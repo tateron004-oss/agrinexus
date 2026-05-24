@@ -1,0 +1,915 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AgriNexus Full Stack</title>
+  <meta name="theme-color" content="#173240">
+  <meta name="application-name" content="AgriNexus">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="AgriNexus">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="icon" href="/icons/agri-nexus-192.png" type="image/png">
+  <link rel="apple-touch-icon" href="/icons/agri-nexus-192.png">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <link rel="stylesheet" href="/styles.css?v=ask-nexus-14">
+</head>
+<body>
+  <a class="skip-link" href="#mainContent">Skip to main content</a>
+  <section id="loginView" class="login-view" aria-labelledby="loginTitle">
+    <div class="login-hero">
+      <div class="brand-mark">AN</div>
+      <h1 id="loginTitle">AgriNexus</h1>
+      <p>Operational platform for learning, workforce, health, trade, wallet, logistics, map intelligence, and AI support.</p>
+      <div class="hero-grid">
+        <span>4 countries</span>
+        <span>4 corridors</span>
+        <span>3 learning tracks</span>
+        <span>Live API state</span>
+      </div>
+    </div>
+    <form id="loginForm" class="login-card">
+      <h2>Sign in</h2>
+      <label>Email<input id="email" value="demo@agrinexus.org" autocomplete="username"></label>
+      <label>Password<input id="password" value="Prototype2026!" type="password" autocomplete="current-password"></label>
+      <button class="primary" type="submit">Enter platform</button>
+      <p id="loginMessage" class="message" role="alert" aria-live="assertive"></p>
+    </form>
+  </section>
+
+  <section id="appView" class="app hidden">
+    <header class="topbar">
+      <div class="brand">
+        <div class="brand-mark small">AN</div>
+        <div>
+          <strong>AgriNexus</strong>
+          <span id="userLine">Loading...</span>
+        </div>
+      </div>
+      <button id="topSettingsToggle" class="ghost top-settings-toggle" type="button" aria-expanded="false" aria-controls="topActions">Settings</button>
+      <div id="topActions" class="top-actions">
+        <button id="accessibilityToggle" class="ghost" type="button" aria-expanded="false" aria-controls="accessibilityPanel">Accessibility</button>
+        <select id="countrySelect" aria-label="Country and language"></select>
+        <select id="platformLanguageSelect" aria-label="Platform language" hidden>
+          <option value="en">English</option>
+          <option value="fr">Francais</option>
+          <option value="sw">Kiswahili</option>
+          <option value="ar">Arabic</option>
+        </select>
+        <button id="logoutBtn" class="ghost">Logout</button>
+      </div>
+    </header>
+
+    <div class="shell">
+      <nav class="sidebar" aria-label="Platform modules">
+        <button data-section="dashboard" class="nav active" aria-current="page">Dashboard</button>
+        <button data-section="learning" class="nav">Learning</button>
+        <button data-section="workforce" class="nav">Workforce</button>
+        <button data-section="health" class="nav">AFAYAI Health</button>
+        <button data-section="trade" class="nav">Agritrade</button>
+        <button data-section="map" class="nav">Map & AI</button>
+        <button data-section="agent" class="nav">Agent AI</button>
+        <button data-section="integrations" class="nav">Integrations</button>
+        <button data-section="admin" class="nav">Admin</button>
+        <button data-section="profile" class="nav">Profile</button>
+      </nav>
+
+      <div id="workspaceBar" class="workspace-bar" aria-live="polite">
+        <div>
+          <span id="workspaceLabel" class="eyebrow">Current workspace</span>
+          <strong id="workspaceTitle">Dashboard</strong>
+          <span id="workspaceDescription">Choose a plain-language action or open a module.</span>
+        </div>
+        <button id="workspaceAskBtn" class="primary" type="button">Ask AgriNexus</button>
+      </div>
+
+      <main id="mainContent" class="content">
+        <section id="accessibilityPanel" class="accessibility-panel hidden" aria-labelledby="accessibilityTitle">
+          <div>
+            <span class="eyebrow">Inclusive access</span>
+            <h2 id="accessibilityTitle">Accessibility Tools</h2>
+            <p>Adjust the workspace for screen readers, low vision, motion sensitivity, captions, and audio-supported workflows.</p>
+          </div>
+          <div class="accessibility-actions" role="group" aria-label="Accessibility display controls">
+            <button type="button" data-accessibility="largeText" aria-pressed="false">Large text</button>
+            <button type="button" data-accessibility="highContrast" aria-pressed="false">High contrast</button>
+            <button type="button" data-accessibility="reducedMotion" aria-pressed="false">Reduce motion</button>
+            <button type="button" data-accessibility="screenReader" aria-pressed="false">Screen reader mode</button>
+          </div>
+          <div class="accessibility-hints">
+            <span>Keyboard: Tab through controls, Enter or Space activates, Escape closes workflow dialogs.</span>
+            <span>Learning and telehealth include captions, transcripts, audio guides, large print, caregiver handoff, and low-bandwidth packets.</span>
+          </div>
+        </section>
+
+        <section id="dashboard" class="section active" aria-labelledby="dashboardHeading">
+          <div class="hero">
+            <h2 id="dashboardHeading">Command Dashboard</h2>
+            <p>Start real learning, workforce, health, trade, AI, and integration workflows from one operations queue.</p>
+          </div>
+          <div class="simple-home" aria-labelledby="simpleHomeTitle">
+            <div class="simple-home-head">
+              <div>
+                <span class="eyebrow">Simple start</span>
+                <h3 id="simpleHomeTitle">What Do You Want To Do?</h3>
+                <p>Choose the closest user type, then pick a plain-language action. AgriNexus will open the right workspace or ask for confirmation.</p>
+              </div>
+              <button id="simpleContinueBtn" type="button" data-simple-action="continue">Continue last task</button>
+            </div>
+            <div class="persona-strip" role="group" aria-label="Choose user type">
+              <button id="personaFarmerBtn" type="button" data-persona="farmer" class="active">Farmer</button>
+              <button id="personaLearnerBtn" type="button" data-persona="learner">Learner</button>
+              <button id="personaWorkerBtn" type="button" data-persona="worker">Worker</button>
+              <button id="personaHealthBtn" type="button" data-persona="health">Health worker</button>
+              <button id="personaGovernmentBtn" type="button" data-persona="government">Government</button>
+              <button id="personaPartnerBtn" type="button" data-persona="partner">Investor / Partner</button>
+            </div>
+            <div id="simpleActionGrid" class="simple-action-grid"></div>
+          </div>
+          <div id="dashboardProcess" class="process-board command-board"></div>
+          <div class="stats">
+            <article><span id="kpiCountries">0</span><small>Countries</small></article>
+            <article><span id="kpiPatients">0</span><small>Patients</small></article>
+            <article><span id="kpiFacilities">0</span><small>Facilities</small></article>
+            <article><span id="kpiOrders">0</span><small>Orders</small></article>
+          </div>
+          <div id="dashboardWorkspace" class="workspace-grid"></div>
+          <div class="command-launch-guide" aria-labelledby="commandLaunchTitle">
+            <div class="command-launch-copy">
+              <span class="eyebrow">Government-ready guide</span>
+              <h3 id="commandLaunchTitle">Six Ways To Operate AgriNexus</h3>
+              <p>Use these guided actions when presenting to non-technical leaders. Each button sends a real command into Ask AgriNexus, asks for confirmation when needed, and records the workflow evidence.</p>
+            </div>
+            <div class="command-launch-grid">
+              <button id="guideCommandTourBtn" type="button" data-command-preset="help me">1. Start command tour</button>
+              <button id="guideTelehealthBtn" type="button" data-command-preset="prepare accessible telehealth">2. Open telehealth access</button>
+              <button id="guideTrainingBtn" type="button" data-command-preset="start training path">3. Start training path</button>
+              <button id="guideWorkforceBtn" type="button" data-command-preset="apply for that job">4. Apply for workforce role</button>
+              <button id="guideFarmerMissionBtn" type="button" data-command-preset="run full mission">5. Run farmer mission</button>
+              <button id="guideEnginesBtn" type="button" data-command-preset="test provider engines">6. Test live engines</button>
+            </div>
+          </div>
+          <div class="local-pilot-studio" aria-labelledby="localPilotTitle">
+            <div>
+              <span class="eyebrow">Local Pilot Studio</span>
+              <h3 id="localPilotTitle">Offer This Before Live Engines</h3>
+              <p>Run a local pilot simulation that creates real platform evidence: training records, workforce actions, telehealth support, trade activity, drone intelligence, map risk, AI briefing, notifications, and provider audit events.</p>
+            </div>
+            <div class="pilot-actions">
+              <button id="pilotRuralAccessBtn" class="primary" type="button" data-pilot-scenario="rural-access">Run rural access pilot</button>
+              <button id="pilotFarmerMarketBtn" type="button" data-pilot-scenario="farmer-market">Run farmer market pilot</button>
+              <button id="pilotHealthWorkforceBtn" type="button" data-pilot-scenario="health-workforce">Run health workforce pilot</button>
+            </div>
+            <div id="localPilotReport" class="pilot-report"></div>
+          </div>
+          <div class="demo-command">
+            <div>
+              <span class="eyebrow">Investor simulation</span>
+              <h3>WOW Demo Mode</h3>
+              <p>Run a complete rural Nigeria scenario: accessible learning, workforce placement, telehealth accessibility, trade logistics, map intelligence, AI recommendations, notifications, and provider evidence.</p>
+            </div>
+            <div class="demo-actions">
+              <button id="wowDemoBtn" class="primary">Run WOW investor demo</button>
+              <button id="demoRunBtn">Run standard demo</button>
+            </div>
+          </div>
+          <div id="demoStoryboard" class="demo-storyboard"></div>
+          <div id="dashboardActions" class="dashboard-actions"></div>
+          <div class="cards two">
+            <article>
+              <div class="tag-row"><span>Start here</span><span>Guided</span></div>
+              <h3>Launch Walkthrough</h3>
+              <p>Open a guided first-run path that shows how a learner, farmer, health worker, workforce coordinator, and admin should use the platform.</p>
+              <div id="onboardingPanel" class="activity"></div>
+              <div class="action-row"><button id="startOnboardingBtn" class="primary">Start walkthrough</button></div>
+            </article>
+            <article>
+              <div class="tag-row"><span>Help desk</span><span>Support</span></div>
+              <h3>Support & Feedback</h3>
+              <p>Capture support requests, user confusion, missing credentials, or launch blockers before the first live pilot.</p>
+              <div id="supportPanel" class="activity"></div>
+              <div class="action-row"><button id="openSupportBtn">Open support ticket</button></div>
+            </article>
+          </div>
+          <div class="cards two">
+            <article>
+              <h3>Unified AI Copilot</h3>
+              <div id="copilotPanel" class="rows"></div>
+              <div class="action-row">
+                <button data-ai="copilot" class="primary">Ask copilot</button>
+                <button data-ai="command">Run command AI</button>
+              </div>
+            </article>
+            <article>
+              <h3>Executive Demo Run</h3>
+              <div id="copilotRecommendations" class="activity"></div>
+            </article>
+          </div>
+          <div class="cards two">
+            <article>
+              <h3>Active Context</h3>
+              <div id="contextPanel" class="rows"></div>
+            </article>
+            <article>
+              <h3>Recent Activity</h3>
+              <div id="activityFeed" class="activity"></div>
+            </article>
+          </div>
+        </section>
+
+        <section id="learning" class="section" aria-labelledby="learningTitle">
+          <div class="learning-studio">
+            <div>
+              <span id="learningEyebrow" class="eyebrow">Learning studio</span>
+              <h2 id="learningTitle">Learning & Development</h2>
+              <p id="learningIntro">Build readiness through guided courses, quizzes, certificates, and workforce-aligned skills.</p>
+            </div>
+            <div class="language-switcher" aria-label="Learning language">
+              <button class="language-option" data-language="en" type="button">English</button>
+              <button class="language-option" data-language="fr" type="button">French</button>
+              <button class="language-option" data-language="sw" type="button">Kiswahili</button>
+              <button class="language-option" data-language="ar" type="button">Arabic</button>
+            </div>
+            <div class="learning-score">
+              <span id="learningScore">0%</span>
+              <small id="learningScoreLabel">Readiness</small>
+            </div>
+          </div>
+          <div class="learning-layout">
+            <article class="active-lesson">
+              <div class="tag-row"><span id="currentFocusLabel">Current focus</span><span id="activeCourseTrack">Pathway</span></div>
+              <h3 id="activeCourseTitle">Choose a course</h3>
+              <p id="activeCourseSummary">Start a course to begin building a verified learning record.</p>
+              <div id="activeCourseModules" class="skill-list"></div>
+              <div id="lessonWorkspace" class="lesson-workspace"></div>
+              <div class="progress tall"><span id="activeCourseProgress" style="width:0%"></span></div>
+              <div class="action-row">
+                <button id="startActiveCourseBtn" class="primary">Start course</button>
+                <button id="completeLessonBtn">Complete lesson</button>
+                <button id="quizBtn" class="primary">Complete quiz</button>
+                <button id="certBtn">Issue certificate</button>
+              </div>
+            </article>
+            <aside class="learning-rail">
+              <h3 id="learningRecordTitle">Learning Record</h3>
+              <div id="learningStats" class="rows"></div>
+              <h3 id="certificatesTitle">Certificates</h3>
+              <div id="certificateList" class="activity"></div>
+            </aside>
+          </div>
+          <div id="learningWorkspace" class="workspace-grid"></div>
+          <div class="cards two">
+            <article class="accessibility-card">
+              <div class="tag-row"><span>Inclusive learning</span><span>ADA support</span></div>
+              <h3>Accessible Learning Mode</h3>
+              <p>Convert active lessons into captioned, screen-reader, large-print, and low-bandwidth study support for hearing and visually impaired learners.</p>
+              <div id="learningAccessPanel" class="rows"></div>
+              <div class="action-row">
+                <button data-learning-access="caption" class="primary">Build captions</button>
+                <button data-learning-access="visual">Create audio guide</button>
+                <button data-learning-access="low-bandwidth">Send offline packet</button>
+              </div>
+            </article>
+            <article class="accessibility-card">
+              <div class="tag-row"><span>Assistive pathway</span><span>Rural access</span></div>
+              <h3>Learner Accommodation Plan</h3>
+              <div id="learningAccommodationList" class="activity"></div>
+            </article>
+          </div>
+          <div id="trackStrip" class="track-strip"></div>
+          <div id="courseGrid" class="cards three"></div>
+          <div class="cards two">
+            <article>
+              <h3>AI Tutor</h3>
+              <div id="learningAiPanel" class="activity"></div>
+              <div class="action-row">
+                <button data-ai="tutor" class="primary">Ask AI tutor</button>
+                <button data-ai="quizgen">Generate quiz help</button>
+              </div>
+            </article>
+            <article>
+              <h3>Learning Provider Evidence</h3>
+              <div id="learningIntegrationPanel" class="activity"></div>
+            </article>
+          </div>
+          <div class="cards two">
+            <article>
+              <h3>Learning Engine Tests</h3>
+              <div id="learningEnginePanel" class="rows"></div>
+              <div class="action-row"><button data-module-test="Learning" class="primary">Test learning engines</button></div>
+            </article>
+          </div>
+        </section>
+
+        <section id="workforce" class="section" aria-labelledby="workforceTitle">
+          <div class="workforce-hub">
+            <div>
+              <span class="eyebrow">Talent operations</span>
+              <h2 id="workforceTitle">Workforce Pipeline</h2>
+              <p>Move from training readiness into applications, interviews, mentor support, scheduled shifts, and paid placement opportunities.</p>
+            </div>
+            <div class="workforce-status">
+              <span id="stage">Profile</span>
+              <small>Candidate stage</small>
+            </div>
+          </div>
+          <div id="workforceProcess" class="process-board command-board"></div>
+          <div id="workforceWorkspace" class="workspace-grid"></div>
+          <div class="workforce-layout">
+            <article class="candidate-card">
+              <div class="tag-row"><span id="eligibility">Locked</span><span id="earnings">$0</span></div>
+              <h3>Candidate Profile</h3>
+              <div class="readiness-meter">
+                <span id="readiness">0%</span>
+                <div class="progress tall"><span id="workforceProgress" style="width:0%"></span></div>
+              </div>
+              <div id="workforcePanel" class="rows"></div>
+            </article>
+            <div class="workforce-main">
+              <div id="pipelineSteps" class="pipeline-steps"></div>
+              <div class="cards two">
+                <article>
+                  <h3>Applications</h3>
+                  <div id="applicationList" class="activity"></div>
+                </article>
+                <article>
+                  <h3>Shift Schedule</h3>
+                  <div id="shiftList" class="activity"></div>
+                </article>
+              </div>
+              <div class="action-row">
+                <button data-workforce="build-profile" class="primary">Build profile</button>
+                <button data-workforce="interview">Schedule interview</button>
+                <button data-workforce="mentor">Assign mentor</button>
+                <button data-workforce="shift">Start shift</button>
+              </div>
+            </div>
+          </div>
+          <div class="cards two">
+            <article>
+              <h3>AI Workforce Coach</h3>
+              <div id="workforceAiPanel" class="activity"></div>
+              <div class="action-row">
+                <button data-ai="workforce-coach" class="primary">Review readiness gaps</button>
+                <button data-ai="interview-prep">Prep interview</button>
+              </div>
+            </article>
+            <article>
+              <h3>Workforce Provider Evidence</h3>
+              <div id="workforceIntegrationPanel" class="activity"></div>
+            </article>
+          </div>
+          <div class="cards two">
+            <article>
+              <h3>Workforce Engine Tests</h3>
+              <div id="workforceEnginePanel" class="rows"></div>
+              <div class="action-row"><button data-module-test="Workforce" class="primary">Test workforce engines</button></div>
+            </article>
+          </div>
+          <div class="marketplace-head"><h3>Role Marketplace</h3><span>Readiness and certificates determine eligibility</span></div>
+          <div id="roleGrid" class="cards three"></div>
+        </section>
+
+        <section id="health" class="section" aria-labelledby="healthTitle">
+          <div class="health-command">
+            <div>
+              <span class="eyebrow">Care operations</span>
+              <h2 id="healthTitle">AFAYAI Health</h2>
+              <p>Manage patient intakes, representative escalation, safety reviews, and care-plan guidance from one supervised care desk.</p>
+            </div>
+            <div class="health-status">
+              <span id="healthQueue">Queue</span>
+              <small>Current access status</small>
+            </div>
+          </div>
+          <div id="healthProcess" class="process-board command-board"></div>
+          <div id="healthWorkspace" class="workspace-grid"></div>
+          <div class="health-layout">
+            <article class="case-card">
+              <h3>Active Case</h3>
+              <div id="healthPanel" class="rows"></div>
+            </article>
+            <article>
+              <h3>Intake Queue</h3>
+              <div id="intakeList" class="activity"></div>
+            </article>
+            <article>
+              <h3>Care Plans</h3>
+              <div id="carePlanList" class="activity"></div>
+            </article>
+          </div>
+          <div class="cards two">
+            <article>
+              <h3>Safety Reviews</h3>
+              <div id="safetyReviewList" class="activity"></div>
+            </article>
+            <article>
+              <h3>AI Governance</h3>
+              <div id="healthAiPanel" class="rows"></div>
+              <div class="action-row"><button data-ai="triage" class="primary">Run AI triage</button></div>
+            </article>
+          </div>
+          <div class="cards two">
+            <article class="accessibility-card">
+              <div class="tag-row"><span>Inclusive telehealth</span><span>Hearing + vision</span></div>
+              <h3>Accessible Telehealth Session</h3>
+              <p>Prepare a care session with captions, visual-assist narration, caregiver handoff, language support, and low-bandwidth fallback.</p>
+              <div id="telehealthAccessPanel" class="rows"></div>
+              <div class="action-row">
+                <button data-health="accessibility" class="primary">Build access plan</button>
+                <button data-health="caption">Start caption relay</button>
+                <button data-health="caregiver">Notify caregiver</button>
+                <button data-health="consent">Record consent</button>
+                <button data-health="vitals">Capture vitals</button>
+                <button data-health="referral">Create referral</button>
+                <button data-health="followup">Schedule follow-up</button>
+              </div>
+            </article>
+            <article class="accessibility-card">
+              <div class="tag-row"><span>Patient support</span><span>Audit ready</span></div>
+              <h3>Accessibility Case Notes</h3>
+              <div id="healthAccessibilityList" class="activity"></div>
+            </article>
+          </div>
+          <div class="cards two">
+            <article>
+              <h3>Telehealth Provider Evidence</h3>
+              <div id="healthIntegrationPanel" class="activity"></div>
+            </article>
+            <article>
+              <h3>Healthcare Engine Tests</h3>
+              <div id="healthEnginePanel" class="rows"></div>
+              <div class="action-row"><button data-module-test="Healthcare" class="primary">Test healthcare engines</button></div>
+            </article>
+          </div>
+          <div class="action-row">
+            <button data-health="intake" class="primary">Start intake</button>
+            <button data-health="representative">Connect representative</button>
+            <button data-health="safety">Run safety review</button>
+            <button data-health="inspector">Run map inspector</button>
+            <button data-health="careplan">Generate care plan</button>
+          </div>
+        </section>
+
+        <section id="trade" class="section" aria-labelledby="tradeTitle">
+          <div class="trade-hub">
+            <div>
+              <span class="eyebrow">Market operations</span>
+              <h2 id="tradeTitle">Agritech + Agritrade</h2>
+              <p>Manage product lots, buyer interest, wallet transactions, route checkpoints, and logistics handoffs.</p>
+            </div>
+            <div class="trade-status">
+              <span id="tradeOrderCount">0</span>
+              <small>Active orders</small>
+            </div>
+          </div>
+          <div id="tradeProcess" class="process-board command-board"></div>
+          <div id="tradeWorkspace" class="workspace-grid"></div>
+          <div class="cards two">
+            <article>
+              <div class="tag-row"><span>Field intelligence</span><span>Drone-ready</span></div>
+              <h3>Drone Field Scan</h3>
+              <p>Run crop-health, irrigation, pest-risk, yield, and buyer-readiness intelligence for the active product lot and route.</p>
+              <div id="dronePanel" class="rows"></div>
+              <div class="action-row">
+                <button id="droneMissionBtn">Plan drone mission</button>
+                <button id="droneScanBtn" class="primary">Run drone field scan</button>
+                <button id="droneInterventionBtn">Assign field task</button>
+              </div>
+            </article>
+            <article>
+              <h3>Drone Mission Evidence</h3>
+              <div id="droneMissionList" class="activity"></div>
+              <h3>Drone Scan Evidence</h3>
+              <div id="droneScanList" class="activity"></div>
+              <h3>Field Intervention Tasks</h3>
+              <div id="fieldInterventionList" class="activity"></div>
+            </article>
+          </div>
+          <div id="productGrid" class="cards four"></div>
+          <div class="cards two">
+            <article>
+              <h3>Wallet Ledger</h3>
+              <div id="walletPanel" class="rows"></div>
+              <div id="walletLedger" class="activity"></div>
+              <div class="action-row"><button data-pay="M-Pesa:120">M-Pesa +120</button><button data-pay="MTN:140">MTN +140</button><button data-pay="Airtel:110">Airtel +110</button></div>
+            </article>
+            <article>
+              <h3>Order Operations</h3>
+              <div id="logisticsPanel" class="rows"></div>
+              <div id="orderTimeline" class="activity"></div>
+              <div class="action-row"><button id="advanceOrderBtn">Advance order</button><button data-ai="price" class="primary">Price AI</button><button data-ai="route">Route AI</button></div>
+            </article>
+          </div>
+          <div class="cards two">
+            <article>
+              <h3>Order Book</h3>
+              <div id="orderBook" class="activity"></div>
+            </article>
+            <article>
+              <h3>Trade Events</h3>
+              <div id="tradeEvents" class="activity"></div>
+            </article>
+          </div>
+          <div class="cards two">
+            <article>
+              <h3>AI Trade Advisor</h3>
+              <div id="tradeAiPanel" class="activity"></div>
+              <div class="action-row"><button data-ai="trade-advisor" class="primary">Review trade next step</button></div>
+            </article>
+            <article>
+              <h3>Trade AI Evidence</h3>
+              <div id="tradeAiEvidence" class="activity"></div>
+            </article>
+          </div>
+        </section>
+
+        <section id="map" class="section" aria-labelledby="mapTitle">
+          <div class="map-command">
+            <div>
+              <span class="eyebrow">Geospatial command</span>
+              <h2 id="mapTitle">Global Map & AI</h2>
+              <p>Monitor country context, route movement, provider status, and AI recommendations from one operations view.</p>
+            </div>
+            <div id="aiStatus" class="ai-status"></div>
+          </div>
+          <div id="mapProcess" class="process-board command-board"></div>
+          <div id="mapWorkspace" class="workspace-grid"></div>
+          <div class="map-layout">
+            <div id="mapCanvas" role="img" aria-label="Interactive operations map showing the active country, route checkpoints, facilities, and route intelligence. The same information is listed in the Map Inspector and Route Intelligence panels."></div>
+            <aside>
+              <h3>Map Inspector</h3>
+              <div id="mapPanel" class="rows"></div>
+              <div class="action-row stacked">
+                <button data-ai="command" class="primary">Run command center</button>
+                <button data-ai="inspector">Inspect route</button>
+                <button data-ai="route">Assess route risk</button>
+              </div>
+            </aside>
+          </div>
+          <div class="cards three">
+            <article>
+              <h3>Layer Status</h3>
+              <div id="layerStatus" class="rows"></div>
+            </article>
+            <article>
+              <h3>Route Intelligence</h3>
+              <div id="routeIntel" class="activity"></div>
+            </article>
+            <article>
+              <h3>AI Run History</h3>
+              <div id="aiRunHistory" class="activity"></div>
+            </article>
+          </div>
+        </section>
+
+        <section id="agent" class="section" aria-labelledby="agentTitle">
+          <div class="section-head">
+            <h2 id="agentTitle">Agent Command Center</h2>
+            <p>Ask AgriNexus to plan across learning, workforce, telehealth, trade, maps, AI, and integrations, then approve the plan before it acts.</p>
+          </div>
+          <div class="cards two">
+            <article class="ai-console">
+              <div class="tag-row"><span>Agentic AI</span><span id="agentMode">planning</span></div>
+              <label class="field-label">Mission
+                <textarea id="agentGoal" rows="5">Help a rural Nigeria learner become job-ready, complete training, prepare telehealth support, match to workforce opportunity, review route risk, and create provider evidence.</textarea>
+              </label>
+              <div class="action-row">
+                <button id="agentPlanBtn" class="primary">Create agent plan</button>
+                <button id="agentExecuteBtn">Execute approved plan</button>
+                <button id="agentBriefingBtn">Government briefing</button>
+              </div>
+            </article>
+            <article class="ai-console">
+              <div class="tag-row"><span>Latest plan</span><span id="agentPlanStatus">none</span></div>
+              <div id="agentPlanPanel" class="task-list"></div>
+            </article>
+          </div>
+          <div class="voice-command">
+            <div>
+              <div class="tag-row"><span>Voice command</span><span id="voiceStatus">standby</span></div>
+              <h3>Nexus Voice Assistant</h3>
+              <p>Ask questions, navigate the platform, stage workflows, create agent plans, execute approved plans, and run AI support from voice or text.</p>
+              <label class="field-label" for="voiceTextCommand">Command
+                <input id="voiceTextCommand" placeholder="Try: create a plan for a rural Nigeria learner">
+              </label>
+              <div class="action-row">
+                <button id="voiceListenBtn" class="primary" type="button">Mic: Start listening</button>
+                <button id="voiceRunBtn" type="button">Run command</button>
+                <button id="voiceFirstBtn" type="button">Voice-first mode</button>
+                <button id="voiceSpeakBtn" type="button">Read response</button>
+              </div>
+            </div>
+            <div class="voice-transcript" aria-live="polite">
+              <strong>Assistant response</strong>
+              <span id="voiceTranscript">Ready for a command.</span>
+              <div id="voiceSuggestions" class="voice-suggestions"></div>
+            </div>
+          </div>
+          <div class="cards three">
+            <article>
+              <h3>Nexus Memory</h3>
+              <div id="agentMemoryPanel" class="activity"></div>
+            </article>
+            <article>
+              <h3>What Nexus Understands</h3>
+              <div id="agentUnderstandingPanel" class="activity"></div>
+            </article>
+            <article>
+              <h3>Government Briefings</h3>
+              <div id="agentBriefingPanel" class="activity"></div>
+            </article>
+          </div>
+          <div class="cards two">
+            <article>
+              <h3>Agent Toolchain</h3>
+              <div id="agentToolPanel" class="rows"></div>
+            </article>
+            <article>
+              <h3>Agent Execution Log</h3>
+              <div id="agentLogPanel" class="activity"></div>
+            </article>
+          </div>
+          <div class="cards two">
+            <article>
+              <div class="tag-row"><span>Capability matrix</span><span id="capabilityScore">0/0</span></div>
+              <h3>Operational Platform Coverage</h3>
+              <div id="capabilityMatrixPanel" class="task-list"></div>
+            </article>
+            <article>
+              <h3>Command Center Guarantees</h3>
+              <div class="activity">
+                <div><strong>No dead controls</strong><span>Every visible command is covered by workflow audit and regression tests.</span></div>
+                <div><strong>Provider evidence</strong><span>Actions create state, activity, integration events, and readiness signals.</span></div>
+                <div><strong>Human oversight</strong><span>AI and agent work remains reviewable through plans, logs, and governance records.</span></div>
+                <div><strong>Multilingual access</strong><span>Static content, dynamic translation endpoint, voice, and accessibility paths are tracked together.</span></div>
+              </div>
+            </article>
+          </div>
+          <div class="cards two">
+            <article>
+              <div class="tag-row"><span>Automation readiness</span><span id="automationScore">0/5</span></div>
+              <h3>Full Automation Unlocks</h3>
+              <div id="automationReadinessPanel" class="task-list"></div>
+            </article>
+            <article>
+              <h3>Automation Rule Examples</h3>
+              <div class="activity">
+                <div><strong>Intake trigger</strong><span>When intake starts, notify representative and caregiver.</span></div>
+                <div><strong>Learning trigger</strong><span>When a course is complete, check job eligibility.</span></div>
+                <div><strong>Drone trigger</strong><span>When crop stress is high, alert farmer and trade coordinator.</span></div>
+                <div><strong>Trade trigger</strong><span>When order advances, notify buyer and logistics provider.</span></div>
+                <div><strong>Provider trigger</strong><span>When an integration fails, alert admin and mark review needed.</span></div>
+              </div>
+            </article>
+          </div>
+        </section>
+
+        <section id="integrations" class="section" aria-labelledby="integrationsTitle">
+          <div class="integration-hub">
+            <div>
+              <span class="eyebrow">Connection center</span>
+              <h2 id="integrationsTitle">Integrations</h2>
+              <p>Monitor sandbox and live-ready provider paths across learning, workforce, healthcare, AI, maps, and persistence.</p>
+            </div>
+            <div class="integration-status">
+              <span id="integrationCount">0</span>
+              <small>Providers tracked</small>
+            </div>
+          </div>
+          <div id="integrationProcess" class="process-board command-board"></div>
+          <div id="integrationWorkspace" class="workspace-grid"></div>
+          <div id="providerGrid" class="cards three"></div>
+          <div class="cards two">
+            <article>
+              <h3>Module Activation</h3>
+              <div id="moduleActivation" class="activity"></div>
+            </article>
+            <article>
+              <h3>Live Connection Checklist</h3>
+              <div id="liveChecklist" class="activity"></div>
+            </article>
+          </div>
+          <div class="cards two">
+            <article>
+              <h3>Integration Events</h3>
+              <div id="integrationEvents" class="activity"></div>
+            </article>
+            <article>
+              <h3>Environment Readiness</h3>
+              <div id="environmentPanel" class="rows"></div>
+            </article>
+          </div>
+        </section>
+
+        <section id="admin" class="section" aria-labelledby="adminTitle">
+          <div class="admin-hub">
+            <div>
+              <span class="eyebrow">Operations console</span>
+              <h2 id="adminTitle">Admin Control Room</h2>
+              <p>Review users, module health, provider activity, and audit-style events across the platform.</p>
+            </div>
+            <button id="adminHealthCheck" class="primary">Run health check</button>
+          </div>
+          <div id="adminProcess" class="process-board command-board"></div>
+          <div id="adminWorkspace" class="workspace-grid"></div>
+          <div class="cards two">
+            <article class="ai-console">
+              <div class="tag-row"><span>AI provider</span><span id="aiConsoleMode">unknown</span></div>
+              <h3>AI Integration Console</h3>
+              <div id="aiConsolePanel" class="rows"></div>
+              <label class="field-label">Test workflow
+                <select id="aiConsoleType">
+                  <option value="command">Command center</option>
+                  <option value="copilot">Unified copilot</option>
+                  <option value="tutor">Learning tutor</option>
+                  <option value="workforce-coach">Workforce coach</option>
+                  <option value="triage">Health triage</option>
+                  <option value="trade-advisor">Trade advisor</option>
+                  <option value="inspector">Route inspector</option>
+                  <option value="route">Route risk</option>
+                  <option value="careplan">Care plan</option>
+                  <option value="price">Trade pricing</option>
+                </select>
+              </label>
+              <div class="action-row">
+                <button id="aiConsoleRun" class="primary">Run AI test</button>
+                <button data-ai="command">Command center</button>
+              </div>
+            </article>
+            <article class="ai-console">
+              <div class="tag-row"><span>Latest response</span><span id="aiConsoleProvider">standing by</span></div>
+              <h3>AI Evidence</h3>
+              <div id="aiConsoleResult" class="activity"></div>
+            </article>
+          </div>
+          <div class="cards two">
+            <article>
+              <h3>AI Governance Review</h3>
+              <div id="aiGovernancePanel" class="activity"></div>
+              <div class="action-row">
+                <button data-ai-review="approve" class="primary">Approve latest AI</button>
+                <button data-ai-review="reject">Reject latest AI</button>
+              </div>
+            </article>
+            <article>
+              <h3>Notification Center</h3>
+              <div id="notificationPanel" class="activity"></div>
+              <div class="action-row">
+                <button data-notify="Learning">Notify learning</button>
+                <button data-notify="Workforce">Notify workforce</button>
+                <button data-notify="Healthcare">Notify health</button>
+                <button data-notify="AgriTrade">Notify trade</button>
+              </div>
+            </article>
+          </div>
+          <div class="cards three">
+            <article>
+              <h3>Users</h3>
+              <div id="adminUsers" class="activity"></div>
+            </article>
+            <article>
+              <h3>Subscribers</h3>
+              <div id="adminSubscribers" class="activity"></div>
+              <div class="action-row"><button id="inviteSubscriberBtn">Invite pilot subscriber</button></div>
+            </article>
+            <article>
+              <h3>Module Health</h3>
+              <div id="adminModules" class="activity"></div>
+            </article>
+          </div>
+          <div class="cards two">
+            <article>
+              <h3>Audit Feed</h3>
+              <div id="adminAudit" class="activity"></div>
+            </article>
+            <article>
+              <h3>Usage & Support</h3>
+              <div id="adminUsagePanel" class="activity"></div>
+            </article>
+          </div>
+          <div class="cards two">
+            <article>
+              <h3>Production Readiness</h3>
+              <div id="productionReadiness" class="rows"></div>
+            </article>
+            <article>
+              <h3>Next Setup Steps</h3>
+              <div id="setupSteps" class="activity"></div>
+            </article>
+          </div>
+          <div class="cards two">
+            <article>
+              <h3>Production Completeness</h3>
+              <div id="productionCompleteness" class="activity"></div>
+            </article>
+            <article>
+              <h3>Legal & Billing</h3>
+              <div class="activity">
+                <div><strong>Terms</strong><span><a href="/terms.html">Review terms of service</a></span></div>
+                <div><strong>Privacy</strong><span><a href="/privacy.html">Review privacy policy</a></span></div>
+                <div><strong>Refunds</strong><span><a href="/refund.html">Review refund policy</a></span></div>
+              </div>
+              <div class="action-row"><button id="billingCheckoutBtn">Test billing checkout</button></div>
+            </article>
+          </div>
+        </section>
+
+        <section id="profile" class="section" aria-labelledby="profileTitle">
+          <div class="section-head"><h2 id="profileTitle">Unified Profile</h2><p>The profile now reflects committed backend state across all platform domains.</p></div>
+          <div id="profileGrid" class="cards three"></div>
+        </section>
+
+        <section id="globalAssistantBar" class="global-assistant hidden" aria-labelledby="globalAssistantTitle">
+          <div class="global-assistant-head">
+            <div>
+              <span class="eyebrow">Always available</span>
+              <h2 id="globalAssistantTitle">Ask AgriNexus</h2>
+              <p>Speak or type a request from any module. Try: "Nexus, start telehealth intake" or "Nexus, contact my buyer."</p>
+            </div>
+            <button id="globalCloseBtn" class="ghost assistant-close" type="button" aria-label="Close Ask AgriNexus">Close</button>
+          </div>
+          <label class="field-label" for="globalCommandInput">Ask or command
+            <input id="globalCommandInput" placeholder="Nexus, apply for that job">
+          </label>
+          <div class="global-assistant-actions">
+            <button id="globalListenBtn" class="primary" type="button">Mic: Start listening</button>
+            <button id="globalRunBtn" type="button">Run command</button>
+            <button id="globalYesBtn" type="button">Yes, do it</button>
+            <button id="globalNoBtn" type="button">No, cancel</button>
+            <button id="globalReadBtn" type="button">Read response</button>
+            <button id="globalInstallBtn" type="button">Install app</button>
+          </div>
+          <div id="globalAssistantStatus" class="global-assistant-status" role="status">Ready</div>
+          <div id="globalMicStatus" class="global-mic-status" role="status">Checking microphone support...</div>
+          <div id="globalConversationPanel" class="global-conversation" aria-live="polite"></div>
+        </section>
+      </main>
+    </div>
+  </section>
+
+  <div id="jarvisDock" class="jarvis-dock hidden" aria-live="polite">
+    <button id="jarvisToggle" class="jarvis-toggle primary" type="button" aria-expanded="false" aria-controls="jarvisPanel">Ask AgriNexus</button>
+    <section id="jarvisPanel" class="jarvis-panel hidden" aria-labelledby="jarvisTitle">
+      <div class="jarvis-head">
+        <div>
+          <span class="eyebrow">Always-on assistant</span>
+          <h2 id="jarvisTitle">Nexus Command Layer</h2>
+        </div>
+        <div class="jarvis-head-actions">
+          <span id="jarvisMode">standby</span>
+          <button id="jarvisCloseBtn" class="ghost jarvis-close" type="button" aria-label="Close Ask AgriNexus">Close</button>
+        </div>
+      </div>
+      <p id="jarvisSummary">Ready to operate across the platform.</p>
+      <label class="field-label" for="jarvisCommandInput">Ask or command
+        <input id="jarvisCommandInput" placeholder="Nexus, run full mission">
+      </label>
+      <div class="action-row">
+        <button id="jarvisListenBtn" class="primary" type="button">Listen</button>
+        <button id="jarvisRunBtn" type="button">Run</button>
+        <button id="jarvisMissionBtn" type="button">Full mission</button>
+        <button id="jarvisReadBtn" type="button">Read</button>
+      </div>
+      <div id="jarvisInsightPanel" class="task-list"></div>
+    </section>
+  </div>
+
+  <div id="workflowModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="workflowTitle" aria-describedby="workflowSummary">
+    <div class="modal-panel">
+      <div class="modal-head">
+        <div>
+          <span id="workflowEyebrow" class="modal-eyebrow">Workflow</span>
+          <h2 id="workflowTitle">Complete workflow</h2>
+        </div>
+        <button id="workflowClose" class="ghost modal-close" type="button" data-close-workflow aria-label="Close workflow">Close</button>
+      </div>
+      <p id="workflowSummary" class="modal-summary"></p>
+      <div id="workflowFields" class="workflow-fields"></div>
+      <div id="workflowChecklist" class="task-list"></div>
+      <label class="field-label" for="workflowNote">Workflow note</label>
+      <textarea id="workflowNote" rows="4" placeholder="Add reviewer notes, decision context, or handoff details."></textarea>
+      <div id="workflowOutcome" class="rows"></div>
+      <div class="workflow-voice-confirm">
+        <label class="field-label" for="workflowVoiceInput">Voice or typed response
+          <input id="workflowVoiceInput" placeholder="Say or type: confirm, yes, cancel">
+        </label>
+        <div class="action-row">
+          <button id="workflowListenBtn" type="button">Mic</button>
+          <button id="workflowRunVoiceBtn" type="button">Run response</button>
+        </div>
+      </div>
+      <div class="action-row modal-actions">
+        <button id="workflowConfirm" class="primary" type="button">Confirm action</button>
+        <button id="workflowCancel" type="button" data-close-workflow>Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast hidden" role="status" aria-live="polite" aria-atomic="true"></div>
+  <div id="screenReaderStatus" class="sr-only" role="status" aria-live="polite" aria-atomic="true"></div>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="/app.js?v=ask-nexus-14"></script>
+</body>
+</html>

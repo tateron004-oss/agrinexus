@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="AgriNexus app icon">
+  <rect width="512" height="512" rx="96" fill="#173240"/>
+  <circle cx="256" cy="256" r="184" fill="#eaf5f2"/>
+  <path d="M147 319c38-104 111-169 218-191-11 88-48 157-111 207-31 25-68 38-107 38 0-18 0-36 0-54z" fill="#1b8f68"/>
+  <path d="M167 333c45-61 104-107 177-137" fill="none" stroke="#173240" stroke-width="24" stroke-linecap="round"/>
+  <path d="M145 373c64-7 122-4 174 9" fill="none" stroke="#1677d8" stroke-width="24" stroke-linecap="round"/>
+  <text x="256" y="448" text-anchor="middle" font-family="Arial, sans-serif" font-size="54" font-weight="800" fill="#eaf5f2">AN</text>
+</svg>

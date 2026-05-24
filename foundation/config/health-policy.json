@@ -1,0 +1,24 @@
+{
+  "timezone": "Africa/Lagos",
+  "escalationRiskLevels": ["High", "Critical"],
+  "heatEscalationThresholdC": 38,
+  "representativeQueueStatuses": ["2 callers ahead", "Intake session in progress"],
+  "safetyReviewMinimumQuality": 90,
+  "carePlanRequiredFields": ["patientRef", "needSummary", "countryName", "riskLevel"],
+  "standardCarePlanSteps": [
+    "Confirm patient identity and location.",
+    "Review reported symptoms and intake need summary.",
+    "Check heat exposure, hydration risk, and nearest active facility.",
+    "Escalate to a representative for high-risk, heat-stressed, or queue-delayed cases.",
+    "Record guidance and follow-up requirements in the health record."
+  ],
+  "redFlags": [
+    "severe breathing difficulty",
+    "loss of consciousness",
+    "severe dehydration",
+    "chest pain",
+    "pregnancy emergency",
+    "child under five with high fever"
+  ],
+  "disclaimer": "AgriNexus AI guidance supports trained operators and does not replace licensed clinical judgment or emergency care."
+}

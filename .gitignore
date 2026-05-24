@@ -1,0 +1,32 @@
+# Secrets and local environment
+.env
+.env.*
+!.env.example
+
+# Dependencies
+node_modules/
+
+# Logs and runtime output
+npm-debug.log*
+*.log
+*.err
+*.out
+*.pid
+provider-events.json
+tmp-server-*
+exports/investor-screenshots/chrome-profile/
+
+# Local generated backups and machine state
+backups/
+
+# OS/editor files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Build/cache output
+dist/
+build/
+.cache/
+.parcel-cache/

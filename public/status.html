@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AgriNexus Live Status</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body class="status-page">
+  <main class="status-shell">
+    <header class="status-hero">
+      <div>
+        <span class="eyebrow">Operational readiness</span>
+        <h1>AgriNexus Live Status</h1>
+        <p>Production gates, live-provider status, AI readiness, persistence, and module integration health.</p>
+      </div>
+      <a class="ghost-link" href="/">Open platform</a>
+    </header>
+    <section id="statusSummary" class="status-summary"></section>
+    <section>
+      <h2>Provider Connections</h2>
+      <div id="providerGrid" class="provider-grid"></div>
+    </section>
+    <section>
+      <h2>Production Gates</h2>
+      <div id="readinessGrid" class="readiness-grid"></div>
+    </section>
+    <section>
+      <h2>10-Item Production Completeness</h2>
+      <div id="productionGrid" class="readiness-grid"></div>
+    </section>
+  </main>
+  <script src="/status.js"></script>
+</body>
+</html>

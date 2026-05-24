@@ -1,0 +1,204 @@
+services:
+  - type: web
+    name: agrinexus-provider-engines
+    env: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm run provider-engines
+    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: HOST
+        value: 0.0.0.0
+      - key: PROVIDER_ENGINE_HOST
+        value: 0.0.0.0
+      - key: PROVIDER_ENGINE_PORT
+        value: 10000
+      - key: AI_PROVIDER_API_KEY
+        sync: false
+      - key: LEARNING_PROVIDER_API_KEY
+        sync: false
+      - key: WORKFORCE_PROVIDER_API_KEY
+        sync: false
+      - key: HEALTH_PROVIDER_API_KEY
+        sync: false
+      - key: TRADE_PROVIDER_API_KEY
+        sync: false
+      - key: DRONE_PROVIDER_API_KEY
+        sync: false
+      - key: VOICE_PROVIDER_API_KEY
+        sync: false
+      - key: TRANSLATION_PROVIDER_API_KEY
+        sync: false
+      - key: AUTH_PROVIDER_API_KEY
+        sync: false
+      - key: COMMUNICATION_PROVIDER_API_KEY
+        sync: false
+      - key: BILLING_PROVIDER_API_KEY
+        sync: false
+
+  - type: web
+    name: agrinexus-platform
+    env: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    autoDeploy: true
+    disk:
+      name: agrinexus-data
+      mountPath: /var/data
+      sizeGB: 1
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: HOST
+        value: 0.0.0.0
+      - key: PORT
+        value: 10000
+      - key: AGRINEXUS_DATA_DIR
+        value: /var/data
+      - key: AGRINEXUS_STATE_STORE
+        value: postgres
+      - key: AGRINEXUS_REQUIRE_LIVE_SERVICES
+        value: true
+      - key: AGRINEXUS_AUTOMATION_SCHEDULES
+        value: disabled
+      - key: AGRINEXUS_EVENT_TRIGGERS
+        value: disabled
+      - key: AUTH_PROVIDER
+        value: webhook
+      - key: PASSWORD_RESET_PROVIDER
+        value: webhook
+      - key: AUTH_WEBHOOK_URL
+        sync: false
+      - key: PASSWORD_RESET_WEBHOOK_URL
+        sync: false
+      - key: AUTH_PROVIDER_API_KEY
+        sync: false
+      - key: EMAIL_PROVIDER
+        sync: false
+      - key: EMAIL_WEBHOOK_URL
+        sync: false
+      - key: SMS_PROVIDER
+        sync: false
+      - key: SMS_WEBHOOK_URL
+        sync: false
+      - key: WHATSAPP_PROVIDER
+        sync: false
+      - key: WHATSAPP_WEBHOOK_URL
+        sync: false
+      - key: COMMUNICATION_PROVIDER_API_KEY
+        sync: false
+      - key: BILLING_PROVIDER
+        sync: false
+      - key: BILLING_WEBHOOK_URL
+        sync: false
+      - key: BILLING_PROVIDER_API_KEY
+        sync: false
+      - key: BILLING_PRICE_ID
+        sync: false
+      - key: BILLING_CHECKOUT_URL
+        sync: false
+      - key: DATABASE_URL
+        sync: false
+      - key: SESSION_SECRET
+        sync: false
+      - key: PASSWORD_PEPPER
+        sync: false
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: OPENAI_MODEL
+        value: gpt-5.4-mini
+      - key: AI_PROVIDER
+        value: webhook
+      - key: AI_WEBHOOK_URL
+        sync: false
+      - key: AI_PROVIDER_API_KEY
+        sync: false
+      - key: VOICE_STT_PROVIDER
+        value: webhook
+      - key: VOICE_TTS_PROVIDER
+        value: webhook
+      - key: VOICE_STT_WEBHOOK_URL
+        sync: false
+      - key: VOICE_TTS_WEBHOOK_URL
+        sync: false
+      - key: VOICE_PROVIDER_API_KEY
+        sync: false
+      - key: TRANSLATION_PROVIDER
+        value: webhook
+      - key: TRANSLATION_WEBHOOK_URL
+        sync: false
+      - key: TRANSLATION_PROVIDER_API_KEY
+        sync: false
+      - key: MAP_TILE_PROVIDER
+        value: custom-tile
+      - key: MAP_TILE_URL
+        sync: false
+      - key: LEARNING_COURSE_PROVIDER
+        value: webhook
+      - key: LEARNING_COURSE_WEBHOOK_URL
+        sync: false
+      - key: LEARNING_CERTIFICATE_PROVIDER
+        value: webhook
+      - key: LEARNING_CERTIFICATE_WEBHOOK_URL
+        sync: false
+      - key: LEARNING_PROVIDER_API_KEY
+        sync: false
+      - key: WORKFORCE_JOB_PROVIDER
+        value: webhook
+      - key: WORKFORCE_CALENDAR_PROVIDER
+        value: webhook
+      - key: WORKFORCE_NOTIFICATION_PROVIDER
+        value: webhook
+      - key: WORKFORCE_HRIS_PROVIDER
+        value: webhook
+      - key: WORKFORCE_SHIFT_PROVIDER
+        value: webhook
+      - key: WORKFORCE_JOB_WEBHOOK_URL
+        sync: false
+      - key: WORKFORCE_CALENDAR_WEBHOOK_URL
+        sync: false
+      - key: WORKFORCE_NOTIFICATION_WEBHOOK_URL
+        sync: false
+      - key: WORKFORCE_HRIS_WEBHOOK_URL
+        sync: false
+      - key: WORKFORCE_SHIFT_WEBHOOK_URL
+        sync: false
+      - key: WORKFORCE_PROVIDER_API_KEY
+        sync: false
+      - key: HEALTH_TELEHEALTH_PROVIDER
+        value: webhook
+      - key: HEALTH_NOTIFICATION_PROVIDER
+        value: webhook
+      - key: HEALTH_EHR_PROVIDER
+        value: webhook
+      - key: HEALTH_TELEHEALTH_WEBHOOK_URL
+        sync: false
+      - key: HEALTH_NOTIFICATION_WEBHOOK_URL
+        sync: false
+      - key: HEALTH_EHR_WEBHOOK_URL
+        sync: false
+      - key: HEALTH_PROVIDER_API_KEY
+        sync: false
+      - key: TRADE_PAYMENT_PROVIDER
+        value: webhook
+      - key: TRADE_LOGISTICS_PROVIDER
+        value: webhook
+      - key: TRADE_MARKET_PROVIDER
+        value: webhook
+      - key: DRONE_PROVIDER
+        value: webhook
+      - key: TRADE_PAYMENT_WEBHOOK_URL
+        sync: false
+      - key: TRADE_LOGISTICS_WEBHOOK_URL
+        sync: false
+      - key: TRADE_MARKET_WEBHOOK_URL
+        sync: false
+      - key: TRADE_PROVIDER_API_KEY
+        sync: false
+      - key: DRONE_WEBHOOK_URL
+        sync: false
+      - key: DRONE_PROVIDER_API_KEY
+        sync: false

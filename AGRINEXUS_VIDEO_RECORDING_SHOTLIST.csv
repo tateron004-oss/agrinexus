@@ -1,0 +1,13 @@
+video,section,estimated_minutes,primary_clicks,outcome
+1,Platform Opening and Login,2,"Open URL; sign in","User reaches live dashboard"
+2,Command Dashboard,4,"Dashboard; Start walkthrough; Open support ticket; Ask copilot","Guided launch and support records created"
+3,Learning and Development,4,"Start course; Complete lesson; Take quiz; Issue certificate; Accessibility supports","Learning readiness and certificate evidence"
+4,Workforce,4,"Build profile; Apply for role; Schedule interview; Assign mentor; Schedule shift","Workforce placement evidence"
+5,AFAYAI Health,5,"Start intake; Record consent; Capture vitals; Build access plan; Referral; Follow-up; Care plan","Accessible telehealth case evidence"
+6,Agritech and Agritrade,5,"Plan drone mission; Run drone scan; Assign field task; Create order; Wallet; Advance order","Drone, field, trade, and logistics evidence"
+7,Map and AI Intelligence,3,"Inspect route; Assess route risk","Route intelligence and AI map evidence"
+8,Nexus Agent AI,5,"Create plan; Execute plan; Government briefing; Voice-first mode; Run full mission","Jarvis-style agentic AI demonstration"
+9,Integrations,3,"Test all providers; Review checklist; Review events","Provider readiness and integration evidence"
+10,Admin Control Room,5,"Run health check; AI test; Approve AI; Invite subscriber; Billing checkout","Operational admin and governance evidence"
+11,Unified Profile,2,"Open Profile","Consolidated record across modules"
+12,Live Production Setup,4,"Open activation docs; Explain Render; Explain status page","Launch team understands live deployment path"
