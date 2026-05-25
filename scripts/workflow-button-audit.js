@@ -122,5 +122,12 @@ for (const [workflow, action] of workflowActions) {
 assert(app.includes("/api/agent/command"), "Voice assistant must use backend command endpoint");
 assert(app.includes("/api/voice/transcribe"), "Voice assistant must record STT sessions");
 assert(app.includes("/api/voice/speak"), "Voice assistant must record TTS sessions");
+assert(app.includes("task-chip-action"), "Workspace status chips must render as actionable buttons when they represent workflows");
+assert(app.includes("function taskActionAttrs"), "Workspace action chips must preserve workflow/provider/module data attributes");
+assert(app.includes('event.target.closest("[data-workflow][data-action]")'), "Dynamic workflow cards and chips need delegated click handling");
+assert(app.includes('event.target.closest("[data-module-test]")'), "Module engine test buttons need delegated click handling");
+assert(app.includes('event.target.closest("[data-health]")'), "Health action buttons need delegated click handling");
+assert(app.includes('event.target.closest("[data-workforce]")'), "Workforce action buttons need delegated click handling");
+assert(app.includes('event.target.closest("[data-provider]")'), "Provider chips and OpenAI controls need delegated click handling");
 
 console.log("Workflow button audit passed");

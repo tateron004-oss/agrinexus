@@ -2280,11 +2280,22 @@ function renderAgentCenter() {
   const capabilities = data.capabilities || { operational: 0, total: 0, items: [] };
   const agentMode = $("#agentMode");
   if (!agentMode) return;
+  const agentStepAction = step => {
+    const moduleName = String(step?.module || "").toLowerCase();
+    const action = String(step?.action || "").toLowerCase();
+    if (moduleName.includes("learning")) return { workflow: "learning", action: action.includes("lesson") ? "lesson" : "start" };
+    if (moduleName.includes("workforce")) return { workflow: "workforce", action: action.includes("shift") ? "shift" : action.includes("mentor") ? "mentor" : action.includes("interview") ? "interview" : action.includes("apply") ? "apply-role" : "build-profile", roleId: firstEligibleRole()?.id };
+    if (moduleName.includes("health") || moduleName.includes("telehealth")) return { workflow: "health", action: action.includes("care") ? "careplan" : action.includes("representative") ? "representative" : action.includes("safety") ? "safety" : "intake" };
+    if (moduleName.includes("trade")) return { workflow: "trade", action: action.includes("drone") ? "drone" : action.includes("wallet") || action.includes("payment") ? "wallet" : action.includes("advance") ? "advance" : "order", productId: firstProduct()?.id };
+    if (moduleName.includes("map")) return { workflow: "ai", action: action.includes("risk") ? "route" : "inspector" };
+    if (moduleName.includes("ai")) return { workflow: "ai", action: "command" };
+    return { workflow: "ai", action: "command" };
+  };
   agentMode.textContent = data.profile.aiProvider || data.providers.find(item => item.id === "openai")?.mode || "ready";
   $("#agentPlanStatus").textContent = plan?.status || "none";
   $("#agentPlanPanel").innerHTML = plan
-    ? plan.steps.map(step => taskItem(`${step.module}: ${step.action}`, step.detail, step.status === "executed" ? "done" : "active", step.tool)).join("")
-    : taskItem("No agent plan yet", "Create a mission plan to see cross-module tool steps.", "pending", "Plan");
+    ? plan.steps.map(step => taskItem(`${step.module}: ${step.action}`, step.detail, step.status === "executed" ? "done" : "active", step.tool, agentStepAction(step))).join("")
+    : taskItem("No agent plan yet", "Create a mission plan to see cross-module tool steps.", "pending", "Plan", { workflow: "ai", action: "command" });
   $("#agentToolPanel").innerHTML = [
     row("Learning", "course catalog, lesson progress, quizzes, certificates"),
     row("Workforce", "job matching, applications, interviews, mentors, shifts"),
@@ -2322,14 +2333,16 @@ function renderAgentCenter() {
     item.title,
     item.detail,
     item.status === "operational" ? "ready" : item.status === "ready" ? "pending" : "blocked",
-    item.status === "operational" ? "Live" : item.status === "ready" ? "Ready" : "Provider"
+    item.status === "operational" ? "Live" : item.status === "ready" ? "Ready" : "Provider",
+    String(item.title || "").toLowerCase().includes("provider") ? { workflow: "integrations", action: "test-all" } : { workflow: "ai", action: "command" }
   )).join("");
   $("#automationScore").textContent = `${automation.readyCount || 0}/${automation.total || 5}`;
   $("#automationReadinessPanel").innerHTML = (automation.items || []).map(item => taskItem(
     item.title,
     item.detail,
     item.status === "ready" ? "ready" : "blocked",
-    item.status === "ready" ? "Ready" : "Needs setup"
+    item.status === "ready" ? "Ready" : "Needs setup",
+    { workflow: "admin", action: "readiness" }
   )).join("");
   renderVoiceAssistant();
 }
@@ -2539,11 +2552,30 @@ function renderProcessBoard(selector, steps) {
   `).join("");
 }
 
-function taskItem(title, detail, status = "ready", label = "Ready") {
+function taskActionAttrs(action = {}) {
+  if (!action || !Object.keys(action).length) return "";
+  const attrs = [];
+  if (action.workflow) attrs.push(`data-workflow="${action.workflow}"`);
+  if (action.action) attrs.push(`data-action="${action.action}"`);
+  if (action.section) attrs.push(`data-jump="${action.section}"`);
+  if (action.ai) attrs.push(`data-ai="${action.ai}"`);
+  if (action.mapAction) attrs.push(`data-map-action="${action.mapAction}"`);
+  if (action.providerId) attrs.push(`data-provider="${action.providerId}"`);
+  if (action.module) attrs.push(`data-module-test="${action.module}"`);
+  if (action.roleId) attrs.push(`data-role-id="${action.roleId}"`);
+  if (action.productId) attrs.push(`data-product-id="${action.productId}"`);
+  return attrs.join(" ");
+}
+
+function taskItem(title, detail, status = "ready", label = "Ready", action = null) {
+  const actionAttrs = taskActionAttrs(action);
+  const statusControl = actionAttrs
+    ? `<button class="task-chip-action" type="button" ${actionAttrs}>${translateText(label)}</button>`
+    : `<small>${translateText(label)}</small>`;
   return `
     <div class="task-item ${status}">
       <div><strong>${translateText(title)}</strong><span>${translateText(detail)}</span></div>
-      <small>${translateText(label)}</small>
+      ${statusControl}
     </div>
   `;
 }
@@ -3066,10 +3098,10 @@ function render() {
       title: "Placement Desk",
       summary: "A coordinator can see exactly what is blocking or moving the candidate toward paid work.",
       items: [
-        taskItem("Profile verification", (data.profile.workforceBadges || []).includes("Profile Verified") ? "Candidate profile verified against learning record" : "Verify profile to unlock placement steps", (data.profile.workforceBadges || []).includes("Profile Verified") ? "ready" : "pending", (data.profile.workforceBadges || []).includes("Profile Verified") ? "Done" : "Open"),
-        taskItem("Application pipeline", `${(data.profile.applications || []).length} submitted application(s)`, (data.profile.applications || []).length ? "ready" : "pending", "Apply"),
-        taskItem("Interview", `${data.profile.interviews || 0} interview(s) scheduled`, data.profile.interviews ? "ready" : "pending", "Calendar"),
-        taskItem("Shift schedule", `${(data.profile.shiftSchedule || []).length} shift(s), ${money(data.profile.earnings || 0)} earnings`, (data.profile.shiftSchedule || []).length ? "live" : "pending", "Shift")
+        taskItem("Profile verification", (data.profile.workforceBadges || []).includes("Profile Verified") ? "Candidate profile verified against learning record" : "Verify profile to unlock placement steps", (data.profile.workforceBadges || []).includes("Profile Verified") ? "ready" : "pending", (data.profile.workforceBadges || []).includes("Profile Verified") ? "Done" : "Open", { workflow: "workforce", action: "build-profile" }),
+        taskItem("Application pipeline", `${(data.profile.applications || []).length} submitted application(s)`, (data.profile.applications || []).length ? "ready" : "pending", "Apply", { workflow: "workforce", action: "apply-role", roleId: firstEligibleRole()?.id }),
+        taskItem("Interview", `${data.profile.interviews || 0} interview(s) scheduled`, data.profile.interviews ? "ready" : "pending", "Calendar", { workflow: "workforce", action: "interview" }),
+        taskItem("Shift schedule", `${(data.profile.shiftSchedule || []).length} shift(s), ${money(data.profile.earnings || 0)} earnings`, (data.profile.shiftSchedule || []).length ? "live" : "pending", "Shift", { workflow: "workforce", action: "shift" })
       ]
     },
     {
@@ -3080,7 +3112,7 @@ function render() {
       items: data.roles.slice(0, 4).map(role => {
         const gate = roleGate(role);
         const missing = gate.missingReadiness ? `${gate.missingReadiness}% readiness gap` : "Readiness met";
-        return taskItem(role.title, `${role.country} - ${missing}`, gate.eligible ? "ready" : "blocked", gate.eligible ? "Eligible" : "Locked");
+        return taskItem(role.title, `${role.country} - ${missing}`, gate.eligible ? "ready" : "blocked", gate.eligible ? "Apply" : "Review", { workflow: "workforce", action: "apply-role", roleId: role.id });
       })
     },
     {
@@ -3089,10 +3121,10 @@ function render() {
       title: "Support & Handoff",
       summary: "Mentor, calendar, notification, and HRIS events show workforce support is more than a card click.",
       items: [
-        taskItem("Mentor", data.profile.mentor === "Assigned" ? "Mentor matched for readiness coaching" : "Assign mentor for role fit", data.profile.mentor === "Assigned" ? "ready" : "pending", data.profile.mentor),
-        taskItem("Next shift", data.profile.nextShift || "No shift scheduled", data.profile.nextShift ? "live" : "pending", "Schedule"),
-        taskItem("HRIS sync", integrationActionComplete("application.submitted") || integrationActionComplete("mentor.assigned") ? "Workforce provider event recorded" : "Submit application or mentor assignment", integrationActionComplete("application.submitted") ? "ready" : "pending", "HRIS"),
-        taskItem("Notifications", integrationActionComplete("notification.sent") ? "Interview notification recorded" : "Schedule interview to send notification", integrationActionComplete("notification.sent") ? "ready" : "pending", "Notify")
+        taskItem("Mentor", data.profile.mentor === "Assigned" ? "Mentor matched for readiness coaching" : "Assign mentor for role fit", data.profile.mentor === "Assigned" ? "ready" : "pending", data.profile.mentor, { workflow: "workforce", action: "mentor" }),
+        taskItem("Next shift", data.profile.nextShift || "No shift scheduled", data.profile.nextShift ? "live" : "pending", "Schedule", { workflow: "workforce", action: "shift" }),
+        taskItem("HRIS sync", integrationActionComplete("application.submitted") || integrationActionComplete("mentor.assigned") ? "Workforce provider event recorded" : "Submit application or mentor assignment", integrationActionComplete("application.submitted") ? "ready" : "pending", "HRIS", { module: "Workforce" }),
+        taskItem("Notifications", integrationActionComplete("notification.sent") ? "Interview notification recorded" : "Schedule interview to send notification", integrationActionComplete("notification.sent") ? "ready" : "pending", "Notify", { workflow: "workforce", action: "interview" })
       ]
     }
   ]);
@@ -3166,10 +3198,10 @@ function render() {
       title: "Patient Access Desk",
       summary: "The health module behaves like a supervised intake queue with escalation and care-plan outcomes.",
       items: [
-        taskItem("Active intake", activeIntake?.patientRef || "No active intake", activeIntake ? "live" : "pending", activeIntake?.riskLevel || "Open"),
-        taskItem("Representative", activeIntake?.representativeStatus || "Not connected", activeIntake?.representativeStatus === "Connected" ? "ready" : "pending", "Human"),
-        taskItem("Safety review", safetyReviews[0]?.recommendation || "Run a safety review before autonomous guidance", safetyReviews.length ? "ready" : "pending", safetyReviews.length ? "Done" : "Review"),
-        taskItem("Care plan", carePlans[0]?.text || "Generate a care plan from the active intake", carePlans.length ? "live" : "pending", carePlans[0]?.provider || "AI")
+        taskItem("Active intake", activeIntake?.patientRef || "No active intake", activeIntake ? "live" : "pending", activeIntake?.riskLevel || "Open", { workflow: "health", action: "intake" }),
+        taskItem("Representative", activeIntake?.representativeStatus || "Not connected", activeIntake?.representativeStatus === "Connected" ? "ready" : "pending", "Human", { workflow: "health", action: "representative" }),
+        taskItem("Safety review", safetyReviews[0]?.recommendation || "Run a safety review before autonomous guidance", safetyReviews.length ? "ready" : "pending", safetyReviews.length ? "Done" : "Review", { workflow: "health", action: "safety" }),
+        taskItem("Care plan", carePlans[0]?.text || "Generate a care plan from the active intake", carePlans.length ? "live" : "pending", carePlans[0]?.provider || "AI", { workflow: "health", action: "careplan" })
       ]
     },
     {
@@ -3178,12 +3210,12 @@ function render() {
       title: "Case Records",
       summary: "Intakes, safety reviews, and care plans create auditable records for the reviewer.",
       items: [
-        taskItem("Telehealth provider", integrationActionComplete("intake.created") ? "Intake provider event recorded" : "Start an intake to record provider event", integrationActionComplete("intake.created") ? "ready" : "pending", "Telehealth"),
-        taskItem("Notification provider", integrationActionComplete("representative.connected") ? "Representative notification recorded" : "Connect representative to record event", integrationActionComplete("representative.connected") ? "ready" : "pending", "Notify"),
-        taskItem("EHR provider", integrationActionComplete("care_plan.synced") || integrationActionComplete("safety.review") ? "Care or safety event synced" : "Run safety or care plan", integrationActionComplete("care_plan.synced") ? "ready" : "pending", "EHR"),
-        taskItem("Consent + vitals", telehealthConsents.length && telehealthVitals.length ? "Consent and triage vitals captured" : "Record consent and capture vitals", telehealthConsents.length && telehealthVitals.length ? "ready" : "pending", "Clinical"),
-        taskItem("Referral + follow-up", telehealthReferrals.length && telehealthFollowUps.length ? "Referral sent and callback scheduled" : "Create referral and schedule follow-up", telehealthReferrals.length && telehealthFollowUps.length ? "ready" : "pending", "Continuity"),
-        taskItem("AI oversight", data.profile.aiActivity || "No AI guidance yet", data.profile.aiActivity ? "live" : "pending", data.profile.aiProvider || "Fallback")
+        taskItem("Telehealth provider", integrationActionComplete("intake.created") ? "Intake provider event recorded" : "Start an intake to record provider event", integrationActionComplete("intake.created") ? "ready" : "pending", "Telehealth", { workflow: "health", action: "intake" }),
+        taskItem("Notification provider", integrationActionComplete("representative.connected") ? "Representative notification recorded" : "Connect representative to record event", integrationActionComplete("representative.connected") ? "ready" : "pending", "Notify", { workflow: "health", action: "representative" }),
+        taskItem("EHR provider", integrationActionComplete("care_plan.synced") || integrationActionComplete("safety.review") ? "Care or safety event synced" : "Run safety or care plan", integrationActionComplete("care_plan.synced") ? "ready" : "pending", "EHR", { workflow: "health", action: "careplan" }),
+        taskItem("Consent + vitals", telehealthConsents.length && telehealthVitals.length ? "Consent and triage vitals captured" : "Record consent and capture vitals", telehealthConsents.length && telehealthVitals.length ? "ready" : "pending", "Clinical", { workflow: "health", action: telehealthConsents.length ? "vitals" : "consent" }),
+        taskItem("Referral + follow-up", telehealthReferrals.length && telehealthFollowUps.length ? "Referral sent and callback scheduled" : "Create referral and schedule follow-up", telehealthReferrals.length && telehealthFollowUps.length ? "ready" : "pending", "Continuity", { workflow: "health", action: telehealthReferrals.length ? "followup" : "referral" }),
+        taskItem("AI oversight", data.profile.aiActivity || "No AI guidance yet", data.profile.aiActivity ? "live" : "pending", data.profile.aiProvider || "Fallback", { workflow: "ai", action: "careplan" })
       ]
     },
     {
@@ -3192,10 +3224,10 @@ function render() {
       title: "Public Health Context",
       summary: "Country heat, queue, safety, and facility load remain visible while care work is active.",
       items: [
-        taskItem("Heat index", `${country.heat} C`, country.heat >= 38 ? "blocked" : "ready", "Heat"),
-        taskItem("Facilities", `${country.facilities} active facilities`, "ready", "Network"),
-        taskItem("Patients", `${country.patients.toLocaleString()} patient records`, "live", "Volume"),
-        taskItem("Data quality", `${country.quality}% quality, ${country.safety}% safety override`, "ready", "Governed")
+        taskItem("Heat index", `${country.heat} C`, country.heat >= 38 ? "blocked" : "ready", "Heat", { workflow: "health", action: "safety" }),
+        taskItem("Facilities", `${country.facilities} active facilities`, "ready", "Network", { mapAction: "focus" }),
+        taskItem("Patients", `${country.patients.toLocaleString()} patient records`, "live", "Volume", { workflow: "health", action: "intake" }),
+        taskItem("Data quality", `${country.quality}% quality, ${country.safety}% safety override`, "ready", "Governed", { workflow: "health", action: "safety" })
       ]
     }
   ]);
@@ -3285,10 +3317,10 @@ function render() {
       title: "Market Operations Queue",
       summary: "The trade module shows order creation, payment, logistics, and buyer-market activity together.",
       items: [
-        taskItem("Latest order", latestOrder ? `${latestOrder.orderNumber} for ${latestOrder.product}` : "No order created yet", latestOrder ? "live" : "pending", latestOrder?.stage || "Create"),
-        taskItem("Route stage", latestOrder ? `${latestOrder.stage} at ${latestOrder.checkpoint}` : data.profile.routeStage, latestOrder ? "ready" : "pending", "Logistics"),
-        taskItem("Wallet balance", `${money(data.profile.wallet || 0)} across ${data.profile.walletTransactions.length} transaction(s)`, data.profile.walletTransactions.length ? "ready" : "pending", "Wallet"),
-        taskItem("Buyer market", `${data.products.length} product lots available`, "live", "Market")
+        taskItem("Latest order", latestOrder ? `${latestOrder.orderNumber} for ${latestOrder.product}` : "No order created yet", latestOrder ? "live" : "pending", latestOrder?.stage || "Create", { workflow: "trade", action: latestOrder ? "advance" : "order", productId: firstProduct()?.id }),
+        taskItem("Route stage", latestOrder ? `${latestOrder.stage} at ${latestOrder.checkpoint}` : data.profile.routeStage, latestOrder ? "ready" : "pending", "Logistics", { workflow: "trade", action: "advance" }),
+        taskItem("Wallet balance", `${money(data.profile.wallet || 0)} across ${data.profile.walletTransactions.length} transaction(s)`, data.profile.walletTransactions.length ? "ready" : "pending", "Wallet", { workflow: "trade", action: "wallet" }),
+        taskItem("Buyer market", `${data.products.length} product lots available`, "live", "Market", { workflow: "trade", action: "order", productId: firstProduct()?.id })
       ]
     },
     {
@@ -3297,10 +3329,10 @@ function render() {
       title: "Shipment Lane",
       summary: "Orders move checkpoint by checkpoint, and the map context follows the active route.",
       items: [
-        taskItem("Current checkpoint", latestOrder?.checkpoint || data.profile.activeCheckpoint, "live", data.profile.routeStage),
-        taskItem("Timeline", latestOrder?.timeline?.[0]?.label || "No timeline yet", latestOrder ? "ready" : "pending", latestOrder ? `${latestOrder.timeline.length} event(s)` : "None"),
-        taskItem("Logistics provider", integrationActionComplete("checkpoint.updated") ? "Checkpoint provider event recorded" : "Advance an order to record logistics", integrationActionComplete("checkpoint.updated") ? "ready" : "pending", "Provider"),
-        taskItem("Route AI", aiRunComplete("route") ? "Route risk analysis recorded" : "Run route AI for shipment risk", aiRunComplete("route") ? "ready" : "pending", "AI")
+        taskItem("Current checkpoint", latestOrder?.checkpoint || data.profile.activeCheckpoint, "live", data.profile.routeStage, { mapAction: "focus" }),
+        taskItem("Timeline", latestOrder?.timeline?.[0]?.label || "No timeline yet", latestOrder ? "ready" : "pending", latestOrder ? `${latestOrder.timeline.length} event(s)` : "None", { workflow: "trade", action: "advance" }),
+        taskItem("Logistics provider", integrationActionComplete("checkpoint.updated") ? "Checkpoint provider event recorded" : "Advance an order to record logistics", integrationActionComplete("checkpoint.updated") ? "ready" : "pending", "Provider", { workflow: "trade", action: "advance" }),
+        taskItem("Route AI", aiRunComplete("route") ? "Route risk analysis recorded" : "Run route AI for shipment risk", aiRunComplete("route") ? "ready" : "pending", "AI", { workflow: "ai", action: "route" })
       ]
     },
     {
@@ -3309,13 +3341,13 @@ function render() {
       title: "Product & Payment Evidence",
       summary: "Products, wallet transactions, and provider events make the trading workflow reviewable.",
       items: [
-        taskItem("Market provider", integrationActionComplete("order.created") ? "Order creation event recorded" : "Create order to record market event", integrationActionComplete("order.created") ? "ready" : "pending", "Market"),
-        taskItem("Payment provider", integrationActionComplete("wallet.transaction") ? "Wallet provider event recorded" : "Post wallet payment", integrationActionComplete("wallet.transaction") ? "ready" : "pending", "Payment"),
-        taskItem("Price AI", aiRunComplete("price") ? "Price analysis recorded" : "Run price AI", aiRunComplete("price") ? "ready" : "pending", "AI"),
-        taskItem("Trade events", (data.profile.tradeEvents || [])[0]?.label || "No trade events yet", (data.profile.tradeEvents || []).length ? "live" : "pending", "Ledger"),
-        taskItem("Drone mission", latestDroneMission ? `${latestDroneMission.productName}: ${latestDroneMission.status}` : "Plan a compliant drone mission", latestDroneMission ? "ready" : "pending", "Flight"),
-        taskItem("Drone intelligence", latestDroneScan ? `${latestDroneScan.productName}: ${latestDroneScan.cropHealthScore}% health` : "Run drone scan for field evidence", latestDroneScan ? "live" : "pending", "Drone"),
-        taskItem("Field intervention", latestFieldIntervention ? `${latestFieldIntervention.productName}: ${latestFieldIntervention.priority}` : "Assign field task from drone evidence", latestFieldIntervention ? "ready" : "pending", "Task")
+        taskItem("Market provider", integrationActionComplete("order.created") ? "Order creation event recorded" : "Create order to record market event", integrationActionComplete("order.created") ? "ready" : "pending", "Market", { workflow: "trade", action: "order", productId: firstProduct()?.id }),
+        taskItem("Payment provider", integrationActionComplete("wallet.transaction") ? "Wallet provider event recorded" : "Post wallet payment", integrationActionComplete("wallet.transaction") ? "ready" : "pending", "Payment", { workflow: "trade", action: "wallet" }),
+        taskItem("Price AI", aiRunComplete("price") ? "Price analysis recorded" : "Run price AI", aiRunComplete("price") ? "ready" : "pending", "AI", { workflow: "ai", action: "price" }),
+        taskItem("Trade events", (data.profile.tradeEvents || [])[0]?.label || "No trade events yet", (data.profile.tradeEvents || []).length ? "live" : "pending", "Ledger", { workflow: "trade", action: "advance" }),
+        taskItem("Drone mission", latestDroneMission ? `${latestDroneMission.productName}: ${latestDroneMission.status}` : "Plan a compliant drone mission", latestDroneMission ? "ready" : "pending", "Flight", { workflow: "trade", action: "drone-plan", productId: firstProduct()?.id }),
+        taskItem("Drone intelligence", latestDroneScan ? `${latestDroneScan.productName}: ${latestDroneScan.cropHealthScore}% health` : "Run drone scan for field evidence", latestDroneScan ? "live" : "pending", "Drone", { workflow: "trade", action: "drone", productId: firstProduct()?.id }),
+        taskItem("Field intervention", latestFieldIntervention ? `${latestFieldIntervention.productName}: ${latestFieldIntervention.priority}` : "Assign field task from drone evidence", latestFieldIntervention ? "ready" : "pending", "Task", { workflow: "trade", action: "drone-intervention", productId: firstProduct()?.id })
       ]
     }
   ]);
@@ -3363,10 +3395,10 @@ function render() {
       title: "Route Operations Desk",
       summary: "The map is tied to health, logistics, country context, and AI recommendations.",
       items: [
-        taskItem("Active country", `${country.name}: ${country.queue}`, "live", country.risk),
-        taskItem("Active route", `${route.name} with ${route.checkpoints.length} checkpoint(s)`, "ready", data.profile.routeStage),
-        taskItem("Current checkpoint", data.profile.activeCheckpoint, "live", "Focused"),
-        taskItem("Facilities layer", `${country.facilities} facilities near the active country`, "ready", "Layer"),
+        taskItem("Active country", `${country.name}: ${country.queue}`, "live", country.risk, { mapAction: "focus" }),
+        taskItem("Active route", `${route.name} with ${route.checkpoints.length} checkpoint(s)`, "ready", data.profile.routeStage, { workflow: "ai", action: "route" }),
+        taskItem("Current checkpoint", data.profile.activeCheckpoint, "live", "Focused", { mapAction: "focus" }),
+        taskItem("Facilities layer", `${country.facilities} facilities near the active country`, "ready", "Layer", { mapAction: "focus" }),
         `<button class="primary workspace-action" type="button" data-map-action="command">${translateText("Run operations desk")}</button>`
       ]
     },
@@ -3376,10 +3408,10 @@ function render() {
       title: "Intelligence Runs",
       summary: "AI runs produce map insights and a visible audit trail instead of a static map screen.",
       items: [
-        taskItem("Command analysis", aiRunComplete("command") ? "Command center run recorded" : "Run command center", aiRunComplete("command") ? "ready" : "pending", "Command"),
-        taskItem("Inspector analysis", aiRunComplete("inspector") ? "Route inspection recorded" : "Run route inspector", aiRunComplete("inspector") ? "ready" : "pending", "Inspect"),
-        taskItem("Route risk", aiRunComplete("route") ? "Route risk recorded" : "Assess route risk", aiRunComplete("route") ? "ready" : "pending", "Risk"),
-        taskItem("Latest insight", (data.profile.mapInsights || [])[0]?.detail || "No insight yet", (data.profile.mapInsights || []).length ? "live" : "pending", "Insight"),
+        taskItem("Command analysis", aiRunComplete("command") ? "Command center run recorded" : "Run command center", aiRunComplete("command") ? "ready" : "pending", "Command", { workflow: "ai", action: "command" }),
+        taskItem("Inspector analysis", aiRunComplete("inspector") ? "Route inspection recorded" : "Run route inspector", aiRunComplete("inspector") ? "ready" : "pending", "Inspect", { workflow: "ai", action: "inspector" }),
+        taskItem("Route risk", aiRunComplete("route") ? "Route risk recorded" : "Assess route risk", aiRunComplete("route") ? "ready" : "pending", "Risk", { workflow: "ai", action: "route" }),
+        taskItem("Latest insight", (data.profile.mapInsights || [])[0]?.detail || "No insight yet", (data.profile.mapInsights || []).length ? "live" : "pending", "Insight", { workflow: "ai", action: "inspector" }),
         `<button class="primary workspace-action" type="button" data-map-action="inspector">${translateText("Run intelligence inspection")}</button>`,
         `<button class="workspace-action" type="button" data-map-action="route">${translateText("Create geospatial evidence")}</button>`
       ]
@@ -3390,10 +3422,10 @@ function render() {
       title: "Geospatial Evidence",
       summary: "Country markers, facilities, routes, and provider status give the map operational context.",
       items: [
-        taskItem("Tile provider", mapsProvider.detail || mapsProvider.status || "Ready", mapsProvider.status === "needs-credentials" ? "blocked" : "ready", mapsProvider.status || "Ready"),
-        taskItem("Country markers", `${data.countries.length} country markers available`, "ready", "Markers"),
-        taskItem("Route lines", `${data.routes.length} route corridor(s) available`, "ready", "Routes"),
-        taskItem("AI provider", openAiProvider.detail || data.profile.aiProvider || "Fallback simulation", openAiProvider.status === "needs-credentials" ? "blocked" : "ready", openAiProvider.mode || "AI"),
+        taskItem("Tile provider", mapsProvider.detail || mapsProvider.status || "Ready", mapsProvider.status === "needs-credentials" ? "blocked" : "ready", mapsProvider.status || "Ready", { providerId: "maps" }),
+        taskItem("Country markers", `${data.countries.length} country markers available`, "ready", "Markers", { mapAction: "focus" }),
+        taskItem("Route lines", `${data.routes.length} route corridor(s) available`, "ready", "Routes", { workflow: "ai", action: "route" }),
+        taskItem("AI provider", openAiProvider.detail || data.profile.aiProvider || "Fallback simulation", openAiProvider.status === "needs-credentials" ? "blocked" : "ready", openAiProvider.mode || "AI", { providerId: "openai" }),
         `<button class="primary workspace-action" type="button" data-map-action="focus">${translateText("Focus map context")}</button>`,
         `<button class="workspace-action" type="button" data-map-action="route">${translateText("Assess route risk")}</button>`
       ]
@@ -3437,10 +3469,10 @@ function render() {
       title: "Connection Workbench",
       summary: "Each provider can be tested individually or as a complete workflow engine set.",
       items: [
-        taskItem("Connected providers", `${data.providers.filter(provider => provider.status === "connected").length}/${data.providers.length} connected`, "live", "Status"),
-        taskItem("Needs credentials", `${data.providers.filter(provider => provider.status === "needs-credentials").length} provider(s) need credentials`, data.providers.some(provider => provider.status === "needs-credentials") ? "blocked" : "ready", "Credentials"),
-        taskItem("Test all", integrationActionComplete("provider.test_all") ? "All-provider test event recorded" : "Run full provider test", integrationActionComplete("provider.test_all") ? "ready" : "pending", "Test"),
-        taskItem("Latest event", (data.profile.integrationEvents || [])[0]?.detail || "No integration event yet", (data.profile.integrationEvents || []).length ? "live" : "pending", "Event")
+        taskItem("Connected providers", `${data.providers.filter(provider => provider.status === "connected").length}/${data.providers.length} connected`, "live", "Status", { workflow: "integrations", action: "focus-cards" }),
+        taskItem("Needs credentials", `${data.providers.filter(provider => provider.status === "needs-credentials").length} provider(s) need credentials`, data.providers.some(provider => provider.status === "needs-credentials") ? "blocked" : "ready", "Credentials", { workflow: "admin", action: "readiness" }),
+        taskItem("Test all", integrationActionComplete("provider.test_all") ? "All-provider test event recorded" : "Run full provider test", integrationActionComplete("provider.test_all") ? "ready" : "pending", "Test", { workflow: "integrations", action: "test-all" }),
+        taskItem("Latest event", (data.profile.integrationEvents || [])[0]?.detail || "No integration event yet", (data.profile.integrationEvents || []).length ? "live" : "pending", "Event", { workflow: "integrations", action: "focus-cards" })
       ]
     },
     {
@@ -3448,7 +3480,7 @@ function render() {
       metric: readiness.status,
       title: "Module Activation Desk",
       summary: "Live-readiness checks are grouped by module so reviewers can see what is production-shaped.",
-      items: (readiness.moduleReadiness || []).slice(0, 4).map(module => taskItem(module.module, `${module.readyCount}/${module.total} live check(s) ready`, module.readyCount === module.total ? "ready" : "pending", module.status))
+      items: (readiness.moduleReadiness || []).slice(0, 4).map(module => taskItem(module.module, `${module.readyCount}/${module.total} live check(s) ready`, module.readyCount === module.total ? "ready" : "pending", module.status, { module: module.module }))
     },
     {
       eyebrow: "Environment",
@@ -3456,10 +3488,10 @@ function render() {
       title: "Setup Evidence",
       summary: "Preflight status, persistence, AI, and provider modes are visible from one operational view.",
       items: [
-        taskItem("Persistence", data.providers.find(item => item.id === "database")?.detail || "Database status unknown", data.providers.find(item => item.id === "database")?.status === "connected" ? "ready" : "pending", "DB"),
-        taskItem("AI provider", data.providers.find(item => item.id === "openai")?.detail || "AI provider status unknown", data.providers.find(item => item.id === "openai")?.status === "connected" ? "ready" : "pending", "AI"),
-        taskItem("Next setup", readiness.nextSteps[0] || "Production readiness checks are complete", readiness.nextSteps.length ? "pending" : "ready", readiness.nextSteps.length ? "Todo" : "Done"),
-        taskItem("Audit depth", `${data.profile.integrationEvents.length} integration event(s) retained`, "live", "Audit")
+        taskItem("Persistence", data.providers.find(item => item.id === "database")?.detail || "Database status unknown", data.providers.find(item => item.id === "database")?.status === "connected" ? "ready" : "pending", "DB", { providerId: "database" }),
+        taskItem("AI provider", data.providers.find(item => item.id === "openai")?.detail || "AI provider status unknown", data.providers.find(item => item.id === "openai")?.status === "connected" ? "ready" : "pending", "AI", { providerId: "openai" }),
+        taskItem("Next setup", readiness.nextSteps[0] || "Production readiness checks are complete", readiness.nextSteps.length ? "pending" : "ready", readiness.nextSteps.length ? "Todo" : "Done", { workflow: "admin", action: "readiness" }),
+        taskItem("Audit depth", `${data.profile.integrationEvents.length} integration event(s) retained`, "live", "Audit", { workflow: "admin", action: "audit" })
       ]
     }
   ]);
@@ -3524,10 +3556,10 @@ function render() {
       title: "Operator Queue",
       summary: "Admin work is framed around health checks, module status, audit events, and readiness.",
       items: [
-        taskItem("Health check", integrationActionComplete("admin.health_check") ? "Platform health check recorded" : "Run platform health check", integrationActionComplete("admin.health_check") ? "ready" : "pending", "Check"),
-        taskItem("Production readiness", `${readiness.readyCount}/${readiness.total} checks ready`, readiness.readyCount === readiness.total ? "ready" : "pending", readiness.status),
-        taskItem("Audit feed", `${(data.admin?.audit || []).length} audit item(s) visible`, (data.admin?.audit || []).length ? "live" : "pending", "Audit"),
-        taskItem("Users", `${data.admin?.users?.length || 0} platform user(s)`, "ready", "Users")
+        taskItem("Health check", integrationActionComplete("admin.health_check") ? "Platform health check recorded" : "Run platform health check", integrationActionComplete("admin.health_check") ? "ready" : "pending", "Check", { workflow: "admin", action: "health-check" }),
+        taskItem("Production readiness", `${readiness.readyCount}/${readiness.total} checks ready`, readiness.readyCount === readiness.total ? "ready" : "pending", readiness.status, { workflow: "admin", action: "readiness" }),
+        taskItem("Audit feed", `${(data.admin?.audit || []).length} audit item(s) visible`, (data.admin?.audit || []).length ? "live" : "pending", "Audit", { workflow: "admin", action: "audit" }),
+        taskItem("Users", `${data.admin?.users?.length || 0} platform user(s)`, "ready", "Users", { workflow: "admin", action: "modules" })
       ]
     },
     {
@@ -3535,7 +3567,7 @@ function render() {
       metric: `${data.admin?.modules?.length || 0} modules`,
       title: "Module Health Desk",
       summary: "Every core domain reports record counts so empty placeholder modules are easy to spot.",
-      items: (data.admin?.modules || []).slice(0, 5).map(module => taskItem(module.name, `${module.records} record(s) in backend state`, module.records ? "ready" : "pending", module.status))
+      items: (data.admin?.modules || []).slice(0, 5).map(module => taskItem(module.name, `${module.records} record(s) in backend state`, module.records ? "ready" : "pending", module.status, { workflow: "integrations", action: "test-module", module: module.name }))
     },
     {
       eyebrow: "Governance",
@@ -3543,10 +3575,10 @@ function render() {
       title: "Audit & Activity Evidence",
       summary: "Workflow actions leave traces in recent activity, provider events, and admin audit views.",
       items: [
-        taskItem("Latest activity", data.profile.activity[0] || "No activity yet", data.profile.activity.length ? "live" : "pending", "Activity"),
-        taskItem("Latest integration", (data.profile.integrationEvents || [])[0]?.action || "No integration yet", (data.profile.integrationEvents || []).length ? "live" : "pending", "Provider"),
-        taskItem("Latest admin audit", (data.admin?.audit || [])[0]?.detail || "No admin audit yet", (data.admin?.audit || []).length ? "live" : "pending", "Admin"),
-        taskItem("Next setup", readiness.nextSteps[0] || "No remaining setup steps", readiness.nextSteps.length ? "pending" : "ready", readiness.nextSteps.length ? "Todo" : "Done")
+        taskItem("Latest activity", data.profile.activity[0] || "No activity yet", data.profile.activity.length ? "live" : "pending", "Activity", { workflow: "profile", action: "open" }),
+        taskItem("Latest integration", (data.profile.integrationEvents || [])[0]?.action || "No integration yet", (data.profile.integrationEvents || []).length ? "live" : "pending", "Provider", { workflow: "integrations", action: "focus-cards" }),
+        taskItem("Latest admin audit", (data.admin?.audit || [])[0]?.detail || "No admin audit yet", (data.admin?.audit || []).length ? "live" : "pending", "Admin", { workflow: "admin", action: "audit" }),
+        taskItem("Next setup", readiness.nextSteps[0] || "No remaining setup steps", readiness.nextSteps.length ? "pending" : "ready", readiness.nextSteps.length ? "Todo" : "Done", { workflow: "admin", action: "readiness" })
       ]
     }
   ]);
@@ -4060,9 +4092,6 @@ function workflowConfig(workflow, action, element) {
       ]
     });
   }
-  if (workflow === "support") return mutate("/api/support/ticket", { subject: "Launch readiness support", module: "Platform", priority: "standard" }, "Support ticket opened");
-  if (workflow === "onboarding") return mutate("/api/onboarding/start", { scenario: "first-live-pilot" }, "Walkthrough started");
-  if (workflow === "subscriber") return mutate("/api/admin/subscriber", { name: "Pilot subscriber", email: "pilot-user@example.com", plan: "pilot", seats: 1 }, "Subscriber invited");
   if (workflow === "admin") {
     if (action === "health-check") {
       return simpleWorkflowConfig({
@@ -4966,6 +4995,21 @@ async function runWowDemo() {
 
 function bindStatic() {
   document.addEventListener("click", event => {
+    const workflowButton = event.target.closest("[data-workflow][data-action]");
+    if (workflowButton) {
+      event.preventDefault();
+      event.stopPropagation();
+      const config = workflowConfig(workflowButton.dataset.workflow, workflowButton.dataset.action, workflowButton);
+      if (config) openWorkflowModal(config);
+      return;
+    }
+    const moduleTestButton = event.target.closest("[data-module-test]");
+    if (moduleTestButton) {
+      event.preventDefault();
+      event.stopPropagation();
+      openWorkflowModal(workflowConfig("integrations", "test-module", { dataset: { module: moduleTestButton.dataset.moduleTest } }));
+      return;
+    }
     const providerTestButton = event.target.closest(".provider-test");
     if (providerTestButton) {
       event.preventDefault();
@@ -4977,6 +5021,13 @@ function bindStatic() {
         status.textContent = `${provider?.name || "OpenAI"} provider test opened. Confirm to test the live AI engine and record evidence.`;
       }
       openWorkflowModal(workflowConfig("integrations", "test-provider", { dataset: { providerId } }));
+      return;
+    }
+    const providerChip = event.target.closest("[data-provider]");
+    if (providerChip && !providerChip.classList.contains("provider-test")) {
+      event.preventDefault();
+      event.stopPropagation();
+      openWorkflowModal(workflowConfig("integrations", "test-provider", { dataset: { providerId: providerChip.dataset.provider } }));
       return;
     }
     const providerCard = event.target.closest(".provider-card");
@@ -5001,6 +5052,127 @@ function bindStatic() {
         confirmLabel: "Run AI test",
         success: "AI test complete"
       });
+      return;
+    }
+    const learningAccessButton = event.target.closest("[data-learning-access]");
+    if (learningAccessButton) {
+      event.preventDefault();
+      event.stopPropagation();
+      openWorkflowModal(learningAccessibilityWorkflowConfig(learningAccessButton.dataset.learningAccess));
+      return;
+    }
+    const workforceButton = event.target.closest("[data-workforce]");
+    if (workforceButton) {
+      event.preventDefault();
+      event.stopPropagation();
+      openWorkflowModal(workflowConfig("workforce", workforceButton.dataset.workforce, { dataset: {} }));
+      return;
+    }
+    const healthButton = event.target.closest("[data-health]");
+    if (healthButton) {
+      event.preventDefault();
+      event.stopPropagation();
+      openWorkflowModal(workflowConfig("health", healthButton.dataset.health, { dataset: {} }));
+      return;
+    }
+    const payButton = event.target.closest("[data-pay]");
+    if (payButton) {
+      event.preventDefault();
+      event.stopPropagation();
+      const [provider, amount] = payButton.dataset.pay.split(":");
+      openWorkflowModal({
+        ...workflowConfig("trade", "wallet", { dataset: {} }),
+        body: { provider, amount: Number(amount) },
+        confirmLabel: `${provider} ${Number(amount) >= 0 ? "+" : ""}${amount}`
+      });
+      return;
+    }
+    const courseButton = event.target.closest(".course");
+    if (courseButton) {
+      event.preventDefault();
+      event.stopPropagation();
+      const course = data.courses.find(item => item.id === courseButton.dataset.course);
+      if (course) {
+        data.profile.activeCourseId = course.id;
+        openWorkflowModal(workflowConfig("learning", "start", { dataset: {} }));
+      }
+      return;
+    }
+    const lessonButton = event.target.closest(".lesson-step");
+    if (lessonButton) {
+      event.preventDefault();
+      event.stopPropagation();
+      const course = data.courses.find(item => item.id === lessonButton.dataset.course);
+      if (course) openWorkflowModal(lessonWorkflowConfig(course, Number(lessonButton.dataset.moduleIndex)));
+      return;
+    }
+    const roleButton = event.target.closest(".apply");
+    if (roleButton) {
+      event.preventDefault();
+      event.stopPropagation();
+      openWorkflowModal(roleWorkflowConfig(roleButton.dataset.role));
+      return;
+    }
+    const orderButton = event.target.closest(".order");
+    if (orderButton) {
+      event.preventDefault();
+      event.stopPropagation();
+      openWorkflowModal(workflowConfig("trade", "order", { dataset: { productId: orderButton.dataset.productId } }));
+      return;
+    }
+    const jumpButton = event.target.closest("[data-jump]");
+    if (jumpButton) {
+      event.preventDefault();
+      event.stopPropagation();
+      goSection(jumpButton.dataset.jump);
+      return;
+    }
+    const aiReviewButton = event.target.closest("[data-ai-review]");
+    if (aiReviewButton) {
+      event.preventDefault();
+      event.stopPropagation();
+      reviewLatestAi(aiReviewButton.dataset.aiReview);
+      return;
+    }
+    const notifyButton = event.target.closest("[data-notify]");
+    if (notifyButton) {
+      event.preventDefault();
+      event.stopPropagation();
+      sendModuleNotification(notifyButton.dataset.notify);
+      return;
+    }
+    const courseCard = event.target.closest(".course-card");
+    if (courseCard) {
+      event.preventDefault();
+      event.stopPropagation();
+      const course = data.courses.find(item => item.id === courseCard.dataset.courseCard);
+      if (course) {
+        data.profile.activeCourseId = course.id;
+        openWorkflowModal(workflowConfig("learning", "start", { dataset: {} }));
+      }
+      return;
+    }
+    const trackCard = event.target.closest(".track-card");
+    if (trackCard) {
+      event.preventDefault();
+      event.stopPropagation();
+      selectedLearningTrack = trackCard.dataset.track;
+      render();
+      toast(selectedLearningTrack === "All" ? "Showing all tracks" : `${selectedLearningTrack} track selected`);
+      return;
+    }
+    const roleCard = event.target.closest(".role-card");
+    if (roleCard) {
+      event.preventDefault();
+      event.stopPropagation();
+      openWorkflowModal(roleWorkflowConfig(roleCard.dataset.roleCard));
+      return;
+    }
+    const productCard = event.target.closest(".product-card");
+    if (productCard) {
+      event.preventDefault();
+      event.stopPropagation();
+      openWorkflowModal(workflowConfig("trade", "order", { dataset: { productId: productCard.dataset.productCard } }));
       return;
     }
     const aiButton = event.target.closest("[data-ai]");
