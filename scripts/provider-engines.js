@@ -5,8 +5,9 @@ const { loadEnvFile } = require("../foundation/src/runtime/env-file");
 
 loadEnvFile();
 
-const PORT = Number(process.env.PROVIDER_ENGINE_PORT || 4280);
-const HOST = process.env.PROVIDER_ENGINE_HOST || process.env.HOST || "127.0.0.1";
+const PORT = Number(process.env.PROVIDER_ENGINE_PORT || process.env.PORT || 4280);
+const IS_HOSTED = process.env.NODE_ENV === "production" || Boolean(process.env.RENDER || process.env.RENDER_SERVICE_ID || process.env.RENDER_EXTERNAL_URL);
+const HOST = process.env.PROVIDER_ENGINE_HOST || process.env.HOST || (IS_HOSTED ? "0.0.0.0" : "127.0.0.1");
 const LOG_PATH = path.join(__dirname, "..", "provider-events.json");
 
 const endpoints = {
