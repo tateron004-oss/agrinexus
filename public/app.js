@@ -2476,7 +2476,7 @@ function renderLaunchSupportPanels() {
 }
 
 function applyPermissions() {
-  $$("[data-workflow], [data-ai], [data-workforce], [data-health], [data-pay], [data-module-test], [data-command-preset], [data-pilot-scenario], [data-persona], [data-simple-command], [data-simple-section], [data-simple-pilot], [data-simple-demo], [data-simple-action], .provider-test, #adminHealthCheck, #aiConsoleRun, #agentPlanBtn, #agentExecuteBtn, #agentBriefingBtn, #demoRunBtn, #wowDemoBtn, #startOnboardingBtn, #openSupportBtn, #inviteSubscriberBtn, [data-ai-review], [data-notify], #voiceListenBtn, #voiceRunBtn, #voiceFirstBtn, #voiceSpeakBtn, #globalListenBtn, #globalRunBtn, #globalYesBtn, #globalNoBtn, #globalReadBtn, #globalInstallBtn, #jarvisListenBtn, #jarvisRunBtn, #jarvisMissionBtn, #jarvisReadBtn").forEach(element => {
+  $$("[data-workflow], [data-ai], [data-workforce], [data-health], [data-pay], [data-module-test], [data-command-preset], [data-pilot-scenario], [data-persona], [data-simple-command], [data-simple-section], [data-simple-pilot], [data-simple-demo], [data-simple-mission], [data-simple-action], .provider-test, #adminHealthCheck, #aiConsoleRun, #agentPlanBtn, #agentExecuteBtn, #agentBriefingBtn, #demoRunBtn, #wowDemoBtn, #startOnboardingBtn, #openSupportBtn, #inviteSubscriberBtn, [data-ai-review], [data-notify], #voiceListenBtn, #voiceRunBtn, #voiceFirstBtn, #voiceSpeakBtn, #globalListenBtn, #globalRunBtn, #globalYesBtn, #globalNoBtn, #globalReadBtn, #globalInstallBtn, #jarvisListenBtn, #jarvisRunBtn, #jarvisMissionBtn, #jarvisReadBtn").forEach(element => {
     const area = element.dataset.workflow
       || (element.dataset.ai ? "ai" : null)
       || (element.dataset.workforce ? "workforce" : null)
@@ -2490,6 +2490,7 @@ function applyPermissions() {
       || (element.dataset.simpleSection ? element.dataset.simpleSection : null)
       || (element.dataset.simplePilot ? "ai" : null)
       || (element.dataset.simpleDemo ? "admin" : null)
+      || (element.dataset.simpleMission ? "ai" : null)
       || (element.dataset.simpleAction ? "ai" : null)
       || (element.classList.contains("provider-test") ? "integrations" : null)
       || (element.id === "adminHealthCheck" ? "admin" : null)
@@ -2631,9 +2632,9 @@ function simpleHomeActions() {
     ],
     partner: [
       { label: "WOW demo", detail: "Run the investor scenario across accessibility, health, work, trade, AI, and evidence.", demo: "wow", primary: true },
-      { label: "Run full mission", detail: "Execute the agentic cross-module mission.", command: "run full mission" },
-      { label: "View integrations", detail: "Open provider status and evidence.", section: "integrations" },
-      { label: "Open admin", detail: "Review production readiness, subscribers, and audit views.", section: "admin" }
+      { label: "Run full mission", detail: "Execute the agentic cross-module mission.", mission: "full" },
+      { label: "Test provider engines", detail: "Run the live/local provider readiness workflow.", workflow: "integrations", action: "test-all" },
+      { label: "Open readiness", detail: "Review production readiness, subscribers, and audit views.", workflow: "admin", action: "readiness" }
     ]
   };
   return [...(byPersona[selectedPersona] || byPersona.farmer), ...common].slice(0, 6);
@@ -2646,15 +2647,19 @@ function renderSimpleHome() {
   const target = $("#simpleActionGrid");
   if (!target) return;
   target.innerHTML = simpleHomeActions().map((action, index) => {
-    const attrs = action.command
-      ? `data-simple-command="${escapeHtml(action.command)}"`
-      : action.section
-        ? `data-simple-section="${escapeHtml(action.section)}"`
-        : action.pilot
-          ? `data-simple-pilot="${escapeHtml(action.pilot)}"`
-          : action.demo
-            ? `data-simple-demo="${escapeHtml(action.demo)}"`
-            : `data-simple-action="continue"`;
+    const attrs = action.workflow
+      ? `data-workflow="${escapeHtml(action.workflow)}" data-action="${escapeHtml(action.action || "review")}"`
+      : action.command
+        ? `data-simple-command="${escapeHtml(action.command)}"`
+        : action.section
+          ? `data-simple-section="${escapeHtml(action.section)}"`
+          : action.pilot
+            ? `data-simple-pilot="${escapeHtml(action.pilot)}"`
+            : action.demo
+              ? `data-simple-demo="${escapeHtml(action.demo)}"`
+              : action.mission
+                ? `data-simple-mission="${escapeHtml(action.mission)}"`
+                : `data-simple-action="continue"`;
     return `<button type="button" class="simple-action ${action.primary ? "primary" : ""}" ${attrs}>
       <strong>${index + 1}. ${escapeHtml(action.label)}</strong>
       <span>${escapeHtml(action.detail)}</span>
@@ -4270,7 +4275,7 @@ function bindDynamic() {
       toast(`${button.textContent.trim()} view selected`);
     };
   });
-  $$("[data-simple-command], [data-simple-section], [data-simple-pilot], [data-simple-demo], [data-simple-action]").forEach(button => {
+  $$("[data-simple-command], [data-simple-section], [data-simple-pilot], [data-simple-demo], [data-simple-mission], [data-simple-action]").forEach(button => {
     button.onclick = runSimpleAction;
   });
   $$(".course").forEach(button => button.onclick = () => {
@@ -4899,6 +4904,11 @@ async function runSimpleAction(eventOrButton) {
     if ($("#simpleActionStatus")) $("#simpleActionStatus").textContent = `${label} completed. Review the demo storyboard and evidence.`;
     return;
   }
+  if (button.dataset.simpleMission === "full") {
+    await runJarvisFullMission();
+    if ($("#simpleActionStatus")) $("#simpleActionStatus").textContent = `${label} sent to the agent command center. Review the plan, execution, and evidence.`;
+    return;
+  }
   const latest = (data.profile.agentCommands || [])[0];
   if (latest?.metadata?.redirectSection) goSection(latest.metadata.redirectSection);
   else goSection("dashboard");
@@ -5204,7 +5214,7 @@ function bindStatic() {
       toast(`${personaButton.textContent.trim()} view selected`);
       return;
     }
-    const simpleButton = event.target.closest("[data-simple-command], [data-simple-section], [data-simple-pilot], [data-simple-demo], [data-simple-action]");
+    const simpleButton = event.target.closest("[data-simple-command], [data-simple-section], [data-simple-pilot], [data-simple-demo], [data-simple-mission], [data-simple-action]");
     if (simpleButton) {
       event.preventDefault();
       event.stopPropagation();
