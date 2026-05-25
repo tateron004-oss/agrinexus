@@ -549,6 +549,16 @@ a:focus-visible,
   display: flex;
   flex-direction: column;
 }
+.agent-action-status {
+  margin-top: 12px;
+  padding: 10px 12px;
+  border: 1px solid #bddbd6;
+  border-radius: 8px;
+  background: #f5fbf9;
+  color: var(--text);
+  font-weight: 800;
+  line-height: 1.45;
+}
 .global-assistant {
   position: static;
   order: 20;

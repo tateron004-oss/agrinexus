@@ -4293,14 +4293,46 @@ async function reviewLatestAi(decision) {
 }
 
 async function createAgentPlan() {
+  const status = $("#agentActionStatus");
   const goal = $("#agentGoal")?.value?.trim() || "Create an AgriNexus cross-module plan.";
-  await mutate("/api/agent/plan", { goal }, "Agent plan created");
+  if (status) status.textContent = "Creating supervised agent plan across learning, workforce, telehealth, trade, drones, maps, and provider evidence...";
+  try {
+    data = await request("/api/agent/plan", { method: "POST", body: { goal } });
+    render();
+    goSection("agent", { instant: true });
+    const plan = (data.profile.agentPlans || [])[0];
+    const message = `Agent plan created with ${plan?.steps?.length || 0} live workflow step(s). Review the plan, then click Execute approved plan.`;
+    if ($("#agentActionStatus")) $("#agentActionStatus").textContent = message;
+    setVoiceResponse(message);
+    toast("Agent plan created");
+  } catch (error) {
+    if (status) status.textContent = error.message;
+    toast(error.message);
+  }
 }
 
 async function executeAgentPlan() {
-  const plan = (data.profile.agentPlans || [])[0];
-  if (!plan) return toast("Create an agent plan first");
-  await mutate("/api/agent/execute", { planId: plan.id, note: "Approved from Agent Command Center" }, "Agent plan executed");
+  const status = $("#agentActionStatus");
+  if (status) status.textContent = "Preparing approved agent execution...";
+  try {
+    let plan = (data.profile.agentPlans || [])[0];
+    if (!plan) {
+      const goal = $("#agentGoal")?.value?.trim() || "Create an AgriNexus cross-module plan.";
+      data = await request("/api/agent/plan", { method: "POST", body: { goal } });
+      plan = (data.profile.agentPlans || [])[0];
+    }
+    data = await request("/api/agent/execute", { method: "POST", body: { planId: plan.id, approved: true, note: "Approved from Agent Command Center" } });
+    render();
+    goSection("agent", { instant: true });
+    const execution = (data.profile.agentExecutions || [])[0];
+    const message = execution?.summary || "Agent plan executed across connected workflows.";
+    if ($("#agentActionStatus")) $("#agentActionStatus").textContent = message;
+    setVoiceResponse(message, true);
+    toast("Agent plan executed");
+  } catch (error) {
+    if (status) status.textContent = error.message;
+    toast(error.message);
+  }
 }
 
 function setVoiceResponse(message, speak = false) {
@@ -4336,7 +4368,21 @@ function setVoiceResponse(message, speak = false) {
 }
 
 async function createGovernmentBriefing() {
-  await mutate("/api/agent/briefing", { purpose: "government presentation" }, "Government briefing created");
+  const status = $("#agentActionStatus");
+  if (status) status.textContent = "Creating government-ready briefing from current platform evidence...";
+  try {
+    data = await request("/api/agent/briefing", { method: "POST", body: { purpose: "government presentation" } });
+    render();
+    goSection("agent", { instant: true });
+    const briefing = data.briefingResult || (data.profile.agentBriefings || [])[0];
+    const message = briefing?.plainLanguageSummary || "Government briefing created.";
+    if ($("#agentActionStatus")) $("#agentActionStatus").textContent = message;
+    setVoiceResponse(message);
+    toast("Government briefing created");
+  } catch (error) {
+    if (status) status.textContent = error.message;
+    toast(error.message);
+  }
 }
 
 function toggleVoiceFirstMode() {
@@ -4921,7 +4967,7 @@ function bindStatic() {
       installAgriNexusApp();
       return;
     }
-    if (event.target.closest("#jarvisMissionBtn")) {
+    if (event.target.closest("#jarvisMissionBtn") || event.target.closest("#agentMissionBtn")) {
       event.preventDefault();
       event.stopPropagation();
       runJarvisFullMission();
@@ -5122,6 +5168,7 @@ function bindStatic() {
   $("#agentPlanBtn").onclick = createAgentPlan;
   $("#agentExecuteBtn").onclick = executeAgentPlan;
   $("#agentBriefingBtn").onclick = createGovernmentBriefing;
+  $("#agentMissionBtn").onclick = runJarvisFullMission;
   $("#voiceListenBtn").onclick = startVoiceListening;
   $("#voiceRunBtn").onclick = runVoiceTextCommand;
   $("#voiceFirstBtn").onclick = toggleVoiceFirstMode;
