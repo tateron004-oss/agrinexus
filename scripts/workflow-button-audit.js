@@ -27,6 +27,7 @@ const requiredStaticHandlers = [
   "voiceRunBtn",
   "voiceFirstBtn",
   "voiceSpeakBtn",
+  "globalVoiceFirstBtn",
   "jarvisToggle",
   "jarvisListenBtn",
   "jarvisRunBtn",

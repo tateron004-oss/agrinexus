@@ -26,6 +26,7 @@ const clickTargets = [
   "inviteSubscriberBtn",
   "globalListenBtn",
   "globalRunBtn",
+  "globalVoiceFirstBtn",
   "globalYesBtn",
   "globalNoBtn",
   "globalReadBtn",

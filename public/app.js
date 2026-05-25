@@ -8,6 +8,8 @@ let lastFocusedElement = null;
 let voiceRecognition = null;
 let lastVoiceResponse = "Ready for a command.";
 let voiceFirstMode = false;
+let voiceAutoRestart = false;
+let voiceStopRequested = false;
 const accessibilityPrefs = JSON.parse(localStorage.getItem("agrinexusAccessibility") || "{}");
 const originalTextNodes = new WeakMap();
 let deferredInstallPrompt = null;
@@ -2396,6 +2398,12 @@ function renderVoiceAssistant() {
       };
     });
   }
+  const guide = $("#globalVoiceGuide");
+  if (guide) {
+    guide.innerHTML = voiceCommandExamples().slice(0, 6)
+      .map(command => `<button type="button" data-voice-example="${command}">${command}</button>`)
+      .join("");
+  }
   renderJarvisLayer();
 }
 
@@ -2504,6 +2512,7 @@ function applyPermissions() {
       || (element.id === "voiceSpeakBtn" ? "ai" : null)
       || (element.id === "globalListenBtn" ? "ai" : null)
       || (element.id === "globalRunBtn" ? "ai" : null)
+      || (element.id === "globalVoiceFirstBtn" ? "ai" : null)
       || (element.id === "globalYesBtn" ? "ai" : null)
       || (element.id === "globalNoBtn" ? "ai" : null)
       || (element.id === "globalReadBtn" ? "ai" : null)
@@ -4458,10 +4467,16 @@ async function createGovernmentBriefing() {
 
 function toggleVoiceFirstMode() {
   voiceFirstMode = !voiceFirstMode;
-  const button = $("#voiceFirstBtn");
-  if (button) button.classList.toggle("primary", voiceFirstMode);
+  voiceAutoRestart = voiceFirstMode;
+  ["#voiceFirstBtn", "#globalVoiceFirstBtn"].forEach(selector => {
+    const button = $(selector);
+    if (!button) return;
+    button.classList.toggle("primary", voiceFirstMode);
+    button.setAttribute("aria-pressed", String(voiceFirstMode));
+  });
   setVoiceStatus(voiceFirstMode ? "voice-first" : "standby");
-  setVoiceResponse(voiceFirstMode ? "Voice-first mode is on. Nexus will read responses aloud." : "Voice-first mode is off.");
+  setVoiceResponse(voiceFirstMode ? "Voice-first mode is on. Nexus will listen after each response when the browser allows it, and will read responses aloud." : "Voice-first mode is off.");
+  if (voiceFirstMode) startVoiceListening();
 }
 
 function chooseSpeechVoice(locale) {
@@ -4518,8 +4533,21 @@ function refreshMicSupport() {
     if (!button) return;
     button.disabled = !ready;
     button.title = ready ? "Use your microphone to ask AgriNexus" : "Use typed command in this browser";
-    if (!ready && selector === "#globalListenBtn") button.textContent = "Mic unavailable";
+    if (!ready) {
+      if (selector === "#globalListenBtn") button.textContent = "Mic unavailable";
+      if (selector === "#voiceListenBtn") button.textContent = "Mic unavailable";
+      if (selector === "#jarvisListenBtn") button.textContent = "Mic unavailable";
+      return;
+    }
+    if (selector === "#globalListenBtn") button.textContent = voiceRecognition ? "Stop listening" : "Mic: Start listening";
+    if (selector === "#voiceListenBtn") button.textContent = voiceRecognition ? "Stop listening" : "Mic: Start listening";
+    if (selector === "#jarvisListenBtn") button.textContent = voiceRecognition ? "Stop" : "Listen";
   });
+  const voiceFirstButton = $("#globalVoiceFirstBtn");
+  if (voiceFirstButton) {
+    voiceFirstButton.classList.toggle("primary", voiceFirstMode);
+    voiceFirstButton.setAttribute("aria-pressed", String(voiceFirstMode));
+  }
 }
 
 function cleanWakeCommand(command) {
@@ -4656,6 +4684,22 @@ async function handleVoiceCommand(rawCommand) {
 
   if (lower.includes("what can you do") || lower.includes("help")) {
     setVoiceResponse("I can open modules, build captions, create audio guides, complete lessons, issue certificates, apply for roles, schedule shifts, start telehealth intake, connect a provider, capture vitals, contact a buyer, create orders, run drone scans, test engines, create plans, and read responses aloud.", true);
+    return;
+  }
+  if (lower.includes("voice demo") || lower.includes("jarvis demo") || lower.includes("show voice") || lower.includes("show jarvis")) {
+    goSection("agent");
+    openAskNexus();
+    setVoiceResponse("Jarvis-style voice demo is ready. Try saying: open telehealth, apply for that job, contact my buyer, test provider engines, or run full mission. Say yes to confirm any staged workflow.", true);
+    return;
+  }
+  if (lower.includes("turn on voice") || lower.includes("voice first") || lower.includes("hands free") || lower.includes("hands-free")) {
+    if (!voiceFirstMode) toggleVoiceFirstMode();
+    else setVoiceResponse("Voice-first mode is already on. Say a command when the microphone is listening.", true);
+    return;
+  }
+  if (lower.includes("turn off voice") || lower.includes("stop voice first") || lower.includes("stop hands free") || lower.includes("stop hands-free")) {
+    if (voiceFirstMode) toggleVoiceFirstMode();
+    else setVoiceResponse("Voice-first mode is already off.");
     return;
   }
   if (lower.includes("status") || lower.includes("readiness") || lower.includes("what is left")) {
@@ -4954,27 +4998,43 @@ function startVoiceListening() {
     return;
   }
   if (voiceRecognition) {
+    voiceStopRequested = true;
     voiceRecognition.stop();
     voiceRecognition = null;
     setVoiceStatus("standby");
+    refreshMicSupport();
     return;
   }
+  voiceStopRequested = false;
   voiceRecognition = new Recognition();
   voiceRecognition.lang = voiceLocale();
   voiceRecognition.interimResults = false;
   voiceRecognition.continuous = false;
-  voiceRecognition.onstart = () => setVoiceStatus("listening");
+  voiceRecognition.onstart = () => {
+    setVoiceStatus("listening");
+    const status = $("#globalMicStatus");
+    if (status) status.textContent = `Listening in ${voiceLanguageName()} (${voiceLocale()}). Say a command like "Nexus, start telehealth intake."`;
+    refreshMicSupport();
+  };
   voiceRecognition.onerror = event => {
     setVoiceStatus("standby");
     const message = event.error === "not-allowed"
       ? "Microphone permission was blocked. Click the browser permission icon near the address bar and allow microphone access, or type your request."
       : `Voice input stopped: ${event.error || "microphone unavailable"}`;
     setVoiceResponse(message);
+    voiceStopRequested = true;
     voiceRecognition = null;
+    refreshMicSupport();
   };
   voiceRecognition.onend = () => {
-    setVoiceStatus("standby");
+    setVoiceStatus(voiceFirstMode ? "voice-first" : "standby");
     voiceRecognition = null;
+    refreshMicSupport();
+    if (voiceFirstMode && voiceAutoRestart && !voiceStopRequested && !document.hidden) {
+      setTimeout(() => {
+        if (!voiceRecognition && voiceFirstMode && voiceAutoRestart) startVoiceListening();
+      }, 900);
+    }
   };
   voiceRecognition.onresult = event => {
     const command = event.results?.[0]?.[0]?.transcript || "";
@@ -5245,6 +5305,12 @@ function bindStatic() {
       runGlobalCommand();
       return;
     }
+    if (event.target.closest("#globalVoiceFirstBtn")) {
+      event.preventDefault();
+      event.stopPropagation();
+      toggleVoiceFirstMode();
+      return;
+    }
     if (event.target.closest("#globalYesBtn")) {
       event.preventDefault();
       event.stopPropagation();
@@ -5490,6 +5556,7 @@ function bindStatic() {
   });
   $("#globalListenBtn").onclick = startVoiceListening;
   $("#globalRunBtn").onclick = runGlobalCommand;
+  $("#globalVoiceFirstBtn").onclick = toggleVoiceFirstMode;
   $("#globalYesBtn").onclick = () => answerGlobalConversation("yes");
   $("#globalNoBtn").onclick = () => answerGlobalConversation("no");
   $("#globalReadBtn").onclick = speakVoiceResponse;

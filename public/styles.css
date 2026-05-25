@@ -793,9 +793,18 @@ a:focus-visible,
   gap: 8px;
   margin-top: auto;
 }
-.voice-suggestions button {
+.voice-guide {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+.voice-suggestions button,
+.voice-guide button {
   padding: 8px 10px;
   font-size: .88rem;
+  min-height: 0;
+  width: auto;
 }
 .voice-listening {
   border-color: #1b8f68;
