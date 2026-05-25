@@ -4966,6 +4966,43 @@ async function runWowDemo() {
 
 function bindStatic() {
   document.addEventListener("click", event => {
+    const providerTestButton = event.target.closest(".provider-test");
+    if (providerTestButton) {
+      event.preventDefault();
+      event.stopPropagation();
+      const providerId = providerTestButton.dataset.provider;
+      const provider = data.providers.find(item => item.id === providerId);
+      const status = $("#aiConsoleStatus");
+      if (status && providerId === "openai") {
+        status.textContent = `${provider?.name || "OpenAI"} provider test opened. Confirm to test the live AI engine and record evidence.`;
+      }
+      openWorkflowModal(workflowConfig("integrations", "test-provider", { dataset: { providerId } }));
+      return;
+    }
+    const providerCard = event.target.closest(".provider-card");
+    if (providerCard && !event.target.closest("button")) {
+      event.preventDefault();
+      event.stopPropagation();
+      const providerId = providerCard.querySelector("[data-provider]")?.dataset.provider;
+      if (providerId) {
+        openWorkflowModal(workflowConfig("integrations", "test-provider", { dataset: { providerId } }));
+      }
+      return;
+    }
+    if (event.target.closest("#aiConsoleRun")) {
+      event.preventDefault();
+      event.stopPropagation();
+      const aiType = $("#aiConsoleType")?.value || "command";
+      const status = $("#aiConsoleStatus");
+      if (status) status.textContent = `${aiType} AI workflow opened. Confirm to run it through the configured engine.`;
+      openWorkflowModal({
+        ...workflowConfig("ai", aiType, { dataset: {} }),
+        title: `Run AI test: ${aiType}`,
+        confirmLabel: "Run AI test",
+        success: "AI test complete"
+      });
+      return;
+    }
     const aiButton = event.target.closest("[data-ai]");
     if (aiButton) {
       event.preventDefault();

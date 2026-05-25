@@ -589,6 +589,17 @@ a:focus-visible,
   font-weight: 800;
   line-height: 1.45;
 }
+.micro-status {
+  margin: 10px 0 0;
+  padding: 8px 10px;
+  border: 1px solid #bddbd6;
+  border-radius: 8px;
+  background: #f5fbf9;
+  color: var(--muted);
+  font-size: .9rem;
+  font-weight: 800;
+  line-height: 1.35;
+}
 .global-assistant {
   position: static;
   order: 20;
