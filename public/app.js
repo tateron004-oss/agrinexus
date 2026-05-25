@@ -4800,29 +4800,39 @@ async function runLocalPilotScenario(event) {
   goSection("dashboard");
 }
 
-async function runSimpleAction(event) {
-  const button = event.currentTarget;
+async function runSimpleAction(eventOrButton) {
+  const button = eventOrButton?.currentTarget || eventOrButton;
+  const status = $("#simpleActionStatus");
+  if (!button) return;
+  const label = button.querySelector("strong")?.textContent || button.textContent.trim() || "Selected action";
+  if (status) status.textContent = `${label} is running...`;
   if (button.dataset.simpleCommand) {
     setCommandInputs(button.dataset.simpleCommand);
+    openAskNexus();
     await handleVoiceCommand(button.dataset.simpleCommand);
+    if ($("#simpleActionStatus")) $("#simpleActionStatus").textContent = `${label} sent to Ask AgriNexus. Review the response or confirm the opened workflow.`;
     return;
   }
   if (button.dataset.simpleSection) {
     goSection(button.dataset.simpleSection);
+    if (status) status.textContent = `${label} opened.`;
     return;
   }
   if (button.dataset.simplePilot) {
     await mutate("/api/pilot/run", { scenario: button.dataset.simplePilot }, "Local pilot evidence report created");
     goSection("dashboard");
+    if ($("#simpleActionStatus")) $("#simpleActionStatus").textContent = `${label} completed and evidence was added below.`;
     return;
   }
   if (button.dataset.simpleDemo === "wow") {
     await runWowDemo();
+    if ($("#simpleActionStatus")) $("#simpleActionStatus").textContent = `${label} completed. Review the demo storyboard and evidence.`;
     return;
   }
   const latest = (data.profile.agentCommands || [])[0];
   if (latest?.metadata?.redirectSection) goSection(latest.metadata.redirectSection);
   else goSection("dashboard");
+  if (status) status.textContent = latest?.response || "Returned to the dashboard. Choose a workflow to continue.";
 }
 
 async function runVoiceTextCommand() {
@@ -4915,6 +4925,25 @@ async function runWowDemo() {
 
 function bindStatic() {
   document.addEventListener("click", event => {
+    const personaButton = event.target.closest("[data-persona]");
+    if (personaButton) {
+      event.preventDefault();
+      event.stopPropagation();
+      selectedPersona = personaButton.dataset.persona || "farmer";
+      localStorage.setItem("agrinexusPersona", selectedPersona);
+      renderSimpleHome();
+      const status = $("#simpleActionStatus");
+      if (status) status.textContent = `${personaButton.textContent.trim()} actions are ready. Choose one below.`;
+      toast(`${personaButton.textContent.trim()} view selected`);
+      return;
+    }
+    const simpleButton = event.target.closest("[data-simple-command], [data-simple-section], [data-simple-pilot], [data-simple-demo], [data-simple-action]");
+    if (simpleButton) {
+      event.preventDefault();
+      event.stopPropagation();
+      runSimpleAction(simpleButton);
+      return;
+    }
     if (event.target.closest("#workspaceAskBtn")) {
       event.preventDefault();
       event.stopPropagation();

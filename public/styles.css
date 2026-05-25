@@ -265,6 +265,15 @@ a:focus-visible,
   border-color: #173240;
   color: white;
 }
+.simple-action-status {
+  margin-top: 10px;
+  padding: 10px 12px;
+  border: 1px solid #bddbd6;
+  border-radius: 8px;
+  background: #f5fbf9;
+  color: var(--text);
+  font-weight: 800;
+}
 .simple-action-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
