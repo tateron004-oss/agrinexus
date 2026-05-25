@@ -2916,7 +2916,7 @@ function extractResponseText(payload) {
 }
 
 async function runAi(type, country, route, profile) {
-  if (!process.env.OPENAI_API_KEY && process.env.AI_PROVIDER === "webhook" && process.env.AI_WEBHOOK_URL) {
+  if (process.env.AI_PROVIDER === "webhook" && process.env.AI_WEBHOOK_URL) {
     const fallback = fallbackAi(type, country, route, profile);
     try {
       const response = await fetch(process.env.AI_WEBHOOK_URL, {

@@ -4936,6 +4936,15 @@ async function runWowDemo() {
 
 function bindStatic() {
   document.addEventListener("click", event => {
+    const aiButton = event.target.closest("[data-ai]");
+    if (aiButton) {
+      event.preventDefault();
+      event.stopPropagation();
+      const status = $("#copilotActionStatus");
+      if (status && aiButton.dataset.ai === "copilot") status.textContent = "Copilot workflow opened. Confirm to create AI guidance and evidence.";
+      openWorkflowModal(workflowConfig("ai", aiButton.dataset.ai, { dataset: {} }));
+      return;
+    }
     const mapButton = event.target.closest("[data-map-action]");
     if (mapButton) {
       event.preventDefault();
