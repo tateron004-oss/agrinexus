@@ -891,6 +891,7 @@
         <button id="workflowClose" class="ghost modal-close" type="button" data-close-workflow aria-label="Close workflow">Close</button>
       </div>
       <p id="workflowSummary" class="modal-summary"></p>
+      <div id="workflowVoicePrompt" class="workflow-voice-prompt" role="status">Voice ready: say yes to confirm, no to cancel, or read to hear this workflow.</div>
       <div id="workflowFields" class="workflow-fields"></div>
       <div id="workflowChecklist" class="task-list"></div>
       <label class="field-label" for="workflowNote">Workflow note</label>
@@ -898,11 +899,12 @@
       <div id="workflowOutcome" class="rows"></div>
       <div class="workflow-voice-confirm">
         <label class="field-label" for="workflowVoiceInput">Voice or typed response
-          <input id="workflowVoiceInput" placeholder="Say or type: confirm, yes, cancel">
+          <input id="workflowVoiceInput" placeholder="Say or type: yes, no, read, or cancel">
         </label>
         <div class="action-row">
           <button id="workflowListenBtn" type="button">Mic</button>
           <button id="workflowRunVoiceBtn" type="button">Run response</button>
+          <button id="workflowReadBtn" type="button">Read workflow</button>
         </div>
       </div>
       <div class="action-row modal-actions">

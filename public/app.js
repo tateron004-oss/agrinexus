@@ -3618,6 +3618,29 @@ function closeWorkflowModal() {
   if (lastFocusedElement && typeof lastFocusedElement.focus === "function") lastFocusedElement.focus();
 }
 
+function workflowSpeechText() {
+  if (!pendingWorkflow) return "No workflow is open.";
+  const checklist = (pendingWorkflow.checklist || [])
+    .slice(0, 4)
+    .map(item => `${item.title}: ${item.detail}`)
+    .join(". ");
+  return [
+    pendingWorkflow.title,
+    pendingWorkflow.summary,
+    pendingWorkflow.record ? `Record created: ${pendingWorkflow.record}` : "",
+    pendingWorkflow.provider ? `Provider evidence: ${pendingWorkflow.provider}` : "",
+    checklist ? `Checklist: ${checklist}` : "",
+    "Say yes to confirm, no to cancel, or read to hear this again."
+  ].filter(Boolean).join(". ");
+}
+
+function readWorkflowModal() {
+  const text = workflowSpeechText();
+  setVoiceResponse(text, true);
+  const prompt = $("#workflowVoicePrompt");
+  if (prompt) prompt.textContent = "Reading workflow. Say yes to confirm, no to cancel, or read to hear it again.";
+}
+
 function openWorkflowModal(config) {
   pendingWorkflow = config;
   lastFocusedElement = document.activeElement;
@@ -3644,9 +3667,12 @@ function openWorkflowModal(config) {
   $("#workflowNote").value = config.note || "";
   $("#workflowConfirm").textContent = translateText(config.confirmLabel || "Confirm action");
   $("#workflowVoiceInput").value = "";
+  $("#workflowVoicePrompt").textContent = translateText("Voice ready: say yes to confirm, no to cancel, or read to hear this workflow.");
   $("#workflowModal").classList.remove("hidden");
   $("#workflowConfirm").focus();
-  announce(`${translateText(config.title)}. ${translateText(config.summary)}`);
+  const instruction = `${translateText(config.title)}. ${translateText(config.summary)}. Say yes to confirm, no to cancel, or read to hear the workflow.`;
+  announce(instruction);
+  setVoiceResponse(instruction);
 }
 
 function workflowFieldValues() {
@@ -4558,6 +4584,10 @@ async function handleVoiceCommand(rawCommand) {
   if (!lower) return setVoiceResponse("Give me a command, and I will route it.");
 
   if (!$("#workflowModal").classList.contains("hidden")) {
+    if (lower === "read" || lower.includes("read this") || lower.includes("read workflow") || lower.includes("repeat")) {
+      readWorkflowModal();
+      return;
+    }
     if (lower === "yes" || lower.includes("confirm") || lower.includes("approve") || lower.includes("yes do it") || lower.includes("do it") || lower.includes("submit")) {
       await confirmPendingWorkflow();
       setVoiceResponse("Confirmed. I completed the staged workflow.", true);
@@ -5040,6 +5070,12 @@ function bindStatic() {
       event.preventDefault();
       event.stopPropagation();
       runWorkflowVoiceResponse();
+      return;
+    }
+    if (event.target.closest("#workflowReadBtn")) {
+      event.preventDefault();
+      event.stopPropagation();
+      readWorkflowModal();
       return;
     }
     if (event.target.closest("#workflowListenBtn")) {

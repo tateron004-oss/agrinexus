@@ -859,6 +859,16 @@ a:focus-visible,
   background: white;
   color: var(--text);
 }
+.workflow-voice-prompt {
+  margin: 10px 0 12px;
+  padding: 10px 12px;
+  border: 1px solid #bddbd6;
+  border-radius: 8px;
+  background: #f5fbf9;
+  color: var(--text);
+  font-weight: 900;
+  line-height: 1.45;
+}
 .modal {
   position: fixed;
   inset: 0;
