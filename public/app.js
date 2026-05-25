@@ -3350,6 +3350,12 @@ function render() {
     ? data.profile.aiRuns.map(run => `<div><strong>${run.type} - ${run.countryName}</strong><span>${run.provider}${run.model ? ` (${run.model})` : ""} - ${run.checkpoint}</span></div>`).join("")
     : "<div>No AI runs yet. Use the command center or route tools to generate one.</div>";
 
+  $("#mapQuickActions").innerHTML = [
+    `<button class="primary" type="button" data-map-action="command"><strong>${translateText("Run operations desk")}</strong><span>${translateText("Create command-center AI evidence for the active country and checkpoint.")}</span></button>`,
+    `<button type="button" data-map-action="inspector"><strong>${translateText("Run intelligence inspection")}</strong><span>${translateText("Inspect route movement, provider state, and field risk.")}</span></button>`,
+    `<button type="button" data-map-action="route"><strong>${translateText("Create geospatial evidence")}</strong><span>${translateText("Assess route risk and write map intelligence evidence.")}</span></button>`
+  ].join("");
+
   renderWorkspace("#mapWorkspace", [
     {
       eyebrow: "Command map",
@@ -4925,6 +4931,13 @@ async function runWowDemo() {
 
 function bindStatic() {
   document.addEventListener("click", event => {
+    const mapButton = event.target.closest("[data-map-action]");
+    if (mapButton) {
+      event.preventDefault();
+      event.stopPropagation();
+      openWorkflowModal(workflowConfig("ai", mapButton.dataset.mapAction, { dataset: {} }));
+      return;
+    }
     const personaButton = event.target.closest("[data-persona]");
     if (personaButton) {
       event.preventDefault();

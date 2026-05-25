@@ -503,6 +503,22 @@ a:focus-visible,
   gap: 14px;
   margin: 16px 0;
 }
+.map-quick-actions {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin: 0 0 14px;
+}
+.map-quick-actions button {
+  min-height: 54px;
+  text-align: left;
+}
+.map-quick-actions span {
+  display: block;
+  margin-top: 3px;
+  font-size: .82rem;
+  font-weight: 700;
+}
 .workspace-panel {
   min-height: 250px;
   display: flex;
