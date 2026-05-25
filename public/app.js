@@ -3366,7 +3366,8 @@ function render() {
         taskItem("Active country", `${country.name}: ${country.queue}`, "live", country.risk),
         taskItem("Active route", `${route.name} with ${route.checkpoints.length} checkpoint(s)`, "ready", data.profile.routeStage),
         taskItem("Current checkpoint", data.profile.activeCheckpoint, "live", "Focused"),
-        taskItem("Facilities layer", `${country.facilities} facilities near the active country`, "ready", "Layer")
+        taskItem("Facilities layer", `${country.facilities} facilities near the active country`, "ready", "Layer"),
+        `<button class="primary workspace-action" type="button" data-map-action="command">${translateText("Run operations desk")}</button>`
       ]
     },
     {
@@ -3378,7 +3379,9 @@ function render() {
         taskItem("Command analysis", aiRunComplete("command") ? "Command center run recorded" : "Run command center", aiRunComplete("command") ? "ready" : "pending", "Command"),
         taskItem("Inspector analysis", aiRunComplete("inspector") ? "Route inspection recorded" : "Run route inspector", aiRunComplete("inspector") ? "ready" : "pending", "Inspect"),
         taskItem("Route risk", aiRunComplete("route") ? "Route risk recorded" : "Assess route risk", aiRunComplete("route") ? "ready" : "pending", "Risk"),
-        taskItem("Latest insight", (data.profile.mapInsights || [])[0]?.detail || "No insight yet", (data.profile.mapInsights || []).length ? "live" : "pending", "Insight")
+        taskItem("Latest insight", (data.profile.mapInsights || [])[0]?.detail || "No insight yet", (data.profile.mapInsights || []).length ? "live" : "pending", "Insight"),
+        `<button class="primary workspace-action" type="button" data-map-action="inspector">${translateText("Run intelligence inspection")}</button>`,
+        `<button class="workspace-action" type="button" data-map-action="route">${translateText("Create geospatial evidence")}</button>`
       ]
     },
     {
@@ -3390,7 +3393,9 @@ function render() {
         taskItem("Tile provider", mapsProvider.detail || mapsProvider.status || "Ready", mapsProvider.status === "needs-credentials" ? "blocked" : "ready", mapsProvider.status || "Ready"),
         taskItem("Country markers", `${data.countries.length} country markers available`, "ready", "Markers"),
         taskItem("Route lines", `${data.routes.length} route corridor(s) available`, "ready", "Routes"),
-        taskItem("AI provider", openAiProvider.detail || data.profile.aiProvider || "Fallback simulation", openAiProvider.status === "needs-credentials" ? "blocked" : "ready", openAiProvider.mode || "AI")
+        taskItem("AI provider", openAiProvider.detail || data.profile.aiProvider || "Fallback simulation", openAiProvider.status === "needs-credentials" ? "blocked" : "ready", openAiProvider.mode || "AI"),
+        `<button class="primary workspace-action" type="button" data-map-action="focus">${translateText("Focus map context")}</button>`,
+        `<button class="workspace-action" type="button" data-map-action="route">${translateText("Assess route risk")}</button>`
       ]
     }
   ]);
@@ -4935,7 +4940,8 @@ function bindStatic() {
     if (mapButton) {
       event.preventDefault();
       event.stopPropagation();
-      openWorkflowModal(workflowConfig("ai", mapButton.dataset.mapAction, { dataset: {} }));
+      const action = mapButton.dataset.mapAction;
+      openWorkflowModal(workflowConfig(action === "focus" ? "map" : "ai", action, { dataset: {} }));
       return;
     }
     const personaButton = event.target.closest("[data-persona]");
