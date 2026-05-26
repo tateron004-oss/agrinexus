@@ -4543,16 +4543,8 @@ function speakVoiceResponse(textOverride) {
     if (globalStatus) globalStatus.textContent = message;
   };
   const browserSpeak = () => {
-    updateVoiceOutputStatus("Using browser voice fallback. OpenAI voice audio was not available.");
-    if (!("speechSynthesis" in window)) return toast("Speech playback is not supported in this browser");
-    window.speechSynthesis.cancel();
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = voiceLocale();
-    const voice = chooseSpeechVoice(voiceLocale());
-    if (voice) utterance.voice = voice;
-    utterance.rate = accessibilityPrefs.screenReader ? .88 : .95;
-    utterance.pitch = 1.04;
-    window.speechSynthesis.speak(utterance);
+    updateVoiceOutputStatus("OpenAI voice audio is not available, so robotic browser speech is turned off.");
+    toast("OpenAI voice unavailable. Browser voice fallback is off.");
   };
   updateVoiceOutputStatus("Requesting OpenAI voice audio...");
   request("/api/voice/speak", { method: "POST", body: { text, language: languageCode(), locale: voiceLocale(), forceOpenAi: true, voice: "coral" } })
@@ -4571,7 +4563,7 @@ function speakVoiceResponse(textOverride) {
       browserSpeak();
     })
     .catch(error => {
-      updateVoiceOutputStatus(`OpenAI voice unavailable: ${error.message || "speech request failed"}. Using browser fallback.`);
+      updateVoiceOutputStatus(`OpenAI voice unavailable: ${error.message || "speech request failed"}. Robotic browser voice is off.`);
       browserSpeak();
     });
 }

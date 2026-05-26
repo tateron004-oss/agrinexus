@@ -31,6 +31,7 @@ const REQUIRE_LIVE_SERVICES = process.env.AGRINEXUS_REQUIRE_LIVE_SERVICES === "t
 const STATE_STORE = process.env.AGRINEXUS_STATE_STORE || "json";
 const sessions = new Map();
 const rateBuckets = new Map();
+const phoneAudioCache = new Map();
 const COUNTRY_LANGUAGE = {
   nigeria: "en",
   kenya: "sw",
@@ -2347,6 +2348,32 @@ function twilioLanguage(language) {
   return process.env.TWILIO_GATHER_LANGUAGE || map[language] || "en-US";
 }
 
+function twilioSay(text, language) {
+  return `<Say voice="${xmlEscape(process.env.TWILIO_TTS_VOICE || "alice")}" language="${xmlEscape(language)}">${xmlEscape(text)}</Say>`;
+}
+
+async function phoneVoicePrompt(text, language) {
+  const fallback = twilioSay(text, language);
+  if (!process.env.OPENAI_API_KEY || !process.env.PUBLIC_BASE_URL) return fallback;
+  try {
+    const audio = await openAiSpeechAudio({ text, voice: "coral", responseFormat: "mp3" });
+    if (!audio?.audioDataUrl) return fallback;
+    const id = crypto.randomUUID();
+    const base64 = audio.audioDataUrl.replace(/^data:audio\/[^;]+;base64,/, "");
+    phoneAudioCache.set(id, {
+      buffer: Buffer.from(base64, "base64"),
+      createdAt: Date.now()
+    });
+    for (const [key, value] of phoneAudioCache.entries()) {
+      if (Date.now() - value.createdAt > 10 * 60 * 1000) phoneAudioCache.delete(key);
+    }
+    const audioUrl = `${String(process.env.PUBLIC_BASE_URL).replace(/\/$/, "")}/api/voice/phone/audio/${id}.mp3`;
+    return `<Play>${xmlEscape(audioUrl)}</Play>`;
+  } catch {
+    return fallback;
+  }
+}
+
 function phoneVoiceUser(db) {
   return db.users.find(item => item.role === "Admin") || db.users[0];
 }
@@ -3198,10 +3225,25 @@ async function api(req, res, url) {
     return send(res, 200, { ok: true, status: delivery.ok ? "sent" : "queued-needs-provider" });
   }
 
+  if (url.pathname.startsWith("/api/voice/phone/audio/") && req.method === "GET") {
+    const id = path.basename(url.pathname).replace(/\.mp3$/, "");
+    const audio = phoneAudioCache.get(id);
+    if (!audio) return send(res, 404, { error: "Phone audio not found" });
+    res.writeHead(200, {
+      "content-type": "audio/mpeg",
+      "cache-control": "no-store",
+      "x-content-type-options": "nosniff"
+    });
+    return res.end(audio.buffer);
+  }
+
   if (url.pathname === "/api/voice/phone/incoming" && req.method === "POST") {
     const phoneUser = phoneVoiceUser(db);
     const language = twilioLanguage(phoneUser?.language || "en");
     const actionUrl = `${process.env.PUBLIC_BASE_URL || ""}/api/voice/phone/gather`;
+    const greeting = await phoneVoicePrompt("You are speaking with the AgriNexus AI assistant. This is an AI generated voice. Tell me what you need, such as telehealth intake, apply for a job, contact my buyer, or test provider engines.", language);
+    const prompt = await phoneVoicePrompt("What would you like AgriNexus to do?", language);
+    const noCommand = await phoneVoicePrompt("I did not hear a command. Please call back or use the web assistant.", language);
     logIntegration(db, {
       providerId: "phone-voice",
       module: "AI",
@@ -3212,11 +3254,11 @@ async function api(req, res, url) {
     await writeDb(db);
     return twimlResponse(res, `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
-  <Say voice="${xmlEscape(process.env.TWILIO_TTS_VOICE || "alice")}" language="${xmlEscape(language)}">You are speaking with the AgriNexus AI assistant. This is an AI generated voice. Tell me what you need, such as telehealth intake, apply for a job, contact my buyer, or test provider engines.</Say>
+  ${greeting}
   <Gather input="speech dtmf" action="${xmlEscape(actionUrl || "/api/voice/phone/gather")}" method="POST" language="${xmlEscape(language)}" speechTimeout="auto" actionOnEmptyResult="true">
-    <Say voice="${xmlEscape(process.env.TWILIO_TTS_VOICE || "alice")}" language="${xmlEscape(language)}">What would you like AgriNexus to do?</Say>
+    ${prompt}
   </Gather>
-  <Say voice="${xmlEscape(process.env.TWILIO_TTS_VOICE || "alice")}" language="${xmlEscape(language)}">I did not hear a command. Please call back or use the web assistant.</Say>
+  ${noCommand}
 </Response>`);
   }
 
@@ -3226,10 +3268,11 @@ async function api(req, res, url) {
     const language = twilioLanguage(phoneUser?.language || "en");
     const command = String(body.SpeechResult || body.speechResult || body.Digits || body.digits || "").trim();
     if (!command) {
+      const retryPrompt = await phoneVoicePrompt("Please say a command, like start telehealth intake, apply for that job, or run full mission.", language);
       return twimlResponse(res, `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
   <Gather input="speech dtmf" action="${xmlEscape((process.env.PUBLIC_BASE_URL || "") + "/api/voice/phone/gather")}" method="POST" language="${xmlEscape(language)}" speechTimeout="auto" actionOnEmptyResult="true">
-    <Say voice="${xmlEscape(process.env.TWILIO_TTS_VOICE || "alice")}" language="${xmlEscape(language)}">Please say a command, like start telehealth intake, apply for that job, or run full mission.</Say>
+    ${retryPrompt}
   </Gather>
 </Response>`);
     }
@@ -3244,11 +3287,13 @@ async function api(req, res, url) {
     });
     await writeDb(db);
     const response = String(result.response || "Command completed.").slice(0, 900);
+    const spokenResponse = await phoneVoicePrompt(response, language);
+    const nextPrompt = await phoneVoicePrompt("You can say another command, or hang up when finished.", language);
     return twimlResponse(res, `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
-  <Say voice="${xmlEscape(process.env.TWILIO_TTS_VOICE || "alice")}" language="${xmlEscape(language)}">${xmlEscape(response)}</Say>
+  ${spokenResponse}
   <Gather input="speech dtmf" action="${xmlEscape((process.env.PUBLIC_BASE_URL || "") + "/api/voice/phone/gather")}" method="POST" language="${xmlEscape(language)}" speechTimeout="auto" actionOnEmptyResult="false">
-    <Say voice="${xmlEscape(process.env.TWILIO_TTS_VOICE || "alice")}" language="${xmlEscape(language)}">You can say another command, or hang up when finished.</Say>
+    ${nextPrompt}
   </Gather>
 </Response>`);
   }
