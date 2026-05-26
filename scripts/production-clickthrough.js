@@ -92,6 +92,7 @@ const endpoints = [
 
 assert(app.includes('event.target.closest("[data-voice-example]")'), "Ask AgriNexus guide buttons need delegated click handling");
 assert(app.includes("runJarvisCommand();"), "Jarvis dock Run button must read the dock command input");
+assert(app.includes("function runAdminHealthCheckDirect"), "Admin top health check button must execute directly");
 
 for (const endpoint of endpoints) {
   assert(server.includes(endpoint), `Missing backend endpoint ${endpoint}`);

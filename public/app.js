@@ -4357,6 +4357,38 @@ async function mutate(path, body, success) {
   }
 }
 
+async function runAdminHealthCheckDirect() {
+  const button = $("#adminHealthCheck");
+  const status = $("#adminHealthCheckStatus");
+  if (button) {
+    button.disabled = true;
+    button.setAttribute("aria-busy", "true");
+    button.textContent = "Running...";
+  }
+  if (status) status.textContent = "Checking providers, modules, audit events, and readiness...";
+  try {
+    data = await request("/api/admin/health-check", { method: "POST", body: {} });
+    render();
+    goSection("admin", { instant: true });
+    const message = `Health check complete. ${(data.profile.integrationEvents || []).filter(event => event.action === "admin.health_check").length} admin health event(s) are now recorded.`;
+    const refreshedStatus = $("#adminHealthCheckStatus");
+    if (refreshedStatus) refreshedStatus.textContent = message;
+    setVoiceResponse(message);
+    toast("Admin health check complete");
+  } catch (error) {
+    const refreshedStatus = $("#adminHealthCheckStatus");
+    if (refreshedStatus) refreshedStatus.textContent = error.message || "Health check failed.";
+    toast(error.message || "Health check failed");
+  } finally {
+    const refreshedButton = $("#adminHealthCheck");
+    if (refreshedButton) {
+      refreshedButton.disabled = false;
+      refreshedButton.removeAttribute("aria-busy");
+      refreshedButton.textContent = "Run health check";
+    }
+  }
+}
+
 async function confirmPendingWorkflow() {
   if (!pendingWorkflow) return;
   const workflow = pendingWorkflow;
@@ -5090,6 +5122,12 @@ function bindStatic() {
       if (config) openWorkflowModal(config);
       return;
     }
+    if (event.target.closest("#adminHealthCheck")) {
+      event.preventDefault();
+      event.stopPropagation();
+      runAdminHealthCheckDirect();
+      return;
+    }
     const moduleTestButton = event.target.closest("[data-module-test]");
     if (moduleTestButton) {
       event.preventDefault();
@@ -5612,7 +5650,7 @@ function bindStatic() {
     button.onclick = runLocalPilotScenario;
   });
   const adminHealthCheck = $("#adminHealthCheck");
-  if (adminHealthCheck) adminHealthCheck.onclick = () => openWorkflowModal(workflowConfig("admin", "health-check", { dataset: {} }));
+  if (adminHealthCheck) adminHealthCheck.onclick = runAdminHealthCheckDirect;
   $("#demoRunBtn").onclick = runExecutiveDemo;
   $("#wowDemoBtn").onclick = runWowDemo;
   $$("[data-ai-review]").forEach(button => button.onclick = () => reviewLatestAi(button.dataset.aiReview));
