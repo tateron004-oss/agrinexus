@@ -309,7 +309,8 @@ function runtimeProviders(db) {
     }
     const config = PROVIDER_CONFIG[provider.id];
     if (config) {
-      const mode = process.env[config.modeEnv] || provider.mode;
+      const openAiVoiceProvider = ["voice-stt", "voice-tts"].includes(provider.id) && Boolean(process.env.OPENAI_API_KEY);
+      const mode = process.env[config.modeEnv] || (openAiVoiceProvider ? "openai" : provider.mode);
       const isSandbox = mode === "sandbox";
       const isBrowser = mode === "browser";
       const isOpenAiVoice = mode === "openai";
@@ -951,8 +952,9 @@ function providerRuntime(providerId) {
   if (!config) return { mode: "local", webhookUrl: "", apiKey: "" };
   const webhookKey = config.credentialEnvs.find(key => key.endsWith("_WEBHOOK_URL"));
   const apiKey = config.credentialEnvs.find(key => key.endsWith("_API_KEY"));
+  const openAiVoiceProvider = ["voice-stt", "voice-tts"].includes(providerId) && Boolean(process.env.OPENAI_API_KEY);
   return {
-    mode: process.env[config.modeEnv] || "sandbox",
+    mode: process.env[config.modeEnv] || (openAiVoiceProvider ? "openai" : "sandbox"),
     webhookUrl: webhookKey ? process.env[webhookKey] || "" : "",
     apiKey: apiKey ? process.env[apiKey] || "" : ""
   };
@@ -4957,7 +4959,7 @@ async function api(req, res, url) {
     if (!canUse(user, "ai")) return send(res, 403, { error: "Role does not allow voice commands" });
     const body = await readBody(req);
     let transcript = String(body.transcript || body.text || "").trim();
-    let provider = process.env.VOICE_STT_PROVIDER || "browser";
+    let provider = process.env.VOICE_STT_PROVIDER || (process.env.OPENAI_API_KEY ? "openai" : "browser");
     let model = null;
     if (!transcript && body.audioBase64 && (process.env.VOICE_STT_PROVIDER === "openai" || process.env.OPENAI_API_KEY)) {
       const result = await openAiTranscribeAudio({
@@ -4983,8 +4985,8 @@ async function api(req, res, url) {
     const text = String(body.text || "").trim();
     if (!text) return send(res, 400, { error: "Voice response text is required" });
     let audio = null;
-    let provider = process.env.VOICE_TTS_PROVIDER || "browser";
-    if (process.env.VOICE_TTS_PROVIDER === "openai" || body.forceOpenAi === true) {
+    let provider = process.env.VOICE_TTS_PROVIDER || (process.env.OPENAI_API_KEY ? "openai" : "browser");
+    if (provider === "openai" || body.forceOpenAi === true) {
       audio = await openAiSpeechAudio({
         text,
         voice: body.voice || process.env.OPENAI_TTS_VOICE,
