@@ -882,16 +882,6 @@ a:focus-visible,
 .jarvis-panel .task-list {
   margin-top: 12px;
 }
-.admin-health-action {
-  display: grid;
-  gap: 8px;
-  justify-items: end;
-}
-.admin-health-action .micro-status {
-  max-width: 240px;
-  text-align: right;
-  color: rgba(255,255,255,.86);
-}
 .field-label {
   display: grid;
   gap: 7px;

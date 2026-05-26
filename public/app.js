@@ -4359,25 +4359,21 @@ async function mutate(path, body, success) {
 
 async function runAdminHealthCheckDirect() {
   const button = $("#adminHealthCheck");
-  const status = $("#adminHealthCheckStatus");
   if (button) {
     button.disabled = true;
     button.setAttribute("aria-busy", "true");
     button.textContent = "Running...";
   }
-  if (status) status.textContent = "Checking providers, modules, audit events, and readiness...";
+  announce("Checking providers, modules, audit events, and readiness.");
   try {
     data = await request("/api/admin/health-check", { method: "POST", body: {} });
     render();
     goSection("admin", { instant: true });
     const message = `Health check complete. ${(data.profile.integrationEvents || []).filter(event => event.action === "admin.health_check").length} admin health event(s) are now recorded.`;
-    const refreshedStatus = $("#adminHealthCheckStatus");
-    if (refreshedStatus) refreshedStatus.textContent = message;
     setVoiceResponse(message);
     toast("Admin health check complete");
   } catch (error) {
-    const refreshedStatus = $("#adminHealthCheckStatus");
-    if (refreshedStatus) refreshedStatus.textContent = error.message || "Health check failed.";
+    announce(error.message || "Health check failed.");
     toast(error.message || "Health check failed");
   } finally {
     const refreshedButton = $("#adminHealthCheck");
@@ -5114,18 +5110,18 @@ async function runWowDemo() {
 
 function bindStatic() {
   document.addEventListener("click", event => {
+    if (event.target.closest("#adminHealthCheck")) {
+      event.preventDefault();
+      event.stopPropagation();
+      runAdminHealthCheckDirect();
+      return;
+    }
     const workflowButton = event.target.closest("[data-workflow][data-action]");
     if (workflowButton) {
       event.preventDefault();
       event.stopPropagation();
       const config = workflowConfig(workflowButton.dataset.workflow, workflowButton.dataset.action, workflowButton);
       if (config) openWorkflowModal(config);
-      return;
-    }
-    if (event.target.closest("#adminHealthCheck")) {
-      event.preventDefault();
-      event.stopPropagation();
-      runAdminHealthCheckDirect();
       return;
     }
     const moduleTestButton = event.target.closest("[data-module-test]");
