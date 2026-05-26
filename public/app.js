@@ -4536,27 +4536,44 @@ function chooseSpeechVoice(locale) {
 
 function speakVoiceResponse(textOverride) {
   const text = textOverride || lastVoiceResponse;
+  const updateVoiceOutputStatus = message => {
+    const localStatus = $("#voicePlaybackStatus");
+    const globalStatus = $("#globalVoiceOutputStatus");
+    if (localStatus) localStatus.textContent = message;
+    if (globalStatus) globalStatus.textContent = message;
+  };
   const browserSpeak = () => {
+    updateVoiceOutputStatus("Using browser voice fallback. OpenAI voice audio was not available.");
     if (!("speechSynthesis" in window)) return toast("Speech playback is not supported in this browser");
     window.speechSynthesis.cancel();
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.lang = voiceLocale();
     const voice = chooseSpeechVoice(voiceLocale());
     if (voice) utterance.voice = voice;
-    utterance.rate = accessibilityPrefs.screenReader ? .92 : 1;
+    utterance.rate = accessibilityPrefs.screenReader ? .88 : .95;
+    utterance.pitch = 1.04;
     window.speechSynthesis.speak(utterance);
   };
-  request("/api/voice/speak", { method: "POST", body: { text, language: languageCode(), locale: voiceLocale() } })
+  updateVoiceOutputStatus("Requesting OpenAI voice audio...");
+  request("/api/voice/speak", { method: "POST", body: { text, language: languageCode(), locale: voiceLocale(), forceOpenAi: true } })
     .then(result => {
       const audioDataUrl = result.voiceResult?.audioDataUrl;
       if (audioDataUrl) {
         const audio = new Audio(audioDataUrl);
-        audio.play().catch(() => {});
+        const voice = result.voiceResult?.voice || "OpenAI";
+        const model = result.voiceResult?.model || "speech";
+        updateVoiceOutputStatus(`Using OpenAI voice: ${voice} (${model}).`);
+        audio.play().catch(() => {
+          updateVoiceOutputStatus("OpenAI audio was created, but the browser blocked playback. Click Read response again.");
+        });
         return;
       }
       browserSpeak();
     })
-    .catch(browserSpeak);
+    .catch(error => {
+      updateVoiceOutputStatus(`OpenAI voice unavailable: ${error.message || "speech request failed"}. Using browser fallback.`);
+      browserSpeak();
+    });
 }
 
 function setVoiceStatus(status) {

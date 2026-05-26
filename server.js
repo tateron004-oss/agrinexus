@@ -2382,10 +2382,10 @@ async function openAiSpeechAudio({ text, voice, responseFormat = "mp3" }) {
     },
     body: JSON.stringify({
       model: process.env.OPENAI_TTS_MODEL || "gpt-4o-mini-tts",
-      voice: voice || process.env.OPENAI_TTS_VOICE || "cedar",
+      voice: voice || process.env.OPENAI_TTS_VOICE || "coral",
       input: String(text || "").slice(0, 4096),
       response_format: responseFormat,
-      instructions: process.env.OPENAI_TTS_INSTRUCTIONS || "Speak clearly, warmly, and professionally as an AI assistant for rural development users."
+      instructions: process.env.OPENAI_TTS_INSTRUCTIONS || "Speak warmly and naturally, like a calm coach guiding a non-technical rural user. Use conversational pacing and avoid a robotic announcer tone."
     })
   });
   if (!response.ok) {
@@ -2397,7 +2397,7 @@ async function openAiSpeechAudio({ text, voice, responseFormat = "mp3" }) {
     audioDataUrl: `data:audio/${responseFormat};base64,${buffer.toString("base64")}`,
     provider: "openai-audio-speech",
     model: process.env.OPENAI_TTS_MODEL || "gpt-4o-mini-tts",
-    voice: voice || process.env.OPENAI_TTS_VOICE || "cedar"
+    voice: voice || process.env.OPENAI_TTS_VOICE || "coral"
   };
 }
 
