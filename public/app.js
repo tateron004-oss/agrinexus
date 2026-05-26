@@ -2392,10 +2392,7 @@ function renderVoiceAssistant() {
       .map(command => `<button type="button" data-voice-example="${command}">${command}</button>`)
       .join("");
     $$("[data-voice-example]").forEach(button => {
-      button.onclick = () => {
-        setCommandInputs(button.dataset.voiceExample);
-        runVoiceTextCommand();
-      };
+      button.onclick = () => runVoiceExample(button);
     });
   }
   const guide = $("#globalVoiceGuide");
@@ -2405,6 +2402,14 @@ function renderVoiceAssistant() {
       .join("");
   }
   renderJarvisLayer();
+}
+
+async function runVoiceExample(button) {
+  const command = button?.dataset.voiceExample || "";
+  if (!command) return;
+  setCommandInputs(command);
+  openAskNexus();
+  await handleVoiceCommand(command);
 }
 
 function jarvisInsights() {
@@ -5311,7 +5316,13 @@ function bindStatic() {
       startVoiceListening();
       return;
     }
-    if (event.target.closest("#globalRunBtn") || event.target.closest("#jarvisRunBtn")) {
+    if (event.target.closest("#jarvisRunBtn")) {
+      event.preventDefault();
+      event.stopPropagation();
+      runJarvisCommand();
+      return;
+    }
+    if (event.target.closest("#globalRunBtn")) {
       event.preventDefault();
       event.stopPropagation();
       runGlobalCommand();
@@ -5349,6 +5360,13 @@ function bindStatic() {
       event.preventDefault();
       event.stopPropagation();
       installAgriNexusApp();
+      return;
+    }
+    const voiceExampleButton = event.target.closest("[data-voice-example]");
+    if (voiceExampleButton) {
+      event.preventDefault();
+      event.stopPropagation();
+      runVoiceExample(voiceExampleButton);
       return;
     }
     if (event.target.closest("#jarvisMissionBtn") || event.target.closest("#agentMissionBtn")) {
