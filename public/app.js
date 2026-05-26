@@ -4555,7 +4555,7 @@ function speakVoiceResponse(textOverride) {
     window.speechSynthesis.speak(utterance);
   };
   updateVoiceOutputStatus("Requesting OpenAI voice audio...");
-  request("/api/voice/speak", { method: "POST", body: { text, language: languageCode(), locale: voiceLocale(), forceOpenAi: true } })
+  request("/api/voice/speak", { method: "POST", body: { text, language: languageCode(), locale: voiceLocale(), forceOpenAi: true, voice: "coral" } })
     .then(result => {
       const audioDataUrl = result.voiceResult?.audioDataUrl;
       if (audioDataUrl) {

@@ -2374,7 +2374,8 @@ async function openAiTranscribeAudio({ audioBase64, mimeType = "audio/webm", fil
 
 async function openAiSpeechAudio({ text, voice, responseFormat = "mp3" }) {
   if (!process.env.OPENAI_API_KEY) return null;
-  const response = await fetch("https://api.openai.com/v1/audio/speech", {
+  const requestedVoice = voice || process.env.OPENAI_TTS_VOICE || "coral";
+  const createSpeech = selectedVoice => fetch("https://api.openai.com/v1/audio/speech", {
     method: "POST",
     headers: {
       Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
@@ -2382,12 +2383,18 @@ async function openAiSpeechAudio({ text, voice, responseFormat = "mp3" }) {
     },
     body: JSON.stringify({
       model: process.env.OPENAI_TTS_MODEL || "gpt-4o-mini-tts",
-      voice: voice || process.env.OPENAI_TTS_VOICE || "coral",
+      voice: selectedVoice,
       input: String(text || "").slice(0, 4096),
       response_format: responseFormat,
       instructions: process.env.OPENAI_TTS_INSTRUCTIONS || "Speak warmly and naturally, like a calm coach guiding a non-technical rural user. Use conversational pacing and avoid a robotic announcer tone."
     })
   });
+  let response = await createSpeech(requestedVoice);
+  let finalVoice = requestedVoice;
+  if (!response.ok && requestedVoice !== "coral") {
+    response = await createSpeech("coral");
+    finalVoice = "coral";
+  }
   if (!response.ok) {
     const payload = await response.json().catch(() => ({}));
     throw new Error(payload.error?.message || `OpenAI speech failed: ${response.status}`);
@@ -2397,7 +2404,7 @@ async function openAiSpeechAudio({ text, voice, responseFormat = "mp3" }) {
     audioDataUrl: `data:audio/${responseFormat};base64,${buffer.toString("base64")}`,
     provider: "openai-audio-speech",
     model: process.env.OPENAI_TTS_MODEL || "gpt-4o-mini-tts",
-    voice: voice || process.env.OPENAI_TTS_VOICE || "coral"
+    voice: finalVoice
   };
 }
 
