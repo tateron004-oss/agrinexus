@@ -73,6 +73,7 @@ async function call(path, body) {
   assert(login.providers.length >= 8);
   assert(login.providers.some(provider => provider.id === "voice-stt"));
   assert(login.providers.some(provider => provider.id === "voice-tts"));
+  assert(login.providers.some(provider => provider.id === "phone-voice"));
   assert(login.providers.some(provider => provider.id === "translation"));
   assert(login.providers.some(provider => provider.id === "auth-users"));
   assert(login.providers.some(provider => provider.id === "auth-password-reset"));
@@ -310,6 +311,22 @@ async function call(path, body) {
   const voiceSpeak = await call("/api/voice/speak", { text: "Telehealth command ready", language: "en" });
   assert(voiceSpeak.voiceResult.text === "Telehealth command ready");
   assert(voiceSpeak.profile.voiceSessions.some(item => item.type === "text-to-speech"));
+  const phoneIncoming = await fetch(`${base}/api/voice/phone/incoming`, {
+    method: "POST",
+    headers: { "content-type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({ From: "+15555550123", CallSid: "CA-smoke" })
+  });
+  const phoneIncomingXml = await phoneIncoming.text();
+  assert(phoneIncoming.ok);
+  assert(phoneIncomingXml.includes("<Gather"));
+  const phoneGather = await fetch(`${base}/api/voice/phone/gather`, {
+    method: "POST",
+    headers: { "content-type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({ SpeechResult: "start telehealth intake", CallSid: "CA-smoke" })
+  });
+  const phoneGatherXml = await phoneGather.text();
+  assert(phoneGather.ok);
+  assert(phoneGatherXml.includes("You can say another command"));
   const translated = await call("/api/translate", { text: "Generate care plan", targetLanguage: "sw", context: "smoke" });
   assert(translated.translationResult.targetLanguage === "sw");
   assert(translated.profile.integrationEvents.some(event => event.action === "translation.dynamic"));

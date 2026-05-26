@@ -4489,16 +4489,28 @@ function chooseSpeechVoice(locale) {
 }
 
 function speakVoiceResponse(textOverride) {
-  if (!("speechSynthesis" in window)) return toast("Speech playback is not supported in this browser");
   const text = textOverride || lastVoiceResponse;
-  request("/api/voice/speak", { method: "POST", body: { text, language: languageCode(), locale: voiceLocale() } }).catch(() => {});
-  window.speechSynthesis.cancel();
-  const utterance = new SpeechSynthesisUtterance(text);
-  utterance.lang = voiceLocale();
-  const voice = chooseSpeechVoice(voiceLocale());
-  if (voice) utterance.voice = voice;
-  utterance.rate = accessibilityPrefs.screenReader ? .92 : 1;
-  window.speechSynthesis.speak(utterance);
+  const browserSpeak = () => {
+    if (!("speechSynthesis" in window)) return toast("Speech playback is not supported in this browser");
+    window.speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = voiceLocale();
+    const voice = chooseSpeechVoice(voiceLocale());
+    if (voice) utterance.voice = voice;
+    utterance.rate = accessibilityPrefs.screenReader ? .92 : 1;
+    window.speechSynthesis.speak(utterance);
+  };
+  request("/api/voice/speak", { method: "POST", body: { text, language: languageCode(), locale: voiceLocale() } })
+    .then(result => {
+      const audioDataUrl = result.voiceResult?.audioDataUrl;
+      if (audioDataUrl) {
+        const audio = new Audio(audioDataUrl);
+        audio.play().catch(() => {});
+        return;
+      }
+      browserSpeak();
+    })
+    .catch(browserSpeak);
 }
 
 function setVoiceStatus(status) {

@@ -54,6 +54,7 @@ const PROVIDER_CONFIG = {
   "field-drones": { modeEnv: "DRONE_PROVIDER", credentialEnvs: ["DRONE_WEBHOOK_URL", "DRONE_PROVIDER_API_KEY"] },
   "voice-stt": { modeEnv: "VOICE_STT_PROVIDER", credentialEnvs: ["VOICE_STT_WEBHOOK_URL", "VOICE_PROVIDER_API_KEY"] },
   "voice-tts": { modeEnv: "VOICE_TTS_PROVIDER", credentialEnvs: ["VOICE_TTS_WEBHOOK_URL", "VOICE_PROVIDER_API_KEY"] },
+  "phone-voice": { modeEnv: "PHONE_PROVIDER", credentialEnvs: ["TWILIO_ACCOUNT_SID", "TWILIO_AUTH_TOKEN", "TWILIO_PHONE_NUMBER"] },
   "translation": { modeEnv: "TRANSLATION_PROVIDER", credentialEnvs: ["TRANSLATION_WEBHOOK_URL", "TRANSLATION_PROVIDER_API_KEY"] },
   "auth-users": { modeEnv: "AUTH_PROVIDER", credentialEnvs: ["AUTH_WEBHOOK_URL", "AUTH_PROVIDER_API_KEY"] },
   "auth-password-reset": { modeEnv: "PASSWORD_RESET_PROVIDER", credentialEnvs: ["PASSWORD_RESET_WEBHOOK_URL", "AUTH_PROVIDER_API_KEY"] },
@@ -62,6 +63,17 @@ const PROVIDER_CONFIG = {
   "whatsapp-delivery": { modeEnv: "WHATSAPP_PROVIDER", credentialEnvs: ["WHATSAPP_WEBHOOK_URL", "COMMUNICATION_PROVIDER_API_KEY"] },
   "billing-subscriptions": { modeEnv: "BILLING_PROVIDER", credentialEnvs: ["BILLING_WEBHOOK_URL", "BILLING_PROVIDER_API_KEY"] }
 };
+
+const BUILT_IN_PROVIDER_DEFINITIONS = [
+  {
+    id: "phone-voice",
+    name: "Phone Voice Assistant",
+    module: "AI",
+    mode: "twilio-ready",
+    status: "needs-credentials",
+    detail: "Twilio Programmable Voice webhooks are available; add Twilio credentials and point a phone number to /api/voice/phone/incoming."
+  }
+];
 
 const mime = {
   ".html": "text/html; charset=utf-8",
@@ -190,11 +202,16 @@ function readBody(req) {
     let data = "";
     req.on("data", chunk => {
       data += chunk;
-      if (data.length > 1_000_000) reject(new Error("Payload too large"));
+      if (data.length > 20_000_000) reject(new Error("Payload too large"));
     });
     req.on("end", () => {
       try {
-        resolve(data ? JSON.parse(data) : {});
+        const contentType = String(req.headers["content-type"] || "");
+        if (!data) return resolve({});
+        if (contentType.includes("application/x-www-form-urlencoded")) {
+          return resolve(Object.fromEntries(new URLSearchParams(data)));
+        }
+        resolve(JSON.parse(data));
       } catch {
         reject(new Error("Invalid JSON"));
       }
@@ -240,7 +257,11 @@ function canUse(user, area) {
 }
 
 function runtimeProviders(db) {
-  return (db.providers || []).map(provider => {
+  const baseProviders = [...(db.providers || [])];
+  for (const provider of BUILT_IN_PROVIDER_DEFINITIONS) {
+    if (!baseProviders.some(item => item.id === provider.id)) baseProviders.push(provider);
+  }
+  return baseProviders.map(provider => {
     if (provider.id === "database") {
       const hasDatabaseUrl = Boolean(process.env.DATABASE_URL);
       const hasPg = Boolean(loadOptional("pg"));
@@ -291,12 +312,16 @@ function runtimeProviders(db) {
       const mode = process.env[config.modeEnv] || provider.mode;
       const isSandbox = mode === "sandbox";
       const isBrowser = mode === "browser";
+      const isOpenAiVoice = mode === "openai";
       const hasCredential = config.credentialEnvs.every(key => Boolean(process.env[key]));
+      const hasOpenAiVoice = isOpenAiVoice && Boolean(process.env.OPENAI_API_KEY);
       return {
         ...provider,
         mode,
-        status: isBrowser ? (REQUIRE_LIVE_SERVICES ? "needs-live-provider" : "connected") : isSandbox ? (REQUIRE_LIVE_SERVICES ? "needs-live-provider" : "connected") : (hasCredential ? "connected" : "needs-credentials"),
-        detail: isBrowser
+        status: hasOpenAiVoice ? "connected" : isBrowser ? (REQUIRE_LIVE_SERVICES ? "needs-live-provider" : "connected") : isSandbox ? (REQUIRE_LIVE_SERVICES ? "needs-live-provider" : "connected") : (hasCredential ? "connected" : "needs-credentials"),
+        detail: hasOpenAiVoice
+          ? `${mode} provider configured through OPENAI_API_KEY.`
+          : isBrowser
           ? (REQUIRE_LIVE_SERVICES ? `Strict live mode requires ${config.modeEnv}=webhook and hosted voice credentials.` : provider.detail)
           : isSandbox
           ? (REQUIRE_LIVE_SERVICES ? `Strict live mode requires ${config.modeEnv} to be set to a live provider and credentials configured.` : provider.detail)
@@ -305,6 +330,10 @@ function runtimeProviders(db) {
     }
     return provider;
   });
+}
+
+function runtimeProviderById(db, providerId) {
+  return runtimeProviders(db).find(item => item.id === providerId);
 }
 
 function integrationStatus(db) {
@@ -332,7 +361,8 @@ function integrationStatus(db) {
       healthcare: ["HEALTH_TELEHEALTH_PROVIDER", "HEALTH_EHR_PROVIDER", "HEALTH_NOTIFICATION_PROVIDER", "HEALTH_*_WEBHOOK_URL", "HEALTH_PROVIDER_API_KEY"],
       agritrade: ["TRADE_PAYMENT_PROVIDER", "TRADE_LOGISTICS_PROVIDER", "TRADE_MARKET_PROVIDER", "TRADE_*_WEBHOOK_URL", "TRADE_PROVIDER_API_KEY"],
       drones: ["DRONE_PROVIDER", "DRONE_WEBHOOK_URL", "DRONE_PROVIDER_API_KEY"],
-      voice: ["VOICE_STT_PROVIDER", "VOICE_TTS_PROVIDER", "VOICE_STT_WEBHOOK_URL", "VOICE_TTS_WEBHOOK_URL", "VOICE_PROVIDER_API_KEY"],
+      voice: ["VOICE_STT_PROVIDER=openai or webhook", "VOICE_TTS_PROVIDER=openai or webhook", "OPENAI_API_KEY or VOICE_*_WEBHOOK_URL + VOICE_PROVIDER_API_KEY"],
+      phone: ["PHONE_PROVIDER=twilio", "TWILIO_ACCOUNT_SID", "TWILIO_AUTH_TOKEN", "TWILIO_PHONE_NUMBER", "Configure Twilio Voice webhook to /api/voice/phone/incoming"],
       auth: ["AUTH_PROVIDER", "AUTH_WEBHOOK_URL", "PASSWORD_RESET_PROVIDER", "PASSWORD_RESET_WEBHOOK_URL", "AUTH_PROVIDER_API_KEY"],
       communications: ["EMAIL_PROVIDER", "EMAIL_WEBHOOK_URL", "SMS_PROVIDER", "SMS_WEBHOOK_URL", "WHATSAPP_PROVIDER", "WHATSAPP_WEBHOOK_URL", "COMMUNICATION_PROVIDER_API_KEY"],
       billing: ["BILLING_PROVIDER", "BILLING_WEBHOOK_URL", "BILLING_PROVIDER_API_KEY", "BILLING_PRICE_ID"],
@@ -396,8 +426,16 @@ function liveEngineManifest(db) {
       name: "Jarvis-Style Voice",
       purpose: "Speech-to-text and text-to-speech workflows for voice-first command center use.",
       providerIds: ["voice-stt", "voice-tts"],
-      credentials: ["VOICE_STT_PROVIDER", "VOICE_TTS_PROVIDER", "VOICE_STT_WEBHOOK_URL", "VOICE_TTS_WEBHOOK_URL", "VOICE_PROVIDER_API_KEY"],
-      userAction: "Deploy provider engines or connect a hosted voice provider."
+      credentials: ["VOICE_STT_PROVIDER=openai", "VOICE_TTS_PROVIDER=openai", "OPENAI_API_KEY", "OPENAI_TRANSCRIBE_MODEL", "OPENAI_TTS_MODEL", "OPENAI_TTS_VOICE"],
+      userAction: "Set VOICE_STT_PROVIDER=openai and VOICE_TTS_PROVIDER=openai on the platform service, then add OPENAI_API_KEY."
+    },
+    {
+      id: "phone-voice",
+      name: "Phone Call Assistant",
+      purpose: "Lets users call a Twilio number, speak plain-language commands, and receive voice responses that route platform workflows.",
+      providerIds: ["phone-voice"],
+      credentials: ["PHONE_PROVIDER=twilio", "TWILIO_ACCOUNT_SID", "TWILIO_AUTH_TOKEN", "TWILIO_PHONE_NUMBER", "PUBLIC_BASE_URL"],
+      userAction: "Buy/configure a Twilio voice number and set its incoming call webhook to PUBLIC_BASE_URL/api/voice/phone/incoming."
     },
     {
       id: "learning",
@@ -610,6 +648,7 @@ function productionReadiness(providers) {
         },
         providerReady("voice-stt", "Speech-to-text command provider"),
         providerReady("voice-tts", "Text-to-speech response provider"),
+        providerReady("phone-voice", "Phone-call voice assistant provider"),
         providerReady("translation", "Live multilingual translation provider"),
         {
           id: "map-provider",
@@ -920,8 +959,14 @@ function providerRuntime(providerId) {
 }
 
 async function dispatchProviderWebhook(db, event) {
-  const provider = (db.providers || []).find(item => item.id === event.providerId);
+  const provider = runtimeProviderById(db, event.providerId);
   const runtime = providerRuntime(event.providerId);
+  if (runtime.mode === "openai" && process.env.OPENAI_API_KEY) {
+    return { attempted: false, ok: true, status: "openai-direct-ready" };
+  }
+  if (event.providerId === "phone-voice" && process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN && process.env.TWILIO_PHONE_NUMBER) {
+    return { attempted: false, ok: true, status: "twilio-webhook-ready" };
+  }
   if (!provider || runtime.mode === "sandbox") {
     if (REQUIRE_LIVE_SERVICES && provider) {
       return { attempted: false, ok: false, status: "strict-live-provider-required" };
@@ -955,7 +1000,7 @@ async function dispatchProviderWebhook(db, event) {
 
 function logIntegration(db, { providerId, module, action, status = "success", detail, metadata = {}, dispatch = true }) {
   db.profile.integrationEvents = db.profile.integrationEvents || [];
-  const provider = (db.providers || []).find(item => item.id === providerId);
+  const provider = runtimeProviderById(db, providerId);
   const event = {
     providerId,
     module,
@@ -2261,7 +2306,9 @@ function voiceRecord(db, user, type, detail, metadata = {}) {
     type,
     detail,
     status: "completed",
-    provider: type === "speech-to-text"
+    provider: type === "phone-call"
+      ? (process.env.PHONE_PROVIDER || "twilio-ready")
+      : type === "speech-to-text"
       ? (process.env.VOICE_STT_PROVIDER || "browser")
       : (process.env.VOICE_TTS_PROVIDER || "browser"),
     createdBy: user.email,
@@ -2271,13 +2318,85 @@ function voiceRecord(db, user, type, detail, metadata = {}) {
   db.profile.voiceSessions.unshift(record);
   db.profile.voiceSessions = db.profile.voiceSessions.slice(0, 40);
   logIntegration(db, {
-    providerId: type === "speech-to-text" ? "voice-stt" : "voice-tts",
+    providerId: type === "phone-call" ? "phone-voice" : type === "speech-to-text" ? "voice-stt" : "voice-tts",
     module: "AI",
     action: `voice.${type}`,
     detail,
     metadata: { voiceSessionId: record.id, ...metadata }
   });
   return record;
+}
+
+function xmlEscape(value) {
+  return String(value || "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&apos;");
+}
+
+function twimlResponse(res, xml) {
+  return send(res, 200, xml, { "content-type": "text/xml; charset=utf-8" });
+}
+
+function twilioLanguage(language) {
+  const map = { en: "en-US", fr: "fr-FR", sw: "sw-KE", ar: "ar-EG" };
+  return process.env.TWILIO_GATHER_LANGUAGE || map[language] || "en-US";
+}
+
+function phoneVoiceUser(db) {
+  return db.users.find(item => item.role === "Admin") || db.users[0];
+}
+
+async function openAiTranscribeAudio({ audioBase64, mimeType = "audio/webm", filename = "agrinexus-voice.webm", language }) {
+  if (!process.env.OPENAI_API_KEY || !audioBase64) return null;
+  const bytes = Buffer.from(String(audioBase64).replace(/^data:[^,]+,/, ""), "base64");
+  const form = new FormData();
+  form.append("file", new Blob([bytes], { type: mimeType }), filename);
+  form.append("model", process.env.OPENAI_TRANSCRIBE_MODEL || "gpt-4o-mini-transcribe");
+  if (language) form.append("language", language);
+  const response = await fetch("https://api.openai.com/v1/audio/transcriptions", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${process.env.OPENAI_API_KEY}` },
+    body: form
+  });
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(payload.error?.message || `OpenAI transcription failed: ${response.status}`);
+  return {
+    transcript: payload.text || "",
+    provider: "openai-audio-transcriptions",
+    model: process.env.OPENAI_TRANSCRIBE_MODEL || "gpt-4o-mini-transcribe"
+  };
+}
+
+async function openAiSpeechAudio({ text, voice, responseFormat = "mp3" }) {
+  if (!process.env.OPENAI_API_KEY) return null;
+  const response = await fetch("https://api.openai.com/v1/audio/speech", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      model: process.env.OPENAI_TTS_MODEL || "gpt-4o-mini-tts",
+      voice: voice || process.env.OPENAI_TTS_VOICE || "cedar",
+      input: String(text || "").slice(0, 4096),
+      response_format: responseFormat,
+      instructions: process.env.OPENAI_TTS_INSTRUCTIONS || "Speak clearly, warmly, and professionally as an AI assistant for rural development users."
+    })
+  });
+  if (!response.ok) {
+    const payload = await response.json().catch(() => ({}));
+    throw new Error(payload.error?.message || `OpenAI speech failed: ${response.status}`);
+  }
+  const buffer = Buffer.from(await response.arrayBuffer());
+  return {
+    audioDataUrl: `data:audio/${responseFormat};base64,${buffer.toString("base64")}`,
+    provider: "openai-audio-speech",
+    model: process.env.OPENAI_TTS_MODEL || "gpt-4o-mini-tts",
+    voice: voice || process.env.OPENAI_TTS_VOICE || "cedar"
+  };
 }
 
 function deepVoiceIntent(lower) {
@@ -3070,6 +3189,61 @@ async function api(req, res, url) {
     return send(res, 200, { ok: true, status: delivery.ok ? "sent" : "queued-needs-provider" });
   }
 
+  if (url.pathname === "/api/voice/phone/incoming" && req.method === "POST") {
+    const phoneUser = phoneVoiceUser(db);
+    const language = twilioLanguage(phoneUser?.language || "en");
+    const actionUrl = `${process.env.PUBLIC_BASE_URL || ""}/api/voice/phone/gather`;
+    logIntegration(db, {
+      providerId: "phone-voice",
+      module: "AI",
+      action: "phone.incoming",
+      detail: "Incoming phone voice assistant session opened.",
+      metadata: { from: req.headers["x-forwarded-for"] || "twilio" }
+    });
+    await writeDb(db);
+    return twimlResponse(res, `<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+  <Say voice="${xmlEscape(process.env.TWILIO_TTS_VOICE || "alice")}" language="${xmlEscape(language)}">You are speaking with the AgriNexus AI assistant. This is an AI generated voice. Tell me what you need, such as telehealth intake, apply for a job, contact my buyer, or test provider engines.</Say>
+  <Gather input="speech dtmf" action="${xmlEscape(actionUrl || "/api/voice/phone/gather")}" method="POST" language="${xmlEscape(language)}" speechTimeout="auto" actionOnEmptyResult="true">
+    <Say voice="${xmlEscape(process.env.TWILIO_TTS_VOICE || "alice")}" language="${xmlEscape(language)}">What would you like AgriNexus to do?</Say>
+  </Gather>
+  <Say voice="${xmlEscape(process.env.TWILIO_TTS_VOICE || "alice")}" language="${xmlEscape(language)}">I did not hear a command. Please call back or use the web assistant.</Say>
+</Response>`);
+  }
+
+  if (url.pathname === "/api/voice/phone/gather" && req.method === "POST") {
+    const phoneUser = phoneVoiceUser(db);
+    const body = await readBody(req);
+    const language = twilioLanguage(phoneUser?.language || "en");
+    const command = String(body.SpeechResult || body.speechResult || body.Digits || body.digits || "").trim();
+    if (!command) {
+      return twimlResponse(res, `<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+  <Gather input="speech dtmf" action="${xmlEscape((process.env.PUBLIC_BASE_URL || "") + "/api/voice/phone/gather")}" method="POST" language="${xmlEscape(language)}" speechTimeout="auto" actionOnEmptyResult="true">
+    <Say voice="${xmlEscape(process.env.TWILIO_TTS_VOICE || "alice")}" language="${xmlEscape(language)}">Please say a command, like start telehealth intake, apply for that job, or run full mission.</Say>
+  </Gather>
+</Response>`);
+    }
+    const result = await runAgentCommand(db, phoneUser, command, { confirm: true, conversational: true, note: "Phone call voice assistant command" });
+    commandRecord(db, phoneUser, command, result);
+    voiceRecord(db, phoneUser, "phone-call", `Phone command handled: ${command}`, {
+      command,
+      response: result.response,
+      callSid: body.CallSid || body.callSid || null,
+      from: body.From || body.from || null,
+      provider: "twilio"
+    });
+    await writeDb(db);
+    const response = String(result.response || "Command completed.").slice(0, 900);
+    return twimlResponse(res, `<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+  <Say voice="${xmlEscape(process.env.TWILIO_TTS_VOICE || "alice")}" language="${xmlEscape(language)}">${xmlEscape(response)}</Say>
+  <Gather input="speech dtmf" action="${xmlEscape((process.env.PUBLIC_BASE_URL || "") + "/api/voice/phone/gather")}" method="POST" language="${xmlEscape(language)}" speechTimeout="auto" actionOnEmptyResult="false">
+    <Say voice="${xmlEscape(process.env.TWILIO_TTS_VOICE || "alice")}" language="${xmlEscape(language)}">You can say another command, or hang up when finished.</Say>
+  </Gather>
+</Response>`);
+  }
+
   if (!user) return send(res, 401, { error: "Sign in required" });
 
   if (url.pathname === "/api/state" && req.method === "GET") {
@@ -3220,7 +3394,7 @@ async function api(req, res, url) {
   if (url.pathname === "/api/integrations/test" && req.method === "POST") {
     if (!canUse(user, "integrations")) return send(res, 403, { error: "Role does not allow integration testing" });
     const body = await readBody(req);
-    const provider = (db.providers || []).find(item => item.id === body.providerId);
+    const provider = runtimeProviderById(db, body.providerId);
     if (!provider) return send(res, 404, { error: "Provider not found" });
     const delivery = await dispatchProviderWebhook(db, {
       providerId: provider.id,
@@ -3248,7 +3422,7 @@ async function api(req, res, url) {
   if (url.pathname === "/api/integrations/test-all" && req.method === "POST") {
     if (!canUse(user, "integrations")) return send(res, 403, { error: "Role does not allow integration testing" });
     const results = [];
-    for (const provider of db.providers || []) {
+    for (const provider of runtimeProviders(db)) {
       let delivery;
       try {
         delivery = await dispatchProviderWebhook(db, {
@@ -3291,7 +3465,7 @@ async function api(req, res, url) {
     if (!canUse(user, "integrations")) return send(res, 403, { error: "Role does not allow module engine testing" });
     const body = await readBody(req);
     const moduleName = String(body.module || "").trim();
-    const providers = (db.providers || []).filter(provider => provider.module === moduleName);
+    const providers = runtimeProviders(db).filter(provider => provider.module === moduleName);
     if (!providers.length) return send(res, 404, { error: "Module providers not found" });
     const results = [];
     for (const provider of providers) {
@@ -3335,7 +3509,7 @@ async function api(req, res, url) {
 
   if (url.pathname === "/api/admin/health-check" && req.method === "POST") {
     if (!canUse(user, "admin")) return send(res, 403, { error: "Role does not allow admin health checks" });
-    for (const provider of db.providers || []) {
+    for (const provider of runtimeProviders(db)) {
       logIntegration(db, {
         providerId: provider.id,
         module: provider.module,
@@ -4782,11 +4956,24 @@ async function api(req, res, url) {
   if (url.pathname === "/api/voice/transcribe" && req.method === "POST") {
     if (!canUse(user, "ai")) return send(res, 403, { error: "Role does not allow voice commands" });
     const body = await readBody(req);
-    const transcript = String(body.transcript || body.text || "").trim();
-    const record = voiceRecord(db, user, "speech-to-text", transcript ? `Speech captured: ${transcript}` : "Speech capture session opened.", { language: body.language || user.language || "en" });
+    let transcript = String(body.transcript || body.text || "").trim();
+    let provider = process.env.VOICE_STT_PROVIDER || "browser";
+    let model = null;
+    if (!transcript && body.audioBase64 && (process.env.VOICE_STT_PROVIDER === "openai" || process.env.OPENAI_API_KEY)) {
+      const result = await openAiTranscribeAudio({
+        audioBase64: body.audioBase64,
+        mimeType: body.mimeType || "audio/webm",
+        filename: body.filename || "agrinexus-voice.webm",
+        language: body.language || user.language || "en"
+      });
+      transcript = result?.transcript || "";
+      provider = result?.provider || provider;
+      model = result?.model || null;
+    }
+    const record = voiceRecord(db, user, "speech-to-text", transcript ? `Speech captured: ${transcript}` : "Speech capture session opened.", { language: body.language || user.language || "en", provider, model });
     await writeDb(db);
     const state = publicState(db, user);
-    state.voiceResult = { transcript, sessionId: record.id, provider: record.provider };
+    state.voiceResult = { transcript, sessionId: record.id, provider, model };
     return send(res, 200, state);
   }
 
@@ -4795,10 +4982,20 @@ async function api(req, res, url) {
     const body = await readBody(req);
     const text = String(body.text || "").trim();
     if (!text) return send(res, 400, { error: "Voice response text is required" });
-    const record = voiceRecord(db, user, "text-to-speech", `Speech response prepared: ${text}`, { language: body.language || user.language || "en" });
+    let audio = null;
+    let provider = process.env.VOICE_TTS_PROVIDER || "browser";
+    if (process.env.VOICE_TTS_PROVIDER === "openai" || body.forceOpenAi === true) {
+      audio = await openAiSpeechAudio({
+        text,
+        voice: body.voice || process.env.OPENAI_TTS_VOICE,
+        responseFormat: body.responseFormat || "mp3"
+      });
+      provider = audio?.provider || provider;
+    }
+    const record = voiceRecord(db, user, "text-to-speech", `Speech response prepared: ${text}`, { language: body.language || user.language || "en", provider, model: audio?.model || null, voice: audio?.voice || null });
     await writeDb(db);
     const state = publicState(db, user);
-    state.voiceResult = { text, sessionId: record.id, provider: record.provider };
+    state.voiceResult = { text, sessionId: record.id, provider, audioDataUrl: audio?.audioDataUrl || null, model: audio?.model || null, voice: audio?.voice || null };
     return send(res, 200, state);
   }
 

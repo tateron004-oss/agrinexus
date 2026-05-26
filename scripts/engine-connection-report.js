@@ -51,9 +51,15 @@ const engines = [
   },
   {
     name: "Jarvis-Style Voice",
-    purpose: "Speech-to-text and text-to-speech commands",
-    keys: ["VOICE_STT_PROVIDER", "VOICE_TTS_PROVIDER", "VOICE_STT_WEBHOOK_URL", "VOICE_TTS_WEBHOOK_URL", "VOICE_PROVIDER_API_KEY"],
-    userStep: "Deploy provider engines or connect a hosted voice provider."
+    purpose: "OpenAI speech-to-text and high-quality text-to-speech commands",
+    keys: ["VOICE_STT_PROVIDER", "VOICE_TTS_PROVIDER", "OPENAI_API_KEY", "OPENAI_TRANSCRIBE_MODEL", "OPENAI_TTS_MODEL", "OPENAI_TTS_VOICE"],
+    userStep: "Set VOICE_STT_PROVIDER=openai, VOICE_TTS_PROVIDER=openai, and add OPENAI_API_KEY in Render."
+  },
+  {
+    name: "Phone Voice Assistant",
+    purpose: "Twilio phone-call assistant for speech commands and voice responses",
+    keys: ["PHONE_PROVIDER", "PUBLIC_BASE_URL", "TWILIO_ACCOUNT_SID", "TWILIO_AUTH_TOKEN", "TWILIO_PHONE_NUMBER"],
+    userStep: "Buy/configure a Twilio voice number and point incoming calls to PUBLIC_BASE_URL/api/voice/phone/incoming."
   },
   {
     name: "Learning Provider",

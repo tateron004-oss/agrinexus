@@ -27,7 +27,13 @@ const liveProviderGroups = [
   {
     module: "Voice Command Center",
     providerKeys: ["VOICE_STT_PROVIDER", "VOICE_TTS_PROVIDER"],
-    credentialKeys: ["VOICE_STT_WEBHOOK_URL", "VOICE_TTS_WEBHOOK_URL", "VOICE_PROVIDER_API_KEY"]
+    credentialKeys: ["OPENAI_API_KEY"],
+    alternateCredentialKeys: ["VOICE_STT_WEBHOOK_URL", "VOICE_TTS_WEBHOOK_URL", "VOICE_PROVIDER_API_KEY"]
+  },
+  {
+    module: "Phone Voice Assistant",
+    providerKeys: ["PHONE_PROVIDER"],
+    credentialKeys: ["TWILIO_ACCOUNT_SID", "TWILIO_AUTH_TOKEN", "TWILIO_PHONE_NUMBER", "PUBLIC_BASE_URL"]
   },
   {
     module: "Translation",
@@ -111,7 +117,7 @@ function providerChecks() {
   return liveProviderGroups.map(group => {
     const modes = group.providerKeys.map(key => process.env[key] || "sandbox");
     const liveModes = modes.filter(mode => mode !== "sandbox");
-    const hasCredentials = group.credentialKeys.every(hasValue);
+    const hasCredentials = group.credentialKeys.every(hasValue) || Boolean(group.alternateCredentialKeys?.every(hasValue));
     const ready = liveModes.length === group.providerKeys.length && hasCredentials;
     const detail = ready
       ? `${group.module} live providers are configured.`

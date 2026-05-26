@@ -1,8 +1,8 @@
 # AgriNexus Live Engine Connection Report
 
 Source env file: `.env.production.gapfill`
-Generated: 2026-05-18T22:37:55.840Z
-Ready engines: 3/11
+Generated: 2026-05-26T05:00:03.033Z
+Ready engines: 3/12
 
 This report is the non-developer checklist for connecting real services in Render. Values marked missing must be added in Render before this is a true live production platform.
 
@@ -11,7 +11,8 @@ This report is the non-developer checklist for connecting real services in Rende
 | Production PostgreSQL | Persistent platform records | Ready | None | Create a Render PostgreSQL database, copy its internal DATABASE_URL, and set AGRINEXUS_STATE_STORE=postgres. |
 | Nexus Live AI | Agentic planning, command center reasoning, tutoring, triage, workforce coaching, trade guidance, and briefings | Needs values | `OPENAI_API_KEY` | Create an OpenAI API key and paste it into Render as OPENAI_API_KEY. |
 | Live Translation | Dynamic multilingual content translation | Needs values | `TRANSLATION_WEBHOOK_URL` | Deploy provider engines or connect a translation provider endpoint. |
-| Jarvis-Style Voice | Speech-to-text and text-to-speech commands | Needs values | `VOICE_STT_WEBHOOK_URL`<br>`VOICE_TTS_WEBHOOK_URL` | Deploy provider engines or connect a hosted voice provider. |
+| Jarvis-Style Voice | OpenAI speech-to-text and high-quality text-to-speech commands | Needs values | `OPENAI_API_KEY` | Set VOICE_STT_PROVIDER=openai, VOICE_TTS_PROVIDER=openai, and add OPENAI_API_KEY in Render. |
+| Phone Voice Assistant | Twilio phone-call assistant for speech commands and voice responses | Needs values | `PUBLIC_BASE_URL`<br>`TWILIO_ACCOUNT_SID`<br>`TWILIO_AUTH_TOKEN`<br>`TWILIO_PHONE_NUMBER` | Buy/configure a Twilio voice number and point incoming calls to PUBLIC_BASE_URL/api/voice/phone/incoming. |
 | Learning Provider | Courses, lessons, certificates, and readiness evidence | Needs values | `LEARNING_COURSE_WEBHOOK_URL` | Use provider engines first, then connect a real LMS/course provider when chosen. |
 | Workforce Network | Jobs, HR records, calendars, shifts, applications, and notifications | Needs values | `WORKFORCE_JOB_WEBHOOK_URL`<br>`WORKFORCE_SHIFT_WEBHOOK_URL` | Use provider engines first, then connect real job boards, employer systems, calendar, HRIS, or shift tools. |
 | Telehealth Network | Intake, accessibility needs, consent, vitals, care plans, referrals, follow-up, EHR sync, and notifications | Ready | None | Use provider engines first, then connect a compliant telehealth/EHR/notification vendor. |
