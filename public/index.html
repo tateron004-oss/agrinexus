@@ -13,7 +13,7 @@
   <link rel="icon" href="/icons/agri-nexus-192.png" type="image/png">
   <link rel="apple-touch-icon" href="/icons/agri-nexus-192.png">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-  <link rel="stylesheet" href="/styles.css?v=ask-nexus-21">
+  <link rel="stylesheet" href="/styles.css?v=ask-nexus-22">
 </head>
 <body>
   <a class="skip-link" href="#mainContent">Skip to main content</a>
@@ -605,6 +605,7 @@
                 <button id="voiceRunBtn" type="button">Run command</button>
                 <button id="voiceFirstBtn" type="button">Voice-first mode</button>
                 <button id="voiceSpeakBtn" type="button">Read response</button>
+                <button id="voiceHelpBtn" type="button">Voice help</button>
               </div>
             </div>
             <div class="voice-transcript" aria-live="polite">
@@ -848,12 +849,23 @@
             <button id="globalYesBtn" type="button">Yes, do it</button>
             <button id="globalNoBtn" type="button">No, cancel</button>
             <button id="globalReadBtn" type="button">Read response</button>
+            <button id="globalVoiceHelpBtn" type="button">Voice help</button>
             <button id="globalInstallBtn" type="button">Install app</button>
           </div>
           <div id="globalAssistantStatus" class="global-assistant-status" role="status">Ready</div>
           <div id="globalMicStatus" class="global-mic-status" role="status">Checking microphone support...</div>
           <div id="globalVoiceOutputStatus" class="global-mic-status" role="status">Voice output standing by.</div>
           <div id="globalVoiceGuide" class="voice-guide" aria-label="Voice command examples"></div>
+          <section id="voiceHelpPanel" class="voice-help-panel hidden" aria-labelledby="voiceHelpTitle">
+            <div class="voice-help-head">
+              <div>
+                <span class="eyebrow">Command help</span>
+                <h3 id="voiceHelpTitle">Say or tap a command</h3>
+              </div>
+              <button id="voiceHelpCloseBtn" class="ghost" type="button" aria-label="Close voice command help">Close</button>
+            </div>
+            <div id="voiceHelpContent" class="voice-help-content"></div>
+          </section>
           <div id="globalConversationPanel" class="global-conversation" aria-live="polite"></div>
         </section>
       </main>
@@ -923,6 +935,6 @@
   <div id="toast" class="toast hidden" role="status" aria-live="polite" aria-atomic="true"></div>
   <div id="screenReaderStatus" class="sr-only" role="status" aria-live="polite" aria-atomic="true"></div>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="/app.js?v=ask-nexus-21"></script>
+  <script src="/app.js?v=ask-nexus-22"></script>
 </body>
 </html>

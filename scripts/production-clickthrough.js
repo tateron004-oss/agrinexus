@@ -30,6 +30,7 @@ const clickTargets = [
   "globalYesBtn",
   "globalNoBtn",
   "globalReadBtn",
+  "globalVoiceHelpBtn",
   "globalInstallBtn",
   "simpleContinueBtn",
   "personaFarmerBtn",
@@ -53,6 +54,8 @@ const clickTargets = [
   "agentBriefingBtn",
   "voiceRunBtn",
   "voiceFirstBtn",
+  "voiceHelpBtn",
+  "voiceHelpCloseBtn",
   "jarvisRunBtn",
   "workflowConfirm"
 ];
@@ -91,6 +94,8 @@ const endpoints = [
 ];
 
 assert(app.includes('event.target.closest("[data-voice-example]")'), "Ask AgriNexus guide buttons need delegated click handling");
+assert(html.includes("voiceHelpPanel"), "Voice command help panel must be present for non-technical users");
+assert(app.includes("function openVoiceHelp"), "Voice command help button must open the command help panel");
 assert(app.includes("runJarvisCommand();"), "Jarvis dock Run button must read the dock command input");
 assert(app.includes("function runAdminHealthCheckDirect"), "Admin top health check button must execute directly");
 

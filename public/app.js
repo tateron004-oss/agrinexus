@@ -2359,24 +2359,75 @@ function sectionFromHash() {
 }
 
 function voiceCommandExamples() {
+  return voiceCommandGroups().flatMap(group => group.commands);
+}
+
+function voiceCommandGroups() {
   return [
-    "Nexus, open learning",
-    "Nexus, build captions",
-    "Nexus, create audio guide",
-    "Nexus, complete my lesson",
-    "Nexus, issue my certificate",
-    "Nexus, apply for that job",
-    "Nexus, schedule my shift",
-    "Nexus, start telehealth intake",
-    "Nexus, connect me to a provider",
-    "Nexus, capture vitals",
-    "Nexus, contact my buyer",
-    "Nexus, create buyer order",
-    "Nexus, run drone scan",
-    "Nexus, assign field task",
-    "Nexus, test provider engines",
-    "Nexus, what can you do",
-    "Nexus, run full mission"
+    {
+      title: "Start here",
+      helper: "Use these when someone is new to the platform.",
+      commands: [
+        "Nexus, what can you do",
+        "Nexus, show voice help",
+        "Nexus, run full mission",
+        "Nexus, test provider engines"
+      ]
+    },
+    {
+      title: "Go to a workspace",
+      helper: "Open the main work areas without searching menus.",
+      commands: [
+        "Nexus, open learning",
+        "Nexus, open workforce",
+        "Nexus, open telehealth",
+        "Nexus, open agritrade",
+        "Nexus, open maps",
+        "Nexus, open admin"
+      ]
+    },
+    {
+      title: "Learning",
+      helper: "Run training, accessibility, and certificate workflows.",
+      commands: [
+        "Nexus, build captions",
+        "Nexus, create audio guide",
+        "Nexus, complete my lesson",
+        "Nexus, issue my certificate"
+      ]
+    },
+    {
+      title: "Workforce",
+      helper: "Help a user find, prepare for, and apply to work.",
+      commands: [
+        "Nexus, apply for that job",
+        "Nexus, review my workforce gaps",
+        "Nexus, schedule my shift",
+        "Nexus, prepare me for an interview"
+      ]
+    },
+    {
+      title: "Telehealth",
+      helper: "Guide patients through care access and support.",
+      commands: [
+        "Nexus, start telehealth intake",
+        "Nexus, connect me to a provider",
+        "Nexus, capture vitals",
+        "Nexus, create a referral",
+        "Nexus, schedule my follow-up"
+      ]
+    },
+    {
+      title: "Farm, Trade, And Drones",
+      helper: "Support farmers, buyers, field teams, and crop intelligence.",
+      commands: [
+        "Nexus, contact my buyer",
+        "Nexus, create buyer order",
+        "Nexus, run drone scan",
+        "Nexus, assign field task",
+        "Nexus, check my route risk"
+      ]
+    }
   ];
 }
 
@@ -2397,11 +2448,42 @@ function renderVoiceAssistant() {
   }
   const guide = $("#globalVoiceGuide");
   if (guide) {
-    guide.innerHTML = voiceCommandExamples().slice(0, 6)
+    guide.innerHTML = voiceCommandExamples().slice(0, 8)
       .map(command => `<button type="button" data-voice-example="${command}">${command}</button>`)
       .join("");
   }
+  renderVoiceHelpPanel();
   renderJarvisLayer();
+}
+
+function renderVoiceHelpPanel() {
+  const content = $("#voiceHelpContent");
+  if (!content) return;
+  content.innerHTML = voiceCommandGroups().map(group => `
+    <article class="voice-help-group">
+      <div>
+        <strong>${group.title}</strong>
+        <span>${group.helper}</span>
+      </div>
+      <div class="voice-help-commands">
+        ${group.commands.map(command => `<button type="button" data-voice-example="${command}">${command}</button>`).join("")}
+      </div>
+    </article>
+  `).join("");
+}
+
+function openVoiceHelp() {
+  openAskNexus();
+  renderVoiceHelpPanel();
+  $("#voiceHelpPanel")?.classList.remove("hidden");
+  $("#globalAssistantStatus").textContent = "Voice command help is open. Say a command or tap one to run it.";
+  $("#voiceHelpContent button")?.focus();
+  announce("Voice command help opened");
+}
+
+function closeVoiceHelp() {
+  $("#voiceHelpPanel")?.classList.add("hidden");
+  announce("Voice command help closed");
 }
 
 async function runVoiceExample(button) {
@@ -2489,7 +2571,7 @@ function renderLaunchSupportPanels() {
 }
 
 function applyPermissions() {
-  $$("[data-workflow], [data-ai], [data-workforce], [data-health], [data-pay], [data-module-test], [data-command-preset], [data-pilot-scenario], [data-persona], [data-simple-command], [data-simple-section], [data-simple-pilot], [data-simple-demo], [data-simple-mission], [data-simple-action], .provider-test, #adminHealthCheck, #aiConsoleRun, #agentPlanBtn, #agentExecuteBtn, #agentBriefingBtn, #demoRunBtn, #wowDemoBtn, #startOnboardingBtn, #openSupportBtn, #inviteSubscriberBtn, [data-ai-review], [data-notify], #voiceListenBtn, #voiceRunBtn, #voiceFirstBtn, #voiceSpeakBtn, #globalListenBtn, #globalRunBtn, #globalYesBtn, #globalNoBtn, #globalReadBtn, #globalInstallBtn, #jarvisListenBtn, #jarvisRunBtn, #jarvisMissionBtn, #jarvisReadBtn").forEach(element => {
+  $$("[data-workflow], [data-ai], [data-workforce], [data-health], [data-pay], [data-module-test], [data-command-preset], [data-pilot-scenario], [data-persona], [data-simple-command], [data-simple-section], [data-simple-pilot], [data-simple-demo], [data-simple-mission], [data-simple-action], .provider-test, #adminHealthCheck, #aiConsoleRun, #agentPlanBtn, #agentExecuteBtn, #agentBriefingBtn, #demoRunBtn, #wowDemoBtn, #startOnboardingBtn, #openSupportBtn, #inviteSubscriberBtn, [data-ai-review], [data-notify], #voiceListenBtn, #voiceRunBtn, #voiceFirstBtn, #voiceSpeakBtn, #voiceHelpBtn, #globalListenBtn, #globalRunBtn, #globalYesBtn, #globalNoBtn, #globalReadBtn, #globalVoiceHelpBtn, #globalInstallBtn, #jarvisListenBtn, #jarvisRunBtn, #jarvisMissionBtn, #jarvisReadBtn").forEach(element => {
     const area = element.dataset.workflow
       || (element.dataset.ai ? "ai" : null)
       || (element.dataset.workforce ? "workforce" : null)
@@ -2514,10 +2596,12 @@ function applyPermissions() {
       || (element.id === "voiceListenBtn" ? "ai" : null)
       || (element.id === "voiceRunBtn" ? "ai" : null)
       || (element.id === "voiceFirstBtn" ? "ai" : null)
+      || (element.id === "voiceHelpBtn" ? "ai" : null)
       || (element.id === "voiceSpeakBtn" ? "ai" : null)
       || (element.id === "globalListenBtn" ? "ai" : null)
       || (element.id === "globalRunBtn" ? "ai" : null)
       || (element.id === "globalVoiceFirstBtn" ? "ai" : null)
+      || (element.id === "globalVoiceHelpBtn" ? "ai" : null)
       || (element.id === "globalYesBtn" ? "ai" : null)
       || (element.id === "globalNoBtn" ? "ai" : null)
       || (element.id === "globalReadBtn" ? "ai" : null)
@@ -4749,7 +4833,8 @@ async function handleVoiceCommand(rawCommand) {
     }
   }
 
-  if (lower.includes("what can you do") || lower.includes("help")) {
+  if (lower.includes("voice help") || lower.includes("command help") || lower.includes("show help") || lower.includes("what can you do")) {
+    openVoiceHelp();
     setVoiceResponse("I can open modules, build captions, create audio guides, complete lessons, issue certificates, apply for roles, schedule shifts, start telehealth intake, connect a provider, capture vitals, contact a buyer, create orders, run drone scans, test engines, create plans, and read responses aloud.", true);
     return;
   }
@@ -5418,6 +5503,18 @@ function bindStatic() {
       installAgriNexusApp();
       return;
     }
+    if (event.target.closest("#globalVoiceHelpBtn") || event.target.closest("#voiceHelpBtn")) {
+      event.preventDefault();
+      event.stopPropagation();
+      openVoiceHelp();
+      return;
+    }
+    if (event.target.closest("#voiceHelpCloseBtn")) {
+      event.preventDefault();
+      event.stopPropagation();
+      closeVoiceHelp();
+      return;
+    }
     const voiceExampleButton = event.target.closest("[data-voice-example]");
     if (voiceExampleButton) {
       event.preventDefault();
@@ -5637,6 +5734,7 @@ function bindStatic() {
   $("#voiceRunBtn").onclick = runVoiceTextCommand;
   $("#voiceFirstBtn").onclick = toggleVoiceFirstMode;
   $("#voiceSpeakBtn").onclick = speakVoiceResponse;
+  $("#voiceHelpBtn").onclick = openVoiceHelp;
   $("#voiceTextCommand").addEventListener("keydown", event => {
     if (event.key === "Enter") runVoiceTextCommand();
   });
@@ -5646,6 +5744,8 @@ function bindStatic() {
   $("#globalYesBtn").onclick = () => answerGlobalConversation("yes");
   $("#globalNoBtn").onclick = () => answerGlobalConversation("no");
   $("#globalReadBtn").onclick = speakVoiceResponse;
+  $("#globalVoiceHelpBtn").onclick = openVoiceHelp;
+  $("#voiceHelpCloseBtn").onclick = closeVoiceHelp;
   $("#globalInstallBtn").onclick = installAgriNexusApp;
   $("#globalCloseBtn").onclick = closeAskNexus;
   $("#globalCommandInput").addEventListener("keydown", event => {
