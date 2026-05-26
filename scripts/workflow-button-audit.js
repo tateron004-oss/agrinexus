@@ -127,6 +127,8 @@ assert(app.includes('event.target.closest("[data-voice-example]")'), "Ask AgriNe
 assert(app.includes("function runVoiceExample"), "Ask AgriNexus examples need a shared runnable workflow handler");
 assert(app.includes("function runAdminHealthCheckDirect"), "Admin health check top button needs a direct runnable workflow");
 assert(app.includes('event.target.closest("#adminHealthCheck")'), "Admin health check button needs delegated click handling");
+assert(app.includes("function openHealthWorkflow"), "Telehealth small workflow buttons need a dedicated opener with status feedback");
+assert(html.includes("healthActionStatus"), "Telehealth workflow buttons need visible status feedback");
 assert(app.includes("task-chip-action"), "Workspace status chips must render as actionable buttons when they represent workflows");
 assert(app.includes("function taskActionAttrs"), "Workspace action chips must preserve workflow/provider/module data attributes");
 assert(app.includes('event.target.closest("[data-workflow][data-action]")'), "Dynamic workflow cards and chips need delegated click handling");

@@ -4385,6 +4385,19 @@ async function runAdminHealthCheckDirect() {
   }
 }
 
+function openHealthWorkflow(action, element = { dataset: {} }) {
+  const config = workflowConfig("health", action, element);
+  const status = $("#healthActionStatus");
+  const title = config?.title || "Health workflow";
+  if (!config) {
+    if (status) status.textContent = "Health workflow could not be opened.";
+    toast("Health workflow could not be opened");
+    return;
+  }
+  if (status) status.textContent = `${title} opened. Review the details and confirm to run it.`;
+  openWorkflowModal(config);
+}
+
 async function confirmPendingWorkflow() {
   if (!pendingWorkflow) return;
   const workflow = pendingWorkflow;
@@ -5193,7 +5206,7 @@ function bindStatic() {
     if (healthButton) {
       event.preventDefault();
       event.stopPropagation();
-      openWorkflowModal(workflowConfig("health", healthButton.dataset.health, { dataset: {} }));
+      openHealthWorkflow(healthButton.dataset.health, healthButton);
       return;
     }
     const payButton = event.target.closest("[data-pay]");
@@ -5567,7 +5580,7 @@ function bindStatic() {
   };
   $$("[data-learning-access]").forEach(button => button.onclick = () => openWorkflowModal(learningAccessibilityWorkflowConfig(button.dataset.learningAccess)));
   $$("[data-workforce]").forEach(button => button.onclick = () => openWorkflowModal(workflowConfig("workforce", button.dataset.workforce, { dataset: {} })));
-  $$("[data-health]").forEach(button => button.onclick = () => openWorkflowModal(workflowConfig("health", button.dataset.health, { dataset: {} })));
+  $$("[data-health]").forEach(button => button.onclick = () => openHealthWorkflow(button.dataset.health, button));
   $$(".order").forEach(button => button.onclick = () => openWorkflowModal(workflowConfig("trade", "order", { dataset: { productId: button.dataset.productId } })));
   $("#advanceOrderBtn").onclick = () => openWorkflowModal(workflowConfig("trade", "advance", { dataset: {} }));
   $("#droneMissionBtn").onclick = () => openWorkflowModal(workflowConfig("trade", "drone-plan", { dataset: { productId: firstProduct()?.id } }));

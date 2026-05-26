@@ -13,7 +13,7 @@
   <link rel="icon" href="/icons/agri-nexus-192.png" type="image/png">
   <link rel="apple-touch-icon" href="/icons/agri-nexus-192.png">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-  <link rel="stylesheet" href="/styles.css?v=ask-nexus-17">
+  <link rel="stylesheet" href="/styles.css?v=ask-nexus-18">
 </head>
 <body>
   <a class="skip-link" href="#mainContent">Skip to main content</a>
@@ -419,14 +419,15 @@
               <p>Prepare a care session with captions, visual-assist narration, caregiver handoff, language support, and low-bandwidth fallback.</p>
               <div id="telehealthAccessPanel" class="rows"></div>
               <div class="action-row">
-                <button data-health="accessibility" class="primary">Build access plan</button>
-                <button data-health="caption">Start caption relay</button>
-                <button data-health="caregiver">Notify caregiver</button>
-                <button data-health="consent">Record consent</button>
-                <button data-health="vitals">Capture vitals</button>
-                <button data-health="referral">Create referral</button>
-                <button data-health="followup">Schedule follow-up</button>
+                <button data-health="accessibility" class="primary" type="button">Build access plan</button>
+                <button data-health="caption" type="button">Start caption relay</button>
+                <button data-health="caregiver" type="button">Notify caregiver</button>
+                <button data-health="consent" type="button">Record consent</button>
+                <button data-health="vitals" type="button">Capture vitals</button>
+                <button data-health="referral" type="button">Create referral</button>
+                <button data-health="followup" type="button">Schedule follow-up</button>
               </div>
+              <p id="healthActionStatus" class="micro-status" role="status">Choose a telehealth workflow to begin.</p>
             </article>
             <article class="accessibility-card">
               <div class="tag-row"><span>Patient support</span><span>Audit ready</span></div>
@@ -446,11 +447,11 @@
             </article>
           </div>
           <div class="action-row">
-            <button data-health="intake" class="primary">Start intake</button>
-            <button data-health="representative">Connect representative</button>
-            <button data-health="safety">Run safety review</button>
-            <button data-health="inspector">Run map inspector</button>
-            <button data-health="careplan">Generate care plan</button>
+            <button data-health="intake" class="primary" type="button">Start intake</button>
+            <button data-health="representative" type="button">Connect representative</button>
+            <button data-health="safety" type="button">Run safety review</button>
+            <button data-health="inspector" type="button">Run map inspector</button>
+            <button data-health="careplan" type="button">Generate care plan</button>
           </div>
         </section>
 
@@ -920,6 +921,6 @@
   <div id="toast" class="toast hidden" role="status" aria-live="polite" aria-atomic="true"></div>
   <div id="screenReaderStatus" class="sr-only" role="status" aria-live="polite" aria-atomic="true"></div>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="/app.js?v=ask-nexus-17"></script>
+  <script src="/app.js?v=ask-nexus-18"></script>
 </body>
 </html>
