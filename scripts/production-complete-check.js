@@ -15,7 +15,7 @@ const files = {
 };
 
 const items = [
-  ["Live provider credentials", ["OPENAI_API_KEY", "TRANSLATION_PROVIDER_API_KEY", "VOICE_PROVIDER_API_KEY", "DRONE_PROVIDER_API_KEY"]],
+  ["Live provider credentials", ["OPENAI_API_KEY", "PROVIDER_ENGINE_BASE_URL", "TRANSLATION_PROVIDER_API_KEY", "VOICE_PROVIDER_API_KEY", "DRONE_PROVIDER_API_KEY"]],
   ["Production PostgreSQL database", ["DATABASE_URL", "AGRINEXUS_STATE_STORE", "db:backup", "db:restore"]],
   ["Real user accounts", ["AUTH_PROVIDER", "PASSWORD_RESET_PROVIDER", "/api/auth/password-reset"]],
   ["Payment/subscription system", ["BILLING_PROVIDER", "BILLING_PRICE_ID", "/api/billing/checkout"]],
@@ -24,7 +24,8 @@ const items = [
   ["End-to-end browser regression", ["production-clickthrough.js", "Workflow button audit passed"]],
   ["Hosted deployment hardening", ["render.yaml", "AGRINEXUS_REQUIRE_LIVE_SERVICES", "/api/healthz", "production:validate-env"]],
   ["Real provider data", ["LEARNING_COURSE_WEBHOOK_URL", "WORKFORCE_JOB_WEBHOOK_URL", "HEALTH_TELEHEALTH_WEBHOOK_URL", "TRADE_MARKET_WEBHOOK_URL"]],
-  ["Investor/product polish", ["productionCompleteness", "AgriNexus Live Status", "jarvisDock", "capabilityMatrixPanel"]]
+  ["Investor/product polish", ["productionCompleteness", "AgriNexus Live Status", "jarvisDock", "capabilityMatrixPanel"]],
+  ["10 production workstreams", ["productionOperationsPlan", "/api/production/operations-plan", "productionOperationsPlan", "Stable Hosted Data", "Voice Layer"]]
 ];
 
 const allText = Object.values(files).join("\n");

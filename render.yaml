@@ -5,6 +5,7 @@ services:
     plan: free
     buildCommand: npm install
     startCommand: npm run provider-engines
+    healthCheckPath: /healthz
     autoDeploy: true
     envVars:
       - key: NODE_ENV
@@ -15,6 +16,8 @@ services:
         value: 0.0.0.0
       - key: PROVIDER_ENGINE_PORT
         value: 10000
+      - key: PROVIDER_ENGINE_BASE_URL
+        sync: false
       - key: AI_PROVIDER_API_KEY
         sync: false
       - key: LEARNING_PROVIDER_API_KEY
@@ -44,6 +47,7 @@ services:
     plan: free
     buildCommand: npm install
     startCommand: npm start
+    healthCheckPath: /api/healthz
     autoDeploy: true
     disk:
       name: agrinexus-data
@@ -115,6 +119,8 @@ services:
       - key: AI_WEBHOOK_URL
         sync: false
       - key: AI_PROVIDER_API_KEY
+        sync: false
+      - key: PROVIDER_ENGINE_BASE_URL
         sync: false
       - key: VOICE_STT_PROVIDER
         value: webhook

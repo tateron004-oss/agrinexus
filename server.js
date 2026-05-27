@@ -65,6 +65,32 @@ const PROVIDER_CONFIG = {
   "billing-subscriptions": { modeEnv: "BILLING_PROVIDER", credentialEnvs: ["BILLING_WEBHOOK_URL", "BILLING_PROVIDER_API_KEY"] }
 };
 
+const PROVIDER_ENGINE_ENDPOINTS = {
+  "learning-courses": "/learning/courses",
+  "learning-certificates": "/learning/certificates",
+  "workforce-jobs": "/workforce/jobs",
+  "workforce-calendar": "/workforce/calendar",
+  "workforce-notifications": "/workforce/notifications",
+  "workforce-hris": "/workforce/hris",
+  "workforce-shifts": "/workforce/shifts",
+  "health-telehealth": "/health/telehealth",
+  "health-ehr": "/health/ehr",
+  "health-notifications": "/health/notifications",
+  "trade-payments": "/trade/payments",
+  "trade-logistics": "/trade/logistics",
+  "trade-market": "/trade/market",
+  "field-drones": "/field/drones",
+  "voice-stt": "/voice/transcribe",
+  "voice-tts": "/voice/speak",
+  "translation": "/translate",
+  "auth-users": "/auth/users",
+  "auth-password-reset": "/auth/password-reset",
+  "email-delivery": "/communications/email",
+  "sms-delivery": "/communications/sms",
+  "whatsapp-delivery": "/communications/whatsapp",
+  "billing-subscriptions": "/billing/subscriptions"
+};
+
 const BUILT_IN_PROVIDER_DEFINITIONS = [
   {
     id: "phone-voice",
@@ -235,6 +261,7 @@ function publicState(db, user) {
     capabilities: capabilityMatrix(db, providers),
     automation: automationReadiness(db, providers),
     production: productionCompleteness(db, providers),
+    productionPlan: productionOperationsPlan(db, providers),
     admin: adminSnapshot(db, providers),
     profile: db.profile
   };
@@ -310,12 +337,14 @@ function runtimeProviders(db) {
     }
     const config = PROVIDER_CONFIG[provider.id];
     if (config) {
+      const runtime = providerRuntime(provider.id);
       const openAiVoiceProvider = ["voice-stt", "voice-tts"].includes(provider.id) && Boolean(process.env.OPENAI_API_KEY);
-      const mode = process.env[config.modeEnv] || (openAiVoiceProvider ? "openai" : provider.mode);
+      const mode = runtime.mode || provider.mode;
       const isSandbox = mode === "sandbox";
       const isBrowser = mode === "browser";
       const isOpenAiVoice = mode === "openai";
-      const hasCredential = config.credentialEnvs.every(key => Boolean(process.env[key]));
+      const hasCredential = Boolean(runtime.webhookUrl && runtime.apiKey);
+      const hasBridge = Boolean(providerEngineWebhookUrl(provider.id) && runtime.apiKey);
       const hasOpenAiVoice = isOpenAiVoice && Boolean(process.env.OPENAI_API_KEY);
       return {
         ...provider,
@@ -327,7 +356,7 @@ function runtimeProviders(db) {
           ? (REQUIRE_LIVE_SERVICES ? `Strict live mode requires ${config.modeEnv}=webhook and hosted voice credentials.` : provider.detail)
           : isSandbox
           ? (REQUIRE_LIVE_SERVICES ? `Strict live mode requires ${config.modeEnv} to be set to a live provider and credentials configured.` : provider.detail)
-          : (hasCredential ? `${mode} provider configured.` : `Set ${config.credentialEnvs.join(" or ")} to activate ${mode}.`)
+          : (hasCredential ? `${mode} provider configured${hasBridge ? " through PROVIDER_ENGINE_BASE_URL bridge" : ""}.` : `Set ${config.credentialEnvs.join(" or ")} or PROVIDER_ENGINE_BASE_URL plus the provider API key to activate ${mode}.`)
       };
     }
     return provider;
@@ -558,6 +587,118 @@ function productionCompleteness(db, providers = runtimeProviders(db)) {
     readinessStatus: readiness.status,
     items,
     nextSteps: items.filter(item => !item.ready).map(item => `${item.title}: ${item.detail}`)
+  };
+}
+
+function productionOperationsPlan(db, providers = runtimeProviders(db)) {
+  const provider = id => providers.find(item => item.id === id) || {};
+  const providerConnected = id => provider(id).status === "connected";
+  const hasEnv = key => Boolean(process.env[key] && String(process.env[key]).trim() && !String(process.env[key]).includes("replace-with"));
+  const legalFiles = ["terms.html", "privacy.html", "refund.html"].map(file => fs.existsSync(path.join(PUBLIC, file)));
+  const readiness = productionReadiness(providers);
+  const workflowEvents = db.profile?.integrationEvents || [];
+  const workstreams = [
+    {
+      id: "stable-hosted-data",
+      title: "Stable Hosted Data",
+      ready: Boolean(hasEnv("DATABASE_URL") && usingPostgresState() && loadOptional("pg")),
+      evidence: provider("database").detail || "Database provider status unavailable.",
+      missing: ["DATABASE_URL", "AGRINEXUS_STATE_STORE=postgres", "pg package"].filter(item => {
+        if (item === "DATABASE_URL") return !hasEnv("DATABASE_URL");
+        if (item === "AGRINEXUS_STATE_STORE=postgres") return !usingPostgresState();
+        return !loadOptional("pg");
+      })
+    },
+    {
+      id: "production-authentication",
+      title: "Production Authentication",
+      ready: Boolean(hasEnv("SESSION_SECRET") && hasEnv("PASSWORD_PEPPER") && providerConnected("auth-users") && providerConnected("auth-password-reset")),
+      evidence: "Login, logout, session cookies, role permissions, subscriber invite, and password reset endpoint are wired.",
+      missing: [
+        !hasEnv("SESSION_SECRET") && "SESSION_SECRET",
+        !hasEnv("PASSWORD_PEPPER") && "PASSWORD_PEPPER",
+        !providerConnected("auth-users") && "AUTH_PROVIDER/AUTH_WEBHOOK_URL/AUTH_PROVIDER_API_KEY",
+        !providerConnected("auth-password-reset") && "PASSWORD_RESET_PROVIDER/PASSWORD_RESET_WEBHOOK_URL"
+      ].filter(Boolean)
+    },
+    {
+      id: "live-provider-engines",
+      title: "Live Provider Engines",
+      ready: ["openai", "learning-courses", "workforce-jobs", "health-telehealth", "trade-market", "field-drones", "maps"].every(providerConnected),
+      evidence: `${providers.filter(item => item.status === "connected").length}/${providers.length} providers report connected.`,
+      missing: providers.filter(item => item.status !== "connected").map(item => `${item.name}: ${item.detail}`).slice(0, 8)
+    },
+    {
+      id: "workflow-completion",
+      title: "Workflow Completion",
+      ready: Boolean(workflowEvents.length >= 12 && fs.existsSync(path.join(ROOT, "scripts", "workflow-button-audit.js"))),
+      evidence: `${workflowEvents.length} provider/workflow event(s) recorded; workflow button audit is present.`,
+      missing: workflowEvents.length >= 12 ? [] : ["Run end-to-end learning, workforce, health, trade, drone, map, AI, integration, and admin workflows to create production evidence."]
+    },
+    {
+      id: "voice-layer",
+      title: "Voice Layer",
+      ready: Boolean(providerConnected("voice-stt") && providerConnected("voice-tts") && providerConnected("phone-voice") && (hasEnv("OPENAI_API_KEY") || hasEnv("VOICE_PROVIDER_API_KEY"))),
+      evidence: "Browser voice, OpenAI/webhook speech, phone assistant, voice command help, and TTS/STT session records are wired.",
+      missing: [
+        !providerConnected("voice-stt") && "VOICE_STT_PROVIDER plus STT credentials",
+        !providerConnected("voice-tts") && "VOICE_TTS_PROVIDER plus TTS credentials",
+        !providerConnected("phone-voice") && "PHONE_PROVIDER=twilio with Twilio credentials",
+        !(hasEnv("OPENAI_API_KEY") || hasEnv("VOICE_PROVIDER_API_KEY")) && "OPENAI_API_KEY or VOICE_PROVIDER_API_KEY"
+      ].filter(Boolean)
+    },
+    {
+      id: "translation-hardening",
+      title: "Translation Hardening",
+      ready: Boolean(providerConnected("translation")),
+      evidence: "Static UI, dynamic workflow text, voice responses, and voice command help use language-aware translation paths.",
+      missing: providerConnected("translation") ? [] : ["TRANSLATION_PROVIDER with TRANSLATION_WEBHOOK_URL and TRANSLATION_PROVIDER_API_KEY for live dynamic translation."]
+    },
+    {
+      id: "admin-operations",
+      title: "Admin Operations",
+      ready: Boolean(db.admin || db.profile?.subscribers || readiness.moduleReadiness?.length),
+      evidence: "Admin control room includes users, subscribers, provider health, production readiness, audit feed, usage, and notification workflow records.",
+      missing: []
+    },
+    {
+      id: "testing-regression",
+      title: "Testing And Regression",
+      ready: ["smoke.js", "production-clickthrough.js", "production-complete-check.js", "full-production-regression.js"].every(file => fs.existsSync(path.join(ROOT, "scripts", file))),
+      evidence: "Smoke, click-through, 10-item completeness, and full production regression scripts are available.",
+      missing: ["smoke.js", "production-clickthrough.js", "production-complete-check.js", "full-production-regression.js"].filter(file => !fs.existsSync(path.join(ROOT, "scripts", file)))
+    },
+    {
+      id: "compliance-legal",
+      title: "Compliance And Legal",
+      ready: legalFiles.every(Boolean),
+      evidence: "Terms, Privacy, Refund, telehealth consent, referral, follow-up, and human review guardrails are tracked.",
+      missing: legalFiles.every(Boolean) ? [] : ["terms.html", "privacy.html", "refund.html"].filter(file => !fs.existsSync(path.join(PUBLIC, file)))
+    },
+    {
+      id: "deployment-polish",
+      title: "Deployment Polish",
+      ready: Boolean(fs.existsSync(path.join(ROOT, "render.yaml")) && hasEnv("PUBLIC_BASE_URL") && REQUIRE_LIVE_SERVICES),
+      evidence: "Render blueprint, health endpoint, strict live mode, environment validation, and deployment runbook signals are present.",
+      missing: [
+        !fs.existsSync(path.join(ROOT, "render.yaml")) && "render.yaml",
+        !hasEnv("PUBLIC_BASE_URL") && "PUBLIC_BASE_URL",
+        !REQUIRE_LIVE_SERVICES && "AGRINEXUS_REQUIRE_LIVE_SERVICES=true"
+      ].filter(Boolean)
+    }
+  ];
+  const readyCount = workstreams.filter(item => item.ready).length;
+  return {
+    status: readyCount === workstreams.length ? "production-operational" : "production-hardening",
+    readyCount,
+    total: workstreams.length,
+    workstreams: workstreams.map(item => ({
+      ...item,
+      status: item.ready ? "ready" : "needs-setup",
+      missing: item.missing.length ? item.missing : ["No code gap detected."]
+    })),
+    nextSteps: workstreams.filter(item => !item.ready).map(item => `${item.title}: ${item.missing.join("; ")}`),
+    timestamp: new Date().toISOString()
   };
 }
 
@@ -948,15 +1089,23 @@ function addWorkflowNote(profile, note, label = "Workflow note") {
   if (clean) addActivity(profile, `${label}: ${clean}`);
 }
 
+function providerEngineWebhookUrl(providerId) {
+  const base = String(process.env.PROVIDER_ENGINE_BASE_URL || "").replace(/\/+$/, "");
+  const endpoint = PROVIDER_ENGINE_ENDPOINTS[providerId];
+  return base && endpoint ? `${base}${endpoint}` : "";
+}
+
 function providerRuntime(providerId) {
   const config = PROVIDER_CONFIG[providerId];
   if (!config) return { mode: "local", webhookUrl: "", apiKey: "" };
   const webhookKey = config.credentialEnvs.find(key => key.endsWith("_WEBHOOK_URL"));
   const apiKey = config.credentialEnvs.find(key => key.endsWith("_API_KEY"));
   const openAiVoiceProvider = ["voice-stt", "voice-tts"].includes(providerId) && Boolean(process.env.OPENAI_API_KEY);
+  const explicitWebhook = webhookKey ? process.env[webhookKey] || "" : "";
+  const bridgeWebhook = providerEngineWebhookUrl(providerId);
   return {
     mode: process.env[config.modeEnv] || (openAiVoiceProvider ? "openai" : "sandbox"),
-    webhookUrl: webhookKey ? process.env[webhookKey] || "" : "",
+    webhookUrl: explicitWebhook || bridgeWebhook,
     apiKey: apiKey ? process.env[apiKey] || "" : ""
   };
 }
@@ -3185,6 +3334,11 @@ async function api(req, res, url) {
   if (url.pathname === "/api/production/complete-check" && req.method === "GET") {
     const providers = runtimeProviders(db);
     return send(res, 200, productionCompleteness(db, providers));
+  }
+
+  if (url.pathname === "/api/production/operations-plan" && req.method === "GET") {
+    const providers = runtimeProviders(db);
+    return send(res, 200, productionOperationsPlan(db, providers));
   }
 
   if (url.pathname === "/api/login" && req.method === "POST") {

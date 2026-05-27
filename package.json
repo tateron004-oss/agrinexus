@@ -15,6 +15,7 @@
     "placeholder:audit": "node scripts/no-placeholder-audit.js",
     "production:clickthrough": "node scripts/production-clickthrough.js",
     "production:complete-check": "node scripts/production-complete-check.js",
+    "production:10-check": "node scripts/production-complete-check.js",
     "github:check": "node scripts/github-ready-check.js",
     "system:start": "node scripts/start-full-system.js",
     "production:smoke": "node scripts/production-smoke.js",

@@ -117,11 +117,12 @@ function providerChecks() {
   return liveProviderGroups.map(group => {
     const modes = group.providerKeys.map(key => process.env[key] || "sandbox");
     const liveModes = modes.filter(mode => mode !== "sandbox");
-    const hasCredentials = group.credentialKeys.every(hasValue) || Boolean(group.alternateCredentialKeys?.every(hasValue));
+    const bridgeReady = hasValue("PROVIDER_ENGINE_BASE_URL") && group.credentialKeys.some(key => key.endsWith("_API_KEY") && hasValue(key));
+    const hasCredentials = group.credentialKeys.every(hasValue) || bridgeReady || Boolean(group.alternateCredentialKeys?.every(hasValue));
     const ready = liveModes.length === group.providerKeys.length && hasCredentials;
     const detail = ready
       ? `${group.module} live providers are configured.`
-      : `${group.module} remains sandbox/local until provider modes and credentials are set.`;
+      : `${group.module} remains sandbox/local until provider modes and credentials are set. Use PROVIDER_ENGINE_BASE_URL plus the module API key as the fastest bridge path.`;
     return check(`${group.module} live providers`, ready, detail, "live-provider");
   });
 }

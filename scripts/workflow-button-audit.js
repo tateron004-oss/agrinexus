@@ -135,6 +135,7 @@ assert(app.includes("function openVoiceHelp"), "Voice command help needs an open
 assert(html.includes("voiceHelpPanel"), "Voice command help panel must exist in the global assistant");
 assert(app.includes('"Nexus, show voice help"'), "Voice command help must include a spoken self-discovery command");
 assert(app.includes('"Nexus, show voice help":'), "Voice command help command needs translated labels");
+assert(html.includes("productionOperationsPlan"), "Admin control room must show the 10 production workstreams");
 assert(app.includes("function runAdminHealthCheckDirect"), "Admin health check top button needs a direct runnable workflow");
 assert(app.includes('event.target.closest("#adminHealthCheck")'), "Admin health check button needs delegated click handling");
 assert(app.includes("function openHealthWorkflow"), "Telehealth small workflow buttons need a dedicated opener with status feedback");

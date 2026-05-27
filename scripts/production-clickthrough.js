@@ -90,7 +90,8 @@ const endpoints = [
   "/api/pilot/run",
   "/api/admin/subscriber",
   "/api/engines/manifest",
-  "/api/production/complete-check"
+  "/api/production/complete-check",
+  "/api/production/operations-plan"
 ];
 
 assert(app.includes('event.target.closest("[data-voice-example]")'), "Ask AgriNexus guide buttons need delegated click handling");
@@ -98,6 +99,8 @@ assert(html.includes("voiceHelpPanel"), "Voice command help panel must be presen
 assert(app.includes("function openVoiceHelp"), "Voice command help button must open the command help panel");
 assert(app.includes("function voiceCommandButton"), "Voice command help buttons must display translated labels");
 assert(app.includes("function normalizeLocalizedVoiceCommand"), "Voice command help must normalize localized spoken commands");
+assert(html.includes("productionOperationsPlan"), "Admin needs the 10 production workstream panel");
+assert(server.includes("function productionOperationsPlan"), "Backend needs a 10 production workstream readiness model");
 assert(app.includes("runJarvisCommand();"), "Jarvis dock Run button must read the dock command input");
 assert(app.includes("function runAdminHealthCheckDirect"), "Admin top health check button must execute directly");
 

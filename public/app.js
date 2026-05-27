@@ -3787,6 +3787,14 @@ function render() {
       <span>${item.ready ? "Ready" : "Needs setup"} - ${item.detail}</span>
     </div>
   `).join("");
+  const productionPlan = data.productionPlan || { workstreams: [], readyCount: 0, total: 10, status: "unknown" };
+  $("#productionOperationsPlan").innerHTML = (productionPlan.workstreams || []).map(item => `
+    <div>
+      <strong>${item.title}</strong>
+      <span>${item.status} - ${item.evidence}</span>
+      ${item.ready ? "" : `<small>${(item.missing || []).slice(0, 2).join(" | ")}</small>`}
+    </div>
+  `).join("") || "<div>No production operations plan available.</div>";
   const usage = data.admin?.usage || { totalEvents: 0, modules: {}, latest: [] };
   const supportTickets = data.admin?.supportTickets || [];
   $("#adminUsagePanel").innerHTML = [
