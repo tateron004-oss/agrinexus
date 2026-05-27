@@ -381,6 +381,48 @@ const platformCopy = {
 const contentTranslations = {
   fr: {
     "Nexus, apply for that job": "Nexus, aide-moi a postuler a cet emploi",
+    "Nexus, what can you do": "Nexus, que peux-tu faire",
+    "Nexus, show voice help": "Nexus, affiche l'aide vocale",
+    "Nexus, run full mission": "Nexus, lance la mission complete",
+    "Nexus, test provider engines": "Nexus, teste les moteurs fournisseurs",
+    "Nexus, open learning": "Nexus, ouvre l'apprentissage",
+    "Nexus, open workforce": "Nexus, ouvre la main-d'oeuvre",
+    "Nexus, open telehealth": "Nexus, ouvre la telesante",
+    "Nexus, open agritrade": "Nexus, ouvre agritrade",
+    "Nexus, open maps": "Nexus, ouvre les cartes",
+    "Nexus, open admin": "Nexus, ouvre l'administration",
+    "Nexus, build captions": "Nexus, cree les sous-titres",
+    "Nexus, create audio guide": "Nexus, cree le guide audio",
+    "Nexus, complete my lesson": "Nexus, termine ma lecon",
+    "Nexus, issue my certificate": "Nexus, emets mon certificat",
+    "Nexus, review my workforce gaps": "Nexus, analyse mes ecarts de preparation",
+    "Nexus, schedule my shift": "Nexus, planifie mon quart",
+    "Nexus, prepare me for an interview": "Nexus, prepare-moi pour un entretien",
+    "Nexus, start telehealth intake": "Nexus, demarre l'admission telesante",
+    "Nexus, connect me to a provider": "Nexus, connecte-moi a un fournisseur",
+    "Nexus, capture vitals": "Nexus, capture les signes vitaux",
+    "Nexus, create a referral": "Nexus, cree une reference",
+    "Nexus, schedule my follow-up": "Nexus, planifie mon suivi",
+    "Nexus, contact my buyer": "Nexus, contacte mon acheteur",
+    "Nexus, create buyer order": "Nexus, cree une commande acheteur",
+    "Nexus, run drone scan": "Nexus, lance le scan drone",
+    "Nexus, assign field task": "Nexus, assigne une tache terrain",
+    "Nexus, check my route risk": "Nexus, verifie le risque de mon trajet",
+    "Command help": "Aide commandes",
+    "Say or tap a command": "Dites ou touchez une commande",
+    "Voice help": "Aide vocale",
+    "Voice command help is open. Say a command or tap one to run it.": "L'aide vocale est ouverte. Dites une commande ou touchez-la pour l'executer.",
+    "Voice command help opened": "Aide vocale ouverte",
+    "Voice command help closed": "Aide vocale fermee",
+    "Go to a workspace": "Aller a un espace de travail",
+    "Use these when someone is new to the platform.": "Utilisez ceci quand une personne decouvre la plateforme.",
+    "Open the main work areas without searching menus.": "Ouvrez les espaces principaux sans chercher dans les menus.",
+    "Run training, accessibility, and certificate workflows.": "Lancez les flux de formation, accessibilite et certificat.",
+    "Help a user find, prepare for, and apply to work.": "Aidez un utilisateur a trouver, preparer et demander un emploi.",
+    "Telehealth": "Telesante",
+    "Guide patients through care access and support.": "Guidez les patients vers l'acces aux soins et au support.",
+    "Farm, Trade, And Drones": "Ferme, commerce et drones",
+    "Support farmers, buyers, field teams, and crop intelligence.": "Soutenez agriculteurs, acheteurs, equipes terrain et intelligence agricole.",
     "English": "Anglais",
     "French": "Francais",
     "Kiswahili": "Kiswahili",
@@ -474,6 +516,48 @@ const contentTranslations = {
   },
   sw: {
     "Nexus, apply for that job": "Nexus, nisaidie kuomba kazi hii",
+    "Nexus, what can you do": "Nexus, unaweza kufanya nini",
+    "Nexus, show voice help": "Nexus, onyesha msaada wa sauti",
+    "Nexus, run full mission": "Nexus, endesha kazi kamili",
+    "Nexus, test provider engines": "Nexus, jaribu injini za huduma",
+    "Nexus, open learning": "Nexus, fungua mafunzo",
+    "Nexus, open workforce": "Nexus, fungua nguvukazi",
+    "Nexus, open telehealth": "Nexus, fungua afya mtandao",
+    "Nexus, open agritrade": "Nexus, fungua agritrade",
+    "Nexus, open maps": "Nexus, fungua ramani",
+    "Nexus, open admin": "Nexus, fungua admin",
+    "Nexus, build captions": "Nexus, tengeneza maelezo ya video",
+    "Nexus, create audio guide": "Nexus, tengeneza mwongozo wa sauti",
+    "Nexus, complete my lesson": "Nexus, kamilisha somo langu",
+    "Nexus, issue my certificate": "Nexus, toa cheti changu",
+    "Nexus, review my workforce gaps": "Nexus, kagua mapungufu yangu ya kazi",
+    "Nexus, schedule my shift": "Nexus, panga zamu yangu",
+    "Nexus, prepare me for an interview": "Nexus, niandae kwa mahojiano",
+    "Nexus, start telehealth intake": "Nexus, anza usajili wa afya mtandao",
+    "Nexus, connect me to a provider": "Nexus, niunganishe na mtoa huduma",
+    "Nexus, capture vitals": "Nexus, chukua vipimo muhimu",
+    "Nexus, create a referral": "Nexus, tengeneza rufaa",
+    "Nexus, schedule my follow-up": "Nexus, panga ufuatiliaji wangu",
+    "Nexus, contact my buyer": "Nexus, wasiliana na mnunuzi wangu",
+    "Nexus, create buyer order": "Nexus, tengeneza oda ya mnunuzi",
+    "Nexus, run drone scan": "Nexus, endesha ukaguzi wa drone",
+    "Nexus, assign field task": "Nexus, toa kazi ya shambani",
+    "Nexus, check my route risk": "Nexus, kagua hatari ya njia yangu",
+    "Command help": "Msaada wa amri",
+    "Say or tap a command": "Sema au gusa amri",
+    "Voice help": "Msaada wa sauti",
+    "Voice command help is open. Say a command or tap one to run it.": "Msaada wa amri za sauti umefunguliwa. Sema amri au iguse ili kuitekeleza.",
+    "Voice command help opened": "Msaada wa sauti umefunguliwa",
+    "Voice command help closed": "Msaada wa sauti umefungwa",
+    "Go to a workspace": "Nenda kwenye eneo la kazi",
+    "Use these when someone is new to the platform.": "Tumia hizi mtu akiwa mpya kwenye jukwaa.",
+    "Open the main work areas without searching menus.": "Fungua maeneo makuu bila kutafuta kwenye menyu.",
+    "Run training, accessibility, and certificate workflows.": "Endesha kazi za mafunzo, ufikikaji, na vyeti.",
+    "Help a user find, prepare for, and apply to work.": "Msaidie mtumiaji kupata, kujiandaa, na kuomba kazi.",
+    "Telehealth": "Afya mtandao",
+    "Guide patients through care access and support.": "Waongoze wagonjwa kupata huduma na msaada.",
+    "Farm, Trade, And Drones": "Shamba, biashara, na drone",
+    "Support farmers, buyers, field teams, and crop intelligence.": "Saidia wakulima, wanunuzi, timu za shamba, na taarifa za mazao.",
     "English": "Kiingereza",
     "French": "Kifaransa",
     "Kiswahili": "Kiswahili",
@@ -567,6 +651,48 @@ const contentTranslations = {
   },
   ar: {
     "Nexus, apply for that job": "\u0646\u0643\u0633\u0633\u060c \u0633\u0627\u0639\u062f\u0646\u064a \u0639\u0644\u0649 \u0627\u0644\u062a\u0642\u062f\u064a\u0645 \u0644\u0647\u0630\u0647 \u0627\u0644\u0648\u0638\u064a\u0641\u0629",
+    "Nexus, what can you do": "نكسس، ماذا يمكنك أن تفعل",
+    "Nexus, show voice help": "نكسس، اعرض مساعدة الصوت",
+    "Nexus, run full mission": "نكسس، شغل المهمة الكاملة",
+    "Nexus, test provider engines": "نكسس، اختبر محركات المزودين",
+    "Nexus, open learning": "نكسس، افتح التعلم",
+    "Nexus, open workforce": "نكسس، افتح القوى العاملة",
+    "Nexus, open telehealth": "نكسس، افتح الرعاية عن بعد",
+    "Nexus, open agritrade": "نكسس، افتح أجريتريد",
+    "Nexus, open maps": "نكسس، افتح الخرائط",
+    "Nexus, open admin": "نكسس، افتح الإدارة",
+    "Nexus, build captions": "نكسس، أنشئ التسميات التوضيحية",
+    "Nexus, create audio guide": "نكسس، أنشئ دليلا صوتيا",
+    "Nexus, complete my lesson": "نكسس، أكمل درسي",
+    "Nexus, issue my certificate": "نكسس، أصدر شهادتي",
+    "Nexus, review my workforce gaps": "نكسس، راجع فجوات جاهزيتي للعمل",
+    "Nexus, schedule my shift": "نكسس، جدولة ورديتي",
+    "Nexus, prepare me for an interview": "نكسس، حضرني للمقابلة",
+    "Nexus, start telehealth intake": "نكسس، ابدأ استقبال الرعاية عن بعد",
+    "Nexus, connect me to a provider": "نكسس، اربطني بمزود خدمة",
+    "Nexus, capture vitals": "نكسس، سجل العلامات الحيوية",
+    "Nexus, create a referral": "نكسس، أنشئ إحالة",
+    "Nexus, schedule my follow-up": "نكسس، جدولة متابعتي",
+    "Nexus, contact my buyer": "نكسس، تواصل مع المشتري",
+    "Nexus, create buyer order": "نكسس، أنشئ طلب المشتري",
+    "Nexus, run drone scan": "نكسس، شغل فحص الدرون",
+    "Nexus, assign field task": "نكسس، عيّن مهمة ميدانية",
+    "Nexus, check my route risk": "نكسس، افحص مخاطر طريقي",
+    "Command help": "مساعدة الأوامر",
+    "Say or tap a command": "قل أو اضغط على أمر",
+    "Voice help": "مساعدة صوتية",
+    "Voice command help is open. Say a command or tap one to run it.": "مساعدة الأوامر الصوتية مفتوحة. قل أمرا أو اضغط عليه لتشغيله.",
+    "Voice command help opened": "تم فتح المساعدة الصوتية",
+    "Voice command help closed": "تم إغلاق المساعدة الصوتية",
+    "Go to a workspace": "اذهب إلى مساحة عمل",
+    "Use these when someone is new to the platform.": "استخدم هذه عندما يكون الشخص جديدا على المنصة.",
+    "Open the main work areas without searching menus.": "افتح مناطق العمل الرئيسية بدون البحث في القوائم.",
+    "Run training, accessibility, and certificate workflows.": "شغل مسارات التدريب وإتاحة الوصول والشهادات.",
+    "Help a user find, prepare for, and apply to work.": "ساعد المستخدم على العثور على العمل والاستعداد له والتقديم عليه.",
+    "Telehealth": "الرعاية عن بعد",
+    "Guide patients through care access and support.": "وجّه المرضى للوصول إلى الرعاية والدعم.",
+    "Farm, Trade, And Drones": "الزراعة والتجارة والدرون",
+    "Support farmers, buyers, field teams, and crop intelligence.": "ادعم المزارعين والمشترين وفرق الميدان وذكاء المحاصيل.",
     "English": "\u0627\u0644\u0625\u0646\u062c\u0644\u064a\u0632\u064a\u0629",
     "French": "\u0627\u0644\u0641\u0631\u0646\u0633\u064a\u0629",
     "Kiswahili": "\u0627\u0644\u0633\u0648\u0627\u062d\u0644\u064a\u0629",
@@ -2362,6 +2488,23 @@ function voiceCommandExamples() {
   return voiceCommandGroups().flatMap(group => group.commands);
 }
 
+function voiceCommandButton(command) {
+  return `<button type="button" data-voice-example="${command}">${translateText(command)}</button>`;
+}
+
+function normalizeLocalizedVoiceCommand(rawCommand) {
+  const value = String(rawCommand || "").trim();
+  if (!value) return value;
+  const localizedWake = value.replace(/^\s*(نكسس|نيكسس|أجرينيكسس|جارفيس|كوتش)\s*[,،:\-]?\s*/i, "Nexus, ");
+  const lowered = localizedWake.toLowerCase();
+  const langMap = contentTranslations[languageCode()] || {};
+  const match = voiceCommandExamples().find(command => {
+    const translated = langMap[command] || command;
+    return translated.toLowerCase() === lowered || cleanWakeCommand(translated).toLowerCase() === cleanWakeCommand(localizedWake).toLowerCase();
+  });
+  return match || localizedWake;
+}
+
 function voiceCommandGroups() {
   return [
     {
@@ -2440,7 +2583,7 @@ function renderVoiceAssistant() {
   const suggestions = $("#voiceSuggestions");
   if (suggestions) {
     suggestions.innerHTML = voiceCommandExamples()
-      .map(command => `<button type="button" data-voice-example="${command}">${command}</button>`)
+      .map(voiceCommandButton)
       .join("");
     $$("[data-voice-example]").forEach(button => {
       button.onclick = () => runVoiceExample(button);
@@ -2449,7 +2592,7 @@ function renderVoiceAssistant() {
   const guide = $("#globalVoiceGuide");
   if (guide) {
     guide.innerHTML = voiceCommandExamples().slice(0, 8)
-      .map(command => `<button type="button" data-voice-example="${command}">${command}</button>`)
+      .map(voiceCommandButton)
       .join("");
   }
   renderVoiceHelpPanel();
@@ -2462,11 +2605,11 @@ function renderVoiceHelpPanel() {
   content.innerHTML = voiceCommandGroups().map(group => `
     <article class="voice-help-group">
       <div>
-        <strong>${group.title}</strong>
-        <span>${group.helper}</span>
+        <strong>${translateText(group.title)}</strong>
+        <span>${translateText(group.helper)}</span>
       </div>
       <div class="voice-help-commands">
-        ${group.commands.map(command => `<button type="button" data-voice-example="${command}">${command}</button>`).join("")}
+        ${group.commands.map(voiceCommandButton).join("")}
       </div>
     </article>
   `).join("");
@@ -2476,14 +2619,14 @@ function openVoiceHelp() {
   openAskNexus();
   renderVoiceHelpPanel();
   $("#voiceHelpPanel")?.classList.remove("hidden");
-  $("#globalAssistantStatus").textContent = "Voice command help is open. Say a command or tap one to run it.";
+  $("#globalAssistantStatus").textContent = translateText("Voice command help is open. Say a command or tap one to run it.");
   $("#voiceHelpContent button")?.focus();
-  announce("Voice command help opened");
+  announce(translateText("Voice command help opened"));
 }
 
 function closeVoiceHelp() {
   $("#voiceHelpPanel")?.classList.add("hidden");
-  announce("Voice command help closed");
+  announce(translateText("Voice command help closed"));
 }
 
 async function runVoiceExample(button) {
@@ -4792,7 +4935,7 @@ function commandGoal(command) {
 
 async function handleVoiceCommand(rawCommand) {
   if (!data) return setVoiceResponse("Sign in first, then I can operate the platform.");
-  const command = cleanWakeCommand(rawCommand);
+  const command = cleanWakeCommand(normalizeLocalizedVoiceCommand(rawCommand));
   const lower = command.toLowerCase();
   if (!lower) return setVoiceResponse("Give me a command, and I will route it.");
 
@@ -5016,7 +5159,7 @@ async function handleVoiceCommand(rawCommand) {
   if (lower.includes("tutor")) return openWorkflowByVoice("ai", "tutor", "AI tutor workflow is ready.");
   if (lower.includes("triage")) return openWorkflowByVoice("ai", "triage", "AI triage workflow is ready.");
   if (lower.includes("trade advisor")) return openWorkflowByVoice("ai", "trade-advisor", "Trade advisor workflow is ready.");
-  if (lower.includes("workforce coach") || lower.includes("readiness gaps")) return openWorkflowByVoice("ai", "workforce-coach", "Workforce coach workflow is ready.");
+  if (lower.includes("workforce coach") || lower.includes("readiness gaps") || lower.includes("workforce gaps") || lower.includes("review gaps")) return openWorkflowByVoice("ai", "workforce-coach", "Workforce coach workflow is ready.");
 
   if (lower.includes("test") && (lower.includes("provider") || lower.includes("engine"))) {
     goSection("integrations");

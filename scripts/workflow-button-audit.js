@@ -129,8 +129,12 @@ assert(app.includes("/api/voice/speak"), "Voice assistant must record TTS sessio
 assert(app.includes('event.target.closest("[data-voice-example]")'), "Ask AgriNexus quick command examples need delegated click handling");
 assert(app.includes("function runVoiceExample"), "Ask AgriNexus examples need a shared runnable workflow handler");
 assert(app.includes("function voiceCommandGroups"), "Voice command help needs grouped non-technical command guidance");
+assert(app.includes("function voiceCommandButton"), "Voice command help buttons must render translated labels while preserving runnable commands");
+assert(app.includes("function normalizeLocalizedVoiceCommand"), "Voice command help needs localized spoken command normalization");
 assert(app.includes("function openVoiceHelp"), "Voice command help needs an opener wired to Ask AgriNexus");
 assert(html.includes("voiceHelpPanel"), "Voice command help panel must exist in the global assistant");
+assert(app.includes('"Nexus, show voice help"'), "Voice command help must include a spoken self-discovery command");
+assert(app.includes('"Nexus, show voice help":'), "Voice command help command needs translated labels");
 assert(app.includes("function runAdminHealthCheckDirect"), "Admin health check top button needs a direct runnable workflow");
 assert(app.includes('event.target.closest("#adminHealthCheck")'), "Admin health check button needs delegated click handling");
 assert(app.includes("function openHealthWorkflow"), "Telehealth small workflow buttons need a dedicated opener with status feedback");
