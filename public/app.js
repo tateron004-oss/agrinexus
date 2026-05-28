@@ -4034,6 +4034,25 @@ function render() {
     </article>
   `).join("");
   const readiness = data.admin?.readiness || { checks: [], nextSteps: [], readyCount: 0, total: 0, status: "unknown", moduleReadiness: [] };
+  const activation = data.activationGuide || { groups: [], readyCount: 0, total: 0, status: "activation-needed" };
+  const activationGroups = activation.groups || [];
+  $("#liveActivationGuide").innerHTML = activationGroups.length
+    ? activationGroups.map(group => `
+      <div>
+        <strong>${translateText(group.title)} - ${translateText(group.status)}</strong>
+        <span>${translateText(group.summary)}</span>
+        <small>${translateText(`${group.providerStatus.connected}/${group.providerStatus.total} providers connected`)}</small>
+        <small>${translateText(group.missing.length ? `Missing: ${group.missing.slice(0, 5).join(", ")}${group.missing.length > 5 ? "..." : ""}` : "Required environment values are present")}</small>
+        <small>${translateText(group.nextAction)}</small>
+      </div>
+    `).join("")
+    : "<div>No activation guide is available yet.</div>";
+  $("#activationFocusPanel").innerHTML = [
+    row("Activation status", activation.status),
+    row("Engine groups ready", `${activation.readyCount}/${activation.total}`),
+    row("Highest priority", activationGroups.find(group => group.status !== "ready")?.title || "All activation groups ready"),
+    row("Next missing key", activationGroups.find(group => group.missing?.length)?.missing?.[0] || "None")
+  ].join("");
   $("#moduleActivation").innerHTML = (readiness.moduleReadiness || []).map(module => `
     <div><strong>${module.module}</strong><span>${module.status} - ${module.readyCount}/${module.total} live check(s)</span></div>
   `).join("");
@@ -6539,6 +6558,8 @@ function bindStatic() {
   if (adminHealthCheck) adminHealthCheck.onclick = runAdminHealthCheckDirect;
   const liveServiceCheck = $("#liveServiceCheckBtn");
   if (liveServiceCheck) liveServiceCheck.onclick = runLiveServiceCheck;
+  const liveServiceCheckFromIntegrations = $("#liveServiceCheckFromIntegrations");
+  if (liveServiceCheckFromIntegrations) liveServiceCheckFromIntegrations.onclick = runLiveServiceCheck;
   $("#demoRunBtn").onclick = runExecutiveDemo;
   $("#wowDemoBtn").onclick = runWowDemo;
   $$("[data-ai-review]").forEach(button => button.onclick = () => reviewLatestAi(button.dataset.aiReview));

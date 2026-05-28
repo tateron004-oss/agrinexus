@@ -82,9 +82,14 @@ async function call(path, body) {
   assert(login.capabilities.items.some(item => item.id === "telehealth-workspace"));
   assert(login.smartActions.status);
   assert(Array.isArray(login.smartActions.items));
+  assert(login.activationGuide.total >= 6);
+  assert(login.activationGuide.groups.some(group => group.id === "ai-voice"));
   const nextActions = await call("/api/intelligence/next-actions");
   assert(Array.isArray(nextActions.items));
   assert(nextActions.context.country);
+  const activationGuide = await call("/api/production/activation-guide");
+  assert(activationGuide.groups.some(group => group.id === "telehealth-trade-drone"));
+  assert(activationGuide.groups.every(group => Array.isArray(group.env)));
   const completion = await call("/api/production/complete-check");
   assert(completion.total === 10);
   const manifest = await call("/api/engines/manifest");

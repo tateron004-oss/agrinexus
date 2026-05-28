@@ -51,6 +51,7 @@ const clickTargets = [
   "pilotHealthWorkforceBtn",
   "adminHealthCheck",
   "liveServiceCheckBtn",
+  "liveServiceCheckFromIntegrations",
   "agentPlanBtn",
   "agentExecuteBtn",
   "agentBriefingBtn",
@@ -105,6 +106,7 @@ const endpoints = [
   "/api/engines/manifest",
   "/api/production/complete-check",
   "/api/production/operations-plan",
+  "/api/production/activation-guide",
   "/api/intelligence/next-actions",
   "/api/production/live-service-check"
 ];
@@ -136,6 +138,9 @@ assert(app.includes("Latest Workflow Guidance"), "Dashboard must show the latest
 assert(server.includes("function smartNextActions"), "Backend needs proactive smart next actions");
 assert(app.includes("Recommended Next Actions"), "Dashboard must show proactive smart guidance");
 assert(server.includes("/api/intelligence/next-actions"), "Backend needs a next-actions intelligence endpoint");
+assert(server.includes("function productionActivationGuide"), "Backend needs a live activation guide");
+assert(html.includes("liveActivationGuide"), "Integrations page needs a live activation guide");
+assert(app.includes("activationGuide"), "Frontend must render live activation guidance");
 assert(server.includes("function buildAutopilotPlan"), "Backend needs Agent Autopilot mission planning");
 assert(server.includes("agent.autopilot_executed"), "Autopilot execution must be recorded as agent evidence");
 assert(html.includes("missionDashboardPanel"), "Agent page needs an Autopilot Mission Dashboard");

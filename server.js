@@ -261,6 +261,7 @@ function publicState(db, user) {
     providers,
     capabilities: capabilityMatrix(db, providers),
     smartActions: smartNextActions(db, user, providers),
+    activationGuide: productionActivationGuide(db, providers),
     automation: automationReadiness(db, providers),
     production: productionCompleteness(db, providers),
     productionPlan: productionOperationsPlan(db, providers),
@@ -1300,6 +1301,106 @@ async function productionLiveServiceCheck(db, user) {
   });
   addActivity(db.profile, `Live service check completed: ${report.readyCount}/${report.total} ready.`);
   return report;
+}
+
+function envStatus(keys) {
+  return keys.map(key => ({ key, set: Boolean(process.env[key]) }));
+}
+
+function productionActivationGuide(db, providers = runtimeProviders(db)) {
+  const provider = id => providers.find(item => item.id === id);
+  const providerStatus = ids => {
+    const selected = ids.map(id => provider(id)).filter(Boolean);
+    const connected = selected.filter(item => item.status === "connected").length;
+    return {
+      connected,
+      total: selected.length,
+      ready: selected.length > 0 && connected === selected.length,
+      providers: selected.map(item => ({ id: item.id, name: item.name, status: item.status, mode: item.mode, detail: item.detail }))
+    };
+  };
+  const group = ({ id, title, summary, providerIds = [], env = [], nextAction, testAction = "test-all" }) => {
+    const status = providerStatus(providerIds);
+    const envItems = envStatus(env);
+    const missing = envItems.filter(item => !item.set).map(item => item.key);
+    const ready = status.ready && missing.length === 0;
+    return {
+      id,
+      title,
+      summary,
+      status: ready ? "ready" : "needs-setup",
+      ready,
+      providerStatus: status,
+      env: envItems,
+      missing,
+      nextAction: ready ? "Run the provider test and continue user workflow testing." : nextAction,
+      testAction
+    };
+  };
+  const groups = [
+    group({
+      id: "core",
+      title: "Core Hosting, Security, and Database",
+      summary: "Keeps user sessions, hosted state, and production safety real.",
+      providerIds: ["database", "auth-users", "auth-password-reset"],
+      env: ["DATABASE_URL", "AGRINEXUS_STATE_STORE", "SESSION_SECRET", "PASSWORD_PEPPER"],
+      nextAction: "In Render, add PostgreSQL, set AGRINEXUS_STATE_STORE=postgres, and confirm SESSION_SECRET plus PASSWORD_PEPPER.",
+      testAction: "health-check"
+    }),
+    group({
+      id: "ai-voice",
+      title: "AI, Voice, and Agent Reasoning",
+      summary: "Powers Ask AgriNexus, voice response, transcription, agent planning, and smart workflow guidance.",
+      providerIds: ["openai", "voice-stt", "voice-tts", "phone-voice"],
+      env: ["OPENAI_API_KEY", "OPENAI_TRANSCRIBE_MODEL", "OPENAI_TTS_MODEL", "OPENAI_TTS_VOICE", "VOICE_STT_PROVIDER", "VOICE_TTS_PROVIDER", "TWILIO_ACCOUNT_SID", "TWILIO_AUTH_TOKEN", "TWILIO_PHONE_NUMBER"],
+      nextAction: "Confirm OpenAI credits/key and Twilio credentials, then test browser voice and phone voice.",
+      testAction: "test-all"
+    }),
+    group({
+      id: "translation-map",
+      title: "Translation and Map Intelligence",
+      summary: "Supports multilingual content, voice language flow, map tiles, country context, and route intelligence.",
+      providerIds: ["translation", "maps"],
+      env: ["TRANSLATION_PROVIDER", "TRANSLATION_WEBHOOK_URL", "TRANSLATION_PROVIDER_API_KEY", "MAP_TILE_PROVIDER", "MAP_TILE_URL"],
+      nextAction: "Add translation provider settings and map tile provider settings, then run live service check.",
+      testAction: "test-all"
+    }),
+    group({
+      id: "learning-workforce",
+      title: "Learning and Workforce Engines",
+      summary: "Connects real courses, certificates, job data, calendars, HR records, shifts, and notifications.",
+      providerIds: ["learning-courses", "learning-certificates", "workforce-jobs", "workforce-calendar", "workforce-notifications", "workforce-hris", "workforce-shifts"],
+      env: ["LEARNING_COURSE_PROVIDER", "LEARNING_COURSE_WEBHOOK_URL", "LEARNING_CERTIFICATE_PROVIDER", "LEARNING_CERTIFICATE_WEBHOOK_URL", "LEARNING_PROVIDER_API_KEY", "WORKFORCE_JOB_PROVIDER", "WORKFORCE_JOB_WEBHOOK_URL", "WORKFORCE_CALENDAR_PROVIDER", "WORKFORCE_CALENDAR_WEBHOOK_URL", "WORKFORCE_NOTIFICATION_PROVIDER", "WORKFORCE_NOTIFICATION_WEBHOOK_URL", "WORKFORCE_HRIS_PROVIDER", "WORKFORCE_HRIS_WEBHOOK_URL", "WORKFORCE_SHIFT_PROVIDER", "WORKFORCE_SHIFT_WEBHOOK_URL", "WORKFORCE_PROVIDER_API_KEY"],
+      nextAction: "Use the provider-engine bridge first, then replace bridge endpoints with real course/job/HR providers as partners are chosen.",
+      testAction: "test-all"
+    }),
+    group({
+      id: "telehealth-trade-drone",
+      title: "Telehealth, Trade, and Drone Engines",
+      summary: "Connects provider access, EHR evidence, crop market data, logistics, payments, and drone operations.",
+      providerIds: ["health-telehealth", "health-ehr", "health-notifications", "trade-payments", "trade-logistics", "trade-market", "field-drones"],
+      env: ["HEALTH_TELEHEALTH_PROVIDER", "HEALTH_TELEHEALTH_WEBHOOK_URL", "HEALTH_EHR_PROVIDER", "HEALTH_EHR_WEBHOOK_URL", "HEALTH_NOTIFICATION_PROVIDER", "HEALTH_NOTIFICATION_WEBHOOK_URL", "HEALTH_PROVIDER_API_KEY", "TRADE_PAYMENT_PROVIDER", "TRADE_PAYMENT_WEBHOOK_URL", "TRADE_LOGISTICS_PROVIDER", "TRADE_LOGISTICS_WEBHOOK_URL", "TRADE_MARKET_PROVIDER", "TRADE_MARKET_WEBHOOK_URL", "TRADE_PROVIDER_API_KEY", "DRONE_PROVIDER", "DRONE_WEBHOOK_URL", "DRONE_PROVIDER_API_KEY"],
+      nextAction: "Keep sandbox bridge running for demos, then connect live telehealth, market, logistics, payment, and drone vendors.",
+      testAction: "test-all"
+    }),
+    group({
+      id: "business-communications",
+      title: "Billing and Communications",
+      summary: "Supports subscriptions, email, SMS, WhatsApp, password resets, reminders, and launch support.",
+      providerIds: ["billing-subscriptions", "email-delivery", "sms-delivery", "whatsapp-delivery"],
+      env: ["BILLING_PROVIDER", "BILLING_WEBHOOK_URL", "BILLING_PROVIDER_API_KEY", "BILLING_PRICE_ID", "EMAIL_PROVIDER", "EMAIL_WEBHOOK_URL", "SMS_PROVIDER", "SMS_WEBHOOK_URL", "WHATSAPP_PROVIDER", "WHATSAPP_WEBHOOK_URL", "COMMUNICATION_PROVIDER_API_KEY"],
+      nextAction: "Add billing price id and communications provider endpoints, then test notification and billing workflows.",
+      testAction: "test-all"
+    })
+  ];
+  const readyCount = groups.filter(item => item.ready).length;
+  return {
+    status: readyCount === groups.length ? "production-ready" : "activation-needed",
+    readyCount,
+    total: groups.length,
+    groups,
+    updatedAt: new Date().toISOString()
+  };
 }
 
 function automationReadiness(db, providers = runtimeProviders(db)) {
@@ -4464,6 +4565,11 @@ async function api(req, res, url) {
   if (url.pathname === "/api/production/operations-plan" && req.method === "GET") {
     const providers = runtimeProviders(db);
     return send(res, 200, productionOperationsPlan(db, providers));
+  }
+
+  if (url.pathname === "/api/production/activation-guide" && req.method === "GET") {
+    const providers = runtimeProviders(db);
+    return send(res, 200, productionActivationGuide(db, providers));
   }
 
   if (url.pathname === "/api/intelligence/next-actions" && req.method === "GET") {
