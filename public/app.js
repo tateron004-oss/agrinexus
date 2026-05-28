@@ -3752,6 +3752,14 @@ function render() {
   const droneScans = data.profile.droneScans || [];
   const droneFindings = data.profile.droneFindings || [];
   const fieldInterventions = data.profile.fieldInterventions || [];
+  const advancedDroneOps = [
+    ...(data.profile.droneFieldReports || []).map(item => ({ title: item.reportRef, detail: `${item.productName} - ${item.cropHealthScore}% health - ${item.status}` })),
+    ...(data.profile.droneIrrigationPlans || []).map(item => ({ title: item.planRef, detail: `${item.productName} - ${item.waterRecommendation}` })),
+    ...(data.profile.dronePestAlerts || []).map(item => ({ title: item.alertRef, detail: `${item.productName} - ${item.riskLevel} - ${item.status}` })),
+    ...(data.profile.droneSprayPlans || []).map(item => ({ title: item.sprayRef, detail: `${item.productName} - ${item.status}` })),
+    ...(data.profile.droneYieldForecasts || []).map(item => ({ title: item.forecastRef, detail: `${item.productName} - ${item.estimate} - ${item.buyerReadiness}` })),
+    ...(data.profile.droneComplianceAudits || []).map(item => ({ title: item.auditRef, detail: `${item.productName} - ${item.status}` }))
+  ];
   const latestDroneMission = droneMissions[0];
   const latestDroneScan = droneScans[0];
   const latestFieldIntervention = fieldInterventions[0];
@@ -3761,6 +3769,11 @@ function render() {
     row("Crop health", latestDroneScan ? `${latestDroneScan.cropHealthScore}%` : "Awaiting scan"),
     row("Stress alert", latestDroneScan?.stressAlert || "Awaiting scan"),
     row("Yield estimate", latestDroneScan?.yieldEstimate || "Awaiting scan"),
+    row("Field reports", (data.profile.droneFieldReports || []).length),
+    row("Irrigation plans", (data.profile.droneIrrigationPlans || []).length),
+    row("Pest alerts", (data.profile.dronePestAlerts || []).length),
+    row("Yield forecasts", (data.profile.droneYieldForecasts || []).length),
+    row("Compliance audits", (data.profile.droneComplianceAudits || []).length),
     row("Compliance", latestDroneMission ? latestDroneMission.complianceChecks.join(", ") : "Awaiting flight plan"),
     row("Field task", latestFieldIntervention?.taskRef || "No intervention assigned"),
     row("Provider", data.providers.find(item => item.id === "field-drones")?.status || "sandbox")
@@ -3777,6 +3790,9 @@ function render() {
   $("#fieldInterventionList").innerHTML = fieldInterventions.length
     ? fieldInterventions.map(task => `<div><strong>${task.taskRef} - ${task.productName}</strong><span>${task.priority} - ${task.status} - ${(task.actions || []).join(", ")}</span></div>`).join("")
     : "<div>No field interventions assigned yet.</div>";
+  $("#advancedDroneList").innerHTML = advancedDroneOps.length
+    ? advancedDroneOps.slice(0, 12).map(item => `<div><strong>${item.title}</strong><span>${item.detail}</span></div>`).join("")
+    : "<div>No advanced drone operations have been run yet.</div>";
   renderAiEvidence("#tradeAiPanel", "AgriTrade", "No trade advisor guidance yet. Ask the advisor to review pricing, route, buyer, and wallet context.");
   renderAiEvidence("#tradeAiEvidence", "AgriTrade", "No trade AI evidence yet. Run price AI or trade advisor.");
 
@@ -4446,7 +4462,7 @@ function workflowConfig(workflow, action, element) {
     const productId = element.dataset.productId || firstProduct()?.id;
     const product = data.products.find(item => item.id === productId) || firstProduct();
     const latestOrder = data.profile.orders[data.profile.orders.length - 1];
-    const titleMap = { order: "Create order", advance: "Advance order", wallet: "Post M-Pesa payment", "drone-plan": "Plan drone mission", drone: "Run drone field scan", "drone-intervention": "Assign field intervention", quote: "Send buyer quote", quality: "Run quality inspection", "cold-chain": "Run cold-chain check", export: "Prepare export packet", contract: "Draft contract packet", release: "Release payment", price: "Run price AI", route: "Run route AI", "trade-advisor": "Review trade next step" };
+    const titleMap = { order: "Create order", advance: "Advance order", wallet: "Post M-Pesa payment", "drone-plan": "Plan drone mission", drone: "Run drone field scan", "drone-intervention": "Assign field intervention", "drone-report": "Create drone field report", "drone-irrigation": "Create irrigation plan", "drone-pest": "Create pest alert", "drone-spray": "Create spray plan", "drone-yield": "Create yield forecast", "drone-compliance": "Run drone compliance audit", quote: "Send buyer quote", quality: "Run quality inspection", "cold-chain": "Run cold-chain check", export: "Prepare export packet", contract: "Draft contract packet", release: "Release payment", price: "Run price AI", route: "Run route AI", "trade-advisor": "Review trade next step" };
     titleMap["buyer-contact"] = "Contact buyer";
     const pathMap = {
       order: "/api/trade/order",
@@ -4456,6 +4472,12 @@ function workflowConfig(workflow, action, element) {
       "drone-plan": "/api/trade/drone-mission",
       drone: "/api/trade/drone-scan",
       "drone-intervention": "/api/trade/drone-intervention",
+      "drone-report": "/api/trade/drone-advanced",
+      "drone-irrigation": "/api/trade/drone-advanced",
+      "drone-pest": "/api/trade/drone-advanced",
+      "drone-spray": "/api/trade/drone-advanced",
+      "drone-yield": "/api/trade/drone-advanced",
+      "drone-compliance": "/api/trade/drone-advanced",
       quote: "/api/trade/advanced",
       quality: "/api/trade/advanced",
       "cold-chain": "/api/trade/advanced",
@@ -4464,15 +4486,17 @@ function workflowConfig(workflow, action, element) {
       release: "/api/trade/advanced"
     };
     const isDroneAction = ["drone-plan", "drone", "drone-intervention"].includes(action);
+    const isAdvancedDroneAction = ["drone-report", "drone-irrigation", "drone-pest", "drone-spray", "drone-yield", "drone-compliance"].includes(action);
     const isAdvancedTrade = ["quote", "quality", "cold-chain", "export", "contract", "release"].includes(action);
+    const droneTypeMap = { "drone-report": "field-report", "drone-irrigation": "irrigation", "drone-pest": "pest", "drone-spray": "spray", "drone-yield": "yield", "drone-compliance": "compliance" };
     return simpleWorkflowConfig({
       eyebrow: "Trade workflow",
       title: titleMap[action] || "Trade action",
-      summary: action === "buyer-contact" ? "Prepare a buyer communication workflow with the active crop, order, route context, channel, and message draft before sending through live communications." : isDroneAction ? "Run a complete agritech drone workflow: compliant flight planning, crop intelligence, findings, map evidence, and field intervention tasks." : isAdvancedTrade ? "Create a concrete commercial operations record with provider evidence for quote, quality, cold-chain, export, contract, or payment release." : "Confirm the market, wallet, logistics, or AI action before the trade ledger changes.",
+      summary: action === "buyer-contact" ? "Prepare a buyer communication workflow with the active crop, order, route context, channel, and message draft before sending through live communications." : isDroneAction ? "Run a complete agritech drone workflow: compliant flight planning, crop intelligence, findings, map evidence, and field intervention tasks." : isAdvancedDroneAction ? "Create farmer-facing drone intelligence that turns aerial evidence into irrigation, pest, spray, yield, compliance, and buyer-readiness decisions." : isAdvancedTrade ? "Create a concrete commercial operations record with provider evidence for quote, quality, cold-chain, export, contract, or payment release." : "Confirm the market, wallet, logistics, or AI action before the trade ledger changes.",
       confirmLabel: titleMap[action] || "Confirm",
       path: pathMap[action] || "/api/ai/run",
-      body: action === "order" ? { productId } : action === "wallet" ? { provider: "M-Pesa", amount: 120 } : action === "buyer-contact" ? { productId } : isDroneAction ? { productId } : isAdvancedTrade ? { type: action, productId } : action === "advance" ? {} : { type: action },
-      success: action === "buyer-contact" ? "Buyer contact prepared" : action === "wallet" ? "Payment posted" : action === "advance" ? "Order advanced" : action === "order" ? "Order created" : action === "drone-plan" ? "Drone mission planned" : action === "drone" ? "Drone scan complete" : action === "drone-intervention" ? "Field intervention assigned" : isAdvancedTrade ? "Advanced trade operation complete" : "AI action complete",
+      body: action === "order" ? { productId } : action === "wallet" ? { provider: "M-Pesa", amount: 120 } : action === "buyer-contact" ? { productId } : isDroneAction ? { productId } : isAdvancedDroneAction ? { type: droneTypeMap[action], productId } : isAdvancedTrade ? { type: action, productId } : action === "advance" ? {} : { type: action },
+      success: action === "buyer-contact" ? "Buyer contact prepared" : action === "wallet" ? "Payment posted" : action === "advance" ? "Order advanced" : action === "order" ? "Order created" : action === "drone-plan" ? "Drone mission planned" : action === "drone" ? "Drone scan complete" : action === "drone-intervention" ? "Field intervention assigned" : isAdvancedDroneAction ? "Advanced drone operation complete" : isAdvancedTrade ? "Advanced trade operation complete" : "AI action complete",
       record: "Order book, wallet ledger, route timeline, drone mission, field scan, intervention task, trade event, or AI evidence",
       provider: "Market, drone, payment, logistics, or AI provider event is recorded.",
       checklist: [

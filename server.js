@@ -1475,6 +1475,12 @@ function ensureTradeProfile(profile) {
   profile.droneMissions = profile.droneMissions || [];
   profile.droneScans = profile.droneScans || [];
   profile.droneFindings = profile.droneFindings || [];
+  profile.droneFieldReports = profile.droneFieldReports || [];
+  profile.droneIrrigationPlans = profile.droneIrrigationPlans || [];
+  profile.dronePestAlerts = profile.dronePestAlerts || [];
+  profile.droneSprayPlans = profile.droneSprayPlans || [];
+  profile.droneYieldForecasts = profile.droneYieldForecasts || [];
+  profile.droneComplianceAudits = profile.droneComplianceAudits || [];
   profile.fieldInterventions = profile.fieldInterventions || [];
 }
 
@@ -2221,6 +2227,113 @@ function createFieldIntervention(db, { source = "operator", assignedTo = "Field 
     metadata: { taskId: task.id, findingId: finding?.id || null, scanId: scan?.id || null, countryId: country.id, source }
   });
   return task;
+}
+
+function createAdvancedDroneOperation(db, { type = "field-report", productId, source = "operator" } = {}) {
+  ensureTradeProfile(db.profile);
+  const { country, route } = activeContext(db);
+  const product = selectedTradeProduct(db, productId, country);
+  if (!product) throw new Error("No crop lot is available for advanced drone operations.");
+  const scan = (db.profile.droneScans || [])[0];
+  const finding = (db.profile.droneFindings || [])[0];
+  const health = scan?.cropHealthScore || Math.max(60, Math.min(95, Number(product.buyerInterest || 72)));
+  const now = new Date().toISOString();
+  const base = {
+    id: crypto.randomUUID(),
+    productId: product.id,
+    productName: product.name,
+    countryId: country.id,
+    routeId: route.id,
+    scanRef: scan?.scanRef || null,
+    fieldZone: scan?.fieldZone || `${country.name} ${product.category || "crop"} zone`,
+    createdBy: source,
+    createdAt: now
+  };
+  const makers = {
+    "field-report": () => ({
+      ...base,
+      reportRef: `AN-AGRO-${country.id.toUpperCase()}-${String(db.profile.droneFieldReports.length + 1).padStart(3, "0")}`,
+      cropHealthScore: health,
+      soilMoisture: country.heat >= 38 ? "low" : health >= 80 ? "balanced" : "watch",
+      standCount: `${Math.max(68, health - 5)}% productive stand`,
+      farmerSummary: `Field report for ${product.name}: ${health}% crop health, ${scan?.stressAlert || "field watch"}, ${scan?.yieldEstimate || "yield estimate pending"}.`,
+      status: "report-ready"
+    }),
+    irrigation: () => ({
+      ...base,
+      planRef: `AN-IRR-${country.id.toUpperCase()}-${String(db.profile.droneIrrigationPlans.length + 1).padStart(3, "0")}`,
+      priorityZones: country.heat >= 38 ? ["north ridge", "low moisture rows", "edge stress"] : ["watch rows", "drip-line check"],
+      waterRecommendation: country.heat >= 38 ? "early morning irrigation within 24 hours" : "standard irrigation cycle with targeted field verification",
+      estimatedSavings: `${Math.max(8, Math.round((100 - health) / 2))}% water optimization`,
+      status: "irrigation-plan-ready"
+    }),
+    pest: () => ({
+      ...base,
+      alertRef: `AN-PEST-${country.id.toUpperCase()}-${String(db.profile.dronePestAlerts.length + 1).padStart(3, "0")}`,
+      riskLevel: finding?.severity === "priority" ? "priority" : health < 75 ? "elevated" : "watch",
+      suspectedIssues: health < 75 ? ["leaf stress", "pest scouting required", "fungal-risk watch"] : ["edge scouting", "spot-check required"],
+      scoutWindow: "same-week field scouting",
+      status: "pest-alert-ready"
+    }),
+    spray: () => ({
+      ...base,
+      sprayRef: `AN-SPRAY-${country.id.toUpperCase()}-${String(db.profile.droneSprayPlans.length + 1).padStart(3, "0")}`,
+      targetZones: ["affected rows", "field edge", "buyer-quality sample area"],
+      safetyChecks: ["wind speed check", "community notification", "operator PPE", "chemical record", "buffer-zone review"],
+      status: "spray-plan-ready"
+    }),
+    yield: () => ({
+      ...base,
+      forecastRef: `AN-YIELD-${country.id.toUpperCase()}-${String(db.profile.droneYieldForecasts.length + 1).padStart(3, "0")}`,
+      estimate: scan?.yieldEstimate || `${Math.max(12, Math.round((product.buyerInterest || 70) / 4))} harvest units`,
+      buyerReadiness: product.buyerInterest >= 80 && health >= 75 ? "ready for buyer offer" : "needs field improvement before premium offer",
+      confidence: Math.max(72, Math.min(96, health + 5)),
+      status: "forecast-ready"
+    }),
+    compliance: () => ({
+      ...base,
+      auditRef: `AN-DAUD-${country.id.toUpperCase()}-${String(db.profile.droneComplianceAudits.length + 1).padStart(3, "0")}`,
+      checks: ["pilot authorization", "community consent", "airspace review", "data privacy", "crop-owner approval", "evidence retention"],
+      status: "compliance-audit-ready"
+    })
+  };
+  const record = (makers[type] || makers["field-report"])();
+  const storeMap = {
+    "field-report": "droneFieldReports",
+    irrigation: "droneIrrigationPlans",
+    pest: "dronePestAlerts",
+    spray: "droneSprayPlans",
+    yield: "droneYieldForecasts",
+    compliance: "droneComplianceAudits"
+  };
+  const actionMap = {
+    "field-report": "drone.field_report",
+    irrigation: "drone.irrigation_plan",
+    pest: "drone.pest_alert",
+    spray: "drone.spray_plan",
+    yield: "drone.yield_forecast",
+    compliance: "drone.compliance_audit"
+  };
+  const label = record.reportRef || record.planRef || record.alertRef || record.sprayRef || record.forecastRef || record.auditRef;
+  const store = storeMap[type] || "droneFieldReports";
+  db.profile[store].unshift(record);
+  db.profile[store] = db.profile[store].slice(0, 20);
+  addMapInsight(db.profile, {
+    type: actionMap[type] || "drone.field_report",
+    label: `${label} advanced drone operation`,
+    detail: `${record.productName}: ${record.status}.`,
+    routeName: route.name,
+    checkpoint: db.profile.activeCheckpoint
+  });
+  addTradeEvent(db.profile, { type: actionMap[type] || "drone.field_report", label: `${label} created for ${record.productName}.` });
+  logIntegration(db, {
+    providerId: "field-drones",
+    module: "AgriTrade",
+    action: actionMap[type] || "drone.field_report",
+    detail: `${label} advanced drone operation created for ${record.productName}.`,
+    metadata: { recordId: record.id, productId: product.id, countryId: country.id, type, source }
+  });
+  return record;
 }
 
 function recordAiRun(db, { type, country, route, result, module = "AI" }) {
@@ -6052,6 +6165,28 @@ async function api(req, res, url) {
     addWorkflowNote(db.profile, body.note, "Field intervention note");
     await writeDb(db);
     return send(res, 200, publicState(db, user));
+  }
+
+  if (url.pathname === "/api/trade/drone-advanced" && req.method === "POST") {
+    if (!canUse(user, "trade")) return send(res, 403, { error: "Role does not allow advanced drone workflows" });
+    const body = await readBody(req);
+    let record;
+    try {
+      record = createAdvancedDroneOperation(db, {
+        type: body.type,
+        productId: body.productId,
+        source: "operator"
+      });
+    } catch (error) {
+      return send(res, 409, { error: error.message });
+    }
+    const label = record.reportRef || record.planRef || record.alertRef || record.sprayRef || record.forecastRef || record.auditRef;
+    addActivity(db.profile, `${label} advanced drone operation completed for ${record.productName}.`);
+    addWorkflowNote(db.profile, body.note, "Advanced drone note");
+    await writeDb(db);
+    const state = publicState(db, user);
+    state.droneAdvancedResult = { type: body.type || "field-report", record };
+    return send(res, 200, state);
   }
 
   if (url.pathname === "/api/trade/advanced" && req.method === "POST") {

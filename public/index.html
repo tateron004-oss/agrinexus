@@ -508,13 +508,19 @@
           <div class="cards two">
             <article>
               <div class="tag-row"><span>Field intelligence</span><span>Drone-ready</span></div>
-              <h3>Drone Field Scan</h3>
-              <p>Run crop-health, irrigation, pest-risk, yield, and buyer-readiness intelligence for the active product lot and route.</p>
+              <h3>Advanced Drone Command Center</h3>
+              <p>Run crop-health, irrigation, pest-risk, yield, compliance, and buyer-readiness intelligence for the active product lot and route.</p>
               <div id="dronePanel" class="rows"></div>
               <div class="action-row">
                 <button id="droneMissionBtn">Plan drone mission</button>
                 <button id="droneScanBtn" class="primary">Run drone field scan</button>
                 <button id="droneInterventionBtn">Assign field task</button>
+                <button data-workflow="trade" data-action="drone-report">Field report</button>
+                <button data-workflow="trade" data-action="drone-irrigation">Irrigation plan</button>
+                <button data-workflow="trade" data-action="drone-pest">Pest alert</button>
+                <button data-workflow="trade" data-action="drone-spray">Spray plan</button>
+                <button data-workflow="trade" data-action="drone-yield">Yield forecast</button>
+                <button data-workflow="trade" data-action="drone-compliance">Compliance audit</button>
               </div>
             </article>
             <article>
@@ -524,6 +530,8 @@
               <div id="droneScanList" class="activity"></div>
               <h3>Field Intervention Tasks</h3>
               <div id="fieldInterventionList" class="activity"></div>
+              <h3>Advanced Drone Evidence</h3>
+              <div id="advancedDroneList" class="activity"></div>
             </article>
           </div>
           <div id="productGrid" class="cards four"></div>
