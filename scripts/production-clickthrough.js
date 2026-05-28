@@ -89,6 +89,7 @@ const endpoints = [
   "/api/trade/drone-advanced",
   "/api/trade/buyer-contact",
   "/api/trade/advanced",
+  "/api/map/advanced",
   "/api/agent/command",
   "/api/agent/briefing",
   "/api/voice/transcribe",
@@ -151,6 +152,9 @@ assert(app.includes("appointment: \"Schedule appointment\""), "Frontend needs ad
 assert(html.includes("learningAdvancedPanel"), "Learning needs an advanced classroom operations pack");
 assert(server.includes("learningAssignments"), "Backend needs advanced learning operation records");
 assert(app.includes("assignment: [\"Create assignment\""), "Frontend needs advanced learning workflow wiring");
+assert(html.includes("mapAdvancedPanel"), "Map needs an advanced field intelligence operations pack");
+assert(server.includes("farmerLocations"), "Backend needs advanced map operation records");
+assert(app.includes("\"farmer-location\": [\"Map farmer location\""), "Frontend needs advanced map workflow wiring");
 
 for (const endpoint of endpoints) {
   assert(server.includes(endpoint), `Missing backend endpoint ${endpoint}`);

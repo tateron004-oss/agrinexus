@@ -1500,6 +1500,12 @@ function ensureTradeProfile(profile) {
 function ensureAiProfile(profile) {
   profile.aiRuns = profile.aiRuns || [];
   profile.mapInsights = profile.mapInsights || [];
+  profile.farmerLocations = profile.farmerLocations || [];
+  profile.fieldZones = profile.fieldZones || [];
+  profile.facilityRoutes = profile.facilityRoutes || [];
+  profile.routeDisruptions = profile.routeDisruptions || [];
+  profile.mapRiskLayers = profile.mapRiskLayers || [];
+  profile.mapEvidencePackets = profile.mapEvidencePackets || [];
   profile.demoMoments = profile.demoMoments || [];
   profile.demoScore = profile.demoScore || 0;
   profile.agentPlans = profile.agentPlans || [];
@@ -6633,6 +6639,145 @@ async function api(req, res, url) {
     addActivity(db.profile, `${run.type} AI run ${run.reviewStatus} by ${user.name}.`);
     await writeDb(db);
     return send(res, 200, publicState(db, user));
+  }
+
+  if (url.pathname === "/api/map/advanced" && req.method === "POST") {
+    if (!canUse(user, "map")) return send(res, 403, { error: "Role does not allow map operations" });
+    const body = await readBody(req);
+    ensureAiProfile(db.profile);
+    const { country, route } = activeContext(db);
+    const type = body.type || "farmer-location";
+    const checkpoint = db.profile.activeCheckpoint || route.checkpoints?.[0] || country.capital;
+    let action = "map.operation_completed";
+    let detail = "Advanced map operation completed.";
+    let record;
+
+    if (type === "field-zone") {
+      record = {
+        id: crypto.randomUUID(),
+        zoneNumber: `ZONE-${country.id.toUpperCase()}-${String(db.profile.fieldZones.length + 1).padStart(3, "0")}`,
+        zoneName: body.zoneName || `${country.cropFocus || "Crop"} resilience zone`,
+        countryId: country.id,
+        routeId: route.id,
+        cropFocus: country.cropFocus || "Staple crop",
+        riskProfile: `${country.risk} route risk with ${country.queue} access queue`,
+        linkedDroneScans: (db.profile.droneScans || []).slice(0, 3).map(item => item.scanRef || item.id),
+        status: "field-zone-ready",
+        createdAt: new Date().toISOString()
+      };
+      db.profile.fieldZones.unshift(record);
+      db.profile.fieldZones = db.profile.fieldZones.slice(0, 20);
+      action = "map.field_zone_created";
+      detail = `${record.zoneNumber} created for ${record.cropFocus} operations in ${country.name}.`;
+    } else if (type === "facility-route") {
+      record = {
+        id: crypto.randomUUID(),
+        routeNumber: `ROUTE-${country.id.toUpperCase()}-${String(db.profile.facilityRoutes.length + 1).padStart(3, "0")}`,
+        origin: body.origin || checkpoint,
+        destination: body.destination || (country.facilities > 1 ? "Nearest rural facility hub" : "Community access point"),
+        purpose: body.purpose || "Move people, care packets, crop lots, and workforce teams with audit evidence.",
+        countryId: country.id,
+        routeId: route.id,
+        status: "facility-route-ready",
+        createdAt: new Date().toISOString()
+      };
+      db.profile.facilityRoutes.unshift(record);
+      db.profile.facilityRoutes = db.profile.facilityRoutes.slice(0, 20);
+      action = "map.facility_route_ready";
+      detail = `${record.routeNumber} prepared from ${record.origin} to ${record.destination}.`;
+    } else if (type === "disruption") {
+      record = {
+        id: crypto.randomUUID(),
+        disruptionNumber: `DISRUPT-${country.id.toUpperCase()}-${String(db.profile.routeDisruptions.length + 1).padStart(3, "0")}`,
+        checkpoint,
+        issue: body.issue || "Road, weather, fuel, or clinic access delay reported by field team.",
+        severity: body.severity || (country.risk === "High" ? "high" : "medium"),
+        mitigation: body.mitigation || "Reroute through alternate checkpoint, notify affected teams, and monitor provider handoff.",
+        countryId: country.id,
+        routeId: route.id,
+        status: "mitigation-ready",
+        createdAt: new Date().toISOString()
+      };
+      db.profile.routeDisruptions.unshift(record);
+      db.profile.routeDisruptions = db.profile.routeDisruptions.slice(0, 20);
+      action = "map.route_disruption_recorded";
+      detail = `${record.disruptionNumber} recorded at ${checkpoint} with ${record.severity} severity.`;
+    } else if (type === "risk-layer") {
+      const score = country.risk === "High" ? 82 : country.risk === "Medium" ? 58 : 34;
+      record = {
+        id: crypto.randomUUID(),
+        layerNumber: `RISK-${country.id.toUpperCase()}-${String(db.profile.mapRiskLayers.length + 1).padStart(3, "0")}`,
+        layers: body.layers || ["road access", "clinic reach", "market movement", "weather exposure", "workforce coverage"],
+        score,
+        countryId: country.id,
+        routeId: route.id,
+        status: "risk-layer-generated",
+        createdAt: new Date().toISOString()
+      };
+      db.profile.mapRiskLayers.unshift(record);
+      db.profile.mapRiskLayers = db.profile.mapRiskLayers.slice(0, 20);
+      action = "map.risk_layer_generated";
+      detail = `${record.layerNumber} generated with ${score} composite risk score.`;
+    } else if (type === "evidence") {
+      record = {
+        id: crypto.randomUUID(),
+        packetNumber: `MAP-EVIDENCE-${country.id.toUpperCase()}-${String(db.profile.mapEvidencePackets.length + 1).padStart(3, "0")}`,
+        countryId: country.id,
+        routeId: route.id,
+        evidence: [
+          `${db.profile.farmerLocations.length} farmer locations`,
+          `${db.profile.fieldZones.length} field zones`,
+          `${db.profile.facilityRoutes.length} facility routes`,
+          `${db.profile.routeDisruptions.length} disruptions`,
+          `${db.profile.mapRiskLayers.length} risk layers`,
+          `${db.profile.mapInsights.length} map insights`
+        ],
+        status: "evidence-packet-ready",
+        createdAt: new Date().toISOString()
+      };
+      db.profile.mapEvidencePackets.unshift(record);
+      db.profile.mapEvidencePackets = db.profile.mapEvidencePackets.slice(0, 20);
+      action = "map.evidence_packet_ready";
+      detail = `${record.packetNumber} compiled for ${country.name} map operations.`;
+    } else {
+      record = {
+        id: crypto.randomUUID(),
+        locationNumber: `FARMER-${country.id.toUpperCase()}-${String(db.profile.farmerLocations.length + 1).padStart(3, "0")}`,
+        farmerName: body.farmerName || "Rural producer group",
+        countryId: country.id,
+        routeId: route.id,
+        lat: country.lat,
+        lng: country.lng,
+        accessNeeds: body.accessNeeds || "Low-bandwidth voice, route support, accessible training, and buyer connection.",
+        status: "mapped",
+        createdAt: new Date().toISOString()
+      };
+      db.profile.farmerLocations.unshift(record);
+      db.profile.farmerLocations = db.profile.farmerLocations.slice(0, 20);
+      action = "map.farmer_location_mapped";
+      detail = `${record.locationNumber} mapped for ${record.farmerName} in ${country.name}.`;
+    }
+
+    addMapInsight(db.profile, {
+      type: action,
+      label: detail.split(".")[0],
+      detail,
+      routeName: route.name,
+      checkpoint
+    });
+    logIntegration(db, {
+      providerId: "maps",
+      module: "Maps",
+      action,
+      detail,
+      metadata: { recordId: record.id, type, countryId: country.id, routeId: route.id }
+    });
+    addActivity(db.profile, detail);
+    addWorkflowNote(db.profile, body.note, "Map note");
+    const state = publicState(db, user);
+    state.mapAdvancedResult = { type, record };
+    await writeDb(db);
+    return send(res, 200, state);
   }
 
   if (url.pathname === "/api/agent/plan" && req.method === "POST") {

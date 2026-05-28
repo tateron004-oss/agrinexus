@@ -3908,6 +3908,25 @@ function render() {
   $("#aiRunHistory").innerHTML = (data.profile.aiRuns || []).length
     ? data.profile.aiRuns.map(run => `<div><strong>${run.type} - ${run.countryName}</strong><span>${run.provider}${run.model ? ` (${run.model})` : ""} - ${run.checkpoint}</span></div>`).join("")
     : "<div>No AI runs yet. Use the command center or route tools to generate one.</div>";
+  const advancedMapOps = [
+    ...(data.profile.farmerLocations || []).map(item => ({ title: item.locationNumber, detail: `${item.farmerName} - ${item.status}` })),
+    ...(data.profile.fieldZones || []).map(item => ({ title: item.zoneNumber, detail: `${item.zoneName} - ${item.status}` })),
+    ...(data.profile.facilityRoutes || []).map(item => ({ title: item.routeNumber, detail: `${item.origin} to ${item.destination} - ${item.status}` })),
+    ...(data.profile.routeDisruptions || []).map(item => ({ title: item.disruptionNumber, detail: `${item.checkpoint} - ${item.severity} - ${item.status}` })),
+    ...(data.profile.mapRiskLayers || []).map(item => ({ title: item.layerNumber, detail: `${item.score} risk score - ${item.status}` })),
+    ...(data.profile.mapEvidencePackets || []).map(item => ({ title: item.packetNumber, detail: `${item.status} - ${(item.evidence || []).join(", ")}` }))
+  ];
+  $("#mapAdvancedPanel").innerHTML = [
+    row("Farmer locations", (data.profile.farmerLocations || []).length),
+    row("Field zones", (data.profile.fieldZones || []).length),
+    row("Facility routes", (data.profile.facilityRoutes || []).length),
+    row("Disruptions", (data.profile.routeDisruptions || []).length),
+    row("Risk layers", (data.profile.mapRiskLayers || []).length),
+    row("Evidence packets", (data.profile.mapEvidencePackets || []).length)
+  ].join("");
+  $("#mapAdvancedList").innerHTML = advancedMapOps.length
+    ? advancedMapOps.slice(0, 10).map(item => `<div><strong>${translateText(item.title)}</strong><span>${translateText(item.detail)}</span></div>`).join("")
+    : `<div>${translateText("No advanced map operations have been run yet.")}</div>`;
 
   $("#mapQuickActions").innerHTML = [
     `<button class="primary" type="button" data-map-action="command"><strong>${translateText("Run operations desk")}</strong><span>${translateText("Create command-center AI evidence for the active country and checkpoint.")}</span></button>`,
@@ -4628,6 +4647,33 @@ function workflowConfig(workflow, action, element) {
     });
   }
   if (workflow === "map") {
+    const advancedMapLabels = {
+      "farmer-location": ["Map farmer location", "Create a farmer or producer-group location record tied to the active route, country, accessibility needs, provider audit, and map evidence.", "Map farmer"],
+      "field-zone": ["Create field zone", "Create an operational field zone that links crop focus, country risk, drone scans, and route context.", "Create field zone"],
+      "facility-route": ["Build facility route", "Prepare a route between rural access points and facility hubs for care, crop movement, and workforce teams.", "Build route"],
+      disruption: ["Record route disruption", "Record a disruption, severity, mitigation plan, and route intelligence evidence for the active checkpoint.", "Record disruption"],
+      "risk-layer": ["Generate risk layer", "Generate a composite map risk layer across road access, clinic reach, market movement, weather exposure, and workforce coverage.", "Generate layer"],
+      evidence: ["Compile map evidence packet", "Compile farmer locations, field zones, facility routes, disruptions, risk layers, and AI insights into a map evidence packet.", "Compile packet"]
+    };
+    if (advancedMapLabels[action]) {
+      const [title, summary, confirmLabel] = advancedMapLabels[action];
+      return simpleWorkflowConfig({
+        eyebrow: "Advanced map",
+        title,
+        summary,
+        confirmLabel,
+        path: "/api/map/advanced",
+        body: { type: action },
+        success: "Advanced map operation complete",
+        record: "Map operation record, country and route context, provider audit event, map insight, and activity feed evidence",
+        provider: "Maps provider evidence is recorded for audit and live engine testing.",
+        checklist: [
+          { title: "Country", detail: `${activeCountry().name}: ${activeCountry().queue}`, status: "live", label: activeCountry().risk },
+          { title: "Route", detail: `${activeRoute().name} - ${data.profile.activeCheckpoint}`, status: "ready", label: data.profile.routeStage },
+          { title: "Audit", detail: "This operation writes a concrete map intelligence record.", status: "ready", label: "Evidence" }
+        ]
+      });
+    }
     return simpleWorkflowConfig({
       eyebrow: "Map workflow",
       title: "Focus map context",
