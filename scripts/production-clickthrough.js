@@ -17,6 +17,7 @@ const clickTargets = [
   "completeLessonBtn",
   "quizBtn",
   "certBtn",
+  "runIntakeSimulationBtn",
   "droneMissionBtn",
   "droneScanBtn",
   "droneInterventionBtn",
@@ -74,9 +75,11 @@ for (const id of clickTargets) {
 
 const endpoints = [
   "/api/learning/start",
+  "/api/learning/catalog",
   "/api/learning/lesson",
   "/api/workforce/action",
   "/api/health/action",
+  "/api/health/intake-simulation",
   "/api/trade/drone-mission",
   "/api/trade/drone-scan",
   "/api/trade/drone-intervention",
@@ -125,6 +128,11 @@ assert(html.includes("missionDashboardPanel"), "Agent page needs an Autopilot Mi
 assert(app.includes("function renderMissionDashboard"), "Frontend needs to render mission plans and executions");
 assert(html.includes("liveServiceCheckPanel"), "Admin needs a live service finalization panel");
 assert(app.includes("function runLiveServiceCheck"), "Frontend needs a live service finalization action");
+assert(html.includes("learningCatalogPanel"), "Learning module needs a course catalog workspace");
+assert(app.includes("learningCatalogSummary"), "Learning catalog summary must render from platform state");
+assert(server.includes("function learningCatalog"), "Backend needs a learning catalog model");
+assert(html.includes("intakeSimulationPanel"), "Health module needs a guided intake simulation workspace");
+assert(app.includes("function openGuidedIntakeSimulation"), "Frontend needs a guided intake simulation workflow");
 
 for (const endpoint of endpoints) {
   assert(server.includes(endpoint), `Missing backend endpoint ${endpoint}`);

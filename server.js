@@ -255,6 +255,7 @@ function publicState(db, user) {
     countries: db.countries,
     routes: db.routes,
     courses: db.courses,
+    learningCatalog: learningCatalog(db),
     roles: db.roles,
     products: db.products || [],
     providers,
@@ -1358,6 +1359,59 @@ function ensureLearningProfile(profile) {
 function getEnrollment(profile, courseId) {
   ensureLearningProfile(profile);
   return profile.enrollments.find(item => item.courseId === courseId) || null;
+}
+
+function learningCatalog(db) {
+  ensureLearningProfile(db.profile);
+  const completed = new Set(db.profile.completedCourses || []);
+  const activeCourseId = db.profile.activeCourseId;
+  const tracks = Array.from(new Set((db.courses || []).map(course => course.track))).map(track => {
+    const courses = db.courses.filter(course => course.track === track);
+    return {
+      track,
+      count: courses.length,
+      completed: courses.filter(course => completed.has(course.id)).length
+    };
+  });
+  const courses = (db.courses || []).map((course, index) => {
+    const enrollment = getEnrollment(db.profile, course.id);
+    const linkedRoles = (db.roles || []).filter(role => (role.requiredCertificates || []).includes(course.id));
+    const nextModuleIndex = enrollment?.activeModuleIndex || 0;
+    return {
+      ...course,
+      catalogNumber: `AN-LRN-${String(index + 1).padStart(3, "0")}`,
+      providerId: "learning-courses",
+      providerStatus: runtimeProviderById(db, "learning-courses")?.status === "connected" ? "live-provider" : "local-catalog",
+      enrollmentStatus: completed.has(course.id) ? "certified" : enrollment?.status || "not_started",
+      progress: enrollment?.progress || (completed.has(course.id) ? 100 : 0),
+      nextLesson: (course.modules || [])[nextModuleIndex] || (course.modules || [])[0] || course.title,
+      workforceLinks: linkedRoles.map(role => ({ id: role.id, title: role.title, country: role.country, rate: role.rate })),
+      outcomes: [
+        `${course.readiness}% readiness impact`,
+        `${course.track} workforce skill path`,
+        linkedRoles.length ? `${linkedRoles.length} role gate link(s)` : "General readiness path"
+      ],
+      accessibility: [
+        "caption packet",
+        "audio guide",
+        "screen-reader outline",
+        "large-print summary",
+        "low-bandwidth offline packet"
+      ]
+    };
+  });
+  const recommended = courses.find(course => course.id === activeCourseId)
+    || courses.find(course => course.enrollmentStatus !== "certified")
+    || courses[0]
+    || null;
+  return {
+    total: courses.length,
+    completed: courses.filter(course => course.enrollmentStatus === "certified").length,
+    activeCourseId: activeCourseId || recommended?.id || null,
+    recommendedCourseId: recommended?.id || null,
+    tracks,
+    courses
+  };
 }
 
 function ensureWorkforceProfile(profile) {
@@ -4898,6 +4952,11 @@ async function api(req, res, url) {
     return send(res, 200, publicState(db, current));
   }
 
+  if (url.pathname === "/api/learning/catalog" && req.method === "GET") {
+    if (!canUse(user, "learning")) return send(res, 403, { error: "Role does not allow learning catalog access" });
+    return send(res, 200, { catalog: learningCatalog(db), user: { language: user.language } });
+  }
+
   if (url.pathname === "/api/learning/start" && req.method === "POST") {
     if (!canUse(user, "learning")) return send(res, 403, { error: "Role does not allow learning workflows" });
     const body = await readBody(req);
@@ -5581,6 +5640,133 @@ async function api(req, res, url) {
     addWorkflowNote(db.profile, body.note, "Health note");
     await writeDb(db);
     return send(res, 200, publicState(db, user));
+  }
+
+  if (url.pathname === "/api/health/intake-simulation" && req.method === "POST") {
+    if (!canUse(user, "health")) return send(res, 403, { error: "Role does not allow healthcare workflows" });
+    const body = await readBody(req);
+    const { country, route } = activeContext(db);
+    ensureHealthProfile(db.profile);
+    const patientName = String(body.patientName || "Amina Community Patient").trim();
+    const needSummary = String(body.needSummary || "Accessible telehealth intake for rural patient support, language translation, and follow-up").trim();
+    const preferredLanguage = String(body.preferredLanguage || db.profile.accessibilityProfile.language || user.language || "en").trim();
+    const accessibilityNeeds = String(body.accessibilityNeeds || "Captions, audio narration, large-print summary, caregiver handoff").trim();
+    const contactMethod = String(body.contactMethod || "Voice callback plus SMS summary").trim();
+    const caregiverName = String(body.caregiverName || "Community accessibility aide").trim();
+    const riskLevel = String(body.urgency || (country.risk === "High" || country.heat >= 38 ? "Priority" : "Routine")).trim();
+    const createdAt = new Date().toISOString();
+    const intake = {
+      id: crypto.randomUUID(),
+      patientRef: `AN-PAT-${country.id.toUpperCase()}-${String(db.profile.healthIntakes.length + 1).padStart(3, "0")}`,
+      patientName,
+      countryId: country.id,
+      needSummary,
+      riskLevel,
+      queueStatus: "Guided intake simulation complete",
+      representativeStatus: "Accessibility aide connected",
+      preferredLanguage,
+      accessibilityNeeds,
+      contactMethod,
+      caregiverName,
+      assistiveSupports: accessibilityNeeds.split(",").map(item => item.trim()).filter(Boolean),
+      routeContext: {
+        routeId: route.id,
+        routeName: route.name,
+        checkpoint: db.profile.activeCheckpoint
+      },
+      simulation: true,
+      createdAt
+    };
+    db.profile.healthIntakes.unshift(intake);
+
+    const consent = {
+      id: crypto.randomUUID(),
+      intakeId: intake.id,
+      patientRef: intake.patientRef,
+      consentType: "telehealth, translation, caregiver, transcript, and assistive-format consent",
+      language: preferredLanguage,
+      privacySummary: "Plain-language consent captured for guided care, translation, caregiver support, and low-bandwidth communication.",
+      status: "recorded",
+      createdAt
+    };
+    const vitals = {
+      id: crypto.randomUUID(),
+      intakeId: intake.id,
+      patientRef: intake.patientRef,
+      temperatureC: Number(body.temperatureC || (country.heat >= 38 ? 38.2 : 36.9)),
+      pulse: Number(body.pulse || (riskLevel.toLowerCase().includes("priority") ? 98 : 84)),
+      symptoms: body.symptoms || "Heat exposure, mobility/accessibility check, rural follow-up request",
+      triageLevel: riskLevel.toLowerCase().includes("priority") || country.heat >= 38 ? "priority" : "routine",
+      status: "captured",
+      createdAt
+    };
+    const accessRecord = {
+      id: crypto.randomUUID(),
+      intakeId: intake.id,
+      patientRef: intake.patientRef,
+      countryId: country.id,
+      title: "Guided accessible intake packet",
+      status: "Access plan ready",
+      language: preferredLanguage,
+      supports: ["caption relay", "audio description", "large-print summary", "caregiver handoff", "low-bandwidth callback"],
+      createdAt
+    };
+    const referral = {
+      id: crypto.randomUUID(),
+      intakeId: intake.id,
+      patientRef: intake.patientRef,
+      destination: body.destination || `${country.name} partner clinic / community health worker`,
+      reason: body.reason || "Guided intake flagged accessible follow-up and provider verification",
+      transportSupport: "community aide callback and low-bandwidth directions",
+      status: "sent",
+      createdAt
+    };
+    const followUp = {
+      id: crypto.randomUUID(),
+      intakeId: intake.id,
+      patientRef: intake.patientRef,
+      scheduleWindow: body.scheduleWindow || "24-hour voice callback with SMS summary",
+      channels: ["voice callback", "SMS summary", "caregiver packet", "large-print/audio guide"],
+      status: "scheduled",
+      createdAt
+    };
+
+    db.profile.telehealthConsents.unshift(consent);
+    db.profile.telehealthVitals.unshift(vitals);
+    db.profile.telehealthAccessibility.unshift(accessRecord);
+    db.profile.telehealthReferrals.unshift(referral);
+    db.profile.telehealthFollowUps.unshift(followUp);
+    db.profile.telehealthConsents = db.profile.telehealthConsents.slice(0, 20);
+    db.profile.telehealthVitals = db.profile.telehealthVitals.slice(0, 20);
+    db.profile.telehealthAccessibility = db.profile.telehealthAccessibility.slice(0, 20);
+    db.profile.telehealthReferrals = db.profile.telehealthReferrals.slice(0, 20);
+    db.profile.telehealthFollowUps = db.profile.telehealthFollowUps.slice(0, 20);
+    db.profile.representativeConnections += 1;
+    country.queue = "Guided intake simulation complete";
+    country.patients += 1;
+
+    const events = [
+      ["health-telehealth", "intake.created", `${intake.patientRef} guided telehealth intake simulation recorded.`],
+      ["health-ehr", "telehealth.consent_recorded", `${consent.patientRef} consent captured during guided intake.`],
+      ["health-telehealth", "telehealth.vitals_captured", `${vitals.patientRef} vitals captured during guided intake.`],
+      ["health-ehr", "telehealth.accessibility_plan", `${accessRecord.patientRef} accessible intake packet prepared.`],
+      ["health-notifications", "telehealth.referral_sent", `${referral.patientRef} referral sent during guided intake.`],
+      ["health-notifications", "telehealth.followup_scheduled", `${followUp.patientRef} follow-up scheduled during guided intake.`]
+    ];
+    for (const [providerId, action, detail] of events) {
+      logIntegration(db, {
+        providerId,
+        module: "Healthcare",
+        action,
+        detail,
+        metadata: { intakeId: intake.id, patientRef: intake.patientRef, simulation: true }
+      });
+    }
+    db.profile.aiActivity = `Guided intake simulation completed for ${intake.patientRef}: consent, vitals, accessibility, referral, and follow-up are ready.`;
+    addActivity(db.profile, db.profile.aiActivity);
+    addWorkflowNote(db.profile, body.note, "Guided intake simulation note");
+    await writeDb(db);
+    return send(res, 200, { ...publicState(db, user), intakeSimulationResult: { intake, consent, vitals, accessRecord, referral, followUp } });
   }
 
   if (url.pathname === "/api/trade/order" && req.method === "POST") {

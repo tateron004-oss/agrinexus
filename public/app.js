@@ -2240,6 +2240,13 @@ function translatedCourse(course) {
   };
 }
 
+function translatedModule(course, moduleTitle) {
+  const localizedCourse = translatedCourse(course);
+  const sourceModules = course.modules || [];
+  const index = sourceModules.indexOf(moduleTitle);
+  return index >= 0 ? (localizedCourse.modules || [])[index] || moduleTitle : translateText(moduleTitle);
+}
+
 function updateWorkspaceBar(sectionId) {
   const copy = workspaceCopy[sectionId] || workspaceCopy.dashboard;
   const title = $("#workspaceTitle");
@@ -3331,6 +3338,43 @@ function render() {
     row(copy.certificates, (data.profile.certificates || []).length)
   ].join("");
 
+  const catalog = data.learningCatalog || {
+    total: data.courses.length,
+    completed: (data.profile.completedCourses || []).length,
+    courses: visibleCourses
+  };
+  $("#learningCatalogSummary").innerHTML = [
+    row("Available courses", catalog.total || data.courses.length),
+    row("Completed", catalog.completed || 0),
+    row("Selected track", selectedLearningTrack === "All" ? copy.allTracks : translatedTrack(selectedLearningTrack)),
+    row("Provider mode", (catalog.courses || [])[0]?.providerStatus === "live-provider" ? "Live catalog" : "Local catalog")
+  ].join("");
+
+  $("#learningCatalogPanel").innerHTML = visibleCourses.map(course => {
+    const catalogCourse = (catalog.courses || []).find(item => item.id === course.id) || course;
+    const localizedCourse = translatedCourse(course);
+    const enrollment = courseEnrollment(course.id);
+    const workforceLinks = catalogCourse.workforceLinks || [];
+    return `
+      <article class="catalog-card ${catalogCourse.enrollmentStatus === "certified" ? "complete" : ""}" data-course-card="${course.id}">
+        <div class="tag-row"><span>${catalogCourse.catalogNumber || course.id}</span><span>${localizedCourse.track}</span><span>${localizedCourse.level || "Core"}</span></div>
+        <h3>${localizedCourse.title}</h3>
+        <p>${translateText((catalogCourse.outcomes || [])[0] || `${course.readiness}% readiness impact`)}</p>
+        <div class="catalog-meta">
+          ${row("Next lesson", translatedModule(course, catalogCourse.nextLesson || (course.modules || [])[0] || course.title))}
+          ${row("Duration", translatedDuration(course.duration))}
+          ${row("Workforce link", workforceLinks.map(role => role.title).join(", ") || "General readiness")}
+          ${row("Accessibility", (catalogCourse.accessibility || []).slice(0, 3).join(", "))}
+        </div>
+        <div class="progress"><span style="width:${enrollment?.progress || catalogCourse.progress || 0}%"></span></div>
+        <div class="action-row">
+          <button class="primary course" data-course="${course.id}">${enrollment ? copy.continueCourse : copy.startCourse}</button>
+          <button class="catalog-lesson" data-course="${course.id}" type="button">${copy.completeLesson || "Complete lesson"}</button>
+        </div>
+      </article>
+    `;
+  }).join("");
+
   $("#courseGrid").innerHTML = visibleCourses.map(course => {
     const localizedCourse = translatedCourse(course);
     const enrollment = courseEnrollment(course.id);
@@ -3533,6 +3577,14 @@ function render() {
   $("#intakeList").innerHTML = intakes.length
     ? intakes.map(item => `<div><strong>${item.patientRef} - ${item.patientName || "Patient"}</strong><span>${item.riskLevel} - ${item.queueStatus} - ${item.contactMethod || "contact pending"}</span></div>`).join("")
     : "<div>No patient intakes yet.</div>";
+
+  $("#intakeSimulationPanel").innerHTML = [
+    row("Scenario", `${country.name} accessible telehealth intake`),
+    row("Language", voiceLanguageName()),
+    row("Patient", activeIntake?.patientName || "Amina Community Patient"),
+    row("Support", "captions, audio guide, caregiver handoff"),
+    row("Evidence created", `${telehealthConsents.length} consent, ${telehealthVitals.length} vitals, ${telehealthFollowUps.length} follow-up`)
+  ].join("");
 
   $("#carePlanList").innerHTML = carePlans.length
     ? carePlans.map(plan => `<div><strong>${plan.patientRef}</strong><span>${plan.status} - ${plan.provider}</span></div>`).join("")
@@ -4658,6 +4710,35 @@ function runWorkflowAction(workflow, action, element) {
   }
 }
 
+function openGuidedIntakeSimulation() {
+  const country = activeCountry();
+  openWorkflowModal({
+    eyebrow: "Guided telehealth intake",
+    title: "Run patient intake simulation",
+    summary: "Create a realistic intake record with consent, vitals, accessibility support, referral, follow-up, and provider evidence.",
+    confirmLabel: "Run guided intake",
+    path: "/api/health/intake-simulation",
+    body: {
+      patientName: "Amina Community Patient",
+      needSummary: `${country.name} patient needs accessible telehealth intake, language support, and rural follow-up`,
+      urgency: country.risk === "High" || country.heat >= 38 ? "Priority" : "Routine",
+      preferredLanguage: languageCode(),
+      accessibilityNeeds: "Captions, audio narration, large-print summary, caregiver handoff",
+      contactMethod: "Voice callback plus SMS summary",
+      caregiverName: "Community accessibility aide"
+    },
+    success: "Guided intake simulation complete",
+    record: "Patient intake, consent, vitals, accessibility packet, referral, follow-up, and provider events",
+    provider: "Telehealth, EHR, and notification provider evidence is recorded. Live providers dispatch when credentials are connected.",
+    checklist: [
+      { title: "Country context", detail: country.name, status: "live", label: country.risk },
+      { title: "Language", detail: voiceLanguageName(), status: "ready", label: "Translate" },
+      { title: "Accessibility", detail: "Captions, audio, large-print, caregiver, low-bandwidth", status: "ready", label: "Inclusive" },
+      { title: "Audit trail", detail: "Creates multiple healthcare provider evidence events", status: "ready", label: "Evidence" }
+    ]
+  });
+}
+
 function bindDynamic() {
   $$("[data-persona]").forEach(button => {
     button.onclick = () => {
@@ -4693,6 +4774,12 @@ function bindDynamic() {
   $$(".lesson-step").forEach(button => button.onclick = () => {
     const course = data.courses.find(item => item.id === button.dataset.course);
     if (course) openWorkflowModal(lessonWorkflowConfig(course, Number(button.dataset.moduleIndex)));
+  });
+  $$(".catalog-lesson").forEach(button => button.onclick = event => {
+    event.stopPropagation();
+    const course = data.courses.find(item => item.id === button.dataset.course);
+    const enrollment = course ? courseEnrollment(course.id) : null;
+    if (course) openWorkflowModal(lessonWorkflowConfig(course, enrollment?.activeModuleIndex || 0));
   });
   $$(".apply").forEach(button => button.onclick = () => openWorkflowModal(roleWorkflowConfig(button.dataset.role)));
   $$(".role-card").forEach(card => card.onclick = event => {
@@ -6069,6 +6156,7 @@ function bindStatic() {
   $$("[data-learning-access]").forEach(button => button.onclick = () => openWorkflowModal(learningAccessibilityWorkflowConfig(button.dataset.learningAccess)));
   $$("[data-workforce]").forEach(button => button.onclick = () => openWorkflowModal(workflowConfig("workforce", button.dataset.workforce, { dataset: {} })));
   $$("[data-health]").forEach(button => button.onclick = () => openHealthWorkflow(button.dataset.health, button));
+  $("#runIntakeSimulationBtn").onclick = openGuidedIntakeSimulation;
   $$(".order").forEach(button => button.onclick = () => openWorkflowModal(workflowConfig("trade", "order", { dataset: { productId: button.dataset.productId } })));
   $("#advanceOrderBtn").onclick = () => openWorkflowModal(workflowConfig("trade", "advance", { dataset: {} }));
   $("#droneMissionBtn").onclick = () => openWorkflowModal(workflowConfig("trade", "drone-plan", { dataset: { productId: firstProduct()?.id } }));

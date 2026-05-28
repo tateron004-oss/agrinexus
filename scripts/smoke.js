@@ -136,6 +136,10 @@ async function call(path, body) {
   const englishLanguage = await call("/api/user/language", { language: "en" });
   assert(englishLanguage.user.language === "en");
   assert(englishLanguage.profile.accessibilityProfile.language === "en");
+  const catalog = await call("/api/learning/catalog");
+  assert(catalog.catalog.total >= 6);
+  assert(catalog.catalog.courses.some(course => course.id === "telehealth-support"));
+  assert(catalog.catalog.courses.every(course => course.accessibility.length >= 3));
   const started = await call("/api/learning/start", { courseId: "digital-foundations" });
   assert(started.profile.readiness >= 36);
   assert(started.profile.enrollments.length >= 1);
@@ -188,6 +192,20 @@ async function call(path, body) {
   assert(intake.profile.healthIntakes[0].accessibilityNeeds.includes("Captions"));
   assert(intake.profile.healthIntakes[0].contactMethod === "Low-bandwidth callback");
   assert(intake.profile.integrationEvents.some(event => event.action === "intake.created"));
+  const guidedIntake = await call("/api/health/intake-simulation", {
+    patientName: "Fatima Hassan",
+    needSummary: "Arabic-speaking rural patient needs accessible telehealth intake simulation",
+    preferredLanguage: "ar",
+    accessibilityNeeds: "Arabic captions, audio narration, caregiver handoff",
+    contactMethod: "Voice callback plus SMS summary"
+  });
+  assert(guidedIntake.intakeSimulationResult.intake.patientName === "Fatima Hassan");
+  assert(guidedIntake.profile.telehealthConsents.length >= 1);
+  assert(guidedIntake.profile.telehealthVitals.length >= 1);
+  assert(guidedIntake.profile.telehealthAccessibility.length >= 1);
+  assert(guidedIntake.profile.telehealthReferrals.length >= 1);
+  assert(guidedIntake.profile.telehealthFollowUps.length >= 1);
+  assert(guidedIntake.profile.integrationEvents.some(event => event.action === "telehealth.followup_scheduled"));
   const representative = await call("/api/health/action", { type: "representative" });
   assert(representative.profile.representativeConnections >= 1);
   assert(representative.profile.integrationEvents.some(event => event.action === "representative.connected"));
