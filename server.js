@@ -262,6 +262,7 @@ function publicState(db, user) {
     capabilities: capabilityMatrix(db, providers),
     smartActions: smartNextActions(db, user, providers),
     activationGuide: productionActivationGuide(db, providers),
+    engineSetup: renderEngineEnvPlan(db),
     automation: automationReadiness(db, providers),
     production: productionCompleteness(db, providers),
     productionPlan: productionOperationsPlan(db, providers),
@@ -425,6 +426,48 @@ function engineCredentialState(keys) {
       value: unresolved ? "" : maskEngineValue(value)
     };
   });
+}
+
+function engineCredentialEntry(rawKey) {
+  const [key, ...rest] = String(rawKey || "").split("=");
+  return { key, suggestedValue: rest.join("=") || "" };
+}
+
+function renderEngineEnvPlan(db) {
+  const manifest = liveEngineManifest(db);
+  const lines = [];
+  const seen = new Set();
+  const add = (key, value = "") => {
+    if (!key || seen.has(key)) return;
+    seen.add(key);
+    lines.push({ key, value, renderValue: value || "<add in Render>" });
+  };
+  add("PROVIDER_ENGINE_BASE_URL", process.env.PROVIDER_ENGINE_BASE_URL || "https://agrinexus-provider-engines.onrender.com");
+  add("AGRINEXUS_REQUIRE_LIVE_SERVICES", "true");
+  add("AGRINEXUS_STATE_STORE", "postgres");
+  for (const engine of manifest.engines) {
+    for (const credential of engine.credentials || []) {
+      const entry = engineCredentialEntry(credential.key || credential);
+      add(entry.key, entry.suggestedValue);
+    }
+  }
+  return {
+    status: manifest.status,
+    totalKeys: lines.length,
+    configuredKeys: lines.filter(item => item.value && item.value !== "<add in Render>").length,
+    groups: manifest.engines.map(engine => ({
+      id: engine.id,
+      name: engine.name,
+      status: engine.status,
+      providerSummary: engine.providerSummary,
+      credentialSummary: engine.credentialSummary,
+      keys: (engine.credentials || []).map(credential => engineCredentialEntry(credential.key || credential)),
+      missing: engine.missing || [],
+      userAction: engine.userAction
+    })),
+    lines,
+    envText: lines.map(item => `${item.key}=${item.value}`).join("\n")
+  };
 }
 
 function liveEngineManifest(db) {
@@ -4555,6 +4598,11 @@ async function api(req, res, url) {
 
   if (url.pathname === "/api/engines/manifest" && req.method === "GET") {
     return send(res, 200, liveEngineManifest(db));
+  }
+
+  if (url.pathname === "/api/engines/render-env-plan" && req.method === "GET") {
+    if (!user) return send(res, 401, { error: "Sign in required" });
+    return send(res, 200, renderEngineEnvPlan(db));
   }
 
   if (url.pathname === "/api/production/complete-check" && req.method === "GET") {

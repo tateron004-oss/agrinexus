@@ -104,6 +104,7 @@ const endpoints = [
   "/api/pilot/run",
   "/api/admin/subscriber",
   "/api/engines/manifest",
+  "/api/engines/render-env-plan",
   "/api/production/complete-check",
   "/api/production/operations-plan",
   "/api/production/activation-guide",
@@ -141,6 +142,9 @@ assert(server.includes("/api/intelligence/next-actions"), "Backend needs a next-
 assert(server.includes("function productionActivationGuide"), "Backend needs a live activation guide");
 assert(html.includes("liveActivationGuide"), "Integrations page needs a live activation guide");
 assert(app.includes("activationGuide"), "Frontend must render live activation guidance");
+assert(server.includes("function renderEngineEnvPlan"), "Backend needs a Render engine env plan");
+assert(html.includes("renderEngineKeysPanel"), "Integrations page needs Render engine keys");
+assert(app.includes("engineSetup"), "Frontend must render engine setup values");
 assert(server.includes("function buildAutopilotPlan"), "Backend needs Agent Autopilot mission planning");
 assert(server.includes("agent.autopilot_executed"), "Autopilot execution must be recorded as agent evidence");
 assert(html.includes("missionDashboardPanel"), "Agent page needs an Autopilot Mission Dashboard");

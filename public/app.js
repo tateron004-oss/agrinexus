@@ -4053,6 +4053,24 @@ function render() {
     row("Highest priority", activationGroups.find(group => group.status !== "ready")?.title || "All activation groups ready"),
     row("Next missing key", activationGroups.find(group => group.missing?.length)?.missing?.[0] || "None")
   ].join("");
+  const engineSetup = data.engineSetup || { groups: [], lines: [], totalKeys: 0, configuredKeys: 0 };
+  $("#renderEngineKeysPanel").innerHTML = (engineSetup.groups || []).length
+    ? engineSetup.groups.map(group => `
+      <div>
+        <strong>${translateText(group.name)} - ${translateText(group.status)}</strong>
+        <span>${translateText(group.userAction)}</span>
+        <small>${translateText(`Providers ${group.providerSummary}; credentials ${group.credentialSummary}`)}</small>
+        <small>${translateText(group.missing?.length ? `Add in Render: ${group.missing.slice(0, 6).join(", ")}${group.missing.length > 6 ? "..." : ""}` : "Engine keys are configured")}</small>
+      </div>
+    `).join("")
+    : "<div>No engine setup plan is available yet.</div>";
+  $("#engineSetupValues").innerHTML = [
+    row("Render keys", engineSetup.totalKeys || 0),
+    row("Suggested defaults", (engineSetup.lines || []).filter(item => item.value).length),
+    row("Provider bridge", (engineSetup.lines || []).find(item => item.key === "PROVIDER_ENGINE_BASE_URL")?.renderValue || "Add provider bridge URL"),
+    row("Strict live mode", (engineSetup.lines || []).find(item => item.key === "AGRINEXUS_REQUIRE_LIVE_SERVICES")?.renderValue || "true"),
+    row("Next empty value", (engineSetup.lines || []).find(item => !item.value)?.key || "None")
+  ].join("");
   $("#moduleActivation").innerHTML = (readiness.moduleReadiness || []).map(module => `
     <div><strong>${module.module}</strong><span>${module.status} - ${module.readyCount}/${module.total} live check(s)</span></div>
   `).join("");
