@@ -112,6 +112,9 @@ assert(server.includes("function planAgentToolWithOpenAi"), "Backend needs live 
 assert(server.includes("agent.llm_tool_planned"), "Agent planner must create provider evidence when OpenAI selects a workflow tool");
 assert(html.includes("agentReasoningTitle"), "Agent page needs a visible reasoning panel");
 assert(app.includes("function renderAgentReasoningPanel"), "Frontend needs to render agent reasoning from command metadata");
+assert(server.includes("function rememberAgentMemory"), "Backend needs long-term memory capture for the learning agent");
+assert(server.includes("function retrieveAgentMemories"), "Backend needs memory retrieval before agent planning");
+assert(server.includes("agent.memory_retrieved"), "Agent planning should record memory retrieval evidence");
 
 for (const endpoint of endpoints) {
   assert(server.includes(endpoint), `Missing backend endpoint ${endpoint}`);

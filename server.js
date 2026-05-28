@@ -1285,6 +1285,10 @@ function ensureAiProfile(profile) {
     lastSummary: "Nexus is ready to guide the platform.",
     updatedAt: new Date().toISOString()
   };
+  profile.agentMemory.longTermFacts = profile.agentMemory.longTermFacts || [];
+  profile.agentMemory.preferences = profile.agentMemory.preferences || [];
+  profile.agentMemory.learnedPatterns = profile.agentMemory.learnedPatterns || [];
+  profile.agentMemory.retrievals = profile.agentMemory.retrievals || [];
 }
 
 function buildAgentPlan(db, goal, user) {
@@ -2284,6 +2288,7 @@ function commandRecord(db, user, command, result) {
     createdAt: new Date().toISOString()
   };
   memory.rememberedContexts = [remembered, ...(memory.rememberedContexts || [])].slice(0, 12);
+  learnFromAgentCommand(db, command, result);
   memory.lastCommand = command;
   memory.lastIntent = result.intent;
   memory.lastResponse = result.response;
@@ -2786,6 +2791,96 @@ function addConversationTurn(profile, role, text, metadata = {}) {
   return turn;
 }
 
+function inferMemoryCategory(text) {
+  const lower = String(text || "").toLowerCase();
+  if (lower.includes("prefer") || lower.includes("i like") || lower.includes("i want") || lower.includes("always") || lower.includes("don't") || lower.includes("do not")) return "preference";
+  if (lower.includes("because") || lower.includes("next time") || lower.includes("when ") || lower.includes("after ")) return "pattern";
+  return "fact";
+}
+
+function memoryBucket(profile, category) {
+  ensureAiProfile(profile);
+  if (category === "preference") return profile.agentMemory.preferences;
+  if (category === "pattern") return profile.agentMemory.learnedPatterns;
+  return profile.agentMemory.longTermFacts;
+}
+
+function rememberAgentMemory(profile, text, metadata = {}) {
+  ensureAiProfile(profile);
+  const value = String(text || "").trim();
+  if (!value) return null;
+  const category = metadata.category || inferMemoryCategory(value);
+  const bucket = memoryBucket(profile, category);
+  const normalized = value.toLowerCase().replace(/\s+/g, " ");
+  const existing = bucket.find(item => item.normalized === normalized);
+  if (existing) {
+    existing.uses = Number(existing.uses || 0) + 1;
+    existing.updatedAt = new Date().toISOString();
+    existing.source = metadata.source || existing.source;
+    return existing;
+  }
+  const item = {
+    id: crypto.randomUUID(),
+    category,
+    text: value,
+    normalized,
+    source: metadata.source || "agent-command",
+    confidence: Number(metadata.confidence || 0.78),
+    uses: 1,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  };
+  bucket.unshift(item);
+  if (category === "preference") profile.agentMemory.preferences = bucket.slice(0, 30);
+  else if (category === "pattern") profile.agentMemory.learnedPatterns = bucket.slice(0, 30);
+  else profile.agentMemory.longTermFacts = bucket.slice(0, 40);
+  profile.agentMemory.updatedAt = item.updatedAt;
+  return item;
+}
+
+function retrieveAgentMemories(profile, query, limit = 6) {
+  ensureAiProfile(profile);
+  const queryTokens = new Set(tokenizeAgentText(query));
+  const all = [
+    ...(profile.agentMemory.preferences || []),
+    ...(profile.agentMemory.learnedPatterns || []),
+    ...(profile.agentMemory.longTermFacts || []),
+    ...(profile.agentMemory.rememberedContexts || []).map(item => ({ ...item, text: `${item.command || ""} ${item.intent || ""} ${item.response || ""}`, category: "recent-context", confidence: 0.62 }))
+  ];
+  const scored = all
+    .map(item => {
+      const tokens = tokenizeAgentText(item.text || item.command || item.response || "");
+      const overlap = tokens.reduce((total, token) => total + (queryTokens.has(token) ? 1 : 0), 0);
+      return { ...item, score: overlap + Number(item.uses || 0) * 0.15 + Number(item.confidence || 0) * 0.25 };
+    })
+    .filter(item => item.score > 0.35)
+    .sort((a, b) => b.score - a.score)
+    .slice(0, limit);
+  profile.agentMemory.retrievals.unshift({
+    id: crypto.randomUUID(),
+    query,
+    memoryIds: scored.map(item => item.id).filter(Boolean),
+    createdAt: new Date().toISOString()
+  });
+  profile.agentMemory.retrievals = profile.agentMemory.retrievals.slice(0, 20);
+  return scored;
+}
+
+function learnFromAgentCommand(db, command, result) {
+  ensureAiProfile(db.profile);
+  const lower = String(command || "").toLowerCase();
+  if (lower.startsWith("remember ") || lower.includes("remember that")) {
+    const fact = String(command || "").replace(/^remember\s+/i, "").replace(/remember that/i, "").trim();
+    if (fact) rememberAgentMemory(db.profile, fact, { source: "explicit-remember", category: inferMemoryCategory(fact), confidence: 0.95 });
+  }
+  if (lower.includes("prefer") || lower.includes("i want") || lower.includes("always")) {
+    rememberAgentMemory(db.profile, command, { source: "user-preference", category: "preference", confidence: 0.88 });
+  }
+  if (result?.intent && result?.status && result.status !== "failed") {
+    rememberAgentMemory(db.profile, `When the user asks "${command}", the useful workflow is ${result.intent}.`, { source: "successful-workflow", category: "pattern", confidence: 0.74 });
+  }
+}
+
 function isAffirmativeCommand(lower) {
   return /^(yes|yep|yeah|ok|okay|confirm|approved|approve|do it|run it|go ahead|proceed|please do|submit it|send it)$/i.test(String(lower || "").trim());
 }
@@ -2993,6 +3088,7 @@ async function planAgentToolWithOpenAi(db, user, command) {
   if (!process.env.OPENAI_API_KEY) return null;
   const { country, route } = activeContext(db);
   const tools = agentToolRegistry();
+  const retrievedMemories = retrieveAgentMemories(db.profile, command, 6);
   const context = {
     country: country.name,
     route: route.name,
@@ -3006,6 +3102,11 @@ async function planAgentToolWithOpenAi(db, user, command) {
       healthIntakes: (db.profile.healthIntakes || []).length,
       orders: (db.profile.orders || []).length,
       droneScans: (db.profile.droneScans || []).length
+    },
+    memory: {
+      activeMission: db.profile.agentMemory.activeMission,
+      activeAudience: db.profile.agentMemory.activeAudience,
+      relevantMemories: retrievedMemories.map(item => ({ category: item.category, text: item.text || item.response || item.command, confidence: item.confidence }))
     }
   };
   try {
@@ -3060,7 +3161,14 @@ async function planAgentToolWithOpenAi(db, user, command) {
 
 async function planAgenticTool(db, user, command) {
   const openAiPlan = await planAgentToolWithOpenAi(db, user, command);
-  return openAiPlan || planAgentToolLocally(command);
+  const localPlan = planAgentToolLocally(command);
+  const plan = openAiPlan || localPlan;
+  if (!plan) return null;
+  const memories = retrieveAgentMemories(db.profile, command, 4);
+  return {
+    ...plan,
+    memoriesUsed: memories.map(item => ({ id: item.id, category: item.category, text: item.text || item.response || item.command, confidence: item.confidence }))
+  };
 }
 
 async function routeAgenticCommand(db, user, command, options = {}) {
@@ -3073,6 +3181,15 @@ async function routeAgenticCommand(db, user, command, options = {}) {
     detail: `${plan.planner} selected ${plan.tool} for: ${command}`,
     metadata: { tool: plan.tool, confidence: plan.confidence, rationale: plan.rationale }
   });
+  if (plan.memoriesUsed?.length) {
+    logIntegration(db, {
+      providerId: "agent-memory",
+      module: "AI",
+      action: "agent.memory_retrieved",
+      detail: `Agent retrieved ${plan.memoriesUsed.length} long-term memory item(s) for planning.`,
+      metadata: { command, memoryIds: plan.memoriesUsed.map(item => item.id).filter(Boolean), tool: plan.tool }
+    });
+  }
   const wantsExecute = options.confirm === true;
   if (plan.tool === "ai.copilot") {
     const { country, route } = activeContext(db);
@@ -3104,7 +3221,8 @@ async function routeAgenticCommand(db, user, command, options = {}) {
         planner: plan.planner,
         confidence: plan.confidence,
         rationale: plan.rationale,
-        userFacingPlan: plan.userFacingPlan || plan.action
+        userFacingPlan: plan.userFacingPlan || plan.action,
+        memoriesUsed: plan.memoriesUsed || []
       }
     };
   }
@@ -3130,6 +3248,7 @@ async function routeAgenticCommand(db, user, command, options = {}) {
       planner: plan.planner,
       confidence: plan.confidence,
       rationale: plan.rationale,
+      memoriesUsed: plan.memoriesUsed || [],
       attempts: result.attempts
     }
   };
@@ -3282,13 +3401,30 @@ async function runAgentCommand(db, user, command, options = {}) {
   }
 
   if (lower.includes("remember") || lower.startsWith("set mission") || lower.startsWith("our mission")) {
-    db.profile.agentMemory.activeMission = text.replace(/^remember\s+/i, "") || db.profile.agentMemory.activeMission || "rural transformation";
+    const remembered = text.replace(/^remember\s+/i, "").replace(/remember that/i, "").trim();
+    if (remembered) rememberAgentMemory(db.profile, remembered, { source: "explicit-remember", category: inferMemoryCategory(remembered), confidence: 0.95 });
+    db.profile.agentMemory.activeMission = remembered || db.profile.agentMemory.activeMission || "rural transformation";
     db.profile.agentMemory.activeAudience = lower.includes("government") ? "government" : db.profile.agentMemory.activeAudience || "government";
     db.profile.agentMemory.updatedAt = new Date().toISOString();
     return {
       intent: "memory-updated",
-      response: `I will remember this mission: ${db.profile.agentMemory.activeMission}.`,
+      response: `I will remember this: ${db.profile.agentMemory.activeMission}.`,
       metadata: { memory: db.profile.agentMemory }
+    };
+  }
+
+  if (lower.includes("what do you remember") || lower.includes("show memory") || lower.includes("what have you learned")) {
+    const memories = [
+      ...(db.profile.agentMemory.preferences || []).slice(0, 3),
+      ...(db.profile.agentMemory.learnedPatterns || []).slice(0, 3),
+      ...(db.profile.agentMemory.longTermFacts || []).slice(0, 3)
+    ];
+    return {
+      intent: "memory-summary",
+      response: memories.length
+        ? `I remember ${memories.length} useful item(s): ${memories.map(item => item.text).join(" | ")}`
+        : "I do not have long-term memories yet. Say remember, then tell me an important fact or preference.",
+      metadata: { memories }
     };
   }
 

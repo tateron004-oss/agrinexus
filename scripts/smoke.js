@@ -365,6 +365,16 @@ async function call(path, body) {
   const agenticConfirm = await call("/api/agent/command", { command: "yes", conversational: true, inputMode: "voice", outputMode: "voice" });
   assert(agenticConfirm.commandResult.intent === "conversation.confirmed");
   assert(!agenticConfirm.profile.agentPendingAction);
+  const rememberPreference = await call("/api/agent/command", { command: "Remember that I prefer voice-first telehealth support for hearing impaired patients", conversational: true, inputMode: "voice", outputMode: "voice" });
+  assert(rememberPreference.commandResult.intent === "memory-updated");
+  assert(rememberPreference.profile.agentMemory.preferences.length >= 1);
+  const memoryRouted = await call("/api/agent/command", { command: "A patient cannot hear and needs care access", conversational: true, inputMode: "voice", outputMode: "voice" });
+  assert(memoryRouted.commandResult.intent === "conversation.pending_action");
+  assert(memoryRouted.commandResult.metadata.memoriesUsed.length >= 1);
+  assert(memoryRouted.profile.integrationEvents.some(event => event.action === "agent.memory_retrieved"));
+  const memorySummary = await call("/api/agent/command", { command: "what have you learned", conversational: true });
+  assert(memorySummary.commandResult.intent === "memory-summary");
+  assert(memorySummary.commandResult.response.includes("voice-first telehealth"));
   const lessonCommand = await call("/api/agent/command", { command: "Nexus complete my lesson", confirm: true, inputMode: "voice", outputMode: "voice" });
   assert(lessonCommand.commandResult.intent === "learning.complete_lesson");
   assert(lessonCommand.commandResult.metadata.redirectSection === "learning");
