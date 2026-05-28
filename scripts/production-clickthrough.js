@@ -155,6 +155,9 @@ assert(html.includes("missionDashboardPanel"), "Agent page needs an Autopilot Mi
 assert(app.includes("function renderMissionDashboard"), "Frontend needs to render mission plans and executions");
 assert(html.includes("liveServiceCheckPanel"), "Admin needs a live service finalization panel");
 assert(app.includes("function runLiveServiceCheck"), "Frontend needs a live service finalization action");
+assert(app.includes("liveServiceCheckFromIntegrations"), "Integrations live service check button must share the finalization action");
+assert(app.includes("Slow external engines will time out"), "Live service check should show progress while external engines respond");
+assert(server.includes("function fetchWithTimeout"), "External service probes need timeouts so checks cannot hang");
 assert(html.includes("learningCatalogPanel"), "Learning module needs a course catalog workspace");
 assert(app.includes("learningCatalogSummary"), "Learning catalog summary must render from platform state");
 assert(server.includes("function learningCatalog"), "Backend needs a learning catalog model");

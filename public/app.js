@@ -2855,7 +2855,7 @@ function renderLaunchSupportPanels() {
 }
 
 function applyPermissions() {
-  $$("[data-workflow], [data-ai], [data-workforce], [data-health], [data-pay], [data-module-test], [data-command-preset], [data-pilot-scenario], [data-persona], [data-simple-command], [data-simple-section], [data-simple-pilot], [data-simple-demo], [data-simple-mission], [data-simple-action], .provider-test, #adminHealthCheck, #liveServiceCheckBtn, #aiConsoleRun, #agentPlanBtn, #agentExecuteBtn, #agentBriefingBtn, #agentMissionBtn, #missionResumeBtn, #missionAutopilotBtn, #demoRunBtn, #wowDemoBtn, #startOnboardingBtn, #openSupportBtn, #inviteSubscriberBtn, [data-ai-review], [data-notify], #voiceListenBtn, #voiceRunBtn, #voiceFirstBtn, #voiceSpeakBtn, #voiceHelpBtn, #globalListenBtn, #globalRunBtn, #globalYesBtn, #globalNoBtn, #globalReadBtn, #globalVoiceHelpBtn, #globalInstallBtn, #jarvisListenBtn, #jarvisRunBtn, #jarvisMissionBtn, #jarvisReadBtn").forEach(element => {
+  $$("[data-workflow], [data-ai], [data-workforce], [data-health], [data-pay], [data-module-test], [data-command-preset], [data-pilot-scenario], [data-persona], [data-simple-command], [data-simple-section], [data-simple-pilot], [data-simple-demo], [data-simple-mission], [data-simple-action], .provider-test, #adminHealthCheck, #liveServiceCheckBtn, #liveServiceCheckFromIntegrations, #aiConsoleRun, #agentPlanBtn, #agentExecuteBtn, #agentBriefingBtn, #agentMissionBtn, #missionResumeBtn, #missionAutopilotBtn, #demoRunBtn, #wowDemoBtn, #startOnboardingBtn, #openSupportBtn, #inviteSubscriberBtn, [data-ai-review], [data-notify], #voiceListenBtn, #voiceRunBtn, #voiceFirstBtn, #voiceSpeakBtn, #voiceHelpBtn, #globalListenBtn, #globalRunBtn, #globalYesBtn, #globalNoBtn, #globalReadBtn, #globalVoiceHelpBtn, #globalInstallBtn, #jarvisListenBtn, #jarvisRunBtn, #jarvisMissionBtn, #jarvisReadBtn").forEach(element => {
     const area = element.dataset.workflow
       || (element.dataset.ai ? "ai" : null)
       || (element.dataset.workforce ? "workforce" : null)
@@ -2874,6 +2874,7 @@ function applyPermissions() {
       || (element.classList.contains("provider-test") ? "integrations" : null)
       || (element.id === "adminHealthCheck" ? "admin" : null)
       || (element.id === "liveServiceCheckBtn" ? "admin" : null)
+      || (element.id === "liveServiceCheckFromIntegrations" ? "admin" : null)
       || (element.id === "aiConsoleRun" ? "ai" : null)
       || (element.id === "agentPlanBtn" ? "ai" : null)
       || (element.id === "agentExecuteBtn" ? "ai" : null)
@@ -5164,11 +5165,15 @@ async function runAdminHealthCheckDirect() {
 }
 
 async function runLiveServiceCheck() {
-  const button = $("#liveServiceCheckBtn");
-  if (button) {
+  const buttons = ["#liveServiceCheckBtn", "#liveServiceCheckFromIntegrations"].map(selector => $(selector)).filter(Boolean);
+  const panel = $("#liveServiceCheckPanel");
+  buttons.forEach(button => {
     button.disabled = true;
     button.setAttribute("aria-busy", "true");
     button.textContent = "Checking live services...";
+  });
+  if (panel) {
+    panel.innerHTML = `<div><strong>Running live service check</strong><span>Testing PostgreSQL, provider bridge, translation, maps, billing, auth, email, SMS, and WhatsApp. Slow external engines will time out instead of locking the page.</span></div>`;
   }
   try {
     data = await request("/api/production/live-service-check", { method: "POST", body: {} });
@@ -5179,14 +5184,18 @@ async function runLiveServiceCheck() {
     setVoiceResponse(message, true);
     toast("Live service check complete");
   } catch (error) {
-    toast(error.message || "Live service check failed");
-  } finally {
-    const refreshedButton = $("#liveServiceCheckBtn");
-    if (refreshedButton) {
-      refreshedButton.disabled = false;
-      refreshedButton.removeAttribute("aria-busy");
-      refreshedButton.textContent = "Run live service check";
+    const message = error.message || "Live service check failed";
+    if (panel) {
+      panel.innerHTML = `<div><strong>Live service check could not finish</strong><span>${escapeHtml(message)}. If this says Sign in required, sign out and sign back in after the latest deploy. If it says Failed to fetch, the server or provider engine is unreachable.</span></div>`;
     }
+    setVoiceResponse(`Live service check failed: ${message}`);
+    toast(message);
+  } finally {
+    ["#liveServiceCheckBtn", "#liveServiceCheckFromIntegrations"].map(selector => $(selector)).filter(Boolean).forEach(button => {
+      button.disabled = false;
+      button.removeAttribute("aria-busy");
+      button.textContent = "Run live service check";
+    });
   }
 }
 

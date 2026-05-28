@@ -1246,13 +1246,23 @@ function mapTileProbeUrl() {
     .replace("{s}", "a");
 }
 
+async function fetchWithTimeout(url, options = {}, timeoutMs = 8000) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await fetch(url, { ...options, signal: controller.signal });
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 async function probeUrl(url, options = {}) {
   if (!url) return { attempted: false, ok: false, status: "missing-url" };
   try {
-    const response = await fetch(url, { method: options.method || "GET", headers: options.headers || {} });
+    const response = await fetchWithTimeout(url, { method: options.method || "GET", headers: options.headers || {} }, options.timeoutMs || 8000);
     return { attempted: true, ok: response.ok, status: response.status };
   } catch (error) {
-    return { attempted: true, ok: false, status: "fetch-error", error: error.message };
+    return { attempted: true, ok: false, status: error.name === "AbortError" ? "timeout" : "fetch-error", error: error.message };
   }
 }
 
@@ -1643,7 +1653,7 @@ async function dispatchProviderWebhook(db, event) {
     return { attempted: false, ok: false, status: "missing-webhook" };
   }
 
-  const response = await fetch(runtime.webhookUrl, {
+  const response = await fetchWithTimeout(runtime.webhookUrl, {
     method: "POST",
     headers: {
       "content-type": "application/json",
@@ -1659,7 +1669,7 @@ async function dispatchProviderWebhook(db, event) {
       metadata: event.metadata || {},
       createdAt: new Date().toISOString()
     })
-  });
+  }, Number(process.env.PROVIDER_WEBHOOK_TIMEOUT_MS || 8000));
 
   return { attempted: true, ok: response.ok, status: response.status };
 }
