@@ -52,6 +52,8 @@ const clickTargets = [
   "agentPlanBtn",
   "agentExecuteBtn",
   "agentBriefingBtn",
+  "missionResumeBtn",
+  "missionAutopilotBtn",
   "voiceRunBtn",
   "voiceFirstBtn",
   "voiceHelpBtn",
@@ -117,6 +119,8 @@ assert(server.includes("function retrieveAgentMemories"), "Backend needs memory 
 assert(server.includes("agent.memory_retrieved"), "Agent planning should record memory retrieval evidence");
 assert(server.includes("function buildAutopilotPlan"), "Backend needs Agent Autopilot mission planning");
 assert(server.includes("agent.autopilot_executed"), "Autopilot execution must be recorded as agent evidence");
+assert(html.includes("missionDashboardPanel"), "Agent page needs an Autopilot Mission Dashboard");
+assert(app.includes("function renderMissionDashboard"), "Frontend needs to render mission plans and executions");
 
 for (const endpoint of endpoints) {
   assert(server.includes(endpoint), `Missing backend endpoint ${endpoint}`);

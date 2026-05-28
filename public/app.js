@@ -2463,6 +2463,65 @@ function renderAgentReasoningPanel({ latestCommand, pendingAction, latestExecuti
   `).join("");
 }
 
+function missionStepHtml(step) {
+  const status = step.status === "executed" ? "done" : step.status === "failed" ? "failed" : "pending";
+  return `
+    <div class="mission-step ${status}">
+      <div>
+        <strong>${translateText(`${step.module}: ${step.action}`)}</strong>
+        <span>${translateText(step.result || step.detail || step.error || step.tool || "Workflow step")}</span>
+      </div>
+      <small>${translateText(step.status || "pending")}</small>
+    </div>
+  `;
+}
+
+function renderMissionDashboard() {
+  const target = $("#missionDashboardPanel");
+  if (!target || !data) return;
+  const plans = data.profile.agentPlans || [];
+  const executions = data.profile.agentExecutions || [];
+  const pending = plans.filter(plan => plan.status === "awaiting-approval" || plan.status === "executing").slice(0, 2);
+  const completed = executions.slice(0, 3);
+  const cards = [];
+  if (pending.length) {
+    cards.push(...pending.map(plan => `
+      <article class="mission-card">
+        <div class="tag-row"><span>${translateText(plan.mode === "autopilot" ? "Autopilot mission" : "Mission plan")}</span><span>${translateText(plan.status)}</span></div>
+        <div>
+          <strong>${translateText(plan.goal || "Untitled mission")}</strong>
+          <span>${translateText(`${plan.steps?.length || 0} step(s) awaiting approval. Created by ${plan.createdBy || "operator"}.`)}</span>
+        </div>
+        <div class="mission-step-list">${(plan.steps || []).slice(0, 5).map(missionStepHtml).join("")}</div>
+      </article>
+    `));
+  }
+  if (completed.length) {
+    cards.push(...completed.map(execution => `
+      <article class="mission-card">
+        <div class="tag-row"><span>${translateText("Completed mission")}</span><span>${translateText(execution.status)}</span></div>
+        <div>
+          <strong>${translateText(execution.goal || "Mission execution")}</strong>
+          <span>${translateText(execution.summary || "Mission completed.")}</span>
+        </div>
+        <div class="mission-step-list">${(execution.steps || []).slice(0, 5).map(missionStepHtml).join("")}</div>
+      </article>
+    `));
+  }
+  if (!cards.length) {
+    cards.push(`
+      <article class="mission-card">
+        <div class="tag-row"><span>${translateText("No missions yet")}</span><span>${translateText("Ready")}</span></div>
+        <div>
+          <strong>${translateText("Start with an outcome")}</strong>
+          <span>${translateText("Say: AgriNexus autopilot, help this farmer get from crop problem to buyer payment.")}</span>
+        </div>
+      </article>
+    `);
+  }
+  target.innerHTML = cards.join("");
+}
+
 function renderAgentCenter() {
   const plan = (data.profile.agentPlans || [])[0];
   const executions = data.profile.agentExecutions || [];
@@ -2489,6 +2548,7 @@ function renderAgentCenter() {
   $("#agentPlanPanel").innerHTML = plan
     ? plan.steps.map(step => taskItem(`${step.module}: ${step.action}`, step.detail, step.status === "executed" ? "done" : "active", step.tool, agentStepAction(step))).join("")
     : taskItem("No agent plan yet", "Create a mission plan to see cross-module tool steps.", "pending", "Plan", { workflow: "ai", action: "command" });
+  renderMissionDashboard();
   $("#agentToolPanel").innerHTML = [
     row("Learning", "course catalog, lesson progress, quizzes, certificates"),
     row("Workforce", "job matching, applications, interviews, mentors, shifts"),
@@ -2786,7 +2846,7 @@ function renderLaunchSupportPanels() {
 }
 
 function applyPermissions() {
-  $$("[data-workflow], [data-ai], [data-workforce], [data-health], [data-pay], [data-module-test], [data-command-preset], [data-pilot-scenario], [data-persona], [data-simple-command], [data-simple-section], [data-simple-pilot], [data-simple-demo], [data-simple-mission], [data-simple-action], .provider-test, #adminHealthCheck, #aiConsoleRun, #agentPlanBtn, #agentExecuteBtn, #agentBriefingBtn, #demoRunBtn, #wowDemoBtn, #startOnboardingBtn, #openSupportBtn, #inviteSubscriberBtn, [data-ai-review], [data-notify], #voiceListenBtn, #voiceRunBtn, #voiceFirstBtn, #voiceSpeakBtn, #voiceHelpBtn, #globalListenBtn, #globalRunBtn, #globalYesBtn, #globalNoBtn, #globalReadBtn, #globalVoiceHelpBtn, #globalInstallBtn, #jarvisListenBtn, #jarvisRunBtn, #jarvisMissionBtn, #jarvisReadBtn").forEach(element => {
+  $$("[data-workflow], [data-ai], [data-workforce], [data-health], [data-pay], [data-module-test], [data-command-preset], [data-pilot-scenario], [data-persona], [data-simple-command], [data-simple-section], [data-simple-pilot], [data-simple-demo], [data-simple-mission], [data-simple-action], .provider-test, #adminHealthCheck, #aiConsoleRun, #agentPlanBtn, #agentExecuteBtn, #agentBriefingBtn, #agentMissionBtn, #missionResumeBtn, #missionAutopilotBtn, #demoRunBtn, #wowDemoBtn, #startOnboardingBtn, #openSupportBtn, #inviteSubscriberBtn, [data-ai-review], [data-notify], #voiceListenBtn, #voiceRunBtn, #voiceFirstBtn, #voiceSpeakBtn, #voiceHelpBtn, #globalListenBtn, #globalRunBtn, #globalYesBtn, #globalNoBtn, #globalReadBtn, #globalVoiceHelpBtn, #globalInstallBtn, #jarvisListenBtn, #jarvisRunBtn, #jarvisMissionBtn, #jarvisReadBtn").forEach(element => {
     const area = element.dataset.workflow
       || (element.dataset.ai ? "ai" : null)
       || (element.dataset.workforce ? "workforce" : null)
@@ -5410,6 +5470,22 @@ async function runJarvisFullMission() {
   await handleVoiceCommand(mission);
 }
 
+async function startFarmerAutopilotMission() {
+  const mission = "AgriNexus autopilot, help this farmer get from crop problem to buyer payment";
+  setCommandInputs(mission);
+  openAskNexus();
+  await handleVoiceCommand(mission);
+}
+
+async function resumeNextMission() {
+  const plan = (data.profile.agentPlans || []).find(item => item.status === "awaiting-approval") || (data.profile.agentPlans || [])[0];
+  if (!plan) {
+    setVoiceResponse("No mission is waiting. Start an autopilot mission first.", true);
+    return;
+  }
+  await executeAgentPlan();
+}
+
 function startVoiceListening() {
   const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
   if (!Recognition) {
@@ -5998,6 +6074,8 @@ function bindStatic() {
   $("#agentExecuteBtn").onclick = executeAgentPlan;
   $("#agentBriefingBtn").onclick = createGovernmentBriefing;
   $("#agentMissionBtn").onclick = runJarvisFullMission;
+  $("#missionResumeBtn").onclick = resumeNextMission;
+  $("#missionAutopilotBtn").onclick = startFarmerAutopilotMission;
   $("#voiceListenBtn").onclick = startVoiceListening;
   $("#voiceRunBtn").onclick = runVoiceTextCommand;
   $("#voiceFirstBtn").onclick = toggleVoiceFirstMode;

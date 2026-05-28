@@ -13,7 +13,7 @@
   <link rel="icon" href="/icons/agri-nexus-192.png" type="image/png">
   <link rel="apple-touch-icon" href="/icons/agri-nexus-192.png">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-  <link rel="stylesheet" href="/styles.css?v=voice-first-25">
+  <link rel="stylesheet" href="/styles.css?v=mission-dashboard-26">
 </head>
 <body>
   <a class="skip-link" href="#mainContent">Skip to main content</a>
@@ -591,6 +591,20 @@
               <div class="tag-row"><span>Latest plan</span><span id="agentPlanStatus">none</span></div>
               <div id="agentPlanPanel" class="task-list"></div>
             </article>
+          </div>
+          <div class="mission-dashboard" aria-labelledby="missionDashboardTitle">
+            <div class="mission-dashboard-head">
+              <div>
+                <span class="eyebrow">Autopilot operations</span>
+                <h3 id="missionDashboardTitle">Mission Dashboard</h3>
+                <p>Track goal-based missions, approval state, execution evidence, and step-by-step workflow progress.</p>
+              </div>
+              <div class="action-row">
+                <button id="missionResumeBtn" type="button">Run next approved mission</button>
+                <button id="missionAutopilotBtn" class="primary" type="button">Start farmer autopilot</button>
+              </div>
+            </div>
+            <div id="missionDashboardPanel" class="mission-grid"></div>
           </div>
           <div class="voice-command">
             <div>
