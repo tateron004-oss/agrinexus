@@ -101,6 +101,8 @@ assert(app.includes("function voiceCommandButton"), "Voice command help buttons 
 assert(app.includes("function normalizeLocalizedVoiceCommand"), "Voice command help must normalize localized spoken commands");
 assert(html.includes("productionOperationsPlan"), "Admin needs the 10 production workstream panel");
 assert(server.includes("function productionOperationsPlan"), "Backend needs a 10 production workstream readiness model");
+assert(app.includes("Awaiting human approval"), "AI governance panel must distinguish pending approval from provider errors");
+assert(app.includes("Provider error - review required"), "AI governance panel must show true provider errors clearly");
 assert(app.includes("runJarvisCommand();"), "Jarvis dock Run button must read the dock command input");
 assert(app.includes("function runAdminHealthCheckDirect"), "Admin top health check button must execute directly");
 

@@ -2385,7 +2385,18 @@ function renderGovernancePanel() {
   if (!target) return;
   const runs = data.profile.aiRuns || [];
   target.innerHTML = runs.length
-    ? runs.slice(0, 8).map(run => `<div><strong>${translateText(run.type)} - ${translateText(run.reviewStatus || "pending-human-review")}</strong><span>${translateText(run.provider)} - ${translateText(run.reviewedBy || "Needs human review")} - ${translateText(run.text)}</span></div>`).join("")
+    ? runs.slice(0, 8).map(run => {
+      const status = run.error
+        ? "Provider error - review required"
+        : run.reviewStatus === "approved"
+        ? "Approved"
+        : run.reviewStatus === "rejected"
+        ? "Rejected"
+        : "Awaiting human approval";
+      const reviewer = run.reviewedBy ? `Reviewed by ${run.reviewedBy}` : "No provider error detected";
+      const detail = run.error ? `${run.provider} error: ${run.error}` : `${run.provider} - ${reviewer}`;
+      return `<div><strong>${translateText(run.type)} - ${translateText(status)}</strong><span>${translateText(detail)} - ${translateText(run.text)}</span></div>`;
+    }).join("")
     : `<div>${translateText("No AI runs yet. Run an AI workflow to create review evidence.")}</div>`;
 }
 
@@ -4650,7 +4661,7 @@ async function confirmPendingWorkflow() {
 async function reviewLatestAi(decision) {
   const run = (data.profile.aiRuns || [])[0];
   if (!run) return toast("Run an AI workflow first");
-  await mutate("/api/ai/review", { runId: run.id, decision, note: `${decision} from governance board` }, decision === "reject" ? "AI run rejected" : "AI run approved");
+  await mutate("/api/ai/review", { runId: run.id, decision, note: `${decision} from governance board` }, decision === "reject" ? "AI guidance rejected" : "AI guidance approved");
 }
 
 async function createAgentPlan() {
