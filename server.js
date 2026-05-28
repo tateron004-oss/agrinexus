@@ -29,6 +29,8 @@ const DB_PATH = process.env.AGRINEXUS_DB_PATH || path.join(DATA_DIR, "db.json");
 const PUBLIC = path.join(ROOT, "public");
 const REQUIRE_LIVE_SERVICES = process.env.AGRINEXUS_REQUIRE_LIVE_SERVICES === "true";
 const STATE_STORE = process.env.AGRINEXUS_STATE_STORE || "json";
+const PROVIDER_WEBHOOK_TIMEOUT_MS = Number(process.env.PROVIDER_WEBHOOK_TIMEOUT_MS || 3000);
+const LIVE_SERVICE_TIMEOUT_MS = Number(process.env.LIVE_SERVICE_TIMEOUT_MS || 3000);
 const sessions = new Map();
 const rateBuckets = new Map();
 const phoneAudioCache = new Map();
@@ -1259,7 +1261,7 @@ async function fetchWithTimeout(url, options = {}, timeoutMs = 8000) {
 async function probeUrl(url, options = {}) {
   if (!url) return { attempted: false, ok: false, status: "missing-url" };
   try {
-    const response = await fetchWithTimeout(url, { method: options.method || "GET", headers: options.headers || {} }, options.timeoutMs || 8000);
+    const response = await fetchWithTimeout(url, { method: options.method || "GET", headers: options.headers || {} }, options.timeoutMs || LIVE_SERVICE_TIMEOUT_MS);
     return { attempted: true, ok: response.ok, status: response.status };
   } catch (error) {
     return { attempted: true, ok: false, status: error.name === "AbortError" ? "timeout" : "fetch-error", error: error.message };
@@ -1669,7 +1671,7 @@ async function dispatchProviderWebhook(db, event) {
       metadata: event.metadata || {},
       createdAt: new Date().toISOString()
     })
-  }, Number(process.env.PROVIDER_WEBHOOK_TIMEOUT_MS || 8000));
+  }, PROVIDER_WEBHOOK_TIMEOUT_MS);
 
   return { attempted: true, ok: response.ok, status: response.status };
 }
@@ -3583,14 +3585,14 @@ async function translateDynamicContent(db, user, { text, targetLanguage, sourceL
   let provider = "local-dictionary";
   if (runtime.mode !== "local-dictionary" && runtime.mode !== "sandbox" && runtime.webhookUrl && runtime.apiKey) {
     try {
-      const response = await fetch(runtime.webhookUrl, {
+      const response = await fetchWithTimeout(runtime.webhookUrl, {
         method: "POST",
         headers: {
           "content-type": "application/json",
           authorization: `Bearer ${runtime.apiKey}`
         },
         body: JSON.stringify({ text, sourceLanguage, targetLanguage, context, userId: user.id })
-      });
+      }, PROVIDER_WEBHOOK_TIMEOUT_MS);
       const json = await response.json().catch(() => ({}));
       if (response.ok && json.translatedText) {
         translatedText = json.translatedText;
