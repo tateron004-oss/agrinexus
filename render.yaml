@@ -114,6 +114,12 @@ services:
         sync: false
       - key: OPENAI_MODEL
         value: gpt-5.4-mini
+      - key: OPENAI_TRANSCRIBE_MODEL
+        value: gpt-4o-mini-transcribe
+      - key: OPENAI_TTS_MODEL
+        value: gpt-4o-mini-tts
+      - key: OPENAI_TTS_VOICE
+        value: coral
       - key: AI_PROVIDER
         value: webhook
       - key: AI_WEBHOOK_URL
@@ -123,9 +129,9 @@ services:
       - key: PROVIDER_ENGINE_BASE_URL
         sync: false
       - key: VOICE_STT_PROVIDER
-        value: webhook
+        value: openai
       - key: VOICE_TTS_PROVIDER
-        value: webhook
+        value: openai
       - key: VOICE_STT_WEBHOOK_URL
         sync: false
       - key: VOICE_TTS_WEBHOOK_URL
