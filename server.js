@@ -1419,6 +1419,12 @@ function ensureWorkforceProfile(profile) {
   profile.shiftSchedule = profile.shiftSchedule || [];
   profile.workforceBadges = profile.workforceBadges || [];
   profile.mentorNotes = profile.mentorNotes || [];
+  profile.workforceOnboarding = profile.workforceOnboarding || [];
+  profile.workforceDocuments = profile.workforceDocuments || [];
+  profile.timesheets = profile.timesheets || [];
+  profile.payrollApprovals = profile.payrollApprovals || [];
+  profile.performanceReviews = profile.performanceReviews || [];
+  profile.shiftRequests = profile.shiftRequests || [];
   profile.interviews = profile.interviews || 0;
   profile.placements = profile.placements || 0;
   profile.mentor = profile.mentor || "Not yet";
@@ -1460,6 +1466,12 @@ function ensureTradeProfile(profile) {
   profile.walletTransactions = profile.walletTransactions || [];
   profile.tradeEvents = profile.tradeEvents || [];
   profile.buyerContacts = profile.buyerContacts || [];
+  profile.tradeQuotes = profile.tradeQuotes || [];
+  profile.qualityInspections = profile.qualityInspections || [];
+  profile.coldChainChecks = profile.coldChainChecks || [];
+  profile.exportReadiness = profile.exportReadiness || [];
+  profile.contractPackets = profile.contractPackets || [];
+  profile.paymentReleases = profile.paymentReleases || [];
   profile.droneMissions = profile.droneMissions || [];
   profile.droneScans = profile.droneScans || [];
   profile.droneFindings = profile.droneFindings || [];
@@ -5313,6 +5325,108 @@ async function api(req, res, url) {
     return send(res, 200, publicState(db, user));
   }
 
+  if (url.pathname === "/api/workforce/advanced" && req.method === "POST") {
+    if (!canUse(user, "workforce")) return send(res, 403, { error: "Role does not allow workforce workflows" });
+    const body = await readBody(req);
+    ensureWorkforceProfile(db.profile);
+    const role = db.profile.applications[0]?.roleTitle || (db.roles || [])[0]?.title || "Field Operations Agent";
+    const now = new Date().toISOString();
+    const type = body.type || "onboarding";
+    const actions = {
+      onboarding: () => {
+        const record = {
+          id: crypto.randomUUID(),
+          packetNumber: `AN-ONB-${String(db.profile.workforceOnboarding.length + 1).padStart(3, "0")}`,
+          role,
+          checklist: ["identity review", "course certificates", "role expectations", "safety briefing", "payment setup"],
+          status: "packet-ready",
+          createdAt: now
+        };
+        db.profile.workforceOnboarding.unshift(record);
+        if (!db.profile.workforceBadges.includes("Onboarding Ready")) db.profile.workforceBadges.push("Onboarding Ready");
+        return ["workforce-hris", "onboarding.packet_ready", `${record.packetNumber} onboarding packet prepared for ${role}.`, record];
+      },
+      document: () => {
+        const record = {
+          id: crypto.randomUUID(),
+          documentNumber: `AN-DOC-${String(db.profile.workforceDocuments.length + 1).padStart(3, "0")}`,
+          role,
+          checks: ["identity", "certificate proof", "work authorization", "emergency contact"],
+          status: "verified",
+          createdAt: now
+        };
+        db.profile.workforceDocuments.unshift(record);
+        if (!db.profile.workforceBadges.includes("Documents Verified")) db.profile.workforceBadges.push("Documents Verified");
+        return ["workforce-hris", "documents.verified", `${record.documentNumber} workforce documents verified.`, record];
+      },
+      timesheet: () => {
+        const record = {
+          id: crypto.randomUUID(),
+          timesheetNumber: `AN-TIME-${String(db.profile.timesheets.length + 1).padStart(3, "0")}`,
+          role,
+          hours: Number(body.hours || 6),
+          status: "submitted",
+          submittedAt: now
+        };
+        db.profile.timesheets.unshift(record);
+        return ["workforce-shifts", "timesheet.submitted", `${record.timesheetNumber} timesheet submitted for ${record.hours} hours.`, record];
+      },
+      payroll: () => {
+        const latestTimesheet = db.profile.timesheets[0] || { hours: 6, timesheetNumber: "AN-TIME-AUTO" };
+        const record = {
+          id: crypto.randomUUID(),
+          payrollNumber: `AN-PAY-${String(db.profile.payrollApprovals.length + 1).padStart(3, "0")}`,
+          timesheetNumber: latestTimesheet.timesheetNumber,
+          amount: Number(body.amount || latestTimesheet.hours * 12),
+          status: "approved",
+          approvedAt: now
+        };
+        db.profile.payrollApprovals.unshift(record);
+        db.profile.earnings = Number(db.profile.earnings || 0) + record.amount;
+        return ["workforce-hris", "payroll.approved", `${record.payrollNumber} payroll approved for $${record.amount}.`, record];
+      },
+      evaluation: () => {
+        const record = {
+          id: crypto.randomUUID(),
+          reviewNumber: `AN-REV-${String(db.profile.performanceReviews.length + 1).padStart(3, "0")}`,
+          role,
+          score: Number(body.score || 92),
+          strengths: ["attendance", "mobile workflow", "community handoff"],
+          nextCoaching: "advance to route coordination and farmer support quality checks",
+          status: "completed",
+          createdAt: now
+        };
+        db.profile.performanceReviews.unshift(record);
+        db.profile.readiness = Math.min(100, Number(db.profile.readiness || 0) + 4);
+        return ["workforce-hris", "performance.reviewed", `${record.reviewNumber} performance review completed at ${record.score}%.`, record];
+      },
+      "shift-request": () => {
+        const record = {
+          id: crypto.randomUUID(),
+          requestNumber: `AN-SWAP-${String(db.profile.shiftRequests.length + 1).padStart(3, "0")}`,
+          role,
+          request: body.request || "worker requested shift swap / schedule adjustment",
+          status: "manager-review",
+          createdAt: now
+        };
+        db.profile.shiftRequests.unshift(record);
+        return ["workforce-calendar", "shift.request_created", `${record.requestNumber} shift request created for ${role}.`, record];
+      }
+    };
+    const handler = actions[type];
+    if (!handler) return send(res, 400, { error: "Unsupported advanced workforce action" });
+    const [providerId, action, detail, record] = handler();
+    db.profile.candidateStage = type === "payroll" ? "Paid Placement" : type === "evaluation" ? "Performance Review" : db.profile.candidateStage;
+    recalcReadiness(db.profile);
+    logIntegration(db, { providerId, module: "Workforce", action, detail, metadata: { recordId: record.id, type } });
+    addActivity(db.profile, detail);
+    addWorkflowNote(db.profile, body.note, "Advanced workforce note");
+    await writeDb(db);
+    const state = publicState(db, user);
+    state.workforceAdvancedResult = { type, record };
+    return send(res, 200, state);
+  }
+
   if (url.pathname === "/api/health/action" && req.method === "POST") {
     if (!canUse(user, "health")) return send(res, 403, { error: "Role does not allow healthcare workflows" });
     const body = await readBody(req);
@@ -5938,6 +6052,117 @@ async function api(req, res, url) {
     addWorkflowNote(db.profile, body.note, "Field intervention note");
     await writeDb(db);
     return send(res, 200, publicState(db, user));
+  }
+
+  if (url.pathname === "/api/trade/advanced" && req.method === "POST") {
+    if (!canUse(user, "trade")) return send(res, 403, { error: "Role does not allow trade workflows" });
+    const body = await readBody(req);
+    ensureTradeProfile(db.profile);
+    const product = (db.products || []).find(item => item.id === body.productId) || (db.products || [])[0];
+    const order = db.profile.orders[db.profile.orders.length - 1] || null;
+    const now = new Date().toISOString();
+    const type = body.type || "quote";
+    const actions = {
+      quote: () => {
+        const record = {
+          id: crypto.randomUUID(),
+          quoteNumber: `AN-QTE-${String(db.profile.tradeQuotes.length + 1).padStart(3, "0")}`,
+          productId: product?.id || null,
+          productName: product?.name || order?.product || "Active crop lot",
+          buyerName: "Regional buyer desk",
+          quantity: body.quantity || `20 ${product?.unit || "units"}`,
+          price: Number(body.price || product?.price || 650),
+          status: "sent",
+          createdAt: now
+        };
+        db.profile.tradeQuotes.unshift(record);
+        return ["trade-market", "quote.sent", `${record.quoteNumber} quote sent for ${record.productName}.`, record];
+      },
+      quality: () => {
+        const record = {
+          id: crypto.randomUUID(),
+          inspectionNumber: `AN-QA-${String(db.profile.qualityInspections.length + 1).padStart(3, "0")}`,
+          productName: product?.name || order?.product || "Active crop lot",
+          grade: body.grade || "Export A",
+          checks: ["moisture", "packaging", "visual defects", "traceability", "buyer specification"],
+          status: "passed",
+          createdAt: now
+        };
+        db.profile.qualityInspections.unshift(record);
+        return ["trade-logistics", "quality.inspected", `${record.inspectionNumber} quality inspection passed at ${record.grade}.`, record];
+      },
+      "cold-chain": () => {
+        const record = {
+          id: crypto.randomUUID(),
+          checkNumber: `AN-COLD-${String(db.profile.coldChainChecks.length + 1).padStart(3, "0")}`,
+          productName: product?.name || order?.product || "Active crop lot",
+          temperatureC: Number(body.temperatureC || 4.2),
+          checkpoints: ["pre-cool", "loading", "route monitor", "handoff"],
+          status: "compliant",
+          createdAt: now
+        };
+        db.profile.coldChainChecks.unshift(record);
+        return ["trade-logistics", "cold_chain.checked", `${record.checkNumber} cold-chain check marked ${record.status}.`, record];
+      },
+      export: () => {
+        const record = {
+          id: crypto.randomUUID(),
+          exportNumber: `AN-EXP-${String(db.profile.exportReadiness.length + 1).padStart(3, "0")}`,
+          productName: product?.name || order?.product || "Active crop lot",
+          documents: ["invoice", "quality certificate", "traceability sheet", "route manifest", "buyer confirmation"],
+          status: "ready-for-export",
+          createdAt: now
+        };
+        db.profile.exportReadiness.unshift(record);
+        return ["trade-logistics", "export.ready", `${record.exportNumber} export readiness packet prepared.`, record];
+      },
+      contract: () => {
+        const record = {
+          id: crypto.randomUUID(),
+          contractNumber: `AN-CON-${String(db.profile.contractPackets.length + 1).padStart(3, "0")}`,
+          productName: product?.name || order?.product || "Active crop lot",
+          buyerName: db.profile.buyerContacts[0]?.buyerName || "Regional buyer desk",
+          terms: ["quantity", "price", "delivery window", "quality grade", "payment release"],
+          status: "draft-ready",
+          createdAt: now
+        };
+        db.profile.contractPackets.unshift(record);
+        return ["trade-market", "contract.packet_ready", `${record.contractNumber} buyer contract packet drafted.`, record];
+      },
+      release: () => {
+        const latestQuote = db.profile.tradeQuotes[0];
+        const record = {
+          id: crypto.randomUUID(),
+          releaseNumber: `AN-REL-${String(db.profile.paymentReleases.length + 1).padStart(3, "0")}`,
+          quoteNumber: latestQuote?.quoteNumber || null,
+          amount: Number(body.amount || latestQuote?.price || product?.price || 650),
+          status: "released",
+          createdAt: now
+        };
+        db.profile.paymentReleases.unshift(record);
+        db.profile.wallet = Number(db.profile.wallet || 0) + record.amount;
+        db.profile.walletTransactions.unshift({
+          id: crypto.randomUUID(),
+          provider: "Escrow release",
+          amount: record.amount,
+          type: "credit",
+          status: "posted",
+          createdAt: now
+        });
+        return ["trade-payments", "payment.released", `${record.releaseNumber} payment released for $${record.amount}.`, record];
+      }
+    };
+    const handler = actions[type];
+    if (!handler) return send(res, 400, { error: "Unsupported advanced trade action" });
+    const [providerId, action, detail, record] = handler();
+    addTradeEvent(db.profile, { type: action, label: detail });
+    logIntegration(db, { providerId, module: "AgriTrade", action, detail, metadata: { recordId: record.id, type, productId: product?.id || null } });
+    addActivity(db.profile, detail);
+    addWorkflowNote(db.profile, body.note, "Advanced trade note");
+    await writeDb(db);
+    const state = publicState(db, user);
+    state.tradeAdvancedResult = { type, record };
+    return send(res, 200, state);
   }
 
   if (url.pathname === "/api/ai/run" && req.method === "POST") {

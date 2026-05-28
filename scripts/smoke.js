@@ -177,6 +177,19 @@ async function call(path, body) {
   const shift = await call("/api/workforce/action", { type: "shift" });
   assert(shift.profile.shiftSchedule.length >= 1);
   assert(shift.profile.integrationEvents.some(event => event.action === "shift.scheduled"));
+  const workforceOnboarding = await call("/api/workforce/advanced", { type: "onboarding" });
+  assert(workforceOnboarding.profile.workforceOnboarding.length >= 1);
+  assert(workforceOnboarding.profile.integrationEvents.some(event => event.action === "onboarding.packet_ready"));
+  const documents = await call("/api/workforce/advanced", { type: "document" });
+  assert(documents.profile.workforceDocuments.length >= 1);
+  const timesheet = await call("/api/workforce/advanced", { type: "timesheet", hours: 6 });
+  assert(timesheet.profile.timesheets.length >= 1);
+  const payroll = await call("/api/workforce/advanced", { type: "payroll" });
+  assert(payroll.profile.payrollApprovals.length >= 1);
+  const evaluation = await call("/api/workforce/advanced", { type: "evaluation" });
+  assert(evaluation.profile.performanceReviews.length >= 1);
+  const shiftRequest = await call("/api/workforce/advanced", { type: "shift-request" });
+  assert(shiftRequest.profile.shiftRequests.length >= 1);
   const intake = await call("/api/health/action", {
     type: "intake",
     patientName: "Amina Okafor",
@@ -363,6 +376,19 @@ async function call(path, body) {
   assert(buyerContact.commandResult.metadata.redirectSection === "trade");
   assert(buyerContact.profile.buyerContacts.length >= 1);
   assert(buyerContact.profile.integrationEvents.some(event => event.action === "buyer.contact_prepared"));
+  const quote = await call("/api/trade/advanced", { type: "quote", productId: "avocado-ke" });
+  assert(quote.profile.tradeQuotes.length >= 1);
+  assert(quote.profile.integrationEvents.some(event => event.action === "quote.sent"));
+  const quality = await call("/api/trade/advanced", { type: "quality", productId: "avocado-ke" });
+  assert(quality.profile.qualityInspections.length >= 1);
+  const coldChain = await call("/api/trade/advanced", { type: "cold-chain", productId: "avocado-ke" });
+  assert(coldChain.profile.coldChainChecks.length >= 1);
+  const exportPacket = await call("/api/trade/advanced", { type: "export", productId: "avocado-ke" });
+  assert(exportPacket.profile.exportReadiness.length >= 1);
+  const contract = await call("/api/trade/advanced", { type: "contract", productId: "avocado-ke" });
+  assert(contract.profile.contractPackets.length >= 1);
+  const release = await call("/api/trade/advanced", { type: "release", productId: "avocado-ke" });
+  assert(release.profile.paymentReleases.length >= 1);
   const workforceApply = await call("/api/agent/command", { command: "Workforce, I want to apply for that job can you help me", confirm: true, inputMode: "voice", outputMode: "voice" });
   assert(["workforce.application_submitted", "workforce.application_help"].includes(workforceApply.commandResult.intent));
   assert(workforceApply.commandResult.metadata.redirectSection === "workforce");

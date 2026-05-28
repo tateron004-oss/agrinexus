@@ -3495,6 +3495,26 @@ function render() {
     ? data.profile.shiftSchedule.map(shift => `<div><strong>${shift.role}</strong><span>${shift.status} - ${new Date(shift.startsAt).toLocaleString()}</span></div>`).join("")
     : "<div>No shifts scheduled yet.</div>";
 
+  const workforceOps = [
+    ...(data.profile.workforceOnboarding || []).map(item => ({ title: item.packetNumber, detail: `${item.role} - ${item.status}` })),
+    ...(data.profile.workforceDocuments || []).map(item => ({ title: item.documentNumber, detail: `${item.role} - ${item.status}` })),
+    ...(data.profile.timesheets || []).map(item => ({ title: item.timesheetNumber, detail: `${item.hours} hours - ${item.status}` })),
+    ...(data.profile.payrollApprovals || []).map(item => ({ title: item.payrollNumber, detail: `${money(item.amount || 0)} - ${item.status}` })),
+    ...(data.profile.performanceReviews || []).map(item => ({ title: item.reviewNumber, detail: `${item.score}% - ${item.status}` })),
+    ...(data.profile.shiftRequests || []).map(item => ({ title: item.requestNumber, detail: `${item.role} - ${item.status}` }))
+  ];
+  $("#workforceAdvancedPanel").innerHTML = [
+    row("Onboarding", (data.profile.workforceOnboarding || []).length),
+    row("Documents", (data.profile.workforceDocuments || []).length),
+    row("Timesheets", (data.profile.timesheets || []).length),
+    row("Payroll", (data.profile.payrollApprovals || []).length),
+    row("Reviews", (data.profile.performanceReviews || []).length),
+    row("Shift requests", (data.profile.shiftRequests || []).length)
+  ].join("");
+  $("#workforceAdvancedList").innerHTML = workforceOps.length
+    ? workforceOps.slice(0, 10).map(item => `<div><strong>${item.title}</strong><span>${item.detail}</span></div>`).join("")
+    : "<div>No advanced workforce operations have been run yet.</div>";
+
   renderProviderEvidence("#workforceIntegrationPanel", "Workforce", "No workforce provider evidence yet. Build profile, schedule interview, assign mentor, start a shift, or test workforce engines.");
   renderEnginePanel("#workforceEnginePanel", "Workforce");
   renderAiEvidence("#workforceAiPanel", "Workforce", "No workforce AI coaching yet. Ask the coach to review readiness gaps or prep the interview.");
@@ -3709,6 +3729,25 @@ function render() {
   $("#tradeEvents").innerHTML = (data.profile.tradeEvents || []).length
     ? data.profile.tradeEvents.map(event => `<div><strong>${event.type}</strong><span>${event.label}</span></div>`).join("")
     : "<div>No trade events yet.</div>";
+  const tradeOps = [
+    ...(data.profile.tradeQuotes || []).map(item => ({ title: item.quoteNumber, detail: `${item.productName} - ${item.status} - ${money(item.price || 0)}` })),
+    ...(data.profile.qualityInspections || []).map(item => ({ title: item.inspectionNumber, detail: `${item.productName} - ${item.grade} - ${item.status}` })),
+    ...(data.profile.coldChainChecks || []).map(item => ({ title: item.checkNumber, detail: `${item.productName} - ${item.temperatureC} C - ${item.status}` })),
+    ...(data.profile.exportReadiness || []).map(item => ({ title: item.exportNumber, detail: `${item.productName} - ${item.status}` })),
+    ...(data.profile.contractPackets || []).map(item => ({ title: item.contractNumber, detail: `${item.productName} - ${item.status}` })),
+    ...(data.profile.paymentReleases || []).map(item => ({ title: item.releaseNumber, detail: `${money(item.amount || 0)} - ${item.status}` }))
+  ];
+  $("#tradeAdvancedPanel").innerHTML = [
+    row("Quotes", (data.profile.tradeQuotes || []).length),
+    row("Quality inspections", (data.profile.qualityInspections || []).length),
+    row("Cold-chain checks", (data.profile.coldChainChecks || []).length),
+    row("Export packets", (data.profile.exportReadiness || []).length),
+    row("Contracts", (data.profile.contractPackets || []).length),
+    row("Payment releases", (data.profile.paymentReleases || []).length)
+  ].join("");
+  $("#tradeAdvancedList").innerHTML = tradeOps.length
+    ? tradeOps.slice(0, 10).map(item => `<div><strong>${item.title}</strong><span>${item.detail}</span></div>`).join("")
+    : "<div>No advanced trade operations have been run yet.</div>";
   const droneMissions = data.profile.droneMissions || [];
   const droneScans = data.profile.droneScans || [];
   const droneFindings = data.profile.droneFindings || [];
@@ -4283,6 +4322,34 @@ function workflowConfig(workflow, action, element) {
   }
   if (workflow === "workforce") {
     if (action === "apply-role") return roleWorkflowConfig(element.dataset.roleId || firstEligibleRole()?.id);
+    const advancedActions = new Set(["onboarding", "document", "timesheet", "payroll", "evaluation", "shift-request"]);
+    if (advancedActions.has(action)) {
+      const labels = {
+        onboarding: ["Prepare onboarding packet", "Create a worker onboarding packet with identity, certificates, role expectations, safety briefing, and payment setup.", "Create packet"],
+        document: ["Verify documents", "Record identity, certificate proof, work authorization, and emergency contact checks.", "Verify documents"],
+        timesheet: ["Submit timesheet", "Submit worked hours for the active role and prepare payroll evidence.", "Submit timesheet"],
+        payroll: ["Approve payroll", "Approve payment from the latest timesheet and update earnings.", "Approve payroll"],
+        evaluation: ["Complete performance review", "Record supervisor feedback, score, strengths, and next coaching step.", "Complete review"],
+        "shift-request": ["Create shift request", "Open a shift swap or schedule adjustment request for manager review.", "Create request"]
+      };
+      const [title, summary, confirmLabel] = labels[action];
+      return simpleWorkflowConfig({
+        eyebrow: "Advanced workforce",
+        title,
+        summary,
+        confirmLabel,
+        path: "/api/workforce/advanced",
+        body: { type: action },
+        success: "Advanced workforce operation complete",
+        record: "Operational workforce record, HRIS/calendar/shift provider event, activity feed, and readiness/earnings when applicable",
+        provider: "HRIS, calendar, shift, payroll, and notification evidence is recorded for audit.",
+        checklist: [
+          { title: "Candidate", detail: `${data.profile.candidateStage} - ${data.profile.eligibility}`, status: "live", label: "Profile" },
+          { title: "Role context", detail: data.profile.applications?.[0]?.roleTitle || firstEligibleRole()?.title || "Best available role", status: "ready", label: "Role" },
+          { title: "Evidence", detail: "A concrete operation record and provider event will be created.", status: "ready", label: "Audit" }
+        ]
+      });
+    }
     const labels = {
       "build-profile": ["Verify candidate profile", "Review learning, certificates, and readiness before verifying the workforce profile.", "Build profile"],
       interview: ["Schedule interview", "Confirm readiness and record calendar plus notification provider events.", "Schedule interview"],
@@ -4379,7 +4446,7 @@ function workflowConfig(workflow, action, element) {
     const productId = element.dataset.productId || firstProduct()?.id;
     const product = data.products.find(item => item.id === productId) || firstProduct();
     const latestOrder = data.profile.orders[data.profile.orders.length - 1];
-    const titleMap = { order: "Create order", advance: "Advance order", wallet: "Post M-Pesa payment", "drone-plan": "Plan drone mission", drone: "Run drone field scan", "drone-intervention": "Assign field intervention", price: "Run price AI", route: "Run route AI", "trade-advisor": "Review trade next step" };
+    const titleMap = { order: "Create order", advance: "Advance order", wallet: "Post M-Pesa payment", "drone-plan": "Plan drone mission", drone: "Run drone field scan", "drone-intervention": "Assign field intervention", quote: "Send buyer quote", quality: "Run quality inspection", "cold-chain": "Run cold-chain check", export: "Prepare export packet", contract: "Draft contract packet", release: "Release payment", price: "Run price AI", route: "Run route AI", "trade-advisor": "Review trade next step" };
     titleMap["buyer-contact"] = "Contact buyer";
     const pathMap = {
       order: "/api/trade/order",
@@ -4388,17 +4455,24 @@ function workflowConfig(workflow, action, element) {
       "buyer-contact": "/api/trade/buyer-contact",
       "drone-plan": "/api/trade/drone-mission",
       drone: "/api/trade/drone-scan",
-      "drone-intervention": "/api/trade/drone-intervention"
+      "drone-intervention": "/api/trade/drone-intervention",
+      quote: "/api/trade/advanced",
+      quality: "/api/trade/advanced",
+      "cold-chain": "/api/trade/advanced",
+      export: "/api/trade/advanced",
+      contract: "/api/trade/advanced",
+      release: "/api/trade/advanced"
     };
     const isDroneAction = ["drone-plan", "drone", "drone-intervention"].includes(action);
+    const isAdvancedTrade = ["quote", "quality", "cold-chain", "export", "contract", "release"].includes(action);
     return simpleWorkflowConfig({
       eyebrow: "Trade workflow",
       title: titleMap[action] || "Trade action",
-      summary: action === "buyer-contact" ? "Prepare a buyer communication workflow with the active crop, order, route context, channel, and message draft before sending through live communications." : isDroneAction ? "Run a complete agritech drone workflow: compliant flight planning, crop intelligence, findings, map evidence, and field intervention tasks." : "Confirm the market, wallet, logistics, or AI action before the trade ledger changes.",
+      summary: action === "buyer-contact" ? "Prepare a buyer communication workflow with the active crop, order, route context, channel, and message draft before sending through live communications." : isDroneAction ? "Run a complete agritech drone workflow: compliant flight planning, crop intelligence, findings, map evidence, and field intervention tasks." : isAdvancedTrade ? "Create a concrete commercial operations record with provider evidence for quote, quality, cold-chain, export, contract, or payment release." : "Confirm the market, wallet, logistics, or AI action before the trade ledger changes.",
       confirmLabel: titleMap[action] || "Confirm",
       path: pathMap[action] || "/api/ai/run",
-      body: action === "order" ? { productId } : action === "wallet" ? { provider: "M-Pesa", amount: 120 } : action === "buyer-contact" ? { productId } : isDroneAction ? { productId } : action === "advance" ? {} : { type: action },
-      success: action === "buyer-contact" ? "Buyer contact prepared" : action === "wallet" ? "Payment posted" : action === "advance" ? "Order advanced" : action === "order" ? "Order created" : action === "drone-plan" ? "Drone mission planned" : action === "drone" ? "Drone scan complete" : action === "drone-intervention" ? "Field intervention assigned" : "AI action complete",
+      body: action === "order" ? { productId } : action === "wallet" ? { provider: "M-Pesa", amount: 120 } : action === "buyer-contact" ? { productId } : isDroneAction ? { productId } : isAdvancedTrade ? { type: action, productId } : action === "advance" ? {} : { type: action },
+      success: action === "buyer-contact" ? "Buyer contact prepared" : action === "wallet" ? "Payment posted" : action === "advance" ? "Order advanced" : action === "order" ? "Order created" : action === "drone-plan" ? "Drone mission planned" : action === "drone" ? "Drone scan complete" : action === "drone-intervention" ? "Field intervention assigned" : isAdvancedTrade ? "Advanced trade operation complete" : "AI action complete",
       record: "Order book, wallet ledger, route timeline, drone mission, field scan, intervention task, trade event, or AI evidence",
       provider: "Market, drone, payment, logistics, or AI provider event is recorded.",
       checklist: [

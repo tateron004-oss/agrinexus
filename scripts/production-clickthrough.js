@@ -78,12 +78,14 @@ const endpoints = [
   "/api/learning/catalog",
   "/api/learning/lesson",
   "/api/workforce/action",
+  "/api/workforce/advanced",
   "/api/health/action",
   "/api/health/intake-simulation",
   "/api/trade/drone-mission",
   "/api/trade/drone-scan",
   "/api/trade/drone-intervention",
   "/api/trade/buyer-contact",
+  "/api/trade/advanced",
   "/api/agent/command",
   "/api/agent/briefing",
   "/api/voice/transcribe",
@@ -133,6 +135,10 @@ assert(app.includes("learningCatalogSummary"), "Learning catalog summary must re
 assert(server.includes("function learningCatalog"), "Backend needs a learning catalog model");
 assert(html.includes("intakeSimulationPanel"), "Health module needs a guided intake simulation workspace");
 assert(app.includes("function openGuidedIntakeSimulation"), "Frontend needs a guided intake simulation workflow");
+assert(html.includes("workforceAdvancedPanel"), "Workforce needs an advanced operations pack");
+assert(html.includes("tradeAdvancedPanel"), "Trade needs an advanced operations pack");
+assert(server.includes("workforceOnboarding"), "Backend needs advanced workforce operation records");
+assert(server.includes("tradeQuotes"), "Backend needs advanced trade operation records");
 
 for (const endpoint of endpoints) {
   assert(server.includes(endpoint), `Missing backend endpoint ${endpoint}`);
