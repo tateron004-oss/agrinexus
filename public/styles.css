@@ -612,6 +612,7 @@ a:focus-visible,
   line-height: 1.45;
 }
 .agent-reasoning-panel {
+  display: none;
   margin: 16px 0;
   padding: 16px;
   border: 1px solid #adcfc6;
@@ -619,6 +620,7 @@ a:focus-visible,
   background: #f8fcfa;
   box-shadow: 0 10px 24px rgba(23, 50, 64, .08);
 }
+.agent-reasoning-panel.reasoning-visible { display: block; }
 .reasoning-head {
   display: flex;
   justify-content: space-between;

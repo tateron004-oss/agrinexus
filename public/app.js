@@ -7,9 +7,11 @@ let pendingWorkflow = null;
 let lastFocusedElement = null;
 let voiceRecognition = null;
 let lastVoiceResponse = "Ready for a command.";
-let voiceFirstMode = false;
-let voiceAutoRestart = false;
+let voiceFirstMode = localStorage.getItem("agrinexusVoiceFirst") !== "off";
+let voiceAutoRestart = voiceFirstMode;
 let voiceStopRequested = false;
+let voiceSpeaking = false;
+let agentReasoningVisible = localStorage.getItem("agrinexusReasoningVisible") === "true";
 const accessibilityPrefs = JSON.parse(localStorage.getItem("agrinexusAccessibility") || "{}");
 const originalTextNodes = new WeakMap();
 let deferredInstallPrompt = null;
@@ -2412,6 +2414,8 @@ function renderNotificationPanel() {
 function renderAgentReasoningPanel({ latestCommand, pendingAction, latestExecution }) {
   const stepsTarget = $("#agentReasoningSteps");
   if (!stepsTarget) return;
+  const panel = stepsTarget.closest(".agent-reasoning-panel");
+  if (panel) panel.classList.toggle("reasoning-visible", agentReasoningVisible);
   const metadata = latestCommand?.metadata || {};
   const hasCommand = Boolean(latestCommand?.command || pendingAction?.command);
   const selectedTool = pendingAction?.tool || metadata.tool || latestCommand?.intent || "";
@@ -2642,6 +2646,12 @@ function renderVoiceAssistant() {
   transcript.textContent = lastVoiceResponse;
   const status = $("#voiceStatus");
   if (status) status.textContent = voiceRecognition ? "listening-ready" : voiceFirstMode ? "voice-first" : "standby";
+  ["#voiceFirstBtn", "#globalVoiceFirstBtn"].forEach(selector => {
+    const button = $(selector);
+    if (!button) return;
+    button.classList.toggle("primary", voiceFirstMode);
+    button.setAttribute("aria-pressed", String(voiceFirstMode));
+  });
   const suggestions = $("#voiceSuggestions");
   if (suggestions) {
     suggestions.innerHTML = voiceCommandExamples()
@@ -4811,6 +4821,7 @@ async function createGovernmentBriefing() {
 function toggleVoiceFirstMode() {
   voiceFirstMode = !voiceFirstMode;
   voiceAutoRestart = voiceFirstMode;
+  localStorage.setItem("agrinexusVoiceFirst", voiceFirstMode ? "on" : "off");
   ["#voiceFirstBtn", "#globalVoiceFirstBtn"].forEach(selector => {
     const button = $(selector);
     if (!button) return;
@@ -4818,7 +4829,7 @@ function toggleVoiceFirstMode() {
     button.setAttribute("aria-pressed", String(voiceFirstMode));
   });
   setVoiceStatus(voiceFirstMode ? "voice-first" : "standby");
-  setVoiceResponse(voiceFirstMode ? "Voice-first mode is on. Nexus will listen after each response when the browser allows it, and will read responses aloud." : "Voice-first mode is off.");
+  setVoiceResponse(voiceFirstMode ? "Voice-first mode is on. Nexus will listen after each response when the browser allows it, and will read responses aloud." : "Voice-first mode is off.", voiceFirstMode);
   if (voiceFirstMode) startVoiceListening();
 }
 
@@ -4833,15 +4844,27 @@ function chooseSpeechVoice(locale) {
 
 function speakVoiceResponse(textOverride) {
   const text = textOverride || lastVoiceResponse;
+  voiceSpeaking = true;
+  voiceAutoRestart = false;
   const updateVoiceOutputStatus = message => {
     const localStatus = $("#voicePlaybackStatus");
     const globalStatus = $("#globalVoiceOutputStatus");
     if (localStatus) localStatus.textContent = message;
     if (globalStatus) globalStatus.textContent = message;
   };
+  const finishSpeaking = () => {
+    voiceSpeaking = false;
+    voiceAutoRestart = voiceFirstMode;
+    if (voiceFirstMode && !voiceRecognition && !voiceStopRequested && !document.hidden) {
+      setTimeout(() => {
+        if (!voiceRecognition && voiceFirstMode && !voiceSpeaking && !voiceStopRequested) startVoiceListening();
+      }, 700);
+    }
+  };
   const browserSpeak = () => {
     updateVoiceOutputStatus("OpenAI voice audio is not available, so robotic browser speech is turned off.");
     toast("OpenAI voice unavailable. Browser voice fallback is off.");
+    finishSpeaking();
   };
   updateVoiceOutputStatus("Requesting OpenAI voice audio...");
   request("/api/voice/speak", { method: "POST", body: { text, language: languageCode(), locale: voiceLocale(), forceOpenAi: true, voice: "coral" } })
@@ -4850,6 +4873,7 @@ function speakVoiceResponse(textOverride) {
       if (result.voiceResult?.error) {
         updateVoiceOutputStatus(`OpenAI voice error: ${result.voiceResult.error}`);
         toast("OpenAI voice error. Check Render logs for /api/voice/speak.");
+        finishSpeaking();
         return;
       }
       if (audioDataUrl) {
@@ -4857,21 +4881,27 @@ function speakVoiceResponse(textOverride) {
         const voice = result.voiceResult?.voice || "OpenAI";
         const model = result.voiceResult?.model || "speech";
         updateVoiceOutputStatus(`Using OpenAI voice: ${voice} (${model}).`);
+        audio.onended = finishSpeaking;
+        audio.onerror = finishSpeaking;
         audio.play().catch(() => {
           updateVoiceOutputStatus("OpenAI audio was created, but the browser blocked playback. Click Read response again.");
+          finishSpeaking();
         });
         return;
       }
       updateVoiceOutputStatus(`OpenAI voice returned no audio. Provider: ${result.voiceResult?.provider || "unknown"}.`);
+      finishSpeaking();
     })
     .catch(error => {
       if (/sign in required/i.test(error.message || "")) {
         updateVoiceOutputStatus("Your session expired after redeploy. Sign in again, then press Read response.");
         toast("Please sign in again to use OpenAI voice.");
+        finishSpeaking();
         return;
       }
       updateVoiceOutputStatus(`OpenAI voice unavailable: ${error.message || "speech request failed"}. Robotic browser voice is off.`);
       toast("OpenAI voice unavailable. Check Render environment values.");
+      finishSpeaking();
     });
 }
 
@@ -5065,6 +5095,21 @@ async function handleVoiceCommand(rawCommand) {
     goSection("agent");
     openAskNexus();
     setVoiceResponse("Jarvis-style voice demo is ready. Try saying: open telehealth, apply for that job, contact my buyer, test provider engines, or run full mission. Say yes to confirm any staged workflow.", true);
+    return;
+  }
+  if (lower.includes("show reasoning") || lower.includes("show how you decide") || lower.includes("show agent thinking")) {
+    agentReasoningVisible = true;
+    localStorage.setItem("agrinexusReasoningVisible", "true");
+    render();
+    goSection("agent");
+    setVoiceResponse("Agent reasoning is visible for demo mode. I will still operate by voice.", true);
+    return;
+  }
+  if (lower.includes("hide reasoning") || lower.includes("hide agent thinking") || lower.includes("simple mode")) {
+    agentReasoningVisible = false;
+    localStorage.setItem("agrinexusReasoningVisible", "false");
+    render();
+    setVoiceResponse("Simple voice mode is on. I will keep reasoning in the background and talk you through the next action.", true);
     return;
   }
   if (lower.includes("turn on voice") || lower.includes("voice first") || lower.includes("hands free") || lower.includes("hands-free")) {
@@ -5405,9 +5450,9 @@ function startVoiceListening() {
     setVoiceStatus(voiceFirstMode ? "voice-first" : "standby");
     voiceRecognition = null;
     refreshMicSupport();
-    if (voiceFirstMode && voiceAutoRestart && !voiceStopRequested && !document.hidden) {
+    if (voiceFirstMode && voiceAutoRestart && !voiceSpeaking && !voiceStopRequested && !document.hidden) {
       setTimeout(() => {
-        if (!voiceRecognition && voiceFirstMode && voiceAutoRestart) startVoiceListening();
+        if (!voiceRecognition && voiceFirstMode && voiceAutoRestart && !voiceSpeaking) startVoiceListening();
       }, 900);
     }
   };
