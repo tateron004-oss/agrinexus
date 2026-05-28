@@ -5191,19 +5191,25 @@ async function api(req, res, url) {
     const text = String(body.text || "").trim();
     if (!text) return send(res, 400, { error: "Voice response text is required" });
     let audio = null;
+    let speechError = null;
     let provider = process.env.VOICE_TTS_PROVIDER || (process.env.OPENAI_API_KEY ? "openai" : "browser");
     if (provider === "openai" || body.forceOpenAi === true) {
-      audio = await openAiSpeechAudio({
-        text,
-        voice: body.voice || process.env.OPENAI_TTS_VOICE,
-        responseFormat: body.responseFormat || "mp3"
-      });
-      provider = audio?.provider || provider;
+      try {
+        audio = await openAiSpeechAudio({
+          text,
+          voice: body.voice || process.env.OPENAI_TTS_VOICE,
+          responseFormat: body.responseFormat || "mp3"
+        });
+        provider = audio?.provider || provider;
+      } catch (error) {
+        speechError = error.message || "OpenAI speech request failed";
+        provider = "openai-audio-error";
+      }
     }
-    const record = voiceRecord(db, user, "text-to-speech", `Speech response prepared: ${text}`, { language: body.language || user.language || "en", provider, model: audio?.model || null, voice: audio?.voice || null });
+    const record = voiceRecord(db, user, "text-to-speech", speechError ? `Speech response failed: ${speechError}` : `Speech response prepared: ${text}`, { language: body.language || user.language || "en", provider, model: audio?.model || null, voice: audio?.voice || null, error: speechError });
     await writeDb(db);
     const state = publicState(db, user);
-    state.voiceResult = { text, sessionId: record.id, provider, audioDataUrl: audio?.audioDataUrl || null, model: audio?.model || null, voice: audio?.voice || null };
+    state.voiceResult = { text, sessionId: record.id, provider, audioDataUrl: audio?.audioDataUrl || null, model: audio?.model || null, voice: audio?.voice || null, error: speechError, configuredProvider: process.env.VOICE_TTS_PROVIDER || null, hasOpenAiKey: Boolean(process.env.OPENAI_API_KEY) };
     return send(res, 200, state);
   }
 

@@ -4796,6 +4796,11 @@ function speakVoiceResponse(textOverride) {
   request("/api/voice/speak", { method: "POST", body: { text, language: languageCode(), locale: voiceLocale(), forceOpenAi: true, voice: "coral" } })
     .then(result => {
       const audioDataUrl = result.voiceResult?.audioDataUrl;
+      if (result.voiceResult?.error) {
+        updateVoiceOutputStatus(`OpenAI voice error: ${result.voiceResult.error}`);
+        toast("OpenAI voice error. Check Render logs for /api/voice/speak.");
+        return;
+      }
       if (audioDataUrl) {
         const audio = new Audio(audioDataUrl);
         const voice = result.voiceResult?.voice || "OpenAI";
@@ -4806,11 +4811,11 @@ function speakVoiceResponse(textOverride) {
         });
         return;
       }
-      browserSpeak();
+      updateVoiceOutputStatus(`OpenAI voice returned no audio. Provider: ${result.voiceResult?.provider || "unknown"}.`);
     })
     .catch(error => {
       updateVoiceOutputStatus(`OpenAI voice unavailable: ${error.message || "speech request failed"}. Robotic browser voice is off.`);
-      browserSpeak();
+      toast("OpenAI voice unavailable. Check Render environment values.");
     });
 }
 
