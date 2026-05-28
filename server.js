@@ -1449,6 +1449,13 @@ function ensureHealthProfile(profile) {
   profile.telehealthVitals = profile.telehealthVitals || [];
   profile.telehealthReferrals = profile.telehealthReferrals || [];
   profile.telehealthFollowUps = profile.telehealthFollowUps || [];
+  profile.telehealthAppointments = profile.telehealthAppointments || [];
+  profile.telehealthProviderAssignments = profile.telehealthProviderAssignments || [];
+  profile.patientHistoryRecords = profile.patientHistoryRecords || [];
+  profile.telehealthPrescriptionPackets = profile.telehealthPrescriptionPackets || [];
+  profile.telehealthEmergencyEscalations = profile.telehealthEmergencyEscalations || [];
+  profile.careTeamNotes = profile.careTeamNotes || [];
+  profile.telehealthOutcomeReviews = profile.telehealthOutcomeReviews || [];
   profile.representativeConnections = profile.representativeConnections || 0;
   profile.accessibilityProfile = profile.accessibilityProfile || {
     hearingSupport: true,
@@ -5994,6 +6001,156 @@ async function api(req, res, url) {
     addWorkflowNote(db.profile, body.note, "Guided intake simulation note");
     await writeDb(db);
     return send(res, 200, { ...publicState(db, user), intakeSimulationResult: { intake, consent, vitals, accessRecord, referral, followUp } });
+  }
+
+  if (url.pathname === "/api/health/advanced" && req.method === "POST") {
+    if (!canUse(user, "health")) return send(res, 403, { error: "Role does not allow advanced healthcare workflows" });
+    const body = await readBody(req);
+    const { country, route } = activeContext(db);
+    ensureHealthProfile(db.profile);
+    let intake = db.profile.healthIntakes[0];
+    if (!intake) {
+      intake = {
+        id: crypto.randomUUID(),
+        patientRef: `AN-PAT-${country.id.toUpperCase()}-ADV`,
+        patientName: "Community patient",
+        countryId: country.id,
+        riskLevel: country.risk,
+        needSummary: `${country.name} advanced telehealth care operations`,
+        queueStatus: "Advanced care operations",
+        representativeStatus: "Accessibility aide pending",
+        preferredLanguage: user.language || "en",
+        accessibilityNeeds: "Captions, audio narration, caregiver handoff",
+        contactMethod: "Low-bandwidth callback",
+        routeContext: { routeId: route.id, routeName: route.name, checkpoint: db.profile.activeCheckpoint },
+        createdAt: new Date().toISOString()
+      };
+      db.profile.healthIntakes.unshift(intake);
+    }
+    const type = body.type || "appointment";
+    const now = new Date().toISOString();
+    const makers = {
+      appointment: () => {
+        const record = {
+          id: crypto.randomUUID(),
+          appointmentNumber: `AN-APT-${String(db.profile.telehealthAppointments.length + 1).padStart(3, "0")}`,
+          intakeId: intake.id,
+          patientRef: intake.patientRef,
+          scheduleWindow: body.scheduleWindow || "next available rural telehealth slot",
+          modality: body.modality || "voice/video with SMS fallback",
+          language: intake.preferredLanguage || user.language || "en",
+          accessibility: ["captions", "audio summary", "caregiver handoff", "low-bandwidth callback"],
+          status: "scheduled",
+          createdAt: now
+        };
+        db.profile.telehealthAppointments.unshift(record);
+        intake.queueStatus = "Telehealth appointment scheduled";
+        return ["health-telehealth", "telehealth.appointment_scheduled", `${record.appointmentNumber} appointment scheduled for ${intake.patientRef}.`, record];
+      },
+      provider: () => {
+        const record = {
+          id: crypto.randomUUID(),
+          assignmentNumber: `AN-PROV-${String(db.profile.telehealthProviderAssignments.length + 1).padStart(3, "0")}`,
+          intakeId: intake.id,
+          patientRef: intake.patientRef,
+          providerName: body.providerName || `${country.name} telehealth provider desk`,
+          specialty: body.specialty || (intake.riskLevel === "High" ? "urgent rural care" : "primary care"),
+          status: "assigned",
+          createdAt: now
+        };
+        db.profile.telehealthProviderAssignments.unshift(record);
+        intake.queueStatus = "Provider assigned";
+        intake.representativeStatus = "Provider assigned";
+        return ["health-telehealth", "telehealth.provider_assigned", `${record.assignmentNumber} provider assigned to ${intake.patientRef}.`, record];
+      },
+      history: () => {
+        const record = {
+          id: crypto.randomUUID(),
+          historyNumber: `AN-HIST-${String(db.profile.patientHistoryRecords.length + 1).padStart(3, "0")}`,
+          intakeId: intake.id,
+          patientRef: intake.patientRef,
+          allergies: body.allergies || "none reported",
+          conditions: body.conditions || "heat exposure risk, mobility/accessibility support, rural access barriers",
+          medications: body.medications || "not recorded",
+          caregiverContext: intake.caregiverName || "community accessibility aide",
+          status: "recorded",
+          createdAt: now
+        };
+        db.profile.patientHistoryRecords.unshift(record);
+        return ["health-ehr", "patient.history_recorded", `${record.historyNumber} patient history recorded for ${intake.patientRef}.`, record];
+      },
+      prescription: () => {
+        const record = {
+          id: crypto.randomUUID(),
+          packetNumber: `AN-RX-${String(db.profile.telehealthPrescriptionPackets.length + 1).padStart(3, "0")}`,
+          intakeId: intake.id,
+          patientRef: intake.patientRef,
+          packetType: "clinician review packet",
+          contents: ["care plan", "referral", "vitals", "patient history", "accessibility needs", "pharmacy/clinic handoff"],
+          status: "ready-for-clinician-review",
+          createdAt: now
+        };
+        db.profile.telehealthPrescriptionPackets.unshift(record);
+        return ["health-ehr", "telehealth.prescription_packet_ready", `${record.packetNumber} clinician packet prepared for ${intake.patientRef}.`, record];
+      },
+      emergency: () => {
+        const record = {
+          id: crypto.randomUUID(),
+          escalationNumber: `AN-ESC-${String(db.profile.telehealthEmergencyEscalations.length + 1).padStart(3, "0")}`,
+          intakeId: intake.id,
+          patientRef: intake.patientRef,
+          reason: body.reason || "high-risk symptoms, heat exposure, or urgent access barrier",
+          destination: `${country.name} emergency partner / community health worker`,
+          status: "escalated",
+          createdAt: now
+        };
+        db.profile.telehealthEmergencyEscalations.unshift(record);
+        intake.queueStatus = "Emergency escalation opened";
+        return ["health-notifications", "telehealth.emergency_escalated", `${record.escalationNumber} emergency escalation opened for ${intake.patientRef}.`, record];
+      },
+      note: () => {
+        const record = {
+          id: crypto.randomUUID(),
+          noteNumber: `AN-NOTE-${String(db.profile.careTeamNotes.length + 1).padStart(3, "0")}`,
+          intakeId: intake.id,
+          patientRef: intake.patientRef,
+          author: user.name,
+          note: body.note || "Care team reviewed accessibility, language, caregiver, and rural follow-up needs.",
+          status: "recorded",
+          createdAt: now
+        };
+        db.profile.careTeamNotes.unshift(record);
+        return ["health-ehr", "care_team.note_recorded", `${record.noteNumber} care-team note recorded for ${intake.patientRef}.`, record];
+      },
+      outcome: () => {
+        const record = {
+          id: crypto.randomUUID(),
+          outcomeNumber: `AN-OUT-${String(db.profile.telehealthOutcomeReviews.length + 1).padStart(3, "0")}`,
+          intakeId: intake.id,
+          patientRef: intake.patientRef,
+          outcome: body.outcome || "follow-up complete; patient connected to accessible care path",
+          nextStep: body.nextStep || "continue caregiver-supported callback and provider review",
+          status: "reviewed",
+          createdAt: now
+        };
+        db.profile.telehealthOutcomeReviews.unshift(record);
+        intake.queueStatus = "Outcome reviewed";
+        return ["health-ehr", "telehealth.outcome_reviewed", `${record.outcomeNumber} outcome reviewed for ${intake.patientRef}.`, record];
+      }
+    };
+    const maker = makers[type];
+    if (!maker) return send(res, 400, { error: "Unsupported advanced health action" });
+    const [providerId, action, detail, record] = maker();
+    const storeLimit = key => { db.profile[key] = db.profile[key].slice(0, 20); };
+    ["telehealthAppointments", "telehealthProviderAssignments", "patientHistoryRecords", "telehealthPrescriptionPackets", "telehealthEmergencyEscalations", "careTeamNotes", "telehealthOutcomeReviews"].forEach(key => storeLimit(key));
+    country.queue = intake.queueStatus;
+    logIntegration(db, { providerId, module: "Healthcare", action, detail, metadata: { recordId: record.id, intakeId: intake.id, patientRef: intake.patientRef, type } });
+    addActivity(db.profile, detail);
+    addWorkflowNote(db.profile, body.note, "Advanced health note");
+    await writeDb(db);
+    const state = publicState(db, user);
+    state.healthAdvancedResult = { type, record };
+    return send(res, 200, state);
   }
 
   if (url.pathname === "/api/trade/order" && req.method === "POST") {

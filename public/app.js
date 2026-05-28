@@ -3580,6 +3580,15 @@ function render() {
   const telehealthVitals = data.profile.telehealthVitals || [];
   const telehealthReferrals = data.profile.telehealthReferrals || [];
   const telehealthFollowUps = data.profile.telehealthFollowUps || [];
+  const advancedHealthOps = [
+    ...(data.profile.telehealthAppointments || []).map(item => ({ title: item.appointmentNumber, detail: `${item.patientRef} - ${item.status} - ${item.modality}` })),
+    ...(data.profile.telehealthProviderAssignments || []).map(item => ({ title: item.assignmentNumber, detail: `${item.patientRef} - ${item.providerName} - ${item.status}` })),
+    ...(data.profile.patientHistoryRecords || []).map(item => ({ title: item.historyNumber, detail: `${item.patientRef} - ${item.status} - ${item.conditions}` })),
+    ...(data.profile.telehealthPrescriptionPackets || []).map(item => ({ title: item.packetNumber, detail: `${item.patientRef} - ${item.status}` })),
+    ...(data.profile.telehealthEmergencyEscalations || []).map(item => ({ title: item.escalationNumber, detail: `${item.patientRef} - ${item.status} - ${item.destination}` })),
+    ...(data.profile.careTeamNotes || []).map(item => ({ title: item.noteNumber, detail: `${item.patientRef} - ${item.status}` })),
+    ...(data.profile.telehealthOutcomeReviews || []).map(item => ({ title: item.outcomeNumber, detail: `${item.patientRef} - ${item.status} - ${item.nextStep}` }))
+  ];
   const activeIntake = intakes[0];
   $("#healthQueue").textContent = country.queue;
   $("#healthPanel").innerHTML = [
@@ -3638,6 +3647,19 @@ function render() {
   $("#healthAccessibilityList").innerHTML = telehealthAccess.length
     ? telehealthAccess.map(item => `<div><strong>${item.title}</strong><span>${item.patientRef} - ${(item.supports || []).join(", ")}</span></div>`).join("")
     : "<div>No telehealth accessibility notes recorded yet.</div>";
+
+  $("#healthAdvancedPanel").innerHTML = [
+    row("Appointments", (data.profile.telehealthAppointments || []).length),
+    row("Providers", (data.profile.telehealthProviderAssignments || []).length),
+    row("History records", (data.profile.patientHistoryRecords || []).length),
+    row("Care packets", (data.profile.telehealthPrescriptionPackets || []).length),
+    row("Escalations", (data.profile.telehealthEmergencyEscalations || []).length),
+    row("Care notes", (data.profile.careTeamNotes || []).length),
+    row("Outcome reviews", (data.profile.telehealthOutcomeReviews || []).length)
+  ].join("");
+  $("#healthAdvancedList").innerHTML = advancedHealthOps.length
+    ? advancedHealthOps.slice(0, 12).map(item => `<div><strong>${item.title}</strong><span>${item.detail}</span></div>`).join("")
+    : "<div>No advanced telehealth operations have been run yet.</div>";
 
   renderProviderEvidence("#healthIntegrationPanel", "Healthcare", "No telehealth provider evidence yet. Start intake, connect a representative, run safety review, generate care plan, or test healthcare engines.");
   renderEnginePanel("#healthEnginePanel", "Healthcare");
@@ -4392,6 +4414,7 @@ function workflowConfig(workflow, action, element) {
   }
   if (workflow === "health") {
     const accessAction = ["accessibility", "caption", "caregiver", "consent", "vitals", "referral", "followup"].includes(action);
+    const advancedHealthActions = new Set(["appointment", "provider", "history", "prescription", "emergency", "note", "outcome"]);
     const titleMap = {
       intake: "Start intake",
       representative: "Connect representative",
@@ -4404,7 +4427,14 @@ function workflowConfig(workflow, action, element) {
       consent: "Record consent",
       vitals: "Capture vitals",
       referral: "Create referral",
-      followup: "Schedule follow-up"
+      followup: "Schedule follow-up",
+      appointment: "Schedule appointment",
+      provider: "Assign provider",
+      history: "Record patient history",
+      prescription: "Build care packet",
+      emergency: "Escalate emergency",
+      note: "Record care-team note",
+      outcome: "Review outcome"
     };
     const summaryMap = {
       intake: "Collect patient need, urgency, accessibility supports, language, caregiver, and callback details before opening the telehealth case.",
@@ -4414,7 +4444,14 @@ function workflowConfig(workflow, action, element) {
       consent: "Record plain-language telehealth, caregiver, translation, privacy, and assistive-format consent.",
       vitals: "Capture supervised vitals and triage evidence before clinical escalation.",
       referral: "Create a referral handoff to a partner clinic, representative, or community health worker.",
-      followup: "Schedule a low-bandwidth callback with SMS, caregiver packet, large-print, and audio support."
+      followup: "Schedule a low-bandwidth callback with SMS, caregiver packet, large-print, and audio support.",
+      appointment: "Schedule a real telehealth appointment record with language, accessibility, modality, and fallback channel.",
+      provider: "Assign a provider or partner clinic desk to the active patient case.",
+      history: "Record patient history for allergies, conditions, medications, caregiver context, and rural access barriers.",
+      prescription: "Build a clinician-review care packet with care plan, referral, vitals, history, and accessibility needs.",
+      emergency: "Open an emergency escalation to a community health worker, partner clinic, or urgent care path.",
+      note: "Record a care-team note that keeps the clinical handoff auditable.",
+      outcome: "Review the follow-up outcome and record the next step for continuity of care."
     };
     const intakeFields = action === "intake" ? [
       { name: "patientName", label: "Patient or household name", value: "Community patient", placeholder: "Name or household reference" },
@@ -4445,11 +4482,11 @@ function workflowConfig(workflow, action, element) {
       title: translateLiteral(titleMap[action] || "Health action"),
       summary: summaryMap[action] || "Confirm the care operation before updating the case queue, safety evidence, and provider trail.",
       confirmLabel: translateLiteral(titleMap[action] || "Confirm"),
-      path: "/api/health/action",
+      path: advancedHealthActions.has(action) ? "/api/health/advanced" : "/api/health/action",
       body: { type: action },
       fields: intakeFields,
       success: "Health action complete",
-      record: accessAction ? "Telehealth accessibility case note, active intake status, provider evidence, and activity feed" : "Intake queue, representative status, safety review, care plan, or AI activity",
+      record: advancedHealthActions.has(action) ? "Advanced care operation record, active intake status, EHR/telehealth/notification evidence, and activity feed" : accessAction ? "Telehealth accessibility case note, active intake status, provider evidence, and activity feed" : "Intake queue, representative status, safety review, care plan, or AI activity",
       provider: "Telehealth, notification, EHR, and AI provider events are recorded when applicable.",
       checklist: [
         { title: "Country context", detail: `${activeCountry().name}: ${activeCountry().queue}`, status: "live", label: activeCountry().risk },
