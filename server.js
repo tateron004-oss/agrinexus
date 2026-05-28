@@ -355,12 +355,20 @@ function runtimeProviders(db) {
       const hasCredential = Boolean(runtime.webhookUrl && runtime.apiKey);
       const hasBridge = Boolean(providerEngineWebhookUrl(provider.id) && runtime.apiKey);
       const hasOpenAiVoice = isOpenAiVoice && Boolean(process.env.OPENAI_API_KEY);
+      const hasTwilioVoice = provider.id === "phone-voice"
+        && mode === "twilio"
+        && Boolean(process.env.TWILIO_ACCOUNT_SID)
+        && Boolean(process.env.TWILIO_AUTH_TOKEN)
+        && Boolean(process.env.TWILIO_PHONE_NUMBER)
+        && Boolean(process.env.PUBLIC_BASE_URL);
       return {
         ...provider,
         mode,
-        status: hasOpenAiVoice ? "connected" : isBrowser ? (REQUIRE_LIVE_SERVICES ? "needs-live-provider" : "connected") : isSandbox ? (REQUIRE_LIVE_SERVICES ? "needs-live-provider" : "connected") : (hasCredential ? "connected" : "needs-credentials"),
+        status: hasOpenAiVoice || hasTwilioVoice ? "connected" : isBrowser ? (REQUIRE_LIVE_SERVICES ? "needs-live-provider" : "connected") : isSandbox ? (REQUIRE_LIVE_SERVICES ? "needs-live-provider" : "connected") : (hasCredential ? "connected" : "needs-credentials"),
         detail: hasOpenAiVoice
           ? `${mode} provider configured through OPENAI_API_KEY.`
+          : hasTwilioVoice
+          ? "Twilio phone assistant is configured with account credentials, phone number, and PUBLIC_BASE_URL."
           : isBrowser
           ? (REQUIRE_LIVE_SERVICES ? `Strict live mode requires ${config.modeEnv}=webhook and hosted voice credentials.` : provider.detail)
           : isSandbox

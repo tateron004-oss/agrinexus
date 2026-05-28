@@ -161,6 +161,8 @@ assert(server.includes('"cache-control": cacheControl'), "Static app assets shou
 assert(app.includes("liveServiceCheckFromIntegrations"), "Integrations live service check button must share the finalization action");
 assert(app.includes("Slow external engines will time out"), "Live service check should show progress while external engines respond");
 assert(server.includes("function fetchWithTimeout"), "External service probes need timeouts so checks cannot hang");
+assert(server.includes("hasTwilioVoice"), "Twilio phone voice readiness must be evaluated without generic webhook API keys");
+assert(server.includes("Twilio phone assistant is configured"), "Phone provider status needs a clear Twilio-ready detail");
 assert(!server.includes("Role does not allow production service checks"), "Live service checks should be available to any signed-in operator");
 assert(!app.includes('element.id === "liveServiceCheckBtn" ? "admin"'), "Live service check buttons should not be disabled as admin-only controls");
 assert(app.includes('event.target.closest("#liveServiceCheckBtn")'), "Live service check needs delegated click handling");
