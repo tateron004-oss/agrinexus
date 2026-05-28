@@ -2080,6 +2080,7 @@ function ensureOperationsProfile(profile) {
   profile.usageEvents = profile.usageEvents || [];
   profile.subscriberAccounts = profile.subscriberAccounts || [];
   profile.localPilotRuns = profile.localPilotRuns || [];
+  profile.workflowIntelligence = profile.workflowIntelligence || [];
 }
 
 function addUsageEvent(profile, event) {
@@ -2090,6 +2091,74 @@ function addUsageEvent(profile, event) {
     ...event
   });
   profile.usageEvents = profile.usageEvents.slice(0, 100);
+}
+
+function workflowIntelligence(db, user, body = {}) {
+  ensureOperationsProfile(db.profile);
+  const { country, route } = activeContext(db);
+  const moduleName = String(body.module || body.workflow || "Platform");
+  const action = String(body.action || body.title || "Workflow completed");
+  const latestEvent = (db.profile.integrationEvents || [])[0];
+  const moduleText = moduleName.toLowerCase();
+  const moduleAdvice = moduleText.includes("learning")
+    ? {
+      meaning: "The learner record moved forward and can now feed workforce readiness, certificate status, accessibility support, and AI tutor guidance.",
+      next: "Confirm the next lesson, check accommodation needs, then route the learner toward a role or certificate."
+    }
+    : moduleText.includes("workforce")
+    ? {
+      meaning: "The workforce record changed and can now drive role matching, interviews, shift operations, payroll evidence, or HR handoff.",
+      next: "Review readiness gaps, schedule the next placement step, and notify the worker or mentor."
+    }
+    : moduleText.includes("health")
+    ? {
+      meaning: "The care workflow created patient-facing evidence that should stay accessible, consent-aware, and ready for provider review.",
+      next: "Check accessibility needs, confirm safety level, and prepare a follow-up or referral if risk is elevated."
+    }
+    : moduleText.includes("trade") || moduleText.includes("agri")
+    ? {
+      meaning: "The trade or field operation created commercial evidence that can connect crop lots, buyers, logistics, wallet activity, and drone intelligence.",
+      next: "Confirm buyer readiness, route status, quality evidence, and payment or logistics handoff."
+    }
+    : moduleText.includes("map")
+    ? {
+      meaning: "The map operation changed geospatial evidence that can guide route risk, farmer access, facility movement, and field intervention planning.",
+      next: "Review the active checkpoint, update route risk, and attach the intelligence to the relevant farmer, care, workforce, or trade workflow."
+    }
+    : moduleText.includes("integration") || moduleText.includes("admin")
+    ? {
+      meaning: "The system control workflow created operational readiness evidence for live providers, production support, and audit review.",
+      next: "Review any provider gaps, confirm connected engines, and rerun the live service check after credentials change."
+    }
+    : {
+      meaning: "The workflow created platform evidence and updated the unified operating record.",
+      next: "Review the latest activity, confirm the next user-facing step, and ask AgriNexus to continue the mission if needed."
+    };
+  const record = {
+    id: crypto.randomUUID(),
+    module: moduleName,
+    action,
+    countryId: country.id,
+    countryName: country.name,
+    routeId: route.id,
+    routeName: route.name,
+    checkpoint: db.profile.activeCheckpoint,
+    summary: `${action} completed in ${country.name} with route context from ${route.name}.`,
+    meaning: moduleAdvice.meaning,
+    nextStep: moduleAdvice.next,
+    evidence: [
+      latestEvent ? `${latestEvent.providerName || latestEvent.providerId}: ${latestEvent.action}` : "No provider event recorded yet",
+      `${(db.profile.activity || []).length} activity items`,
+      `${(db.profile.integrationEvents || []).length} provider audit events`,
+      `${(db.profile.workflowIntelligence || []).length + 1} workflow intelligence records`
+    ],
+    risk: country.risk,
+    language: user.language || db.profile.accessibilityProfile?.language || "en",
+    createdAt: new Date().toISOString()
+  };
+  db.profile.workflowIntelligence.unshift(record);
+  db.profile.workflowIntelligence = db.profile.workflowIntelligence.slice(0, 40);
+  return record;
 }
 
 function addMapInsight(profile, insight) {
@@ -6639,6 +6708,24 @@ async function api(req, res, url) {
     addActivity(db.profile, `${run.type} AI run ${run.reviewStatus} by ${user.name}.`);
     await writeDb(db);
     return send(res, 200, publicState(db, user));
+  }
+
+  if (url.pathname === "/api/intelligence/workflow" && req.method === "POST") {
+    if (!canUse(user, "ai")) return send(res, 403, { error: "Role does not allow workflow intelligence" });
+    const body = await readBody(req);
+    const intelligence = workflowIntelligence(db, user, body);
+    logIntegration(db, {
+      providerId: "openai",
+      module: "AI",
+      action: "workflow.intelligence_generated",
+      detail: `${intelligence.module} intelligence generated for ${intelligence.action}.`,
+      metadata: { intelligenceId: intelligence.id, module: intelligence.module, action: intelligence.action }
+    });
+    addActivity(db.profile, `Workflow intelligence: ${intelligence.nextStep}`);
+    await writeDb(db);
+    const state = publicState(db, user);
+    state.workflowIntelligenceResult = intelligence;
+    return send(res, 200, state);
   }
 
   if (url.pathname === "/api/map/advanced" && req.method === "POST") {

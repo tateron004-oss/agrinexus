@@ -3266,6 +3266,23 @@ function render() {
         taskItem("Facilities", `${country.facilities} facilities, ${country.patients.toLocaleString()} patients`, "ready", country.queue),
         taskItem("AI activity", data.profile.aiActivity || "No AI run yet", data.profile.aiRuns?.length ? "ready" : "pending", data.profile.aiProvider || "Fallback")
       ]
+    },
+    {
+      eyebrow: "Intelligence",
+      metric: `${(data.profile.workflowIntelligence || []).length} record(s)`,
+      title: "Latest Workflow Guidance",
+      summary: (data.profile.workflowIntelligence || [])[0]?.summary || "Every confirmed workflow can now produce module-aware guidance, evidence, and the next recommended action.",
+      items: (data.profile.workflowIntelligence || []).length
+        ? [
+          taskItem("What it means", data.profile.workflowIntelligence[0].meaning, "ready", data.profile.workflowIntelligence[0].module),
+          taskItem("Recommended next step", data.profile.workflowIntelligence[0].nextStep, "live", "Next"),
+          taskItem("Evidence", (data.profile.workflowIntelligence[0].evidence || [])[0], "ready", "Audit")
+        ]
+        : [
+          taskItem("Intelligence layer", "Confirm any workflow to generate smart guidance.", "pending", "Ready"),
+          taskItem("Voice handoff", "Ask AgriNexus can read the guidance aloud after completion.", "ready", "Voice"),
+          taskItem("Audit trail", "Guidance is recorded with provider evidence.", "ready", "Evidence")
+        ]
     }
   ]);
 
@@ -5128,8 +5145,31 @@ async function confirmPendingWorkflow() {
     toast(workflow.success || "Workflow reviewed");
     return;
   }
-  await mutate(workflow.path, { ...(workflow.body || {}), ...workflowFieldValues(), note }, workflow.success || "Workflow complete");
-  if (workflow.redirectSection) goSection(workflow.redirectSection);
+  try {
+    data = await request(workflow.path, { method: "POST", body: { ...(workflow.body || {}), ...workflowFieldValues(), note } });
+    data = await request("/api/intelligence/workflow", {
+      method: "POST",
+      body: {
+        module: workflow.eyebrow || workflow.body?.module || "Platform",
+        action: workflow.title || workflow.confirmLabel || "Workflow completed",
+        summary: workflow.summary || "",
+        record: workflow.record || "",
+        provider: workflow.provider || ""
+      }
+    });
+    render();
+    if (workflow.redirectSection) goSection(workflow.redirectSection);
+    const intelligence = data.workflowIntelligenceResult || (data.profile.workflowIntelligence || [])[0];
+    if (intelligence) {
+      const response = `${workflow.success || "Workflow complete"}. ${intelligence.summary} ${intelligence.nextStep}`;
+      setVoiceResponse(response, true);
+      toast("Workflow complete with intelligence");
+    } else {
+      toast(workflow.success || "Workflow complete");
+    }
+  } catch (error) {
+    toast(error.message || "Workflow failed");
+  }
 }
 
 async function reviewLatestAi(decision) {

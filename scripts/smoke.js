@@ -150,6 +150,10 @@ async function call(path, body) {
   assert(lessonEnrollment.completedModules.includes(0));
   assert(lessonEnrollment.progress >= 45);
   assert(lesson.profile.integrationEvents.some(event => event.action === "lesson.completed"));
+  const lessonIntelligence = await call("/api/intelligence/workflow", { module: "Learning workflow", action: "Complete lesson" });
+  assert(lessonIntelligence.profile.workflowIntelligence.length >= 1);
+  assert(lessonIntelligence.workflowIntelligenceResult.nextStep.includes("lesson") || lessonIntelligence.workflowIntelligenceResult.nextStep.includes("certificate"));
+  assert(lessonIntelligence.profile.integrationEvents.some(event => event.action === "workflow.intelligence_generated"));
   const quiz = await call("/api/learning/quiz", {});
   assert(quiz.profile.quizScore >= 25);
   assert(quiz.profile.integrationEvents.some(event => event.action === "quiz.completed"));

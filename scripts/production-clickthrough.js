@@ -90,6 +90,7 @@ const endpoints = [
   "/api/trade/buyer-contact",
   "/api/trade/advanced",
   "/api/map/advanced",
+  "/api/intelligence/workflow",
   "/api/agent/command",
   "/api/agent/briefing",
   "/api/voice/transcribe",
@@ -128,6 +129,9 @@ assert(app.includes("function renderAgentReasoningPanel"), "Frontend needs to re
 assert(server.includes("function rememberAgentMemory"), "Backend needs long-term memory capture for the learning agent");
 assert(server.includes("function retrieveAgentMemories"), "Backend needs memory retrieval before agent planning");
 assert(server.includes("agent.memory_retrieved"), "Agent planning should record memory retrieval evidence");
+assert(server.includes("function workflowIntelligence"), "Backend needs module-aware workflow intelligence");
+assert(app.includes("/api/intelligence/workflow"), "Confirmed workflows must request intelligence after execution");
+assert(app.includes("Latest Workflow Guidance"), "Dashboard must show the latest workflow intelligence guidance");
 assert(server.includes("function buildAutopilotPlan"), "Backend needs Agent Autopilot mission planning");
 assert(server.includes("agent.autopilot_executed"), "Autopilot execution must be recorded as agent evidence");
 assert(html.includes("missionDashboardPanel"), "Agent page needs an Autopilot Mission Dashboard");
