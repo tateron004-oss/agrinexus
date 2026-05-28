@@ -107,6 +107,9 @@ assert(server.includes("speechError"), "Voice speech route must return OpenAI TT
 assert(app.includes("OpenAI voice error:"), "Voice UI must show the exact OpenAI TTS error");
 assert(app.includes("runJarvisCommand();"), "Jarvis dock Run button must read the dock command input");
 assert(app.includes("function runAdminHealthCheckDirect"), "Admin top health check button must execute directly");
+assert(server.includes("function agentToolRegistry"), "Backend needs a safe agent tool registry for open-ended requests");
+assert(server.includes("function planAgentToolWithOpenAi"), "Backend needs live LLM planning for agentic commands");
+assert(server.includes("agent.llm_tool_planned"), "Agent planner must create provider evidence when OpenAI selects a workflow tool");
 
 for (const endpoint of endpoints) {
   assert(server.includes(endpoint), `Missing backend endpoint ${endpoint}`);

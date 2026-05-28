@@ -358,6 +358,13 @@ async function call(path, body) {
   assert(guidedHealth.commandResult.metadata.redirectSection === "health");
   const cancelGuidedHealth = await call("/api/agent/command", { command: "no", conversational: true });
   assert(cancelGuidedHealth.commandResult.intent === "conversation.canceled");
+  const agenticOpenCommand = await call("/api/agent/command", { command: "My field has crop stress and I need evidence before selling", conversational: true, inputMode: "voice", outputMode: "voice" });
+  assert(agenticOpenCommand.commandResult.intent === "conversation.pending_action");
+  assert(["drone.field_scan", "trade.market_review", "drone.intervention_task"].includes(agenticOpenCommand.commandResult.metadata.tool));
+  assert(agenticOpenCommand.profile.agentPendingAction.tool);
+  const agenticConfirm = await call("/api/agent/command", { command: "yes", conversational: true, inputMode: "voice", outputMode: "voice" });
+  assert(agenticConfirm.commandResult.intent === "conversation.confirmed");
+  assert(!agenticConfirm.profile.agentPendingAction);
   const lessonCommand = await call("/api/agent/command", { command: "Nexus complete my lesson", confirm: true, inputMode: "voice", outputMode: "voice" });
   assert(lessonCommand.commandResult.intent === "learning.complete_lesson");
   assert(lessonCommand.commandResult.metadata.redirectSection === "learning");

@@ -2801,7 +2801,7 @@ function sectionForAgentModule(module) {
     Healthcare: "health",
     AgriTrade: "trade",
     AgriTech: "trade",
-    Maps: "maps",
+    Maps: "map",
     AI: "agent",
     Integrations: "integrations",
     Admin: "admin",
@@ -2874,6 +2874,252 @@ async function executePendingAgentAction(db, user, pending) {
     };
   }
   return { intent: "conversation.no_pending_action", response: "I could not find the pending workflow details. Please ask again.", status: "needs-input" };
+}
+
+function agentToolRegistry() {
+  return [
+    { tool: "learning.start_or_continue", module: "Learning", action: "Advance learning", section: "learning", description: "Start or continue a course, training path, lesson, or learning journey for a learner." },
+    { tool: "learning.complete_lesson", module: "Learning", action: "Complete lesson", section: "learning", description: "Complete the active lesson and update learner progress." },
+    { tool: "learning.quiz", module: "Learning", action: "Complete quiz", section: "learning", description: "Run a lesson quiz or knowledge check." },
+    { tool: "learning.certificate", module: "Learning", action: "Issue certificate", section: "learning", description: "Issue a certificate after training progress or course completion." },
+    { tool: "learning.access_caption", module: "Learning", action: "Prepare captions", section: "learning", description: "Create captions for deaf or hard-of-hearing learners." },
+    { tool: "learning.access_visual", module: "Learning", action: "Prepare visual and audio supports", section: "learning", description: "Create large print, audio guide, or screen reader support for visually impaired learners." },
+    { tool: "learning.access_offline", module: "Learning", action: "Prepare offline packet", section: "learning", description: "Prepare low-bandwidth or offline learning support." },
+    { tool: "workforce.build_profile", module: "Workforce", action: "Verify profile", section: "workforce", description: "Build or verify a candidate profile for job readiness." },
+    { tool: "workforce.match_role", module: "Workforce", action: "Match workforce role", section: "workforce", description: "Find a job, role, placement, readiness gap, or candidate match." },
+    { tool: "workforce.apply_role", module: "Workforce", action: "Apply to role", section: "workforce", description: "Submit or prepare a job application for the best matched role." },
+    { tool: "workforce.schedule_interview", module: "Workforce", action: "Schedule interview", section: "workforce", description: "Schedule or prepare a job interview." },
+    { tool: "workforce.assign_mentor", module: "Workforce", action: "Assign mentor", section: "workforce", description: "Assign workforce mentor support to a candidate." },
+    { tool: "workforce.schedule_shift", module: "Workforce", action: "Schedule shift", section: "workforce", description: "Schedule a work shift, paid shift, or field work assignment." },
+    { tool: "health.intake", module: "Healthcare", action: "Start intake", section: "health", description: "Start a telehealth intake for a patient or community member." },
+    { tool: "health.accessibility_review", module: "Healthcare", action: "Prepare accessible telehealth", section: "health", description: "Prepare telehealth support for visual impairment, hearing impairment, captions, caregiver, audio, or low-bandwidth access." },
+    { tool: "health.representative", module: "Healthcare", action: "Connect representative", section: "health", description: "Connect a patient to a health representative or care navigator." },
+    { tool: "health.caption", module: "Healthcare", action: "Start caption relay", section: "health", description: "Start caption support for a deaf or hard-of-hearing patient." },
+    { tool: "health.caregiver", module: "Healthcare", action: "Notify caregiver", section: "health", description: "Notify or involve a caregiver or community aide." },
+    { tool: "health.consent", module: "Healthcare", action: "Record consent", section: "health", description: "Record privacy or telehealth consent." },
+    { tool: "health.vitals", module: "Healthcare", action: "Capture vitals", section: "health", description: "Capture patient vitals for telehealth." },
+    { tool: "health.referral", module: "Healthcare", action: "Create referral", section: "health", description: "Create a provider referral or care handoff." },
+    { tool: "health.followup", module: "Healthcare", action: "Schedule follow-up", section: "health", description: "Schedule a telehealth follow-up or callback." },
+    { tool: "health.safety", module: "Healthcare", action: "Run safety review", section: "health", description: "Run a safety review for health risk, escalation, or care quality." },
+    { tool: "health.careplan", module: "Healthcare", action: "Generate care plan", section: "health", description: "Generate a care plan for a patient." },
+    { tool: "trade.market_review", module: "AgriTrade", action: "Review market", section: "trade", description: "Review market, create an order, price crops, or prepare a selling workflow." },
+    { tool: "trade.buyer_contact", module: "AgriTrade", action: "Contact buyer", section: "trade", description: "Speak to, call, message, or contact a buyer about selling crops." },
+    { tool: "trade.advance_order", module: "AgriTrade", action: "Advance order", section: "trade", description: "Move an order through logistics, quality check, or delivery." },
+    { tool: "trade.wallet_payment", module: "AgriTrade", action: "Post payment", section: "trade", description: "Record wallet, mobile money, M-Pesa, or buyer payment activity." },
+    { tool: "drone.flight_plan", module: "AgriTech", action: "Plan drone mission", section: "trade", description: "Plan a drone flight, drone mission, or field survey." },
+    { tool: "drone.field_scan", module: "AgriTech", action: "Run drone scan", section: "trade", description: "Run crop stress, disease, soil, irrigation, pest, or field evidence scan." },
+    { tool: "drone.intervention_task", module: "AgriTech", action: "Assign field intervention", section: "trade", description: "Create field intervention task from drone intelligence, irrigation, pest, or crop stress evidence." },
+    { tool: "map.route_risk", module: "Maps", action: "Assess route", section: "map", description: "Assess map, logistics route, checkpoint, corridor, country, or geospatial risk." },
+    { tool: "integrations.test_all", module: "Integrations", action: "Test provider engines", section: "integrations", description: "Test live provider engines, APIs, integrations, and service health." },
+    { tool: "admin.health_check", module: "Admin", action: "Admin health check", section: "admin", description: "Run platform health check, admin diagnostics, or production readiness review." },
+    { tool: "profile.summary", module: "Profile", action: "Show profile", section: "profile", description: "Summarize user profile, records, workflow history, and unified activity." },
+    { tool: "ai.copilot", module: "AI", action: "Run copilot", section: "agent", description: "Answer an operational question or recommend next best action when no workflow should run." }
+  ];
+}
+
+function extractJsonObject(text) {
+  const value = String(text || "").trim();
+  if (!value) return null;
+  const fenced = value.match(/```(?:json)?\s*([\s\S]*?)```/i);
+  const candidate = fenced ? fenced[1].trim() : value.slice(value.indexOf("{"), value.lastIndexOf("}") + 1);
+  if (!candidate || !candidate.startsWith("{")) return null;
+  try {
+    return JSON.parse(candidate);
+  } catch {
+    return null;
+  }
+}
+
+function tokenizeAgentText(text) {
+  const synonyms = {
+    deaf: "caption hearing accessibility",
+    blind: "visual screenreader audio accessibility",
+    eyesight: "visual screenreader audio accessibility",
+    hear: "hearing caption accessibility",
+    hearing: "caption accessibility",
+    farmer: "crop trade drone field market buyer",
+    crop: "farm field drone trade market buyer",
+    crops: "farm field drone trade market buyer",
+    sell: "trade market buyer order",
+    selling: "trade market buyer order",
+    patient: "health telehealth care intake",
+    doctor: "health provider care representative",
+    nurse: "health provider care representative",
+    work: "workforce job role shift",
+    job: "workforce role application interview",
+    learn: "learning training course lesson",
+    training: "learning course lesson certificate",
+    route: "map logistics checkpoint risk",
+    country: "map route risk",
+    provider: "integration engine api health"
+  };
+  const expanded = String(text || "").toLowerCase().replace(/[^\w\s.-]/g, " ");
+  return expanded
+    .split(/\s+/)
+    .flatMap(token => [token, ...(synonyms[token] || "").split(/\s+/)])
+    .filter(token => token && token.length > 2);
+}
+
+function planAgentToolLocally(command) {
+  const tokens = tokenizeAgentText(command);
+  if (!tokens.length) return null;
+  const scored = agentToolRegistry()
+    .map(item => {
+      const haystack = tokenizeAgentText(`${item.module} ${item.action} ${item.tool} ${item.description}`);
+      const score = tokens.reduce((total, token) => total + (haystack.includes(token) ? 1 : 0), 0);
+      return { ...item, score };
+    })
+    .sort((a, b) => b.score - a.score);
+  const best = scored[0];
+  if (!best || best.score < 3) return null;
+  return {
+    ...best,
+    confidence: Math.min(0.86, 0.45 + best.score / 20),
+    rationale: "Local agent router matched the request to the closest available AgriNexus workflow tool.",
+    planner: "local-agent-router"
+  };
+}
+
+async function planAgentToolWithOpenAi(db, user, command) {
+  if (!process.env.OPENAI_API_KEY) return null;
+  const { country, route } = activeContext(db);
+  const tools = agentToolRegistry();
+  const context = {
+    country: country.name,
+    route: route.name,
+    checkpoint: db.profile.activeCheckpoint,
+    user: { role: user.role, language: user.language || db.profile.accessibilityProfile?.language || "en" },
+    profile: {
+      readiness: db.profile.readiness,
+      learningPath: db.profile.learningPath || db.profile.careerTrack,
+      certificates: (db.profile.certificates || []).length,
+      applications: (db.profile.applications || []).length,
+      healthIntakes: (db.profile.healthIntakes || []).length,
+      orders: (db.profile.orders || []).length,
+      droneScans: (db.profile.droneScans || []).length
+    }
+  };
+  try {
+    const response = await fetch("https://api.openai.com/v1/responses", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        model: process.env.OPENAI_AGENT_MODEL || process.env.OPENAI_MODEL || "gpt-4o-mini",
+        input: [
+          {
+            role: "system",
+            content: [
+              "You are the AgriNexus agent planner.",
+              "Select exactly one safe workflow tool from the provided allowlist.",
+              "Do not invent tools, endpoints, providers, legal/medical promises, or external actions.",
+              "If the user asks a general question with no workflow action, select ai.copilot.",
+              "Return JSON only with: tool, confidence, rationale, userFacingPlan."
+            ].join(" ")
+          },
+          { role: "user", content: JSON.stringify({ command, context, tools }) }
+        ],
+        max_output_tokens: 450
+      })
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(payload.error?.message || `OpenAI planner failed: ${response.status}`);
+    const parsed = extractJsonObject(extractResponseText(payload));
+    const selected = tools.find(item => item.tool === parsed?.tool);
+    if (!selected) return null;
+    return {
+      ...selected,
+      confidence: Number(parsed.confidence || 0.7),
+      rationale: String(parsed.rationale || "OpenAI selected the closest safe AgriNexus workflow."),
+      userFacingPlan: String(parsed.userFacingPlan || selected.action),
+      planner: "openai-agent-planner"
+    };
+  } catch (error) {
+    logIntegration(db, {
+      providerId: "openai",
+      module: "AI",
+      action: "agent.llm_tool_planner_error",
+      status: "fallback",
+      detail: error.message || "OpenAI agent planner unavailable.",
+      metadata: { command }
+    });
+    return null;
+  }
+}
+
+async function planAgenticTool(db, user, command) {
+  const openAiPlan = await planAgentToolWithOpenAi(db, user, command);
+  return openAiPlan || planAgentToolLocally(command);
+}
+
+async function routeAgenticCommand(db, user, command, options = {}) {
+  const plan = await planAgenticTool(db, user, command);
+  if (!plan) return null;
+  logIntegration(db, {
+    providerId: plan.planner === "openai-agent-planner" ? "openai" : "agent-router",
+    module: "AI",
+    action: plan.planner === "openai-agent-planner" ? "agent.llm_tool_planned" : "agent.local_tool_planned",
+    detail: `${plan.planner} selected ${plan.tool} for: ${command}`,
+    metadata: { tool: plan.tool, confidence: plan.confidence, rationale: plan.rationale }
+  });
+  const wantsExecute = options.confirm === true;
+  if (plan.tool === "ai.copilot") {
+    const { country, route } = activeContext(db);
+    const aiResult = await runAi("copilot", country, route, db.profile);
+    const run = recordAiRun(db, { type: "copilot", country, route, result: aiResult, module: "AI" });
+    return {
+      intent: "ai-question",
+      response: run.text,
+      status: "completed",
+      metadata: { runId: run.id, provider: run.provider, planner: plan.planner, confidence: plan.confidence, rationale: plan.rationale }
+    };
+  }
+  if (!wantsExecute) {
+    const staged = stageAgentAction(db, command, {
+      module: plan.module,
+      tool: plan.tool,
+      action: plan.action,
+      section: plan.section
+    });
+    return {
+      ...staged,
+      response: `I understood the goal and selected ${plan.action.toLowerCase()} in ${plan.module}. ${plan.rationale} Say or type "yes" to run it, or "no" to cancel.`,
+      metadata: {
+        ...staged.metadata,
+        planner: plan.planner,
+        confidence: plan.confidence,
+        rationale: plan.rationale,
+        userFacingPlan: plan.userFacingPlan || plan.action
+      }
+    };
+  }
+  const step = {
+    id: crypto.randomUUID(),
+    module: plan.module,
+    tool: plan.tool,
+    action: plan.action,
+    detail: `Agent-planned command: ${command}`,
+    status: "pending-approval"
+  };
+  const result = await executeAgentStepWithRetry(db, user, step, 2);
+  db.profile.agentMemory.lastStatus = result.status === "executed" ? "completed" : "needs-review";
+  db.profile.agentMemory.lastSummary = result.result || result.error || `${plan.action} completed.`;
+  db.profile.agentMemory.updatedAt = new Date().toISOString();
+  return {
+    intent: plan.tool,
+    response: result.result || result.error || `${plan.action} completed.`,
+    status: result.status === "executed" ? "completed" : "needs-review",
+    metadata: {
+      redirectSection: plan.section,
+      tool: plan.tool,
+      planner: plan.planner,
+      confidence: plan.confidence,
+      rationale: plan.rationale,
+      attempts: result.attempts
+    }
+  };
 }
 
 async function runAgentCommand(db, user, command, options = {}) {
@@ -3044,6 +3290,12 @@ async function runAgentCommand(db, user, command, options = {}) {
     };
   }
 
+  const isPlanRequest = (lower.includes("create") && lower.includes("plan")) || lower.startsWith("plan ") || lower.includes("onboard") || lower.includes("rural pilot");
+  if (!isPlanRequest) {
+    const agenticRoute = await routeAgenticCommand(db, user, text, { confirm: wantsExecute });
+    if (agenticRoute) return agenticRoute;
+  }
+
   if ((lower.includes("buyer") || lower.includes("customer")) && (lower.includes("speak") || lower.includes("talk") || lower.includes("call") || lower.includes("message") || lower.includes("contact"))) {
     const contact = createBuyerContactWorkflow(db, user, text);
     db.profile.agentMemory.lastStatus = "buyer-contact-ready";
@@ -3075,7 +3327,7 @@ async function runAgentCommand(db, user, command, options = {}) {
     };
   }
 
-  if ((lower.includes("create") && lower.includes("plan")) || lower.startsWith("plan ") || lower.includes("onboard") || lower.includes("farmer") || lower.includes("rural pilot")) {
+  if (isPlanRequest || lower.includes("farmer")) {
     const goal = commandGoal(text) || text || "Create an AgriNexus cross-module plan.";
     const plan = buildAgentPlan(db, goal, user);
     db.profile.agentPlans.unshift(plan);
