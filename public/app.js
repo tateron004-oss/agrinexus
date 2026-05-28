@@ -3402,6 +3402,14 @@ function render() {
 
   const accessProfile = data.profile.accessibilityProfile || {};
   const learningAccommodations = data.profile.learningAccommodations || [];
+  const advancedLearningOps = [
+    ...(data.profile.learningAssignments || []).map(item => ({ title: item.assignmentNumber, detail: `${item.courseTitle} - ${item.status}` })),
+    ...(data.profile.quizAttempts || []).map(item => ({ title: item.attemptNumber, detail: `${item.courseTitle} - ${item.score}% - ${item.status}` })),
+    ...(data.profile.instructorNotes || []).map(item => ({ title: item.noteNumber, detail: `${item.courseTitle} - ${item.status}` })),
+    ...(data.profile.learningProgressReports || []).map(item => ({ title: item.reportNumber, detail: `${item.courseTitle} - ${item.progress}% progress` })),
+    ...(data.profile.learningTranscripts || []).map(item => ({ title: item.transcriptNumber, detail: `${item.learnerName} - ${item.status}` })),
+    ...(data.profile.learningCohorts || []).map(item => ({ title: item.cohortNumber, detail: `${item.cohortName} - ${item.learnerCount} learners` }))
+  ];
   $("#learningAccessPanel").innerHTML = [
     row("Hearing support", accessProfile.hearingSupport ? "Captions, transcript, and relay handoff" : "Not configured"),
     row("Vision support", accessProfile.visualSupport ? "Audio guide, screen-reader outline, and large print" : "Not configured"),
@@ -3417,6 +3425,17 @@ function render() {
   renderProviderEvidence("#learningIntegrationPanel", "Learning", "No learning provider evidence yet. Start a course, complete a lesson, finish a quiz, issue a certificate, or test learning engines.");
   renderEnginePanel("#learningEnginePanel", "Learning");
   renderAiEvidence("#learningAiPanel", "Learning", "No AI tutor guidance yet. Ask the tutor for lesson support or quiz help.");
+  $("#learningAdvancedPanel").innerHTML = [
+    row("Assignments", (data.profile.learningAssignments || []).length),
+    row("Quiz attempts", (data.profile.quizAttempts || []).length),
+    row("Instructor notes", (data.profile.instructorNotes || []).length),
+    row("Progress reports", (data.profile.learningProgressReports || []).length),
+    row("Transcripts", (data.profile.learningTranscripts || []).length),
+    row("Cohorts", (data.profile.learningCohorts || []).length)
+  ].join("");
+  $("#learningAdvancedList").innerHTML = advancedLearningOps.length
+    ? advancedLearningOps.slice(0, 12).map(item => `<div><strong>${item.title}</strong><span>${item.detail}</span></div>`).join("")
+    : "<div>No advanced learning operations have been run yet.</div>";
 
   renderWorkspace("#learningWorkspace", [
     {
@@ -4337,6 +4356,34 @@ function workflowConfig(workflow, action, element) {
   if (workflow === "learning") {
     const course = activeCourse();
     if (!course) return null;
+    const advancedLearningActions = new Set(["assignment", "quiz-attempt", "note", "report", "transcript", "cohort"]);
+    if (advancedLearningActions.has(action)) {
+      const labels = {
+        assignment: ["Create assignment", "Create a practical assignment tied to the active course and workforce-ready reflection.", "Create assignment"],
+        "quiz-attempt": ["Record quiz attempt", "Record a quiz attempt, score, feedback, and certificate readiness evidence.", "Record attempt"],
+        note: ["Record instructor note", "Add an instructor note for progress, accessibility, and readiness coaching.", "Record note"],
+        report: ["Generate progress report", "Generate a learner progress report with readiness, hours, modules, and recommendation.", "Generate report"],
+        transcript: ["Issue learner transcript", "Issue a transcript with completed courses, certificates, and readiness evidence.", "Issue transcript"],
+        cohort: ["Create cohort", "Create a facilitated learning cohort for a rural learner group.", "Create cohort"]
+      };
+      const [title, summary, confirmLabel] = labels[action];
+      return simpleWorkflowConfig({
+        eyebrow: "Advanced learning",
+        title,
+        summary,
+        confirmLabel,
+        path: "/api/learning/advanced",
+        body: { type: action, courseId: course.id },
+        success: "Advanced learning operation complete",
+        record: "Learning operation record, active course, provider evidence, readiness context, and activity feed",
+        provider: "Learning course and certificate provider evidence is recorded for audit.",
+        checklist: [
+          { title: "Active course", detail: translatedCourse(course).title, status: "live", label: translatedCourse(course).track },
+          { title: "Learner progress", detail: `${courseEnrollment(course.id)?.progress || 0}% progress, ${data.profile.learningHours || 0} hour(s)`, status: "ready", label: "Record" },
+          { title: "Evidence", detail: "This action creates a concrete classroom operations record.", status: "ready", label: "Audit" }
+        ]
+      });
+    }
     if (action === "lesson") {
       const enrollment = courseEnrollment(course.id);
       return lessonWorkflowConfig(course, enrollment?.activeModuleIndex || 0);

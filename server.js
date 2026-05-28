@@ -1345,6 +1345,12 @@ function ensureLearningProfile(profile) {
   profile.learningPath = profile.learningPath || "Foundation Pathway";
   profile.learningStreak = profile.learningStreak || 0;
   profile.learningHours = profile.learningHours || 0;
+  profile.learningAssignments = profile.learningAssignments || [];
+  profile.quizAttempts = profile.quizAttempts || [];
+  profile.instructorNotes = profile.instructorNotes || [];
+  profile.learningProgressReports = profile.learningProgressReports || [];
+  profile.learningTranscripts = profile.learningTranscripts || [];
+  profile.learningCohorts = profile.learningCohorts || [];
   profile.accessibilityProfile = profile.accessibilityProfile || {
     hearingSupport: true,
     visualSupport: true,
@@ -5302,6 +5308,143 @@ async function api(req, res, url) {
     addWorkflowNote(db.profile, body.note, "Learning accessibility note");
     await writeDb(db);
     return send(res, 200, publicState(db, user));
+  }
+
+  if (url.pathname === "/api/learning/advanced" && req.method === "POST") {
+    if (!canUse(user, "learning")) return send(res, 403, { error: "Role does not allow advanced learning workflows" });
+    const body = await readBody(req);
+    ensureLearningProfile(db.profile);
+    const course = db.courses.find(item => item.id === (body.courseId || db.profile.activeCourseId)) || db.courses[0];
+    if (!course) return send(res, 404, { error: "Course not found" });
+    let enrollment = getEnrollment(db.profile, course.id);
+    if (!enrollment) {
+      enrollment = {
+        id: crypto.randomUUID(),
+        courseId: course.id,
+        status: "in_progress",
+        progress: 25,
+        score: 0,
+        activeModuleIndex: 0,
+        completedModules: [],
+        startedAt: new Date().toISOString(),
+        completedAt: null
+      };
+      db.profile.enrollments.unshift(enrollment);
+    }
+    const type = body.type || "assignment";
+    const now = new Date().toISOString();
+    const makers = {
+      assignment: () => {
+        const record = {
+          id: crypto.randomUUID(),
+          assignmentNumber: `AN-ASG-${String(db.profile.learningAssignments.length + 1).padStart(3, "0")}`,
+          courseId: course.id,
+          courseTitle: course.title,
+          title: body.title || `${course.title} field assignment`,
+          instructions: body.instructions || "Complete the lesson task, upload field notes, and prepare a short workforce-ready reflection.",
+          dueWindow: body.dueWindow || "next learning session",
+          status: "assigned",
+          createdAt: now
+        };
+        db.profile.learningAssignments.unshift(record);
+        return ["learning-courses", "learning.assignment_created", `${record.assignmentNumber} assignment created for ${course.title}.`, record];
+      },
+      "quiz-attempt": () => {
+        const record = {
+          id: crypto.randomUUID(),
+          attemptNumber: `AN-QUIZ-${String(db.profile.quizAttempts.length + 1).padStart(3, "0")}`,
+          courseId: course.id,
+          courseTitle: course.title,
+          score: Number(body.score || Math.max(72, Math.min(96, (enrollment.score || 60) + 18))),
+          status: "submitted",
+          feedback: "Review missed concepts, then proceed toward certificate readiness.",
+          createdAt: now
+        };
+        db.profile.quizAttempts.unshift(record);
+        enrollment.score = Math.max(enrollment.score || 0, record.score);
+        enrollment.progress = Math.max(enrollment.progress || 25, 85);
+        db.profile.quizScore = Math.max(db.profile.quizScore || 0, record.score);
+        return ["learning-certificates", "learning.quiz_attempt_recorded", `${record.attemptNumber} quiz attempt recorded at ${record.score}%.`, record];
+      },
+      note: () => {
+        const record = {
+          id: crypto.randomUUID(),
+          noteNumber: `AN-INST-${String(db.profile.instructorNotes.length + 1).padStart(3, "0")}`,
+          courseId: course.id,
+          courseTitle: course.title,
+          author: user.name,
+          note: body.note || "Instructor reviewed learner progress, accessibility needs, and workforce readiness path.",
+          status: "recorded",
+          createdAt: now
+        };
+        db.profile.instructorNotes.unshift(record);
+        return ["learning-courses", "learning.instructor_note_recorded", `${record.noteNumber} instructor note recorded for ${course.title}.`, record];
+      },
+      report: () => {
+        const record = {
+          id: crypto.randomUUID(),
+          reportNumber: `AN-LRPT-${String(db.profile.learningProgressReports.length + 1).padStart(3, "0")}`,
+          courseId: course.id,
+          courseTitle: course.title,
+          progress: enrollment.progress || 0,
+          readiness: db.profile.readiness,
+          learningHours: db.profile.learningHours || 0,
+          completedModules: (enrollment.completedModules || []).length,
+          recommendation: "Continue active course, complete assessment, and connect certificate to workforce role gate.",
+          status: "generated",
+          createdAt: now
+        };
+        db.profile.learningProgressReports.unshift(record);
+        return ["learning-courses", "learning.progress_report_generated", `${record.reportNumber} progress report generated for ${course.title}.`, record];
+      },
+      transcript: () => {
+        const record = {
+          id: crypto.randomUUID(),
+          transcriptNumber: `AN-TRN-${String(db.profile.learningTranscripts.length + 1).padStart(3, "0")}`,
+          learnerName: user.name,
+          activeCourse: course.title,
+          completedCourses: (db.profile.completedCourses || []).map(courseId => db.courses.find(item => item.id === courseId)?.title || courseId),
+          certificates: (db.profile.certificates || []).map(cert => cert.certificateNumber || cert.id),
+          readiness: db.profile.readiness,
+          status: "issued",
+          createdAt: now
+        };
+        db.profile.learningTranscripts.unshift(record);
+        return ["learning-certificates", "learning.transcript_issued", `${record.transcriptNumber} transcript issued for ${user.name}.`, record];
+      },
+      cohort: () => {
+        const record = {
+          id: crypto.randomUUID(),
+          cohortNumber: `AN-COH-${String(db.profile.learningCohorts.length + 1).padStart(3, "0")}`,
+          courseId: course.id,
+          courseTitle: course.title,
+          cohortName: body.cohortName || `${course.track} rural learner cohort`,
+          learnerCount: Number(body.learnerCount || 24),
+          facilitator: body.facilitator || "Community learning facilitator",
+          status: "active",
+          createdAt: now
+        };
+        db.profile.learningCohorts.unshift(record);
+        return ["learning-courses", "learning.cohort_created", `${record.cohortNumber} cohort created for ${course.title}.`, record];
+      }
+    };
+    const maker = makers[type];
+    if (!maker) return send(res, 400, { error: "Unsupported advanced learning action" });
+    const [providerId, action, detail, record] = maker();
+    ["learningAssignments", "quizAttempts", "instructorNotes", "learningProgressReports", "learningTranscripts", "learningCohorts"].forEach(key => {
+      db.profile[key] = db.profile[key].slice(0, 20);
+    });
+    db.profile.activeCourseId = course.id;
+    db.profile.learningStreak += 1;
+    db.profile.learningHours = Number((Number(db.profile.learningHours || 0) + 0.25).toFixed(2));
+    recalcReadiness(db.profile);
+    logIntegration(db, { providerId, module: "Learning", action, detail, metadata: { recordId: record.id, courseId: course.id, type } });
+    addActivity(db.profile, detail);
+    addWorkflowNote(db.profile, body.note, "Advanced learning note");
+    await writeDb(db);
+    const state = publicState(db, user);
+    state.learningAdvancedResult = { type, record };
+    return send(res, 200, state);
   }
 
   if (url.pathname === "/api/workforce/action" && req.method === "POST") {
