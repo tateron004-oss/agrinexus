@@ -4814,6 +4814,11 @@ function speakVoiceResponse(textOverride) {
       updateVoiceOutputStatus(`OpenAI voice returned no audio. Provider: ${result.voiceResult?.provider || "unknown"}.`);
     })
     .catch(error => {
+      if (/sign in required/i.test(error.message || "")) {
+        updateVoiceOutputStatus("Your session expired after redeploy. Sign in again, then press Read response.");
+        toast("Please sign in again to use OpenAI voice.");
+        return;
+      }
       updateVoiceOutputStatus(`OpenAI voice unavailable: ${error.message || "speech request failed"}. Robotic browser voice is off.`);
       toast("OpenAI voice unavailable. Check Render environment values.");
     });
