@@ -7421,7 +7421,9 @@ function serveStatic(req, res, url) {
   if (!filePath.startsWith(PUBLIC)) return send(res, 403, "Forbidden");
   fs.readFile(filePath, (err, data) => {
     if (err) return send(res, 404, "Not found");
-    res.writeHead(200, { "content-type": mime[path.extname(filePath)] || "application/octet-stream" });
+    const ext = path.extname(filePath);
+    const cacheControl = ext === ".html" || ext === ".js" ? "no-store" : "public, max-age=3600";
+    res.writeHead(200, { "content-type": mime[ext] || "application/octet-stream", "cache-control": cacheControl });
     res.end(data);
   });
 }
