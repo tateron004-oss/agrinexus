@@ -49,6 +49,7 @@ const clickTargets = [
   "pilotFarmerMarketBtn",
   "pilotHealthWorkforceBtn",
   "adminHealthCheck",
+  "liveServiceCheckBtn",
   "agentPlanBtn",
   "agentExecuteBtn",
   "agentBriefingBtn",
@@ -93,7 +94,8 @@ const endpoints = [
   "/api/admin/subscriber",
   "/api/engines/manifest",
   "/api/production/complete-check",
-  "/api/production/operations-plan"
+  "/api/production/operations-plan",
+  "/api/production/live-service-check"
 ];
 
 assert(app.includes('event.target.closest("[data-voice-example]")'), "Ask AgriNexus guide buttons need delegated click handling");
@@ -121,6 +123,8 @@ assert(server.includes("function buildAutopilotPlan"), "Backend needs Agent Auto
 assert(server.includes("agent.autopilot_executed"), "Autopilot execution must be recorded as agent evidence");
 assert(html.includes("missionDashboardPanel"), "Agent page needs an Autopilot Mission Dashboard");
 assert(app.includes("function renderMissionDashboard"), "Frontend needs to render mission plans and executions");
+assert(html.includes("liveServiceCheckPanel"), "Admin needs a live service finalization panel");
+assert(app.includes("function runLiveServiceCheck"), "Frontend needs a live service finalization action");
 
 for (const endpoint of endpoints) {
   assert(server.includes(endpoint), `Missing backend endpoint ${endpoint}`);

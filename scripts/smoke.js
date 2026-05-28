@@ -88,6 +88,10 @@ async function call(path, body) {
   assert(manifest.engines.some(engine => engine.id === "telehealth"));
   assert(manifest.engines.some(engine => engine.id === "workforce"));
   assert(manifest.engines.some(engine => engine.id === "trade-drone"));
+  const liveServiceCheck = await call("/api/production/live-service-check", {});
+  assert(liveServiceCheck.liveServiceCheckResult.total >= 7);
+  assert(liveServiceCheck.profile.liveServiceChecks.length >= 1);
+  assert(liveServiceCheck.profile.integrationEvents.some(event => event.action === "production.live_service_check"));
   const reset = await call("/api/auth/password-reset", { email: "demo@agrinexus.org" });
   assert(reset.ok === true);
   const onboarding = await call("/api/onboarding/start", { scenario: "first-live-pilot" });

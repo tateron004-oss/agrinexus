@@ -2846,7 +2846,7 @@ function renderLaunchSupportPanels() {
 }
 
 function applyPermissions() {
-  $$("[data-workflow], [data-ai], [data-workforce], [data-health], [data-pay], [data-module-test], [data-command-preset], [data-pilot-scenario], [data-persona], [data-simple-command], [data-simple-section], [data-simple-pilot], [data-simple-demo], [data-simple-mission], [data-simple-action], .provider-test, #adminHealthCheck, #aiConsoleRun, #agentPlanBtn, #agentExecuteBtn, #agentBriefingBtn, #agentMissionBtn, #missionResumeBtn, #missionAutopilotBtn, #demoRunBtn, #wowDemoBtn, #startOnboardingBtn, #openSupportBtn, #inviteSubscriberBtn, [data-ai-review], [data-notify], #voiceListenBtn, #voiceRunBtn, #voiceFirstBtn, #voiceSpeakBtn, #voiceHelpBtn, #globalListenBtn, #globalRunBtn, #globalYesBtn, #globalNoBtn, #globalReadBtn, #globalVoiceHelpBtn, #globalInstallBtn, #jarvisListenBtn, #jarvisRunBtn, #jarvisMissionBtn, #jarvisReadBtn").forEach(element => {
+  $$("[data-workflow], [data-ai], [data-workforce], [data-health], [data-pay], [data-module-test], [data-command-preset], [data-pilot-scenario], [data-persona], [data-simple-command], [data-simple-section], [data-simple-pilot], [data-simple-demo], [data-simple-mission], [data-simple-action], .provider-test, #adminHealthCheck, #liveServiceCheckBtn, #aiConsoleRun, #agentPlanBtn, #agentExecuteBtn, #agentBriefingBtn, #agentMissionBtn, #missionResumeBtn, #missionAutopilotBtn, #demoRunBtn, #wowDemoBtn, #startOnboardingBtn, #openSupportBtn, #inviteSubscriberBtn, [data-ai-review], [data-notify], #voiceListenBtn, #voiceRunBtn, #voiceFirstBtn, #voiceSpeakBtn, #voiceHelpBtn, #globalListenBtn, #globalRunBtn, #globalYesBtn, #globalNoBtn, #globalReadBtn, #globalVoiceHelpBtn, #globalInstallBtn, #jarvisListenBtn, #jarvisRunBtn, #jarvisMissionBtn, #jarvisReadBtn").forEach(element => {
     const area = element.dataset.workflow
       || (element.dataset.ai ? "ai" : null)
       || (element.dataset.workforce ? "workforce" : null)
@@ -2864,6 +2864,7 @@ function applyPermissions() {
       || (element.dataset.simpleAction ? "ai" : null)
       || (element.classList.contains("provider-test") ? "integrations" : null)
       || (element.id === "adminHealthCheck" ? "admin" : null)
+      || (element.id === "liveServiceCheckBtn" ? "admin" : null)
       || (element.id === "aiConsoleRun" ? "ai" : null)
       || (element.id === "agentPlanBtn" ? "ai" : null)
       || (element.id === "agentExecuteBtn" ? "ai" : null)
@@ -3927,6 +3928,16 @@ function render() {
       ${item.ready ? "" : `<small>${(item.missing || []).slice(0, 2).join(" | ")}</small>`}
     </div>
   `).join("") || "<div>No production operations plan available.</div>";
+  const liveChecks = data.profile.liveServiceChecks || [];
+  $("#liveServiceCheckPanel").innerHTML = liveChecks.length
+    ? liveChecks.slice(0, 2).map(report => `
+      <div>
+        <strong>${translateText(`Live service check - ${report.status}`)}</strong>
+        <span>${translateText(`${report.readyCount}/${report.total} ready - ${new Date(report.createdAt).toLocaleString()}`)}</span>
+        ${(report.checks || []).map(check => `<small>${translateText(check.title)}: ${translateText(check.status)}</small>`).join("")}
+      </div>
+    `).join("")
+    : "<div>Run the live service check after Render environment variables are set.</div>";
   const usage = data.admin?.usage || { totalEvents: 0, modules: {}, latest: [] };
   const supportTickets = data.admin?.supportTickets || [];
   $("#adminUsagePanel").innerHTML = [
@@ -4748,6 +4759,33 @@ async function runAdminHealthCheckDirect() {
       refreshedButton.disabled = false;
       refreshedButton.removeAttribute("aria-busy");
       refreshedButton.textContent = "Run health check";
+    }
+  }
+}
+
+async function runLiveServiceCheck() {
+  const button = $("#liveServiceCheckBtn");
+  if (button) {
+    button.disabled = true;
+    button.setAttribute("aria-busy", "true");
+    button.textContent = "Checking live services...";
+  }
+  try {
+    data = await request("/api/production/live-service-check", { method: "POST", body: {} });
+    render();
+    goSection("admin", { instant: true });
+    const result = data.liveServiceCheckResult || (data.profile.liveServiceChecks || [])[0];
+    const message = `Live service check complete. ${result?.readyCount || 0}/${result?.total || 0} services are ready.`;
+    setVoiceResponse(message, true);
+    toast("Live service check complete");
+  } catch (error) {
+    toast(error.message || "Live service check failed");
+  } finally {
+    const refreshedButton = $("#liveServiceCheckBtn");
+    if (refreshedButton) {
+      refreshedButton.disabled = false;
+      refreshedButton.removeAttribute("aria-busy");
+      refreshedButton.textContent = "Run live service check";
     }
   }
 }
@@ -6115,6 +6153,8 @@ function bindStatic() {
   });
   const adminHealthCheck = $("#adminHealthCheck");
   if (adminHealthCheck) adminHealthCheck.onclick = runAdminHealthCheckDirect;
+  const liveServiceCheck = $("#liveServiceCheckBtn");
+  if (liveServiceCheck) liveServiceCheck.onclick = runLiveServiceCheck;
   $("#demoRunBtn").onclick = runExecutiveDemo;
   $("#wowDemoBtn").onclick = runWowDemo;
   $$("[data-ai-review]").forEach(button => button.onclick = () => reviewLatestAi(button.dataset.aiReview));

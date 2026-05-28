@@ -972,6 +972,154 @@ function capabilityMatrix(db, providers = runtimeProviders(db)) {
   };
 }
 
+function mapTileProbeUrl() {
+  const template = process.env.MAP_TILE_URL || "";
+  if (!template) return "";
+  return template
+    .replace("{z}", "0")
+    .replace("{x}", "0")
+    .replace("{y}", "0")
+    .replace("{s}", "a");
+}
+
+async function probeUrl(url, options = {}) {
+  if (!url) return { attempted: false, ok: false, status: "missing-url" };
+  try {
+    const response = await fetch(url, { method: options.method || "GET", headers: options.headers || {} });
+    return { attempted: true, ok: response.ok, status: response.status };
+  } catch (error) {
+    return { attempted: true, ok: false, status: "fetch-error", error: error.message };
+  }
+}
+
+async function productionLiveServiceCheck(db, user) {
+  ensureAiProfile(db.profile);
+  ensureOperationsProfile(db.profile);
+  const checks = [];
+  const push = (id, title, ok, detail, metadata = {}) => {
+    checks.push({ id, title, ok: Boolean(ok), status: ok ? "ready" : "needs-setup", detail, metadata });
+  };
+
+  push(
+    "postgres",
+    "PostgreSQL state store",
+    Boolean(process.env.DATABASE_URL && usingPostgresState() && loadOptional("pg")),
+    process.env.DATABASE_URL
+      ? (usingPostgresState() ? "DATABASE_URL is configured and AGRINEXUS_STATE_STORE=postgres is active." : "DATABASE_URL is configured; set AGRINEXUS_STATE_STORE=postgres to activate hosted persistence.")
+      : "DATABASE_URL is missing. Create/link Render PostgreSQL and set AGRINEXUS_STATE_STORE=postgres.",
+    { hasDatabaseUrl: Boolean(process.env.DATABASE_URL), stateStore: STATE_STORE, pgAvailable: Boolean(loadOptional("pg")) }
+  );
+
+  const bridgeBase = String(process.env.PROVIDER_ENGINE_BASE_URL || "").replace(/\/+$/, "");
+  const bridgeProbe = bridgeBase ? await probeUrl(`${bridgeBase}/healthz`) : { attempted: false, ok: false, status: "missing-url" };
+  push(
+    "provider-engine-bridge",
+    "Provider-engine bridge",
+    bridgeProbe.ok,
+    bridgeProbe.ok ? `Provider bridge responded at ${bridgeBase}/healthz.` : "Set PROVIDER_ENGINE_BASE_URL to the provider-engine Render URL, then redeploy.",
+    { baseUrl: bridgeBase || null, probe: bridgeProbe }
+  );
+
+  const translationResult = await translateDynamicContent(db, user, {
+    text: "Telehealth intake is ready for voice-first support.",
+    targetLanguage: "sw",
+    sourceLanguage: "en",
+    context: "live-service-check"
+  });
+  push(
+    "translation",
+    "Translation provider/live translation",
+    Boolean(translationResult.translatedText && translationResult.provider !== "local-after-translation-error"),
+    `Translation returned through ${translationResult.provider}: ${translationResult.translatedText}`,
+    { provider: translationResult.provider, targetLanguage: translationResult.targetLanguage }
+  );
+
+  const tileUrl = mapTileProbeUrl();
+  const tileProbe = tileUrl ? await probeUrl(tileUrl) : { attempted: false, ok: false, status: "missing-url" };
+  push(
+    "map-tiles",
+    "Map tile provider",
+    Boolean(process.env.MAP_TILE_PROVIDER && (process.env.MAP_TILE_PROVIDER === "openstreetmap" || process.env.MAP_TILE_URL ? tileProbe.ok || !REQUIRE_LIVE_SERVICES : !REQUIRE_LIVE_SERVICES)),
+    tileUrl
+      ? `Map tile probe ${tileProbe.ok ? "succeeded" : "did not confirm"} for ${process.env.MAP_TILE_PROVIDER || "custom"} tiles.`
+      : "Set MAP_TILE_PROVIDER and MAP_TILE_URL for a live custom tile provider.",
+    { provider: process.env.MAP_TILE_PROVIDER || null, tileUrl: tileUrl || null, probe: tileProbe }
+  );
+
+  const billingEvent = {
+    providerId: "billing-subscriptions",
+    module: "Platform",
+    action: "billing.live_service_check",
+    detail: "Live billing/subscription provider check from production finalization.",
+    metadata: { priceId: process.env.BILLING_PRICE_ID || null, checkedBy: user.email }
+  };
+  const billingDelivery = await dispatchProviderWebhook(db, billingEvent).catch(error => ({ attempted: true, ok: false, status: "dispatch-error", error: error.message }));
+  logIntegration(db, { ...billingEvent, status: billingDelivery.ok ? "success" : "needs-credentials", metadata: { ...billingEvent.metadata, delivery: billingDelivery }, dispatch: false });
+  push("billing", "Billing/subscription test", billingDelivery.ok && Boolean(process.env.BILLING_PRICE_ID), billingDelivery.ok ? "Billing provider accepted the live check." : "Billing provider or BILLING_PRICE_ID still needs setup.", { delivery: billingDelivery });
+
+  const resetEvent = {
+    providerId: "auth-password-reset",
+    module: "Platform",
+    action: "auth.password_reset_live_check",
+    detail: `Password reset provider check for ${user.email}.`,
+    metadata: { email: user.email }
+  };
+  const resetDelivery = await dispatchProviderWebhook(db, resetEvent).catch(error => ({ attempted: true, ok: false, status: "dispatch-error", error: error.message }));
+  logIntegration(db, { ...resetEvent, status: resetDelivery.ok ? "success" : "needs-credentials", metadata: { ...resetEvent.metadata, delivery: resetDelivery }, dispatch: false });
+  push("auth-password-reset", "Password reset/auth provider test", resetDelivery.ok, resetDelivery.ok ? "Password reset provider accepted the live check." : "Auth/password reset provider still needs endpoint or credentials.", { delivery: resetDelivery });
+
+  const communicationProviders = [
+    ["email-delivery", "Email notification"],
+    ["sms-delivery", "SMS notification"],
+    ["whatsapp-delivery", "WhatsApp notification"]
+  ];
+  const communicationResults = [];
+  for (const [providerId, label] of communicationProviders) {
+    const event = {
+      providerId,
+      module: "Platform",
+      action: "notification.live_service_check",
+      detail: `${label} live notification provider check.`,
+      metadata: { checkedBy: user.email }
+    };
+    const delivery = await dispatchProviderWebhook(db, event).catch(error => ({ attempted: true, ok: false, status: "dispatch-error", error: error.message }));
+    communicationResults.push({ providerId, label, delivery });
+    logIntegration(db, { ...event, status: delivery.ok ? "success" : "needs-credentials", metadata: { ...event.metadata, delivery }, dispatch: false });
+  }
+  const communicationOk = communicationResults.every(item => item.delivery.ok);
+  push(
+    "communications",
+    "Email/SMS/WhatsApp notification test",
+    communicationOk,
+    communicationOk ? "Email, SMS, and WhatsApp providers accepted live checks." : "One or more communication providers still need endpoint/credentials.",
+    { results: communicationResults }
+  );
+
+  const report = {
+    id: crypto.randomUUID(),
+    status: checks.every(check => check.ok) ? "ready" : "needs-setup",
+    readyCount: checks.filter(check => check.ok).length,
+    total: checks.length,
+    checks,
+    createdBy: user.email,
+    createdAt: new Date().toISOString()
+  };
+  db.profile.liveServiceChecks = db.profile.liveServiceChecks || [];
+  db.profile.liveServiceChecks.unshift(report);
+  db.profile.liveServiceChecks = db.profile.liveServiceChecks.slice(0, 10);
+  logIntegration(db, {
+    providerId: "openai",
+    module: "Admin",
+    action: "production.live_service_check",
+    status: report.status === "ready" ? "success" : "needs-credentials",
+    detail: `Live service check completed: ${report.readyCount}/${report.total} ready.`,
+    metadata: { reportId: report.id, readyCount: report.readyCount, total: report.total },
+    dispatch: false
+  });
+  addActivity(db.profile, `Live service check completed: ${report.readyCount}/${report.total} ready.`);
+  return report;
+}
+
 function automationReadiness(db, providers = runtimeProviders(db)) {
   const providerConnected = id => {
     const provider = providers.find(item => item.id === id);
@@ -3868,6 +4016,16 @@ async function api(req, res, url) {
   if (url.pathname === "/api/production/operations-plan" && req.method === "GET") {
     const providers = runtimeProviders(db);
     return send(res, 200, productionOperationsPlan(db, providers));
+  }
+
+  if (url.pathname === "/api/production/live-service-check" && req.method === "POST") {
+    if (!user) return send(res, 401, { error: "Sign in required" });
+    if (!canUse(user, "admin")) return send(res, 403, { error: "Role does not allow production service checks" });
+    const report = await productionLiveServiceCheck(db, user);
+    await writeDb(db);
+    const state = publicState(db, user);
+    state.liveServiceCheckResult = report;
+    return send(res, 200, state);
   }
 
   if (url.pathname === "/api/login" && req.method === "POST") {
