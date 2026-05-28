@@ -2870,7 +2870,16 @@ async function executePendingAgentAction(db, user, pending) {
       intent: pending.tool,
       response: `Done. ${result.result || result.error || `${pending.action} completed.`}`,
       status: result.status === "executed" ? "completed" : "needs-review",
-      metadata: { conversationMode: true, redirectSection: pending.section || sectionForAgentModule(pending.module), tool: pending.tool, attempts: result.attempts }
+      metadata: {
+        conversationMode: true,
+        redirectSection: pending.section || sectionForAgentModule(pending.module),
+        tool: pending.tool,
+        planner: pending.planner || null,
+        confidence: pending.confidence || null,
+        rationale: pending.rationale || null,
+        userFacingPlan: pending.userFacingPlan || pending.action || null,
+        attempts: result.attempts
+      }
     };
   }
   return { intent: "conversation.no_pending_action", response: "I could not find the pending workflow details. Please ask again.", status: "needs-input" };
@@ -3081,7 +3090,11 @@ async function routeAgenticCommand(db, user, command, options = {}) {
       module: plan.module,
       tool: plan.tool,
       action: plan.action,
-      section: plan.section
+      section: plan.section,
+      planner: plan.planner,
+      confidence: plan.confidence,
+      rationale: plan.rationale,
+      userFacingPlan: plan.userFacingPlan || plan.action
     });
     return {
       ...staged,

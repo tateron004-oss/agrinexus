@@ -13,7 +13,7 @@
   <link rel="icon" href="/icons/agri-nexus-192.png" type="image/png">
   <link rel="apple-touch-icon" href="/icons/agri-nexus-192.png">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-  <link rel="stylesheet" href="/styles.css?v=ask-nexus-23">
+  <link rel="stylesheet" href="/styles.css?v=agent-reasoning-24">
 </head>
 <body>
   <a class="skip-link" href="#mainContent">Skip to main content</a>
@@ -613,6 +613,26 @@
               <span id="voiceTranscript">Ready for a command.</span>
               <small id="voicePlaybackStatus" class="micro-status">Voice output standing by.</small>
               <div id="voiceSuggestions" class="voice-suggestions"></div>
+            </div>
+          </div>
+          <div class="agent-reasoning-panel" aria-labelledby="agentReasoningTitle">
+            <div class="reasoning-head">
+              <div>
+                <span class="eyebrow">Agent reasoning</span>
+                <h3 id="agentReasoningTitle">How Nexus Decides</h3>
+              </div>
+              <span id="agentReasoningConfidence" class="reasoning-confidence">standing by</span>
+            </div>
+            <div id="agentReasoningSteps" class="reasoning-steps"></div>
+            <div class="reasoning-evidence">
+              <div>
+                <strong>Selected workflow</strong>
+                <span id="agentReasoningWorkflow">No workflow selected yet.</span>
+              </div>
+              <div>
+                <strong>Evidence created</strong>
+                <span id="agentReasoningEvidence">Run or confirm a workflow to see the audit trail.</span>
+              </div>
             </div>
           </div>
           <div class="cards three">

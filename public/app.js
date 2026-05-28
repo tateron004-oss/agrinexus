@@ -2409,6 +2409,56 @@ function renderNotificationPanel() {
     : `<div>${translateText("No notifications sent yet.")}</div>`;
 }
 
+function renderAgentReasoningPanel({ latestCommand, pendingAction, latestExecution }) {
+  const stepsTarget = $("#agentReasoningSteps");
+  if (!stepsTarget) return;
+  const metadata = latestCommand?.metadata || {};
+  const hasCommand = Boolean(latestCommand?.command || pendingAction?.command);
+  const selectedTool = pendingAction?.tool || metadata.tool || latestCommand?.intent || "";
+  const selectedAction = pendingAction?.action || metadata.userFacingPlan || selectedTool || "No workflow selected yet.";
+  const planner = pendingAction?.planner || metadata.planner || (selectedTool ? "deterministic workflow router" : "standing by");
+  const confidence = Number(pendingAction?.confidence || metadata.confidence || 0);
+  const confidenceText = confidence ? `${Math.round(confidence * 100)}% confidence` : (hasCommand ? "workflow routed" : "standing by");
+  const rationale = pendingAction?.rationale || metadata.rationale || (hasCommand
+    ? "Nexus matched the request against the available AgriNexus workflow tools and safety rules."
+    : "Ask Nexus a natural-language request to see the agent reasoning path.");
+  const evidence = latestExecution?.summary
+    || latestCommand?.response
+    || "Run or confirm a workflow to see the audit trail.";
+  const steps = [
+    {
+      label: "1. Heard",
+      title: "User request",
+      detail: latestCommand?.command || pendingAction?.command || "No command submitted yet."
+    },
+    {
+      label: "2. Understood",
+      title: latestCommand?.intent || pendingAction?.tool || "Standing by",
+      detail: rationale
+    },
+    {
+      label: "3. Selected",
+      title: selectedAction,
+      detail: selectedTool ? `${planner} chose ${selectedTool}.` : "Nexus will choose a workflow when a request is submitted."
+    },
+    {
+      label: "4. Next step",
+      title: pendingAction ? "Waiting for confirmation" : (latestCommand?.status || "Ready"),
+      detail: pendingAction ? "Say or type yes to run it, or no to cancel." : "Completed actions and responses are recorded as platform evidence."
+    }
+  ];
+  $("#agentReasoningConfidence").textContent = translateText(confidenceText);
+  $("#agentReasoningWorkflow").textContent = translateText(selectedTool ? `${selectedAction} (${selectedTool})` : "No workflow selected yet.");
+  $("#agentReasoningEvidence").textContent = translateText(evidence);
+  stepsTarget.innerHTML = steps.map(step => `
+    <div class="reasoning-step">
+      <small>${translateText(step.label)}</small>
+      <strong>${translateText(step.title)}</strong>
+      <span>${translateText(step.detail)}</span>
+    </div>
+  `).join("");
+}
+
 function renderAgentCenter() {
   const plan = (data.profile.agentPlans || [])[0];
   const executions = data.profile.agentExecutions || [];
@@ -2451,6 +2501,7 @@ function renderAgentCenter() {
     `<div><strong>Last summary</strong><span>${translateText(memory.lastSummary || "No summary yet")}</span></div>`
   ].join("");
   const latestCommand = commands[0];
+  renderAgentReasoningPanel({ latestCommand, pendingAction: data.profile.agentPendingAction, latestExecution: executions[0] });
   $("#agentUnderstandingPanel").innerHTML = [
     `<div><strong>What I heard</strong><span>${translateText(latestCommand?.command || "No command yet")}</span></div>`,
     `<div><strong>What I understood</strong><span>${translateText(latestCommand?.intent || "Standing by")}</span></div>`,

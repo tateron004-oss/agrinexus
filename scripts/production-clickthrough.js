@@ -110,6 +110,8 @@ assert(app.includes("function runAdminHealthCheckDirect"), "Admin top health che
 assert(server.includes("function agentToolRegistry"), "Backend needs a safe agent tool registry for open-ended requests");
 assert(server.includes("function planAgentToolWithOpenAi"), "Backend needs live LLM planning for agentic commands");
 assert(server.includes("agent.llm_tool_planned"), "Agent planner must create provider evidence when OpenAI selects a workflow tool");
+assert(html.includes("agentReasoningTitle"), "Agent page needs a visible reasoning panel");
+assert(app.includes("function renderAgentReasoningPanel"), "Frontend needs to render agent reasoning from command metadata");
 
 for (const endpoint of endpoints) {
   assert(server.includes(endpoint), `Missing backend endpoint ${endpoint}`);
