@@ -1319,6 +1319,98 @@ function buildAgentPlan(db, goal, user) {
   };
 }
 
+function buildAutopilotPlan(db, goal, user) {
+  const { country, route } = activeContext(db);
+  const lower = String(goal || "").toLowerCase();
+  const course = db.courses.find(item => item.id === db.profile.activeCourseId) || db.courses[0];
+  const role = db.roles.find(item => roleReadiness(db.profile, item).eligible) || db.roles[0];
+  const product = (db.products || []).find(item => item.countryId === country.id) || (db.products || [])[0];
+  const memory = retrieveAgentMemories(db.profile, goal, 5);
+  const makeStep = (module, tool, action, detail) => ({
+    id: crypto.randomUUID(),
+    module,
+    tool,
+    action,
+    detail,
+    status: "pending-approval"
+  });
+  let steps;
+  if (lower.includes("patient") || lower.includes("telehealth") || lower.includes("health") || lower.includes("care")) {
+    steps = [
+      makeStep("Healthcare", "health.intake", "Start telehealth intake", `Open a patient intake for ${country.name} with voice-first accessibility.`),
+      makeStep("Healthcare", "health.accessibility_review", "Prepare accessible care", "Apply captions, audio support, caregiver handoff, and low-bandwidth callback preferences."),
+      makeStep("Healthcare", "health.vitals", "Capture vitals", "Create vitals evidence before routing the case."),
+      makeStep("Healthcare", "health.careplan", "Generate care plan", "Create supervised care guidance from the intake and vitals evidence."),
+      makeStep("Healthcare", "health.followup", "Schedule follow-up", "Create a callback path for patient continuity."),
+      makeStep("AI", "ai.copilot", "Summarize health mission", "Prepare a supervised operator summary for human review.")
+    ];
+  } else if (lower.includes("job") || lower.includes("workforce") || lower.includes("worker") || lower.includes("training") || lower.includes("learner")) {
+    steps = [
+      makeStep("Learning", "learning.start_or_continue", "Start learning path", `Use ${course?.title || "active course"} as the training path.`),
+      makeStep("Learning", "learning.complete_lesson", "Complete lesson", "Advance the learner and create progress evidence."),
+      makeStep("Learning", "learning.certificate", "Issue certificate", "Create credential evidence for workforce readiness."),
+      makeStep("Workforce", "workforce.build_profile", "Verify candidate profile", "Prepare the candidate profile for role matching."),
+      makeStep("Workforce", "workforce.match_role", "Match role", `Compare readiness against ${role?.title || "available role"}.`),
+      makeStep("Workforce", "workforce.apply_role", "Apply for role", "Submit or prepare the best matched role application."),
+      makeStep("Workforce", "workforce.schedule_interview", "Schedule interview", "Prepare the candidate for next employer contact."),
+      makeStep("AI", "ai.copilot", "Summarize workforce mission", "Prepare a supervised operator summary for human review.")
+    ];
+  } else {
+    steps = [
+      makeStep("AgriTech", "drone.flight_plan", "Plan drone mission", `Plan field evidence collection for ${product?.name || "active crop lot"}.`),
+      makeStep("AgriTrade", "drone.field_scan", "Run field scan", "Create crop health, stress, yield, and map evidence."),
+      makeStep("AgriTech", "drone.intervention_task", "Assign field intervention", "Convert crop evidence into a practical field follow-up task."),
+      makeStep("AgriTrade", "trade.market_review", "Review market", `Create market/order evidence for ${product?.name || "available product"}.`),
+      makeStep("AgriTrade", "trade.buyer_contact", "Contact buyer", "Prepare buyer communication for the active crop/order."),
+      makeStep("Maps", "map.route_risk", "Assess route risk", `Assess ${route.name} at ${db.profile.activeCheckpoint}.`),
+      makeStep("AgriTrade", "trade.advance_order", "Advance logistics", "Move the order through the next logistics checkpoint."),
+      makeStep("AgriTrade", "trade.wallet_payment", "Prepare payment", "Record wallet/payment evidence for the trade mission."),
+      makeStep("AI", "ai.copilot", "Summarize farmer mission", "Prepare a supervised operator summary for human review.")
+    ];
+  }
+  return {
+    id: crypto.randomUUID(),
+    goal,
+    mode: "autopilot",
+    status: "awaiting-approval",
+    createdBy: user.email,
+    countryId: country.id,
+    routeId: route.id,
+    memoryUsed: memory.map(item => ({ id: item.id, category: item.category, text: item.text || item.response || item.command })),
+    steps,
+    createdAt: new Date().toISOString()
+  };
+}
+
+async function createAndExecuteAutopilotMission(db, user, goal, note = "Approved from Agent Autopilot mode") {
+  ensureAiProfile(db.profile);
+  const plan = buildAutopilotPlan(db, goal, user);
+  db.profile.agentPlans.unshift(plan);
+  db.profile.agentPlans = db.profile.agentPlans.slice(0, 12);
+  logIntegration(db, {
+    providerId: "openai",
+    module: "AI",
+    action: "agent.autopilot_plan_created",
+    detail: `Autopilot created ${plan.steps.length} mission step(s).`,
+    metadata: { planId: plan.id, goal, memoryUsed: plan.memoryUsed }
+  });
+  const execution = await executeAgentPlanObject(db, user, plan, note);
+  logIntegration(db, {
+    providerId: "openai",
+    module: "AI",
+    action: "agent.autopilot_executed",
+    detail: execution.summary,
+    metadata: { planId: plan.id, executionId: execution.id, steps: execution.steps.length }
+  });
+  db.profile.agentMemory.lastGoal = goal;
+  db.profile.agentMemory.lastPlanId = plan.id;
+  db.profile.agentMemory.lastExecutionId = execution.id;
+  db.profile.agentMemory.lastStatus = execution.status;
+  db.profile.agentMemory.lastSummary = execution.summary;
+  db.profile.agentMemory.updatedAt = new Date().toISOString();
+  return { plan, execution };
+}
+
 function addTradeEvent(profile, event) {
   ensureTradeProfile(profile);
   profile.tradeEvents.unshift({ id: crypto.randomUUID(), createdAt: new Date().toISOString(), ...event });
@@ -2925,7 +3017,9 @@ function stageAgentAction(db, command, action) {
       conversationMode: true,
       pendingActionId: pending.id,
       redirectSection: pending.section,
-      tool: pending.tool || null
+      tool: pending.tool || null,
+      mode: pending.kind === "autopilot-mission" ? "autopilot" : null,
+      previewSteps: pending.previewSteps || []
     }
   };
 }
@@ -2949,6 +3043,15 @@ async function executePendingAgentAction(db, user, pending) {
       response: `Done. ${result.response}`,
       status: result.status,
       metadata: { conversationMode: true, redirectSection: "workforce", roleId: result.role?.id || null, applicationId: result.application?.id || null, readiness: result.readiness || null }
+    };
+  }
+  if (pending.kind === "autopilot-mission") {
+    const { plan, execution } = await createAndExecuteAutopilotMission(db, user, pending.goal || pending.command || "Run an AgriNexus autopilot mission.", "Confirmed from voice-first autopilot");
+    return {
+      intent: "agent.autopilot_executed",
+      response: `Autopilot complete. ${execution.summary}`,
+      status: execution.status,
+      metadata: { conversationMode: true, redirectSection: pending.section || "agent", planId: plan.id, executionId: execution.id, steps: execution.steps.length, mode: "autopilot" }
     };
   }
   if (pending.tool) {
@@ -3320,6 +3423,31 @@ async function runAgentCommand(db, user, command, options = {}) {
       engines: { module: "Integrations", tool: "integrations.test_all", action: "Test provider engines", section: "integrations" }
     }[lower];
     if (guidedShortcut) return stageAgentAction(db, text, guidedShortcut);
+  }
+
+  if (lower.includes("autopilot") || lower.includes("auto pilot") || lower.includes("take over") || lower.includes("run the mission")) {
+    const goal = text.replace(/^(run|start|create|use|activate)?\s*(agent\s+)?(auto\s*pilot|autopilot)\s*(mode)?\s*(for|to)?/i, "").trim() || text || "Run an AgriNexus autopilot mission.";
+    if (!wantsExecute) {
+      const preview = buildAutopilotPlan(db, goal, user);
+      db.profile.agentMemory.lastStatus = "autopilot-awaiting-confirmation";
+      db.profile.agentMemory.lastSummary = `Autopilot can run ${preview.steps.length} supervised step(s). Say yes to execute, or no to cancel.`;
+      db.profile.agentMemory.updatedAt = new Date().toISOString();
+      return stageAgentAction(db, text, {
+        kind: "autopilot-mission",
+        module: "AI",
+        action: `Run autopilot mission with ${preview.steps.length} steps`,
+        section: "agent",
+        goal,
+        previewSteps: preview.steps.map(step => ({ module: step.module, tool: step.tool, action: step.action }))
+      });
+    }
+    const { plan, execution } = await createAndExecuteAutopilotMission(db, user, goal, options.note || "Approved from autopilot command");
+    return {
+      intent: "agent.autopilot_executed",
+      response: `Autopilot complete. ${execution.summary}`,
+      status: execution.status,
+      metadata: { redirectSection: "agent", planId: plan.id, executionId: execution.id, steps: execution.steps.length, mode: "autopilot" }
+    };
   }
 
   if ((lower.includes("buyer") || lower.includes("customer")) && (lower.includes("speak") || lower.includes("talk") || lower.includes("call") || lower.includes("message") || lower.includes("contact"))) {

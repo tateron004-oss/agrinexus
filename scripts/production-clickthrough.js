@@ -115,6 +115,8 @@ assert(app.includes("function renderAgentReasoningPanel"), "Frontend needs to re
 assert(server.includes("function rememberAgentMemory"), "Backend needs long-term memory capture for the learning agent");
 assert(server.includes("function retrieveAgentMemories"), "Backend needs memory retrieval before agent planning");
 assert(server.includes("agent.memory_retrieved"), "Agent planning should record memory retrieval evidence");
+assert(server.includes("function buildAutopilotPlan"), "Backend needs Agent Autopilot mission planning");
+assert(server.includes("agent.autopilot_executed"), "Autopilot execution must be recorded as agent evidence");
 
 for (const endpoint of endpoints) {
   assert(server.includes(endpoint), `Missing backend endpoint ${endpoint}`);

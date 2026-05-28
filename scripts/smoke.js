@@ -375,6 +375,15 @@ async function call(path, body) {
   const memorySummary = await call("/api/agent/command", { command: "what have you learned", conversational: true });
   assert(memorySummary.commandResult.intent === "memory-summary");
   assert(memorySummary.commandResult.response.includes("voice-first telehealth"));
+  const autopilotPreview = await call("/api/agent/command", { command: "Nexus autopilot help this farmer get from crop problem to buyer payment", conversational: true, inputMode: "voice", outputMode: "voice" });
+  assert(autopilotPreview.commandResult.intent === "conversation.pending_action");
+  assert(autopilotPreview.commandResult.metadata.mode === "autopilot");
+  assert(autopilotPreview.commandResult.metadata.previewSteps.length >= 6);
+  const autopilotConfirm = await call("/api/agent/command", { command: "yes", conversational: true, inputMode: "voice", outputMode: "voice" });
+  assert(autopilotConfirm.commandResult.intent === "conversation.confirmed");
+  assert(autopilotConfirm.commandResult.metadata.mode === "autopilot");
+  assert(autopilotConfirm.profile.agentExecutions[0].status === "completed");
+  assert(autopilotConfirm.profile.integrationEvents.some(event => event.action === "agent.autopilot_executed"));
   const lessonCommand = await call("/api/agent/command", { command: "Nexus complete my lesson", confirm: true, inputMode: "voice", outputMode: "voice" });
   assert(lessonCommand.commandResult.intent === "learning.complete_lesson");
   assert(lessonCommand.commandResult.metadata.redirectSection === "learning");
