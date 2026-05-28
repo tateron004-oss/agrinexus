@@ -105,6 +105,7 @@ const endpoints = [
   "/api/engines/manifest",
   "/api/production/complete-check",
   "/api/production/operations-plan",
+  "/api/intelligence/next-actions",
   "/api/production/live-service-check"
 ];
 
@@ -132,6 +133,9 @@ assert(server.includes("agent.memory_retrieved"), "Agent planning should record 
 assert(server.includes("function workflowIntelligence"), "Backend needs module-aware workflow intelligence");
 assert(app.includes("/api/intelligence/workflow"), "Confirmed workflows must request intelligence after execution");
 assert(app.includes("Latest Workflow Guidance"), "Dashboard must show the latest workflow intelligence guidance");
+assert(server.includes("function smartNextActions"), "Backend needs proactive smart next actions");
+assert(app.includes("Recommended Next Actions"), "Dashboard must show proactive smart guidance");
+assert(server.includes("/api/intelligence/next-actions"), "Backend needs a next-actions intelligence endpoint");
 assert(server.includes("function buildAutopilotPlan"), "Backend needs Agent Autopilot mission planning");
 assert(server.includes("agent.autopilot_executed"), "Autopilot execution must be recorded as agent evidence");
 assert(html.includes("missionDashboardPanel"), "Agent page needs an Autopilot Mission Dashboard");

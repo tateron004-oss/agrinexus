@@ -260,6 +260,7 @@ function publicState(db, user) {
     products: db.products || [],
     providers,
     capabilities: capabilityMatrix(db, providers),
+    smartActions: smartNextActions(db, user, providers),
     automation: automationReadiness(db, providers),
     production: productionCompleteness(db, providers),
     productionPlan: productionOperationsPlan(db, providers),
@@ -970,6 +971,186 @@ function capabilityMatrix(db, providers = runtimeProviders(db)) {
     operational,
     total: capabilities.length,
     items: capabilities
+  };
+}
+
+function smartNextActions(db, user, providers = runtimeProviders(db)) {
+  ensureLearningProfile(db.profile);
+  ensureWorkforceProfile(db.profile);
+  ensureHealthProfile(db.profile);
+  ensureTradeProfile(db.profile);
+  ensureAiProfile(db.profile);
+  ensureOperationsProfile(db.profile);
+  const providerOk = id => ["connected", "ready"].includes(providers.find(item => item.id === id)?.status);
+  const { country, route } = activeContext(db);
+  const activeCourse = (db.courses || []).find(course => course.id === db.profile.activeCourseId) || (db.courses || [])[0];
+  const eligibleRole = (db.roles || []).find(role => roleReadiness(db.profile, role).eligible) || (db.roles || [])[0];
+  const activeProduct = (db.products || []).find(product => product.countryId === country.id) || (db.products || [])[0];
+  const actions = [];
+  const push = action => actions.push({
+    id: action.id,
+    module: action.module,
+    title: action.title,
+    detail: action.detail,
+    priority: action.priority || "recommended",
+    confidence: action.confidence || 0.88,
+    reason: action.reason,
+    workflow: action.workflow || null,
+    action: action.action || null,
+    ai: action.ai || null,
+    moduleTest: action.moduleTest || null,
+    section: action.section || null,
+    roleId: action.roleId || null,
+    productId: action.productId || null
+  });
+
+  if (!db.profile.enrollments?.length) {
+    push({
+      id: "start-learning",
+      module: "Learning",
+      title: "Start the active course",
+      detail: `${activeCourse?.title || "Training"} should start first so the user has learning evidence.`,
+      reason: "No enrollment record exists yet.",
+      workflow: "learning",
+      action: "start",
+      section: "learning",
+      priority: "high"
+    });
+  } else if (!db.profile.certificates?.length) {
+    push({
+      id: "complete-lesson",
+      module: "Learning",
+      title: "Complete the next lesson",
+      detail: "Move the learner toward certificate and workforce readiness.",
+      reason: "Enrollment exists but no certificate has been issued.",
+      workflow: "learning",
+      action: "lesson",
+      section: "learning"
+    });
+  }
+
+  if (!db.profile.applications?.length) {
+    push({
+      id: "apply-workforce",
+      module: "Workforce",
+      title: "Apply for the best matched role",
+      detail: `${eligibleRole?.title || "Available role"} is the next workforce milestone.`,
+      reason: "No workforce application has been submitted yet.",
+      workflow: "workforce",
+      action: "apply-role",
+      roleId: eligibleRole?.id,
+      section: "workforce",
+      priority: db.profile.readiness >= 55 ? "high" : "recommended"
+    });
+  } else if (!db.profile.shiftSchedule?.length) {
+    push({
+      id: "schedule-shift",
+      module: "Workforce",
+      title: "Schedule the first shift",
+      detail: "Turn the application into operational work evidence.",
+      reason: "Application exists but no shift is scheduled.",
+      workflow: "workforce",
+      action: "shift",
+      section: "workforce"
+    });
+  }
+
+  if (!db.profile.healthIntakes?.length) {
+    push({
+      id: "start-telehealth",
+      module: "Telehealth",
+      title: "Run accessible intake",
+      detail: `${country.name} users may need captions, audio, language support, and caregiver handoff.`,
+      reason: "No patient intake exists yet.",
+      workflow: "health",
+      action: "intake",
+      section: "health",
+      priority: country.risk === "High" ? "high" : "recommended"
+    });
+  } else if (!db.profile.carePlans?.length) {
+    push({
+      id: "generate-care-plan",
+      module: "Telehealth",
+      title: "Generate care plan",
+      detail: "Convert intake evidence into a supervised care pathway.",
+      reason: "Intake exists but no care plan is recorded.",
+      workflow: "health",
+      action: "careplan",
+      section: "health"
+    });
+  }
+
+  if (!db.profile.orders?.length) {
+    push({
+      id: "create-trade-order",
+      module: "AgriTrade",
+      title: "Create crop order",
+      detail: `${activeProduct?.name || "Active crop lot"} needs a trade record before logistics and payment evidence.`,
+      reason: "No trade order exists yet.",
+      workflow: "trade",
+      action: "order",
+      productId: activeProduct?.id,
+      section: "trade"
+    });
+  } else if (!db.profile.droneScans?.length) {
+    push({
+      id: "run-drone-scan",
+      module: "AgriTech",
+      title: "Run drone field scan",
+      detail: "Create crop health, pest, irrigation, and map evidence for the active lot.",
+      reason: "Trade exists but no drone intelligence has been recorded.",
+      workflow: "trade",
+      action: "drone",
+      productId: activeProduct?.id,
+      section: "trade"
+    });
+  }
+
+  if (!db.profile.mapEvidencePackets?.length) {
+    push({
+      id: "map-evidence-packet",
+      module: "Maps",
+      title: "Compile map evidence packet",
+      detail: `${route.name} should have a map packet tying route, farmer, field, risk, and provider evidence together.`,
+      reason: "Advanced map evidence packet is not yet recorded.",
+      workflow: "map",
+      action: "evidence",
+      section: "map"
+    });
+  }
+
+  if (!db.profile.aiRuns?.length || !providerOk("openai")) {
+    push({
+      id: "run-ai-copilot",
+      module: "Agent AI",
+      title: "Ask AI for next-step guidance",
+      detail: "Generate a governed AI recommendation using the current platform context.",
+      reason: providerOk("openai") ? "No AI run exists yet." : "AI provider should be tested or reviewed.",
+      ai: "copilot",
+      section: "agent"
+    });
+  }
+
+  const disconnected = providers.filter(provider => provider.status !== "connected");
+  if (disconnected.length) {
+    push({
+      id: "test-engines",
+      module: "Integrations",
+      title: "Test live engines",
+      detail: `${disconnected.length} provider(s) still need confirmation or credentials.`,
+      reason: "Provider readiness drives production behavior.",
+      workflow: "integrations",
+      action: "test-all",
+      section: "integrations",
+      priority: "high"
+    });
+  }
+
+  return {
+    status: actions.some(action => action.priority === "high") ? "attention-needed" : "guided",
+    generatedAt: new Date().toISOString(),
+    context: { country: country.name, route: route.name, checkpoint: db.profile.activeCheckpoint, userRole: user?.role || "guest" },
+    items: actions.slice(0, 8)
   };
 }
 
@@ -4283,6 +4464,11 @@ async function api(req, res, url) {
   if (url.pathname === "/api/production/operations-plan" && req.method === "GET") {
     const providers = runtimeProviders(db);
     return send(res, 200, productionOperationsPlan(db, providers));
+  }
+
+  if (url.pathname === "/api/intelligence/next-actions" && req.method === "GET") {
+    if (!user) return send(res, 401, { error: "Sign in required" });
+    return send(res, 200, smartNextActions(db, user, runtimeProviders(db)));
   }
 
   if (url.pathname === "/api/production/live-service-check" && req.method === "POST") {

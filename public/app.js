@@ -2944,6 +2944,7 @@ function taskActionAttrs(action = {}) {
   if (action.mapAction) attrs.push(`data-map-action="${action.mapAction}"`);
   if (action.providerId) attrs.push(`data-provider="${action.providerId}"`);
   if (action.module) attrs.push(`data-module-test="${action.module}"`);
+  if (action.moduleTest) attrs.push(`data-module-test="${action.moduleTest}"`);
   if (action.roleId) attrs.push(`data-role-id="${action.roleId}"`);
   if (action.productId) attrs.push(`data-product-id="${action.productId}"`);
   return attrs.join(" ");
@@ -3229,8 +3230,35 @@ function render() {
     row("Human review", "Required before committing AI-guided actions")
   ].join("");
   renderAiEvidence("#copilotRecommendations", "AI", "No copilot recommendation yet. Ask the copilot to create the next-action guidance.");
+  const smartItems = data.smartActions?.items || [];
+  const smartTaskItems = smartItems.length
+    ? smartItems.slice(0, 5).map(item => taskItem(
+      item.title,
+      `${item.detail} Reason: ${item.reason}`,
+      item.priority === "high" ? "blocked" : "ready",
+      item.priority === "high" ? "Do next" : "Open",
+      {
+        workflow: item.workflow,
+        action: item.action,
+        ai: item.ai,
+        section: item.section,
+        roleId: item.roleId,
+        productId: item.productId,
+        moduleTest: item.moduleTest
+      }
+    ))
+    : [
+      taskItem("Smart guide ready", "The platform did not find an urgent gap. Ask AgriNexus for a mission or continue any module.", "ready", "Guided", { ai: "copilot" })
+    ];
 
   renderWorkspace("#dashboardWorkspace", [
+    {
+      eyebrow: "Smart guide",
+      metric: data.smartActions?.status || "guided",
+      title: "Recommended Next Actions",
+      summary: `AgriNexus is reading ${data.smartActions?.context?.country || country.name}, ${data.smartActions?.context?.route || route.name}, user role, provider status, and workflow evidence to guide the next move.`,
+      items: smartTaskItems
+    },
     {
       eyebrow: "Operations",
       metric: `${dashboardCards.length} domains`,

@@ -80,6 +80,11 @@ async function call(path, body) {
   assert(login.capabilities.total >= 10);
   assert(login.capabilities.items.some(item => item.id === "jarvis-command-layer"));
   assert(login.capabilities.items.some(item => item.id === "telehealth-workspace"));
+  assert(login.smartActions.status);
+  assert(Array.isArray(login.smartActions.items));
+  const nextActions = await call("/api/intelligence/next-actions");
+  assert(Array.isArray(nextActions.items));
+  assert(nextActions.context.country);
   const completion = await call("/api/production/complete-check");
   assert(completion.total === 10);
   const manifest = await call("/api/engines/manifest");
