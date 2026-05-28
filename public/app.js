@@ -2873,8 +2873,6 @@ function applyPermissions() {
       || (element.dataset.simpleAction ? "ai" : null)
       || (element.classList.contains("provider-test") ? "integrations" : null)
       || (element.id === "adminHealthCheck" ? "admin" : null)
-      || (element.id === "liveServiceCheckBtn" ? "integrations" : null)
-      || (element.id === "liveServiceCheckFromIntegrations" ? "integrations" : null)
       || (element.id === "aiConsoleRun" ? "ai" : null)
       || (element.id === "agentPlanBtn" ? "ai" : null)
       || (element.id === "agentExecuteBtn" ? "ai" : null)
@@ -5164,30 +5162,35 @@ async function runAdminHealthCheckDirect() {
   }
 }
 
-async function runLiveServiceCheck() {
+function setLiveServiceCheckStatus(html) {
+  const adminPanel = $("#liveServiceCheckPanel");
+  const inlineStatus = $("#liveServiceCheckInlineStatus");
+  if (adminPanel) adminPanel.innerHTML = html;
+  if (inlineStatus) inlineStatus.innerHTML = html;
+}
+
+async function runLiveServiceCheck(event) {
+  event?.preventDefault?.();
+  event?.stopPropagation?.();
   const buttons = ["#liveServiceCheckBtn", "#liveServiceCheckFromIntegrations"].map(selector => $(selector)).filter(Boolean);
-  const panel = $("#liveServiceCheckPanel");
   buttons.forEach(button => {
     button.disabled = true;
     button.setAttribute("aria-busy", "true");
     button.textContent = "Checking live services...";
   });
-  if (panel) {
-    panel.innerHTML = `<div><strong>Running live service check</strong><span>Testing PostgreSQL, provider bridge, translation, maps, billing, auth, email, SMS, and WhatsApp. Slow external engines will time out instead of locking the page.</span></div>`;
-  }
+  setLiveServiceCheckStatus(`<div><strong>Running live service check</strong><span>Testing PostgreSQL, provider bridge, translation, maps, billing, auth, email, SMS, and WhatsApp. Slow external engines will time out instead of locking the page.</span></div>`);
   try {
     data = await request("/api/production/live-service-check", { method: "POST", body: {} });
     render();
     goSection("admin", { instant: true });
     const result = data.liveServiceCheckResult || (data.profile.liveServiceChecks || [])[0];
     const message = `Live service check complete. ${result?.readyCount || 0}/${result?.total || 0} services are ready.`;
+    setLiveServiceCheckStatus(`<div><strong>Live service check complete</strong><span>${escapeHtml(message)}</span></div>`);
     setVoiceResponse(message, true);
     toast("Live service check complete");
   } catch (error) {
     const message = error.message || "Live service check failed";
-    if (panel) {
-      panel.innerHTML = `<div><strong>Live service check could not finish</strong><span>${escapeHtml(message)}. If this says Sign in required, sign out and sign back in after the latest deploy. If it says Failed to fetch, the server or provider engine is unreachable.</span></div>`;
-    }
+    setLiveServiceCheckStatus(`<div><strong>Live service check could not finish</strong><span>${escapeHtml(message)}. If this says Sign in required, sign out and sign back in after the latest deploy. If it says Failed to fetch, the server or provider engine is unreachable.</span></div>`);
     setVoiceResponse(`Live service check failed: ${message}`);
     toast(message);
   } finally {
@@ -6278,6 +6281,10 @@ function bindStatic() {
       event.preventDefault();
       event.stopPropagation();
       openAskNexus();
+      return;
+    }
+    if (event.target.closest("#liveServiceCheckBtn") || event.target.closest("#liveServiceCheckFromIntegrations")) {
+      runLiveServiceCheck(event);
       return;
     }
     if (event.target.closest("#globalCloseBtn") || event.target.closest("#jarvisCloseBtn")) {

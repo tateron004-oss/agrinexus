@@ -154,14 +154,16 @@ assert(server.includes("agent.autopilot_executed"), "Autopilot execution must be
 assert(html.includes("missionDashboardPanel"), "Agent page needs an Autopilot Mission Dashboard");
 assert(app.includes("function renderMissionDashboard"), "Frontend needs to render mission plans and executions");
 assert(html.includes("liveServiceCheckPanel"), "Admin needs a live service finalization panel");
+assert(html.includes("liveServiceCheckInlineStatus"), "Integrations needs a visible live service check status");
 assert(app.includes("function runLiveServiceCheck"), "Frontend needs a live service finalization action");
-assert(html.includes("app.js?v=ask-nexus-26"), "Index must force browsers to load the latest live service check code");
+assert(html.includes("app.js?v=ask-nexus-27"), "Index must force browsers to load the latest live service check code");
 assert(server.includes('"cache-control": cacheControl'), "Static app assets should declare cache-control headers");
 assert(app.includes("liveServiceCheckFromIntegrations"), "Integrations live service check button must share the finalization action");
 assert(app.includes("Slow external engines will time out"), "Live service check should show progress while external engines respond");
 assert(server.includes("function fetchWithTimeout"), "External service probes need timeouts so checks cannot hang");
 assert(!server.includes("Role does not allow production service checks"), "Live service checks should be available to any signed-in operator");
-assert(app.includes('element.id === "liveServiceCheckBtn" ? "integrations"'), "Live service check buttons should not be disabled as admin-only controls");
+assert(!app.includes('element.id === "liveServiceCheckBtn" ? "admin"'), "Live service check buttons should not be disabled as admin-only controls");
+assert(app.includes('event.target.closest("#liveServiceCheckBtn")'), "Live service check needs delegated click handling");
 assert(html.includes("learningCatalogPanel"), "Learning module needs a course catalog workspace");
 assert(app.includes("learningCatalogSummary"), "Learning catalog summary must render from platform state");
 assert(server.includes("function learningCatalog"), "Backend needs a learning catalog model");
