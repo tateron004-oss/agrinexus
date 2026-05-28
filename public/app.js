@@ -11,6 +11,8 @@ let voiceFirstMode = localStorage.getItem("agrinexusVoiceFirst") !== "off";
 let voiceAutoRestart = voiceFirstMode;
 let voiceStopRequested = false;
 let voiceSpeaking = false;
+let activeVoiceAudio = null;
+let voicePlaybackToken = 0;
 let agentReasoningVisible = localStorage.getItem("agrinexusReasoningVisible") === "true";
 const accessibilityPrefs = JSON.parse(localStorage.getItem("agrinexusAccessibility") || "{}");
 const originalTextNodes = new WeakMap();
@@ -4292,6 +4294,7 @@ function renderMap() {
 
 function closeWorkflowModal() {
   pendingWorkflow = null;
+  stopVoicePlayback();
   $("#workflowModal")?.classList.add("hidden");
   if (lastFocusedElement && typeof lastFocusedElement.focus === "function") lastFocusedElement.focus();
 }
@@ -5286,7 +5289,8 @@ async function executeAgentPlan() {
   }
 }
 
-function setVoiceResponse(message, speak = false) {
+function setVoiceResponse(message, speak = false, options = {}) {
+  const allowVoiceFirst = options.allowVoiceFirst !== false;
   const token = ++voiceTranslationToken;
   lastVoiceResponse = message;
   const transcript = $("#voiceTranscript");
@@ -5309,13 +5313,13 @@ function setVoiceResponse(message, speak = false) {
       if (summary) summary.textContent = translated;
       if (globalStatus) globalStatus.textContent = translated;
       announce(translated);
-      if (speak || voiceFirstMode) speakVoiceResponse(translated);
+      if (speak || (voiceFirstMode && allowVoiceFirst)) speakVoiceResponse(translated);
     }).catch(() => {
-      if (speak || voiceFirstMode) speakVoiceResponse(message);
+      if (speak || (voiceFirstMode && allowVoiceFirst)) speakVoiceResponse(message);
     });
     return;
   }
-  if (speak || voiceFirstMode) speakVoiceResponse(message);
+  if (speak || (voiceFirstMode && allowVoiceFirst)) speakVoiceResponse(message);
 }
 
 async function createGovernmentBriefing() {
@@ -5360,8 +5364,22 @@ function chooseSpeechVoice(locale) {
     || null;
 }
 
+function stopVoicePlayback() {
+  voicePlaybackToken += 1;
+  if (activeVoiceAudio) {
+    activeVoiceAudio.pause();
+    activeVoiceAudio.src = "";
+    activeVoiceAudio = null;
+  }
+  if ("speechSynthesis" in window) window.speechSynthesis.cancel();
+  voiceSpeaking = false;
+  voiceAutoRestart = voiceFirstMode;
+}
+
 function speakVoiceResponse(textOverride) {
   const text = textOverride || lastVoiceResponse;
+  stopVoicePlayback();
+  const playbackToken = ++voicePlaybackToken;
   voiceSpeaking = true;
   voiceAutoRestart = false;
   const updateVoiceOutputStatus = message => {
@@ -5371,6 +5389,8 @@ function speakVoiceResponse(textOverride) {
     if (globalStatus) globalStatus.textContent = message;
   };
   const finishSpeaking = () => {
+    if (playbackToken !== voicePlaybackToken) return;
+    activeVoiceAudio = null;
     voiceSpeaking = false;
     voiceAutoRestart = voiceFirstMode;
     if (voiceFirstMode && !voiceRecognition && !voiceStopRequested && !document.hidden) {
@@ -5387,6 +5407,7 @@ function speakVoiceResponse(textOverride) {
   updateVoiceOutputStatus("Requesting OpenAI voice audio...");
   request("/api/voice/speak", { method: "POST", body: { text, language: languageCode(), locale: voiceLocale(), forceOpenAi: true, voice: "coral" } })
     .then(result => {
+      if (playbackToken !== voicePlaybackToken) return;
       const audioDataUrl = result.voiceResult?.audioDataUrl;
       if (result.voiceResult?.error) {
         updateVoiceOutputStatus(`OpenAI voice error: ${result.voiceResult.error}`);
@@ -5396,6 +5417,7 @@ function speakVoiceResponse(textOverride) {
       }
       if (audioDataUrl) {
         const audio = new Audio(audioDataUrl);
+        activeVoiceAudio = audio;
         const voice = result.voiceResult?.voice || "OpenAI";
         const model = result.voiceResult?.model || "speech";
         updateVoiceOutputStatus(`Using OpenAI voice: ${voice} (${model}).`);
@@ -5411,6 +5433,7 @@ function speakVoiceResponse(textOverride) {
       finishSpeaking();
     })
     .catch(error => {
+      if (playbackToken !== voicePlaybackToken) return;
       if (/sign in required/i.test(error.message || "")) {
         updateVoiceOutputStatus("Your session expired after redeploy. Sign in again, then press Read response.");
         toast("Please sign in again to use OpenAI voice.");
@@ -5507,7 +5530,7 @@ function openAskNexus() {
   setTimeout(() => {
     (globalInput || dockInput)?.focus();
   }, 220);
-  setVoiceResponse("Ask AgriNexus is open. Type a request or use the Mic button.");
+  setVoiceResponse("Ask AgriNexus is open. Type a request or use the Mic button.", false, { allowVoiceFirst: false });
   announce("Ask AgriNexus opened");
 }
 
@@ -5518,7 +5541,8 @@ function closeAskNexus() {
   if (panel) panel.classList.add("hidden");
   if (globalBar) globalBar.classList.add("hidden");
   if (toggle) toggle.setAttribute("aria-expanded", "false");
-  setVoiceResponse("Ask AgriNexus closed.");
+  stopVoicePlayback();
+  setVoiceResponse("Ask AgriNexus closed.", false, { allowVoiceFirst: false });
   announce("Ask AgriNexus closed");
 }
 
@@ -5993,7 +6017,7 @@ function startVoiceListening() {
   voiceRecognition.onresult = event => {
     const command = event.results?.[0]?.[0]?.transcript || "";
     setCommandInputs(command);
-    setVoiceResponse(`Heard: ${command}`);
+    setVoiceResponse(`Heard: ${command}`, false, { allowVoiceFirst: false });
     request("/api/voice/transcribe", { method: "POST", body: { transcript: command, language: languageCode(), locale: voiceLocale() } }).catch(() => {});
     handleVoiceCommand(command);
   };

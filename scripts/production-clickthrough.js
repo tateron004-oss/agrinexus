@@ -117,6 +117,8 @@ assert(html.includes("voiceHelpPanel"), "Voice command help panel must be presen
 assert(app.includes("function openVoiceHelp"), "Voice command help button must open the command help panel");
 assert(app.includes("function voiceCommandButton"), "Voice command help buttons must display translated labels");
 assert(app.includes("function normalizeLocalizedVoiceCommand"), "Voice command help must normalize localized spoken commands");
+assert(app.includes("activeVoiceAudio"), "Voice playback needs a single active audio guard");
+assert(app.includes("function stopVoicePlayback"), "Voice playback must be cancellable before starting another response");
 assert(html.includes("productionOperationsPlan"), "Admin needs the 10 production workstream panel");
 assert(server.includes("function productionOperationsPlan"), "Backend needs a 10 production workstream readiness model");
 assert(app.includes("Awaiting human approval"), "AI governance panel must distinguish pending approval from provider errors");
