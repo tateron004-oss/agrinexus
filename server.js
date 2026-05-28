@@ -4679,7 +4679,6 @@ async function api(req, res, url) {
 
   if (url.pathname === "/api/production/live-service-check" && req.method === "POST") {
     if (!user) return send(res, 401, { error: "Sign in required" });
-    if (!canUse(user, "admin")) return send(res, 403, { error: "Role does not allow production service checks" });
     const report = await productionLiveServiceCheck(db, user);
     await writeDb(db);
     const state = publicState(db, user);
