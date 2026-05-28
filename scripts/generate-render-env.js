@@ -66,7 +66,7 @@ const shared = {
   TRANSLATION_PROVIDER: "webhook",
   TRANSLATION_WEBHOOK_URL: `${providerBase}/translate`,
   TRANSLATION_PROVIDER_API_KEY: fromEnv("TRANSLATION_PROVIDER_API_KEY", secret(32)),
-  MAP_TILE_PROVIDER: "custom-tile",
+  MAP_TILE_PROVIDER: "openstreetmap",
   MAP_TILE_URL: mapTileUrl,
   LEARNING_COURSE_PROVIDER: "webhook",
   LEARNING_COURSE_WEBHOOK_URL: `${providerBase}/learning/courses`,

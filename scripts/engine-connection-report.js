@@ -88,8 +88,8 @@ const engines = [
   {
     name: "Live Maps",
     purpose: "Field, country, route, drone, and operational map context",
-    keys: ["MAP_TILE_PROVIDER", "MAP_TILE_URL"],
-    userStep: "Use OpenStreetMap tiles for launch or replace MAP_TILE_URL with Mapbox/Google/provider tiles."
+    keys: ["MAP_TILE_PROVIDER"],
+    userStep: "Use MAP_TILE_PROVIDER=openstreetmap for launch, or switch to custom tiles later with MAP_TILE_URL."
   },
   {
     name: "Communications",

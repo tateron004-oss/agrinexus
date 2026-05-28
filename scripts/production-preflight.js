@@ -136,7 +136,7 @@ function aiReady() {
 }
 
 function mapReady() {
-  return process.env.MAP_TILE_PROVIDER === "custom-tile" && hasValue("MAP_TILE_URL");
+  return process.env.MAP_TILE_PROVIDER === "openstreetmap" || (process.env.MAP_TILE_PROVIDER === "custom-tile" && hasValue("MAP_TILE_URL"));
 }
 
 async function main() {
@@ -154,7 +154,7 @@ async function main() {
     check("Legal pages", ["terms.html", "privacy.html", "refund.html"].every(file => fileExists(`public/${file}`)), "Terms, Privacy, and Refund Policy must be present.", "release"),
     check("Click-through audit", fileExists("scripts/production-clickthrough.js"), "Production click-through audit must be available.", "release"),
     check("AI provider", aiReady(), "Set OPENAI_API_KEY for OpenAI or configure AI_PROVIDER=webhook with AI_WEBHOOK_URL and AI_PROVIDER_API_KEY.", "live-provider"),
-    check("Map provider", mapReady(), "Set MAP_TILE_PROVIDER=custom-tile and MAP_TILE_URL for live map tiles.", "live-provider"),
+    check("Map provider", mapReady(), "Set MAP_TILE_PROVIDER=openstreetmap or configure MAP_TILE_PROVIDER=custom-tile with MAP_TILE_URL for live map tiles.", "live-provider"),
     ...providerChecks()
   ];
 

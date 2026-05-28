@@ -43,7 +43,7 @@ const values = {
   AI_PROVIDER: "webhook",
   AI_WEBHOOK_URL: existing.AI_WEBHOOK_URL || `${providerBase}/ai/responses`,
   AI_PROVIDER_API_KEY: existing.AI_PROVIDER_API_KEY || secret(32),
-  MAP_TILE_PROVIDER: "custom-tile",
+  MAP_TILE_PROVIDER: "openstreetmap",
   MAP_TILE_URL: existing.MAP_TILE_URL || "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
   VOICE_STT_PROVIDER: existing.VOICE_STT_PROVIDER || "openai",
   VOICE_TTS_PROVIDER: existing.VOICE_TTS_PROVIDER || "openai",

@@ -143,6 +143,8 @@ assert(server.includes("function productionActivationGuide"), "Backend needs a l
 assert(html.includes("liveActivationGuide"), "Integrations page needs a live activation guide");
 assert(app.includes("activationGuide"), "Frontend must render live activation guidance");
 assert(server.includes("function renderEngineEnvPlan"), "Backend needs a Render engine env plan");
+assert(server.includes("MAP_TILE_PROVIDER: \"openstreetmap\""), "Engine setup should default launch maps to OpenStreetMap");
+assert(server.includes("OpenStreetMap live tile provider is enabled for launch."), "Map readiness should accept OpenStreetMap as a live provider");
 assert(html.includes("renderEngineKeysPanel"), "Integrations page needs Render engine keys");
 assert(app.includes("engineSetup"), "Frontend must render engine setup values");
 assert(server.includes("function buildAutopilotPlan"), "Backend needs Agent Autopilot mission planning");

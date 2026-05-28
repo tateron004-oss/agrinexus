@@ -127,7 +127,7 @@ services:
       - key: AI_PROVIDER_API_KEY
         sync: false
       - key: PROVIDER_ENGINE_BASE_URL
-        sync: false
+        value: https://agrinexus-provider-engines.onrender.com
       - key: VOICE_STT_PROVIDER
         value: openai
       - key: VOICE_TTS_PROVIDER
@@ -145,7 +145,7 @@ services:
       - key: TRANSLATION_PROVIDER_API_KEY
         sync: false
       - key: MAP_TILE_PROVIDER
-        value: custom-tile
+        value: openstreetmap
       - key: MAP_TILE_URL
         sync: false
       - key: LEARNING_COURSE_PROVIDER

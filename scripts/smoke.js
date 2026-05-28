@@ -86,12 +86,15 @@ async function call(path, body) {
   assert(login.activationGuide.groups.some(group => group.id === "ai-voice"));
   assert(login.engineSetup.totalKeys >= 20);
   assert(login.engineSetup.lines.some(item => item.key === "PROVIDER_ENGINE_BASE_URL"));
+  assert(login.engineSetup.lines.some(item => item.key === "MAP_TILE_PROVIDER"));
   const nextActions = await call("/api/intelligence/next-actions");
   assert(Array.isArray(nextActions.items));
   assert(nextActions.context.country);
   const renderEnvPlan = await call("/api/engines/render-env-plan");
   assert(renderEnvPlan.groups.some(group => group.id === "telehealth"));
   assert(renderEnvPlan.lines.some(item => item.key === "OPENAI_API_KEY"));
+  assert(renderEnvPlan.lines.some(item => item.key === "PROVIDER_ENGINE_BASE_URL"));
+  assert(renderEnvPlan.lines.some(item => item.key === "MAP_TILE_PROVIDER"));
   const activationGuide = await call("/api/production/activation-guide");
   assert(activationGuide.groups.some(group => group.id === "telehealth-trade-drone"));
   assert(activationGuide.groups.every(group => Array.isArray(group.env)));

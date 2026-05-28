@@ -326,16 +326,19 @@ function runtimeProviders(db) {
     }
     if (provider.id === "maps") {
       const mode = process.env.MAP_TILE_PROVIDER || provider.mode;
+      const normalizedMode = String(mode || "").toLowerCase();
       const hasTileUrl = Boolean(process.env.MAP_TILE_URL);
-      const liveMap = mode === "custom-tile" && hasTileUrl;
+      const liveMap = normalizedMode === "openstreetmap" || (normalizedMode === "custom-tile" && hasTileUrl);
       return {
         ...provider,
         mode,
         status: liveMap ? "connected" : (REQUIRE_LIVE_SERVICES ? "needs-credentials" : provider.status),
-        detail: mode === "custom-tile"
+        detail: normalizedMode === "openstreetmap"
+          ? "OpenStreetMap live tile provider is enabled for launch."
+          : normalizedMode === "custom-tile"
           ? (hasTileUrl ? "Custom map tile URL configured." : "Set MAP_TILE_URL for a custom map tile provider.")
           : REQUIRE_LIVE_SERVICES
-          ? "Strict live mode requires MAP_TILE_PROVIDER=custom-tile and MAP_TILE_URL."
+          ? "Strict live mode requires MAP_TILE_PROVIDER=openstreetmap or MAP_TILE_PROVIDER=custom-tile with MAP_TILE_URL."
           : provider.detail
       };
     }
@@ -401,7 +404,7 @@ function integrationStatus(db) {
       auth: ["AUTH_PROVIDER", "AUTH_WEBHOOK_URL", "PASSWORD_RESET_PROVIDER", "PASSWORD_RESET_WEBHOOK_URL", "AUTH_PROVIDER_API_KEY"],
       communications: ["EMAIL_PROVIDER", "EMAIL_WEBHOOK_URL", "SMS_PROVIDER", "SMS_WEBHOOK_URL", "WHATSAPP_PROVIDER", "WHATSAPP_WEBHOOK_URL", "COMMUNICATION_PROVIDER_API_KEY"],
       billing: ["BILLING_PROVIDER", "BILLING_WEBHOOK_URL", "BILLING_PROVIDER_API_KEY", "BILLING_PRICE_ID"],
-      maps: ["MAP_TILE_PROVIDER", "MAP_TILE_URL"],
+      maps: ["MAP_TILE_PROVIDER=openstreetmap or MAP_TILE_PROVIDER=custom-tile + MAP_TILE_URL"],
       legal: ["/terms.html", "/privacy.html", "/refund.html"],
       regression: ["npm run production:regression", "npm run production:complete-check"]
     },
@@ -417,12 +420,15 @@ function maskEngineValue(value) {
 }
 
 function engineCredentialState(keys) {
-  return keys.map(key => {
+  return keys.map(rawKey => {
+    const { key, suggestedValue } = engineCredentialEntry(rawKey);
     const value = process.env[key] || "";
     const unresolved = !value || value.includes("PASTE_") || value.includes("YOUR-") || value.includes("replace-with") || value.includes("your-key-here");
+    const ready = suggestedValue ? value === suggestedValue : !unresolved;
     return {
       key,
-      ready: !unresolved,
+      expectedValue: suggestedValue || "",
+      ready,
       value: unresolved ? "" : maskEngineValue(value)
     };
   });
@@ -442,13 +448,42 @@ function renderEngineEnvPlan(db) {
     seen.add(key);
     lines.push({ key, value, renderValue: value || "<add in Render>" });
   };
-  add("PROVIDER_ENGINE_BASE_URL", process.env.PROVIDER_ENGINE_BASE_URL || "https://agrinexus-provider-engines.onrender.com");
-  add("AGRINEXUS_REQUIRE_LIVE_SERVICES", "true");
-  add("AGRINEXUS_STATE_STORE", "postgres");
+  const defaults = {
+    PROVIDER_ENGINE_BASE_URL: process.env.PROVIDER_ENGINE_BASE_URL || "https://agrinexus-provider-engines.onrender.com",
+    AGRINEXUS_REQUIRE_LIVE_SERVICES: "true",
+    AGRINEXUS_STATE_STORE: "postgres",
+    AI_PROVIDER: "webhook",
+    VOICE_STT_PROVIDER: "openai",
+    VOICE_TTS_PROVIDER: "openai",
+    TRANSLATION_PROVIDER: "webhook",
+    MAP_TILE_PROVIDER: "openstreetmap",
+    LEARNING_COURSE_PROVIDER: "webhook",
+    LEARNING_CERTIFICATE_PROVIDER: "webhook",
+    WORKFORCE_JOB_PROVIDER: "webhook",
+    WORKFORCE_CALENDAR_PROVIDER: "webhook",
+    WORKFORCE_NOTIFICATION_PROVIDER: "webhook",
+    WORKFORCE_HRIS_PROVIDER: "webhook",
+    WORKFORCE_SHIFT_PROVIDER: "webhook",
+    HEALTH_TELEHEALTH_PROVIDER: "webhook",
+    HEALTH_NOTIFICATION_PROVIDER: "webhook",
+    HEALTH_EHR_PROVIDER: "webhook",
+    TRADE_PAYMENT_PROVIDER: "webhook",
+    TRADE_LOGISTICS_PROVIDER: "webhook",
+    TRADE_MARKET_PROVIDER: "webhook",
+    DRONE_PROVIDER: "webhook",
+    PHONE_PROVIDER: "twilio",
+    AUTH_PROVIDER: "webhook",
+    PASSWORD_RESET_PROVIDER: "webhook",
+    EMAIL_PROVIDER: "webhook",
+    SMS_PROVIDER: "webhook",
+    WHATSAPP_PROVIDER: "webhook",
+    BILLING_PROVIDER: "webhook"
+  };
+  Object.entries(defaults).forEach(([key, value]) => add(key, process.env[key] || value));
   for (const engine of manifest.engines) {
     for (const credential of engine.credentials || []) {
       const entry = engineCredentialEntry(credential.key || credential);
-      add(entry.key, entry.suggestedValue);
+      add(entry.key, process.env[entry.key] || defaults[entry.key] || entry.suggestedValue);
     }
   }
   return {
@@ -551,8 +586,8 @@ function liveEngineManifest(db) {
       name: "Live Map Provider",
       purpose: "Shows field, country, route, drone, and operational map context.",
       providerIds: ["maps"],
-      credentials: ["MAP_TILE_PROVIDER", "MAP_TILE_URL"],
-      userAction: "Use OpenStreetMap tiles for launch or replace MAP_TILE_URL with Mapbox/Google/provider tiles."
+      credentials: ["MAP_TILE_PROVIDER=openstreetmap"],
+      userAction: "Use OpenStreetMap tiles for launch, or later switch to MAP_TILE_PROVIDER=custom-tile with MAP_TILE_URL."
     },
     {
       id: "communications",
@@ -1199,6 +1234,9 @@ function smartNextActions(db, user, providers = runtimeProviders(db)) {
 }
 
 function mapTileProbeUrl() {
+  if (String(process.env.MAP_TILE_PROVIDER || "").toLowerCase() === "openstreetmap") {
+    return "https://tile.openstreetmap.org/0/0/0.png";
+  }
   const template = process.env.MAP_TILE_URL || "";
   if (!template) return "";
   return template
@@ -1262,13 +1300,15 @@ async function productionLiveServiceCheck(db, user) {
 
   const tileUrl = mapTileProbeUrl();
   const tileProbe = tileUrl ? await probeUrl(tileUrl) : { attempted: false, ok: false, status: "missing-url" };
+  const mapProvider = String(process.env.MAP_TILE_PROVIDER || "").toLowerCase();
+  const mapReady = mapProvider === "openstreetmap" || (mapProvider === "custom-tile" && Boolean(process.env.MAP_TILE_URL) && (tileProbe.ok || !REQUIRE_LIVE_SERVICES));
   push(
     "map-tiles",
     "Map tile provider",
-    Boolean(process.env.MAP_TILE_PROVIDER && (process.env.MAP_TILE_PROVIDER === "openstreetmap" || process.env.MAP_TILE_URL ? tileProbe.ok || !REQUIRE_LIVE_SERVICES : !REQUIRE_LIVE_SERVICES)),
-    tileUrl
+    mapReady,
+    mapReady
       ? `Map tile probe ${tileProbe.ok ? "succeeded" : "did not confirm"} for ${process.env.MAP_TILE_PROVIDER || "custom"} tiles.`
-      : "Set MAP_TILE_PROVIDER and MAP_TILE_URL for a live custom tile provider.",
+      : "Set MAP_TILE_PROVIDER=openstreetmap or configure MAP_TILE_PROVIDER=custom-tile with MAP_TILE_URL.",
     { provider: process.env.MAP_TILE_PROVIDER || null, tileUrl: tileUrl || null, probe: tileProbe }
   );
 
@@ -1404,8 +1444,8 @@ function productionActivationGuide(db, providers = runtimeProviders(db)) {
       title: "Translation and Map Intelligence",
       summary: "Supports multilingual content, voice language flow, map tiles, country context, and route intelligence.",
       providerIds: ["translation", "maps"],
-      env: ["TRANSLATION_PROVIDER", "TRANSLATION_WEBHOOK_URL", "TRANSLATION_PROVIDER_API_KEY", "MAP_TILE_PROVIDER", "MAP_TILE_URL"],
-      nextAction: "Add translation provider settings and map tile provider settings, then run live service check.",
+      env: ["TRANSLATION_PROVIDER", "TRANSLATION_WEBHOOK_URL", "TRANSLATION_PROVIDER_API_KEY", "MAP_TILE_PROVIDER"],
+      nextAction: "Add translation provider settings and set MAP_TILE_PROVIDER=openstreetmap or a custom tile provider, then run live service check.",
       testAction: "test-all"
     }),
     group({
