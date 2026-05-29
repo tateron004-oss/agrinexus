@@ -3186,11 +3186,29 @@ function renderProcessBoard(selector, steps) {
   `).join("");
 }
 
+function defaultWorkflowAction(workflow) {
+  return {
+    learning: "start",
+    workforce: "build-profile",
+    health: "intake",
+    trade: "order",
+    map: "focus",
+    ai: "copilot",
+    integrations: "focus-cards",
+    admin: "readiness",
+    profile: "open"
+  }[workflow] || "review";
+}
+
 function taskActionAttrs(action = {}) {
   if (!action || !Object.keys(action).length) return "";
   const attrs = [];
-  if (action.workflow) attrs.push(`data-workflow="${action.workflow}"`);
-  if (action.action) attrs.push(`data-action="${action.action}"`);
+  if (action.workflow) {
+    attrs.push(`data-workflow="${action.workflow}"`);
+    attrs.push(`data-action="${action.action || defaultWorkflowAction(action.workflow)}"`);
+  } else if (action.action) {
+    attrs.push(`data-action="${action.action}"`);
+  }
   if (action.section) attrs.push(`data-jump="${action.section}"`);
   if (action.ai) attrs.push(`data-ai="${action.ai}"`);
   if (action.mapAction) attrs.push(`data-map-action="${action.mapAction}"`);
@@ -6526,8 +6544,7 @@ function bindStatic() {
     if (workflowButton) {
       event.preventDefault();
       event.stopPropagation();
-      const config = workflowConfig(workflowButton.dataset.workflow, workflowButton.dataset.action, workflowButton);
-      if (config) openWorkflowModal(config);
+      runWorkflowAction(workflowButton.dataset.workflow, workflowButton.dataset.action, workflowButton);
       return;
     }
     const moduleTestButton = event.target.closest("[data-module-test]");

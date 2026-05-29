@@ -142,7 +142,9 @@ assert(app.includes("function openHealthWorkflow"), "Telehealth small workflow b
 assert(html.includes("healthActionStatus"), "Telehealth workflow buttons need visible status feedback");
 assert(app.includes("task-chip-action"), "Workspace status chips must render as actionable buttons when they represent workflows");
 assert(app.includes("function taskActionAttrs"), "Workspace action chips must preserve workflow/provider/module data attributes");
+assert(app.includes("function defaultWorkflowAction"), "Dashboard task chips need default workflow actions when only a module is known");
 assert(app.includes('event.target.closest("[data-workflow][data-action]")'), "Dynamic workflow cards and chips need delegated click handling");
+assert(app.includes("runWorkflowAction(workflowButton.dataset.workflow, workflowButton.dataset.action, workflowButton)"), "Delegated workflow buttons need workflow fallback handling");
 assert(app.includes('event.target.closest("[data-module-test]")'), "Module engine test buttons need delegated click handling");
 assert(app.includes('event.target.closest("[data-health]")'), "Health action buttons need delegated click handling");
 assert(app.includes('event.target.closest("[data-workforce]")'), "Workforce action buttons need delegated click handling");
