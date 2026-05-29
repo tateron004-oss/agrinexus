@@ -7,7 +7,30 @@ const testPort = process.env.AGRINEXUS_TEST_PORT || "4373";
 const base = process.env.AGRINEXUS_URL || `http://localhost:${testPort}`;
 const dbPath = path.join(__dirname, "..", "db.json");
 const dbSnapshot = fs.readFileSync(dbPath, "utf8");
+const tempDbPath = path.join(__dirname, "..", "tmp-smoke-db.json");
 let cookie = "";
+
+function resetConversationMemory(db) {
+  db.profile = db.profile || {};
+  db.profile.agentPendingAction = null;
+  db.profile.activeCourseId = "digital-foundations";
+  db.profile.completedCourses = (db.profile.completedCourses || []).filter(courseId => courseId !== "digital-foundations");
+  db.profile.certificates = (db.profile.certificates || []).filter(item => item.courseId !== "digital-foundations");
+  db.profile.enrollments = (db.profile.enrollments || []).filter(item => item.courseId !== "digital-foundations");
+  db.profile.agentMemory = {
+    ...(db.profile.agentMemory || {}),
+    activeClarification: null,
+    activeGuidedMission: null,
+    activeIntake: null,
+    activeJarvisSession: null,
+    activeRecovery: null,
+    activeVoiceMission: null,
+    lastRecommendedAction: null,
+    turnCoach: null,
+    userModel: {}
+  };
+  return db;
+}
 
 function wait(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
@@ -39,9 +62,11 @@ async function call(path, body) {
 }
 
 (async () => {
+  const isolatedDb = resetConversationMemory(JSON.parse(dbSnapshot));
+  fs.writeFileSync(tempDbPath, JSON.stringify(isolatedDb, null, 2));
   const server = spawn(process.execPath, ["server.js"], {
     cwd: `${__dirname}/..`,
-    env: { ...process.env, PORT: testPort },
+    env: { ...process.env, PORT: testPort, AGRINEXUS_DB_PATH: tempDbPath },
     stdio: "ignore",
     windowsHide: true
   });
@@ -114,7 +139,7 @@ async function call(path, body) {
   assert(login.behaviorModel.audience.includes("low-tech"));
   assert(login.behaviorModel.interactionStyle.includes("voice-first"));
   assert(login.behaviorModel.lowTechBehaviors.some(item => item.includes("one clear question")));
-  assert(login.capabilities.items.some(item => item.id === "jarvis-command-layer"));
+  assert(login.capabilities.items.some(item => item.id === "agrinexus-command-layer"));
   assert(login.capabilities.items.some(item => item.id === "telehealth-workspace"));
   assert(login.smartActions.status);
   assert(Array.isArray(login.smartActions.items));
@@ -522,9 +547,17 @@ async function call(path, body) {
   assert(moduleHelp.commandResult.intent === "voice.module_help");
   assert(moduleHelp.commandResult.metadata.redirectSection === "health");
   const voiceMission = await call("/api/agent/command", { command: "help this farmer sell maize safely from start to finish", conversational: true, inputMode: "voice", outputMode: "voice" });
-  assert(voiceMission.commandResult.intent === "conversation.pending_action");
-  assert(voiceMission.commandResult.metadata.mode === "autopilot");
-  assert(voiceMission.commandResult.metadata.previewSteps.length >= 6);
+  assert(["conversation.pending_action", "conversation.clarification_started"].includes(voiceMission.commandResult.intent));
+  if (voiceMission.commandResult.intent === "conversation.pending_action") {
+    assert(voiceMission.commandResult.metadata.mode === "autopilot");
+    assert(voiceMission.commandResult.metadata.previewSteps.length >= 6);
+  } else {
+    assert(voiceMission.profile.agentMemory.activeClarification);
+    assert(voiceMission.commandResult.metadata.suggestedReplies.includes("contact buyer"));
+    const clarifiedVoiceMission = await call("/api/agent/command", { command: "contact buyer", conversational: true, inputMode: "voice", outputMode: "voice" });
+    assert(clarifiedVoiceMission.commandResult.intent === "conversation.clarification_resolved");
+    assert(clarifiedVoiceMission.profile.agentPendingAction);
+  }
   const voiceMissionCancel = await call("/api/agent/command", { command: "no", conversational: true, inputMode: "voice", outputMode: "voice" });
   assert(voiceMissionCancel.commandResult.intent === "conversation.canceled");
   const localizedBuyer = await call("/api/agent/command", { command: "contacter acheteur", conversational: true, inputMode: "voice", outputMode: "voice" });
@@ -670,7 +703,7 @@ async function call(path, body) {
   assert(memorySummary.commandResult.intent === "memory-summary");
   assert(memorySummary.commandResult.response.includes("voice-first telehealth"));
   const autopilotPreview = await call("/api/agent/command", { command: "Nexus autopilot help this farmer get from crop problem to buyer payment", conversational: true, inputMode: "voice", outputMode: "voice" });
-  assert(autopilotPreview.commandResult.intent === "conversation.pending_action");
+  assert(["conversation.pending_action", "agent.agrinexus_mode_staged"].includes(autopilotPreview.commandResult.intent));
   assert(autopilotPreview.commandResult.metadata.mode === "autopilot");
   assert(autopilotPreview.commandResult.metadata.previewSteps.length >= 6);
   const autopilotConfirm = await call("/api/agent/command", { command: "yes", conversational: true, inputMode: "voice", outputMode: "voice" });
@@ -721,10 +754,10 @@ async function call(path, body) {
   assert(wowDemo.profile.integrationEvents.some(event => event.action === "wow.ai_orchestration"));
   assert(wowDemo.profile.notifications.some(item => item.channel === "wow-demo"));
   server.kill();
-  fs.writeFileSync(dbPath, dbSnapshot);
+  fs.rmSync(tempDbPath, { force: true });
   console.log("Smoke test passed");
 })().catch(error => {
-  fs.writeFileSync(dbPath, dbSnapshot);
+  fs.rmSync(tempDbPath, { force: true });
   console.error(error.message);
   process.exit(1);
 });

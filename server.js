@@ -6671,11 +6671,13 @@ async function runAgentCommand(db, user, command, options = {}) {
   if (conversational && db.profile.agentMemory.activeIntake) {
     const activeDomain = db.profile.agentMemory.activeIntake.domain;
     const requestedDomain = intakeDomainFromText(lower);
-    const startsDifferentFlow = requestedDomain && requestedDomain !== activeDomain && /(start|apply|help|intake|job|workforce|training|trade|buyer|crop|telehealth|health)/.test(lower);
-    if (startsDifferentFlow) {
+    const directSystemCommand = /(summarize my progress|progress summary|where am i|how am i doing|all 10|all ten|10 items|ten items|voice demo|investor voice demo|show investors|demo mode|behavior model|what have you learned|show memory|what do you remember)/.test(lower);
+    const directWorkflowCommand = /(complete.*lesson|lesson|course|certificate|apply|job|workforce|shift|schedule|trade|buyer|crop|drone|map|route|provider|engine|vitals|telehealth|health)/.test(lower);
+    const startsDifferentFlow = requestedDomain && requestedDomain !== activeDomain && /(start|apply|help|intake|job|workforce|training|lesson|course|certificate|trade|buyer|crop|drone|map|route|provider|engine|telehealth|health|vitals|shift|schedule)/.test(lower);
+    if (startsDifferentFlow || directSystemCommand || directWorkflowCommand) {
       db.profile.agentMemory.activeIntake = null;
-      db.profile.agentMemory.lastStatus = "intake-switched";
-      db.profile.agentMemory.lastSummary = `Previous ${activeDomain} intake paused because the user started ${requestedDomain}.`;
+      db.profile.agentMemory.lastStatus = directSystemCommand || directWorkflowCommand ? "intake-paused-for-direct-command" : "intake-switched";
+      db.profile.agentMemory.lastSummary = `Previous ${activeDomain} intake paused because the user gave a direct command.`;
       db.profile.agentMemory.updatedAt = new Date().toISOString();
     } else {
       return continueConversationalIntake(db, user, text);
@@ -6707,6 +6709,97 @@ async function runAgentCommand(db, user, command, options = {}) {
       response: "Canceled. I did not run that workflow. Tell me what you want to do next.",
       status: "canceled",
       metadata: { conversationMode: true }
+    };
+  }
+
+  if (lower.includes("voice demo") || lower.includes("investor voice demo") || lower.includes("show investors") || lower.includes("demo mode")) {
+    db.profile.agentMemory.activeClarification = null;
+    db.profile.agentMemory.activeRecovery = null;
+    return voiceInvestorDemo(db, user);
+  }
+
+  if (lower.includes("all 10") || lower.includes("all ten") || lower.includes("10 items") || lower.includes("ten items") || lower.includes("full intelligent model") || lower.includes("full intelligence model")) {
+    db.profile.agentMemory.activeClarification = null;
+    db.profile.agentMemory.activeRecovery = null;
+    const model = intelligentAssistantModel(db, user);
+    db.profile.agentMemory.lastStatus = model.status;
+    db.profile.agentMemory.lastSummary = `The intelligent assistant model has ${model.readyCount}/${model.total} items active.`;
+    db.profile.agentMemory.updatedAt = new Date().toISOString();
+    logIntegration(db, {
+      providerId: "openai",
+      module: "AI",
+      action: "agent.ten_item_model_reviewed",
+      detail: `Ten-item intelligent assistant model reviewed: ${model.readyCount}/${model.total}.`,
+      metadata: { status: model.status, items: model.items.map(item => ({ id: item.id, ready: item.ready })) },
+      dispatch: false
+    });
+    return {
+      intent: "intelligent-assistant.ten_item_model",
+      response: `The full intelligent model is active at ${model.readyCount} out of ${model.total}. It covers onboarding, memory, next-step coaching, conversational intake, multilingual voice, role-aware guidance, autopilot missions, live services, accessibility-first support, and investor presentation mode. Say "help me" for the best next step or say one of the listed commands to test a specific item.`,
+      status: model.status,
+      metadata: { conversationMode: conversational, redirectSection: "agent", model }
+    };
+  }
+
+  if (lower.includes("behavior model") || lower.includes("not robotic") || lower.includes("human guide") || lower.includes("how do you behave")) {
+    db.profile.agentMemory.activeClarification = null;
+    db.profile.agentMemory.activeRecovery = null;
+    const behavior = assistantBehaviorModel(db, user);
+    db.profile.agentMemory.lastStatus = "behavior-model-active";
+    db.profile.agentMemory.lastSummary = `${behavior.name}: ${behavior.tone}`;
+    db.profile.agentMemory.updatedAt = new Date().toISOString();
+    return {
+      intent: "conversation.behavior_model",
+      response: `I use the ${behavior.name} for ${behavior.audience}. That means I listen first, restate what I understood, guide one step at a time, avoid technical language, ask before important actions, and keep the experience voice-first and human.`,
+      status: "completed",
+      metadata: { conversationMode: conversational, redirectSection: "agent", behaviorModel: behavior }
+    };
+  }
+
+  if (lower.includes("summarize my progress") || lower.includes("progress summary") || lower.includes("where am i") || lower.includes("how am i doing")) {
+    db.profile.agentMemory.activeClarification = null;
+    db.profile.agentMemory.activeRecovery = null;
+    const summary = platformProgressSummary(db, user);
+    db.profile.agentMemory.lastStatus = "progress-summary";
+    db.profile.agentMemory.lastSummary = summary;
+    db.profile.agentMemory.updatedAt = new Date().toISOString();
+    return {
+      intent: "conversation.progress_summary",
+      response: `Here is your progress: ${summary}.`,
+      status: "completed",
+      metadata: { conversationMode: conversational, redirectSection: "dashboard", summary }
+    };
+  }
+
+  if (lower.includes("investor tour") || lower.includes("demo narrator") || lower.includes("present the platform") || lower.includes("walk investors") || lower.includes("presentation mode")) {
+    db.profile.agentMemory.activeClarification = null;
+    db.profile.agentMemory.activeRecovery = null;
+    const briefing = agentBriefing(db, user, "investor presentation mode");
+    db.profile.agentMemory.lastStatus = "investor-presentation-ready";
+    db.profile.agentMemory.lastSummary = briefing.plainLanguageSummary;
+    db.profile.agentMemory.updatedAt = new Date().toISOString();
+    return {
+      intent: "conversation.investor_presentation_mode",
+      response: `Investor presentation mode is ready. Start on the Dashboard, then move through Learning, Workforce, Telehealth, AgriTrade, Map and AI, Agent AI, and Integrations. Opening statement: ${briefing.plainLanguageSummary}`,
+      status: "completed",
+      metadata: { conversationMode: conversational, redirectSection: "dashboard", briefingId: briefing.id }
+    };
+  }
+
+  if (lower.includes("what do you remember") || lower.includes("show memory") || lower.includes("what have you learned")) {
+    db.profile.agentMemory.activeClarification = null;
+    db.profile.agentMemory.activeRecovery = null;
+    const memories = [
+      ...(db.profile.agentMemory.preferences || []).slice(0, 3),
+      ...(db.profile.agentMemory.learnedPatterns || []).slice(0, 3),
+      ...(db.profile.agentMemory.longTermFacts || []).slice(0, 3)
+    ];
+    return {
+      intent: "memory-summary",
+      response: memories.length
+        ? `I remember ${memories.length} useful item(s): ${memories.map(item => item.text).join(" | ")}`
+        : "I do not have long-term memories yet. Say remember, then tell me an important fact or preference.",
+      metadata: { memories }
     };
   }
 
@@ -6764,6 +6857,15 @@ async function runAgentCommand(db, user, command, options = {}) {
       status: readiness.status,
       metadata: { conversationMode: conversational, redirectSection: "agent", jarvisReadiness: readiness }
     };
+  }
+
+  if (lower.includes("autonomous") || lower.includes("full mission") || lower.includes("run everything") || lower.includes("agrinexus command")) {
+    const goal = text || "Run the full AgriNexus cross-module mission.";
+    const plan = buildAgentPlan(db, goal, user);
+    db.profile.agentPlans.unshift(plan);
+    db.profile.agentPlans = db.profile.agentPlans.slice(0, 12);
+    const execution = await executeAgentPlanObject(db, user, plan, options.note || "Approved full mission from command center");
+    return { intent: "full-agent-mission", response: execution.summary, status: execution.status, metadata: { planId: plan.id, executionId: execution.id, steps: execution.steps.length } };
   }
 
   if ((invokedAgriNexus || /\b(agrinexus|agri\s+nexus|nexus|command mode|operating assistant)\b/.test(lower)) && /\b(need|want|mode|handle|take over|operate|run|activate|start|be|become|help|mission)\b/.test(lower)) {
