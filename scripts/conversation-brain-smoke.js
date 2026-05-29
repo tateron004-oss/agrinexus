@@ -59,6 +59,7 @@ async function call(route, body) {
     });
     assert(state.commandResult.intent === "conversation.open_reasoning");
     assert(state.commandResult.metadata.redirectSection === "trade");
+    assert(state.commandResult.metadata.suggestedReplies.includes("do the next step"));
     assert(state.profile.agentMemory.lastRecommendedAction);
     assert(state.profile.agentMemory.conversationQuality.openEndedAnswers >= 1);
 

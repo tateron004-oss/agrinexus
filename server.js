@@ -381,12 +381,29 @@ function behaviorFollowUpForResult(result = {}) {
   return "Would you like me to guide the next step?";
 }
 
+function suggestedRepliesForResult(result = {}) {
+  const intent = String(result.intent || "");
+  const status = String(result.status || "");
+  if (status === "needs-confirmation") return ["yes", "no", "explain that"];
+  if (status === "needs-input") return ["tell me more", "start intake", "take me there"];
+  if (status === "paused") return ["continue", "repeat that", "take me there"];
+  if (intent.includes("open_reasoning")) return ["do the next step", "explain that", "take me there"];
+  if (intent.includes("followup_explained")) return ["yes", "no", "tell me more"];
+  if (intent.includes("acknowledged")) return ["do the next step", "what should I do next", "open that"];
+  if (intent.includes("workflow_outcome_summary")) return ["do the next step", "explain that", "show evidence"];
+  if (intent.includes("daily_operator_briefing")) return ["do the next step", "run full mission", "open dashboard"];
+  if (intent.includes("language_changed")) return ["continue", "what can I say", "open voice help"];
+  if (intent.includes("conversation.greeting")) return ["help me get started", "open telehealth", "contact my buyer"];
+  return ["do the next step", "what should I do next", "open voice help"];
+}
+
 function humanizeAgentResult(db, user, result = {}) {
   const behavior = assistantBehaviorModel(db, user);
   const original = String(result.response || "I am ready.");
   const alreadyNatural = /^(I hear you|Absolutely|Got it|Done|Here is|Welcome|I can|I opened|I created|I submitted|The full intelligent model)/i.test(original);
   const prefix = alreadyNatural ? "" : "Got it. ";
   const followUp = behaviorFollowUpForResult(result);
+  const suggestedReplies = suggestedRepliesForResult(result);
   const response = `${prefix}${original}${/[.!?]$/.test(original.trim()) ? "" : "."} ${followUp}`;
   return {
     ...result,
@@ -400,7 +417,8 @@ function humanizeAgentResult(db, user, result = {}) {
         interactionStyle: behavior.interactionStyle,
         turnPattern: behavior.turnPattern.slice(0, 5),
         followUp
-      }
+      },
+      suggestedReplies
     }
   };
 }

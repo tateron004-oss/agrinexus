@@ -14,6 +14,7 @@ let voiceSpeaking = false;
 let activeVoiceAudio = null;
 let voicePlaybackToken = 0;
 let voiceConversationTurns = Number(localStorage.getItem("agrinexusVoiceTurns") || 0);
+let liveVoiceSuggestions = [];
 let agentReasoningVisible = localStorage.getItem("agrinexusReasoningVisible") === "true";
 const accessibilityPrefs = JSON.parse(localStorage.getItem("agrinexusAccessibility") || "{}");
 const originalTextNodes = new WeakMap();
@@ -2977,21 +2978,28 @@ function renderVoiceAssistant() {
   });
   const suggestions = $("#voiceSuggestions");
   if (suggestions) {
-    suggestions.innerHTML = voiceCommandExamples()
-      .map(voiceCommandButton)
-      .join("");
-    $$("[data-voice-example]").forEach(button => {
-      button.onclick = () => runVoiceExample(button);
-    });
+    renderLiveVoiceSuggestions();
   }
   const guide = $("#globalVoiceGuide");
   if (guide) {
-    guide.innerHTML = voiceCommandExamples().slice(0, 8)
-      .map(voiceCommandButton)
-      .join("");
+    renderLiveVoiceSuggestions();
   }
   renderVoiceHelpPanel();
   renderJarvisLayer();
+}
+
+function renderLiveVoiceSuggestions(suggestions = liveVoiceSuggestions) {
+  liveVoiceSuggestions = Array.isArray(suggestions) ? suggestions.filter(Boolean).slice(0, 4) : [];
+  const targets = ["#voiceSuggestions", "#globalVoiceGuide"];
+  for (const selector of targets) {
+    const container = $(selector);
+    if (!container) continue;
+    const phrases = liveVoiceSuggestions.length ? liveVoiceSuggestions : voiceCommandExamples().slice(0, selector === "#globalVoiceGuide" ? 8 : 6);
+    container.innerHTML = phrases.map(voiceCommandButton).join("");
+  }
+  $$("[data-voice-example]").forEach(button => {
+    button.onclick = () => runVoiceExample(button);
+  });
 }
 
 function renderVoiceHelpPanel() {
@@ -6350,6 +6358,7 @@ async function runBackendAgentCommand(command) {
     if (result.intent === "conversation.language_changed" || result.metadata?.language || previousLanguage !== languageCode()) {
       refreshVoiceForLanguageChange();
     }
+    renderLiveVoiceSuggestions(result.metadata?.suggestedReplies || []);
     const mode = $("#jarvisMode");
     if (mode) mode.textContent = `conversation turn ${voiceConversationTurns}`;
     setVoiceResponse(result.response || "Command completed.", true);
