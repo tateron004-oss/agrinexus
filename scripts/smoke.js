@@ -495,6 +495,17 @@ async function call(path, body) {
   assert(buyerContact.commandResult.metadata.redirectSection === "trade");
   assert(buyerContact.profile.buyerContacts.length >= 1);
   assert(buyerContact.profile.integrationEvents.some(event => event.action === "buyer.contact_prepared"));
+  const routeTracking = await call("/api/agent/command", { command: "Hey AgriTrade, track my route in real time", conversational: true, inputMode: "voice", outputMode: "voice" });
+  assert(routeTracking.commandResult.intent === "map.live_route_tracking");
+  assert(routeTracking.commandResult.metadata.redirectSection === "map");
+  assert(routeTracking.commandResult.metadata.requiresBrowserGeolocation);
+  assert(routeTracking.profile.integrationEvents.some(event => event.action === "map.live_route_tracking_requested"));
+  const outbreakCheck = await call("/api/agent/command", { command: "Telehealth, is the Congo region infected with Ebola right now?", conversational: true, inputMode: "voice", outputMode: "voice" });
+  assert(outbreakCheck.commandResult.intent === "health.public_health_risk");
+  assert(outbreakCheck.commandResult.metadata.redirectSection === "health");
+  assert(outbreakCheck.commandResult.response.toLowerCase().includes("ebola"));
+  assert(outbreakCheck.profile.publicHealthChecks.length >= 1);
+  assert(outbreakCheck.profile.integrationEvents.some(event => event.action === "health.public_health_risk_checked"));
   const quote = await call("/api/trade/advanced", { type: "quote", productId: "avocado-ke" });
   assert(quote.profile.tradeQuotes.length >= 1);
   assert(quote.profile.integrationEvents.some(event => event.action === "quote.sent"));

@@ -17,6 +17,8 @@ let agentReasoningVisible = localStorage.getItem("agrinexusReasoningVisible") ==
 const accessibilityPrefs = JSON.parse(localStorage.getItem("agrinexusAccessibility") || "{}");
 const originalTextNodes = new WeakMap();
 let deferredInstallPrompt = null;
+let routeTrackingWatchId = null;
+let routeTrackingPoints = [];
 
 const countryLanguageMap = {
   nigeria: "en",
@@ -2865,6 +2867,8 @@ function voiceCommandGroups() {
         "Nexus, connect me to a provider",
         "Nexus, capture vitals",
         "Nexus, create a referral",
+        "Nexus, check outbreak risk in Congo",
+        "Nexus, is this region safe for telehealth outreach",
         "Nexus, schedule my follow-up",
         "Nexus, turn on caption relay",
         "Nexus, notify my caregiver"
@@ -2879,6 +2883,7 @@ function voiceCommandGroups() {
         "Nexus, contact my buyer",
         "Nexus, create buyer order",
         "Nexus, run drone scan",
+        "Hey AgriTrade, track my route in real time",
         "Nexus, assign field task",
         "Nexus, check my route risk",
         "Nexus, plan drone mission",
@@ -2891,6 +2896,7 @@ function voiceCommandGroups() {
       commands: [
         "Nexus, run route intelligence",
         "Nexus, show map risk",
+        "Nexus, stop live route tracking",
         "Nexus, ask copilot",
         "Nexus, run live service check",
         "Nexus, summarize my progress"
@@ -4463,6 +4469,81 @@ function render() {
   if (hashSection !== currentSectionId()) goSection(hashSection, { updateHash: false, scroll: false });
 }
 
+function ensureLiveRouteLayer() {
+  if (!map) return null;
+  if (!layers.liveRoute) layers.liveRoute = L.layerGroup().addTo(map);
+  return layers.liveRoute;
+}
+
+function drawLiveRouteTracking() {
+  if (!window.L || !map || !routeTrackingPoints.length) return;
+  const layer = ensureLiveRouteLayer();
+  if (!layer) return;
+  layer.clearLayers();
+  const latest = routeTrackingPoints[routeTrackingPoints.length - 1];
+  if (routeTrackingPoints.length > 1) {
+    L.polyline(routeTrackingPoints, { color: "#d94c31", weight: 5, opacity: .95, dashArray: "8 6" })
+      .addTo(layer)
+      .bindTooltip(translateText("Live route trail"));
+  }
+  L.circleMarker(latest, { radius: 8, color: "#d94c31", fillColor: "#d94c31", fillOpacity: .95, weight: 3 })
+    .addTo(layer)
+    .bindTooltip(translateText("Live route position"));
+  map.setView(latest, Math.max(map.getZoom(), 13));
+}
+
+function stopLiveRouteTracking() {
+  if (routeTrackingWatchId !== null && navigator.geolocation) {
+    navigator.geolocation.clearWatch(routeTrackingWatchId);
+  }
+  routeTrackingWatchId = null;
+  ensureLiveRouteLayer()?.clearLayers();
+  setVoiceResponse("Live route tracking is stopped. Your saved route points stay in this session until you refresh.", true);
+}
+
+async function startLiveRouteTracking() {
+  goSection("map");
+  if (!navigator.geolocation) {
+    setVoiceResponse("This device does not expose GPS tracking to the browser. I can still run route-risk intelligence from the map and trade route tools.", true);
+    return;
+  }
+  if (routeTrackingWatchId !== null) {
+    setVoiceResponse("Live route tracking is already on. I will keep updating the map as the device moves.", true);
+    return;
+  }
+  routeTrackingPoints = [];
+  if (!map) renderMap();
+  setVoiceResponse("Live route tracking is starting. Please allow location access if your browser asks.", true);
+  try {
+    await request("/api/workflow/record", {
+      method: "POST",
+      body: {
+        module: "Map",
+        action: "route.live_tracking_started",
+        detail: "Live route tracking started from a voice command.",
+        providerId: "maps"
+      }
+    });
+  } catch {
+    // Tracking can still run locally if evidence recording is temporarily unavailable.
+  }
+  routeTrackingWatchId = navigator.geolocation.watchPosition(position => {
+    const point = [position.coords.latitude, position.coords.longitude];
+    routeTrackingPoints.push(point);
+    routeTrackingPoints = routeTrackingPoints.slice(-120);
+    drawLiveRouteTracking();
+    const accuracy = Math.round(position.coords.accuracy || 0);
+    $("#globalAssistantStatus").textContent = translateText(`Live route tracking active. Latest accuracy: ${accuracy} meters.`);
+  }, error => {
+    routeTrackingWatchId = null;
+    setVoiceResponse(`I could not start live route tracking: ${error.message}. Check browser location permission, then try again.`, true);
+  }, {
+    enableHighAccuracy: true,
+    maximumAge: 5000,
+    timeout: 15000
+  });
+}
+
 function renderMap() {
   if (!window.L || !data) return;
   const country = activeCountry();
@@ -4473,6 +4554,7 @@ function renderMap() {
     layers.routes = L.layerGroup().addTo(map);
     layers.markers = L.layerGroup().addTo(map);
     layers.facilities = L.layerGroup().addTo(map);
+    layers.liveRoute = L.layerGroup().addTo(map);
   }
   layers.routes.clearLayers();
   layers.markers.clearLayers();
@@ -4499,6 +4581,7 @@ function renderMap() {
     L.circleMarker(point, { radius: 6, color: "#1b8f68", fillColor: "#1b8f68", fillOpacity: .65 }).addTo(layers.facilities).bindTooltip(`${translateText("Facility")} ${index + 1}`);
   });
   map.setView([country.lat, country.lng], country.zoom);
+  drawLiveRouteTracking();
   setTimeout(() => map.invalidateSize(), 100);
 }
 
@@ -5889,6 +5972,19 @@ async function handleVoiceCommand(rawCommand) {
       setVoiceResponse(`Opened ${section}.`, true);
       return;
     }
+  }
+
+  if (/(stop|cancel|end|pause).*(live\s+)?route.*track/.test(lower) || /(stop|cancel|end|pause).*(tracking).*(route)/.test(lower)) {
+    stopLiveRouteTracking();
+    return;
+  }
+  if (/(track|follow|watch).*(my\s+)?route/.test(lower) && /(real time|realtime|live|gps|location)/.test(lower)) {
+    await startLiveRouteTracking();
+    return;
+  }
+  if (/(outbreak|infected|infection|ebola|disease risk|region safe|safe to deploy|safe for telehealth)/.test(lower) && /(telehealth|health|region|congo|drc|uganda|africa|outreach)/.test(lower)) {
+    await runBackendAgentCommand(command);
+    return;
   }
 
   if ((lower.includes("agritrade") || lower.includes("agri trade")) && (lower.includes("what do you do") || lower.includes("tell me about") || lower.includes("about the platform") || lower.includes("change") || lower.includes("language") || lower.includes("translate"))) {

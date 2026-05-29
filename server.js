@@ -2109,6 +2109,7 @@ function ensureHealthProfile(profile) {
   profile.telehealthEmergencyEscalations = profile.telehealthEmergencyEscalations || [];
   profile.careTeamNotes = profile.careTeamNotes || [];
   profile.telehealthOutcomeReviews = profile.telehealthOutcomeReviews || [];
+  profile.publicHealthChecks = profile.publicHealthChecks || [];
   profile.representativeConnections = profile.representativeConnections || 0;
   profile.accessibilityProfile = profile.accessibilityProfile || {
     hearingSupport: true,
@@ -4894,6 +4895,103 @@ function changeUserLanguage(db, user, language) {
   return true;
 }
 
+function regionFromHealthCommand(db, lower) {
+  if (/\b(drc|congo|democratic republic|kinshasa|ituri)\b/.test(lower)) return db.countries.find(item => item.id === "drc") || { id: "drc", name: "DRC" };
+  if (/\buganda\b/.test(lower)) return { id: "uganda", name: "Uganda" };
+  if (/\bnigeria\b/.test(lower)) return db.countries.find(item => item.id === "nigeria") || { id: "nigeria", name: "Nigeria" };
+  if (/\bkenya\b/.test(lower)) return db.countries.find(item => item.id === "kenya") || { id: "kenya", name: "Kenya" };
+  if (/\begypt\b/.test(lower)) return db.countries.find(item => item.id === "egypt") || { id: "egypt", name: "Egypt" };
+  return activeContext(db).country;
+}
+
+async function publicHealthRiskBriefing(db, user, text, lower) {
+  ensureHealthProfile(db.profile);
+  const region = regionFromHealthCommand(db, lower);
+  const sources = [
+    { name: "WHO Disease Outbreak News", url: "https://www.who.int/emergencies/disease-outbreak-news" },
+    { name: "CDC Ebola outbreaks", url: "https://www.cdc.gov/ebola/outbreaks/" }
+  ];
+  const feedUrl = process.env.PUBLIC_HEALTH_FEED_URL || process.env.HEALTH_RISK_FEED_URL || "";
+  let feedStatus = feedUrl ? "configured" : "official-source-manual-check";
+  let feedSummary = "";
+  if (feedUrl) {
+    try {
+      const response = await fetchWithTimeout(feedUrl, { headers: { accept: "application/json,text/plain,*/*" } }, 6000);
+      feedStatus = response.ok ? "live-feed-reachable" : `live-feed-${response.status}`;
+      feedSummary = response.ok ? String(await response.text()).slice(0, 500) : "";
+    } catch (error) {
+      feedStatus = `live-feed-error: ${error.message}`;
+    }
+  }
+  const ebolaMentioned = /\bebola\b/.test(lower);
+  const riskLevel = (/\b(drc|congo|uganda|ituri|ebola)\b/.test(lower) || ebolaMentioned) ? "high-public-health-caution" : "verify-before-deployment";
+  const check = {
+    id: crypto.randomUUID(),
+    regionId: region.id,
+    regionName: region.name,
+    query: text,
+    riskLevel,
+    sourceMode: feedStatus,
+    sourceUrls: sources.map(source => source.url),
+    createdBy: user.email,
+    createdAt: new Date().toISOString()
+  };
+  db.profile.publicHealthChecks.unshift(check);
+  db.profile.publicHealthChecks = db.profile.publicHealthChecks.slice(0, 20);
+  db.profile.agentMemory.activeModule = "Telehealth";
+  db.profile.agentMemory.lastStatus = "public-health-risk-checked";
+  db.profile.agentMemory.lastSummary = `${region.name} public health risk checked before telehealth deployment.`;
+  db.profile.agentMemory.updatedAt = check.createdAt;
+  rememberAgentMemory(db.profile, `Before deploying in ${region.name}, verify outbreak status with official public-health sources and local authorities.`, { source: "public-health-risk", category: "safety", confidence: 0.9 });
+  logIntegration(db, {
+    providerId: "health-notifications",
+    module: "Health",
+    action: "health.public_health_risk_checked",
+    detail: `${region.name} public health deployment risk reviewed from voice command.`,
+    metadata: { checkId: check.id, riskLevel, feedStatus, sourceUrls: check.sourceUrls },
+    dispatch: false
+  });
+  addActivity(db.profile, `Public health risk check: ${region.name} - ${riskLevel}.`);
+  const sourceLine = sources.map(source => source.name).join(" and ");
+  return {
+    intent: "health.public_health_risk",
+    response: `I would not mark ${region.name} clear without a live official health check. For an Ebola or outbreak concern, treat this as high-caution: verify WHO, CDC, and local Ministry of Health updates, screen travel and exposure, prepare PPE and isolation protocol, and get clinical approval before outreach. I recorded this public-health risk check and can open telehealth intake, referral, or safety review next.`,
+    status: "completed",
+    metadata: {
+      conversationMode: true,
+      redirectSection: "health",
+      module: "Telehealth",
+      regionId: region.id,
+      regionName: region.name,
+      riskLevel,
+      feedStatus,
+      feedSummary,
+      sourceLine,
+      sourceUrls: check.sourceUrls
+    }
+  };
+}
+
+function liveRouteTrackingResponse(db, user, text) {
+  ensureAiProfile(db.profile);
+  const { route } = activeContext(db);
+  logIntegration(db, {
+    providerId: "maps",
+    module: "Map",
+    action: "map.live_route_tracking_requested",
+    detail: `Live route tracking requested for ${route.name}.`,
+    metadata: { routeId: route.id, command: text },
+    dispatch: false
+  });
+  addActivity(db.profile, `Live route tracking requested for ${route.name}.`);
+  return {
+    intent: "map.live_route_tracking",
+    response: "I can track your route in real time from the web app when the browser has location permission. I will open the map, ask for GPS access, draw the route trail, and keep route-risk tools available while you move.",
+    status: "completed",
+    metadata: { conversationMode: true, redirectSection: "map", requiresBrowserGeolocation: true, routeId: route.id }
+  };
+}
+
 function moduleGreetingResponse(db, user, text, lower) {
   const isGreeting = /^(hi|hello|hey|good morning|good afternoon|good evening)\b/.test(lower);
   const isTradeAddressed = /\b(agritrade|agri\s*trade)\b/.test(lower);
@@ -4937,7 +5035,7 @@ function moduleGreetingResponse(db, user, text, lower) {
   }
   if (!isGreeting) return null;
   const extractedName = extractConversationalName(text);
-  const hasActionRequest = /\b(want|need|speak|talk|contact|buyer|sell|crop|order|wallet|payment|drone|logistics|run|open|create|apply|help)\b/.test(lower);
+  const hasActionRequest = /\b(want|need|speak|talk|contact|buyer|sell|crop|order|wallet|payment|drone|logistics|run|open|create|apply|help|track|route|gps|location)\b/.test(lower);
   if (hasActionRequest && !/\b(my name is|call me)\b/.test(lower)) return null;
   const name = extractedName || db.profile.agentMemory.userName || user.name?.split(/\s+/)[0] || "there";
   db.profile.agentMemory.userName = name;
@@ -4968,6 +5066,14 @@ async function runAgentCommand(db, user, command, options = {}) {
 
   const moduleGreeting = moduleGreetingResponse(db, user, text, lower);
   if (moduleGreeting) return moduleGreeting;
+
+  if (/(track|follow|watch).*(my\s+)?route/.test(lower) && /(real time|realtime|live|gps|location)/.test(lower)) {
+    return liveRouteTrackingResponse(db, user, text);
+  }
+
+  if (/(outbreak|infected|infection|ebola|disease risk|region safe|safe to deploy|safe for telehealth)/.test(lower) && /(telehealth|health|region|congo|drc|uganda|africa|outreach)/.test(lower)) {
+    return publicHealthRiskBriefing(db, user, text, lower);
+  }
 
   if (conversational && db.profile.agentMemory.activeIntake) {
     const activeDomain = db.profile.agentMemory.activeIntake.domain;
