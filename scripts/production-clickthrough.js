@@ -177,6 +177,10 @@ assert(app.includes("sessionBriefingPanel"), "Frontend must render the session b
 assert(server.includes("function assistantBehaviorModel"), "Backend needs a non-robotic behavior model");
 assert(server.includes("function humanizeAgentResult"), "Agent command responses must be shaped by the behavior model");
 assert(server.includes("conversation.behavior_model"), "Voice agent must explain its behavior model");
+assert(server.includes("function conversationalReasoningResponse"), "Backend needs an open-ended conversational reasoning brain");
+assert(server.includes("function updateConversationUserModel"), "Conversation brain must learn user context and preferences");
+assert(server.includes("agent.conversation_brain_answered"), "Conversation brain must create audit evidence for open-ended answers");
+assert(app.includes("Conversation learning"), "Agent UI must show conversation learning progress");
 assert(server.includes("function moduleGreetingResponse"), "Agent needs module-specific conversational greetings");
 assert(server.includes("trade.conversational_greeting"), "AgriTrade should greet users by name and speak as a module");
 assert(server.includes("trade.module_introduction"), "AgriTrade should explain the platform conversationally");

@@ -2238,6 +2238,14 @@ function ensureAiProfile(profile) {
   profile.agentMemory.retrievals = profile.agentMemory.retrievals || [];
   profile.agentMemory.activeIntake = profile.agentMemory.activeIntake || null;
   profile.agentMemory.conversationalIntakes = profile.agentMemory.conversationalIntakes || [];
+  profile.agentMemory.userModel = profile.agentMemory.userModel || {};
+  profile.agentMemory.conversationQuality = profile.agentMemory.conversationQuality || {
+    turns: 0,
+    openEndedAnswers: 0,
+    stagedActions: 0,
+    confirmedActions: 0,
+    lastSignal: "ready"
+  };
 }
 
 function buildAgentPlan(db, goal, user) {
@@ -3663,6 +3671,9 @@ function commandRecord(db, user, command, result) {
   };
   memory.rememberedContexts = [remembered, ...(memory.rememberedContexts || [])].slice(0, 12);
   learnFromAgentCommand(db, command, result);
+  if (result.intent === "conversation.confirmed" || result.metadata?.mode === "autopilot" || result.status === "completed") {
+    memory.conversationQuality.confirmedActions = Number(memory.conversationQuality.confirmedActions || 0) + (result.intent === "conversation.confirmed" ? 1 : 0);
+  }
   memory.lastCommand = command;
   memory.lastIntent = result.intent;
   memory.lastResponse = result.response;
@@ -4256,8 +4267,196 @@ function retrieveAgentMemories(profile, query, limit = 6) {
   return scored;
 }
 
+function conversationModuleSignal(text) {
+  const lower = String(text || "").toLowerCase();
+  const signals = [
+    { module: "Healthcare", section: "health", keys: ["telehealth", "health", "patient", "care", "doctor", "nurse", "clinic", "outbreak", "ebola", "vitals", "referral", "hearing", "visual", "blind", "deaf"] },
+    { module: "Learning", section: "learning", keys: ["learning", "training", "course", "lesson", "quiz", "certificate", "learner", "student", "captions", "audio guide"] },
+    { module: "Workforce", section: "workforce", keys: ["workforce", "job", "role", "worker", "candidate", "interview", "shift", "mentor", "apply", "hiring"] },
+    { module: "AgriTrade", section: "trade", keys: ["agritrade", "trade", "farmer", "crop", "buyer", "sell", "market", "order", "wallet", "payment", "logistics", "drone", "field", "farm"] },
+    { module: "Maps", section: "map", keys: ["map", "route", "location", "gps", "geospatial", "corridor", "country", "risk"] },
+    { module: "Integrations", section: "integrations", keys: ["integration", "provider", "engine", "api", "service", "credential", "render", "openai", "twilio"] },
+    { module: "Agent AI", section: "agent", keys: ["agent", "jarvis", "assistant", "voice", "conversation", "autopilot", "mission", "reason"] }
+  ];
+  const scored = signals
+    .map(signal => ({ ...signal, score: signal.keys.reduce((total, key) => total + (lower.includes(key) ? 1 : 0), 0) }))
+    .sort((a, b) => b.score - a.score);
+  return scored[0]?.score ? scored[0] : { module: "Platform", section: "dashboard", score: 0 };
+}
+
+function isOpenEndedConversation(lower) {
+  const value = String(lower || "").trim();
+  if (!value) return false;
+  return /^(what|how|why|when|where|who|can|could|would|should|tell|explain|describe|summarize)\b/.test(value)
+    || /\b(question|wondering|understand|explain|tell me|what about|how about|can it|can you|could it|does it|will it)\b/.test(value);
+}
+
+function isActionRequest(lower) {
+  return /\b(open|start|run|create|build|make|send|submit|apply|schedule|connect|contact|call|message|advance|complete|issue|record|capture|test|deploy|change|switch|translate|track|prepare)\b/.test(String(lower || ""));
+}
+
+function updateConversationUserModel(profile, command) {
+  ensureAiProfile(profile);
+  const text = String(command || "").trim();
+  const lower = text.toLowerCase();
+  const model = profile.agentMemory.userModel || {};
+  const nameMatch = text.match(/\b(?:my name is|i am|i'm|this is)\s+([A-Z][a-zA-Z'-]{1,30})\b/);
+  if (nameMatch) model.name = nameMatch[1];
+  if (/\bfarmer|crop|field|buyer|sell|farm\b/.test(lower)) model.currentPersona = "farmer-or-trade-operator";
+  if (/\bpatient|care|telehealth|doctor|health\b/.test(lower)) model.currentPersona = "health-access-user";
+  if (/\blearner|student|training|course|lesson\b/.test(lower)) model.currentPersona = "learner";
+  if (/\bjob|workforce|worker|candidate|interview\b/.test(lower)) model.currentPersona = "workforce-candidate";
+  if (/\binvestor|government|ministry|funding|presentation\b/.test(lower)) model.currentAudience = "investor-government";
+  if (/\bvoice|speak|talk|listen|microphone|jarvis\b/.test(lower)) model.preferredInteraction = "voice-first";
+  if (/\bnon technical|non-technical|simple|easy|plain language|low tech|low-tech\b/.test(lower)) model.communicationStyle = "plain-language-step-by-step";
+  if (/\bspanish|espanol|español\b/.test(lower)) model.lastRequestedLanguage = "es";
+  if (/\bfrench|francais|français\b/.test(lower)) model.lastRequestedLanguage = "fr";
+  if (/\bkiswahili|swahili\b/.test(lower)) model.lastRequestedLanguage = "sw";
+  if (/\barabic|arabic-speaking|عربي\b/.test(lower)) model.lastRequestedLanguage = "ar";
+  model.lastSeenAt = new Date().toISOString();
+  profile.agentMemory.userModel = model;
+  return model;
+}
+
+function localConversationalAnswer(db, user, command, moduleSignal, memories) {
+  const { country, route } = activeContext(db);
+  const memoryPreview = memories
+    .slice(0, 2)
+    .map(item => String(item.text || item.response || item.command || "").replace(/\s+/g, " ").trim())
+    .filter(Boolean)
+    .map(text => text.length > 120 ? `${text.slice(0, 117)}...` : text);
+  const memoryLine = memories.length
+    ? `I am using ${memoryPreview.length} relevant memory cue(s): ${memoryPreview.join(" | ")}.`
+    : "I do not need extra setup to guide this locally.";
+  const moduleAnswers = {
+    Healthcare: `Telehealth can guide a user from intake to accessible support, representative connection, consent, vitals, referral, care plan, follow-up, and public-health risk review. For sensitive care actions, I should explain the step and ask before creating records.`,
+    Learning: `Learning can guide a learner through course selection, lesson progress, captions, audio guides, offline packets, quizzes, and certificates. The strongest experience is conversational: I ask the learner's goal, language, and access needs, then move one step at a time.`,
+    Workforce: `Workforce can help someone build a profile, review readiness gaps, match roles, apply, schedule interviews, assign mentors, verify documents, plan shifts, and prepare payroll or performance evidence.`,
+    AgriTrade: `AgriTrade can help a farmer or seller review crop readiness, run drone field intelligence, prepare buyer communication, create orders, assess route risk, check quality and cold-chain needs, and prepare payment evidence.`,
+    Maps: `Maps can connect country context, route checkpoints, facility access, route risk, public-health or trade evidence, and live location tracking when the browser allows GPS.`,
+    Integrations: `Integrations can test live engines, provider status, OpenAI, voice, translation, maps, jobs, courses, telehealth, trade, drones, communications, billing, and auth readiness.`,
+    "Agent AI": `The agent layer can listen, remember context, answer questions, stage safe actions, ask for confirmation, run approved workflows, summarize what happened, and recommend the next best step.`
+  };
+  const base = moduleAnswers[moduleSignal.module] || `AgriNexus connects learning, workforce, telehealth, AgriTrade, drones, maps, AI, integrations, and admin readiness into one guided operating system.`;
+  const next = smartNextActions(db, user).items.find(item => item.section === moduleSignal.section) || smartNextActions(db, user).items[0];
+  return [
+    base,
+    `Current context: ${country.name}, ${route.name}, checkpoint ${db.profile.activeCheckpoint}.`,
+    memoryLine,
+    next ? `Best next step: ${next.title}. ${next.detail}` : "Best next step: tell me the module and the outcome you want, and I will guide it."
+  ].join(" ");
+}
+
+async function conversationalReasoningResponse(db, user, command, options = {}) {
+  ensureAiProfile(db.profile);
+  const lower = String(command || "").toLowerCase();
+  const moduleSignal = conversationModuleSignal(command);
+  const memories = retrieveAgentMemories(db.profile, command, 5);
+  const { country, route } = activeContext(db);
+  const profileSummary = {
+    readiness: db.profile.readiness,
+    activeCourseId: db.profile.activeCourseId,
+    applications: (db.profile.applications || []).length,
+    healthIntakes: (db.profile.healthIntakes || []).length,
+    orders: (db.profile.orders || []).length,
+    droneScans: (db.profile.droneScans || []).length,
+    lastStatus: db.profile.agentMemory.lastStatus,
+    userModel: db.profile.agentMemory.userModel
+  };
+  let responseText = "";
+  let provider = "local-conversation-brain";
+  if (process.env.OPENAI_API_KEY) {
+    try {
+      const response = await fetch("https://api.openai.com/v1/responses", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          model: process.env.OPENAI_AGENT_MODEL || process.env.OPENAI_MODEL || "gpt-4o-mini",
+          input: [
+            {
+              role: "system",
+              content: [
+                "You are AgriNexus, a warm voice-first operating assistant for rural agriculture, telehealth, learning, workforce, maps, and trade.",
+                "Answer the user's question conversationally in plain language.",
+                "Use the platform context; do not claim external real-time facts unless they are provided.",
+                "If an action may affect records, health, jobs, payment, providers, or messages, recommend confirmation instead of pretending it is already done.",
+                "End with one clear next step the user can say."
+              ].join(" ")
+            },
+            { role: "user", content: JSON.stringify({ command, moduleSignal, country, route, checkpoint: db.profile.activeCheckpoint, profileSummary, memories }) }
+          ],
+          max_output_tokens: 360
+        })
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(payload.error?.message || response.statusText);
+      responseText = extractResponseText(payload);
+      provider = "openai-conversation-brain";
+    } catch (error) {
+      responseText = localConversationalAnswer(db, user, command, moduleSignal, memories);
+      provider = "local-after-openai-conversation-error";
+      logIntegration(db, {
+        providerId: "openai",
+        module: "AI",
+        action: "agent.conversation_brain_error",
+        status: "fallback",
+        detail: error.message || "OpenAI conversation brain unavailable.",
+        metadata: { command, module: moduleSignal.module }
+      });
+    }
+  } else {
+    responseText = localConversationalAnswer(db, user, command, moduleSignal, memories);
+  }
+  db.profile.agentMemory.conversationQuality.openEndedAnswers = Number(db.profile.agentMemory.conversationQuality.openEndedAnswers || 0) + 1;
+  db.profile.agentMemory.conversationQuality.lastSignal = moduleSignal.module;
+  db.profile.agentMemory.activeModule = moduleSignal.module;
+  db.profile.agentMemory.lastStatus = "conversation-reasoned";
+  db.profile.agentMemory.lastSummary = responseText;
+  db.profile.agentMemory.updatedAt = new Date().toISOString();
+  logIntegration(db, {
+    providerId: "openai",
+    module: "AI",
+    action: "agent.conversation_brain_answered",
+    detail: `Conversation brain answered in ${moduleSignal.module}.`,
+    metadata: { provider, command, module: moduleSignal.module, memoriesUsed: memories.map(item => item.id).filter(Boolean) },
+    dispatch: false
+  });
+  const shouldStage = options.conversational && isActionRequest(lower) && moduleSignal.section !== "dashboard";
+  if (shouldStage) {
+    const plan = planAgentToolLocally(command);
+    if (plan && plan.tool !== "ai.copilot") {
+      const staged = stageAgentAction(db, command, {
+        module: plan.module,
+        tool: plan.tool,
+        action: plan.action,
+        section: plan.section,
+        planner: "conversation-brain-local",
+        confidence: plan.confidence,
+        rationale: plan.rationale
+      });
+      db.profile.agentMemory.conversationQuality.stagedActions = Number(db.profile.agentMemory.conversationQuality.stagedActions || 0) + 1;
+      return {
+        ...staged,
+        response: `${responseText} I can also stage ${plan.action.toLowerCase()} now. Say "yes" to run it, or "no" to cancel.`,
+        metadata: { ...staged.metadata, provider, conversationBrain: true, moduleSignal }
+      };
+    }
+  }
+  return {
+    intent: "conversation.open_reasoning",
+    response: responseText,
+    status: "completed",
+    metadata: { conversationMode: true, redirectSection: moduleSignal.section, provider, moduleSignal, memoriesUsed: memories.map(item => item.id).filter(Boolean) }
+  };
+}
+
 function learnFromAgentCommand(db, command, result) {
   ensureAiProfile(db.profile);
+  updateConversationUserModel(db.profile, command);
+  db.profile.agentMemory.conversationQuality.turns = Number(db.profile.agentMemory.conversationQuality.turns || 0) + 1;
   const lower = String(command || "").toLowerCase();
   if (lower.startsWith("remember ") || lower.includes("remember that")) {
     const fact = String(command || "").replace(/^remember\s+/i, "").replace(/remember that/i, "").trim();
@@ -5603,6 +5802,10 @@ async function runAgentCommand(db, user, command, options = {}) {
     db.profile.agentMemory.lastSummary = guide.response;
     db.profile.agentMemory.updatedAt = new Date().toISOString();
     return guide;
+  }
+
+  if (conversational && isOpenEndedConversation(lower)) {
+    return conversationalReasoningResponse(db, user, text, options);
   }
 
   if (conversational) {
