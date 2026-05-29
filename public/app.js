@@ -2862,7 +2862,10 @@ function voiceCommandGroups() {
       commands: [
         "Nexus, what can you do",
         "Nexus, show voice help",
+        "Nexus, what can I say in telehealth",
+        "Nexus, what can AgriTrade do",
         "Nexus, run full mission",
+        "Nexus, run investor voice demo",
         "Nexus, test provider engines",
         "Nexus, explain your behavior model"
       ]
@@ -6048,6 +6051,16 @@ async function handleVoiceCommand(rawCommand) {
     return;
   }
   if ((lower.includes("agritrade") || lower.includes("agri trade") || lower.includes("trade") || lower.includes("buyer") || lower.includes("crop") || lower.includes("route") || lower.includes("logistics") || lower.includes("driver") || lower.includes("farmer") || lower.includes("field")) && (lower.includes("communicat") || lower.includes("message") || lower.includes("update") || lower.includes("brief") || lower.includes("status") || lower.includes("report") || lower.includes("say to") || lower.includes("tell the") || lower.includes("notify") || lower.includes("script") || lower.includes("handoff"))) {
+    await runBackendAgentCommand(command);
+    return;
+  }
+
+  if ((lower.includes("what can i say") || lower.includes("what can") || lower.includes("commands") || lower.includes("examples")) && (lower.includes("agritrade") || lower.includes("trade") || lower.includes("telehealth") || lower.includes("health") || lower.includes("workforce") || lower.includes("learning") || lower.includes("maps"))) {
+    await runBackendAgentCommand(command);
+    return;
+  }
+
+  if (lower.includes("investor voice demo") || lower.includes("voice demo mode") || lower.includes("show investors") || lower.includes("demo mode")) {
     await runBackendAgentCommand(command);
     return;
   }

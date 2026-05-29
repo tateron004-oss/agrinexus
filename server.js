@@ -4264,6 +4264,97 @@ function stageAgentAction(db, command, action) {
   };
 }
 
+function lastWorkflowContext(profile) {
+  ensureAiProfile(profile);
+  const latest = (profile.agentCommands || [])[0] || {};
+  const memory = profile.agentMemory || {};
+  const source = `${latest.intent || ""} ${latest.command || ""} ${memory.activeModule || ""}`.toLowerCase();
+  const section = [
+    [/trade|buyer|drone|wallet|order|payment|market/, "trade"],
+    [/health|telehealth|care|patient|vitals|referral/, "health"],
+    [/workforce|job|role|shift|interview|mentor/, "workforce"],
+    [/learning|lesson|course|certificate|quiz/, "learning"],
+    [/map|route|risk|geo/, "map"],
+    [/integration|provider|engine/, "integrations"]
+  ].find(([pattern]) => pattern.test(source))?.[1] || null;
+  return { section, intent: latest.intent || memory.lastIntent || "", module: memory.activeModule || latest.metadata?.module || "", command: latest.command || memory.lastCommand || "" };
+}
+
+function contextualVoiceCommand(db, text, lower) {
+  const context = lastWorkflowContext(db.profile);
+  if (!context.section) return null;
+  const compact = String(lower || "").trim();
+  if (!/^(now\s+)?(check|open|run|create|send|tell|contact|advance|complete|issue|schedule|connect|review|prepare|brief|notify|track|start|do)\b/.test(compact)) return null;
+  if (!/\b(the|that|it|them|buyer|route|order|patient|job|lesson|provider|driver|team|payment|scan)\b/.test(compact)) return null;
+  const moduleLead = { trade: "AgriTrade", health: "Telehealth", workforce: "Workforce", learning: "Learning", map: "Maps", integrations: "Integrations" }[context.section];
+  return moduleLead ? `${moduleLead}, continuing from ${context.intent || "the last workflow"}: ${text}` : null;
+}
+
+function moduleVoiceHelpResponse(db, text, lower) {
+  if (!/(what can i say|what can.*do|voice help|commands|examples|help in|help for)/.test(lower)) return null;
+  const help = [
+    { keys: ["agritrade", "trade", "farmer", "crop", "buyer"], section: "trade", module: "AgriTrade", examples: ["contact my buyer", "review operational efficiency", "prepare a buyer update", "track my route in real time", "run drone scan", "release payment"] },
+    { keys: ["telehealth", "health", "patient", "care"], section: "health", module: "Telehealth", examples: ["start telehealth intake", "connect me to a provider", "capture vitals", "create a referral", "check outbreak risk in Congo", "turn on caption relay"] },
+    { keys: ["workforce", "job", "role", "worker"], section: "workforce", module: "Workforce", examples: ["apply for that job", "review my workforce gaps", "schedule my shift", "prepare me for an interview", "match me to a mentor"] },
+    { keys: ["learning", "training", "course", "lesson"], section: "learning", module: "Learning", examples: ["start training path", "complete my lesson", "build captions", "create audio guide", "issue my certificate"] },
+    { keys: ["map", "maps", "route", "geospatial"], section: "map", module: "Maps and AI", examples: ["run route intelligence", "show map risk", "track my route in real time", "stop live route tracking"] }
+  ];
+  const selected = help.find(item => item.keys.some(key => lower.includes(key)));
+  if (!selected) return null;
+  return {
+    intent: "voice.module_help",
+    response: `${selected.module} voice examples: say ${selected.examples.map(item => `"${item}"`).join(", ")}. I will guide the workflow and ask for confirmation before high-impact actions.`,
+    status: "completed",
+    metadata: { conversationMode: true, redirectSection: selected.section, module: selected.module, examples: selected.examples }
+  };
+}
+
+function voiceRecoveryResponse(db) {
+  const context = lastWorkflowContext(db.profile);
+  const suggestions = context.section === "trade"
+    ? ["review operational efficiency", "prepare a buyer update", "check route risk", "run drone scan"]
+    : context.section === "health"
+      ? ["start telehealth intake", "capture vitals", "create referral", "check outbreak risk"]
+      : context.section === "workforce"
+        ? ["apply for that job", "review workforce gaps", "schedule interview", "schedule shift"]
+        : ["open telehealth", "open AgriTrade", "apply for a job", "start training path"];
+  return {
+    intent: "conversation.voice_recovery",
+    response: `I heard you, but I need one clearer direction. Are you asking about ${suggestions.join(", or ")}? You can say one of those exactly and I will continue.`,
+    status: "needs-input",
+    metadata: { conversationMode: true, redirectSection: context.section || "agent", suggestions }
+  };
+}
+
+async function voiceInvestorDemo(db, user) {
+  const goal = "Run a voice-led investor demo across learning, workforce, telehealth, AgriTrade, drones, maps, and provider readiness.";
+  const { plan, execution } = await createAndExecuteAutopilotMission(db, user, goal, "Voice investor demo mode");
+  const script = [
+    "Welcome to AgriNexus. This is a voice-first operating system for rural learning, workforce readiness, accessible telehealth, agriculture trade, drone intelligence, live maps, and AI-guided operations.",
+    "The assistant can guide a non-technical user from a spoken need to an actual workflow, with confirmation, evidence, and next steps.",
+    "In this demo, AgriNexus creates training evidence, workforce movement, telehealth support, trade and buyer activity, drone field intelligence, route risk, and provider evidence."
+  ].join(" ");
+  db.profile.agentBriefings = db.profile.agentBriefings || [];
+  db.profile.agentBriefings.unshift({ id: crypto.randomUUID(), title: "Voice Investor Demo", plainLanguageSummary: script, planId: plan.id, executionId: execution.id, createdBy: user.email, createdAt: new Date().toISOString() });
+  logIntegration(db, { providerId: "openai", module: "AI", action: "agent.voice_demo_completed", detail: `Voice investor demo executed with ${execution.steps.length} step(s).`, metadata: { planId: plan.id, executionId: execution.id } });
+  return { intent: "agent.voice_demo_mode", response: `${script} Demo evidence is complete: ${execution.summary}`, status: execution.status, metadata: { conversationMode: true, redirectSection: "agent", planId: plan.id, executionId: execution.id, steps: execution.steps.length } };
+}
+
+function localizedWorkflowPhrase(lower) {
+  const normalized = String(lower || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  const phrases = [
+    { patterns: ["demarre telesante", "iniciar telesalud", "anza afya", "anza usajili"], command: "start telehealth intake" },
+    { patterns: ["connecte moi", "conectame", "niunganishe"], command: "connect me to a provider" },
+    { patterns: ["postuler", "solicitar trabajo", "omba kazi"], command: "apply for that job" },
+    { patterns: ["terminer lecon", "completa mi leccion", "kamilisha somo"], command: "complete my lesson" },
+    { patterns: ["contacter acheteur", "contacta comprador", "wasiliana na mnunuzi"], command: "contact my buyer" },
+    { patterns: ["rapport acheteur", "actualizacion comprador", "taarifa kwa mnunuzi"], command: "AgriTrade prepare a buyer update" },
+    { patterns: ["risque route", "riesgo ruta", "hatari ya njia"], command: "check my route risk" },
+    { patterns: ["scan drone", "escaneo dron", "ukaguzi wa drone"], command: "run drone scan" }
+  ];
+  return phrases.find(item => item.patterns.some(pattern => normalized.includes(pattern)))?.command || "";
+}
+
 async function executePendingAgentAction(db, user, pending) {
   if (!pending) return { intent: "conversation.no_pending_action", response: "There is no pending action to confirm.", status: "needs-input" };
   db.profile.agentPendingAction = null;
@@ -5254,10 +5345,20 @@ async function moduleGreetingResponse(db, user, text, lower) {
 
 async function runAgentCommand(db, user, command, options = {}) {
   ensureAiProfile(db.profile);
-  const text = String(command || "")
+  let text = String(command || "")
     .replace(/^\s*(hey\s+)?(nexus|jarvis|agrinexus|coach)\s*[,:\-]?\s*/i, "")
     .trim();
-  const lower = text.toLowerCase();
+  let lower = text.toLowerCase();
+  const localizedWorkflow = localizedWorkflowPhrase(lower);
+  if (localizedWorkflow) {
+    text = localizedWorkflow;
+    lower = text.toLowerCase();
+  }
+  const contextual = contextualVoiceCommand(db, text, lower);
+  if (contextual) {
+    text = contextual;
+    lower = text.toLowerCase();
+  }
   if (!text) return { intent: "empty-command", response: "Give me a command and I will route it.", status: "needs-input" };
   const wantsExecute = options.confirm === true || lower.includes("execute") || lower.includes("run it") || lower.includes("do it");
   const conversational = options.conversational === true;
@@ -5265,6 +5366,9 @@ async function runAgentCommand(db, user, command, options = {}) {
 
   const moduleGreeting = await moduleGreetingResponse(db, user, text, lower);
   if (moduleGreeting) return moduleGreeting;
+
+  const moduleHelp = moduleVoiceHelpResponse(db, text, lower);
+  if (moduleHelp) return moduleHelp;
 
   if (/(track|follow|watch).*(my\s+)?route/.test(lower) && /(real time|realtime|live|gps|location)/.test(lower)) {
     return liveRouteTrackingResponse(db, user, text);
@@ -5519,6 +5623,18 @@ async function runAgentCommand(db, user, command, options = {}) {
     };
   }
 
+  if (/(help|guide|support|move|take).*(farmer|patient|learner|worker|community|seller).*(sell|care|job|training|payment|buyer|safe|safely|end to end|start to finish)/.test(lower)) {
+    const preview = buildAutopilotPlan(db, text, user);
+    return stageAgentAction(db, text, {
+      kind: "autopilot-mission",
+      module: "AI",
+      action: `Run multistep voice mission with ${preview.steps.length} steps`,
+      section: "agent",
+      goal: text,
+      previewSteps: preview.steps.map(step => ({ module: step.module, tool: step.tool, action: step.action }))
+    });
+  }
+
   if (lower.includes("help") || lower.includes("what can you do")) {
     return {
       intent: "capability-summary",
@@ -5638,6 +5754,22 @@ async function runAgentCommand(db, user, command, options = {}) {
     return { intent: "execute-agent-plan", response: execution.summary, status: execution.status, metadata: { planId: plan.id, executionId: execution.id } };
   }
 
+  if (lower.includes("voice demo") || lower.includes("investor voice demo") || lower.includes("show investors") || lower.includes("demo mode")) {
+    return voiceInvestorDemo(db, user);
+  }
+
+  if (/(help|guide|support|move|take).*(farmer|patient|learner|worker|community|seller).*(sell|care|job|training|payment|buyer|safe|safely|end to end|start to finish)/.test(lower)) {
+    const preview = buildAutopilotPlan(db, text, user);
+    return stageAgentAction(db, text, {
+      kind: "autopilot-mission",
+      module: "AI",
+      action: `Run multistep voice mission with ${preview.steps.length} steps`,
+      section: "agent",
+      goal: text,
+      previewSteps: preview.steps.map(step => ({ module: step.module, tool: step.tool, action: step.action }))
+    });
+  }
+
   if (lower.includes("autonomous") || lower.includes("full mission") || lower.includes("run everything") || lower.includes("jarvis")) {
     const goal = text || "Run the full AgriNexus cross-module mission.";
     const plan = buildAgentPlan(db, goal, user);
@@ -5669,9 +5801,10 @@ async function runAgentCommand(db, user, command, options = {}) {
   }
 
   const { country, route } = activeContext(db);
+  if (String(command || "").trim().split(/\s+/).length <= 5 && conversational) return voiceRecoveryResponse(db);
   const aiResult = await runAi("copilot", country, route, db.profile);
   const run = recordAiRun(db, { type: "copilot", country, route, result: aiResult, module: "AI" });
-  return { intent: "ai-question", response: run.text, metadata: { runId: run.id, provider: run.provider } };
+  return { intent: "ai-question", response: `${run.text} If you want me to act, say a module and action, like "AgriTrade prepare buyer update" or "Telehealth start intake."`, metadata: { runId: run.id, provider: run.provider } };
 }
 
 function aiModuleForType(type, fallback = "AI") {

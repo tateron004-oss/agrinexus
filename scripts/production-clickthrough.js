@@ -160,6 +160,8 @@ assert(app.includes("es: \"es-ES\""), "Frontend voice locale map should include 
 assert(app.includes("function refreshVoiceForLanguageChange"), "Frontend should refresh app microphone locale after language changes");
 assert(app.includes("Voice language is now"), "App should show language-specific voice status");
 assert(app.includes("Hey AgriTrade, change language to Spanish"), "Voice help should include AgriTrade language command");
+assert(app.includes("what can I say in telehealth"), "Voice help should include module-specific prompts");
+assert(app.includes("run investor voice demo"), "Voice help should include investor voice demo");
 assert(app.includes("Hey AgriTrade, speak French"), "Voice help should include natural language switching");
 assert(app.includes("Hey AgriTrade, switch to Kiswahili"), "Voice help should include Kiswahili switching");
 assert(app.includes("Hey AgriTrade, use Arabic"), "Voice help should include Arabic switching");
@@ -199,6 +201,12 @@ assert(server.includes("conversation.platform_guide"), "Agent command route must
 assert(server.includes("function startConversationalIntake"), "Backend needs guided conversational intake sessions");
 assert(server.includes("function applyConversationalIntake"), "Conversational intake must convert remembered answers into real workflows");
 assert(server.includes("agent.conversational_intake_completed"), "Completed conversational intake should create evidence");
+assert(server.includes("function contextualVoiceCommand"), "Voice agent needs contextual follow-up memory");
+assert(server.includes("function moduleVoiceHelpResponse"), "Voice agent needs module-specific spoken help");
+assert(server.includes("function voiceRecoveryResponse"), "Voice agent needs graceful unclear-command recovery");
+assert(server.includes("function voiceInvestorDemo"), "Voice agent needs investor demo mode");
+assert(server.includes("function localizedWorkflowPhrase"), "Voice agent needs localized workflow phrase routing");
+assert(server.includes("Run multistep voice mission"), "Voice agent needs multistep voice mission confirmation");
 assert(server.includes("recommendedAction"), "Guided help should use memory-driven next actions");
 assert(html.includes("missionDashboardPanel"), "Agent page needs an Autopilot Mission Dashboard");
 assert(app.includes("function renderMissionDashboard"), "Frontend needs to render mission plans and executions");
