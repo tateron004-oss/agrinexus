@@ -11,6 +11,7 @@
     "webhook:smoke": "node scripts/webhook-smoke.js",
     "provider-engines": "node scripts/provider-engines.js",
     "provider-engines:smoke": "node scripts/provider-engines-smoke.js",
+    "conversation:smoke": "node scripts/conversation-brain-smoke.js",
     "workflow:audit": "node scripts/workflow-button-audit.js",
     "placeholder:audit": "node scripts/no-placeholder-audit.js",
     "production:clickthrough": "node scripts/production-clickthrough.js",

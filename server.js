@@ -4339,6 +4339,7 @@ function localConversationalAnswer(db, user, command, moduleSignal, memories) {
   };
   const base = moduleAnswers[moduleSignal.module] || `AgriNexus connects learning, workforce, telehealth, AgriTrade, drones, maps, AI, integrations, and admin readiness into one guided operating system.`;
   const next = smartNextActions(db, user).items.find(item => item.section === moduleSignal.section) || smartNextActions(db, user).items[0];
+  db.profile.agentMemory.lastRecommendedAction = next || null;
   return [
     base,
     `Current context: ${country.name}, ${route.name}, checkpoint ${db.profile.activeCheckpoint}.`,
@@ -4413,6 +4414,7 @@ async function conversationalReasoningResponse(db, user, command, options = {}) 
   db.profile.agentMemory.conversationQuality.openEndedAnswers = Number(db.profile.agentMemory.conversationQuality.openEndedAnswers || 0) + 1;
   db.profile.agentMemory.conversationQuality.lastSignal = moduleSignal.module;
   db.profile.agentMemory.activeModule = moduleSignal.module;
+  db.profile.agentMemory.lastRecommendedSection = moduleSignal.section;
   db.profile.agentMemory.lastStatus = "conversation-reasoned";
   db.profile.agentMemory.lastSummary = responseText;
   db.profile.agentMemory.updatedAt = new Date().toISOString();
@@ -4491,6 +4493,65 @@ function sectionForAgentModule(module) {
     Admin: "admin",
     Profile: "profile"
   }[module] || "agent";
+}
+
+function workflowActionToAgentAction(action = {}) {
+  const workflow = action.workflow || action.section || "";
+  const workflowAction = action.action || action.ai || "";
+  const moduleByWorkflow = {
+    learning: "Learning",
+    workforce: "Workforce",
+    health: "Healthcare",
+    trade: "AgriTrade",
+    map: "Maps",
+    integrations: "Integrations",
+    admin: "Admin",
+    agent: "AI",
+    ai: "AI"
+  };
+  const toolMap = {
+    "learning:start": "learning.start_or_continue",
+    "learning:lesson": "learning.complete_lesson",
+    "learning:quiz": "learning.quiz",
+    "learning:certificate": "learning.certificate",
+    "workforce:build-profile": "workforce.build_profile",
+    "workforce:apply-role": "workforce.apply_role",
+    "workforce:interview": "workforce.schedule_interview",
+    "workforce:mentor": "workforce.assign_mentor",
+    "workforce:shift": "workforce.schedule_shift",
+    "health:intake": "health.intake",
+    "health:accessibility": "health.accessibility_review",
+    "health:representative": "health.representative",
+    "health:caption": "health.caption",
+    "health:caregiver": "health.caregiver",
+    "health:safety": "health.safety",
+    "health:careplan": "health.careplan",
+    "trade:order": "trade.market_review",
+    "trade:buyer-contact": "trade.buyer_contact",
+    "trade:drone": "drone.field_scan",
+    "trade:drone-plan": "drone.flight_plan",
+    "trade:drone-intervention": "drone.intervention_task",
+    "trade:advance": "trade.advance_order",
+    "trade:wallet": "trade.wallet_payment",
+    "map:evidence": "map.route_risk",
+    "map:focus": "map.route_risk",
+    "integrations:test-all": "integrations.test_all",
+    "admin:readiness": "admin.health_check",
+    "admin:health-check": "admin.health_check",
+    "ai:copilot": "ai.copilot",
+    "ai:command": "ai.copilot"
+  };
+  const tool = toolMap[`${workflow}:${workflowAction}`] || (action.ai ? "ai.copilot" : null);
+  if (!tool) return null;
+  const registry = agentToolRegistry().find(item => item.tool === tool);
+  return {
+    module: registry?.module || moduleByWorkflow[workflow] || action.module || "AI",
+    tool,
+    action: registry?.action || action.title || "Run recommended action",
+    section: registry?.section || action.section || workflow || "agent",
+    roleId: action.roleId || null,
+    productId: action.productId || null
+  };
 }
 
 function stageAgentAction(db, command, action) {
@@ -4580,6 +4641,80 @@ function voiceRecoveryResponse(db) {
     response: `I heard you, but I need one clearer direction. Are you asking about ${suggestions.join(", or ")}? You can say one of those exactly and I will continue.`,
     status: "needs-input",
     metadata: { conversationMode: true, redirectSection: context.section || "agent", suggestions }
+  };
+}
+
+function conversationFollowUpResponse(db, user, text, lower) {
+  ensureAiProfile(db.profile);
+  const memory = db.profile.agentMemory;
+  const pending = db.profile.agentPendingAction;
+  const recommendation = memory.lastRecommendedAction || smartNextActions(db, user).items[0] || null;
+  const context = lastWorkflowContext(db.profile);
+  const wantsExplanation = /\b(explain|repeat|say that again|read that|what do you mean|why|summarize that)\b/.test(lower);
+  const wantsNavigation = /\b(take me there|open that|show me|go there|go to it|where is that)\b/.test(lower);
+  const wantsNext = /\b(continue|next step|do the next|run the next|start the next|do that|let's do that|lets do that|proceed)\b/.test(lower);
+  if (!wantsExplanation && !wantsNavigation && !wantsNext) return null;
+
+  if (wantsExplanation) {
+    const detail = pending
+      ? `The pending action is ${pending.action || "a workflow"} in ${pending.module || "AgriNexus"}. I am waiting because this action may create or change workflow evidence. Say yes to run it, or no to cancel.`
+      : memory.lastSummary || "I do not have a recent answer to explain yet.";
+    return {
+      intent: "conversation.followup_explained",
+      response: detail,
+      status: pending ? "needs-confirmation" : "completed",
+      metadata: { conversationMode: true, redirectSection: pending?.section || memory.lastRecommendedSection || context.section || "agent" }
+    };
+  }
+
+  if (wantsNavigation && !wantsNext) {
+    const section = pending?.section || recommendation?.section || memory.lastRecommendedSection || context.section || "dashboard";
+    return {
+      intent: "conversation.followup_navigate",
+      response: `I am taking you to ${section}. From there, I can guide the next step by voice.`,
+      status: "completed",
+      metadata: { conversationMode: true, redirectSection: section, recommendation }
+    };
+  }
+
+  if (pending && wantsNext) {
+    return {
+      intent: "conversation.followup_pending",
+      response: `I already have ${pending.action || "a workflow"} ready. Say "yes" to run it, or "no" to cancel.`,
+      status: "needs-confirmation",
+      metadata: { conversationMode: true, redirectSection: pending.section || "agent", pendingActionId: pending.id }
+    };
+  }
+
+  if (recommendation && wantsNext) {
+    const agentAction = workflowActionToAgentAction(recommendation);
+    if (agentAction) {
+      const staged = stageAgentAction(db, text, {
+        ...agentAction,
+        planner: "follow-up-recommendation",
+        confidence: recommendation.confidence || 0.82,
+        rationale: recommendation.reason || recommendation.detail || "This was the last recommended next action."
+      });
+      memory.conversationQuality.stagedActions = Number(memory.conversationQuality.stagedActions || 0) + 1;
+      return {
+        ...staged,
+        response: `Yes. The next best step is ${recommendation.title}. ${recommendation.detail} Say "yes" to run it, or "no" to cancel.`,
+        metadata: { ...staged.metadata, recommendationId: recommendation.id, followUp: true }
+      };
+    }
+    return {
+      intent: "conversation.followup_navigate",
+      response: `The next best step is ${recommendation.title}. I am opening ${recommendation.section || "dashboard"} so I can guide it with you.`,
+      status: "completed",
+      metadata: { conversationMode: true, redirectSection: recommendation.section || "dashboard", recommendation }
+    };
+  }
+
+  return {
+    intent: "conversation.followup_recovery",
+    response: "I can continue, but I need one clear direction. Say open telehealth, start training, apply for a job, contact my buyer, run drone scan, or test engines.",
+    status: "needs-input",
+    metadata: { conversationMode: true, redirectSection: context.section || "dashboard" }
   };
 }
 
@@ -5676,6 +5811,11 @@ async function runAgentCommand(db, user, command, options = {}) {
       status: "canceled",
       metadata: { conversationMode: true }
     };
+  }
+
+  if (conversational) {
+    const followUp = conversationFollowUpResponse(db, user, text, lower);
+    if (followUp) return followUp;
   }
 
   if (conversational && isIntakeStart(lower)) {

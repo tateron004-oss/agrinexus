@@ -179,6 +179,8 @@ assert(server.includes("function humanizeAgentResult"), "Agent command responses
 assert(server.includes("conversation.behavior_model"), "Voice agent must explain its behavior model");
 assert(server.includes("function conversationalReasoningResponse"), "Backend needs an open-ended conversational reasoning brain");
 assert(server.includes("function updateConversationUserModel"), "Conversation brain must learn user context and preferences");
+assert(server.includes("function conversationFollowUpResponse"), "Conversation brain must support natural follow-up commands");
+assert(server.includes("lastRecommendedAction"), "Conversation brain must remember the last recommended next action");
 assert(server.includes("agent.conversation_brain_answered"), "Conversation brain must create audit evidence for open-ended answers");
 assert(app.includes("Conversation learning"), "Agent UI must show conversation learning progress");
 assert(server.includes("function moduleGreetingResponse"), "Agent needs module-specific conversational greetings");
