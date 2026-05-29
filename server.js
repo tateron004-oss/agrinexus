@@ -386,6 +386,8 @@ function suggestedRepliesForResult(result = {}) {
   const status = String(result.status || "");
   if (intent.includes("clarification_started")) return result.metadata?.suggestedReplies || ["contact buyer", "start intake", "apply for role"];
   if (intent.includes("clarification_resolved")) return ["yes", "no", "explain that"];
+  if (intent.includes("voice_recovery") && result.metadata?.suggestions) return result.metadata.suggestions;
+  if (intent.includes("voice_recovery_resolved")) return ["yes", "no", "explain that"];
   if (status === "needs-confirmation") return ["yes", "no", "explain that"];
   if (status === "needs-input") return ["tell me more", "start intake", "take me there"];
   if (status === "paused") return ["continue", "repeat that", "take me there"];
@@ -2264,6 +2266,8 @@ function ensureAiProfile(profile) {
   profile.agentMemory.voiceMissionHistory = profile.agentMemory.voiceMissionHistory || [];
   profile.agentMemory.activeClarification = profile.agentMemory.activeClarification || null;
   profile.agentMemory.clarificationHistory = profile.agentMemory.clarificationHistory || [];
+  profile.agentMemory.activeRecovery = profile.agentMemory.activeRecovery || null;
+  profile.agentMemory.recoveryHistory = profile.agentMemory.recoveryHistory || [];
   profile.agentMemory.conversationQuality = profile.agentMemory.conversationQuality || {
     turns: 0,
     openEndedAnswers: 0,
@@ -4902,20 +4906,116 @@ function moduleVoiceHelpResponse(db, text, lower) {
   };
 }
 
+function voiceRecoveryRoutes(section = "") {
+  const routes = {
+    trade: [
+      { phrase: "review operational efficiency", module: "AgriTrade", tool: "trade.operational_efficiency", action: "Review operational efficiency", section: "trade", keys: ["efficiency", "operations", "optimize", "review"] },
+      { phrase: "prepare a buyer update", module: "AgriTrade", tool: "trade.operational_communication", action: "Prepare operational communication", section: "trade", keys: ["buyer", "update", "message", "communication"] },
+      { phrase: "check route risk", module: "Maps", tool: "map.route_risk", action: "Assess route", section: "map", keys: ["route", "risk", "map"] },
+      { phrase: "run drone scan", module: "AgriTech", tool: "drone.field_scan", action: "Run drone scan", section: "trade", keys: ["drone", "scan", "field"] }
+    ],
+    health: [
+      { phrase: "start telehealth intake", module: "Healthcare", tool: "health.intake", action: "Start intake", section: "health", keys: ["intake", "start", "patient"] },
+      { phrase: "capture vitals", module: "Healthcare", tool: "health.vitals", action: "Capture vitals", section: "health", keys: ["vitals", "blood", "temperature"] },
+      { phrase: "create referral", module: "Healthcare", tool: "health.referral", action: "Create referral", section: "health", keys: ["referral", "provider", "doctor"] },
+      { phrase: "check outbreak risk", module: "Healthcare", tool: "health.safety", action: "Run safety review", section: "health", keys: ["outbreak", "risk", "safe", "ebola"] }
+    ],
+    workforce: [
+      { phrase: "apply for that job", module: "Workforce", tool: "workforce.apply_role", action: "Apply to role", section: "workforce", keys: ["apply", "job", "role"] },
+      { phrase: "review workforce gaps", module: "Workforce", tool: "workforce.match_role", action: "Match workforce role", section: "workforce", keys: ["gaps", "match", "readiness"] },
+      { phrase: "schedule interview", module: "Workforce", tool: "workforce.schedule_interview", action: "Schedule interview", section: "workforce", keys: ["interview"] },
+      { phrase: "schedule shift", module: "Workforce", tool: "workforce.schedule_shift", action: "Schedule shift", section: "workforce", keys: ["shift", "schedule"] }
+    ],
+    learning: [
+      { phrase: "start training path", module: "Learning", tool: "learning.start_or_continue", action: "Advance learning", section: "learning", keys: ["start", "training", "course"] },
+      { phrase: "complete my lesson", module: "Learning", tool: "learning.complete_lesson", action: "Complete lesson", section: "learning", keys: ["lesson", "complete"] },
+      { phrase: "build captions", module: "Learning", tool: "learning.access_caption", action: "Prepare captions", section: "learning", keys: ["caption", "deaf", "hearing"] },
+      { phrase: "issue my certificate", module: "Learning", tool: "learning.certificate", action: "Issue certificate", section: "learning", keys: ["certificate", "credential"] }
+    ],
+    dashboard: [
+      { phrase: "open telehealth", module: "Healthcare", tool: "health.accessibility_review", action: "Prepare accessible telehealth", section: "health", keys: ["telehealth", "health", "care"] },
+      { phrase: "open AgriTrade", module: "AgriTrade", tool: "trade.market_review", action: "Review market", section: "trade", keys: ["agritrade", "trade", "buyer", "crop"] },
+      { phrase: "apply for a job", module: "Workforce", tool: "workforce.apply_role", action: "Apply to role", section: "workforce", keys: ["apply", "job", "work"] },
+      { phrase: "start training path", module: "Learning", tool: "learning.start_or_continue", action: "Advance learning", section: "learning", keys: ["training", "learn", "course"] }
+    ]
+  };
+  return routes[section] || routes.dashboard;
+}
+
 function voiceRecoveryResponse(db) {
+  ensureAiProfile(db.profile);
   const context = lastWorkflowContext(db.profile);
-  const suggestions = context.section === "trade"
-    ? ["review operational efficiency", "prepare a buyer update", "check route risk", "run drone scan"]
-    : context.section === "health"
-      ? ["start telehealth intake", "capture vitals", "create referral", "check outbreak risk"]
-      : context.section === "workforce"
-        ? ["apply for that job", "review workforce gaps", "schedule interview", "schedule shift"]
-        : ["open telehealth", "open AgriTrade", "apply for a job", "start training path"];
+  const routes = voiceRecoveryRoutes(context.section || "dashboard");
+  const suggestions = routes.map(item => item.phrase);
+  const recovery = {
+    id: crypto.randomUUID(),
+    section: context.section || "dashboard",
+    contextIntent: context.intent || "",
+    suggestions,
+    routes,
+    status: "waiting-answer",
+    createdAt: new Date().toISOString()
+  };
+  db.profile.agentMemory.activeRecovery = recovery;
+  db.profile.agentMemory.lastStatus = "voice-recovery";
+  db.profile.agentMemory.lastSummary = `I need one clearer direction: ${suggestions.join(", or ")}.`;
+  db.profile.agentMemory.updatedAt = recovery.createdAt;
   return {
     intent: "conversation.voice_recovery",
     response: `I heard you, but I need one clearer direction. Are you asking about ${suggestions.join(", or ")}? You can say one of those exactly and I will continue.`,
     status: "needs-input",
-    metadata: { conversationMode: true, redirectSection: context.section || "agent", suggestions }
+    metadata: { conversationMode: true, redirectSection: context.section || "agent", suggestions, recovery }
+  };
+}
+
+function continueVoiceRecovery(db, user, command) {
+  ensureAiProfile(db.profile);
+  const recovery = db.profile.agentMemory.activeRecovery;
+  if (!recovery) return null;
+  const lower = String(command || "").toLowerCase();
+  if (isNegativeCommand(lower)) {
+    db.profile.agentMemory.activeRecovery = null;
+    db.profile.agentMemory.lastStatus = "voice-recovery-canceled";
+    db.profile.agentMemory.lastSummary = "Voice recovery canceled.";
+    db.profile.agentMemory.updatedAt = new Date().toISOString();
+    return {
+      intent: "conversation.voice_recovery_canceled",
+      response: "No problem. I stopped that recovery prompt. Tell me what you want in your own words.",
+      status: "canceled",
+      metadata: { conversationMode: true, redirectSection: recovery.section || "agent" }
+    };
+  }
+  const route = (recovery.routes || []).find(item => lower.includes(String(item.phrase || "").toLowerCase()) || (item.keys || []).some(key => lower.includes(key)))
+    || (recovery.routes || [])[0];
+  if (!route) return null;
+  const completed = {
+    ...recovery,
+    answer: command,
+    selectedAction: route.action,
+    selectedTool: route.tool,
+    status: "resolved",
+    resolvedAt: new Date().toISOString()
+  };
+  db.profile.agentMemory.recoveryHistory = [completed, ...(db.profile.agentMemory.recoveryHistory || [])].slice(0, 20);
+  db.profile.agentMemory.activeRecovery = null;
+  const staged = stageAgentAction(db, `Recovered voice command: ${command}`, {
+    module: route.module,
+    tool: route.tool,
+    action: route.action,
+    section: route.section,
+    planner: "voice-recovery-router",
+    confidence: 0.78,
+    rationale: `User selected a recovery option after an unclear voice command.`
+  });
+  return {
+    ...staged,
+    intent: "conversation.voice_recovery_resolved",
+    response: `Got it. I can ${route.action.toLowerCase()} now. Say "yes" to run it, or "no" to cancel.`,
+    metadata: {
+      ...(staged.metadata || {}),
+      recovery: completed,
+      suggestedReplies: ["yes", "no", "explain that"]
+    }
   };
 }
 
@@ -6142,6 +6242,11 @@ async function runAgentCommand(db, user, command, options = {}) {
   if (conversational && db.profile.agentMemory.activeClarification) {
     const clarified = continueClarification(db, user, text);
     if (clarified) return clarified;
+  }
+
+  if (conversational && db.profile.agentMemory.activeRecovery) {
+    const recovered = continueVoiceRecovery(db, user, text);
+    if (recovered) return recovered;
   }
 
   if (conversational) {

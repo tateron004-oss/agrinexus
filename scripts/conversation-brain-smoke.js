@@ -128,6 +128,34 @@ async function call(route, body) {
     assert(state.commandResult.intent === "conversation.clarification_resolved");
     assert(!state.profile.agentMemory.activeClarification);
     assert(state.profile.agentPendingAction);
+
+    state = await call("/api/agent/command", {
+      command: "no",
+      conversational: true,
+      inputMode: "voice",
+      outputMode: "voice"
+    });
+    assert(state.commandResult.intent === "conversation.canceled");
+
+    state = await call("/api/agent/command", {
+      command: "unclear",
+      conversational: true,
+      inputMode: "voice",
+      outputMode: "voice"
+    });
+    assert(state.commandResult.intent === "conversation.voice_recovery");
+    assert(state.profile.agentMemory.activeRecovery);
+    assert(state.commandResult.metadata.suggestions.length >= 3);
+
+    state = await call("/api/agent/command", {
+      command: "check route risk",
+      conversational: true,
+      inputMode: "voice",
+      outputMode: "voice"
+    });
+    assert(state.commandResult.intent === "conversation.voice_recovery_resolved");
+    assert(!state.profile.agentMemory.activeRecovery);
+    assert(state.profile.agentPendingAction);
     console.log("Conversation brain smoke test passed");
   } finally {
     server.kill();
