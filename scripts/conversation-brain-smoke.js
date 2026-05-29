@@ -167,6 +167,40 @@ async function call(route, body) {
     assert(state.commandResult.intent === "conversation.voice_recovery_resolved");
     assert(!state.profile.agentMemory.activeRecovery);
     assert(state.profile.agentPendingAction);
+
+    state = await call("/api/agent/command", {
+      command: "no",
+      conversational: true,
+      inputMode: "voice",
+      outputMode: "voice"
+    });
+    assert(state.commandResult.intent === "conversation.canceled");
+
+    state = await call("/api/agent/command", {
+      command: "I am visually impaired. What is telehealth support?",
+      conversational: true,
+      inputMode: "voice",
+      outputMode: "voice"
+    });
+    assert(state.profile.agentMemory.userModel.accessibilityMode === "visual-or-audio-support");
+    assert(state.commandResult.metadata.behaviorModel.accessibilityMode === "visual-or-audio-support");
+    assert(state.commandResult.metadata.suggestedReplies.includes("yes"));
+
+    state = await call("/api/agent/command", {
+      command: "no",
+      conversational: true,
+      inputMode: "voice",
+      outputMode: "voice"
+    });
+    assert(state.commandResult.intent === "conversation.canceled");
+
+    state = await call("/api/agent/command", {
+      command: "what is your behavior model",
+      conversational: true,
+      inputMode: "voice",
+      outputMode: "voice"
+    });
+    assert(state.commandResult.metadata.suggestedReplies.includes("read it aloud"));
     console.log("Conversation brain smoke test passed");
   } finally {
     server.kill();

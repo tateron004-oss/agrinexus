@@ -176,6 +176,9 @@ assert(html.includes("AgriNexus Guide Brief"), "Dashboard needs a visible sessio
 assert(app.includes("sessionBriefingPanel"), "Frontend must render the session briefing");
 assert(server.includes("function assistantBehaviorModel"), "Backend needs a non-robotic behavior model");
 assert(server.includes("function humanizeAgentResult"), "Agent command responses must be shaped by the behavior model");
+assert(server.includes("function adaptiveBehaviorNudge"), "Conversation brain must adapt follow-up language to the user context");
+assert(server.includes("lastAdaptiveSignals"), "Conversation brain must remember adaptive conversation signals");
+assert(app.includes("Adaptive style"), "Agent UI must show adaptive conversation style");
 assert(server.includes("conversation.behavior_model"), "Voice agent must explain its behavior model");
 assert(server.includes("function conversationalReasoningResponse"), "Backend needs an open-ended conversational reasoning brain");
 assert(server.includes("function updateConversationUserModel"), "Conversation brain must learn user context and preferences");

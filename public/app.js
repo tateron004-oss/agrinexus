@@ -2775,6 +2775,7 @@ function renderAgentCenter() {
     `<div><strong>Current question</strong><span>${translateText(memory.activeClarification?.question || "No clarification needed")}</span></div>`,
     `<div><strong>Recovery prompt</strong><span>${translateText(memory.activeRecovery?.suggestions?.join(", ") || "No recovery prompt active")}</span></div>`,
     `<div><strong>Conversation mode</strong><span>${translateText(memory.userModel?.preferredInteraction || "voice-first guidance")} - ${translateText(memory.userModel?.communicationStyle || "plain-language support")}</span></div>`,
+    `<div><strong>Adaptive style</strong><span>${translateText(memory.userModel?.lastAdaptiveSignals?.persona || "general-operator")} - ${translateText(memory.userModel?.lastAdaptiveSignals?.accessibility || "standard")}</span></div>`,
     `<div><strong>Conversation learning</strong><span>${Number(memory.conversationQuality?.turns || 0)} ${translateText("turn(s)")} - ${Number(memory.conversationQuality?.openEndedAnswers || 0)} ${translateText("reasoned answer(s)")}</span></div>`,
     `<div><strong>Last goal</strong><span>${translateText(memory.lastGoal || "No goal remembered yet")}</span></div>`,
     `<div><strong>Last summary</strong><span>${translateText(memory.lastSummary || "No summary yet")}</span></div>`

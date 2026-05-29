@@ -321,13 +321,31 @@ function assistantBehaviorModel(db, user) {
   ensureAiProfile(db.profile);
   const language = user?.language || db.profile.accessibilityProfile?.language || "en";
   const role = user?.role || "Standard User";
+  const model = db.profile.agentMemory.userModel || {};
+  const currentPersona = model.currentPersona || "general-operator";
+  const communicationStyle = model.communicationStyle || "plain-language-step-by-step";
+  const accessibilityMode = model.accessibilityMode || db.profile.accessibilityProfile?.supportMode || "standard";
+  const audience = model.currentAudience === "investor-government"
+    ? "investors, government leaders, and non-technical decision makers"
+    : currentPersona === "farmer-or-trade-operator"
+      ? "farmers, crop sellers, buyer coordinators, and field teams"
+      : currentPersona === "health-access-user"
+        ? "patients, caregivers, telehealth aides, and community health teams"
+        : currentPersona === "workforce-candidate"
+          ? "job seekers, workforce operators, mentors, and placement teams"
+          : currentPersona === "learner"
+            ? "learners, trainers, and low-bandwidth education teams"
+            : "low-tech rural and cross-language users";
   return {
     id: "human-guide-behavior-model",
     name: "Human Guide Behavior Model",
     status: "active",
     language,
     role,
-    audience: "low-tech rural and cross-language users",
+    audience,
+    currentPersona,
+    communicationStyle,
+    accessibilityMode,
     tone: "warm, plain-language, calm, confident, patient, non-robotic",
     interactionStyle: "voice-first, one-step-at-a-time, confirmation-before-action",
     turnPattern: [
@@ -381,7 +399,19 @@ function behaviorFollowUpForResult(result = {}) {
   return "Would you like me to guide the next step?";
 }
 
-function suggestedRepliesForResult(result = {}) {
+function adaptiveBehaviorNudge(behavior = {}, result = {}) {
+  const status = String(result.status || "");
+  if (status === "needs-confirmation") return "Say yes when you are ready, or no if you want me to stop.";
+  if (behavior.accessibilityMode && behavior.accessibilityMode !== "standard") return "I can read this aloud, simplify it, or keep going step by step.";
+  if (behavior.currentPersona === "farmer-or-trade-operator") return "You can ask me to contact the buyer, check the field, plan the route, or explain the crop evidence.";
+  if (behavior.currentPersona === "health-access-user") return "You can ask me to start intake, connect a representative, add captions, or check safety risk.";
+  if (behavior.currentPersona === "workforce-candidate") return "You can ask me to match a role, apply, prepare for interview, or schedule a shift.";
+  if (behavior.currentPersona === "learner") return "You can ask me to start the course, complete a lesson, build captions, or issue a certificate.";
+  if (behavior.currentAudience === "investor-government") return "You can ask me for the investor summary, evidence, or the next presentation step.";
+  return behaviorFollowUpForResult(result);
+}
+
+function suggestedRepliesForResult(result = {}, behavior = {}) {
   const intent = String(result.intent || "");
   const status = String(result.status || "");
   if (intent.includes("clarification_started")) return result.metadata?.suggestedReplies || ["contact buyer", "start intake", "apply for role"];
@@ -391,6 +421,7 @@ function suggestedRepliesForResult(result = {}) {
   if (status === "needs-confirmation") return ["yes", "no", "explain that"];
   if (status === "needs-input") return ["tell me more", "start intake", "take me there"];
   if (status === "paused") return ["continue", "repeat that", "take me there"];
+  if (behavior.accessibilityMode && behavior.accessibilityMode !== "standard") return ["read it aloud", "make it simpler", "continue"];
   if (intent.includes("open_reasoning")) return ["do the next step", "explain that", "take me there"];
   if (intent.includes("followup_explained")) return ["yes", "no", "tell me more"];
   if (intent.includes("acknowledged")) return ["do the next step", "what should I do next", "open that"];
@@ -399,16 +430,22 @@ function suggestedRepliesForResult(result = {}) {
   if (intent.includes("voice_mission_status")) return ["continue", "do the next step", "take me there"];
   if (intent.includes("language_changed")) return ["continue", "what can I say", "open voice help"];
   if (intent.includes("conversation.greeting")) return ["help me get started", "open telehealth", "contact my buyer"];
+  if (behavior.currentPersona === "farmer-or-trade-operator") return ["contact buyer", "run drone scan", "check route risk"];
+  if (behavior.currentPersona === "health-access-user") return ["start intake", "connect representative", "turn on captions"];
+  if (behavior.currentPersona === "workforce-candidate") return ["apply for role", "review gaps", "schedule interview"];
+  if (behavior.currentPersona === "learner") return ["start course", "complete lesson", "issue certificate"];
+  if (behavior.currentAudience === "investor-government") return ["investor summary", "show evidence", "run demo tour"];
   return ["do the next step", "what should I do next", "open voice help"];
 }
 
-function humanizeAgentResult(db, user, result = {}) {
+function humanizeAgentResult(db, user, result = {}, command = "") {
+  if (command) updateConversationUserModel(db.profile, command);
   const behavior = assistantBehaviorModel(db, user);
   const original = String(result.response || "I am ready.");
   const alreadyNatural = /^(I hear you|Absolutely|Got it|Done|Here is|Welcome|I can|I opened|I created|I submitted|The full intelligent model)/i.test(original);
   const prefix = alreadyNatural ? "" : "Got it. ";
-  const followUp = behaviorFollowUpForResult(result);
-  const suggestedReplies = suggestedRepliesForResult(result);
+  const followUp = adaptiveBehaviorNudge(behavior, result);
+  const suggestedReplies = suggestedRepliesForResult(result, behavior);
   const response = `${prefix}${original}${/[.!?]$/.test(original.trim()) ? "" : "."} ${followUp}`;
   return {
     ...result,
@@ -419,6 +456,9 @@ function humanizeAgentResult(db, user, result = {}) {
         id: behavior.id,
         tone: behavior.tone,
         audience: behavior.audience,
+        currentPersona: behavior.currentPersona,
+        communicationStyle: behavior.communicationStyle,
+        accessibilityMode: behavior.accessibilityMode,
         interactionStyle: behavior.interactionStyle,
         turnPattern: behavior.turnPattern.slice(0, 5),
         followUp
@@ -4342,10 +4382,20 @@ function updateConversationUserModel(profile, command) {
   if (/\binvestor|government|ministry|funding|presentation\b/.test(lower)) model.currentAudience = "investor-government";
   if (/\bvoice|speak|talk|listen|microphone|jarvis\b/.test(lower)) model.preferredInteraction = "voice-first";
   if (/\bnon technical|non-technical|simple|easy|plain language|low tech|low-tech\b/.test(lower)) model.communicationStyle = "plain-language-step-by-step";
+  if (/\bread aloud|audio|voice guide|blind|visual|visually impaired|large print|screen reader\b/.test(lower)) model.accessibilityMode = "visual-or-audio-support";
+  if (/\bdeaf|hearing impaired|hard of hearing|caption|captions|transcript|sign language\b/.test(lower)) model.accessibilityMode = "hearing-support";
+  if (/\blow bandwidth|offline|poor internet|bad internet|no internet|rural signal\b/.test(lower)) model.connectivityMode = "low-bandwidth";
   if (/\bspanish|espanol|español\b/.test(lower)) model.lastRequestedLanguage = "es";
   if (/\bfrench|francais|français\b/.test(lower)) model.lastRequestedLanguage = "fr";
   if (/\bkiswahili|swahili\b/.test(lower)) model.lastRequestedLanguage = "sw";
   if (/\barabic|arabic-speaking|عربي\b/.test(lower)) model.lastRequestedLanguage = "ar";
+  model.lastAdaptiveSignals = {
+    persona: model.currentPersona || "general-operator",
+    audience: model.currentAudience || "community-user",
+    style: model.communicationStyle || "plain-language-step-by-step",
+    accessibility: model.accessibilityMode || "standard",
+    connectivity: model.connectivityMode || "standard"
+  };
   model.lastSeenAt = new Date().toISOString();
   profile.agentMemory.userModel = model;
   return model;
@@ -9648,7 +9698,7 @@ async function api(req, res, url) {
     const command = String(body.command || "").trim();
     if (body.inputMode === "voice") voiceRecord(db, user, "speech-to-text", `Voice command transcribed: ${command}`, { command });
     const rawResult = await runAgentCommand(db, user, command, { confirm: body.confirm === true, stageOnly: body.stageOnly === true, conversational: body.conversational === true, note: body.note });
-    const result = humanizeAgentResult(db, user, rawResult);
+    const result = humanizeAgentResult(db, user, rawResult, command);
     commandRecord(db, user, command, result);
     if (body.outputMode === "voice") voiceRecord(db, user, "text-to-speech", `Voice response prepared: ${result.response}`, { response: result.response });
     addWorkflowNote(db.profile, body.note, "Agent command note");
