@@ -384,6 +384,8 @@ function behaviorFollowUpForResult(result = {}) {
 function suggestedRepliesForResult(result = {}) {
   const intent = String(result.intent || "");
   const status = String(result.status || "");
+  if (intent.includes("clarification_started")) return result.metadata?.suggestedReplies || ["contact buyer", "start intake", "apply for role"];
+  if (intent.includes("clarification_resolved")) return ["yes", "no", "explain that"];
   if (status === "needs-confirmation") return ["yes", "no", "explain that"];
   if (status === "needs-input") return ["tell me more", "start intake", "take me there"];
   if (status === "paused") return ["continue", "repeat that", "take me there"];
@@ -2260,6 +2262,8 @@ function ensureAiProfile(profile) {
   profile.agentMemory.userModel = profile.agentMemory.userModel || {};
   profile.agentMemory.activeVoiceMission = profile.agentMemory.activeVoiceMission || null;
   profile.agentMemory.voiceMissionHistory = profile.agentMemory.voiceMissionHistory || [];
+  profile.agentMemory.activeClarification = profile.agentMemory.activeClarification || null;
+  profile.agentMemory.clarificationHistory = profile.agentMemory.clarificationHistory || [];
   profile.agentMemory.conversationQuality = profile.agentMemory.conversationQuality || {
     turns: 0,
     openEndedAnswers: 0,
@@ -4677,6 +4681,154 @@ function activeVoiceMissionBrief(db) {
   };
 }
 
+function isVagueHelpRequest(lower) {
+  const value = String(lower || "").trim();
+  if (!value) return false;
+  const broadAsk = /\b(help me|i need help|guide me|what should i do|help this|help my|support me|i need support|i want help)\b/.test(value);
+  const broadDomain = /\b(farm|farmer|crop|field|patient|care|health|telehealth|work|job|role|training|learn|course|buyer|trade|market|drone|route)\b/.test(value);
+  const specificAction = /\b(apply|contact|call|message|schedule|complete|issue|submit|pay|track|scan|translate|change language|run health check)\b/.test(value);
+  return broadAsk && broadDomain && !specificAction;
+}
+
+function clarificationBlueprint(moduleSignal = {}) {
+  const section = moduleSignal.section || "dashboard";
+  const blueprints = {
+    trade: {
+      module: "AgriTrade",
+      section: "trade",
+      question: "I can help with the farm. What is the first outcome: contact buyer, sell crop, check field, or plan route?",
+      options: ["contact buyer", "sell crop", "check field", "plan route"],
+      routes: [
+        { keys: ["contact", "buyer", "call", "message", "speak"], module: "AgriTrade", tool: "trade.buyer_contact", action: "Contact buyer", section: "trade" },
+        { keys: ["sell", "crop", "market", "order", "price"], module: "AgriTrade", tool: "trade.market_review", action: "Review market", section: "trade" },
+        { keys: ["check", "field", "scan", "drone", "pest", "disease", "soil"], module: "AgriTech", tool: "drone.field_scan", action: "Run drone scan", section: "trade" },
+        { keys: ["route", "logistics", "delivery", "transport"], module: "Maps", tool: "map.route_risk", action: "Assess route", section: "map" }
+      ]
+    },
+    health: {
+      module: "Healthcare",
+      section: "health",
+      question: "I can help with care. What do you need first: start intake, connect representative, accessibility support, or check regional risk?",
+      options: ["start intake", "connect representative", "accessibility support", "check regional risk"],
+      routes: [
+        { keys: ["intake", "start", "patient", "symptom"], module: "Healthcare", tool: "health.intake", action: "Start intake", section: "health" },
+        { keys: ["representative", "provider", "doctor", "nurse", "navigator"], module: "Healthcare", tool: "health.representative", action: "Connect representative", section: "health" },
+        { keys: ["access", "caption", "audio", "blind", "deaf", "visual", "hearing"], module: "Healthcare", tool: "health.accessibility_review", action: "Prepare accessible telehealth", section: "health" },
+        { keys: ["risk", "outbreak", "safe", "region", "ebola", "infection"], module: "Healthcare", tool: "health.safety", action: "Run safety review", section: "health" }
+      ]
+    },
+    workforce: {
+      module: "Workforce",
+      section: "workforce",
+      question: "I can help with work. What should we do first: match role, apply for role, schedule interview, or plan shift?",
+      options: ["match role", "apply for role", "schedule interview", "plan shift"],
+      routes: [
+        { keys: ["match", "find", "role", "readiness", "gap"], module: "Workforce", tool: "workforce.match_role", action: "Match workforce role", section: "workforce" },
+        { keys: ["apply", "application", "job"], module: "Workforce", tool: "workforce.apply_role", action: "Apply to role", section: "workforce" },
+        { keys: ["interview", "meeting"], module: "Workforce", tool: "workforce.schedule_interview", action: "Schedule interview", section: "workforce" },
+        { keys: ["shift", "schedule", "work day"], module: "Workforce", tool: "workforce.schedule_shift", action: "Schedule shift", section: "workforce" }
+      ]
+    },
+    learning: {
+      module: "Learning",
+      section: "learning",
+      question: "I can help with learning. What should we do first: start course, complete lesson, build captions, or issue certificate?",
+      options: ["start course", "complete lesson", "build captions", "issue certificate"],
+      routes: [
+        { keys: ["start", "course", "training", "learn"], module: "Learning", tool: "learning.start_or_continue", action: "Advance learning", section: "learning" },
+        { keys: ["lesson", "complete"], module: "Learning", tool: "learning.complete_lesson", action: "Complete lesson", section: "learning" },
+        { keys: ["caption", "deaf", "hearing"], module: "Learning", tool: "learning.access_caption", action: "Prepare captions", section: "learning" },
+        { keys: ["certificate", "credential", "issue"], module: "Learning", tool: "learning.certificate", action: "Issue certificate", section: "learning" }
+      ]
+    }
+  };
+  if (section === "health") return blueprints.health;
+  if (section === "workforce") return blueprints.workforce;
+  if (section === "learning") return blueprints.learning;
+  return blueprints.trade;
+}
+
+function startClarification(db, user, command, moduleSignal = conversationModuleSignal(command)) {
+  ensureAiProfile(db.profile);
+  const blueprint = clarificationBlueprint(moduleSignal);
+  const clarification = {
+    id: crypto.randomUUID(),
+    sourceCommand: command,
+    module: blueprint.module,
+    section: blueprint.section,
+    question: blueprint.question,
+    options: blueprint.options,
+    routes: blueprint.routes,
+    status: "waiting-answer",
+    createdBy: user?.email || "user",
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  };
+  db.profile.agentMemory.activeClarification = clarification;
+  db.profile.agentMemory.activeModule = blueprint.module;
+  db.profile.agentMemory.lastRecommendedSection = blueprint.section;
+  db.profile.agentMemory.lastStatus = "clarifying-user-need";
+  db.profile.agentMemory.lastSummary = blueprint.question;
+  db.profile.agentMemory.updatedAt = clarification.updatedAt;
+  return {
+    intent: "conversation.clarification_started",
+    response: blueprint.question,
+    status: "needs-input",
+    metadata: { conversationMode: true, redirectSection: blueprint.section, clarification, suggestedReplies: blueprint.options }
+  };
+}
+
+function continueClarification(db, user, command) {
+  ensureAiProfile(db.profile);
+  const clarification = db.profile.agentMemory.activeClarification;
+  if (!clarification) return null;
+  const lower = String(command || "").toLowerCase();
+  if (isNegativeCommand(lower)) {
+    db.profile.agentMemory.activeClarification = null;
+    db.profile.agentMemory.lastStatus = "clarification-canceled";
+    db.profile.agentMemory.lastSummary = "Clarification canceled.";
+    db.profile.agentMemory.updatedAt = new Date().toISOString();
+    return {
+      intent: "conversation.clarification_canceled",
+      response: "No problem. I stopped that question. Tell me what you want to do next.",
+      status: "canceled",
+      metadata: { conversationMode: true, redirectSection: clarification.section }
+    };
+  }
+  const route = (clarification.routes || []).find(item => (item.keys || []).some(key => lower.includes(key)))
+    || (clarification.routes || [])[0];
+  if (!route) return null;
+  const completed = {
+    ...clarification,
+    answer: command,
+    selectedAction: route.action,
+    selectedTool: route.tool,
+    status: "resolved",
+    resolvedAt: new Date().toISOString()
+  };
+  db.profile.agentMemory.clarificationHistory = [completed, ...(db.profile.agentMemory.clarificationHistory || [])].slice(0, 20);
+  db.profile.agentMemory.activeClarification = null;
+  const staged = stageAgentAction(db, `${clarification.sourceCommand}. Answer: ${command}`, {
+    module: route.module,
+    tool: route.tool,
+    action: route.action,
+    section: route.section,
+    planner: "clarification-router",
+    confidence: 0.82,
+    rationale: `User clarified broad request with: ${command}`
+  });
+  return {
+    ...staged,
+    intent: "conversation.clarification_resolved",
+    response: `Good. I understand: ${command}. I can ${route.action.toLowerCase()} now. Say "yes" to run it, or "no" to cancel.`,
+    metadata: {
+      ...(staged.metadata || {}),
+      clarification: completed,
+      suggestedReplies: ["yes", "no", "explain that"]
+    }
+  };
+}
+
 function stageAgentAction(db, command, action) {
   ensureAiProfile(db.profile);
   const pending = {
@@ -5987,6 +6139,11 @@ async function runAgentCommand(db, user, command, options = {}) {
     };
   }
 
+  if (conversational && db.profile.agentMemory.activeClarification) {
+    const clarified = continueClarification(db, user, text);
+    if (clarified) return clarified;
+  }
+
   if (conversational) {
     const social = socialConversationResponse(db, user, text, lower);
     if (social) return social;
@@ -5995,6 +6152,10 @@ async function runAgentCommand(db, user, command, options = {}) {
   if (conversational) {
     const followUp = conversationFollowUpResponse(db, user, text, lower);
     if (followUp) return followUp;
+  }
+
+  if (conversational && isVagueHelpRequest(lower)) {
+    return startClarification(db, user, text, conversationModuleSignal(text));
   }
 
   if (conversational && isIntakeStart(lower)) {

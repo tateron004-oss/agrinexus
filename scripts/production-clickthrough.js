@@ -184,6 +184,9 @@ assert(server.includes("function socialConversationResponse"), "Conversation bra
 assert(server.includes("function suggestedRepliesForResult"), "Agent responses need spoken next-step suggestions");
 assert(server.includes("function updateActiveVoiceMission"), "Conversation brain must track active voice missions across turns");
 assert(server.includes("function activeVoiceMissionBrief"), "Conversation brain must explain current voice mission state");
+assert(server.includes("function startClarification"), "Conversation brain must ask smart clarification questions for vague requests");
+assert(server.includes("function continueClarification"), "Conversation brain must turn clarification answers into workflow actions");
+assert(server.includes("activeClarification"), "Conversation brain must remember active clarification state");
 assert(server.includes("lastRecommendedAction"), "Conversation brain must remember the last recommended next action");
 assert(server.includes("agent.conversation_brain_answered"), "Conversation brain must create audit evidence for open-ended answers");
 assert(app.includes("function isNaturalConversationCommand"), "Microphone commands should route natural speech to the conversation brain");

@@ -2771,6 +2771,7 @@ function renderAgentCenter() {
     `<div><strong>Audience</strong><span>${translateText(memory.activeAudience || "government")}</span></div>`,
     `<div><strong>Mission</strong><span>${translateText(memory.activeMission || "rural transformation")}</span></div>`,
     `<div><strong>Active voice mission</strong><span>${translateText(memory.activeVoiceMission?.goal || "No active voice mission")} ${memory.activeVoiceMission ? `- ${Number(memory.activeVoiceMission.progress || 0)}%` : ""}</span></div>`,
+    `<div><strong>Current question</strong><span>${translateText(memory.activeClarification?.question || "No clarification needed")}</span></div>`,
     `<div><strong>Conversation mode</strong><span>${translateText(memory.userModel?.preferredInteraction || "voice-first guidance")} - ${translateText(memory.userModel?.communicationStyle || "plain-language support")}</span></div>`,
     `<div><strong>Conversation learning</strong><span>${Number(memory.conversationQuality?.turns || 0)} ${translateText("turn(s)")} - ${Number(memory.conversationQuality?.openEndedAnswers || 0)} ${translateText("reasoned answer(s)")}</span></div>`,
     `<div><strong>Last goal</strong><span>${translateText(memory.lastGoal || "No goal remembered yet")}</span></div>`,

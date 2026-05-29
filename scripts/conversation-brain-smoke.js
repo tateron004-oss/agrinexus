@@ -108,6 +108,26 @@ async function call(route, body) {
     });
     assert(state.commandResult.intent === "conversation.acknowledged");
     assert(/next/i.test(state.commandResult.response));
+
+    state = await call("/api/agent/command", {
+      command: "help me with my farm",
+      conversational: true,
+      inputMode: "voice",
+      outputMode: "voice"
+    });
+    assert(state.commandResult.intent === "conversation.clarification_started");
+    assert(state.profile.agentMemory.activeClarification);
+    assert(state.commandResult.metadata.suggestedReplies.includes("contact buyer"));
+
+    state = await call("/api/agent/command", {
+      command: "contact buyer",
+      conversational: true,
+      inputMode: "voice",
+      outputMode: "voice"
+    });
+    assert(state.commandResult.intent === "conversation.clarification_resolved");
+    assert(!state.profile.agentMemory.activeClarification);
+    assert(state.profile.agentPendingAction);
     console.log("Conversation brain smoke test passed");
   } finally {
     server.kill();
