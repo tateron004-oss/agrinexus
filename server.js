@@ -2133,6 +2133,7 @@ function ensureTradeProfile(profile) {
   profile.exportReadiness = profile.exportReadiness || [];
   profile.contractPackets = profile.contractPackets || [];
   profile.paymentReleases = profile.paymentReleases || [];
+  profile.tradeEfficiencyReviews = profile.tradeEfficiencyReviews || [];
   profile.droneMissions = profile.droneMissions || [];
   profile.droneScans = profile.droneScans || [];
   profile.droneFindings = profile.droneFindings || [];
@@ -2355,6 +2356,80 @@ function createBuyerContactWorkflow(db, user, command = "") {
   });
   addActivity(db.profile, `Buyer contact prepared for ${buyerName} about ${productName}.`);
   return contact;
+}
+
+async function tradeOperationalEfficiencyReview(db, user, text) {
+  ensureTradeProfile(db.profile);
+  ensureAiProfile(db.profile);
+  const { country, route } = activeContext(db);
+  const order = db.profile.orders[db.profile.orders.length - 1] || null;
+  const product = order
+    ? (db.products || []).find(item => item.id === order.productId)
+    : (db.products || []).find(item => item.countryId === country.id) || (db.products || [])[0];
+  const latestScan = (db.profile.droneScans || [])[0] || null;
+  const latestRoute = (db.profile.aiRuns || []).find(item => item.type === "route") || null;
+  const buyerReadiness = Math.max(product?.buyerInterest || 65, order?.buyerInterest || 0);
+  const hasPaymentEvidence = (db.profile.walletTransactions || []).length > 0 || (db.profile.paymentReleases || []).length > 0;
+  const hasColdChain = (db.profile.coldChainChecks || []).length > 0;
+  const hasQuality = (db.profile.qualityInspections || []).length > 0;
+  const blockers = [
+    buyerReadiness < 80 ? "buyer interest is not yet at premium-ready level" : "",
+    !latestScan ? "no current drone field scan is attached" : "",
+    !latestRoute ? "route-risk AI has not been refreshed" : "",
+    !hasQuality ? "quality inspection is not yet recorded" : "",
+    !hasColdChain ? "cold-chain check is missing for perishable goods" : "",
+    !hasPaymentEvidence ? "payment release or wallet evidence is not confirmed" : ""
+  ].filter(Boolean);
+  const score = Math.max(42, Math.min(98, 100 - blockers.length * 9 + (country.risk === "Low" ? 4 : -4) + (buyerReadiness >= 85 ? 5 : 0)));
+  const aiResult = await runAi("trade-efficiency", country, route, db.profile);
+  const aiRun = recordAiRun(db, { type: "trade-efficiency", country, route, result: aiResult, module: "AgriTrade" });
+  const recommendations = [
+    latestScan ? "Use the latest drone scan as field evidence for the buyer." : "Run a drone scan before buyer negotiation.",
+    latestRoute ? "Attach current route-risk evidence to logistics timing." : "Run route intelligence before dispatch.",
+    hasQuality ? "Share quality evidence with the buyer." : "Run quality inspection before pricing.",
+    hasColdChain ? "Keep cold-chain evidence visible for delivery." : "Run cold-chain check if the crop is perishable.",
+    hasPaymentEvidence ? "Confirm payment release before handoff." : "Prepare wallet or payment-release evidence before delivery."
+  ];
+  const review = {
+    id: crypto.randomUUID(),
+    query: text,
+    countryId: country.id,
+    countryName: country.name,
+    routeId: route.id,
+    routeName: route.name,
+    productId: product?.id || null,
+    productName: order?.product || product?.name || "active crop lot",
+    orderId: order?.id || null,
+    score,
+    buyerReadiness,
+    blockers,
+    recommendations,
+    aiRunId: aiRun.id,
+    createdBy: user.email,
+    createdAt: new Date().toISOString()
+  };
+  db.profile.tradeEfficiencyReviews.unshift(review);
+  db.profile.tradeEfficiencyReviews = db.profile.tradeEfficiencyReviews.slice(0, 20);
+  addTradeEvent(db.profile, { type: "trade.operational_efficiency_reviewed", label: `${review.productName} efficiency score ${score}% on ${route.name}.` });
+  rememberAgentMemory(db.profile, `AgriTrade operations review for ${review.productName}: score ${score}%, blockers: ${blockers.join("; ") || "none"}.`, { source: "trade-efficiency", category: "operations", confidence: 0.92 });
+  db.profile.agentMemory.activeModule = "AgriTrade";
+  db.profile.agentMemory.lastStatus = "trade-efficiency-reviewed";
+  db.profile.agentMemory.lastSummary = `${review.productName} scored ${score}% for operational efficiency.`;
+  db.profile.agentMemory.updatedAt = review.createdAt;
+  logIntegration(db, {
+    providerId: "trade-logistics",
+    module: "AgriTrade",
+    action: "trade.operational_efficiency_reviewed",
+    detail: `${review.productName} operational efficiency reviewed at ${score}%.`,
+    metadata: { reviewId: review.id, aiRunId: aiRun.id, blockers, recommendations }
+  });
+  const blockerText = blockers.length ? `Main blockers: ${blockers.slice(0, 3).join("; ")}.` : "No major blockers are showing from current platform evidence.";
+  return {
+    intent: "trade.operational_efficiency",
+    response: `AgriTrade operational efficiency is ${score}% for ${review.productName} on ${route.name}. ${blockerText} Next best actions: ${recommendations.slice(0, 3).join(" ")} ${aiRun.text}`,
+    status: "completed",
+    metadata: { conversationMode: true, redirectSection: "trade", reviewId: review.id, aiRunId: aiRun.id, score, blockers, recommendations }
+  };
 }
 
 function submitBestWorkforceApplication(db, user, command = "") {
@@ -3300,6 +3375,11 @@ async function executeAgentTool(db, user, step) {
     return `Prepared ${contact.channel} for ${contact.buyerName} about ${contact.productName}.`;
   }
 
+  if (step.tool === "trade.operational_efficiency") {
+    const review = await tradeOperationalEfficiencyReview(db, user, step.detail || "review AgriTrade operational efficiency");
+    return review.response;
+  }
+
   if (step.tool === "trade.wallet_payment") {
     ensureTradeProfile(db.profile);
     const tx = { id: crypto.randomUUID(), provider: "M-Pesa", amount: 120, type: "credit", status: "posted", createdAt: new Date().toISOString() };
@@ -3775,6 +3855,7 @@ function deepVoiceIntent(lower) {
   if (includesAny(["care plan", "careplan"])) return { tool: "health.careplan", module: "Healthcare", action: "Generate care plan", section: "health" };
 
   if ((includesAny(["buyer", "customer"]) && includesAny(["speak", "talk", "call", "message", "contact"]))) return { tool: "trade.buyer_contact", module: "AgriTrade", action: "Contact buyer", section: "trade" };
+  if (includesAny(["operational efficiency", "operations efficiency", "optimize trade", "optimise trade", "trade bottleneck", "reduce delay", "reduce cost", "improve profit", "improve operations"])) return { tool: "trade.operational_efficiency", module: "AgriTrade", action: "Review operational efficiency", section: "trade" };
   if (includesAny(["create order", "buyer order", "market order", "sell crop"])) return { tool: "trade.market_review", module: "AgriTrade", action: "Create order", section: "trade" };
   if (includesAny(["advance order", "move order", "logistics handoff"])) return { tool: "trade.advance_order", module: "AgriTrade", action: "Advance order", section: "trade" };
   if (includesAny(["wallet", "payment", "mpesa", "m-pesa"])) return { tool: "trade.wallet_payment", module: "AgriTrade", action: "Post payment", section: "trade" };
@@ -4197,6 +4278,7 @@ function agentToolRegistry() {
     { tool: "health.careplan", module: "Healthcare", action: "Generate care plan", section: "health", description: "Generate a care plan for a patient." },
     { tool: "trade.market_review", module: "AgriTrade", action: "Review market", section: "trade", description: "Review market, create an order, price crops, or prepare a selling workflow." },
     { tool: "trade.buyer_contact", module: "AgriTrade", action: "Contact buyer", section: "trade", description: "Speak to, call, message, or contact a buyer about selling crops." },
+    { tool: "trade.operational_efficiency", module: "AgriTrade", action: "Review operational efficiency", section: "trade", description: "Optimize trade operations, identify bottlenecks, reduce delay, improve profit, and connect buyer, route, drone, quality, cold-chain, logistics, and payment evidence." },
     { tool: "trade.advance_order", module: "AgriTrade", action: "Advance order", section: "trade", description: "Move an order through logistics, quality check, or delivery." },
     { tool: "trade.wallet_payment", module: "AgriTrade", action: "Post payment", section: "trade", description: "Record wallet, mobile money, M-Pesa, or buyer payment activity." },
     { tool: "drone.flight_plan", module: "AgriTech", action: "Plan drone mission", section: "trade", description: "Plan a drone flight, drone mission, or field survey." },
@@ -4992,7 +5074,7 @@ function liveRouteTrackingResponse(db, user, text) {
   };
 }
 
-function moduleGreetingResponse(db, user, text, lower) {
+async function moduleGreetingResponse(db, user, text, lower) {
   const isGreeting = /^(hi|hello|hey|good morning|good afternoon|good evening)\b/.test(lower);
   const isTradeAddressed = /\b(agritrade|agri\s*trade)\b/.test(lower);
   if (!isTradeAddressed) return null;
@@ -5033,6 +5115,9 @@ function moduleGreetingResponse(db, user, text, lower) {
       metadata: { conversationMode: true, redirectSection: "trade", module: "AgriTrade" }
     };
   }
+  if (/(efficiency|efficient|optimize|optimise|operations|operational|bottleneck|delay|cost|waste|profit|improve|performance)/.test(lower)) {
+    return tradeOperationalEfficiencyReview(db, user, text);
+  }
   if (!isGreeting) return null;
   const extractedName = extractConversationalName(text);
   const hasActionRequest = /\b(want|need|speak|talk|contact|buyer|sell|crop|order|wallet|payment|drone|logistics|run|open|create|apply|help|track|route|gps|location)\b/.test(lower);
@@ -5064,7 +5149,7 @@ async function runAgentCommand(db, user, command, options = {}) {
   const conversational = options.conversational === true;
   const pendingAction = db.profile.agentPendingAction;
 
-  const moduleGreeting = moduleGreetingResponse(db, user, text, lower);
+  const moduleGreeting = await moduleGreetingResponse(db, user, text, lower);
   if (moduleGreeting) return moduleGreeting;
 
   if (/(track|follow|watch).*(my\s+)?route/.test(lower) && /(real time|realtime|live|gps|location)/.test(lower)) {
@@ -5073,6 +5158,10 @@ async function runAgentCommand(db, user, command, options = {}) {
 
   if (/(outbreak|infected|infection|ebola|disease risk|region safe|safe to deploy|safe for telehealth)/.test(lower) && /(telehealth|health|region|congo|drc|uganda|africa|outreach)/.test(lower)) {
     return publicHealthRiskBriefing(db, user, text, lower);
+  }
+
+  if (/(trade|agritrade|crop|buyer|route|order|logistics|drone|farm)/.test(lower) && /(efficiency|efficient|optimize|optimise|operations|operational|bottleneck|delay|cost|waste|profit|improve|performance)/.test(lower)) {
+    return tradeOperationalEfficiencyReview(db, user, text);
   }
 
   if (conversational && db.profile.agentMemory.activeIntake) {
@@ -5477,6 +5566,7 @@ function aiModuleForType(type, fallback = "AI") {
     careplan: "Healthcare",
     inspector: "Healthcare",
     "trade-advisor": "AgriTrade",
+    "trade-efficiency": "AgriTrade",
     price: "AgriTrade",
     route: "Maps",
     command: "AI",
@@ -5493,6 +5583,7 @@ function fallbackAi(type, country, route, profile) {
     "interview-prep": `AI interview prep recommends practicing a short story about training completed, operational reliability, and how the candidate would handle a field workflow escalation.`,
     triage: `AI triage assistant recommends classifying the active ${country.name} case by heat, queue pressure, risk, and representative availability before drafting care guidance.`,
     "trade-advisor": `AI trade advisor recommends reviewing buyer interest, wallet readiness, route checkpoint status, and provider evidence before advancing the next order.`,
+    "trade-efficiency": `AgriTrade efficiency advisor recommends clearing the bottleneck chain in this order: field evidence, buyer readiness, quality/cold-chain proof, route timing, and payment confirmation. Keep the operation moving only when each handoff has evidence attached.`,
     copilot: `AI copilot recommends the next best action across AgriNexus: verify learning progress, keep workforce placement moving, review active health risk, advance the trade route, and confirm provider evidence.`,
     price: `Price AI recommends holding premium lots on ${route.name} while buyer demand is strongest. Prioritize verified buyers, staged release, and route-aware pricing.`,
     soil: `${country.name} soil profile needs moderate support before the next planting cycle. Recommend field sampling, irrigation review, and input planning by district.`,

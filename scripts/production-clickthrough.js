@@ -156,10 +156,13 @@ assert(app.includes("es: \"es-ES\""), "Frontend voice locale map should include 
 assert(app.includes("Hey AgriTrade, change language to Spanish"), "Voice help should include AgriTrade language command");
 assert(server.includes("health.public_health_risk"), "Telehealth needs public-health outbreak risk briefing");
 assert(server.includes("map.live_route_tracking"), "Agent needs a live route tracking response");
+assert(server.includes("trade.operational_efficiency"), "AgriTrade needs operational efficiency intelligence");
+assert(server.includes("tradeEfficiencyReviews"), "AgriTrade efficiency reviews must persist as workflow evidence");
 assert(app.includes("function startLiveRouteTracking"), "Frontend needs browser GPS live route tracking");
 assert(app.includes("watchPosition"), "Live route tracking must use device geolocation");
 assert(app.includes("check outbreak risk in Congo"), "Voice help needs outbreak risk command guidance");
 assert(app.includes("track my route in real time"), "Voice help needs live route tracking command guidance");
+assert(app.includes("improve operational efficiency"), "Voice help needs AgriTrade operational efficiency guidance");
 assert(server.includes("lowTechBehaviors"), "Behavior model must explicitly support low-tech users");
 assert(server.includes("voice-first, one-step-at-a-time"), "Behavior model must be voice-first and step-by-step");
 assert(app.includes("behaviorModel.interactionStyle"), "Dashboard must render the behavior interaction style");

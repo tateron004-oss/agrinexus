@@ -500,6 +500,12 @@ async function call(path, body) {
   assert(routeTracking.commandResult.metadata.redirectSection === "map");
   assert(routeTracking.commandResult.metadata.requiresBrowserGeolocation);
   assert(routeTracking.profile.integrationEvents.some(event => event.action === "map.live_route_tracking_requested"));
+  const efficiency = await call("/api/agent/command", { command: "Hey AgriTrade, how can we improve operational efficiency for this crop route?", conversational: true, inputMode: "voice", outputMode: "voice" });
+  assert(efficiency.commandResult.intent === "trade.operational_efficiency");
+  assert(efficiency.commandResult.metadata.redirectSection === "trade");
+  assert(efficiency.commandResult.metadata.score > 0);
+  assert(efficiency.profile.tradeEfficiencyReviews.length >= 1);
+  assert(efficiency.profile.integrationEvents.some(event => event.action === "trade.operational_efficiency_reviewed"));
   const outbreakCheck = await call("/api/agent/command", { command: "Telehealth, is the Congo region infected with Ebola right now?", conversational: true, inputMode: "voice", outputMode: "voice" });
   assert(outbreakCheck.commandResult.intent === "health.public_health_risk");
   assert(outbreakCheck.commandResult.metadata.redirectSection === "health");

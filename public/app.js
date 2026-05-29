@@ -442,6 +442,7 @@ const contentTranslations = {
     "Nexus, contact my buyer": "Nexus, contacta a mi comprador",
     "Nexus, create buyer order": "Nexus, crea pedido de comprador",
     "Nexus, run drone scan": "Nexus, ejecuta escaneo de dron",
+    "Hey AgriTrade, how can we improve operational efficiency": "AgriTrade, como podemos mejorar la eficiencia operativa",
     "Nexus, assign field task": "Nexus, asigna tarea de campo",
     "Nexus, check my route risk": "Nexus, revisa el riesgo de mi ruta",
     "Start here": "Empiece aqui",
@@ -489,6 +490,7 @@ const contentTranslations = {
     "Nexus, contact my buyer": "Nexus, contacte mon acheteur",
     "Nexus, create buyer order": "Nexus, cree une commande acheteur",
     "Nexus, run drone scan": "Nexus, lance le scan drone",
+    "Hey AgriTrade, how can we improve operational efficiency": "AgriTrade, comment ameliorer l'efficacite operationnelle",
     "Nexus, assign field task": "Nexus, assigne une tache terrain",
     "Nexus, check my route risk": "Nexus, verifie le risque de mon trajet",
     "Command help": "Aide commandes",
@@ -624,6 +626,7 @@ const contentTranslations = {
     "Nexus, contact my buyer": "Nexus, wasiliana na mnunuzi wangu",
     "Nexus, create buyer order": "Nexus, tengeneza oda ya mnunuzi",
     "Nexus, run drone scan": "Nexus, endesha ukaguzi wa drone",
+    "Hey AgriTrade, how can we improve operational efficiency": "AgriTrade, tunawezaje kuboresha ufanisi wa uendeshaji",
     "Nexus, assign field task": "Nexus, toa kazi ya shambani",
     "Nexus, check my route risk": "Nexus, kagua hatari ya njia yangu",
     "Command help": "Msaada wa amri",
@@ -2880,6 +2883,7 @@ function voiceCommandGroups() {
       commands: [
         "Hey AgriTrade, tell me about the platform",
         "Hey AgriTrade, change language to Spanish",
+        "Hey AgriTrade, how can we improve operational efficiency",
         "Nexus, contact my buyer",
         "Nexus, create buyer order",
         "Nexus, run drone scan",
@@ -5988,6 +5992,10 @@ async function handleVoiceCommand(rawCommand) {
   }
 
   if ((lower.includes("agritrade") || lower.includes("agri trade")) && (lower.includes("what do you do") || lower.includes("tell me about") || lower.includes("about the platform") || lower.includes("change") || lower.includes("language") || lower.includes("translate"))) {
+    await runBackendAgentCommand(command);
+    return;
+  }
+  if ((lower.includes("agritrade") || lower.includes("agri trade") || lower.includes("trade") || lower.includes("buyer") || lower.includes("crop") || lower.includes("route") || lower.includes("logistics")) && (lower.includes("efficiency") || lower.includes("efficient") || lower.includes("optimize") || lower.includes("optimise") || lower.includes("operations") || lower.includes("operational") || lower.includes("bottleneck") || lower.includes("delay") || lower.includes("cost") || lower.includes("waste") || lower.includes("profit") || lower.includes("performance"))) {
     await runBackendAgentCommand(command);
     return;
   }
