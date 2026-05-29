@@ -4823,6 +4823,52 @@ async function buildConversationalGuideResponse(db, user, text) {
   }
 }
 
+function extractConversationalName(text) {
+  const value = String(text || "").trim();
+  const patterns = [
+    /\bmy name is\s+([a-z][a-z\s'-]{1,40})/i,
+    /\bi am\s+([a-z][a-z\s'-]{1,40})/i,
+    /\bi'm\s+([a-z][a-z\s'-]{1,40})/i,
+    /\bcall me\s+([a-z][a-z\s'-]{1,40})/i
+  ];
+  for (const pattern of patterns) {
+    const match = value.match(pattern);
+    if (match?.[1]) {
+      return match[1]
+        .replace(/[,.!?].*$/, "")
+        .trim()
+        .split(/\s+/)
+        .slice(0, 3)
+        .map(part => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
+        .join(" ");
+    }
+  }
+  return "";
+}
+
+function moduleGreetingResponse(db, user, text, lower) {
+  const isGreeting = /^(hi|hello|hey|good morning|good afternoon|good evening)\b/.test(lower);
+  const isTradeAddressed = /\b(agritrade|agri\s*trade)\b/.test(lower);
+  if (!isGreeting || !isTradeAddressed) return null;
+  const extractedName = extractConversationalName(text);
+  const hasActionRequest = /\b(want|need|speak|talk|contact|buyer|sell|crop|order|wallet|payment|drone|logistics|run|open|create|apply|help)\b/.test(lower);
+  if (hasActionRequest && !/\b(my name is|call me)\b/.test(lower)) return null;
+  const name = extractedName || db.profile.agentMemory.userName || user.name?.split(/\s+/)[0] || "there";
+  db.profile.agentMemory.userName = name;
+  db.profile.agentMemory.activeModule = "AgriTrade";
+  db.profile.agentMemory.lastStatus = "agritrade-greeting";
+  db.profile.agentMemory.lastSummary = `AgriTrade greeted ${name} and is ready for buyer, crop, order, wallet, drone, and logistics help.`;
+  db.profile.agentMemory.updatedAt = new Date().toISOString();
+  rememberAgentMemory(db.profile, `User name is ${name}.`, { source: "voice-greeting", category: "fact", confidence: 0.96 });
+  rememberAgentMemory(db.profile, `${name} greeted AgriTrade and may need trade, buyer, crop, drone, wallet, or logistics support.`, { source: "module-greeting", category: "preference", confidence: 0.88 });
+  return {
+    intent: "trade.conversational_greeting",
+    response: `Hello ${name}. I am AgriTrade. I can help you sell crops, contact buyers, create an order, check wallet payments, plan logistics, or run a drone field scan. Tell me what you want to do next.`,
+    status: "completed",
+    metadata: { conversationMode: true, redirectSection: "trade", module: "AgriTrade", userName: name }
+  };
+}
+
 async function runAgentCommand(db, user, command, options = {}) {
   ensureAiProfile(db.profile);
   const text = String(command || "")
@@ -4833,6 +4879,9 @@ async function runAgentCommand(db, user, command, options = {}) {
   const wantsExecute = options.confirm === true || lower.includes("execute") || lower.includes("run it") || lower.includes("do it");
   const conversational = options.conversational === true;
   const pendingAction = db.profile.agentPendingAction;
+
+  const moduleGreeting = moduleGreetingResponse(db, user, text, lower);
+  if (moduleGreeting) return moduleGreeting;
 
   if (conversational && db.profile.agentMemory.activeIntake) {
     const activeDomain = db.profile.agentMemory.activeIntake.domain;

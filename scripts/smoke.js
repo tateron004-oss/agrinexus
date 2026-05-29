@@ -583,6 +583,11 @@ async function call(path, body) {
   const agenticConfirm = await call("/api/agent/command", { command: "yes", conversational: true, inputMode: "voice", outputMode: "voice" });
   assert(agenticConfirm.commandResult.intent === "conversation.confirmed");
   assert(!agenticConfirm.profile.agentPendingAction);
+  const agritradeGreeting = await call("/api/agent/command", { command: "Hi AgriTrade, my name is Ron", conversational: true, inputMode: "voice", outputMode: "voice" });
+  assert(agritradeGreeting.commandResult.intent === "trade.conversational_greeting");
+  assert(agritradeGreeting.commandResult.response.includes("Hello Ron"));
+  assert(agritradeGreeting.commandResult.metadata.redirectSection === "trade");
+  assert(agritradeGreeting.profile.agentMemory.userName === "Ron");
   const rememberPreference = await call("/api/agent/command", { command: "Remember that I prefer voice-first telehealth support for hearing impaired patients", conversational: true, inputMode: "voice", outputMode: "voice" });
   assert(rememberPreference.commandResult.intent === "memory-updated");
   assert(rememberPreference.profile.agentMemory.preferences.length >= 1);
