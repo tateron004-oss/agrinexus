@@ -319,9 +319,52 @@ function conversationEvidencePack(db) {
   };
 }
 
+function agentCapabilityRegistryState(db, providers = runtimeProviders(db)) {
+  ensureAiProfile(db.profile);
+  const providerReady = id => ["connected", "ready"].includes(providers.find(provider => provider.id === id)?.status);
+  const liveGateForTool = tool => {
+    if (tool.startsWith("ai.")) return providerReady("openai") ? "live" : "offline-fallback";
+    if (tool.startsWith("health.")) return providerReady("telehealth") ? "live" : "local-workflow";
+    if (tool.startsWith("map.")) return providerReady("maps") ? "live" : "local-intelligence";
+    if (tool.startsWith("integrations.")) return providerReady("provider-engines") ? "live" : "needs-provider";
+    if (tool.startsWith("trade.") || tool.startsWith("drone.")) return providerReady("trade") || providerReady("drone") ? "live" : "local-workflow";
+    if (tool.startsWith("workforce.")) return providerReady("jobs") ? "live" : "local-workflow";
+    if (tool.startsWith("learning.")) return providerReady("courses") ? "live" : "local-workflow";
+    return "local-workflow";
+  };
+  const confirmationRequired = tool => /apply|payment|wallet|contact|consent|vitals|referral|followup|careplan|test_all|health_check|field_scan|flight_plan|intervention|advance_order/.test(tool);
+  const tools = agentToolRegistry().map(item => ({
+    ...item,
+    confirmationRequired: confirmationRequired(item.tool),
+    engineMode: liveGateForTool(item.tool),
+    commandExample: `${item.module} ${item.action}`.toLowerCase()
+  }));
+  const modules = [...new Set(tools.map(item => item.module))].map(module => {
+    const moduleTools = tools.filter(item => item.module === module);
+    return {
+      module,
+      total: moduleTools.length,
+      live: moduleTools.filter(item => item.engineMode === "live").length,
+      confirmationRequired: moduleTools.filter(item => item.confirmationRequired).length,
+      examples: moduleTools.slice(0, 3).map(item => item.commandExample)
+    };
+  });
+  const liveCount = tools.filter(item => item.engineMode === "live").length;
+  return {
+    status: liveCount === tools.length ? "all-live" : "mixed-local-and-live",
+    totalTools: tools.length,
+    liveTools: liveCount,
+    confirmationTools: tools.filter(item => item.confirmationRequired).length,
+    modules,
+    tools,
+    updatedAt: new Date().toISOString()
+  };
+}
+
 function publicState(db, user) {
   const providers = runtimeProviders(db);
   ensureOperationsProfile(db.profile);
+  const agentCapabilities = agentCapabilityRegistryState(db, providers);
   return {
     user: user && { id: user.id, name: user.name, email: user.email, role: user.role, country: user.country, language: user.language },
     permissions: user ? permissionsForRole(user.role) : {},
@@ -337,6 +380,7 @@ function publicState(db, user) {
     intelligentAssistant: intelligentAssistantModel(db, user, providers),
     behaviorModel: assistantBehaviorModel(db, user),
     conversationEvidence: conversationEvidencePack(db),
+    agentCapabilities,
     sessionBriefing: sessionBriefingModel(db, user, providers),
     smartActions: smartNextActions(db, user, providers),
     activationGuide: productionActivationGuide(db, providers),
@@ -6514,6 +6558,19 @@ async function runAgentCommand(db, user, command, options = {}) {
   if (conversational && isIntakeStart(lower)) {
     const started = startConversationalIntake(db, text, intakeDomainFromText(lower));
     if (started) return started;
+  }
+
+  if (lower.includes("capability registry") || lower.includes("technical capability") || lower.includes("what tools can you run") || lower.includes("what can you operate")) {
+    const registry = agentCapabilityRegistryState(db);
+    db.profile.agentMemory.lastStatus = "capability-registry-ready";
+    db.profile.agentMemory.lastSummary = `AgriNexus has ${registry.totalTools} supervised agent tool(s), ${registry.confirmationTools} requiring confirmation, and ${registry.liveTools} connected to live engines.`;
+    db.profile.agentMemory.updatedAt = new Date().toISOString();
+    return {
+      intent: "agent.capability_registry",
+      response: `I can operate ${registry.totalTools} supervised tools across learning, workforce, telehealth, trade, drones, maps, integrations, admin, profile, and AI. ${registry.confirmationTools} tools require confirmation before action. ${registry.liveTools} are live-engine backed right now; the rest run as local workflow evidence until providers are connected.`,
+      status: "completed",
+      metadata: { conversationMode: conversational, redirectSection: "agent", capabilityRegistry: registry }
+    };
   }
 
   if (lower.includes("all 10") || lower.includes("all ten") || lower.includes("10 items") || lower.includes("ten items") || lower.includes("full intelligent model") || lower.includes("full intelligence model")) {

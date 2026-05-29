@@ -67,6 +67,8 @@ async function call(route, body) {
     assert(state.conversationEvidence);
     assert(state.conversationEvidence.counts.commands >= 1);
     assert(state.conversationEvidence.evidence.some(item => /Latest command/i.test(item)));
+    assert(state.agentCapabilities.totalTools >= 30);
+    assert(state.agentCapabilities.confirmationTools > 0);
     assert(state.profile.agentMemory.conversationQuality.openEndedAnswers >= 1);
 
     state = await call("/api/agent/command", {
@@ -208,6 +210,15 @@ async function call(route, body) {
       outputMode: "voice"
     });
     assert(state.commandResult.metadata.suggestedReplies.includes("read it aloud"));
+
+    state = await call("/api/agent/command", {
+      command: "what tools can you run",
+      conversational: true,
+      inputMode: "voice",
+      outputMode: "voice"
+    });
+    assert(state.commandResult.intent === "agent.capability_registry");
+    assert(state.commandResult.metadata.capabilityRegistry.totalTools >= 30);
     console.log("Conversation brain smoke test passed");
   } finally {
     server.kill();
