@@ -40,12 +40,7 @@ const clickTargets = [
   "personaHealthBtn",
   "personaGovernmentBtn",
   "personaPartnerBtn",
-  "guideCommandTourBtn",
-  "guideTelehealthBtn",
-  "guideTrainingBtn",
-  "guideWorkforceBtn",
-  "guideFarmerMissionBtn",
-  "guideEnginesBtn",
+  "guideConversationBtn",
   "pilotRuralAccessBtn",
   "pilotFarmerMarketBtn",
   "pilotHealthWorkforceBtn",
@@ -153,6 +148,8 @@ assert(server.includes("function assistantBehaviorModel"), "Backend needs a non-
 assert(server.includes("function humanizeAgentResult"), "Agent command responses must be shaped by the behavior model");
 assert(server.includes("conversation.behavior_model"), "Voice agent must explain its behavior model");
 assert(app.includes("behaviorModel.tone"), "Dashboard must render behavior model tone");
+assert(html.includes("Conversation-first guide"), "Dashboard should present AgriNexus as conversation-first");
+assert(app.includes("function voicePhrase"), "Session prompts should be sample phrases instead of extra buttons");
 assert(server.includes("conversation.progress_summary"), "Voice agent must summarize user progress");
 assert(server.includes("conversation.investor_presentation_mode"), "Voice agent must support demo narrator mode");
 assert(server.includes("function productionActivationGuide"), "Backend needs a live activation guide");
@@ -185,7 +182,7 @@ assert(server.includes("Standard User"), "Backend needs a standard user role");
 assert(server.includes("Investor"), "Backend needs an investor role");
 assert(!server.includes("Workforce Operator"), "Production login levels should be simplified to admin, standard user, and investor");
 assert(app.includes("function runLiveServiceCheck"), "Frontend needs a live service finalization action");
-assert(html.includes("app.js?v=ask-nexus-33"), "Index must force browsers to load the latest session briefing code");
+assert(html.includes("app.js?v=conversation-first-34"), "Index must force browsers to load the latest conversation-first code");
 assert(app.includes("function captureOriginalText"), "Frontend must capture original English text before first translated render");
 assert(app.includes("captureOriginalText();"), "Boot must preserve original static text before user-specific language rendering");
 assert(app.includes('"#loginView", ".topbar", ".sidebar"'), "Translation pass must include login, topbar, and navigation areas");

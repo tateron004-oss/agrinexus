@@ -13,7 +13,7 @@
   <link rel="icon" href="/icons/agri-nexus-192.png" type="image/png">
   <link rel="apple-touch-icon" href="/icons/agri-nexus-192.png">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-  <link rel="stylesheet" href="/styles.css?v=mission-dashboard-26">
+  <link rel="stylesheet" href="/styles.css?v=conversation-first-27">
 </head>
 <body>
   <a class="skip-link" href="#mainContent">Skip to main content</a>
@@ -152,17 +152,18 @@
           <div id="dashboardWorkspace" class="workspace-grid"></div>
           <div class="command-launch-guide" aria-labelledby="commandLaunchTitle">
             <div class="command-launch-copy">
-              <span class="eyebrow">Government-ready guide</span>
-              <h3 id="commandLaunchTitle">Six Ways To Operate AgriNexus</h3>
-              <p>Use these guided actions when presenting to non-technical leaders. Each button sends a real command into Ask AgriNexus, asks for confirmation when needed, and records the workflow evidence.</p>
+              <span class="eyebrow">Conversation-first guide</span>
+              <h3 id="commandLaunchTitle">Talk To AgriNexus</h3>
+              <p>Use plain language. AgriNexus will listen, ask one helpful question when needed, open the right workspace, and confirm before it records important workflow evidence.</p>
             </div>
-            <div class="command-launch-grid">
-              <button id="guideCommandTourBtn" type="button" data-command-preset="help me">1. Start command tour</button>
-              <button id="guideTelehealthBtn" type="button" data-command-preset="prepare accessible telehealth">2. Open telehealth access</button>
-              <button id="guideTrainingBtn" type="button" data-command-preset="start training path">3. Start training path</button>
-              <button id="guideWorkforceBtn" type="button" data-command-preset="apply for that job">4. Apply for workforce role</button>
-              <button id="guideFarmerMissionBtn" type="button" data-command-preset="run full mission">5. Run farmer mission</button>
-              <button id="guideEnginesBtn" type="button" data-command-preset="test provider engines">6. Test live engines</button>
+            <div class="conversation-launch">
+              <ul class="command-phrase-list" aria-label="Example phrases">
+                <li>“Help me get started.”</li>
+                <li>“Open telehealth and start intake.”</li>
+                <li>“Help me apply for a workforce role.”</li>
+                <li>“Run a farmer mission and explain the result.”</li>
+              </ul>
+              <button id="guideConversationBtn" class="primary" type="button" data-command-preset="help me">Start conversation</button>
             </div>
           </div>
           <div class="local-pilot-studio" aria-labelledby="localPilotTitle">
@@ -1160,6 +1161,6 @@
   <div id="toast" class="toast hidden" role="status" aria-live="polite" aria-atomic="true"></div>
   <div id="screenReaderStatus" class="sr-only" role="status" aria-live="polite" aria-atomic="true"></div>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="/app.js?v=ask-nexus-33"></script>
+  <script src="/app.js?v=conversation-first-34"></script>
 </body>
 </html>

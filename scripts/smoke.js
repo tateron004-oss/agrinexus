@@ -50,12 +50,8 @@ async function call(path, body) {
   assert(html.includes("Nexus Voice Assistant"));
   assert(html.includes("voiceTextCommand"));
   assert(html.includes("voiceListenBtn"));
-  assert(html.includes("guideCommandTourBtn"));
-  assert(html.includes("guideTelehealthBtn"));
-  assert(html.includes("guideTrainingBtn"));
-  assert(html.includes("guideWorkforceBtn"));
-  assert(html.includes("guideFarmerMissionBtn"));
-  assert(html.includes("guideEnginesBtn"));
+  assert(html.includes("guideConversationBtn"));
+  assert(html.includes("Conversation-first guide"));
   assert(html.includes("pilotRuralAccessBtn"));
   assert(html.includes("pilotFarmerMarketBtn"));
   assert(html.includes("pilotHealthWorkforceBtn"));

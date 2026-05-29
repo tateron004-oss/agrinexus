@@ -2710,6 +2710,10 @@ function voiceCommandButton(command) {
   return `<button type="button" data-voice-example="${command}">${translateText(command)}</button>`;
 }
 
+function voicePhrase(command) {
+  return `<span class="sample-phrase">${translateText(command)}</span>`;
+}
+
 function normalizeLocalizedVoiceCommand(rawCommand) {
   const value = String(rawCommand || "").trim();
   if (!value) return value;
@@ -3234,13 +3238,13 @@ function render() {
     `<div><strong>${translateText("Behavior")}</strong><span>${translateText(behaviorModel.tone || "warm, plain-language guide")}</span></div>`
   ].join("");
   $("#sessionPromptPanel").innerHTML = (sessionBriefing.prompts || ["help me", "summarize my progress", "show me all 10 items"])
-    .map(command => voiceCommandButton(command))
+    .map(command => voicePhrase(command))
     .join("");
   $("#firstTimeGuidePanel").innerHTML = [
-    taskItem("Choose your goal", "Say what you need in normal language: health, training, work, farming, trade, or investor tour.", "ready", "Ask", { simpleCommand: "I am new, guide me" }),
-    taskItem("Let AgriNexus ask questions", "Use conversational intake so the platform fills the right workflow from your answers.", "ready", "Intake", { simpleCommand: "start telehealth intake and ask me questions" }),
-    taskItem("Confirm before action", "AgriNexus prepares workflows first, then waits for yes before committing records.", "ready", "Safe", { simpleCommand: "what should I do next" }),
-    taskItem("Hear the summary", "Ask for a plain-language progress summary any time.", "ready", "Read", { simpleCommand: "summarize my progress" })
+    taskItem("Choose your goal", "Say what you need in normal language: health, training, work, farming, trade, or investor tour.", "ready", "Say it"),
+    taskItem("Let AgriNexus ask questions", "Use conversational intake so the platform fills the right workflow from your answers.", "ready", "Guided"),
+    taskItem("Confirm before action", "AgriNexus prepares workflows first, then waits for yes before committing records.", "ready", "Safe"),
+    taskItem("Hear the summary", "Ask for a plain-language progress summary any time.", "ready", "Natural")
   ].join("");
 
   $("#contextPanel").innerHTML = [

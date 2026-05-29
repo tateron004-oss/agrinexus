@@ -380,6 +380,31 @@ a:focus-visible,
   border-color: #0f766e;
   background: #eaf5f2;
 }
+.conversation-launch {
+  display: grid;
+  gap: 12px;
+  align-content: center;
+}
+.command-phrase-list {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.command-phrase-list li,
+.sample-phrase {
+  display: inline-flex;
+  align-items: center;
+  min-height: 34px;
+  padding: 8px 10px;
+  border: 1px solid #cfe4df;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #173240;
+  font-weight: 800;
+  line-height: 1.25;
+}
 .local-pilot-studio {
   display: grid;
   grid-template-columns: minmax(260px, .9fr) minmax(220px, .55fr) minmax(260px, 1fr);
@@ -1003,6 +1028,9 @@ a:focus-visible,
   flex-wrap: wrap;
   gap: 8px;
   margin-top: 8px;
+}
+.voice-guide .sample-phrase {
+  font-size: .88rem;
 }
 .voice-suggestions button,
 .voice-guide button {
