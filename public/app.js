@@ -2775,6 +2775,7 @@ function renderAgentCenter() {
     `<div><strong>Audience</strong><span>${translateText(memory.activeAudience || "government")}</span></div>`,
     `<div><strong>Mission</strong><span>${translateText(memory.activeMission || "rural transformation")}</span></div>`,
     `<div><strong>Active voice mission</strong><span>${translateText(memory.activeVoiceMission?.goal || "No active voice mission")} ${memory.activeVoiceMission ? `- ${Number(memory.activeVoiceMission.progress || 0)}%` : ""}</span></div>`,
+    `<div><strong>Jarvis session</strong><span>${translateText(memory.activeJarvisSession?.goal || "No Jarvis session active")} ${memory.activeJarvisSession ? `- ${translateText(memory.activeJarvisSession.status || "active")}` : ""}</span></div>`,
     `<div><strong>Guided checklist</strong><span>${translateText(memory.activeGuidedMission?.currentStep?.title || memory.activeGuidedMission?.status || "No guided checklist active")} ${memory.activeGuidedMission ? `- ${Number(memory.activeGuidedMission.progress || 0)}%` : ""}</span></div>`,
     `<div><strong>Current question</strong><span>${translateText(memory.activeClarification?.question || "No clarification needed")}</span></div>`,
     `<div><strong>Recovery prompt</strong><span>${translateText(memory.activeRecovery?.suggestions?.join(", ") || "No recovery prompt active")}</span></div>`,

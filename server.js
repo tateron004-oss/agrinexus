@@ -293,6 +293,7 @@ function conversationEvidencePack(db) {
     latestCommand ? `Understood as: ${latestCommand.intent}` : "Assistant understanding will appear after the first command.",
     pending ? `Pending action: ${pending.action || pending.tool || "workflow"} in ${pending.module || "AgriNexus"}` : "No pending action waiting for approval.",
     guided ? `Guided mission: ${guided.progress}% complete` : "No guided mission checklist active.",
+    memory.activeJarvisSession ? `Jarvis session: ${memory.activeJarvisSession.goal}` : "No Jarvis session active.",
     memory.turnCoach?.nextQuestion ? `Next prompt: ${memory.turnCoach.nextQuestion}` : "Next prompt will appear after conversation starts."
   ];
   return {
@@ -304,6 +305,7 @@ function conversationEvidencePack(db) {
     activeRecovery: memory.activeRecovery || null,
     guidedMission: guided,
     voiceMission: voice,
+    activeJarvisSession: memory.activeJarvisSession || null,
     turnCoach: memory.turnCoach || null,
     quality: memory.conversationQuality || {},
     counts: {
@@ -2477,6 +2479,8 @@ function ensureAiProfile(profile) {
   profile.agentMemory.activeGuidedMission = profile.agentMemory.activeGuidedMission || null;
   profile.agentMemory.guidedMissionHistory = profile.agentMemory.guidedMissionHistory || [];
   profile.agentMemory.turnCoach = profile.agentMemory.turnCoach || null;
+  profile.agentMemory.activeJarvisSession = profile.agentMemory.activeJarvisSession || null;
+  profile.agentMemory.jarvisSessionHistory = profile.agentMemory.jarvisSessionHistory || [];
   profile.agentMemory.conversationQuality = profile.agentMemory.conversationQuality || {
     turns: 0,
     openEndedAnswers: 0,
@@ -2574,6 +2578,67 @@ function buildAutopilotPlan(db, goal, user) {
     memoryUsed: memory.map(item => ({ id: item.id, category: item.category, text: item.text || item.response || item.command })),
     steps,
     createdAt: new Date().toISOString()
+  };
+}
+
+function buildJarvisSession(db, user, goal) {
+  ensureAiProfile(db.profile);
+  const plan = buildAutopilotPlan(db, goal, user);
+  const readiness = jarvisReadinessModel(db, user);
+  const capabilityRegistry = agentCapabilityRegistryState(db);
+  const session = {
+    id: crypto.randomUUID(),
+    goal,
+    status: "awaiting-confirmation",
+    mode: "supervised-jarvis",
+    planId: plan.id,
+    previewSteps: plan.steps.map(step => ({
+      module: step.module,
+      tool: step.tool,
+      action: step.action,
+      detail: step.detail
+    })),
+    jarvisScore: readiness.score,
+    toolCount: capabilityRegistry.totalTools,
+    confirmationRequired: true,
+    createdBy: user.email,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  };
+  db.profile.agentMemory.activeJarvisSession = session;
+  db.profile.agentMemory.lastGoal = goal;
+  db.profile.agentMemory.lastStatus = "jarvis-awaiting-confirmation";
+  db.profile.agentMemory.lastSummary = `Jarvis mode prepared ${session.previewSteps.length} supervised step(s).`;
+  db.profile.agentMemory.updatedAt = session.updatedAt;
+  return { session, plan, readiness, capabilityRegistry };
+}
+
+function startJarvisMode(db, user, command) {
+  const goal = String(command || "")
+    .replace(/\b(i need|i want|activate|start|use|be|become|run|launch|show|give me)\b/gi, "")
+    .replace(/\b(jarvis|jarvis mode|like jarvis)\b/gi, "")
+    .replace(/\s+/g, " ")
+    .trim() || "Operate AgriNexus like a supervised Jarvis assistant across the best next mission.";
+  const { session, plan, readiness, capabilityRegistry } = buildJarvisSession(db, user, goal);
+  const staged = stageAgentAction(db, command, {
+    kind: "autopilot-mission",
+    module: "AI",
+    action: `Run Jarvis supervised mission with ${plan.steps.length} steps`,
+    section: "agent",
+    goal,
+    jarvisSessionId: session.id,
+    previewSteps: session.previewSteps.map(step => ({ module: step.module, tool: step.tool, action: step.action }))
+  });
+  return {
+    ...staged,
+    intent: "agent.jarvis_mode_staged",
+    response: `Jarvis mode is ready. I built a supervised mission with ${plan.steps.length} steps and ${capabilityRegistry.totalTools} available tools behind it. I will not run high-impact actions without approval. Say "yes" to run the mission, or "no" to cancel.`,
+    metadata: {
+      ...(staged.metadata || {}),
+      jarvisSession: session,
+      jarvisReadiness: readiness,
+      capabilityRegistry
+    }
   };
 }
 
@@ -5046,6 +5111,7 @@ function buildConversationTurnCoach(db, user, command, result = {}) {
 function isVagueHelpRequest(lower) {
   const value = String(lower || "").trim();
   if (!value) return false;
+  if (/\bjarvis\b/.test(value)) return false;
   const broadAsk = /\b(help me|i need help|guide me|what should i do|help this|help my|support me|i need support|i want help)\b/.test(value);
   const broadDomain = /\b(farm|farmer|crop|field|patient|care|health|telehealth|work|job|role|training|learn|course|buyer|trade|market|drone|route)\b/.test(value);
   const specificAction = /\b(apply|contact|call|message|schedule|complete|issue|submit|pay|track|scan|translate|change language|run health check)\b/.test(value);
@@ -5562,6 +5628,18 @@ async function executePendingAgentAction(db, user, pending) {
   }
   if (pending.kind === "autopilot-mission") {
     const { plan, execution } = await createAndExecuteAutopilotMission(db, user, pending.goal || pending.command || "Run an AgriNexus autopilot mission.", "Confirmed from voice-first autopilot");
+    if (pending.jarvisSessionId && db.profile.agentMemory.activeJarvisSession?.id === pending.jarvisSessionId) {
+      const session = {
+        ...db.profile.agentMemory.activeJarvisSession,
+        status: execution.status,
+        executionId: execution.id,
+        executedAt: new Date().toISOString(),
+        summary: execution.summary,
+        updatedAt: new Date().toISOString()
+      };
+      db.profile.agentMemory.activeJarvisSession = session;
+      db.profile.agentMemory.jarvisSessionHistory = [session, ...(db.profile.agentMemory.jarvisSessionHistory || [])].slice(0, 12);
+    }
     return {
       intent: "agent.autopilot_executed",
       response: `Autopilot complete. ${execution.summary}`,
@@ -6594,6 +6672,13 @@ async function runAgentCommand(db, user, command, options = {}) {
   }
 
   if (pendingAction && isNegativeCommand(lower)) {
+    if (pendingAction.jarvisSessionId && db.profile.agentMemory.activeJarvisSession?.id === pendingAction.jarvisSessionId) {
+      db.profile.agentMemory.activeJarvisSession = {
+        ...db.profile.agentMemory.activeJarvisSession,
+        status: "canceled",
+        updatedAt: new Date().toISOString()
+      };
+    }
     db.profile.agentPendingAction = null;
     db.profile.agentMemory.lastStatus = "canceled";
     db.profile.agentMemory.lastSummary = "Pending action canceled. You can ask for a new workflow any time.";
@@ -6660,6 +6745,10 @@ async function runAgentCommand(db, user, command, options = {}) {
       status: readiness.status,
       metadata: { conversationMode: conversational, redirectSection: "agent", jarvisReadiness: readiness }
     };
+  }
+
+  if (/\bjarvis\b/.test(lower) && /\b(need|want|mode|handle|take over|operate|run|activate|start|be|become|help|mission)\b/.test(lower)) {
+    return startJarvisMode(db, user, text);
   }
 
   if (lower.includes("all 10") || lower.includes("all ten") || lower.includes("10 items") || lower.includes("ten items") || lower.includes("full intelligent model") || lower.includes("full intelligence model")) {
