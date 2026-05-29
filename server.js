@@ -288,6 +288,7 @@ function publicState(db, user) {
     products: db.products || [],
     providers,
     capabilities: capabilityMatrix(db, providers),
+    intelligentAssistant: intelligentAssistantModel(db, user, providers),
     smartActions: smartNextActions(db, user, providers),
     activationGuide: productionActivationGuide(db, providers),
     engineSetup: renderEngineEnvPlan(db),
@@ -312,6 +313,106 @@ function permissionsForRole(role) {
 
 function canUse(user, area) {
   return Boolean(permissionsForRole(user.role)[area]);
+}
+
+function intelligentAssistantModel(db, user, providers = runtimeProviders(db)) {
+  ensureLearningProfile(db.profile);
+  ensureWorkforceProfile(db.profile);
+  ensureHealthProfile(db.profile);
+  ensureTradeProfile(db.profile);
+  ensureAiProfile(db.profile);
+  ensureOperationsProfile(db.profile);
+  const providerOk = id => ["connected", "ready"].includes(providers.find(item => item.id === id)?.status);
+  const hasMemory = Boolean(
+    (db.profile.agentMemory.preferences || []).length
+    || (db.profile.agentMemory.longTermFacts || []).length
+    || (db.profile.agentMemory.conversationalIntakes || []).length
+  );
+  const hasVoice = providerOk("voice-tts") || Boolean(process.env.OPENAI_API_KEY);
+  const hasTranslation = providerOk("translation") || ["en", "fr", "sw", "ar"].includes(user?.language || db.profile.accessibilityProfile?.language || "en");
+  const items = [
+    {
+      id: "personal-onboarding",
+      title: "Personal onboarding",
+      ready: (db.profile.onboardingRuns || []).length > 0 || Boolean(user?.role),
+      evidence: user?.role ? `${user.role} experience selected` : "User role selects the experience.",
+      command: "I am new, guide me"
+    },
+    {
+      id: "memory-across-sessions",
+      title: "Memory across sessions",
+      ready: hasMemory,
+      evidence: hasMemory ? `${(db.profile.agentMemory.preferences || []).length + (db.profile.agentMemory.longTermFacts || []).length + (db.profile.agentMemory.conversationalIntakes || []).length} memory record(s)` : "Say remember, then tell AgriNexus an important preference.",
+      command: "remember that I prefer voice-first support"
+    },
+    {
+      id: "smart-next-step-coaching",
+      title: "Smart next-step coaching",
+      ready: true,
+      evidence: `${smartNextActions(db, user, providers).items.length} recommended action(s) available`,
+      command: "what should I do next"
+    },
+    {
+      id: "conversational-intake",
+      title: "Conversational intake",
+      ready: true,
+      evidence: `${(db.profile.agentMemory.conversationalIntakes || []).length} guided intake(s) captured`,
+      command: "start telehealth intake and ask me questions"
+    },
+    {
+      id: "multilingual-voice-guide",
+      title: "Multilingual voice guide",
+      ready: hasTranslation && hasVoice,
+      evidence: `${voiceLanguageLabel(user?.language || db.profile.accessibilityProfile?.language || "en")} voice/text response path`,
+      command: "speak to me in my selected language"
+    },
+    {
+      id: "role-aware-assistant",
+      title: "Role-aware assistant",
+      ready: Boolean(user?.role),
+      evidence: `${user?.role || "Standard User"} permissions shape visible modules and actions`,
+      command: "what can I do with my account"
+    },
+    {
+      id: "autopilot-missions",
+      title: "Autopilot missions",
+      ready: true,
+      evidence: `${(db.profile.agentPlans || []).filter(plan => plan.mode === "autopilot").length} autopilot plan(s), ${(db.profile.agentExecutions || []).length} execution(s)`,
+      command: "autopilot help this farmer get from crop problem to buyer payment"
+    },
+    {
+      id: "live-service-actions",
+      title: "Live service actions",
+      ready: providers.filter(provider => provider.status === "connected").length >= Math.max(1, providers.length - 2),
+      evidence: `${providers.filter(provider => provider.status === "connected").length}/${providers.length} provider(s) connected or ready`,
+      command: "test provider engines"
+    },
+    {
+      id: "accessibility-first-behavior",
+      title: "Accessibility-first behavior",
+      ready: Boolean(db.profile.accessibilityProfile?.hearingSupport || db.profile.accessibilityProfile?.visualSupport),
+      evidence: (db.profile.accessibilityProfile?.preferredFormats || []).join(", ") || "captions, audio guide, large print, low bandwidth",
+      command: "prepare accessible support"
+    },
+    {
+      id: "investor-presentation-mode",
+      title: "Investor presentation mode",
+      ready: (db.profile.agentBriefings || []).length > 0 || (db.profile.demoMoments || []).length > 0,
+      evidence: `${(db.profile.agentBriefings || []).length} briefing(s), ${(db.profile.demoMoments || []).length} demo moment(s)`,
+      command: "prepare an investor presentation"
+    }
+  ];
+  const readyCount = items.filter(item => item.ready).length;
+  return {
+    status: readyCount === items.length ? "all-ten-active" : "active-with-setup-gates",
+    readyCount,
+    total: items.length,
+    items
+  };
+}
+
+function voiceLanguageLabel(language) {
+  return { en: "English", fr: "French", sw: "Kiswahili", ar: "Arabic" }[language] || "selected-language";
 }
 
 function runtimeProviders(db) {
@@ -4634,6 +4735,27 @@ async function runAgentCommand(db, user, command, options = {}) {
   if (conversational && isIntakeStart(lower)) {
     const started = startConversationalIntake(db, text, intakeDomainFromText(lower));
     if (started) return started;
+  }
+
+  if (lower.includes("all 10") || lower.includes("all ten") || lower.includes("10 items") || lower.includes("ten items") || lower.includes("full intelligent model") || lower.includes("full intelligence model")) {
+    const model = intelligentAssistantModel(db, user);
+    db.profile.agentMemory.lastStatus = model.status;
+    db.profile.agentMemory.lastSummary = `The intelligent assistant model has ${model.readyCount}/${model.total} items active.`;
+    db.profile.agentMemory.updatedAt = new Date().toISOString();
+    logIntegration(db, {
+      providerId: "openai",
+      module: "AI",
+      action: "agent.ten_item_model_reviewed",
+      detail: `Ten-item intelligent assistant model reviewed: ${model.readyCount}/${model.total}.`,
+      metadata: { status: model.status, items: model.items.map(item => ({ id: item.id, ready: item.ready })) },
+      dispatch: false
+    });
+    return {
+      intent: "intelligent-assistant.ten_item_model",
+      response: `The full intelligent model is active at ${model.readyCount} out of ${model.total}. It covers onboarding, memory, next-step coaching, conversational intake, multilingual voice, role-aware guidance, autopilot missions, live services, accessibility-first support, and investor presentation mode. Say "help me" for the best next step or say one of the listed commands to test a specific item.`,
+      status: model.status,
+      metadata: { conversationMode: conversational, redirectSection: "agent", model }
+    };
   }
 
   if (conversational && (lower === "help" || lower.includes("what can you do") || lower.includes("i need help") || lower.includes("help me"))) {

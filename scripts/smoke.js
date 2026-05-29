@@ -105,6 +105,10 @@ async function call(path, body) {
   assert(login.providers.some(provider => provider.id === "auth-users"));
   assert(login.providers.some(provider => provider.id === "auth-password-reset"));
   assert(login.capabilities.total >= 10);
+  assert(login.intelligentAssistant.total === 10);
+  assert(login.intelligentAssistant.items.some(item => item.id === "personal-onboarding"));
+  assert(login.intelligentAssistant.items.some(item => item.id === "conversational-intake"));
+  assert(login.intelligentAssistant.items.some(item => item.id === "investor-presentation-mode"));
   assert(login.capabilities.items.some(item => item.id === "jarvis-command-layer"));
   assert(login.capabilities.items.some(item => item.id === "telehealth-workspace"));
   assert(login.smartActions.status);
@@ -529,6 +533,10 @@ async function call(path, body) {
   assert(memoryHelp.commandResult.intent === "conversation.guided_menu");
   assert(memoryHelp.commandResult.metadata.recommendedAction);
   assert(memoryHelp.commandResult.metadata.redirectSection);
+  const tenItemModel = await call("/api/agent/command", { command: "show me all 10 items", conversational: true, inputMode: "voice", outputMode: "voice" });
+  assert(tenItemModel.commandResult.intent === "intelligent-assistant.ten_item_model");
+  assert(tenItemModel.commandResult.metadata.model.total === 10);
+  assert(tenItemModel.commandResult.metadata.redirectSection === "agent");
   const intakeStart = await call("/api/agent/command", { command: "start telehealth intake and ask me questions", conversational: true, inputMode: "voice", outputMode: "voice" });
   assert(intakeStart.commandResult.intent === "conversation.intake_started");
   assert(intakeStart.profile.agentMemory.activeIntake.domain === "health");

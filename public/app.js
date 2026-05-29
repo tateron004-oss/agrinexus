@@ -2609,6 +2609,7 @@ function renderAgentCenter() {
   const briefings = data.profile.agentBriefings || [];
   const automation = data.automation || { readyCount: 0, total: 5, items: [] };
   const capabilities = data.capabilities || { operational: 0, total: 0, items: [] };
+  const intelligentAssistant = data.intelligentAssistant || { readyCount: 0, total: 10, items: [] };
   const agentMode = $("#agentMode");
   if (!agentMode) return;
   const agentStepAction = step => {
@@ -2654,6 +2655,18 @@ function renderAgentCenter() {
   $("#agentBriefingPanel").innerHTML = briefings.length
     ? briefings.slice(0, 4).map(briefing => `<div><strong>${translateText(briefing.title)}</strong><span>${translateText(briefing.purpose)} - ${translateText(briefing.plainLanguageSummary)}</span></div>`).join("")
     : `<div>${translateText("No government briefing yet. Create one before the presentation.")}</div>`;
+  $("#intelligentAssistantScore").textContent = `${intelligentAssistant.readyCount || 0}/${intelligentAssistant.total || 10}`;
+  $("#intelligentAssistantPanel").innerHTML = (intelligentAssistant.items || []).map(item => taskItem(
+    item.title,
+    item.evidence,
+    item.ready ? "ready" : "pending",
+    item.ready ? "Active" : "Setup",
+    { simpleCommand: item.command }
+  )).join("");
+  $("#intelligentAssistantCommands").innerHTML = (intelligentAssistant.items || [])
+    .slice(0, 10)
+    .map(item => voiceCommandButton(item.command))
+    .join("");
   const agentLog = [
     ...commands.slice(0, 4).map(item => ({ title: `Command - ${item.intent}`, detail: item.response })),
     ...executions.slice(0, 6).map(item => ({ title: `${item.status} - ${item.goal}`, detail: item.summary }))
@@ -3018,6 +3031,7 @@ function taskActionAttrs(action = {}) {
   if (action.moduleTest) attrs.push(`data-module-test="${action.moduleTest}"`);
   if (action.roleId) attrs.push(`data-role-id="${action.roleId}"`);
   if (action.productId) attrs.push(`data-product-id="${action.productId}"`);
+  if (action.simpleCommand) attrs.push(`data-simple-command="${String(action.simpleCommand).replace(/"/g, "&quot;")}"`);
   return attrs.join(" ");
 }
 
