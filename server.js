@@ -4181,6 +4181,170 @@ async function routeAgenticCommand(db, user, command, options = {}) {
   };
 }
 
+function conversationalSectionGuide(db, text) {
+  const lower = String(text || "").toLowerCase();
+  const guides = [
+    {
+      section: "health",
+      keys: ["telehealth", "health", "patient", "care", "doctor", "nurse", "hearing", "visual", "blind", "deaf"],
+      title: "telehealth",
+      first: "I am opening Telehealth. Start with intake, then use accessibility support for captions, audio guidance, caregiver handoff, vitals, referral, and follow-up.",
+      command: "start telehealth intake"
+    },
+    {
+      section: "learning",
+      keys: ["learning", "training", "course", "lesson", "certificate", "student", "learner"],
+      title: "learning",
+      first: "I am opening Learning. Start with the course catalog, then begin a course, complete a lesson, take the quiz, and issue the certificate.",
+      command: "start training path"
+    },
+    {
+      section: "workforce",
+      keys: ["workforce", "job", "role", "worker", "candidate", "apply", "interview", "shift"],
+      title: "workforce",
+      first: "I am opening Workforce. Start by verifying the profile, then match a role, apply, schedule an interview, assign a mentor, and plan the shift.",
+      command: "apply for that job"
+    },
+    {
+      section: "trade",
+      keys: ["trade", "buyer", "sell", "crop", "market", "order", "wallet", "payment", "drone", "field", "farm"],
+      title: "AgriTrade and drone operations",
+      first: "I am opening AgriTrade. Start with the crop lot, contact the buyer, create the order, run drone field intelligence, and advance payment or logistics.",
+      command: "contact my buyer"
+    },
+    {
+      section: "map",
+      keys: ["map", "route", "country", "location", "geospatial", "risk", "corridor"],
+      title: "maps and route intelligence",
+      first: "I am opening Map and AI. Start with the active country, inspect route risk, review facilities, and create evidence for field decisions.",
+      command: "assess route risk"
+    },
+    {
+      section: "integrations",
+      keys: ["integration", "provider", "engine", "api", "live service", "connected", "production"],
+      title: "integrations",
+      first: "I am opening Integrations. Start with live service checks, then review provider readiness and confirm which engines are connected.",
+      command: "test provider engines"
+    },
+    {
+      section: "agent",
+      keys: ["agent", "assistant", "jarvis", "voice", "mission", "autopilot", "command"],
+      title: "agent command center",
+      first: "I am opening Agent AI. Start with a plain-language goal, let the agent build a plan, then confirm before it executes the supervised workflow.",
+      command: "run full mission"
+    }
+  ];
+  return guides.find(guide => guide.keys.some(key => lower.includes(key))) || {
+    section: "dashboard",
+    title: "dashboard",
+    first: "I am opening the Dashboard. Start with the simple action cards, then choose training, workforce, telehealth, trade, maps, or agent mission based on what you need.",
+    command: "help me choose the next step"
+  };
+}
+
+function isGuidanceConversation(lower) {
+  return [
+    "walk me", "guide me", "direct me", "show me around", "where should i", "what should i",
+    "how do i", "how can i", "how does", "explain", "teach me", "i am new", "i'm new",
+    "im new", "help me understand", "take me through", "what do i do", "what now", "next step"
+  ].some(phrase => lower.includes(phrase));
+}
+
+async function buildConversationalGuideResponse(db, user, text) {
+  const guide = conversationalSectionGuide(db, text);
+  const { country, route } = activeContext(db);
+  const memories = retrieveAgentMemories(db.profile, text, 4);
+  const base = {
+    intent: "conversation.platform_guide",
+    response: `${guide.first} When you are ready, say "${guide.command}" and I will prepare the next workflow for confirmation.`,
+    status: "guiding",
+    metadata: {
+      conversationMode: true,
+      redirectSection: guide.section,
+      suggestedCommand: guide.command,
+      guideTopic: guide.title,
+      country: country.name,
+      route: route.name,
+      memoriesUsed: memories.map(item => ({ id: item.id, category: item.category, text: item.text || item.response || item.command, confidence: item.confidence }))
+    }
+  };
+  if (!process.env.OPENAI_API_KEY) return base;
+  try {
+    const response = await fetch("https://api.openai.com/v1/responses", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        model: process.env.OPENAI_AGENT_MODEL || process.env.OPENAI_MODEL || "gpt-4o-mini",
+        input: [
+          {
+            role: "system",
+            content: [
+              "You are AgriNexus, a warm voice-first platform guide for non-technical users.",
+              "Answer in plain language. Be concise, practical, and reassuring.",
+              "Guide the user through the platform, but do not claim you completed real-world external actions.",
+              "Return JSON only with response, redirectSection, suggestedCommand, confidence.",
+              "redirectSection must be one of dashboard, learning, workforce, health, trade, map, agent, integrations, admin, profile."
+            ].join(" ")
+          },
+          {
+            role: "user",
+            content: JSON.stringify({
+              userQuestion: text,
+              recommendedGuide: guide,
+              context: {
+                userRole: user.role,
+                language: user.language || db.profile.accessibilityProfile?.language || "en",
+                country: country.name,
+                route: route.name,
+                activeCheckpoint: db.profile.activeCheckpoint,
+                readiness: db.profile.readiness,
+                recentMemory: memories.map(item => item.text || item.response || item.command)
+              }
+            })
+          }
+        ],
+        max_output_tokens: 360
+      })
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(payload.error?.message || `OpenAI guide failed: ${response.status}`);
+    const parsed = extractJsonObject(extractResponseText(payload));
+    const allowedSections = new Set(["dashboard", "learning", "workforce", "health", "trade", "map", "agent", "integrations", "admin", "profile"]);
+    const redirectSection = allowedSections.has(parsed?.redirectSection) ? parsed.redirectSection : guide.section;
+    const result = {
+      ...base,
+      response: String(parsed?.response || base.response),
+      metadata: {
+        ...base.metadata,
+        redirectSection,
+        suggestedCommand: String(parsed?.suggestedCommand || guide.command),
+        confidence: Number(parsed?.confidence || 0.76),
+        planner: "openai-conversation-guide"
+      }
+    };
+    logIntegration(db, {
+      providerId: "openai",
+      module: "AI",
+      action: "agent.conversation_guided",
+      detail: `Conversation guide routed user to ${redirectSection}.`,
+      metadata: { command: text, redirectSection, suggestedCommand: result.metadata.suggestedCommand }
+    });
+    return result;
+  } catch (error) {
+    logIntegration(db, {
+      providerId: "openai",
+      module: "AI",
+      action: "agent.conversation_guide_fallback",
+      detail: error.message || "OpenAI conversation guide unavailable.",
+      metadata: { command: text, redirectSection: guide.section }
+    });
+    return base;
+  }
+}
+
 async function runAgentCommand(db, user, command, options = {}) {
   ensureAiProfile(db.profile);
   const text = String(command || "")
@@ -4226,6 +4390,15 @@ async function runAgentCommand(db, user, command, options = {}) {
     };
   }
 
+  if (conversational && isGuidanceConversation(lower)) {
+    const guide = await buildConversationalGuideResponse(db, user, text);
+    db.profile.agentPendingAction = null;
+    db.profile.agentMemory.lastStatus = "guiding-user";
+    db.profile.agentMemory.lastSummary = guide.response;
+    db.profile.agentMemory.updatedAt = new Date().toISOString();
+    return guide;
+  }
+
   if (conversational) {
     const guidedShortcut = {
       health: { module: "Healthcare", tool: "health.accessibility_review", action: "Prepare accessible telehealth", section: "health" },
@@ -4240,8 +4413,8 @@ async function runAgentCommand(db, user, command, options = {}) {
       trade: { module: "AgriTrade", tool: "trade.market_review", action: "Review market", section: "trade" },
       drone: { module: "AgriTech", tool: "drone.field_scan", action: "Run drone scan", section: "trade" },
       drones: { module: "AgriTech", tool: "drone.field_scan", action: "Run drone scan", section: "trade" },
-      map: { module: "Maps", tool: "map.route_risk", action: "Assess route", section: "maps" },
-      maps: { module: "Maps", tool: "map.route_risk", action: "Assess route", section: "maps" },
+      map: { module: "Maps", tool: "map.route_risk", action: "Assess route", section: "map" },
+      maps: { module: "Maps", tool: "map.route_risk", action: "Assess route", section: "map" },
       provider: { module: "Integrations", tool: "integrations.test_all", action: "Test provider engines", section: "integrations" },
       providers: { module: "Integrations", tool: "integrations.test_all", action: "Test provider engines", section: "integrations" },
       engines: { module: "Integrations", tool: "integrations.test_all", action: "Test provider engines", section: "integrations" }

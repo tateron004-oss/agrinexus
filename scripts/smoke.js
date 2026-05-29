@@ -516,6 +516,15 @@ async function call(path, body) {
   assert(guidedHealth.commandResult.metadata.redirectSection === "health");
   const cancelGuidedHealth = await call("/api/agent/command", { command: "no", conversational: true });
   assert(cancelGuidedHealth.commandResult.intent === "conversation.canceled");
+  const telehealthGuide = await call("/api/agent/command", { command: "walk me through telehealth", conversational: true, inputMode: "voice", outputMode: "voice" });
+  assert(telehealthGuide.commandResult.intent === "conversation.platform_guide");
+  assert(telehealthGuide.commandResult.status === "guiding");
+  assert(telehealthGuide.commandResult.metadata.redirectSection === "health");
+  assert(telehealthGuide.commandResult.metadata.suggestedCommand);
+  assert(!telehealthGuide.profile.agentPendingAction);
+  const learningGuide = await call("/api/agent/command", { command: "I am new, how do I start training", conversational: true, inputMode: "voice", outputMode: "voice" });
+  assert(learningGuide.commandResult.intent === "conversation.platform_guide");
+  assert(learningGuide.commandResult.metadata.redirectSection === "learning");
   const agenticOpenCommand = await call("/api/agent/command", { command: "My field has crop stress and I need evidence before selling", conversational: true, inputMode: "voice", outputMode: "voice" });
   assert(agenticOpenCommand.commandResult.intent === "conversation.pending_action");
   assert(["drone.field_scan", "trade.market_review", "drone.intervention_task"].includes(agenticOpenCommand.commandResult.metadata.tool));

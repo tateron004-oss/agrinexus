@@ -151,6 +151,9 @@ assert(html.includes("renderEngineKeysPanel"), "Integrations page needs Render e
 assert(app.includes("engineSetup"), "Frontend must render engine setup values");
 assert(server.includes("function buildAutopilotPlan"), "Backend needs Agent Autopilot mission planning");
 assert(server.includes("agent.autopilot_executed"), "Autopilot execution must be recorded as agent evidence");
+assert(server.includes("function buildConversationalGuideResponse"), "Backend needs an intuitive conversational platform guide");
+assert(server.includes("agent.conversation_guided"), "Conversation guide should create AI evidence when OpenAI routes the user");
+assert(server.includes("conversation.platform_guide"), "Agent command route must support guide-style conversation");
 assert(html.includes("missionDashboardPanel"), "Agent page needs an Autopilot Mission Dashboard");
 assert(app.includes("function renderMissionDashboard"), "Frontend needs to render mission plans and executions");
 assert(html.includes("liveServiceCheckPanel"), "Admin needs a live service finalization panel");
