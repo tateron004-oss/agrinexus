@@ -273,6 +273,52 @@ function readBody(req) {
   });
 }
 
+function conversationEvidencePack(db) {
+  ensureAiProfile(db.profile);
+  const memory = db.profile.agentMemory || {};
+  const latestCommand = (db.profile.agentCommands || [])[0] || null;
+  const latestConversation = (db.profile.agentConversation || []).slice(-6);
+  const pending = db.profile.agentPendingAction || null;
+  const guided = activeGuidedMissionBrief(db);
+  const voice = activeVoiceMissionBrief(db);
+  const status = pending
+    ? "waiting-confirmation"
+    : memory.activeClarification
+      ? "asking-clarification"
+      : memory.activeRecovery
+        ? "recovering-unclear-command"
+        : guided?.status || "ready";
+  const evidence = [
+    latestCommand ? `Latest command: ${latestCommand.command}` : "No voice command recorded yet.",
+    latestCommand ? `Understood as: ${latestCommand.intent}` : "Assistant understanding will appear after the first command.",
+    pending ? `Pending action: ${pending.action || pending.tool || "workflow"} in ${pending.module || "AgriNexus"}` : "No pending action waiting for approval.",
+    guided ? `Guided mission: ${guided.progress}% complete` : "No guided mission checklist active.",
+    memory.turnCoach?.nextQuestion ? `Next prompt: ${memory.turnCoach.nextQuestion}` : "Next prompt will appear after conversation starts."
+  ];
+  return {
+    id: crypto.randomUUID(),
+    status,
+    latestCommand,
+    pendingAction: pending,
+    activeClarification: memory.activeClarification || null,
+    activeRecovery: memory.activeRecovery || null,
+    guidedMission: guided,
+    voiceMission: voice,
+    turnCoach: memory.turnCoach || null,
+    quality: memory.conversationQuality || {},
+    counts: {
+      commands: (db.profile.agentCommands || []).length,
+      conversationTurns: (db.profile.agentConversation || []).length,
+      confirmedActions: Number(memory.conversationQuality?.confirmedActions || 0),
+      stagedActions: Number(memory.conversationQuality?.stagedActions || 0),
+      openEndedAnswers: Number(memory.conversationQuality?.openEndedAnswers || 0)
+    },
+    evidence,
+    recentTurns: latestConversation,
+    createdAt: new Date().toISOString()
+  };
+}
+
 function publicState(db, user) {
   const providers = runtimeProviders(db);
   ensureOperationsProfile(db.profile);
@@ -290,6 +336,7 @@ function publicState(db, user) {
     capabilities: capabilityMatrix(db, providers),
     intelligentAssistant: intelligentAssistantModel(db, user, providers),
     behaviorModel: assistantBehaviorModel(db, user),
+    conversationEvidence: conversationEvidencePack(db),
     sessionBriefing: sessionBriefingModel(db, user, providers),
     smartActions: smartNextActions(db, user, providers),
     activationGuide: productionActivationGuide(db, providers),

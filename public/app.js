@@ -2741,6 +2741,7 @@ function renderAgentCenter() {
   const automation = data.automation || { readyCount: 0, total: 5, items: [] };
   const capabilities = data.capabilities || { operational: 0, total: 0, items: [] };
   const intelligentAssistant = data.intelligentAssistant || { readyCount: 0, total: 10, items: [] };
+  const evidencePack = data.conversationEvidence || { evidence: [], status: "ready", counts: {} };
   const agentMode = $("#agentMode");
   if (!agentMode) return;
   const agentStepAction = step => {
@@ -2789,7 +2790,9 @@ function renderAgentCenter() {
     `<div><strong>What I heard</strong><span>${translateText(latestCommand?.command || "No command yet")}</span></div>`,
     `<div><strong>What I understood</strong><span>${translateText(latestCommand?.intent || "Standing by")}</span></div>`,
     `<div><strong>What needs approval</strong><span>${translateText(plan?.status === "awaiting-approval" ? `${plan.steps.length} planned step(s)` : "No approval pending")}</span></div>`,
-    `<div><strong>What I completed</strong><span>${translateText(executions[0]?.summary || "No execution yet")}</span></div>`
+    `<div><strong>What I completed</strong><span>${translateText(executions[0]?.summary || "No execution yet")}</span></div>`,
+    `<div><strong>Evidence status</strong><span>${translateText(evidencePack.status || "ready")} - ${Number(evidencePack.counts?.commands || 0)} ${translateText("command(s)")}</span></div>`,
+    `<div><strong>Evidence pack</strong><span>${translateText((evidencePack.evidence || []).slice(0, 3).join(" | ") || "No conversation evidence yet")}</span></div>`
   ].join("");
   $("#agentBriefingPanel").innerHTML = briefings.length
     ? briefings.slice(0, 4).map(briefing => `<div><strong>${translateText(briefing.title)}</strong><span>${translateText(briefing.purpose)} - ${translateText(briefing.plainLanguageSummary)}</span></div>`).join("")
