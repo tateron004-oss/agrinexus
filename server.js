@@ -2310,6 +2310,7 @@ function ensureAiProfile(profile) {
   profile.agentMemory.recoveryHistory = profile.agentMemory.recoveryHistory || [];
   profile.agentMemory.activeGuidedMission = profile.agentMemory.activeGuidedMission || null;
   profile.agentMemory.guidedMissionHistory = profile.agentMemory.guidedMissionHistory || [];
+  profile.agentMemory.turnCoach = profile.agentMemory.turnCoach || null;
   profile.agentMemory.conversationQuality = profile.agentMemory.conversationQuality || {
     turns: 0,
     openEndedAnswers: 0,
@@ -3750,6 +3751,9 @@ function commandRecord(db, user, command, result) {
   memory.lastResponse = result.response;
   memory.lastStatus = result.status || "completed";
   memory.updatedAt = remembered.createdAt;
+  const turnCoach = buildConversationTurnCoach(db, user, command, result);
+  memory.turnCoach = turnCoach;
+  result.metadata = { ...(result.metadata || {}), turnCoach };
   const record = {
     id: crypto.randomUUID(),
     command,
@@ -4831,6 +4835,45 @@ function activeGuidedMissionBrief(db) {
     phrase: current
       ? `Guided mission: ${mission.goal}. Current step: ${current.title}. ${current.detail}`
       : `Guided mission: ${mission.goal}. The checklist is complete.`
+  };
+}
+
+function buildConversationTurnCoach(db, user, command, result = {}) {
+  ensureAiProfile(db.profile);
+  const behavior = assistantBehaviorModel(db, user);
+  const intent = String(result.intent || "");
+  const status = String(result.status || "");
+  const section = result.metadata?.redirectSection || conversationModuleSignal(command).section || "dashboard";
+  let nextQuestion = "What would you like to do next?";
+  let mode = "guide";
+  if (status === "needs-confirmation") {
+    mode = "confirm";
+    nextQuestion = "Should I run that workflow now? Say yes to continue, or no to cancel.";
+  } else if (intent.includes("clarification_started") || intent.includes("voice_recovery")) {
+    mode = "clarify";
+    nextQuestion = "Choose one option in your own words and I will continue.";
+  } else if (behavior.accessibilityMode && behavior.accessibilityMode !== "standard") {
+    mode = "accessibility";
+    nextQuestion = "Do you want me to read this aloud, make it simpler, or continue?";
+  } else if (behavior.currentPersona === "farmer-or-trade-operator") {
+    nextQuestion = "Do you want buyer help, a drone scan, route risk, or a crop sale next?";
+  } else if (behavior.currentPersona === "health-access-user") {
+    nextQuestion = "Do you want intake, provider connection, captions, or safety review next?";
+  } else if (behavior.currentPersona === "workforce-candidate") {
+    nextQuestion = "Do you want to match a role, apply, prepare for interview, or schedule work?";
+  } else if (behavior.currentPersona === "learner") {
+    nextQuestion = "Do you want to start a course, complete a lesson, build captions, or issue a certificate?";
+  } else if (behavior.currentAudience === "investor-government") {
+    nextQuestion = "Do you want the investor summary, workflow evidence, or the guided tour?";
+  }
+  return {
+    id: crypto.randomUUID(),
+    mode,
+    section,
+    nextQuestion,
+    persona: behavior.currentPersona,
+    accessibilityMode: behavior.accessibilityMode,
+    createdAt: new Date().toISOString()
   };
 }
 

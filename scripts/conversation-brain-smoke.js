@@ -62,6 +62,8 @@ async function call(route, body) {
     assert(state.commandResult.metadata.suggestedReplies.includes("do the next step"));
     assert(state.profile.agentMemory.lastRecommendedAction);
     assert(state.profile.agentMemory.activeVoiceMission);
+    assert(state.profile.agentMemory.turnCoach);
+    assert(state.commandResult.metadata.turnCoach);
     assert(state.profile.agentMemory.conversationQuality.openEndedAnswers >= 1);
 
     state = await call("/api/agent/command", {
@@ -139,6 +141,7 @@ async function call(route, body) {
     });
     assert(state.commandResult.intent === "conversation.guided_mission_status");
     assert(state.commandResult.metadata.guidedMission);
+    assert(state.profile.agentMemory.turnCoach.nextQuestion);
 
     state = await call("/api/agent/command", {
       command: "no",

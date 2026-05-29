@@ -195,6 +195,9 @@ assert(server.includes("activeRecovery"), "Conversation brain must remember acti
 assert(server.includes("function updateGuidedMissionMemory"), "Conversation brain must keep guided mission checklist state");
 assert(server.includes("function activeGuidedMissionBrief"), "Conversation brain must explain guided checklist progress");
 assert(app.includes("Guided checklist"), "Agent UI must show guided checklist progress");
+assert(server.includes("function buildConversationTurnCoach"), "Conversation brain must manage the next conversational turn");
+assert(app.includes("lastSpokenText"), "Voice UI must prevent rapid duplicate speech playback");
+assert(app.includes("Next prompt"), "Agent UI must show the next conversational prompt");
 assert(server.includes("lastRecommendedAction"), "Conversation brain must remember the last recommended next action");
 assert(server.includes("agent.conversation_brain_answered"), "Conversation brain must create audit evidence for open-ended answers");
 assert(app.includes("function isNaturalConversationCommand"), "Microphone commands should route natural speech to the conversation brain");

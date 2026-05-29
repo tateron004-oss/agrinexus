@@ -11,6 +11,8 @@ let voiceFirstMode = localStorage.getItem("agrinexusVoiceFirst") !== "off";
 let voiceAutoRestart = voiceFirstMode;
 let voiceStopRequested = false;
 let voiceSpeaking = false;
+let lastSpokenText = "";
+let lastSpokenAt = 0;
 let activeVoiceAudio = null;
 let voicePlaybackToken = 0;
 let voiceConversationTurns = Number(localStorage.getItem("agrinexusVoiceTurns") || 0);
@@ -2776,6 +2778,7 @@ function renderAgentCenter() {
     `<div><strong>Recovery prompt</strong><span>${translateText(memory.activeRecovery?.suggestions?.join(", ") || "No recovery prompt active")}</span></div>`,
     `<div><strong>Conversation mode</strong><span>${translateText(memory.userModel?.preferredInteraction || "voice-first guidance")} - ${translateText(memory.userModel?.communicationStyle || "plain-language support")}</span></div>`,
     `<div><strong>Adaptive style</strong><span>${translateText(memory.userModel?.lastAdaptiveSignals?.persona || "general-operator")} - ${translateText(memory.userModel?.lastAdaptiveSignals?.accessibility || "standard")}</span></div>`,
+    `<div><strong>Next prompt</strong><span>${translateText(memory.turnCoach?.nextQuestion || "Ask AgriNexus what you want to do next")}</span></div>`,
     `<div><strong>Conversation learning</strong><span>${Number(memory.conversationQuality?.turns || 0)} ${translateText("turn(s)")} - ${Number(memory.conversationQuality?.openEndedAnswers || 0)} ${translateText("reasoned answer(s)")}</span></div>`,
     `<div><strong>Last goal</strong><span>${translateText(memory.lastGoal || "No goal remembered yet")}</span></div>`,
     `<div><strong>Last summary</strong><span>${translateText(memory.lastSummary || "No summary yet")}</span></div>`
@@ -5775,6 +5778,11 @@ function stopVoicePlayback() {
 
 function speakVoiceResponse(textOverride) {
   const text = textOverride || lastVoiceResponse;
+  const compact = String(text || "").replace(/\s+/g, " ").trim();
+  const now = Date.now();
+  if (compact && compact === lastSpokenText && now - lastSpokenAt < 3500) return;
+  lastSpokenText = compact;
+  lastSpokenAt = now;
   stopVoicePlayback();
   const playbackToken = ++voicePlaybackToken;
   voiceSpeaking = true;
