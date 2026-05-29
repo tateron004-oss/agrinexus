@@ -117,7 +117,7 @@ async function call(base, route, body) {
   try {
     await waitFor(`${providerBase}/healthz`);
     await waitFor(`${appBase}/api/healthz`);
-    await call(appBase, "/api/login", { email: "demo@agrinexus.org", password: "Prototype2026!" });
+    await call(appBase, "/api/login", { email: "admin@agrinexus.org", password: "Admin2026!" });
     const ai = await call(appBase, "/api/ai/run", { type: "command" });
     assert(ai.profile.aiProvider === "local-ai-webhook");
     await call(appBase, "/api/voice/transcribe", { transcript: "run workforce command", language: "en" });
