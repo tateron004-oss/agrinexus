@@ -28,13 +28,15 @@ const voiceLocaleMap = {
   en: "en-US",
   fr: "fr-FR",
   sw: "sw-KE",
-  ar: "ar-EG"
+  ar: "ar-EG",
+  es: "es-ES"
 };
 const voiceLanguageNames = {
   en: "English",
   fr: "French",
   sw: "Kiswahili",
-  ar: "Arabic"
+  ar: "Arabic",
+  es: "Spanish"
 };
 let voiceTranslationToken = 0;
 
@@ -363,6 +365,29 @@ const platformCopy = {
     profileIntro: "Wasifu unaonyesha hali ya backend katika kila eneo la jukwaa.",
     languageToast: "Lugha ya jukwaa imesasishwa"
   },
+  es: {
+    nav: ["Panel", "Aprendizaje", "Trabajo", "Salud AFAYAI", "Agritrade", "Mapa e IA", "Agente IA", "Integraciones", "Admin", "Perfil"],
+    logout: "Salir",
+    dashboardTitle: "Panel de mando",
+    dashboardIntro: "Inicie flujos reales de aprendizaje, trabajo, salud, comercio, IA e integraciones desde una sola cola.",
+    learningTitle: "Aprendizaje y desarrollo",
+    learningIntro: "Construya preparacion con cursos guiados, pruebas, certificados y habilidades para el trabajo.",
+    workforceTitle: "Ruta laboral",
+    workforceIntro: "Pase de la preparacion a solicitudes, entrevistas, mentores, turnos y oportunidades pagadas.",
+    healthTitle: "Salud AFAYAI",
+    healthIntro: "Gestione admisiones, apoyo de representantes, revisiones de seguridad y planes de cuidado.",
+    tradeTitle: "Agritech + Agritrade",
+    tradeIntro: "Gestione cultivos, compradores, pedidos, pagos, rutas y logistica.",
+    mapTitle: "Mapa global e IA",
+    mapIntro: "Monitoree paises, rutas, proveedores y recomendaciones de IA desde una vista operativa.",
+    integrationsTitle: "Integraciones",
+    integrationsIntro: "Revise motores, proveedores, API y configuracion de produccion.",
+    adminTitle: "Sala de control admin",
+    adminIntro: "Revise usuarios, salud de modulos, actividad de proveedores y eventos de auditoria.",
+    profileTitle: "Perfil unificado",
+    profileIntro: "El perfil refleja el estado guardado en todos los dominios de la plataforma.",
+    languageToast: "Idioma de la plataforma actualizado"
+  },
   ar: {
     nav: ["\u0644\u0648\u062d\u0629 \u0627\u0644\u062a\u062d\u0643\u0645", "\u0627\u0644\u062a\u0639\u0644\u0645", "\u0627\u0644\u0642\u0648\u0649 \u0627\u0644\u0639\u0627\u0645\u0644\u0629", "\u0635\u062d\u0629 AFAYAI", "\u0627\u0644\u062a\u062c\u0627\u0631\u0629", "\u0627\u0644\u062e\u0631\u064a\u0637\u0629 \u0648\u0627\u0644\u0630\u0643\u0627\u0621", "\u0648\u0643\u064a\u0644 AI", "\u0627\u0644\u062a\u0643\u0627\u0645\u0644\u0627\u062a", "\u0627\u0644\u0625\u062f\u0627\u0631\u0629", "\u0627\u0644\u0645\u0644\u0641"],
     logout: "\u062a\u0633\u062c\u064a\u0644 \u062e\u0631\u0648\u062c",
@@ -389,6 +414,52 @@ const platformCopy = {
 };
 
 const contentTranslations = {
+  es: {
+    "Nexus, what can you do": "Nexus, que puedes hacer",
+    "Nexus, show voice help": "Nexus, muestra ayuda de voz",
+    "Nexus, run full mission": "Nexus, ejecuta la mision completa",
+    "Nexus, test provider engines": "Nexus, prueba los motores de proveedores",
+    "Nexus, open learning": "Nexus, abre aprendizaje",
+    "Nexus, open workforce": "Nexus, abre trabajo",
+    "Nexus, open telehealth": "Nexus, abre telesalud",
+    "Nexus, open agritrade": "Nexus, abre Agritrade",
+    "Nexus, open maps": "Nexus, abre mapas",
+    "Nexus, build captions": "Nexus, crea subtitulos",
+    "Nexus, create audio guide": "Nexus, crea guia de audio",
+    "Nexus, complete my lesson": "Nexus, completa mi leccion",
+    "Nexus, issue my certificate": "Nexus, emite mi certificado",
+    "Nexus, apply for that job": "Nexus, ayudame a solicitar ese trabajo",
+    "Nexus, review my workforce gaps": "Nexus, revisa mis brechas laborales",
+    "Nexus, schedule my shift": "Nexus, programa mi turno",
+    "Nexus, prepare me for an interview": "Nexus, preparame para una entrevista",
+    "Nexus, start telehealth intake": "Nexus, inicia admision de telesalud",
+    "Nexus, connect me to a provider": "Nexus, conectame con un proveedor",
+    "Nexus, capture vitals": "Nexus, captura signos vitales",
+    "Nexus, create a referral": "Nexus, crea una referencia",
+    "Nexus, schedule my follow-up": "Nexus, programa mi seguimiento",
+    "Nexus, contact my buyer": "Nexus, contacta a mi comprador",
+    "Nexus, create buyer order": "Nexus, crea pedido de comprador",
+    "Nexus, run drone scan": "Nexus, ejecuta escaneo de dron",
+    "Nexus, assign field task": "Nexus, asigna tarea de campo",
+    "Nexus, check my route risk": "Nexus, revisa el riesgo de mi ruta",
+    "Start here": "Empiece aqui",
+    "Go to a workspace": "Ir a un espacio",
+    "Learning": "Aprendizaje",
+    "Workforce": "Trabajo",
+    "Telehealth": "Telesalud",
+    "Farm, Trade, And Drones": "Campo, comercio y drones",
+    "Use these when someone is new to the platform.": "Use estas frases cuando alguien es nuevo en la plataforma.",
+    "Open the main work areas without searching menus.": "Abra las areas principales sin buscar menus.",
+    "Run training, accessibility, and certificate workflows.": "Ejecute capacitacion, accesibilidad y certificados.",
+    "Help a user find, prepare for, and apply to work.": "Ayude a una persona a encontrar, prepararse y solicitar trabajo.",
+    "Guide patients through care access and support.": "Guie pacientes hacia acceso y apoyo de salud.",
+    "Support farmers, buyers, field teams, and crop intelligence.": "Apoye agricultores, compradores, equipos de campo e inteligencia de cultivos.",
+    "Behavior": "Comportamiento",
+    "Assistant readiness": "Preparacion del asistente",
+    "Progress": "Progreso",
+    "Ready": "Listo",
+    "Language changed to Spanish. AgriTrade phrases and responses will use Spanish.": "Idioma cambiado a espanol. Las frases y respuestas de AgriTrade usaran espanol."
+  },
   fr: {
     "Nexus, apply for that job": "Nexus, aide-moi a postuler a cet emploi",
     "Nexus, what can you do": "Nexus, que peux-tu faire",
@@ -1255,6 +1326,16 @@ Object.entries(workflowModalTranslations).forEach(([lang, entries]) => {
 });
 
 const wordTranslations = {
+  es: {
+    "choose": "elegir", "simple": "simple", "action": "accion", "run": "ejecutar", "pilot": "piloto", "open": "abrir", "live": "activo", "module": "modulo",
+    "start": "iniciar", "course": "curso", "courses": "cursos", "complete": "completar", "lesson": "leccion", "lessons": "lecciones", "issue": "emitir", "certificate": "certificado", "certificates": "certificados", "training": "capacitacion", "content": "contenido",
+    "apply": "solicitar", "role": "rol", "roles": "roles", "review": "revisar", "skill": "habilidad", "skills": "habilidades", "gap": "brecha", "gaps": "brechas", "plan": "plan", "shift": "turno", "shifts": "turnos", "readiness": "preparacion",
+    "accessible": "accesible", "telehealth": "telesalud", "triage": "triaje", "visit": "visita", "care": "cuidado", "patient": "paciente", "patients": "pacientes", "support": "apoyo", "workflow": "flujo", "workflows": "flujos",
+    "manage": "gestionar", "crop": "cultivo", "crops": "cultivos", "buyer": "comprador", "buyers": "compradores", "order": "pedido", "orders": "pedidos", "logistics": "logistica", "wallet": "billetera", "market": "mercado",
+    "view": "ver", "country": "pais", "operations": "operaciones", "drone": "dron", "missions": "misiones", "provider": "proveedor", "status": "estado", "location": "ubicacion", "intelligence": "inteligencia",
+    "voice": "voz", "text": "texto", "commands": "comandos", "route": "ruta", "tasks": "tareas", "platform": "plataforma", "check": "revisar", "engine": "motor", "engines": "motores", "production": "produccion", "setup": "configuracion",
+    "admin": "admin", "profile": "perfil", "dashboard": "panel", "learning": "aprendizaje", "workforce": "trabajo", "health": "salud", "trade": "comercio", "map": "mapa", "agent": "agente", "integrations": "integraciones"
+  },
   fr: {
     "choose": "choisir", "simple": "simple", "action": "action", "run": "lancer", "pilot": "pilote", "open": "ouvrir", "live": "actif", "module": "module",
     "start": "commencer", "course": "cours", "courses": "cours", "complete": "terminer", "lesson": "lecon", "lessons": "lecons", "issue": "emettre", "certificate": "certificat", "certificates": "certificats", "training": "formation", "content": "contenu",
@@ -2736,7 +2817,8 @@ function voiceCommandGroups() {
         "Nexus, what can you do",
         "Nexus, show voice help",
         "Nexus, run full mission",
-        "Nexus, test provider engines"
+        "Nexus, test provider engines",
+        "Nexus, explain your behavior model"
       ]
     },
     {
@@ -2758,7 +2840,9 @@ function voiceCommandGroups() {
         "Nexus, build captions",
         "Nexus, create audio guide",
         "Nexus, complete my lesson",
-        "Nexus, issue my certificate"
+        "Nexus, issue my certificate",
+        "Nexus, start training path",
+        "Nexus, make this low bandwidth"
       ]
     },
     {
@@ -2768,7 +2852,9 @@ function voiceCommandGroups() {
         "Nexus, apply for that job",
         "Nexus, review my workforce gaps",
         "Nexus, schedule my shift",
-        "Nexus, prepare me for an interview"
+        "Nexus, prepare me for an interview",
+        "Nexus, build my work profile",
+        "Nexus, match me to a mentor"
       ]
     },
     {
@@ -2779,18 +2865,35 @@ function voiceCommandGroups() {
         "Nexus, connect me to a provider",
         "Nexus, capture vitals",
         "Nexus, create a referral",
-        "Nexus, schedule my follow-up"
+        "Nexus, schedule my follow-up",
+        "Nexus, turn on caption relay",
+        "Nexus, notify my caregiver"
       ]
     },
     {
       title: "Farm, Trade, And Drones",
       helper: "Support farmers, buyers, field teams, and crop intelligence.",
       commands: [
+        "Hey AgriTrade, tell me about the platform",
+        "Hey AgriTrade, change language to Spanish",
         "Nexus, contact my buyer",
         "Nexus, create buyer order",
         "Nexus, run drone scan",
         "Nexus, assign field task",
-        "Nexus, check my route risk"
+        "Nexus, check my route risk",
+        "Nexus, plan drone mission",
+        "Nexus, release payment"
+      ]
+    },
+    {
+      title: "Maps, AI, And Integrations",
+      helper: "Check routes, AI guidance, provider engines, and production readiness.",
+      commands: [
+        "Nexus, run route intelligence",
+        "Nexus, show map risk",
+        "Nexus, ask copilot",
+        "Nexus, run live service check",
+        "Nexus, summarize my progress"
       ]
     }
   ];
@@ -3221,9 +3324,10 @@ function render() {
 
   $("#countrySelect").innerHTML = [
     `<option value="language:en">English</option>`,
+    `<option value="language:es">Spanish</option>`,
     ...data.countries.map(item => `<option value="${item.id}">${countryDisplayLabel[item.id] || `${item.name} - ${countryLanguageLabel[item.id] || "Language"}`}</option>`)
   ].join("");
-  $("#countrySelect").value = languageCode() === "en" ? "language:en" : country.id;
+  $("#countrySelect").value = ["en", "es"].includes(languageCode()) ? `language:${languageCode()}` : country.id;
 
   $("#kpiCountries").textContent = data.countries.length;
   $("#kpiPatients").textContent = data.countries.reduce((sum, item) => sum + item.patients, 0).toLocaleString();
@@ -5787,6 +5891,11 @@ async function handleVoiceCommand(rawCommand) {
     }
   }
 
+  if ((lower.includes("agritrade") || lower.includes("agri trade")) && (lower.includes("what do you do") || lower.includes("tell me about") || lower.includes("about the platform") || lower.includes("change") || lower.includes("language") || lower.includes("translate"))) {
+    await runBackendAgentCommand(command);
+    return;
+  }
+
   if (lower.includes("voice help") || lower.includes("command help") || lower.includes("show help") || lower.includes("what can you do")) {
     openVoiceHelp();
     setVoiceResponse("I can open modules, build captions, create audio guides, complete lessons, issue certificates, apply for roles, schedule shifts, start telehealth intake, connect a provider, capture vitals, contact a buyer, create orders, run drone scans, test engines, create plans, and read responses aloud.", true);
@@ -5979,7 +6088,7 @@ async function handleVoiceCommand(rawCommand) {
     return openWorkflowByVoice("trade", "wallet", "Wallet payment workflow is ready.");
   }
   if (lower.includes("price")) return openWorkflowByVoice("ai", "price", "Price AI workflow is ready.");
-  if (lower.includes("route risk") || lower.includes("assess route")) return openWorkflowByVoice("ai", "route", "Route risk AI workflow is ready.");
+  if (lower.includes("route risk") || lower.includes("assess route") || lower.includes("route intelligence") || lower.includes("map risk")) return openWorkflowByVoice("ai", "route", "Route risk AI workflow is ready.");
   if (lower.includes("command center")) return openWorkflowByVoice("ai", "command", "Command center AI workflow is ready.");
   if (lower.includes("copilot")) return openWorkflowByVoice("ai", "copilot", "Copilot workflow is ready.");
   if (lower.includes("tutor")) return openWorkflowByVoice("ai", "tutor", "AI tutor workflow is ready.");
@@ -5990,6 +6099,11 @@ async function handleVoiceCommand(rawCommand) {
   if (lower.includes("test") && (lower.includes("provider") || lower.includes("engine"))) {
     goSection("integrations");
     return openWorkflowByVoice("integrations", "test-all", "Provider test workflow is ready.");
+  }
+  if (lower.includes("live service check")) {
+    goSection("integrations");
+    await runLiveServiceCheck();
+    return;
   }
   if (lower.includes("health check")) {
     goSection("admin");

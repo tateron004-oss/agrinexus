@@ -592,6 +592,11 @@ async function call(path, body) {
   assert(agritradeIntro.commandResult.intent === "trade.module_introduction");
   assert(agritradeIntro.commandResult.response.includes("AgriTrade helps farmers"));
   assert(agritradeIntro.commandResult.metadata.redirectSection === "trade");
+  const agritradeSpanish = await call("/api/agent/command", { command: "Hey AgriTrade can you change the language from English to Spanish", conversational: true, inputMode: "voice", outputMode: "voice" });
+  assert(agritradeSpanish.commandResult.intent === "conversation.language_changed");
+  assert(agritradeSpanish.commandResult.metadata.language === "es");
+  assert(agritradeSpanish.user.language === "es");
+  assert(agritradeSpanish.profile.accessibilityProfile.language === "es");
   const rememberPreference = await call("/api/agent/command", { command: "Remember that I prefer voice-first telehealth support for hearing impaired patients", conversational: true, inputMode: "voice", outputMode: "voice" });
   assert(rememberPreference.commandResult.intent === "memory-updated");
   assert(rememberPreference.profile.agentMemory.preferences.length >= 1);

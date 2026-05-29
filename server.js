@@ -419,7 +419,7 @@ function intelligentAssistantModel(db, user, providers = runtimeProviders(db)) {
     || (db.profile.agentMemory.conversationalIntakes || []).length
   );
   const hasVoice = providerOk("voice-tts") || Boolean(process.env.OPENAI_API_KEY);
-  const hasTranslation = providerOk("translation") || ["en", "fr", "sw", "ar"].includes(user?.language || db.profile.accessibilityProfile?.language || "en");
+  const hasTranslation = providerOk("translation") || ["en", "fr", "sw", "ar", "es"].includes(user?.language || db.profile.accessibilityProfile?.language || "en");
   const items = [
     {
       id: "personal-onboarding",
@@ -502,7 +502,7 @@ function intelligentAssistantModel(db, user, providers = runtimeProviders(db)) {
 }
 
 function voiceLanguageLabel(language) {
-  return { en: "English", fr: "French", sw: "Kiswahili", ar: "Arabic" }[language] || "selected-language";
+  return { en: "English", fr: "French", sw: "Kiswahili", ar: "Arabic", es: "Spanish" }[language] || "selected-language";
 }
 
 function platformProgressSummary(db, user, providers = runtimeProviders(db)) {
@@ -3841,12 +3841,26 @@ function localTranslateText(text, targetLanguage) {
       [["opened"], "تم فتح القسم. يمكنك المتابعة هنا."]
     ]
   };
+  voicePhrases.es = [
+    [["language", "spanish"], "Listo. Cambie el idioma a espanol. Las frases y respuestas de AgriTrade ahora usaran espanol."],
+    [["agritrade", "helps"], "AgriTrade ayuda a agricultores y equipos comerciales a pasar del cultivo al comprador y al pago. Puedo ayudar con cultivos, compradores, pedidos, pagos, logistica, calidad, exportacion e inteligencia de drones."],
+    [["telehealth", "intake"], "La admision de telesalud esta lista con apoyo por voz."],
+    [["vitals"], "Los signos vitales fueron capturados y agregados al registro de salud."],
+    [["buyer"], "El contacto con el comprador esta listo con un mensaje preparado para su producto."],
+    [["application"], "AgriNexus reviso la solicitud y guardo el siguiente paso de trabajo."],
+    [["lesson"], "La leccion se completo y el progreso fue actualizado."],
+    [["certificate"], "El certificado fue emitido y agregado al perfil."],
+    [["drone"], "El flujo de dron se completo y la evidencia del campo fue guardada."],
+    [["provider"], "Los motores de proveedores fueron probados y los resultados fueron guardados."],
+    [["opened"], "Espacio abierto. Puede continuar aqui."]
+  ];
   const match = (voicePhrases[language] || []).find(([keys]) => keys.every(key => lower.includes(key)));
   if (match) return match[1];
   const labels = {
     fr: "[FR]",
     sw: "[SW]",
-    ar: "[AR]"
+    ar: "[AR]",
+    es: "[ES]"
   };
   return `${labels[language] || `[${language.toUpperCase()}]`} ${value}`;
 }
@@ -4846,10 +4860,68 @@ function extractConversationalName(text) {
   return "";
 }
 
+function languageFromCommand(text) {
+  const lower = String(text || "").toLowerCase();
+  const languages = {
+    english: "en",
+    french: "fr",
+    francais: "fr",
+    swahili: "sw",
+    kiswahili: "sw",
+    arabic: "ar",
+    spanish: "es",
+    espanol: "es",
+    "espanol": "es"
+  };
+  const targetMatch = lower.match(/\b(?:to|into|in|a)\s+(english|french|francais|swahili|kiswahili|arabic|spanish|espanol)\b/);
+  if (targetMatch?.[1]) return languages[targetMatch[1]] || "";
+  for (const [name, code] of Object.entries(languages)) {
+    if (lower.includes(name)) return code;
+  }
+  return "";
+}
+
+function changeUserLanguage(db, user, language) {
+  const allowed = new Set(["en", "fr", "sw", "ar", "es"]);
+  if (!allowed.has(language)) return false;
+  const current = db.users.find(item => item.id === user.id);
+  if (current) current.language = language;
+  user.language = language;
+  db.profile.accessibilityProfile = {
+    ...(db.profile.accessibilityProfile || {}),
+    language
+  };
+  return true;
+}
+
 function moduleGreetingResponse(db, user, text, lower) {
   const isGreeting = /^(hi|hello|hey|good morning|good afternoon|good evening)\b/.test(lower);
   const isTradeAddressed = /\b(agritrade|agri\s*trade)\b/.test(lower);
   if (!isTradeAddressed) return null;
+  if (/(change|switch|set|translate).*(language|english|french|swahili|kiswahili|arabic|spanish|espanol)/.test(lower) || /(language).*(english|french|swahili|kiswahili|arabic|spanish|espanol)/.test(lower)) {
+    const language = languageFromCommand(text);
+    if (!language || !changeUserLanguage(db, user, language)) {
+      return {
+        intent: "conversation.language_change",
+        response: "I can change language to English, French, Kiswahili, Arabic, or Spanish. Tell me which one you want.",
+        status: "needs-input",
+        metadata: { conversationMode: true, redirectSection: "trade", module: "AgriTrade" }
+      };
+    }
+    const label = voiceLanguageLabel(language);
+    db.profile.agentMemory.activeModule = "AgriTrade";
+    db.profile.agentMemory.lastStatus = "language-changed";
+    db.profile.agentMemory.lastSummary = `AgriTrade language changed to ${label}.`;
+    db.profile.agentMemory.updatedAt = new Date().toISOString();
+    rememberAgentMemory(db.profile, `User wants AgriTrade phrases and responses in ${label}.`, { source: "language-command", category: "preference", confidence: 0.94 });
+    addActivity(db.profile, `Voice command changed platform language to ${label}.`);
+    return {
+      intent: "conversation.language_changed",
+      response: `Language changed to ${label}. AgriTrade phrases and responses will use ${label}.`,
+      status: "completed",
+      metadata: { conversationMode: true, redirectSection: "trade", module: "AgriTrade", language }
+    };
+  }
   if (/(tell me about|what do you do|explain|describe|about the platform|about agritrade|how do you help)/.test(lower)) {
     db.profile.agentMemory.activeModule = "AgriTrade";
     db.profile.agentMemory.lastStatus = "agritrade-introduction";
@@ -6375,7 +6447,7 @@ async function api(req, res, url) {
 
   if (url.pathname === "/api/user/language" && req.method === "POST") {
     const body = await readBody(req);
-    const allowed = new Set(["en", "fr", "sw", "ar"]);
+    const allowed = new Set(["en", "fr", "sw", "ar", "es"]);
     if (!allowed.has(body.language)) return send(res, 400, { error: "Unsupported language" });
     const current = db.users.find(item => item.id === user.id);
     current.language = body.language;
