@@ -2765,7 +2765,7 @@ function renderAgentCenter() {
   renderMissionDashboard();
   $("#agentToolPanel").innerHTML = [
     row("Capability registry", `${agentCapabilities.totalTools || 0} supervised tools, ${agentCapabilities.liveTools || 0} live-backed, ${agentCapabilities.confirmationTools || 0} confirmation-gated`),
-    row("Jarvis production track", `${jarvisReadiness.readyCount || 0}/${jarvisReadiness.total || 6} ready - ${jarvisReadiness.score || 0}% across wake, voice, autonomy, engines, memory, and app layer`),
+    row("AgriNexus command track", `${jarvisReadiness.readyCount || 0}/${jarvisReadiness.total || 6} ready - ${jarvisReadiness.score || 0}% across wake, voice, autonomy, engines, memory, and app layer`),
     ...(agentCapabilities.modules || []).map(item => row(
       item.module,
       `${item.total} tool(s), ${item.live} live-backed, ${item.confirmationRequired} confirmation-gated - ${(item.examples || []).slice(0, 2).join(", ")}`
@@ -2775,7 +2775,7 @@ function renderAgentCenter() {
     `<div><strong>Audience</strong><span>${translateText(memory.activeAudience || "government")}</span></div>`,
     `<div><strong>Mission</strong><span>${translateText(memory.activeMission || "rural transformation")}</span></div>`,
     `<div><strong>Active voice mission</strong><span>${translateText(memory.activeVoiceMission?.goal || "No active voice mission")} ${memory.activeVoiceMission ? `- ${Number(memory.activeVoiceMission.progress || 0)}%` : ""}</span></div>`,
-    `<div><strong>Jarvis session</strong><span>${translateText(memory.activeJarvisSession?.goal || "No Jarvis session active")} ${memory.activeJarvisSession ? `- ${translateText(memory.activeJarvisSession.status || "active")}` : ""}</span></div>`,
+    `<div><strong>AgriNexus session</strong><span>${translateText(memory.activeJarvisSession?.goal || "No AgriNexus session active")} ${memory.activeJarvisSession ? `- ${translateText(memory.activeJarvisSession.status || "active")}` : ""}</span></div>`,
     `<div><strong>Guided checklist</strong><span>${translateText(memory.activeGuidedMission?.currentStep?.title || memory.activeGuidedMission?.status || "No guided checklist active")} ${memory.activeGuidedMission ? `- ${Number(memory.activeGuidedMission.progress || 0)}%` : ""}</span></div>`,
     `<div><strong>Current question</strong><span>${translateText(memory.activeClarification?.question || "No clarification needed")}</span></div>`,
     `<div><strong>Recovery prompt</strong><span>${translateText(memory.activeRecovery?.suggestions?.join(", ") || "No recovery prompt active")}</span></div>`,
@@ -5923,7 +5923,6 @@ function isWakePhraseOnly(command) {
   if (!normalized) return false;
   const wakePhrases = [
     "hey agrinexus", "agri nexus", "agrinexus", "hey nexus", "nexus",
-    "hey jarvis", "jarvis", "coach",
     "bonjour agrinexus", "salut agrinexus", "bonjour nexus",
     "habari agrinexus", "hujambo agrinexus", "habari nexus",
     "مرحبا اغرينكسوس", "يا اغرينكسوس", "اغرينكسوس", "نيكسس"
@@ -5933,7 +5932,7 @@ function isWakePhraseOnly(command) {
 
 function cleanWakeCommand(command) {
   return String(command || "")
-    .replace(/^\s*(hey\s+)?(nexus|jarvis|agrinexus|agri\s+nexus|coach)\s*[,:\-]?\s*/i, "")
+    .replace(/^\s*(hey\s+)?(nexus|agrinexus|agri\s+nexus)\s*[,:\-]?\s*/i, "")
     .replace(/^\s*(bonjour|salut|habari|hujambo)\s+(nexus|agrinexus|agri\s+nexus)\s*[,:\-]?\s*/i, "")
     .replace(/^\s*(مرحبا|يا)?\s*(اغرينكسوس|نيكسس)\s*[,:\-]?\s*/i, "")
     .trim();
@@ -6079,7 +6078,7 @@ async function handleVoiceCommand(rawCommand) {
     health: ["health", "telehealth", "afayai", "care", "patient"],
     trade: ["trade", "agritrade", "agritech", "market", "wallet", "drone"],
     map: ["map", "route", "routes", "country"],
-    agent: ["agent", "jarvis", "assistant", "voice", "command center"],
+    agent: ["agent", "agrinexus", "nexus", "assistant", "voice", "command center"],
     integrations: ["integration", "integrations", "provider", "providers", "engines"],
     admin: ["admin", "readiness", "governance"],
     profile: ["profile", "record", "records"]
@@ -6139,10 +6138,10 @@ async function handleVoiceCommand(rawCommand) {
     setVoiceResponse("I can open modules, build captions, create audio guides, complete lessons, issue certificates, apply for roles, schedule shifts, start telehealth intake, connect a provider, capture vitals, contact a buyer, create orders, run drone scans, test engines, create plans, and read responses aloud.", true);
     return;
   }
-  if (lower.includes("voice demo") || lower.includes("jarvis demo") || lower.includes("show voice") || lower.includes("show jarvis")) {
+  if (lower.includes("voice demo") || lower.includes("agrinexus demo") || lower.includes("show voice") || lower.includes("show agrinexus")) {
     goSection("agent");
     openAskNexus();
-    setVoiceResponse("Jarvis-style voice demo is ready. Try saying: open telehealth, apply for that job, contact my buyer, test provider engines, or run full mission. Say yes to confirm any staged workflow.", true);
+    setVoiceResponse("AgriNexus voice demo is ready. Try saying: open telehealth, apply for that job, contact my buyer, test provider engines, or run full mission. Say yes to confirm any staged workflow.", true);
     return;
   }
   if (lower.includes("show reasoning") || lower.includes("show how you decide") || lower.includes("show agent thinking")) {
@@ -6496,7 +6495,7 @@ async function runWorkflowVoiceResponse() {
 }
 
 async function runJarvisFullMission() {
-  const mission = "Nexus, run full mission for learning, workforce, accessible telehealth, trade, drone, maps, AI, translation, and provider evidence";
+  const mission = "AgriNexus, run full mission for learning, workforce, accessible telehealth, trade, drone, maps, AI, translation, and provider evidence";
   setCommandInputs(mission);
   await handleVoiceCommand(mission);
 }

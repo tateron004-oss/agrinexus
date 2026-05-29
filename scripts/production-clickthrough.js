@@ -146,7 +146,7 @@ assert(app.includes("Awaiting human approval"), "AI governance panel must distin
 assert(app.includes("Provider error - review required"), "AI governance panel must show true provider errors clearly");
 assert(server.includes("speechError"), "Voice speech route must return OpenAI TTS errors for production debugging");
 assert(app.includes("OpenAI voice error:"), "Voice UI must show the exact OpenAI TTS error");
-assert(app.includes("runJarvisCommand();"), "Jarvis dock Run button must read the dock command input");
+assert(app.includes("runJarvisCommand();"), "AgriNexus dock Run button must read the dock command input");
 assert(app.includes("function runAdminHealthCheckDirect"), "Admin top health check button must execute directly");
 assert(server.includes("function agentToolRegistry"), "Backend needs a safe agent tool registry for open-ended requests");
 assert(server.includes("function planAgentToolWithOpenAi"), "Backend needs live LLM planning for agentic commands");
@@ -203,12 +203,12 @@ assert(app.includes("Evidence pack"), "Agent UI must show conversation evidence 
 assert(server.includes("function agentCapabilityRegistryState"), "Agent command center must expose a technical capability registry");
 assert(server.includes("agent.capability_registry"), "Voice agent must answer technical capability registry questions");
 assert(app.includes("Capability registry"), "Agent UI must show the capability registry");
-assert(server.includes("function jarvisReadinessModel"), "Agent command center must track the six-part Jarvis readiness model");
-assert(server.includes("agent.jarvis_readiness"), "Voice agent must answer Jarvis readiness questions");
-assert(app.includes("Jarvis production track"), "Agent UI must show Jarvis production track readiness");
-assert(server.includes("function startJarvisMode"), "Agent command center must start supervised Jarvis mode missions");
-assert(server.includes("agent.jarvis_mode_staged"), "Voice agent must stage Jarvis mode missions before execution");
-assert(app.includes("Jarvis session"), "Agent UI must show active Jarvis session state");
+assert(server.includes("function jarvisReadinessModel"), "Agent command center must track the six-part AgriNexus readiness model");
+assert(server.includes("agent.agrinexus_readiness"), "Voice agent must answer AgriNexus readiness questions");
+assert(app.includes("AgriNexus command track"), "Agent UI must show AgriNexus command track readiness");
+assert(server.includes("function startJarvisMode"), "Agent command center must start supervised AgriNexus mode missions");
+assert(server.includes("agent.agrinexus_mode_staged"), "Voice agent must stage AgriNexus mode missions before execution");
+assert(app.includes("AgriNexus session"), "Agent UI must show active AgriNexus session state");
 assert(server.includes("lastRecommendedAction"), "Conversation brain must remember the last recommended next action");
 assert(server.includes("agent.conversation_brain_answered"), "Conversation brain must create audit evidence for open-ended answers");
 assert(app.includes("function isNaturalConversationCommand"), "Microphone commands should route natural speech to the conversation brain");

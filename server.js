@@ -293,7 +293,7 @@ function conversationEvidencePack(db) {
     latestCommand ? `Understood as: ${latestCommand.intent}` : "Assistant understanding will appear after the first command.",
     pending ? `Pending action: ${pending.action || pending.tool || "workflow"} in ${pending.module || "AgriNexus"}` : "No pending action waiting for approval.",
     guided ? `Guided mission: ${guided.progress}% complete` : "No guided mission checklist active.",
-    memory.activeJarvisSession ? `Jarvis session: ${memory.activeJarvisSession.goal}` : "No Jarvis session active.",
+    memory.activeJarvisSession ? `AgriNexus session: ${memory.activeJarvisSession.goal}` : "No AgriNexus session active.",
     memory.turnCoach?.nextQuestion ? `Next prompt: ${memory.turnCoach.nextQuestion}` : "Next prompt will appear after conversation starts."
   ];
   return {
@@ -426,12 +426,12 @@ function jarvisReadinessModel(db, user, providers = runtimeProviders(db)) {
   ];
   const readyCount = items.filter(item => item.ready).length;
   return {
-    status: readyCount === items.length ? "jarvis-production-ready" : "jarvis-progressive-ready",
+    status: readyCount === items.length ? "agrinexus-command-production-ready" : "agrinexus-command-progressive-ready",
     readyCount,
     total: items.length,
     score: Math.round((readyCount / items.length) * 100),
     items,
-    summary: `AgriNexus is ${readyCount}/${items.length} on the Jarvis production track: wake behavior, streaming voice, autonomous planning, live engines, production memory, and app layer.`,
+    summary: `AgriNexus is ${readyCount}/${items.length} on the AgriNexus command track: wake behavior, streaming voice, autonomous planning, live engines, production memory, and app layer.`,
     updatedAt: new Date().toISOString()
   };
 }
@@ -1096,7 +1096,7 @@ function liveEngineManifest(db) {
     },
     {
       id: "voice",
-      name: "Jarvis-Style Voice",
+      name: "AgriNexus Voice",
       purpose: "Speech-to-text and text-to-speech workflows for voice-first command center use.",
       providerIds: ["voice-stt", "voice-tts"],
       credentials: ["VOICE_STT_PROVIDER=openai", "VOICE_TTS_PROVIDER=openai", "OPENAI_API_KEY", "OPENAI_TRANSCRIBE_MODEL", "OPENAI_TTS_MODEL", "OPENAI_TTS_VOICE"],
@@ -1535,8 +1535,8 @@ function capabilityMatrix(db, providers = runtimeProviders(db)) {
   const hasAi = (db.profile.aiRuns || []).length > 0 || providerOk("openai");
   const capabilities = [
     {
-      id: "jarvis-command-layer",
-      title: "Jarvis-style command layer",
+      id: "agrinexus-command-layer",
+      title: "AgriNexus command layer",
       module: "Agent AI",
       status: providerOk("voice-stt") && providerOk("voice-tts") ? "operational" : "needs-provider",
       detail: "Global Nexus dock, typed commands, voice sessions, backend command endpoint, wake-word cleanup, spoken responses, and command audit trail."
@@ -2590,7 +2590,7 @@ function buildJarvisSession(db, user, goal) {
     id: crypto.randomUUID(),
     goal,
     status: "awaiting-confirmation",
-    mode: "supervised-jarvis",
+    mode: "supervised-agrinexus-command",
     planId: plan.id,
     previewSteps: plan.steps.map(step => ({
       module: step.module,
@@ -2598,7 +2598,7 @@ function buildJarvisSession(db, user, goal) {
       action: step.action,
       detail: step.detail
     })),
-    jarvisScore: readiness.score,
+    agrinexusCommandScore: readiness.score,
     toolCount: capabilityRegistry.totalTools,
     confirmationRequired: true,
     createdBy: user.email,
@@ -2607,8 +2607,8 @@ function buildJarvisSession(db, user, goal) {
   };
   db.profile.agentMemory.activeJarvisSession = session;
   db.profile.agentMemory.lastGoal = goal;
-  db.profile.agentMemory.lastStatus = "jarvis-awaiting-confirmation";
-  db.profile.agentMemory.lastSummary = `Jarvis mode prepared ${session.previewSteps.length} supervised step(s).`;
+  db.profile.agentMemory.lastStatus = "agrinexus-command-awaiting-confirmation";
+  db.profile.agentMemory.lastSummary = `AgriNexus command mode prepared ${session.previewSteps.length} supervised step(s).`;
   db.profile.agentMemory.updatedAt = session.updatedAt;
   return { session, plan, readiness, capabilityRegistry };
 }
@@ -2616,14 +2616,14 @@ function buildJarvisSession(db, user, goal) {
 function startJarvisMode(db, user, command) {
   const goal = String(command || "")
     .replace(/\b(i need|i want|activate|start|use|be|become|run|launch|show|give me)\b/gi, "")
-    .replace(/\b(jarvis|jarvis mode|like jarvis)\b/gi, "")
+    .replace(/\b(agrinexus|agri\s+nexus|nexus|command mode|operating assistant)\b/gi, "")
     .replace(/\s+/g, " ")
-    .trim() || "Operate AgriNexus like a supervised Jarvis assistant across the best next mission.";
+    .trim() || "Operate AgriNexus as a supervised operating assistant across the best next mission.";
   const { session, plan, readiness, capabilityRegistry } = buildJarvisSession(db, user, goal);
   const staged = stageAgentAction(db, command, {
     kind: "autopilot-mission",
     module: "AI",
-    action: `Run Jarvis supervised mission with ${plan.steps.length} steps`,
+    action: `Run AgriNexus supervised mission with ${plan.steps.length} steps`,
     section: "agent",
     goal,
     jarvisSessionId: session.id,
@@ -2631,8 +2631,8 @@ function startJarvisMode(db, user, command) {
   });
   return {
     ...staged,
-    intent: "agent.jarvis_mode_staged",
-    response: `Jarvis mode is ready. I built a supervised mission with ${plan.steps.length} steps and ${capabilityRegistry.totalTools} available tools behind it. I will not run high-impact actions without approval. Say "yes" to run the mission, or "no" to cancel.`,
+    intent: "agent.agrinexus_mode_staged",
+    response: `AgriNexus command mode is ready. I built a supervised mission with ${plan.steps.length} steps and ${capabilityRegistry.totalTools} available tools behind it. I will not run high-impact actions without approval. Say "yes" to run the mission, or "no" to cancel.`,
     metadata: {
       ...(staged.metadata || {}),
       jarvisSession: session,
@@ -4584,7 +4584,7 @@ function conversationModuleSignal(text) {
     { module: "AgriTrade", section: "trade", keys: ["agritrade", "trade", "farmer", "crop", "buyer", "sell", "market", "order", "wallet", "payment", "logistics", "drone", "field", "farm"] },
     { module: "Maps", section: "map", keys: ["map", "route", "location", "gps", "geospatial", "corridor", "country", "risk"] },
     { module: "Integrations", section: "integrations", keys: ["integration", "provider", "engine", "api", "service", "credential", "render", "openai", "twilio"] },
-    { module: "Agent AI", section: "agent", keys: ["agent", "jarvis", "assistant", "voice", "conversation", "autopilot", "mission", "reason"] }
+    { module: "Agent AI", section: "agent", keys: ["agent", "agrinexus", "nexus", "assistant", "voice", "conversation", "autopilot", "mission", "reason"] }
   ];
   const scored = signals
     .map(signal => ({ ...signal, score: signal.keys.reduce((total, key) => total + (lower.includes(key) ? 1 : 0), 0) }))
@@ -4615,7 +4615,7 @@ function updateConversationUserModel(profile, command) {
   if (/\blearner|student|training|course|lesson\b/.test(lower)) model.currentPersona = "learner";
   if (/\bjob|workforce|worker|candidate|interview\b/.test(lower)) model.currentPersona = "workforce-candidate";
   if (/\binvestor|government|ministry|funding|presentation\b/.test(lower)) model.currentAudience = "investor-government";
-  if (/\bvoice|speak|talk|listen|microphone|jarvis\b/.test(lower)) model.preferredInteraction = "voice-first";
+  if (/\bvoice|speak|talk|listen|microphone|agrinexus|nexus\b/.test(lower)) model.preferredInteraction = "voice-first";
   if (/\bnon technical|non-technical|simple|easy|plain language|low tech|low-tech\b/.test(lower)) model.communicationStyle = "plain-language-step-by-step";
   if (/\bread aloud|audio|voice guide|blind|visual|visually impaired|large print|screen reader\b/.test(lower)) model.accessibilityMode = "visual-or-audio-support";
   if (/\bdeaf|hearing impaired|hard of hearing|caption|captions|transcript|sign language\b/.test(lower)) model.accessibilityMode = "hearing-support";
@@ -5111,7 +5111,7 @@ function buildConversationTurnCoach(db, user, command, result = {}) {
 function isVagueHelpRequest(lower) {
   const value = String(lower || "").trim();
   if (!value) return false;
-  if (/\bjarvis\b/.test(value)) return false;
+  if (/\b(agrinexus|agri\s+nexus|nexus)\b/.test(value)) return false;
   const broadAsk = /\b(help me|i need help|guide me|what should i do|help this|help my|support me|i need support|i want help)\b/.test(value);
   const broadDomain = /\b(farm|farmer|crop|field|patient|care|health|telehealth|work|job|role|training|learn|course|buyer|trade|market|drone|route)\b/.test(value);
   const specificAction = /\b(apply|contact|call|message|schedule|complete|issue|submit|pay|track|scan|translate|change language|run health check)\b/.test(value);
@@ -6006,7 +6006,7 @@ function conversationalSectionGuide(db, text) {
     },
     {
       section: "agent",
-      keys: ["agent", "assistant", "jarvis", "voice", "mission", "autopilot", "command"],
+      keys: ["agent", "assistant", "agrinexus", "nexus", "voice", "mission", "autopilot", "command"],
       title: "agent command center",
       first: "I am opening Agent AI. Start with a plain-language goal, let the agent build a plan, then confirm before it executes the supervised workflow.",
       command: "run full mission"
@@ -6607,8 +6607,10 @@ async function moduleGreetingResponse(db, user, text, lower) {
 
 async function runAgentCommand(db, user, command, options = {}) {
   ensureAiProfile(db.profile);
+  const rawCommand = String(command || "");
+  const invokedAgriNexus = /\b(agrinexus|agri\s+nexus|nexus)\b/i.test(rawCommand);
   let text = String(command || "")
-    .replace(/^\s*(hey\s+)?(nexus|jarvis|agrinexus|coach)\s*[,:\-]?\s*/i, "")
+    .replace(/^\s*(hey\s+)?(nexus|agrinexus|agri\s+nexus)\s*[,:\-]?\s*/i, "")
     .trim();
   let lower = text.toLowerCase();
   const localizedWorkflow = localizedWorkflowPhrase(lower);
@@ -6711,7 +6713,7 @@ async function runAgentCommand(db, user, command, options = {}) {
     if (followUp) return followUp;
   }
 
-  if (conversational && isVagueHelpRequest(lower)) {
+  if (conversational && !invokedAgriNexus && isVagueHelpRequest(lower)) {
     return startClarification(db, user, text, conversationModuleSignal(text));
   }
 
@@ -6733,21 +6735,21 @@ async function runAgentCommand(db, user, command, options = {}) {
     };
   }
 
-  if (lower.includes("jarvis readiness") || lower.includes("jarvis level") || lower.includes("get to jarvis") || lower.includes("all six") || lower.includes("all 6")) {
+  if (lower.includes("agrinexus readiness") || lower.includes("agrinexus level") || lower.includes("command readiness") || lower.includes("command level") || lower.includes("all six") || lower.includes("all 6")) {
     const readiness = jarvisReadinessModel(db, user);
-    db.profile.agentMemory.lastStatus = "jarvis-readiness-reviewed";
+    db.profile.agentMemory.lastStatus = "agrinexus-readiness-reviewed";
     db.profile.agentMemory.lastSummary = readiness.summary;
     db.profile.agentMemory.updatedAt = new Date().toISOString();
     const missing = readiness.items.filter(item => !item.ready).map(item => item.title).slice(0, 3);
     return {
-      intent: "agent.jarvis_readiness",
+      intent: "agent.agrinexus_readiness",
       response: `${readiness.summary} Current score is ${readiness.score} percent. ${missing.length ? `The biggest remaining unlocks are ${missing.join(", ")}.` : "All six layers are ready."} I can keep improving the software layer now and will clearly show which parts need hosted credentials or native app packaging.`,
       status: readiness.status,
       metadata: { conversationMode: conversational, redirectSection: "agent", jarvisReadiness: readiness }
     };
   }
 
-  if (/\bjarvis\b/.test(lower) && /\b(need|want|mode|handle|take over|operate|run|activate|start|be|become|help|mission)\b/.test(lower)) {
+  if ((invokedAgriNexus || /\b(agrinexus|agri\s+nexus|nexus|command mode|operating assistant)\b/.test(lower)) && /\b(need|want|mode|handle|take over|operate|run|activate|start|be|become|help|mission)\b/.test(lower)) {
     return startJarvisMode(db, user, text);
   }
 
@@ -7133,7 +7135,7 @@ async function runAgentCommand(db, user, command, options = {}) {
     });
   }
 
-  if (lower.includes("autonomous") || lower.includes("full mission") || lower.includes("run everything") || lower.includes("jarvis")) {
+  if (lower.includes("autonomous") || lower.includes("full mission") || lower.includes("run everything") || lower.includes("agrinexus command")) {
     const goal = text || "Run the full AgriNexus cross-module mission.";
     const plan = buildAgentPlan(db, goal, user);
     db.profile.agentPlans.unshift(plan);

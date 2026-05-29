@@ -221,22 +221,22 @@ async function call(route, body) {
     assert(state.commandResult.metadata.capabilityRegistry.totalTools >= 30);
 
     state = await call("/api/agent/command", {
-      command: "show jarvis readiness for all six",
+      command: "show AgriNexus readiness for all six",
       conversational: true,
       inputMode: "voice",
       outputMode: "voice"
     });
-    assert(state.commandResult.intent === "agent.jarvis_readiness");
+    assert(state.commandResult.intent === "agent.agrinexus_readiness");
     assert(state.commandResult.metadata.jarvisReadiness.total === 6);
     assert(state.jarvisReadiness.items.length === 6);
 
     state = await call("/api/agent/command", {
-      command: "I need Jarvis to help this farmer sell crops",
+      command: "AgriNexus help this farmer sell crops",
       conversational: true,
       inputMode: "voice",
       outputMode: "voice"
     });
-    assert(state.commandResult.intent === "agent.jarvis_mode_staged");
+    assert(state.commandResult.intent === "agent.agrinexus_mode_staged");
     assert(state.profile.agentMemory.activeJarvisSession);
     assert(state.profile.agentPendingAction?.kind === "autopilot-mission");
     assert(state.conversationEvidence.activeJarvisSession);
