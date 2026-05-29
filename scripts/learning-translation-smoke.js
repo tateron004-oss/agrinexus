@@ -11,6 +11,9 @@ const expected = [
   "Studio d'apprentissage",
   "Kituo cha kujifunza",
   "arabicLearningCopy",
+  "function captureOriginalText",
+  "captureOriginalText();",
+  "\"#loginView\", \".topbar\", \".sidebar\"",
   "translatedCourse(course)",
   "translatedDuration(course.duration)",
   "setAttribute(\"dir\", languageCode() === \"ar\" ? \"rtl\" : \"ltr\")"

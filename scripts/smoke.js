@@ -82,6 +82,20 @@ async function call(path, body) {
   assert(investorLogin.permissions.learning);
   assert(!investorLogin.permissions.admin);
   assert(!investorLogin.permissions.integrations);
+  for (const account of [
+    { email: "admin@agrinexus.org", password: "Admin2026!" },
+    { email: "user@agrinexus.org", password: "User2026!" },
+    { email: "investor@agrinexus.org", password: "Investor2026!" }
+  ]) {
+    const accountLogin = await call("/api/login", account);
+    assert(accountLogin.user.email === account.email);
+    for (const targetLanguage of ["fr", "sw", "ar", "en"]) {
+      const languageState = await call("/api/user/language", { language: targetLanguage });
+      assert(languageState.user.email === account.email);
+      assert(languageState.user.language === targetLanguage);
+      assert(languageState.profile.accessibilityProfile.language === targetLanguage);
+    }
+  }
   await call("/api/login", { email: "admin@agrinexus.org", password: "Admin2026!" });
   assert(login.providers.length >= 8);
   assert(login.providers.some(provider => provider.id === "voice-stt"));

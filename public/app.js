@@ -2177,9 +2177,30 @@ function translateText(value) {
   return translateByWordMap(output, lang);
 }
 
+function captureOriginalText(root = document.body) {
+  if (!root) return;
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
+    acceptNode(node) {
+      const parent = node.parentElement;
+      if (!parent || ["SCRIPT", "STYLE", "NOSCRIPT"].includes(parent.tagName)) return NodeFilter.FILTER_REJECT;
+      return node.nodeValue.trim() ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_SKIP;
+    }
+  });
+  while (walker.nextNode()) {
+    if (!originalTextNodes.has(walker.currentNode)) originalTextNodes.set(walker.currentNode, walker.currentNode.nodeValue);
+  }
+  $$("[placeholder]").forEach(element => {
+    if (!element.dataset.originalPlaceholder) element.dataset.originalPlaceholder = element.getAttribute("placeholder") || "";
+  });
+  $$("[aria-label]").forEach(element => {
+    if (!element.dataset.originalAriaLabel) element.dataset.originalAriaLabel = element.getAttribute("aria-label") || "";
+  });
+}
+
 function applyContentTranslations() {
   const map = contentTranslations[languageCode()];
   const roots = [
+    "#loginView", ".topbar", ".sidebar",
     "#dashboard", "#learning", "#workforce", "#health", "#trade",
     "#map", "#agent", "#integrations", "#admin", "#profile", "#workflowModal",
     "#workspaceBar", "#globalAssistantBar", "#accessibilityPanel"
@@ -5999,6 +6020,7 @@ function renderLoginProfiles() {
       $("#loginMessage").textContent = `${button.querySelector("strong")?.textContent || "Profile"} login selected.`;
     });
   });
+  captureOriginalText(target);
 }
 
 async function runVoiceTextCommand() {
@@ -6728,6 +6750,7 @@ function bindStatic() {
 async function boot() {
   registerWebApp();
   bindStatic();
+  captureOriginalText();
   try {
     data = await request("/api/state");
     render();
