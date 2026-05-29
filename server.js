@@ -4718,6 +4718,45 @@ function conversationFollowUpResponse(db, user, text, lower) {
   };
 }
 
+function socialConversationResponse(db, user, text, lower) {
+  ensureAiProfile(db.profile);
+  if (/^(hi|hello|hey|good morning|good afternoon|good evening|are you there|can you hear me)\b/.test(lower)) {
+    const name = db.profile.agentMemory.userModel?.name || user.name?.split(/\s+/)[0] || "there";
+    db.profile.agentMemory.lastStatus = "conversation-ready";
+    db.profile.agentMemory.lastSummary = `Hello ${name}. I am listening and ready to guide the next step.`;
+    db.profile.agentMemory.updatedAt = new Date().toISOString();
+    return {
+      intent: "conversation.greeting",
+      response: `Hello ${name}. I am here with you. Tell me what you want to do in plain language, and I will guide one step at a time.`,
+      status: "completed",
+      metadata: { conversationMode: true, redirectSection: db.profile.agentMemory.lastRecommendedSection || "dashboard" }
+    };
+  }
+  if (/^(thanks|thank you|appreciate it|that helps|perfect|great|awesome)\b/.test(lower)) {
+    const next = db.profile.agentMemory.lastRecommendedAction || smartNextActions(db, user).items[0];
+    return {
+      intent: "conversation.acknowledged",
+      response: next
+        ? `You're welcome. I am still here. The next thing I can help with is ${next.title}. Say "do the next step" when you are ready.`
+        : "You're welcome. I am still here. Say what you want to do next and I will guide it.",
+      status: "completed",
+      metadata: { conversationMode: true, redirectSection: next?.section || "dashboard", recommendation: next || null }
+    };
+  }
+  if (/^(wait|hold on|pause|give me a second|one second|stop talking)\b/.test(lower)) {
+    db.profile.agentMemory.lastStatus = "paused-by-user";
+    db.profile.agentMemory.lastSummary = "User asked AgriNexus to pause and wait.";
+    db.profile.agentMemory.updatedAt = new Date().toISOString();
+    return {
+      intent: "conversation.paused",
+      response: "No problem. I will wait. When you are ready, say continue or ask the next question.",
+      status: "paused",
+      metadata: { conversationMode: true, redirectSection: db.profile.agentMemory.lastRecommendedSection || "dashboard" }
+    };
+  }
+  return null;
+}
+
 async function voiceInvestorDemo(db, user) {
   const goal = "Run a voice-led investor demo across learning, workforce, telehealth, AgriTrade, drones, maps, and provider readiness.";
   const { plan, execution } = await createAndExecuteAutopilotMission(db, user, goal, "Voice investor demo mode");
@@ -5811,6 +5850,11 @@ async function runAgentCommand(db, user, command, options = {}) {
       status: "canceled",
       metadata: { conversationMode: true }
     };
+  }
+
+  if (conversational) {
+    const social = socialConversationResponse(db, user, text, lower);
+    if (social) return social;
   }
 
   if (conversational) {

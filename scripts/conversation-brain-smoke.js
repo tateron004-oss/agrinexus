@@ -88,6 +88,15 @@ async function call(route, body) {
     });
     assert(state.commandResult.intent === "conversation.confirmed");
     assert(!state.profile.agentPendingAction);
+
+    state = await call("/api/agent/command", {
+      command: "thanks coach",
+      conversational: true,
+      inputMode: "voice",
+      outputMode: "voice"
+    });
+    assert(state.commandResult.intent === "conversation.acknowledged");
+    assert(/next/i.test(state.commandResult.response));
     console.log("Conversation brain smoke test passed");
   } finally {
     server.kill();

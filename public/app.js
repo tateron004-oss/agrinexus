@@ -13,6 +13,7 @@ let voiceStopRequested = false;
 let voiceSpeaking = false;
 let activeVoiceAudio = null;
 let voicePlaybackToken = 0;
+let voiceConversationTurns = Number(localStorage.getItem("agrinexusVoiceTurns") || 0);
 let agentReasoningVisible = localStorage.getItem("agrinexusReasoningVisible") === "true";
 const accessibilityPrefs = JSON.parse(localStorage.getItem("agrinexusAccessibility") || "{}");
 const originalTextNodes = new WeakMap();
@@ -5994,6 +5995,15 @@ function voiceStatusSummary() {
   ].join(" ");
 }
 
+function isNaturalConversationCommand(lower) {
+  const value = String(lower || "").trim();
+  if (!value) return false;
+  const followUp = /^(yes|no|explain|repeat|continue|do the next|next step|take me there|open that|show me|tell me more|why|how|what about|thanks|thank you|wait|hold on)\b/.test(value);
+  const question = /^(what|how|why|when|where|who|can|could|would|should|does|do|is|are|tell|explain|describe|summarize)\b/.test(value);
+  const humanNeed = /\b(i need|i want|i am trying|i'm trying|help me|walk me|guide me|talk to me|i have a question|question|not sure|confused|show me how|can you help)\b/.test(value);
+  return followUp || question || humanNeed || value.split(/\s+/).length >= 9;
+}
+
 function commandGoal(command) {
   return command
     .replace(/^(please\s+)?(create|build|make|generate)\s+(an?\s+)?(agent\s+)?plan( for| to)?/i, "")
@@ -6069,6 +6079,12 @@ async function handleVoiceCommand(rawCommand) {
     await runBackendAgentCommand(command);
     return;
   }
+
+  if (voiceFirstMode && isNaturalConversationCommand(lower)) {
+    await runBackendAgentCommand(command);
+    return;
+  }
+
   if ((lower.includes("agritrade") || lower.includes("agri trade") || lower.includes("trade") || lower.includes("buyer") || lower.includes("crop") || lower.includes("route") || lower.includes("logistics")) && (lower.includes("efficiency") || lower.includes("efficient") || lower.includes("optimize") || lower.includes("optimise") || lower.includes("operations") || lower.includes("operational") || lower.includes("bottleneck") || lower.includes("delay") || lower.includes("cost") || lower.includes("waste") || lower.includes("profit") || lower.includes("performance"))) {
     await runBackendAgentCommand(command);
     return;
@@ -6312,6 +6328,11 @@ async function handleVoiceCommand(rawCommand) {
 async function runBackendAgentCommand(command) {
   try {
     const previousLanguage = languageCode();
+    voiceConversationTurns += 1;
+    localStorage.setItem("agrinexusVoiceTurns", String(voiceConversationTurns));
+    setVoiceStatus("thinking");
+    const globalStatus = $("#globalAssistantStatus");
+    if (globalStatus) globalStatus.textContent = `Thinking about: ${command}`;
     data = await request("/api/agent/command", {
       method: "POST",
       body: {
@@ -6329,6 +6350,8 @@ async function runBackendAgentCommand(command) {
     if (result.intent === "conversation.language_changed" || result.metadata?.language || previousLanguage !== languageCode()) {
       refreshVoiceForLanguageChange();
     }
+    const mode = $("#jarvisMode");
+    if (mode) mode.textContent = `conversation turn ${voiceConversationTurns}`;
     setVoiceResponse(result.response || "Command completed.", true);
   } catch (error) {
     setVoiceResponse(error.message || "Command failed.");
@@ -6467,6 +6490,10 @@ function startVoiceListening() {
     setVoiceResponse("Microphone voice input is not available in this browser. Type your request in Ask AgriNexus and click Run command.");
     return;
   }
+  if (voiceSpeaking) {
+    stopVoicePlayback();
+    setVoiceResponse("I stopped speaking. I'm listening now.", false, { allowVoiceFirst: false });
+  }
   if (voiceRecognition) {
     voiceStopRequested = true;
     voiceRecognition.stop();
@@ -6479,7 +6506,8 @@ function startVoiceListening() {
   voiceRecognition = new Recognition();
   voiceRecognition.lang = voiceLocale();
   voiceRecognition.interimResults = false;
-  voiceRecognition.continuous = false;
+  voiceRecognition.continuous = voiceFirstMode;
+  voiceRecognition.maxAlternatives = 3;
   voiceRecognition.onstart = () => {
     setVoiceStatus("listening");
     const status = $("#globalMicStatus");
@@ -6507,9 +6535,12 @@ function startVoiceListening() {
     }
   };
   voiceRecognition.onresult = event => {
-    const command = event.results?.[0]?.[0]?.transcript || "";
+    const latest = event.results?.[event.results.length - 1];
+    if (latest && latest.isFinal === false) return;
+    const command = latest?.[0]?.transcript || event.results?.[0]?.[0]?.transcript || "";
     setCommandInputs(command);
-    setVoiceResponse(`Heard: ${command}`, false, { allowVoiceFirst: false });
+    setVoiceStatus("thinking");
+    setVoiceResponse(`I heard: ${command}. Give me a moment.`, false, { allowVoiceFirst: false });
     request("/api/voice/transcribe", { method: "POST", body: { transcript: command, language: languageCode(), locale: voiceLocale() } }).catch(() => {});
     handleVoiceCommand(command);
   };
