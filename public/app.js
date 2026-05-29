@@ -2743,6 +2743,7 @@ function renderAgentCenter() {
   const intelligentAssistant = data.intelligentAssistant || { readyCount: 0, total: 10, items: [] };
   const evidencePack = data.conversationEvidence || { evidence: [], status: "ready", counts: {} };
   const agentCapabilities = data.agentCapabilities || { totalTools: 0, liveTools: 0, confirmationTools: 0, modules: [] };
+  const jarvisReadiness = data.jarvisReadiness || { readyCount: 0, total: 6, score: 0, items: [] };
   const agentMode = $("#agentMode");
   if (!agentMode) return;
   const agentStepAction = step => {
@@ -2764,6 +2765,7 @@ function renderAgentCenter() {
   renderMissionDashboard();
   $("#agentToolPanel").innerHTML = [
     row("Capability registry", `${agentCapabilities.totalTools || 0} supervised tools, ${agentCapabilities.liveTools || 0} live-backed, ${agentCapabilities.confirmationTools || 0} confirmation-gated`),
+    row("Jarvis production track", `${jarvisReadiness.readyCount || 0}/${jarvisReadiness.total || 6} ready - ${jarvisReadiness.score || 0}% across wake, voice, autonomy, engines, memory, and app layer`),
     ...(agentCapabilities.modules || []).map(item => row(
       item.module,
       `${item.total} tool(s), ${item.live} live-backed, ${item.confirmationRequired} confirmation-gated - ${(item.examples || []).slice(0, 2).join(", ")}`
@@ -2794,9 +2796,12 @@ function renderAgentCenter() {
     `<div><strong>Evidence pack</strong><span>${translateText((evidencePack.evidence || []).slice(0, 3).join(" | ") || "No conversation evidence yet")}</span></div>`,
     `<div><strong>Tool registry</strong><span>${Number(agentCapabilities.totalTools || 0)} ${translateText("supervised tool(s)")} - ${Number(agentCapabilities.confirmationTools || 0)} ${translateText("need confirmation")}</span></div>`
   ].join("");
-  $("#agentBriefingPanel").innerHTML = briefings.length
-    ? briefings.slice(0, 4).map(briefing => `<div><strong>${translateText(briefing.title)}</strong><span>${translateText(briefing.purpose)} - ${translateText(briefing.plainLanguageSummary)}</span></div>`).join("")
-    : `<div>${translateText("No government briefing yet. Create one before the presentation.")}</div>`;
+  if ($("#agentBriefingPanel")) {
+    const jarvisItems = (jarvisReadiness.items || []).map(item => `<div><strong>${translateText(item.title)}</strong><span>${translateText(item.level)} - ${translateText(item.evidence)}</span></div>`).join("");
+    $("#agentBriefingPanel").innerHTML = jarvisItems || (briefings.length
+      ? briefings.slice(0, 4).map(briefing => `<div><strong>${translateText(briefing.title)}</strong><span>${translateText(briefing.purpose)} - ${translateText(briefing.plainLanguageSummary)}</span></div>`).join("")
+      : `<div>${translateText("No government briefing yet. Create one before the presentation.")}</div>`);
+  }
   $("#intelligentAssistantScore").textContent = `${intelligentAssistant.readyCount || 0}/${intelligentAssistant.total || 10}`;
   $("#intelligentAssistantPanel").innerHTML = (intelligentAssistant.items || []).map(item => taskItem(
     item.title,

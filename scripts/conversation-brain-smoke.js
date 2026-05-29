@@ -219,6 +219,16 @@ async function call(route, body) {
     });
     assert(state.commandResult.intent === "agent.capability_registry");
     assert(state.commandResult.metadata.capabilityRegistry.totalTools >= 30);
+
+    state = await call("/api/agent/command", {
+      command: "show jarvis readiness for all six",
+      conversational: true,
+      inputMode: "voice",
+      outputMode: "voice"
+    });
+    assert(state.commandResult.intent === "agent.jarvis_readiness");
+    assert(state.commandResult.metadata.jarvisReadiness.total === 6);
+    assert(state.jarvisReadiness.items.length === 6);
     console.log("Conversation brain smoke test passed");
   } finally {
     server.kill();

@@ -203,6 +203,9 @@ assert(app.includes("Evidence pack"), "Agent UI must show conversation evidence 
 assert(server.includes("function agentCapabilityRegistryState"), "Agent command center must expose a technical capability registry");
 assert(server.includes("agent.capability_registry"), "Voice agent must answer technical capability registry questions");
 assert(app.includes("Capability registry"), "Agent UI must show the capability registry");
+assert(server.includes("function jarvisReadinessModel"), "Agent command center must track the six-part Jarvis readiness model");
+assert(server.includes("agent.jarvis_readiness"), "Voice agent must answer Jarvis readiness questions");
+assert(app.includes("Jarvis production track"), "Agent UI must show Jarvis production track readiness");
 assert(server.includes("lastRecommendedAction"), "Conversation brain must remember the last recommended next action");
 assert(server.includes("agent.conversation_brain_answered"), "Conversation brain must create audit evidence for open-ended answers");
 assert(app.includes("function isNaturalConversationCommand"), "Microphone commands should route natural speech to the conversation brain");

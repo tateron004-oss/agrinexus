@@ -361,10 +361,84 @@ function agentCapabilityRegistryState(db, providers = runtimeProviders(db)) {
   };
 }
 
+function jarvisReadinessModel(db, user, providers = runtimeProviders(db)) {
+  ensureAiProfile(db.profile);
+  const providerReady = id => ["connected", "ready"].includes(providers.find(provider => provider.id === id)?.status);
+  const openAiReady = providerReady("openai") || Boolean(process.env.OPENAI_API_KEY);
+  const voiceReady = providerReady("voice-stt") && providerReady("voice-tts");
+  const phoneReady = providerReady("phone-voice");
+  const databaseReady = Boolean(process.env.DATABASE_URL && usingPostgresState() && loadOptional("pg"));
+  const liveEngineIds = ["learning-courses", "workforce-jobs", "health-telehealth", "trade-market", "field-drones", "maps", "translation"];
+  const liveEngineCount = liveEngineIds.filter(providerReady).length;
+  const appReady = fs.existsSync(path.join(ROOT, "public", "manifest.webmanifest")) && fs.existsSync(path.join(ROOT, "public", "sw.js"));
+  const agentCapabilities = agentCapabilityRegistryState(db, providers);
+  const items = [
+    {
+      id: "wake-word",
+      title: "Wake-word and hands-free mode",
+      ready: Boolean((db.profile.agentCommands || []).length && agentCapabilities.totalTools),
+      level: "browser-assisted",
+      evidence: "Browser mic security requires a user-started mic session; Hey AgriNexus mode keeps listening when allowed.",
+      next: "For true always-on wake word, package AgriNexus as mobile/desktop app with native microphone permissions."
+    },
+    {
+      id: "streaming-voice",
+      title: "Streaming voice conversation",
+      ready: openAiReady && voiceReady,
+      level: openAiReady ? "live-turn-based" : "local-turn-based",
+      evidence: openAiReady ? "OpenAI voice/text path is configured for natural spoken replies." : "Local/browser conversation path works; OpenAI key unlocks higher-quality voice.",
+      next: "Add a realtime speech API session for interruption-aware speech-to-speech."
+    },
+    {
+      id: "autonomous-planning",
+      title: "Autonomous mission planning",
+      ready: Boolean(agentCapabilities.totalTools >= 30 && (db.profile.activeGuidedMission || db.profile.agentPlans?.length)),
+      level: "supervised-agentic",
+      evidence: `${agentCapabilities.totalTools} supervised tools with confirmation gates, guided missions, turn coaching, and evidence packs.`,
+      next: "Allow scheduled/background missions after user approval and provider credentials are connected."
+    },
+    {
+      id: "live-engines",
+      title: "External live engines",
+      ready: liveEngineCount === liveEngineIds.length,
+      level: `${liveEngineCount}/${liveEngineIds.length} engine groups live`,
+      evidence: "Tracks learning, workforce, telehealth, trade, drones, maps, and translation provider readiness.",
+      next: "Connect missing provider URLs/API keys in Render or replace provider-engine bridge with chosen vendors."
+    },
+    {
+      id: "production-memory",
+      title: "Production memory and audit",
+      ready: databaseReady,
+      level: databaseReady ? "postgres-backed" : "json-backed",
+      evidence: databaseReady ? "DATABASE_URL with PostgreSQL state store is active." : "Local JSON memory works; PostgreSQL activation is prepared.",
+      next: "Set DATABASE_URL, AGRINEXUS_STATE_STORE=postgres, and keep migrations active in hosted production."
+    },
+    {
+      id: "mobile-app-layer",
+      title: "Mobile/web app layer",
+      ready: appReady,
+      level: appReady ? "PWA-ready" : "browser-only",
+      evidence: appReady ? "Manifest and service worker are present for installable web-app behavior." : "Browser mode works; app shell assets need setup.",
+      next: "Package as PWA first, then native mobile for always-on wake, push notifications, GPS, camera, and offline field use."
+    }
+  ];
+  const readyCount = items.filter(item => item.ready).length;
+  return {
+    status: readyCount === items.length ? "jarvis-production-ready" : "jarvis-progressive-ready",
+    readyCount,
+    total: items.length,
+    score: Math.round((readyCount / items.length) * 100),
+    items,
+    summary: `AgriNexus is ${readyCount}/${items.length} on the Jarvis production track: wake behavior, streaming voice, autonomous planning, live engines, production memory, and app layer.`,
+    updatedAt: new Date().toISOString()
+  };
+}
+
 function publicState(db, user) {
   const providers = runtimeProviders(db);
   ensureOperationsProfile(db.profile);
   const agentCapabilities = agentCapabilityRegistryState(db, providers);
+  const jarvisReadiness = jarvisReadinessModel(db, user, providers);
   return {
     user: user && { id: user.id, name: user.name, email: user.email, role: user.role, country: user.country, language: user.language },
     permissions: user ? permissionsForRole(user.role) : {},
@@ -381,6 +455,7 @@ function publicState(db, user) {
     behaviorModel: assistantBehaviorModel(db, user),
     conversationEvidence: conversationEvidencePack(db),
     agentCapabilities,
+    jarvisReadiness,
     sessionBriefing: sessionBriefingModel(db, user, providers),
     smartActions: smartNextActions(db, user, providers),
     activationGuide: productionActivationGuide(db, providers),
@@ -6570,6 +6645,20 @@ async function runAgentCommand(db, user, command, options = {}) {
       response: `I can operate ${registry.totalTools} supervised tools across learning, workforce, telehealth, trade, drones, maps, integrations, admin, profile, and AI. ${registry.confirmationTools} tools require confirmation before action. ${registry.liveTools} are live-engine backed right now; the rest run as local workflow evidence until providers are connected.`,
       status: "completed",
       metadata: { conversationMode: conversational, redirectSection: "agent", capabilityRegistry: registry }
+    };
+  }
+
+  if (lower.includes("jarvis readiness") || lower.includes("jarvis level") || lower.includes("get to jarvis") || lower.includes("all six") || lower.includes("all 6")) {
+    const readiness = jarvisReadinessModel(db, user);
+    db.profile.agentMemory.lastStatus = "jarvis-readiness-reviewed";
+    db.profile.agentMemory.lastSummary = readiness.summary;
+    db.profile.agentMemory.updatedAt = new Date().toISOString();
+    const missing = readiness.items.filter(item => !item.ready).map(item => item.title).slice(0, 3);
+    return {
+      intent: "agent.jarvis_readiness",
+      response: `${readiness.summary} Current score is ${readiness.score} percent. ${missing.length ? `The biggest remaining unlocks are ${missing.join(", ")}.` : "All six layers are ready."} I can keep improving the software layer now and will clearly show which parts need hosted credentials or native app packaging.`,
+      status: readiness.status,
+      metadata: { conversationMode: conversational, redirectSection: "agent", jarvisReadiness: readiness }
     };
   }
 
