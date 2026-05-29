@@ -622,6 +622,9 @@ async function call(path, body) {
   const agritradeFrench = await call("/api/agent/command", { command: "Hey AgriTrade, speak French", conversational: true, inputMode: "voice", outputMode: "voice" });
   assert(agritradeFrench.commandResult.intent === "conversation.language_changed");
   assert(agritradeFrench.commandResult.metadata.language === "fr");
+  const agritradeLocalizedEnglish = await call("/api/agent/command", { command: "Hey AgriTrade, parle anglais", conversational: true, inputMode: "voice", outputMode: "voice" });
+  assert(agritradeLocalizedEnglish.commandResult.intent === "conversation.language_changed");
+  assert(agritradeLocalizedEnglish.commandResult.metadata.language === "en");
   const agritradeSwahili = await call("/api/agent/command", { command: "Hey AgriTrade, switch to Kenya", conversational: true, inputMode: "voice", outputMode: "voice" });
   assert(agritradeSwahili.commandResult.intent === "conversation.language_changed");
   assert(agritradeSwahili.commandResult.metadata.language === "sw");

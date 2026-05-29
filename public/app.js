@@ -2203,6 +2203,29 @@ function voiceLanguageName() {
   return voiceLanguageNames[languageCode()] || "English";
 }
 
+function refreshVoiceForLanguageChange() {
+  const languageName = voiceLanguageName();
+  const locale = voiceLocale();
+  refreshMicSupport();
+  const message = `Voice language is now ${languageName} (${locale}). You can keep speaking commands in this language.`;
+  const status = $("#globalMicStatus");
+  if (status) status.textContent = message;
+  const wasListening = Boolean(voiceRecognition);
+  if (wasListening) {
+    voiceStopRequested = false;
+    try {
+      voiceRecognition.stop();
+    } catch {
+      voiceRecognition = null;
+    }
+  }
+  if (voiceFirstMode && !voiceSpeaking && !document.hidden) {
+    setTimeout(() => {
+      if (!voiceRecognition && voiceFirstMode && !voiceSpeaking && !voiceStopRequested) startVoiceListening();
+    }, wasListening ? 900 : 300);
+  }
+}
+
 function platformText() {
   return platformCopy[languageCode()] || platformCopy.en;
 }
@@ -5447,8 +5470,10 @@ function bindDynamic() {
 
 async function mutate(path, body, success) {
   try {
+    const previousLanguage = languageCode();
     data = await request(path, { method: "POST", body });
     render();
+    if (path === "/api/user/language" && previousLanguage !== languageCode()) refreshVoiceForLanguageChange();
     toast(success);
   } catch (error) {
     toast(error.message);
@@ -6014,7 +6039,7 @@ async function handleVoiceCommand(rawCommand) {
     return;
   }
 
-  if ((lower.includes("agritrade") || lower.includes("agri trade")) && (lower.includes("what do you do") || lower.includes("tell me about") || lower.includes("about the platform") || lower.includes("change") || lower.includes("language") || lower.includes("translate") || lower.includes("speak") || lower.includes("use ") || lower.includes("respond") || lower.includes("reply"))) {
+  if ((lower.includes("agritrade") || lower.includes("agri trade")) && (lower.includes("what do you do") || lower.includes("tell me about") || lower.includes("about the platform") || lower.includes("change") || lower.includes("language") || lower.includes("translate") || lower.includes("speak") || lower.includes("use ") || lower.includes("respond") || lower.includes("reply") || lower.includes("parle") || lower.includes("habla") || lower.includes("utilise") || lower.includes("badilisha") || lower.includes("tumia") || lower.includes("zungumza") || lower.includes("ongea") || lower.includes("anglais") || lower.includes("ingles") || lower.includes("francais") || lower.includes("frances") || lower.includes("kiswahili") || lower.includes("kiingereza") || lower.includes("kifaransa") || lower.includes("kiarabu") || lower.includes("kihispania") || lower.includes("arabe") || lower.includes("espanol"))) {
     await runBackendAgentCommand(command);
     return;
   }
@@ -6246,6 +6271,7 @@ async function handleVoiceCommand(rawCommand) {
 
 async function runBackendAgentCommand(command) {
   try {
+    const previousLanguage = languageCode();
     data = await request("/api/agent/command", {
       method: "POST",
       body: {
@@ -6260,6 +6286,9 @@ async function runBackendAgentCommand(command) {
     render();
     const result = data.commandResult || {};
     if (result.metadata?.redirectSection) goSection(result.metadata.redirectSection);
+    if (result.intent === "conversation.language_changed" || result.metadata?.language || previousLanguage !== languageCode()) {
+      refreshVoiceForLanguageChange();
+    }
     setVoiceResponse(result.response || "Command completed.", true);
   } catch (error) {
     setVoiceResponse(error.message || "Command failed.");
@@ -6858,6 +6887,7 @@ function bindStatic() {
     const countryId = value;
     const language = countryLanguageMap[countryId] || languageCode();
     try {
+      const previousLanguage = languageCode();
       data = await request("/api/context", { method: "POST", body: { countryId } });
       data.user.language = language;
       data.profile.accessibilityProfile = {
@@ -6865,6 +6895,7 @@ function bindStatic() {
         language
       };
       render();
+      if (previousLanguage !== languageCode()) refreshVoiceForLanguageChange();
       toast(platformCopy[language]?.languageToast || "Country and language context updated");
     } catch (error) {
       toast(error.message);

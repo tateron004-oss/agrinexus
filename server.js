@@ -5025,31 +5025,43 @@ function extractConversationalName(text) {
 }
 
 function languageFromCommand(text) {
-  const lower = String(text || "").toLowerCase();
+  const lower = String(text || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
   const languages = {
     english: "en",
+    anglais: "en",
+    ingles: "en",
+    ingereza: "en",
+    kiingereza: "en",
     "nigeria": "en",
     "nigerian": "en",
     "united states": "en",
     "america": "en",
     french: "fr",
     francais: "fr",
+    francais: "fr",
+    frances: "fr",
+    kifaransa: "fr",
     "francais": "fr",
     "drc": "fr",
     "congo": "fr",
     "democratic republic": "fr",
     swahili: "sw",
     kiswahili: "sw",
+    suajili: "sw",
     "kenya": "sw",
     "kenyan": "sw",
     arabic: "ar",
+    arabe: "ar",
+    kiarabu: "ar",
     "egypt": "ar",
     "egyptian": "ar",
     spanish: "es",
     espanol: "es",
+    espanhol: "es",
+    kihispania: "es",
     "espanol": "es"
   };
-  const targetMatch = lower.match(/\b(?:to|into|in|a|as|use|speak|talk|respond|reply)\s+(english|french|francais|swahili|kiswahili|arabic|spanish|espanol|nigeria|nigerian|kenya|kenyan|egypt|egyptian|drc|congo)\b/);
+  const targetMatch = lower.match(/\b(?:to|into|in|a|as|use|speak|talk|respond|reply|parle|parler|habla|hablar|usa|utilise|utilizar|badilisha|tumia|zungumza|ongea)\s+(english|anglais|ingles|ingereza|kiingereza|french|francais|frances|kifaransa|swahili|kiswahili|suajili|arabic|arabe|kiarabu|spanish|espanol|espanhol|kihispania|nigeria|nigerian|kenya|kenyan|egypt|egyptian|drc|congo)\b/);
   if (targetMatch?.[1]) return languages[targetMatch[1]] || "";
   for (const [name, code] of Object.entries(languages)) {
     if (lower.includes(name)) return code;
@@ -5058,8 +5070,9 @@ function languageFromCommand(text) {
 }
 
 function isLanguageCommand(lower) {
-  return /(change|switch|set|translate|language|speak|talk|respond|reply|use).*(english|french|francais|swahili|kiswahili|arabic|spanish|espanol|nigeria|nigerian|kenya|kenyan|egypt|egyptian|drc|congo)/.test(lower)
-    || /(english|french|francais|swahili|kiswahili|arabic|spanish|espanol|nigeria|kenya|egypt|drc|congo).*(language|voice|translation|phrases|responses)/.test(lower);
+  const normalized = String(lower || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  return /(change|switch|set|translate|language|speak|talk|respond|reply|use|parle|parler|habla|hablar|usa|utilise|utilizar|badilisha|tumia|zungumza|ongea).*(english|anglais|ingles|kiingereza|french|francais|frances|kifaransa|swahili|kiswahili|arabic|arabe|kiarabu|spanish|espanol|kihispania|nigeria|nigerian|kenya|kenyan|egypt|egyptian|drc|congo)/.test(normalized)
+    || /(english|anglais|ingles|kiingereza|french|francais|frances|kifaransa|swahili|kiswahili|arabic|arabe|kiarabu|spanish|espanol|kihispania|nigeria|kenya|egypt|drc|congo).*(language|voice|translation|phrases|responses|langue|idioma|lugha)/.test(normalized);
 }
 
 function changeUserLanguage(db, user, language) {

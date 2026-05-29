@@ -6,6 +6,7 @@ const root = path.join(__dirname, "..");
 const html = fs.readFileSync(path.join(root, "public", "index.html"), "utf8");
 const app = fs.readFileSync(path.join(root, "public", "app.js"), "utf8");
 const server = fs.readFileSync(path.join(root, "server.js"), "utf8");
+const sw = fs.readFileSync(path.join(root, "public", "sw.js"), "utf8");
 
 const pages = ["index.html", "status.html", "terms.html", "privacy.html", "refund.html", "manifest.webmanifest", "sw.js", "icons/agri-nexus-icon.svg", "icons/agri-nexus-192.png", "icons/agri-nexus-512.png"];
 for (const page of pages) {
@@ -154,7 +155,10 @@ assert(server.includes("conversation.language_changed"), "Voice agent should cha
 assert(server.includes("\"es\""), "Backend should allow Spanish language routing");
 assert(server.includes("function isLanguageCommand"), "Backend should detect natural AgriTrade language commands");
 assert(server.includes("\"kenya\": \"sw\""), "Backend should map country language voice commands");
+assert(server.includes("kiingereza"), "Backend should recognize localized language names");
 assert(app.includes("es: \"es-ES\""), "Frontend voice locale map should include Spanish");
+assert(app.includes("function refreshVoiceForLanguageChange"), "Frontend should refresh app microphone locale after language changes");
+assert(app.includes("Voice language is now"), "App should show language-specific voice status");
 assert(app.includes("Hey AgriTrade, change language to Spanish"), "Voice help should include AgriTrade language command");
 assert(app.includes("Hey AgriTrade, speak French"), "Voice help should include natural language switching");
 assert(app.includes("Hey AgriTrade, switch to Kiswahili"), "Voice help should include Kiswahili switching");
@@ -210,6 +214,7 @@ assert(server.includes("Investor"), "Backend needs an investor role");
 assert(!server.includes("Workforce Operator"), "Production login levels should be simplified to admin, standard user, and investor");
 assert(app.includes("function runLiveServiceCheck"), "Frontend needs a live service finalization action");
 assert(html.includes("app.js?v=voice-language-36"), "Index must force browsers to load the latest voice language code");
+assert(sw.includes("agrinexus-pwa-v15"), "Service worker cache must refresh the installed app after voice language updates");
 assert(app.includes("function captureOriginalText"), "Frontend must capture original English text before first translated render");
 assert(app.includes("captureOriginalText();"), "Boot must preserve original static text before user-specific language rendering");
 assert(app.includes('"#loginView", ".topbar", ".sidebar"'), "Translation pass must include login, topbar, and navigation areas");
