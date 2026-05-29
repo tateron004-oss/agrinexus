@@ -112,6 +112,9 @@ async function call(path, body) {
   assert(login.sessionBriefing.title);
   assert(login.sessionBriefing.prompts.includes("summarize my progress"));
   assert(login.sessionBriefing.assistantReadiness.total === 10);
+  assert(login.behaviorModel.id === "human-guide-behavior-model");
+  assert(login.behaviorModel.turnPattern.length >= 5);
+  assert(login.behaviorModel.principles.some(item => item.includes("short natural")));
   assert(login.capabilities.items.some(item => item.id === "jarvis-command-layer"));
   assert(login.capabilities.items.some(item => item.id === "telehealth-workspace"));
   assert(login.smartActions.status);
@@ -548,6 +551,11 @@ async function call(path, body) {
   assert(investorTourCommand.commandResult.intent === "conversation.investor_presentation_mode");
   assert(investorTourCommand.commandResult.metadata.redirectSection === "dashboard");
   assert(investorTourCommand.profile.agentBriefings.length >= 1);
+  const behaviorCommand = await call("/api/agent/command", { command: "explain your behavior model", conversational: true, inputMode: "voice", outputMode: "voice" });
+  assert(behaviorCommand.commandResult.intent === "conversation.behavior_model");
+  assert(behaviorCommand.commandResult.metadata.behaviorModel.id === "human-guide-behavior-model");
+  assert(behaviorCommand.commandResult.metadata.behaviorModel.followUp);
+  assert(behaviorCommand.commandResult.response.includes("Would you like") || behaviorCommand.commandResult.response.includes("guide"));
   const intakeStart = await call("/api/agent/command", { command: "start telehealth intake and ask me questions", conversational: true, inputMode: "voice", outputMode: "voice" });
   assert(intakeStart.commandResult.intent === "conversation.intake_started");
   assert(intakeStart.profile.agentMemory.activeIntake.domain === "health");

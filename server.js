@@ -289,6 +289,7 @@ function publicState(db, user) {
     providers,
     capabilities: capabilityMatrix(db, providers),
     intelligentAssistant: intelligentAssistantModel(db, user, providers),
+    behaviorModel: assistantBehaviorModel(db, user),
     sessionBriefing: sessionBriefingModel(db, user, providers),
     smartActions: smartNextActions(db, user, providers),
     activationGuide: productionActivationGuide(db, providers),
@@ -314,6 +315,80 @@ function permissionsForRole(role) {
 
 function canUse(user, area) {
   return Boolean(permissionsForRole(user.role)[area]);
+}
+
+function assistantBehaviorModel(db, user) {
+  ensureAiProfile(db.profile);
+  const language = user?.language || db.profile.accessibilityProfile?.language || "en";
+  const role = user?.role || "Standard User";
+  return {
+    id: "human-guide-behavior-model",
+    name: "Human Guide Behavior Model",
+    status: "active",
+    language,
+    role,
+    tone: "warm, plain-language, calm, confident, non-robotic",
+    turnPattern: [
+      "Acknowledge what the user asked.",
+      "Orient the user to where they are in the platform.",
+      "Recommend one clear next step.",
+      "Ask for confirmation before committing important workflow records.",
+      "Offer a simple phrase the user can say next."
+    ],
+    principles: [
+      "Use short natural sentences.",
+      "Avoid technical labels unless the user asks for them.",
+      "Never overwhelm a non-technical user with too many choices.",
+      "Keep AI actions supervised and explain when human review matters.",
+      "Adapt to role, language, accessibility needs, and remembered preferences.",
+      "When uncertain, ask one helpful question instead of dumping instructions."
+    ],
+    followUps: [
+      "Would you like me to open that now?",
+      "Should I prepare the intake?",
+      "Do you want me to read this aloud?",
+      "Would you like the next step or the full tour?"
+    ],
+    evidence: {
+      conversations: (db.profile.agentConversation || []).length,
+      memories: (db.profile.agentMemory.preferences || []).length + (db.profile.agentMemory.longTermFacts || []).length,
+      guidedIntakes: (db.profile.agentMemory.conversationalIntakes || []).length
+    }
+  };
+}
+
+function behaviorFollowUpForResult(result = {}) {
+  const intent = String(result.intent || "");
+  const status = String(result.status || "");
+  if (status === "needs-confirmation") return "Say yes to continue, or no to cancel.";
+  if (status === "needs-input") return "Tell me the next answer in your own words.";
+  if (intent.includes("progress_summary")) return "You can say what should I do next if you want the next guided step.";
+  if (intent.includes("platform_guide")) return "You can say the suggested command when you are ready.";
+  if (intent.includes("investor_presentation")) return "You can say read this aloud when you want the presentation voiceover.";
+  if (intent.includes("ten_item_model")) return "You can test any item by saying its command.";
+  return "Would you like me to guide the next step?";
+}
+
+function humanizeAgentResult(db, user, result = {}) {
+  const behavior = assistantBehaviorModel(db, user);
+  const original = String(result.response || "I am ready.");
+  const alreadyNatural = /^(I hear you|Absolutely|Got it|Done|Here is|Welcome|I can|I opened|I created|I submitted|The full intelligent model)/i.test(original);
+  const prefix = alreadyNatural ? "" : "Got it. ";
+  const followUp = behaviorFollowUpForResult(result);
+  const response = `${prefix}${original}${/[.!?]$/.test(original.trim()) ? "" : "."} ${followUp}`;
+  return {
+    ...result,
+    response,
+    metadata: {
+      ...(result.metadata || {}),
+      behaviorModel: {
+        id: behavior.id,
+        tone: behavior.tone,
+        turnPattern: behavior.turnPattern.slice(0, 5),
+        followUp
+      }
+    }
+  };
 }
 
 function intelligentAssistantModel(db, user, providers = runtimeProviders(db)) {
@@ -4806,6 +4881,19 @@ async function runAgentCommand(db, user, command, options = {}) {
     };
   }
 
+  if (lower.includes("behavior model") || lower.includes("not robotic") || lower.includes("human guide") || lower.includes("how do you behave")) {
+    const behavior = assistantBehaviorModel(db, user);
+    db.profile.agentMemory.lastStatus = "behavior-model-active";
+    db.profile.agentMemory.lastSummary = `${behavior.name}: ${behavior.tone}`;
+    db.profile.agentMemory.updatedAt = new Date().toISOString();
+    return {
+      intent: "conversation.behavior_model",
+      response: `I use the ${behavior.name}. That means I acknowledge what you asked, explain where you are, recommend one next step, ask before committing important actions, and keep the language simple and human.`,
+      status: "completed",
+      metadata: { conversationMode: conversational, redirectSection: "agent", behaviorModel: behavior }
+    };
+  }
+
   if (lower.includes("summarize my progress") || lower.includes("progress summary") || lower.includes("where am i") || lower.includes("how am i doing")) {
     const summary = platformProgressSummary(db, user);
     db.profile.agentMemory.lastStatus = "progress-summary";
@@ -7974,7 +8062,8 @@ async function api(req, res, url) {
     const body = await readBody(req);
     const command = String(body.command || "").trim();
     if (body.inputMode === "voice") voiceRecord(db, user, "speech-to-text", `Voice command transcribed: ${command}`, { command });
-    const result = await runAgentCommand(db, user, command, { confirm: body.confirm === true, stageOnly: body.stageOnly === true, conversational: body.conversational === true, note: body.note });
+    const rawResult = await runAgentCommand(db, user, command, { confirm: body.confirm === true, stageOnly: body.stageOnly === true, conversational: body.conversational === true, note: body.note });
+    const result = humanizeAgentResult(db, user, rawResult);
     commandRecord(db, user, command, result);
     if (body.outputMode === "voice") voiceRecord(db, user, "text-to-speech", `Voice response prepared: ${result.response}`, { response: result.response });
     addWorkflowNote(db.profile, body.note, "Agent command note");

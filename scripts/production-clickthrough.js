@@ -149,6 +149,10 @@ assert(server.includes("function sessionBriefingModel"), "Backend needs login/se
 assert(server.includes("function platformProgressSummary"), "Backend needs plain-language progress summaries");
 assert(html.includes("AgriNexus Guide Brief"), "Dashboard needs a visible session briefing");
 assert(app.includes("sessionBriefingPanel"), "Frontend must render the session briefing");
+assert(server.includes("function assistantBehaviorModel"), "Backend needs a non-robotic behavior model");
+assert(server.includes("function humanizeAgentResult"), "Agent command responses must be shaped by the behavior model");
+assert(server.includes("conversation.behavior_model"), "Voice agent must explain its behavior model");
+assert(app.includes("behaviorModel.tone"), "Dashboard must render behavior model tone");
 assert(server.includes("conversation.progress_summary"), "Voice agent must summarize user progress");
 assert(server.includes("conversation.investor_presentation_mode"), "Voice agent must support demo narrator mode");
 assert(server.includes("function productionActivationGuide"), "Backend needs a live activation guide");
