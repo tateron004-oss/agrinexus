@@ -2134,6 +2134,7 @@ function ensureTradeProfile(profile) {
   profile.contractPackets = profile.contractPackets || [];
   profile.paymentReleases = profile.paymentReleases || [];
   profile.tradeEfficiencyReviews = profile.tradeEfficiencyReviews || [];
+  profile.tradeCommunicationBriefs = profile.tradeCommunicationBriefs || [];
   profile.droneMissions = profile.droneMissions || [];
   profile.droneScans = profile.droneScans || [];
   profile.droneFindings = profile.droneFindings || [];
@@ -2429,6 +2430,79 @@ async function tradeOperationalEfficiencyReview(db, user, text) {
     response: `AgriTrade operational efficiency is ${score}% for ${review.productName} on ${route.name}. ${blockerText} Next best actions: ${recommendations.slice(0, 3).join(" ")} ${aiRun.text}`,
     status: "completed",
     metadata: { conversationMode: true, redirectSection: "trade", reviewId: review.id, aiRunId: aiRun.id, score, blockers, recommendations }
+  };
+}
+
+function tradeOperationalCommunicationBrief(db, user, text) {
+  ensureTradeProfile(db.profile);
+  const { country, route } = activeContext(db);
+  const order = db.profile.orders[db.profile.orders.length - 1] || null;
+  const product = order
+    ? (db.products || []).find(item => item.id === order.productId)
+    : (db.products || []).find(item => item.countryId === country.id) || (db.products || [])[0];
+  const latestEfficiency = (db.profile.tradeEfficiencyReviews || [])[0] || null;
+  const latestScan = (db.profile.droneScans || [])[0] || null;
+  const latestQuality = (db.profile.qualityInspections || [])[0] || null;
+  const latestPayment = (db.profile.paymentReleases || [])[0] || (db.profile.walletTransactions || [])[0] || null;
+  const lower = String(text || "").toLowerCase();
+  const audience = lower.includes("buyer") ? "buyer"
+    : lower.includes("driver") || lower.includes("route") || lower.includes("logistics") ? "logistics team"
+      : lower.includes("farmer") || lower.includes("field") ? "field team"
+        : lower.includes("investor") || lower.includes("partner") ? "partner"
+          : "operations team";
+  const productName = order?.product || order?.productName || product?.name || "active crop lot";
+  const routeStatus = `${route.name} at ${db.profile.activeCheckpoint}`;
+  const readinessLine = latestEfficiency
+    ? `Current operational efficiency is ${latestEfficiency.score}%, with ${latestEfficiency.blockers.length ? latestEfficiency.blockers[0] : "no major blocker showing"}.`
+    : "Operational efficiency has not been scored yet; run an efficiency review before final dispatch.";
+  const evidenceLine = [
+    latestScan ? `drone scan ${latestScan.scanRef || "recorded"}` : "drone scan not attached",
+    latestQuality ? `quality check ${latestQuality.checkNumber || "recorded"}` : "quality check pending",
+    latestPayment ? "payment evidence present" : "payment evidence pending"
+  ].join(", ");
+  const message = `AgriTrade update for ${audience}: ${productName} is moving through ${routeStatus}. ${readinessLine} Evidence status: ${evidenceLine}. Recommended next step: confirm buyer timing, route handoff, quality evidence, and payment readiness before advancing.`;
+  const brief = {
+    id: crypto.randomUUID(),
+    query: text,
+    audience,
+    productId: product?.id || order?.productId || null,
+    productName,
+    countryId: country.id,
+    routeId: route.id,
+    routeName: route.name,
+    checkpoint: db.profile.activeCheckpoint,
+    message,
+    evidence: {
+      efficiencyReviewId: latestEfficiency?.id || null,
+      droneScanId: latestScan?.id || null,
+      qualityCheckId: latestQuality?.id || null,
+      paymentRecordId: latestPayment?.id || null
+    },
+    createdBy: user.email,
+    createdAt: new Date().toISOString()
+  };
+  db.profile.tradeCommunicationBriefs.unshift(brief);
+  db.profile.tradeCommunicationBriefs = db.profile.tradeCommunicationBriefs.slice(0, 25);
+  addTradeEvent(db.profile, { type: "trade.operational_communication_prepared", label: `${audience} update prepared for ${productName}.` });
+  addNotification(db.profile, { module: "AgriTrade", channel: "voice-ready message", message });
+  rememberAgentMemory(db.profile, `AgriTrade prepared an operational communication for ${audience}: ${productName}.`, { source: "trade-communication", category: "operations", confidence: 0.9 });
+  db.profile.agentMemory.activeModule = "AgriTrade";
+  db.profile.agentMemory.lastStatus = "trade-communication-ready";
+  db.profile.agentMemory.lastSummary = `${audience} update prepared for ${productName}.`;
+  db.profile.agentMemory.updatedAt = brief.createdAt;
+  logIntegration(db, {
+    providerId: "trade-logistics",
+    module: "AgriTrade",
+    action: "trade.operational_communication_prepared",
+    detail: `${audience} operational communication prepared for ${productName}.`,
+    metadata: { briefId: brief.id, audience, productId: brief.productId, routeId: route.id },
+    dispatch: false
+  });
+  return {
+    intent: "trade.operational_communication",
+    response: `I prepared an AgriTrade operational update for the ${audience}. ${message}`,
+    status: "completed",
+    metadata: { conversationMode: true, redirectSection: "trade", briefId: brief.id, audience, productName }
   };
 }
 
@@ -3380,6 +3454,11 @@ async function executeAgentTool(db, user, step) {
     return review.response;
   }
 
+  if (step.tool === "trade.operational_communication") {
+    const brief = tradeOperationalCommunicationBrief(db, user, step.detail || "prepare AgriTrade operational communication");
+    return brief.response;
+  }
+
   if (step.tool === "trade.wallet_payment") {
     ensureTradeProfile(db.profile);
     const tx = { id: crypto.randomUUID(), provider: "M-Pesa", amount: 120, type: "credit", status: "posted", createdAt: new Date().toISOString() };
@@ -3856,6 +3935,7 @@ function deepVoiceIntent(lower) {
 
   if ((includesAny(["buyer", "customer"]) && includesAny(["speak", "talk", "call", "message", "contact"]))) return { tool: "trade.buyer_contact", module: "AgriTrade", action: "Contact buyer", section: "trade" };
   if (includesAny(["operational efficiency", "operations efficiency", "optimize trade", "optimise trade", "trade bottleneck", "reduce delay", "reduce cost", "improve profit", "improve operations"])) return { tool: "trade.operational_efficiency", module: "AgriTrade", action: "Review operational efficiency", section: "trade" };
+  if (includesAny(["trade update", "buyer update", "route update", "logistics update", "operations brief", "status report", "message the buyer", "notify the driver", "handoff message"])) return { tool: "trade.operational_communication", module: "AgriTrade", action: "Prepare operational communication", section: "trade" };
   if (includesAny(["create order", "buyer order", "market order", "sell crop"])) return { tool: "trade.market_review", module: "AgriTrade", action: "Create order", section: "trade" };
   if (includesAny(["advance order", "move order", "logistics handoff"])) return { tool: "trade.advance_order", module: "AgriTrade", action: "Advance order", section: "trade" };
   if (includesAny(["wallet", "payment", "mpesa", "m-pesa"])) return { tool: "trade.wallet_payment", module: "AgriTrade", action: "Post payment", section: "trade" };
@@ -4279,6 +4359,7 @@ function agentToolRegistry() {
     { tool: "trade.market_review", module: "AgriTrade", action: "Review market", section: "trade", description: "Review market, create an order, price crops, or prepare a selling workflow." },
     { tool: "trade.buyer_contact", module: "AgriTrade", action: "Contact buyer", section: "trade", description: "Speak to, call, message, or contact a buyer about selling crops." },
     { tool: "trade.operational_efficiency", module: "AgriTrade", action: "Review operational efficiency", section: "trade", description: "Optimize trade operations, identify bottlenecks, reduce delay, improve profit, and connect buyer, route, drone, quality, cold-chain, logistics, and payment evidence." },
+    { tool: "trade.operational_communication", module: "AgriTrade", action: "Prepare operational communication", section: "trade", description: "Draft intuitive updates, handoff messages, status reports, buyer scripts, route updates, and operational briefs from current trade evidence." },
     { tool: "trade.advance_order", module: "AgriTrade", action: "Advance order", section: "trade", description: "Move an order through logistics, quality check, or delivery." },
     { tool: "trade.wallet_payment", module: "AgriTrade", action: "Post payment", section: "trade", description: "Record wallet, mobile money, M-Pesa, or buyer payment activity." },
     { tool: "drone.flight_plan", module: "AgriTech", action: "Plan drone mission", section: "trade", description: "Plan a drone flight, drone mission, or field survey." },
@@ -4947,21 +5028,38 @@ function languageFromCommand(text) {
   const lower = String(text || "").toLowerCase();
   const languages = {
     english: "en",
+    "nigeria": "en",
+    "nigerian": "en",
+    "united states": "en",
+    "america": "en",
     french: "fr",
     francais: "fr",
+    "francais": "fr",
+    "drc": "fr",
+    "congo": "fr",
+    "democratic republic": "fr",
     swahili: "sw",
     kiswahili: "sw",
+    "kenya": "sw",
+    "kenyan": "sw",
     arabic: "ar",
+    "egypt": "ar",
+    "egyptian": "ar",
     spanish: "es",
     espanol: "es",
     "espanol": "es"
   };
-  const targetMatch = lower.match(/\b(?:to|into|in|a)\s+(english|french|francais|swahili|kiswahili|arabic|spanish|espanol)\b/);
+  const targetMatch = lower.match(/\b(?:to|into|in|a|as|use|speak|talk|respond|reply)\s+(english|french|francais|swahili|kiswahili|arabic|spanish|espanol|nigeria|nigerian|kenya|kenyan|egypt|egyptian|drc|congo)\b/);
   if (targetMatch?.[1]) return languages[targetMatch[1]] || "";
   for (const [name, code] of Object.entries(languages)) {
     if (lower.includes(name)) return code;
   }
   return "";
+}
+
+function isLanguageCommand(lower) {
+  return /(change|switch|set|translate|language|speak|talk|respond|reply|use).*(english|french|francais|swahili|kiswahili|arabic|spanish|espanol|nigeria|nigerian|kenya|kenyan|egypt|egyptian|drc|congo)/.test(lower)
+    || /(english|french|francais|swahili|kiswahili|arabic|spanish|espanol|nigeria|kenya|egypt|drc|congo).*(language|voice|translation|phrases|responses)/.test(lower);
 }
 
 function changeUserLanguage(db, user, language) {
@@ -5078,7 +5176,7 @@ async function moduleGreetingResponse(db, user, text, lower) {
   const isGreeting = /^(hi|hello|hey|good morning|good afternoon|good evening)\b/.test(lower);
   const isTradeAddressed = /\b(agritrade|agri\s*trade)\b/.test(lower);
   if (!isTradeAddressed) return null;
-  if (/(change|switch|set|translate).*(language|english|french|swahili|kiswahili|arabic|spanish|espanol)/.test(lower) || /(language).*(english|french|swahili|kiswahili|arabic|spanish|espanol)/.test(lower)) {
+  if (isLanguageCommand(lower)) {
     const language = languageFromCommand(text);
     if (!language || !changeUserLanguage(db, user, language)) {
       return {
@@ -5117,6 +5215,9 @@ async function moduleGreetingResponse(db, user, text, lower) {
   }
   if (/(efficiency|efficient|optimize|optimise|operations|operational|bottleneck|delay|cost|waste|profit|improve|performance)/.test(lower)) {
     return tradeOperationalEfficiencyReview(db, user, text);
+  }
+  if (/(communicat|message|update|brief|status|report|say to|tell the|notify|script|announcement|handoff)/.test(lower) && /(buyer|driver|logistics|route|farmer|field|team|partner|investor|operations|quality|payment|cold chain|order|crop)/.test(lower)) {
+    return tradeOperationalCommunicationBrief(db, user, text);
   }
   if (!isGreeting) return null;
   const extractedName = extractConversationalName(text);
@@ -5162,6 +5263,10 @@ async function runAgentCommand(db, user, command, options = {}) {
 
   if (/(trade|agritrade|crop|buyer|route|order|logistics|drone|farm)/.test(lower) && /(efficiency|efficient|optimize|optimise|operations|operational|bottleneck|delay|cost|waste|profit|improve|performance)/.test(lower)) {
     return tradeOperationalEfficiencyReview(db, user, text);
+  }
+
+  if (/(trade|agritrade|crop|buyer|route|order|logistics|driver|farmer|field|quality|payment|cold chain)/.test(lower) && /(communicat|message|update|brief|status|report|say to|tell the|notify|script|announcement|handoff)/.test(lower)) {
+    return tradeOperationalCommunicationBrief(db, user, text);
   }
 
   if (conversational && db.profile.agentMemory.activeIntake) {

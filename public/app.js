@@ -439,10 +439,16 @@ const contentTranslations = {
     "Nexus, capture vitals": "Nexus, captura signos vitales",
     "Nexus, create a referral": "Nexus, crea una referencia",
     "Nexus, schedule my follow-up": "Nexus, programa mi seguimiento",
+    "Hey AgriTrade, speak French": "AgriTrade, habla frances",
+    "Hey AgriTrade, switch to Kiswahili": "AgriTrade, cambia a kiswahili",
+    "Hey AgriTrade, use Arabic": "AgriTrade, usa arabe",
+    "Hey AgriTrade, change language to Spanish": "AgriTrade, cambia el idioma a espanol",
     "Nexus, contact my buyer": "Nexus, contacta a mi comprador",
     "Nexus, create buyer order": "Nexus, crea pedido de comprador",
     "Nexus, run drone scan": "Nexus, ejecuta escaneo de dron",
     "Hey AgriTrade, how can we improve operational efficiency": "AgriTrade, como podemos mejorar la eficiencia operativa",
+    "Hey AgriTrade, prepare a buyer update": "AgriTrade, prepara una actualizacion para el comprador",
+    "Hey AgriTrade, brief the logistics team": "AgriTrade, informa al equipo de logistica",
     "Nexus, assign field task": "Nexus, asigna tarea de campo",
     "Nexus, check my route risk": "Nexus, revisa el riesgo de mi ruta",
     "Start here": "Empiece aqui",
@@ -487,10 +493,16 @@ const contentTranslations = {
     "Nexus, capture vitals": "Nexus, capture les signes vitaux",
     "Nexus, create a referral": "Nexus, cree une reference",
     "Nexus, schedule my follow-up": "Nexus, planifie mon suivi",
+    "Hey AgriTrade, speak French": "AgriTrade, parle francais",
+    "Hey AgriTrade, switch to Kiswahili": "AgriTrade, passe en kiswahili",
+    "Hey AgriTrade, use Arabic": "AgriTrade, utilise l'arabe",
+    "Hey AgriTrade, change language to Spanish": "AgriTrade, change la langue en espagnol",
     "Nexus, contact my buyer": "Nexus, contacte mon acheteur",
     "Nexus, create buyer order": "Nexus, cree une commande acheteur",
     "Nexus, run drone scan": "Nexus, lance le scan drone",
     "Hey AgriTrade, how can we improve operational efficiency": "AgriTrade, comment ameliorer l'efficacite operationnelle",
+    "Hey AgriTrade, prepare a buyer update": "AgriTrade, prepare une mise a jour acheteur",
+    "Hey AgriTrade, brief the logistics team": "AgriTrade, informe l'equipe logistique",
     "Nexus, assign field task": "Nexus, assigne une tache terrain",
     "Nexus, check my route risk": "Nexus, verifie le risque de mon trajet",
     "Command help": "Aide commandes",
@@ -623,10 +635,16 @@ const contentTranslations = {
     "Nexus, capture vitals": "Nexus, chukua vipimo muhimu",
     "Nexus, create a referral": "Nexus, tengeneza rufaa",
     "Nexus, schedule my follow-up": "Nexus, panga ufuatiliaji wangu",
+    "Hey AgriTrade, speak French": "AgriTrade, zungumza kifaransa",
+    "Hey AgriTrade, switch to Kiswahili": "AgriTrade, badilisha kwenda kiswahili",
+    "Hey AgriTrade, use Arabic": "AgriTrade, tumia kiarabu",
+    "Hey AgriTrade, change language to Spanish": "AgriTrade, badilisha lugha kwenda kihispania",
     "Nexus, contact my buyer": "Nexus, wasiliana na mnunuzi wangu",
     "Nexus, create buyer order": "Nexus, tengeneza oda ya mnunuzi",
     "Nexus, run drone scan": "Nexus, endesha ukaguzi wa drone",
     "Hey AgriTrade, how can we improve operational efficiency": "AgriTrade, tunawezaje kuboresha ufanisi wa uendeshaji",
+    "Hey AgriTrade, prepare a buyer update": "AgriTrade, andaa taarifa kwa mnunuzi",
+    "Hey AgriTrade, brief the logistics team": "AgriTrade, eleza timu ya usafirishaji",
     "Nexus, assign field task": "Nexus, toa kazi ya shambani",
     "Nexus, check my route risk": "Nexus, kagua hatari ya njia yangu",
     "Command help": "Msaada wa amri",
@@ -2882,8 +2900,13 @@ function voiceCommandGroups() {
       helper: "Support farmers, buyers, field teams, and crop intelligence.",
       commands: [
         "Hey AgriTrade, tell me about the platform",
+        "Hey AgriTrade, speak French",
+        "Hey AgriTrade, switch to Kiswahili",
+        "Hey AgriTrade, use Arabic",
         "Hey AgriTrade, change language to Spanish",
         "Hey AgriTrade, how can we improve operational efficiency",
+        "Hey AgriTrade, prepare a buyer update",
+        "Hey AgriTrade, brief the logistics team",
         "Nexus, contact my buyer",
         "Nexus, create buyer order",
         "Nexus, run drone scan",
@@ -5991,11 +6014,15 @@ async function handleVoiceCommand(rawCommand) {
     return;
   }
 
-  if ((lower.includes("agritrade") || lower.includes("agri trade")) && (lower.includes("what do you do") || lower.includes("tell me about") || lower.includes("about the platform") || lower.includes("change") || lower.includes("language") || lower.includes("translate"))) {
+  if ((lower.includes("agritrade") || lower.includes("agri trade")) && (lower.includes("what do you do") || lower.includes("tell me about") || lower.includes("about the platform") || lower.includes("change") || lower.includes("language") || lower.includes("translate") || lower.includes("speak") || lower.includes("use ") || lower.includes("respond") || lower.includes("reply"))) {
     await runBackendAgentCommand(command);
     return;
   }
   if ((lower.includes("agritrade") || lower.includes("agri trade") || lower.includes("trade") || lower.includes("buyer") || lower.includes("crop") || lower.includes("route") || lower.includes("logistics")) && (lower.includes("efficiency") || lower.includes("efficient") || lower.includes("optimize") || lower.includes("optimise") || lower.includes("operations") || lower.includes("operational") || lower.includes("bottleneck") || lower.includes("delay") || lower.includes("cost") || lower.includes("waste") || lower.includes("profit") || lower.includes("performance"))) {
+    await runBackendAgentCommand(command);
+    return;
+  }
+  if ((lower.includes("agritrade") || lower.includes("agri trade") || lower.includes("trade") || lower.includes("buyer") || lower.includes("crop") || lower.includes("route") || lower.includes("logistics") || lower.includes("driver") || lower.includes("farmer") || lower.includes("field")) && (lower.includes("communicat") || lower.includes("message") || lower.includes("update") || lower.includes("brief") || lower.includes("status") || lower.includes("report") || lower.includes("say to") || lower.includes("tell the") || lower.includes("notify") || lower.includes("script") || lower.includes("handoff"))) {
     await runBackendAgentCommand(command);
     return;
   }
