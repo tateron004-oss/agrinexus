@@ -117,6 +117,16 @@ async function call(route, body) {
     assert(/next/i.test(state.commandResult.response));
 
     state = await call("/api/agent/command", {
+      command: "Nexus, what should I call you?",
+      conversational: true,
+      inputMode: "voice",
+      outputMode: "voice"
+    });
+    assert(state.commandResult.intent === "conversation.assistant_alias");
+    assert(state.commandResult.metadata.assistantAlias === "Nexus");
+    assert(/AgriNexus is the full platform/i.test(state.commandResult.response));
+
+    state = await call("/api/agent/command", {
       command: "help me with my farm",
       conversational: true,
       inputMode: "voice",

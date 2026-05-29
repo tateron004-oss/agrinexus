@@ -6629,6 +6629,23 @@ async function runAgentCommand(db, user, command, options = {}) {
   const conversational = options.conversational === true;
   const pendingAction = db.profile.agentPendingAction;
 
+  if (/(what should i call you|what do i call you|short name|abbreviat|nickname|who are you|your name)/.test(lower)) {
+    db.profile.agentMemory.lastStatus = "assistant-alias-ready";
+    db.profile.agentMemory.lastSummary = "The assistant short name is Nexus.";
+    db.profile.agentMemory.updatedAt = new Date().toISOString();
+    return {
+      intent: "conversation.assistant_alias",
+      response: "You can call me Nexus. AgriNexus is the full platform name, and Nexus is the short voice command for everyday use.",
+      status: "completed",
+      metadata: {
+        conversationMode: true,
+        assistantName: "AgriNexus",
+        assistantAlias: "Nexus",
+        wakePhrases: ["Hey AgriNexus", "Nexus"]
+      }
+    };
+  }
+
   const moduleGreeting = await moduleGreetingResponse(db, user, text, lower);
   if (moduleGreeting) return moduleGreeting;
 

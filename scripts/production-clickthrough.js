@@ -300,6 +300,11 @@ assert(app.includes("function isWakePhraseOnly"), "Voice assistant must treat He
 assert(app.includes("function enableHeyAgriNexusMode"), "Voice assistant must enable hands-free wake listening");
 assert(app.includes("Hey AgriNexus mode is on"), "Voice-first mode needs clear user-facing wake phrase copy");
 assert(html.includes("Hey AgriNexus: On"), "Global assistant needs a clear Hey AgriNexus control");
+assert(html.includes("Nexus Command Layer"), "Assistant panel should expose the shorter Nexus command name");
+assert(html.includes('placeholder="Nexus, run full mission"'), "Assistant input should teach the short Nexus wake command");
+assert(app.includes("function welcomeSignedInUser"), "Signed-in users should receive a personalized Nexus welcome");
+assert(app.includes("agrinexusWelcome:"), "Personalized welcome should only run once per browser session");
+assert(server.includes("conversation.assistant_alias"), "Backend should answer assistant alias and short-name questions");
 assert(server.includes('"cache-control": cacheControl'), "Static app assets should declare cache-control headers");
 assert(app.includes("liveServiceCheckFromIntegrations"), "Integrations live service check button must share the finalization action");
 assert(app.includes("Slow external engines will time out"), "Live service check should show progress while external engines respond");

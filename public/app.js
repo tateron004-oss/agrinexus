@@ -23,6 +23,8 @@ const originalTextNodes = new WeakMap();
 let deferredInstallPrompt = null;
 let routeTrackingWatchId = null;
 let routeTrackingPoints = [];
+const assistantFullName = "AgriNexus";
+const assistantShortName = "Nexus";
 
 const countryLanguageMap = {
   nigeria: "en",
@@ -3428,6 +3430,7 @@ function render() {
   $("#userLine").textContent = `${data.user.name} - ${data.user.role}`;
   applyPlatformLanguage();
   applyRoleNavigation();
+  welcomeSignedInUser();
 
   $("#countrySelect").innerHTML = [
     `<option value="language:en">English</option>`,
@@ -5731,6 +5734,21 @@ function setVoiceResponse(message, speak = false, options = {}) {
   if (speak || (voiceFirstMode && allowVoiceFirst)) speakVoiceResponse(message);
 }
 
+function userFirstName() {
+  const name = data?.user?.name || data?.user?.email || "there";
+  return String(name).trim().split(/\s+/)[0] || "there";
+}
+
+function welcomeSignedInUser() {
+  if (!data?.user) return;
+  const userKey = data.user.email || data.user.id || data.user.name || "current-user";
+  const welcomeKey = `agrinexusWelcome:${userKey}`;
+  if (sessionStorage.getItem(welcomeKey)) return;
+  sessionStorage.setItem(welcomeKey, "shown");
+  const message = `Welcome back, ${userFirstName()}. I am ${assistantShortName}, your short name for ${assistantFullName}. Say "${assistantShortName}, help me" or tell me what you want to do next.`;
+  setVoiceResponse(message, false, { allowVoiceFirst: true });
+}
+
 async function createGovernmentBriefing() {
   const status = $("#agentActionStatus");
   if (status) status.textContent = "Creating government-ready briefing from current platform evidence...";
@@ -5760,7 +5778,7 @@ function toggleVoiceFirstMode() {
     button.setAttribute("aria-pressed", String(voiceFirstMode));
   });
   setVoiceStatus(voiceFirstMode ? "voice-first" : "standby");
-  setVoiceResponse(voiceFirstMode ? "Hey AgriNexus mode is on. Say Hey AgriNexus, then tell me what you need. I will speak back and keep listening when the browser allows it." : "Hey AgriNexus mode is off.", voiceFirstMode);
+  setVoiceResponse(voiceFirstMode ? "Hey AgriNexus mode is on. You can also call me Nexus. Say Nexus, then tell me what you need. I will speak back and keep listening when the browser allows it." : "Hey AgriNexus mode is off.", voiceFirstMode);
   if (voiceFirstMode) startVoiceListening();
 }
 
@@ -6049,7 +6067,7 @@ async function handleVoiceCommand(rawCommand) {
   if (!lower && wakeOnly) {
     openAskNexus();
     enableHeyAgriNexusMode();
-    setVoiceResponse("I'm here. Tell me what you want to do, like open telehealth, apply for a job, contact a buyer, run a drone scan, or check live engines.", true);
+    setVoiceResponse(`I'm here. You can call me ${assistantShortName}. Tell me what you want to do, like open telehealth, apply for a job, contact a buyer, run a drone scan, or check live engines.`, true);
     return;
   }
   if (!lower) return setVoiceResponse("Give me a command, and I will route it.", true);
@@ -6135,7 +6153,7 @@ async function handleVoiceCommand(rawCommand) {
 
   if (lower.includes("voice help") || lower.includes("command help") || lower.includes("show help") || lower.includes("what can you do")) {
     openVoiceHelp();
-    setVoiceResponse("I can open modules, build captions, create audio guides, complete lessons, issue certificates, apply for roles, schedule shifts, start telehealth intake, connect a provider, capture vitals, contact a buyer, create orders, run drone scans, test engines, create plans, and read responses aloud.", true);
+    setVoiceResponse("You can call me Nexus. I can open modules, build captions, create audio guides, complete lessons, issue certificates, apply for roles, schedule shifts, start telehealth intake, connect a provider, capture vitals, contact a buyer, create orders, run drone scans, test engines, create plans, and read responses aloud.", true);
     return;
   }
   if (lower.includes("voice demo") || lower.includes("agrinexus demo") || lower.includes("show voice") || lower.includes("show agrinexus")) {
