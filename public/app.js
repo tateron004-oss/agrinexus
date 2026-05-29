@@ -2864,6 +2864,8 @@ function voiceCommandGroups() {
         "Nexus, show voice help",
         "Nexus, what can I say in telehealth",
         "Nexus, what can AgriTrade do",
+        "Good morning AgriNexus",
+        "Nexus, what just happened",
         "Nexus, run full mission",
         "Nexus, run investor voice demo",
         "Nexus, test provider engines",
@@ -5967,7 +5969,8 @@ function voiceStatusSummary() {
     `Current section: ${currentSectionId()}.`,
     `Production readiness: ${readiness?.readyCount || 0} of ${readiness?.total || 0}.`,
     `Automation readiness: ${automation?.readyCount || 0} of ${automation?.total || 5}.`,
-    `Latest agent plan: ${plan?.status || "none"}.`
+    `Latest agent plan: ${plan?.status || "none"}.`,
+    `Latest workflow: ${(data.profile.agentCommands || [])[0]?.intent || "none yet"}.`
   ].join(" ");
 }
 
@@ -6103,6 +6106,10 @@ async function handleVoiceCommand(rawCommand) {
   }
   if (lower.includes("status") || lower.includes("readiness") || lower.includes("what is left")) {
     setVoiceResponse(voiceStatusSummary(), true);
+    return;
+  }
+  if (lower.includes("what happened") || lower.includes("what just happened") || lower.includes("what did you do") || lower.includes("what evidence") || lower.includes("explain the last workflow") || lower.includes("good morning agrinexus") || lower.includes("good morning nexus") || lower.includes("daily briefing") || lower.includes("operator briefing") || lower.includes("morning briefing")) {
+    await runBackendAgentCommand(command);
     return;
   }
   if (lower.includes("create") && lower.includes("plan") || lower.startsWith("plan ")) {

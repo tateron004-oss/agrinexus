@@ -490,6 +490,10 @@ async function call(path, body) {
   assert(voiceDrone.commandResult.intent === "drone.field_scan");
   assert(voiceDrone.profile.droneScans.length >= 1);
   assert(voiceDrone.profile.agentCommands[0].intent === "drone.field_scan");
+  const happened = await call("/api/agent/command", { command: "Nexus, what just happened?", conversational: true, inputMode: "voice", outputMode: "voice" });
+  assert(happened.commandResult.response);
+  const morning = await call("/api/agent/command", { command: "Good morning AgriNexus", conversational: true, inputMode: "voice", outputMode: "voice" });
+  assert(morning.commandResult.response);
   const buyerContact = await call("/api/agent/command", { command: "Hey AgriTrade, I want to speak to the buyer that I am selling my crop to", confirm: true, inputMode: "voice", outputMode: "voice" });
   assert(buyerContact.commandResult.intent === "trade.buyer_contact");
   assert(buyerContact.commandResult.metadata.redirectSection === "trade");

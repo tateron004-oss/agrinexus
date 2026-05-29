@@ -143,6 +143,10 @@ assert(html.includes("10-Part Assistant System"), "Agent page needs a visible 10
 assert(server.includes("intelligent-assistant.ten_item_model"), "Voice agent must answer all-ten intelligent model requests");
 assert(server.includes("function sessionBriefingModel"), "Backend needs login/session briefing guidance");
 assert(server.includes("function platformProgressSummary"), "Backend needs plain-language progress summaries");
+assert(server.includes("function workflowOutcomeSummary"), "Voice agent needs a plain-language what-happened summary");
+assert(server.includes("function dailyOperatorBriefing"), "Voice agent needs a daily operator briefing");
+assert(server.includes("conversation.workflow_outcome_summary"), "Voice agent must answer what just happened");
+assert(server.includes("conversation.daily_operator_briefing"), "Voice agent must answer good morning briefing");
 assert(html.includes("AgriNexus Guide Brief"), "Dashboard needs a visible session briefing");
 assert(app.includes("sessionBriefingPanel"), "Frontend must render the session briefing");
 assert(server.includes("function assistantBehaviorModel"), "Backend needs a non-robotic behavior model");
@@ -161,6 +165,8 @@ assert(app.includes("function refreshVoiceForLanguageChange"), "Frontend should 
 assert(app.includes("Voice language is now"), "App should show language-specific voice status");
 assert(app.includes("Hey AgriTrade, change language to Spanish"), "Voice help should include AgriTrade language command");
 assert(app.includes("what can I say in telehealth"), "Voice help should include module-specific prompts");
+assert(app.includes("Good morning AgriNexus"), "Voice help should include daily operator briefing");
+assert(app.includes("what just happened"), "Voice help should include workflow outcome summary");
 assert(app.includes("run investor voice demo"), "Voice help should include investor voice demo");
 assert(app.includes("Hey AgriTrade, speak French"), "Voice help should include natural language switching");
 assert(app.includes("Hey AgriTrade, switch to Kiswahili"), "Voice help should include Kiswahili switching");

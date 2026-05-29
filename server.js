@@ -552,6 +552,64 @@ function sessionBriefingModel(db, user, providers = runtimeProviders(db)) {
   };
 }
 
+function workflowOutcomeSummary(db) {
+  ensureAiProfile(db.profile);
+  const latestCommand = (db.profile.agentCommands || [])[0] || null;
+  const latestEvent = (db.profile.integrationEvents || [])[0] || null;
+  const latestActivity = (db.profile.activity || [])[0] || "";
+  const evidence = [
+    latestCommand ? `voice command ${latestCommand.intent}` : "",
+    latestEvent ? `${latestEvent.module} evidence: ${latestEvent.action}` : "",
+    latestActivity ? `activity: ${latestActivity.replace(/^\S+\s+/, "")}` : ""
+  ].filter(Boolean);
+  const next = smartNextActions(db, null, runtimeProviders(db)).items[0];
+  return {
+    latestCommand,
+    latestEvent,
+    latestActivity,
+    evidence,
+    next,
+    text: evidence.length
+      ? `The last workflow created ${evidence.join("; ")}. ${next ? `Next best step: ${next.title}. ${next.detail}` : "Next best step: ask AgriNexus for guidance."}`
+      : "No workflow evidence has been created yet in this session. Start with a voice command like open telehealth, apply for that job, or contact my buyer."
+  };
+}
+
+function dailyOperatorBriefing(db, user, providers = runtimeProviders(db)) {
+  ensureLearningProfile(db.profile);
+  ensureWorkforceProfile(db.profile);
+  ensureHealthProfile(db.profile);
+  ensureTradeProfile(db.profile);
+  ensureAiProfile(db.profile);
+  const connected = providers.filter(provider => provider.status === "connected").length;
+  const nextActions = smartNextActions(db, user, providers).items.slice(0, 3);
+  const latestRisk = (db.profile.publicHealthChecks || [])[0];
+  const latestTrade = (db.profile.tradeEfficiencyReviews || [])[0];
+  const priorities = [
+    `${(db.profile.healthIntakes || []).length} telehealth intake(s), ${(db.profile.telehealthReferrals || []).length} referral(s), and ${(db.profile.telehealthFollowUps || []).length} follow-up(s)`,
+    `${(db.profile.enrollments || []).length} learner enrollment(s), ${(db.profile.certificates || []).length} certificate(s), and ${db.profile.readiness || 0}% workforce readiness`,
+    `${(db.profile.applications || []).length} job application(s), ${(db.profile.shiftSchedule || []).length} shift(s), and ${(db.profile.interviews || 0)} interview(s)`,
+    `${(db.profile.orders || []).length} trade order(s), ${(db.profile.buyerContacts || []).length} buyer contact(s), and ${(db.profile.droneScans || []).length} drone scan(s)`,
+    `${connected}/${providers.length} provider engine(s) connected`
+  ];
+  const caution = latestRisk ? `Latest public-health check: ${latestRisk.regionName} is ${latestRisk.riskLevel}.` : "";
+  const trade = latestTrade ? `Latest AgriTrade efficiency score: ${latestTrade.score}% for ${latestTrade.productName}.` : "";
+  return {
+    title: `Good morning ${user?.name?.split(/\s+/)[0] || "operator"}.`,
+    priorities,
+    nextActions,
+    caution,
+    trade,
+    text: [
+      `Good morning ${user?.name?.split(/\s+/)[0] || "operator"}. Here is your AgriNexus operating brief.`,
+      priorities.join("; "),
+      caution,
+      trade,
+      nextActions.length ? `Top next steps: ${nextActions.map(item => `${item.title} in ${item.module}`).join("; ")}.` : "Top next step: ask AgriNexus to guide the next workflow."
+    ].filter(Boolean).join(" ")
+  };
+}
+
 function runtimeProviders(db) {
   const baseProviders = [...(db.providers || [])];
   for (const provider of BUILT_IN_PROVIDER_DEFINITIONS) {
@@ -5470,6 +5528,40 @@ async function runAgentCommand(db, user, command, options = {}) {
       response: `Here is your progress: ${summary}.`,
       status: "completed",
       metadata: { conversationMode: conversational, redirectSection: "dashboard", summary }
+    };
+  }
+
+  if (lower.includes("what happened") || lower.includes("what just happened") || lower.includes("what did you do") || lower.includes("what evidence") || lower.includes("explain the last workflow")) {
+    const outcome = workflowOutcomeSummary(db);
+    db.profile.agentMemory.lastStatus = "workflow-outcome-summary";
+    db.profile.agentMemory.lastSummary = outcome.text;
+    db.profile.agentMemory.updatedAt = new Date().toISOString();
+    return {
+      intent: "conversation.workflow_outcome_summary",
+      response: outcome.text,
+      status: outcome.evidence.length ? "completed" : "needs-workflow",
+      metadata: { conversationMode: conversational, redirectSection: outcome.next?.section || "dashboard", outcome }
+    };
+  }
+
+  if (lower.includes("good morning agrinexus") || lower.includes("good morning nexus") || lower.includes("daily briefing") || lower.includes("operator briefing") || lower.includes("morning briefing")) {
+    const briefing = dailyOperatorBriefing(db, user);
+    db.profile.agentMemory.lastStatus = "daily-operator-briefing";
+    db.profile.agentMemory.lastSummary = briefing.text;
+    db.profile.agentMemory.updatedAt = new Date().toISOString();
+    logIntegration(db, {
+      providerId: "openai",
+      module: "AI",
+      action: "agent.daily_operator_briefing",
+      detail: "Daily operator briefing generated from current platform state.",
+      metadata: { nextActions: briefing.nextActions.map(item => item.id || item.title), priorities: briefing.priorities },
+      dispatch: false
+    });
+    return {
+      intent: "conversation.daily_operator_briefing",
+      response: briefing.text,
+      status: "completed",
+      metadata: { conversationMode: conversational, redirectSection: "dashboard", briefing }
     };
   }
 
