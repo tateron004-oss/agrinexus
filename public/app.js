@@ -38,6 +38,17 @@ const voiceLanguageNames = {
 };
 let voiceTranslationToken = 0;
 
+const demoLoginProfiles = [
+  { label: "Admin", role: "Full control", email: "admin@agrinexus.org", password: "Admin2026!" },
+  { label: "Coordinator", role: "All workflows", email: "demo@agrinexus.org", password: "Prototype2026!" },
+  { label: "Operator", role: "Operations, no admin", email: "operator@agrinexus.org", password: "Operator2026!" },
+  { label: "Learner", role: "Learning + jobs", email: "learner@agrinexus.org", password: "Learn2026!" },
+  { label: "Workforce", role: "Jobs + shifts", email: "workforce@agrinexus.org", password: "Work2026!" },
+  { label: "Health", role: "Telehealth", email: "health@agrinexus.org", password: "Health2026!" },
+  { label: "Farmer", role: "Trade + maps", email: "farmer@agrinexus.org", password: "Farmer2026!" },
+  { label: "Investor", role: "Guided demo", email: "investor@agrinexus.org", password: "Investor2026!" }
+];
+
 const countryLanguageLabel = {
   nigeria: "English",
   kenya: "Kiswahili",
@@ -2130,6 +2141,7 @@ function applyPlatformLanguage() {
   setText("#profile .section-head p", copy.profileIntro);
   const selector = $("#platformLanguageSelect");
   if (selector) selector.value = languageCode();
+  if (data) applyRoleNavigation();
   refreshMicSupport();
 }
 
@@ -2260,6 +2272,11 @@ function updateWorkspaceBar(sectionId) {
 function goSection(sectionId, options = {}) {
   const target = $(`#${sectionId}`);
   if (!target || !target.classList.contains("section")) sectionId = "dashboard";
+  if (!canOpenSection(sectionId)) {
+    const fallback = firstAllowedSection();
+    toast(`Your ${data.user.role} login cannot open ${sectionId}.`);
+    sectionId = fallback;
+  }
   updateWorkspaceBar(sectionId);
   $$(".nav").forEach(item => {
     const active = item.dataset.section === sectionId;
@@ -2389,6 +2406,43 @@ function renderEnginePanel(selector, moduleName) {
 
 function can(area) {
   return data.permissions?.[area] !== false;
+}
+
+function sectionPermissionArea(sectionId) {
+  return {
+    dashboard: "dashboard",
+    learning: "learning",
+    workforce: "workforce",
+    health: "health",
+    trade: "trade",
+    map: "map",
+    agent: "ai",
+    integrations: "integrations",
+    admin: "admin",
+    profile: "profile"
+  }[sectionId] || sectionId;
+}
+
+function canOpenSection(sectionId) {
+  const area = sectionPermissionArea(sectionId);
+  return area === "dashboard" || can(area);
+}
+
+function firstAllowedSection() {
+  return ["dashboard", "learning", "workforce", "health", "trade", "map", "agent", "integrations", "admin", "profile"].find(canOpenSection) || "dashboard";
+}
+
+function applyRoleNavigation() {
+  $$(".nav").forEach(button => {
+    const allowed = canOpenSection(button.dataset.section);
+    button.classList.toggle("hidden", !allowed);
+    button.disabled = !allowed;
+    button.setAttribute("aria-hidden", String(!allowed));
+  });
+  $$(".section").forEach(section => {
+    const allowed = section.id === "accessibilityPanel" || canOpenSection(section.id);
+    section.classList.toggle("role-hidden", !allowed);
+  });
 }
 
 function renderGovernancePanel() {
@@ -3127,6 +3181,7 @@ function render() {
   $("#appView").classList.remove("hidden");
   $("#userLine").textContent = `${data.user.name} - ${data.user.role}`;
   applyPlatformLanguage();
+  applyRoleNavigation();
 
   $("#countrySelect").innerHTML = [
     `<option value="language:en">English</option>`,
@@ -5933,6 +5988,24 @@ async function runSimpleAction(eventOrButton) {
   if (status) status.textContent = latest?.response || "Returned to the dashboard. Choose a workflow to continue.";
 }
 
+function renderLoginProfiles() {
+  const target = $("#loginProfiles");
+  if (!target) return;
+  target.innerHTML = demoLoginProfiles.map(profile => `
+    <button class="login-profile" type="button" data-login-email="${profile.email}" data-login-password="${profile.password}">
+      <strong>${profile.label}</strong>
+      <span>${profile.role}</span>
+    </button>
+  `).join("");
+  target.querySelectorAll("[data-login-email]").forEach(button => {
+    button.addEventListener("click", () => {
+      $("#email").value = button.dataset.loginEmail;
+      $("#password").value = button.dataset.loginPassword;
+      $("#loginMessage").textContent = `${button.querySelector("strong")?.textContent || "Profile"} login selected.`;
+    });
+  });
+}
+
 async function runVoiceTextCommand() {
   const input = $("#voiceTextCommand");
   await handleVoiceCommand(input?.value || "");
@@ -6054,6 +6127,7 @@ async function runWowDemo() {
 }
 
 function bindStatic() {
+  renderLoginProfiles();
   document.addEventListener("click", event => {
     if (event.target.closest("#adminHealthCheck")) {
       event.preventDefault();

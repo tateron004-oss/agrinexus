@@ -155,8 +155,15 @@ assert(html.includes("missionDashboardPanel"), "Agent page needs an Autopilot Mi
 assert(app.includes("function renderMissionDashboard"), "Frontend needs to render mission plans and executions");
 assert(html.includes("liveServiceCheckPanel"), "Admin needs a live service finalization panel");
 assert(html.includes("liveServiceCheckInlineStatus"), "Integrations needs a visible live service check status");
+assert(html.includes("loginProfiles"), "Login screen needs role-based demo account selectors");
+assert(app.includes("demoLoginProfiles"), "Frontend needs selectable login profiles");
+assert(app.includes("function applyRoleNavigation"), "Frontend needs role-based navigation visibility");
+assert(app.includes("function canOpenSection"), "Frontend needs section permission guards");
+assert(server.includes("DEFAULT_USERS"), "Backend needs seeded role-based demo accounts");
+assert(server.includes("Investor Viewer"), "Backend needs an investor viewer role");
+assert(server.includes("Workforce Operator"), "Backend needs a workforce operator role");
 assert(app.includes("function runLiveServiceCheck"), "Frontend needs a live service finalization action");
-assert(html.includes("app.js?v=ask-nexus-27"), "Index must force browsers to load the latest live service check code");
+assert(html.includes("app.js?v=ask-nexus-28"), "Index must force browsers to load the latest role access code");
 assert(server.includes('"cache-control": cacheControl'), "Static app assets should declare cache-control headers");
 assert(app.includes("liveServiceCheckFromIntegrations"), "Integrations live service check button must share the finalization action");
 assert(app.includes("Slow external engines will time out"), "Live service check should show progress while external engines respond");

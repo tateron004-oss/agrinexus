@@ -70,6 +70,13 @@ async function call(path, body) {
   assert(html.includes("jarvisCommandInput"));
   const login = await call("/api/login", { email: "demo@agrinexus.org", password: "Prototype2026!" });
   assert(login.user.email === "demo@agrinexus.org");
+  assert(login.loginProfiles.some(profile => profile.email === "admin@agrinexus.org"));
+  assert(login.loginProfiles.some(profile => profile.role === "Investor Viewer"));
+  const learnerLogin = await call("/api/login", { email: "learner@agrinexus.org", password: "Learn2026!" });
+  assert(learnerLogin.permissions.learning);
+  assert(!learnerLogin.permissions.admin);
+  assert(!learnerLogin.permissions.integrations);
+  await call("/api/login", { email: "demo@agrinexus.org", password: "Prototype2026!" });
   assert(login.providers.length >= 8);
   assert(login.providers.some(provider => provider.id === "voice-stt"));
   assert(login.providers.some(provider => provider.id === "voice-tts"));
