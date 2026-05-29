@@ -3207,6 +3207,7 @@ function render() {
   if (!data) return;
   const country = activeCountry();
   const route = activeRoute();
+  const sessionBriefing = data.sessionBriefing || {};
   $("#loginView").classList.add("hidden");
   $("#appView").classList.remove("hidden");
   $("#userLine").textContent = `${data.user.name} - ${data.user.role}`;
@@ -3224,6 +3225,21 @@ function render() {
   $("#kpiFacilities").textContent = data.countries.reduce((sum, item) => sum + item.facilities, 0);
   $("#kpiOrders").textContent = data.profile.orders.length;
   renderSimpleHome();
+  $("#sessionBriefingStatus").textContent = translateText(sessionBriefing.status || "ready");
+  $("#sessionBriefingPanel").innerHTML = [
+    `<div><strong>${translateText(sessionBriefing.title || "Welcome back")}</strong><span>${translateText(sessionBriefing.message || "Ask AgriNexus what to do next.")}</span></div>`,
+    `<div><strong>${translateText("Progress")}</strong><span>${translateText(sessionBriefing.progress || "No progress summary yet.")}</span></div>`,
+    `<div><strong>${translateText("Assistant readiness")}</strong><span>${translateText(`${sessionBriefing.assistantReadiness?.readyCount || 0}/${sessionBriefing.assistantReadiness?.total || 10} intelligent assistant items active`)}</span></div>`
+  ].join("");
+  $("#sessionPromptPanel").innerHTML = (sessionBriefing.prompts || ["help me", "summarize my progress", "show me all 10 items"])
+    .map(command => voiceCommandButton(command))
+    .join("");
+  $("#firstTimeGuidePanel").innerHTML = [
+    taskItem("Choose your goal", "Say what you need in normal language: health, training, work, farming, trade, or investor tour.", "ready", "Ask", { simpleCommand: "I am new, guide me" }),
+    taskItem("Let AgriNexus ask questions", "Use conversational intake so the platform fills the right workflow from your answers.", "ready", "Intake", { simpleCommand: "start telehealth intake and ask me questions" }),
+    taskItem("Confirm before action", "AgriNexus prepares workflows first, then waits for yes before committing records.", "ready", "Safe", { simpleCommand: "what should I do next" }),
+    taskItem("Hear the summary", "Ask for a plain-language progress summary any time.", "ready", "Read", { simpleCommand: "summarize my progress" })
+  ].join("");
 
   $("#contextPanel").innerHTML = [
     row("Country", country.name),

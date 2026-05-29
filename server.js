@@ -289,6 +289,7 @@ function publicState(db, user) {
     providers,
     capabilities: capabilityMatrix(db, providers),
     intelligentAssistant: intelligentAssistantModel(db, user, providers),
+    sessionBriefing: sessionBriefingModel(db, user, providers),
     smartActions: smartNextActions(db, user, providers),
     activationGuide: productionActivationGuide(db, providers),
     engineSetup: renderEngineEnvPlan(db),
@@ -413,6 +414,53 @@ function intelligentAssistantModel(db, user, providers = runtimeProviders(db)) {
 
 function voiceLanguageLabel(language) {
   return { en: "English", fr: "French", sw: "Kiswahili", ar: "Arabic" }[language] || "selected-language";
+}
+
+function platformProgressSummary(db, user, providers = runtimeProviders(db)) {
+  ensureLearningProfile(db.profile);
+  ensureWorkforceProfile(db.profile);
+  ensureHealthProfile(db.profile);
+  ensureTradeProfile(db.profile);
+  ensureAiProfile(db.profile);
+  const next = smartNextActions(db, user, providers).items[0];
+  const connected = providers.filter(provider => provider.status === "connected").length;
+  return [
+    `${db.profile.readiness || 0}% workforce readiness`,
+    `${(db.profile.enrollments || []).length} course enrollment(s) and ${(db.profile.certificates || []).length} certificate(s)`,
+    `${(db.profile.applications || []).length} workforce application(s) and ${(db.profile.shiftSchedule || []).length} shift(s)`,
+    `${(db.profile.healthIntakes || []).length} telehealth intake(s) and ${(db.profile.carePlans || []).length} care plan(s)`,
+    `${(db.profile.orders || []).length} trade order(s), ${(db.profile.droneScans || []).length} drone scan(s), and ${(db.profile.mapEvidencePackets || []).length} map packet(s)`,
+    `${connected}/${providers.length} provider engine(s) connected`,
+    next ? `next recommended step: ${next.title}` : "next recommended step: ask AgriNexus for guidance"
+  ].join("; ");
+}
+
+function sessionBriefingModel(db, user, providers = runtimeProviders(db)) {
+  ensureOperationsProfile(db.profile);
+  ensureAiProfile(db.profile);
+  const nextActions = smartNextActions(db, user, providers).items;
+  const top = nextActions[0];
+  const role = user?.role || "Standard User";
+  const firstRun = !(db.profile.onboardingRuns || []).length;
+  const model = intelligentAssistantModel(db, user, providers);
+  const progress = platformProgressSummary(db, user, providers);
+  const prompts = [
+    firstRun ? "I am new, guide me" : "what should I do next",
+    top?.title || "help me",
+    "summarize my progress",
+    "show me all 10 items"
+  ];
+  return {
+    title: firstRun ? "Welcome. I can guide your first session." : "Welcome back. Here is your operating brief.",
+    message: firstRun
+      ? `I can walk you through AgriNexus step by step. Your ${role} access is ready, and the assistant model has ${model.readyCount}/${model.total} items active.`
+      : `Your ${role} workspace is ready. ${top ? `Recommended next: ${top.title}. ${top.detail}` : "Ask AgriNexus for your next best step."}`,
+    progress,
+    nextAction: top || null,
+    prompts,
+    status: firstRun ? "first-time-guide" : "returning-session",
+    assistantReadiness: { readyCount: model.readyCount, total: model.total, status: model.status }
+  };
 }
 
 function runtimeProviders(db) {
@@ -4755,6 +4803,32 @@ async function runAgentCommand(db, user, command, options = {}) {
       response: `The full intelligent model is active at ${model.readyCount} out of ${model.total}. It covers onboarding, memory, next-step coaching, conversational intake, multilingual voice, role-aware guidance, autopilot missions, live services, accessibility-first support, and investor presentation mode. Say "help me" for the best next step or say one of the listed commands to test a specific item.`,
       status: model.status,
       metadata: { conversationMode: conversational, redirectSection: "agent", model }
+    };
+  }
+
+  if (lower.includes("summarize my progress") || lower.includes("progress summary") || lower.includes("where am i") || lower.includes("how am i doing")) {
+    const summary = platformProgressSummary(db, user);
+    db.profile.agentMemory.lastStatus = "progress-summary";
+    db.profile.agentMemory.lastSummary = summary;
+    db.profile.agentMemory.updatedAt = new Date().toISOString();
+    return {
+      intent: "conversation.progress_summary",
+      response: `Here is your progress: ${summary}.`,
+      status: "completed",
+      metadata: { conversationMode: conversational, redirectSection: "dashboard", summary }
+    };
+  }
+
+  if (lower.includes("investor tour") || lower.includes("demo narrator") || lower.includes("present the platform") || lower.includes("walk investors") || lower.includes("presentation mode")) {
+    const briefing = agentBriefing(db, user, "investor presentation mode");
+    db.profile.agentMemory.lastStatus = "investor-presentation-ready";
+    db.profile.agentMemory.lastSummary = briefing.plainLanguageSummary;
+    db.profile.agentMemory.updatedAt = new Date().toISOString();
+    return {
+      intent: "conversation.investor_presentation_mode",
+      response: `Investor presentation mode is ready. Start on the Dashboard, then move through Learning, Workforce, Telehealth, AgriTrade, Map and AI, Agent AI, and Integrations. Opening statement: ${briefing.plainLanguageSummary}`,
+      status: "completed",
+      metadata: { conversationMode: conversational, redirectSection: "dashboard", briefingId: briefing.id }
     };
   }
 

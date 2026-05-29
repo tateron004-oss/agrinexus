@@ -109,6 +109,9 @@ async function call(path, body) {
   assert(login.intelligentAssistant.items.some(item => item.id === "personal-onboarding"));
   assert(login.intelligentAssistant.items.some(item => item.id === "conversational-intake"));
   assert(login.intelligentAssistant.items.some(item => item.id === "investor-presentation-mode"));
+  assert(login.sessionBriefing.title);
+  assert(login.sessionBriefing.prompts.includes("summarize my progress"));
+  assert(login.sessionBriefing.assistantReadiness.total === 10);
   assert(login.capabilities.items.some(item => item.id === "jarvis-command-layer"));
   assert(login.capabilities.items.some(item => item.id === "telehealth-workspace"));
   assert(login.smartActions.status);
@@ -537,6 +540,14 @@ async function call(path, body) {
   assert(tenItemModel.commandResult.intent === "intelligent-assistant.ten_item_model");
   assert(tenItemModel.commandResult.metadata.model.total === 10);
   assert(tenItemModel.commandResult.metadata.redirectSection === "agent");
+  const progressSummaryCommand = await call("/api/agent/command", { command: "summarize my progress", conversational: true, inputMode: "voice", outputMode: "voice" });
+  assert(progressSummaryCommand.commandResult.intent === "conversation.progress_summary");
+  assert(progressSummaryCommand.commandResult.metadata.redirectSection === "dashboard");
+  assert(progressSummaryCommand.commandResult.response.includes("Here is your progress"));
+  const investorTourCommand = await call("/api/agent/command", { command: "present the platform", conversational: true, inputMode: "voice", outputMode: "voice" });
+  assert(investorTourCommand.commandResult.intent === "conversation.investor_presentation_mode");
+  assert(investorTourCommand.commandResult.metadata.redirectSection === "dashboard");
+  assert(investorTourCommand.profile.agentBriefings.length >= 1);
   const intakeStart = await call("/api/agent/command", { command: "start telehealth intake and ask me questions", conversational: true, inputMode: "voice", outputMode: "voice" });
   assert(intakeStart.commandResult.intent === "conversation.intake_started");
   assert(intakeStart.profile.agentMemory.activeIntake.domain === "health");

@@ -129,6 +129,19 @@
             <div id="simpleActionGrid" class="simple-action-grid"></div>
             <div id="simpleActionStatus" class="simple-action-status" role="status">Choose a user type, then select an action.</div>
           </div>
+          <div class="cards two">
+            <article>
+              <div class="tag-row"><span>Session briefing</span><span id="sessionBriefingStatus">Ready</span></div>
+              <h3>AgriNexus Guide Brief</h3>
+              <div id="sessionBriefingPanel" class="activity"></div>
+              <div id="sessionPromptPanel" class="voice-guide"></div>
+            </article>
+            <article>
+              <div class="tag-row"><span>First-time mode</span><span>Plain language</span></div>
+              <h3>Guided First Steps</h3>
+              <div id="firstTimeGuidePanel" class="task-list"></div>
+            </article>
+          </div>
           <div id="dashboardProcess" class="process-board command-board"></div>
           <div class="stats">
             <article><span id="kpiCountries">0</span><small>Countries</small></article>
@@ -1147,6 +1160,6 @@
   <div id="toast" class="toast hidden" role="status" aria-live="polite" aria-atomic="true"></div>
   <div id="screenReaderStatus" class="sr-only" role="status" aria-live="polite" aria-atomic="true"></div>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="/app.js?v=ask-nexus-32"></script>
+  <script src="/app.js?v=ask-nexus-33"></script>
 </body>
 </html>
