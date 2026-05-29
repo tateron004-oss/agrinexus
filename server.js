@@ -1937,6 +1937,8 @@ function ensureAiProfile(profile) {
   profile.agentMemory.preferences = profile.agentMemory.preferences || [];
   profile.agentMemory.learnedPatterns = profile.agentMemory.learnedPatterns || [];
   profile.agentMemory.retrievals = profile.agentMemory.retrievals || [];
+  profile.agentMemory.activeIntake = profile.agentMemory.activeIntake || null;
+  profile.agentMemory.conversationalIntakes = profile.agentMemory.conversationalIntakes || [];
 }
 
 function buildAgentPlan(db, goal, user) {
@@ -3878,6 +3880,13 @@ async function executePendingAgentAction(db, user, pending) {
       metadata: { conversationMode: true, redirectSection: pending.section || "agent", planId: plan.id, executionId: execution.id, steps: execution.steps.length, mode: "autopilot" }
     };
   }
+  if (pending.kind === "conversational-intake") {
+    const result = await applyConversationalIntake(db, user, pending);
+    return {
+      ...result,
+      metadata: { conversationMode: true, ...(result.metadata || {}) }
+    };
+  }
   if (pending.tool) {
     const step = {
       id: crypto.randomUUID(),
@@ -4250,6 +4259,237 @@ function isGuidanceConversation(lower) {
   ].some(phrase => lower.includes(phrase));
 }
 
+function intakeBlueprint(domain) {
+  const blueprints = {
+    health: {
+      module: "Healthcare",
+      section: "health",
+      completionAction: "create telehealth intake",
+      fields: [
+        { key: "patientName", question: "Who is the patient or community member we are helping?" },
+        { key: "needSummary", question: "What is the main health need or concern?" },
+        { key: "preferredLanguage", question: "What language should the care support use?" },
+        { key: "accessibilityNeeds", question: "Do they need captions, audio guidance, large print, caregiver handoff, or another support?" },
+        { key: "contactMethod", question: "What is the best way to reach them: voice callback, SMS, WhatsApp, or caregiver contact?" }
+      ]
+    },
+    workforce: {
+      module: "Workforce",
+      section: "workforce",
+      completionAction: "prepare workforce profile and role application",
+      fields: [
+        { key: "candidateName", question: "Who is applying or preparing for work?" },
+        { key: "roleInterest", question: "What kind of role or work are they interested in?" },
+        { key: "experience", question: "What experience, training, or certificates do they already have?" },
+        { key: "availability", question: "When are they available to work or interview?" },
+        { key: "supportNeeds", question: "Do they need interview help, transport support, language support, or accessibility support?" }
+      ]
+    },
+    learning: {
+      module: "Learning",
+      section: "learning",
+      completionAction: "start the best learning path",
+      fields: [
+        { key: "learnerName", question: "Who is the learner?" },
+        { key: "goal", question: "What do they want to learn or become ready to do?" },
+        { key: "preferredLanguage", question: "What language should the lessons use?" },
+        { key: "accessNeeds", question: "Do they need captions, audio guide, large print, screen-reader support, or offline lessons?" },
+        { key: "bandwidth", question: "Will they usually have strong internet, low bandwidth, or offline access?" }
+      ]
+    },
+    trade: {
+      module: "AgriTrade",
+      section: "trade",
+      completionAction: "prepare farmer trade and field intelligence workflow",
+      fields: [
+        { key: "farmerName", question: "Who is the farmer or seller?" },
+        { key: "crop", question: "What crop or product are they working with?" },
+        { key: "fieldIssue", question: "Is there a field issue, crop stress, pest concern, or quality question?" },
+        { key: "buyerGoal", question: "What do they want to do with the buyer: find one, contact one, negotiate, or confirm delivery?" },
+        { key: "paymentPreference", question: "What payment or wallet method should we prepare for?" }
+      ]
+    }
+  };
+  return blueprints[domain] || null;
+}
+
+function intakeDomainFromText(lower) {
+  if (/(telehealth|health|patient|care|doctor|nurse|clinic|medical)/.test(lower)) return "health";
+  if (/(workforce|job|role|worker|candidate|interview|shift|apply)/.test(lower)) return "workforce";
+  if (/(learning|training|course|lesson|certificate|learner|student)/.test(lower)) return "learning";
+  if (/(trade|buyer|crop|farmer|sell|market|drone|field|payment|wallet)/.test(lower)) return "trade";
+  return null;
+}
+
+function isIntakeStart(lower) {
+  return /(intake|ask me questions|interview me|fill.*out|help me apply|onboard me|set me up)/.test(lower)
+    && Boolean(intakeDomainFromText(lower));
+}
+
+function startConversationalIntake(db, text, domain) {
+  const blueprint = intakeBlueprint(domain);
+  if (!blueprint) return null;
+  const session = {
+    id: crypto.randomUUID(),
+    domain,
+    module: blueprint.module,
+    section: blueprint.section,
+    status: "collecting",
+    sourceCommand: text,
+    answers: {},
+    currentIndex: 0,
+    startedAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  };
+  db.profile.agentMemory.activeIntake = session;
+  db.profile.agentMemory.lastStatus = "intake-collecting";
+  db.profile.agentMemory.lastSummary = blueprint.fields[0].question;
+  db.profile.agentMemory.updatedAt = session.updatedAt;
+  return {
+    intent: "conversation.intake_started",
+    response: `Absolutely. I will guide the ${blueprint.module} intake one question at a time. ${blueprint.fields[0].question}`,
+    status: "needs-input",
+    metadata: { conversationMode: true, intakeId: session.id, domain, redirectSection: blueprint.section, field: blueprint.fields[0].key }
+  };
+}
+
+function rememberIntakeAnswers(profile, session) {
+  const values = Object.entries(session.answers || {})
+    .filter(([, value]) => String(value || "").trim())
+    .map(([key, value]) => `${key}: ${value}`);
+  if (!values.length) return;
+  rememberAgentMemory(profile, `${session.module} intake: ${values.join("; ")}`, {
+    source: "conversational-intake",
+    category: "preference",
+    confidence: 0.9
+  });
+}
+
+function completeConversationalIntake(db, user, session) {
+  const blueprint = intakeBlueprint(session.domain);
+  const completed = {
+    ...session,
+    status: "ready-for-confirmation",
+    completedAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  };
+  db.profile.agentMemory.conversationalIntakes.unshift(completed);
+  db.profile.agentMemory.conversationalIntakes = db.profile.agentMemory.conversationalIntakes.slice(0, 20);
+  db.profile.agentMemory.activeIntake = null;
+  rememberIntakeAnswers(db.profile, completed);
+  const pending = {
+    kind: "conversational-intake",
+    module: blueprint.module,
+    action: blueprint.completionAction,
+    section: blueprint.section,
+    domain: session.domain,
+    intakeSessionId: completed.id,
+    intakeAnswers: completed.answers,
+    command: session.sourceCommand
+  };
+  db.profile.agentPendingAction = {
+    id: crypto.randomUUID(),
+    createdAt: new Date().toISOString(),
+    ...pending
+  };
+  db.profile.agentMemory.lastStatus = "intake-ready-for-confirmation";
+  db.profile.agentMemory.lastSummary = `${blueprint.module} intake is ready. Say yes to ${blueprint.completionAction}, or no to cancel.`;
+  db.profile.agentMemory.updatedAt = new Date().toISOString();
+  logIntegration(db, {
+    providerId: "agent-memory",
+    module: blueprint.module,
+    action: "agent.conversational_intake_completed",
+    detail: `${blueprint.module} intake collected ${Object.keys(completed.answers || {}).length} answer(s).`,
+    metadata: { intakeSessionId: completed.id, domain: session.domain, userId: user.id }
+  });
+  return {
+    intent: "conversation.intake_ready",
+    response: `I have enough to continue. I captured the ${blueprint.module} intake and remembered the key details. Say "yes" to ${blueprint.completionAction}, or "no" to cancel.`,
+    status: "needs-confirmation",
+    metadata: { conversationMode: true, redirectSection: blueprint.section, domain: session.domain, pendingActionId: db.profile.agentPendingAction.id }
+  };
+}
+
+function continueConversationalIntake(db, user, text) {
+  const session = db.profile.agentMemory.activeIntake;
+  if (!session) return null;
+  const lower = String(text || "").toLowerCase().trim();
+  if (isNegativeCommand(lower) || lower.includes("cancel intake") || lower.includes("stop intake")) {
+    db.profile.agentMemory.activeIntake = null;
+    db.profile.agentMemory.lastStatus = "intake-canceled";
+    db.profile.agentMemory.lastSummary = "Conversational intake canceled.";
+    db.profile.agentMemory.updatedAt = new Date().toISOString();
+    return { intent: "conversation.intake_canceled", response: "Canceled the intake. Tell me what you want to do next.", status: "canceled", metadata: { conversationMode: true } };
+  }
+  const blueprint = intakeBlueprint(session.domain);
+  const field = blueprint.fields[session.currentIndex];
+  if (!field) return completeConversationalIntake(db, user, session);
+  session.answers[field.key] = String(text || "").trim();
+  session.currentIndex += 1;
+  session.updatedAt = new Date().toISOString();
+  db.profile.agentMemory.updatedAt = session.updatedAt;
+  const next = blueprint.fields[session.currentIndex];
+  if (next) {
+    db.profile.agentMemory.lastStatus = "intake-collecting";
+    db.profile.agentMemory.lastSummary = next.question;
+    return {
+      intent: "conversation.intake_question",
+      response: `Got it. ${next.question}`,
+      status: "needs-input",
+      metadata: { conversationMode: true, intakeId: session.id, domain: session.domain, redirectSection: blueprint.section, field: next.key, answeredField: field.key }
+    };
+  }
+  return completeConversationalIntake(db, user, session);
+}
+
+async function applyConversationalIntake(db, user, pending) {
+  const answers = pending.intakeAnswers || {};
+  const { country, route } = activeContext(db);
+  if (pending.domain === "health") {
+    ensureHealthProfile(db.profile);
+    const intake = {
+      id: crypto.randomUUID(),
+      patientRef: `AN-PAT-${country.id.toUpperCase()}-${String(db.profile.healthIntakes.length + 1).padStart(3, "0")}`,
+      patientName: answers.patientName || "Voice-supported patient",
+      countryId: country.id,
+      needSummary: answers.needSummary || `${country.name} telehealth intake`,
+      riskLevel: country.risk === "High" || country.heat >= 38 ? "High" : "Routine",
+      queueStatus: "Conversational intake opened",
+      representativeStatus: "Accessibility review ready",
+      preferredLanguage: answers.preferredLanguage || user.language || "en",
+      accessibilityNeeds: answers.accessibilityNeeds || "Voice-first support",
+      contactMethod: answers.contactMethod || "Voice callback",
+      caregiverName: /caregiver|aide/i.test(answers.accessibilityNeeds || "") ? "Community accessibility aide" : "",
+      assistiveSupports: String(answers.accessibilityNeeds || "voice support").split(",").map(item => item.trim()).filter(Boolean),
+      routeContext: { routeId: route.id, routeName: route.name, checkpoint: db.profile.activeCheckpoint },
+      createdAt: new Date().toISOString()
+    };
+    db.profile.healthIntakes.unshift(intake);
+    logIntegration(db, { providerId: "health-telehealth", module: "Healthcare", action: "agent.conversational_intake_created", detail: `${intake.patientRef} created from conversational intake.`, metadata: { intakeId: intake.id, answers } });
+    addActivity(db.profile, `${intake.patientRef} created from conversational intake.`);
+    return { intent: "health.conversational_intake", response: `Done. I created telehealth intake ${intake.patientRef} for ${intake.patientName}. Next step: say "create care plan" or "connect provider."`, status: "completed", metadata: { redirectSection: "health", intakeId: intake.id } };
+  }
+  if (pending.domain === "workforce") {
+    rememberAgentMemory(db.profile, `Workforce candidate ${answers.candidateName || "user"} wants ${answers.roleInterest || "a matched role"}; availability ${answers.availability || "not specified"}; support ${answers.supportNeeds || "standard"}.`, { source: "workforce-intake", category: "preference", confidence: 0.92 });
+    const result = submitBestWorkforceApplication(db, user, answers.roleInterest || "apply for job");
+    return { intent: result.status === "completed" ? "workforce.conversational_application" : "workforce.conversational_gap_review", response: `Done. ${result.response}`, status: result.status, metadata: { redirectSection: "workforce", roleId: result.role?.id || null, applicationId: result.application?.id || null } };
+  }
+  if (pending.domain === "learning") {
+    rememberAgentMemory(db.profile, `Learner ${answers.learnerName || "user"} goal: ${answers.goal || "training"}; language: ${answers.preferredLanguage || user.language || "en"}; access needs: ${answers.accessNeeds || "standard"}; bandwidth: ${answers.bandwidth || "unknown"}.`, { source: "learning-intake", category: "preference", confidence: 0.92 });
+    const result = await executeAgentTool(db, user, { tool: "learning.start_or_continue" });
+    if (/caption|audio|large|screen|offline|low/i.test(`${answers.accessNeeds || ""} ${answers.bandwidth || ""}`)) prepareLearningAccess(db, user, /offline|low/i.test(answers.bandwidth || "") ? "low-bandwidth" : /audio|screen|visual|large/i.test(answers.accessNeeds || "") ? "visual" : "caption");
+    return { intent: "learning.conversational_path_started", response: `Done. ${result} I also remembered the learner goal so I can guide the next lesson and certificate step.`, status: "completed", metadata: { redirectSection: "learning" } };
+  }
+  if (pending.domain === "trade") {
+    rememberAgentMemory(db.profile, `Farmer ${answers.farmerName || "user"} is working with ${answers.crop || "crop"}; field issue: ${answers.fieldIssue || "none"}; buyer goal: ${answers.buyerGoal || "market support"}; payment: ${answers.paymentPreference || "not specified"}.`, { source: "trade-intake", category: "preference", confidence: 0.92 });
+    const wantsBuyer = /buyer|contact|negotiate|delivery/i.test(answers.buyerGoal || "");
+    const contact = wantsBuyer ? createBuyerContactWorkflow(db, user, `contact buyer for ${answers.crop || "crop"}`) : null;
+    const scan = /stress|pest|disease|field|quality|soil|irrigation/i.test(answers.fieldIssue || "") ? await executeAgentTool(db, user, { tool: "drone.field_scan" }) : null;
+    return { intent: "trade.conversational_intake", response: `Done. I remembered the farmer trade details.${contact ? ` Buyer contact is ready for ${contact.buyerName}.` : ""}${scan ? ` ${scan}` : ""} Next step: say "create order" or "run drone mission."`, status: "completed", metadata: { redirectSection: "trade", contactId: contact?.id || null } };
+  }
+  return { intent: "conversation.intake_applied", response: "Done. I saved the intake and prepared the next workflow.", status: "completed", metadata: { redirectSection: pending.section || "dashboard" } };
+}
+
 async function buildConversationalGuideResponse(db, user, text) {
   const guide = conversationalSectionGuide(db, text);
   const { country, route } = activeContext(db);
@@ -4356,6 +4596,20 @@ async function runAgentCommand(db, user, command, options = {}) {
   const conversational = options.conversational === true;
   const pendingAction = db.profile.agentPendingAction;
 
+  if (conversational && db.profile.agentMemory.activeIntake) {
+    const activeDomain = db.profile.agentMemory.activeIntake.domain;
+    const requestedDomain = intakeDomainFromText(lower);
+    const startsDifferentFlow = requestedDomain && requestedDomain !== activeDomain && /(start|apply|help|intake|job|workforce|training|trade|buyer|crop|telehealth|health)/.test(lower);
+    if (startsDifferentFlow) {
+      db.profile.agentMemory.activeIntake = null;
+      db.profile.agentMemory.lastStatus = "intake-switched";
+      db.profile.agentMemory.lastSummary = `Previous ${activeDomain} intake paused because the user started ${requestedDomain}.`;
+      db.profile.agentMemory.updatedAt = new Date().toISOString();
+    } else {
+      return continueConversationalIntake(db, user, text);
+    }
+  }
+
   if (pendingAction && isAffirmativeCommand(lower)) {
     const result = await executePendingAgentAction(db, user, pendingAction);
     db.profile.agentMemory.lastStatus = result.status || "completed";
@@ -4377,16 +4631,26 @@ async function runAgentCommand(db, user, command, options = {}) {
     };
   }
 
+  if (conversational && isIntakeStart(lower)) {
+    const started = startConversationalIntake(db, text, intakeDomainFromText(lower));
+    if (started) return started;
+  }
+
   if (conversational && (lower === "help" || lower.includes("what can you do") || lower.includes("i need help") || lower.includes("help me"))) {
+    const next = smartNextActions(db, user).items[0];
     db.profile.agentPendingAction = null;
     db.profile.agentMemory.lastStatus = "guiding-user";
-    db.profile.agentMemory.lastSummary = "I can guide Health, Jobs, Training, Farming and Trade, Drones, Maps, Provider Checks, or a Full Mission.";
+    db.profile.agentMemory.lastSummary = next
+      ? `Recommended next step: ${next.title} in ${next.module}.`
+      : "I can guide Health, Jobs, Training, Farming and Trade, Drones, Maps, Provider Checks, or a Full Mission.";
     db.profile.agentMemory.updatedAt = new Date().toISOString();
     return {
       intent: "conversation.guided_menu",
-      response: "I can help with Health, Jobs, Training, Farming and Trade, Drones, Maps, Provider Checks, or a Full Mission. Tell me the area, for example: health, jobs, training, buyer, drone, map, or run full mission.",
+      response: next
+        ? `Based on your current record, I recommend: ${next.title}. ${next.detail} You can say "${next.title}" or say "start ${String(next.module || "that").toLowerCase()} intake" and I will guide you one question at a time.`
+        : "I can help with Health, Jobs, Training, Farming and Trade, Drones, Maps, Provider Checks, or a Full Mission. Tell me the area, for example: health, jobs, training, buyer, drone, map, or run full mission.",
       status: "needs-input",
-      metadata: { conversationMode: true }
+      metadata: { conversationMode: true, redirectSection: next?.section || "dashboard", recommendedAction: next || null }
     };
   }
 

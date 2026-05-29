@@ -154,6 +154,10 @@ assert(server.includes("agent.autopilot_executed"), "Autopilot execution must be
 assert(server.includes("function buildConversationalGuideResponse"), "Backend needs an intuitive conversational platform guide");
 assert(server.includes("agent.conversation_guided"), "Conversation guide should create AI evidence when OpenAI routes the user");
 assert(server.includes("conversation.platform_guide"), "Agent command route must support guide-style conversation");
+assert(server.includes("function startConversationalIntake"), "Backend needs guided conversational intake sessions");
+assert(server.includes("function applyConversationalIntake"), "Conversational intake must convert remembered answers into real workflows");
+assert(server.includes("agent.conversational_intake_completed"), "Completed conversational intake should create evidence");
+assert(server.includes("recommendedAction"), "Guided help should use memory-driven next actions");
 assert(html.includes("missionDashboardPanel"), "Agent page needs an Autopilot Mission Dashboard");
 assert(app.includes("function renderMissionDashboard"), "Frontend needs to render mission plans and executions");
 assert(html.includes("liveServiceCheckPanel"), "Admin needs a live service finalization panel");
