@@ -40,12 +40,7 @@ let voiceTranslationToken = 0;
 
 const demoLoginProfiles = [
   { label: "Admin", role: "Full control", email: "admin@agrinexus.org", password: "Admin2026!" },
-  { label: "Coordinator", role: "All workflows", email: "demo@agrinexus.org", password: "Prototype2026!" },
-  { label: "Operator", role: "Operations, no admin", email: "operator@agrinexus.org", password: "Operator2026!" },
-  { label: "Learner", role: "Learning + jobs", email: "learner@agrinexus.org", password: "Learn2026!" },
-  { label: "Workforce", role: "Jobs + shifts", email: "workforce@agrinexus.org", password: "Work2026!" },
-  { label: "Health", role: "Telehealth", email: "health@agrinexus.org", password: "Health2026!" },
-  { label: "Farmer", role: "Trade + maps", email: "farmer@agrinexus.org", password: "Farmer2026!" },
+  { label: "Standard User", role: "Services, no admin", email: "user@agrinexus.org", password: "User2026!" },
   { label: "Investor", role: "Guided demo", email: "investor@agrinexus.org", password: "Investor2026!" }
 ];
 

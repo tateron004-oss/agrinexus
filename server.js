@@ -42,13 +42,8 @@ const COUNTRY_LANGUAGE = {
 };
 const DEFAULT_USERS = [
   { id: "u_admin", name: "Platform Admin", email: "admin@agrinexus.org", password: "Admin2026!", role: "Admin", country: "Nigeria", language: "en" },
-  { id: "u_demo", name: "Demo Coordinator", email: "demo@agrinexus.org", password: "Prototype2026!", role: "Coordinator", country: "DRC", language: "en" },
-  { id: "u_ops", name: "Operations Manager", email: "operator@agrinexus.org", password: "Operator2026!", role: "Operations Manager", country: "Kenya", language: "sw" },
-  { id: "u_learner", name: "Learning User", email: "learner@agrinexus.org", password: "Learn2026!", role: "Learner", country: "Kenya", language: "sw" },
-  { id: "u_workforce", name: "Workforce User", email: "workforce@agrinexus.org", password: "Work2026!", role: "Workforce Operator", country: "Nigeria", language: "en" },
-  { id: "u_health", name: "Health Worker", email: "health@agrinexus.org", password: "Health2026!", role: "Health Operator", country: "DRC", language: "fr" },
-  { id: "u_farmer", name: "Farmer Trader", email: "farmer@agrinexus.org", password: "Farmer2026!", role: "Farmer", country: "Nigeria", language: "en" },
-  { id: "u_investor", name: "Investor Viewer", email: "investor@agrinexus.org", password: "Investor2026!", role: "Investor Viewer", country: "Egypt", language: "ar" }
+  { id: "u_standard", name: "Standard User", email: "user@agrinexus.org", password: "User2026!", role: "Standard User", country: "Nigeria", language: "en" },
+  { id: "u_investor", name: "Investor Viewer", email: "investor@agrinexus.org", password: "Investor2026!", role: "Investor", country: "Egypt", language: "ar" }
 ];
 const PROVIDER_CONFIG = {
   "learning-courses": { modeEnv: "LEARNING_COURSE_PROVIDER", credentialEnvs: ["LEARNING_COURSE_WEBHOOK_URL", "LEARNING_PROVIDER_API_KEY"] },
@@ -308,16 +303,10 @@ function permissionsForRole(role) {
   const all = ["learning", "workforce", "health", "trade", "map", "ai", "integrations", "admin", "profile", "notifications", "governance"];
   const matrix = {
     Admin: all,
-    Coordinator: all,
-    "Operations Manager": ["learning", "workforce", "health", "trade", "map", "ai", "integrations", "profile", "notifications", "governance"],
-    Learner: ["learning", "workforce", "ai", "profile"],
-    "Workforce Operator": ["learning", "workforce", "ai", "notifications", "profile"],
-    "Health Operator": ["health", "map", "ai", "notifications", "profile"],
-    "Trade Operator": ["trade", "map", "ai", "notifications", "profile"],
-    Farmer: ["learning", "trade", "map", "ai", "notifications", "profile"],
-    "Investor Viewer": ["learning", "workforce", "health", "trade", "map", "ai", "profile"]
+    "Standard User": ["learning", "workforce", "health", "trade", "map", "ai", "notifications", "profile"],
+    Investor: ["learning", "workforce", "health", "trade", "map", "ai", "profile"]
   };
-  const allowed = new Set(matrix[role] || matrix.Coordinator);
+  const allowed = new Set(matrix[role] || matrix["Standard User"]);
   return Object.fromEntries(all.map(item => [item, allowed.has(item)]));
 }
 

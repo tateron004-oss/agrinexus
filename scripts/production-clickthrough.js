@@ -160,10 +160,11 @@ assert(app.includes("demoLoginProfiles"), "Frontend needs selectable login profi
 assert(app.includes("function applyRoleNavigation"), "Frontend needs role-based navigation visibility");
 assert(app.includes("function canOpenSection"), "Frontend needs section permission guards");
 assert(server.includes("DEFAULT_USERS"), "Backend needs seeded role-based demo accounts");
-assert(server.includes("Investor Viewer"), "Backend needs an investor viewer role");
-assert(server.includes("Workforce Operator"), "Backend needs a workforce operator role");
+assert(server.includes("Standard User"), "Backend needs a standard user role");
+assert(server.includes("Investor"), "Backend needs an investor role");
+assert(!server.includes("Workforce Operator"), "Production login levels should be simplified to admin, standard user, and investor");
 assert(app.includes("function runLiveServiceCheck"), "Frontend needs a live service finalization action");
-assert(html.includes("app.js?v=ask-nexus-28"), "Index must force browsers to load the latest role access code");
+assert(html.includes("app.js?v=ask-nexus-29"), "Index must force browsers to load the latest simplified role access code");
 assert(server.includes('"cache-control": cacheControl'), "Static app assets should declare cache-control headers");
 assert(app.includes("liveServiceCheckFromIntegrations"), "Integrations live service check button must share the finalization action");
 assert(app.includes("Slow external engines will time out"), "Live service check should show progress while external engines respond");
