@@ -5434,7 +5434,7 @@ function toggleVoiceFirstMode() {
     button.setAttribute("aria-pressed", String(voiceFirstMode));
   });
   setVoiceStatus(voiceFirstMode ? "voice-first" : "standby");
-  setVoiceResponse(voiceFirstMode ? "Voice-first mode is on. Nexus will listen after each response when the browser allows it, and will read responses aloud." : "Voice-first mode is off.", voiceFirstMode);
+  setVoiceResponse(voiceFirstMode ? "Hey AgriNexus mode is on. Say Hey AgriNexus, then tell me what you need. I will speak back and keep listening when the browser allows it." : "Hey AgriNexus mode is off.", voiceFirstMode);
   if (voiceFirstMode) startVoiceListening();
 }
 
@@ -5575,13 +5575,45 @@ function refreshMicSupport() {
   if (voiceFirstButton) {
     voiceFirstButton.classList.toggle("primary", voiceFirstMode);
     voiceFirstButton.setAttribute("aria-pressed", String(voiceFirstMode));
+    voiceFirstButton.textContent = voiceFirstMode ? "Hey AgriNexus: On" : "Hey AgriNexus: Off";
   }
+}
+
+function normalizedWakeText(command) {
+  return String(command || "")
+    .toLowerCase()
+    .replace(/[.,!?;:"'()[\]{}]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function isWakePhraseOnly(command) {
+  const normalized = normalizedWakeText(command);
+  if (!normalized) return false;
+  const wakePhrases = [
+    "hey agrinexus", "agri nexus", "agrinexus", "hey nexus", "nexus",
+    "hey jarvis", "jarvis", "coach",
+    "bonjour agrinexus", "salut agrinexus", "bonjour nexus",
+    "habari agrinexus", "hujambo agrinexus", "habari nexus",
+    "مرحبا اغرينكسوس", "يا اغرينكسوس", "اغرينكسوس", "نيكسس"
+  ];
+  return wakePhrases.includes(normalized);
 }
 
 function cleanWakeCommand(command) {
   return String(command || "")
-    .replace(/^\s*(hey\s+)?(nexus|jarvis|agrinexus|coach)\s*[,:\-]?\s*/i, "")
+    .replace(/^\s*(hey\s+)?(nexus|jarvis|agrinexus|agri\s+nexus|coach)\s*[,:\-]?\s*/i, "")
+    .replace(/^\s*(bonjour|salut|habari|hujambo)\s+(nexus|agrinexus|agri\s+nexus)\s*[,:\-]?\s*/i, "")
+    .replace(/^\s*(مرحبا|يا)?\s*(اغرينكسوس|نيكسس)\s*[,:\-]?\s*/i, "")
     .trim();
+}
+
+function enableHeyAgriNexusMode() {
+  voiceFirstMode = true;
+  voiceAutoRestart = true;
+  voiceStopRequested = false;
+  localStorage.setItem("agrinexusVoiceFirst", "on");
+  refreshMicSupport();
 }
 
 function setCommandInputs(command) {
@@ -5670,9 +5702,17 @@ function commandGoal(command) {
 
 async function handleVoiceCommand(rawCommand) {
   if (!data) return setVoiceResponse("Sign in first, then I can operate the platform.");
-  const command = cleanWakeCommand(normalizeLocalizedVoiceCommand(rawCommand));
+  const localizedCommand = normalizeLocalizedVoiceCommand(rawCommand);
+  const wakeOnly = isWakePhraseOnly(localizedCommand);
+  const command = cleanWakeCommand(localizedCommand);
   const lower = command.toLowerCase();
-  if (!lower) return setVoiceResponse("Give me a command, and I will route it.");
+  if (!lower && wakeOnly) {
+    openAskNexus();
+    enableHeyAgriNexusMode();
+    setVoiceResponse("I'm here. Tell me what you want to do, like open telehealth, apply for a job, contact a buyer, run a drone scan, or check live engines.", true);
+    return;
+  }
+  if (!lower) return setVoiceResponse("Give me a command, and I will route it.", true);
 
   if (!$("#workflowModal").classList.contains("hidden")) {
     if (lower === "read" || lower.includes("read this") || lower.includes("read workflow") || lower.includes("repeat")) {
@@ -6093,7 +6133,7 @@ function startVoiceListening() {
   voiceRecognition.onstart = () => {
     setVoiceStatus("listening");
     const status = $("#globalMicStatus");
-    if (status) status.textContent = `Listening in ${voiceLanguageName()} (${voiceLocale()}). Say a command like "Nexus, start telehealth intake."`;
+    if (status) status.textContent = `Listening in ${voiceLanguageName()} (${voiceLocale()}). Say "Hey AgriNexus" or ask for a workflow like "open telehealth."`;
     refreshMicSupport();
   };
   voiceRecognition.onerror = event => {
