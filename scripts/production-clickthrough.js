@@ -147,7 +147,9 @@ assert(app.includes("sessionBriefingPanel"), "Frontend must render the session b
 assert(server.includes("function assistantBehaviorModel"), "Backend needs a non-robotic behavior model");
 assert(server.includes("function humanizeAgentResult"), "Agent command responses must be shaped by the behavior model");
 assert(server.includes("conversation.behavior_model"), "Voice agent must explain its behavior model");
-assert(app.includes("behaviorModel.tone"), "Dashboard must render behavior model tone");
+assert(server.includes("lowTechBehaviors"), "Behavior model must explicitly support low-tech users");
+assert(server.includes("voice-first, one-step-at-a-time"), "Behavior model must be voice-first and step-by-step");
+assert(app.includes("behaviorModel.interactionStyle"), "Dashboard must render the behavior interaction style");
 assert(html.includes("Conversation-first guide"), "Dashboard should present AgriNexus as conversation-first");
 assert(app.includes("function voicePhrase"), "Session prompts should be sample phrases instead of extra buttons");
 assert(server.includes("conversation.progress_summary"), "Voice agent must summarize user progress");

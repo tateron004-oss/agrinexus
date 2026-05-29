@@ -3235,7 +3235,7 @@ function render() {
     `<div><strong>${translateText(sessionBriefing.title || "Welcome back")}</strong><span>${translateText(sessionBriefing.message || "Ask AgriNexus what to do next.")}</span></div>`,
     `<div><strong>${translateText("Progress")}</strong><span>${translateText(sessionBriefing.progress || "No progress summary yet.")}</span></div>`,
     `<div><strong>${translateText("Assistant readiness")}</strong><span>${translateText(`${sessionBriefing.assistantReadiness?.readyCount || 0}/${sessionBriefing.assistantReadiness?.total || 10} intelligent assistant items active`)}</span></div>`,
-    `<div><strong>${translateText("Behavior")}</strong><span>${translateText(behaviorModel.tone || "warm, plain-language guide")}</span></div>`
+    `<div><strong>${translateText("Behavior")}</strong><span>${translateText(behaviorModel.interactionStyle || behaviorModel.tone || "voice-first, one-step-at-a-time guide")}</span></div>`
   ].join("");
   $("#sessionPromptPanel").innerHTML = (sessionBriefing.prompts || ["help me", "summarize my progress", "show me all 10 items"])
     .map(command => voicePhrase(command))

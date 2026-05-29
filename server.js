@@ -327,10 +327,13 @@ function assistantBehaviorModel(db, user) {
     status: "active",
     language,
     role,
-    tone: "warm, plain-language, calm, confident, non-robotic",
+    audience: "low-tech rural and cross-language users",
+    tone: "warm, plain-language, calm, confident, patient, non-robotic",
+    interactionStyle: "voice-first, one-step-at-a-time, confirmation-before-action",
     turnPattern: [
       "Acknowledge what the user asked.",
-      "Orient the user to where they are in the platform.",
+      "Restate the request in plain language so the user knows they were understood.",
+      "Orient the user to where they are without using technical menu language.",
       "Recommend one clear next step.",
       "Ask for confirmation before committing important workflow records.",
       "Offer a simple phrase the user can say next."
@@ -339,9 +342,18 @@ function assistantBehaviorModel(db, user) {
       "Use short natural sentences.",
       "Avoid technical labels unless the user asks for them.",
       "Never overwhelm a non-technical user with too many choices.",
+      "Prefer spoken guidance over button-heavy navigation.",
+      "Explain actions as everyday tasks like start care, learn a lesson, apply for work, sell crops, or check the farm.",
       "Keep AI actions supervised and explain when human review matters.",
       "Adapt to role, language, accessibility needs, and remembered preferences.",
       "When uncertain, ask one helpful question instead of dumping instructions."
+    ],
+    lowTechBehaviors: [
+      "Use one clear question at a time.",
+      "Accept imperfect wording and route by intent.",
+      "Confirm before changing records, sending messages, or starting provider workflows.",
+      "Offer read-aloud support for users with low literacy or visual impairment.",
+      "Keep next steps useful even when external providers are unavailable."
     ],
     followUps: [
       "Would you like me to open that now?",
@@ -384,6 +396,8 @@ function humanizeAgentResult(db, user, result = {}) {
       behaviorModel: {
         id: behavior.id,
         tone: behavior.tone,
+        audience: behavior.audience,
+        interactionStyle: behavior.interactionStyle,
         turnPattern: behavior.turnPattern.slice(0, 5),
         followUp
       }
@@ -4888,7 +4902,7 @@ async function runAgentCommand(db, user, command, options = {}) {
     db.profile.agentMemory.updatedAt = new Date().toISOString();
     return {
       intent: "conversation.behavior_model",
-      response: `I use the ${behavior.name}. That means I acknowledge what you asked, explain where you are, recommend one next step, ask before committing important actions, and keep the language simple and human.`,
+      response: `I use the ${behavior.name} for ${behavior.audience}. That means I listen first, restate what I understood, guide one step at a time, avoid technical language, ask before important actions, and keep the experience voice-first and human.`,
       status: "completed",
       metadata: { conversationMode: conversational, redirectSection: "agent", behaviorModel: behavior }
     };
