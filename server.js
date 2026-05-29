@@ -2268,6 +2268,8 @@ function ensureAiProfile(profile) {
   profile.agentMemory.clarificationHistory = profile.agentMemory.clarificationHistory || [];
   profile.agentMemory.activeRecovery = profile.agentMemory.activeRecovery || null;
   profile.agentMemory.recoveryHistory = profile.agentMemory.recoveryHistory || [];
+  profile.agentMemory.activeGuidedMission = profile.agentMemory.activeGuidedMission || null;
+  profile.agentMemory.guidedMissionHistory = profile.agentMemory.guidedMissionHistory || [];
   profile.agentMemory.conversationQuality = profile.agentMemory.conversationQuality || {
     turns: 0,
     openEndedAnswers: 0,
@@ -3721,13 +3723,14 @@ function commandRecord(db, user, command, result) {
   db.profile.agentCommands.unshift(record);
   db.profile.agentCommands = db.profile.agentCommands.slice(0, 30);
   const voiceMission = updateActiveVoiceMission(db, user, command, result);
+  const guidedMission = updateGuidedMissionMemory(db, user, command, result);
   logIntegration(db, {
     providerId: "openai",
     module: "AI",
     action: "agent.command",
     status: record.status === "failed" ? "failed" : "success",
     detail: `${record.intent}: ${record.response}`,
-    metadata: { commandId: record.id, command, voiceMissionId: voiceMission?.id || null }
+    metadata: { commandId: record.id, command, voiceMissionId: voiceMission?.id || null, guidedMissionId: guidedMission?.id || null }
   });
   addActivity(db.profile, `Voice command: ${record.intent} - ${record.response}`);
   return record;
@@ -4685,6 +4688,102 @@ function activeVoiceMissionBrief(db) {
   };
 }
 
+function guidedMissionChecklistFor(moduleSignal = {}) {
+  const section = moduleSignal.section || "dashboard";
+  const label = moduleSignal.module || "AgriNexus";
+  const finalStep = {
+    trade: "Create trade evidence and summarize buyer, route, payment, or drone readiness.",
+    health: "Create care evidence and summarize intake, accessibility, provider, or safety readiness.",
+    workforce: "Create workforce evidence and summarize role, application, interview, or shift readiness.",
+    learning: "Create learning evidence and summarize course, lesson, caption, or certificate progress.",
+    map: "Create map evidence and summarize route, risk, location, or field-zone readiness.",
+    integrations: "Create integration evidence and summarize provider readiness."
+  }[section] || "Create platform evidence and summarize what changed.";
+  return [
+    { id: "understand", title: "Understand the need", detail: `Confirm what the user wants from ${label}.`, status: "active" },
+    { id: "choose", title: "Choose the safest workflow", detail: "Ask one question if the request is broad or unclear.", status: "queued" },
+    { id: "confirm", title: "Confirm before action", detail: "Ask yes or no before creating records, messages, applications, care, payments, or provider actions.", status: "queued" },
+    { id: "evidence", title: "Create and explain evidence", detail: finalStep, status: "queued" }
+  ];
+}
+
+function updateGuidedMissionMemory(db, user, command, result = {}) {
+  ensureAiProfile(db.profile);
+  const memory = db.profile.agentMemory;
+  const moduleSignal = result.metadata?.moduleSignal || conversationModuleSignal(command);
+  const section = result.metadata?.redirectSection || moduleSignal.section || "dashboard";
+  const shouldStart = !memory.activeGuidedMission
+    || memory.activeGuidedMission.status === "completed"
+    || result.intent === "conversation.open_reasoning"
+    || result.intent === "conversation.clarification_started"
+    || result.intent === "conversation.voice_recovery"
+    || /\b(help me|guide me|i need|i want|can you|how do i|show me)\b/i.test(String(command || ""));
+  let mission = memory.activeGuidedMission;
+  if (shouldStart && section !== "dashboard") {
+    mission = {
+      id: crypto.randomUUID(),
+      goal: command || "Guide the user through AgriNexus.",
+      module: moduleSignal.module,
+      section,
+      status: "active",
+      steps: guidedMissionChecklistFor({ ...moduleSignal, section }),
+      turnCount: 0,
+      createdBy: user?.email || "user",
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+  }
+  if (!mission) return null;
+  mission.turnCount = Number(mission.turnCount || 0) + 1;
+  mission.lastCommand = command;
+  mission.lastIntent = result.intent;
+  mission.lastResponse = result.response;
+  mission.updatedAt = new Date().toISOString();
+  const markDone = ids => {
+    mission.steps = (mission.steps || []).map(step => ids.includes(step.id) ? { ...step, status: "done" } : step);
+  };
+  if (result.intent === "conversation.clarification_started" || result.intent === "conversation.voice_recovery") {
+    markDone(["understand"]);
+    mission.steps = mission.steps.map(step => step.id === "choose" ? { ...step, status: "active" } : step);
+  } else if (result.intent === "conversation.clarification_resolved" || result.intent === "conversation.voice_recovery_resolved" || result.status === "needs-confirmation") {
+    markDone(["understand", "choose"]);
+    mission.steps = mission.steps.map(step => step.id === "confirm" ? { ...step, status: "active" } : step);
+  } else if (result.intent === "conversation.confirmed" || result.status === "completed") {
+    markDone(["understand", "choose", "confirm"]);
+    mission.steps = mission.steps.map(step => step.id === "evidence" ? { ...step, status: result.intent === "conversation.confirmed" ? "done" : step.status } : step);
+  }
+  const done = (mission.steps || []).filter(step => step.status === "done").length;
+  mission.progress = mission.steps?.length ? Math.round((done / mission.steps.length) * 100) : 0;
+  mission.currentStep = (mission.steps || []).find(step => step.status !== "done") || (mission.steps || [])[mission.steps.length - 1] || null;
+  if (mission.progress >= 100) {
+    mission.status = "completed";
+    memory.guidedMissionHistory = [mission, ...(memory.guidedMissionHistory || [])].slice(0, 12);
+  } else {
+    mission.status = "active";
+  }
+  memory.activeGuidedMission = mission;
+  return mission;
+}
+
+function activeGuidedMissionBrief(db) {
+  const mission = db.profile.agentMemory?.activeGuidedMission;
+  if (!mission) return null;
+  const current = mission.currentStep || (mission.steps || []).find(step => step.status !== "done") || null;
+  return {
+    id: mission.id,
+    goal: mission.goal,
+    module: mission.module,
+    section: mission.section,
+    status: mission.status,
+    progress: Number(mission.progress || 0),
+    currentStep: current,
+    steps: mission.steps || [],
+    phrase: current
+      ? `Guided mission: ${mission.goal}. Current step: ${current.title}. ${current.detail}`
+      : `Guided mission: ${mission.goal}. The checklist is complete.`
+  };
+}
+
 function isVagueHelpRequest(lower) {
   const value = String(lower || "").trim();
   if (!value) return false;
@@ -5026,12 +5125,21 @@ function conversationFollowUpResponse(db, user, text, lower) {
   const recommendation = memory.lastRecommendedAction || smartNextActions(db, user).items[0] || null;
   const context = lastWorkflowContext(db.profile);
   const wantsExplanation = /\b(explain|repeat|say that again|read that|what do you mean|why|summarize that)\b/.test(lower);
-  const wantsMission = /\b(current mission|mission status|where are we|what are we doing|what step|where am i|orient me)\b/.test(lower);
+  const wantsMission = /\b(current mission|mission status|where are we|what are we doing|what step|where am i|orient me|checklist|guided mission)\b/.test(lower);
   const wantsNavigation = /\b(take me there|open that|show me|go there|go to it|where is that)\b/.test(lower);
   const wantsNext = /\b(continue|next step|do the next|run the next|start the next|do that|let's do that|lets do that|proceed)\b/.test(lower);
   if (!wantsExplanation && !wantsNavigation && !wantsNext && !wantsMission) return null;
 
   if (wantsMission) {
+    const guided = /\b(checklist|guided mission)\b/.test(lower) ? activeGuidedMissionBrief(db) : null;
+    if (guided) {
+      return {
+        intent: "conversation.guided_mission_status",
+        response: `${guided.phrase}. Progress is ${guided.progress} percent. Say continue when you are ready.`,
+        status: "completed",
+        metadata: { conversationMode: true, redirectSection: guided.section || "dashboard", guidedMission: guided }
+      };
+    }
     const brief = activeVoiceMissionBrief(db);
     return {
       intent: "conversation.voice_mission_status",

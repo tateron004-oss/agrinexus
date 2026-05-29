@@ -189,6 +189,9 @@ assert(server.includes("function continueClarification"), "Conversation brain mu
 assert(server.includes("activeClarification"), "Conversation brain must remember active clarification state");
 assert(server.includes("function continueVoiceRecovery"), "Conversation brain must recover unclear voice prompts into workflows");
 assert(server.includes("activeRecovery"), "Conversation brain must remember active voice recovery state");
+assert(server.includes("function updateGuidedMissionMemory"), "Conversation brain must keep guided mission checklist state");
+assert(server.includes("function activeGuidedMissionBrief"), "Conversation brain must explain guided checklist progress");
+assert(app.includes("Guided checklist"), "Agent UI must show guided checklist progress");
 assert(server.includes("lastRecommendedAction"), "Conversation brain must remember the last recommended next action");
 assert(server.includes("agent.conversation_brain_answered"), "Conversation brain must create audit evidence for open-ended answers");
 assert(app.includes("function isNaturalConversationCommand"), "Microphone commands should route natural speech to the conversation brain");

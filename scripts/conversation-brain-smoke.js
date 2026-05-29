@@ -117,6 +117,7 @@ async function call(route, body) {
     });
     assert(state.commandResult.intent === "conversation.clarification_started");
     assert(state.profile.agentMemory.activeClarification);
+    assert(state.profile.agentMemory.activeGuidedMission);
     assert(state.commandResult.metadata.suggestedReplies.includes("contact buyer"));
 
     state = await call("/api/agent/command", {
@@ -128,6 +129,16 @@ async function call(route, body) {
     assert(state.commandResult.intent === "conversation.clarification_resolved");
     assert(!state.profile.agentMemory.activeClarification);
     assert(state.profile.agentPendingAction);
+    assert(state.profile.agentMemory.activeGuidedMission.progress >= 50);
+
+    state = await call("/api/agent/command", {
+      command: "what is my checklist",
+      conversational: true,
+      inputMode: "voice",
+      outputMode: "voice"
+    });
+    assert(state.commandResult.intent === "conversation.guided_mission_status");
+    assert(state.commandResult.metadata.guidedMission);
 
     state = await call("/api/agent/command", {
       command: "no",
