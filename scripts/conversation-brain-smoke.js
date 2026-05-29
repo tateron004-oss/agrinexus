@@ -61,7 +61,17 @@ async function call(route, body) {
     assert(state.commandResult.metadata.redirectSection === "trade");
     assert(state.commandResult.metadata.suggestedReplies.includes("do the next step"));
     assert(state.profile.agentMemory.lastRecommendedAction);
+    assert(state.profile.agentMemory.activeVoiceMission);
     assert(state.profile.agentMemory.conversationQuality.openEndedAnswers >= 1);
+
+    state = await call("/api/agent/command", {
+      command: "where are we",
+      conversational: true,
+      inputMode: "voice",
+      outputMode: "voice"
+    });
+    assert(state.commandResult.intent === "conversation.voice_mission_status");
+    assert(state.commandResult.metadata.voiceMission);
 
     state = await call("/api/agent/command", {
       command: "do the next step",

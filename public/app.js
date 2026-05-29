@@ -2770,6 +2770,7 @@ function renderAgentCenter() {
   $("#agentMemoryPanel").innerHTML = [
     `<div><strong>Audience</strong><span>${translateText(memory.activeAudience || "government")}</span></div>`,
     `<div><strong>Mission</strong><span>${translateText(memory.activeMission || "rural transformation")}</span></div>`,
+    `<div><strong>Active voice mission</strong><span>${translateText(memory.activeVoiceMission?.goal || "No active voice mission")} ${memory.activeVoiceMission ? `- ${Number(memory.activeVoiceMission.progress || 0)}%` : ""}</span></div>`,
     `<div><strong>Conversation mode</strong><span>${translateText(memory.userModel?.preferredInteraction || "voice-first guidance")} - ${translateText(memory.userModel?.communicationStyle || "plain-language support")}</span></div>`,
     `<div><strong>Conversation learning</strong><span>${Number(memory.conversationQuality?.turns || 0)} ${translateText("turn(s)")} - ${Number(memory.conversationQuality?.openEndedAnswers || 0)} ${translateText("reasoned answer(s)")}</span></div>`,
     `<div><strong>Last goal</strong><span>${translateText(memory.lastGoal || "No goal remembered yet")}</span></div>`,
@@ -6359,6 +6360,9 @@ async function runBackendAgentCommand(command) {
       refreshVoiceForLanguageChange();
     }
     renderLiveVoiceSuggestions(result.metadata?.suggestedReplies || []);
+    if (result.metadata?.voiceMission?.phrase && $("#globalAssistantStatus")) {
+      $("#globalAssistantStatus").textContent = result.metadata.voiceMission.phrase;
+    }
     const mode = $("#jarvisMode");
     if (mode) mode.textContent = `conversation turn ${voiceConversationTurns}`;
     setVoiceResponse(result.response || "Command completed.", true);

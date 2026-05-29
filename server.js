@@ -392,6 +392,7 @@ function suggestedRepliesForResult(result = {}) {
   if (intent.includes("acknowledged")) return ["do the next step", "what should I do next", "open that"];
   if (intent.includes("workflow_outcome_summary")) return ["do the next step", "explain that", "show evidence"];
   if (intent.includes("daily_operator_briefing")) return ["do the next step", "run full mission", "open dashboard"];
+  if (intent.includes("voice_mission_status")) return ["continue", "do the next step", "take me there"];
   if (intent.includes("language_changed")) return ["continue", "what can I say", "open voice help"];
   if (intent.includes("conversation.greeting")) return ["help me get started", "open telehealth", "contact my buyer"];
   return ["do the next step", "what should I do next", "open voice help"];
@@ -2257,6 +2258,8 @@ function ensureAiProfile(profile) {
   profile.agentMemory.activeIntake = profile.agentMemory.activeIntake || null;
   profile.agentMemory.conversationalIntakes = profile.agentMemory.conversationalIntakes || [];
   profile.agentMemory.userModel = profile.agentMemory.userModel || {};
+  profile.agentMemory.activeVoiceMission = profile.agentMemory.activeVoiceMission || null;
+  profile.agentMemory.voiceMissionHistory = profile.agentMemory.voiceMissionHistory || [];
   profile.agentMemory.conversationQuality = profile.agentMemory.conversationQuality || {
     turns: 0,
     openEndedAnswers: 0,
@@ -3709,13 +3712,14 @@ function commandRecord(db, user, command, result) {
   };
   db.profile.agentCommands.unshift(record);
   db.profile.agentCommands = db.profile.agentCommands.slice(0, 30);
+  const voiceMission = updateActiveVoiceMission(db, user, command, result);
   logIntegration(db, {
     providerId: "openai",
     module: "AI",
     action: "agent.command",
     status: record.status === "failed" ? "failed" : "success",
     detail: `${record.intent}: ${record.response}`,
-    metadata: { commandId: record.id, command }
+    metadata: { commandId: record.id, command, voiceMissionId: voiceMission?.id || null }
   });
   addActivity(db.profile, `Voice command: ${record.intent} - ${record.response}`);
   return record;
@@ -4572,6 +4576,107 @@ function workflowActionToAgentAction(action = {}) {
   };
 }
 
+function buildVoiceMissionFromGoal(db, user, goal, moduleSignal = conversationModuleSignal(goal)) {
+  const smart = smartNextActions(db, user).items;
+  const primary = smart.find(item => item.section === moduleSignal.section) || smart[0] || null;
+  const steps = [];
+  if (primary) {
+    steps.push({
+      id: crypto.randomUUID(),
+      title: primary.title,
+      detail: primary.detail,
+      section: primary.section || moduleSignal.section,
+      workflow: primary.workflow || null,
+      action: primary.action || primary.ai || null,
+      status: "recommended"
+    });
+  }
+  if (moduleSignal.section === "trade") {
+    steps.push(
+      { id: crypto.randomUUID(), title: "Confirm crop or product", detail: "Make sure the farmer, crop, buyer, and route are clear.", section: "trade", workflow: "trade", action: "order", status: "queued" },
+      { id: crypto.randomUUID(), title: "Create buyer evidence", detail: "Prepare buyer update, field evidence, route risk, and payment readiness.", section: "trade", workflow: "trade", action: "buyer-contact", status: "queued" }
+    );
+  } else if (moduleSignal.section === "health") {
+    steps.push(
+      { id: crypto.randomUUID(), title: "Collect access needs", detail: "Ask language, hearing, visual, caregiver, and low-bandwidth needs.", section: "health", workflow: "health", action: "intake", status: "queued" },
+      { id: crypto.randomUUID(), title: "Prepare care handoff", detail: "Confirm consent, vitals, referral, and follow-up.", section: "health", workflow: "health", action: "careplan", status: "queued" }
+    );
+  } else if (moduleSignal.section === "workforce") {
+    steps.push(
+      { id: crypto.randomUUID(), title: "Review readiness", detail: "Check training, certificates, gaps, and best matched role.", section: "workforce", workflow: "workforce", action: "build-profile", status: "queued" },
+      { id: crypto.randomUUID(), title: "Prepare placement", detail: "Apply, schedule interview, mentor, and shift.", section: "workforce", workflow: "workforce", action: "apply-role", status: "queued" }
+    );
+  } else if (moduleSignal.section === "learning") {
+    steps.push(
+      { id: crypto.randomUUID(), title: "Choose learning support", detail: "Confirm goal, language, captions, audio, and offline needs.", section: "learning", workflow: "learning", action: "start", status: "queued" },
+      { id: crypto.randomUUID(), title: "Move to credential", detail: "Complete lesson, quiz, and certificate.", section: "learning", workflow: "learning", action: "lesson", status: "queued" }
+    );
+  } else {
+    steps.push(
+      { id: crypto.randomUUID(), title: "Choose a workspace", detail: "Open the best module and explain the next action.", section: moduleSignal.section || "dashboard", workflow: moduleSignal.section || null, action: null, status: "queued" },
+      { id: crypto.randomUUID(), title: "Create evidence", detail: "Run the confirmed workflow and summarize what happened.", section: moduleSignal.section || "dashboard", workflow: moduleSignal.section || null, action: null, status: "queued" }
+    );
+  }
+  return {
+    id: crypto.randomUUID(),
+    goal: goal || "Guide the user through AgriNexus.",
+    module: moduleSignal.module,
+    section: moduleSignal.section,
+    status: "active",
+    currentStepIndex: 0,
+    progress: 0,
+    steps: steps.slice(0, 4),
+    createdBy: user?.email || "user",
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  };
+}
+
+function updateActiveVoiceMission(db, user, command, result = {}) {
+  ensureAiProfile(db.profile);
+  const memory = db.profile.agentMemory;
+  const lower = String(command || "").toLowerCase();
+  let mission = memory.activeVoiceMission;
+  const moduleSignal = result.metadata?.moduleSignal || conversationModuleSignal(command);
+  const shouldStart = !mission || mission.status === "completed" || /\b(start|help me|guide me|i need|i want|can|how|what|sell|patient|job|training|farmer|telehealth)\b/.test(lower);
+  if (shouldStart && moduleSignal.section !== "dashboard" && result.intent !== "conversation.acknowledged") {
+    mission = buildVoiceMissionFromGoal(db, user, command, moduleSignal);
+  }
+  if (!mission) return null;
+  if (result.status === "completed" || result.intent === "conversation.confirmed") {
+    mission.steps = (mission.steps || []).map((step, index) => index === mission.currentStepIndex ? { ...step, status: "done" } : step);
+    mission.currentStepIndex = Math.min((mission.steps || []).length - 1, Number(mission.currentStepIndex || 0) + 1);
+  }
+  if (result.status === "needs-confirmation") {
+    mission.steps = (mission.steps || []).map((step, index) => index === mission.currentStepIndex ? { ...step, status: "waiting-confirmation" } : step);
+  }
+  const done = (mission.steps || []).filter(step => step.status === "done").length;
+  mission.progress = mission.steps?.length ? Math.round((done / mission.steps.length) * 100) : 0;
+  mission.status = mission.progress >= 100 ? "completed" : "active";
+  mission.updatedAt = new Date().toISOString();
+  memory.activeVoiceMission = mission;
+  if (mission.status === "completed") {
+    memory.voiceMissionHistory = [mission, ...(memory.voiceMissionHistory || [])].slice(0, 10);
+  }
+  return mission;
+}
+
+function activeVoiceMissionBrief(db) {
+  const mission = db.profile.agentMemory?.activeVoiceMission;
+  if (!mission) return null;
+  const step = mission.steps?.[mission.currentStepIndex] || mission.steps?.[0];
+  return {
+    id: mission.id,
+    goal: mission.goal,
+    module: mission.module,
+    section: mission.section,
+    status: mission.status,
+    progress: mission.progress,
+    currentStep: step || null,
+    phrase: step ? `Current mission: ${mission.goal}. Step ${Number(mission.currentStepIndex || 0) + 1}: ${step.title}. ${step.detail}` : `Current mission: ${mission.goal}.`
+  };
+}
+
 function stageAgentAction(db, command, action) {
   ensureAiProfile(db.profile);
   const pending = {
@@ -4669,9 +4774,20 @@ function conversationFollowUpResponse(db, user, text, lower) {
   const recommendation = memory.lastRecommendedAction || smartNextActions(db, user).items[0] || null;
   const context = lastWorkflowContext(db.profile);
   const wantsExplanation = /\b(explain|repeat|say that again|read that|what do you mean|why|summarize that)\b/.test(lower);
+  const wantsMission = /\b(current mission|mission status|where are we|what are we doing|what step|where am i|orient me)\b/.test(lower);
   const wantsNavigation = /\b(take me there|open that|show me|go there|go to it|where is that)\b/.test(lower);
   const wantsNext = /\b(continue|next step|do the next|run the next|start the next|do that|let's do that|lets do that|proceed)\b/.test(lower);
-  if (!wantsExplanation && !wantsNavigation && !wantsNext) return null;
+  if (!wantsExplanation && !wantsNavigation && !wantsNext && !wantsMission) return null;
+
+  if (wantsMission) {
+    const brief = activeVoiceMissionBrief(db);
+    return {
+      intent: "conversation.voice_mission_status",
+      response: brief ? `${brief.phrase}. Progress is ${brief.progress} percent. Say continue when you are ready.` : "No active voice mission is running yet. Tell me what you want to accomplish, and I will guide it.",
+      status: brief ? "completed" : "needs-input",
+      metadata: { conversationMode: true, redirectSection: brief?.section || "dashboard", voiceMission: brief }
+    };
+  }
 
   if (wantsExplanation) {
     const detail = pending
@@ -5803,7 +5919,8 @@ async function runAgentCommand(db, user, command, options = {}) {
     text = localizedWorkflow;
     lower = text.toLowerCase();
   }
-  const contextual = contextualVoiceCommand(db, text, lower);
+  const directFollowUp = /^(continue|next step|do the next|run the next|start the next|do that|let's do that|lets do that|proceed|take me there|open that|show me|go there|where are we|what step|orient me|explain that|repeat that)\b/.test(lower);
+  const contextual = directFollowUp ? null : contextualVoiceCommand(db, text, lower);
   if (contextual) {
     text = contextual;
     lower = text.toLowerCase();

@@ -182,10 +182,13 @@ assert(server.includes("function updateConversationUserModel"), "Conversation br
 assert(server.includes("function conversationFollowUpResponse"), "Conversation brain must support natural follow-up commands");
 assert(server.includes("function socialConversationResponse"), "Conversation brain must support human social turns");
 assert(server.includes("function suggestedRepliesForResult"), "Agent responses need spoken next-step suggestions");
+assert(server.includes("function updateActiveVoiceMission"), "Conversation brain must track active voice missions across turns");
+assert(server.includes("function activeVoiceMissionBrief"), "Conversation brain must explain current voice mission state");
 assert(server.includes("lastRecommendedAction"), "Conversation brain must remember the last recommended next action");
 assert(server.includes("agent.conversation_brain_answered"), "Conversation brain must create audit evidence for open-ended answers");
 assert(app.includes("function isNaturalConversationCommand"), "Microphone commands should route natural speech to the conversation brain");
 assert(app.includes("function renderLiveVoiceSuggestions"), "Voice UI must render live next-phrase suggestions");
+assert(app.includes("Active voice mission"), "Agent UI must show active voice mission progress");
 assert(app.includes("voiceRecognition.continuous = voiceFirstMode"), "Voice-first mode should keep listening across conversation turns");
 assert(app.includes("Conversation learning"), "Agent UI must show conversation learning progress");
 assert(server.includes("function moduleGreetingResponse"), "Agent needs module-specific conversational greetings");
