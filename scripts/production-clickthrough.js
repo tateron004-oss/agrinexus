@@ -149,6 +149,7 @@ assert(server.includes("function humanizeAgentResult"), "Agent command responses
 assert(server.includes("conversation.behavior_model"), "Voice agent must explain its behavior model");
 assert(server.includes("function moduleGreetingResponse"), "Agent needs module-specific conversational greetings");
 assert(server.includes("trade.conversational_greeting"), "AgriTrade should greet users by name and speak as a module");
+assert(server.includes("trade.module_introduction"), "AgriTrade should explain the platform conversationally");
 assert(server.includes("lowTechBehaviors"), "Behavior model must explicitly support low-tech users");
 assert(server.includes("voice-first, one-step-at-a-time"), "Behavior model must be voice-first and step-by-step");
 assert(app.includes("behaviorModel.interactionStyle"), "Dashboard must render the behavior interaction style");

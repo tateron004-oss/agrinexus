@@ -588,6 +588,10 @@ async function call(path, body) {
   assert(agritradeGreeting.commandResult.response.includes("Hello Ron"));
   assert(agritradeGreeting.commandResult.metadata.redirectSection === "trade");
   assert(agritradeGreeting.profile.agentMemory.userName === "Ron");
+  const agritradeIntro = await call("/api/agent/command", { command: "Hey AgriTrade tell me about the platform and what you do", conversational: true, inputMode: "voice", outputMode: "voice" });
+  assert(agritradeIntro.commandResult.intent === "trade.module_introduction");
+  assert(agritradeIntro.commandResult.response.includes("AgriTrade helps farmers"));
+  assert(agritradeIntro.commandResult.metadata.redirectSection === "trade");
   const rememberPreference = await call("/api/agent/command", { command: "Remember that I prefer voice-first telehealth support for hearing impaired patients", conversational: true, inputMode: "voice", outputMode: "voice" });
   assert(rememberPreference.commandResult.intent === "memory-updated");
   assert(rememberPreference.profile.agentMemory.preferences.length >= 1);

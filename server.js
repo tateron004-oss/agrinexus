@@ -4849,7 +4849,21 @@ function extractConversationalName(text) {
 function moduleGreetingResponse(db, user, text, lower) {
   const isGreeting = /^(hi|hello|hey|good morning|good afternoon|good evening)\b/.test(lower);
   const isTradeAddressed = /\b(agritrade|agri\s*trade)\b/.test(lower);
-  if (!isGreeting || !isTradeAddressed) return null;
+  if (!isTradeAddressed) return null;
+  if (/(tell me about|what do you do|explain|describe|about the platform|about agritrade|how do you help)/.test(lower)) {
+    db.profile.agentMemory.activeModule = "AgriTrade";
+    db.profile.agentMemory.lastStatus = "agritrade-introduction";
+    db.profile.agentMemory.lastSummary = "AgriTrade explained its crop, buyer, order, wallet, logistics, drone, and market support workflows.";
+    db.profile.agentMemory.updatedAt = new Date().toISOString();
+    rememberAgentMemory(db.profile, "User asked AgriTrade to explain the platform and what it does.", { source: "module-introduction", category: "preference", confidence: 0.86 });
+    return {
+      intent: "trade.module_introduction",
+      response: "AgriTrade helps farmers and trade teams move from crop to buyer to payment. I can help you review crops, contact a buyer, create an order, check wallet payments, plan logistics, prepare export or quality records, and use drone field intelligence before selling. Tell me your crop, your buyer goal, or the field problem, and I will guide one step at a time.",
+      status: "completed",
+      metadata: { conversationMode: true, redirectSection: "trade", module: "AgriTrade" }
+    };
+  }
+  if (!isGreeting) return null;
   const extractedName = extractConversationalName(text);
   const hasActionRequest = /\b(want|need|speak|talk|contact|buyer|sell|crop|order|wallet|payment|drone|logistics|run|open|create|apply|help)\b/.test(lower);
   if (hasActionRequest && !/\b(my name is|call me)\b/.test(lower)) return null;
