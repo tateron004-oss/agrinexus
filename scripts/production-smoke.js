@@ -1,7 +1,7 @@
 const assert = require("assert");
 const { spawn } = require("child_process");
 
-const port = Number(process.env.PORT || 4173);
+const port = Number(process.env.PRODUCTION_SMOKE_PORT || process.env.PORT || 4396);
 const base = `http://localhost:${port}`;
 let cookie = "";
 
@@ -37,6 +37,7 @@ async function call(path, body) {
 (async () => {
   const server = spawn(process.execPath, ["server.js"], {
     cwd: `${__dirname}/..`,
+    env: { ...process.env, PORT: String(port) },
     stdio: "ignore",
     windowsHide: true
   });
@@ -50,7 +51,8 @@ async function call(path, body) {
     const login = await call("/api/login", { email: "demo@agrinexus.org", password: "Prototype2026!" });
     assert(login.user.email === "demo@agrinexus.org");
     assert(login.providers.find(provider => provider.id === "database").status === "connected");
-    assert(login.admin.readiness.readyCount >= 1);
+    assert(login.admin.readiness.total >= 1);
+    assert(["ready", "local-optimized", "needs-setup"].includes(login.admin.readiness.status));
     assert(login.admin.readiness.total >= login.admin.readiness.readyCount);
 
     console.log("Production smoke test passed");

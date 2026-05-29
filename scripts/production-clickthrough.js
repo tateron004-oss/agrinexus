@@ -61,6 +61,31 @@ const clickTargets = [
   "workflowConfirm"
 ];
 
+function htmlAttribute(attrs, name) {
+  const match = attrs.match(new RegExp(`${name}=["']([^"']+)["']`, "i"));
+  return match ? match[1] : "";
+}
+
+function isButtonHandled(attrs) {
+  const id = htmlAttribute(attrs, "id");
+  const classNames = htmlAttribute(attrs, "class").split(/\s+/).filter(Boolean);
+  const hasDataAttribute = /(?:^|\s)data-[\w-]+=/i.test(attrs);
+  const hasInlineHandler = /(?:^|\s)on\w+=/i.test(attrs);
+  const isFormControl = /(?:^|\s)type=["'](?:submit|reset)["']/i.test(attrs);
+  const idHandled = id && (app.includes(`#${id}`) || app.includes(`"${id}"`) || app.includes(`'${id}'`));
+  const classHandled = classNames.some(className => app.includes(`.${className}`) || app.includes(className));
+  return hasDataAttribute || hasInlineHandler || isFormControl || idHandled || classHandled;
+}
+
+const allButtons = [...html.matchAll(/<button\b([\s\S]*?)>([\s\S]*?)<\/button>/gi)];
+const unhandledButtons = allButtons
+  .map(match => ({
+    attrs: match[1].replace(/\s+/g, " ").trim(),
+    label: match[2].replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim()
+  }))
+  .filter(button => !isButtonHandled(button.attrs));
+assert(unhandledButtons.length === 0, `Unhandled static buttons found: ${JSON.stringify(unhandledButtons)}`);
+
 for (const id of clickTargets) {
   assert(html.includes(`id="${id}"`), `Missing clickable control #${id}`);
   const isPresetCommand = html.includes(`id="${id}"`) && html.slice(Math.max(0, html.indexOf(`id="${id}"`) - 250), html.indexOf(`id="${id}"`) + 250).includes("data-command-preset");
