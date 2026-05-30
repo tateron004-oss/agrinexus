@@ -3449,6 +3449,60 @@ function operatorCoachSuggestions(sectionId = currentSectionId()) {
   return [command, ...base.filter(item => item !== command)].slice(0, 4);
 }
 
+function nexusPriorityActions() {
+  if (!data) return [];
+  const actions = [];
+  const readiness = data.admin?.readiness || {};
+  const automation = data.automation || {};
+  const alerts = nexusProactiveAlerts();
+  const coach = nexusOperatorCoach();
+  const providerDepth = providerActionDepthStatus();
+  if (activeAgentJourney?.next) {
+    actions.push({ score: 100, title: "Continue active journey", command: activeAgentJourney.next.command, reason: activeAgentJourney.next.label, category: "journey" });
+  }
+  if (alerts[0]) {
+    actions.push({ score: 92, title: "Address active alert", command: "what needs attention", reason: alerts[0].message, category: "alert" });
+  }
+  if ((readiness.readyCount || 0) < (readiness.total || 0)) {
+    actions.push({ score: 84, title: "Close production readiness gap", command: "run live service check", reason: `${readiness.readyCount || 0}/${readiness.total || 0} checks ready`, category: "production" });
+  }
+  if ((automation.readyCount || 0) < (automation.total || 0)) {
+    actions.push({ score: 76, title: "Review automation unlocks", command: "run performance check", reason: `${automation.readyCount || 0}/${automation.total || 5} automation unlocks ready`, category: "automation" });
+  }
+  const weakProvider = Object.entries(providerDepth).find(([, item]) => item.ready < item.total);
+  if (weakProvider) {
+    actions.push({ score: 72, title: `Improve ${weakProvider[0]} engine depth`, command: "run live service check", reason: `${weakProvider[1].ready}/${weakProvider[1].total} providers ready`, category: "provider" });
+  }
+  actions.push({ score: 64, title: "Follow operator coach", command: coach.command, reason: coach.prompt, category: coach.priority });
+  return actions
+    .sort((a, b) => b.score - a.score)
+    .filter((item, index, list) => list.findIndex(other => other.title === item.title) === index)
+    .slice(0, 5);
+}
+
+function nexusSituationalBrief() {
+  const section = currentSectionId();
+  const country = activeCountry?.();
+  const route = activeRoute?.();
+  const priorities = nexusPriorityActions();
+  const scorecard = agenticBehaviorScorecard();
+  const top = priorities[0];
+  return {
+    section,
+    country: country?.name || "selected country",
+    route: route?.name || "selected route",
+    top,
+    priorities,
+    summary: `I see ${workspaceCopy[section]?.title || section} active for ${country?.name || "the selected country"} on ${route?.name || "the selected route"}. Top priority: ${top?.title || "start a guided workflow"} because ${top?.reason || "it will create the clearest next evidence"}. Agent mode is ${scorecard.mode}; provider depth is ${scorecard.providerReady}.`
+  };
+}
+
+function explainSmartRecommendation() {
+  const brief = nexusSituationalBrief();
+  const ranked = brief.priorities.map((item, index) => `${index + 1}. ${item.title}: ${item.reason}`).join(" ");
+  return `${brief.summary} Ranked actions: ${ranked || "1. Ask Nexus what to do next."}`;
+}
+
 function contextualVoiceSuggestions(sectionId = currentSectionId()) {
   const mode = nexusBehaviorMode();
   const user = [
@@ -3814,7 +3868,9 @@ function jarvisInsights() {
   const latestCommand = (data.profile.agentCommands || [])[0];
   const scorecard = agenticBehaviorScorecard();
   const coach = nexusOperatorCoach();
+  const brief = nexusSituationalBrief();
   return [
+    { title: "Situational brief", detail: brief.summary, status: "ready", label: "Smart" },
     { title: "Operator coach", detail: coach.prompt, status: "ready", label: coach.priority },
     { title: "Behavior", detail: `${scorecard.mode}: ${scorecard.behavior}`, status: "ready", label: "Agentic" },
     { title: "Performance", detail: agentPerformanceState.lastLatencyMs ? `Last response completed in ${agentPerformanceState.lastLatencyMs} ms via ${agentPerformanceState.route}` : "Ready for fast acknowledgement and timed agent routing", status: agentPerformanceState.lastLatencyMs && agentPerformanceState.lastLatencyMs > 12000 ? "pending" : "ready", label: "Speed" },
@@ -7647,6 +7703,15 @@ async function handleVoiceCommand(rawCommand) {
     pendingAgentClarification = {
       original: command,
       options: [{ label: "Yes", section: currentSectionId(), command: coach.command, detail: coach.prompt }]
+    };
+    return;
+  }
+  if (lower.includes("what do you see") || lower.includes("situational brief") || lower.includes("smartest recommendation") || lower.includes("most important") || lower.includes("rank priorities")) {
+    const brief = nexusSituationalBrief();
+    setVoiceResponse(explainSmartRecommendation(), true);
+    pendingAgentClarification = {
+      original: command,
+      options: brief.priorities.slice(0, 3).map(item => ({ label: item.title, section: currentSectionId(), command: item.command, detail: item.reason }))
     };
     return;
   }

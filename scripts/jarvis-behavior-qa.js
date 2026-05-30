@@ -27,7 +27,9 @@ const requirements = [
   ["guided next-step journey", app.includes("activeAgentJourney") && app.includes("function setActiveAgentJourney") && app.includes("function runActiveAgentNextStep")],
   ["voice follow-through command", app.includes("say next step to continue") && app.includes("continue journey") && app.includes("Guided journey cleared")],
   ["operator coaching layer", app.includes("function nexusOperatorCoach") && app.includes("function operatorCoachSuggestions") && app.includes("Operator coach")],
-  ["context-aware suggested commands", app.includes("operatorCoachSuggestions(currentSectionId())") && app.includes("recommend next")]
+  ["context-aware suggested commands", app.includes("operatorCoachSuggestions(currentSectionId())") && app.includes("recommend next")],
+  ["situational intelligence brief", app.includes("function nexusSituationalBrief") && app.includes("function nexusPriorityActions") && app.includes("Situational brief")],
+  ["ranked smart recommendation", app.includes("function explainSmartRecommendation") && app.includes("rank priorities") && app.includes("Ranked actions")]
 ];
 
 const missing = requirements.filter(([, passed]) => !passed).map(([name]) => name);
