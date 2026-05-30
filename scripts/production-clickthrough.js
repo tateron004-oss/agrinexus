@@ -505,6 +505,9 @@ assert(app.includes("function conversationPlatformMode"), "Voice assistant must 
 assert(app.includes("function modeFollowUpResponse"), "Voice assistant must answer follow-ups without forcing extra buttons");
 assert(app.includes("modeContext: modeConversationContext(command)"), "Voice assistant must send mode context to backend agent reasoning");
 assert(server.includes("modeContext = options.modeContext"), "Backend agent reasoning must receive mode-aware conversation context");
+assert(server.includes("Admin conversation: I will focus on readiness"), "Local conversation fallback must stay admin-mode aware");
+assert(server.includes("Investor conversation: I will focus on impact"), "Local conversation fallback must stay investor-mode aware");
+assert(server.includes("User conversation: I will keep this simple"), "Local conversation fallback must stay user-mode aware");
 assert(app.includes("I want to sell maize"), "Nexus must route natural trade requests without button hunting");
 assert(app.includes("I need a doctor"), "Nexus must route natural telehealth requests without button hunting");
 assert(app.includes("Admin Operator"), "Nexus must adapt for Admin mode");

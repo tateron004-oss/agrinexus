@@ -5288,8 +5288,10 @@ function updateConversationUserModel(profile, command) {
   return model;
 }
 
-function localConversationalAnswer(db, user, command, moduleSignal, memories) {
+function localConversationalAnswer(db, user, command, moduleSignal, memories, options = {}) {
   const { country, route } = activeContext(db);
+  const modeContext = options.modeContext || {};
+  const platformMode = options.mode || modeContext.mode || "user";
   const memoryPreview = memories
     .slice(0, 2)
     .map(item => String(item.text || item.response || item.command || "").replace(/\s+/g, " ").trim())
@@ -5309,8 +5311,14 @@ function localConversationalAnswer(db, user, command, moduleSignal, memories) {
   };
   const base = moduleAnswers[moduleSignal.module] || `AgriNexus connects learning, workforce, telehealth, AgriTrade, drones, maps, AI, integrations, and admin readiness into one guided operating system.`;
   const next = smartNextActions(db, user).items.find(item => item.section === moduleSignal.section) || smartNextActions(db, user).items[0];
+  const modeLine = platformMode === "admin"
+    ? "Admin conversation: I will focus on readiness, users, risk, evidence, providers, and production operations."
+    : platformMode === "investor"
+      ? "Investor conversation: I will focus on impact, proof, readiness, rural value, and a clear presentation story."
+      : "User conversation: I will keep this simple, voice-first, and one step at a time.";
   db.profile.agentMemory.lastRecommendedAction = next || null;
   return [
+    modeLine,
     base,
     `Current context: ${country.name}, ${route.name}, checkpoint ${db.profile.activeCheckpoint}.`,
     memoryLine,
@@ -5376,7 +5384,7 @@ async function conversationalReasoningResponse(db, user, command, options = {}) 
       responseText = extractResponseText(payload);
       provider = "openai-conversation-brain";
     } catch (error) {
-      responseText = localConversationalAnswer(db, user, command, moduleSignal, memories);
+      responseText = localConversationalAnswer(db, user, command, moduleSignal, memories, options);
       provider = "local-after-openai-conversation-error";
       logIntegration(db, {
         providerId: "openai",
@@ -5388,7 +5396,7 @@ async function conversationalReasoningResponse(db, user, command, options = {}) 
       });
     }
   } else {
-    responseText = localConversationalAnswer(db, user, command, moduleSignal, memories);
+    responseText = localConversationalAnswer(db, user, command, moduleSignal, memories, options);
   }
   db.profile.agentMemory.conversationQuality.openEndedAnswers = Number(db.profile.agentMemory.conversationQuality.openEndedAnswers || 0) + 1;
   db.profile.agentMemory.conversationQuality.lastSignal = moduleSignal.module;
@@ -6070,9 +6078,14 @@ function continueVoiceRecovery(db, user, command) {
       metadata: { conversationMode: true, redirectSection: recovery.section || "agent" }
     };
   }
-  const route = (recovery.routes || []).find(item => lower.includes(String(item.phrase || "").toLowerCase()) || (item.keys || []).some(key => lower.includes(key)))
-    || (recovery.routes || [])[0];
-  if (!route) return null;
+  const route = (recovery.routes || []).find(item => lower.includes(String(item.phrase || "").toLowerCase()) || (item.keys || []).some(key => lower.includes(key)));
+  if (!route) {
+    db.profile.agentMemory.activeRecovery = null;
+    db.profile.agentMemory.lastStatus = "voice-recovery-released";
+    db.profile.agentMemory.lastSummary = "Voice recovery released because the user gave a different clear command.";
+    db.profile.agentMemory.updatedAt = new Date().toISOString();
+    return null;
+  }
   const completed = {
     ...recovery,
     answer: command,
@@ -7279,15 +7292,23 @@ async function runAgentCommand(db, user, command, options = {}) {
     text = localizedWorkflow;
     lower = text.toLowerCase();
   }
+  const conversational = options.conversational === true;
+  if (!text) return { intent: "empty-command", response: "Give me a command and I will route it.", status: "needs-input" };
+  if (conversational && db.profile.agentMemory.activeClarification) {
+    const clarified = continueClarification(db, user, text);
+    if (clarified) return clarified;
+  }
+  if (conversational && db.profile.agentMemory.activeRecovery) {
+    const recovered = continueVoiceRecovery(db, user, text);
+    if (recovered) return recovered;
+  }
   const directFollowUp = /^(continue|next step|do the next|run the next|start the next|do that|let's do that|lets do that|proceed|take me there|open that|show me|go there|where are we|what step|orient me|explain that|repeat that)\b/.test(lower);
   const contextual = directFollowUp ? null : contextualVoiceCommand(db, text, lower);
   if (contextual) {
     text = contextual;
     lower = text.toLowerCase();
   }
-  if (!text) return { intent: "empty-command", response: "Give me a command and I will route it.", status: "needs-input" };
   const wantsExecute = options.confirm === true || lower.includes("execute") || lower.includes("run it") || lower.includes("do it");
-  const conversational = options.conversational === true;
   const pendingAction = db.profile.agentPendingAction;
 
   if (/(complete|finish|advance).*(my\s+)?lesson|next lesson/.test(lower)) {

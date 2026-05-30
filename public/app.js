@@ -3213,16 +3213,18 @@ function conversationModeBrief(mode = conversationPlatformMode()) {
 
 function rememberConversationTurn(command = "", response = "") {
   const mode = conversationPlatformMode();
+  const cleanedCommand = String(command || "").trim();
+  const isNewCommand = cleanedCommand && cleanedCommand !== conversationModeState.lastQuestion;
   conversationModeState = {
     ...conversationModeState,
     mode,
     modeLabel: conversationPlatformLabel(mode),
-    lastTopic: command || conversationModeState.lastTopic || currentSectionId(),
-    lastQuestion: command || conversationModeState.lastQuestion || "",
+    lastTopic: cleanedCommand || conversationModeState.lastTopic || currentSectionId(),
+    lastQuestion: cleanedCommand || conversationModeState.lastQuestion || "",
     lastAnswer: response || conversationModeState.lastAnswer || "",
     lastSection: currentSectionId(),
     language: voiceLanguageName(),
-    turnCount: Number(conversationModeState.turnCount || 0) + (command || response ? 1 : 0),
+    turnCount: Number(conversationModeState.turnCount || 0) + (isNewCommand ? 1 : 0),
     updatedAt: new Date().toISOString()
   };
   localStorage.setItem("agrinexusConversationModeState", JSON.stringify(conversationModeState));
