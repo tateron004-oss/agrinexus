@@ -529,6 +529,12 @@ assert(app.includes("function nexusSmartBehaviorModel"), "Every mode needs a sma
 assert(app.includes("function nexusSmartBehaviorSummary"), "Voice assistant needs to explain smart behavior by role");
 assert(app.includes("Smart Behavior"), "Role-aware panels must expose smart behavior as an intelligence item");
 assert(app.includes("Nexus, be smart"), "Voice commands must activate smart behavior explanation");
+assert(server.includes("function jarvisProductionTenModel"), "Backend needs a Jarvis Production 10 readiness model");
+assert(app.includes("function renderJarvisProductionTen"), "Frontend needs to render Jarvis Production 10 readiness");
+assert(html.includes("jarvisProductionTenPanel"), "Agent mode needs visible Jarvis Production 10 readiness");
+assert(html.includes("adminJarvisProductionTenPanel"), "Admin mode needs visible Jarvis Production 10 readiness");
+assert(app.includes("function jarvisProductionTenSummary"), "Voice assistant needs a spoken Jarvis Production 10 summary");
+assert(app.includes("how close are we to all 10"), "Voice commands need to answer how close production is to all 10");
 assert(html.includes("adminIntelligencePanel"), "Admin mode needs a visible intelligence panel");
 assert(html.includes("investorIntelligencePanel"), "Investor mode needs a visible intelligence panel");
 assert(app.includes("user-intelligence-card"), "User mode needs a simple visible intelligence card");

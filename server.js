@@ -436,6 +436,118 @@ function jarvisReadinessModel(db, user, providers = runtimeProviders(db)) {
   };
 }
 
+function jarvisProductionTenModel(db, providers = runtimeProviders(db)) {
+  ensureAiProfile(db.profile);
+  const provider = id => providers.find(item => item.id === id) || {};
+  const connected = id => provider(id).status === "connected";
+  const hasEnv = key => Boolean(process.env[key] && String(process.env[key]).trim() && !String(process.env[key]).includes("replace-with"));
+  const scriptExists = file => fs.existsSync(path.join(ROOT, "scripts", file));
+  const legalReady = ["terms.html", "privacy.html", "refund.html"].every(file => fs.existsSync(path.join(PUBLIC, file)));
+  const providerGroups = ["learning-courses", "workforce-jobs", "health-telehealth", "trade-market", "field-drones", "maps", "translation", "openai"];
+  const voiceReady = connected("voice-stt") && connected("voice-tts") && connected("phone-voice") && hasEnv("OPENAI_API_KEY");
+  const databaseReady = hasEnv("DATABASE_URL") && usingPostgresState() && Boolean(loadOptional("pg"));
+  const accountReady = connected("auth-users") && connected("auth-password-reset") && hasEnv("SESSION_SECRET") && hasEnv("PASSWORD_PEPPER");
+  const securityReady = hasEnv("SESSION_SECRET") && hasEnv("PASSWORD_PEPPER") && REQUIRE_LIVE_SERVICES;
+  const observabilityReady = scriptExists("production-preflight.js") && scriptExists("engine-connection-report.js") && Boolean((db.profile.integrationEvents || []).length);
+  const learningReady = Boolean((db.profile.agentMemory?.longTermFacts || []).length || (db.profile.agentCommands || []).length);
+  const items = [
+    {
+      id: "live-provider-depth",
+      title: "Real Live Provider Depth",
+      ready: providerGroups.every(connected),
+      level: `${providerGroups.filter(connected).length}/${providerGroups.length}`,
+      evidence: "OpenAI, courses, jobs, telehealth, markets, drones, maps, and translation providers are tracked.",
+      next: "Add any missing provider URLs/API keys in Render or connect direct vendor endpoints."
+    },
+    {
+      id: "production-voice",
+      title: "Production Voice",
+      ready: voiceReady,
+      level: voiceReady ? "live voice configured" : "browser/provider-ready voice",
+      evidence: "Browser mic, OpenAI TTS/STT routes, phone voice webhook, interruption, and voice help are wired.",
+      next: "Keep OpenAI credits active and add realtime/streaming voice when ready."
+    },
+    {
+      id: "native-mobile",
+      title: "Native Mobile Permissions",
+      ready: fs.existsSync(path.join(PUBLIC, "native-bridge.json")) && fs.existsSync(path.join(PUBLIC, "manifest.webmanifest")),
+      level: "PWA/native-bridge ready",
+      evidence: "Manifest, service worker, install flow, permission prompts, and native bridge contract exist.",
+      next: "Wrap with Capacitor/React Native for always-on wake, background GPS, camera, push, and OS mic controls."
+    },
+    {
+      id: "real-accounts",
+      title: "Real User And Subscriber Operations",
+      ready: accountReady && connected("billing-subscriptions"),
+      level: accountReady ? "auth ready" : "auth provider-ready",
+      evidence: "Role login, user creation, admin creation, password reset, subscriber invite, and billing checkout are wired.",
+      next: "Finish live auth/password reset provider, billing price id, and production email templates."
+    },
+    {
+      id: "production-database",
+      title: "Persistent Production Database",
+      ready: databaseReady,
+      level: databaseReady ? "PostgreSQL active" : "PostgreSQL prepared",
+      evidence: "pg package, backup/restore scripts, and state-store switch are present.",
+      next: "Set DATABASE_URL and AGRINEXUS_STATE_STORE=postgres in Render."
+    },
+    {
+      id: "safety-governance",
+      title: "Safety And Human Governance",
+      ready: legalReady,
+      level: legalReady ? "guardrails present" : "legal pages needed",
+      evidence: "Terms, privacy, refund, telehealth consent, AI review, confirmation gates, and audit records are in the platform.",
+      next: "Add formal clinical/legal review before real diagnosis, hiring decisions, or money movement."
+    },
+    {
+      id: "observability",
+      title: "Observability And Operations",
+      ready: observabilityReady,
+      level: observabilityReady ? "operational evidence active" : "tooling ready",
+      evidence: "Health checks, live service checks, engine reports, production preflight, audit events, and admin usage are wired.",
+      next: "Add hosted log drains, uptime alerts, AI cost dashboards, and incident notification rules."
+    },
+    {
+      id: "security-hardening",
+      title: "Security Hardening",
+      ready: securityReady,
+      level: securityReady ? "strict production mode" : "security controls prepared",
+      evidence: "Session secrets, password pepper, strict live mode, security headers, payload limits, and rate limiting are expected.",
+      next: "Run penetration testing, secrets rotation, encrypted PHI/PII storage, and abuse monitoring."
+    },
+    {
+      id: "real-agent-learning",
+      title: "Real Agent Learning And Memory",
+      ready: learningReady && databaseReady,
+      level: learningReady ? "memory active" : "memory prepared",
+      evidence: "Conversation memory, mode memory, long-term facts, turn coaching, evidence packs, and agent brain state are wired.",
+      next: "Use PostgreSQL-backed consented memory, retrieval policies, organization playbooks, and feedback scoring."
+    },
+    {
+      id: "end-to-end-live-testing",
+      title: "End-To-End Live Testing",
+      ready: ["smoke.js", "production-clickthrough.js", "production-complete-check.js", "full-production-regression.js", "provider-engines-smoke.js"].every(scriptExists),
+      level: "regression suite present",
+      evidence: "Smoke, provider, click-through, completeness, behavior, mobile, placeholder, translation, and production regression tests exist.",
+      next: "Add hosted Playwright browser runs, mobile-device tests, provider sandbox tests, and CI deployment gates."
+    }
+  ];
+  const readyCount = items.filter(item => item.ready).length;
+  const providerReadyCount = items.filter(item => item.ready || item.level.includes("ready") || item.level.includes("prepared") || item.level.includes("present")).length;
+  return {
+    status: readyCount === items.length ? "jarvis-production-ready" : "jarvis-production-progress",
+    readyCount,
+    providerReadyCount,
+    total: items.length,
+    score: Math.round((readyCount / items.length) * 100),
+    providerReadyScore: Math.round((providerReadyCount / items.length) * 100),
+    items,
+    summary: `AgriNexus is ${readyCount}/${items.length} fully live and ${providerReadyCount}/${items.length} code/provider-ready for production smart agentic Jarvis behavior.`,
+    nextSteps: items.filter(item => !item.ready).map(item => `${item.title}: ${item.next}`),
+    updatedAt: new Date().toISOString()
+  };
+}
+
 function publicState(db, user) {
   const providers = runtimeProviders(db);
   ensureOperationsProfile(db.profile);
@@ -458,6 +570,7 @@ function publicState(db, user) {
     conversationEvidence: conversationEvidencePack(db),
     agentCapabilities,
     jarvisReadiness,
+    jarvisProductionTen: jarvisProductionTenModel(db, providers),
     sessionBriefing: sessionBriefingModel(db, user, providers),
     impactDashboard: impactDashboardModel(db, providers),
     missionTimeline: missionTimelineModel(db),

@@ -25,6 +25,7 @@ const items = [
   ["Hosted deployment hardening", ["render.yaml", "AGRINEXUS_REQUIRE_LIVE_SERVICES", "/api/healthz", "production:validate-env"]],
   ["Real provider data", ["LEARNING_COURSE_WEBHOOK_URL", "WORKFORCE_JOB_WEBHOOK_URL", "HEALTH_TELEHEALTH_WEBHOOK_URL", "TRADE_MARKET_WEBHOOK_URL"]],
   ["Investor/product polish", ["productionCompleteness", "AgriNexus Live Status", "jarvisDock", "capabilityMatrixPanel"]],
+  ["Jarvis production 10", ["function jarvisProductionTenModel", "jarvisProductionTen", "Real Live Provider Depth", "Production Voice", "Native Mobile Permissions", "Real Agent Learning And Memory"]],
   ["10 production workstreams", ["productionOperationsPlan", "/api/production/operations-plan", "productionOperationsPlan", "Stable Hosted Data", "Voice Layer"]]
 ];
 

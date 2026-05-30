@@ -3076,6 +3076,7 @@ function renderAgentCenter() {
       `<div><strong>${translateText("Situational read")}</strong><span>${translateText(intelligence.summary)}</span></div>`
     ].join("");
   }
+  renderJarvisProductionTen("jarvisProduction");
   renderModeIntelligence("investor", "investor");
   if ($("#aiOrchestrationPanel")) {
     $("#aiOrchestrationPanel").innerHTML = latestOrchestration
@@ -3818,6 +3819,38 @@ function renderModeIntelligence(prefix, mode = experienceMode) {
       `<div><strong>${translateText("Intelligence read")}</strong><span>${translateText(snapshot.summary)}</span></div>`
     ].join("");
   }
+}
+
+function renderJarvisProductionTen(prefix = "jarvisProduction") {
+  const model = data?.jarvisProductionTen || { readyCount: 0, providerReadyCount: 0, total: 10, items: [], nextSteps: [] };
+  const panel = $(`#${prefix}TenPanel`);
+  const nextPanel = $(`#${prefix}NextPanel`);
+  const score = $(`#${prefix}Score`);
+  const providerScore = $(`#${prefix}ProviderScore`);
+  if (score) score.textContent = `${model.readyCount || 0}/${model.total || 10}`;
+  if (providerScore) providerScore.textContent = `${model.providerReadyCount || 0}/${model.total || 10}`;
+  if (panel) {
+    panel.innerHTML = (model.items || []).map(item => taskItem(
+      item.title,
+      `${item.level}. ${item.evidence}`,
+      item.ready ? "ready" : "pending",
+      item.ready ? "Live" : "Unlock",
+      { simpleCommand: item.ready ? "Nexus, show intelligence" : "Nexus, what is left for production" }
+    )).join("");
+  }
+  if (nextPanel) {
+    const steps = model.nextSteps?.length ? model.nextSteps : ["All 10 Jarvis production areas are live-ready."];
+    nextPanel.innerHTML = [
+      `<div><strong>${translateText("Production summary")}</strong><span>${translateText(model.summary || "Production smart agent status is loading.")}</span></div>`,
+      ...steps.slice(0, 6).map(step => `<div><strong>${translateText("Next unlock")}</strong><span>${translateText(step)}</span></div>`)
+    ].join("");
+  }
+}
+
+function jarvisProductionTenSummary() {
+  const model = data?.jarvisProductionTen || { readyCount: 0, providerReadyCount: 0, total: 10, nextSteps: [] };
+  const next = model.nextSteps?.[0] || "All 10 Jarvis production areas are live-ready.";
+  return `${model.summary || `AgriNexus is ${model.readyCount}/${model.total} fully live.`} Closest next unlock: ${next}`;
 }
 
 function updateNexusBehaviorLayer(status = "ready", detail = "") {
@@ -6428,6 +6461,7 @@ function render() {
       ${item.ready ? "" : `<small>${(item.missing || []).slice(0, 2).join(" | ")}</small>`}
     </div>
   `).join("") || "<div>No production operations plan available.</div>";
+  renderJarvisProductionTen("adminJarvisProduction");
   const liveChecks = data.profile.liveServiceChecks || [];
   $("#liveServiceCheckPanel").innerHTML = liveChecks.length
     ? liveChecks.slice(0, 2).map(report => `
@@ -8535,6 +8569,11 @@ async function handleVoiceCommand(rawCommand) {
   }
   if (lower.includes("status") || lower.includes("readiness") || lower.includes("what is left")) {
     setVoiceResponse(voiceStatusSummary(), true);
+    return;
+  }
+  if (lower.includes("production 10") || lower.includes("jarvis production") || lower.includes("full production smart") || lower.includes("what is left for production") || lower.includes("how close are we to all 10")) {
+    goSection(canOpenSection("admin") ? "admin" : "agent");
+    setVoiceResponse(jarvisProductionTenSummary(), true);
     return;
   }
   if (lower.includes("what do you remember") || lower.includes("show memory") || lower.includes("what have you learned")) {
