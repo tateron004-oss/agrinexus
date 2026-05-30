@@ -517,6 +517,12 @@ assert(app.includes("function nexusBrainTimeline"), "Nexus Brain OS needs a visi
 assert(app.includes("function nexusBrainLearningRules"), "Nexus Brain OS needs explicit learning rules");
 assert(html.includes("nexusBrainPanel"), "Agent page needs a visible all-ten Nexus Brain OS panel");
 assert(html.includes("nexusBrainTimelinePanel"), "Agent page needs a visible Nexus Brain timeline panel");
+assert(app.includes("function nexusHighIntelligenceSnapshot"), "Agent page needs a high-intelligence decision snapshot");
+assert(app.includes("function nexusHighIntelligenceSummary"), "Voice assistant needs a high-intelligence spoken summary");
+assert(html.includes("nexusIntelligencePanel"), "Agent page needs a visible live intelligence panel");
+assert(html.includes("nexusIntelligenceBriefPanel"), "Agent page needs a visible next-best-action intelligence brief");
+assert(app.includes("Decision Confidence"), "High intelligence snapshot must show decision confidence");
+assert(app.includes("Risk Radar"), "High intelligence snapshot must show risk awareness");
 assert(app.includes("Nexus, explain your brain"), "Voice commands must let Nexus explain its brain");
 assert(app.includes("Nexus, show brain timeline"), "Voice commands must let Nexus show its brain timeline");
 assert(app.includes("function modeFollowUpResponse"), "Voice assistant must answer follow-ups without forcing extra buttons");

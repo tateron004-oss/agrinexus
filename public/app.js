@@ -3016,6 +3016,7 @@ function renderAgentCenter() {
   const jarvisReadiness = data.jarvisReadiness || { readyCount: 0, total: 6, score: 0, items: [] };
   const brain = nexusBrainState(commands[0]?.command || "");
   const brainOs = nexusBrainOsModel();
+  const intelligence = nexusHighIntelligenceSnapshot();
   const latestOrchestration = (data.profile.aiOrchestrations || [])[0];
   const agentMode = $("#agentMode");
   if (!agentMode) return;
@@ -3055,6 +3056,25 @@ function renderAgentCenter() {
         <span>${translateText(item.detail || "Evidence recorded")}</span>
       </div>
     `).join("");
+  }
+  if ($("#nexusIntelligenceScore")) $("#nexusIntelligenceScore").textContent = `${intelligence.score}%`;
+  if ($("#nexusIntelligenceMode")) $("#nexusIntelligenceMode").textContent = translateText(intelligence.mode);
+  if ($("#nexusIntelligencePanel")) {
+    $("#nexusIntelligencePanel").innerHTML = intelligence.items.map(item => taskItem(
+      item.title,
+      item.evidence,
+      item.ready ? "ready" : "pending",
+      item.ready ? "Clear" : "Watch",
+      { simpleCommand: item.command }
+    )).join("");
+  }
+  if ($("#nexusIntelligenceBriefPanel")) {
+    $("#nexusIntelligenceBriefPanel").innerHTML = [
+      `<div><strong>${translateText("Recommendation")}</strong><span>${translateText(intelligence.topPriority.title)} - ${translateText(intelligence.topPriority.reason)}</span></div>`,
+      `<div><strong>${translateText("Command")}</strong><span>${translateText(`Nexus, ${intelligence.topPriority.command}`)}</span></div>`,
+      `<div><strong>${translateText("Autonomy")}</strong><span>${translateText(intelligence.autonomyLevel)}</span></div>`,
+      `<div><strong>${translateText("Situational read")}</strong><span>${translateText(intelligence.summary)}</span></div>`
+    ].join("");
   }
   if ($("#aiOrchestrationPanel")) {
     $("#aiOrchestrationPanel").innerHTML = latestOrchestration
@@ -3559,6 +3579,112 @@ function nexusBrainOsSummary() {
   const model = nexusBrainOsModel();
   const next = model.items.find(item => !item.ready) || model.items[0];
   return `Nexus Brain OS is ${model.readyCount}/${model.total} active across persistence, timeline, self-explanation, learning rules, task queue, provider feeds, native app, multilingual behavior, admin controls, and investor view. Current goal: ${model.brain.goals}. Next useful command: ${next.command}.`;
+}
+
+function nexusHighIntelligenceSnapshot() {
+  const brainOs = nexusBrainOsModel();
+  const brief = nexusSituationalBrief();
+  const scorecard = agenticBehaviorScorecard();
+  const memory = nexusDeepMemorySignals();
+  const timeline = nexusBrainTimeline();
+  const providerDepth = providerActionDepthStatus();
+  const providerTotals = Object.values(providerDepth || {}).reduce((acc, item) => {
+    acc.ready += Number(item.ready || 0);
+    acc.total += Number(item.total || 0);
+    return acc;
+  }, { ready: 0, total: 0 });
+  const confidence = Math.min(99, Math.max(55, Math.round(
+    (brainOs.readyCount / Math.max(1, brainOs.total)) * 34
+    + (Number(nexusAwarenessState.confidence || 0.58) * 28)
+    + (memory.count ? 14 : 5)
+    + (brief.priorities.length ? 12 : 4)
+    + (providerTotals.total ? (providerTotals.ready / providerTotals.total) * 12 : 8)
+  )));
+  const topPriority = brief.priorities[0] || { title: "Start guided support", command: "what should I do next", reason: "Nexus needs a first user goal." };
+  const risk = brief.priorities.find(item => item.category === "provider" || item.category === "production" || item.category === "alert");
+  const language = `${voiceLanguageName()} active; commands can switch English, French, Arabic, Kiswahili, and Spanish.`;
+  const autonomyLevel = activeAgentJourney?.next
+    ? "guided autonomy with a live journey"
+    : pendingWorkflow
+      ? "confirmation-gated autonomy"
+      : providerTotals.ready < providerTotals.total
+        ? "provider-aware autonomy with safe local fallback"
+        : "live-provider autonomy with evidence tracking";
+  const items = [
+    {
+      title: "Decision Confidence",
+      evidence: `${confidence}% confidence from brain readiness, awareness, memory, priorities, and provider depth`,
+      ready: confidence >= 75,
+      command: "Nexus, explain your brain"
+    },
+    {
+      title: "Top Priority",
+      evidence: `${topPriority.title}: ${topPriority.reason}`,
+      ready: true,
+      command: `Nexus, ${topPriority.command}`
+    },
+    {
+      title: "Risk Radar",
+      evidence: risk ? `${risk.title}: ${risk.reason}` : "No critical risk detected in the active view",
+      ready: !risk,
+      command: risk ? `Nexus, ${risk.command}` : "Nexus, what needs attention"
+    },
+    {
+      title: "Memory Context",
+      evidence: `${memory.count} remembered signal(s); latest: ${memory.latest}`,
+      ready: true,
+      command: "Nexus, what do you remember"
+    },
+    {
+      title: "Evidence Awareness",
+      evidence: `${timeline.length} recent evidence event(s) across commands, missions, providers, and memory`,
+      ready: true,
+      command: "Nexus, show brain timeline"
+    },
+    {
+      title: "Autonomy Level",
+      evidence: autonomyLevel,
+      ready: true,
+      command: "Nexus, run full mission"
+    },
+    {
+      title: "Provider Depth",
+      evidence: `${providerTotals.ready}/${providerTotals.total} live/provider-ready signals`,
+      ready: providerTotals.total === 0 || providerTotals.ready >= Math.ceil(providerTotals.total * 0.6),
+      command: "Nexus, test provider engines"
+    },
+    {
+      title: "Language Intelligence",
+      evidence: language,
+      ready: true,
+      command: "Nexus, change language to French"
+    },
+    {
+      title: "Recovery Plan",
+      evidence: scorecard.behavior,
+      ready: true,
+      command: "Nexus, help me"
+    },
+    {
+      title: "Next Best Action",
+      evidence: `Run: ${topPriority.command}`,
+      ready: true,
+      command: `Nexus, ${topPriority.command}`
+    }
+  ];
+  return {
+    score: confidence,
+    mode: scorecard.mode,
+    topPriority,
+    summary: brief.summary,
+    autonomyLevel,
+    items
+  };
+}
+
+function nexusHighIntelligenceSummary() {
+  const snapshot = nexusHighIntelligenceSnapshot();
+  return `Nexus intelligence is operating at ${snapshot.score}% confidence. Top recommendation: ${snapshot.topPriority.title}, because ${snapshot.topPriority.reason}. Autonomy level: ${snapshot.autonomyLevel}. Say ${snapshot.topPriority.command} to continue.`;
 }
 
 function updateNexusBehaviorLayer(status = "ready", detail = "") {
@@ -8320,6 +8446,11 @@ async function handleVoiceCommand(rawCommand) {
   if (lower.includes("brain os") || lower.includes("all 10 brain") || lower.includes("all ten brain") || lower.includes("brain operating system") || lower.includes("show the 10") || lower.includes("show the ten")) {
     goSection("agent");
     setVoiceResponse(nexusBrainOsSummary(), true);
+    return;
+  }
+  if (lower.includes("highest intelligence") || lower.includes("high intelligence") || lower.includes("show intelligence") || lower.includes("intelligence snapshot") || lower.includes("how smart are you") || lower.includes("show decision")) {
+    goSection("agent");
+    setVoiceResponse(nexusHighIntelligenceSummary(), true);
     return;
   }
   if (lower.includes("brain timeline") || lower.includes("show brain history") || lower.includes("what have you been doing")) {
