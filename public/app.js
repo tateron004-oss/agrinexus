@@ -2259,6 +2259,94 @@ function voiceLanguageName() {
   return voiceLanguageNames[languageCode()] || "English";
 }
 
+function languageFromVoiceCommand(command) {
+  const lower = String(command || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  const languages = {
+    english: "en",
+    anglais: "en",
+    ingles: "en",
+    kiingereza: "en",
+    nigeria: "en",
+    nigerian: "en",
+    french: "fr",
+    francais: "fr",
+    frances: "fr",
+    kifaransa: "fr",
+    drc: "fr",
+    congo: "fr",
+    swahili: "sw",
+    kiswahili: "sw",
+    suajili: "sw",
+    kenya: "sw",
+    kenyan: "sw",
+    arabic: "ar",
+    arabe: "ar",
+    kiarabu: "ar",
+    egypt: "ar",
+    egyptian: "ar",
+    spanish: "es",
+    espanol: "es",
+    espanhol: "es",
+    kihispania: "es"
+  };
+  const match = lower.match(/\b(?:to|into|in|as|use|speak|talk|respond|reply|change|switch|set|translate)\s+(english|anglais|ingles|kiingereza|nigeria|nigerian|french|francais|frances|kifaransa|drc|congo|swahili|kiswahili|suajili|kenya|kenyan|arabic|arabe|kiarabu|egypt|egyptian|spanish|espanol|espanhol|kihispania)\b/);
+  if (match?.[1]) return languages[match[1]] || "";
+  return Object.entries(languages).find(([name]) => lower.includes(name))?.[1] || "";
+}
+
+function isUniversalLanguageCommand(command) {
+  const lower = String(command || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  return /\b(change|switch|set|translate|language|speak|talk|respond|reply|use)\b/.test(lower)
+    && Boolean(languageFromVoiceCommand(lower));
+}
+
+function moduleFromHelpCommand(command) {
+  const lower = String(command || "").toLowerCase();
+  if (/\b(learn|learning|course|lesson|training|certificate)\b/.test(lower)) return "learning";
+  if (/\b(work|workforce|job|role|shift|apply|skills)\b/.test(lower)) return "workforce";
+  if (/\b(health|telehealth|care|patient|provider|intake)\b/.test(lower)) return "health";
+  if (/\b(trade|agritrade|crop|buyer|order|wallet|drone|farm)\b/.test(lower)) return "trade";
+  if (/\b(map|route|facility|country|location|risk)\b/.test(lower)) return "map";
+  if (/\b(ai|agent|nexus|assistant|voice|command)\b/.test(lower)) return "agent";
+  if (/\b(integration|provider|engine|live service)\b/.test(lower)) return "integrations";
+  if (/\b(admin|readiness|health check|subscriber)\b/.test(lower)) return "admin";
+  return currentSectionId();
+}
+
+function moduleUseExplanation(moduleId) {
+  const explanations = {
+    dashboard: "The dashboard is your starting point. Use the big buttons to talk to Nexus, learn, find work, get health help, sell crops, open the map, or ask AI for guidance.",
+    learning: "Learning helps you start a course, finish a lesson, make captions, create audio support, take quizzes, and issue certificates. Say start a course, finish lesson, make captions, or get certificate.",
+    workforce: "Workforce helps you find jobs, apply for a role, check skill gaps, schedule interviews, plan shifts, and build a worker profile. Say find jobs, apply for job, check skills, or plan shift.",
+    health: "Telehealth helps with intake, provider support, regional risk checks, accessibility support, referrals, vitals, and follow-up. Say start intake, talk to provider, check region, or accessibility help.",
+    trade: "AgriTrade helps farmers move crops to buyers. It can contact buyers, create orders, track routes, prepare wallet and logistics records, and run drone field intelligence. Say contact buyer, create order, track route, or scan farm.",
+    map: "Map and AI shows countries, routes, facilities, risk layers, field evidence, and route intelligence. Say check route, find facility, explain map, or track my route in real time.",
+    agent: "AI Help is the conversation layer. Ask Nexus questions, request a plan, ask what to do next, change language, or have the response read aloud.",
+    integrations: "Integrations checks live engines, provider status, AI, voice, translation, maps, billing, and communication services. Say test live engines or run live service check.",
+    admin: "Admin is for platform operators. It checks production readiness, users, health checks, service status, subscribers, and audit evidence."
+  };
+  return explanations[moduleId] || explanations.dashboard;
+}
+
+async function changeLanguageByVoice(command) {
+  const language = languageFromVoiceCommand(command);
+  if (!language) {
+    setVoiceResponse("I can change language to English, French, Kiswahili, Arabic, or Spanish. Tell me which language you want.", true);
+    return;
+  }
+  try {
+    const previousLanguage = languageCode();
+    data = await request("/api/user/language", { method: "POST", body: { language } });
+    render();
+    if (previousLanguage !== languageCode()) refreshVoiceForLanguageChange();
+    const label = voiceLanguageName();
+    setVoiceResponse(`Language changed to ${label}. The platform text and voice responses will use ${label} where translation is available.`, true);
+    toast(`Language changed to ${label}`);
+  } catch (error) {
+    setVoiceResponse(error.message || "I could not change the language.");
+  }
+}
+
 function refreshVoiceForLanguageChange() {
   const languageName = voiceLanguageName();
   const locale = voiceLocale();
@@ -6651,6 +6739,22 @@ async function handleVoiceCommand(rawCommand) {
     return;
   }
   if (!lower) return setVoiceResponse("Give me a command, and I will route it.", true);
+
+  if (isUniversalLanguageCommand(command)) {
+    await changeLanguageByVoice(command);
+    return;
+  }
+  if (/(what is|define|explain|tell me about|describe).*(agrinexus|agri nexus|nexus platform|the platform)/.test(lower) || /(agrinexus|agri nexus).*(what do you do|who are you|how do you help)/.test(lower)) {
+    goSection(experienceMode === "user" ? "dashboard" : "agent");
+    setVoiceResponse("AgriNexus is an AI operating platform for rural learning, workforce, telehealth, agriculture trade, maps, drone intelligence, translation, and provider workflows. You can talk to Nexus, change language, ask what to do next, open a service, or ask it to guide a real workflow step by step.", true);
+    return;
+  }
+  if (/(how do i use|how to use|show me how|explain how|walk me through|teach me).*(platform|learning|course|workforce|job|health|telehealth|trade|agritrade|map|ai|agent|nexus|integration|admin|function|button|section)/.test(lower)) {
+    const moduleId = moduleFromHelpCommand(command);
+    if (canOpenSection(moduleId)) goSection(moduleId);
+    setVoiceResponse(moduleUseExplanation(moduleId), true);
+    return;
+  }
 
   if (!$("#workflowModal").classList.contains("hidden")) {
     if (lower === "read" || lower.includes("read this") || lower.includes("read workflow") || lower.includes("repeat")) {
