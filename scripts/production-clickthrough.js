@@ -123,6 +123,7 @@ const endpoints = [
   "/api/onboarding/start",
   "/api/support/ticket",
   "/api/pilot/run",
+  "/api/partnership/create",
   "/api/admin/subscriber",
   "/api/engines/manifest",
   "/api/engines/render-env-plan",
@@ -138,6 +139,10 @@ assert(html.includes("voiceHelpPanel"), "Voice command help panel must be presen
 assert(app.includes("function openVoiceHelp"), "Voice command help button must open the command help panel");
 assert(app.includes("function voiceCommandButton"), "Voice command help buttons must display translated labels");
 assert(app.includes("function normalizeLocalizedVoiceCommand"), "Voice command help must normalize localized spoken commands");
+assert(html.includes("Provider Partnership Command Center"), "Integrations must include a provider partnership command center");
+assert(server.includes("function createProviderPartnership"), "Backend must create provider partnership packets before live vendors are connected");
+assert(server.includes("provider.partnership_packet_created"), "Provider partnership packets must create audit evidence");
+assert(app.includes("providerPartnershipPanel"), "Frontend must render the latest provider partnership packets");
 assert(app.includes("activeVoiceAudio"), "Voice playback needs a single active audio guard");
 assert(app.includes("function stopVoicePlayback"), "Voice playback must be cancellable before starting another response");
 assert(html.includes("productionOperationsPlan"), "Admin needs the 10 production workstream panel");

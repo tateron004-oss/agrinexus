@@ -4403,6 +4403,16 @@ function render() {
   $("#integrationEvents").innerHTML = (data.profile.integrationEvents || []).length
     ? data.profile.integrationEvents.map(event => `<div><strong>${event.providerName}</strong><span>${event.action} - ${event.status}</span></div>`).join("")
     : "<div>No integration events yet. Run a workflow or test a provider.</div>";
+  $("#providerPartnershipPanel").innerHTML = (data.profile.providerPartnerships || []).length
+    ? data.profile.providerPartnerships.slice(0, 6).map(packet => `
+      <div>
+        <strong>${translateText(packet.title)} - ${translateText(packet.status)}</strong>
+        <span>${translateText(packet.pilotOffer || packet.useCase || "Partner packet ready")}</span>
+        <small>${translateText(`Credentials: ${(packet.requiredCredentials || []).slice(0, 4).join(", ")}`)}</small>
+        <small>${translateText(`Next: ${(packet.nextSteps || [])[0] || "Review partner packet"}`)}</small>
+      </div>
+    `).join("")
+    : `<div>${translateText("No provider partnership packets yet. Create one before contacting a partner.")}</div>`;
 
   $("#environmentPanel").innerHTML = [
     row("Persistence", data.providers.find(item => item.id === "database")?.mode || "unknown"),
@@ -4423,6 +4433,18 @@ function render() {
         taskItem("Needs credentials", `${data.providers.filter(provider => provider.status === "needs-credentials").length} provider(s) need credentials`, data.providers.some(provider => provider.status === "needs-credentials") ? "blocked" : "ready", "Credentials", { workflow: "admin", action: "readiness" }),
         taskItem("Test all", integrationActionComplete("provider.test_all") ? "All-provider test event recorded" : "Run full provider test", integrationActionComplete("provider.test_all") ? "ready" : "pending", "Test", { workflow: "integrations", action: "test-all" }),
         taskItem("Latest event", (data.profile.integrationEvents || [])[0]?.detail || "No integration event yet", (data.profile.integrationEvents || []).length ? "live" : "pending", "Event", { workflow: "integrations", action: "focus-cards" })
+      ]
+    },
+    {
+      eyebrow: "Partnerships",
+      metric: `${(data.profile.providerPartnerships || []).length} packets`,
+      title: "Provider Partner Desk",
+      summary: "Create credible onboarding packets while real vendors, endpoints, and credentials are still being selected.",
+      items: [
+        taskItem("Telehealth partner", "Create provider intake, EHR, callback, and accessibility credential plan.", "ready", "Health", { workflow: "partnership", action: "telehealth" }),
+        taskItem("Workforce partner", "Create job board, employer, calendar, HRIS, and shift provider plan.", "ready", "Jobs", { workflow: "partnership", action: "workforce" }),
+        taskItem("Drone partner", "Create drone operator, field evidence, compliance, and buyer packet plan.", "ready", "Drone", { workflow: "partnership", action: "drone" }),
+        taskItem("Latest packet", (data.profile.providerPartnerships || [])[0]?.title || "No packet yet", (data.profile.providerPartnerships || []).length ? "live" : "pending", "Packet", { workflow: "partnership", action: "telehealth" })
       ]
     },
     {
@@ -5248,6 +5270,59 @@ function workflowConfig(workflow, action, element) {
         { title: "Provider cards", detail: `${data.providers.length} provider card(s) available`, status: "live", label: "Cards" },
         { title: "Latest event", detail: (data.profile.integrationEvents || [])[0]?.action || "No event yet", status: (data.profile.integrationEvents || []).length ? "ready" : "pending", label: "Audit" },
         { title: "Readiness", detail: data.admin?.readiness?.status || "unknown", status: "ready", label: `${data.admin?.readiness?.readyCount || 0}/${data.admin?.readiness?.total || 0}` }
+      ]
+    });
+  }
+  if (workflow === "partnership") {
+    const partnershipMap = {
+      telehealth: {
+        title: "Create telehealth provider packet",
+        summary: "Prepare a partner-ready packet for telehealth intake, EHR handoff, callback support, accessibility, language support, and provider credentials.",
+        provider: "Health telehealth, EHR, and notification provider evidence will be recorded."
+      },
+      workforce: {
+        title: "Create workforce provider packet",
+        summary: "Prepare a partner-ready packet for job listings, candidate profiles, interviews, HRIS, shift scheduling, mentor support, and worker notifications.",
+        provider: "Workforce jobs, calendar, HRIS, shifts, and notification provider evidence will be recorded."
+      },
+      learning: {
+        title: "Create learning catalog packet",
+        summary: "Prepare a partner-ready packet for course catalogs, progress sync, quizzes, accessibility, translated lessons, and certificates.",
+        provider: "Learning courses and certificate provider evidence will be recorded."
+      },
+      drone: {
+        title: "Create drone technology packet",
+        summary: "Prepare a partner-ready packet for drone flight planning, field evidence, crop stress, compliance, yield forecast, and buyer-readiness intelligence.",
+        provider: "Field drone, map, trade, and buyer evidence will be recorded."
+      },
+      trade: {
+        title: "Create AgriTrade provider packet",
+        summary: "Prepare a partner-ready packet for buyer networks, market pricing, logistics, cold-chain, contracts, payments, and export readiness.",
+        provider: "Market, logistics, payment, and trade provider evidence will be recorded."
+      },
+      communications: {
+        title: "Create communications provider packet",
+        summary: "Prepare a partner-ready packet for phone assistant, SMS, WhatsApp, email, caregiver alerts, buyer updates, and delivery receipts.",
+        provider: "Phone, SMS, WhatsApp, and email provider evidence will be recorded."
+      }
+    };
+    const type = partnershipMap[action] ? action : "telehealth";
+    const config = partnershipMap[type];
+    return simpleWorkflowConfig({
+      eyebrow: "Provider partnership workflow",
+      title: config.title,
+      summary: config.summary,
+      confirmLabel: "Create partner packet",
+      path: "/api/partnership/create",
+      body: { type },
+      redirectSection: "integrations",
+      success: "Provider partnership packet created",
+      record: "Partner packet, credential list, outreach questions, next steps, provider audit event, and activity feed evidence",
+      provider: config.provider,
+      checklist: [
+        { title: "Pilot offer", detail: "Creates a funder-ready pilot offer that can be discussed with real providers.", status: "ready", label: "Pilot" },
+        { title: "Credential list", detail: "Lists the exact environment values or endpoints needed later.", status: "ready", label: "Keys" },
+        { title: "Partner questions", detail: "Creates plain-language questions for provider discovery calls.", status: "ready", label: "Outreach" }
       ]
     });
   }
@@ -6216,6 +6291,17 @@ async function handleVoiceCommand(rawCommand) {
     await runExecutiveDemo();
     setVoiceResponse("Standard demo completed.", true);
     return;
+  }
+
+  if ((lower.includes("onboard") || lower.includes("create") || lower.includes("build") || lower.includes("prepare")) && (lower.includes("partner") || lower.includes("provider") || lower.includes("vendor"))) {
+    const type = lower.includes("workforce") || lower.includes("job") ? "workforce"
+      : lower.includes("learning") || lower.includes("course") || lower.includes("training") ? "learning"
+      : lower.includes("drone") || lower.includes("field") ? "drone"
+      : lower.includes("trade") || lower.includes("buyer") || lower.includes("market") || lower.includes("logistics") ? "trade"
+      : lower.includes("sms") || lower.includes("whatsapp") || lower.includes("email") || lower.includes("phone") || lower.includes("communication") ? "communications"
+      : "telehealth";
+    goSection("integrations");
+    return openWorkflowByVoice("partnership", type, "Provider partnership packet workflow is ready.");
   }
 
   if (lower.includes("build caption") || lower.includes("caption lesson") || lower.includes("learning caption")) {

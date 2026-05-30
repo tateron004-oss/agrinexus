@@ -183,6 +183,15 @@ async function call(path, body) {
   assert(localPilot.pilotResult.status === "pilot-ready");
   assert(localPilot.profile.localPilotRuns.length >= 1);
   assert(localPilot.profile.integrationEvents.some(event => event.action === "pilot.local_run_completed"));
+  const telehealthPartner = await call("/api/partnership/create", { type: "telehealth", note: "Provider partnership smoke" });
+  assert(telehealthPartner.partnershipResult.title.includes("Telehealth"));
+  assert(telehealthPartner.profile.providerPartnerships.length >= 1);
+  assert(telehealthPartner.profile.providerPartnerships[0].requiredCredentials.includes("HEALTH_TELEHEALTH_WEBHOOK_URL"));
+  assert(telehealthPartner.profile.integrationEvents.some(event => event.action === "provider.partnership_packet_created"));
+  const dronePartnerCommand = await call("/api/agent/command", { command: "Nexus, create a drone provider partnership packet", conversational: true, inputMode: "voice", outputMode: "voice" });
+  assert(dronePartnerCommand.commandResult.intent === "provider.partnership_packet_created");
+  assert(dronePartnerCommand.commandResult.metadata.type === "drone");
+  assert(dronePartnerCommand.profile.providerPartnerships[0].type === "drone");
   assert(login.automation.total === 5);
   assert(login.automation.items.some(item => item.id === "live-provider-accounts"));
   assert(login.automation.items.some(item => item.id === "scheduled-background-automation"));

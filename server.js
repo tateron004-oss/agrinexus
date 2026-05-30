@@ -3249,6 +3249,118 @@ function ensureOperationsProfile(profile) {
   profile.subscriberAccounts = profile.subscriberAccounts || [];
   profile.localPilotRuns = profile.localPilotRuns || [];
   profile.workflowIntelligence = profile.workflowIntelligence || [];
+  profile.providerPartnerships = profile.providerPartnerships || [];
+  profile.providerOutreach = profile.providerOutreach || [];
+}
+
+function providerPartnershipCatalog(type = "telehealth") {
+  const catalog = {
+    telehealth: {
+      title: "Telehealth provider partnership",
+      module: "Healthcare",
+      providerId: "health-telehealth",
+      useCase: "Accessible patient intake, care-plan review, provider callback, EHR handoff, captions, caregiver support, and low-bandwidth follow-up.",
+      requiredCredentials: ["HEALTH_TELEHEALTH_WEBHOOK_URL", "HEALTH_TELEHEALTH_API_KEY", "HEALTH_EHR_WEBHOOK_URL", "HEALTH_NOTIFICATION_API_KEY"],
+      pilotOffer: "Run a supervised 25-patient rural access pilot with voice intake, accessibility support, and provider audit evidence.",
+      nextSteps: ["Identify licensed care partner", "Confirm privacy and consent workflow", "Connect webhook endpoint", "Run sandbox patient intake", "Review care evidence pack"],
+      sampleQuestions: ["Can your team receive structured telehealth referrals?", "Do you support low-bandwidth callbacks?", "Can we send accessibility and language needs in the referral?"]
+    },
+    workforce: {
+      title: "Workforce and job network partnership",
+      module: "Workforce",
+      providerId: "workforce-jobs",
+      useCase: "Role listings, candidate readiness, interview scheduling, mentor assignment, shift planning, HRIS evidence, and worker notifications.",
+      requiredCredentials: ["WORKFORCE_JOBS_WEBHOOK_URL", "WORKFORCE_JOBS_API_KEY", "WORKFORCE_CALENDAR_WEBHOOK_URL", "WORKFORCE_HRIS_API_KEY"],
+      pilotOffer: "Run a 50-candidate placement pilot from learning readiness into job application, interview, mentor, and shift evidence.",
+      nextSteps: ["Choose employer or job-board partner", "Map role data fields", "Connect application endpoint", "Run candidate readiness test", "Review placement dashboard"],
+      sampleQuestions: ["Can we submit candidate profiles through API?", "Can interview and shift status return to AgriNexus?", "What fields are required for rural candidates?"]
+    },
+    learning: {
+      title: "Learning catalog partnership",
+      module: "Learning",
+      providerId: "learning-courses",
+      useCase: "Course catalog, lesson progress, quizzes, certificates, accommodations, translated content, and workforce readiness signals.",
+      requiredCredentials: ["LEARNING_COURSES_WEBHOOK_URL", "LEARNING_COURSES_API_KEY", "LEARNING_CERTIFICATES_WEBHOOK_URL", "LEARNING_CERTIFICATES_API_KEY"],
+      pilotOffer: "Run a 100-learner pilot with offline-ready lessons, captions, audio guides, certificates, and workforce handoff.",
+      nextSteps: ["Select LMS/course provider", "Map course and certificate schema", "Connect catalog endpoint", "Test lesson completion", "Issue sample certificate"],
+      sampleQuestions: ["Can course content be localized?", "Can certificates be verified externally?", "Can learner progress sync back to AgriNexus?"]
+    },
+    drone: {
+      title: "Drone and field intelligence partnership",
+      module: "AgriTrade",
+      providerId: "field-drones",
+      useCase: "Drone flight planning, crop stress detection, field evidence, irrigation, pest alerts, spray planning, yield forecast, compliance, and buyer-readiness packets.",
+      requiredCredentials: ["DRONE_PROVIDER_WEBHOOK_URL", "DRONE_PROVIDER_API_KEY", "FIELD_DRONE_DATA_URL", "MAP_TILE_URL"],
+      pilotOffer: "Run a 10-farm drone intelligence pilot that turns aerial evidence into trade, route, and buyer-confidence decisions.",
+      nextSteps: ["Choose licensed drone operator", "Confirm flight and data rules", "Connect field evidence endpoint", "Run sample crop scan", "Generate buyer evidence packet"],
+      sampleQuestions: ["Can drone findings be returned as structured field evidence?", "What flight permissions are needed?", "Can imagery support buyer quality checks?"]
+    },
+    trade: {
+      title: "AgriTrade buyer, market, logistics, and payment partnership",
+      module: "AgriTrade",
+      providerId: "trade-market",
+      useCase: "Buyer matching, market pricing, crop orders, route logistics, cold-chain checks, contracts, wallet payments, and export readiness.",
+      requiredCredentials: ["TRADE_MARKET_WEBHOOK_URL", "TRADE_MARKET_API_KEY", "TRADE_LOGISTICS_WEBHOOK_URL", "TRADE_PAYMENT_API_KEY"],
+      pilotOffer: "Run a crop-to-buyer pilot with order creation, route risk, buyer updates, payment evidence, and logistics handoff.",
+      nextSteps: ["Identify buyer network or marketplace", "Map crop and order fields", "Connect logistics endpoint", "Test buyer communication", "Review payment release flow"],
+      sampleQuestions: ["Can buyers receive structured crop offers?", "Can logistics status sync back?", "Can payment confirmations be recorded safely?"]
+    },
+    communications: {
+      title: "Communications provider partnership",
+      module: "Platform",
+      providerId: "sms-delivery",
+      useCase: "SMS, WhatsApp, email, phone assistant, caregiver alerts, worker notifications, buyer updates, and low-bandwidth user follow-up.",
+      requiredCredentials: ["TWILIO_ACCOUNT_SID", "TWILIO_AUTH_TOKEN", "TWILIO_PHONE_NUMBER", "EMAIL_PROVIDER_API_KEY", "WHATSAPP_PROVIDER_API_KEY"],
+      pilotOffer: "Run a communication pilot with voice assistant calls, SMS/WhatsApp alerts, email summaries, and delivery evidence.",
+      nextSteps: ["Confirm message channels", "Connect phone and SMS credentials", "Set inbound webhook", "Send pilot notification", "Review delivery audit"],
+      sampleQuestions: ["Which channels are approved in-country?", "Can inbound voice calls hit AgriNexus?", "Can delivery receipts be returned?"]
+    }
+  };
+  return catalog[type] || catalog.telehealth;
+}
+
+function createProviderPartnership(db, user, type = "telehealth", note = "") {
+  ensureOperationsProfile(db.profile);
+  const plan = providerPartnershipCatalog(type);
+  const record = {
+    id: crypto.randomUUID(),
+    type,
+    title: plan.title,
+    module: plan.module,
+    providerId: plan.providerId,
+    status: "ready-to-send",
+    useCase: plan.useCase,
+    pilotOffer: plan.pilotOffer,
+    requiredCredentials: plan.requiredCredentials,
+    nextSteps: plan.nextSteps,
+    sampleQuestions: plan.sampleQuestions,
+    note,
+    createdBy: user.email,
+    createdAt: new Date().toISOString()
+  };
+  db.profile.providerPartnerships.unshift(record);
+  db.profile.providerPartnerships = db.profile.providerPartnerships.slice(0, 30);
+  db.profile.providerOutreach.unshift({
+    id: crypto.randomUUID(),
+    partnershipId: record.id,
+    type,
+    channel: "partner-readiness",
+    status: "drafted",
+    message: `${plan.title}: ${plan.pilotOffer}`,
+    createdAt: record.createdAt
+  });
+  db.profile.providerOutreach = db.profile.providerOutreach.slice(0, 30);
+  logIntegration(db, {
+    providerId: plan.providerId,
+    module: "Integrations",
+    action: "provider.partnership_packet_created",
+    detail: `${plan.title} packet created with ${plan.requiredCredentials.length} credential item(s) and ${plan.nextSteps.length} next step(s).`,
+    metadata: { type, partnershipId: record.id, requiredCredentials: plan.requiredCredentials, nextSteps: plan.nextSteps },
+    dispatch: false
+  });
+  addUsageEvent(db.profile, { module: "Integrations", action: "provider.partnership_packet_created", detail: plan.title, user: user.email });
+  addActivity(db.profile, `${plan.title} packet created for partner outreach.`);
+  return record;
 }
 
 function addUsageEvent(profile, event) {
@@ -6646,6 +6758,23 @@ async function runAgentCommand(db, user, command, options = {}) {
     };
   }
 
+  if (/(onboard|create|build|prepare|generate).*(provider|partner|partnership|vendor)/.test(lower) || /(provider|partner|vendor).*(onboard|partnership|packet|plan)/.test(lower)) {
+    const type = lower.includes("telehealth") || lower.includes("health") || lower.includes("ehr") ? "telehealth"
+      : lower.includes("workforce") || lower.includes("job") || lower.includes("employer") ? "workforce"
+      : lower.includes("learning") || lower.includes("course") || lower.includes("training") || lower.includes("lms") ? "learning"
+      : lower.includes("drone") || lower.includes("field") ? "drone"
+      : lower.includes("trade") || lower.includes("buyer") || lower.includes("market") || lower.includes("logistics") || lower.includes("payment") ? "trade"
+      : lower.includes("sms") || lower.includes("whatsapp") || lower.includes("email") || lower.includes("phone") || lower.includes("communication") ? "communications"
+      : "telehealth";
+    const partnership = createProviderPartnership(db, user, type, text);
+    return {
+      intent: "provider.partnership_packet_created",
+      response: `${partnership.title} is ready. I created the partner packet, pilot offer, credential list, outreach questions, next steps, and audit evidence. Open Integrations to review it.`,
+      status: "completed",
+      metadata: { conversationMode: conversational, redirectSection: "integrations", partnershipId: partnership.id, type, requiredCredentials: partnership.requiredCredentials }
+    };
+  }
+
   const moduleGreeting = await moduleGreetingResponse(db, user, text, lower);
   if (moduleGreeting) return moduleGreeting;
 
@@ -6671,8 +6800,8 @@ async function runAgentCommand(db, user, command, options = {}) {
   if (conversational && db.profile.agentMemory.activeIntake) {
     const activeDomain = db.profile.agentMemory.activeIntake.domain;
     const requestedDomain = intakeDomainFromText(lower);
-    const directSystemCommand = /(summarize my progress|progress summary|where am i|how am i doing|all 10|all ten|10 items|ten items|voice demo|investor voice demo|show investors|demo mode|behavior model|what have you learned|show memory|what do you remember)/.test(lower);
-    const directWorkflowCommand = /(complete.*lesson|lesson|course|certificate|apply|job|workforce|shift|schedule|trade|buyer|crop|drone|map|route|provider|engine|vitals|telehealth|health)/.test(lower);
+    const directSystemCommand = /(summarize my progress|progress summary|where am i|how am i doing|all 10|all ten|10 items|ten items|voice demo|investor voice demo|show investors|demo mode|behavior model|what have you learned|show memory|what do you remember|provider partnership|partner packet)/.test(lower);
+    const directWorkflowCommand = /(complete.*lesson|lesson|course|certificate|apply|job|workforce|shift|schedule|trade|buyer|crop|drone|map|route|provider|partner|vendor|engine|vitals|telehealth|health)/.test(lower);
     const startsDifferentFlow = requestedDomain && requestedDomain !== activeDomain && /(start|apply|help|intake|job|workforce|training|lesson|course|certificate|trade|buyer|crop|drone|map|route|provider|engine|telehealth|health|vitals|shift|schedule)/.test(lower);
     if (startsDifferentFlow || directSystemCommand || directWorkflowCommand) {
       db.profile.agentMemory.activeIntake = null;
@@ -7951,6 +8080,16 @@ async function api(req, res, url) {
     addActivity(db.profile, detail);
     await writeDb(db);
     return send(res, 200, publicState(db, user));
+  }
+
+  if (url.pathname === "/api/partnership/create" && req.method === "POST") {
+    if (!canUse(user, "integrations")) return send(res, 403, { error: "Role does not allow provider partnership workflows" });
+    const body = await readBody(req);
+    const partnership = createProviderPartnership(db, user, String(body.type || "telehealth"), String(body.note || ""));
+    await writeDb(db);
+    const state = publicState(db, user);
+    state.partnershipResult = partnership;
+    return send(res, 200, state);
   }
 
   if (url.pathname === "/api/demo/run" && req.method === "POST") {

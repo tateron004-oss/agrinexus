@@ -111,6 +111,12 @@ const workflowActions = [
   ["ai", "route"],
   ["ai", "inspector"],
   ["integrations", "test-all"],
+  ["partnership", "telehealth"],
+  ["partnership", "workforce"],
+  ["partnership", "learning"],
+  ["partnership", "drone"],
+  ["partnership", "trade"],
+  ["partnership", "communications"],
   ["onboarding", "start"],
   ["support", "ticket"],
   ["subscriber", "invite"],
@@ -149,5 +155,7 @@ assert(app.includes('event.target.closest("[data-module-test]")'), "Module engin
 assert(app.includes('event.target.closest("[data-health]")'), "Health action buttons need delegated click handling");
 assert(app.includes('event.target.closest("[data-workforce]")'), "Workforce action buttons need delegated click handling");
 assert(app.includes('event.target.closest("[data-provider]")'), "Provider chips and OpenAI controls need delegated click handling");
+assert(html.includes("Provider Partnership Command Center"), "Integrations needs a provider partnership command center");
+assert(app.includes("/api/partnership/create"), "Provider partnership packets need a backend workflow endpoint");
 
 console.log("Workflow button audit passed");
