@@ -19,7 +19,9 @@ const requirements = [
   ["behavior QA visibility", html.includes("nexusBehaviorStatus") && styles.includes("#nexusBehaviorStatus") && app.includes("function updateNexusBehaviorLayer")],
   ["performance behavior controller", app.includes("agentPerformanceState") && app.includes("function markAgentPerformance") && app.includes("function setAgentFastAcknowledgement")],
   ["agentic behavior scorecard", app.includes("function agenticBehaviorScorecard") && app.includes("Agentic behavior check")],
-  ["agent command timeout safety", app.includes("function requestWithTimeout") && app.includes("Nexus timed out waiting for the live engine")]
+  ["agent command timeout safety", app.includes("function requestWithTimeout") && app.includes("Nexus timed out waiting for the live engine")],
+  ["no dead-air progress updates", app.includes("function beginAgentNoDeadAir") && app.includes("Still working on") && app.includes("The live engine is taking longer than normal")],
+  ["safe slow-engine fallback", app.includes("function safeAgentFallbackResponse") && app.includes("I kept the app responsive")]
 ];
 
 const missing = requirements.filter(([, passed]) => !passed).map(([name]) => name);

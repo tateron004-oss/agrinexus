@@ -29,6 +29,7 @@ let agentPerformanceState = {
   status: "ready",
   route: "idle"
 };
+let agentProgressTimers = [];
 const accessibilityPrefs = JSON.parse(localStorage.getItem("agrinexusAccessibility") || "{}");
 const originalTextNodes = new WeakMap();
 let deferredInstallPrompt = null;
@@ -3203,12 +3204,14 @@ function markAgentPerformance(stage, detail = "") {
     if (detail) agentPerformanceState.route = detail;
   }
   if (stage === "completed") {
+    clearAgentProgressTimers();
     agentPerformanceState.completedAt = now;
     agentPerformanceState.lastLatencyMs = Math.max(0, Math.round(now - (agentPerformanceState.startedAt || now)));
     agentPerformanceState.status = "ready";
     if (detail) agentPerformanceState.route = detail;
   }
   if (stage === "failed") {
+    clearAgentProgressTimers();
     agentPerformanceState.completedAt = now;
     agentPerformanceState.lastLatencyMs = Math.max(0, Math.round(now - (agentPerformanceState.startedAt || now)));
     agentPerformanceState.status = "needs-clarity";
@@ -3228,6 +3231,42 @@ function setAgentFastAcknowledgement(command) {
   const transcript = $("#voiceTranscript");
   if (transcript) transcript.textContent = translateText(message);
   updateNexusBehaviorLayer("thinking", message);
+}
+
+function clearAgentProgressTimers() {
+  agentProgressTimers.forEach(timer => clearTimeout(timer));
+  agentProgressTimers = [];
+}
+
+function setAgentProgressMessage(message) {
+  const translated = translateText(message);
+  const globalStatus = $("#globalAssistantStatus");
+  if (globalStatus) globalStatus.textContent = translated;
+  const outputStatus = $("#globalVoiceOutputStatus");
+  if (outputStatus) outputStatus.textContent = translated;
+  const transcript = $("#voiceTranscript");
+  if (transcript) transcript.textContent = translated;
+  updateNexusBehaviorLayer("thinking", message);
+  announce(message);
+}
+
+function beginAgentNoDeadAir(command) {
+  clearAgentProgressTimers();
+  const plainCommand = String(command || "your request").trim() || "your request";
+  agentProgressTimers = [
+    setTimeout(() => setAgentProgressMessage(`Still working on ${plainCommand}. I am checking the best workflow path now.`), 3200),
+    setTimeout(() => setAgentProgressMessage("The live engine is taking longer than normal. I am keeping the platform responsive and will use the safest local workflow if needed."), 8500),
+    setTimeout(() => setAgentProgressMessage("Still here. You can say stop to interrupt, or wait while Nexus finishes the agent response."), 14000)
+  ];
+}
+
+function safeAgentFallbackResponse(command) {
+  const text = String(command || "").toLowerCase();
+  if (/health|doctor|provider|clinic|care|telehealth/.test(text)) return "The live agent was slow, so I kept you safe: open Health, start intake, and use provider connection if credentials are live.";
+  if (/job|work|role|shift|workforce/.test(text)) return "The live agent was slow, so use Workforce: find jobs, review gaps, and apply for the matched role.";
+  if (/trade|buyer|crop|maize|route|logistics|drone/.test(text)) return "The live agent was slow, so use Agritrade: contact buyer, create order, run route intelligence, or launch drone support.";
+  if (/learn|course|lesson|training|certificate/.test(text)) return "The live agent was slow, so use Learning: start course, complete lesson, build captions, or issue certificate.";
+  return "The live agent was slow, so I kept the app responsive. Use a module button or ask Nexus again in simpler words.";
 }
 
 function agenticBehaviorScorecard() {
@@ -7637,6 +7676,7 @@ async function runBackendAgentCommand(command) {
     localStorage.setItem("agrinexusVoiceTurns", String(voiceConversationTurns));
     setVoiceStatus("thinking");
     setAgentFastAcknowledgement(command);
+    beginAgentNoDeadAir(command);
     data = await requestWithTimeout("/api/agent/command", {
       method: "POST",
       body: {
@@ -7648,6 +7688,7 @@ async function runBackendAgentCommand(command) {
         note: "Command submitted from Nexus Voice Assistant"
       }
     }, 18000);
+    clearAgentProgressTimers();
     render();
     const result = data.commandResult || {};
     if (result.metadata?.redirectSection) goSection(result.metadata.redirectSection);
@@ -7664,9 +7705,11 @@ async function runBackendAgentCommand(command) {
     updateNexusBehaviorLayer("speaking", result.response || "Command completed.");
     setVoiceResponse(result.response || "Command completed.", true);
   } catch (error) {
+    clearAgentProgressTimers();
     markAgentPerformance("failed", "agent-command-error");
     updateNexusBehaviorLayer("ready", "Nexus needs one clearer request.");
-    setVoiceResponse(error.message || "Command failed.");
+    const message = /timed out|abort/i.test(error.message || "") ? `${error.message} ${safeAgentFallbackResponse(command)}` : (error.message || "Command failed.");
+    setVoiceResponse(message, true);
   }
 }
 
