@@ -3515,6 +3515,9 @@ function renderUserWorkspace() {
   const providerReady = data.providers?.filter(provider => ["ready", "connected", "live"].includes(provider.status)).length || 0;
   const providerTotal = data.providers?.length || 0;
   const readiness = data.admin?.readiness || {};
+  const activation = data.activationGuide || {};
+  const activationGroups = activation.groups || [];
+  const nextMissing = activationGroups.find(group => group.status !== "ready");
   const languageName = voiceLanguageNames[languageCode()] || "English";
   const voiceMode = data.profile.voiceProvider === "openai" || data.providers?.some(provider => provider.id === "openai" && provider.status === "ready")
     ? "AI voice ready"
@@ -3603,6 +3606,38 @@ function renderUserWorkspace() {
           <button type="button" data-simple-command="what providers are missing">${translateText("Explain missing engines")}</button>
         </div>
       </article>
+    </section>
+    <section class="launch-wizard-panel" aria-label="${translateText("Production launch wizard")}">
+      <div class="launch-wizard-head">
+        <div>
+          <span class="eyebrow">${translateText("Launch Wizard")}</span>
+          <h3>${translateText("Make AgriNexus Live")}</h3>
+          <p>${translateText("Follow these steps when you are ready to move from a powerful working model into a hosted service with real providers.")}</p>
+        </div>
+        <strong>${translateText(`${activation.readyCount || 0}/${activation.total || 0} groups ready`)}</strong>
+      </div>
+      <div class="launch-wizard-steps">
+        ${[
+          { title: "1. Add credentials", detail: nextMissing?.missing?.[0] ? `Next missing value: ${nextMissing.missing[0]}` : "OpenAI, Twilio, maps, billing, database, and provider URLs are ready or being checked.", action: "what credentials are missing", status: nextMissing ? "pending" : "ready" },
+          { title: "2. Turn on phone permissions", detail: "Enable microphone, notifications, location, and install mode on the device that will be used in the field.", permission: "microphone", status: "ready" },
+          { title: "3. Run live provider check", detail: "Test database, provider bridge, translation, maps, billing, auth, email, SMS, and WhatsApp from the live server.", liveCheck: true, status: readiness.status === "production-ready" ? "ready" : "pending" },
+          { title: "4. Test a real user journey", detail: "Run learning, workforce, telehealth, trade, drone, map, language, and voice workflows end to end.", action: "run full mission", status: "ready" },
+          { title: "5. Review launch evidence", detail: "Use Admin or Investor mode to review readiness, audit events, evidence packets, and support records.", section: can("admin") ? "admin" : "integrations", status: "ready" }
+        ].map(step => {
+          const attrs = step.liveCheck
+            ? `id="launchWizardLiveCheckBtn"`
+            : step.permission
+              ? `data-mobile-permission="${step.permission}"`
+              : step.section
+                ? `data-simple-section="${step.section}"`
+                : `data-simple-command="${escapeHtml(step.action)}"`;
+          return `<button type="button" class="launch-step ${step.status}" ${attrs}>
+            <small>${translateText(step.status)}</small>
+            <strong>${translateText(step.title)}</strong>
+            <span>${translateText(step.detail)}</span>
+          </button>`;
+        }).join("")}
+      </div>
     </section>
     <div class="user-action-grid">
       ${actions.map(action => `<button type="button" class="user-action ${action.primary ? "primary" : ""}" data-simple-command="${escapeHtml(action.command)}">
@@ -6074,7 +6109,7 @@ function setLiveServiceCheckStatus(html) {
 async function runLiveServiceCheck(event) {
   event?.preventDefault?.();
   event?.stopPropagation?.();
-  const buttons = ["#liveServiceCheckBtn", "#liveServiceCheckFromIntegrations", "#userLiveServiceCheckBtn"].map(selector => $(selector)).filter(Boolean);
+  const buttons = ["#liveServiceCheckBtn", "#liveServiceCheckFromIntegrations", "#userLiveServiceCheckBtn", "#launchWizardLiveCheckBtn"].map(selector => $(selector)).filter(Boolean);
   buttons.forEach(button => {
     button.disabled = true;
     button.setAttribute("aria-busy", "true");
@@ -6096,7 +6131,7 @@ async function runLiveServiceCheck(event) {
     setVoiceResponse(`Live service check failed: ${message}`);
     toast(message);
   } finally {
-    ["#liveServiceCheckBtn", "#liveServiceCheckFromIntegrations", "#userLiveServiceCheckBtn"].map(selector => $(selector)).filter(Boolean).forEach(button => {
+    ["#liveServiceCheckBtn", "#liveServiceCheckFromIntegrations", "#userLiveServiceCheckBtn", "#launchWizardLiveCheckBtn"].map(selector => $(selector)).filter(Boolean).forEach(button => {
       button.disabled = false;
       button.removeAttribute("aria-busy");
       button.textContent = "Run live service check";
@@ -7380,7 +7415,7 @@ function bindStatic() {
       requestProductionMobilePermission(permissionButton.dataset.mobilePermission);
       return;
     }
-    if (event.target.closest("#userLiveServiceCheckBtn")) {
+    if (event.target.closest("#userLiveServiceCheckBtn") || event.target.closest("#launchWizardLiveCheckBtn")) {
       runLiveServiceCheck(event);
       return;
     }

@@ -524,6 +524,82 @@ a:focus-visible,
 .user-production-card .action-row {
   margin-top: auto;
 }
+.launch-wizard-panel {
+  display: grid;
+  gap: 12px;
+  padding: 18px;
+  border: 1px solid #cddfe4;
+  border-radius: 16px;
+  background:
+    linear-gradient(135deg, #ffffff, #f4fbf8 58%, #f3f8fc);
+  box-shadow: 0 16px 36px rgba(23, 50, 64, .08);
+}
+.launch-wizard-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  align-items: flex-start;
+}
+.launch-wizard-head h3 {
+  margin: 4px 0 6px;
+}
+.launch-wizard-head p {
+  margin: 0;
+  max-width: 760px;
+  color: var(--muted);
+  line-height: 1.45;
+}
+.launch-wizard-head > strong {
+  flex: 0 0 auto;
+  padding: 8px 12px;
+  border: 1px solid #bddbd6;
+  border-radius: 999px;
+  background: #ffffff;
+  color: #0e654a;
+}
+.launch-wizard-steps {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 10px;
+}
+.launch-step {
+  min-height: 150px;
+  display: grid;
+  align-content: start;
+  text-align: left;
+  background: #ffffff;
+  border-color: #d8e7eb;
+  box-shadow: 0 10px 24px rgba(23, 50, 64, .06);
+}
+.launch-step small,
+.launch-step strong,
+.launch-step span {
+  display: block;
+}
+.launch-step small {
+  width: fit-content;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: #eaf5f2;
+  color: #0e654a;
+  font-size: .72rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+.launch-step.pending small {
+  background: #fff6df;
+  color: #8a5a12;
+}
+.launch-step strong {
+  margin-top: 9px;
+  color: #173240;
+}
+.launch-step span {
+  margin-top: 6px;
+  color: var(--muted);
+  font-size: .85rem;
+  line-height: 1.35;
+}
 .user-action-grid {
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
@@ -2135,7 +2211,7 @@ body.reduced-motion *::after {
   }
 }
 @media (max-width: 980px) {
-  .login-view, .shell, .map-layout, .cards.two, .cards.three, .cards.four, .stats, .dashboard-actions, .simple-action-grid, .user-workspace-hero, .user-action-grid, .user-outcome-panel, .user-production-grid, .demo-command, .command-launch-guide, .command-launch-grid, .local-pilot-studio, .demo-storyboard, .process-board, .workspace-grid, .workspace-split, .learning-layout, .track-strip, .catalog-desk, .catalog-grid, .workforce-layout, .pipeline-steps, .health-layout, .accessibility-panel, .accessibility-actions, .voice-command, .global-assistant { grid-template-columns: 1fr; }
+  .login-view, .shell, .map-layout, .cards.two, .cards.three, .cards.four, .stats, .dashboard-actions, .simple-action-grid, .user-workspace-hero, .user-action-grid, .user-outcome-panel, .user-production-grid, .launch-wizard-steps, .demo-command, .command-launch-guide, .command-launch-grid, .local-pilot-studio, .demo-storyboard, .process-board, .workspace-grid, .workspace-split, .learning-layout, .track-strip, .catalog-desk, .catalog-grid, .workforce-layout, .pipeline-steps, .health-layout, .accessibility-panel, .accessibility-actions, .voice-command, .global-assistant { grid-template-columns: 1fr; }
   .user-intelligence-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .reasoning-steps,
   .reasoning-evidence,
@@ -2321,6 +2397,9 @@ body.reduced-motion *::after {
     padding: 12px;
   }
   .simple-home-head {
+    display: grid;
+  }
+  .launch-wizard-head {
     display: grid;
   }
   .simple-home-controls {
