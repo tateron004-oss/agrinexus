@@ -2434,6 +2434,12 @@ function goSection(sectionId, options = {}) {
     if (active) item.setAttribute("aria-current", "page");
     else item.removeAttribute("aria-current");
   });
+  $$("[data-mobile-section]").forEach(item => {
+    const active = item.dataset.mobileSection === sectionId;
+    item.classList.toggle("active", active);
+    if (active) item.setAttribute("aria-current", "page");
+    else item.removeAttribute("aria-current");
+  });
   $$(".section").forEach(section => {
     const active = section.id === sectionId || section.id === "accessibilityPanel";
     section.classList.toggle("active", section.id === sectionId);
@@ -7431,6 +7437,12 @@ function bindStatic() {
 
   $$(".nav").forEach(button => {
     button.onclick = () => goSection(button.dataset.section, { instant: true });
+  });
+  $$("[data-mobile-section]").forEach(button => {
+    button.onclick = () => goSection(button.dataset.mobileSection, { instant: true });
+  });
+  $$("[data-mobile-ask]").forEach(button => {
+    button.onclick = openAskNexus;
   });
   $("#workspaceAskBtn").onclick = openAskNexus;
   $("#accessibilityToggle").onclick = () => {

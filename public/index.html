@@ -13,7 +13,7 @@
   <link rel="icon" href="/icons/agri-nexus-192.png" type="image/png">
   <link rel="apple-touch-icon" href="/icons/agri-nexus-192.png">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-  <link rel="stylesheet" href="/styles.css?v=conversation-first-27">
+  <link rel="stylesheet" href="/styles.css?v=user-mobile-28">
 </head>
 <body>
   <a class="skip-link" href="#mainContent">Skip to main content</a>
@@ -75,6 +75,15 @@
         <button data-section="integrations" class="nav">Integrations</button>
         <button data-section="admin" class="nav">Admin</button>
         <button data-section="profile" class="nav">Profile</button>
+      </nav>
+
+      <nav id="userMobileDock" class="user-mobile-dock" aria-label="User app navigation">
+        <button type="button" data-mobile-section="dashboard" class="active">Home</button>
+        <button type="button" data-mobile-section="learning">Learn</button>
+        <button type="button" data-mobile-section="workforce">Work</button>
+        <button type="button" data-mobile-section="health">Health</button>
+        <button type="button" data-mobile-section="trade">Trade</button>
+        <button type="button" data-mobile-ask="true">Ask</button>
       </nav>
 
       <div id="workspaceBar" class="workspace-bar" aria-live="polite">
@@ -1299,6 +1308,6 @@
   <div id="toast" class="toast hidden" role="status" aria-live="polite" aria-atomic="true"></div>
   <div id="screenReaderStatus" class="sr-only" role="status" aria-live="polite" aria-atomic="true"></div>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="/app.js?v=user-mode-40"></script>
+  <script src="/app.js?v=user-mobile-41"></script>
 </body>
 </html>
