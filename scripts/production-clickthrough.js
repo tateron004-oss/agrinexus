@@ -502,6 +502,7 @@ assert(app.includes("function nexusPriorityActions"), "Jarvis effect needs ranke
 assert(app.includes("function adminIntelligenceBrief"), "Admin mode needs smart risk and readiness intelligence");
 assert(app.includes("function investorIntelligenceBrief"), "Investor mode needs smart evidence and story intelligence");
 assert(app.includes("function conversationPlatformMode"), "Voice assistant must know whether it is in user, admin, or investor conversation mode");
+assert(app.includes("function conversationMemoryForMode"), "Voice assistant must keep separate memory for user, admin, and investor conversations");
 assert(app.includes("function modeFollowUpResponse"), "Voice assistant must answer follow-ups without forcing extra buttons");
 assert(app.includes("modeContext: modeConversationContext(command)"), "Voice assistant must send mode context to backend agent reasoning");
 assert(server.includes("modeContext = options.modeContext"), "Backend agent reasoning must receive mode-aware conversation context");

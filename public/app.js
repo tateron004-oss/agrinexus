@@ -33,6 +33,7 @@ let agentProgressTimers = [];
 let pendingAgentClarification = null;
 let activeAgentJourney = null;
 let conversationModeState = JSON.parse(localStorage.getItem("agrinexusConversationModeState") || "{}");
+let conversationModeMemories = JSON.parse(localStorage.getItem("agrinexusConversationModeMemories") || "{}");
 const accessibilityPrefs = JSON.parse(localStorage.getItem("agrinexusAccessibility") || "{}");
 const originalTextNodes = new WeakMap();
 let deferredInstallPrompt = null;
@@ -3211,31 +3212,60 @@ function conversationModeBrief(mode = conversationPlatformMode()) {
   };
 }
 
-function rememberConversationTurn(command = "", response = "") {
-  const mode = conversationPlatformMode();
-  const cleanedCommand = String(command || "").trim();
-  const isNewCommand = cleanedCommand && cleanedCommand !== conversationModeState.lastQuestion;
-  conversationModeState = {
-    ...conversationModeState,
+function conversationMemoryForMode(mode = conversationPlatformMode()) {
+  const legacy = conversationModeState?.mode === mode ? conversationModeState : {};
+  return {
     mode,
     modeLabel: conversationPlatformLabel(mode),
-    lastTopic: cleanedCommand || conversationModeState.lastTopic || currentSectionId(),
-    lastQuestion: cleanedCommand || conversationModeState.lastQuestion || "",
-    lastAnswer: response || conversationModeState.lastAnswer || "",
-    lastSection: currentSectionId(),
-    language: voiceLanguageName(),
-    turnCount: Number(conversationModeState.turnCount || 0) + (isNewCommand ? 1 : 0),
-    updatedAt: new Date().toISOString()
+    lastTopic: legacy.lastTopic || "",
+    lastQuestion: legacy.lastQuestion || "",
+    lastAnswer: legacy.lastAnswer || "",
+    lastSection: legacy.lastSection || "",
+    language: legacy.language || voiceLanguageName(),
+    turnCount: Number(legacy.turnCount || 0),
+    updatedAt: legacy.updatedAt || "",
+    ...(conversationModeMemories[mode] || {})
   };
+}
+
+function saveConversationModeMemory(mode, memory) {
+  conversationModeMemories = {
+    ...conversationModeMemories,
+    [mode]: memory
+  };
+  conversationModeState = memory;
+  localStorage.setItem("agrinexusConversationModeMemories", JSON.stringify(conversationModeMemories));
   localStorage.setItem("agrinexusConversationModeState", JSON.stringify(conversationModeState));
 }
 
+function rememberConversationTurn(command = "", response = "") {
+  const mode = conversationPlatformMode();
+  const currentMemory = conversationMemoryForMode(mode);
+  const cleanedCommand = String(command || "").trim();
+  const isNewCommand = cleanedCommand && cleanedCommand !== currentMemory.lastQuestion;
+  const nextMemory = {
+    ...currentMemory,
+    mode,
+    modeLabel: conversationPlatformLabel(mode),
+    lastTopic: cleanedCommand || currentMemory.lastTopic || currentSectionId(),
+    lastQuestion: cleanedCommand || currentMemory.lastQuestion || "",
+    lastAnswer: response || currentMemory.lastAnswer || "",
+    lastSection: currentSectionId(),
+    language: voiceLanguageName(),
+    turnCount: Number(currentMemory.turnCount || 0) + (isNewCommand ? 1 : 0),
+    updatedAt: new Date().toISOString()
+  };
+  saveConversationModeMemory(mode, nextMemory);
+}
+
 function modeConversationContext(command = "") {
+  const mode = conversationPlatformMode();
   const brief = conversationModeBrief();
+  const modeMemory = conversationMemoryForMode(mode);
   const memory = data ? nexusMemoryProfile() : {};
   const readiness = data?.admin?.readiness;
   return {
-    mode: conversationPlatformMode(),
+    mode,
     modeLabel: brief.mode,
     audience: brief.audience,
     tone: brief.tone,
@@ -3245,9 +3275,14 @@ function modeConversationContext(command = "") {
     userName: userFirstName(),
     command,
     activeJourney: activeAgentJourneySummary(),
-    lastQuestion: conversationModeState.lastQuestion || "",
-    lastAnswer: conversationModeState.lastAnswer || "",
-    lastTopic: conversationModeState.lastTopic || "",
+    lastQuestion: modeMemory.lastQuestion || "",
+    lastAnswer: modeMemory.lastAnswer || "",
+    lastTopic: modeMemory.lastTopic || "",
+    modeTurnCount: modeMemory.turnCount || 0,
+    allModeSummaries: ["user", "admin", "investor"].map(item => {
+      const saved = conversationMemoryForMode(item);
+      return `${conversationPlatformLabel(item)}: ${saved.lastTopic || "ready"}`;
+    }),
     memory,
     productionReadiness: readiness ? `${readiness.readyCount || 0}/${readiness.total || 0}` : "unknown"
   };
@@ -3260,8 +3295,9 @@ function isModeFollowUpCommand(lower) {
 function modeFollowUpResponse(command = "") {
   const mode = conversationPlatformMode();
   const brief = conversationModeBrief(mode);
-  const lastAnswer = conversationModeState.lastAnswer || lastVoiceResponse || "I am ready to guide the next step.";
-  const lastTopic = conversationModeState.lastTopic || currentSectionId();
+  const modeMemory = conversationMemoryForMode(mode);
+  const lastAnswer = modeMemory.lastAnswer || lastVoiceResponse || "I am ready to guide the next step.";
+  const lastTopic = modeMemory.lastTopic || currentSectionId();
   if (mode === "admin") {
     const adminBrief = adminIntelligenceBrief();
     return `${brief.mode}: I am holding the admin context. Last topic: ${lastTopic}. ${lastAnswer} Operationally, the next best move is ${adminBrief.recommendation}. You can say run admin intelligence, run live service check, show production gaps, or take me to admin.`;
@@ -4039,8 +4075,9 @@ function jarvisInsights() {
   const adminBrief = adminIntelligenceBrief();
   const investorBrief = investorIntelligenceBrief();
   const conversationBrief = conversationModeBrief();
+  const modeMemory = conversationMemoryForMode();
   return [
-    { title: conversationBrief.mode, detail: `${conversationBrief.tone}. Context: ${conversationBrief.focus}. Last: ${conversationModeState.lastTopic || "ready for a conversation"}`, status: "ready", label: "Talk" },
+    { title: conversationBrief.mode, detail: `${conversationBrief.tone}. Context: ${conversationBrief.focus}. Last: ${modeMemory.lastTopic || "ready for a conversation"}. Turns in this mode: ${modeMemory.turnCount || 0}.`, status: "ready", label: "Talk" },
     { title: "Situational brief", detail: brief.summary, status: "ready", label: "Smart" },
     { title: "Admin intelligence", detail: `${adminBrief.topRisk} Recommendation: ${adminBrief.recommendation}`, status: adminBrief.riskCount ? "pending" : "ready", label: adminBrief.readiness },
     { title: "Investor intelligence", detail: `${investorBrief.strongestMetric}. ${investorBrief.topGap}`, status: investorBrief.topGap.includes("waiting") || investorBrief.topGap.includes("Run") ? "pending" : "ready", label: investorBrief.providerDepth },

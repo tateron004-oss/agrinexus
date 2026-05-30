@@ -33,6 +33,7 @@ const requirements = [
   ["admin intelligence brief", app.includes("function adminIntelligenceBrief") && app.includes("Admin intelligence") && app.includes("admin risk")],
   ["investor intelligence brief", app.includes("function investorIntelligenceBrief") && app.includes("Investor intelligence") && app.includes("investor story")],
   ["three-mode conversation state", app.includes("conversationModeState") && app.includes("function conversationPlatformMode") && app.includes("function modeConversationContext")],
+  ["separate conversation memory by mode", app.includes("conversationModeMemories") && app.includes("function conversationMemoryForMode") && app.includes("function saveConversationModeMemory")],
   ["user admin investor conversational modes", app.includes("User conversation") && app.includes("Admin conversation") && app.includes("Investor conversation")],
   ["mode-aware follow-up answers", app.includes("function modeFollowUpResponse") && app.includes("isModeFollowUpCommand(lower)") && app.includes("I am holding the user context")],
   ["backend conversation context", app.includes("modeContext: modeConversationContext(command)") && server.includes("modeContext = options.modeContext") && server.includes("platformMode")],
