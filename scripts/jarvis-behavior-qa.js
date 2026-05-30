@@ -29,7 +29,9 @@ const requirements = [
   ["operator coaching layer", app.includes("function nexusOperatorCoach") && app.includes("function operatorCoachSuggestions") && app.includes("Operator coach")],
   ["context-aware suggested commands", app.includes("operatorCoachSuggestions(currentSectionId())") && app.includes("recommend next")],
   ["situational intelligence brief", app.includes("function nexusSituationalBrief") && app.includes("function nexusPriorityActions") && app.includes("Situational brief")],
-  ["ranked smart recommendation", app.includes("function explainSmartRecommendation") && app.includes("rank priorities") && app.includes("Ranked actions")]
+  ["ranked smart recommendation", app.includes("function explainSmartRecommendation") && app.includes("rank priorities") && app.includes("Ranked actions")],
+  ["admin intelligence brief", app.includes("function adminIntelligenceBrief") && app.includes("Admin intelligence") && app.includes("admin risk")],
+  ["investor intelligence brief", app.includes("function investorIntelligenceBrief") && app.includes("Investor intelligence") && app.includes("investor story")]
 ];
 
 const missing = requirements.filter(([, passed]) => !passed).map(([name]) => name);

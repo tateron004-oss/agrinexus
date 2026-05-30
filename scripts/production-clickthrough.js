@@ -499,6 +499,8 @@ assert(app.includes("function nexusOperatorCoach"), "Jarvis effect needs context
 assert(app.includes("function operatorCoachSuggestions"), "Jarvis effect needs coached voice suggestions");
 assert(app.includes("function nexusSituationalBrief"), "Jarvis effect needs a situational intelligence brief");
 assert(app.includes("function nexusPriorityActions"), "Jarvis effect needs ranked priority actions");
+assert(app.includes("function adminIntelligenceBrief"), "Admin mode needs smart risk and readiness intelligence");
+assert(app.includes("function investorIntelligenceBrief"), "Investor mode needs smart evidence and story intelligence");
 assert(app.includes("I want to sell maize"), "Nexus must route natural trade requests without button hunting");
 assert(app.includes("I need a doctor"), "Nexus must route natural telehealth requests without button hunting");
 assert(app.includes("Admin Operator"), "Nexus must adapt for Admin mode");

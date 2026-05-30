@@ -3449,6 +3449,65 @@ function operatorCoachSuggestions(sectionId = currentSectionId()) {
   return [command, ...base.filter(item => item !== command)].slice(0, 4);
 }
 
+function adminIntelligenceBrief() {
+  const readiness = data?.admin?.readiness || {};
+  const modules = data?.admin?.modules || [];
+  const audit = data?.admin?.audit || [];
+  const usage = data?.admin?.usage || {};
+  const liveChecks = data?.profile?.liveServiceChecks || [];
+  const providerDepth = providerActionDepthStatus();
+  const weakProviders = Object.entries(providerDepth).filter(([, item]) => item.ready < item.total);
+  const risks = [
+    ...(readiness.readyCount < readiness.total ? [`Production readiness is ${readiness.readyCount || 0}/${readiness.total || 0}.`] : []),
+    ...(weakProviders.length ? [`${weakProviders[0][0]} provider depth is ${weakProviders[0][1].ready}/${weakProviders[0][1].total}.`] : []),
+    ...(liveChecks[0]?.readyCount < liveChecks[0]?.total ? [`Latest live service check is ${liveChecks[0].readyCount}/${liveChecks[0].total}.`] : []),
+    ...(!audit.length ? ["No admin audit events are visible yet."] : [])
+  ];
+  const healthiestModule = modules.slice().sort((a, b) => (b.records || 0) - (a.records || 0))[0];
+  return {
+    mode: "Admin intelligence",
+    readiness: `${readiness.readyCount || 0}/${readiness.total || 0}`,
+    riskCount: risks.length,
+    topRisk: risks[0] || "No critical admin risk detected.",
+    healthiestModule: healthiestModule?.name || "No module records yet",
+    usage: `${usage.totalEvents || 0} event(s)`,
+    recommendation: risks[0] ? "Run live service check, review provider gaps, and verify audit evidence before handoff." : "Export evidence, review users, and prepare the next operator handoff.",
+    command: risks[0] ? "run live service check" : "summarize audit"
+  };
+}
+
+function investorIntelligenceBrief() {
+  const impact = data?.impactDashboard || {};
+  const timeline = data?.missionTimeline || {};
+  const readiness = data?.admin?.readiness || {};
+  const demo = (data?.profile?.liveInvestorDemos || [])[0];
+  const exports = data?.profile?.evidenceExports || [];
+  const providerDepth = providerActionDepthStatus();
+  const readyProviders = Object.values(providerDepth).reduce((sum, item) => sum + item.ready, 0);
+  const totalProviders = Object.values(providerDepth).reduce((sum, item) => sum + item.total, 0);
+  const strongestMetric = (impact.metrics || []).slice().sort((a, b) => Number(b.value || 0) - Number(a.value || 0))[0];
+  const gaps = [
+    ...(!demo ? ["Run live investor mode to create a guided evidence story."] : []),
+    ...(!exports.length ? ["Export an evidence packet for partner review."] : []),
+    ...(readiness.readyCount < readiness.total ? [`Production readiness is ${readiness.readyCount || 0}/${readiness.total || 0}.`] : [])
+  ];
+  return {
+    mode: "Investor intelligence",
+    strongestMetric: strongestMetric ? `${strongestMetric.label}: ${strongestMetric.value}${strongestMetric.suffix || ""}` : "Impact evidence waiting for workflow activity",
+    timeline: `${timeline.total || 0} evidence event(s)`,
+    providerDepth: `${readyProviders}/${totalProviders}`,
+    topGap: gaps[0] || "Investor story has demo evidence, export path, and readiness signals.",
+    recommendation: gaps[0] ? "Run live investor mode, export evidence, then summarize impact." : "Use the investor pitch and government briefing voice paths.",
+    command: gaps[0] ? "run investor voice demo" : "explain this to investors"
+  };
+}
+
+function modeSpecificIntelligenceBrief() {
+  if (experienceMode === "admin" || currentSectionId() === "admin") return adminIntelligenceBrief();
+  if (experienceMode === "investor") return investorIntelligenceBrief();
+  return null;
+}
+
 function nexusPriorityActions() {
   if (!data) return [];
   const actions = [];
@@ -3457,8 +3516,12 @@ function nexusPriorityActions() {
   const alerts = nexusProactiveAlerts();
   const coach = nexusOperatorCoach();
   const providerDepth = providerActionDepthStatus();
+  const modeBrief = modeSpecificIntelligenceBrief();
   if (activeAgentJourney?.next) {
     actions.push({ score: 100, title: "Continue active journey", command: activeAgentJourney.next.command, reason: activeAgentJourney.next.label, category: "journey" });
+  }
+  if (modeBrief) {
+    actions.push({ score: 96, title: modeBrief.mode, command: modeBrief.command, reason: modeBrief.recommendation, category: experienceMode || currentSectionId() });
   }
   if (alerts[0]) {
     actions.push({ score: 92, title: "Address active alert", command: "what needs attention", reason: alerts[0].message, category: "alert" });
@@ -3486,6 +3549,7 @@ function nexusSituationalBrief() {
   const route = activeRoute?.();
   const priorities = nexusPriorityActions();
   const scorecard = agenticBehaviorScorecard();
+  const modeBrief = modeSpecificIntelligenceBrief();
   const top = priorities[0];
   return {
     section,
@@ -3493,7 +3557,7 @@ function nexusSituationalBrief() {
     route: route?.name || "selected route",
     top,
     priorities,
-    summary: `I see ${workspaceCopy[section]?.title || section} active for ${country?.name || "the selected country"} on ${route?.name || "the selected route"}. Top priority: ${top?.title || "start a guided workflow"} because ${top?.reason || "it will create the clearest next evidence"}. Agent mode is ${scorecard.mode}; provider depth is ${scorecard.providerReady}.`
+    summary: `${modeBrief ? `${modeBrief.mode}: ${modeBrief.recommendation} ` : ""}I see ${workspaceCopy[section]?.title || section} active for ${country?.name || "the selected country"} on ${route?.name || "the selected route"}. Top priority: ${top?.title || "start a guided workflow"} because ${top?.reason || "it will create the clearest next evidence"}. Agent mode is ${scorecard.mode}; provider depth is ${scorecard.providerReady}.`
   };
 }
 
@@ -3869,8 +3933,12 @@ function jarvisInsights() {
   const scorecard = agenticBehaviorScorecard();
   const coach = nexusOperatorCoach();
   const brief = nexusSituationalBrief();
+  const adminBrief = adminIntelligenceBrief();
+  const investorBrief = investorIntelligenceBrief();
   return [
     { title: "Situational brief", detail: brief.summary, status: "ready", label: "Smart" },
+    { title: "Admin intelligence", detail: `${adminBrief.topRisk} Recommendation: ${adminBrief.recommendation}`, status: adminBrief.riskCount ? "pending" : "ready", label: adminBrief.readiness },
+    { title: "Investor intelligence", detail: `${investorBrief.strongestMetric}. ${investorBrief.topGap}`, status: investorBrief.topGap.includes("waiting") || investorBrief.topGap.includes("Run") ? "pending" : "ready", label: investorBrief.providerDepth },
     { title: "Operator coach", detail: coach.prompt, status: "ready", label: coach.priority },
     { title: "Behavior", detail: `${scorecard.mode}: ${scorecard.behavior}`, status: "ready", label: "Agentic" },
     { title: "Performance", detail: agentPerformanceState.lastLatencyMs ? `Last response completed in ${agentPerformanceState.lastLatencyMs} ms via ${agentPerformanceState.route}` : "Ready for fast acknowledgement and timed agent routing", status: agentPerformanceState.lastLatencyMs && agentPerformanceState.lastLatencyMs > 12000 ? "pending" : "ready", label: "Speed" },
@@ -7712,6 +7780,24 @@ async function handleVoiceCommand(rawCommand) {
     pendingAgentClarification = {
       original: command,
       options: brief.priorities.slice(0, 3).map(item => ({ label: item.title, section: currentSectionId(), command: item.command, detail: item.reason }))
+    };
+    return;
+  }
+  if (lower.includes("admin intelligence") || lower.includes("admin brief") || lower.includes("admin risk") || lower.includes("smart admin")) {
+    const brief = adminIntelligenceBrief();
+    setVoiceResponse(`Admin intelligence: readiness ${brief.readiness}. Top risk: ${brief.topRisk}. Usage: ${brief.usage}. Strongest module: ${brief.healthiestModule}. Recommendation: ${brief.recommendation}`, true);
+    pendingAgentClarification = {
+      original: command,
+      options: [{ label: "Run admin recommendation", section: "admin", command: brief.command, detail: brief.recommendation }]
+    };
+    return;
+  }
+  if (lower.includes("investor intelligence") || lower.includes("investor brief") || lower.includes("investor story") || lower.includes("smart investor")) {
+    const brief = investorIntelligenceBrief();
+    setVoiceResponse(`Investor intelligence: strongest metric is ${brief.strongestMetric}. Timeline has ${brief.timeline}. Provider depth is ${brief.providerDepth}. Gap: ${brief.topGap}. Recommendation: ${brief.recommendation}`, true);
+    pendingAgentClarification = {
+      original: command,
+      options: [{ label: "Run investor recommendation", section: "dashboard", command: brief.command, detail: brief.recommendation }]
     };
     return;
   }
