@@ -3547,6 +3547,7 @@ function renderUserWorkspace() {
 const simpleUserSections = {
   learning: {
     title: "What do you want to learn?",
+    className: "service-learning",
     buttons: [
       { label: "Start a Course", command: "start training path" },
       { label: "Finish Lesson", command: "complete my lesson" },
@@ -3556,6 +3557,7 @@ const simpleUserSections = {
   },
   workforce: {
     title: "How can we help with work?",
+    className: "service-workforce",
     buttons: [
       { label: "Find Jobs", command: "show me jobs" },
       { label: "Apply for Job", command: "apply for that job" },
@@ -3565,6 +3567,7 @@ const simpleUserSections = {
   },
   health: {
     title: "What health help do you need?",
+    className: "service-health",
     buttons: [
       { label: "Start Intake", command: "start telehealth intake" },
       { label: "Talk to Provider", command: "open telehealth access" },
@@ -3574,6 +3577,7 @@ const simpleUserSections = {
   },
   trade: {
     title: "What do you want to do with crops?",
+    className: "service-trade",
     buttons: [
       { label: "Contact Buyer", command: "contact my buyer" },
       { label: "Create Order", command: "create a crop order" },
@@ -3583,6 +3587,7 @@ const simpleUserSections = {
   },
   map: {
     title: "What do you want to check?",
+    className: "service-map",
     buttons: [
       { label: "Check Route", command: "check route risk" },
       { label: "Check Farm", command: "run drone scan" },
@@ -3592,6 +3597,7 @@ const simpleUserSections = {
   },
   profile: {
     title: "What do you need from your account?",
+    className: "service-profile",
     buttons: [
       { label: "My Progress", command: "summarize my progress" },
       { label: "My Messages", command: "show my messages" },
@@ -3612,7 +3618,7 @@ function renderUserSimpleActiveSection(sectionId = currentSectionId()) {
       <h2>${translateText(config.title)}</h2>
       <p>${translateText("Tap one button. Nexus will do the next step.")}</p>
       <div class="user-service-buttons user-module-buttons">
-        ${config.buttons.map(action => `<button type="button" class="service-ask" data-simple-command="${escapeHtml(action.command)}">
+        ${config.buttons.map(action => `<button type="button" class="${escapeHtml(config.className)}" data-simple-command="${escapeHtml(action.command)}">
           <strong>${translateText(action.label)}</strong>
         </button>`).join("")}
       </div>
