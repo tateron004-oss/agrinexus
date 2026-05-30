@@ -38,6 +38,7 @@ const requirements = [
   ["mode-aware follow-up answers", app.includes("function modeFollowUpResponse") && app.includes("isModeFollowUpCommand(lower)") && app.includes("I am holding the user context")],
   ["intuitive conversation guide", app.includes("function intuitiveConversationGuide") && app.includes("function intuitiveConversationResponse") && app.includes("Conversation guide")],
   ["natural conversation handoff", app.includes("function composeJarvisResponse") && app.includes("function jarvisHandoffLine") && app.includes("turnCoach?.nextQuestion")],
+  ["live Nexus awareness state", app.includes("nexusAwarenessState") && app.includes("function updateNexusAwareness") && app.includes("function nexusAwarenessSummary") && app.includes("Live awareness")],
   ["backend conversation context", app.includes("modeContext: modeConversationContext(command)") && server.includes("modeContext = options.modeContext") && server.includes("platformMode")],
   ["mode-aware local conversation fallback", server.includes("Admin conversation: I will focus on readiness") && server.includes("Investor conversation: I will focus on impact") && server.includes("User conversation: I will keep this simple")]
 ];

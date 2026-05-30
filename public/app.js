@@ -34,6 +34,7 @@ let pendingAgentClarification = null;
 let activeAgentJourney = null;
 let conversationModeState = JSON.parse(localStorage.getItem("agrinexusConversationModeState") || "{}");
 let conversationModeMemories = JSON.parse(localStorage.getItem("agrinexusConversationModeMemories") || "{}");
+let nexusAwarenessState = JSON.parse(localStorage.getItem("agrinexusAwarenessState") || "{}");
 const accessibilityPrefs = JSON.parse(localStorage.getItem("agrinexusAccessibility") || "{}");
 const originalTextNodes = new WeakMap();
 let deferredInstallPrompt = null;
@@ -3262,6 +3263,7 @@ function modeConversationContext(command = "") {
   const mode = conversationPlatformMode();
   const brief = conversationModeBrief();
   const modeMemory = conversationMemoryForMode(mode);
+  const awareness = updateNexusAwareness(command, { silent: true });
   const memory = data ? nexusMemoryProfile() : {};
   const readiness = data?.admin?.readiness;
   return {
@@ -3279,6 +3281,7 @@ function modeConversationContext(command = "") {
     lastAnswer: modeMemory.lastAnswer || "",
     lastTopic: modeMemory.lastTopic || "",
     modeTurnCount: modeMemory.turnCount || 0,
+    awareness,
     allModeSummaries: ["user", "admin", "investor"].map(item => {
       const saved = conversationMemoryForMode(item);
       return `${conversationPlatformLabel(item)}: ${saved.lastTopic || "ready"}`;
@@ -3307,6 +3310,51 @@ function modeFollowUpResponse(command = "") {
     return `${brief.mode}: I am holding the investor context. Last topic: ${lastTopic}. ${lastAnswer} For the funding story, lead with ${investorBrief.strongestMetric}. Next, you can say run investor story, summarize impact, prepare government briefing, or show evidence.`;
   }
   return `${brief.mode}: I am holding the user context. Last topic: ${lastTopic}. ${lastAnswer} I will keep this simple: tell me what you need, or say open learning, open telehealth, find jobs, sell my crop, change language, or guide me step by step.`;
+}
+
+function inferNexusIntent(command = "") {
+  const lower = String(command || "").toLowerCase();
+  if (!lower.trim()) return { label: "idle", section: currentSectionId(), confidence: 0.3 };
+  const signals = [
+    { label: "telehealth support", section: "health", confidence: 0.9, pattern: /\b(doctor|provider|nurse|clinic|telehealth|care|patient|intake|vitals|health|medicine|outbreak|ebola)\b/ },
+    { label: "workforce support", section: "workforce", confidence: 0.88, pattern: /\b(job|work|role|shift|interview|mentor|apply|worker|candidate|skills|gaps)\b/ },
+    { label: "learning support", section: "learning", confidence: 0.86, pattern: /\b(course|lesson|learn|training|certificate|quiz|caption|audio guide|student)\b/ },
+    { label: "trade and farming support", section: "trade", confidence: 0.9, pattern: /\b(crop|buyer|sell|maize|trade|agritrade|order|payment|wallet|drone|field|farm|route|logistics)\b/ },
+    { label: "map intelligence", section: "map", confidence: 0.82, pattern: /\b(map|route|gps|location|facility|risk|track)\b/ },
+    { label: "provider integration", section: "integrations", confidence: 0.78, pattern: /\b(provider|engine|integration|connected|live service|api|credential)\b/ },
+    { label: "admin operation", section: "admin", confidence: 0.8, pattern: /\b(admin|audit|readiness|production|users|health check|service check)\b/ },
+    { label: "investor presentation", section: "dashboard", confidence: 0.84, pattern: /\b(investor|funding|government|presentation|impact|evidence|demo)\b/ }
+  ];
+  return signals.find(item => item.pattern.test(lower)) || { label: "open conversation", section: currentSectionId(), confidence: 0.58 };
+}
+
+function updateNexusAwareness(command = "", options = {}) {
+  const inferred = inferNexusIntent(command || agentPerformanceState.lastCommand || conversationModeState.lastQuestion || "");
+  const guide = intuitiveConversationGuide(inferred.section || currentSectionId());
+  const waitingOn = pendingWorkflow ? "workflow confirmation"
+    : pendingAgentClarification ? "clarification choice"
+      : activeAgentJourney?.next ? "guided journey continuation"
+        : agentPerformanceState.status === "thinking" ? "agent response"
+          : "user direction";
+  nexusAwarenessState = {
+    mode: conversationPlatformMode(),
+    section: currentSectionId(),
+    inferredIntent: inferred.label,
+    inferredSection: inferred.section,
+    confidence: inferred.confidence,
+    waitingOn,
+    safeNextAction: guide.primaryCommand,
+    lastCommand: command || agentPerformanceState.lastCommand || "",
+    updatedAt: new Date().toISOString()
+  };
+  localStorage.setItem("agrinexusAwarenessState", JSON.stringify(nexusAwarenessState));
+  if (!options.silent) updateNexusBehaviorLayer("ready", `Awareness: ${nexusAwarenessState.inferredIntent}; waiting on ${nexusAwarenessState.waitingOn}.`);
+  return nexusAwarenessState;
+}
+
+function nexusAwarenessSummary() {
+  const awareness = updateNexusAwareness("", { silent: true });
+  return `Nexus awareness: mode ${conversationPlatformLabel(awareness.mode)}, section ${awareness.section}, intent ${awareness.inferredIntent}, confidence ${Math.round((awareness.confidence || 0) * 100)} percent, waiting on ${awareness.waitingOn}. Safe next action: ${awareness.safeNextAction}.`;
 }
 
 function updateNexusBehaviorLayer(status = "ready", detail = "") {
@@ -3530,6 +3578,7 @@ function agenticBehaviorScorecard() {
     mode: nexusBehaviorMode().label,
     latencyMs: agentPerformanceState.lastLatencyMs,
     memoryCount: memory.count,
+    awareness: nexusAwarenessState.inferredIntent || "ready",
     autopilotWaiting: queue.waiting,
     mobileReady: `${readiness.ready}/${readiness.total}`,
     providerReady: `${providerReady}/${providerTotal}`,
@@ -4149,8 +4198,10 @@ function jarvisInsights() {
   const conversationBrief = conversationModeBrief();
   const modeMemory = conversationMemoryForMode();
   const conversationGuide = intuitiveConversationGuide();
+  const awareness = updateNexusAwareness("", { silent: true });
   return [
     { title: conversationBrief.mode, detail: `${conversationBrief.tone}. Context: ${conversationBrief.focus}. Last: ${modeMemory.lastTopic || "ready for a conversation"}. Turns in this mode: ${modeMemory.turnCount || 0}.`, status: "ready", label: "Talk" },
+    { title: "Live awareness", detail: `${awareness.inferredIntent} in ${awareness.section}. Waiting on ${awareness.waitingOn}. Safe next: ${awareness.safeNextAction}`, status: "ready", label: `${Math.round((awareness.confidence || 0) * 100)}%` },
     { title: "Conversation guide", detail: `${conversationGuide.reason} Best phrase: ${conversationGuide.primaryCommand}`, status: "ready", label: "Next" },
     { title: "Situational brief", detail: brief.summary, status: "ready", label: "Smart" },
     { title: "Admin intelligence", detail: `${adminBrief.topRisk} Recommendation: ${adminBrief.recommendation}`, status: adminBrief.riskCount ? "pending" : "ready", label: adminBrief.readiness },
@@ -7744,6 +7795,7 @@ async function handleVoiceCommand(rawCommand) {
   markAgentPerformance("heard", "voice-command");
   agentPerformanceState.lastCommand = command;
   if (command) rememberConversationTurn(command, "");
+  if (command) updateNexusAwareness(command, { silent: true });
   if (/\b(stop|pause|wait|hold on|be quiet|interrupt|cancel speech)\b/.test(lower) && voiceSpeaking) {
     interruptNexusSpeech("I stopped speaking. Tell me the next instruction.");
     return;
@@ -8019,6 +8071,10 @@ async function handleVoiceCommand(rawCommand) {
     };
     return;
   }
+  if (lower.includes("what are you aware of") || lower.includes("awareness check") || lower.includes("what do you think i need") || lower.includes("what am i trying to do")) {
+    setVoiceResponse(nexusAwarenessSummary(), true);
+    return;
+  }
   if (lower.includes("admin intelligence") || lower.includes("admin brief") || lower.includes("admin risk") || lower.includes("smart admin")) {
     const brief = adminIntelligenceBrief();
     setVoiceResponse(`Admin intelligence: readiness ${brief.readiness}. Top risk: ${brief.topRisk}. Usage: ${brief.usage}. Strongest module: ${brief.healthiestModule}. Recommendation: ${brief.recommendation}`, true);
@@ -8290,6 +8346,7 @@ async function runBackendAgentCommand(command) {
     const mode = $("#jarvisMode");
     if (mode) mode.textContent = `conversation turn ${voiceConversationTurns}`;
     markAgentPerformance("completed", result.intent || "agent-command");
+    updateNexusAwareness(command, { silent: true });
     updateNexusBehaviorLayer("speaking", result.response || "Command completed.");
     setVoiceResponse(result.response || "Command completed.", true, { handoffText: result.metadata?.turnCoach?.nextQuestion || "" });
   } catch (error) {
