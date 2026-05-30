@@ -511,6 +511,7 @@ assert(app.includes("function intuitiveConversationGuide"), "Voice assistant mus
 assert(app.includes("function composeJarvisResponse"), "Voice assistant must add natural conversational handoffs when appropriate");
 assert(app.includes("function updateNexusAwareness"), "Voice assistant must maintain a live awareness state for Jarvis behavior");
 assert(app.includes("function conversationRepairPlan"), "Voice assistant must recover when users are stuck or confused");
+assert(app.includes("function nexusBrainState"), "Voice assistant must expose a unified Nexus Brain state");
 assert(app.includes("function modeFollowUpResponse"), "Voice assistant must answer follow-ups without forcing extra buttons");
 assert(app.includes("modeContext: modeConversationContext(command)"), "Voice assistant must send mode context to backend agent reasoning");
 assert(server.includes("modeContext = options.modeContext"), "Backend agent reasoning must receive mode-aware conversation context");

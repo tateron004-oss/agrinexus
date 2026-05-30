@@ -3014,6 +3014,7 @@ function renderAgentCenter() {
   const evidencePack = data.conversationEvidence || { evidence: [], status: "ready", counts: {} };
   const agentCapabilities = data.agentCapabilities || { totalTools: 0, liveTools: 0, confirmationTools: 0, modules: [] };
   const jarvisReadiness = data.jarvisReadiness || { readyCount: 0, total: 6, score: 0, items: [] };
+  const brain = nexusBrainState(commands[0]?.command || "");
   const latestOrchestration = (data.profile.aiOrchestrations || [])[0];
   const agentMode = $("#agentMode");
   if (!agentMode) return;
@@ -3081,6 +3082,9 @@ function renderAgentCenter() {
   const latestCommand = commands[0];
   renderAgentReasoningPanel({ latestCommand, pendingAction: data.profile.agentPendingAction, latestExecution: executions[0] });
   $("#agentUnderstandingPanel").innerHTML = [
+    `<div><strong>Nexus Brain</strong><span>${translateText(`${brain.goals} - ${brain.mode}`)}</span></div>`,
+    `<div><strong>Brain awareness</strong><span>${translateText(`${brain.awareness}; waiting on ${brain.waitingOn}`)}</span></div>`,
+    `<div><strong>Brain initiative</strong><span>${translateText(brain.initiative)}</span></div>`,
     `<div><strong>What I heard</strong><span>${translateText(latestCommand?.command || "No command yet")}</span></div>`,
     `<div><strong>What I understood</strong><span>${translateText(latestCommand?.intent || "Standing by")}</span></div>`,
     `<div><strong>What needs approval</strong><span>${translateText(plan?.status === "awaiting-approval" ? `${plan.steps.length} planned step(s)` : "No approval pending")}</span></div>`,
@@ -3355,6 +3359,36 @@ function updateNexusAwareness(command = "", options = {}) {
 function nexusAwarenessSummary() {
   const awareness = updateNexusAwareness("", { silent: true });
   return `Nexus awareness: mode ${conversationPlatformLabel(awareness.mode)}, section ${awareness.section}, intent ${awareness.inferredIntent}, confidence ${Math.round((awareness.confidence || 0) * 100)} percent, waiting on ${awareness.waitingOn}. Safe next action: ${awareness.safeNextAction}.`;
+}
+
+function nexusBrainState(command = "") {
+  const awareness = updateNexusAwareness(command, { silent: true });
+  const modeMemory = conversationMemoryForMode(awareness.mode);
+  const repair = conversationRepairPlan(command || awareness.lastCommand || "");
+  const guide = intuitiveConversationGuide(awareness.inferredSection || currentSectionId());
+  const memorySignals = nexusDeepMemorySignals();
+  const queue = nexusAutopilotQueue();
+  const scorecard = agenticBehaviorScorecard();
+  const brain = {
+    name: "Nexus Brain",
+    goals: activeAgentJourney?.workflow || data?.profile?.agentMemory?.activeJarvisSession?.goal || data?.profile?.agentMemory?.activeMission || "guide the user to the safest useful next action",
+    memory: `${memorySignals.count} memory signal(s); mode topic: ${modeMemory.lastTopic || "new conversation"}`,
+    awareness: `${awareness.inferredIntent} in ${awareness.section} at ${Math.round((awareness.confidence || 0) * 100)}% confidence`,
+    recovery: repair.problem || "ready",
+    initiative: guide.primaryCommand || "Nexus, guide me",
+    waitingOn: awareness.waitingOn,
+    mode: conversationPlatformLabel(awareness.mode),
+    section: awareness.section,
+    missions: `${queue.waiting} waiting, ${queue.completed} completed`,
+    behavior: scorecard.behavior
+  };
+  localStorage.setItem("agrinexusBrainState", JSON.stringify(brain));
+  return brain;
+}
+
+function nexusBrainSummary() {
+  const brain = nexusBrainState();
+  return `${brain.name}: goal is ${brain.goals}. Memory: ${brain.memory}. Awareness: ${brain.awareness}. Recovery: ${brain.recovery}. Initiative: ${brain.initiative}. Waiting on ${brain.waitingOn}.`;
 }
 
 function updateNexusBehaviorLayer(status = "ready", detail = "") {
@@ -4229,7 +4263,9 @@ function jarvisInsights() {
   const conversationGuide = intuitiveConversationGuide();
   const awareness = updateNexusAwareness("", { silent: true });
   const repair = conversationRepairPlan(agentPerformanceState.lastCommand || "");
+  const brain = nexusBrainState(agentPerformanceState.lastCommand || "");
   return [
+    { title: "Nexus Brain", detail: `${brain.goals}. Awareness: ${brain.awareness}. Initiative: ${brain.initiative}`, status: "ready", label: "Brain" },
     { title: conversationBrief.mode, detail: `${conversationBrief.tone}. Context: ${conversationBrief.focus}. Last: ${modeMemory.lastTopic || "ready for a conversation"}. Turns in this mode: ${modeMemory.turnCount || 0}.`, status: "ready", label: "Talk" },
     { title: "Live awareness", detail: `${awareness.inferredIntent} in ${awareness.section}. Waiting on ${awareness.waitingOn}. Safe next: ${awareness.safeNextAction}`, status: "ready", label: `${Math.round((awareness.confidence || 0) * 100)}%` },
     { title: "Repair mode", detail: `${repair.problem}. If the user is stuck, use ${repair.primaryCommand}`, status: "ready", label: "Recover" },
@@ -8109,6 +8145,11 @@ async function handleVoiceCommand(rawCommand) {
   }
   if (lower.includes("what are you aware of") || lower.includes("awareness check") || lower.includes("what do you think i need") || lower.includes("what am i trying to do")) {
     setVoiceResponse(nexusAwarenessSummary(), true);
+    return;
+  }
+  if (lower.includes("nexus brain") || lower.includes("show your brain") || lower.includes("do you have a brain") || lower.includes("what is your brain doing")) {
+    setVoiceResponse(nexusBrainSummary(), true);
+    goSection("agent");
     return;
   }
   if (lower.includes("admin intelligence") || lower.includes("admin brief") || lower.includes("admin risk") || lower.includes("smart admin")) {
