@@ -8488,6 +8488,44 @@ async function api(req, res, url) {
     return send(res, 200, state);
   }
 
+  if (url.pathname === "/api/admin/admin-user" && req.method === "POST") {
+    if (!canUse(user, "admin")) return send(res, 403, { error: "Role does not allow admin user management" });
+    const body = await readBody(req);
+    ensureOperationsProfile(db.profile);
+    const email = String(body.email || "admin-test@example.com").trim().toLowerCase();
+    const name = String(body.name || "Admin Test User").trim() || "Admin Test User";
+    const password = String(body.password || "Admin2026!").trim();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return send(res, 400, { error: "A valid email is required" });
+    if (password.length < 10) return send(res, 400, { error: "Admin password must be at least 10 characters" });
+    const account = db.users.find(item => String(item.email || "").toLowerCase() === email);
+    if (account && account.role !== "Admin") return send(res, 409, { error: "That email already belongs to a non-admin account" });
+    const adminAccount = account || {
+      id: crypto.randomUUID(),
+      email,
+      createdAt: new Date().toISOString()
+    };
+    adminAccount.name = name;
+    adminAccount.password = password;
+    adminAccount.role = "Admin";
+    adminAccount.country = String(body.country || adminAccount.country || "Nigeria").trim() || "Nigeria";
+    adminAccount.language = String(body.language || adminAccount.language || COUNTRY_LANGUAGE[adminAccount.country.toLowerCase()] || "en").trim() || "en";
+    adminAccount.lastUpdatedAt = new Date().toISOString();
+    if (!account) db.users.push(adminAccount);
+    addUsageEvent(db.profile, { module: "Admin", action: "admin_user.created", detail: `${adminAccount.email} Admin test login created.` });
+    logIntegration(db, {
+      providerId: "auth-users",
+      module: "Platform",
+      action: "admin_user.created",
+      detail: `${adminAccount.email} created with Admin permissions by ${user.email}.`,
+      metadata: { adminUserId: adminAccount.id, createdBy: user.id, role: adminAccount.role, country: adminAccount.country, language: adminAccount.language }
+    });
+    addActivity(db.profile, `Admin test login ready: ${adminAccount.email}.`);
+    await writeDb(db);
+    const state = publicState(db, user);
+    state.adminUserResult = { name: adminAccount.name, email: adminAccount.email, password: adminAccount.password, role: adminAccount.role, country: adminAccount.country, language: adminAccount.language };
+    return send(res, 200, state);
+  }
+
   if (url.pathname === "/api/billing/checkout" && req.method === "POST") {
     if (!canUse(user, "admin")) return send(res, 403, { error: "Role does not allow billing setup" });
     const body = await readBody(req);

@@ -398,6 +398,10 @@ async function call(path, body) {
   assert(testUser.testUserResult.role === "Standard User");
   assert(testUser.admin.users.some(item => item.email === "family-test@example.com" && item.role === "Standard User"));
   assert(testUser.profile.integrationEvents.some(event => event.action === "test_user.created"));
+  const adminUser = await call("/api/admin/admin-user", { name: "Admin Family User", email: "family-admin@example.com", password: "Admin2026!", role: "Standard User", country: "Nigeria", language: "en" });
+  assert(adminUser.adminUserResult.role === "Admin");
+  assert(adminUser.admin.users.some(item => item.email === "family-admin@example.com" && item.role === "Admin"));
+  assert(adminUser.profile.integrationEvents.some(event => event.action === "admin_user.created"));
   const order = await call("/api/trade/order", { productId: "avocado-ke" });
   assert(order.profile.orders.length >= 1);
   assert(order.profile.tradeEvents.some(event => event.type === "order.created"));

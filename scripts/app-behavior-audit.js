@@ -96,8 +96,11 @@ assert(!styles.includes("body.user-mode .user-mobile-dock button.active,\nbody.u
 assert(html.includes("addTestUserBtn"), "Admin should have a User-only test login button");
 assert(app.includes('workflow === "test-user"'), "User-only test login needs workflow wiring");
 assert(app.includes("This account cannot access Admin or Investor mode"), "User-only login flow should clearly exclude Admin and Investor");
-assert(html.includes("user-only-test-account-53"), "Index must force browsers to load user account CSS");
-assert(html.includes("user-only-test-account-66"), "Index must force browsers to load user account JS");
+assert(html.includes("addAdminUserBtn"), "Admin should have an Admin test login button");
+assert(app.includes('workflow === "admin-user"'), "Admin test login needs workflow wiring");
+assert(app.includes("Standard Users and Investors cannot run this workflow"), "Admin login flow should clearly exclude Standard Users and Investors");
+assert(html.includes("admin-workflow-54"), "Index must force browsers to load admin workflow CSS");
+assert(html.includes("admin-workflow-67"), "Index must force browsers to load admin workflow JS");
 
 console.log("App behavior audit passed");
 console.log("Checked: app-mode language picker, service buttons, section containment, workflow confirmations, voice routes, overflow wrapping, and advanced-panel hiding.");

@@ -3396,7 +3396,7 @@ function renderLaunchSupportPanels() {
 }
 
 function applyPermissions() {
-  $$("[data-workflow], [data-ai], [data-workforce], [data-health], [data-pay], [data-module-test], [data-command-preset], [data-pilot-scenario], [data-persona], [data-simple-command], [data-simple-section], [data-simple-pilot], [data-simple-demo], [data-simple-mission], [data-simple-action], .provider-test, #adminHealthCheck, #liveServiceCheckBtn, #liveServiceCheckFromIntegrations, #aiConsoleRun, #agentPlanBtn, #agentExecuteBtn, #agentBriefingBtn, #agentMissionBtn, #missionResumeBtn, #missionAutopilotBtn, #demoRunBtn, #wowDemoBtn, #startOnboardingBtn, #openSupportBtn, #inviteSubscriberBtn, #addTestUserBtn, [data-ai-review], [data-notify], #voiceListenBtn, #voiceRunBtn, #voiceFirstBtn, #voiceSpeakBtn, #voiceHelpBtn, #globalListenBtn, #globalRunBtn, #globalYesBtn, #globalNoBtn, #globalReadBtn, #globalVoiceHelpBtn, #globalInstallBtn, #jarvisListenBtn, #jarvisRunBtn, #jarvisMissionBtn, #jarvisReadBtn").forEach(element => {
+  $$("[data-workflow], [data-ai], [data-workforce], [data-health], [data-pay], [data-module-test], [data-command-preset], [data-pilot-scenario], [data-persona], [data-simple-command], [data-simple-section], [data-simple-pilot], [data-simple-demo], [data-simple-mission], [data-simple-action], .provider-test, #adminHealthCheck, #liveServiceCheckBtn, #liveServiceCheckFromIntegrations, #aiConsoleRun, #agentPlanBtn, #agentExecuteBtn, #agentBriefingBtn, #agentMissionBtn, #missionResumeBtn, #missionAutopilotBtn, #demoRunBtn, #wowDemoBtn, #startOnboardingBtn, #openSupportBtn, #inviteSubscriberBtn, #addTestUserBtn, #addAdminUserBtn, [data-ai-review], [data-notify], #voiceListenBtn, #voiceRunBtn, #voiceFirstBtn, #voiceSpeakBtn, #voiceHelpBtn, #globalListenBtn, #globalRunBtn, #globalYesBtn, #globalNoBtn, #globalReadBtn, #globalVoiceHelpBtn, #globalInstallBtn, #jarvisListenBtn, #jarvisRunBtn, #jarvisMissionBtn, #jarvisReadBtn").forEach(element => {
     const area = element.dataset.workflow
       || (element.dataset.ai ? "ai" : null)
       || (element.dataset.workforce ? "workforce" : null)
@@ -3439,6 +3439,7 @@ function applyPermissions() {
       || (element.id === "openSupportBtn" ? "profile" : null)
       || (element.id === "inviteSubscriberBtn" ? "admin" : null)
       || (element.id === "addTestUserBtn" ? "admin" : null)
+      || (element.id === "addAdminUserBtn" ? "admin" : null)
       || (element.id === "demoRunBtn" ? "admin" : null)
       || (element.id === "wowDemoBtn" ? "admin" : null)
       || (element.dataset.aiReview ? "governance" : null)
@@ -6032,6 +6033,54 @@ function workflowConfig(workflow, action, element) {
       ]
     });
   }
+  if (workflow === "admin-user") {
+    return simpleWorkflowConfig({
+      eyebrow: "Admin access workflow",
+      title: "Add admin",
+      summary: "Create an Admin-only test login for trusted operators who need the control room, integrations, user management, readiness checks, and deployment evidence.",
+      confirmLabel: "Create admin login",
+      path: "/api/admin/admin-user",
+      body: { role: "Admin" },
+      fields: [
+        { name: "name", label: "Admin name", value: "Admin Test User", placeholder: "Example: Ron Admin" },
+        { name: "email", label: "Admin email", value: "admin-test@example.com", placeholder: "admin@example.com" },
+        { name: "password", label: "Temporary admin password", type: "password", value: "Admin2026!", placeholder: "At least 10 characters" },
+        {
+          name: "country",
+          label: "Country",
+          type: "select",
+          value: "Nigeria",
+          options: [
+            { value: "Nigeria", label: "Nigeria" },
+            { value: "Kenya", label: "Kenya" },
+            { value: "DRC", label: "DRC" },
+            { value: "Egypt", label: "Egypt" }
+          ]
+        },
+        {
+          name: "language",
+          label: "Language",
+          type: "select",
+          value: "en",
+          options: [
+            { value: "en", label: "English" },
+            { value: "fr", label: "French" },
+            { value: "ar", label: "Arabic" },
+            { value: "sw", label: "Swahili" },
+            { value: "es", label: "Spanish" }
+          ]
+        }
+      ],
+      success: "Admin test login created",
+      record: "Admin login account, control-room permissions, auth provider evidence, and admin audit",
+      provider: "Auth provider records admin_user.created when configured. Only an existing Admin can run this workflow.",
+      checklist: [
+        { title: "Admin only", detail: "This account can access Admin Control Room, integrations, health checks, and deployment evidence.", status: "ready", label: "Admin" },
+        { title: "Protected action", detail: "Standard Users and Investors cannot run this workflow.", status: "ready", label: "Guarded" },
+        { title: "Auth audit", detail: data.providers.find(item => item.id === "auth-users")?.status || "Provider audit will record locally until live auth is connected.", status: "ready", label: "Auth" }
+      ]
+    });
+  }
   if (workflow === "profile") {
     return simpleWorkflowConfig({
       eyebrow: "Profile workflow",
@@ -8020,6 +8069,7 @@ function bindStatic() {
   $("#openSupportBtn").onclick = () => openWorkflowModal(workflowConfig("support", "ticket", { dataset: {} }));
   $("#inviteSubscriberBtn").onclick = () => openWorkflowModal(workflowConfig("subscriber", "invite", { dataset: {} }));
   $("#addTestUserBtn").onclick = () => openWorkflowModal(workflowConfig("test-user", "create", { dataset: {} }));
+  $("#addAdminUserBtn").onclick = () => openWorkflowModal(workflowConfig("admin-user", "create", { dataset: {} }));
   $("#agentPlanBtn").onclick = createAgentPlan;
   $("#agentExecuteBtn").onclick = executeAgentPlan;
   $("#agentBriefingBtn").onclick = createGovernmentBriefing;

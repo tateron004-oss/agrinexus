@@ -29,6 +29,7 @@ const clickTargets = [
   "openSupportBtn",
   "inviteSubscriberBtn",
   "addTestUserBtn",
+  "addAdminUserBtn",
   "globalListenBtn",
   "globalRunBtn",
   "globalVoiceFirstBtn",
@@ -133,6 +134,7 @@ const endpoints = [
   "/api/partnership/create",
   "/api/admin/subscriber",
   "/api/admin/test-user",
+  "/api/admin/admin-user",
   "/api/engines/manifest",
   "/api/engines/render-env-plan",
   "/api/production/complete-check",
@@ -342,9 +344,14 @@ assert(app.includes('workflow === "test-user"'), "User-only test login button ne
 assert(app.includes("Create a User-only test login"), "User-only test login flow must explain Admin and Investor are not exposed");
 assert(server.includes('account.role = "Standard User"'), "Backend must force test logins to Standard User");
 assert(server.includes("test_user.created"), "User-only test login must create auth audit evidence");
-assert(html.includes("styles.css?v=user-only-test-account-53"), "Index must force browsers to load the latest user account shell");
-assert(html.includes("app.js?v=user-only-test-account-66"), "Index must force browsers to load the latest user account code");
-assert(sw.includes("agrinexus-pwa-v45"), "Service worker cache must refresh the installed app after user account updates");
+assert(html.includes("addAdminUserBtn"), "Admin needs an Admin test login workflow");
+assert(app.includes('workflow === "admin-user"'), "Admin test login button needs workflow modal wiring");
+assert(app.includes("Only an existing Admin can run this workflow"), "Admin login flow must explain admin-only protection");
+assert(server.includes('adminAccount.role = "Admin"'), "Backend must force admin test logins to Admin");
+assert(server.includes("admin_user.created"), "Admin test login must create auth audit evidence");
+assert(html.includes("styles.css?v=admin-workflow-54"), "Index must force browsers to load the latest admin workflow shell");
+assert(html.includes("app.js?v=admin-workflow-67"), "Index must force browsers to load the latest admin workflow code");
+assert(sw.includes("agrinexus-pwa-v46"), "Service worker cache must refresh the installed app after admin workflow updates");
 assert(html.includes("userWorkspace"), "Dashboard needs a User Workspace for standard users");
 assert(html.includes("userMobileDock"), "Legacy mobile dock markup should remain safely hidden for cache compatibility");
 assert(html.includes("What Do You Need Help With Today?"), "Dashboard simple start should use user-ready language");
