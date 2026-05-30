@@ -3523,19 +3523,17 @@ function renderUserWorkspace() {
   const target = $("#userWorkspace");
   if (!target) return;
   const serviceButtons = [
-    { label: "Ask Nexus", section: "ask", className: "service-ask", ask: true },
+    { label: "Talk to Nexus", section: "ask", className: "service-ask", ask: true },
     { label: "Learn", section: "learning", className: "service-learning" },
-    { label: "Work", section: "workforce", className: "service-workforce" },
-    { label: "Health", section: "health", className: "service-health" },
-    { label: "Trade", section: "trade", className: "service-trade" },
-    { label: "Maps", section: "map", className: "service-map" },
-    { label: "Me", section: "profile", className: "service-profile" }
+    { label: "Find Work", section: "workforce", className: "service-workforce" },
+    { label: "Get Health Help", section: "health", className: "service-health" },
+    { label: "Sell Crops", section: "trade", className: "service-trade" }
   ].filter(item => item.ask || canOpenSection(item.section));
   target.innerHTML = `
     <section class="user-workspace-hero user-simple-hero">
       <span class="eyebrow">${translateText("AgriNexus")}</span>
-      <h3 id="userWorkspaceTitle">${translateText("What do you need?")}</h3>
-      <p>${translateText("Choose one button. Nexus will guide you from there.")}</p>
+      <h3 id="userWorkspaceTitle">${translateText("How can we help?")}</h3>
+      <p>${translateText("Tap one button. Nexus will guide you step by step.")}</p>
     </section>
     <section class="user-service-buttons" aria-label="${translateText("Open a service")}">
       ${serviceButtons.map(item => `<button type="button" class="${escapeHtml(item.className)}" ${item.ask ? `data-mobile-ask="true"` : `data-simple-section="${item.section}"`}>
