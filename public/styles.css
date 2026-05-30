@@ -669,6 +669,36 @@ body.user-mode .investor-only,
 body.user-mode .admin-only {
   display: none !important;
 }
+body.user-mode #dashboard > .hero,
+body.user-mode #dashboard > .cards,
+body.user-mode #dashboard > .command-launch-guide,
+body.user-mode #dashboard > .local-pilot-studio,
+body.user-mode #dashboard > .demo-command,
+body.user-mode #dashboard > .demo-storyboard,
+body.user-mode #dashboard > .dashboard-actions {
+  display: none !important;
+}
+body.user-mode .simple-home {
+  padding: 14px 16px;
+}
+body.user-mode .simple-home .persona-strip,
+body.user-mode .simple-home #simpleActionGrid,
+body.user-mode .simple-home #simpleActionStatus,
+body.user-mode .simple-home #simpleContinueBtn {
+  display: none !important;
+}
+body.user-mode .simple-home-head {
+  align-items: center;
+}
+body.user-mode .simple-home h3 {
+  font-size: 1.15rem;
+}
+body.user-mode .simple-home p {
+  max-width: 760px;
+}
+body.user-mode .simple-home-controls {
+  display: none;
+}
 body.advanced-mode .investor-only,
 body.advanced-mode .admin-only {
   display: none !important;

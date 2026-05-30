@@ -2644,6 +2644,8 @@ function defaultExperienceMode() {
 }
 
 function allowedExperienceModes() {
+  const role = String(data?.user?.role || "").toLowerCase();
+  if (role.includes("standard") || role.includes("user")) return ["user"];
   const modes = ["user", "advanced"];
   if (can("integrations") || can("admin")) modes.push("investor");
   if (can("admin")) modes.push("admin");
@@ -3518,6 +3520,7 @@ function renderUserWorkspace() {
   const activation = data.activationGuide || {};
   const activationGroups = activation.groups || [];
   const nextMissing = activationGroups.find(group => group.status !== "ready");
+  const showLaunchTools = can("admin") || can("integrations");
   const languageName = voiceLanguageNames[languageCode()] || "English";
   const voiceMode = data.profile.voiceProvider === "openai" || data.providers?.some(provider => provider.id === "openai" && provider.status === "ready")
     ? "AI voice ready"
@@ -3572,12 +3575,12 @@ function renderUserWorkspace() {
         <strong>${translateText("AI Agent")}</strong>
         <span>${translateText("Plan the next best action")}</span>
       </button>
-      <button type="button" data-workflow="integrations" data-action="test-all">
+      ${showLaunchTools ? `<button type="button" data-workflow="integrations" data-action="test-all">
         <strong>${translateText("Engines")}</strong>
         <span>${translateText(`${providerReady}/${providerTotal} services ready`)}</span>
-      </button>
+      </button>` : ""}
     </section>
-    <section class="user-production-grid" aria-label="${translateText("Mobile permissions and provider depth")}">
+    ${showLaunchTools ? `<section class="user-production-grid" aria-label="${translateText("Mobile permissions and provider depth")}">
       <article class="user-production-card">
         <div class="tag-row"><span>${translateText("Mobile permissions")}</span><span>${translateText("Production app")}</span></div>
         <h3>${translateText("Turn On Phone Capabilities")}</h3>
@@ -3606,8 +3609,8 @@ function renderUserWorkspace() {
           <button type="button" data-simple-command="what providers are missing">${translateText("Explain missing engines")}</button>
         </div>
       </article>
-    </section>
-    <section class="launch-wizard-panel" aria-label="${translateText("Production launch wizard")}">
+    </section>` : ""}
+    ${showLaunchTools ? `<section class="launch-wizard-panel" aria-label="${translateText("Production launch wizard")}">
       <div class="launch-wizard-head">
         <div>
           <span class="eyebrow">${translateText("Launch Wizard")}</span>
@@ -3638,7 +3641,7 @@ function renderUserWorkspace() {
           </button>`;
         }).join("")}
       </div>
-    </section>
+    </section>` : ""}
     <div class="user-action-grid">
       ${actions.map(action => `<button type="button" class="user-action ${action.primary ? "primary" : ""}" data-simple-command="${escapeHtml(action.command)}">
         <strong>${translateText(action.label)}</strong>
