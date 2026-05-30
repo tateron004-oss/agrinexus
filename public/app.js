@@ -3754,6 +3754,26 @@ function intuitiveConversationResponse() {
   return `${conversationPlatformLabel(guide.mode)} guide: ${guide.reason} Best thing to say now: ${guide.primaryCommand}. Other helpful phrases are ${guide.suggestions.slice(1, 4).join(", ")}.`;
 }
 
+function shouldAddJarvisHandoff(message = "") {
+  const lower = String(message || "").toLowerCase();
+  if (!lower.trim()) return false;
+  if (/\b(say yes|say no|confirm|cancel|which path|choose one|waiting|permission|blocked|failed|error|sign in)\b/.test(lower)) return false;
+  if (/\b(next, say|next you can say|best thing to say|other helpful phrases|what would you like to do next)\b/.test(lower)) return false;
+  return true;
+}
+
+function jarvisHandoffLine(handoffText = "") {
+  if (handoffText) return handoffText;
+  const guide = intuitiveConversationGuide();
+  const phrase = guide.primaryCommand || guide.suggestions[0] || "Nexus, guide me";
+  return `Next, you can say: ${phrase}.`;
+}
+
+function composeJarvisResponse(message, options = {}) {
+  if (options.allowHandoff === false || !shouldAddJarvisHandoff(message)) return message;
+  return `${message} ${jarvisHandoffLine(options.handoffText)}`;
+}
+
 function contextualVoiceSuggestions(sectionId = currentSectionId()) {
   const mode = nexusBehaviorMode();
   const user = [
@@ -7326,24 +7346,25 @@ async function executeAgentPlan() {
 function setVoiceResponse(message, speak = false, options = {}) {
   const allowVoiceFirst = options.allowVoiceFirst !== false;
   const token = ++voiceTranslationToken;
-  updateNexusBehaviorLayer(speak ? "speaking" : "ready", message);
-  lastVoiceResponse = message;
-  rememberConversationTurn(agentPerformanceState.lastCommand || conversationModeState.lastQuestion || "", message);
+  const responseMessage = speak || options.forceHandoff ? composeJarvisResponse(message, options) : message;
+  updateNexusBehaviorLayer(speak ? "speaking" : "ready", responseMessage);
+  lastVoiceResponse = responseMessage;
+  rememberConversationTurn(agentPerformanceState.lastCommand || conversationModeState.lastQuestion || "", responseMessage);
   const transcript = $("#voiceTranscript");
-  if (transcript) transcript.textContent = message;
+  if (transcript) transcript.textContent = responseMessage;
   const summary = $("#jarvisSummary");
-  if (summary) summary.textContent = message;
+  if (summary) summary.textContent = responseMessage;
   const globalStatus = $("#globalAssistantStatus");
-  if (globalStatus) globalStatus.textContent = message;
-  announce(message);
-  toast(message);
+  if (globalStatus) globalStatus.textContent = responseMessage;
+  announce(responseMessage);
+  toast(responseMessage);
   if (languageCode() !== "en") {
     request("/api/translate", {
       method: "POST",
-      body: { text: message, sourceLanguage: "en", targetLanguage: languageCode(), context: "voice-response" }
+      body: { text: responseMessage, sourceLanguage: "en", targetLanguage: languageCode(), context: "voice-response" }
     }).then(result => {
       if (token !== voiceTranslationToken) return;
-      const translated = result.translationResult?.translatedText || message;
+      const translated = result.translationResult?.translatedText || responseMessage;
       lastVoiceResponse = translated;
       if (transcript) transcript.textContent = translated;
       if (summary) summary.textContent = translated;
@@ -7351,11 +7372,11 @@ function setVoiceResponse(message, speak = false, options = {}) {
       announce(translated);
       if (speak || (voiceFirstMode && allowVoiceFirst)) speakVoiceResponse(translated);
     }).catch(() => {
-      if (speak || (voiceFirstMode && allowVoiceFirst)) speakVoiceResponse(message);
+      if (speak || (voiceFirstMode && allowVoiceFirst)) speakVoiceResponse(responseMessage);
     });
     return;
   }
-  if (speak || (voiceFirstMode && allowVoiceFirst)) speakVoiceResponse(message);
+  if (speak || (voiceFirstMode && allowVoiceFirst)) speakVoiceResponse(responseMessage);
 }
 
 function userFirstName() {
@@ -8263,11 +8284,14 @@ async function runBackendAgentCommand(command) {
     if (result.metadata?.voiceMission?.phrase && $("#globalAssistantStatus")) {
       $("#globalAssistantStatus").textContent = result.metadata.voiceMission.phrase;
     }
+    if (result.metadata?.turnCoach?.nextQuestion) {
+      renderLiveVoiceSuggestions([result.metadata.turnCoach.nextQuestion, ...(result.metadata?.suggestedReplies || [])]);
+    }
     const mode = $("#jarvisMode");
     if (mode) mode.textContent = `conversation turn ${voiceConversationTurns}`;
     markAgentPerformance("completed", result.intent || "agent-command");
     updateNexusBehaviorLayer("speaking", result.response || "Command completed.");
-    setVoiceResponse(result.response || "Command completed.", true);
+    setVoiceResponse(result.response || "Command completed.", true, { handoffText: result.metadata?.turnCoach?.nextQuestion || "" });
   } catch (error) {
     clearAgentProgressTimers();
     markAgentPerformance("failed", "agent-command-error");
