@@ -2416,6 +2416,8 @@ function ensureTradeProfile(profile) {
   profile.walletTransactions = profile.walletTransactions || [];
   profile.tradeEvents = profile.tradeEvents || [];
   profile.buyerContacts = profile.buyerContacts || [];
+  profile.tradeMessageThreads = profile.tradeMessageThreads || [];
+  profile.tradeMessages = profile.tradeMessages || [];
   profile.tradeQuotes = profile.tradeQuotes || [];
   profile.qualityInspections = profile.qualityInspections || [];
   profile.coldChainChecks = profile.coldChainChecks || [];
@@ -2675,6 +2677,78 @@ function addTradeEvent(profile, event) {
   ensureTradeProfile(profile);
   profile.tradeEvents.unshift({ id: crypto.randomUUID(), createdAt: new Date().toISOString(), ...event });
   profile.tradeEvents = profile.tradeEvents.slice(0, 30);
+}
+
+function createBuyerSellerMessage(db, user, body = {}) {
+  ensureTradeProfile(db.profile);
+  const { country, route } = activeContext(db);
+  const order = db.profile.orders[db.profile.orders.length - 1] || null;
+  const product = order
+    ? (db.products || []).find(item => item.id === order.productId)
+    : (db.products || []).find(item => item.id === body.productId) || (db.products || []).find(item => item.countryId === country.id) || (db.products || [])[0];
+  const productName = order?.product || product?.name || "active crop lot";
+  const buyerName = body.buyerName || product?.buyerName || `${country.name} verified buyer desk`;
+  const sellerName = body.sellerName || user.name || "AgriNexus seller";
+  const channel = body.channel || (/whatsapp/i.test(body.message || "") ? "WhatsApp" : /sms|text/i.test(body.message || "") ? "SMS" : /email/i.test(body.message || "") ? "Email" : "in-app chat");
+  const thread = {
+    id: crypto.randomUUID(),
+    orderId: order?.id || null,
+    orderNumber: order?.orderNumber || "pending-order",
+    productId: product?.id || order?.productId || null,
+    productName,
+    buyerName,
+    sellerName,
+    routeName: route.name,
+    status: "active",
+    lastChannel: channel,
+    createdBy: user.email,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  };
+  const text = String(body.message || `Hello ${buyerName}, this is ${sellerName} with an AgriNexus update for ${productName}. Current status: ${order?.stage || "ready for buyer review"} on ${route.name}. Can we confirm price, quantity, delivery timing, and payment next step?`).trim();
+  const sellerMessage = {
+    id: crypto.randomUUID(),
+    threadId: thread.id,
+    sender: "seller",
+    senderName: sellerName,
+    recipientName: buyerName,
+    channel,
+    text,
+    status: "sent-local",
+    providerStatus: "ready-for-live-provider",
+    createdAt: new Date().toISOString()
+  };
+  const buyerReply = {
+    id: crypto.randomUUID(),
+    threadId: thread.id,
+    sender: "buyer",
+    senderName: buyerName,
+    recipientName: sellerName,
+    channel,
+    text: `Received. Please send final quality evidence, route timing, and payment terms for ${productName}.`,
+    status: "received-local",
+    providerStatus: "simulated-until-live-communications",
+    createdAt: new Date(Date.now() + 1000).toISOString()
+  };
+  thread.lastMessage = buyerReply.text;
+  thread.updatedAt = buyerReply.createdAt;
+  db.profile.tradeMessageThreads.unshift(thread);
+  db.profile.tradeMessageThreads = db.profile.tradeMessageThreads.slice(0, 25);
+  db.profile.tradeMessages.unshift(buyerReply, sellerMessage);
+  db.profile.tradeMessages = db.profile.tradeMessages.slice(0, 100);
+  addTradeEvent(db.profile, { type: "buyer_seller.message_thread", label: `${channel} thread opened between ${sellerName} and ${buyerName} for ${productName}.` });
+  addNotification(db.profile, { module: "AgriTrade", providerId: "whatsapp-delivery", channel, message: `Buyer-seller message thread ready for ${productName}.` });
+  const providerId = channel.toLowerCase().includes("whatsapp") ? "whatsapp-delivery" : channel.toLowerCase().includes("sms") ? "sms-delivery" : channel.toLowerCase().includes("email") ? "email-delivery" : "trade-market";
+  logIntegration(db, {
+    providerId,
+    module: "AgriTrade",
+    action: "trade.buyer_seller_message_sent",
+    detail: `${channel} buyer-seller message prepared for ${buyerName}.`,
+    metadata: { threadId: thread.id, orderId: thread.orderId, productName, buyerName, sellerName, messageId: sellerMessage.id }
+  });
+  addActivity(db.profile, `Buyer-seller ${channel} thread opened for ${productName}.`);
+  rememberAgentMemory(db.profile, `AgriTrade opened a buyer-seller communication thread for ${productName}.`, { source: "trade-message", category: "communications", confidence: 0.91 });
+  return { thread, messages: [sellerMessage, buyerReply] };
 }
 
 function createBuyerContactWorkflow(db, user, command = "") {
@@ -6793,6 +6867,16 @@ async function runAgentCommand(db, user, command, options = {}) {
     return tradeOperationalEfficiencyReview(db, user, text);
   }
 
+  if (/(buyer|seller|customer|purchaser)/.test(lower) && /(message|chat|communicate|reply|conversation|thread|real time|realtime)/.test(lower)) {
+    const result = createBuyerSellerMessage(db, user, { message: text, channel: /whatsapp/i.test(lower) ? "WhatsApp" : /sms|text/i.test(lower) ? "SMS" : /email/i.test(lower) ? "Email" : "in-app chat" });
+    return {
+      intent: "trade.buyer_seller_message",
+      response: `Buyer-seller communication is ready. I opened a ${result.thread.lastChannel} thread for ${result.thread.productName}, sent the seller update, recorded a local buyer reply, and saved provider-ready evidence for live WhatsApp, SMS, email, or in-app chat.`,
+      status: "completed",
+      metadata: { conversationMode: true, redirectSection: "trade", threadId: result.thread.id, channel: result.thread.lastChannel, messageCount: result.messages.length }
+    };
+  }
+
   if (/(trade|agritrade|crop|buyer|route|order|logistics|driver|farmer|field|quality|payment|cold chain)/.test(lower) && /(communicat|message|update|brief|status|report|say to|tell the|notify|script|announcement|handoff)/.test(lower)) {
     return tradeOperationalCommunicationBrief(db, user, text);
   }
@@ -9847,6 +9931,17 @@ async function api(req, res, url) {
     await writeDb(db);
     const state = publicState(db, user);
     state.buyerContactResult = contact;
+    return send(res, 200, state);
+  }
+
+  if (url.pathname === "/api/trade/message" && req.method === "POST") {
+    if (!canUse(user, "trade")) return send(res, 403, { error: "Role does not allow buyer-seller messaging workflows" });
+    const body = await readBody(req);
+    const result = createBuyerSellerMessage(db, user, body);
+    addWorkflowNote(db.profile, body.note, "Buyer-seller message note");
+    await writeDb(db);
+    const state = publicState(db, user);
+    state.tradeMessageResult = result;
     return send(res, 200, state);
   }
 

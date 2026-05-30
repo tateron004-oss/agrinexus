@@ -4133,6 +4133,23 @@ function render() {
   $("#orderBook").innerHTML = data.profile.orders.length
     ? data.profile.orders.slice().reverse().map(order => `<div><strong>${order.orderNumber || order.id}</strong><span>${order.product} - ${order.stage} - ${money(order.total || 0)}</span></div>`).join("")
     : "<div>No trade orders yet.</div>";
+  const latestThread = (data.profile.tradeMessageThreads || [])[0];
+  $("#buyerSellerPanel").innerHTML = [
+    row("Active thread", latestThread?.productName || "No buyer-seller thread yet"),
+    row("Buyer", latestThread?.buyerName || (data.profile.buyerContacts || [])[0]?.buyerName || "No buyer selected"),
+    row("Seller", latestThread?.sellerName || data.user?.name || "Current seller"),
+    row("Channel", latestThread?.lastChannel || "in-app chat"),
+    row("Messages", (data.profile.tradeMessages || []).filter(item => !latestThread || item.threadId === latestThread.id).length),
+    row("Provider status", latestThread ? "ready for live SMS/WhatsApp/email" : "local thread available now")
+  ].join("");
+  $("#buyerSellerThread").innerHTML = latestThread
+    ? (data.profile.tradeMessages || [])
+      .filter(message => message.threadId === latestThread.id)
+      .slice()
+      .reverse()
+      .map(message => `<div><strong>${translateText(message.senderName)} - ${translateText(message.channel)}</strong><span>${translateText(message.text)}</span><small>${translateText(message.status)} - ${translateText(message.providerStatus)}</small></div>`)
+      .join("")
+    : `<div>${translateText("No buyer-seller thread yet. Message the buyer to create local communication evidence.")}</div>`;
 
   $("#tradeEvents").innerHTML = (data.profile.tradeEvents || []).length
     ? data.profile.tradeEvents.map(event => `<div><strong>${event.type}</strong><span>${event.label}</span></div>`).join("")
@@ -4214,7 +4231,8 @@ function render() {
         taskItem("Latest order", latestOrder ? `${latestOrder.orderNumber} for ${latestOrder.product}` : "No order created yet", latestOrder ? "live" : "pending", latestOrder?.stage || "Create", { workflow: "trade", action: latestOrder ? "advance" : "order", productId: firstProduct()?.id }),
         taskItem("Route stage", latestOrder ? `${latestOrder.stage} at ${latestOrder.checkpoint}` : data.profile.routeStage, latestOrder ? "ready" : "pending", "Logistics", { workflow: "trade", action: "advance" }),
         taskItem("Wallet balance", `${money(data.profile.wallet || 0)} across ${data.profile.walletTransactions.length} transaction(s)`, data.profile.walletTransactions.length ? "ready" : "pending", "Wallet", { workflow: "trade", action: "wallet" }),
-        taskItem("Buyer market", `${data.products.length} product lots available`, "live", "Market", { workflow: "trade", action: "order", productId: firstProduct()?.id })
+        taskItem("Buyer market", `${data.products.length} product lots available`, "live", "Market", { workflow: "trade", action: "order", productId: firstProduct()?.id }),
+        taskItem("Buyer chat", latestThread ? `${latestThread.buyerName}: ${latestThread.status}` : "Open buyer-seller message thread", latestThread ? "live" : "pending", latestThread?.lastChannel || "Chat", { workflow: "trade", action: "buyer-message", productId: firstProduct()?.id })
       ]
     },
     {
@@ -4239,6 +4257,7 @@ function render() {
         taskItem("Payment provider", integrationActionComplete("wallet.transaction") ? "Wallet provider event recorded" : "Post wallet payment", integrationActionComplete("wallet.transaction") ? "ready" : "pending", "Payment", { workflow: "trade", action: "wallet" }),
         taskItem("Price AI", aiRunComplete("price") ? "Price analysis recorded" : "Run price AI", aiRunComplete("price") ? "ready" : "pending", "AI", { workflow: "ai", action: "price" }),
         taskItem("Trade events", (data.profile.tradeEvents || [])[0]?.label || "No trade events yet", (data.profile.tradeEvents || []).length ? "live" : "pending", "Ledger", { workflow: "trade", action: "advance" }),
+        taskItem("Message evidence", latestThread ? latestThread.lastMessage : "No buyer-seller message yet", latestThread ? "ready" : "pending", "Messages", { workflow: "trade", action: "buyer-message" }),
         taskItem("Drone mission", latestDroneMission ? `${latestDroneMission.productName}: ${latestDroneMission.status}` : "Plan a compliant drone mission", latestDroneMission ? "ready" : "pending", "Flight", { workflow: "trade", action: "drone-plan", productId: firstProduct()?.id }),
         taskItem("Drone intelligence", latestDroneScan ? `${latestDroneScan.productName}: ${latestDroneScan.cropHealthScore}% health` : "Run drone scan for field evidence", latestDroneScan ? "live" : "pending", "Drone", { workflow: "trade", action: "drone", productId: firstProduct()?.id }),
         taskItem("Field intervention", latestFieldIntervention ? `${latestFieldIntervention.productName}: ${latestFieldIntervention.priority}` : "Assign field task from drone evidence", latestFieldIntervention ? "ready" : "pending", "Task", { workflow: "trade", action: "drone-intervention", productId: firstProduct()?.id })
@@ -5069,13 +5088,14 @@ function workflowConfig(workflow, action, element) {
     const productId = element.dataset.productId || firstProduct()?.id;
     const product = data.products.find(item => item.id === productId) || firstProduct();
     const latestOrder = data.profile.orders[data.profile.orders.length - 1];
-    const titleMap = { order: "Create order", advance: "Advance order", wallet: "Post M-Pesa payment", "drone-plan": "Plan drone mission", drone: "Run drone field scan", "drone-intervention": "Assign field intervention", "drone-report": "Create drone field report", "drone-irrigation": "Create irrigation plan", "drone-pest": "Create pest alert", "drone-spray": "Create spray plan", "drone-yield": "Create yield forecast", "drone-compliance": "Run drone compliance audit", quote: "Send buyer quote", quality: "Run quality inspection", "cold-chain": "Run cold-chain check", export: "Prepare export packet", contract: "Draft contract packet", release: "Release payment", price: "Run price AI", route: "Run route AI", "trade-advisor": "Review trade next step" };
+    const titleMap = { order: "Create order", advance: "Advance order", wallet: "Post M-Pesa payment", "buyer-message": "Open buyer-seller thread", "drone-plan": "Plan drone mission", drone: "Run drone field scan", "drone-intervention": "Assign field intervention", "drone-report": "Create drone field report", "drone-irrigation": "Create irrigation plan", "drone-pest": "Create pest alert", "drone-spray": "Create spray plan", "drone-yield": "Create yield forecast", "drone-compliance": "Run drone compliance audit", quote: "Send buyer quote", quality: "Run quality inspection", "cold-chain": "Run cold-chain check", export: "Prepare export packet", contract: "Draft contract packet", release: "Release payment", price: "Run price AI", route: "Run route AI", "trade-advisor": "Review trade next step" };
     titleMap["buyer-contact"] = "Contact buyer";
     const pathMap = {
       order: "/api/trade/order",
       advance: "/api/trade/advance",
       wallet: "/api/trade/wallet",
       "buyer-contact": "/api/trade/buyer-contact",
+      "buyer-message": "/api/trade/message",
       "drone-plan": "/api/trade/drone-mission",
       drone: "/api/trade/drone-scan",
       "drone-intervention": "/api/trade/drone-intervention",
@@ -5099,16 +5119,17 @@ function workflowConfig(workflow, action, element) {
     return simpleWorkflowConfig({
       eyebrow: "Trade workflow",
       title: titleMap[action] || "Trade action",
-      summary: action === "buyer-contact" ? "Prepare a buyer communication workflow with the active crop, order, route context, channel, and message draft before sending through live communications." : isDroneAction ? "Run a complete agritech drone workflow: compliant flight planning, crop intelligence, findings, map evidence, and field intervention tasks." : isAdvancedDroneAction ? "Create farmer-facing drone intelligence that turns aerial evidence into irrigation, pest, spray, yield, compliance, and buyer-readiness decisions." : isAdvancedTrade ? "Create a concrete commercial operations record with provider evidence for quote, quality, cold-chain, export, contract, or payment release." : "Confirm the market, wallet, logistics, or AI action before the trade ledger changes.",
+      summary: action === "buyer-message" ? "Open a buyer-seller message thread tied to the active crop, order, route, quality, payment, and provider-ready communication evidence." : action === "buyer-contact" ? "Prepare a buyer communication workflow with the active crop, order, route context, channel, and message draft before sending through live communications." : isDroneAction ? "Run a complete agritech drone workflow: compliant flight planning, crop intelligence, findings, map evidence, and field intervention tasks." : isAdvancedDroneAction ? "Create farmer-facing drone intelligence that turns aerial evidence into irrigation, pest, spray, yield, compliance, and buyer-readiness decisions." : isAdvancedTrade ? "Create a concrete commercial operations record with provider evidence for quote, quality, cold-chain, export, contract, or payment release." : "Confirm the market, wallet, logistics, or AI action before the trade ledger changes.",
       confirmLabel: titleMap[action] || "Confirm",
       path: pathMap[action] || "/api/ai/run",
-      body: action === "order" ? { productId } : action === "wallet" ? { provider: "M-Pesa", amount: 120 } : action === "buyer-contact" ? { productId } : isDroneAction ? { productId } : isAdvancedDroneAction ? { type: droneTypeMap[action], productId } : isAdvancedTrade ? { type: action, productId } : action === "advance" ? {} : { type: action },
-      success: action === "buyer-contact" ? "Buyer contact prepared" : action === "wallet" ? "Payment posted" : action === "advance" ? "Order advanced" : action === "order" ? "Order created" : action === "drone-plan" ? "Drone mission planned" : action === "drone" ? "Drone scan complete" : action === "drone-intervention" ? "Field intervention assigned" : isAdvancedDroneAction ? "Advanced drone operation complete" : isAdvancedTrade ? "Advanced trade operation complete" : "AI action complete",
-      record: "Order book, wallet ledger, route timeline, drone mission, field scan, intervention task, trade event, or AI evidence",
-      provider: "Market, drone, payment, logistics, or AI provider event is recorded.",
+      body: action === "order" ? { productId } : action === "wallet" ? { provider: "M-Pesa", amount: 120 } : action === "buyer-contact" ? { productId } : action === "buyer-message" ? { productId, channel: "in-app chat" } : isDroneAction ? { productId } : isAdvancedDroneAction ? { type: droneTypeMap[action], productId } : isAdvancedTrade ? { type: action, productId } : action === "advance" ? {} : { type: action },
+      success: action === "buyer-message" ? "Buyer-seller thread opened" : action === "buyer-contact" ? "Buyer contact prepared" : action === "wallet" ? "Payment posted" : action === "advance" ? "Order advanced" : action === "order" ? "Order created" : action === "drone-plan" ? "Drone mission planned" : action === "drone" ? "Drone scan complete" : action === "drone-intervention" ? "Field intervention assigned" : isAdvancedDroneAction ? "Advanced drone operation complete" : isAdvancedTrade ? "Advanced trade operation complete" : "AI action complete",
+      record: "Order book, wallet ledger, message thread, route timeline, drone mission, field scan, intervention task, trade event, or AI evidence",
+      provider: "Market, communications, drone, payment, logistics, or AI provider event is recorded.",
       checklist: [
         { title: "Product/order", detail: latestOrder ? `${latestOrder.orderNumber} - ${latestOrder.stage}` : product?.name || "No product selected", status: latestOrder || product ? "live" : "pending", label: "Trade" },
         { title: "Buyer contact", detail: (data.profile.buyerContacts || [])[0]?.buyerName || "No buyer contact yet", status: (data.profile.buyerContacts || []).length ? "ready" : "pending", label: "Buyer" },
+        { title: "Message thread", detail: (data.profile.tradeMessageThreads || [])[0]?.productName || "No buyer-seller thread yet", status: (data.profile.tradeMessageThreads || []).length ? "ready" : "pending", label: "Chat" },
         { title: "Route", detail: activeRoute().name, status: "ready", label: data.profile.activeCheckpoint },
         { title: "Wallet", detail: `${money(data.profile.wallet || 0)} current balance`, status: "ready", label: "Wallet" },
         { title: "Drone mission", detail: (data.profile.droneMissions || [])[0]?.missionRef || "No flight plan yet", status: (data.profile.droneMissions || []).length ? "ready" : "pending", label: "Flight" },
@@ -6406,6 +6427,9 @@ async function handleVoiceCommand(rawCommand) {
 
   if ((lower.includes("buyer") || lower.includes("customer")) && (lower.includes("speak") || lower.includes("talk") || lower.includes("call") || lower.includes("message") || lower.includes("contact"))) {
     goSection("trade");
+    if (lower.includes("message") || lower.includes("chat") || lower.includes("communicate") || lower.includes("real time") || lower.includes("realtime")) {
+      return openWorkflowByVoice("trade", "buyer-message", "Buyer-seller message thread workflow is ready.", { productId: firstProduct()?.id });
+    }
     return openWorkflowByVoice("trade", "buyer-contact", "Buyer contact workflow is ready.", { productId: firstProduct()?.id });
   }
   if (lower.includes("flight plan") || lower.includes("drone mission") || lower.includes("plan drone")) {

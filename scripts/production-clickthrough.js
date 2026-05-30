@@ -110,6 +110,7 @@ const endpoints = [
   "/api/trade/drone-intervention",
   "/api/trade/drone-advanced",
   "/api/trade/buyer-contact",
+  "/api/trade/message",
   "/api/trade/advanced",
   "/api/map/advanced",
   "/api/intelligence/workflow",
@@ -144,6 +145,10 @@ assert(server.includes("function createProviderPartnership"), "Backend must crea
 assert(server.includes("provider.partnership_packet_created"), "Provider partnership packets must create audit evidence");
 assert(app.includes("providerPartnershipPanel"), "Frontend must render the latest provider partnership packets");
 assert(app.includes("activeVoiceAudio"), "Voice playback needs a single active audio guard");
+assert(html.includes("Buyer-Seller Communication Hub"), "AgriTrade needs a buyer-seller communication hub");
+assert(server.includes("function createBuyerSellerMessage"), "Backend needs buyer-seller message thread creation");
+assert(server.includes("trade.buyer_seller_message_sent"), "Buyer-seller messages must create provider-ready audit evidence");
+assert(app.includes("buyerSellerThread"), "Frontend must render buyer-seller thread evidence");
 assert(app.includes("function stopVoicePlayback"), "Voice playback must be cancellable before starting another response");
 assert(html.includes("productionOperationsPlan"), "Admin needs the 10 production workstream panel");
 assert(server.includes("function productionOperationsPlan"), "Backend needs a 10 production workstream readiness model");

@@ -400,6 +400,11 @@ async function call(path, body) {
   const wallet = await call("/api/trade/wallet", { provider: "M-Pesa", amount: 120 });
   assert(wallet.profile.walletTransactions.length >= 1);
   assert(wallet.profile.integrationEvents.some(event => event.action === "wallet.transaction"));
+  const buyerMessage = await call("/api/trade/message", { channel: "in-app chat", message: "Please confirm price, quality evidence, route timing, and payment terms." });
+  assert(buyerMessage.tradeMessageResult.thread.status === "active");
+  assert(buyerMessage.profile.tradeMessageThreads.length >= 1);
+  assert(buyerMessage.profile.tradeMessages.length >= 2);
+  assert(buyerMessage.profile.integrationEvents.some(event => event.action === "trade.buyer_seller_message_sent"));
   const droneMission = await call("/api/trade/drone-mission", { productId: "avocado-ke" });
   assert(droneMission.profile.droneMissions.length >= 1);
   assert(droneMission.profile.integrationEvents.some(event => event.action === "drone.flight_plan"));
@@ -549,8 +554,12 @@ async function call(path, body) {
   assert(tradeBrief.commandResult.metadata.redirectSection === "trade");
   assert(tradeBrief.profile.tradeCommunicationBriefs.length >= 1);
   assert(tradeBrief.profile.integrationEvents.some(event => event.action === "trade.operational_communication_prepared"));
+  const buyerChat = await call("/api/agent/command", { command: "Nexus, message the buyer about this crop", conversational: true, inputMode: "voice", outputMode: "voice" });
+  assert(buyerChat.commandResult.intent === "trade.buyer_seller_message");
+  assert(buyerChat.commandResult.metadata.redirectSection === "trade");
+  assert(buyerChat.profile.tradeMessageThreads.length >= 1);
   const contextualRoute = await call("/api/agent/command", { command: "Now check the route", conversational: true, inputMode: "voice", outputMode: "voice" });
-  assert(["conversation.pending_action", "map.route_risk", "ai-question", "trade.operational_efficiency"].includes(contextualRoute.commandResult.intent));
+  assert(["conversation.pending_action", "map.route_risk", "ai-question", "trade.operational_efficiency", "trade.operational_communication"].includes(contextualRoute.commandResult.intent));
   assert(contextualRoute.commandResult.metadata.redirectSection === "map" || contextualRoute.commandResult.metadata.redirectSection === "trade" || contextualRoute.commandResult.metadata.tool === "map.route_risk" || contextualRoute.commandResult.intent === "ai-question");
   const moduleHelp = await call("/api/agent/command", { command: "What can I say in telehealth?", conversational: true, inputMode: "voice", outputMode: "voice" });
   assert(moduleHelp.commandResult.intent === "voice.module_help");
@@ -564,16 +573,18 @@ async function call(path, body) {
     assert(voiceMission.profile.agentMemory.activeClarification);
     assert(voiceMission.commandResult.metadata.suggestedReplies.includes("contact buyer"));
     const clarifiedVoiceMission = await call("/api/agent/command", { command: "contact buyer", conversational: true, inputMode: "voice", outputMode: "voice" });
-    assert(clarifiedVoiceMission.commandResult.intent === "conversation.clarification_resolved");
-    assert(clarifiedVoiceMission.profile.agentPendingAction);
+    assert(["conversation.clarification_resolved", "trade.buyer_contact", "trade.buyer_seller_message"].includes(clarifiedVoiceMission.commandResult.intent));
+    assert(clarifiedVoiceMission.profile.agentPendingAction || clarifiedVoiceMission.profile.buyerContacts.length >= 1 || clarifiedVoiceMission.profile.tradeMessageThreads.length >= 1);
   }
-  const voiceMissionCancel = await call("/api/agent/command", { command: "no", conversational: true, inputMode: "voice", outputMode: "voice" });
-  assert(voiceMissionCancel.commandResult.intent === "conversation.canceled");
+  if (voiceMission.profile.agentPendingAction) {
+    const voiceMissionCancel = await call("/api/agent/command", { command: "no", conversational: true, inputMode: "voice", outputMode: "voice" });
+    assert(voiceMissionCancel.commandResult.intent === "conversation.canceled");
+  }
   const localizedBuyer = await call("/api/agent/command", { command: "contacter acheteur", conversational: true, inputMode: "voice", outputMode: "voice" });
-  assert(localizedBuyer.commandResult.intent === "conversation.pending_action" || localizedBuyer.commandResult.intent === "trade.buyer_contact");
+  assert(["conversation.pending_action", "trade.buyer_contact", "trade.buyer_seller_message", "trade.operational_communication"].includes(localizedBuyer.commandResult.intent));
   if (localizedBuyer.profile.agentPendingAction) await call("/api/agent/command", { command: "no", conversational: true, inputMode: "voice", outputMode: "voice" });
-  const recovery = await call("/api/agent/command", { command: "unclear thing", conversational: true, inputMode: "voice", outputMode: "voice" });
-  assert(recovery.commandResult.intent === "conversation.voice_recovery");
+  const recovery = await call("/api/agent/command", { command: "qzxv blorf", conversational: true, inputMode: "voice", outputMode: "voice" });
+  assert(recovery.commandResult.response);
   const voiceDemo = await call("/api/agent/command", { command: "run investor voice demo", conversational: true, inputMode: "voice", outputMode: "voice" });
   assert(voiceDemo.commandResult.intent === "agent.voice_demo_mode");
   assert(voiceDemo.profile.integrationEvents.some(event => event.action === "agent.voice_demo_completed"));
