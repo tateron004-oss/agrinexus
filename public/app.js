@@ -2157,6 +2157,54 @@ async function installAgriNexusApp() {
   toast("Use the browser menu to install AgriNexus as an app.");
 }
 
+async function requestProductionMobilePermission(kind) {
+  const status = $("#mobilePermissionStatus");
+  const setStatus = message => {
+    if (status) status.textContent = translateText(message);
+    toast(message);
+  };
+  try {
+    if (kind === "microphone") {
+      if (!navigator.mediaDevices?.getUserMedia) {
+        setStatus("Microphone permission is not available in this browser. Typed commands still work.");
+        return;
+      }
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      stream.getTracks().forEach(track => track.stop());
+      setStatus("Microphone is ready. Nexus can listen when voice mode is started.");
+      return;
+    }
+    if (kind === "notifications") {
+      if (!("Notification" in window)) {
+        setStatus("Notifications are not available in this browser. SMS and WhatsApp workflows can still operate when configured.");
+        return;
+      }
+      const result = await Notification.requestPermission();
+      setStatus(result === "granted" ? "Notifications are ready for app alerts." : "Notifications were not enabled. The platform will keep alerts inside the app.");
+      return;
+    }
+    if (kind === "location") {
+      if (!navigator.geolocation) {
+        setStatus("Location is not available in this browser. Map workflows can still use selected routes.");
+        return;
+      }
+      await new Promise((resolve, reject) => {
+        navigator.geolocation.getCurrentPosition(resolve, reject, { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 });
+      });
+      setStatus("Location is ready for map risk, route tracking, and field support.");
+      return;
+    }
+    if (kind === "install") {
+      installAgriNexusApp();
+      if (status) status.textContent = translateText("Install flow opened if the browser supports app installation.");
+      return;
+    }
+    setStatus("Permission option is ready.");
+  } catch (error) {
+    setStatus(`${kind} permission could not be enabled: ${error.message || "browser blocked the request"}`);
+  }
+}
+
 function applyAccessibilityPrefs() {
   const classMap = {
     largeText: "large-text",
@@ -3466,10 +3514,23 @@ function renderUserWorkspace() {
   const outcome = latestUserOutcome();
   const providerReady = data.providers?.filter(provider => ["ready", "connected", "live"].includes(provider.status)).length || 0;
   const providerTotal = data.providers?.length || 0;
+  const readiness = data.admin?.readiness || {};
   const languageName = voiceLanguageNames[languageCode()] || "English";
   const voiceMode = data.profile.voiceProvider === "openai" || data.providers?.some(provider => provider.id === "openai" && provider.status === "ready")
     ? "AI voice ready"
     : "Voice fallback ready";
+  const permissionItems = [
+    { key: "microphone", title: "Microphone", detail: "Voice commands and spoken intake" },
+    { key: "notifications", title: "Notifications", detail: "Care, work, trade, and follow-up alerts" },
+    { key: "location", title: "Location", detail: "Route tracking, map risk, and field support" },
+    { key: "install", title: "Install app", detail: "Phone-ready home screen access" }
+  ];
+  const providerDepth = [
+    { title: "AI and voice", detail: "OpenAI reasoning, speech, voice response, and command routing", status: data.providers?.find(provider => provider.id === "openai")?.status || "needs setup" },
+    { title: "Translation and maps", detail: "Language switching, translated content, map tiles, route intelligence", status: readiness.status || "check" },
+    { title: "Learning and workforce", detail: "Course catalog, certificates, job data, role applications, schedules", status: `${providerReady}/${providerTotal} engines` },
+    { title: "Telehealth, trade, drones", detail: "Intake, provider handoff, buyer messaging, field intelligence", status: "workflow ready" }
+  ];
   const actions = [
     { label: "Learn a skill", detail: "Start training, complete lessons, and create a certificate record.", command: "start training path", primary: true },
     { label: "Find work", detail: "Build a work profile, review gaps, and apply for a role.", command: "apply for that job", primary: true },
@@ -3512,6 +3573,36 @@ function renderUserWorkspace() {
         <strong>${translateText("Engines")}</strong>
         <span>${translateText(`${providerReady}/${providerTotal} services ready`)}</span>
       </button>
+    </section>
+    <section class="user-production-grid" aria-label="${translateText("Mobile permissions and provider depth")}">
+      <article class="user-production-card">
+        <div class="tag-row"><span>${translateText("Mobile permissions")}</span><span>${translateText("Production app")}</span></div>
+        <h3>${translateText("Turn On Phone Capabilities")}</h3>
+        <p>${translateText("Enable the device features Nexus needs for hands-free voice, local alerts, route intelligence, and app-style access.")}</p>
+        <div class="permission-grid">
+          ${permissionItems.map(item => `<button type="button" data-mobile-permission="${item.key}">
+            <strong>${translateText(item.title)}</strong>
+            <span>${translateText(item.detail)}</span>
+          </button>`).join("")}
+        </div>
+        <div id="mobilePermissionStatus" class="micro-status">${translateText("Choose a permission to check or activate it.")}</div>
+      </article>
+      <article class="user-production-card">
+        <div class="tag-row"><span>${translateText("Live provider depth")}</span><span>${translateText(`${providerReady}/${providerTotal}`)}</span></div>
+        <h3>${translateText("Connect Real-World Engines")}</h3>
+        <p>${translateText("Use this before launch to confirm AI, voice, translation, maps, learning, workforce, telehealth, trade, drone, billing, and messaging services.")}</p>
+        <div class="provider-depth-list">
+          ${providerDepth.map(item => `<div>
+            <strong>${translateText(item.title)}</strong>
+            <span>${translateText(item.detail)}</span>
+            <small>${translateText(item.status)}</small>
+          </div>`).join("")}
+        </div>
+        <div class="action-row">
+          <button type="button" class="primary" id="userLiveServiceCheckBtn">${translateText("Run live provider check")}</button>
+          <button type="button" data-simple-command="what providers are missing">${translateText("Explain missing engines")}</button>
+        </div>
+      </article>
     </section>
     <div class="user-action-grid">
       ${actions.map(action => `<button type="button" class="user-action ${action.primary ? "primary" : ""}" data-simple-command="${escapeHtml(action.command)}">
@@ -5983,7 +6074,7 @@ function setLiveServiceCheckStatus(html) {
 async function runLiveServiceCheck(event) {
   event?.preventDefault?.();
   event?.stopPropagation?.();
-  const buttons = ["#liveServiceCheckBtn", "#liveServiceCheckFromIntegrations"].map(selector => $(selector)).filter(Boolean);
+  const buttons = ["#liveServiceCheckBtn", "#liveServiceCheckFromIntegrations", "#userLiveServiceCheckBtn"].map(selector => $(selector)).filter(Boolean);
   buttons.forEach(button => {
     button.disabled = true;
     button.setAttribute("aria-busy", "true");
@@ -6005,7 +6096,7 @@ async function runLiveServiceCheck(event) {
     setVoiceResponse(`Live service check failed: ${message}`);
     toast(message);
   } finally {
-    ["#liveServiceCheckBtn", "#liveServiceCheckFromIntegrations"].map(selector => $(selector)).filter(Boolean).forEach(button => {
+    ["#liveServiceCheckBtn", "#liveServiceCheckFromIntegrations", "#userLiveServiceCheckBtn"].map(selector => $(selector)).filter(Boolean).forEach(button => {
       button.disabled = false;
       button.removeAttribute("aria-busy");
       button.textContent = "Run live service check";
@@ -7280,6 +7371,17 @@ function bindStatic() {
       event.preventDefault();
       event.stopPropagation();
       openAskNexus();
+      return;
+    }
+    const permissionButton = event.target.closest("[data-mobile-permission]");
+    if (permissionButton) {
+      event.preventDefault();
+      event.stopPropagation();
+      requestProductionMobilePermission(permissionButton.dataset.mobilePermission);
+      return;
+    }
+    if (event.target.closest("#userLiveServiceCheckBtn")) {
+      runLiveServiceCheck(event);
       return;
     }
     const simpleButton = event.target.closest("[data-simple-command], [data-simple-section], [data-simple-pilot], [data-simple-demo], [data-simple-mission], [data-simple-action]");
