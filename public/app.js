@@ -3641,6 +3641,21 @@ function renderUserWorkspace() {
       <h3 id="userWorkspaceTitle">${translateText("How can we help?")}</h3>
       <p>${translateText("Tap one button. Nexus will guide you step by step.")}</p>
     </section>
+    <section class="user-language-panel" aria-label="${translateText("Choose language")}">
+      <strong>${translateText("Choose language")}</strong>
+      <div class="user-language-buttons">
+        ${[
+          ["en", "English"],
+          ["fr", "French"],
+          ["sw", "Kiswahili"],
+          ["ar", "Arabic"],
+          ["es", "Spanish"]
+        ].map(([code, label]) => `<button type="button" class="${languageCode() === code ? "active" : ""}" data-user-language="${code}" aria-pressed="${languageCode() === code}">
+          ${translateText(label)}
+        </button>`).join("")}
+      </div>
+      <span>${translateText("You can also say: Nexus, change language to French.")}</span>
+    </section>
     <section class="user-service-buttons" aria-label="${translateText("Open a service")}">
       ${serviceButtons.map(item => `<button type="button" class="${escapeHtml(item.className)}" ${item.ask ? `data-mobile-ask="true"` : `data-simple-section="${item.section}"`}>
         <strong>${translateText(item.label)}</strong>
@@ -6086,6 +6101,9 @@ function bindDynamic() {
   });
   $$("[data-simple-command], [data-simple-section], [data-simple-pilot], [data-simple-demo], [data-simple-mission], [data-simple-action]").forEach(button => {
     button.onclick = runSimpleAction;
+  });
+  $$("[data-user-language]").forEach(button => {
+    button.onclick = () => mutate("/api/user/language", { language: button.dataset.userLanguage }, platformCopy[button.dataset.userLanguage]?.languageToast || "Platform language updated");
   });
   $$(".course").forEach(button => button.onclick = () => {
     const course = data.courses.find(item => item.id === button.dataset.course);
