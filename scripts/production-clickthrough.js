@@ -212,6 +212,10 @@ assert(html.includes("Platform Intelligence Review"), "Agent center needs an AI 
 assert(app.includes("aiOrchestrationPanel"), "Frontend needs to render AI orchestration records");
 assert(app.includes("orchestrate: \"Orchestrate next move\""), "AI workflow modal needs orchestration wiring");
 assert(server.includes("function intelligentAssistantModel"), "Backend needs the 10-part intelligent assistant model");
+assert(server.includes("goal-driven-operating-brain"), "10-part model must include goal-driven operating brain");
+assert(server.includes("live-context-awareness"), "10-part model must include live context awareness");
+assert(server.includes("provider-independence-layer"), "10-part model must include provider independence");
+assert(server.includes("evidence-and-mobile-initiative"), "10-part model must include evidence and mobile initiative");
 assert(app.includes("intelligentAssistantPanel"), "Agent page must render the 10-part intelligent assistant model");
 assert(html.includes("10-Part Assistant System"), "Agent page needs a visible 10-part assistant system panel");
 assert(server.includes("intelligent-assistant.ten_item_model"), "Voice agent must answer all-ten intelligent model requests");

@@ -785,74 +785,74 @@ function intelligentAssistantModel(db, user, providers = runtimeProviders(db)) {
   const hasTranslation = providerOk("translation") || ["en", "fr", "sw", "ar", "es"].includes(user?.language || db.profile.accessibilityProfile?.language || "en");
   const items = [
     {
-      id: "personal-onboarding",
-      title: "Personal onboarding",
-      ready: (db.profile.onboardingRuns || []).length > 0 || Boolean(user?.role),
-      evidence: user?.role ? `${user.role} experience selected` : "User role selects the experience.",
-      command: "I am new, guide me"
+      id: "goal-driven-operating-brain",
+      title: "Goal-driven operating brain",
+      ready: Boolean(user?.role) || (db.profile.agentPlans || []).length > 0,
+      evidence: user?.role ? `${user.role} mode gives Nexus a goal frame for User, Admin, or Investor work.` : "Create a mission so Nexus can hold an outcome.",
+      command: "Nexus, what is my goal here"
     },
     {
-      id: "memory-across-sessions",
-      title: "Memory across sessions",
+      id: "persistent-memory",
+      title: "Persistent memory",
       ready: hasMemory,
-      evidence: hasMemory ? `${(db.profile.agentMemory.preferences || []).length + (db.profile.agentMemory.longTermFacts || []).length + (db.profile.agentMemory.conversationalIntakes || []).length} memory record(s)` : "Say remember, then tell AgriNexus an important preference.",
+      evidence: hasMemory ? `${(db.profile.agentMemory.preferences || []).length + (db.profile.agentMemory.longTermFacts || []).length + (db.profile.agentMemory.conversationalIntakes || []).length} memory record(s) shape future guidance.` : "Say remember, then tell AgriNexus an important preference.",
       command: "remember that I prefer voice-first support"
     },
     {
-      id: "smart-next-step-coaching",
-      title: "Smart next-step coaching",
+      id: "live-context-awareness",
+      title: "Live context awareness",
       ready: true,
-      evidence: `${smartNextActions(db, user, providers).items.length} recommended action(s) available`,
-      command: "what should I do next"
+      evidence: `Nexus tracks role, active section, pending action, guided mission, recommended next action, and production readiness.`,
+      command: "Nexus, awareness check"
     },
     {
-      id: "conversational-intake",
-      title: "Conversational intake",
+      id: "autonomous-missions",
+      title: "Autonomous missions",
       ready: true,
-      evidence: `${(db.profile.agentMemory.conversationalIntakes || []).length} guided intake(s) captured`,
-      command: "start telehealth intake and ask me questions"
-    },
-    {
-      id: "multilingual-voice-guide",
-      title: "Multilingual voice guide",
-      ready: hasTranslation && hasVoice,
-      evidence: `${voiceLanguageLabel(user?.language || db.profile.accessibilityProfile?.language || "en")} voice/text response path`,
-      command: "speak to me in my selected language"
-    },
-    {
-      id: "role-aware-assistant",
-      title: "Role-aware assistant",
-      ready: Boolean(user?.role),
-      evidence: `${user?.role || "Standard User"} permissions shape visible modules and actions`,
-      command: "what can I do with my account"
-    },
-    {
-      id: "autopilot-missions",
-      title: "Autopilot missions",
-      ready: true,
-      evidence: `${(db.profile.agentPlans || []).filter(plan => plan.mode === "autopilot").length} autopilot plan(s), ${(db.profile.agentExecutions || []).length} execution(s)`,
+      evidence: `${(db.profile.agentPlans || []).filter(plan => plan.mode === "autopilot").length} autopilot plan(s), ${(db.profile.agentExecutions || []).length} execution(s), confirmation gates before risky actions.`,
       command: "autopilot help this farmer get from crop problem to buyer payment"
     },
     {
-      id: "live-service-actions",
-      title: "Live service actions",
-      ready: providers.filter(provider => provider.status === "connected").length >= Math.max(1, providers.length - 2),
-      evidence: `${providers.filter(provider => provider.status === "connected").length}/${providers.length} provider(s) connected or ready`,
+      id: "natural-voice-operation",
+      title: "Natural voice operation",
+      ready: hasVoice,
+      evidence: hasVoice ? "Voice response provider is available; browser voice and OpenAI voice can guide users." : "Browser voice still works locally; OpenAI voice needs credits/key.",
+      command: "Nexus, talk me through this"
+    },
+    {
+      id: "workflow-execution",
+      title: "Workflow execution",
+      ready: true,
+      evidence: `Agent tools can stage or execute learning, workforce, telehealth, trade, map, drone, communications, provider, and admin workflows.`,
+      command: "Nexus, do the next step"
+    },
+    {
+      id: "provider-independence-layer",
+      title: "Provider independence layer",
+      ready: providers.length > 0,
+      evidence: `${providers.filter(provider => ["connected", "ready"].includes(provider.status)).length}/${providers.length} provider adapter(s) connected or ready; local workflows continue when vendors are missing.`,
       command: "test provider engines"
     },
     {
       id: "accessibility-first-behavior",
       title: "Accessibility-first behavior",
-      ready: Boolean(db.profile.accessibilityProfile?.hearingSupport || db.profile.accessibilityProfile?.visualSupport),
-      evidence: (db.profile.accessibilityProfile?.preferredFormats || []).join(", ") || "captions, audio guide, large print, low bandwidth",
+      ready: true,
+      evidence: (db.profile.accessibilityProfile?.preferredFormats || []).join(", ") || "Captions, audio guide, read-aloud, simplified language, low-bandwidth, visual and hearing support paths.",
       command: "prepare accessible support"
     },
     {
-      id: "investor-presentation-mode",
-      title: "Investor presentation mode",
-      ready: (db.profile.agentBriefings || []).length > 0 || (db.profile.demoMoments || []).length > 0,
-      evidence: `${(db.profile.agentBriefings || []).length} briefing(s), ${(db.profile.demoMoments || []).length} demo moment(s)`,
-      command: "prepare an investor presentation"
+      id: "role-specific-intelligence",
+      title: "Role-specific intelligence",
+      ready: Boolean(user?.role),
+      evidence: `${user?.role || "User"} mode changes what Nexus shows, says, recommends, and protects.`,
+      command: "what can I do with my account"
+    },
+    {
+      id: "evidence-and-mobile-initiative",
+      title: "Evidence and mobile initiative",
+      ready: (db.profile.integrationEvents || []).length > 0 || (db.profile.agentBriefings || []).length > 0,
+      evidence: `${(db.profile.integrationEvents || []).length} evidence event(s), ${(db.profile.agentBriefings || []).length} briefing(s), native bridge and phone/voice readiness paths.`,
+      command: "Nexus, summarize evidence and mobile readiness"
     }
   ];
   const readyCount = items.filter(item => item.ready).length;
@@ -860,6 +860,7 @@ function intelligentAssistantModel(db, user, providers = runtimeProviders(db)) {
     status: readyCount === items.length ? "all-ten-active" : "active-with-setup-gates",
     readyCount,
     total: items.length,
+    operatingPrinciples: ["goals", "memory", "awareness", "recovery", "initiative"],
     items
   };
 }
@@ -7467,7 +7468,7 @@ async function runAgentCommand(db, user, command, options = {}) {
     return voiceInvestorDemo(db, user);
   }
 
-  if (lower.includes("all 10") || lower.includes("all ten") || lower.includes("10 items") || lower.includes("ten items") || lower.includes("full intelligent model") || lower.includes("full intelligence model")) {
+  if (lower.includes("all 10") || lower.includes("all ten") || lower.includes("10 items") || lower.includes("ten items") || lower.includes("full intelligent model") || lower.includes("full intelligence model") || lower.includes("independent agent") || lower.includes("jarvis model") || lower.includes("goals memory awareness recovery initiative")) {
     db.profile.agentMemory.activeClarification = null;
     db.profile.agentMemory.activeRecovery = null;
     const model = intelligentAssistantModel(db, user);
@@ -7484,7 +7485,7 @@ async function runAgentCommand(db, user, command, options = {}) {
     });
     return {
       intent: "intelligent-assistant.ten_item_model",
-      response: `The full intelligent model is active at ${model.readyCount} out of ${model.total}. It covers onboarding, memory, next-step coaching, conversational intake, multilingual voice, role-aware guidance, autopilot missions, live services, accessibility-first support, and investor presentation mode. Say "help me" for the best next step or say one of the listed commands to test a specific item.`,
+      response: `The independent Nexus agent model is active at ${model.readyCount} out of ${model.total}. It is organized around goals, memory, awareness, recovery, and initiative. The 10 operating layers are goal-driven brain, persistent memory, live context awareness, autonomous missions, natural voice operation, workflow execution, provider independence, accessibility-first behavior, role-specific intelligence, and evidence plus mobile initiative. Say "Nexus, awareness check" or "Nexus, do the next step" to test it.`,
       status: model.status,
       metadata: { conversationMode: conversational, redirectSection: "agent", model }
     };
@@ -7621,7 +7622,7 @@ async function runAgentCommand(db, user, command, options = {}) {
     return startJarvisMode(db, user, text);
   }
 
-  if (lower.includes("all 10") || lower.includes("all ten") || lower.includes("10 items") || lower.includes("ten items") || lower.includes("full intelligent model") || lower.includes("full intelligence model")) {
+  if (lower.includes("all 10") || lower.includes("all ten") || lower.includes("10 items") || lower.includes("ten items") || lower.includes("full intelligent model") || lower.includes("full intelligence model") || lower.includes("independent agent") || lower.includes("jarvis model") || lower.includes("goals memory awareness recovery initiative")) {
     const model = intelligentAssistantModel(db, user);
     db.profile.agentMemory.lastStatus = model.status;
     db.profile.agentMemory.lastSummary = `The intelligent assistant model has ${model.readyCount}/${model.total} items active.`;
@@ -7636,7 +7637,7 @@ async function runAgentCommand(db, user, command, options = {}) {
     });
     return {
       intent: "intelligent-assistant.ten_item_model",
-      response: `The full intelligent model is active at ${model.readyCount} out of ${model.total}. It covers onboarding, memory, next-step coaching, conversational intake, multilingual voice, role-aware guidance, autopilot missions, live services, accessibility-first support, and investor presentation mode. Say "help me" for the best next step or say one of the listed commands to test a specific item.`,
+      response: `The independent Nexus agent model is active at ${model.readyCount} out of ${model.total}. It is organized around goals, memory, awareness, recovery, and initiative. The 10 operating layers are goal-driven brain, persistent memory, live context awareness, autonomous missions, natural voice operation, workflow execution, provider independence, accessibility-first behavior, role-specific intelligence, and evidence plus mobile initiative. Say "Nexus, awareness check" or "Nexus, do the next step" to test it.`,
       status: model.status,
       metadata: { conversationMode: conversational, redirectSection: "agent", model }
     };

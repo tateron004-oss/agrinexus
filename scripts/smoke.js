@@ -129,9 +129,10 @@ async function call(path, body) {
   assert(login.providers.some(provider => provider.id === "auth-password-reset"));
   assert(login.capabilities.total >= 10);
   assert(login.intelligentAssistant.total === 10);
-  assert(login.intelligentAssistant.items.some(item => item.id === "personal-onboarding"));
-  assert(login.intelligentAssistant.items.some(item => item.id === "conversational-intake"));
-  assert(login.intelligentAssistant.items.some(item => item.id === "investor-presentation-mode"));
+  assert(login.intelligentAssistant.items.some(item => item.id === "goal-driven-operating-brain"));
+  assert(login.intelligentAssistant.items.some(item => item.id === "persistent-memory"));
+  assert(login.intelligentAssistant.items.some(item => item.id === "live-context-awareness"));
+  assert(login.intelligentAssistant.items.some(item => item.id === "evidence-and-mobile-initiative"));
   assert(login.sessionBriefing.title);
   assert(login.sessionBriefing.prompts.includes("summarize my progress"));
   assert(login.sessionBriefing.assistantReadiness.total === 10);
