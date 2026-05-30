@@ -6171,6 +6171,7 @@ function openHealthWorkflow(action, element = { dataset: {} }) {
 async function confirmPendingWorkflow() {
   if (!pendingWorkflow) return;
   const workflow = pendingWorkflow;
+  const grandmaMode = experienceMode === "user";
   const note = $("#workflowNote").value.trim();
   closeWorkflowModal();
   if (!workflow.path) {
@@ -6192,6 +6193,14 @@ async function confirmPendingWorkflow() {
     });
     render();
     if (workflow.redirectSection) goSection(workflow.redirectSection);
+    if (grandmaMode) {
+      const active = currentSectionId();
+      if (active !== "dashboard" && simpleUserSections[active]) renderUserSimpleActiveSection(active);
+      const response = `${workflow.success || "Done"}. Choose another button when ready.`;
+      setVoiceResponse(response, true);
+      toast(response);
+      return;
+    }
     const intelligence = data.workflowIntelligenceResult || (data.profile.workflowIntelligence || [])[0];
     if (intelligence) {
       const response = `${workflow.success || "Workflow complete"}. ${intelligence.summary} ${intelligence.nextStep}`;
