@@ -28,6 +28,7 @@ const clickTargets = [
   "startOnboardingBtn",
   "openSupportBtn",
   "inviteSubscriberBtn",
+  "addTestUserBtn",
   "globalListenBtn",
   "globalRunBtn",
   "globalVoiceFirstBtn",
@@ -131,6 +132,7 @@ const endpoints = [
   "/api/pilot/run",
   "/api/partnership/create",
   "/api/admin/subscriber",
+  "/api/admin/test-user",
   "/api/engines/manifest",
   "/api/engines/render-env-plan",
   "/api/production/complete-check",
@@ -335,9 +337,14 @@ assert(server.includes("Standard User"), "Backend needs a standard user role");
 assert(server.includes("Investor"), "Backend needs an investor role");
 assert(!server.includes("Workforce Operator"), "Production login levels should be simplified to admin, standard user, and investor");
 assert(app.includes("function runLiveServiceCheck"), "Frontend needs a live service finalization action");
-assert(html.includes("styles.css?v=personalized-nexus-52"), "Index must force browsers to load the latest personalized Nexus shell");
-assert(html.includes("app.js?v=personalized-nexus-65"), "Index must force browsers to load the latest personalized Nexus code");
-assert(sw.includes("agrinexus-pwa-v44"), "Service worker cache must refresh the installed app after personalized Nexus updates");
+assert(html.includes("addTestUserBtn"), "Admin needs a User-only test login workflow");
+assert(app.includes('workflow === "test-user"'), "User-only test login button needs workflow modal wiring");
+assert(app.includes("Create a User-only test login"), "User-only test login flow must explain Admin and Investor are not exposed");
+assert(server.includes('account.role = "Standard User"'), "Backend must force test logins to Standard User");
+assert(server.includes("test_user.created"), "User-only test login must create auth audit evidence");
+assert(html.includes("styles.css?v=user-only-test-account-53"), "Index must force browsers to load the latest user account shell");
+assert(html.includes("app.js?v=user-only-test-account-66"), "Index must force browsers to load the latest user account code");
+assert(sw.includes("agrinexus-pwa-v45"), "Service worker cache must refresh the installed app after user account updates");
 assert(html.includes("userWorkspace"), "Dashboard needs a User Workspace for standard users");
 assert(html.includes("userMobileDock"), "Legacy mobile dock markup should remain safely hidden for cache compatibility");
 assert(html.includes("What Do You Need Help With Today?"), "Dashboard simple start should use user-ready language");

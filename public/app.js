@@ -3396,7 +3396,7 @@ function renderLaunchSupportPanels() {
 }
 
 function applyPermissions() {
-  $$("[data-workflow], [data-ai], [data-workforce], [data-health], [data-pay], [data-module-test], [data-command-preset], [data-pilot-scenario], [data-persona], [data-simple-command], [data-simple-section], [data-simple-pilot], [data-simple-demo], [data-simple-mission], [data-simple-action], .provider-test, #adminHealthCheck, #liveServiceCheckBtn, #liveServiceCheckFromIntegrations, #aiConsoleRun, #agentPlanBtn, #agentExecuteBtn, #agentBriefingBtn, #agentMissionBtn, #missionResumeBtn, #missionAutopilotBtn, #demoRunBtn, #wowDemoBtn, #startOnboardingBtn, #openSupportBtn, #inviteSubscriberBtn, [data-ai-review], [data-notify], #voiceListenBtn, #voiceRunBtn, #voiceFirstBtn, #voiceSpeakBtn, #voiceHelpBtn, #globalListenBtn, #globalRunBtn, #globalYesBtn, #globalNoBtn, #globalReadBtn, #globalVoiceHelpBtn, #globalInstallBtn, #jarvisListenBtn, #jarvisRunBtn, #jarvisMissionBtn, #jarvisReadBtn").forEach(element => {
+  $$("[data-workflow], [data-ai], [data-workforce], [data-health], [data-pay], [data-module-test], [data-command-preset], [data-pilot-scenario], [data-persona], [data-simple-command], [data-simple-section], [data-simple-pilot], [data-simple-demo], [data-simple-mission], [data-simple-action], .provider-test, #adminHealthCheck, #liveServiceCheckBtn, #liveServiceCheckFromIntegrations, #aiConsoleRun, #agentPlanBtn, #agentExecuteBtn, #agentBriefingBtn, #agentMissionBtn, #missionResumeBtn, #missionAutopilotBtn, #demoRunBtn, #wowDemoBtn, #startOnboardingBtn, #openSupportBtn, #inviteSubscriberBtn, #addTestUserBtn, [data-ai-review], [data-notify], #voiceListenBtn, #voiceRunBtn, #voiceFirstBtn, #voiceSpeakBtn, #voiceHelpBtn, #globalListenBtn, #globalRunBtn, #globalYesBtn, #globalNoBtn, #globalReadBtn, #globalVoiceHelpBtn, #globalInstallBtn, #jarvisListenBtn, #jarvisRunBtn, #jarvisMissionBtn, #jarvisReadBtn").forEach(element => {
     const area = element.dataset.workflow
       || (element.dataset.ai ? "ai" : null)
       || (element.dataset.workforce ? "workforce" : null)
@@ -3438,6 +3438,7 @@ function applyPermissions() {
       || (element.id === "startOnboardingBtn" ? "profile" : null)
       || (element.id === "openSupportBtn" ? "profile" : null)
       || (element.id === "inviteSubscriberBtn" ? "admin" : null)
+      || (element.id === "addTestUserBtn" ? "admin" : null)
       || (element.id === "demoRunBtn" ? "admin" : null)
       || (element.id === "wowDemoBtn" ? "admin" : null)
       || (element.dataset.aiReview ? "governance" : null)
@@ -5272,7 +5273,7 @@ function openWorkflowModal(config) {
     if (field.type === "textarea") {
       return `<label class="field-label">${translateText(field.label)}<textarea rows="${field.rows || 3}" data-workflow-field="${field.name}" placeholder="${translateText(field.placeholder || "")}">${translateText(value)}</textarea></label>`;
     }
-    return `<label class="field-label">${translateText(field.label)}<input data-workflow-field="${field.name}" value="${translateText(value)}" placeholder="${translateText(field.placeholder || "")}"></label>`;
+    return `<label class="field-label">${translateText(field.label)}<input type="${field.type === "password" ? "password" : "text"}" data-workflow-field="${field.name}" value="${translateText(value)}" placeholder="${translateText(field.placeholder || "")}"></label>`;
   }).join("");
   $("#workflowChecklist").innerHTML = (config.checklist || []).map(item => taskItem(item.title, item.detail, item.status || "ready", item.label || "Ready")).join("");
   $("#workflowOutcome").innerHTML = [
@@ -5348,8 +5349,8 @@ function roleWorkflowConfig(roleId) {
   };
 }
 
-function simpleWorkflowConfig({ eyebrow, title, summary, confirmLabel, path, body, success, record, provider, checklist }) {
-  return { eyebrow, title, summary, confirmLabel, path, body, success, record, provider, checklist };
+function simpleWorkflowConfig({ eyebrow, title, summary, confirmLabel, path, body, success, record, provider, checklist, fields }) {
+  return { eyebrow, title, summary, confirmLabel, path, body, success, record, provider, checklist, fields };
 }
 
 function learningAccessibilityWorkflowConfig(mode) {
@@ -5980,6 +5981,54 @@ function workflowConfig(workflow, action, element) {
         { title: "Current subscribers", detail: `${(data.admin?.subscribers || []).length} subscriber(s) tracked`, status: "ready", label: "Admin" },
         { title: "Billing provider", detail: data.providers.find(item => item.id === "billing-subscriptions")?.status || "not configured", status: "ready", label: "Billing" },
         { title: "Auth provider", detail: data.providers.find(item => item.id === "auth-users")?.status || "not configured", status: "ready", label: "Auth" }
+      ]
+    });
+  }
+  if (workflow === "test-user") {
+    return simpleWorkflowConfig({
+      eyebrow: "User access workflow",
+      title: "Add app user",
+      summary: "Create a User-only test login. This account cannot access Admin or Investor mode.",
+      confirmLabel: "Create user login",
+      path: "/api/admin/test-user",
+      body: { role: "Standard User" },
+      fields: [
+        { name: "name", label: "User name", value: "Test User", placeholder: "Example: Ron User" },
+        { name: "email", label: "User email", value: "test-user@example.com", placeholder: "name@example.com" },
+        { name: "password", label: "Temporary password", type: "password", value: "User2026!", placeholder: "At least 8 characters" },
+        {
+          name: "country",
+          label: "Country",
+          type: "select",
+          value: "Nigeria",
+          options: [
+            { value: "Nigeria", label: "Nigeria" },
+            { value: "Kenya", label: "Kenya" },
+            { value: "DRC", label: "DRC" },
+            { value: "Egypt", label: "Egypt" }
+          ]
+        },
+        {
+          name: "language",
+          label: "Language",
+          type: "select",
+          value: "en",
+          options: [
+            { value: "en", label: "English" },
+            { value: "fr", label: "French" },
+            { value: "ar", label: "Arabic" },
+            { value: "sw", label: "Swahili" },
+            { value: "es", label: "Spanish" }
+          ]
+        }
+      ],
+      success: "User test login created",
+      record: "User login account, role permissions, auth provider evidence, and admin audit",
+      provider: "Auth provider records test_user.created when configured. The backend always forces Standard User permissions.",
+      checklist: [
+        { title: "Role locked", detail: "The account is created as User only, with no Admin or Investor controls.", status: "ready", label: "User" },
+        { title: "Login test", detail: "Use the email and temporary password on the sign-in screen.", status: "ready", label: "Access" },
+        { title: "Auth audit", detail: data.providers.find(item => item.id === "auth-users")?.status || "Provider audit will record locally until live auth is connected.", status: "ready", label: "Auth" }
       ]
     });
   }
@@ -7970,6 +8019,7 @@ function bindStatic() {
   $("#startOnboardingBtn").onclick = () => openWorkflowModal(workflowConfig("onboarding", "start", { dataset: {} }));
   $("#openSupportBtn").onclick = () => openWorkflowModal(workflowConfig("support", "ticket", { dataset: {} }));
   $("#inviteSubscriberBtn").onclick = () => openWorkflowModal(workflowConfig("subscriber", "invite", { dataset: {} }));
+  $("#addTestUserBtn").onclick = () => openWorkflowModal(workflowConfig("test-user", "create", { dataset: {} }));
   $("#agentPlanBtn").onclick = createAgentPlan;
   $("#agentExecuteBtn").onclick = executeAgentPlan;
   $("#agentBriefingBtn").onclick = createGovernmentBriefing;

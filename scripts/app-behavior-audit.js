@@ -93,8 +93,11 @@ hasAll(app, [
 assert(!app.includes('{ label: "Me", section: "profile"'), "Standard User home should not expose profile clutter");
 assert(!app.includes("Welcome back, ${data.user.role}"), "Ask Nexus should not welcome people by role label");
 assert(!styles.includes("body.user-mode .user-mobile-dock button.active,\nbody.user-mode .user-mobile-dock button[data-mobile-ask] {\n  display:"), "Mobile dock should stay hidden in app mode");
-assert(html.includes("personalized-nexus-52"), "Index must force browsers to load personalized Nexus CSS");
-assert(html.includes("personalized-nexus-65"), "Index must force browsers to load personalized Nexus JS");
+assert(html.includes("addTestUserBtn"), "Admin should have a User-only test login button");
+assert(app.includes('workflow === "test-user"'), "User-only test login needs workflow wiring");
+assert(app.includes("This account cannot access Admin or Investor mode"), "User-only login flow should clearly exclude Admin and Investor");
+assert(html.includes("user-only-test-account-53"), "Index must force browsers to load user account CSS");
+assert(html.includes("user-only-test-account-66"), "Index must force browsers to load user account JS");
 
 console.log("App behavior audit passed");
 console.log("Checked: app-mode language picker, service buttons, section containment, workflow confirmations, voice routes, overflow wrapping, and advanced-panel hiding.");

@@ -8452,6 +8452,42 @@ async function api(req, res, url) {
     return send(res, 200, publicState(db, user));
   }
 
+  if (url.pathname === "/api/admin/test-user" && req.method === "POST") {
+    if (!canUse(user, "admin")) return send(res, 403, { error: "Role does not allow user management" });
+    const body = await readBody(req);
+    ensureOperationsProfile(db.profile);
+    const email = String(body.email || "test-user@example.com").trim().toLowerCase();
+    const name = String(body.name || "Test User").trim() || "Test User";
+    const password = String(body.password || "User2026!").trim();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return send(res, 400, { error: "A valid email is required" });
+    if (password.length < 8) return send(res, 400, { error: "Password must be at least 8 characters" });
+    const account = db.users.find(item => String(item.email || "").toLowerCase() === email) || {
+      id: crypto.randomUUID(),
+      email,
+      createdAt: new Date().toISOString()
+    };
+    account.name = name;
+    account.password = password;
+    account.role = "Standard User";
+    account.country = String(body.country || account.country || "Nigeria").trim() || "Nigeria";
+    account.language = String(body.language || account.language || COUNTRY_LANGUAGE[account.country.toLowerCase()] || "en").trim() || "en";
+    account.lastUpdatedAt = new Date().toISOString();
+    if (!db.users.some(item => item.id === account.id)) db.users.push(account);
+    addUsageEvent(db.profile, { module: "Admin", action: "test_user.created", detail: `${account.email} User-only test login created.` });
+    logIntegration(db, {
+      providerId: "auth-users",
+      module: "Platform",
+      action: "test_user.created",
+      detail: `${account.email} created with User-only permissions.`,
+      metadata: { userId: account.id, role: account.role, country: account.country, language: account.language }
+    });
+    addActivity(db.profile, `User-only test login ready: ${account.email}.`);
+    await writeDb(db);
+    const state = publicState(db, user);
+    state.testUserResult = { name: account.name, email: account.email, password: account.password, role: account.role, country: account.country, language: account.language };
+    return send(res, 200, state);
+  }
+
   if (url.pathname === "/api/billing/checkout" && req.method === "POST") {
     if (!canUse(user, "admin")) return send(res, 403, { error: "Role does not allow billing setup" });
     const body = await readBody(req);
