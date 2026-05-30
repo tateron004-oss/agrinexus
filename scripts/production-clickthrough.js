@@ -525,6 +525,10 @@ assert(app.includes("Decision Confidence"), "High intelligence snapshot must sho
 assert(app.includes("Risk Radar"), "High intelligence snapshot must show risk awareness");
 assert(app.includes("function modeIntelligenceSnapshot"), "Every workspace mode needs a role-aware intelligence model");
 assert(app.includes("function renderModeIntelligence"), "Admin and Investor modes need visible role-aware intelligence rendering");
+assert(app.includes("function nexusSmartBehaviorModel"), "Every mode needs a smart behavior rule model");
+assert(app.includes("function nexusSmartBehaviorSummary"), "Voice assistant needs to explain smart behavior by role");
+assert(app.includes("Smart Behavior"), "Role-aware panels must expose smart behavior as an intelligence item");
+assert(app.includes("Nexus, be smart"), "Voice commands must activate smart behavior explanation");
 assert(html.includes("adminIntelligencePanel"), "Admin mode needs a visible intelligence panel");
 assert(html.includes("investorIntelligencePanel"), "Investor mode needs a visible intelligence panel");
 assert(app.includes("user-intelligence-card"), "User mode needs a simple visible intelligence card");

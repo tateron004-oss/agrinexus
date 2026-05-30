@@ -3688,9 +3688,47 @@ function nexusHighIntelligenceSummary() {
   return `Nexus intelligence is operating at ${snapshot.score}% confidence. Top recommendation: ${snapshot.topPriority.title}, because ${snapshot.topPriority.reason}. Autonomy level: ${snapshot.autonomyLevel}. Say ${snapshot.topPriority.command} to continue.`;
 }
 
+function nexusSmartBehaviorModel(mode = experienceMode) {
+  const normalized = normalizeExperienceMode(mode);
+  const snapshot = nexusHighIntelligenceSnapshot();
+  const role = normalized === "admin" ? "operator"
+    : normalized === "investor" ? "partner reviewer"
+      : normalized === "user" ? "everyday user"
+        : "workspace user";
+  const behavior = normalized === "user"
+    ? "simple, voice-first, one action at a time, with large-button paths and plain-language recovery"
+    : normalized === "admin"
+      ? "risk-aware, readiness-focused, audit-driven, and provider-depth conscious"
+      : normalized === "investor"
+        ? "impact-focused, evidence-led, funding-story aware, and demo-ready"
+        : "cross-module, evidence-aware, and workflow-first";
+  const thinking = [
+    "read the active role and section",
+    "rank the safest next action",
+    "check memory, language, provider depth, and unresolved risks",
+    "speak plainly before acting",
+    "confirm important workflow changes",
+    "record evidence after useful actions"
+  ];
+  return {
+    role,
+    behavior,
+    score: snapshot.score,
+    recommendation: snapshot.topPriority,
+    thinking,
+    statement: `For the ${role}, Nexus behaves ${behavior}. It is currently ${snapshot.score}% confident. Best move: ${snapshot.topPriority.title}, because ${snapshot.topPriority.reason}.`
+  };
+}
+
+function nexusSmartBehaviorSummary(mode = experienceMode) {
+  const model = nexusSmartBehaviorModel(mode);
+  return `${model.statement} Smart rules active: ${model.thinking.join("; ")}.`;
+}
+
 function modeIntelligenceSnapshot(mode = experienceMode) {
   const normalized = normalizeExperienceMode(mode);
   const base = nexusHighIntelligenceSnapshot();
+  const smart = nexusSmartBehaviorModel(normalized);
   const adminBrief = adminIntelligenceBrief();
   const investorBrief = investorIntelligenceBrief();
   const outcome = data ? latestUserOutcome() : { happened: "No workflow yet", meaning: "Nexus is ready.", next: "Ask Nexus for help." };
@@ -3705,6 +3743,7 @@ function modeIntelligenceSnapshot(mode = experienceMode) {
       },
       summary: `${outcome.meaning} Nexus will keep this simple, use voice-first guidance, translate when asked, and confirm before important actions.`,
       items: [
+        { title: "Smart Behavior", evidence: smart.behavior, ready: true, command: "Nexus, be smart" },
         { title: "Simple Next Step", evidence: outcome.next, ready: true, command: "Nexus, help me" },
         { title: "Voice Guidance", evidence: "Talk to Nexus, ask a question, or press one big service button.", ready: true, command: "Nexus, what should I do next" },
         { title: "Language Support", evidence: `${voiceLanguageName()} active; voice and screen language can change by command.`, ready: true, command: "Nexus, change language to French" },
@@ -3723,6 +3762,7 @@ function modeIntelligenceSnapshot(mode = experienceMode) {
       },
       summary: `Admin intelligence sees readiness ${adminBrief.readiness}, risk count ${adminBrief.riskCount}, usage ${adminBrief.usage}, and top risk: ${adminBrief.topRisk}`,
       items: [
+        { title: "Smart Behavior", evidence: smart.behavior, ready: true, command: "Nexus, be smart" },
         { title: "Readiness Risk", evidence: adminBrief.topRisk, ready: !adminBrief.riskCount, command: "Nexus, run admin intelligence" },
         { title: "Live Services", evidence: adminBrief.recommendation, ready: true, command: "Nexus, run live service check" },
         { title: "Usage Awareness", evidence: `${adminBrief.usage}; strongest module: ${adminBrief.healthiestModule}`, ready: true, command: "Nexus, summarize audit" },
@@ -3741,6 +3781,7 @@ function modeIntelligenceSnapshot(mode = experienceMode) {
       },
       summary: `Investor intelligence sees strongest metric ${investorBrief.strongestMetric}, timeline ${investorBrief.timeline}, provider depth ${investorBrief.providerDepth}, and gap: ${investorBrief.topGap}`,
       items: [
+        { title: "Smart Behavior", evidence: smart.behavior, ready: true, command: "Nexus, be smart" },
         { title: "Impact Signal", evidence: investorBrief.strongestMetric, ready: true, command: "Nexus, summarize impact" },
         { title: "Evidence Story", evidence: investorBrief.timeline, ready: true, command: "Nexus, run investor voice demo" },
         { title: "Funding Gap", evidence: investorBrief.topGap, ready: !investorBrief.topGap.includes("Run") && !investorBrief.topGap.includes("readiness"), command: "Nexus, explain this to investors" },
@@ -8553,6 +8594,10 @@ async function handleVoiceCommand(rawCommand) {
   if (lower.includes("highest intelligence") || lower.includes("high intelligence") || lower.includes("show intelligence") || lower.includes("intelligence snapshot") || lower.includes("how smart are you") || lower.includes("show decision")) {
     goSection("agent");
     setVoiceResponse(nexusHighIntelligenceSummary(), true);
+    return;
+  }
+  if (lower.includes("be smart") || lower.includes("act smart") || lower.includes("act intelligently") || lower.includes("think for me") || lower.includes("use your intelligence")) {
+    setVoiceResponse(nexusSmartBehaviorSummary(), true);
     return;
   }
   if (lower.includes("brain timeline") || lower.includes("show brain history") || lower.includes("what have you been doing")) {

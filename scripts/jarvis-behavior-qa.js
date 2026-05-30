@@ -47,6 +47,7 @@ const requirements = [
   ["high intelligence decision snapshot", app.includes("function nexusHighIntelligenceSnapshot") && app.includes("Decision Confidence") && app.includes("Risk Radar") && html.includes("nexusIntelligencePanel")],
   ["high intelligence voice summary", app.includes("function nexusHighIntelligenceSummary") && app.includes("Nexus intelligence is operating") && app.includes("intelligence snapshot")],
   ["role-aware intelligence all modes", app.includes("function modeIntelligenceSnapshot") && app.includes("User intelligence") && app.includes("Admin intelligence") && app.includes("Investor intelligence") && html.includes("adminIntelligencePanel") && html.includes("investorIntelligencePanel")],
+  ["smart behavior model", app.includes("function nexusSmartBehaviorModel") && app.includes("function nexusSmartBehaviorSummary") && app.includes("Smart Behavior") && app.includes("Nexus, be smart")],
   ["backend conversation context", app.includes("modeContext: modeConversationContext(command)") && server.includes("modeContext = options.modeContext") && server.includes("platformMode")],
   ["mode-aware local conversation fallback", server.includes("Admin conversation: I will focus on readiness") && server.includes("Investor conversation: I will focus on impact") && server.includes("User conversation: I will keep this simple")]
 ];
