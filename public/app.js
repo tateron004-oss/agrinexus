@@ -2759,6 +2759,7 @@ function renderAgentCenter() {
   const evidencePack = data.conversationEvidence || { evidence: [], status: "ready", counts: {} };
   const agentCapabilities = data.agentCapabilities || { totalTools: 0, liveTools: 0, confirmationTools: 0, modules: [] };
   const jarvisReadiness = data.jarvisReadiness || { readyCount: 0, total: 6, score: 0, items: [] };
+  const latestOrchestration = (data.profile.aiOrchestrations || [])[0];
   const agentMode = $("#agentMode");
   if (!agentMode) return;
   const agentStepAction = step => {
@@ -2778,6 +2779,27 @@ function renderAgentCenter() {
     ? plan.steps.map(step => taskItem(`${step.module}: ${step.action}`, step.detail, step.status === "executed" ? "done" : "active", step.tool, agentStepAction(step))).join("")
     : taskItem("No agent plan yet", "Create a mission plan to see cross-module tool steps.", "pending", "Plan", { workflow: "ai", action: "command" });
   renderMissionDashboard();
+  if ($("#aiOrchestrationPanel")) {
+    $("#aiOrchestrationPanel").innerHTML = latestOrchestration
+      ? (data.profile.aiOrchestrations || []).slice(0, 5).map(item => `<div><strong>${translateText(item.topAction?.module || "AI")} - ${translateText(item.topAction?.title || item.title)}</strong><span>${translateText(item.recommendation || "AI orchestration complete")}</span><small>${translateText(item.status)} - ${translateText(item.routeName || "")}</small></div>`).join("")
+      : `<div>${translateText("No AI orchestration review yet. Run Orchestrate next move to have Nexus read the whole platform and recommend the highest-value next action.")}</div>`;
+  }
+  if ($("#aiOrchestrationEvidence")) {
+    $("#aiOrchestrationEvidence").innerHTML = latestOrchestration
+      ? [
+        row("Top action", latestOrchestration.topAction?.title || "None"),
+        row("Module", latestOrchestration.topAction?.module || "Platform"),
+        row("Reason", latestOrchestration.topAction?.reason || "No reason recorded"),
+        row("Coverage", (latestOrchestration.coverage || []).join(" | ")),
+        row("AI run", latestOrchestration.aiRunId || "None"),
+        row("Workflow intelligence", latestOrchestration.intelligenceId || "None")
+      ].join("")
+      : [
+        row("Top action", "Awaiting orchestration"),
+        row("Coverage", "Learning, workforce, health, trade, maps, communications, providers"),
+        row("Voice command", "Nexus, orchestrate the platform")
+      ].join("");
+  }
   $("#agentToolPanel").innerHTML = [
     row("Capability registry", `${agentCapabilities.totalTools || 0} supervised tools, ${agentCapabilities.liveTools || 0} live-backed, ${agentCapabilities.confirmationTools || 0} confirmation-gated`),
     row("AgriNexus command track", `${jarvisReadiness.readyCount || 0}/${jarvisReadiness.total || 6} ready - ${jarvisReadiness.score || 0}% across wake, voice, autonomy, engines, memory, and app layer`),
@@ -5211,23 +5233,25 @@ function workflowConfig(workflow, action, element) {
       route: "Assess route risk",
       careplan: "Generate care-plan guidance",
       price: "Run price AI",
-      "trade-advisor": "Review trade next step"
+      "trade-advisor": "Review trade next step",
+      orchestrate: "Orchestrate next move"
     };
+    const isOrchestration = action === "orchestrate";
     return simpleWorkflowConfig({
       eyebrow: "AI workflow",
       title: titleMap[action] || "Run AI workflow",
-      summary: "Run the AI engine with the active country, route, checkpoint, learning, workforce, health, trade, and provider context.",
+      summary: isOrchestration ? "Run a cross-module AI orchestration review that reads platform state, recommends the highest-value next move, records an AI run, and creates workflow intelligence evidence." : "Run the AI engine with the active country, route, checkpoint, learning, workforce, health, trade, and provider context.",
       confirmLabel: titleMap[action] || "Run AI",
-      path: "/api/ai/run",
-      body: { type: action },
-      success: "AI action complete",
-      record: "AI run history, module evidence, map insight, activity feed, provider status, and response evidence",
+      path: isOrchestration ? "/api/ai/orchestrate" : "/api/ai/run",
+      body: { type: isOrchestration ? "copilot" : action },
+      success: isOrchestration ? "AI orchestration complete" : "AI action complete",
+      record: isOrchestration ? "AI orchestration record, AI run, workflow intelligence, smart next action, activity feed, and provider evidence" : "AI run history, module evidence, map insight, activity feed, provider status, and response evidence",
       provider: "OpenAI, local AI webhook, or fallback provider is recorded on each run.",
       checklist: [
         { title: "AI mode", detail: data.providers.find(item => item.id === "openai")?.mode || data.profile.aiProvider || "fallback", status: "live", label: "Provider" },
         { title: "Route context", detail: `${activeRoute().name} - ${data.profile.activeCheckpoint}`, status: "ready", label: "Map" },
         { title: "Operating country", detail: `${activeCountry().name}: ${activeCountry().risk} risk`, status: "ready", label: "Context" },
-        { title: "Human review", detail: "AI guidance is logged for operator review before real-world action.", status: "ready", label: "Governed" }
+        { title: isOrchestration ? "Cross-module read" : "Human review", detail: isOrchestration ? "Learning, workforce, health, trade, maps, communications, and providers are reviewed together." : "AI guidance is logged for operator review before real-world action.", status: "ready", label: "Governed" }
       ]
     });
   }

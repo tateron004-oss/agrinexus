@@ -491,8 +491,12 @@ async function call(path, body) {
   const copilotAi = await call("/api/ai/run", { type: "copilot" });
   assert(copilotAi.profile.aiRuns[0].type === "copilot");
   assert(copilotAi.profile.aiRuns[0].reviewStatus === "pending-human-review");
+  const orchestration = await call("/api/ai/orchestrate", { type: "copilot", note: "Smoke orchestration review" });
+  assert(orchestration.aiOrchestrationResult.orchestration.topAction.title);
+  assert(orchestration.profile.aiOrchestrations.length >= 1);
+  assert(orchestration.profile.integrationEvents.some(event => event.action === "ai.orchestration_reviewed"));
   const reviewedAi = await call("/api/ai/review", { runId: copilotAi.profile.aiRuns[0].id, decision: "approve", note: "Smoke review" });
-  assert(reviewedAi.profile.aiRuns[0].reviewStatus === "approved");
+  assert(reviewedAi.profile.aiRuns.some(run => run.id === copilotAi.profile.aiRuns[0].id && run.reviewStatus === "approved"));
   assert(reviewedAi.profile.integrationEvents.some(event => event.action === "ai.reviewed"));
   const agentPlan = await call("/api/agent/plan", { goal: "Move a rural learner through training, workforce, telehealth, trade, maps, and AI evidence." });
   assert(agentPlan.profile.agentPlans.length >= 1);

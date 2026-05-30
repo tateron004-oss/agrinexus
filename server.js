@@ -1801,6 +1801,76 @@ function smartNextActions(db, user, providers = runtimeProviders(db)) {
   };
 }
 
+async function aiOrchestrationReview(db, user, body = {}) {
+  ensureAiProfile(db.profile);
+  ensureOperationsProfile(db.profile);
+  const providers = runtimeProviders(db);
+  const { country, route } = activeContext(db);
+  const smart = smartNextActions(db, user, providers);
+  const topAction = smart.items[0] || {
+    module: "Platform",
+    title: "Continue guided operations",
+    detail: "No urgent gap was found. Continue the current mission or ask Nexus for the next step.",
+    reason: "The platform has enough evidence to proceed through normal workflows.",
+    section: "dashboard"
+  };
+  const aiResult = await runAi(body.type || "copilot", country, route, db.profile);
+  const aiRun = recordAiRun(db, { type: "orchestration", country, route, result: aiResult, module: "AI" });
+  const intelligence = workflowIntelligence(db, user, {
+    module: topAction.module || "Platform",
+    action: topAction.title || "AI orchestration review"
+  });
+  const providersReady = providers.filter(provider => provider.status === "connected").length;
+  const communicationThreads = (db.profile.communicationThreads || []).length + (db.profile.tradeMessageThreads || []).length;
+  const record = {
+    id: crypto.randomUUID(),
+    title: "Cross-module AI orchestration review",
+    status: smart.status === "attention-needed" ? "needs-operator-action" : "ready",
+    countryId: country.id,
+    countryName: country.name,
+    routeId: route.id,
+    routeName: route.name,
+    checkpoint: db.profile.activeCheckpoint,
+    topAction: {
+      module: topAction.module,
+      title: topAction.title,
+      detail: topAction.detail,
+      reason: topAction.reason,
+      workflow: topAction.workflow || null,
+      action: topAction.action || null,
+      ai: topAction.ai || null,
+      section: topAction.section || null
+    },
+    coverage: [
+      `${providersReady}/${providers.length} provider(s) connected`,
+      `${(db.profile.aiRuns || []).length} AI run(s) recorded`,
+      `${(db.profile.workflowIntelligence || []).length} workflow intelligence record(s)`,
+      `${communicationThreads} communication thread(s)`,
+      `${(db.profile.integrationEvents || []).length} provider audit event(s)`
+    ],
+    recommendation: `${topAction.title}: ${topAction.detail}`,
+    aiRunId: aiRun.id,
+    intelligenceId: intelligence.id,
+    createdBy: user.email,
+    createdAt: new Date().toISOString()
+  };
+  db.profile.aiOrchestrations.unshift(record);
+  db.profile.aiOrchestrations = db.profile.aiOrchestrations.slice(0, 25);
+  db.profile.agentMemory.lastRecommendedAction = record.topAction;
+  db.profile.agentMemory.lastStatus = "ai-orchestration-reviewed";
+  db.profile.agentMemory.lastSummary = record.recommendation;
+  db.profile.agentMemory.updatedAt = new Date().toISOString();
+  logIntegration(db, {
+    providerId: "openai",
+    module: "AI",
+    action: "ai.orchestration_reviewed",
+    detail: record.recommendation,
+    metadata: { orchestrationId: record.id, aiRunId: aiRun.id, intelligenceId: intelligence.id, topAction: record.topAction }
+  });
+  addActivity(db.profile, `AI orchestration reviewed: ${record.recommendation}`);
+  return { orchestration: record, smartActions: smart, aiRun, intelligence };
+}
+
 function mapTileProbeUrl() {
   if (String(process.env.MAP_TILE_PROVIDER || "").toLowerCase() === "openstreetmap") {
     return "https://tile.openstreetmap.org/0/0/0.png";
@@ -2543,6 +2613,7 @@ function ensureAiProfile(profile) {
   profile.agentExecutions = profile.agentExecutions || [];
   profile.agentCommands = profile.agentCommands || [];
   profile.agentConversation = profile.agentConversation || [];
+  profile.aiOrchestrations = profile.aiOrchestrations || [];
   profile.agentPendingAction = profile.agentPendingAction || null;
   profile.voiceSessions = profile.voiceSessions || [];
   profile.agentBriefings = profile.agentBriefings || [];
@@ -7073,6 +7144,16 @@ async function runAgentCommand(db, user, command, options = {}) {
     return { intent: "learning.complete_lesson", response: result, status: "completed", metadata: { conversationMode: conversational, redirectSection: "learning" } };
   }
 
+  if (/(orchestrate|elevate|optimi[sz]e|review).*(platform|mission|everything|all modules|whole system|ai)/.test(lower) || /(what should we do next|highest value next step|best next step)/.test(lower)) {
+    const result = await aiOrchestrationReview(db, user, { type: "copilot", note: text });
+    return {
+      intent: "ai.orchestration_reviewed",
+      response: `I reviewed the whole platform. Best next move: ${result.orchestration.recommendation}. I saved the AI run, workflow intelligence, and provider evidence.`,
+      status: "completed",
+      metadata: { conversationMode: conversational, redirectSection: result.orchestration.topAction.section || "dashboard", orchestrationId: result.orchestration.id, topAction: result.orchestration.topAction }
+    };
+  }
+
   if (/(issue|create|generate).*(my\s+)?certificate|certificate/.test(lower) && /(learning|course|lesson|certificate|my)/.test(lower)) {
     const result = await executeAgentTool(db, user, { tool: "learning.certificate" });
     return { intent: "learning.certificate", response: result, status: "completed", metadata: { conversationMode: conversational, redirectSection: "learning" } };
@@ -10452,6 +10533,17 @@ async function api(req, res, url) {
     addActivity(db.profile, `${run.type} AI run ${run.reviewStatus} by ${user.name}.`);
     await writeDb(db);
     return send(res, 200, publicState(db, user));
+  }
+
+  if (url.pathname === "/api/ai/orchestrate" && req.method === "POST") {
+    if (!canUse(user, "ai")) return send(res, 403, { error: "Role does not allow AI orchestration" });
+    const body = await readBody(req);
+    const result = await aiOrchestrationReview(db, user, body);
+    addWorkflowNote(db.profile, body.note, "AI orchestration note");
+    await writeDb(db);
+    const state = publicState(db, user);
+    state.aiOrchestrationResult = result;
+    return send(res, 200, state);
   }
 
   if (url.pathname === "/api/intelligence/workflow" && req.method === "POST") {

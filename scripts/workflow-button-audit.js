@@ -113,6 +113,7 @@ const workflowActions = [
   ["ai", "price"],
   ["ai", "route"],
   ["ai", "inspector"],
+  ["ai", "orchestrate"],
   ["integrations", "test-all"],
   ["communications", "learning-chat"],
   ["communications", "learning-sms"],

@@ -777,12 +777,24 @@
                 <button id="agentExecuteBtn">Execute approved plan</button>
                 <button id="agentBriefingBtn">Government briefing</button>
                 <button id="agentMissionBtn" type="button">Run full mission</button>
+                <button data-workflow="ai" data-action="orchestrate" type="button">Orchestrate next move</button>
               </div>
               <div id="agentActionStatus" class="agent-action-status" role="status">Ready to create a supervised cross-module plan.</div>
             </article>
             <article class="ai-console">
               <div class="tag-row"><span>Latest plan</span><span id="agentPlanStatus">none</span></div>
               <div id="agentPlanPanel" class="task-list"></div>
+            </article>
+          </div>
+          <div class="cards two">
+            <article>
+              <div class="tag-row"><span>AI orchestration</span><span>Cross-module</span></div>
+              <h3>Platform Intelligence Review</h3>
+              <div id="aiOrchestrationPanel" class="activity"></div>
+            </article>
+            <article>
+              <h3>AI Next-Move Evidence</h3>
+              <div id="aiOrchestrationEvidence" class="rows"></div>
             </article>
           </div>
           <div class="mission-dashboard" aria-labelledby="missionDashboardTitle">
@@ -1248,6 +1260,6 @@
   <div id="toast" class="toast hidden" role="status" aria-live="polite" aria-atomic="true"></div>
   <div id="screenReaderStatus" class="sr-only" role="status" aria-live="polite" aria-atomic="true"></div>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="/app.js?v=twoway-comms-38"></script>
+  <script src="/app.js?v=ai-orchestration-39"></script>
 </body>
 </html>
