@@ -887,12 +887,22 @@ function platformProgressSummary(db, user, providers = runtimeProviders(db)) {
   ].join("; ");
 }
 
+function userDisplayName(user) {
+  const name = String(user?.name || "").trim();
+  const role = String(user?.role || "").trim();
+  const roleLike = new Set(["standard user", "admin", "platform admin", "investor", "investor viewer", "user"]);
+  if (name && !roleLike.has(name.toLowerCase()) && name.toLowerCase() !== role.toLowerCase()) return name;
+  const emailName = String(user?.email || "").split("@")[0].replace(/[._-]+/g, " ").trim();
+  if (emailName && !roleLike.has(emailName.toLowerCase())) return emailName;
+  return "there";
+}
+
 function sessionBriefingModel(db, user, providers = runtimeProviders(db)) {
   ensureOperationsProfile(db.profile);
   ensureAiProfile(db.profile);
   const nextActions = smartNextActions(db, user, providers).items;
   const top = nextActions[0];
-  const role = user?.role || "Standard User";
+  const name = userDisplayName(user);
   const firstRun = !(db.profile.onboardingRuns || []).length;
   const model = intelligentAssistantModel(db, user, providers);
   const progress = platformProgressSummary(db, user, providers);
@@ -903,10 +913,10 @@ function sessionBriefingModel(db, user, providers = runtimeProviders(db)) {
     "show me all 10 items"
   ];
   return {
-    title: firstRun ? "Welcome. I can guide your first session." : "Welcome back. Here is your operating brief.",
+    title: firstRun ? `Welcome, ${name}. I can guide your first session.` : `Welcome back, ${name}. Here is your operating brief.`,
     message: firstRun
-      ? `I can walk you through AgriNexus step by step. Your ${role} access is ready, and the assistant model has ${model.readyCount}/${model.total} items active.`
-      : `Your ${role} workspace is ready. ${top ? `Recommended next: ${top.title}. ${top.detail}` : "Ask AgriNexus for your next best step."}`,
+      ? `I can walk you through AgriNexus step by step. Your workspace is ready, and the assistant model has ${model.readyCount}/${model.total} items active.`
+      : `Your workspace is ready, ${name}. ${top ? `Recommended next: ${top.title}. ${top.detail}` : "Ask AgriNexus for your next best step."}`,
     progress,
     nextAction: top || null,
     prompts,

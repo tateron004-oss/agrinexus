@@ -85,13 +85,16 @@ hasAll(app, [
   "lower.includes(\"read the current response\")",
   "function isUniversalLanguageCommand",
   "function changeLanguageByVoice",
-  "function moduleUseExplanation"
+  "function moduleUseExplanation",
+  "function userDisplayName",
+  "roleLike.has(name.toLowerCase())"
 ], "Voice behavior routes");
 
 assert(!app.includes('{ label: "Me", section: "profile"'), "Standard User home should not expose profile clutter");
+assert(!app.includes("Welcome back, ${data.user.role}"), "Ask Nexus should not welcome people by role label");
 assert(!styles.includes("body.user-mode .user-mobile-dock button.active,\nbody.user-mode .user-mobile-dock button[data-mobile-ask] {\n  display:"), "Mobile dock should stay hidden in app mode");
-assert(html.includes("visible-language-panel-51"), "Index must force browsers to load visible language panel CSS");
-assert(html.includes("visible-language-panel-64"), "Index must force browsers to load visible language panel JS");
+assert(html.includes("personalized-nexus-52"), "Index must force browsers to load personalized Nexus CSS");
+assert(html.includes("personalized-nexus-65"), "Index must force browsers to load personalized Nexus JS");
 
 console.log("App behavior audit passed");
 console.log("Checked: app-mode language picker, service buttons, section containment, workflow confirmations, voice routes, overflow wrapping, and advanced-panel hiding.");

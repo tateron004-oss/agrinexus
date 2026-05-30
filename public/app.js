@@ -6432,8 +6432,24 @@ function setVoiceResponse(message, speak = false, options = {}) {
 }
 
 function userFirstName() {
-  const name = data?.user?.name || data?.user?.email || "there";
-  return String(name).trim().split(/\s+/)[0] || "there";
+  return userDisplayName().split(/\s+/)[0] || "there";
+}
+
+function userDisplayName() {
+  const name = String(data?.user?.name || "").trim();
+  const role = String(data?.user?.role || "").trim();
+  const roleLike = new Set([
+    "standard user",
+    "admin",
+    "platform admin",
+    "investor",
+    "investor viewer",
+    "user"
+  ]);
+  if (name && !roleLike.has(name.toLowerCase()) && name.toLowerCase() !== role.toLowerCase()) return name;
+  const emailName = String(data?.user?.email || "").split("@")[0].replace(/[._-]+/g, " ").trim();
+  if (emailName && !roleLike.has(emailName.toLowerCase())) return emailName;
+  return "there";
 }
 
 function welcomeSignedInUser() {
