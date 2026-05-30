@@ -3464,6 +3464,12 @@ function renderUserWorkspace() {
   const target = $("#userWorkspace");
   if (!target) return;
   const outcome = latestUserOutcome();
+  const providerReady = data.providers?.filter(provider => ["ready", "connected", "live"].includes(provider.status)).length || 0;
+  const providerTotal = data.providers?.length || 0;
+  const languageName = voiceLanguageNames[languageCode()] || "English";
+  const voiceMode = data.profile.voiceProvider === "openai" || data.providers?.some(provider => provider.id === "openai" && provider.status === "ready")
+    ? "AI voice ready"
+    : "Voice fallback ready";
   const actions = [
     { label: "Learn a skill", detail: "Start training, complete lessons, and create a certificate record.", command: "start training path", primary: true },
     { label: "Find work", detail: "Build a work profile, review gaps, and apply for a role.", command: "apply for that job", primary: true },
@@ -3473,13 +3479,39 @@ function renderUserWorkspace() {
     { label: "Ask Nexus", detail: "Speak or type what you need. Nexus will guide the next step.", command: "help me" }
   ];
   target.innerHTML = `
-    <section class="user-workspace-hero">
+    <section class="user-workspace-hero user-studio-hero">
       <div>
         <span class="eyebrow">${translateText("User Workspace")}</span>
         <h3 id="userWorkspaceTitle">${translateText("Start With One Simple Step")}</h3>
         <p>${translateText("This view keeps the platform simple for everyday users. Pick a goal, let Nexus ask questions, then confirm before anything important is saved.")}</p>
+        <div class="user-studio-status">
+          <span>${translateText("AI agent active")}</span>
+          <span>${translateText(voiceMode)}</span>
+          <span>${translateText(`${languageName} content`)}</span>
+        </div>
       </div>
-      <button type="button" class="primary" data-simple-command="what should I do next">${translateText("Guide me")}</button>
+      <div class="user-hero-actions">
+        <button type="button" class="primary" data-simple-command="what should I do next">${translateText("Guide me")}</button>
+        <button type="button" data-mobile-ask="true">${translateText("Talk to Nexus")}</button>
+      </div>
+    </section>
+    <section class="user-intelligence-strip" aria-label="${translateText("Platform intelligence status")}">
+      <button type="button" data-mobile-ask="true">
+        <strong>${translateText("Voice")}</strong>
+        <span>${translateText("Speak or type naturally")}</span>
+      </button>
+      <button type="button" data-simple-command="change language to Spanish">
+        <strong>${translateText("Language")}</strong>
+        <span>${translateText("Switch content and voice")}</span>
+      </button>
+      <button type="button" data-simple-command="orchestrate the platform">
+        <strong>${translateText("AI Agent")}</strong>
+        <span>${translateText("Plan the next best action")}</span>
+      </button>
+      <button type="button" data-workflow="integrations" data-action="test-all">
+        <strong>${translateText("Engines")}</strong>
+        <span>${translateText(`${providerReady}/${providerTotal} services ready`)}</span>
+      </button>
     </section>
     <div class="user-action-grid">
       ${actions.map(action => `<button type="button" class="user-action ${action.primary ? "primary" : ""}" data-simple-command="${escapeHtml(action.command)}">
@@ -7242,6 +7274,12 @@ function bindStatic() {
       event.stopPropagation();
       setExperienceMode(experienceButton.dataset.experienceMode, { announceChange: true });
       toast(`${experienceModeLabel()} view selected`);
+      return;
+    }
+    if (event.target.closest("[data-mobile-ask]")) {
+      event.preventDefault();
+      event.stopPropagation();
+      openAskNexus();
       return;
     }
     const simpleButton = event.target.closest("[data-simple-command], [data-simple-section], [data-simple-pilot], [data-simple-demo], [data-simple-mission], [data-simple-action]");
