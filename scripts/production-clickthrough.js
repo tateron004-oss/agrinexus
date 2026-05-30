@@ -9,8 +9,9 @@ const server = fs.readFileSync(path.join(root, "server.js"), "utf8");
 const styles = fs.readFileSync(path.join(root, "public", "styles.css"), "utf8");
 const sw = fs.readFileSync(path.join(root, "public", "sw.js"), "utf8");
 const manifest = fs.readFileSync(path.join(root, "public", "manifest.webmanifest"), "utf8");
+const nativeBridge = fs.readFileSync(path.join(root, "public", "native-bridge.json"), "utf8");
 
-const pages = ["index.html", "status.html", "terms.html", "privacy.html", "refund.html", "manifest.webmanifest", "sw.js", "icons/agri-nexus-icon.svg", "icons/agri-nexus-192.png", "icons/agri-nexus-512.png"];
+const pages = ["index.html", "status.html", "terms.html", "privacy.html", "refund.html", "manifest.webmanifest", "native-bridge.json", "sw.js", "icons/agri-nexus-icon.svg", "icons/agri-nexus-192.png", "icons/agri-nexus-512.png"];
 for (const page of pages) {
   assert(fs.existsSync(path.join(root, "public", page)), `Missing public page: ${page}`);
 }
@@ -351,7 +352,7 @@ assert(server.includes('adminAccount.role = "Admin"'), "Backend must force admin
 assert(server.includes("admin_user.created"), "Admin test login must create auth audit evidence");
 assert(html.includes("styles.css?v=nexus-behavior-56"), "Index must force browsers to load the latest Nexus behavior shell");
 assert(html.includes("app.js?v=nexus-behavior-69"), "Index must force browsers to load the latest Nexus behavior code");
-assert(sw.includes("agrinexus-pwa-v48"), "Service worker cache must refresh the installed app after Nexus behavior updates");
+assert(sw.includes("agrinexus-pwa-v49"), "Service worker cache must refresh the installed app after native voice bridge updates");
 assert(html.includes("userWorkspace"), "Dashboard needs a User Workspace for standard users");
 assert(html.includes("userMobileDock"), "Legacy mobile dock markup should remain safely hidden for cache compatibility");
 assert(html.includes("What Do You Need Help With Today?"), "Dashboard simple start should use user-ready language");
@@ -474,6 +475,14 @@ assert(app.includes("function nexusAutopilotQueue"), "Jarvis effect needs an aut
 assert(app.includes("function providerActionDepthStatus"), "Jarvis effect needs real provider action-depth status");
 assert(app.includes("function nexusProactiveAlerts"), "Jarvis effect needs proactive alert generation");
 assert(app.includes("function mobilePermissionRecoveryGuide"), "Jarvis effect needs mobile permission recovery guidance");
+assert(app.includes("function nativeAppCapabilityMatrix"), "Highest-level app mode needs a native capability matrix");
+assert(app.includes("function nativeAppReadinessSummary"), "Highest-level app mode needs a native readiness summary");
+assert(html.includes('data-mobile-permission="native-plan"'), "Ask AgriNexus needs a native app plan permission action");
+assert(manifest.includes('"share_target"'), "PWA manifest needs share target support");
+assert(manifest.includes("Voice Intake"), "PWA manifest needs a voice intake shortcut");
+assert(sw.includes("native-bridge.json"), "Service worker should cache the native bridge contract");
+assert(nativeBridge.includes('"backgroundAudio"'), "Native bridge must define deeper background audio permission needs");
+assert(nativeBridge.includes('"voice.wake"'), "Native bridge must define wake event handling");
 assert(app.includes("function interruptNexusSpeech"), "Jarvis effect needs voice interruption handling");
 assert(app.includes("visibilitychange"), "Jarvis effect needs background listening recovery when the app returns");
 assert(app.includes("I want to sell maize"), "Nexus must route natural trade requests without button hunting");

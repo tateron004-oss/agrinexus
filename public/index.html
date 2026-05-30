@@ -1237,6 +1237,13 @@
             <button id="globalVoiceHelpBtn" type="button">Voice help</button>
             <button id="globalInstallBtn" type="button">Install app</button>
           </div>
+          <div class="mobile-permission-strip" aria-label="Mobile app permissions">
+            <button type="button" data-mobile-permission="microphone">Enable mic</button>
+            <button type="button" data-mobile-permission="notifications">Enable alerts</button>
+            <button type="button" data-mobile-permission="location">Enable location</button>
+            <button type="button" data-mobile-permission="native-plan">Native app plan</button>
+          </div>
+          <div id="mobilePermissionStatus" class="global-mic-status" role="status">Mobile app permissions ready to check.</div>
           <div id="globalAssistantStatus" class="global-assistant-status" role="status">Ready</div>
           <div id="globalMicStatus" class="global-mic-status" role="status">Checking microphone support...</div>
           <div id="globalVoiceOutputStatus" class="global-mic-status" role="status">Voice output standing by.</div>

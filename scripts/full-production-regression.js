@@ -13,6 +13,7 @@ const checks = [
   npmCheck("workflow:audit"),
   npmCheck("app:behavior-audit"),
   npmCheck("app:jarvis-qa"),
+  npmCheck("app:mobile-native-qa"),
   npmCheck("placeholder:audit"),
   npmCheck("production:clickthrough"),
   npmCheck("production:complete-check"),

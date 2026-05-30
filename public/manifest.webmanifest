@@ -9,6 +9,18 @@
   "background_color": "#f5f8f1",
   "theme_color": "#173240",
   "categories": ["business", "education", "health", "productivity"],
+  "lang": "en",
+  "dir": "ltr",
+  "prefer_related_applications": false,
+  "share_target": {
+    "action": "/?section=agent&source=share",
+    "method": "GET",
+    "params": {
+      "title": "title",
+      "text": "text",
+      "url": "url"
+    }
+  },
   "icons": [
     {
       "src": "/icons/agri-nexus-192.png",
@@ -56,6 +68,20 @@
       "short_name": "Demo",
       "description": "Open the investor-ready dashboard, impact metrics, and evidence timeline.",
       "url": "/?section=dashboard&mode=investor",
+      "icons": [{ "src": "/icons/agri-nexus-192.png", "sizes": "192x192", "type": "image/png" }]
+    },
+    {
+      "name": "Voice Intake",
+      "short_name": "Voice",
+      "description": "Open hands-free voice intake for learning, health, workforce, trade, and maps.",
+      "url": "/?section=agent&voice=on",
+      "icons": [{ "src": "/icons/agri-nexus-192.png", "sizes": "192x192", "type": "image/png" }]
+    },
+    {
+      "name": "Field Route",
+      "short_name": "Route",
+      "description": "Open map and GPS route support for field operations.",
+      "url": "/?section=map&mode=route",
       "icons": [{ "src": "/icons/agri-nexus-192.png", "sizes": "192x192", "type": "image/png" }]
     }
   ]

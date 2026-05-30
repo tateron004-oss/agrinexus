@@ -1,10 +1,11 @@
-const CACHE_NAME = "agrinexus-pwa-v48";
+const CACHE_NAME = "agrinexus-pwa-v49";
 const APP_SHELL = [
   "/",
   "/index.html",
   "/styles.css",
   "/app.js",
   "/manifest.webmanifest",
+  "/native-bridge.json",
   "/icons/agri-nexus-192.png",
   "/icons/agri-nexus-512.png",
   "/icons/agri-nexus-icon.svg",

@@ -1,0 +1,50 @@
+{
+  "name": "AgriNexus Native Voice Bridge",
+  "version": "1.0.0",
+  "purpose": "Contract for Android, iOS, and desktop shells that wrap the AgriNexus web platform with deeper device permissions.",
+  "wakePhrases": ["Hey AgriNexus", "Nexus", "Agri"],
+  "requiredPermissions": [
+    "microphone",
+    "speechRecognition",
+    "speechSynthesis",
+    "notifications",
+    "backgroundAudio",
+    "backgroundFetch",
+    "geolocation",
+    "secureStorage"
+  ],
+  "nativeEvents": [
+    "voice.wake",
+    "voice.partial_transcript",
+    "voice.final_transcript",
+    "voice.interrupt",
+    "notification.opened",
+    "location.route_update",
+    "offline.queue_flushed",
+    "auth.token_refreshed"
+  ],
+  "webCommands": [
+    "agent.command",
+    "agent.confirm",
+    "agent.cancel",
+    "voice.speak",
+    "voice.stop",
+    "permissions.status",
+    "route.track",
+    "notification.schedule"
+  ],
+  "apiEndpoints": {
+    "command": "/api/agent/command",
+    "voice": "/api/voice/respond",
+    "liveServices": "/api/production/live-service-check",
+    "memory": "/api/agent/memory-summary",
+    "telehealth": "/api/health/intake",
+    "workforce": "/api/workforce/apply",
+    "trade": "/api/trade/action"
+  },
+  "productionNotes": [
+    "Browser mode can listen only while permission and tab focus allow it.",
+    "Native mode can request OS-level microphone, notification, GPS, and background task permissions.",
+    "Always-on wake should be implemented with an OS-approved wake/listening flow and clear privacy controls."
+  ]
+}

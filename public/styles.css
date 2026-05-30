@@ -1945,6 +1945,23 @@ body.admin-mode .user-workspace {
 .global-assistant-actions button {
   padding: 8px 10px;
 }
+.mobile-permission-strip {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 7px;
+}
+.mobile-permission-strip button {
+  min-width: 0;
+  min-height: 38px;
+  padding: 8px;
+  border-color: #bfd9d2;
+  background: #f4faf8;
+  color: #163c35;
+  font-size: .78rem;
+  font-weight: 900;
+  white-space: normal;
+}
 .global-assistant-status {
   grid-column: 1 / -1;
   color: var(--muted);
@@ -3036,6 +3053,14 @@ body.reduced-motion *::after {
     padding: 8px 7px;
     font-size: .84rem;
     white-space: nowrap;
+  }
+  .mobile-permission-strip {
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+  }
+  .mobile-permission-strip button {
+    min-height: 34px;
+    font-size: .74rem;
   }
   .global-conversation {
     max-height: 56px;

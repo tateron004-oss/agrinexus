@@ -2204,6 +2204,10 @@ async function requestProductionMobilePermission(kind) {
       if (status) status.textContent = translateText("Install flow opened if the browser supports app installation.");
       return;
     }
+    if (kind === "native-plan") {
+      openNativeAppPlan();
+      return;
+    }
     setStatus("Permission option is ready.");
   } catch (error) {
     setStatus(`${kind} permission could not be enabled: ${error.message || "browser blocked the request"}`);
@@ -3253,6 +3257,43 @@ function mobilePermissionRecoveryGuide() {
   };
 }
 
+function nativeAppCapabilityMatrix() {
+  const permission = mobilePermissionRecoveryGuide();
+  const standalone = window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone;
+  const voiceReady = Boolean(permission.microphone && (window.SpeechRecognition || window.webkitSpeechRecognition));
+  const providerDepth = providerActionDepthStatus();
+  return [
+    { id: "install", title: "Installable app shell", ready: standalone || permission.install, detail: standalone ? "AgriNexus is running like an app." : "Install prompt or browser app install is available when supported." },
+    { id: "wake", title: "Wake phrase layer", ready: true, detail: "Hey AgriNexus, Nexus, and Agri route into the same command layer." },
+    { id: "microphone", title: "Voice capture", ready: voiceReady, detail: voiceReady ? "Browser speech recognition is available." : "Native app packaging unlocks stronger microphone behavior." },
+    { id: "interrupt", title: "Voice interruption", ready: true, detail: "Say stop, pause, wait, or be quiet to interrupt speech." },
+    { id: "notifications", title: "Proactive alerts", ready: permission.notifications, detail: permission.notifications ? "Browser alerts can be requested; in-app alerts always work." : "Native push notifications need app packaging." },
+    { id: "location", title: "GPS route mode", ready: permission.location, detail: permission.location ? "Location permission can support route and field intelligence." : "Native GPS permission is needed for background route support." },
+    { id: "provider-depth", title: "Live engine depth", ready: Object.values(providerDepth).some(group => group.ready > 0), detail: "Provider bridge status is visible and workflows continue locally while vendors connect." },
+    { id: "native-bridge", title: "Native bridge contract", ready: true, detail: "public/native-bridge.json defines events, permissions, wake phrases, and API endpoints for Android/iOS wrappers." }
+  ];
+}
+
+function nativeAppReadinessSummary() {
+  const items = nativeAppCapabilityMatrix();
+  const ready = items.filter(item => item.ready).length;
+  return {
+    ready,
+    total: items.length,
+    items,
+    summary: `${ready}/${items.length} mobile Jarvis capabilities are ready in the web build. Native packaging is the unlock for always-on wake, background GPS, push notifications, and OS-level microphone behavior.`
+  };
+}
+
+function openNativeAppPlan() {
+  const readiness = nativeAppReadinessSummary();
+  const status = $("#mobilePermissionStatus");
+  const message = `${readiness.summary} Next build step: package AgriNexus with the native bridge so the phone can request microphone, notification, location, and background task permissions.`;
+  if (status) status.textContent = translateText(message);
+  updateNexusBehaviorLayer("ready", "Native app bridge is ready for Android and iOS packaging.");
+  setVoiceResponse(message, true);
+}
+
 function sectionFromHash() {
   const id = String(window.location.hash || "").replace(/^#/, "");
   return $(`#${id}`)?.classList.contains("section") ? id : "dashboard";
@@ -3298,6 +3339,7 @@ function voiceCommandGroups() {
         "Nexus, run full mission",
         "Nexus, run investor voice demo",
         "Nexus, test provider engines",
+        "Nexus, check native app readiness",
         "Nexus, explain your behavior model"
       ]
     },
@@ -3993,12 +4035,9 @@ function renderElevationPanels() {
       : `<div>${translateText("Run live investor mode to create a narrated pilot, AI orchestration, timeline evidence, and export packet.")}</div>`;
   }
   if ($("#pwaPolishPanel")) {
-    $("#pwaPolishPanel").innerHTML = [
-      row("Install mode", "Manifest, service worker, and app shortcuts are active."),
-      row("Low bandwidth", "Offline packets, SMS-friendly workflows, and local evidence are supported."),
-      row("Voice-first", "Nexus can guide users through workflows with microphone or typed commands."),
-      row("Mobile layout", "Persona buttons and guided actions reduce navigation for non-technical users.")
-    ].join("");
+    const nativeReadiness = nativeAppReadinessSummary();
+    $("#pwaPolishStatus").textContent = `${nativeReadiness.ready}/${nativeReadiness.total} ready`;
+    $("#pwaPolishPanel").innerHTML = nativeReadiness.items.map(item => row(item.title, `${item.ready ? "Ready" : "Needs native app"} - ${item.detail}`)).join("");
   }
 }
 
@@ -6938,7 +6977,7 @@ function isWakePhraseOnly(command) {
   const normalized = normalizedWakeText(command);
   if (!normalized) return false;
   const wakePhrases = [
-    "hey agrinexus", "agri nexus", "agrinexus", "hey nexus", "nexus",
+    "hey agrinexus", "agri nexus", "agrinexus", "hey nexus", "nexus", "hey agri", "agri",
     "bonjour agrinexus", "salut agrinexus", "bonjour nexus",
     "habari agrinexus", "hujambo agrinexus", "habari nexus",
     "مرحبا اغرينكسوس", "يا اغرينكسوس", "اغرينكسوس", "نيكسس"
@@ -6948,8 +6987,8 @@ function isWakePhraseOnly(command) {
 
 function cleanWakeCommand(command) {
   return String(command || "")
-    .replace(/^\s*(hey\s+)?(nexus|agrinexus|agri\s+nexus)\s*[,:\-]?\s*/i, "")
-    .replace(/^\s*(bonjour|salut|habari|hujambo)\s+(nexus|agrinexus|agri\s+nexus)\s*[,:\-]?\s*/i, "")
+    .replace(/^\s*(hey\s+)?(nexus|agrinexus|agri\s+nexus|agri)\s*[,:\-]?\s*/i, "")
+    .replace(/^\s*(bonjour|salut|habari|hujambo)\s+(nexus|agrinexus|agri\s+nexus|agri)\s*[,:\-]?\s*/i, "")
     .replace(/^\s*(مرحبا|يا)?\s*(اغرينكسوس|نيكسس)\s*[,:\-]?\s*/i, "")
     .trim();
 }
@@ -7278,6 +7317,11 @@ async function handleVoiceCommand(rawCommand) {
   if (lower.includes("mobile permissions") || lower.includes("app permissions") || lower.includes("permissions check")) {
     const permissions = mobilePermissionRecoveryGuide();
     setVoiceResponse(`Mobile permission check: microphone ${permissions.microphone ? "available" : "not available"}, notifications ${permissions.notifications ? "available" : "not available"}, location ${permissions.location ? "available" : "not available"}. ${permissions.guidance}`, true);
+    return;
+  }
+  if (lower.includes("native app") || lower.includes("highest level app") || lower.includes("always on") || lower.includes("always-on") || lower.includes("background listening")) {
+    const readiness = nativeAppReadinessSummary();
+    setVoiceResponse(`${readiness.summary} I can run the browser-safe assistant now, and the native bridge is ready for Android and iOS packaging when you want always-on wake, background GPS, push alerts, and deeper device permissions.`, true);
     return;
   }
   if (lower.includes("proactive alerts") || lower.includes("what needs attention") || lower.includes("alert me")) {
