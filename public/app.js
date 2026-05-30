@@ -3145,6 +3145,17 @@ function voiceCommandGroups() {
       ]
     },
     {
+      title: "Change Language",
+      helper: "Use these from any mode or module. Nexus changes the platform language and keeps voice responses aligned.",
+      commands: [
+        "Nexus, change language to English",
+        "Nexus, change language to French",
+        "Nexus, change language to Kiswahili",
+        "Nexus, change language to Arabic",
+        "Nexus, change language to Spanish"
+      ]
+    },
+    {
       title: "Go to a workspace",
       helper: "Open the main work areas without searching menus.",
       commands: [
