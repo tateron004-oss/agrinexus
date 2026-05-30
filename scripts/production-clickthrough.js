@@ -491,6 +491,8 @@ assert(app.includes("function agenticBehaviorScorecard"), "Jarvis effect needs a
 assert(app.includes("function requestWithTimeout"), "Agent commands need timeout safety for slow live engines");
 assert(app.includes("function beginAgentNoDeadAir"), "Jarvis effect needs no-dead-air progress updates while engines respond");
 assert(app.includes("function safeAgentFallbackResponse"), "Jarvis effect needs safe local fallback language when engines time out");
+assert(app.includes("function inferAmbiguousIntent"), "Jarvis effect needs clarification when user intent is vague");
+assert(app.includes("function answerAgentClarification"), "Jarvis effect needs follow-up answers to clarification prompts");
 assert(app.includes("I want to sell maize"), "Nexus must route natural trade requests without button hunting");
 assert(app.includes("I need a doctor"), "Nexus must route natural telehealth requests without button hunting");
 assert(app.includes("Admin Operator"), "Nexus must adapt for Admin mode");

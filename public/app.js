@@ -30,6 +30,7 @@ let agentPerformanceState = {
   route: "idle"
 };
 let agentProgressTimers = [];
+let pendingAgentClarification = null;
 const accessibilityPrefs = JSON.parse(localStorage.getItem("agrinexusAccessibility") || "{}");
 const originalTextNodes = new WeakMap();
 let deferredInstallPrompt = null;
@@ -3267,6 +3268,55 @@ function safeAgentFallbackResponse(command) {
   if (/trade|buyer|crop|maize|route|logistics|drone/.test(text)) return "The live agent was slow, so use Agritrade: contact buyer, create order, run route intelligence, or launch drone support.";
   if (/learn|course|lesson|training|certificate/.test(text)) return "The live agent was slow, so use Learning: start course, complete lesson, build captions, or issue certificate.";
   return "The live agent was slow, so I kept the app responsive. Use a module button or ask Nexus again in simpler words.";
+}
+
+function inferAmbiguousIntent(command) {
+  const text = String(command || "").toLowerCase().trim();
+  if (!text) return null;
+  const directActionWords = /\b(open|start|apply|sell|contact|call|message|translate|change language|run|create|track|find|show|explain|remember|confirm|yes|no|cancel|stop)\b/;
+  if (directActionWords.test(text)) return null;
+  const vagueNeed = /\b(help|support|assist|guide|stuck|confused|what now|next|need something|not sure|i need help|can you help)\b/.test(text);
+  const shortQuestion = text.split(/\s+/).length <= 6 && /\b(what|how|help|support|next|now)\b/.test(text);
+  if (!vagueNeed && !shortQuestion) return null;
+  const options = [
+    { label: "Health", section: "health", command: "open telehealth and start intake", detail: "Start care intake, provider support, accessibility, or safety review." },
+    { label: "Work", section: "workforce", command: "show me jobs", detail: "Find jobs, apply, review gaps, or plan a shift." },
+    { label: "Trade", section: "trade", command: "contact buyer", detail: "Sell crops, contact buyer, check route, payment, logistics, or drones." },
+    { label: "Learning", section: "learning", command: "start a course", detail: "Start training, captions, audio guide, lesson, or certificate." }
+  ];
+  const active = currentSectionId();
+  const ordered = options.sort((a, b) => (a.section === active ? -1 : b.section === active ? 1 : 0)).slice(0, 3);
+  return { original: command, options: ordered };
+}
+
+function askAgentClarification(clarification) {
+  pendingAgentClarification = clarification;
+  const choices = clarification.options.map((option, index) => `${index + 1}. ${option.label}: ${option.detail}`).join(" ");
+  updateNexusBehaviorLayer("confirming", "Nexus needs one quick choice.");
+  setVoiceResponse(`I can help. Which path do you want? ${choices} Say the number, say the service name, or say cancel.`, true);
+}
+
+async function answerAgentClarification(command) {
+  if (!pendingAgentClarification) return false;
+  const lower = String(command || "").toLowerCase().trim();
+  if (/\b(cancel|stop|never mind|no)\b/.test(lower)) {
+    pendingAgentClarification = null;
+    setVoiceResponse("Canceled. Tell me what you need when you are ready.", true);
+    return true;
+  }
+  const indexMatch = lower.match(/\b([1-3])\b/);
+  const selected = indexMatch
+    ? pendingAgentClarification.options[Number(indexMatch[1]) - 1]
+    : pendingAgentClarification.options.find(option => lower.includes(option.label.toLowerCase()) || lower.includes(option.section));
+  if (!selected) {
+    const names = pendingAgentClarification.options.map(option => option.label).join(", ");
+    setVoiceResponse(`I need one choice: ${names}, or say cancel.`, true);
+    return true;
+  }
+  pendingAgentClarification = null;
+  setCommandInputs(`Nexus, ${selected.command}`);
+  await handleVoiceCommand(selected.command);
+  return true;
 }
 
 function agenticBehaviorScorecard() {
@@ -7237,6 +7287,7 @@ async function handleVoiceCommand(rawCommand) {
     return;
   }
   updateNexusBehaviorLayer("thinking", command ? `Nexus is deciding how to help with: ${command}` : "Nexus is listening.");
+  if (pendingAgentClarification && await answerAgentClarification(command)) return;
   if (!lower && wakeOnly) {
     openAskNexus();
     enableHeyAgriNexusMode();
@@ -7247,6 +7298,11 @@ async function handleVoiceCommand(rawCommand) {
 
   if (isUniversalLanguageCommand(command)) {
     await changeLanguageByVoice(command);
+    return;
+  }
+  const clarification = inferAmbiguousIntent(command);
+  if (clarification) {
+    askAgentClarification(clarification);
     return;
   }
   if (/(what is|define|explain|tell me about|describe).*(agrinexus|agri nexus|nexus platform|the platform)/.test(lower) || /(agrinexus|agri nexus).*(what do you do|who are you|how do you help)/.test(lower)) {

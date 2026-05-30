@@ -21,7 +21,9 @@ const requirements = [
   ["agentic behavior scorecard", app.includes("function agenticBehaviorScorecard") && app.includes("Agentic behavior check")],
   ["agent command timeout safety", app.includes("function requestWithTimeout") && app.includes("Nexus timed out waiting for the live engine")],
   ["no dead-air progress updates", app.includes("function beginAgentNoDeadAir") && app.includes("Still working on") && app.includes("The live engine is taking longer than normal")],
-  ["safe slow-engine fallback", app.includes("function safeAgentFallbackResponse") && app.includes("I kept the app responsive")]
+  ["safe slow-engine fallback", app.includes("function safeAgentFallbackResponse") && app.includes("I kept the app responsive")],
+  ["conversation clarification repair", app.includes("function inferAmbiguousIntent") && app.includes("function askAgentClarification") && app.includes("function answerAgentClarification")],
+  ["simple clarification choices", app.includes("Which path do you want?") && app.includes("Say the number, say the service name, or say cancel")]
 ];
 
 const missing = requirements.filter(([, passed]) => !passed).map(([name]) => name);
