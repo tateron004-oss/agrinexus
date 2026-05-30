@@ -3308,7 +3308,7 @@ async function answerAgentClarification(command) {
   const indexMatch = lower.match(/\b([1-3])\b/);
   const selected = indexMatch
     ? pendingAgentClarification.options[Number(indexMatch[1]) - 1]
-    : pendingAgentClarification.options.find(option => lower.includes(option.label.toLowerCase()) || lower.includes(option.section));
+    : pendingAgentClarification.options.find(option => lower === "yes" || lower.includes(option.label.toLowerCase()) || lower.includes(option.section));
   if (!selected) {
     const names = pendingAgentClarification.options.map(option => option.label).join(", ");
     setVoiceResponse(`I need one choice: ${names}, or say cancel.`, true);
@@ -3396,6 +3396,57 @@ function agenticBehaviorScorecard() {
     providerReady: `${providerReady}/${providerTotal}`,
     behavior: "voice-first, confirms important actions, remembers context, routes tools, reports evidence, and recovers when engines slow down"
   };
+}
+
+function nexusOperatorCoach() {
+  if (!data) return { prompt: "Sign in so Nexus can coach the active workspace.", command: "sign in", priority: "setup" };
+  const section = currentSectionId();
+  const journey = activeAgentJourney?.next;
+  const alerts = nexusProactiveAlerts();
+  const providerDepth = providerActionDepthStatus();
+  if (journey) {
+    return {
+      prompt: `Continue the ${activeAgentJourney.workflow} journey: ${journey.label}.`,
+      command: journey.command,
+      priority: "journey"
+    };
+  }
+  if (alerts[0]) {
+    return {
+      prompt: `Attention needed: ${alerts[0].message}`,
+      command: "what needs attention",
+      priority: "alert"
+    };
+  }
+  const sectionCoach = {
+    dashboard: { prompt: "Start with the highest-impact path: ask Nexus what to do next.", command: "what should I do next", priority: "start" },
+    learning: { prompt: "Learning is ready. Start a course, finish a lesson, or build accessibility support.", command: "start a course", priority: "learning" },
+    workforce: { prompt: "Workforce is ready. Review gaps, apply for a role, then schedule the next step.", command: "show me jobs", priority: "workforce" },
+    health: { prompt: "Health is ready. Start intake, connect provider support, or check regional safety.", command: "start telehealth intake", priority: "health" },
+    trade: { prompt: "Trade is ready. Contact the buyer, create an order, or run route and drone intelligence.", command: "contact buyer", priority: "trade" },
+    map: { prompt: "Map intelligence is ready. Check route risk or start live route tracking.", command: "run route intelligence", priority: "map" },
+    agent: { prompt: "Agent mode is ready. Ask for a plan, performance check, or full mission.", command: "run performance check", priority: "agent" },
+    integrations: { prompt: "Integrations are ready. Test providers and then run the live service check.", command: "run live service check", priority: "integrations" },
+    admin: { prompt: "Admin is ready. Check production readiness, users, evidence, or live services.", command: "run health check", priority: "admin" },
+    profile: { prompt: "Profile is ready. Review saved progress or ask Nexus to summarize your record.", command: "summarize my progress", priority: "profile" }
+  };
+  const coach = sectionCoach[section] || sectionCoach.dashboard;
+  const weakProvider = Object.entries(providerDepth).find(([, item]) => item.ready < item.total);
+  if (weakProvider && ["integrations", "admin", "agent"].includes(section)) {
+    return {
+      prompt: `${weakProvider[0]} providers are ${weakProvider[1].ready}/${weakProvider[1].total}. Run live service check before investor testing.`,
+      command: "run live service check",
+      priority: "provider-depth"
+    };
+  }
+  return coach;
+}
+
+function operatorCoachSuggestions(sectionId = currentSectionId()) {
+  const coach = nexusOperatorCoach();
+  const base = contextualVoiceSuggestions(sectionId).slice(0, 3);
+  const command = `Nexus, ${coach.command}`;
+  return [command, ...base.filter(item => item !== command)].slice(0, 4);
 }
 
 function contextualVoiceSuggestions(sectionId = currentSectionId()) {
@@ -3693,11 +3744,11 @@ function renderVoiceAssistant() {
   });
   const suggestions = $("#voiceSuggestions");
   if (suggestions) {
-    renderLiveVoiceSuggestions();
+    renderLiveVoiceSuggestions(operatorCoachSuggestions(currentSectionId()));
   }
   const guide = $("#globalVoiceGuide");
   if (guide) {
-    renderLiveVoiceSuggestions();
+    renderLiveVoiceSuggestions(operatorCoachSuggestions(currentSectionId()));
   }
   renderVoiceHelpPanel();
   renderJarvisLayer();
@@ -3762,7 +3813,9 @@ function jarvisInsights() {
   const plan = (data.profile.agentPlans || [])[0];
   const latestCommand = (data.profile.agentCommands || [])[0];
   const scorecard = agenticBehaviorScorecard();
+  const coach = nexusOperatorCoach();
   return [
+    { title: "Operator coach", detail: coach.prompt, status: "ready", label: coach.priority },
     { title: "Behavior", detail: `${scorecard.mode}: ${scorecard.behavior}`, status: "ready", label: "Agentic" },
     { title: "Performance", detail: agentPerformanceState.lastLatencyMs ? `Last response completed in ${agentPerformanceState.lastLatencyMs} ms via ${agentPerformanceState.route}` : "Ready for fast acknowledgement and timed agent routing", status: agentPerformanceState.lastLatencyMs && agentPerformanceState.lastLatencyMs > 12000 ? "pending" : "ready", label: "Speed" },
     { title: "Guided journey", detail: activeAgentJourneySummary(), status: activeAgentJourney?.next ? "ready" : "pending", label: activeAgentJourney?.next ? "Next" : "Start" },
@@ -7586,6 +7639,15 @@ async function handleVoiceCommand(rawCommand) {
   if (lower.includes("agentic behavior") || lower.includes("jarvis behavior") || lower.includes("performance check") || lower.includes("behavior check") || lower.includes("are you agentic")) {
     const scorecard = agenticBehaviorScorecard();
     setVoiceResponse(`Agentic behavior check: ${scorecard.mode}. I am ${scorecard.behavior}. Last timed response: ${scorecard.latencyMs || 0} ms. Memory: ${scorecard.memoryCount} item(s). Autopilot waiting: ${scorecard.autopilotWaiting}. Mobile readiness: ${scorecard.mobileReady}. Provider depth: ${scorecard.providerReady}.`, true);
+    return;
+  }
+  if (lower.includes("coach me") || lower.includes("guide me") || lower.includes("operator coach") || lower.includes("recommend next")) {
+    const coach = nexusOperatorCoach();
+    setVoiceResponse(`Operator coach: ${coach.prompt} Say yes to run ${coach.command}, or say a different request.`, true);
+    pendingAgentClarification = {
+      original: command,
+      options: [{ label: "Yes", section: currentSectionId(), command: coach.command, detail: coach.prompt }]
+    };
     return;
   }
   if (lower.includes("native app") || lower.includes("highest level app") || lower.includes("always on") || lower.includes("always-on") || lower.includes("background listening")) {

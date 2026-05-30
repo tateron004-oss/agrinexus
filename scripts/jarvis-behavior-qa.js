@@ -25,7 +25,9 @@ const requirements = [
   ["conversation clarification repair", app.includes("function inferAmbiguousIntent") && app.includes("function askAgentClarification") && app.includes("function answerAgentClarification")],
   ["simple clarification choices", app.includes("Which path do you want?") && app.includes("Say the number, say the service name, or say cancel")],
   ["guided next-step journey", app.includes("activeAgentJourney") && app.includes("function setActiveAgentJourney") && app.includes("function runActiveAgentNextStep")],
-  ["voice follow-through command", app.includes("say next step to continue") && app.includes("continue journey") && app.includes("Guided journey cleared")]
+  ["voice follow-through command", app.includes("say next step to continue") && app.includes("continue journey") && app.includes("Guided journey cleared")],
+  ["operator coaching layer", app.includes("function nexusOperatorCoach") && app.includes("function operatorCoachSuggestions") && app.includes("Operator coach")],
+  ["context-aware suggested commands", app.includes("operatorCoachSuggestions(currentSectionId())") && app.includes("recommend next")]
 ];
 
 const missing = requirements.filter(([, passed]) => !passed).map(([name]) => name);
