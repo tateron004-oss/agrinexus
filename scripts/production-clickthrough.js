@@ -523,6 +523,12 @@ assert(html.includes("nexusIntelligencePanel"), "Agent page needs a visible live
 assert(html.includes("nexusIntelligenceBriefPanel"), "Agent page needs a visible next-best-action intelligence brief");
 assert(app.includes("Decision Confidence"), "High intelligence snapshot must show decision confidence");
 assert(app.includes("Risk Radar"), "High intelligence snapshot must show risk awareness");
+assert(app.includes("function modeIntelligenceSnapshot"), "Every workspace mode needs a role-aware intelligence model");
+assert(app.includes("function renderModeIntelligence"), "Admin and Investor modes need visible role-aware intelligence rendering");
+assert(html.includes("adminIntelligencePanel"), "Admin mode needs a visible intelligence panel");
+assert(html.includes("investorIntelligencePanel"), "Investor mode needs a visible intelligence panel");
+assert(app.includes("user-intelligence-card"), "User mode needs a simple visible intelligence card");
+assert(styles.includes(".user-intelligence-card"), "User intelligence card must be styled for phone-style mode");
 assert(app.includes("Nexus, explain your brain"), "Voice commands must let Nexus explain its brain");
 assert(app.includes("Nexus, show brain timeline"), "Voice commands must let Nexus show its brain timeline");
 assert(app.includes("function modeFollowUpResponse"), "Voice assistant must answer follow-ups without forcing extra buttons");

@@ -498,6 +498,37 @@ a:focus-visible,
 .user-service-buttons .service-map { border-color: #a7c7ef; background: linear-gradient(180deg, #ffffff, #f0f6ff); }
 .user-service-buttons .service-agent { border-color: #9d8be8; background: linear-gradient(135deg, #f2edff, #ffffff 62%); }
 .user-service-buttons .service-profile { border-color: #c8b8ee; background: linear-gradient(180deg, #ffffff, #f7f3ff); }
+.user-intelligence-card {
+  display: grid;
+  gap: 8px;
+  padding: 14px;
+  border: 2px solid #1f5f64;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #f7fffb, #e8f6ff);
+  color: var(--text);
+  box-shadow: 0 12px 28px rgba(23, 50, 64, .12);
+}
+.user-intelligence-card span {
+  color: #1f5f64;
+  font-weight: 900;
+}
+.user-intelligence-card strong {
+  display: block;
+  color: #173240;
+  font-size: 1.18rem;
+  line-height: 1.2;
+}
+.user-intelligence-card small {
+  display: block;
+  color: var(--muted);
+  font-size: .98rem;
+  line-height: 1.35;
+  white-space: normal;
+}
+.user-intelligence-card button {
+  width: 100%;
+  margin-top: 4px;
+}
 .user-service-buttons button:hover {
   transform: translateY(-2px);
   border-color: #9abac5;

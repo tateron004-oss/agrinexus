@@ -46,6 +46,7 @@ const requirements = [
   ["Nexus brain voice commands", app.includes("Nexus, show brain timeline") && app.includes("Nexus, explain your brain") && app.includes("Nexus, show learning rules") && app.includes("Nexus Brain OS is")],
   ["high intelligence decision snapshot", app.includes("function nexusHighIntelligenceSnapshot") && app.includes("Decision Confidence") && app.includes("Risk Radar") && html.includes("nexusIntelligencePanel")],
   ["high intelligence voice summary", app.includes("function nexusHighIntelligenceSummary") && app.includes("Nexus intelligence is operating") && app.includes("intelligence snapshot")],
+  ["role-aware intelligence all modes", app.includes("function modeIntelligenceSnapshot") && app.includes("User intelligence") && app.includes("Admin intelligence") && app.includes("Investor intelligence") && html.includes("adminIntelligencePanel") && html.includes("investorIntelligencePanel")],
   ["backend conversation context", app.includes("modeContext: modeConversationContext(command)") && server.includes("modeContext = options.modeContext") && server.includes("platformMode")],
   ["mode-aware local conversation fallback", server.includes("Admin conversation: I will focus on readiness") && server.includes("Investor conversation: I will focus on impact") && server.includes("User conversation: I will keep this simple")]
 ];

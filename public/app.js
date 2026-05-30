@@ -3076,6 +3076,7 @@ function renderAgentCenter() {
       `<div><strong>${translateText("Situational read")}</strong><span>${translateText(intelligence.summary)}</span></div>`
     ].join("");
   }
+  renderModeIntelligence("investor", "investor");
   if ($("#aiOrchestrationPanel")) {
     $("#aiOrchestrationPanel").innerHTML = latestOrchestration
       ? (data.profile.aiOrchestrations || []).slice(0, 5).map(item => `<div><strong>${translateText(item.topAction?.module || "AI")} - ${translateText(item.topAction?.title || item.title)}</strong><span>${translateText(item.recommendation || "AI orchestration complete")}</span><small>${translateText(item.status)} - ${translateText(item.routeName || "")}</small></div>`).join("")
@@ -3685,6 +3686,97 @@ function nexusHighIntelligenceSnapshot() {
 function nexusHighIntelligenceSummary() {
   const snapshot = nexusHighIntelligenceSnapshot();
   return `Nexus intelligence is operating at ${snapshot.score}% confidence. Top recommendation: ${snapshot.topPriority.title}, because ${snapshot.topPriority.reason}. Autonomy level: ${snapshot.autonomyLevel}. Say ${snapshot.topPriority.command} to continue.`;
+}
+
+function modeIntelligenceSnapshot(mode = experienceMode) {
+  const normalized = normalizeExperienceMode(mode);
+  const base = nexusHighIntelligenceSnapshot();
+  const adminBrief = adminIntelligenceBrief();
+  const investorBrief = investorIntelligenceBrief();
+  const outcome = data ? latestUserOutcome() : { happened: "No workflow yet", meaning: "Nexus is ready.", next: "Ask Nexus for help." };
+  if (normalized === "user") {
+    return {
+      ...base,
+      mode: "User intelligence",
+      topPriority: {
+        title: "Help the user succeed",
+        reason: outcome.next,
+        command: "help me"
+      },
+      summary: `${outcome.meaning} Nexus will keep this simple, use voice-first guidance, translate when asked, and confirm before important actions.`,
+      items: [
+        { title: "Simple Next Step", evidence: outcome.next, ready: true, command: "Nexus, help me" },
+        { title: "Voice Guidance", evidence: "Talk to Nexus, ask a question, or press one big service button.", ready: true, command: "Nexus, what should I do next" },
+        { title: "Language Support", evidence: `${voiceLanguageName()} active; voice and screen language can change by command.`, ready: true, command: "Nexus, change language to French" },
+        { title: "Memory", evidence: outcome.happened, ready: true, command: "Nexus, what do you remember" }
+      ]
+    };
+  }
+  if (normalized === "admin") {
+    return {
+      ...base,
+      mode: "Admin intelligence",
+      topPriority: {
+        title: "Protect production readiness",
+        reason: adminBrief.recommendation,
+        command: adminBrief.command
+      },
+      summary: `Admin intelligence sees readiness ${adminBrief.readiness}, risk count ${adminBrief.riskCount}, usage ${adminBrief.usage}, and top risk: ${adminBrief.topRisk}`,
+      items: [
+        { title: "Readiness Risk", evidence: adminBrief.topRisk, ready: !adminBrief.riskCount, command: "Nexus, run admin intelligence" },
+        { title: "Live Services", evidence: adminBrief.recommendation, ready: true, command: "Nexus, run live service check" },
+        { title: "Usage Awareness", evidence: `${adminBrief.usage}; strongest module: ${adminBrief.healthiestModule}`, ready: true, command: "Nexus, summarize audit" },
+        { title: "Provider Control", evidence: base.items.find(item => item.title === "Provider Depth")?.evidence || "Provider depth ready", ready: true, command: "Nexus, test provider engines" }
+      ]
+    };
+  }
+  if (normalized === "investor") {
+    return {
+      ...base,
+      mode: "Investor intelligence",
+      topPriority: {
+        title: "Strengthen the funding story",
+        reason: investorBrief.recommendation,
+        command: investorBrief.command
+      },
+      summary: `Investor intelligence sees strongest metric ${investorBrief.strongestMetric}, timeline ${investorBrief.timeline}, provider depth ${investorBrief.providerDepth}, and gap: ${investorBrief.topGap}`,
+      items: [
+        { title: "Impact Signal", evidence: investorBrief.strongestMetric, ready: true, command: "Nexus, summarize impact" },
+        { title: "Evidence Story", evidence: investorBrief.timeline, ready: true, command: "Nexus, run investor voice demo" },
+        { title: "Funding Gap", evidence: investorBrief.topGap, ready: !investorBrief.topGap.includes("Run") && !investorBrief.topGap.includes("readiness"), command: "Nexus, explain this to investors" },
+        { title: "Provider Proof", evidence: `Provider depth ${investorBrief.providerDepth}`, ready: true, command: "Nexus, test provider engines" }
+      ]
+    };
+  }
+  return base;
+}
+
+function renderModeIntelligence(prefix, mode = experienceMode) {
+  const panel = $(`#${prefix}IntelligencePanel`);
+  const briefPanel = $(`#${prefix}IntelligenceBriefPanel`);
+  if (!panel && !briefPanel) return;
+  const snapshot = modeIntelligenceSnapshot(mode);
+  const score = $(`#${prefix}IntelligenceScore`);
+  const modeLabel = $(`#${prefix}IntelligenceMode`);
+  if (score) score.textContent = `${snapshot.score}%`;
+  if (modeLabel) modeLabel.textContent = translateText(snapshot.mode);
+  if (panel) {
+    panel.innerHTML = snapshot.items.map(item => taskItem(
+      item.title,
+      item.evidence,
+      item.ready ? "ready" : "pending",
+      item.ready ? "Clear" : "Watch",
+      { simpleCommand: item.command }
+    )).join("");
+  }
+  if (briefPanel) {
+    briefPanel.innerHTML = [
+      `<div><strong>${translateText("Mode")}</strong><span>${translateText(snapshot.mode)}</span></div>`,
+      `<div><strong>${translateText("Recommendation")}</strong><span>${translateText(snapshot.topPriority.title)} - ${translateText(snapshot.topPriority.reason)}</span></div>`,
+      `<div><strong>${translateText("Command")}</strong><span>${translateText(`Nexus, ${snapshot.topPriority.command}`)}</span></div>`,
+      `<div><strong>${translateText("Intelligence read")}</strong><span>${translateText(snapshot.summary)}</span></div>`
+    ].join("");
+  }
 }
 
 function updateNexusBehaviorLayer(status = "ready", detail = "") {
@@ -4875,6 +4967,7 @@ function latestUserOutcome() {
 function renderUserWorkspace() {
   const target = $("#userWorkspace");
   if (!target) return;
+  const intelligence = modeIntelligenceSnapshot("user");
   const serviceButtons = [
     { label: "Talk to Nexus", section: "ask", className: "service-ask", ask: true },
     { label: "Learn", section: "learning", className: "service-learning" },
@@ -4889,6 +4982,14 @@ function renderUserWorkspace() {
       <span class="eyebrow">${translateText("AgriNexus")}</span>
       <h3 id="userWorkspaceTitle">${translateText("How can we help?")}</h3>
       <p>${translateText("Tap one big button. Or say: Nexus, help me.")}</p>
+    </section>
+    <section class="user-intelligence-card" aria-label="${translateText("Nexus intelligence")}">
+      <span>${translateText("Nexus is thinking")}: ${intelligence.score}%</span>
+      <strong>${translateText(intelligence.topPriority.title)}</strong>
+      <small>${translateText(intelligence.topPriority.reason)}</small>
+      <button type="button" class="service-ask" data-simple-command="${escapeHtml(intelligence.topPriority.command)}">
+        ${translateText("Do this")}
+      </button>
     </section>
     <section class="user-language-panel" aria-label="${translateText("Choose language")}">
       <strong>${translateText("Choose language")}</strong>
@@ -6296,6 +6397,7 @@ function render() {
       </div>
     `).join("")
     : "<div>Run the live service check after Render environment variables are set.</div>";
+  renderModeIntelligence("admin", "admin");
   const usage = data.admin?.usage || { totalEvents: 0, modules: {}, latest: [] };
   const supportTickets = data.admin?.supportTickets || [];
   $("#adminUsagePanel").innerHTML = [
