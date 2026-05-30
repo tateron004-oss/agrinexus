@@ -13,6 +13,7 @@
     "provider-engines:smoke": "node scripts/provider-engines-smoke.js",
     "conversation:smoke": "node scripts/conversation-brain-smoke.js",
     "workflow:audit": "node scripts/workflow-button-audit.js",
+    "app:behavior-audit": "node scripts/app-behavior-audit.js",
     "placeholder:audit": "node scripts/no-placeholder-audit.js",
     "production:clickthrough": "node scripts/production-clickthrough.js",
     "production:complete-check": "node scripts/production-complete-check.js",

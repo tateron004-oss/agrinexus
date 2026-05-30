@@ -11,6 +11,7 @@ const checks = [
   [process.execPath, ["--check", "scripts/provider-engines.js"]],
   [process.execPath, ["--check", "scripts/generate-render-env.js"]],
   npmCheck("workflow:audit"),
+  npmCheck("app:behavior-audit"),
   npmCheck("placeholder:audit"),
   npmCheck("production:clickthrough"),
   npmCheck("production:complete-check"),
