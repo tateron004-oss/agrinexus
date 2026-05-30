@@ -3,6 +3,7 @@ let map = null;
 let layers = {};
 let selectedLearningTrack = "All";
 let selectedPersona = localStorage.getItem("agrinexusPersona") || "farmer";
+let experienceMode = localStorage.getItem("agrinexusExperienceMode") || "";
 let pendingWorkflow = null;
 let lastFocusedElement = null;
 let voiceRecognition = null;
@@ -2581,6 +2582,61 @@ function firstAllowedSection() {
   return ["dashboard", "learning", "workforce", "health", "trade", "map", "agent", "integrations", "admin", "profile"].find(canOpenSection) || "dashboard";
 }
 
+function defaultExperienceMode() {
+  const role = String(data?.user?.role || "").toLowerCase();
+  if (role.includes("admin")) return "admin";
+  if (role.includes("investor")) return "investor";
+  return "user";
+}
+
+function allowedExperienceModes() {
+  const modes = ["user", "advanced"];
+  if (can("integrations") || can("admin")) modes.push("investor");
+  if (can("admin")) modes.push("admin");
+  return modes;
+}
+
+function normalizeExperienceMode(mode = experienceMode) {
+  const allowed = allowedExperienceModes();
+  const preferred = allowed.includes(mode) ? mode : defaultExperienceMode();
+  return allowed.includes(preferred) ? preferred : "user";
+}
+
+function experienceModeLabel(mode = experienceMode) {
+  return {
+    user: "User",
+    advanced: "Workspace",
+    investor: "Investor",
+    admin: "Admin"
+  }[mode] || "User";
+}
+
+function setExperienceMode(mode, { persist = true, announceChange = true } = {}) {
+  experienceMode = normalizeExperienceMode(mode);
+  if (persist) localStorage.setItem("agrinexusExperienceMode", experienceMode);
+  applyExperienceMode({ announceChange });
+}
+
+function applyExperienceMode({ announceChange = false } = {}) {
+  if (!data) return;
+  experienceMode = normalizeExperienceMode(experienceMode);
+  document.body.classList.toggle("user-mode", experienceMode === "user");
+  document.body.classList.toggle("advanced-mode", experienceMode === "advanced");
+  document.body.classList.toggle("investor-mode", experienceMode === "investor");
+  document.body.classList.toggle("admin-mode", experienceMode === "admin");
+  $$("[data-experience-mode]").forEach(button => {
+    const mode = button.dataset.experienceMode;
+    const allowed = allowedExperienceModes().includes(mode);
+    button.classList.toggle("active", mode === experienceMode);
+    button.disabled = !allowed;
+    button.classList.toggle("hidden", !allowed);
+    button.setAttribute("aria-pressed", String(mode === experienceMode));
+    button.setAttribute("aria-hidden", String(!allowed));
+  });
+  const status = $("#simpleActionStatus");
+  if (status && announceChange) status.textContent = translateText(`${experienceModeLabel()} view is ready.`);
+}
+
 function applyRoleNavigation() {
   $$(".nav").forEach(button => {
     const allowed = canOpenSection(button.dataset.section);
@@ -3385,6 +3441,63 @@ function renderSimpleHome() {
   }).join("");
 }
 
+function latestUserOutcome() {
+  const activity = (data.profile.activity || [])[0];
+  const intelligence = (data.profile.workflowIntelligence || [])[0];
+  const command = (data.profile.agentCommands || [])[0];
+  const thread = (data.profile.communicationThreads || [])[0];
+  const action = data.smartActions?.items?.[0];
+  return {
+    happened: activity?.detail || command?.response || "No workflow has been run yet in this session.",
+    meaning: intelligence?.meaning || intelligence?.summary || thread?.lastMessage || "AgriNexus is ready to guide the user one step at a time.",
+    next: intelligence?.nextStep || action?.recommendedAction || "Choose one action below or ask Nexus in normal language."
+  };
+}
+
+function renderUserWorkspace() {
+  const target = $("#userWorkspace");
+  if (!target) return;
+  const outcome = latestUserOutcome();
+  const actions = [
+    { label: "Learn a skill", detail: "Start training, complete lessons, and create a certificate record.", command: "start training path", primary: true },
+    { label: "Find work", detail: "Build a work profile, review gaps, and apply for a role.", command: "apply for that job", primary: true },
+    { label: "Get health support", detail: "Start intake, capture needs, and prepare a care follow-up.", command: "start telehealth intake", primary: true },
+    { label: "Sell crops", detail: "Contact a buyer, create an order, and move trade forward.", command: "contact my buyer", primary: true },
+    { label: "Use field intelligence", detail: "Run drone, route, and map support for farm operations.", command: "run drone scan" },
+    { label: "Ask Nexus", detail: "Speak or type what you need. Nexus will guide the next step.", command: "help me" }
+  ];
+  target.innerHTML = `
+    <section class="user-workspace-hero">
+      <div>
+        <span class="eyebrow">${translateText("User Workspace")}</span>
+        <h3 id="userWorkspaceTitle">${translateText("Start With One Simple Step")}</h3>
+        <p>${translateText("This view keeps the platform simple for everyday users. Pick a goal, let Nexus ask questions, then confirm before anything important is saved.")}</p>
+      </div>
+      <button type="button" class="primary" data-simple-command="what should I do next">${translateText("Guide me")}</button>
+    </section>
+    <div class="user-action-grid">
+      ${actions.map(action => `<button type="button" class="user-action ${action.primary ? "primary" : ""}" data-simple-command="${escapeHtml(action.command)}">
+        <strong>${translateText(action.label)}</strong>
+        <span>${translateText(action.detail)}</span>
+      </button>`).join("")}
+    </div>
+    <section class="user-outcome-panel" aria-label="${translateText("Latest user outcome")}">
+      <article>
+        <span>${translateText("What happened")}</span>
+        <strong>${translateText(outcome.happened)}</strong>
+      </article>
+      <article>
+        <span>${translateText("What it means")}</span>
+        <strong>${translateText(outcome.meaning)}</strong>
+      </article>
+      <article>
+        <span>${translateText("Next step")}</span>
+        <strong>${translateText(outcome.next)}</strong>
+      </article>
+    </section>
+  `;
+}
+
 function renderElevationPanels() {
   const impact = data.impactDashboard || { metrics: [], status: "build-evidence", summary: "" };
   if ($("#impactStatus")) $("#impactStatus").textContent = impact.status || "Pilot-ready";
@@ -3498,6 +3611,7 @@ function render() {
   $("#userLine").textContent = `${data.user.name} - ${data.user.role}`;
   applyPlatformLanguage();
   applyRoleNavigation();
+  applyExperienceMode();
   welcomeSignedInUser();
 
   $("#countrySelect").innerHTML = [
@@ -3512,6 +3626,7 @@ function render() {
   $("#kpiFacilities").textContent = data.countries.reduce((sum, item) => sum + item.facilities, 0);
   $("#kpiOrders").textContent = data.profile.orders.length;
   renderSimpleHome();
+  renderUserWorkspace();
   renderElevationPanels();
   $("#sessionBriefingStatus").textContent = translateText(sessionBriefing.status || "ready");
   $("#sessionBriefingPanel").innerHTML = [
@@ -7109,9 +7224,18 @@ function bindStatic() {
       selectedPersona = personaButton.dataset.persona || "farmer";
       localStorage.setItem("agrinexusPersona", selectedPersona);
       renderSimpleHome();
+      renderUserWorkspace();
       const status = $("#simpleActionStatus");
       if (status) status.textContent = `${personaButton.textContent.trim()} actions are ready. Choose one below.`;
       toast(`${personaButton.textContent.trim()} view selected`);
+      return;
+    }
+    const experienceButton = event.target.closest("[data-experience-mode]");
+    if (experienceButton) {
+      event.preventDefault();
+      event.stopPropagation();
+      setExperienceMode(experienceButton.dataset.experienceMode, { announceChange: true });
+      toast(`${experienceModeLabel()} view selected`);
       return;
     }
     const simpleButton = event.target.closest("[data-simple-command], [data-simple-section], [data-simple-pilot], [data-simple-demo], [data-simple-mission], [data-simple-action]");

@@ -261,6 +261,30 @@ a:focus-visible,
   gap: 14px;
   align-items: flex-start;
 }
+.simple-home-controls {
+  display: grid;
+  gap: 8px;
+  justify-items: end;
+}
+.experience-switch {
+  display: inline-flex;
+  gap: 6px;
+  padding: 4px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #f7fbfc;
+}
+.experience-switch button {
+  padding: 7px 10px;
+  background: transparent;
+  border-color: transparent;
+  white-space: nowrap;
+}
+.experience-switch button.active {
+  background: #173240;
+  border-color: #173240;
+  color: white;
+}
 .simple-home h3 {
   margin: 4px 0 6px;
   font-size: 1.25rem;
@@ -326,6 +350,101 @@ a:focus-visible,
 .simple-action.primary strong,
 .simple-action.primary span {
   color: white;
+}
+.user-workspace {
+  display: grid;
+  gap: 12px;
+  margin: 0 0 16px;
+}
+.user-workspace-hero,
+.user-outcome-panel,
+.user-action-grid {
+  display: grid;
+  gap: 12px;
+}
+.user-workspace-hero {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  padding: 18px;
+  border: 1px solid #b7d9ce;
+  border-radius: 12px;
+  background: #ffffff;
+  box-shadow: var(--shadow);
+}
+.user-workspace-hero h3 {
+  margin: 3px 0 6px;
+  font-size: 1.35rem;
+}
+.user-workspace-hero p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.45;
+}
+.user-action-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.user-action {
+  min-height: 118px;
+  display: grid;
+  align-content: start;
+  text-align: left;
+  background: #fbfdfe;
+}
+.user-action strong,
+.user-action span {
+  display: block;
+}
+.user-action span {
+  margin-top: 6px;
+  color: var(--muted);
+  font-size: .88rem;
+  line-height: 1.35;
+}
+.user-action.primary strong,
+.user-action.primary span {
+  color: white;
+}
+.user-outcome-panel {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.user-outcome-panel article {
+  min-height: 118px;
+  box-shadow: none;
+  border-color: #c9dce1;
+}
+.user-outcome-panel span,
+.user-outcome-panel strong {
+  display: block;
+}
+.user-outcome-panel span {
+  color: var(--muted);
+  font-size: .78rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+.user-outcome-panel strong {
+  margin-top: 8px;
+  line-height: 1.38;
+}
+body.user-mode .advanced-only,
+body.user-mode .investor-only,
+body.user-mode .admin-only {
+  display: none !important;
+}
+body.advanced-mode .investor-only,
+body.advanced-mode .admin-only {
+  display: none !important;
+}
+body.investor-mode .admin-only {
+  display: none !important;
+}
+body.investor-mode .advanced-only {
+  display: none !important;
+}
+body.advanced-mode .user-workspace,
+body.investor-mode .user-workspace,
+body.admin-mode .user-workspace {
+  display: none;
 }
 .demo-command {
   display: grid;
@@ -1854,7 +1973,7 @@ body.reduced-motion *::after {
   }
 }
 @media (max-width: 980px) {
-  .login-view, .shell, .map-layout, .cards.two, .cards.three, .cards.four, .stats, .dashboard-actions, .simple-action-grid, .demo-command, .command-launch-guide, .command-launch-grid, .local-pilot-studio, .demo-storyboard, .process-board, .workspace-grid, .workspace-split, .learning-layout, .track-strip, .catalog-desk, .catalog-grid, .workforce-layout, .pipeline-steps, .health-layout, .accessibility-panel, .accessibility-actions, .voice-command, .global-assistant { grid-template-columns: 1fr; }
+  .login-view, .shell, .map-layout, .cards.two, .cards.three, .cards.four, .stats, .dashboard-actions, .simple-action-grid, .user-workspace-hero, .user-action-grid, .user-outcome-panel, .demo-command, .command-launch-guide, .command-launch-grid, .local-pilot-studio, .demo-storyboard, .process-board, .workspace-grid, .workspace-split, .learning-layout, .track-strip, .catalog-desk, .catalog-grid, .workforce-layout, .pipeline-steps, .health-layout, .accessibility-panel, .accessibility-actions, .voice-command, .global-assistant { grid-template-columns: 1fr; }
   .reasoning-steps,
   .reasoning-evidence,
   .mission-grid { grid-template-columns: 1fr; }
@@ -1999,7 +2118,21 @@ body.reduced-motion *::after {
   .simple-home-head {
     display: grid;
   }
+  .simple-home-controls {
+    justify-items: stretch;
+  }
+  .experience-switch {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .experience-switch button {
+    white-space: normal;
+  }
   .simple-action {
+    min-height: auto;
+  }
+  .user-action,
+  .user-outcome-panel article {
     min-height: auto;
   }
   .dashboard-card,
@@ -2028,6 +2161,9 @@ body.reduced-motion *::after {
   .top-actions {
     grid-template-columns: 1fr 1fr;
     width: 100%;
+  }
+  .experience-switch {
+    grid-template-columns: 1fr;
   }
   .top-actions select {
     grid-column: 1 / -1;

@@ -113,11 +113,19 @@
           <div class="simple-home" aria-labelledby="simpleHomeTitle">
             <div class="simple-home-head">
               <div>
-                <span class="eyebrow">Simple start</span>
-                <h3 id="simpleHomeTitle">What Do You Want To Do?</h3>
+                <span class="eyebrow">User mode</span>
+                <h3 id="simpleHomeTitle">What Do You Need Help With Today?</h3>
                 <p>Choose the closest user type, then pick a plain-language action. AgriNexus will open the right workspace or ask for confirmation.</p>
               </div>
-              <button id="simpleContinueBtn" type="button" data-simple-action="continue">Continue last task</button>
+              <div class="simple-home-controls">
+                <div id="experienceModeSwitch" class="experience-switch" role="group" aria-label="Choose workspace mode">
+                  <button id="experienceUserBtn" type="button" data-experience-mode="user">User</button>
+                  <button id="experienceAdvancedBtn" type="button" data-experience-mode="advanced">Workspace</button>
+                  <button id="experienceInvestorBtn" type="button" data-experience-mode="investor">Investor</button>
+                  <button id="experienceAdminBtn" type="button" data-experience-mode="admin">Admin</button>
+                </div>
+                <button id="simpleContinueBtn" type="button" data-simple-action="continue">Continue last task</button>
+              </div>
             </div>
             <div class="persona-strip" role="group" aria-label="Choose user type">
               <button id="personaFarmerBtn" type="button" data-persona="farmer" class="active">Farmer</button>
@@ -130,6 +138,7 @@
             <div id="simpleActionGrid" class="simple-action-grid"></div>
             <div id="simpleActionStatus" class="simple-action-status" role="status">Choose a user type, then select an action.</div>
           </div>
+          <div id="userWorkspace" class="user-workspace" aria-labelledby="userWorkspaceTitle"></div>
           <div class="cards two">
             <article>
               <div class="tag-row"><span>Session briefing</span><span id="sessionBriefingStatus">Ready</span></div>
@@ -143,15 +152,15 @@
               <div id="firstTimeGuidePanel" class="task-list"></div>
             </article>
           </div>
-          <div id="dashboardProcess" class="process-board command-board"></div>
-          <div class="stats">
+          <div id="dashboardProcess" class="process-board command-board advanced-only"></div>
+          <div class="stats advanced-only">
             <article><span id="kpiCountries">0</span><small>Countries</small></article>
             <article><span id="kpiPatients">0</span><small>Patients</small></article>
             <article><span id="kpiFacilities">0</span><small>Facilities</small></article>
             <article><span id="kpiOrders">0</span><small>Orders</small></article>
           </div>
-          <div id="dashboardWorkspace" class="workspace-grid"></div>
-          <div class="cards two">
+          <div id="dashboardWorkspace" class="workspace-grid advanced-only"></div>
+          <div class="cards two investor-only">
             <article>
               <div class="tag-row"><span>Impact dashboard</span><span id="impactStatus">Pilot-ready</span></div>
               <h3>Rural Impact Metrics</h3>
@@ -163,7 +172,7 @@
               <div id="missionTimelinePanel" class="activity"></div>
             </article>
           </div>
-          <div class="cards two">
+          <div class="cards two investor-only">
             <article>
               <div class="tag-row"><span>Live investor mode</span><span>Guided</span></div>
               <h3>One-Click Investor Walkthrough</h3>
@@ -1290,6 +1299,6 @@
   <div id="toast" class="toast hidden" role="status" aria-live="polite" aria-atomic="true"></div>
   <div id="screenReaderStatus" class="sr-only" role="status" aria-live="polite" aria-atomic="true"></div>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="/app.js?v=ai-orchestration-39"></script>
+  <script src="/app.js?v=user-mode-40"></script>
 </body>
 </html>
