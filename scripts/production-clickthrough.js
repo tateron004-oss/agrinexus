@@ -335,9 +335,9 @@ assert(server.includes("Standard User"), "Backend needs a standard user role");
 assert(server.includes("Investor"), "Backend needs an investor role");
 assert(!server.includes("Workforce Operator"), "Production login levels should be simplified to admin, standard user, and investor");
 assert(app.includes("function runLiveServiceCheck"), "Frontend needs a live service finalization action");
-assert(html.includes("styles.css?v=grandma-layout-46"), "Index must force browsers to load the latest contained Grandma Mode shell");
-assert(html.includes("app.js?v=grandma-layout-59"), "Index must force browsers to load the latest contained Grandma Mode code");
-assert(sw.includes("agrinexus-pwa-v38"), "Service worker cache must refresh the installed app after contained Grandma Mode updates");
+assert(html.includes("styles.css?v=grandma-map-ai-47"), "Index must force browsers to load the latest Map and AI Grandma Mode shell");
+assert(html.includes("app.js?v=grandma-map-ai-60"), "Index must force browsers to load the latest Map and AI Grandma Mode code");
+assert(sw.includes("agrinexus-pwa-v39"), "Service worker cache must refresh the installed app after Map and AI Grandma Mode updates");
 assert(html.includes("userWorkspace"), "Dashboard needs a User Workspace for standard users");
 assert(html.includes("userMobileDock"), "Legacy mobile dock markup should remain safely hidden for cache compatibility");
 assert(html.includes("What Do You Need Help With Today?"), "Dashboard simple start should use user-ready language");
@@ -349,7 +349,8 @@ assert(app.includes("user-simple-hero"), "Standard User view needs a simple phon
 assert(app.includes("How can we help?"), "Standard User view needs short user-ready copy");
 assert(app.includes('data-mobile-ask="true"'), "Standard User view needs one clear Ask Nexus button");
 assert(app.includes("Talk to Nexus"), "Standard User view needs a plain voice-first help button");
-assert(!app.includes('{ label: "Maps", section: "map"'), "Standard User home should avoid extra utility buttons");
+assert(app.includes('{ label: "Map", section: "map"'), "Standard User home should expose Map as a simple service button");
+assert(app.includes('{ label: "AI Help", section: "agent"'), "Standard User home should expose AI communication as a simple service button");
 assert(!app.includes('{ label: "Me", section: "profile"'), "Standard User home should avoid profile clutter");
 assert(app.includes("function renderUserSimpleActiveSection"), "Standard User module pages must collapse into button-only action screens");
 assert(app.includes("simpleUserSections"), "Standard User needs simple action definitions for every service section");
@@ -365,6 +366,7 @@ assert(app.includes('Do you want Nexus to do this now?'), "Grandma Mode workflow
 assert(app.includes('$("#workflowConfirm").textContent = grandmaMode ? translateText("Yes")'), "Grandma Mode confirm button should be Yes");
 assert(app.includes('$("#workflowTitle").textContent = grandmaMode ? translateText("Ready?")'), "Grandma Mode modal title must stay short");
 assert(app.includes('title: "Learn"'), "Grandma Mode sections must use short titles");
+assert(app.includes('title: "AI Help"'), "Grandma Mode needs a simple AI communication page");
 assert(app.includes('className: "service-learning"'), "Learning action screen needs blue action buttons");
 assert(app.includes('className: "service-workforce"'), "Workforce action screen needs green action buttons");
 assert(app.includes('className: "service-health"'), "Health action screen needs red action buttons");
@@ -408,6 +410,7 @@ assert(styles.includes("font-size: 1.42rem"), "Grandma Mode needs extra-large bu
 assert(styles.includes(".grandma-workflow .workflow-fields"), "Grandma Mode modal must hide advanced workflow fields");
 assert(styles.includes(".grandma-workflow .task-list"), "Grandma Mode modal must hide dense checklist cards");
 assert(styles.includes("body.user-mode .global-assistant-status"), "Grandma Mode assistant response must stay contained");
+assert(styles.includes("body.user-mode #globalVoiceGuide") && styles.includes("display: none !important"), "Standard User mode must hide command example text menus at the bottom");
 assert(styles.includes("body.user-mode .assistant-close") && styles.includes("white-space: nowrap"), "Ask Nexus close button must never wrap in Standard User mode");
 assert(styles.includes("body.user-mode .global-assistant-actions") && styles.includes("grid-template-columns: 1fr 1fr"), "Ask Nexus buttons should be contained in a simple two-button grid");
 assert(styles.includes("body.user-mode .toast"), "Grandma Mode toast must wrap inside the phone viewport");

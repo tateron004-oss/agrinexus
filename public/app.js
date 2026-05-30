@@ -3532,7 +3532,9 @@ function renderUserWorkspace() {
     { label: "Learn", section: "learning", className: "service-learning" },
     { label: "Find Work", section: "workforce", className: "service-workforce" },
     { label: "Get Health Help", section: "health", className: "service-health" },
-    { label: "Sell Crops", section: "trade", className: "service-trade" }
+    { label: "Sell Crops", section: "trade", className: "service-trade" },
+    { label: "Map", section: "map", className: "service-map" },
+    { label: "AI Help", section: "agent", className: "service-agent" }
   ].filter(item => item.ask || canOpenSection(item.section));
   target.innerHTML = `
     <section class="user-workspace-hero user-simple-hero">
@@ -3597,6 +3599,16 @@ const simpleUserSections = {
       { label: "Check Farm", command: "run drone scan" },
       { label: "Find Facility", command: "find nearest health facility" },
       { label: "Explain Map", command: "explain the map" }
+    ]
+  },
+  agent: {
+    title: "AI Help",
+    className: "service-agent",
+    buttons: [
+      { label: "Ask Question", command: "help me understand the platform" },
+      { label: "Plan Mission", command: "create an agent plan" },
+      { label: "Explain Next Step", command: "what should I do next" },
+      { label: "Read to Me", command: "read the current response" }
     ]
   },
   profile: {
