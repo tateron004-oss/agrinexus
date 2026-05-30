@@ -5,6 +5,7 @@ let selectedLearningTrack = "All";
 let selectedPersona = localStorage.getItem("agrinexusPersona") || "farmer";
 let experienceMode = localStorage.getItem("agrinexusExperienceMode") || "";
 let pendingWorkflow = null;
+let pendingGrandmaAction = null;
 let lastFocusedElement = null;
 let voiceRecognition = null;
 let lastVoiceResponse = "Ready for a command.";
@@ -3617,6 +3618,7 @@ function renderUserSimpleActiveSection(sectionId = currentSectionId()) {
       <span class="eyebrow">${translateText("AgriNexus")}</span>
       <h2>${translateText(config.title)}</h2>
       <p>${translateText("Tap one button. Nexus will do the next step.")}</p>
+      <div id="grandmaConfirmPanel" class="grandma-confirm-panel hidden" role="status" aria-live="polite"></div>
       <div class="user-service-buttons user-module-buttons">
         ${config.buttons.map(action => `<button type="button" class="${escapeHtml(config.className)}" data-simple-command="${escapeHtml(action.command)}">
           <strong>${translateText(action.label)}</strong>
@@ -3624,6 +3626,50 @@ function renderUserSimpleActiveSection(sectionId = currentSectionId()) {
       </div>
     </section>
   `;
+}
+
+function renderGrandmaConfirmation() {
+  const panel = $("#grandmaConfirmPanel");
+  if (!panel) return;
+  if (!pendingGrandmaAction) {
+    panel.classList.add("hidden");
+    panel.innerHTML = "";
+    return;
+  }
+  panel.classList.remove("hidden");
+  panel.innerHTML = `
+    <strong>${translateText(`You chose ${pendingGrandmaAction.label}.`)}</strong>
+    <span>${translateText("Do you want Nexus to do this now?")}</span>
+    <div class="grandma-confirm-actions">
+      <button type="button" class="primary" data-grandma-confirm="yes">${translateText("Yes")}</button>
+      <button type="button" data-grandma-confirm="no">${translateText("No")}</button>
+    </div>
+  `;
+  panel.scrollIntoView({ behavior: "smooth", block: "center" });
+  announce(`You chose ${pendingGrandmaAction.label}. Do you want Nexus to do this now?`);
+}
+
+function startGrandmaActionConfirmation(button) {
+  const label = button.querySelector("strong")?.textContent || button.textContent.trim() || "this action";
+  pendingGrandmaAction = {
+    label,
+    command: button.dataset.simpleCommand
+  };
+  renderGrandmaConfirmation();
+}
+
+async function answerGrandmaActionConfirmation(answer) {
+  const action = pendingGrandmaAction;
+  pendingGrandmaAction = null;
+  renderGrandmaConfirmation();
+  if (answer !== "yes" || !action?.command) {
+    toast("Canceled");
+    announce("Canceled. Choose another button when ready.");
+    return;
+  }
+  setCommandInputs(action.command);
+  openAskNexus();
+  await handleVoiceCommand(action.command);
 }
 
 function renderElevationPanels() {
@@ -6961,6 +7007,10 @@ async function runSimpleAction(eventOrButton) {
   const label = button.querySelector("strong")?.textContent || button.textContent.trim() || "Selected action";
   if (status) status.textContent = `${label} is running...`;
   if (button.dataset.simpleCommand) {
+    if (experienceMode === "user") {
+      startGrandmaActionConfirmation(button);
+      return;
+    }
     setCommandInputs(button.dataset.simpleCommand);
     openAskNexus();
     await handleVoiceCommand(button.dataset.simpleCommand);
@@ -7371,6 +7421,13 @@ function bindStatic() {
       event.preventDefault();
       event.stopPropagation();
       openAskNexus();
+      return;
+    }
+    const grandmaConfirmButton = event.target.closest("[data-grandma-confirm]");
+    if (grandmaConfirmButton) {
+      event.preventDefault();
+      event.stopPropagation();
+      answerGrandmaActionConfirmation(grandmaConfirmButton.dataset.grandmaConfirm);
       return;
     }
     const permissionButton = event.target.closest("[data-mobile-permission]");
