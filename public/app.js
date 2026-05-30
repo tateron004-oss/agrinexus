@@ -5088,7 +5088,7 @@ function workflowConfig(workflow, action, element) {
     const productId = element.dataset.productId || firstProduct()?.id;
     const product = data.products.find(item => item.id === productId) || firstProduct();
     const latestOrder = data.profile.orders[data.profile.orders.length - 1];
-    const titleMap = { order: "Create order", advance: "Advance order", wallet: "Post M-Pesa payment", "buyer-message": "Open buyer-seller thread", "drone-plan": "Plan drone mission", drone: "Run drone field scan", "drone-intervention": "Assign field intervention", "drone-report": "Create drone field report", "drone-irrigation": "Create irrigation plan", "drone-pest": "Create pest alert", "drone-spray": "Create spray plan", "drone-yield": "Create yield forecast", "drone-compliance": "Run drone compliance audit", quote: "Send buyer quote", quality: "Run quality inspection", "cold-chain": "Run cold-chain check", export: "Prepare export packet", contract: "Draft contract packet", release: "Release payment", price: "Run price AI", route: "Run route AI", "trade-advisor": "Review trade next step" };
+    const titleMap = { order: "Create order", advance: "Advance order", wallet: "Post M-Pesa payment", "buyer-message": "Open buyer-seller thread", "buyer-whatsapp": "WhatsApp buyer", "buyer-sms": "SMS buyer", "drone-plan": "Plan drone mission", drone: "Run drone field scan", "drone-intervention": "Assign field intervention", "drone-report": "Create drone field report", "drone-irrigation": "Create irrigation plan", "drone-pest": "Create pest alert", "drone-spray": "Create spray plan", "drone-yield": "Create yield forecast", "drone-compliance": "Run drone compliance audit", quote: "Send buyer quote", quality: "Run quality inspection", "cold-chain": "Run cold-chain check", export: "Prepare export packet", contract: "Draft contract packet", release: "Release payment", price: "Run price AI", route: "Run route AI", "trade-advisor": "Review trade next step" };
     titleMap["buyer-contact"] = "Contact buyer";
     const pathMap = {
       order: "/api/trade/order",
@@ -5096,6 +5096,8 @@ function workflowConfig(workflow, action, element) {
       wallet: "/api/trade/wallet",
       "buyer-contact": "/api/trade/buyer-contact",
       "buyer-message": "/api/trade/message",
+      "buyer-whatsapp": "/api/trade/message",
+      "buyer-sms": "/api/trade/message",
       "drone-plan": "/api/trade/drone-mission",
       drone: "/api/trade/drone-scan",
       "drone-intervention": "/api/trade/drone-intervention",
@@ -5119,11 +5121,11 @@ function workflowConfig(workflow, action, element) {
     return simpleWorkflowConfig({
       eyebrow: "Trade workflow",
       title: titleMap[action] || "Trade action",
-      summary: action === "buyer-message" ? "Open a buyer-seller message thread tied to the active crop, order, route, quality, payment, and provider-ready communication evidence." : action === "buyer-contact" ? "Prepare a buyer communication workflow with the active crop, order, route context, channel, and message draft before sending through live communications." : isDroneAction ? "Run a complete agritech drone workflow: compliant flight planning, crop intelligence, findings, map evidence, and field intervention tasks." : isAdvancedDroneAction ? "Create farmer-facing drone intelligence that turns aerial evidence into irrigation, pest, spray, yield, compliance, and buyer-readiness decisions." : isAdvancedTrade ? "Create a concrete commercial operations record with provider evidence for quote, quality, cold-chain, export, contract, or payment release." : "Confirm the market, wallet, logistics, or AI action before the trade ledger changes.",
+      summary: ["buyer-message", "buyer-whatsapp", "buyer-sms"].includes(action) ? "Open a buyer-seller message thread tied to the active crop, order, route, quality, payment, and provider-ready communication evidence. SMS and WhatsApp attempt live Twilio delivery when configured." : action === "buyer-contact" ? "Prepare a buyer communication workflow with the active crop, order, route context, channel, and message draft before sending through live communications." : isDroneAction ? "Run a complete agritech drone workflow: compliant flight planning, crop intelligence, findings, map evidence, and field intervention tasks." : isAdvancedDroneAction ? "Create farmer-facing drone intelligence that turns aerial evidence into irrigation, pest, spray, yield, compliance, and buyer-readiness decisions." : isAdvancedTrade ? "Create a concrete commercial operations record with provider evidence for quote, quality, cold-chain, export, contract, or payment release." : "Confirm the market, wallet, logistics, or AI action before the trade ledger changes.",
       confirmLabel: titleMap[action] || "Confirm",
       path: pathMap[action] || "/api/ai/run",
-      body: action === "order" ? { productId } : action === "wallet" ? { provider: "M-Pesa", amount: 120 } : action === "buyer-contact" ? { productId } : action === "buyer-message" ? { productId, channel: "in-app chat" } : isDroneAction ? { productId } : isAdvancedDroneAction ? { type: droneTypeMap[action], productId } : isAdvancedTrade ? { type: action, productId } : action === "advance" ? {} : { type: action },
-      success: action === "buyer-message" ? "Buyer-seller thread opened" : action === "buyer-contact" ? "Buyer contact prepared" : action === "wallet" ? "Payment posted" : action === "advance" ? "Order advanced" : action === "order" ? "Order created" : action === "drone-plan" ? "Drone mission planned" : action === "drone" ? "Drone scan complete" : action === "drone-intervention" ? "Field intervention assigned" : isAdvancedDroneAction ? "Advanced drone operation complete" : isAdvancedTrade ? "Advanced trade operation complete" : "AI action complete",
+      body: action === "order" ? { productId } : action === "wallet" ? { provider: "M-Pesa", amount: 120 } : action === "buyer-contact" ? { productId } : action === "buyer-message" ? { productId, channel: "in-app chat" } : action === "buyer-whatsapp" ? { productId, channel: "WhatsApp" } : action === "buyer-sms" ? { productId, channel: "SMS" } : isDroneAction ? { productId } : isAdvancedDroneAction ? { type: droneTypeMap[action], productId } : isAdvancedTrade ? { type: action, productId } : action === "advance" ? {} : { type: action },
+      success: ["buyer-message", "buyer-whatsapp", "buyer-sms"].includes(action) ? "Buyer-seller thread opened" : action === "buyer-contact" ? "Buyer contact prepared" : action === "wallet" ? "Payment posted" : action === "advance" ? "Order advanced" : action === "order" ? "Order created" : action === "drone-plan" ? "Drone mission planned" : action === "drone" ? "Drone scan complete" : action === "drone-intervention" ? "Field intervention assigned" : isAdvancedDroneAction ? "Advanced drone operation complete" : isAdvancedTrade ? "Advanced trade operation complete" : "AI action complete",
       record: "Order book, wallet ledger, message thread, route timeline, drone mission, field scan, intervention task, trade event, or AI evidence",
       provider: "Market, communications, drone, payment, logistics, or AI provider event is recorded.",
       checklist: [
@@ -6427,6 +6429,12 @@ async function handleVoiceCommand(rawCommand) {
 
   if ((lower.includes("buyer") || lower.includes("customer")) && (lower.includes("speak") || lower.includes("talk") || lower.includes("call") || lower.includes("message") || lower.includes("contact"))) {
     goSection("trade");
+    if (lower.includes("whatsapp")) {
+      return openWorkflowByVoice("trade", "buyer-whatsapp", "WhatsApp buyer workflow is ready.", { productId: firstProduct()?.id });
+    }
+    if (lower.includes("sms") || lower.includes("text")) {
+      return openWorkflowByVoice("trade", "buyer-sms", "SMS buyer workflow is ready.", { productId: firstProduct()?.id });
+    }
     if (lower.includes("message") || lower.includes("chat") || lower.includes("communicate") || lower.includes("real time") || lower.includes("realtime")) {
       return openWorkflowByVoice("trade", "buyer-message", "Buyer-seller message thread workflow is ready.", { productId: firstProduct()?.id });
     }

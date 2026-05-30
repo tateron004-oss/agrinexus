@@ -3,12 +3,13 @@ const { spawn } = require("child_process");
 const fs = require("fs");
 const path = require("path");
 
-const testPort = process.env.AGRINEXUS_TEST_PORT || "4373";
+const testPort = process.env.AGRINEXUS_TEST_PORT || String(4373 + Math.floor(Math.random() * 400));
 const base = process.env.AGRINEXUS_URL || `http://localhost:${testPort}`;
 const dbPath = path.join(__dirname, "..", "db.json");
 const dbSnapshot = fs.readFileSync(dbPath, "utf8");
-const tempDbPath = path.join(__dirname, "..", "tmp-smoke-db.json");
+const tempDbPath = path.join(__dirname, "..", `tmp-smoke-db-${process.pid}-${testPort}.json`);
 let cookie = "";
+let serverProcess = null;
 
 function resetConversationMemory(db) {
   db.profile = db.profile || {};
@@ -70,6 +71,7 @@ async function call(path, body) {
     stdio: "ignore",
     windowsHide: true
   });
+  serverProcess = server;
   await waitForServer();
   const html = await fetch(`${base}/`).then(res => res.text());
   assert(html.includes("Nexus Voice Assistant"));
@@ -405,6 +407,14 @@ async function call(path, body) {
   assert(buyerMessage.profile.tradeMessageThreads.length >= 1);
   assert(buyerMessage.profile.tradeMessages.length >= 2);
   assert(buyerMessage.profile.integrationEvents.some(event => event.action === "trade.buyer_seller_message_sent"));
+  const buyerSms = await call("/api/trade/message", { channel: "SMS", message: "SMS buyer update: please confirm delivery window." });
+  assert(["sent-live", "sent-local"].includes(buyerSms.tradeMessageResult.messages[0].status));
+  assert(buyerSms.tradeMessageResult.delivery.status);
+  assert(buyerSms.profile.integrationEvents.some(event => event.providerId === "sms-delivery" && event.action === "trade.buyer_seller_message_sent"));
+  const buyerWhatsapp = await call("/api/trade/message", { channel: "WhatsApp", message: "WhatsApp buyer update: please confirm quality evidence." });
+  assert(["sent-live", "sent-local"].includes(buyerWhatsapp.tradeMessageResult.messages[0].status));
+  assert(buyerWhatsapp.tradeMessageResult.delivery.status);
+  assert(buyerWhatsapp.profile.integrationEvents.some(event => event.providerId === "whatsapp-delivery" && event.action === "trade.buyer_seller_message_sent"));
   const droneMission = await call("/api/trade/drone-mission", { productId: "avocado-ke" });
   assert(droneMission.profile.droneMissions.length >= 1);
   assert(droneMission.profile.integrationEvents.some(event => event.action === "drone.flight_plan"));
@@ -777,6 +787,7 @@ async function call(path, body) {
   fs.rmSync(tempDbPath, { force: true });
   console.log("Smoke test passed");
 })().catch(error => {
+  if (serverProcess && !serverProcess.killed) serverProcess.kill();
   fs.rmSync(tempDbPath, { force: true });
   console.error(error.message);
   process.exit(1);

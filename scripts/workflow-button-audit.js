@@ -97,6 +97,8 @@ const workflowActions = [
   ["trade", "advance"],
   ["trade", "wallet"],
   ["trade", "buyer-message"],
+  ["trade", "buyer-whatsapp"],
+  ["trade", "buyer-sms"],
   ["trade", "drone-plan"],
   ["trade", "drone"],
   ["trade", "drone-intervention"],

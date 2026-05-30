@@ -912,14 +912,21 @@ function runtimeProviders(db) {
         && Boolean(process.env.TWILIO_AUTH_TOKEN)
         && Boolean(process.env.TWILIO_PHONE_NUMBER)
         && Boolean(process.env.PUBLIC_BASE_URL);
+      const isTwilioMessaging = ["sms-delivery", "whatsapp-delivery"].includes(provider.id) && mode === "twilio";
+      const hasTwilioMessaging = isTwilioMessaging && hasTwilioMessagingCore();
+      const twilioMessagingRecipient = isTwilioMessaging ? twilioRecipientForProvider(provider.id) : "";
       return {
         ...provider,
         mode,
-        status: hasOpenAiVoice || hasTwilioVoice ? "connected" : isBrowser ? (REQUIRE_LIVE_SERVICES ? "needs-live-provider" : "connected") : isSandbox ? (REQUIRE_LIVE_SERVICES ? "needs-live-provider" : "connected") : (hasCredential ? "connected" : "needs-credentials"),
+        status: hasOpenAiVoice || hasTwilioVoice || (hasTwilioMessaging && twilioMessagingRecipient) ? "connected" : hasTwilioMessaging ? "needs-recipient" : isBrowser ? (REQUIRE_LIVE_SERVICES ? "needs-live-provider" : "connected") : isSandbox ? (REQUIRE_LIVE_SERVICES ? "needs-live-provider" : "connected") : (hasCredential ? "connected" : "needs-credentials"),
         detail: hasOpenAiVoice
           ? `${mode} provider configured through OPENAI_API_KEY.`
           : hasTwilioVoice
           ? "Twilio phone assistant is configured with account credentials, phone number, and PUBLIC_BASE_URL."
+          : hasTwilioMessaging && twilioMessagingRecipient
+          ? `Twilio ${provider.id === "sms-delivery" ? "SMS" : "WhatsApp"} delivery is configured with a test recipient.`
+          : hasTwilioMessaging
+          ? `Twilio ${provider.id === "sms-delivery" ? "SMS" : "WhatsApp"} credentials are configured; add ${provider.id === "sms-delivery" ? "TRADE_BUYER_SMS_TO or DEMO_SMS_TO" : "TRADE_BUYER_WHATSAPP_TO or DEMO_WHATSAPP_TO"} for live buyer delivery.`
           : isBrowser
           ? (REQUIRE_LIVE_SERVICES ? `Strict live mode requires ${config.modeEnv}=webhook and hosted voice credentials.` : provider.detail)
           : isSandbox
@@ -1817,6 +1824,85 @@ async function fetchWithTimeout(url, options = {}, timeoutMs = 8000) {
   }
 }
 
+function hasTwilioMessagingCore() {
+  return Boolean(process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN && process.env.TWILIO_PHONE_NUMBER);
+}
+
+function normalizeTwilioAddress(channel, value) {
+  const clean = String(value || "").trim();
+  if (!clean) return "";
+  if (/whatsapp/i.test(channel) && !clean.toLowerCase().startsWith("whatsapp:")) return `whatsapp:${clean}`;
+  return clean;
+}
+
+function twilioRecipientForProvider(providerId, body = {}) {
+  if (providerId === "whatsapp-delivery") {
+    return body.recipientWhatsapp
+      || body.whatsappTo
+      || body.to
+      || process.env.TRADE_BUYER_WHATSAPP_TO
+      || process.env.DEMO_WHATSAPP_TO
+      || process.env.WHATSAPP_TEST_TO
+      || "";
+  }
+  if (providerId === "sms-delivery") {
+    return body.recipientPhone
+      || body.smsTo
+      || body.to
+      || process.env.TRADE_BUYER_SMS_TO
+      || process.env.DEMO_SMS_TO
+      || process.env.SMS_TEST_TO
+      || "";
+  }
+  return "";
+}
+
+function twilioFromForProvider(providerId) {
+  if (providerId === "whatsapp-delivery") {
+    return process.env.TWILIO_WHATSAPP_FROM || normalizeTwilioAddress("WhatsApp", process.env.TWILIO_PHONE_NUMBER);
+  }
+  return process.env.TWILIO_SMS_FROM || process.env.TWILIO_PHONE_NUMBER || "";
+}
+
+async function sendTwilioMessage({ providerId, channel, to, text }) {
+  const required = [
+    ["TWILIO_ACCOUNT_SID", process.env.TWILIO_ACCOUNT_SID],
+    ["TWILIO_AUTH_TOKEN", process.env.TWILIO_AUTH_TOKEN],
+    ["TWILIO_PHONE_NUMBER", process.env.TWILIO_PHONE_NUMBER],
+    [providerId === "whatsapp-delivery" ? "TRADE_BUYER_WHATSAPP_TO or DEMO_WHATSAPP_TO" : "TRADE_BUYER_SMS_TO or DEMO_SMS_TO", to]
+  ];
+  const missing = required.filter(([, value]) => !value).map(([key]) => key);
+  if (missing.length) return { attempted: false, ok: false, status: "needs-twilio-config", missing, channel };
+  const from = normalizeTwilioAddress(channel, twilioFromForProvider(providerId));
+  const recipient = normalizeTwilioAddress(channel, to);
+  const form = new URLSearchParams({ From: from, To: recipient, Body: String(text || "").slice(0, 1500) });
+  try {
+    const response = await fetchWithTimeout(
+      `https://api.twilio.com/2010-04-01/Accounts/${encodeURIComponent(process.env.TWILIO_ACCOUNT_SID)}/Messages.json`,
+      {
+        method: "POST",
+        headers: {
+          authorization: `Basic ${Buffer.from(`${process.env.TWILIO_ACCOUNT_SID}:${process.env.TWILIO_AUTH_TOKEN}`).toString("base64")}`,
+          "content-type": "application/x-www-form-urlencoded"
+        },
+        body: form.toString()
+      },
+      PROVIDER_WEBHOOK_TIMEOUT_MS
+    );
+    const payload = await response.json().catch(() => ({}));
+    return {
+      attempted: true,
+      ok: response.ok,
+      status: response.ok ? "sent-live" : "provider-error",
+      httpStatus: response.status,
+      sid: payload.sid || "",
+      error: payload.message || payload.error_message || ""
+    };
+  } catch (error) {
+    return { attempted: true, ok: false, status: "provider-error", error: error.message, channel };
+  }
+}
+
 async function probeUrl(url, options = {}) {
   if (!url) return { attempted: false, ok: false, status: "missing-url" };
   try {
@@ -2186,10 +2272,11 @@ function providerRuntime(providerId) {
   const webhookKey = config.credentialEnvs.find(key => key.endsWith("_WEBHOOK_URL"));
   const apiKey = config.credentialEnvs.find(key => key.endsWith("_API_KEY"));
   const openAiVoiceProvider = ["voice-stt", "voice-tts"].includes(providerId) && Boolean(process.env.OPENAI_API_KEY);
+  const twilioMessagingProvider = ["sms-delivery", "whatsapp-delivery"].includes(providerId) && hasTwilioMessagingCore();
   const explicitWebhook = webhookKey ? process.env[webhookKey] || "" : "";
   const bridgeWebhook = providerEngineWebhookUrl(providerId);
   return {
-    mode: process.env[config.modeEnv] || (openAiVoiceProvider ? "openai" : "sandbox"),
+    mode: process.env[config.modeEnv] || (openAiVoiceProvider ? "openai" : twilioMessagingProvider ? "twilio" : "sandbox"),
     webhookUrl: explicitWebhook || bridgeWebhook,
     apiKey: apiKey ? process.env[apiKey] || "" : ""
   };
@@ -2203,6 +2290,9 @@ async function dispatchProviderWebhook(db, event) {
   }
   if (event.providerId === "phone-voice" && process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN && process.env.TWILIO_PHONE_NUMBER) {
     return { attempted: false, ok: true, status: "twilio-webhook-ready" };
+  }
+  if (["sms-delivery", "whatsapp-delivery"].includes(event.providerId) && hasTwilioMessagingCore()) {
+    return { attempted: false, ok: true, status: "twilio-messaging-ready" };
   }
   if (!provider || runtime.mode === "sandbox") {
     if (REQUIRE_LIVE_SERVICES && provider) {
@@ -2679,7 +2769,7 @@ function addTradeEvent(profile, event) {
   profile.tradeEvents = profile.tradeEvents.slice(0, 30);
 }
 
-function createBuyerSellerMessage(db, user, body = {}) {
+async function createBuyerSellerMessage(db, user, body = {}) {
   ensureTradeProfile(db.profile);
   const { country, route } = activeContext(db);
   const order = db.profile.orders[db.profile.orders.length - 1] || null;
@@ -2739,16 +2829,33 @@ function createBuyerSellerMessage(db, user, body = {}) {
   addTradeEvent(db.profile, { type: "buyer_seller.message_thread", label: `${channel} thread opened between ${sellerName} and ${buyerName} for ${productName}.` });
   addNotification(db.profile, { module: "AgriTrade", providerId: "whatsapp-delivery", channel, message: `Buyer-seller message thread ready for ${productName}.` });
   const providerId = channel.toLowerCase().includes("whatsapp") ? "whatsapp-delivery" : channel.toLowerCase().includes("sms") ? "sms-delivery" : channel.toLowerCase().includes("email") ? "email-delivery" : "trade-market";
+  const recipient = twilioRecipientForProvider(providerId, body);
+  let delivery = { attempted: false, ok: true, status: "local-thread-only", channel };
+  if (["sms-delivery", "whatsapp-delivery"].includes(providerId)) {
+    delivery = await sendTwilioMessage({ providerId, channel, to: recipient, text });
+    sellerMessage.status = delivery.ok ? "sent-live" : "sent-local";
+    sellerMessage.providerStatus = delivery.ok ? `twilio:${delivery.sid || "sent"}` : delivery.status;
+    thread.status = delivery.ok ? "active-live" : "active";
+    thread.deliveryStatus = delivery.status;
+    thread.liveRecipientConfigured = Boolean(recipient);
+    addTradeEvent(db.profile, {
+      type: delivery.ok ? "buyer_seller.twilio_sent" : "buyer_seller.twilio_pending",
+      label: delivery.ok
+        ? `${channel} delivered through Twilio to ${buyerName}.`
+        : `${channel} local evidence created; ${delivery.missing?.join(", ") || delivery.error || "Twilio delivery pending"}.`
+    });
+  }
   logIntegration(db, {
     providerId,
     module: "AgriTrade",
     action: "trade.buyer_seller_message_sent",
-    detail: `${channel} buyer-seller message prepared for ${buyerName}.`,
-    metadata: { threadId: thread.id, orderId: thread.orderId, productName, buyerName, sellerName, messageId: sellerMessage.id }
+    status: delivery.ok || !delivery.attempted ? "success" : "needs-setup",
+    detail: delivery.ok ? `${channel} buyer-seller message delivered to ${buyerName}.` : `${channel} buyer-seller message prepared for ${buyerName}; live delivery status: ${delivery.status}.`,
+    metadata: { threadId: thread.id, orderId: thread.orderId, productName, buyerName, sellerName, messageId: sellerMessage.id, delivery }
   });
   addActivity(db.profile, `Buyer-seller ${channel} thread opened for ${productName}.`);
   rememberAgentMemory(db.profile, `AgriTrade opened a buyer-seller communication thread for ${productName}.`, { source: "trade-message", category: "communications", confidence: 0.91 });
-  return { thread, messages: [sellerMessage, buyerReply] };
+  return { thread, messages: [sellerMessage, buyerReply], delivery };
 }
 
 function createBuyerContactWorkflow(db, user, command = "") {
@@ -6868,10 +6975,10 @@ async function runAgentCommand(db, user, command, options = {}) {
   }
 
   if (/(buyer|seller|customer|purchaser)/.test(lower) && /(message|chat|communicate|reply|conversation|thread|real time|realtime)/.test(lower)) {
-    const result = createBuyerSellerMessage(db, user, { message: text, channel: /whatsapp/i.test(lower) ? "WhatsApp" : /sms|text/i.test(lower) ? "SMS" : /email/i.test(lower) ? "Email" : "in-app chat" });
+    const result = await createBuyerSellerMessage(db, user, { message: text, channel: /whatsapp/i.test(lower) ? "WhatsApp" : /sms|text/i.test(lower) ? "SMS" : /email/i.test(lower) ? "Email" : "in-app chat" });
     return {
       intent: "trade.buyer_seller_message",
-      response: `Buyer-seller communication is ready. I opened a ${result.thread.lastChannel} thread for ${result.thread.productName}, sent the seller update, recorded a local buyer reply, and saved provider-ready evidence for live WhatsApp, SMS, email, or in-app chat.`,
+      response: `Buyer-seller communication is ready. I opened a ${result.thread.lastChannel} thread for ${result.thread.productName}, sent the seller update, recorded a local buyer reply, and saved ${result.delivery.ok ? "live delivery evidence" : "provider-ready evidence"} for WhatsApp, SMS, email, or in-app chat.`,
       status: "completed",
       metadata: { conversationMode: true, redirectSection: "trade", threadId: result.thread.id, channel: result.thread.lastChannel, messageCount: result.messages.length }
     };
@@ -9937,7 +10044,7 @@ async function api(req, res, url) {
   if (url.pathname === "/api/trade/message" && req.method === "POST") {
     if (!canUse(user, "trade")) return send(res, 403, { error: "Role does not allow buyer-seller messaging workflows" });
     const body = await readBody(req);
-    const result = createBuyerSellerMessage(db, user, body);
+    const result = await createBuyerSellerMessage(db, user, body);
     addWorkflowNote(db.profile, body.note, "Buyer-seller message note");
     await writeDb(db);
     const state = publicState(db, user);
@@ -10469,15 +10576,20 @@ async function api(req, res, url) {
       AI: "openai",
       Platform: "openai"
     };
-    const providerId = providerByModule[moduleName] || "openai";
+    const channel = String(body.channel || "workflow");
+    const providerId = /whatsapp/i.test(channel) ? "whatsapp-delivery" : /sms|text/i.test(channel) ? "sms-delivery" : providerByModule[moduleName] || "openai";
     const message = String(body.message || `${moduleName} workflow notification sent.`).trim();
-    addNotification(db.profile, { module: moduleName, providerId, channel: body.channel || "workflow", message, createdBy: user.name });
+    const delivery = ["sms-delivery", "whatsapp-delivery"].includes(providerId)
+      ? await sendTwilioMessage({ providerId, channel, to: twilioRecipientForProvider(providerId, body), text: message })
+      : { attempted: false, ok: true, status: "local-notification-only" };
+    addNotification(db.profile, { module: moduleName, providerId, channel, message, createdBy: user.name, deliveryStatus: delivery.status });
     logIntegration(db, {
       providerId,
       module: moduleName,
       action: "notification.sent",
-      detail: message,
-      metadata: { channel: body.channel || "workflow", createdBy: user.name }
+      status: delivery.ok || !delivery.attempted ? "success" : "needs-setup",
+      detail: delivery.ok ? message : `${message} Delivery status: ${delivery.status}.`,
+      metadata: { channel, createdBy: user.name, delivery }
     });
     addActivity(db.profile, `${moduleName} notification sent: ${message}`);
     await writeDb(db);
