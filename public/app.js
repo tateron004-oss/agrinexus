@@ -3522,168 +3522,25 @@ function latestUserOutcome() {
 function renderUserWorkspace() {
   const target = $("#userWorkspace");
   if (!target) return;
-  const outcome = latestUserOutcome();
-  const providerReady = data.providers?.filter(provider => ["ready", "connected", "live"].includes(provider.status)).length || 0;
-  const providerTotal = data.providers?.length || 0;
-  const readiness = data.admin?.readiness || {};
-  const activation = data.activationGuide || {};
-  const activationGroups = activation.groups || [];
-  const nextMissing = activationGroups.find(group => group.status !== "ready");
-  const showLaunchTools = can("admin") || can("integrations");
-  const languageName = voiceLanguageNames[languageCode()] || "English";
-  const voiceMode = data.profile.voiceProvider === "openai" || data.providers?.some(provider => provider.id === "openai" && provider.status === "ready")
-    ? "AI voice ready"
-    : "Voice fallback ready";
-  const permissionItems = [
-    { key: "microphone", title: "Microphone", detail: "Voice commands and spoken intake" },
-    { key: "notifications", title: "Notifications", detail: "Care, work, trade, and follow-up alerts" },
-    { key: "location", title: "Location", detail: "Route tracking, map risk, and field support" },
-    { key: "install", title: "Install app", detail: "Phone-ready home screen access" }
-  ];
-  const providerDepth = [
-    { title: "AI and voice", detail: "OpenAI reasoning, speech, voice response, and command routing", status: data.providers?.find(provider => provider.id === "openai")?.status || "needs setup" },
-    { title: "Translation and maps", detail: "Language switching, translated content, map tiles, route intelligence", status: readiness.status || "check" },
-    { title: "Learning and workforce", detail: "Course catalog, certificates, job data, role applications, schedules", status: `${providerReady}/${providerTotal} engines` },
-    { title: "Telehealth, trade, drones", detail: "Intake, provider handoff, buyer messaging, field intelligence", status: "workflow ready" }
-  ];
-  const actions = [
-    { label: "Learn a skill", detail: "Start training, complete lessons, and create a certificate record.", command: "start training path", primary: true },
-    { label: "Find work", detail: "Build a work profile, review gaps, and apply for a role.", command: "apply for that job", primary: true },
-    { label: "Get health support", detail: "Start intake, capture needs, and prepare a care follow-up.", command: "start telehealth intake", primary: true },
-    { label: "Sell crops", detail: "Contact a buyer, create an order, and move trade forward.", command: "contact my buyer", primary: true },
-    { label: "Use field intelligence", detail: "Run drone, route, and map support for farm operations.", command: "run drone scan" },
-    { label: "Ask Nexus", detail: "Speak or type what you need. Nexus will guide the next step.", command: "help me" }
-  ];
   const serviceButtons = [
-    { label: "Learning", detail: "Courses, lessons, captions, certificates", section: "learning", className: "service-learning" },
-    { label: "Work", detail: "Jobs, applications, gaps, shifts", section: "workforce", className: "service-workforce" },
-    { label: "Health", detail: "Telehealth intake, vitals, care support", section: "health", className: "service-health" },
-    { label: "Trade", detail: "Crops, buyers, orders, route support", section: "trade", className: "service-trade" },
-    { label: "Maps", detail: "Route risk, field intelligence, location", section: "map", className: "service-map" },
-    { label: "Profile", detail: "Progress, records, activity, settings", section: "profile", className: "service-profile" }
-  ].filter(item => canOpenSection(item.section));
+    { label: "Ask Nexus", section: "ask", className: "service-ask", ask: true },
+    { label: "Learn", section: "learning", className: "service-learning" },
+    { label: "Work", section: "workforce", className: "service-workforce" },
+    { label: "Health", section: "health", className: "service-health" },
+    { label: "Trade", section: "trade", className: "service-trade" },
+    { label: "Maps", section: "map", className: "service-map" },
+    { label: "Me", section: "profile", className: "service-profile" }
+  ].filter(item => item.ask || canOpenSection(item.section));
   target.innerHTML = `
-    <section class="user-workspace-hero user-studio-hero">
-      <div>
-        <span class="eyebrow">${translateText("User Workspace")}</span>
-        <h3 id="userWorkspaceTitle">${translateText("Start With One Simple Step")}</h3>
-        <p>${translateText("This view keeps the platform simple for everyday users. Pick a goal, let Nexus ask questions, then confirm before anything important is saved.")}</p>
-        <div class="user-studio-status">
-          <span>${translateText("AI agent active")}</span>
-          <span>${translateText(voiceMode)}</span>
-          <span>${translateText(`${languageName} content`)}</span>
-        </div>
-      </div>
-      <div class="user-hero-actions">
-        <button type="button" class="primary" data-simple-command="what should I do next">${translateText("Guide me")}</button>
-        <button type="button" data-mobile-ask="true">${translateText("Talk to Nexus")}</button>
-      </div>
-    </section>
-    <section class="user-intelligence-strip" aria-label="${translateText("Platform intelligence status")}">
-      <button type="button" data-mobile-ask="true">
-        <strong>${translateText("Voice")}</strong>
-        <span>${translateText("Speak or type naturally")}</span>
-      </button>
-      <button type="button" data-simple-command="change language to Spanish">
-        <strong>${translateText("Language")}</strong>
-        <span>${translateText("Switch content and voice")}</span>
-      </button>
-      <button type="button" data-simple-command="orchestrate the platform">
-        <strong>${translateText("AI Agent")}</strong>
-        <span>${translateText("Plan the next best action")}</span>
-      </button>
-      ${showLaunchTools ? `<button type="button" data-workflow="integrations" data-action="test-all">
-        <strong>${translateText("Engines")}</strong>
-        <span>${translateText(`${providerReady}/${providerTotal} services ready`)}</span>
-      </button>` : ""}
+    <section class="user-workspace-hero user-simple-hero">
+      <span class="eyebrow">${translateText("AgriNexus")}</span>
+      <h3 id="userWorkspaceTitle">${translateText("What do you need?")}</h3>
+      <p>${translateText("Choose one button. Nexus will guide you from there.")}</p>
     </section>
     <section class="user-service-buttons" aria-label="${translateText("Open a service")}">
-      ${serviceButtons.map(item => `<button type="button" class="${escapeHtml(item.className)}" data-simple-section="${item.section}">
+      ${serviceButtons.map(item => `<button type="button" class="${escapeHtml(item.className)}" ${item.ask ? `data-mobile-ask="true"` : `data-simple-section="${item.section}"`}>
         <strong>${translateText(item.label)}</strong>
-        <span>${translateText(item.detail)}</span>
       </button>`).join("")}
-    </section>
-    ${showLaunchTools ? `<section class="user-production-grid" aria-label="${translateText("Mobile permissions and provider depth")}">
-      <article class="user-production-card">
-        <div class="tag-row"><span>${translateText("Mobile permissions")}</span><span>${translateText("Production app")}</span></div>
-        <h3>${translateText("Turn On Phone Capabilities")}</h3>
-        <p>${translateText("Enable the device features Nexus needs for hands-free voice, local alerts, route intelligence, and app-style access.")}</p>
-        <div class="permission-grid">
-          ${permissionItems.map(item => `<button type="button" data-mobile-permission="${item.key}">
-            <strong>${translateText(item.title)}</strong>
-            <span>${translateText(item.detail)}</span>
-          </button>`).join("")}
-        </div>
-        <div id="mobilePermissionStatus" class="micro-status">${translateText("Choose a permission to check or activate it.")}</div>
-      </article>
-      <article class="user-production-card">
-        <div class="tag-row"><span>${translateText("Live provider depth")}</span><span>${translateText(`${providerReady}/${providerTotal}`)}</span></div>
-        <h3>${translateText("Connect Real-World Engines")}</h3>
-        <p>${translateText("Use this before launch to confirm AI, voice, translation, maps, learning, workforce, telehealth, trade, drone, billing, and messaging services.")}</p>
-        <div class="provider-depth-list">
-          ${providerDepth.map(item => `<div>
-            <strong>${translateText(item.title)}</strong>
-            <span>${translateText(item.detail)}</span>
-            <small>${translateText(item.status)}</small>
-          </div>`).join("")}
-        </div>
-        <div class="action-row">
-          <button type="button" class="primary" id="userLiveServiceCheckBtn">${translateText("Run live provider check")}</button>
-          <button type="button" data-simple-command="what providers are missing">${translateText("Explain missing engines")}</button>
-        </div>
-      </article>
-    </section>` : ""}
-    ${showLaunchTools ? `<section class="launch-wizard-panel" aria-label="${translateText("Production launch wizard")}">
-      <div class="launch-wizard-head">
-        <div>
-          <span class="eyebrow">${translateText("Launch Wizard")}</span>
-          <h3>${translateText("Make AgriNexus Live")}</h3>
-          <p>${translateText("Follow these steps when you are ready to move from a powerful working model into a hosted service with real providers.")}</p>
-        </div>
-        <strong>${translateText(`${activation.readyCount || 0}/${activation.total || 0} groups ready`)}</strong>
-      </div>
-      <div class="launch-wizard-steps">
-        ${[
-          { title: "1. Add credentials", detail: nextMissing?.missing?.[0] ? `Next missing value: ${nextMissing.missing[0]}` : "OpenAI, Twilio, maps, billing, database, and provider URLs are ready or being checked.", action: "what credentials are missing", status: nextMissing ? "pending" : "ready" },
-          { title: "2. Turn on phone permissions", detail: "Enable microphone, notifications, location, and install mode on the device that will be used in the field.", permission: "microphone", status: "ready" },
-          { title: "3. Run live provider check", detail: "Test database, provider bridge, translation, maps, billing, auth, email, SMS, and WhatsApp from the live server.", liveCheck: true, status: readiness.status === "production-ready" ? "ready" : "pending" },
-          { title: "4. Test a real user journey", detail: "Run learning, workforce, telehealth, trade, drone, map, language, and voice workflows end to end.", action: "run full mission", status: "ready" },
-          { title: "5. Review launch evidence", detail: "Use Admin or Investor mode to review readiness, audit events, evidence packets, and support records.", section: can("admin") ? "admin" : "integrations", status: "ready" }
-        ].map(step => {
-          const attrs = step.liveCheck
-            ? `id="launchWizardLiveCheckBtn"`
-            : step.permission
-              ? `data-mobile-permission="${step.permission}"`
-              : step.section
-                ? `data-simple-section="${step.section}"`
-                : `data-simple-command="${escapeHtml(step.action)}"`;
-          return `<button type="button" class="launch-step ${step.status}" ${attrs}>
-            <small>${translateText(step.status)}</small>
-            <strong>${translateText(step.title)}</strong>
-            <span>${translateText(step.detail)}</span>
-          </button>`;
-        }).join("")}
-      </div>
-    </section>` : ""}
-    <div class="user-action-grid">
-      ${actions.map(action => `<button type="button" class="user-action ${action.primary ? "primary" : ""}" data-simple-command="${escapeHtml(action.command)}">
-        <strong>${translateText(action.label)}</strong>
-        <span>${translateText(action.detail)}</span>
-      </button>`).join("")}
-    </div>
-    <section class="user-outcome-panel" aria-label="${translateText("Latest user outcome")}">
-      <article>
-        <span>${translateText("What happened")}</span>
-        <strong>${translateText(outcome.happened)}</strong>
-      </article>
-      <article>
-        <span>${translateText("What it means")}</span>
-        <strong>${translateText(outcome.meaning)}</strong>
-      </article>
-      <article>
-        <span>${translateText("Next step")}</span>
-        <strong>${translateText(outcome.next)}</strong>
-      </article>
     </section>
   `;
 }
