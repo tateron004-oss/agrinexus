@@ -16,7 +16,10 @@ const requirements = [
   ["voice interruption", app.includes("function interruptNexusSpeech") && app.includes("I stopped speaking") && app.includes("stopVoicePlayback")],
   ["proactive alerts", app.includes("function nexusProactiveAlerts") && app.includes("autopilot-waiting") && app.includes("renderNotificationPanel")],
   ["mobile permission polish", app.includes("function mobilePermissionRecoveryGuide") && app.includes("requestProductionMobilePermission") && app.includes("Connection restored")],
-  ["behavior QA visibility", html.includes("nexusBehaviorStatus") && styles.includes("#nexusBehaviorStatus") && app.includes("function updateNexusBehaviorLayer")]
+  ["behavior QA visibility", html.includes("nexusBehaviorStatus") && styles.includes("#nexusBehaviorStatus") && app.includes("function updateNexusBehaviorLayer")],
+  ["performance behavior controller", app.includes("agentPerformanceState") && app.includes("function markAgentPerformance") && app.includes("function setAgentFastAcknowledgement")],
+  ["agentic behavior scorecard", app.includes("function agenticBehaviorScorecard") && app.includes("Agentic behavior check")],
+  ["agent command timeout safety", app.includes("function requestWithTimeout") && app.includes("Nexus timed out waiting for the live engine")]
 ];
 
 const missing = requirements.filter(([, passed]) => !passed).map(([name]) => name);

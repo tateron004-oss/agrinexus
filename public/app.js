@@ -20,6 +20,15 @@ let voicePlaybackToken = 0;
 let voiceConversationTurns = Number(localStorage.getItem("agrinexusVoiceTurns") || 0);
 let liveVoiceSuggestions = [];
 let agentReasoningVisible = localStorage.getItem("agrinexusReasoningVisible") === "true";
+let agentPerformanceState = {
+  lastCommand: "",
+  startedAt: 0,
+  acknowledgedAt: 0,
+  completedAt: 0,
+  lastLatencyMs: 0,
+  status: "ready",
+  route: "idle"
+};
 const accessibilityPrefs = JSON.parse(localStorage.getItem("agrinexusAccessibility") || "{}");
 const originalTextNodes = new WeakMap();
 let deferredInstallPrompt = null;
@@ -2104,6 +2113,19 @@ async function request(path, options = {}) {
   return json;
 }
 
+async function requestWithTimeout(path, options = {}, timeoutMs = 18000) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await request(path, { ...options, signal: controller.signal });
+  } catch (error) {
+    if (error.name === "AbortError") throw new Error("Nexus timed out waiting for the live engine. I kept the workflow safe; try again or use a direct module button.");
+    throw error;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
 function toast(message) {
   const el = $("#toast");
   el.textContent = message;
@@ -3149,6 +3171,7 @@ function updateNexusBehaviorLayer(status = "ready", detail = "") {
   const mode = nexusBehaviorMode();
   const memory = data ? nexusMemoryProfile() : { language: "English", section: "dashboard" };
   const proactive = data ? nexusProactiveAlerts()[0] : null;
+  agentPerformanceState.status = status;
   const label = status === "listening" ? "Listening"
     : status === "thinking" ? "Thinking"
       : status === "confirming" ? "Confirm"
@@ -3159,6 +3182,70 @@ function updateNexusBehaviorLayer(status = "ready", detail = "") {
   if (dockStatus) dockStatus.textContent = translateText(message);
   const localStatus = $("#globalVoiceOutputStatus");
   if (localStatus && experienceMode === "user") localStatus.textContent = translateText(message);
+}
+
+function markAgentPerformance(stage, detail = "") {
+  const now = performance.now ? performance.now() : Date.now();
+  if (stage === "heard") {
+    agentPerformanceState = {
+      ...agentPerformanceState,
+      startedAt: now,
+      acknowledgedAt: 0,
+      completedAt: 0,
+      lastLatencyMs: 0,
+      status: "listening",
+      route: detail || "voice"
+    };
+  }
+  if (stage === "acknowledged") {
+    agentPerformanceState.acknowledgedAt = now;
+    agentPerformanceState.status = "thinking";
+    if (detail) agentPerformanceState.route = detail;
+  }
+  if (stage === "completed") {
+    agentPerformanceState.completedAt = now;
+    agentPerformanceState.lastLatencyMs = Math.max(0, Math.round(now - (agentPerformanceState.startedAt || now)));
+    agentPerformanceState.status = "ready";
+    if (detail) agentPerformanceState.route = detail;
+  }
+  if (stage === "failed") {
+    agentPerformanceState.completedAt = now;
+    agentPerformanceState.lastLatencyMs = Math.max(0, Math.round(now - (agentPerformanceState.startedAt || now)));
+    agentPerformanceState.status = "needs-clarity";
+    if (detail) agentPerformanceState.route = detail;
+  }
+}
+
+function setAgentFastAcknowledgement(command) {
+  const cleaned = String(command || "").trim();
+  agentPerformanceState.lastCommand = cleaned;
+  markAgentPerformance("acknowledged", "agentic-router");
+  const message = cleaned
+    ? `Heard you, ${userFirstName()}. Nexus is routing that now.`
+    : `I'm listening, ${userFirstName()}.`;
+  const globalStatus = $("#globalAssistantStatus");
+  if (globalStatus) globalStatus.textContent = translateText(message);
+  const transcript = $("#voiceTranscript");
+  if (transcript) transcript.textContent = translateText(message);
+  updateNexusBehaviorLayer("thinking", message);
+}
+
+function agenticBehaviorScorecard() {
+  const memory = nexusDeepMemorySignals();
+  const queue = nexusAutopilotQueue();
+  const readiness = nativeAppReadinessSummary();
+  const providerDepth = providerActionDepthStatus();
+  const providerReady = Object.values(providerDepth).reduce((sum, item) => sum + item.ready, 0);
+  const providerTotal = Object.values(providerDepth).reduce((sum, item) => sum + item.total, 0);
+  return {
+    mode: nexusBehaviorMode().label,
+    latencyMs: agentPerformanceState.lastLatencyMs,
+    memoryCount: memory.count,
+    autopilotWaiting: queue.waiting,
+    mobileReady: `${readiness.ready}/${readiness.total}`,
+    providerReady: `${providerReady}/${providerTotal}`,
+    behavior: "voice-first, confirms important actions, remembers context, routes tools, reports evidence, and recovers when engines slow down"
+  };
 }
 
 function contextualVoiceSuggestions(sectionId = currentSectionId()) {
@@ -3524,7 +3611,10 @@ function jarvisInsights() {
   const automation = data.automation || {};
   const plan = (data.profile.agentPlans || [])[0];
   const latestCommand = (data.profile.agentCommands || [])[0];
+  const scorecard = agenticBehaviorScorecard();
   return [
+    { title: "Behavior", detail: `${scorecard.mode}: ${scorecard.behavior}`, status: "ready", label: "Agentic" },
+    { title: "Performance", detail: agentPerformanceState.lastLatencyMs ? `Last response completed in ${agentPerformanceState.lastLatencyMs} ms via ${agentPerformanceState.route}` : "Ready for fast acknowledgement and timed agent routing", status: agentPerformanceState.lastLatencyMs && agentPerformanceState.lastLatencyMs > 12000 ? "pending" : "ready", label: "Speed" },
     { title: "Readiness", detail: `${readiness.readyCount || 0}/${readiness.total || 0} production checks ready`, status: readiness.status === "production-ready" ? "ready" : "pending", label: readiness.status || "Status" },
     { title: "Automation", detail: `${automation.readyCount || 0}/${automation.total || 5} automation unlocks ready`, status: automation.status === "production-ready" ? "ready" : "pending", label: "Auto" },
     { title: "Plan", detail: plan ? `${plan.status}: ${plan.goal}` : "No active plan yet", status: plan ? "ready" : "pending", label: plan?.status || "None" },
@@ -7102,6 +7192,7 @@ async function handleVoiceCommand(rawCommand) {
   const wakeOnly = isWakePhraseOnly(localizedCommand);
   const command = cleanWakeCommand(localizedCommand);
   const lower = command.toLowerCase();
+  markAgentPerformance("heard", "voice-command");
   if (/\b(stop|pause|wait|hold on|be quiet|interrupt|cancel speech)\b/.test(lower) && voiceSpeaking) {
     interruptNexusSpeech("I stopped speaking. Tell me the next instruction.");
     return;
@@ -7317,6 +7408,11 @@ async function handleVoiceCommand(rawCommand) {
   if (lower.includes("mobile permissions") || lower.includes("app permissions") || lower.includes("permissions check")) {
     const permissions = mobilePermissionRecoveryGuide();
     setVoiceResponse(`Mobile permission check: microphone ${permissions.microphone ? "available" : "not available"}, notifications ${permissions.notifications ? "available" : "not available"}, location ${permissions.location ? "available" : "not available"}. ${permissions.guidance}`, true);
+    return;
+  }
+  if (lower.includes("agentic behavior") || lower.includes("jarvis behavior") || lower.includes("performance check") || lower.includes("behavior check") || lower.includes("are you agentic")) {
+    const scorecard = agenticBehaviorScorecard();
+    setVoiceResponse(`Agentic behavior check: ${scorecard.mode}. I am ${scorecard.behavior}. Last timed response: ${scorecard.latencyMs || 0} ms. Memory: ${scorecard.memoryCount} item(s). Autopilot waiting: ${scorecard.autopilotWaiting}. Mobile readiness: ${scorecard.mobileReady}. Provider depth: ${scorecard.providerReady}.`, true);
     return;
   }
   if (lower.includes("native app") || lower.includes("highest level app") || lower.includes("always on") || lower.includes("always-on") || lower.includes("background listening")) {
@@ -7540,10 +7636,8 @@ async function runBackendAgentCommand(command) {
     voiceConversationTurns += 1;
     localStorage.setItem("agrinexusVoiceTurns", String(voiceConversationTurns));
     setVoiceStatus("thinking");
-    const globalStatus = $("#globalAssistantStatus");
-    if (globalStatus) globalStatus.textContent = `Thinking about: ${command}`;
-    updateNexusBehaviorLayer("thinking", `${nexusBehaviorMode().label}: thinking about your request`);
-    data = await request("/api/agent/command", {
+    setAgentFastAcknowledgement(command);
+    data = await requestWithTimeout("/api/agent/command", {
       method: "POST",
       body: {
         command,
@@ -7553,7 +7647,7 @@ async function runBackendAgentCommand(command) {
         outputMode: "voice",
         note: "Command submitted from Nexus Voice Assistant"
       }
-    });
+    }, 18000);
     render();
     const result = data.commandResult || {};
     if (result.metadata?.redirectSection) goSection(result.metadata.redirectSection);
@@ -7566,9 +7660,11 @@ async function runBackendAgentCommand(command) {
     }
     const mode = $("#jarvisMode");
     if (mode) mode.textContent = `conversation turn ${voiceConversationTurns}`;
+    markAgentPerformance("completed", result.intent || "agent-command");
     updateNexusBehaviorLayer("speaking", result.response || "Command completed.");
     setVoiceResponse(result.response || "Command completed.", true);
   } catch (error) {
+    markAgentPerformance("failed", "agent-command-error");
     updateNexusBehaviorLayer("ready", "Nexus needs one clearer request.");
     setVoiceResponse(error.message || "Command failed.");
   }
