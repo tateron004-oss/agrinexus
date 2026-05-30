@@ -3641,7 +3641,7 @@ function renderUserWorkspace() {
     <section class="user-workspace-hero user-simple-hero">
       <span class="eyebrow">${translateText("AgriNexus")}</span>
       <h3 id="userWorkspaceTitle">${translateText("How can we help?")}</h3>
-      <p>${translateText("Tap one button. Nexus will guide you step by step.")}</p>
+      <p>${translateText("Tap one big button. Or say: Nexus, help me.")}</p>
     </section>
     <section class="user-language-panel" aria-label="${translateText("Choose language")}">
       <strong>${translateText("Choose language")}</strong>
@@ -3656,7 +3656,7 @@ function renderUserWorkspace() {
           ${translateText(label)}
         </button>`).join("")}
       </div>
-      <span>${translateText("You can also say: Nexus, change language to French.")}</span>
+      <span>${translateText("Say: change language to French, Arabic, Swahili, Spanish, or English.")}</span>
     </section>
     <section class="user-service-buttons" aria-label="${translateText("Open a service")}">
       ${serviceButtons.map(item => `<button type="button" class="${escapeHtml(item.className)}" ${item.ask ? `data-mobile-ask="true"` : `data-simple-section="${item.section}"`}>
@@ -3669,6 +3669,7 @@ function renderUserWorkspace() {
 const simpleUserSections = {
   learning: {
     title: "Learn",
+    prompt: "Choose how you want to learn.",
     className: "service-learning",
     buttons: [
       { label: "Start a Course", command: "start training path" },
@@ -3679,6 +3680,7 @@ const simpleUserSections = {
   },
   workforce: {
     title: "Work",
+    prompt: "Choose what you need for work.",
     className: "service-workforce",
     buttons: [
       { label: "Find Jobs", command: "show me jobs" },
@@ -3689,6 +3691,7 @@ const simpleUserSections = {
   },
   health: {
     title: "Health",
+    prompt: "Choose the care support you need.",
     className: "service-health",
     buttons: [
       { label: "Start Intake", command: "start telehealth intake" },
@@ -3699,6 +3702,7 @@ const simpleUserSections = {
   },
   trade: {
     title: "Trade",
+    prompt: "Choose what you need for crops or buyers.",
     className: "service-trade",
     buttons: [
       { label: "Contact Buyer", command: "contact my buyer" },
@@ -3709,6 +3713,7 @@ const simpleUserSections = {
   },
   map: {
     title: "Map",
+    prompt: "Choose what you want Nexus to check.",
     className: "service-map",
     buttons: [
       { label: "Check Route", command: "check route risk" },
@@ -3719,6 +3724,7 @@ const simpleUserSections = {
   },
   agent: {
     title: "AI Help",
+    prompt: "Ask Nexus to explain, plan, or read.",
     className: "service-agent",
     buttons: [
       { label: "Ask Question", command: "help me understand the platform" },
@@ -3729,6 +3735,7 @@ const simpleUserSections = {
   },
   profile: {
     title: "Account",
+    prompt: "Choose what you want to review.",
     className: "service-profile",
     buttons: [
       { label: "My Progress", command: "summarize my progress" },
@@ -3746,15 +3753,17 @@ function renderUserSimpleActiveSection(sectionId = currentSectionId()) {
   if (!target) return;
   target.innerHTML = `
     <section class="user-simple-module" aria-label="${translateText(config.title)}">
+      <button type="button" class="user-module-back" data-simple-section="dashboard">${translateText("Back")}</button>
       <span class="eyebrow">${translateText("AgriNexus")}</span>
       <h2>${translateText(config.title)}</h2>
-      <p>${translateText("Tap one button.")}</p>
+      <p>${translateText(config.prompt || "Tap one button.")}</p>
       <div id="grandmaConfirmPanel" class="grandma-confirm-panel hidden" role="status" aria-live="polite"></div>
       <div class="user-service-buttons user-module-buttons">
         ${config.buttons.map(action => `<button type="button" class="${escapeHtml(config.className)}" data-simple-command="${escapeHtml(action.command)}">
           <strong>${translateText(action.label)}</strong>
         </button>`).join("")}
       </div>
+      <div class="user-module-status" role="status">${translateText("Nexus is ready.")}</div>
     </section>
   `;
 }
@@ -7736,6 +7745,21 @@ function bindStatic() {
       event.preventDefault();
       event.stopPropagation();
       openAskNexus();
+      return;
+    }
+    const userVoiceButton = event.target.closest("[data-user-voice-action]");
+    if (userVoiceButton) {
+      event.preventDefault();
+      event.stopPropagation();
+      const action = userVoiceButton.dataset.userVoiceAction;
+      openAskNexus();
+      if (action === "listen") {
+        startVoiceListening();
+      } else if (action === "read") {
+        speakVoiceResponse();
+      } else {
+        $("#globalCommandInput")?.focus();
+      }
       return;
     }
     const grandmaConfirmButton = event.target.closest("[data-grandma-confirm]");

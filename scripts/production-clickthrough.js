@@ -349,9 +349,9 @@ assert(app.includes('workflow === "admin-user"'), "Admin test login button needs
 assert(app.includes("Only an existing Admin can run this workflow"), "Admin login flow must explain admin-only protection");
 assert(server.includes('adminAccount.role = "Admin"'), "Backend must force admin test logins to Admin");
 assert(server.includes("admin_user.created"), "Admin test login must create auth audit evidence");
-assert(html.includes("styles.css?v=admin-workflow-54"), "Index must force browsers to load the latest admin workflow shell");
-assert(html.includes("app.js?v=admin-workflow-67"), "Index must force browsers to load the latest admin workflow code");
-assert(sw.includes("agrinexus-pwa-v46"), "Service worker cache must refresh the installed app after admin workflow updates");
+assert(html.includes("styles.css?v=user-app-shell-55"), "Index must force browsers to load the latest user app shell");
+assert(html.includes("app.js?v=user-app-shell-68"), "Index must force browsers to load the latest user app code");
+assert(sw.includes("agrinexus-pwa-v47"), "Service worker cache must refresh the installed app after user app updates");
 assert(html.includes("userWorkspace"), "Dashboard needs a User Workspace for standard users");
 assert(html.includes("userMobileDock"), "Legacy mobile dock markup should remain safely hidden for cache compatibility");
 assert(html.includes("What Do You Need Help With Today?"), "Dashboard simple start should use user-ready language");
@@ -368,6 +368,12 @@ assert(app.includes('{ label: "AI Help", section: "agent"'), "Standard User home
 assert(!app.includes('{ label: "Me", section: "profile"'), "Standard User home should avoid profile clutter");
 assert(app.includes("function renderUserSimpleActiveSection"), "Standard User module pages must collapse into button-only action screens");
 assert(app.includes("simpleUserSections"), "Standard User needs simple action definitions for every service section");
+assert(app.includes("user-module-status"), "User module pages need a contained status/result area");
+assert(app.includes("user-module-back"), "User module pages need a clear Back button");
+assert(html.includes("userVoiceDock"), "Standard User app needs a compact voice dock");
+assert(html.includes('data-user-voice-action="listen"'), "Voice dock needs a speak action");
+assert(html.includes('data-user-voice-action="type"'), "Voice dock needs a type action");
+assert(html.includes('data-user-voice-action="read"'), "Voice dock needs a read action");
 assert(app.includes("pendingGrandmaAction"), "Grandma Mode needs a pending action confirmation state");
 assert(app.includes("function renderGrandmaConfirmation"), "Grandma Mode needs a visible yes/no confirmation panel");
 assert(app.includes('data-grandma-confirm="yes"'), "Grandma Mode confirmation needs a large Yes button");
@@ -432,6 +438,9 @@ assert(styles.includes("body.user-mode .sidebar"), "User mode should simplify mo
 assert(styles.includes(".user-simple-hero"), "User interface needs a compact simple hero");
 assert(styles.includes(".user-service-buttons .service-ask"), "Ask Nexus should be a prominent service button");
 assert(styles.includes("body.user-mode .user-service-buttons button::before"), "Grandma dashboard buttons need strong color personality accents");
+assert(styles.includes("body.user-mode .user-voice-dock"), "User mode needs fixed compact voice controls");
+assert(styles.includes("body.user-mode .user-module-status"), "User module status text must be contained");
+assert(styles.includes("body.user-mode .section.active") && styles.includes("max-height: calc(100vh - 58px)"), "User mode sections should behave like one-screen task pages");
 assert(styles.includes("rgba(255, 211, 86"), "Grandma dashboard needs a warm colorful hero");
 assert(styles.includes(".user-simple-module"), "Standard User module pages need simple button-only styling");
 assert(styles.includes(".section.active:not(#dashboard) > :not(.user-simple-module)"), "Standard User module pages must hide long professional content");

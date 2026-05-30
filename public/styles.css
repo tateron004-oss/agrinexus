@@ -834,8 +834,8 @@ body.user-mode .shell {
 body.user-mode .content {
   width: 100%;
   max-width: 460px;
-  padding: 10px 12px 24px;
-  overflow: visible;
+  padding: 10px 12px 104px;
+  overflow: hidden;
 }
 body.user-mode,
 body.user-mode * {
@@ -853,7 +853,7 @@ body.user-mode .user-outcome-panel article {
 }
 body.user-mode .user-workspace-hero {
   grid-template-columns: 1fr;
-  padding: 18px 16px;
+  padding: 16px 14px;
   margin-bottom: 12px;
   border: 2px solid #173240;
   background:
@@ -866,14 +866,14 @@ body.user-mode .user-workspace-hero .eyebrow {
 }
 body.user-mode .user-workspace-hero h3 {
   color: #102b36;
-  font-size: 1.55rem;
+  font-size: 1.42rem;
   margin-bottom: 0;
   text-align: center;
 }
 body.user-mode .user-workspace-hero p {
   margin: 0;
   color: #102b36;
-  font-size: 1.04rem;
+  font-size: .98rem;
   font-weight: 950;
   line-height: 1.35;
   text-align: center;
@@ -886,7 +886,7 @@ body.user-mode .user-language-panel {
   display: grid;
   gap: 10px;
   margin-bottom: 12px;
-  padding: 14px;
+  padding: 12px;
   border: 2px solid #173240;
   border-radius: 16px;
   background: #ffffff;
@@ -900,7 +900,7 @@ body.user-mode .user-language-panel strong {
 }
 body.user-mode .user-language-panel span {
   color: #365867;
-  font-size: .9rem;
+  font-size: .84rem;
   font-weight: 800;
   line-height: 1.25;
 }
@@ -955,7 +955,7 @@ body.user-mode .user-service-buttons button {
   position: relative;
   isolation: isolate;
   width: 100%;
-  padding: 20px 18px;
+  padding: 18px 16px;
   border-radius: 16px;
   text-align: center;
   justify-items: center;
@@ -985,7 +985,7 @@ body.user-mode .user-service-buttons button:active {
 body.user-mode .user-service-buttons strong {
   position: relative;
   z-index: 1;
-  font-size: 1.42rem;
+  font-size: 1.28rem;
   line-height: 1.1;
   white-space: normal;
 }
@@ -995,25 +995,27 @@ body.user-mode .user-service-buttons .service-ask {
 }
 body.user-mode .section.active {
   display: block;
-  max-height: none;
-  overflow: visible;
+  max-height: calc(100vh - 58px);
+  overflow: auto;
 }
 body.user-mode .section.active:not(#dashboard) > :not(.user-simple-module) {
   display: none !important;
 }
 body.user-mode .user-simple-module {
   display: grid;
-  gap: 12px;
+  gap: 10px;
   width: 100%;
   max-width: 100%;
   min-width: 0;
-  min-height: calc(100vh - 92px);
+  min-height: calc(100vh - 162px);
+  max-height: calc(100vh - 88px);
   align-content: start;
-  padding: 16px;
+  padding: 12px;
   border: 2px solid #173240;
   border-radius: 16px;
   background: #ffffff;
   box-shadow: 0 14px 32px rgba(23, 50, 64, .08);
+  overflow: auto;
 }
 body.user-mode .user-simple-module,
 body.user-mode .user-simple-module * {
@@ -1023,14 +1025,14 @@ body.user-mode .user-simple-module * {
 body.user-mode .user-simple-module h2 {
   margin: 0;
   color: #173240;
-  font-size: 1.5rem;
+  font-size: 1.32rem;
   line-height: 1.15;
   text-align: center;
 }
 body.user-mode .user-simple-module p {
   margin: 0;
   color: #173240;
-  font-size: 1rem;
+  font-size: .94rem;
   font-weight: 800;
   line-height: 1.35;
   text-align: center;
@@ -1038,12 +1040,37 @@ body.user-mode .user-simple-module p {
 body.user-mode .user-module-buttons {
   margin-top: 2px;
   display: grid;
-  gap: 12px;
+  gap: 10px;
 }
 body.user-mode .user-module-buttons button {
-  min-height: 104px;
+  min-height: 82px;
   border-width: 2px;
   box-shadow: 0 12px 26px rgba(23, 50, 64, .08);
+}
+body.user-mode .user-module-back {
+  width: fit-content;
+  min-height: 42px;
+  padding: 8px 14px;
+  border: 2px solid #173240;
+  border-radius: 999px;
+  background: #fffdf2;
+  color: #173240;
+  font-weight: 950;
+  white-space: nowrap;
+}
+body.user-mode .user-module-status {
+  max-height: 4.8rem;
+  overflow: auto;
+  padding: 10px 12px;
+  border: 2px solid #d8e6eb;
+  border-radius: 12px;
+  background: #f7fbfc;
+  color: #173240;
+  font-size: .92rem;
+  font-weight: 850;
+  line-height: 1.25;
+  text-align: center;
+  overflow-wrap: anywhere;
 }
 body.user-mode .grandma-confirm-panel {
   display: grid;
@@ -1089,6 +1116,41 @@ body.user-mode .user-outcome-panel article {
 body.user-mode .user-mobile-dock {
   display: none !important;
 }
+body.user-mode .user-voice-dock {
+  position: fixed;
+  left: 50%;
+  bottom: 10px;
+  z-index: 118;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  width: min(440px, calc(100vw - 20px));
+  padding: 8px;
+  border: 2px solid #173240;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, .96);
+  box-shadow: 0 16px 38px rgba(23, 50, 64, .18);
+  transform: translateX(-50%);
+}
+body:not(.user-mode) .user-voice-dock {
+  display: none !important;
+}
+body.user-mode .user-voice-dock button {
+  min-height: 56px;
+  padding: 8px 6px;
+  border: 2px solid #d8e6eb;
+  border-radius: 14px;
+  background: #f7fbfc;
+  color: #173240;
+  font-size: .94rem;
+  font-weight: 950;
+  line-height: 1.05;
+  white-space: nowrap;
+}
+body.user-mode .user-voice-dock button:first-child {
+  background: linear-gradient(135deg, #173240, #2c6d78);
+  color: #ffffff;
+}
 body.user-mode .user-mobile-dock button {
   min-height: 44px;
   padding: 6px 3px;
@@ -1106,12 +1168,12 @@ body.user-mode .user-mobile-dock button[data-mobile-ask] {
 body.user-mode .global-assistant {
   left: 50%;
   right: auto;
-  bottom: 12px;
+  bottom: 86px;
   display: grid;
   grid-template-columns: 1fr;
   gap: 10px;
   width: min(440px, calc(100vw - 20px));
-  max-height: calc(100vh - 24px);
+  max-height: calc(100vh - 112px);
   overflow: auto;
   padding: 12px;
   border: 3px solid #173240;
@@ -1154,7 +1216,7 @@ body.user-mode .global-assistant-actions {
 }
 body.user-mode .global-assistant-actions button {
   width: 100%;
-  min-height: 52px;
+  min-height: 48px;
   padding: 9px 8px;
   font-size: .9rem;
   line-height: 1.12;
@@ -1193,7 +1255,7 @@ body.user-mode .grandma-workflow .modal-panel {
   grid-template-rows: auto 1fr auto;
   width: calc(100vw - 16px);
   max-width: 440px;
-  min-height: calc(100vh - 20px);
+  min-height: min(560px, calc(100vh - 20px));
   max-height: calc(100vh - 20px);
   overflow: hidden;
   padding: 16px;
@@ -1232,7 +1294,7 @@ body.user-mode .grandma-workflow .modal-summary {
   align-items: center;
   justify-items: center;
   max-height: none;
-  min-height: 160px;
+  min-height: 130px;
   overflow: auto;
   color: #173240;
   font-size: clamp(1.08rem, 4vw, 1.32rem);
@@ -1248,7 +1310,7 @@ body.user-mode .grandma-workflow .modal-actions {
   margin-top: auto;
 }
 body.user-mode .grandma-workflow .modal-actions button {
-  min-height: 86px;
+  min-height: 74px;
   border-width: 2px;
   font-size: clamp(1.08rem, 5vw, 1.32rem);
   font-weight: 950;
@@ -2879,10 +2941,10 @@ body.reduced-motion *::after {
     color: #ffffff;
   }
   body.user-mode .content {
-    padding-bottom: 28px;
+    padding-bottom: 104px;
   }
   body.user-mode .global-assistant {
-    bottom: 12px;
+    bottom: 86px;
   }
   .nav {
     padding: 8px 10px;

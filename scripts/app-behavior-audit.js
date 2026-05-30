@@ -22,6 +22,8 @@ hasAll(app, [
   "[data-user-language]",
   "function renderUserSimpleActiveSection",
   "simpleUserSections",
+  "user-module-status",
+  "data-user-voice-action",
   "title: \"Learn\"",
   "title: \"Work\"",
   "title: \"Health\"",
@@ -42,9 +44,13 @@ hasAll(styles, [
   "display: none !important",
   "body.user-mode .section.active:not(#dashboard) > :not(.user-simple-module)",
   "body.user-mode .user-simple-module",
-  "min-height: calc(100vh - 92px)",
+  "min-height: calc(100vh - 162px)",
+  "max-height: calc(100vh - 88px)",
   "body.user-mode .user-language-panel",
   "body.user-mode .user-language-buttons button",
+  "body.user-mode .user-voice-dock",
+  "body.user-mode .user-module-status",
+  "body.user-mode .user-module-back",
   "body.user-mode #globalVoiceGuide",
   "body.user-mode .assistant-close",
   "white-space: nowrap",
@@ -99,8 +105,12 @@ assert(app.includes("This account cannot access Admin or Investor mode"), "User-
 assert(html.includes("addAdminUserBtn"), "Admin should have an Admin test login button");
 assert(app.includes('workflow === "admin-user"'), "Admin test login needs workflow wiring");
 assert(app.includes("Standard Users and Investors cannot run this workflow"), "Admin login flow should clearly exclude Standard Users and Investors");
-assert(html.includes("admin-workflow-54"), "Index must force browsers to load admin workflow CSS");
-assert(html.includes("admin-workflow-67"), "Index must force browsers to load admin workflow JS");
+assert(html.includes("userVoiceDock"), "User app shell needs a compact always-available voice dock");
+assert(html.includes('data-user-voice-action="listen"'), "User voice dock needs a speak action");
+assert(html.includes('data-user-voice-action="type"'), "User voice dock needs a type action");
+assert(html.includes('data-user-voice-action="read"'), "User voice dock needs a read action");
+assert(html.includes("user-app-shell-55"), "Index must force browsers to load user app shell CSS");
+assert(html.includes("user-app-shell-68"), "Index must force browsers to load user app shell JS");
 
 console.log("App behavior audit passed");
 console.log("Checked: app-mode language picker, service buttons, section containment, workflow confirmations, voice routes, overflow wrapping, and advanced-panel hiding.");
