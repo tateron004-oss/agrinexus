@@ -2508,7 +2508,16 @@ function goSection(sectionId, options = {}) {
     });
   }
   if (sectionId === "map") setTimeout(() => map && map.invalidateSize(), 100);
+  updateUserBackHome(sectionId);
   announce(`${sectionId} section opened`);
+}
+
+function updateUserBackHome(sectionId = currentSectionId()) {
+  const button = $("#userBackHomeBtn");
+  if (!button) return;
+  const show = experienceMode === "user" && sectionId !== "dashboard";
+  button.classList.toggle("hidden", !show);
+  button.setAttribute("aria-hidden", String(!show));
 }
 
 function courseEnrollment(courseId) {
@@ -3546,12 +3555,12 @@ function renderUserWorkspace() {
     { label: "Ask Nexus", detail: "Speak or type what you need. Nexus will guide the next step.", command: "help me" }
   ];
   const serviceButtons = [
-    { label: "Learning", detail: "Courses, lessons, captions, certificates", section: "learning" },
-    { label: "Work", detail: "Jobs, applications, gaps, shifts", section: "workforce" },
-    { label: "Health", detail: "Telehealth intake, vitals, care support", section: "health" },
-    { label: "Trade", detail: "Crops, buyers, orders, route support", section: "trade" },
-    { label: "Maps", detail: "Route risk, field intelligence, location", section: "map" },
-    { label: "Profile", detail: "Progress, records, activity, settings", section: "profile" }
+    { label: "Learning", detail: "Courses, lessons, captions, certificates", section: "learning", className: "service-learning" },
+    { label: "Work", detail: "Jobs, applications, gaps, shifts", section: "workforce", className: "service-workforce" },
+    { label: "Health", detail: "Telehealth intake, vitals, care support", section: "health", className: "service-health" },
+    { label: "Trade", detail: "Crops, buyers, orders, route support", section: "trade", className: "service-trade" },
+    { label: "Maps", detail: "Route risk, field intelligence, location", section: "map", className: "service-map" },
+    { label: "Profile", detail: "Progress, records, activity, settings", section: "profile", className: "service-profile" }
   ].filter(item => canOpenSection(item.section));
   target.innerHTML = `
     <section class="user-workspace-hero user-studio-hero">
@@ -3589,7 +3598,7 @@ function renderUserWorkspace() {
       </button>` : ""}
     </section>
     <section class="user-service-buttons" aria-label="${translateText("Open a service")}">
-      ${serviceButtons.map(item => `<button type="button" data-simple-section="${item.section}">
+      ${serviceButtons.map(item => `<button type="button" class="${escapeHtml(item.className)}" data-simple-section="${item.section}">
         <strong>${translateText(item.label)}</strong>
         <span>${translateText(item.detail)}</span>
       </button>`).join("")}
@@ -7630,6 +7639,8 @@ function bindStatic() {
   $$(".nav").forEach(button => {
     button.onclick = () => goSection(button.dataset.section, { instant: true });
   });
+  const userBackHomeBtn = $("#userBackHomeBtn");
+  if (userBackHomeBtn) userBackHomeBtn.onclick = () => goSection("dashboard", { instant: true });
   $$("[data-mobile-section]").forEach(button => {
     button.onclick = () => goSection(button.dataset.mobileSection, { instant: true });
   });

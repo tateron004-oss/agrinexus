@@ -166,6 +166,15 @@ a:focus-visible,
 .user-mobile-dock {
   display: none;
 }
+.user-back-home {
+  display: none;
+  width: fit-content;
+  margin: 12px 16px 0;
+  background: #ffffff;
+  border-color: #b9d9cf;
+  color: #0e654a;
+  box-shadow: 0 8px 20px rgba(23, 50, 64, .08);
+}
 .workspace-bar {
   display: flex;
   align-items: center;
@@ -474,6 +483,12 @@ a:focus-visible,
   background: #ffffff;
   box-shadow: 0 10px 24px rgba(23, 50, 64, .07);
 }
+.user-service-buttons .service-learning { border-color: #8cc8f2; background: linear-gradient(180deg, #ffffff, #eef8ff); }
+.user-service-buttons .service-workforce { border-color: #a7d8b4; background: linear-gradient(180deg, #ffffff, #f0fbf3); }
+.user-service-buttons .service-health { border-color: #efb7b7; background: linear-gradient(180deg, #ffffff, #fff4f4); }
+.user-service-buttons .service-trade { border-color: #e4c46f; background: linear-gradient(180deg, #ffffff, #fff9e8); }
+.user-service-buttons .service-map { border-color: #a7c7ef; background: linear-gradient(180deg, #ffffff, #f0f6ff); }
+.user-service-buttons .service-profile { border-color: #c8b8ee; background: linear-gradient(180deg, #ffffff, #f7f3ff); }
 .user-service-buttons button:hover {
   transform: translateY(-2px);
   border-color: #9abac5;
@@ -735,6 +750,11 @@ body.user-mode .simple-home-controls {
 body.user-mode .sidebar,
 body.user-mode .workspace-bar {
   display: none !important;
+}
+body.user-mode .user-back-home:not(.hidden) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 body.advanced-mode .investor-only,
 body.advanced-mode .admin-only {
@@ -2372,6 +2392,13 @@ body.reduced-motion *::after {
   }
   body.user-mode .workspace-bar {
     display: none;
+  }
+  body.user-mode .user-back-home:not(.hidden) {
+    position: sticky;
+    top: 0;
+    z-index: 60;
+    margin: 8px 10px 0;
+    width: calc(100% - 20px);
   }
   .workspace-bar strong {
     font-size: .98rem;
