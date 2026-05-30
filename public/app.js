@@ -31,6 +31,7 @@ let agentPerformanceState = {
 };
 let agentProgressTimers = [];
 let pendingAgentClarification = null;
+let activeAgentJourney = null;
 const accessibilityPrefs = JSON.parse(localStorage.getItem("agrinexusAccessibility") || "{}");
 const originalTextNodes = new WeakMap();
 let deferredInstallPrompt = null;
@@ -3319,6 +3320,66 @@ async function answerAgentClarification(command) {
   return true;
 }
 
+function nextStepForWorkflow(workflow, action) {
+  const key = `${workflow}:${action}`;
+  const map = {
+    "learning:start": { command: "complete lesson", label: "complete the first lesson", section: "learning" },
+    "learning:lesson": { command: "issue certificate", label: "check certificate readiness", section: "learning" },
+    "learning:caption": { command: "create audio guide", label: "create an audio guide", section: "learning" },
+    "workforce:build-profile": { command: "apply for job", label: "apply for the best matched role", section: "workforce" },
+    "workforce:apply-role": { command: "schedule interview", label: "schedule the interview", section: "workforce" },
+    "workforce:interview": { command: "assign mentor", label: "assign a mentor", section: "workforce" },
+    "workforce:mentor": { command: "plan shift", label: "plan the first shift", section: "workforce" },
+    "health:intake": { command: "connect me to a provider", label: "connect to a provider", section: "health" },
+    "health:representative": { command: "capture vitals", label: "capture vitals", section: "health" },
+    "health:vitals": { command: "create care plan", label: "create the care plan", section: "health" },
+    "health:careplan": { command: "schedule follow up", label: "schedule follow-up", section: "health" },
+    "trade:buyer-contact": { command: "create buyer order", label: "create the buyer order", section: "trade" },
+    "trade:buyer-message": { command: "create buyer order", label: "create the buyer order", section: "trade" },
+    "trade:buyer-whatsapp": { command: "create buyer order", label: "create the buyer order", section: "trade" },
+    "trade:buyer-sms": { command: "create buyer order", label: "create the buyer order", section: "trade" },
+    "trade:order": { command: "advance order", label: "advance logistics", section: "trade" },
+    "trade:advance": { command: "release payment", label: "release or record payment", section: "trade" },
+    "trade:drone": { command: "assign field task", label: "assign a field intervention", section: "trade" },
+    "trade:drone-plan": { command: "run drone scan", label: "run the drone scan", section: "trade" },
+    "trade:drone-intervention": { command: "create drone field report", label: "create field evidence", section: "trade" },
+    "ai:route": { command: "track my route in real time", label: "start live route tracking", section: "map" },
+    "integrations:test-all": { command: "run live service check", label: "run live service check", section: "integrations" },
+    "admin:health-check": { command: "run live service check", label: "check live services", section: "admin" }
+  };
+  return map[key] || null;
+}
+
+function setActiveAgentJourney(workflow, action, response = "") {
+  const next = nextStepForWorkflow(workflow, action);
+  activeAgentJourney = {
+    workflow,
+    action,
+    section: next?.section || workflow,
+    response,
+    next,
+    updatedAt: Date.now()
+  };
+  if (next) updateNexusBehaviorLayer("ready", `Next step ready: ${next.label}.`);
+}
+
+function activeAgentJourneySummary() {
+  if (!activeAgentJourney?.next) return "No guided journey is active yet. Ask Nexus to start learning, health, work, trade, maps, or a mission.";
+  return `Current journey: ${activeAgentJourney.workflow}. Last action: ${activeAgentJourney.action}. Recommended next step: ${activeAgentJourney.next.label}. Say next step to continue, or say cancel journey.`;
+}
+
+async function runActiveAgentNextStep() {
+  if (!activeAgentJourney?.next) {
+    setVoiceResponse(activeAgentJourneySummary(), true);
+    return true;
+  }
+  const next = activeAgentJourney.next;
+  if (canOpenSection(next.section)) goSection(next.section);
+  setCommandInputs(`Nexus, ${next.command}`);
+  await handleVoiceCommand(next.command);
+  return true;
+}
+
 function agenticBehaviorScorecard() {
   const memory = nexusDeepMemorySignals();
   const queue = nexusAutopilotQueue();
@@ -3704,6 +3765,7 @@ function jarvisInsights() {
   return [
     { title: "Behavior", detail: `${scorecard.mode}: ${scorecard.behavior}`, status: "ready", label: "Agentic" },
     { title: "Performance", detail: agentPerformanceState.lastLatencyMs ? `Last response completed in ${agentPerformanceState.lastLatencyMs} ms via ${agentPerformanceState.route}` : "Ready for fast acknowledgement and timed agent routing", status: agentPerformanceState.lastLatencyMs && agentPerformanceState.lastLatencyMs > 12000 ? "pending" : "ready", label: "Speed" },
+    { title: "Guided journey", detail: activeAgentJourneySummary(), status: activeAgentJourney?.next ? "ready" : "pending", label: activeAgentJourney?.next ? "Next" : "Start" },
     { title: "Readiness", detail: `${readiness.readyCount || 0}/${readiness.total || 0} production checks ready`, status: readiness.status === "production-ready" ? "ready" : "pending", label: readiness.status || "Status" },
     { title: "Automation", detail: `${automation.readyCount || 0}/${automation.total || 5} automation unlocks ready`, status: automation.status === "production-ready" ? "ready" : "pending", label: "Auto" },
     { title: "Plan", detail: plan ? `${plan.status}: ${plan.goal}` : "No active plan yet", status: plan ? "ready" : "pending", label: plan?.status || "None" },
@@ -6817,7 +6879,8 @@ async function confirmPendingWorkflow() {
     if (grandmaMode) {
       const active = currentSectionId();
       if (active !== "dashboard" && simpleUserSections[active]) renderUserSimpleActiveSection(active);
-      const response = `${workflow.success || "Done"}. Choose another button when ready.`;
+      const next = activeAgentJourney?.next;
+      const response = `${workflow.success || "Done"}. ${next ? `Next, I can ${next.label}. Say next step when ready.` : "Choose another button when ready."}`;
       updateNexusBehaviorLayer("speaking", response);
       setVoiceResponse(response, true);
       toast(response);
@@ -6825,7 +6888,8 @@ async function confirmPendingWorkflow() {
     }
     const intelligence = data.workflowIntelligenceResult || (data.profile.workflowIntelligence || [])[0];
     if (intelligence) {
-      const response = `${workflow.success || "Workflow complete"}. ${intelligence.summary} ${intelligence.nextStep}`;
+      const next = activeAgentJourney?.next;
+      const response = `${workflow.success || "Workflow complete"}. ${intelligence.summary} ${intelligence.nextStep} ${next ? `I can also ${next.label}; say next step to continue.` : ""}`;
       updateNexusBehaviorLayer("speaking", response);
       setVoiceResponse(response, true);
       toast("Workflow complete with intelligence");
@@ -7236,6 +7300,7 @@ function toggleAskNexus() {
 
 function openWorkflowByVoice(workflow, action, response, dataset = {}) {
   const config = workflowConfig(workflow, action, { dataset });
+  setActiveAgentJourney(workflow, action, response || "");
   if (!config) {
     runWorkflowAction(workflow, action, { dataset });
     setVoiceResponse(response || "Workflow command sent.");
@@ -7288,6 +7353,11 @@ async function handleVoiceCommand(rawCommand) {
   }
   updateNexusBehaviorLayer("thinking", command ? `Nexus is deciding how to help with: ${command}` : "Nexus is listening.");
   if (pendingAgentClarification && await answerAgentClarification(command)) return;
+  if (/\b(cancel|stop|clear|end)\s+(journey|guided journey|next step|follow through)\b/.test(lower)) {
+    activeAgentJourney = null;
+    setVoiceResponse("Guided journey cleared. Tell me what you want to do next.", true);
+    return;
+  }
   if (!lower && wakeOnly) {
     openAskNexus();
     enableHeyAgriNexusMode();
@@ -7298,6 +7368,14 @@ async function handleVoiceCommand(rawCommand) {
 
   if (isUniversalLanguageCommand(command)) {
     await changeLanguageByVoice(command);
+    return;
+  }
+  if (lower === "next" || lower.includes("next step") || lower.includes("continue journey") || lower.includes("continue the workflow") || lower.includes("what is the next step")) {
+    await runActiveAgentNextStep();
+    return;
+  }
+  if (lower.includes("current journey") || lower.includes("guided journey") || lower.includes("where are we")) {
+    setVoiceResponse(activeAgentJourneySummary(), true);
     return;
   }
   const clarification = inferAmbiguousIntent(command);
