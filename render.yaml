@@ -17,7 +17,7 @@ services:
       - key: PROVIDER_ENGINE_PORT
         value: 10000
       - key: PROVIDER_ENGINE_BASE_URL
-        sync: false
+        value: https://agrinexus-provider-engines.onrender.com
       - key: AI_PROVIDER_API_KEY
         sync: false
       - key: LEARNING_PROVIDER_API_KEY
@@ -75,29 +75,29 @@ services:
       - key: PASSWORD_RESET_PROVIDER
         value: webhook
       - key: AUTH_WEBHOOK_URL
-        sync: false
+        value: https://agrinexus-provider-engines.onrender.com/auth/users
       - key: PASSWORD_RESET_WEBHOOK_URL
-        sync: false
+        value: https://agrinexus-provider-engines.onrender.com/auth/password-reset
       - key: AUTH_PROVIDER_API_KEY
         sync: false
       - key: EMAIL_PROVIDER
-        sync: false
+        value: webhook
       - key: EMAIL_WEBHOOK_URL
-        sync: false
+        value: https://agrinexus-provider-engines.onrender.com/communications/email
       - key: SMS_PROVIDER
-        sync: false
+        value: webhook
       - key: SMS_WEBHOOK_URL
-        sync: false
+        value: https://agrinexus-provider-engines.onrender.com/communications/sms
       - key: WHATSAPP_PROVIDER
-        sync: false
+        value: webhook
       - key: WHATSAPP_WEBHOOK_URL
-        sync: false
+        value: https://agrinexus-provider-engines.onrender.com/communications/whatsapp
       - key: COMMUNICATION_PROVIDER_API_KEY
         sync: false
       - key: BILLING_PROVIDER
-        sync: false
+        value: webhook
       - key: BILLING_WEBHOOK_URL
-        sync: false
+        value: https://agrinexus-provider-engines.onrender.com/billing/subscriptions
       - key: BILLING_PROVIDER_API_KEY
         sync: false
       - key: BILLING_PRICE_ID
@@ -123,7 +123,7 @@ services:
       - key: AI_PROVIDER
         value: webhook
       - key: AI_WEBHOOK_URL
-        sync: false
+        value: https://agrinexus-provider-engines.onrender.com/ai/responses
       - key: AI_PROVIDER_API_KEY
         sync: false
       - key: PROVIDER_ENGINE_BASE_URL
@@ -133,29 +133,29 @@ services:
       - key: VOICE_TTS_PROVIDER
         value: openai
       - key: VOICE_STT_WEBHOOK_URL
-        sync: false
+        value: https://agrinexus-provider-engines.onrender.com/voice/transcribe
       - key: VOICE_TTS_WEBHOOK_URL
-        sync: false
+        value: https://agrinexus-provider-engines.onrender.com/voice/speak
       - key: VOICE_PROVIDER_API_KEY
         sync: false
       - key: TRANSLATION_PROVIDER
         value: webhook
       - key: TRANSLATION_WEBHOOK_URL
-        sync: false
+        value: https://agrinexus-provider-engines.onrender.com/translate
       - key: TRANSLATION_PROVIDER_API_KEY
         sync: false
       - key: MAP_TILE_PROVIDER
         value: openstreetmap
       - key: MAP_TILE_URL
-        sync: false
+        value: https://tile.openstreetmap.org/{z}/{x}/{y}.png
       - key: LEARNING_COURSE_PROVIDER
         value: webhook
       - key: LEARNING_COURSE_WEBHOOK_URL
-        sync: false
+        value: https://agrinexus-provider-engines.onrender.com/learning/courses
       - key: LEARNING_CERTIFICATE_PROVIDER
         value: webhook
       - key: LEARNING_CERTIFICATE_WEBHOOK_URL
-        sync: false
+        value: https://agrinexus-provider-engines.onrender.com/learning/certificates
       - key: LEARNING_PROVIDER_API_KEY
         sync: false
       - key: WORKFORCE_JOB_PROVIDER
@@ -169,15 +169,15 @@ services:
       - key: WORKFORCE_SHIFT_PROVIDER
         value: webhook
       - key: WORKFORCE_JOB_WEBHOOK_URL
-        sync: false
+        value: https://agrinexus-provider-engines.onrender.com/workforce/jobs
       - key: WORKFORCE_CALENDAR_WEBHOOK_URL
-        sync: false
+        value: https://agrinexus-provider-engines.onrender.com/workforce/calendar
       - key: WORKFORCE_NOTIFICATION_WEBHOOK_URL
-        sync: false
+        value: https://agrinexus-provider-engines.onrender.com/workforce/notifications
       - key: WORKFORCE_HRIS_WEBHOOK_URL
-        sync: false
+        value: https://agrinexus-provider-engines.onrender.com/workforce/hris
       - key: WORKFORCE_SHIFT_WEBHOOK_URL
-        sync: false
+        value: https://agrinexus-provider-engines.onrender.com/workforce/shifts
       - key: WORKFORCE_PROVIDER_API_KEY
         sync: false
       - key: HEALTH_TELEHEALTH_PROVIDER
@@ -187,11 +187,11 @@ services:
       - key: HEALTH_EHR_PROVIDER
         value: webhook
       - key: HEALTH_TELEHEALTH_WEBHOOK_URL
-        sync: false
+        value: https://agrinexus-provider-engines.onrender.com/health/telehealth
       - key: HEALTH_NOTIFICATION_WEBHOOK_URL
-        sync: false
+        value: https://agrinexus-provider-engines.onrender.com/health/notifications
       - key: HEALTH_EHR_WEBHOOK_URL
-        sync: false
+        value: https://agrinexus-provider-engines.onrender.com/health/ehr
       - key: HEALTH_PROVIDER_API_KEY
         sync: false
       - key: TRADE_PAYMENT_PROVIDER
@@ -203,14 +203,14 @@ services:
       - key: DRONE_PROVIDER
         value: webhook
       - key: TRADE_PAYMENT_WEBHOOK_URL
-        sync: false
+        value: https://agrinexus-provider-engines.onrender.com/trade/payments
       - key: TRADE_LOGISTICS_WEBHOOK_URL
-        sync: false
+        value: https://agrinexus-provider-engines.onrender.com/trade/logistics
       - key: TRADE_MARKET_WEBHOOK_URL
-        sync: false
+        value: https://agrinexus-provider-engines.onrender.com/trade/market
       - key: TRADE_PROVIDER_API_KEY
         sync: false
       - key: DRONE_WEBHOOK_URL
-        sync: false
+        value: https://agrinexus-provider-engines.onrender.com/field/drones
       - key: DRONE_PROVIDER_API_KEY
         sync: false

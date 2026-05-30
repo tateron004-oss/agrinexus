@@ -10,7 +10,7 @@ function fromEnv(key, fallback = "") {
   return process.env[key] || fallback;
 }
 
-const providerBase = fromEnv("PROVIDER_BASE_URL", "https://YOUR-AGRINEXUS-PROVIDER-ENGINES.onrender.com").replace(/\/$/, "");
+const providerBase = fromEnv("PROVIDER_BASE_URL", "https://agrinexus-provider-engines.onrender.com").replace(/\/$/, "");
 const mapTileUrl = fromEnv("MAP_TILE_URL", "https://tile.openstreetmap.org/{z}/{x}/{y}.png");
 
 const shared = {
