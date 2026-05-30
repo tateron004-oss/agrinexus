@@ -2623,6 +2623,19 @@ function renderNotificationPanel() {
     : `<div>${translateText("No notifications sent yet.")}</div>`;
 }
 
+function renderCommunicationPanel(selector, moduleName, emptyText) {
+  const target = $(selector);
+  if (!target) return;
+  const threads = (data.profile.communicationThreads || []).filter(thread => thread.module === moduleName);
+  target.innerHTML = threads.length
+    ? threads.slice(0, 4).map(thread => {
+      const messages = (data.profile.communicationMessages || []).filter(message => message.threadId === thread.id);
+      const latest = messages[0];
+      return `<div><strong>${translateText(thread.subject)} - ${translateText(thread.channel)}</strong><span>${translateText(thread.participantName)}: ${translateText(latest?.text || thread.lastMessage || "Thread open")}</span><small>${translateText(thread.status)} - ${translateText(thread.deliveryStatus || "local-thread")}</small></div>`;
+    }).join("")
+    : `<div>${translateText(emptyText)}</div>`;
+}
+
 function renderAgentReasoningPanel({ latestCommand, pendingAction, latestExecution }) {
   const stepsTarget = $("#agentReasoningSteps");
   if (!stepsTarget) return;
@@ -3790,6 +3803,7 @@ function render() {
     : "<div>No accessible learning accommodations prepared yet.</div>";
 
   renderProviderEvidence("#learningIntegrationPanel", "Learning", "No learning provider evidence yet. Start a course, complete a lesson, finish a quiz, issue a certificate, or test learning engines.");
+  renderCommunicationPanel("#learningCommunicationPanel", "Learning", "No learning support thread yet. Message the instructor to create a two-way learning record.");
   renderEnginePanel("#learningEnginePanel", "Learning");
   renderAiEvidence("#learningAiPanel", "Learning", "No AI tutor guidance yet. Ask the tutor for lesson support or quiz help.");
   $("#learningAdvancedPanel").innerHTML = [
@@ -3902,6 +3916,7 @@ function render() {
     : "<div>No advanced workforce operations have been run yet.</div>";
 
   renderProviderEvidence("#workforceIntegrationPanel", "Workforce", "No workforce provider evidence yet. Build profile, schedule interview, assign mentor, start a shift, or test workforce engines.");
+  renderCommunicationPanel("#workforceCommunicationPanel", "Workforce", "No recruiter thread yet. Message the recruiter to create a two-way workforce record.");
   renderEnginePanel("#workforceEnginePanel", "Workforce");
   renderAiEvidence("#workforceAiPanel", "Workforce", "No workforce AI coaching yet. Ask the coach to review readiness gaps or prep the interview.");
 
@@ -4048,6 +4063,7 @@ function render() {
     : "<div>No advanced telehealth operations have been run yet.</div>";
 
   renderProviderEvidence("#healthIntegrationPanel", "Healthcare", "No telehealth provider evidence yet. Start intake, connect a representative, run safety review, generate care plan, or test healthcare engines.");
+  renderCommunicationPanel("#healthCommunicationPanel", "Healthcare", "No telehealth communication thread yet. Message the care team to create two-way support evidence.");
   renderEnginePanel("#healthEnginePanel", "Healthcare");
 
   renderWorkspace("#healthWorkspace", [
@@ -4432,6 +4448,7 @@ function render() {
       </div>
     `).join("")
     : `<div>${translateText("No provider partnership packets yet. Create one before contacting a partner.")}</div>`;
+  renderCommunicationPanel("#providerCommunicationPanel", "Platform", "No provider support thread yet. Message the provider desk to create a two-way operations record.");
 
   $("#environmentPanel").innerHTML = [
     row("Persistence", data.providers.find(item => item.id === "database")?.mode || "unknown"),
@@ -4895,6 +4912,47 @@ function learningAccessibilityWorkflowConfig(mode) {
 }
 
 function workflowConfig(workflow, action, element) {
+  if (workflow === "communications") {
+    const communicationMap = {
+      "learning-chat": ["Learning", "in-app chat", "Message instructor", "Ask the learning coach for help with the active course, captions, quiz prep, or next lesson."],
+      "learning-sms": ["Learning", "SMS", "SMS learning aide", "Send a low-bandwidth learning support message through SMS when Twilio recipient settings are configured."],
+      "learning-whatsapp": ["Learning", "WhatsApp", "WhatsApp learning aide", "Send a learning support message through WhatsApp when Twilio recipient settings are configured."],
+      "workforce-chat": ["Workforce", "in-app chat", "Message recruiter", "Open a recruiter thread for application, interview, documents, mentor, or shift support."],
+      "workforce-sms": ["Workforce", "SMS", "SMS candidate update", "Send a candidate update through SMS when Twilio recipient settings are configured."],
+      "workforce-whatsapp": ["Workforce", "WhatsApp", "WhatsApp recruiter", "Send a recruiter message through WhatsApp when Twilio recipient settings are configured."],
+      "health-chat": ["Healthcare", "in-app chat", "Message care team", "Open a care-team thread for intake, accessibility, caregiver, provider, vitals, referral, or follow-up support."],
+      "health-sms": ["Healthcare", "SMS", "SMS caregiver", "Send caregiver or patient support through SMS when Twilio recipient settings are configured."],
+      "health-whatsapp": ["Healthcare", "WhatsApp", "WhatsApp provider", "Send a provider support message through WhatsApp when Twilio recipient settings are configured."],
+      "provider-chat": ["Platform", "in-app chat", "Message provider desk", "Open a provider support thread for credentials, engines, deployment, billing, or operations support."],
+      "provider-sms": ["Platform", "SMS", "SMS provider desk", "Send provider support through SMS when Twilio recipient settings are configured."],
+      "provider-whatsapp": ["Platform", "WhatsApp", "WhatsApp provider desk", "Send provider support through WhatsApp when Twilio recipient settings are configured."]
+    };
+    const [moduleName, channel, title, summary] = communicationMap[action] || ["Platform", "in-app chat", "Open communication thread", "Open a two-way communication thread and record provider-ready evidence."];
+    return simpleWorkflowConfig({
+      eyebrow: "Two-way communication",
+      title,
+      summary,
+      confirmLabel: title,
+      path: "/api/communications/thread",
+      body: {
+        module: moduleName,
+        channel,
+        subject: `${moduleName} support`,
+        message: `${title}: please review the active AgriNexus context and confirm the next step.`
+      },
+      fields: [
+        { type: "textarea", name: "message", label: "Message", rows: 3, value: `${title}: please review the active AgriNexus context and confirm the next step.` }
+      ],
+      success: "Communication thread opened",
+      record: "Thread record, outbound message, local reply, notification, activity, and provider audit event",
+      provider: "SMS and WhatsApp attempt Twilio delivery when credentials and recipient numbers are configured; otherwise the thread records missing setup.",
+      checklist: [
+        { title: "Module", detail: moduleName, status: "ready", label: "Area" },
+        { title: "Channel", detail: channel, status: channel === "in-app chat" ? "ready" : "live", label: "Route" },
+        { title: "Provider status", detail: channel === "WhatsApp" ? (data.providers.find(item => item.id === "whatsapp-delivery")?.detail || "WhatsApp provider pending") : channel === "SMS" ? (data.providers.find(item => item.id === "sms-delivery")?.detail || "SMS provider pending") : "Local two-way thread is available now", status: "ready", label: "Comms" }
+      ]
+    });
+  }
   if (workflow === "learning") {
     const course = activeCourse();
     if (!course) return null;
@@ -6290,6 +6348,10 @@ async function handleVoiceCommand(rawCommand) {
     return;
   }
   if (lower.includes("what happened") || lower.includes("what just happened") || lower.includes("what did you do") || lower.includes("what evidence") || lower.includes("explain the last workflow") || lower.includes("good morning agrinexus") || lower.includes("good morning nexus") || lower.includes("daily briefing") || lower.includes("operator briefing") || lower.includes("morning briefing")) {
+    await runBackendAgentCommand(command);
+    return;
+  }
+  if (/(learning|course|lesson|instructor|workforce|job|recruiter|employer|health|telehealth|caregiver|care team|provider|admin|support)/.test(lower) && /(message|chat|communicate|contact|notify|sms|whatsapp|text)/.test(lower)) {
     await runBackendAgentCommand(command);
     return;
   }

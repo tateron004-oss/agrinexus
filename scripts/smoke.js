@@ -415,6 +415,15 @@ async function call(path, body) {
   assert(["sent-live", "sent-local"].includes(buyerWhatsapp.tradeMessageResult.messages[0].status));
   assert(buyerWhatsapp.tradeMessageResult.delivery.status);
   assert(buyerWhatsapp.profile.integrationEvents.some(event => event.providerId === "whatsapp-delivery" && event.action === "trade.buyer_seller_message_sent"));
+  const learningComms = await call("/api/communications/thread", { module: "Learning", channel: "in-app chat", message: "Please help me with this course." });
+  assert(learningComms.communicationThreadResult.thread.module === "Learning");
+  assert(learningComms.profile.communicationThreads.some(thread => thread.module === "Learning"));
+  const workforceComms = await call("/api/communications/thread", { module: "Workforce", channel: "SMS", message: "Please confirm my next workforce step." });
+  assert(workforceComms.communicationThreadResult.delivery.status);
+  assert(workforceComms.profile.integrationEvents.some(event => event.action === "communication.thread_opened" && event.module === "Workforce"));
+  const healthComms = await call("/api/communications/thread", { module: "Healthcare", channel: "WhatsApp", message: "Please confirm provider and caregiver support." });
+  assert(healthComms.communicationThreadResult.delivery.status);
+  assert(healthComms.profile.integrationEvents.some(event => event.action === "communication.thread_opened" && event.module === "Healthcare"));
   const droneMission = await call("/api/trade/drone-mission", { productId: "avocado-ke" });
   assert(droneMission.profile.droneMissions.length >= 1);
   assert(droneMission.profile.integrationEvents.some(event => event.action === "drone.flight_plan"));

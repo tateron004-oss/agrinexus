@@ -3423,6 +3423,152 @@ function addNotification(profile, notice) {
   profile.notifications = profile.notifications.slice(0, 50);
 }
 
+function ensureCommunicationProfile(profile) {
+  profile.communicationThreads = profile.communicationThreads || [];
+  profile.communicationMessages = profile.communicationMessages || [];
+}
+
+function communicationContext(db, moduleName, body = {}) {
+  const { country, route } = activeContext(db);
+  const moduleKey = String(moduleName || "Platform").toLowerCase();
+  if (moduleKey.includes("learning")) {
+    const course = (db.courses || []).find(item => item.id === (body.courseId || db.profile.activeCourseId)) || (db.courses || [])[0];
+    return {
+      subject: course?.title || "active learning path",
+      participantName: body.recipientName || "Learning coach",
+      defaultMessage: `I need help with ${course?.title || "my active course"}. Please review my progress and tell me the next learning step.`,
+      defaultReply: `I reviewed the learning record. Continue the next lesson, use captions or audio support if needed, then complete the quiz when ready.`,
+      providerId: "learning-courses"
+    };
+  }
+  if (moduleKey.includes("workforce")) {
+    const application = (db.profile.applications || [])[0];
+    const role = application?.roleTitle || (db.roles || [])[0]?.title || "available workforce role";
+    return {
+      subject: role,
+      participantName: body.recipientName || "Workforce recruiter",
+      defaultMessage: `I would like support with ${role}. Please confirm my application, interview, documents, shift, or next placement step.`,
+      defaultReply: `The workforce desk reviewed your status. Keep your profile, certificates, and interview readiness current while we confirm the next employer action.`,
+      providerId: "workforce-notifications"
+    };
+  }
+  if (moduleKey.includes("health")) {
+    const intake = (db.profile.healthIntakes || [])[0];
+    return {
+      subject: intake?.patientRef || "active telehealth case",
+      participantName: body.recipientName || "Telehealth care team",
+      defaultMessage: `I need support with ${intake?.patientRef || "my telehealth intake"}. Please confirm provider access, caregiver support, language, and follow-up.`,
+      defaultReply: `The care team received the message. Keep emergency symptoms escalated immediately, and we will continue the intake, care plan, or follow-up workflow.`,
+      providerId: "health-notifications"
+    };
+  }
+  if (moduleKey.includes("trade") || moduleKey.includes("agri")) {
+    const order = (db.profile.orders || [])[0];
+    const product = order?.product || (db.products || [])[0]?.name || "active crop lot";
+    return {
+      subject: product,
+      participantName: body.recipientName || (db.products || [])[0]?.buyerName || "Verified buyer desk",
+      defaultMessage: `Please confirm buyer terms, route timing, quality evidence, and payment next step for ${product}.`,
+      defaultReply: `Buyer desk received the crop update. Send final quality evidence, delivery timing, and payment terms before advancing the order.`,
+      providerId: "trade-market"
+    };
+  }
+  return {
+    subject: `${country.name} ${route.name} operations`,
+    participantName: body.recipientName || "Provider support desk",
+    defaultMessage: `Please review AgriNexus operations for ${country.name}: provider readiness, user support, and next action.`,
+    defaultReply: `Provider support received the request and logged it for operator review.`,
+    providerId: "email-delivery"
+  };
+}
+
+async function createCommunicationThread(db, user, body = {}) {
+  ensureCommunicationProfile(db.profile);
+  const moduleName = String(body.module || "Platform");
+  const channel = String(body.channel || "in-app chat");
+  const providerId = /whatsapp/i.test(channel)
+    ? "whatsapp-delivery"
+    : /sms|text/i.test(channel)
+    ? "sms-delivery"
+    : /email/i.test(channel)
+    ? "email-delivery"
+    : communicationContext(db, moduleName, body).providerId;
+  const context = communicationContext(db, moduleName, body);
+  const text = String(body.message || context.defaultMessage).trim();
+  const replyText = String(body.reply || context.defaultReply).trim();
+  const thread = {
+    id: crypto.randomUUID(),
+    module: moduleName,
+    subject: body.subject || context.subject,
+    participantName: context.participantName,
+    requesterName: user.name,
+    channel,
+    providerId,
+    status: "active",
+    createdBy: user.email,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  };
+  const outbound = {
+    id: crypto.randomUUID(),
+    threadId: thread.id,
+    module: moduleName,
+    sender: "user",
+    senderName: user.name,
+    recipientName: context.participantName,
+    channel,
+    text,
+    status: "sent-local",
+    providerStatus: "ready-for-live-provider",
+    createdAt: thread.createdAt
+  };
+  let delivery = { attempted: false, ok: true, status: "local-thread-only", channel };
+  if (["sms-delivery", "whatsapp-delivery"].includes(providerId)) {
+    delivery = await sendTwilioMessage({ providerId, channel, to: twilioRecipientForProvider(providerId, body), text });
+    outbound.status = delivery.ok ? "sent-live" : "sent-local";
+    outbound.providerStatus = delivery.ok ? `twilio:${delivery.sid || "sent"}` : delivery.status;
+    thread.status = delivery.ok ? "active-live" : "active";
+    thread.deliveryStatus = delivery.status;
+  }
+  const inbound = {
+    id: crypto.randomUUID(),
+    threadId: thread.id,
+    module: moduleName,
+    sender: "responder",
+    senderName: context.participantName,
+    recipientName: user.name,
+    channel,
+    text: replyText,
+    status: "received-local",
+    providerStatus: "simulated-reply-until-live-provider",
+    createdAt: new Date(Date.now() + 1000).toISOString()
+  };
+  thread.lastMessage = inbound.text;
+  thread.updatedAt = inbound.createdAt;
+  db.profile.communicationThreads.unshift(thread);
+  db.profile.communicationThreads = db.profile.communicationThreads.slice(0, 50);
+  db.profile.communicationMessages.unshift(inbound, outbound);
+  db.profile.communicationMessages = db.profile.communicationMessages.slice(0, 160);
+  addNotification(db.profile, {
+    module: moduleName,
+    providerId,
+    channel,
+    message: `${channel} two-way thread opened with ${context.participantName}: ${thread.subject}.`,
+    deliveryStatus: delivery.status
+  });
+  logIntegration(db, {
+    providerId,
+    module: moduleName,
+    action: "communication.thread_opened",
+    status: delivery.ok || !delivery.attempted ? "success" : "needs-setup",
+    detail: `${moduleName} ${channel} two-way communication opened with ${context.participantName}.`,
+    metadata: { threadId: thread.id, channel, subject: thread.subject, delivery }
+  });
+  addActivity(db.profile, `${moduleName} ${channel} communication opened with ${context.participantName}.`);
+  rememberAgentMemory(db.profile, `${moduleName} two-way communication opened: ${thread.subject}.`, { source: "communication-thread", category: "communications", confidence: 0.9 });
+  return { thread, messages: [outbound, inbound], delivery };
+}
+
 function ensureOperationsProfile(profile) {
   profile.onboardingRuns = profile.onboardingRuns || [];
   profile.supportTickets = profile.supportTickets || [];
@@ -6922,6 +7068,16 @@ async function runAgentCommand(db, user, command, options = {}) {
   const conversational = options.conversational === true;
   const pendingAction = db.profile.agentPendingAction;
 
+  if (/(complete|finish|advance).*(my\s+)?lesson|next lesson/.test(lower)) {
+    const result = await executeAgentTool(db, user, { tool: "learning.complete_lesson" });
+    return { intent: "learning.complete_lesson", response: result, status: "completed", metadata: { conversationMode: conversational, redirectSection: "learning" } };
+  }
+
+  if (/(issue|create|generate).*(my\s+)?certificate|certificate/.test(lower) && /(learning|course|lesson|certificate|my)/.test(lower)) {
+    const result = await executeAgentTool(db, user, { tool: "learning.certificate" });
+    return { intent: "learning.certificate", response: result, status: "completed", metadata: { conversationMode: conversational, redirectSection: "learning" } };
+  }
+
   if (/(what should i call you|what do i call you|short name|abbreviat|nickname|who are you|your name)/.test(lower)) {
     db.profile.agentMemory.lastStatus = "assistant-alias-ready";
     db.profile.agentMemory.lastSummary = "The assistant short name is Nexus.";
@@ -6972,6 +7128,26 @@ async function runAgentCommand(db, user, command, options = {}) {
 
   if (/(trade|agritrade|crop|buyer|route|order|logistics|drone|farm)/.test(lower) && /(efficiency|efficient|optimize|optimise|operations|operational|bottleneck|delay|cost|waste|profit|improve|performance)/.test(lower)) {
     return tradeOperationalEfficiencyReview(db, user, text);
+  }
+
+  if (/(learning|course|lesson|instructor|tutor|workforce|job|recruiter|employer|health|telehealth|provider|caregiver|admin|support|integration)/.test(lower) && /(message|chat|communicate|reply|conversation|thread|contact|notify|sms|whatsapp|text)/.test(lower)) {
+    const moduleName = /learning|course|lesson|instructor|tutor/.test(lower)
+      ? "Learning"
+      : /workforce|job|recruiter|employer/.test(lower)
+      ? "Workforce"
+      : /health|telehealth|provider|caregiver|patient|doctor|nurse/.test(lower)
+      ? "Healthcare"
+      : /integration|provider engine|admin|support/.test(lower)
+      ? "Platform"
+      : "Platform";
+    const channel = /whatsapp/i.test(lower) ? "WhatsApp" : /sms|text/i.test(lower) ? "SMS" : /email/i.test(lower) ? "Email" : "in-app chat";
+    const result = await createCommunicationThread(db, user, { module: moduleName, channel, message: text });
+    return {
+      intent: "communication.thread_opened",
+      response: `${moduleName} communication is ready. I opened a ${channel} thread with ${result.thread.participantName}, recorded a reply, and saved ${result.delivery.ok ? "live delivery evidence" : "provider-ready communication evidence"}.`,
+      status: "completed",
+      metadata: { conversationMode: true, redirectSection: moduleName === "Healthcare" ? "health" : moduleName === "Platform" ? "admin" : moduleName.toLowerCase(), threadId: result.thread.id, channel, messageCount: result.messages.length }
+    };
   }
 
   if (/(buyer|seller|customer|purchaser)/.test(lower) && /(message|chat|communicate|reply|conversation|thread|real time|realtime)/.test(lower)) {
@@ -10594,6 +10770,17 @@ async function api(req, res, url) {
     addActivity(db.profile, `${moduleName} notification sent: ${message}`);
     await writeDb(db);
     return send(res, 200, publicState(db, user));
+  }
+
+  if (url.pathname === "/api/communications/thread" && req.method === "POST") {
+    if (!canUse(user, "notifications")) return send(res, 403, { error: "Role does not allow communication workflows" });
+    const body = await readBody(req);
+    const result = await createCommunicationThread(db, user, body);
+    addWorkflowNote(db.profile, body.note, "Communication note");
+    await writeDb(db);
+    const state = publicState(db, user);
+    state.communicationThreadResult = result;
+    return send(res, 200, state);
   }
 
   return send(res, 404, { error: "API route not found" });
