@@ -491,10 +491,10 @@ a:focus-visible,
   box-shadow: 0 10px 24px rgba(23, 50, 64, .07);
 }
 .user-service-buttons .service-ask { border-color: #173240; background: linear-gradient(180deg, #173240, #255569); color: #ffffff; }
-.user-service-buttons .service-learning { border-color: #8cc8f2; background: linear-gradient(180deg, #ffffff, #eef8ff); }
-.user-service-buttons .service-workforce { border-color: #a7d8b4; background: linear-gradient(180deg, #ffffff, #f0fbf3); }
-.user-service-buttons .service-health { border-color: #efb7b7; background: linear-gradient(180deg, #ffffff, #fff4f4); }
-.user-service-buttons .service-trade { border-color: #e4c46f; background: linear-gradient(180deg, #ffffff, #fff9e8); }
+.user-service-buttons .service-learning { border-color: #42a8e8; background: linear-gradient(135deg, #e7f6ff, #ffffff 62%); }
+.user-service-buttons .service-workforce { border-color: #57bd76; background: linear-gradient(135deg, #e7f9ed, #ffffff 62%); }
+.user-service-buttons .service-health { border-color: #e76f7a; background: linear-gradient(135deg, #fff0f1, #ffffff 62%); }
+.user-service-buttons .service-trade { border-color: #d9a71d; background: linear-gradient(135deg, #fff4c7, #ffffff 62%); }
 .user-service-buttons .service-map { border-color: #a7c7ef; background: linear-gradient(180deg, #ffffff, #f0f6ff); }
 .user-service-buttons .service-profile { border-color: #c8b8ee; background: linear-gradient(180deg, #ffffff, #f7f3ff); }
 .user-service-buttons button:hover {
@@ -764,13 +764,15 @@ body.user-mode .workspace-bar {
 }
 body.user-mode {
   background:
-    linear-gradient(135deg, #dfeaec, #f6faf9 45%, #eaf4f8);
+    linear-gradient(135deg, #fff3bd, #e8f8ee 44%, #e7f3ff);
 }
 body.user-mode .app {
   max-width: 460px;
   min-height: 100vh;
   margin: 0 auto;
-  background: #f7fbfc;
+  background:
+    linear-gradient(180deg, #fff8dc 0, #eef8ff 28%, #f7fbfc 60%),
+    #f7fbfc;
   box-shadow: 0 0 0 1px rgba(23, 50, 64, .08), 0 24px 70px rgba(23, 50, 64, .18);
 }
 body.user-mode .topbar {
@@ -846,19 +848,27 @@ body.user-mode .user-outcome-panel article {
 }
 body.user-mode .user-workspace-hero {
   grid-template-columns: 1fr;
-  padding: 12px;
-  margin-bottom: 8px;
+  padding: 18px 16px;
+  margin-bottom: 12px;
+  border: 2px solid #173240;
+  background:
+    linear-gradient(135deg, rgba(255, 211, 86, .86), rgba(124, 205, 164, .74) 48%, rgba(115, 179, 232, .72)),
+    #ffffff;
+  box-shadow: 0 14px 28px rgba(23, 50, 64, .12);
 }
 body.user-mode .user-workspace-hero h3 {
-  font-size: 1.35rem;
+  color: #102b36;
+  font-size: 1.55rem;
   margin-bottom: 0;
+  text-align: center;
 }
 body.user-mode .user-workspace-hero p {
   margin: 0;
-  color: #173240;
-  font-size: 1rem;
-  font-weight: 800;
+  color: #102b36;
+  font-size: 1.04rem;
+  font-weight: 950;
   line-height: 1.35;
+  text-align: center;
 }
 body.user-mode .user-hero-actions {
   min-width: 0;
@@ -888,20 +898,45 @@ body.user-mode .user-service-buttons {
   gap: 12px;
 }
 body.user-mode .user-service-buttons button {
+  position: relative;
+  isolation: isolate;
   width: 100%;
   padding: 20px 18px;
   border-radius: 16px;
   text-align: center;
   justify-items: center;
   border-width: 2px;
+  overflow: hidden;
+  box-shadow: 0 14px 28px rgba(23, 50, 64, .11);
+}
+body.user-mode .user-service-buttons button::before {
+  content: "";
+  position: absolute;
+  inset: 10px auto 10px 10px;
+  width: 12px;
+  border-radius: 999px;
+  background: #173240;
+}
+body.user-mode .user-service-buttons .service-ask::before { background: #ffd356; }
+body.user-mode .user-service-buttons .service-learning::before { background: #1286cf; }
+body.user-mode .user-service-buttons .service-workforce::before { background: #22984e; }
+body.user-mode .user-service-buttons .service-health::before { background: #d74d5b; }
+body.user-mode .user-service-buttons .service-trade::before { background: #bc8700; }
+body.user-mode .user-service-buttons .service-map::before { background: #176fc7; }
+body.user-mode .user-service-buttons .service-profile::before { background: #7452b8; }
+body.user-mode .user-service-buttons button:active {
+  transform: scale(.99);
 }
 body.user-mode .user-service-buttons strong {
+  position: relative;
+  z-index: 1;
   font-size: 1.42rem;
   line-height: 1.1;
   white-space: normal;
 }
 body.user-mode .user-service-buttons .service-ask {
-  min-height: 112px;
+  min-height: 118px;
+  background: linear-gradient(135deg, #102b36, #255f73);
 }
 body.user-mode .section.active {
   display: block;
