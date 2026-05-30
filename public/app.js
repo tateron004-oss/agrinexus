@@ -5130,10 +5130,13 @@ function readWorkflowModal() {
 function openWorkflowModal(config) {
   pendingWorkflow = config;
   lastFocusedElement = document.activeElement;
-  $("#workflowModal")?.classList.toggle("grandma-workflow", experienceMode === "user");
+  const grandmaMode = experienceMode === "user";
+  $("#workflowModal")?.classList.toggle("grandma-workflow", grandmaMode);
   $("#workflowEyebrow").textContent = translateText(config.eyebrow || "Workflow");
   $("#workflowTitle").textContent = translateText(config.title);
-  $("#workflowSummary").textContent = translateText(config.summary);
+  $("#workflowSummary").textContent = grandmaMode
+    ? translateText("Do you want Nexus to do this now?")
+    : translateText(config.summary);
   $("#workflowFields").innerHTML = (config.fields || []).map(field => {
     const value = field.value || "";
     const options = field.options || [];
@@ -5152,14 +5155,17 @@ function openWorkflowModal(config) {
     row("Provider evidence", config.provider || "Activity and integration audit when applicable")
   ].join("");
   $("#workflowNote").value = config.note || "";
-  $("#workflowConfirm").textContent = translateText(config.confirmLabel || "Confirm action");
+  $("#workflowConfirm").textContent = grandmaMode ? translateText("Yes") : translateText(config.confirmLabel || "Confirm action");
+  $("#workflowCancel").textContent = grandmaMode ? translateText("No") : translateText("Cancel");
   $("#workflowVoiceInput").value = "";
   $("#workflowVoicePrompt").textContent = translateText("Voice ready: say yes to confirm, no to cancel, or read to hear this workflow.");
   $("#workflowModal").classList.remove("hidden");
   $("#workflowConfirm").focus();
-  const instruction = `${translateText(config.title)}. ${translateText(config.summary)}. Say yes to confirm, no to cancel, or read to hear the workflow.`;
+  const instruction = grandmaMode
+    ? `${translateText(config.title)}. ${translateText("Do you want Nexus to do this now?")}`
+    : `${translateText(config.title)}. ${translateText(config.summary)}. Say yes to confirm, no to cancel, or read to hear the workflow.`;
   announce(instruction);
-  setVoiceResponse(instruction);
+  setVoiceResponse(instruction, false, { allowVoiceFirst: !grandmaMode });
 }
 
 function workflowFieldValues() {
