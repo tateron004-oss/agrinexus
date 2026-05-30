@@ -6689,6 +6689,42 @@ async function handleVoiceCommand(rawCommand) {
     }
   }
 
+  if (lower.includes("show me jobs") || lower.includes("find jobs") || lower.includes("show jobs") || lower.includes("available jobs")) {
+    goSection("workforce");
+    setVoiceResponse("I opened Work. Choose Find Jobs to review roles, or say apply for job when you are ready.", true);
+    return;
+  }
+  if (lower.includes("track my route") || lower.includes("track route")) {
+    goSection("map");
+    return openWorkflowByVoice("ai", "route", "Route tracking support is ready. Say yes to create route intelligence, or say track my route in real time to start GPS tracking.");
+  }
+  if (lower.includes("check health risk") || lower.includes("check region") || lower.includes("region risk")) {
+    goSection("health");
+    return openWorkflowByVoice("health", "safety", "Regional health risk review is ready.");
+  }
+  if (lower.includes("nearest health facility") || lower.includes("find facility") || lower.includes("nearest facility")) {
+    goSection("map");
+    return openWorkflowByVoice("map", "facility-route", "Facility route workflow is ready.");
+  }
+  if (lower.includes("explain the map") || lower.includes("map explanation")) {
+    goSection("map");
+    setVoiceResponse(`The map shows ${activeCountry().name}, the active route ${activeRoute().name}, health pressure, facilities, route risk, drone evidence, and AI map intelligence. Use Check Route to assess risk or Find Facility to build a care route.`, true);
+    return;
+  }
+  if (lower.includes("help me understand the platform") || lower.includes("ask question")) {
+    goSection("agent");
+    await runBackendAgentCommand("help me understand the platform and guide my next step");
+    return;
+  }
+  if (lower.includes("explain next step") || lower.includes("what should i do next")) {
+    await runBackendAgentCommand("what should I do next");
+    return;
+  }
+  if (lower.includes("read the current response") || lower.includes("read current response") || lower.includes("read to me")) {
+    setVoiceResponse(lastVoiceResponse || "I am ready. Choose a button or ask Nexus what to do next.", true);
+    return;
+  }
+
   if (/(stop|cancel|end|pause).*(live\s+)?route.*track/.test(lower) || /(stop|cancel|end|pause).*(tracking).*(route)/.test(lower)) {
     stopLiveRouteTracking();
     return;
