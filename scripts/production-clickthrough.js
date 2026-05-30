@@ -512,6 +512,13 @@ assert(app.includes("function composeJarvisResponse"), "Voice assistant must add
 assert(app.includes("function updateNexusAwareness"), "Voice assistant must maintain a live awareness state for Jarvis behavior");
 assert(app.includes("function conversationRepairPlan"), "Voice assistant must recover when users are stuck or confused");
 assert(app.includes("function nexusBrainState"), "Voice assistant must expose a unified Nexus Brain state");
+assert(app.includes("function nexusBrainOsModel"), "Voice assistant needs an all-ten Nexus Brain OS model");
+assert(app.includes("function nexusBrainTimeline"), "Nexus Brain OS needs a visible timeline of commands, missions, providers, and memory");
+assert(app.includes("function nexusBrainLearningRules"), "Nexus Brain OS needs explicit learning rules");
+assert(html.includes("nexusBrainPanel"), "Agent page needs a visible all-ten Nexus Brain OS panel");
+assert(html.includes("nexusBrainTimelinePanel"), "Agent page needs a visible Nexus Brain timeline panel");
+assert(app.includes("Nexus, explain your brain"), "Voice commands must let Nexus explain its brain");
+assert(app.includes("Nexus, show brain timeline"), "Voice commands must let Nexus show its brain timeline");
 assert(app.includes("function modeFollowUpResponse"), "Voice assistant must answer follow-ups without forcing extra buttons");
 assert(app.includes("modeContext: modeConversationContext(command)"), "Voice assistant must send mode context to backend agent reasoning");
 assert(server.includes("modeContext = options.modeContext"), "Backend agent reasoning must receive mode-aware conversation context");

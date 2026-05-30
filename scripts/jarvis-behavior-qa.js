@@ -42,6 +42,8 @@ const requirements = [
   ["conversation repair momentum", app.includes("function isConversationRepairCommand") && app.includes("function conversationRepairPlan") && app.includes("Repair mode")],
   ["independent ten-layer agent model", server.includes("goal-driven-operating-brain") && server.includes("persistent-memory") && server.includes("live-context-awareness") && server.includes("evidence-and-mobile-initiative") && server.includes("goals, memory, awareness, recovery, and initiative")],
   ["visible Nexus brain state", app.includes("function nexusBrainState") && app.includes("function nexusBrainSummary") && app.includes("Nexus Brain") && app.includes("agrinexusBrainState")],
+  ["all-ten Nexus Brain OS", app.includes("function nexusBrainOsModel") && app.includes("Brain Persistence") && app.includes("Brain Timeline") && app.includes("Investor Brain View") && html.includes("nexusBrainPanel") && html.includes("nexusBrainTimelinePanel")],
+  ["Nexus brain voice commands", app.includes("Nexus, show brain timeline") && app.includes("Nexus, explain your brain") && app.includes("Nexus, show learning rules") && app.includes("Nexus Brain OS is")],
   ["backend conversation context", app.includes("modeContext: modeConversationContext(command)") && server.includes("modeContext = options.modeContext") && server.includes("platformMode")],
   ["mode-aware local conversation fallback", server.includes("Admin conversation: I will focus on readiness") && server.includes("Investor conversation: I will focus on impact") && server.includes("User conversation: I will keep this simple")]
 ];

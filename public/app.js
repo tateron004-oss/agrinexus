@@ -3015,6 +3015,7 @@ function renderAgentCenter() {
   const agentCapabilities = data.agentCapabilities || { totalTools: 0, liveTools: 0, confirmationTools: 0, modules: [] };
   const jarvisReadiness = data.jarvisReadiness || { readyCount: 0, total: 6, score: 0, items: [] };
   const brain = nexusBrainState(commands[0]?.command || "");
+  const brainOs = nexusBrainOsModel();
   const latestOrchestration = (data.profile.aiOrchestrations || [])[0];
   const agentMode = $("#agentMode");
   if (!agentMode) return;
@@ -3035,6 +3036,26 @@ function renderAgentCenter() {
     ? plan.steps.map(step => taskItem(`${step.module}: ${step.action}`, step.detail, step.status === "executed" ? "done" : "active", step.tool, agentStepAction(step))).join("")
     : taskItem("No agent plan yet", "Create a mission plan to see cross-module tool steps.", "pending", "Plan", { workflow: "ai", action: "command" });
   renderMissionDashboard();
+  if ($("#nexusBrainScore")) $("#nexusBrainScore").textContent = `${brainOs.readyCount}/${brainOs.total}`;
+  if ($("#nexusBrainPrinciples")) $("#nexusBrainPrinciples").textContent = brainOs.principles.map(item => translateText(item)).join(" | ");
+  if ($("#nexusBrainPanel")) {
+    $("#nexusBrainPanel").innerHTML = brainOs.items.map(item => taskItem(
+      item.title,
+      item.evidence,
+      item.ready ? "ready" : "pending",
+      item.ready ? "Active" : "Setup",
+      { simpleCommand: item.command }
+    )).join("");
+  }
+  if ($("#nexusBrainTimelineStatus")) $("#nexusBrainTimelineStatus").textContent = `${brainOs.timeline.length} item(s)`;
+  if ($("#nexusBrainTimelinePanel")) {
+    $("#nexusBrainTimelinePanel").innerHTML = brainOs.timeline.map(item => `
+      <div>
+        <strong>${translateText(`${item.type}: ${item.title}`)}</strong>
+        <span>${translateText(item.detail || "Evidence recorded")}</span>
+      </div>
+    `).join("");
+  }
   if ($("#aiOrchestrationPanel")) {
     $("#aiOrchestrationPanel").innerHTML = latestOrchestration
       ? (data.profile.aiOrchestrations || []).slice(0, 5).map(item => `<div><strong>${translateText(item.topAction?.module || "AI")} - ${translateText(item.topAction?.title || item.title)}</strong><span>${translateText(item.recommendation || "AI orchestration complete")}</span><small>${translateText(item.status)} - ${translateText(item.routeName || "")}</small></div>`).join("")
@@ -3389,6 +3410,155 @@ function nexusBrainState(command = "") {
 function nexusBrainSummary() {
   const brain = nexusBrainState();
   return `${brain.name}: goal is ${brain.goals}. Memory: ${brain.memory}. Awareness: ${brain.awareness}. Recovery: ${brain.recovery}. Initiative: ${brain.initiative}. Waiting on ${brain.waitingOn}.`;
+}
+
+function nexusBrainTimeline() {
+  const profile = data?.profile || {};
+  const commands = (profile.agentCommands || []).slice(0, 4).map(item => ({
+    type: "Command",
+    title: item.intent || "Voice command",
+    detail: item.command || item.response || "Command captured",
+    at: item.createdAt || item.updatedAt || ""
+  }));
+  const executions = (profile.agentExecutions || []).slice(0, 3).map(item => ({
+    type: "Mission",
+    title: item.goal || "Agent mission",
+    detail: item.summary || item.status || "Mission evidence recorded",
+    at: item.createdAt || item.updatedAt || ""
+  }));
+  const events = (profile.integrationEvents || []).slice(0, 3).map(item => ({
+    type: "Provider",
+    title: item.type || item.provider || "Provider event",
+    detail: item.detail || item.status || "Provider-ready event recorded",
+    at: item.createdAt || item.updatedAt || ""
+  }));
+  const memories = Object.entries(conversationModeMemories || {}).slice(0, 3).map(([mode, memory]) => ({
+    type: "Memory",
+    title: conversationPlatformLabel(mode),
+    detail: memory.lastTopic || memory.lastQuestion || "Mode memory is active",
+    at: memory.updatedAt || ""
+  }));
+  const timeline = [...commands, ...executions, ...events, ...memories]
+    .filter(item => item.title || item.detail)
+    .slice(0, 10);
+  return timeline.length ? timeline : [{
+    type: "Ready",
+    title: "Nexus Brain is standing by",
+    detail: "Start a voice command, workflow, mission, or provider check to create timeline evidence.",
+    at: new Date().toISOString()
+  }];
+}
+
+function nexusBrainLearningRules() {
+  const memory = data?.profile?.agentMemory || {};
+  const userModel = memory.userModel || {};
+  const preferences = [
+    userModel.preferredInteraction || "voice-first support",
+    userModel.communicationStyle || "plain-language guidance",
+    userModel.lastAdaptiveSignals?.accessibility || "standard accessibility"
+  ];
+  const modeMemory = conversationMemoryForMode(conversationPlatformMode());
+  if (modeMemory.lastTopic) preferences.push(`continue topic: ${modeMemory.lastTopic}`);
+  if (memory.turnCoach?.nextQuestion) preferences.push(`next prompt: ${memory.turnCoach.nextQuestion}`);
+  return preferences.filter(Boolean).slice(0, 5);
+}
+
+function nexusBrainOsModel() {
+  const brain = nexusBrainState(agentPerformanceState.lastCommand || "");
+  const timeline = nexusBrainTimeline();
+  const providerDepth = providerActionDepthStatus();
+  const nativeReadiness = nativeAppReadinessSummary();
+  const adminBrief = adminIntelligenceBrief();
+  const investorBrief = investorIntelligenceBrief();
+  const learningRules = nexusBrainLearningRules();
+  const queue = nexusAutopilotQueue();
+  const memory = nexusDeepMemorySignals();
+  const depthTotals = Object.values(providerDepth || {}).reduce((acc, item) => {
+    acc.ready += Number(item.ready || 0);
+    acc.total += Number(item.total || 0);
+    return acc;
+  }, { ready: 0, total: 0 });
+  const items = [
+    {
+      title: "Brain Persistence",
+      evidence: `${memory.count} memory signal(s), mode memory, and browser state ready`,
+      ready: true,
+      command: "Nexus, what do you remember"
+    },
+    {
+      title: "Brain Timeline",
+      evidence: `${timeline.length} recent command, mission, provider, or memory event(s) visible`,
+      ready: timeline.length > 0,
+      command: "Nexus, show brain timeline"
+    },
+    {
+      title: "Brain Self-Explanation",
+      evidence: `${brain.goals}; ${brain.awareness}`,
+      ready: true,
+      command: "Nexus, explain your brain"
+    },
+    {
+      title: "Brain Learning Rules",
+      evidence: learningRules.join(" | "),
+      ready: learningRules.length > 0,
+      command: "Nexus, show learning rules"
+    },
+    {
+      title: "Autonomous Task Queue",
+      evidence: `${queue.waiting} waiting, ${queue.completed} completed mission task(s)`,
+      ready: true,
+      command: "Nexus, run full mission"
+    },
+    {
+      title: "Real Provider Feeds",
+      evidence: `${depthTotals.ready}/${depthTotals.total} provider-backed action depth signals ready`,
+      ready: depthTotals.total === 0 || depthTotals.ready > 0,
+      command: "Nexus, test provider engines"
+    },
+    {
+      title: "Native App Layer",
+      evidence: nativeReadiness.summary,
+      ready: nativeReadiness.readyCount > 0,
+      command: "Nexus, check native app readiness"
+    },
+    {
+      title: "Multilingual Brain",
+      evidence: `Active language: ${voiceLanguageName()}; voice command switching is enabled`,
+      ready: true,
+      command: "Nexus, change language to French"
+    },
+    {
+      title: "Admin Brain Controls",
+      evidence: `${adminBrief.readiness}; top risk: ${adminBrief.topRisk}`,
+      ready: true,
+      command: "Nexus, run admin intelligence"
+    },
+    {
+      title: "Investor Brain View",
+      evidence: `${investorBrief.strongestMetric}; gap: ${investorBrief.topGap}`,
+      ready: true,
+      command: "Nexus, run investor voice demo"
+    }
+  ];
+  const readyCount = items.filter(item => item.ready).length;
+  const model = {
+    title: "Nexus Brain OS",
+    principles: ["goals", "memory", "awareness", "recovery", "initiative"],
+    readyCount,
+    total: items.length,
+    items,
+    timeline,
+    brain,
+    learningRules
+  };
+  localStorage.setItem("agrinexusBrainOs", JSON.stringify(model));
+  return model;
+}
+
+function nexusBrainOsSummary() {
+  const model = nexusBrainOsModel();
+  const next = model.items.find(item => !item.ready) || model.items[0];
+  return `Nexus Brain OS is ${model.readyCount}/${model.total} active across persistence, timeline, self-explanation, learning rules, task queue, provider feeds, native app, multilingual behavior, admin controls, and investor view. Current goal: ${model.brain.goals}. Next useful command: ${next.command}.`;
 }
 
 function updateNexusBehaviorLayer(status = "ready", detail = "") {
@@ -8145,6 +8315,27 @@ async function handleVoiceCommand(rawCommand) {
   }
   if (lower.includes("what are you aware of") || lower.includes("awareness check") || lower.includes("what do you think i need") || lower.includes("what am i trying to do")) {
     setVoiceResponse(nexusAwarenessSummary(), true);
+    return;
+  }
+  if (lower.includes("brain os") || lower.includes("all 10 brain") || lower.includes("all ten brain") || lower.includes("brain operating system") || lower.includes("show the 10") || lower.includes("show the ten")) {
+    goSection("agent");
+    setVoiceResponse(nexusBrainOsSummary(), true);
+    return;
+  }
+  if (lower.includes("brain timeline") || lower.includes("show brain history") || lower.includes("what have you been doing")) {
+    goSection("agent");
+    const timeline = nexusBrainTimeline().slice(0, 5).map(item => `${item.type}: ${item.title}`).join(". ");
+    setVoiceResponse(`Brain timeline: ${timeline}.`, true);
+    return;
+  }
+  if (lower.includes("learning rules") || lower.includes("how are you learning") || lower.includes("what did you learn about me")) {
+    goSection("agent");
+    setVoiceResponse(`Nexus learning rules: ${nexusBrainLearningRules().join(". ")}.`, true);
+    return;
+  }
+  if (lower.includes("explain your brain") || lower.includes("how does your brain work") || lower.includes("how do you think")) {
+    goSection("agent");
+    setVoiceResponse(`${nexusBrainSummary()} The operating rules are goals, memory, awareness, recovery, and initiative. I use those to decide whether to answer, open a section, stage a workflow, ask for confirmation, or recover when something is unclear.`, true);
     return;
   }
   if (lower.includes("nexus brain") || lower.includes("show your brain") || lower.includes("do you have a brain") || lower.includes("what is your brain doing")) {
