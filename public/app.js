@@ -3706,6 +3706,54 @@ function explainSmartRecommendation() {
   return `${brief.summary} Ranked actions: ${ranked || "1. Ask Nexus what to do next."}`;
 }
 
+function intuitiveConversationGuide(sectionId = currentSectionId()) {
+  const mode = conversationPlatformMode();
+  const modeMemory = conversationMemoryForMode(mode);
+  const alerts = nexusProactiveAlerts();
+  const journey = activeAgentJourney?.next;
+  const sectionPrompts = {
+    dashboard: ["Nexus, what should I do next", "Nexus, explain the platform", "Nexus, run full mission"],
+    learning: ["Nexus, start a course", "Nexus, build captions", "Nexus, issue my certificate"],
+    workforce: ["Nexus, find jobs", "Nexus, apply for job", "Nexus, review my gaps"],
+    health: ["Nexus, start telehealth intake", "Nexus, connect provider", "Nexus, check region safety"],
+    trade: ["Nexus, contact buyer", "Nexus, run drone scan", "Nexus, create order"],
+    map: ["Nexus, check route risk", "Nexus, find facility", "Nexus, track my route live"],
+    agent: ["Nexus, explain your reasoning", "Nexus, create a plan", "Nexus, what can you do"],
+    integrations: ["Nexus, run live service check", "Nexus, test provider engines", "Nexus, what is missing"],
+    admin: ["Nexus, run health check", "Nexus, show production gaps", "Nexus, summarize audit"],
+    profile: ["Nexus, summarize my progress", "Nexus, show my certificates", "Nexus, help me"]
+  };
+  const modePrompts = mode === "admin"
+    ? ["Nexus, run admin intelligence", "Nexus, run live service check", "Nexus, show production gaps"]
+    : mode === "investor"
+      ? ["Nexus, explain this to investors", "Nexus, run investor voice demo", "Nexus, summarize impact"]
+      : ["Nexus, help me", "Nexus, what should I do next", "Nexus, read this to me"];
+  const priority = journey
+    ? { reason: `You have a guided ${activeAgentJourney.workflow} journey in progress.`, command: `Nexus, ${journey.command}` }
+    : alerts[0]
+      ? { reason: alerts[0].message, command: "Nexus, what needs attention" }
+      : { reason: modeMemory.lastTopic ? `Continuing from ${modeMemory.lastTopic}.` : `You are in ${sectionId}.`, command: (sectionPrompts[sectionId] || modePrompts)[0] };
+  const suggestions = [
+    priority.command,
+    ...modePrompts,
+    ...(sectionPrompts[sectionId] || [])
+  ].filter(Boolean);
+  return {
+    mode,
+    section: sectionId,
+    reason: priority.reason,
+    primaryCommand: priority.command,
+    suggestions: [...new Set(suggestions)].slice(0, 6),
+    memoryTopic: modeMemory.lastTopic || "new conversation",
+    turns: modeMemory.turnCount || 0
+  };
+}
+
+function intuitiveConversationResponse() {
+  const guide = intuitiveConversationGuide();
+  return `${conversationPlatformLabel(guide.mode)} guide: ${guide.reason} Best thing to say now: ${guide.primaryCommand}. Other helpful phrases are ${guide.suggestions.slice(1, 4).join(", ")}.`;
+}
+
 function contextualVoiceSuggestions(sectionId = currentSectionId()) {
   const mode = nexusBehaviorMode();
   const user = [
@@ -3726,9 +3774,13 @@ function contextualVoiceSuggestions(sectionId = currentSectionId()) {
     admin: ["Nexus, run health check", "Nexus, review users", "Nexus, show production gaps", "Nexus, summarize audit"],
     profile: ["Nexus, summarize my progress", "Nexus, show my messages", "Nexus, show my certificates", "Nexus, help me"]
   };
-  if (experienceMode === "admin") return bySection.admin;
-  if (experienceMode === "investor") return ["Nexus, explain this to investors", "Nexus, run investor voice demo", "Nexus, summarize impact", "Nexus, prepare government briefing"];
-  return bySection[sectionId] || user;
+  const guide = intuitiveConversationGuide(sectionId);
+  const fallback = experienceMode === "admin"
+    ? bySection.admin
+    : experienceMode === "investor"
+      ? ["Nexus, explain this to investors", "Nexus, run investor voice demo", "Nexus, summarize impact", "Nexus, prepare government briefing"]
+      : bySection[sectionId] || user;
+  return [...new Set([...guide.suggestions, ...fallback])].slice(0, 8);
 }
 
 function nexusDeepMemorySignals() {
@@ -4076,8 +4128,10 @@ function jarvisInsights() {
   const investorBrief = investorIntelligenceBrief();
   const conversationBrief = conversationModeBrief();
   const modeMemory = conversationMemoryForMode();
+  const conversationGuide = intuitiveConversationGuide();
   return [
     { title: conversationBrief.mode, detail: `${conversationBrief.tone}. Context: ${conversationBrief.focus}. Last: ${modeMemory.lastTopic || "ready for a conversation"}. Turns in this mode: ${modeMemory.turnCount || 0}.`, status: "ready", label: "Talk" },
+    { title: "Conversation guide", detail: `${conversationGuide.reason} Best phrase: ${conversationGuide.primaryCommand}`, status: "ready", label: "Next" },
     { title: "Situational brief", detail: brief.summary, status: "ready", label: "Smart" },
     { title: "Admin intelligence", detail: `${adminBrief.topRisk} Recommendation: ${adminBrief.recommendation}`, status: adminBrief.riskCount ? "pending" : "ready", label: adminBrief.readiness },
     { title: "Investor intelligence", detail: `${investorBrief.strongestMetric}. ${investorBrief.topGap}`, status: investorBrief.topGap.includes("waiting") || investorBrief.topGap.includes("Run") ? "pending" : "ready", label: investorBrief.providerDepth },
@@ -7704,6 +7758,12 @@ async function handleVoiceCommand(rawCommand) {
     setVoiceResponse(modeFollowUpResponse(command), true);
     return;
   }
+  if (/\b(what should i say|what can i say here|suggest what to say|help me talk|conversation guide)\b/.test(lower)) {
+    const guide = intuitiveConversationGuide();
+    renderLiveVoiceSuggestions(guide.suggestions);
+    setVoiceResponse(intuitiveConversationResponse(), true);
+    return;
+  }
   const clarification = inferAmbiguousIntent(command);
   if (clarification) {
     askAgentClarification(clarification);
@@ -7915,6 +7975,12 @@ async function handleVoiceCommand(rawCommand) {
     return;
   }
   if (lower.includes("coach me") || lower.includes("guide me") || lower.includes("operator coach") || lower.includes("recommend next")) {
+    if (lower.includes("guide me") || lower.includes("recommend next")) {
+      const guide = intuitiveConversationGuide();
+      renderLiveVoiceSuggestions(guide.suggestions);
+      setVoiceResponse(intuitiveConversationResponse(), true);
+      return;
+    }
     const coach = nexusOperatorCoach();
     setVoiceResponse(`Operator coach: ${coach.prompt} Say yes to run ${coach.command}, or say a different request.`, true);
     pendingAgentClarification = {
