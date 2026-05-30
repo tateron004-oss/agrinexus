@@ -2340,6 +2340,7 @@ async function changeLanguageByVoice(command) {
     render();
     if (previousLanguage !== languageCode()) refreshVoiceForLanguageChange();
     const label = voiceLanguageName();
+    updateNexusBehaviorLayer("ready", `Nexus will keep listening and responding in ${label}.`);
     setVoiceResponse(`Language changed to ${label}. The platform text and voice responses will use ${label} where translation is available.`, true);
     toast(`Language changed to ${label}`);
   } catch (error) {
@@ -2601,6 +2602,8 @@ function goSection(sectionId, options = {}) {
   }
   if (sectionId === "map") setTimeout(() => map && map.invalidateSize(), 100);
   renderUserSimpleActiveSection(sectionId);
+  renderLiveVoiceSuggestions(contextualVoiceSuggestions(sectionId));
+  updateNexusBehaviorLayer("ready", `${nexusBehaviorMode().label}: ${workspaceCopy[sectionId]?.title || sectionId} ready`);
   updateUserBackHome(sectionId);
   announce(`${sectionId} section opened`);
 }
@@ -3096,6 +3099,82 @@ function currentSectionId() {
   return $(".section.active")?.id || "dashboard";
 }
 
+function nexusMemoryProfile() {
+  const memory = data?.profile?.agentMemory || {};
+  return {
+    name: memory.userName || memory.userModel?.name || userFirstName(),
+    language: voiceLanguageName(),
+    role: data?.user?.role || "Standard User",
+    section: currentSectionId(),
+    activeModule: memory.activeModule || currentSectionId(),
+    lastStatus: memory.lastStatus || "ready",
+    lastSummary: memory.lastSummary || lastVoiceResponse || "Nexus is ready.",
+    recommended: memory.lastRecommendedAction?.title || memory.lastRecommendedAction?.recommendedAction || "Ask what to do next"
+  };
+}
+
+function nexusBehaviorMode() {
+  if (experienceMode === "admin") {
+    return {
+      label: "Admin Operator",
+      greeting: `Good ${new Date().getHours() < 12 ? "morning" : "day"}, ${userFirstName()}. Nexus is watching readiness, users, integrations, evidence, and production health.`,
+      prompt: "Ask for health checks, live services, users, integrations, audits, or production gaps."
+    };
+  }
+  if (experienceMode === "investor") {
+    return {
+      label: "Investor Presenter",
+      greeting: `Welcome back, ${userFirstName()}. Nexus is ready to explain the platform, run the investor story, and show evidence.`,
+      prompt: "Ask for the investor pitch, impact story, demo mode, readiness, or government briefing."
+    };
+  }
+  return {
+    label: "User Guide",
+    greeting: `Hello ${userFirstName()}. I am Nexus. Tell me what you need, and I will guide one step at a time.`,
+    prompt: "Say things like: I need a doctor, I want to sell maize, I need a job, or help me learn."
+  };
+}
+
+function updateNexusBehaviorLayer(status = "ready", detail = "") {
+  const mode = nexusBehaviorMode();
+  const memory = data ? nexusMemoryProfile() : { language: "English", section: "dashboard" };
+  const label = status === "listening" ? "Listening"
+    : status === "thinking" ? "Thinking"
+      : status === "confirming" ? "Confirm"
+        : status === "speaking" ? "Speaking"
+          : "Ready";
+  const message = detail || `${mode.label}: ${label} in ${memory.language}`;
+  const dockStatus = $("#nexusBehaviorStatus");
+  if (dockStatus) dockStatus.textContent = translateText(message);
+  const localStatus = $("#globalVoiceOutputStatus");
+  if (localStatus && experienceMode === "user") localStatus.textContent = translateText(message);
+}
+
+function contextualVoiceSuggestions(sectionId = currentSectionId()) {
+  const mode = nexusBehaviorMode();
+  const user = [
+    "Nexus, help me",
+    "Nexus, what should I do next",
+    "Nexus, change language to French",
+    "Nexus, read this to me"
+  ];
+  const bySection = {
+    dashboard: user,
+    learning: ["Nexus, start a course", "Nexus, finish lesson", "Nexus, make captions", "Nexus, get certificate"],
+    workforce: ["Nexus, find jobs", "Nexus, apply for job", "Nexus, check my skills", "Nexus, plan shift"],
+    health: ["Nexus, I need a doctor", "Nexus, start intake", "Nexus, talk to provider", "Nexus, check region"],
+    trade: ["Nexus, I want to sell maize", "Nexus, contact buyer", "Nexus, track route", "Nexus, run drone scan"],
+    map: ["Nexus, check route", "Nexus, find facility", "Nexus, explain map", "Nexus, track my route live"],
+    agent: ["Nexus, explain the platform", "Nexus, create a plan", "Nexus, what can you do", "Nexus, read response"],
+    integrations: ["Nexus, run live service check", "Nexus, test provider engines", "Nexus, what is connected", "Nexus, what is missing"],
+    admin: ["Nexus, run health check", "Nexus, review users", "Nexus, show production gaps", "Nexus, summarize audit"],
+    profile: ["Nexus, summarize my progress", "Nexus, show my messages", "Nexus, show my certificates", "Nexus, help me"]
+  };
+  if (experienceMode === "admin") return bySection.admin;
+  if (experienceMode === "investor") return ["Nexus, explain this to investors", "Nexus, run investor voice demo", "Nexus, summarize impact", "Nexus, prepare government briefing"];
+  return bySection[sectionId] || user;
+}
+
 function sectionFromHash() {
   const id = String(window.location.hash || "").replace(/^#/, "");
   return $(`#${id}`)?.classList.contains("section") ? id : "dashboard";
@@ -3273,7 +3352,7 @@ function renderLiveVoiceSuggestions(suggestions = liveVoiceSuggestions) {
   for (const selector of targets) {
     const container = $(selector);
     if (!container) continue;
-    const phrases = liveVoiceSuggestions.length ? liveVoiceSuggestions : voiceCommandExamples().slice(0, selector === "#globalVoiceGuide" ? 8 : 6);
+    const phrases = liveVoiceSuggestions.length ? liveVoiceSuggestions : contextualVoiceSuggestions(currentSectionId()).slice(0, selector === "#globalVoiceGuide" ? 8 : 6);
     container.innerHTML = phrases.map(voiceCommandButton).join("");
   }
   $$("[data-voice-example]").forEach(button => {
@@ -6276,11 +6355,14 @@ function bindDynamic() {
 async function mutate(path, body, success) {
   try {
     const previousLanguage = languageCode();
+    updateNexusBehaviorLayer("thinking", "Nexus is running the selected workflow.");
     data = await request(path, { method: "POST", body });
     render();
     if (path === "/api/user/language" && previousLanguage !== languageCode()) refreshVoiceForLanguageChange();
+    updateNexusBehaviorLayer("ready", success || "Workflow complete.");
     toast(success);
   } catch (error) {
+    updateNexusBehaviorLayer("ready", error.message || "Workflow needs attention.");
     toast(error.message);
   }
 }
@@ -6415,6 +6497,7 @@ async function confirmPendingWorkflow() {
   const workflow = pendingWorkflow;
   const grandmaMode = experienceMode === "user";
   const note = $("#workflowNote").value.trim();
+  updateNexusBehaviorLayer("thinking", "Nexus is completing the confirmed workflow.");
   closeWorkflowModal();
   if (!workflow.path) {
     if (workflow.redirectSection) goSection(workflow.redirectSection);
@@ -6439,6 +6522,7 @@ async function confirmPendingWorkflow() {
       const active = currentSectionId();
       if (active !== "dashboard" && simpleUserSections[active]) renderUserSimpleActiveSection(active);
       const response = `${workflow.success || "Done"}. Choose another button when ready.`;
+      updateNexusBehaviorLayer("speaking", response);
       setVoiceResponse(response, true);
       toast(response);
       return;
@@ -6446,6 +6530,7 @@ async function confirmPendingWorkflow() {
     const intelligence = data.workflowIntelligenceResult || (data.profile.workflowIntelligence || [])[0];
     if (intelligence) {
       const response = `${workflow.success || "Workflow complete"}. ${intelligence.summary} ${intelligence.nextStep}`;
+      updateNexusBehaviorLayer("speaking", response);
       setVoiceResponse(response, true);
       toast("Workflow complete with intelligence");
     } else {
@@ -6508,6 +6593,7 @@ async function executeAgentPlan() {
 function setVoiceResponse(message, speak = false, options = {}) {
   const allowVoiceFirst = options.allowVoiceFirst !== false;
   const token = ++voiceTranslationToken;
+  updateNexusBehaviorLayer(speak ? "speaking" : "ready", message);
   lastVoiceResponse = message;
   const transcript = $("#voiceTranscript");
   if (transcript) transcript.textContent = message;
@@ -6565,7 +6651,8 @@ function welcomeSignedInUser() {
   const welcomeKey = `agrinexusWelcome:${userKey}`;
   if (sessionStorage.getItem(welcomeKey)) return;
   sessionStorage.setItem(welcomeKey, "shown");
-  const message = `Welcome back, ${userFirstName()}. I am ${assistantShortName}, your short name for ${assistantFullName}. Say "${assistantShortName}, help me" or tell me what you want to do next.`;
+  const behavior = nexusBehaviorMode();
+  const message = `${behavior.greeting} ${behavior.prompt}`;
   setVoiceResponse(message, false, { allowVoiceFirst: true });
 }
 
@@ -6709,6 +6796,7 @@ function setVoiceStatus(status) {
   if (panel) panel.classList.toggle("voice-listening", status === "listening");
   const bar = $("#globalAssistantBar");
   if (bar) bar.classList.toggle("voice-listening", status === "listening");
+  updateNexusBehaviorLayer(status);
 }
 
 function refreshMicSupport() {
@@ -6845,6 +6933,7 @@ function openWorkflowByVoice(workflow, action, response, dataset = {}) {
     setVoiceResponse(response || "Workflow command sent.");
     return;
   }
+  updateNexusBehaviorLayer("confirming", "Nexus prepared the workflow and is waiting for your yes.");
   openWorkflowModal(config);
   setVoiceResponse(`${response || "Workflow staged."} Review the workflow, then say confirm or use the confirm button.`);
 }
@@ -6884,10 +6973,11 @@ async function handleVoiceCommand(rawCommand) {
   const wakeOnly = isWakePhraseOnly(localizedCommand);
   const command = cleanWakeCommand(localizedCommand);
   const lower = command.toLowerCase();
+  updateNexusBehaviorLayer("thinking", command ? `Nexus is deciding how to help with: ${command}` : "Nexus is listening.");
   if (!lower && wakeOnly) {
     openAskNexus();
     enableHeyAgriNexusMode();
-    setVoiceResponse(`I'm here. You can call me ${assistantShortName}. Tell me what you want to do, like open telehealth, apply for a job, contact a buyer, run a drone scan, or check live engines.`, true);
+    setVoiceResponse(`I'm here, ${userFirstName()}. You can call me ${assistantShortName}. Tell me what you need in normal words, like I need a doctor, I want to sell maize, I need a job, or help me learn.`, true);
     return;
   }
   if (!lower) return setVoiceResponse("Give me a command, and I will route it.", true);
@@ -6906,6 +6996,23 @@ async function handleVoiceCommand(rawCommand) {
     if (canOpenSection(moduleId)) goSection(moduleId);
     setVoiceResponse(moduleUseExplanation(moduleId), true);
     return;
+  }
+
+  if (/\b(i want to sell|sell my|sell|buyer for|find buyer|market my)\b/.test(lower) && /\b(maize|corn|rice|cassava|yam|beans|crop|produce|harvest|farm)\b/.test(lower)) {
+    goSection("trade");
+    return openWorkflowByVoice("trade", "buyer-contact", "I can help sell that crop. I opened Trade and prepared the buyer contact workflow.", { productId: firstProduct()?.id });
+  }
+  if (/\b(i need|need|find|get|want)\b/.test(lower) && /\b(doctor|provider|nurse|clinic|telehealth|care|medicine|health help)\b/.test(lower)) {
+    goSection("health");
+    return openWorkflowByVoice("health", "intake", "I can help with care. I opened Health and prepared the intake workflow.");
+  }
+  if (/\b(i need|need|find|get|want|apply)\b/.test(lower) && /\b(job|work|role|shift|employment)\b/.test(lower)) {
+    goSection("workforce");
+    return openWorkflowByVoice("workforce", "apply-role", "I can help with work. I opened Workforce and prepared the role application workflow.", { roleId: firstEligibleRole()?.id });
+  }
+  if (/\b(i want|i need|help me|teach me|start)\b/.test(lower) && /\b(learn|course|lesson|training|skill|certificate)\b/.test(lower)) {
+    goSection("learning");
+    return openWorkflowByVoice("learning", "start", "I can help you learn. I opened Learning and prepared the course start workflow.");
   }
 
   if (!$("#workflowModal").classList.contains("hidden")) {
@@ -7276,6 +7383,7 @@ async function runBackendAgentCommand(command) {
     setVoiceStatus("thinking");
     const globalStatus = $("#globalAssistantStatus");
     if (globalStatus) globalStatus.textContent = `Thinking about: ${command}`;
+    updateNexusBehaviorLayer("thinking", `${nexusBehaviorMode().label}: thinking about your request`);
     data = await request("/api/agent/command", {
       method: "POST",
       body: {
@@ -7293,14 +7401,16 @@ async function runBackendAgentCommand(command) {
     if (result.intent === "conversation.language_changed" || result.metadata?.language || previousLanguage !== languageCode()) {
       refreshVoiceForLanguageChange();
     }
-    renderLiveVoiceSuggestions(result.metadata?.suggestedReplies || []);
+    renderLiveVoiceSuggestions(result.metadata?.suggestedReplies?.length ? result.metadata.suggestedReplies : contextualVoiceSuggestions(result.metadata?.redirectSection || currentSectionId()));
     if (result.metadata?.voiceMission?.phrase && $("#globalAssistantStatus")) {
       $("#globalAssistantStatus").textContent = result.metadata.voiceMission.phrase;
     }
     const mode = $("#jarvisMode");
     if (mode) mode.textContent = `conversation turn ${voiceConversationTurns}`;
+    updateNexusBehaviorLayer("speaking", result.response || "Command completed.");
     setVoiceResponse(result.response || "Command completed.", true);
   } catch (error) {
+    updateNexusBehaviorLayer("ready", "Nexus needs one clearer request.");
     setVoiceResponse(error.message || "Command failed.");
   }
 }

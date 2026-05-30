@@ -1132,6 +1132,20 @@ body.user-mode .user-voice-dock {
   box-shadow: 0 16px 38px rgba(23, 50, 64, .18);
   transform: translateX(-50%);
 }
+body.user-mode .user-voice-dock #nexusBehaviorStatus {
+  grid-column: 1 / -1;
+  display: block;
+  max-height: 2.6rem;
+  overflow: hidden;
+  padding: 2px 6px;
+  color: #173240;
+  font-size: .8rem;
+  font-weight: 900;
+  line-height: 1.15;
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 body:not(.user-mode) .user-voice-dock {
   display: none !important;
 }

@@ -349,9 +349,9 @@ assert(app.includes('workflow === "admin-user"'), "Admin test login button needs
 assert(app.includes("Only an existing Admin can run this workflow"), "Admin login flow must explain admin-only protection");
 assert(server.includes('adminAccount.role = "Admin"'), "Backend must force admin test logins to Admin");
 assert(server.includes("admin_user.created"), "Admin test login must create auth audit evidence");
-assert(html.includes("styles.css?v=user-app-shell-55"), "Index must force browsers to load the latest user app shell");
-assert(html.includes("app.js?v=user-app-shell-68"), "Index must force browsers to load the latest user app code");
-assert(sw.includes("agrinexus-pwa-v47"), "Service worker cache must refresh the installed app after user app updates");
+assert(html.includes("styles.css?v=nexus-behavior-56"), "Index must force browsers to load the latest Nexus behavior shell");
+assert(html.includes("app.js?v=nexus-behavior-69"), "Index must force browsers to load the latest Nexus behavior code");
+assert(sw.includes("agrinexus-pwa-v48"), "Service worker cache must refresh the installed app after Nexus behavior updates");
 assert(html.includes("userWorkspace"), "Dashboard needs a User Workspace for standard users");
 assert(html.includes("userMobileDock"), "Legacy mobile dock markup should remain safely hidden for cache compatibility");
 assert(html.includes("What Do You Need Help With Today?"), "Dashboard simple start should use user-ready language");
@@ -371,6 +371,7 @@ assert(app.includes("simpleUserSections"), "Standard User needs simple action de
 assert(app.includes("user-module-status"), "User module pages need a contained status/result area");
 assert(app.includes("user-module-back"), "User module pages need a clear Back button");
 assert(html.includes("userVoiceDock"), "Standard User app needs a compact voice dock");
+assert(html.includes("nexusBehaviorStatus"), "Standard User app needs a visible Nexus behavior status");
 assert(html.includes('data-user-voice-action="listen"'), "Voice dock needs a speak action");
 assert(html.includes('data-user-voice-action="type"'), "Voice dock needs a type action");
 assert(html.includes('data-user-voice-action="read"'), "Voice dock needs a read action");
@@ -439,6 +440,7 @@ assert(styles.includes(".user-simple-hero"), "User interface needs a compact sim
 assert(styles.includes(".user-service-buttons .service-ask"), "Ask Nexus should be a prominent service button");
 assert(styles.includes("body.user-mode .user-service-buttons button::before"), "Grandma dashboard buttons need strong color personality accents");
 assert(styles.includes("body.user-mode .user-voice-dock"), "User mode needs fixed compact voice controls");
+assert(styles.includes("body.user-mode .user-voice-dock #nexusBehaviorStatus"), "User mode voice dock needs contained behavior status styling");
 assert(styles.includes("body.user-mode .user-module-status"), "User module status text must be contained");
 assert(styles.includes("body.user-mode .section.active") && styles.includes("max-height: calc(100vh - 58px)"), "User mode sections should behave like one-screen task pages");
 assert(styles.includes("rgba(255, 211, 86"), "Grandma dashboard needs a warm colorful hero");
@@ -463,6 +465,14 @@ assert(app.includes("captureOriginalText();"), "Boot must preserve original stat
 assert(app.includes('"#loginView", ".topbar", ".sidebar"'), "Translation pass must include login, topbar, and navigation areas");
 assert(app.includes("function isWakePhraseOnly"), "Voice assistant must treat Hey AgriNexus as a wake phrase");
 assert(app.includes("function enableHeyAgriNexusMode"), "Voice assistant must enable hands-free wake listening");
+assert(app.includes("function nexusMemoryProfile"), "Nexus behavior layer needs persistent user memory context");
+assert(app.includes("function nexusBehaviorMode"), "Nexus behavior layer needs mode-specific behavior");
+assert(app.includes("function updateNexusBehaviorLayer"), "Nexus behavior layer needs a visible state indicator");
+assert(app.includes("function contextualVoiceSuggestions"), "Nexus behavior layer needs contextual voice suggestions");
+assert(app.includes("I want to sell maize"), "Nexus must route natural trade requests without button hunting");
+assert(app.includes("I need a doctor"), "Nexus must route natural telehealth requests without button hunting");
+assert(app.includes("Admin Operator"), "Nexus must adapt for Admin mode");
+assert(app.includes("Investor Presenter"), "Nexus must adapt for Investor mode");
 assert(app.includes("Hey AgriNexus mode is on"), "Voice-first mode needs clear user-facing wake phrase copy");
 assert(html.includes("Hey AgriNexus: On"), "Global assistant needs a clear Hey AgriNexus control");
 assert(html.includes("Nexus Command Layer"), "Assistant panel should expose the shorter Nexus command name");
