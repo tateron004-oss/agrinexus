@@ -32,6 +32,7 @@ let agentPerformanceState = {
 let agentProgressTimers = [];
 let pendingAgentClarification = null;
 let activeAgentJourney = null;
+let conversationModeState = JSON.parse(localStorage.getItem("agrinexusConversationModeState") || "{}");
 const accessibilityPrefs = JSON.parse(localStorage.getItem("agrinexusAccessibility") || "{}");
 const originalTextNodes = new WeakMap();
 let deferredInstallPrompt = null;
@@ -3170,6 +3171,106 @@ function nexusBehaviorMode() {
   };
 }
 
+function conversationPlatformMode() {
+  if (experienceMode === "admin" || currentSectionId() === "admin") return "admin";
+  if (experienceMode === "investor") return "investor";
+  return "user";
+}
+
+function conversationPlatformLabel(mode = conversationPlatformMode()) {
+  if (mode === "admin") return "Admin conversation";
+  if (mode === "investor") return "Investor conversation";
+  return "User conversation";
+}
+
+function conversationModeBrief(mode = conversationPlatformMode()) {
+  if (mode === "admin") {
+    return {
+      mode: "Admin conversation",
+      audience: "platform operator",
+      tone: "direct, operational, readiness-focused",
+      focus: "users, workflow evidence, health checks, integrations, risk, live services, and production gaps",
+      next: "Ask Nexus for admin intelligence, live service check, production gaps, users, or provider readiness."
+    };
+  }
+  if (mode === "investor") {
+    return {
+      mode: "Investor conversation",
+      audience: "investor or partner reviewer",
+      tone: "clear, confident, evidence-led",
+      focus: "impact story, proof points, rural use cases, readiness, government presentation, and funding narrative",
+      next: "Ask Nexus for the investor story, impact metrics, government briefing, or demo walkthrough."
+    };
+  }
+  return {
+    mode: "User conversation",
+    audience: "everyday service user",
+    tone: "simple, patient, voice-first, one step at a time",
+    focus: "learning, jobs, telehealth, trade, maps, language changes, accessibility, and guided help",
+    next: "Tell Nexus what you need, like I need a doctor, I want to learn, I need work, or I want to sell crops."
+  };
+}
+
+function rememberConversationTurn(command = "", response = "") {
+  const mode = conversationPlatformMode();
+  conversationModeState = {
+    ...conversationModeState,
+    mode,
+    modeLabel: conversationPlatformLabel(mode),
+    lastTopic: command || conversationModeState.lastTopic || currentSectionId(),
+    lastQuestion: command || conversationModeState.lastQuestion || "",
+    lastAnswer: response || conversationModeState.lastAnswer || "",
+    lastSection: currentSectionId(),
+    language: voiceLanguageName(),
+    turnCount: Number(conversationModeState.turnCount || 0) + (command || response ? 1 : 0),
+    updatedAt: new Date().toISOString()
+  };
+  localStorage.setItem("agrinexusConversationModeState", JSON.stringify(conversationModeState));
+}
+
+function modeConversationContext(command = "") {
+  const brief = conversationModeBrief();
+  const memory = data ? nexusMemoryProfile() : {};
+  const readiness = data?.admin?.readiness;
+  return {
+    mode: conversationPlatformMode(),
+    modeLabel: brief.mode,
+    audience: brief.audience,
+    tone: brief.tone,
+    focus: brief.focus,
+    currentSection: currentSectionId(),
+    language: voiceLanguageName(),
+    userName: userFirstName(),
+    command,
+    activeJourney: activeAgentJourneySummary(),
+    lastQuestion: conversationModeState.lastQuestion || "",
+    lastAnswer: conversationModeState.lastAnswer || "",
+    lastTopic: conversationModeState.lastTopic || "",
+    memory,
+    productionReadiness: readiness ? `${readiness.readyCount || 0}/${readiness.total || 0}` : "unknown"
+  };
+}
+
+function isModeFollowUpCommand(lower) {
+  return /^(tell me more|explain that|explain more|why|repeat that|say that again|summarize|what should i do|what now|what next|continue|keep going|how do i use this|walk me through it|guide me|what does that mean)\b/.test(String(lower || "").trim());
+}
+
+function modeFollowUpResponse(command = "") {
+  const mode = conversationPlatformMode();
+  const brief = conversationModeBrief(mode);
+  const lastAnswer = conversationModeState.lastAnswer || lastVoiceResponse || "I am ready to guide the next step.";
+  const lastTopic = conversationModeState.lastTopic || currentSectionId();
+  if (mode === "admin") {
+    const adminBrief = adminIntelligenceBrief();
+    return `${brief.mode}: I am holding the admin context. Last topic: ${lastTopic}. ${lastAnswer} Operationally, the next best move is ${adminBrief.recommendation}. You can say run admin intelligence, run live service check, show production gaps, or take me to admin.`;
+  }
+  if (mode === "investor") {
+    const investorBrief = investorIntelligenceBrief();
+    return `${brief.mode}: I am holding the investor context. Last topic: ${lastTopic}. ${lastAnswer} For the funding story, lead with ${investorBrief.strongestMetric}. Next, you can say run investor story, summarize impact, prepare government briefing, or show evidence.`;
+  }
+  return `${brief.mode}: I am holding the user context. Last topic: ${lastTopic}. ${lastAnswer} I will keep this simple: tell me what you need, or say open learning, open telehealth, find jobs, sell my crop, change language, or guide me step by step.`;
+}
+
 function updateNexusBehaviorLayer(status = "ready", detail = "") {
   const mode = nexusBehaviorMode();
   const memory = data ? nexusMemoryProfile() : { language: "English", section: "dashboard" };
@@ -3935,7 +4036,9 @@ function jarvisInsights() {
   const brief = nexusSituationalBrief();
   const adminBrief = adminIntelligenceBrief();
   const investorBrief = investorIntelligenceBrief();
+  const conversationBrief = conversationModeBrief();
   return [
+    { title: conversationBrief.mode, detail: `${conversationBrief.tone}. Context: ${conversationBrief.focus}. Last: ${conversationModeState.lastTopic || "ready for a conversation"}`, status: "ready", label: "Talk" },
     { title: "Situational brief", detail: brief.summary, status: "ready", label: "Smart" },
     { title: "Admin intelligence", detail: `${adminBrief.topRisk} Recommendation: ${adminBrief.recommendation}`, status: adminBrief.riskCount ? "pending" : "ready", label: adminBrief.readiness },
     { title: "Investor intelligence", detail: `${investorBrief.strongestMetric}. ${investorBrief.topGap}`, status: investorBrief.topGap.includes("waiting") || investorBrief.topGap.includes("Run") ? "pending" : "ready", label: investorBrief.providerDepth },
@@ -7132,6 +7235,7 @@ function setVoiceResponse(message, speak = false, options = {}) {
   const token = ++voiceTranslationToken;
   updateNexusBehaviorLayer(speak ? "speaking" : "ready", message);
   lastVoiceResponse = message;
+  rememberConversationTurn(agentPerformanceState.lastCommand || conversationModeState.lastQuestion || "", message);
   const transcript = $("#voiceTranscript");
   if (transcript) transcript.textContent = message;
   const summary = $("#jarvisSummary");
@@ -7524,6 +7628,8 @@ async function handleVoiceCommand(rawCommand) {
   const command = cleanWakeCommand(localizedCommand);
   const lower = command.toLowerCase();
   markAgentPerformance("heard", "voice-command");
+  agentPerformanceState.lastCommand = command;
+  if (command) rememberConversationTurn(command, "");
   if (/\b(stop|pause|wait|hold on|be quiet|interrupt|cancel speech)\b/.test(lower) && voiceSpeaking) {
     interruptNexusSpeech("I stopped speaking. Tell me the next instruction.");
     return;
@@ -7553,6 +7659,10 @@ async function handleVoiceCommand(rawCommand) {
   }
   if (lower.includes("current journey") || lower.includes("guided journey") || lower.includes("where are we")) {
     setVoiceResponse(activeAgentJourneySummary(), true);
+    return;
+  }
+  if (isModeFollowUpCommand(lower)) {
+    setVoiceResponse(modeFollowUpResponse(command), true);
     return;
   }
   const clarification = inferAmbiguousIntent(command);
@@ -8032,6 +8142,8 @@ async function runBackendAgentCommand(command) {
         conversational: true,
         inputMode: "voice",
         outputMode: "voice",
+        mode: conversationPlatformMode(),
+        modeContext: modeConversationContext(command),
         note: "Command submitted from Nexus Voice Assistant"
       }
     }, 18000);

@@ -5324,6 +5324,13 @@ async function conversationalReasoningResponse(db, user, command, options = {}) 
   const moduleSignal = conversationModuleSignal(command);
   const memories = retrieveAgentMemories(db.profile, command, 5);
   const { country, route } = activeContext(db);
+  const modeContext = options.modeContext || {};
+  const platformMode = options.mode || modeContext.mode || "user";
+  const modeInstructions = {
+    user: "You are speaking to an everyday user. Keep it very simple, friendly, and step-by-step. Avoid admin language unless the user asks.",
+    admin: "You are speaking to a platform admin. Be operational, direct, and readiness-focused. Mention users, integrations, evidence, risk, health checks, and production gaps when relevant.",
+    investor: "You are speaking to an investor or partner reviewer. Be concise, confident, evidence-led, and explain impact, proof, readiness, and the next demo step."
+  };
   const profileSummary = {
     readiness: db.profile.readiness,
     activeCourseId: db.profile.activeCourseId,
@@ -5353,11 +5360,13 @@ async function conversationalReasoningResponse(db, user, command, options = {}) 
                 "You are AgriNexus, a warm voice-first operating assistant for rural agriculture, telehealth, learning, workforce, maps, and trade.",
                 "Answer the user's question conversationally in plain language.",
                 "Use the platform context; do not claim external real-time facts unless they are provided.",
+                modeInstructions[platformMode] || modeInstructions.user,
+                "Carry the conversation across turns. If the user asks a follow-up like tell me more, why, or what next, use the recent conversation context instead of starting over.",
                 "If an action may affect records, health, jobs, payment, providers, or messages, recommend confirmation instead of pretending it is already done.",
                 "End with one clear next step the user can say."
               ].join(" ")
             },
-            { role: "user", content: JSON.stringify({ command, moduleSignal, country, route, checkpoint: db.profile.activeCheckpoint, profileSummary, memories }) }
+            { role: "user", content: JSON.stringify({ command, moduleSignal, country, route, checkpoint: db.profile.activeCheckpoint, profileSummary, memories, platformMode, modeContext }) }
           ],
           max_output_tokens: 360
         })
@@ -5421,7 +5430,7 @@ async function conversationalReasoningResponse(db, user, command, options = {}) 
     intent: "conversation.open_reasoning",
     response: responseText,
     status: "completed",
-    metadata: { conversationMode: true, redirectSection: moduleSignal.section, provider, moduleSignal, memoriesUsed: memories.map(item => item.id).filter(Boolean) }
+    metadata: { conversationMode: true, platformMode, modeContext, redirectSection: moduleSignal.section, provider, moduleSignal, memoriesUsed: memories.map(item => item.id).filter(Boolean) }
   };
 }
 
@@ -11016,7 +11025,14 @@ async function api(req, res, url) {
     const body = await readBody(req);
     const command = String(body.command || "").trim();
     if (body.inputMode === "voice") voiceRecord(db, user, "speech-to-text", `Voice command transcribed: ${command}`, { command });
-    const rawResult = await runAgentCommand(db, user, command, { confirm: body.confirm === true, stageOnly: body.stageOnly === true, conversational: body.conversational === true, note: body.note });
+    const rawResult = await runAgentCommand(db, user, command, {
+      confirm: body.confirm === true,
+      stageOnly: body.stageOnly === true,
+      conversational: body.conversational === true,
+      mode: body.mode,
+      modeContext: body.modeContext,
+      note: body.note
+    });
     const result = humanizeAgentResult(db, user, rawResult, command);
     commandRecord(db, user, command, result);
     if (body.outputMode === "voice") voiceRecord(db, user, "text-to-speech", `Voice response prepared: ${result.response}`, { response: result.response });
