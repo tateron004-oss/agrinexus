@@ -899,6 +899,39 @@ body.user-mode .user-service-buttons strong {
 body.user-mode .user-service-buttons .service-ask {
   min-height: 96px;
 }
+body.user-mode .section.active {
+  display: block;
+  max-height: none;
+  overflow: visible;
+}
+body.user-mode .section.active:not(#dashboard) > :not(.user-simple-module) {
+  display: none !important;
+}
+body.user-mode .user-simple-module {
+  display: grid;
+  gap: 10px;
+  width: 100%;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: #ffffff;
+  box-shadow: 0 14px 32px rgba(23, 50, 64, .08);
+}
+body.user-mode .user-simple-module h2 {
+  margin: 0;
+  color: #173240;
+  font-size: 1.18rem;
+  line-height: 1.15;
+}
+body.user-mode .user-simple-module p {
+  margin: 0;
+  color: var(--muted);
+  font-size: .9rem;
+  line-height: 1.3;
+}
+body.user-mode .user-module-buttons {
+  margin-top: 2px;
+}
 body.user-mode .user-outcome-panel article {
   min-height: auto;
 }

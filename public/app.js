@@ -2508,6 +2508,7 @@ function goSection(sectionId, options = {}) {
     });
   }
   if (sectionId === "map") setTimeout(() => map && map.invalidateSize(), 100);
+  renderUserSimpleActiveSection(sectionId);
   updateUserBackHome(sectionId);
   announce(`${sectionId} section opened`);
 }
@@ -3539,6 +3540,82 @@ function renderUserWorkspace() {
       ${serviceButtons.map(item => `<button type="button" class="${escapeHtml(item.className)}" ${item.ask ? `data-mobile-ask="true"` : `data-simple-section="${item.section}"`}>
         <strong>${translateText(item.label)}</strong>
       </button>`).join("")}
+    </section>
+  `;
+}
+
+const simpleUserSections = {
+  learning: {
+    title: "What do you want to learn?",
+    buttons: [
+      { label: "Start a Course", command: "start training path" },
+      { label: "Finish Lesson", command: "complete my lesson" },
+      { label: "Get Certificate", command: "issue my certificate" },
+      { label: "Make Captions", command: "build captions" }
+    ]
+  },
+  workforce: {
+    title: "How can we help with work?",
+    buttons: [
+      { label: "Find Jobs", command: "show me jobs" },
+      { label: "Apply for Job", command: "apply for that job" },
+      { label: "Check Skills", command: "review my workforce gaps" },
+      { label: "Plan Shift", command: "schedule my shift" }
+    ]
+  },
+  health: {
+    title: "What health help do you need?",
+    buttons: [
+      { label: "Start Intake", command: "start telehealth intake" },
+      { label: "Talk to Provider", command: "open telehealth access" },
+      { label: "Check Region", command: "check health risk in my region" },
+      { label: "Accessibility Help", command: "create audio guide and captions" }
+    ]
+  },
+  trade: {
+    title: "What do you want to do with crops?",
+    buttons: [
+      { label: "Contact Buyer", command: "contact my buyer" },
+      { label: "Create Order", command: "create a crop order" },
+      { label: "Track Route", command: "track my route" },
+      { label: "Scan Farm", command: "run drone scan" }
+    ]
+  },
+  map: {
+    title: "What do you want to check?",
+    buttons: [
+      { label: "Check Route", command: "check route risk" },
+      { label: "Check Farm", command: "run drone scan" },
+      { label: "Find Facility", command: "find nearest health facility" },
+      { label: "Explain Map", command: "explain the map" }
+    ]
+  },
+  profile: {
+    title: "What do you need from your account?",
+    buttons: [
+      { label: "My Progress", command: "summarize my progress" },
+      { label: "My Messages", command: "show my messages" },
+      { label: "My Certificates", command: "show my certificates" },
+      { label: "Help Me", command: "help me" }
+    ]
+  }
+};
+
+function renderUserSimpleActiveSection(sectionId = currentSectionId()) {
+  if (experienceMode !== "user" || sectionId === "dashboard") return;
+  const config = simpleUserSections[sectionId];
+  const target = config ? $(`#${sectionId}`) : null;
+  if (!target) return;
+  target.innerHTML = `
+    <section class="user-simple-module" aria-label="${translateText(config.title)}">
+      <span class="eyebrow">${translateText("AgriNexus")}</span>
+      <h2>${translateText(config.title)}</h2>
+      <p>${translateText("Tap one button. Nexus will do the next step.")}</p>
+      <div class="user-service-buttons user-module-buttons">
+        ${config.buttons.map(action => `<button type="button" class="service-ask" data-simple-command="${escapeHtml(action.command)}">
+          <strong>${translateText(action.label)}</strong>
+        </button>`).join("")}
+      </div>
     </section>
   `;
 }
@@ -4843,6 +4920,7 @@ function render() {
   applyAccessibilityPrefs();
   applyAccessibilityAttributes();
   renderMap();
+  renderUserSimpleActiveSection(currentSectionId());
   const hashSection = sectionFromHash();
   if (hashSection !== currentSectionId()) goSection(hashSection, { updateHash: false, scroll: false });
 }
