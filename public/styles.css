@@ -1005,6 +1005,53 @@ body.user-mode .global-assistant {
   width: min(440px, calc(100vw - 20px));
   transform: translateX(-50%);
 }
+body.user-mode .modal {
+  align-items: center;
+  padding: 10px;
+  background: rgba(23, 50, 64, .72);
+}
+body.user-mode .modal-panel {
+  width: min(440px, calc(100vw - 20px));
+  max-height: calc(100vh - 20px);
+  overflow: auto;
+  border: 3px solid #173240;
+  border-radius: 18px;
+}
+body.user-mode .grandma-workflow .modal-head {
+  gap: 10px;
+}
+body.user-mode .grandma-workflow .modal-eyebrow,
+body.user-mode .grandma-workflow .workflow-voice-prompt,
+body.user-mode .grandma-workflow .workflow-fields,
+body.user-mode .grandma-workflow .task-list,
+body.user-mode .grandma-workflow #workflowNote,
+body.user-mode .grandma-workflow label[for="workflowNote"],
+body.user-mode .grandma-workflow #workflowOutcome,
+body.user-mode .grandma-workflow .workflow-voice-confirm {
+  display: none !important;
+}
+body.user-mode .grandma-workflow h2 {
+  font-size: 1.35rem;
+  line-height: 1.15;
+}
+body.user-mode .grandma-workflow .modal-summary {
+  color: #173240;
+  font-size: 1.08rem;
+  font-weight: 850;
+  line-height: 1.35;
+}
+body.user-mode .grandma-workflow .modal-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+body.user-mode .grandma-workflow .modal-actions button,
+body.user-mode .grandma-workflow .modal-close {
+  min-height: 68px;
+  border-width: 2px;
+  font-size: 1.08rem;
+  font-weight: 950;
+}
 body.user-mode .user-back-home:not(.hidden) {
   display: inline-flex;
   align-items: center;

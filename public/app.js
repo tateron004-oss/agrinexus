@@ -2471,6 +2471,9 @@ function updateWorkspaceBar(sectionId) {
 function goSection(sectionId, options = {}) {
   const target = $(`#${sectionId}`);
   if (!target || !target.classList.contains("section")) sectionId = "dashboard";
+  if (experienceMode === "user" && sectionId !== "dashboard" && !simpleUserSections[sectionId]) {
+    sectionId = "dashboard";
+  }
   if (!canOpenSection(sectionId)) {
     const fallback = firstAllowedSection();
     toast(`Your ${data.user.role} login cannot open ${sectionId}.`);
@@ -5097,6 +5100,7 @@ function closeWorkflowModal() {
   pendingWorkflow = null;
   stopVoicePlayback();
   $("#workflowModal")?.classList.add("hidden");
+  $("#workflowModal")?.classList.remove("grandma-workflow");
   if (lastFocusedElement && typeof lastFocusedElement.focus === "function") lastFocusedElement.focus();
 }
 
@@ -5126,6 +5130,7 @@ function readWorkflowModal() {
 function openWorkflowModal(config) {
   pendingWorkflow = config;
   lastFocusedElement = document.activeElement;
+  $("#workflowModal")?.classList.toggle("grandma-workflow", experienceMode === "user");
   $("#workflowEyebrow").textContent = translateText(config.eyebrow || "Workflow");
   $("#workflowTitle").textContent = translateText(config.title);
   $("#workflowSummary").textContent = translateText(config.summary);
