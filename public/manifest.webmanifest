@@ -50,6 +50,13 @@
       "description": "Open workforce readiness and job workflows.",
       "url": "/?section=workforce",
       "icons": [{ "src": "/icons/agri-nexus-192.png", "sizes": "192x192", "type": "image/png" }]
+    },
+    {
+      "name": "Live Investor Mode",
+      "short_name": "Demo",
+      "description": "Open the investor-ready dashboard, impact metrics, and evidence timeline.",
+      "url": "/?section=dashboard&mode=investor",
+      "icons": [{ "src": "/icons/agri-nexus-192.png", "sizes": "192x192", "type": "image/png" }]
     }
   ]
 }

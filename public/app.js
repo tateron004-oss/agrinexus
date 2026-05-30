@@ -3385,6 +3385,39 @@ function renderSimpleHome() {
   }).join("");
 }
 
+function renderElevationPanels() {
+  const impact = data.impactDashboard || { metrics: [], status: "build-evidence", summary: "" };
+  if ($("#impactStatus")) $("#impactStatus").textContent = impact.status || "Pilot-ready";
+  if ($("#impactDashboardPanel")) {
+    $("#impactDashboardPanel").innerHTML = (impact.metrics || []).map(item => {
+      const value = item.format === "money" ? money(item.value || 0) : `${item.value}${item.suffix || ""}`;
+      return row(item.label, `${value} - ${item.detail}`);
+    }).join("") || row("Impact", "Run workflows to create impact evidence.");
+  }
+  const timeline = data.missionTimeline || { items: [], stages: [] };
+  if ($("#missionTimelineCount")) $("#missionTimelineCount").textContent = `${timeline.total || 0} events`;
+  if ($("#missionTimelinePanel")) {
+    const stageHtml = (timeline.stages || []).map(stage => `<div><strong>${translateText(stage.title)}</strong><span>${translateText(stage.status)}</span></div>`).join("");
+    const itemHtml = (timeline.items || []).slice(0, 8).map(item => `<div><strong>${translateText(item.module)} - ${translateText(item.title)}</strong><span>${translateText(item.detail)}</span><small>${translateText(item.status)}${item.evidence ? ` - ${translateText(item.evidence)}` : ""}</small></div>`).join("");
+    $("#missionTimelinePanel").innerHTML = itemHtml || stageHtml || `<div>${translateText("Run a workflow to create the first mission timeline event.")}</div>`;
+  }
+  if ($("#liveInvestorDemoPanel")) {
+    const demo = (data.profile.liveInvestorDemos || [])[0];
+    const packet = (data.profile.evidenceExports || [])[0];
+    $("#liveInvestorDemoPanel").innerHTML = demo
+      ? `<div><strong>${translateText(demo.title)} - ${translateText(demo.status)}</strong><span>${translateText((demo.narratorScript || []).join(" "))}</span><small>${translateText(`Evidence packet: ${demo.evidenceExportId || packet?.id || "ready"}`)}</small></div>`
+      : `<div>${translateText("Run live investor mode to create a narrated pilot, AI orchestration, timeline evidence, and export packet.")}</div>`;
+  }
+  if ($("#pwaPolishPanel")) {
+    $("#pwaPolishPanel").innerHTML = [
+      row("Install mode", "Manifest, service worker, and app shortcuts are active."),
+      row("Low bandwidth", "Offline packets, SMS-friendly workflows, and local evidence are supported."),
+      row("Voice-first", "Nexus can guide users through workflows with microphone or typed commands."),
+      row("Mobile layout", "Persona buttons and guided actions reduce navigation for non-technical users.")
+    ].join("");
+  }
+}
+
 function renderWorkflowBoards(country, route) {
   const product = firstProduct();
   const role = firstEligibleRole();
@@ -3479,6 +3512,7 @@ function render() {
   $("#kpiFacilities").textContent = data.countries.reduce((sum, item) => sum + item.facilities, 0);
   $("#kpiOrders").textContent = data.profile.orders.length;
   renderSimpleHome();
+  renderElevationPanels();
   $("#sessionBriefingStatus").textContent = translateText(sessionBriefing.status || "ready");
   $("#sessionBriefingPanel").innerHTML = [
     `<div><strong>${translateText(sessionBriefing.title || "Welcome back")}</strong><span>${translateText(sessionBriefing.message || "Ask AgriNexus what to do next.")}</span></div>`,
@@ -5714,6 +5748,50 @@ async function mutate(path, body, success) {
   }
 }
 
+async function runLiveInvestorDemoMode() {
+  const button = $("#liveInvestorDemoBtn");
+  if (button) {
+    button.disabled = true;
+    button.textContent = "Running...";
+  }
+  try {
+    data = await request("/api/demo/investor-live", { method: "POST", body: { scenario: "farmer-market" } });
+    render();
+    const demo = data.liveInvestorDemoResult?.demo || (data.profile.liveInvestorDemos || [])[0];
+    const message = demo?.narratorScript?.join(" ") || "Live investor mode completed with pilot evidence, AI orchestration, and export packet.";
+    setVoiceResponse(message, true);
+    toast("Live investor mode complete");
+  } catch (error) {
+    toast(error.message);
+  } finally {
+    if (button) {
+      button.disabled = false;
+      button.textContent = "Run live investor mode";
+    }
+  }
+}
+
+async function exportEvidencePacket() {
+  try {
+    data = await request("/api/evidence/export", { method: "POST", body: { audience: "investor" } });
+    render();
+    const packet = data.evidenceExportResult;
+    if (packet?.content) {
+      const blob = new Blob([packet.content], { type: "text/markdown;charset=utf-8" });
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = `agrinexus-evidence-${new Date().toISOString().slice(0, 10)}.md`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      setTimeout(() => URL.revokeObjectURL(link.href), 1000);
+    }
+    toast("Evidence packet exported");
+  } catch (error) {
+    toast(error.message);
+  }
+}
+
 async function runAdminHealthCheckDirect() {
   const button = $("#adminHealthCheck");
   if (button) {
@@ -7303,6 +7381,9 @@ function bindStatic() {
   $("#droneMissionBtn").onclick = () => openWorkflowModal(workflowConfig("trade", "drone-plan", { dataset: { productId: firstProduct()?.id } }));
   $("#droneScanBtn").onclick = () => openWorkflowModal(workflowConfig("trade", "drone", { dataset: { productId: firstProduct()?.id } }));
   $("#droneInterventionBtn").onclick = () => openWorkflowModal(workflowConfig("trade", "drone-intervention", { dataset: { productId: firstProduct()?.id } }));
+  $("#liveInvestorDemoBtn").onclick = runLiveInvestorDemoMode;
+  $("#exportEvidenceBtn").onclick = exportEvidencePacket;
+  $("#dashboardInstallBtn").onclick = installAgriNexusApp;
   $$("[data-pay]").forEach(button => button.onclick = () => {
     const [provider, amount] = button.dataset.pay.split(":");
     openWorkflowModal({

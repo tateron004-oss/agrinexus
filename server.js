@@ -459,6 +459,8 @@ function publicState(db, user) {
     agentCapabilities,
     jarvisReadiness,
     sessionBriefing: sessionBriefingModel(db, user, providers),
+    impactDashboard: impactDashboardModel(db, providers),
+    missionTimeline: missionTimelineModel(db),
     smartActions: smartNextActions(db, user, providers),
     activationGuide: productionActivationGuide(db, providers),
     engineSetup: renderEngineEnvPlan(db),
@@ -468,6 +470,136 @@ function publicState(db, user) {
     admin: adminSnapshot(db, providers),
     profile: db.profile
   };
+}
+
+function impactDashboardModel(db, providers = runtimeProviders(db)) {
+  ensureLearningProfile(db.profile);
+  ensureWorkforceProfile(db.profile);
+  ensureHealthProfile(db.profile);
+  ensureTradeProfile(db.profile);
+  ensureAiProfile(db.profile);
+  ensureCommunicationProfile(db.profile);
+  const orders = db.profile.orders || [];
+  const tradeValue = orders.reduce((sum, order) => sum + Number(order.total || 0), 0);
+  const trained = new Set([...(db.profile.completedCourses || []), ...(db.profile.certificates || []).map(item => item.courseId)]).size;
+  const providerEvents = (db.profile.integrationEvents || []).length;
+  const connectedProviders = providers.filter(provider => provider.status === "connected").length;
+  const communications = (db.profile.communicationThreads || []).length + (db.profile.tradeMessageThreads || []).length;
+  const ruralAccessScore = Math.min(100, Math.round(
+    20
+    + Math.min(20, trained * 8)
+    + Math.min(15, (db.profile.healthIntakes || []).length * 5)
+    + Math.min(15, (db.profile.applications || []).length * 7)
+    + Math.min(15, orders.length * 5)
+    + Math.min(15, communications * 4)
+  ));
+  const metrics = [
+    { label: "Learners trained", value: trained, detail: `${(db.profile.enrollments || []).length} enrollment(s), ${(db.profile.certificates || []).length} certificate(s)` },
+    { label: "Jobs supported", value: (db.profile.applications || []).length + (db.profile.shiftSchedule || []).length, detail: `${(db.profile.applications || []).length} application(s), ${(db.profile.shiftSchedule || []).length} shift(s)` },
+    { label: "Telehealth cases", value: (db.profile.healthIntakes || []).length, detail: `${(db.profile.carePlans || []).length} care plan(s), ${(db.profile.telehealthFollowUps || []).length} follow-up(s)` },
+    { label: "Trade value", value: tradeValue, detail: `${orders.length} order(s), ${(db.profile.walletTransactions || []).length} wallet transaction(s)`, format: "money" },
+    { label: "Communication threads", value: communications, detail: "Learning, workforce, telehealth, provider, and buyer-seller threads" },
+    { label: "Provider evidence", value: providerEvents, detail: `${connectedProviders}/${providers.length} connected provider(s)` },
+    { label: "Rural access score", value: ruralAccessScore, detail: "Composite learning, care, work, trade, communication, and evidence score", suffix: "%" }
+  ];
+  return {
+    status: ruralAccessScore >= 80 ? "investor-ready" : ruralAccessScore >= 55 ? "pilot-ready" : "build-evidence",
+    ruralAccessScore,
+    metrics,
+    summary: `AgriNexus has ${providerEvents} audit event(s), ${communications} communication thread(s), ${orders.length} trade order(s), and ${ruralAccessScore}% rural access readiness.`,
+    updatedAt: new Date().toISOString()
+  };
+}
+
+function missionTimelineModel(db) {
+  const items = [];
+  const add = (module, title, detail, status, createdAt, evidence = "") => items.push({
+    id: crypto.randomUUID(),
+    module,
+    title,
+    detail,
+    status,
+    evidence,
+    createdAt: createdAt || new Date().toISOString()
+  });
+  (db.profile.enrollments || []).slice(0, 3).forEach(item => add("Learning", "Course pathway started", `${item.progress || 0}% progress`, item.status || "active", item.startedAt, item.courseId));
+  (db.profile.certificates || []).slice(0, 3).forEach(item => add("Learning", "Certificate issued", item.title || item.courseId, "complete", item.issuedAt, item.certificateNumber));
+  (db.profile.applications || []).slice(0, 3).forEach(item => add("Workforce", "Role application submitted", item.roleTitle, item.status || "submitted", item.submittedAt, item.id));
+  (db.profile.healthIntakes || []).slice(0, 3).forEach(item => add("Healthcare", "Telehealth intake opened", item.patientRef || item.needSummary, item.queueStatus || "active", item.createdAt, item.riskLevel));
+  (db.profile.orders || []).slice(-3).forEach(item => add("AgriTrade", "Trade order created", `${item.orderNumber || item.id}: ${item.product}`, item.stage || "active", item.createdAt, item.checkpoint));
+  (db.profile.droneScans || []).slice(0, 3).forEach(item => add("AgriTech", "Drone field scan completed", `${item.productName}: ${item.cropHealthScore}% crop health`, item.status || "complete", item.createdAt, item.scanRef));
+  (db.profile.communicationThreads || []).slice(0, 3).forEach(item => add(item.module || "Communications", "Two-way thread opened", `${item.channel} with ${item.participantName}`, item.status, item.createdAt, item.subject));
+  (db.profile.aiOrchestrations || []).slice(0, 3).forEach(item => add("AI", "AI orchestration reviewed", item.recommendation, item.status, item.createdAt, item.aiRunId));
+  (db.profile.integrationEvents || []).slice(0, 5).forEach(item => add(item.module || "Integrations", item.action, item.detail, item.status, item.createdAt, item.providerName || item.providerId));
+  const sorted = items.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)).slice(0, 18);
+  return {
+    total: sorted.length,
+    latest: sorted[0] || null,
+    items: sorted,
+    stages: [
+      { title: "Need identified", status: sorted.length ? "done" : "pending" },
+      { title: "AI intake or guidance", status: (db.profile.aiRuns || []).length ? "done" : "pending" },
+      { title: "Workflow started", status: (db.profile.integrationEvents || []).length ? "done" : "pending" },
+      { title: "Communication opened", status: (db.profile.communicationThreads || []).length || (db.profile.tradeMessageThreads || []).length ? "done" : "pending" },
+      { title: "Evidence created", status: (db.profile.integrationEvents || []).length >= 5 ? "done" : "active" },
+      { title: "Next action recommended", status: (db.profile.workflowIntelligence || []).length || (db.profile.aiOrchestrations || []).length ? "done" : "pending" }
+    ]
+  };
+}
+
+function evidenceExportPacket(db, user, audience = "investor") {
+  const impact = impactDashboardModel(db);
+  const timeline = missionTimelineModel(db);
+  const briefing = sessionBriefingModel(db, user, runtimeProviders(db));
+  const lines = [
+    "# AgriNexus Evidence Packet",
+    "",
+    `Audience: ${audience}`,
+    `Generated: ${new Date().toISOString()}`,
+    `Operator: ${user.name} (${user.role})`,
+    "",
+    "## Executive Summary",
+    impact.summary,
+    briefing.message || "",
+    "",
+    "## Impact Metrics",
+    ...impact.metrics.map(item => `- ${item.label}: ${item.format === "money" ? `$${Number(item.value || 0).toLocaleString()}` : `${item.value}${item.suffix || ""}`} - ${item.detail}`),
+    "",
+    "## Mission Timeline",
+    ...timeline.items.slice(0, 12).map(item => `- ${item.module}: ${item.title} - ${item.detail} (${item.status})`),
+    "",
+    "## Provider Evidence",
+    ...(db.profile.integrationEvents || []).slice(0, 12).map(item => `- ${item.module}: ${item.action} - ${item.status} - ${item.detail}`),
+    "",
+    "## AI Evidence",
+    ...(db.profile.aiRuns || []).slice(0, 8).map(item => `- ${item.type}: ${item.provider}${item.model ? ` (${item.model})` : ""} - ${item.reviewStatus || "pending-human-review"}`),
+    "",
+    "## Communication Evidence",
+    ...(db.profile.communicationThreads || []).slice(0, 8).map(item => `- ${item.module}: ${item.channel} with ${item.participantName} - ${item.subject} (${item.status})`),
+    ...(db.profile.tradeMessageThreads || []).slice(0, 4).map(item => `- AgriTrade: ${item.lastChannel} with ${item.buyerName} - ${item.productName} (${item.status})`)
+  ].filter(line => line !== null && line !== undefined);
+  const packet = {
+    id: crypto.randomUUID(),
+    audience,
+    title: "AgriNexus Evidence Packet",
+    format: "markdown",
+    content: lines.join("\n"),
+    createdBy: user.email,
+    createdAt: new Date().toISOString()
+  };
+  db.profile.evidenceExports = db.profile.evidenceExports || [];
+  db.profile.evidenceExports.unshift({ id: packet.id, audience, createdAt: packet.createdAt, title: packet.title });
+  db.profile.evidenceExports = db.profile.evidenceExports.slice(0, 20);
+  logIntegration(db, {
+    providerId: "database",
+    module: "Admin",
+    action: "evidence.export_created",
+    detail: `${packet.title} created for ${audience}.`,
+    metadata: { exportId: packet.id, audience },
+    dispatch: false
+  });
+  addActivity(db.profile, `${packet.title} created for ${audience}.`);
+  return packet;
 }
 
 function permissionsForRole(role) {
@@ -8678,6 +8810,54 @@ async function api(req, res, url) {
     addActivity(db.profile, "Executive demo run completed across learning, workforce, health, trade, AI, notifications, and integrations.");
     await writeDb(db);
     return send(res, 200, publicState(db, user));
+  }
+
+  if (url.pathname === "/api/demo/investor-live" && req.method === "POST") {
+    if (!canUse(user, "ai")) return send(res, 403, { error: "Role does not allow investor demo mode" });
+    const body = await readBody(req);
+    const pilotRun = await runLocalPilotStudio(db, user, body.scenario || "farmer-market");
+    const orchestration = await aiOrchestrationReview(db, user, { type: "copilot", note: "Live investor demo mode" });
+    const packet = evidenceExportPacket(db, user, "investor");
+    db.profile.liveInvestorDemos = db.profile.liveInvestorDemos || [];
+    const demo = {
+      id: crypto.randomUUID(),
+      title: "Live investor guided demo",
+      status: "complete",
+      narratorScript: [
+        "AgriNexus starts with a real user need.",
+        "Nexus reads learning, workforce, telehealth, trade, maps, communications, and provider evidence.",
+        "The platform recommends the highest-value next move.",
+        "Every action creates auditable evidence for partners and funders."
+      ],
+      pilotRunId: pilotRun.id,
+      orchestrationId: orchestration.orchestration.id,
+      evidenceExportId: packet.id,
+      createdBy: user.email,
+      createdAt: new Date().toISOString()
+    };
+    db.profile.liveInvestorDemos.unshift(demo);
+    db.profile.liveInvestorDemos = db.profile.liveInvestorDemos.slice(0, 10);
+    logIntegration(db, {
+      providerId: "openai",
+      module: "AI",
+      action: "demo.investor_live_completed",
+      detail: "Live investor guided demo completed with pilot evidence, AI orchestration, and export packet.",
+      metadata: { demoId: demo.id, pilotRunId: pilotRun.id, orchestrationId: orchestration.orchestration.id, evidenceExportId: packet.id }
+    });
+    await writeDb(db);
+    const state = publicState(db, user);
+    state.liveInvestorDemoResult = { demo, pilotRun, orchestration, packet };
+    return send(res, 200, state);
+  }
+
+  if (url.pathname === "/api/evidence/export" && req.method === "POST") {
+    if (!canUse(user, "ai")) return send(res, 403, { error: "Role does not allow evidence exports" });
+    const body = await readBody(req);
+    const packet = evidenceExportPacket(db, user, body.audience || "investor");
+    await writeDb(db);
+    const state = publicState(db, user);
+    state.evidenceExportResult = packet;
+    return send(res, 200, state);
   }
 
   if (url.pathname === "/api/pilot/run" && req.method === "POST") {

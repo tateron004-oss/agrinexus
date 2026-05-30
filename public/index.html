@@ -151,6 +151,36 @@
             <article><span id="kpiOrders">0</span><small>Orders</small></article>
           </div>
           <div id="dashboardWorkspace" class="workspace-grid"></div>
+          <div class="cards two">
+            <article>
+              <div class="tag-row"><span>Impact dashboard</span><span id="impactStatus">Pilot-ready</span></div>
+              <h3>Rural Impact Metrics</h3>
+              <div id="impactDashboardPanel" class="rows"></div>
+            </article>
+            <article>
+              <div class="tag-row"><span>Mission timeline</span><span id="missionTimelineCount">0 events</span></div>
+              <h3>Evidence Journey</h3>
+              <div id="missionTimelinePanel" class="activity"></div>
+            </article>
+          </div>
+          <div class="cards two">
+            <article>
+              <div class="tag-row"><span>Live investor mode</span><span>Guided</span></div>
+              <h3>One-Click Investor Walkthrough</h3>
+              <p>Nexus runs a pilot scenario, creates AI orchestration, updates the timeline, and prepares an evidence packet for review.</p>
+              <div id="liveInvestorDemoPanel" class="activity"></div>
+              <div class="action-row">
+                <button id="liveInvestorDemoBtn" class="primary" type="button">Run live investor mode</button>
+                <button id="exportEvidenceBtn" type="button">Export evidence packet</button>
+              </div>
+            </article>
+            <article>
+              <div class="tag-row"><span>App mode</span><span id="pwaPolishStatus">Installable</span></div>
+              <h3>Phone-Ready Field App</h3>
+              <div id="pwaPolishPanel" class="rows"></div>
+              <div class="action-row"><button id="dashboardInstallBtn" type="button">Install web app</button></div>
+            </article>
+          </div>
           <div class="command-launch-guide" aria-labelledby="commandLaunchTitle">
             <div class="command-launch-copy">
               <span class="eyebrow">Conversation-first guide</span>

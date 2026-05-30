@@ -796,6 +796,15 @@ async function call(path, body) {
   assert(wowDemo.profile.integrationEvents.some(event => event.action === "wow.telehealth_accessible"));
   assert(wowDemo.profile.integrationEvents.some(event => event.action === "wow.ai_orchestration"));
   assert(wowDemo.profile.notifications.some(item => item.channel === "wow-demo"));
+  const liveInvestor = await call("/api/demo/investor-live", { scenario: "farmer-market" });
+  assert(liveInvestor.liveInvestorDemoResult.demo.status === "complete");
+  assert(liveInvestor.profile.liveInvestorDemos.length >= 1);
+  assert(liveInvestor.impactDashboard.metrics.length >= 7);
+  assert(liveInvestor.missionTimeline.stages.length >= 6);
+  assert(liveInvestor.profile.integrationEvents.some(event => event.action === "demo.investor_live_completed"));
+  const evidencePacket = await call("/api/evidence/export", { audience: "investor" });
+  assert(evidencePacket.evidenceExportResult.content.includes("AgriNexus Evidence Packet"));
+  assert(evidencePacket.profile.evidenceExports.length >= 1);
   server.kill();
   fs.rmSync(tempDbPath, { force: true });
   console.log("Smoke test passed");

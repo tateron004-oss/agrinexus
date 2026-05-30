@@ -7,6 +7,7 @@ const html = fs.readFileSync(path.join(root, "public", "index.html"), "utf8");
 const app = fs.readFileSync(path.join(root, "public", "app.js"), "utf8");
 const server = fs.readFileSync(path.join(root, "server.js"), "utf8");
 const sw = fs.readFileSync(path.join(root, "public", "sw.js"), "utf8");
+const manifest = fs.readFileSync(path.join(root, "public", "manifest.webmanifest"), "utf8");
 
 const pages = ["index.html", "status.html", "terms.html", "privacy.html", "refund.html", "manifest.webmanifest", "sw.js", "icons/agri-nexus-icon.svg", "icons/agri-nexus-192.png", "icons/agri-nexus-512.png"];
 for (const page of pages) {
@@ -45,6 +46,9 @@ const clickTargets = [
   "pilotRuralAccessBtn",
   "pilotFarmerMarketBtn",
   "pilotHealthWorkforceBtn",
+  "liveInvestorDemoBtn",
+  "exportEvidenceBtn",
+  "dashboardInstallBtn",
   "adminHealthCheck",
   "liveServiceCheckBtn",
   "liveServiceCheckFromIntegrations",
@@ -184,6 +188,18 @@ assert(app.includes("Latest Workflow Guidance"), "Dashboard must show the latest
 assert(server.includes("function smartNextActions"), "Backend needs proactive smart next actions");
 assert(app.includes("Recommended Next Actions"), "Dashboard must show proactive smart guidance");
 assert(server.includes("/api/intelligence/next-actions"), "Backend needs a next-actions intelligence endpoint");
+assert(server.includes("function impactDashboardModel"), "Backend needs investor impact metrics");
+assert(server.includes("function missionTimelineModel"), "Backend needs a real mission timeline model");
+assert(server.includes("function evidenceExportPacket"), "Backend needs evidence packet export");
+assert(server.includes("/api/demo/investor-live"), "Backend needs live investor guided demo mode");
+assert(server.includes("/api/evidence/export"), "Backend needs evidence export endpoint");
+assert(html.includes("Rural Impact Metrics"), "Dashboard needs impact metrics panel");
+assert(html.includes("Evidence Journey"), "Dashboard needs mission timeline panel");
+assert(html.includes("One-Click Investor Walkthrough"), "Dashboard needs live investor walkthrough controls");
+assert(html.includes("Phone-Ready Field App"), "Dashboard needs PWA field-app polish panel");
+assert(app.includes("function runLiveInvestorDemoMode"), "Frontend needs live investor demo runner");
+assert(app.includes("function exportEvidencePacket"), "Frontend needs evidence export runner");
+assert(manifest.includes("Live Investor Mode"), "PWA manifest needs investor demo shortcut");
 assert(server.includes("function aiOrchestrationReview"), "Backend needs cross-module AI orchestration review");
 assert(server.includes("/api/ai/orchestrate"), "AI orchestration needs a backend endpoint");
 assert(html.includes("Platform Intelligence Review"), "Agent center needs an AI orchestration review panel");
