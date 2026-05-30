@@ -369,6 +369,7 @@ a:focus-visible,
 .user-outcome-panel,
 .user-action-grid,
 .user-intelligence-strip,
+.user-service-buttons,
 .user-production-grid {
   display: grid;
   gap: 12px;
@@ -459,6 +460,38 @@ a:focus-visible,
   color: var(--muted);
   font-size: .84rem;
   line-height: 1.3;
+}
+.user-service-buttons {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.user-service-buttons button {
+  min-height: 112px;
+  display: grid;
+  align-content: center;
+  text-align: left;
+  border: 1px solid #cddfe4;
+  border-radius: 12px;
+  background: #ffffff;
+  box-shadow: 0 10px 24px rgba(23, 50, 64, .07);
+}
+.user-service-buttons button:hover {
+  transform: translateY(-2px);
+  border-color: #9abac5;
+  box-shadow: 0 16px 34px rgba(23, 50, 64, .11);
+}
+.user-service-buttons strong,
+.user-service-buttons span {
+  display: block;
+}
+.user-service-buttons strong {
+  color: #173240;
+  font-size: 1.05rem;
+}
+.user-service-buttons span {
+  margin-top: 6px;
+  color: var(--muted);
+  font-size: .86rem;
+  line-height: 1.35;
 }
 .user-production-grid {
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -698,6 +731,10 @@ body.user-mode .simple-home p {
 }
 body.user-mode .simple-home-controls {
   display: none;
+}
+body.user-mode .sidebar,
+body.user-mode .workspace-bar {
+  display: none !important;
 }
 body.advanced-mode .investor-only,
 body.advanced-mode .admin-only {
@@ -2241,7 +2278,7 @@ body.reduced-motion *::after {
   }
 }
 @media (max-width: 980px) {
-  .login-view, .shell, .map-layout, .cards.two, .cards.three, .cards.four, .stats, .dashboard-actions, .simple-action-grid, .user-workspace-hero, .user-action-grid, .user-outcome-panel, .user-production-grid, .launch-wizard-steps, .demo-command, .command-launch-guide, .command-launch-grid, .local-pilot-studio, .demo-storyboard, .process-board, .workspace-grid, .workspace-split, .learning-layout, .track-strip, .catalog-desk, .catalog-grid, .workforce-layout, .pipeline-steps, .health-layout, .accessibility-panel, .accessibility-actions, .voice-command, .global-assistant { grid-template-columns: 1fr; }
+  .login-view, .shell, .map-layout, .cards.two, .cards.three, .cards.four, .stats, .dashboard-actions, .simple-action-grid, .user-workspace-hero, .user-action-grid, .user-service-buttons, .user-outcome-panel, .user-production-grid, .launch-wizard-steps, .demo-command, .command-launch-guide, .command-launch-grid, .local-pilot-studio, .demo-storyboard, .process-board, .workspace-grid, .workspace-split, .learning-layout, .track-strip, .catalog-desk, .catalog-grid, .workforce-layout, .pipeline-steps, .health-layout, .accessibility-panel, .accessibility-actions, .voice-command, .global-assistant { grid-template-columns: 1fr; }
   .user-intelligence-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .reasoning-steps,
   .reasoning-evidence,

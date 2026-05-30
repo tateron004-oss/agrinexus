@@ -3545,6 +3545,14 @@ function renderUserWorkspace() {
     { label: "Use field intelligence", detail: "Run drone, route, and map support for farm operations.", command: "run drone scan" },
     { label: "Ask Nexus", detail: "Speak or type what you need. Nexus will guide the next step.", command: "help me" }
   ];
+  const serviceButtons = [
+    { label: "Learning", detail: "Courses, lessons, captions, certificates", section: "learning" },
+    { label: "Work", detail: "Jobs, applications, gaps, shifts", section: "workforce" },
+    { label: "Health", detail: "Telehealth intake, vitals, care support", section: "health" },
+    { label: "Trade", detail: "Crops, buyers, orders, route support", section: "trade" },
+    { label: "Maps", detail: "Route risk, field intelligence, location", section: "map" },
+    { label: "Profile", detail: "Progress, records, activity, settings", section: "profile" }
+  ].filter(item => canOpenSection(item.section));
   target.innerHTML = `
     <section class="user-workspace-hero user-studio-hero">
       <div>
@@ -3579,6 +3587,12 @@ function renderUserWorkspace() {
         <strong>${translateText("Engines")}</strong>
         <span>${translateText(`${providerReady}/${providerTotal} services ready`)}</span>
       </button>` : ""}
+    </section>
+    <section class="user-service-buttons" aria-label="${translateText("Open a service")}">
+      ${serviceButtons.map(item => `<button type="button" data-simple-section="${item.section}">
+        <strong>${translateText(item.label)}</strong>
+        <span>${translateText(item.detail)}</span>
+      </button>`).join("")}
     </section>
     ${showLaunchTools ? `<section class="user-production-grid" aria-label="${translateText("Mobile permissions and provider depth")}">
       <article class="user-production-card">
