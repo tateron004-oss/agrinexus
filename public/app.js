@@ -3458,6 +3458,35 @@ function safeAgentFallbackResponse(command) {
   return "The live agent was slow, so I kept the app responsive. Use a module button or ask Nexus again in simpler words.";
 }
 
+function isConversationRepairCommand(lower) {
+  const value = String(lower || "").trim();
+  return /\b(i am lost|i'm lost|im lost|confused|stuck|not working|nothing works|didn't work|doesn't work|failed|blank screen|too much|overwhelmed|help me fix|fix this|where do i go|what happened|try again|recover|reset me|start over)\b/.test(value);
+}
+
+function conversationRepairPlan(command = "") {
+  const awareness = updateNexusAwareness(command, { silent: true });
+  const guide = intuitiveConversationGuide(awareness.inferredSection || currentSectionId());
+  const section = awareness.inferredSection || currentSectionId();
+  const openCommand = section && section !== currentSectionId() ? `Nexus, open ${section}` : guide.primaryCommand;
+  return {
+    mode: conversationPlatformLabel(awareness.mode),
+    problem: awareness.inferredIntent || "unclear request",
+    section,
+    waitingOn: awareness.waitingOn,
+    primaryCommand: guide.primaryCommand,
+    suggestions: [...new Set([openCommand, guide.primaryCommand, "Nexus, guide me", "Nexus, what should I say"])].filter(Boolean).slice(0, 4),
+    message: `I can recover this. I think you are dealing with ${awareness.inferredIntent || "a stuck step"} in ${section}. I am waiting on ${awareness.waitingOn}. The safest next move is: ${guide.primaryCommand}.`
+  };
+}
+
+function handleConversationRepair(command = "") {
+  const plan = conversationRepairPlan(command);
+  renderLiveVoiceSuggestions(plan.suggestions);
+  updateNexusBehaviorLayer("ready", `Repair mode: ${plan.problem}.`);
+  setVoiceResponse(`${plan.message} If that is not right, say what should I say, or say open telehealth, open learning, open workforce, open trade, open map, or open admin.`, true, { allowHandoff: false });
+  return true;
+}
+
 function inferAmbiguousIntent(command) {
   const text = String(command || "").toLowerCase().trim();
   if (!text) return null;
@@ -4199,9 +4228,11 @@ function jarvisInsights() {
   const modeMemory = conversationMemoryForMode();
   const conversationGuide = intuitiveConversationGuide();
   const awareness = updateNexusAwareness("", { silent: true });
+  const repair = conversationRepairPlan(agentPerformanceState.lastCommand || "");
   return [
     { title: conversationBrief.mode, detail: `${conversationBrief.tone}. Context: ${conversationBrief.focus}. Last: ${modeMemory.lastTopic || "ready for a conversation"}. Turns in this mode: ${modeMemory.turnCount || 0}.`, status: "ready", label: "Talk" },
     { title: "Live awareness", detail: `${awareness.inferredIntent} in ${awareness.section}. Waiting on ${awareness.waitingOn}. Safe next: ${awareness.safeNextAction}`, status: "ready", label: `${Math.round((awareness.confidence || 0) * 100)}%` },
+    { title: "Repair mode", detail: `${repair.problem}. If the user is stuck, use ${repair.primaryCommand}`, status: "ready", label: "Recover" },
     { title: "Conversation guide", detail: `${conversationGuide.reason} Best phrase: ${conversationGuide.primaryCommand}`, status: "ready", label: "Next" },
     { title: "Situational brief", detail: brief.summary, status: "ready", label: "Smart" },
     { title: "Admin intelligence", detail: `${adminBrief.topRisk} Recommendation: ${adminBrief.recommendation}`, status: adminBrief.riskCount ? "pending" : "ready", label: adminBrief.readiness },
@@ -7814,6 +7845,11 @@ async function handleVoiceCommand(rawCommand) {
     return;
   }
   if (!lower) return setVoiceResponse("Give me a command, and I will route it.", true);
+
+  if (isConversationRepairCommand(lower)) {
+    handleConversationRepair(command);
+    return;
+  }
 
   if (isUniversalLanguageCommand(command)) {
     await changeLanguageByVoice(command);
