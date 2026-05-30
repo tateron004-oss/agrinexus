@@ -28,6 +28,12 @@ hasAll(app, [
   "function nexusBehaviorMode",
   "function updateNexusBehaviorLayer",
   "function contextualVoiceSuggestions",
+  "function nexusDeepMemorySignals",
+  "function nexusAutopilotQueue",
+  "function providerActionDepthStatus",
+  "function nexusProactiveAlerts",
+  "function mobilePermissionRecoveryGuide",
+  "function interruptNexusSpeech",
   "title: \"Learn\"",
   "title: \"Work\"",
   "title: \"Health\"",
@@ -121,6 +127,10 @@ assert(app.includes("I want to sell maize"), "Nexus behavior layer should suppor
 assert(app.includes("I need a doctor"), "Nexus behavior layer should support natural telehealth requests without button hunting");
 assert(app.includes("Admin Operator"), "Nexus behavior layer should adapt for Admin mode");
 assert(app.includes("Investor Presenter"), "Nexus behavior layer should adapt for Investor mode");
+assert(app.includes("visibilitychange"), "Nexus behavior layer should recover voice-first listening after app visibility changes");
+assert(app.includes("Nexus is resuming voice-first listening"), "Nexus behavior layer should explain listening recovery");
+assert(app.includes("providerActionDepthStatus"), "Nexus behavior layer should summarize real provider action depth");
+assert(app.includes("mobilePermissionRecoveryGuide"), "Nexus behavior layer should guide mobile permission recovery");
 
 console.log("App behavior audit passed");
 console.log("Checked: app-mode language picker, service buttons, section containment, workflow confirmations, voice routes, overflow wrapping, and advanced-panel hiding.");

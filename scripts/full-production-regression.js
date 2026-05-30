@@ -12,6 +12,7 @@ const checks = [
   [process.execPath, ["--check", "scripts/generate-render-env.js"]],
   npmCheck("workflow:audit"),
   npmCheck("app:behavior-audit"),
+  npmCheck("app:jarvis-qa"),
   npmCheck("placeholder:audit"),
   npmCheck("production:clickthrough"),
   npmCheck("production:complete-check"),

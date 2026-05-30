@@ -2168,11 +2168,13 @@ async function requestProductionMobilePermission(kind) {
     if (kind === "microphone") {
       if (!navigator.mediaDevices?.getUserMedia) {
         setStatus("Microphone permission is not available in this browser. Typed commands still work.");
+        updateNexusBehaviorLayer("ready", mobilePermissionRecoveryGuide().guidance);
         return;
       }
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       stream.getTracks().forEach(track => track.stop());
       setStatus("Microphone is ready. Nexus can listen when voice mode is started.");
+      updateNexusBehaviorLayer("ready", "Microphone permission is ready for Nexus voice commands.");
       return;
     }
     if (kind === "notifications") {
@@ -2182,6 +2184,7 @@ async function requestProductionMobilePermission(kind) {
       }
       const result = await Notification.requestPermission();
       setStatus(result === "granted" ? "Notifications are ready for app alerts." : "Notifications were not enabled. The platform will keep alerts inside the app.");
+      updateNexusBehaviorLayer("ready", result === "granted" ? "Nexus can use browser alerts when supported." : "Nexus will keep proactive alerts inside the app.");
       return;
     }
     if (kind === "location") {
@@ -2193,6 +2196,7 @@ async function requestProductionMobilePermission(kind) {
         navigator.geolocation.getCurrentPosition(resolve, reject, { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 });
       });
       setStatus("Location is ready for map risk, route tracking, and field support.");
+      updateNexusBehaviorLayer("ready", "Location permission is ready for route and field intelligence.");
       return;
     }
     if (kind === "install") {
@@ -2835,8 +2839,10 @@ function renderNotificationPanel() {
   const target = $("#notificationPanel");
   if (!target) return;
   const notices = data.profile.notifications || [];
-  target.innerHTML = notices.length
-    ? notices.slice(0, 8).map(item => `<div><strong>${translateText(item.module)} - ${translateText(item.status)}</strong><span>${translateText(item.channel)}: ${translateText(item.message)}</span></div>`).join("")
+  const proactive = nexusProactiveAlerts();
+  const combined = [...proactive, ...notices].slice(0, 8);
+  target.innerHTML = combined.length
+    ? combined.map(item => `<div><strong>${translateText(item.module)} - ${translateText(item.status)}</strong><span>${translateText(item.channel)}: ${translateText(item.message)}</span></div>`).join("")
     : `<div>${translateText("No notifications sent yet.")}</div>`;
 }
 
@@ -3138,12 +3144,13 @@ function nexusBehaviorMode() {
 function updateNexusBehaviorLayer(status = "ready", detail = "") {
   const mode = nexusBehaviorMode();
   const memory = data ? nexusMemoryProfile() : { language: "English", section: "dashboard" };
+  const proactive = data ? nexusProactiveAlerts()[0] : null;
   const label = status === "listening" ? "Listening"
     : status === "thinking" ? "Thinking"
       : status === "confirming" ? "Confirm"
         : status === "speaking" ? "Speaking"
           : "Ready";
-  const message = detail || `${mode.label}: ${label} in ${memory.language}`;
+  const message = detail || (proactive ? `${mode.label}: ${proactive.message}` : `${mode.label}: ${label} in ${memory.language}`);
   const dockStatus = $("#nexusBehaviorStatus");
   if (dockStatus) dockStatus.textContent = translateText(message);
   const localStatus = $("#globalVoiceOutputStatus");
@@ -3173,6 +3180,77 @@ function contextualVoiceSuggestions(sectionId = currentSectionId()) {
   if (experienceMode === "admin") return bySection.admin;
   if (experienceMode === "investor") return ["Nexus, explain this to investors", "Nexus, run investor voice demo", "Nexus, summarize impact", "Nexus, prepare government briefing"];
   return bySection[sectionId] || user;
+}
+
+function nexusDeepMemorySignals() {
+  const memory = data?.profile?.agentMemory || {};
+  const facts = [
+    ...(memory.preferences || []),
+    ...(memory.learnedPatterns || []),
+    ...(memory.longTermFacts || []),
+    ...(memory.conversationalIntakes || []).map(item => ({ text: `${item.module || item.domain || "intake"} intake`, confidence: 0.8 }))
+  ];
+  return {
+    count: facts.length,
+    latest: facts[0]?.text || memory.lastSummary || "No long-term memory captured yet.",
+    activeMission: memory.activeMission || memory.lastGoal || "No active mission yet.",
+    preferredLanguage: voiceLanguageName()
+  };
+}
+
+function nexusAutopilotQueue() {
+  const plans = (data?.profile?.agentPlans || []).filter(plan => plan.mode === "autopilot" || /autopilot/i.test(plan.goal || ""));
+  const executions = data?.profile?.agentExecutions || [];
+  return {
+    waiting: plans.filter(plan => plan.status === "awaiting-approval").length,
+    completed: executions.filter(item => item.status === "completed").length,
+    next: plans.find(plan => plan.status === "awaiting-approval") || plans[0] || null
+  };
+}
+
+function providerActionDepthStatus() {
+  const providers = data?.providers || [];
+  const connected = id => ["connected", "ready"].includes(providers.find(provider => provider.id === id)?.status);
+  const groups = {
+    learning: ["learning-courses", "learning-certificates"],
+    workforce: ["workforce-jobs", "workforce-calendar", "workforce-notifications", "workforce-hris", "workforce-shifts"],
+    telehealth: ["health-telehealth", "health-ehr", "health-notifications"],
+    trade: ["trade-payments", "trade-logistics", "trade-market", "field-drones"],
+    voice: ["openai", "voice-stt", "voice-tts", "phone-voice"],
+    communications: ["email-delivery", "sms-delivery", "whatsapp-delivery"]
+  };
+  return Object.fromEntries(Object.entries(groups).map(([group, ids]) => [
+    group,
+    { ready: ids.filter(connected).length, total: ids.length, ids }
+  ]));
+}
+
+function nexusProactiveAlerts() {
+  const readiness = data?.admin?.readiness || {};
+  const automation = data?.automation || {};
+  const queue = nexusAutopilotQueue();
+  const memory = nexusDeepMemorySignals();
+  const alerts = [];
+  if (queue.waiting) alerts.push({ module: "Nexus", status: "autopilot-waiting", channel: "assistant", message: `${queue.waiting} mission needs approval.` });
+  if ((readiness.readyCount || 0) < (readiness.total || 0)) alerts.push({ module: "Admin", status: "readiness-gap", channel: "assistant", message: `${readiness.readyCount || 0}/${readiness.total || 0} production checks ready.` });
+  if ((automation.readyCount || 0) < (automation.total || 0)) alerts.push({ module: "Automation", status: "automation-gap", channel: "assistant", message: `${automation.readyCount || 0}/${automation.total || 5} automation unlocks ready.` });
+  if (!memory.count) alerts.push({ module: "Memory", status: "teach-nexus", channel: "assistant", message: "Say remember, then tell Nexus a preference or mission." });
+  if ((data?.profile?.notifications || []).length) alerts.push({ module: "Notifications", status: "latest", channel: "assistant", message: (data.profile.notifications || [])[0].message });
+  return alerts.slice(0, 5);
+}
+
+function mobilePermissionRecoveryGuide() {
+  const secureEnough = window.isSecureContext || ["localhost", "127.0.0.1"].includes(location.hostname);
+  return {
+    secureEnough,
+    microphone: Boolean(navigator.mediaDevices?.getUserMedia),
+    notifications: "Notification" in window,
+    location: Boolean(navigator.geolocation),
+    install: Boolean(deferredInstallPrompt || window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone),
+    guidance: secureEnough
+      ? "Use Speak, Ask, Read, notifications, location, and install prompts when supported by this browser."
+      : "Use HTTPS hosting for production microphone, notifications, location, and install prompts."
+  };
 }
 
 function sectionFromHash() {
@@ -6710,6 +6788,18 @@ function stopVoicePlayback() {
   voiceAutoRestart = voiceFirstMode;
 }
 
+function interruptNexusSpeech(reason = "I stopped speaking and I am ready for the next instruction.") {
+  stopVoicePlayback();
+  updateNexusBehaviorLayer("listening", reason);
+  const status = $("#globalVoiceOutputStatus");
+  if (status) status.textContent = translateText(reason);
+  if (voiceFirstMode && !voiceRecognition && !document.hidden) {
+    setTimeout(() => {
+      if (!voiceRecognition && !voiceSpeaking && !voiceStopRequested) startVoiceListening();
+    }, 300);
+  }
+}
+
 function speakVoiceResponse(textOverride) {
   const text = textOverride || lastVoiceResponse;
   const compact = String(text || "").replace(/\s+/g, " ").trim();
@@ -6973,6 +7063,10 @@ async function handleVoiceCommand(rawCommand) {
   const wakeOnly = isWakePhraseOnly(localizedCommand);
   const command = cleanWakeCommand(localizedCommand);
   const lower = command.toLowerCase();
+  if (/\b(stop|pause|wait|hold on|be quiet|interrupt|cancel speech)\b/.test(lower) && voiceSpeaking) {
+    interruptNexusSpeech("I stopped speaking. Tell me the next instruction.");
+    return;
+  }
   updateNexusBehaviorLayer("thinking", command ? `Nexus is deciding how to help with: ${command}` : "Nexus is listening.");
   if (!lower && wakeOnly) {
     openAskNexus();
@@ -7168,6 +7262,27 @@ async function handleVoiceCommand(rawCommand) {
   }
   if (lower.includes("status") || lower.includes("readiness") || lower.includes("what is left")) {
     setVoiceResponse(voiceStatusSummary(), true);
+    return;
+  }
+  if (lower.includes("what do you remember") || lower.includes("show memory") || lower.includes("what have you learned")) {
+    const memory = nexusDeepMemorySignals();
+    setVoiceResponse(`I remember ${memory.count} useful item(s). Active mission: ${memory.activeMission}. Latest memory: ${memory.latest}.`, true);
+    return;
+  }
+  if (lower.includes("provider depth") || lower.includes("real provider actions") || lower.includes("what engines are live")) {
+    const depth = providerActionDepthStatus();
+    const summary = Object.entries(depth).map(([group, item]) => `${group}: ${item.ready}/${item.total}`).join(". ");
+    setVoiceResponse(`Provider action depth: ${summary}. Local workflows remain active while live providers are being connected.`, true);
+    return;
+  }
+  if (lower.includes("mobile permissions") || lower.includes("app permissions") || lower.includes("permissions check")) {
+    const permissions = mobilePermissionRecoveryGuide();
+    setVoiceResponse(`Mobile permission check: microphone ${permissions.microphone ? "available" : "not available"}, notifications ${permissions.notifications ? "available" : "not available"}, location ${permissions.location ? "available" : "not available"}. ${permissions.guidance}`, true);
+    return;
+  }
+  if (lower.includes("proactive alerts") || lower.includes("what needs attention") || lower.includes("alert me")) {
+    const alerts = nexusProactiveAlerts();
+    setVoiceResponse(alerts.length ? `Nexus sees ${alerts.length} alert(s): ${alerts.map(item => `${item.module} ${item.status}: ${item.message}`).join(" ")}` : "No proactive alerts need attention right now.", true);
     return;
   }
   if (lower.includes("what happened") || lower.includes("what just happened") || lower.includes("what did you do") || lower.includes("what evidence") || lower.includes("explain the last workflow") || lower.includes("good morning agrinexus") || lower.includes("good morning nexus") || lower.includes("daily briefing") || lower.includes("operator briefing") || lower.includes("morning briefing")) {
@@ -8231,6 +8346,24 @@ function bindStatic() {
   $("#globalCommandInput").addEventListener("keydown", event => {
     if (event.key === "Enter") runGlobalCommand();
   });
+  document.addEventListener("visibilitychange", () => {
+    if (document.hidden) {
+      if (voiceRecognition) {
+        voiceAutoRestart = voiceFirstMode;
+        voiceRecognition.stop();
+      }
+      updateNexusBehaviorLayer("ready", "Nexus paused listening while the app is hidden.");
+      return;
+    }
+    if (voiceFirstMode && voiceAutoRestart && !voiceRecognition && !voiceSpeaking) {
+      updateNexusBehaviorLayer("listening", "Nexus is resuming voice-first listening.");
+      setTimeout(() => {
+        if (!voiceRecognition && voiceFirstMode && !voiceSpeaking && !voiceStopRequested) startVoiceListening();
+      }, 600);
+    }
+  });
+  window.addEventListener("online", () => updateNexusBehaviorLayer("ready", "Connection restored. Nexus can use live services when configured."));
+  window.addEventListener("offline", () => updateNexusBehaviorLayer("ready", "Connection offline. Nexus will keep local workflows available."));
   refreshMicSupport();
   $("#jarvisToggle").onclick = toggleAskNexus;
   $("#jarvisCloseBtn").onclick = closeAskNexus;

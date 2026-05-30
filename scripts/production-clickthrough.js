@@ -469,6 +469,13 @@ assert(app.includes("function nexusMemoryProfile"), "Nexus behavior layer needs 
 assert(app.includes("function nexusBehaviorMode"), "Nexus behavior layer needs mode-specific behavior");
 assert(app.includes("function updateNexusBehaviorLayer"), "Nexus behavior layer needs a visible state indicator");
 assert(app.includes("function contextualVoiceSuggestions"), "Nexus behavior layer needs contextual voice suggestions");
+assert(app.includes("function nexusDeepMemorySignals"), "Jarvis effect needs deeper long-term memory signals");
+assert(app.includes("function nexusAutopilotQueue"), "Jarvis effect needs an autopilot mission queue");
+assert(app.includes("function providerActionDepthStatus"), "Jarvis effect needs real provider action-depth status");
+assert(app.includes("function nexusProactiveAlerts"), "Jarvis effect needs proactive alert generation");
+assert(app.includes("function mobilePermissionRecoveryGuide"), "Jarvis effect needs mobile permission recovery guidance");
+assert(app.includes("function interruptNexusSpeech"), "Jarvis effect needs voice interruption handling");
+assert(app.includes("visibilitychange"), "Jarvis effect needs background listening recovery when the app returns");
 assert(app.includes("I want to sell maize"), "Nexus must route natural trade requests without button hunting");
 assert(app.includes("I need a doctor"), "Nexus must route natural telehealth requests without button hunting");
 assert(app.includes("Admin Operator"), "Nexus must adapt for Admin mode");
