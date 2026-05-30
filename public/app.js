@@ -3550,7 +3550,7 @@ function renderUserWorkspace() {
 
 const simpleUserSections = {
   learning: {
-    title: "What do you want to learn?",
+    title: "Learn",
     className: "service-learning",
     buttons: [
       { label: "Start a Course", command: "start training path" },
@@ -3560,7 +3560,7 @@ const simpleUserSections = {
     ]
   },
   workforce: {
-    title: "How can we help with work?",
+    title: "Work",
     className: "service-workforce",
     buttons: [
       { label: "Find Jobs", command: "show me jobs" },
@@ -3570,7 +3570,7 @@ const simpleUserSections = {
     ]
   },
   health: {
-    title: "What health help do you need?",
+    title: "Health",
     className: "service-health",
     buttons: [
       { label: "Start Intake", command: "start telehealth intake" },
@@ -3580,7 +3580,7 @@ const simpleUserSections = {
     ]
   },
   trade: {
-    title: "What do you want to do with crops?",
+    title: "Trade",
     className: "service-trade",
     buttons: [
       { label: "Contact Buyer", command: "contact my buyer" },
@@ -3590,7 +3590,7 @@ const simpleUserSections = {
     ]
   },
   map: {
-    title: "What do you want to check?",
+    title: "Map",
     className: "service-map",
     buttons: [
       { label: "Check Route", command: "check route risk" },
@@ -3600,7 +3600,7 @@ const simpleUserSections = {
     ]
   },
   profile: {
-    title: "What do you need from your account?",
+    title: "Account",
     className: "service-profile",
     buttons: [
       { label: "My Progress", command: "summarize my progress" },
@@ -3620,7 +3620,7 @@ function renderUserSimpleActiveSection(sectionId = currentSectionId()) {
     <section class="user-simple-module" aria-label="${translateText(config.title)}">
       <span class="eyebrow">${translateText("AgriNexus")}</span>
       <h2>${translateText(config.title)}</h2>
-      <p>${translateText("Tap one button. Nexus will do the next step.")}</p>
+      <p>${translateText("Tap one button.")}</p>
       <div id="grandmaConfirmPanel" class="grandma-confirm-panel hidden" role="status" aria-live="polite"></div>
       <div class="user-service-buttons user-module-buttons">
         ${config.buttons.map(action => `<button type="button" class="${escapeHtml(config.className)}" data-simple-command="${escapeHtml(action.command)}">
@@ -5133,7 +5133,7 @@ function openWorkflowModal(config) {
   const grandmaMode = experienceMode === "user";
   $("#workflowModal")?.classList.toggle("grandma-workflow", grandmaMode);
   $("#workflowEyebrow").textContent = translateText(config.eyebrow || "Workflow");
-  $("#workflowTitle").textContent = translateText(config.title);
+  $("#workflowTitle").textContent = grandmaMode ? translateText("Ready?") : translateText(config.title);
   $("#workflowSummary").textContent = grandmaMode
     ? translateText("Do you want Nexus to do this now?")
     : translateText(config.summary);
@@ -5162,7 +5162,7 @@ function openWorkflowModal(config) {
   $("#workflowModal").classList.remove("hidden");
   $("#workflowConfirm").focus();
   const instruction = grandmaMode
-    ? `${translateText(config.title)}. ${translateText("Do you want Nexus to do this now?")}`
+    ? translateText("Do you want Nexus to do this now?")
     : `${translateText(config.title)}. ${translateText(config.summary)}. Say yes to confirm, no to cancel, or read to hear the workflow.`;
   announce(instruction);
   setVoiceResponse(instruction, false, { allowVoiceFirst: !grandmaMode });

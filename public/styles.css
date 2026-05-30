@@ -837,6 +837,7 @@ body.user-mode * {
 }
 body.user-mode .simple-home,
 body.user-mode .user-workspace-hero,
+body.user-mode .user-workspace-hero *,
 body.user-mode .user-intelligence-strip button,
 body.user-mode .user-service-buttons button,
 body.user-mode .user-action,
@@ -914,17 +915,25 @@ body.user-mode .user-simple-module {
   display: grid;
   gap: 12px;
   width: 100%;
+  max-width: 100%;
+  min-width: 0;
   padding: 14px;
   border: 2px solid #173240;
   border-radius: 16px;
   background: #ffffff;
   box-shadow: 0 14px 32px rgba(23, 50, 64, .08);
 }
+body.user-mode .user-simple-module,
+body.user-mode .user-simple-module * {
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
 body.user-mode .user-simple-module h2 {
   margin: 0;
   color: #173240;
-  font-size: 1.32rem;
+  font-size: 1.5rem;
   line-height: 1.15;
+  text-align: center;
 }
 body.user-mode .user-simple-module p {
   margin: 0;
@@ -932,6 +941,7 @@ body.user-mode .user-simple-module p {
   font-size: 1rem;
   font-weight: 800;
   line-height: 1.35;
+  text-align: center;
 }
 body.user-mode .user-module-buttons {
   margin-top: 2px;
@@ -1075,8 +1085,9 @@ body.user-mode .grandma-workflow .modal-close {
 }
 body.user-mode .grandma-workflow h2 {
   margin: 0;
-  font-size: 1.45rem;
+  font-size: 1.75rem;
   line-height: 1.15;
+  text-align: center;
   overflow-wrap: anywhere;
 }
 body.user-mode .grandma-workflow .modal-summary {
