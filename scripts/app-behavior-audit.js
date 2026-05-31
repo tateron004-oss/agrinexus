@@ -48,6 +48,8 @@ hasAll(app, [
   "function openDefaultUserSectionAction",
   "function renderUserInlineWorkflow",
   "function openMappedUserWorkflow",
+  "eventOrButton?.target?.closest",
+  "eventOrButton?.currentTarget?.matches",
   "data-inline-workflow-confirm",
   "data-inline-workflow-cancel",
   "pendingWorkflow = config",

@@ -9112,7 +9112,11 @@ async function runLocalPilotScenario(event) {
 }
 
 async function runSimpleAction(eventOrButton) {
-  const button = eventOrButton?.currentTarget || eventOrButton;
+  const selector = "[data-simple-command], [data-simple-section], [data-simple-pilot], [data-simple-demo], [data-simple-mission], [data-simple-action]";
+  const eventTargetButton = eventOrButton?.target?.closest?.(selector);
+  const currentTargetButton = eventOrButton?.currentTarget?.matches?.(selector) ? eventOrButton.currentTarget : null;
+  const directButton = eventOrButton?.matches?.(selector) ? eventOrButton : null;
+  const button = eventTargetButton || currentTargetButton || directButton;
   const status = $("#simpleActionStatus");
   if (!button) return;
   eventOrButton?.preventDefault?.();

@@ -394,6 +394,8 @@ assert(app.includes("data-inline-workflow-cancel"), "Inline user workflow needs 
 assert(app.includes("pendingWorkflow = config"), "User inline workflows must set the pending workflow before Confirm");
 assert(app.includes('$("#workflowModal")?.classList.add("hidden")'), "User inline workflows must keep blocking modal overlays closed");
 assert(app.includes("closeAskNexus({ silent: true })"), "User service buttons must clear assistant overlays before opening workflows");
+assert(app.includes("eventOrButton?.target?.closest"), "Simple button handler must support delegated clicks");
+assert(app.includes("eventOrButton?.currentTarget?.matches"), "Simple button handler must support direct button clicks");
 assert(app.includes('lower.includes("help me")'), "Do this/help commands need full workflow routing instead of partial assistant fallback");
 assert(app.includes('action: "orchestrate"'), "Do this should open a real AI orchestration workflow");
 assert(app.includes('openDefaultAction: experienceMode === "user"'), "User tab clicks must opt into default workflow actions");
