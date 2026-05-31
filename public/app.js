@@ -2197,8 +2197,8 @@ function runUserModeSelfTest() {
       if (!simpleUserCommandWorkflow(button.command)) missing.push(`${section}: ${button.label}`);
     });
   });
-  const currentScript = [...document.scripts].some(script => String(script.src || "").includes("nexus-behavior-72"));
-  const currentStyle = [...document.styleSheets].some(sheet => String(sheet.href || "").includes("nexus-behavior-72"));
+  const currentScript = [...document.scripts].some(script => String(script.src || "").includes("nexus-behavior-73"));
+  const currentStyle = [...document.styleSheets].some(sheet => String(sheet.href || "").includes("nexus-behavior-73"));
   if (!currentScript || !currentStyle) missing.push("new app files");
   const ok = missing.length === 0;
   const message = ok
@@ -6849,13 +6849,11 @@ function readWorkflowModal() {
 function openWorkflowModal(config) {
   pendingWorkflow = config;
   lastFocusedElement = document.activeElement;
-  const grandmaMode = experienceMode === "user";
-  $("#workflowModal")?.classList.toggle("grandma-workflow", grandmaMode);
+  $("#workflowModal")?.classList.remove("grandma-workflow");
+  $("#workflowModal")?.classList.toggle("user-full-workflow", experienceMode === "user");
   $("#workflowEyebrow").textContent = translateText(config.eyebrow || "Workflow");
-  $("#workflowTitle").textContent = grandmaMode ? translateText("Ready?") : translateText(config.title);
-  $("#workflowSummary").textContent = grandmaMode
-    ? translateText("Do you want Nexus to do this now?")
-    : translateText(config.summary);
+  $("#workflowTitle").textContent = translateText(config.title || "Workflow");
+  $("#workflowSummary").textContent = translateText(config.summary || "Review this workflow and confirm when ready.");
   $("#workflowFields").innerHTML = (config.fields || []).map(field => {
     const value = field.value || "";
     const options = field.options || [];
@@ -6874,17 +6872,15 @@ function openWorkflowModal(config) {
     row("Provider evidence", config.provider || "Activity and integration audit when applicable")
   ].join("");
   $("#workflowNote").value = config.note || "";
-  $("#workflowConfirm").textContent = grandmaMode ? translateText("Yes") : translateText(config.confirmLabel || "Confirm action");
-  $("#workflowCancel").textContent = grandmaMode ? translateText("No") : translateText("Cancel");
+  $("#workflowConfirm").textContent = translateText(config.confirmLabel || "Confirm action");
+  $("#workflowCancel").textContent = translateText("Cancel");
   $("#workflowVoiceInput").value = "";
   $("#workflowVoicePrompt").textContent = translateText("Voice ready: say yes to confirm, no to cancel, or read to hear this workflow.");
   $("#workflowModal").classList.remove("hidden");
   $("#workflowConfirm").focus();
-  const instruction = grandmaMode
-    ? translateText("Do you want Nexus to do this now?")
-    : `${translateText(config.title)}. ${translateText(config.summary)}. Say yes to confirm, no to cancel, or read to hear the workflow.`;
+  const instruction = `${translateText(config.title || "Workflow")}. ${translateText(config.summary || "Review this workflow and confirm when ready.")}. Say yes to confirm, no to cancel, or read to hear the workflow.`;
   announce(instruction);
-  setVoiceResponse(instruction, false, { allowVoiceFirst: !grandmaMode });
+  setVoiceResponse(instruction, false, { allowVoiceFirst: true });
 }
 
 function workflowFieldValues() {
