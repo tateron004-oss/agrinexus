@@ -2197,8 +2197,8 @@ function runUserModeSelfTest() {
       if (!simpleUserCommandWorkflow(button.command)) missing.push(`${section}: ${button.label}`);
     });
   });
-  const currentScript = [...document.scripts].some(script => String(script.src || "").includes("nexus-behavior-71"));
-  const currentStyle = [...document.styleSheets].some(sheet => String(sheet.href || "").includes("nexus-behavior-71"));
+  const currentScript = [...document.scripts].some(script => String(script.src || "").includes("nexus-behavior-72"));
+  const currentStyle = [...document.styleSheets].some(sheet => String(sheet.href || "").includes("nexus-behavior-72"));
   if (!currentScript || !currentStyle) missing.push("new app files");
   const ok = missing.length === 0;
   const message = ok
@@ -5297,14 +5297,11 @@ function openMappedUserWorkflow(mapped, sectionId = currentSectionId()) {
   }
   const config = mapped.config || workflowConfig(mapped.workflow, mapped.action, { dataset: mapped.dataset || {} });
   if (!config) return false;
+  openWorkflowModal(config);
   if (experienceMode === "user") {
-    pendingWorkflow = config;
-    $("#workflowModal")?.classList.add("hidden");
-    $("#workflowModal")?.classList.remove("grandma-workflow");
-  } else {
-    openWorkflowModal(config);
+    $(`#${sectionId} .user-inline-workflow`)?.classList.add("hidden");
+    $(`#${sectionId} .user-module-status`) && ($(`#${sectionId} .user-module-status`).textContent = translateText("Workflow window opened. Choose Yes or No."));
   }
-  renderUserInlineWorkflow(sectionId, config);
   setVoiceResponse(mapped.response || "Workflow is ready.", true);
   return true;
 }

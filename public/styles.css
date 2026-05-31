@@ -3549,10 +3549,27 @@ body.user-mode .global-assistant:not(.hidden) .global-assistant-status {
 
 body.user-mode .modal:not(.hidden) .modal-panel,
 body.user-mode .grandma-workflow:not(.hidden) .modal-panel {
-  width: min(440px, calc(100vw - 20px)) !important;
-  max-height: calc(100dvh - 20px) !important;
-  min-height: min(420px, calc(100dvh - 20px)) !important;
+  width: min(720px, calc(100vw - 18px)) !important;
+  max-width: calc(100vw - 18px) !important;
+  max-height: calc(100dvh - 18px) !important;
+  min-height: min(560px, calc(100dvh - 18px)) !important;
   overflow: auto !important;
+}
+
+body.user-mode .grandma-workflow:not(.hidden) .modal-head {
+  position: sticky !important;
+  top: 0 !important;
+  z-index: 2 !important;
+  padding-bottom: 10px !important;
+  background: #ffffff !important;
+}
+
+body.user-mode .grandma-workflow:not(.hidden) .modal-close,
+body.user-mode .grandma-workflow:not(.hidden) .modal-actions button {
+  min-width: 96px !important;
+  min-height: 56px !important;
+  white-space: nowrap !important;
+  overflow-wrap: normal !important;
 }
 
 @media (max-width: 560px) {
@@ -3573,5 +3590,15 @@ body.user-mode .grandma-workflow:not(.hidden) .modal-panel {
   body.user-mode .global-assistant:not(.hidden) .global-assistant-actions,
   .jarvis-panel:not(.hidden) .action-row {
     grid-template-columns: 1fr !important;
+  }
+
+  .modal:not(.hidden) .modal-panel,
+  body.user-mode .modal:not(.hidden) .modal-panel,
+  body.user-mode .grandma-workflow:not(.hidden) .modal-panel {
+    width: calc(100vw - 16px) !important;
+    max-width: calc(100vw - 16px) !important;
+    max-height: calc(100dvh - 16px) !important;
+    min-height: calc(100dvh - 16px) !important;
+    border-radius: 14px !important;
   }
 }

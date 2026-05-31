@@ -22,11 +22,11 @@ function requireScript(scriptName) {
 }
 
 requireMarkers("current browser cache contract", html, [
-  "/styles.css?v=nexus-behavior-71",
-  "/app.js?v=nexus-behavior-71"
+  "/styles.css?v=nexus-behavior-72",
+  "/app.js?v=nexus-behavior-72"
 ]);
 requireMarkers("service worker cache contract", sw, [
-  'CACHE_NAME = "agrinexus-pwa-v51"',
+  'CACHE_NAME = "agrinexus-pwa-v52"',
   "skipWaiting",
   "clients.claim"
 ]);
@@ -56,6 +56,8 @@ requireMarkers("simple user workflow contract", app, [
   "function openMappedUserWorkflow",
   "function renderUserInlineWorkflow",
   "pendingWorkflow = config",
+  "openWorkflowModal(config)",
+  "$(\"#workflowModal\").classList.remove(\"hidden\")",
   "data-inline-workflow-confirm",
   "data-inline-workflow-cancel",
   "eventOrButton?.target?.closest",
