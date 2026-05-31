@@ -2445,6 +2445,38 @@ body.admin-mode .user-workspace {
   color: var(--muted);
   margin-bottom: 14px;
 }
+.workflow-comfort {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin: 0 0 14px;
+}
+.workflow-comfort:empty {
+  display: none;
+}
+.workflow-comfort div {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid #d7eadf;
+  border-radius: 10px;
+  background: linear-gradient(180deg, #fbfff9, #eef8f2);
+}
+.workflow-comfort strong,
+.friendly-outcome strong {
+  color: #174737;
+  font-size: .92rem;
+  line-height: 1.2;
+}
+.workflow-comfort span,
+.friendly-outcome span {
+  color: #3b5f53;
+  font-size: .9rem;
+  font-weight: 750;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
 .workflow-steps {
   display: grid;
   gap: 8px;
@@ -2455,22 +2487,106 @@ body.admin-mode .user-workspace {
 }
 .workflow-steps div {
   display: grid;
-  gap: 3px;
-  padding: 10px 12px;
+  grid-template-columns: auto 1fr;
+  gap: 4px 10px;
+  align-items: start;
+  padding: 12px;
   border: 1px solid #bddbd6;
-  border-radius: 8px;
+  border-radius: 10px;
   background: #f7fbfc;
 }
 .workflow-steps strong {
   color: var(--text);
   font-size: .94rem;
   line-height: 1.2;
+  grid-column: 1 / -1;
 }
 .workflow-steps span {
   color: var(--muted);
   font-size: .9rem;
   font-weight: 750;
   line-height: 1.3;
+  grid-column: 1 / -1;
+  overflow-wrap: anywhere;
+}
+.friendly-outcome {
+  display: grid;
+  gap: 5px;
+  padding: 12px;
+  border: 1px solid #d4dde8;
+  border-radius: 10px;
+  background: #f8fbff;
+}
+body.user-mode #workflowChecklist {
+  display: none;
+}
+body.user-mode #workflowOutcome {
+  display: grid;
+  gap: 10px;
+}
+body.user-mode #workflowNote {
+  min-height: 86px;
+}
+body.user-mode label[for="workflowNote"] {
+  font-size: 0;
+}
+body.user-mode label[for="workflowNote"]::after {
+  content: "Anything else AgriNexus should know?";
+  font-size: .92rem;
+}
+body.user-mode .workflow-fields {
+  padding: 12px;
+  border: 1px solid #deece7;
+  border-radius: 12px;
+  background: #fbfdfc;
+}
+body.user-mode .workflow-fields:empty {
+  display: none;
+}
+body.user-mode .workflow-fields .field-label {
+  color: #23483c;
+  font-weight: 850;
+}
+body.user-mode .workflow-fields input,
+body.user-mode .workflow-fields select,
+body.user-mode .workflow-fields textarea,
+body.user-mode #workflowNote {
+  border-radius: 10px;
+  border-color: #b7d7ce;
+  background: #ffffff;
+  font-size: 1rem;
+}
+body.user-mode .workflow-voice-prompt {
+  border-radius: 12px;
+  background: #102f2a;
+  color: #ffffff;
+  font-weight: 850;
+}
+body.user-mode .workflow-voice-confirm {
+  border-radius: 12px;
+  background: #f4f8fb;
+}
+body.user-mode .workflow-voice-confirm input {
+  border-radius: 10px;
+}
+body.user-mode .workflow-voice-confirm button {
+  min-height: 48px;
+}
+body.user-mode .modal-actions {
+  gap: 10px;
+}
+body.user-mode #workflowConfirm {
+  min-height: 56px;
+  border-radius: 12px;
+  font-size: 1.02rem;
+  font-weight: 950;
+}
+body.user-mode #workflowCancel,
+body.user-mode #workflowClose {
+  min-height: 52px;
+  border-radius: 12px;
+  font-weight: 900;
+  white-space: nowrap;
 }
 .workflow-voice-confirm {
   display: grid;
@@ -3614,6 +3730,29 @@ body.user-mode .grandma-workflow:not(.hidden) .modal-actions button {
 }
 
 @media (max-width: 560px) {
+  body.user-mode .workflow-comfort {
+    grid-template-columns: 1fr;
+  }
+
+  body.user-mode .workflow-comfort div,
+  body.user-mode .workflow-steps div,
+  body.user-mode .friendly-outcome,
+  body.user-mode .workflow-fields {
+    padding: 10px;
+  }
+
+  body.user-mode .modal-summary,
+  body.user-mode .workflow-comfort span,
+  body.user-mode .workflow-steps span,
+  body.user-mode .friendly-outcome span {
+    font-size: .95rem;
+    line-height: 1.35;
+  }
+
+  body.user-mode .workflow-voice-confirm {
+    grid-template-columns: 1fr;
+  }
+
   .global-assistant:not(.hidden),
   body.user-mode .global-assistant:not(.hidden),
   .jarvis-panel:not(.hidden) {

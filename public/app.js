@@ -2197,8 +2197,8 @@ function runUserModeSelfTest() {
       if (!simpleUserCommandWorkflow(button.command)) missing.push(`${section}: ${button.label}`);
     });
   });
-  const currentScript = [...document.scripts].some(script => String(script.src || "").includes("nexus-behavior-77"));
-  const currentStyle = [...document.styleSheets].some(sheet => String(sheet.href || "").includes("nexus-behavior-77"));
+  const currentScript = [...document.scripts].some(script => String(script.src || "").includes("nexus-behavior-78"));
+  const currentStyle = [...document.styleSheets].some(sheet => String(sheet.href || "").includes("nexus-behavior-78"));
   if (!currentScript || !currentStyle) missing.push("new app files");
   const ok = missing.length === 0;
   const message = ok
@@ -6853,6 +6853,30 @@ function workflowStepHtml(steps = []) {
     : "";
 }
 
+function workflowComfortHtml(config) {
+  if (experienceMode !== "user") return "";
+  return [
+    { title: "What you are doing", detail: config.userSummary || config.summary || "AgriNexus will guide this step with you." },
+    { title: "What I need from you", detail: "Review the simple choices below. Change anything that looks wrong." },
+    { title: "What happens next", detail: config.userOutcome || config.success || "AgriNexus saves the action and shows the next step." }
+  ].map(item => `<div><strong>${translateText(item.title)}</strong><span>${translateText(item.detail)}</span></div>`).join("");
+}
+
+function workflowOutcomeHtml(config) {
+  if (experienceMode === "user") {
+    return [
+      `<div class="friendly-outcome"><strong>${translateText("You stay in control")}</strong><span>${translateText("Nothing is sent until you press the main button. You can close this window and choose another action anytime.")}</span></div>`,
+      `<div class="friendly-outcome"><strong>${translateText("AgriNexus will remember this")}</strong><span>${translateText(config.userRecord || config.record || "The platform saves the workflow result so you can continue later.")}</span></div>`
+    ].join("");
+  }
+  return [
+    row("How this works", config.guide || "Review the visible details, adjust the fields if needed, then confirm. AgriNexus records the workflow and updates the module evidence."),
+    row("Action", config.confirmLabel || "Confirm action"),
+    row("Record created", config.record || "Workflow event and profile state update"),
+    row("Provider evidence", config.provider || "Activity and integration audit when applicable")
+  ].join("");
+}
+
 function openWorkflowModal(config) {
   pendingWorkflow = config;
   lastFocusedElement = document.activeElement;
@@ -6862,6 +6886,7 @@ function openWorkflowModal(config) {
   $("#workflowEyebrow").textContent = translateText(config.eyebrow || "Workflow");
   $("#workflowTitle").textContent = translateText((experienceMode === "user" && config.userTitle) || config.title || "Workflow");
   $("#workflowSummary").textContent = translateText((experienceMode === "user" && config.userSummary) || config.summary || "Review this workflow and confirm when ready.");
+  $("#workflowComfort").innerHTML = workflowComfortHtml(config);
   $("#workflowSteps").innerHTML = workflowStepHtml(config.steps || []);
   $("#workflowFields").innerHTML = (config.fields || []).map(field => {
     const value = field.value || "";
@@ -6875,12 +6900,7 @@ function openWorkflowModal(config) {
     return `<label class="field-label">${translateText(field.label)}<input type="${field.type === "password" ? "password" : "text"}" data-workflow-field="${field.name}" value="${translateText(value)}" placeholder="${translateText(field.placeholder || "")}"></label>`;
   }).join("");
   $("#workflowChecklist").innerHTML = (config.checklist || []).map(item => taskItem(item.title, item.detail, item.status || "ready", item.label || "Ready")).join("");
-  $("#workflowOutcome").innerHTML = [
-    row("How this works", config.guide || "Review the visible details, adjust the fields if needed, then confirm. AgriNexus records the workflow and updates the module evidence."),
-    row("Action", config.confirmLabel || "Confirm action"),
-    row("Record created", config.record || "Workflow event and profile state update"),
-    row("Provider evidence", config.provider || "Activity and integration audit when applicable")
-  ].join("");
+  $("#workflowOutcome").innerHTML = workflowOutcomeHtml(config);
   $("#workflowNote").value = config.note || "";
   $("#workflowConfirm").textContent = translateText(config.confirmLabel || "Confirm action");
   $("#workflowCancel").textContent = translateText("Cancel");
