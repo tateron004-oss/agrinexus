@@ -5222,7 +5222,13 @@ function openMappedUserWorkflow(mapped, sectionId = currentSectionId()) {
   }
   const config = mapped.config || workflowConfig(mapped.workflow, mapped.action, { dataset: mapped.dataset || {} });
   if (!config) return false;
-  openWorkflowModal(config);
+  if (experienceMode === "user") {
+    pendingWorkflow = config;
+    $("#workflowModal")?.classList.add("hidden");
+    $("#workflowModal")?.classList.remove("grandma-workflow");
+  } else {
+    openWorkflowModal(config);
+  }
   renderUserInlineWorkflow(sectionId, config);
   setVoiceResponse(mapped.response || "Workflow is ready.", true);
   return true;
@@ -7943,6 +7949,8 @@ async function confirmPendingWorkflow() {
   const prompt = $("#workflowVoicePrompt");
   if (!pendingWorkflow) {
     if (prompt) prompt.textContent = "No workflow is open. Choose a button first.";
+    const inlinePanel = $(".user-inline-workflow:not(.hidden)");
+    if (inlinePanel) inlinePanel.querySelector("span").textContent = translateText("Choose a button first, then press Yes.");
     toast("Choose a workflow first");
     return;
   }
@@ -7955,6 +7963,14 @@ async function confirmPendingWorkflow() {
     confirmButton.textContent = grandmaMode ? translateText("Working...") : translateText("Completing...");
   }
   if (prompt) prompt.textContent = translateText("Nexus is completing this workflow now.");
+  const inlinePanel = $(".user-inline-workflow:not(.hidden)");
+  if (inlinePanel) {
+    inlinePanel.querySelector("span").textContent = translateText("Nexus is completing this now.");
+    inlinePanel.querySelectorAll("button").forEach(button => {
+      button.disabled = true;
+      button.setAttribute("aria-busy", "true");
+    });
+  }
   updateNexusBehaviorLayer("thinking", "Nexus is completing the confirmed workflow.");
   closeWorkflowModal();
   if (!workflow.path) {
@@ -8005,6 +8021,13 @@ async function confirmPendingWorkflow() {
       confirmButton.disabled = false;
       confirmButton.removeAttribute("aria-busy");
       confirmButton.textContent = grandmaMode ? translateText("Yes") : translateText(workflow.confirmLabel || "Confirm action");
+    }
+    const activeInlinePanel = $(".user-inline-workflow:not(.hidden)");
+    if (activeInlinePanel) {
+      activeInlinePanel.querySelectorAll("button").forEach(button => {
+        button.disabled = false;
+        button.removeAttribute("aria-busy");
+      });
     }
   }
 }
@@ -9092,6 +9115,13 @@ async function runSimpleAction(eventOrButton) {
   const button = eventOrButton?.currentTarget || eventOrButton;
   const status = $("#simpleActionStatus");
   if (!button) return;
+  eventOrButton?.preventDefault?.();
+  eventOrButton?.stopPropagation?.();
+  if (experienceMode === "user") {
+    closeAskNexus({ silent: true });
+    $("#jarvisPanel")?.classList.add("hidden");
+    $("#workflowModal")?.classList.add("hidden");
+  }
   const label = button.querySelector("strong")?.textContent || button.textContent.trim() || "Selected action";
   if (status) status.textContent = `${label} is running...`;
   if (button.dataset.simpleCommand) {
@@ -9573,7 +9603,7 @@ function bindStatic() {
     if (simpleButton) {
       event.preventDefault();
       event.stopPropagation();
-      runSimpleAction(simpleButton);
+      runSimpleAction(event);
       return;
     }
     if (event.target.closest("#workspaceAskBtn")) {

@@ -391,6 +391,9 @@ assert(app.includes("function renderUserInlineWorkflow"), "User tabs need a visi
 assert(app.includes("function openMappedUserWorkflow"), "User tab auto-actions need one shared visual workflow launcher");
 assert(app.includes("data-inline-workflow-confirm"), "Inline user workflow needs a visible Yes button");
 assert(app.includes("data-inline-workflow-cancel"), "Inline user workflow needs a visible No button");
+assert(app.includes("pendingWorkflow = config"), "User inline workflows must set the pending workflow before Confirm");
+assert(app.includes('$("#workflowModal")?.classList.add("hidden")'), "User inline workflows must keep blocking modal overlays closed");
+assert(app.includes("closeAskNexus({ silent: true })"), "User service buttons must clear assistant overlays before opening workflows");
 assert(app.includes('lower.includes("help me")'), "Do this/help commands need full workflow routing instead of partial assistant fallback");
 assert(app.includes('action: "orchestrate"'), "Do this should open a real AI orchestration workflow");
 assert(app.includes('openDefaultAction: experienceMode === "user"'), "User tab clicks must opt into default workflow actions");
