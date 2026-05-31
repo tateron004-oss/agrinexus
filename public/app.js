@@ -5174,7 +5174,8 @@ function renderUserSimpleActiveSection(sectionId = currentSectionId()) {
   const config = simpleUserSections[sectionId];
   const target = config ? $(`#${sectionId}`) : null;
   if (!target) return;
-  target.innerHTML = `
+  target.querySelector(":scope > .user-simple-module")?.remove();
+  target.insertAdjacentHTML("afterbegin", `
     <section class="user-simple-module" aria-label="${translateText(config.title)}">
       <button type="button" class="user-module-back" data-simple-section="dashboard">${translateText("Back")}</button>
       <span class="eyebrow">${translateText("AgriNexus")}</span>
@@ -5188,7 +5189,7 @@ function renderUserSimpleActiveSection(sectionId = currentSectionId()) {
       </div>
       <div class="user-module-status" role="status">${translateText("Nexus is ready.")}</div>
     </section>
-  `;
+  `);
 }
 
 function renderGrandmaConfirmation() {

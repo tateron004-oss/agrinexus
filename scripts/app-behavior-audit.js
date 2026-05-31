@@ -22,6 +22,8 @@ hasAll(app, [
   "[data-user-language]",
   "function renderUserSimpleActiveSection",
   "simpleUserSections",
+  "insertAdjacentHTML(\"afterbegin\"",
+  ":scope > .user-simple-module",
   "user-module-status",
   "data-user-voice-action",
   "function nexusMemoryProfile",

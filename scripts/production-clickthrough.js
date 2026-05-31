@@ -373,6 +373,8 @@ assert(app.includes('{ label: "AI Help", section: "agent"'), "Standard User home
 assert(!app.includes('{ label: "Me", section: "profile"'), "Standard User home should avoid profile clutter");
 assert(app.includes("function renderUserSimpleActiveSection"), "Standard User module pages must collapse into button-only action screens");
 assert(app.includes("simpleUserSections"), "Standard User needs simple action definitions for every service section");
+assert(app.includes('insertAdjacentHTML("afterbegin"'), "User simple screens must overlay module content instead of deleting backend-bound elements");
+assert(app.includes(":scope > .user-simple-module"), "User simple screens must replace only the prior simple overlay");
 assert(app.includes("user-module-status"), "User module pages need a contained status/result area");
 assert(app.includes("closeAskNexus({ silent: true })"), "User mode section changes should collapse Ask Nexus so it cannot remain half-open");
 assert(app.includes("user-module-back"), "User module pages need a clear Back button");
