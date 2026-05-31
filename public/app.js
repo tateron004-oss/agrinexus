@@ -2197,8 +2197,8 @@ function runUserModeSelfTest() {
       if (!simpleUserCommandWorkflow(button.command)) missing.push(`${section}: ${button.label}`);
     });
   });
-  const currentScript = [...document.scripts].some(script => String(script.src || "").includes("nexus-behavior-80"));
-  const currentStyle = [...document.styleSheets].some(sheet => String(sheet.href || "").includes("nexus-behavior-80"));
+  const currentScript = [...document.scripts].some(script => String(script.src || "").includes("nexus-behavior-81"));
+  const currentStyle = [...document.styleSheets].some(sheet => String(sheet.href || "").includes("nexus-behavior-81"));
   if (!currentScript || !currentStyle) missing.push("new app files");
   const ok = missing.length === 0;
   const message = ok
@@ -5197,6 +5197,7 @@ const simpleUserSections = {
     buttons: [
       { label: "Start Intake", command: "start telehealth intake" },
       { label: "Talk to Provider", command: "open telehealth access" },
+      { label: "Call Provider", command: "call provider" },
       { label: "Check Region", command: "check health risk in my region" },
       { label: "Accessibility Help", command: "create audio guide and captions" }
     ]
@@ -5288,7 +5289,27 @@ function userModulePreviewHtml(sectionId) {
     return `<div class="user-module-preview"><div class="user-preview-summary"><strong>${translateText("Work support")}</strong><span>${translateText(role ? `Best next role: ${role.title}. Choose Find Jobs or Apply for Job.` : "Choose Find Jobs to review work options.")}</span></div></div>`;
   }
   if (sectionId === "health") {
-    return `<div class="user-module-preview"><div class="user-preview-summary"><strong>${translateText("Health support")}</strong><span>${translateText("Start with intake. Nexus can help with language, caregiver support, captions, audio, and follow-up.")}</span></div></div>`;
+    const country = activeCountry();
+    const intake = (data.profile.healthIntakes || [])[0];
+    const provider = (data.profile.telehealthProviderAssignments || [])[0];
+    return `
+      <div class="user-module-preview user-health-preview">
+        ${healthHotspotHtml({ country, title: "Regional health risk" })}
+        <div class="provider-contact-card">
+          <strong>${translateText(provider?.providerName || "Telehealth provider desk")}</strong>
+          <span>${translateText(intake ? `Case ${intake.patientRef}: ${intake.needSummary || "care support needed"}` : "Start intake first, then Nexus prepares provider contact.")}</span>
+          <div>
+            <button type="button" data-simple-command="talk to provider">${translateText("Speak")}</button>
+            <button type="button" data-simple-command="call provider">${translateText("Call")}</button>
+            <button type="button" data-simple-command="message provider">${translateText("Message")}</button>
+          </div>
+        </div>
+        <div class="user-preview-summary">
+          <strong>${translateText("Health support")}</strong>
+          <span>${translateText(`${country.name} is marked ${country.risk} risk with ${country.queue}. Use Start Intake, Talk to Provider, or Check Region.`)}</span>
+        </div>
+      </div>
+    `;
   }
   if (sectionId === "agent") {
     return `<div class="user-module-preview"><div class="user-preview-summary"><strong>${translateText("Talk naturally")}</strong><span>${translateText("Ask Nexus what to do, ask it to explain the platform, or ask it to open a service.")}</span></div></div>`;
@@ -5419,7 +5440,9 @@ function simpleUserCommandWorkflow(command = "") {
   if (lower.includes("review my workforce gaps") || lower.includes("skills")) return { workflow: "workforce", action: "mentor", response: "Skills review is ready.", dataset: { roleId } };
   if (lower.includes("schedule my shift") || lower.includes("plan shift")) return { workflow: "workforce", action: "shift", response: "Shift planning is ready.", dataset: { roleId } };
   if (lower.includes("telehealth intake") || lower.includes("start intake")) return { workflow: "health", action: "intake", response: "Telehealth intake is ready.", dataset: {} };
-  if (lower.includes("telehealth access") || lower.includes("talk to provider")) return { workflow: "health", action: "provider", response: "Provider access is ready.", dataset: {} };
+  if (lower.includes("telehealth access") || lower.includes("talk to provider") || lower.includes("speak to provider")) return { workflow: "health", action: "provider", response: "Provider access is ready.", dataset: {} };
+  if (lower.includes("call provider") || lower.includes("call the provider")) return { workflow: "communications", action: "health-whatsapp", response: "Provider call or WhatsApp handoff is ready.", dataset: {} };
+  if (lower.includes("message provider")) return { workflow: "communications", action: "health-chat", response: "Provider message is ready.", dataset: {} };
   if (lower.includes("check health risk") || lower.includes("check region")) return { workflow: "health", action: "safety", response: "Regional health risk review is ready.", dataset: {} };
   if (lower.includes("audio guide") || lower.includes("accessibility")) return { workflow: "health", action: "accessibility", response: "Accessibility support is ready.", dataset: {} };
   if (lower.includes("contact my buyer") || lower.includes("contact buyer")) return { workflow: "trade", action: "buyer-contact", response: "Buyer contact is ready.", dataset: { productId } };
@@ -6980,6 +7003,56 @@ function shipmentMapHtml({ route = activeRoute(), order = null, product = firstP
   `;
 }
 
+function healthHotspotHtml({ country = activeCountry(), title = "Health hotspot map" } = {}) {
+  const countries = (data.countries || []).slice().sort((a, b) => {
+    const riskRank = { High: 3, Medium: 2, Low: 1 };
+    return (riskRank[b.risk] || 0) - (riskRank[a.risk] || 0) || (b.heat || 0) - (a.heat || 0);
+  });
+  if (!countries.length) return "";
+  const lats = countries.map(item => Number(item.lat));
+  const lngs = countries.map(item => Number(item.lng));
+  const minLat = Math.min(...lats);
+  const maxLat = Math.max(...lats);
+  const minLng = Math.min(...lngs);
+  const maxLng = Math.max(...lngs);
+  const latRange = Math.max(maxLat - minLat, .01);
+  const lngRange = Math.max(maxLng - minLng, .01);
+  const project = item => {
+    const x = 10 + ((Number(item.lng) - minLng) / lngRange) * 80;
+    const y = 84 - ((Number(item.lat) - minLat) / latRange) * 68;
+    return [Number(x.toFixed(1)), Number(y.toFixed(1))];
+  };
+  const riskColor = item => item.risk === "High" ? "#d94c31" : item.risk === "Medium" ? "#d9a71d" : "#1b8f68";
+  const hotspots = countries.slice(0, 4);
+  return `
+    <section class="health-hotspot-card">
+      <div class="shipment-map-head">
+        <div>
+          <strong>${translateText(title)}</strong>
+          <span>${translateText(`${country.name}: ${country.risk} risk, ${country.queue}`)}</span>
+        </div>
+        <small>${translateText(country.risk)}</small>
+      </div>
+      <svg viewBox="0 0 100 100" role="img" aria-label="${escapeHtml(`${country.name} health hotspot map`)}">
+        <rect x="1" y="1" width="98" height="98" rx="10" fill="#f8eef0"></rect>
+        ${countries.map(item => {
+          const [x, y] = project(item);
+          const active = item.id === country.id;
+          const radius = active ? 8 : item.risk === "High" ? 6 : 4.8;
+          return `<circle cx="${x}" cy="${y}" r="${radius}" fill="${riskColor(item)}" fill-opacity="${active ? ".95" : ".72"}" stroke="#ffffff" stroke-width="2"></circle>
+            <text x="${x}" y="${Math.max(8, y - radius - 3)}" text-anchor="middle" font-size="5" font-weight="800" fill="#173240">${escapeHtml(item.name.split(" ")[0])}</text>`;
+        }).join("")}
+      </svg>
+      <div class="hotspot-list">
+        ${hotspots.map(item => `<div class="${item.id === country.id ? "active" : ""}">
+          <strong>${translateText(item.name)}</strong>
+          <span>${translateText(`${item.risk} risk - ${item.queue} - ${item.facilities} facilities`)}</span>
+        </div>`).join("")}
+      </div>
+    </section>
+  `;
+}
+
 function workflowOutcomeHtml(config) {
   if (experienceMode === "user") {
     return [
@@ -7005,7 +7078,7 @@ function openWorkflowModal(config) {
   $("#workflowTitle").textContent = translateText((experienceMode === "user" && config.userTitle) || config.title || "Workflow");
   $("#workflowSummary").textContent = translateText((experienceMode === "user" && config.userSummary) || config.summary || "Review this workflow and confirm when ready.");
   $("#workflowComfort").innerHTML = workflowComfortHtml(config);
-  $("#workflowShipmentMap").innerHTML = config.routePreview ? shipmentMapHtml(config.routePreview) : "";
+  $("#workflowShipmentMap").innerHTML = config.healthPreview ? healthHotspotHtml(config.healthPreview) : config.routePreview ? shipmentMapHtml(config.routePreview) : "";
   $("#workflowSteps").innerHTML = workflowStepHtml(config.steps || []);
   $("#workflowFields").innerHTML = (config.fields || []).map(field => {
     const value = field.value || "";
@@ -7091,8 +7164,8 @@ function roleWorkflowConfig(roleId) {
   };
 }
 
-function simpleWorkflowConfig({ eyebrow, title, userTitle, summary, userSummary, confirmLabel, path, body, success, record, provider, checklist, fields, guide, steps, routePreview, userOutcome, userRecord }) {
-  return { eyebrow, title, userTitle, summary, userSummary, confirmLabel, path, body, success, record, provider, checklist, fields, guide, steps, routePreview, userOutcome, userRecord };
+function simpleWorkflowConfig({ eyebrow, title, userTitle, summary, userSummary, confirmLabel, path, body, success, record, provider, checklist, fields, guide, steps, routePreview, healthPreview, userOutcome, userRecord }) {
+  return { eyebrow, title, userTitle, summary, userSummary, confirmLabel, path, body, success, record, provider, checklist, fields, guide, steps, routePreview, healthPreview, userOutcome, userRecord };
 }
 
 function courseSelectOptions() {
@@ -7285,6 +7358,27 @@ function healthUserCopy(action, accessAction) {
       { title: "What is needed?", detail: "Describe the health concern in normal words." },
       { title: "How should we support them?", detail: "Choose language, captions, audio, large print, caregiver, and contact method." },
       { title: "Start intake", detail: "Press Start intake to create the case and next care steps." }
+    ]
+  };
+  if (action === "provider" || action === "appointment") return {
+    title: action === "appointment" ? "Schedule provider visit" : "Talk to a provider",
+    summary: "Choose how the patient should reach the provider: speak in the app, call, WhatsApp, SMS, caregiver handoff, or low-bandwidth callback.",
+    guide: "This prepares provider contact. When live partners are connected, the same workflow can route to real clinic, phone, SMS, WhatsApp, or telehealth systems.",
+    steps: [
+      { title: "Confirm patient", detail: "Use the active intake or describe who needs care." },
+      { title: "Choose contact", detail: "Pick speak, call, message, caregiver, or callback." },
+      { title: "Check region", detail: "Review hotspot risk before the provider responds." },
+      { title: "Connect provider", detail: "Confirm to create the provider contact record and next care step." }
+    ]
+  };
+  if (action === "safety" || action === "inspector") return {
+    title: "Check health hotspot",
+    summary: "Review the current region, nearby hotspot areas, facility pressure, heat, queue status, and safety risk.",
+    guide: "This creates a regional health risk review that helps the user understand whether an area needs caution, escalation, provider contact, or follow-up.",
+    steps: [
+      { title: "View map", detail: "The map marks the active country and nearby higher-risk areas." },
+      { title: "Review list", detail: "Check risk level, queue pressure, and available facilities." },
+      { title: "Decide next step", detail: "Confirm to record the safety review and provider-ready evidence." }
     ]
   };
   if (accessAction) return {
@@ -7645,6 +7739,9 @@ function workflowConfig(workflow, action, element) {
           ? "Review the assistive support needed. Confirming records captions, caregiver, consent, vitals, referral, or follow-up evidence."
           : "Review the patient/country context. Confirming updates the telehealth queue, safety evidence, provider handoff, or care plan.",
       steps: userCopy.steps,
+      healthPreview: { country: activeCountry(), title: action === "provider" || action === "appointment" ? "Provider and hotspot context" : "Regional health hotspot" },
+      userOutcome: action === "provider" || action === "appointment" ? "AgriNexus prepares the provider contact path and saves the handoff." : action === "safety" || action === "inspector" ? "AgriNexus records the hotspot review and recommended next step." : "AgriNexus creates the care record and keeps provider support connected.",
+      userRecord: "The intake, provider contact, accessibility needs, hotspot context, and follow-up evidence stay connected for the care team.",
       checklist: [
         { title: "Country context", detail: `${activeCountry().name}: ${activeCountry().queue}`, status: "live", label: activeCountry().risk },
         { title: "Active case", detail: (data.profile.healthIntakes || [])[0]?.patientRef || "No intake yet", status: (data.profile.healthIntakes || []).length ? "ready" : "pending", label: "Case" },

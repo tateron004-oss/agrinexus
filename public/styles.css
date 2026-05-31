@@ -2574,6 +2574,78 @@ body.admin-mode .user-workspace {
   background: #fff1ed;
   color: #8c2a18;
 }
+.health-hotspot-card {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid #e3c4c8;
+  border-radius: 14px;
+  background: linear-gradient(180deg, #ffffff, #fff1f2);
+}
+.health-hotspot-card svg {
+  width: 100%;
+  min-height: 180px;
+  border: 1px solid #efd2d5;
+  border-radius: 12px;
+  background: #fff4f5;
+}
+.hotspot-list {
+  display: grid;
+  gap: 7px;
+}
+.hotspot-list div,
+.provider-contact-card,
+.provider-contact-card div {
+  min-width: 0;
+}
+.hotspot-list div {
+  display: grid;
+  gap: 3px;
+  padding: 9px;
+  border: 1px solid #efd7da;
+  border-radius: 10px;
+  background: #ffffff;
+}
+.hotspot-list div.active {
+  border-color: #d94c31;
+  background: #fff1ed;
+}
+.hotspot-list strong,
+.provider-contact-card strong {
+  color: #173240;
+  font-size: .95rem;
+  line-height: 1.2;
+}
+.hotspot-list span,
+.provider-contact-card span {
+  color: #5d4549;
+  font-size: .9rem;
+  font-weight: 800;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+.provider-contact-card {
+  display: grid;
+  gap: 9px;
+  padding: 12px;
+  border: 2px solid #e8c6cb;
+  border-radius: 14px;
+  background: #fff8f8;
+  text-align: center;
+}
+.provider-contact-card div {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+.provider-contact-card button {
+  min-height: 52px;
+  border: 2px solid #bd4a56;
+  border-radius: 12px;
+  background: #ffffff;
+  color: #742631;
+  font-weight: 950;
+}
 .workflow-comfort div {
   display: grid;
   gap: 5px;
@@ -3870,11 +3942,21 @@ body.user-mode .grandma-workflow:not(.hidden) .modal-actions button {
     min-height: 160px;
   }
 
+  body.user-mode .health-hotspot-card svg {
+    min-height: 150px;
+  }
+
+  body.user-mode .provider-contact-card div {
+    grid-template-columns: 1fr;
+  }
+
   body.user-mode .modal-summary,
   body.user-mode .workflow-comfort span,
   body.user-mode .workflow-steps span,
   body.user-mode .friendly-outcome span,
-  body.user-mode .shipment-map-meta span {
+  body.user-mode .shipment-map-meta span,
+  body.user-mode .hotspot-list span,
+  body.user-mode .provider-contact-card span {
     font-size: .95rem;
     line-height: 1.35;
   }
