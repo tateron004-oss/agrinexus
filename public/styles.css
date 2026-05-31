@@ -3551,7 +3551,7 @@ body.user-mode .global-assistant:not(.hidden) .global-assistant-status {
   justify-items: center !important;
   padding: 12px !important;
   overflow: auto !important;
-  z-index: 2500 !important;
+  z-index: 2700 !important;
 }
 
 .modal:not(.hidden) .modal-panel {

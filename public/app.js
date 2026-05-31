@@ -2197,8 +2197,8 @@ function runUserModeSelfTest() {
       if (!simpleUserCommandWorkflow(button.command)) missing.push(`${section}: ${button.label}`);
     });
   });
-  const currentScript = [...document.scripts].some(script => String(script.src || "").includes("nexus-behavior-74"));
-  const currentStyle = [...document.styleSheets].some(sheet => String(sheet.href || "").includes("nexus-behavior-74"));
+  const currentScript = [...document.scripts].some(script => String(script.src || "").includes("nexus-behavior-75"));
+  const currentStyle = [...document.styleSheets].some(sheet => String(sheet.href || "").includes("nexus-behavior-75"));
   if (!currentScript || !currentStyle) missing.push("new app files");
   const ok = missing.length === 0;
   const message = ok
@@ -6820,6 +6820,7 @@ function closeWorkflowModal() {
   stopVoicePlayback();
   $("#workflowModal")?.classList.add("hidden");
   $("#workflowModal")?.classList.remove("grandma-workflow");
+  $("#workflowModal")?.classList.remove("user-full-workflow");
   if (lastFocusedElement && typeof lastFocusedElement.focus === "function") lastFocusedElement.focus();
 }
 
@@ -6849,6 +6850,7 @@ function readWorkflowModal() {
 function openWorkflowModal(config) {
   pendingWorkflow = config;
   lastFocusedElement = document.activeElement;
+  closeAskNexus({ silent: true });
   $("#workflowModal")?.classList.remove("grandma-workflow");
   $("#workflowModal")?.classList.toggle("user-full-workflow", experienceMode === "user");
   $("#workflowEyebrow").textContent = translateText(config.eyebrow || "Workflow");
@@ -6867,6 +6869,7 @@ function openWorkflowModal(config) {
   }).join("");
   $("#workflowChecklist").innerHTML = (config.checklist || []).map(item => taskItem(item.title, item.detail, item.status || "ready", item.label || "Ready")).join("");
   $("#workflowOutcome").innerHTML = [
+    row("How this works", config.guide || "Review the visible details, adjust the fields if needed, then confirm. AgriNexus records the workflow and updates the module evidence."),
     row("Action", config.confirmLabel || "Confirm action"),
     row("Record created", config.record || "Workflow event and profile state update"),
     row("Provider evidence", config.provider || "Activity and integration audit when applicable")
@@ -6937,8 +6940,20 @@ function roleWorkflowConfig(roleId) {
   };
 }
 
-function simpleWorkflowConfig({ eyebrow, title, summary, confirmLabel, path, body, success, record, provider, checklist, fields }) {
-  return { eyebrow, title, summary, confirmLabel, path, body, success, record, provider, checklist, fields };
+function simpleWorkflowConfig({ eyebrow, title, summary, confirmLabel, path, body, success, record, provider, checklist, fields, guide }) {
+  return { eyebrow, title, summary, confirmLabel, path, body, success, record, provider, checklist, fields, guide };
+}
+
+function courseSelectOptions() {
+  return (data.courses || []).map(course => ({ value: course.id, label: `${translatedCourse(course).title} - ${translatedCourse(course).track}` }));
+}
+
+function productSelectOptions() {
+  return (data.products || []).map(product => ({ value: product.id, label: `${product.name} - ${money(product.price || 0)} - ${product.country}` }));
+}
+
+function routeSelectOptions() {
+  return (data.routes || []).map(route => ({ value: route.id, label: `${route.name} - ${route.checkpoints.length} checkpoints` }));
 }
 
 function learningAccessibilityWorkflowConfig(mode) {
@@ -7084,13 +7099,24 @@ function workflowConfig(workflow, action, element) {
     return simpleWorkflowConfig({
       eyebrow: "Learning workflow",
       title: `Start course: ${translatedCourse(course).title}`,
-      summary: "Start or continue the selected course and create a learning record tied to readiness.",
+      summary: "Select a course, review the modules, then confirm to create or continue the learner record.",
       confirmLabel: "Start course",
       path: "/api/learning/start",
       body: { courseId: course.id },
       success: "Course started",
       record: "Enrollment, readiness, learning streak, and activity feed",
       provider: "Certificate provider becomes active after quiz and credential issue.",
+      guide: "Pick the course from the selector. Confirming enrolls the learner, sets the active course, and updates readiness evidence.",
+      fields: [
+        { name: "courseId", label: "Choose course", type: "select", value: course.id, options: courseSelectOptions() },
+        { name: "learningGoal", label: "Learning goal", value: "Prepare for workforce placement and field operations", placeholder: "Example: learn crop quality basics" },
+        { name: "supportNeed", label: "Support needed", type: "select", value: "Audio and captions", options: [
+          { value: "Audio and captions", label: "Audio and captions" },
+          { value: "Large print", label: "Large print" },
+          { value: "Low bandwidth", label: "Low bandwidth" },
+          { value: "Instructor support", label: "Instructor support" }
+        ] }
+      ],
       checklist: [
         { title: "Course", detail: translatedCourse(course).title, status: "live", label: translatedCourse(course).track },
         { title: "Modules", detail: (translatedCourse(course).modules || []).join(", "), status: "ready", label: `${course.readiness}%` },
@@ -7216,7 +7242,17 @@ function workflowConfig(workflow, action, element) {
         { value: "Community aide", label: "Community aide" }
       ] },
       { name: "caregiverName", label: "Caregiver or community aide", value: "Community accessibility aide", placeholder: "Caregiver, aide, or trusted contact" }
-    ] : [];
+    ] : [
+      { name: "caseFocus", label: "Case focus", value: (data.profile.healthIntakes || [])[0]?.patientRef || `${activeCountry().name} community care case`, placeholder: "Patient, household, or case reference" },
+      { name: "supportNeed", label: "Support needed", type: "select", value: accessAction ? "Accessibility support" : "Provider review", options: [
+        { value: "Provider review", label: "Provider review" },
+        { value: "Accessibility support", label: "Accessibility support" },
+        { value: "Caregiver handoff", label: "Caregiver handoff" },
+        { value: "Safety review", label: "Safety review" },
+        { value: "Follow-up", label: "Follow-up" }
+      ] },
+      { name: "careNote", label: "Care note", type: "textarea", rows: 3, value: "Explain the patient need, communication barrier, safety issue, or next clinical step." }
+    ];
     return simpleWorkflowConfig({
       eyebrow: accessAction ? "Accessible telehealth" : "Health workflow",
       title: translateLiteral(titleMap[action] || "Health action"),
@@ -7228,6 +7264,11 @@ function workflowConfig(workflow, action, element) {
       success: "Health action complete",
       record: advancedHealthActions.has(action) ? "Advanced care operation record, active intake status, EHR/telehealth/notification evidence, and activity feed" : accessAction ? "Telehealth accessibility case note, active intake status, provider evidence, and activity feed" : "Intake queue, representative status, safety review, care plan, or AI activity",
       provider: "Telehealth, notification, EHR, and AI provider events are recorded when applicable.",
+      guide: action === "intake"
+        ? "Fill in who needs care, language, accessibility, urgency, and contact method. Confirming creates the intake case and makes the next telehealth steps visible."
+        : accessAction
+          ? "Review the assistive support needed. Confirming records captions, caregiver, consent, vitals, referral, or follow-up evidence."
+          : "Review the patient/country context. Confirming updates the telehealth queue, safety evidence, provider handoff, or care plan.",
       checklist: [
         { title: "Country context", detail: `${activeCountry().name}: ${activeCountry().queue}`, status: "live", label: activeCountry().risk },
         { title: "Active case", detail: (data.profile.healthIntakes || [])[0]?.patientRef || "No intake yet", status: (data.profile.healthIntakes || []).length ? "ready" : "pending", label: "Case" },
@@ -7276,6 +7317,36 @@ function workflowConfig(workflow, action, element) {
       confirmLabel: titleMap[action] || "Confirm",
       path: pathMap[action] || "/api/ai/run",
       body: action === "order" ? { productId } : action === "wallet" ? { provider: "M-Pesa", amount: 120 } : action === "buyer-contact" ? { productId } : action === "buyer-message" ? { productId, channel: "in-app chat" } : action === "buyer-whatsapp" ? { productId, channel: "WhatsApp" } : action === "buyer-sms" ? { productId, channel: "SMS" } : isDroneAction ? { productId } : isAdvancedDroneAction ? { type: droneTypeMap[action], productId } : isAdvancedTrade ? { type: action, productId } : action === "advance" ? {} : { type: action },
+      guide: action === "order"
+        ? "Choose the crop/product, quantity, buyer, and pickup point. Confirming creates a real order record, active route, checkpoint, and trade evidence."
+        : isDroneAction || isAdvancedDroneAction
+          ? "Choose the crop lot, field zone, and scan objective. Confirming creates drone mission or scan evidence tied to the map and trade route."
+          : action === "route" || action === "advance"
+            ? "Review the active route and checkpoint. Confirming updates route intelligence or moves the order to the next logistics step."
+            : "Review the buyer, channel, and product context. Confirming creates the trade communication or provider evidence.",
+      fields: [
+        ...(action !== "advance" ? [{ name: "productId", label: "Crop or product", type: "select", value: product?.id || productId || "", options: productSelectOptions() }] : []),
+        ...(action === "order" ? [
+          { name: "quantity", label: "Quantity", value: "20 bags", placeholder: "Example: 20 bags" },
+          { name: "buyerName", label: "Buyer name", value: "Regional buyer cooperative", placeholder: "Buyer, cooperative, or processor" },
+          { name: "pickupPoint", label: "Pickup point", value: data.profile.activeCheckpoint || "Field collection point", placeholder: "Pickup point" }
+        ] : []),
+        ...((isDroneAction || isAdvancedDroneAction) ? [
+          { name: "fieldZone", label: "Field zone", value: "North field zone", placeholder: "Example: North field zone" },
+          { name: "scanType", label: "Drone scan type", type: "select", value: "crop-health", options: [
+            { value: "crop-health", label: "Crop health" },
+            { value: "irrigation", label: "Irrigation stress" },
+            { value: "pest-risk", label: "Pest risk" },
+            { value: "yield-forecast", label: "Yield forecast" },
+            { value: "buyer-readiness", label: "Buyer readiness" }
+          ] },
+          { name: "objective", label: "Drone objective", value: "Find crop stress, route evidence, and field task needs", placeholder: "What should the drone check?" }
+        ] : []),
+        ...(["buyer-contact", "buyer-message", "buyer-whatsapp", "buyer-sms"].includes(action) ? [
+          { name: "buyerName", label: "Buyer name", value: "Regional buyer cooperative", placeholder: "Buyer name" },
+          { name: "messageDraft", label: "Message draft", type: "textarea", rows: 3, value: "Hello, I am ready to discuss crop quantity, quality, delivery route, and payment timing." }
+        ] : [])
+      ],
       success: ["buyer-message", "buyer-whatsapp", "buyer-sms"].includes(action) ? "Buyer-seller thread opened" : action === "buyer-contact" ? "Buyer contact prepared" : action === "wallet" ? "Payment posted" : action === "advance" ? "Order advanced" : action === "order" ? "Order created" : action === "drone-plan" ? "Drone mission planned" : action === "drone" ? "Drone scan complete" : action === "drone-intervention" ? "Field intervention assigned" : isAdvancedDroneAction ? "Advanced drone operation complete" : isAdvancedTrade ? "Advanced trade operation complete" : "AI action complete",
       record: "Order book, wallet ledger, message thread, route timeline, drone mission, field scan, intervention task, trade event, or AI evidence",
       provider: "Market, communications, drone, payment, logistics, or AI provider event is recorded.",
@@ -7318,6 +7389,14 @@ function workflowConfig(workflow, action, element) {
       success: isOrchestration ? "AI orchestration complete" : "AI action complete",
       record: isOrchestration ? "AI orchestration record, AI run, workflow intelligence, smart next action, activity feed, and provider evidence" : "AI run history, module evidence, map insight, activity feed, provider status, and response evidence",
       provider: "OpenAI, local AI webhook, or fallback provider is recorded on each run.",
+      guide: action === "route"
+        ? "Choose the route and concern. Confirming creates route-risk intelligence from country, checkpoint, trade, health, and logistics context."
+        : "Choose the AI focus and confirm. AgriNexus records the AI answer, provider mode, human-review status, and next recommended action.",
+      fields: [
+        { name: "routeId", label: "Route", type: "select", value: activeRoute().id, options: routeSelectOptions() },
+        { name: "checkpoint", label: "Checkpoint", value: data.profile.activeCheckpoint || activeRoute().checkpoints?.[0] || "Active checkpoint", placeholder: "Checkpoint or corridor" },
+        { name: "question", label: "Question for AI", type: "textarea", rows: 3, value: action === "route" ? "What route risks should we address before moving crops, patients, or field teams?" : "What is the safest and most useful next step?" }
+      ],
       checklist: [
         { title: "AI mode", detail: data.providers.find(item => item.id === "openai")?.mode || data.profile.aiProvider || "fallback", status: "live", label: "Provider" },
         { title: "Route context", detail: `${activeRoute().name} - ${data.profile.activeCheckpoint}`, status: "ready", label: "Map" },
@@ -8023,12 +8102,11 @@ async function confirmPendingWorkflow() {
     return;
   }
   const workflow = pendingWorkflow;
-  const grandmaMode = experienceMode === "user";
   const note = $("#workflowNote").value.trim();
   if (confirmButton) {
     confirmButton.disabled = true;
     confirmButton.setAttribute("aria-busy", "true");
-    confirmButton.textContent = grandmaMode ? translateText("Working...") : translateText("Completing...");
+    confirmButton.textContent = translateText("Completing...");
   }
   if (prompt) prompt.textContent = translateText("Nexus is completing this workflow now.");
   const inlinePanel = $(".user-inline-workflow:not(.hidden)");
@@ -8060,7 +8138,7 @@ async function confirmPendingWorkflow() {
     });
     render();
     if (workflow.redirectSection) goSection(workflow.redirectSection);
-    if (grandmaMode) {
+    if (experienceMode === "user") {
       const active = currentSectionId();
       if (active !== "dashboard" && simpleUserSections[active]) renderUserSimpleActiveSection(active);
       const next = activeAgentJourney?.next;
@@ -8088,7 +8166,7 @@ async function confirmPendingWorkflow() {
     if (confirmButton) {
       confirmButton.disabled = false;
       confirmButton.removeAttribute("aria-busy");
-      confirmButton.textContent = grandmaMode ? translateText("Yes") : translateText(workflow.confirmLabel || "Confirm action");
+      confirmButton.textContent = translateText(workflow.confirmLabel || "Confirm action");
     }
     const activeInlinePanel = $(".user-inline-workflow:not(.hidden)");
     if (activeInlinePanel) {
@@ -9718,7 +9796,7 @@ function bindStatic() {
       runLiveServiceCheck(event);
       return;
     }
-    if (event.target.closest("#globalCloseBtn") || event.target.closest("#jarvisCloseBtn")) {
+    if (event.target.closest("#globalCloseBtn") || event.target.closest("#globalBackBtn") || event.target.closest("#jarvisCloseBtn")) {
       event.preventDefault();
       event.stopPropagation();
       closeAskNexus();
@@ -10039,6 +10117,7 @@ function bindStatic() {
   $("#voiceHelpCloseBtn").onclick = closeVoiceHelp;
   $("#globalInstallBtn").onclick = installAgriNexusApp;
   $("#globalCloseBtn").onclick = closeAskNexus;
+  $("#globalBackBtn").onclick = closeAskNexus;
   $("#globalCommandInput").addEventListener("keydown", event => {
     if (event.key === "Enter") runGlobalCommand();
   });

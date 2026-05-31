@@ -60,6 +60,11 @@ hasAll(app, [
   "openWorkflowModal(config)",
   "$(\"#workflowModal\").classList.remove(\"hidden\")",
   "closeAskNexus({ silent: true })",
+  "row(\"How this works\"",
+  "function courseSelectOptions",
+  "function productSelectOptions",
+  "function routeSelectOptions",
+  "closeAskNexus({ silent: true })",
   "const userSection = workflow === \"ai\" ? \"agent\" : workflow === \"map\" ? \"map\" : workflow",
   "experienceMode === \"user\" && simpleUserSections[userSection]",
   "lower.includes(\"help me\")",
@@ -161,12 +166,13 @@ assert(html.includes("addAdminUserBtn"), "Admin should have an Admin test login 
 assert(app.includes('workflow === "admin-user"'), "Admin test login needs workflow wiring");
 assert(app.includes("Standard Users and Investors cannot run this workflow"), "Admin login flow should clearly exclude Standard Users and Investors");
 assert(html.includes("userVoiceDock"), "User app shell needs a compact always-available voice dock");
+assert(html.includes("globalBackBtn"), "Ask Nexus needs a clear Back to app close control");
 assert(html.includes("nexusBehaviorStatus"), "User voice dock needs an assistant state indicator");
 assert(html.includes('data-user-voice-action="listen"'), "User voice dock needs a speak action");
 assert(html.includes('data-user-voice-action="type"'), "User voice dock needs a type action");
 assert(html.includes('data-user-voice-action="read"'), "User voice dock needs a read action");
-assert(html.includes("nexus-behavior-74"), "Index must force browsers to load Nexus behavior CSS");
-assert(html.includes("nexus-behavior-74"), "Index must force browsers to load Nexus behavior JS");
+assert(html.includes("nexus-behavior-75"), "Index must force browsers to load Nexus behavior CSS");
+assert(html.includes("nexus-behavior-75"), "Index must force browsers to load Nexus behavior JS");
 assert(app.includes("I want to sell maize"), "Nexus behavior layer should support natural trade requests without button hunting");
 assert(app.includes("I need a doctor"), "Nexus behavior layer should support natural telehealth requests without button hunting");
 assert(app.includes("Admin Operator"), "Nexus behavior layer should adapt for Admin mode");

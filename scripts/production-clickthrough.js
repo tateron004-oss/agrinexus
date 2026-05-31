@@ -354,9 +354,9 @@ assert(app.includes('workflow === "admin-user"'), "Admin test login button needs
 assert(app.includes("Only an existing Admin can run this workflow"), "Admin login flow must explain admin-only protection");
 assert(server.includes('adminAccount.role = "Admin"'), "Backend must force admin test logins to Admin");
 assert(server.includes("admin_user.created"), "Admin test login must create auth audit evidence");
-assert(html.includes("styles.css?v=nexus-behavior-74"), "Index must force browsers to load the latest Nexus behavior shell");
-assert(html.includes("app.js?v=nexus-behavior-74"), "Index must force browsers to load the latest Nexus behavior code");
-assert(sw.includes("agrinexus-pwa-v54"), "Service worker cache must refresh the installed app after native voice bridge updates");
+assert(html.includes("styles.css?v=nexus-behavior-75"), "Index must force browsers to load the latest Nexus behavior shell");
+assert(html.includes("app.js?v=nexus-behavior-75"), "Index must force browsers to load the latest Nexus behavior code");
+assert(sw.includes("agrinexus-pwa-v55"), "Service worker cache must refresh the installed app after native voice bridge updates");
 assert(html.includes("userWorkspace"), "Dashboard needs a User Workspace for standard users");
 assert(html.includes("userMobileDock"), "Legacy mobile dock markup should remain safely hidden for cache compatibility");
 assert(html.includes("What Do You Need Help With Today?"), "Dashboard simple start should use user-ready language");
@@ -393,6 +393,12 @@ assert(app.includes("data-inline-workflow-confirm"), "Inline user workflow needs
 assert(app.includes("data-inline-workflow-cancel"), "Inline user workflow needs a visible No button");
 assert(app.includes("openWorkflowModal(config)"), "User tab workflows must open the full workflow window for testing");
 assert(app.includes('$("#workflowModal").classList.remove("hidden")'), "Workflow modal must become visible when opened");
+assert(app.includes("closeAskNexus({ silent: true })"), "Workflow windows must close Ask Nexus so workflows never run behind the assistant");
+assert(app.includes('row("How this works"'), "Workflow windows need clear user guidance, not just cards");
+assert(app.includes("function courseSelectOptions"), "Start Course needs a visible course selector");
+assert(app.includes("function productSelectOptions"), "Create Order and Drone Scan need visible product selectors");
+assert(app.includes("function routeSelectOptions"), "Route workflows need visible route selectors");
+assert(html.includes("globalBackBtn"), "Ask Nexus needs a clear Back to app close button");
 assert(app.includes("closeAskNexus({ silent: true })"), "User service buttons must clear assistant overlays before opening workflows");
 assert(app.includes('const userSection = workflow === "ai" ? "agent" : workflow === "map" ? "map" : workflow'), "User voice workflows must resolve to the visible simple section");
 assert(app.includes('experienceMode === "user" && simpleUserSections[userSection]'), "User voice workflows must resolve into the visible user section");
