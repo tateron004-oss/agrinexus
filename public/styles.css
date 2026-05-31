@@ -3352,3 +3352,175 @@ body.reduced-motion *::after {
     width: fit-content;
   }
 }
+
+/* Final assistant containment pass: open assistant surfaces must never render as clipped partial windows. */
+.global-assistant:not(.hidden),
+body.user-mode .global-assistant:not(.hidden) {
+  position: fixed !important;
+  inset: 12px !important;
+  left: 50% !important;
+  right: auto !important;
+  bottom: auto !important;
+  top: 12px !important;
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) !important;
+  align-content: start !important;
+  width: min(520px, calc(100vw - 24px)) !important;
+  max-width: calc(100vw - 24px) !important;
+  max-height: calc(100dvh - 24px) !important;
+  min-height: min(560px, calc(100dvh - 24px)) !important;
+  overflow: auto !important;
+  margin: 0 !important;
+  padding: 14px !important;
+  border: 3px solid #173240 !important;
+  border-radius: 18px !important;
+  background: #ffffff !important;
+  box-shadow: 0 24px 70px rgba(23, 50, 64, .28) !important;
+  transform: translateX(-50%) !important;
+  z-index: 2400 !important;
+}
+
+.global-assistant:not(.hidden) *,
+body.user-mode .global-assistant:not(.hidden) * {
+  max-width: 100%;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.global-assistant:not(.hidden) .global-assistant-head,
+body.user-mode .global-assistant:not(.hidden) .global-assistant-head {
+  position: sticky !important;
+  top: 0 !important;
+  z-index: 2 !important;
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) auto !important;
+  gap: 10px !important;
+  align-items: start !important;
+  padding-bottom: 8px !important;
+  background: #ffffff !important;
+}
+
+.global-assistant:not(.hidden) .global-assistant-head > div,
+body.user-mode .global-assistant:not(.hidden) .global-assistant-head > div {
+  display: block !important;
+}
+
+.global-assistant:not(.hidden) .global-assistant-actions,
+body.user-mode .global-assistant:not(.hidden) .global-assistant-actions,
+.jarvis-panel:not(.hidden) .action-row {
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  gap: 8px !important;
+  overflow: visible !important;
+}
+
+.global-assistant:not(.hidden) .global-assistant-actions button,
+body.user-mode .global-assistant:not(.hidden) .global-assistant-actions button,
+.jarvis-panel:not(.hidden) .action-row button {
+  width: 100% !important;
+  min-height: 48px !important;
+  white-space: normal !important;
+}
+
+.global-assistant:not(.hidden) .global-assistant-status,
+body.user-mode .global-assistant:not(.hidden) .global-assistant-status {
+  max-height: none !important;
+  overflow: visible !important;
+  font-size: 1rem !important;
+  line-height: 1.32 !important;
+  white-space: normal !important;
+}
+
+.jarvis-dock:not(.hidden) {
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 2350 !important;
+  pointer-events: none;
+}
+
+.jarvis-dock:not(.hidden) .jarvis-toggle {
+  position: fixed !important;
+  right: 16px !important;
+  bottom: 16px !important;
+  pointer-events: auto;
+}
+
+.jarvis-panel:not(.hidden) {
+  position: fixed !important;
+  left: 50% !important;
+  top: 12px !important;
+  right: auto !important;
+  bottom: auto !important;
+  display: grid !important;
+  align-content: start !important;
+  width: min(520px, calc(100vw - 24px)) !important;
+  max-width: calc(100vw - 24px) !important;
+  max-height: calc(100dvh - 24px) !important;
+  min-height: min(520px, calc(100dvh - 24px)) !important;
+  overflow: auto !important;
+  padding: 14px !important;
+  border: 3px solid #173240 !important;
+  border-radius: 18px !important;
+  background: #ffffff !important;
+  box-shadow: 0 24px 70px rgba(23, 50, 64, .28) !important;
+  transform: translateX(-50%) !important;
+  pointer-events: auto;
+}
+
+.voice-help-panel:not(.hidden) {
+  display: grid !important;
+  max-height: none !important;
+  overflow: visible !important;
+}
+
+.voice-help-panel:not(.hidden) .voice-help-content {
+  max-height: min(46dvh, 420px) !important;
+  overflow: auto !important;
+}
+
+.modal:not(.hidden) {
+  position: fixed !important;
+  inset: 0 !important;
+  display: grid !important;
+  align-items: center !important;
+  justify-items: center !important;
+  padding: 12px !important;
+  overflow: auto !important;
+  z-index: 2500 !important;
+}
+
+.modal:not(.hidden) .modal-panel {
+  width: min(760px, calc(100vw - 24px)) !important;
+  max-width: calc(100vw - 24px) !important;
+  max-height: calc(100dvh - 24px) !important;
+  overflow: auto !important;
+}
+
+body.user-mode .modal:not(.hidden) .modal-panel,
+body.user-mode .grandma-workflow:not(.hidden) .modal-panel {
+  width: min(440px, calc(100vw - 20px)) !important;
+  max-height: calc(100dvh - 20px) !important;
+  min-height: min(420px, calc(100dvh - 20px)) !important;
+  overflow: auto !important;
+}
+
+@media (max-width: 560px) {
+  .global-assistant:not(.hidden),
+  body.user-mode .global-assistant:not(.hidden),
+  .jarvis-panel:not(.hidden) {
+    inset: 8px !important;
+    left: 8px !important;
+    top: 8px !important;
+    width: calc(100vw - 16px) !important;
+    max-width: calc(100vw - 16px) !important;
+    max-height: calc(100dvh - 16px) !important;
+    min-height: calc(100dvh - 16px) !important;
+    transform: none !important;
+  }
+
+  .global-assistant:not(.hidden) .global-assistant-actions,
+  body.user-mode .global-assistant:not(.hidden) .global-assistant-actions,
+  .jarvis-panel:not(.hidden) .action-row {
+    grid-template-columns: 1fr !important;
+  }
+}

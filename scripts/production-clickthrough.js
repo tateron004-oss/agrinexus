@@ -480,6 +480,9 @@ assert(styles.includes("body.user-mode .global-assistant-status"), "Grandma Mode
 assert(styles.includes("body.user-mode #globalVoiceGuide") && styles.includes("display: none !important"), "Standard User mode must hide command example text menus at the bottom");
 assert(styles.includes("body.user-mode .global-assistant") && styles.includes("position: fixed") && styles.includes("z-index: 220"), "Ask Nexus must open as a fixed contained user-mode panel");
 assert(styles.includes("max-height: calc(100vh - 24px)"), "Ask Nexus user panel must not open as a partial clipped window");
+assert(styles.includes("Final assistant containment pass"), "Assistant windows need final anti-clipping containment overrides");
+assert(styles.includes(".global-assistant:not(.hidden)") && styles.includes(".jarvis-panel:not(.hidden)") && styles.includes(".modal:not(.hidden)"), "All assistant windows must have full open-state containment rules");
+assert(styles.includes("min-height: calc(100dvh - 16px)"), "Small-screen assistant windows must open full-height, not as partial sheets");
 assert(styles.includes("body.user-mode .global-assistant .field-label") && styles.includes("visibility: visible"), "Ask Nexus must keep its input and controls visible in user mode");
 assert(styles.includes("body.user-mode .assistant-close") && styles.includes("white-space: nowrap"), "Ask Nexus close button must never wrap in Standard User mode");
 assert(styles.includes("body.user-mode .global-assistant-actions") && styles.includes("grid-template-columns: 1fr 1fr"), "Ask Nexus buttons should be contained in a simple two-button grid");
