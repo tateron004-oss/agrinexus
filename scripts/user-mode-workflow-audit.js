@@ -5,6 +5,8 @@ const path = require("node:path");
 const root = path.resolve(__dirname, "..");
 const app = fs.readFileSync(path.join(root, "public", "app.js"), "utf8");
 const styles = fs.readFileSync(path.join(root, "public", "styles.css"), "utf8");
+const html = fs.readFileSync(path.join(root, "public", "index.html"), "utf8");
+const sw = fs.readFileSync(path.join(root, "public", "sw.js"), "utf8");
 
 const expectedSections = {
   learning: [
@@ -80,6 +82,10 @@ for (const [section, buttons] of Object.entries(expectedSections)) {
 ].forEach(marker => {
   assert(styles.includes(marker), `User workflow containment style missing: ${marker}`);
 });
+
+assert(html.includes("/app.js?v=nexus-behavior-70"), "Index must force browsers to load current User-mode workflow JS");
+assert(html.includes("/styles.css?v=nexus-behavior-70"), "Index must force browsers to load current User-mode workflow CSS");
+assert(sw.includes('CACHE_NAME = "agrinexus-pwa-v50"'), "Service worker cache must be bumped after User-mode workflow fixes");
 
 console.log("User mode workflow audit passed");
 console.log("Checked: every simple app tab/button maps to a workflow, User mode uses inline confirmations, and assistant windows have anti-partial containment.");
