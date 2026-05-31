@@ -5222,6 +5222,32 @@ function startGrandmaActionConfirmation(button) {
   renderGrandmaConfirmation();
 }
 
+function simpleUserCommandWorkflow(command = "") {
+  const lower = String(command || "").toLowerCase();
+  const roleId = firstEligibleRole()?.id;
+  const productId = firstProduct()?.id;
+  if (lower.includes("start training") || lower.includes("start a course")) return { workflow: "learning", action: "start", response: "Course start is ready.", dataset: {} };
+  if (lower.includes("complete my lesson") || lower.includes("finish lesson")) return { workflow: "learning", action: "lesson", response: "Lesson completion is ready.", dataset: {} };
+  if (lower.includes("issue my certificate") || lower.includes("certificate")) return { section: "learning", config: learningCertificateWorkflowConfig(), response: "Certificate workflow is ready." };
+  if (lower.includes("build captions") || lower.includes("captions")) return { section: "learning", config: learningAccessibilityWorkflowConfig("caption"), response: "Caption support is ready." };
+  if (lower.includes("show me jobs") || lower.includes("find jobs")) return { workflow: "workforce", action: "build-profile", response: "Job support is ready.", dataset: { roleId } };
+  if (lower.includes("apply for")) return { workflow: "workforce", action: "apply-role", response: "Job application is ready.", dataset: { roleId } };
+  if (lower.includes("review my workforce gaps") || lower.includes("skills")) return { workflow: "workforce", action: "mentor", response: "Skills review is ready.", dataset: { roleId } };
+  if (lower.includes("schedule my shift") || lower.includes("plan shift")) return { workflow: "workforce", action: "shift", response: "Shift planning is ready.", dataset: { roleId } };
+  if (lower.includes("telehealth intake") || lower.includes("start intake")) return { workflow: "health", action: "intake", response: "Telehealth intake is ready.", dataset: {} };
+  if (lower.includes("telehealth access") || lower.includes("talk to provider")) return { workflow: "health", action: "provider", response: "Provider access is ready.", dataset: {} };
+  if (lower.includes("check health risk") || lower.includes("check region")) return { workflow: "health", action: "safety", response: "Regional health risk review is ready.", dataset: {} };
+  if (lower.includes("audio guide") || lower.includes("accessibility")) return { workflow: "health", action: "accessibility", response: "Accessibility support is ready.", dataset: {} };
+  if (lower.includes("contact my buyer") || lower.includes("contact buyer")) return { workflow: "trade", action: "buyer-contact", response: "Buyer contact is ready.", dataset: { productId } };
+  if (lower.includes("crop order") || lower.includes("create order")) return { workflow: "trade", action: "order", response: "Crop order is ready.", dataset: { productId } };
+  if (lower.includes("track my route") || lower.includes("check route")) return { workflow: "ai", action: "route", response: "Route intelligence is ready.", dataset: {} };
+  if (lower.includes("drone scan") || lower.includes("scan farm") || lower.includes("check farm")) return { workflow: "trade", action: "drone", response: "Drone scan is ready.", dataset: { productId } };
+  if (lower.includes("nearest health facility") || lower.includes("find facility")) return { workflow: "map", action: "facility-route", response: "Facility route is ready.", dataset: {} };
+  if (lower.includes("explain the map")) return { workflow: "map", action: "inspector", response: "Map explanation is ready.", dataset: {} };
+  if (lower.includes("agent plan") || lower.includes("plan mission")) return { workflow: "ai", action: "command", response: "Agent plan support is ready.", dataset: {} };
+  return null;
+}
+
 async function answerGrandmaActionConfirmation(answer) {
   const action = pendingGrandmaAction;
   pendingGrandmaAction = null;
@@ -6824,6 +6850,27 @@ function learningAccessibilityWorkflowConfig(mode) {
       { title: "Learner need", detail: "Supports hearing and visual impairment workflows without requiring high bandwidth.", status: "ready", label: "Access" },
       { title: "Course context", detail: localized?.title || "Active course", status: "live", label: "Lesson" },
       { title: "Assistive output", detail: selected.support, status: "ready", label: "Prepared" }
+    ]
+  });
+}
+
+function learningCertificateWorkflowConfig() {
+  const course = activeCourse() || data.courses[0];
+  const localized = course ? translatedCourse(course) : null;
+  return simpleWorkflowConfig({
+    eyebrow: "Learning workflow",
+    title: "Issue certificate",
+    summary: "Confirm certificate readiness before the credential is issued and provider evidence is recorded.",
+    confirmLabel: "Issue certificate",
+    path: "/api/learning/certificate",
+    body: { courseId: course?.id },
+    success: "Certificate issued",
+    record: "Certificate, credential number, readiness, and certificate provider evidence",
+    provider: "Learning certificate provider records certificate.issued.",
+    checklist: [
+      { title: "Course", detail: localized?.title || "Active course", status: "live", label: localized?.track || "Learning" },
+      { title: "Quiz score", detail: `${data.profile.quizScore || 0}`, status: data.profile.quizScore ? "ready" : "blocked", label: data.profile.quizScore ? "Ready" : "Quiz first" },
+      { title: "Provider evidence", detail: "A certificate issue event is recorded for audit.", status: "ready", label: "Credential" }
     ]
   });
 }
@@ -8974,7 +9021,23 @@ async function runSimpleAction(eventOrButton) {
   if (status) status.textContent = `${label} is running...`;
   if (button.dataset.simpleCommand) {
     if (experienceMode === "user") {
-      startGrandmaActionConfirmation(button);
+      const mapped = simpleUserCommandWorkflow(button.dataset.simpleCommand);
+      if (mapped) {
+        if (status) status.textContent = `${label} opened. Review the details and choose Yes or No.`;
+        const targetSection = mapped.section || (mapped.workflow === "ai" ? "agent" : mapped.workflow === "map" ? "map" : mapped.workflow);
+        goSection(targetSection, { keepAssistant: false });
+        if (mapped.config) {
+          openWorkflowModal(mapped.config);
+          setVoiceResponse(mapped.response || "Workflow is ready.", true);
+        } else {
+          openWorkflowByVoice(mapped.workflow, mapped.action, mapped.response, mapped.dataset);
+        }
+        return;
+      }
+      setCommandInputs(button.dataset.simpleCommand);
+      openAskNexus();
+      await handleVoiceCommand(button.dataset.simpleCommand);
+      if ($("#simpleActionStatus")) $("#simpleActionStatus").textContent = `${label} sent to Nexus.`;
       return;
     }
     setCommandInputs(button.dataset.simpleCommand);
