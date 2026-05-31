@@ -2197,8 +2197,8 @@ function runUserModeSelfTest() {
       if (!simpleUserCommandWorkflow(button.command)) missing.push(`${section}: ${button.label}`);
     });
   });
-  const currentScript = [...document.scripts].some(script => String(script.src || "").includes("nexus-behavior-78"));
-  const currentStyle = [...document.styleSheets].some(sheet => String(sheet.href || "").includes("nexus-behavior-78"));
+  const currentScript = [...document.scripts].some(script => String(script.src || "").includes("nexus-behavior-79"));
+  const currentStyle = [...document.styleSheets].some(sheet => String(sheet.href || "").includes("nexus-behavior-79"));
   if (!currentScript || !currentStyle) missing.push("new app files");
   const ok = missing.length === 0;
   const message = ok
@@ -6206,6 +6206,12 @@ function render() {
     row("Checkpoint", latestOrder?.checkpoint || data.profile.activeCheckpoint),
     row("Latest order", latestOrder?.orderNumber || "None")
   ].join("");
+  $("#shipmentMapPreview").innerHTML = shipmentMapHtml({
+    route,
+    order: latestOrder,
+    product: latestOrder ? (data.products || []).find(item => item.id === latestOrder.productId) || firstProduct() : firstProduct(),
+    title: latestOrder ? "Shipment tracking" : "Crop route preview"
+  });
 
   $("#orderTimeline").innerHTML = latestOrder?.timeline?.length
     ? latestOrder.timeline.map(item => `<div><strong>${item.label}</strong><span>${item.checkpoint}</span></div>`).join("")
@@ -6862,6 +6868,65 @@ function workflowComfortHtml(config) {
   ].map(item => `<div><strong>${translateText(item.title)}</strong><span>${translateText(item.detail)}</span></div>`).join("");
 }
 
+function shipmentMapHtml({ route = activeRoute(), order = null, product = firstProduct(), title = "Shipment route" } = {}) {
+  if (!route?.points?.length) return "";
+  const points = route.points;
+  const lats = points.map(point => Number(point[0]));
+  const lngs = points.map(point => Number(point[1]));
+  const minLat = Math.min(...lats);
+  const maxLat = Math.max(...lats);
+  const minLng = Math.min(...lngs);
+  const maxLng = Math.max(...lngs);
+  const latRange = Math.max(maxLat - minLat, .01);
+  const lngRange = Math.max(maxLng - minLng, .01);
+  const project = point => {
+    const x = 8 + ((Number(point[1]) - minLng) / lngRange) * 84;
+    const y = 86 - ((Number(point[0]) - minLat) / latRange) * 70;
+    return [Number(x.toFixed(1)), Number(y.toFixed(1))];
+  };
+  const projected = points.map(project);
+  const linePoints = projected.map(point => point.join(",")).join(" ");
+  const activeCheckpoint = order?.checkpoint || data.profile.activeCheckpoint || route.checkpoints?.[0] || "Pickup";
+  const checkpointIndex = Math.max(0, route.checkpoints?.findIndex(checkpoint => checkpoint === activeCheckpoint) ?? 0);
+  const safeIndex = Math.min(checkpointIndex < 0 ? 0 : checkpointIndex, projected.length - 1);
+  const activePoint = projected[safeIndex];
+  const destination = route.checkpoints?.[route.checkpoints.length - 1] || "Buyer handoff";
+  const shipmentTitle = order?.orderNumber ? `${order.orderNumber} - ${product?.name || order.product || "Crop shipment"}` : product?.name || "Crop shipment";
+  const checkpointTags = (route.checkpoints || []).map((checkpoint, index) => {
+    const status = index < safeIndex ? "Done" : index === safeIndex ? "Here now" : "Next";
+    return `<span class="${index === safeIndex ? "active" : ""}">${translateText(status)}: ${translateText(checkpoint)}</span>`;
+  }).join("");
+  return `
+    <section class="shipment-map-card">
+      <div class="shipment-map-head">
+        <div>
+          <strong>${translateText(title)}</strong>
+          <span>${translateText(shipmentTitle)}</span>
+        </div>
+        <small>${translateText(order?.stage || data.profile.routeStage || "Tracking")}</small>
+      </div>
+      <svg viewBox="0 0 100 100" role="img" aria-label="${escapeHtml(`${route.name} shipment map`)}">
+        <defs>
+          <linearGradient id="shipmentRouteGradient" x1="0%" x2="100%" y1="0%" y2="0%">
+            <stop offset="0%" stop-color="#1b8f68"></stop>
+            <stop offset="100%" stop-color="#176fc7"></stop>
+          </linearGradient>
+        </defs>
+        <rect x="1" y="1" width="98" height="98" rx="10" fill="#eef8f4"></rect>
+        <polyline points="${linePoints}" fill="none" stroke="url(#shipmentRouteGradient)" stroke-width="4.8" stroke-linecap="round" stroke-linejoin="round"></polyline>
+        ${projected.map((point, index) => `<circle cx="${point[0]}" cy="${point[1]}" r="${index === safeIndex ? 4.8 : 3.2}" fill="${index === safeIndex ? "#d94c31" : "#ffffff"}" stroke="${index === safeIndex ? "#d94c31" : "#176fc7"}" stroke-width="2"></circle>`).join("")}
+        <circle cx="${activePoint[0]}" cy="${activePoint[1]}" r="8" fill="none" stroke="#d94c31" stroke-width="2" stroke-dasharray="3 3"></circle>
+      </svg>
+      <div class="shipment-map-meta">
+        <div><strong>${translateText("Pickup")}</strong><span>${translateText(route.checkpoints?.[0] || "Field pickup")}</span></div>
+        <div><strong>${translateText("Now")}</strong><span>${translateText(activeCheckpoint)}</span></div>
+        <div><strong>${translateText("Buyer")}</strong><span>${translateText(destination)}</span></div>
+      </div>
+      <div class="shipment-checkpoints">${checkpointTags}</div>
+    </section>
+  `;
+}
+
 function workflowOutcomeHtml(config) {
   if (experienceMode === "user") {
     return [
@@ -6887,6 +6952,7 @@ function openWorkflowModal(config) {
   $("#workflowTitle").textContent = translateText((experienceMode === "user" && config.userTitle) || config.title || "Workflow");
   $("#workflowSummary").textContent = translateText((experienceMode === "user" && config.userSummary) || config.summary || "Review this workflow and confirm when ready.");
   $("#workflowComfort").innerHTML = workflowComfortHtml(config);
+  $("#workflowShipmentMap").innerHTML = config.routePreview ? shipmentMapHtml(config.routePreview) : "";
   $("#workflowSteps").innerHTML = workflowStepHtml(config.steps || []);
   $("#workflowFields").innerHTML = (config.fields || []).map(field => {
     const value = field.value || "";
@@ -6972,8 +7038,8 @@ function roleWorkflowConfig(roleId) {
   };
 }
 
-function simpleWorkflowConfig({ eyebrow, title, userTitle, summary, userSummary, confirmLabel, path, body, success, record, provider, checklist, fields, guide, steps }) {
-  return { eyebrow, title, userTitle, summary, userSummary, confirmLabel, path, body, success, record, provider, checklist, fields, guide, steps };
+function simpleWorkflowConfig({ eyebrow, title, userTitle, summary, userSummary, confirmLabel, path, body, success, record, provider, checklist, fields, guide, steps, routePreview, userOutcome, userRecord }) {
+  return { eyebrow, title, userTitle, summary, userSummary, confirmLabel, path, body, success, record, provider, checklist, fields, guide, steps, routePreview, userOutcome, userRecord };
 }
 
 function courseSelectOptions() {
@@ -7114,13 +7180,23 @@ function tradeUserCopy(action, product) {
   };
   if (["buyer-contact", "buyer-message", "buyer-whatsapp", "buyer-sms"].includes(action)) return {
     title: "Talk to my buyer",
-    summary: "Prepare a simple buyer message about the crop, route, quantity, quality, payment, or delivery timing.",
+    summary: "Prepare a simple buyer message about the crop, route, quantity, quality, payment, or delivery timing while seeing the shipment lane.",
     guide: "This opens a buyer-seller communication thread. Live SMS or WhatsApp sends when provider credentials and phone numbers are configured; otherwise AgriNexus records the message thread for testing.",
     steps: [
       { title: "Choose crop", detail: `Use ${product?.name || "the selected crop"} or choose another crop.` },
       { title: "Name buyer", detail: "Type who you want to talk to." },
       { title: "Write message", detail: "Use plain language. AgriNexus keeps it tied to the order and route." },
       { title: "Open thread", detail: "Press the confirm button to record the buyer conversation." }
+    ]
+  };
+  if (action === "advance" || action === "route") return {
+    title: action === "advance" ? "Track my shipment" : "Check shipment route",
+    summary: "See where the crop shipment is now, what checkpoint comes next, and what needs attention before delivery.",
+    guide: "This uses the active shipment lane. Confirming advances or reviews the order checkpoint and keeps route evidence tied to the crop order.",
+    steps: [
+      { title: "Look at the map", detail: "The red marker shows where the shipment is now." },
+      { title: "Review checkpoint", detail: "Check pickup, current stop, and buyer handoff." },
+      { title: "Confirm next move", detail: "Press the main button to update the shipment route record." }
     ]
   };
   if (["drone-plan", "drone", "drone-intervention", "drone-report", "drone-irrigation", "drone-pest", "drone-spray", "drone-yield", "drone-compliance"].includes(action)) return {
@@ -7575,6 +7651,11 @@ function workflowConfig(workflow, action, element) {
             ? "Review the active route and checkpoint. Confirming updates route intelligence or moves the order to the next logistics step."
             : "Review the buyer, channel, and product context. Confirming creates the trade communication or provider evidence.",
       steps: userCopy.steps,
+      routePreview: ["order", "advance", "route", "buyer-contact", "buyer-message", "buyer-whatsapp", "buyer-sms"].includes(action)
+        ? { route: activeRoute(), order: latestOrder, product, title: action === "order" ? "Crop route preview" : "Shipment tracking map" }
+        : null,
+      userOutcome: action === "order" ? "AgriNexus creates the order and connects it to the shipment lane." : action === "advance" ? "AgriNexus moves the shipment to the next checkpoint." : "AgriNexus keeps the buyer conversation connected to the crop route.",
+      userRecord: "The crop order, buyer message, checkpoint, and route evidence stay connected so the shipment can be tracked later.",
       fields: [
         ...(action !== "advance" ? [{ name: "productId", label: "Crop or product", type: "select", value: product?.id || productId || "", options: productSelectOptions() }] : []),
         ...(action === "order" ? [

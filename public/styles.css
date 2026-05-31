@@ -2454,6 +2454,103 @@ body.admin-mode .user-workspace {
 .workflow-comfort:empty {
   display: none;
 }
+.workflow-shipment-map:empty,
+.shipment-map-preview:empty {
+  display: none;
+}
+.workflow-shipment-map,
+.shipment-map-preview {
+  margin: 0 0 14px;
+}
+.shipment-map-card {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid #bcd9d1;
+  border-radius: 14px;
+  background: linear-gradient(180deg, #ffffff, #edf8f4);
+  box-shadow: 0 12px 30px rgba(18, 70, 56, .08);
+}
+.shipment-map-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  align-items: start;
+}
+.shipment-map-head div {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+.shipment-map-head strong {
+  color: #173240;
+  font-size: 1rem;
+  line-height: 1.15;
+}
+.shipment-map-head span,
+.shipment-map-head small {
+  color: #426257;
+  font-weight: 800;
+  line-height: 1.25;
+}
+.shipment-map-head small {
+  padding: 6px 8px;
+  border-radius: 999px;
+  background: #173240;
+  color: #ffffff;
+  white-space: nowrap;
+}
+.shipment-map-card svg {
+  width: 100%;
+  min-height: 190px;
+  border: 1px solid #d4e8e2;
+  border-radius: 12px;
+  background: #eef8f4;
+}
+.shipment-map-meta {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+.shipment-map-meta div {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+  padding: 9px;
+  border-radius: 10px;
+  background: #ffffff;
+  border: 1px solid #dcebe7;
+}
+.shipment-map-meta strong,
+.shipment-checkpoints span {
+  color: #173240;
+  font-size: .82rem;
+  line-height: 1.2;
+}
+.shipment-map-meta span {
+  color: #456b60;
+  font-size: .88rem;
+  font-weight: 800;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+.shipment-checkpoints {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.shipment-checkpoints span {
+  padding: 7px 9px;
+  border-radius: 999px;
+  border: 1px solid #cfe4df;
+  background: #ffffff;
+  font-weight: 850;
+}
+.shipment-checkpoints span.active {
+  border-color: #d94c31;
+  background: #fff1ed;
+  color: #8c2a18;
+}
 .workflow-comfort div {
   display: grid;
   gap: 5px;
@@ -3737,14 +3834,24 @@ body.user-mode .grandma-workflow:not(.hidden) .modal-actions button {
   body.user-mode .workflow-comfort div,
   body.user-mode .workflow-steps div,
   body.user-mode .friendly-outcome,
-  body.user-mode .workflow-fields {
+  body.user-mode .workflow-fields,
+  body.user-mode .shipment-map-card {
     padding: 10px;
+  }
+
+  body.user-mode .shipment-map-meta {
+    grid-template-columns: 1fr;
+  }
+
+  body.user-mode .shipment-map-card svg {
+    min-height: 160px;
   }
 
   body.user-mode .modal-summary,
   body.user-mode .workflow-comfort span,
   body.user-mode .workflow-steps span,
-  body.user-mode .friendly-outcome span {
+  body.user-mode .friendly-outcome span,
+  body.user-mode .shipment-map-meta span {
     font-size: .95rem;
     line-height: 1.35;
   }

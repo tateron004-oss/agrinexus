@@ -13,7 +13,7 @@
   <link rel="icon" href="/icons/agri-nexus-192.png" type="image/png">
   <link rel="apple-touch-icon" href="/icons/agri-nexus-192.png">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-  <link rel="stylesheet" href="/styles.css?v=nexus-behavior-78">
+  <link rel="stylesheet" href="/styles.css?v=nexus-behavior-79">
 </head>
 <body>
   <a class="skip-link" href="#mainContent">Skip to main content</a>
@@ -724,6 +724,7 @@
             <article>
               <h3>Order Operations</h3>
               <div id="logisticsPanel" class="rows"></div>
+              <div id="shipmentMapPreview" class="shipment-map-preview" aria-label="Shipment tracking map"></div>
               <div id="orderTimeline" class="activity"></div>
               <div class="action-row"><button id="advanceOrderBtn">Advance order</button><button data-ai="price" class="primary">Price AI</button><button data-ai="route">Route AI</button></div>
             </article>
@@ -1376,6 +1377,7 @@
       </div>
       <p id="workflowSummary" class="modal-summary"></p>
       <div id="workflowComfort" class="workflow-comfort" aria-label="Workflow guidance"></div>
+      <div id="workflowShipmentMap" class="workflow-shipment-map" aria-label="Shipment map preview"></div>
       <div id="workflowSteps" class="workflow-steps" aria-label="Workflow steps"></div>
       <div id="workflowVoicePrompt" class="workflow-voice-prompt" role="status">Voice ready: say yes to confirm, no to cancel, or read to hear this workflow.</div>
       <div id="workflowFields" class="workflow-fields"></div>
@@ -1403,6 +1405,6 @@
   <div id="toast" class="toast hidden" role="status" aria-live="polite" aria-atomic="true"></div>
   <div id="screenReaderStatus" class="sr-only" role="status" aria-live="polite" aria-atomic="true"></div>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="/app.js?v=nexus-behavior-78"></script>
+  <script src="/app.js?v=nexus-behavior-79"></script>
 </body>
 </html>
