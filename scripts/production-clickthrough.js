@@ -386,6 +386,8 @@ assert(html.includes('data-user-voice-action="read"'), "Voice dock needs a read 
 assert(app.includes("pendingGrandmaAction"), "Grandma Mode needs a pending action confirmation state");
 assert(app.includes("function renderGrandmaConfirmation"), "Grandma Mode needs a visible yes/no confirmation panel");
 assert(app.includes("function simpleUserCommandWorkflow"), "User app buttons need direct workflow routing");
+assert(app.includes("function openDefaultUserSectionAction"), "User tabs need to open the first useful action automatically");
+assert(app.includes('openDefaultAction: experienceMode === "user"'), "User tab clicks must opt into default workflow actions");
 assert(app.includes("function learningCertificateWorkflowConfig"), "User app certificate button needs its own certificate workflow instead of course fallback");
 assert(app.includes("openWorkflowModal(mapped.config)"), "User app mapped workflows must open the real workflow modal");
 assert(app.includes("await handleVoiceCommand(button.dataset.simpleCommand)"), "User app conversational buttons must still send commands to Nexus");

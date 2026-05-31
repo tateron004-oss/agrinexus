@@ -2639,6 +2639,9 @@ function goSection(sectionId, options = {}) {
   if (experienceMode === "user" && options.keepAssistant !== true) closeAskNexus({ silent: true });
   if (sectionId === "map") setTimeout(() => map && map.invalidateSize(), 100);
   renderUserSimpleActiveSection(sectionId);
+  if (experienceMode === "user" && options.openDefaultAction === true) {
+    queueMicrotask(() => openDefaultUserSectionAction(sectionId));
+  }
   renderLiveVoiceSuggestions(contextualVoiceSuggestions(sectionId));
   updateNexusBehaviorLayer("ready", `${nexusBehaviorMode().label}: ${workspaceCopy[sectionId]?.title || sectionId} ready`);
   updateUserBackHome(sectionId);
@@ -5190,6 +5193,29 @@ function renderUserSimpleActiveSection(sectionId = currentSectionId()) {
       <div class="user-module-status" role="status">${translateText("Nexus is ready.")}</div>
     </section>
   `);
+}
+
+function openDefaultUserSectionAction(sectionId = currentSectionId()) {
+  if (experienceMode !== "user" || sectionId === "dashboard") return false;
+  const command = simpleUserSections[sectionId]?.buttons?.[0]?.command;
+  if (!command) return false;
+  const label = simpleUserSections[sectionId]?.buttons?.[0]?.label || "Selected action";
+  const status = $(`#${sectionId} .user-module-status`);
+  const mapped = simpleUserCommandWorkflow(command);
+  if (status) status.textContent = `${translateText(label)} opened. Review the details and choose Yes or No.`;
+  if (mapped) {
+    if (mapped.config) {
+      openWorkflowModal(mapped.config);
+      setVoiceResponse(mapped.response || "Workflow is ready.", true);
+    } else {
+      openWorkflowByVoice(mapped.workflow, mapped.action, mapped.response, mapped.dataset);
+    }
+    return true;
+  }
+  setCommandInputs(command);
+  openAskNexus();
+  void handleVoiceCommand(command);
+  return true;
 }
 
 function renderGrandmaConfirmation() {
@@ -9047,7 +9073,7 @@ async function runSimpleAction(eventOrButton) {
     return;
   }
   if (button.dataset.simpleSection) {
-    goSection(button.dataset.simpleSection);
+    goSection(button.dataset.simpleSection, { openDefaultAction: experienceMode === "user" });
     if (status) status.textContent = `${label} opened.`;
     return;
   }
@@ -9677,12 +9703,12 @@ function bindStatic() {
   };
 
   $$(".nav").forEach(button => {
-    button.onclick = () => goSection(button.dataset.section, { instant: true });
+    button.onclick = () => goSection(button.dataset.section, { instant: true, openDefaultAction: experienceMode === "user" });
   });
   const userBackHomeBtn = $("#userBackHomeBtn");
   if (userBackHomeBtn) userBackHomeBtn.onclick = () => goSection("dashboard", { instant: true });
   $$("[data-mobile-section]").forEach(button => {
-    button.onclick = () => goSection(button.dataset.mobileSection, { instant: true });
+    button.onclick = () => goSection(button.dataset.mobileSection, { instant: true, openDefaultAction: experienceMode === "user" });
   });
   $$("[data-mobile-ask]").forEach(button => {
     button.onclick = openAskNexus;

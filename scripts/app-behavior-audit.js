@@ -45,6 +45,8 @@ hasAll(app, [
   "pendingGrandmaAction",
   "function renderGrandmaConfirmation",
   "function simpleUserCommandWorkflow",
+  "function openDefaultUserSectionAction",
+  "openDefaultAction: experienceMode === \"user\"",
   "function learningCertificateWorkflowConfig",
   "openWorkflowModal(mapped.config)",
   "await handleVoiceCommand(button.dataset.simpleCommand)",
