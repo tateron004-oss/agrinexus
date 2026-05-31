@@ -1075,6 +1075,20 @@ body.user-mode .section.active {
 body.user-mode .section.active:not(#dashboard) > :not(.user-simple-module) {
   display: none !important;
 }
+body.user-mode #map.section.active > .map-layout {
+  display: grid !important;
+  grid-template-columns: 1fr !important;
+  gap: 10px !important;
+  margin-top: 10px !important;
+}
+body.user-mode #map.section.active > .map-layout aside {
+  display: none !important;
+}
+body.user-mode #mapCanvas {
+  min-height: min(46dvh, 360px) !important;
+  border: 3px solid #173240 !important;
+  border-radius: 18px !important;
+}
 body.user-mode .user-simple-module {
   display: grid;
   gap: 10px;

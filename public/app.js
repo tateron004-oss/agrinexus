@@ -2197,8 +2197,8 @@ function runUserModeSelfTest() {
       if (!simpleUserCommandWorkflow(button.command)) missing.push(`${section}: ${button.label}`);
     });
   });
-  const currentScript = [...document.scripts].some(script => String(script.src || "").includes("nexus-behavior-73"));
-  const currentStyle = [...document.styleSheets].some(sheet => String(sheet.href || "").includes("nexus-behavior-73"));
+  const currentScript = [...document.scripts].some(script => String(script.src || "").includes("nexus-behavior-74"));
+  const currentStyle = [...document.styleSheets].some(sheet => String(sheet.href || "").includes("nexus-behavior-74"));
   if (!currentScript || !currentStyle) missing.push("new app files");
   const ok = missing.length === 0;
   const message = ok
@@ -2703,7 +2703,7 @@ function activateSectionFromButton(button, options = {}) {
   if (!sectionId) return false;
   goSection(sectionId, {
     instant: true,
-    openDefaultAction: experienceMode === "user" && sectionId !== "dashboard",
+    openDefaultAction: experienceMode === "user" && !["dashboard", "map"].includes(sectionId),
     ...options
   });
   const activeSection = $(`#${sectionId}`);
