@@ -18,6 +18,7 @@
     "app:jarvis-qa": "node scripts/jarvis-behavior-qa.js",
     "app:mobile-native-qa": "node scripts/mobile-native-qa.js",
     "placeholder:audit": "node scripts/no-placeholder-audit.js",
+    "stabilization:gate": "node scripts/stabilization-gate.js",
     "production:clickthrough": "node scripts/production-clickthrough.js",
     "production:complete-check": "node scripts/production-complete-check.js",
     "production:10-check": "node scripts/production-complete-check.js",
