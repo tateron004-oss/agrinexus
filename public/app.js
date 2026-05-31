@@ -7910,10 +7910,22 @@ function openHealthWorkflow(action, element = { dataset: {} }) {
 }
 
 async function confirmPendingWorkflow() {
-  if (!pendingWorkflow) return;
+  const confirmButton = $("#workflowConfirm");
+  const prompt = $("#workflowVoicePrompt");
+  if (!pendingWorkflow) {
+    if (prompt) prompt.textContent = "No workflow is open. Choose a button first.";
+    toast("Choose a workflow first");
+    return;
+  }
   const workflow = pendingWorkflow;
   const grandmaMode = experienceMode === "user";
   const note = $("#workflowNote").value.trim();
+  if (confirmButton) {
+    confirmButton.disabled = true;
+    confirmButton.setAttribute("aria-busy", "true");
+    confirmButton.textContent = grandmaMode ? translateText("Working...") : translateText("Completing...");
+  }
+  if (prompt) prompt.textContent = translateText("Nexus is completing this workflow now.");
   updateNexusBehaviorLayer("thinking", "Nexus is completing the confirmed workflow.");
   closeWorkflowModal();
   if (!workflow.path) {
@@ -7956,7 +7968,15 @@ async function confirmPendingWorkflow() {
       toast(workflow.success || "Workflow complete");
     }
   } catch (error) {
-    toast(error.message || "Workflow failed");
+    const message = error.message || "Workflow failed";
+    setVoiceResponse(message, true);
+    toast(message);
+  } finally {
+    if (confirmButton) {
+      confirmButton.disabled = false;
+      confirmButton.removeAttribute("aria-busy");
+      confirmButton.textContent = grandmaMode ? translateText("Yes") : translateText(workflow.confirmLabel || "Confirm action");
+    }
   }
 }
 
@@ -9896,6 +9916,11 @@ function bindStatic() {
   $("#wowDemoBtn").onclick = runWowDemo;
   $$("[data-ai-review]").forEach(button => button.onclick = () => reviewLatestAi(button.dataset.aiReview));
   $$("[data-notify]").forEach(button => button.onclick = () => sendModuleNotification(button.dataset.notify));
+  $("#workflowConfirm").onclick = event => {
+    event.preventDefault();
+    event.stopPropagation();
+    confirmPendingWorkflow();
+  };
   $("#workflowClose").onclick = closeWorkflowModal;
   $("#workflowCancel").onclick = closeWorkflowModal;
   $("#workflowModal").onclick = event => {

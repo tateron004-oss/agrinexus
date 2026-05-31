@@ -390,6 +390,8 @@ assert(app.includes("function openDefaultUserSectionAction"), "User tabs need to
 assert(app.includes('openDefaultAction: experienceMode === "user"'), "User tab clicks must opt into default workflow actions");
 assert(app.includes("function learningCertificateWorkflowConfig"), "User app certificate button needs its own certificate workflow instead of course fallback");
 assert(app.includes("openWorkflowModal(mapped.config)"), "User app mapped workflows must open the real workflow modal");
+assert(app.includes('$("#workflowConfirm").onclick'), "Workflow Confirm button needs a direct click handler");
+assert(app.includes("Nexus is completing this workflow now."), "Workflow Confirm should show immediate progress feedback");
 assert(app.includes("await handleVoiceCommand(button.dataset.simpleCommand)"), "User app conversational buttons must still send commands to Nexus");
 assert(app.includes('data-grandma-confirm="yes"'), "Grandma Mode confirmation needs a large Yes button");
 assert(app.includes('data-grandma-confirm="no"'), "Grandma Mode confirmation needs a large No button");

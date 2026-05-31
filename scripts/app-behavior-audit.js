@@ -49,6 +49,8 @@ hasAll(app, [
   "openDefaultAction: experienceMode === \"user\"",
   "function learningCertificateWorkflowConfig",
   "openWorkflowModal(mapped.config)",
+  "$(\"#workflowConfirm\").onclick",
+  "Nexus is completing this workflow now.",
   "await handleVoiceCommand(button.dataset.simpleCommand)",
   "data-grandma-confirm=\"yes\"",
   "data-grandma-confirm=\"no\"",
