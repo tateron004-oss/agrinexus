@@ -391,6 +391,8 @@ assert(app.includes("function renderUserInlineWorkflow"), "User tabs need a visi
 assert(app.includes("function openMappedUserWorkflow"), "User tab auto-actions need one shared visual workflow launcher");
 assert(app.includes("data-inline-workflow-confirm"), "Inline user workflow needs a visible Yes button");
 assert(app.includes("data-inline-workflow-cancel"), "Inline user workflow needs a visible No button");
+assert(app.includes('lower.includes("help me")'), "Do this/help commands need full workflow routing instead of partial assistant fallback");
+assert(app.includes('action: "orchestrate"'), "Do this should open a real AI orchestration workflow");
 assert(app.includes('openDefaultAction: experienceMode === "user"'), "User tab clicks must opt into default workflow actions");
 assert(app.includes("function learningCertificateWorkflowConfig"), "User app certificate button needs its own certificate workflow instead of course fallback");
 assert(app.includes("openWorkflowModal(config)"), "User app mapped workflows must open the real workflow modal");
@@ -477,6 +479,7 @@ assert(styles.includes(".grandma-workflow .task-list"), "Grandma Mode modal must
 assert(styles.includes("body.user-mode .global-assistant-status"), "Grandma Mode assistant response must stay contained");
 assert(styles.includes("body.user-mode #globalVoiceGuide") && styles.includes("display: none !important"), "Standard User mode must hide command example text menus at the bottom");
 assert(styles.includes("body.user-mode .global-assistant") && styles.includes("position: fixed") && styles.includes("z-index: 220"), "Ask Nexus must open as a fixed contained user-mode panel");
+assert(styles.includes("max-height: calc(100vh - 24px)"), "Ask Nexus user panel must not open as a partial clipped window");
 assert(styles.includes("body.user-mode .global-assistant .field-label") && styles.includes("visibility: visible"), "Ask Nexus must keep its input and controls visible in user mode");
 assert(styles.includes("body.user-mode .assistant-close") && styles.includes("white-space: nowrap"), "Ask Nexus close button must never wrap in Standard User mode");
 assert(styles.includes("body.user-mode .global-assistant-actions") && styles.includes("grid-template-columns: 1fr 1fr"), "Ask Nexus buttons should be contained in a simple two-button grid");

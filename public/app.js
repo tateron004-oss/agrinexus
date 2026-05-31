@@ -5214,6 +5214,12 @@ function renderUserInlineWorkflow(sectionId, config) {
 
 function openMappedUserWorkflow(mapped, sectionId = currentSectionId()) {
   if (!mapped) return false;
+  if (mapped.conversational) {
+    setCommandInputs(mapped.command || "");
+    openAskNexus();
+    void handleVoiceCommand(mapped.command || "");
+    return true;
+  }
   const config = mapped.config || workflowConfig(mapped.workflow, mapped.action, { dataset: mapped.dataset || {} });
   if (!config) return false;
   openWorkflowModal(config);
@@ -5291,6 +5297,8 @@ function simpleUserCommandWorkflow(command = "") {
   if (lower.includes("drone scan") || lower.includes("scan farm") || lower.includes("check farm")) return { workflow: "trade", action: "drone", response: "Drone scan is ready.", dataset: { productId } };
   if (lower.includes("nearest health facility") || lower.includes("find facility")) return { workflow: "map", action: "facility-route", response: "Facility route is ready.", dataset: {} };
   if (lower.includes("explain the map")) return { workflow: "map", action: "inspector", response: "Map explanation is ready.", dataset: {} };
+  if (lower.includes("help me") || lower.includes("what should i do next") || lower.includes("understand the platform")) return { workflow: "ai", action: "orchestrate", response: "Nexus help is ready.", dataset: {} };
+  if (lower.includes("read the current response") || lower.includes("read to me")) return { section: "agent", conversational: true, command: "read the current response", response: "Nexus is ready to read." };
   if (lower.includes("agent plan") || lower.includes("plan mission")) return { workflow: "ai", action: "command", response: "Agent plan support is ready.", dataset: {} };
   return null;
 }
