@@ -92,8 +92,8 @@ hasAll(styles, [
   "body.user-mode .simple-home",
   "display: none !important",
   "body.user-mode .section.active:not(#dashboard) > :not(.user-simple-module)",
-  "body.user-mode #map.section.active > .map-layout",
-  "body.user-mode #mapCanvas",
+  "body.user-mode .user-module-preview",
+  "body.user-mode .user-module-preview .shipment-map-card",
   "body.user-mode .user-simple-module",
   "min-height: calc(100vh - 162px)",
   "max-height: calc(100vh - 88px)",
@@ -176,8 +176,8 @@ assert(html.includes("nexusBehaviorStatus"), "User voice dock needs an assistant
 assert(html.includes('data-user-voice-action="listen"'), "User voice dock needs a speak action");
 assert(html.includes('data-user-voice-action="type"'), "User voice dock needs a type action");
 assert(html.includes('data-user-voice-action="read"'), "User voice dock needs a read action");
-assert(html.includes("nexus-behavior-79"), "Index must force browsers to load Nexus behavior CSS");
-assert(html.includes("nexus-behavior-79"), "Index must force browsers to load Nexus behavior JS");
+assert(html.includes("nexus-behavior-80"), "Index must force browsers to load Nexus behavior CSS");
+assert(html.includes("nexus-behavior-80"), "Index must force browsers to load Nexus behavior JS");
 assert(app.includes("I want to sell maize"), "Nexus behavior layer should support natural trade requests without button hunting");
 assert(app.includes("I need a doctor"), "Nexus behavior layer should support natural telehealth requests without button hunting");
 assert(app.includes("Admin Operator"), "Nexus behavior layer should adapt for Admin mode");

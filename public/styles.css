@@ -1075,20 +1075,6 @@ body.user-mode .section.active {
 body.user-mode .section.active:not(#dashboard) > :not(.user-simple-module) {
   display: none !important;
 }
-body.user-mode #map.section.active > .map-layout {
-  display: grid !important;
-  grid-template-columns: 1fr !important;
-  gap: 10px !important;
-  margin-top: 10px !important;
-}
-body.user-mode #map.section.active > .map-layout aside {
-  display: none !important;
-}
-body.user-mode #mapCanvas {
-  min-height: min(46dvh, 360px) !important;
-  border: 3px solid #173240 !important;
-  border-radius: 18px !important;
-}
 body.user-mode .user-simple-module {
   display: grid;
   gap: 10px;
@@ -1129,6 +1115,43 @@ body.user-mode .user-module-buttons {
   margin-top: 2px;
   display: grid;
   gap: 10px;
+}
+body.user-mode .user-module-preview {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+}
+body.user-mode .user-module-preview .shipment-map-card {
+  padding: 10px;
+  border-width: 2px;
+  box-shadow: none;
+}
+body.user-mode .user-module-preview .shipment-map-card svg {
+  min-height: 150px;
+}
+body.user-mode .user-module-preview .shipment-map-meta {
+  grid-template-columns: 1fr;
+}
+body.user-mode .user-preview-summary {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  padding: 12px;
+  border: 2px solid #d7e8e3;
+  border-radius: 14px;
+  background: #f8fcfb;
+  color: #173240;
+  text-align: center;
+}
+body.user-mode .user-preview-summary strong {
+  font-size: 1.05rem;
+  line-height: 1.15;
+}
+body.user-mode .user-preview-summary span {
+  color: #395c52;
+  font-size: .95rem;
+  font-weight: 850;
+  line-height: 1.3;
 }
 body.user-mode .user-module-buttons button {
   min-height: 82px;

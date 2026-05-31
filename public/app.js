@@ -2197,8 +2197,8 @@ function runUserModeSelfTest() {
       if (!simpleUserCommandWorkflow(button.command)) missing.push(`${section}: ${button.label}`);
     });
   });
-  const currentScript = [...document.scripts].some(script => String(script.src || "").includes("nexus-behavior-79"));
-  const currentStyle = [...document.styleSheets].some(sheet => String(sheet.href || "").includes("nexus-behavior-79"));
+  const currentScript = [...document.scripts].some(script => String(script.src || "").includes("nexus-behavior-80"));
+  const currentStyle = [...document.styleSheets].some(sheet => String(sheet.href || "").includes("nexus-behavior-80"));
   if (!currentScript || !currentStyle) missing.push("new app files");
   const ok = missing.length === 0;
   const message = ok
@@ -5247,6 +5247,58 @@ const simpleUserSections = {
   }
 };
 
+function userModulePreviewHtml(sectionId) {
+  if (sectionId === "trade") {
+    const latestOrder = data.profile.orders?.[data.profile.orders.length - 1];
+    const product = latestOrder
+      ? (data.products || []).find(item => item.id === latestOrder.productId) || firstProduct()
+      : firstProduct();
+    return `
+      <div class="user-module-preview user-trade-preview">
+        ${shipmentMapHtml({
+          route: activeRoute(),
+          order: latestOrder,
+          product,
+          title: latestOrder ? "Your shipment" : "Crop route"
+        })}
+        <div class="user-preview-summary">
+          <strong>${translateText(latestOrder ? "Shipment status" : "Ready to sell")}</strong>
+          <span>${translateText(latestOrder ? `${latestOrder.product || product?.name || "Crop"} is at ${latestOrder.checkpoint || data.profile.activeCheckpoint}.` : `Start with ${product?.name || "your crop"}, then choose buyer, order, route, or farm scan.`)}</span>
+        </div>
+      </div>
+    `;
+  }
+  if (sectionId === "map") {
+    return `
+      <div class="user-module-preview">
+        ${shipmentMapHtml({ route: activeRoute(), order: data.profile.orders?.[data.profile.orders.length - 1], product: firstProduct(), title: "Route map" })}
+        <div class="user-preview-summary">
+          <strong>${translateText("Map made simple")}</strong>
+          <span>${translateText(`Nexus is watching ${activeRoute().name}. Choose Check Route, Find Facility, or Explain Map.`)}</span>
+        </div>
+      </div>
+    `;
+  }
+  if (sectionId === "learning") {
+    const course = activeCourse() || (data.courses || [])[0];
+    return `<div class="user-module-preview"><div class="user-preview-summary"><strong>${translateText("Learning path")}</strong><span>${translateText(course ? `${translatedCourse(course).title}. Choose Start a Course or Finish Lesson.` : "Choose Start a Course when ready.")}</span></div></div>`;
+  }
+  if (sectionId === "workforce") {
+    const role = firstEligibleRole();
+    return `<div class="user-module-preview"><div class="user-preview-summary"><strong>${translateText("Work support")}</strong><span>${translateText(role ? `Best next role: ${role.title}. Choose Find Jobs or Apply for Job.` : "Choose Find Jobs to review work options.")}</span></div></div>`;
+  }
+  if (sectionId === "health") {
+    return `<div class="user-module-preview"><div class="user-preview-summary"><strong>${translateText("Health support")}</strong><span>${translateText("Start with intake. Nexus can help with language, caregiver support, captions, audio, and follow-up.")}</span></div></div>`;
+  }
+  if (sectionId === "agent") {
+    return `<div class="user-module-preview"><div class="user-preview-summary"><strong>${translateText("Talk naturally")}</strong><span>${translateText("Ask Nexus what to do, ask it to explain the platform, or ask it to open a service.")}</span></div></div>`;
+  }
+  if (sectionId === "profile") {
+    return `<div class="user-module-preview"><div class="user-preview-summary"><strong>${translateText("Your record")}</strong><span>${translateText("Review progress, messages, certificates, and saved activity without seeing admin controls.")}</span></div></div>`;
+  }
+  return "";
+}
+
 function renderUserSimpleActiveSection(sectionId = currentSectionId()) {
   if (experienceMode !== "user" || sectionId === "dashboard") return;
   const config = simpleUserSections[sectionId];
@@ -5259,6 +5311,7 @@ function renderUserSimpleActiveSection(sectionId = currentSectionId()) {
       <span class="eyebrow">${translateText("AgriNexus")}</span>
       <h2>${translateText(config.title)}</h2>
       <p>${translateText(config.prompt || "Tap one button.")}</p>
+      ${userModulePreviewHtml(sectionId)}
       <div id="grandmaConfirmPanel" class="grandma-confirm-panel hidden" role="status" aria-live="polite"></div>
       <div class="user-service-buttons user-module-buttons">
         ${config.buttons.map(action => `<button type="button" class="${escapeHtml(config.className)}" data-simple-command="${escapeHtml(action.command)}">
