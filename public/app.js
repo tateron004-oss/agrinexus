@@ -2197,8 +2197,8 @@ function runUserModeSelfTest() {
       if (!simpleUserCommandWorkflow(button.command)) missing.push(`${section}: ${button.label}`);
     });
   });
-  const currentScript = [...document.scripts].some(script => String(script.src || "").includes("nexus-behavior-70"));
-  const currentStyle = [...document.styleSheets].some(sheet => String(sheet.href || "").includes("nexus-behavior-70"));
+  const currentScript = [...document.scripts].some(script => String(script.src || "").includes("nexus-behavior-71"));
+  const currentStyle = [...document.styleSheets].some(sheet => String(sheet.href || "").includes("nexus-behavior-71"));
   if (!currentScript || !currentStyle) missing.push("new app files");
   const ok = missing.length === 0;
   const message = ok
@@ -2696,6 +2696,23 @@ function goSection(sectionId, options = {}) {
   updateNexusBehaviorLayer("ready", `${nexusBehaviorMode().label}: ${workspaceCopy[sectionId]?.title || sectionId} ready`);
   updateUserBackHome(sectionId);
   announce(`${sectionId} section opened`);
+}
+
+function activateSectionFromButton(button, options = {}) {
+  const sectionId = button?.dataset?.section || button?.dataset?.mobileSection || button?.dataset?.simpleSection;
+  if (!sectionId) return false;
+  goSection(sectionId, {
+    instant: true,
+    openDefaultAction: experienceMode === "user" && sectionId !== "dashboard",
+    ...options
+  });
+  const activeSection = $(`#${sectionId}`);
+  if (experienceMode === "user" && sectionId !== "dashboard" && !activeSection?.querySelector(":scope > .user-simple-module")) {
+    renderUserSimpleActiveSection(sectionId);
+  }
+  const status = $("#simpleActionStatus") || $(`#${sectionId} .user-module-status`);
+  if (status) status.textContent = translateText(`${workspaceCopy[sectionId]?.title || sectionId} opened.`);
+  return true;
 }
 
 function updateUserBackHome(sectionId = currentSectionId()) {
@@ -9220,7 +9237,7 @@ async function runSimpleAction(eventOrButton) {
     return;
   }
   if (button.dataset.simpleSection) {
-    goSection(button.dataset.simpleSection, { openDefaultAction: experienceMode === "user" });
+    activateSectionFromButton(button);
     if (status) status.textContent = `${label} opened.`;
     return;
   }
@@ -9407,6 +9424,13 @@ function bindStatic() {
       event.preventDefault();
       event.stopPropagation();
       runWorkflowAction(workflowButton.dataset.workflow, workflowButton.dataset.action, workflowButton);
+      return;
+    }
+    const sectionButton = event.target.closest("[data-section], [data-mobile-section]");
+    if (sectionButton) {
+      event.preventDefault();
+      event.stopPropagation();
+      activateSectionFromButton(sectionButton);
       return;
     }
     const moduleTestButton = event.target.closest("[data-module-test]");
@@ -9876,12 +9900,12 @@ function bindStatic() {
   };
 
   $$(".nav").forEach(button => {
-    button.onclick = () => goSection(button.dataset.section, { instant: true, openDefaultAction: experienceMode === "user" });
+    button.onclick = () => activateSectionFromButton(button);
   });
   const userBackHomeBtn = $("#userBackHomeBtn");
   if (userBackHomeBtn) userBackHomeBtn.onclick = () => goSection("dashboard", { instant: true });
   $$("[data-mobile-section]").forEach(button => {
-    button.onclick = () => goSection(button.dataset.mobileSection, { instant: true, openDefaultAction: experienceMode === "user" });
+    button.onclick = () => activateSectionFromButton(button);
   });
   $$("[data-mobile-ask]").forEach(button => {
     button.onclick = openAskNexus;
