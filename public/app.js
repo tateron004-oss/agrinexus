@@ -2636,6 +2636,7 @@ function goSection(sectionId, options = {}) {
       activeSection?.focus({ preventScroll: true });
     });
   }
+  if (experienceMode === "user" && options.keepAssistant !== true) closeAskNexus({ silent: true });
   if (sectionId === "map") setTimeout(() => map && map.invalidateSize(), 100);
   renderUserSimpleActiveSection(sectionId);
   renderLiveVoiceSuggestions(contextualVoiceSuggestions(sectionId));
@@ -8263,7 +8264,7 @@ function openAskNexus() {
   announce("Ask AgriNexus opened");
 }
 
-function closeAskNexus() {
+function closeAskNexus(options = {}) {
   const panel = $("#jarvisPanel");
   const globalBar = $("#globalAssistantBar");
   const toggle = $("#jarvisToggle");
@@ -8271,8 +8272,10 @@ function closeAskNexus() {
   if (globalBar) globalBar.classList.add("hidden");
   if (toggle) toggle.setAttribute("aria-expanded", "false");
   stopVoicePlayback();
-  setVoiceResponse("Ask AgriNexus closed.", false, { allowVoiceFirst: false });
-  announce("Ask AgriNexus closed");
+  if (!options.silent) {
+    setVoiceResponse("Ask AgriNexus closed.", false, { allowVoiceFirst: false });
+    announce("Ask AgriNexus closed");
+  }
 }
 
 function toggleAskNexus() {

@@ -374,6 +374,7 @@ assert(!app.includes('{ label: "Me", section: "profile"'), "Standard User home s
 assert(app.includes("function renderUserSimpleActiveSection"), "Standard User module pages must collapse into button-only action screens");
 assert(app.includes("simpleUserSections"), "Standard User needs simple action definitions for every service section");
 assert(app.includes("user-module-status"), "User module pages need a contained status/result area");
+assert(app.includes("closeAskNexus({ silent: true })"), "User mode section changes should collapse Ask Nexus so it cannot remain half-open");
 assert(app.includes("user-module-back"), "User module pages need a clear Back button");
 assert(html.includes("userVoiceDock"), "Standard User app needs a compact voice dock");
 assert(html.includes("nexusBehaviorStatus"), "Standard User app needs a visible Nexus behavior status");
@@ -459,6 +460,8 @@ assert(styles.includes(".grandma-workflow .workflow-fields"), "Grandma Mode moda
 assert(styles.includes(".grandma-workflow .task-list"), "Grandma Mode modal must hide dense checklist cards");
 assert(styles.includes("body.user-mode .global-assistant-status"), "Grandma Mode assistant response must stay contained");
 assert(styles.includes("body.user-mode #globalVoiceGuide") && styles.includes("display: none !important"), "Standard User mode must hide command example text menus at the bottom");
+assert(styles.includes("body.user-mode .global-assistant") && styles.includes("position: fixed") && styles.includes("z-index: 220"), "Ask Nexus must open as a fixed contained user-mode panel");
+assert(styles.includes("body.user-mode .global-assistant .field-label") && styles.includes("visibility: visible"), "Ask Nexus must keep its input and controls visible in user mode");
 assert(styles.includes("body.user-mode .assistant-close") && styles.includes("white-space: nowrap"), "Ask Nexus close button must never wrap in Standard User mode");
 assert(styles.includes("body.user-mode .global-assistant-actions") && styles.includes("grid-template-columns: 1fr 1fr"), "Ask Nexus buttons should be contained in a simple two-button grid");
 assert(styles.includes("body.user-mode .toast"), "Grandma Mode toast must wrap inside the phone viewport");

@@ -44,6 +44,7 @@ hasAll(app, [
   "function renderGrandmaConfirmation",
   "data-grandma-confirm=\"yes\"",
   "data-grandma-confirm=\"no\"",
+  "closeAskNexus({ silent: true })",
   "openAskNexus();",
   "await handleVoiceCommand(action.command);"
 ], "App-mode workflow behavior");
@@ -63,6 +64,10 @@ hasAll(styles, [
   "body.user-mode .user-module-status",
   "body.user-mode .user-module-back",
   "body.user-mode #globalVoiceGuide",
+  "body.user-mode .global-assistant",
+  "position: fixed",
+  "z-index: 220",
+  "body.user-mode .global-assistant .field-label",
   "body.user-mode .assistant-close",
   "white-space: nowrap",
   "body.user-mode .global-assistant-status",
