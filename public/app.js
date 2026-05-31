@@ -2197,8 +2197,8 @@ function runUserModeSelfTest() {
       if (!simpleUserCommandWorkflow(button.command)) missing.push(`${section}: ${button.label}`);
     });
   });
-  const currentScript = [...document.scripts].some(script => String(script.src || "").includes("nexus-behavior-75"));
-  const currentStyle = [...document.styleSheets].some(sheet => String(sheet.href || "").includes("nexus-behavior-75"));
+  const currentScript = [...document.scripts].some(script => String(script.src || "").includes("nexus-behavior-77"));
+  const currentStyle = [...document.styleSheets].some(sheet => String(sheet.href || "").includes("nexus-behavior-77"));
   if (!currentScript || !currentStyle) missing.push("new app files");
   const ok = missing.length === 0;
   const message = ok
@@ -6847,6 +6847,12 @@ function readWorkflowModal() {
   if (prompt) prompt.textContent = "Reading workflow. Say yes to confirm, no to cancel, or read to hear it again.";
 }
 
+function workflowStepHtml(steps = []) {
+  return steps.length
+    ? steps.map((step, index) => `<div><strong>${index + 1}. ${translateText(step.title)}</strong><span>${translateText(step.detail)}</span></div>`).join("")
+    : "";
+}
+
 function openWorkflowModal(config) {
   pendingWorkflow = config;
   lastFocusedElement = document.activeElement;
@@ -6854,8 +6860,9 @@ function openWorkflowModal(config) {
   $("#workflowModal")?.classList.remove("grandma-workflow");
   $("#workflowModal")?.classList.toggle("user-full-workflow", experienceMode === "user");
   $("#workflowEyebrow").textContent = translateText(config.eyebrow || "Workflow");
-  $("#workflowTitle").textContent = translateText(config.title || "Workflow");
-  $("#workflowSummary").textContent = translateText(config.summary || "Review this workflow and confirm when ready.");
+  $("#workflowTitle").textContent = translateText((experienceMode === "user" && config.userTitle) || config.title || "Workflow");
+  $("#workflowSummary").textContent = translateText((experienceMode === "user" && config.userSummary) || config.summary || "Review this workflow and confirm when ready.");
+  $("#workflowSteps").innerHTML = workflowStepHtml(config.steps || []);
   $("#workflowFields").innerHTML = (config.fields || []).map(field => {
     const value = field.value || "";
     const options = field.options || [];
@@ -6881,7 +6888,7 @@ function openWorkflowModal(config) {
   $("#workflowVoicePrompt").textContent = translateText("Voice ready: say yes to confirm, no to cancel, or read to hear this workflow.");
   $("#workflowModal").classList.remove("hidden");
   $("#workflowConfirm").focus();
-  const instruction = `${translateText(config.title || "Workflow")}. ${translateText(config.summary || "Review this workflow and confirm when ready.")}. Say yes to confirm, no to cancel, or read to hear the workflow.`;
+  const instruction = `${translateText((experienceMode === "user" && config.userTitle) || config.title || "Workflow")}. ${translateText((experienceMode === "user" && config.userSummary) || config.summary || "Review this workflow and confirm when ready.")}. Say yes to confirm, no to cancel, or read to hear the workflow.`;
   announce(instruction);
   setVoiceResponse(instruction, false, { allowVoiceFirst: true });
 }
@@ -6919,15 +6926,20 @@ function roleWorkflowConfig(roleId) {
   const gate = roleGate(role);
   const missingCourses = gate.missingCertificates.map(id => data.courses.find(course => course.id === id)?.title || id);
   const blocked = !gate.eligible;
+  const userCopy = workforceUserCopy("apply-role", role, blocked);
   return {
     eyebrow: blocked ? "Readiness review" : "Workforce application",
     title: blocked ? `Review gaps: ${role.title}` : `Apply for role: ${role.title}`,
+    userTitle: userCopy.title,
     summary: blocked
       ? "This role is not unlocked yet. Review the exact readiness and certificate gaps before submitting."
       : "Confirm role fit, readiness, and provider handoff before submitting the application.",
+    userSummary: userCopy.summary,
     confirmLabel: blocked ? "Open learning path" : "Submit application",
     record: blocked ? "No application is submitted; use this review to guide training next steps." : "Application, candidate stage, HRIS event, and activity feed",
     provider: blocked ? "Learning and readiness gates determine eligibility." : "Workforce HRIS provider records the application event.",
+    guide: userCopy.guide,
+    steps: userCopy.steps,
     path: blocked ? null : "/api/workforce/apply",
     body: { roleId: role.id },
     success: blocked ? "Review gaps opened" : "Application submitted",
@@ -6940,8 +6952,8 @@ function roleWorkflowConfig(roleId) {
   };
 }
 
-function simpleWorkflowConfig({ eyebrow, title, summary, confirmLabel, path, body, success, record, provider, checklist, fields, guide }) {
-  return { eyebrow, title, summary, confirmLabel, path, body, success, record, provider, checklist, fields, guide };
+function simpleWorkflowConfig({ eyebrow, title, userTitle, summary, userSummary, confirmLabel, path, body, success, record, provider, checklist, fields, guide, steps }) {
+  return { eyebrow, title, userTitle, summary, userSummary, confirmLabel, path, body, success, record, provider, checklist, fields, guide, steps };
 }
 
 function courseSelectOptions() {
@@ -6954,6 +6966,198 @@ function productSelectOptions() {
 
 function routeSelectOptions() {
   return (data.routes || []).map(route => ({ value: route.id, label: `${route.name} - ${route.checkpoints.length} checkpoints` }));
+}
+
+function learningUserCopy(action, course) {
+  const courseName = course ? translatedCourse(course).title : "the selected course";
+  if (action === "assignment") return {
+    title: "Do my assignment",
+    summary: `Create a practical assignment for ${courseName} so the learner knows exactly what to practice.`,
+    guide: "This creates an assignment record connected to the course, learner progress, accessibility needs, and workforce readiness.",
+    steps: [
+      { title: "Choose course", detail: "Use the course the learner is taking now." },
+      { title: "Set task", detail: "Describe the practice activity in simple words." },
+      { title: "Add support", detail: "Include captions, audio, large print, or instructor help if needed." },
+      { title: "Create assignment", detail: "Confirm to save the task and add it to the learner record." }
+    ]
+  };
+  if (action === "quiz-attempt") return {
+    title: "Take a quiz",
+    summary: `Record a quiz attempt for ${courseName} and show whether the learner is ready for a certificate.`,
+    guide: "This records score, feedback, certificate readiness, and the next learning step.",
+    steps: [
+      { title: "Choose course", detail: "Confirm the course the quiz belongs to." },
+      { title: "Record score", detail: "Add the learner score or practice result." },
+      { title: "Review feedback", detail: "AgriNexus creates the next coaching note." },
+      { title: "Save attempt", detail: "Confirm to update progress and certificate readiness." }
+    ]
+  };
+  if (action === "transcript") return {
+    title: "Get my transcript",
+    summary: "Create a simple learner record that shows completed courses, certificates, and readiness.",
+    guide: "This creates a transcript-style record that can support job placement, partner review, or investor demonstration.",
+    steps: [
+      { title: "Review courses", detail: "Check completed and active learning." },
+      { title: "Review certificates", detail: "Confirm earned certificates and readiness." },
+      { title: "Issue record", detail: "Confirm to create the transcript evidence." }
+    ]
+  };
+  if (action === "cohort") return {
+    title: "Start a learning group",
+    summary: "Create a simple learning group for a village, farm cooperative, classroom, or workforce cohort.",
+    guide: "This creates a cohort record for group training, instructor follow-up, and shared readiness tracking.",
+    steps: [
+      { title: "Name group", detail: "Use a clear group name." },
+      { title: "Choose course", detail: "Pick what the group should learn first." },
+      { title: "Set support", detail: "Add language, audio, captions, or low-bandwidth needs." },
+      { title: "Create group", detail: "Confirm to save the cohort and next training step." }
+    ]
+  };
+  if (action === "note" || action === "report") return {
+    title: action === "note" ? "Add learning note" : "Show my progress",
+    summary: action === "note" ? "Record a short support note so the learner knows what to do next." : "Create a progress summary that explains course progress and next steps.",
+    guide: "This keeps the learner record understandable for the learner, instructor, workforce partner, and investor view.",
+    steps: [
+      { title: "Review learner", detail: "Check the active course and progress." },
+      { title: "Add message", detail: "Write a short helpful note or recommendation." },
+      { title: "Save record", detail: "Confirm to update the learning history." }
+    ]
+  };
+  return {
+    title: "Start learning",
+    summary: `Choose a course, choose support needs, and start ${courseName} in a way the learner can understand.`,
+    guide: "This starts or continues the learner record, sets the active course, and connects learning to certificates and workforce readiness.",
+    steps: [
+      { title: "Choose course", detail: "Pick the course the learner wants to take." },
+      { title: "Choose support", detail: "Select audio, captions, large print, low bandwidth, or instructor help." },
+      { title: "Start course", detail: "Confirm to open the learning path and save progress." }
+    ]
+  };
+}
+
+function workforceUserCopy(action, role, blocked = false) {
+  if (action === "apply-role") return blocked ? {
+    title: "See what I need for this job",
+    summary: `This job is not unlocked yet. AgriNexus will show the training or readiness gap before applying for ${role?.title || "the role"}.`,
+    guide: "This does not submit an application. It helps the user understand exactly what course, certificate, or readiness step is missing.",
+    steps: [
+      { title: "Check readiness", detail: "Compare current readiness to the job requirement." },
+      { title: "Check certificates", detail: "See which training certificates are missing." },
+      { title: "Open learning", detail: "Confirm to move to the right training path." }
+    ]
+  } : {
+    title: "Apply for this job",
+    summary: `Submit an application for ${role?.title || "the selected role"} with readiness, certificate, and contact evidence.`,
+    guide: "This creates a workforce application record and connects it to interview, mentor, HR, and notification workflows.",
+    steps: [
+      { title: "Review job", detail: "Check job title, location, level, and pay." },
+      { title: "Review readiness", detail: "Confirm certificates and training fit the role." },
+      { title: "Submit application", detail: "Confirm to create the application and next workforce step." }
+    ]
+  };
+  const plain = {
+    "build-profile": ["Build my work profile", "Review skills, certificates, language, contact, and readiness so a job partner can understand the worker."],
+    interview: ["Schedule my interview", "Create an interview plan with time, channel, reminder, and support needs."],
+    mentor: ["Find me a mentor", "Match the worker with a mentor who can help with gaps, role readiness, and confidence."],
+    shift: ["Schedule my shift", "Create the next work shift and connect it to attendance, pay, and reminders."],
+    onboarding: ["Get ready for work", "Create the onboarding packet with ID, safety, certificates, contact, and payment setup."],
+    document: ["Check my documents", "Verify identity, certificates, work documents, and emergency contact details."],
+    timesheet: ["Submit my hours", "Record hours worked so payroll and earnings can be reviewed."],
+    payroll: ["Approve my pay", "Review pay evidence and approve the latest workforce payment step."],
+    evaluation: ["Review my performance", "Record supervisor feedback, strengths, score, and next coaching step."],
+    "shift-request": ["Ask for a shift change", "Create a shift swap or schedule adjustment request for manager review."]
+  };
+  const [title, summary] = plain[action] || ["Workforce help", "Choose the next work step and let AgriNexus record it."];
+  return {
+    title,
+    summary,
+    guide: "This creates a workforce record the user can understand, then connects it to HR, calendar, notifications, pay, mentor, and readiness evidence.",
+    steps: [
+      { title: "Review worker", detail: "Check the worker profile, readiness, and support need." },
+      { title: "Choose next step", detail: "Confirm the interview, mentor, shift, document, timesheet, pay, or review action." },
+      { title: "Save work record", detail: "Press confirm to create the workforce evidence and next step." }
+    ]
+  };
+}
+
+function tradeUserCopy(action, product) {
+  if (action === "order") return {
+    title: "Sell my crop",
+    summary: "Tell AgriNexus what crop you want to sell, who the buyer is, and where pickup should happen.",
+    guide: "This creates a crop order. The order is the record that lets buyer messages, route tracking, payment, and delivery updates connect together.",
+    steps: [
+      { title: "Choose crop", detail: "Pick the crop or product you want to sell." },
+      { title: "Add buyer", detail: "Enter the buyer, cooperative, processor, or market contact." },
+      { title: "Set pickup", detail: "Confirm where the crop starts its route." },
+      { title: "Create order", detail: "Press Create order to save the sale and start tracking it." }
+    ]
+  };
+  if (["buyer-contact", "buyer-message", "buyer-whatsapp", "buyer-sms"].includes(action)) return {
+    title: "Talk to my buyer",
+    summary: "Prepare a simple buyer message about the crop, route, quantity, quality, payment, or delivery timing.",
+    guide: "This opens a buyer-seller communication thread. Live SMS or WhatsApp sends when provider credentials and phone numbers are configured; otherwise AgriNexus records the message thread for testing.",
+    steps: [
+      { title: "Choose crop", detail: `Use ${product?.name || "the selected crop"} or choose another crop.` },
+      { title: "Name buyer", detail: "Type who you want to talk to." },
+      { title: "Write message", detail: "Use plain language. AgriNexus keeps it tied to the order and route." },
+      { title: "Open thread", detail: "Press the confirm button to record the buyer conversation." }
+    ]
+  };
+  if (["drone-plan", "drone", "drone-intervention", "drone-report", "drone-irrigation", "drone-pest", "drone-spray", "drone-yield", "drone-compliance"].includes(action)) return {
+    title: action === "drone-plan" ? "Plan a drone check" : action === "drone-intervention" ? "Send field help" : "Check my farm with a drone",
+    summary: "Tell AgriNexus which crop and field area the drone should inspect, then choose what problem to look for.",
+    guide: "The drone workflow does not fly a real drone yet. It creates a field-intelligence record for crop health, water stress, pest risk, yield, compliance, buyer readiness, and follow-up tasks.",
+    steps: [
+      { title: "Choose crop", detail: "Pick the crop lot connected to the field." },
+      { title: "Name field area", detail: "Use a simple name like North field or Plot 2." },
+      { title: "Choose scan type", detail: "Pick crop health, irrigation, pest risk, yield, or buyer readiness." },
+      { title: "Create evidence", detail: "Press confirm to create the drone intelligence record and next field action." }
+    ]
+  };
+  return {
+    title: "Trade action",
+    summary: "Review the crop, buyer, route, and payment details before AgriNexus records the trade step.",
+    guide: "This keeps the trade record connected to buyer communication, route tracking, wallet/payment evidence, and field intelligence.",
+    steps: [
+      { title: "Review crop", detail: "Check the selected crop or product." },
+      { title: "Review route", detail: "Make sure the checkpoint or route makes sense." },
+      { title: "Confirm", detail: "Press the main button to record the next trade step." }
+    ]
+  };
+}
+
+function healthUserCopy(action, accessAction) {
+  if (action === "intake") return {
+    title: "Get health help",
+    summary: "Tell AgriNexus who needs care, what is wrong, what language they use, and how the care team should reach them.",
+    guide: "This starts a telehealth intake. It is not a diagnosis. It creates a care request with accessibility, language, caregiver, callback, and safety details.",
+    steps: [
+      { title: "Who needs help?", detail: "Enter the patient, household, or community reference." },
+      { title: "What is needed?", detail: "Describe the health concern in normal words." },
+      { title: "How should we support them?", detail: "Choose language, captions, audio, large print, caregiver, and contact method." },
+      { title: "Start intake", detail: "Press Start intake to create the case and next care steps." }
+    ]
+  };
+  if (accessAction) return {
+    title: "Make health support accessible",
+    summary: "Choose the support needed for someone who has hearing, vision, language, caregiver, or low-bandwidth needs.",
+    guide: "This attaches accessibility support to the health case so the user can receive captions, audio help, caregiver handoff, consent, vitals, referral, or follow-up.",
+    steps: [
+      { title: "Pick support", detail: "Choose what kind of help is needed." },
+      { title: "Add note", detail: "Explain the communication barrier or care need." },
+      { title: "Save support", detail: "Confirm to record the support plan and provider evidence." }
+    ]
+  };
+  return {
+    title: "Continue health case",
+    summary: "Review the current health case and choose the next care action.",
+    guide: "This updates the health queue, safety record, provider handoff, care plan, or follow-up evidence.",
+    steps: [
+      { title: "Review case", detail: "Check the patient or community case reference." },
+      { title: "Choose support", detail: "Pick the next care action or provider handoff." },
+      { title: "Confirm", detail: "Press confirm to update the health workflow." }
+    ]
+  };
 }
 
 function learningAccessibilityWorkflowConfig(mode) {
@@ -7075,16 +7279,21 @@ function workflowConfig(workflow, action, element) {
         cohort: ["Create cohort", "Create a facilitated learning cohort for a rural learner group.", "Create cohort"]
       };
       const [title, summary, confirmLabel] = labels[action];
+      const userCopy = learningUserCopy(action, course);
       return simpleWorkflowConfig({
         eyebrow: "Advanced learning",
         title,
+        userTitle: userCopy.title,
         summary,
+        userSummary: userCopy.summary,
         confirmLabel,
         path: "/api/learning/advanced",
         body: { type: action, courseId: course.id },
         success: "Advanced learning operation complete",
         record: "Learning operation record, active course, provider evidence, readiness context, and activity feed",
         provider: "Learning course and certificate provider evidence is recorded for audit.",
+        guide: experienceMode === "user" ? userCopy.guide : "Review the course and learner context. Confirming creates a classroom operation record and updates the learning evidence trail.",
+        steps: userCopy.steps,
         checklist: [
           { title: "Active course", detail: translatedCourse(course).title, status: "live", label: translatedCourse(course).track },
           { title: "Learner progress", detail: `${courseEnrollment(course.id)?.progress || 0}% progress, ${data.profile.learningHours || 0} hour(s)`, status: "ready", label: "Record" },
@@ -7096,17 +7305,21 @@ function workflowConfig(workflow, action, element) {
       const enrollment = courseEnrollment(course.id);
       return lessonWorkflowConfig(course, enrollment?.activeModuleIndex || 0);
     }
+    const userCopy = learningUserCopy(action, course);
     return simpleWorkflowConfig({
       eyebrow: "Learning workflow",
       title: `Start course: ${translatedCourse(course).title}`,
+      userTitle: userCopy.title,
       summary: "Select a course, review the modules, then confirm to create or continue the learner record.",
+      userSummary: userCopy.summary,
       confirmLabel: "Start course",
       path: "/api/learning/start",
       body: { courseId: course.id },
       success: "Course started",
       record: "Enrollment, readiness, learning streak, and activity feed",
       provider: "Certificate provider becomes active after quiz and credential issue.",
-      guide: "Pick the course from the selector. Confirming enrolls the learner, sets the active course, and updates readiness evidence.",
+      guide: experienceMode === "user" ? userCopy.guide : "Pick the course from the selector. Confirming enrolls the learner, sets the active course, and updates readiness evidence.",
+      steps: userCopy.steps,
       fields: [
         { name: "courseId", label: "Choose course", type: "select", value: course.id, options: courseSelectOptions() },
         { name: "learningGoal", label: "Learning goal", value: "Prepare for workforce placement and field operations", placeholder: "Example: learn crop quality basics" },
@@ -7137,16 +7350,21 @@ function workflowConfig(workflow, action, element) {
         "shift-request": ["Create shift request", "Open a shift swap or schedule adjustment request for manager review.", "Create request"]
       };
       const [title, summary, confirmLabel] = labels[action];
+      const userCopy = workforceUserCopy(action);
       return simpleWorkflowConfig({
         eyebrow: "Advanced workforce",
         title,
+        userTitle: userCopy.title,
         summary,
+        userSummary: userCopy.summary,
         confirmLabel,
         path: "/api/workforce/advanced",
         body: { type: action },
         success: "Advanced workforce operation complete",
         record: "Operational workforce record, HRIS/calendar/shift provider event, activity feed, and readiness/earnings when applicable",
         provider: "HRIS, calendar, shift, payroll, and notification evidence is recorded for audit.",
+        guide: experienceMode === "user" ? userCopy.guide : "Review the worker and role context. Confirming creates a workforce operation record and provider audit event.",
+        steps: userCopy.steps,
         checklist: [
           { title: "Candidate", detail: `${data.profile.candidateStage} - ${data.profile.eligibility}`, status: "live", label: "Profile" },
           { title: "Role context", detail: data.profile.applications?.[0]?.roleTitle || firstEligibleRole()?.title || "Best available role", status: "ready", label: "Role" },
@@ -7161,16 +7379,21 @@ function workflowConfig(workflow, action, element) {
       shift: ["Schedule shift", "Create the next paid shift after interview support is in place.", "Start shift"]
     };
     const [title, summary, confirmLabel] = labels[action] || ["Workforce action", "Complete workforce action.", "Confirm"];
+    const userCopy = workforceUserCopy(action);
     return simpleWorkflowConfig({
       eyebrow: "Workforce workflow",
       title,
+      userTitle: userCopy.title,
       summary,
+      userSummary: userCopy.summary,
       confirmLabel,
       path: "/api/workforce/action",
       body: { type: action },
       success: "Workforce updated",
       record: "Candidate stage, readiness, schedule, earnings, and activity feed",
       provider: "Calendar, notification, and HRIS events are recorded when applicable.",
+      guide: experienceMode === "user" ? userCopy.guide : "Review the candidate, readiness, and support context. Confirming updates the workforce workflow and evidence trail.",
+      steps: userCopy.steps,
       checklist: [
         { title: "Candidate stage", detail: data.profile.candidateStage, status: "live", label: data.profile.eligibility },
         { title: "Readiness", detail: `${data.profile.readiness}% readiness with ${(data.profile.certificates || []).length} certificate(s)`, status: "ready", label: "Profile" },
@@ -7253,10 +7476,13 @@ function workflowConfig(workflow, action, element) {
       ] },
       { name: "careNote", label: "Care note", type: "textarea", rows: 3, value: "Explain the patient need, communication barrier, safety issue, or next clinical step." }
     ];
+    const userCopy = healthUserCopy(action, accessAction);
     return simpleWorkflowConfig({
       eyebrow: accessAction ? "Accessible telehealth" : "Health workflow",
       title: translateLiteral(titleMap[action] || "Health action"),
+      userTitle: userCopy.title,
       summary: summaryMap[action] || "Confirm the care operation before updating the case queue, safety evidence, and provider trail.",
+      userSummary: userCopy.summary,
       confirmLabel: translateLiteral(titleMap[action] || "Confirm"),
       path: advancedHealthActions.has(action) ? "/api/health/advanced" : "/api/health/action",
       body: { type: action },
@@ -7264,11 +7490,12 @@ function workflowConfig(workflow, action, element) {
       success: "Health action complete",
       record: advancedHealthActions.has(action) ? "Advanced care operation record, active intake status, EHR/telehealth/notification evidence, and activity feed" : accessAction ? "Telehealth accessibility case note, active intake status, provider evidence, and activity feed" : "Intake queue, representative status, safety review, care plan, or AI activity",
       provider: "Telehealth, notification, EHR, and AI provider events are recorded when applicable.",
-      guide: action === "intake"
+      guide: experienceMode === "user" ? userCopy.guide : action === "intake"
         ? "Fill in who needs care, language, accessibility, urgency, and contact method. Confirming creates the intake case and makes the next telehealth steps visible."
         : accessAction
           ? "Review the assistive support needed. Confirming records captions, caregiver, consent, vitals, referral, or follow-up evidence."
           : "Review the patient/country context. Confirming updates the telehealth queue, safety evidence, provider handoff, or care plan.",
+      steps: userCopy.steps,
       checklist: [
         { title: "Country context", detail: `${activeCountry().name}: ${activeCountry().queue}`, status: "live", label: activeCountry().risk },
         { title: "Active case", detail: (data.profile.healthIntakes || [])[0]?.patientRef || "No intake yet", status: (data.profile.healthIntakes || []).length ? "ready" : "pending", label: "Case" },
@@ -7310,20 +7537,24 @@ function workflowConfig(workflow, action, element) {
     const isAdvancedDroneAction = ["drone-report", "drone-irrigation", "drone-pest", "drone-spray", "drone-yield", "drone-compliance"].includes(action);
     const isAdvancedTrade = ["quote", "quality", "cold-chain", "export", "contract", "release"].includes(action);
     const droneTypeMap = { "drone-report": "field-report", "drone-irrigation": "irrigation", "drone-pest": "pest", "drone-spray": "spray", "drone-yield": "yield", "drone-compliance": "compliance" };
+    const userCopy = tradeUserCopy(action, product);
     return simpleWorkflowConfig({
       eyebrow: "Trade workflow",
       title: titleMap[action] || "Trade action",
+      userTitle: userCopy.title,
       summary: ["buyer-message", "buyer-whatsapp", "buyer-sms"].includes(action) ? "Open a buyer-seller message thread tied to the active crop, order, route, quality, payment, and provider-ready communication evidence. SMS and WhatsApp attempt live Twilio delivery when configured." : action === "buyer-contact" ? "Prepare a buyer communication workflow with the active crop, order, route context, channel, and message draft before sending through live communications." : isDroneAction ? "Run a complete agritech drone workflow: compliant flight planning, crop intelligence, findings, map evidence, and field intervention tasks." : isAdvancedDroneAction ? "Create farmer-facing drone intelligence that turns aerial evidence into irrigation, pest, spray, yield, compliance, and buyer-readiness decisions." : isAdvancedTrade ? "Create a concrete commercial operations record with provider evidence for quote, quality, cold-chain, export, contract, or payment release." : "Confirm the market, wallet, logistics, or AI action before the trade ledger changes.",
+      userSummary: userCopy.summary,
       confirmLabel: titleMap[action] || "Confirm",
       path: pathMap[action] || "/api/ai/run",
       body: action === "order" ? { productId } : action === "wallet" ? { provider: "M-Pesa", amount: 120 } : action === "buyer-contact" ? { productId } : action === "buyer-message" ? { productId, channel: "in-app chat" } : action === "buyer-whatsapp" ? { productId, channel: "WhatsApp" } : action === "buyer-sms" ? { productId, channel: "SMS" } : isDroneAction ? { productId } : isAdvancedDroneAction ? { type: droneTypeMap[action], productId } : isAdvancedTrade ? { type: action, productId } : action === "advance" ? {} : { type: action },
-      guide: action === "order"
+      guide: experienceMode === "user" ? userCopy.guide : action === "order"
         ? "Choose the crop/product, quantity, buyer, and pickup point. Confirming creates a real order record, active route, checkpoint, and trade evidence."
         : isDroneAction || isAdvancedDroneAction
           ? "Choose the crop lot, field zone, and scan objective. Confirming creates drone mission or scan evidence tied to the map and trade route."
           : action === "route" || action === "advance"
             ? "Review the active route and checkpoint. Confirming updates route intelligence or moves the order to the next logistics step."
             : "Review the buyer, channel, and product context. Confirming creates the trade communication or provider evidence.",
+      steps: userCopy.steps,
       fields: [
         ...(action !== "advance" ? [{ name: "productId", label: "Crop or product", type: "select", value: product?.id || productId || "", options: productSelectOptions() }] : []),
         ...(action === "order" ? [

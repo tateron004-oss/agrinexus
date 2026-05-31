@@ -2445,6 +2445,33 @@ body.admin-mode .user-workspace {
   color: var(--muted);
   margin-bottom: 14px;
 }
+.workflow-steps {
+  display: grid;
+  gap: 8px;
+  margin: 0 0 12px;
+}
+.workflow-steps:empty {
+  display: none;
+}
+.workflow-steps div {
+  display: grid;
+  gap: 3px;
+  padding: 10px 12px;
+  border: 1px solid #bddbd6;
+  border-radius: 8px;
+  background: #f7fbfc;
+}
+.workflow-steps strong {
+  color: var(--text);
+  font-size: .94rem;
+  line-height: 1.2;
+}
+.workflow-steps span {
+  color: var(--muted);
+  font-size: .9rem;
+  font-weight: 750;
+  line-height: 1.3;
+}
 .workflow-voice-confirm {
   display: grid;
   gap: 8px;
