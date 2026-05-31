@@ -46,9 +46,13 @@ hasAll(app, [
   "function renderGrandmaConfirmation",
   "function simpleUserCommandWorkflow",
   "function openDefaultUserSectionAction",
+  "function renderUserInlineWorkflow",
+  "function openMappedUserWorkflow",
+  "data-inline-workflow-confirm",
+  "data-inline-workflow-cancel",
   "openDefaultAction: experienceMode === \"user\"",
   "function learningCertificateWorkflowConfig",
-  "openWorkflowModal(mapped.config)",
+  "openWorkflowModal(config)",
   "$(\"#workflowConfirm\").onclick",
   "Nexus is completing this workflow now.",
   "await handleVoiceCommand(button.dataset.simpleCommand)",
@@ -85,6 +89,8 @@ hasAll(styles, [
   "body.user-mode .grandma-workflow .workflow-fields",
   "body.user-mode .grandma-workflow .task-list",
   "body.user-mode .grandma-workflow .modal-actions button",
+  "body.user-mode .user-inline-workflow",
+  "body.user-mode .user-inline-workflow-actions",
   "body.user-mode .toast"
 ], "App-mode containment styles");
 

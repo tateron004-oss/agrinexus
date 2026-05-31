@@ -1115,6 +1115,42 @@ body.user-mode .grandma-confirm-panel {
 body.user-mode .grandma-confirm-panel.hidden {
   display: none !important;
 }
+body.user-mode .user-inline-workflow.hidden {
+  display: none !important;
+}
+body.user-mode .user-inline-workflow {
+  display: grid;
+  gap: 12px;
+  width: 100%;
+  padding: 16px;
+  border: 3px solid #173240;
+  border-radius: 18px;
+  background: #fff8d8;
+  color: #173240;
+  box-shadow: 0 16px 34px rgba(23, 50, 64, .18);
+  text-align: center;
+}
+body.user-mode .user-inline-workflow strong {
+  font-size: clamp(1.2rem, 5vw, 1.6rem);
+  line-height: 1.1;
+  overflow-wrap: anywhere;
+}
+body.user-mode .user-inline-workflow span {
+  font-size: clamp(1rem, 4vw, 1.24rem);
+  font-weight: 900;
+  line-height: 1.2;
+}
+body.user-mode .user-inline-workflow-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+body.user-mode .user-inline-workflow-actions button {
+  min-height: 72px;
+  border-width: 2px;
+  font-size: clamp(1.08rem, 5vw, 1.32rem);
+  font-weight: 950;
+}
 body.user-mode .grandma-confirm-panel strong,
 body.user-mode .grandma-confirm-panel span {
   display: block;

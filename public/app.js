@@ -5190,9 +5190,36 @@ function renderUserSimpleActiveSection(sectionId = currentSectionId()) {
           <strong>${translateText(action.label)}</strong>
         </button>`).join("")}
       </div>
+      <div class="user-inline-workflow hidden" role="dialog" aria-live="polite"></div>
       <div class="user-module-status" role="status">${translateText("Nexus is ready.")}</div>
     </section>
   `);
+}
+
+function renderUserInlineWorkflow(sectionId, config) {
+  if (experienceMode !== "user" || !config) return;
+  const panel = $(`#${sectionId} .user-inline-workflow`);
+  if (!panel) return;
+  panel.classList.remove("hidden");
+  panel.innerHTML = `
+    <strong>${translateText(config.title || "Ready?")}</strong>
+    <span>${translateText("Do you want Nexus to do this now?")}</span>
+    <div class="user-inline-workflow-actions">
+      <button type="button" class="primary" data-inline-workflow-confirm>${translateText("Yes")}</button>
+      <button type="button" data-inline-workflow-cancel>${translateText("No")}</button>
+    </div>
+  `;
+  panel.scrollIntoView({ behavior: "smooth", block: "center" });
+}
+
+function openMappedUserWorkflow(mapped, sectionId = currentSectionId()) {
+  if (!mapped) return false;
+  const config = mapped.config || workflowConfig(mapped.workflow, mapped.action, { dataset: mapped.dataset || {} });
+  if (!config) return false;
+  openWorkflowModal(config);
+  renderUserInlineWorkflow(sectionId, config);
+  setVoiceResponse(mapped.response || "Workflow is ready.", true);
+  return true;
 }
 
 function openDefaultUserSectionAction(sectionId = currentSectionId()) {
@@ -5204,13 +5231,7 @@ function openDefaultUserSectionAction(sectionId = currentSectionId()) {
   const mapped = simpleUserCommandWorkflow(command);
   if (status) status.textContent = `${translateText(label)} opened. Review the details and choose Yes or No.`;
   if (mapped) {
-    if (mapped.config) {
-      openWorkflowModal(mapped.config);
-      setVoiceResponse(mapped.response || "Workflow is ready.", true);
-    } else {
-      openWorkflowByVoice(mapped.workflow, mapped.action, mapped.response, mapped.dataset);
-    }
-    return true;
+    return openMappedUserWorkflow(mapped, sectionId);
   }
   setCommandInputs(command);
   openAskNexus();
@@ -9072,12 +9093,7 @@ async function runSimpleAction(eventOrButton) {
         if (status) status.textContent = `${label} opened. Review the details and choose Yes or No.`;
         const targetSection = mapped.section || (mapped.workflow === "ai" ? "agent" : mapped.workflow === "map" ? "map" : mapped.workflow);
         goSection(targetSection, { keepAssistant: false });
-        if (mapped.config) {
-          openWorkflowModal(mapped.config);
-          setVoiceResponse(mapped.response || "Workflow is ready.", true);
-        } else {
-          openWorkflowByVoice(mapped.workflow, mapped.action, mapped.response, mapped.dataset);
-        }
+        openMappedUserWorkflow(mapped, targetSection);
         return;
       }
       setCommandInputs(button.dataset.simpleCommand);
@@ -9518,6 +9534,20 @@ function bindStatic() {
       event.preventDefault();
       event.stopPropagation();
       answerGrandmaActionConfirmation(grandmaConfirmButton.dataset.grandmaConfirm);
+      return;
+    }
+    if (event.target.closest("[data-inline-workflow-confirm]")) {
+      event.preventDefault();
+      event.stopPropagation();
+      confirmPendingWorkflow();
+      return;
+    }
+    if (event.target.closest("[data-inline-workflow-cancel]")) {
+      event.preventDefault();
+      event.stopPropagation();
+      closeWorkflowModal();
+      event.target.closest(".user-inline-workflow")?.classList.add("hidden");
+      setVoiceResponse("Canceled. Choose another button when ready.", true);
       return;
     }
     const permissionButton = event.target.closest("[data-mobile-permission]");

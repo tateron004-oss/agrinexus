@@ -387,9 +387,13 @@ assert(app.includes("pendingGrandmaAction"), "Grandma Mode needs a pending actio
 assert(app.includes("function renderGrandmaConfirmation"), "Grandma Mode needs a visible yes/no confirmation panel");
 assert(app.includes("function simpleUserCommandWorkflow"), "User app buttons need direct workflow routing");
 assert(app.includes("function openDefaultUserSectionAction"), "User tabs need to open the first useful action automatically");
+assert(app.includes("function renderUserInlineWorkflow"), "User tabs need a visible inline workflow confirmation when voice starts");
+assert(app.includes("function openMappedUserWorkflow"), "User tab auto-actions need one shared visual workflow launcher");
+assert(app.includes("data-inline-workflow-confirm"), "Inline user workflow needs a visible Yes button");
+assert(app.includes("data-inline-workflow-cancel"), "Inline user workflow needs a visible No button");
 assert(app.includes('openDefaultAction: experienceMode === "user"'), "User tab clicks must opt into default workflow actions");
 assert(app.includes("function learningCertificateWorkflowConfig"), "User app certificate button needs its own certificate workflow instead of course fallback");
-assert(app.includes("openWorkflowModal(mapped.config)"), "User app mapped workflows must open the real workflow modal");
+assert(app.includes("openWorkflowModal(config)"), "User app mapped workflows must open the real workflow modal");
 assert(app.includes('$("#workflowConfirm").onclick'), "Workflow Confirm button needs a direct click handler");
 assert(app.includes("Nexus is completing this workflow now."), "Workflow Confirm should show immediate progress feedback");
 assert(app.includes("await handleVoiceCommand(button.dataset.simpleCommand)"), "User app conversational buttons must still send commands to Nexus");
@@ -465,6 +469,8 @@ assert(styles.includes(".section.active:not(#dashboard) > :not(.user-simple-modu
 assert(styles.includes(".user-module-buttons .service-workforce"), "Inner workforce action buttons need module color styling");
 assert(styles.includes(".user-module-buttons .service-trade"), "Inner trade action buttons need module color styling");
 assert(styles.includes(".grandma-confirm-panel"), "Grandma Mode needs high-contrast confirmation styling");
+assert(styles.includes(".user-inline-workflow"), "User tab auto-actions need visible inline workflow styling");
+assert(styles.includes(".user-inline-workflow-actions"), "Inline workflow confirmation actions need button styling");
 assert(styles.includes("font-size: 1.42rem"), "Grandma Mode needs extra-large button text");
 assert(styles.includes(".grandma-workflow .workflow-fields"), "Grandma Mode modal must hide advanced workflow fields");
 assert(styles.includes(".grandma-workflow .task-list"), "Grandma Mode modal must hide dense checklist cards");
