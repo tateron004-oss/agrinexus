@@ -1172,6 +1172,14 @@ body.user-mode .grandma-confirm-actions button {
 }
 body.user-mode .user-module-buttons .service-learning { background: linear-gradient(180deg, #ffffff, #e8f6ff); border-color: #5db4ea; }
 body.user-mode .user-module-buttons .service-workforce { background: linear-gradient(180deg, #ffffff, #e9f9ee); border-color: #71c585; }
+body.user-mode #workforce .user-inline-workflow {
+  border-color: #22984e;
+  background: linear-gradient(180deg, #ffffff, #e9f9ee);
+}
+body.user-mode #workforce .user-inline-workflow .primary {
+  background: linear-gradient(135deg, #176f38, #22984e);
+  color: #ffffff;
+}
 body.user-mode .user-module-buttons .service-health { background: linear-gradient(180deg, #ffffff, #ffeded); border-color: #e48181; }
 body.user-mode .user-module-buttons .service-trade { background: linear-gradient(180deg, #ffffff, #fff4cc); border-color: #d9ae32; }
 body.user-mode .user-module-buttons .service-map { background: linear-gradient(180deg, #ffffff, #e8f2ff); border-color: #6fa9e9; }

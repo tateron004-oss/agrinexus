@@ -55,6 +55,8 @@ hasAll(app, [
   "pendingWorkflow = config",
   "$(\"#workflowModal\")?.classList.add(\"hidden\")",
   "closeAskNexus({ silent: true })",
+  "const userSection = workflow === \"ai\" ? \"agent\" : workflow === \"map\" ? \"map\" : workflow",
+  "experienceMode === \"user\" && simpleUserSections[userSection]",
   "lower.includes(\"help me\")",
   "action: \"orchestrate\"",
   "openDefaultAction: experienceMode === \"user\"",
@@ -103,6 +105,7 @@ hasAll(styles, [
   "body.user-mode .grandma-workflow .task-list",
   "body.user-mode .grandma-workflow .modal-actions button",
   "body.user-mode .user-inline-workflow",
+  "body.user-mode #workforce .user-inline-workflow",
   "body.user-mode .user-inline-workflow-actions",
   "body.user-mode .toast"
 ], "App-mode containment styles");

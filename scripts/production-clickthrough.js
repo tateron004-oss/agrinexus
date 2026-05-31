@@ -394,6 +394,8 @@ assert(app.includes("data-inline-workflow-cancel"), "Inline user workflow needs 
 assert(app.includes("pendingWorkflow = config"), "User inline workflows must set the pending workflow before Confirm");
 assert(app.includes('$("#workflowModal")?.classList.add("hidden")'), "User inline workflows must keep blocking modal overlays closed");
 assert(app.includes("closeAskNexus({ silent: true })"), "User service buttons must clear assistant overlays before opening workflows");
+assert(app.includes('const userSection = workflow === "ai" ? "agent" : workflow === "map" ? "map" : workflow'), "User voice workflows must resolve to the visible simple section");
+assert(app.includes('experienceMode === "user" && simpleUserSections[userSection]'), "User voice workflows must use inline cards instead of modal windows");
 assert(app.includes("eventOrButton?.target?.closest"), "Simple button handler must support delegated clicks");
 assert(app.includes("eventOrButton?.currentTarget?.matches"), "Simple button handler must support direct button clicks");
 assert(app.includes('lower.includes("help me")'), "Do this/help commands need full workflow routing instead of partial assistant fallback");
@@ -478,6 +480,7 @@ assert(styles.includes(".user-module-buttons .service-trade"), "Inner trade acti
 assert(styles.includes(".grandma-confirm-panel"), "Grandma Mode needs high-contrast confirmation styling");
 assert(styles.includes(".user-inline-workflow"), "User tab auto-actions need visible inline workflow styling");
 assert(styles.includes(".user-inline-workflow-actions"), "Inline workflow confirmation actions need button styling");
+assert(styles.includes("body.user-mode #workforce .user-inline-workflow"), "Workforce inline workflow needs dedicated non-partial styling");
 assert(styles.includes("font-size: 1.42rem"), "Grandma Mode needs extra-large button text");
 assert(styles.includes(".grandma-workflow .workflow-fields"), "Grandma Mode modal must hide advanced workflow fields");
 assert(styles.includes(".grandma-workflow .task-list"), "Grandma Mode modal must hide dense checklist cards");

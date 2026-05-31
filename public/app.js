@@ -8441,6 +8441,17 @@ function openWorkflowByVoice(workflow, action, response, dataset = {}) {
     setVoiceResponse(response || "Workflow command sent.");
     return;
   }
+  const userSection = workflow === "ai" ? "agent" : workflow === "map" ? "map" : workflow;
+  if (experienceMode === "user" && simpleUserSections[userSection]) {
+    renderUserSimpleActiveSection(userSection);
+    pendingWorkflow = config;
+    $("#workflowModal")?.classList.add("hidden");
+    $("#workflowModal")?.classList.remove("grandma-workflow");
+    renderUserInlineWorkflow(userSection, config);
+    updateNexusBehaviorLayer("confirming", "Nexus prepared the workflow and is waiting for your yes.");
+    setVoiceResponse(`${response || "Workflow is ready."} Press Yes to continue or No to cancel.`, true);
+    return;
+  }
   updateNexusBehaviorLayer("confirming", "Nexus prepared the workflow and is waiting for your yes.");
   openWorkflowModal(config);
   setVoiceResponse(`${response || "Workflow staged."} Review the workflow, then say confirm or use the confirm button.`);
