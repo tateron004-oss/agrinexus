@@ -2186,6 +2186,56 @@ async function installAgriNexusApp() {
   toast("Use the browser menu to install AgriNexus as an app.");
 }
 
+function runUserModeSelfTest() {
+  const expectedSections = ["learning", "workforce", "health", "trade", "map", "agent"];
+  const missing = [];
+  expectedSections.forEach(section => {
+    const config = simpleUserSections[section];
+    if (!config) missing.push(`${section} setup`);
+    if (!$(`#${section}`)) missing.push(`${section} screen`);
+    (config?.buttons || []).forEach(button => {
+      if (!simpleUserCommandWorkflow(button.command)) missing.push(`${section}: ${button.label}`);
+    });
+  });
+  const currentScript = [...document.scripts].some(script => String(script.src || "").includes("nexus-behavior-70"));
+  const currentStyle = [...document.styleSheets].some(sheet => String(sheet.href || "").includes("nexus-behavior-70"));
+  if (!currentScript || !currentStyle) missing.push("new app files");
+  const ok = missing.length === 0;
+  const message = ok
+    ? "App check passed. User buttons are mapped to workflows and the newest files are loaded."
+    : `App check found ${missing.length} issue(s): ${missing.slice(0, 4).join(", ")}. Press Repair App to reload clean files.`;
+  const status = $("#userRepairStatus");
+  if (status) status.textContent = translateText(message);
+  toast(message);
+  setVoiceResponse(message, true);
+  return { ok, missing };
+}
+
+async function repairAppRuntime() {
+  const status = $("#userRepairStatus");
+  const message = "Repairing app cache. AgriNexus will reload with the newest workflow files.";
+  if (status) status.textContent = translateText(message);
+  toast(message);
+  try {
+    if ("serviceWorker" in navigator) {
+      const registrations = await navigator.serviceWorker.getRegistrations();
+      await Promise.all(registrations.map(registration => registration.unregister()));
+    }
+    if ("caches" in window) {
+      const keys = await caches.keys();
+      await Promise.all(keys.map(key => caches.delete(key)));
+    }
+    localStorage.setItem("agrinexusLastRuntimeRepair", new Date().toISOString());
+  } catch (error) {
+    const detail = `Repair could not clear every cache: ${error.message || error}`;
+    if (status) status.textContent = translateText(detail);
+    toast(detail);
+  } finally {
+    const base = window.location.href.split("#")[0].split("?")[0];
+    window.location.href = `${base}?repair=${Date.now()}#dashboard`;
+  }
+}
+
 async function requestProductionMobilePermission(kind) {
   const status = $("#mobilePermissionStatus");
   const setStatus = message => {
@@ -5083,6 +5133,14 @@ function renderUserWorkspace() {
         </button>`).join("")}
       </div>
       <span>${translateText("Say: change language to French, Arabic, Swahili, Spanish, or English.")}</span>
+    </section>
+    <section class="user-repair-panel" aria-label="${translateText("App repair")}">
+      <strong>${translateText("App check")}</strong>
+      <span id="userRepairStatus">${translateText("If a button feels stuck, check or repair the app.")}</span>
+      <div class="user-repair-actions">
+        <button type="button" data-app-self-test>${translateText("Check App")}</button>
+        <button type="button" class="primary" data-app-repair>${translateText("Repair App")}</button>
+      </div>
     </section>
     <section class="user-service-buttons" aria-label="${translateText("Open a service")}">
       ${serviceButtons.map(item => `<button type="button" class="${escapeHtml(item.className)}" ${item.ask ? `data-mobile-ask="true"` : `data-simple-section="${item.section}"`}>
@@ -9565,6 +9623,18 @@ function bindStatic() {
       event.preventDefault();
       event.stopPropagation();
       openAskNexus();
+      return;
+    }
+    if (event.target.closest("[data-app-self-test]")) {
+      event.preventDefault();
+      event.stopPropagation();
+      runUserModeSelfTest();
+      return;
+    }
+    if (event.target.closest("[data-app-repair]")) {
+      event.preventDefault();
+      event.stopPropagation();
+      repairAppRuntime();
       return;
     }
     const userVoiceButton = event.target.closest("[data-user-voice-action]");

@@ -67,7 +67,14 @@ for (const [section, buttons] of Object.entries(expectedSections)) {
   "renderUserInlineWorkflow(userSection, config)",
   "eventOrButton?.target?.closest",
   "eventOrButton?.currentTarget?.matches",
-  "closeAskNexus({ silent: true })"
+  "closeAskNexus({ silent: true })",
+  "function runUserModeSelfTest",
+  "function repairAppRuntime",
+  "data-app-self-test",
+  "data-app-repair",
+  "navigator.serviceWorker.getRegistrations",
+  "caches.keys()",
+  "agrinexusLastRuntimeRepair"
 ].forEach(marker => {
   assert(app.includes(marker), `User workflow safety marker missing: ${marker}`);
 });
@@ -78,7 +85,9 @@ for (const [section, buttons] of Object.entries(expectedSections)) {
   ".global-assistant:not(.hidden)",
   ".jarvis-panel:not(.hidden)",
   ".modal:not(.hidden)",
-  "min-height: calc(100dvh - 16px)"
+  "min-height: calc(100dvh - 16px)",
+  "body.user-mode .user-repair-panel",
+  "body.user-mode .user-repair-actions"
 ].forEach(marker => {
   assert(styles.includes(marker), `User workflow containment style missing: ${marker}`);
 });
@@ -88,4 +97,4 @@ assert(html.includes("/styles.css?v=nexus-behavior-70"), "Index must force brows
 assert(sw.includes('CACHE_NAME = "agrinexus-pwa-v50"'), "Service worker cache must be bumped after User-mode workflow fixes");
 
 console.log("User mode workflow audit passed");
-console.log("Checked: every simple app tab/button maps to a workflow, User mode uses inline confirmations, and assistant windows have anti-partial containment.");
+console.log("Checked: every simple app tab/button maps to a workflow, User mode uses inline confirmations, assistant windows have anti-partial containment, and the app can self-check/repair stale runtime cache.");
