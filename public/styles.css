@@ -1026,49 +1026,6 @@ body.user-mode .user-language-buttons button.active {
 body.user-mode .user-language-buttons button:last-child:nth-child(odd) {
   grid-column: 1 / -1;
 }
-body.user-mode .user-repair-panel {
-  display: grid;
-  gap: 10px;
-  margin-bottom: 12px;
-  padding: 12px;
-  border: 2px solid #173240;
-  border-radius: 16px;
-  background: linear-gradient(180deg, #fffdf2, #ffffff);
-  box-shadow: 0 12px 24px rgba(23, 50, 64, .08);
-  color: #173240;
-  text-align: center;
-}
-body.user-mode .user-repair-panel strong {
-  font-size: 1.06rem;
-  font-weight: 950;
-  line-height: 1.15;
-}
-body.user-mode .user-repair-panel span {
-  font-size: .86rem;
-  font-weight: 850;
-  line-height: 1.25;
-  overflow-wrap: anywhere;
-}
-body.user-mode .user-repair-actions {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 8px;
-}
-body.user-mode .user-repair-actions button {
-  min-height: 54px;
-  padding: 8px 6px;
-  border: 2px solid #173240;
-  border-radius: 12px;
-  background: #ffffff;
-  color: #173240;
-  font-size: .95rem;
-  font-weight: 950;
-  white-space: normal;
-}
-body.user-mode .user-repair-actions button.primary {
-  background: linear-gradient(135deg, #173240, #255f73);
-  color: #ffffff;
-}
 body.user-mode .user-intelligence-strip,
 body.user-mode .user-action-grid,
 body.user-mode .user-outcome-panel,

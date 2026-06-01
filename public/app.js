@@ -2384,43 +2384,16 @@ function runUserModeSelfTest() {
       if (!simpleUserCommandWorkflow(button.command)) missing.push(`${section}: ${button.label}`);
     });
   });
-  const currentScript = [...document.scripts].some(script => String(script.src || "").includes("nexus-behavior-125"));
-  const currentStyle = [...document.styleSheets].some(sheet => String(sheet.href || "").includes("nexus-behavior-125"));
+  const currentScript = [...document.scripts].some(script => String(script.src || "").includes("nexus-behavior-126"));
+  const currentStyle = [...document.styleSheets].some(sheet => String(sheet.href || "").includes("nexus-behavior-126"));
   if (!currentScript || !currentStyle) missing.push("new app files");
   const ok = missing.length === 0;
   const message = ok
     ? "App check passed. User buttons are mapped to workflows and the newest files are loaded."
-    : `App check found ${missing.length} issue(s): ${missing.slice(0, 4).join(", ")}. Press Repair App to reload clean files.`;
-  const status = $("#userRepairStatus");
-  if (status) status.textContent = translateText(message);
+    : `App check found ${missing.length} issue(s): ${missing.slice(0, 4).join(", ")}. Please refresh the app or contact support.`;
   toast(message);
   setVoiceResponse(message, true);
   return { ok, missing };
-}
-
-async function repairAppRuntime() {
-  const status = $("#userRepairStatus");
-  const message = "Repairing app cache. AgriNexus will reload with the newest workflow files.";
-  if (status) status.textContent = translateText(message);
-  toast(message);
-  try {
-    if ("serviceWorker" in navigator) {
-      const registrations = await navigator.serviceWorker.getRegistrations();
-      await Promise.all(registrations.map(registration => registration.unregister()));
-    }
-    if ("caches" in window) {
-      const keys = await caches.keys();
-      await Promise.all(keys.map(key => caches.delete(key)));
-    }
-    localStorage.setItem("agrinexusLastRuntimeRepair", new Date().toISOString());
-  } catch (error) {
-    const detail = `Repair could not clear every cache: ${error.message || error}`;
-    if (status) status.textContent = translateText(detail);
-    toast(detail);
-  } finally {
-    const base = window.location.href.split("#")[0].split("?")[0];
-    window.location.href = `${base}?repair=${Date.now()}#dashboard`;
-  }
 }
 
 async function requestProductionMobilePermission(kind) {
@@ -12433,18 +12406,6 @@ function bindStatic() {
       event.preventDefault();
       event.stopPropagation();
       openAskNexus();
-      return;
-    }
-    if (event.target.closest("[data-app-self-test]")) {
-      event.preventDefault();
-      event.stopPropagation();
-      runUserModeSelfTest();
-      return;
-    }
-    if (event.target.closest("[data-app-repair]")) {
-      event.preventDefault();
-      event.stopPropagation();
-      repairAppRuntime();
       return;
     }
     if (event.target.closest("[data-toggle-user-language]")) {

@@ -22,29 +22,33 @@ function requireScript(scriptName) {
 }
 
 requireMarkers("current browser cache contract", html, [
-  "/styles.css?v=nexus-behavior-125",
-  "/app.js?v=nexus-behavior-125"
+  "/styles.css?v=nexus-behavior-126",
+  "/app.js?v=nexus-behavior-126"
 ]);
 requireMarkers("service worker cache contract", sw, [
-  'CACHE_NAME = "agrinexus-pwa-v105"',
+  'CACHE_NAME = "agrinexus-pwa-v106"',
   "skipWaiting",
   "clients.claim"
 ]);
 
-requireMarkers("self-healing app repair", app, [
+requireMarkers("internal app freshness check", app, [
   "function runUserModeSelfTest",
+  "newest files are loaded",
+  "Please refresh the app or contact support."
+]);
+[
   "function repairAppRuntime",
   "data-app-self-test",
   "data-app-repair",
-  "navigator.serviceWorker.getRegistrations",
-  "caches.keys()",
-  "agrinexusLastRuntimeRepair"
-]);
-requireMarkers("self-healing app repair styles", styles, [
+  "userRepairStatus",
+  "Press Repair App",
   "body.user-mode .user-repair-panel",
-  "body.user-mode .user-repair-actions",
-  "body.user-mode .user-repair-actions button.primary"
-]);
+  "body.user-mode .user-repair-actions"
+].forEach(marker => {
+  assert(!app.includes(marker), `User-facing app repair hook must not be in app.js: ${marker}`);
+  assert(!html.includes(marker), `User-facing app repair hook must not be in index.html: ${marker}`);
+  assert(!styles.includes(marker), `User-facing app repair style must not be in styles.css: ${marker}`);
+});
 
 requireMarkers("simple user workflow contract", app, [
   "function renderUserWorkspace",
@@ -153,4 +157,4 @@ requireMarkers("live production service contract", server, [
 ].forEach(requireScript);
 
 console.log("Stabilization gate passed");
-console.log("Checked: cache freshness, self-repair, User-mode workflows, no partial windows, language/voice behavior, role separation, live-service contract, and regression coverage.");
+console.log("Checked: cache freshness, no user-facing repair controls, User-mode workflows, no partial windows, language/voice behavior, role separation, live-service contract, and regression coverage.");
