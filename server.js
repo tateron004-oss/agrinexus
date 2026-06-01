@@ -6340,6 +6340,7 @@ function contextualVoiceCommand(db, text, lower) {
   const context = lastWorkflowContext(db.profile);
   if (!context.section) return null;
   const compact = String(lower || "").trim();
+  if (deepVoiceIntent(compact)) return null;
   if (!/^(now\s+)?(check|open|run|create|send|tell|contact|advance|complete|issue|schedule|connect|review|prepare|brief|notify|track|start|do)\b/.test(compact)) return null;
   if (!/\b(the|that|it|them|buyer|route|order|patient|job|lesson|provider|driver|team|payment|scan)\b/.test(compact)) return null;
   const moduleLead = { trade: "AgriTrade", health: "Telehealth", workforce: "Workforce", learning: "Learning", map: "Maps", integrations: "Integrations" }[context.section];
@@ -7741,17 +7742,17 @@ function simplePlatformDataBrief(db, text = "") {
       section: "health",
       title: "Health data in simple words",
       response: latest
-        ? `Simple health meaning: this person has a recorded care need for ${latest.needSummary || "support"}. Next step: keep the intake clear, use captions or audio if needed, and connect to a provider or emergency help if symptoms are urgent.`
-        : "No health intake is active yet. Simple next step: start intake, ask what happened, record location and contact support, then connect to a provider if needed.",
+        ? `Here is the health information in simple words: this person needs help with ${latest.needSummary || "a health concern"}. Do this first: make sure they are safe, get their location, and connect them to the provider or caregiver. Watch for danger signs like trouble breathing, chest pain, confusion, heavy bleeding, fainting, or severe weakness. If any danger sign is present, seek emergency help now.`
+        : "Here is the health step in simple words: first ask what happened, where the person is, and how to contact them. Then start the intake. If they have trouble breathing, chest pain, heavy bleeding, confusion, fainting, or severe weakness, seek emergency help now.",
       status: latest ? "completed" : "needs-intake"
     };
   }
-  if (/\b(lesson|course|learning|student|learner|training)\b/.test(lower)) {
+  if (/\b(education|school|lesson|course|learning|student|learner|training)\b/.test(lower)) {
     return {
       module: "Learning",
       section: "learning",
       title: "Learning data in simple words",
-      response: `Simple learning meaning: the active path is ${course?.title || "the selected course"}. Next step: start or continue one lesson, add captions or audio if needed, then complete a short check before the certificate.`,
+      response: `Here is the learning information in simple words: the learner is working on ${course?.title || "the selected course"}. Do this first: open one lesson and help them finish one small step. If they cannot hear, turn on captions. If they cannot see well, use audio or large text. Watch for confusion or stopping points, then explain it again in easier words before moving to the quiz or certificate.`,
       status: "completed"
     };
   }
@@ -7760,7 +7761,7 @@ function simplePlatformDataBrief(db, text = "") {
       module: "Workforce",
       section: "workforce",
       title: "Workforce data in simple words",
-      response: `Simple workforce meaning: the best current role to review is ${role?.title || "the selected role"}. Next step: check readiness gaps, apply if eligible, then prepare interview and shift support.`,
+      response: `Here is the workforce information in simple words: the best job to review is ${role?.title || "the selected role"}. Do this first: check if the person is ready for the job. If they are ready, help them apply. If they are not ready, show the missing skill and connect them to training. Watch for missing documents, schedule problems, transportation issues, or interview help needs.`,
       status: "completed"
     };
   }
@@ -7783,8 +7784,8 @@ function simplePlatformDataBrief(db, text = "") {
 }
 
 function isSimpleDataExplanation(lower) {
-  return /\b(explain|interpret|make|say|translate|summarize|read)\b.*\b(simple|plain|farmer language|grandma|easy|data|drone data|scan data|field data|what does.*mean)\b/.test(String(lower || ""))
-    || /\b(what does|what do).*\b(drone|scan|field|data|health score|crop health|map|route|course|job).*\b(mean|say)\b/.test(String(lower || ""));
+  return /\b(explain|interpret|make|say|translate|summarize|read)\b.*\b(simple|plain|farmer language|grandma|easy|data|drone data|scan data|field data|health|education|learning|workforce|job|course|what does.*mean)\b/.test(String(lower || ""))
+    || /\b(what does|what do).*\b(drone|scan|field|data|health score|crop health|map|route|course|lesson|learner|student|job|workforce|patient|care)\b.*\b(mean|say)\b/.test(String(lower || ""));
 }
 
 function simpleDataExplanationResponse(db, user, text, lower) {

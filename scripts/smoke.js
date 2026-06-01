@@ -449,6 +449,18 @@ async function call(path, body) {
   assert(droneSimple.commandResult.intent === "conversation.simple_data_interpretation");
   assert(droneSimple.commandResult.metadata.redirectSection === "trade");
   assert(/farmer|crop|field|water|pest|route|buyer|sale/i.test(droneSimple.commandResult.response));
+  const healthSimple = await call("/api/agent/command", { command: "Nexus, explain the health data in simple words", conversational: true, inputMode: "voice", outputMode: "voice" });
+  assert(healthSimple.commandResult.intent === "conversation.simple_data_interpretation");
+  assert(healthSimple.commandResult.metadata.redirectSection === "health");
+  assert(/simple words|do this first|danger signs|emergency/i.test(healthSimple.commandResult.response));
+  const learningSimple = await call("/api/agent/command", { command: "Nexus, explain the education data in simple words", conversational: true, inputMode: "voice", outputMode: "voice" });
+  assert(learningSimple.commandResult.intent === "conversation.simple_data_interpretation");
+  assert(learningSimple.commandResult.metadata.redirectSection === "learning");
+  assert(/one lesson|captions|audio|quiz|certificate/i.test(learningSimple.commandResult.response));
+  const workforceSimple = await call("/api/agent/command", { command: "Nexus, explain the workforce data in simple words", conversational: true, inputMode: "voice", outputMode: "voice" });
+  assert(workforceSimple.commandResult.intent === "conversation.simple_data_interpretation");
+  assert(workforceSimple.commandResult.metadata.redirectSection === "workforce");
+  assert(/job|apply|training|documents|interview/i.test(workforceSimple.commandResult.response));
   const droneIntervention = await call("/api/trade/drone-intervention", {});
   assert(droneIntervention.profile.fieldInterventions.length >= 1);
   assert(droneIntervention.profile.integrationEvents.some(event => event.action === "drone.intervention_task"));
