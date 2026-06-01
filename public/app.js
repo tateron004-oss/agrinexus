@@ -5722,9 +5722,19 @@ function renderLaunchSupportPanels() {
   const pilotTarget = $("#localPilotReport");
   if (pilotTarget) {
     const pilots = data.profile.localPilotRuns || [];
-    pilotTarget.innerHTML = pilots.length
+    const remoteKits = data.profile.remoteLaunchKits || [];
+    const latestKit = remoteKits[0] || data.remoteLaunchKit;
+    const remoteKitHtml = latestKit ? `
+      <div>
+        <strong>${translateText("Remote Rural Farmer Launch Kit")} - ${translateText(latestKit.status)}</strong>
+        <span>${translateText(`Built for ${latestKit.country || "the active country"} from ${latestKit.operatingFrom || "your current location"}.`)}</span>
+        <span>${translateText((latestKit.remoteProof || [])[0] || "Runs without signed providers while keeping live gaps visible.")}</span>
+      </div>
+    ` : "";
+    const pilotHtml = pilots.length
       ? pilots.slice(0, 3).map(pilot => `<div><strong>${translateText(pilot.title)} - ${translateText(pilot.status)}</strong><span>${translateText(pilot.summary)}</span><span>${(pilot.outcomes || []).slice(0, 3).map(item => translateText(item)).join(" | ")}</span></div>`).join("")
       : "<div><strong>Ready to run</strong><span>Choose a pilot scenario to create local evidence before live engines are connected.</span></div>";
+    pilotTarget.innerHTML = `${remoteKitHtml}${pilotHtml}`;
   }
   const onboardingTarget = $("#onboardingPanel");
   if (onboardingTarget) {
@@ -5741,7 +5751,7 @@ function renderLaunchSupportPanels() {
 }
 
 function applyPermissions() {
-  $$("[data-workflow], [data-ai], [data-workforce], [data-health], [data-pay], [data-module-test], [data-command-preset], [data-pilot-scenario], [data-persona], [data-simple-command], [data-simple-section], [data-simple-pilot], [data-simple-demo], [data-simple-mission], [data-simple-action], .provider-test, #adminHealthCheck, #liveServiceCheckBtn, #liveServiceCheckFromIntegrations, #aiConsoleRun, #agentPlanBtn, #agentExecuteBtn, #agentBriefingBtn, #agentMissionBtn, #missionResumeBtn, #missionAutopilotBtn, #demoRunBtn, #wowDemoBtn, #startOnboardingBtn, #openSupportBtn, #inviteSubscriberBtn, #addTestUserBtn, #addAdminUserBtn, [data-ai-review], [data-notify], #voiceListenBtn, #voiceRunBtn, #voiceFirstBtn, #voiceSpeakBtn, #voiceHelpBtn, #globalListenBtn, #globalRunBtn, #globalYesBtn, #globalNoBtn, #globalReadBtn, #globalVoiceHelpBtn, #globalInstallBtn, #jarvisListenBtn, #jarvisRunBtn, #jarvisMissionBtn, #jarvisReadBtn").forEach(element => {
+  $$("[data-workflow], [data-ai], [data-workforce], [data-health], [data-pay], [data-module-test], [data-command-preset], [data-pilot-scenario], [data-persona], [data-simple-command], [data-simple-section], [data-simple-pilot], [data-simple-demo], [data-simple-mission], [data-simple-action], .provider-test, #adminHealthCheck, #liveServiceCheckBtn, #liveServiceCheckFromIntegrations, #aiConsoleRun, #agentPlanBtn, #agentExecuteBtn, #agentBriefingBtn, #agentMissionBtn, #missionResumeBtn, #missionAutopilotBtn, #demoRunBtn, #wowDemoBtn, #remoteLaunchKitBtn, #startOnboardingBtn, #openSupportBtn, #inviteSubscriberBtn, #addTestUserBtn, #addAdminUserBtn, [data-ai-review], [data-notify], #voiceListenBtn, #voiceRunBtn, #voiceFirstBtn, #voiceSpeakBtn, #voiceHelpBtn, #globalListenBtn, #globalRunBtn, #globalYesBtn, #globalNoBtn, #globalReadBtn, #globalVoiceHelpBtn, #globalInstallBtn, #jarvisListenBtn, #jarvisRunBtn, #jarvisMissionBtn, #jarvisReadBtn").forEach(element => {
     const area = element.dataset.workflow
       || (element.dataset.ai ? "ai" : null)
       || (element.dataset.workforce ? "workforce" : null)
@@ -5787,6 +5797,7 @@ function applyPermissions() {
       || (element.id === "addAdminUserBtn" ? "admin" : null)
       || (element.id === "demoRunBtn" ? "admin" : null)
       || (element.id === "wowDemoBtn" ? "admin" : null)
+      || (element.id === "remoteLaunchKitBtn" ? "ai" : null)
       || (element.dataset.aiReview ? "governance" : null)
       || (element.dataset.notify ? "notifications" : null);
     if (!area) return;
@@ -11324,6 +11335,11 @@ async function runLocalPilotScenario(event) {
   goSection("dashboard");
 }
 
+async function runRemoteLaunchKit() {
+  await mutate("/api/pilot/remote-launch-kit", {}, "Remote rural farmer launch kit created");
+  goSection("dashboard");
+}
+
 async function runSimpleAction(eventOrButton) {
   const selector = "[data-simple-command], [data-simple-section], [data-simple-pilot], [data-simple-demo], [data-simple-mission], [data-simple-action]";
   const eventTargetButton = eventOrButton?.target?.closest?.(selector);
@@ -12289,6 +12305,8 @@ function bindStatic() {
   $$("[data-pilot-scenario]").forEach(button => {
     button.onclick = runLocalPilotScenario;
   });
+  const remoteLaunchKitBtn = $("#remoteLaunchKitBtn");
+  if (remoteLaunchKitBtn) remoteLaunchKitBtn.onclick = runRemoteLaunchKit;
   const adminHealthCheck = $("#adminHealthCheck");
   if (adminHealthCheck) adminHealthCheck.onclick = runAdminHealthCheckDirect;
   const liveServiceCheck = $("#liveServiceCheckBtn");

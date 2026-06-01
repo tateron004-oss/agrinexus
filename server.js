@@ -1260,6 +1260,145 @@ function noVendorUpgradeTenPack(db, user, providers = runtimeProviders(db), opti
   return pack;
 }
 
+function remoteRuralFarmerLaunchKit(db, user, providers = runtimeProviders(db), options = {}) {
+  ensureOperationsProfile(db.profile);
+  ensureLearningProfile(db.profile);
+  ensureWorkforceProfile(db.profile);
+  ensureHealthProfile(db.profile);
+  ensureTradeProfile(db.profile);
+  ensureAiProfile(db.profile);
+  ensureCommunicationProfile(db.profile);
+  const { country, route } = activeContext(db);
+  const providerCatalog = providerCandidateCatalog(db, providers);
+  const countryCoverage = providerCatalog.countryCoverage.find(item => item.name === country.name) || providerCatalog.countryCoverage[0];
+  const noVendorPack = noVendorUpgradeTenPack(db, user, providers);
+  const liveReadiness = productionReadiness(providers);
+  const stages = [
+    {
+      id: "remote-country-focus",
+      title: "Pick the first rural farmer market",
+      readyNow: true,
+      action: `Use ${country.name} as the working country context and ${route.name} as the corridor model.`,
+      evidence: "Country, route, language, map risk, and provider candidate coverage are visible without needing a local office."
+    },
+    {
+      id: "farmer-intake",
+      title: "Run farmer intake by voice",
+      readyNow: true,
+      action: "Ask crop, quantity, location, buyer need, language, accessibility needs, and phone contact preference.",
+      evidence: "Nexus can guide the farmer in simple steps and save workflow evidence locally."
+    },
+    {
+      id: "crop-sale-simulation",
+      title: "Create a crop sale workflow",
+      readyNow: true,
+      action: "Prepare product lot, buyer message, route tracking, delivery evidence, and payment-readiness record.",
+      evidence: "AgriTrade can show the full crop-to-buyer process before a marketplace partner is signed."
+    },
+    {
+      id: "field-intelligence",
+      title: "Interpret field or drone evidence simply",
+      readyNow: true,
+      action: "Use local drone/satellite-style evidence to explain crop stress, pests, water, and harvest readiness in plain language.",
+      evidence: "The farmer sees simple advice instead of technical vegetation-index language."
+    },
+    {
+      id: "telehealth-navigation",
+      title: "Run healthcare support safely",
+      readyNow: true,
+      action: "Capture symptoms, accessibility needs, consent, caregiver support, danger signals, and provider handoff packet.",
+      evidence: "AgriNexus supports navigation and escalation while clearly avoiding unlicensed diagnosis."
+    },
+    {
+      id: "learning-workforce",
+      title: "Connect learning to income",
+      readyNow: true,
+      action: "Start a practical course, create captions/audio support, issue local certificate evidence, and match a role.",
+      evidence: "A farmer, youth, or rural worker can see a path from learning to earning."
+    },
+    {
+      id: "partner-outreach",
+      title: "Create partner packets remotely",
+      readyNow: true,
+      action: "Generate partnership packets for course, job, telehealth, EHR, marketplace, drone, logistics, payments, and compliance lanes.",
+      evidence: `${providerCatalog.groups.length} provider lanes and ${providerCatalog.total} candidate records are ready for outreach.`
+    },
+    {
+      id: "country-compliance",
+      title: "Keep legal and clinical review visible",
+      readyNow: true,
+      action: "Track local counsel, privacy/DPO, clinical governance, consent, payment rules, and marketplace rules before live launch.",
+      evidence: "The platform separates demo/pilot evidence from regulated live operations."
+    },
+    {
+      id: "investor-evidence",
+      title: "Produce investor and partner evidence",
+      readyNow: true,
+      action: "Run local pilots, export evidence, show admin readiness, and explain what unlocks live production.",
+      evidence: "You can show serious progress without pretending to have signed providers."
+    },
+    {
+      id: "live-credential-path",
+      title: "Connect live engines when access arrives",
+      readyNow: true,
+      action: "Add approved API keys, webhooks, phone numbers, map providers, and legal approvals one provider at a time.",
+      evidence: `${liveReadiness.readyCount}/${liveReadiness.total} production checks currently report ready or locally optimized.`
+    }
+  ];
+  const kit = {
+    id: crypto.randomUUID(),
+    status: "remote-pilot-ready",
+    audience: "Rural African farmers, farming families, field agents, learners, workers, and patients",
+    operatingFrom: user?.country || "remote operator location",
+    country: country.name,
+    route: route.name,
+    providerCoverage: countryCoverage ? {
+      country: countryCoverage.name,
+      status: countryCoverage.status,
+      providerCount: countryCoverage.providerCount,
+      plainAnswer: countryCoverage.plainAnswer
+    } : null,
+    noVendorPack: {
+      status: noVendorPack.status,
+      readyCount: noVendorPack.readyCount,
+      total: noVendorPack.total,
+      missions: noVendorPack.missionBlueprints.map(item => item.title)
+    },
+    stages,
+    remoteProof: [
+      "Works from your current location because the pilot evidence is generated inside AgriNexus.",
+      "Does not require pretending that a clinic, marketplace, drone vendor, or payment provider is already signed.",
+      "Creates the story and evidence needed to approach partners, funders, governments, and NGOs.",
+      "Keeps live-provider gaps visible so the platform remains credible."
+    ],
+    nextCommands: [
+      "Nexus, run rural access pilot",
+      "Nexus, help me sell my crop",
+      "Nexus, walk me through telehealth",
+      "Nexus, create provider partnership packets",
+      "Nexus, explain what is ready without vendors"
+    ],
+    createdBy: user?.email || "system",
+    createdAt: new Date().toISOString()
+  };
+  if (options.persist) {
+    db.profile.remoteLaunchKits.unshift(kit);
+    db.profile.remoteLaunchKits = db.profile.remoteLaunchKits.slice(0, 20);
+    rememberAgentMemory(db.profile, "Remote rural farmer launch kit is active: provider-agnostic pilot workflows, farmer intake, crop sale, telehealth navigation, learning-workforce, partner packets, compliance, and evidence export.", { source: "remote-launch-kit", category: "pattern", module: "Platform", confidence: 0.94 });
+    logIntegration(db, {
+      providerId: "openai",
+      module: "Local Pilot Studio",
+      action: "pilot.remote_launch_kit_created",
+      detail: `Remote rural farmer launch kit created for ${country.name} with ${stages.length} ready stage(s).`,
+      metadata: { kitId: kit.id, country: country.name, route: route.name, stages: stages.map(stage => stage.id) },
+      dispatch: false
+    });
+    addUsageEvent(db.profile, { module: "Local Pilot Studio", action: "pilot.remote_launch_kit_created", detail: kit.status, user: user?.email });
+    addActivity(db.profile, `Remote rural farmer launch kit created for ${country.name}.`);
+  }
+  return kit;
+}
+
 function publicState(db, user) {
   const providers = runtimeProviders(db);
   ensureOperationsProfile(db.profile);
@@ -1289,6 +1428,7 @@ function publicState(db, user) {
     noVendorUpgradeTen: noVendorUpgradeTenPack(db, user, providers),
     maximumOperationalEfficiency: maximumOperationalEfficiencyModel(db, user, providers),
     autonomousOperatingLoop: autonomousOperatingLoopModel(db, user, providers),
+    remoteLaunchKit: remoteRuralFarmerLaunchKit(db, user, providers),
     sessionBriefing: sessionBriefingModel(db, user, providers),
     impactDashboard: impactDashboardModel(db, providers),
     missionTimeline: missionTimelineModel(db),
@@ -5001,6 +5141,7 @@ function ensureOperationsProfile(profile) {
   profile.providerPartnerships = profile.providerPartnerships || [];
   profile.providerOutreach = profile.providerOutreach || [];
   profile.providerShortlist = profile.providerShortlist || [];
+  profile.remoteLaunchKits = profile.remoteLaunchKits || [];
 }
 
 function providerCandidateGroups() {
@@ -11720,6 +11861,15 @@ async function api(req, res, url) {
     await writeDb(db);
     const state = publicState(db, user);
     state.pilotResult = pilotRun;
+    return send(res, 200, state);
+  }
+
+  if (url.pathname === "/api/pilot/remote-launch-kit" && req.method === "POST") {
+    if (!canUse(user, "ai")) return send(res, 403, { error: "Role does not allow remote launch kit workflows" });
+    const kit = remoteRuralFarmerLaunchKit(db, user, runtimeProviders(db), { persist: true });
+    await writeDb(db);
+    const state = publicState(db, user);
+    state.remoteLaunchKitResult = kit;
     return send(res, 200, state);
   }
 

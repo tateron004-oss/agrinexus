@@ -186,6 +186,12 @@ async function call(path, body) {
   assert(localPilot.pilotResult.status === "pilot-ready");
   assert(localPilot.profile.localPilotRuns.length >= 1);
   assert(localPilot.profile.integrationEvents.some(event => event.action === "pilot.local_run_completed"));
+  const remoteLaunchKit = await call("/api/pilot/remote-launch-kit", {});
+  assert(remoteLaunchKit.remoteLaunchKitResult.status === "remote-pilot-ready");
+  assert(remoteLaunchKit.remoteLaunchKitResult.stages.length === 10);
+  assert(remoteLaunchKit.remoteLaunchKitResult.remoteProof.length >= 4);
+  assert(remoteLaunchKit.profile.remoteLaunchKits.length >= 1);
+  assert(remoteLaunchKit.profile.integrationEvents.some(event => event.action === "pilot.remote_launch_kit_created"));
   const telehealthPartner = await call("/api/partnership/create", { type: "telehealth", note: "Provider partnership smoke" });
   assert(telehealthPartner.partnershipResult.title.includes("Telehealth"));
   assert(telehealthPartner.profile.providerPartnerships.length >= 1);

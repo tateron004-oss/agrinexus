@@ -132,6 +132,7 @@ const endpoints = [
   "/api/onboarding/start",
   "/api/support/ticket",
   "/api/pilot/run",
+  "/api/pilot/remote-launch-kit",
   "/api/partnership/create",
   "/api/providers/candidates",
   "/api/providers/candidates/shortlist",
@@ -154,6 +155,10 @@ assert(app.includes("function voiceCommandButton"), "Voice command help buttons 
 assert(app.includes("function normalizeLocalizedVoiceCommand"), "Voice command help must normalize localized spoken commands");
 assert(html.includes("Provider Partnership Command Center"), "Integrations must include a provider partnership command center");
 assert(server.includes("function createProviderPartnership"), "Backend must create provider partnership packets before live vendors are connected");
+assert(server.includes("function remoteRuralFarmerLaunchKit"), "Backend must create a remote rural farmer launch kit before live vendors are signed");
+assert(server.includes("pilot.remote_launch_kit_created"), "Remote launch kit must create audit evidence");
+assert(html.includes("remoteLaunchKitBtn"), "Dashboard must expose a remote launch kit button");
+assert(app.includes("function runRemoteLaunchKit"), "Frontend must wire the remote launch kit button to a real endpoint");
 assert(server.includes("REAL_PROVIDER_CANDIDATES"), "Backend must include real provider candidates for course, job, telehealth, EHR, trade, drone, logistics, and payment engines");
 assert(server.includes("function providerCandidateCatalog"), "Backend must expose a grouped provider candidate catalog");
 assert(server.includes("function shortlistProviderCandidate"), "Backend must shortlist provider candidates into platform evidence");
