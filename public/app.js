@@ -2380,8 +2380,8 @@ function runUserModeSelfTest() {
       if (!simpleUserCommandWorkflow(button.command)) missing.push(`${section}: ${button.label}`);
     });
   });
-  const currentScript = [...document.scripts].some(script => String(script.src || "").includes("nexus-behavior-116"));
-  const currentStyle = [...document.styleSheets].some(sheet => String(sheet.href || "").includes("nexus-behavior-116"));
+  const currentScript = [...document.scripts].some(script => String(script.src || "").includes("nexus-behavior-117"));
+  const currentStyle = [...document.styleSheets].some(sheet => String(sheet.href || "").includes("nexus-behavior-117"));
   if (!currentScript || !currentStyle) missing.push("new app files");
   const ok = missing.length === 0;
   const message = ok
@@ -5875,6 +5875,11 @@ function updateUserCaptionPanel(message, { open = true } = {}) {
 
 function closeUserCaptionPanel() {
   $("#userCaptionPanel")?.classList.add("hidden");
+}
+
+function openCaptionBox(message = "") {
+  updateUserCaptionPanel(message || lastVoiceResponse || "Nexus is ready. Captions will appear here.");
+  $("#userCaptionInput")?.focus();
 }
 
 function renderConversationPanel() {
@@ -12346,6 +12351,14 @@ function bindStatic() {
     $("#accessibilityToggle").setAttribute("aria-expanded", String(willOpen));
     if (willOpen) panel.querySelector("button")?.focus();
     announce(willOpen ? "Accessibility tools opened" : "Accessibility tools closed");
+  };
+  const topCaptionsBtn = $("#topCaptionsBtn");
+  if (topCaptionsBtn) topCaptionsBtn.onclick = () => openCaptionBox("Nexus captions are open. Speak or type your request.");
+  const topHomeBtn = $("#topHomeBtn");
+  if (topHomeBtn) topHomeBtn.onclick = () => {
+    closeAskNexus({ silent: true });
+    closeUserCaptionPanel();
+    goSection("dashboard", { instant: true });
   };
   $$("[data-accessibility]").forEach(button => {
     button.onclick = () => toggleAccessibilityPref(button.dataset.accessibility);

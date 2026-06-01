@@ -102,6 +102,7 @@ hasAll(app, [
   "Nexus is completing this workflow now.",
   "remoteLaunchKitBtn",
   "function runRemoteLaunchKit",
+  "function openCaptionBox",
   "/api/pilot/remote-launch-kit",
   "Remote Rural Farmer Launch Kit",
   "await handleVoiceCommand(button.dataset.simpleCommand)",
@@ -127,6 +128,8 @@ hasAll(styles, [
   "body.user-mode .user-language-panel",
   "body.user-mode #countrySelect",
   "body.user-mode #platformLanguageSelect",
+  "body:not(.user-mode) #topCaptionsBtn",
+  "body:not(.user-mode) #topHomeBtn",
   "body.user-mode .user-language-header",
   "body.user-mode .user-language-buttons button",
   "body.user-mode .user-fast-actions",
@@ -247,8 +250,8 @@ assert(html.includes("nexusBehaviorStatus"), "User voice dock needs an assistant
 assert(html.includes('data-user-voice-action="listen"'), "User voice dock needs a speak action");
 assert(html.includes('data-user-voice-action="type"'), "User voice dock needs a type action");
 assert(html.includes('data-user-voice-action="read"'), "User voice dock needs a read action");
-assert(html.includes("nexus-behavior-116"), "Index must force browsers to load Nexus behavior CSS");
-assert(html.includes("nexus-behavior-116"), "Index must force browsers to load Nexus behavior JS");
+assert(html.includes("nexus-behavior-117"), "Index must force browsers to load Nexus behavior CSS");
+assert(html.includes("nexus-behavior-117"), "Index must force browsers to load Nexus behavior JS");
 assert(app.includes("if (!id) return \"dashboard\";"), "Language changes must survive an empty hash without querying '#'");
 assert(app.includes("document.getElementById(id)?.classList.contains(\"section\")"), "Section hash lookup must avoid invalid CSS selectors during language switching");
 assert(app.includes("I want to sell maize"), "Nexus behavior layer should support natural trade requests without button hunting");

@@ -863,6 +863,10 @@ body.user-mode #countrySelect,
 body.user-mode #platformLanguageSelect {
   display: none !important;
 }
+body:not(.user-mode) #topCaptionsBtn,
+body:not(.user-mode) #topHomeBtn {
+  display: none !important;
+}
 body.user-mode .shell {
   min-height: calc(100vh - 57px);
 }
@@ -1705,19 +1709,28 @@ body.admin-mode .user-caption-panel,
 body.investor-mode .user-caption-panel {
   position: fixed;
   left: 50%;
-  bottom: 104px;
+  top: 76px;
+  bottom: auto;
   z-index: 126;
   display: grid;
   gap: 10px;
   width: min(440px, calc(100vw - 20px));
-  max-height: min(42vh, 360px);
+  max-height: min(58vh, 460px);
   min-width: 0;
-  padding: 12px;
+  padding: 16px;
   border: 3px solid #173240;
-  border-radius: 18px;
-  background: #ffffff;
-  box-shadow: 0 18px 42px rgba(23, 50, 64, .22);
+  border-radius: 22px;
+  background: #fffdf2;
+  box-shadow: 0 24px 60px rgba(23, 50, 64, .28);
   transform: translateX(-50%);
+}
+body.user-mode .user-caption-panel::before {
+  content: "";
+  position: absolute;
+  inset: -999px;
+  z-index: -1;
+  background: rgba(23, 50, 64, .2);
+  pointer-events: none;
 }
 body.user-mode .user-caption-panel.hidden,
 body.admin-mode .user-caption-panel.hidden,
@@ -1749,16 +1762,17 @@ body:not(.user-mode):not(.admin-mode):not(.investor-mode) .user-caption-panel {
   white-space: nowrap;
 }
 .user-caption-text {
-  max-height: 9.5rem;
+  min-height: 7.5rem;
+  max-height: 16rem;
   overflow: auto;
-  padding: 12px;
-  border: 2px solid #d8e6eb;
-  border-radius: 14px;
-  background: #f7fbfc;
+  padding: 16px;
+  border: 3px solid #173240;
+  border-radius: 16px;
+  background: #ffffff;
   color: #173240;
-  font-size: 1.05rem;
+  font-size: 1.18rem;
   font-weight: 850;
-  line-height: 1.35;
+  line-height: 1.45;
   overflow-wrap: anywhere;
 }
 .user-caption-input {
