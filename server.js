@@ -5061,6 +5061,7 @@ function providerCandidateCatalog(db, providers = runtimeProviders(db)) {
       candidates: groupCandidates
     };
   });
+  const countryCoverage = providerCandidateCountryCoverage(candidates, groups);
   return {
     total: candidates.length,
     readyNow: candidates.filter(candidate => candidate.apiReady).length,
@@ -5073,6 +5074,7 @@ function providerCandidateCatalog(db, providers = runtimeProviders(db)) {
       mustWorkFor: ["smallholder farmers", "cooperatives", "rural elders", "low-literacy users", "hearing-impaired users", "visually-impaired users", "field agents"],
       successDefinition: "A farmer can speak to Nexus, sell a crop, understand field risk, contact support, track delivery, learn a skill, and get health or workforce help without needing technical training."
     },
+    countryCoverage,
     groups,
     candidates,
     nextBestActions: [
@@ -5082,6 +5084,60 @@ function providerCandidateCatalog(db, providers = runtimeProviders(db)) {
       "Run live service check after each provider is connected."
     ]
   };
+}
+
+function providerCandidateCountryCoverage(candidates, groups) {
+  const countries = [
+    { id: "nigeria", name: "Nigeria", region: "West Africa", priority: "high", strengths: ["payments", "marketplace", "learning", "voice-first farmer support"] },
+    { id: "drc", name: "DRC", region: "Central Africa", priority: "high", strengths: ["telehealth access", "field intelligence", "route risk", "mobile money partner search"] },
+    { id: "kenya", name: "Kenya", region: "East Africa", priority: "high", strengths: ["agritech partners", "mobile money", "learning", "logistics"] },
+    { id: "egypt", name: "Egypt", region: "North Africa", priority: "high", strengths: ["irrigation", "field intelligence", "learning", "provider partnerships"] },
+    { id: "ghana", name: "Ghana", region: "West Africa", priority: "high", strengths: ["payments", "marketplace", "learning", "farmer cooperatives"] },
+    { id: "rwanda", name: "Rwanda", region: "East Africa", priority: "high", strengths: ["digital public services", "telehealth partner search", "learning", "field agents"] },
+    { id: "tanzania", name: "Tanzania", region: "East Africa", priority: "high", strengths: ["smallholder farms", "mobile money", "logistics", "field intelligence"] },
+    { id: "south-africa", name: "South Africa", region: "Southern Africa", priority: "high", strengths: ["provider networks", "health booking", "payments", "logistics"] },
+    { id: "pan-africa", name: "Pan-African", region: "Multi-country", priority: "platform-wide", strengths: ["shared provider bridge", "voice AI", "translation", "satellite/drone data", "farmer marketplace expansion"] }
+  ];
+  const countrySpecific = {
+    nigeria: ["flutterwave", "paystack", "pawapay", "terminal-africa", "useri", "zowasel", "eosda", "sentinel-hub", "udemy-business", "ulesson"],
+    drc: ["pawapay", "eosda", "sentinel-hub", "leaf-agriculture", "ithalamed", "sentros", "udemy-business", "local-employer-network"],
+    kenya: ["pawapay", "flutterwave", "terminal-africa", "furaha", "eosda", "sentinel-hub", "ulesson", "local-employer-network"],
+    egypt: ["eosda", "sentinel-hub", "leaf-agriculture", "udemy-business", "pluralsight-skills", "ithalamed", "local-employer-network"],
+    ghana: ["flutterwave", "paystack", "pawapay", "terminal-africa", "zowasel", "eosda", "ulesson", "local-employer-network"],
+    rwanda: ["pawapay", "eosda", "sentinel-hub", "ithalamed", "sentros", "ulesson", "local-employer-network"],
+    tanzania: ["pawapay", "terminal-africa", "furaha", "eosda", "sentinel-hub", "ulesson", "local-employer-network"],
+    "south-africa": ["recomed", "paystack", "flutterwave", "terminal-africa", "eosda", "sentinel-hub", "pluralsight-skills", "local-employer-network"],
+    "pan-africa": candidates.map(candidate => candidate.id)
+  };
+  const categoryTitles = Object.fromEntries(groups.map(group => [group.id, group.title]));
+  return countries.map(country => {
+    const selected = (countrySpecific[country.id] || []).map(id => candidates.find(candidate => candidate.id === id)).filter(Boolean);
+    const categories = [...new Set(selected.map(candidate => candidate.category))].map(category => ({
+      id: category,
+      title: categoryTitles[category] || category,
+      candidates: selected.filter(candidate => candidate.category === category).slice(0, 4).map(candidate => ({
+        id: candidate.id,
+        name: candidate.name,
+        readiness: candidate.readiness,
+        apiStatus: candidate.apiStatus,
+        providerId: candidate.providerId
+      }))
+    }));
+    const missingCategories = groups
+      .filter(group => !categories.some(category => category.id === group.id))
+      .map(group => group.title);
+    return {
+      ...country,
+      status: missingCategories.length ? "needs-local-partner-selection" : "candidate-covered",
+      providerCount: selected.length,
+      categories,
+      missingCategories,
+      plainAnswer: missingCategories.length
+        ? `${country.name} has candidate coverage for ${categories.length} engine area(s); local partners are still needed for ${missingCategories.slice(0, 3).join(", ")}.`
+        : `${country.name} has candidate coverage across the rural farmer operating model. Live use still requires credentials, contracts, and country validation.`,
+      farmerUseCase: `In ${country.name}, Nexus should help a rural farmer ask for crop advice, sell crops, track delivery, reach health support, learn skills, and find work with country-aware provider choices.`
+    };
+  });
 }
 
 function shortlistProviderCandidate(db, user, candidateId) {

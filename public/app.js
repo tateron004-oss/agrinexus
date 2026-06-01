@@ -7726,6 +7726,7 @@ function render() {
     ? data.profile.integrationEvents.map(event => `<div><strong>${event.providerName}</strong><span>${event.action} - ${event.status}</span></div>`).join("")
     : "<div>No integration events yet. Run a workflow or test a provider.</div>";
   const providerCandidateGroups = data.providerCandidates?.groups || [];
+  const countryCoverage = data.providerCandidates?.countryCoverage || [];
   const farmerFocus = data.providerCandidates?.focus || {};
   const providerPacketHtml = (data.profile.providerPartnerships || []).length
     ? data.profile.providerPartnerships.slice(0, 6).map(packet => `
@@ -7748,6 +7749,16 @@ function render() {
       </div>
     `).join("")
     : `<div>${translateText("Provider candidate pipeline is not loaded yet.")}</div>`;
+  const countryCoverageHtml = countryCoverage.length
+    ? countryCoverage.map(country => `
+      <div>
+        <strong>${translateText(`${country.name} - ${country.status}`)}</strong>
+        <span>${translateText(country.plainAnswer)}</span>
+        <small>${translateText(`Region: ${country.region}; strengths: ${(country.strengths || []).join(", ")}`)}</small>
+        <small>${translateText(`Engine areas: ${(country.categories || []).map(category => category.title).join(", ")}`)}</small>
+      </div>
+    `).join("")
+    : `<div>${translateText("Country coverage is not loaded yet.")}</div>`;
   $("#providerPartnershipPanel").innerHTML = `
     ${providerPacketHtml}
     <div>
@@ -7756,6 +7767,11 @@ function render() {
       <small>${translateText(`Priority countries: ${(farmerFocus.countryPriority || []).join(", ")}`)}</small>
       <small>${translateText(farmerFocus.successDefinition || "A farmer can speak to Nexus, sell crops, understand field risk, track delivery, learn, and get help.")}</small>
     </div>
+    <div>
+      <strong>${translateText("African Country Coverage")}</strong>
+      <span>${translateText("Use this to answer: will AgriNexus work in my country? It shows candidate provider coverage by country and where local partners are still needed.")}</span>
+    </div>
+    ${countryCoverageHtml}
     ${providerCandidateHtml}
   `;
   renderCommunicationPanel("#providerCommunicationPanel", "Platform", "No provider support thread yet. Message the provider desk to create a two-way operations record.");
@@ -7801,6 +7817,13 @@ function render() {
       title: "Rural Farmer Real Engine Pipeline",
       summary: "Each category is judged by whether it helps a rural African farmer sell crops, get guidance, reach care, learn, find work, move goods, or receive payment.",
       items: providerCandidateGroups.slice(0, 6).map(group => taskItem(group.title, `${group.ruralFarmerValue || group.plainLanguage} Options: ${(group.topCandidates || []).map(candidate => candidate.name).slice(0, 3).join(", ")}`, group.readyNow ? "ready" : "pending", `${group.readyNow}/${group.count}`, { workflow: "provider-candidate", action: group.id }))
+    },
+    {
+      eyebrow: "Country readiness",
+      metric: `${countryCoverage.length} regions`,
+      title: "African Country Coverage Desk",
+      summary: "Nigeria, DRC, Kenya, Egypt, Ghana, Rwanda, Tanzania, South Africa, and pan-African coverage are organized so partners can see where AgriNexus can start first.",
+      items: countryCoverage.slice(0, 6).map(country => taskItem(country.name, country.plainAnswer, country.status === "candidate-covered" ? "ready" : "pending", `${country.providerCount} providers`, { workflow: "integrations", action: "focus-cards" }))
     },
     {
       eyebrow: "Readiness",

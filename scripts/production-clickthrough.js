@@ -161,8 +161,13 @@ assert(server.includes("provider.partnership_packet_created"), "Provider partner
 assert(app.includes("providerPartnershipPanel"), "Frontend must render the latest provider partnership packets");
 assert(server.includes("Rural African farmers and farming families"), "Provider catalog must be focused on rural African farmers");
 assert(server.includes("smallholder farmers"), "Provider catalog must account for smallholder farmers");
+assert(server.includes("function providerCandidateCountryCoverage"), "Provider catalog must organize candidate coverage by African country and region");
+assert(server.includes("Nigeria") && server.includes("DRC") && server.includes("Kenya") && server.includes("Egypt"), "Provider country coverage must include priority African countries");
+assert(server.includes("Ghana") && server.includes("Rwanda") && server.includes("Tanzania") && server.includes("South Africa"), "Provider country coverage must include additional African priority countries");
 assert(app.includes("Rural African Farmer Provider Pipeline"), "Frontend must show the rural African farmer provider pipeline");
 assert(app.includes("Rural Farmer Real Engine Pipeline"), "Frontend must show the rural farmer real engine pipeline");
+assert(app.includes("African Country Coverage"), "Frontend must show country coverage inside the provider pipeline");
+assert(app.includes("African Country Coverage Desk"), "Frontend must render a country readiness workspace");
 assert(app.includes('workflow === "provider-candidate"'), "Frontend must wire provider candidate buttons to a real shortlist workflow");
 assert(app.includes("/api/providers/candidates/shortlist"), "Frontend must call the provider shortlist endpoint");
 assert(app.includes("activeVoiceAudio"), "Voice playback needs a single active audio guard");

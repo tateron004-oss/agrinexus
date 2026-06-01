@@ -198,6 +198,16 @@ async function call(path, body) {
   assert(providerCandidates.focus.countryPriority.includes("DRC"));
   assert(providerCandidates.focus.mustWorkFor.includes("smallholder farmers"));
   assert(providerCandidates.focus.successDefinition.includes("A farmer can speak to Nexus"));
+  assert(providerCandidates.countryCoverage.some(country => country.name === "Nigeria"));
+  assert(providerCandidates.countryCoverage.some(country => country.name === "DRC"));
+  assert(providerCandidates.countryCoverage.some(country => country.name === "Kenya"));
+  assert(providerCandidates.countryCoverage.some(country => country.name === "Egypt"));
+  assert(providerCandidates.countryCoverage.some(country => country.name === "Ghana"));
+  assert(providerCandidates.countryCoverage.some(country => country.name === "Rwanda"));
+  assert(providerCandidates.countryCoverage.some(country => country.name === "Tanzania"));
+  assert(providerCandidates.countryCoverage.some(country => country.name === "South Africa"));
+  assert(providerCandidates.countryCoverage.some(country => country.name === "Pan-African"));
+  assert(providerCandidates.countryCoverage.every(country => country.providerCount >= 1));
   assert(providerCandidates.groups.some(group => group.id === "course-catalog"));
   assert(providerCandidates.groups.some(group => group.id === "job-network"));
   assert(providerCandidates.groups.some(group => group.id === "telehealth-provider"));
