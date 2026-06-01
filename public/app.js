@@ -2199,8 +2199,8 @@ function runUserModeSelfTest() {
       if (!simpleUserCommandWorkflow(button.command)) missing.push(`${section}: ${button.label}`);
     });
   });
-  const currentScript = [...document.scripts].some(script => String(script.src || "").includes("nexus-behavior-98"));
-  const currentStyle = [...document.styleSheets].some(sheet => String(sheet.href || "").includes("nexus-behavior-98"));
+  const currentScript = [...document.scripts].some(script => String(script.src || "").includes("nexus-behavior-99"));
+  const currentStyle = [...document.styleSheets].some(sheet => String(sheet.href || "").includes("nexus-behavior-99"));
   if (!currentScript || !currentStyle) missing.push("new app files");
   const ok = missing.length === 0;
   const message = ok
@@ -4916,7 +4916,7 @@ function voiceMissionTemplates() {
   return {
     trade: {
       label: "sell crop mission",
-      match: /\b(sell|market|trade)\b.*\b(crop|produce|maize|corn|rice|cassava|yam|beans|harvest)\b|\bhelp me sell\b/,
+      match: /\b(sell|selling|market|trade)\b.*\b(crop|produce|maize|corn|rice|cassava|yam|beans|harvest)\b|\b(help|assist|guide).*\b(sell|selling)\b|\b(crop|produce|harvest).*\b(buyer|market|sale|delivery)\b/,
       steps: [
         { command: "contact my buyer", label: "contact or identify buyer" },
         { command: "create buyer order", label: "create crop order" },
@@ -4960,8 +4960,8 @@ function voiceMissionTemplates() {
 
 function isVoiceMissionRequest(command = "") {
   const lower = String(command || "").toLowerCase();
-  return /\b(help me|walk me through|guide me through|start|run)\b/.test(lower)
-    && /\b(sell|crop|doctor|health|job|work|learn|course|training)\b/.test(lower)
+  return /\b(help|assist|walk me through|guide|start|run|i need|i want|please)\b/.test(lower)
+    && /\b(sell|selling|crop|produce|harvest|doctor|health|job|work|learn|course|training)\b/.test(lower)
     && Object.values(voiceMissionTemplates()).some(item => item.match.test(lower));
 }
 
