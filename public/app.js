@@ -2197,8 +2197,8 @@ function runUserModeSelfTest() {
       if (!simpleUserCommandWorkflow(button.command)) missing.push(`${section}: ${button.label}`);
     });
   });
-  const currentScript = [...document.scripts].some(script => String(script.src || "").includes("nexus-behavior-95"));
-  const currentStyle = [...document.styleSheets].some(sheet => String(sheet.href || "").includes("nexus-behavior-95"));
+  const currentScript = [...document.scripts].some(script => String(script.src || "").includes("nexus-behavior-96"));
+  const currentStyle = [...document.styleSheets].some(sheet => String(sheet.href || "").includes("nexus-behavior-96"));
   if (!currentScript || !currentStyle) missing.push("new app files");
   const ok = missing.length === 0;
   const message = ok
@@ -4730,6 +4730,163 @@ function allModeVoiceCommandCatalog() {
     ],
     guarantee: "These commands are available in User, Admin, and Investor mode. Nexus keeps the same voice behavior, then applies the permission level for the signed-in account."
   };
+}
+
+function normalizeToolText(value = "") {
+  return String(value || "")
+    .toLowerCase()
+    .replace(/[^a-z0-9\s-]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function voiceToolTokens(value = "") {
+  const stop = new Set(["a", "an", "and", "are", "can", "for", "i", "in", "is", "it", "me", "my", "of", "on", "please", "the", "to", "with", "you"]);
+  return normalizeToolText(value).split(/\s+/).filter(token => token.length > 2 && !stop.has(token));
+}
+
+function workflowVoiceAliases(workflow, action) {
+  const key = `${workflow}:${action}`;
+  const aliases = {
+    "learning:start": ["start course", "take course", "begin training", "learn"],
+    "learning:lesson": ["finish lesson", "complete lesson"],
+    "workforce:apply-role": ["apply for job", "apply for role", "get work"],
+    "workforce:shift": ["plan shift", "schedule shift"],
+    "health:intake": ["start intake", "need doctor", "health help"],
+    "health:provider": ["contact provider", "talk to provider", "telehealth provider"],
+    "health:representative": ["connect representative", "connect provider", "reach doctor", "reach nurse"],
+    "health:safety": ["check region", "hotspot", "health risk"],
+    "trade:order": ["sell crop", "create order", "crop sale"],
+    "trade:buyer-contact": ["contact buyer", "talk to buyer", "buyer contact"],
+    "trade:buyer-message": ["message buyer", "chat buyer"],
+    "trade:buyer-whatsapp": ["whatsapp buyer", "call buyer"],
+    "trade:buyer-sms": ["sms buyer", "text buyer"],
+    "trade:advance": ["track delivery", "track shipment", "advance order"],
+    "trade:drone": ["run drone scan", "scan farm", "check field"],
+    "trade:drone-plan": ["plan drone mission", "flight plan"],
+    "map:facility-route": ["find facility", "clinic route", "health facility"],
+    "map:risk-layer": ["risk layer", "map risk"],
+    "ai:route": ["route intelligence", "route risk", "track route"],
+    "ai:orchestrate": ["what should i do next", "next move", "orchestrate"],
+    "integrations:test-all": ["test engines", "run live service check", "provider check"],
+    "admin:health-check": ["run health check", "admin health check", "production check"]
+  };
+  return aliases[key] || [];
+}
+
+function dynamicVoiceToolRegistry() {
+  const tools = [];
+  const addTool = tool => {
+    if (!tool?.id) return;
+    if (tools.some(item => item.id === tool.id)) return;
+    tools.push(tool);
+  };
+  const sections = [
+    ["learning", "Learning", "open learning training courses lessons"],
+    ["workforce", "Workforce", "open workforce jobs roles shifts applications"],
+    ["health", "Telehealth", "open telehealth health provider intake care"],
+    ["trade", "AgriTrade", "open agritrade trade crops buyers drones orders"],
+    ["map", "Map", "open map routes facilities risk geospatial"],
+    ["agent", "AI Help", "open ai nexus assistant command center"],
+    ["integrations", "Integrations", "open integrations providers engines"],
+    ["admin", "Admin", "open admin readiness users health check"],
+    ["profile", "Profile", "open profile progress records"]
+  ];
+  sections.forEach(([section, label, keywords]) => addTool({
+    id: `section:${section}`,
+    type: "section",
+    section,
+    label,
+    keywords
+  }));
+  Object.entries(simpleUserSections || {}).forEach(([section, config]) => {
+    (config.buttons || []).forEach(button => {
+      const mapped = simpleUserCommandWorkflow(button.command);
+      if (!mapped?.workflow && !mapped?.section) return;
+      addTool({
+        id: `simple:${section}:${button.command}`,
+        type: mapped.workflow ? "workflow" : "section",
+        section: mapped.section || (mapped.workflow === "ai" ? "agent" : mapped.workflow === "map" ? "map" : mapped.workflow),
+        workflow: mapped.workflow,
+        action: mapped.action,
+        config: mapped.config,
+        dataset: mapped.dataset || {},
+        label: button.label,
+        command: button.command,
+        response: mapped.response,
+        keywords: `${section} ${button.label} ${button.command}`
+      });
+    });
+  });
+  $$("[data-workflow][data-action]").forEach(button => {
+    const workflow = button.dataset.workflow;
+    const action = button.dataset.action;
+    const label = button.textContent.trim() || `${workflow} ${action}`;
+    addTool({
+      id: `workflow:${workflow}:${action}:${label}`,
+      type: "workflow",
+      workflow,
+      action,
+      section: workflow === "ai" ? "agent" : workflow === "map" ? "map" : workflow,
+      dataset: { ...button.dataset },
+      label,
+      keywords: `${workflow} ${action} ${label} ${workflowVoiceAliases(workflow, action).join(" ")}`
+    });
+  });
+  return tools.filter(tool => canOpenSection(tool.section || tool.workflow || "agent") || can(tool.workflow || tool.section || "ai"));
+}
+
+function scoreVoiceTool(command, tool) {
+  const lower = normalizeToolText(command);
+  if (!lower || !tool) return 0;
+  const haystack = normalizeToolText(`${tool.label || ""} ${tool.command || ""} ${tool.keywords || ""}`);
+  const aliases = workflowVoiceAliases(tool.workflow, tool.action);
+  let score = 0;
+  if (tool.type === "section" && lower.includes(normalizeToolText(tool.label))) score += 12;
+  if (tool.label && lower.includes(normalizeToolText(tool.label))) score += 10;
+  if (tool.command && lower.includes(normalizeToolText(tool.command))) score += 12;
+  aliases.forEach(alias => {
+    if (lower.includes(normalizeToolText(alias))) score += 14;
+  });
+  if (tool.workflow && lower.includes(normalizeToolText(tool.workflow))) score += 4;
+  if (tool.action && lower.includes(normalizeToolText(tool.action).replace(/-/g, " "))) score += 5;
+  const commandTokens = new Set(voiceToolTokens(lower));
+  const toolTokens = new Set(voiceToolTokens(haystack));
+  commandTokens.forEach(token => {
+    if (toolTokens.has(token)) score += 2;
+  });
+  return score;
+}
+
+function bestDynamicVoiceTool(command = "") {
+  const ranked = dynamicVoiceToolRegistry()
+    .map(tool => ({ tool, score: scoreVoiceTool(command, tool) }))
+    .filter(item => item.score >= 8)
+    .sort((a, b) => b.score - a.score);
+  return ranked[0]?.tool || null;
+}
+
+async function runDynamicVoiceTool(command = "") {
+  const tool = bestDynamicVoiceTool(command);
+  if (!tool) return false;
+  if (tool.type === "section") {
+    goSection(tool.section);
+    setVoiceResponse(`${tool.label} is open. Tell Nexus what you want to do next.`, true);
+    return true;
+  }
+  if (tool.config) {
+    if (tool.section && canOpenSection(tool.section)) goSection(tool.section);
+    openWorkflowModal(tool.config);
+    setActiveAgentJourney(tool.workflow || tool.section, tool.action || "open", tool.response || tool.label);
+    setVoiceResponse(`${tool.response || `${tool.label} workflow is ready.`} Say yes to confirm, no to cancel, or read to hear it.`, true);
+    return true;
+  }
+  if (tool.workflow && tool.action) {
+    if (tool.section && canOpenSection(tool.section)) goSection(tool.section);
+    await openWorkflowByVoice(tool.workflow, tool.action, `${tool.label} workflow is ready.`, tool.dataset || {});
+    return true;
+  }
+  return false;
 }
 
 function voiceCommandButton(command) {
@@ -9889,7 +10046,8 @@ async function handleVoiceCommand(rawCommand) {
   if (lower.includes("voice help") || lower.includes("command help") || lower.includes("show help") || lower.includes("what can you do")) {
     openVoiceHelp();
     const catalog = allModeVoiceCommandCatalog();
-    setVoiceResponse(`You can call me Nexus in User, Admin, or Investor mode. I can open modules, build captions, create audio guides, complete lessons, issue certificates, apply for roles, schedule shifts, start telehealth intake, connect a provider, capture vitals, contact a buyer, create orders, run drone scans, test engines, create plans, and read responses aloud. All-mode examples: ${catalog.commands.slice(0, 5).join(". ")}.`, true);
+    const toolCount = dynamicVoiceToolRegistry().length;
+    setVoiceResponse(`You can call me Nexus in User, Admin, or Investor mode. I can open modules, build captions, create audio guides, complete lessons, issue certificates, apply for roles, schedule shifts, start telehealth intake, connect a provider, capture vitals, contact a buyer, create orders, run drone scans, test engines, create plans, and read responses aloud. I can also discover ${toolCount} workflow tools from the current platform screen, so you can ask in normal words. All-mode examples: ${catalog.commands.slice(0, 5).join(". ")}.`, true);
     return;
   }
   if (lower.includes("voice demo") || lower.includes("agrinexus demo") || lower.includes("show voice") || lower.includes("show agrinexus")) {
@@ -10252,6 +10410,8 @@ async function handleVoiceCommand(rawCommand) {
     goSection("admin");
     return openWorkflowByVoice("admin", "health-check", "Admin health check workflow is ready.");
   }
+
+  if (await runDynamicVoiceTool(command)) return;
 
   await runBackendAgentCommand(command);
 }
