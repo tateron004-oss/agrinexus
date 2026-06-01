@@ -52,13 +52,23 @@ const requiredDatasets = [
   "data-accessibility",
   "data-language",
   "data-learning-access",
+  "data-experience-mode",
   "data-workforce",
   "data-health",
   "data-ai",
   "data-pay",
   "data-module-test",
   "data-ai-review",
-  "data-notify"
+  "data-notify",
+  "data-command-preset",
+  "data-pilot-scenario",
+  "data-persona",
+  "data-simple-action",
+  "data-user-voice-action",
+  "data-caption-action",
+  "data-mobile-permission",
+  "data-mobile-ask",
+  "data-close-workflow"
 ];
 
 for (const id of requiredStaticHandlers) {
@@ -72,6 +82,44 @@ for (const dataset of requiredDatasets) {
     .replace(/-([a-z])/g, (_, letter) => letter.toUpperCase());
   assert(html.includes(dataset), `Missing ${dataset} controls`);
   assert(app.includes(`dataset.${camel}`) || app.includes(`[${dataset}]`), `No app handler reference for ${dataset}`);
+}
+
+const buttonTags = [
+  ...html.matchAll(/<button\b[^>]*>/g),
+  ...app.matchAll(/<button\b[^>]*>/g)
+].map(match => match[0]);
+
+const knownButtonSignals = [
+  "type=\"submit\"",
+  "data-",
+  "id=\"",
+  "class=\"primary",
+  "class=\"ghost",
+  "class=\"course",
+  "class=\"catalog-lesson",
+  "class=\"apply",
+  "class=\"order",
+  "class=\"provider-test",
+  "class=\"dashboard-jump",
+  "class=\"task-chip-action",
+  "class=\"simple-action"
+];
+
+const inertButtons = buttonTags.filter(tag => !knownButtonSignals.some(signal => tag.includes(signal)));
+assert.deepStrictEqual(inertButtons, [], `Every button must expose a handler signal. Inert buttons: ${inertButtons.join(" | ")}`);
+
+const staticButtonDataAttrs = new Set();
+for (const tag of html.matchAll(/<button\b[^>]*>/g)) {
+  for (const attr of tag[0].matchAll(/\s(data-[\w-]+)(?:=|\s|>)/g)) staticButtonDataAttrs.add(attr[1]);
+}
+for (const dataset of staticButtonDataAttrs) {
+  const camel = dataset
+    .replace("data-", "")
+    .replace(/-([a-z])/g, (_, letter) => letter.toUpperCase());
+  assert(
+    app.includes(`dataset.${camel}`) || app.includes(`[${dataset}]`) || app.includes(`closest("[${dataset}`) || app.includes(dataset),
+    `No delegated handler coverage found for ${dataset}`
+  );
 }
 
 const workflowActions = [
