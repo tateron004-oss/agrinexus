@@ -2199,8 +2199,8 @@ function runUserModeSelfTest() {
       if (!simpleUserCommandWorkflow(button.command)) missing.push(`${section}: ${button.label}`);
     });
   });
-  const currentScript = [...document.scripts].some(script => String(script.src || "").includes("nexus-behavior-107"));
-  const currentStyle = [...document.styleSheets].some(sheet => String(sheet.href || "").includes("nexus-behavior-107"));
+  const currentScript = [...document.scripts].some(script => String(script.src || "").includes("nexus-behavior-108"));
+  const currentStyle = [...document.styleSheets].some(sheet => String(sheet.href || "").includes("nexus-behavior-108"));
   if (!currentScript || !currentStyle) missing.push("new app files");
   const ok = missing.length === 0;
   const message = ok
@@ -2415,6 +2415,88 @@ function migrantFriendlyVoiceIntent(command = "") {
     return { workflow: "map", action: "inspector", section: "map", response: "I opened the map. You can ask for route, facility, product, or risk help.", dataset: {} };
   }
   return null;
+}
+
+function advisorBrainSignals(command = "") {
+  const lower = normalizeToolText(command);
+  const product = firstProduct() || {};
+  const country = activeCountry();
+  const route = activeRoute();
+  const latestScan = (data?.profile?.droneScans || [])[0];
+  const latestFinding = (data?.profile?.droneFindings || [])[0];
+  const has = words => words.some(word => new RegExp(`\\b${word}\\b`).test(lower));
+  return {
+    lower,
+    product,
+    country,
+    route,
+    latestScan,
+    latestFinding,
+    emergency: has(["emergency", "injury", "injured", "hurt", "bleeding", "fall", "fell", "unconscious", "breathing", "breathe", "accident", "severe", "urgent", "danger"]),
+    mediaIntake: has(["photo", "picture", "image", "video", "camera", "show", "see"]) && has(["injury", "wound", "rash", "swelling", "hurt", "pain", "telehealth", "doctor", "provider"]),
+    cropCalendar: has(["plant", "planting", "harvest", "harvesting", "season", "rain", "weather", "best time", "when"]) && has(["crop", "maize", "corn", "rice", "cassava", "yam", "beans", "farm", "field"]),
+    cropSpoilage: has(["bad", "going bad", "spoil", "spoiling", "rot", "disease", "pest", "yellow", "dry", "stress", "weak", "dying", "not growing"]) && has(["crop", "crops", "field", "farm", "plant", "maize", "rice", "cassava", "yam", "beans"]),
+    droneReview: has(["drone", "footage", "scan", "aerial", "field video", "camera"]) && has(["crop", "field", "farm", "stress", "bad", "water", "pest", "yield", "harvest"])
+  };
+}
+
+function advisorCropCalendarAdvice(signals) {
+  const crop = signals.product?.name || "the selected crop";
+  const country = signals.country?.name || "your area";
+  const risk = signals.country?.risk || "Moderate";
+  const route = signals.route?.name || "the active route";
+  return `For ${crop} in ${country}, I would check three things before planting or harvesting: expected rain, field moisture, and market route timing. Current regional risk is ${risk}, and the active route is ${route}. I can open crop planning, run a drone scan, or check the route before you move the crop.`;
+}
+
+function advisorBrainSummary(command = "") {
+  const signals = advisorBrainSignals(command);
+  const crop = signals.product?.name || "the selected crop";
+  const country = signals.country?.name || "your area";
+  const scan = signals.latestScan ? `${signals.latestScan.cropHealthScore}% crop health` : "no drone scan yet";
+  const finding = signals.latestFinding?.finding || "no field finding yet";
+  return `Advisor Brain is watching health, crop, route, drone, and provider context. For ${country}, the active crop is ${crop}, the latest scan is ${scan}, and the latest field finding is ${finding}. Tell me what happened and I will choose the safest next step.`;
+}
+
+function handleAdvisorBrainCommand(command = "") {
+  const signals = advisorBrainSignals(command);
+  if (!(signals.emergency || signals.mediaIntake || signals.cropCalendar || signals.cropSpoilage || signals.droneReview || /\b(advisor brain|farm advisor|what should i know|help the farmer|be smarter|protect farmer)\b/.test(signals.lower))) return false;
+  pendingAgentClarification = null;
+  if (signals.emergency) {
+    goSection("health");
+    renderLiveVoiceSuggestions(["confirm emergency escalation", "contact provider", "start telehealth intake", "stop"]);
+    return openWorkflowByVoice("health", "emergency", "I am treating this as urgent. If there is immediate danger, call local emergency services now. I opened emergency escalation so Nexus can prepare the care handoff, caregiver note, and provider record.", {
+      supportNeed: "Emergency escalation",
+      careNote: "Possible injury or urgent event reported by voice. Prepare emergency contact, caregiver handoff, location, and provider escalation."
+    });
+  }
+  if (signals.mediaIntake) {
+    goSection("health");
+    renderLiveVoiceSuggestions(["confirm intake", "contact provider", "record care note", "stop"]);
+    return openWorkflowByVoice("health", "intake", "I opened telehealth intake for the injury. Add a photo or video note, describe what happened, and Nexus will prepare it for provider review. This does not replace emergency care.", {
+      urgency: "Priority",
+      needSummary: "Patient has an injury or visible concern. Add photo or video notes for provider review.",
+      mediaNote: "Photo/video evidence requested during intake. Use device camera or upload outside the browser, then describe what the provider should review."
+    });
+  }
+  if (signals.cropSpoilage || signals.droneReview) {
+    goSection("trade");
+    renderLiveVoiceSuggestions(["confirm drone scan", "assign field task", "create irrigation plan", "pest alert"]);
+    return openWorkflowByVoice("trade", signals.cropSpoilage ? "drone-pest" : "drone", "I opened field intelligence. Nexus will check crop stress, water, pest risk, yield, and buyer readiness, then suggest the next field action.", {
+      productId: signals.product?.id,
+      objective: "Check crop stress, spoilage risk, water stress, pest pressure, harvest timing, and next field action."
+    });
+  }
+  if (signals.cropCalendar) {
+    goSection("trade");
+    renderLiveVoiceSuggestions(["run drone scan", "check route risk", "review trade next step", "create field zone"]);
+    setActiveAgentJourney("trade", "advisor", "Crop calendar advisor opened by voice.");
+    setVoiceResponse(`${advisorCropCalendarAdvice(signals)} I can also scan the field or check the route before you plant or harvest.`, true);
+    return true;
+  }
+  goSection(experienceMode === "user" ? "dashboard" : "agent");
+  renderLiveVoiceSuggestions(["I need a doctor", "check my crop", "when should I harvest", "run drone scan"]);
+  setVoiceResponse(advisorBrainSummary(command), true);
+  return true;
 }
 
 function moduleFromHelpCommand(command) {
@@ -8580,6 +8662,7 @@ function workflowConfig(workflow, action, element) {
   if (workflow === "health") {
     const accessAction = ["accessibility", "caption", "caregiver", "consent", "vitals", "referral", "followup"].includes(action);
     const advancedHealthActions = new Set(["appointment", "provider", "history", "prescription", "emergency", "note", "outcome"]);
+    const advisorDataset = element?.dataset || {};
     const titleMap = {
       intake: "Start intake",
       representative: "Connect representative",
@@ -8620,8 +8703,9 @@ function workflowConfig(workflow, action, element) {
     };
     const intakeFields = action === "intake" ? [
       { name: "patientName", label: "Patient or household name", value: "Community patient", placeholder: "Name or household reference" },
-      { name: "needSummary", label: "Primary health need", type: "textarea", rows: 3, value: `${activeCountry().name} intake for heat, queue, field access, and care support` },
-      { name: "urgency", label: "Urgency", type: "select", value: activeCountry().risk === "High" ? "High" : "Routine", options: [
+      { name: "needSummary", label: "Primary health need", type: "textarea", rows: 3, value: advisorDataset.needSummary || `${activeCountry().name} intake for heat, queue, field access, and care support` },
+      { name: "mediaNote", label: "Photo or video note", type: "textarea", rows: 2, value: advisorDataset.mediaNote || "If there is a photo or video, describe what the provider should look at.", placeholder: "Describe photo, video, wound, swelling, rash, fall, or injury." },
+      { name: "urgency", label: "Urgency", type: "select", value: advisorDataset.urgency || (activeCountry().risk === "High" ? "High" : "Routine"), options: [
         { value: "Routine", label: "Routine" },
         { value: "Priority", label: "Priority" },
         { value: "High", label: "High" },
@@ -8643,14 +8727,15 @@ function workflowConfig(workflow, action, element) {
       { name: "caregiverName", label: "Caregiver or community aide", value: "Community accessibility aide", placeholder: "Caregiver, aide, or trusted contact" }
     ] : [
       { name: "caseFocus", label: "Case focus", value: (data.profile.healthIntakes || [])[0]?.patientRef || `${activeCountry().name} community care case`, placeholder: "Patient, household, or case reference" },
-      { name: "supportNeed", label: "Support needed", type: "select", value: accessAction ? "Accessibility support" : "Provider review", options: [
+      { name: "supportNeed", label: "Support needed", type: "select", value: advisorDataset.supportNeed || (accessAction ? "Accessibility support" : "Provider review"), options: [
         { value: "Provider review", label: "Provider review" },
         { value: "Accessibility support", label: "Accessibility support" },
         { value: "Caregiver handoff", label: "Caregiver handoff" },
         { value: "Safety review", label: "Safety review" },
-        { value: "Follow-up", label: "Follow-up" }
+        { value: "Follow-up", label: "Follow-up" },
+        { value: "Emergency escalation", label: "Emergency escalation" }
       ] },
-      { name: "careNote", label: "Care note", type: "textarea", rows: 3, value: "Explain the patient need, communication barrier, safety issue, or next clinical step." }
+      { name: "careNote", label: "Care note", type: "textarea", rows: 3, value: advisorDataset.careNote || "Explain the patient need, communication barrier, safety issue, or next clinical step." }
     ];
     const userCopy = healthUserCopy(action, accessAction);
     return simpleWorkflowConfig({
@@ -8755,7 +8840,7 @@ function workflowConfig(workflow, action, element) {
             { value: "yield-forecast", label: "Yield forecast" },
             { value: "buyer-readiness", label: "Buyer readiness" }
           ] },
-          { name: "objective", label: "Drone objective", value: "Find crop stress, route evidence, and field task needs", placeholder: "What should the drone check?" }
+          { name: "objective", label: "Drone objective", value: element?.dataset?.objective || "Find crop stress, route evidence, and field task needs", placeholder: "What should the drone check?" }
         ] : []),
         ...(["buyer-contact", "buyer-message", "buyer-whatsapp", "buyer-sms"].includes(action) ? [
           { name: "buyerName", label: "Buyer name", value: "Regional buyer cooperative", placeholder: "Buyer name" },
@@ -10095,6 +10180,8 @@ async function handleVoiceCommand(rawCommand) {
     handleConversationRepair(command);
     return;
   }
+
+  if (handleAdvisorBrainCommand(command)) return;
 
   const migrantIntent = migrantFriendlyVoiceIntent(command);
   if (migrantIntent) {
