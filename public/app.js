@@ -2199,8 +2199,8 @@ function runUserModeSelfTest() {
       if (!simpleUserCommandWorkflow(button.command)) missing.push(`${section}: ${button.label}`);
     });
   });
-  const currentScript = [...document.scripts].some(script => String(script.src || "").includes("nexus-behavior-111"));
-  const currentStyle = [...document.styleSheets].some(sheet => String(sheet.href || "").includes("nexus-behavior-111"));
+  const currentScript = [...document.scripts].some(script => String(script.src || "").includes("nexus-behavior-112"));
+  const currentStyle = [...document.styleSheets].some(sheet => String(sheet.href || "").includes("nexus-behavior-112"));
   if (!currentScript || !currentStyle) missing.push("new app files");
   const ok = missing.length === 0;
   const message = ok
@@ -3207,6 +3207,7 @@ function renderAgentReasoningPanel({ latestCommand, pendingAction, latestExecuti
   const panel = stepsTarget.closest(".agent-reasoning-panel");
   if (panel) panel.classList.toggle("reasoning-visible", agentReasoningVisible);
   const metadata = latestCommand?.metadata || {};
+  const reasoning = metadata.reasoning || data?.profile?.agentMemory?.lastReasoning || {};
   const hasCommand = Boolean(latestCommand?.command || pendingAction?.command);
   const selectedTool = pendingAction?.tool || metadata.tool || latestCommand?.intent || "";
   const selectedAction = pendingAction?.action || metadata.userFacingPlan || selectedTool || "No workflow selected yet.";
@@ -3219,6 +3220,18 @@ function renderAgentReasoningPanel({ latestCommand, pendingAction, latestExecuti
   const evidence = latestExecution?.summary
     || latestCommand?.response
     || "Run or confirm a workflow to see the audit trail.";
+  const memoryDetail = (reasoning.memoryUsed || metadata.memoriesUsed || [])
+    .slice(0, 2)
+    .map(item => item.text || item.id || "")
+    .filter(Boolean)
+    .join(" | ");
+  const needDetail = (reasoning.userNeeds || [])
+    .slice(0, 4)
+    .map(item => String(item).replace(/-/g, " "))
+    .join(", ");
+  const optionDetail = (reasoning.optionsConsidered || [])
+    .slice(0, 3)
+    .join(" | ");
   const steps = [
     {
       label: "1. Heard",
@@ -3227,18 +3240,28 @@ function renderAgentReasoningPanel({ latestCommand, pendingAction, latestExecuti
     },
     {
       label: "2. Understood",
-      title: latestCommand?.intent || pendingAction?.tool || "Standing by",
-      detail: rationale
+      title: reasoning.intentType || latestCommand?.intent || pendingAction?.tool || "Standing by",
+      detail: reasoning.why?.join(" ") || rationale
     },
     {
-      label: "3. Selected",
+      label: "3. Remembered",
+      title: needDetail || "User context",
+      detail: memoryDetail || "No deeper memory was needed for this request."
+    },
+    {
+      label: "4. Compared",
+      title: reasoning.riskLevel || "safe route",
+      detail: optionDetail || "Nexus compared the request against safe workflow options."
+    },
+    {
+      label: "5. Selected",
       title: selectedAction,
       detail: selectedTool ? `${planner} chose ${selectedTool}.` : "Nexus will choose a workflow when a request is submitted."
     },
     {
-      label: "4. Next step",
+      label: "6. Next step",
       title: pendingAction ? "Waiting for confirmation" : (latestCommand?.status || "Ready"),
-      detail: pendingAction ? "Say or type yes to run it, or no to cancel." : "Completed actions and responses are recorded as platform evidence."
+      detail: reasoning.recommendation || (pendingAction ? "Say or type yes to run it, or no to cancel." : "Completed actions and responses are recorded as platform evidence.")
     }
   ];
   $("#agentReasoningConfidence").textContent = translateText(confidenceText);

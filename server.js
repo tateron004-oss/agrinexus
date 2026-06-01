@@ -2891,6 +2891,8 @@ function ensureAiProfile(profile) {
   profile.agentMemory.advisorHistory = profile.agentMemory.advisorHistory || [];
   profile.agentMemory.memoryTimeline = profile.agentMemory.memoryTimeline || [];
   profile.agentMemory.safetyBoundaries = profile.agentMemory.safetyBoundaries || [];
+  profile.agentMemory.reasoningHistory = profile.agentMemory.reasoningHistory || [];
+  profile.agentMemory.lastReasoning = profile.agentMemory.lastReasoning || null;
   profile.agentMemory.lastMemorySummary = profile.agentMemory.lastMemorySummary || "";
   profile.agentMemory.activeIntake = profile.agentMemory.activeIntake || null;
   profile.agentMemory.conversationalIntakes = profile.agentMemory.conversationalIntakes || [];
@@ -5476,6 +5478,66 @@ function longTermMemorySummary(profile) {
   return summary;
 }
 
+function aiReasoningSnapshot(db, user, command, moduleSignal, memories = [], options = {}) {
+  const { country, route } = activeContext(db);
+  const text = String(command || "").trim();
+  const lower = text.toLowerCase();
+  const memorySummary = longTermMemorySummary(db.profile);
+  const moduleName = moduleSignal?.module || conversationModuleSignal(text).module;
+  const actionLikely = isActionRequest(lower);
+  const sensitive = /\b(emergency|injury|doctor|medicine|diagnose|payment|wallet|apply|provider|call|message|consent|outbreak|ebola)\b/.test(lower);
+  const userNeeds = [
+    ...(db.profile.agentMemory.userModel?.accessibilityMode && db.profile.agentMemory.userModel.accessibilityMode !== "standard" ? [db.profile.agentMemory.userModel.accessibilityMode] : []),
+    ...(db.profile.agentMemory.userModel?.communicationStyle ? [db.profile.agentMemory.userModel.communicationStyle] : []),
+    ...Object.keys(db.profile.agentMemory.userNeeds || {}).slice(0, 4)
+  ].filter(Boolean);
+  const optionsConsidered = [
+    actionLikely ? "Run or stage the matching workflow" : "Answer conversationally first",
+    memories.length ? "Use remembered user context" : "Proceed without saved memory",
+    sensitive ? "Require confirmation and keep human review" : "Give the simplest next step",
+    moduleName === "Healthcare" ? "Avoid diagnosis and focus on access, triage, referral, and emergency guidance" : null,
+    moduleName === "AgriTrade" ? "Connect crop, buyer, route, order, payment, and delivery evidence" : null
+  ].filter(Boolean);
+  const reasoning = {
+    id: crypto.randomUUID(),
+    command: text,
+    module: moduleName,
+    section: moduleSignal?.section || sectionForAgentModule(moduleName),
+    country: country.name,
+    route: route.name,
+    intentType: actionLikely ? "action-request" : "conversation",
+    riskLevel: sensitive ? "confirmation-required" : "low",
+    userNeeds: [...new Set(userNeeds)].slice(0, 6),
+    memoryUsed: memories.slice(0, 5).map(item => ({
+      id: item.id,
+      category: item.category,
+      module: item.module,
+      text: item.text || item.event || item.response || item.command,
+      confidence: item.confidence
+    })),
+    optionsConsidered,
+    recommendation: actionLikely
+      ? `Stage the safest ${moduleName} workflow and ask for confirmation before changing records or contacting anyone.`
+      : `Answer in plain language, use remembered context, and offer one next step in ${moduleName}.`,
+    why: [
+      `${moduleName} is the strongest match for the request.`,
+      memories.length ? `${memories.length} memory cue(s) can personalize the response.` : "No saved memory is required for this request.",
+      sensitive ? "The request may affect health, money, jobs, providers, or messages, so confirmation is safer." : "The request can be handled with guidance or a low-risk local workflow.",
+      `Current operating context is ${country.name} on ${route.name}.`
+    ],
+    memorySummary: {
+      total: memorySummary.total,
+      modules: memorySummary.modules.slice(0, 4),
+      needs: memorySummary.needs.slice(0, 5)
+    },
+    createdAt: new Date().toISOString()
+  };
+  db.profile.agentMemory.reasoningHistory = [reasoning, ...(db.profile.agentMemory.reasoningHistory || [])].slice(0, 40);
+  db.profile.agentMemory.lastReasoning = reasoning;
+  db.profile.agentMemory.updatedAt = reasoning.createdAt;
+  return reasoning;
+}
+
 function conversationModuleSignal(text) {
   const lower = String(text || "").toLowerCase();
   const signals = [
@@ -5586,6 +5648,7 @@ async function conversationalReasoningResponse(db, user, command, options = {}) 
   const lower = String(command || "").toLowerCase();
   const moduleSignal = conversationModuleSignal(command);
   const memories = retrieveAgentMemories(db.profile, command, 5);
+  const reasoning = aiReasoningSnapshot(db, user, command, moduleSignal, memories, options);
   const { country, route } = activeContext(db);
   const modeContext = options.modeContext || {};
   const platformMode = options.mode || modeContext.mode || "user";
@@ -5629,7 +5692,7 @@ async function conversationalReasoningResponse(db, user, command, options = {}) 
                 "End with one clear next step the user can say."
               ].join(" ")
             },
-            { role: "user", content: JSON.stringify({ command, moduleSignal, country, route, checkpoint: db.profile.activeCheckpoint, profileSummary, memories, platformMode, modeContext }) }
+            { role: "user", content: JSON.stringify({ command, moduleSignal, country, route, checkpoint: db.profile.activeCheckpoint, profileSummary, memories, reasoning, platformMode, modeContext }) }
           ],
           max_output_tokens: 360
         })
@@ -5665,7 +5728,7 @@ async function conversationalReasoningResponse(db, user, command, options = {}) 
     module: "AI",
     action: "agent.conversation_brain_answered",
     detail: `Conversation brain answered in ${moduleSignal.module}.`,
-    metadata: { provider, command, module: moduleSignal.module, memoriesUsed: memories.map(item => item.id).filter(Boolean) },
+    metadata: { provider, command, module: moduleSignal.module, memoriesUsed: memories.map(item => item.id).filter(Boolean), reasoning },
     dispatch: false
   });
   const shouldStage = options.conversational && isActionRequest(lower) && moduleSignal.section !== "dashboard";
@@ -5685,7 +5748,7 @@ async function conversationalReasoningResponse(db, user, command, options = {}) 
       return {
         ...staged,
         response: `${responseText} I can also stage ${plan.action.toLowerCase()} now. Say "yes" to run it, or "no" to cancel.`,
-        metadata: { ...staged.metadata, provider, conversationBrain: true, moduleSignal }
+        metadata: { ...staged.metadata, provider, conversationBrain: true, moduleSignal, reasoning }
       };
     }
   }
@@ -5693,7 +5756,7 @@ async function conversationalReasoningResponse(db, user, command, options = {}) 
     intent: "conversation.open_reasoning",
     response: responseText,
     status: "completed",
-    metadata: { conversationMode: true, platformMode, modeContext, redirectSection: moduleSignal.section, provider, moduleSignal, memoriesUsed: memories.map(item => item.id).filter(Boolean) }
+    metadata: { conversationMode: true, platformMode, modeContext, redirectSection: moduleSignal.section, provider, moduleSignal, memoriesUsed: memories.map(item => item.id).filter(Boolean), reasoning }
   };
 }
 
@@ -6799,9 +6862,11 @@ async function planAgenticTool(db, user, command) {
   const plan = openAiPlan || localPlan;
   if (!plan) return null;
   const memories = retrieveAgentMemories(db.profile, command, 4);
+  const reasoning = aiReasoningSnapshot(db, user, command, conversationModuleSignal(command), memories, { plannedTool: plan.tool });
   return {
     ...plan,
-    memoriesUsed: memories.map(item => ({ id: item.id, category: item.category, text: item.text || item.response || item.command, confidence: item.confidence }))
+    memoriesUsed: memories.map(item => ({ id: item.id, category: item.category, module: item.module, text: item.text || item.response || item.command, confidence: item.confidence })),
+    reasoning
   };
 }
 
@@ -6813,7 +6878,7 @@ async function routeAgenticCommand(db, user, command, options = {}) {
     module: "AI",
     action: plan.planner === "openai-agent-planner" ? "agent.llm_tool_planned" : "agent.local_tool_planned",
     detail: `${plan.planner} selected ${plan.tool} for: ${command}`,
-    metadata: { tool: plan.tool, confidence: plan.confidence, rationale: plan.rationale }
+    metadata: { tool: plan.tool, confidence: plan.confidence, rationale: plan.rationale, reasoning: plan.reasoning }
   });
   if (plan.memoriesUsed?.length) {
     logIntegration(db, {
@@ -6833,7 +6898,7 @@ async function routeAgenticCommand(db, user, command, options = {}) {
       intent: "ai-question",
       response: run.text,
       status: "completed",
-      metadata: { runId: run.id, provider: run.provider, planner: plan.planner, confidence: plan.confidence, rationale: plan.rationale }
+      metadata: { runId: run.id, provider: run.provider, planner: plan.planner, confidence: plan.confidence, rationale: plan.rationale, reasoning: plan.reasoning }
     };
   }
   if (!wantsExecute) {
@@ -6856,6 +6921,7 @@ async function routeAgenticCommand(db, user, command, options = {}) {
         confidence: plan.confidence,
         rationale: plan.rationale,
         userFacingPlan: plan.userFacingPlan || plan.action,
+        reasoning: plan.reasoning,
         memoriesUsed: plan.memoriesUsed || []
       }
     };
@@ -6882,6 +6948,7 @@ async function routeAgenticCommand(db, user, command, options = {}) {
       planner: plan.planner,
       confidence: plan.confidence,
       rationale: plan.rationale,
+      reasoning: plan.reasoning,
       memoriesUsed: plan.memoriesUsed || [],
       attempts: result.attempts
     }

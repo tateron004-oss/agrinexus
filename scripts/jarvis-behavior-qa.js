@@ -42,6 +42,7 @@ const requirements = [
   ["mode-aware follow-up answers", app.includes("function modeFollowUpResponse") && app.includes("isModeFollowUpCommand(lower)") && app.includes("I am holding the user context")],
   ["intuitive conversation guide", app.includes("function intuitiveConversationGuide") && app.includes("function intuitiveConversationResponse") && app.includes("Conversation guide")],
   ["natural conversation handoff", app.includes("function composeJarvisResponse") && app.includes("function jarvisHandoffLine") && app.includes("turnCoach?.nextQuestion")],
+  ["memory-backed AI reasoning", server.includes("function aiReasoningSnapshot") && server.includes("reasoningHistory") && app.includes("reasoning.memoryUsed") && app.includes("optionsConsidered")],
   ["live Nexus awareness state", app.includes("nexusAwarenessState") && app.includes("function updateNexusAwareness") && app.includes("function nexusAwarenessSummary") && app.includes("Live awareness")],
   ["conversation repair momentum", app.includes("function isConversationRepairCommand") && app.includes("function conversationRepairPlan") && app.includes("Repair mode")],
   ["independent ten-layer agent model", server.includes("goal-driven-operating-brain") && server.includes("persistent-memory") && server.includes("live-context-awareness") && server.includes("evidence-and-mobile-initiative") && server.includes("goals, memory, awareness, recovery, and initiative")],
