@@ -45,6 +45,7 @@ const requirements = [
   ["memory-backed AI reasoning", server.includes("function aiReasoningSnapshot") && server.includes("reasoningHistory") && app.includes("reasoning.memoryUsed") && app.includes("optionsConsidered")],
   ["daily life advisor reasoning", server.includes("function dailyLifeAdvisorResponse") && server.includes("isDailyAdvisorQuestion") && server.includes("walking safety at about") && server.includes("daily-life-advisor")],
   ["simple data interpretation", server.includes("function plainDroneInterpretation") && server.includes("function simplePlatformDataBrief") && server.includes("conversation.simple_data_interpretation") && server.includes("simpleMeaning")],
+  ["deeper simple coach model", server.includes("function simpleCoachCard") && server.includes("What this means") && server.includes("Ask for help when") && server.includes("simple-coach-interpreter")],
   ["live Nexus awareness state", app.includes("nexusAwarenessState") && app.includes("function updateNexusAwareness") && app.includes("function nexusAwarenessSummary") && app.includes("Live awareness")],
   ["conversation repair momentum", app.includes("function isConversationRepairCommand") && app.includes("function conversationRepairPlan") && app.includes("Repair mode")],
   ["independent ten-layer agent model", server.includes("goal-driven-operating-brain") && server.includes("persistent-memory") && server.includes("live-context-awareness") && server.includes("evidence-and-mobile-initiative") && server.includes("goals, memory, awareness, recovery, and initiative")],

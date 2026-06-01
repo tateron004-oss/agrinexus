@@ -7783,6 +7783,95 @@ function simplePlatformDataBrief(db, text = "") {
   };
 }
 
+function simpleCoachCard({ module, section, title, meaning, firstStep, watch, helpTrigger, sayNext, status = "completed" }) {
+  return {
+    module,
+    section,
+    title,
+    meaning,
+    firstStep,
+    watch,
+    helpTrigger,
+    sayNext,
+    status,
+    response: [
+      `What this means: ${meaning}`,
+      `Do this first: ${firstStep}`,
+      `Watch for: ${watch}`,
+      `Ask for help when: ${helpTrigger}`,
+      `You can say next: "${sayNext}"`
+    ].join(" ")
+  };
+}
+
+function simpleCoachCardForBrief(brief = {}) {
+  const text = String(brief.response || "");
+  const fallback = {
+    module: brief.module || "Agent AI",
+    section: brief.section || "agent",
+    title: brief.title || "Simple coach",
+    status: brief.status || "completed"
+  };
+  if (brief.module === "Healthcare") {
+    return simpleCoachCard({
+      ...fallback,
+      meaning: text.includes("danger") ? "This may be a care situation. We need to keep the person safe and collect the basic facts." : "No care record is active yet, so we need to start with a simple intake.",
+      firstStep: "Ask what happened, where the person is, and the best phone number or helper to contact.",
+      watch: "trouble breathing, chest pain, heavy bleeding, confusion, fainting, severe weakness, or fast worsening symptoms",
+      helpTrigger: "any danger sign is present, the person is alone, or you are unsure what to do",
+      sayNext: "Nexus, start telehealth intake"
+    });
+  }
+  if (brief.module === "Learning") {
+    return simpleCoachCard({
+      ...fallback,
+      meaning: "The learner needs one small learning step, not a long lesson all at once.",
+      firstStep: "Open one lesson and help them finish the next small task.",
+      watch: "confusion, low vision, hearing difficulty, poor internet, or the learner getting stuck",
+      helpTrigger: "the learner cannot hear, cannot see well, cannot understand the lesson, or cannot finish the activity",
+      sayNext: "Nexus, explain my lesson"
+    });
+  }
+  if (brief.module === "Workforce") {
+    return simpleCoachCard({
+      ...fallback,
+      meaning: "This is about helping someone move toward work without confusing them.",
+      firstStep: "Check if they are ready for the job, then apply or show the missing skill.",
+      watch: "missing documents, transport problems, schedule conflicts, interview fear, or unclear job requirements",
+      helpTrigger: "they are not ready, do not understand the job, or need help applying",
+      sayNext: "Nexus, help me apply"
+    });
+  }
+  if (brief.module === "AgriTrade") {
+    return simpleCoachCard({
+      ...fallback,
+      meaning: text.replace(/^Here is the drone data in farmer language:\s*/i, "") || "This is farm or trade information that needs one clear next step.",
+      firstStep: text.match(/What to do first:\s*([^.]*(?:\.[^.]*)?)/i)?.[1] || "Check the crop, water, pests, buyer, and route before moving forward.",
+      watch: text.match(/What to watch:\s*([^.]*(?:\.[^.]*)?)/i)?.[1] || "crop stress, dry soil, pests, route risk, or buyer timing",
+      helpTrigger: "the crop looks worse, the route is unsafe, the buyer changes plans, or payment is unclear",
+      sayNext: "Nexus, check my crop"
+    });
+  }
+  if (brief.module === "Maps") {
+    return simpleCoachCard({
+      ...fallback,
+      meaning: "The map is showing where people, crops, providers, routes, and risks are connected.",
+      firstStep: "Check the route before anyone moves.",
+      watch: "road delays, heat, clinic access, unsafe checkpoints, or delivery timing problems",
+      helpTrigger: "the route looks unsafe or someone cannot reach a clinic, job, buyer, or delivery point",
+      sayNext: "Nexus, check route risk"
+    });
+  }
+  return simpleCoachCard({
+    ...fallback,
+    meaning: "Nexus can turn platform data into a clear everyday next step.",
+    firstStep: "Tell me the area: health, learning, workforce, farm, map, buyer, or route.",
+    watch: "anything urgent, confusing, unsafe, or incomplete",
+    helpTrigger: "you are unsure what the data means",
+    sayNext: "Nexus, explain this simply"
+  });
+}
+
 function isSimpleDataExplanation(lower) {
   return /\b(explain|interpret|make|say|translate|summarize|read)\b.*\b(simple|plain|farmer language|grandma|easy|data|drone data|scan data|field data|health|education|learning|workforce|job|course|what does.*mean)\b/.test(String(lower || ""))
     || /\b(what does|what do).*\b(drone|scan|field|data|health score|crop health|map|route|course|lesson|learner|student|job|workforce|patient|care)\b.*\b(mean|say)\b/.test(String(lower || ""));
@@ -7790,24 +7879,25 @@ function isSimpleDataExplanation(lower) {
 
 function simpleDataExplanationResponse(db, user, text, lower) {
   const brief = simplePlatformDataBrief(db, text);
-  rememberAgentMemory(db.profile, `${brief.title}: ${brief.response}`, { source: "simple-data-interpreter", category: "pattern", module: brief.module, confidence: 0.88 });
+  const coach = simpleCoachCardForBrief(brief);
+  rememberAgentMemory(db.profile, `${coach.title}: ${coach.response}`, { source: "simple-coach-interpreter", category: "pattern", module: coach.module, confidence: 0.9 });
   db.profile.agentMemory.activeModule = brief.module;
   db.profile.agentMemory.lastStatus = "simple-data-interpreted";
-  db.profile.agentMemory.lastSummary = brief.response;
+  db.profile.agentMemory.lastSummary = coach.response;
   db.profile.agentMemory.updatedAt = new Date().toISOString();
   logIntegration(db, {
     providerId: "openai",
-    module: brief.module,
-    action: "agent.simple_data_interpreted",
-    detail: brief.title,
-    metadata: { command: text, status: brief.status },
+    module: coach.module,
+    action: "agent.simple_coach_interpreted",
+    detail: coach.title,
+    metadata: { command: text, status: coach.status, sayNext: coach.sayNext },
     dispatch: false
   });
   return {
     intent: "conversation.simple_data_interpretation",
-    response: brief.response,
-    status: brief.status,
-    metadata: { conversationMode: true, redirectSection: brief.section, module: brief.module, title: brief.title }
+    response: coach.response,
+    status: coach.status,
+    metadata: { conversationMode: true, redirectSection: coach.section, module: coach.module, title: coach.title, simpleCoach: coach }
   };
 }
 
