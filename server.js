@@ -5591,7 +5591,7 @@ function conversationModuleSignal(text) {
   const signals = [
     { module: "Healthcare", section: "health", keys: ["telehealth", "health", "patient", "care", "doctor", "nurse", "clinic", "outbreak", "ebola", "vitals", "referral", "hearing", "visual", "blind", "deaf"] },
     { module: "Learning", section: "learning", keys: ["learning", "training", "course", "lesson", "quiz", "certificate", "learner", "student", "captions", "audio guide"] },
-    { module: "Workforce", section: "workforce", keys: ["workforce", "job", "role", "worker", "candidate", "interview", "shift", "mentor", "apply", "hiring"] },
+    { module: "Workforce", section: "workforce", keys: ["workforce", "work", "job", "role", "worker", "candidate", "interview", "shift", "mentor", "apply", "hiring", "position", "money", "income"] },
     { module: "AgriTrade", section: "trade", keys: ["agritrade", "trade", "farmer", "crop", "buyer", "sell", "market", "order", "wallet", "payment", "logistics", "drone", "field", "farm"] },
     { module: "Maps", section: "map", keys: ["map", "route", "location", "gps", "geospatial", "corridor", "country", "risk"] },
     { module: "Integrations", section: "integrations", keys: ["integration", "provider", "engine", "api", "service", "credential", "render", "openai", "twilio"] },
@@ -6203,11 +6203,24 @@ function clarificationBlueprint(moduleSignal = {}) {
         { keys: ["caption", "deaf", "hearing"], module: "Learning", tool: "learning.access_caption", action: "Prepare captions", section: "learning" },
         { keys: ["certificate", "credential", "issue"], module: "Learning", tool: "learning.certificate", action: "Issue certificate", section: "learning" }
       ]
+    },
+    map: {
+      module: "Maps",
+      section: "map",
+      question: "I can help with movement and location. What should we do first: check route safety, track delivery, find clinic, or reach buyer?",
+      options: ["check route safety", "track delivery", "find clinic", "reach buyer"],
+      routes: [
+        { keys: ["route", "safe", "road", "risk", "travel"], module: "Maps", tool: "map.route_risk", action: "Assess route", section: "map" },
+        { keys: ["track", "delivery", "shipment", "truck", "gps"], module: "Maps", tool: "map.route_risk", action: "Track route", section: "map" },
+        { keys: ["clinic", "hospital", "provider", "health"], module: "Healthcare", tool: "health.safety", action: "Check clinic access", section: "health" },
+        { keys: ["buyer", "market", "crop", "customer"], module: "AgriTrade", tool: "trade.buyer_contact", action: "Reach buyer", section: "trade" }
+      ]
     }
   };
   if (section === "health") return blueprints.health;
   if (section === "workforce") return blueprints.workforce;
   if (section === "learning") return blueprints.learning;
+  if (section === "map") return blueprints.map;
   return blueprints.trade;
 }
 
@@ -6277,6 +6290,80 @@ function guidedQuestionPlan(blueprint = {}, command = "", userModel = {}) {
   };
 }
 
+function simpleFollowUpForClarification(clarification = {}, answer = "") {
+  const section = clarification.section || "trade";
+  const lower = String(answer || "").toLowerCase();
+  const unsure = /\b(i do not know|i don't know|dont know|not sure|unsure|confused|help me decide|you decide|what should i do)\b/.test(lower);
+  const fallback = {
+    health: unsure
+      ? "That is okay. Is this urgent right now, or do you want me to start a simple telehealth intake?"
+      : "I want to help safely. Is this about an urgent problem, a provider visit, captions, or regional risk?",
+    learning: unsure
+      ? "That is okay. Do you want to start a course, hear the lesson out loud, get captions, or finish a certificate?"
+      : "I can help with the lesson. Do you want to start, listen, read captions, finish, or get a certificate?",
+    workforce: unsure
+      ? "That is okay. Are you looking for a job, applying now, preparing documents, or getting ready for an interview?"
+      : "For work, should I help you find a job, apply, prepare documents, practice interview, or plan a shift?",
+    map: unsure
+      ? "That is okay. Are you trying to reach a clinic, buyer, job site, farm, or delivery route?"
+      : "For the map, should I check route safety, clinic access, buyer route, job route, or delivery tracking?",
+    trade: unsure
+      ? "That is okay. Are you trying to check the crop, sell it, talk to a buyer, move it, or scan the field?"
+      : "For the farm, should I help check the crop, sell it, contact a buyer, track delivery, or run a drone scan?"
+  };
+  return fallback[section] || fallback.trade;
+}
+
+function clarificationRouteFromAnswer(clarification = {}, answer = "") {
+  const lower = String(answer || "").toLowerCase();
+  const section = clarification.section || "trade";
+  const routeSignals = {
+    health: [
+      { keys: ["urgent", "emergency", "not safe", "danger", "chest", "breath", "bleed", "faint", "confusion", "weak", "ebola", "outbreak", "infection", "risk", "safe"], tool: "health.safety", priority: 3 },
+      { keys: ["doctor", "provider", "nurse", "clinic", "hospital", "call", "speak", "talk", "visit"], tool: "health.representative" },
+      { keys: ["deaf", "hear", "hearing", "caption", "blind", "vision", "visual", "audio", "read"], tool: "health.accessibility_review" },
+      { keys: ["hurt", "pain", "sick", "injury", "intake", "patient", "symptom", "medicine", "care"], tool: "health.intake" }
+    ],
+    learning: [
+      { keys: ["caption", "deaf", "hear", "hearing", "read", "large text"], tool: "learning.access_caption" },
+      { keys: ["certificate", "credential", "proof", "graduate"], tool: "learning.certificate" },
+      { keys: ["finish", "complete", "lesson", "quiz", "done"], tool: "learning.complete_lesson" },
+      { keys: ["learn", "school", "training", "course", "start", "study", "teach", "explain"], tool: "learning.start_or_continue" }
+    ],
+    workforce: [
+      { keys: ["interview", "practice", "meet", "questions"], tool: "workforce.schedule_interview" },
+      { keys: ["shift", "schedule", "time", "work day", "hours"], tool: "workforce.schedule_shift" },
+      { keys: ["apply", "application", "job", "role", "position", "work", "money", "income"], tool: "workforce.apply_role" },
+      { keys: ["find", "match", "skill", "gap", "ready", "training"], tool: "workforce.match_role" }
+    ],
+    map: [
+      { keys: ["route", "road", "drive", "walk", "track", "delivery", "gps", "location", "safe way"], tool: "map.route_risk" },
+      { keys: ["clinic", "hospital", "buyer", "job site", "farm", "field"], tool: "map.route_risk" }
+    ],
+    trade: [
+      { keys: ["buyer", "customer", "talk", "speak", "message", "contact"], tool: "trade.buyer_contact" },
+      { keys: ["route", "deliver", "truck", "track", "ship", "move", "logistics"], tool: "map.route_risk" },
+      { keys: ["drone", "scan", "field", "picture", "video", "crop bad", "crop stress", "pest", "dry"], tool: "drone.field_scan" },
+      { keys: ["sell", "sale", "price", "market", "crop", "maize", "cassava", "rice", "farm"], tool: "trade.market_review" }
+    ]
+  };
+  const scored = (clarification.routes || []).map(route => {
+    const signal = (routeSignals[section] || []).find(item => item.tool === route.tool) || {};
+    const routeKeys = new Set([...(route.keys || []), ...(signal.keys || [])]);
+    const matchCount = [...routeKeys].filter(key => lower.includes(String(key).toLowerCase())).length;
+    const score = matchCount ? matchCount + Number(signal.priority || 0) : 0;
+    return { route, score };
+  }).sort((a, b) => b.score - a.score);
+  return scored[0]?.score ? scored[0].route : null;
+}
+
+function shouldHoldClarificationForBetterAnswer(answer = "") {
+  const lower = String(answer || "").toLowerCase().trim();
+  if (!lower) return true;
+  if (/\b(i do not know|i don't know|dont know|not sure|unsure|confused|help me decide|you decide|what should i do)\b/.test(lower)) return true;
+  return lower.split(/\s+/).filter(Boolean).length <= 2 && !/\b(yes|no|start|apply|sell|buyer|job|work|health|clinic|course|lesson|map|route|drone|crop)\b/.test(lower);
+}
+
 function startClarification(db, user, command, moduleSignal = conversationModuleSignal(command)) {
   ensureAiProfile(db.profile);
   const blueprint = clarificationBlueprint(moduleSignal);
@@ -6327,27 +6414,45 @@ function continueClarification(db, user, command) {
       metadata: { conversationMode: true, redirectSection: clarification.section }
     };
   }
-  const route = (clarification.routes || []).find(item => (item.keys || []).some(key => lower.includes(key)))
-    || (clarification.routes || [])[0];
-  if (!route) return null;
+  const route = clarificationRouteFromAnswer(clarification, command);
+  if (!route && shouldHoldClarificationForBetterAnswer(command)) {
+    const nextQuestion = simpleFollowUpForClarification(clarification, command);
+    db.profile.agentMemory.activeClarification = {
+      ...clarification,
+      attempts: Number(clarification.attempts || 0) + 1,
+      question: nextQuestion,
+      updatedAt: new Date().toISOString()
+    };
+    db.profile.agentMemory.lastStatus = "clarifying-user-need";
+    db.profile.agentMemory.lastSummary = nextQuestion;
+    db.profile.agentMemory.updatedAt = db.profile.agentMemory.activeClarification.updatedAt;
+    return {
+      intent: "conversation.clarification_followup",
+      response: `${nextQuestion} You do not need exact words. Say it the way you would say it to a person.`,
+      status: "needs-input",
+      metadata: { conversationMode: true, redirectSection: clarification.section, clarification: db.profile.agentMemory.activeClarification, suggestedReplies: clarification.options }
+    };
+  }
+  const selectedRoute = route || (clarification.routes || [])[0];
+  if (!selectedRoute) return null;
   const completed = {
     ...clarification,
     answer: command,
-    interpretedAnswer: route.action,
+    interpretedAnswer: selectedRoute.action,
     nextQuestion: clarification.guidedQuestion?.followUpQuestion || null,
     watchFor: clarification.guidedQuestion?.watchFor || [],
-    selectedAction: route.action,
-    selectedTool: route.tool,
+    selectedAction: selectedRoute.action,
+    selectedTool: selectedRoute.tool,
     status: "resolved",
     resolvedAt: new Date().toISOString()
   };
   db.profile.agentMemory.clarificationHistory = [completed, ...(db.profile.agentMemory.clarificationHistory || [])].slice(0, 20);
   db.profile.agentMemory.activeClarification = null;
   const staged = stageAgentAction(db, `${clarification.sourceCommand}. Answer: ${command}`, {
-    module: route.module,
-    tool: route.tool,
-    action: route.action,
-    section: route.section,
+    module: selectedRoute.module,
+    tool: selectedRoute.tool,
+    action: selectedRoute.action,
+    section: selectedRoute.section,
     planner: "clarification-router",
     confidence: 0.82,
     rationale: `User clarified broad request with: ${command}`
@@ -6355,7 +6460,7 @@ function continueClarification(db, user, command) {
   return {
     ...staged,
     intent: "conversation.clarification_resolved",
-    response: `Good. I understand: ${command}. In simple terms, the next safe step is ${route.action.toLowerCase()}. ${completed.nextQuestion ? `After this, I may ask: ${completed.nextQuestion} ` : ""}Say "yes" to run it, or "no" to cancel.`,
+    response: `Good. I understand: ${command}. In simple terms, the next safe step is ${selectedRoute.action.toLowerCase()}. ${completed.nextQuestion ? `After this, I may ask: ${completed.nextQuestion} ` : ""}Say "yes" to run it, or "no" to cancel.`,
     metadata: {
       ...(staged.metadata || {}),
       clarification: completed,

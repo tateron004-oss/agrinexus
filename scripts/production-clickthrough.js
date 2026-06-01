@@ -254,6 +254,7 @@ assert(server.includes("function startClarification"), "Conversation brain must 
 assert(server.includes("function continueClarification"), "Conversation brain must turn clarification answers into workflow actions");
 assert(server.includes("activeClarification"), "Conversation brain must remember active clarification state");
 assert(server.includes("function guidedQuestionPlan") && server.includes("one-question-at-a-time"), "Conversation brain must ask adaptive guided questions one at a time");
+assert(server.includes("function clarificationRouteFromAnswer") && server.includes("conversation.clarification_followup"), "Conversation brain must handle imperfect answers without forcing exact choices");
 assert(server.includes("function continueVoiceRecovery"), "Conversation brain must recover unclear voice prompts into workflows");
 assert(server.includes("activeRecovery"), "Conversation brain must remember active voice recovery state");
 assert(server.includes("function updateGuidedMissionMemory"), "Conversation brain must keep guided mission checklist state");

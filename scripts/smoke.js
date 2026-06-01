@@ -620,10 +620,20 @@ async function call(path, body) {
   assert(guidedQuestions.commandResult.intent === "conversation.clarification_started");
   assert(guidedQuestions.commandResult.metadata.guidedQuestion.questionType === "care-safety-first");
   assert(guidedQuestions.commandResult.response.includes("own words"));
-  const guidedAnswer = await call("/api/agent/command", { command: "start intake", conversational: true, inputMode: "voice", outputMode: "voice" });
+  const guidedUnsure = await call("/api/agent/command", { command: "I don't know", conversational: true, inputMode: "voice", outputMode: "voice" });
+  assert(guidedUnsure.commandResult.intent === "conversation.clarification_followup");
+  assert(guidedUnsure.commandResult.response.includes("exact words"));
+  const guidedAnswer = await call("/api/agent/command", { command: "my chest hurts and I need help", conversational: true, inputMode: "voice", outputMode: "voice" });
   assert(guidedAnswer.commandResult.intent === "conversation.clarification_resolved");
+  assert(guidedAnswer.commandResult.metadata.clarification.selectedTool === "health.safety");
   assert(guidedAnswer.commandResult.metadata.clarification.nextQuestion);
   if (guidedAnswer.profile.agentPendingAction) await call("/api/agent/command", { command: "no", conversational: true, inputMode: "voice", outputMode: "voice" });
+  const guidedWork = await call("/api/agent/command", { command: "Nexus, ask me questions about work", conversational: true, inputMode: "voice", outputMode: "voice" });
+  assert(guidedWork.commandResult.intent === "conversation.clarification_started");
+  const guidedWorkAnswer = await call("/api/agent/command", { command: "I need money and a position", conversational: true, inputMode: "voice", outputMode: "voice" });
+  assert(guidedWorkAnswer.commandResult.intent === "conversation.clarification_resolved");
+  assert(guidedWorkAnswer.commandResult.metadata.clarification.selectedTool === "workforce.apply_role");
+  if (guidedWorkAnswer.profile.agentPendingAction) await call("/api/agent/command", { command: "no", conversational: true, inputMode: "voice", outputMode: "voice" });
   const voiceMission = await call("/api/agent/command", { command: "help this farmer sell maize safely from start to finish", conversational: true, inputMode: "voice", outputMode: "voice" });
   assert(["conversation.pending_action", "conversation.clarification_started"].includes(voiceMission.commandResult.intent));
   if (voiceMission.commandResult.intent === "conversation.pending_action") {
