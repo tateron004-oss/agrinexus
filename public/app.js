@@ -2199,8 +2199,8 @@ function runUserModeSelfTest() {
       if (!simpleUserCommandWorkflow(button.command)) missing.push(`${section}: ${button.label}`);
     });
   });
-  const currentScript = [...document.scripts].some(script => String(script.src || "").includes("nexus-behavior-97"));
-  const currentStyle = [...document.styleSheets].some(sheet => String(sheet.href || "").includes("nexus-behavior-97"));
+  const currentScript = [...document.scripts].some(script => String(script.src || "").includes("nexus-behavior-98"));
+  const currentStyle = [...document.styleSheets].some(sheet => String(sheet.href || "").includes("nexus-behavior-98"));
   if (!currentScript || !currentStyle) missing.push("new app files");
   const ok = missing.length === 0;
   const message = ok
@@ -4958,20 +4958,22 @@ function voiceMissionTemplates() {
   };
 }
 
-function startVoiceMission(command = "") {
+function isVoiceMissionRequest(command = "") {
+  const lower = String(command || "").toLowerCase();
+  return /\b(help me|walk me through|guide me through|start|run)\b/.test(lower)
+    && /\b(sell|crop|doctor|health|job|work|learn|course|training)\b/.test(lower)
+    && Object.values(voiceMissionTemplates()).some(item => item.match.test(lower));
+}
+
+async function startVoiceMission(command = "") {
   const lower = String(command || "").toLowerCase();
   const mission = Object.values(voiceMissionTemplates()).find(item => item.match.test(lower));
   if (!mission) return false;
   activeVoiceMission = { ...mission, index: 0, startedAt: Date.now(), mode: conversationPlatformMode() };
   recordVoiceEvent(`Mission started: ${mission.label}. First step: ${mission.steps[0].label}.`, "progress");
-  pendingAgentClarification = {
-    original: command,
-    options: [
-      { label: "Start mission", section: currentSectionId(), command: mission.steps[0].command, detail: `Begin ${mission.label}: ${mission.steps[0].label}.` },
-      { label: "Hear steps", section: currentSectionId(), command: "mission status", detail: mission.steps.map(step => step.label).join(", ") }
-    ]
-  };
-  setVoiceResponse(`I can run a ${mission.label}. Steps are ${mission.steps.map(step => step.label).join(", ")}. Say start mission to begin, or say hear steps.`, true);
+  pendingAgentClarification = null;
+  setVoiceResponse(`Starting ${mission.label}. I will walk you through: ${mission.steps.map(step => step.label).join(", ")}. Opening the first step now.`, true);
+  await continueVoiceMission();
   return true;
 }
 
@@ -9970,6 +9972,11 @@ async function handleVoiceCommand(rawCommand) {
     return;
   }
   updateNexusBehaviorLayer("thinking", command ? `Nexus is deciding how to help with: ${command}` : "Nexus is listening.");
+  if (isVoiceMissionRequest(command)) {
+    pendingAgentClarification = null;
+    await startVoiceMission(command);
+    return;
+  }
   if (pendingAgentClarification && await answerAgentClarification(command)) return;
   if (/\b(cancel|stop|clear|end)\s+(journey|guided journey|next step|follow through)\b/.test(lower)) {
     activeAgentJourney = null;
@@ -10008,8 +10015,8 @@ async function handleVoiceCommand(rawCommand) {
     setVoiceResponse(voiceReadbackText(), true);
     return;
   }
-  if (/\b(help me|walk me through|guide me through)\b/.test(lower) && /\b(sell|crop|doctor|health|job|work|learn|course|training)\b/.test(lower)) {
-    if (startVoiceMission(command)) return;
+  if (isVoiceMissionRequest(command)) {
+    if (await startVoiceMission(command)) return;
   }
   if (lower === "next" || lower.includes("next step") || lower.includes("continue journey") || lower.includes("continue the workflow") || lower.includes("what is the next step")) {
     await runActiveAgentNextStep();
