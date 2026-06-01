@@ -596,6 +596,9 @@ async function call(path, body) {
   const buyerContact = await call("/api/agent/command", { command: "Hey AgriTrade, I want to speak to the buyer that I am selling my crop to", confirm: true, inputMode: "voice", outputMode: "voice" });
   assert(buyerContact.commandResult.intent === "trade.buyer_contact");
   assert(buyerContact.commandResult.metadata.redirectSection === "trade");
+  assert(buyerContact.commandResult.metadata.highestFunctionalityMode === true);
+  assert(buyerContact.commandResult.metadata.autonomousBrain.phase === "observe-diagnose-decide-act-verify-learn");
+  assert(buyerContact.profile.autonomousOperatingLoops.length >= 1);
   assert(buyerContact.profile.buyerContacts.length >= 1);
   assert(buyerContact.profile.integrationEvents.some(event => event.action === "buyer.contact_prepared"));
   const routeTracking = await call("/api/agent/command", { command: "Hey AgriTrade, track my route in real time", conversational: true, inputMode: "voice", outputMode: "voice" });

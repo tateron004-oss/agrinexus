@@ -1544,6 +1544,36 @@ function autonomousOperatingLoopModel(db, user, providers = runtimeProviders(db)
   return loop;
 }
 
+function applyHighestFunctionalityMode(db, user, result, command) {
+  if (!result || result.intent === "empty-command") return result;
+  const providers = runtimeProviders(db);
+  const loop = autonomousOperatingLoopModel(db, user, providers, { persist: true });
+  const section = result.metadata?.redirectSection || result.metadata?.section || sectionForAgentModule(loop.currentDecision.module) || "dashboard";
+  result.metadata = {
+    ...(result.metadata || {}),
+    highestFunctionalityMode: true,
+    autonomousBrain: {
+      loopId: loop.id,
+      status: loop.status,
+      phase: "observe-diagnose-decide-act-verify-learn",
+      currentDecision: loop.currentDecision,
+      recommendedCommand: loop.recommendedCommand,
+      evidenceChecklist: loop.evidenceChecklist,
+      appliedToCommand: command,
+      redirectSection: section
+    }
+  };
+  db.profile.agentMemory.lastAutonomousBrainAppliedTo = {
+    command,
+    intent: result.intent,
+    section,
+    loopId: loop.id,
+    summary: loop.plainLanguageSummary,
+    createdAt: new Date().toISOString()
+  };
+  return result;
+}
+
 function runtimeProviders(db) {
   const baseProviders = [...(db.providers || [])];
   for (const provider of BUILT_IN_PROVIDER_DEFINITIONS) {
@@ -13002,7 +13032,7 @@ async function api(req, res, url) {
       note: body.note,
       targetLanguage: body.targetLanguage || body.language
     });
-    const result = humanizeAgentResult(db, user, rawResult, command);
+    const result = applyHighestFunctionalityMode(db, user, humanizeAgentResult(db, user, rawResult, command), command);
     commandRecord(db, user, command, result);
     if (body.outputMode === "voice") voiceRecord(db, user, "text-to-speech", `Voice response prepared: ${result.response}`, { response: result.response });
     addWorkflowNote(db.profile, body.note, "Agent command note");

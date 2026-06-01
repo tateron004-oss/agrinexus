@@ -693,6 +693,8 @@ assert(server.includes("function autonomousOperatingLoopModel"), "Backend needs 
 assert(server.includes("conversation.autonomous_operating_loop"), "Voice agent must answer autonomous loop requests");
 assert(server.includes("/api/intelligence/autonomous-loop"), "Backend needs autonomous loop endpoint");
 assert(server.includes("autonomousOperatingLoops"), "Autonomous loop should persist loop evidence");
+assert(server.includes("function applyHighestFunctionalityMode"), "Every normal agent command should receive highest-functionality brain enrichment");
+assert(server.includes("highestFunctionalityMode"), "Agent command responses should expose highest-functionality mode evidence");
 assert(app.includes("function jarvisProductionTenSummary"), "Voice assistant needs a spoken Jarvis Production 10 summary");
 assert(app.includes("how close are we to all 10"), "Voice commands need to answer how close production is to all 10");
 assert(html.includes("adminIntelligencePanel"), "Admin mode needs a visible intelligence panel");
