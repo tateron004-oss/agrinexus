@@ -1,6 +1,8 @@
 let data = null;
 let map = null;
 let layers = {};
+let userMap = null;
+let userMapLayers = {};
 let selectedLearningTrack = "All";
 let selectedPersona = localStorage.getItem("agrinexusPersona") || "farmer";
 let experienceMode = localStorage.getItem("agrinexusExperienceMode") || "";
@@ -2380,8 +2382,8 @@ function runUserModeSelfTest() {
       if (!simpleUserCommandWorkflow(button.command)) missing.push(`${section}: ${button.label}`);
     });
   });
-  const currentScript = [...document.scripts].some(script => String(script.src || "").includes("nexus-behavior-117"));
-  const currentStyle = [...document.styleSheets].some(sheet => String(sheet.href || "").includes("nexus-behavior-117"));
+  const currentScript = [...document.scripts].some(script => String(script.src || "").includes("nexus-behavior-118"));
+  const currentStyle = [...document.styleSheets].some(sheet => String(sheet.href || "").includes("nexus-behavior-118"));
   if (!currentScript || !currentStyle) missing.push("new app files");
   const ok = missing.length === 0;
   const message = ok
@@ -6542,6 +6544,28 @@ function userSceneVisualHtml(type = "agent", title = "Workflow visual") {
   `;
 }
 
+function userRealMapHtml(title = "Live route map") {
+  const route = activeRoute();
+  const country = activeCountry();
+  return `
+    <div class="user-real-map-card">
+      <div class="user-real-map-head">
+        <div>
+          <strong>${translateText(title)}</strong>
+          <span>${translateText(`${route.name} through ${country.name}`)}</span>
+        </div>
+        <small>${translateText(country.risk || "Monitored")}</small>
+      </div>
+      <div id="userMapCanvas" class="user-real-map" role="img" aria-label="${translateText(`Real map for ${route.name}, showing checkpoints, facilities, and route risk.`)}"></div>
+      <div class="user-real-map-meta">
+        <div><strong>${translateText("Route")}</strong><span>${translateText(route.name)}</span></div>
+        <div><strong>${translateText("Checkpoint")}</strong><span>${translateText(data.profile.activeCheckpoint || route.checkpoints?.[0] || "Start")}</span></div>
+        <div><strong>${translateText("Nearby help")}</strong><span>${translateText(`${country.facilities || 0} facilities`)}</span></div>
+      </div>
+    </div>
+  `;
+}
+
 function userModulePreviewHtml(sectionId) {
   if (sectionId === "trade") {
     const latestOrder = data.profile.orders?.[data.profile.orders.length - 1];
@@ -6572,8 +6596,7 @@ function userModulePreviewHtml(sectionId) {
   if (sectionId === "map") {
     return `
       <div class="user-module-preview">
-        ${userSceneVisualHtml("map", "Route map visual")}
-        ${shipmentMapHtml({ route: activeRoute(), order: data.profile.orders?.[data.profile.orders.length - 1], product: firstProduct(), title: "Route map" })}
+        ${userRealMapHtml("Live route map")}
         <div class="user-preview-summary">
           <strong>${translateText("Map made simple")}</strong>
           <span>${translateText(`Nexus is watching ${activeRoute().name}. Choose Check Route, Find Facility, or Explain Map.`)}</span>
@@ -6675,6 +6698,7 @@ function renderUserSimpleActiveSection(sectionId = currentSectionId()) {
       <div class="user-module-status" role="status">${translateText("Nexus is ready.")}</div>
     </section>
   `);
+  if (sectionId === "map") setTimeout(renderUserRealMap, 80);
 }
 
 function renderUserInlineWorkflow(sectionId, config) {
@@ -8306,6 +8330,81 @@ function renderMap() {
   map.setView([country.lat, country.lng], country.zoom);
   drawLiveRouteTracking();
   setTimeout(() => map.invalidateSize(), 100);
+}
+
+function renderUserRealMap() {
+  const canvas = $("#userMapCanvas");
+  if (!canvas || !data) return;
+  if (!window.L) {
+    canvas.innerHTML = `<div class="user-real-map-fallback">${translateText("Map tiles are loading. Check your internet connection, then refresh this screen.")}</div>`;
+    return;
+  }
+  if (userMap) {
+    try {
+      userMap.remove();
+    } catch (error) {
+      // Leaflet can throw if the old user-mode panel was already removed.
+    }
+    userMap = null;
+    userMapLayers = {};
+  }
+
+  const country = activeCountry();
+  const route = activeRoute();
+  userMap = L.map(canvas, {
+    zoomControl: true,
+    attributionControl: true,
+    scrollWheelZoom: false,
+    tap: true
+  }).setView([country.lat, country.lng], Math.max(4, Number(country.zoom || 5)));
+  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    maxZoom: 19,
+    attribution: "OpenStreetMap"
+  }).addTo(userMap);
+
+  userMapLayers.route = L.layerGroup().addTo(userMap);
+  userMapLayers.markers = L.layerGroup().addTo(userMap);
+  userMapLayers.facilities = L.layerGroup().addTo(userMap);
+
+  const routeLine = L.polyline(route.points || [], {
+    color: "#176fc7",
+    weight: 6,
+    opacity: .9
+  }).addTo(userMapLayers.route);
+
+  (route.checkpoints || []).forEach((checkpoint, index) => {
+    const point = (route.points || [])[Math.min(index, Math.max(0, (route.points || []).length - 1))];
+    if (!point) return;
+    const isActive = checkpoint === data.profile.activeCheckpoint;
+    L.circleMarker(point, {
+      radius: isActive ? 10 : 7,
+      color: isActive ? "#173240" : "#176fc7",
+      fillColor: isActive ? "#ffc857" : "#ffffff",
+      fillOpacity: 1,
+      weight: 3
+    }).addTo(userMapLayers.route).bindPopup(`<strong>${translateText(checkpoint)}</strong><br>${translateText(isActive ? "Current checkpoint" : "Route checkpoint")}`);
+  });
+
+  data.countries.forEach(item => {
+    L.marker([item.lat, item.lng])
+      .addTo(userMapLayers.markers)
+      .bindPopup(`<strong>${translateText(item.name)}</strong><br>${item.facilities} ${translateText("facilities")}<br>${translateText(item.risk || "Monitored")} ${translateText("risk")}`);
+  });
+
+  [[country.lat + .7, country.lng - .8], [country.lat - .5, country.lng + .9], [country.lat + .3, country.lng + .5]].forEach((point, index) => {
+    L.circleMarker(point, {
+      radius: 8,
+      color: "#1b8f68",
+      fillColor: "#1b8f68",
+      fillOpacity: .72,
+      weight: 2
+    }).addTo(userMapLayers.facilities).bindPopup(`${translateText("Facility")} ${index + 1}`);
+  });
+
+  if (routeLine.getBounds?.().isValid?.()) {
+    userMap.fitBounds(routeLine.getBounds(), { padding: [26, 26] });
+  }
+  setTimeout(() => userMap?.invalidateSize(), 120);
 }
 
 function closeWorkflowModal() {

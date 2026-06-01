@@ -422,9 +422,9 @@ assert(app.includes('workflow === "admin-user"'), "Admin test login button needs
 assert(app.includes("Only an existing Admin can run this workflow"), "Admin login flow must explain admin-only protection");
 assert(server.includes('adminAccount.role = "Admin"'), "Backend must force admin test logins to Admin");
 assert(server.includes("admin_user.created"), "Admin test login must create auth audit evidence");
-assert(html.includes("styles.css?v=nexus-behavior-117"), "Index must force browsers to load the latest Nexus behavior shell");
-assert(html.includes("app.js?v=nexus-behavior-117"), "Index must force browsers to load the latest Nexus behavior code");
-assert(sw.includes("agrinexus-pwa-v97"), "Service worker cache must refresh the installed app after native voice bridge updates");
+assert(html.includes("styles.css?v=nexus-behavior-118"), "Index must force browsers to load the latest Nexus behavior shell");
+assert(html.includes("app.js?v=nexus-behavior-118"), "Index must force browsers to load the latest Nexus behavior code");
+assert(sw.includes("agrinexus-pwa-v98"), "Service worker cache must refresh the installed app after native voice bridge updates");
 assert(html.includes("userWorkspace"), "Dashboard needs a User Workspace for standard users");
 assert(html.includes("userMobileDock"), "Legacy mobile dock markup should remain safely hidden for cache compatibility");
 assert(html.includes("What Do You Need Help With Today?"), "Dashboard simple start should use user-ready language");
@@ -432,7 +432,12 @@ assert(app.includes("function defaultExperienceMode"), "Frontend needs default r
 assert(app.includes("function applyExperienceMode"), "Frontend needs experience-mode visibility rules");
 assert(app.includes("function renderUserWorkspace"), "Frontend needs a guided User Workspace renderer");
 assert(app.includes("function userSceneVisualHtml"), "User mode needs lightweight visual scene images for service workflows");
+assert(app.includes("function userRealMapHtml"), "User mode map needs a real map shell");
+assert(app.includes("function renderUserRealMap"), "User mode map needs Leaflet rendering");
+assert(app.includes("userMapCanvas"), "User mode map must expose a real map canvas");
+assert(app.includes("OpenStreetMap"), "User mode map must use real map tiles");
 assert(styles.includes("body.user-mode .user-scene-visual"), "User workflow visuals must be styled and contained");
+assert(styles.includes("body.user-mode .user-real-map"), "User real map must be styled and contained");
 assert(app.includes("[data-mobile-section]"), "Frontend needs click handling for the mobile user dock");
 assert(app.includes("user-simple-hero"), "Standard User view needs a simple phone-style welcome");
 assert(app.includes("How can we help?"), "Standard User view needs short user-ready copy");
