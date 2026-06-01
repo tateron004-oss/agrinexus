@@ -681,6 +681,10 @@ assert(server.includes("function deepOperatingIntelligence"), "Backend needs dee
 assert(server.includes("conversation.deep_operating_intelligence"), "Voice agent must answer go-deeper operating intelligence requests");
 assert(server.includes("/api/intelligence/deep-operating"), "Backend needs a deep operating intelligence endpoint");
 assert(server.includes("Billing, password reset, and email can remain deferred"), "Deep intelligence should separate deferred services from active live engines");
+assert(server.includes("function noVendorUpgradeTenPack"), "Backend needs all-ten no-vendor upgrade pack");
+assert(server.includes("conversation.no_vendor_upgrade_ten"), "Voice agent must activate all-ten no-vendor upgrades");
+assert(server.includes("/api/intelligence/no-vendor-ten"), "Backend needs no-vendor ten endpoint");
+assert(server.includes("localScenarioMissions"), "No-vendor pack should create local scenario missions");
 assert(app.includes("function jarvisProductionTenSummary"), "Voice assistant needs a spoken Jarvis Production 10 summary");
 assert(app.includes("how close are we to all 10"), "Voice commands need to answer how close production is to all 10");
 assert(html.includes("adminIntelligencePanel"), "Admin mode needs a visible intelligence panel");

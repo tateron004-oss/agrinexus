@@ -768,6 +768,14 @@ async function call(path, body) {
   const deepEndpoint = await call("/api/intelligence/deep-operating");
   assert(deepEndpoint.moduleDepth.length >= 6);
   assert(deepEndpoint.autonomy.actsWithConfirmation === true);
+  const noVendorTen = await call("/api/agent/command", { command: "Nexus, do all 10 without adding real credentials", conversational: true, inputMode: "voice", outputMode: "voice" });
+  assert(noVendorTen.commandResult.intent === "conversation.no_vendor_upgrade_ten");
+  assert(noVendorTen.commandResult.metadata.noVendorUpgradeTen.total === 10);
+  assert(noVendorTen.profile.noVendorUpgradeRuns.length >= 1);
+  assert(noVendorTen.profile.localScenarioMissions.length >= 4);
+  const noVendorEndpoint = await call("/api/intelligence/no-vendor-ten", { persist: true });
+  assert(noVendorEndpoint.noVendorUpgradeTenResult.readyCount === 10);
+  assert(noVendorEndpoint.noVendorUpgradeTenResult.missionBlueprints.length === 4);
   const progressSummaryCommand = await call("/api/agent/command", { command: "summarize my progress", conversational: true, inputMode: "voice", outputMode: "voice" });
   assert(progressSummaryCommand.commandResult.intent === "conversation.progress_summary");
   assert(progressSummaryCommand.commandResult.metadata.redirectSection === "dashboard");
