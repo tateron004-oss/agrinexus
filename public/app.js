@@ -2199,8 +2199,8 @@ function runUserModeSelfTest() {
       if (!simpleUserCommandWorkflow(button.command)) missing.push(`${section}: ${button.label}`);
     });
   });
-  const currentScript = [...document.scripts].some(script => String(script.src || "").includes("nexus-behavior-106"));
-  const currentStyle = [...document.styleSheets].some(sheet => String(sheet.href || "").includes("nexus-behavior-106"));
+  const currentScript = [...document.scripts].some(script => String(script.src || "").includes("nexus-behavior-107"));
+  const currentStyle = [...document.styleSheets].some(sheet => String(sheet.href || "").includes("nexus-behavior-107"));
   if (!currentScript || !currentStyle) missing.push("new app files");
   const ok = missing.length === 0;
   const message = ok
@@ -3317,7 +3317,7 @@ function nexusBehaviorMode() {
   }
   return {
     label: "User Guide",
-    greeting: `Hello ${userFirstName()}. I am Nexus. Tell me what you need, and I will guide one step at a time.`,
+    greeting: `Hello ${userFirstName()}. I am Nexus. Just tell me what you need. We can take it one step at a time.`,
     prompt: "Say things like: I need a doctor, I want to sell maize, I need a job, or help me learn."
   };
 }
@@ -4115,8 +4115,8 @@ function setAgentFastAcknowledgement(command) {
   agentPerformanceState.lastCommand = cleaned;
   markAgentPerformance("acknowledged", "agentic-router");
   const message = cleaned
-    ? `I hear you, ${userFirstName()}. Give me a moment and I will help.`
-    : `I'm right here, ${userFirstName()}.`;
+    ? `I hear you, ${userFirstName()}. Let me help with that.`
+    : `I'm right here, ${userFirstName()}. Just talk to me.`;
   const globalStatus = $("#globalAssistantStatus");
   if (globalStatus) globalStatus.textContent = translateText(message);
   const transcript = $("#voiceTranscript");
@@ -4157,7 +4157,7 @@ function safeAgentFallbackResponse(command) {
   if (/job|work|role|shift|workforce/.test(text)) return "The live service is slow, but I can still help. I opened work support so you can see roles and start an application.";
   if (/trade|buyer|crop|maize|route|logistics|drone/.test(text)) return "The live service is slow, but I can still help. I opened trade support so you can work on the buyer, order, route, or drone step.";
   if (/learn|course|lesson|training|certificate/.test(text)) return "The live service is slow, but I can still help. I opened learning support so you can start the course step.";
-  return "The live service is slow, but you are not stuck. Tell me what you need in simple words and I will guide the next step.";
+  return "The live service is slow, but you are not stuck. Tell me what you need and I will help you move forward.";
 }
 
 function isConversationRepairCommand(lower) {
@@ -4212,7 +4212,7 @@ function askAgentClarification(clarification) {
   pendingAgentClarification = clarification;
   const choices = clarification.options.map(option => option.label).join(", ");
   updateNexusBehaviorLayer("confirming", "Nexus is asking one simple follow-up.");
-  setVoiceResponse(`I can help. Say ${choices}, or say it your way. You can also say stop.`, true);
+  setVoiceResponse(`I can help. You can say ${choices}, or just tell me what happened.`, true);
 }
 
 function guideAmbiguousUserWithoutChoice(clarification) {
@@ -4226,7 +4226,7 @@ function guideAmbiguousUserWithoutChoice(clarification) {
   const suggestions = options.map(option => option.command || option.label);
   renderLiveVoiceSuggestions(suggestions);
   updateNexusBehaviorLayer("listening", "Nexus is guiding without forcing a choice.");
-  setVoiceResponse("I can help. You do not need perfect words. Say something like: I need a doctor, I need work, I want to sell my crop, or I want to learn. I will open the right place.", true);
+  setVoiceResponse("I can help. You do not need perfect words. Tell me what you need, and I will take you to the right place.", true);
 }
 
 function isGlobalStopCommand(lower) {
@@ -4264,7 +4264,7 @@ async function answerAgentClarification(command) {
   if (!pendingAgentClarification) return false;
   const lower = String(command || "").toLowerCase().trim();
   if (/\b(cancel|stop|never mind|no)\b/.test(lower)) {
-    clearConversationHold("Canceled. Tell me what you need when you are ready.");
+    clearConversationHold("Canceled. I am here when you are ready.");
     return true;
   }
   if (isFreshActionDuringClarification(lower)) {
@@ -4280,7 +4280,7 @@ async function answerAgentClarification(command) {
     pendingAgentClarification.misses = (pendingAgentClarification.misses || 0) + 1;
     if (pendingAgentClarification.misses >= 1) {
       pendingAgentClarification = null;
-      setVoiceResponse("I cleared that old step. You do not need exact words. Say I need a doctor, I need work, sell my crop, start learning, or stop.", true);
+      setVoiceResponse("I cleared that old step. You do not need exact words. Tell me what you need, or say stop.", true);
       return true;
     }
     const names = pendingAgentClarification.options.map(option => option.label).join(", ");
@@ -4586,7 +4586,7 @@ function intuitiveConversationGuide(sectionId = currentSectionId()) {
 
 function intuitiveConversationResponse() {
   const guide = intuitiveConversationGuide();
-  return `I can walk with you one step at a time. From here, I would start with: ${guide.primaryCommand}. You can also tell me in your own words what you need.`;
+  return `I can walk with you one step at a time. Tell me what you need, or say: ${guide.primaryCommand}.`;
 }
 
 function shouldAddJarvisHandoff(message = "") {
@@ -4601,7 +4601,7 @@ function jarvisHandoffLine(handoffText = "") {
   if (handoffText) return handoffText;
   const guide = intuitiveConversationGuide();
   const phrase = guide.primaryCommand || guide.suggestions[0] || "Nexus, guide me";
-  return `When you are ready, you can say: ${phrase}.`;
+  return `You can keep talking, or say: ${phrase}.`;
 }
 
 function composeJarvisResponse(message, options = {}) {
@@ -4994,7 +4994,7 @@ function modeSpecificVoicePersona() {
   const mode = conversationPlatformMode();
   if (mode === "admin") return "I am in admin mode with you. I will keep the system calm, watch readiness, and explain risk in plain language.";
   if (mode === "investor") return "I am in investor mode with you. I will tell the story clearly, show proof, and keep the next demo step simple.";
-  return "I am here with you. I will go slowly, use plain words, read things back, and help one step at a time.";
+  return "I am here with you. Talk to me naturally, and I will go slowly, read things back, and help one step at a time.";
 }
 
 function voiceMissionTemplates() {
@@ -5123,10 +5123,10 @@ function voiceErrorRecovery(error, command = "") {
   const tool = bestDynamicVoiceTool(command);
   if (tool) {
     pendingAgentClarification = { original: command, options: [{ label: tool.label, section: tool.section || currentSectionId(), command: tool.command || `${tool.workflow} ${tool.action}`, detail: "Retry with the closest registered tool." }] };
-    setVoiceResponse(`That did not go through cleanly, but you are not stuck. I found ${tool.label}. Say yes if you want me to try that, or say stop.`, true);
+    setVoiceResponse(`That did not go through cleanly, but you are not stuck. I found ${tool.label}. Say yes and I will try it, or tell me what you want instead.`, true);
     return true;
   }
-  setVoiceResponse("That did not go through cleanly, but I can still help. Say what you need in simple words, like I need a doctor, I need work, sell my crop, or help me learn.", true);
+  setVoiceResponse("That did not go through cleanly, but I can still help. Tell me what you need, even if the words are not perfect.", true);
   return true;
 }
 
@@ -10086,10 +10086,10 @@ async function handleVoiceCommand(rawCommand) {
   if (!lower && wakeOnly) {
     openAskNexus();
     enableHeyAgriNexusMode();
-    setVoiceResponse(`I'm here, ${userFirstName()}. You can call me ${assistantShortName}. Tell me what you need in normal words, like I need a doctor, I want to sell maize, I need a job, or help me learn.`, true);
+    setVoiceResponse(`I'm here, ${userFirstName()}. You can call me ${assistantShortName}. Just tell me what you need, and I will help one step at a time.`, true);
     return;
   }
-  if (!lower) return setVoiceResponse("I am listening. Tell me what you need in your own words.", true);
+  if (!lower) return setVoiceResponse("I am listening. Just tell me what you need.", true);
 
   if (isConversationRepairCommand(lower)) {
     handleConversationRepair(command);
