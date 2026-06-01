@@ -1209,6 +1209,46 @@ body.user-mode .user-module-preview {
   gap: 8px;
   min-width: 0;
 }
+body.user-mode .user-scene-visual {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding: 10px;
+  border: 2px solid #d7e8e3;
+  border-radius: 16px;
+  background: #ffffff;
+  color: #173240;
+  box-shadow: 0 10px 22px rgba(23, 50, 64, .06);
+  text-align: center;
+}
+body.user-mode .user-scene-visual svg {
+  width: 100%;
+  height: auto;
+  max-height: 126px;
+}
+body.user-mode .user-scene-visual .scene-bg {
+  fill: #f5fbfa;
+  stroke: none;
+}
+body.user-mode .user-scene-visual g {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+body.user-mode .user-scene-visual figcaption {
+  color: #365867;
+  font-size: .84rem;
+  font-weight: 950;
+  line-height: 1.15;
+}
+body.user-mode .scene-learning { color: #126fa8; border-color: #cbdfe8; }
+body.user-mode .scene-workforce { color: #1f7f43; border-color: #cce9d6; }
+body.user-mode .scene-health { color: #b73d4a; border-color: #f2cbd1; }
+body.user-mode .scene-trade { color: #946900; border-color: #efd98c; }
+body.user-mode .scene-map { color: #176fc7; border-color: #c7ddf2; }
+body.user-mode .scene-agent { color: #6d55d7; border-color: #d9d2f4; }
 body.user-mode .user-choice-preview {
   gap: 8px;
 }

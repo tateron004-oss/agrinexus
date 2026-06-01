@@ -2197,8 +2197,8 @@ function runUserModeSelfTest() {
       if (!simpleUserCommandWorkflow(button.command)) missing.push(`${section}: ${button.label}`);
     });
   });
-  const currentScript = [...document.scripts].some(script => String(script.src || "").includes("nexus-behavior-90"));
-  const currentStyle = [...document.styleSheets].some(sheet => String(sheet.href || "").includes("nexus-behavior-90"));
+  const currentScript = [...document.scripts].some(script => String(script.src || "").includes("nexus-behavior-91"));
+  const currentStyle = [...document.styleSheets].some(sheet => String(sheet.href || "").includes("nexus-behavior-91"));
   if (!currentScript || !currentStyle) missing.push("new app files");
   const ok = missing.length === 0;
   const message = ok
@@ -5480,6 +5480,75 @@ function userPreviewActionsHtml(actions = []) {
   `;
 }
 
+function userSceneVisualHtml(type = "agent", title = "Workflow visual") {
+  const scenes = {
+    learning: {
+      label: "Course path",
+      shapes: `
+        <rect x="12" y="28" width="66" height="58" rx="10"></rect>
+        <path d="M24 43h42M24 57h34M24 71h25"></path>
+        <circle cx="118" cy="48" r="24"></circle>
+        <path d="M104 49l9 9 19-22"></path>
+        <path d="M84 98h64M100 98v22M132 98v22"></path>`
+    },
+    workforce: {
+      label: "Job match",
+      shapes: `
+        <rect x="18" y="38" width="56" height="46" rx="9"></rect>
+        <path d="M34 38v-12h24v12M30 61h32"></path>
+        <rect x="96" y="28" width="52" height="70" rx="12"></rect>
+        <path d="M108 48h28M108 64h20M108 80h24"></path>
+        <path d="M74 66h22"></path>`
+    },
+    health: {
+      label: "Care access",
+      shapes: `
+        <path d="M48 100s-30-18-30-45a19 19 0 0 1 32-14 19 19 0 0 1 32 14c0 27-34 45-34 45Z"></path>
+        <path d="M48 44v32M32 60h32"></path>
+        <rect x="98" y="34" width="44" height="54" rx="12"></rect>
+        <path d="M110 52h20M110 68h16"></path>`
+    },
+    trade: {
+      label: "Crop trade",
+      shapes: `
+        <path d="M18 84c26-48 62-58 116-50-8 48-36 74-92 72"></path>
+        <path d="M20 112c22-36 54-58 100-72"></path>
+        <rect x="100" y="86" width="44" height="28" rx="7"></rect>
+        <path d="M108 86v-14h28v14M112 100h20"></path>`
+    },
+    map: {
+      label: "Route map",
+      shapes: `
+        <path d="M18 38l34-12 38 12 42-12v88l-42 14-38-12-34 12V38Z"></path>
+        <path d="M52 26v90M90 38v90"></path>
+        <path d="M36 92c34-52 46 20 78-34"></path>
+        <circle cx="36" cy="92" r="6"></circle>
+        <circle cx="114" cy="58" r="6"></circle>`
+    },
+    agent: {
+      label: "Nexus brain",
+      shapes: `
+        <rect x="24" y="34" width="104" height="62" rx="18"></rect>
+        <path d="M50 96l-18 18v-18"></path>
+        <circle cx="55" cy="64" r="5"></circle>
+        <circle cx="76" cy="64" r="5"></circle>
+        <circle cx="97" cy="64" r="5"></circle>
+        <path d="M76 24v10M44 28l8 10M108 28l-8 10"></path>`
+    }
+  };
+  const scene = scenes[type] || scenes.agent;
+  return `
+    <figure class="user-scene-visual scene-${escapeHtml(type)}" aria-label="${translateText(title)}">
+      <svg viewBox="0 0 160 136" role="img" focusable="false">
+        <title>${translateText(scene.label)}</title>
+        <rect class="scene-bg" x="6" y="10" width="148" height="116" rx="24"></rect>
+        <g>${scene.shapes}</g>
+      </svg>
+      <figcaption>${translateText(scene.label)}</figcaption>
+    </figure>
+  `;
+}
+
 function userModulePreviewHtml(sectionId) {
   if (sectionId === "trade") {
     const latestOrder = data.profile.orders?.[data.profile.orders.length - 1];
@@ -5488,6 +5557,7 @@ function userModulePreviewHtml(sectionId) {
       : firstProduct();
     return `
       <div class="user-module-preview user-trade-preview">
+        ${userSceneVisualHtml("trade", "Crop trade visual")}
         ${shipmentMapHtml({
           route: activeRoute(),
           order: latestOrder,
@@ -5509,6 +5579,7 @@ function userModulePreviewHtml(sectionId) {
   if (sectionId === "map") {
     return `
       <div class="user-module-preview">
+        ${userSceneVisualHtml("map", "Route map visual")}
         ${shipmentMapHtml({ route: activeRoute(), order: data.profile.orders?.[data.profile.orders.length - 1], product: firstProduct(), title: "Route map" })}
         <div class="user-preview-summary">
           <strong>${translateText("Map made simple")}</strong>
@@ -5525,6 +5596,7 @@ function userModulePreviewHtml(sectionId) {
   if (sectionId === "learning") {
     return `
       <div class="user-module-preview user-learning-preview user-choice-preview">
+        ${userSceneVisualHtml("learning", "Learning visual")}
         ${learningCourseChoicesHtml()}
       </div>
     `;
@@ -5532,6 +5604,7 @@ function userModulePreviewHtml(sectionId) {
   if (sectionId === "workforce") {
     return `
       <div class="user-module-preview user-workforce-preview user-choice-preview">
+        ${userSceneVisualHtml("workforce", "Workforce visual")}
         ${workforceJobChoicesHtml()}
       </div>
     `;
@@ -5542,6 +5615,7 @@ function userModulePreviewHtml(sectionId) {
     const provider = (data.profile.telehealthProviderAssignments || [])[0];
     return `
       <div class="user-module-preview user-health-preview">
+        ${userSceneVisualHtml("health", "Telehealth visual")}
         ${healthHotspotHtml({ country, title: "Regional health risk" })}
         <div class="provider-contact-card">
           <strong>${translateText(provider?.providerName || "Telehealth provider desk")}</strong>
@@ -5565,14 +5639,14 @@ function userModulePreviewHtml(sectionId) {
     `;
   }
   if (sectionId === "agent") {
-    return `<div class="user-module-preview"><div class="user-preview-summary"><strong>${translateText("Talk naturally")}</strong><span>${translateText("Ask Nexus what to do, ask it to explain the platform, or ask it to open a service.")}</span>${userPreviewActionsHtml([
+    return `<div class="user-module-preview">${userSceneVisualHtml("agent", "Nexus AI visual")}<div class="user-preview-summary"><strong>${translateText("Talk naturally")}</strong><span>${translateText("Ask Nexus what to do, ask it to explain the platform, or ask it to open a service.")}</span>${userPreviewActionsHtml([
       { label: "Ask Question", command: "help me understand the platform" },
       { label: "Plan Mission", command: "create an agent plan" },
       { label: "Read to Me", command: "read the current response" }
     ])}</div></div>`;
   }
   if (sectionId === "profile") {
-    return `<div class="user-module-preview"><div class="user-preview-summary"><strong>${translateText("Your record")}</strong><span>${translateText("Review progress, messages, certificates, and saved activity without seeing admin controls.")}</span>${userPreviewActionsHtml([
+    return `<div class="user-module-preview">${userSceneVisualHtml("agent", "Profile visual")}<div class="user-preview-summary"><strong>${translateText("Your record")}</strong><span>${translateText("Review progress, messages, certificates, and saved activity without seeing admin controls.")}</span>${userPreviewActionsHtml([
       { label: "My Progress", command: "summarize my progress" },
       { label: "My Messages", command: "show my messages" },
       { label: "Help Me", command: "help me" }
