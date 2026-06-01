@@ -6084,6 +6084,7 @@ const simpleUserSections = {
     buttons: [
       { label: "Start Intake", command: "start telehealth intake" },
       { label: "Talk to Provider", command: "open telehealth access" },
+      { label: "Show Injury", command: "open video for provider to show injury" },
       { label: "Call Provider", command: "call provider" },
       { label: "Check Region", command: "check health risk in my region" },
       { label: "Accessibility Help", command: "create audio guide and captions" }
@@ -6095,6 +6096,7 @@ const simpleUserSections = {
     className: "service-trade",
     buttons: [
       { label: "Contact Buyer", command: "contact my buyer" },
+      { label: "Show Crop", command: "open video for buyer to show crops" },
       { label: "Create Order", command: "create a crop order" },
       { label: "Track Route", command: "track my route" },
       { label: "Scan Farm", command: "run drone scan" }
@@ -6569,12 +6571,14 @@ function simpleUserCommandWorkflow(command = "") {
   if (lower.includes("schedule my shift") || lower.includes("plan shift")) return { workflow: "workforce", action: "shift", response: "Shift planning is ready.", dataset: { roleId } };
   if (lower.includes("telehealth intake") || lower.includes("start intake")) return { workflow: "health", action: "intake", response: "Telehealth intake is ready.", dataset: {} };
   if (lower.includes("telehealth access") || lower.includes("talk to provider") || lower.includes("speak to provider")) return { workflow: "health", action: "provider", response: "Provider access is ready.", dataset: {} };
+  if (lower.includes("open video for provider") || lower.includes("show injury") || lower.includes("video for provider")) return { workflow: "health", action: "video", response: "Provider video is ready.", dataset: {} };
   if (lower.includes("contact the listed telehealth provider") || lower.includes("contact listed telehealth provider") || lower.includes("contact telehealth provider listed")) return { workflow: "health", action: "provider", response: "Listed telehealth provider contact is ready.", dataset: {} };
   if (lower.includes("call provider") || lower.includes("call the provider")) return { workflow: "communications", action: "health-whatsapp", response: "Provider call or WhatsApp handoff is ready.", dataset: {} };
   if (lower.includes("message provider")) return { workflow: "communications", action: "health-chat", response: "Provider message is ready.", dataset: {} };
   if (lower.includes("check health risk") || lower.includes("check region")) return { workflow: "health", action: "safety", response: "Regional health risk review is ready.", dataset: {} };
   if (lower.includes("audio guide") || lower.includes("accessibility")) return { workflow: "health", action: "accessibility", response: "Accessibility support is ready.", dataset: {} };
   if (lower.includes("contact my buyer") || lower.includes("contact buyer")) return { workflow: "trade", action: "buyer-contact", response: "Buyer contact is ready.", dataset: { productId } };
+  if (lower.includes("open video for buyer") || lower.includes("show crops") || lower.includes("show crop")) return { workflow: "trade", action: "buyer-video", response: "Buyer crop video is ready.", dataset: { productId } };
   if ((lower.includes("sell my crop") || lower.includes("sell crop")) && (lower.includes("track my sale") || lower.includes("track sale") || lower.includes("delivery"))) return { workflow: "trade", action: "order", response: "Crop sale and delivery tracking is ready.", dataset: { productId } };
   if (lower.includes("crop order") || lower.includes("create order")) return { workflow: "trade", action: "order", response: "Crop order is ready.", dataset: { productId } };
   if (lower.includes("track my route") || lower.includes("check route")) return { workflow: "ai", action: "route", response: "Route intelligence is ready.", dataset: {} };
@@ -8039,6 +8043,7 @@ function renderMap() {
 }
 
 function closeWorkflowModal() {
+  stopWorkflowCamera();
   pendingWorkflow = null;
   stopVoicePlayback();
   $("#workflowModal")?.classList.add("hidden");
@@ -8209,6 +8214,53 @@ function workflowOutcomeHtml(config) {
   ].join("");
 }
 
+function videoSessionPreviewHtml(config) {
+  if (!config.videoPreview) return "";
+  const title = config.videoPreview.title || "Video session";
+  const detail = config.videoPreview.detail || "Use the camera only when the user agrees.";
+  return `
+    <section class="workflow-video-preview">
+      <div>
+        <strong>${translateText(title)}</strong>
+        <span>${translateText(detail)}</span>
+      </div>
+      <video id="workflowVideoPreview" autoplay muted playsinline></video>
+      <div class="workflow-video-actions">
+        <button type="button" class="btn primary" id="workflowStartCamera">${translateText("Open camera")}</button>
+        <button type="button" class="btn ghost" id="workflowStopCamera">${translateText("Stop camera")}</button>
+      </div>
+      <p>${translateText(config.videoPreview.consent || "Ask permission before showing private health, crop, buyer, seller, route, or payment details.")}</p>
+    </section>
+  `;
+}
+
+let workflowVideoStream = null;
+
+async function startWorkflowCamera() {
+  const video = $("#workflowVideoPreview");
+  if (!video || !navigator.mediaDevices?.getUserMedia) {
+    setVoiceResponse("This browser cannot open the camera here. The workflow still creates the video handoff record and fallback contact options.", true);
+    return;
+  }
+  try {
+    stopWorkflowCamera();
+    workflowVideoStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+    video.srcObject = workflowVideoStream;
+    setVoiceResponse("Camera is open. Ask permission before showing private details. Press confirm when the video handoff is ready.", true);
+  } catch (error) {
+    setVoiceResponse(`Camera could not open: ${error.message || "permission blocked"}. The workflow can still create a video-ready handoff record.`, true);
+  }
+}
+
+function stopWorkflowCamera() {
+  if (workflowVideoStream) {
+    workflowVideoStream.getTracks().forEach(track => track.stop());
+    workflowVideoStream = null;
+  }
+  const video = $("#workflowVideoPreview");
+  if (video) video.srcObject = null;
+}
+
 function openWorkflowModal(config) {
   pendingWorkflow = config;
   lastFocusedElement = document.activeElement;
@@ -8219,7 +8271,8 @@ function openWorkflowModal(config) {
   $("#workflowTitle").textContent = translateText((experienceMode === "user" && config.userTitle) || config.title || "Workflow");
   $("#workflowSummary").textContent = translateText((experienceMode === "user" && config.userSummary) || config.summary || "Review this workflow and confirm when ready.");
   $("#workflowComfort").innerHTML = workflowComfortHtml(config);
-  $("#workflowShipmentMap").innerHTML = config.healthPreview ? healthHotspotHtml(config.healthPreview) : config.routePreview ? shipmentMapHtml(config.routePreview) : "";
+  stopWorkflowCamera();
+  $("#workflowShipmentMap").innerHTML = `${videoSessionPreviewHtml(config)}${config.healthPreview ? healthHotspotHtml(config.healthPreview) : config.routePreview ? shipmentMapHtml(config.routePreview) : ""}`;
   $("#workflowSteps").innerHTML = workflowStepHtml(config.steps || []);
   $("#workflowFields").innerHTML = (config.fields || []).map(field => {
     const value = field.value || "";
@@ -8240,6 +8293,8 @@ function openWorkflowModal(config) {
   $("#workflowVoiceInput").value = "";
   $("#workflowVoicePrompt").textContent = translateText("Voice ready: say yes to confirm, no to cancel, or read to hear this workflow.");
   $("#workflowModal").classList.remove("hidden");
+  $("#workflowStartCamera")?.addEventListener("click", startWorkflowCamera);
+  $("#workflowStopCamera")?.addEventListener("click", stopWorkflowCamera);
   $("#workflowConfirm").focus();
   const instruction = `${translateText((experienceMode === "user" && config.userTitle) || config.title || "Workflow")}. ${translateText((experienceMode === "user" && config.userSummary) || config.summary || "Review this workflow and confirm when ready.")}. Say yes to confirm, no to cancel, or read to hear the workflow.`;
   recordVoiceEvent(`Workflow ready: ${(experienceMode === "user" && config.userTitle) || config.title || "Workflow"}.`, "progress");
@@ -8323,8 +8378,8 @@ function roleWorkflowConfig(roleId) {
   };
 }
 
-function simpleWorkflowConfig({ eyebrow, title, userTitle, summary, userSummary, confirmLabel, path, body, success, record, provider, checklist, fields, guide, steps, routePreview, healthPreview, userOutcome, userRecord }) {
-  return { eyebrow, title, userTitle, summary, userSummary, confirmLabel, path, body, success, record, provider, checklist, fields, guide, steps, routePreview, healthPreview, userOutcome, userRecord };
+function simpleWorkflowConfig({ eyebrow, title, userTitle, summary, userSummary, confirmLabel, path, body, success, record, provider, checklist, fields, guide, steps, routePreview, healthPreview, videoPreview, userOutcome, userRecord }) {
+  return { eyebrow, title, userTitle, summary, userSummary, confirmLabel, path, body, success, record, provider, checklist, fields, guide, steps, routePreview, healthPreview, videoPreview, userOutcome, userRecord };
 }
 
 function courseSelectOptions() {
@@ -8463,15 +8518,15 @@ function tradeUserCopy(action, product) {
       { title: "Create order", detail: "Press Create order to save the sale and start tracking it." }
     ]
   };
-  if (["buyer-contact", "buyer-message", "buyer-whatsapp", "buyer-sms"].includes(action)) return {
-    title: "Talk to my buyer",
-    summary: "Prepare a simple buyer message about the crop, route, quantity, quality, payment, or delivery timing while seeing the shipment lane.",
-    guide: "This opens a buyer-seller communication thread. Live SMS or WhatsApp sends when provider credentials and phone numbers are configured; otherwise AgriNexus records the message thread for testing.",
+  if (["buyer-contact", "buyer-message", "buyer-whatsapp", "buyer-sms", "buyer-video"].includes(action)) return {
+    title: action === "buyer-video" ? "Show crop on video" : "Talk to my buyer",
+    summary: action === "buyer-video" ? "Open a camera-ready buyer video workflow so the farmer can show crop quality, damage, quantity, packaging, field condition, or pickup readiness." : "Prepare a simple buyer message about the crop, route, quantity, quality, payment, or delivery timing while seeing the shipment lane.",
+    guide: action === "buyer-video" ? "This prepares a video session record. The browser can open the camera after permission, and the workflow keeps SMS, WhatsApp, and photo fallback options attached for low-bandwidth buyers." : "This opens a buyer-seller communication thread. Live SMS or WhatsApp sends when provider credentials and phone numbers are configured; otherwise AgriNexus records the message thread for testing.",
     steps: [
       { title: "Choose crop", detail: `Use ${product?.name || "the selected crop"} or choose another crop.` },
       { title: "Name buyer", detail: "Type who you want to talk to." },
-      { title: "Write message", detail: "Use plain language. AgriNexus keeps it tied to the order and route." },
-      { title: "Open thread", detail: "Press the confirm button to record the buyer conversation." }
+      { title: action === "buyer-video" ? "Open camera" : "Write message", detail: action === "buyer-video" ? "Show the crop only after the farmer agrees and the buyer is ready." : "Use plain language. AgriNexus keeps it tied to the order and route." },
+      { title: action === "buyer-video" ? "Save video handoff" : "Open thread", detail: action === "buyer-video" ? "Press confirm to record the video-ready buyer session and fallback channels." : "Press the confirm button to record the buyer conversation." }
     ]
   };
   if (action === "advance" || action === "route") return {
@@ -8528,6 +8583,17 @@ function healthUserCopy(action, accessAction) {
       { title: "Choose contact", detail: "Pick speak, call, message, caregiver, or callback." },
       { title: "Check region", detail: "Review hotspot risk before the provider responds." },
       { title: "Connect provider", detail: "Confirm to create the provider contact record and next care step." }
+    ]
+  };
+  if (action === "video") return {
+    title: "Show provider on video",
+    summary: "Open a camera-ready telehealth video workflow so the patient or caregiver can show an injury, rash, swelling, fall, movement issue, or visible concern.",
+    guide: "This prepares a video review record. It is not a diagnosis. The user should give permission before showing private health details, and AgriNexus keeps phone, SMS, WhatsApp, caregiver, and low-bandwidth fallback options attached.",
+    steps: [
+      { title: "Confirm patient", detail: "Use the active intake or describe who needs care." },
+      { title: "Ask permission", detail: "The patient or caregiver must agree before showing an injury or private detail." },
+      { title: "Open camera", detail: "Use video to show what the provider needs to see." },
+      { title: "Save handoff", detail: "Confirm to create the provider-ready video review record." }
     ]
   };
   if (action === "safety" || action === "inspector") return {
@@ -8830,6 +8896,7 @@ function workflowConfig(workflow, action, element) {
     const titleMap = {
       intake: "Start intake",
       representative: "Connect representative",
+      video: "Open provider video",
       safety: "Run safety review",
       inspector: "Inspect route",
       careplan: "Generate care plan",
@@ -8850,6 +8917,7 @@ function workflowConfig(workflow, action, element) {
     };
     const summaryMap = {
       intake: "Collect patient need, urgency, accessibility supports, language, caregiver, and callback details before opening the telehealth case.",
+      video: "Open a camera-ready telehealth video handoff so the patient can show an injury, swelling, rash, fall, movement issue, or visible concern to a provider.",
       accessibility: "Create a telehealth access plan with captions, audio description, caregiver handoff, and low-bandwidth fallback.",
       caption: "Start a caption relay session and transcript workflow for a hearing-impaired patient.",
       caregiver: "Notify a caregiver or community accessibility aide for supported telehealth follow-up.",
@@ -8909,8 +8977,8 @@ function workflowConfig(workflow, action, element) {
       summary: summaryMap[action] || "Confirm the care operation before updating the case queue, safety evidence, and provider trail.",
       userSummary: userCopy.summary,
       confirmLabel: translateLiteral(titleMap[action] || "Confirm"),
-      path: advancedHealthActions.has(action) ? "/api/health/advanced" : "/api/health/action",
-      body: { type: action },
+      path: action === "video" ? "/api/video/session" : advancedHealthActions.has(action) ? "/api/health/advanced" : "/api/health/action",
+      body: action === "video" ? { type: "health" } : { type: action },
       fields: intakeFields,
       success: "Health action complete",
       record: advancedHealthActions.has(action) ? "Advanced care operation record, active intake status, EHR/telehealth/notification evidence, and activity feed" : accessAction ? "Telehealth accessibility case note, active intake status, provider evidence, and activity feed" : "Intake queue, representative status, safety review, care plan, or AI activity",
@@ -8921,12 +8989,18 @@ function workflowConfig(workflow, action, element) {
           ? "Review the assistive support needed. Confirming records captions, caregiver, consent, vitals, referral, or follow-up evidence."
           : "Review the patient/country context. Confirming updates the telehealth queue, safety evidence, provider handoff, or care plan.",
       steps: userCopy.steps,
-      healthPreview: { country: activeCountry(), title: action === "provider" || action === "appointment" ? "Provider and hotspot context" : "Regional health hotspot" },
-      userOutcome: action === "provider" || action === "appointment" ? "AgriNexus prepares the provider contact path and saves the handoff." : action === "safety" || action === "inspector" ? "AgriNexus records the hotspot review and recommended next step." : "AgriNexus creates the care record and keeps provider support connected.",
+      healthPreview: { country: activeCountry(), title: action === "provider" || action === "appointment" || action === "video" ? "Provider and hotspot context" : "Regional health hotspot" },
+      videoPreview: action === "video" ? {
+        title: "Telehealth video",
+        detail: "Open camera so the patient or caregiver can show the provider the injury or visible concern.",
+        consent: "Ask permission before showing an injury, face, household, document, or private health detail."
+      } : null,
+      userOutcome: action === "video" ? "AgriNexus prepares the provider video handoff and fallback contact path." : action === "provider" || action === "appointment" ? "AgriNexus prepares the provider contact path and saves the handoff." : action === "safety" || action === "inspector" ? "AgriNexus records the hotspot review and recommended next step." : "AgriNexus creates the care record and keeps provider support connected.",
       userRecord: "The intake, provider contact, accessibility needs, hotspot context, and follow-up evidence stay connected for the care team.",
       checklist: [
         { title: "Country context", detail: `${activeCountry().name}: ${activeCountry().queue}`, status: "live", label: activeCountry().risk },
         { title: "Active case", detail: (data.profile.healthIntakes || [])[0]?.patientRef || "No intake yet", status: (data.profile.healthIntakes || []).length ? "ready" : "pending", label: "Case" },
+        ...(action === "video" ? [{ title: "Video handoff", detail: (data.profile.videoSessions || [])[0]?.sessionNumber || "No video session yet", status: (data.profile.videoSessions || []).length ? "ready" : "pending", label: "Video" }] : []),
         { title: accessAction ? "Assistive support" : "Governance", detail: accessAction ? "Captions, visual support, caregiver handoff, and rural fallback remain attached to the session." : `${activeCountry().quality}% data quality, ${activeCountry().safety}% safety override`, status: "ready", label: accessAction ? "Access" : "Safety" }
       ]
     });
@@ -8935,7 +9009,7 @@ function workflowConfig(workflow, action, element) {
     const productId = element.dataset.productId || firstProduct()?.id;
     const product = data.products.find(item => item.id === productId) || firstProduct();
     const latestOrder = data.profile.orders[data.profile.orders.length - 1];
-    const titleMap = { order: "Create order", advance: "Advance order", wallet: "Post M-Pesa payment", "buyer-message": "Open buyer-seller thread", "buyer-whatsapp": "WhatsApp buyer", "buyer-sms": "SMS buyer", "drone-plan": "Plan drone mission", drone: "Run drone field scan", "drone-intervention": "Assign field intervention", "drone-report": "Create drone field report", "drone-irrigation": "Create irrigation plan", "drone-pest": "Create pest alert", "drone-spray": "Create spray plan", "drone-yield": "Create yield forecast", "drone-compliance": "Run drone compliance audit", quote: "Send buyer quote", quality: "Run quality inspection", "cold-chain": "Run cold-chain check", export: "Prepare export packet", contract: "Draft contract packet", release: "Release payment", price: "Run price AI", route: "Run route AI", "trade-advisor": "Review trade next step" };
+    const titleMap = { order: "Create order", advance: "Advance order", wallet: "Post M-Pesa payment", "buyer-message": "Open buyer-seller thread", "buyer-whatsapp": "WhatsApp buyer", "buyer-sms": "SMS buyer", "buyer-video": "Open buyer video", "drone-plan": "Plan drone mission", drone: "Run drone field scan", "drone-intervention": "Assign field intervention", "drone-report": "Create drone field report", "drone-irrigation": "Create irrigation plan", "drone-pest": "Create pest alert", "drone-spray": "Create spray plan", "drone-yield": "Create yield forecast", "drone-compliance": "Run drone compliance audit", quote: "Send buyer quote", quality: "Run quality inspection", "cold-chain": "Run cold-chain check", export: "Prepare export packet", contract: "Draft contract packet", release: "Release payment", price: "Run price AI", route: "Run route AI", "trade-advisor": "Review trade next step" };
     titleMap["buyer-contact"] = "Contact buyer";
     const pathMap = {
       order: "/api/trade/order",
@@ -8945,6 +9019,7 @@ function workflowConfig(workflow, action, element) {
       "buyer-message": "/api/trade/message",
       "buyer-whatsapp": "/api/trade/message",
       "buyer-sms": "/api/trade/message",
+      "buyer-video": "/api/video/session",
       "drone-plan": "/api/trade/drone-mission",
       drone: "/api/trade/drone-scan",
       "drone-intervention": "/api/trade/drone-intervention",
@@ -8974,7 +9049,7 @@ function workflowConfig(workflow, action, element) {
       userSummary: userCopy.summary,
       confirmLabel: titleMap[action] || "Confirm",
       path: pathMap[action] || "/api/ai/run",
-      body: action === "order" ? { productId } : action === "wallet" ? { provider: "M-Pesa", amount: 120 } : action === "buyer-contact" ? { productId } : action === "buyer-message" ? { productId, channel: "in-app chat" } : action === "buyer-whatsapp" ? { productId, channel: "WhatsApp" } : action === "buyer-sms" ? { productId, channel: "SMS" } : isDroneAction ? { productId } : isAdvancedDroneAction ? { type: droneTypeMap[action], productId } : isAdvancedTrade ? { type: action, productId } : action === "advance" ? {} : { type: action },
+      body: action === "order" ? { productId } : action === "wallet" ? { provider: "M-Pesa", amount: 120 } : action === "buyer-contact" ? { productId } : action === "buyer-message" ? { productId, channel: "in-app chat" } : action === "buyer-whatsapp" ? { productId, channel: "WhatsApp" } : action === "buyer-sms" ? { productId, channel: "SMS" } : action === "buyer-video" ? { type: "trade", productId } : isDroneAction ? { productId } : isAdvancedDroneAction ? { type: droneTypeMap[action], productId } : isAdvancedTrade ? { type: action, productId } : action === "advance" ? {} : { type: action },
       guide: experienceMode === "user" ? userCopy.guide : action === "order"
         ? "Choose the crop/product, quantity, buyer, and pickup point. Confirming creates a real order record, active route, checkpoint, and trade evidence."
         : isDroneAction || isAdvancedDroneAction
@@ -8983,9 +9058,14 @@ function workflowConfig(workflow, action, element) {
             ? "Review the active route and checkpoint. Confirming updates route intelligence or moves the order to the next logistics step."
             : "Review the buyer, channel, and product context. Confirming creates the trade communication or provider evidence.",
       steps: userCopy.steps,
-      routePreview: ["order", "advance", "route", "buyer-contact", "buyer-message", "buyer-whatsapp", "buyer-sms"].includes(action)
+      routePreview: ["order", "advance", "route", "buyer-contact", "buyer-message", "buyer-whatsapp", "buyer-sms", "buyer-video"].includes(action)
         ? { route: activeRoute(), order: latestOrder, product, title: action === "order" ? "Crop route preview" : "Shipment tracking map" }
         : null,
+      videoPreview: action === "buyer-video" ? {
+        title: "Buyer crop video",
+        detail: "Open camera so the farmer can show crop quality, quantity, packaging, field condition, or pickup readiness.",
+        consent: "Ask permission before showing the farm, buyer, seller, route, payment, or private household details."
+      } : null,
       userOutcome: action === "order" ? "AgriNexus creates the order and connects it to the shipment lane." : action === "advance" ? "AgriNexus moves the shipment to the next checkpoint." : "AgriNexus keeps the buyer conversation connected to the crop route.",
       userRecord: "The crop order, buyer message, checkpoint, and route evidence stay connected so the shipment can be tracked later.",
       fields: [
@@ -9006,18 +9086,19 @@ function workflowConfig(workflow, action, element) {
           ] },
           { name: "objective", label: "Drone objective", value: element?.dataset?.objective || "Find crop stress, route evidence, and field task needs", placeholder: "What should the drone check?" }
         ] : []),
-        ...(["buyer-contact", "buyer-message", "buyer-whatsapp", "buyer-sms"].includes(action) ? [
+        ...(["buyer-contact", "buyer-message", "buyer-whatsapp", "buyer-sms", "buyer-video"].includes(action) ? [
           { name: "buyerName", label: "Buyer name", value: "Regional buyer cooperative", placeholder: "Buyer name" },
-          { name: "messageDraft", label: "Message draft", type: "textarea", rows: 3, value: "Hello, I am ready to discuss crop quantity, quality, delivery route, and payment timing." }
+          { name: action === "buyer-video" ? "videoNote" : "messageDraft", label: action === "buyer-video" ? "What should the buyer see?" : "Message draft", type: "textarea", rows: 3, value: action === "buyer-video" ? "Show crop quality, quantity, packaging, damage, field condition, and pickup readiness." : "Hello, I am ready to discuss crop quantity, quality, delivery route, and payment timing." }
         ] : [])
       ],
-      success: ["buyer-message", "buyer-whatsapp", "buyer-sms"].includes(action) ? "Buyer-seller thread opened" : action === "buyer-contact" ? "Buyer contact prepared" : action === "wallet" ? "Payment posted" : action === "advance" ? "Order advanced" : action === "order" ? "Order created" : action === "drone-plan" ? "Drone mission planned" : action === "drone" ? "Drone scan complete" : action === "drone-intervention" ? "Field intervention assigned" : isAdvancedDroneAction ? "Advanced drone operation complete" : isAdvancedTrade ? "Advanced trade operation complete" : "AI action complete",
+      success: action === "buyer-video" ? "Buyer video handoff ready" : ["buyer-message", "buyer-whatsapp", "buyer-sms"].includes(action) ? "Buyer-seller thread opened" : action === "buyer-contact" ? "Buyer contact prepared" : action === "wallet" ? "Payment posted" : action === "advance" ? "Order advanced" : action === "order" ? "Order created" : action === "drone-plan" ? "Drone mission planned" : action === "drone" ? "Drone scan complete" : action === "drone-intervention" ? "Field intervention assigned" : isAdvancedDroneAction ? "Advanced drone operation complete" : isAdvancedTrade ? "Advanced trade operation complete" : "AI action complete",
       record: "Order book, wallet ledger, message thread, route timeline, drone mission, field scan, intervention task, trade event, or AI evidence",
       provider: "Market, communications, drone, payment, logistics, or AI provider event is recorded.",
       checklist: [
         { title: "Product/order", detail: latestOrder ? `${latestOrder.orderNumber} - ${latestOrder.stage}` : product?.name || "No product selected", status: latestOrder || product ? "live" : "pending", label: "Trade" },
         { title: "Buyer contact", detail: (data.profile.buyerContacts || [])[0]?.buyerName || "No buyer contact yet", status: (data.profile.buyerContacts || []).length ? "ready" : "pending", label: "Buyer" },
         { title: "Message thread", detail: (data.profile.tradeMessageThreads || [])[0]?.productName || "No buyer-seller thread yet", status: (data.profile.tradeMessageThreads || []).length ? "ready" : "pending", label: "Chat" },
+        ...(action === "buyer-video" ? [{ title: "Video handoff", detail: (data.profile.videoSessions || [])[0]?.sessionNumber || "No video session yet", status: (data.profile.videoSessions || []).length ? "ready" : "pending", label: "Video" }] : []),
         { title: "Route", detail: activeRoute().name, status: "ready", label: data.profile.activeCheckpoint },
         { title: "Wallet", detail: `${money(data.profile.wallet || 0)} current balance`, status: "ready", label: "Wallet" },
         { title: "Drone mission", detail: (data.profile.droneMissions || [])[0]?.missionRef || "No flight plan yet", status: (data.profile.droneMissions || []).length ? "ready" : "pending", label: "Flight" },
@@ -10454,6 +10535,14 @@ async function handleVoiceCommand(rawCommand) {
     }
     goSection("health");
     return openWorkflowByVoice("health", "provider", "I opened Health and prepared the listed telehealth provider contact workflow.");
+  }
+  if (/\b(video|camera|show|see)\b.*\b(injury|wound|rash|swelling|fall|patient|doctor|provider|telehealth|health)\b/.test(lower) || /\b(show|open)\b.*\b(provider|doctor)\b.*\b(video|camera)\b/.test(lower)) {
+    goSection("health");
+    return openWorkflowByVoice("health", "video", "I opened Health and prepared the telehealth video workflow. Press Open camera when the patient agrees.");
+  }
+  if (/\b(video|camera|show|see)\b.*\b(buyer|seller|crop|crops|produce|harvest|quality|field|farm)\b/.test(lower) || /\b(show|open)\b.*\b(buyer|seller)\b.*\b(video|camera)\b/.test(lower)) {
+    goSection("trade");
+    return openWorkflowByVoice("trade", "buyer-video", "I opened Trade and prepared the buyer crop video workflow. Press Open camera when the farmer agrees.");
   }
   if (/\b(sell|market|create|start)\b.*\b(crop|produce|harvest|maize|corn|rice|cassava|yam|beans)\b.*\b(buyer|customer|market|cooperative)\b/.test(lower) && /\b(track|trace|follow|watch|delivery|shipment|route|sale)\b/.test(lower)) {
     goSection("trade");

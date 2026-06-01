@@ -199,7 +199,7 @@ function send(res, status, body, headers = {}) {
     "content-type": typeof body === "string" ? "text/plain; charset=utf-8" : "application/json; charset=utf-8",
     "x-content-type-options": "nosniff",
     "referrer-policy": "strict-origin-when-cross-origin",
-    "permissions-policy": "camera=(), microphone=(self), geolocation=(self)",
+    "permissions-policy": "camera=(self), microphone=(self), geolocation=(self)",
     ...headers
   });
   res.end(payload);
@@ -2872,6 +2872,7 @@ function ensureAiProfile(profile) {
   profile.aiOrchestrations = profile.aiOrchestrations || [];
   profile.agentPendingAction = profile.agentPendingAction || null;
   profile.voiceSessions = profile.voiceSessions || [];
+  profile.videoSessions = profile.videoSessions || [];
   profile.agentBriefings = profile.agentBriefings || [];
   profile.agentMemory = profile.agentMemory || {
     activeAudience: "government",
@@ -3242,6 +3243,93 @@ function createBuyerContactWorkflow(db, user, command = "") {
   });
   addActivity(db.profile, `Buyer contact prepared for ${buyerName} about ${productName}.`);
   return contact;
+}
+
+function createVideoSessionWorkflow(db, user, body = {}) {
+  ensureAiProfile(db.profile);
+  ensureTradeProfile(db.profile);
+  ensureHealthProfile(db.profile);
+  const { country, route } = activeContext(db);
+  const requested = String(body.type || body.purpose || body.module || "").toLowerCase();
+  const moduleName = /health|patient|injury|provider|telehealth|care/.test(requested) ? "Healthcare" : "AgriTrade";
+  const isHealth = moduleName === "Healthcare";
+  const order = db.profile.orders[db.profile.orders.length - 1] || null;
+  const product = order
+    ? (db.products || []).find(item => item.id === order.productId)
+    : (db.products || []).find(item => item.id === body.productId) || (db.products || []).find(item => item.countryId === country.id) || (db.products || [])[0];
+  let intake = db.profile.healthIntakes[0] || null;
+  if (isHealth && !intake) {
+    intake = {
+      id: crypto.randomUUID(),
+      patientRef: `AN-PAT-${country.id.toUpperCase()}-VIDEO`,
+      patientName: String(body.patientName || "Video-supported patient"),
+      countryId: country.id,
+      needSummary: String(body.needSummary || body.videoNote || "Patient needs video-supported telehealth review"),
+      riskLevel: country.risk === "High" || country.heat >= 38 ? "High" : "Routine",
+      queueStatus: "Video review prepared",
+      representativeStatus: "Provider video handoff pending",
+      preferredLanguage: db.profile.accessibilityProfile.language || user.language || "en",
+      accessibilityNeeds: "Captions, audio narration, caregiver handoff, low-bandwidth fallback",
+      contactMethod: "Video plus fallback callback",
+      createdAt: new Date().toISOString()
+    };
+    db.profile.healthIntakes.unshift(intake);
+  }
+  const participant = isHealth
+    ? String(body.providerName || "Telehealth provider")
+    : String(body.buyerName || product?.buyerName || `${country.name} verified buyer desk`);
+  const subject = isHealth
+    ? String(body.subject || intake?.patientRef || "patient video review")
+    : String(body.subject || product?.name || "crop video proof");
+  const session = {
+    id: crypto.randomUUID(),
+    sessionNumber: `AN-VID-${String((db.profile.videoSessions || []).length + 1).padStart(3, "0")}`,
+    module: moduleName,
+    type: isHealth ? "telehealth-video" : "buyer-crop-video",
+    status: "ready",
+    participantName: participant,
+    subject,
+    countryId: country.id,
+    routeId: route.id,
+    orderId: order?.id || null,
+    productId: product?.id || null,
+    productName: product?.name || null,
+    intakeId: intake?.id || null,
+    patientRef: intake?.patientRef || null,
+    videoNote: String(body.videoNote || body.mediaNote || (isHealth ? "Show injury, swelling, rash, fall, mobility, or visible concern to provider." : "Show crop quality, damage, quantity, packaging, field condition, and pickup readiness to buyer.")),
+    liveProvider: process.env.VIDEO_PROVIDER || process.env.TELEHEALTH_VIDEO_PROVIDER || "browser-camera",
+    providerStatus: process.env.VIDEO_WEBHOOK_URL || process.env.TELEHEALTH_VIDEO_WEBHOOK_URL ? "live-provider-ready" : "local-browser-video-ready",
+    joinUrl: process.env.VIDEO_WEBHOOK_URL || process.env.TELEHEALTH_VIDEO_WEBHOOK_URL || "/video/local-browser-session",
+    fallbackChannels: isHealth ? ["phone callback", "SMS", "WhatsApp", "caregiver handoff"] : ["buyer message", "SMS", "WhatsApp", "photo evidence"],
+    consent: isHealth ? "Ask permission before showing injury or patient details." : "Ask permission before showing field, crop, buyer, or payment details.",
+    createdBy: user.email,
+    createdAt: new Date().toISOString()
+  };
+  db.profile.videoSessions.unshift(session);
+  db.profile.videoSessions = db.profile.videoSessions.slice(0, 50);
+  if (isHealth && intake) {
+    intake.queueStatus = "Video review ready";
+    intake.mediaNote = session.videoNote;
+  }
+  if (!isHealth) {
+    addTradeEvent(db.profile, { type: "buyer.video_session_ready", label: `${session.sessionNumber} prepared for ${participant} about ${subject}.` });
+  }
+  addNotification(db.profile, {
+    module: moduleName,
+    channel: "video",
+    message: isHealth ? `Telehealth video ready for ${session.patientRef}.` : `Buyer crop video ready for ${subject}.`
+  });
+  logIntegration(db, {
+    providerId: isHealth ? "health-telehealth" : "trade-market",
+    module: moduleName,
+    action: isHealth ? "telehealth.video_session_ready" : "trade.buyer_video_session_ready",
+    status: "success",
+    detail: isHealth ? `${session.sessionNumber} video review prepared for ${session.patientRef}.` : `${session.sessionNumber} buyer crop video prepared for ${subject}.`,
+    metadata: { videoSessionId: session.id, sessionNumber: session.sessionNumber, providerStatus: session.providerStatus, joinUrl: session.joinUrl }
+  });
+  rememberAgentMemory(db.profile, `${moduleName} video session prepared: ${session.sessionNumber} for ${subject}.`, { source: "video-session", category: "communications", module: moduleName, confidence: 0.92 });
+  addActivity(db.profile, `${session.sessionNumber} ${moduleName} video session ready for ${subject}.`);
+  return session;
 }
 
 async function tradeOperationalEfficiencyReview(db, user, text) {
@@ -4598,6 +4686,10 @@ async function executeAgentTool(db, user, step) {
   if (step.tool === "health.followup") return runHealthActionByAgent(db, user, "followup");
   if (step.tool === "health.safety") return runHealthActionByAgent(db, user, "safety");
   if (step.tool === "health.careplan") return runHealthActionByAgent(db, user, "careplan");
+  if (step.tool === "health.video_session") {
+    const session = createVideoSessionWorkflow(db, user, { type: "health", videoNote: step.detail });
+    return `Prepared ${session.sessionNumber} so the patient can show the provider the injury or visible concern.`;
+  }
 
   if (step.tool === "trade.market_review") {
     ensureTradeProfile(db.profile);
@@ -4633,6 +4725,11 @@ async function executeAgentTool(db, user, step) {
   if (step.tool === "trade.buyer_contact") {
     const contact = createBuyerContactWorkflow(db, user, step.detail || "contact buyer");
     return `Prepared ${contact.channel} for ${contact.buyerName} about ${contact.productName}.`;
+  }
+
+  if (step.tool === "trade.buyer_video") {
+    const session = createVideoSessionWorkflow(db, user, { type: "trade", videoNote: step.detail });
+    return `Prepared ${session.sessionNumber} so the farmer can show the buyer the crop quality, quantity, or field condition.`;
   }
 
   if (step.tool === "trade.operational_efficiency") {
@@ -5126,7 +5223,9 @@ function deepVoiceIntent(lower) {
   if (includesAny(["schedule follow up", "follow-up", "followup", "callback"])) return { tool: "health.followup", module: "Healthcare", action: "Schedule follow-up", section: "health" };
   if (includesAny(["safety review", "review safety"])) return { tool: "health.safety", module: "Healthcare", action: "Run safety review", section: "health" };
   if (includesAny(["care plan", "careplan"])) return { tool: "health.careplan", module: "Healthcare", action: "Generate care plan", section: "health" };
+  if (includesAny(["video provider", "video doctor", "show injury", "show the injury", "show wound", "open video for patient", "video telehealth", "video visit"])) return { tool: "health.video_session", module: "Healthcare", action: "Open telehealth video", section: "health" };
 
+  if (includesAny(["video buyer", "show buyer", "show the buyer", "show crops", "show crop", "show seller", "crop video", "video crop", "open video for buyer"])) return { tool: "trade.buyer_video", module: "AgriTrade", action: "Open buyer crop video", section: "trade" };
   if ((includesAny(["buyer", "customer"]) && includesAny(["speak", "talk", "call", "message", "contact"]))) return { tool: "trade.buyer_contact", module: "AgriTrade", action: "Contact buyer", section: "trade" };
   if (includesAny(["operational efficiency", "operations efficiency", "optimize trade", "optimise trade", "trade bottleneck", "reduce delay", "reduce cost", "improve profit", "improve operations"])) return { tool: "trade.operational_efficiency", module: "AgriTrade", action: "Review operational efficiency", section: "trade" };
   if (includesAny(["trade update", "buyer update", "route update", "logistics update", "operations brief", "status report", "message the buyer", "notify the driver", "handoff message"])) return { tool: "trade.operational_communication", module: "AgriTrade", action: "Prepare operational communication", section: "trade" };
@@ -8408,6 +8507,32 @@ async function runAgentCommand(db, user, command, options = {}) {
     };
   }
 
+  if (/(video|camera|show|see|visual|face to face|face-to-face)/.test(lower) && /(injury|wound|rash|swelling|fall|patient|doctor|provider|telehealth|clinic|health)/.test(lower)) {
+    if (conversational && !wantsExecute) {
+      return stageAgentAction(db, text, { module: "Healthcare", tool: "health.video_session", action: "Open telehealth video", section: "health" });
+    }
+    const session = createVideoSessionWorkflow(db, user, { type: "health", videoNote: text });
+    return {
+      intent: "health.video_session_ready",
+      response: `Telehealth video is ready. ${session.sessionNumber} lets the patient show the provider the injury or visible concern, with phone, SMS, WhatsApp, and caregiver fallback if video is not strong.`,
+      status: "completed",
+      metadata: { conversationMode: true, redirectSection: "health", videoSessionId: session.id, sessionNumber: session.sessionNumber, providerStatus: session.providerStatus }
+    };
+  }
+
+  if (/(video|camera|show|see|visual|face to face|face-to-face)/.test(lower) && /(buyer|seller|crop|crops|produce|harvest|quality|field|farm)/.test(lower)) {
+    if (conversational && !wantsExecute) {
+      return stageAgentAction(db, text, { module: "AgriTrade", tool: "trade.buyer_video", action: "Open buyer crop video", section: "trade" });
+    }
+    const session = createVideoSessionWorkflow(db, user, { type: "trade", videoNote: text });
+    return {
+      intent: "trade.buyer_video_session_ready",
+      response: `Buyer crop video is ready. ${session.sessionNumber} lets the farmer show crop quality, quantity, packaging, field condition, or pickup readiness to the buyer or seller.`,
+      status: "completed",
+      metadata: { conversationMode: true, redirectSection: "trade", videoSessionId: session.id, sessionNumber: session.sessionNumber, providerStatus: session.providerStatus }
+    };
+  }
+
   if (/(buyer|seller|customer|purchaser)/.test(lower) && /(message|chat|communicate|reply|conversation|thread|real time|realtime)/.test(lower)) {
     const result = await createBuyerSellerMessage(db, user, { message: text, channel: /whatsapp/i.test(lower) ? "WhatsApp" : /sms|text/i.test(lower) ? "SMS" : /email/i.test(lower) ? "Email" : "in-app chat" });
     return {
@@ -8422,7 +8547,7 @@ async function runAgentCommand(db, user, command, options = {}) {
     return tradeOperationalCommunicationBrief(db, user, text);
   }
 
-  if (conversational && db.profile.agentMemory.activeIntake) {
+  if (conversational && db.profile.agentMemory.activeIntake && !(pendingAction && (isAffirmativeCommand(lower) || isNegativeCommand(lower)))) {
     const activeDomain = db.profile.agentMemory.activeIntake.domain;
     const requestedDomain = intakeDomainFromText(lower);
     const directSystemCommand = /(summarize my progress|progress summary|where am i|how am i doing|all 10|all ten|10 items|ten items|voice demo|investor voice demo|show investors|demo mode|behavior model|what have you learned|show memory|what do you remember|provider partnership|partner packet)/.test(lower);
@@ -9270,6 +9395,16 @@ async function api(req, res, url) {
     await writeDb(db);
     const state = publicState(db, user);
     state.liveServiceCheckResult = report;
+    return send(res, 200, state);
+  }
+
+  if (url.pathname === "/api/video/session" && req.method === "POST") {
+    if (!user) return send(res, 401, { error: "Sign in required" });
+    const body = await readBody(req);
+    const videoSessionResult = createVideoSessionWorkflow(db, user, body);
+    await writeDb(db);
+    const state = publicState(db, user);
+    state.videoSessionResult = videoSessionResult;
     return send(res, 200, state);
   }
 

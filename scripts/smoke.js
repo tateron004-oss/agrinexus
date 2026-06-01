@@ -424,6 +424,14 @@ async function call(path, body) {
   assert(["sent-live", "sent-local"].includes(buyerWhatsapp.tradeMessageResult.messages[0].status));
   assert(buyerWhatsapp.tradeMessageResult.delivery.status);
   assert(buyerWhatsapp.profile.integrationEvents.some(event => event.providerId === "whatsapp-delivery" && event.action === "trade.buyer_seller_message_sent"));
+  const buyerVideo = await call("/api/video/session", { type: "trade", videoNote: "Show crop quality, quantity, packaging, and pickup readiness to the buyer." });
+  assert(buyerVideo.videoSessionResult.type === "buyer-crop-video");
+  assert(buyerVideo.profile.videoSessions.length >= 1);
+  assert(buyerVideo.profile.integrationEvents.some(event => event.action === "trade.buyer_video_session_ready"));
+  const healthVideo = await call("/api/video/session", { type: "health", videoNote: "Show injury swelling to the telehealth provider." });
+  assert(healthVideo.videoSessionResult.type === "telehealth-video");
+  assert(healthVideo.profile.videoSessions.length >= 2);
+  assert(healthVideo.profile.integrationEvents.some(event => event.action === "telehealth.video_session_ready"));
   const learningComms = await call("/api/communications/thread", { module: "Learning", channel: "in-app chat", message: "Please help me with this course." });
   assert(learningComms.communicationThreadResult.thread.module === "Learning");
   assert(learningComms.profile.communicationThreads.some(thread => thread.module === "Learning"));
@@ -610,6 +618,22 @@ async function call(path, body) {
   assert(buyerChat.commandResult.intent === "trade.buyer_seller_message");
   assert(buyerChat.commandResult.metadata.redirectSection === "trade");
   assert(buyerChat.profile.tradeMessageThreads.length >= 1);
+  const stagedCropVideo = await call("/api/agent/command", { command: "Nexus, open video so I can show the buyer my crops", conversational: true, inputMode: "voice", outputMode: "voice" });
+  assert(stagedCropVideo.commandResult.intent === "conversation.pending_action");
+  assert(stagedCropVideo.profile.agentPendingAction.tool === "trade.buyer_video");
+  const cropVideoConfirm = await call("/api/agent/command", { command: "yes", conversational: true, inputMode: "voice", outputMode: "voice" });
+  assert(["conversation.confirmed", "trade.buyer_video"].includes(cropVideoConfirm.commandResult.intent));
+  assert(cropVideoConfirm.profile.videoSessions.some(item => item.type === "buyer-crop-video"));
+  const stagedInjuryVideo = await call("/api/agent/command", { command: "Nexus, video provider for patient injury", conversational: true, inputMode: "voice", outputMode: "voice" });
+  assert(["conversation.pending_action", "health.video_session_ready"].includes(stagedInjuryVideo.commandResult.intent));
+  if (stagedInjuryVideo.commandResult.intent === "conversation.pending_action") {
+    assert(stagedInjuryVideo.profile.agentPendingAction.tool === "health.video_session");
+    const injuryVideoConfirm = await call("/api/agent/command", { command: "yes", conversational: true, inputMode: "voice", outputMode: "voice" });
+    assert(["conversation.confirmed", "health.video_session"].includes(injuryVideoConfirm.commandResult.intent));
+    assert(injuryVideoConfirm.profile.videoSessions.some(item => item.type === "telehealth-video"));
+  } else {
+    assert(stagedInjuryVideo.profile.videoSessions.some(item => item.type === "telehealth-video"));
+  }
   const contextualRoute = await call("/api/agent/command", { command: "Now check the route", conversational: true, inputMode: "voice", outputMode: "voice" });
   assert(["conversation.pending_action", "map.route_risk", "ai-question", "trade.operational_efficiency", "trade.operational_communication"].includes(contextualRoute.commandResult.intent));
   assert(contextualRoute.commandResult.metadata.redirectSection === "map" || contextualRoute.commandResult.metadata.redirectSection === "trade" || contextualRoute.commandResult.metadata.tool === "map.route_risk" || contextualRoute.commandResult.intent === "ai-question");

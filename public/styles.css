@@ -3199,6 +3199,47 @@ body.admin-mode .user-workspace {
   border-radius: 10px;
   background: #f8fbff;
 }
+.workflow-video-preview {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  margin-bottom: 12px;
+  border: 2px solid #b8d8c4;
+  border-radius: 12px;
+  background: #f5fbf6;
+}
+.workflow-video-preview strong {
+  display: block;
+  color: #174737;
+  font-size: 1rem;
+  line-height: 1.2;
+}
+.workflow-video-preview span,
+.workflow-video-preview p {
+  margin: 0;
+  color: #36594a;
+  font-size: .9rem;
+  font-weight: 750;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+.workflow-video-preview video {
+  width: 100%;
+  min-height: 180px;
+  max-height: 320px;
+  border-radius: 10px;
+  background: #10251f;
+  object-fit: cover;
+}
+.workflow-video-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+.workflow-video-actions .btn {
+  min-height: 48px;
+  white-space: normal;
+}
 body.user-mode #workflowChecklist {
   display: none;
 }

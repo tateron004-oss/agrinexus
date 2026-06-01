@@ -24,11 +24,13 @@ const expectedSections = {
   health: [
     ["Start Intake", "start telehealth intake", "workflow: \"health\"", "action: \"intake\""],
     ["Talk to Provider", "open telehealth access", "workflow: \"health\"", "action: \"provider\""],
+    ["Show Injury", "open video for provider to show injury", "workflow: \"health\"", "action: \"video\""],
     ["Check Region", "check health risk in my region", "workflow: \"health\"", "action: \"safety\""],
     ["Accessibility Help", "create audio guide and captions", "workflow: \"health\"", "action: \"accessibility\""]
   ],
   trade: [
     ["Contact Buyer", "contact my buyer", "workflow: \"trade\"", "action: \"buyer-contact\""],
+    ["Show Crop", "open video for buyer to show crops", "workflow: \"trade\"", "action: \"buyer-video\""],
     ["Create Order", "create a crop order", "workflow: \"trade\"", "action: \"order\""],
     ["Track Route", "track my route", "workflow: \"ai\"", "action: \"route\""],
     ["Scan Farm", "run drone scan", "workflow: \"trade\"", "action: \"drone\""]

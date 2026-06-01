@@ -256,6 +256,7 @@ assert(server.includes("activeClarification"), "Conversation brain must remember
 assert(server.includes("function guidedQuestionPlan") && server.includes("one-question-at-a-time"), "Conversation brain must ask adaptive guided questions one at a time");
 assert(server.includes("function clarificationRouteFromAnswer") && server.includes("conversation.clarification_followup"), "Conversation brain must handle imperfect answers without forcing exact choices");
 assert(server.includes("function roleGuidancePlan") && server.includes("conversation.role_guidance"), "Conversation brain must guide farmers, students, patients, workers, and learners by role");
+assert(server.includes("function createVideoSessionWorkflow") && app.includes("workflowVideoPreview"), "Platform must support video handoffs for telehealth injuries and buyer crop proof");
 assert(server.includes("function continueVoiceRecovery"), "Conversation brain must recover unclear voice prompts into workflows");
 assert(server.includes("activeRecovery"), "Conversation brain must remember active voice recovery state");
 assert(server.includes("function updateGuidedMissionMemory"), "Conversation brain must keep guided mission checklist state");
