@@ -3199,6 +3199,63 @@ body.admin-mode .user-workspace {
   border-radius: 10px;
   background: #f8fbff;
 }
+.workflow-real-use-coach {
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+  border: 2px solid #173240;
+  border-radius: 12px;
+  background: #f8fcfb;
+}
+.workflow-real-use-head {
+  display: grid;
+  gap: 3px;
+}
+.workflow-real-use-head strong {
+  color: #0f2c36;
+  font-size: 1rem;
+  line-height: 1.2;
+}
+.workflow-real-use-head span {
+  color: #4f6570;
+  font-size: .9rem;
+  font-weight: 800;
+  line-height: 1.35;
+}
+.workflow-real-use-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+.workflow-real-use-grid div,
+.user-inline-coach div {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  padding: 10px;
+  border-radius: 10px;
+  background: #ffffff;
+  border: 1px solid #d5e4df;
+}
+.workflow-real-use-grid strong,
+.user-inline-coach strong {
+  color: #174737;
+  font-size: .86rem;
+  line-height: 1.2;
+}
+.workflow-real-use-grid span,
+.user-inline-coach span {
+  color: #304f48;
+  font-size: .9rem;
+  font-weight: 750;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+.user-inline-coach {
+  display: grid;
+  gap: 8px;
+  width: 100%;
+}
 .workflow-video-preview {
   display: grid;
   gap: 10px;
@@ -3266,6 +3323,9 @@ body.user-mode .workflow-fields {
 body.user-mode .workflow-fields:empty {
   display: none;
 }
+body.user-mode .workflow-real-use-grid {
+  grid-template-columns: 1fr;
+}
 body.user-mode .workflow-fields .field-label {
   color: #23483c;
   font-weight: 850;
@@ -3310,6 +3370,11 @@ body.user-mode #workflowClose {
   border-radius: 12px;
   font-weight: 900;
   white-space: nowrap;
+}
+@media (max-width: 720px) {
+  .workflow-real-use-grid {
+    grid-template-columns: 1fr;
+  }
 }
 .workflow-voice-confirm {
   display: grid;

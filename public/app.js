@@ -6477,10 +6477,16 @@ function renderUserInlineWorkflow(sectionId, config) {
   if (experienceMode !== "user" || !config) return;
   const panel = $(`#${sectionId} .user-inline-workflow`);
   if (!panel) return;
+  const coach = workflowRealUseCoach(config);
   panel.classList.remove("hidden");
   panel.innerHTML = `
     <strong>${translateText(config.title || "Ready?")}</strong>
-    <span>${translateText("Do you want Nexus to do this now?")}</span>
+    <span>${translateText(coach.plain || "Do you want Nexus to do this now?")}</span>
+    <div class="user-inline-coach">
+      <div><strong>${translateText("Answer")}</strong><span>${translateText(coach.question)}</span></div>
+      <div><strong>${translateText("Careful")}</strong><span>${translateText(coach.watch)}</span></div>
+      <div><strong>${translateText("Try saying")}</strong><span>${translateText(coach.sayNext)}</span></div>
+    </div>
     <div class="user-inline-workflow-actions">
       <button type="button" class="primary" data-inline-workflow-confirm>${translateText("Yes")}</button>
       <button type="button" data-inline-workflow-cancel>${translateText("No")}</button>
@@ -8054,6 +8060,7 @@ function closeWorkflowModal() {
 
 function workflowSpeechText() {
   if (!pendingWorkflow) return "No workflow is open.";
+  const coach = workflowRealUseCoach(pendingWorkflow);
   const checklist = (pendingWorkflow.checklist || [])
     .slice(0, 4)
     .map(item => `${item.title}: ${item.detail}`)
@@ -8061,10 +8068,13 @@ function workflowSpeechText() {
   return [
     pendingWorkflow.title,
     pendingWorkflow.summary,
+    coach.plain ? `Plain meaning: ${coach.plain}` : "",
+    coach.question ? `Answer this first: ${coach.question}` : "",
+    coach.watch ? `Watch out: ${coach.watch}` : "",
     pendingWorkflow.record ? `Record created: ${pendingWorkflow.record}` : "",
     pendingWorkflow.provider ? `Provider evidence: ${pendingWorkflow.provider}` : "",
     checklist ? `Checklist: ${checklist}` : "",
-    "Say yes to confirm, no to cancel, or read to hear this again."
+    `Say yes to confirm, no to cancel, or say ${coach.sayNext || "read"} to continue.`
   ].filter(Boolean).join(". ");
 }
 
@@ -8088,6 +8098,91 @@ function workflowComfortHtml(config) {
     { title: "What I need from you", detail: "Review the simple choices below. Change anything that looks wrong." },
     { title: "What happens next", detail: config.userOutcome || config.success || "AgriNexus saves the action and shows the next step." }
   ].map(item => `<div><strong>${translateText(item.title)}</strong><span>${translateText(item.detail)}</span></div>`).join("");
+}
+
+function workflowRealUseCoach(config = {}) {
+  const haystack = `${config.eyebrow || ""} ${config.title || ""} ${config.userTitle || ""} ${config.summary || ""} ${config.confirmLabel || ""}`.toLowerCase();
+  const base = {
+    title: "Nexus field coach",
+    plain: "This screen is here to help you finish one real task.",
+    question: "What is the one thing you want done right now?",
+    watch: "Do not confirm if the crop, person, job, provider, or route looks wrong.",
+    sayNext: "Nexus, explain this in simple words"
+  };
+  if (/course|lesson|learning|certificate|quiz|assignment|transcript/.test(haystack)) {
+    return {
+      ...base,
+      plain: "This helps the learner start, finish, or prove training progress.",
+      question: "Which course or lesson should the learner work on now?",
+      watch: "Make sure the learner support need is correct: audio, captions, large print, low bandwidth, or instructor help.",
+      sayNext: "Nexus, help me start this course"
+    };
+  }
+  if (/workforce|job|role|interview|mentor|shift|payroll|timesheet|document|worker/.test(haystack)) {
+    return {
+      ...base,
+      plain: "This helps the worker move toward a real job step.",
+      question: "Is the worker trying to apply, prepare, schedule, or get paid?",
+      watch: "Do not submit an application until the role, readiness, and missing certificates make sense.",
+      sayNext: "Nexus, help me apply for this job"
+    };
+  }
+  if (/health|telehealth|patient|provider|care|vitals|referral|caption|caregiver|emergency|injury|prescription/.test(haystack)) {
+    return {
+      ...base,
+      plain: "This helps the patient connect to care support without Nexus acting as a doctor.",
+      question: "What does the patient need help with, and how urgent is it?",
+      watch: "For chest pain, trouble breathing, severe bleeding, fainting, or danger, contact local emergency help immediately.",
+      sayNext: "Nexus, start telehealth intake"
+    };
+  }
+  if (/buyer|crop|trade|order|wallet|payment|logistics|shipment|route|drone|field|irrigation|pest|yield|quality|export|contract/.test(haystack)) {
+    return {
+      ...base,
+      plain: "This helps the farmer turn crop, buyer, route, and field information into a clear next step.",
+      question: "Are you selling, contacting a buyer, checking the field, or tracking a shipment?",
+      watch: "Do not confirm money, delivery, or buyer messages until crop, buyer, quantity, and route look right.",
+      sayNext: "Nexus, help me sell my crop and track the route"
+    };
+  }
+  if (/map|facility|location|risk|corridor|checkpoint/.test(haystack)) {
+    return {
+      ...base,
+      plain: "This helps the user understand where the route, facility, field, or risk area is.",
+      question: "Which location or route should Nexus focus on?",
+      watch: "Check that the active country and checkpoint match the user before confirming.",
+      sayNext: "Nexus, open the map and show the route"
+    };
+  }
+  if (/provider|integration|engine|billing|auth|email|sms|whatsapp|service/.test(haystack)) {
+    return {
+      ...base,
+      plain: "This checks whether the connected service is ready or needs setup.",
+      question: "Which live service should Nexus test or explain?",
+      watch: "If a provider returns 401 or needs setup, the workflow is working but credentials need attention.",
+      sayNext: "Nexus, run live service check"
+    };
+  }
+  return base;
+}
+
+function workflowRealUseCoachHtml(config) {
+  const coach = config.realUseCoach || workflowRealUseCoach(config);
+  const items = [
+    { title: "Plain meaning", detail: coach.plain },
+    { title: "Ask this first", detail: coach.question },
+    { title: "Watch out", detail: coach.watch },
+    { title: "Say next", detail: coach.sayNext }
+  ];
+  return `<section class="workflow-real-use-coach" aria-label="${translateText("Nexus field coach")}">
+    <div class="workflow-real-use-head">
+      <strong>${translateText(coach.title || "Nexus field coach")}</strong>
+      <span>${translateText("Built for real people using real workflows.")}</span>
+    </div>
+    <div class="workflow-real-use-grid">
+      ${items.map(item => `<div><strong>${translateText(item.title)}</strong><span>${translateText(item.detail)}</span></div>`).join("")}
+    </div>
+  </section>`;
 }
 
 function shipmentMapHtml({ route = activeRoute(), order = null, product = firstProduct(), title = "Shipment route" } = {}) {
@@ -8202,11 +8297,13 @@ function healthHotspotHtml({ country = activeCountry(), title = "Health hotspot 
 function workflowOutcomeHtml(config) {
   if (experienceMode === "user") {
     return [
+      workflowRealUseCoachHtml(config),
       `<div class="friendly-outcome"><strong>${translateText("You stay in control")}</strong><span>${translateText("Nothing is sent until you press the main button. You can close this window and choose another action anytime.")}</span></div>`,
       `<div class="friendly-outcome"><strong>${translateText("AgriNexus will remember this")}</strong><span>${translateText(config.userRecord || config.record || "The platform saves the workflow result so you can continue later.")}</span></div>`
     ].join("");
   }
   return [
+    workflowRealUseCoachHtml(config),
     row("How this works", config.guide || "Review the visible details, adjust the fields if needed, then confirm. AgriNexus records the workflow and updates the module evidence."),
     row("Action", config.confirmLabel || "Confirm action"),
     row("Record created", config.record || "Workflow event and profile state update"),
