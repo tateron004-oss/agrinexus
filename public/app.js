@@ -2197,8 +2197,8 @@ function runUserModeSelfTest() {
       if (!simpleUserCommandWorkflow(button.command)) missing.push(`${section}: ${button.label}`);
     });
   });
-  const currentScript = [...document.scripts].some(script => String(script.src || "").includes("nexus-behavior-93"));
-  const currentStyle = [...document.styleSheets].some(sheet => String(sheet.href || "").includes("nexus-behavior-93"));
+  const currentScript = [...document.scripts].some(script => String(script.src || "").includes("nexus-behavior-94"));
+  const currentStyle = [...document.styleSheets].some(sheet => String(sheet.href || "").includes("nexus-behavior-94"));
   if (!currentScript || !currentStyle) missing.push("new app files");
   const ok = missing.length === 0;
   const message = ok
@@ -4789,6 +4789,7 @@ function voiceCommandGroups() {
         "Nexus, open workforce",
         "Nexus, open telehealth",
         "Nexus, open agritrade",
+        "Nexus, open the map",
         "Nexus, open maps",
         "Nexus, open admin"
       ]
@@ -4823,6 +4824,7 @@ function voiceCommandGroups() {
       commands: [
         "Nexus, start telehealth intake",
         "Nexus, connect me to a provider",
+        "Nexus, contact the listed telehealth provider",
         "Nexus, capture vitals",
         "Nexus, create a referral",
         "Nexus, check outbreak risk in Congo",
@@ -4845,6 +4847,7 @@ function voiceCommandGroups() {
         "Hey AgriTrade, prepare a buyer update",
         "Hey AgriTrade, brief the logistics team",
         "Nexus, contact my buyer",
+        "Nexus, sell my crop to buyer and track my sale and delivery",
         "Nexus, create buyer order",
         "Nexus, run drone scan",
         "Hey AgriTrade, track my route in real time",
@@ -5891,11 +5894,13 @@ function simpleUserCommandWorkflow(command = "") {
   if (lower.includes("schedule my shift") || lower.includes("plan shift")) return { workflow: "workforce", action: "shift", response: "Shift planning is ready.", dataset: { roleId } };
   if (lower.includes("telehealth intake") || lower.includes("start intake")) return { workflow: "health", action: "intake", response: "Telehealth intake is ready.", dataset: {} };
   if (lower.includes("telehealth access") || lower.includes("talk to provider") || lower.includes("speak to provider")) return { workflow: "health", action: "provider", response: "Provider access is ready.", dataset: {} };
+  if (lower.includes("contact the listed telehealth provider") || lower.includes("contact listed telehealth provider") || lower.includes("contact telehealth provider listed")) return { workflow: "health", action: "provider", response: "Listed telehealth provider contact is ready.", dataset: {} };
   if (lower.includes("call provider") || lower.includes("call the provider")) return { workflow: "communications", action: "health-whatsapp", response: "Provider call or WhatsApp handoff is ready.", dataset: {} };
   if (lower.includes("message provider")) return { workflow: "communications", action: "health-chat", response: "Provider message is ready.", dataset: {} };
   if (lower.includes("check health risk") || lower.includes("check region")) return { workflow: "health", action: "safety", response: "Regional health risk review is ready.", dataset: {} };
   if (lower.includes("audio guide") || lower.includes("accessibility")) return { workflow: "health", action: "accessibility", response: "Accessibility support is ready.", dataset: {} };
   if (lower.includes("contact my buyer") || lower.includes("contact buyer")) return { workflow: "trade", action: "buyer-contact", response: "Buyer contact is ready.", dataset: { productId } };
+  if ((lower.includes("sell my crop") || lower.includes("sell crop")) && (lower.includes("track my sale") || lower.includes("track sale") || lower.includes("delivery"))) return { workflow: "trade", action: "order", response: "Crop sale and delivery tracking is ready.", dataset: { productId } };
   if (lower.includes("crop order") || lower.includes("create order")) return { workflow: "trade", action: "order", response: "Crop order is ready.", dataset: { productId } };
   if (lower.includes("track my route") || lower.includes("check route")) return { workflow: "ai", action: "route", response: "Route intelligence is ready.", dataset: {} };
   if (lower.includes("drone scan") || lower.includes("scan farm") || lower.includes("check farm")) return { workflow: "trade", action: "drone", response: "Drone scan is ready.", dataset: { productId } };
@@ -9697,6 +9702,29 @@ async function handleVoiceCommand(rawCommand) {
     if (canOpenSection(moduleId)) goSection(moduleId);
     setVoiceResponse(moduleUseExplanation(moduleId), true);
     return;
+  }
+
+  if (/\b(open|show|take me to|go to|navigate to)\b.*\b(the\s+)?map\b/.test(lower)) {
+    goSection("map");
+    setActiveAgentJourney("map", "context", "Map opened by voice.");
+    setVoiceResponse("Map is open. You can say track my route, show map risk, find a health facility, or explain the map.", true);
+    return;
+  }
+  if (/\b(contact|call|message|whatsapp|text|speak to|talk to|connect)\b.*\b(listed\s+)?(telehealth\s+)?(provider|doctor|nurse|clinic)\b/.test(lower) || /\b(listed\s+telehealth\s+provider|telehealth\s+provider\s+listed)\b/.test(lower)) {
+    if (lower.includes("call") || lower.includes("whatsapp")) {
+      goSection("health");
+      return openWorkflowByVoice("communications", "health-whatsapp", "I opened Health and prepared the listed provider call or WhatsApp handoff.");
+    }
+    if (lower.includes("message") || lower.includes("text") || lower.includes("sms")) {
+      goSection("health");
+      return openWorkflowByVoice("communications", lower.includes("sms") || lower.includes("text") ? "health-sms" : "health-chat", "I opened Health and prepared the listed provider message workflow.");
+    }
+    goSection("health");
+    return openWorkflowByVoice("health", "provider", "I opened Health and prepared the listed telehealth provider contact workflow.");
+  }
+  if (/\b(sell|market|create|start)\b.*\b(crop|produce|harvest|maize|corn|rice|cassava|yam|beans)\b.*\b(buyer|customer|market|cooperative)\b/.test(lower) && /\b(track|trace|follow|watch|delivery|shipment|route|sale)\b/.test(lower)) {
+    goSection("trade");
+    return openWorkflowByVoice("trade", "order", "I opened Trade and prepared the crop sale. The workflow connects the buyer, order, route map, sale record, and delivery tracking.", { productId: firstProduct()?.id });
   }
 
   if (/\b(i want to sell|sell my|sell|buyer for|find buyer|market my)\b/.test(lower) && /\b(maize|corn|rice|cassava|yam|beans|crop|produce|harvest|farm)\b/.test(lower)) {
