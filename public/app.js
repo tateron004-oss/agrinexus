@@ -2199,8 +2199,8 @@ function runUserModeSelfTest() {
       if (!simpleUserCommandWorkflow(button.command)) missing.push(`${section}: ${button.label}`);
     });
   });
-  const currentScript = [...document.scripts].some(script => String(script.src || "").includes("nexus-behavior-99"));
-  const currentStyle = [...document.styleSheets].some(sheet => String(sheet.href || "").includes("nexus-behavior-99"));
+  const currentScript = [...document.scripts].some(script => String(script.src || "").includes("nexus-behavior-100"));
+  const currentStyle = [...document.styleSheets].some(sheet => String(sheet.href || "").includes("nexus-behavior-100"));
   if (!currentScript || !currentStyle) missing.push("new app files");
   const ok = missing.length === 0;
   const message = ok
@@ -2386,6 +2386,34 @@ function isUniversalLanguageCommand(command) {
   const lower = String(command || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
   return /\b(change|switch|set|translate|language|speak|talk|respond|reply|use)\b/.test(lower)
     && Boolean(languageFromVoiceCommand(lower));
+}
+
+function migrantFriendlyVoiceIntent(command = "") {
+  const lower = normalizeToolText(command);
+  const productId = firstProduct()?.id;
+  const roleId = firstEligibleRole()?.id;
+  const hasAny = words => words.some(word => new RegExp(`\\b${word}\\b`).test(lower));
+  const hasCrop = hasAny(["crop", "crops", "maize", "corn", "rice", "cassava", "yam", "beans", "food", "produce", "harvest", "farm"]);
+  const hasBuyer = hasAny(["buyer", "buy", "market", "sell", "sale", "customer"]);
+  if (hasCrop && hasAny(["where", "track", "route", "road", "delivery", "deliver", "product", "shipment", "move", "moving"])) {
+    return { workflow: "ai", action: "route", section: "map", response: "I opened the map to track your sale, product, route, and delivery.", dataset: {} };
+  }
+  if (hasCrop && hasBuyer) {
+    return { workflow: "trade", action: "buyer-contact", section: "trade", response: "I opened Trade to help sell your crop and contact a buyer.", dataset: { productId } };
+  }
+  if (hasAny(["doctor", "nurse", "clinic", "hospital", "sick", "pain", "medicine", "health", "care", "provider"])) {
+    return { workflow: "health", action: hasAny(["call", "talk", "speak", "message", "provider", "doctor", "nurse"]) ? "provider" : "intake", section: "health", response: "I opened Health to help with care. I will guide this step slowly.", dataset: {} };
+  }
+  if (hasAny(["job", "work", "money", "role", "apply", "worker", "employment", "shift"])) {
+    return { workflow: "workforce", action: hasAny(["apply", "role"]) ? "apply-role" : "build-profile", section: "workforce", response: "I opened Workforce to help find work and prepare the next step.", dataset: { roleId } };
+  }
+  if (hasAny(["learn", "school", "class", "course", "lesson", "teach", "training", "certificate", "study"])) {
+    return { workflow: "learning", action: "start", section: "learning", response: "I opened Learning to help start a course.", dataset: {} };
+  }
+  if (hasAny(["map", "place", "location", "road", "route", "where"])) {
+    return { workflow: "map", action: "inspector", section: "map", response: "I opened the map. You can ask for route, facility, product, or risk help.", dataset: {} };
+  }
+  return null;
 }
 
 function moduleFromHelpCommand(command) {
@@ -4750,21 +4778,21 @@ function voiceToolTokens(value = "") {
 function workflowVoiceAliases(workflow, action) {
   const key = `${workflow}:${action}`;
   const aliases = {
-    "learning:start": ["start course", "take course", "begin training", "learn"],
-    "learning:lesson": ["finish lesson", "complete lesson"],
-    "workforce:apply-role": ["apply for job", "apply for role", "get work"],
-    "workforce:shift": ["plan shift", "schedule shift"],
-    "health:intake": ["start intake", "need doctor", "health help"],
-    "health:provider": ["contact provider", "talk to provider", "telehealth provider"],
+    "learning:start": ["start course", "take course", "begin training", "learn", "teach me", "school help", "class start", "i want learn", "learn please"],
+    "learning:lesson": ["finish lesson", "complete lesson", "lesson done", "finish class"],
+    "workforce:apply-role": ["apply for job", "apply for role", "get work", "job please", "i want work", "work help", "need money work", "job apply"],
+    "workforce:shift": ["plan shift", "schedule shift", "work time", "job schedule"],
+    "health:intake": ["start intake", "need doctor", "health help", "doctor help", "i sick", "i am sick", "pain help", "clinic help", "medicine help"],
+    "health:provider": ["contact provider", "talk to provider", "telehealth provider", "talk doctor", "speak doctor", "call doctor", "doctor now"],
     "health:representative": ["connect representative", "connect provider", "reach doctor", "reach nurse"],
-    "health:safety": ["check region", "hotspot", "health risk"],
-    "trade:order": ["sell crop", "create order", "crop sale"],
-    "trade:buyer-contact": ["contact buyer", "talk to buyer", "buyer contact"],
-    "trade:buyer-message": ["message buyer", "chat buyer"],
+    "health:safety": ["check region", "hotspot", "health risk", "area safe", "sickness near me", "disease area"],
+    "trade:order": ["sell crop", "create order", "crop sale", "sell food", "sell maize", "sell produce", "market crop"],
+    "trade:buyer-contact": ["contact buyer", "talk to buyer", "buyer contact", "crop buyer", "maize buyer", "find buyer", "buyer for crop", "sell to buyer"],
+    "trade:buyer-message": ["message buyer", "chat buyer", "talk buyer", "buyer message"],
     "trade:buyer-whatsapp": ["whatsapp buyer", "call buyer"],
     "trade:buyer-sms": ["sms buyer", "text buyer"],
-    "trade:advance": ["track delivery", "track shipment", "advance order"],
-    "trade:drone": ["run drone scan", "scan farm", "check field"],
+    "trade:advance": ["track delivery", "track shipment", "advance order", "where my product", "track my product", "track my sale", "track sale and product"],
+    "trade:drone": ["run drone scan", "scan farm", "check field", "farm check", "drone farm", "check crop field"],
     "trade:drone-plan": ["plan drone mission", "flight plan"],
     "map:facility-route": ["find facility", "clinic route", "health facility"],
     "map:risk-layer": ["risk layer", "map risk"],
@@ -5079,6 +5107,11 @@ function voiceCommandGroups() {
         "Nexus, show voice help",
         "Nexus, what can I say in telehealth",
         "Nexus, what can AgriTrade do",
+        "Nexus, doctor help",
+        "Nexus, job please",
+        "Nexus, sell crop",
+        "Nexus, where my product",
+        "Nexus, teach me",
         "Good morning AgriNexus",
         "Nexus, what just happened",
         "Nexus, run full mission",
@@ -6218,6 +6251,8 @@ function simpleUserCommandWorkflow(command = "") {
   const lower = String(command || "").toLowerCase();
   const roleId = firstEligibleRole()?.id;
   const productId = firstProduct()?.id;
+  const migrantIntent = migrantFriendlyVoiceIntent(command);
+  if (migrantIntent) return migrantIntent;
   if (lower.includes("start training") || lower.includes("start a course")) return { workflow: "learning", action: "start", response: "Course start is ready.", dataset: {} };
   if (lower.includes("complete my lesson") || lower.includes("finish lesson")) return { workflow: "learning", action: "lesson", response: "Lesson completion is ready.", dataset: {} };
   if (lower.includes("issue my certificate") || lower.includes("certificate")) return { section: "learning", config: learningCertificateWorkflowConfig(), response: "Certificate workflow is ready." };
@@ -9999,6 +10034,11 @@ async function handleVoiceCommand(rawCommand) {
   if (isUniversalLanguageCommand(command)) {
     await changeLanguageByVoice(command);
     return;
+  }
+  const migrantIntent = migrantFriendlyVoiceIntent(command);
+  if (migrantIntent) {
+    if (migrantIntent.section && canOpenSection(migrantIntent.section)) goSection(migrantIntent.section);
+    return openWorkflowByVoice(migrantIntent.workflow, migrantIntent.action, migrantIntent.response, migrantIntent.dataset || {});
   }
   if (/\b(voice persona|how will you talk|conversation style|who are you in this mode)\b/.test(lower)) {
     setVoiceResponse(modeSpecificVoicePersona(), true);
