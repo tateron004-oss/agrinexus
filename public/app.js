@@ -2199,8 +2199,8 @@ function runUserModeSelfTest() {
       if (!simpleUserCommandWorkflow(button.command)) missing.push(`${section}: ${button.label}`);
     });
   });
-  const currentScript = [...document.scripts].some(script => String(script.src || "").includes("nexus-behavior-100"));
-  const currentStyle = [...document.styleSheets].some(sheet => String(sheet.href || "").includes("nexus-behavior-100"));
+  const currentScript = [...document.scripts].some(script => String(script.src || "").includes("nexus-behavior-101"));
+  const currentStyle = [...document.styleSheets].some(sheet => String(sheet.href || "").includes("nexus-behavior-101"));
   if (!currentScript || !currentStyle) missing.push("new app files");
   const ok = missing.length === 0;
   const message = ok
@@ -2393,13 +2393,14 @@ function migrantFriendlyVoiceIntent(command = "") {
   const productId = firstProduct()?.id;
   const roleId = firstEligibleRole()?.id;
   const hasAny = words => words.some(word => new RegExp(`\\b${word}\\b`).test(lower));
-  const hasCrop = hasAny(["crop", "crops", "maize", "corn", "rice", "cassava", "yam", "beans", "food", "produce", "harvest", "farm"]);
-  const hasBuyer = hasAny(["buyer", "buy", "market", "sell", "sale", "customer"]);
-  if (hasCrop && hasAny(["where", "track", "route", "road", "delivery", "deliver", "product", "shipment", "move", "moving"])) {
-    return { workflow: "ai", action: "route", section: "map", response: "I opened the map to track your sale, product, route, and delivery.", dataset: {} };
+  const hasProduct = hasAny(["crop", "crops", "maize", "corn", "rice", "cassava", "yam", "beans", "food", "produce", "harvest", "farm", "product", "products", "goods", "item", "items", "order"]);
+  const hasTrade = hasAny(["buyer", "buy", "buying", "purchase", "sell", "selling", "sale", "seller", "customer", "market", "transaction", "payment"]);
+  const hasTracking = hasAny(["where", "track", "tracking", "trace", "route", "road", "delivery", "deliver", "location", "locate", "shipment", "move", "moving", "transaction"]);
+  if (hasProduct && hasTrade && hasTracking) {
+    return { workflow: "ai", action: "route", section: "map", response: "I opened the map to track your product, transaction, sale route, and delivery location.", dataset: {} };
   }
-  if (hasCrop && hasBuyer) {
-    return { workflow: "trade", action: "buyer-contact", section: "trade", response: "I opened Trade to help sell your crop and contact a buyer.", dataset: { productId } };
+  if (hasProduct && hasTrade) {
+    return { workflow: "trade", action: "buyer-contact", section: "trade", response: "I opened Trade to help buy or sell the product and contact the buyer or seller.", dataset: { productId } };
   }
   if (hasAny(["doctor", "nurse", "clinic", "hospital", "sick", "pain", "medicine", "health", "care", "provider"])) {
     return { workflow: "health", action: hasAny(["call", "talk", "speak", "message", "provider", "doctor", "nurse"]) ? "provider" : "intake", section: "health", response: "I opened Health to help with care. I will guide this step slowly.", dataset: {} };
@@ -4786,17 +4787,17 @@ function workflowVoiceAliases(workflow, action) {
     "health:provider": ["contact provider", "talk to provider", "telehealth provider", "talk doctor", "speak doctor", "call doctor", "doctor now"],
     "health:representative": ["connect representative", "connect provider", "reach doctor", "reach nurse"],
     "health:safety": ["check region", "hotspot", "health risk", "area safe", "sickness near me", "disease area"],
-    "trade:order": ["sell crop", "create order", "crop sale", "sell food", "sell maize", "sell produce", "market crop"],
-    "trade:buyer-contact": ["contact buyer", "talk to buyer", "buyer contact", "crop buyer", "maize buyer", "find buyer", "buyer for crop", "sell to buyer"],
+    "trade:order": ["sell crop", "create order", "crop sale", "sell food", "sell maize", "sell produce", "market crop", "buy product", "sell product", "product order", "create transaction"],
+    "trade:buyer-contact": ["contact buyer", "talk to buyer", "buyer contact", "crop buyer", "maize buyer", "find buyer", "buyer for crop", "sell to buyer", "seller contact", "buyer seller", "buy from seller"],
     "trade:buyer-message": ["message buyer", "chat buyer", "talk buyer", "buyer message"],
     "trade:buyer-whatsapp": ["whatsapp buyer", "call buyer"],
     "trade:buyer-sms": ["sms buyer", "text buyer"],
-    "trade:advance": ["track delivery", "track shipment", "advance order", "where my product", "track my product", "track my sale", "track sale and product"],
+    "trade:advance": ["track delivery", "track shipment", "advance order", "where my product", "track my product", "track my sale", "track sale and product", "track transaction", "track location", "where is my order", "where is my transaction", "product location"],
     "trade:drone": ["run drone scan", "scan farm", "check field", "farm check", "drone farm", "check crop field"],
     "trade:drone-plan": ["plan drone mission", "flight plan"],
     "map:facility-route": ["find facility", "clinic route", "health facility"],
     "map:risk-layer": ["risk layer", "map risk"],
-    "ai:route": ["route intelligence", "route risk", "track route"],
+    "ai:route": ["route intelligence", "route risk", "track route", "track transaction location", "track product location", "sale location", "delivery location"],
     "ai:orchestrate": ["what should i do next", "next move", "orchestrate"],
     "integrations:test-all": ["test engines", "run live service check", "provider check"],
     "admin:health-check": ["run health check", "admin health check", "production check"]
@@ -5110,7 +5111,10 @@ function voiceCommandGroups() {
         "Nexus, doctor help",
         "Nexus, job please",
         "Nexus, sell crop",
+        "Nexus, buy product",
+        "Nexus, sell product",
         "Nexus, where my product",
+        "Nexus, track transaction location",
         "Nexus, teach me",
         "Good morning AgriNexus",
         "Nexus, what just happened",

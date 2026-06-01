@@ -185,8 +185,8 @@ assert(html.includes("nexusBehaviorStatus"), "User voice dock needs an assistant
 assert(html.includes('data-user-voice-action="listen"'), "User voice dock needs a speak action");
 assert(html.includes('data-user-voice-action="type"'), "User voice dock needs a type action");
 assert(html.includes('data-user-voice-action="read"'), "User voice dock needs a read action");
-assert(html.includes("nexus-behavior-100"), "Index must force browsers to load Nexus behavior CSS");
-assert(html.includes("nexus-behavior-100"), "Index must force browsers to load Nexus behavior JS");
+assert(html.includes("nexus-behavior-101"), "Index must force browsers to load Nexus behavior CSS");
+assert(html.includes("nexus-behavior-101"), "Index must force browsers to load Nexus behavior JS");
 assert(app.includes("I want to sell maize"), "Nexus behavior layer should support natural trade requests without button hunting");
 assert(app.includes("I need a doctor"), "Nexus behavior layer should support natural telehealth requests without button hunting");
 assert(app.includes("function allModeVoiceCommandCatalog"), "Nexus needs an explicit all-mode voice command contract");
@@ -197,8 +197,11 @@ assert(app.includes("function migrantFriendlyVoiceIntent"), "Voice layer needs m
 assert(app.includes("doctor help"), "Voice help needs migrant-friendly health phrasing");
 assert(app.includes("job please"), "Voice help needs migrant-friendly workforce phrasing");
 assert(app.includes("where my product"), "Voice help needs migrant-friendly product tracking phrasing");
+assert(app.includes("track transaction location"), "Voice help needs transaction and location tracking phrasing");
+assert(app.includes("buy product"), "Voice help needs product buying phrasing");
 assert(app.includes("i sick"), "Voice aliases need imperfect-English telehealth support");
 assert(app.includes("crop buyer"), "Voice aliases need imperfect-English trade support");
+assert(app.includes("I opened the map to track your product, transaction, sale route, and delivery location."), "Migrant-friendly trade tracking must open map route support");
 assert(app.includes("function dynamicVoiceToolRegistry"), "Nexus needs a dynamic voice tool registry for unlimited-menu behavior");
 assert(app.includes("function bestDynamicVoiceTool"), "Nexus needs dynamic tool scoring for natural commands");
 assert(app.includes("await runDynamicVoiceTool(command)"), "Voice handler must try registered workflow tools before generic AI fallback");
