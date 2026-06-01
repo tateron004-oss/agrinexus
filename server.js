@@ -4156,6 +4156,39 @@ function createDroneMission(db, { productId, source = "operator", fieldZone, obj
   return mission;
 }
 
+function plainDroneInterpretation(db, scan = {}, finding = null) {
+  const { country, route } = activeContext(db);
+  const health = Number(scan.cropHealthScore || 0);
+  const crop = scan.productName || "your crop";
+  const stress = String(scan.stressAlert || finding?.issueType || "").toLowerCase();
+  const isPriority = health < 70 || /high|stress|risk|priority|heat/.test(stress) || finding?.severity === "priority";
+  const isStrong = health >= 82 && !isPriority;
+  const meaning = isPriority
+    ? `${crop} needs attention. The field scan shows stress, so do not rush the crop to sale until someone checks the problem area.`
+    : isStrong
+      ? `${crop} looks mostly healthy. Keep watching the field and prepare buyer or harvest steps carefully.`
+      : `${crop} is in the middle range. It is not an emergency, but the farmer should check water, pests, and crop quality before selling.`;
+  const nextStep = isPriority
+    ? country.heat >= 38
+      ? "Water or inspect the hottest, driest rows early in the morning, then send a field worker to take photos."
+      : "Send a field worker to check the stressed area, look for pests, and take close-up photos."
+    : isStrong
+      ? "Prepare the buyer update, keep the route ready, and do one more quality check before pickup."
+      : "Check irrigation, scout for pests, and wait for better quality evidence before promising delivery.";
+  const watch = isPriority
+    ? "Watch for yellow leaves, dry soil, pest damage, wilting, or heat stress."
+    : "Watch route timing, quality, water level, and buyer pickup date.";
+  const routeLine = `Route note: ${route.name} is the active route, so check road risk before moving the crop.`;
+  return {
+    level: isPriority ? "needs-attention" : isStrong ? "mostly-good" : "watch",
+    summary: `${meaning} ${nextStep} ${routeLine}`,
+    meaning,
+    nextStep,
+    watch,
+    routeLine
+  };
+}
+
 function createDroneScan(db, { productId, source = "operator", fieldZone, scanType } = {}) {
   ensureTradeProfile(db.profile);
   const { country, route } = activeContext(db);
@@ -4180,6 +4213,7 @@ function createDroneScan(db, { productId, source = "operator", fieldZone, scanTy
     createdBy: source,
     createdAt: new Date().toISOString()
   };
+  const plain = plainDroneInterpretation(db, scan, null);
   const finding = {
     id: crypto.randomUUID(),
     findingRef: `AN-FIND-${country.id.toUpperCase()}-${String((db.profile.droneFindings || []).length + 1).padStart(3, "0")}`,
@@ -4191,9 +4225,17 @@ function createDroneScan(db, { productId, source = "operator", fieldZone, scanTy
     severity: cropHealthScore < 70 || stress.includes("High") ? "priority" : "watch",
     evidence: `${scan.scanType}: ${cropHealthScore}% crop health, ${stress}, ${scan.yieldEstimate}.`,
     recommendedAction: scan.recommendation,
+    farmerMeaning: plain.meaning,
+    farmerNextStep: plain.nextStep,
+    farmerWarnings: plain.watch,
     interventionStatus: "awaiting-field-task",
     createdAt: new Date().toISOString()
   };
+  const finalPlain = plainDroneInterpretation(db, scan, finding);
+  scan.farmerSummary = finalPlain.summary;
+  scan.simpleMeaning = finalPlain.meaning;
+  scan.simpleNextStep = finalPlain.nextStep;
+  scan.simpleWatch = finalPlain.watch;
   db.profile.droneScans.unshift(scan);
   db.profile.droneScans = db.profile.droneScans.slice(0, 20);
   db.profile.droneFindings.unshift(finding);
@@ -4213,6 +4255,7 @@ function createDroneScan(db, { productId, source = "operator", fieldZone, scanTy
     detail: `${scan.scanRef} drone field intelligence created for ${scan.productName}.`,
     metadata: { scanId: scan.id, findingId: finding.id, productId: product.id, countryId: country.id, cropHealthScore: scan.cropHealthScore, source }
   });
+  rememberAgentMemory(db.profile, `Drone scan for ${scan.productName}: ${scan.simpleMeaning} Next step: ${scan.simpleNextStep}`, { source: "drone-plain-language", category: "pattern", module: "AgriTrade", confidence: 0.9 });
   return { scan, finding };
 }
 
@@ -5461,9 +5504,14 @@ function longTermMemorySummary(profile) {
     ...(memory.longTermFacts || []),
     ...(memory.safetyBoundaries || [])
   ];
-  const topMemories = core
-    .sort((a, b) => String(b.updatedAt || "").localeCompare(String(a.updatedAt || "")))
-    .slice(0, 5);
+  const preferred = (memory.preferences || []).slice(0, 3);
+  const preferredIds = new Set(preferred.map(item => item.id));
+  const topMemories = [
+    ...preferred,
+    ...core
+      .filter(item => !preferredIds.has(item.id))
+      .sort((a, b) => String(b.updatedAt || "").localeCompare(String(a.updatedAt || "")))
+  ].slice(0, 5);
   const summary = {
     total: core.length,
     modules: moduleNames.map(name => ({ name, count: (memory.moduleMemory[name] || []).length })).sort((a, b) => b.count - a.count),
@@ -7666,6 +7714,102 @@ async function dailyLifeAdvisorResponse(db, user, text, lower, options = {}) {
   };
 }
 
+function simplePlatformDataBrief(db, text = "") {
+  const lower = String(text || "").toLowerCase();
+  const { country, route } = activeContext(db);
+  const scan = (db.profile.droneScans || [])[0];
+  const finding = (db.profile.droneFindings || [])[0];
+  const course = (db.courses || []).find(item => item.id === db.profile.activeCourseId) || (db.courses || [])[0];
+  const role = (db.roles || []).find(item => roleReadiness(db.profile, item).eligible) || (db.roles || [])[0];
+  const product = (db.products || []).find(item => item.countryId === country.id) || (db.products || [])[0];
+  if (/\b(drone|field scan|scan data|crop data|aerial|farm data)\b/.test(lower)) {
+    const plain = scan ? plainDroneInterpretation(db, scan, finding) : null;
+    return {
+      module: "AgriTrade",
+      section: "trade",
+      title: "Drone data in simple words",
+      response: plain
+        ? `Here is the drone data in farmer language: ${plain.meaning} What to do first: ${plain.nextStep} What to watch: ${plain.watch} ${plain.routeLine}`
+        : `No drone scan has been run yet. Simple next step: scan the field first, then I will tell the farmer if ${product?.name || "the crop"} looks healthy, needs water, may have pests, or should wait before sale.`,
+      status: scan ? "completed" : "needs-scan"
+    };
+  }
+  if (/\b(health|telehealth|patient|care|vitals|outbreak)\b/.test(lower)) {
+    const latest = (db.profile.healthIntakes || [])[0];
+    return {
+      module: "Healthcare",
+      section: "health",
+      title: "Health data in simple words",
+      response: latest
+        ? `Simple health meaning: this person has a recorded care need for ${latest.needSummary || "support"}. Next step: keep the intake clear, use captions or audio if needed, and connect to a provider or emergency help if symptoms are urgent.`
+        : "No health intake is active yet. Simple next step: start intake, ask what happened, record location and contact support, then connect to a provider if needed.",
+      status: latest ? "completed" : "needs-intake"
+    };
+  }
+  if (/\b(lesson|course|learning|student|learner|training)\b/.test(lower)) {
+    return {
+      module: "Learning",
+      section: "learning",
+      title: "Learning data in simple words",
+      response: `Simple learning meaning: the active path is ${course?.title || "the selected course"}. Next step: start or continue one lesson, add captions or audio if needed, then complete a short check before the certificate.`,
+      status: "completed"
+    };
+  }
+  if (/\b(job|work|worker|workforce|role|shift|application)\b/.test(lower)) {
+    return {
+      module: "Workforce",
+      section: "workforce",
+      title: "Workforce data in simple words",
+      response: `Simple workforce meaning: the best current role to review is ${role?.title || "the selected role"}. Next step: check readiness gaps, apply if eligible, then prepare interview and shift support.`,
+      status: "completed"
+    };
+  }
+  if (/\b(route|map|delivery|shipment|location|road)\b/.test(lower)) {
+    return {
+      module: "Maps",
+      section: "map",
+      title: "Map data in simple words",
+      response: `Simple map meaning: active country is ${country.name}, active route is ${route.name}, checkpoint is ${db.profile.activeCheckpoint}. Next step: check route risk before moving people, crops, medicine, or workers.`,
+      status: "completed"
+    };
+  }
+  return {
+    module: "Agent AI",
+    section: "agent",
+    title: "Platform data in simple words",
+    response: "Simple meaning: Nexus can translate platform data into plain next steps. Tell me the area: drone, crop, health, learning, jobs, map, buyer, route, or provider status.",
+    status: "needs-area"
+  };
+}
+
+function isSimpleDataExplanation(lower) {
+  return /\b(explain|interpret|make|say|translate|summarize|read)\b.*\b(simple|plain|farmer language|grandma|easy|data|drone data|scan data|field data|what does.*mean)\b/.test(String(lower || ""))
+    || /\b(what does|what do).*\b(drone|scan|field|data|health score|crop health|map|route|course|job).*\b(mean|say)\b/.test(String(lower || ""));
+}
+
+function simpleDataExplanationResponse(db, user, text, lower) {
+  const brief = simplePlatformDataBrief(db, text);
+  rememberAgentMemory(db.profile, `${brief.title}: ${brief.response}`, { source: "simple-data-interpreter", category: "pattern", module: brief.module, confidence: 0.88 });
+  db.profile.agentMemory.activeModule = brief.module;
+  db.profile.agentMemory.lastStatus = "simple-data-interpreted";
+  db.profile.agentMemory.lastSummary = brief.response;
+  db.profile.agentMemory.updatedAt = new Date().toISOString();
+  logIntegration(db, {
+    providerId: "openai",
+    module: brief.module,
+    action: "agent.simple_data_interpreted",
+    detail: brief.title,
+    metadata: { command: text, status: brief.status },
+    dispatch: false
+  });
+  return {
+    intent: "conversation.simple_data_interpretation",
+    response: brief.response,
+    status: brief.status,
+    metadata: { conversationMode: true, redirectSection: brief.section, module: brief.module, title: brief.title }
+  };
+}
+
 async function moduleGreetingResponse(db, user, text, lower) {
   const isGreeting = /^(hi|hello|hey|good morning|good afternoon|good evening)\b/.test(lower);
   const isTradeAddressed = /\b(agritrade|agri\s*trade)\b/.test(lower);
@@ -7827,6 +7971,10 @@ async function runAgentCommand(db, user, command, options = {}) {
 
   if (/(track|follow|watch).*(my\s+)?route/.test(lower) && /(real time|realtime|live|gps|location)/.test(lower)) {
     return liveRouteTrackingResponse(db, user, text);
+  }
+
+  if (isSimpleDataExplanation(lower)) {
+    return simpleDataExplanationResponse(db, user, text, lower);
   }
 
   if (isDailyAdvisorQuestion(lower)) {

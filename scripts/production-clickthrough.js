@@ -240,6 +240,8 @@ assert(server.includes("function aiReasoningSnapshot"), "Backend needs a memory-
 assert(server.includes("reasoningHistory") && app.includes("optionsConsidered"), "Agent reasoning must preserve decision history and options considered");
 assert(server.includes("function dailyLifeAdvisorResponse"), "Backend needs day-to-day advisor reasoning for farmers, learners, workers, and grandma support");
 assert(server.includes("DAILY_CONTEXT_WEBHOOK_URL") && server.includes("WEATHER_WEBHOOK_URL"), "Daily advisor must support live weather/context providers when configured");
+assert(server.includes("function plainDroneInterpretation"), "Drone intelligence must be translated into simple farmer language");
+assert(server.includes("conversation.simple_data_interpretation"), "Voice agent must explain drone and platform data in plain language");
 assert(server.includes("function updateConversationUserModel"), "Conversation brain must learn user context and preferences");
 assert(server.includes("function conversationFollowUpResponse"), "Conversation brain must support natural follow-up commands");
 assert(server.includes("function socialConversationResponse"), "Conversation brain must support human social turns");

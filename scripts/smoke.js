@@ -441,8 +441,14 @@ async function call(path, body) {
   assert(drone.profile.droneScans.length >= 1);
   assert(drone.profile.droneFindings.length >= 1);
   assert(drone.profile.droneScans[0].cropHealthScore >= 55);
+  assert(drone.profile.droneScans[0].farmerSummary);
+  assert(drone.profile.droneFindings[0].farmerNextStep);
   assert(drone.profile.integrationEvents.some(event => event.action === "drone.field_scan"));
   assert(drone.profile.mapInsights.some(item => item.type === "drone-field-scan"));
+  const droneSimple = await call("/api/agent/command", { command: "Nexus, explain the drone data in simple farmer language", conversational: true, inputMode: "voice", outputMode: "voice" });
+  assert(droneSimple.commandResult.intent === "conversation.simple_data_interpretation");
+  assert(droneSimple.commandResult.metadata.redirectSection === "trade");
+  assert(/farmer|crop|field|water|pest|route|buyer|sale/i.test(droneSimple.commandResult.response));
   const droneIntervention = await call("/api/trade/drone-intervention", {});
   assert(droneIntervention.profile.fieldInterventions.length >= 1);
   assert(droneIntervention.profile.integrationEvents.some(event => event.action === "drone.intervention_task"));
