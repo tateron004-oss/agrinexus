@@ -2382,8 +2382,8 @@ function runUserModeSelfTest() {
       if (!simpleUserCommandWorkflow(button.command)) missing.push(`${section}: ${button.label}`);
     });
   });
-  const currentScript = [...document.scripts].some(script => String(script.src || "").includes("nexus-behavior-119"));
-  const currentStyle = [...document.styleSheets].some(sheet => String(sheet.href || "").includes("nexus-behavior-119"));
+  const currentScript = [...document.scripts].some(script => String(script.src || "").includes("nexus-behavior-120"));
+  const currentStyle = [...document.styleSheets].some(sheet => String(sheet.href || "").includes("nexus-behavior-120"));
   if (!currentScript || !currentStyle) missing.push("new app files");
   const ok = missing.length === 0;
   const message = ok
@@ -6732,8 +6732,21 @@ function openMappedUserWorkflow(mapped, sectionId = currentSectionId()) {
     return true;
   }
   const config = mapped.config || workflowConfig(mapped.workflow, mapped.action, { dataset: mapped.dataset || {} });
-  if (!config) return false;
-  openWorkflowModal(config);
+  if (!config) {
+    const message = "Nexus could not build that workflow. Choose another action or ask Nexus in your own words.";
+    $(`#${sectionId} .user-module-status`) && ($(`#${sectionId} .user-module-status`).textContent = translateText(message));
+    toast(message);
+    return false;
+  }
+  try {
+    openWorkflowModal(config);
+  } catch (error) {
+    const message = `Workflow window could not open: ${error.message || "unknown error"}`;
+    console.error(message, error);
+    $(`#${sectionId} .user-module-status`) && ($(`#${sectionId} .user-module-status`).textContent = translateText(message));
+    toast(message);
+    return false;
+  }
   if (experienceMode === "user") {
     $(`#${sectionId} .user-inline-workflow`)?.classList.add("hidden");
     $(`#${sectionId} .user-module-status`) && ($(`#${sectionId} .user-module-status`).textContent = translateText("Workflow window opened. Choose Yes or No."));
@@ -11771,9 +11784,9 @@ async function runSimpleAction(eventOrButton) {
       const mapped = simpleUserCommandWorkflow(button.dataset.simpleCommand);
       if (mapped) {
         if (status) status.textContent = `${label} opened. Review the details and choose Yes or No.`;
-        const targetSection = mapped.section || (mapped.workflow === "ai" ? "agent" : mapped.workflow === "map" ? "map" : mapped.workflow);
-        goSection(targetSection, { keepAssistant: false });
-        openMappedUserWorkflow(mapped, targetSection);
+        const targetSection = mapped.section || currentSectionId() || (mapped.workflow === "ai" ? "agent" : mapped.workflow === "map" ? "map" : mapped.workflow);
+        const opened = openMappedUserWorkflow(mapped, targetSection);
+        if (!opened && $("#simpleActionStatus")) $("#simpleActionStatus").textContent = `${label} needs attention. Ask Nexus in your own words or choose another action.`;
         return;
       }
       setCommandInputs(button.dataset.simpleCommand);
