@@ -26,6 +26,7 @@ const requirements = [
   ["migrant-friendly clarification", app.includes("function guideAmbiguousUserWithoutChoice") && app.includes("You do not need perfect words") && app.includes("Nexus is guiding without forcing a choice")],
   ["easy conversation tone", app.includes("Just tell me what you need") && app.includes("You can keep talking") && app.includes("Talk to me naturally")],
   ["advisor brain health and field intelligence", app.includes("function handleAdvisorBrainCommand") && app.includes("I am treating this as urgent") && app.includes("advisorCropCalendarAdvice") && app.includes("crop stress, water, pest risk, yield")],
+  ["advisor brain all modules", app.includes("learnerSupport") && app.includes("workforceSupport") && app.includes("mapSupport") && app.includes("adminSupport") && app.includes("integrationSupport") && app.includes("investorSupport")],
   ["guided next-step journey", app.includes("activeAgentJourney") && app.includes("function setActiveAgentJourney") && app.includes("function runActiveAgentNextStep")],
   ["voice follow-through command", app.includes("say next step to continue") && app.includes("continue journey") && app.includes("Guided journey cleared")],
   ["operator coaching layer", app.includes("function nexusOperatorCoach") && app.includes("function operatorCoachSuggestions") && app.includes("Operator coach")],

@@ -2199,8 +2199,8 @@ function runUserModeSelfTest() {
       if (!simpleUserCommandWorkflow(button.command)) missing.push(`${section}: ${button.label}`);
     });
   });
-  const currentScript = [...document.scripts].some(script => String(script.src || "").includes("nexus-behavior-108"));
-  const currentStyle = [...document.styleSheets].some(sheet => String(sheet.href || "").includes("nexus-behavior-108"));
+  const currentScript = [...document.scripts].some(script => String(script.src || "").includes("nexus-behavior-109"));
+  const currentStyle = [...document.styleSheets].some(sheet => String(sheet.href || "").includes("nexus-behavior-109"));
   if (!currentScript || !currentStyle) missing.push("new app files");
   const ok = missing.length === 0;
   const message = ok
@@ -2434,6 +2434,12 @@ function advisorBrainSignals(command = "") {
     latestFinding,
     emergency: has(["emergency", "injury", "injured", "hurt", "bleeding", "fall", "fell", "unconscious", "breathing", "breathe", "accident", "severe", "urgent", "danger"]),
     mediaIntake: has(["photo", "picture", "image", "video", "camera", "show", "see"]) && has(["injury", "wound", "rash", "swelling", "hurt", "pain", "telehealth", "doctor", "provider"]),
+    learnerSupport: has(["student", "learner", "learn", "learning", "course", "lesson", "class", "study", "quiz", "assignment", "certificate", "confused", "stuck", "read", "audio", "caption"]),
+    workforceSupport: has(["job", "work", "worker", "role", "apply", "application", "interview", "mentor", "shift", "timesheet", "pay", "skills", "readiness"]),
+    mapSupport: has(["map", "route", "road", "facility", "clinic", "location", "where", "direction", "risk layer", "checkpoint", "corridor"]),
+    adminSupport: has(["admin", "operator", "readiness", "health check", "audit", "subscriber", "users", "production", "risk", "governance"]),
+    integrationSupport: has(["integration", "provider", "engine", "credential", "openai", "twilio", "postgres", "billing", "sms", "whatsapp", "email", "map tile", "service check"]),
+    investorSupport: has(["investor", "funding", "partner", "government", "pitch", "demo", "impact", "evidence", "presentation", "support"]),
     cropCalendar: has(["plant", "planting", "harvest", "harvesting", "season", "rain", "weather", "best time", "when"]) && has(["crop", "maize", "corn", "rice", "cassava", "yam", "beans", "farm", "field"]),
     cropSpoilage: has(["bad", "going bad", "spoil", "spoiling", "rot", "disease", "pest", "yellow", "dry", "stress", "weak", "dying", "not growing"]) && has(["crop", "crops", "field", "farm", "plant", "maize", "rice", "cassava", "yam", "beans"]),
     droneReview: has(["drone", "footage", "scan", "aerial", "field video", "camera"]) && has(["crop", "field", "farm", "stress", "bad", "water", "pest", "yield", "harvest"])
@@ -2454,12 +2460,12 @@ function advisorBrainSummary(command = "") {
   const country = signals.country?.name || "your area";
   const scan = signals.latestScan ? `${signals.latestScan.cropHealthScore}% crop health` : "no drone scan yet";
   const finding = signals.latestFinding?.finding || "no field finding yet";
-  return `Advisor Brain is watching health, crop, route, drone, and provider context. For ${country}, the active crop is ${crop}, the latest scan is ${scan}, and the latest field finding is ${finding}. Tell me what happened and I will choose the safest next step.`;
+  return `Advisor Brain is watching learning, work, health, crop, route, drone, provider, admin, and investor context. For ${country}, the active crop is ${crop}, the latest scan is ${scan}, and the latest field finding is ${finding}. Tell me what happened and I will choose the safest next step.`;
 }
 
 function handleAdvisorBrainCommand(command = "") {
   const signals = advisorBrainSignals(command);
-  if (!(signals.emergency || signals.mediaIntake || signals.cropCalendar || signals.cropSpoilage || signals.droneReview || /\b(advisor brain|farm advisor|what should i know|help the farmer|be smarter|protect farmer)\b/.test(signals.lower))) return false;
+  if (!(signals.emergency || signals.mediaIntake || signals.learnerSupport || signals.workforceSupport || signals.mapSupport || signals.adminSupport || signals.integrationSupport || signals.investorSupport || signals.cropCalendar || signals.cropSpoilage || signals.droneReview || /\b(advisor brain|brain advisor|smart advisor|what should i know|be smarter|protect farmer|help the student|help the learner|help the worker|help the operator|help the investor)\b/.test(signals.lower))) return false;
   pendingAgentClarification = null;
   if (signals.emergency) {
     goSection("health");
@@ -2478,6 +2484,31 @@ function handleAdvisorBrainCommand(command = "") {
       mediaNote: "Photo/video evidence requested during intake. Use device camera or upload outside the browser, then describe what the provider should review."
     });
   }
+  if (signals.learnerSupport) {
+    goSection("learning");
+    renderLiveVoiceSuggestions(["start a course", "complete my lesson", "build captions", "issue certificate"]);
+    if (signals.lower.includes("caption") || signals.lower.includes("cannot hear")) {
+      openWorkflowModal(learningAccessibilityWorkflowConfig("caption"));
+      setVoiceResponse("I opened Learning Advisor support for captions. Nexus will help the learner read, hear, and understand the lesson.", true);
+      return true;
+    }
+    if (signals.lower.includes("audio") || signals.lower.includes("cannot see") || signals.lower.includes("vision")) {
+      openWorkflowModal(learningAccessibilityWorkflowConfig("visual"));
+      setVoiceResponse("I opened Learning Advisor support for audio guidance. Nexus will help the learner hear the lesson and follow the steps.", true);
+      return true;
+    }
+    if (signals.lower.includes("certificate")) {
+      openWorkflowModal(learningCertificateWorkflowConfig());
+      setVoiceResponse("I opened Learning Advisor support for the certificate. Nexus will check course progress and credential readiness.", true);
+      return true;
+    }
+    return openWorkflowByVoice("learning", signals.lower.includes("quiz") ? "quiz-attempt" : signals.lower.includes("assignment") ? "assignment" : "start", "I opened Learning Advisor support. Nexus will help the learner choose a course, understand the next lesson, add captions or audio support, and connect learning to work readiness.", {});
+  }
+  if (signals.workforceSupport) {
+    goSection("workforce");
+    renderLiveVoiceSuggestions(["show me jobs", "apply for job", "prepare interview", "review gaps"]);
+    return openWorkflowByVoice(signals.lower.includes("gap") || signals.lower.includes("skills") || signals.lower.includes("readiness") ? "ai" : "workforce", signals.lower.includes("interview") ? "interview" : signals.lower.includes("shift") ? "shift" : signals.lower.includes("mentor") ? "mentor" : signals.lower.includes("gap") || signals.lower.includes("skills") || signals.lower.includes("readiness") ? "workforce-coach" : "apply-role", "I opened Workforce Advisor support. Nexus will help review skills, pick a role, apply, prepare interview steps, and guide the worker toward placement.", { roleId: firstEligibleRole()?.id });
+  }
   if (signals.cropSpoilage || signals.droneReview) {
     goSection("trade");
     renderLiveVoiceSuggestions(["confirm drone scan", "assign field task", "create irrigation plan", "pest alert"]);
@@ -2493,8 +2524,33 @@ function handleAdvisorBrainCommand(command = "") {
     setVoiceResponse(`${advisorCropCalendarAdvice(signals)} I can also scan the field or check the route before you plant or harvest.`, true);
     return true;
   }
+  if (signals.mapSupport) {
+    goSection("map");
+    renderLiveVoiceSuggestions(["check route risk", "find nearest health facility", "explain the map", "track my route"]);
+    return openWorkflowByVoice("map", signals.lower.includes("facility") || signals.lower.includes("clinic") ? "facility-route" : signals.lower.includes("risk") ? "risk-layer" : "disruption", "I opened Map Advisor support. Nexus will help with route risk, facility access, location context, and the safest next movement.", {});
+  }
+  if (signals.adminSupport) {
+    const brief = adminIntelligenceBrief();
+    goSection("admin");
+    renderLiveVoiceSuggestions(["run live service check", "run health check", "summarize audit", "review users"]);
+    setVoiceResponse(`Admin Advisor: ${brief.topRisk} My recommendation is: ${brief.recommendation}`, true);
+    return true;
+  }
+  if (signals.integrationSupport) {
+    goSection("integrations");
+    renderLiveVoiceSuggestions(["run live service check", "test provider engines", "message provider desk", "open integrations"]);
+    setVoiceResponse("Integration Advisor is checking provider readiness. Start with live service check, then review AI, voice, translation, maps, billing, SMS, WhatsApp, email, and database credentials.", true);
+    return true;
+  }
+  if (signals.investorSupport) {
+    const brief = investorIntelligenceBrief();
+    goSection(experienceMode === "user" ? "dashboard" : "agent");
+    renderLiveVoiceSuggestions(["explain this to investors", "run investor voice demo", "summarize impact", "export evidence"]);
+    setVoiceResponse(`Investor Advisor: strongest proof is ${brief.strongestMetric}. The next move is: ${brief.recommendation}`, true);
+    return true;
+  }
   goSection(experienceMode === "user" ? "dashboard" : "agent");
-  renderLiveVoiceSuggestions(["I need a doctor", "check my crop", "when should I harvest", "run drone scan"]);
+  renderLiveVoiceSuggestions(["I need a doctor", "help me learn", "I need work", "check my crop", "run live service check"]);
   setVoiceResponse(advisorBrainSummary(command), true);
   return true;
 }
