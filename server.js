@@ -4960,7 +4960,8 @@ function providerCandidateGroups() {
       module: "Learning",
       partnershipType: "learning",
       providerId: "learning-courses",
-      plainLanguage: "Connects real courses, lessons, progress, and certificates."
+      plainLanguage: "Connects short, practical courses rural African farmers can use on a phone: crop skills, business basics, safety, and certificates.",
+      ruralFarmerValue: "Helps farmers and family members learn in simple language without needing a formal classroom."
     },
     {
       id: "job-network",
@@ -4968,7 +4969,8 @@ function providerCandidateGroups() {
       module: "Workforce",
       partnershipType: "workforce",
       providerId: "workforce-jobs",
-      plainLanguage: "Connects real jobs, applications, interview steps, and placement evidence."
+      plainLanguage: "Connects rural workers to farm, logistics, health support, cooperative, and field-service jobs.",
+      ruralFarmerValue: "Helps farming families find income opportunities when crops are seasonal or markets are slow."
     },
     {
       id: "telehealth-provider",
@@ -4976,7 +4978,8 @@ function providerCandidateGroups() {
       module: "Healthcare",
       partnershipType: "telehealth",
       providerId: "health-telehealth",
-      plainLanguage: "Connects provider access, intake, callback, and care handoff workflows."
+      plainLanguage: "Connects remote patients to intake, callback, captions, caregiver support, and provider handoff.",
+      ruralFarmerValue: "Helps farmers and elders ask for health help when the clinic is far away or transport is limited."
     },
     {
       id: "ehr-fhir",
@@ -4984,7 +4987,8 @@ function providerCandidateGroups() {
       module: "Healthcare",
       partnershipType: "ehr",
       providerId: "health-ehr",
-      plainLanguage: "Connects consented health records and provider system handoffs."
+      plainLanguage: "Connects consented health records and provider handoffs when a clinic or health partner is involved.",
+      ruralFarmerValue: "Reduces repeated paperwork and helps a provider understand the patient history faster."
     },
     {
       id: "buyer-marketplace",
@@ -4992,7 +4996,8 @@ function providerCandidateGroups() {
       module: "AgriTrade",
       partnershipType: "trade",
       providerId: "trade-market",
-      plainLanguage: "Connects farmer crop offers, buyers, orders, and sale evidence."
+      plainLanguage: "Connects farmers to crop buyers, buyer messages, order records, and sale evidence.",
+      ruralFarmerValue: "Helps farmers sell crops beyond the nearest local middleman and prove what they are selling."
     },
     {
       id: "drone-data",
@@ -5000,7 +5005,8 @@ function providerCandidateGroups() {
       module: "AgriTrade",
       partnershipType: "drone",
       providerId: "field-drones",
-      plainLanguage: "Connects crop scans, satellite/drone evidence, and farmer field advice."
+      plainLanguage: "Connects satellite or drone scans to simple farmer advice about crop stress, pests, water, and harvest readiness.",
+      ruralFarmerValue: "Turns complex field imagery into plain guidance like water this section, watch for disease, or harvest soon."
     },
     {
       id: "logistics-payment",
@@ -5008,7 +5014,8 @@ function providerCandidateGroups() {
       module: "AgriTrade",
       partnershipType: "logistics",
       providerId: "trade-logistics",
-      plainLanguage: "Connects shipment tracking, delivery evidence, buyer payment, and payouts."
+      plainLanguage: "Connects shipment tracking, route evidence, delivery updates, buyer payment, and farmer payouts.",
+      ruralFarmerValue: "Lets farmers know where the crop is, whether it arrived, and when payment should happen."
     }
   ];
 }
@@ -5059,6 +5066,13 @@ function providerCandidateCatalog(db, providers = runtimeProviders(db)) {
     readyNow: candidates.filter(candidate => candidate.apiReady).length,
     partnershipNeeded: candidates.filter(candidate => !candidate.apiReady).length,
     shortlisted: candidates.filter(candidate => candidate.shortlisted).length,
+    focus: {
+      audience: "Rural African farmers and farming families",
+      operatingModel: "Voice-first, low-bandwidth, multilingual, phone-friendly support for crop sales, field advice, health access, learning, workforce, logistics, and payments.",
+      countryPriority: ["Nigeria", "DRC", "Kenya", "Egypt", "Ghana", "Rwanda", "Tanzania", "Uganda", "South Africa", "pan-African partners"],
+      mustWorkFor: ["smallholder farmers", "cooperatives", "rural elders", "low-literacy users", "hearing-impaired users", "visually-impaired users", "field agents"],
+      successDefinition: "A farmer can speak to Nexus, sell a crop, understand field risk, contact support, track delivery, learn a skill, and get health or workforce help without needing technical training."
+    },
     groups,
     candidates,
     nextBestActions: [

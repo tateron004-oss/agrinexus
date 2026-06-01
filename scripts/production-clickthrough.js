@@ -159,7 +159,10 @@ assert(server.includes("function providerCandidateCatalog"), "Backend must expos
 assert(server.includes("function shortlistProviderCandidate"), "Backend must shortlist provider candidates into platform evidence");
 assert(server.includes("provider.partnership_packet_created"), "Provider partnership packets must create audit evidence");
 assert(app.includes("providerPartnershipPanel"), "Frontend must render the latest provider partnership packets");
-assert(app.includes("Provider Candidate Pipeline"), "Frontend must show the real provider candidate pipeline");
+assert(server.includes("Rural African farmers and farming families"), "Provider catalog must be focused on rural African farmers");
+assert(server.includes("smallholder farmers"), "Provider catalog must account for smallholder farmers");
+assert(app.includes("Rural African Farmer Provider Pipeline"), "Frontend must show the rural African farmer provider pipeline");
+assert(app.includes("Rural Farmer Real Engine Pipeline"), "Frontend must show the rural farmer real engine pipeline");
 assert(app.includes('workflow === "provider-candidate"'), "Frontend must wire provider candidate buttons to a real shortlist workflow");
 assert(app.includes("/api/providers/candidates/shortlist"), "Frontend must call the provider shortlist endpoint");
 assert(app.includes("activeVoiceAudio"), "Voice playback needs a single active audio guard");

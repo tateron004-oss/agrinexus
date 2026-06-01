@@ -193,6 +193,11 @@ async function call(path, body) {
   assert(telehealthPartner.profile.integrationEvents.some(event => event.action === "provider.partnership_packet_created"));
   const providerCandidates = await call("/api/providers/candidates");
   assert(providerCandidates.total >= 20);
+  assert(providerCandidates.focus.audience === "Rural African farmers and farming families");
+  assert(providerCandidates.focus.countryPriority.includes("Nigeria"));
+  assert(providerCandidates.focus.countryPriority.includes("DRC"));
+  assert(providerCandidates.focus.mustWorkFor.includes("smallholder farmers"));
+  assert(providerCandidates.focus.successDefinition.includes("A farmer can speak to Nexus"));
   assert(providerCandidates.groups.some(group => group.id === "course-catalog"));
   assert(providerCandidates.groups.some(group => group.id === "job-network"));
   assert(providerCandidates.groups.some(group => group.id === "telehealth-provider"));

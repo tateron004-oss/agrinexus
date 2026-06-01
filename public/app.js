@@ -7726,6 +7726,7 @@ function render() {
     ? data.profile.integrationEvents.map(event => `<div><strong>${event.providerName}</strong><span>${event.action} - ${event.status}</span></div>`).join("")
     : "<div>No integration events yet. Run a workflow or test a provider.</div>";
   const providerCandidateGroups = data.providerCandidates?.groups || [];
+  const farmerFocus = data.providerCandidates?.focus || {};
   const providerPacketHtml = (data.profile.providerPartnerships || []).length
     ? data.profile.providerPartnerships.slice(0, 6).map(packet => `
       <div>
@@ -7750,8 +7751,10 @@ function render() {
   $("#providerPartnershipPanel").innerHTML = `
     ${providerPacketHtml}
     <div>
-      <strong>${translateText("Provider Candidate Pipeline")}</strong>
-      <span>${translateText("Real course, job, telehealth, EHR, marketplace, drone, logistics, and payment candidates are mapped to the platform engines.")}</span>
+      <strong>${translateText("Rural African Farmer Provider Pipeline")}</strong>
+      <span>${translateText(farmerFocus.operatingModel || "Real course, job, telehealth, EHR, marketplace, drone, logistics, and payment candidates are mapped to rural African farmer workflows.")}</span>
+      <small>${translateText(`Priority countries: ${(farmerFocus.countryPriority || []).join(", ")}`)}</small>
+      <small>${translateText(farmerFocus.successDefinition || "A farmer can speak to Nexus, sell crops, understand field risk, track delivery, learn, and get help.")}</small>
     </div>
     ${providerCandidateHtml}
   `;
@@ -7795,9 +7798,9 @@ function render() {
     {
       eyebrow: "Provider marketplace",
       metric: `${data.providerCandidates?.readyNow || 0} API-ready`,
-      title: "Real Engine Candidate Pipeline",
-      summary: "Each category has named provider candidates, required keys, next actions, and runtime status before live credentials are connected.",
-      items: providerCandidateGroups.slice(0, 6).map(group => taskItem(group.title, `${group.count} option(s): ${(group.topCandidates || []).map(candidate => candidate.name).slice(0, 3).join(", ")}`, group.readyNow ? "ready" : "pending", `${group.readyNow}/${group.count}`, { workflow: "provider-candidate", action: group.id }))
+      title: "Rural Farmer Real Engine Pipeline",
+      summary: "Each category is judged by whether it helps a rural African farmer sell crops, get guidance, reach care, learn, find work, move goods, or receive payment.",
+      items: providerCandidateGroups.slice(0, 6).map(group => taskItem(group.title, `${group.ruralFarmerValue || group.plainLanguage} Options: ${(group.topCandidates || []).map(candidate => candidate.name).slice(0, 3).join(", ")}`, group.readyNow ? "ready" : "pending", `${group.readyNow}/${group.count}`, { workflow: "provider-candidate", action: group.id }))
     },
     {
       eyebrow: "Readiness",
