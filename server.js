@@ -824,6 +824,7 @@ function publicState(db, user) {
     deepOperatingIntelligence: deepOperatingIntelligence(db, user, providers),
     noVendorUpgradeTen: noVendorUpgradeTenPack(db, user, providers),
     maximumOperationalEfficiency: maximumOperationalEfficiencyModel(db, user, providers),
+    autonomousOperatingLoop: autonomousOperatingLoopModel(db, user, providers),
     sessionBriefing: sessionBriefingModel(db, user, providers),
     impactDashboard: impactDashboardModel(db, providers),
     missionTimeline: missionTimelineModel(db),
@@ -1429,6 +1430,118 @@ function maximumOperationalEfficiencyModel(db, user, providers = runtimeProvider
     addActivity(db.profile, `Maximum operational efficiency review completed: ${overallScore}%.`);
   }
   return model;
+}
+
+function autonomousOperatingLoopModel(db, user, providers = runtimeProviders(db), options = {}) {
+  ensureLearningProfile(db.profile);
+  ensureWorkforceProfile(db.profile);
+  ensureHealthProfile(db.profile);
+  ensureTradeProfile(db.profile);
+  ensureAiProfile(db.profile);
+  ensureCommunicationProfile(db.profile);
+  const { country, route } = activeContext(db);
+  const efficiency = maximumOperationalEfficiencyModel(db, user, providers);
+  const intelligence = deepOperatingIntelligence(db, user, providers, { mode: user?.role });
+  const outcome = workflowOutcomeSummary(db);
+  const nextActions = smartNextActions(db, user, providers).items.slice(0, 5);
+  const connected = providers.filter(provider => provider.status === "connected");
+  const weakest = [...(efficiency.moduleScores || [])].sort((a, b) => a.score - b.score)[0] || { module: "AgriNexus", score: 70, bottleneck: "Keep moving the most important workflow." };
+  const decision = efficiency.recommendedSequence?.[0] || nextActions[0] || {
+    title: "Ask Nexus for the next guided workflow",
+    module: weakest.module,
+    command: "Nexus, what should I do next",
+    action: "Let the assistant guide the next safest action."
+  };
+  const protectedModules = ["Telehealth", "AgriTrade", "Workforce", "Providers"];
+  const safeToAutostage = !protectedModules.includes(decision.module) && !/pay|buy|sell|apply|provider|patient|health|message|call|certificate/i.test(decision.command || decision.title || "");
+  const phases = [
+    {
+      id: "observe",
+      title: "Observe",
+      status: "complete",
+      detail: `Nexus reviewed ${country.name}, ${route.name}, ${connected.length}/${providers.length} live providers, ${outcome.totalEvidence} evidence records, and ${nextActions.length} smart next actions.`
+    },
+    {
+      id: "diagnose",
+      title: "Diagnose",
+      status: "complete",
+      detail: `${weakest.module} needs the most attention at ${weakest.score}%. ${weakest.bottleneck || weakest.issue || "Nexus will improve the next workflow record."}`
+    },
+    {
+      id: "decide",
+      title: "Decide",
+      status: "complete",
+      detail: `Best next move: ${decision.title} in ${decision.module}.`
+    },
+    {
+      id: "act",
+      title: "Act",
+      status: safeToAutostage ? "ready" : "needs-confirmation",
+      detail: safeToAutostage
+        ? `Ready to stage the command: ${decision.command || decision.title}.`
+        : `Nexus will ask before acting because this may touch health, trade, jobs, providers, messages, or records.`
+    },
+    {
+      id: "verify",
+      title: "Verify",
+      status: "ready",
+      detail: "After the action, Nexus checks for an activity record, integration event, workflow evidence, and a plain-language result."
+    },
+    {
+      id: "learn",
+      title: "Learn",
+      status: "ready",
+      detail: `Nexus stores what worked, what was unclear, and the next safer prompt for ${user?.name || "the user"}.`
+    }
+  ];
+  const loop = {
+    id: crypto.randomUUID(),
+    status: efficiency.overallScore >= 85 ? "autonomous-ready" : "autonomous-learning",
+    loopName: "Nexus Observe-Diagnose-Decide-Act-Verify-Learn",
+    mode: user?.role || "User",
+    country: country.name,
+    route: route.name,
+    phases,
+    currentDecision: {
+      module: decision.module,
+      title: decision.title,
+      action: decision.action || decision.detail || "Run the next guided workflow.",
+      command: decision.command || decision.title,
+      requiresConfirmation: !safeToAutostage
+    },
+    safeToAutostage,
+    recommendedCommand: decision.command || "Nexus, what should I do next",
+    nextThreeMoves: (efficiency.recommendedSequence || []).slice(0, 3),
+    evidenceChecklist: [
+      "The workflow opens a visible full panel.",
+      "Nexus explains the action in simple language.",
+      "Sensitive actions ask for confirmation.",
+      "A workflow, activity, or integration evidence record is saved.",
+      "Nexus recommends the next best step."
+    ],
+    plainLanguageSummary: `Nexus ran an autonomous operating loop. It observed the platform, diagnosed ${weakest.module} as the highest-priority area, chose "${decision.title}", will verify evidence after action, and will learn from the result.`,
+    createdAt: new Date().toISOString()
+  };
+  if (options.persist) {
+    db.profile.autonomousOperatingLoops = db.profile.autonomousOperatingLoops || [];
+    db.profile.autonomousOperatingLoops.unshift(loop);
+    db.profile.autonomousOperatingLoops = db.profile.autonomousOperatingLoops.slice(0, 25);
+    db.profile.agentMemory.lastAutonomousOperatingLoop = loop;
+    db.profile.agentMemory.lastStatus = loop.status;
+    db.profile.agentMemory.lastSummary = loop.plainLanguageSummary;
+    db.profile.agentMemory.updatedAt = loop.createdAt;
+    rememberAgentMemory(db.profile, loop.plainLanguageSummary, { source: "autonomous-operating-loop", category: "operations", module: "Agent AI", confidence: 0.93 });
+    logIntegration(db, {
+      providerId: "openai",
+      module: "AI",
+      action: "agent.autonomous_operating_loop",
+      detail: `Autonomous operating loop selected ${loop.currentDecision.module}: ${loop.currentDecision.title}.`,
+      metadata: { loopId: loop.id, status: loop.status, recommendedCommand: loop.recommendedCommand, phases: loop.phases.map(item => item.id) },
+      dispatch: false
+    });
+    addActivity(db.profile, `Autonomous operating loop completed: ${loop.currentDecision.module} next.`);
+  }
+  return loop;
 }
 
 function runtimeProviders(db) {
@@ -9196,6 +9309,18 @@ async function runAgentCommand(db, user, command, options = {}) {
     };
   }
 
+  if (lower.includes("go even deeper") || lower.includes("autonomous operating loop") || lower.includes("observe diagnose decide") || lower.includes("think in a loop") || lower.includes("run operating loop") || lower.includes("go deeper with the brain") || lower.includes("run the brain loop")) {
+    db.profile.agentMemory.activeClarification = null;
+    db.profile.agentMemory.activeRecovery = null;
+    const loop = autonomousOperatingLoopModel(db, user, runtimeProviders(db), { persist: true });
+    return {
+      intent: "conversation.autonomous_operating_loop",
+      response: `${loop.plainLanguageSummary} I observed, diagnosed, decided, prepared the next action, set verification, and saved the learning record. Say "${loop.recommendedCommand}" to continue.`,
+      status: loop.status,
+      metadata: { conversationMode: conversational, redirectSection: "agent", autonomousOperatingLoop: loop }
+    };
+  }
+
   if (lower.includes("all 8") || lower.includes("all eight") || lower.includes("8 items") || lower.includes("eight items") || lower.includes("reasoning and language") || lower.includes("language production") || lower.includes("optimal reasoning") || lower.includes("multilingual reasoning")) {
     db.profile.agentMemory.activeClarification = null;
     db.profile.agentMemory.activeRecovery = null;
@@ -10037,6 +10162,16 @@ async function api(req, res, url) {
     await writeDb(db);
     const state = publicState(db, user);
     state.maximumOperationalEfficiencyResult = model;
+    return send(res, 200, state);
+  }
+
+  if (url.pathname === "/api/intelligence/autonomous-loop" && req.method === "POST") {
+    if (!user) return send(res, 401, { error: "Sign in required" });
+    const body = await readBody(req);
+    const loop = autonomousOperatingLoopModel(db, user, runtimeProviders(db), { persist: body.persist !== false });
+    await writeDb(db);
+    const state = publicState(db, user);
+    state.autonomousOperatingLoopResult = loop;
     return send(res, 200, state);
   }
 

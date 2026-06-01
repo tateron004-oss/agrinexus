@@ -689,6 +689,10 @@ assert(server.includes("function maximumOperationalEfficiencyModel"), "Backend n
 assert(server.includes("conversation.maximum_operational_efficiency"), "Voice agent must answer maximum operational efficiency requests");
 assert(server.includes("/api/intelligence/maximum-efficiency"), "Backend needs a maximum efficiency endpoint");
 assert(server.includes("automationOpportunities"), "Efficiency model should expose automation opportunities");
+assert(server.includes("function autonomousOperatingLoopModel"), "Backend needs autonomous operating loop model");
+assert(server.includes("conversation.autonomous_operating_loop"), "Voice agent must answer autonomous loop requests");
+assert(server.includes("/api/intelligence/autonomous-loop"), "Backend needs autonomous loop endpoint");
+assert(server.includes("autonomousOperatingLoops"), "Autonomous loop should persist loop evidence");
 assert(app.includes("function jarvisProductionTenSummary"), "Voice assistant needs a spoken Jarvis Production 10 summary");
 assert(app.includes("how close are we to all 10"), "Voice commands need to answer how close production is to all 10");
 assert(html.includes("adminIntelligencePanel"), "Admin mode needs a visible intelligence panel");

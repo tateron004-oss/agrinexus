@@ -784,6 +784,14 @@ async function call(path, body) {
   const maxEfficiencyEndpoint = await call("/api/intelligence/maximum-efficiency", { persist: true });
   assert(maxEfficiencyEndpoint.maximumOperationalEfficiencyResult.moduleScores.length >= 6);
   assert(maxEfficiencyEndpoint.maximumOperationalEfficiencyResult.automationOpportunities.length >= 5);
+  const autonomousLoop = await call("/api/agent/command", { command: "Nexus, run autonomous operating loop", conversational: true, inputMode: "voice", outputMode: "voice" });
+  assert(autonomousLoop.commandResult.intent === "conversation.autonomous_operating_loop");
+  assert(autonomousLoop.commandResult.metadata.autonomousOperatingLoop.phases.length === 6);
+  assert(autonomousLoop.commandResult.metadata.autonomousOperatingLoop.phases.some(item => item.id === "verify"));
+  assert(autonomousLoop.profile.autonomousOperatingLoops.length >= 1);
+  const autonomousLoopEndpoint = await call("/api/intelligence/autonomous-loop", { persist: true });
+  assert(autonomousLoopEndpoint.autonomousOperatingLoopResult.currentDecision.command);
+  assert(autonomousLoopEndpoint.autonomousOperatingLoopResult.evidenceChecklist.length >= 5);
   const progressSummaryCommand = await call("/api/agent/command", { command: "summarize my progress", conversational: true, inputMode: "voice", outputMode: "voice" });
   assert(progressSummaryCommand.commandResult.intent === "conversation.progress_summary");
   assert(progressSummaryCommand.commandResult.metadata.redirectSection === "dashboard");
