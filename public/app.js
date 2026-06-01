@@ -5,6 +5,7 @@ let userMap = null;
 let userMapLayers = {};
 let userHealthMap = null;
 let userHealthMapLayers = {};
+let workflowLeafletMap = null;
 let selectedLearningTrack = "All";
 let selectedPersona = localStorage.getItem("agrinexusPersona") || "farmer";
 let experienceMode = localStorage.getItem("agrinexusExperienceMode") || "";
@@ -2384,8 +2385,8 @@ function runUserModeSelfTest() {
       if (!simpleUserCommandWorkflow(button.command)) missing.push(`${section}: ${button.label}`);
     });
   });
-  const currentScript = [...document.scripts].some(script => String(script.src || "").includes("nexus-behavior-128"));
-  const currentStyle = [...document.styleSheets].some(sheet => String(sheet.href || "").includes("nexus-behavior-128"));
+  const currentScript = [...document.scripts].some(script => String(script.src || "").includes("nexus-behavior-129"));
+  const currentStyle = [...document.styleSheets].some(sheet => String(sheet.href || "").includes("nexus-behavior-129"));
   if (!currentScript || !currentStyle) missing.push("new app files");
   const ok = missing.length === 0;
   const message = ok
@@ -6590,12 +6591,7 @@ function userModulePreviewHtml(sectionId) {
     return `
       <div class="user-module-preview user-trade-preview">
         ${userServicePhotoHtml("trade", "Sell crops")}
-        ${shipmentMapHtml({
-          route: activeRoute(),
-          order: latestOrder,
-          product,
-          title: latestOrder ? "Your shipment" : "Crop route"
-        })}
+        ${userRealMapHtml(latestOrder ? "Your shipment map" : "Crop market map")}
         <div class="user-preview-summary">
           <strong>${translateText(latestOrder ? "Shipment status" : "Ready to sell")}</strong>
           <span>${translateText(latestOrder ? `${latestOrder.product || product?.name || "Crop"} is at ${latestOrder.checkpoint || data.profile.activeCheckpoint}.` : `Start with ${product?.name || "your crop"}, then choose buyer, order, route, or farm scan.`)}</span>
@@ -6713,7 +6709,7 @@ function renderUserSimpleActiveSection(sectionId = currentSectionId()) {
       <div class="user-module-status" role="status">${translateText("Nexus is ready.")}</div>
     </section>
   `);
-  if (sectionId === "map") setTimeout(renderUserRealMap, 80);
+  if (sectionId === "map" || sectionId === "trade") setTimeout(renderUserRealMap, 80);
   if (sectionId === "health") setTimeout(renderUserHealthMap, 80);
 }
 
@@ -8460,6 +8456,69 @@ function renderMap() {
   setTimeout(() => map.invalidateSize(), 100);
 }
 
+function addRealMapTiles(targetMap) {
+  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    maxZoom: 19,
+    attribution: "OpenStreetMap contributors"
+  }).addTo(targetMap);
+  L.control.scale({ metric: true, imperial: false }).addTo(targetMap);
+}
+
+function surroundingMapBounds(route = activeRoute(), country = activeCountry()) {
+  const points = [
+    ...(route?.points || []),
+    ...((data?.countries || []).map(item => [item.lat, item.lng])),
+    [country.lat + 1.8, country.lng - 2.2],
+    [country.lat - 1.6, country.lng + 2.3],
+    [country.lat + 1.1, country.lng + 1.8]
+  ].filter(point => Array.isArray(point) && Number.isFinite(Number(point[0])) && Number.isFinite(Number(point[1])));
+  const bounds = points.length ? L.latLngBounds(points) : L.latLngBounds([[-35, -20], [36, 55]]);
+  return bounds.pad(.35);
+}
+
+function fitMapToSurroundingRegion(targetMap, route = activeRoute(), country = activeCountry(), maxZoom = 5) {
+  const bounds = surroundingMapBounds(route, country);
+  if (bounds.isValid?.()) {
+    targetMap.fitBounds(bounds, { padding: [34, 34], maxZoom });
+  } else {
+    targetMap.setView([3.2, 20.5], 3);
+  }
+}
+
+function addOperationalCountryMarkers(targetMap, markerLayer, country = activeCountry(), { health = false } = {}) {
+  const riskColor = risk => {
+    const value = String(risk || "").toLowerCase();
+    if (value.includes("high")) return "#d94c31";
+    if (value.includes("moderate") || value.includes("elevated")) return "#d9a71d";
+    return "#1b8f68";
+  };
+  (data.countries || []).forEach(item => {
+    const active = item.id === country.id;
+    const color = health ? riskColor(item.risk) : active ? "#d94c31" : "#1b8f68";
+    L.circleMarker([item.lat, item.lng], {
+      radius: active ? 12 : 8,
+      color: active ? "#173240" : color,
+      fillColor: color,
+      fillOpacity: active ? .9 : .72,
+      weight: active ? 4 : 2
+    })
+      .addTo(markerLayer)
+      .bindPopup(`<strong>${translateText(item.name)}</strong><br>${item.facilities} ${translateText("facilities")}<br>${translateText(item.risk || "Monitored")} ${translateText("risk")}<br>${translateText(item.queue || "Operational area")}`);
+  });
+}
+
+function addNearbyFacilityMarkers(layer, country = activeCountry(), label = "Facility") {
+  [[country.lat + .7, country.lng - .8], [country.lat - .5, country.lng + .9], [country.lat + .3, country.lng + .5]].forEach((point, index) => {
+    L.circleMarker(point, {
+      radius: 7,
+      color: "#173240",
+      fillColor: "#ffffff",
+      fillOpacity: 1,
+      weight: 3
+    }).addTo(layer).bindPopup(`<strong>${translateText(label)} ${index + 1}</strong><br>${translateText("Nearby support point")}`);
+  });
+}
+
 function renderUserRealMap() {
   const canvas = $("#userMapCanvas");
   if (!canvas || !data) return;
@@ -8482,13 +8541,13 @@ function renderUserRealMap() {
   userMap = L.map(canvas, {
     zoomControl: true,
     attributionControl: true,
-    scrollWheelZoom: false,
-    tap: true
+    scrollWheelZoom: true,
+    tap: true,
+    worldCopyJump: true,
+    preferCanvas: true,
+    minZoom: 2
   }).setView([3.2, 20.5], 3);
-  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-    maxZoom: 19,
-    attribution: "OpenStreetMap"
-  }).addTo(userMap);
+  addRealMapTiles(userMap);
 
   userMapLayers.route = L.layerGroup().addTo(userMap);
   userMapLayers.markers = L.layerGroup().addTo(userMap);
@@ -8502,11 +8561,11 @@ function renderUserRealMap() {
 
   L.rectangle([[-35, -20], [36, 55]], {
     color: "#173240",
-    weight: 2,
+    weight: 1,
     fill: false,
-    dashArray: "8 6",
-    opacity: .7
-  }).addTo(userMapLayers.route).bindPopup(translateText("Regional Africa operations view"));
+    dashArray: "10 8",
+    opacity: .45
+  }).addTo(userMapLayers.route).bindPopup(translateText("Regional Africa operations view. Zoom or drag to inspect surrounding areas."));
 
   (route.checkpoints || []).forEach((checkpoint, index) => {
     const point = (route.points || [])[Math.min(index, Math.max(0, (route.points || []).length - 1))];
@@ -8521,31 +8580,9 @@ function renderUserRealMap() {
     }).addTo(userMapLayers.route).bindPopup(`<strong>${translateText(checkpoint)}</strong><br>${translateText(isActive ? "Current checkpoint" : "Route checkpoint")}`);
   });
 
-  data.countries.forEach(item => {
-    const active = item.id === country.id;
-    L.circleMarker([item.lat, item.lng], {
-      radius: active ? 12 : 9,
-      color: active ? "#d94c31" : "#173240",
-      fillColor: active ? "#d94c31" : "#1b8f68",
-      fillOpacity: .8,
-      weight: 3
-    })
-      .addTo(userMapLayers.markers)
-      .bindPopup(`<strong>${translateText(item.name)}</strong><br>${item.facilities} ${translateText("facilities")}<br>${translateText(item.risk || "Monitored")} ${translateText("risk")}`);
-  });
-
-  [[country.lat + .7, country.lng - .8], [country.lat - .5, country.lng + .9], [country.lat + .3, country.lng + .5]].forEach((point, index) => {
-    L.circleMarker(point, {
-      radius: 8,
-      color: "#1b8f68",
-      fillColor: "#1b8f68",
-      fillOpacity: .72,
-      weight: 2
-    }).addTo(userMapLayers.facilities).bindPopup(`${translateText("Facility")} ${index + 1}`);
-  });
-
-  const regionalBounds = L.latLngBounds([[-35, -20], [36, 55]]);
-  userMap.fitBounds(regionalBounds, { padding: [12, 12] });
+  addOperationalCountryMarkers(userMap, userMapLayers.markers, country);
+  addNearbyFacilityMarkers(userMapLayers.facilities, country, "Support point");
+  fitMapToSurroundingRegion(userMap, route, country, 5);
   setTimeout(() => userMap?.invalidateSize(), 120);
 }
 
@@ -8570,13 +8607,13 @@ function renderUserHealthMap() {
   userHealthMap = L.map(canvas, {
     zoomControl: true,
     attributionControl: true,
-    scrollWheelZoom: false,
-    tap: true
+    scrollWheelZoom: true,
+    tap: true,
+    worldCopyJump: true,
+    preferCanvas: true,
+    minZoom: 2
   }).setView([3.2, 20.5], 3);
-  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-    maxZoom: 19,
-    attribution: "OpenStreetMap"
-  }).addTo(userHealthMap);
+  addRealMapTiles(userHealthMap);
 
   userHealthMapLayers.region = L.layerGroup().addTo(userHealthMap);
   userHealthMapLayers.markers = L.layerGroup().addTo(userHealthMap);
@@ -8584,44 +8621,15 @@ function renderUserHealthMap() {
 
   L.rectangle([[-35, -20], [36, 55]], {
     color: "#173240",
-    weight: 2,
+    weight: 1,
     fill: false,
-    dashArray: "8 6",
-    opacity: .7
-  }).addTo(userHealthMapLayers.region).bindPopup(translateText("Regional Africa health access view"));
+    dashArray: "10 8",
+    opacity: .45
+  }).addTo(userHealthMapLayers.region).bindPopup(translateText("Regional Africa health access view. Zoom or drag to inspect nearby areas."));
 
-  const riskColor = risk => {
-    const value = String(risk || "").toLowerCase();
-    if (value.includes("high")) return "#d94c31";
-    if (value.includes("moderate") || value.includes("elevated")) return "#d9a71d";
-    return "#1b8f68";
-  };
-
-  (data.countries || []).forEach(item => {
-    const active = item.id === country.id;
-    const color = riskColor(item.risk);
-    L.circleMarker([item.lat, item.lng], {
-      radius: active ? 13 : 8,
-      color: active ? "#173240" : color,
-      fillColor: color,
-      fillOpacity: active ? .92 : .76,
-      weight: active ? 4 : 2
-    })
-      .addTo(userHealthMapLayers.markers)
-      .bindPopup(`<strong>${translateText(item.name)}</strong><br>${translateText(item.risk || "Monitored")} ${translateText("risk")}<br>${item.facilities} ${translateText("facilities")}<br>${translateText(item.queue || "Telehealth support ready")}`);
-  });
-
-  [[country.lat + .7, country.lng - .8], [country.lat - .5, country.lng + .9], [country.lat + .3, country.lng + .5]].forEach((point, index) => {
-    L.circleMarker(point, {
-      radius: 8,
-      color: "#173240",
-      fillColor: "#ffffff",
-      fillOpacity: 1,
-      weight: 3
-    }).addTo(userHealthMapLayers.facilities).bindPopup(`<strong>${translateText("Care point")} ${index + 1}</strong><br>${translateText("Telehealth referral ready")}`);
-  });
-
-  userHealthMap.fitBounds([[-35, -20], [36, 55]], { padding: [12, 12] });
+  addOperationalCountryMarkers(userHealthMap, userHealthMapLayers.markers, country, { health: true });
+  addNearbyFacilityMarkers(userHealthMapLayers.facilities, country, "Care point");
+  fitMapToSurroundingRegion(userHealthMap, activeRoute(), country, 5);
   setTimeout(() => userHealthMap?.invalidateSize(), 120);
 }
 
@@ -8632,24 +8640,32 @@ function renderWorkflowLiveMap(config = pendingWorkflow || {}) {
     canvas.innerHTML = `<div class="user-real-map-fallback">${translateText("Map tiles are loading. Check internet connection, then reopen this workflow.")}</div>`;
     return;
   }
+  if (workflowLeafletMap) {
+    try {
+      workflowLeafletMap.remove();
+    } catch (error) {
+      // Workflow maps can be removed when the modal is closed between renders.
+    }
+    workflowLeafletMap = null;
+  }
   if (canvas._leaflet_id) canvas.replaceWith(canvas.cloneNode(false));
   const target = $("#workflowLiveMapCanvas");
   const mode = workflowMode(config);
   const country = config.healthPreview?.country || activeCountry();
   const route = config.routePreview?.route || activeRoute();
-  const workflowMap = L.map(target, {
+  workflowLeafletMap = L.map(target, {
     zoomControl: true,
     attributionControl: true,
-    scrollWheelZoom: false,
-    tap: true
+    scrollWheelZoom: true,
+    tap: true,
+    worldCopyJump: true,
+    preferCanvas: true,
+    minZoom: 2
   }).setView([country.lat, country.lng], Math.max(4, Number(country.zoom || 5)));
-  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-    maxZoom: 19,
-    attribution: "OpenStreetMap"
-  }).addTo(workflowMap);
+  addRealMapTiles(workflowLeafletMap);
 
-  const routeLayer = L.layerGroup().addTo(workflowMap);
-  const markerLayer = L.layerGroup().addTo(workflowMap);
+  const routeLayer = L.layerGroup().addTo(workflowLeafletMap);
+  const markerLayer = L.layerGroup().addTo(workflowLeafletMap);
   if (mode !== "health" && route?.points?.length) {
     const routeLine = L.polyline(route.points, { color: "#176fc7", weight: 6, opacity: .9 }).addTo(routeLayer);
     (route.checkpoints || []).forEach((checkpoint, index) => {
@@ -8663,26 +8679,24 @@ function renderWorkflowLiveMap(config = pendingWorkflow || {}) {
         weight: 3
       }).addTo(routeLayer).bindPopup(`<strong>${translateText(checkpoint)}</strong><br>${translateText("Workflow checkpoint")}`);
     });
-    if (routeLine.getBounds?.().isValid?.()) workflowMap.fitBounds(routeLine.getBounds(), { padding: [24, 24] });
   }
-  (data.countries || []).forEach(item => {
-    const active = item.id === country.id;
-    L.circleMarker([item.lat, item.lng], {
-      radius: active ? 11 : 7,
-      color: active ? "#d94c31" : "#1b8f68",
-      fillColor: active ? "#d94c31" : "#1b8f68",
-      fillOpacity: .74,
-      weight: 2
-    }).addTo(markerLayer).bindPopup(`<strong>${translateText(item.name)}</strong><br>${translateText(item.risk || "Monitored")} ${translateText("risk")}<br>${item.facilities} ${translateText("facilities")}`);
-  });
-  if (mode === "health") workflowMap.setView([country.lat, country.lng], Math.max(5, Number(country.zoom || 5)));
-  setTimeout(() => workflowMap.invalidateSize(), 140);
+  addOperationalCountryMarkers(workflowLeafletMap, markerLayer, country, { health: mode === "health" });
+  fitMapToSurroundingRegion(workflowLeafletMap, route, country, mode === "health" ? 5 : 6);
+  setTimeout(() => workflowLeafletMap?.invalidateSize(), 140);
 }
 
 function closeWorkflowModal() {
   stopWorkflowCamera();
   pendingWorkflow = null;
   stopVoicePlayback();
+  if (workflowLeafletMap) {
+    try {
+      workflowLeafletMap.remove();
+    } catch (error) {
+      // Map may already be detached.
+    }
+    workflowLeafletMap = null;
+  }
   $("#workflowModal")?.classList.add("hidden");
   $("#workflowModal")?.classList.remove("grandma-workflow");
   $("#workflowModal")?.classList.remove("user-full-workflow");

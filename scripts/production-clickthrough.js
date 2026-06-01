@@ -422,9 +422,9 @@ assert(app.includes('workflow === "admin-user"'), "Admin test login button needs
 assert(app.includes("Only an existing Admin can run this workflow"), "Admin login flow must explain admin-only protection");
 assert(server.includes('adminAccount.role = "Admin"'), "Backend must force admin test logins to Admin");
 assert(server.includes("admin_user.created"), "Admin test login must create auth audit evidence");
-assert(html.includes("styles.css?v=nexus-behavior-128"), "Index must force browsers to load the latest Nexus behavior shell");
-assert(html.includes("app.js?v=nexus-behavior-128"), "Index must force browsers to load the latest Nexus behavior code");
-assert(sw.includes("agrinexus-pwa-v108"), "Service worker cache must refresh the installed app after native voice bridge updates");
+assert(html.includes("styles.css?v=nexus-behavior-129"), "Index must force browsers to load the latest Nexus behavior shell");
+assert(html.includes("app.js?v=nexus-behavior-129"), "Index must force browsers to load the latest Nexus behavior code");
+assert(sw.includes("agrinexus-pwa-v109"), "Service worker cache must refresh the installed app after native voice bridge updates");
 assert(html.includes("userWorkspace"), "Dashboard needs a User Workspace for standard users");
 assert(html.includes("userMobileDock"), "Legacy mobile dock markup should remain safely hidden for cache compatibility");
 assert(html.includes("What Do You Need Help With Today?"), "Dashboard simple start should use user-ready language");
@@ -441,7 +441,11 @@ assert(app.includes("userHealthMapCanvas"), "User health risk must expose a real
 assert(app.includes("OpenStreetMap"), "User mode map must use real map tiles");
 assert(app.includes("Africa operations"), "User mode map must open with regional Africa context");
 assert(app.includes("Regional Africa operations view"), "User mode map must label the regional view");
-assert(app.includes("fitBounds(regionalBounds"), "User mode map must fit to regional Africa bounds");
+assert(app.includes("function surroundingMapBounds"), "User maps must compute surrounding-area bounds instead of tight route sketches");
+assert(app.includes("function fitMapToSurroundingRegion"), "User maps must fit around surrounding regions and nearby countries");
+assert(app.includes("L.control.scale"), "User maps need real map scale controls");
+assert(app.includes('sectionId === "map" || sectionId === "trade"'), "Trade user preview must render a real map, not an SVG route sketch");
+assert(app.includes("workflowLeafletMap.remove"), "Workflow maps must remove old Leaflet instances to prevent freezing");
 assert(styles.includes("body.user-mode .user-scene-visual"), "User workflow visuals must be styled and contained");
 assert(styles.includes("body.user-mode .user-real-map"), "User real map must be styled and contained");
 assert(styles.includes("body.user-mode .user-health-map-card"), "User health map card must be styled");
