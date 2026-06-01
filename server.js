@@ -2886,6 +2886,12 @@ function ensureAiProfile(profile) {
   profile.agentMemory.preferences = profile.agentMemory.preferences || [];
   profile.agentMemory.learnedPatterns = profile.agentMemory.learnedPatterns || [];
   profile.agentMemory.retrievals = profile.agentMemory.retrievals || [];
+  profile.agentMemory.moduleMemory = profile.agentMemory.moduleMemory || {};
+  profile.agentMemory.userNeeds = profile.agentMemory.userNeeds || {};
+  profile.agentMemory.advisorHistory = profile.agentMemory.advisorHistory || [];
+  profile.agentMemory.memoryTimeline = profile.agentMemory.memoryTimeline || [];
+  profile.agentMemory.safetyBoundaries = profile.agentMemory.safetyBoundaries || [];
+  profile.agentMemory.lastMemorySummary = profile.agentMemory.lastMemorySummary || "";
   profile.agentMemory.activeIntake = profile.agentMemory.activeIntake || null;
   profile.agentMemory.conversationalIntakes = profile.agentMemory.conversationalIntakes || [];
   profile.agentMemory.userModel = profile.agentMemory.userModel || {};
@@ -5270,6 +5276,7 @@ function inferMemoryCategory(text) {
   const lower = String(text || "").toLowerCase();
   if (lower.includes("prefer") || lower.includes("i like") || lower.includes("i want") || lower.includes("always") || lower.includes("don't") || lower.includes("do not")) return "preference";
   if (lower.includes("because") || lower.includes("next time") || lower.includes("when ") || lower.includes("after ")) return "pattern";
+  if (lower.includes("emergency") || lower.includes("doctor") || lower.includes("diagnose") || lower.includes("medicine") || lower.includes("payment") || lower.includes("consent")) return "safety";
   return "fact";
 }
 
@@ -5277,7 +5284,90 @@ function memoryBucket(profile, category) {
   ensureAiProfile(profile);
   if (category === "preference") return profile.agentMemory.preferences;
   if (category === "pattern") return profile.agentMemory.learnedPatterns;
+  if (category === "safety") return profile.agentMemory.safetyBoundaries;
   return profile.agentMemory.longTermFacts;
+}
+
+function normalizeMemoryText(text) {
+  return String(text || "").trim().toLowerCase().replace(/\s+/g, " ");
+}
+
+function memoryModuleForText(text, metadata = {}) {
+  if (metadata.module) return metadata.module;
+  const signal = conversationModuleSignal(text);
+  return signal.module === "Platform" ? (metadata.category === "safety" ? "Safety" : "Platform") : signal.module;
+}
+
+function memoryNeedSignals(text) {
+  const lower = String(text || "").toLowerCase();
+  const needs = [];
+  if (/\bvoice|speak|talk|listen|microphone|audio|read aloud\b/.test(lower)) needs.push("voice-first");
+  if (/\bcaption|captions|deaf|hearing|hard of hearing|transcript\b/.test(lower)) needs.push("hearing-support");
+  if (/\bblind|visual|large print|screen reader|bad vision|visually impaired\b/.test(lower)) needs.push("visual-support");
+  if (/\bsimple|easy|grandma|non technical|non-technical|low tech|low-tech|plain language\b/.test(lower)) needs.push("plain-language");
+  if (/\boffline|low bandwidth|poor internet|bad internet|rural signal\b/.test(lower)) needs.push("low-bandwidth");
+  if (/\bfarmer|crop|field|harvest|plant|drone|buyer|sell\b/.test(lower)) needs.push("farmer-operations");
+  if (/\bpatient|care|provider|clinic|telehealth|injury|outbreak|ebola\b/.test(lower)) needs.push("care-access");
+  if (/\blearner|student|course|lesson|training|certificate\b/.test(lower)) needs.push("learning-support");
+  if (/\bjob|apply|role|workforce|shift|mentor|interview\b/.test(lower)) needs.push("workforce-support");
+  return [...new Set(needs)];
+}
+
+function updateStructuredLongTermMemory(profile, item, metadata = {}) {
+  ensureAiProfile(profile);
+  const moduleName = item.module || memoryModuleForText(item.text, metadata);
+  const needs = item.needs || memoryNeedSignals(item.text);
+  item.module = moduleName;
+  item.needs = needs;
+  item.tags = [...new Set([item.category, moduleName, ...needs].filter(Boolean).map(value => String(value).toLowerCase().replace(/\s+/g, "-")))].slice(0, 8);
+
+  const moduleBucket = profile.agentMemory.moduleMemory[moduleName] || [];
+  const existingModule = moduleBucket.find(memory => memory.normalized === item.normalized);
+  const moduleItem = {
+    id: item.id,
+    category: item.category,
+    text: item.text,
+    normalized: item.normalized,
+    source: item.source,
+    confidence: item.confidence,
+    tags: item.tags,
+    needs,
+    uses: item.uses,
+    updatedAt: item.updatedAt
+  };
+  profile.agentMemory.moduleMemory[moduleName] = existingModule
+    ? moduleBucket.map(memory => memory.normalized === item.normalized ? { ...memory, ...moduleItem, uses: Number(memory.uses || 0) + 1 } : memory).slice(0, 20)
+    : [moduleItem, ...moduleBucket].slice(0, 20);
+
+  needs.forEach(need => {
+    const needBucket = profile.agentMemory.userNeeds[need] || [];
+    profile.agentMemory.userNeeds[need] = [{ id: item.id, module: moduleName, text: item.text, confidence: item.confidence, updatedAt: item.updatedAt }, ...needBucket.filter(memory => memory.id !== item.id)].slice(0, 12);
+  });
+
+  if (!metadata.noTimeline && metadata.source && /advisor|workflow|intake|conversation|trade|health|learning|workforce|drone|route/i.test(metadata.source)) {
+    profile.agentMemory.advisorHistory = [{
+      id: crypto.randomUUID(),
+      memoryId: item.id,
+      module: moduleName,
+      event: item.text,
+      source: item.source,
+      confidence: item.confidence,
+      createdAt: item.updatedAt
+    }, ...(profile.agentMemory.advisorHistory || [])].slice(0, 50);
+  }
+
+  if (!metadata.noTimeline) {
+    profile.agentMemory.memoryTimeline = [{
+      id: crypto.randomUUID(),
+      type: item.category,
+      module: moduleName,
+      title: item.text.length > 90 ? `${item.text.slice(0, 87)}...` : item.text,
+      source: item.source,
+      tags: item.tags,
+      createdAt: item.updatedAt
+    }, ...(profile.agentMemory.memoryTimeline || [])].slice(0, 80);
+  }
+  return item;
 }
 
 function rememberAgentMemory(profile, text, metadata = {}) {
@@ -5286,19 +5376,23 @@ function rememberAgentMemory(profile, text, metadata = {}) {
   if (!value) return null;
   const category = metadata.category || inferMemoryCategory(value);
   const bucket = memoryBucket(profile, category);
-  const normalized = value.toLowerCase().replace(/\s+/g, " ");
+  const normalized = normalizeMemoryText(value);
   const existing = bucket.find(item => item.normalized === normalized);
   if (existing) {
     existing.uses = Number(existing.uses || 0) + 1;
     existing.updatedAt = new Date().toISOString();
     existing.source = metadata.source || existing.source;
-    return existing;
+    existing.module = existing.module || memoryModuleForText(value, metadata);
+    existing.needs = existing.needs || memoryNeedSignals(value);
+    return updateStructuredLongTermMemory(profile, existing, { ...metadata, noTimeline: true });
   }
   const item = {
     id: crypto.randomUUID(),
     category,
     text: value,
     normalized,
+    module: memoryModuleForText(value, metadata),
+    needs: memoryNeedSignals(value),
     source: metadata.source || "agent-command",
     confidence: Number(metadata.confidence || 0.78),
     uses: 1,
@@ -5308,25 +5402,38 @@ function rememberAgentMemory(profile, text, metadata = {}) {
   bucket.unshift(item);
   if (category === "preference") profile.agentMemory.preferences = bucket.slice(0, 30);
   else if (category === "pattern") profile.agentMemory.learnedPatterns = bucket.slice(0, 30);
+  else if (category === "safety") profile.agentMemory.safetyBoundaries = bucket.slice(0, 30);
   else profile.agentMemory.longTermFacts = bucket.slice(0, 40);
   profile.agentMemory.updatedAt = item.updatedAt;
-  return item;
+  return updateStructuredLongTermMemory(profile, item, metadata);
 }
 
 function retrieveAgentMemories(profile, query, limit = 6) {
   ensureAiProfile(profile);
   const queryTokens = new Set(tokenizeAgentText(query));
+  const queryModule = memoryModuleForText(query);
+  const queryNeeds = new Set(memoryNeedSignals(query));
   const all = [
     ...(profile.agentMemory.preferences || []),
     ...(profile.agentMemory.learnedPatterns || []),
     ...(profile.agentMemory.longTermFacts || []),
+    ...(profile.agentMemory.safetyBoundaries || []),
+    ...Object.values(profile.agentMemory.moduleMemory || {}).flat(),
+    ...(profile.agentMemory.advisorHistory || []).map(item => ({ ...item, text: item.event, category: "advisor-history", confidence: item.confidence || 0.66 })),
     ...(profile.agentMemory.rememberedContexts || []).map(item => ({ ...item, text: `${item.command || ""} ${item.intent || ""} ${item.response || ""}`, category: "recent-context", confidence: 0.62 }))
   ];
-  const scored = all
+  const unique = new Map();
+  all.filter(Boolean).forEach(item => {
+    const key = item.id || normalizeMemoryText(item.text || item.command || item.response || "");
+    if (!unique.has(key)) unique.set(key, item);
+  });
+  const scored = [...unique.values()]
     .map(item => {
       const tokens = tokenizeAgentText(item.text || item.command || item.response || "");
       const overlap = tokens.reduce((total, token) => total + (queryTokens.has(token) ? 1 : 0), 0);
-      return { ...item, score: overlap + Number(item.uses || 0) * 0.15 + Number(item.confidence || 0) * 0.25 };
+      const needBoost = (item.needs || []).reduce((total, need) => total + (queryNeeds.has(need) ? 0.75 : 0), 0);
+      const moduleBoost = item.module && item.module === queryModule ? 0.8 : 0;
+      return { ...item, score: overlap + needBoost + moduleBoost + Number(item.uses || 0) * 0.15 + Number(item.confidence || 0) * 0.25 };
     })
     .filter(item => item.score > 0.35)
     .sort((a, b) => b.score - a.score)
@@ -5339,6 +5446,34 @@ function retrieveAgentMemories(profile, query, limit = 6) {
   });
   profile.agentMemory.retrievals = profile.agentMemory.retrievals.slice(0, 20);
   return scored;
+}
+
+function longTermMemorySummary(profile) {
+  ensureAiProfile(profile);
+  const memory = profile.agentMemory;
+  const moduleNames = Object.keys(memory.moduleMemory || {});
+  const needNames = Object.keys(memory.userNeeds || {});
+  const core = [
+    ...(memory.preferences || []),
+    ...(memory.learnedPatterns || []),
+    ...(memory.longTermFacts || []),
+    ...(memory.safetyBoundaries || [])
+  ];
+  const topMemories = core
+    .sort((a, b) => String(b.updatedAt || "").localeCompare(String(a.updatedAt || "")))
+    .slice(0, 5);
+  const summary = {
+    total: core.length,
+    modules: moduleNames.map(name => ({ name, count: (memory.moduleMemory[name] || []).length })).sort((a, b) => b.count - a.count),
+    needs: needNames.map(name => ({ name, count: (memory.userNeeds[name] || []).length })).sort((a, b) => b.count - a.count),
+    advisorEvents: (memory.advisorHistory || []).length,
+    timeline: (memory.memoryTimeline || []).slice(0, 8),
+    topMemories
+  };
+  memory.lastMemorySummary = summary.total
+    ? `I remember ${summary.total} long-term item(s), ${summary.modules.length} module area(s), and ${summary.needs.length} user need signal(s).`
+    : "No durable long-term memory has been saved yet.";
+  return summary;
 }
 
 function conversationModuleSignal(text) {
@@ -5399,6 +5534,12 @@ function updateConversationUserModel(profile, command) {
   };
   model.lastSeenAt = new Date().toISOString();
   profile.agentMemory.userModel = model;
+  if (nameMatch) rememberAgentMemory(profile, `User name is ${model.name}.`, { source: "conversation-user-model", category: "fact", module: "Profile", confidence: 0.94 });
+  if (model.preferredInteraction) rememberAgentMemory(profile, `User prefers ${model.preferredInteraction} interaction.`, { source: "conversation-user-model", category: "preference", module: "Agent AI", confidence: 0.86 });
+  if (model.communicationStyle) rememberAgentMemory(profile, `User needs ${model.communicationStyle} communication.`, { source: "conversation-user-model", category: "preference", module: "Agent AI", confidence: 0.86 });
+  if (model.accessibilityMode && model.accessibilityMode !== "standard") rememberAgentMemory(profile, `User needs ${model.accessibilityMode}.`, { source: "conversation-user-model", category: "preference", module: "Healthcare", confidence: 0.9 });
+  if (model.connectivityMode && model.connectivityMode !== "standard") rememberAgentMemory(profile, `User may need ${model.connectivityMode} support.`, { source: "conversation-user-model", category: "preference", module: "Integrations", confidence: 0.84 });
+  if (model.lastRequestedLanguage) rememberAgentMemory(profile, `User recently requested language ${model.lastRequestedLanguage}.`, { source: "conversation-user-model", category: "preference", module: "Profile", confidence: 0.82 });
   return model;
 }
 
@@ -7652,17 +7793,16 @@ async function runAgentCommand(db, user, command, options = {}) {
   if (lower.includes("what do you remember") || lower.includes("show memory") || lower.includes("what have you learned")) {
     db.profile.agentMemory.activeClarification = null;
     db.profile.agentMemory.activeRecovery = null;
-    const memories = [
-      ...(db.profile.agentMemory.preferences || []).slice(0, 3),
-      ...(db.profile.agentMemory.learnedPatterns || []).slice(0, 3),
-      ...(db.profile.agentMemory.longTermFacts || []).slice(0, 3)
-    ];
+    const summary = longTermMemorySummary(db.profile);
+    const memories = summary.topMemories;
+    const moduleLine = summary.modules.slice(0, 3).map(item => `${item.name}: ${item.count}`).join(", ");
+    const needsLine = summary.needs.slice(0, 4).map(item => item.name.replace(/-/g, " ")).join(", ");
     return {
       intent: "memory-summary",
       response: memories.length
-        ? `I remember ${memories.length} useful item(s): ${memories.map(item => item.text).join(" | ")}`
+        ? `${summary.total} long-term memories are active. Strongest areas: ${moduleLine || "general platform"}. User need signals: ${needsLine || "standard support"}. Recent memories: ${memories.map(item => item.text).join(" | ")}`
         : "I do not have long-term memories yet. Say remember, then tell me an important fact or preference.",
-      metadata: { memories }
+      metadata: { memories, longTermMemory: summary }
     };
   }
 
@@ -8012,17 +8152,16 @@ async function runAgentCommand(db, user, command, options = {}) {
   }
 
   if (lower.includes("what do you remember") || lower.includes("show memory") || lower.includes("what have you learned")) {
-    const memories = [
-      ...(db.profile.agentMemory.preferences || []).slice(0, 3),
-      ...(db.profile.agentMemory.learnedPatterns || []).slice(0, 3),
-      ...(db.profile.agentMemory.longTermFacts || []).slice(0, 3)
-    ];
+    const summary = longTermMemorySummary(db.profile);
+    const memories = summary.topMemories;
+    const moduleLine = summary.modules.slice(0, 3).map(item => `${item.name}: ${item.count}`).join(", ");
+    const needsLine = summary.needs.slice(0, 4).map(item => item.name.replace(/-/g, " ")).join(", ");
     return {
       intent: "memory-summary",
       response: memories.length
-        ? `I remember ${memories.length} useful item(s): ${memories.map(item => item.text).join(" | ")}`
+        ? `${summary.total} long-term memories are active. Strongest areas: ${moduleLine || "general platform"}. User need signals: ${needsLine || "standard support"}. Recent memories: ${memories.map(item => item.text).join(" | ")}`
         : "I do not have long-term memories yet. Say remember, then tell me an important fact or preference.",
-      metadata: { memories }
+      metadata: { memories, longTermMemory: summary }
     };
   }
 

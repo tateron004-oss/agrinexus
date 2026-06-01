@@ -2199,8 +2199,8 @@ function runUserModeSelfTest() {
       if (!simpleUserCommandWorkflow(button.command)) missing.push(`${section}: ${button.label}`);
     });
   });
-  const currentScript = [...document.scripts].some(script => String(script.src || "").includes("nexus-behavior-110"));
-  const currentStyle = [...document.styleSheets].some(sheet => String(sheet.href || "").includes("nexus-behavior-110"));
+  const currentScript = [...document.scripts].some(script => String(script.src || "").includes("nexus-behavior-111"));
+  const currentStyle = [...document.styleSheets].some(sheet => String(sheet.href || "").includes("nexus-behavior-111"));
   if (!currentScript || !currentStyle) missing.push("new app files");
   const ok = missing.length === 0;
   const message = ok
@@ -3328,6 +3328,7 @@ function renderAgentCenter() {
   const brainOs = nexusBrainOsModel();
   const intelligence = nexusHighIntelligenceSnapshot();
   const latestOrchestration = (data.profile.aiOrchestrations || [])[0];
+  const deepMemory = nexusDeepMemorySignals();
   const agentMode = $("#agentMode");
   if (!agentMode) return;
   const agentStepAction = step => {
@@ -3427,6 +3428,10 @@ function renderAgentCenter() {
     `<div><strong>Recovery prompt</strong><span>${translateText(memory.activeRecovery?.suggestions?.join(", ") || "No recovery prompt active")}</span></div>`,
     `<div><strong>Conversation mode</strong><span>${translateText(memory.userModel?.preferredInteraction || "voice-first guidance")} - ${translateText(memory.userModel?.communicationStyle || "plain-language support")}</span></div>`,
     `<div><strong>Adaptive style</strong><span>${translateText(memory.userModel?.lastAdaptiveSignals?.persona || "general-operator")} - ${translateText(memory.userModel?.lastAdaptiveSignals?.accessibility || "standard")}</span></div>`,
+    `<div><strong>Long-term memory</strong><span>${translateText(deepMemory.summary)}</span></div>`,
+    `<div><strong>Memory modules</strong><span>${translateText(deepMemory.modules.slice(0, 4).map(item => `${item.name} (${item.count})`).join(", ") || "No module memory yet")}</span></div>`,
+    `<div><strong>User needs</strong><span>${translateText(deepMemory.needs.slice(0, 5).map(item => item.name.replace(/-/g, " ")).join(", ") || "No user need signals yet")}</span></div>`,
+    `<div><strong>Advisor history</strong><span>${Number(deepMemory.advisorEvents || 0)} ${translateText("remembered advisor event(s)")}</span></div>`,
     `<div><strong>Next prompt</strong><span>${translateText(memory.turnCoach?.nextQuestion || "Ask AgriNexus what you want to do next")}</span></div>`,
     `<div><strong>Conversation learning</strong><span>${Number(memory.conversationQuality?.turns || 0)} ${translateText("turn(s)")} - ${Number(memory.conversationQuality?.openEndedAnswers || 0)} ${translateText("reasoned answer(s)")}</span></div>`,
     `<div><strong>Last goal</strong><span>${translateText(memory.lastGoal || "No goal remembered yet")}</span></div>`,
@@ -4891,17 +4896,27 @@ function contextualVoiceSuggestions(sectionId = currentSectionId()) {
 
 function nexusDeepMemorySignals() {
   const memory = data?.profile?.agentMemory || {};
+  const moduleMemory = memory.moduleMemory || {};
+  const userNeeds = memory.userNeeds || {};
   const facts = [
     ...(memory.preferences || []),
     ...(memory.learnedPatterns || []),
     ...(memory.longTermFacts || []),
+    ...(memory.safetyBoundaries || []),
     ...(memory.conversationalIntakes || []).map(item => ({ text: `${item.module || item.domain || "intake"} intake`, confidence: 0.8 }))
   ];
+  const modules = Object.entries(moduleMemory).map(([name, items]) => ({ name, count: (items || []).length })).sort((a, b) => b.count - a.count);
+  const needs = Object.entries(userNeeds).map(([name, items]) => ({ name, count: (items || []).length })).sort((a, b) => b.count - a.count);
   return {
     count: facts.length,
     latest: facts[0]?.text || memory.lastSummary || "No long-term memory captured yet.",
     activeMission: memory.activeMission || memory.lastGoal || "No active mission yet.",
-    preferredLanguage: voiceLanguageName()
+    preferredLanguage: voiceLanguageName(),
+    modules,
+    needs,
+    advisorEvents: (memory.advisorHistory || []).length,
+    timeline: (memory.memoryTimeline || []).slice(0, 6),
+    summary: memory.lastMemorySummary || `${facts.length} memory item(s), ${modules.length} module area(s), ${needs.length} user need signal(s)`
   };
 }
 
@@ -10611,7 +10626,9 @@ async function handleVoiceCommand(rawCommand) {
   }
   if (lower.includes("what do you remember") || lower.includes("show memory") || lower.includes("what have you learned")) {
     const memory = nexusDeepMemorySignals();
-    setVoiceResponse(`I remember ${memory.count} useful item(s). Active mission: ${memory.activeMission}. Latest memory: ${memory.latest}.`, true);
+    const modules = memory.modules.slice(0, 3).map(item => `${item.name} ${item.count}`).join(", ") || "no module memory yet";
+    const needs = memory.needs.slice(0, 4).map(item => item.name.replace(/-/g, " ")).join(", ") || "standard support";
+    setVoiceResponse(`I remember ${memory.count} useful item(s). Active mission: ${memory.activeMission}. Strongest memory areas: ${modules}. User needs I am tracking: ${needs}. Latest memory: ${memory.latest}.`, true);
     return;
   }
   if (lower.includes("provider depth") || lower.includes("real provider actions") || lower.includes("what engines are live")) {

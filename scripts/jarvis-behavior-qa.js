@@ -10,7 +10,7 @@ const server = fs.readFileSync(path.join(root, "server.js"), "utf8");
 
 const requirements = [
   ["true background listening recovery", app.includes("visibilitychange") && app.includes("Nexus is resuming voice-first listening") && app.includes("voiceAutoRestart")],
-  ["deeper long-term memory", app.includes("function nexusDeepMemorySignals") && server.includes("rememberAgentMemory") && server.includes("memory-summary")],
+  ["deeper long-term memory", app.includes("function nexusDeepMemorySignals") && server.includes("rememberAgentMemory") && server.includes("memory-summary") && server.includes("function longTermMemorySummary") && server.includes("moduleMemory") && server.includes("advisorHistory")],
   ["autopilot mission queue", app.includes("function nexusAutopilotQueue") && server.includes("agent.autopilot_executed") && server.includes("previewSteps")],
   ["real provider action depth", app.includes("function providerActionDepthStatus") && server.includes("live-service-check") && server.includes("dispatchProviderWebhook")],
   ["voice interruption", app.includes("function interruptNexusSpeech") && app.includes("I stopped speaking") && app.includes("stopVoicePlayback")],
