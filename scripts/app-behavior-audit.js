@@ -165,6 +165,7 @@ hasAll(app, [
   "lower.includes(\"read the current response\")",
   "function isUniversalLanguageCommand",
   "function changeLanguageByVoice",
+  "pendingAgentClarification = null;\n    await changeLanguageByVoice(command);",
   "function moduleUseExplanation",
   "function userDisplayName",
   "roleLike.has(name.toLowerCase())"
@@ -185,8 +186,8 @@ assert(html.includes("nexusBehaviorStatus"), "User voice dock needs an assistant
 assert(html.includes('data-user-voice-action="listen"'), "User voice dock needs a speak action");
 assert(html.includes('data-user-voice-action="type"'), "User voice dock needs a type action");
 assert(html.includes('data-user-voice-action="read"'), "User voice dock needs a read action");
-assert(html.includes("nexus-behavior-101"), "Index must force browsers to load Nexus behavior CSS");
-assert(html.includes("nexus-behavior-101"), "Index must force browsers to load Nexus behavior JS");
+assert(html.includes("nexus-behavior-102"), "Index must force browsers to load Nexus behavior CSS");
+assert(html.includes("nexus-behavior-102"), "Index must force browsers to load Nexus behavior JS");
 assert(app.includes("I want to sell maize"), "Nexus behavior layer should support natural trade requests without button hunting");
 assert(app.includes("I need a doctor"), "Nexus behavior layer should support natural telehealth requests without button hunting");
 assert(app.includes("function allModeVoiceCommandCatalog"), "Nexus needs an explicit all-mode voice command contract");

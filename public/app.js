@@ -2199,8 +2199,8 @@ function runUserModeSelfTest() {
       if (!simpleUserCommandWorkflow(button.command)) missing.push(`${section}: ${button.label}`);
     });
   });
-  const currentScript = [...document.scripts].some(script => String(script.src || "").includes("nexus-behavior-101"));
-  const currentStyle = [...document.styleSheets].some(sheet => String(sheet.href || "").includes("nexus-behavior-101"));
+  const currentScript = [...document.scripts].some(script => String(script.src || "").includes("nexus-behavior-102"));
+  const currentStyle = [...document.styleSheets].some(sheet => String(sheet.href || "").includes("nexus-behavior-102"));
   if (!currentScript || !currentStyle) missing.push("new app files");
   const ok = missing.length === 0;
   const message = ok
@@ -10016,6 +10016,11 @@ async function handleVoiceCommand(rawCommand) {
     await startVoiceMission(command);
     return;
   }
+  if (isUniversalLanguageCommand(command)) {
+    pendingAgentClarification = null;
+    await changeLanguageByVoice(command);
+    return;
+  }
   if (pendingAgentClarification && await answerAgentClarification(command)) return;
   if (/\b(cancel|stop|clear|end)\s+(journey|guided journey|next step|follow through)\b/.test(lower)) {
     activeAgentJourney = null;
@@ -10035,10 +10040,6 @@ async function handleVoiceCommand(rawCommand) {
     return;
   }
 
-  if (isUniversalLanguageCommand(command)) {
-    await changeLanguageByVoice(command);
-    return;
-  }
   const migrantIntent = migrantFriendlyVoiceIntent(command);
   if (migrantIntent) {
     if (migrantIntent.section && canOpenSection(migrantIntent.section)) goSection(migrantIntent.section);

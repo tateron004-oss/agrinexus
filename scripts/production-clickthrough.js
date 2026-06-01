@@ -383,9 +383,9 @@ assert(app.includes('workflow === "admin-user"'), "Admin test login button needs
 assert(app.includes("Only an existing Admin can run this workflow"), "Admin login flow must explain admin-only protection");
 assert(server.includes('adminAccount.role = "Admin"'), "Backend must force admin test logins to Admin");
 assert(server.includes("admin_user.created"), "Admin test login must create auth audit evidence");
-assert(html.includes("styles.css?v=nexus-behavior-101"), "Index must force browsers to load the latest Nexus behavior shell");
-assert(html.includes("app.js?v=nexus-behavior-101"), "Index must force browsers to load the latest Nexus behavior code");
-assert(sw.includes("agrinexus-pwa-v81"), "Service worker cache must refresh the installed app after native voice bridge updates");
+assert(html.includes("styles.css?v=nexus-behavior-102"), "Index must force browsers to load the latest Nexus behavior shell");
+assert(html.includes("app.js?v=nexus-behavior-102"), "Index must force browsers to load the latest Nexus behavior code");
+assert(sw.includes("agrinexus-pwa-v82"), "Service worker cache must refresh the installed app after native voice bridge updates");
 assert(html.includes("userWorkspace"), "Dashboard needs a User Workspace for standard users");
 assert(html.includes("userMobileDock"), "Legacy mobile dock markup should remain safely hidden for cache compatibility");
 assert(html.includes("What Do You Need Help With Today?"), "Dashboard simple start should use user-ready language");
@@ -471,6 +471,7 @@ assert(app.includes('lower.includes("nearest health facility")'), "Simple voice 
 assert(app.includes('lower.includes("read the current response")'), "Simple voice buttons must read responses without API not-found fallthrough");
 assert(app.includes('lower.includes("help me understand the platform")'), "Simple AI Help button must route through the agent instead of a missing endpoint");
 assert(app.includes("function isUniversalLanguageCommand"), "Voice language changes must work from every mode");
+assert(app.includes("pendingAgentClarification = null;\n    await changeLanguageByVoice(command);"), "Clear language commands must bypass stale clarification prompts");
 assert(app.includes("function changeLanguageByVoice"), "Frontend voice layer must change language without module-specific wording");
 assert(app.includes("Nexus, change language to French"), "Voice help must explicitly show French language switching");
 assert(app.includes("Nexus, change language to Arabic"), "Voice help must explicitly show Arabic language switching");
