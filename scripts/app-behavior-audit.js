@@ -279,8 +279,10 @@ assert(html.includes("nexusBehaviorStatus"), "User voice dock needs an assistant
 assert(html.includes('data-user-voice-action="listen"'), "User voice dock needs a speak action");
 assert(html.includes('data-user-voice-action="type"'), "User voice dock needs a type action");
 assert(html.includes('data-user-voice-action="read"'), "User voice dock needs a read action");
-assert(html.includes("nexus-behavior-124"), "Index must force browsers to load Nexus behavior CSS");
-assert(html.includes("nexus-behavior-124"), "Index must force browsers to load Nexus behavior JS");
+assert(styles.includes("pointer-events: none") && styles.includes(".user-caption-actions") && styles.includes("pointer-events: auto"), "Caption panel must not block workflow action clicks");
+assert(styles.includes("bottom: 92px") && styles.includes("max-height: min(34vh, 310px)"), "Caption panel must stay compact below the main workflow area");
+assert(html.includes("nexus-behavior-125"), "Index must force browsers to load Nexus behavior CSS");
+assert(html.includes("nexus-behavior-125"), "Index must force browsers to load Nexus behavior JS");
 assert(app.includes("if (!id) return \"dashboard\";"), "Language changes must survive an empty hash without querying '#'");
 assert(app.includes("document.getElementById(id)?.classList.contains(\"section\")"), "Section hash lookup must avoid invalid CSS selectors during language switching");
 assert(app.includes("I want to sell maize"), "Nexus behavior layer should support natural trade requests without button hunting");

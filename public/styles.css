@@ -1963,28 +1963,25 @@ body.admin-mode .user-caption-panel,
 body.investor-mode .user-caption-panel {
   position: fixed;
   left: 50%;
-  top: 76px;
-  bottom: auto;
+  top: auto;
+  bottom: 92px;
   z-index: 126;
   display: grid;
-  gap: 10px;
-  width: min(440px, calc(100vw - 20px));
-  max-height: min(58vh, 460px);
+  gap: 8px;
+  width: min(420px, calc(100vw - 24px));
+  max-height: min(34vh, 310px);
   min-width: 0;
-  padding: 16px;
-  border: 3px solid #173240;
-  border-radius: 22px;
-  background: #fffdf2;
-  box-shadow: 0 24px 60px rgba(23, 50, 64, .28);
+  padding: 10px;
+  border: 2px solid #173240;
+  border-radius: 18px;
+  background: rgba(255, 253, 242, .98);
+  box-shadow: 0 16px 38px rgba(23, 50, 64, .22);
   transform: translateX(-50%);
+  pointer-events: none;
 }
 body.user-mode .user-caption-panel::before {
-  content: "";
-  position: absolute;
-  inset: -999px;
-  z-index: -1;
-  background: rgba(23, 50, 64, .2);
-  pointer-events: none;
+  display: none;
+  content: none;
 }
 body.user-mode .user-caption-panel.hidden,
 body.admin-mode .user-caption-panel.hidden,
@@ -1999,6 +1996,7 @@ body:not(.user-mode):not(.admin-mode):not(.investor-mode) .user-caption-panel {
   grid-template-columns: minmax(0, 1fr) auto;
   gap: 8px;
   align-items: center;
+  pointer-events: auto;
 }
 .user-caption-head strong {
   color: #173240;
@@ -2006,8 +2004,8 @@ body:not(.user-mode):not(.admin-mode):not(.investor-mode) .user-caption-panel {
   line-height: 1.15;
 }
 .user-caption-head button {
-  min-height: 40px;
-  padding: 7px 10px;
+  min-height: 36px;
+  padding: 6px 10px;
   border: 2px solid #d8e6eb;
   border-radius: 12px;
   background: #f7fbfc;
@@ -2016,18 +2014,19 @@ body:not(.user-mode):not(.admin-mode):not(.investor-mode) .user-caption-panel {
   white-space: nowrap;
 }
 .user-caption-text {
-  min-height: 7.5rem;
-  max-height: 16rem;
+  min-height: 3.6rem;
+  max-height: 6.2rem;
   overflow: auto;
-  padding: 16px;
-  border: 3px solid #173240;
-  border-radius: 16px;
+  padding: 10px;
+  border: 2px solid #173240;
+  border-radius: 14px;
   background: #ffffff;
   color: #173240;
-  font-size: 1.18rem;
+  font-size: 1rem;
   font-weight: 850;
-  line-height: 1.45;
+  line-height: 1.3;
   overflow-wrap: anywhere;
+  pointer-events: none;
 }
 .user-caption-input {
   display: grid;
@@ -2036,10 +2035,11 @@ body:not(.user-mode):not(.admin-mode):not(.investor-mode) .user-caption-panel {
   color: #456b60;
   font-size: .85rem;
   font-weight: 950;
+  pointer-events: auto;
 }
 .user-caption-input input {
   width: 100%;
-  min-height: 46px;
+  min-height: 42px;
   padding: 9px 11px;
   border: 2px solid #d8e6eb;
   border-radius: 12px;
@@ -2051,9 +2051,10 @@ body:not(.user-mode):not(.admin-mode):not(.investor-mode) .user-caption-panel {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 8px;
+  pointer-events: auto;
 }
 .user-caption-actions button {
-  min-height: 46px;
+  min-height: 42px;
   border: 2px solid #173240;
   border-radius: 12px;
   background: #ffffff;
