@@ -2382,8 +2382,8 @@ function runUserModeSelfTest() {
       if (!simpleUserCommandWorkflow(button.command)) missing.push(`${section}: ${button.label}`);
     });
   });
-  const currentScript = [...document.scripts].some(script => String(script.src || "").includes("nexus-behavior-118"));
-  const currentStyle = [...document.styleSheets].some(sheet => String(sheet.href || "").includes("nexus-behavior-118"));
+  const currentScript = [...document.scripts].some(script => String(script.src || "").includes("nexus-behavior-119"));
+  const currentStyle = [...document.styleSheets].some(sheet => String(sheet.href || "").includes("nexus-behavior-119"));
   if (!currentScript || !currentStyle) missing.push("new app files");
   const ok = missing.length === 0;
   const message = ok
@@ -8407,6 +8407,60 @@ function renderUserRealMap() {
   setTimeout(() => userMap?.invalidateSize(), 120);
 }
 
+function renderWorkflowLiveMap(config = pendingWorkflow || {}) {
+  const canvas = $("#workflowLiveMapCanvas");
+  if (!canvas || !data) return;
+  if (!window.L) {
+    canvas.innerHTML = `<div class="user-real-map-fallback">${translateText("Map tiles are loading. Check internet connection, then reopen this workflow.")}</div>`;
+    return;
+  }
+  if (canvas._leaflet_id) canvas.replaceWith(canvas.cloneNode(false));
+  const target = $("#workflowLiveMapCanvas");
+  const mode = workflowMode(config);
+  const country = config.healthPreview?.country || activeCountry();
+  const route = config.routePreview?.route || activeRoute();
+  const workflowMap = L.map(target, {
+    zoomControl: true,
+    attributionControl: true,
+    scrollWheelZoom: false,
+    tap: true
+  }).setView([country.lat, country.lng], Math.max(4, Number(country.zoom || 5)));
+  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    maxZoom: 19,
+    attribution: "OpenStreetMap"
+  }).addTo(workflowMap);
+
+  const routeLayer = L.layerGroup().addTo(workflowMap);
+  const markerLayer = L.layerGroup().addTo(workflowMap);
+  if (mode !== "health" && route?.points?.length) {
+    const routeLine = L.polyline(route.points, { color: "#176fc7", weight: 6, opacity: .9 }).addTo(routeLayer);
+    (route.checkpoints || []).forEach((checkpoint, index) => {
+      const point = route.points[Math.min(index, route.points.length - 1)];
+      const active = checkpoint === data.profile.activeCheckpoint;
+      L.circleMarker(point, {
+        radius: active ? 10 : 7,
+        color: "#173240",
+        fillColor: active ? "#ffc857" : "#ffffff",
+        fillOpacity: 1,
+        weight: 3
+      }).addTo(routeLayer).bindPopup(`<strong>${translateText(checkpoint)}</strong><br>${translateText("Workflow checkpoint")}`);
+    });
+    if (routeLine.getBounds?.().isValid?.()) workflowMap.fitBounds(routeLine.getBounds(), { padding: [24, 24] });
+  }
+  (data.countries || []).forEach(item => {
+    const active = item.id === country.id;
+    L.circleMarker([item.lat, item.lng], {
+      radius: active ? 11 : 7,
+      color: active ? "#d94c31" : "#1b8f68",
+      fillColor: active ? "#d94c31" : "#1b8f68",
+      fillOpacity: .74,
+      weight: 2
+    }).addTo(markerLayer).bindPopup(`<strong>${translateText(item.name)}</strong><br>${translateText(item.risk || "Monitored")} ${translateText("risk")}<br>${item.facilities} ${translateText("facilities")}`);
+  });
+  if (mode === "health") workflowMap.setView([country.lat, country.lng], Math.max(5, Number(country.zoom || 5)));
+  setTimeout(() => workflowMap.invalidateSize(), 140);
+}
+
 function closeWorkflowModal() {
   stopWorkflowCamera();
   pendingWorkflow = null;
@@ -8446,8 +8500,62 @@ function readWorkflowModal() {
 
 function workflowStepHtml(steps = []) {
   return steps.length
-    ? steps.map((step, index) => `<div><strong>${index + 1}. ${translateText(step.title)}</strong><span>${translateText(step.detail)}</span></div>`).join("")
+    ? steps.map((step, index) => `<div class="workflow-timeline-step"><b>${index + 1}</b><strong>${translateText(step.title)}</strong><span>${translateText(step.detail)}</span></div>`).join("")
     : "";
+}
+
+function workflowMode(config = {}) {
+  const haystack = `${config.eyebrow || ""} ${config.title || ""} ${config.userTitle || ""} ${config.summary || ""} ${config.confirmLabel || ""}`.toLowerCase();
+  if (/course|lesson|learning|certificate|quiz|assignment|transcript/.test(haystack)) return "learning";
+  if (/workforce|job|role|interview|mentor|shift|payroll|timesheet|document|worker/.test(haystack)) return "workforce";
+  if (/health|telehealth|patient|provider|care|vitals|referral|caption|caregiver|emergency|injury|prescription/.test(haystack)) return "health";
+  if (/buyer|crop|trade|order|wallet|payment|logistics|shipment|route|drone|field|irrigation|pest|yield|quality|export|contract/.test(haystack)) return "trade";
+  if (/map|facility|location|risk|corridor|checkpoint/.test(haystack)) return "map";
+  if (/provider|integration|engine|billing|auth|email|sms|whatsapp|service/.test(haystack)) return "integration";
+  if (/investor|funding|partner|demo|briefing/.test(haystack)) return "investor";
+  return "agent";
+}
+
+function workflowOperatingScreenHtml(config = {}) {
+  const mode = workflowMode(config);
+  const coach = config.realUseCoach || workflowRealUseCoach(config);
+  const route = config.routePreview?.route || activeRoute();
+  const country = config.healthPreview?.country || activeCountry();
+  const primaryField = (config.fields || [])[0];
+  const evidence = config.record || config.provider || "Workflow evidence saved";
+  const mapNeeded = ["trade", "map", "health"].includes(mode) || config.routePreview || config.healthPreview;
+  const statusItems = [
+    { label: "Now", value: (experienceMode === "user" && config.userTitle) || config.title || "Workflow" },
+    { label: mode === "health" ? "Region" : mode === "trade" || mode === "map" ? "Route" : "Focus", value: mode === "health" ? `${country.name} - ${country.risk}` : mode === "trade" || mode === "map" ? route.name : coach.question },
+    { label: "Next", value: config.confirmLabel || "Confirm action" }
+  ];
+  return `
+    <section class="workflow-operating-screen workflow-operating-${escapeHtml(mode)}" aria-label="${translateText("Active workflow workspace")}">
+      <div class="workflow-operating-head">
+        <div>
+          <strong>${translateText("Active workspace")}</strong>
+          <span>${translateText(coach.plain)}</span>
+        </div>
+        <small>${translateText(mode)}</small>
+      </div>
+      <div class="workflow-operating-body">
+        ${mapNeeded ? `<div id="workflowLiveMapCanvas" class="workflow-live-map" role="img" aria-label="${translateText("Live workflow map with route, country, checkpoints, and facilities.")}"></div>` : `
+          <div class="workflow-live-workbench">
+            <strong>${translateText(primaryField?.label || "Task input")}</strong>
+            <span>${translateText(primaryField?.value || primaryField?.placeholder || coach.question)}</span>
+            <button type="button" data-workflow-focus-field>${translateText("Edit details")}</button>
+          </div>
+        `}
+        <div class="workflow-operating-status">
+          ${statusItems.map(item => `<div><strong>${translateText(item.label)}</strong><span>${translateText(item.value)}</span></div>`).join("")}
+        </div>
+      </div>
+      <div class="workflow-evidence-strip">
+        <strong>${translateText("Evidence")}</strong>
+        <span>${translateText(evidence)}</span>
+      </div>
+    </section>
+  `;
 }
 
 function workflowComfortHtml(config) {
@@ -8728,7 +8836,7 @@ function openWorkflowModal(config) {
   $("#workflowSummary").textContent = translateText((experienceMode === "user" && config.userSummary) || config.summary || "Review this workflow and confirm when ready.");
   $("#workflowComfort").innerHTML = workflowComfortHtml(config);
   stopWorkflowCamera();
-  $("#workflowShipmentMap").innerHTML = `${videoSessionPreviewHtml(config)}${config.healthPreview ? healthHotspotHtml(config.healthPreview) : config.routePreview ? shipmentMapHtml(config.routePreview) : ""}`;
+  $("#workflowShipmentMap").innerHTML = `${workflowOperatingScreenHtml(config)}${videoSessionPreviewHtml(config)}`;
   $("#workflowSteps").innerHTML = workflowStepHtml(config.steps || []);
   $("#workflowFields").innerHTML = (config.fields || []).map(field => {
     const value = field.value || "";
@@ -8749,8 +8857,13 @@ function openWorkflowModal(config) {
   $("#workflowVoiceInput").value = "";
   $("#workflowVoicePrompt").textContent = translateText("Voice ready: say yes to confirm, no to cancel, or read to hear this workflow.");
   $("#workflowModal").classList.remove("hidden");
+  renderWorkflowLiveMap(config);
   $("#workflowStartCamera")?.addEventListener("click", startWorkflowCamera);
   $("#workflowStopCamera")?.addEventListener("click", stopWorkflowCamera);
+  $("[data-workflow-focus-field]")?.addEventListener("click", () => {
+    const field = $("[data-workflow-field]");
+    if (field) field.focus();
+  });
   $("#workflowConfirm").focus();
   const instruction = `${translateText((experienceMode === "user" && config.userTitle) || config.title || "Workflow")}. ${translateText((experienceMode === "user" && config.userSummary) || config.summary || "Review this workflow and confirm when ready.")}. Say yes to confirm, no to cancel, or read to hear the workflow.`;
   recordVoiceEvent(`Workflow ready: ${(experienceMode === "user" && config.userTitle) || config.title || "Workflow"}.`, "progress");

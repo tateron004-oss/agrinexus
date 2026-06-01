@@ -422,9 +422,9 @@ assert(app.includes('workflow === "admin-user"'), "Admin test login button needs
 assert(app.includes("Only an existing Admin can run this workflow"), "Admin login flow must explain admin-only protection");
 assert(server.includes('adminAccount.role = "Admin"'), "Backend must force admin test logins to Admin");
 assert(server.includes("admin_user.created"), "Admin test login must create auth audit evidence");
-assert(html.includes("styles.css?v=nexus-behavior-118"), "Index must force browsers to load the latest Nexus behavior shell");
-assert(html.includes("app.js?v=nexus-behavior-118"), "Index must force browsers to load the latest Nexus behavior code");
-assert(sw.includes("agrinexus-pwa-v98"), "Service worker cache must refresh the installed app after native voice bridge updates");
+assert(html.includes("styles.css?v=nexus-behavior-119"), "Index must force browsers to load the latest Nexus behavior shell");
+assert(html.includes("app.js?v=nexus-behavior-119"), "Index must force browsers to load the latest Nexus behavior code");
+assert(sw.includes("agrinexus-pwa-v99"), "Service worker cache must refresh the installed app after native voice bridge updates");
 assert(html.includes("userWorkspace"), "Dashboard needs a User Workspace for standard users");
 assert(html.includes("userMobileDock"), "Legacy mobile dock markup should remain safely hidden for cache compatibility");
 assert(html.includes("What Do You Need Help With Today?"), "Dashboard simple start should use user-ready language");
@@ -471,6 +471,10 @@ assert(app.includes('$("#workflowModal").classList.remove("hidden")'), "Workflow
 assert(app.includes("closeAskNexus({ silent: true })"), "Workflow windows must close Ask Nexus so workflows never run behind the assistant");
 assert(app.includes('row("How this works"'), "Workflow windows need clear user guidance, not just cards");
 assert(app.includes("workflowStepHtml"), "Workflow windows need numbered plain-language steps");
+assert(app.includes("workflow-timeline-step"), "Workflow steps need timeline rows instead of placeholder cards");
+assert(app.includes("function workflowOperatingScreenHtml"), "Workflow modal needs an active operating screen");
+assert(app.includes("function renderWorkflowLiveMap"), "Route and health workflows need real map rendering");
+assert(app.includes("workflowLiveMapCanvas"), "Workflow modal must expose a real map canvas");
 assert(app.includes("function learningUserCopy"), "Learning workflows need plain-language user copy");
 assert(app.includes("function workforceUserCopy"), "Workforce workflows need plain-language user copy");
 assert(app.includes("function tradeUserCopy"), "Trade, buyer, and drone workflows need plain-language user copy");
