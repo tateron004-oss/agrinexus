@@ -99,6 +99,7 @@ hasAll(styles, [
   "max-height: calc(100vh - 88px)",
   "body.user-mode .user-language-panel",
   "body.user-mode .user-language-buttons button",
+  ".user-visual-icon",
   "body.user-mode .user-voice-dock",
   "body.user-mode .user-caption-panel",
   "body.admin-mode .user-caption-panel",
@@ -180,8 +181,8 @@ assert(html.includes("nexusBehaviorStatus"), "User voice dock needs an assistant
 assert(html.includes('data-user-voice-action="listen"'), "User voice dock needs a speak action");
 assert(html.includes('data-user-voice-action="type"'), "User voice dock needs a type action");
 assert(html.includes('data-user-voice-action="read"'), "User voice dock needs a read action");
-assert(html.includes("nexus-behavior-86"), "Index must force browsers to load Nexus behavior CSS");
-assert(html.includes("nexus-behavior-86"), "Index must force browsers to load Nexus behavior JS");
+assert(html.includes("nexus-behavior-87"), "Index must force browsers to load Nexus behavior CSS");
+assert(html.includes("nexus-behavior-87"), "Index must force browsers to load Nexus behavior JS");
 assert(app.includes("I want to sell maize"), "Nexus behavior layer should support natural trade requests without button hunting");
 assert(app.includes("I need a doctor"), "Nexus behavior layer should support natural telehealth requests without button hunting");
 assert(app.includes("Admin Operator"), "Nexus behavior layer should adapt for Admin mode");

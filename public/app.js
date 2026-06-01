@@ -2197,8 +2197,8 @@ function runUserModeSelfTest() {
       if (!simpleUserCommandWorkflow(button.command)) missing.push(`${section}: ${button.label}`);
     });
   });
-  const currentScript = [...document.scripts].some(script => String(script.src || "").includes("nexus-behavior-86"));
-  const currentStyle = [...document.styleSheets].some(sheet => String(sheet.href || "").includes("nexus-behavior-86"));
+  const currentScript = [...document.scripts].some(script => String(script.src || "").includes("nexus-behavior-87"));
+  const currentStyle = [...document.styleSheets].some(sheet => String(sheet.href || "").includes("nexus-behavior-87"));
   if (!currentScript || !currentStyle) missing.push("new app files");
   const ok = missing.length === 0;
   const message = ok
@@ -5125,18 +5125,35 @@ function latestUserOutcome() {
   };
 }
 
+function userVisualIconHtml(type = "agent") {
+  const icons = {
+    ask: `<path d="M18 9.5a6 6 0 0 0-12 0v2.2a6 6 0 0 0 12 0V9.5Z"></path><path d="M9 18h6"></path><path d="M12 18v3"></path><path d="M7 10h10"></path>`,
+    learning: `<path d="M5 5.5h8a4 4 0 0 1 4 4V19H9a4 4 0 0 0-4 4V5.5Z"></path><path d="M17 7h2a2 2 0 0 1 2 2v10h-4"></path><path d="M8 9h5"></path><path d="M8 13h4"></path>`,
+    workforce: `<path d="M7 7h10v3H7z"></path><path d="M5 10h14a2 2 0 0 1 2 2v7H3v-7a2 2 0 0 1 2-2Z"></path><path d="M9 7V5h6v2"></path><path d="M8 15h8"></path>`,
+    health: `<path d="M12 21s-7-4.4-7-10a4 4 0 0 1 7-2.7A4 4 0 0 1 19 11c0 5.6-7 10-7 10Z"></path><path d="M12 8v6"></path><path d="M9 11h6"></path>`,
+    trade: `<path d="M4 16c4-7 9-9 16-8-1 7-5 12-13 12"></path><path d="M4 20c3-5 7-8 13-10"></path><path d="M6 7h3"></path><path d="M17 17h3"></path>`,
+    map: `<path d="M4 7l5-2 6 2 5-2v14l-5 2-6-2-5 2V7Z"></path><path d="M9 5v14"></path><path d="M15 7v14"></path>`,
+    agent: `<path d="M8 7h8a4 4 0 0 1 4 4v1a4 4 0 0 1-4 4h-2l-3 3v-3H8a4 4 0 0 1-4-4v-1a4 4 0 0 1 4-4Z"></path><path d="M9 11h.1"></path><path d="M12 11h.1"></path><path d="M15 11h.1"></path>`,
+    course: `<path d="M6 4h9a3 3 0 0 1 3 3v13H9a3 3 0 0 0-3 3V4Z"></path><path d="M9 8h5"></path><path d="M9 12h6"></path><path d="M9 16h4"></path>`,
+    job: `<path d="M6 8h12a2 2 0 0 1 2 2v9H4v-9a2 2 0 0 1 2-2Z"></path><path d="M9 8V6h6v2"></path><path d="M8 13h8"></path><path d="M12 13v3"></path>`,
+    certificate: `<circle cx="12" cy="9" r="5"></circle><path d="M9 13l-1 7 4-2 4 2-1-7"></path>`,
+    route: `<path d="M6 18c4 0 4-12 8-12s4 12 8 12"></path><circle cx="6" cy="18" r="2"></circle><circle cx="14" cy="6" r="2"></circle><circle cx="22" cy="18" r="2"></circle>`
+  };
+  return `<span class="user-visual-icon" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false">${icons[type] || icons.agent}</svg></span>`;
+}
+
 function renderUserWorkspace() {
   const target = $("#userWorkspace");
   if (!target) return;
   const intelligence = modeIntelligenceSnapshot("user");
   const serviceButtons = [
-    { label: "Talk to Nexus", section: "ask", className: "service-ask", ask: true },
-    { label: "Learn", section: "learning", className: "service-learning" },
-    { label: "Find Work", section: "workforce", className: "service-workforce" },
-    { label: "Get Health Help", section: "health", className: "service-health" },
-    { label: "Sell Crops", section: "trade", className: "service-trade" },
-    { label: "Map", section: "map", className: "service-map" },
-    { label: "AI Help", section: "agent", className: "service-agent" }
+    { label: "Talk to Nexus", section: "ask", className: "service-ask", icon: "ask", ask: true },
+    { label: "Learn", section: "learning", className: "service-learning", icon: "learning" },
+    { label: "Find Work", section: "workforce", className: "service-workforce", icon: "workforce" },
+    { label: "Get Health Help", section: "health", className: "service-health", icon: "health" },
+    { label: "Sell Crops", section: "trade", className: "service-trade", icon: "trade" },
+    { label: "Map", section: "map", className: "service-map", icon: "map" },
+    { label: "AI Help", section: "agent", className: "service-agent", icon: "agent" }
   ].filter(item => item.ask || canOpenSection(item.section));
   target.innerHTML = `
     <section class="user-workspace-hero user-simple-hero">
@@ -5177,6 +5194,7 @@ function renderUserWorkspace() {
     </section>
     <section class="user-service-buttons" aria-label="${translateText("Open a service")}">
       ${serviceButtons.map(item => `<button type="button" class="${escapeHtml(item.className)}" ${item.ask ? `data-mobile-ask="true"` : `data-simple-section="${item.section}"`}>
+        ${userVisualIconHtml(item.icon)}
         <strong>${translateText(item.label)}</strong>
       </button>`).join("")}
     </section>
@@ -5314,6 +5332,7 @@ function learningCourseChoicesHtml() {
         const progress = enrollment?.progress || (certified ? 100 : 0);
         return `
           <article class="user-choice-card learning-choice ${course.id === data.profile.activeCourseId ? "selected" : ""}">
+            ${userVisualIconHtml(certified ? "certificate" : "course")}
             <div>
               <span>${translateText(localized.track || "Course")}</span>
               <strong>${translateText(localized.title)}</strong>
@@ -5375,6 +5394,7 @@ function workforceJobChoicesHtml() {
               : `Needs ${gate.missingReadiness || 0}% readiness`;
         return `
           <article class="user-choice-card workforce-choice ${application ? "applied" : gate.eligible ? "ready" : "locked"}">
+            ${userVisualIconHtml(application ? "certificate" : "job")}
             <div>
               <span>${translateText(application ? "Applied" : gate.eligible ? "Ready job" : "Training needed")}</span>
               <strong>${translateText(role.title)}</strong>
