@@ -26,6 +26,8 @@ hasAll(app, [
   ":scope > .user-simple-module",
   "user-module-status",
   "data-user-voice-action",
+  "data-close-user-language",
+  "user-module-close",
   "function nexusMemoryProfile",
   "function nexusBehaviorMode",
   "function updateNexusBehaviorLayer",
@@ -112,6 +114,7 @@ hasAll(styles, [
   "body.user-mode #dashboard > :not(#userWorkspace)",
   "body.user-mode .simple-home",
   "display: none !important",
+  "body.user-mode #countrySelect",
   "body.user-mode .section.active:not(#dashboard) > :not(.user-simple-module)",
   "body.user-mode .user-module-preview",
   "body.user-mode .user-scene-visual",
@@ -120,6 +123,9 @@ hasAll(styles, [
   "min-height: calc(100vh - 162px)",
   "max-height: calc(100vh - 88px)",
   "body.user-mode .user-language-panel",
+  "body.user-mode #countrySelect",
+  "body.user-mode #platformLanguageSelect",
+  "body.user-mode .user-language-header",
   "body.user-mode .user-language-buttons button",
   "body.user-mode .user-fast-actions",
   "body.user-mode .user-fast-action",
@@ -133,6 +139,7 @@ hasAll(styles, [
   "body.user-mode .user-voice-dock #nexusBehaviorStatus",
   "body.user-mode .user-module-status",
   "body.user-mode .user-module-back",
+  "body.user-mode .user-module-close",
   "body.user-mode #globalVoiceGuide",
   "body.user-mode .global-assistant",
   "max-height: calc(100vh - 24px)",
@@ -238,8 +245,8 @@ assert(html.includes("nexusBehaviorStatus"), "User voice dock needs an assistant
 assert(html.includes('data-user-voice-action="listen"'), "User voice dock needs a speak action");
 assert(html.includes('data-user-voice-action="type"'), "User voice dock needs a type action");
 assert(html.includes('data-user-voice-action="read"'), "User voice dock needs a read action");
-assert(html.includes("nexus-behavior-114"), "Index must force browsers to load Nexus behavior CSS");
-assert(html.includes("nexus-behavior-114"), "Index must force browsers to load Nexus behavior JS");
+assert(html.includes("nexus-behavior-115"), "Index must force browsers to load Nexus behavior CSS");
+assert(html.includes("nexus-behavior-115"), "Index must force browsers to load Nexus behavior JS");
 assert(app.includes("if (!id) return \"dashboard\";"), "Language changes must survive an empty hash without querying '#'");
 assert(app.includes("document.getElementById(id)?.classList.contains(\"section\")"), "Section hash lookup must avoid invalid CSS selectors during language switching");
 assert(app.includes("I want to sell maize"), "Nexus behavior layer should support natural trade requests without button hunting");

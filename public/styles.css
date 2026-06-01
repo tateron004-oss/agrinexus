@@ -859,6 +859,10 @@ body.user-mode .top-actions select,
 body.user-mode .top-actions button {
   width: 100%;
 }
+body.user-mode #countrySelect,
+body.user-mode #platformLanguageSelect {
+  display: none !important;
+}
 body.user-mode .shell {
   min-height: calc(100vh - 57px);
 }
@@ -1547,6 +1551,13 @@ body.user-mode .user-module-buttons button {
   border-width: 2px;
   box-shadow: 0 12px 26px rgba(23, 50, 64, .08);
 }
+body.user-mode .user-module-nav,
+body.user-mode .user-language-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
 body.user-mode .user-module-back {
   width: fit-content;
   min-height: 42px;
@@ -1557,6 +1568,19 @@ body.user-mode .user-module-back {
   color: #173240;
   font-weight: 950;
   white-space: nowrap;
+}
+body.user-mode .user-module-close,
+body.user-mode .user-language-close {
+  width: fit-content;
+  min-height: 42px;
+  padding: 8px 14px;
+  border: 2px solid #173240;
+  border-radius: 999px;
+  background: #173240;
+  color: #ffffff;
+  font-weight: 950;
+  white-space: nowrap;
+  overflow-wrap: normal;
 }
 body.user-mode .user-module-status {
   max-height: 4.8rem;

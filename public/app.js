@@ -2199,8 +2199,8 @@ function runUserModeSelfTest() {
       if (!simpleUserCommandWorkflow(button.command)) missing.push(`${section}: ${button.label}`);
     });
   });
-  const currentScript = [...document.scripts].some(script => String(script.src || "").includes("nexus-behavior-113"));
-  const currentStyle = [...document.styleSheets].some(sheet => String(sheet.href || "").includes("nexus-behavior-113"));
+  const currentScript = [...document.scripts].some(script => String(script.src || "").includes("nexus-behavior-115"));
+  const currentStyle = [...document.styleSheets].some(sheet => String(sheet.href || "").includes("nexus-behavior-115"));
   if (!currentScript || !currentStyle) missing.push("new app files");
   const ok = missing.length === 0;
   const message = ok
@@ -6042,7 +6042,10 @@ function renderUserWorkspace() {
       </button>
     </section>
     <section id="userLanguagePanel" class="user-language-panel hidden" aria-label="${translateText("Choose language")}">
-      <strong>${translateText("Choose language")}</strong>
+      <div class="user-language-header">
+        <strong>${translateText("Choose language")}</strong>
+        <button type="button" class="user-language-close" data-close-user-language aria-label="${translateText("Close")}">${translateText("Close")}</button>
+      </div>
       <div class="user-language-buttons">
         ${[
           ["en", "English"],
@@ -6466,7 +6469,10 @@ function renderUserSimpleActiveSection(sectionId = currentSectionId()) {
   target.querySelector(":scope > .user-simple-module")?.remove();
   target.insertAdjacentHTML("afterbegin", `
     <section class="user-simple-module ${sectionId === "learning" || sectionId === "workforce" ? "user-choice-module" : ""}" aria-label="${translateText(config.title)}">
-      <button type="button" class="user-module-back" data-simple-section="dashboard">${translateText("Back")}</button>
+      <div class="user-module-nav">
+        <button type="button" class="user-module-back" data-simple-section="dashboard">${translateText("Back")}</button>
+        <button type="button" class="user-module-close" data-simple-section="dashboard" aria-label="${translateText("Close")}">${translateText("Close")}</button>
+      </div>
       <span class="eyebrow">${translateText("AgriNexus")}</span>
       <h2>${translateText(config.title)}</h2>
       <p>${translateText(config.prompt || "Tap one button.")}</p>
@@ -11816,6 +11822,12 @@ function bindStatic() {
           setVoiceResponse("Choose a language, or say change language to French, Arabic, Kiswahili, Spanish, or English.", false, { allowVoiceFirst: false });
         }
       }
+      return;
+    }
+    if (event.target.closest("[data-close-user-language]")) {
+      event.preventDefault();
+      event.stopPropagation();
+      $("#userLanguagePanel")?.classList.add("hidden");
       return;
     }
     const userVoiceButton = event.target.closest("[data-user-voice-action]");
