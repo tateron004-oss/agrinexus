@@ -2384,8 +2384,8 @@ function runUserModeSelfTest() {
       if (!simpleUserCommandWorkflow(button.command)) missing.push(`${section}: ${button.label}`);
     });
   });
-  const currentScript = [...document.scripts].some(script => String(script.src || "").includes("nexus-behavior-126"));
-  const currentStyle = [...document.styleSheets].some(sheet => String(sheet.href || "").includes("nexus-behavior-126"));
+  const currentScript = [...document.scripts].some(script => String(script.src || "").includes("nexus-behavior-127"));
+  const currentStyle = [...document.styleSheets].some(sheet => String(sheet.href || "").includes("nexus-behavior-127"));
   if (!currentScript || !currentStyle) missing.push("new app files");
   const ok = missing.length === 0;
   const message = ok
@@ -5866,7 +5866,14 @@ function renderConversationPanel() {
   const pending = data.profile.agentPendingAction;
   const recentTurns = turns.slice(-8);
   const pendingHtml = pending
-    ? `<div class="conversation-turn assistant"><strong>Pending</strong><span>${escapeHtml(`Ready to ${String(pending.action || "run this workflow").toLowerCase()}. Use Yes, do it or No, cancel.`)}</span></div>`
+    ? `<div class="conversation-turn assistant agent-pending-confirm-card">
+        <strong>${translateText("Ready to continue?")}</strong>
+        <span>${escapeHtml(translateText(`Nexus is ready to ${String(pending.action || "run this workflow").toLowerCase()}. Press Do this now to continue, or Cancel to stop.`))}</span>
+        <div class="agent-pending-confirm-actions">
+          <button type="button" class="primary" data-agent-pending-confirm="yes">${translateText("Do this now")}</button>
+          <button type="button" data-agent-pending-confirm="no">${translateText("Cancel")}</button>
+        </div>
+      </div>`
     : "";
   panel.innerHTML = (recentTurns.length ? recentTurns.map(turn => `
     <div class="conversation-turn ${turn.role === "user" ? "user" : "assistant"}">
@@ -12485,6 +12492,15 @@ function bindStatic() {
       event.preventDefault();
       event.stopPropagation();
       answerGrandmaActionConfirmation(grandmaConfirmButton.dataset.grandmaConfirm);
+      return;
+    }
+    const agentPendingConfirmButton = event.target.closest("[data-agent-pending-confirm]");
+    if (agentPendingConfirmButton) {
+      event.preventDefault();
+      event.stopPropagation();
+      const answer = agentPendingConfirmButton.dataset.agentPendingConfirm === "yes" ? "yes do it" : "no cancel";
+      setCommandInputs(answer);
+      void handleVoiceCommand(answer);
       return;
     }
     if (event.target.closest("[data-inline-workflow-confirm]")) {

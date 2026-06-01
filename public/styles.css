@@ -2916,6 +2916,32 @@ body.admin-mode .user-workspace {
   color: var(--muted);
   text-transform: uppercase;
 }
+.agent-pending-confirm-card {
+  gap: 8px;
+  border: 2px solid #173240;
+  border-left-width: 6px !important;
+  background: #fffdf2;
+}
+.agent-pending-confirm-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+.agent-pending-confirm-actions button {
+  min-height: 46px;
+  padding: 8px 10px;
+  border: 2px solid #173240;
+  border-radius: 12px;
+  background: #ffffff;
+  color: #173240;
+  font-size: .95rem;
+  font-weight: 950;
+  white-space: normal;
+}
+.agent-pending-confirm-actions button.primary {
+  background: #173240;
+  color: #ffffff;
+}
 .global-mic-status {
   grid-column: 1 / -1;
   display: inline-flex;

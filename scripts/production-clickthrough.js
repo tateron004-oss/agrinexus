@@ -422,9 +422,9 @@ assert(app.includes('workflow === "admin-user"'), "Admin test login button needs
 assert(app.includes("Only an existing Admin can run this workflow"), "Admin login flow must explain admin-only protection");
 assert(server.includes('adminAccount.role = "Admin"'), "Backend must force admin test logins to Admin");
 assert(server.includes("admin_user.created"), "Admin test login must create auth audit evidence");
-assert(html.includes("styles.css?v=nexus-behavior-126"), "Index must force browsers to load the latest Nexus behavior shell");
-assert(html.includes("app.js?v=nexus-behavior-126"), "Index must force browsers to load the latest Nexus behavior code");
-assert(sw.includes("agrinexus-pwa-v106"), "Service worker cache must refresh the installed app after native voice bridge updates");
+assert(html.includes("styles.css?v=nexus-behavior-127"), "Index must force browsers to load the latest Nexus behavior shell");
+assert(html.includes("app.js?v=nexus-behavior-127"), "Index must force browsers to load the latest Nexus behavior code");
+assert(sw.includes("agrinexus-pwa-v107"), "Service worker cache must refresh the installed app after native voice bridge updates");
 assert(html.includes("userWorkspace"), "Dashboard needs a User Workspace for standard users");
 assert(html.includes("userMobileDock"), "Legacy mobile dock markup should remain safely hidden for cache compatibility");
 assert(html.includes("What Do You Need Help With Today?"), "Dashboard simple start should use user-ready language");
@@ -475,6 +475,9 @@ assert(app.includes("function userProcessScreenHtml"), "User workflows need proc
 assert(app.includes("function openMappedUserWorkflow"), "User actions need one shared process launcher");
 assert(app.includes("data-inline-workflow-confirm"), "Inline user process needs a visible Do this now button");
 assert(app.includes("data-inline-workflow-cancel"), "Inline user process needs a visible Choose another button");
+assert(app.includes("data-agent-pending-confirm"), "Ask Nexus pending actions need clickable Do this now and Cancel buttons");
+assert(app.includes("agent-pending-confirm-card"), "Ask Nexus pending actions need a visible confirmation card");
+assert(styles.includes(".agent-pending-confirm-actions"), "Ask Nexus pending confirmation buttons need styling");
 assert(app.includes('$("#workflowModal").classList.remove("hidden")'), "Workflow modal must become visible when opened");
 assert(app.includes("closeAskNexus({ silent: true })"), "Workflow windows must close Ask Nexus so workflows never run behind the assistant");
 assert(app.includes('row("How this works"'), "Workflow windows need clear user guidance, not just cards");
