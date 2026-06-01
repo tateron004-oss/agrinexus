@@ -2197,8 +2197,8 @@ function runUserModeSelfTest() {
       if (!simpleUserCommandWorkflow(button.command)) missing.push(`${section}: ${button.label}`);
     });
   });
-  const currentScript = [...document.scripts].some(script => String(script.src || "").includes("nexus-behavior-83"));
-  const currentStyle = [...document.styleSheets].some(sheet => String(sheet.href || "").includes("nexus-behavior-83"));
+  const currentScript = [...document.scripts].some(script => String(script.src || "").includes("nexus-behavior-84"));
+  const currentStyle = [...document.styleSheets].some(sheet => String(sheet.href || "").includes("nexus-behavior-84"));
   if (!currentScript || !currentStyle) missing.push("new app files");
   const ok = missing.length === 0;
   const message = ok
@@ -5170,7 +5170,7 @@ function renderUserWorkspace() {
 const simpleUserSections = {
   learning: {
     title: "Learn",
-    prompt: "Choose how you want to learn.",
+    prompt: "Pick a course.",
     className: "service-learning",
     buttons: [
       { label: "Start a Course", command: "start training path" },
@@ -5180,8 +5180,8 @@ const simpleUserSections = {
     ]
   },
   workforce: {
-    title: "Work",
-    prompt: "Choose what you need for work.",
+    title: "Find Work",
+    prompt: "Pick a job.",
     className: "service-workforce",
     buttons: [
       { label: "Find Jobs", command: "show me jobs" },
@@ -5286,6 +5286,10 @@ function learningCourseChoicesHtml() {
   const courses = (data.courses || []).slice(0, 4);
   if (!courses.length) return "";
   return `
+    <div class="user-choice-title">
+      <strong>${translateText("Choose a course")}</strong>
+      <span>${translateText("Tap Select or Continue.")}</span>
+    </div>
     <div class="user-choice-list" aria-label="${translateText("Choose a course")}">
       ${courses.map(course => {
         const localized = translatedCourse(course);
@@ -5297,7 +5301,7 @@ function learningCourseChoicesHtml() {
             <div>
               <span>${translateText(localized.track || "Course")}</span>
               <strong>${translateText(localized.title)}</strong>
-              <small>${translateText(`${translatedDuration(course.duration)} - ${progress}% complete`)}</small>
+              <small>${translateText(`${progress}% complete`)}</small>
             </div>
             <button type="button" class="course" data-course="${escapeHtml(course.id)}">${translateText(enrollment ? "Continue" : "Select")}</button>
           </article>
@@ -5337,6 +5341,10 @@ function workforceJobChoicesHtml() {
   const roles = (data.roles || []).slice(0, 4);
   if (!roles.length) return "";
   return `
+    <div class="user-choice-title">
+      <strong>${translateText("Choose a job")}</strong>
+      <span>${translateText("Tap Apply, View, or Gaps.")}</span>
+    </div>
     <div class="user-choice-list" aria-label="${translateText("Choose a job")}">
       ${roles.map(role => {
         const gate = roleGate(role);
@@ -5345,7 +5353,7 @@ function workforceJobChoicesHtml() {
         const detail = application
           ? `${application.status || "submitted"} - ${money(application.rate || role.rate || 0)}/shift`
           : gate.eligible
-            ? `${role.country} - ${money(role.rate || 0)}/shift - ready`
+            ? `${role.country} - ${money(role.rate || 0)}/shift`
             : missing.length
               ? `Needs ${missing[0]}`
               : `Needs ${gate.missingReadiness || 0}% readiness`;
@@ -5397,28 +5405,16 @@ function userModulePreviewHtml(sectionId) {
     `;
   }
   if (sectionId === "learning") {
-    const course = activeCourse() || (data.courses || [])[0];
     return `
-      <div class="user-module-preview user-learning-preview">
-        ${learningPathPreviewHtml(course)}
+      <div class="user-module-preview user-learning-preview user-choice-preview">
         ${learningCourseChoicesHtml()}
-        <div class="user-preview-summary">
-          <strong>${translateText("Learning made simple")}</strong>
-          <span>${translateText(course ? `Choose a course, press Select or Continue, then confirm enrollment. You will see progress after the course starts.` : "Choose Start a Course when ready.")}</span>
-        </div>
       </div>
     `;
   }
   if (sectionId === "workforce") {
-    const role = firstEligibleRole();
     return `
-      <div class="user-module-preview user-workforce-preview">
-        ${workforcePathPreviewHtml(role)}
+      <div class="user-module-preview user-workforce-preview user-choice-preview">
         ${workforceJobChoicesHtml()}
-        <div class="user-preview-summary">
-          <strong>${translateText("Find work support")}</strong>
-          <span>${translateText(role ? "Choose a job, press Apply, then confirm. Applied jobs stay visible with an Applied label." : "Choose Find Jobs to review work options.")}</span>
-        </div>
       </div>
     `;
   }
@@ -5461,12 +5457,13 @@ function renderUserSimpleActiveSection(sectionId = currentSectionId()) {
   if (!target) return;
   target.querySelector(":scope > .user-simple-module")?.remove();
   target.insertAdjacentHTML("afterbegin", `
-    <section class="user-simple-module" aria-label="${translateText(config.title)}">
+    <section class="user-simple-module ${sectionId === "learning" || sectionId === "workforce" ? "user-choice-module" : ""}" aria-label="${translateText(config.title)}">
       <button type="button" class="user-module-back" data-simple-section="dashboard">${translateText("Back")}</button>
       <span class="eyebrow">${translateText("AgriNexus")}</span>
       <h2>${translateText(config.title)}</h2>
       <p>${translateText(config.prompt || "Tap one button.")}</p>
       ${userModulePreviewHtml(sectionId)}
+      ${sectionId === "learning" || sectionId === "workforce" ? `<span class="user-actions-label">${translateText("More actions")}</span>` : ""}
       <div id="grandmaConfirmPanel" class="grandma-confirm-panel hidden" role="status" aria-live="polite"></div>
       <div class="user-service-buttons user-module-buttons">
         ${config.buttons.map(action => `<button type="button" class="${escapeHtml(config.className)}" data-simple-command="${escapeHtml(action.command)}">

@@ -1077,19 +1077,23 @@ body.user-mode .section.active:not(#dashboard) > :not(.user-simple-module) {
 }
 body.user-mode .user-simple-module {
   display: grid;
-  gap: 10px;
+  gap: 9px;
   width: 100%;
   max-width: 100%;
   min-width: 0;
   min-height: calc(100vh - 162px);
   max-height: calc(100vh - 88px);
   align-content: start;
-  padding: 12px;
+  padding: 10px;
   border: 2px solid #173240;
   border-radius: 16px;
   background: #ffffff;
   box-shadow: 0 14px 32px rgba(23, 50, 64, .08);
   overflow: auto;
+}
+body.user-mode .user-simple-module.user-choice-module {
+  gap: 8px;
+  align-content: start;
 }
 body.user-mode .user-simple-module,
 body.user-mode .user-simple-module * {
@@ -1118,8 +1122,11 @@ body.user-mode .user-module-buttons {
 }
 body.user-mode .user-module-preview {
   display: grid;
-  gap: 10px;
+  gap: 8px;
   min-width: 0;
+}
+body.user-mode .user-choice-preview {
+  gap: 8px;
 }
 body.user-mode .user-module-preview .shipment-map-card {
   padding: 10px;
@@ -1263,8 +1270,26 @@ body.user-mode .user-preview-summary.compact {
 }
 .user-choice-list {
   display: grid;
-  gap: 9px;
+  gap: 8px;
   min-width: 0;
+}
+.user-choice-title {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+  padding: 2px 4px;
+  text-align: center;
+}
+.user-choice-title strong {
+  color: #173240;
+  font-size: 1.02rem;
+  line-height: 1.12;
+}
+.user-choice-title span {
+  color: #456b60;
+  font-size: .86rem;
+  font-weight: 850;
+  line-height: 1.2;
 }
 .user-choice-card {
   display: grid;
@@ -1272,9 +1297,9 @@ body.user-mode .user-preview-summary.compact {
   gap: 10px;
   align-items: center;
   min-width: 0;
-  padding: 12px;
+  padding: 9px 10px;
   border: 2px solid #d8e8e2;
-  border-radius: 16px;
+  border-radius: 14px;
   background: #ffffff;
   box-shadow: 0 8px 18px rgba(23, 50, 64, .05);
 }
@@ -1303,7 +1328,7 @@ body.user-mode .user-preview-summary.compact {
   overflow-wrap: anywhere;
 }
 .user-choice-card button {
-  min-height: 50px;
+  min-height: 44px;
   padding: 8px 10px;
   border: 2px solid #173240;
   border-radius: 12px;
@@ -1333,6 +1358,29 @@ body.user-mode .user-preview-summary.compact {
 .user-choice-card.workforce-choice.locked button {
   border-color: #9a6b0f;
   background: #9a6b0f;
+}
+body.user-mode .user-actions-label {
+  display: block;
+  margin: 0;
+  color: #456b60;
+  font-size: .82rem;
+  font-weight: 950;
+  line-height: 1;
+  text-align: center;
+}
+body.user-mode .user-choice-module .user-module-buttons {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+body.user-mode .user-choice-module .user-module-buttons button {
+  min-height: 56px;
+  padding: 10px 8px;
+  border-radius: 14px;
+  box-shadow: none;
+}
+body.user-mode .user-choice-module .user-module-buttons strong {
+  font-size: .98rem;
+  line-height: 1.12;
 }
 body.user-mode .user-module-buttons button {
   min-height: 82px;
