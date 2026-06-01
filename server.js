@@ -2241,6 +2241,41 @@ async function probeUrl(url, options = {}) {
   }
 }
 
+function providerCredentialHint(providerId) {
+  const config = PROVIDER_CONFIG[providerId] || {};
+  const modeEnv = config.modeEnv || "";
+  const webhookEnv = (config.credentialEnvs || []).find(key => key.endsWith("_WEBHOOK_URL")) || "";
+  const apiKeyEnv = (config.credentialEnvs || []).find(key => key.endsWith("_API_KEY")) || "";
+  const endpoint = PROVIDER_ENGINE_ENDPOINTS[providerId] || "";
+  return {
+    providerId,
+    modeEnv,
+    webhookEnv,
+    apiKeyEnv,
+    bridgeEndpoint: endpoint,
+    expectedFix: apiKeyEnv
+      ? `Set the same ${apiKeyEnv} value on agrinexus-platform and agrinexus-provider-engines, then redeploy both services.`
+      : "Confirm the platform and provider-engine services use matching credentials."
+  };
+}
+
+function providerDeliveryDetail(providerId, label, delivery, fallback) {
+  const hint = providerCredentialHint(providerId);
+  if (delivery?.status === 401 || delivery?.httpStatus === 401) {
+    return `${label} reached the provider bridge but the credential was rejected. ${hint.expectedFix}`;
+  }
+  if (delivery?.status === "missing-webhook") {
+    return `${label} is missing its webhook URL. Set ${hint.webhookEnv || "the provider webhook URL"} or PROVIDER_ENGINE_BASE_URL.`;
+  }
+  if (delivery?.status === "dispatch-error" || delivery?.status === "fetch-error") {
+    return `${label} could not reach its provider endpoint. Check the provider service URL, deployment status, and network access.`;
+  }
+  if (delivery?.status === "needs-twilio-config") {
+    return `${label} needs Twilio sender/recipient settings before live delivery.`;
+  }
+  return fallback;
+}
+
 async function productionLiveServiceCheck(db, user) {
   ensureAiProfile(db.profile);
   ensureOperationsProfile(db.profile);
@@ -2306,7 +2341,15 @@ async function productionLiveServiceCheck(db, user) {
   };
   const billingDelivery = await dispatchProviderWebhook(db, billingEvent).catch(error => ({ attempted: true, ok: false, status: "dispatch-error", error: error.message }));
   logIntegration(db, { ...billingEvent, status: billingDelivery.ok ? "success" : "needs-credentials", metadata: { ...billingEvent.metadata, delivery: billingDelivery }, dispatch: false });
-  push("billing", "Billing/subscription test", billingDelivery.ok && Boolean(process.env.BILLING_PRICE_ID), billingDelivery.ok ? "Billing provider accepted the live check." : "Billing provider or BILLING_PRICE_ID still needs setup.", { delivery: billingDelivery });
+  push(
+    "billing",
+    "Billing/subscription test",
+    billingDelivery.ok && Boolean(process.env.BILLING_PRICE_ID),
+    billingDelivery.ok
+      ? "Billing provider accepted the live check."
+      : providerDeliveryDetail("billing-subscriptions", "Billing", billingDelivery, "Billing provider or BILLING_PRICE_ID still needs setup."),
+    { delivery: billingDelivery, credentialHint: providerCredentialHint("billing-subscriptions"), hasBillingPriceId: Boolean(process.env.BILLING_PRICE_ID) }
+  );
 
   const resetEvent = {
     providerId: "auth-password-reset",
@@ -2317,7 +2360,15 @@ async function productionLiveServiceCheck(db, user) {
   };
   const resetDelivery = await dispatchProviderWebhook(db, resetEvent).catch(error => ({ attempted: true, ok: false, status: "dispatch-error", error: error.message }));
   logIntegration(db, { ...resetEvent, status: resetDelivery.ok ? "success" : "needs-credentials", metadata: { ...resetEvent.metadata, delivery: resetDelivery }, dispatch: false });
-  push("auth-password-reset", "Password reset/auth provider test", resetDelivery.ok, resetDelivery.ok ? "Password reset provider accepted the live check." : "Auth/password reset provider still needs endpoint or credentials.", { delivery: resetDelivery });
+  push(
+    "auth-password-reset",
+    "Password reset/auth provider test",
+    resetDelivery.ok,
+    resetDelivery.ok
+      ? "Password reset provider accepted the live check."
+      : providerDeliveryDetail("auth-password-reset", "Password reset", resetDelivery, "Auth/password reset provider still needs endpoint or credentials."),
+    { delivery: resetDelivery, credentialHint: providerCredentialHint("auth-password-reset") }
+  );
 
   const communicationProviders = [
     ["email-delivery", "Email notification"],
@@ -2342,8 +2393,13 @@ async function productionLiveServiceCheck(db, user) {
     "communications",
     "Email/SMS/WhatsApp notification test",
     communicationOk,
-    communicationOk ? "Email, SMS, and WhatsApp providers accepted live checks." : "One or more communication providers still need endpoint/credentials.",
-    { results: communicationResults }
+    communicationOk
+      ? "Email, SMS, and WhatsApp providers accepted live checks."
+      : communicationResults
+        .filter(item => !item.delivery.ok)
+        .map(item => providerDeliveryDetail(item.providerId, item.label, item.delivery, `${item.label} still needs endpoint or credentials.`))
+        .join(" "),
+    { results: communicationResults.map(item => ({ ...item, credentialHint: providerCredentialHint(item.providerId) })) }
   );
 
   const report = {
