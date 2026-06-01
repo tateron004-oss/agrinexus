@@ -23,7 +23,7 @@ const requirements = [
   ["no dead-air progress updates", app.includes("function beginAgentNoDeadAir") && app.includes("Still working on") && app.includes("The live engine is taking longer than normal")],
   ["safe slow-engine fallback", app.includes("function safeAgentFallbackResponse") && app.includes("I kept the app responsive")],
   ["conversation clarification repair", app.includes("function inferAmbiguousIntent") && app.includes("function askAgentClarification") && app.includes("function answerAgentClarification")],
-  ["simple clarification choices", app.includes("Which path do you want?") && app.includes("Say the number, say the service name, or say cancel")],
+  ["migrant-friendly clarification", app.includes("function guideAmbiguousUserWithoutChoice") && app.includes("You do not need perfect words") && app.includes("Nexus is guiding without forcing a choice")],
   ["guided next-step journey", app.includes("activeAgentJourney") && app.includes("function setActiveAgentJourney") && app.includes("function runActiveAgentNextStep")],
   ["voice follow-through command", app.includes("say next step to continue") && app.includes("continue journey") && app.includes("Guided journey cleared")],
   ["operator coaching layer", app.includes("function nexusOperatorCoach") && app.includes("function operatorCoachSuggestions") && app.includes("Operator coach")],

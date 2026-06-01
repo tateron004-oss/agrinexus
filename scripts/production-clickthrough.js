@@ -383,9 +383,9 @@ assert(app.includes('workflow === "admin-user"'), "Admin test login button needs
 assert(app.includes("Only an existing Admin can run this workflow"), "Admin login flow must explain admin-only protection");
 assert(server.includes('adminAccount.role = "Admin"'), "Backend must force admin test logins to Admin");
 assert(server.includes("admin_user.created"), "Admin test login must create auth audit evidence");
-assert(html.includes("styles.css?v=nexus-behavior-104"), "Index must force browsers to load the latest Nexus behavior shell");
-assert(html.includes("app.js?v=nexus-behavior-104"), "Index must force browsers to load the latest Nexus behavior code");
-assert(sw.includes("agrinexus-pwa-v84"), "Service worker cache must refresh the installed app after native voice bridge updates");
+assert(html.includes("styles.css?v=nexus-behavior-105"), "Index must force browsers to load the latest Nexus behavior shell");
+assert(html.includes("app.js?v=nexus-behavior-105"), "Index must force browsers to load the latest Nexus behavior code");
+assert(sw.includes("agrinexus-pwa-v85"), "Service worker cache must refresh the installed app after native voice bridge updates");
 assert(html.includes("userWorkspace"), "Dashboard needs a User Workspace for standard users");
 assert(html.includes("userMobileDock"), "Legacy mobile dock markup should remain safely hidden for cache compatibility");
 assert(html.includes("What Do You Need Help With Today?"), "Dashboard simple start should use user-ready language");
@@ -477,6 +477,9 @@ assert(app.includes("function isGlobalStopCommand"), "Nexus stop must interrupt 
 assert(app.includes("function clearConversationHold"), "Voice recovery must clear stale choices, missions, journeys, and open workflow modals");
 assert(app.includes("function isFreshActionDuringClarification"), "Fresh voice requests must bypass stale one-choice clarification loops");
 assert(app.includes("I may have heard that wrong"), "Clarification fallback must be calm and recovery-oriented");
+assert(app.includes("function guideAmbiguousUserWithoutChoice"), "Vague migrant-user requests must guide without forcing a required choice");
+assert(app.includes("You do not need perfect words"), "Voice assistant must reassure migrant users that imperfect wording is acceptable");
+assert(app.includes("Nexus is guiding without forcing a choice"), "Ambiguous voice requests must not trap users in a choice loop");
 assert(app.includes("Nexus, change language to French"), "Voice help must explicitly show French language switching");
 assert(app.includes("Nexus, change language to Arabic"), "Voice help must explicitly show Arabic language switching");
 assert(app.includes("Nexus, change language to Kiswahili"), "Voice help must explicitly show Kiswahili language switching");

@@ -2199,8 +2199,8 @@ function runUserModeSelfTest() {
       if (!simpleUserCommandWorkflow(button.command)) missing.push(`${section}: ${button.label}`);
     });
   });
-  const currentScript = [...document.scripts].some(script => String(script.src || "").includes("nexus-behavior-104"));
-  const currentStyle = [...document.styleSheets].some(sheet => String(sheet.href || "").includes("nexus-behavior-104"));
+  const currentScript = [...document.scripts].some(script => String(script.src || "").includes("nexus-behavior-105"));
+  const currentStyle = [...document.styleSheets].some(sheet => String(sheet.href || "").includes("nexus-behavior-105"));
   if (!currentScript || !currentStyle) missing.push("new app files");
   const ok = missing.length === 0;
   const message = ok
@@ -4210,9 +4210,23 @@ function inferAmbiguousIntent(command) {
 
 function askAgentClarification(clarification) {
   pendingAgentClarification = clarification;
-  const choices = clarification.options.map((option, index) => `${index + 1}. ${option.label}: ${option.detail}`).join(" ");
-  updateNexusBehaviorLayer("confirming", "Nexus needs one quick choice.");
-  setVoiceResponse(`I can help. Which path do you want? ${choices} Say the number, say the service name, or say cancel.`, true);
+  const choices = clarification.options.map(option => option.label).join(", ");
+  updateNexusBehaviorLayer("confirming", "Nexus is asking one simple follow-up.");
+  setVoiceResponse(`I can help. Say ${choices}, or say it your way. You can also say stop.`, true);
+}
+
+function guideAmbiguousUserWithoutChoice(clarification) {
+  pendingAgentClarification = null;
+  const options = clarification?.options?.length ? clarification.options : [
+    { label: "Health", command: "I need a doctor" },
+    { label: "Work", command: "I need work" },
+    { label: "Trade", command: "I want to sell my crop" },
+    { label: "Learning", command: "I want to learn" }
+  ];
+  const suggestions = options.map(option => option.command || option.label);
+  renderLiveVoiceSuggestions(suggestions);
+  updateNexusBehaviorLayer("listening", "Nexus is guiding without forcing a choice.");
+  setVoiceResponse("I can help. You do not need perfect words. Say something like: I need a doctor, I need work, I want to sell my crop, or I want to learn. I will open the right place.", true);
 }
 
 function isGlobalStopCommand(lower) {
@@ -4264,9 +4278,9 @@ async function answerAgentClarification(command) {
     : pendingAgentClarification.options.find(option => lower === "yes" || lower.includes(option.label.toLowerCase()) || lower.includes(option.section));
   if (!selected) {
     pendingAgentClarification.misses = (pendingAgentClarification.misses || 0) + 1;
-    if (pendingAgentClarification.misses >= 2) {
+    if (pendingAgentClarification.misses >= 1) {
       pendingAgentClarification = null;
-      setVoiceResponse("I cleared that old choice. Say what you want in normal words, like open health, find jobs, sell my crop, or start a course.", true);
+      setVoiceResponse("I cleared that old step. You do not need exact words. Say I need a doctor, I need work, sell my crop, start learning, or stop.", true);
       return true;
     }
     const names = pendingAgentClarification.options.map(option => option.label).join(", ");
@@ -10137,7 +10151,7 @@ async function handleVoiceCommand(rawCommand) {
   }
   const clarification = inferAmbiguousIntent(command);
   if (clarification) {
-    askAgentClarification(clarification);
+    guideAmbiguousUserWithoutChoice(clarification);
     return;
   }
   if (/(what is|define|explain|tell me about|describe).*(agrinexus|agri nexus|nexus platform|the platform)/.test(lower) || /(agrinexus|agri nexus).*(what do you do|who are you|how do you help)/.test(lower)) {
