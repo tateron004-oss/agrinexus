@@ -2197,8 +2197,8 @@ function runUserModeSelfTest() {
       if (!simpleUserCommandWorkflow(button.command)) missing.push(`${section}: ${button.label}`);
     });
   });
-  const currentScript = [...document.scripts].some(script => String(script.src || "").includes("nexus-behavior-84"));
-  const currentStyle = [...document.styleSheets].some(sheet => String(sheet.href || "").includes("nexus-behavior-84"));
+  const currentScript = [...document.scripts].some(script => String(script.src || "").includes("nexus-behavior-85"));
+  const currentStyle = [...document.styleSheets].some(sheet => String(sheet.href || "").includes("nexus-behavior-85"));
   if (!currentScript || !currentStyle) missing.push("new app files");
   const ok = missing.length === 0;
   const message = ok
@@ -4832,6 +4832,22 @@ function renderJarvisLayer() {
     panel.innerHTML = jarvisInsights().map(item => taskItem(item.title, item.detail, item.status, item.label)).join("");
   }
   renderConversationPanel();
+}
+
+function updateUserCaptionPanel(message, { open = true } = {}) {
+  const panel = $("#userCaptionPanel");
+  const text = $("#userCaptionText");
+  if (!panel || !text) return;
+  const clean = String(message || "").replace(/\s+/g, " ").trim();
+  if (!clean) return;
+  text.textContent = clean;
+  if (open && experienceMode === "user") panel.classList.remove("hidden");
+  const input = $("#userCaptionInput");
+  if (input && !input.value.trim()) input.placeholder = translateText("Type or speak your reply");
+}
+
+function closeUserCaptionPanel() {
+  $("#userCaptionPanel")?.classList.add("hidden");
 }
 
 function renderConversationPanel() {
@@ -8890,8 +8906,9 @@ function setVoiceResponse(message, speak = false, options = {}) {
   if (summary) summary.textContent = responseMessage;
   const globalStatus = $("#globalAssistantStatus");
   if (globalStatus) globalStatus.textContent = responseMessage;
+  updateUserCaptionPanel(responseMessage);
   announce(responseMessage);
-  toast(responseMessage);
+  if (experienceMode !== "user" || responseMessage.length < 90) toast(responseMessage);
   if (languageCode() !== "en") {
     request("/api/translate", {
       method: "POST",
@@ -8903,6 +8920,7 @@ function setVoiceResponse(message, speak = false, options = {}) {
       if (transcript) transcript.textContent = translated;
       if (summary) summary.textContent = translated;
       if (globalStatus) globalStatus.textContent = translated;
+      updateUserCaptionPanel(translated);
       announce(translated);
       if (speak || (voiceFirstMode && allowVoiceFirst)) speakVoiceResponse(translated);
     }).catch(() => {
@@ -10387,13 +10405,41 @@ function bindStatic() {
       event.preventDefault();
       event.stopPropagation();
       const action = userVoiceButton.dataset.userVoiceAction;
-      openAskNexus();
       if (action === "listen") {
+        updateUserCaptionPanel("Listening. Speak your request.");
         startVoiceListening();
       } else if (action === "read") {
+        updateUserCaptionPanel(lastVoiceResponse || "Nexus is ready.");
         speakVoiceResponse();
       } else {
+        updateUserCaptionPanel(lastVoiceResponse || "Ask Nexus anything.");
+        openAskNexus();
         $("#globalCommandInput")?.focus();
+      }
+      return;
+    }
+    const captionButton = event.target.closest("[data-caption-action]");
+    if (captionButton) {
+      event.preventDefault();
+      event.stopPropagation();
+      const action = captionButton.dataset.captionAction;
+      if (action === "close") {
+        closeUserCaptionPanel();
+      } else if (action === "listen") {
+        updateUserCaptionPanel("Listening. Speak your request.");
+        startVoiceListening();
+      } else if (action === "speak") {
+        speakVoiceResponse($("#userCaptionText")?.textContent || lastVoiceResponse);
+      } else if (action === "send") {
+        const input = $("#userCaptionInput");
+        const command = input?.value.trim();
+        if (!command) {
+          updateUserCaptionPanel("Type a request or press Mic to speak.");
+          return;
+        }
+        if (input) input.value = "";
+        setCommandInputs(command);
+        void handleVoiceCommand(command);
       }
       return;
     }
@@ -10826,6 +10872,15 @@ function bindStatic() {
     if (event.target.id === "workflowModal") closeWorkflowModal();
   };
   document.addEventListener("keydown", event => {
+    if (event.key === "Enter" && event.target?.id === "userCaptionInput") {
+      event.preventDefault();
+      const command = event.target.value.trim();
+      if (!command) return updateUserCaptionPanel("Type a request or press Mic to speak.");
+      event.target.value = "";
+      setCommandInputs(command);
+      void handleVoiceCommand(command);
+      return;
+    }
     if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "k") {
       event.preventDefault();
       openAskNexus();

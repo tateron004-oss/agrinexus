@@ -1516,6 +1516,98 @@ body.user-mode .user-voice-dock {
   box-shadow: 0 16px 38px rgba(23, 50, 64, .18);
   transform: translateX(-50%);
 }
+body.user-mode .user-caption-panel {
+  position: fixed;
+  left: 50%;
+  bottom: 104px;
+  z-index: 126;
+  display: grid;
+  gap: 10px;
+  width: min(440px, calc(100vw - 20px));
+  max-height: min(42vh, 360px);
+  min-width: 0;
+  padding: 12px;
+  border: 3px solid #173240;
+  border-radius: 18px;
+  background: #ffffff;
+  box-shadow: 0 18px 42px rgba(23, 50, 64, .22);
+  transform: translateX(-50%);
+}
+body.user-mode .user-caption-panel.hidden {
+  display: none !important;
+}
+body:not(.user-mode) .user-caption-panel {
+  display: none !important;
+}
+.user-caption-head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+}
+.user-caption-head strong {
+  color: #173240;
+  font-size: 1.05rem;
+  line-height: 1.15;
+}
+.user-caption-head button {
+  min-height: 40px;
+  padding: 7px 10px;
+  border: 2px solid #d8e6eb;
+  border-radius: 12px;
+  background: #f7fbfc;
+  color: #173240;
+  font-weight: 950;
+  white-space: nowrap;
+}
+.user-caption-text {
+  max-height: 9.5rem;
+  overflow: auto;
+  padding: 12px;
+  border: 2px solid #d8e6eb;
+  border-radius: 14px;
+  background: #f7fbfc;
+  color: #173240;
+  font-size: 1.05rem;
+  font-weight: 850;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+.user-caption-input {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+  color: #456b60;
+  font-size: .85rem;
+  font-weight: 950;
+}
+.user-caption-input input {
+  width: 100%;
+  min-height: 46px;
+  padding: 9px 11px;
+  border: 2px solid #d8e6eb;
+  border-radius: 12px;
+  color: #173240;
+  font-size: 1rem;
+  font-weight: 850;
+}
+.user-caption-actions {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+.user-caption-actions button {
+  min-height: 46px;
+  border: 2px solid #173240;
+  border-radius: 12px;
+  background: #ffffff;
+  color: #173240;
+  font-weight: 950;
+}
+.user-caption-actions button:first-child {
+  background: #173240;
+  color: #ffffff;
+}
 body.user-mode .user-voice-dock #nexusBehaviorStatus {
   grid-column: 1 / -1;
   display: block;

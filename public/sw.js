@@ -1,4 +1,4 @@
-const CACHE_NAME = "agrinexus-pwa-v64";
+const CACHE_NAME = "agrinexus-pwa-v65";
 const APP_SHELL = [
   "/",
   "/index.html",

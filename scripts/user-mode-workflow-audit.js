@@ -101,6 +101,8 @@ for (const [section, buttons] of Object.entries(expectedSections)) {
   ".user-choice-card.workforce-choice.applied",
   ".user-choice-title",
   ".user-choice-module",
+  "body.user-mode .user-caption-panel",
+  ".user-caption-text",
   "body.user-mode #workforce .user-inline-workflow",
   ".global-assistant:not(.hidden)",
   ".jarvis-panel:not(.hidden)",
@@ -112,9 +114,9 @@ for (const [section, buttons] of Object.entries(expectedSections)) {
   assert(styles.includes(marker), `User workflow containment style missing: ${marker}`);
 });
 
-assert(html.includes("/app.js?v=nexus-behavior-84"), "Index must force browsers to load current User-mode workflow JS");
-assert(html.includes("/styles.css?v=nexus-behavior-84"), "Index must force browsers to load current User-mode workflow CSS");
-assert(sw.includes('CACHE_NAME = "agrinexus-pwa-v64"'), "Service worker cache must be bumped after User-mode workflow fixes");
+assert(html.includes("/app.js?v=nexus-behavior-85"), "Index must force browsers to load current User-mode workflow JS");
+assert(html.includes("/styles.css?v=nexus-behavior-85"), "Index must force browsers to load current User-mode workflow CSS");
+assert(sw.includes('CACHE_NAME = "agrinexus-pwa-v65"'), "Service worker cache must be bumped after User-mode workflow fixes");
 
 console.log("User mode workflow audit passed");
 console.log("Checked: every simple app tab/button maps to a workflow, course/job choices are visible, User mode uses inline confirmations, assistant windows have anti-partial containment, and the app can self-check/repair stale runtime cache.");

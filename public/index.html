@@ -13,7 +13,7 @@
   <link rel="icon" href="/icons/agri-nexus-192.png" type="image/png">
   <link rel="apple-touch-icon" href="/icons/agri-nexus-192.png">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-  <link rel="stylesheet" href="/styles.css?v=nexus-behavior-84">
+  <link rel="stylesheet" href="/styles.css?v=nexus-behavior-85">
 </head>
 <body>
   <a class="skip-link" href="#mainContent">Skip to main content</a>
@@ -102,6 +102,22 @@
         <button type="button" data-user-voice-action="read">Read</button>
         <span id="nexusBehaviorStatus">Nexus ready</span>
       </div>
+      <section id="userCaptionPanel" class="user-caption-panel hidden" aria-label="Nexus captions" aria-live="polite">
+        <div class="user-caption-head">
+          <strong>Nexus captions</strong>
+          <button type="button" data-caption-action="close" aria-label="Close captions">Close</button>
+        </div>
+        <div id="userCaptionText" class="user-caption-text">Nexus is ready.</div>
+        <label class="user-caption-input" for="userCaptionInput">
+          <span>Speak or type back</span>
+          <input id="userCaptionInput" placeholder="Ask Nexus anything">
+        </label>
+        <div class="user-caption-actions">
+          <button type="button" data-caption-action="listen">Mic</button>
+          <button type="button" data-caption-action="send">Send</button>
+          <button type="button" data-caption-action="speak">Read</button>
+        </div>
+      </section>
 
       <main id="mainContent" class="content">
         <section id="accessibilityPanel" class="accessibility-panel hidden" aria-labelledby="accessibilityTitle">
@@ -1405,6 +1421,6 @@
   <div id="toast" class="toast hidden" role="status" aria-live="polite" aria-atomic="true"></div>
   <div id="screenReaderStatus" class="sr-only" role="status" aria-live="polite" aria-atomic="true"></div>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="/app.js?v=nexus-behavior-84"></script>
+  <script src="/app.js?v=nexus-behavior-85"></script>
 </body>
 </html>
