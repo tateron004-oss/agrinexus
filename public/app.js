@@ -2197,8 +2197,8 @@ function runUserModeSelfTest() {
       if (!simpleUserCommandWorkflow(button.command)) missing.push(`${section}: ${button.label}`);
     });
   });
-  const currentScript = [...document.scripts].some(script => String(script.src || "").includes("nexus-behavior-88"));
-  const currentStyle = [...document.styleSheets].some(sheet => String(sheet.href || "").includes("nexus-behavior-88"));
+  const currentScript = [...document.scripts].some(script => String(script.src || "").includes("nexus-behavior-89"));
+  const currentStyle = [...document.styleSheets].some(sheet => String(sheet.href || "").includes("nexus-behavior-89"));
   if (!currentScript || !currentStyle) missing.push("new app files");
   const ok = missing.length === 0;
   const message = ok
@@ -5410,6 +5410,15 @@ function workforceJobChoicesHtml() {
   `;
 }
 
+function userPreviewActionsHtml(actions = []) {
+  if (!actions.length) return "";
+  return `
+    <div class="user-preview-actions">
+      ${actions.map(action => `<button type="button" data-simple-command="${escapeHtml(action.command)}">${translateText(action.label)}</button>`).join("")}
+    </div>
+  `;
+}
+
 function userModulePreviewHtml(sectionId) {
   if (sectionId === "trade") {
     const latestOrder = data.profile.orders?.[data.profile.orders.length - 1];
@@ -5427,6 +5436,11 @@ function userModulePreviewHtml(sectionId) {
         <div class="user-preview-summary">
           <strong>${translateText(latestOrder ? "Shipment status" : "Ready to sell")}</strong>
           <span>${translateText(latestOrder ? `${latestOrder.product || product?.name || "Crop"} is at ${latestOrder.checkpoint || data.profile.activeCheckpoint}.` : `Start with ${product?.name || "your crop"}, then choose buyer, order, route, or farm scan.`)}</span>
+          ${userPreviewActionsHtml([
+            { label: latestOrder ? "Track Route" : "Create Order", command: latestOrder ? "track my route" : "create a crop order" },
+            { label: "Contact Buyer", command: "contact my buyer" },
+            { label: "Scan Farm", command: "run drone scan" }
+          ])}
         </div>
       </div>
     `;
@@ -5438,6 +5452,11 @@ function userModulePreviewHtml(sectionId) {
         <div class="user-preview-summary">
           <strong>${translateText("Map made simple")}</strong>
           <span>${translateText(`Nexus is watching ${activeRoute().name}. Choose Check Route, Find Facility, or Explain Map.`)}</span>
+          ${userPreviewActionsHtml([
+            { label: "Check Route", command: "check route risk" },
+            { label: "Find Facility", command: "find nearest health facility" },
+            { label: "Explain Map", command: "explain the map" }
+          ])}
         </div>
       </div>
     `;
@@ -5475,15 +5494,28 @@ function userModulePreviewHtml(sectionId) {
         <div class="user-preview-summary">
           <strong>${translateText("Health support")}</strong>
           <span>${translateText(`${country.name} is marked ${country.risk} risk with ${country.queue}. Use Start Intake, Talk to Provider, or Check Region.`)}</span>
+          ${userPreviewActionsHtml([
+            { label: "Start Intake", command: "start telehealth intake" },
+            { label: "Check Region", command: "check health risk in my region" },
+            { label: "Accessibility Help", command: "create audio guide and captions" }
+          ])}
         </div>
       </div>
     `;
   }
   if (sectionId === "agent") {
-    return `<div class="user-module-preview"><div class="user-preview-summary"><strong>${translateText("Talk naturally")}</strong><span>${translateText("Ask Nexus what to do, ask it to explain the platform, or ask it to open a service.")}</span></div></div>`;
+    return `<div class="user-module-preview"><div class="user-preview-summary"><strong>${translateText("Talk naturally")}</strong><span>${translateText("Ask Nexus what to do, ask it to explain the platform, or ask it to open a service.")}</span>${userPreviewActionsHtml([
+      { label: "Ask Question", command: "help me understand the platform" },
+      { label: "Plan Mission", command: "create an agent plan" },
+      { label: "Read to Me", command: "read the current response" }
+    ])}</div></div>`;
   }
   if (sectionId === "profile") {
-    return `<div class="user-module-preview"><div class="user-preview-summary"><strong>${translateText("Your record")}</strong><span>${translateText("Review progress, messages, certificates, and saved activity without seeing admin controls.")}</span></div></div>`;
+    return `<div class="user-module-preview"><div class="user-preview-summary"><strong>${translateText("Your record")}</strong><span>${translateText("Review progress, messages, certificates, and saved activity without seeing admin controls.")}</span>${userPreviewActionsHtml([
+      { label: "My Progress", command: "summarize my progress" },
+      { label: "My Messages", command: "show my messages" },
+      { label: "Help Me", command: "help me" }
+    ])}</div></div>`;
   }
   return "";
 }
