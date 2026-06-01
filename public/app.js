@@ -3,6 +3,8 @@ let map = null;
 let layers = {};
 let userMap = null;
 let userMapLayers = {};
+let userHealthMap = null;
+let userHealthMapLayers = {};
 let selectedLearningTrack = "All";
 let selectedPersona = localStorage.getItem("agrinexusPersona") || "farmer";
 let experienceMode = localStorage.getItem("agrinexusExperienceMode") || "";
@@ -2382,8 +2384,8 @@ function runUserModeSelfTest() {
       if (!simpleUserCommandWorkflow(button.command)) missing.push(`${section}: ${button.label}`);
     });
   });
-  const currentScript = [...document.scripts].some(script => String(script.src || "").includes("nexus-behavior-123"));
-  const currentStyle = [...document.styleSheets].some(sheet => String(sheet.href || "").includes("nexus-behavior-123"));
+  const currentScript = [...document.scripts].some(script => String(script.src || "").includes("nexus-behavior-124"));
+  const currentStyle = [...document.styleSheets].some(sheet => String(sheet.href || "").includes("nexus-behavior-124"));
   if (!currentScript || !currentStyle) missing.push("new app files");
   const ok = missing.length === 0;
   const message = ok
@@ -6573,6 +6575,28 @@ function userRealMapHtml(title = "Live route map") {
   `;
 }
 
+function userHealthRegionalMapHtml(title = "Regional health risk") {
+  const country = activeCountry();
+  const regions = (data.countries || []).map(item => item.name).slice(0, 5).join(", ");
+  return `
+    <div class="user-real-map-card user-health-map-card">
+      <div class="user-real-map-head">
+        <div>
+          <strong>${translateText(title)}</strong>
+          <span>${translateText(`${country.name}: ${country.risk} risk, ${country.queue}`)}</span>
+        </div>
+        <small class="risk-badge">${translateText(country.risk || "Monitored")}</small>
+      </div>
+      <div id="userHealthMapCanvas" class="user-real-map user-health-real-map" role="img" aria-label="${translateText(`Real health map for ${country.name}, showing regional risk, facilities, and nearby care access.`)}"></div>
+      <div class="user-real-map-meta">
+        <div><strong>${translateText("Region")}</strong><span>${translateText(regions || "Africa health access")}</span></div>
+        <div><strong>${translateText("Risk")}</strong><span>${translateText(`${country.risk || "Monitored"} risk`)}</span></div>
+        <div><strong>${translateText("Nearby help")}</strong><span>${translateText(`${country.facilities || 0} facilities`)}</span></div>
+      </div>
+    </div>
+  `;
+}
+
 function userModulePreviewHtml(sectionId) {
   if (sectionId === "trade") {
     const latestOrder = data.profile.orders?.[data.profile.orders.length - 1];
@@ -6639,7 +6663,7 @@ function userModulePreviewHtml(sectionId) {
     return `
       <div class="user-module-preview user-health-preview">
         ${userServicePhotoHtml("health", "Health support")}
-        ${healthHotspotHtml({ country, title: "Regional health risk" })}
+        ${userHealthRegionalMapHtml("Regional health risk")}
         <div class="provider-contact-card">
           <strong>${translateText(provider?.providerName || "Telehealth provider desk")}</strong>
           <span>${translateText(intake ? `Case ${intake.patientRef}: ${intake.needSummary || "care support needed"}` : "Start intake first, then Nexus prepares provider contact.")}</span>
@@ -6706,6 +6730,7 @@ function renderUserSimpleActiveSection(sectionId = currentSectionId()) {
     </section>
   `);
   if (sectionId === "map") setTimeout(renderUserRealMap, 80);
+  if (sectionId === "health") setTimeout(renderUserHealthMap, 80);
 }
 
 function renderUserInlineWorkflow(sectionId, config) {
@@ -8538,6 +8563,82 @@ function renderUserRealMap() {
   const regionalBounds = L.latLngBounds([[-35, -20], [36, 55]]);
   userMap.fitBounds(regionalBounds, { padding: [12, 12] });
   setTimeout(() => userMap?.invalidateSize(), 120);
+}
+
+function renderUserHealthMap() {
+  const canvas = $("#userHealthMapCanvas");
+  if (!canvas || !data) return;
+  if (!window.L) {
+    canvas.innerHTML = `<div class="user-real-map-fallback">${translateText("Map tiles are loading. Check your internet connection, then refresh this screen.")}</div>`;
+    return;
+  }
+  if (userHealthMap) {
+    try {
+      userHealthMap.remove();
+    } catch (error) {
+      // The previous user health panel may already be gone after navigation.
+    }
+    userHealthMap = null;
+    userHealthMapLayers = {};
+  }
+
+  const country = activeCountry();
+  userHealthMap = L.map(canvas, {
+    zoomControl: true,
+    attributionControl: true,
+    scrollWheelZoom: false,
+    tap: true
+  }).setView([3.2, 20.5], 3);
+  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    maxZoom: 19,
+    attribution: "OpenStreetMap"
+  }).addTo(userHealthMap);
+
+  userHealthMapLayers.region = L.layerGroup().addTo(userHealthMap);
+  userHealthMapLayers.markers = L.layerGroup().addTo(userHealthMap);
+  userHealthMapLayers.facilities = L.layerGroup().addTo(userHealthMap);
+
+  L.rectangle([[-35, -20], [36, 55]], {
+    color: "#173240",
+    weight: 2,
+    fill: false,
+    dashArray: "8 6",
+    opacity: .7
+  }).addTo(userHealthMapLayers.region).bindPopup(translateText("Regional Africa health access view"));
+
+  const riskColor = risk => {
+    const value = String(risk || "").toLowerCase();
+    if (value.includes("high")) return "#d94c31";
+    if (value.includes("moderate") || value.includes("elevated")) return "#d9a71d";
+    return "#1b8f68";
+  };
+
+  (data.countries || []).forEach(item => {
+    const active = item.id === country.id;
+    const color = riskColor(item.risk);
+    L.circleMarker([item.lat, item.lng], {
+      radius: active ? 13 : 8,
+      color: active ? "#173240" : color,
+      fillColor: color,
+      fillOpacity: active ? .92 : .76,
+      weight: active ? 4 : 2
+    })
+      .addTo(userHealthMapLayers.markers)
+      .bindPopup(`<strong>${translateText(item.name)}</strong><br>${translateText(item.risk || "Monitored")} ${translateText("risk")}<br>${item.facilities} ${translateText("facilities")}<br>${translateText(item.queue || "Telehealth support ready")}`);
+  });
+
+  [[country.lat + .7, country.lng - .8], [country.lat - .5, country.lng + .9], [country.lat + .3, country.lng + .5]].forEach((point, index) => {
+    L.circleMarker(point, {
+      radius: 8,
+      color: "#173240",
+      fillColor: "#ffffff",
+      fillOpacity: 1,
+      weight: 3
+    }).addTo(userHealthMapLayers.facilities).bindPopup(`<strong>${translateText("Care point")} ${index + 1}</strong><br>${translateText("Telehealth referral ready")}`);
+  });
+
+  userHealthMap.fitBounds([[-35, -20], [36, 55]], { padding: [12, 12] });
+  setTimeout(() => userHealthMap?.invalidateSize(), 120);
 }
 
 function renderWorkflowLiveMap(config = pendingWorkflow || {}) {

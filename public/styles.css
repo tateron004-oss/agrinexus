@@ -1366,13 +1366,18 @@ body.user-mode .user-real-map-head span {
 }
 body.user-mode .user-real-map-head small {
   flex: 0 0 auto;
+  min-width: 76px;
+  max-width: 126px;
   padding: 7px 9px;
   border-radius: 999px;
   background: #173240;
   color: #ffffff;
-  font-size: .78rem;
+  font-size: .74rem;
   font-weight: 950;
-  line-height: 1;
+  line-height: 1.08;
+  text-align: center;
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 body.user-mode .user-real-map {
   height: min(56vh, 430px);
@@ -1382,6 +1387,13 @@ body.user-mode .user-real-map {
   border: 3px solid #173240;
   border-radius: 18px;
   background: #b9d8e8;
+}
+body.user-mode .user-health-map-card {
+  border-color: #efc2c8;
+  background: #fff9f9;
+}
+body.user-mode .user-health-real-map {
+  background: #d8e8ef;
 }
 body.user-mode .user-real-map .leaflet-control-container,
 body.user-mode .user-real-map .leaflet-pane {
@@ -3290,11 +3302,16 @@ body.admin-mode .user-workspace {
   line-height: 1.25;
 }
 .shipment-map-head small {
+  min-width: 72px;
+  max-width: 124px;
   padding: 6px 8px;
   border-radius: 999px;
   background: #173240;
   color: #ffffff;
-  white-space: nowrap;
+  text-align: center;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  line-height: 1.08;
 }
 .shipment-map-card svg {
   width: 100%;
