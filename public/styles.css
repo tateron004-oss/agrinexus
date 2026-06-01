@@ -929,7 +929,7 @@ body.user-mode .user-language-panel.hidden {
 }
 body.user-mode .user-fast-actions {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
   margin-bottom: 12px;
 }
@@ -958,6 +958,10 @@ body.user-mode .user-fast-action.language {
 body.user-mode .user-fast-action.check {
   background: linear-gradient(180deg, #f0fff7, #ffffff);
   border-color: #22984e;
+}
+body.user-mode .user-fast-action.production {
+  background: linear-gradient(180deg, #f5f1ff, #ffffff);
+  border-color: #6d55d7;
 }
 body.user-mode .user-fast-action .user-visual-icon {
   width: 34px;

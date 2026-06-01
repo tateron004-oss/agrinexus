@@ -2197,8 +2197,8 @@ function runUserModeSelfTest() {
       if (!simpleUserCommandWorkflow(button.command)) missing.push(`${section}: ${button.label}`);
     });
   });
-  const currentScript = [...document.scripts].some(script => String(script.src || "").includes("nexus-behavior-92"));
-  const currentStyle = [...document.styleSheets].some(sheet => String(sheet.href || "").includes("nexus-behavior-92"));
+  const currentScript = [...document.scripts].some(script => String(script.src || "").includes("nexus-behavior-93"));
+  const currentStyle = [...document.styleSheets].some(sheet => String(sheet.href || "").includes("nexus-behavior-93"));
   if (!currentScript || !currentStyle) missing.push("new app files");
   const ok = missing.length === 0;
   const message = ok
@@ -3801,6 +3801,13 @@ function modeIntelligenceSnapshot(mode = experienceMode) {
   const normalized = normalizeExperienceMode(mode);
   const base = nexusHighIntelligenceSnapshot();
   const smart = nexusSmartBehaviorModel(normalized);
+  const productionEight = productionJarvisEightModel();
+  const productionItem = {
+    title: "Production 1-8",
+    evidence: `${productionEight.readyCount}/${productionEight.total} ready: ${productionEight.closest.title} is the closest unlock.`,
+    ready: productionEight.readyCount === productionEight.total,
+    command: "Nexus, production one through eight"
+  };
   const adminBrief = adminIntelligenceBrief();
   const investorBrief = investorIntelligenceBrief();
   const outcome = data ? latestUserOutcome() : { happened: "No workflow yet", meaning: "Nexus is ready.", next: "Ask Nexus for help." };
@@ -3819,6 +3826,7 @@ function modeIntelligenceSnapshot(mode = experienceMode) {
         { title: "Simple Next Step", evidence: outcome.next, ready: true, command: "Nexus, help me" },
         { title: "Voice Guidance", evidence: "Talk to Nexus, ask a question, or press one big service button.", ready: true, command: "Nexus, what should I do next" },
         { title: "Language Support", evidence: `${voiceLanguageName()} active; voice and screen language can change by command.`, ready: true, command: "Nexus, change language to French" },
+        productionItem,
         { title: "Memory", evidence: outcome.happened, ready: true, command: "Nexus, what do you remember" }
       ]
     };
@@ -3837,6 +3845,7 @@ function modeIntelligenceSnapshot(mode = experienceMode) {
         { title: "Smart Behavior", evidence: smart.behavior, ready: true, command: "Nexus, be smart" },
         { title: "Readiness Risk", evidence: adminBrief.topRisk, ready: !adminBrief.riskCount, command: "Nexus, run admin intelligence" },
         { title: "Live Services", evidence: adminBrief.recommendation, ready: true, command: "Nexus, run live service check" },
+        productionItem,
         { title: "Usage Awareness", evidence: `${adminBrief.usage}; strongest module: ${adminBrief.healthiestModule}`, ready: true, command: "Nexus, summarize audit" },
         { title: "Provider Control", evidence: base.items.find(item => item.title === "Provider Depth")?.evidence || "Provider depth ready", ready: true, command: "Nexus, test provider engines" }
       ]
@@ -3856,6 +3865,7 @@ function modeIntelligenceSnapshot(mode = experienceMode) {
         { title: "Smart Behavior", evidence: smart.behavior, ready: true, command: "Nexus, be smart" },
         { title: "Impact Signal", evidence: investorBrief.strongestMetric, ready: true, command: "Nexus, summarize impact" },
         { title: "Evidence Story", evidence: investorBrief.timeline, ready: true, command: "Nexus, run investor voice demo" },
+        productionItem,
         { title: "Funding Gap", evidence: investorBrief.topGap, ready: !investorBrief.topGap.includes("Run") && !investorBrief.topGap.includes("readiness"), command: "Nexus, explain this to investors" },
         { title: "Provider Proof", evidence: `Provider depth ${investorBrief.providerDepth}`, ready: true, command: "Nexus, test provider engines" }
       ]
@@ -5305,6 +5315,7 @@ function renderUserWorkspace() {
   const target = $("#userWorkspace");
   if (!target) return;
   const intelligence = modeIntelligenceSnapshot("user");
+  const productionEight = productionJarvisEightModel();
   const guideCommand = intelligence.topPriority.command || "what should I do next";
   const serviceButtons = [
     { label: "Talk to Nexus", section: "ask", className: "service-ask", icon: "ask", ask: true },
@@ -5336,6 +5347,11 @@ function renderUserWorkspace() {
         ${userVisualIconHtml("certificate")}
         <strong>${translateText("Check app")}</strong>
         <span>${translateText("Make sure buttons are ready.")}</span>
+      </button>
+      <button type="button" class="user-fast-action production" data-simple-command="Nexus, production one through eight">
+        ${userVisualIconHtml("route")}
+        <strong>${translateText("Readiness")}</strong>
+        <span>${translateText(`${productionEight.readyCount}/${productionEight.total}: ${productionEight.closest.title}`)}</span>
       </button>
     </section>
     <section id="userLanguagePanel" class="user-language-panel hidden" aria-label="${translateText("Choose language")}">
