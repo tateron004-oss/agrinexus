@@ -383,9 +383,9 @@ assert(app.includes('workflow === "admin-user"'), "Admin test login button needs
 assert(app.includes("Only an existing Admin can run this workflow"), "Admin login flow must explain admin-only protection");
 assert(server.includes('adminAccount.role = "Admin"'), "Backend must force admin test logins to Admin");
 assert(server.includes("admin_user.created"), "Admin test login must create auth audit evidence");
-assert(html.includes("styles.css?v=nexus-behavior-102"), "Index must force browsers to load the latest Nexus behavior shell");
-assert(html.includes("app.js?v=nexus-behavior-102"), "Index must force browsers to load the latest Nexus behavior code");
-assert(sw.includes("agrinexus-pwa-v82"), "Service worker cache must refresh the installed app after native voice bridge updates");
+assert(html.includes("styles.css?v=nexus-behavior-103"), "Index must force browsers to load the latest Nexus behavior shell");
+assert(html.includes("app.js?v=nexus-behavior-103"), "Index must force browsers to load the latest Nexus behavior code");
+assert(sw.includes("agrinexus-pwa-v83"), "Service worker cache must refresh the installed app after native voice bridge updates");
 assert(html.includes("userWorkspace"), "Dashboard needs a User Workspace for standard users");
 assert(html.includes("userMobileDock"), "Legacy mobile dock markup should remain safely hidden for cache compatibility");
 assert(html.includes("What Do You Need Help With Today?"), "Dashboard simple start should use user-ready language");
@@ -482,6 +482,8 @@ assert(app.includes("user-language-panel"), "Standard User app must show a visib
 assert(app.includes('["fr", "French"]'), "Visible language picker must include French");
 assert(app.includes('["ar", "Arabic"]'), "Visible language picker must include Arabic");
 assert(app.includes("[data-user-language]"), "Visible language picker buttons must have click handling");
+assert(app.includes("if (!id) return \"dashboard\";"), "Language switching must not crash when the current route hash is empty");
+assert(app.includes("document.getElementById(id)?.classList.contains(\"section\")"), "Route lookup must avoid invalid querySelector('#') calls");
 assert(styles.includes("body.user-mode .user-language-panel"), "Visible language picker must be styled for app mode");
 assert(app.includes("function moduleUseExplanation"), "Voice assistant must explain how to use each major module");
 assert(app.includes("AgriNexus is an AI operating platform"), "Voice assistant must explain what AgriNexus is for investors and users");
