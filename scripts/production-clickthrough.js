@@ -164,10 +164,14 @@ assert(server.includes("smallholder farmers"), "Provider catalog must account fo
 assert(server.includes("function providerCandidateCountryCoverage"), "Provider catalog must organize candidate coverage by African country and region");
 assert(server.includes("Nigeria") && server.includes("DRC") && server.includes("Kenya") && server.includes("Egypt"), "Provider country coverage must include priority African countries");
 assert(server.includes("Ghana") && server.includes("Rwanda") && server.includes("Tanzania") && server.includes("South Africa"), "Provider country coverage must include additional African priority countries");
+assert(server.includes("Final legal and compliance review"), "Provider catalog must include the legal and compliance review lane");
+assert(server.includes("country-health-privacy-counsel"), "Provider catalog must include country health/privacy counsel");
+assert(server.includes("clinical-governance-review"), "Provider catalog must include clinical governance review");
 assert(app.includes("Rural African Farmer Provider Pipeline"), "Frontend must show the rural African farmer provider pipeline");
 assert(app.includes("Rural Farmer Real Engine Pipeline"), "Frontend must show the rural farmer real engine pipeline");
 assert(app.includes("African Country Coverage"), "Frontend must show country coverage inside the provider pipeline");
 assert(app.includes("African Country Coverage Desk"), "Frontend must render a country readiness workspace");
+assert(app.includes("Legal/compliance"), "Frontend must expose a legal/compliance provider workflow");
 assert(app.includes('workflow === "provider-candidate"'), "Frontend must wire provider candidate buttons to a real shortlist workflow");
 assert(app.includes("/api/providers/candidates/shortlist"), "Frontend must call the provider shortlist endpoint");
 assert(app.includes("activeVoiceAudio"), "Voice playback needs a single active audio guard");

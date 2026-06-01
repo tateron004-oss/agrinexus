@@ -215,6 +215,9 @@ async function call(path, body) {
   assert(providerCandidates.groups.some(group => group.id === "buyer-marketplace"));
   assert(providerCandidates.groups.some(group => group.id === "drone-data"));
   assert(providerCandidates.groups.some(group => group.id === "logistics-payment"));
+  assert(providerCandidates.groups.some(group => group.id === "legal-compliance"));
+  assert(providerCandidates.candidates.some(candidate => candidate.id === "country-health-privacy-counsel"));
+  assert(providerCandidates.candidates.some(candidate => candidate.id === "clinical-governance-review"));
   const shortlistedProvider = await call("/api/providers/candidates/shortlist", { candidateId: "eosda" });
   assert(shortlistedProvider.providerCandidateShortlistResult.candidateId === "eosda");
   assert(shortlistedProvider.profile.providerShortlist.some(item => item.candidateId === "eosda"));
@@ -222,6 +225,10 @@ async function call(path, body) {
   const logisticsPartner = await call("/api/partnership/create", { type: "logistics", note: "Logistics provider smoke" });
   assert(logisticsPartner.partnershipResult.title.includes("Logistics"));
   assert(logisticsPartner.partnershipResult.candidateProviders.length >= 1);
+  const compliancePartner = await call("/api/partnership/create", { type: "compliance", note: "Compliance provider smoke" });
+  assert(compliancePartner.partnershipResult.title.includes("Legal"));
+  assert(compliancePartner.partnershipResult.requiredCredentials.includes("LEGAL_REVIEW_CONTACT_URL"));
+  assert(compliancePartner.partnershipResult.candidateProviders.includes("Country Health and Privacy Counsel"));
   const dronePartnerCommand = await call("/api/agent/command", { command: "Nexus, create a drone provider partnership packet", conversational: true, inputMode: "voice", outputMode: "voice" });
   assert(dronePartnerCommand.commandResult.intent === "provider.partnership_packet_created");
   assert(dronePartnerCommand.commandResult.metadata.type === "drone");

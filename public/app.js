@@ -7808,7 +7808,8 @@ function render() {
         taskItem("Telehealth/EHR", "Create provider intake, EHR, callback, accessibility, and referral plan.", "ready", "Health", { workflow: "partnership", action: "telehealth" }),
         taskItem("Marketplace", "Create buyer/seller market, crop order, pricing, payment, and logistics plan.", "ready", "Trade", { workflow: "partnership", action: "trade" }),
         taskItem("Drone data", "Create drone, satellite, field evidence, crop stress, and buyer packet plan.", "ready", "Drone", { workflow: "partnership", action: "drone" }),
-        taskItem("Logistics/payment", "Create shipment tracking, delivery, checkout, payout, and receipt plan.", "ready", "Pay", { workflow: "partnership", action: "logistics" })
+        taskItem("Logistics/payment", "Create shipment tracking, delivery, checkout, payout, and receipt plan.", "ready", "Pay", { workflow: "partnership", action: "logistics" }),
+        taskItem("Legal/compliance", "Create country launch review for telehealth, privacy, payments, marketplace, and consent.", "ready", "Legal", { workflow: "partnership", action: "compliance" })
       ]
     },
     {
@@ -7816,7 +7817,7 @@ function render() {
       metric: `${data.providerCandidates?.readyNow || 0} API-ready`,
       title: "Rural Farmer Real Engine Pipeline",
       summary: "Each category is judged by whether it helps a rural African farmer sell crops, get guidance, reach care, learn, find work, move goods, or receive payment.",
-      items: providerCandidateGroups.slice(0, 6).map(group => taskItem(group.title, `${group.ruralFarmerValue || group.plainLanguage} Options: ${(group.topCandidates || []).map(candidate => candidate.name).slice(0, 3).join(", ")}`, group.readyNow ? "ready" : "pending", `${group.readyNow}/${group.count}`, { workflow: "provider-candidate", action: group.id }))
+      items: providerCandidateGroups.slice(0, 8).map(group => taskItem(group.title, `${group.ruralFarmerValue || group.plainLanguage} Options: ${(group.topCandidates || []).map(candidate => candidate.name).slice(0, 3).join(", ")}`, group.readyNow ? "ready" : "pending", `${group.readyNow}/${group.count}`, { workflow: "provider-candidate", action: group.id }))
     },
     {
       eyebrow: "Country readiness",
@@ -9496,6 +9497,11 @@ function workflowConfig(workflow, action, element) {
         title: "Create payment provider packet",
         summary: "Prepare a partner-ready packet for buyer checkout, mobile money, farmer payout, receipts, and settlement evidence.",
         provider: "Trade payments and billing provider evidence will be recorded."
+      },
+      compliance: {
+        title: "Create legal and compliance packet",
+        summary: "Prepare a country launch review packet for telehealth, patient consent, privacy, payments, marketplace operations, accessibility, and data protection.",
+        provider: "Legal review, privacy/DPO, clinical governance, payment compliance, and launch approval evidence will be recorded."
       }
     };
     const type = partnershipMap[action] ? action : "telehealth";

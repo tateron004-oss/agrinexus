@@ -79,6 +79,8 @@ hasAll(app, [
   "African Country Coverage Desk",
   "data.providerCandidates?.countryCoverage",
   "farmerFocus.successDefinition",
+  "Legal/compliance",
+  "Create legal and compliance packet",
   "workflow === \"provider-candidate\"",
   "/api/providers/candidates/shortlist",
   "function courseSelectOptions",

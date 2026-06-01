@@ -519,6 +519,57 @@ const REAL_PROVIDER_CANDIDATES = [
     workflowFit: ["payment partner", "wallet settlement", "receipt evidence"],
     status: "candidate",
     nextAction: "Contact partnership team and verify API availability."
+  },
+  {
+    id: "country-health-privacy-counsel",
+    name: "Country Health and Privacy Counsel",
+    category: "legal-compliance",
+    module: "Compliance",
+    providerId: "auth-users",
+    partnershipType: "compliance",
+    region: "Country-specific",
+    website: "https://agrinexus.local/provider/country-health-privacy-counsel",
+    apiStatus: "professional-review-needed",
+    integrationLevel: "legal-review",
+    bestUse: "Country-by-country review for telehealth, patient consent, health data, privacy, payments, and farmer marketplace rules.",
+    credentials: ["LEGAL_REVIEW_CONTACT_URL", "PRIVACY_POLICY_URL", "TERMS_URL"],
+    workflowFit: ["health consent", "privacy review", "country launch approval"],
+    status: "requires-human-review",
+    nextAction: "Engage licensed counsel in each launch country before real patient, payment, or marketplace operations."
+  },
+  {
+    id: "data-protection-officer",
+    name: "Data Protection Officer / Privacy Lead",
+    category: "legal-compliance",
+    module: "Compliance",
+    providerId: "auth-users",
+    partnershipType: "compliance",
+    region: "Pan-African plus country-specific",
+    website: "https://agrinexus.local/provider/data-protection-officer",
+    apiStatus: "professional-review-needed",
+    integrationLevel: "privacy-governance",
+    bestUse: "Privacy impact assessment, data retention rules, user rights, breach plan, and cross-border data transfer review.",
+    credentials: ["COMPLIANCE_DPO_CONTACT_URL", "PRIVACY_POLICY_URL", "DATA_PROCESSING_ADDENDUM_URL"],
+    workflowFit: ["privacy assessment", "data retention", "user rights", "breach response"],
+    status: "requires-human-review",
+    nextAction: "Assign DPO/privacy lead before live healthcare or payment data is processed."
+  },
+  {
+    id: "clinical-governance-review",
+    name: "Clinical Governance Review Partner",
+    category: "legal-compliance",
+    module: "Healthcare",
+    providerId: "health-telehealth",
+    partnershipType: "compliance",
+    region: "Country-specific",
+    website: "https://agrinexus.local/provider/clinical-governance-review",
+    apiStatus: "professional-review-needed",
+    integrationLevel: "clinical-safety-review",
+    bestUse: "Confirms AgriNexus is a support and navigation tool, not an unlicensed medical diagnosis or emergency-care replacement.",
+    credentials: ["CLINICAL_GOVERNANCE_CONTACT_URL", "HEALTH_CONSENT_POLICY_URL"],
+    workflowFit: ["telehealth safety", "patient disclaimers", "escalation rules", "emergency guidance"],
+    status: "requires-human-review",
+    nextAction: "Have a licensed clinical governance reviewer approve telehealth language, triage limits, and escalation workflow."
   }
 ];
 
@@ -5016,6 +5067,15 @@ function providerCandidateGroups() {
       providerId: "trade-logistics",
       plainLanguage: "Connects shipment tracking, route evidence, delivery updates, buyer payment, and farmer payouts.",
       ruralFarmerValue: "Lets farmers know where the crop is, whether it arrived, and when payment should happen."
+    },
+    {
+      id: "legal-compliance",
+      title: "Final legal and compliance review",
+      module: "Compliance",
+      partnershipType: "compliance",
+      providerId: "auth-users",
+      plainLanguage: "Connects country review for telehealth, patient consent, privacy, payments, marketplace rules, and data protection.",
+      ruralFarmerValue: "Protects farmers, patients, families, and the platform before real health, payment, and marketplace data goes live."
     }
   ];
 }
@@ -5099,14 +5159,14 @@ function providerCandidateCountryCoverage(candidates, groups) {
     { id: "pan-africa", name: "Pan-African", region: "Multi-country", priority: "platform-wide", strengths: ["shared provider bridge", "voice AI", "translation", "satellite/drone data", "farmer marketplace expansion"] }
   ];
   const countrySpecific = {
-    nigeria: ["flutterwave", "paystack", "pawapay", "terminal-africa", "useri", "zowasel", "eosda", "sentinel-hub", "udemy-business", "ulesson"],
-    drc: ["pawapay", "eosda", "sentinel-hub", "leaf-agriculture", "ithalamed", "sentros", "udemy-business", "local-employer-network"],
-    kenya: ["pawapay", "flutterwave", "terminal-africa", "furaha", "eosda", "sentinel-hub", "ulesson", "local-employer-network"],
-    egypt: ["eosda", "sentinel-hub", "leaf-agriculture", "udemy-business", "pluralsight-skills", "ithalamed", "local-employer-network"],
-    ghana: ["flutterwave", "paystack", "pawapay", "terminal-africa", "zowasel", "eosda", "ulesson", "local-employer-network"],
-    rwanda: ["pawapay", "eosda", "sentinel-hub", "ithalamed", "sentros", "ulesson", "local-employer-network"],
-    tanzania: ["pawapay", "terminal-africa", "furaha", "eosda", "sentinel-hub", "ulesson", "local-employer-network"],
-    "south-africa": ["recomed", "paystack", "flutterwave", "terminal-africa", "eosda", "sentinel-hub", "pluralsight-skills", "local-employer-network"],
+    nigeria: ["flutterwave", "paystack", "pawapay", "terminal-africa", "useri", "zowasel", "eosda", "sentinel-hub", "udemy-business", "ulesson", "country-health-privacy-counsel", "data-protection-officer", "clinical-governance-review"],
+    drc: ["pawapay", "eosda", "sentinel-hub", "leaf-agriculture", "ithalamed", "sentros", "udemy-business", "local-employer-network", "country-health-privacy-counsel", "data-protection-officer", "clinical-governance-review"],
+    kenya: ["pawapay", "flutterwave", "terminal-africa", "furaha", "eosda", "sentinel-hub", "ulesson", "local-employer-network", "country-health-privacy-counsel", "data-protection-officer", "clinical-governance-review"],
+    egypt: ["eosda", "sentinel-hub", "leaf-agriculture", "udemy-business", "pluralsight-skills", "ithalamed", "local-employer-network", "country-health-privacy-counsel", "data-protection-officer", "clinical-governance-review"],
+    ghana: ["flutterwave", "paystack", "pawapay", "terminal-africa", "zowasel", "eosda", "ulesson", "local-employer-network", "country-health-privacy-counsel", "data-protection-officer", "clinical-governance-review"],
+    rwanda: ["pawapay", "eosda", "sentinel-hub", "ithalamed", "sentros", "ulesson", "local-employer-network", "country-health-privacy-counsel", "data-protection-officer", "clinical-governance-review"],
+    tanzania: ["pawapay", "terminal-africa", "furaha", "eosda", "sentinel-hub", "ulesson", "local-employer-network", "country-health-privacy-counsel", "data-protection-officer", "clinical-governance-review"],
+    "south-africa": ["recomed", "paystack", "flutterwave", "terminal-africa", "eosda", "sentinel-hub", "pluralsight-skills", "local-employer-network", "country-health-privacy-counsel", "data-protection-officer", "clinical-governance-review"],
     "pan-africa": candidates.map(candidate => candidate.id)
   };
   const categoryTitles = Object.fromEntries(groups.map(group => [group.id, group.title]));
@@ -5288,6 +5348,17 @@ function providerPartnershipCatalog(type = "telehealth") {
       pilotOffer: "Run a communication pilot with voice assistant calls, SMS/WhatsApp alerts, email summaries, and delivery evidence.",
       nextSteps: ["Confirm message channels", "Connect phone and SMS credentials", "Set inbound webhook", "Send pilot notification", "Review delivery audit"],
       sampleQuestions: ["Which channels are approved in-country?", "Can inbound voice calls hit AgriNexus?", "Can delivery receipts be returned?"]
+    },
+    compliance: {
+      title: "Legal and compliance review packet",
+      module: "Compliance",
+      providerId: "auth-users",
+      useCase: "Country launch review for telehealth, patient consent, data privacy, payment rules, marketplace operations, accessibility, and cross-border data handling.",
+      requiredCredentials: ["LEGAL_REVIEW_CONTACT_URL", "COMPLIANCE_DPO_CONTACT_URL", "PRIVACY_POLICY_URL", "TERMS_URL", "HEALTH_CONSENT_POLICY_URL"],
+      pilotOffer: "Run a launch-readiness review before any live healthcare, payment, or marketplace data is processed in a target country.",
+      nextSteps: ["Pick first launch country", "Engage licensed local counsel", "Assign privacy/DPO owner", "Review healthcare and payment workflows", "Approve country launch checklist"],
+      sampleQuestions: ["Can AgriNexus operate as support/navigation without practicing medicine?", "What patient consent language is required?", "What payment, marketplace, and data-transfer rules apply?"],
+      candidateProviders: candidateNames("compliance")
     }
   };
   if (groupByPartnership[type] && !catalog[type]) return catalog[groupByPartnership[type].partnershipType] || catalog.telehealth;
