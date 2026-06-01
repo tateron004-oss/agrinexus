@@ -1415,6 +1415,187 @@ const wordTranslations = {
   }
 };
 
+const userModeTranslationPack = {
+  es: {
+    "How can we help?": "Como podemos ayudar?",
+    "Tap one big button. Or say: Nexus, help me.": "Toque un boton grande. O diga: Nexus, ayudame.",
+    "Guide me": "Guiame",
+    "Language": "Idioma",
+    "Change screen and voice language.": "Cambiar idioma de pantalla y voz.",
+    "Check app": "Revisar app",
+    "Make sure buttons are ready.": "Asegurar que los botones esten listos.",
+    "Readiness": "Preparacion",
+    "Choose language": "Elegir idioma",
+    "Say: change language to French, Arabic, Swahili, Spanish, or English.": "Diga: cambiar idioma a frances, arabe, suajili, espanol o ingles.",
+    "Open a service": "Abrir un servicio",
+    "Talk to Nexus": "Hablar con Nexus",
+    "Learn": "Aprender",
+    "Find Work": "Buscar trabajo",
+    "Get Health Help": "Recibir ayuda de salud",
+    "Sell Crops": "Vender cultivos",
+    "Map": "Mapa",
+    "AI Help": "Ayuda IA",
+    "Back": "Atras",
+    "Close": "Cerrar",
+    "Pick a course.": "Elija un curso.",
+    "Choose a job.": "Elija un trabajo.",
+    "Tell us what health help is needed.": "Diganos que ayuda de salud necesita.",
+    "Choose what you want to do with crops.": "Elija que quiere hacer con los cultivos.",
+    "Choose map help.": "Elija ayuda de mapa.",
+    "Ask Nexus for help.": "Pida ayuda a Nexus.",
+    "More actions": "Mas acciones",
+    "Nexus is ready.": "Nexus esta listo.",
+    "Start a Course": "Iniciar curso",
+    "Finish Lesson": "Terminar leccion",
+    "Get Certificate": "Obtener certificado",
+    "Find Jobs": "Buscar empleos",
+    "Apply for Job": "Solicitar empleo",
+    "Prepare Interview": "Preparar entrevista",
+    "Start Health Intake": "Iniciar admision de salud",
+    "Call Provider": "Llamar proveedor",
+    "Contact Caregiver": "Contactar cuidador",
+    "Sell Crop": "Vender cultivo",
+    "Contact Buyer": "Contactar comprador",
+    "Track Shipment": "Seguir envio",
+    "Check Route": "Revisar ruta",
+    "Find Facility": "Encontrar centro",
+    "Explain Map": "Explicar mapa",
+    "Ask Question": "Hacer pregunta",
+    "Plan Mission": "Planear mision",
+    "Read to Me": "Leerme"
+  },
+  fr: {
+    "How can we help?": "Comment pouvons-nous aider?",
+    "Tap one big button. Or say: Nexus, help me.": "Touchez un grand bouton. Ou dites : Nexus, aide-moi.",
+    "Guide me": "Guide-moi",
+    "Language": "Langue",
+    "Change screen and voice language.": "Changer la langue de l'ecran et de la voix.",
+    "Check app": "Verifier l'app",
+    "Make sure buttons are ready.": "Verifier que les boutons sont prets.",
+    "Readiness": "Preparation",
+    "Choose language": "Choisir la langue",
+    "Say: change language to French, Arabic, Swahili, Spanish, or English.": "Dites : changer la langue en francais, arabe, swahili, espagnol ou anglais.",
+    "Open a service": "Ouvrir un service",
+    "Talk to Nexus": "Parler a Nexus",
+    "Learn": "Apprendre",
+    "Find Work": "Trouver du travail",
+    "Get Health Help": "Obtenir une aide sante",
+    "Sell Crops": "Vendre les recoltes",
+    "Map": "Carte",
+    "AI Help": "Aide IA",
+    "Back": "Retour",
+    "Close": "Fermer",
+    "Pick a course.": "Choisissez un cours.",
+    "Choose a job.": "Choisissez un emploi.",
+    "Tell us what health help is needed.": "Dites-nous quelle aide sante est necessaire.",
+    "Choose what you want to do with crops.": "Choisissez quoi faire avec les recoltes.",
+    "Choose map help.": "Choisissez l'aide carte.",
+    "Ask Nexus for help.": "Demandez de l'aide a Nexus.",
+    "More actions": "Plus d'actions",
+    "Nexus is ready.": "Nexus est pret.",
+    "Start a Course": "Commencer un cours",
+    "Finish Lesson": "Terminer la lecon",
+    "Get Certificate": "Obtenir le certificat",
+    "Find Jobs": "Trouver des emplois",
+    "Apply for Job": "Postuler",
+    "Prepare Interview": "Preparer entretien",
+    "Start Health Intake": "Demarrer l'admission sante",
+    "Call Provider": "Appeler fournisseur",
+    "Contact Caregiver": "Contacter aidant",
+    "Sell Crop": "Vendre recolte",
+    "Contact Buyer": "Contacter acheteur",
+    "Track Shipment": "Suivre livraison",
+    "Check Route": "Verifier route",
+    "Find Facility": "Trouver centre",
+    "Explain Map": "Expliquer carte",
+    "Ask Question": "Poser question",
+    "Plan Mission": "Planifier mission",
+    "Read to Me": "Lire pour moi"
+  },
+  sw: {
+    "How can we help?": "Tunawezaje kusaidia?",
+    "Tap one big button. Or say: Nexus, help me.": "Bonyeza kitufe kikubwa. Au sema: Nexus, nisaidie.",
+    "Guide me": "Niongoze",
+    "Language": "Lugha",
+    "Change screen and voice language.": "Badilisha lugha ya skrini na sauti.",
+    "Check app": "Kagua app",
+    "Make sure buttons are ready.": "Hakikisha vitufe viko tayari.",
+    "Readiness": "Utayari",
+    "Choose language": "Chagua lugha",
+    "Say: change language to French, Arabic, Swahili, Spanish, or English.": "Sema: badilisha lugha kwenda Kifaransa, Kiarabu, Kiswahili, Kihispania, au Kiingereza.",
+    "Open a service": "Fungua huduma",
+    "Talk to Nexus": "Ongea na Nexus",
+    "Learn": "Jifunze",
+    "Find Work": "Tafuta kazi",
+    "Get Health Help": "Pata msaada wa afya",
+    "Sell Crops": "Uza mazao",
+    "Map": "Ramani",
+    "AI Help": "Msaada wa AI",
+    "Back": "Rudi",
+    "Close": "Funga",
+    "Pick a course.": "Chagua kozi.",
+    "Choose a job.": "Chagua kazi.",
+    "Tell us what health help is needed.": "Tuambie msaada wa afya unaohitajika.",
+    "Choose what you want to do with crops.": "Chagua unachotaka kufanya na mazao.",
+    "Choose map help.": "Chagua msaada wa ramani.",
+    "Ask Nexus for help.": "Muulize Nexus akusaidie.",
+    "More actions": "Hatua zaidi",
+    "Nexus is ready.": "Nexus iko tayari.",
+    "Start a Course": "Anza kozi",
+    "Finish Lesson": "Maliza somo",
+    "Get Certificate": "Pata cheti",
+    "Find Jobs": "Tafuta ajira",
+    "Apply for Job": "Omba kazi",
+    "Prepare Interview": "Jiandae kwa usaili",
+    "Start Health Intake": "Anza taarifa za afya",
+    "Call Provider": "Piga mtoa huduma",
+    "Contact Caregiver": "Wasiliana na mlezi",
+    "Sell Crop": "Uza zao",
+    "Contact Buyer": "Wasiliana na mnunuzi",
+    "Track Shipment": "Fuatilia mzigo",
+    "Check Route": "Kagua njia",
+    "Find Facility": "Tafuta kituo",
+    "Explain Map": "Eleza ramani",
+    "Ask Question": "Uliza swali",
+    "Plan Mission": "Panga misheni",
+    "Read to Me": "Nisomee"
+  },
+  ar: {
+    "How can we help?": "\u0643\u064a\u0641 \u0646\u0633\u0627\u0639\u062f\u0643\u061f",
+    "Tap one big button. Or say: Nexus, help me.": "\u0627\u0636\u063a\u0637 \u0632\u0631\u0627 \u0643\u0628\u064a\u0631\u0627. \u0623\u0648 \u0642\u0644: Nexus\u060c \u0633\u0627\u0639\u062f\u0646\u064a.",
+    "Guide me": "\u0627\u0631\u0634\u062f\u0646\u064a",
+    "Language": "\u0627\u0644\u0644\u063a\u0629",
+    "Change screen and voice language.": "\u063a\u064a\u0631 \u0644\u063a\u0629 \u0627\u0644\u0634\u0627\u0634\u0629 \u0648\u0627\u0644\u0635\u0648\u062a.",
+    "Check app": "\u0627\u0641\u062d\u0635 \u0627\u0644\u062a\u0637\u0628\u064a\u0642",
+    "Make sure buttons are ready.": "\u062a\u0623\u0643\u062f \u0623\u0646 \u0627\u0644\u0623\u0632\u0631\u0627\u0631 \u062c\u0627\u0647\u0632\u0629.",
+    "Readiness": "\u0627\u0644\u062c\u0627\u0647\u0632\u064a\u0629",
+    "Choose language": "\u0627\u062e\u062a\u0631 \u0627\u0644\u0644\u063a\u0629",
+    "Open a service": "\u0627\u0641\u062a\u062d \u062e\u062f\u0645\u0629",
+    "Talk to Nexus": "\u062a\u062d\u062f\u062b \u0645\u0639 Nexus",
+    "Learn": "\u062a\u0639\u0644\u0645",
+    "Find Work": "\u0627\u0628\u062d\u062b \u0639\u0646 \u0639\u0645\u0644",
+    "Get Health Help": "\u0627\u062d\u0635\u0644 \u0639\u0644\u0649 \u0645\u0633\u0627\u0639\u062f\u0629 \u0635\u062d\u064a\u0629",
+    "Sell Crops": "\u0628\u0639 \u0627\u0644\u0645\u062d\u0627\u0635\u064a\u0644",
+    "Map": "\u062e\u0631\u064a\u0637\u0629",
+    "AI Help": "\u0645\u0633\u0627\u0639\u062f\u0629 \u0627\u0644\u0630\u0643\u0627\u0621",
+    "Back": "\u0631\u062c\u0648\u0639",
+    "Close": "\u0625\u063a\u0644\u0627\u0642",
+    "Pick a course.": "\u0627\u062e\u062a\u0631 \u062f\u0648\u0631\u0629.",
+    "Choose a job.": "\u0627\u062e\u062a\u0631 \u0648\u0638\u064a\u0641\u0629.",
+    "Nexus is ready.": "Nexus \u062c\u0627\u0647\u0632.",
+    "Start a Course": "\u0627\u0628\u062f\u0623 \u062f\u0648\u0631\u0629",
+    "Find Jobs": "\u0627\u0628\u062d\u062b \u0639\u0646 \u0648\u0638\u0627\u0626\u0641",
+    "Sell Crop": "\u0628\u0639 \u0645\u062d\u0635\u0648\u0644\u0627",
+    "Track Shipment": "\u062a\u0627\u0628\u0639 \u0627\u0644\u0634\u062d\u0646\u0629",
+    "Check Route": "\u0627\u0641\u062d\u0635 \u0627\u0644\u0637\u0631\u064a\u0642",
+    "Explain Map": "\u0627\u0634\u0631\u062d \u0627\u0644\u062e\u0631\u064a\u0637\u0629"
+  }
+};
+
+Object.entries(userModeTranslationPack).forEach(([lang, entries]) => {
+  contentTranslations[lang] = { ...(contentTranslations[lang] || {}), ...entries };
+});
+
 const demoAccessibilityTranslations = {
   fr: {
     "Investor simulation": "Simulation investisseur",
@@ -2199,8 +2380,8 @@ function runUserModeSelfTest() {
       if (!simpleUserCommandWorkflow(button.command)) missing.push(`${section}: ${button.label}`);
     });
   });
-  const currentScript = [...document.scripts].some(script => String(script.src || "").includes("nexus-behavior-115"));
-  const currentStyle = [...document.styleSheets].some(sheet => String(sheet.href || "").includes("nexus-behavior-115"));
+  const currentScript = [...document.scripts].some(script => String(script.src || "").includes("nexus-behavior-116"));
+  const currentStyle = [...document.styleSheets].some(sheet => String(sheet.href || "").includes("nexus-behavior-116"));
   if (!currentScript || !currentStyle) missing.push("new app files");
   const ok = missing.length === 0;
   const message = ok
@@ -2800,7 +2981,8 @@ function applyContentTranslations() {
     "#loginView", ".topbar", ".sidebar",
     "#dashboard", "#learning", "#workforce", "#health", "#trade",
     "#map", "#agent", "#integrations", "#admin", "#profile", "#workflowModal",
-    "#workspaceBar", "#globalAssistantBar", "#accessibilityPanel"
+    "#workspaceBar", "#globalAssistantBar", "#accessibilityPanel",
+    "#userWorkspace", "#userLanguagePanel", "#userCaptionPanel", ".user-simple-module"
   ];
   roots.forEach(selector => {
     const root = $(selector);
@@ -9848,7 +10030,11 @@ function bindDynamic() {
     button.onclick = runSimpleAction;
   });
   $$("[data-user-language]").forEach(button => {
-    button.onclick = () => mutate("/api/user/language", { language: button.dataset.userLanguage }, platformCopy[button.dataset.userLanguage]?.languageToast || "Platform language updated");
+    button.onclick = event => {
+      event.preventDefault();
+      event.stopPropagation();
+      mutate("/api/user/language", { language: button.dataset.userLanguage }, platformCopy[button.dataset.userLanguage]?.languageToast || "Platform language updated");
+    };
   });
   $$(".course").forEach(button => button.onclick = () => {
     const course = data.courses.find(item => item.id === button.dataset.course);
@@ -11561,7 +11747,7 @@ async function runWowDemo() {
 
 function bindStatic() {
   renderLoginProfiles();
-  document.addEventListener("click", event => {
+  document.addEventListener("click", async event => {
     if (event.target.closest("#adminHealthCheck")) {
       event.preventDefault();
       event.stopPropagation();
@@ -11822,6 +12008,15 @@ function bindStatic() {
           setVoiceResponse("Choose a language, or say change language to French, Arabic, Kiswahili, Spanish, or English.", false, { allowVoiceFirst: false });
         }
       }
+      return;
+    }
+    const userLanguageButton = event.target.closest("[data-user-language]");
+    if (userLanguageButton) {
+      event.preventDefault();
+      event.stopPropagation();
+      await mutate("/api/user/language", { language: userLanguageButton.dataset.userLanguage }, platformCopy[userLanguageButton.dataset.userLanguage]?.languageToast || "Platform language updated");
+      $("#userLanguagePanel")?.classList.remove("hidden");
+      applyContentTranslations();
       return;
     }
     if (event.target.closest("[data-close-user-language]")) {
