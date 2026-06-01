@@ -49,11 +49,11 @@ hasAll(app, [
   "pendingGrandmaAction",
   "function renderGrandmaConfirmation",
   "function simpleUserCommandWorkflow",
-  "function openDefaultUserSectionAction",
-  "function renderUserInlineWorkflow",
+  "function renderUserProcessScreen",
+  "function userProcessScreenHtml",
   "function activateSectionFromButton",
   "activateSectionFromButton(button)",
-  "![\"dashboard\", \"map\"].includes(sectionId)",
+  "openDefaultAction: false",
   "event.target.closest(\"[data-section], [data-mobile-section]\")",
   "function openMappedUserWorkflow",
   "eventOrButton?.target?.closest",
@@ -61,8 +61,7 @@ hasAll(app, [
   "data-inline-workflow-confirm",
   "data-inline-workflow-cancel",
   "pendingWorkflow = config",
-  "openWorkflowModal(config)",
-  "$(\"#workflowModal\").classList.remove(\"hidden\")",
+  "return renderUserProcessScreen(sectionId, config, mapped, label)",
   "closeAskNexus({ silent: true })",
   "row(\"How this works\"",
   "workflowStepHtml",
@@ -99,9 +98,9 @@ hasAll(app, [
   "experienceMode === \"user\" && simpleUserSections[userSection]",
   "lower.includes(\"help me\")",
   "action: \"orchestrate\"",
-  "openDefaultAction: experienceMode === \"user\"",
+  "openDefaultAction: false",
   "function learningCertificateWorkflowConfig",
-  "openWorkflowModal(config)",
+  "renderUserProcessScreen(userSection, config",
   "$(\"#workflowConfirm\").onclick",
   "Nexus is completing this workflow now.",
   "remoteLaunchKitBtn",
@@ -170,8 +169,9 @@ hasAll(styles, [
   "body.user-mode .grandma-workflow .task-list",
   "body.user-mode .grandma-workflow .modal-actions button",
   "body.user-mode .user-inline-workflow",
-  "body.user-mode #workforce .user-inline-workflow",
-  "body.user-mode .user-inline-workflow-actions",
+  "body.user-mode .user-process-screen",
+  "body.user-mode .user-process-actions",
+  "body.user-mode #workforce .user-process-actions .primary",
   ".workflow-real-use-coach",
   ".workflow-real-use-grid",
   ".workflow-operating-screen",
@@ -264,8 +264,8 @@ assert(html.includes("nexusBehaviorStatus"), "User voice dock needs an assistant
 assert(html.includes('data-user-voice-action="listen"'), "User voice dock needs a speak action");
 assert(html.includes('data-user-voice-action="type"'), "User voice dock needs a type action");
 assert(html.includes('data-user-voice-action="read"'), "User voice dock needs a read action");
-assert(html.includes("nexus-behavior-120"), "Index must force browsers to load Nexus behavior CSS");
-assert(html.includes("nexus-behavior-120"), "Index must force browsers to load Nexus behavior JS");
+assert(html.includes("nexus-behavior-121"), "Index must force browsers to load Nexus behavior CSS");
+assert(html.includes("nexus-behavior-121"), "Index must force browsers to load Nexus behavior JS");
 assert(app.includes("if (!id) return \"dashboard\";"), "Language changes must survive an empty hash without querying '#'");
 assert(app.includes("document.getElementById(id)?.classList.contains(\"section\")"), "Section hash lookup must avoid invalid CSS selectors during language switching");
 assert(app.includes("I want to sell maize"), "Nexus behavior layer should support natural trade requests without button hunting");

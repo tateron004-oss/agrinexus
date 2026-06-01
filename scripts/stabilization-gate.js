@@ -22,11 +22,11 @@ function requireScript(scriptName) {
 }
 
 requireMarkers("current browser cache contract", html, [
-  "/styles.css?v=nexus-behavior-120",
-  "/app.js?v=nexus-behavior-120"
+  "/styles.css?v=nexus-behavior-121",
+  "/app.js?v=nexus-behavior-121"
 ]);
 requireMarkers("service worker cache contract", sw, [
-  'CACHE_NAME = "agrinexus-pwa-v100"',
+  'CACHE_NAME = "agrinexus-pwa-v101"',
   "skipWaiting",
   "clients.claim"
 ]);
@@ -51,14 +51,14 @@ requireMarkers("simple user workflow contract", app, [
   "function renderUserSimpleActiveSection",
   "function runSimpleAction",
   "function activateSectionFromButton",
-  "![\"dashboard\", \"map\"].includes(sectionId)",
+  "openDefaultAction: false",
   "event.target.closest(\"[data-section], [data-mobile-section]\")",
   "function simpleUserCommandWorkflow",
   "function openMappedUserWorkflow",
-  "function renderUserInlineWorkflow",
+  "function renderUserProcessScreen",
+  "function userProcessScreenHtml",
   "pendingWorkflow = config",
-  "openWorkflowModal(config)",
-  "$(\"#workflowModal\").classList.remove(\"hidden\")",
+  "return renderUserProcessScreen(sectionId, config, mapped, label)",
   "closeAskNexus({ silent: true })",
   "row(\"How this works\"",
   "workflowStepHtml",

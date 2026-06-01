@@ -2382,8 +2382,8 @@ function runUserModeSelfTest() {
       if (!simpleUserCommandWorkflow(button.command)) missing.push(`${section}: ${button.label}`);
     });
   });
-  const currentScript = [...document.scripts].some(script => String(script.src || "").includes("nexus-behavior-120"));
-  const currentStyle = [...document.styleSheets].some(sheet => String(sheet.href || "").includes("nexus-behavior-120"));
+  const currentScript = [...document.scripts].some(script => String(script.src || "").includes("nexus-behavior-121"));
+  const currentStyle = [...document.styleSheets].some(sheet => String(sheet.href || "").includes("nexus-behavior-121"));
   if (!currentScript || !currentStyle) missing.push("new app files");
   const ok = missing.length === 0;
   const message = ok
@@ -3126,7 +3126,7 @@ function activateSectionFromButton(button, options = {}) {
   if (!sectionId) return false;
   goSection(sectionId, {
     instant: true,
-    openDefaultAction: experienceMode === "user" && !["dashboard", "map"].includes(sectionId),
+    openDefaultAction: false,
     ...options
   });
   const activeSection = $(`#${sectionId}`);
@@ -6723,6 +6723,101 @@ function renderUserInlineWorkflow(sectionId, config) {
   panel.scrollIntoView({ behavior: "smooth", block: "center" });
 }
 
+function userProcessSteps(config = {}) {
+  const mode = workflowMode(config);
+  const title = (experienceMode === "user" && config.userTitle) || config.title || "This step";
+  const action = config.confirmLabel || "Do this now";
+  const next = config.userOutcome || config.success || config.record || "Nexus saves this and shows the next step.";
+  if (mode === "learning") {
+    return [
+      { title: "Choose learning", detail: title },
+      { title: "Nexus helps", detail: "Captions, audio, progress, and certificate evidence stay connected." },
+      { title: "Save progress", detail: next }
+    ];
+  }
+  if (mode === "workforce") {
+    return [
+      { title: "Choose job step", detail: title },
+      { title: "Check readiness", detail: "Nexus reviews skills, certificates, role fit, and next action." },
+      { title: "Move forward", detail: next }
+    ];
+  }
+  if (mode === "health") {
+    return [
+      { title: "Share care need", detail: title },
+      { title: "Prepare support", detail: "Nexus organizes intake, access needs, provider contact, and safety notes." },
+      { title: "Connect to help", detail: next }
+    ];
+  }
+  if (mode === "trade" || mode === "map") {
+    return [
+      { title: "Choose farm task", detail: title },
+      { title: "Check route or crop", detail: "Nexus connects buyer, crop, route, drone, and location information." },
+      { title: "Track result", detail: next }
+    ];
+  }
+  return [
+    { title: "Tell Nexus", detail: title },
+    { title: "Nexus reasons", detail: "The assistant prepares the safest next step in plain language." },
+    { title: "Continue", detail: action }
+  ];
+}
+
+function userProcessScreenHtml(config = {}, mapped = {}, label = "Selected action") {
+  const mode = workflowMode(config);
+  const coach = config.realUseCoach || workflowRealUseCoach(config);
+  const title = (experienceMode === "user" && config.userTitle) || config.title || label;
+  const summary = (experienceMode === "user" && config.userSummary) || config.summary || coach.plain;
+  const steps = userProcessSteps(config);
+  const route = config.routePreview?.route || activeRoute();
+  const country = config.healthPreview?.country || activeCountry();
+  const focus = mode === "health"
+    ? `${country.name}: ${country.risk} risk`
+    : mode === "trade" || mode === "map"
+      ? route.name
+      : coach.question;
+  return `
+    <section class="user-process-screen user-process-${escapeHtml(mode)}" aria-label="${translateText("Guided process")}">
+      <div class="user-process-head">
+        <small>${translateText("Guided process")}</small>
+        <strong>${translateText(title)}</strong>
+        <span>${translateText(summary)}</span>
+      </div>
+      <div class="user-process-focus">
+        <strong>${translateText("Focus")}</strong>
+        <span>${translateText(focus)}</span>
+      </div>
+      <div class="user-process-steps">
+        ${steps.map((step, index) => `<div>
+          <b>${index + 1}</b>
+          <strong>${translateText(step.title)}</strong>
+          <span>${translateText(step.detail)}</span>
+        </div>`).join("")}
+      </div>
+      <div class="user-process-actions">
+        <button type="button" class="primary" data-inline-workflow-confirm>${translateText(config.confirmLabel || "Do this now")}</button>
+        <button type="button" data-inline-workflow-cancel>${translateText("Choose another")}</button>
+      </div>
+      <p>${translateText("You stay in control. Nothing is submitted until you press the main button.")}</p>
+    </section>
+  `;
+}
+
+function renderUserProcessScreen(sectionId, config, mapped = {}, label = "Selected action") {
+  if (experienceMode !== "user" || !config) return false;
+  const panel = $(`#${sectionId} .user-inline-workflow`);
+  if (!panel) return false;
+  pendingWorkflow = config;
+  closeAskNexus({ silent: true });
+  $("#workflowModal")?.classList.add("hidden");
+  panel.classList.remove("hidden");
+  panel.innerHTML = userProcessScreenHtml(config, mapped, label);
+  panel.scrollIntoView({ behavior: "smooth", block: "start" });
+  $(`#${sectionId} .user-module-status`) && ($(`#${sectionId} .user-module-status`).textContent = translateText("Process opened. Review it, then press Do this now."));
+  setVoiceResponse(mapped.response || "Process is ready. Review it, then press Do this now.", true);
+  return true;
+}
+
 function openMappedUserWorkflow(mapped, sectionId = currentSectionId()) {
   if (!mapped) return false;
   if (mapped.conversational) {
@@ -6739,6 +6834,10 @@ function openMappedUserWorkflow(mapped, sectionId = currentSectionId()) {
     return false;
   }
   try {
+    if (experienceMode === "user") {
+      const label = mapped.label || simpleUserSections[sectionId]?.buttons?.find(button => button.command === mapped.command)?.label || config.userTitle || config.title || "Selected action";
+      return renderUserProcessScreen(sectionId, config, mapped, label);
+    }
     openWorkflowModal(config);
   } catch (error) {
     const message = `Workflow window could not open: ${error.message || "unknown error"}`;
@@ -10970,13 +11069,11 @@ function openWorkflowByVoice(workflow, action, response, dataset = {}) {
   }
   const userSection = workflow === "ai" ? "agent" : workflow === "map" ? "map" : workflow;
   if (experienceMode === "user" && simpleUserSections[userSection]) {
+    goSection(userSection, { instant: true, openDefaultAction: false, keepAssistant: false });
     renderUserSimpleActiveSection(userSection);
-    pendingWorkflow = config;
-    $("#workflowModal")?.classList.add("hidden");
-    $("#workflowModal")?.classList.remove("grandma-workflow");
-    renderUserInlineWorkflow(userSection, config);
+    renderUserProcessScreen(userSection, config, { response }, response || config.userTitle || config.title || "Selected action");
     updateNexusBehaviorLayer("confirming", "Nexus prepared the workflow and is waiting for your yes.");
-    setVoiceResponse(`${response || "Workflow is ready."} Press Yes to continue or No to cancel.`, true);
+    setVoiceResponse(`${response || "Process is ready."} Press Do this now to continue or Choose another to cancel.`, true);
     return;
   }
   updateNexusBehaviorLayer("confirming", "Nexus prepared the workflow and is waiting for your yes.");
@@ -11783,6 +11880,8 @@ async function runSimpleAction(eventOrButton) {
     if (experienceMode === "user") {
       const mapped = simpleUserCommandWorkflow(button.dataset.simpleCommand);
       if (mapped) {
+        mapped.command = button.dataset.simpleCommand;
+        mapped.label = label;
         if (status) status.textContent = `${label} opened. Review the details and choose Yes or No.`;
         const targetSection = mapped.section || currentSectionId() || (mapped.workflow === "ai" ? "agent" : mapped.workflow === "map" ? "map" : mapped.workflow);
         const opened = openMappedUserWorkflow(mapped, targetSection);

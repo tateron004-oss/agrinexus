@@ -63,8 +63,9 @@ for (const [section, buttons] of Object.entries(expectedSections)) {
 [
   "function openMappedUserWorkflow",
   "pendingWorkflow = config",
-  "openWorkflowModal(config)",
-  "$(\"#workflowModal\").classList.remove(\"hidden\")",
+  "function renderUserProcessScreen",
+  "function userProcessScreenHtml",
+  "return renderUserProcessScreen(sectionId, config, mapped, label)",
   "closeAskNexus({ silent: true })",
   "row(\"How this works\"",
   "workflowStepHtml",
@@ -86,7 +87,7 @@ for (const [section, buttons] of Object.entries(expectedSections)) {
   "function productSelectOptions",
   "function routeSelectOptions",
   "experienceMode === \"user\" && simpleUserSections[userSection]",
-  "renderUserInlineWorkflow(userSection, config)",
+  "renderUserProcessScreen(userSection, config",
   "function userPreviewActionsHtml",
   "function userSceneVisualHtml",
   "function userRealMapHtml",
@@ -95,7 +96,7 @@ for (const [section, buttons] of Object.entries(expectedSections)) {
   "OpenStreetMap",
   "function activateSectionFromButton",
   "activateSectionFromButton(button)",
-  "![\"dashboard\", \"map\"].includes(sectionId)",
+  "openDefaultAction: false",
   "event.target.closest(\"[data-section], [data-mobile-section]\")",
   "eventOrButton?.target?.closest",
   "eventOrButton?.currentTarget?.matches",
@@ -141,7 +142,9 @@ for (const [section, buttons] of Object.entries(expectedSections)) {
   "body.user-mode .user-preview-actions",
   "body.user-mode .user-caption-panel",
   ".user-caption-text",
-  "body.user-mode #workforce .user-inline-workflow",
+  "body.user-mode .user-process-screen",
+  "body.user-mode .user-process-actions",
+  "body.user-mode #workforce .user-process-actions .primary",
   ".workflow-real-use-coach",
   ".workflow-real-use-grid",
   ".workflow-operating-screen",
@@ -157,9 +160,9 @@ for (const [section, buttons] of Object.entries(expectedSections)) {
   assert(styles.includes(marker), `User workflow containment style missing: ${marker}`);
 });
 
-assert(html.includes("/app.js?v=nexus-behavior-120"), "Index must force browsers to load current User-mode workflow JS");
-assert(html.includes("/styles.css?v=nexus-behavior-120"), "Index must force browsers to load current User-mode workflow CSS");
-assert(sw.includes('CACHE_NAME = "agrinexus-pwa-v100"'), "Service worker cache must be bumped after User-mode workflow fixes");
+assert(html.includes("/app.js?v=nexus-behavior-121"), "Index must force browsers to load current User-mode workflow JS");
+assert(html.includes("/styles.css?v=nexus-behavior-121"), "Index must force browsers to load current User-mode workflow CSS");
+assert(sw.includes('CACHE_NAME = "agrinexus-pwa-v101"'), "Service worker cache must be bumped after User-mode workflow fixes");
 
 console.log("User mode workflow audit passed");
 console.log("Checked: every simple app tab/button maps to a workflow, course/job choices are visible, User mode uses inline confirmations, assistant windows have anti-partial containment, and the app can self-check/repair stale runtime cache.");
