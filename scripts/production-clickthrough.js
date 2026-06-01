@@ -238,6 +238,8 @@ assert(server.includes("conversation.behavior_model"), "Voice agent must explain
 assert(server.includes("function conversationalReasoningResponse"), "Backend needs an open-ended conversational reasoning brain");
 assert(server.includes("function aiReasoningSnapshot"), "Backend needs a memory-backed AI reasoning snapshot");
 assert(server.includes("reasoningHistory") && app.includes("optionsConsidered"), "Agent reasoning must preserve decision history and options considered");
+assert(server.includes("function dailyLifeAdvisorResponse"), "Backend needs day-to-day advisor reasoning for farmers, learners, workers, and grandma support");
+assert(server.includes("DAILY_CONTEXT_WEBHOOK_URL") && server.includes("WEATHER_WEBHOOK_URL"), "Daily advisor must support live weather/context providers when configured");
 assert(server.includes("function updateConversationUserModel"), "Conversation brain must learn user context and preferences");
 assert(server.includes("function conversationFollowUpResponse"), "Conversation brain must support natural follow-up commands");
 assert(server.includes("function socialConversationResponse"), "Conversation brain must support human social turns");
@@ -387,9 +389,9 @@ assert(app.includes('workflow === "admin-user"'), "Admin test login button needs
 assert(app.includes("Only an existing Admin can run this workflow"), "Admin login flow must explain admin-only protection");
 assert(server.includes('adminAccount.role = "Admin"'), "Backend must force admin test logins to Admin");
 assert(server.includes("admin_user.created"), "Admin test login must create auth audit evidence");
-assert(html.includes("styles.css?v=nexus-behavior-112"), "Index must force browsers to load the latest Nexus behavior shell");
-assert(html.includes("app.js?v=nexus-behavior-112"), "Index must force browsers to load the latest Nexus behavior code");
-assert(sw.includes("agrinexus-pwa-v92"), "Service worker cache must refresh the installed app after native voice bridge updates");
+assert(html.includes("styles.css?v=nexus-behavior-113"), "Index must force browsers to load the latest Nexus behavior shell");
+assert(html.includes("app.js?v=nexus-behavior-113"), "Index must force browsers to load the latest Nexus behavior code");
+assert(sw.includes("agrinexus-pwa-v93"), "Service worker cache must refresh the installed app after native voice bridge updates");
 assert(html.includes("userWorkspace"), "Dashboard needs a User Workspace for standard users");
 assert(html.includes("userMobileDock"), "Legacy mobile dock markup should remain safely hidden for cache compatibility");
 assert(html.includes("What Do You Need Help With Today?"), "Dashboard simple start should use user-ready language");

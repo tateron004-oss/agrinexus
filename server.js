@@ -7534,6 +7534,138 @@ function liveRouteTrackingResponse(db, user, text) {
   };
 }
 
+function fahrenheitFromCelsius(celsius) {
+  return Math.round((Number(celsius || 0) * 9 / 5) + 32);
+}
+
+function extractTemperatureF(text) {
+  const value = String(text || "");
+  const fahrenheit = value.match(/\b(\d{2,3})\s*(?:degrees?|deg|f|fahrenheit)\b/i);
+  if (fahrenheit?.[1]) return Number(fahrenheit[1]);
+  const celsius = value.match(/\b(\d{1,2})\s*(?:c|celsius)\b/i);
+  if (celsius?.[1]) return fahrenheitFromCelsius(Number(celsius[1]));
+  return null;
+}
+
+async function dailyContextSnapshot(db, text) {
+  const { country, route } = activeContext(db);
+  const fallbackTempF = extractTemperatureF(text) || fahrenheitFromCelsius(country.heat || 31);
+  const providerUrl = process.env.DAILY_CONTEXT_WEBHOOK_URL || process.env.WEATHER_WEBHOOK_URL || process.env.WEATHER_API_URL || "";
+  const context = {
+    country: country.name,
+    route: route.name,
+    source: providerUrl ? "weather-provider-configured" : "platform-context",
+    temperatureF: fallbackTempF,
+    temperatureC: Math.round((fallbackTempF - 32) * 5 / 9),
+    heatProfileC: country.heat,
+    risk: country.risk || "Routine",
+    providerStatus: providerUrl ? "not-called" : "not-configured"
+  };
+  if (!providerUrl) return context;
+  try {
+    const url = providerUrl.includes("?")
+      ? `${providerUrl}&country=${encodeURIComponent(country.name)}&query=${encodeURIComponent(text)}`
+      : `${providerUrl}?country=${encodeURIComponent(country.name)}&query=${encodeURIComponent(text)}`;
+    const response = await fetchWithTimeout(url, { headers: { accept: "application/json,text/plain,*/*" } }, 5000);
+    context.providerStatus = response.ok ? "live-context-reachable" : `live-context-${response.status}`;
+    const raw = response.ok ? await response.text() : "";
+    const parsed = raw ? JSON.parse(raw) : {};
+    const liveTemp = Number(parsed.temperatureF || parsed.tempF || (parsed.temperatureC || parsed.tempC ? fahrenheitFromCelsius(parsed.temperatureC || parsed.tempC) : 0));
+    if (liveTemp) {
+      context.temperatureF = Math.round(liveTemp);
+      context.temperatureC = Math.round((liveTemp - 32) * 5 / 9);
+      context.source = "live-weather-provider";
+    }
+    context.conditions = String(parsed.conditions || parsed.summary || "").slice(0, 120);
+  } catch (error) {
+    context.providerStatus = `live-context-error: ${error.message}`;
+  }
+  return context;
+}
+
+function dailyAdvisorKind(lower) {
+  if (/\b(walk|walking|outside|go out|too hot|heat|temperature|weather)\b/.test(lower) && /\b(grandma|grandmother|elder|older|senior|mom|mother|patient|me|i)\b/.test(lower)) return "walking-heat";
+  if (/\b(walk|walking|outside|go out|too hot|heat|temperature|weather)\b/.test(lower)) return "walking-heat";
+  if (/\b(farmer|farm|crop|field|plant|harvest|water|irrigat|pest|soil|drone)\b/.test(lower)) return "farmer";
+  if (/\b(learner|student|course|lesson|study|learn|explain|curious|question)\b/.test(lower)) return "learner";
+  if (/\b(worker|workforce|job|shift|apply|interview|task|pay|role)\b/.test(lower)) return "worker";
+  if (/\b(grandma|grandmother|elder|older|senior|daily|today|should i|is it safe|what should i do)\b/.test(lower)) return "daily-support";
+  return "";
+}
+
+function isDailyAdvisorQuestion(lower) {
+  const value = String(lower || "");
+  if (/\b(start to finish|end to end|sell|buyer|payment|order|create order|contact buyer|apply for|submit application|run mission)\b/.test(value)) return false;
+  return Boolean(dailyAdvisorKind(value)) && (
+    /\b(should|can|could|is today|is it|good time|best time|too hot|safe|what should|how do|when should|curious|question|wonder)\b/.test(value)
+    || /\?$/.test(value)
+  );
+}
+
+async function dailyLifeAdvisorResponse(db, user, text, lower, options = {}) {
+  ensureAiProfile(db.profile);
+  const kind = dailyAdvisorKind(lower) || "daily-support";
+  const context = await dailyContextSnapshot(db, text);
+  const memories = retrieveAgentMemories(db.profile, text, 5);
+  const moduleSignal = kind === "farmer"
+    ? { module: "AgriTrade", section: "trade" }
+    : kind === "learner"
+      ? { module: "Learning", section: "learning" }
+      : kind === "worker"
+        ? { module: "Workforce", section: "workforce" }
+        : { module: "Healthcare", section: "health" };
+  const reasoning = aiReasoningSnapshot(db, user, text, moduleSignal, memories, options);
+  let response = "";
+  let nextStep = "";
+  if (kind === "walking-heat" || kind === "daily-support") {
+    const temp = context.temperatureF;
+    const bestWindow = temp >= 90
+      ? "early morning or evening, when it is closer to 80 degrees or below"
+      : temp >= 81
+        ? "a shaded, shorter walk with water, preferably before midday"
+        : "today looks more comfortable for a normal walk";
+    const safety = temp >= 90
+      ? "I would not recommend a long walk in the hottest part of the day."
+      : temp >= 81
+        ? "Use caution because heat can still stress older adults."
+        : "Still take water and a phone, but the heat risk is lower.";
+    response = `I can help with that. Based on the current AgriNexus context, it is about ${temp} degrees Fahrenheit in ${context.country}. ${safety} Best time to walk: ${bestWindow}. If grandma feels dizzy, weak, short of breath, confused, or has chest pain, stop and contact local emergency help or a healthcare provider.`;
+    nextStep = "Say 'Nexus, open telehealth' if you want care support, or 'Nexus, remind me to walk later' if you want a safer routine.";
+    rememberAgentMemory(db.profile, `Daily support: user asked about walking safety at about ${temp}F in ${context.country}.`, { source: "daily-life-advisor", category: "safety", module: "Healthcare", confidence: 0.89 });
+  } else if (kind === "farmer") {
+    const product = (db.products || []).find(item => item.countryId === activeContext(db).country.id) || (db.products || [])[0];
+    response = `Yes. A farmer can ask even without all the data. I will use the country, crop, route, weather/heat profile, drone evidence, and remembered farm goals. Right now I would ask one simple follow-up only if needed: what crop and what problem are you seeing? For ${product?.name || "the selected crop"}, I can suggest when to water, whether to scan the field, whether to harvest, how to protect quality, and which route or buyer step is safest.`;
+    nextStep = "Say 'Nexus, check my crop' or 'Nexus, when should I harvest' and I will guide it.";
+    rememberAgentMemory(db.profile, `Farmer daily advisor requested for ${product?.name || "crop"} using heat, route, crop, drone, and market context.`, { source: "daily-life-advisor", category: "pattern", module: "AgriTrade", confidence: 0.88 });
+  } else if (kind === "learner") {
+    response = "Yes. A learner can ask a rough question like 'I do not understand this' or 'what does this mean?' Nexus should explain it in plain language, connect it to the active course, offer captions or audio, and then ask one small next question instead of overwhelming the learner.";
+    nextStep = "Say 'Nexus, explain my lesson' or 'Nexus, help me study this' and I will turn it into a learning step.";
+    rememberAgentMemory(db.profile, "Learner daily advisor should answer incomplete questions with plain-language explanation, captions, audio, and one next step.", { source: "daily-life-advisor", category: "pattern", module: "Learning", confidence: 0.88 });
+  } else {
+    response = "Yes. A worker can ask without perfect words. Nexus should understand job, shift, pay, interview, skill gap, and application questions, then help choose the next useful action: review roles, apply, prepare for interview, schedule shift support, or explain a work requirement.";
+    nextStep = "Say 'Nexus, help me apply' or 'Nexus, explain this job' and I will guide it.";
+    rememberAgentMemory(db.profile, "Worker daily advisor should answer incomplete job, shift, interview, pay, and skills questions with one clear next action.", { source: "daily-life-advisor", category: "pattern", module: "Workforce", confidence: 0.88 });
+  }
+  db.profile.agentMemory.activeModule = moduleSignal.module;
+  db.profile.agentMemory.lastStatus = "daily-life-advisor";
+  db.profile.agentMemory.lastSummary = `${response} ${nextStep}`;
+  db.profile.agentMemory.updatedAt = new Date().toISOString();
+  logIntegration(db, {
+    providerId: "openai",
+    module: moduleSignal.module,
+    action: "agent.daily_life_advisor",
+    detail: `Daily life advisor answered a ${kind} question.`,
+    metadata: { kind, context, reasoningId: reasoning.id, memoriesUsed: memories.map(item => item.id).filter(Boolean) },
+    dispatch: false
+  });
+  return {
+    intent: "conversation.daily_life_advisor",
+    response: `${response} ${nextStep}`,
+    status: "completed",
+    metadata: { conversationMode: true, redirectSection: moduleSignal.section, module: moduleSignal.module, kind, context, reasoning, memoriesUsed: memories.map(item => item.id).filter(Boolean) }
+  };
+}
+
 async function moduleGreetingResponse(db, user, text, lower) {
   const isGreeting = /^(hi|hello|hey|good morning|good afternoon|good evening)\b/.test(lower);
   const isTradeAddressed = /\b(agritrade|agri\s*trade)\b/.test(lower);
@@ -7695,6 +7827,10 @@ async function runAgentCommand(db, user, command, options = {}) {
 
   if (/(track|follow|watch).*(my\s+)?route/.test(lower) && /(real time|realtime|live|gps|location)/.test(lower)) {
     return liveRouteTrackingResponse(db, user, text);
+  }
+
+  if (isDailyAdvisorQuestion(lower)) {
+    return dailyLifeAdvisorResponse(db, user, text, lower, options);
   }
 
   if (/(outbreak|infected|infection|ebola|disease risk|region safe|safe to deploy|safe for telehealth)/.test(lower) && /(telehealth|health|region|congo|drc|uganda|africa|outreach)/.test(lower)) {

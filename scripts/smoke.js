@@ -754,6 +754,14 @@ async function call(path, body) {
   const memorySummary = await call("/api/agent/command", { command: "what have you learned", conversational: true });
   assert(memorySummary.commandResult.intent === "memory-summary");
   assert(memorySummary.commandResult.response.includes("voice-first telehealth"));
+  const dailyWalkAdvisor = await call("/api/agent/command", { command: "Nexus, grandma wants to walk today but it is 90 degrees. Is it too hot?", conversational: true, inputMode: "voice", outputMode: "voice" });
+  assert(dailyWalkAdvisor.commandResult.intent === "conversation.daily_life_advisor");
+  assert(dailyWalkAdvisor.commandResult.metadata.kind === "walking-heat");
+  assert(dailyWalkAdvisor.commandResult.metadata.reasoning);
+  assert(dailyWalkAdvisor.commandResult.response.includes("90 degrees"));
+  const farmerCuriousAdvisor = await call("/api/agent/command", { command: "Nexus, a farmer is curious when to harvest but does not have all the data", conversational: true, inputMode: "voice", outputMode: "voice" });
+  assert(farmerCuriousAdvisor.commandResult.intent === "conversation.daily_life_advisor");
+  assert(farmerCuriousAdvisor.commandResult.metadata.kind === "farmer");
   const autopilotPreview = await call("/api/agent/command", { command: "Nexus autopilot help this farmer get from crop problem to buyer payment", conversational: true, inputMode: "voice", outputMode: "voice" });
   assert(["conversation.pending_action", "agent.agrinexus_mode_staged"].includes(autopilotPreview.commandResult.intent));
   assert(autopilotPreview.commandResult.metadata.mode === "autopilot");
