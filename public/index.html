@@ -13,7 +13,7 @@
   <link rel="icon" href="/icons/agri-nexus-192.png" type="image/png">
   <link rel="apple-touch-icon" href="/icons/agri-nexus-192.png">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-  <link rel="stylesheet" href="/styles.css?v=nexus-behavior-87">
+  <link rel="stylesheet" href="/styles.css?v=nexus-behavior-88">
 </head>
 <body>
   <a class="skip-link" href="#mainContent">Skip to main content</a>
@@ -1312,12 +1312,13 @@
               <h2 id="globalAssistantTitle">Ask AgriNexus</h2>
               <p>Speak or type a request from any module. Start with "Hey AgriNexus" or simply "Nexus," then ask for telehealth, learning, workforce, trade, drones, maps, or live engines.</p>
             </div>
-            <button id="globalCloseBtn" class="ghost assistant-close" type="button" aria-label="Close Ask AgriNexus">Close</button>
+            <button id="globalCloseBtn" class="ghost assistant-close" type="button" aria-label="Back to app">Back</button>
           </div>
           <label class="field-label" for="globalCommandInput">Ask or command
             <input id="globalCommandInput" placeholder="Nexus, apply for that job">
           </label>
           <div class="global-assistant-actions">
+            <button id="globalBackBtn" class="ghost" type="button">Back to app</button>
             <button id="globalListenBtn" class="primary" type="button">Mic: Start listening</button>
             <button id="globalRunBtn" type="button">Run command</button>
             <button id="globalVoiceFirstBtn" type="button">Hey AgriNexus: On</button>
@@ -1326,7 +1327,6 @@
             <button id="globalReadBtn" type="button">Read response</button>
             <button id="globalVoiceHelpBtn" type="button">Voice help</button>
             <button id="globalInstallBtn" type="button">Install app</button>
-            <button id="globalBackBtn" class="ghost" type="button">Back to app</button>
           </div>
           <div class="mobile-permission-strip" aria-label="Mobile app permissions">
             <button type="button" data-mobile-permission="microphone">Enable mic</button>
@@ -1421,6 +1421,6 @@
   <div id="toast" class="toast hidden" role="status" aria-live="polite" aria-atomic="true"></div>
   <div id="screenReaderStatus" class="sr-only" role="status" aria-live="polite" aria-atomic="true"></div>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="/app.js?v=nexus-behavior-87"></script>
+  <script src="/app.js?v=nexus-behavior-88"></script>
 </body>
 </html>

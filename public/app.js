@@ -2197,8 +2197,8 @@ function runUserModeSelfTest() {
       if (!simpleUserCommandWorkflow(button.command)) missing.push(`${section}: ${button.label}`);
     });
   });
-  const currentScript = [...document.scripts].some(script => String(script.src || "").includes("nexus-behavior-87"));
-  const currentStyle = [...document.styleSheets].some(sheet => String(sheet.href || "").includes("nexus-behavior-87"));
+  const currentScript = [...document.scripts].some(script => String(script.src || "").includes("nexus-behavior-88"));
+  const currentStyle = [...document.styleSheets].some(sheet => String(sheet.href || "").includes("nexus-behavior-88"));
   if (!currentScript || !currentStyle) missing.push("new app files");
   const ok = missing.length === 0;
   const message = ok
@@ -5146,6 +5146,7 @@ function renderUserWorkspace() {
   const target = $("#userWorkspace");
   if (!target) return;
   const intelligence = modeIntelligenceSnapshot("user");
+  const guideCommand = intelligence.topPriority.command || "what should I do next";
   const serviceButtons = [
     { label: "Talk to Nexus", section: "ask", className: "service-ask", icon: "ask", ask: true },
     { label: "Learn", section: "learning", className: "service-learning", icon: "learning" },
@@ -5161,15 +5162,24 @@ function renderUserWorkspace() {
       <h3 id="userWorkspaceTitle">${translateText("How can we help?")}</h3>
       <p>${translateText("Tap one big button. Or say: Nexus, help me.")}</p>
     </section>
-    <section class="user-intelligence-card" aria-label="${translateText("Nexus intelligence")}">
-      <span>${translateText("Nexus is thinking")}: ${intelligence.score}%</span>
-      <strong>${translateText(intelligence.topPriority.title)}</strong>
-      <small>${translateText(intelligence.topPriority.reason)}</small>
-      <button type="button" class="service-ask" data-simple-command="${escapeHtml(intelligence.topPriority.command)}">
-        ${translateText("Do this")}
+    <section class="user-fast-actions" aria-label="${translateText("Quick actions")}">
+      <button type="button" class="user-fast-action guide" data-simple-command="${escapeHtml(guideCommand)}">
+        ${userVisualIconHtml("agent")}
+        <strong>${translateText("Guide me")}</strong>
+        <span>${translateText(intelligence.topPriority.title || "Nexus chooses the next safe step.")}</span>
+      </button>
+      <button type="button" class="user-fast-action language" data-toggle-user-language>
+        ${userVisualIconHtml("map")}
+        <strong>${translateText("Language")}</strong>
+        <span>${translateText("Change screen and voice language.")}</span>
+      </button>
+      <button type="button" class="user-fast-action check" data-app-self-test>
+        ${userVisualIconHtml("certificate")}
+        <strong>${translateText("Check app")}</strong>
+        <span>${translateText("Make sure buttons are ready.")}</span>
       </button>
     </section>
-    <section class="user-language-panel" aria-label="${translateText("Choose language")}">
+    <section id="userLanguagePanel" class="user-language-panel hidden" aria-label="${translateText("Choose language")}">
       <strong>${translateText("Choose language")}</strong>
       <div class="user-language-buttons">
         ${[
@@ -5183,14 +5193,6 @@ function renderUserWorkspace() {
         </button>`).join("")}
       </div>
       <span>${translateText("Say: change language to French, Arabic, Swahili, Spanish, or English.")}</span>
-    </section>
-    <section class="user-repair-panel" aria-label="${translateText("App repair")}">
-      <strong>${translateText("App check")}</strong>
-      <span id="userRepairStatus">${translateText("If a button feels stuck, check or repair the app.")}</span>
-      <div class="user-repair-actions">
-        <button type="button" data-app-self-test>${translateText("Check App")}</button>
-        <button type="button" class="primary" data-app-repair>${translateText("Repair App")}</button>
-      </div>
     </section>
     <section class="user-service-buttons" aria-label="${translateText("Open a service")}">
       ${serviceButtons.map(item => `<button type="button" class="${escapeHtml(item.className)}" ${item.ask ? `data-mobile-ask="true"` : `data-simple-section="${item.section}"`}>
@@ -10418,6 +10420,20 @@ function bindStatic() {
       event.preventDefault();
       event.stopPropagation();
       repairAppRuntime();
+      return;
+    }
+    if (event.target.closest("[data-toggle-user-language]")) {
+      event.preventDefault();
+      event.stopPropagation();
+      const panel = $("#userLanguagePanel");
+      if (panel) {
+        const willOpen = panel.classList.contains("hidden");
+        panel.classList.toggle("hidden", !willOpen);
+        if (willOpen) {
+          panel.scrollIntoView({ behavior: "smooth", block: "center" });
+          setVoiceResponse("Choose a language, or say change language to French, Arabic, Kiswahili, Spanish, or English.", false, { allowVoiceFirst: false });
+        }
+      }
       return;
     }
     const userVoiceButton = event.target.closest("[data-user-voice-action]");

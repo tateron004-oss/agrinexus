@@ -354,9 +354,9 @@ assert(app.includes('workflow === "admin-user"'), "Admin test login button needs
 assert(app.includes("Only an existing Admin can run this workflow"), "Admin login flow must explain admin-only protection");
 assert(server.includes('adminAccount.role = "Admin"'), "Backend must force admin test logins to Admin");
 assert(server.includes("admin_user.created"), "Admin test login must create auth audit evidence");
-assert(html.includes("styles.css?v=nexus-behavior-87"), "Index must force browsers to load the latest Nexus behavior shell");
-assert(html.includes("app.js?v=nexus-behavior-87"), "Index must force browsers to load the latest Nexus behavior code");
-assert(sw.includes("agrinexus-pwa-v67"), "Service worker cache must refresh the installed app after native voice bridge updates");
+assert(html.includes("styles.css?v=nexus-behavior-88"), "Index must force browsers to load the latest Nexus behavior shell");
+assert(html.includes("app.js?v=nexus-behavior-88"), "Index must force browsers to load the latest Nexus behavior code");
+assert(sw.includes("agrinexus-pwa-v68"), "Service worker cache must refresh the installed app after native voice bridge updates");
 assert(html.includes("userWorkspace"), "Dashboard needs a User Workspace for standard users");
 assert(html.includes("userMobileDock"), "Legacy mobile dock markup should remain safely hidden for cache compatibility");
 assert(html.includes("What Do You Need Help With Today?"), "Dashboard simple start should use user-ready language");
@@ -588,8 +588,8 @@ assert(app.includes("function jarvisProductionTenSummary"), "Voice assistant nee
 assert(app.includes("how close are we to all 10"), "Voice commands need to answer how close production is to all 10");
 assert(html.includes("adminIntelligencePanel"), "Admin mode needs a visible intelligence panel");
 assert(html.includes("investorIntelligencePanel"), "Investor mode needs a visible intelligence panel");
-assert(app.includes("user-intelligence-card"), "User mode needs a simple visible intelligence card");
-assert(styles.includes(".user-intelligence-card"), "User intelligence card must be styled for phone-style mode");
+assert(app.includes("user-fast-actions"), "User mode needs simple visible quick-action buttons");
+assert(styles.includes(".user-fast-action"), "User quick actions must be styled for phone-style mode");
 assert(app.includes("Nexus, explain your brain"), "Voice commands must let Nexus explain its brain");
 assert(app.includes("Nexus, show brain timeline"), "Voice commands must let Nexus show its brain timeline");
 assert(app.includes("function modeFollowUpResponse"), "Voice assistant must answer follow-ups without forcing extra buttons");

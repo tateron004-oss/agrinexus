@@ -924,6 +924,61 @@ body.user-mode .user-language-panel {
   box-shadow: 0 12px 24px rgba(23, 50, 64, .08);
   text-align: center;
 }
+body.user-mode .user-language-panel.hidden {
+  display: none !important;
+}
+body.user-mode .user-fast-actions {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin-bottom: 12px;
+}
+body.user-mode .user-fast-action {
+  display: grid;
+  align-content: start;
+  justify-items: center;
+  gap: 4px;
+  min-height: 118px;
+  padding: 10px 8px;
+  border: 2px solid #173240;
+  border-radius: 16px;
+  background: #ffffff;
+  color: #173240;
+  box-shadow: 0 10px 20px rgba(23, 50, 64, .08);
+  text-align: center;
+}
+body.user-mode .user-fast-action.guide {
+  background: linear-gradient(180deg, #f4fbff, #ffffff);
+  border-color: #176fc7;
+}
+body.user-mode .user-fast-action.language {
+  background: linear-gradient(180deg, #fff8da, #ffffff);
+  border-color: #bc8700;
+}
+body.user-mode .user-fast-action.check {
+  background: linear-gradient(180deg, #f0fff7, #ffffff);
+  border-color: #22984e;
+}
+body.user-mode .user-fast-action .user-visual-icon {
+  width: 34px;
+  height: 34px;
+  margin-bottom: 2px;
+}
+body.user-mode .user-fast-action .user-visual-icon svg {
+  width: 20px;
+  height: 20px;
+}
+body.user-mode .user-fast-action strong {
+  font-size: .98rem;
+  line-height: 1.08;
+  font-weight: 950;
+}
+body.user-mode .user-fast-action span {
+  font-size: .72rem;
+  line-height: 1.18;
+  font-weight: 850;
+  color: #365867;
+}
 body.user-mode .user-language-panel strong {
   color: #173240;
   font-size: 1.08rem;
@@ -1744,6 +1799,11 @@ body.user-mode .assistant-close {
   min-width: 76px;
   min-height: 44px;
   padding: 8px 12px;
+  border: 2px solid #173240;
+  border-radius: 12px;
+  background: #173240;
+  color: #ffffff;
+  font-weight: 950;
   white-space: nowrap;
   overflow-wrap: normal;
 }
