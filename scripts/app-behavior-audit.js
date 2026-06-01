@@ -166,6 +166,10 @@ hasAll(app, [
   "function isUniversalLanguageCommand",
   "function changeLanguageByVoice",
   "pendingAgentClarification = null;\n    await changeLanguageByVoice(command);",
+  "function isGlobalStopCommand",
+  "function clearConversationHold",
+  "function isFreshActionDuringClarification",
+  "Nexus heard a new request and cleared the old choice",
   "function moduleUseExplanation",
   "function userDisplayName",
   "roleLike.has(name.toLowerCase())"
@@ -186,8 +190,8 @@ assert(html.includes("nexusBehaviorStatus"), "User voice dock needs an assistant
 assert(html.includes('data-user-voice-action="listen"'), "User voice dock needs a speak action");
 assert(html.includes('data-user-voice-action="type"'), "User voice dock needs a type action");
 assert(html.includes('data-user-voice-action="read"'), "User voice dock needs a read action");
-assert(html.includes("nexus-behavior-103"), "Index must force browsers to load Nexus behavior CSS");
-assert(html.includes("nexus-behavior-103"), "Index must force browsers to load Nexus behavior JS");
+assert(html.includes("nexus-behavior-104"), "Index must force browsers to load Nexus behavior CSS");
+assert(html.includes("nexus-behavior-104"), "Index must force browsers to load Nexus behavior JS");
 assert(app.includes("if (!id) return \"dashboard\";"), "Language changes must survive an empty hash without querying '#'");
 assert(app.includes("document.getElementById(id)?.classList.contains(\"section\")"), "Section hash lookup must avoid invalid CSS selectors during language switching");
 assert(app.includes("I want to sell maize"), "Nexus behavior layer should support natural trade requests without button hunting");

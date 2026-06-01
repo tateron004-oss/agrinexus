@@ -383,9 +383,9 @@ assert(app.includes('workflow === "admin-user"'), "Admin test login button needs
 assert(app.includes("Only an existing Admin can run this workflow"), "Admin login flow must explain admin-only protection");
 assert(server.includes('adminAccount.role = "Admin"'), "Backend must force admin test logins to Admin");
 assert(server.includes("admin_user.created"), "Admin test login must create auth audit evidence");
-assert(html.includes("styles.css?v=nexus-behavior-103"), "Index must force browsers to load the latest Nexus behavior shell");
-assert(html.includes("app.js?v=nexus-behavior-103"), "Index must force browsers to load the latest Nexus behavior code");
-assert(sw.includes("agrinexus-pwa-v83"), "Service worker cache must refresh the installed app after native voice bridge updates");
+assert(html.includes("styles.css?v=nexus-behavior-104"), "Index must force browsers to load the latest Nexus behavior shell");
+assert(html.includes("app.js?v=nexus-behavior-104"), "Index must force browsers to load the latest Nexus behavior code");
+assert(sw.includes("agrinexus-pwa-v84"), "Service worker cache must refresh the installed app after native voice bridge updates");
 assert(html.includes("userWorkspace"), "Dashboard needs a User Workspace for standard users");
 assert(html.includes("userMobileDock"), "Legacy mobile dock markup should remain safely hidden for cache compatibility");
 assert(html.includes("What Do You Need Help With Today?"), "Dashboard simple start should use user-ready language");
@@ -473,6 +473,10 @@ assert(app.includes('lower.includes("help me understand the platform")'), "Simpl
 assert(app.includes("function isUniversalLanguageCommand"), "Voice language changes must work from every mode");
 assert(app.includes("pendingAgentClarification = null;\n    await changeLanguageByVoice(command);"), "Clear language commands must bypass stale clarification prompts");
 assert(app.includes("function changeLanguageByVoice"), "Frontend voice layer must change language without module-specific wording");
+assert(app.includes("function isGlobalStopCommand"), "Nexus stop must interrupt speech and clear stuck conversation state");
+assert(app.includes("function clearConversationHold"), "Voice recovery must clear stale choices, missions, journeys, and open workflow modals");
+assert(app.includes("function isFreshActionDuringClarification"), "Fresh voice requests must bypass stale one-choice clarification loops");
+assert(app.includes("I may have heard that wrong"), "Clarification fallback must be calm and recovery-oriented");
 assert(app.includes("Nexus, change language to French"), "Voice help must explicitly show French language switching");
 assert(app.includes("Nexus, change language to Arabic"), "Voice help must explicitly show Arabic language switching");
 assert(app.includes("Nexus, change language to Kiswahili"), "Voice help must explicitly show Kiswahili language switching");

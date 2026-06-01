@@ -2199,8 +2199,8 @@ function runUserModeSelfTest() {
       if (!simpleUserCommandWorkflow(button.command)) missing.push(`${section}: ${button.label}`);
     });
   });
-  const currentScript = [...document.scripts].some(script => String(script.src || "").includes("nexus-behavior-103"));
-  const currentStyle = [...document.styleSheets].some(sheet => String(sheet.href || "").includes("nexus-behavior-103"));
+  const currentScript = [...document.scripts].some(script => String(script.src || "").includes("nexus-behavior-104"));
+  const currentStyle = [...document.styleSheets].some(sheet => String(sheet.href || "").includes("nexus-behavior-104"));
   if (!currentScript || !currentStyle) missing.push("new app files");
   const ok = missing.length === 0;
   const message = ok
@@ -4215,21 +4215,62 @@ function askAgentClarification(clarification) {
   setVoiceResponse(`I can help. Which path do you want? ${choices} Say the number, say the service name, or say cancel.`, true);
 }
 
+function isGlobalStopCommand(lower) {
+  const value = String(lower || "").trim();
+  return /^(nexus\s+)?(stop|pause|wait|hold on|be quiet|interrupt|cancel|cancel that|stop that|stop it|wrong|that's wrong|that is wrong|never mind|reset|start over)$/i.test(value);
+}
+
+function isFreshActionDuringClarification(lower) {
+  const value = String(lower || "").trim();
+  if (!value || /^(yes|yeah|yep|confirm|ok|okay|one|two|three|1|2|3)$/i.test(value)) return false;
+  return /\b(open|start|apply|sell|buy|contact|call|message|whatsapp|text|translate|change language|switch language|run|create|track|find|show|explain|take me to|go to|navigate|doctor|provider|job|work|course|learn|trade|buyer|crop|map|telehealth|health|workforce|drone)\b/i.test(value);
+}
+
+function clearConversationHold(message = "Stopped. Tell me the next instruction.") {
+  pendingAgentClarification = null;
+  activeVoiceMission = null;
+  activeAgentJourney = null;
+  pendingGrandmaAction = null;
+  if (!$("#workflowModal")?.classList.contains("hidden")) closeWorkflowModal();
+  stopVoicePlayback();
+  clearAgentProgressTimers();
+  updateNexusBehaviorLayer("listening", message);
+  setVoiceStatus(voiceFirstMode ? "voice-first" : "standby");
+  const status = $("#globalVoiceOutputStatus");
+  if (status) status.textContent = translateText(message);
+  setVoiceResponse(message, false, { allowVoiceFirst: false });
+  if (voiceFirstMode && !voiceRecognition && !document.hidden) {
+    setTimeout(() => {
+      if (!voiceRecognition && !voiceSpeaking && !voiceStopRequested) startVoiceListening();
+    }, 300);
+  }
+}
+
 async function answerAgentClarification(command) {
   if (!pendingAgentClarification) return false;
   const lower = String(command || "").toLowerCase().trim();
   if (/\b(cancel|stop|never mind|no)\b/.test(lower)) {
-    pendingAgentClarification = null;
-    setVoiceResponse("Canceled. Tell me what you need when you are ready.", true);
+    clearConversationHold("Canceled. Tell me what you need when you are ready.");
     return true;
+  }
+  if (isFreshActionDuringClarification(lower)) {
+    pendingAgentClarification = null;
+    updateNexusBehaviorLayer("thinking", "Nexus heard a new request and cleared the old choice.");
+    return false;
   }
   const indexMatch = lower.match(/\b([1-3])\b/);
   const selected = indexMatch
     ? pendingAgentClarification.options[Number(indexMatch[1]) - 1]
     : pendingAgentClarification.options.find(option => lower === "yes" || lower.includes(option.label.toLowerCase()) || lower.includes(option.section));
   if (!selected) {
+    pendingAgentClarification.misses = (pendingAgentClarification.misses || 0) + 1;
+    if (pendingAgentClarification.misses >= 2) {
+      pendingAgentClarification = null;
+      setVoiceResponse("I cleared that old choice. Say what you want in normal words, like open health, find jobs, sell my crop, or start a course.", true);
+      return true;
+    }
     const names = pendingAgentClarification.options.map(option => option.label).join(", ");
-    setVoiceResponse(`I need one choice: ${names}, or say cancel.`, true);
+    setVoiceResponse(`I may have heard that wrong. You can say ${names}, say a number, or just say a new request like open health or sell my crop.`, true);
     return true;
   }
   pendingAgentClarification = null;
@@ -10007,8 +10048,8 @@ async function handleVoiceCommand(rawCommand) {
   agentPerformanceState.lastCommand = command;
   if (command) rememberConversationTurn(command, "");
   if (command) updateNexusAwareness(command, { silent: true });
-  if (/\b(stop|pause|wait|hold on|be quiet|interrupt|cancel speech)\b/.test(lower) && voiceSpeaking) {
-    interruptNexusSpeech("I stopped speaking. Tell me the next instruction.");
+  if (isGlobalStopCommand(lower)) {
+    clearConversationHold("Stopped. I cleared the current choice and I am ready for the next instruction.");
     return;
   }
   updateNexusBehaviorLayer("thinking", command ? `Nexus is deciding how to help with: ${command}` : "Nexus is listening.");
