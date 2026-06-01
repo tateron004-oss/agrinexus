@@ -185,10 +185,14 @@ assert(html.includes("nexusBehaviorStatus"), "User voice dock needs an assistant
 assert(html.includes('data-user-voice-action="listen"'), "User voice dock needs a speak action");
 assert(html.includes('data-user-voice-action="type"'), "User voice dock needs a type action");
 assert(html.includes('data-user-voice-action="read"'), "User voice dock needs a read action");
-assert(html.includes("nexus-behavior-94"), "Index must force browsers to load Nexus behavior CSS");
-assert(html.includes("nexus-behavior-94"), "Index must force browsers to load Nexus behavior JS");
+assert(html.includes("nexus-behavior-95"), "Index must force browsers to load Nexus behavior CSS");
+assert(html.includes("nexus-behavior-95"), "Index must force browsers to load Nexus behavior JS");
 assert(app.includes("I want to sell maize"), "Nexus behavior layer should support natural trade requests without button hunting");
 assert(app.includes("I need a doctor"), "Nexus behavior layer should support natural telehealth requests without button hunting");
+assert(app.includes("function allModeVoiceCommandCatalog"), "Nexus needs an explicit all-mode voice command contract");
+assert(app.includes("These commands are available in User, Admin, and Investor mode"), "Nexus must explain command support across all three modes");
+assert(app.includes("what commands work in all modes"), "Voice help should expose an all-three-modes command phrase");
+assert(app.includes("User, Admin, or Investor mode"), "Voice help response must say Nexus works in all three modes");
 assert(app.includes("Admin Operator"), "Nexus behavior layer should adapt for Admin mode");
 assert(app.includes("Investor Presenter"), "Nexus behavior layer should adapt for Investor mode");
 assert(app.includes("visibilitychange"), "Nexus behavior layer should recover voice-first listening after app visibility changes");

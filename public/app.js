@@ -2197,8 +2197,8 @@ function runUserModeSelfTest() {
       if (!simpleUserCommandWorkflow(button.command)) missing.push(`${section}: ${button.label}`);
     });
   });
-  const currentScript = [...document.scripts].some(script => String(script.src || "").includes("nexus-behavior-94"));
-  const currentStyle = [...document.styleSheets].some(sheet => String(sheet.href || "").includes("nexus-behavior-94"));
+  const currentScript = [...document.scripts].some(script => String(script.src || "").includes("nexus-behavior-95"));
+  const currentStyle = [...document.styleSheets].some(sheet => String(sheet.href || "").includes("nexus-behavior-95"));
   if (!currentScript || !currentStyle) missing.push("new app files");
   const ok = missing.length === 0;
   const message = ok
@@ -4712,6 +4712,26 @@ function voiceCommandExamples() {
   return voiceCommandGroups().flatMap(group => group.commands);
 }
 
+function allModeVoiceCommandCatalog() {
+  return {
+    modes: ["User", "Admin", "Investor"],
+    commands: [
+      "Nexus, open learning",
+      "Nexus, open workforce",
+      "Nexus, open telehealth",
+      "Nexus, open agritrade",
+      "Nexus, open the map",
+      "Nexus, contact the listed telehealth provider",
+      "Nexus, sell my crop to buyer and track my sale and delivery",
+      "Nexus, change language to French",
+      "Nexus, run route intelligence",
+      "Nexus, explain the platform",
+      "Nexus, what should I do next"
+    ],
+    guarantee: "These commands are available in User, Admin, and Investor mode. Nexus keeps the same voice behavior, then applies the permission level for the signed-in account."
+  };
+}
+
 function voiceCommandButton(command) {
   return `<button type="button" data-voice-example="${command}">${translateText(command)}</button>`;
 }
@@ -4739,6 +4759,7 @@ function voiceCommandGroups() {
       title: "Start here",
       helper: "Use these when someone is new to the platform.",
       commands: [
+        "Nexus, what commands work in all modes",
         "Nexus, activate Agentic Jarvis mode",
         "Nexus, show Agentic Jarvis plan",
         "Nexus, what can you do",
@@ -9697,6 +9718,12 @@ async function handleVoiceCommand(rawCommand) {
     setVoiceResponse("AgriNexus is an AI operating platform for rural learning, workforce, telehealth, agriculture trade, maps, drone intelligence, translation, and provider workflows. You can talk to Nexus, change language, ask what to do next, open a service, or ask it to guide a real workflow step by step.", true);
     return;
   }
+  if (/(what commands|which commands|what can i ask|what can i say).*(all three modes|all modes|user admin investor|user.*admin.*investor)/.test(lower) || /(commands|voice commands).*(user.*admin.*investor|all modes)/.test(lower)) {
+    const catalog = allModeVoiceCommandCatalog();
+    renderLiveVoiceSuggestions(catalog.commands);
+    setVoiceResponse(`${catalog.guarantee} Try: ${catalog.commands.slice(0, 6).join(". ")}.`, true);
+    return;
+  }
   if (/(how do i use|how to use|show me how|explain how|walk me through|teach me).*(platform|learning|course|workforce|job|health|telehealth|trade|agritrade|map|ai|agent|nexus|integration|admin|function|button|section)/.test(lower)) {
     const moduleId = moduleFromHelpCommand(command);
     if (canOpenSection(moduleId)) goSection(moduleId);
@@ -9861,7 +9888,8 @@ async function handleVoiceCommand(rawCommand) {
 
   if (lower.includes("voice help") || lower.includes("command help") || lower.includes("show help") || lower.includes("what can you do")) {
     openVoiceHelp();
-    setVoiceResponse("You can call me Nexus. I can open modules, build captions, create audio guides, complete lessons, issue certificates, apply for roles, schedule shifts, start telehealth intake, connect a provider, capture vitals, contact a buyer, create orders, run drone scans, test engines, create plans, and read responses aloud.", true);
+    const catalog = allModeVoiceCommandCatalog();
+    setVoiceResponse(`You can call me Nexus in User, Admin, or Investor mode. I can open modules, build captions, create audio guides, complete lessons, issue certificates, apply for roles, schedule shifts, start telehealth intake, connect a provider, capture vitals, contact a buyer, create orders, run drone scans, test engines, create plans, and read responses aloud. All-mode examples: ${catalog.commands.slice(0, 5).join(". ")}.`, true);
     return;
   }
   if (lower.includes("voice demo") || lower.includes("agrinexus demo") || lower.includes("show voice") || lower.includes("show agrinexus")) {

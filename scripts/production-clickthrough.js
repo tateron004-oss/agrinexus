@@ -304,6 +304,8 @@ assert(app.includes("brief the logistics team"), "Voice help needs AgriTrade log
 assert(app.includes("Nexus, open the map"), "Voice help needs a direct open-map phrase");
 assert(app.includes("Nexus, contact the listed telehealth provider"), "Voice help needs a listed telehealth provider contact phrase");
 assert(app.includes("Nexus, sell my crop to buyer and track my sale and delivery"), "Voice help needs a full crop sale and delivery tracking phrase");
+assert(app.includes("function allModeVoiceCommandCatalog"), "Voice command contract must be shared across User, Admin, and Investor modes");
+assert(app.includes("These commands are available in User, Admin, and Investor mode"), "All-mode command support must be stated in-app");
 assert(app.includes("I opened Health and prepared the listed telehealth provider contact workflow."), "Voice handler must directly stage listed telehealth provider contact");
 assert(app.includes("The workflow connects the buyer, order, route map, sale record, and delivery tracking."), "Voice handler must directly stage crop sale and delivery tracking");
 assert(app.includes("Map is open. You can say track my route"), "Voice handler must directly open and coach the map");
@@ -360,9 +362,9 @@ assert(app.includes('workflow === "admin-user"'), "Admin test login button needs
 assert(app.includes("Only an existing Admin can run this workflow"), "Admin login flow must explain admin-only protection");
 assert(server.includes('adminAccount.role = "Admin"'), "Backend must force admin test logins to Admin");
 assert(server.includes("admin_user.created"), "Admin test login must create auth audit evidence");
-assert(html.includes("styles.css?v=nexus-behavior-94"), "Index must force browsers to load the latest Nexus behavior shell");
-assert(html.includes("app.js?v=nexus-behavior-94"), "Index must force browsers to load the latest Nexus behavior code");
-assert(sw.includes("agrinexus-pwa-v74"), "Service worker cache must refresh the installed app after native voice bridge updates");
+assert(html.includes("styles.css?v=nexus-behavior-95"), "Index must force browsers to load the latest Nexus behavior shell");
+assert(html.includes("app.js?v=nexus-behavior-95"), "Index must force browsers to load the latest Nexus behavior code");
+assert(sw.includes("agrinexus-pwa-v75"), "Service worker cache must refresh the installed app after native voice bridge updates");
 assert(html.includes("userWorkspace"), "Dashboard needs a User Workspace for standard users");
 assert(html.includes("userMobileDock"), "Legacy mobile dock markup should remain safely hidden for cache compatibility");
 assert(html.includes("What Do You Need Help With Today?"), "Dashboard simple start should use user-ready language");
