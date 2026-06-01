@@ -354,9 +354,9 @@ assert(app.includes('workflow === "admin-user"'), "Admin test login button needs
 assert(app.includes("Only an existing Admin can run this workflow"), "Admin login flow must explain admin-only protection");
 assert(server.includes('adminAccount.role = "Admin"'), "Backend must force admin test logins to Admin");
 assert(server.includes("admin_user.created"), "Admin test login must create auth audit evidence");
-assert(html.includes("styles.css?v=nexus-behavior-91"), "Index must force browsers to load the latest Nexus behavior shell");
-assert(html.includes("app.js?v=nexus-behavior-91"), "Index must force browsers to load the latest Nexus behavior code");
-assert(sw.includes("agrinexus-pwa-v71"), "Service worker cache must refresh the installed app after native voice bridge updates");
+assert(html.includes("styles.css?v=nexus-behavior-92"), "Index must force browsers to load the latest Nexus behavior shell");
+assert(html.includes("app.js?v=nexus-behavior-92"), "Index must force browsers to load the latest Nexus behavior code");
+assert(sw.includes("agrinexus-pwa-v72"), "Service worker cache must refresh the installed app after native voice bridge updates");
 assert(html.includes("userWorkspace"), "Dashboard needs a User Workspace for standard users");
 assert(html.includes("userMobileDock"), "Legacy mobile dock markup should remain safely hidden for cache compatibility");
 assert(html.includes("What Do You Need Help With Today?"), "Dashboard simple start should use user-ready language");
@@ -586,6 +586,9 @@ assert(app.includes("function agenticJarvisModePlan"), "Voice assistant needs an
 assert(app.includes("function activateAgenticJarvisMode"), "Voice assistant must activate Agentic Jarvis mode without adding static cards");
 assert(app.includes("Nexus, activate Agentic Jarvis mode"), "Voice help must expose the Agentic Jarvis mode command");
 assert(app.includes("Agentic Jarvis Mode"), "Jarvis layer must expose actionable Agentic Jarvis mode status");
+assert(app.includes("function productionJarvisEightModel"), "Frontend needs a Production 1-8 Agentic/Jarvis readiness model");
+assert(app.includes("function productionJarvisEightSummary"), "Voice assistant must explain production items 1-8");
+assert(app.includes("Nexus, production one through eight"), "Voice help must expose production 1-8 readiness command");
 assert(server.includes("function jarvisProductionTenModel"), "Backend needs a Jarvis Production 10 readiness model");
 assert(app.includes("function renderJarvisProductionTen"), "Frontend needs to render Jarvis Production 10 readiness");
 assert(html.includes("jarvisProductionTenPanel"), "Agent mode needs visible Jarvis Production 10 readiness");
