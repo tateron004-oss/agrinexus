@@ -422,9 +422,9 @@ assert(app.includes('workflow === "admin-user"'), "Admin test login button needs
 assert(app.includes("Only an existing Admin can run this workflow"), "Admin login flow must explain admin-only protection");
 assert(server.includes('adminAccount.role = "Admin"'), "Backend must force admin test logins to Admin");
 assert(server.includes("admin_user.created"), "Admin test login must create auth audit evidence");
-assert(html.includes("styles.css?v=nexus-behavior-121"), "Index must force browsers to load the latest Nexus behavior shell");
-assert(html.includes("app.js?v=nexus-behavior-121"), "Index must force browsers to load the latest Nexus behavior code");
-assert(sw.includes("agrinexus-pwa-v101"), "Service worker cache must refresh the installed app after native voice bridge updates");
+assert(html.includes("styles.css?v=nexus-behavior-122"), "Index must force browsers to load the latest Nexus behavior shell");
+assert(html.includes("app.js?v=nexus-behavior-122"), "Index must force browsers to load the latest Nexus behavior code");
+assert(sw.includes("agrinexus-pwa-v102"), "Service worker cache must refresh the installed app after native voice bridge updates");
 assert(html.includes("userWorkspace"), "Dashboard needs a User Workspace for standard users");
 assert(html.includes("userMobileDock"), "Legacy mobile dock markup should remain safely hidden for cache compatibility");
 assert(html.includes("What Do You Need Help With Today?"), "Dashboard simple start should use user-ready language");
@@ -443,8 +443,8 @@ assert(app.includes("user-simple-hero"), "Standard User view needs a simple phon
 assert(app.includes("How can we help?"), "Standard User view needs short user-ready copy");
 assert(app.includes('data-mobile-ask="true"'), "Standard User view needs one clear Ask Nexus button");
 assert(app.includes("Talk to Nexus"), "Standard User view needs a plain voice-first help button");
-assert(app.includes('{ label: "Map", section: "map"'), "Standard User home should expose Map as a simple service button");
-assert(app.includes('{ label: "AI Help", section: "agent"'), "Standard User home should expose AI communication as a simple service button");
+assert(app.includes('label: "Map"') && app.includes('section: "map"'), "Standard User home should expose Map as a simple service button");
+assert(app.includes('label: "AI Help"') && app.includes('section: "agent"'), "Standard User home should expose AI communication as a simple service button");
 assert(!app.includes('{ label: "Me", section: "profile"'), "Standard User home should avoid profile clutter");
 assert(app.includes("function renderUserSimpleActiveSection"), "Standard User module pages must collapse into button-only action screens");
 assert(app.includes("simpleUserSections"), "Standard User needs simple action definitions for every service section");
@@ -579,6 +579,8 @@ assert(app.includes("navigator.geolocation.getCurrentPosition"), "Mobile permiss
 assert(app.includes('role.includes("standard") || role.includes("user")'), "Standard User must be locked into the simplified User mode");
 assert(app.includes("const serviceButtons = ["), "Standard User needs button-based service navigation");
 assert(app.includes("user-service-buttons"), "User workspace needs visible service buttons");
+assert(app.includes("user-service-photo"), "Standard User service buttons need real photo tiles");
+assert(app.includes("function userServicePhotoHtml"), "Standard User module pages need real photo headers");
 assert(html.includes("userBackHomeBtn"), "User sections need a clear back-to-home control");
 assert(app.includes("function updateUserBackHome"), "Back-to-home button must update when sections change");
 assert(app.includes("service-learning"), "User service buttons need section-specific color classes");
@@ -589,6 +591,8 @@ assert(styles.includes("body.user-mode #dashboard > :not(#userWorkspace)"), "Use
 assert(styles.includes("body.user-mode .simple-home") && styles.includes("display: none !important"), "User mode should remove the older dashboard choice area completely");
 assert(styles.includes("body.user-mode .sidebar"), "User mode must hide tab-style module navigation");
 assert(styles.includes(".user-service-buttons"), "User service buttons need dedicated styling");
+assert(styles.includes(".user-service-photo"), "User service buttons need photo tile styling");
+assert(styles.includes(".user-service-photo-card"), "User service pages need realistic photo headers");
 assert(styles.includes(".user-service-buttons .service-learning"), "Learning button needs color-coded styling");
 assert(styles.includes(".user-service-buttons .service-health"), "Health button needs color-coded styling");
 assert(styles.includes("body.user-mode .app"), "Standard User mode should render inside a phone-style app shell");
@@ -700,7 +704,7 @@ assert(app.includes("function productionJarvisEightModel"), "Frontend needs a Pr
 assert(app.includes("function productionJarvisEightSummary"), "Voice assistant must explain production items 1-8");
 assert(app.includes("Nexus, production one through eight"), "Voice help must expose production 1-8 readiness command");
 assert(app.includes('title: "Production 1-8"'), "Production 1-8 readiness must appear in role-aware intelligence for all modes");
-assert(app.includes('class="user-fast-action production"'), "User mode must expose Production 1-8 as a simple app action");
+assert(!app.includes('class="user-fast-action production"'), "Standard User home should hide admin-style Production 1-8 action");
 assert(server.includes("function jarvisProductionTenModel"), "Backend needs a Jarvis Production 10 readiness model");
 assert(app.includes("function renderJarvisProductionTen"), "Frontend needs to render Jarvis Production 10 readiness");
 assert(html.includes("jarvisProductionTenPanel"), "Agent mode needs visible Jarvis Production 10 readiness");

@@ -2382,8 +2382,8 @@ function runUserModeSelfTest() {
       if (!simpleUserCommandWorkflow(button.command)) missing.push(`${section}: ${button.label}`);
     });
   });
-  const currentScript = [...document.scripts].some(script => String(script.src || "").includes("nexus-behavior-121"));
-  const currentStyle = [...document.styleSheets].some(sheet => String(sheet.href || "").includes("nexus-behavior-121"));
+  const currentScript = [...document.scripts].some(script => String(script.src || "").includes("nexus-behavior-122"));
+  const currentStyle = [...document.styleSheets].some(sheet => String(sheet.href || "").includes("nexus-behavior-122"));
   if (!currentScript || !currentStyle) missing.push("new app files");
   const ok = missing.length === 0;
   const message = ok
@@ -6191,22 +6191,21 @@ function renderUserWorkspace() {
   const target = $("#userWorkspace");
   if (!target) return;
   const intelligence = modeIntelligenceSnapshot("user");
-  const productionEight = productionJarvisEightModel();
   const guideCommand = intelligence.topPriority.command || "what should I do next";
   const serviceButtons = [
-    { label: "Talk to Nexus", section: "ask", className: "service-ask", icon: "ask", ask: true },
-    { label: "Learn", section: "learning", className: "service-learning", icon: "learning" },
-    { label: "Find Work", section: "workforce", className: "service-workforce", icon: "workforce" },
-    { label: "Get Health Help", section: "health", className: "service-health", icon: "health" },
-    { label: "Sell Crops", section: "trade", className: "service-trade", icon: "trade" },
-    { label: "Map", section: "map", className: "service-map", icon: "map" },
-    { label: "AI Help", section: "agent", className: "service-agent", icon: "agent" }
+    { label: "Talk to Nexus", detail: "Speak or type what you need.", section: "ask", className: "service-ask", ask: true, photo: "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=900&q=70" },
+    { label: "Learn", detail: "Start a course or finish a lesson.", section: "learning", className: "service-learning", photo: "https://images.unsplash.com/photo-1522202176988-66273c2fd55f?auto=format&fit=crop&w=900&q=70" },
+    { label: "Find Work", detail: "Find jobs, apply, and check skills.", section: "workforce", className: "service-workforce", photo: "https://images.unsplash.com/photo-1521737604893-d14cc237f11d?auto=format&fit=crop&w=900&q=70" },
+    { label: "Get Health Help", detail: "Start intake or contact a provider.", section: "health", className: "service-health", photo: "https://images.unsplash.com/photo-1584515933487-779824d29309?auto=format&fit=crop&w=900&q=70" },
+    { label: "Sell Crops", detail: "Contact buyers, create order, track route.", section: "trade", className: "service-trade", photo: "https://images.unsplash.com/photo-1500937386664-56d1dfef3854?auto=format&fit=crop&w=900&q=70" },
+    { label: "Map", detail: "Check route, facility, or farm area.", section: "map", className: "service-map", photo: "https://images.unsplash.com/photo-1524661135-423995f22d0b?auto=format&fit=crop&w=900&q=70" },
+    { label: "AI Help", detail: "Ask Nexus to guide the next step.", section: "agent", className: "service-agent", photo: "https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&w=900&q=70" }
   ].filter(item => item.ask || canOpenSection(item.section));
   target.innerHTML = `
     <section class="user-workspace-hero user-simple-hero">
       <span class="eyebrow">${translateText("AgriNexus")}</span>
-      <h3 id="userWorkspaceTitle">${translateText("How can we help?")}</h3>
-      <p>${translateText("Tap one big button. Or say: Nexus, help me.")}</p>
+      <h3 id="userWorkspaceTitle">${translateText(`Hi ${userFirstName()}. What do you need today?`)}</h3>
+      <p>${translateText("Tap a photo button or say: Nexus, help me.")}</p>
     </section>
     <section class="user-fast-actions" aria-label="${translateText("Quick actions")}">
       <button type="button" class="user-fast-action guide" data-simple-command="${escapeHtml(guideCommand)}">
@@ -6218,16 +6217,6 @@ function renderUserWorkspace() {
         ${userVisualIconHtml("map")}
         <strong>${translateText("Language")}</strong>
         <span>${translateText("Change screen and voice language.")}</span>
-      </button>
-      <button type="button" class="user-fast-action check" data-app-self-test>
-        ${userVisualIconHtml("certificate")}
-        <strong>${translateText("Check app")}</strong>
-        <span>${translateText("Make sure buttons are ready.")}</span>
-      </button>
-      <button type="button" class="user-fast-action production" data-simple-command="Nexus, production one through eight">
-        ${userVisualIconHtml("route")}
-        <strong>${translateText("Readiness")}</strong>
-        <span>${translateText(`${productionEight.readyCount}/${productionEight.total}: ${productionEight.closest.title}`)}</span>
       </button>
     </section>
     <section id="userLanguagePanel" class="user-language-panel hidden" aria-label="${translateText("Choose language")}">
@@ -6249,9 +6238,10 @@ function renderUserWorkspace() {
       <span>${translateText("Say: change language to French, Arabic, Swahili, Spanish, or English.")}</span>
     </section>
     <section class="user-service-buttons" aria-label="${translateText("Open a service")}">
-      ${serviceButtons.map(item => `<button type="button" class="${escapeHtml(item.className)}" ${item.ask ? `data-mobile-ask="true"` : `data-simple-section="${item.section}"`}>
-        ${userVisualIconHtml(item.icon)}
+      ${serviceButtons.map(item => `<button type="button" class="${escapeHtml(item.className)}" style="--service-photo: url('${escapeHtml(item.photo)}')" ${item.ask ? `data-mobile-ask="true"` : `data-simple-section="${item.section}"`}>
+        <span class="user-service-photo" aria-hidden="true"></span>
         <strong>${translateText(item.label)}</strong>
+        <span>${translateText(item.detail)}</span>
       </button>`).join("")}
     </section>
   `;
@@ -6544,6 +6534,22 @@ function userSceneVisualHtml(type = "agent", title = "Workflow visual") {
   `;
 }
 
+function userServicePhotoHtml(type = "agent", title = "Service") {
+  const photos = {
+    learning: "https://images.unsplash.com/photo-1522202176988-66273c2fd55f?auto=format&fit=crop&w=900&q=70",
+    workforce: "https://images.unsplash.com/photo-1521737604893-d14cc237f11d?auto=format&fit=crop&w=900&q=70",
+    health: "https://images.unsplash.com/photo-1584515933487-779824d29309?auto=format&fit=crop&w=900&q=70",
+    trade: "https://images.unsplash.com/photo-1500937386664-56d1dfef3854?auto=format&fit=crop&w=900&q=70",
+    map: "https://images.unsplash.com/photo-1524661135-423995f22d0b?auto=format&fit=crop&w=900&q=70",
+    agent: "https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&w=900&q=70",
+    profile: "https://images.unsplash.com/photo-1497366811353-6870744d04b2?auto=format&fit=crop&w=900&q=70"
+  };
+  return `<figure class="user-service-photo-card service-photo-${escapeHtml(type)}" style="--service-photo: url('${escapeHtml(photos[type] || photos.agent)}')" aria-label="${translateText(title)}">
+    <span aria-hidden="true"></span>
+    <figcaption>${translateText(title)}</figcaption>
+  </figure>`;
+}
+
 function userRealMapHtml(title = "Live route map") {
   const route = activeRoute();
   const country = activeCountry();
@@ -6574,7 +6580,7 @@ function userModulePreviewHtml(sectionId) {
       : firstProduct();
     return `
       <div class="user-module-preview user-trade-preview">
-        ${userSceneVisualHtml("trade", "Crop trade visual")}
+        ${userServicePhotoHtml("trade", "Sell crops")}
         ${shipmentMapHtml({
           route: activeRoute(),
           order: latestOrder,
@@ -6612,7 +6618,7 @@ function userModulePreviewHtml(sectionId) {
   if (sectionId === "learning") {
     return `
       <div class="user-module-preview user-learning-preview user-choice-preview">
-        ${userSceneVisualHtml("learning", "Learning visual")}
+        ${userServicePhotoHtml("learning", "Learning")}
         ${learningCourseChoicesHtml()}
       </div>
     `;
@@ -6620,7 +6626,7 @@ function userModulePreviewHtml(sectionId) {
   if (sectionId === "workforce") {
     return `
       <div class="user-module-preview user-workforce-preview user-choice-preview">
-        ${userSceneVisualHtml("workforce", "Workforce visual")}
+        ${userServicePhotoHtml("workforce", "Find work")}
         ${workforceJobChoicesHtml()}
       </div>
     `;
@@ -6631,7 +6637,7 @@ function userModulePreviewHtml(sectionId) {
     const provider = (data.profile.telehealthProviderAssignments || [])[0];
     return `
       <div class="user-module-preview user-health-preview">
-        ${userSceneVisualHtml("health", "Telehealth visual")}
+        ${userServicePhotoHtml("health", "Health support")}
         ${healthHotspotHtml({ country, title: "Regional health risk" })}
         <div class="provider-contact-card">
           <strong>${translateText(provider?.providerName || "Telehealth provider desk")}</strong>
@@ -6655,14 +6661,14 @@ function userModulePreviewHtml(sectionId) {
     `;
   }
   if (sectionId === "agent") {
-    return `<div class="user-module-preview">${userSceneVisualHtml("agent", "Nexus AI visual")}<div class="user-preview-summary"><strong>${translateText("Talk naturally")}</strong><span>${translateText("Ask Nexus what to do, ask it to explain the platform, or ask it to open a service.")}</span>${userPreviewActionsHtml([
+    return `<div class="user-module-preview">${userServicePhotoHtml("agent", "Talk to Nexus")}<div class="user-preview-summary"><strong>${translateText("Talk naturally")}</strong><span>${translateText("Ask Nexus what to do, ask it to explain the platform, or ask it to open a service.")}</span>${userPreviewActionsHtml([
       { label: "Ask Question", command: "help me understand the platform" },
       { label: "Plan Mission", command: "create an agent plan" },
       { label: "Read to Me", command: "read the current response" }
     ])}</div></div>`;
   }
   if (sectionId === "profile") {
-    return `<div class="user-module-preview">${userSceneVisualHtml("agent", "Profile visual")}<div class="user-preview-summary"><strong>${translateText("Your record")}</strong><span>${translateText("Review progress, messages, certificates, and saved activity without seeing admin controls.")}</span>${userPreviewActionsHtml([
+    return `<div class="user-module-preview">${userServicePhotoHtml("profile", "Your record")}<div class="user-preview-summary"><strong>${translateText("Your record")}</strong><span>${translateText("Review progress, messages, certificates, and saved activity without seeing admin controls.")}</span>${userPreviewActionsHtml([
       { label: "My Progress", command: "summarize my progress" },
       { label: "My Messages", command: "show my messages" },
       { label: "Help Me", command: "help me" }

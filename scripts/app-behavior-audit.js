@@ -75,6 +75,8 @@ hasAll(app, [
   "function healthUserCopy",
   "function workflowRealUseCoach",
   "function workflowRealUseCoachHtml",
+  "function userServicePhotoHtml",
+  "user-service-photo",
   "Plain meaning",
   "Ask this first",
   "Watch out",
@@ -172,6 +174,8 @@ hasAll(styles, [
   "body.user-mode .user-process-screen",
   "body.user-mode .user-process-actions",
   "body.user-mode #workforce .user-process-actions .primary",
+  "body.user-mode .user-service-photo",
+  "body.user-mode .user-service-photo-card",
   ".workflow-real-use-coach",
   ".workflow-real-use-grid",
   ".workflow-operating-screen",
@@ -192,13 +196,21 @@ hasAll(styles, [
 ], "Color-coded app service buttons");
 
 hasAll(app, [
-  "{ label: \"Talk to Nexus\", section: \"ask\"",
-  "{ label: \"Learn\", section: \"learning\"",
-  "{ label: \"Find Work\", section: \"workforce\"",
-  "{ label: \"Get Health Help\", section: \"health\"",
-  "{ label: \"Sell Crops\", section: \"trade\"",
-  "{ label: \"Map\", section: \"map\"",
-  "{ label: \"AI Help\", section: \"agent\""
+  "label: \"Talk to Nexus\"",
+  "section: \"ask\"",
+  "label: \"Learn\"",
+  "section: \"learning\"",
+  "label: \"Find Work\"",
+  "section: \"workforce\"",
+  "label: \"Get Health Help\"",
+  "section: \"health\"",
+  "label: \"Sell Crops\"",
+  "section: \"trade\"",
+  "label: \"Map\"",
+  "section: \"map\"",
+  "label: \"AI Help\"",
+  "section: \"agent\"",
+  "photo:"
 ], "Visible app home services");
 
 hasAll(app, [
@@ -264,8 +276,8 @@ assert(html.includes("nexusBehaviorStatus"), "User voice dock needs an assistant
 assert(html.includes('data-user-voice-action="listen"'), "User voice dock needs a speak action");
 assert(html.includes('data-user-voice-action="type"'), "User voice dock needs a type action");
 assert(html.includes('data-user-voice-action="read"'), "User voice dock needs a read action");
-assert(html.includes("nexus-behavior-121"), "Index must force browsers to load Nexus behavior CSS");
-assert(html.includes("nexus-behavior-121"), "Index must force browsers to load Nexus behavior JS");
+assert(html.includes("nexus-behavior-122"), "Index must force browsers to load Nexus behavior CSS");
+assert(html.includes("nexus-behavior-122"), "Index must force browsers to load Nexus behavior JS");
 assert(app.includes("if (!id) return \"dashboard\";"), "Language changes must survive an empty hash without querying '#'");
 assert(app.includes("document.getElementById(id)?.classList.contains(\"section\")"), "Section hash lookup must avoid invalid CSS selectors during language switching");
 assert(app.includes("I want to sell maize"), "Nexus behavior layer should support natural trade requests without button hunting");

@@ -90,6 +90,8 @@ for (const [section, buttons] of Object.entries(expectedSections)) {
   "renderUserProcessScreen(userSection, config",
   "function userPreviewActionsHtml",
   "function userSceneVisualHtml",
+  "function userServicePhotoHtml",
+  "user-service-photo",
   "function userRealMapHtml",
   "function renderUserRealMap",
   "userMapCanvas",
@@ -122,6 +124,8 @@ for (const [section, buttons] of Object.entries(expectedSections)) {
   "body.user-mode .user-inline-workflow",
   "body.user-mode .user-module-preview",
   "body.user-mode .user-scene-visual",
+  "body.user-mode .user-service-photo-card",
+  "body.user-mode .user-service-photo",
   "body.user-mode .user-module-preview .shipment-map-card",
   "body.user-mode .user-real-map-card",
   "body.user-mode .user-real-map",
@@ -160,9 +164,9 @@ for (const [section, buttons] of Object.entries(expectedSections)) {
   assert(styles.includes(marker), `User workflow containment style missing: ${marker}`);
 });
 
-assert(html.includes("/app.js?v=nexus-behavior-121"), "Index must force browsers to load current User-mode workflow JS");
-assert(html.includes("/styles.css?v=nexus-behavior-121"), "Index must force browsers to load current User-mode workflow CSS");
-assert(sw.includes('CACHE_NAME = "agrinexus-pwa-v101"'), "Service worker cache must be bumped after User-mode workflow fixes");
+assert(html.includes("/app.js?v=nexus-behavior-122"), "Index must force browsers to load current User-mode workflow JS");
+assert(html.includes("/styles.css?v=nexus-behavior-122"), "Index must force browsers to load current User-mode workflow CSS");
+assert(sw.includes('CACHE_NAME = "agrinexus-pwa-v102"'), "Service worker cache must be bumped after User-mode workflow fixes");
 
 console.log("User mode workflow audit passed");
 console.log("Checked: every simple app tab/button maps to a workflow, course/job choices are visible, User mode uses inline confirmations, assistant windows have anti-partial containment, and the app can self-check/repair stale runtime cache.");

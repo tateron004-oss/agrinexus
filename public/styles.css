@@ -1090,45 +1090,60 @@ body.user-mode .user-action {
   min-height: 104px;
 }
 body.user-mode .user-service-buttons {
-  gap: 12px;
+  gap: 14px;
 }
 body.user-mode .user-service-buttons button {
   position: relative;
   isolation: isolate;
   width: 100%;
-  padding: 14px 14px;
-  border-radius: 16px;
-  text-align: center;
-  justify-items: center;
-  border-width: 2px;
+  min-height: 128px;
+  padding: 16px 16px 16px 136px;
+  border-radius: 22px;
+  text-align: left;
+  justify-items: start;
+  align-content: center;
+  border: 0;
+  background: #ffffff;
   overflow: hidden;
-  box-shadow: 0 14px 28px rgba(23, 50, 64, .11);
+  box-shadow: 0 18px 34px rgba(23, 50, 64, .14);
+}
+body.user-mode .user-service-photo {
+  position: absolute;
+  left: 10px;
+  top: 10px;
+  bottom: 10px;
+  width: 108px;
+  border-radius: 18px;
+  background-image: var(--service-photo);
+  background-size: cover;
+  background-position: center;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .35);
 }
 body.user-mode .user-service-buttons button::before {
   content: "";
   position: absolute;
-  inset: 10px auto 10px 10px;
-  width: 8px;
-  border-radius: 999px;
-  background: #173240;
+  inset: 0;
+  background: linear-gradient(90deg, rgba(255,255,255,.02), rgba(255,255,255,.94) 118px, #ffffff);
+  z-index: -1;
 }
-body.user-mode .user-service-buttons .service-ask::before { background: #ffd356; }
-body.user-mode .user-service-buttons .service-learning::before { background: #1286cf; }
-body.user-mode .user-service-buttons .service-workforce::before { background: #22984e; }
-body.user-mode .user-service-buttons .service-health::before { background: #d74d5b; }
-body.user-mode .user-service-buttons .service-trade::before { background: #bc8700; }
-body.user-mode .user-service-buttons .service-map::before { background: #176fc7; }
-body.user-mode .user-service-buttons .service-agent::before { background: #6d55d7; }
-body.user-mode .user-service-buttons .service-profile::before { background: #7452b8; }
 body.user-mode .user-service-buttons button:active {
   transform: scale(.99);
 }
 body.user-mode .user-service-buttons strong {
   position: relative;
   z-index: 1;
-  font-size: 1.22rem;
+  font-size: 1.28rem;
   line-height: 1.1;
   white-space: normal;
+}
+body.user-mode .user-service-buttons span:not(.user-service-photo) {
+  position: relative;
+  z-index: 1;
+  margin-top: 6px;
+  color: #4b625c;
+  font-size: .96rem;
+  font-weight: 850;
+  line-height: 1.25;
 }
 .user-visual-icon {
   display: inline-grid;
@@ -1159,9 +1174,50 @@ body.user-mode .service-health .user-visual-icon { color: #b73d4a; }
 body.user-mode .service-trade .user-visual-icon { color: #946900; }
 body.user-mode .service-map .user-visual-icon { color: #176fc7; }
 body.user-mode .service-agent .user-visual-icon { color: #6d55d7; }
+body.user-mode .service-ask strong,
+body.user-mode .service-ask span:not(.user-service-photo) {
+  color: #ffffff;
+}
 body.user-mode .user-service-buttons .service-ask {
   min-height: 118px;
-  background: linear-gradient(135deg, #102b36, #255f73);
+  background: #102b36;
+}
+body.user-mode .user-service-buttons .service-ask::before {
+  background: linear-gradient(90deg, rgba(16,43,54,.02), rgba(16,43,54,.78) 118px, #102b36);
+}
+body.user-mode .user-service-photo-card {
+  position: relative;
+  min-height: 150px;
+  margin: 0;
+  overflow: hidden;
+  border-radius: 22px;
+  background: #173240;
+  box-shadow: 0 18px 34px rgba(23, 50, 64, .14);
+}
+body.user-mode .user-service-photo-card > span {
+  position: absolute;
+  inset: 0;
+  background-image: var(--service-photo);
+  background-size: cover;
+  background-position: center;
+  filter: saturate(1.04);
+}
+body.user-mode .user-service-photo-card::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(0,0,0,.08), rgba(0,0,0,.58));
+}
+body.user-mode .user-service-photo-card figcaption {
+  position: absolute;
+  left: 14px;
+  right: 14px;
+  bottom: 12px;
+  z-index: 1;
+  color: #ffffff;
+  font-size: 1.18rem;
+  font-weight: 950;
+  line-height: 1.1;
 }
 body.user-mode .section.active {
   display: block;
@@ -1180,11 +1236,11 @@ body.user-mode .user-simple-module {
   min-height: calc(100vh - 162px);
   max-height: calc(100vh - 88px);
   align-content: start;
-  padding: 10px;
-  border: 2px solid #173240;
-  border-radius: 16px;
+  padding: 12px;
+  border: 0;
+  border-radius: 24px;
   background: #ffffff;
-  box-shadow: 0 14px 32px rgba(23, 50, 64, .08);
+  box-shadow: 0 20px 44px rgba(23, 50, 64, .12);
   overflow: auto;
 }
 body.user-mode .user-simple-module.user-choice-module {
