@@ -550,6 +550,136 @@ function jarvisProductionTenModel(db, providers = runtimeProviders(db)) {
   };
 }
 
+function deepOperatingIntelligence(db, user, providers = runtimeProviders(db), options = {}) {
+  ensureLearningProfile(db.profile);
+  ensureWorkforceProfile(db.profile);
+  ensureHealthProfile(db.profile);
+  ensureTradeProfile(db.profile);
+  ensureAiProfile(db.profile);
+  ensureCommunicationProfile(db.profile);
+  const provider = id => providers.find(item => item.id === id) || {};
+  const connected = id => provider(id).status === "connected";
+  const deferredIds = new Set(["billing-subscriptions", "auth-password-reset", "email-delivery"]);
+  const liveEngineIds = ["database", "openai", "voice-stt", "voice-tts", "phone-voice", "sms-delivery", "whatsapp-delivery", "translation", "maps", "learning-courses", "workforce-jobs", "health-telehealth", "trade-market", "field-drones"];
+  const liveEngines = liveEngineIds.map(id => ({
+    id,
+    name: provider(id).name || id,
+    status: provider(id).status || "unknown",
+    mode: provider(id).mode || "unknown",
+    detail: provider(id).detail || "No provider detail available."
+  }));
+  const strongLive = liveEngines.filter(item => item.status === "connected").length;
+  const readiness = productionReadiness(providers);
+  const smart = smartNextActions(db, user, providers).items.slice(0, 5);
+  const { country, route } = activeContext(db);
+  const mode = options.mode || user?.role || "Standard User";
+  const moduleDepth = [
+    {
+      id: "learning",
+      title: "Learning",
+      state: `${(db.profile.enrollments || []).length} enrollment(s), ${(db.profile.certificates || []).length} certificate(s)`,
+      intelligence: "Nexus can choose a course, explain it simply, add captions/audio/offline support, track progress, and connect training to jobs.",
+      liveProvider: connected("learning-courses") && connected("learning-certificates"),
+      nextCommand: "Nexus, help me start the right course"
+    },
+    {
+      id: "workforce",
+      title: "Workforce",
+      state: `${db.profile.readiness || 0}% readiness, ${(db.profile.applications || []).length} application(s), ${(db.profile.shiftSchedule || []).length} shift item(s)`,
+      intelligence: "Nexus can match a role, explain readiness gaps, apply, schedule interviews, assign mentors, and prepare shift evidence.",
+      liveProvider: connected("workforce-jobs"),
+      nextCommand: "Nexus, help me apply for a job"
+    },
+    {
+      id: "health",
+      title: "Telehealth",
+      state: `${(db.profile.healthIntakes || []).length} intake(s), ${(db.profile.videoSessions || []).length} video handoff(s), ${country.risk} regional risk`,
+      intelligence: "Nexus can run intake, check danger signals without diagnosing, open video, prepare captions, notify caregiver, and route to provider support.",
+      liveProvider: connected("health-telehealth") && connected("phone-voice"),
+      nextCommand: "Nexus, walk me through telehealth"
+    },
+    {
+      id: "trade",
+      title: "AgriTrade",
+      state: `${(db.profile.orders || []).length} order(s), ${(db.profile.tradeMessageThreads || []).length} buyer thread(s), ${(db.profile.droneScans || []).length} drone scan(s)`,
+      intelligence: "Nexus can help sell a crop, contact the buyer, create order evidence, track route risk, explain drone findings, and prepare payment/logistics steps.",
+      liveProvider: connected("trade-market") && connected("field-drones") && connected("maps"),
+      nextCommand: "Nexus, help me sell my crop and track the route"
+    },
+    {
+      id: "maps",
+      title: "Maps And Route Intelligence",
+      state: `${country.name}, ${route.name}, checkpoint ${db.profile.activeCheckpoint}`,
+      intelligence: "Nexus can show country context, route risk, facility access, shipment lane, outbreak context, and drone/map evidence in plain language.",
+      liveProvider: connected("maps"),
+      nextCommand: "Nexus, open the map and explain the risk"
+    },
+    {
+      id: "agent",
+      title: "Nexus Agent Brain",
+      state: `${(db.profile.agentConversation || []).length} conversation turn(s), ${(db.profile.agentMemory.reasoningHistory || []).length} reasoning record(s)`,
+      intelligence: "Nexus can listen, reason, remember, recover from unclear speech, ask questions, stage safe workflows, and explain evidence before action.",
+      liveProvider: connected("openai") || Boolean(process.env.OPENAI_API_KEY),
+      nextCommand: "Nexus, go deeper"
+    }
+  ];
+  const modeGuidance = {
+    "Standard User": {
+      label: "User mode",
+      promise: "Keep it simple, voice-first, and action-based. One big choice, one guided step, clear captions, and confirmation before records or messages change.",
+      next: ["Ask what the person needs", "Open the right service", "Explain in plain language", "Confirm before action"]
+    },
+    Admin: {
+      label: "Admin mode",
+      promise: "Monitor live engines, users, safety, audit evidence, workflow failures, and provider readiness while keeping deferred services clearly separated.",
+      next: ["Run live service check", "Review audit feed", "Check provider mismatches", "Inspect mode permissions"]
+    },
+    Investor: {
+      label: "Investor mode",
+      promise: "Show impact, live engine depth, rural use cases, accessibility, agentic behavior, and the path from demo to deployable operating system.",
+      next: ["Present platform story", "Show live services", "Run voice demo", "Show farmer-to-market mission"]
+    }
+  };
+  const deferred = providers
+    .filter(item => deferredIds.has(item.id))
+    .map(item => ({ id: item.id, name: item.name, status: item.status, reason: "Deferred by operator for now; not blocking deeper AI, voice, maps, trade, health, workforce, or learning behavior." }));
+  const intelligence = {
+    id: crypto.randomUUID(),
+    status: strongLive >= 12 ? "deep-live-operating" : "deep-provider-ready",
+    mode: modeGuidance[mode]?.label || "Cross-mode",
+    activeCountry: country.name,
+    activeRoute: route.name,
+    liveEngineScore: `${strongLive}/${liveEngines.length}`,
+    readinessScore: `${readiness.readyCount}/${readiness.total}`,
+    liveEngines,
+    deferred,
+    moduleDepth,
+    modeGuidance: modeGuidance[mode] || modeGuidance["Standard User"],
+    autonomy: {
+      listens: connected("voice-stt") || Boolean(process.env.OPENAI_API_KEY),
+      speaks: connected("voice-tts") || connected("phone-voice") || Boolean(process.env.OPENAI_API_KEY),
+      reasons: connected("openai") || Boolean(process.env.OPENAI_API_KEY),
+      translates: connected("translation"),
+      maps: connected("maps"),
+      contacts: connected("phone-voice") || connected("sms-delivery") || connected("whatsapp-delivery"),
+      actsWithConfirmation: true,
+      recoversFromUnclearSpeech: true,
+      explainsEvidence: true
+    },
+    nextActions: smart.map(item => ({ title: item.title, module: item.module, detail: item.detail, command: item.command || item.title })),
+    plainLanguageSummary: `Nexus is operating deeply with ${strongLive}/${liveEngines.length} priority live engines, ${readiness.readyCount}/${readiness.total} production checks ready, and active context in ${country.name} on ${route.name}. Billing, password reset, and email can remain deferred while OpenAI, Twilio voice/SMS/WhatsApp, maps, provider bridge, learning, workforce, health, trade, and drone workflows keep moving.`,
+    createdAt: new Date().toISOString()
+  };
+  if (options.persist) {
+    db.profile.agentMemory.deepOperatingHistory = [intelligence, ...(db.profile.agentMemory.deepOperatingHistory || [])].slice(0, 25);
+    db.profile.agentMemory.lastDeepOperatingIntelligence = intelligence;
+    db.profile.agentMemory.lastStatus = intelligence.status;
+    db.profile.agentMemory.lastSummary = intelligence.plainLanguageSummary;
+    db.profile.agentMemory.updatedAt = intelligence.createdAt;
+  }
+  return intelligence;
+}
+
 function publicState(db, user) {
   const providers = runtimeProviders(db);
   ensureOperationsProfile(db.profile);
@@ -573,6 +703,7 @@ function publicState(db, user) {
     agentCapabilities,
     jarvisReadiness,
     jarvisProductionTen: jarvisProductionTenModel(db, providers),
+    deepOperatingIntelligence: deepOperatingIntelligence(db, user, providers),
     sessionBriefing: sessionBriefingModel(db, user, providers),
     impactDashboard: impactDashboardModel(db, providers),
     missionTimeline: missionTimelineModel(db),
@@ -8820,6 +8951,26 @@ async function runAgentCommand(db, user, command, options = {}) {
     return voiceInvestorDemo(db, user);
   }
 
+  if (lower.includes("go deeper") || lower.includes("lets go deeper") || lower.includes("let's go deeper") || lower.includes("deep operating") || lower.includes("deeper intelligence") || lower.includes("deep intelligence") || lower.includes("live engine awareness") || lower.includes("what is live now")) {
+    db.profile.agentMemory.activeClarification = null;
+    db.profile.agentMemory.activeRecovery = null;
+    const intelligence = deepOperatingIntelligence(db, user, runtimeProviders(db), { mode: user?.role, persist: true });
+    logIntegration(db, {
+      providerId: "openai",
+      module: "AI",
+      action: "agent.deep_operating_intelligence",
+      detail: `Deep operating intelligence reviewed: ${intelligence.liveEngineScore} live engines, ${intelligence.readinessScore} readiness.`,
+      metadata: { intelligenceId: intelligence.id, mode: intelligence.mode, deferred: intelligence.deferred.map(item => item.id) },
+      dispatch: false
+    });
+    return {
+      intent: "conversation.deep_operating_intelligence",
+      response: `${intelligence.plainLanguageSummary} In ${intelligence.mode}, I will focus on this: ${intelligence.modeGuidance.promise} Best next commands are: ${intelligence.nextActions.slice(0, 3).map(item => item.command).join("; ")}.`,
+      status: intelligence.status,
+      metadata: { conversationMode: conversational, redirectSection: "agent", deepOperatingIntelligence: intelligence }
+    };
+  }
+
   if (lower.includes("all 8") || lower.includes("all eight") || lower.includes("8 items") || lower.includes("eight items") || lower.includes("reasoning and language") || lower.includes("language production") || lower.includes("optimal reasoning") || lower.includes("multilingual reasoning")) {
     db.profile.agentMemory.activeClarification = null;
     db.profile.agentMemory.activeRecovery = null;
@@ -9637,6 +9788,11 @@ async function api(req, res, url) {
   if (url.pathname === "/api/intelligence/next-actions" && req.method === "GET") {
     if (!user) return send(res, 401, { error: "Sign in required" });
     return send(res, 200, smartNextActions(db, user, runtimeProviders(db)));
+  }
+
+  if (url.pathname === "/api/intelligence/deep-operating" && req.method === "GET") {
+    if (!user) return send(res, 401, { error: "Sign in required" });
+    return send(res, 200, deepOperatingIntelligence(db, user, runtimeProviders(db), { mode: user.role }));
   }
 
   if (url.pathname === "/api/production/live-service-check" && req.method === "POST") {

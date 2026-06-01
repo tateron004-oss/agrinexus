@@ -677,6 +677,10 @@ assert(server.includes("conversation.reasoning_language_production"), "Voice age
 assert(server.includes("/api/agent/reasoning-language"), "Backend needs a direct reasoning-language production endpoint");
 assert(server.includes("OPENAI_TRANSLATION_MODEL"), "Translation engine should support a live OpenAI translation model fallback");
 assert(server.includes("preActionReasoning"), "Agent actions should preserve reasoning before action");
+assert(server.includes("function deepOperatingIntelligence"), "Backend needs deep operating intelligence for live engine awareness");
+assert(server.includes("conversation.deep_operating_intelligence"), "Voice agent must answer go-deeper operating intelligence requests");
+assert(server.includes("/api/intelligence/deep-operating"), "Backend needs a deep operating intelligence endpoint");
+assert(server.includes("Billing, password reset, and email can remain deferred"), "Deep intelligence should separate deferred services from active live engines");
 assert(app.includes("function jarvisProductionTenSummary"), "Voice assistant needs a spoken Jarvis Production 10 summary");
 assert(app.includes("how close are we to all 10"), "Voice commands need to answer how close production is to all 10");
 assert(html.includes("adminIntelligencePanel"), "Admin mode needs a visible intelligence panel");

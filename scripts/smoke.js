@@ -760,6 +760,14 @@ async function call(path, body) {
   const directAllEight = await call("/api/agent/reasoning-language", { command: "Review all eight for a farmer speaking French", targetLanguage: "fr" });
   assert(directAllEight.reasoningLanguageProduction.total === 8);
   assert(directAllEight.reasoningLanguageProduction.targetLanguage === "fr");
+  const deepOperating = await call("/api/agent/command", { command: "Nexus, go deeper on live engine awareness", conversational: true, inputMode: "voice", outputMode: "voice" });
+  assert(deepOperating.commandResult.intent === "conversation.deep_operating_intelligence");
+  assert(deepOperating.commandResult.metadata.deepOperatingIntelligence.moduleDepth.length >= 6);
+  assert(deepOperating.commandResult.metadata.deepOperatingIntelligence.deferred.some(item => item.id === "billing-subscriptions"));
+  assert(deepOperating.profile.agentMemory.lastDeepOperatingIntelligence.status);
+  const deepEndpoint = await call("/api/intelligence/deep-operating");
+  assert(deepEndpoint.moduleDepth.length >= 6);
+  assert(deepEndpoint.autonomy.actsWithConfirmation === true);
   const progressSummaryCommand = await call("/api/agent/command", { command: "summarize my progress", conversational: true, inputMode: "voice", outputMode: "voice" });
   assert(progressSummaryCommand.commandResult.intent === "conversation.progress_summary");
   assert(progressSummaryCommand.commandResult.metadata.redirectSection === "dashboard");
