@@ -685,6 +685,10 @@ assert(server.includes("function noVendorUpgradeTenPack"), "Backend needs all-te
 assert(server.includes("conversation.no_vendor_upgrade_ten"), "Voice agent must activate all-ten no-vendor upgrades");
 assert(server.includes("/api/intelligence/no-vendor-ten"), "Backend needs no-vendor ten endpoint");
 assert(server.includes("localScenarioMissions"), "No-vendor pack should create local scenario missions");
+assert(server.includes("function maximumOperationalEfficiencyModel"), "Backend needs a maximum operational efficiency model");
+assert(server.includes("conversation.maximum_operational_efficiency"), "Voice agent must answer maximum operational efficiency requests");
+assert(server.includes("/api/intelligence/maximum-efficiency"), "Backend needs a maximum efficiency endpoint");
+assert(server.includes("automationOpportunities"), "Efficiency model should expose automation opportunities");
 assert(app.includes("function jarvisProductionTenSummary"), "Voice assistant needs a spoken Jarvis Production 10 summary");
 assert(app.includes("how close are we to all 10"), "Voice commands need to answer how close production is to all 10");
 assert(html.includes("adminIntelligencePanel"), "Admin mode needs a visible intelligence panel");

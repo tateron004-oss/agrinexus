@@ -776,6 +776,14 @@ async function call(path, body) {
   const noVendorEndpoint = await call("/api/intelligence/no-vendor-ten", { persist: true });
   assert(noVendorEndpoint.noVendorUpgradeTenResult.readyCount === 10);
   assert(noVendorEndpoint.noVendorUpgradeTenResult.missionBlueprints.length === 4);
+  const maxEfficiency = await call("/api/agent/command", { command: "Nexus, maximum operational efficiency", conversational: true, inputMode: "voice", outputMode: "voice" });
+  assert(maxEfficiency.commandResult.intent === "conversation.maximum_operational_efficiency");
+  assert(maxEfficiency.commandResult.metadata.maximumOperationalEfficiency.overallScore > 0);
+  assert(maxEfficiency.commandResult.metadata.maximumOperationalEfficiency.recommendedSequence.length >= 3);
+  assert(maxEfficiency.profile.operationalEfficiencyRuns.length >= 1);
+  const maxEfficiencyEndpoint = await call("/api/intelligence/maximum-efficiency", { persist: true });
+  assert(maxEfficiencyEndpoint.maximumOperationalEfficiencyResult.moduleScores.length >= 6);
+  assert(maxEfficiencyEndpoint.maximumOperationalEfficiencyResult.automationOpportunities.length >= 5);
   const progressSummaryCommand = await call("/api/agent/command", { command: "summarize my progress", conversational: true, inputMode: "voice", outputMode: "voice" });
   assert(progressSummaryCommand.commandResult.intent === "conversation.progress_summary");
   assert(progressSummaryCommand.commandResult.metadata.redirectSection === "dashboard");

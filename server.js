@@ -823,6 +823,7 @@ function publicState(db, user) {
     jarvisProductionTen: jarvisProductionTenModel(db, providers),
     deepOperatingIntelligence: deepOperatingIntelligence(db, user, providers),
     noVendorUpgradeTen: noVendorUpgradeTenPack(db, user, providers),
+    maximumOperationalEfficiency: maximumOperationalEfficiencyModel(db, user, providers),
     sessionBriefing: sessionBriefingModel(db, user, providers),
     impactDashboard: impactDashboardModel(db, providers),
     missionTimeline: missionTimelineModel(db),
@@ -1347,6 +1348,87 @@ function dailyOperatorBriefing(db, user, providers = runtimeProviders(db)) {
       nextActions.length ? `Top next steps: ${nextActions.map(item => `${item.title} in ${item.module}`).join("; ")}.` : "Top next step: ask AgriNexus to guide the next workflow."
     ].filter(Boolean).join(" ")
   };
+}
+
+function maximumOperationalEfficiencyModel(db, user, providers = runtimeProviders(db), options = {}) {
+  ensureLearningProfile(db.profile);
+  ensureWorkforceProfile(db.profile);
+  ensureHealthProfile(db.profile);
+  ensureTradeProfile(db.profile);
+  ensureAiProfile(db.profile);
+  ensureCommunicationProfile(db.profile);
+  const { country, route } = activeContext(db);
+  const connected = providers.filter(provider => provider.status === "connected").length;
+  const providerScore = Math.round((connected / Math.max(1, providers.length)) * 100);
+  const smart = smartNextActions(db, user, providers).items.slice(0, 6);
+  const readiness = Number(db.profile.readiness || 0);
+  const evidenceCount = (db.profile.integrationEvents || []).length + (db.profile.workflowIntelligence || []).length + (db.profile.activity || []).length;
+  const tradeScore = (db.profile.tradeEfficiencyReviews || [])[0]?.score || (db.profile.orders || []).length ? 72 : 58;
+  const learningScore = Math.min(100, 50 + (db.profile.certificates || []).length * 10 + (db.profile.enrollments || []).length * 5);
+  const workforceScore = Math.min(100, 45 + readiness / 2 + (db.profile.applications || []).length * 8 + (db.profile.shiftSchedule || []).length * 4);
+  const healthScore = Math.min(100, 55 + (db.profile.healthIntakes || []).length * 6 + (db.profile.telehealthAccessibility || []).length * 4 + (db.profile.videoSessions || []).length * 5);
+  const agentScore = Math.min(100, 60 + (db.profile.agentCommands || []).length * 2 + (db.profile.agentMemory.reasoningHistory || []).length * 2);
+  const moduleScores = [
+    { module: "Learning", score: learningScore, bottleneck: learningScore < 75 ? "Need more completed lessons/certificates tied to workforce goals." : "Learning flow is producing evidence." },
+    { module: "Workforce", score: workforceScore, bottleneck: workforceScore < 75 ? "Readiness, applications, interview, and shift records should be advanced." : "Workforce flow is ready for placement evidence." },
+    { module: "Telehealth", score: healthScore, bottleneck: healthScore < 75 ? "Need more complete intake, accessibility, provider, video, and follow-up evidence." : "Telehealth flow is producing accessible support evidence." },
+    { module: "AgriTrade", score: tradeScore, bottleneck: tradeScore < 75 ? "Need crop evidence, buyer contact, route risk, quality, and payment/logistics handoff." : "Trade flow has operational evidence." },
+    { module: "Nexus Agent", score: agentScore, bottleneck: agentScore < 75 ? "Use more voice commands, memory, reasoning, and guided missions." : "Agent behavior has strong command evidence." },
+    { module: "Providers", score: providerScore, bottleneck: providerScore < 90 ? "Some providers are deferred or not connected; keep transparency clear." : "Provider layer is strong for current scope." }
+  ].map(item => ({ ...item, score: Math.round(item.score) }));
+  const overallScore = Math.round(moduleScores.reduce((sum, item) => sum + item.score, 0) / moduleScores.length);
+  const bottlenecks = moduleScores
+    .filter(item => item.score < 80)
+    .sort((a, b) => a.score - b.score)
+    .slice(0, 5)
+    .map(item => ({ module: item.module, score: item.score, issue: item.bottleneck }));
+  const recommendedSequence = [
+    smart[0] ? { order: 1, title: smart[0].title, module: smart[0].module, action: smart[0].detail, command: smart[0].command || smart[0].title } : null,
+    { order: 2, title: "Create one evidence record in the weakest module", module: bottlenecks[0]?.module || "AgriNexus", action: bottlenecks[0]?.issue || "Keep moving the highest priority workflow.", command: bottlenecks[0]?.module === "AgriTrade" ? "Nexus, help me sell my crop and track the route" : bottlenecks[0]?.module === "Telehealth" ? "Nexus, walk me through telehealth" : bottlenecks[0]?.module === "Workforce" ? "Nexus, help me apply for a job" : "Nexus, what should I do next" },
+    { order: 3, title: "Run deep operating intelligence", module: "Agent AI", action: "Review live engines, deferred services, module depth, and best commands.", command: "Nexus, go deeper" },
+    { order: 4, title: "Summarize evidence for the audience", module: user?.role === "Investor" ? "Investor" : user?.role === "Admin" ? "Admin" : "User", action: "Turn latest records into a plain-language explanation.", command: user?.role === "Investor" ? "Nexus, present the platform" : "Nexus, summarize my progress" }
+  ].filter(Boolean);
+  const automationOpportunities = [
+    { id: "auto-question", title: "Ask one smart question before every major action", active: true },
+    { id: "auto-evidence", title: "Create an evidence record after every confirmed workflow", active: true },
+    { id: "auto-next-step", title: "Recommend one next step after each completed workflow", active: true },
+    { id: "auto-language", title: "Respect language and voice preferences during guidance", active: true },
+    { id: "auto-recovery", title: "Recover from unclear speech without forcing exact choices", active: true }
+  ];
+  const model = {
+    id: crypto.randomUUID(),
+    status: overallScore >= 85 ? "maximum-efficiency-ready" : "efficiency-improving",
+    overallScore,
+    country: country.name,
+    route: route.name,
+    providerScore,
+    evidenceCount,
+    moduleScores,
+    bottlenecks,
+    recommendedSequence,
+    automationOpportunities,
+    plainLanguageSummary: `Operational efficiency is ${overallScore}%. Nexus should focus on ${bottlenecks[0]?.module || "the highest-value workflow"} first, then create evidence, recommend the next step, and explain progress in plain language.`,
+    createdAt: new Date().toISOString()
+  };
+  if (options.persist) {
+    db.profile.operationalEfficiencyRuns = db.profile.operationalEfficiencyRuns || [];
+    db.profile.operationalEfficiencyRuns.unshift(model);
+    db.profile.operationalEfficiencyRuns = db.profile.operationalEfficiencyRuns.slice(0, 25);
+    db.profile.agentMemory.lastMaximumOperationalEfficiency = model;
+    db.profile.agentMemory.lastStatus = model.status;
+    db.profile.agentMemory.lastSummary = model.plainLanguageSummary;
+    db.profile.agentMemory.updatedAt = model.createdAt;
+    logIntegration(db, {
+      providerId: "openai",
+      module: "AI",
+      action: "agent.maximum_operational_efficiency",
+      detail: `Maximum operational efficiency model scored ${overallScore}%.`,
+      metadata: { modelId: model.id, bottlenecks, recommendedSequence },
+      dispatch: false
+    });
+    addActivity(db.profile, `Maximum operational efficiency review completed: ${overallScore}%.`);
+  }
+  return model;
 }
 
 function runtimeProviders(db) {
@@ -9102,6 +9184,18 @@ async function runAgentCommand(db, user, command, options = {}) {
     };
   }
 
+  if (lower.includes("maximum operational efficiency") || lower.includes("max operational efficiency") || lower.includes("optimize everything") || lower.includes("optimise everything") || lower.includes("make operations efficient") || lower.includes("highest efficiency") || lower.includes("operational command review")) {
+    db.profile.agentMemory.activeClarification = null;
+    db.profile.agentMemory.activeRecovery = null;
+    const model = maximumOperationalEfficiencyModel(db, user, runtimeProviders(db), { persist: true });
+    return {
+      intent: "conversation.maximum_operational_efficiency",
+      response: `${model.plainLanguageSummary} Recommended sequence: ${model.recommendedSequence.map(item => `${item.order}. ${item.title}`).join(" ")}. You can say "${model.recommendedSequence[0]?.command || "Nexus, what should I do next"}" to start.`,
+      status: model.status,
+      metadata: { conversationMode: conversational, redirectSection: "agent", maximumOperationalEfficiency: model }
+    };
+  }
+
   if (lower.includes("all 8") || lower.includes("all eight") || lower.includes("8 items") || lower.includes("eight items") || lower.includes("reasoning and language") || lower.includes("language production") || lower.includes("optimal reasoning") || lower.includes("multilingual reasoning")) {
     db.profile.agentMemory.activeClarification = null;
     db.profile.agentMemory.activeRecovery = null;
@@ -9933,6 +10027,16 @@ async function api(req, res, url) {
     await writeDb(db);
     const state = publicState(db, user);
     state.noVendorUpgradeTenResult = pack;
+    return send(res, 200, state);
+  }
+
+  if (url.pathname === "/api/intelligence/maximum-efficiency" && req.method === "POST") {
+    if (!user) return send(res, 401, { error: "Sign in required" });
+    const body = await readBody(req);
+    const model = maximumOperationalEfficiencyModel(db, user, runtimeProviders(db), { persist: body.persist !== false });
+    await writeDb(db);
+    const state = publicState(db, user);
+    state.maximumOperationalEfficiencyResult = model;
     return send(res, 200, state);
   }
 
