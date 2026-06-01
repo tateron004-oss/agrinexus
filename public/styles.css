@@ -1153,6 +1153,114 @@ body.user-mode .user-preview-summary span {
   font-weight: 850;
   line-height: 1.3;
 }
+body.user-mode .user-preview-summary.compact {
+  padding: 10px;
+  border-color: rgba(23, 50, 64, .12);
+  background: rgba(255, 255, 255, .78);
+}
+.learning-path-card,
+.workforce-path-card {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+  padding: 12px;
+  border: 2px solid #d7e8e3;
+  border-radius: 16px;
+  background: #ffffff;
+  box-shadow: 0 10px 24px rgba(23, 50, 64, .06);
+}
+.learning-path-card {
+  border-color: #cbdfe8;
+  background: linear-gradient(180deg, #ffffff, #f0f8fb);
+}
+.workforce-path-card {
+  border-color: #d6ead1;
+  background: linear-gradient(180deg, #ffffff, #f2faef);
+}
+.user-path-head {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  text-align: center;
+}
+.user-path-head span,
+.user-path-head small {
+  color: #456b60;
+  font-size: .82rem;
+  font-weight: 950;
+  line-height: 1.2;
+}
+.user-path-head strong {
+  color: #173240;
+  font-size: 1.05rem;
+  line-height: 1.15;
+  overflow-wrap: anywhere;
+}
+.user-progress-bar {
+  width: 100%;
+  height: 13px;
+  overflow: hidden;
+  border: 1px solid #bfd8df;
+  border-radius: 999px;
+  background: #eaf3f6;
+}
+.user-progress-bar span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #24799b, #33a7bd);
+}
+.user-progress-bar.workforce {
+  border-color: #c6dec0;
+  background: #edf6ea;
+}
+.user-progress-bar.workforce span {
+  background: linear-gradient(90deg, #3b8a44, #7dbd50);
+}
+.user-path-steps {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  min-width: 0;
+}
+.user-path-steps div {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  padding: 10px;
+  border: 1px solid #dcebe7;
+  border-radius: 12px;
+  background: #ffffff;
+  text-align: center;
+}
+.user-path-steps div.active {
+  border-color: #2f8b9f;
+  background: #eefaff;
+}
+.user-path-steps div.done {
+  border-color: #78b46b;
+  background: #f3fbef;
+}
+.user-path-steps div.blocked {
+  border-color: #e7c277;
+  background: #fff8e6;
+}
+.user-path-steps div.ready {
+  border-color: #cfdfe8;
+  background: #f8fbfc;
+}
+.user-path-steps strong {
+  color: #173240;
+  font-size: .85rem;
+  line-height: 1.15;
+}
+.user-path-steps span {
+  color: #426257;
+  font-size: .78rem;
+  font-weight: 850;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
 body.user-mode .user-module-buttons button {
   min-height: 82px;
   border-width: 2px;

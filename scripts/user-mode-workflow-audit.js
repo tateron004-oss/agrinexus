@@ -108,9 +108,9 @@ for (const [section, buttons] of Object.entries(expectedSections)) {
   assert(styles.includes(marker), `User workflow containment style missing: ${marker}`);
 });
 
-assert(html.includes("/app.js?v=nexus-behavior-81"), "Index must force browsers to load current User-mode workflow JS");
-assert(html.includes("/styles.css?v=nexus-behavior-81"), "Index must force browsers to load current User-mode workflow CSS");
-assert(sw.includes('CACHE_NAME = "agrinexus-pwa-v61"'), "Service worker cache must be bumped after User-mode workflow fixes");
+assert(html.includes("/app.js?v=nexus-behavior-82"), "Index must force browsers to load current User-mode workflow JS");
+assert(html.includes("/styles.css?v=nexus-behavior-82"), "Index must force browsers to load current User-mode workflow CSS");
+assert(sw.includes('CACHE_NAME = "agrinexus-pwa-v62"'), "Service worker cache must be bumped after User-mode workflow fixes");
 
 console.log("User mode workflow audit passed");
 console.log("Checked: every simple app tab/button maps to a workflow, User mode uses inline confirmations, assistant windows have anti-partial containment, and the app can self-check/repair stale runtime cache.");

@@ -2197,8 +2197,8 @@ function runUserModeSelfTest() {
       if (!simpleUserCommandWorkflow(button.command)) missing.push(`${section}: ${button.label}`);
     });
   });
-  const currentScript = [...document.scripts].some(script => String(script.src || "").includes("nexus-behavior-81"));
-  const currentStyle = [...document.styleSheets].some(sheet => String(sheet.href || "").includes("nexus-behavior-81"));
+  const currentScript = [...document.scripts].some(script => String(script.src || "").includes("nexus-behavior-82"));
+  const currentStyle = [...document.styleSheets].some(sheet => String(sheet.href || "").includes("nexus-behavior-82"));
   if (!currentScript || !currentStyle) missing.push("new app files");
   const ok = missing.length === 0;
   const message = ok
@@ -5248,6 +5248,66 @@ const simpleUserSections = {
   }
 };
 
+function userProgressStepsHtml(steps = []) {
+  return `<div class="user-path-steps">${steps.map((step, index) => `
+    <div class="${escapeHtml(step.state || (index === 0 ? "active" : ""))}">
+      <strong>${translateText(step.title)}</strong>
+      <span>${translateText(step.detail)}</span>
+    </div>
+  `).join("")}</div>`;
+}
+
+function learningPathPreviewHtml(course) {
+  const localized = course ? translatedCourse(course) : null;
+  const enrollment = course ? courseEnrollment(course.id) : null;
+  const modules = localized?.modules || [];
+  const activeIndex = Math.max(0, Math.min(enrollment?.activeModuleIndex || 0, Math.max(0, modules.length - 1)));
+  const progress = enrollment?.progress || 0;
+  const nextLesson = modules[activeIndex] || localized?.title || "Start course";
+  return `
+    <div class="learning-path-card">
+      <div class="user-path-head">
+        <span>${translateText("Course")}</span>
+        <strong>${translateText(localized?.title || "Choose a course")}</strong>
+        <small>${translateText(`${progress}% complete`)}</small>
+      </div>
+      <div class="user-progress-bar" aria-label="${translateText("Course progress")}"><span style="width: ${Math.max(4, Math.min(progress, 100))}%"></span></div>
+      ${userProgressStepsHtml([
+        { title: "Start", detail: localized?.track || "Choose course", state: "done" },
+        { title: "Next lesson", detail: nextLesson, state: "active" },
+        { title: "Support", detail: "Captions, audio, large print, or low bandwidth", state: "ready" },
+        { title: "Certificate", detail: progress >= 100 ? "Ready to issue" : "Finish lessons first", state: progress >= 100 ? "ready" : "blocked" }
+      ])}
+    </div>
+  `;
+}
+
+function workforcePathPreviewHtml(role) {
+  const gate = role ? roleGate(role) : null;
+  const missing = gate?.missingCertificates?.map(id => data.courses.find(course => course.id === id)?.title || id) || [];
+  const readiness = data.profile.readiness || 0;
+  return `
+    <div class="workforce-path-card">
+      <div class="user-path-head">
+        <span>${translateText("Best match")}</span>
+        <strong>${translateText(role?.title || "Find a role")}</strong>
+        <small>${translateText(`${readiness}% ready`)}</small>
+      </div>
+      <div class="user-progress-bar workforce" aria-label="${translateText("Work readiness")}"><span style="width: ${Math.max(4, Math.min(readiness, 100))}%"></span></div>
+      ${userProgressStepsHtml([
+        { title: "Profile", detail: data.profile.candidateStage || "Build profile", state: (data.profile.workforceBadges || []).includes("Profile Verified") ? "done" : "active" },
+        { title: "Apply", detail: gate?.eligible ? "Ready to apply" : "Finish required gap first", state: gate?.eligible ? "active" : "blocked" },
+        { title: "Interview", detail: data.profile.interviews ? "Interview booked" : "Schedule next", state: data.profile.interviews ? "done" : "ready" },
+        { title: "Shift", detail: data.profile.shiftSchedule?.length ? "Shift ready" : "Plan first shift", state: data.profile.shiftSchedule?.length ? "done" : "ready" }
+      ])}
+      <div class="user-preview-summary compact">
+        <strong>${translateText(gate?.eligible ? "You can apply now" : "Next skill gap")}</strong>
+        <span>${translateText(gate?.eligible ? `${role?.country || "Role"} placement is ready for application support.` : (missing.length ? missing.join(", ") : `${gate?.missingReadiness || 0}% more readiness needed`))}</span>
+      </div>
+    </div>
+  `;
+}
+
 function userModulePreviewHtml(sectionId) {
   if (sectionId === "trade") {
     const latestOrder = data.profile.orders?.[data.profile.orders.length - 1];
@@ -5282,11 +5342,27 @@ function userModulePreviewHtml(sectionId) {
   }
   if (sectionId === "learning") {
     const course = activeCourse() || (data.courses || [])[0];
-    return `<div class="user-module-preview"><div class="user-preview-summary"><strong>${translateText("Learning path")}</strong><span>${translateText(course ? `${translatedCourse(course).title}. Choose Start a Course or Finish Lesson.` : "Choose Start a Course when ready.")}</span></div></div>`;
+    return `
+      <div class="user-module-preview user-learning-preview">
+        ${learningPathPreviewHtml(course)}
+        <div class="user-preview-summary">
+          <strong>${translateText("Learning made simple")}</strong>
+          <span>${translateText(course ? `Start ${translatedCourse(course).title}, finish the next lesson, add captions, or request the certificate when ready.` : "Choose Start a Course when ready.")}</span>
+        </div>
+      </div>
+    `;
   }
   if (sectionId === "workforce") {
     const role = firstEligibleRole();
-    return `<div class="user-module-preview"><div class="user-preview-summary"><strong>${translateText("Work support")}</strong><span>${translateText(role ? `Best next role: ${role.title}. Choose Find Jobs or Apply for Job.` : "Choose Find Jobs to review work options.")}</span></div></div>`;
+    return `
+      <div class="user-module-preview user-workforce-preview">
+        ${workforcePathPreviewHtml(role)}
+        <div class="user-preview-summary">
+          <strong>${translateText("Find work support")}</strong>
+          <span>${translateText(role ? `AgriNexus can build your profile, show job readiness, apply for ${role.title}, schedule an interview, and plan your first shift.` : "Choose Find Jobs to review work options.")}</span>
+        </div>
+      </div>
+    `;
   }
   if (sectionId === "health") {
     const country = activeCountry();
@@ -7117,13 +7193,23 @@ function lessonWorkflowConfig(course, moduleIndex) {
   return {
     eyebrow: "Learning workflow",
     title: `Complete lesson: ${modules[selectedIndex] || localized.title}`,
+    userTitle: "Finish this lesson",
     summary: "Review the lesson context, confirm progress, and add a note before the learning record is updated.",
+    userSummary: `Complete ${modules[selectedIndex] || localized.title}. AgriNexus saves progress, learning hours, and the next recommended step.`,
     confirmLabel: "Complete lesson",
     record: "Enrollment progress, learning hours, readiness, and active module state",
     provider: "Learning record updates immediately; certificate provider is used when issuing credentials.",
+    guide: "This marks the lesson complete, moves the learner forward, and keeps the course record ready for certificate and workforce use.",
+    steps: [
+      { title: "Review lesson", detail: modules[selectedIndex] || localized.title },
+      { title: "Confirm support", detail: "Captions, audio, large print, or instructor help stay connected." },
+      { title: "Save progress", detail: "Press Complete lesson to update the learner record." }
+    ],
     path: "/api/learning/lesson",
     body: { courseId: course.id, moduleIndex: selectedIndex },
     success: "Lesson completed",
+    userOutcome: "AgriNexus marks the lesson complete and prepares the next learning step.",
+    userRecord: "Course progress, readiness, learning hours, accessibility support, and activity history are updated.",
     checklist: [
       { title: localized.title, detail: `${enrollment.progress || 0}% current progress`, status: enrollment.progress ? "live" : "pending", label: "Course" },
       { title: "Selected module", detail: modules[selectedIndex] || "Core lesson", status: "live", label: `Step ${selectedIndex + 1}` },
@@ -7155,6 +7241,8 @@ function roleWorkflowConfig(roleId) {
     path: blocked ? null : "/api/workforce/apply",
     body: { roleId: role.id },
     success: blocked ? "Review gaps opened" : "Application submitted",
+    userOutcome: blocked ? "AgriNexus shows the exact training gap before applying." : "AgriNexus submits the job application and prepares the interview path.",
+    userRecord: blocked ? "Readiness, certificates, and missing steps stay visible for learning support." : "Application, role, readiness, HR evidence, interview path, and notifications stay connected.",
     redirectSection: blocked ? "learning" : null,
     checklist: [
       { title: "Readiness gate", detail: `${data.profile.readiness}% current / ${role.minReadiness}% required`, status: gate.missingReadiness ? "blocked" : "ready", label: gate.missingReadiness ? `${gate.missingReadiness}% gap` : "Met" },
@@ -7437,6 +7525,8 @@ function learningAccessibilityWorkflowConfig(mode) {
     success: "Accessible learning support prepared",
     record: "Learner accommodation record, accessibility profile, learning activity, and provider evidence",
     provider: "Learning provider evidence records the accessibility-ready packet for audit.",
+    userOutcome: `${selected.title} is prepared for the active lesson.`,
+    userRecord: "The learner record keeps captions, audio, transcript, low-bandwidth, and support needs connected.",
     checklist: [
       { title: "Learner need", detail: "Supports hearing and visual impairment workflows without requiring high bandwidth.", status: "ready", label: "Access" },
       { title: "Course context", detail: localized?.title || "Active course", status: "live", label: "Lesson" },
@@ -7451,13 +7541,23 @@ function learningCertificateWorkflowConfig() {
   return simpleWorkflowConfig({
     eyebrow: "Learning workflow",
     title: "Issue certificate",
+    userTitle: "Get my certificate",
     summary: "Confirm certificate readiness before the credential is issued and provider evidence is recorded.",
+    userSummary: "AgriNexus checks the course, quiz score, and readiness before creating the certificate record.",
     confirmLabel: "Issue certificate",
     path: "/api/learning/certificate",
     body: { courseId: course?.id },
     success: "Certificate issued",
     record: "Certificate, credential number, readiness, and certificate provider evidence",
     provider: "Learning certificate provider records certificate.issued.",
+    guide: "This creates certificate evidence the learner can use for job placement, partner review, or a pilot demonstration.",
+    steps: [
+      { title: "Check course", detail: localized?.title || "Active course" },
+      { title: "Check readiness", detail: data.profile.quizScore ? "Quiz score is recorded." : "A quiz score may be needed before issuing." },
+      { title: "Issue record", detail: "Press Issue certificate to create credential evidence." }
+    ],
+    userOutcome: "AgriNexus prepares the credential record and updates the learner profile.",
+    userRecord: "Certificate, course, readiness, credential number, and provider evidence stay attached to the learner.",
     checklist: [
       { title: "Course", detail: localized?.title || "Active course", status: "live", label: localized?.track || "Learning" },
       { title: "Quiz score", detail: `${data.profile.quizScore || 0}`, status: data.profile.quizScore ? "ready" : "blocked", label: data.profile.quizScore ? "Ready" : "Quiz first" },
@@ -7537,6 +7637,8 @@ function workflowConfig(workflow, action, element) {
         provider: "Learning course and certificate provider evidence is recorded for audit.",
         guide: experienceMode === "user" ? userCopy.guide : "Review the course and learner context. Confirming creates a classroom operation record and updates the learning evidence trail.",
         steps: userCopy.steps,
+        userOutcome: "AgriNexus saves the learning action and explains the next learner step.",
+        userRecord: "Course progress, accessibility need, instructor note, quiz, transcript, or cohort evidence stays on the learner record.",
         checklist: [
           { title: "Active course", detail: translatedCourse(course).title, status: "live", label: translatedCourse(course).track },
           { title: "Learner progress", detail: `${courseEnrollment(course.id)?.progress || 0}% progress, ${data.profile.learningHours || 0} hour(s)`, status: "ready", label: "Record" },
@@ -7563,6 +7665,8 @@ function workflowConfig(workflow, action, element) {
       provider: "Certificate provider becomes active after quiz and credential issue.",
       guide: experienceMode === "user" ? userCopy.guide : "Pick the course from the selector. Confirming enrolls the learner, sets the active course, and updates readiness evidence.",
       steps: userCopy.steps,
+      userOutcome: "AgriNexus opens the course and saves the learner path.",
+      userRecord: "Enrollment, support needs, active lesson, readiness, and workforce connection are updated.",
       fields: [
         { name: "courseId", label: "Choose course", type: "select", value: course.id, options: courseSelectOptions() },
         { name: "learningGoal", label: "Learning goal", value: "Prepare for workforce placement and field operations", placeholder: "Example: learn crop quality basics" },
@@ -7608,6 +7712,8 @@ function workflowConfig(workflow, action, element) {
         provider: "HRIS, calendar, shift, payroll, and notification evidence is recorded for audit.",
         guide: experienceMode === "user" ? userCopy.guide : "Review the worker and role context. Confirming creates a workforce operation record and provider audit event.",
         steps: userCopy.steps,
+        userOutcome: "AgriNexus saves the workforce action and prepares the next job step.",
+        userRecord: "Worker profile, role, documents, timesheet, payroll, evaluation, or shift request evidence stays connected.",
         checklist: [
           { title: "Candidate", detail: `${data.profile.candidateStage} - ${data.profile.eligibility}`, status: "live", label: "Profile" },
           { title: "Role context", detail: data.profile.applications?.[0]?.roleTitle || firstEligibleRole()?.title || "Best available role", status: "ready", label: "Role" },
@@ -7637,6 +7743,8 @@ function workflowConfig(workflow, action, element) {
       provider: "Calendar, notification, and HRIS events are recorded when applicable.",
       guide: experienceMode === "user" ? userCopy.guide : "Review the candidate, readiness, and support context. Confirming updates the workforce workflow and evidence trail.",
       steps: userCopy.steps,
+      userOutcome: "AgriNexus records the work step and tells the user what happens next.",
+      userRecord: "Candidate stage, readiness, interview, mentor, shift, earnings, and notifications remain connected.",
       checklist: [
         { title: "Candidate stage", detail: data.profile.candidateStage, status: "live", label: data.profile.eligibility },
         { title: "Readiness", detail: `${data.profile.readiness}% readiness with ${(data.profile.certificates || []).length} certificate(s)`, status: "ready", label: "Profile" },
