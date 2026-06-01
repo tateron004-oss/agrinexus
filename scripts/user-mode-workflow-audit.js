@@ -166,8 +166,9 @@ for (const [section, buttons] of Object.entries(expectedSections)) {
   ".user-caption-text",
   "pointer-events: none",
   "pointer-events: auto",
-  "bottom: 92px",
-  "max-height: min(34vh, 310px)",
+  "width: min(300px, calc(100vw - 24px))",
+  "max-height: 138px",
+  ".user-caption-panel.expanded",
   "body.user-mode .user-process-screen",
   "body.user-mode .user-process-actions",
   "body.user-mode #workforce .user-process-actions .primary",
@@ -186,9 +187,9 @@ for (const [section, buttons] of Object.entries(expectedSections)) {
   assert(styles.includes(marker), `User workflow containment style missing: ${marker}`);
 });
 
-assert(html.includes("/app.js?v=nexus-behavior-127"), "Index must force browsers to load current User-mode workflow JS");
-assert(html.includes("/styles.css?v=nexus-behavior-127"), "Index must force browsers to load current User-mode workflow CSS");
-assert(sw.includes('CACHE_NAME = "agrinexus-pwa-v107"'), "Service worker cache must be bumped after User-mode workflow fixes");
+assert(html.includes("/app.js?v=nexus-behavior-128"), "Index must force browsers to load current User-mode workflow JS");
+assert(html.includes("/styles.css?v=nexus-behavior-128"), "Index must force browsers to load current User-mode workflow CSS");
+assert(sw.includes('CACHE_NAME = "agrinexus-pwa-v108"'), "Service worker cache must be bumped after User-mode workflow fixes");
 
 console.log("User mode workflow audit passed");
 console.log("Checked: every simple app tab/button maps to a workflow, course/job choices are visible, User mode uses inline confirmations, assistant windows have anti-partial containment, and no user-facing repair controls are exposed.");

@@ -422,9 +422,9 @@ assert(app.includes('workflow === "admin-user"'), "Admin test login button needs
 assert(app.includes("Only an existing Admin can run this workflow"), "Admin login flow must explain admin-only protection");
 assert(server.includes('adminAccount.role = "Admin"'), "Backend must force admin test logins to Admin");
 assert(server.includes("admin_user.created"), "Admin test login must create auth audit evidence");
-assert(html.includes("styles.css?v=nexus-behavior-127"), "Index must force browsers to load the latest Nexus behavior shell");
-assert(html.includes("app.js?v=nexus-behavior-127"), "Index must force browsers to load the latest Nexus behavior code");
-assert(sw.includes("agrinexus-pwa-v107"), "Service worker cache must refresh the installed app after native voice bridge updates");
+assert(html.includes("styles.css?v=nexus-behavior-128"), "Index must force browsers to load the latest Nexus behavior shell");
+assert(html.includes("app.js?v=nexus-behavior-128"), "Index must force browsers to load the latest Nexus behavior code");
+assert(sw.includes("agrinexus-pwa-v108"), "Service worker cache must refresh the installed app after native voice bridge updates");
 assert(html.includes("userWorkspace"), "Dashboard needs a User Workspace for standard users");
 assert(html.includes("userMobileDock"), "Legacy mobile dock markup should remain safely hidden for cache compatibility");
 assert(html.includes("What Do You Need Help With Today?"), "Dashboard simple start should use user-ready language");
@@ -466,7 +466,8 @@ assert(html.includes("nexusBehaviorStatus"), "Standard User app needs a visible 
 assert(html.includes('data-user-voice-action="listen"'), "Voice dock needs a speak action");
 assert(html.includes('data-user-voice-action="type"'), "Voice dock needs a type action");
 assert(html.includes('data-user-voice-action="read"'), "Voice dock needs a read action");
-assert(styles.includes("bottom: 92px") && styles.includes("pointer-events: none") && styles.includes("pointer-events: auto"), "Caption panel must be compact and not block user workflow clicks");
+assert(styles.includes("width: min(300px, calc(100vw - 24px))") && styles.includes("max-height: 138px") && styles.includes("pointer-events: none") && styles.includes("pointer-events: auto"), "Caption panel must be a compact bubble and not block user workflow clicks");
+assert(styles.includes(".user-caption-panel.expanded") && styles.includes("display: none") && styles.includes("display: grid"), "Caption menu controls must stay hidden unless the caption panel is expanded");
 assert(app.includes("pendingGrandmaAction"), "Grandma Mode needs a pending action confirmation state");
 assert(app.includes("function renderGrandmaConfirmation"), "Grandma Mode needs a visible yes/no confirmation panel");
 assert(app.includes("function simpleUserCommandWorkflow"), "User app buttons need direct workflow routing");

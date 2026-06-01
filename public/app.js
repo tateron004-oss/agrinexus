@@ -2384,8 +2384,8 @@ function runUserModeSelfTest() {
       if (!simpleUserCommandWorkflow(button.command)) missing.push(`${section}: ${button.label}`);
     });
   });
-  const currentScript = [...document.scripts].some(script => String(script.src || "").includes("nexus-behavior-127"));
-  const currentStyle = [...document.styleSheets].some(sheet => String(sheet.href || "").includes("nexus-behavior-127"));
+  const currentScript = [...document.scripts].some(script => String(script.src || "").includes("nexus-behavior-128"));
+  const currentStyle = [...document.styleSheets].some(sheet => String(sheet.href || "").includes("nexus-behavior-128"));
   if (!currentScript || !currentStyle) missing.push("new app files");
   const ok = missing.length === 0;
   const message = ok
@@ -5838,24 +5838,28 @@ function renderJarvisLayer() {
   renderConversationPanel();
 }
 
-function updateUserCaptionPanel(message, { open = true } = {}) {
+function updateUserCaptionPanel(message, { open = true, expanded = false } = {}) {
   const panel = $("#userCaptionPanel");
   const text = $("#userCaptionText");
   if (!panel || !text) return;
   const clean = String(message || "").replace(/\s+/g, " ").trim();
   if (!clean) return;
   text.textContent = clean;
+  panel.classList.toggle("expanded", Boolean(expanded));
   if (open && ["user", "admin", "investor"].includes(experienceMode)) panel.classList.remove("hidden");
   const input = $("#userCaptionInput");
   if (input && !input.value.trim()) input.placeholder = translateText("Type or speak your reply");
 }
 
 function closeUserCaptionPanel() {
-  $("#userCaptionPanel")?.classList.add("hidden");
+  const panel = $("#userCaptionPanel");
+  if (!panel) return;
+  panel.classList.add("hidden");
+  panel.classList.remove("expanded");
 }
 
 function openCaptionBox(message = "") {
-  updateUserCaptionPanel(message || lastVoiceResponse || "Nexus is ready. Captions will appear here.");
+  updateUserCaptionPanel(message || lastVoiceResponse || "Nexus is ready. Captions will appear here.", { expanded: true });
   $("#userCaptionInput")?.focus();
 }
 
