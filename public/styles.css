@@ -1261,6 +1261,79 @@ body.user-mode .user-preview-summary.compact {
   line-height: 1.25;
   overflow-wrap: anywhere;
 }
+.user-choice-list {
+  display: grid;
+  gap: 9px;
+  min-width: 0;
+}
+.user-choice-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(86px, auto);
+  gap: 10px;
+  align-items: center;
+  min-width: 0;
+  padding: 12px;
+  border: 2px solid #d8e8e2;
+  border-radius: 16px;
+  background: #ffffff;
+  box-shadow: 0 8px 18px rgba(23, 50, 64, .05);
+}
+.user-choice-card > div {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+.user-choice-card span {
+  color: #456b60;
+  font-size: .78rem;
+  font-weight: 950;
+  line-height: 1.15;
+}
+.user-choice-card strong {
+  color: #173240;
+  font-size: .95rem;
+  line-height: 1.15;
+  overflow-wrap: anywhere;
+}
+.user-choice-card small {
+  color: #456b60;
+  font-size: .82rem;
+  font-weight: 850;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+.user-choice-card button {
+  min-height: 50px;
+  padding: 8px 10px;
+  border: 2px solid #173240;
+  border-radius: 12px;
+  background: #173240;
+  color: #ffffff;
+  font-size: .9rem;
+  font-weight: 950;
+  white-space: nowrap;
+}
+.user-choice-card.learning-choice.selected,
+.user-choice-card.workforce-choice.ready {
+  border-color: #3b8a72;
+  background: #f2fbf6;
+}
+.user-choice-card.workforce-choice.applied {
+  border-color: #176fc7;
+  background: #f0f7ff;
+}
+.user-choice-card.workforce-choice.applied button {
+  border-color: #176fc7;
+  background: #176fc7;
+}
+.user-choice-card.workforce-choice.locked {
+  border-color: #e5c97a;
+  background: #fff9e8;
+}
+.user-choice-card.workforce-choice.locked button {
+  border-color: #9a6b0f;
+  background: #9a6b0f;
+}
 body.user-mode .user-module-buttons button {
   min-height: 82px;
   border-width: 2px;

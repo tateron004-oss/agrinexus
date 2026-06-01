@@ -2197,8 +2197,8 @@ function runUserModeSelfTest() {
       if (!simpleUserCommandWorkflow(button.command)) missing.push(`${section}: ${button.label}`);
     });
   });
-  const currentScript = [...document.scripts].some(script => String(script.src || "").includes("nexus-behavior-82"));
-  const currentStyle = [...document.styleSheets].some(sheet => String(sheet.href || "").includes("nexus-behavior-82"));
+  const currentScript = [...document.scripts].some(script => String(script.src || "").includes("nexus-behavior-83"));
+  const currentStyle = [...document.styleSheets].some(sheet => String(sheet.href || "").includes("nexus-behavior-83"));
   if (!currentScript || !currentStyle) missing.push("new app files");
   const ok = missing.length === 0;
   const message = ok
@@ -5282,6 +5282,31 @@ function learningPathPreviewHtml(course) {
   `;
 }
 
+function learningCourseChoicesHtml() {
+  const courses = (data.courses || []).slice(0, 4);
+  if (!courses.length) return "";
+  return `
+    <div class="user-choice-list" aria-label="${translateText("Choose a course")}">
+      ${courses.map(course => {
+        const localized = translatedCourse(course);
+        const enrollment = courseEnrollment(course.id);
+        const certified = (data.profile.completedCourses || []).includes(course.id);
+        const progress = enrollment?.progress || (certified ? 100 : 0);
+        return `
+          <article class="user-choice-card learning-choice ${course.id === data.profile.activeCourseId ? "selected" : ""}">
+            <div>
+              <span>${translateText(localized.track || "Course")}</span>
+              <strong>${translateText(localized.title)}</strong>
+              <small>${translateText(`${translatedDuration(course.duration)} - ${progress}% complete`)}</small>
+            </div>
+            <button type="button" class="course" data-course="${escapeHtml(course.id)}">${translateText(enrollment ? "Continue" : "Select")}</button>
+          </article>
+        `;
+      }).join("")}
+    </div>
+  `;
+}
+
 function workforcePathPreviewHtml(role) {
   const gate = role ? roleGate(role) : null;
   const missing = gate?.missingCertificates?.map(id => data.courses.find(course => course.id === id)?.title || id) || [];
@@ -5304,6 +5329,37 @@ function workforcePathPreviewHtml(role) {
         <strong>${translateText(gate?.eligible ? "You can apply now" : "Next skill gap")}</strong>
         <span>${translateText(gate?.eligible ? `${role?.country || "Role"} placement is ready for application support.` : (missing.length ? missing.join(", ") : `${gate?.missingReadiness || 0}% more readiness needed`))}</span>
       </div>
+    </div>
+  `;
+}
+
+function workforceJobChoicesHtml() {
+  const roles = (data.roles || []).slice(0, 4);
+  if (!roles.length) return "";
+  return `
+    <div class="user-choice-list" aria-label="${translateText("Choose a job")}">
+      ${roles.map(role => {
+        const gate = roleGate(role);
+        const application = (data.profile.applications || []).find(item => item.roleId === role.id);
+        const missing = gate.missingCertificates.map(id => data.courses.find(course => course.id === id)?.title || id);
+        const detail = application
+          ? `${application.status || "submitted"} - ${money(application.rate || role.rate || 0)}/shift`
+          : gate.eligible
+            ? `${role.country} - ${money(role.rate || 0)}/shift - ready`
+            : missing.length
+              ? `Needs ${missing[0]}`
+              : `Needs ${gate.missingReadiness || 0}% readiness`;
+        return `
+          <article class="user-choice-card workforce-choice ${application ? "applied" : gate.eligible ? "ready" : "locked"}">
+            <div>
+              <span>${translateText(application ? "Applied" : gate.eligible ? "Ready job" : "Training needed")}</span>
+              <strong>${translateText(role.title)}</strong>
+              <small>${translateText(detail)}</small>
+            </div>
+            <button type="button" class="apply" data-role="${escapeHtml(role.id)}">${translateText(application ? "View" : gate.eligible ? "Apply" : "Gaps")}</button>
+          </article>
+        `;
+      }).join("")}
     </div>
   `;
 }
@@ -5345,9 +5401,10 @@ function userModulePreviewHtml(sectionId) {
     return `
       <div class="user-module-preview user-learning-preview">
         ${learningPathPreviewHtml(course)}
+        ${learningCourseChoicesHtml()}
         <div class="user-preview-summary">
           <strong>${translateText("Learning made simple")}</strong>
-          <span>${translateText(course ? `Start ${translatedCourse(course).title}, finish the next lesson, add captions, or request the certificate when ready.` : "Choose Start a Course when ready.")}</span>
+          <span>${translateText(course ? `Choose a course, press Select or Continue, then confirm enrollment. You will see progress after the course starts.` : "Choose Start a Course when ready.")}</span>
         </div>
       </div>
     `;
@@ -5357,9 +5414,10 @@ function userModulePreviewHtml(sectionId) {
     return `
       <div class="user-module-preview user-workforce-preview">
         ${workforcePathPreviewHtml(role)}
+        ${workforceJobChoicesHtml()}
         <div class="user-preview-summary">
           <strong>${translateText("Find work support")}</strong>
-          <span>${translateText(role ? `AgriNexus can build your profile, show job readiness, apply for ${role.title}, schedule an interview, and plan your first shift.` : "Choose Find Jobs to review work options.")}</span>
+          <span>${translateText(role ? "Choose a job, press Apply, then confirm. Applied jobs stay visible with an Applied label." : "Choose Find Jobs to review work options.")}</span>
         </div>
       </div>
     `;
@@ -7222,28 +7280,33 @@ function roleWorkflowConfig(roleId) {
   const role = data.roles.find(item => item.id === roleId) || firstEligibleRole();
   if (!role) return null;
   const gate = roleGate(role);
+  const application = (data.profile.applications || []).find(item => item.roleId === role.id);
   const missingCourses = gate.missingCertificates.map(id => data.courses.find(course => course.id === id)?.title || id);
   const blocked = !gate.eligible;
   const userCopy = workforceUserCopy("apply-role", role, blocked);
   return {
-    eyebrow: blocked ? "Readiness review" : "Workforce application",
-    title: blocked ? `Review gaps: ${role.title}` : `Apply for role: ${role.title}`,
-    userTitle: userCopy.title,
+    eyebrow: application ? "Application record" : blocked ? "Readiness review" : "Workforce application",
+    title: application ? `Application submitted: ${role.title}` : blocked ? `Review gaps: ${role.title}` : `Apply for role: ${role.title}`,
+    userTitle: application ? "You already applied" : userCopy.title,
     summary: blocked
       ? "This role is not unlocked yet. Review the exact readiness and certificate gaps before submitting."
-      : "Confirm role fit, readiness, and provider handoff before submitting the application.",
-    userSummary: userCopy.summary,
-    confirmLabel: blocked ? "Open learning path" : "Submit application",
-    record: blocked ? "No application is submitted; use this review to guide training next steps." : "Application, candidate stage, HRIS event, and activity feed",
+      : application
+        ? "This job application is already saved. Review the status and continue to interview, mentor, or shift planning."
+        : "Confirm role fit, readiness, and provider handoff before submitting the application.",
+    userSummary: application ? `${role.title} is already applied with status ${application.status || "submitted"}.` : userCopy.summary,
+    confirmLabel: application ? "Review application" : blocked ? "Open learning path" : "Submit application",
+    record: blocked ? "No application is submitted; use this review to guide training next steps." : application ? "Existing application, candidate stage, interview path, and activity feed" : "Application, candidate stage, HRIS event, and activity feed",
     provider: blocked ? "Learning and readiness gates determine eligibility." : "Workforce HRIS provider records the application event.",
     guide: userCopy.guide,
     steps: userCopy.steps,
-    path: blocked ? null : "/api/workforce/apply",
-    body: { roleId: role.id },
-    success: blocked ? "Review gaps opened" : "Application submitted",
-    userOutcome: blocked ? "AgriNexus shows the exact training gap before applying." : "AgriNexus submits the job application and prepares the interview path.",
-    userRecord: blocked ? "Readiness, certificates, and missing steps stay visible for learning support." : "Application, role, readiness, HR evidence, interview path, and notifications stay connected.",
+    path: blocked ? null : application ? "/api/workflow/record" : "/api/workforce/apply",
     redirectSection: blocked ? "learning" : null,
+    body: application
+      ? { module: "Workforce", action: "application.reviewed", section: "workforce", detail: `${role.title} application reviewed from User mode.` }
+      : { roleId: role.id },
+    success: blocked ? "Review gaps opened" : application ? "Application reviewed" : "Application submitted",
+    userOutcome: blocked ? "AgriNexus shows the exact training gap before applying." : application ? "AgriNexus keeps the application visible and prepares the next workforce step." : "AgriNexus submits the job application and prepares the interview path.",
+    userRecord: blocked ? "Readiness, certificates, and missing steps stay visible for learning support." : application ? "Submitted application, role, status, interview, mentor, and shift evidence stay connected." : "Application, role, readiness, HR evidence, interview path, and notifications stay connected.",
     checklist: [
       { title: "Readiness gate", detail: `${data.profile.readiness}% current / ${role.minReadiness}% required`, status: gate.missingReadiness ? "blocked" : "ready", label: gate.missingReadiness ? `${gate.missingReadiness}% gap` : "Met" },
       { title: "Certificates", detail: missingCourses.length ? missingCourses.join(", ") : "Required certificates are complete", status: missingCourses.length ? "blocked" : "ready", label: missingCourses.length ? "Gaps" : "Met" },
