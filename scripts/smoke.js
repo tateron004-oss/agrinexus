@@ -616,6 +616,14 @@ async function call(path, body) {
   const moduleHelp = await call("/api/agent/command", { command: "What can I say in telehealth?", conversational: true, inputMode: "voice", outputMode: "voice" });
   assert(moduleHelp.commandResult.intent === "voice.module_help");
   assert(moduleHelp.commandResult.metadata.redirectSection === "health");
+  const guidedQuestions = await call("/api/agent/command", { command: "Nexus, ask me questions about health", conversational: true, inputMode: "voice", outputMode: "voice" });
+  assert(guidedQuestions.commandResult.intent === "conversation.clarification_started");
+  assert(guidedQuestions.commandResult.metadata.guidedQuestion.questionType === "care-safety-first");
+  assert(guidedQuestions.commandResult.response.includes("own words"));
+  const guidedAnswer = await call("/api/agent/command", { command: "start intake", conversational: true, inputMode: "voice", outputMode: "voice" });
+  assert(guidedAnswer.commandResult.intent === "conversation.clarification_resolved");
+  assert(guidedAnswer.commandResult.metadata.clarification.nextQuestion);
+  if (guidedAnswer.profile.agentPendingAction) await call("/api/agent/command", { command: "no", conversational: true, inputMode: "voice", outputMode: "voice" });
   const voiceMission = await call("/api/agent/command", { command: "help this farmer sell maize safely from start to finish", conversational: true, inputMode: "voice", outputMode: "voice" });
   assert(["conversation.pending_action", "conversation.clarification_started"].includes(voiceMission.commandResult.intent));
   if (voiceMission.commandResult.intent === "conversation.pending_action") {

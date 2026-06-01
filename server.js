@@ -6211,17 +6211,86 @@ function clarificationBlueprint(moduleSignal = {}) {
   return blueprints.trade;
 }
 
+function guidedQuestionPlan(blueprint = {}, command = "", userModel = {}) {
+  const section = blueprint.section || "trade";
+  const common = {
+    id: crypto.randomUUID(),
+    style: "one-question-at-a-time",
+    answerRule: "The user can answer in plain words. Nexus should interpret intent instead of requiring exact button labels.",
+    supportRule: "If the answer sounds urgent, unsafe, or confusing, ask one safety question or stage the safest workflow.",
+    createdAt: new Date().toISOString()
+  };
+  const plans = {
+    health: {
+      questionType: "care-safety-first",
+      openingQuestion: "What happened, and is the person safe right now?",
+      why: "Health support starts by checking safety before paperwork.",
+      goodAnswers: ["pain", "injury", "needs provider", "cannot hear", "needs captions", "not safe"],
+      watchFor: ["trouble breathing", "chest pain", "heavy bleeding", "confusion", "fainting", "severe weakness"],
+      followUpQuestion: "Where is the person, and what is the best way to contact them?",
+      safestNextStep: "start telehealth intake"
+    },
+    learning: {
+      questionType: "learning-small-step",
+      openingQuestion: "What is the learner trying to understand or finish today?",
+      why: "Learning works best when Nexus helps with one small step first.",
+      goodAnswers: ["start course", "explain lesson", "cannot hear", "needs audio", "wants certificate"],
+      watchFor: ["confusion", "low vision", "hearing difficulty", "poor internet", "low literacy"],
+      followUpQuestion: "Do they need captions, audio, large text, or a simpler explanation?",
+      safestNextStep: "start course"
+    },
+    workforce: {
+      questionType: "work-readiness",
+      openingQuestion: "What work step do they need help with: finding a role, applying, interview, documents, or schedule?",
+      why: "Workforce support should remove the next barrier before asking for more details.",
+      goodAnswers: ["find job", "apply", "documents", "interview", "shift"],
+      watchFor: ["missing documents", "transportation issue", "schedule conflict", "skill gap", "interview help"],
+      followUpQuestion: "Are they ready to apply now, or do they need training or documents first?",
+      safestNextStep: "match role"
+    },
+    trade: {
+      questionType: "farm-outcome",
+      openingQuestion: "What is the farmer trying to do first: check the crop, sell it, contact a buyer, or move it?",
+      why: "Farm support should protect the crop and money before moving to sale.",
+      goodAnswers: ["check crop", "sell crop", "contact buyer", "route", "drone scan"],
+      watchFor: ["crop stress", "dry soil", "pests", "unsafe route", "unclear payment"],
+      followUpQuestion: "What crop is it, and what problem do you see?",
+      safestNextStep: "check field"
+    },
+    map: {
+      questionType: "movement-safety",
+      openingQuestion: "What are you trying to move or reach: person, crop, clinic, job site, buyer, or delivery?",
+      why: "Map support should check route risk before movement.",
+      goodAnswers: ["clinic", "buyer", "crop delivery", "worker route", "facility"],
+      watchFor: ["unsafe road", "heat", "delay", "clinic access", "checkpoint"],
+      followUpQuestion: "Where are you starting from, and where do you need to go?",
+      safestNextStep: "check route risk"
+    }
+  };
+  const selected = plans[section] || plans.trade;
+  return {
+    ...common,
+    ...selected,
+    sourceCommand: command,
+    preferredStyle: userModel.communicationStyle || "plain-language-step-by-step",
+    accessibility: userModel.accessibilityMode || "standard"
+  };
+}
+
 function startClarification(db, user, command, moduleSignal = conversationModuleSignal(command)) {
   ensureAiProfile(db.profile);
   const blueprint = clarificationBlueprint(moduleSignal);
+  const guidedQuestion = guidedQuestionPlan(blueprint, command, db.profile.agentMemory.userModel || {});
   const clarification = {
     id: crypto.randomUUID(),
     sourceCommand: command,
     module: blueprint.module,
     section: blueprint.section,
-    question: blueprint.question,
+    question: guidedQuestion.openingQuestion || blueprint.question,
+    menuQuestion: blueprint.question,
     options: blueprint.options,
     routes: blueprint.routes,
+    guidedQuestion,
     status: "waiting-answer",
     createdBy: user?.email || "user",
     createdAt: new Date().toISOString(),
@@ -6231,13 +6300,13 @@ function startClarification(db, user, command, moduleSignal = conversationModule
   db.profile.agentMemory.activeModule = blueprint.module;
   db.profile.agentMemory.lastRecommendedSection = blueprint.section;
   db.profile.agentMemory.lastStatus = "clarifying-user-need";
-  db.profile.agentMemory.lastSummary = blueprint.question;
+  db.profile.agentMemory.lastSummary = clarification.question;
   db.profile.agentMemory.updatedAt = clarification.updatedAt;
   return {
     intent: "conversation.clarification_started",
-    response: blueprint.question,
+    response: `${clarification.question} You can answer in your own words. ${guidedQuestion.why}`,
     status: "needs-input",
-    metadata: { conversationMode: true, redirectSection: blueprint.section, clarification, suggestedReplies: blueprint.options }
+    metadata: { conversationMode: true, redirectSection: blueprint.section, clarification, guidedQuestion, suggestedReplies: blueprint.options }
   };
 }
 
@@ -6264,6 +6333,9 @@ function continueClarification(db, user, command) {
   const completed = {
     ...clarification,
     answer: command,
+    interpretedAnswer: route.action,
+    nextQuestion: clarification.guidedQuestion?.followUpQuestion || null,
+    watchFor: clarification.guidedQuestion?.watchFor || [],
     selectedAction: route.action,
     selectedTool: route.tool,
     status: "resolved",
@@ -6283,7 +6355,7 @@ function continueClarification(db, user, command) {
   return {
     ...staged,
     intent: "conversation.clarification_resolved",
-    response: `Good. I understand: ${command}. I can ${route.action.toLowerCase()} now. Say "yes" to run it, or "no" to cancel.`,
+    response: `Good. I understand: ${command}. In simple terms, the next safe step is ${route.action.toLowerCase()}. ${completed.nextQuestion ? `After this, I may ask: ${completed.nextQuestion} ` : ""}Say "yes" to run it, or "no" to cancel.`,
     metadata: {
       ...(staged.metadata || {}),
       clarification: completed,
@@ -7136,7 +7208,7 @@ function intakeDomainFromText(lower) {
 }
 
 function isIntakeStart(lower) {
-  return /(intake|ask me questions|interview me|fill.*out|help me apply|onboard me|set me up)/.test(lower)
+  return /(intake|fill.*out|help me apply|onboard me|set me up)/.test(lower)
     && Boolean(intakeDomainFromText(lower));
 }
 
@@ -8056,6 +8128,11 @@ async function runAgentCommand(db, user, command, options = {}) {
 
   const moduleGreeting = await moduleGreetingResponse(db, user, text, lower);
   if (moduleGreeting) return moduleGreeting;
+
+  if (conversational && !isIntakeStart(lower) && /\b(ask me questions|ask questions|interview me|guide me with questions|question mode|walk me through questions)\b/.test(lower)) {
+    const signal = conversationModuleSignal(text);
+    return startClarification(db, user, text, signal.score ? signal : conversationModuleSignal(`${text} ${db.profile.agentMemory.activeModule || ""}`));
+  }
 
   const moduleHelp = moduleVoiceHelpResponse(db, text, lower);
   if (moduleHelp) return moduleHelp;
