@@ -185,8 +185,8 @@ assert(html.includes("nexusBehaviorStatus"), "User voice dock needs an assistant
 assert(html.includes('data-user-voice-action="listen"'), "User voice dock needs a speak action");
 assert(html.includes('data-user-voice-action="type"'), "User voice dock needs a type action");
 assert(html.includes('data-user-voice-action="read"'), "User voice dock needs a read action");
-assert(html.includes("nexus-behavior-96"), "Index must force browsers to load Nexus behavior CSS");
-assert(html.includes("nexus-behavior-96"), "Index must force browsers to load Nexus behavior JS");
+assert(html.includes("nexus-behavior-97"), "Index must force browsers to load Nexus behavior CSS");
+assert(html.includes("nexus-behavior-97"), "Index must force browsers to load Nexus behavior JS");
 assert(app.includes("I want to sell maize"), "Nexus behavior layer should support natural trade requests without button hunting");
 assert(app.includes("I need a doctor"), "Nexus behavior layer should support natural telehealth requests without button hunting");
 assert(app.includes("function allModeVoiceCommandCatalog"), "Nexus needs an explicit all-mode voice command contract");
@@ -197,6 +197,13 @@ assert(app.includes("function dynamicVoiceToolRegistry"), "Nexus needs a dynamic
 assert(app.includes("function bestDynamicVoiceTool"), "Nexus needs dynamic tool scoring for natural commands");
 assert(app.includes("await runDynamicVoiceTool(command)"), "Voice handler must try registered workflow tools before generic AI fallback");
 assert(app.includes("I can also discover"), "Voice help should explain dynamic workflow discovery");
+assert(app.includes("function voiceMissionTemplates"), "Advanced voice needs multi-step mission templates");
+assert(app.includes("function fillWorkflowFieldByVoice"), "Advanced voice needs form filling by speech");
+assert(app.includes("function voiceWorkflowStatus"), "Advanced voice needs workflow status readout");
+assert(app.includes("function voiceErrorRecovery"), "Advanced voice needs recovery when actions fail");
+assert(app.includes("function modeSpecificVoicePersona"), "Advanced voice needs mode-specific persona behavior");
+assert(app.includes("function recordVoiceEvent"), "Advanced voice needs real-time progress event stream");
+assert(app.includes("start multi-step missions"), "Voice help must explain advanced voice capabilities");
 assert(app.includes("Admin Operator"), "Nexus behavior layer should adapt for Admin mode");
 assert(app.includes("Investor Presenter"), "Nexus behavior layer should adapt for Investor mode");
 assert(app.includes("visibilitychange"), "Nexus behavior layer should recover voice-first listening after app visibility changes");

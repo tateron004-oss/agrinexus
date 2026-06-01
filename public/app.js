@@ -32,6 +32,8 @@ let agentPerformanceState = {
 let agentProgressTimers = [];
 let pendingAgentClarification = null;
 let activeAgentJourney = null;
+let activeVoiceMission = null;
+let voiceEventStream = [];
 let conversationModeState = JSON.parse(localStorage.getItem("agrinexusConversationModeState") || "{}");
 let conversationModeMemories = JSON.parse(localStorage.getItem("agrinexusConversationModeMemories") || "{}");
 let nexusAwarenessState = JSON.parse(localStorage.getItem("agrinexusAwarenessState") || "{}");
@@ -2197,8 +2199,8 @@ function runUserModeSelfTest() {
       if (!simpleUserCommandWorkflow(button.command)) missing.push(`${section}: ${button.label}`);
     });
   });
-  const currentScript = [...document.scripts].some(script => String(script.src || "").includes("nexus-behavior-96"));
-  const currentStyle = [...document.styleSheets].some(sheet => String(sheet.href || "").includes("nexus-behavior-96"));
+  const currentScript = [...document.scripts].some(script => String(script.src || "").includes("nexus-behavior-97"));
+  const currentStyle = [...document.styleSheets].some(sheet => String(sheet.href || "").includes("nexus-behavior-97"));
   if (!currentScript || !currentStyle) missing.push("new app files");
   const ok = missing.length === 0;
   const message = ok
@@ -4871,11 +4873,13 @@ async function runDynamicVoiceTool(command = "") {
   if (!tool) return false;
   if (tool.type === "section") {
     goSection(tool.section);
+    recordVoiceEvent(`Opened ${tool.label} from a dynamic voice tool.`, "done");
     setVoiceResponse(`${tool.label} is open. Tell Nexus what you want to do next.`, true);
     return true;
   }
   if (tool.config) {
     if (tool.section && canOpenSection(tool.section)) goSection(tool.section);
+    recordVoiceEvent(`Prepared ${tool.label} from dynamic voice matching.`, "progress");
     openWorkflowModal(tool.config);
     setActiveAgentJourney(tool.workflow || tool.section, tool.action || "open", tool.response || tool.label);
     setVoiceResponse(`${tool.response || `${tool.label} workflow is ready.`} Say yes to confirm, no to cancel, or read to hear it.`, true);
@@ -4883,10 +4887,160 @@ async function runDynamicVoiceTool(command = "") {
   }
   if (tool.workflow && tool.action) {
     if (tool.section && canOpenSection(tool.section)) goSection(tool.section);
+    recordVoiceEvent(`Matched ${tool.label} to ${tool.workflow} ${tool.action}.`, "progress");
     await openWorkflowByVoice(tool.workflow, tool.action, `${tool.label} workflow is ready.`, tool.dataset || {});
     return true;
   }
   return false;
+}
+
+function recordVoiceEvent(message, status = "progress") {
+  const event = { message, status, mode: conversationPlatformMode(), section: currentSectionId(), at: new Date().toISOString() };
+  voiceEventStream = [event, ...voiceEventStream].slice(0, 12);
+  const prompt = $("#workflowVoicePrompt");
+  if (prompt && !$("#workflowModal")?.classList.contains("hidden")) prompt.textContent = translateText(message);
+  const globalStatus = $("#globalAssistantStatus");
+  if (globalStatus) globalStatus.textContent = translateText(message);
+  updateNexusBehaviorLayer(status === "error" ? "ready" : status === "done" ? "speaking" : "thinking", message);
+  return event;
+}
+
+function modeSpecificVoicePersona() {
+  const mode = conversationPlatformMode();
+  if (mode === "admin") return "Admin voice is operational: I will focus on readiness, users, integrations, audit evidence, and production risk.";
+  if (mode === "investor") return "Investor voice is presentation-ready: I will explain impact, proof, workflow evidence, and the next demo step.";
+  return "User voice is simple and patient: I will guide one step at a time with plain language, captions, and readback.";
+}
+
+function voiceMissionTemplates() {
+  return {
+    trade: {
+      label: "sell crop mission",
+      match: /\b(sell|market|trade)\b.*\b(crop|produce|maize|corn|rice|cassava|yam|beans|harvest)\b|\bhelp me sell\b/,
+      steps: [
+        { command: "contact my buyer", label: "contact or identify buyer" },
+        { command: "create buyer order", label: "create crop order" },
+        { command: "advance order", label: "start shipment tracking" },
+        { command: "track my route in real time", label: "track delivery route" },
+        { command: "release payment", label: "record payment" }
+      ]
+    },
+    health: {
+      label: "telehealth mission",
+      match: /\b(doctor|nurse|clinic|health|telehealth|provider|care)\b/,
+      steps: [
+        { command: "start telehealth intake", label: "start intake" },
+        { command: "contact the listed telehealth provider", label: "contact provider" },
+        { command: "capture vitals", label: "capture vitals" },
+        { command: "schedule follow up", label: "schedule follow-up" }
+      ]
+    },
+    workforce: {
+      label: "job mission",
+      match: /\b(job|work|role|employment|apply|shift)\b/,
+      steps: [
+        { command: "show me jobs", label: "show jobs" },
+        { command: "apply for that job", label: "apply for role" },
+        { command: "prepare me for an interview", label: "prepare interview" },
+        { command: "schedule my shift", label: "schedule shift" }
+      ]
+    },
+    learning: {
+      label: "learning mission",
+      match: /\b(learn|course|lesson|training|certificate|class)\b/,
+      steps: [
+        { command: "start training path", label: "start course" },
+        { command: "complete my lesson", label: "complete lesson" },
+        { command: "build captions", label: "make captions" },
+        { command: "issue my certificate", label: "issue certificate" }
+      ]
+    }
+  };
+}
+
+function startVoiceMission(command = "") {
+  const lower = String(command || "").toLowerCase();
+  const mission = Object.values(voiceMissionTemplates()).find(item => item.match.test(lower));
+  if (!mission) return false;
+  activeVoiceMission = { ...mission, index: 0, startedAt: Date.now(), mode: conversationPlatformMode() };
+  recordVoiceEvent(`Mission started: ${mission.label}. First step: ${mission.steps[0].label}.`, "progress");
+  pendingAgentClarification = {
+    original: command,
+    options: [
+      { label: "Start mission", section: currentSectionId(), command: mission.steps[0].command, detail: `Begin ${mission.label}: ${mission.steps[0].label}.` },
+      { label: "Hear steps", section: currentSectionId(), command: "mission status", detail: mission.steps.map(step => step.label).join(", ") }
+    ]
+  };
+  setVoiceResponse(`I can run a ${mission.label}. Steps are ${mission.steps.map(step => step.label).join(", ")}. Say start mission to begin, or say hear steps.`, true);
+  return true;
+}
+
+async function continueVoiceMission() {
+  if (!activeVoiceMission) return false;
+  const step = activeVoiceMission.steps[activeVoiceMission.index];
+  if (!step) {
+    recordVoiceEvent(`${activeVoiceMission.label} is complete.`, "done");
+    setVoiceResponse(`${activeVoiceMission.label} is complete.`, true);
+    activeVoiceMission = null;
+    return true;
+  }
+  recordVoiceEvent(`Mission step ${activeVoiceMission.index + 1}: ${step.label}.`, "progress");
+  activeVoiceMission.index += 1;
+  await handleVoiceCommand(step.command);
+  return true;
+}
+
+function voiceMissionStatus() {
+  if (!activeVoiceMission) return "No voice mission is active. Say help me sell my crop, I need a doctor, I need work, or help me learn.";
+  const current = activeVoiceMission.steps[activeVoiceMission.index] || null;
+  const done = activeVoiceMission.steps.slice(0, activeVoiceMission.index).map(step => step.label).join(", ") || "none yet";
+  return `${activeVoiceMission.label}: completed ${done}. Next step: ${current ? current.label : "mission complete"}. Say continue mission to keep going.`;
+}
+
+function voiceWorkflowStatus() {
+  const open = pendingWorkflow ? `${pendingWorkflow.title || "workflow"} is open and waiting for confirmation.` : "No workflow window is open.";
+  const events = voiceEventStream.slice(0, 3).map(item => item.message).join(" ");
+  return `${open} ${activeAgentJourneySummary()} ${voiceMissionStatus()} Latest voice events: ${events || "none yet"}.`;
+}
+
+function fillWorkflowFieldByVoice(command = "") {
+  if (!pendingWorkflow || $("#workflowModal")?.classList.contains("hidden")) return false;
+  const match = [/(?:set|change|enter|put|make)\s+(.+?)\s+(?:to|as)\s+(.+)/i, /(.+?)\s+(?:is|equals)\s+(.+)/i]
+    .map(pattern => command.match(pattern))
+    .find(Boolean);
+  if (!match) return false;
+  const requested = normalizeToolText(match[1]);
+  const value = match[2].trim().replace(/[.?!]$/, "");
+  const field = $$("[data-workflow-field]").find(item => {
+    const label = normalizeToolText(item.closest("label")?.textContent || item.dataset.workflowField || "");
+    const name = normalizeToolText(item.dataset.workflowField || "");
+    return label.includes(requested) || requested.includes(name) || name.includes(requested);
+  });
+  if (!field || !value) return false;
+  field.value = value;
+  field.dispatchEvent(new Event("input", { bubbles: true }));
+  field.dispatchEvent(new Event("change", { bubbles: true }));
+  recordVoiceEvent(`Updated ${field.dataset.workflowField} to ${value}.`, "progress");
+  setVoiceResponse(`Updated ${field.dataset.workflowField} to ${value}. Say yes to confirm when ready.`, true);
+  return true;
+}
+
+function voiceReadbackText() {
+  if (pendingWorkflow && !$("#workflowModal")?.classList.contains("hidden")) return workflowSpeechText();
+  return `${modeSpecificVoicePersona()} Current section is ${currentSectionId()}. ${activeVoiceMission ? voiceMissionStatus() : "Ask me to open a service, start a mission, fill a form, or explain the next step."}`;
+}
+
+function voiceErrorRecovery(error, command = "") {
+  const message = error?.message || String(error || "That did not work.");
+  recordVoiceEvent(`Recovery: ${message}`, "error");
+  const tool = bestDynamicVoiceTool(command);
+  if (tool) {
+    pendingAgentClarification = { original: command, options: [{ label: tool.label, section: tool.section || currentSectionId(), command: tool.command || `${tool.workflow} ${tool.action}`, detail: "Retry with the closest registered tool." }] };
+    setVoiceResponse(`That hit a problem: ${message}. I found a related action: ${tool.label}. Say yes to try it, or say cancel.`, true);
+    return true;
+  }
+  setVoiceResponse(`That hit a problem: ${message}. Try saying voice help, what should I do next, or open the service you want.`, true);
+  return true;
 }
 
 function voiceCommandButton(command) {
@@ -7745,6 +7899,7 @@ function openWorkflowModal(config) {
   $("#workflowModal").classList.remove("hidden");
   $("#workflowConfirm").focus();
   const instruction = `${translateText((experienceMode === "user" && config.userTitle) || config.title || "Workflow")}. ${translateText((experienceMode === "user" && config.userSummary) || config.summary || "Review this workflow and confirm when ready.")}. Say yes to confirm, no to cancel, or read to hear the workflow.`;
+  recordVoiceEvent(`Workflow ready: ${(experienceMode === "user" && config.userTitle) || config.title || "Workflow"}.`, "progress");
   announce(instruction);
   setVoiceResponse(instruction, false, { allowVoiceFirst: true });
 }
@@ -9272,6 +9427,7 @@ async function confirmPendingWorkflow() {
     confirmButton.textContent = translateText("Completing...");
   }
   if (prompt) prompt.textContent = translateText("Nexus is completing this workflow now.");
+  recordVoiceEvent(`Completing workflow: ${workflow.title || workflow.confirmLabel || "workflow"}.`, "progress");
   const inlinePanel = $(".user-inline-workflow:not(.hidden)");
   if (inlinePanel) {
     inlinePanel.querySelector("span").textContent = translateText("Nexus is completing this now.");
@@ -9306,6 +9462,7 @@ async function confirmPendingWorkflow() {
       if (active !== "dashboard" && simpleUserSections[active]) renderUserSimpleActiveSection(active);
       const next = activeAgentJourney?.next;
       const response = `${workflow.success || "Done"}. ${next ? `Next, I can ${next.label}. Say next step when ready.` : "Choose another button when ready."}`;
+      recordVoiceEvent(response, "done");
       updateNexusBehaviorLayer("speaking", response);
       setVoiceResponse(response, true);
       toast(response);
@@ -9315,6 +9472,7 @@ async function confirmPendingWorkflow() {
     if (intelligence) {
       const next = activeAgentJourney?.next;
       const response = `${workflow.success || "Workflow complete"}. ${intelligence.summary} ${intelligence.nextStep} ${next ? `I can also ${next.label}; say next step to continue.` : ""}`;
+      recordVoiceEvent(response, "done");
       updateNexusBehaviorLayer("speaking", response);
       setVoiceResponse(response, true);
       toast("Workflow complete with intelligence");
@@ -9323,7 +9481,7 @@ async function confirmPendingWorkflow() {
     }
   } catch (error) {
     const message = error.message || "Workflow failed";
-    setVoiceResponse(message, true);
+    voiceErrorRecovery(error, workflow.title || workflow.confirmLabel || "");
     toast(message);
   } finally {
     if (confirmButton) {
@@ -9835,6 +9993,24 @@ async function handleVoiceCommand(rawCommand) {
     await changeLanguageByVoice(command);
     return;
   }
+  if (/\b(voice persona|how will you talk|conversation style|who are you in this mode)\b/.test(lower)) {
+    setVoiceResponse(modeSpecificVoicePersona(), true);
+    return;
+  }
+  if (/\b(mission status|where am i|where are we|workflow status|voice status)\b/.test(lower)) {
+    setVoiceResponse(voiceWorkflowStatus(), true);
+    return;
+  }
+  if (/\b(continue mission|next mission step|start mission)\b/.test(lower)) {
+    if (await continueVoiceMission()) return;
+  }
+  if (/\b(read back|readback|read this|read screen|read current|speak this)\b/.test(lower)) {
+    setVoiceResponse(voiceReadbackText(), true);
+    return;
+  }
+  if (/\b(help me|walk me through|guide me through)\b/.test(lower) && /\b(sell|crop|doctor|health|job|work|learn|course|training)\b/.test(lower)) {
+    if (startVoiceMission(command)) return;
+  }
   if (lower === "next" || lower.includes("next step") || lower.includes("continue journey") || lower.includes("continue the workflow") || lower.includes("what is the next step")) {
     await runActiveAgentNextStep();
     return;
@@ -9929,6 +10105,7 @@ async function handleVoiceCommand(rawCommand) {
   }
 
   if (!$("#workflowModal").classList.contains("hidden")) {
+    if (fillWorkflowFieldByVoice(command)) return;
     if (lower === "read" || lower.includes("read this") || lower.includes("read workflow") || lower.includes("repeat")) {
       readWorkflowModal();
       return;
@@ -10047,7 +10224,7 @@ async function handleVoiceCommand(rawCommand) {
     openVoiceHelp();
     const catalog = allModeVoiceCommandCatalog();
     const toolCount = dynamicVoiceToolRegistry().length;
-    setVoiceResponse(`You can call me Nexus in User, Admin, or Investor mode. I can open modules, build captions, create audio guides, complete lessons, issue certificates, apply for roles, schedule shifts, start telehealth intake, connect a provider, capture vitals, contact a buyer, create orders, run drone scans, test engines, create plans, and read responses aloud. I can also discover ${toolCount} workflow tools from the current platform screen, so you can ask in normal words. All-mode examples: ${catalog.commands.slice(0, 5).join(". ")}.`, true);
+    setVoiceResponse(`You can call me Nexus in User, Admin, or Investor mode. I can open modules, start multi-step missions, ask clarifying questions, remember confirmations, fill workflow forms by voice, explain workflow status, recover from errors, read screens aloud, adapt my voice behavior by mode, follow language changes, and speak progress events. I can also discover ${toolCount} workflow tools from the current platform screen, so you can ask in normal words. All-mode examples: ${catalog.commands.slice(0, 5).join(". ")}.`, true);
     return;
   }
   if (lower.includes("voice demo") || lower.includes("agrinexus demo") || lower.includes("show voice") || lower.includes("show agrinexus")) {
@@ -10462,7 +10639,7 @@ async function runBackendAgentCommand(command) {
     markAgentPerformance("failed", "agent-command-error");
     updateNexusBehaviorLayer("ready", "Nexus needs one clearer request.");
     const message = /timed out|abort/i.test(error.message || "") ? `${error.message} ${safeAgentFallbackResponse(command)}` : (error.message || "Command failed.");
-    setVoiceResponse(message, true);
+    voiceErrorRecovery(new Error(message), command);
   }
 }
 
