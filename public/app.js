@@ -2197,8 +2197,8 @@ function runUserModeSelfTest() {
       if (!simpleUserCommandWorkflow(button.command)) missing.push(`${section}: ${button.label}`);
     });
   });
-  const currentScript = [...document.scripts].some(script => String(script.src || "").includes("nexus-behavior-89"));
-  const currentStyle = [...document.styleSheets].some(sheet => String(sheet.href || "").includes("nexus-behavior-89"));
+  const currentScript = [...document.scripts].some(script => String(script.src || "").includes("nexus-behavior-90"));
+  const currentStyle = [...document.styleSheets].some(sheet => String(sheet.href || "").includes("nexus-behavior-90"));
   if (!currentScript || !currentStyle) missing.push("new app files");
   const ok = missing.length === 0;
   const message = ok
@@ -4419,6 +4419,49 @@ function composeJarvisResponse(message, options = {}) {
   return `${message} ${jarvisHandoffLine(options.handoffText)}`;
 }
 
+function agenticJarvisModePlan(mode = experienceMode) {
+  const normalized = normalizeExperienceMode(mode);
+  const guide = intuitiveConversationGuide(currentSectionId());
+  const brain = nexusBrainState(agentPerformanceState.lastCommand || "");
+  const production = data?.jarvisProductionTen || { readyCount: 0, total: 10 };
+  const modeCommands = normalized === "admin"
+    ? ["Nexus, run admin intelligence", "Nexus, run live service check", "Nexus, summarize audit"]
+    : normalized === "investor"
+      ? ["Nexus, explain this to investors", "Nexus, run investor voice demo", "Nexus, summarize impact"]
+      : ["Nexus, help me", "Nexus, what should I do next", "Nexus, read this to me"];
+  const items = [
+    { title: "Listen", detail: "Wake phrase, mic, text command, and phone-style assistant entry are available.", command: "Nexus, what can you do" },
+    { title: "Understand", detail: `Intent is ${brain.awareness}; mode is ${conversationPlatformLabel(normalized)}.`, command: "Nexus, what am I trying to do" },
+    { title: "Route", detail: "Nexus opens the right workspace instead of making the user search.", command: modeCommands[0] },
+    { title: "Stage", detail: "Nexus prepares the correct workflow before committing the action.", command: guide.primaryCommand || modeCommands[0] },
+    { title: "Confirm", detail: "Important workflows wait for yes, no, confirm, or cancel.", command: "Nexus, yes" },
+    { title: "Execute", detail: "Approved workflows write evidence into the platform record.", command: "Nexus, run full mission" },
+    { title: "Translate", detail: `${voiceLanguageName()} is active; language can change by voice.`, command: "Nexus, change language to French" },
+    { title: "Remember", detail: brain.memory, command: "Nexus, what do you remember" },
+    { title: "Recover", detail: "If intent is unclear, Nexus asks a simple follow-up instead of failing silently.", command: "Nexus, guide me" },
+    { title: "Prove", detail: `Production intelligence is ${production.readyCount || 0}/${production.total || 10}; evidence and readiness checks are actionable.`, command: normalized === "investor" ? "Nexus, run investor voice demo" : "Nexus, run live service check" }
+  ];
+  return {
+    mode: normalized,
+    label: conversationPlatformLabel(normalized),
+    summary: `${conversationPlatformLabel(normalized)} Agentic Jarvis mode is active: listen, understand, route, stage, confirm, execute, translate, remember, recover, and prove.`,
+    items,
+    commands: [...new Set([...modeCommands, ...items.map(item => item.command)])].slice(0, 8)
+  };
+}
+
+function activateAgenticJarvisMode(mode = experienceMode) {
+  const plan = agenticJarvisModePlan(mode);
+  localStorage.setItem("agrinexusAgenticJarvisMode", JSON.stringify({
+    mode: plan.mode,
+    activatedAt: new Date().toISOString(),
+    commands: plan.commands
+  }));
+  renderLiveVoiceSuggestions(plan.commands);
+  updateNexusBehaviorLayer("ready", `${plan.label} Agentic Jarvis mode is active.`);
+  return `${plan.summary} Top actions: ${plan.items.slice(0, 4).map(item => `${item.title}: say ${item.command}`).join(". ")}.`;
+}
+
 function contextualVoiceSuggestions(sectionId = currentSectionId()) {
   const mode = nexusBehaviorMode();
   const user = [
@@ -4592,6 +4635,8 @@ function voiceCommandGroups() {
       title: "Start here",
       helper: "Use these when someone is new to the platform.",
       commands: [
+        "Nexus, activate Agentic Jarvis mode",
+        "Nexus, show Agentic Jarvis plan",
         "Nexus, what can you do",
         "Nexus, show voice help",
         "Nexus, what can I say in telehealth",
@@ -4603,6 +4648,20 @@ function voiceCommandGroups() {
         "Nexus, test provider engines",
         "Nexus, check native app readiness",
         "Nexus, explain your behavior model"
+      ]
+    },
+    {
+      title: "Agentic Jarvis Mode",
+      helper: "Use these in User, Admin, or Investor mode to make Nexus listen, reason, route, confirm, execute, remember, recover, and prove evidence.",
+      commands: [
+        "Nexus, activate Agentic Jarvis mode",
+        "Nexus, show Agentic Jarvis plan",
+        "Nexus, what am I trying to do",
+        "Nexus, what do you remember",
+        "Nexus, run full mission",
+        "Nexus, run admin intelligence",
+        "Nexus, explain this to investors",
+        "Nexus, guide me"
       ]
     },
     {
@@ -4797,7 +4856,9 @@ function jarvisInsights() {
   const awareness = updateNexusAwareness("", { silent: true });
   const repair = conversationRepairPlan(agentPerformanceState.lastCommand || "");
   const brain = nexusBrainState(agentPerformanceState.lastCommand || "");
+  const agenticPlan = agenticJarvisModePlan();
   return [
+    { title: "Agentic Jarvis Mode", detail: `${agenticPlan.label}: ${agenticPlan.items.map(item => item.title).join(", ")}`, status: "ready", label: "Activate", action: { simpleCommand: "Nexus, activate Agentic Jarvis mode" } },
     { title: "Nexus Brain", detail: `${brain.goals}. Awareness: ${brain.awareness}. Initiative: ${brain.initiative}`, status: "ready", label: "Brain" },
     { title: conversationBrief.mode, detail: `${conversationBrief.tone}. Context: ${conversationBrief.focus}. Last: ${modeMemory.lastTopic || "ready for a conversation"}. Turns in this mode: ${modeMemory.turnCount || 0}.`, status: "ready", label: "Talk" },
     { title: "Live awareness", detail: `${awareness.inferredIntent} in ${awareness.section}. Waiting on ${awareness.waitingOn}. Safe next: ${awareness.safeNextAction}`, status: "ready", label: `${Math.round((awareness.confidence || 0) * 100)}%` },
@@ -9408,6 +9469,18 @@ async function handleVoiceCommand(rawCommand) {
     const guide = intuitiveConversationGuide();
     renderLiveVoiceSuggestions(guide.suggestions);
     setVoiceResponse(intuitiveConversationResponse(), true);
+    return;
+  }
+  if (/(activate|turn on|start|use|enable|show|explain).*(agentic|jarvis).*(mode|plan|system)?/.test(lower) || /(agentic|jarvis).*(mode|plan).*(all modes|across modes)?/.test(lower)) {
+    const response = activateAgenticJarvisMode();
+    if (experienceMode !== "user" && canOpenSection("agent")) goSection("agent");
+    setVoiceResponse(response, true);
+    return;
+  }
+  if (/(everything|all).*(agentic|jarvis).*(list|mode|across modes)/.test(lower)) {
+    const plan = agenticJarvisModePlan();
+    renderLiveVoiceSuggestions(plan.commands);
+    setVoiceResponse(`${plan.summary} The full list is: ${plan.items.map(item => `${item.title}: ${item.detail}`).join(" ")}.`, true);
     return;
   }
   const clarification = inferAmbiguousIntent(command);

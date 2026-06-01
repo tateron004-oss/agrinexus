@@ -354,9 +354,9 @@ assert(app.includes('workflow === "admin-user"'), "Admin test login button needs
 assert(app.includes("Only an existing Admin can run this workflow"), "Admin login flow must explain admin-only protection");
 assert(server.includes('adminAccount.role = "Admin"'), "Backend must force admin test logins to Admin");
 assert(server.includes("admin_user.created"), "Admin test login must create auth audit evidence");
-assert(html.includes("styles.css?v=nexus-behavior-89"), "Index must force browsers to load the latest Nexus behavior shell");
-assert(html.includes("app.js?v=nexus-behavior-89"), "Index must force browsers to load the latest Nexus behavior code");
-assert(sw.includes("agrinexus-pwa-v69"), "Service worker cache must refresh the installed app after native voice bridge updates");
+assert(html.includes("styles.css?v=nexus-behavior-90"), "Index must force browsers to load the latest Nexus behavior shell");
+assert(html.includes("app.js?v=nexus-behavior-90"), "Index must force browsers to load the latest Nexus behavior code");
+assert(sw.includes("agrinexus-pwa-v70"), "Service worker cache must refresh the installed app after native voice bridge updates");
 assert(html.includes("userWorkspace"), "Dashboard needs a User Workspace for standard users");
 assert(html.includes("userMobileDock"), "Legacy mobile dock markup should remain safely hidden for cache compatibility");
 assert(html.includes("What Do You Need Help With Today?"), "Dashboard simple start should use user-ready language");
@@ -580,6 +580,10 @@ assert(app.includes("function nexusSmartBehaviorModel"), "Every mode needs a sma
 assert(app.includes("function nexusSmartBehaviorSummary"), "Voice assistant needs to explain smart behavior by role");
 assert(app.includes("Smart Behavior"), "Role-aware panels must expose smart behavior as an intelligence item");
 assert(app.includes("Nexus, be smart"), "Voice commands must activate smart behavior explanation");
+assert(app.includes("function agenticJarvisModePlan"), "Voice assistant needs an Agentic Jarvis mode plan across User, Admin, and Investor modes");
+assert(app.includes("function activateAgenticJarvisMode"), "Voice assistant must activate Agentic Jarvis mode without adding static cards");
+assert(app.includes("Nexus, activate Agentic Jarvis mode"), "Voice help must expose the Agentic Jarvis mode command");
+assert(app.includes("Agentic Jarvis Mode"), "Jarvis layer must expose actionable Agentic Jarvis mode status");
 assert(server.includes("function jarvisProductionTenModel"), "Backend needs a Jarvis Production 10 readiness model");
 assert(app.includes("function renderJarvisProductionTen"), "Frontend needs to render Jarvis Production 10 readiness");
 assert(html.includes("jarvisProductionTenPanel"), "Agent mode needs visible Jarvis Production 10 readiness");
