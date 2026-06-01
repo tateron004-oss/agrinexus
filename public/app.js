@@ -2199,8 +2199,8 @@ function runUserModeSelfTest() {
       if (!simpleUserCommandWorkflow(button.command)) missing.push(`${section}: ${button.label}`);
     });
   });
-  const currentScript = [...document.scripts].some(script => String(script.src || "").includes("nexus-behavior-109"));
-  const currentStyle = [...document.styleSheets].some(sheet => String(sheet.href || "").includes("nexus-behavior-109"));
+  const currentScript = [...document.scripts].some(script => String(script.src || "").includes("nexus-behavior-110"));
+  const currentStyle = [...document.styleSheets].some(sheet => String(sheet.href || "").includes("nexus-behavior-110"));
   if (!currentScript || !currentStyle) missing.push("new app files");
   const ok = missing.length === 0;
   const message = ok
@@ -2454,13 +2454,80 @@ function advisorCropCalendarAdvice(signals) {
   return `For ${crop} in ${country}, I would check three things before planting or harvesting: expected rain, field moisture, and market route timing. Current regional risk is ${risk}, and the active route is ${route}. I can open crop planning, run a drone scan, or check the route before you move the crop.`;
 }
 
+function routeCountryFor(route) {
+  return (data?.countries || []).find(country => country.routeId === route?.id) || activeCountry();
+}
+
+function routeSafetyScore(route) {
+  const country = routeCountryFor(route);
+  const riskPenalty = country.risk === "High" ? 32 : country.risk === "Elevated" ? 20 : country.risk === "Moderate" ? 12 : 4;
+  const heatPenalty = Number(country.heat || 0) >= 40 ? 12 : Number(country.heat || 0) >= 36 ? 8 : 3;
+  const facilityBonus = Math.min(12, Number(country.facilities || 0) / 2);
+  const checkpointBonus = Math.min(8, (route?.checkpoints || []).length * 2);
+  return Math.max(30, Math.min(98, Math.round(88 - riskPenalty - heatPenalty + facilityBonus + checkpointBonus)));
+}
+
+function rankedLogisticsRoutes() {
+  return (data?.routes || []).map(route => {
+    const country = routeCountryFor(route);
+    const score = routeSafetyScore(route);
+    const warnings = [
+      country.risk === "High" ? "high regional risk" : "",
+      Number(country.heat || 0) >= 38 ? "heat exposure" : "",
+      (country.facilities || 0) < 16 ? "limited facility support" : ""
+    ].filter(Boolean);
+    return {
+      route,
+      country,
+      score,
+      status: score >= 78 ? "best" : score >= 62 ? "usable with caution" : "avoid unless necessary",
+      reason: `${country.name}: ${country.risk} risk, ${country.heat}C heat, ${country.facilities} facilities, ${(route.checkpoints || []).length} checkpoints`,
+      warnings
+    };
+  }).sort((a, b) => b.score - a.score);
+}
+
+function advisorCropConditionRecommendation() {
+  const product = firstProduct() || {};
+  const country = activeCountry();
+  const scan = (data?.profile?.droneScans || [])[0];
+  const finding = (data?.profile?.droneFindings || [])[0];
+  const health = Number(scan?.cropHealthScore || product.buyerInterest || 72);
+  const issue = finding?.issueType || (health < 70 ? "crop stress" : country.heat >= 38 ? "heat stress" : "buyer readiness check");
+  const urgency = health < 70 || country.heat >= 38 || country.risk === "High" ? "priority" : "watch";
+  const actions = urgency === "priority"
+    ? ["Run drone scan", "Create irrigation plan", "Create pest alert", "Assign field task", "Delay buyer shipment until quality evidence is updated"]
+    : ["Run quality inspection", "Check route risk", "Share buyer update", "Prepare harvest or delivery window"];
+  return {
+    crop: product.name || "selected crop",
+    health,
+    issue,
+    urgency,
+    actions,
+    message: `${product.name || "The crop"} is at ${health}% readiness. I see ${issue}. My suggestion is ${actions[0].toLowerCase()} first, then ${actions[1].toLowerCase()}.`
+  };
+}
+
+function advisorLogisticsRecommendation() {
+  const ranked = rankedLogisticsRoutes();
+  const best = ranked[0];
+  const active = ranked.find(item => item.route.id === activeRoute().id) || best;
+  return {
+    best,
+    active,
+    ranked,
+    message: `Best current route: ${best.route.name} with ${best.score}/100 safety. Reason: ${best.reason}. Active route is ${active.route.name} with ${active.score}/100. ${active.route.id === best.route.id ? "The active route is already the safest option." : "I recommend comparing before moving the shipment."}`
+  };
+}
+
 function advisorBrainSummary(command = "") {
   const signals = advisorBrainSignals(command);
   const crop = signals.product?.name || "the selected crop";
   const country = signals.country?.name || "your area";
   const scan = signals.latestScan ? `${signals.latestScan.cropHealthScore}% crop health` : "no drone scan yet";
   const finding = signals.latestFinding?.finding || "no field finding yet";
-  return `Advisor Brain is watching learning, work, health, crop, route, drone, provider, admin, and investor context. For ${country}, the active crop is ${crop}, the latest scan is ${scan}, and the latest field finding is ${finding}. Tell me what happened and I will choose the safest next step.`;
+  const route = advisorLogisticsRecommendation();
+  return `Advisor Brain is watching learning, work, health, crop, route, drone, provider, admin, and investor context. For ${country}, the active crop is ${crop}, the latest scan is ${scan}, and the latest field finding is ${finding}. Safest route now is ${route.best.route.name}. Tell me what happened and I will choose the safest next step.`;
 }
 
 function handleAdvisorBrainCommand(command = "") {
@@ -2510,24 +2577,27 @@ function handleAdvisorBrainCommand(command = "") {
     return openWorkflowByVoice(signals.lower.includes("gap") || signals.lower.includes("skills") || signals.lower.includes("readiness") ? "ai" : "workforce", signals.lower.includes("interview") ? "interview" : signals.lower.includes("shift") ? "shift" : signals.lower.includes("mentor") ? "mentor" : signals.lower.includes("gap") || signals.lower.includes("skills") || signals.lower.includes("readiness") ? "workforce-coach" : "apply-role", "I opened Workforce Advisor support. Nexus will help review skills, pick a role, apply, prepare interview steps, and guide the worker toward placement.", { roleId: firstEligibleRole()?.id });
   }
   if (signals.cropSpoilage || signals.droneReview) {
+    const cropAdvice = advisorCropConditionRecommendation();
     goSection("trade");
     renderLiveVoiceSuggestions(["confirm drone scan", "assign field task", "create irrigation plan", "pest alert"]);
-    return openWorkflowByVoice("trade", signals.cropSpoilage ? "drone-pest" : "drone", "I opened field intelligence. Nexus will check crop stress, water, pest risk, yield, and buyer readiness, then suggest the next field action.", {
+    return openWorkflowByVoice("trade", signals.cropSpoilage ? "drone-pest" : "drone", `${cropAdvice.message} I opened field intelligence so Nexus can create the crop evidence and next field action.`, {
       productId: signals.product?.id,
-      objective: "Check crop stress, spoilage risk, water stress, pest pressure, harvest timing, and next field action."
+      objective: `Advisor recommendation: ${cropAdvice.actions.join("; ")}. Check crop stress, spoilage risk, water stress, pest pressure, harvest timing, and next field action.`
     });
   }
   if (signals.cropCalendar) {
+    const cropAdvice = advisorCropConditionRecommendation();
     goSection("trade");
     renderLiveVoiceSuggestions(["run drone scan", "check route risk", "review trade next step", "create field zone"]);
     setActiveAgentJourney("trade", "advisor", "Crop calendar advisor opened by voice.");
-    setVoiceResponse(`${advisorCropCalendarAdvice(signals)} I can also scan the field or check the route before you plant or harvest.`, true);
+    setVoiceResponse(`${advisorCropCalendarAdvice(signals)} ${cropAdvice.message} I can also scan the field or check the route before you plant or harvest.`, true);
     return true;
   }
   if (signals.mapSupport) {
+    const routeAdvice = advisorLogisticsRecommendation();
     goSection("map");
     renderLiveVoiceSuggestions(["check route risk", "find nearest health facility", "explain the map", "track my route"]);
-    return openWorkflowByVoice("map", signals.lower.includes("facility") || signals.lower.includes("clinic") ? "facility-route" : signals.lower.includes("risk") ? "risk-layer" : "disruption", "I opened Map Advisor support. Nexus will help with route risk, facility access, location context, and the safest next movement.", {});
+    return openWorkflowByVoice("map", signals.lower.includes("facility") || signals.lower.includes("clinic") ? "facility-route" : signals.lower.includes("risk") ? "risk-layer" : "disruption", `${routeAdvice.message} I opened Map Advisor support to help with route risk, facility access, location context, and safest next movement.`, {});
   }
   if (signals.adminSupport) {
     const brief = adminIntelligenceBrief();
@@ -10246,6 +10316,20 @@ async function handleVoiceCommand(rawCommand) {
   }
   if (/\b(voice persona|how will you talk|conversation style|who are you in this mode)\b/.test(lower)) {
     setVoiceResponse(modeSpecificVoicePersona(), true);
+    return;
+  }
+  if (/\b(best|safest|safe|safer|recommend|which)\b.*\b(route|road|logistics|delivery|shipment|corridor)\b/.test(lower)) {
+    const routeAdvice = advisorLogisticsRecommendation();
+    goSection("map");
+    renderLiveVoiceSuggestions(["check route risk", "track my route", "find facility", "explain the map"]);
+    setVoiceResponse(routeAdvice.message, true);
+    return;
+  }
+  if (/\b(what should i do|recommend|suggest|help)\b.*\b(crop|crops|field|harvest|plant|farm)\b/.test(lower) || /\b(crop|crops|field|farm)\b.*\b(bad|going bad|stress|pest|dry|yellow|rot|spoil)\b/.test(lower)) {
+    const cropAdvice = advisorCropConditionRecommendation();
+    goSection("trade");
+    renderLiveVoiceSuggestions(cropAdvice.actions.slice(0, 4));
+    setVoiceResponse(`${cropAdvice.message} I can open drone scan, irrigation, pest alert, or field task now.`, true);
     return;
   }
   if (/\b(mission status|where am i|where are we|workflow status|voice status)\b/.test(lower)) {
