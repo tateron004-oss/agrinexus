@@ -2199,8 +2199,8 @@ function runUserModeSelfTest() {
       if (!simpleUserCommandWorkflow(button.command)) missing.push(`${section}: ${button.label}`);
     });
   });
-  const currentScript = [...document.scripts].some(script => String(script.src || "").includes("nexus-behavior-105"));
-  const currentStyle = [...document.styleSheets].some(sheet => String(sheet.href || "").includes("nexus-behavior-105"));
+  const currentScript = [...document.scripts].some(script => String(script.src || "").includes("nexus-behavior-106"));
+  const currentStyle = [...document.styleSheets].some(sheet => String(sheet.href || "").includes("nexus-behavior-106"));
   if (!currentScript || !currentStyle) missing.push("new app files");
   const ok = missing.length === 0;
   const message = ok
@@ -4115,8 +4115,8 @@ function setAgentFastAcknowledgement(command) {
   agentPerformanceState.lastCommand = cleaned;
   markAgentPerformance("acknowledged", "agentic-router");
   const message = cleaned
-    ? `Heard you, ${userFirstName()}. Nexus is routing that now.`
-    : `I'm listening, ${userFirstName()}.`;
+    ? `I hear you, ${userFirstName()}. Give me a moment and I will help.`
+    : `I'm right here, ${userFirstName()}.`;
   const globalStatus = $("#globalAssistantStatus");
   if (globalStatus) globalStatus.textContent = translateText(message);
   const transcript = $("#voiceTranscript");
@@ -4145,19 +4145,19 @@ function beginAgentNoDeadAir(command) {
   clearAgentProgressTimers();
   const plainCommand = String(command || "your request").trim() || "your request";
   agentProgressTimers = [
-    setTimeout(() => setAgentProgressMessage(`Still working on ${plainCommand}. I am checking the best workflow path now.`), 3200),
-    setTimeout(() => setAgentProgressMessage("The live engine is taking longer than normal. I am keeping the platform responsive and will use the safest local workflow if needed."), 8500),
-    setTimeout(() => setAgentProgressMessage("Still here. You can say stop to interrupt, or wait while Nexus finishes the agent response."), 14000)
+    setTimeout(() => setAgentProgressMessage(`I am still with you. I am checking the safest way to help with ${plainCommand}.`), 3200),
+    setTimeout(() => setAgentProgressMessage("This is taking a little longer. I will keep you moving with the safest available workflow."), 8500),
+    setTimeout(() => setAgentProgressMessage("I am still here. Say stop any time if you want me to pause."), 14000)
   ];
 }
 
 function safeAgentFallbackResponse(command) {
   const text = String(command || "").toLowerCase();
-  if (/health|doctor|provider|clinic|care|telehealth/.test(text)) return "The live agent was slow, so I kept you safe: open Health, start intake, and use provider connection if credentials are live.";
-  if (/job|work|role|shift|workforce/.test(text)) return "The live agent was slow, so use Workforce: find jobs, review gaps, and apply for the matched role.";
-  if (/trade|buyer|crop|maize|route|logistics|drone/.test(text)) return "The live agent was slow, so use Agritrade: contact buyer, create order, run route intelligence, or launch drone support.";
-  if (/learn|course|lesson|training|certificate/.test(text)) return "The live agent was slow, so use Learning: start course, complete lesson, build captions, or issue certificate.";
-  return "The live agent was slow, so I kept the app responsive. Use a module button or ask Nexus again in simpler words.";
+  if (/health|doctor|provider|clinic|care|telehealth/.test(text)) return "The live service is slow, but I can still help. I opened the health path so you can start intake or contact care support.";
+  if (/job|work|role|shift|workforce/.test(text)) return "The live service is slow, but I can still help. I opened work support so you can see roles and start an application.";
+  if (/trade|buyer|crop|maize|route|logistics|drone/.test(text)) return "The live service is slow, but I can still help. I opened trade support so you can work on the buyer, order, route, or drone step.";
+  if (/learn|course|lesson|training|certificate/.test(text)) return "The live service is slow, but I can still help. I opened learning support so you can start the course step.";
+  return "The live service is slow, but you are not stuck. Tell me what you need in simple words and I will guide the next step.";
 }
 
 function isConversationRepairCommand(lower) {
@@ -4586,7 +4586,7 @@ function intuitiveConversationGuide(sectionId = currentSectionId()) {
 
 function intuitiveConversationResponse() {
   const guide = intuitiveConversationGuide();
-  return `${conversationPlatformLabel(guide.mode)} guide: ${guide.reason} Best thing to say now: ${guide.primaryCommand}. Other helpful phrases are ${guide.suggestions.slice(1, 4).join(", ")}.`;
+  return `I can walk with you one step at a time. From here, I would start with: ${guide.primaryCommand}. You can also tell me in your own words what you need.`;
 }
 
 function shouldAddJarvisHandoff(message = "") {
@@ -4601,7 +4601,7 @@ function jarvisHandoffLine(handoffText = "") {
   if (handoffText) return handoffText;
   const guide = intuitiveConversationGuide();
   const phrase = guide.primaryCommand || guide.suggestions[0] || "Nexus, guide me";
-  return `Next, you can say: ${phrase}.`;
+  return `When you are ready, you can say: ${phrase}.`;
 }
 
 function composeJarvisResponse(message, options = {}) {
@@ -4992,9 +4992,9 @@ function recordVoiceEvent(message, status = "progress") {
 
 function modeSpecificVoicePersona() {
   const mode = conversationPlatformMode();
-  if (mode === "admin") return "Admin voice is operational: I will focus on readiness, users, integrations, audit evidence, and production risk.";
-  if (mode === "investor") return "Investor voice is presentation-ready: I will explain impact, proof, workflow evidence, and the next demo step.";
-  return "User voice is simple and patient: I will guide one step at a time with plain language, captions, and readback.";
+  if (mode === "admin") return "I am in admin mode with you. I will keep the system calm, watch readiness, and explain risk in plain language.";
+  if (mode === "investor") return "I am in investor mode with you. I will tell the story clearly, show proof, and keep the next demo step simple.";
+  return "I am here with you. I will go slowly, use plain words, read things back, and help one step at a time.";
 }
 
 function voiceMissionTemplates() {
@@ -5057,7 +5057,7 @@ async function startVoiceMission(command = "") {
   activeVoiceMission = { ...mission, index: 0, startedAt: Date.now(), mode: conversationPlatformMode() };
   recordVoiceEvent(`Mission started: ${mission.label}. First step: ${mission.steps[0].label}.`, "progress");
   pendingAgentClarification = null;
-  setVoiceResponse(`Starting ${mission.label}. I will walk you through: ${mission.steps.map(step => step.label).join(", ")}. Opening the first step now.`, true);
+  setVoiceResponse(`We can do this together. I am starting the ${mission.label} and opening the first step now.`, true);
   await continueVoiceMission();
   return true;
 }
@@ -5123,10 +5123,10 @@ function voiceErrorRecovery(error, command = "") {
   const tool = bestDynamicVoiceTool(command);
   if (tool) {
     pendingAgentClarification = { original: command, options: [{ label: tool.label, section: tool.section || currentSectionId(), command: tool.command || `${tool.workflow} ${tool.action}`, detail: "Retry with the closest registered tool." }] };
-    setVoiceResponse(`That hit a problem: ${message}. I found a related action: ${tool.label}. Say yes to try it, or say cancel.`, true);
+    setVoiceResponse(`That did not go through cleanly, but you are not stuck. I found ${tool.label}. Say yes if you want me to try that, or say stop.`, true);
     return true;
   }
-  setVoiceResponse(`That hit a problem: ${message}. Try saying voice help, what should I do next, or open the service you want.`, true);
+  setVoiceResponse("That did not go through cleanly, but I can still help. Say what you need in simple words, like I need a doctor, I need work, sell my crop, or help me learn.", true);
   return true;
 }
 
@@ -10089,7 +10089,7 @@ async function handleVoiceCommand(rawCommand) {
     setVoiceResponse(`I'm here, ${userFirstName()}. You can call me ${assistantShortName}. Tell me what you need in normal words, like I need a doctor, I want to sell maize, I need a job, or help me learn.`, true);
     return;
   }
-  if (!lower) return setVoiceResponse("Give me a command, and I will route it.", true);
+  if (!lower) return setVoiceResponse("I am listening. Tell me what you need in your own words.", true);
 
   if (isConversationRepairCommand(lower)) {
     handleConversationRepair(command);
@@ -10740,12 +10740,12 @@ async function runBackendAgentCommand(command) {
     if (mode) mode.textContent = `conversation turn ${voiceConversationTurns}`;
     markAgentPerformance("completed", result.intent || "agent-command");
     updateNexusAwareness(command, { silent: true });
-    updateNexusBehaviorLayer("speaking", result.response || "Command completed.");
-    setVoiceResponse(result.response || "Command completed.", true, { handoffText: result.metadata?.turnCoach?.nextQuestion || "" });
+    updateNexusBehaviorLayer("speaking", result.response || "Done. I am ready for your next step.");
+    setVoiceResponse(result.response || "Done. I am ready for your next step.", true, { handoffText: result.metadata?.turnCoach?.nextQuestion || "" });
   } catch (error) {
     clearAgentProgressTimers();
     markAgentPerformance("failed", "agent-command-error");
-    updateNexusBehaviorLayer("ready", "Nexus needs one clearer request.");
+    updateNexusBehaviorLayer("ready", "Nexus is ready to help in simpler words.");
     const message = /timed out|abort/i.test(error.message || "") ? `${error.message} ${safeAgentFallbackResponse(command)}` : (error.message || "Command failed.");
     voiceErrorRecovery(new Error(message), command);
   }

@@ -172,6 +172,9 @@ hasAll(app, [
   "Nexus heard a new request and cleared the old choice",
   "function guideAmbiguousUserWithoutChoice",
   "You do not need perfect words",
+  "I hear you",
+  "We can do this together",
+  "you are not stuck",
   "function moduleUseExplanation",
   "function userDisplayName",
   "roleLike.has(name.toLowerCase())"
@@ -192,8 +195,8 @@ assert(html.includes("nexusBehaviorStatus"), "User voice dock needs an assistant
 assert(html.includes('data-user-voice-action="listen"'), "User voice dock needs a speak action");
 assert(html.includes('data-user-voice-action="type"'), "User voice dock needs a type action");
 assert(html.includes('data-user-voice-action="read"'), "User voice dock needs a read action");
-assert(html.includes("nexus-behavior-105"), "Index must force browsers to load Nexus behavior CSS");
-assert(html.includes("nexus-behavior-105"), "Index must force browsers to load Nexus behavior JS");
+assert(html.includes("nexus-behavior-106"), "Index must force browsers to load Nexus behavior CSS");
+assert(html.includes("nexus-behavior-106"), "Index must force browsers to load Nexus behavior JS");
 assert(app.includes("if (!id) return \"dashboard\";"), "Language changes must survive an empty hash without querying '#'");
 assert(app.includes("document.getElementById(id)?.classList.contains(\"section\")"), "Section hash lookup must avoid invalid CSS selectors during language switching");
 assert(app.includes("I want to sell maize"), "Nexus behavior layer should support natural trade requests without button hunting");
@@ -217,7 +220,7 @@ assert(app.includes("await runDynamicVoiceTool(command)"), "Voice handler must t
 assert(app.includes("I can also discover"), "Voice help should explain dynamic workflow discovery");
 assert(app.includes("function voiceMissionTemplates"), "Advanced voice needs multi-step mission templates");
 assert(app.includes("function isVoiceMissionRequest"), "Advanced voice needs clear mission detection");
-assert(app.includes("Opening the first step now"), "Mission requests should begin the first workflow without extra choice friction");
+assert(app.includes("opening the first step now"), "Mission requests should begin the first workflow without extra choice friction");
 assert(app.includes("\\b(help|assist|walk me through|guide|start|run|i need|i want|please)\\b"), "Mission detection should accept natural help and want phrases");
 assert(app.includes("\\b(help|assist|guide).*\\b(sell|selling)\\b"), "Crop-sale mission should catch help sell my crop phrasing");
 assert(app.includes("function fillWorkflowFieldByVoice"), "Advanced voice needs form filling by speech");
