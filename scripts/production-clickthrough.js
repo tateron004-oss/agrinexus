@@ -133,6 +133,8 @@ const endpoints = [
   "/api/support/ticket",
   "/api/pilot/run",
   "/api/partnership/create",
+  "/api/providers/candidates",
+  "/api/providers/candidates/shortlist",
   "/api/admin/subscriber",
   "/api/admin/test-user",
   "/api/admin/admin-user",
@@ -152,8 +154,14 @@ assert(app.includes("function voiceCommandButton"), "Voice command help buttons 
 assert(app.includes("function normalizeLocalizedVoiceCommand"), "Voice command help must normalize localized spoken commands");
 assert(html.includes("Provider Partnership Command Center"), "Integrations must include a provider partnership command center");
 assert(server.includes("function createProviderPartnership"), "Backend must create provider partnership packets before live vendors are connected");
+assert(server.includes("REAL_PROVIDER_CANDIDATES"), "Backend must include real provider candidates for course, job, telehealth, EHR, trade, drone, logistics, and payment engines");
+assert(server.includes("function providerCandidateCatalog"), "Backend must expose a grouped provider candidate catalog");
+assert(server.includes("function shortlistProviderCandidate"), "Backend must shortlist provider candidates into platform evidence");
 assert(server.includes("provider.partnership_packet_created"), "Provider partnership packets must create audit evidence");
 assert(app.includes("providerPartnershipPanel"), "Frontend must render the latest provider partnership packets");
+assert(app.includes("Provider Candidate Pipeline"), "Frontend must show the real provider candidate pipeline");
+assert(app.includes('workflow === "provider-candidate"'), "Frontend must wire provider candidate buttons to a real shortlist workflow");
+assert(app.includes("/api/providers/candidates/shortlist"), "Frontend must call the provider shortlist endpoint");
 assert(app.includes("activeVoiceAudio"), "Voice playback needs a single active audio guard");
 assert(html.includes("Buyer-Seller Communication Hub"), "AgriTrade needs a buyer-seller communication hub");
 assert(server.includes("function createBuyerSellerMessage"), "Backend needs buyer-seller message thread creation");

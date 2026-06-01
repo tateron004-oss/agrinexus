@@ -7725,16 +7725,36 @@ function render() {
   $("#integrationEvents").innerHTML = (data.profile.integrationEvents || []).length
     ? data.profile.integrationEvents.map(event => `<div><strong>${event.providerName}</strong><span>${event.action} - ${event.status}</span></div>`).join("")
     : "<div>No integration events yet. Run a workflow or test a provider.</div>";
-  $("#providerPartnershipPanel").innerHTML = (data.profile.providerPartnerships || []).length
+  const providerCandidateGroups = data.providerCandidates?.groups || [];
+  const providerPacketHtml = (data.profile.providerPartnerships || []).length
     ? data.profile.providerPartnerships.slice(0, 6).map(packet => `
       <div>
         <strong>${translateText(packet.title)} - ${translateText(packet.status)}</strong>
         <span>${translateText(packet.pilotOffer || packet.useCase || "Partner packet ready")}</span>
         <small>${translateText(`Credentials: ${(packet.requiredCredentials || []).slice(0, 4).join(", ")}`)}</small>
         <small>${translateText(`Next: ${(packet.nextSteps || [])[0] || "Review partner packet"}`)}</small>
+        ${(packet.candidateProviders || []).length ? `<small>${translateText(`Candidate providers: ${packet.candidateProviders.join(", ")}`)}</small>` : ""}
       </div>
     `).join("")
     : `<div>${translateText("No provider partnership packets yet. Create one before contacting a partner.")}</div>`;
+  const providerCandidateHtml = providerCandidateGroups.length
+    ? providerCandidateGroups.map(group => `
+      <div>
+        <strong>${translateText(group.title)} - ${group.runtimeStatus}</strong>
+        <span>${translateText(group.plainLanguage)}</span>
+        <small>${translateText(`${group.readyNow} API-ready candidate(s), ${group.partnershipNeeded} partnership-led candidate(s), ${group.shortlisted} shortlisted`)}</small>
+        <small>${translateText(`Top options: ${(group.topCandidates || []).map(candidate => candidate.name).join(", ")}`)}</small>
+      </div>
+    `).join("")
+    : `<div>${translateText("Provider candidate pipeline is not loaded yet.")}</div>`;
+  $("#providerPartnershipPanel").innerHTML = `
+    ${providerPacketHtml}
+    <div>
+      <strong>${translateText("Provider Candidate Pipeline")}</strong>
+      <span>${translateText("Real course, job, telehealth, EHR, marketplace, drone, logistics, and payment candidates are mapped to the platform engines.")}</span>
+    </div>
+    ${providerCandidateHtml}
+  `;
   renderCommunicationPanel("#providerCommunicationPanel", "Platform", "No provider support thread yet. Message the provider desk to create a two-way operations record.");
 
   $("#environmentPanel").innerHTML = [
@@ -7760,15 +7780,24 @@ function render() {
     },
     {
       eyebrow: "Partnerships",
-      metric: `${(data.profile.providerPartnerships || []).length} packets`,
+      metric: `${data.providerCandidates?.total || 0} candidates`,
       title: "Provider Partner Desk",
-      summary: "Create credible onboarding packets while real vendors, endpoints, and credentials are still being selected.",
+      summary: "Create credible onboarding packets and shortlist real vendors for course catalogs, job networks, telehealth, EHR, trade, drone, logistics, and payments.",
       items: [
-        taskItem("Telehealth partner", "Create provider intake, EHR, callback, and accessibility credential plan.", "ready", "Health", { workflow: "partnership", action: "telehealth" }),
-        taskItem("Workforce partner", "Create job board, employer, calendar, HRIS, and shift provider plan.", "ready", "Jobs", { workflow: "partnership", action: "workforce" }),
-        taskItem("Drone partner", "Create drone operator, field evidence, compliance, and buyer packet plan.", "ready", "Drone", { workflow: "partnership", action: "drone" }),
-        taskItem("Latest packet", (data.profile.providerPartnerships || [])[0]?.title || "No packet yet", (data.profile.providerPartnerships || []).length ? "live" : "pending", "Packet", { workflow: "partnership", action: "telehealth" })
+        taskItem("Course catalog", "Shortlist learning providers and create catalog, progress, and certificate plan.", "ready", "Learn", { workflow: "partnership", action: "learning" }),
+        taskItem("Job network", "Shortlist job providers and create application, interview, HRIS, and shift plan.", "ready", "Jobs", { workflow: "partnership", action: "workforce" }),
+        taskItem("Telehealth/EHR", "Create provider intake, EHR, callback, accessibility, and referral plan.", "ready", "Health", { workflow: "partnership", action: "telehealth" }),
+        taskItem("Marketplace", "Create buyer/seller market, crop order, pricing, payment, and logistics plan.", "ready", "Trade", { workflow: "partnership", action: "trade" }),
+        taskItem("Drone data", "Create drone, satellite, field evidence, crop stress, and buyer packet plan.", "ready", "Drone", { workflow: "partnership", action: "drone" }),
+        taskItem("Logistics/payment", "Create shipment tracking, delivery, checkout, payout, and receipt plan.", "ready", "Pay", { workflow: "partnership", action: "logistics" })
       ]
+    },
+    {
+      eyebrow: "Provider marketplace",
+      metric: `${data.providerCandidates?.readyNow || 0} API-ready`,
+      title: "Real Engine Candidate Pipeline",
+      summary: "Each category has named provider candidates, required keys, next actions, and runtime status before live credentials are connected.",
+      items: providerCandidateGroups.slice(0, 6).map(group => taskItem(group.title, `${group.count} option(s): ${(group.topCandidates || []).map(candidate => candidate.name).slice(0, 3).join(", ")}`, group.readyNow ? "ready" : "pending", `${group.readyNow}/${group.count}`, { workflow: "provider-candidate", action: group.id }))
     },
     {
       eyebrow: "Readiness",
@@ -9370,6 +9399,31 @@ function workflowConfig(workflow, action, element) {
       ]
     });
   }
+  if (workflow === "provider-candidate") {
+    const group = (data.providerCandidates?.groups || []).find(item => item.id === action) || (data.providerCandidates?.groups || [])[0];
+    const candidate = group?.topCandidates?.[0] || group?.candidates?.[0];
+    return simpleWorkflowConfig({
+      eyebrow: "Provider candidate workflow",
+      title: `Shortlist ${candidate?.name || "provider candidate"}`,
+      summary: candidate
+        ? `${candidate.name} is mapped to ${group.title}. Best use: ${candidate.bestUse} Next action: ${candidate.nextAction}`
+        : "Shortlist a real provider candidate and record the next integration step.",
+      confirmLabel: "Shortlist provider",
+      path: "/api/providers/candidates/shortlist",
+      body: { candidateId: candidate?.id || "" },
+      redirectSection: "integrations",
+      success: "Provider candidate shortlisted",
+      record: "Shortlist record, provider status, required credentials, next action, activity feed, and integration audit evidence",
+      provider: candidate
+        ? `${candidate.providerId} slot, ${candidate.apiStatus}, credentials: ${(candidate.credentials || []).join(", ")}`
+        : "Provider slot will be prepared for credentials.",
+      checklist: [
+        { title: "Provider fit", detail: candidate?.bestUse || "Provider candidate will be mapped to platform workflows.", status: "ready", label: "Fit" },
+        { title: "Credential path", detail: (candidate?.credentials || ["Provider credentials"]).join(", "), status: "ready", label: "Keys" },
+        { title: "Next action", detail: candidate?.nextAction || "Review partner and credential requirements.", status: "ready", label: "Next" }
+      ]
+    });
+  }
   if (workflow === "partnership") {
     const partnershipMap = {
       telehealth: {
@@ -9401,6 +9455,21 @@ function workflowConfig(workflow, action, element) {
         title: "Create communications provider packet",
         summary: "Prepare a partner-ready packet for phone assistant, SMS, WhatsApp, email, caregiver alerts, buyer updates, and delivery receipts.",
         provider: "Phone, SMS, WhatsApp, and email provider evidence will be recorded."
+      },
+      ehr: {
+        title: "Create EHR/FHIR provider packet",
+        summary: "Prepare a partner-ready packet for FHIR record handoff, consent, referral evidence, clinical data governance, and provider-system integration.",
+        provider: "EHR/FHIR provider evidence, consent workflow, and clinical handoff readiness will be recorded."
+      },
+      logistics: {
+        title: "Create logistics provider packet",
+        summary: "Prepare a partner-ready packet for shipment quotes, route tracking, delivery evidence, cold-chain checks, and buyer/farmer updates.",
+        provider: "Trade logistics, map, route, and delivery evidence will be recorded."
+      },
+      payments: {
+        title: "Create payment provider packet",
+        summary: "Prepare a partner-ready packet for buyer checkout, mobile money, farmer payout, receipts, and settlement evidence.",
+        provider: "Trade payments and billing provider evidence will be recorded."
       }
     };
     const type = partnershipMap[action] ? action : "telehealth";

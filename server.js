@@ -111,6 +111,417 @@ const BUILT_IN_PROVIDER_DEFINITIONS = [
   }
 ];
 
+const REAL_PROVIDER_CANDIDATES = [
+  {
+    id: "udemy-business",
+    name: "Udemy Business",
+    category: "course-catalog",
+    module: "Learning",
+    providerId: "learning-courses",
+    partnershipType: "learning",
+    region: "Global",
+    website: "https://business.udemy.com/",
+    apiStatus: "enterprise-api",
+    integrationLevel: "catalog-progress-certificates",
+    bestUse: "Large course catalog for digital skills, leadership, agriculture business, and workforce readiness.",
+    credentials: ["LEARNING_COURSES_WEBHOOK_URL", "LEARNING_COURSES_API_KEY", "LEARNING_CERTIFICATES_WEBHOOK_URL"],
+    workflowFit: ["course search", "lesson launch", "progress sync", "certificate evidence"],
+    status: "candidate",
+    nextAction: "Request enterprise catalog/API access and confirm localization options."
+  },
+  {
+    id: "pluralsight-skills",
+    name: "Pluralsight Skills",
+    category: "course-catalog",
+    module: "Learning",
+    providerId: "learning-courses",
+    partnershipType: "learning",
+    region: "Global",
+    website: "https://www.pluralsight.com/product/skills",
+    apiStatus: "enterprise-api",
+    integrationLevel: "skills-assessment-catalog",
+    bestUse: "Technical learning paths, assessments, and workforce skill evidence.",
+    credentials: ["LEARNING_COURSES_WEBHOOK_URL", "LEARNING_COURSES_API_KEY"],
+    workflowFit: ["skill assessment", "learning path", "progress evidence"],
+    status: "candidate",
+    nextAction: "Confirm API access, price tier, and certificate export support."
+  },
+  {
+    id: "ulesson",
+    name: "uLesson",
+    category: "course-catalog",
+    module: "Learning",
+    providerId: "learning-courses",
+    partnershipType: "learning",
+    region: "Africa",
+    website: "https://ulesson.com/",
+    apiStatus: "partnership-needed",
+    integrationLevel: "education-content-partner",
+    bestUse: "Africa-focused learner content and mobile-friendly education support.",
+    credentials: ["LEARNING_COURSES_WEBHOOK_URL", "LEARNING_PROVIDER_API_KEY"],
+    workflowFit: ["mobile lessons", "learner support", "localized content"],
+    status: "candidate",
+    nextAction: "Open content partnership discussion and request partner integration options."
+  },
+  {
+    id: "apijobs",
+    name: "APIJobs",
+    category: "job-network",
+    module: "Workforce",
+    providerId: "workforce-jobs",
+    partnershipType: "workforce",
+    region: "Global",
+    website: "https://apijobs.dev/",
+    apiStatus: "api-available",
+    integrationLevel: "job-feed",
+    bestUse: "Job listings that can populate role search and workforce matching workflows.",
+    credentials: ["WORKFORCE_JOBS_WEBHOOK_URL", "WORKFORCE_JOBS_API_KEY"],
+    workflowFit: ["job search", "role matching", "application tracking"],
+    status: "candidate",
+    nextAction: "Create developer account and test job search endpoint."
+  },
+  {
+    id: "loopcv",
+    name: "LoopCV",
+    category: "job-network",
+    module: "Workforce",
+    providerId: "workforce-jobs",
+    partnershipType: "workforce",
+    region: "Global",
+    website: "https://www.loopcv.pro/developers/",
+    apiStatus: "api-available",
+    integrationLevel: "candidate-automation",
+    bestUse: "Candidate application automation, resume workflow support, and placement evidence.",
+    credentials: ["WORKFORCE_JOBS_WEBHOOK_URL", "WORKFORCE_JOBS_API_KEY"],
+    workflowFit: ["application assist", "interview prep", "placement evidence"],
+    status: "candidate",
+    nextAction: "Request developer access and confirm candidate data rules."
+  },
+  {
+    id: "local-employer-network",
+    name: "Local Employer Network",
+    category: "job-network",
+    module: "Workforce",
+    providerId: "workforce-jobs",
+    partnershipType: "workforce",
+    region: "Country-specific",
+    website: "https://agrinexus.local/provider/local-employer-network",
+    apiStatus: "partner-built",
+    integrationLevel: "employer-intake",
+    bestUse: "Local farms, clinics, NGOs, and logistics teams posting jobs directly into AgriNexus.",
+    credentials: ["WORKFORCE_JOBS_WEBHOOK_URL", "WORKFORCE_HRIS_API_KEY"],
+    workflowFit: ["employer intake", "role approval", "candidate placement"],
+    status: "ready-to-build",
+    nextAction: "Use AgriNexus provider intake form as the first live employer channel."
+  },
+  {
+    id: "ithalamed",
+    name: "IthalaMed",
+    category: "telehealth-provider",
+    module: "Healthcare",
+    providerId: "health-telehealth",
+    partnershipType: "telehealth",
+    region: "Africa",
+    website: "https://ithalamed.com/",
+    apiStatus: "partnership-needed",
+    integrationLevel: "provider-network",
+    bestUse: "Telehealth partner outreach for rural intake, callbacks, and provider handoff.",
+    credentials: ["HEALTH_TELEHEALTH_WEBHOOK_URL", "HEALTH_TELEHEALTH_API_KEY"],
+    workflowFit: ["patient intake", "provider callback", "care handoff"],
+    status: "candidate",
+    nextAction: "Request partner integration details and provider coverage areas."
+  },
+  {
+    id: "sentros",
+    name: "Sentros",
+    category: "telehealth-provider",
+    module: "Healthcare",
+    providerId: "health-telehealth",
+    partnershipType: "telehealth",
+    region: "Africa",
+    website: "https://www.sentros.net/",
+    apiStatus: "partnership-needed",
+    integrationLevel: "telehealth-network",
+    bestUse: "Low-bandwidth clinical access, provider coordination, and rural care workflows.",
+    credentials: ["HEALTH_TELEHEALTH_WEBHOOK_URL", "HEALTH_NOTIFICATION_API_KEY"],
+    workflowFit: ["provider search", "care request", "follow-up alerts"],
+    status: "candidate",
+    nextAction: "Confirm supported countries, licensing, and callback process."
+  },
+  {
+    id: "recomed",
+    name: "RecoMed",
+    category: "telehealth-provider",
+    module: "Healthcare",
+    providerId: "health-telehealth",
+    partnershipType: "telehealth",
+    region: "Africa",
+    website: "https://www.recomed.co.za/",
+    apiStatus: "partnership-needed",
+    integrationLevel: "appointment-network",
+    bestUse: "Provider booking and referral workflow model for telehealth appointment routing.",
+    credentials: ["HEALTH_TELEHEALTH_WEBHOOK_URL", "HEALTH_TELEHEALTH_API_KEY"],
+    workflowFit: ["provider booking", "appointment request", "referral evidence"],
+    status: "candidate",
+    nextAction: "Ask about referral API, appointment callbacks, and partner sandbox."
+  },
+  {
+    id: "google-cloud-healthcare-api",
+    name: "Google Cloud Healthcare API",
+    category: "ehr-fhir",
+    module: "Healthcare",
+    providerId: "health-ehr",
+    partnershipType: "ehr",
+    region: "Global",
+    website: "https://cloud.google.com/healthcare-api",
+    apiStatus: "api-available",
+    integrationLevel: "fhir-store",
+    bestUse: "FHIR-ready patient handoff, consented health records, and clinical data exchange.",
+    credentials: ["HEALTH_EHR_WEBHOOK_URL", "HEALTH_EHR_API_KEY"],
+    workflowFit: ["FHIR handoff", "consent evidence", "care record sync"],
+    status: "candidate",
+    nextAction: "Create cloud project and define FHIR consent/security model."
+  },
+  {
+    id: "azure-health-data-services",
+    name: "Azure Health Data Services",
+    category: "ehr-fhir",
+    module: "Healthcare",
+    providerId: "health-ehr",
+    partnershipType: "ehr",
+    region: "Global",
+    website: "https://azure.microsoft.com/en-us/products/health-data-services",
+    apiStatus: "api-available",
+    integrationLevel: "fhir-dicom-medtech",
+    bestUse: "FHIR and health data interoperability for regulated healthcare partners.",
+    credentials: ["HEALTH_EHR_WEBHOOK_URL", "HEALTH_EHR_API_KEY"],
+    workflowFit: ["FHIR sync", "provider record", "health data governance"],
+    status: "candidate",
+    nextAction: "Create sandbox workspace and configure FHIR endpoint permissions."
+  },
+  {
+    id: "oracle-cerner-fhir",
+    name: "Oracle Cerner FHIR APIs",
+    category: "ehr-fhir",
+    module: "Healthcare",
+    providerId: "health-ehr",
+    partnershipType: "ehr",
+    region: "Global",
+    website: "https://docs.oracle.com/en/industries/health/millennium-platform-apis/",
+    apiStatus: "tenant-needed",
+    integrationLevel: "ehr-system",
+    bestUse: "Hospital or clinic system handoff when a formal EHR partner is present.",
+    credentials: ["HEALTH_EHR_WEBHOOK_URL", "HEALTH_EHR_API_KEY"],
+    workflowFit: ["clinical referral", "provider record", "care audit"],
+    status: "candidate",
+    nextAction: "Use only after a clinic or hospital partner grants EHR access."
+  },
+  {
+    id: "useri",
+    name: "Useri",
+    category: "buyer-marketplace",
+    module: "AgriTrade",
+    providerId: "trade-market",
+    partnershipType: "trade",
+    region: "Africa",
+    website: "https://useriapp.com/",
+    apiStatus: "partnership-needed",
+    integrationLevel: "buyer-seller-network",
+    bestUse: "Farmer-to-buyer crop offers, buyer communication, and sales evidence.",
+    credentials: ["TRADE_MARKET_WEBHOOK_URL", "TRADE_MARKET_API_KEY"],
+    workflowFit: ["crop listing", "buyer match", "sale tracking"],
+    status: "candidate",
+    nextAction: "Request marketplace partner API and buyer coverage details."
+  },
+  {
+    id: "furaha",
+    name: "Furaha",
+    category: "buyer-marketplace",
+    module: "AgriTrade",
+    providerId: "trade-market",
+    partnershipType: "trade",
+    region: "Africa",
+    website: "https://www.furaha.farm/",
+    apiStatus: "partnership-needed",
+    integrationLevel: "farm-marketplace",
+    bestUse: "Crop sale workflow, farmer marketplace participation, and buyer updates.",
+    credentials: ["TRADE_MARKET_WEBHOOK_URL", "TRADE_MARKET_API_KEY"],
+    workflowFit: ["sell crop", "buyer chat", "market evidence"],
+    status: "candidate",
+    nextAction: "Confirm partner intake, buyer data access, and message channels."
+  },
+  {
+    id: "nile-ag",
+    name: "Nile.ag",
+    category: "buyer-marketplace",
+    module: "AgriTrade",
+    providerId: "trade-market",
+    partnershipType: "trade",
+    region: "Africa",
+    website: "https://www.nile.ag/",
+    apiStatus: "partnership-needed",
+    integrationLevel: "ag-marketplace",
+    bestUse: "African buyer/seller market access and trade evidence.",
+    credentials: ["TRADE_MARKET_WEBHOOK_URL", "TRADE_MARKET_API_KEY"],
+    workflowFit: ["buyer matching", "order creation", "market pricing"],
+    status: "candidate",
+    nextAction: "Request partner channel and determine available crop/order data."
+  },
+  {
+    id: "zowasel",
+    name: "Zowasel",
+    category: "buyer-marketplace",
+    module: "AgriTrade",
+    providerId: "trade-market",
+    partnershipType: "trade",
+    region: "Africa",
+    website: "https://zowasel.com/",
+    apiStatus: "partnership-needed",
+    integrationLevel: "commodity-marketplace",
+    bestUse: "Structured commodity trading, quality evidence, and buyer readiness.",
+    credentials: ["TRADE_MARKET_WEBHOOK_URL", "TRADE_MARKET_API_KEY"],
+    workflowFit: ["quality packet", "buyer offer", "trade evidence"],
+    status: "candidate",
+    nextAction: "Open partnership conversation for API or seller onboarding path."
+  },
+  {
+    id: "eosda",
+    name: "EOSDA Crop Monitoring",
+    category: "drone-data",
+    module: "AgriTrade",
+    providerId: "field-drones",
+    partnershipType: "drone",
+    region: "Global",
+    website: "https://eos.com/agriculture-api/",
+    apiStatus: "api-available",
+    integrationLevel: "satellite-crop-intelligence",
+    bestUse: "Crop stress, vegetation index, field risk, and farmer guidance.",
+    credentials: ["FIELD_DRONE_DATA_URL", "DRONE_PROVIDER_API_KEY"],
+    workflowFit: ["run scan", "field advice", "buyer evidence"],
+    status: "candidate",
+    nextAction: "Create API account and test field boundary/crop index endpoint."
+  },
+  {
+    id: "leaf-agriculture",
+    name: "Leaf Agriculture",
+    category: "drone-data",
+    module: "AgriTrade",
+    providerId: "field-drones",
+    partnershipType: "drone",
+    region: "Global",
+    website: "https://www.buildwithleaf.com/",
+    apiStatus: "api-available",
+    integrationLevel: "farm-data-api",
+    bestUse: "Farm data integrations, equipment data, field records, and agronomic evidence.",
+    credentials: ["FIELD_DRONE_DATA_URL", "DRONE_PROVIDER_API_KEY"],
+    workflowFit: ["field records", "machine data", "farm evidence"],
+    status: "candidate",
+    nextAction: "Request developer access and confirm supported data sources."
+  },
+  {
+    id: "sentinel-hub",
+    name: "Sentinel Hub",
+    category: "drone-data",
+    module: "AgriTrade",
+    providerId: "field-drones",
+    partnershipType: "drone",
+    region: "Global",
+    website: "https://www.sentinel-hub.com/develop/api/",
+    apiStatus: "api-available",
+    integrationLevel: "satellite-imagery-api",
+    bestUse: "Satellite imagery, vegetation monitoring, field overlays, and map intelligence.",
+    credentials: ["FIELD_DRONE_DATA_URL", "MAP_TILE_URL", "DRONE_PROVIDER_API_KEY"],
+    workflowFit: ["field map", "scan overlay", "risk layer"],
+    status: "candidate",
+    nextAction: "Create developer account and test imagery tile access."
+  },
+  {
+    id: "terminal-africa",
+    name: "Terminal Africa",
+    category: "logistics-payment",
+    module: "AgriTrade",
+    providerId: "trade-logistics",
+    partnershipType: "logistics",
+    region: "Africa",
+    website: "https://www.terminal.africa/tship-api",
+    apiStatus: "api-available",
+    integrationLevel: "shipping-logistics-api",
+    bestUse: "Shipment rates, package tracking, route evidence, and delivery updates.",
+    credentials: ["TRADE_LOGISTICS_WEBHOOK_URL", "TRADE_LOGISTICS_API_KEY"],
+    workflowFit: ["track route", "shipment quote", "delivery evidence"],
+    status: "candidate",
+    nextAction: "Create developer account and test shipment tracking endpoint."
+  },
+  {
+    id: "flutterwave",
+    name: "Flutterwave",
+    category: "logistics-payment",
+    module: "AgriTrade",
+    providerId: "trade-payments",
+    partnershipType: "payments",
+    region: "Africa",
+    website: "https://developer.flutterwave.com/",
+    apiStatus: "api-available",
+    integrationLevel: "payments-api",
+    bestUse: "Buyer payments, wallet flow, payout evidence, and marketplace settlement.",
+    credentials: ["TRADE_PAYMENT_API_KEY", "BILLING_PROVIDER_API_KEY"],
+    workflowFit: ["payment intent", "buyer checkout", "payout evidence"],
+    status: "candidate",
+    nextAction: "Create sandbox account and decide escrow/payout policy."
+  },
+  {
+    id: "paystack",
+    name: "Paystack",
+    category: "logistics-payment",
+    module: "AgriTrade",
+    providerId: "trade-payments",
+    partnershipType: "payments",
+    region: "Africa",
+    website: "https://paystack.com/docs/",
+    apiStatus: "api-available",
+    integrationLevel: "payments-api",
+    bestUse: "Card, transfer, and local payment workflows for buyer/seller transactions.",
+    credentials: ["TRADE_PAYMENT_API_KEY", "BILLING_PROVIDER_API_KEY"],
+    workflowFit: ["checkout", "payment verification", "receipt evidence"],
+    status: "candidate",
+    nextAction: "Create sandbox account and test payment verification endpoint."
+  },
+  {
+    id: "pawapay",
+    name: "PawaPay",
+    category: "logistics-payment",
+    module: "AgriTrade",
+    providerId: "trade-payments",
+    partnershipType: "payments",
+    region: "Africa",
+    website: "https://www.pawapay.io/",
+    apiStatus: "api-available",
+    integrationLevel: "mobile-money-api",
+    bestUse: "Mobile money collection and payout workflows across African markets.",
+    credentials: ["TRADE_PAYMENT_API_KEY", "BILLING_PROVIDER_API_KEY"],
+    workflowFit: ["mobile money", "farmer payout", "payment receipt"],
+    status: "candidate",
+    nextAction: "Request sandbox credentials and confirm country coverage."
+  },
+  {
+    id: "bunipay",
+    name: "Bunipay",
+    category: "logistics-payment",
+    module: "AgriTrade",
+    providerId: "trade-payments",
+    partnershipType: "payments",
+    region: "Africa",
+    website: "https://bunipay.com/",
+    apiStatus: "partnership-needed",
+    integrationLevel: "payments-partner",
+    bestUse: "Alternative regional payment and settlement conversations.",
+    credentials: ["TRADE_PAYMENT_API_KEY"],
+    workflowFit: ["payment partner", "wallet settlement", "receipt evidence"],
+    status: "candidate",
+    nextAction: "Contact partnership team and verify API availability."
+  }
+];
+
 const mime = {
   ".html": "text/html; charset=utf-8",
   ".css": "text/css; charset=utf-8",
@@ -801,6 +1212,7 @@ function noVendorUpgradeTenPack(db, user, providers = runtimeProviders(db), opti
 function publicState(db, user) {
   const providers = runtimeProviders(db);
   ensureOperationsProfile(db.profile);
+  const providerCandidates = providerCandidateCatalog(db, providers);
   const agentCapabilities = agentCapabilityRegistryState(db, providers);
   const jarvisReadiness = jarvisReadinessModel(db, user, providers);
   return {
@@ -814,6 +1226,7 @@ function publicState(db, user) {
     roles: db.roles,
     products: db.products || [],
     providers,
+    providerCandidates,
     capabilities: capabilityMatrix(db, providers),
     intelligentAssistant: intelligentAssistantModel(db, user, providers),
     behaviorModel: assistantBehaviorModel(db, user),
@@ -4536,9 +4949,177 @@ function ensureOperationsProfile(profile) {
   profile.workflowIntelligence = profile.workflowIntelligence || [];
   profile.providerPartnerships = profile.providerPartnerships || [];
   profile.providerOutreach = profile.providerOutreach || [];
+  profile.providerShortlist = profile.providerShortlist || [];
+}
+
+function providerCandidateGroups() {
+  return [
+    {
+      id: "course-catalog",
+      title: "Real course provider catalog",
+      module: "Learning",
+      partnershipType: "learning",
+      providerId: "learning-courses",
+      plainLanguage: "Connects real courses, lessons, progress, and certificates."
+    },
+    {
+      id: "job-network",
+      title: "Real job network",
+      module: "Workforce",
+      partnershipType: "workforce",
+      providerId: "workforce-jobs",
+      plainLanguage: "Connects real jobs, applications, interview steps, and placement evidence."
+    },
+    {
+      id: "telehealth-provider",
+      title: "Real telehealth/provider partnerships",
+      module: "Healthcare",
+      partnershipType: "telehealth",
+      providerId: "health-telehealth",
+      plainLanguage: "Connects provider access, intake, callback, and care handoff workflows."
+    },
+    {
+      id: "ehr-fhir",
+      title: "Real EHR/FHIR connection",
+      module: "Healthcare",
+      partnershipType: "ehr",
+      providerId: "health-ehr",
+      plainLanguage: "Connects consented health records and provider system handoffs."
+    },
+    {
+      id: "buyer-marketplace",
+      title: "Real buyer/seller marketplace",
+      module: "AgriTrade",
+      partnershipType: "trade",
+      providerId: "trade-market",
+      plainLanguage: "Connects farmer crop offers, buyers, orders, and sale evidence."
+    },
+    {
+      id: "drone-data",
+      title: "Real drone vendor/data feeds",
+      module: "AgriTrade",
+      partnershipType: "drone",
+      providerId: "field-drones",
+      plainLanguage: "Connects crop scans, satellite/drone evidence, and farmer field advice."
+    },
+    {
+      id: "logistics-payment",
+      title: "Real logistics/payment providers",
+      module: "AgriTrade",
+      partnershipType: "logistics",
+      providerId: "trade-logistics",
+      plainLanguage: "Connects shipment tracking, delivery evidence, buyer payment, and payouts."
+    }
+  ];
+}
+
+function providerCandidateCatalog(db, providers = runtimeProviders(db)) {
+  ensureOperationsProfile(db.profile);
+  const runtimeById = Object.fromEntries(providers.map(provider => [provider.id, provider]));
+  const shortlistById = Object.fromEntries((db.profile.providerShortlist || []).map(item => [item.candidateId, item]));
+  const packetsByType = {};
+  for (const packet of db.profile.providerPartnerships || []) {
+    if (!packetsByType[packet.type]) packetsByType[packet.type] = packet;
+  }
+  const candidates = REAL_PROVIDER_CANDIDATES.map(candidate => {
+    const runtime = runtimeById[candidate.providerId] || {};
+    const packet = packetsByType[candidate.partnershipType];
+    const shortlisted = shortlistById[candidate.id];
+    const apiReady = ["api-available", "enterprise-api"].includes(candidate.apiStatus);
+    return {
+      ...candidate,
+      runtimeStatus: runtime.status || "needs-provider-selection",
+      runtimeMode: runtime.mode || "candidate",
+      runtimeDetail: runtime.detail || "Provider slot is ready; choose vendor credentials or partnership.",
+      apiReady,
+      shortlisted: Boolean(shortlisted),
+      shortlistStatus: shortlisted?.status || "not-shortlisted",
+      packetStatus: packet?.status || "not-started",
+      packetId: packet?.id || null,
+      readiness: runtime.status === "connected" ? "connected" : apiReady ? "ready-for-credentials" : "partnership-needed"
+    };
+  });
+  const groups = providerCandidateGroups().map(group => {
+    const groupCandidates = candidates.filter(candidate => candidate.category === group.id);
+    const topCandidates = groupCandidates.slice(0, 4);
+    return {
+      ...group,
+      count: groupCandidates.length,
+      readyNow: groupCandidates.filter(candidate => candidate.apiReady).length,
+      partnershipNeeded: groupCandidates.filter(candidate => !candidate.apiReady).length,
+      shortlisted: groupCandidates.filter(candidate => candidate.shortlisted).length,
+      runtimeStatus: runtimeById[group.providerId]?.status || "needs-provider-selection",
+      runtimeMode: runtimeById[group.providerId]?.mode || "candidate",
+      topCandidates,
+      candidates: groupCandidates
+    };
+  });
+  return {
+    total: candidates.length,
+    readyNow: candidates.filter(candidate => candidate.apiReady).length,
+    partnershipNeeded: candidates.filter(candidate => !candidate.apiReady).length,
+    shortlisted: candidates.filter(candidate => candidate.shortlisted).length,
+    groups,
+    candidates,
+    nextBestActions: [
+      "Shortlist one provider per category.",
+      "Create partner packets for the shortlisted categories.",
+      "Add vendor URLs/API keys in Render when credentials are approved.",
+      "Run live service check after each provider is connected."
+    ]
+  };
+}
+
+function shortlistProviderCandidate(db, user, candidateId) {
+  ensureOperationsProfile(db.profile);
+  const catalog = providerCandidateCatalog(db);
+  const candidate = catalog.candidates.find(item => item.id === candidateId);
+  if (!candidate) return null;
+  const now = new Date().toISOString();
+  let record = db.profile.providerShortlist.find(item => item.candidateId === candidate.id);
+  if (!record) {
+    record = {
+      id: crypto.randomUUID(),
+      candidateId: candidate.id,
+      name: candidate.name,
+      category: candidate.category,
+      module: candidate.module,
+      providerId: candidate.providerId,
+      partnershipType: candidate.partnershipType,
+      website: candidate.website,
+      status: "shortlisted",
+      nextAction: candidate.nextAction,
+      createdBy: user.email,
+      createdAt: now,
+      updatedAt: now
+    };
+    db.profile.providerShortlist.unshift(record);
+  } else {
+    record.status = "shortlisted";
+    record.nextAction = candidate.nextAction;
+    record.updatedAt = now;
+  }
+  db.profile.providerShortlist = db.profile.providerShortlist.slice(0, 50);
+  logIntegration(db, {
+    providerId: candidate.providerId,
+    module: candidate.module,
+    action: "provider.candidate_shortlisted",
+    detail: `${candidate.name} shortlisted for ${candidate.module}: ${candidate.bestUse}`,
+    metadata: { candidateId: candidate.id, category: candidate.category, website: candidate.website, credentials: candidate.credentials },
+    dispatch: false
+  });
+  addUsageEvent(db.profile, { module: "Integrations", action: "provider.candidate_shortlisted", detail: candidate.name, user: user.email });
+  addActivity(db.profile, `${candidate.name} shortlisted as a real ${candidate.module} provider candidate.`);
+  return record;
 }
 
 function providerPartnershipCatalog(type = "telehealth") {
+  const groups = providerCandidateGroups();
+  const groupByPartnership = Object.fromEntries(groups.map(group => [group.partnershipType, group]));
+  const candidateNames = partnershipType => REAL_PROVIDER_CANDIDATES
+    .filter(candidate => candidate.partnershipType === partnershipType)
+    .slice(0, 5)
+    .map(candidate => candidate.name);
   const catalog = {
     telehealth: {
       title: "Telehealth provider partnership",
@@ -4548,7 +5129,19 @@ function providerPartnershipCatalog(type = "telehealth") {
       requiredCredentials: ["HEALTH_TELEHEALTH_WEBHOOK_URL", "HEALTH_TELEHEALTH_API_KEY", "HEALTH_EHR_WEBHOOK_URL", "HEALTH_NOTIFICATION_API_KEY"],
       pilotOffer: "Run a supervised 25-patient rural access pilot with voice intake, accessibility support, and provider audit evidence.",
       nextSteps: ["Identify licensed care partner", "Confirm privacy and consent workflow", "Connect webhook endpoint", "Run sandbox patient intake", "Review care evidence pack"],
-      sampleQuestions: ["Can your team receive structured telehealth referrals?", "Do you support low-bandwidth callbacks?", "Can we send accessibility and language needs in the referral?"]
+      sampleQuestions: ["Can your team receive structured telehealth referrals?", "Do you support low-bandwidth callbacks?", "Can we send accessibility and language needs in the referral?"],
+      candidateProviders: candidateNames("telehealth")
+    },
+    ehr: {
+      title: "EHR/FHIR provider partnership",
+      module: "Healthcare",
+      providerId: "health-ehr",
+      useCase: "FHIR-ready record handoff, consent, referral evidence, provider notes, and regulated clinical data exchange.",
+      requiredCredentials: ["HEALTH_EHR_WEBHOOK_URL", "HEALTH_EHR_API_KEY", "HEALTH_TELEHEALTH_WEBHOOK_URL"],
+      pilotOffer: "Run a consented patient-record handoff pilot with FHIR-ready payloads and provider review evidence.",
+      nextSteps: ["Choose FHIR/EHR vendor or clinic partner", "Confirm consent and privacy rules", "Create sandbox FHIR endpoint", "Send sample referral bundle", "Review audit trail"],
+      sampleQuestions: ["Which FHIR resources do you support?", "How do patients consent to record sharing?", "Can provider notes return to AgriNexus?"],
+      candidateProviders: candidateNames("ehr")
     },
     workforce: {
       title: "Workforce and job network partnership",
@@ -4558,7 +5151,8 @@ function providerPartnershipCatalog(type = "telehealth") {
       requiredCredentials: ["WORKFORCE_JOBS_WEBHOOK_URL", "WORKFORCE_JOBS_API_KEY", "WORKFORCE_CALENDAR_WEBHOOK_URL", "WORKFORCE_HRIS_API_KEY"],
       pilotOffer: "Run a 50-candidate placement pilot from learning readiness into job application, interview, mentor, and shift evidence.",
       nextSteps: ["Choose employer or job-board partner", "Map role data fields", "Connect application endpoint", "Run candidate readiness test", "Review placement dashboard"],
-      sampleQuestions: ["Can we submit candidate profiles through API?", "Can interview and shift status return to AgriNexus?", "What fields are required for rural candidates?"]
+      sampleQuestions: ["Can we submit candidate profiles through API?", "Can interview and shift status return to AgriNexus?", "What fields are required for rural candidates?"],
+      candidateProviders: candidateNames("workforce")
     },
     learning: {
       title: "Learning catalog partnership",
@@ -4568,7 +5162,8 @@ function providerPartnershipCatalog(type = "telehealth") {
       requiredCredentials: ["LEARNING_COURSES_WEBHOOK_URL", "LEARNING_COURSES_API_KEY", "LEARNING_CERTIFICATES_WEBHOOK_URL", "LEARNING_CERTIFICATES_API_KEY"],
       pilotOffer: "Run a 100-learner pilot with offline-ready lessons, captions, audio guides, certificates, and workforce handoff.",
       nextSteps: ["Select LMS/course provider", "Map course and certificate schema", "Connect catalog endpoint", "Test lesson completion", "Issue sample certificate"],
-      sampleQuestions: ["Can course content be localized?", "Can certificates be verified externally?", "Can learner progress sync back to AgriNexus?"]
+      sampleQuestions: ["Can course content be localized?", "Can certificates be verified externally?", "Can learner progress sync back to AgriNexus?"],
+      candidateProviders: candidateNames("learning")
     },
     drone: {
       title: "Drone and field intelligence partnership",
@@ -4578,7 +5173,8 @@ function providerPartnershipCatalog(type = "telehealth") {
       requiredCredentials: ["DRONE_PROVIDER_WEBHOOK_URL", "DRONE_PROVIDER_API_KEY", "FIELD_DRONE_DATA_URL", "MAP_TILE_URL"],
       pilotOffer: "Run a 10-farm drone intelligence pilot that turns aerial evidence into trade, route, and buyer-confidence decisions.",
       nextSteps: ["Choose licensed drone operator", "Confirm flight and data rules", "Connect field evidence endpoint", "Run sample crop scan", "Generate buyer evidence packet"],
-      sampleQuestions: ["Can drone findings be returned as structured field evidence?", "What flight permissions are needed?", "Can imagery support buyer quality checks?"]
+      sampleQuestions: ["Can drone findings be returned as structured field evidence?", "What flight permissions are needed?", "Can imagery support buyer quality checks?"],
+      candidateProviders: candidateNames("drone")
     },
     trade: {
       title: "AgriTrade buyer, market, logistics, and payment partnership",
@@ -4588,7 +5184,30 @@ function providerPartnershipCatalog(type = "telehealth") {
       requiredCredentials: ["TRADE_MARKET_WEBHOOK_URL", "TRADE_MARKET_API_KEY", "TRADE_LOGISTICS_WEBHOOK_URL", "TRADE_PAYMENT_API_KEY"],
       pilotOffer: "Run a crop-to-buyer pilot with order creation, route risk, buyer updates, payment evidence, and logistics handoff.",
       nextSteps: ["Identify buyer network or marketplace", "Map crop and order fields", "Connect logistics endpoint", "Test buyer communication", "Review payment release flow"],
-      sampleQuestions: ["Can buyers receive structured crop offers?", "Can logistics status sync back?", "Can payment confirmations be recorded safely?"]
+      sampleQuestions: ["Can buyers receive structured crop offers?", "Can logistics status sync back?", "Can payment confirmations be recorded safely?"],
+      candidateProviders: candidateNames("trade")
+    },
+    logistics: {
+      title: "Logistics provider partnership",
+      module: "AgriTrade",
+      providerId: "trade-logistics",
+      useCase: "Shipment quotes, route status, delivery evidence, cold-chain checks, buyer updates, and farmer-facing tracking maps.",
+      requiredCredentials: ["TRADE_LOGISTICS_WEBHOOK_URL", "TRADE_LOGISTICS_API_KEY", "MAP_TILE_URL"],
+      pilotOffer: "Run a shipment-tracking pilot that lets farmers and buyers see route status, delivery risk, and confirmation evidence.",
+      nextSteps: ["Choose logistics provider", "Map package and route fields", "Connect tracking endpoint", "Test buyer/farmer updates", "Review delivery evidence"],
+      sampleQuestions: ["Can route status return by API?", "Can delivery photos or signatures be attached?", "What countries and carriers are supported?"],
+      candidateProviders: candidateNames("logistics")
+    },
+    payments: {
+      title: "Payment provider partnership",
+      module: "AgriTrade",
+      providerId: "trade-payments",
+      useCase: "Buyer checkout, mobile money, farmer payout, receipts, transaction evidence, and settlement readiness.",
+      requiredCredentials: ["TRADE_PAYMENT_API_KEY", "BILLING_PROVIDER_API_KEY", "BILLING_PRICE_ID"],
+      pilotOffer: "Run a sandbox buyer-payment flow with receipt evidence and farmer payout readiness.",
+      nextSteps: ["Choose payment provider", "Create sandbox keys", "Define escrow and payout policy", "Test payment verification", "Review transaction evidence"],
+      sampleQuestions: ["Which payment methods work in-country?", "Can payouts go to mobile money?", "How are refunds and disputes handled?"],
+      candidateProviders: candidateNames("payments")
     },
     communications: {
       title: "Communications provider partnership",
@@ -4601,6 +5220,14 @@ function providerPartnershipCatalog(type = "telehealth") {
       sampleQuestions: ["Which channels are approved in-country?", "Can inbound voice calls hit AgriNexus?", "Can delivery receipts be returned?"]
     }
   };
+  if (groupByPartnership[type] && !catalog[type]) return catalog[groupByPartnership[type].partnershipType] || catalog.telehealth;
+  if (type === "course-catalog") return catalog.learning;
+  if (type === "job-network") return catalog.workforce;
+  if (type === "telehealth-provider") return catalog.telehealth;
+  if (type === "ehr-fhir") return catalog.ehr;
+  if (type === "buyer-marketplace") return catalog.trade;
+  if (type === "drone-data") return catalog.drone;
+  if (type === "logistics-payment") return catalog.logistics;
   return catalog[type] || catalog.telehealth;
 }
 
@@ -4619,6 +5246,7 @@ function createProviderPartnership(db, user, type = "telehealth", note = "") {
     requiredCredentials: plan.requiredCredentials,
     nextSteps: plan.nextSteps,
     sampleQuestions: plan.sampleQuestions,
+    candidateProviders: plan.candidateProviders || [],
     note,
     createdBy: user.email,
     createdAt: new Date().toISOString()
@@ -10728,6 +11356,22 @@ async function api(req, res, url) {
     addActivity(db.profile, detail);
     await writeDb(db);
     return send(res, 200, publicState(db, user));
+  }
+
+  if (url.pathname === "/api/providers/candidates" && req.method === "GET") {
+    if (!canUse(user, "integrations")) return send(res, 403, { error: "Role does not allow provider candidate review" });
+    return send(res, 200, providerCandidateCatalog(db, runtimeProviders(db)));
+  }
+
+  if (url.pathname === "/api/providers/candidates/shortlist" && req.method === "POST") {
+    if (!canUse(user, "integrations")) return send(res, 403, { error: "Role does not allow provider candidate shortlisting" });
+    const body = await readBody(req);
+    const shortlist = shortlistProviderCandidate(db, user, String(body.candidateId || ""));
+    if (!shortlist) return send(res, 404, { error: "Provider candidate not found" });
+    await writeDb(db);
+    const state = publicState(db, user);
+    state.providerCandidateShortlistResult = shortlist;
+    return send(res, 200, state);
   }
 
   if (url.pathname === "/api/partnership/create" && req.method === "POST") {
