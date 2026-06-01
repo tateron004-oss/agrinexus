@@ -634,6 +634,23 @@ async function call(path, body) {
   assert(guidedWorkAnswer.commandResult.intent === "conversation.clarification_resolved");
   assert(guidedWorkAnswer.commandResult.metadata.clarification.selectedTool === "workforce.apply_role");
   if (guidedWorkAnswer.profile.agentPendingAction) await call("/api/agent/command", { command: "no", conversational: true, inputMode: "voice", outputMode: "voice" });
+  const farmerGuide = await call("/api/agent/command", { command: "Nexus, guide the farmer", conversational: true, inputMode: "voice", outputMode: "voice" });
+  assert(farmerGuide.commandResult.intent === "conversation.role_guidance");
+  assert(farmerGuide.commandResult.metadata.roleGuide.persona === "farmer");
+  assert(farmerGuide.commandResult.metadata.roleGuide.path.includes("run drone or field scan"));
+  const patientGuide = await call("/api/agent/command", { command: "Nexus, support the patient", conversational: true, inputMode: "voice", outputMode: "voice" });
+  assert(patientGuide.commandResult.intent === "conversation.role_guidance");
+  assert(patientGuide.commandResult.metadata.roleGuide.persona === "patient");
+  assert(patientGuide.commandResult.response.includes("safe intake"));
+  const workerGuide = await call("/api/agent/command", { command: "Nexus, coach the worker", conversational: true, inputMode: "voice", outputMode: "voice" });
+  assert(workerGuide.commandResult.intent === "conversation.role_guidance");
+  assert(workerGuide.commandResult.metadata.roleGuide.persona === "worker");
+  const studentGuide = await call("/api/agent/command", { command: "Nexus, guide the student", conversational: true, inputMode: "voice", outputMode: "voice" });
+  assert(studentGuide.commandResult.intent === "conversation.role_guidance");
+  assert(studentGuide.commandResult.metadata.roleGuide.persona === "student");
+  const learnerGuide = await call("/api/agent/command", { command: "Nexus, guide the learner", conversational: true, inputMode: "voice", outputMode: "voice" });
+  assert(learnerGuide.commandResult.intent === "conversation.role_guidance");
+  assert(learnerGuide.commandResult.metadata.roleGuide.persona === "learner");
   const voiceMission = await call("/api/agent/command", { command: "help this farmer sell maize safely from start to finish", conversational: true, inputMode: "voice", outputMode: "voice" });
   assert(["conversation.pending_action", "conversation.clarification_started"].includes(voiceMission.commandResult.intent));
   if (voiceMission.commandResult.intent === "conversation.pending_action") {

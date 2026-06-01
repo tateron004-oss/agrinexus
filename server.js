@@ -7576,6 +7576,127 @@ async function buildConversationalGuideResponse(db, user, text) {
   }
 }
 
+function roleGuidanceTarget(text = "") {
+  const lower = String(text || "").toLowerCase();
+  if (/\b(farmer|farm|field|crop|producer|seller)\b/.test(lower)) return "farmer";
+  if (/\b(patient|caregiver|health user|sick|injury|telehealth)\b/.test(lower)) return "patient";
+  if (/\b(worker|job seeker|workforce|candidate|employee|laborer)\b/.test(lower)) return "worker";
+  if (/\b(student|school|classroom|study)\b/.test(lower)) return "student";
+  if (/\b(learner|trainee|training user|course user)\b/.test(lower)) return "learner";
+  return "";
+}
+
+function roleGuidancePlan(db, user, target = "farmer") {
+  const { country, route } = activeContext(db);
+  const course = (db.courses || []).find(item => item.id === db.profile.activeCourseId) || (db.courses || [])[0];
+  const role = (db.roles || []).find(item => roleReadiness(db.profile, item).eligible) || (db.roles || [])[0];
+  const product = (db.products || []).find(item => item.countryId === country.id) || (db.products || [])[0];
+  const plans = {
+    farmer: {
+      persona: "farmer",
+      module: "AgriTrade",
+      section: "trade",
+      promise: "I guide the farmer from field problem to crop decision, buyer contact, route safety, and payment evidence.",
+      firstQuestion: `What crop are we working with today, and what problem do you see in the field?`,
+      firstAction: "check crop and field risk",
+      nextCommand: "Nexus, check my crop",
+      path: ["check crop condition", "run drone or field scan", "explain result in farmer language", "contact buyer or plan harvest", "track route and payment"],
+      watch: ["crop stress", "pests", "water shortage", "unsafe delivery route", "unclear buyer payment"],
+      context: `${product?.name || "selected crop"} in ${country.name} on ${route.name}`
+    },
+    patient: {
+      persona: "patient",
+      module: "Healthcare",
+      section: "health",
+      promise: "I guide the patient from what happened to safe intake, accessibility support, provider contact, and follow-up.",
+      firstQuestion: "What happened, where is the person, and are they safe right now?",
+      firstAction: "start safety-first telehealth support",
+      nextCommand: "Nexus, start telehealth intake",
+      path: ["check urgent safety signs", "start intake", "capture language and access needs", "connect provider or caregiver", "schedule follow-up"],
+      watch: ["trouble breathing", "chest pain", "heavy bleeding", "confusion", "fainting", "severe weakness"],
+      context: `${country.name} care access with ${db.profile.accessibilityProfile?.language || user?.language || "en"} language support`
+    },
+    worker: {
+      persona: "worker",
+      module: "Workforce",
+      section: "workforce",
+      promise: "I guide the worker from job interest to readiness, application, interview, schedule, and work support.",
+      firstQuestion: "What kind of work do you want, and are you trying to apply today?",
+      firstAction: "match and apply for the best role",
+      nextCommand: "Nexus, help me apply for work",
+      path: ["find the best role", "check missing skills or documents", "apply or prepare", "practice interview", "schedule shift support"],
+      watch: ["missing documents", "skill gap", "transportation issue", "schedule conflict", "interview anxiety"],
+      context: `${role?.title || "selected role"} with readiness ${db.profile.readiness || 0}%`
+    },
+    student: {
+      persona: "student",
+      module: "Learning",
+      section: "learning",
+      promise: "I guide the student from confusion to one small lesson step, captions or audio, practice, and certificate progress.",
+      firstQuestion: "What lesson or idea is confusing right now?",
+      firstAction: "explain the lesson and start one small step",
+      nextCommand: "Nexus, explain my lesson",
+      path: ["understand the question", "explain in simple words", "turn on captions or audio if needed", "complete one activity", "save progress"],
+      watch: ["confusion", "low literacy", "hearing difficulty", "vision difficulty", "poor internet"],
+      context: `${course?.title || "active course"} learning path`
+    },
+    learner: {
+      persona: "learner",
+      module: "Learning",
+      section: "learning",
+      promise: "I guide the learner from course goal to lesson progress, accessibility support, certificate, and workforce handoff.",
+      firstQuestion: "What skill are you trying to learn or finish today?",
+      firstAction: "start or continue the course",
+      nextCommand: "Nexus, start my training",
+      path: ["choose course goal", "start lesson", "add captions, audio, or offline support", "complete lesson", "prepare certificate and work handoff"],
+      watch: ["getting stuck", "low bandwidth", "missing language support", "accessibility need", "certificate readiness"],
+      context: `${course?.title || "active course"} with workforce handoff`
+    }
+  };
+  return plans[target] || plans.farmer;
+}
+
+function roleGuidanceResponse(db, user, text) {
+  ensureAiProfile(db.profile);
+  const target = roleGuidanceTarget(text);
+  if (!target) return null;
+  const plan = roleGuidancePlan(db, user, target);
+  db.profile.agentMemory.activeModule = plan.module;
+  db.profile.agentMemory.lastRecommendedSection = plan.section;
+  db.profile.agentMemory.lastStatus = "role-guidance-ready";
+  db.profile.agentMemory.lastSummary = `${plan.persona} guide: ${plan.firstAction}.`;
+  db.profile.agentMemory.turnCoach = {
+    id: crypto.randomUUID(),
+    mode: "role-guide",
+    section: plan.section,
+    persona: plan.persona,
+    nextQuestion: plan.firstQuestion,
+    createdAt: new Date().toISOString()
+  };
+  db.profile.agentMemory.updatedAt = new Date().toISOString();
+  rememberAgentMemory(db.profile, `Nexus should guide the ${plan.persona} with: ${plan.path.join(" -> ")}.`, { source: "role-guidance", category: "pattern", module: plan.module, confidence: 0.9 });
+  logIntegration(db, {
+    providerId: "openai",
+    module: plan.module,
+    action: "agent.role_guidance_ready",
+    detail: `Role guidance prepared for ${plan.persona}.`,
+    metadata: { persona: plan.persona, section: plan.section, path: plan.path },
+    dispatch: false
+  });
+  return {
+    intent: "conversation.role_guidance",
+    response: `${plan.promise} First I would ask: ${plan.firstQuestion} The safest next step is to ${plan.firstAction}. You can say "${plan.nextCommand}" and I will guide it one step at a time.`,
+    status: "guiding",
+    metadata: {
+      conversationMode: true,
+      redirectSection: plan.section,
+      roleGuide: plan,
+      suggestedCommand: plan.nextCommand,
+      suggestedReplies: [plan.nextCommand, "ask me questions", "explain that"]
+    }
+  };
+}
+
 function extractConversationalName(text) {
   const value = String(text || "").trim();
   const patterns = [
@@ -8241,6 +8362,11 @@ async function runAgentCommand(db, user, command, options = {}) {
 
   const moduleHelp = moduleVoiceHelpResponse(db, text, lower);
   if (moduleHelp) return moduleHelp;
+
+  if (conversational && /\b(guide|support|walk|lead|coach)\b/.test(lower) && /\b(farmer|student|patient|worker|learner|job seeker|caregiver)\b/.test(lower) && !/\b(start to finish|end to end|sell|payment|buyer)\b/.test(lower)) {
+    const roleGuide = roleGuidanceResponse(db, user, text);
+    if (roleGuide) return roleGuide;
+  }
 
   if (/(track|follow|watch).*(my\s+)?route/.test(lower) && /(real time|realtime|live|gps|location)/.test(lower)) {
     return liveRouteTrackingResponse(db, user, text);
