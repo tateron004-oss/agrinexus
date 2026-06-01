@@ -752,6 +752,14 @@ async function call(path, body) {
   assert(tenItemModel.commandResult.intent === "intelligent-assistant.ten_item_model");
   assert(tenItemModel.commandResult.metadata.model.total === 10);
   assert(tenItemModel.commandResult.metadata.redirectSection === "agent");
+  const allEight = await call("/api/agent/command", { command: "Nexus, show all 8 reasoning and language production upgrades", conversational: true, inputMode: "voice", outputMode: "voice" });
+  assert(allEight.commandResult.intent === "conversation.reasoning_language_production");
+  assert(allEight.commandResult.metadata.reasoningLanguageProduction.total === 8);
+  assert(allEight.commandResult.metadata.reasoningLanguageProduction.layers.some(item => item.id === "reasoning-before-action"));
+  assert(allEight.profile.agentMemory.lastReasoningLanguageProduction.total === 8);
+  const directAllEight = await call("/api/agent/reasoning-language", { command: "Review all eight for a farmer speaking French", targetLanguage: "fr" });
+  assert(directAllEight.reasoningLanguageProduction.total === 8);
+  assert(directAllEight.reasoningLanguageProduction.targetLanguage === "fr");
   const progressSummaryCommand = await call("/api/agent/command", { command: "summarize my progress", conversational: true, inputMode: "voice", outputMode: "voice" });
   assert(progressSummaryCommand.commandResult.intent === "conversation.progress_summary");
   assert(progressSummaryCommand.commandResult.metadata.redirectSection === "dashboard");

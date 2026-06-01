@@ -672,6 +672,11 @@ assert(server.includes("function jarvisProductionTenModel"), "Backend needs a Ja
 assert(app.includes("function renderJarvisProductionTen"), "Frontend needs to render Jarvis Production 10 readiness");
 assert(html.includes("jarvisProductionTenPanel"), "Agent mode needs visible Jarvis Production 10 readiness");
 assert(html.includes("adminJarvisProductionTenPanel"), "Admin mode needs visible Jarvis Production 10 readiness");
+assert(server.includes("function reasoningLanguageProductionEngine"), "Backend needs the all-eight reasoning and language production engine");
+assert(server.includes("conversation.reasoning_language_production"), "Voice agent must answer all-eight reasoning and language production requests");
+assert(server.includes("/api/agent/reasoning-language"), "Backend needs a direct reasoning-language production endpoint");
+assert(server.includes("OPENAI_TRANSLATION_MODEL"), "Translation engine should support a live OpenAI translation model fallback");
+assert(server.includes("preActionReasoning"), "Agent actions should preserve reasoning before action");
 assert(app.includes("function jarvisProductionTenSummary"), "Voice assistant needs a spoken Jarvis Production 10 summary");
 assert(app.includes("how close are we to all 10"), "Voice commands need to answer how close production is to all 10");
 assert(html.includes("adminIntelligencePanel"), "Admin mode needs a visible intelligence panel");
