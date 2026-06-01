@@ -1516,7 +1516,9 @@ body.user-mode .user-voice-dock {
   box-shadow: 0 16px 38px rgba(23, 50, 64, .18);
   transform: translateX(-50%);
 }
-body.user-mode .user-caption-panel {
+body.user-mode .user-caption-panel,
+body.admin-mode .user-caption-panel,
+body.investor-mode .user-caption-panel {
   position: fixed;
   left: 50%;
   bottom: 104px;
@@ -1533,10 +1535,12 @@ body.user-mode .user-caption-panel {
   box-shadow: 0 18px 42px rgba(23, 50, 64, .22);
   transform: translateX(-50%);
 }
-body.user-mode .user-caption-panel.hidden {
+body.user-mode .user-caption-panel.hidden,
+body.admin-mode .user-caption-panel.hidden,
+body.investor-mode .user-caption-panel.hidden {
   display: none !important;
 }
-body:not(.user-mode) .user-caption-panel {
+body:not(.user-mode):not(.admin-mode):not(.investor-mode) .user-caption-panel {
   display: none !important;
 }
 .user-caption-head {

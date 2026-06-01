@@ -2197,8 +2197,8 @@ function runUserModeSelfTest() {
       if (!simpleUserCommandWorkflow(button.command)) missing.push(`${section}: ${button.label}`);
     });
   });
-  const currentScript = [...document.scripts].some(script => String(script.src || "").includes("nexus-behavior-85"));
-  const currentStyle = [...document.styleSheets].some(sheet => String(sheet.href || "").includes("nexus-behavior-85"));
+  const currentScript = [...document.scripts].some(script => String(script.src || "").includes("nexus-behavior-86"));
+  const currentStyle = [...document.styleSheets].some(sheet => String(sheet.href || "").includes("nexus-behavior-86"));
   if (!currentScript || !currentStyle) missing.push("new app files");
   const ok = missing.length === 0;
   const message = ok
@@ -4841,7 +4841,7 @@ function updateUserCaptionPanel(message, { open = true } = {}) {
   const clean = String(message || "").replace(/\s+/g, " ").trim();
   if (!clean) return;
   text.textContent = clean;
-  if (open && experienceMode === "user") panel.classList.remove("hidden");
+  if (open && ["user", "admin", "investor"].includes(experienceMode)) panel.classList.remove("hidden");
   const input = $("#userCaptionInput");
   if (input && !input.value.trim()) input.placeholder = translateText("Type or speak your reply");
 }
@@ -10490,6 +10490,42 @@ function bindStatic() {
     }
     if (event.target.closest("#liveServiceCheckBtn") || event.target.closest("#liveServiceCheckFromIntegrations")) {
       runLiveServiceCheck(event);
+      return;
+    }
+    if (event.target.closest("#startOnboardingBtn")) {
+      event.preventDefault();
+      event.stopPropagation();
+      openWorkflowModal(workflowConfig("onboarding", "start", { dataset: {} }));
+      return;
+    }
+    if (event.target.closest("#openSupportBtn")) {
+      event.preventDefault();
+      event.stopPropagation();
+      openWorkflowModal(workflowConfig("support", "ticket", { dataset: {} }));
+      return;
+    }
+    if (event.target.closest("#inviteSubscriberBtn")) {
+      event.preventDefault();
+      event.stopPropagation();
+      openWorkflowModal(workflowConfig("subscriber", "invite", { dataset: {} }));
+      return;
+    }
+    if (event.target.closest("#addTestUserBtn")) {
+      event.preventDefault();
+      event.stopPropagation();
+      openWorkflowModal(workflowConfig("test-user", "create", { dataset: {} }));
+      return;
+    }
+    if (event.target.closest("#addAdminUserBtn")) {
+      event.preventDefault();
+      event.stopPropagation();
+      openWorkflowModal(workflowConfig("admin-user", "create", { dataset: {} }));
+      return;
+    }
+    if (event.target.closest("#liveInvestorDemoBtn")) {
+      event.preventDefault();
+      event.stopPropagation();
+      runLiveInvestorDemoMode();
       return;
     }
     if (event.target.closest("#globalCloseBtn") || event.target.closest("#globalBackBtn") || event.target.closest("#jarvisCloseBtn")) {
