@@ -2382,8 +2382,8 @@ function runUserModeSelfTest() {
       if (!simpleUserCommandWorkflow(button.command)) missing.push(`${section}: ${button.label}`);
     });
   });
-  const currentScript = [...document.scripts].some(script => String(script.src || "").includes("nexus-behavior-122"));
-  const currentStyle = [...document.styleSheets].some(sheet => String(sheet.href || "").includes("nexus-behavior-122"));
+  const currentScript = [...document.scripts].some(script => String(script.src || "").includes("nexus-behavior-123"));
+  const currentStyle = [...document.styleSheets].some(sheet => String(sheet.href || "").includes("nexus-behavior-123"));
   if (!currentScript || !currentStyle) missing.push("new app files");
   const ok = missing.length === 0;
   const message = ok
@@ -6553,19 +6553,20 @@ function userServicePhotoHtml(type = "agent", title = "Service") {
 function userRealMapHtml(title = "Live route map") {
   const route = activeRoute();
   const country = activeCountry();
+  const regions = (data.countries || []).map(item => item.name).slice(0, 5).join(", ");
   return `
     <div class="user-real-map-card">
       <div class="user-real-map-head">
         <div>
           <strong>${translateText(title)}</strong>
-          <span>${translateText(`${route.name} through ${country.name}`)}</span>
+          <span>${translateText(`Regional view: ${regions || country.name}`)}</span>
         </div>
         <small>${translateText(country.risk || "Monitored")}</small>
       </div>
       <div id="userMapCanvas" class="user-real-map" role="img" aria-label="${translateText(`Real map for ${route.name}, showing checkpoints, facilities, and route risk.`)}"></div>
       <div class="user-real-map-meta">
+        <div><strong>${translateText("Region")}</strong><span>${translateText("Africa operations")}</span></div>
         <div><strong>${translateText("Route")}</strong><span>${translateText(route.name)}</span></div>
-        <div><strong>${translateText("Checkpoint")}</strong><span>${translateText(data.profile.activeCheckpoint || route.checkpoints?.[0] || "Start")}</span></div>
         <div><strong>${translateText("Nearby help")}</strong><span>${translateText(`${country.facilities || 0} facilities`)}</span></div>
       </div>
     </div>
@@ -8474,7 +8475,7 @@ function renderUserRealMap() {
     attributionControl: true,
     scrollWheelZoom: false,
     tap: true
-  }).setView([country.lat, country.lng], Math.max(4, Number(country.zoom || 5)));
+  }).setView([3.2, 20.5], 3);
   L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
     maxZoom: 19,
     attribution: "OpenStreetMap"
@@ -8490,6 +8491,14 @@ function renderUserRealMap() {
     opacity: .9
   }).addTo(userMapLayers.route);
 
+  L.rectangle([[-35, -20], [36, 55]], {
+    color: "#173240",
+    weight: 2,
+    fill: false,
+    dashArray: "8 6",
+    opacity: .7
+  }).addTo(userMapLayers.route).bindPopup(translateText("Regional Africa operations view"));
+
   (route.checkpoints || []).forEach((checkpoint, index) => {
     const point = (route.points || [])[Math.min(index, Math.max(0, (route.points || []).length - 1))];
     if (!point) return;
@@ -8504,7 +8513,14 @@ function renderUserRealMap() {
   });
 
   data.countries.forEach(item => {
-    L.marker([item.lat, item.lng])
+    const active = item.id === country.id;
+    L.circleMarker([item.lat, item.lng], {
+      radius: active ? 12 : 9,
+      color: active ? "#d94c31" : "#173240",
+      fillColor: active ? "#d94c31" : "#1b8f68",
+      fillOpacity: .8,
+      weight: 3
+    })
       .addTo(userMapLayers.markers)
       .bindPopup(`<strong>${translateText(item.name)}</strong><br>${item.facilities} ${translateText("facilities")}<br>${translateText(item.risk || "Monitored")} ${translateText("risk")}`);
   });
@@ -8519,9 +8535,8 @@ function renderUserRealMap() {
     }).addTo(userMapLayers.facilities).bindPopup(`${translateText("Facility")} ${index + 1}`);
   });
 
-  if (routeLine.getBounds?.().isValid?.()) {
-    userMap.fitBounds(routeLine.getBounds(), { padding: [26, 26] });
-  }
+  const regionalBounds = L.latLngBounds([[-35, -20], [36, 55]]);
+  userMap.fitBounds(regionalBounds, { padding: [12, 12] });
   setTimeout(() => userMap?.invalidateSize(), 120);
 }
 

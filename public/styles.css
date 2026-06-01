@@ -1375,13 +1375,13 @@ body.user-mode .user-real-map-head small {
   line-height: 1;
 }
 body.user-mode .user-real-map {
-  height: min(48vh, 360px);
-  min-height: 260px;
+  height: min(56vh, 430px);
+  min-height: 320px;
   width: 100%;
   overflow: hidden;
-  border: 2px solid #173240;
-  border-radius: 15px;
-  background: #dcecf3;
+  border: 3px solid #173240;
+  border-radius: 18px;
+  background: #b9d8e8;
 }
 body.user-mode .user-real-map .leaflet-control-container,
 body.user-mode .user-real-map .leaflet-pane {
@@ -2134,24 +2134,27 @@ body.user-mode .global-assistant-head {
   position: sticky;
   top: 0;
   z-index: 2;
-  padding-bottom: 6px;
+  padding: 0 0 8px;
   background: #ffffff;
+  border-bottom: 2px solid #e4efec;
 }
 body.user-mode .global-assistant h2 {
   font-size: 1.12rem;
   line-height: 1.15;
 }
 body.user-mode .assistant-close {
-  min-width: 76px;
-  min-height: 44px;
-  padding: 8px 12px;
-  border: 2px solid #173240;
-  border-radius: 12px;
-  background: #173240;
+  min-width: 92px;
+  min-height: 52px;
+  padding: 10px 14px;
+  border: 3px solid #173240;
+  border-radius: 16px;
+  background: #d94c31;
   color: #ffffff;
   font-weight: 950;
+  font-size: 1rem;
   white-space: nowrap;
   overflow-wrap: normal;
+  box-shadow: 0 10px 20px rgba(23, 50, 64, .18);
 }
 body.user-mode .global-assistant input {
   min-height: 50px;
