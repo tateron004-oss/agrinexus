@@ -7278,6 +7278,106 @@ function reasoningLanguageProductionEngine(db, user, command = "", options = {})
   return engine;
 }
 
+function backendAdvisorProfile(user, moduleSignal = { module: "Platform", section: "dashboard" }) {
+  const role = String(user?.role || "Standard User").toLowerCase();
+  const module = moduleSignal.module || "Platform";
+  const persona = role.includes("admin") ? "platform operator"
+    : role.includes("investor") ? "investor reviewer"
+      : module === "Healthcare" ? "patient or caregiver"
+        : module === "AgriTrade" || module === "Maps" ? "farmer or market user"
+          : module === "Workforce" ? "worker"
+            : module === "Learning" ? "learner"
+              : "everyday user";
+  const style = role.includes("admin") ? "risk-first, operational, evidence-based"
+    : role.includes("investor") ? "impact-first, proof-first, non-technical"
+      : "plain language, one step at a time, voice-first";
+  return {
+    persona,
+    style,
+    module,
+    section: moduleSignal.section,
+    goal: module === "Healthcare" ? "guide safe telehealth support without diagnosis"
+      : module === "AgriTrade" ? "move crops from seller to buyer with communication, route, and payment evidence"
+        : module === "Workforce" ? "help the user find, apply, and prepare for work"
+          : module === "Learning" ? "help the learner choose, complete, understand, and prove training"
+            : "route the user to the safest useful workflow",
+    guardrail: module === "Healthcare" ? "confirm before health records and direct urgent danger to local emergency support"
+      : module === "AgriTrade" ? "confirm before buyer, seller, money, route, or delivery actions"
+        : "confirm before important records or messages"
+  };
+}
+
+function backendProviderGroupReadiness(providers = runtimeProviders({ profile: {} }), ids = []) {
+  const providerReady = id => ["connected", "ready"].includes(providers.find(provider => provider.id === id)?.status);
+  return { ready: ids.filter(providerReady).length, total: ids.length };
+}
+
+function backendLiveKnowledgeFeedReadiness(db) {
+  const providers = runtimeProviders(db);
+  const providerReady = id => ["connected", "ready"].includes(providers.find(provider => provider.id === id)?.status);
+  const feeds = [
+    { id: "weather", title: "Weather and heat", ready: providerReady("weather") || providerReady("map-tiles"), value: "walking, planting, harvest, and field-risk guidance" },
+    { id: "health", title: "Health/outbreak alerts", ready: providerReady("health-telehealth") || providerReady("health-ehr"), value: "regional telehealth safety and referral context" },
+    { id: "market", title: "Crop prices and buyers", ready: providerReady("trade-market"), value: "buyer matching, price comparison, and sale timing" },
+    { id: "jobs", title: "Job listings", ready: providerReady("workforce-jobs"), value: "live role search and application support" },
+    { id: "courses", title: "Course catalog", ready: providerReady("learning-courses"), value: "real course selection and completion paths" },
+    { id: "drone", title: "Drone/satellite evidence", ready: providerReady("field-drones"), value: "field condition interpretation and intervention planning" },
+    { id: "logistics", title: "Logistics and routing", ready: providerReady("trade-logistics") || providerReady("map-tiles"), value: "delivery tracking, route risk, and facility routing" },
+    { id: "communications", title: "SMS/WhatsApp/phone", ready: providerReady("sms-delivery") || providerReady("whatsapp-delivery") || providerReady("phone-voice"), value: "two-way buyer, provider, and learner communication" }
+  ];
+  return { ready: feeds.filter(feed => feed.ready).length, total: feeds.length, feeds };
+}
+
+function backendDecisionScoringModel(db, user, command = "") {
+  const moduleSignal = conversationModuleSignal(command);
+  const providers = runtimeProviders(db);
+  const providerGroups = {
+    Healthcare: ["health-telehealth", "health-ehr", "health-notifications"],
+    AgriTrade: ["trade-market", "trade-logistics", "trade-payments", "field-drones"],
+    Maps: ["trade-logistics", "map-tiles"],
+    Workforce: ["workforce-jobs", "workforce-calendar", "workforce-notifications", "workforce-hris", "workforce-shifts"],
+    Learning: ["learning-courses", "learning-certificates"],
+    "Agent AI": ["openai", "voice-stt", "voice-tts", "phone-voice"]
+  };
+  const group = backendProviderGroupReadiness(providers, providerGroups[moduleSignal.module] || ["openai"]);
+  const liveReadiness = group.total ? Math.round((group.ready / group.total) * 100) : 50;
+  const advisor = backendAdvisorProfile(user, moduleSignal);
+  const next = smartNextActions(db, user, providers).items.find(item => item.section === moduleSignal.section) || smartNextActions(db, user, providers).items[0];
+  const confidence = Math.min(99, Math.round(62 + (moduleSignal.score || 0) * 8 + liveReadiness * .18));
+  const safety = moduleSignal.module === "Healthcare" ? 92 : moduleSignal.module === "AgriTrade" ? 84 : 88;
+  const usefulness = Math.min(98, Math.round(68 + liveReadiness * .16 + (next ? 10 : 0)));
+  const score = Math.round((confidence * .36) + (usefulness * .34) + (safety * .2) + (liveReadiness * .1));
+  return {
+    moduleSignal,
+    advisor,
+    confidence,
+    safety,
+    usefulness,
+    liveReadiness,
+    score,
+    recommendation: next?.title || "Ask Nexus what should happen next",
+    command: next?.command || "what should I do next",
+    why: `Matched ${moduleSignal.module}, used ${advisor.persona} behavior, checked live readiness ${liveReadiness}%, and weighted safety ${safety}%.`
+  };
+}
+
+function backendPredictiveAdvisorModel(db, user, command = "") {
+  const scoring = backendDecisionScoringModel(db, user, command);
+  const feeds = backendLiveKnowledgeFeedReadiness(db);
+  const profile = db.profile || {};
+  const predictions = [];
+  const add = (module, priority, message, commandText) => predictions.push({ module, priority, message, command: commandText });
+  if ((profile.healthIntakes || []).length && !(profile.telehealthFollowUps || []).length) add("Health", "high", "Health intake exists but follow-up is not scheduled.", "schedule telehealth follow up");
+  if ((profile.orders || []).length && !(profile.tradeMessageThreads || []).length) add("Trade", "high", "A trade order needs buyer-seller communication evidence.", "contact buyer");
+  if ((profile.orders || []).length && !(profile.mapInsights || []).length) add("Map", "medium", "A sale route exists without route-risk intelligence.", "track my sale route");
+  if ((profile.enrollments || []).length && !(profile.certificates || []).length) add("Learning", "medium", "A learner has course progress but no certificate evidence yet.", "issue my certificate");
+  if ((profile.applications || []).length && !(profile.interviews || 0)) add("Workforce", "medium", "A job application exists but interview support is not scheduled.", "prepare interview");
+  if ((profile.droneScans || []).length && !(profile.fieldInterventions || []).length) add("Drone", "medium", "Drone evidence exists but no field task has been created.", "create field task");
+  if (feeds.ready < feeds.total) add("Live feeds", "setup", `${feeds.ready}/${feeds.total} live knowledge feeds are ready.`, "explain live intelligence feeds");
+  if (!predictions.length) add("Nexus", "ready", "No immediate gap detected. Keep guiding the active request.", scoring.command);
+  return { scoring, feeds, predictions: predictions.slice(0, 6), nextBestAction: predictions[0]?.command || scoring.command };
+}
+
 function conversationModuleSignal(text) {
   const lower = String(text || "").toLowerCase();
   const signals = [
@@ -7499,6 +7599,39 @@ async function conversationalReasoningResponse(db, user, command, options = {}) 
     status: "completed",
     metadata: { conversationMode: true, platformMode, modeContext, redirectSection: moduleSignal.section, provider, moduleSignal, memoriesUsed: memories.map(item => item.id).filter(Boolean), reasoning, reasoningLanguageProduction }
   };
+}
+
+function backendSmartCommandResponse(db, user, command = "", options = {}) {
+  const lower = String(command || "").toLowerCase();
+  if (/\b(live intelligence feeds|live knowledge feeds|real time feeds|provider feeds|what feeds are live)\b/.test(lower)) {
+    const feeds = backendLiveKnowledgeFeedReadiness(db);
+    return {
+      intent: "conversation.live_feed_readiness",
+      status: "completed",
+      response: `Live intelligence feed readiness is ${feeds.ready}/${feeds.total}. ${feeds.feeds.map(feed => `${feed.title}: ${feed.ready ? "ready" : "needs provider"} for ${feed.value}`).join(". ")}.`,
+      metadata: { conversationMode: true, redirectSection: "integrations", platformMode: options.mode || options.modeContext?.mode || "user", feeds }
+    };
+  }
+  if (/\b(decision score|score your decision|why did you recommend|rank this|score this)\b/.test(lower)) {
+    const scoring = backendDecisionScoringModel(db, user, command);
+    return {
+      intent: "conversation.decision_scoring",
+      status: "completed",
+      response: `Decision score ${scoring.score}/100. Recommendation: ${scoring.recommendation}. Why: ${scoring.why}. Next command: ${scoring.command}.`,
+      metadata: { conversationMode: true, redirectSection: scoring.moduleSignal.section, scoring }
+    };
+  }
+  if (/\b(predict|prediction|predictive|what needs attention|smart recommendation|make a smart recommendation|what should happen next)\b/.test(lower)) {
+    const predictive = backendPredictiveAdvisorModel(db, user, command);
+    const top = predictive.predictions[0];
+    return {
+      intent: "conversation.predictive_advisor",
+      status: "completed",
+      response: `Predictive advisor is active. Intelligence score ${predictive.scoring.score}/100. Top prediction: ${top.module} ${top.priority}: ${top.message} Next best action: ${top.command}. Live feeds ready: ${predictive.feeds.ready}/${predictive.feeds.total}.`,
+      metadata: { conversationMode: true, redirectSection: predictive.scoring.moduleSignal.section, predictive }
+    };
+  }
+  return null;
 }
 
 function learnFromAgentCommand(db, command, result) {
@@ -10001,6 +10134,21 @@ async function runAgentCommand(db, user, command, options = {}) {
   if (contextual) {
     text = contextual;
     lower = text.toLowerCase();
+  }
+  const smartCommand = backendSmartCommandResponse(db, user, text, options);
+  if (smartCommand) {
+    db.profile.agentMemory.lastStatus = smartCommand.intent;
+    db.profile.agentMemory.lastSummary = smartCommand.response;
+    db.profile.agentMemory.updatedAt = new Date().toISOString();
+    logIntegration(db, {
+      providerId: "openai",
+      module: "AI",
+      action: smartCommand.intent,
+      detail: smartCommand.response.slice(0, 240),
+      metadata: smartCommand.metadata || {},
+      dispatch: false
+    });
+    return smartCommand;
   }
   const wantsExecute = options.confirm === true || lower.includes("execute") || lower.includes("run it") || lower.includes("do it");
   const pendingAction = db.profile.agentPendingAction;

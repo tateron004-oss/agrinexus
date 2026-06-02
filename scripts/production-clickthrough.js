@@ -685,6 +685,10 @@ assert(app.includes("function nexusPredictiveAdvisorModel"), "Nexus needs predic
 assert(app.includes("function nexusLiveKnowledgeFeedReadiness"), "Nexus needs live knowledge feed readiness tracking");
 assert(app.includes("agrinexusPredictiveAdvisor"), "Predictive advisor should persist the latest prediction state");
 assert(app.includes("agrinexusLiveKnowledgeFeeds"), "Live knowledge feeds should persist readiness state");
+assert(server.includes("function backendSmartCommandResponse"), "Backend agent commands must mirror smart frontend recommendations");
+assert(server.includes("function backendPredictiveAdvisorModel"), "Backend needs predictive advisor command support");
+assert(server.includes("conversation.predictive_advisor"), "Backend smart recommendation should return predictive advisor intent");
+assert(server.includes("conversation.live_feed_readiness"), "Backend live feed command should return live readiness intent");
 assert(app.includes("function nexusBehaviorMode"), "Nexus behavior layer needs mode-specific behavior");
 assert(app.includes("function updateNexusBehaviorLayer"), "Nexus behavior layer needs a visible state indicator");
 assert(app.includes("function contextualVoiceSuggestions"), "Nexus behavior layer needs contextual voice suggestions");
