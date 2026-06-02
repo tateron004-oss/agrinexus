@@ -2385,8 +2385,8 @@ function runUserModeSelfTest() {
       if (!simpleUserCommandWorkflow(button.command)) missing.push(`${section}: ${button.label}`);
     });
   });
-  const currentScript = [...document.scripts].some(script => String(script.src || "").includes("nexus-behavior-133"));
-  const currentStyle = [...document.styleSheets].some(sheet => String(sheet.href || "").includes("nexus-behavior-133"));
+  const currentScript = [...document.scripts].some(script => String(script.src || "").includes("nexus-behavior-134"));
+  const currentStyle = [...document.styleSheets].some(sheet => String(sheet.href || "").includes("nexus-behavior-134"));
   if (!currentScript || !currentStyle) missing.push("new app files");
   const ok = missing.length === 0;
   const message = ok
@@ -2653,6 +2653,7 @@ function adaptiveCommandUnderstanding(command = "") {
     ? best.command
     : normalized;
   const confidence = Math.min(.96, Math.max(.45, (best?.score || 0) + (hasAction ? .42 : .28) + (words.length >= 4 ? .12 : 0)));
+  const context = nexusContextMemoryModel(original, best?.hits ? best.intent : "general");
   const needsHumanCheck = confidence < .72 || (best?.hits > 0 && !hasAction);
   const understanding = {
     original,
@@ -2661,6 +2662,8 @@ function adaptiveCommandUnderstanding(command = "") {
     intent: best?.hits ? best.intent : "general",
     confidence: Number(confidence.toFixed(2)),
     needsHumanCheck,
+    context,
+    nextQuestion: nexusNextBestQuestion(best?.hits ? best.intent : "general", original, context),
     reason: best?.hits
       ? `Matched ${best.intent} from ${best.hits} speech clue(s).`
       : "No strong workflow clue found yet.",
@@ -2670,9 +2673,80 @@ function adaptiveCommandUnderstanding(command = "") {
   return understanding;
 }
 
+function nexusContextMemoryModel(command = "", intent = "general") {
+  const mode = conversationPlatformMode();
+  const modeMemory = conversationMemoryForMode(mode);
+  const profile = data?.profile || {};
+  const activeOrder = (profile.orders || [])[0] || (profile.tradeOrders || [])[0] || null;
+  const activeIntake = (profile.healthIntakes || [])[0] || null;
+  const activeApplication = (profile.applications || [])[0] || null;
+  const activeCourse = (profile.enrollments || [])[0] || null;
+  const activeScan = (profile.droneScans || [])[0] || null;
+  const section = currentSectionId();
+  const memory = {
+    mode,
+    modeLabel: conversationPlatformLabel(mode),
+    userName: userFirstName(),
+    language: voiceLanguageName(),
+    section,
+    intent,
+    command,
+    lastTopic: modeMemory.lastTopic || "",
+    lastQuestion: modeMemory.lastQuestion || "",
+    lastAnswer: modeMemory.lastAnswer || "",
+    activeOrder: activeOrder ? `${activeOrder.orderNumber || activeOrder.id || "order"} ${activeOrder.stage || ""}`.trim() : "",
+    activeIntake: activeIntake ? `${activeIntake.patientRef || "intake"} ${activeIntake.riskLevel || ""}`.trim() : "",
+    activeApplication: activeApplication ? `${activeApplication.roleTitle || activeApplication.roleId || "application"} ${activeApplication.status || ""}`.trim() : "",
+    activeCourse: activeCourse ? `${activeCourse.courseTitle || activeCourse.courseId || "course"} ${activeCourse.progress || 0}%` : "",
+    activeScan: activeScan ? `${activeScan.scanRef || "drone scan"} ${activeScan.cropHealthScore || ""}`.trim() : "",
+    updatedAt: new Date().toISOString()
+  };
+  localStorage.setItem("agrinexusContextMemory", JSON.stringify(memory));
+  return memory;
+}
+
+function nexusNextBestQuestion(intent = "general", command = "", context = nexusContextMemoryModel(command, intent)) {
+  const lower = normalizeToolText(command);
+  const questions = {
+    health: context.activeIntake
+      ? `Do you want me to continue the current health intake ${context.activeIntake}, contact the provider, or explain the next care step?`
+      : "Is this urgent, or should I start a normal telehealth intake first?",
+    trade: context.activeOrder
+      ? `Do you want me to track ${context.activeOrder}, contact the buyer, or update the delivery route?`
+      : "Are you trying to sell crops, buy crops, contact a buyer, or track a delivery?",
+    workforce: context.activeApplication
+      ? `Do you want me to continue ${context.activeApplication}, find another job, or prepare for interview?`
+      : "Do you want to find jobs, apply for a role, or check what skills you still need?",
+    learning: context.activeCourse
+      ? `Do you want to continue ${context.activeCourse}, build captions, or complete the lesson?`
+      : "Do you want to start a course, hear the lesson, get captions, or work toward a certificate?",
+    map: context.activeOrder
+      ? `Should I show the route for ${context.activeOrder}, check risk, or find the nearest facility?`
+      : "Do you want the route, the nearest facility, the risk layer, or live tracking?",
+    drone: context.activeScan
+      ? `Should I explain ${context.activeScan} in simple terms or create the next field task?`
+      : "Do you want a drone scan, a simple crop health explanation, or a field task recommendation?",
+    general: "Do you want health, work, learning, trade, map, or help deciding?"
+  };
+  if (/\b(urgent|emergency|bleeding|danger|severe)\b/.test(lower)) return "Is anyone in immediate danger right now?";
+  return questions[intent] || questions.general;
+}
+
+function nexusContextMemorySummary() {
+  const memory = JSON.parse(localStorage.getItem("agrinexusContextMemory") || "null") || nexusContextMemoryModel(agentPerformanceState.lastCommand || "", "general");
+  const active = [
+    memory.activeOrder ? `order ${memory.activeOrder}` : "",
+    memory.activeIntake ? `health intake ${memory.activeIntake}` : "",
+    memory.activeApplication ? `application ${memory.activeApplication}` : "",
+    memory.activeCourse ? `course ${memory.activeCourse}` : "",
+    memory.activeScan ? `drone scan ${memory.activeScan}` : ""
+  ].filter(Boolean).join("; ") || "no active workflow record yet";
+  return `Context memory is active for ${memory.modeLabel}. I know the user is in ${memory.section}, speaking ${memory.language}, with intent ${memory.intent}. Active context: ${active}. My next best question is: ${nexusNextBestQuestion(memory.intent, memory.command || "", memory)}`;
+}
+
 function nexusAdaptiveUnderstandingSummary() {
   const stored = JSON.parse(localStorage.getItem("agrinexusAdaptiveUnderstanding") || "null") || adaptiveCommandUnderstanding(agentPerformanceState.lastCommand || "");
-  return `Adaptive understanding is active. Nexus heard: ${stored.original || "nothing yet"}. It normalized that to: ${stored.rewrittenCommand || stored.normalized || "no command yet"}. Intent: ${stored.intent}. Confidence: ${Math.round((stored.confidence || 0) * 100)} percent. ${stored.needsHumanCheck ? "For unclear or risky speech, Nexus will confirm before acting." : "Nexus can route this without extra friction."}`;
+  return `Adaptive understanding is active. Nexus heard: ${stored.original || "nothing yet"}. It normalized that to: ${stored.rewrittenCommand || stored.normalized || "no command yet"}. Intent: ${stored.intent}. Confidence: ${Math.round((stored.confidence || 0) * 100)} percent. Next best question: ${stored.nextQuestion || "What do you need next?"} ${stored.needsHumanCheck ? "For unclear or risky speech, Nexus will confirm before acting." : "Nexus can route this without extra friction."}`;
 }
 
 function languageFromVoiceCommand(command) {
@@ -11773,6 +11847,10 @@ async function handleVoiceCommand(rawCommand) {
   }
   if (/\b(adaptive understanding|what did you hear|what do you think i said|understand me|speech intelligence|voice intelligence)\b/.test(lower)) {
     setVoiceResponse(nexusAdaptiveUnderstandingSummary(), true);
+    return;
+  }
+  if (/\b(context memory|what context|what do you know about this|what do you remember about this|next best question|what should you ask me)\b/.test(lower)) {
+    setVoiceResponse(nexusContextMemorySummary(), true);
     return;
   }
   if (pendingAgentClarification && await answerAgentClarification(command)) return;

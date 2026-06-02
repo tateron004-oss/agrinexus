@@ -22,11 +22,11 @@ function requireScript(scriptName) {
 }
 
 requireMarkers("current browser cache contract", html, [
-  "/styles.css?v=nexus-behavior-133",
-  "/app.js?v=nexus-behavior-133"
+  "/styles.css?v=nexus-behavior-134",
+  "/app.js?v=nexus-behavior-134"
 ]);
 requireMarkers("service worker cache contract", sw, [
-  'CACHE_NAME = "agrinexus-pwa-v113"',
+  'CACHE_NAME = "agrinexus-pwa-v114"',
   "skipWaiting",
   "clients.claim"
 ]);
@@ -137,6 +137,10 @@ requireMarkers("language and voice contract", app, [
   "function adaptiveCommandUnderstanding",
   "agrinexusAdaptiveUnderstanding",
   "nexusAdaptiveUnderstandingSummary",
+  "function nexusContextMemoryModel",
+  "function nexusNextBestQuestion",
+  "agrinexusContextMemory",
+  "function nexusContextMemorySummary",
   "function speakVoiceResponse",
   "function setVoiceResponse",
   "/api/voice/transcribe",
