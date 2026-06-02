@@ -6694,6 +6694,15 @@ function localTranslateText(text, targetLanguage) {
   const language = targetLanguage || "en";
   if (language === "en") return value;
   const lower = value.toLowerCase();
+  if (/\b(until real providers arrive|pre-provider|without providers|provider-ready|provider ready|platform records and local context)\b/.test(lower)) {
+    const readinessTranslations = {
+      fr: "Jusqu'a l'arrivee des vrais fournisseurs, Nexus peut executer les workflows guides d'apprentissage, de main-d'oeuvre, de telesante, de commerce agricole, de drones, de cartes, de voix, de memoire et d'audit avec les donnees de la plateforme et le contexte local. Je dirai clairement ce qui est en direct, ce qui est local et ce qui exige des identifiants.",
+      sw: "Mpaka watoa huduma wa moja kwa moja waunganishwe, Nexus inaweza kuendesha mtiririko wa kujifunza, kazi, afya kwa mbali, biashara ya mazao, droni, ramani, sauti, kumbukumbu na ukaguzi kwa kutumia rekodi za jukwaa na muktadha wa ndani. Nitasema wazi kilicho hai, kilicho cha ndani, na kinachohitaji nywila au funguo za huduma.",
+      ar: "حتى وصول مزودي الخدمة الحقيقيين، يستطيع نكسس تشغيل مسارات التعلم والعمل والصحة عن بعد والتجارة الزراعية والطائرات بدون طيار والخرائط والصوت والذاكرة والتدقيق باستخدام سجلات المنصة والسياق المحلي. سأوضح ما هو مباشر، وما هو محلي، وما يحتاج إلى بيانات اعتماد.",
+      es: "Hasta que lleguen los proveedores reales, Nexus puede ejecutar flujos guiados de aprendizaje, fuerza laboral, telesalud, comercio agricola, drones, mapas, voz, memoria y auditoria con registros de la plataforma y contexto local. Dire claramente que esta en vivo, que es local y que necesita credenciales."
+    };
+    if (readinessTranslations[language]) return readinessTranslations[language];
+  }
   const voicePhrases = {
     fr: [
       [["telehealth", "intake"], "Votre admission de telesante est ouverte. AgriNexus a cree le dossier et le prochain suivi."],
@@ -6836,6 +6845,32 @@ async function translateDynamicContent(db, user, { text, targetLanguage, sourceL
     metadata: { sourceLanguage, targetLanguage, provider }
   });
   return { sourceText: text, translatedText, sourceLanguage, targetLanguage, provider };
+}
+
+async function translateAgentCommandResult(db, user, result = {}, options = {}) {
+  const targetLanguage = options.targetLanguage || user?.language || db.profile.accessibilityProfile?.language || "en";
+  if (!targetLanguage || targetLanguage === "en" || !result.response) return result;
+  const translation = await translateDynamicContent(db, user, {
+    text: result.response,
+    sourceLanguage: "en",
+    targetLanguage,
+    context: `agent-command:${result.intent || "unknown"}`
+  });
+  return {
+    ...result,
+    response: translation.translatedText || result.response,
+    metadata: {
+      ...(result.metadata || {}),
+      originalResponse: result.response,
+      translatedResponse: true,
+      translation: {
+        targetLanguage,
+        sourceLanguage: "en",
+        provider: translation.provider,
+        context: `agent-command:${result.intent || "unknown"}`
+      }
+    }
+  };
 }
 
 async function executeAgentPlanObject(db, user, plan, note = "Approved from command center") {
@@ -14583,7 +14618,8 @@ async function api(req, res, url) {
       timeZone: body.timeZone,
       targetLanguage: body.targetLanguage || body.language
     });
-    const result = applyHighestFunctionalityMode(db, user, humanizeAgentResult(db, user, rawResult, command), command);
+    let result = applyHighestFunctionalityMode(db, user, humanizeAgentResult(db, user, rawResult, command), command);
+    result = await translateAgentCommandResult(db, user, result, { targetLanguage: body.targetLanguage || body.language || user.language });
     commandRecord(db, user, command, result);
     if (body.outputMode === "voice") voiceRecord(db, user, "text-to-speech", `Voice response prepared: ${result.response}`, { response: result.response });
     addWorkflowNote(db.profile, body.note, "Agent command note");

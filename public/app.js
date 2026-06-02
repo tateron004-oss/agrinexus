@@ -51,8 +51,8 @@ let routeTrackingWatchId = null;
 let routeTrackingPoints = [];
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-146";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v126";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-147";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v127";
 
 const countryLanguageMap = {
   nigeria: "en",
@@ -11907,7 +11907,7 @@ function setVoiceResponse(message, speak = false, options = {}) {
   updateUserCaptionPanel(responseMessage);
   announce(responseMessage);
   if (experienceMode !== "user" || responseMessage.length < 90) toast(responseMessage);
-  if (languageCode() !== "en") {
+  if (languageCode() !== "en" && !options.alreadyTranslated) {
     request("/api/translate", {
       method: "POST",
       body: { text: responseMessage, sourceLanguage: "en", targetLanguage: languageCode(), context: "voice-response" }
@@ -13082,6 +13082,7 @@ async function runBackendAgentCommand(command) {
         mode: conversationPlatformMode(),
         modeContext: modeConversationContext(command),
         timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+        targetLanguage: languageCode(),
         note: "Command submitted from Nexus Voice Assistant"
       }
     }, 18000);
@@ -13104,7 +13105,7 @@ async function runBackendAgentCommand(command) {
     markAgentPerformance("completed", result.intent || "agent-command");
     updateNexusAwareness(command, { silent: true });
     updateNexusBehaviorLayer("speaking", result.response || "Done. I am ready for your next step.");
-    setVoiceResponse(result.response || "Done. I am ready for your next step.", true, { handoffText: result.metadata?.turnCoach?.nextQuestion || "" });
+    setVoiceResponse(result.response || "Done. I am ready for your next step.", true, { handoffText: result.metadata?.turnCoach?.nextQuestion || "", alreadyTranslated: result.metadata?.translatedResponse === true });
   } catch (error) {
     clearAgentProgressTimers();
     markAgentPerformance("failed", "agent-command-error");
@@ -13132,6 +13133,7 @@ async function runUtilityAgentCommand(command, fallbackAnswer = "") {
         mode: conversationPlatformMode(),
         modeContext: modeConversationContext(command),
         timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+        targetLanguage: languageCode(),
         note: "Ask Nexus daily utility assistant"
       }
     }, 12000);
@@ -13145,7 +13147,7 @@ async function runUtilityAgentCommand(command, fallbackAnswer = "") {
     markAgentPerformance("completed", result.intent || "utility-assistant");
     updateNexusAwareness(command, { silent: true });
     updateNexusBehaviorLayer("speaking", result.response || fallbackAnswer || "Done. I am ready for your next question.");
-    setVoiceResponse(result.response || fallbackAnswer || "Done. I am ready for your next question.", true, { handoffText: result.metadata?.turnCoach?.nextQuestion || "" });
+    setVoiceResponse(result.response || fallbackAnswer || "Done. I am ready for your next question.", true, { handoffText: result.metadata?.turnCoach?.nextQuestion || "", alreadyTranslated: result.metadata?.translatedResponse === true });
   } catch (error) {
     markAgentPerformance("failed", "utility-assistant-error");
     const local = fallbackAnswer || nexusUtilityAssistantResponseV2(command);

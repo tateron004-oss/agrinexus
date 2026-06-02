@@ -87,6 +87,21 @@ async function call(route, body) {
       assert(state.commandResult.response.length > 20, `${intent} should produce a useful spoken answer`);
       assert((state.profile.agentMemory.rememberedContexts || []).some(item => item.intent === intent), `${intent} should be remembered as command evidence`);
     }
+    for (const targetLanguage of ["es", "fr", "sw", "ar"]) {
+      const state = await call("/api/agent/command", {
+        command: "Nexus, what works without providers?",
+        conversational: true,
+        inputMode: "voice",
+        outputMode: "voice",
+        targetLanguage,
+        timeZone: "America/Los_Angeles"
+      });
+      assert.strictEqual(state.commandResult.intent, "utility.pre-provider-readiness", `${targetLanguage} should keep the pre-provider intent`);
+      assert.strictEqual(state.commandResult.metadata.translatedResponse, true, `${targetLanguage} should return a translated command response`);
+      assert.strictEqual(state.commandResult.metadata.translation.targetLanguage, targetLanguage, `${targetLanguage} should be the response target language`);
+      assert.notStrictEqual(state.commandResult.response, state.commandResult.metadata.originalResponse, `${targetLanguage} response should not remain English-only`);
+      assert.strictEqual(state.commandResult.metadata.preProviderHardening.mode, "nexus-pre-provider-hardening", `${targetLanguage} should preserve the hardening model metadata`);
+    }
   } finally {
     server.kill();
     try {
@@ -111,6 +126,7 @@ async function call(route, body) {
   console.log("- Ask Nexus backend appointment answer");
   console.log("- Ask Nexus backend daily plan answer");
   console.log("- Ask Nexus backend next-step answer");
+  console.log("- Ask Nexus pre-provider multilingual responses: es, fr, sw, ar");
 })().catch(error => {
   console.error(error);
   process.exit(1);
