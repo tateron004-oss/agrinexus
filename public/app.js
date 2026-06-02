@@ -51,8 +51,8 @@ let routeTrackingWatchId = null;
 let routeTrackingPoints = [];
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-140";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v120";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-141";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v121";
 
 const countryLanguageMap = {
   nigeria: "en",
@@ -81,6 +81,7 @@ const voiceStopTranslations = {
     "Stop": "Detener",
     "Stop speaking": "Detener voz",
     "Stopped. I am ready when you are.": "Detenido. Estoy listo cuando usted lo este.",
+    "Stopped. Ask me the next question or tell me where to go next.": "Detenido. Hagame la siguiente pregunta o digame a donde ir despues.",
     "Nexus stopped speaking": "Nexus dejo de hablar",
     "I stopped speaking and I am ready for the next instruction.": "Deje de hablar y estoy listo para la siguiente instruccion."
   },
@@ -88,6 +89,7 @@ const voiceStopTranslations = {
     "Stop": "Arreter",
     "Stop speaking": "Arreter la voix",
     "Stopped. I am ready when you are.": "Arrete. Je suis pret quand vous l'etes.",
+    "Stopped. Ask me the next question or tell me where to go next.": "Arrete. Posez-moi la prochaine question ou dites-moi ou aller ensuite.",
     "Nexus stopped speaking": "Nexus a arrete de parler",
     "I stopped speaking and I am ready for the next instruction.": "J'ai arrete de parler et je suis pret pour la prochaine instruction."
   },
@@ -95,6 +97,7 @@ const voiceStopTranslations = {
     "Stop": "Simamisha",
     "Stop speaking": "Simamisha sauti",
     "Stopped. I am ready when you are.": "Nimesimama. Niko tayari utakaponihitaji.",
+    "Stopped. Ask me the next question or tell me where to go next.": "Nimesimama. Niulize swali linalofuata au niambie niende wapi sasa.",
     "Nexus stopped speaking": "Nexus ameacha kuzungumza",
     "I stopped speaking and I am ready for the next instruction.": "Nimeacha kuzungumza na niko tayari kwa maagizo yanayofuata."
   },
@@ -102,6 +105,7 @@ const voiceStopTranslations = {
     "Stop": "\u0625\u064a\u0642\u0627\u0641",
     "Stop speaking": "\u0623\u0648\u0642\u0641 \u0627\u0644\u0635\u0648\u062a",
     "Stopped. I am ready when you are.": "\u062a\u0645 \u0627\u0644\u0625\u064a\u0642\u0627\u0641. \u0623\u0646\u0627 \u062c\u0627\u0647\u0632 \u0639\u0646\u062f\u0645\u0627 \u062a\u0643\u0648\u0646 \u062c\u0627\u0647\u0632\u0627.",
+    "Stopped. Ask me the next question or tell me where to go next.": "\u062a\u0645 \u0627\u0644\u0625\u064a\u0642\u0627\u0641. \u0627\u0633\u0623\u0644\u0646\u064a \u0627\u0644\u0633\u0624\u0627\u0644 \u0627\u0644\u062a\u0627\u0644\u064a \u0623\u0648 \u0623\u062e\u0628\u0631\u0646\u064a \u0625\u0644\u0649 \u0623\u064a\u0646 \u0623\u0630\u0647\u0628.",
     "Nexus stopped speaking": "\u062a\u0648\u0642\u0641 \u0646\u0643\u0633\u0633 \u0639\u0646 \u0627\u0644\u0643\u0644\u0627\u0645",
     "I stopped speaking and I am ready for the next instruction.": "\u062a\u0648\u0642\u0641\u062a \u0639\u0646 \u0627\u0644\u0643\u0644\u0627\u0645 \u0648\u0623\u0646\u0627 \u062c\u0627\u0647\u0632 \u0644\u0644\u062a\u0639\u0644\u064a\u0645\u0629 \u0627\u0644\u062a\u0627\u0644\u064a\u0629."
   }
@@ -193,6 +197,7 @@ const workspaceTranslations = {
     "Stop": "Arreter",
     "Stop speaking": "Arreter la voix",
     "Stopped. I am ready when you are.": "Arrete. Je suis pret quand vous l'etes.",
+    "Stopped. Ask me the next question or tell me where to go next.": "Arrete. Posez-moi la prochaine question ou dites-moi ou aller ensuite.",
     "Nexus stopped speaking": "Nexus a arrete de parler",
     "I stopped speaking and I am ready for the next instruction.": "J'ai arrete de parler et je suis pret pour la prochaine instruction.",
     "Profile": "Profil",
@@ -220,6 +225,7 @@ const workspaceTranslations = {
     "Stop": "Simamisha",
     "Stop speaking": "Simamisha sauti",
     "Stopped. I am ready when you are.": "Nimesimama. Niko tayari utakaponihitaji.",
+    "Stopped. Ask me the next question or tell me where to go next.": "Nimesimama. Niulize swali linalofuata au niambie niende wapi sasa.",
     "Nexus stopped speaking": "Nexus ameacha kuzungumza",
     "I stopped speaking and I am ready for the next instruction.": "Nimeacha kuzungumza na niko tayari kwa maagizo yanayofuata.",
     "Profile": "Wasifu",
@@ -247,6 +253,7 @@ const workspaceTranslations = {
     "Stop": "\u0625\u064a\u0642\u0627\u0641",
     "Stop speaking": "\u0623\u0648\u0642\u0641 \u0627\u0644\u0635\u0648\u062a",
     "Stopped. I am ready when you are.": "\u062a\u0645 \u0627\u0644\u0625\u064a\u0642\u0627\u0641. \u0623\u0646\u0627 \u062c\u0627\u0647\u0632 \u0639\u0646\u062f\u0645\u0627 \u062a\u0643\u0648\u0646 \u062c\u0627\u0647\u0632\u0627.",
+    "Stopped. Ask me the next question or tell me where to go next.": "\u062a\u0645 \u0627\u0644\u0625\u064a\u0642\u0627\u0641. \u0627\u0633\u0623\u0644\u0646\u064a \u0627\u0644\u0633\u0624\u0627\u0644 \u0627\u0644\u062a\u0627\u0644\u064a \u0623\u0648 \u0623\u062e\u0628\u0631\u0646\u064a \u0625\u0644\u0649 \u0623\u064a\u0646 \u0623\u0630\u0647\u0628.",
     "Nexus stopped speaking": "\u062a\u0648\u0642\u0641 \u0646\u0643\u0633\u0633 \u0639\u0646 \u0627\u0644\u0643\u0644\u0627\u0645",
     "I stopped speaking and I am ready for the next instruction.": "\u062a\u0648\u0642\u0641\u062a \u0639\u0646 \u0627\u0644\u0643\u0644\u0627\u0645 \u0648\u0623\u0646\u0627 \u062c\u0627\u0647\u0632 \u0644\u0644\u062a\u0639\u0644\u064a\u0645\u0629 \u0627\u0644\u062a\u0627\u0644\u064a\u0629.",
     "Profile": "\u0627\u0644\u0645\u0644\u0641",
@@ -550,6 +557,7 @@ const contentTranslations = {
     "Stop": "Detener",
     "Stop speaking": "Detener voz",
     "Stopped. I am ready when you are.": "Detenido. Estoy listo cuando usted lo este.",
+    "Stopped. Ask me the next question or tell me where to go next.": "Detenido. Hagame la siguiente pregunta o digame a donde ir despues.",
     "Nexus stopped speaking": "Nexus dejo de hablar",
     "I stopped speaking and I am ready for the next instruction.": "Deje de hablar y estoy listo para la siguiente instruccion.",
     "Language changed to Spanish. AgriTrade phrases and responses will use Spanish.": "Idioma cambiado a espanol. Las frases y respuestas de AgriTrade usaran espanol."
@@ -2454,8 +2462,8 @@ function runUserModeSelfTest() {
       if (!simpleUserCommandWorkflow(button.command)) missing.push(`${section}: ${button.label}`);
     });
   });
-  const currentScript = [...document.scripts].some(script => String(script.src || "").includes("nexus-behavior-140"));
-  const currentStyle = [...document.styleSheets].some(sheet => String(sheet.href || "").includes("nexus-behavior-140"));
+  const currentScript = [...document.scripts].some(script => String(script.src || "").includes("nexus-behavior-141"));
+  const currentStyle = [...document.styleSheets].some(sheet => String(sheet.href || "").includes("nexus-behavior-141"));
   if (!currentScript || !currentStyle) missing.push("new app files");
   const ok = missing.length === 0;
   const message = ok
@@ -5458,6 +5466,34 @@ function clearConversationHold(message = "Stopped. Tell me the next instruction.
     setTimeout(() => {
       if (!voiceRecognition && !voiceSpeaking && !voiceStopRequested) startVoiceListening();
     }, 300);
+  }
+}
+
+function resetNexusForNextPrompt(message = "Stopped. Ask me the next question or tell me where to go next.") {
+  pendingAgentClarification = null;
+  activeVoiceMission = null;
+  activeAgentJourney = null;
+  pendingGrandmaAction = null;
+  voiceStopRequested = false;
+  voiceAutoRestart = voiceFirstMode;
+  agentProgressTimers = [];
+  agentPerformanceState.status = "ready";
+  conversationModeState.waitingForChoice = false;
+  conversationModeState.lastQuestion = "";
+  updateNexusBehaviorLayer("listening", message);
+  setVoiceStatus(voiceFirstMode ? "voice-first" : "standby");
+  const translated = translateText(message);
+  lastVoiceResponse = translated;
+  ["#globalAssistantStatus", "#globalVoiceOutputStatus", "#voiceTranscript", "#jarvisSummary"].forEach(selector => {
+    const element = $(selector);
+    if (element) element.textContent = translated;
+  });
+  updateUserCaptionPanel(translated, { expanded: true });
+  setCommandInputs("");
+  if (voiceFirstMode && !voiceRecognition && !voiceSpeaking && !document.hidden) {
+    setTimeout(() => {
+      if (!voiceRecognition && voiceFirstMode && !voiceSpeaking && !voiceStopRequested) startVoiceListening();
+    }, 250);
   }
 }
 
@@ -11784,17 +11820,7 @@ function stopVoicePlayback(options = {}) {
 
 function interruptNexusSpeech(reason = "I stopped speaking and I am ready for the next instruction.") {
   stopVoicePlayback({ hard: true });
-  updateNexusBehaviorLayer("listening", reason);
-  const status = $("#globalVoiceOutputStatus");
-  if (status) status.textContent = translateText(reason);
-  const transcript = $("#voiceTranscript");
-  if (transcript) transcript.textContent = translateText(reason);
-  updateUserCaptionPanel(reason);
-  if (voiceFirstMode && !voiceRecognition && !document.hidden) {
-    setTimeout(() => {
-      if (!voiceRecognition && !voiceSpeaking && !voiceStopRequested) startVoiceListening();
-    }, 300);
-  }
+  resetNexusForNextPrompt(reason);
 }
 
 function speakVoiceResponse(textOverride) {
@@ -12088,6 +12114,7 @@ async function handleVoiceCommand(rawCommand) {
   if (command) speechSafetyRisk(command, "voice");
   if (isGlobalStopCommand(lower)) {
     clearConversationHold("Stopped. I cleared the current choice and I am ready for the next instruction.");
+    resetNexusForNextPrompt("Stopped. Ask me the next question or tell me where to go next.");
     return;
   }
   updateNexusBehaviorLayer("thinking", command ? `Nexus is deciding how to help with: ${command}` : "Nexus is listening.");
@@ -12860,6 +12887,7 @@ async function runBackendAgentCommand(command) {
 function stopNexusSpeaking(reason = "Stopped. I am ready when you are.") {
   voiceStopRequested = false;
   interruptNexusSpeech(reason);
+  resetNexusForNextPrompt("Stopped. Ask me the next question or tell me where to go next.");
   setVoiceStatus(voiceFirstMode ? "voice-first" : "standby");
   toast("Nexus stopped speaking");
 }
@@ -13083,6 +13111,7 @@ function startVoiceListening() {
     if (isGlobalStopCommand(String(cleanedCommand || localizedCommand || command).toLowerCase())) {
       voiceStopRequested = false;
       clearConversationHold("Stopped. I am ready when you are.");
+      resetNexusForNextPrompt("Stopped. Ask me the next question or tell me where to go next.");
       return;
     }
     setVoiceStatus("thinking");

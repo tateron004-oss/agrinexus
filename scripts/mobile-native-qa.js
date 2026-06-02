@@ -13,7 +13,7 @@ const bridge = JSON.parse(fs.readFileSync(path.join(root, "public", "native-brid
 const requirements = [
   ["native bridge contract", bridge.wakePhrases.includes("Agri") && bridge.requiredPermissions.includes("backgroundAudio") && bridge.webCommands.includes("voice.stop")],
   ["installable app sharing", manifest.includes('"share_target"') && manifest.includes("Voice Intake") && manifest.includes("Field Route")],
-  ["offline bridge cache", sw.includes("native-bridge.json") && sw.includes("agrinexus-pwa-v120")],
+  ["offline bridge cache", sw.includes("native-bridge.json") && sw.includes("agrinexus-pwa-v121")],
   ["visible mobile permission controls", html.includes("mobilePermissionStatus") && html.includes('data-mobile-permission="native-plan"')],
   ["native capability matrix", app.includes("function nativeAppCapabilityMatrix") && app.includes("function nativeAppReadinessSummary")],
   ["native app voice answer", app.includes("highest level app") && app.includes("always-on wake")],

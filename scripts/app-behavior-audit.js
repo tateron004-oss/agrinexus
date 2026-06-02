@@ -318,11 +318,13 @@ assert(html.includes('data-caption-action="stop"'), "Caption box needs a stop sp
 assert(app.includes("activeVoiceRequestController.abort"), "Voice stop must abort pending OpenAI voice requests");
 assert(app.includes("voiceStopTranslations"), "Voice stop controls must translate in every supported language");
 assert(app.includes("detente") && app.includes("arrete") && app.includes("simama") && app.includes("اوقف"), "Voice stop parser must understand multilingual stop phrases");
+assert(app.includes("function resetNexusForNextPrompt"), "Voice stop must reset Nexus so the next question can be asked immediately");
+assert(app.includes("Stopped. Ask me the next question or tell me where to go next."), "Voice stop recovery must tell users they can ask the next prompt");
 assert(styles.includes("pointer-events: none") && styles.includes(".user-caption-actions") && styles.includes("pointer-events: auto"), "Caption panel must not block workflow action clicks");
 assert(styles.includes("width: min(300px, calc(100vw - 24px))") && styles.includes("max-height: 138px"), "Caption panel must default to a small bubble");
 assert(styles.includes(".user-caption-panel.expanded") && styles.includes("display: none") && styles.includes("display: grid"), "Caption input controls must appear only in expanded caption mode");
-assert(html.includes("nexus-behavior-140"), "Index must force browsers to load Nexus behavior CSS");
-assert(html.includes("nexus-behavior-140"), "Index must force browsers to load Nexus behavior JS");
+assert(html.includes("nexus-behavior-141"), "Index must force browsers to load Nexus behavior CSS");
+assert(html.includes("nexus-behavior-141"), "Index must force browsers to load Nexus behavior JS");
 assert(app.includes("if (!id) return \"dashboard\";"), "Language changes must survive an empty hash without querying '#'");
 assert(app.includes("document.getElementById(id)?.classList.contains(\"section\")"), "Section hash lookup must avoid invalid CSS selectors during language switching");
 assert(app.includes("I want to sell maize"), "Nexus behavior layer should support natural trade requests without button hunting");
