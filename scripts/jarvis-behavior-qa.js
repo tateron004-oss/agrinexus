@@ -13,7 +13,7 @@ const requirements = [
   ["deeper long-term memory", app.includes("function nexusDeepMemorySignals") && server.includes("rememberAgentMemory") && server.includes("memory-summary") && server.includes("function longTermMemorySummary") && server.includes("moduleMemory") && server.includes("advisorHistory")],
   ["autopilot mission queue", app.includes("function nexusAutopilotQueue") && server.includes("agent.autopilot_executed") && server.includes("previewSteps")],
   ["real provider action depth", app.includes("function providerActionDepthStatus") && server.includes("live-service-check") && server.includes("dispatchProviderWebhook")],
-  ["voice interruption", app.includes("function interruptNexusSpeech") && app.includes("I stopped speaking") && app.includes("stopVoicePlayback")],
+  ["voice interruption", app.includes("function interruptNexusSpeech") && app.includes("function stopNexusSpeaking") && app.includes("I stopped speaking") && app.includes("stopVoicePlayback") && app.includes("activeVoiceRequestController.abort")],
   ["proactive alerts", app.includes("function nexusProactiveAlerts") && app.includes("autopilot-waiting") && app.includes("renderNotificationPanel")],
   ["mobile permission polish", app.includes("function mobilePermissionRecoveryGuide") && app.includes("requestProductionMobilePermission") && app.includes("Connection restored")],
   ["behavior QA visibility", html.includes("nexusBehaviorStatus") && styles.includes("#nexusBehaviorStatus") && app.includes("function updateNexusBehaviorLayer")],

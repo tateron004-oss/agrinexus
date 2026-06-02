@@ -13,7 +13,7 @@
   <link rel="icon" href="/icons/agri-nexus-192.png" type="image/png">
   <link rel="apple-touch-icon" href="/icons/agri-nexus-192.png">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-  <link rel="stylesheet" href="/styles.css?v=nexus-behavior-138">
+  <link rel="stylesheet" href="/styles.css?v=nexus-behavior-139">
 </head>
 <body>
   <a class="skip-link" href="#mainContent">Skip to main content</a>
@@ -102,6 +102,7 @@
         <button type="button" data-user-voice-action="listen">Speak</button>
         <button type="button" data-user-voice-action="type">Ask</button>
         <button type="button" data-user-voice-action="read">Read</button>
+        <button type="button" class="voice-stop-button" data-user-voice-action="stop">Stop</button>
         <span id="nexusBehaviorStatus">Nexus ready</span>
       </div>
       <section id="userCaptionPanel" class="user-caption-panel hidden" aria-label="Nexus captions" aria-live="polite">
@@ -118,6 +119,7 @@
           <button type="button" data-caption-action="listen">Mic</button>
           <button type="button" data-caption-action="send">Send</button>
           <button type="button" data-caption-action="speak">Read</button>
+          <button type="button" class="voice-stop-button" data-caption-action="stop">Stop speaking</button>
           <button type="button" class="primary hidden" data-caption-action="confirm">Do this now</button>
           <button type="button" class="hidden" data-caption-action="cancel">Cancel</button>
         </div>
@@ -914,6 +916,7 @@
                 <button id="voiceRunBtn" type="button">Run command</button>
                 <button id="voiceFirstBtn" type="button">Voice-first mode</button>
                 <button id="voiceSpeakBtn" type="button">Read response</button>
+                <button id="voiceStopBtn" class="voice-stop-button" type="button">Stop speaking</button>
                 <button id="voiceHelpBtn" type="button">Voice help</button>
               </div>
             </div>
@@ -1330,6 +1333,7 @@
             <button id="globalYesBtn" type="button">Yes, do it</button>
             <button id="globalNoBtn" type="button">No, cancel</button>
             <button id="globalReadBtn" type="button">Read response</button>
+            <button id="globalStopBtn" class="voice-stop-button" type="button">Stop speaking</button>
             <button id="globalVoiceHelpBtn" type="button">Voice help</button>
             <button id="globalInstallBtn" type="button">Install app</button>
           </div>
@@ -1382,6 +1386,7 @@
         <button id="jarvisRunBtn" type="button">Run</button>
         <button id="jarvisMissionBtn" type="button">Full mission</button>
         <button id="jarvisReadBtn" type="button">Read</button>
+        <button id="jarvisStopBtn" class="voice-stop-button" type="button">Stop</button>
       </div>
       <div id="jarvisInsightPanel" class="task-list"></div>
     </section>
@@ -1426,6 +1431,6 @@
   <div id="toast" class="toast hidden" role="status" aria-live="polite" aria-atomic="true"></div>
   <div id="screenReaderStatus" class="sr-only" role="status" aria-live="polite" aria-atomic="true"></div>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="/app.js?v=nexus-behavior-138"></script>
+  <script src="/app.js?v=nexus-behavior-139"></script>
 </body>
 </html>

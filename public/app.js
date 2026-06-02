@@ -23,6 +23,7 @@ let lastSpokenAt = 0;
 let activeVoiceAudio = null;
 let voicePlaybackToken = 0;
 let voiceInterruptToken = 0;
+let activeVoiceRequestController = null;
 let voiceConversationTurns = Number(localStorage.getItem("agrinexusVoiceTurns") || 0);
 let liveVoiceSuggestions = [];
 let agentReasoningVisible = localStorage.getItem("agrinexusReasoningVisible") === "true";
@@ -50,8 +51,8 @@ let routeTrackingWatchId = null;
 let routeTrackingPoints = [];
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-138";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v118";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-139";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v119";
 
 const countryLanguageMap = {
   nigeria: "en",
@@ -2402,8 +2403,8 @@ function runUserModeSelfTest() {
       if (!simpleUserCommandWorkflow(button.command)) missing.push(`${section}: ${button.label}`);
     });
   });
-  const currentScript = [...document.scripts].some(script => String(script.src || "").includes("nexus-behavior-138"));
-  const currentStyle = [...document.styleSheets].some(sheet => String(sheet.href || "").includes("nexus-behavior-138"));
+  const currentScript = [...document.scripts].some(script => String(script.src || "").includes("nexus-behavior-139"));
+  const currentStyle = [...document.styleSheets].some(sheet => String(sheet.href || "").includes("nexus-behavior-139"));
   if (!currentScript || !currentStyle) missing.push("new app files");
   const ok = missing.length === 0;
   const message = ok
@@ -6668,7 +6669,7 @@ function renderLaunchSupportPanels() {
 }
 
 function applyPermissions() {
-  $$("[data-workflow], [data-ai], [data-workforce], [data-health], [data-pay], [data-module-test], [data-command-preset], [data-pilot-scenario], [data-persona], [data-simple-command], [data-simple-section], [data-simple-pilot], [data-simple-demo], [data-simple-mission], [data-simple-action], .provider-test, #adminHealthCheck, #liveServiceCheckBtn, #liveServiceCheckFromIntegrations, #aiConsoleRun, #agentPlanBtn, #agentExecuteBtn, #agentBriefingBtn, #agentMissionBtn, #missionResumeBtn, #missionAutopilotBtn, #demoRunBtn, #wowDemoBtn, #remoteLaunchKitBtn, #startOnboardingBtn, #openSupportBtn, #inviteSubscriberBtn, #addTestUserBtn, #addAdminUserBtn, [data-ai-review], [data-notify], #voiceListenBtn, #voiceRunBtn, #voiceFirstBtn, #voiceSpeakBtn, #voiceHelpBtn, #globalListenBtn, #globalRunBtn, #globalYesBtn, #globalNoBtn, #globalReadBtn, #globalVoiceHelpBtn, #globalInstallBtn, #jarvisListenBtn, #jarvisRunBtn, #jarvisMissionBtn, #jarvisReadBtn").forEach(element => {
+  $$("[data-workflow], [data-ai], [data-workforce], [data-health], [data-pay], [data-module-test], [data-command-preset], [data-pilot-scenario], [data-persona], [data-simple-command], [data-simple-section], [data-simple-pilot], [data-simple-demo], [data-simple-mission], [data-simple-action], .provider-test, #adminHealthCheck, #liveServiceCheckBtn, #liveServiceCheckFromIntegrations, #aiConsoleRun, #agentPlanBtn, #agentExecuteBtn, #agentBriefingBtn, #agentMissionBtn, #missionResumeBtn, #missionAutopilotBtn, #demoRunBtn, #wowDemoBtn, #remoteLaunchKitBtn, #startOnboardingBtn, #openSupportBtn, #inviteSubscriberBtn, #addTestUserBtn, #addAdminUserBtn, [data-ai-review], [data-notify], #voiceListenBtn, #voiceRunBtn, #voiceFirstBtn, #voiceSpeakBtn, #voiceStopBtn, #voiceHelpBtn, #globalListenBtn, #globalRunBtn, #globalYesBtn, #globalNoBtn, #globalReadBtn, #globalStopBtn, #globalVoiceHelpBtn, #globalInstallBtn, #jarvisListenBtn, #jarvisRunBtn, #jarvisMissionBtn, #jarvisReadBtn, #jarvisStopBtn").forEach(element => {
     const area = element.dataset.workflow
       || (element.dataset.ai ? "ai" : null)
       || (element.dataset.workforce ? "workforce" : null)
@@ -11693,6 +11694,14 @@ function stopVoicePlayback(options = {}) {
     lastSpokenText = "";
     lastSpokenAt = 0;
   }
+  if (activeVoiceRequestController) {
+    try {
+      activeVoiceRequestController.abort();
+    } catch (error) {
+      // The request may already have finished.
+    }
+    activeVoiceRequestController = null;
+  }
   if (activeVoiceAudio) {
     activeVoiceAudio.pause();
     activeVoiceAudio.onended = null;
@@ -11756,9 +11765,11 @@ function speakVoiceResponse(textOverride) {
     finishSpeaking();
   };
   updateVoiceOutputStatus("Requesting OpenAI voice audio...");
-  request("/api/voice/speak", { method: "POST", body: { text, language: languageCode(), locale: voiceLocale(), rate: speechRateForLanguage(), pitch: speechPitchForLanguage(), forceOpenAi: true, voice: "coral" } })
+  activeVoiceRequestController = new AbortController();
+  request("/api/voice/speak", { method: "POST", signal: activeVoiceRequestController.signal, body: { text, language: languageCode(), locale: voiceLocale(), rate: speechRateForLanguage(), pitch: speechPitchForLanguage(), forceOpenAi: true, voice: "coral" } })
     .then(result => {
       if (playbackToken !== voicePlaybackToken || interruptToken !== voiceInterruptToken) return;
+      activeVoiceRequestController = null;
       const audioDataUrl = result.voiceResult?.audioDataUrl;
       if (result.voiceResult?.error) {
         updateVoiceOutputStatus(`OpenAI voice error: ${result.voiceResult.error}`);
@@ -11785,6 +11796,8 @@ function speakVoiceResponse(textOverride) {
     })
     .catch(error => {
       if (playbackToken !== voicePlaybackToken || interruptToken !== voiceInterruptToken) return;
+      activeVoiceRequestController = null;
+      if (error.name === "AbortError") return;
       if (/sign in required/i.test(error.message || "")) {
         updateVoiceOutputStatus("Your session expired after redeploy. Sign in again, then press Read response.");
         toast("Please sign in again to use OpenAI voice.");
@@ -12777,6 +12790,13 @@ async function runBackendAgentCommand(command) {
   }
 }
 
+function stopNexusSpeaking(reason = "Stopped. I am ready when you are.") {
+  voiceStopRequested = false;
+  interruptNexusSpeech(reason);
+  setVoiceStatus(voiceFirstMode ? "voice-first" : "standby");
+  toast("Nexus stopped speaking");
+}
+
 async function answerGlobalConversation(answer) {
   setCommandInputs(answer);
   await handleVoiceCommand(answer);
@@ -13302,6 +13322,8 @@ function bindStatic() {
       } else if (action === "read") {
         updateUserCaptionPanel(lastVoiceResponse || "Nexus is ready.");
         speakVoiceResponse();
+      } else if (action === "stop") {
+        stopNexusSpeaking();
       } else {
         updateUserCaptionPanel(lastVoiceResponse || "Ask Nexus anything.");
         openAskNexus();
@@ -13321,6 +13343,8 @@ function bindStatic() {
         startVoiceListening();
       } else if (action === "speak") {
         speakVoiceResponse($("#userCaptionText")?.textContent || lastVoiceResponse);
+      } else if (action === "stop") {
+        stopNexusSpeaking();
       } else if (action === "send") {
         const input = $("#userCaptionInput");
         const command = input?.value.trim();
@@ -13486,6 +13510,12 @@ function bindStatic() {
       event.preventDefault();
       event.stopPropagation();
       speakVoiceResponse();
+      return;
+    }
+    if (event.target.closest("#globalStopBtn") || event.target.closest("#jarvisStopBtn") || event.target.closest("#voiceStopBtn")) {
+      event.preventDefault();
+      event.stopPropagation();
+      stopNexusSpeaking();
       return;
     }
     if (event.target.closest("#globalInstallBtn")) {
