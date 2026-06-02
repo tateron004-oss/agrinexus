@@ -2385,8 +2385,8 @@ function runUserModeSelfTest() {
       if (!simpleUserCommandWorkflow(button.command)) missing.push(`${section}: ${button.label}`);
     });
   });
-  const currentScript = [...document.scripts].some(script => String(script.src || "").includes("nexus-behavior-130"));
-  const currentStyle = [...document.styleSheets].some(sheet => String(sheet.href || "").includes("nexus-behavior-130"));
+  const currentScript = [...document.scripts].some(script => String(script.src || "").includes("nexus-behavior-131"));
+  const currentStyle = [...document.styleSheets].some(sheet => String(sheet.href || "").includes("nexus-behavior-131"));
   if (!currentScript || !currentStyle) missing.push("new app files");
   const ok = missing.length === 0;
   const message = ok
@@ -2993,6 +2993,95 @@ function nexusIntelligenceRouterDecision(command = "") {
   return null;
 }
 
+function nexusStrategicReasoningModel(command = "", decision = null) {
+  const signals = nexusIntentSignals(command);
+  const categories = [
+    signals.health ? "health" : "",
+    signals.trade ? "trade" : "",
+    signals.workforce ? "workforce" : "",
+    signals.learning ? "learning" : "",
+    signals.map ? "map" : "",
+    signals.drone ? "drone" : "",
+    signals.admin ? "admin" : "",
+    signals.investor ? "investor" : ""
+  ].filter(Boolean);
+  const urgency = signals.advisor.emergency ? 100
+    : signals.advisor.mediaIntake ? 88
+      : signals.advisor.cropSpoilage ? 78
+        : signals.tracking ? 72
+          : signals.health ? 70
+            : signals.nextStep ? 56
+              : 48;
+  const impact = Math.min(100, 44
+    + (signals.health ? 18 : 0)
+    + (signals.trade ? 16 : 0)
+    + (signals.workforce ? 13 : 0)
+    + (signals.learning ? 12 : 0)
+    + (signals.map ? 10 : 0)
+    + (signals.drone ? 13 : 0)
+    + (signals.investor || signals.admin ? 10 : 0));
+  const safety = Math.max(38, Math.min(98, 94
+    - (signals.advisor.emergency ? 22 : 0)
+    - (signals.moneyTrade ? 8 : 0)
+    - (signals.advisor.mediaIntake ? 10 : 0)
+    + (decision?.type === "answer" ? 8 : 0)));
+  const confidence = Math.round(Math.min(99, Math.max(45, Number(decision?.confidence || 0.6) * 100)));
+  const intelligence = Math.round((urgency * .24) + (impact * .28) + (safety * .18) + (confidence * .3));
+  const nextBestAction = decision?.suggestions?.[0]
+    || (signals.health ? "start telehealth intake"
+      : signals.trade ? "contact buyer"
+        : signals.workforce ? "show me jobs"
+          : signals.learning ? "start a course"
+            : signals.map ? "check route risk"
+              : "ask what should I do next");
+  const plainWhy = [
+    categories.length ? `matched ${categories.join(", ")}` : "matched a general guidance request",
+    `urgency ${urgency}/100`,
+    `impact ${impact}/100`,
+    `safety ${safety}/100`,
+    `confidence ${confidence}/100`
+  ].join("; ");
+  const model = {
+    command,
+    mode: signals.context.mode,
+    section: decision?.section || signals.context.section,
+    categories,
+    urgency,
+    impact,
+    safety,
+    confidence,
+    intelligence,
+    nextBestAction,
+    plainWhy,
+    recommendation: decision?.response || `I recommend ${nextBestAction}.`,
+    updatedAt: new Date().toISOString()
+  };
+  localStorage.setItem("agrinexusStrategicReasoning", JSON.stringify(model));
+  return model;
+}
+
+function enhanceNexusDecisionWithStrategy(decision, command = "") {
+  if (!decision) return null;
+  const strategy = nexusStrategicReasoningModel(command, decision);
+  const strategicReason = `Strategic reasoning: ${strategy.plainWhy}. Next best action: ${strategy.nextBestAction}.`;
+  return {
+    ...decision,
+    strategicPlan: strategy,
+    confidence: Math.max(Number(decision.confidence || 0), strategy.confidence / 100),
+    reason: `${decision.reason} ${strategicReason}`,
+    suggestions: Array.from(new Set([...(decision.suggestions || []), strategy.nextBestAction])).slice(0, 6),
+    response: decision.response
+      ? `${decision.response} I chose this because ${strategy.plainWhy}.`
+      : `I recommend ${strategy.nextBestAction}. I chose this because ${strategy.plainWhy}.`
+  };
+}
+
+function nexusStrategicReasoningSummary() {
+  const stored = JSON.parse(localStorage.getItem("agrinexusStrategicReasoning") || "null");
+  const plan = stored || nexusStrategicReasoningModel(agentPerformanceState.lastCommand || "what should I do next", nexusIntelligenceRouterDecision(agentPerformanceState.lastCommand || "what should I do next"));
+  return `Nexus Strategic Reasoner is active. Intelligence score ${plan.intelligence}/100. It saw ${plan.categories.length ? plan.categories.join(", ") : "general guidance"}, weighed urgency ${plan.urgency}, impact ${plan.impact}, safety ${plan.safety}, and confidence ${plan.confidence}. Next best action: ${plan.nextBestAction}.`;
+}
+
 async function executeNexusIntelligenceRoute(decision, command = "") {
   if (!decision) return false;
   updateNexusBehaviorLayer(decision.type === "workflow" ? "confirming" : "thinking", `Nexus Intelligence Router: ${decision.reason}`);
@@ -3021,7 +3110,7 @@ async function executeNexusIntelligenceRoute(decision, command = "") {
 }
 
 async function handleNexusIntelligenceRouter(command = "") {
-  const decision = nexusIntelligenceRouterDecision(command);
+  const decision = enhanceNexusDecisionWithStrategy(nexusIntelligenceRouterDecision(command), command);
   if (!decision || decision.confidence < .78) return false;
   return executeNexusIntelligenceRoute(decision, command);
 }
@@ -11886,7 +11975,12 @@ async function handleVoiceCommand(rawCommand) {
   }
   if (lower.includes("highest intelligence") || lower.includes("high intelligence") || lower.includes("show intelligence") || lower.includes("intelligence snapshot") || lower.includes("how smart are you") || lower.includes("show decision")) {
     goSection("agent");
-    setVoiceResponse(nexusHighIntelligenceSummary(), true);
+    setVoiceResponse(`${nexusHighIntelligenceSummary()} ${nexusStrategicReasoningSummary()}`, true);
+    return;
+  }
+  if (lower.includes("strategic reasoning") || lower.includes("strategic reason") || lower.includes("why did you choose") || lower.includes("explain your decision") || lower.includes("intelligence score")) {
+    goSection("agent");
+    setVoiceResponse(nexusStrategicReasoningSummary(), true);
     return;
   }
   if (lower.includes("be smart") || lower.includes("act smart") || lower.includes("act intelligently") || lower.includes("think for me") || lower.includes("use your intelligence")) {
