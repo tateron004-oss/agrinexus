@@ -132,6 +132,10 @@ for (const [section, buttons] of Object.entries(expectedSections)) {
   "function speechSafetyRisk",
   "function applySpeechSafetyToDecision",
   "agrinexusSpeechSafety",
+  "function normalizeImperfectSpeech",
+  "function adaptiveCommandUnderstanding",
+  "agrinexusAdaptiveUnderstanding",
+  "nexusAdaptiveUnderstandingSummary",
   "Please refresh the app or contact support."
 ].forEach(marker => {
   assert(app.includes(marker), `User workflow safety marker missing: ${marker}`);
@@ -201,9 +205,9 @@ for (const [section, buttons] of Object.entries(expectedSections)) {
   assert(styles.includes(marker), `User workflow containment style missing: ${marker}`);
 });
 
-assert(html.includes("/app.js?v=nexus-behavior-132"), "Index must force browsers to load current User-mode workflow JS");
-assert(html.includes("/styles.css?v=nexus-behavior-132"), "Index must force browsers to load current User-mode workflow CSS");
-assert(sw.includes('CACHE_NAME = "agrinexus-pwa-v112"'), "Service worker cache must be bumped after User-mode workflow fixes");
+assert(html.includes("/app.js?v=nexus-behavior-133"), "Index must force browsers to load current User-mode workflow JS");
+assert(html.includes("/styles.css?v=nexus-behavior-133"), "Index must force browsers to load current User-mode workflow CSS");
+assert(sw.includes('CACHE_NAME = "agrinexus-pwa-v113"'), "Service worker cache must be bumped after User-mode workflow fixes");
 
 console.log("User mode workflow audit passed");
 console.log("Checked: every simple app tab/button maps to a workflow, course/job choices are visible, User mode uses inline confirmations, assistant windows have anti-partial containment, and no user-facing repair controls are exposed.");

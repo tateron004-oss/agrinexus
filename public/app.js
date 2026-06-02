@@ -2385,8 +2385,8 @@ function runUserModeSelfTest() {
       if (!simpleUserCommandWorkflow(button.command)) missing.push(`${section}: ${button.label}`);
     });
   });
-  const currentScript = [...document.scripts].some(script => String(script.src || "").includes("nexus-behavior-132"));
-  const currentStyle = [...document.styleSheets].some(sheet => String(sheet.href || "").includes("nexus-behavior-132"));
+  const currentScript = [...document.scripts].some(script => String(script.src || "").includes("nexus-behavior-133"));
+  const currentStyle = [...document.styleSheets].some(sheet => String(sheet.href || "").includes("nexus-behavior-133"));
   if (!currentScript || !currentStyle) missing.push("new app files");
   const ok = missing.length === 0;
   const message = ok
@@ -2600,6 +2600,81 @@ function applySpeechSafetyToDecision(decision, command = "", source = "voice") {
   };
 }
 
+function normalizeImperfectSpeech(command = "") {
+  const original = String(command || "").replace(/\s+/g, " ").trim();
+  const lower = normalizeToolText(original);
+  const replacements = [
+    [/\bagri\s*trade\b/g, "agritrade"],
+    [/\bagri\s*nexus\b/g, "agrinexus"],
+    [/\btele\s*health\b/g, "telehealth"],
+    [/\bdoctor help\b/g, "open telehealth and start intake"],
+    [/\bhealth help\b/g, "open telehealth and start intake"],
+    [/\bjob please\b/g, "show me jobs"],
+    [/\bwork please\b/g, "show me jobs"],
+    [/\bsell crop\b/g, "sell my crop"],
+    [/\bbuy crop\b/g, "buy a crop"],
+    [/\bwhere product\b/g, "track my product route"],
+    [/\bwhere my product\b/g, "track my product route"],
+    [/\btrack sale\b/g, "track my sale route"],
+    [/\bmap route\b/g, "open map and check route risk"],
+    [/\bdrone farm\b/g, "run drone scan on my farm"],
+    [/\bteach me\b/g, "start a course"],
+    [/\bi want learn\b/g, "start a course"],
+    [/\bi need job\b/g, "show me jobs"],
+    [/\bi need doctor\b/g, "open telehealth and start intake"]
+  ];
+  let rewritten = lower;
+  replacements.forEach(([pattern, value]) => {
+    rewritten = rewritten.replace(pattern, value);
+  });
+  return rewritten.replace(/\s+/g, " ").trim() || original;
+}
+
+function adaptiveCommandUnderstanding(command = "") {
+  const original = String(command || "").replace(/\s+/g, " ").trim();
+  const normalized = normalizeImperfectSpeech(original);
+  const lower = normalizeToolText(normalized);
+  const words = lower.split(/\s+/).filter(Boolean);
+  const families = [
+    { intent: "health", command: "open telehealth and start intake", terms: ["doctor", "nurse", "clinic", "hospital", "pain", "hurt", "injury", "sick", "medicine", "health", "care", "provider", "telehealth", "medico", "salud", "sante", "hopital", "afya"] },
+    { intent: "workforce", command: "show me jobs", terms: ["job", "work", "role", "apply", "worker", "shift", "interview", "employment", "skills", "trabajo", "emploi", "kazi"] },
+    { intent: "trade", command: "sell my crop", terms: ["crop", "buyer", "seller", "sell", "buy", "market", "price", "payment", "wallet", "order", "farm", "harvest", "maize", "rice", "cassava", "producto", "vendre", "acheter", "soko", "mazao"] },
+    { intent: "map", command: "open map and check route risk", terms: ["map", "route", "road", "location", "track", "where", "facility", "delivery", "shipment", "gps", "ruta", "carte", "ramani", "njia"] },
+    { intent: "learning", command: "start a course", terms: ["learn", "course", "lesson", "training", "certificate", "student", "quiz", "school", "study", "aprender", "cours", "kujifunza", "somo"] },
+    { intent: "drone", command: "run drone scan on my farm", terms: ["drone", "scan", "footage", "field", "pest", "irrigation", "aerial", "farm video"] }
+  ];
+  const scored = families.map(family => {
+    const hits = family.terms.filter(term => lower.includes(term)).length;
+    return { ...family, hits, score: hits / Math.max(2, Math.min(8, words.length)) };
+  }).sort((a, b) => b.score - a.score);
+  const best = scored[0];
+  const hasAction = /\b(open|start|show|apply|sell|buy|contact|call|message|run|create|track|find|explain|change|switch|translate|confirm|cancel|stop)\b/.test(lower);
+  const rewrittenCommand = best?.hits && !hasAction
+    ? best.command
+    : normalized;
+  const confidence = Math.min(.96, Math.max(.45, (best?.score || 0) + (hasAction ? .42 : .28) + (words.length >= 4 ? .12 : 0)));
+  const needsHumanCheck = confidence < .72 || (best?.hits > 0 && !hasAction);
+  const understanding = {
+    original,
+    normalized,
+    rewrittenCommand,
+    intent: best?.hits ? best.intent : "general",
+    confidence: Number(confidence.toFixed(2)),
+    needsHumanCheck,
+    reason: best?.hits
+      ? `Matched ${best.intent} from ${best.hits} speech clue(s).`
+      : "No strong workflow clue found yet.",
+    updatedAt: new Date().toISOString()
+  };
+  localStorage.setItem("agrinexusAdaptiveUnderstanding", JSON.stringify(understanding));
+  return understanding;
+}
+
+function nexusAdaptiveUnderstandingSummary() {
+  const stored = JSON.parse(localStorage.getItem("agrinexusAdaptiveUnderstanding") || "null") || adaptiveCommandUnderstanding(agentPerformanceState.lastCommand || "");
+  return `Adaptive understanding is active. Nexus heard: ${stored.original || "nothing yet"}. It normalized that to: ${stored.rewrittenCommand || stored.normalized || "no command yet"}. Intent: ${stored.intent}. Confidence: ${Math.round((stored.confidence || 0) * 100)} percent. ${stored.needsHumanCheck ? "For unclear or risky speech, Nexus will confirm before acting." : "Nexus can route this without extra friction."}`;
+}
+
 function languageFromVoiceCommand(command) {
   const lower = String(command || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
   const languages = {
@@ -2637,7 +2712,7 @@ function languageFromVoiceCommand(command) {
 
 function isUniversalLanguageCommand(command) {
   const lower = String(command || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-  return /\b(change|switch|set|translate|language|speak|talk|respond|reply|use)\b/.test(lower)
+  return /\b(change|switch|set|translate|language|speak|talk|respond|reply|use|cambiar|idioma|langue|lugha|lingua|hablar|parler|ongea|zungumza|responder)\b/.test(lower)
     && Boolean(languageFromVoiceCommand(lower));
 }
 
@@ -11663,7 +11738,11 @@ async function handleVoiceCommand(rawCommand) {
   if (!data) return setVoiceResponse("Sign in first, then I can operate the platform.");
   const localizedCommand = normalizeLocalizedVoiceCommand(rawCommand);
   const wakeOnly = isWakePhraseOnly(localizedCommand);
-  const command = cleanWakeCommand(localizedCommand);
+  let command = cleanWakeCommand(localizedCommand);
+  const understanding = adaptiveCommandUnderstanding(command);
+  if (understanding.rewrittenCommand && !isUniversalLanguageCommand(command) && !isGlobalStopCommand(understanding.rewrittenCommand.toLowerCase())) {
+    command = understanding.rewrittenCommand;
+  }
   const lower = command.toLowerCase();
   markAgentPerformance("heard", "voice-command");
   agentPerformanceState.lastCommand = command;
@@ -11690,6 +11769,10 @@ async function handleVoiceCommand(rawCommand) {
       localStorage.setItem("agrinexusSlowSpeech", "on");
     }
     setVoiceResponse(multilingualSpeechSafetySummary(), true);
+    return;
+  }
+  if (/\b(adaptive understanding|what did you hear|what do you think i said|understand me|speech intelligence|voice intelligence)\b/.test(lower)) {
+    setVoiceResponse(nexusAdaptiveUnderstandingSummary(), true);
     return;
   }
   if (pendingAgentClarification && await answerAgentClarification(command)) return;
