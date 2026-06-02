@@ -2777,6 +2777,7 @@ function nexusUtilityAssistantResponseV2(command = "") {
   if (/\b(buyer message|message buyer|contact buyer|buyer update|text buyer|whatsapp buyer|send buyer|talk to buyer|speak to buyer)\b/.test(lower)) return buyerMessageAssistantAnswer();
   if (/\b(field alert|field warning|crop alert|farm alert|pest alert|drone alert|field problem|crop problem|crop stress|field risk|bad crop|crops going bad)\b/.test(lower)) return fieldAlertAssistantAnswer();
   if (/\b(health safety|safety reminder|health reminder|is it safe|too hot for grandma|patient safety|care reminder|outbreak safety|heat safety)\b/.test(lower)) return healthSafetyAssistantAnswer();
+  if (/\b(situation agent|manage this situation|handle this situation|what is the situation|situation plan|help me with this situation)\b/.test(lower)) return `${nextStepAssistantAnswer()} Nexus Situation Agent is using memory, situation detection, one-question intake, planning, safety, follow-up, role tone, and provider truthfulness.`;
   if (/\b(shipment|delivery|deliver|arrive|arrival|eta|track my sale|track my order|track my product|where is my crop|where is my shipment|route status)\b/.test(lower)) {
     if (canOpenSection("map")) goSection("map");
     return shipmentEtaAnswer();

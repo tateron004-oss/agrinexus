@@ -9765,6 +9765,7 @@ function utilityAssistantKind(text, lower) {
   if (/\b(buyer message|message buyer|contact buyer|buyer update|text buyer|whatsapp buyer|send buyer|talk to buyer|speak to buyer)\b/.test(lower)) return "buyer-message";
   if (/\b(field alert|field warning|crop alert|farm alert|pest alert|drone alert|field problem|crop problem|crop stress|field risk|bad crop|crops going bad)\b/.test(lower)) return "field-alert";
   if (/\b(health safety|safety reminder|health reminder|is it safe|too hot for grandma|patient safety|care reminder|outbreak safety|heat safety)\b/.test(lower)) return "health-safety";
+  if (/\b(situation agent|manage this situation|handle this situation|what is the situation|situation plan|help me with this situation)\b/.test(lower)) return "situation-agent";
   if (/\b(shipment|delivery|deliver|arrive|arrival|eta|track my sale|track my order|track my product|where is my crop|where is my shipment|route status)\b/.test(lower)) return "shipment";
   if (/\b(appointment|schedule|calendar|visit|call with provider|doctor time|provider time|shift time|what time is my)\b/.test(lower)) return "appointment";
   if (/\b(what is next today|what do i have today|today's plan|daily plan|my day|what should i do today)\b/.test(lower)) return "daily-plan";
@@ -9955,6 +9956,85 @@ function utilityNextStepAnswer(db, user) {
   return `Next best step: ${top.title} in ${top.module}. Why: ${top.reason || top.detail}. What to do: ${top.detail}. You can say "Nexus, do the next step" or open ${top.section || top.module}.`;
 }
 
+function nexusSituationAgentModel(db, user, text, kind = "") {
+  const providers = runtimeProviders(db);
+  const signal = conversationModuleSignal(text);
+  const smart = smartNextActions(db, user, providers);
+  const top = smart.items[0] || null;
+  const memories = retrieveAgentMemories(db.profile, text, 4);
+  const liveProviders = providers.filter(provider => provider.status === "connected").length;
+  const totalProviders = providers.length;
+  const risky = /health|safety|payment|buyer|shipment|delivery|route|appointment|emergency|doctor|provider|wallet|send|message|contact/i.test(text);
+  const role = user?.role || "Standard User";
+  const tone = role === "Admin"
+    ? "operations-ready, evidence-focused, and risk-aware"
+    : role === "Investor"
+      ? "impact-focused, simple, and proof-oriented"
+      : "plain, calm, one step at a time";
+  const questionBySection = {
+    health: "What is the main health concern right now?",
+    trade: "Which crop or buyer are we working on?",
+    workforce: "Which job or shift do you want help with?",
+    learning: "What do you want to learn or finish today?",
+    map: "Which route, shipment, or place should I check?",
+    agent: "What outcome do you want Nexus to manage?"
+  };
+  const detectedSection = kind === "shipment" || kind === "route-delay" ? "map"
+    : kind === "health-safety" || kind === "appointment" || kind === "appointment-reminder" ? "health"
+      : kind === "crop-timing" || kind === "buyer-message" || kind === "field-alert" ? "trade"
+        : signal.section || top?.section || "dashboard";
+  return {
+    mode: "nexus-situation-agent",
+    eightPointModel: [
+      "multi-step-memory",
+      "situation-detection",
+      "one-question-intake",
+      "auto-action-planning",
+      "confidence-and-safety",
+      "proactive-follow-up",
+      "role-specific-personality",
+      "provider-aware-truthfulness"
+    ],
+    memory: {
+      currentGoal: text,
+      matchedMemories: memories.map(item => item.text || item.summary || item.fact).filter(Boolean).slice(0, 3),
+      rememberedContextCount: (db.profile.agentMemory?.rememberedContexts || []).length
+    },
+    situation: {
+      kind: kind || signal.section || "general",
+      module: signal.module || top?.module || "Agent AI",
+      section: detectedSection,
+      confidence: Math.max(signal.score || 0.72, top?.confidence || 0.74)
+    },
+    intake: {
+      style: "one-question-at-a-time",
+      nextQuestion: questionBySection[detectedSection] || "What do you want Nexus to help with first?"
+    },
+    plan: {
+      nextAction: top ? top.title : "Continue guided support",
+      steps: top
+        ? ["confirm the goal", top.title, "record evidence", "ask the next useful question"]
+        : ["confirm the goal", "choose the right module", "open the workflow", "record evidence"]
+    },
+    safety: {
+      confirmationRequired: risky,
+      reason: risky ? "Health, payments, buyer contact, routing, or provider actions should be confirmed before action." : "Low-risk informational request."
+    },
+    proactiveFollowUp: {
+      enabled: true,
+      prompt: top ? `After this, I should ask whether to ${String(top.title || "continue").toLowerCase()}.` : "After this, I should ask what the user wants to do next."
+    },
+    persona: {
+      role,
+      tone
+    },
+    truthfulness: {
+      providerStatus: `${liveProviders}/${totalProviders} provider adapter(s) connected`,
+      rule: "Nexus must say when it is using live providers, platform records, or local context."
+    }
+  };
+}
+
 async function utilityAssistantCommandResponse(db, user, text, lower, options = {}) {
   const kind = utilityAssistantKind(text, lower);
   if (!kind) return null;
@@ -9980,10 +10060,14 @@ async function utilityAssistantCommandResponse(db, user, text, lower, options = 
           ? utilityAppointmentAnswer(db, options)
           : kind === "next-step"
             ? utilityNextStepAnswer(db, user)
+            : kind === "situation-agent"
+              ? `Situation Agent is active. ${utilityNextStepAnswer(db, user)}`
             : `${utilityTimeAnswer(options)} ${utilityAppointmentAnswer(db, options)} ${utilityShipmentEtaAnswer(db)} ${utilityNextStepAnswer(db, user)}`;
+  const situationAgent = nexusSituationAgentModel(db, user, text, kind);
   const redirectSection = ["shipment", "route-delay"].includes(kind) ? "map"
     : ["appointment", "appointment-reminder", "health-safety"].includes(kind) ? "health"
       : ["crop-timing", "buyer-message", "field-alert"].includes(kind) ? "trade"
+        : kind === "situation-agent" ? situationAgent.situation.section
         : kind === "next-step" ? (smartNextActions(db, user).items[0]?.section || "dashboard")
           : "dashboard";
   ensureAiProfile(db.profile);
@@ -10001,7 +10085,7 @@ async function utilityAssistantCommandResponse(db, user, text, lower, options = 
     module: "Agent AI",
     action: `utility.${kind}`,
     detail: response.slice(0, 240),
-    metadata: { kind, timeZone: options.timeZone || "", command: text },
+    metadata: { kind, timeZone: options.timeZone || "", command: text, situationAgent },
     dispatch: false
   });
   return {
@@ -10012,6 +10096,7 @@ async function utilityAssistantCommandResponse(db, user, text, lower, options = 
       conversationMode: true,
       redirectSection,
       utilityAssistant: true,
+      situationAgent,
       kind,
       suggestedReplies: ["what should I do next", "track my shipment", "message buyer", "field alert", "health safety reminder"]
     }

@@ -60,6 +60,7 @@ async function call(route, body) {
       ["utility.buyer-message", "Nexus, prepare a buyer message"],
       ["utility.field-alert", "Nexus, give me a field alert"],
       ["utility.health-safety", "Nexus, give me a health safety reminder"],
+      ["utility.situation-agent", "Nexus, manage this situation"],
       ["utility.shipment", "Nexus, how long until my shipment arrives?"],
       ["utility.appointment", "Nexus, what time is my appointment?"],
       ["utility.daily-plan", "Nexus, what is next today?"],
@@ -75,6 +76,8 @@ async function call(route, body) {
       });
       assert.strictEqual(state.commandResult.intent, intent, `${command} should return ${intent}`);
       assert.strictEqual(state.commandResult.metadata.utilityAssistant, true, `${intent} should be utility-backed`);
+      assert.strictEqual(state.commandResult.metadata.situationAgent.mode, "nexus-situation-agent", `${intent} should include Situation Agent mode`);
+      assert.strictEqual(state.commandResult.metadata.situationAgent.eightPointModel.length, 8, `${intent} should include all eight Situation Agent elements`);
       assert(state.commandResult.response.length > 20, `${intent} should produce a useful spoken answer`);
       assert((state.profile.agentMemory.rememberedContexts || []).some(item => item.intent === intent), `${intent} should be remembered as command evidence`);
     }
@@ -96,6 +99,7 @@ async function call(route, body) {
   console.log("- Ask Nexus backend buyer message answer");
   console.log("- Ask Nexus backend field alert answer");
   console.log("- Ask Nexus backend health safety answer");
+  console.log("- Ask Nexus backend Situation Agent eight-point model");
   console.log("- Ask Nexus backend shipment answer");
   console.log("- Ask Nexus backend appointment answer");
   console.log("- Ask Nexus backend daily plan answer");
