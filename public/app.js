@@ -2385,8 +2385,8 @@ function runUserModeSelfTest() {
       if (!simpleUserCommandWorkflow(button.command)) missing.push(`${section}: ${button.label}`);
     });
   });
-  const currentScript = [...document.scripts].some(script => String(script.src || "").includes("nexus-behavior-134"));
-  const currentStyle = [...document.styleSheets].some(sheet => String(sheet.href || "").includes("nexus-behavior-134"));
+  const currentScript = [...document.scripts].some(script => String(script.src || "").includes("nexus-behavior-135"));
+  const currentStyle = [...document.styleSheets].some(sheet => String(sheet.href || "").includes("nexus-behavior-135"));
   if (!currentScript || !currentStyle) missing.push("new app files");
   const ok = missing.length === 0;
   const message = ok
@@ -2742,6 +2742,141 @@ function nexusContextMemorySummary() {
     memory.activeScan ? `drone scan ${memory.activeScan}` : ""
   ].filter(Boolean).join("; ") || "no active workflow record yet";
   return `Context memory is active for ${memory.modeLabel}. I know the user is in ${memory.section}, speaking ${memory.language}, with intent ${memory.intent}. Active context: ${active}. My next best question is: ${nexusNextBestQuestion(memory.intent, memory.command || "", memory)}`;
+}
+
+function nexusAdvisorProfile(intent = "general") {
+  const mode = conversationPlatformMode();
+  const section = currentSectionId();
+  const role = mode === "admin" ? "operator"
+    : mode === "investor" ? "investor reviewer"
+      : intent === "health" ? "patient or caregiver"
+        : intent === "trade" || intent === "drone" ? "farmer or market user"
+          : intent === "workforce" ? "worker"
+            : intent === "learning" ? "learner"
+              : "everyday user";
+  const style = mode === "user"
+    ? "plain language, one question at a time, large-action guidance"
+    : mode === "admin"
+      ? "risk-first, evidence-first, operational"
+      : "impact-first, proof-first, non-technical";
+  const goals = {
+    health: "get the user to safe telehealth support without giving medical diagnosis",
+    trade: "help move crops from seller to buyer with route, payment, and communication evidence",
+    drone: "turn field evidence into simple crop guidance and the next safe field task",
+    workforce: "help the user find work, apply, and understand the next readiness gap",
+    learning: "help the learner choose, complete, understand, and prove training progress",
+    map: "explain route, facility, risk, and location context clearly",
+    general: "understand the need and route to the safest useful workflow"
+  };
+  return {
+    mode,
+    section,
+    role,
+    style,
+    goal: goals[intent] || goals.general,
+    guardrail: intent === "health"
+      ? "resource guidance only; urgent danger should use local emergency services"
+      : intent === "trade"
+        ? "confirm before money, buyer, seller, or route actions"
+        : "confirm before important workflow changes",
+    updatedAt: new Date().toISOString()
+  };
+}
+
+function nexusDecisionScoringModel(command = agentPerformanceState.lastCommand || "") {
+  const understanding = adaptiveCommandUnderstanding(command);
+  const context = nexusContextMemoryModel(command, understanding.intent);
+  const advisor = nexusAdvisorProfile(understanding.intent);
+  const providerDepth = providerActionDepthStatus();
+  const providerGroup = understanding.intent === "health" ? providerDepth.telehealth
+    : understanding.intent === "trade" || understanding.intent === "drone" || understanding.intent === "map" ? providerDepth.trade
+      : understanding.intent === "workforce" ? providerDepth.workforce
+        : understanding.intent === "learning" ? providerDepth.learning
+          : providerDepth.voice;
+  const liveReadiness = providerGroup?.total ? Math.round((providerGroup.ready / providerGroup.total) * 100) : 50;
+  const safety = understanding.intent === "health" ? 92
+    : understanding.intent === "trade" ? 84
+      : understanding.intent === "map" ? 82
+        : 88;
+  const usefulness = Math.min(98, Math.round((understanding.confidence * 55) + (context.lastTopic ? 10 : 0) + (liveReadiness * .25) + 18));
+  const confidence = Math.min(99, Math.round((understanding.confidence * 70) + (liveReadiness * .18) + (safety * .12)));
+  const score = Math.round((confidence * .36) + (usefulness * .34) + (safety * .2) + (liveReadiness * .1));
+  const recommendation = understanding.rewrittenCommand || nexusNextBestQuestion(understanding.intent, command, context);
+  const model = {
+    command,
+    intent: understanding.intent,
+    advisor,
+    context,
+    confidence,
+    usefulness,
+    safety,
+    liveReadiness,
+    score,
+    recommendation,
+    why: `I matched ${understanding.intent}, used ${advisor.role} behavior, checked live readiness ${liveReadiness}%, and weighted safety ${safety}%.`,
+    nextQuestion: understanding.nextQuestion || nexusNextBestQuestion(understanding.intent, command, context),
+    updatedAt: new Date().toISOString()
+  };
+  localStorage.setItem("agrinexusDecisionScoring", JSON.stringify(model));
+  return model;
+}
+
+function nexusLiveKnowledgeFeedReadiness() {
+  const providers = data?.providers || [];
+  const providerReady = id => ["connected", "ready"].includes(providers.find(provider => provider.id === id)?.status);
+  const feeds = [
+    { id: "weather", title: "Weather and heat", ready: providerReady("weather") || providerReady("map-tiles"), value: "walking, planting, harvest, and field-risk guidance" },
+    { id: "health", title: "Health/outbreak alerts", ready: providerReady("health-telehealth") || providerReady("health-ehr"), value: "regional telehealth safety and referral context" },
+    { id: "market", title: "Crop prices and buyers", ready: providerReady("trade-market"), value: "buyer matching, price comparison, and sale timing" },
+    { id: "jobs", title: "Job listings", ready: providerReady("workforce-jobs"), value: "live role search and application support" },
+    { id: "courses", title: "Course catalog", ready: providerReady("learning-courses"), value: "real course selection and completion paths" },
+    { id: "drone", title: "Drone/satellite evidence", ready: providerReady("field-drones"), value: "field condition interpretation and intervention planning" },
+    { id: "logistics", title: "Logistics and routing", ready: providerReady("trade-logistics") || providerReady("map-tiles"), value: "delivery tracking, route risk, and facility routing" },
+    { id: "communications", title: "SMS/WhatsApp/phone", ready: providerReady("sms-delivery") || providerReady("whatsapp-delivery") || providerReady("phone-voice"), value: "two-way buyer, provider, and learner communication" }
+  ];
+  const ready = feeds.filter(feed => feed.ready).length;
+  const model = { ready, total: feeds.length, feeds, updatedAt: new Date().toISOString() };
+  localStorage.setItem("agrinexusLiveKnowledgeFeeds", JSON.stringify(model));
+  return model;
+}
+
+function nexusPredictiveAdvisorModel(command = agentPerformanceState.lastCommand || "") {
+  const scoring = nexusDecisionScoringModel(command);
+  const feeds = nexusLiveKnowledgeFeedReadiness();
+  const profile = data?.profile || {};
+  const predictions = [];
+  const add = (module, priority, message, commandText) => predictions.push({ module, priority, message, command: commandText });
+  if ((profile.healthIntakes || []).length && !(profile.telehealthFollowUps || []).length) add("Health", "high", "Health intake exists but follow-up is not scheduled.", "schedule telehealth follow up");
+  if ((profile.orders || profile.tradeOrders || []).length && !(profile.tradeMessageThreads || []).length) add("Trade", "high", "A trade order needs buyer-seller communication evidence.", "contact buyer");
+  if ((profile.orders || profile.tradeOrders || []).length && !(profile.mapInsights || []).length) add("Map", "medium", "A sale route exists without route-risk intelligence.", "track my sale route");
+  if ((profile.enrollments || []).length && !(profile.certificates || []).length) add("Learning", "medium", "A learner has course progress but no certificate evidence yet.", "issue my certificate");
+  if ((profile.applications || []).length && !(profile.interviews || 0)) add("Workforce", "medium", "A job application exists but interview support is not scheduled.", "prepare interview");
+  if ((profile.droneScans || []).length && !(profile.fieldInterventions || []).length) add("Drone", "medium", "Drone evidence exists but no field task has been created.", "create field task");
+  if (feeds.ready < feeds.total) add("Live feeds", "setup", `${feeds.ready}/${feeds.total} live knowledge feeds are ready.`, "explain live intelligence feeds");
+  if (!predictions.length) add("Nexus", "ready", "No immediate gap detected. The smartest next move is to keep guiding the active request.", scoring.recommendation);
+  const model = {
+    score: scoring.score,
+    intent: scoring.intent,
+    nextBestAction: predictions[0].command,
+    nextBestQuestion: scoring.nextQuestion,
+    predictions: predictions.slice(0, 6),
+    feeds,
+    updatedAt: new Date().toISOString()
+  };
+  localStorage.setItem("agrinexusPredictiveAdvisor", JSON.stringify(model));
+  return model;
+}
+
+function nexusPredictiveAdvisorSummary(command = agentPerformanceState.lastCommand || "") {
+  const model = nexusPredictiveAdvisorModel(command);
+  const top = model.predictions[0];
+  return `Predictive advisor is active. Intelligence score ${model.score}/100. Top prediction: ${top.module} ${top.priority}: ${top.message} Next best action: ${top.command}. Live feeds ready: ${model.feeds.ready}/${model.feeds.total}. Next question: ${model.nextBestQuestion}`;
+}
+
+function nexusLiveKnowledgeFeedSummary() {
+  const model = nexusLiveKnowledgeFeedReadiness();
+  const feedText = model.feeds.map(feed => `${feed.title}: ${feed.ready ? "ready" : "needs provider"} for ${feed.value}`).join(". ");
+  return `Live intelligence feed readiness is ${model.ready}/${model.total}. ${feedText}.`;
 }
 
 function nexusAdaptiveUnderstandingSummary() {
@@ -4762,7 +4897,9 @@ function nexusHighIntelligenceSnapshot() {
 
 function nexusHighIntelligenceSummary() {
   const snapshot = nexusHighIntelligenceSnapshot();
-  return `Nexus intelligence is operating at ${snapshot.score}% confidence. Top recommendation: ${snapshot.topPriority.title}, because ${snapshot.topPriority.reason}. Autonomy level: ${snapshot.autonomyLevel}. Say ${snapshot.topPriority.command} to continue.`;
+  const predictive = nexusPredictiveAdvisorModel(agentPerformanceState.lastCommand || snapshot.topPriority.command || "");
+  const topPrediction = predictive.predictions[0];
+  return `Nexus intelligence is operating at ${snapshot.score}% confidence. Predictive score ${predictive.score}/100. Top recommendation: ${snapshot.topPriority.title}, because ${snapshot.topPriority.reason}. Predictive alert: ${topPrediction.module} ${topPrediction.priority}: ${topPrediction.message}. Autonomy level: ${snapshot.autonomyLevel}. Say ${topPrediction.command || snapshot.topPriority.command} to continue.`;
 }
 
 function nexusSmartBehaviorModel(mode = experienceMode) {
@@ -11851,6 +11988,19 @@ async function handleVoiceCommand(rawCommand) {
   }
   if (/\b(context memory|what context|what do you know about this|what do you remember about this|next best question|what should you ask me)\b/.test(lower)) {
     setVoiceResponse(nexusContextMemorySummary(), true);
+    return;
+  }
+  if (/\b(predict|prediction|predictive|what needs attention|smart recommendation|make a smart recommendation|what should happen next)\b/.test(lower)) {
+    setVoiceResponse(nexusPredictiveAdvisorSummary(command), true);
+    return;
+  }
+  if (/\b(decision score|score your decision|why did you recommend|rank this|score this)\b/.test(lower)) {
+    const model = nexusDecisionScoringModel(command);
+    setVoiceResponse(`Decision score ${model.score}/100. Recommendation: ${model.recommendation}. Why: ${model.why}. Next question: ${model.nextQuestion}`, true);
+    return;
+  }
+  if (/\b(live intelligence feeds|live knowledge feeds|real time feeds|provider feeds|what feeds are live)\b/.test(lower)) {
+    setVoiceResponse(nexusLiveKnowledgeFeedSummary(), true);
     return;
   }
   if (pendingAgentClarification && await answerAgentClarification(command)) return;

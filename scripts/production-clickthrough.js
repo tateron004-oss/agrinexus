@@ -422,9 +422,9 @@ assert(app.includes('workflow === "admin-user"'), "Admin test login button needs
 assert(app.includes("Only an existing Admin can run this workflow"), "Admin login flow must explain admin-only protection");
 assert(server.includes('adminAccount.role = "Admin"'), "Backend must force admin test logins to Admin");
 assert(server.includes("admin_user.created"), "Admin test login must create auth audit evidence");
-assert(html.includes("styles.css?v=nexus-behavior-134"), "Index must force browsers to load the latest Nexus behavior shell");
-assert(html.includes("app.js?v=nexus-behavior-134"), "Index must force browsers to load the latest Nexus behavior code");
-assert(sw.includes("agrinexus-pwa-v114"), "Service worker cache must refresh the installed app after native voice bridge updates");
+assert(html.includes("styles.css?v=nexus-behavior-135"), "Index must force browsers to load the latest Nexus behavior shell");
+assert(html.includes("app.js?v=nexus-behavior-135"), "Index must force browsers to load the latest Nexus behavior code");
+assert(sw.includes("agrinexus-pwa-v115"), "Service worker cache must refresh the installed app after native voice bridge updates");
 assert(html.includes("userWorkspace"), "Dashboard needs a User Workspace for standard users");
 assert(html.includes("userMobileDock"), "Legacy mobile dock markup should remain safely hidden for cache compatibility");
 assert(html.includes("What Do You Need Help With Today?"), "Dashboard simple start should use user-ready language");
@@ -679,6 +679,12 @@ assert(app.includes("function nexusContextMemoryModel"), "Nexus needs context me
 assert(app.includes("function nexusNextBestQuestion"), "Nexus needs next-best-question intelligence for incomplete requests");
 assert(app.includes("agrinexusContextMemory"), "Context memory should persist the current operational situation");
 assert(app.includes("function nexusContextMemorySummary"), "Users need a voice-readable context memory summary");
+assert(app.includes("function nexusAdvisorProfile"), "Nexus needs role-aware advisor profiles");
+assert(app.includes("function nexusDecisionScoringModel"), "Nexus needs decision scoring for smart recommendations");
+assert(app.includes("function nexusPredictiveAdvisorModel"), "Nexus needs predictive advisor alerts");
+assert(app.includes("function nexusLiveKnowledgeFeedReadiness"), "Nexus needs live knowledge feed readiness tracking");
+assert(app.includes("agrinexusPredictiveAdvisor"), "Predictive advisor should persist the latest prediction state");
+assert(app.includes("agrinexusLiveKnowledgeFeeds"), "Live knowledge feeds should persist readiness state");
 assert(app.includes("function nexusBehaviorMode"), "Nexus behavior layer needs mode-specific behavior");
 assert(app.includes("function updateNexusBehaviorLayer"), "Nexus behavior layer needs a visible state indicator");
 assert(app.includes("function contextualVoiceSuggestions"), "Nexus behavior layer needs contextual voice suggestions");
