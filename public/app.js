@@ -49,6 +49,8 @@ let routeTrackingWatchId = null;
 let routeTrackingPoints = [];
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-136";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v116";
 
 const countryLanguageMap = {
   nigeria: "en",
@@ -2337,8 +2339,22 @@ function announce(message) {
 
 function registerWebApp() {
   if ("serviceWorker" in navigator) {
-    navigator.serviceWorker.register("/sw.js")
-      .then(() => updateInstallStatus("Web app mode is ready. You can install AgriNexus from this browser."))
+    let refreshingForNewBuild = false;
+    navigator.serviceWorker.addEventListener("controllerchange", () => {
+      if (refreshingForNewBuild) return;
+      refreshingForNewBuild = true;
+      if (sessionStorage.getItem("agrinexusReloadedForBuild") !== AGRINEXUS_BUILD_VERSION) {
+        sessionStorage.setItem("agrinexusReloadedForBuild", AGRINEXUS_BUILD_VERSION);
+        window.location.reload();
+      }
+    });
+    navigator.serviceWorker.register(`/sw.js?v=${AGRINEXUS_PWA_CACHE_VERSION}`)
+      .then(registration => {
+        updateInstallStatus("Web app mode is ready. You can install AgriNexus from this browser.");
+        registration.update?.();
+        const worker = registration.waiting || registration.active || navigator.serviceWorker.controller;
+        worker?.postMessage?.({ type: "AGRINEXUS_PURGE_OLD_CACHES", build: AGRINEXUS_BUILD_VERSION, cache: AGRINEXUS_PWA_CACHE_VERSION });
+      })
       .catch(() => updateInstallStatus("Web app mode could not start here. You can still use AgriNexus in the browser."));
   }
   window.addEventListener("beforeinstallprompt", event => {
@@ -2385,8 +2401,8 @@ function runUserModeSelfTest() {
       if (!simpleUserCommandWorkflow(button.command)) missing.push(`${section}: ${button.label}`);
     });
   });
-  const currentScript = [...document.scripts].some(script => String(script.src || "").includes("nexus-behavior-135"));
-  const currentStyle = [...document.styleSheets].some(sheet => String(sheet.href || "").includes("nexus-behavior-135"));
+  const currentScript = [...document.scripts].some(script => String(script.src || "").includes("nexus-behavior-136"));
+  const currentStyle = [...document.styleSheets].some(sheet => String(sheet.href || "").includes("nexus-behavior-136"));
   if (!currentScript || !currentStyle) missing.push("new app files");
   const ok = missing.length === 0;
   const message = ok

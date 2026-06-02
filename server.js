@@ -14246,7 +14246,7 @@ function serveStatic(req, res, url) {
   fs.readFile(filePath, (err, data) => {
     if (err) return send(res, 404, "Not found");
     const ext = path.extname(filePath);
-    const cacheControl = ext === ".html" || ext === ".js" ? "no-store" : "public, max-age=3600";
+    const cacheControl = ext === ".html" || ext === ".js" || ext === ".css" ? "no-store" : "public, max-age=3600";
     res.writeHead(200, { "content-type": mime[ext] || "application/octet-stream", "cache-control": cacheControl });
     res.end(data);
   });

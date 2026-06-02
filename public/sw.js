@@ -1,9 +1,10 @@
-const CACHE_NAME = "agrinexus-pwa-v115";
+const CACHE_NAME = "agrinexus-pwa-v116";
+const BUILD_VERSION = "nexus-behavior-136";
 const APP_SHELL = [
   "/",
   "/index.html",
-  "/styles.css",
-  "/app.js",
+  `/styles.css?v=${BUILD_VERSION}`,
+  `/app.js?v=${BUILD_VERSION}`,
   "/manifest.webmanifest",
   "/native-bridge.json",
   "/icons/agri-nexus-192.png",
@@ -16,6 +17,11 @@ const APP_SHELL = [
   "/refund.html"
 ];
 
+async function purgeOldCaches() {
+  const keys = await caches.keys();
+  await Promise.all(keys.filter(key => key !== CACHE_NAME).map(key => caches.delete(key)));
+}
+
 self.addEventListener("install", event => {
   event.waitUntil(
     caches.open(CACHE_NAME)
@@ -26,16 +32,24 @@ self.addEventListener("install", event => {
 
 self.addEventListener("activate", event => {
   event.waitUntil(
-    caches.keys()
-      .then(keys => Promise.all(keys.filter(key => key !== CACHE_NAME).map(key => caches.delete(key))))
+    purgeOldCaches()
       .then(() => self.clients.claim())
   );
+});
+
+self.addEventListener("message", event => {
+  if (event.data?.type === "AGRINEXUS_PURGE_OLD_CACHES") {
+    event.waitUntil(purgeOldCaches().then(() => self.skipWaiting()));
+  }
 });
 
 self.addEventListener("fetch", event => {
   const url = new URL(event.request.url);
   if (url.pathname.startsWith("/api/")) return;
   if (event.request.method !== "GET") return;
+  const networkFirst = event.request.mode === "navigate"
+    || ["/", "/index.html", "/app.js", "/styles.css", "/sw.js"].includes(url.pathname)
+    || url.searchParams.has("v");
 
   event.respondWith(
     fetch(event.request)
@@ -45,6 +59,6 @@ self.addEventListener("fetch", event => {
         caches.open(CACHE_NAME).then(cache => cache.put(event.request, copy));
         return response;
       })
-      .catch(() => caches.match(event.request).then(cached => cached || caches.match("/index.html")))
+      .catch(() => caches.match(event.request).then(cached => cached || (networkFirst ? caches.match("/index.html") : caches.match("/index.html"))))
   );
 });
