@@ -51,8 +51,8 @@ let routeTrackingWatchId = null;
 let routeTrackingPoints = [];
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-143";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v123";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-144";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v124";
 
 const countryLanguageMap = {
   nigeria: "en",
@@ -2690,6 +2690,30 @@ function nexusUtilityAssistantResponse(command = "") {
   }
   if (/\b(shipment|delivery|deliver|arrive|arrival|eta|track my sale|track my order|track my product|where is my crop|where is my shipment|route status)\b/.test(lower)) {
     if (canOpenSection("map")) goSection(experienceMode === "user" ? "map" : "map");
+    return shipmentEtaAnswer();
+  }
+  if (/\b(appointment|schedule|calendar|visit|call with provider|doctor time|provider time|shift time|what time is my)\b/.test(lower)) {
+    return appointmentAnswer();
+  }
+  if (/\b(what is next today|what do i have today|today's plan|daily plan|my day|what should i do today)\b/.test(lower)) {
+    return `${localTimeAnswer()} ${appointmentAnswer()} ${shipmentEtaAnswer()}`;
+  }
+  return "";
+}
+
+function nexusUtilityAssistantResponseV2(command = "") {
+  const lower = normalizeToolText(command);
+  const raw = String(command || "").toLowerCase();
+  const haystack = `${lower} ${raw}`;
+  if (!lower && !raw.trim()) return "";
+  if (/\b(what time is it|current time|time now|tell me the time|hora es|quelle heure|saa ngapi)\b/.test(lower) || /(\u0627\u0644\u0648\u0642\u062a|\u0627\u0644\u0633\u0627\u0639\u0629)/.test(raw)) {
+    return localTimeAnswer();
+  }
+  if (/\b(weather|temperature|too hot|heat|outside|walk|walking|rain|forecast|clima|meteo|météo|hali ya hewa)\b/.test(haystack) || /(\u0627\u0644\u0637\u0642\u0633|\u0627\u0644\u062d\u0631\u0627\u0631\u0629)/.test(raw)) {
+    return weatherAssistantAnswer(command);
+  }
+  if (/\b(shipment|delivery|deliver|arrive|arrival|eta|track my sale|track my order|track my product|where is my crop|where is my shipment|route status)\b/.test(lower)) {
+    if (canOpenSection("map")) goSection("map");
     return shipmentEtaAnswer();
   }
   if (/\b(appointment|schedule|calendar|visit|call with provider|doctor time|provider time|shift time|what time is my)\b/.test(lower)) {
@@ -12304,11 +12328,11 @@ async function handleVoiceCommand(rawCommand) {
     return;
   }
 
-  const utilityAnswer = nexusUtilityAssistantResponse(command);
+  const utilityAnswer = nexusUtilityAssistantResponseV2(command);
   if (utilityAnswer) {
     updateNexusBehaviorLayer("answering", "Nexus is answering a practical daily question.");
     renderLiveVoiceSuggestions(["open map", "open telehealth", "track my shipment", "what is next today"]);
-    setVoiceResponse(utilityAnswer, true);
+    await runUtilityAgentCommand(command, utilityAnswer);
     return;
   }
 
@@ -12989,6 +13013,7 @@ async function runBackendAgentCommand(command) {
         outputMode: "voice",
         mode: conversationPlatformMode(),
         modeContext: modeConversationContext(command),
+        timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
         note: "Command submitted from Nexus Voice Assistant"
       }
     }, 18000);
@@ -13018,6 +13043,46 @@ async function runBackendAgentCommand(command) {
     updateNexusBehaviorLayer("ready", "Nexus is ready to help in simpler words.");
     const message = /timed out|abort/i.test(error.message || "") ? `${error.message} ${safeAgentFallbackResponse(command)}` : (error.message || "Command failed.");
     voiceErrorRecovery(new Error(message), command);
+  }
+}
+
+async function runUtilityAgentCommand(command, fallbackAnswer = "") {
+  try {
+    const previousLanguage = languageCode();
+    voiceConversationTurns += 1;
+    localStorage.setItem("agrinexusVoiceTurns", String(voiceConversationTurns));
+    setVoiceStatus("thinking");
+    updateNexusBehaviorLayer("thinking", "Nexus is checking the real platform record before answering.");
+    data = await requestWithTimeout("/api/agent/command", {
+      method: "POST",
+      body: {
+        command,
+        confirm: false,
+        conversational: true,
+        inputMode: "voice",
+        outputMode: "voice",
+        mode: conversationPlatformMode(),
+        modeContext: modeConversationContext(command),
+        timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+        note: "Ask Nexus daily utility assistant"
+      }
+    }, 12000);
+    render();
+    const result = data.commandResult || {};
+    if (result.metadata?.redirectSection) goSection(result.metadata.redirectSection);
+    if (result.intent === "conversation.language_changed" || result.metadata?.language || previousLanguage !== languageCode()) {
+      refreshVoiceForLanguageChange();
+    }
+    renderLiveVoiceSuggestions(result.metadata?.suggestedReplies?.length ? result.metadata.suggestedReplies : ["what is next today", "track my shipment", "open telehealth", "tell me the weather"]);
+    markAgentPerformance("completed", result.intent || "utility-assistant");
+    updateNexusAwareness(command, { silent: true });
+    updateNexusBehaviorLayer("speaking", result.response || fallbackAnswer || "Done. I am ready for your next question.");
+    setVoiceResponse(result.response || fallbackAnswer || "Done. I am ready for your next question.", true, { handoffText: result.metadata?.turnCoach?.nextQuestion || "" });
+  } catch (error) {
+    markAgentPerformance("failed", "utility-assistant-error");
+    const local = fallbackAnswer || nexusUtilityAssistantResponseV2(command);
+    updateNexusBehaviorLayer("speaking", "Nexus is using local app context because the backend command engine is unavailable.");
+    setVoiceResponse(local ? `${local} I used local app context because the live command engine was unavailable.` : (error.message || "Ask Nexus could not answer that utility question yet."), true);
   }
 }
 

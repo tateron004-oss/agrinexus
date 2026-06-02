@@ -9725,6 +9725,27 @@ function fahrenheitFromCelsius(celsius) {
   return Math.round((Number(celsius || 0) * 9 / 5) + 32);
 }
 
+function latestRecordByDate(items = [], dateKeys = ["startsAt", "createdAt", "scheduledAt"]) {
+  return [...(items || [])]
+    .filter(Boolean)
+    .sort((a, b) => {
+      const aTime = dateKeys.map(key => Date.parse(a?.[key] || "")).find(Number.isFinite) || 0;
+      const bTime = dateKeys.map(key => Date.parse(b?.[key] || "")).find(Number.isFinite) || 0;
+      return bTime - aTime;
+    })[0] || null;
+}
+
+function nextRecordByDate(items = [], dateKeys = ["startsAt", "scheduledAt", "createdAt"]) {
+  const now = Date.now();
+  const dated = (items || []).map(item => {
+    const time = dateKeys.map(key => Date.parse(item?.[key] || "")).find(Number.isFinite) || 0;
+    return { item, time };
+  }).filter(entry => entry.time);
+  return (dated.filter(entry => entry.time >= now).sort((a, b) => a.time - b.time)[0]
+    || dated.sort((a, b) => b.time - a.time)[0]
+    || {}).item || null;
+}
+
 function extractTemperatureF(text) {
   const value = String(text || "");
   const fahrenheit = value.match(/\b(\d{2,3})\s*(?:degrees?|deg|f|fahrenheit)\b/i);
@@ -9732,6 +9753,132 @@ function extractTemperatureF(text) {
   const celsius = value.match(/\b(\d{1,2})\s*(?:c|celsius)\b/i);
   if (celsius?.[1]) return fahrenheitFromCelsius(Number(celsius[1]));
   return null;
+}
+
+function utilityAssistantKind(text, lower) {
+  const raw = String(text || "").toLowerCase();
+  if (/\b(what time is it|current time|time now|tell me the time|hora es|quelle heure|saa ngapi)\b/.test(lower) || /(\u0627\u0644\u0648\u0642\u062a|\u0627\u0644\u0633\u0627\u0639\u0629)/.test(raw)) return "time";
+  if (/\b(weather|temperature|too hot|heat|outside|walk|walking|rain|forecast|clima|meteo|météo|hali ya hewa)\b/.test(lower) || /(\u0627\u0644\u0637\u0642\u0633|\u0627\u0644\u062d\u0631\u0627\u0631\u0629)/.test(raw)) return "weather";
+  if (/\b(shipment|delivery|deliver|arrive|arrival|eta|track my sale|track my order|track my product|where is my crop|where is my shipment|route status)\b/.test(lower)) return "shipment";
+  if (/\b(appointment|schedule|calendar|visit|call with provider|doctor time|provider time|shift time|what time is my)\b/.test(lower)) return "appointment";
+  if (/\b(what is next today|what do i have today|today's plan|daily plan|my day|what should i do today)\b/.test(lower)) return "daily-plan";
+  return "";
+}
+
+function formatUtilityDate(dateValue, timeZone = "") {
+  const parsed = Date.parse(dateValue || "");
+  if (!Number.isFinite(parsed)) return "";
+  const options = { dateStyle: "medium", timeStyle: "short" };
+  if (timeZone) options.timeZone = timeZone;
+  try {
+    return new Intl.DateTimeFormat("en-US", options).format(new Date(parsed));
+  } catch (error) {
+    return new Intl.DateTimeFormat("en-US", { dateStyle: "medium", timeStyle: "short" }).format(new Date(parsed));
+  }
+}
+
+function utilityTimeAnswer(options = {}) {
+  const timeZone = options.timeZone || "UTC";
+  const now = new Date();
+  let time = "";
+  let date = "";
+  try {
+    time = new Intl.DateTimeFormat("en-US", { hour: "numeric", minute: "2-digit", timeZoneName: "short", timeZone }).format(now);
+    date = new Intl.DateTimeFormat("en-US", { weekday: "long", month: "long", day: "numeric", timeZone }).format(now);
+  } catch (error) {
+    time = new Intl.DateTimeFormat("en-US", { hour: "numeric", minute: "2-digit", timeZoneName: "short" }).format(now);
+    date = new Intl.DateTimeFormat("en-US", { weekday: "long", month: "long", day: "numeric" }).format(now);
+  }
+  return `It is ${time} on ${date}.`;
+}
+
+function utilityAppointmentAnswer(db, options = {}) {
+  const appointment = nextRecordByDate(db.profile.telehealthAppointments || [], ["scheduledAt", "startsAt", "createdAt"]);
+  const shift = nextRecordByDate(db.profile.shiftSchedule || [], ["startsAt", "createdAt"]);
+  if (appointment) {
+    const when = formatUtilityDate(appointment.scheduledAt || appointment.startsAt, options.timeZone)
+      || appointment.scheduleWindow
+      || "the next available rural telehealth slot";
+    return `Your telehealth appointment is ${when}. It is ${appointment.status || "scheduled"} by ${appointment.modality || "voice or video"}, with ${appointment.language ? `${appointment.language} language support` : "language support"} and accessibility support.`;
+  }
+  if (shift) {
+    const when = formatUtilityDate(shift.startsAt, options.timeZone) || "the next scheduled shift window";
+    return `I do not see a telehealth appointment yet. Your next workforce schedule item is ${shift.role || "a shift"} at ${when}, status ${shift.status || "scheduled"}.`;
+  }
+  return "I do not see an appointment time saved yet. I can open telehealth scheduling or workforce scheduling and help create one.";
+}
+
+function utilityShipmentEtaAnswer(db) {
+  const { route } = activeContext(db);
+  const latestOrder = latestRecordByDate(db.profile.orders || [], ["createdAt", "updatedAt"]);
+  const checkpoints = route.checkpoints || [];
+  const activeCheckpoint = latestOrder?.checkpoint || db.profile.activeCheckpoint || checkpoints[0] || "pickup";
+  const index = Math.max(0, checkpoints.findIndex(checkpoint => checkpoint === activeCheckpoint));
+  const completed = checkpoints.length ? index + 1 : 1;
+  const remaining = Math.max(0, checkpoints.length - completed);
+  const etaHours = remaining ? remaining * 8 : 2;
+  const orderName = latestOrder?.orderNumber || latestOrder?.id || "the active shipment";
+  const product = latestOrder?.productName || latestOrder?.product || latestOrder?.productId || "your crop";
+  const stage = latestOrder?.stage || db.profile.routeStage || "tracking";
+  const logistics = runtimeProviderById(db, "trade-logistics");
+  const deliveryWindow = remaining
+    ? `${etaHours} to ${etaHours + 6} hours`
+    : "about 2 hours";
+  const source = logistics?.status === "connected" ? "live logistics provider context" : "the platform route model";
+  return `${orderName} for ${product} is at ${activeCheckpoint} on ${route.name}. Stage: ${stage}. Estimated delivery is ${deliveryWindow} from ${source}. ${logistics?.status === "connected" ? "Carrier integration is ready to enrich this with live tracking." : "Live carrier GPS needs a logistics provider connection for exact real-time tracking."}`;
+}
+
+async function utilityWeatherAnswer(db, text) {
+  const context = await dailyContextSnapshot(db, text);
+  const provider = runtimeProviderById(db, "weather") || runtimeProviderById(db, "map-tiles");
+  const live = context.source === "live-weather-provider" || provider?.status === "connected";
+  const walkingAdvice = context.temperatureF >= 90
+    ? "For walking, I recommend early morning or evening, shade, water, and shorter distance."
+    : "For walking, conditions look manageable, but check water, shade, and local safety before going.";
+  const farmAdvice = /\b(farm|crop|plant|harvest|field|drone|water|irrigat)\b/i.test(text)
+    ? "For farming, use this as a planning signal: check field moisture, inspect crop stress, and run drone or map intelligence before planting, watering, or moving harvest."
+    : walkingAdvice;
+  return `Weather check for ${context.country}: about ${context.temperatureF} degrees Fahrenheit, ${context.temperatureC} Celsius, with ${String(context.risk || "routine").toLowerCase()} operating risk from ${live ? "live provider context" : "platform country context"}. ${farmAdvice}`;
+}
+
+async function utilityAssistantCommandResponse(db, user, text, lower, options = {}) {
+  const kind = utilityAssistantKind(text, lower);
+  if (!kind) return null;
+  const response = kind === "time"
+    ? utilityTimeAnswer(options)
+    : kind === "weather"
+      ? await utilityWeatherAnswer(db, text)
+      : kind === "shipment"
+        ? utilityShipmentEtaAnswer(db)
+        : kind === "appointment"
+          ? utilityAppointmentAnswer(db, options)
+          : `${utilityTimeAnswer(options)} ${utilityAppointmentAnswer(db, options)} ${utilityShipmentEtaAnswer(db)}`;
+  const redirectSection = kind === "shipment" ? "map" : kind === "appointment" ? "health" : "dashboard";
+  ensureAiProfile(db.profile);
+  db.profile.agentMemory.lastStatus = `utility.${kind}`;
+  db.profile.agentMemory.lastSummary = response;
+  db.profile.agentMemory.updatedAt = new Date().toISOString();
+  rememberAgentMemory(db.profile, `Utility assistant answered ${kind}: ${text}`, { source: "ask-nexus-utility", category: "pattern", module: "Agent AI", confidence: 0.87 });
+  logIntegration(db, {
+    providerId: kind === "weather" ? "weather" : kind === "shipment" ? "trade-logistics" : kind === "appointment" ? "health-telehealth" : "openai",
+    module: "Agent AI",
+    action: `utility.${kind}`,
+    detail: response.slice(0, 240),
+    metadata: { kind, timeZone: options.timeZone || "", command: text },
+    dispatch: false
+  });
+  return {
+    intent: `utility.${kind}`,
+    response,
+    status: "completed",
+    metadata: {
+      conversationMode: true,
+      redirectSection,
+      utilityAssistant: true,
+      kind,
+      suggestedReplies: ["what is next today", "track my shipment", "open telehealth", "tell me the weather"]
+    }
+  };
 }
 
 async function dailyContextSnapshot(db, text) {
@@ -10135,6 +10282,8 @@ async function runAgentCommand(db, user, command, options = {}) {
     text = contextual;
     lower = text.toLowerCase();
   }
+  const utilityCommand = await utilityAssistantCommandResponse(db, user, text, lower, options);
+  if (utilityCommand) return utilityCommand;
   const smartCommand = backendSmartCommandResponse(db, user, text, options);
   if (smartCommand) {
     db.profile.agentMemory.lastStatus = smartCommand.intent;
@@ -14113,6 +14262,7 @@ async function api(req, res, url) {
       mode: body.mode,
       modeContext: body.modeContext,
       note: body.note,
+      timeZone: body.timeZone,
       targetLanguage: body.targetLanguage || body.language
     });
     const result = applyHighestFunctionalityMode(db, user, humanizeAgentResult(db, user, rawResult, command), command);
