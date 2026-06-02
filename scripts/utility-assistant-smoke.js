@@ -61,6 +61,7 @@ async function call(route, body) {
       ["utility.field-alert", "Nexus, give me a field alert"],
       ["utility.health-safety", "Nexus, give me a health safety reminder"],
       ["utility.situation-agent", "Nexus, manage this situation"],
+      ["utility.pre-provider-readiness", "Nexus, what works without providers?"],
       ["utility.shipment", "Nexus, how long until my shipment arrives?"],
       ["utility.appointment", "Nexus, what time is my appointment?"],
       ["utility.daily-plan", "Nexus, what is next today?"],
@@ -78,6 +79,11 @@ async function call(route, body) {
       assert.strictEqual(state.commandResult.metadata.utilityAssistant, true, `${intent} should be utility-backed`);
       assert.strictEqual(state.commandResult.metadata.situationAgent.mode, "nexus-situation-agent", `${intent} should include Situation Agent mode`);
       assert.strictEqual(state.commandResult.metadata.situationAgent.eightPointModel.length, 8, `${intent} should include all eight Situation Agent elements`);
+      if (intent === "utility.pre-provider-readiness") {
+        assert.strictEqual(state.commandResult.metadata.preProviderHardening.mode, "nexus-pre-provider-hardening", "pre-provider command should include hardening model");
+        assert(state.commandResult.metadata.preProviderHardening.guardrails.length >= 5, "pre-provider hardening should include guardrails");
+        assert(state.commandResult.metadata.preProviderHardening.modules.length >= 6, "pre-provider hardening should cover all core modules");
+      }
       assert(state.commandResult.response.length > 20, `${intent} should produce a useful spoken answer`);
       assert((state.profile.agentMemory.rememberedContexts || []).some(item => item.intent === intent), `${intent} should be remembered as command evidence`);
     }
@@ -100,6 +106,7 @@ async function call(route, body) {
   console.log("- Ask Nexus backend field alert answer");
   console.log("- Ask Nexus backend health safety answer");
   console.log("- Ask Nexus backend Situation Agent eight-point model");
+  console.log("- Ask Nexus pre-provider hardening model");
   console.log("- Ask Nexus backend shipment answer");
   console.log("- Ask Nexus backend appointment answer");
   console.log("- Ask Nexus backend daily plan answer");

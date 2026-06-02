@@ -51,8 +51,8 @@ let routeTrackingWatchId = null;
 let routeTrackingPoints = [];
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-145";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v125";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-146";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v126";
 
 const countryLanguageMap = {
   nigeria: "en",
@@ -2778,6 +2778,7 @@ function nexusUtilityAssistantResponseV2(command = "") {
   if (/\b(field alert|field warning|crop alert|farm alert|pest alert|drone alert|field problem|crop problem|crop stress|field risk|bad crop|crops going bad)\b/.test(lower)) return fieldAlertAssistantAnswer();
   if (/\b(health safety|safety reminder|health reminder|is it safe|too hot for grandma|patient safety|care reminder|outbreak safety|heat safety)\b/.test(lower)) return healthSafetyAssistantAnswer();
   if (/\b(situation agent|manage this situation|handle this situation|what is the situation|situation plan|help me with this situation)\b/.test(lower)) return `${nextStepAssistantAnswer()} Nexus Situation Agent is using memory, situation detection, one-question intake, planning, safety, follow-up, role tone, and provider truthfulness.`;
+  if (/\b(pre provider|pre-provider|before providers|until providers|providerless|no vendor|without vendors|without providers|provider readiness|provider hardening|real providers arrive|live providers arrive|what works without providers)\b/.test(lower)) return "Pre-provider hardening is active. Nexus can run guided learning, workforce, telehealth, trade, drone, map, voice, memory, confirmation, and audit workflows with platform records and local context. I will say what is live, what is local, and what needs credentials.";
   if (/\b(shipment|delivery|deliver|arrive|arrival|eta|track my sale|track my order|track my product|where is my crop|where is my shipment|route status)\b/.test(lower)) {
     if (canOpenSection("map")) goSection("map");
     return shipmentEtaAnswer();

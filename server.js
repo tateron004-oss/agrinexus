@@ -9766,6 +9766,7 @@ function utilityAssistantKind(text, lower) {
   if (/\b(field alert|field warning|crop alert|farm alert|pest alert|drone alert|field problem|crop problem|crop stress|field risk|bad crop|crops going bad)\b/.test(lower)) return "field-alert";
   if (/\b(health safety|safety reminder|health reminder|is it safe|too hot for grandma|patient safety|care reminder|outbreak safety|heat safety)\b/.test(lower)) return "health-safety";
   if (/\b(situation agent|manage this situation|handle this situation|what is the situation|situation plan|help me with this situation)\b/.test(lower)) return "situation-agent";
+  if (/\b(pre provider|pre-provider|before providers|until providers|providerless|no vendor|without vendors|without providers|provider readiness|provider hardening|real providers arrive|live providers arrive|what works without providers)\b/.test(lower)) return "pre-provider-readiness";
   if (/\b(shipment|delivery|deliver|arrive|arrival|eta|track my sale|track my order|track my product|where is my crop|where is my shipment|route status)\b/.test(lower)) return "shipment";
   if (/\b(appointment|schedule|calendar|visit|call with provider|doctor time|provider time|shift time|what time is my)\b/.test(lower)) return "appointment";
   if (/\b(what is next today|what do i have today|today's plan|daily plan|my day|what should i do today)\b/.test(lower)) return "daily-plan";
@@ -10035,9 +10036,99 @@ function nexusSituationAgentModel(db, user, text, kind = "") {
   };
 }
 
+function nexusPreProviderHardeningModel(db, user, text = "") {
+  ensureAiProfile(db.profile);
+  const providers = runtimeProviders(db);
+  const connected = providers.filter(provider => provider.status === "connected");
+  const providerReady = providers.filter(provider => provider.status !== "connected");
+  const memorySummary = longTermMemorySummary(db.profile);
+  const voiceProvider = process.env.VOICE_TTS_PROVIDER || process.env.VOICE_STT_PROVIDER || (process.env.OPENAI_API_KEY ? "openai-ready" : "browser/local");
+  const ttsVoice = process.env.OPENAI_TTS_VOICE || "browser-default";
+  const usage = {
+    aiRuns: (db.profile.aiRuns || []).length,
+    voiceSessions: (db.profile.voiceSessions || []).length,
+    agentCommands: (db.profile.agentCommands || []).length,
+    conversationTurns: (db.profile.agentConversation || []).length,
+    providerAuditEvents: (db.profile.integrationEvents || []).length,
+    memoryItems: memorySummary.total
+  };
+  const modules = [
+    { module: "Learning", localNow: "course selection, captions, lesson evidence, certificates, learner guidance", liveLater: "real catalog, LMS, certificate issuer" },
+    { module: "Workforce", localNow: "role matching, applications, interview prep, shift evidence, reminders", liveLater: "job boards, HRIS, shift calendar, employer network" },
+    { module: "Healthcare", localNow: "intake, accessibility support, video handoff, safety guidance, referral evidence", liveLater: "telehealth provider, EHR/FHIR, clinical partner scheduling" },
+    { module: "AgriTrade", localNow: "buyer message draft, order evidence, route readiness, quality workflow, payment guardrails", liveLater: "marketplace, payments, logistics carrier" },
+    { module: "Drone And Map", localNow: "field-scan interpretation, crop-risk explanation, route-risk model, map workflow evidence", liveLater: "drone feed, satellite imagery, live routing/map tiles" },
+    { module: "Ask Nexus", localNow: "voice/text conversation, memory, reasoning, confirmation, audit trail, plain-language coaching", liveLater: "live LLM, real-time speech, real-time data feeds" }
+  ];
+  const guardrails = [
+    "confirm before health, payment, buyer contact, job application, provider contact, or route-changing actions",
+    "say whether the answer uses live provider data, platform records, or local context",
+    "keep medical guidance as access, triage, referral, and emergency support, not diagnosis",
+    "record command, response, memory, voice session, and provider audit evidence",
+    "ask one plain-language question when the user is unclear instead of forcing perfect wording"
+  ];
+  const mobileReadiness = [
+    "PWA shell can run in a browser and keep the simple user interface",
+    "native app path can add always-on wake word, push notifications, camera, GPS, and offline permissions",
+    "voice provider can switch from browser speech to OpenAI voice when keys and quota are valid"
+  ];
+  const score = Math.min(100, 48
+    + Math.min(16, usage.agentCommands * 2)
+    + Math.min(12, usage.voiceSessions)
+    + Math.min(12, usage.memoryItems)
+    + Math.min(12, connected.length * 2));
+  const model = {
+    mode: "nexus-pre-provider-hardening",
+    status: connected.length ? "hybrid-live-and-provider-ready" : "provider-ready-local-operations",
+    score,
+    voiceHealth: {
+      provider: voiceProvider,
+      ttsVoice,
+      openAiConfigured: Boolean(process.env.OPENAI_API_KEY),
+      twilioConfigured: Boolean(process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN && process.env.TWILIO_PHONE_NUMBER),
+      rule: "Use live voice when credentials are valid; otherwise keep browser/local fallback honest."
+    },
+    memory: {
+      summary: memorySummary.lastMemorySummary || `Nexus remembers ${usage.memoryItems} item(s).`,
+      modules: memorySummary.modules.slice(0, 6),
+      needs: memorySummary.needs.slice(0, 6)
+    },
+    guardrails,
+    usage,
+    providerTruth: {
+      connected: connected.map(provider => provider.id),
+      providerReady: providerReady.map(provider => provider.id).slice(0, 20),
+      rule: "Provider-ready means the platform has the workflow adapter and audit path; connected means the hosted credential or endpoint is live."
+    },
+    modules,
+    mobileReadiness,
+    nextProviderUnlocks: providerReady.slice(0, 8).map(provider => ({
+      providerId: provider.id,
+      name: provider.name,
+      module: provider.module,
+      next: provider.nextStep || "Add hosted credentials or approved provider endpoint."
+    })),
+    response: `Until real providers arrive, Nexus can still run guided learning, workforce, telehealth, trade, drone, map, voice, memory, and audit workflows using platform records and local context. Current pre-provider intelligence score is ${score}%. ${connected.length} provider adapter(s) are connected and ${providerReady.length} are provider-ready. I will keep saying what is live, what is local, and what needs credentials.`
+  };
+  db.profile.agentMemory.lastPreProviderHardening = model;
+  db.profile.agentMemory.lastSummary = model.response;
+  db.profile.agentMemory.updatedAt = new Date().toISOString();
+  rememberAgentMemory(db.profile, `Pre-provider hardening active: score ${score}%, ${connected.length} connected provider(s), ${providerReady.length} provider-ready adapter(s).`, { source: "pre-provider-hardening", category: "pattern", module: "Agent AI", confidence: 0.92 });
+  logIntegration(db, {
+    providerId: "openai",
+    module: "Agent AI",
+    action: "agent.pre_provider_hardening",
+    detail: model.response,
+    metadata: { score, connected: connected.length, providerReady: providerReady.length, usage },
+    dispatch: false
+  });
+  return model;
+}
+
 async function utilityAssistantCommandResponse(db, user, text, lower, options = {}) {
   const kind = utilityAssistantKind(text, lower);
   if (!kind) return null;
+  const preProviderModel = kind === "pre-provider-readiness" ? nexusPreProviderHardeningModel(db, user, text) : null;
   const response = kind === "time"
     ? utilityTimeAnswer(options)
     : kind === "weather"
@@ -10058,16 +10149,19 @@ async function utilityAssistantCommandResponse(db, user, text, lower, options = 
         ? utilityShipmentEtaAnswer(db)
         : kind === "appointment"
           ? utilityAppointmentAnswer(db, options)
-          : kind === "next-step"
-            ? utilityNextStepAnswer(db, user)
+            : kind === "next-step"
+              ? utilityNextStepAnswer(db, user)
             : kind === "situation-agent"
               ? `Situation Agent is active. ${utilityNextStepAnswer(db, user)}`
+              : kind === "pre-provider-readiness"
+                ? preProviderModel.response
             : `${utilityTimeAnswer(options)} ${utilityAppointmentAnswer(db, options)} ${utilityShipmentEtaAnswer(db)} ${utilityNextStepAnswer(db, user)}`;
   const situationAgent = nexusSituationAgentModel(db, user, text, kind);
   const redirectSection = ["shipment", "route-delay"].includes(kind) ? "map"
     : ["appointment", "appointment-reminder", "health-safety"].includes(kind) ? "health"
       : ["crop-timing", "buyer-message", "field-alert"].includes(kind) ? "trade"
         : kind === "situation-agent" ? situationAgent.situation.section
+          : kind === "pre-provider-readiness" ? "integrations"
         : kind === "next-step" ? (smartNextActions(db, user).items[0]?.section || "dashboard")
           : "dashboard";
   ensureAiProfile(db.profile);
@@ -10079,13 +10173,14 @@ async function utilityAssistantCommandResponse(db, user, text, lower, options = 
     providerId: kind === "weather" ? "weather"
       : ["shipment", "route-delay"].includes(kind) ? "trade-logistics"
         : ["appointment", "appointment-reminder", "health-safety"].includes(kind) ? "health-telehealth"
-          : ["crop-timing", "buyer-message"].includes(kind) ? "trade-market"
+      : ["crop-timing", "buyer-message"].includes(kind) ? "trade-market"
             : kind === "field-alert" ? "field-drones"
+              : kind === "pre-provider-readiness" ? "provider-engines"
               : "openai",
     module: "Agent AI",
     action: `utility.${kind}`,
     detail: response.slice(0, 240),
-    metadata: { kind, timeZone: options.timeZone || "", command: text, situationAgent },
+    metadata: { kind, timeZone: options.timeZone || "", command: text, situationAgent, preProviderHardening: preProviderModel },
     dispatch: false
   });
   return {
@@ -10097,8 +10192,9 @@ async function utilityAssistantCommandResponse(db, user, text, lower, options = 
       redirectSection,
       utilityAssistant: true,
       situationAgent,
+      preProviderHardening: preProviderModel,
       kind,
-      suggestedReplies: ["what should I do next", "track my shipment", "message buyer", "field alert", "health safety reminder"]
+      suggestedReplies: ["what should I do next", "track my shipment", "message buyer", "field alert", "health safety reminder", "what works without providers"]
     }
   };
 }
