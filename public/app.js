@@ -2385,8 +2385,8 @@ function runUserModeSelfTest() {
       if (!simpleUserCommandWorkflow(button.command)) missing.push(`${section}: ${button.label}`);
     });
   });
-  const currentScript = [...document.scripts].some(script => String(script.src || "").includes("nexus-behavior-129"));
-  const currentStyle = [...document.styleSheets].some(sheet => String(sheet.href || "").includes("nexus-behavior-129"));
+  const currentScript = [...document.scripts].some(script => String(script.src || "").includes("nexus-behavior-130"));
+  const currentStyle = [...document.styleSheets].some(sheet => String(sheet.href || "").includes("nexus-behavior-130"));
   if (!currentScript || !currentStyle) missing.push("new app files");
   const ok = missing.length === 0;
   const message = ok
@@ -2782,6 +2782,248 @@ function handleAdvisorBrainCommand(command = "") {
   renderLiveVoiceSuggestions(["I need a doctor", "help me learn", "I need work", "check my crop", "run live service check"]);
   setVoiceResponse(advisorBrainSummary(command), true);
   return true;
+}
+
+function nexusIntentSignals(command = "") {
+  const lower = normalizeToolText(command);
+  const words = lower.split(/\s+/).filter(Boolean);
+  const has = list => list.some(word => new RegExp(`\\b${word}\\b`).test(lower));
+  const phrase = list => list.some(item => lower.includes(item));
+  const advisor = advisorBrainSignals(command);
+  const memory = data ? nexusMemoryProfile() : {};
+  const context = {
+    mode: conversationPlatformMode(),
+    section: currentSectionId(),
+    language: voiceLanguageName(),
+    userName: userFirstName(),
+    memory,
+    country: activeCountry(),
+    route: activeRoute(),
+    product: firstProduct(),
+    role: firstEligibleRole()
+  };
+  return {
+    lower,
+    words,
+    wordCount: words.length,
+    context,
+    advisor,
+    question: /^(what|how|why|when|where|who|can|could|would|should|does|do|is|are|tell|explain|describe|summarize)\b/.test(lower),
+    nextStep: phrase(["what should i do", "what now", "what next", "next step", "guide me", "walk me through", "help me decide"]),
+    platformExplain: phrase(["what is agrinexus", "tell me about agrinexus", "explain agrinexus", "what do you do", "who are you", "explain the platform"]),
+    health: advisor.emergency || advisor.mediaIntake || has(["doctor", "nurse", "clinic", "hospital", "health", "telehealth", "provider", "injury", "pain", "medicine", "care", "sick"]),
+    learning: advisor.learnerSupport || has(["learn", "course", "lesson", "training", "certificate", "student", "quiz", "study", "caption", "audio"]),
+    workforce: advisor.workforceSupport || has(["job", "work", "worker", "role", "apply", "shift", "interview", "skills", "employment"]),
+    trade: advisor.cropSpoilage || advisor.droneReview || has(["crop", "buyer", "seller", "sell", "buy", "order", "market", "payment", "wallet", "farm", "harvest", "produce", "maize", "cassava", "rice"]),
+    map: advisor.mapSupport || has(["map", "route", "road", "location", "where", "track", "delivery", "shipment", "facility", "direction"]),
+    drone: advisor.droneReview || has(["drone", "scan", "footage", "aerial", "field camera", "crop health"]),
+    admin: advisor.adminSupport,
+    integrations: advisor.integrationSupport,
+    investor: advisor.investorSupport,
+    callOrMessage: has(["call", "talk", "speak", "message", "text", "sms", "whatsapp", "contact"]),
+    tracking: has(["track", "tracking", "trace", "where", "locate", "delivery", "shipment", "route"]),
+    moneyTrade: has(["sell", "buy", "buyer", "seller", "order", "price", "payment", "wallet", "market"])
+  };
+}
+
+function nexusIntelligenceRouterDecision(command = "") {
+  const signals = nexusIntentSignals(command);
+  const { context } = signals;
+  const confidenceBase = Math.min(.98, .42 + Math.min(signals.wordCount, 12) * .035);
+  const decision = (type, detail = {}) => ({
+    type,
+    confidence: detail.confidence || confidenceBase,
+    reason: detail.reason || "Nexus matched the request to the safest platform path.",
+    section: detail.section || context.section,
+    workflow: detail.workflow || "",
+    action: detail.action || "",
+    response: detail.response || "",
+    dataset: detail.dataset || {},
+    suggestions: detail.suggestions || []
+  });
+
+  if (!signals.lower) return decision("listen", { confidence: .9, response: "I am listening. Tell me what you need." });
+  if (signals.platformExplain) {
+    return decision("answer", {
+      confidence: .92,
+      section: "agent",
+      response: "AgriNexus is a voice-guided AI operating platform for rural agriculture, learning, workforce, telehealth, trade, maps, drone intelligence, translation, and provider workflows. Nexus listens, understands the request, opens the right service, asks for confirmation, and keeps the user moving one safe step at a time.",
+      suggestions: ["start telehealth intake", "sell my crop", "find work", "start a course", "open map"]
+    });
+  }
+  if (signals.advisor.emergency) {
+    return decision("workflow", {
+      confidence: .98,
+      section: "health",
+      workflow: "health",
+      action: "emergency",
+      response: "This sounds urgent. I am opening emergency health support now. If there is immediate danger, call local emergency services first.",
+      dataset: { supportNeed: "Emergency escalation", careNote: "Urgent event reported through Nexus Intelligence Router." },
+      suggestions: ["confirm emergency escalation", "contact provider", "start intake", "stop"]
+    });
+  }
+  if (signals.advisor.mediaIntake) {
+    return decision("workflow", {
+      confidence: .94,
+      section: "health",
+      workflow: "health",
+      action: "intake",
+      response: "I am opening telehealth intake with photo or video support so the concern can be described clearly for provider review.",
+      dataset: { urgency: "Priority", needSummary: "Photo or video review requested by user." },
+      suggestions: ["confirm intake", "open video", "message provider", "cancel"]
+    });
+  }
+  if (signals.health && signals.callOrMessage) {
+    return decision("workflow", {
+      confidence: .9,
+      section: "health",
+      workflow: "health",
+      action: signals.lower.includes("video") ? "video" : "provider",
+      response: "I am opening the telehealth provider contact path. Nexus will prepare the call, message, or video handoff.",
+      suggestions: ["call provider", "message provider", "start intake", "cancel"]
+    });
+  }
+  if (signals.health) {
+    return decision("workflow", {
+      confidence: .88,
+      section: "health",
+      workflow: "health",
+      action: signals.lower.includes("region") || signals.lower.includes("risk") ? "safety" : "intake",
+      response: "I am opening health support. Nexus will guide intake, provider support, accessibility, and regional risk one step at a time.",
+      suggestions: ["start intake", "talk to provider", "check region", "accessibility help"]
+    });
+  }
+  if (signals.trade && signals.tracking) {
+    return decision("workflow", {
+      confidence: .91,
+      section: "map",
+      workflow: "ai",
+      action: "route",
+      response: "I am opening route intelligence so you can track the sale, product, delivery route, and surrounding map area.",
+      suggestions: ["track my route", "check route risk", "explain map", "contact buyer"]
+    });
+  }
+  if (signals.drone || signals.advisor.cropSpoilage) {
+    const cropAdvice = advisorCropConditionRecommendation();
+    return decision("workflow", {
+      confidence: .92,
+      section: "trade",
+      workflow: "trade",
+      action: signals.advisor.cropSpoilage ? "drone-pest" : "drone",
+      response: `${cropAdvice.message} I am opening drone field intelligence so Nexus can create crop evidence and the next field action.`,
+      dataset: { productId: context.product?.id, objective: cropAdvice.actions.join("; ") },
+      suggestions: ["run drone scan", "create irrigation plan", "pest alert", "check route risk"]
+    });
+  }
+  if (signals.trade && signals.moneyTrade) {
+    return decision("workflow", {
+      confidence: .89,
+      section: "trade",
+      workflow: "trade",
+      action: signals.lower.includes("order") ? "order" : "buyer-contact",
+      response: "I am opening AgriTrade. Nexus will help contact the buyer or seller, prepare the crop order, and connect the route evidence.",
+      dataset: { productId: context.product?.id },
+      suggestions: ["contact buyer", "create order", "track route", "show crop"]
+    });
+  }
+  if (signals.workforce) {
+    return decision("workflow", {
+      confidence: .89,
+      section: "workforce",
+      workflow: signals.lower.includes("gap") || signals.lower.includes("skill") ? "ai" : "workforce",
+      action: signals.lower.includes("interview") ? "interview" : signals.lower.includes("shift") ? "shift" : signals.lower.includes("gap") || signals.lower.includes("skill") ? "workforce-coach" : "apply-role",
+      response: "I am opening Workforce. Nexus will help find roles, apply, review gaps, or prepare the next work step.",
+      dataset: { roleId: context.role?.id },
+      suggestions: ["show me jobs", "apply for job", "check skills", "plan shift"]
+    });
+  }
+  if (signals.learning) {
+    return decision("workflow", {
+      confidence: .88,
+      section: "learning",
+      workflow: signals.lower.includes("certificate") || signals.lower.includes("caption") || signals.lower.includes("audio") ? "learning-support" : "learning",
+      action: signals.lower.includes("certificate") ? "certificate" : signals.lower.includes("caption") ? "caption" : signals.lower.includes("audio") ? "visual" : "start",
+      response: "I am opening Learning. Nexus will help choose a course, add support, complete lessons, and connect progress to work readiness.",
+      suggestions: ["start a course", "complete lesson", "make captions", "issue certificate"]
+    });
+  }
+  if (signals.map) {
+    return decision("workflow", {
+      confidence: .86,
+      section: "map",
+      workflow: "map",
+      action: signals.lower.includes("facility") || signals.lower.includes("clinic") ? "facility-route" : signals.lower.includes("risk") ? "risk-layer" : "disruption",
+      response: "I am opening Map Advisor. Nexus will show surrounding areas, route risk, facilities, and location context.",
+      suggestions: ["check route risk", "find facility", "explain map", "track route"]
+    });
+  }
+  if (signals.admin && experienceMode !== "user") {
+    return decision("answer", {
+      confidence: .86,
+      section: "admin",
+      response: `Admin intelligence: ${adminIntelligenceBrief().recommendation}`,
+      suggestions: ["run health check", "run live service check", "review users", "open audit"]
+    });
+  }
+  if (signals.integrations && experienceMode !== "user") {
+    return decision("answer", {
+      confidence: .86,
+      section: "integrations",
+      response: "Integration intelligence: check provider engines, OpenAI, voice, translation, maps, PostgreSQL, SMS, WhatsApp, email, and billing. Start with live service check.",
+      suggestions: ["run live service check", "test provider engines", "open integrations", "review production gaps"]
+    });
+  }
+  if (signals.investor && experienceMode !== "user") {
+    const brief = investorIntelligenceBrief();
+    return decision("answer", {
+      confidence: .86,
+      section: "agent",
+      response: `Investor intelligence: strongest proof is ${brief.strongestMetric}. Recommendation: ${brief.recommendation}`,
+      suggestions: ["summarize impact", "run investor demo", "government briefing", "show evidence"]
+    });
+  }
+  if (signals.nextStep) {
+    return decision("answer", {
+      confidence: .82,
+      section: context.section,
+      response: `Based on where you are now, I recommend: ${context.memory.recommended}. You can also say health, work, trade, learning, or map, and I will open the right path.`,
+      suggestions: ["I need a doctor", "I need work", "sell my crop", "start a course", "open map"]
+    });
+  }
+  return null;
+}
+
+async function executeNexusIntelligenceRoute(decision, command = "") {
+  if (!decision) return false;
+  updateNexusBehaviorLayer(decision.type === "workflow" ? "confirming" : "thinking", `Nexus Intelligence Router: ${decision.reason}`);
+  if (decision.suggestions?.length) renderLiveVoiceSuggestions(decision.suggestions);
+  if (decision.section && canOpenSection(decision.section)) goSection(decision.section);
+  if (decision.type === "listen") {
+    setVoiceResponse(decision.response, true);
+    return true;
+  }
+  if (decision.type === "answer") {
+    setActiveAgentJourney(decision.section || currentSectionId(), "intelligence-router", command || decision.response);
+    setVoiceResponse(decision.response, true);
+    return true;
+  }
+  if (decision.type === "workflow" && decision.workflow && decision.action) {
+    if (decision.workflow === "learning-support") {
+      if (decision.action === "certificate") openWorkflowModal(learningCertificateWorkflowConfig());
+      else openWorkflowModal(learningAccessibilityWorkflowConfig(decision.action));
+      setVoiceResponse(decision.response, true);
+      return true;
+    }
+    await openWorkflowByVoice(decision.workflow, decision.action, decision.response, decision.dataset || {});
+    return true;
+  }
+  return false;
+}
+
+async function handleNexusIntelligenceRouter(command = "") {
+  const decision = nexusIntelligenceRouterDecision(command);
+  if (!decision || decision.confidence < .78) return false;
+  return executeNexusIntelligenceRoute(decision, command);
 }
 
 function moduleFromHelpCommand(command) {
@@ -11273,6 +11515,8 @@ async function handleVoiceCommand(rawCommand) {
     handleConversationRepair(command);
     return;
   }
+
+  if (await handleNexusIntelligenceRouter(command)) return;
 
   if (handleAdvisorBrainCommand(command)) return;
 

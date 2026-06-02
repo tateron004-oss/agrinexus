@@ -422,9 +422,9 @@ assert(app.includes('workflow === "admin-user"'), "Admin test login button needs
 assert(app.includes("Only an existing Admin can run this workflow"), "Admin login flow must explain admin-only protection");
 assert(server.includes('adminAccount.role = "Admin"'), "Backend must force admin test logins to Admin");
 assert(server.includes("admin_user.created"), "Admin test login must create auth audit evidence");
-assert(html.includes("styles.css?v=nexus-behavior-129"), "Index must force browsers to load the latest Nexus behavior shell");
-assert(html.includes("app.js?v=nexus-behavior-129"), "Index must force browsers to load the latest Nexus behavior code");
-assert(sw.includes("agrinexus-pwa-v109"), "Service worker cache must refresh the installed app after native voice bridge updates");
+assert(html.includes("styles.css?v=nexus-behavior-130"), "Index must force browsers to load the latest Nexus behavior shell");
+assert(html.includes("app.js?v=nexus-behavior-130"), "Index must force browsers to load the latest Nexus behavior code");
+assert(sw.includes("agrinexus-pwa-v110"), "Service worker cache must refresh the installed app after native voice bridge updates");
 assert(html.includes("userWorkspace"), "Dashboard needs a User Workspace for standard users");
 assert(html.includes("userMobileDock"), "Legacy mobile dock markup should remain safely hidden for cache compatibility");
 assert(html.includes("What Do You Need Help With Today?"), "Dashboard simple start should use user-ready language");
@@ -657,6 +657,11 @@ assert(app.includes('"#loginView", ".topbar", ".sidebar"'), "Translation pass mu
 assert(app.includes("function isWakePhraseOnly"), "Voice assistant must treat Hey AgriNexus as a wake phrase");
 assert(app.includes("function enableHeyAgriNexusMode"), "Voice assistant must enable hands-free wake listening");
 assert(app.includes("function nexusMemoryProfile"), "Nexus behavior layer needs persistent user memory context");
+assert(app.includes("function nexusIntentSignals"), "Nexus needs an intelligence router signal layer");
+assert(app.includes("function nexusIntelligenceRouterDecision"), "Nexus needs a central intelligence routing decision layer");
+assert(app.includes("function executeNexusIntelligenceRoute"), "Nexus needs a central intelligence routing execution layer");
+assert(app.includes("await handleNexusIntelligenceRouter(command)"), "Voice commands must run through the Nexus Intelligence Router before older fallbacks");
+assert(app.includes("learning-support"), "Nexus Intelligence Router must preserve tested learning accessibility and certificate workflows");
 assert(app.includes("function nexusBehaviorMode"), "Nexus behavior layer needs mode-specific behavior");
 assert(app.includes("function updateNexusBehaviorLayer"), "Nexus behavior layer needs a visible state indicator");
 assert(app.includes("function contextualVoiceSuggestions"), "Nexus behavior layer needs contextual voice suggestions");
