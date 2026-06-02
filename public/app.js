@@ -2385,8 +2385,8 @@ function runUserModeSelfTest() {
       if (!simpleUserCommandWorkflow(button.command)) missing.push(`${section}: ${button.label}`);
     });
   });
-  const currentScript = [...document.scripts].some(script => String(script.src || "").includes("nexus-behavior-131"));
-  const currentStyle = [...document.styleSheets].some(sheet => String(sheet.href || "").includes("nexus-behavior-131"));
+  const currentScript = [...document.scripts].some(script => String(script.src || "").includes("nexus-behavior-132"));
+  const currentStyle = [...document.styleSheets].some(sheet => String(sheet.href || "").includes("nexus-behavior-132"));
   if (!currentScript || !currentStyle) missing.push("new app files");
   const ok = missing.length === 0;
   const message = ok
@@ -2504,6 +2504,100 @@ function voiceLocale() {
 
 function voiceLanguageName() {
   return voiceLanguageNames[languageCode()] || "English";
+}
+
+function speechRateForLanguage(language = languageCode()) {
+  const rates = { en: 0.94, fr: 0.88, sw: 0.86, ar: 0.82, es: 0.9 };
+  const slowMode = localStorage.getItem("agrinexusSlowSpeech") === "on";
+  const baseRate = rates[language] || 0.9;
+  return Number((slowMode ? Math.max(0.72, baseRate * 0.88) : baseRate).toFixed(2));
+}
+
+function speechPitchForLanguage(language = languageCode()) {
+  const pitches = { en: 1, fr: 0.98, sw: 1, ar: 0.96, es: 1 };
+  return pitches[language] || 1;
+}
+
+function speechSafetyRisk(command = "", source = "voice") {
+  const heardText = String(command || "").replace(/\s+/g, " ").trim();
+  const lower = normalizeToolText(heardText);
+  const language = languageCode();
+  const wordCount = lower ? lower.split(/\s+/).filter(Boolean).length : 0;
+  const mixedLanguageTerms = /\b(english|french|francais|spanish|espanol|arabic|kiswahili|swahili|nigeria|drc|kenya|egypt)\b/.test(lower);
+  const categories = [];
+  const has = pattern => pattern.test(lower);
+  if (has(/\b(doctor|nurse|clinic|hospital|injury|hurt|pain|bleeding|emergency|medicine|telehealth|provider|sick|care)\b/)) categories.push("health");
+  if (has(/\b(sell|buy|buyer|seller|price|payment|wallet|order|crop|delivery|shipment|market|transaction)\b/)) categories.push("trade");
+  if (has(/\b(job|work|apply|role|shift|interview|worker|employment|pay)\b/)) categories.push("workforce");
+  if (has(/\b(route|track|location|where|map|facility|road|gps|delivery|shipment)\b/)) categories.push("map");
+  if (has(/\b(drone|scan|footage|field|pest|irrigation|harvest|plant)\b/)) categories.push("drone");
+  const sensitive = categories.length > 0;
+  const fastLanguage = ["fr", "sw", "ar", "es"].includes(language);
+  const longVoice = source === "voice" && wordCount >= 9;
+  const unclear = source === "voice" && (wordCount <= 2 || /\b(thing|stuff|that|this|there|it)\b/.test(lower));
+  const needsConfirmation = Boolean(source === "voice" && (sensitive || (fastLanguage && longVoice) || mixedLanguageTerms || unclear));
+  const riskLevel = categories.includes("health") && /\b(emergency|bleeding|severe|danger|unconscious|breathing)\b/.test(lower)
+    ? "high"
+    : needsConfirmation
+      ? "medium"
+      : "low";
+  const reason = needsConfirmation
+    ? `Voice safety is active for ${categories.join(", ") || voiceLanguageName()} because spoken or translated commands can be misheard.`
+    : `Voice safety is monitoring ${voiceLanguageName()} commands.`;
+  const confirmationPrompt = needsConfirmation
+    ? `I heard: ${heardText}. If that is right, say yes or press Do this now. If not, say stop or repeat it slowly.`
+    : "";
+  const safety = {
+    language,
+    languageName: voiceLanguageName(),
+    locale: voiceLocale(),
+    rate: speechRateForLanguage(language),
+    pitch: speechPitchForLanguage(language),
+    source,
+    wordCount,
+    categories,
+    sensitive,
+    needsConfirmation,
+    riskLevel,
+    reason,
+    confirmationPrompt,
+    heardText,
+    suggestions: needsConfirmation
+      ? ["say yes", "say stop", "repeat slowly", "change language"]
+      : ["keep speaking naturally", "say slow down", "change language"]
+  };
+  localStorage.setItem("agrinexusSpeechSafety", JSON.stringify(safety));
+  return safety;
+}
+
+function speechSafetyPrefix(command = "") {
+  const safety = speechSafetyRisk(command, "voice");
+  return safety.needsConfirmation ? `${safety.confirmationPrompt} ` : "";
+}
+
+function shouldConfirmSpeechSafety(command, source = "voice") {
+  return speechSafetyRisk(command, source).needsConfirmation;
+}
+
+function multilingualSpeechSafetySummary() {
+  const safety = JSON.parse(localStorage.getItem("agrinexusSpeechSafety") || "null") || speechSafetyRisk(agentPerformanceState.lastCommand || "", "voice");
+  const mode = localStorage.getItem("agrinexusSlowSpeech") === "on" ? "slow speech is on" : "normal speech pacing";
+  return `Multilingual speech safety is active in User, Admin, and Investor mode. Current language is ${safety.languageName}, locale ${safety.locale}, voice rate ${safety.rate}, and ${mode}. Nexus confirms risky health, trade, workforce, map, money, route, emergency, and drone commands before taking action.`;
+}
+
+function applySpeechSafetyToDecision(decision, command = "", source = "voice") {
+  if (!decision) return null;
+  const safety = speechSafetyRisk(command, source);
+  const response = safety.needsConfirmation && decision.type !== "listen"
+    ? `${decision.response} ${safety.confirmationPrompt}`
+    : decision.response;
+  return {
+    ...decision,
+    speechSafety: safety,
+    response,
+    reason: `${decision.reason} Speech safety: ${safety.reason}`,
+    suggestions: Array.from(new Set([...(decision.suggestions || []), ...(safety.suggestions || [])])).slice(0, 7)
+  };
 }
 
 function languageFromVoiceCommand(command) {
@@ -3110,7 +3204,11 @@ async function executeNexusIntelligenceRoute(decision, command = "") {
 }
 
 async function handleNexusIntelligenceRouter(command = "") {
-  const decision = enhanceNexusDecisionWithStrategy(nexusIntelligenceRouterDecision(command), command);
+  const decision = applySpeechSafetyToDecision(
+    enhanceNexusDecisionWithStrategy(nexusIntelligenceRouterDecision(command), command),
+    command,
+    "voice"
+  );
   if (!decision || decision.confidence < .78) return false;
   return executeNexusIntelligenceRoute(decision, command);
 }
@@ -11326,7 +11424,7 @@ function speakVoiceResponse(textOverride) {
     finishSpeaking();
   };
   updateVoiceOutputStatus("Requesting OpenAI voice audio...");
-  request("/api/voice/speak", { method: "POST", body: { text, language: languageCode(), locale: voiceLocale(), forceOpenAi: true, voice: "coral" } })
+  request("/api/voice/speak", { method: "POST", body: { text, language: languageCode(), locale: voiceLocale(), rate: speechRateForLanguage(), pitch: speechPitchForLanguage(), forceOpenAi: true, voice: "coral" } })
     .then(result => {
       if (playbackToken !== voicePlaybackToken) return;
       const audioDataUrl = result.voiceResult?.audioDataUrl;
@@ -11571,6 +11669,7 @@ async function handleVoiceCommand(rawCommand) {
   agentPerformanceState.lastCommand = command;
   if (command) rememberConversationTurn(command, "");
   if (command) updateNexusAwareness(command, { silent: true });
+  if (command) speechSafetyRisk(command, "voice");
   if (isGlobalStopCommand(lower)) {
     clearConversationHold("Stopped. I cleared the current choice and I am ready for the next instruction.");
     return;
@@ -11584,6 +11683,13 @@ async function handleVoiceCommand(rawCommand) {
   if (isUniversalLanguageCommand(command)) {
     pendingAgentClarification = null;
     await changeLanguageByVoice(command);
+    return;
+  }
+  if (/\b(speech safety|translation safety|voice safety|speak slower|slow down|talk slower|slower voice)\b/.test(lower)) {
+    if (/\b(speak slower|slow down|talk slower|slower voice)\b/.test(lower)) {
+      localStorage.setItem("agrinexusSlowSpeech", "on");
+    }
+    setVoiceResponse(multilingualSpeechSafetySummary(), true);
     return;
   }
   if (pendingAgentClarification && await answerAgentClarification(command)) return;

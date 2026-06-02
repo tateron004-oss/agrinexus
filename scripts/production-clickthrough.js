@@ -422,9 +422,9 @@ assert(app.includes('workflow === "admin-user"'), "Admin test login button needs
 assert(app.includes("Only an existing Admin can run this workflow"), "Admin login flow must explain admin-only protection");
 assert(server.includes('adminAccount.role = "Admin"'), "Backend must force admin test logins to Admin");
 assert(server.includes("admin_user.created"), "Admin test login must create auth audit evidence");
-assert(html.includes("styles.css?v=nexus-behavior-131"), "Index must force browsers to load the latest Nexus behavior shell");
-assert(html.includes("app.js?v=nexus-behavior-131"), "Index must force browsers to load the latest Nexus behavior code");
-assert(sw.includes("agrinexus-pwa-v111"), "Service worker cache must refresh the installed app after native voice bridge updates");
+assert(html.includes("styles.css?v=nexus-behavior-132"), "Index must force browsers to load the latest Nexus behavior shell");
+assert(html.includes("app.js?v=nexus-behavior-132"), "Index must force browsers to load the latest Nexus behavior code");
+assert(sw.includes("agrinexus-pwa-v112"), "Service worker cache must refresh the installed app after native voice bridge updates");
 assert(html.includes("userWorkspace"), "Dashboard needs a User Workspace for standard users");
 assert(html.includes("userMobileDock"), "Legacy mobile dock markup should remain safely hidden for cache compatibility");
 assert(html.includes("What Do You Need Help With Today?"), "Dashboard simple start should use user-ready language");
@@ -666,6 +666,11 @@ assert(app.includes("function nexusStrategicReasoningModel"), "Nexus needs a str
 assert(app.includes("function enhanceNexusDecisionWithStrategy"), "Nexus router decisions must be upgraded with strategic reasoning");
 assert(app.includes("urgency") && app.includes("impact") && app.includes("safety") && app.includes("nextBestAction"), "Strategic reasoning must score urgency, impact, safety, and next best action");
 assert(app.includes("agrinexusStrategicReasoning"), "Strategic reasoning should persist its latest explanation locally");
+assert(app.includes("function speechRateForLanguage"), "Multilingual voice needs language-aware speech pacing");
+assert(app.includes("function speechSafetyRisk"), "Multilingual voice needs fast-speech and sensitive-command risk detection");
+assert(app.includes("function applySpeechSafetyToDecision"), "Intelligence router decisions must include speech safety confirmation");
+assert(app.includes("agrinexusSpeechSafety"), "Speech safety should persist what Nexus heard for review and recovery");
+assert(app.includes("rate: speechRateForLanguage()"), "OpenAI voice requests should carry language-aware pacing metadata");
 assert(app.includes("function nexusBehaviorMode"), "Nexus behavior layer needs mode-specific behavior");
 assert(app.includes("function updateNexusBehaviorLayer"), "Nexus behavior layer needs a visible state indicator");
 assert(app.includes("function contextualVoiceSuggestions"), "Nexus behavior layer needs contextual voice suggestions");
