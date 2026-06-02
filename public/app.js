@@ -51,8 +51,8 @@ let routeTrackingWatchId = null;
 let routeTrackingPoints = [];
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-142";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v122";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-143";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v123";
 
 const countryLanguageMap = {
   nigeria: "en",
@@ -2593,6 +2593,112 @@ function speechRateForLanguage(language = languageCode()) {
 function speechPitchForLanguage(language = languageCode()) {
   const pitches = { en: 1, fr: 0.98, sw: 1, ar: 0.96, es: 1 };
   return pitches[language] || 1;
+}
+
+function latestByDate(items = [], dateKeys = ["startsAt", "createdAt", "scheduledAt"]) {
+  return [...(items || [])]
+    .filter(Boolean)
+    .sort((a, b) => {
+      const aTime = dateKeys.map(key => Date.parse(a?.[key] || "")).find(Number.isFinite) || 0;
+      const bTime = dateKeys.map(key => Date.parse(b?.[key] || "")).find(Number.isFinite) || 0;
+      return bTime - aTime;
+    })[0] || null;
+}
+
+function nextByDate(items = [], dateKeys = ["startsAt", "scheduledAt", "createdAt"]) {
+  const now = Date.now();
+  const dated = (items || []).map(item => {
+    const time = dateKeys.map(key => Date.parse(item?.[key] || "")).find(Number.isFinite) || 0;
+    return { item, time };
+  }).filter(entry => entry.time);
+  return (dated.filter(entry => entry.time >= now).sort((a, b) => a.time - b.time)[0]
+    || dated.sort((a, b) => b.time - a.time)[0]
+    || {}).item || null;
+}
+
+function localTimeAnswer() {
+  const now = new Date();
+  const time = new Intl.DateTimeFormat(voiceLocale(), { hour: "numeric", minute: "2-digit", timeZoneName: "short" }).format(now);
+  const date = new Intl.DateTimeFormat(voiceLocale(), { weekday: "long", month: "long", day: "numeric" }).format(now);
+  return `It is ${time} on ${date}.`;
+}
+
+function appointmentAnswer() {
+  const appointment = nextByDate(data.profile.telehealthAppointments || [], ["scheduledAt", "startsAt", "createdAt"]);
+  const shift = nextByDate(data.profile.shiftSchedule || [], ["startsAt", "createdAt"]);
+  if (appointment) {
+    const exact = Date.parse(appointment.scheduledAt || appointment.startsAt || "");
+    const when = Number.isFinite(exact)
+      ? new Intl.DateTimeFormat(voiceLocale(), { dateStyle: "medium", timeStyle: "short" }).format(new Date(exact))
+      : appointment.scheduleWindow || "the next available rural telehealth slot";
+    return `Your telehealth appointment is ${when}. It is ${appointment.status || "scheduled"} by ${appointment.modality || "voice or video"}, with ${appointment.language ? `${appointment.language} language support` : "language support"} and accessibility support.`;
+  }
+  if (shift) {
+    const exact = Date.parse(shift.startsAt || "");
+    const when = Number.isFinite(exact)
+      ? new Intl.DateTimeFormat(voiceLocale(), { dateStyle: "medium", timeStyle: "short" }).format(new Date(exact))
+      : "the next scheduled shift window";
+    return `I do not see a telehealth appointment yet. Your next workforce schedule item is ${shift.role || "a shift"} at ${when}, status ${shift.status || "scheduled"}.`;
+  }
+  return "I do not see an appointment time saved yet. I can open telehealth scheduling or workforce scheduling and help create one.";
+}
+
+function shipmentEtaAnswer() {
+  const route = activeRoute();
+  const latestOrder = latestByDate(data.profile.orders || [], ["createdAt", "updatedAt"]);
+  const checkpoints = route.checkpoints || [];
+  const activeCheckpoint = latestOrder?.checkpoint || data.profile.activeCheckpoint || checkpoints[0] || "pickup";
+  const index = Math.max(0, checkpoints.findIndex(checkpoint => checkpoint === activeCheckpoint));
+  const completed = checkpoints.length ? index + 1 : 1;
+  const remaining = Math.max(0, checkpoints.length - completed);
+  const etaHours = remaining ? remaining * 8 : 2;
+  const orderName = latestOrder?.orderNumber || latestOrder?.id || "the active shipment";
+  const product = latestOrder?.productName || latestOrder?.product || firstProduct()?.name || "your crop";
+  const stage = latestOrder?.stage || data.profile.routeStage || "tracking";
+  const deliveryWindow = remaining
+    ? `${etaHours} to ${etaHours + 6} hours in the platform route model`
+    : "about 2 hours in the platform route model";
+  return `${orderName} for ${product} is at ${activeCheckpoint} on ${route.name}. Stage: ${stage}. Estimated delivery is ${deliveryWindow}. Live carrier GPS will make this exact when a logistics provider is connected.`;
+}
+
+function weatherAssistantAnswer(command = "") {
+  const country = activeCountry();
+  const heatC = Number(country.heat || 31);
+  const heatF = Math.round((heatC * 9 / 5) + 32);
+  const risk = country.risk || "Routine";
+  const liveReady = providerReady("weather") || providerReady("map-tiles");
+  const walkingAdvice = heatF >= 90
+    ? "For walking, I recommend early morning or evening, shade, water, and shorter distance."
+    : "For walking, conditions look manageable, but check water, shade, and local safety before going.";
+  const farmAdvice = /\b(farm|crop|plant|harvest|field|drone|water|irrigat)\b/i.test(command)
+    ? "For farming, use this as a planning signal: check field moisture, inspect crop stress, and run drone or map intelligence before planting, watering, or moving harvest."
+    : walkingAdvice;
+  const source = liveReady ? "live provider or map context" : "platform country context";
+  return `Weather check for ${country.name}: about ${heatF} degrees Fahrenheit, ${heatC} Celsius, with ${risk.toLowerCase()} operating risk from ${source}. ${farmAdvice}`;
+}
+
+function nexusUtilityAssistantResponse(command = "") {
+  const lower = normalizeToolText(command);
+  const raw = String(command || "").toLowerCase();
+  const haystack = `${lower} ${raw}`;
+  if (!lower && !raw.trim()) return "";
+  if (/\b(what time is it|current time|time now|tell me the time|hora es|quelle heure|saa ngapi)\b/.test(lower) || /(الوقت|الساعة)/.test(raw)) {
+    return localTimeAnswer();
+  }
+  if (/\b(weather|temperature|too hot|heat|outside|walk|walking|rain|forecast|clima|meteo|météo|hali ya hewa)\b/.test(haystack) || /(الطقس|الحرارة)/.test(raw)) {
+    return weatherAssistantAnswer(command);
+  }
+  if (/\b(shipment|delivery|deliver|arrive|arrival|eta|track my sale|track my order|track my product|where is my crop|where is my shipment|route status)\b/.test(lower)) {
+    if (canOpenSection("map")) goSection(experienceMode === "user" ? "map" : "map");
+    return shipmentEtaAnswer();
+  }
+  if (/\b(appointment|schedule|calendar|visit|call with provider|doctor time|provider time|shift time|what time is my)\b/.test(lower)) {
+    return appointmentAnswer();
+  }
+  if (/\b(what is next today|what do i have today|today's plan|daily plan|my day|what should i do today)\b/.test(lower)) {
+    return `${localTimeAnswer()} ${appointmentAnswer()} ${shipmentEtaAnswer()}`;
+  }
+  return "";
 }
 
 function speechSafetyRisk(command = "", source = "voice") {
@@ -12195,6 +12301,14 @@ async function handleVoiceCommand(rawCommand) {
 
   if (isConversationRepairCommand(lower)) {
     handleConversationRepair(command);
+    return;
+  }
+
+  const utilityAnswer = nexusUtilityAssistantResponse(command);
+  if (utilityAnswer) {
+    updateNexusBehaviorLayer("answering", "Nexus is answering a practical daily question.");
+    renderLiveVoiceSuggestions(["open map", "open telehealth", "track my shipment", "what is next today"]);
+    setVoiceResponse(utilityAnswer, true);
     return;
   }
 
