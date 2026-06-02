@@ -22,6 +22,7 @@ let lastSpokenText = "";
 let lastSpokenAt = 0;
 let activeVoiceAudio = null;
 let voicePlaybackToken = 0;
+let voiceInterruptToken = 0;
 let voiceConversationTurns = Number(localStorage.getItem("agrinexusVoiceTurns") || 0);
 let liveVoiceSuggestions = [];
 let agentReasoningVisible = localStorage.getItem("agrinexusReasoningVisible") === "true";
@@ -49,8 +50,8 @@ let routeTrackingWatchId = null;
 let routeTrackingPoints = [];
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-136";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v116";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-137";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v117";
 
 const countryLanguageMap = {
   nigeria: "en",
@@ -2401,8 +2402,8 @@ function runUserModeSelfTest() {
       if (!simpleUserCommandWorkflow(button.command)) missing.push(`${section}: ${button.label}`);
     });
   });
-  const currentScript = [...document.scripts].some(script => String(script.src || "").includes("nexus-behavior-136"));
-  const currentStyle = [...document.styleSheets].some(sheet => String(sheet.href || "").includes("nexus-behavior-136"));
+  const currentScript = [...document.scripts].some(script => String(script.src || "").includes("nexus-behavior-137"));
+  const currentStyle = [...document.styleSheets].some(sheet => String(sheet.href || "").includes("nexus-behavior-137"));
   if (!currentScript || !currentStyle) missing.push("new app files");
   const ok = missing.length === 0;
   const message = ok
@@ -5358,7 +5359,12 @@ function guideAmbiguousUserWithoutChoice(clarification) {
 
 function isGlobalStopCommand(lower) {
   const value = String(lower || "").trim();
-  return /^(nexus\s+)?(stop|pause|wait|hold on|be quiet|interrupt|cancel|cancel that|stop that|stop it|wrong|that's wrong|that is wrong|never mind|reset|start over)$/i.test(value);
+  const cleaned = value
+    .replace(/^(hey|hi|hello|okay|ok)\s+/i, "")
+    .replace(/^(agri\s*nexus|agrinexus|nexus)\s*,?\s*/i, "")
+    .trim();
+  if (/^(stop|pause|wait|hold on|be quiet|interrupt|cancel|cancel that|stop that|stop it|wrong|that's wrong|that is wrong|never mind|reset|start over)(\s+(talking|speaking|voice|audio|now|please|for now))?$/i.test(cleaned)) return true;
+  return /\b(agri\s*nexus|agrinexus|nexus)\b.*\b(stop|pause|be quiet|interrupt|cancel|stop talking|stop speaking)\b/i.test(value);
 }
 
 function isFreshActionDuringClarification(lower) {
@@ -5373,7 +5379,7 @@ function clearConversationHold(message = "Stopped. Tell me the next instruction.
   activeAgentJourney = null;
   pendingGrandmaAction = null;
   if (!$("#workflowModal")?.classList.contains("hidden")) closeWorkflowModal();
-  stopVoicePlayback();
+  stopVoicePlayback({ hard: true });
   clearAgentProgressTimers();
   updateNexusBehaviorLayer("listening", message);
   setVoiceStatus(voiceFirstMode ? "voice-first" : "standby");
@@ -11559,6 +11565,7 @@ async function executeAgentPlan() {
 function setVoiceResponse(message, speak = false, options = {}) {
   const allowVoiceFirst = options.allowVoiceFirst !== false;
   const token = ++voiceTranslationToken;
+  const interruptToken = voiceInterruptToken;
   const responseMessage = speak || options.forceHandoff ? composeJarvisResponse(message, options) : message;
   updateNexusBehaviorLayer(speak ? "speaking" : "ready", responseMessage);
   lastVoiceResponse = responseMessage;
@@ -11577,7 +11584,7 @@ function setVoiceResponse(message, speak = false, options = {}) {
       method: "POST",
       body: { text: responseMessage, sourceLanguage: "en", targetLanguage: languageCode(), context: "voice-response" }
     }).then(result => {
-      if (token !== voiceTranslationToken) return;
+      if (token !== voiceTranslationToken || interruptToken !== voiceInterruptToken) return;
       const translated = result.translationResult?.translatedText || responseMessage;
       lastVoiceResponse = translated;
       if (transcript) transcript.textContent = translated;
@@ -11585,13 +11592,13 @@ function setVoiceResponse(message, speak = false, options = {}) {
       if (globalStatus) globalStatus.textContent = translated;
       updateUserCaptionPanel(translated);
       announce(translated);
-      if (speak || (voiceFirstMode && allowVoiceFirst)) speakVoiceResponse(translated);
+      if (interruptToken === voiceInterruptToken && (speak || (voiceFirstMode && allowVoiceFirst))) speakVoiceResponse(translated);
     }).catch(() => {
-      if (speak || (voiceFirstMode && allowVoiceFirst)) speakVoiceResponse(responseMessage);
+      if (interruptToken === voiceInterruptToken && (speak || (voiceFirstMode && allowVoiceFirst))) speakVoiceResponse(responseMessage);
     });
     return;
   }
-  if (speak || (voiceFirstMode && allowVoiceFirst)) speakVoiceResponse(responseMessage);
+  if (interruptToken === voiceInterruptToken && (speak || (voiceFirstMode && allowVoiceFirst))) speakVoiceResponse(responseMessage);
 }
 
 function userFirstName() {
@@ -11668,11 +11675,20 @@ function chooseSpeechVoice(locale) {
     || null;
 }
 
-function stopVoicePlayback() {
+function stopVoicePlayback(options = {}) {
   voicePlaybackToken += 1;
+  if (options.hard) {
+    voiceInterruptToken += 1;
+    voiceTranslationToken += 1;
+    lastSpokenText = "";
+    lastSpokenAt = 0;
+  }
   if (activeVoiceAudio) {
     activeVoiceAudio.pause();
+    activeVoiceAudio.onended = null;
+    activeVoiceAudio.onerror = null;
     activeVoiceAudio.src = "";
+    activeVoiceAudio.load?.();
     activeVoiceAudio = null;
   }
   if ("speechSynthesis" in window) window.speechSynthesis.cancel();
@@ -11681,10 +11697,13 @@ function stopVoicePlayback() {
 }
 
 function interruptNexusSpeech(reason = "I stopped speaking and I am ready for the next instruction.") {
-  stopVoicePlayback();
+  stopVoicePlayback({ hard: true });
   updateNexusBehaviorLayer("listening", reason);
   const status = $("#globalVoiceOutputStatus");
   if (status) status.textContent = translateText(reason);
+  const transcript = $("#voiceTranscript");
+  if (transcript) transcript.textContent = translateText(reason);
+  updateUserCaptionPanel(reason);
   if (voiceFirstMode && !voiceRecognition && !document.hidden) {
     setTimeout(() => {
       if (!voiceRecognition && !voiceSpeaking && !voiceStopRequested) startVoiceListening();
@@ -11695,6 +11714,7 @@ function interruptNexusSpeech(reason = "I stopped speaking and I am ready for th
 function speakVoiceResponse(textOverride) {
   const text = textOverride || lastVoiceResponse;
   const compact = String(text || "").replace(/\s+/g, " ").trim();
+  const interruptToken = voiceInterruptToken;
   const now = Date.now();
   if (compact && compact === lastSpokenText && now - lastSpokenAt < 3500) return;
   lastSpokenText = compact;
@@ -11710,7 +11730,7 @@ function speakVoiceResponse(textOverride) {
     if (globalStatus) globalStatus.textContent = message;
   };
   const finishSpeaking = () => {
-    if (playbackToken !== voicePlaybackToken) return;
+    if (playbackToken !== voicePlaybackToken || interruptToken !== voiceInterruptToken) return;
     activeVoiceAudio = null;
     voiceSpeaking = false;
     voiceAutoRestart = voiceFirstMode;
@@ -11728,7 +11748,7 @@ function speakVoiceResponse(textOverride) {
   updateVoiceOutputStatus("Requesting OpenAI voice audio...");
   request("/api/voice/speak", { method: "POST", body: { text, language: languageCode(), locale: voiceLocale(), rate: speechRateForLanguage(), pitch: speechPitchForLanguage(), forceOpenAi: true, voice: "coral" } })
     .then(result => {
-      if (playbackToken !== voicePlaybackToken) return;
+      if (playbackToken !== voicePlaybackToken || interruptToken !== voiceInterruptToken) return;
       const audioDataUrl = result.voiceResult?.audioDataUrl;
       if (result.voiceResult?.error) {
         updateVoiceOutputStatus(`OpenAI voice error: ${result.voiceResult.error}`);
@@ -11754,7 +11774,7 @@ function speakVoiceResponse(textOverride) {
       finishSpeaking();
     })
     .catch(error => {
-      if (playbackToken !== voicePlaybackToken) return;
+      if (playbackToken !== voicePlaybackToken || interruptToken !== voiceInterruptToken) return;
       if (/sign in required/i.test(error.message || "")) {
         updateVoiceOutputStatus("Your session expired after redeploy. Sign in again, then press Read response.");
         toast("Please sign in again to use OpenAI voice.");
@@ -12940,6 +12960,13 @@ function startVoiceListening() {
     if (latest && latest.isFinal === false) return;
     const command = latest?.[0]?.transcript || event.results?.[0]?.[0]?.transcript || "";
     setCommandInputs(command);
+    const localizedCommand = normalizeLocalizedVoiceCommand(command);
+    const cleanedCommand = cleanWakeCommand(localizedCommand);
+    if (isGlobalStopCommand(String(cleanedCommand || localizedCommand || command).toLowerCase())) {
+      voiceStopRequested = false;
+      clearConversationHold("Stopped. I am ready when you are.");
+      return;
+    }
     setVoiceStatus("thinking");
     setVoiceResponse(`I heard: ${command}. Give me a moment.`, false, { allowVoiceFirst: false });
     request("/api/voice/transcribe", { method: "POST", body: { transcript: command, language: languageCode(), locale: voiceLocale() } }).catch(() => {});
