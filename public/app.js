@@ -50,8 +50,8 @@ let routeTrackingWatchId = null;
 let routeTrackingPoints = [];
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-137";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v117";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-138";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v118";
 
 const countryLanguageMap = {
   nigeria: "en",
@@ -2402,8 +2402,8 @@ function runUserModeSelfTest() {
       if (!simpleUserCommandWorkflow(button.command)) missing.push(`${section}: ${button.label}`);
     });
   });
-  const currentScript = [...document.scripts].some(script => String(script.src || "").includes("nexus-behavior-137"));
-  const currentStyle = [...document.styleSheets].some(sheet => String(sheet.href || "").includes("nexus-behavior-137"));
+  const currentScript = [...document.scripts].some(script => String(script.src || "").includes("nexus-behavior-138"));
+  const currentStyle = [...document.styleSheets].some(sheet => String(sheet.href || "").includes("nexus-behavior-138"));
   if (!currentScript || !currentStyle) missing.push("new app files");
   const ok = missing.length === 0;
   const message = ok
@@ -6585,6 +6585,10 @@ function updateUserCaptionPanel(message, { open = true, expanded = false } = {})
   text.textContent = clean;
   panel.classList.toggle("expanded", Boolean(expanded));
   if (open && ["user", "admin", "investor"].includes(experienceMode)) panel.classList.remove("hidden");
+  panel.classList.toggle("has-pending-workflow", Boolean(pendingWorkflow));
+  panel.querySelectorAll('[data-caption-action="confirm"], [data-caption-action="cancel"]').forEach(button => {
+    button.classList.toggle("hidden", !pendingWorkflow);
+  });
   const input = $("#userCaptionInput");
   if (input && !input.value.trim()) input.placeholder = translateText("Type or speak your reply");
 }
@@ -7544,7 +7548,7 @@ function userProcessScreenHtml(config = {}, mapped = {}, label = "Selected actio
         </div>`).join("")}
       </div>
       <div class="user-process-actions">
-        <button type="button" class="primary" data-inline-workflow-confirm>${translateText(config.confirmLabel || "Do this now")}</button>
+        <button type="button" class="primary" data-inline-workflow-confirm aria-label="${escapeHtml(translateText(config.confirmLabel || "Do this now"))}">${translateText("Do this now")}</button>
         <button type="button" data-inline-workflow-cancel>${translateText("Choose another")}</button>
       </div>
       <p>${translateText("You stay in control. Nothing is submitted until you press the main button.")}</p>
@@ -7561,6 +7565,7 @@ function renderUserProcessScreen(sectionId, config, mapped = {}, label = "Select
   $("#workflowModal")?.classList.add("hidden");
   panel.classList.remove("hidden");
   panel.innerHTML = userProcessScreenHtml(config, mapped, label);
+  updateUserCaptionPanel(mapped.response || "Process is ready. Press Do this now to continue.", { expanded: true });
   panel.scrollIntoView({ behavior: "smooth", block: "start" });
   $(`#${sectionId} .user-module-status`) && ($(`#${sectionId} .user-module-status`).textContent = translateText("Process opened. Review it, then press Do this now."));
   setVoiceResponse(mapped.response || "Process is ready. Review it, then press Do this now.", true);
@@ -9425,6 +9430,11 @@ function renderWorkflowLiveMap(config = pendingWorkflow || {}) {
 function closeWorkflowModal() {
   stopWorkflowCamera();
   pendingWorkflow = null;
+  const captionPanel = $("#userCaptionPanel");
+  if (captionPanel) {
+    captionPanel.classList.remove("has-pending-workflow");
+    captionPanel.querySelectorAll('[data-caption-action="confirm"], [data-caption-action="cancel"]').forEach(button => button.classList.add("hidden"));
+  }
   stopVoicePlayback();
   if (workflowLeafletMap) {
     try {
@@ -12200,6 +12210,27 @@ async function handleVoiceCommand(rawCommand) {
     return openWorkflowByVoice("learning", "start", "I can help you learn. I opened Learning and prepared the course start workflow.");
   }
 
+  const visibleInlineWorkflow = $(".user-inline-workflow:not(.hidden)");
+  if (pendingWorkflow && visibleInlineWorkflow) {
+    if (fillWorkflowFieldByVoice(command)) return;
+    if (lower === "read" || lower.includes("read this") || lower.includes("read workflow") || lower.includes("repeat")) {
+      readWorkflowModal();
+      return;
+    }
+    if (lower === "yes" || lower.includes("confirm") || lower.includes("approve") || lower.includes("yes do it") || lower.includes("do it") || lower.includes("do this now") || lower.includes("submit")) {
+      await confirmPendingWorkflow();
+      return;
+    }
+    if (lower === "no" || lower.includes("cancel") || lower.includes("choose another") || lower.includes("close") || lower.includes("stop")) {
+      closeWorkflowModal();
+      visibleInlineWorkflow.classList.add("hidden");
+      pendingWorkflow = null;
+      updateUserCaptionPanel("Canceled. Choose another button when ready.");
+      setVoiceResponse("Canceled. Choose another button when ready.", true);
+      return;
+    }
+  }
+
   if (!$("#workflowModal").classList.contains("hidden")) {
     if (fillWorkflowFieldByVoice(command)) return;
     if (lower === "read" || lower.includes("read this") || lower.includes("read workflow") || lower.includes("repeat")) {
@@ -13300,6 +13331,14 @@ function bindStatic() {
         if (input) input.value = "";
         setCommandInputs(command);
         void handleVoiceCommand(command);
+      } else if (action === "confirm") {
+        void confirmPendingWorkflow();
+      } else if (action === "cancel") {
+        closeWorkflowModal();
+        $(".user-inline-workflow:not(.hidden)")?.classList.add("hidden");
+        pendingWorkflow = null;
+        updateUserCaptionPanel("Canceled. Choose another button when ready.");
+        setVoiceResponse("Canceled. Choose another button when ready.", true);
       }
       return;
     }
