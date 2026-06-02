@@ -2066,13 +2066,6 @@ body.investor-mode .user-caption-panel.expanded .user-caption-actions {
   background: #173240;
   color: #ffffff;
 }
-.voice-stop-button,
-.user-caption-actions .voice-stop-button,
-.user-voice-dock .voice-stop-button {
-  border-color: #7f1d1d !important;
-  background: #b91c1c !important;
-  color: #ffffff !important;
-}
 body.user-mode .user-voice-dock #nexusBehaviorStatus {
   grid-column: 1 / -1;
   display: block;

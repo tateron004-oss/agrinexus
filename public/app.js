@@ -51,8 +51,8 @@ let routeTrackingWatchId = null;
 let routeTrackingPoints = [];
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-141";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v121";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-142";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v122";
 
 const countryLanguageMap = {
   nigeria: "en",
@@ -2462,8 +2462,8 @@ function runUserModeSelfTest() {
       if (!simpleUserCommandWorkflow(button.command)) missing.push(`${section}: ${button.label}`);
     });
   });
-  const currentScript = [...document.scripts].some(script => String(script.src || "").includes("nexus-behavior-141"));
-  const currentStyle = [...document.styleSheets].some(sheet => String(sheet.href || "").includes("nexus-behavior-141"));
+  const currentScript = [...document.scripts].some(script => String(script.src || "").includes("nexus-behavior-142"));
+  const currentStyle = [...document.styleSheets].some(sheet => String(sheet.href || "").includes("nexus-behavior-142"));
   if (!currentScript || !currentStyle) missing.push("new app files");
   const ok = missing.length === 0;
   const message = ok
@@ -5443,6 +5443,22 @@ function isGlobalStopCommand(lower) {
     || /\b(agri\s*nexus|agrinexus|nexus)\b.*\b(para|detente|detener|silencio|arrete|tais toi|simama|nyamaza|acha)\b/i.test(normalized);
 }
 
+function postStopRedirectCommand(command = "") {
+  const value = String(command || "").trim();
+  if (!value) return "";
+  const normalized = value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[؟،,.!]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  const stopWords = "(?:stop|pause|cancel|be quiet|interrupt|para|parar|deten|detente|detener|silencio|callate|arrete|arreter|tais toi|simama|nyamaza|acha|ghairi|subiri|اوقف|توقف|اسكت|اصمت|الغ)";
+  const prefix = new RegExp(`^(?:hey\\s+|hi\\s+|hello\\s+|hola\\s+|bonjour\\s+|jambo\\s+)?(?:agri\\s*nexus|agrinexus|nexus|نكسس)?\\s*${stopWords}\\s*(?:and|then|now|please|,|;|:|-|i want to|i need to|take me to|go to)?\\s*`, "i");
+  const redirected = normalized.replace(prefix, "").trim();
+  if (!redirected || redirected === normalized || isGlobalStopCommand(redirected)) return "";
+  return redirected;
+}
+
 function isFreshActionDuringClarification(lower) {
   const value = String(lower || "").trim();
   if (!value || /^(yes|yeah|yep|confirm|ok|okay|one|two|three|1|2|3)$/i.test(value)) return false;
@@ -6772,7 +6788,7 @@ function renderLaunchSupportPanels() {
 }
 
 function applyPermissions() {
-  $$("[data-workflow], [data-ai], [data-workforce], [data-health], [data-pay], [data-module-test], [data-command-preset], [data-pilot-scenario], [data-persona], [data-simple-command], [data-simple-section], [data-simple-pilot], [data-simple-demo], [data-simple-mission], [data-simple-action], .provider-test, #adminHealthCheck, #liveServiceCheckBtn, #liveServiceCheckFromIntegrations, #aiConsoleRun, #agentPlanBtn, #agentExecuteBtn, #agentBriefingBtn, #agentMissionBtn, #missionResumeBtn, #missionAutopilotBtn, #demoRunBtn, #wowDemoBtn, #remoteLaunchKitBtn, #startOnboardingBtn, #openSupportBtn, #inviteSubscriberBtn, #addTestUserBtn, #addAdminUserBtn, [data-ai-review], [data-notify], #voiceListenBtn, #voiceRunBtn, #voiceFirstBtn, #voiceSpeakBtn, #voiceStopBtn, #voiceHelpBtn, #globalListenBtn, #globalRunBtn, #globalYesBtn, #globalNoBtn, #globalReadBtn, #globalStopBtn, #globalVoiceHelpBtn, #globalInstallBtn, #jarvisListenBtn, #jarvisRunBtn, #jarvisMissionBtn, #jarvisReadBtn, #jarvisStopBtn").forEach(element => {
+  $$("[data-workflow], [data-ai], [data-workforce], [data-health], [data-pay], [data-module-test], [data-command-preset], [data-pilot-scenario], [data-persona], [data-simple-command], [data-simple-section], [data-simple-pilot], [data-simple-demo], [data-simple-mission], [data-simple-action], .provider-test, #adminHealthCheck, #liveServiceCheckBtn, #liveServiceCheckFromIntegrations, #aiConsoleRun, #agentPlanBtn, #agentExecuteBtn, #agentBriefingBtn, #agentMissionBtn, #missionResumeBtn, #missionAutopilotBtn, #demoRunBtn, #wowDemoBtn, #remoteLaunchKitBtn, #startOnboardingBtn, #openSupportBtn, #inviteSubscriberBtn, #addTestUserBtn, #addAdminUserBtn, [data-ai-review], [data-notify], #voiceListenBtn, #voiceRunBtn, #voiceFirstBtn, #voiceSpeakBtn, #voiceHelpBtn, #globalListenBtn, #globalRunBtn, #globalYesBtn, #globalNoBtn, #globalReadBtn, #globalVoiceHelpBtn, #globalInstallBtn, #jarvisListenBtn, #jarvisRunBtn, #jarvisMissionBtn, #jarvisReadBtn").forEach(element => {
     const area = element.dataset.workflow
       || (element.dataset.ai ? "ai" : null)
       || (element.dataset.workforce ? "workforce" : null)
@@ -12103,6 +12119,7 @@ async function handleVoiceCommand(rawCommand) {
   const wakeOnly = isWakePhraseOnly(localizedCommand);
   let command = cleanWakeCommand(localizedCommand);
   const understanding = adaptiveCommandUnderstanding(command);
+  const stopRedirect = postStopRedirectCommand(command);
   if (understanding.rewrittenCommand && !isUniversalLanguageCommand(command) && !isGlobalStopCommand(understanding.rewrittenCommand.toLowerCase())) {
     command = understanding.rewrittenCommand;
   }
@@ -12115,6 +12132,12 @@ async function handleVoiceCommand(rawCommand) {
   if (isGlobalStopCommand(lower)) {
     clearConversationHold("Stopped. I cleared the current choice and I am ready for the next instruction.");
     resetNexusForNextPrompt("Stopped. Ask me the next question or tell me where to go next.");
+    if (stopRedirect) {
+      setTimeout(() => {
+        setCommandInputs(stopRedirect);
+        void handleVoiceCommand(stopRedirect);
+      }, 120);
+    }
     return;
   }
   updateNexusBehaviorLayer("thinking", command ? `Nexus is deciding how to help with: ${command}` : "Nexus is listening.");
@@ -13108,10 +13131,17 @@ function startVoiceListening() {
     setCommandInputs(command);
     const localizedCommand = normalizeLocalizedVoiceCommand(command);
     const cleanedCommand = cleanWakeCommand(localizedCommand);
+    const stopRedirect = postStopRedirectCommand(cleanedCommand || localizedCommand || command);
     if (isGlobalStopCommand(String(cleanedCommand || localizedCommand || command).toLowerCase())) {
       voiceStopRequested = false;
       clearConversationHold("Stopped. I am ready when you are.");
       resetNexusForNextPrompt("Stopped. Ask me the next question or tell me where to go next.");
+      if (stopRedirect) {
+        setTimeout(() => {
+          setCommandInputs(stopRedirect);
+          void handleVoiceCommand(stopRedirect);
+        }, 120);
+      }
       return;
     }
     setVoiceStatus("thinking");
@@ -13418,8 +13448,6 @@ function bindStatic() {
       } else if (action === "read") {
         updateUserCaptionPanel(lastVoiceResponse || "Nexus is ready.");
         speakVoiceResponse();
-      } else if (action === "stop") {
-        stopNexusSpeaking();
       } else {
         updateUserCaptionPanel(lastVoiceResponse || "Ask Nexus anything.");
         openAskNexus();
@@ -13439,8 +13467,6 @@ function bindStatic() {
         startVoiceListening();
       } else if (action === "speak") {
         speakVoiceResponse($("#userCaptionText")?.textContent || lastVoiceResponse);
-      } else if (action === "stop") {
-        stopNexusSpeaking();
       } else if (action === "send") {
         const input = $("#userCaptionInput");
         const command = input?.value.trim();
@@ -13606,12 +13632,6 @@ function bindStatic() {
       event.preventDefault();
       event.stopPropagation();
       speakVoiceResponse();
-      return;
-    }
-    if (event.target.closest("#globalStopBtn") || event.target.closest("#jarvisStopBtn") || event.target.closest("#voiceStopBtn")) {
-      event.preventDefault();
-      event.stopPropagation();
-      stopNexusSpeaking();
       return;
     }
     if (event.target.closest("#globalInstallBtn")) {
