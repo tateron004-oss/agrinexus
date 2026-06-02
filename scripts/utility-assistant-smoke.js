@@ -54,9 +54,16 @@ async function call(route, body) {
     const utilityBodies = [
       ["utility.time", "Nexus, what time is it?"],
       ["utility.weather", "Nexus, what is the weather for the farmer today?"],
+      ["utility.crop-timing", "Nexus, when should I harvest this crop?"],
+      ["utility.appointment-reminder", "Nexus, remind me about my telehealth appointment"],
+      ["utility.route-delay", "Nexus, are there route delays for my shipment?"],
+      ["utility.buyer-message", "Nexus, prepare a buyer message"],
+      ["utility.field-alert", "Nexus, give me a field alert"],
+      ["utility.health-safety", "Nexus, give me a health safety reminder"],
       ["utility.shipment", "Nexus, how long until my shipment arrives?"],
       ["utility.appointment", "Nexus, what time is my appointment?"],
-      ["utility.daily-plan", "Nexus, what is next today?"]
+      ["utility.daily-plan", "Nexus, what is next today?"],
+      ["utility.next-step", "Nexus, what should I do next?"]
     ];
     for (const [intent, command] of utilityBodies) {
       const state = await call("/api/agent/command", {
@@ -83,9 +90,16 @@ async function call(route, body) {
   console.log("Utility assistant smoke passed");
   console.log("- Ask Nexus backend time answer");
   console.log("- Ask Nexus backend weather answer");
+  console.log("- Ask Nexus backend crop timing answer");
+  console.log("- Ask Nexus backend appointment reminder answer");
+  console.log("- Ask Nexus backend route delay answer");
+  console.log("- Ask Nexus backend buyer message answer");
+  console.log("- Ask Nexus backend field alert answer");
+  console.log("- Ask Nexus backend health safety answer");
   console.log("- Ask Nexus backend shipment answer");
   console.log("- Ask Nexus backend appointment answer");
   console.log("- Ask Nexus backend daily plan answer");
+  console.log("- Ask Nexus backend next-step answer");
 })().catch(error => {
   console.error(error);
   process.exit(1);

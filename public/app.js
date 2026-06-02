@@ -51,8 +51,8 @@ let routeTrackingWatchId = null;
 let routeTrackingPoints = [];
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-144";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v124";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-145";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v125";
 
 const countryLanguageMap = {
   nigeria: "en",
@@ -2677,6 +2677,66 @@ function weatherAssistantAnswer(command = "") {
   return `Weather check for ${country.name}: about ${heatF} degrees Fahrenheit, ${heatC} Celsius, with ${risk.toLowerCase()} operating risk from ${source}. ${farmAdvice}`;
 }
 
+function cropTimingAssistantAnswer() {
+  const product = firstProduct() || {};
+  const country = activeCountry();
+  const heatC = Number(country.heat || 31);
+  const heatF = Math.round((heatC * 9 / 5) + 32);
+  const latestScan = latestByDate(data.profile.droneScans || [], ["createdAt"]);
+  const scanLine = latestScan
+    ? `Latest field scan shows ${latestScan.cropHealthScore || "recorded"}% crop health and ${latestScan.yieldEstimate || "a recorded yield estimate"}.`
+    : "No drone scan is attached yet, so run field scan before selling or dispatch.";
+  const heatLine = heatF >= 92 ? "Avoid the hottest hours for planting or harvest." : "Use morning timing, water planning, and route risk before moving harvest.";
+  return `Crop timing for ${product.name || "the active crop"} in ${country.name}: ${heatLine} ${scanLine}`;
+}
+
+function routeDelayAssistantAnswer() {
+  const route = activeRoute();
+  const country = activeCountry();
+  const latestOrder = latestByDate(data.profile.orders || [], ["createdAt", "updatedAt"]);
+  const checkpoint = latestOrder?.checkpoint || data.profile.activeCheckpoint || route.checkpoints?.[0] || "active checkpoint";
+  const risk = country.risk || "routine";
+  return `Route delay check for ${route.name}: current checkpoint is ${checkpoint}, platform risk is ${risk}, and exact live traffic needs the logistics or map provider connected.`;
+}
+
+function buyerMessageAssistantAnswer() {
+  const country = activeCountry();
+  const route = activeRoute();
+  const product = firstProduct() || {};
+  const thread = latestByDate(data.profile.tradeMessageThreads || [], ["updatedAt", "createdAt"]);
+  const buyer = thread?.buyerName || product.buyerName || `${country.name} verified buyer desk`;
+  return `Buyer message is ready for ${buyer}. Suggested message: Current crop is ${product.name || "active crop lot"}, route is ${route.name}, checkpoint is ${data.profile.activeCheckpoint}. Please confirm price, quantity, delivery timing, and payment next step.`;
+}
+
+function fieldAlertAssistantAnswer() {
+  const product = firstProduct() || {};
+  const latestScan = latestByDate(data.profile.droneScans || [], ["createdAt"]);
+  if (!latestScan) return `Field alert for ${product.name || "the active crop"}: no drone scan is attached yet. Run drone field scan so Nexus can check crop health, pests, irrigation, yield, and buyer evidence.`;
+  const score = Number(latestScan.cropHealthScore || 0);
+  const severity = score < 70 ? "high" : score < 84 ? "medium" : "low";
+  return `Field alert for ${latestScan.productName || product.name || "the active crop"}: crop health is ${score || "recorded"}%, severity is ${severity}, and yield estimate is ${latestScan.yieldEstimate || "recorded"}.`;
+}
+
+function healthSafetyAssistantAnswer() {
+  const country = activeCountry();
+  const heatC = Number(country.heat || 31);
+  const heatF = Math.round((heatC * 9 / 5) + 32);
+  const intake = latestByDate(data.profile.healthIntakes || [], ["createdAt"]);
+  const heatLine = heatF >= 90 ? "Heat risk is elevated. Use shade, water, rest, and avoid the hottest part of the day." : "Heat risk is manageable, but keep water, shade, and local support available.";
+  return `Health safety reminder for ${country.name}: ${heatLine} ${intake ? `Latest intake is ${intake.patientRef || "recorded"}.` : "No current intake is open."} For severe symptoms or danger, contact local emergency help immediately.`;
+}
+
+function nextStepAssistantAnswer() {
+  const course = activeCourse();
+  const role = firstEligibleRole();
+  const product = firstProduct();
+  if (!(data.profile.enrollments || []).length && course) return `Next best step: start ${translatedCourse(course).title}. This creates learning evidence.`;
+  if (!(data.profile.applications || []).length && role) return `Next best step: apply for ${role.title}. This creates workforce evidence.`;
+  if (!(data.profile.healthIntakes || []).length) return "Next best step: start telehealth intake so Nexus can guide care access and safety support.";
+  if (!(data.profile.orders || []).length && product) return `Next best step: create a crop order for ${product.name}. This connects buyer, route, payment, and delivery tracking.`;
+  return "Next best step: ask Nexus to run route intelligence, field alert, buyer message, or health safety reminder.";
+}
+
 function nexusUtilityAssistantResponse(command = "") {
   const lower = normalizeToolText(command);
   const raw = String(command || "").toLowerCase();
@@ -2712,6 +2772,11 @@ function nexusUtilityAssistantResponseV2(command = "") {
   if (/\b(weather|temperature|too hot|heat|outside|walk|walking|rain|forecast|clima|meteo|météo|hali ya hewa)\b/.test(haystack) || /(\u0627\u0644\u0637\u0642\u0633|\u0627\u0644\u062d\u0631\u0627\u0631\u0629)/.test(raw)) {
     return weatherAssistantAnswer(command);
   }
+  if (/\b(crop timing|planting time|when should i plant|when to plant|best time to plant|harvest time|when should i harvest|when to harvest|crop calendar|plant today|harvest today)\b/.test(lower)) return cropTimingAssistantAnswer();
+  if (/\b(route delay|route delays|delay|delays|delayed|traffic|road blocked|roadblock|late delivery|delivery delay|delivery delays|shipment delay|shipment delays|route problem)\b/.test(lower)) return routeDelayAssistantAnswer();
+  if (/\b(buyer message|message buyer|contact buyer|buyer update|text buyer|whatsapp buyer|send buyer|talk to buyer|speak to buyer)\b/.test(lower)) return buyerMessageAssistantAnswer();
+  if (/\b(field alert|field warning|crop alert|farm alert|pest alert|drone alert|field problem|crop problem|crop stress|field risk|bad crop|crops going bad)\b/.test(lower)) return fieldAlertAssistantAnswer();
+  if (/\b(health safety|safety reminder|health reminder|is it safe|too hot for grandma|patient safety|care reminder|outbreak safety|heat safety)\b/.test(lower)) return healthSafetyAssistantAnswer();
   if (/\b(shipment|delivery|deliver|arrive|arrival|eta|track my sale|track my order|track my product|where is my crop|where is my shipment|route status)\b/.test(lower)) {
     if (canOpenSection("map")) goSection("map");
     return shipmentEtaAnswer();
@@ -2720,8 +2785,9 @@ function nexusUtilityAssistantResponseV2(command = "") {
     return appointmentAnswer();
   }
   if (/\b(what is next today|what do i have today|today's plan|daily plan|my day|what should i do today)\b/.test(lower)) {
-    return `${localTimeAnswer()} ${appointmentAnswer()} ${shipmentEtaAnswer()}`;
+    return `${localTimeAnswer()} ${appointmentAnswer()} ${shipmentEtaAnswer()} ${nextStepAssistantAnswer()}`;
   }
+  if (/\b(what should i do next|what next|next best action|next best step|recommend next|guide my next step|what do you recommend)\b/.test(lower)) return nextStepAssistantAnswer();
   return "";
 }
 

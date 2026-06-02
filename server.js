@@ -9759,9 +9759,16 @@ function utilityAssistantKind(text, lower) {
   const raw = String(text || "").toLowerCase();
   if (/\b(what time is it|current time|time now|tell me the time|hora es|quelle heure|saa ngapi)\b/.test(lower) || /(\u0627\u0644\u0648\u0642\u062a|\u0627\u0644\u0633\u0627\u0639\u0629)/.test(raw)) return "time";
   if (/\b(weather|temperature|too hot|heat|outside|walk|walking|rain|forecast|clima|meteo|météo|hali ya hewa)\b/.test(lower) || /(\u0627\u0644\u0637\u0642\u0633|\u0627\u0644\u062d\u0631\u0627\u0631\u0629)/.test(raw)) return "weather";
+  if (/\b(crop timing|planting time|when should i plant|when to plant|best time to plant|harvest time|when should i harvest|when to harvest|crop calendar|plant today|harvest today)\b/.test(lower)) return "crop-timing";
+  if (/\b(remind me|appointment reminder|reminder|remind|notify me|call reminder|visit reminder)\b/.test(lower) && /\b(appointment|visit|telehealth|doctor|provider|shift|schedule)\b/.test(lower)) return "appointment-reminder";
+  if (/\b(route delay|route delays|delay|delays|delayed|traffic|road blocked|roadblock|late delivery|delivery delay|delivery delays|shipment delay|shipment delays|route problem)\b/.test(lower)) return "route-delay";
+  if (/\b(buyer message|message buyer|contact buyer|buyer update|text buyer|whatsapp buyer|send buyer|talk to buyer|speak to buyer)\b/.test(lower)) return "buyer-message";
+  if (/\b(field alert|field warning|crop alert|farm alert|pest alert|drone alert|field problem|crop problem|crop stress|field risk|bad crop|crops going bad)\b/.test(lower)) return "field-alert";
+  if (/\b(health safety|safety reminder|health reminder|is it safe|too hot for grandma|patient safety|care reminder|outbreak safety|heat safety)\b/.test(lower)) return "health-safety";
   if (/\b(shipment|delivery|deliver|arrive|arrival|eta|track my sale|track my order|track my product|where is my crop|where is my shipment|route status)\b/.test(lower)) return "shipment";
   if (/\b(appointment|schedule|calendar|visit|call with provider|doctor time|provider time|shift time|what time is my)\b/.test(lower)) return "appointment";
   if (/\b(what is next today|what do i have today|today's plan|daily plan|my day|what should i do today)\b/.test(lower)) return "daily-plan";
+  if (/\b(what should i do next|what next|next best action|next best step|recommend next|guide my next step|what do you recommend)\b/.test(lower)) return "next-step";
   return "";
 }
 
@@ -9841,6 +9848,113 @@ async function utilityWeatherAnswer(db, text) {
   return `Weather check for ${context.country}: about ${context.temperatureF} degrees Fahrenheit, ${context.temperatureC} Celsius, with ${String(context.risk || "routine").toLowerCase()} operating risk from ${live ? "live provider context" : "platform country context"}. ${farmAdvice}`;
 }
 
+async function utilityCropTimingAnswer(db, text) {
+  const { country, route } = activeContext(db);
+  const context = await dailyContextSnapshot(db, text);
+  const product = (db.products || []).find(item => item.countryId === country.id) || (db.products || [])[0];
+  const latestScan = latestRecordByDate(db.profile.droneScans || [], ["createdAt"]);
+  const cropScore = Number(latestScan?.cropHealthScore || 0);
+  const heatWarning = context.temperatureF >= 92 ? "Heat is high, so avoid planting or harvesting during the hottest hours." : "Heat is manageable if water and shade planning are in place.";
+  const scanLine = latestScan
+    ? `Latest field evidence shows ${cropScore || "recorded"}% crop health and ${latestScan.yieldEstimate || "a recorded yield estimate"}.`
+    : "No drone or field scan is attached yet, so this is planning guidance from crop, weather, and route context.";
+  const harvestAction = cropScore && cropScore < 72
+    ? "Do not rush harvest; inspect stress, pests, and irrigation first."
+    : "If quality inspection passes, prepare harvest timing and buyer evidence before dispatch.";
+  return `Crop timing for ${product?.name || "the active crop"} in ${country.name}: ${heatWarning} ${scanLine} ${harvestAction} Use ${route.name} timing only after route risk is checked.`;
+}
+
+function utilityAppointmentReminderAnswer(db, user, options = {}) {
+  const appointment = nextRecordByDate(db.profile.telehealthAppointments || [], ["scheduledAt", "startsAt", "createdAt"]);
+  const shift = nextRecordByDate(db.profile.shiftSchedule || [], ["startsAt", "createdAt"]);
+  const target = appointment
+    ? `telehealth appointment ${appointment.appointmentNumber || ""}`.trim()
+    : shift
+      ? `${shift.role || "workforce shift"}`
+      : "next appointment";
+  const when = appointment
+    ? (formatUtilityDate(appointment.scheduledAt || appointment.startsAt, options.timeZone) || appointment.scheduleWindow || "the next available slot")
+    : shift
+      ? (formatUtilityDate(shift.startsAt, options.timeZone) || "the next scheduled shift window")
+      : "after you schedule it";
+  addNotification(db.profile, {
+    module: appointment ? "Healthcare" : shift ? "Workforce" : "Platform",
+    providerId: appointment ? "health-notifications" : shift ? "workforce-notifications" : "email-delivery",
+    channel: "in-app reminder",
+    message: `Reminder set for ${target}: ${when}.`,
+    createdBy: user?.email || "Ask Nexus"
+  });
+  return `Reminder ready. I created an in-app reminder for ${target} at ${when}. Live SMS, WhatsApp, email, or phone reminders will send when the notification provider is connected.`;
+}
+
+function utilityRouteDelayAnswer(db) {
+  const { country, route } = activeContext(db);
+  const latestOrder = latestRecordByDate(db.profile.orders || [], ["createdAt", "updatedAt"]);
+  const checkpoints = route.checkpoints || [];
+  const activeCheckpoint = latestOrder?.checkpoint || db.profile.activeCheckpoint || checkpoints[0] || "active checkpoint";
+  const riskLevel = country.risk || "Routine";
+  const delayRisk = riskLevel === "High" || country.heat >= 38 ? "high" : riskLevel === "Moderate" || country.heat >= 34 ? "moderate" : "low";
+  const routeProvider = runtimeProviderById(db, "trade-logistics") || runtimeProviderById(db, "maps");
+  const nextCheckpoint = checkpoints[Math.min(checkpoints.indexOf(activeCheckpoint) + 1, checkpoints.length - 1)] || "next checkpoint";
+  const providerLine = routeProvider?.status === "connected"
+    ? "Live route provider context is connected for deeper tracking."
+    : "Exact live road delay data needs the logistics or map provider connected.";
+  return `Route delay check for ${route.name}: current checkpoint is ${activeCheckpoint}, next checkpoint is ${nextCheckpoint}, and platform delay risk is ${delayRisk} because ${country.name} operating risk is ${riskLevel}. ${providerLine}`;
+}
+
+function utilityBuyerMessageAnswer(db, user) {
+  ensureTradeProfile(db.profile);
+  const { country, route } = activeContext(db);
+  const order = latestRecordByDate(db.profile.orders || [], ["createdAt", "updatedAt"]);
+  const product = order
+    ? (db.products || []).find(item => item.id === order.productId)
+    : (db.products || []).find(item => item.countryId === country.id) || (db.products || [])[0];
+  const productName = order?.product || order?.productName || product?.name || "active crop lot";
+  const buyerName = product?.buyerName || `${country.name} verified buyer desk`;
+  const latestThread = latestRecordByDate(db.profile.tradeMessageThreads || [], ["updatedAt", "createdAt"]);
+  const draft = `Hello ${buyerName}, this is ${user?.name || "AgriNexus seller"} with an update for ${productName}. Current route: ${route.name}, checkpoint: ${db.profile.activeCheckpoint}. Please confirm price, quantity, delivery timing, and payment next step.`;
+  return latestThread
+    ? `Buyer message is ready. Latest thread is with ${latestThread.buyerName || buyerName} for ${latestThread.productName || productName}. Suggested next message: ${draft}`
+    : `Buyer message draft is ready for ${buyerName}. ${draft} Say "Nexus, send buyer message" or open AgriTrade to create the live message thread.`;
+}
+
+function utilityFieldAlertAnswer(db) {
+  const { country, route } = activeContext(db);
+  const product = (db.products || []).find(item => item.countryId === country.id) || (db.products || [])[0];
+  const latestScan = latestRecordByDate(db.profile.droneScans || [], ["createdAt"]);
+  if (!latestScan) {
+    return `Field alert for ${product?.name || "the active crop"}: no drone scan is attached yet. Run drone field scan before buyer negotiation so Nexus can check crop health, pests, irrigation, yield, and route evidence.`;
+  }
+  const score = Number(latestScan.cropHealthScore || 0);
+  const severity = score < 70 ? "high" : score < 84 ? "medium" : "low";
+  const next = severity === "high"
+    ? "inspect irrigation, pest pressure, and harvest timing before selling."
+    : severity === "medium"
+      ? "review field stress and quality evidence before shipment."
+      : "prepare quality evidence for the buyer and keep monitoring route timing.";
+  return `Field alert for ${latestScan.productName || product?.name || "the active crop"}: crop health is ${score || "recorded"}%, severity is ${severity}, and yield estimate is ${latestScan.yieldEstimate || "recorded"}. Next step: ${next} Route context is ${route.name} at ${db.profile.activeCheckpoint}.`;
+}
+
+async function utilityHealthSafetyAnswer(db, text) {
+  const { country } = activeContext(db);
+  const context = await dailyContextSnapshot(db, text);
+  const intake = latestRecordByDate(db.profile.healthIntakes || [], ["createdAt"]);
+  const heatLine = context.temperatureF >= 90
+    ? "Heat risk is elevated. Use shade, water, rest, and avoid the hottest part of the day."
+    : "Heat risk is manageable, but keep water, shade, and local support available.";
+  const careLine = intake
+    ? `Latest intake is ${intake.patientRef || "recorded"} with ${intake.riskLevel || country.risk || "routine"} risk.`
+    : "No current intake is open; start telehealth intake if symptoms, injury, or urgent concerns appear.";
+  return `Health safety reminder for ${country.name}: ${heatLine} ${careLine} If there is chest pain, severe bleeding, trouble breathing, fainting, confusion, or danger, contact local emergency help immediately.`;
+}
+
+function utilityNextStepAnswer(db, user) {
+  const smart = smartNextActions(db, user, runtimeProviders(db));
+  const top = smart.items[0];
+  if (!top) return "Everything looks steady. Ask Nexus to open learning, telehealth, workforce, trade, map, or daily plan, and I will guide the next workflow.";
+  return `Next best step: ${top.title} in ${top.module}. Why: ${top.reason || top.detail}. What to do: ${top.detail}. You can say "Nexus, do the next step" or open ${top.section || top.module}.`;
+}
+
 async function utilityAssistantCommandResponse(db, user, text, lower, options = {}) {
   const kind = utilityAssistantKind(text, lower);
   if (!kind) return null;
@@ -9848,19 +9962,42 @@ async function utilityAssistantCommandResponse(db, user, text, lower, options = 
     ? utilityTimeAnswer(options)
     : kind === "weather"
       ? await utilityWeatherAnswer(db, text)
+      : kind === "crop-timing"
+        ? await utilityCropTimingAnswer(db, text)
+        : kind === "appointment-reminder"
+          ? utilityAppointmentReminderAnswer(db, user, options)
+          : kind === "route-delay"
+            ? utilityRouteDelayAnswer(db)
+            : kind === "buyer-message"
+              ? utilityBuyerMessageAnswer(db, user)
+              : kind === "field-alert"
+                ? utilityFieldAlertAnswer(db)
+                : kind === "health-safety"
+                  ? await utilityHealthSafetyAnswer(db, text)
       : kind === "shipment"
         ? utilityShipmentEtaAnswer(db)
         : kind === "appointment"
           ? utilityAppointmentAnswer(db, options)
-          : `${utilityTimeAnswer(options)} ${utilityAppointmentAnswer(db, options)} ${utilityShipmentEtaAnswer(db)}`;
-  const redirectSection = kind === "shipment" ? "map" : kind === "appointment" ? "health" : "dashboard";
+          : kind === "next-step"
+            ? utilityNextStepAnswer(db, user)
+            : `${utilityTimeAnswer(options)} ${utilityAppointmentAnswer(db, options)} ${utilityShipmentEtaAnswer(db)} ${utilityNextStepAnswer(db, user)}`;
+  const redirectSection = ["shipment", "route-delay"].includes(kind) ? "map"
+    : ["appointment", "appointment-reminder", "health-safety"].includes(kind) ? "health"
+      : ["crop-timing", "buyer-message", "field-alert"].includes(kind) ? "trade"
+        : kind === "next-step" ? (smartNextActions(db, user).items[0]?.section || "dashboard")
+          : "dashboard";
   ensureAiProfile(db.profile);
   db.profile.agentMemory.lastStatus = `utility.${kind}`;
   db.profile.agentMemory.lastSummary = response;
   db.profile.agentMemory.updatedAt = new Date().toISOString();
   rememberAgentMemory(db.profile, `Utility assistant answered ${kind}: ${text}`, { source: "ask-nexus-utility", category: "pattern", module: "Agent AI", confidence: 0.87 });
   logIntegration(db, {
-    providerId: kind === "weather" ? "weather" : kind === "shipment" ? "trade-logistics" : kind === "appointment" ? "health-telehealth" : "openai",
+    providerId: kind === "weather" ? "weather"
+      : ["shipment", "route-delay"].includes(kind) ? "trade-logistics"
+        : ["appointment", "appointment-reminder", "health-safety"].includes(kind) ? "health-telehealth"
+          : ["crop-timing", "buyer-message"].includes(kind) ? "trade-market"
+            : kind === "field-alert" ? "field-drones"
+              : "openai",
     module: "Agent AI",
     action: `utility.${kind}`,
     detail: response.slice(0, 240),
@@ -9876,7 +10013,7 @@ async function utilityAssistantCommandResponse(db, user, text, lower, options = 
       redirectSection,
       utilityAssistant: true,
       kind,
-      suggestedReplies: ["what is next today", "track my shipment", "open telehealth", "tell me the weather"]
+      suggestedReplies: ["what should I do next", "track my shipment", "message buyer", "field alert", "health safety reminder"]
     }
   };
 }
@@ -10276,14 +10413,14 @@ async function runAgentCommand(db, user, command, options = {}) {
     const recovered = continueVoiceRecovery(db, user, text);
     if (recovered) return recovered;
   }
+  const directUtilityCommand = await utilityAssistantCommandResponse(db, user, text, lower, options);
+  if (directUtilityCommand) return directUtilityCommand;
   const directFollowUp = /^(continue|next step|do the next|run the next|start the next|do that|let's do that|lets do that|proceed|take me there|open that|show me|go there|where are we|what step|orient me|explain that|repeat that)\b/.test(lower);
   const contextual = directFollowUp ? null : contextualVoiceCommand(db, text, lower);
   if (contextual) {
     text = contextual;
     lower = text.toLowerCase();
   }
-  const utilityCommand = await utilityAssistantCommandResponse(db, user, text, lower, options);
-  if (utilityCommand) return utilityCommand;
   const smartCommand = backendSmartCommandResponse(db, user, text, options);
   if (smartCommand) {
     db.profile.agentMemory.lastStatus = smartCommand.intent;

@@ -76,7 +76,7 @@ const requirements = [
   ["backend conversation context", app.includes("modeContext: modeConversationContext(command)") && server.includes("modeContext = options.modeContext") && server.includes("platformMode")],
   ["mode-aware local conversation fallback", server.includes("Admin conversation: I will focus on readiness") && server.includes("Investor conversation: I will focus on impact") && server.includes("User conversation: I will keep this simple")],
   ["Siri-style utility answers", app.includes("function nexusUtilityAssistantResponse") && app.includes("async function runUtilityAgentCommand") && app.includes("Ask Nexus daily utility assistant") && app.includes("function localTimeAnswer") && app.includes("function appointmentAnswer") && app.includes("function shipmentEtaAnswer") && app.includes("function weatherAssistantAnswer") && app.includes("what time is it") && app.includes("track my shipment")],
-  ["backend utility assistant intents", server.includes("function utilityAssistantCommandResponse") && server.includes("function utilityAssistantKind") && server.includes('intent: `utility.${kind}`') && server.includes('"shipment"') && server.includes('"weather"') && server.includes("ask-nexus-utility")]
+  ["backend utility assistant intents", server.includes("function utilityAssistantCommandResponse") && server.includes("function utilityAssistantKind") && server.includes('intent: `utility.${kind}`') && server.includes('"shipment"') && server.includes('"weather"') && server.includes('"crop-timing"') && server.includes('"field-alert"') && server.includes('"next-step"') && server.includes("ask-nexus-utility")]
 ];
 
 const missing = requirements.filter(([, passed]) => !passed).map(([name]) => name);
