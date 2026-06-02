@@ -51,8 +51,8 @@ let routeTrackingWatchId = null;
 let routeTrackingPoints = [];
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-139";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v119";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-140";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v120";
 
 const countryLanguageMap = {
   nigeria: "en",
@@ -75,6 +75,37 @@ const voiceLanguageNames = {
   es: "Spanish"
 };
 let voiceTranslationToken = 0;
+
+const voiceStopTranslations = {
+  es: {
+    "Stop": "Detener",
+    "Stop speaking": "Detener voz",
+    "Stopped. I am ready when you are.": "Detenido. Estoy listo cuando usted lo este.",
+    "Nexus stopped speaking": "Nexus dejo de hablar",
+    "I stopped speaking and I am ready for the next instruction.": "Deje de hablar y estoy listo para la siguiente instruccion."
+  },
+  fr: {
+    "Stop": "Arreter",
+    "Stop speaking": "Arreter la voix",
+    "Stopped. I am ready when you are.": "Arrete. Je suis pret quand vous l'etes.",
+    "Nexus stopped speaking": "Nexus a arrete de parler",
+    "I stopped speaking and I am ready for the next instruction.": "J'ai arrete de parler et je suis pret pour la prochaine instruction."
+  },
+  sw: {
+    "Stop": "Simamisha",
+    "Stop speaking": "Simamisha sauti",
+    "Stopped. I am ready when you are.": "Nimesimama. Niko tayari utakaponihitaji.",
+    "Nexus stopped speaking": "Nexus ameacha kuzungumza",
+    "I stopped speaking and I am ready for the next instruction.": "Nimeacha kuzungumza na niko tayari kwa maagizo yanayofuata."
+  },
+  ar: {
+    "Stop": "\u0625\u064a\u0642\u0627\u0641",
+    "Stop speaking": "\u0623\u0648\u0642\u0641 \u0627\u0644\u0635\u0648\u062a",
+    "Stopped. I am ready when you are.": "\u062a\u0645 \u0627\u0644\u0625\u064a\u0642\u0627\u0641. \u0623\u0646\u0627 \u062c\u0627\u0647\u0632 \u0639\u0646\u062f\u0645\u0627 \u062a\u0643\u0648\u0646 \u062c\u0627\u0647\u0632\u0627.",
+    "Nexus stopped speaking": "\u062a\u0648\u0642\u0641 \u0646\u0643\u0633\u0633 \u0639\u0646 \u0627\u0644\u0643\u0644\u0627\u0645",
+    "I stopped speaking and I am ready for the next instruction.": "\u062a\u0648\u0642\u0641\u062a \u0639\u0646 \u0627\u0644\u0643\u0644\u0627\u0645 \u0648\u0623\u0646\u0627 \u062c\u0627\u0647\u0632 \u0644\u0644\u062a\u0639\u0644\u064a\u0645\u0629 \u0627\u0644\u062a\u0627\u0644\u064a\u0629."
+  }
+};
 
 const demoLoginProfiles = [
   { label: "Admin", role: "Full control", email: "admin@agrinexus.org", password: "Admin2026!" },
@@ -159,6 +190,11 @@ const workspaceTranslations = {
     "Check live engine status, provider endpoints, API readiness, and production setup.": "Verifiez l'etat des moteurs, endpoints fournisseurs, API et configuration production.",
     "Admin": "Admin",
     "Review subscribers, system readiness, evidence, and operator controls.": "Revoyez abonnes, preparation systeme, preuves et controles operateur.",
+    "Stop": "Arreter",
+    "Stop speaking": "Arreter la voix",
+    "Stopped. I am ready when you are.": "Arrete. Je suis pret quand vous l'etes.",
+    "Nexus stopped speaking": "Nexus a arrete de parler",
+    "I stopped speaking and I am ready for the next instruction.": "J'ai arrete de parler et je suis pret pour la prochaine instruction.",
     "Profile": "Profil",
     "Manage user settings, accessibility preferences, language, and saved progress.": "Gerez parametres, preferences d'accessibilite, langue et progression sauvegardee."
   },
@@ -181,6 +217,11 @@ const workspaceTranslations = {
     "Check live engine status, provider endpoints, API readiness, and production setup.": "Kagua hali ya injini, endpoints za watoa huduma, utayari wa API, na usanidi wa uzalishaji.",
     "Admin": "Admin",
     "Review subscribers, system readiness, evidence, and operator controls.": "Kagua watumiaji, utayari wa mfumo, ushahidi, na udhibiti wa mwendeshaji.",
+    "Stop": "Simamisha",
+    "Stop speaking": "Simamisha sauti",
+    "Stopped. I am ready when you are.": "Nimesimama. Niko tayari utakaponihitaji.",
+    "Nexus stopped speaking": "Nexus ameacha kuzungumza",
+    "I stopped speaking and I am ready for the next instruction.": "Nimeacha kuzungumza na niko tayari kwa maagizo yanayofuata.",
     "Profile": "Wasifu",
     "Manage user settings, accessibility preferences, language, and saved progress.": "Simamia mipangilio, mapendeleo ya ufikivu, lugha, na maendeleo yaliyohifadhiwa."
   },
@@ -203,6 +244,11 @@ const workspaceTranslations = {
     "Check live engine status, provider endpoints, API readiness, and production setup.": "\u0627\u0641\u062d\u0635 \u062d\u0627\u0644\u0629 \u0627\u0644\u0645\u062d\u0631\u0643\u0627\u062a \u0648\u0646\u0642\u0627\u0637 \u0627\u0644\u0645\u0632\u0648\u062f \u0648\u062c\u0627\u0647\u0632\u064a\u0629 API \u0648\u0625\u0639\u062f\u0627\u062f \u0627\u0644\u0625\u0646\u062a\u0627\u062c.",
     "Admin": "\u0627\u0644\u0625\u062f\u0627\u0631\u0629",
     "Review subscribers, system readiness, evidence, and operator controls.": "\u0631\u0627\u062c\u0639 \u0627\u0644\u0645\u0634\u062a\u0631\u0643\u064a\u0646 \u0648\u062c\u0627\u0647\u0632\u064a\u0629 \u0627\u0644\u0646\u0638\u0627\u0645 \u0648\u0627\u0644\u0623\u062f\u0644\u0629 \u0648\u062a\u062d\u0643\u0645 \u0627\u0644\u0645\u0634\u063a\u0644.",
+    "Stop": "\u0625\u064a\u0642\u0627\u0641",
+    "Stop speaking": "\u0623\u0648\u0642\u0641 \u0627\u0644\u0635\u0648\u062a",
+    "Stopped. I am ready when you are.": "\u062a\u0645 \u0627\u0644\u0625\u064a\u0642\u0627\u0641. \u0623\u0646\u0627 \u062c\u0627\u0647\u0632 \u0639\u0646\u062f\u0645\u0627 \u062a\u0643\u0648\u0646 \u062c\u0627\u0647\u0632\u0627.",
+    "Nexus stopped speaking": "\u062a\u0648\u0642\u0641 \u0646\u0643\u0633\u0633 \u0639\u0646 \u0627\u0644\u0643\u0644\u0627\u0645",
+    "I stopped speaking and I am ready for the next instruction.": "\u062a\u0648\u0642\u0641\u062a \u0639\u0646 \u0627\u0644\u0643\u0644\u0627\u0645 \u0648\u0623\u0646\u0627 \u062c\u0627\u0647\u0632 \u0644\u0644\u062a\u0639\u0644\u064a\u0645\u0629 \u0627\u0644\u062a\u0627\u0644\u064a\u0629.",
     "Profile": "\u0627\u0644\u0645\u0644\u0641",
     "Manage user settings, accessibility preferences, language, and saved progress.": "\u0623\u062f\u0631 \u0625\u0639\u062f\u0627\u062f\u0627\u062a \u0627\u0644\u0645\u0633\u062a\u062e\u062f\u0645 \u0648\u062a\u0641\u0636\u064a\u0644\u0627\u062a \u0627\u0644\u0648\u0635\u0648\u0644 \u0648\u0627\u0644\u0644\u063a\u0629 \u0648\u0627\u0644\u062a\u0642\u062f\u0645 \u0627\u0644\u0645\u062d\u0641\u0648\u0638."
   }
@@ -501,6 +547,11 @@ const contentTranslations = {
     "Assistant readiness": "Preparacion del asistente",
     "Progress": "Progreso",
     "Ready": "Listo",
+    "Stop": "Detener",
+    "Stop speaking": "Detener voz",
+    "Stopped. I am ready when you are.": "Detenido. Estoy listo cuando usted lo este.",
+    "Nexus stopped speaking": "Nexus dejo de hablar",
+    "I stopped speaking and I am ready for the next instruction.": "Deje de hablar y estoy listo para la siguiente instruccion.",
     "Language changed to Spanish. AgriTrade phrases and responses will use Spanish.": "Idioma cambiado a espanol. Las frases y respuestas de AgriTrade usaran espanol."
   },
   fr: {
@@ -2403,8 +2454,8 @@ function runUserModeSelfTest() {
       if (!simpleUserCommandWorkflow(button.command)) missing.push(`${section}: ${button.label}`);
     });
   });
-  const currentScript = [...document.scripts].some(script => String(script.src || "").includes("nexus-behavior-139"));
-  const currentStyle = [...document.styleSheets].some(sheet => String(sheet.href || "").includes("nexus-behavior-139"));
+  const currentScript = [...document.scripts].some(script => String(script.src || "").includes("nexus-behavior-140"));
+  const currentStyle = [...document.styleSheets].some(sheet => String(sheet.href || "").includes("nexus-behavior-140"));
   if (!currentScript || !currentStyle) missing.push("new app files");
   const ok = missing.length === 0;
   const message = ok
@@ -3626,6 +3677,10 @@ function applyPlatformLanguage() {
   if (data) applyRoleNavigation();
   refreshMicSupport();
 }
+
+Object.entries(voiceStopTranslations).forEach(([lang, entries]) => {
+  contentTranslations[lang] = { ...(contentTranslations[lang] || {}), ...entries };
+});
 
 function translateLiteral(value) {
   const map = contentTranslations[languageCode()];
@@ -5360,12 +5415,24 @@ function guideAmbiguousUserWithoutChoice(clarification) {
 
 function isGlobalStopCommand(lower) {
   const value = String(lower || "").trim();
+  const normalized = value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[؟،,.!]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
   const cleaned = value
     .replace(/^(hey|hi|hello|okay|ok)\s+/i, "")
     .replace(/^(agri\s*nexus|agrinexus|nexus)\s*,?\s*/i, "")
     .trim();
-  if (/^(stop|pause|wait|hold on|be quiet|interrupt|cancel|cancel that|stop that|stop it|wrong|that's wrong|that is wrong|never mind|reset|start over)(\s+(talking|speaking|voice|audio|now|please|for now))?$/i.test(cleaned)) return true;
-  return /\b(agri\s*nexus|agrinexus|nexus)\b.*\b(stop|pause|be quiet|interrupt|cancel|stop talking|stop speaking)\b/i.test(value);
+  const normalizedCleaned = normalized
+    .replace(/^(hey|hi|hello|okay|ok|hola|bonjour|salut|jambo|habari|مرحبا|اهلا)\s+/i, "")
+    .replace(/^(agri\s*nexus|agrinexus|nexus|نكسس)\s*/i, "")
+    .trim();
+  const multilingualStop = /^(stop|pause|wait|hold on|be quiet|interrupt|cancel|cancel that|stop that|stop it|wrong|that'?s wrong|that is wrong|never mind|reset|start over|para|parar|deten|detente|detener|silencio|callate|cancela|cancelar|espera|arr[ée]te|arrete|arreter|stoppe|tais toi|silence|annule|pause|attends|simama|nyamaza|acha|ghairi|subiri|tulia|komesha|اوقف|توقف|اسكت|الغ|انتظر|اصمت|كفى)(\s+(talking|speaking|voice|audio|now|please|for now|hablar|voz|audio|ahora|por favor|parler|voix|sauti|kuongea|الكلام|الصوت|الان|رجاء))?$/i;
+  if (multilingualStop.test(cleaned) || multilingualStop.test(normalizedCleaned)) return true;
+  return /\b(agri\s*nexus|agrinexus|nexus|نكسس)\b.*\b(stop|pause|be quiet|interrupt|cancel|stop talking|stop speaking|para|detente|detener|silencio|arr[ée]te|arrete|tais toi|simama|nyamaza|acha|اوقف|توقف|اسكت|اصمت|الغ)\b/i.test(value)
+    || /\b(agri\s*nexus|agrinexus|nexus)\b.*\b(para|detente|detener|silencio|arrete|tais toi|simama|nyamaza|acha)\b/i.test(normalized);
 }
 
 function isFreshActionDuringClarification(lower) {
