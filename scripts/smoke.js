@@ -685,8 +685,10 @@ async function call(path, body) {
   assert(["conversation.pending_action", "map.route_risk", "ai-question", "trade.operational_efficiency", "trade.operational_communication"].includes(contextualRoute.commandResult.intent));
   assert(contextualRoute.commandResult.metadata.redirectSection === "map" || contextualRoute.commandResult.metadata.redirectSection === "trade" || contextualRoute.commandResult.metadata.tool === "map.route_risk" || contextualRoute.commandResult.intent === "ai-question");
   const moduleHelp = await call("/api/agent/command", { command: "What can I say in telehealth?", conversational: true, inputMode: "voice", outputMode: "voice" });
-  assert(moduleHelp.commandResult.intent === "voice.module_help");
+  assert(moduleHelp.commandResult.intent === "conversation.platform_guide");
+  assert(moduleHelp.commandResult.status === "guiding");
   assert(moduleHelp.commandResult.metadata.redirectSection === "health");
+  assert(moduleHelp.commandResult.metadata.suggestedCommand);
   const guidedQuestions = await call("/api/agent/command", { command: "Nexus, ask me questions about health", conversational: true, inputMode: "voice", outputMode: "voice" });
   assert(guidedQuestions.commandResult.intent === "conversation.clarification_started");
   assert(guidedQuestions.commandResult.metadata.guidedQuestion.questionType === "care-safety-first");

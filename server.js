@@ -8722,7 +8722,7 @@ function contextualVoiceCommand(db, text, lower) {
 }
 
 function moduleVoiceHelpResponse(db, text, lower) {
-  if (!/(what can i say|what can.*do|voice help|commands|examples|help in|help for)/.test(lower)) return null;
+  if (!/(what can i say|what can.*do|voice help|commands|examples|help in|help for|walk me through|guide me through|show me how|how do i use|how to use|help me use|i am new|i'm new|where do i start|start training)/.test(lower)) return null;
   const help = [
     { keys: ["agritrade", "trade", "farmer", "crop", "buyer"], section: "trade", module: "AgriTrade", examples: ["contact my buyer", "review operational efficiency", "prepare a buyer update", "track my route in real time", "run drone scan", "release payment"] },
     { keys: ["telehealth", "health", "patient", "care"], section: "health", module: "Telehealth", examples: ["start telehealth intake", "connect me to a provider", "capture vitals", "create a referral", "check outbreak risk in Congo", "turn on caption relay"] },
@@ -8733,10 +8733,10 @@ function moduleVoiceHelpResponse(db, text, lower) {
   const selected = help.find(item => item.keys.some(key => lower.includes(key)));
   if (!selected) return null;
   return {
-    intent: "voice.module_help",
+    intent: "conversation.platform_guide",
     response: `${selected.module} voice examples: say ${selected.examples.map(item => `"${item}"`).join(", ")}. I will guide the workflow and ask for confirmation before high-impact actions.`,
-    status: "completed",
-    metadata: { conversationMode: true, redirectSection: selected.section, module: selected.module, examples: selected.examples }
+    status: "guiding",
+    metadata: { conversationMode: true, redirectSection: selected.section, module: selected.module, examples: selected.examples, suggestedCommand: selected.examples[0] }
   };
 }
 
@@ -10536,6 +10536,7 @@ function extractTemperatureF(text) {
 
 function utilityAssistantKind(text, lower) {
   const raw = String(text || "").toLowerCase();
+  if (/\b(walk me through|guide me through|show me how|help me use|how do i use|how to use)\b/.test(lower)) return "";
   if (/\b(what time is it|current time|time now|tell me the time|hora es|quelle heure|saa ngapi)\b/.test(lower) || /(\u0627\u0644\u0648\u0642\u062a|\u0627\u0644\u0633\u0627\u0639\u0629)/.test(raw)) return "time";
   if (/\b(weather|temperature|temp|too hot|how hot|heat|outside|walk|walking|rain|forecast|clima|meteo|météo|hali ya hewa)\b/.test(lower) || /(\u0627\u0644\u0637\u0642\u0633|\u0627\u0644\u062d\u0631\u0627\u0631\u0629)/.test(raw)) return "weather";
   if (/\b(crop timing|planting time|when should i plant|when to plant|best time to plant|harvest time|when should i harvest|when to harvest|crop calendar|plant today|harvest today)\b/.test(lower)) return "crop-timing";
@@ -11405,6 +11406,25 @@ async function runAgentCommand(db, user, command, options = {}) {
     const recovered = continueVoiceRecovery(db, user, text);
     if (recovered) return recovered;
   }
+  if (conversational && db.profile.agentMemory.activeIntake) {
+    const invokedModuleCommand = invokedAgriNexus || /\b(agritrade|telehealth|healthcare|workforce|learning|maps?|integrations?|admin)\b/i.test(rawCommand);
+    const activeIntakeBlueprint = intakeBlueprint(db.profile.agentMemory.activeIntake.domain || "");
+    const activeIntakeSection = activeIntakeBlueprint.section;
+    const activeIntakeField = activeIntakeBlueprint.fields[db.profile.agentMemory.activeIntake.currentIndex]?.key || "";
+    const newSignal = conversationModuleSignal(text);
+    const contactMethodAnswer = activeIntakeField === "contactMethod" && /\b(voice|callback|call|phone|sms|text|whatsapp|caregiver|email)\b/.test(lower);
+    const domainChangeInterrupt = !contactMethodAnswer && newSignal.section && newSignal.section !== activeIntakeSection && Number(newSignal.score || 0) >= 1;
+    const clearIntakeInterrupt = domainChangeInterrupt || (invokedModuleCommand && /\b(open|start|track|run|show|change|switch|call|contact|sell|buy|apply|complete|issue|create|explain|tell|walk me through|guide me through)\b/.test(lower));
+    if (clearIntakeInterrupt) {
+      db.profile.agentMemory.activeIntake = null;
+      db.profile.agentMemory.lastStatus = "intake-interrupted";
+      db.profile.agentMemory.lastSummary = `Intake paused so Nexus could handle: ${text}`;
+      db.profile.agentMemory.updatedAt = new Date().toISOString();
+    } else {
+      const intake = continueConversationalIntake(db, user, text);
+      if (intake) return intake;
+    }
+  }
   if (isBuyerSellerLocationRouteCommand(lower)) {
     return tradeLocationRouteResponse(db, user, text, options);
   }
@@ -11413,6 +11433,69 @@ async function runAgentCommand(db, user, command, options = {}) {
   }
   if (/\b(trusted operating system|trusted os|people can rely on|actually rely on|can we trust|trust review|dependable platform|reliable operating system|production trust|trust score)\b/.test(lower)) {
     return trustedOperatingSystemCommandResponse(db, user, text, options);
+  }
+  if (lower.includes("autopilot") || lower.includes("auto pilot") || lower.includes("take over") || lower.includes("run the mission")) {
+    const goal = text.replace(/^(run|start|create|use|activate)?\s*(agent\s+)?(auto\s*pilot|autopilot)\s*(mode)?\s*(for|to)?/i, "").trim() || text || "Run an AgriNexus autopilot mission.";
+    if (conversational && !options.confirm) {
+      const preview = buildAutopilotPlan(db, goal, user);
+      db.profile.agentMemory.lastStatus = "autopilot-awaiting-confirmation";
+      db.profile.agentMemory.lastSummary = `Autopilot can run ${preview.steps.length} supervised step(s). Say yes to execute, or no to cancel.`;
+      db.profile.agentMemory.updatedAt = new Date().toISOString();
+      return stageAgentAction(db, text, {
+        kind: "autopilot-mission",
+        module: "Agent AI",
+        action: `Run autopilot mission with ${preview.steps.length} steps`,
+        section: "agent",
+        goal,
+        previewSteps: preview.steps.map(step => ({ module: step.module, tool: step.tool, action: step.action }))
+      });
+    }
+    const { plan, execution } = await createAndExecuteAutopilotMission(db, user, goal, options.note || "Approved from autopilot command");
+    return {
+      intent: "agent.autopilot_executed",
+      response: `Autopilot complete. ${execution.summary}`,
+      status: execution.status,
+      metadata: { redirectSection: "agent", planId: plan.id, executionId: execution.id, steps: execution.steps.length, mode: "autopilot" }
+    };
+  }
+  const addressedModuleGreeting = await moduleGreetingResponse(db, user, text, lower);
+  if (addressedModuleGreeting) return addressedModuleGreeting;
+  if (/(track|follow|watch).*(my\s+)?route/.test(lower) && /(real time|realtime|live|gps|location)/.test(lower)) {
+    return liveRouteTrackingResponse(db, user, text);
+  }
+  if (/\b(schedule|plan|create|start|book)\b/.test(lower) && /\b(shift|work day|paid shift)\b/.test(lower) && (options.confirm === true || lower.includes("do it") || lower.includes("run it"))) {
+    const result = runWorkforceActionByAgent(db, user, "shift");
+    return { intent: "workforce.schedule_shift", response: result, status: "completed", metadata: { conversationMode: conversational, redirectSection: "workforce" } };
+  }
+  if (conversational && !/\b(message|chat|communicate|reply|contact|call|speak|talk)\b/.test(lower) && /\b(field|crop|farm|soil|plant|harvest)\b/.test(lower) && /\b(stress|bad|problem|pest|disease|evidence|selling|sell|buyer|quality)\b/.test(lower)) {
+    return stageAgentAction(db, text, {
+      module: "AgriTech",
+      tool: /\b(buyer|sell|selling|quality|market)\b/.test(lower) ? "drone.field_scan" : "drone.intervention_task",
+      action: /\b(buyer|sell|selling|quality|market)\b/.test(lower) ? "Run field evidence scan" : "Create field intervention task",
+      section: "trade",
+      planner: "farmer-evidence-router",
+      confidence: 0.86,
+      rationale: "Farmer described crop or field stress and asked for evidence or buyer readiness, so Nexus should stage a visible workflow before action."
+    });
+  }
+  if (!/\b(prepare|draft|write|compose|update)\b/.test(lower) && /(buyer|seller|customer|purchaser)/.test(lower) && /(message|chat|communicate|reply|conversation|thread|real time|realtime)/.test(lower)) {
+    const result = await createBuyerSellerMessage(db, user, {
+      channel: /whatsapp/i.test(text) ? "WhatsApp" : /sms|text/i.test(text) ? "SMS" : "in-app chat",
+      message: `AgriNexus update: please confirm crop quality evidence, price, route timing, and payment next step for the active lot.`
+    });
+    return {
+      intent: "trade.buyer_seller_message",
+      response: `I opened a ${result.thread.lastChannel} thread with ${result.thread.buyerName} for ${result.thread.productName}. The buyer can reply in the same thread, and the message evidence is saved.`,
+      status: "completed",
+      metadata: { conversationMode: conversational, redirectSection: "trade", threadId: result.thread.id, channel: result.thread.lastChannel }
+    };
+  }
+  const earlyUtilityKind = utilityAssistantKind(text, lower);
+  const shouldUseDailySafety = earlyUtilityKind === "weather" && /\b(grandma|grandmother|elder|older|senior|patient|too hot|safe to walk|walk today|walking today)\b/.test(lower);
+  const asksForReasonedGuidance = /\b(curious|not have all the data|without all the data|not sure|unsure)\b/.test(lower);
+  const shouldKeepUtility = earlyUtilityKind && !shouldUseDailySafety && !asksForReasonedGuidance;
+  if (isDailyAdvisorQuestion(lower) && !shouldKeepUtility) {
+    return dailyLifeAdvisorResponse(db, user, text, lower, options);
   }
   const directUtilityCommand = await utilityAssistantCommandResponse(db, user, text, lower, options);
   if (directUtilityCommand) return directUtilityCommand;
@@ -11494,9 +11577,6 @@ async function runAgentCommand(db, user, command, options = {}) {
     };
   }
 
-  const moduleGreeting = await moduleGreetingResponse(db, user, text, lower);
-  if (moduleGreeting) return moduleGreeting;
-
   if (conversational && !isIntakeStart(lower) && /\b(ask me questions|ask questions|interview me|guide me with questions|question mode|walk me through questions)\b/.test(lower)) {
     const signal = conversationModuleSignal(text);
     return startClarification(db, user, text, signal.score ? signal : conversationModuleSignal(`${text} ${db.profile.agentMemory.activeModule || ""}`));
@@ -11508,10 +11588,6 @@ async function runAgentCommand(db, user, command, options = {}) {
   if (conversational && /\b(guide|support|walk|lead|coach)\b/.test(lower) && /\b(farmer|student|patient|worker|learner|job seeker|caregiver)\b/.test(lower) && !/\b(start to finish|end to end|sell|payment|buyer)\b/.test(lower)) {
     const roleGuide = roleGuidanceResponse(db, user, text);
     if (roleGuide) return roleGuide;
-  }
-
-  if (/(track|follow|watch).*(my\s+)?route/.test(lower) && /(real time|realtime|live|gps|location)/.test(lower)) {
-    return liveRouteTrackingResponse(db, user, text);
   }
 
   if (isSimpleDataExplanation(lower)) {
@@ -13802,8 +13878,9 @@ async function api(req, res, url) {
     enrollment.status = "completed";
     enrollment.progress = 100;
     enrollment.completedAt = new Date().toISOString();
-    if (!db.profile.certificates.some(item => item.courseId === course.id)) {
-      const certificate = {
+    let certificate = db.profile.certificates.find(item => item.courseId === course.id);
+    if (!certificate) {
+      certificate = {
         id: crypto.randomUUID(),
         certificateNumber: `AN-CERT-${String(db.profile.certificates.length + 1).padStart(4, "0")}`,
         courseId: course.id,
@@ -13811,14 +13888,14 @@ async function api(req, res, url) {
         issuedAt: new Date().toISOString()
       };
       db.profile.certificates.push(certificate);
-      logIntegration(db, {
-        providerId: "learning-certificates",
-        module: "Learning",
-        action: "certificate.issued",
-        detail: `${certificate.certificateNumber} issued for ${course.title}.`,
-        metadata: { courseId: course.id, certificateNumber: certificate.certificateNumber }
-      });
     }
+    logIntegration(db, {
+      providerId: "learning-certificates",
+      module: "Learning",
+      action: "certificate.issued",
+      detail: `${certificate.certificateNumber} issued for ${course.title}.`,
+      metadata: { courseId: course.id, certificateNumber: certificate.certificateNumber }
+    });
     db.profile.readiness = Math.min(100, db.profile.readiness + 10);
     db.profile.learningStreak += 1;
     recalcReadiness(db.profile);

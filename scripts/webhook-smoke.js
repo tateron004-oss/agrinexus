@@ -78,7 +78,7 @@ function createWebhookServer() {
 
   try {
     await waitFor(`${base}/`);
-    await call("/api/login", { email: "demo@agrinexus.org", password: "Prototype2026!" });
+    await call("/api/login", { email: "admin@agrinexus.org", password: "Admin2026!" });
     await call("/api/integrations/test", { providerId: "learning-certificates" });
     await call("/api/learning/start", { courseId: "digital-foundations" });
     await call("/api/learning/quiz", {});
