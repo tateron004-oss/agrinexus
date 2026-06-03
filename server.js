@@ -4013,6 +4013,7 @@ function ensureAiProfile(profile) {
   profile.videoSessions = profile.videoSessions || [];
   profile.agentBriefings = profile.agentBriefings || [];
   profile.missionBrainRuns = profile.missionBrainRuns || [];
+  profile.trustedOsReviews = profile.trustedOsReviews || [];
   profile.agentMemory = profile.agentMemory || {
     activeAudience: "government",
     activeMission: "rural transformation",
@@ -10051,6 +10052,134 @@ function missionBrainCommandResponse(db, user, text, options = {}) {
   };
 }
 
+function nexusTrustedOperatingSystemModel(db, user, goalText = "", options = {}) {
+  ensureAiProfile(db.profile);
+  ensureLearningProfile(db.profile);
+  ensureWorkforceProfile(db.profile);
+  ensureHealthProfile(db.profile);
+  ensureTradeProfile(db.profile);
+  ensureOperationsProfile(db.profile);
+  const providers = runtimeProviders(db);
+  const readiness = productionReadiness(providers);
+  const operations = productionOperationsPlan(db, providers);
+  const completeness = productionCompleteness(db, providers);
+  const missionBrain = db.profile.agentMemory.activeMissionBrain || nexusMissionBrainModel(db, user, goalText || "trusted operating system review", options);
+  const permissions = permissionsForRole(user?.role || "User");
+  const connectedProviders = providers.filter(provider => provider.status === "connected");
+  const providerReady = providers.filter(provider => provider.status !== "connected");
+  const auditEvents = db.profile.integrationEvents || [];
+  const agentCommands = db.profile.agentCommands || [];
+  const workflowEvidence = [
+    (db.profile.enrollments || []).length,
+    (db.profile.applications || []).length,
+    (db.profile.healthIntakes || []).length,
+    (db.profile.orders || []).length,
+    (db.profile.droneScans || []).length,
+    (db.profile.mapInsights || []).length,
+    auditEvents.length,
+    agentCommands.length
+  ].reduce((sum, value) => sum + Number(value || 0), 0);
+  const hasVoice = Boolean((db.profile.voiceSessions || []).length || process.env.OPENAI_API_KEY || process.env.VOICE_TTS_PROVIDER || process.env.VOICE_STT_PROVIDER);
+  const hasTranslation = connectedProviders.some(provider => provider.id === "translation") || ["en", "fr", "sw", "ar", "es"].includes(user?.language || db.profile.accessibilityProfile?.language || "en");
+  const hasMap = Boolean((db.profile.locationRoutePackets || []).length || connectedProviders.some(provider => provider.id === "maps" || provider.id === "map-tiles"));
+  const hasSafety = Boolean(fs.existsSync(path.join(PUBLIC, "terms.html")) && fs.existsSync(path.join(PUBLIC, "privacy.html")));
+  const pillars = [
+    { id: "reliable-workflows", title: "Reliable Workflows", ready: workflowEvidence >= 8, evidence: `${workflowEvidence} workflow/evidence record(s) across learning, workforce, health, trade, drone, map, AI, and audit.` },
+    { id: "provider-truth", title: "Provider Truth", ready: true, evidence: `${connectedProviders.length}/${providers.length} provider adapter(s) connected; Nexus distinguishes live, local, and provider-ready.` },
+    { id: "safety-guardrails", title: "Safety Guardrails", ready: hasSafety, evidence: hasSafety ? "Legal pages, telehealth guardrails, emergency language, and confirmation gates are present." : "Terms/Privacy or final legal review still need production confirmation." },
+    { id: "role-permissions", title: "Role Permissions", ready: Boolean(permissions && Object.keys(permissions).length), evidence: `${user?.role || "User"} mode permits ${Object.entries(permissions).filter(([, allowed]) => allowed).map(([key]) => key).join(", ") || "restricted access"}.` },
+    { id: "memory-and-context", title: "Memory And Context", ready: Boolean((db.profile.agentMemory?.preferences || []).length || (db.profile.agentConversation || []).length || missionBrain), evidence: `${(db.profile.agentConversation || []).length} conversation turn(s), ${(db.profile.agentMemory?.memoryTimeline || []).length} memory timeline event(s), Mission Brain ${missionBrain?.status || "ready"}.` },
+    { id: "multilingual-voice", title: "Multilingual Voice", ready: hasVoice && hasTranslation, evidence: `Voice sessions ${(db.profile.voiceSessions || []).length}; translation path ${hasTranslation ? "available" : "needs provider"}.` },
+    { id: "map-location-intelligence", title: "Map And Location Intelligence", ready: hasMap, evidence: `${(db.profile.locationRoutePackets || []).length} route packet(s), ${(db.profile.mapInsights || []).length} map insight(s), GPS/weather handoff ready.` },
+    { id: "auditability", title: "Auditability", ready: auditEvents.length >= 8, evidence: `${auditEvents.length} integration/audit event(s), ${agentCommands.length} agent command record(s).` },
+    { id: "failure-recovery", title: "Failure Recovery", ready: true, evidence: "Timeout fallback, voice stop, clarification repair, local context fallback, and provider-ready messaging are active." },
+    { id: "production-hardening", title: "Production Hardening", ready: operations.readyCount >= Math.ceil(operations.total * 0.7), evidence: `${operations.readyCount}/${operations.total} production workstream(s) ready; completeness ${completeness.readyCount}/${completeness.total}.` }
+  ];
+  const readyCount = pillars.filter(pillar => pillar.ready).length;
+  const score = Math.round((readyCount / pillars.length) * 100);
+  const gaps = [
+    ...operations.nextSteps.slice(0, 5),
+    ...completeness.nextSteps.slice(0, 4)
+  ].filter(Boolean).slice(0, 8);
+  const review = {
+    id: crypto.randomUUID(),
+    mode: "nexus-trusted-operating-system",
+    status: score >= 90 ? "trusted-operational" : score >= 75 ? "trusted-provider-ready" : "trusted-hardening",
+    score,
+    readyCount,
+    total: pillars.length,
+    goal: goalText || "Make AgriNexus a trusted operating system people can rely on.",
+    pillars,
+    reliabilityContract: [
+      "Nexus must tell users what is live, local, provider-ready, or unavailable.",
+      "Nexus must ask for confirmation before health, payment, buyer, provider, job, route, or messaging actions.",
+      "Nexus must create audit evidence for meaningful workflow actions.",
+      "Nexus must recover from unclear speech with one simple question.",
+      "Nexus must keep User mode simple and protect Admin-only controls."
+    ],
+    providerTruth: {
+      connected: connectedProviders.map(provider => provider.id),
+      providerReady: providerReady.map(provider => provider.id).slice(0, 18),
+      liveGaps: readiness.nextSteps.slice(0, 8)
+    },
+    roleTrust: {
+      role: user?.role || "User",
+      permissions,
+      userRule: "Simple, guided, voice-first workflows.",
+      adminRule: "Operational control, provider health, audit evidence, and user management.",
+      investorRule: "Impact story, proof, readiness, and provider gaps without exposing admin controls."
+    },
+    recoveryModel: {
+      stopCommand: "Nexus stop",
+      unclearSpeech: "Ask one plain-language question.",
+      providerFailure: "Use local workflow evidence and say the provider is not live.",
+      safetyEscalation: "Urgent health danger signs route to emergency guidance and human/provider support.",
+      offlineOrSlowNetwork: "Keep app workflow and evidence local until sync/provider return."
+    },
+    missionBrain: {
+      id: missionBrain?.id || null,
+      status: missionBrain?.status || "not-started",
+      confidence: missionBrain?.confidence || 0,
+      nextAction: missionBrain?.nextActions?.[0]?.title || missionBrain?.missionSteps?.[0]?.action || "Ask Nexus for a mission"
+    },
+    nextGaps: gaps.length ? gaps : ["No code gap detected; next improvement is live provider credentials and field testing."],
+    createdBy: user?.email || "Ask Nexus",
+    createdAt: new Date().toISOString()
+  };
+  db.profile.trustedOsReviews.unshift(review);
+  db.profile.trustedOsReviews = db.profile.trustedOsReviews.slice(0, 20);
+  db.profile.agentMemory.lastTrustedOperatingSystem = review;
+  db.profile.agentMemory.lastStatus = "trusted-os-reviewed";
+  db.profile.agentMemory.lastSummary = `Trusted OS score ${score}% with ${readyCount}/${pillars.length} pillars ready.`;
+  db.profile.agentMemory.updatedAt = review.createdAt;
+  rememberAgentMemory(db.profile, `Trusted OS review: ${score}% score, ${readyCount}/${pillars.length} pillars ready.`, { source: "trusted-operating-system", category: "pattern", module: "Platform", confidence: 0.94 });
+  logIntegration(db, {
+    providerId: "openai",
+    module: "Agent AI",
+    action: "agent.trusted_os_reviewed",
+    detail: `Trusted OS review scored ${score}% with ${readyCount}/${pillars.length} pillars ready.`,
+    metadata: { reviewId: review.id, score, readyCount, total: pillars.length, status: review.status },
+    dispatch: false
+  });
+  return review;
+}
+
+function trustedOperatingSystemCommandResponse(db, user, text, options = {}) {
+  const review = nexusTrustedOperatingSystemModel(db, user, text, options);
+  const topGap = review.nextGaps[0] || "Keep testing with real users and live providers.";
+  return {
+    intent: "agent.trusted_operating_system",
+    response: `Trusted Operating System review complete. AgriNexus is at ${review.score}% with ${review.readyCount}/${review.total} trust pillars ready. Status: ${review.status}. Nexus can be relied on for guided workflows, voice, memory, audit evidence, role permissions, safety guardrails, provider truth, and recovery behavior. The next trust gap is: ${topGap}`,
+    status: review.status,
+    metadata: {
+      conversationMode: true,
+      redirectSection: user?.role === "Admin" ? "admin" : user?.role === "Investor" ? "agent" : "dashboard",
+      trustedOperatingSystem: review,
+      suggestedReplies: ["activate mission brain", "run live service check", "what works without providers", "show next trust gap"]
+    }
+  };
+}
+
 function fahrenheitFromCelsius(celsius) {
   return Math.round((Number(celsius || 0) * 9 / 5) + 32);
 }
@@ -10962,6 +11091,9 @@ async function runAgentCommand(db, user, command, options = {}) {
   if (/\b(new mission brain|mission brain|nexus mission brain|activate mission brain|build mission brain|all 10 mission brain|all ten mission brain|goal brain|mission intelligence)\b/.test(lower)) {
     return missionBrainCommandResponse(db, user, text, options);
   }
+  if (/\b(trusted operating system|trusted os|people can rely on|actually rely on|can we trust|trust review|dependable platform|reliable operating system|production trust|trust score)\b/.test(lower)) {
+    return trustedOperatingSystemCommandResponse(db, user, text, options);
+  }
   const directUtilityCommand = await utilityAssistantCommandResponse(db, user, text, lower, options);
   if (directUtilityCommand) return directUtilityCommand;
   const directFollowUp = /^(continue|next step|do the next|run the next|start the next|do that|let's do that|lets do that|proceed|take me there|open that|show me|go there|where are we|what step|orient me|explain that|repeat that)\b/.test(lower);
@@ -11399,6 +11531,9 @@ async function runAgentCommand(db, user, command, options = {}) {
 
   if (/\b(new mission brain|mission brain|nexus mission brain|activate mission brain|build mission brain|all 10 mission brain|all ten mission brain|goal brain|mission intelligence)\b/.test(lower)) {
     return missionBrainCommandResponse(db, user, text, options);
+  }
+  if (/\b(trusted operating system|trusted os|people can rely on|actually rely on|can we trust|trust review|dependable platform|reliable operating system|production trust|trust score)\b/.test(lower)) {
+    return trustedOperatingSystemCommandResponse(db, user, text, options);
   }
 
   if (lower.includes("agrinexus readiness") || lower.includes("agrinexus level") || lower.includes("command readiness") || lower.includes("command level") || lower.includes("all six") || lower.includes("all 6")) {

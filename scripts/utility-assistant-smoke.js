@@ -146,6 +146,27 @@ async function call(route, body) {
     assert(missionBrain.commandResult.metadata.missionBrain.layers.some(layer => layer.id === "safety-compliance-brain"), "Mission Brain should include safety compliance");
     assert((missionBrain.profile.missionBrainRuns || []).length >= 1, "Mission Brain should persist mission brain runs");
     assert(missionBrain.profile.integrationEvents.some(event => event.action === "agent.mission_brain_planned"), "Mission Brain should log audit evidence");
+    const trustedOs = await call("/api/agent/command", {
+      command: "Nexus, run a trusted operating system review people can rely on",
+      conversational: true,
+      inputMode: "voice",
+      outputMode: "voice"
+    });
+    assert.strictEqual(trustedOs.commandResult.intent, "agent.trusted_operating_system", "Trusted OS command should return agent.trusted_operating_system");
+    assert.strictEqual(trustedOs.commandResult.metadata.trustedOperatingSystem.mode, "nexus-trusted-operating-system", "Trusted OS metadata should include the model");
+    assert.strictEqual(trustedOs.commandResult.metadata.trustedOperatingSystem.pillars.length, 10, "Trusted OS should include all 10 trust pillars");
+    assert(trustedOs.commandResult.metadata.trustedOperatingSystem.pillars.some(pillar => pillar.id === "reliable-workflows"), "Trusted OS should include reliable workflows");
+    assert(trustedOs.commandResult.metadata.trustedOperatingSystem.pillars.some(pillar => pillar.id === "provider-truth"), "Trusted OS should include provider truth");
+    assert(trustedOs.commandResult.metadata.trustedOperatingSystem.pillars.some(pillar => pillar.id === "safety-guardrails"), "Trusted OS should include safety guardrails");
+    assert(trustedOs.commandResult.metadata.trustedOperatingSystem.pillars.some(pillar => pillar.id === "role-permissions"), "Trusted OS should include role permissions");
+    assert(trustedOs.commandResult.metadata.trustedOperatingSystem.pillars.some(pillar => pillar.id === "memory-and-context"), "Trusted OS should include memory and context");
+    assert(trustedOs.commandResult.metadata.trustedOperatingSystem.pillars.some(pillar => pillar.id === "multilingual-voice"), "Trusted OS should include multilingual voice");
+    assert(trustedOs.commandResult.metadata.trustedOperatingSystem.pillars.some(pillar => pillar.id === "map-location-intelligence"), "Trusted OS should include map/location intelligence");
+    assert(trustedOs.commandResult.metadata.trustedOperatingSystem.pillars.some(pillar => pillar.id === "auditability"), "Trusted OS should include auditability");
+    assert(trustedOs.commandResult.metadata.trustedOperatingSystem.pillars.some(pillar => pillar.id === "failure-recovery"), "Trusted OS should include failure recovery");
+    assert(trustedOs.commandResult.metadata.trustedOperatingSystem.pillars.some(pillar => pillar.id === "production-hardening"), "Trusted OS should include production hardening");
+    assert((trustedOs.profile.trustedOsReviews || []).length >= 1, "Trusted OS should persist reviews");
+    assert(trustedOs.profile.integrationEvents.some(event => event.action === "agent.trusted_os_reviewed"), "Trusted OS should log audit evidence");
   } finally {
     server.kill();
     try {
@@ -174,6 +195,7 @@ async function call(route, body) {
   console.log("- Ask Nexus weather location handoff");
   console.log("- Ask Nexus buyer-to-seller map route packet");
   console.log("- Nexus Mission Brain all 10 intelligence layers");
+  console.log("- Nexus Trusted OS all 10 trust pillars");
 })().catch(error => {
   console.error(error);
   process.exit(1);
