@@ -51,8 +51,8 @@ let routeTrackingWatchId = null;
 let routeTrackingPoints = [];
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-148";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v128";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-149";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v129";
 
 const countryLanguageMap = {
   nigeria: "en",
@@ -12542,6 +12542,14 @@ async function handleVoiceCommand(rawCommand) {
     goSection("map");
     setActiveAgentJourney("map", "context", "Map opened by voice.");
     setVoiceResponse("Map is open. You can say track my route, show map risk, find a health facility, or explain the map.", true);
+    return;
+  }
+  if (/\b(buyer|customer|purchaser|client|seller|farmer|pickup|delivery|deliver|ship|shipment|product|products|crop|order|sale)\b/.test(lower)
+    && /\b(address|location|lagos|kenya|nairobi|route|map|track|tracking|where|deliver|delivery|purchased|bought|sold)\b/.test(lower)) {
+    goSection("map");
+    setActiveAgentJourney("map", "buyer-route", "Buyer-to-seller route opened by voice.");
+    renderLiveVoiceSuggestions(["run route risk", "message buyer", "track my route in real time", "create order"]);
+    await runBackendAgentCommand(command);
     return;
   }
   if (/\b(contact|call|message|whatsapp|text|speak to|talk to|connect)\b.*\b(listed\s+)?(telehealth\s+)?(provider|doctor|nurse|clinic)\b/.test(lower) || /\b(listed\s+telehealth\s+provider|telehealth\s+provider\s+listed)\b/.test(lower)) {

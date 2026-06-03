@@ -4000,6 +4000,7 @@ function ensureAiProfile(profile) {
   profile.routeDisruptions = profile.routeDisruptions || [];
   profile.mapRiskLayers = profile.mapRiskLayers || [];
   profile.mapEvidencePackets = profile.mapEvidencePackets || [];
+  profile.locationRoutePackets = profile.locationRoutePackets || [];
   profile.demoMoments = profile.demoMoments || [];
   profile.demoScore = profile.demoScore || 0;
   profile.agentPlans = profile.agentPlans || [];
@@ -9756,6 +9757,141 @@ function liveRouteTrackingResponse(db, user, text) {
   };
 }
 
+function knownMapLocation(query = "", fallbackCountry = null) {
+  const value = String(query || "").toLowerCase();
+  const known = [
+    { keys: ["lagos"], label: "Lagos, Nigeria", lat: 6.5244, lng: 3.3792, country: "Nigeria" },
+    { keys: ["nairobi"], label: "Nairobi, Kenya", lat: -1.2921, lng: 36.8219, country: "Kenya" },
+    { keys: ["kenya"], label: "Kenya", lat: -0.0236, lng: 37.9062, country: "Kenya" },
+    { keys: ["kinshasa"], label: "Kinshasa, DRC", lat: -4.4419, lng: 15.2663, country: "DRC" },
+    { keys: ["congo", "drc"], label: "Democratic Republic of the Congo", lat: -2.8799, lng: 23.656, country: "DRC" },
+    { keys: ["cairo"], label: "Cairo, Egypt", lat: 30.0444, lng: 31.2357, country: "Egypt" },
+    { keys: ["egypt"], label: "Egypt", lat: 26.8206, lng: 30.8025, country: "Egypt" },
+    { keys: ["accra"], label: "Accra, Ghana", lat: 5.6037, lng: -0.187, country: "Ghana" },
+    { keys: ["ghana"], label: "Ghana", lat: 7.9465, lng: -1.0232, country: "Ghana" },
+    { keys: ["kigali"], label: "Kigali, Rwanda", lat: -1.9441, lng: 30.0619, country: "Rwanda" },
+    { keys: ["rwanda"], label: "Rwanda", lat: -1.9403, lng: 29.8739, country: "Rwanda" },
+    { keys: ["dar es salaam", "tanzania"], label: "Tanzania", lat: -6.369, lng: 34.8888, country: "Tanzania" },
+    { keys: ["johannesburg", "south africa"], label: "South Africa", lat: -30.5595, lng: 22.9375, country: "South Africa" }
+  ];
+  const found = known.find(item => item.keys.some(key => value.includes(key)));
+  if (found) return found;
+  if (fallbackCountry) return { label: fallbackCountry.name, lat: fallbackCountry.lat, lng: fallbackCountry.lng, country: fallbackCountry.name };
+  return null;
+}
+
+function extractTradeRouteLocations(text = "", country = null) {
+  const value = String(text || "").replace(/\s+/g, " ").trim();
+  const buyerMatch = value.match(/\b(?:buyer|customer|purchaser|client)\b.*?\b(?:in|at|near|around|to|from)\s+([^,.]+(?:,\s*[^,.]+)?)/i);
+  const sellerMatch = value.match(/\b(?:i am|i'm|we are|seller is|farmer is|pickup is|origin is|from)\s+(?:in|at|near|around)?\s*([^,.]+(?:,\s*[^,.]+)?)/i);
+  const toMatch = value.match(/\b(?:to|deliver to|ship to|send to)\s+([^,.]+(?:,\s*[^,.]+)?)/i);
+  const fromMatch = value.match(/\b(?:from|pickup from|ship from|origin)\s+([^,.]+(?:,\s*[^,.]+)?)/i);
+  const destinationText = (buyerMatch?.[1] || toMatch?.[1] || "buyer location").trim();
+  const originText = (sellerMatch?.[1] || fromMatch?.[1] || country?.name || "seller location").trim();
+  return {
+    originText,
+    destinationText,
+    origin: knownMapLocation(originText, country),
+    destination: knownMapLocation(destinationText, country)
+  };
+}
+
+function isBuyerSellerLocationRouteCommand(lower = "") {
+  const value = String(lower || "");
+  const hasBuyerOrSeller = /\b(buyer|customer|purchaser|client|seller|farmer|pickup|delivery address|buyer address|seller address)\b/.test(value);
+  const hasLocationPair = /\b(lagos|kenya|nairobi|address|buyer location|seller location|pickup location|delivery location)\b/.test(value)
+    || /\b(i am|i'm|we are|seller is|farmer is|pickup is)\b.*\b(in|at|near|around)\b/.test(value);
+  const hasRouteAction = /\b(route|map|track|tracking|where|deliver|delivery|purchased|bought|sold|ship|shipment)\b/.test(value);
+  return hasBuyerOrSeller && hasLocationPair && hasRouteAction;
+}
+
+function distanceKmBetween(a, b) {
+  if (!a || !b || !Number.isFinite(Number(a.lat)) || !Number.isFinite(Number(b.lat))) return null;
+  const radius = 6371;
+  const toRad = value => Number(value) * Math.PI / 180;
+  const dLat = toRad(b.lat - a.lat);
+  const dLng = toRad(b.lng - a.lng);
+  const lat1 = toRad(a.lat);
+  const lat2 = toRad(b.lat);
+  const h = Math.sin(dLat / 2) ** 2 + Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLng / 2) ** 2;
+  return Math.round(radius * 2 * Math.atan2(Math.sqrt(h), Math.sqrt(1 - h)));
+}
+
+function tradeLocationRouteResponse(db, user, text, options = {}) {
+  ensureAiProfile(db.profile);
+  ensureTradeProfile(db.profile);
+  const { country, route } = activeContext(db);
+  const locations = extractTradeRouteLocations(text, country);
+  const product = (db.products || []).find(item => item.countryId === country.id) || (db.products || [])[0];
+  const order = latestRecordByDate(db.profile.orders || [], ["createdAt", "updatedAt"]);
+  const origin = locations.origin || knownMapLocation(locations.originText, country);
+  const destination = locations.destination || knownMapLocation(locations.destinationText, country);
+  const distanceKm = distanceKmBetween(origin, destination);
+  const mapProvider = runtimeProviderById(db, "maps") || runtimeProviderById(db, "map-tiles");
+  const logisticsProvider = runtimeProviderById(db, "trade-logistics");
+  const liveRoutingConfigured = Boolean(process.env.ROUTING_WEBHOOK_URL || process.env.MAPBOX_ACCESS_TOKEN || process.env.OPENROUTESERVICE_API_KEY || process.env.GOOGLE_MAPS_API_KEY);
+  const packet = {
+    id: crypto.randomUUID(),
+    packetNumber: `LOCATION-ROUTE-${String((db.profile.locationRoutePackets || []).length + 1).padStart(3, "0")}`,
+    productName: order?.productName || order?.product || product?.name || "crop lot",
+    buyerLocation: locations.destinationText,
+    sellerLocation: locations.originText,
+    origin,
+    destination,
+    distanceKm,
+    routeId: route.id,
+    routeName: route.name,
+    checkpoint: db.profile.activeCheckpoint || route.checkpoints?.[0] || "",
+    providerStatus: liveRoutingConfigured ? "live-routing-provider-configured" : "provider-ready-routing",
+    mapProviderStatus: mapProvider?.status || "provider-ready",
+    logisticsProviderStatus: logisticsProvider?.status || "provider-ready",
+    nextSteps: [
+      "Confirm seller pickup address.",
+      "Confirm buyer delivery address.",
+      "Attach the crop order or create one.",
+      "Run route risk and weather check.",
+      "Share tracking update with buyer by WhatsApp, SMS, phone, or in-app chat."
+    ],
+    createdBy: user?.email || "Ask Nexus",
+    createdAt: new Date().toISOString()
+  };
+  db.profile.locationRoutePackets.unshift(packet);
+  db.profile.locationRoutePackets = db.profile.locationRoutePackets.slice(0, 20);
+  addMapInsight(db.profile, {
+    type: "map.buyer_seller_location_route",
+    label: `${packet.productName} route from ${packet.sellerLocation} to ${packet.buyerLocation}`,
+    detail: distanceKm
+      ? `Provider-ready route packet created for ${packet.productName}: ${packet.sellerLocation} to ${packet.buyerLocation}, about ${distanceKm} km direct distance.`
+      : `Provider-ready route packet created for ${packet.productName}: ${packet.sellerLocation} to ${packet.buyerLocation}.`,
+    routeName: route.name,
+    checkpoint: packet.checkpoint
+  });
+  logIntegration(db, {
+    providerId: "maps",
+    module: "Maps",
+    action: "map.buyer_seller_location_route",
+    detail: `${packet.packetNumber} created from ${packet.sellerLocation} to ${packet.buyerLocation}.`,
+    metadata: { packetId: packet.id, origin, destination, distanceKm, liveRoutingConfigured },
+    dispatch: false
+  });
+  rememberAgentMemory(db.profile, `Buyer route created from ${packet.sellerLocation} to ${packet.buyerLocation} for ${packet.productName}.`, { source: "buyer-location-route", category: "pattern", module: "Maps", confidence: 0.91 });
+  return {
+    intent: "map.buyer_seller_location_route",
+    response: distanceKm
+      ? `I created the route packet for ${packet.productName}: seller pickup ${packet.sellerLocation}, buyer delivery ${packet.buyerLocation}. Direct distance is about ${distanceKm} kilometers. I opened the map so you can review route risk, shipment tracking, buyer updates, and delivery evidence. Live turn-by-turn routing will use Mapbox, Google Maps, or OpenRouteService when credentials are connected.`
+      : `I created the route packet for ${packet.productName}: seller pickup ${packet.sellerLocation}, buyer delivery ${packet.buyerLocation}. I opened the map so you can review route risk, shipment tracking, buyer updates, and delivery evidence. Add a full address or routing provider for exact turn-by-turn distance.`,
+    status: "completed",
+    metadata: {
+      conversationMode: true,
+      redirectSection: "map",
+      packet,
+      providerReady: true,
+      liveRoutingConfigured,
+      suggestedReplies: ["run route risk", "message buyer", "track my route in real time", "create order"]
+    }
+  };
+}
+
 function fahrenheitFromCelsius(celsius) {
   return Math.round((Number(celsius || 0) * 9 / 5) + 32);
 }
@@ -10660,6 +10796,9 @@ async function runAgentCommand(db, user, command, options = {}) {
   if (conversational && db.profile.agentMemory.activeRecovery) {
     const recovered = continueVoiceRecovery(db, user, text);
     if (recovered) return recovered;
+  }
+  if (isBuyerSellerLocationRouteCommand(lower)) {
+    return tradeLocationRouteResponse(db, user, text, options);
   }
   const directUtilityCommand = await utilityAssistantCommandResponse(db, user, text, lower, options);
   if (directUtilityCommand) return directUtilityCommand;

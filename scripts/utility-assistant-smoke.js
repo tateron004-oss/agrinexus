@@ -113,6 +113,18 @@ async function call(route, body) {
     assert.strictEqual(locatedWeather.commandResult.intent, "utility.weather", "weather question with coordinates should stay utility.weather");
     assert.strictEqual(locatedWeather.commandResult.metadata.location.label, "Lagos", "weather command should preserve supplied location");
     assert(/current browser location|Lagos|location/i.test(locatedWeather.commandResult.response), "weather response should reference location context");
+    const buyerRoute = await call("/api/agent/command", {
+      command: "Nexus, a buyer purchased my products in Lagos and I am in Kenya. Track the delivery location.",
+      conversational: true,
+      inputMode: "voice",
+      outputMode: "voice"
+    });
+    assert.strictEqual(buyerRoute.commandResult.intent, "map.buyer_seller_location_route", "buyer/seller location command should create route packet");
+    assert.strictEqual(buyerRoute.commandResult.metadata.redirectSection, "map", "buyer/seller route should open map");
+    assert(buyerRoute.commandResult.metadata.packet.destination.label.includes("Lagos"), "route packet should detect Lagos buyer destination");
+    assert(buyerRoute.commandResult.metadata.packet.origin.label.includes("Kenya"), "route packet should detect Kenya seller origin");
+    assert((buyerRoute.profile.locationRoutePackets || []).length >= 1, "profile should store location route packets");
+    assert(buyerRoute.profile.integrationEvents.some(event => event.action === "map.buyer_seller_location_route"), "buyer route should log map evidence");
   } finally {
     server.kill();
     try {
@@ -139,6 +151,7 @@ async function call(route, body) {
   console.log("- Ask Nexus backend next-step answer");
   console.log("- Ask Nexus pre-provider multilingual responses: es, fr, sw, ar");
   console.log("- Ask Nexus weather location handoff");
+  console.log("- Ask Nexus buyer-to-seller map route packet");
 })().catch(error => {
   console.error(error);
   process.exit(1);
