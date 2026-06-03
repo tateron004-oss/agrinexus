@@ -5,6 +5,8 @@ let userMap = null;
 let userMapLayers = {};
 let userHealthMap = null;
 let userHealthMapLayers = {};
+let shipmentPreviewMap = null;
+let healthHotspotPreviewMap = null;
 let workflowLeafletMap = null;
 let selectedLearningTrack = "All";
 let selectedPersona = localStorage.getItem("agrinexusPersona") || "farmer";
@@ -52,8 +54,8 @@ let routeTrackingWatchId = null;
 let routeTrackingPoints = [];
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-158";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v138";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-159";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v139";
 
 const countryLanguageMap = {
   nigeria: "en",
@@ -9572,6 +9574,8 @@ function render() {
   applyAccessibilityPrefs();
   applyAccessibilityAttributes();
   renderMap();
+  renderShipmentPreviewMap();
+  renderHealthHotspotPreviewMap();
   renderUserSimpleActiveSection(currentSectionId());
   const hashSection = sectionFromHash();
   if (hashSection !== currentSectionId()) goSection(hashSection, { updateHash: false, scroll: false });
@@ -9870,6 +9874,102 @@ function renderUserHealthMap() {
   setTimeout(() => userHealthMap?.invalidateSize(), 120);
 }
 
+function renderShipmentPreviewMap() {
+  const canvas = $("#shipmentPreviewMapCanvas");
+  if (!canvas || !data) return;
+  if (!window.L) {
+    canvas.innerHTML = `<div class="user-real-map-fallback">${translateText("Map tiles are loading. Check internet connection, then refresh this screen.")}</div>`;
+    return;
+  }
+  if (shipmentPreviewMap) {
+    try {
+      shipmentPreviewMap.remove();
+    } catch (error) {
+      // Preview maps can be removed between renders.
+    }
+    shipmentPreviewMap = null;
+  }
+  if (canvas._leaflet_id) canvas.replaceWith(canvas.cloneNode(false));
+  const target = $("#shipmentPreviewMapCanvas");
+  const route = activeRoute();
+  const country = activeCountry();
+  shipmentPreviewMap = L.map(target, {
+    zoomControl: true,
+    attributionControl: true,
+    scrollWheelZoom: true,
+    tap: true,
+    worldCopyJump: true,
+    preferCanvas: true,
+    minZoom: 2
+  }).setView([3.2, 20.5], 3);
+  addRealMapTiles(shipmentPreviewMap);
+  const routeLayer = L.layerGroup().addTo(shipmentPreviewMap);
+  const markerLayer = L.layerGroup().addTo(shipmentPreviewMap);
+  const facilityLayer = L.layerGroup().addTo(shipmentPreviewMap);
+  if (route?.points?.length) {
+    L.polyline(route.points, { color: "#176fc7", weight: 6, opacity: .92 }).addTo(routeLayer);
+    (route.checkpoints || []).forEach((checkpoint, index) => {
+      const point = route.points[Math.min(index, route.points.length - 1)];
+      const active = checkpoint === data.profile.activeCheckpoint;
+      L.circleMarker(point, {
+        radius: active ? 10 : 7,
+        color: active ? "#173240" : "#176fc7",
+        fillColor: active ? "#ffc857" : "#ffffff",
+        fillOpacity: 1,
+        weight: 3
+      }).addTo(routeLayer).bindPopup(`<strong>${translateText(checkpoint)}</strong><br>${translateText(active ? "Current shipment checkpoint" : "Shipment checkpoint")}`);
+    });
+  }
+  addOperationalCountryMarkers(shipmentPreviewMap, markerLayer, country);
+  addNearbyFacilityMarkers(facilityLayer, country, "Logistics support point");
+  fitMapToSurroundingRegion(shipmentPreviewMap, route, country, 6);
+  setTimeout(() => shipmentPreviewMap?.invalidateSize(), 140);
+}
+
+function renderHealthHotspotPreviewMap() {
+  const canvas = $("#healthHotspotMapCanvas");
+  if (!canvas || !data) return;
+  if (!window.L) {
+    canvas.innerHTML = `<div class="user-real-map-fallback">${translateText("Map tiles are loading. Check internet connection, then refresh this screen.")}</div>`;
+    return;
+  }
+  if (healthHotspotPreviewMap) {
+    try {
+      healthHotspotPreviewMap.remove();
+    } catch (error) {
+      // Preview maps can be removed between renders.
+    }
+    healthHotspotPreviewMap = null;
+  }
+  if (canvas._leaflet_id) canvas.replaceWith(canvas.cloneNode(false));
+  const target = $("#healthHotspotMapCanvas");
+  const country = activeCountry();
+  healthHotspotPreviewMap = L.map(target, {
+    zoomControl: true,
+    attributionControl: true,
+    scrollWheelZoom: true,
+    tap: true,
+    worldCopyJump: true,
+    preferCanvas: true,
+    minZoom: 2
+  }).setView([3.2, 20.5], 3);
+  addRealMapTiles(healthHotspotPreviewMap);
+  const regionLayer = L.layerGroup().addTo(healthHotspotPreviewMap);
+  const markerLayer = L.layerGroup().addTo(healthHotspotPreviewMap);
+  const facilityLayer = L.layerGroup().addTo(healthHotspotPreviewMap);
+  L.rectangle([[-35, -20], [36, 55]], {
+    color: "#173240",
+    weight: 1,
+    fill: false,
+    dashArray: "10 8",
+    opacity: .45
+  }).addTo(regionLayer).bindPopup(translateText("Regional Africa health access view. Zoom or drag to inspect surrounding areas."));
+  addOperationalCountryMarkers(healthHotspotPreviewMap, markerLayer, country, { health: true });
+  addNearbyFacilityMarkers(facilityLayer, country, "Care support point");
+  fitMapToSurroundingRegion(healthHotspotPreviewMap, activeRoute(), country, 5);
+  setTimeout(() => healthHotspotPreviewMap?.invalidateSize(), 140);
+}
+
 function renderWorkflowLiveMap(config = pendingWorkflow || {}) {
   const canvas = $("#workflowLiveMapCanvas");
   if (!canvas || !data) return;
@@ -10128,26 +10228,9 @@ function workflowRealUseCoachHtml(config) {
 
 function shipmentMapHtml({ route = activeRoute(), order = null, product = firstProduct(), title = "Shipment route" } = {}) {
   if (!route?.points?.length) return "";
-  const points = route.points;
-  const lats = points.map(point => Number(point[0]));
-  const lngs = points.map(point => Number(point[1]));
-  const minLat = Math.min(...lats);
-  const maxLat = Math.max(...lats);
-  const minLng = Math.min(...lngs);
-  const maxLng = Math.max(...lngs);
-  const latRange = Math.max(maxLat - minLat, .01);
-  const lngRange = Math.max(maxLng - minLng, .01);
-  const project = point => {
-    const x = 8 + ((Number(point[1]) - minLng) / lngRange) * 84;
-    const y = 86 - ((Number(point[0]) - minLat) / latRange) * 70;
-    return [Number(x.toFixed(1)), Number(y.toFixed(1))];
-  };
-  const projected = points.map(project);
-  const linePoints = projected.map(point => point.join(",")).join(" ");
   const activeCheckpoint = order?.checkpoint || data.profile.activeCheckpoint || route.checkpoints?.[0] || "Pickup";
   const checkpointIndex = Math.max(0, route.checkpoints?.findIndex(checkpoint => checkpoint === activeCheckpoint) ?? 0);
-  const safeIndex = Math.min(checkpointIndex < 0 ? 0 : checkpointIndex, projected.length - 1);
-  const activePoint = projected[safeIndex];
+  const safeIndex = Math.min(checkpointIndex < 0 ? 0 : checkpointIndex, route.points.length - 1);
   const destination = route.checkpoints?.[route.checkpoints.length - 1] || "Buyer handoff";
   const shipmentTitle = order?.orderNumber ? `${order.orderNumber} - ${product?.name || order.product || "Crop shipment"}` : product?.name || "Crop shipment";
   const checkpointTags = (route.checkpoints || []).map((checkpoint, index) => {
@@ -10163,18 +10246,7 @@ function shipmentMapHtml({ route = activeRoute(), order = null, product = firstP
         </div>
         <small>${translateText(order?.stage || data.profile.routeStage || "Tracking")}</small>
       </div>
-      <svg viewBox="0 0 100 100" role="img" aria-label="${escapeHtml(`${route.name} shipment map`)}">
-        <defs>
-          <linearGradient id="shipmentRouteGradient" x1="0%" x2="100%" y1="0%" y2="0%">
-            <stop offset="0%" stop-color="#1b8f68"></stop>
-            <stop offset="100%" stop-color="#176fc7"></stop>
-          </linearGradient>
-        </defs>
-        <rect x="1" y="1" width="98" height="98" rx="10" fill="#eef8f4"></rect>
-        <polyline points="${linePoints}" fill="none" stroke="url(#shipmentRouteGradient)" stroke-width="4.8" stroke-linecap="round" stroke-linejoin="round"></polyline>
-        ${projected.map((point, index) => `<circle cx="${point[0]}" cy="${point[1]}" r="${index === safeIndex ? 4.8 : 3.2}" fill="${index === safeIndex ? "#d94c31" : "#ffffff"}" stroke="${index === safeIndex ? "#d94c31" : "#176fc7"}" stroke-width="2"></circle>`).join("")}
-        <circle cx="${activePoint[0]}" cy="${activePoint[1]}" r="8" fill="none" stroke="#d94c31" stroke-width="2" stroke-dasharray="3 3"></circle>
-      </svg>
+      <div id="shipmentPreviewMapCanvas" class="shipment-real-map" role="img" aria-label="${escapeHtml(`${route.name} full-scale shipment map with route checkpoints, facilities, and surrounding areas.`)}"></div>
       <div class="shipment-map-meta">
         <div><strong>${translateText("Pickup")}</strong><span>${translateText(route.checkpoints?.[0] || "Field pickup")}</span></div>
         <div><strong>${translateText("Now")}</strong><span>${translateText(activeCheckpoint)}</span></div>
@@ -10191,20 +10263,6 @@ function healthHotspotHtml({ country = activeCountry(), title = "Health hotspot 
     return (riskRank[b.risk] || 0) - (riskRank[a.risk] || 0) || (b.heat || 0) - (a.heat || 0);
   });
   if (!countries.length) return "";
-  const lats = countries.map(item => Number(item.lat));
-  const lngs = countries.map(item => Number(item.lng));
-  const minLat = Math.min(...lats);
-  const maxLat = Math.max(...lats);
-  const minLng = Math.min(...lngs);
-  const maxLng = Math.max(...lngs);
-  const latRange = Math.max(maxLat - minLat, .01);
-  const lngRange = Math.max(maxLng - minLng, .01);
-  const project = item => {
-    const x = 10 + ((Number(item.lng) - minLng) / lngRange) * 80;
-    const y = 84 - ((Number(item.lat) - minLat) / latRange) * 68;
-    return [Number(x.toFixed(1)), Number(y.toFixed(1))];
-  };
-  const riskColor = item => item.risk === "High" ? "#d94c31" : item.risk === "Medium" ? "#d9a71d" : "#1b8f68";
   const hotspots = countries.slice(0, 4);
   return `
     <section class="health-hotspot-card">
@@ -10215,16 +10273,7 @@ function healthHotspotHtml({ country = activeCountry(), title = "Health hotspot 
         </div>
         <small>${translateText(country.risk)}</small>
       </div>
-      <svg viewBox="0 0 100 100" role="img" aria-label="${escapeHtml(`${country.name} health hotspot map`)}">
-        <rect x="1" y="1" width="98" height="98" rx="10" fill="#f8eef0"></rect>
-        ${countries.map(item => {
-          const [x, y] = project(item);
-          const active = item.id === country.id;
-          const radius = active ? 8 : item.risk === "High" ? 6 : 4.8;
-          return `<circle cx="${x}" cy="${y}" r="${radius}" fill="${riskColor(item)}" fill-opacity="${active ? ".95" : ".72"}" stroke="#ffffff" stroke-width="2"></circle>
-            <text x="${x}" y="${Math.max(8, y - radius - 3)}" text-anchor="middle" font-size="5" font-weight="800" fill="#173240">${escapeHtml(item.name.split(" ")[0])}</text>`;
-        }).join("")}
-      </svg>
+      <div id="healthHotspotMapCanvas" class="shipment-real-map health-hotspot-real-map" role="img" aria-label="${escapeHtml(`${country.name} full-scale health risk map with facilities and surrounding regions.`)}"></div>
       <div class="hotspot-list">
         ${hotspots.map(item => `<div class="${item.id === country.id ? "active" : ""}">
           <strong>${translateText(item.name)}</strong>

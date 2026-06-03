@@ -1293,9 +1293,6 @@ body.user-mode .user-module-preview .shipment-map-card {
   border-width: 2px;
   box-shadow: none;
 }
-body.user-mode .user-module-preview .shipment-map-card svg {
-  min-height: 150px;
-}
 body.user-mode .user-module-preview .shipment-map-meta {
   grid-template-columns: 1fr;
 }
@@ -3419,12 +3416,21 @@ body.admin-mode .user-workspace {
   word-break: normal;
   line-height: 1.08;
 }
-.shipment-map-card svg {
+.shipment-real-map {
   width: 100%;
-  min-height: 190px;
-  border: 1px solid #d4e8e2;
-  border-radius: 12px;
-  background: #eef8f4;
+  min-height: 360px;
+  height: min(54vh, 460px);
+  overflow: hidden;
+  border: 3px solid #173240;
+  border-radius: 14px;
+  background: #d8e8ef;
+}
+.shipment-real-map .leaflet-pane,
+.shipment-real-map .leaflet-control-container {
+  z-index: 1;
+}
+.health-hotspot-real-map {
+  background: #f3e8ea;
 }
 .shipment-map-meta {
   display: grid;
@@ -3478,13 +3484,6 @@ body.admin-mode .user-workspace {
   border: 1px solid #e3c4c8;
   border-radius: 14px;
   background: linear-gradient(180deg, #ffffff, #fff1f2);
-}
-.health-hotspot-card svg {
-  width: 100%;
-  min-height: 180px;
-  border: 1px solid #efd2d5;
-  border-radius: 12px;
-  background: #fff4f5;
 }
 .hotspot-list {
   display: grid;
@@ -5123,11 +5122,11 @@ body.user-mode .grandma-workflow:not(.hidden) .modal-actions button {
     grid-template-columns: 1fr;
   }
 
-  body.user-mode .shipment-map-card svg {
+  body.user-mode .shipment-real-map {
     min-height: 160px;
   }
 
-  body.user-mode .health-hotspot-card svg {
+  body.user-mode .health-hotspot-real-map {
     min-height: 150px;
   }
 

@@ -17,8 +17,8 @@ includesAll(html, [
   "Close menu",
   'id="userCaptionPanel"',
   'data-caption-action="close"',
-  "/styles.css?v=nexus-behavior-158",
-  "/app.js?v=nexus-behavior-158"
+  "/styles.css?v=nexus-behavior-159",
+  "/app.js?v=nexus-behavior-159"
 ], "HTML grandma-mode shell");
 
 includesAll(app, [
@@ -97,7 +97,9 @@ includesAll(styles, [
   "body.user-mode .user-accessibility-module",
   "body.user-mode .user-accessibility-buttons",
   "body.user-mode .user-real-map",
-  "body.user-mode .user-health-real-map"
+  "body.user-mode .user-health-real-map",
+  ".shipment-real-map",
+  ".health-hotspot-real-map"
 ], "CSS grandma-mode containment");
 
 [
@@ -111,9 +113,14 @@ includesAll(styles, [
   assert(!html.includes(marker), `Grandma-mode HTML should not include: ${marker}`);
 });
 
+assert(app.includes("shipmentPreviewMapCanvas") && app.includes("renderShipmentPreviewMap"), "Grandma mode shipment preview needs a real map canvas");
+assert(app.includes("healthHotspotMapCanvas") && app.includes("renderHealthHotspotPreviewMap"), "Grandma mode health preview needs a real map canvas");
+assert(!/function shipmentMapHtml[\s\S]*?<svg[\s\S]*?function healthHotspotHtml/.test(app), "Shipment preview must not render cartoon SVG maps");
+assert(!/function healthHotspotHtml[\s\S]*?<svg[\s\S]*?function workflowOutcomeHtml/.test(app), "Health preview must not render cartoon SVG maps");
+
 includesAll(sw, [
-  'CACHE_NAME = "agrinexus-pwa-v138"',
-  'BUILD_VERSION = "nexus-behavior-158"'
+  'CACHE_NAME = "agrinexus-pwa-v139"',
+  'BUILD_VERSION = "nexus-behavior-159"'
 ], "Service worker freshness");
 
 console.log("Grandma mode user pass passed");
