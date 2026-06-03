@@ -125,6 +125,27 @@ async function call(route, body) {
     assert(buyerRoute.commandResult.metadata.packet.origin.label.includes("Kenya"), "route packet should detect Kenya seller origin");
     assert((buyerRoute.profile.locationRoutePackets || []).length >= 1, "profile should store location route packets");
     assert(buyerRoute.profile.integrationEvents.some(event => event.action === "map.buyer_seller_location_route"), "buyer route should log map evidence");
+    const missionBrain = await call("/api/agent/command", {
+      command: "Nexus, activate the new mission brain to help sell crops, track route, and message buyer",
+      conversational: true,
+      inputMode: "voice",
+      outputMode: "voice"
+    });
+    assert.strictEqual(missionBrain.commandResult.intent, "agent.mission_brain", "Mission Brain command should return agent.mission_brain");
+    assert.strictEqual(missionBrain.commandResult.metadata.missionBrain.mode, "nexus-mission-brain", "Mission Brain metadata should include the model");
+    assert.strictEqual(missionBrain.commandResult.metadata.missionBrain.layers.length, 10, "Mission Brain should include all 10 intelligence layers");
+    assert(missionBrain.commandResult.metadata.missionBrain.layers.some(layer => layer.id === "context-awareness"), "Mission Brain should include context awareness");
+    assert(missionBrain.commandResult.metadata.missionBrain.layers.some(layer => layer.id === "live-provider-reasoning"), "Mission Brain should include live provider reasoning");
+    assert(missionBrain.commandResult.metadata.missionBrain.layers.some(layer => layer.id === "multi-step-mission-planning"), "Mission Brain should include mission planning");
+    assert(missionBrain.commandResult.metadata.missionBrain.layers.some(layer => layer.id === "proactive-alerts"), "Mission Brain should include proactive alerts");
+    assert(missionBrain.commandResult.metadata.missionBrain.layers.some(layer => layer.id === "personal-memory"), "Mission Brain should include personal memory");
+    assert(missionBrain.commandResult.metadata.missionBrain.layers.some(layer => layer.id === "voice-clarification"), "Mission Brain should include voice clarification");
+    assert(missionBrain.commandResult.metadata.missionBrain.layers.some(layer => layer.id === "decision-scoring"), "Mission Brain should include decision scoring");
+    assert(missionBrain.commandResult.metadata.missionBrain.layers.some(layer => layer.id === "real-time-map-intelligence"), "Mission Brain should include map intelligence");
+    assert(missionBrain.commandResult.metadata.missionBrain.layers.some(layer => layer.id === "role-based-intelligence"), "Mission Brain should include role intelligence");
+    assert(missionBrain.commandResult.metadata.missionBrain.layers.some(layer => layer.id === "safety-compliance-brain"), "Mission Brain should include safety compliance");
+    assert((missionBrain.profile.missionBrainRuns || []).length >= 1, "Mission Brain should persist mission brain runs");
+    assert(missionBrain.profile.integrationEvents.some(event => event.action === "agent.mission_brain_planned"), "Mission Brain should log audit evidence");
   } finally {
     server.kill();
     try {
@@ -152,6 +173,7 @@ async function call(route, body) {
   console.log("- Ask Nexus pre-provider multilingual responses: es, fr, sw, ar");
   console.log("- Ask Nexus weather location handoff");
   console.log("- Ask Nexus buyer-to-seller map route packet");
+  console.log("- Nexus Mission Brain all 10 intelligence layers");
 })().catch(error => {
   console.error(error);
   process.exit(1);

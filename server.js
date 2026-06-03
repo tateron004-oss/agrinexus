@@ -4012,6 +4012,7 @@ function ensureAiProfile(profile) {
   profile.voiceSessions = profile.voiceSessions || [];
   profile.videoSessions = profile.videoSessions || [];
   profile.agentBriefings = profile.agentBriefings || [];
+  profile.missionBrainRuns = profile.missionBrainRuns || [];
   profile.agentMemory = profile.agentMemory || {
     activeAudience: "government",
     activeMission: "rural transformation",
@@ -9892,6 +9893,164 @@ function tradeLocationRouteResponse(db, user, text, options = {}) {
   };
 }
 
+function nexusMissionBrainModel(db, user, goalText = "", options = {}) {
+  ensureAiProfile(db.profile);
+  ensureLearningProfile(db.profile);
+  ensureWorkforceProfile(db.profile);
+  ensureHealthProfile(db.profile);
+  ensureTradeProfile(db.profile);
+  const goal = String(goalText || "Run the best AgriNexus mission from the current platform context.").trim();
+  const providers = runtimeProviders(db);
+  const { country, route } = activeContext(db);
+  const signal = conversationModuleSignal(goal);
+  const memories = retrieveAgentMemories(db.profile, goal, 6);
+  const smart = smartNextActions(db, user, providers);
+  const autopilot = buildAutopilotPlan(db, goal, user);
+  const latestRoutePacket = (db.profile.locationRoutePackets || [])[0] || null;
+  const liveProviders = providers.filter(provider => provider.status === "connected");
+  const providerReady = providers.filter(provider => provider.status !== "connected");
+  const risky = /\b(health|injury|emergency|doctor|provider|payment|wallet|buyer|seller|route|delivery|shipment|job|apply|message|call|whatsapp|sms)\b/i.test(goal);
+  const role = user?.role || "User";
+  const roleFrame = role === "Admin"
+    ? "operations, provider health, failure recovery, and audit evidence"
+    : role === "Investor"
+      ? "impact, scale readiness, proof, and pilot story"
+      : "simple guided help, voice-first steps, and low-tech usability";
+  const confidence = Math.min(0.97, Math.max(0.72,
+    0.62
+    + (signal.score || 0) * 0.18
+    + (memories.length ? 0.06 : 0)
+    + (latestRoutePacket ? 0.04 : 0)
+    + (liveProviders.length ? 0.03 : 0)
+  ));
+  const nextActions = smart.items.slice(0, 5).map(item => ({
+    title: item.title,
+    module: item.module,
+    section: item.section,
+    reason: item.reason || item.detail,
+    command: item.command || item.title
+  }));
+  const missionSteps = autopilot.steps.slice(0, 8).map((step, index) => ({
+    order: index + 1,
+    module: step.module,
+    tool: step.tool,
+    action: step.action,
+    status: "planned",
+    confirmationRequired: /health|payment|buyer|message|provider|apply|route/i.test(`${step.module} ${step.tool} ${step.action}`)
+  }));
+  const alerts = [];
+  if (!(db.profile.healthIntakes || []).length) alerts.push({ module: "Healthcare", priority: "medium", message: "No active health intake exists; start intake before care routing." });
+  if ((db.profile.orders || []).length && !(db.profile.tradeMessageThreads || []).length) alerts.push({ module: "AgriTrade", priority: "high", message: "A trade order needs buyer-seller communication evidence." });
+  if ((db.profile.orders || []).length && !(db.profile.locationRoutePackets || []).length) alerts.push({ module: "Maps", priority: "medium", message: "A trade order needs buyer/seller route evidence." });
+  if (!liveProviders.some(provider => provider.id === "openai")) alerts.push({ module: "AI", priority: "medium", message: "Live OpenAI is not connected in this runtime; local reasoning remains active." });
+  if (!liveProviders.some(provider => provider.id === "maps" || provider.id === "map-tiles")) alerts.push({ module: "Maps", priority: "medium", message: "Live map/routing credentials improve address geocoding, ETA, and traffic." });
+  const layers = [
+    { id: "context-awareness", title: "True Context Awareness", active: true, evidence: `${signal.module || "Platform"} matched; active country ${country.name}; route ${route.name}.` },
+    { id: "live-provider-reasoning", title: "Live Provider Reasoning", active: true, evidence: `${liveProviders.length}/${providers.length} provider adapter(s) connected; ${providerReady.length} provider-ready.` },
+    { id: "multi-step-mission-planning", title: "Multi-Step Mission Planning", active: true, evidence: `${missionSteps.length} planned step(s) from current goal.` },
+    { id: "proactive-alerts", title: "Proactive Alerts", active: true, evidence: `${alerts.length} active alert(s) generated from platform state.` },
+    { id: "personal-memory", title: "Personal Memory", active: true, evidence: `${memories.length} relevant memory cue(s) retrieved.` },
+    { id: "voice-clarification", title: "Voice Clarification", active: true, evidence: "One-question clarification and imperfect speech repair are available before risky actions." },
+    { id: "decision-scoring", title: "Decision Scoring", active: true, evidence: `${Math.round(confidence * 100)}% confidence for this mission plan.` },
+    { id: "real-time-map-intelligence", title: "Real-Time Map Intelligence", active: true, evidence: latestRoutePacket ? `Latest route packet ${latestRoutePacket.packetNumber}: ${latestRoutePacket.sellerLocation} to ${latestRoutePacket.buyerLocation}.` : "Map route packets, GPS route tracking, weather, and provider-ready routing are available." },
+    { id: "role-based-intelligence", title: "Role-Based Intelligence", active: true, evidence: `${role} mode focuses on ${roleFrame}.` },
+    { id: "safety-compliance-brain", title: "Safety And Compliance Brain", active: true, evidence: risky ? "This mission touches sensitive health, buyer, payment, provider, job, route, or messaging actions; confirmation is required." : "No high-risk action detected; standard confirmation remains available." }
+  ];
+  const brain = {
+    id: crypto.randomUUID(),
+    mode: "nexus-mission-brain",
+    goal,
+    status: risky ? "planned-needs-confirmation" : "planned-ready",
+    confidence: Number(confidence.toFixed(2)),
+    activeContext: {
+      country: country.name,
+      route: route.name,
+      checkpoint: db.profile.activeCheckpoint || route.checkpoints?.[0] || "",
+      detectedModule: signal.module || "Platform",
+      section: signal.section || sectionForAgentModule(signal.module || "Platform")
+    },
+    layers,
+    nextActions,
+    missionSteps,
+    proactiveAlerts: alerts.slice(0, 6),
+    memoryUsed: memories.map(item => ({
+      id: item.id,
+      category: item.category,
+      module: item.module,
+      text: item.text || item.event || item.response || item.command,
+      confidence: item.confidence
+    })),
+    providerTruth: {
+      connected: liveProviders.map(provider => provider.id),
+      providerReady: providerReady.map(provider => provider.id).slice(0, 18),
+      rule: "Mission Brain must say what is live, local, provider-ready, or waiting on credentials."
+    },
+    mapIntelligence: {
+      routePacket: latestRoutePacket,
+      gpsTrackingReady: true,
+      liveRoutingReady: Boolean(process.env.ROUTING_WEBHOOK_URL || process.env.MAPBOX_ACCESS_TOKEN || process.env.OPENROUTESERVICE_API_KEY || process.env.GOOGLE_MAPS_API_KEY),
+      weatherLocationReady: true
+    },
+    roleBehavior: {
+      role,
+      frame: roleFrame,
+      userModeRule: "Keep the user experience simple, guided, visual, and voice-first.",
+      adminModeRule: "Expose operational evidence, provider failures, and recovery next steps.",
+      investorModeRule: "Explain impact, proof, scalability, and live-provider gaps."
+    },
+    safety: {
+      confirmationRequired: risky,
+      boundaries: [
+        "Do not diagnose medical conditions.",
+        "Confirm before health, payment, job application, buyer contact, provider contact, or route-changing actions.",
+        "Use emergency guidance for danger signs.",
+        "Say when data is local context instead of live provider data."
+      ]
+    },
+    suggestedCommands: [
+      "Nexus, run the first mission step",
+      "Nexus, explain the mission",
+      "Nexus, track the buyer route",
+      "Nexus, message the buyer",
+      "Nexus, start telehealth intake"
+    ],
+    createdBy: user?.email || "Ask Nexus",
+    createdAt: new Date().toISOString()
+  };
+  db.profile.missionBrainRuns.unshift(brain);
+  db.profile.missionBrainRuns = db.profile.missionBrainRuns.slice(0, 20);
+  db.profile.agentMemory.activeMissionBrain = brain;
+  db.profile.agentMemory.lastStatus = "mission-brain-ready";
+  db.profile.agentMemory.lastSummary = `Mission Brain planned ${missionSteps.length} step(s) with ${Math.round(confidence * 100)}% confidence.`;
+  db.profile.agentMemory.updatedAt = brain.createdAt;
+  rememberAgentMemory(db.profile, `Mission Brain goal: ${goal}. Next action: ${nextActions[0]?.title || "continue guided mission"}.`, { source: "nexus-mission-brain", category: "pattern", module: signal.module || "Agent AI", confidence: 0.93 });
+  logIntegration(db, {
+    providerId: "openai",
+    module: "Agent AI",
+    action: "agent.mission_brain_planned",
+    detail: `Mission Brain planned ${missionSteps.length} step(s) for ${goal}.`,
+    metadata: { brainId: brain.id, confidence: brain.confidence, layers: layers.map(layer => layer.id), alerts: alerts.length },
+    dispatch: false
+  });
+  return brain;
+}
+
+function missionBrainCommandResponse(db, user, text, options = {}) {
+  const brain = nexusMissionBrainModel(db, user, text, options);
+  const first = brain.nextActions[0] || brain.missionSteps[0] || null;
+  return {
+    intent: "agent.mission_brain",
+    response: `Nexus Mission Brain is active. I read the goal, checked context, memory, providers, map intelligence, safety, role mode, and next actions. Confidence is ${Math.round(brain.confidence * 100)}%. I planned ${brain.missionSteps.length} step(s), found ${brain.proactiveAlerts.length} alert(s), and ${brain.safety.confirmationRequired ? "will require confirmation before sensitive actions" : "can guide the next low-risk step"}. Recommended next step: ${first?.title || first?.action || "continue guided mission"}.`,
+    status: brain.status,
+    metadata: {
+      conversationMode: true,
+      redirectSection: brain.activeContext.section || "agent",
+      missionBrain: brain,
+      suggestedReplies: brain.suggestedCommands
+    }
+  };
+}
+
 function fahrenheitFromCelsius(celsius) {
   return Math.round((Number(celsius || 0) * 9 / 5) + 32);
 }
@@ -10800,6 +10959,9 @@ async function runAgentCommand(db, user, command, options = {}) {
   if (isBuyerSellerLocationRouteCommand(lower)) {
     return tradeLocationRouteResponse(db, user, text, options);
   }
+  if (/\b(new mission brain|mission brain|nexus mission brain|activate mission brain|build mission brain|all 10 mission brain|all ten mission brain|goal brain|mission intelligence)\b/.test(lower)) {
+    return missionBrainCommandResponse(db, user, text, options);
+  }
   const directUtilityCommand = await utilityAssistantCommandResponse(db, user, text, lower, options);
   if (directUtilityCommand) return directUtilityCommand;
   const directFollowUp = /^(continue|next step|do the next|run the next|start the next|do that|let's do that|lets do that|proceed|take me there|open that|show me|go there|where are we|what step|orient me|explain that|repeat that)\b/.test(lower);
@@ -11233,6 +11395,10 @@ async function runAgentCommand(db, user, command, options = {}) {
       status: "completed",
       metadata: { conversationMode: conversational, redirectSection: "agent", capabilityRegistry: registry }
     };
+  }
+
+  if (/\b(new mission brain|mission brain|nexus mission brain|activate mission brain|build mission brain|all 10 mission brain|all ten mission brain|goal brain|mission intelligence)\b/.test(lower)) {
+    return missionBrainCommandResponse(db, user, text, options);
   }
 
   if (lower.includes("agrinexus readiness") || lower.includes("agrinexus level") || lower.includes("command readiness") || lower.includes("command level") || lower.includes("all six") || lower.includes("all 6")) {
