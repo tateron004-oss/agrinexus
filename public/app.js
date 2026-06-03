@@ -51,8 +51,8 @@ let routeTrackingWatchId = null;
 let routeTrackingPoints = [];
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-155";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v135";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-156";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v136";
 
 const countryLanguageMap = {
   nigeria: "en",
@@ -14189,12 +14189,24 @@ function bindStatic() {
     goSection(sectionFromHash(), { updateHash: false, instant: true });
   });
 
+  const closeTopSettings = () => {
+    const panel = $("#topActions");
+    if (!panel) return;
+    panel.classList.remove("open");
+    $("#topSettingsToggle")?.setAttribute("aria-expanded", "false");
+  };
+
   $("#topSettingsToggle").onclick = () => {
     const panel = $("#topActions");
     const open = !panel.classList.contains("open");
     panel.classList.toggle("open", open);
     $("#topSettingsToggle").setAttribute("aria-expanded", String(open));
     announce(open ? "Settings opened" : "Settings closed");
+  };
+  const topSettingsClose = $("#topSettingsClose");
+  if (topSettingsClose) topSettingsClose.onclick = () => {
+    closeTopSettings();
+    announce("Settings closed");
   };
 
   $("#loginForm").addEventListener("submit", async event => {
@@ -14251,6 +14263,7 @@ function bindStatic() {
   });
   $("#workspaceAskBtn").onclick = openAskNexus;
   $("#accessibilityToggle").onclick = () => {
+    closeTopSettings();
     if (experienceMode === "user") {
       $("#accessibilityPanel")?.classList.add("hidden");
       $("#accessibilityToggle").setAttribute("aria-expanded", "true");
@@ -14266,9 +14279,13 @@ function bindStatic() {
     announce(willOpen ? "Accessibility tools opened" : "Accessibility tools closed");
   };
   const topCaptionsBtn = $("#topCaptionsBtn");
-  if (topCaptionsBtn) topCaptionsBtn.onclick = () => openCaptionBox("Nexus captions are open. Speak or type your request.");
+  if (topCaptionsBtn) topCaptionsBtn.onclick = () => {
+    closeTopSettings();
+    openCaptionBox("Nexus captions are open. Speak or type your request.");
+  };
   const topHomeBtn = $("#topHomeBtn");
   if (topHomeBtn) topHomeBtn.onclick = () => {
+    closeTopSettings();
     closeAskNexus({ silent: true });
     closeUserCaptionPanel();
     goSection("dashboard", { instant: true });

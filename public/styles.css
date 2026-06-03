@@ -859,6 +859,12 @@ body.user-mode .top-actions select,
 body.user-mode .top-actions button {
   width: 100%;
 }
+body.user-mode .top-settings-close {
+  background: #14213d;
+  border-color: #14213d;
+  color: #ffffff;
+  min-height: 46px;
+}
 body.user-mode #logoutBtn {
   display: none !important;
 }
@@ -882,7 +888,8 @@ body.user-mode .content {
 body.user-mode,
 body.user-mode * {
   min-width: 0;
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
+  word-break: normal;
 }
 body.user-mode .simple-home,
 body.user-mode .user-workspace-hero,
