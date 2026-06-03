@@ -51,8 +51,8 @@ let routeTrackingWatchId = null;
 let routeTrackingPoints = [];
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-152";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v132";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-153";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v133";
 
 const countryLanguageMap = {
   nigeria: "en",
@@ -6280,6 +6280,90 @@ function nativeAppReadinessSummary() {
     items,
     summary: `${ready}/${items.length} mobile Jarvis capabilities are ready in the web build. Native packaging is the unlock for always-on wake, background GPS, push notifications, and OS-level microphone behavior.`
   };
+}
+
+function installAgriNexusNativeBridge() {
+  window.AgriNexusNativeBridge = {
+    version: "1.1.0",
+    receive(event = {}) {
+      const type = String(event.type || "").trim();
+      if (!type) return { ok: false, error: "Missing native event type" };
+      if (type === "voice.wake") {
+        voiceFirstMode = true;
+        voiceAutoRestart = true;
+        localStorage.setItem("agrinexusVoiceFirst", "on");
+        setVoiceStatus("listening");
+        updateNexusBehaviorLayer("listening", "Native wake heard. Nexus is ready for the command.");
+        return { ok: true, action: "wake-ready" };
+      }
+      if (type === "voice.final_transcript") {
+        const transcript = normalizeLocalizedVoiceCommand(event.transcript || event.command || "");
+        if (!transcript) return { ok: false, error: "Missing transcript" };
+        void handleVoiceCommand(transcript);
+        return { ok: true, action: "command-submitted", transcript };
+      }
+      if (type === "voice.partial_transcript") {
+        const status = $("#globalAssistantStatus");
+        if (status) status.textContent = translateText(event.transcript || "Listening...");
+        return { ok: true, action: "partial-rendered" };
+      }
+      if (type === "voice.interrupt" || type === "voice.stop") {
+        stopNexusSpeaking("Stopped. I am ready when you are.");
+        return { ok: true, action: "speech-stopped" };
+      }
+      if (type === "voice.language_changed") {
+        const lang = event.language || event.targetLanguage;
+        if (lang && voiceLocaleMap[lang]) {
+          setLanguage(lang);
+          refreshVoiceForLanguageChange();
+          return { ok: true, action: "language-changed", language: lang };
+        }
+        return { ok: false, error: "Unsupported language" };
+      }
+      if (type === "location.route_update") {
+        const lat = Number(event.latitude);
+        const lng = Number(event.longitude);
+        if (Number.isFinite(lat) && Number.isFinite(lng)) {
+          routeTrackingPoints.push({ lat, lng, at: new Date().toISOString(), speed: event.speed || null, heading: event.heading || null });
+          routeTrackingPoints = routeTrackingPoints.slice(-80);
+          goSection("map");
+          updateNexusBehaviorLayer("ready", "Native GPS route update received.");
+          return { ok: true, action: "route-point-added", points: routeTrackingPoints.length };
+        }
+        return { ok: false, error: "Missing latitude/longitude" };
+      }
+      if (type === "camera.media_attached") {
+        const media = event.media || event.attachment || {};
+        localStorage.setItem("agrinexusLastNativeMedia", JSON.stringify({ media, at: new Date().toISOString() }));
+        updateNexusBehaviorLayer("ready", "Native media was attached for the next workflow.");
+        setVoiceResponse("I received the image or video. Tell me if this is for telehealth, crop inspection, buyer proof, or workforce evidence.", true);
+        return { ok: true, action: "media-staged" };
+      }
+      if (type === "voice.permission_changed" || type === "notification.permission_changed") {
+        const status = $("#mobilePermissionStatus");
+        if (status) status.textContent = translateText(`${event.permission || "Permission"} is ${event.status || "updated"}.`);
+        return { ok: true, action: "permission-updated" };
+      }
+      return { ok: false, error: `Unhandled native event: ${type}` };
+    },
+    status() {
+      return {
+        build: AGRINEXUS_BUILD_VERSION,
+        cache: AGRINEXUS_PWA_CACHE_VERSION,
+        voiceFirstMode,
+        language: languageCode(),
+        section: currentSectionId(),
+        readiness: nativeAppReadinessSummary()
+      };
+    },
+    command(command, options = {}) {
+      return this.receive({ type: "voice.final_transcript", transcript: command, ...options });
+    },
+    stop() {
+      return this.receive({ type: "voice.stop" });
+    }
+  };
+  return window.AgriNexusNativeBridge;
 }
 
 function openNativeAppPlan() {
@@ -14329,6 +14413,7 @@ function bindStatic() {
 
 async function boot() {
   registerWebApp();
+  installAgriNexusNativeBridge();
   bindStatic();
   captureOriginalText();
   try {

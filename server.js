@@ -900,6 +900,101 @@ function jarvisReadinessModel(db, user, providers = runtimeProviders(db)) {
   };
 }
 
+function nativeVoiceRuntimeModel(db, user, providers = runtimeProviders(db)) {
+  ensureAiProfile(db.profile);
+  const bridgePath = path.join(PUBLIC, "native-bridge.json");
+  let bridge = {};
+  try {
+    bridge = JSON.parse(fs.readFileSync(bridgePath, "utf8"));
+  } catch {
+    bridge = {};
+  }
+  const provider = id => providers.find(item => item.id === id) || {};
+  const connected = id => provider(id).status === "connected";
+  const hasEnv = key => Boolean(process.env[key] && String(process.env[key]).trim() && !String(process.env[key]).includes("replace-with"));
+  const browserVoiceReady = true;
+  const openAiVoiceReady = connected("voice-stt") && connected("voice-tts") && hasEnv("OPENAI_API_KEY");
+  const phoneReady = connected("phone-voice") && hasEnv("TWILIO_ACCOUNT_SID") && hasEnv("TWILIO_AUTH_TOKEN") && hasEnv("TWILIO_PHONE_NUMBER");
+  const nativeBridgeReady = Boolean(bridge.version && bridge.wakeRuntime && bridge.commandEnvelope && bridge.webCallbacks);
+  const locationReady = connected("maps") || hasEnv("MAPBOX_ACCESS_TOKEN") || hasEnv("GOOGLE_MAPS_API_KEY") || hasEnv("OPENROUTESERVICE_API_KEY");
+  const productionMemoryReady = hasEnv("DATABASE_URL") && usingPostgresState() && Boolean(loadOptional("pg"));
+  const items = [
+    {
+      id: "browser-voice",
+      title: "Browser Voice Assistant",
+      ready: browserVoiceReady,
+      mode: "live-in-browser",
+      evidence: "Ask Nexus can listen after user permission, answer aloud, stop by voice, change language, and run platform workflows."
+    },
+    {
+      id: "openai-voice",
+      title: "High Quality AI Voice",
+      ready: openAiVoiceReady,
+      mode: openAiVoiceReady ? "live-openai" : "provider-ready",
+      evidence: openAiVoiceReady ? "OpenAI STT/TTS is configured." : "Add OPENAI_API_KEY with VOICE_STT_PROVIDER=openai and VOICE_TTS_PROVIDER=openai."
+    },
+    {
+      id: "phone-assistant",
+      title: "Phone Call Assistant",
+      ready: phoneReady,
+      mode: phoneReady ? "live-twilio" : "provider-ready",
+      evidence: phoneReady ? "Twilio phone assistant credentials are configured." : "Add Twilio account SID, auth token, phone number, and webhook."
+    },
+    {
+      id: "native-bridge",
+      title: "Native Wake Bridge",
+      ready: nativeBridgeReady,
+      mode: nativeBridgeReady ? "android-ios-contract-ready" : "needs-contract",
+      evidence: nativeBridgeReady ? `Bridge ${bridge.version} defines wake events, callbacks, permissions, command envelope, and offline queue.` : "native-bridge.json needs wake runtime and callback contract."
+    },
+    {
+      id: "always-on-wake",
+      title: "Always-On Wake",
+      ready: false,
+      mode: "requires-native-shell",
+      evidence: "Browsers cannot safely provide hidden always-on wake. Android/iOS packaging must request OS-level mic/background audio with privacy controls."
+    },
+    {
+      id: "camera-media",
+      title: "Camera And Media Handoff",
+      ready: nativeBridgeReady,
+      mode: "contract-ready",
+      evidence: "Native bridge includes camera.capture and media.attach callbacks for crop/injury videos and provider/buyer handoff."
+    },
+    {
+      id: "gps-route",
+      title: "GPS Route And Location",
+      ready: locationReady,
+      mode: locationReady ? "provider-or-browser-ready" : "provider-ready",
+      evidence: locationReady ? "Map/location provider or browser geolocation path is available." : "Add map/routing provider for live turn-by-turn distance and tracking."
+    },
+    {
+      id: "production-memory",
+      title: "Long-Term Production Memory",
+      ready: productionMemoryReady,
+      mode: productionMemoryReady ? "postgres-backed" : "local-provider-ready",
+      evidence: productionMemoryReady ? "PostgreSQL-backed state is active." : "Set DATABASE_URL and AGRINEXUS_STATE_STORE=postgres for hosted long-term memory."
+    }
+  ];
+  const readyCount = items.filter(item => item.ready).length;
+  return {
+    status: readyCount >= 6 ? "native-runtime-ready-for-packaging" : "native-runtime-provider-ready",
+    readyCount,
+    total: items.length,
+    score: Math.round((readyCount / items.length) * 100),
+    wakePhrases: bridge.wakePhrases || ["Hey AgriNexus", "Nexus", "Agri"],
+    permissions: bridge.requiredPermissions || [],
+    stopPhrases: bridge.wakeRuntime?.stopPhrases || ["Nexus stop"],
+    commandEnvelope: bridge.commandEnvelope || {},
+    apiEndpoints: bridge.apiEndpoints || {},
+    moduleVoiceExamples: bridge.moduleVoiceExamples || {},
+    items,
+    nextNativeStep: "Package AgriNexus with Capacitor, React Native, Flutter, or another native shell, then map native callbacks into window.AgriNexusNativeBridge.receive().",
+    privacyRule: bridge.wakeRuntime?.privacyRule || "Use visible listening status, user permission, and a one-tap off switch.",
+    updatedAt: new Date().toISOString()
+  };
+}
+
 function jarvisProductionTenModel(db, providers = runtimeProviders(db)) {
   ensureAiProfile(db.profile);
   const provider = id => providers.find(item => item.id === id) || {};
@@ -12274,6 +12369,10 @@ async function api(req, res, url) {
 
   if (url.pathname === "/api/engines/manifest" && req.method === "GET") {
     return send(res, 200, liveEngineManifest(db));
+  }
+
+  if (url.pathname === "/api/native/voice-runtime" && req.method === "GET") {
+    return send(res, 200, nativeVoiceRuntimeModel(db, user));
   }
 
   if (url.pathname === "/api/engines/render-env-plan" && req.method === "GET") {

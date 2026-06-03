@@ -1,8 +1,13 @@
 {
   "name": "AgriNexus Native Voice Bridge",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "purpose": "Contract for Android, iOS, and desktop shells that wrap the AgriNexus web platform with deeper device permissions.",
-  "wakePhrases": ["Hey AgriNexus", "Nexus", "Agri"],
+  "wakePhrases": ["Hey AgriNexus", "Hey Nexus", "Nexus", "Agri"],
+  "assistantNames": {
+    "full": "AgriNexus",
+    "short": "Nexus",
+    "spokenAliases": ["Hey AgriNexus", "Hey Nexus", "Agri"]
+  },
   "requiredPermissions": [
     "microphone",
     "speechRecognition",
@@ -11,40 +16,118 @@
     "backgroundAudio",
     "backgroundFetch",
     "geolocation",
-    "secureStorage"
+    "camera",
+    "secureStorage",
+    "bluetoothOptional",
+    "backgroundLocationOptional"
   ],
+  "permissionStates": {
+    "microphone": ["unknown", "prompt", "granted", "denied", "restricted"],
+    "notifications": ["unknown", "prompt", "granted", "denied"],
+    "geolocation": ["unknown", "prompt", "foreground", "background", "denied"],
+    "camera": ["unknown", "prompt", "granted", "denied"],
+    "speech": ["browser", "native", "openai", "provider-webhook", "unavailable"]
+  },
+  "wakeRuntime": {
+    "mode": "native-required-for-true-background",
+    "browserMode": "Tap microphone once, then Hey AgriNexus/Nexus/Agri can route commands while the browser allows listening.",
+    "nativeMode": "Use OS-approved foreground service or app audio session for wake detection, with visible privacy indicator and a one-tap off switch.",
+    "privacyRule": "Never run hidden listening. Show status, allow pause, and keep audit records for wake, transcript, command, and stop events.",
+    "stopPhrases": ["Nexus stop", "stop talking", "pause", "be quiet", "cancel"],
+    "confirmationPhrases": ["yes", "confirm", "do it", "no", "cancel", "explain first"]
+  },
   "nativeEvents": [
     "voice.wake",
     "voice.partial_transcript",
     "voice.final_transcript",
     "voice.interrupt",
+    "voice.language_changed",
+    "voice.permission_changed",
+    "voice.playback_started",
+    "voice.playback_finished",
+    "camera.capture_ready",
+    "camera.media_attached",
     "notification.opened",
+    "notification.permission_changed",
     "location.route_update",
+    "location.region_changed",
     "offline.queue_flushed",
-    "auth.token_refreshed"
+    "offline.command_queued",
+    "auth.token_refreshed",
+    "app.foreground",
+    "app.background"
   ],
   "webCommands": [
     "agent.command",
     "agent.confirm",
     "agent.cancel",
+    "agent.memory",
+    "agent.status",
     "voice.speak",
     "voice.stop",
+    "voice.listen",
     "permissions.status",
+    "permissions.request",
+    "camera.capture",
+    "media.attach",
     "route.track",
+    "route.stop",
     "notification.schedule"
   ],
+  "commandEnvelope": {
+    "command": "string user's phrase or typed request",
+    "language": "en|fr|sw|ar|es",
+    "mode": "User|Admin|Investor",
+    "inputMode": "voice|text|native",
+    "outputMode": "voice|text|both",
+    "location": { "label": "optional", "latitude": "optional", "longitude": "optional" },
+    "attachments": [{ "type": "image|video|audio|document", "url": "native secure file URL or uploaded URL", "caption": "optional" }],
+    "requiresConfirmation": "boolean for health, payment, buyer contact, provider contact, route change, or job application"
+  },
+  "webCallbacks": {
+    "onWake": "window.AgriNexusNativeBridge.receive({ type: 'voice.wake', phrase, language })",
+    "onTranscript": "window.AgriNexusNativeBridge.receive({ type: 'voice.final_transcript', transcript, language, confidence })",
+    "onInterrupt": "window.AgriNexusNativeBridge.receive({ type: 'voice.interrupt' })",
+    "onLocation": "window.AgriNexusNativeBridge.receive({ type: 'location.route_update', latitude, longitude, speed, heading })",
+    "onMedia": "window.AgriNexusNativeBridge.receive({ type: 'camera.media_attached', media })",
+    "onPermission": "window.AgriNexusNativeBridge.receive({ type: 'voice.permission_changed', permission, status })"
+  },
   "apiEndpoints": {
     "command": "/api/agent/command",
     "voice": "/api/voice/respond",
+    "voiceTranscribe": "/api/voice/transcribe",
+    "nativeRuntime": "/api/native/voice-runtime",
     "liveServices": "/api/production/live-service-check",
     "memory": "/api/agent/memory-summary",
     "telehealth": "/api/health/intake",
     "workforce": "/api/workforce/apply",
     "trade": "/api/trade/action"
   },
+  "offlineQueue": {
+    "queueableCommands": ["agent.command", "notification.schedule", "route.track", "media.attach"],
+    "syncEndpoint": "/api/agent/command",
+    "conflictRule": "If an offline command affects health, payment, buyer contact, provider contact, or job application, ask the user to confirm again before live sync."
+  },
+  "providerRequirements": {
+    "highQualityVoice": ["OPENAI_API_KEY", "VOICE_STT_PROVIDER=openai", "VOICE_TTS_PROVIDER=openai", "OPENAI_TTS_VOICE"],
+    "phoneAssistant": ["PHONE_PROVIDER=twilio", "TWILIO_ACCOUNT_SID", "TWILIO_AUTH_TOKEN", "TWILIO_PHONE_NUMBER", "PUBLIC_BASE_URL"],
+    "smsWhatsApp": ["TWILIO_ACCOUNT_SID", "TWILIO_AUTH_TOKEN", "TWILIO_PHONE_NUMBER", "DEMO_SMS_TO or channel-specific recipient", "DEMO_WHATSAPP_TO or channel-specific recipient"],
+    "mapsAndLocation": ["MAPBOX_ACCESS_TOKEN or GOOGLE_MAPS_API_KEY or OPENROUTESERVICE_API_KEY"],
+    "productionMemory": ["DATABASE_URL", "AGRINEXUS_STATE_STORE=postgres"]
+  },
+  "moduleVoiceExamples": {
+    "learning": ["Nexus, start a course", "Nexus, explain this lesson", "Nexus, make captions"],
+    "workforce": ["Nexus, show jobs", "Nexus, help me apply", "Nexus, prepare me for interview"],
+    "telehealth": ["Nexus, start intake", "Nexus, call the provider", "Nexus, attach a video for the provider"],
+    "trade": ["Nexus, sell my crop", "Nexus, message buyer", "Nexus, track my delivery"],
+    "maps": ["Nexus, open map", "Nexus, track my route", "Nexus, show risk near me"],
+    "drone": ["Nexus, run drone scan", "Nexus, explain crop damage", "Nexus, create field task"]
+  },
   "productionNotes": [
     "Browser mode can listen only while permission and tab focus allow it.",
-    "Native mode can request OS-level microphone, notification, GPS, and background task permissions.",
-    "Always-on wake should be implemented with an OS-approved wake/listening flow and clear privacy controls."
+    "Native mode can request OS-level microphone, notification, GPS, camera, and background task permissions.",
+    "Always-on wake should be implemented with an OS-approved wake/listening flow and clear privacy controls.",
+    "The web app should remain fully functional without native mode; native mode adds deeper permissions rather than replacing core workflows.",
+    "Every native command must still pass through AgriNexus confirmation gates for sensitive actions."
   ]
 }
