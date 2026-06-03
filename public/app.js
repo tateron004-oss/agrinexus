@@ -51,8 +51,8 @@ let routeTrackingWatchId = null;
 let routeTrackingPoints = [];
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-154";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v134";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-155";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v135";
 
 const countryLanguageMap = {
   nigeria: "en",
@@ -4121,6 +4121,7 @@ function goSection(sectionId, options = {}) {
   if (experienceMode === "user" && options.keepAssistant !== true) closeAskNexus({ silent: true });
   if (sectionId === "map") setTimeout(() => map && map.invalidateSize(), 100);
   renderUserSimpleActiveSection(sectionId);
+  if (experienceMode === "user" && sectionId === "dashboard") renderUserWorkspace();
   if (experienceMode === "user" && options.openDefaultAction === true) {
     queueMicrotask(() => openDefaultUserSectionAction(sectionId));
   }
@@ -7377,7 +7378,7 @@ function renderUserWorkspace() {
   const target = $("#userWorkspace");
   if (!target) return;
   const intelligence = modeIntelligenceSnapshot("user");
-  const guideCommand = intelligence.topPriority.command || "what should I do next";
+  const guideCommand = "help me understand the platform";
   const serviceButtons = [
     { label: "Talk to Nexus", detail: "Speak or type what you need.", section: "ask", className: "service-ask", ask: true, photo: "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=900&q=70" },
     { label: "Learn", detail: "Start a course or finish a lesson.", section: "learning", className: "service-learning", photo: "https://images.unsplash.com/photo-1522202176988-66273c2fd55f?auto=format&fit=crop&w=900&q=70" },
@@ -7397,7 +7398,7 @@ function renderUserWorkspace() {
       <button type="button" class="user-fast-action guide" data-simple-command="${escapeHtml(guideCommand)}">
         ${userVisualIconHtml("agent")}
         <strong>${translateText("Guide me")}</strong>
-        <span>${translateText(intelligence.topPriority.title || "Nexus chooses the next safe step.")}</span>
+        <span>${translateText("Open a simple guided help process.")}</span>
       </button>
       <button type="button" class="user-fast-action language" data-toggle-user-language>
         ${userVisualIconHtml("map")}
@@ -7431,6 +7432,41 @@ function renderUserWorkspace() {
       </button>`).join("")}
     </section>
   `;
+}
+
+function renderUserAccessibilityPanel() {
+  if (experienceMode !== "user") return;
+  goSection("dashboard", { instant: true, scroll: false });
+  const target = $("#userWorkspace");
+  if (!target) return;
+  const toggles = [
+    { key: "largeText", label: "Large text", detail: "Makes words easier to read." },
+    { key: "highContrast", label: "High contrast", detail: "Makes buttons and text stronger." },
+    { key: "reducedMotion", label: "Reduce motion", detail: "Stops extra movement." },
+    { key: "screenReader", label: "Screen reader", detail: "Improves labels for assistive tools." }
+  ];
+  target.innerHTML = `
+    <section id="userAccessibilityPanel" class="user-simple-module user-accessibility-module" aria-label="${translateText("Accessibility help")}">
+      <div class="user-module-nav">
+        <button type="button" class="user-module-back" data-simple-section="dashboard">${translateText("Home")}</button>
+        <button type="button" class="user-module-close" data-close-user-accessibility aria-label="${translateText("Close")}">${translateText("Close")}</button>
+      </div>
+      <span class="eyebrow">${translateText("Accessibility")}</span>
+      <h2>${translateText("Make AgriNexus easier to use")}</h2>
+      <p>${translateText("Choose what helps you see, hear, read, or move through the app. You can change this any time.")}</p>
+      <div class="user-accessibility-buttons">
+        ${toggles.map(item => `<button type="button" data-accessibility="${item.key}" aria-pressed="${Boolean(accessibilityPrefs[item.key])}">
+          <strong>${translateText(item.label)}</strong>
+          <span>${translateText(item.detail)}</span>
+          <small>${translateText(accessibilityPrefs[item.key] ? "On" : "Off")}</small>
+        </button>`).join("")}
+      </div>
+      <div class="user-module-status" role="status">${translateText("Nexus can also read aloud, show captions, and use voice commands.")}</div>
+    </section>
+  `;
+  applyAccessibilityPrefs();
+  setVoiceResponse("Accessibility help is open. Choose large text, high contrast, reduce motion, or screen reader support.", false, { allowVoiceFirst: false });
+  $("#userAccessibilityPanel")?.focus?.({ preventScroll: true });
 }
 
 const simpleUserSections = {
@@ -13864,6 +13900,25 @@ function bindStatic() {
       $("#userLanguagePanel")?.classList.add("hidden");
       return;
     }
+    if (event.target.closest("[data-close-user-accessibility]")) {
+      event.preventDefault();
+      event.stopPropagation();
+      renderUserWorkspace();
+      updateUserBackHome("dashboard");
+      return;
+    }
+    const accessibilityButton = event.target.closest("[data-accessibility]");
+    if (accessibilityButton) {
+      event.preventDefault();
+      event.stopPropagation();
+      toggleAccessibilityPref(accessibilityButton.dataset.accessibility);
+      if (experienceMode === "user" && $("#userAccessibilityPanel")) {
+        accessibilityButton.querySelector("small") && (accessibilityButton.querySelector("small").textContent = translateText(accessibilityPrefs[accessibilityButton.dataset.accessibility] ? "On" : "Off"));
+        const status = $("#userAccessibilityPanel .user-module-status");
+        if (status) status.textContent = translateText(`${accessibilityButton.querySelector("strong")?.textContent || "Accessibility option"} ${accessibilityPrefs[accessibilityButton.dataset.accessibility] ? "enabled" : "disabled"}.`);
+      }
+      return;
+    }
     const userVoiceButton = event.target.closest("[data-user-voice-action]");
     if (userVoiceButton) {
       event.preventDefault();
@@ -14196,6 +14251,13 @@ function bindStatic() {
   });
   $("#workspaceAskBtn").onclick = openAskNexus;
   $("#accessibilityToggle").onclick = () => {
+    if (experienceMode === "user") {
+      $("#accessibilityPanel")?.classList.add("hidden");
+      $("#accessibilityToggle").setAttribute("aria-expanded", "true");
+      renderUserAccessibilityPanel();
+      announce("Accessibility help opened");
+      return;
+    }
     const panel = $("#accessibilityPanel");
     const willOpen = panel.classList.contains("hidden");
     panel.classList.toggle("hidden", !willOpen);

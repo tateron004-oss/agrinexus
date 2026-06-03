@@ -215,9 +215,14 @@ for (const [section, buttons] of Object.entries(expectedSections)) {
   assert(styles.includes(marker), `User workflow containment style missing: ${marker}`);
 });
 
-assert(html.includes("/app.js?v=nexus-behavior-154"), "Index must force browsers to load current User-mode workflow JS");
-assert(html.includes("/styles.css?v=nexus-behavior-154"), "Index must force browsers to load current User-mode workflow CSS");
-assert(sw.includes('CACHE_NAME = "agrinexus-pwa-v134"'), "Service worker cache must be bumped after User-mode workflow fixes");
+assert(html.includes("/app.js?v=nexus-behavior-155"), "Index must force browsers to load current User-mode workflow JS");
+assert(html.includes("/styles.css?v=nexus-behavior-155"), "Index must force browsers to load current User-mode workflow CSS");
+assert(sw.includes('CACHE_NAME = "agrinexus-pwa-v135"'), "Service worker cache must be bumped after User-mode workflow fixes");
+assert(app.includes('const guideCommand = "help me understand the platform"'), "Guide Me must map to a visible user workflow instead of a silent dynamic command");
+assert(app.includes("function renderUserAccessibilityPanel"), "User mode needs a contained accessibility panel with its own controls");
+assert(app.includes("[data-close-user-accessibility]"), "User accessibility panel needs a close control");
+assert(styles.includes("body.user-mode .user-accessibility-buttons"), "User accessibility buttons need contained app-mode styling");
+assert(styles.includes("word-break: normal"), "User mode text should not run vertically from aggressive word breaking");
 
 console.log("User mode workflow audit passed");
 console.log("Checked: every simple app tab/button maps to a workflow, course/job choices are visible, User mode uses inline confirmations, assistant windows have anti-partial containment, and no user-facing repair controls are exposed.");
