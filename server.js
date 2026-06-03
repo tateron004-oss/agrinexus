@@ -6850,6 +6850,99 @@ async function translateDynamicContent(db, user, { text, targetLanguage, sourceL
   return { sourceText: text, translatedText, sourceLanguage, targetLanguage, provider };
 }
 
+const TRANSLATED_DISPLAY_KEYS = new Set([
+  "response", "title", "label", "helper", "summary", "detail", "description", "message", "reason",
+  "action", "nextAction", "nextQuestion", "prompt", "rule", "frame", "userModeRule", "adminModeRule",
+  "investorModeRule", "statusText", "module", "priority", "goal", "productName", "buyerLocation",
+  "sellerLocation", "routeName", "checkpoint", "providerStatus", "mapProviderStatus",
+  "logisticsProviderStatus", "unclearSpeech", "providerFailure", "safetyEscalation",
+  "offlineOrSlowNetwork", "stopCommand", "localNow", "liveLater", "name", "engine", "missing",
+  "suggestedReplies", "nextSteps", "boundaries", "reliabilityContract", "nextGaps", "liveGaps",
+  "steps", "commands", "suggestedCommands", "actions", "options"
+]);
+
+const STABLE_DISPLAY_KEYS = new Set([
+  "id", "mode", "intent", "type", "tool", "role", "email", "createdBy", "createdAt", "updatedAt",
+  "packetNumber", "packetId", "routeId", "countryId", "providerId", "moduleId", "section",
+  "redirectSection", "sourceLanguage", "targetLanguage", "provider", "providerReady", "connected",
+  "permissions", "origin", "destination", "coordinates", "lat", "lng", "latitude", "longitude",
+  "distanceKm", "confidence", "score", "ready", "readyCount", "total", "liveRoutingConfigured",
+  "liveRoutingReady", "gpsTrackingReady", "confirmationRequired", "createdAt"
+]);
+
+function shouldTranslateDisplayString(key, value) {
+  const text = String(value || "").trim();
+  if (!text) return false;
+  if (STABLE_DISPLAY_KEYS.has(key)) return false;
+  if (/\b[A-Z0-9]{8,}-[A-Z0-9-]{4,}\b/i.test(text)) return false;
+  if (/^https?:\/\//i.test(text)) return false;
+  if (/^[a-z0-9_.:-]+$/i.test(text) && !text.includes(" ")) return false;
+  return TRANSLATED_DISPLAY_KEYS.has(key) || /Rule$|Text$|Summary$|Reason$|Message$|Action$|Question$/i.test(key);
+}
+
+async function translateDisplayValue(db, user, value, targetLanguage, context, cache, budget, key = "") {
+  if (!targetLanguage || targetLanguage === "en") return value;
+  if (typeof value === "string") {
+    if (!shouldTranslateDisplayString(key, value)) return value;
+    const cacheKey = `${targetLanguage}:${value}`;
+    if (cache.has(cacheKey)) return cache.get(cacheKey);
+    if (budget.count >= budget.max) return value;
+    budget.count += 1;
+    const translation = await translateDynamicContent(db, user, {
+      text: value,
+      sourceLanguage: "en",
+      targetLanguage,
+      context
+    });
+    const translated = translation.translatedText || value;
+    cache.set(cacheKey, translated);
+    return translated;
+  }
+  if (Array.isArray(value)) {
+    const translated = [];
+    for (const item of value) {
+      translated.push(await translateDisplayValue(db, user, item, targetLanguage, context, cache, budget, key));
+    }
+    return translated;
+  }
+  if (value && typeof value === "object") {
+    const translated = {};
+    for (const [childKey, childValue] of Object.entries(value)) {
+      if (STABLE_DISPLAY_KEYS.has(childKey)) {
+        translated[childKey] = childValue;
+      } else {
+        translated[childKey] = await translateDisplayValue(db, user, childValue, targetLanguage, `${context}:${childKey}`, cache, budget, childKey);
+      }
+    }
+    return translated;
+  }
+  return value;
+}
+
+async function translateAgentDisplayBundle(db, user, result = {}, targetLanguage = "en") {
+  if (!targetLanguage || targetLanguage === "en") return null;
+  const metadata = result.metadata || {};
+  const displayBundle = {
+    response: result.response || "",
+    suggestedReplies: metadata.suggestedReplies || [],
+    turnCoach: metadata.turnCoach || null,
+    situationAgent: metadata.situationAgent || null,
+    preProviderHardening: metadata.preProviderHardening || null,
+    packet: metadata.packet || null,
+    missionBrain: metadata.missionBrain || null,
+    trustedOperatingSystem: metadata.trustedOperatingSystem || null,
+    voiceMission: metadata.voiceMission || null
+  };
+  const cache = new Map();
+  const budget = { count: 0, max: 90 };
+  const localized = await translateDisplayValue(db, user, displayBundle, targetLanguage, `agent-display:${result.intent || "unknown"}`, cache, budget);
+  return {
+    ...localized,
+    translationBudgetUsed: budget.count,
+    preservedSystemFields: true
+  };
+}
+
 async function translateAgentCommandResult(db, user, result = {}, options = {}) {
   const targetLanguage = options.targetLanguage || user?.language || db.profile.accessibilityProfile?.language || "en";
   if (!targetLanguage || targetLanguage === "en" || !result.response) return result;
@@ -6859,13 +6952,19 @@ async function translateAgentCommandResult(db, user, result = {}, options = {}) 
     targetLanguage,
     context: `agent-command:${result.intent || "unknown"}`
   });
-  return {
+  const translatedResult = {
     ...result,
-    response: translation.translatedText || result.response,
+    response: translation.translatedText || result.response
+  };
+  const localized = await translateAgentDisplayBundle(db, user, translatedResult, targetLanguage);
+  return {
+    ...translatedResult,
     metadata: {
       ...(result.metadata || {}),
       originalResponse: result.response,
       translatedResponse: true,
+      translatedDisplay: true,
+      localized,
       translation: {
         targetLanguage,
         sourceLanguage: "en",

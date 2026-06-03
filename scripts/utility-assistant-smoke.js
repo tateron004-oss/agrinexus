@@ -43,7 +43,7 @@ async function call(route, body) {
   fs.copyFileSync(sourceDb, tempDb);
   const server = spawn(process.execPath, ["server.js"], {
     cwd: root,
-    env: { ...process.env, PORT: String(port), AGRINEXUS_DB_PATH: tempDb },
+    env: { ...process.env, PORT: String(port), AGRINEXUS_DB_PATH: tempDb, OPENAI_API_KEY: "" },
     stdio: "ignore",
     windowsHide: true
   });
@@ -146,6 +146,16 @@ async function call(route, body) {
     assert(missionBrain.commandResult.metadata.missionBrain.layers.some(layer => layer.id === "safety-compliance-brain"), "Mission Brain should include safety compliance");
     assert((missionBrain.profile.missionBrainRuns || []).length >= 1, "Mission Brain should persist mission brain runs");
     assert(missionBrain.profile.integrationEvents.some(event => event.action === "agent.mission_brain_planned"), "Mission Brain should log audit evidence");
+    const translatedMissionBrain = await call("/api/agent/command", {
+      command: "Nexus, activate the new mission brain to help sell crops, track route, and message buyer",
+      conversational: true,
+      inputMode: "voice",
+      outputMode: "voice",
+      targetLanguage: "fr"
+    });
+    assert.strictEqual(translatedMissionBrain.commandResult.metadata.translatedDisplay, true, "Mission Brain should translate display metadata");
+    assert.strictEqual(translatedMissionBrain.commandResult.metadata.localized.missionBrain.layers.length, 10, "Localized Mission Brain should include all 10 translated layers");
+    assert.notStrictEqual(translatedMissionBrain.commandResult.metadata.localized.missionBrain.layers[0].title, translatedMissionBrain.commandResult.metadata.missionBrain.layers[0].title, "Localized Mission Brain layer title should change from English");
     const trustedOs = await call("/api/agent/command", {
       command: "Nexus, run a trusted operating system review people can rely on",
       conversational: true,
@@ -167,6 +177,26 @@ async function call(route, body) {
     assert(trustedOs.commandResult.metadata.trustedOperatingSystem.pillars.some(pillar => pillar.id === "production-hardening"), "Trusted OS should include production hardening");
     assert((trustedOs.profile.trustedOsReviews || []).length >= 1, "Trusted OS should persist reviews");
     assert(trustedOs.profile.integrationEvents.some(event => event.action === "agent.trusted_os_reviewed"), "Trusted OS should log audit evidence");
+    const translatedTrustedOs = await call("/api/agent/command", {
+      command: "Nexus, run a trusted operating system review people can rely on",
+      conversational: true,
+      inputMode: "voice",
+      outputMode: "voice",
+      targetLanguage: "sw"
+    });
+    assert.strictEqual(translatedTrustedOs.commandResult.metadata.translatedDisplay, true, "Trusted OS should translate display metadata");
+    assert.strictEqual(translatedTrustedOs.commandResult.metadata.localized.trustedOperatingSystem.pillars.length, 10, "Localized Trusted OS should include all 10 translated pillars");
+    assert.notStrictEqual(translatedTrustedOs.commandResult.metadata.localized.trustedOperatingSystem.pillars[0].title, translatedTrustedOs.commandResult.metadata.trustedOperatingSystem.pillars[0].title, "Localized Trusted OS pillar title should change from English");
+    const translatedBuyerRoute = await call("/api/agent/command", {
+      command: "Nexus, a buyer purchased my products in Lagos and I am in Kenya. Track the delivery location.",
+      conversational: true,
+      inputMode: "voice",
+      outputMode: "voice",
+      targetLanguage: "es"
+    });
+    assert.strictEqual(translatedBuyerRoute.commandResult.metadata.translatedDisplay, true, "Buyer route should translate display metadata");
+    assert.strictEqual(translatedBuyerRoute.commandResult.metadata.localized.packet.nextSteps.length, translatedBuyerRoute.commandResult.metadata.packet.nextSteps.length, "Localized buyer route should translate packet next steps");
+    assert.notStrictEqual(translatedBuyerRoute.commandResult.metadata.localized.packet.nextSteps[0], translatedBuyerRoute.commandResult.metadata.packet.nextSteps[0], "Localized buyer route next step should change from English");
   } finally {
     server.kill();
     try {
@@ -188,6 +218,9 @@ async function call(route, body) {
   console.log("- Ask Nexus backend Situation Agent eight-point model");
   console.log("- Ask Nexus pre-provider hardening model");
   console.log("- Ask Nexus backend shipment answer");
+  console.log("- Ask Nexus translated Mission Brain display metadata");
+  console.log("- Ask Nexus translated Trusted OS display metadata");
+  console.log("- Ask Nexus translated buyer route packet metadata");
   console.log("- Ask Nexus backend appointment answer");
   console.log("- Ask Nexus backend daily plan answer");
   console.log("- Ask Nexus backend next-step answer");

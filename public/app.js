@@ -51,8 +51,8 @@ let routeTrackingWatchId = null;
 let routeTrackingPoints = [];
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-151";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v131";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-152";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v132";
 
 const countryLanguageMap = {
   nigeria: "en",
@@ -6632,8 +6632,23 @@ function voiceErrorRecovery(error, command = "") {
   return true;
 }
 
+function htmlSafe(value) {
+  return String(value ?? "").replace(/[&<>"']/g, char => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;", "'": "&#39;" }[char]));
+}
+
+function localizedVoiceSuggestionItems(result = {}, fallback = []) {
+  const raw = Array.isArray(result.metadata?.suggestedReplies) && result.metadata.suggestedReplies.length ? result.metadata.suggestedReplies : fallback;
+  const translated = result.metadata?.localized?.suggestedReplies || [];
+  return raw.map((command, index) => ({
+    command,
+    label: translated[index] && translated[index] !== command ? translated[index] : translateText(command)
+  }));
+}
+
 function voiceCommandButton(command) {
-  return `<button type="button" data-voice-example="${command}">${translateText(command)}</button>`;
+  const value = typeof command === "object" ? command.command || command.value || command.label || "" : command;
+  const label = typeof command === "object" ? command.label || command.text || value : translateText(value);
+  return `<button type="button" data-voice-example="${htmlSafe(value)}">${htmlSafe(label)}</button>`;
 }
 
 function voicePhrase(command) {
@@ -13145,12 +13160,13 @@ async function runBackendAgentCommand(command, locationContext = null) {
     if (result.intent === "conversation.language_changed" || result.metadata?.language || previousLanguage !== languageCode()) {
       refreshVoiceForLanguageChange();
     }
-    renderLiveVoiceSuggestions(result.metadata?.suggestedReplies?.length ? result.metadata.suggestedReplies : contextualVoiceSuggestions(result.metadata?.redirectSection || currentSectionId()));
+    renderLiveVoiceSuggestions(localizedVoiceSuggestionItems(result, contextualVoiceSuggestions(result.metadata?.redirectSection || currentSectionId())));
     if (result.metadata?.voiceMission?.phrase && $("#globalAssistantStatus")) {
       $("#globalAssistantStatus").textContent = result.metadata.voiceMission.phrase;
     }
     if (result.metadata?.turnCoach?.nextQuestion) {
-      renderLiveVoiceSuggestions([result.metadata.turnCoach.nextQuestion, ...(result.metadata?.suggestedReplies || [])]);
+      const turnQuestion = result.metadata?.localized?.turnCoach?.nextQuestion || result.metadata.turnCoach.nextQuestion;
+      renderLiveVoiceSuggestions([{ command: result.metadata.turnCoach.nextQuestion, label: turnQuestion }, ...localizedVoiceSuggestionItems(result, [])]);
     }
     const mode = $("#jarvisMode");
     if (mode) mode.textContent = `conversation turn ${voiceConversationTurns}`;
@@ -13196,7 +13212,7 @@ async function runUtilityAgentCommand(command, fallbackAnswer = "", locationCont
     if (result.intent === "conversation.language_changed" || result.metadata?.language || previousLanguage !== languageCode()) {
       refreshVoiceForLanguageChange();
     }
-    renderLiveVoiceSuggestions(result.metadata?.suggestedReplies?.length ? result.metadata.suggestedReplies : ["what is next today", "track my shipment", "open telehealth", "tell me the weather"]);
+    renderLiveVoiceSuggestions(localizedVoiceSuggestionItems(result, ["what is next today", "track my shipment", "open telehealth", "tell me the weather"]));
     markAgentPerformance("completed", result.intent || "utility-assistant");
     updateNexusAwareness(command, { silent: true });
     updateNexusBehaviorLayer("speaking", result.response || fallbackAnswer || "Done. I am ready for your next question.");
