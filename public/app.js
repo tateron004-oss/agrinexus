@@ -51,8 +51,8 @@ let routeTrackingWatchId = null;
 let routeTrackingPoints = [];
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-147";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v127";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-148";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v128";
 
 const countryLanguageMap = {
   nigeria: "en",
@@ -2675,6 +2675,45 @@ function weatherAssistantAnswer(command = "") {
     : walkingAdvice;
   const source = liveReady ? "live provider or map context" : "platform country context";
   return `Weather check for ${country.name}: about ${heatF} degrees Fahrenheit, ${heatC} Celsius, with ${risk.toLowerCase()} operating risk from ${source}. ${farmAdvice}`;
+}
+
+function isWeatherLocationQuestion(command = "") {
+  const lower = normalizeToolText(command);
+  return /\b(temp|temperature|weather|hot|heat|outside|walk|rain|forecast|clima|meteo|météo|hali ya hewa)\b/.test(lower);
+}
+
+function explicitWeatherPlace(command = "") {
+  const text = String(command || "");
+  const match = text.match(/\b(?:in|for|near|around)\s+([A-Za-z\u00C0-\u024F\s.'-]{3,40})\??$/i);
+  return match?.[1]?.trim() || "";
+}
+
+async function browserWeatherLocation(command = "") {
+  if (!isWeatherLocationQuestion(command)) return null;
+  const explicit = explicitWeatherPlace(command);
+  if (explicit) return { label: explicit, source: "spoken-location" };
+  if (!navigator.geolocation) return null;
+  const secureEnough = window.isSecureContext || ["localhost", "127.0.0.1"].includes(location.hostname);
+  if (!secureEnough) return null;
+  try {
+    setVoiceResponse("I can check the temperature from your current location. Please allow location access if your browser asks.", false, { allowVoiceFirst: false });
+    const position = await new Promise((resolve, reject) => {
+      navigator.geolocation.getCurrentPosition(resolve, reject, { enableHighAccuracy: false, timeout: 8000, maximumAge: 300000 });
+    });
+    return {
+      latitude: Number(position.coords.latitude),
+      longitude: Number(position.coords.longitude),
+      accuracy: Number(position.coords.accuracy || 0),
+      label: "your current location",
+      source: "browser-geolocation"
+    };
+  } catch (error) {
+    return {
+      label: activeCountry().name,
+      source: "location-permission-blocked",
+      error: error?.message || "Location permission was blocked or unavailable."
+    };
+  }
 }
 
 function cropTimingAssistantAnswer() {
@@ -12400,7 +12439,8 @@ async function handleVoiceCommand(rawCommand) {
   if (utilityAnswer) {
     updateNexusBehaviorLayer("answering", "Nexus is answering a practical daily question.");
     renderLiveVoiceSuggestions(["open map", "open telehealth", "track my shipment", "what is next today"]);
-    await runUtilityAgentCommand(command, utilityAnswer);
+    const locationContext = await browserWeatherLocation(command);
+    await runUtilityAgentCommand(command, utilityAnswer, locationContext);
     return;
   }
 
@@ -13060,10 +13100,11 @@ async function handleVoiceCommand(rawCommand) {
 
   if (await runDynamicVoiceTool(command)) return;
 
-  await runBackendAgentCommand(command);
+  const locationContext = await browserWeatherLocation(command);
+  await runBackendAgentCommand(command, locationContext);
 }
 
-async function runBackendAgentCommand(command) {
+async function runBackendAgentCommand(command, locationContext = null) {
   try {
     const previousLanguage = languageCode();
     voiceConversationTurns += 1;
@@ -13082,6 +13123,7 @@ async function runBackendAgentCommand(command) {
         mode: conversationPlatformMode(),
         modeContext: modeConversationContext(command),
         timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+        location: locationContext,
         targetLanguage: languageCode(),
         note: "Command submitted from Nexus Voice Assistant"
       }
@@ -13115,7 +13157,7 @@ async function runBackendAgentCommand(command) {
   }
 }
 
-async function runUtilityAgentCommand(command, fallbackAnswer = "") {
+async function runUtilityAgentCommand(command, fallbackAnswer = "", locationContext = null) {
   try {
     const previousLanguage = languageCode();
     voiceConversationTurns += 1;
@@ -13133,6 +13175,7 @@ async function runUtilityAgentCommand(command, fallbackAnswer = "") {
         mode: conversationPlatformMode(),
         modeContext: modeConversationContext(command),
         timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+        location: locationContext,
         targetLanguage: languageCode(),
         note: "Ask Nexus daily utility assistant"
       }

@@ -9793,7 +9793,7 @@ function extractTemperatureF(text) {
 function utilityAssistantKind(text, lower) {
   const raw = String(text || "").toLowerCase();
   if (/\b(what time is it|current time|time now|tell me the time|hora es|quelle heure|saa ngapi)\b/.test(lower) || /(\u0627\u0644\u0648\u0642\u062a|\u0627\u0644\u0633\u0627\u0639\u0629)/.test(raw)) return "time";
-  if (/\b(weather|temperature|too hot|heat|outside|walk|walking|rain|forecast|clima|meteo|météo|hali ya hewa)\b/.test(lower) || /(\u0627\u0644\u0637\u0642\u0633|\u0627\u0644\u062d\u0631\u0627\u0631\u0629)/.test(raw)) return "weather";
+  if (/\b(weather|temperature|temp|too hot|how hot|heat|outside|walk|walking|rain|forecast|clima|meteo|météo|hali ya hewa)\b/.test(lower) || /(\u0627\u0644\u0637\u0642\u0633|\u0627\u0644\u062d\u0631\u0627\u0631\u0629)/.test(raw)) return "weather";
   if (/\b(crop timing|planting time|when should i plant|when to plant|best time to plant|harvest time|when should i harvest|when to harvest|crop calendar|plant today|harvest today)\b/.test(lower)) return "crop-timing";
   if (/\b(remind me|appointment reminder|reminder|remind|notify me|call reminder|visit reminder)\b/.test(lower) && /\b(appointment|visit|telehealth|doctor|provider|shift|schedule)\b/.test(lower)) return "appointment-reminder";
   if (/\b(route delay|route delays|delay|delays|delayed|traffic|road blocked|roadblock|late delivery|delivery delay|delivery delays|shipment delay|shipment delays|route problem)\b/.test(lower)) return "route-delay";
@@ -9872,22 +9872,24 @@ function utilityShipmentEtaAnswer(db) {
   return `${orderName} for ${product} is at ${activeCheckpoint} on ${route.name}. Stage: ${stage}. Estimated delivery is ${deliveryWindow} from ${source}. ${logistics?.status === "connected" ? "Carrier integration is ready to enrich this with live tracking." : "Live carrier GPS needs a logistics provider connection for exact real-time tracking."}`;
 }
 
-async function utilityWeatherAnswer(db, text) {
-  const context = await dailyContextSnapshot(db, text);
+async function utilityWeatherAnswer(db, text, options = {}) {
+  const context = await dailyContextSnapshot(db, text, options.location || options.currentLocation || null);
   const provider = runtimeProviderById(db, "weather") || runtimeProviderById(db, "map-tiles");
-  const live = context.source === "live-weather-provider" || provider?.status === "connected";
+  const live = context.source === "live-weather-provider" || context.source === "live-open-meteo-browser-location" || provider?.status === "connected";
   const walkingAdvice = context.temperatureF >= 90
     ? "For walking, I recommend early morning or evening, shade, water, and shorter distance."
     : "For walking, conditions look manageable, but check water, shade, and local safety before going.";
   const farmAdvice = /\b(farm|crop|plant|harvest|field|drone|water|irrigat)\b/i.test(text)
     ? "For farming, use this as a planning signal: check field moisture, inspect crop stress, and run drone or map intelligence before planting, watering, or moving harvest."
     : walkingAdvice;
-  return `Weather check for ${context.country}: about ${context.temperatureF} degrees Fahrenheit, ${context.temperatureC} Celsius, with ${String(context.risk || "routine").toLowerCase()} operating risk from ${live ? "live provider context" : "platform country context"}. ${farmAdvice}`;
+  const locationLine = context.location ? "using your current browser location" : `for ${context.country}`;
+  const windLine = context.windSpeed ? ` Wind is about ${context.windSpeed}.` : "";
+  return `Weather check ${locationLine}: about ${context.temperatureF} degrees Fahrenheit, ${context.temperatureC} Celsius, with ${String(context.risk || "routine").toLowerCase()} operating risk from ${live ? "live provider context" : "platform country context"}.${windLine} ${farmAdvice}`;
 }
 
-async function utilityCropTimingAnswer(db, text) {
+async function utilityCropTimingAnswer(db, text, options = {}) {
   const { country, route } = activeContext(db);
-  const context = await dailyContextSnapshot(db, text);
+  const context = await dailyContextSnapshot(db, text, options.location || options.currentLocation || null);
   const product = (db.products || []).find(item => item.countryId === country.id) || (db.products || [])[0];
   const latestScan = latestRecordByDate(db.profile.droneScans || [], ["createdAt"]);
   const cropScore = Number(latestScan?.cropHealthScore || 0);
@@ -9972,9 +9974,9 @@ function utilityFieldAlertAnswer(db) {
   return `Field alert for ${latestScan.productName || product?.name || "the active crop"}: crop health is ${score || "recorded"}%, severity is ${severity}, and yield estimate is ${latestScan.yieldEstimate || "recorded"}. Next step: ${next} Route context is ${route.name} at ${db.profile.activeCheckpoint}.`;
 }
 
-async function utilityHealthSafetyAnswer(db, text) {
+async function utilityHealthSafetyAnswer(db, text, options = {}) {
   const { country } = activeContext(db);
-  const context = await dailyContextSnapshot(db, text);
+  const context = await dailyContextSnapshot(db, text, options.location || options.currentLocation || null);
   const intake = latestRecordByDate(db.profile.healthIntakes || [], ["createdAt"]);
   const heatLine = context.temperatureF >= 90
     ? "Heat risk is elevated. Use shade, water, rest, and avoid the hottest part of the day."
@@ -10167,9 +10169,9 @@ async function utilityAssistantCommandResponse(db, user, text, lower, options = 
   const response = kind === "time"
     ? utilityTimeAnswer(options)
     : kind === "weather"
-      ? await utilityWeatherAnswer(db, text)
+      ? await utilityWeatherAnswer(db, text, options)
       : kind === "crop-timing"
-        ? await utilityCropTimingAnswer(db, text)
+        ? await utilityCropTimingAnswer(db, text, options)
         : kind === "appointment-reminder"
           ? utilityAppointmentReminderAnswer(db, user, options)
           : kind === "route-delay"
@@ -10179,7 +10181,7 @@ async function utilityAssistantCommandResponse(db, user, text, lower, options = 
               : kind === "field-alert"
                 ? utilityFieldAlertAnswer(db)
                 : kind === "health-safety"
-                  ? await utilityHealthSafetyAnswer(db, text)
+                  ? await utilityHealthSafetyAnswer(db, text, options)
       : kind === "shipment"
         ? utilityShipmentEtaAnswer(db)
         : kind === "appointment"
@@ -10215,7 +10217,7 @@ async function utilityAssistantCommandResponse(db, user, text, lower, options = 
     module: "Agent AI",
     action: `utility.${kind}`,
     detail: response.slice(0, 240),
-    metadata: { kind, timeZone: options.timeZone || "", command: text, situationAgent, preProviderHardening: preProviderModel },
+    metadata: { kind, timeZone: options.timeZone || "", command: text, situationAgent, preProviderHardening: preProviderModel, location: options.location || options.currentLocation || null },
     dispatch: false
   });
   return {
@@ -10229,6 +10231,7 @@ async function utilityAssistantCommandResponse(db, user, text, lower, options = 
       situationAgent,
       preProviderHardening: preProviderModel,
       kind,
+      location: options.location || options.currentLocation || null,
       suggestedReplies: ["what should I do next", "track my shipment", "message buyer", "field alert", "health safety reminder", "what works without providers"]
     }
   };
@@ -10236,18 +10239,47 @@ async function utilityAssistantCommandResponse(db, user, text, lower, options = 
 
 async function dailyContextSnapshot(db, text) {
   const { country, route } = activeContext(db);
+  const requestedLocation = arguments.length > 2 ? arguments[2] || {} : {};
   const fallbackTempF = extractTemperatureF(text) || fahrenheitFromCelsius(country.heat || 31);
   const providerUrl = process.env.DAILY_CONTEXT_WEBHOOK_URL || process.env.WEATHER_WEBHOOK_URL || process.env.WEATHER_API_URL || "";
+  const latitude = Number(requestedLocation.latitude || requestedLocation.lat || 0);
+  const longitude = Number(requestedLocation.longitude || requestedLocation.lon || requestedLocation.lng || 0);
+  const hasCoordinates = Number.isFinite(latitude) && Number.isFinite(longitude) && latitude >= -90 && latitude <= 90 && longitude >= -180 && longitude <= 180 && (latitude || longitude);
+  const locationLabel = requestedLocation.label || requestedLocation.city || requestedLocation.country || country.name;
   const context = {
-    country: country.name,
+    country: locationLabel,
     route: route.name,
-    source: providerUrl ? "weather-provider-configured" : "platform-context",
+    source: hasCoordinates ? "browser-location-pending-weather" : providerUrl ? "weather-provider-configured" : "platform-context",
     temperatureF: fallbackTempF,
     temperatureC: Math.round((fallbackTempF - 32) * 5 / 9),
     heatProfileC: country.heat,
     risk: country.risk || "Routine",
-    providerStatus: providerUrl ? "not-called" : "not-configured"
+    providerStatus: hasCoordinates ? "browser-location-received" : providerUrl ? "not-called" : "not-configured",
+    location: hasCoordinates ? { latitude, longitude, label: locationLabel, source: requestedLocation.source || "browser-geolocation" } : null
   };
+  if (hasCoordinates && (!providerUrl || /open-meteo|openmeteo/i.test(providerUrl))) {
+    try {
+      const url = providerUrl && providerUrl.includes("api.open-meteo.com")
+        ? `${providerUrl}${providerUrl.includes("?") ? "&" : "?"}latitude=${latitude}&longitude=${longitude}&current=temperature_2m,weather_code,wind_speed_10m,precipitation&temperature_unit=fahrenheit&timezone=auto`
+        : `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m,weather_code,wind_speed_10m,precipitation&temperature_unit=fahrenheit&timezone=auto`;
+      const response = await fetchWithTimeout(url, { headers: { accept: "application/json" } }, 5000);
+      context.providerStatus = response.ok ? "open-meteo-live" : `open-meteo-${response.status}`;
+      if (response.ok) {
+        const parsed = await response.json().catch(() => ({}));
+        const temp = Number(parsed.current?.temperature_2m || parsed.current_weather?.temperature || 0);
+        if (temp) {
+          context.temperatureF = Math.round(temp);
+          context.temperatureC = Math.round((temp - 32) * 5 / 9);
+          context.source = "live-open-meteo-browser-location";
+          context.weatherCode = parsed.current?.weather_code ?? parsed.current_weather?.weathercode ?? null;
+          context.windSpeed = parsed.current?.wind_speed_10m ?? parsed.current_weather?.windspeed ?? null;
+          context.precipitation = parsed.current?.precipitation ?? null;
+        }
+      }
+    } catch (error) {
+      context.providerStatus = "open-meteo-error";
+    }
+  }
   if (!providerUrl) return context;
   try {
     const url = providerUrl.includes("?")
@@ -14616,6 +14648,7 @@ async function api(req, res, url) {
       modeContext: body.modeContext,
       note: body.note,
       timeZone: body.timeZone,
+      location: body.location || body.currentLocation || null,
       targetLanguage: body.targetLanguage || body.language
     });
     let result = applyHighestFunctionalityMode(db, user, humanizeAgentResult(db, user, rawResult, command), command);

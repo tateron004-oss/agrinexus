@@ -102,6 +102,17 @@ async function call(route, body) {
       assert.notStrictEqual(state.commandResult.response, state.commandResult.metadata.originalResponse, `${targetLanguage} response should not remain English-only`);
       assert.strictEqual(state.commandResult.metadata.preProviderHardening.mode, "nexus-pre-provider-hardening", `${targetLanguage} should preserve the hardening model metadata`);
     }
+    const locatedWeather = await call("/api/agent/command", {
+      command: "Nexus, what's the temp like?",
+      conversational: true,
+      inputMode: "voice",
+      outputMode: "voice",
+      location: { latitude: 6.5244, longitude: 3.3792, label: "Lagos", source: "smoke-test" },
+      timeZone: "Africa/Lagos"
+    });
+    assert.strictEqual(locatedWeather.commandResult.intent, "utility.weather", "weather question with coordinates should stay utility.weather");
+    assert.strictEqual(locatedWeather.commandResult.metadata.location.label, "Lagos", "weather command should preserve supplied location");
+    assert(/current browser location|Lagos|location/i.test(locatedWeather.commandResult.response), "weather response should reference location context");
   } finally {
     server.kill();
     try {
@@ -127,6 +138,7 @@ async function call(route, body) {
   console.log("- Ask Nexus backend daily plan answer");
   console.log("- Ask Nexus backend next-step answer");
   console.log("- Ask Nexus pre-provider multilingual responses: es, fr, sw, ar");
+  console.log("- Ask Nexus weather location handoff");
 })().catch(error => {
   console.error(error);
   process.exit(1);
