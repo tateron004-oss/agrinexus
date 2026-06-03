@@ -217,7 +217,8 @@ hasAll(styles, [
   "body.user-mode .assistant-close",
   "white-space: nowrap",
   "body.user-mode .global-assistant-status",
-  "overflow-wrap: anywhere",
+  "overflow-wrap: break-word",
+  "word-break: normal",
   "body.user-mode .grandma-workflow .workflow-fields",
   "body.user-mode .grandma-workflow .task-list",
   "body.user-mode .grandma-workflow .modal-actions button",
@@ -345,8 +346,8 @@ assert(app.includes("Stopped. Ask me the next question or tell me where to go ne
 assert(styles.includes("pointer-events: none") && styles.includes(".user-caption-actions") && styles.includes("pointer-events: auto"), "Caption panel must not block workflow action clicks");
 assert(styles.includes("width: min(300px, calc(100vw - 24px))") && styles.includes("max-height: 138px"), "Caption panel must default to a small bubble");
 assert(styles.includes(".user-caption-panel.expanded") && styles.includes("display: none") && styles.includes("display: grid"), "Caption input controls must appear only in expanded caption mode");
-assert(html.includes("nexus-behavior-157"), "Index must force browsers to load Nexus behavior CSS");
-assert(html.includes("nexus-behavior-157"), "Index must force browsers to load Nexus behavior JS");
+assert(html.includes("nexus-behavior-158"), "Index must force browsers to load Nexus behavior CSS");
+assert(html.includes("nexus-behavior-158"), "Index must force browsers to load Nexus behavior JS");
 assert(html.includes("topSettingsClose"), "Settings menu needs an explicit close control");
 assert(app.includes("voiceShouldResumeAfterUiAction"), "User button actions must preserve active voice listening");
 assert(app.includes("resumeVoiceAfterUiAction(shouldResumeVoice"), "User button actions must restore voice after guided workflows");

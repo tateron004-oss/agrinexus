@@ -52,8 +52,8 @@ let routeTrackingWatchId = null;
 let routeTrackingPoints = [];
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-157";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v137";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-158";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v138";
 
 const countryLanguageMap = {
   nigeria: "en",

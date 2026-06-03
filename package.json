@@ -13,6 +13,7 @@
     "provider-engines:smoke": "node scripts/provider-engines-smoke.js",
     "conversation:smoke": "node scripts/conversation-brain-smoke.js",
     "workflow:audit": "node scripts/workflow-button-audit.js",
+    "grandma:pass": "node scripts/grandma-mode-user-pass.js",
     "user-mode:audit": "node scripts/user-mode-workflow-audit.js",
     "app:behavior-audit": "node scripts/app-behavior-audit.js",
     "app:jarvis-qa": "node scripts/jarvis-behavior-qa.js",
