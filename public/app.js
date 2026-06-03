@@ -51,8 +51,8 @@ let routeTrackingWatchId = null;
 let routeTrackingPoints = [];
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-153";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v133";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-154";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v134";
 
 const countryLanguageMap = {
   nigeria: "en",
@@ -10723,9 +10723,34 @@ function workflowConfig(workflow, action, element) {
       "health-whatsapp": ["Healthcare", "WhatsApp", "WhatsApp provider", "Send a provider support message through WhatsApp when Twilio recipient settings are configured."],
       "provider-chat": ["Platform", "in-app chat", "Message provider desk", "Open a provider support thread for credentials, engines, deployment, billing, or operations support."],
       "provider-sms": ["Platform", "SMS", "SMS provider desk", "Send provider support through SMS when Twilio recipient settings are configured."],
-      "provider-whatsapp": ["Platform", "WhatsApp", "WhatsApp provider desk", "Send provider support through WhatsApp when Twilio recipient settings are configured."]
+      "provider-whatsapp": ["Platform", "WhatsApp", "WhatsApp provider desk", "Send provider support through WhatsApp when Twilio recipient settings are configured."],
+      "outbound-call": ["Platform", "Phone", "Place outbound call", "Place a real outbound phone call through Twilio when a destination number and live phone credentials are configured."]
     };
     const [moduleName, channel, title, summary] = communicationMap[action] || ["Platform", "in-app chat", "Open communication thread", "Open a two-way communication thread and record provider-ready evidence."];
+    if (action === "outbound-call") {
+      return simpleWorkflowConfig({
+        eyebrow: "Phone assistant",
+        title,
+        summary,
+        confirmLabel: "Place call",
+        path: "/api/voice/phone/outbound-call",
+        body: {
+          module: moduleName,
+          purpose: "AgriNexus outbound support call",
+          message: "This is AgriNexus calling. You can speak after the greeting and the AI assistant will help route the next step."
+        },
+        success: "Outbound call workflow processed",
+        record: "Phone call request, Twilio delivery status, voice session, and provider audit evidence",
+        provider: "Live outbound calls require PHONE_PROVIDER=twilio, TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_PHONE_NUMBER, PUBLIC_BASE_URL, and DEMO_CALL_TO or a destination number.",
+        userOutcome: "AgriNexus places the call when live Twilio settings and a destination number are configured.",
+        userRecord: "The outbound call request is recorded with provider status and next setup requirements.",
+        checklist: [
+          { title: "Caller", detail: "Uses the configured Twilio phone number.", status: "ready", label: "Twilio" },
+          { title: "Destination", detail: "Uses DEMO_CALL_TO, buyer/provider/recruiter env number, or supplied phone number.", status: "pending", label: "To" },
+          { title: "Voice handoff", detail: "Recipient hears AgriNexus and can speak back to the phone assistant.", status: "ready", label: "AI voice" }
+        ]
+      });
+    }
     return simpleWorkflowConfig({
       eyebrow: "Two-way communication",
       title,

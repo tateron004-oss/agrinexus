@@ -43,7 +43,17 @@ async function call(route, body) {
   fs.copyFileSync(sourceDb, tempDb);
   const server = spawn(process.execPath, ["server.js"], {
     cwd: root,
-    env: { ...process.env, PORT: String(port), AGRINEXUS_DB_PATH: tempDb, OPENAI_API_KEY: "" },
+    env: {
+      ...process.env,
+      PORT: String(port),
+      AGRINEXUS_DB_PATH: tempDb,
+      OPENAI_API_KEY: "",
+      TWILIO_ACCOUNT_SID: "",
+      TWILIO_AUTH_TOKEN: "",
+      TWILIO_PHONE_NUMBER: "",
+      PUBLIC_BASE_URL: "",
+      DEMO_CALL_TO: ""
+    },
     stdio: "ignore",
     windowsHide: true
   });
@@ -197,6 +207,23 @@ async function call(route, body) {
     assert.strictEqual(translatedBuyerRoute.commandResult.metadata.translatedDisplay, true, "Buyer route should translate display metadata");
     assert.strictEqual(translatedBuyerRoute.commandResult.metadata.localized.packet.nextSteps.length, translatedBuyerRoute.commandResult.metadata.packet.nextSteps.length, "Localized buyer route should translate packet next steps");
     assert.notStrictEqual(translatedBuyerRoute.commandResult.metadata.localized.packet.nextSteps[0], translatedBuyerRoute.commandResult.metadata.packet.nextSteps[0], "Localized buyer route next step should change from English");
+    const stagedCall = await call("/api/agent/command", {
+      command: "Nexus, call the buyer",
+      conversational: true,
+      inputMode: "voice",
+      outputMode: "voice"
+    });
+    assert.strictEqual(stagedCall.commandResult.status, "needs-confirmation", "Outbound call voice command should require confirmation first");
+    assert.strictEqual(stagedCall.profile.agentPendingAction.tool, "communications.outbound_call", "Outbound call should stage the outbound call tool");
+    const confirmedCall = await call("/api/agent/command", {
+      command: "yes",
+      conversational: true,
+      inputMode: "voice",
+      outputMode: "voice"
+    });
+    assert.strictEqual(confirmedCall.commandResult.intent, "conversation.confirmed", "Confirmed outbound call should run through confirmation");
+    assert((confirmedCall.profile.outboundCalls || []).length >= 1, "Confirmed outbound call should create an outbound call record");
+    assert(confirmedCall.profile.integrationEvents.some(event => event.action === "phone.outbound_call_requested"), "Outbound call should create provider audit evidence");
   } finally {
     server.kill();
     try {
@@ -221,6 +248,7 @@ async function call(route, body) {
   console.log("- Ask Nexus translated Mission Brain display metadata");
   console.log("- Ask Nexus translated Trusted OS display metadata");
   console.log("- Ask Nexus translated buyer route packet metadata");
+  console.log("- Ask Nexus outbound call staging and confirmation");
   console.log("- Ask Nexus backend appointment answer");
   console.log("- Ask Nexus backend daily plan answer");
   console.log("- Ask Nexus backend next-step answer");

@@ -126,6 +126,8 @@ const endpoints = [
   "/api/agent/briefing",
   "/api/voice/transcribe",
   "/api/voice/speak",
+  "/api/voice/phone/outbound-call",
+  "/api/voice/phone/outbound-twiml",
   "/api/translate",
   "/api/auth/password-reset",
   "/api/billing/checkout",
@@ -423,9 +425,9 @@ assert(app.includes('workflow === "admin-user"'), "Admin test login button needs
 assert(app.includes("Only an existing Admin can run this workflow"), "Admin login flow must explain admin-only protection");
 assert(server.includes('adminAccount.role = "Admin"'), "Backend must force admin test logins to Admin");
 assert(server.includes("admin_user.created"), "Admin test login must create auth audit evidence");
-assert(html.includes("styles.css?v=nexus-behavior-153"), "Index must force browsers to load the latest Nexus behavior shell");
-assert(html.includes("app.js?v=nexus-behavior-153"), "Index must force browsers to load the latest Nexus behavior code");
-assert(sw.includes("agrinexus-pwa-v133"), "Service worker cache must refresh the installed app after native voice bridge updates");
+assert(html.includes("styles.css?v=nexus-behavior-154"), "Index must force browsers to load the latest Nexus behavior shell");
+assert(html.includes("app.js?v=nexus-behavior-154"), "Index must force browsers to load the latest Nexus behavior code");
+assert(sw.includes("agrinexus-pwa-v134"), "Service worker cache must refresh the installed app after native voice bridge updates");
 assert(html.includes("userWorkspace"), "Dashboard needs a User Workspace for standard users");
 assert(html.includes("userMobileDock"), "Legacy mobile dock markup should remain safely hidden for cache compatibility");
 assert(html.includes("What Do You Need Help With Today?"), "Dashboard simple start should use user-ready language");
@@ -824,6 +826,10 @@ assert(app.includes("Slow external engines will time out"), "Live service check 
 assert(server.includes("function fetchWithTimeout"), "External service probes need timeouts so checks cannot hang");
 assert(server.includes("hasTwilioVoice"), "Twilio phone voice readiness must be evaluated without generic webhook API keys");
 assert(server.includes("Twilio phone assistant is configured"), "Phone provider status needs a clear Twilio-ready detail");
+assert(server.includes("function startTwilioOutboundCall"), "Outbound calls need a Twilio Calls API workflow");
+assert(server.includes('url.pathname === "/api/voice/phone/outbound-call"'), "Outbound calls need a signed-in API endpoint");
+assert(server.includes('url.pathname === "/api/voice/phone/outbound-twiml"'), "Outbound calls need a TwiML callback endpoint");
+assert(app.includes('"outbound-call"') && app.includes("Place outbound call"), "Frontend needs an outbound call workflow config");
 assert(!server.includes("Role does not allow production service checks"), "Live service checks should be available to any signed-in operator");
 assert(!app.includes('element.id === "liveServiceCheckBtn" ? "admin"'), "Live service check buttons should not be disabled as admin-only controls");
 assert(app.includes('event.target.closest("#liveServiceCheckBtn")'), "Live service check needs delegated click handling");
@@ -863,7 +869,7 @@ assert(app.includes("serviceWorker.register"), "Missing service worker registrat
 assert(app.includes("AGRINEXUS_BUILD_VERSION") && app.includes("AGRINEXUS_PWA_CACHE_VERSION"), "App needs explicit freshness constants");
 assert(app.includes("AGRINEXUS_PURGE_OLD_CACHES"), "App should ask the service worker to purge old build caches");
 assert(app.includes("controllerchange") && app.includes("agrinexusReloadedForBuild"), "App should reload once when a newer service worker takes control");
-assert(sw.includes("BUILD_VERSION = \"nexus-behavior-153\""), "Service worker must know the current app build version");
+assert(sw.includes("BUILD_VERSION = \"nexus-behavior-154\""), "Service worker must know the current app build version");
 assert(sw.includes("purgeOldCaches") && sw.includes("AGRINEXUS_PURGE_OLD_CACHES"), "Service worker must purge old caches on activation and message");
 assert(sw.includes("`/app.js?v=${BUILD_VERSION}`") && sw.includes("`/styles.css?v=${BUILD_VERSION}`"), "Service worker must precache versioned JS and CSS");
 assert(app.includes("installAgriNexusApp"), "Missing in-app install handler");

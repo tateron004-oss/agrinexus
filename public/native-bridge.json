@@ -110,7 +110,7 @@
   },
   "providerRequirements": {
     "highQualityVoice": ["OPENAI_API_KEY", "VOICE_STT_PROVIDER=openai", "VOICE_TTS_PROVIDER=openai", "OPENAI_TTS_VOICE"],
-    "phoneAssistant": ["PHONE_PROVIDER=twilio", "TWILIO_ACCOUNT_SID", "TWILIO_AUTH_TOKEN", "TWILIO_PHONE_NUMBER", "PUBLIC_BASE_URL"],
+    "phoneAssistant": ["PHONE_PROVIDER=twilio", "TWILIO_ACCOUNT_SID", "TWILIO_AUTH_TOKEN", "TWILIO_PHONE_NUMBER", "PUBLIC_BASE_URL", "DEMO_CALL_TO or TELEHEALTH_PROVIDER_PHONE or TRADE_BUYER_PHONE"],
     "smsWhatsApp": ["TWILIO_ACCOUNT_SID", "TWILIO_AUTH_TOKEN", "TWILIO_PHONE_NUMBER", "DEMO_SMS_TO or channel-specific recipient", "DEMO_WHATSAPP_TO or channel-specific recipient"],
     "mapsAndLocation": ["MAPBOX_ACCESS_TOKEN or GOOGLE_MAPS_API_KEY or OPENROUTESERVICE_API_KEY"],
     "productionMemory": ["DATABASE_URL", "AGRINEXUS_STATE_STORE=postgres"]

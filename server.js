@@ -3330,11 +3330,41 @@ function hasTwilioMessagingCore() {
   return Boolean(process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN && process.env.TWILIO_PHONE_NUMBER);
 }
 
+function hasTwilioVoiceCore() {
+  return Boolean(process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN && process.env.TWILIO_PHONE_NUMBER && process.env.PUBLIC_BASE_URL);
+}
+
 function normalizeTwilioAddress(channel, value) {
   const clean = String(value || "").trim();
   if (!clean) return "";
   if (/whatsapp/i.test(channel) && !clean.toLowerCase().startsWith("whatsapp:")) return `whatsapp:${clean}`;
   return clean;
+}
+
+function normalizePhoneNumber(value) {
+  const clean = String(value || "").trim().replace(/[^\d+]/g, "");
+  if (!clean) return "";
+  if (!/^\+\d{8,15}$/.test(clean)) return "";
+  return clean;
+}
+
+function outboundCallRecipientForPurpose(purpose = "", body = {}) {
+  const lower = String(purpose || "").toLowerCase();
+  const direct = normalizePhoneNumber(body.to || body.phone || body.recipientPhone || body.callbackNumber);
+  if (direct) return direct;
+  if (/(buyer|seller|trade|crop|order|delivery)/.test(lower)) {
+    return normalizePhoneNumber(process.env.TRADE_BUYER_PHONE || process.env.BUYER_PHONE || process.env.DEMO_CALL_TO);
+  }
+  if (/(health|telehealth|doctor|nurse|provider|clinic|care|patient|emergency)/.test(lower)) {
+    return normalizePhoneNumber(process.env.TELEHEALTH_PROVIDER_PHONE || process.env.HEALTH_PROVIDER_PHONE || process.env.DEMO_CALL_TO);
+  }
+  if (/(work|job|recruiter|workforce|employer)/.test(lower)) {
+    return normalizePhoneNumber(process.env.WORKFORCE_RECRUITER_PHONE || process.env.RECRUITER_PHONE || process.env.DEMO_CALL_TO);
+  }
+  if (/(learning|course|teacher|instructor|training)/.test(lower)) {
+    return normalizePhoneNumber(process.env.LEARNING_SUPPORT_PHONE || process.env.DEMO_CALL_TO);
+  }
+  return normalizePhoneNumber(process.env.DEMO_CALL_TO || process.env.OUTBOUND_CALL_TO);
 }
 
 function twilioRecipientForProvider(providerId, body = {}) {
@@ -3402,6 +3432,56 @@ async function sendTwilioMessage({ providerId, channel, to, text }) {
     };
   } catch (error) {
     return { attempted: true, ok: false, status: "provider-error", error: error.message, channel };
+  }
+}
+
+async function startTwilioOutboundCall({ to, message, context = "AgriNexus outbound call" }) {
+  const recipient = normalizePhoneNumber(to);
+  const missing = [
+    ["TWILIO_ACCOUNT_SID", process.env.TWILIO_ACCOUNT_SID],
+    ["TWILIO_AUTH_TOKEN", process.env.TWILIO_AUTH_TOKEN],
+    ["TWILIO_PHONE_NUMBER", process.env.TWILIO_PHONE_NUMBER],
+    ["PUBLIC_BASE_URL", process.env.PUBLIC_BASE_URL],
+    ["destination phone number", recipient]
+  ].filter(([, value]) => !value).map(([key]) => key);
+  if (missing.length) return { attempted: false, ok: false, status: "needs-twilio-call-config", missing };
+  const base = String(process.env.PUBLIC_BASE_URL || "").replace(/\/$/, "");
+  const twimlUrl = `${base}/api/voice/phone/outbound-twiml?message=${encodeURIComponent(String(message || "").slice(0, 500))}`;
+  const form = new URLSearchParams({
+    From: process.env.TWILIO_PHONE_NUMBER,
+    To: recipient,
+    Url: twimlUrl,
+    Method: "POST"
+  });
+  try {
+    const response = await fetchWithTimeout(
+      `https://api.twilio.com/2010-04-01/Accounts/${encodeURIComponent(process.env.TWILIO_ACCOUNT_SID)}/Calls.json`,
+      {
+        method: "POST",
+        headers: {
+          authorization: `Basic ${Buffer.from(`${process.env.TWILIO_ACCOUNT_SID}:${process.env.TWILIO_AUTH_TOKEN}`).toString("base64")}`,
+          "content-type": "application/x-www-form-urlencoded"
+        },
+        body: form.toString()
+      },
+      PROVIDER_WEBHOOK_TIMEOUT_MS
+    );
+    const payload = await response.json().catch(() => ({}));
+    return {
+      attempted: true,
+      ok: response.ok,
+      status: response.ok ? "call-started-live" : "provider-error",
+      httpStatus: response.status,
+      sid: payload.sid || "",
+      callStatus: payload.status || "",
+      to: recipient,
+      from: process.env.TWILIO_PHONE_NUMBER,
+      twimlUrl,
+      context,
+      error: payload.message || payload.error_message || ""
+    };
+  } catch (error) {
+    return { attempted: true, ok: false, status: "provider-error", error: error.message, to: recipient, context };
   }
 }
 
@@ -6234,6 +6314,13 @@ async function executeAgentTool(db, user, step) {
     return `Prepared ${session.sessionNumber} so the patient can show the provider the injury or visible concern.`;
   }
 
+  if (step.tool === "communications.outbound_call") {
+    const call = await createOutboundCallWorkflow(db, user, { purpose: step.detail || "AgriNexus outbound call" });
+    return call.delivery?.ok
+      ? `Started outbound call ${call.callNumber} to ${call.to}.`
+      : `Prepared outbound call ${call.callNumber}, but it needs setup: ${(call.delivery?.missing || [call.delivery?.error || call.status]).join(", ")}.`;
+  }
+
   if (step.tool === "trade.market_review") {
     ensureTradeProfile(db.profile);
     const product = (db.products || []).find(item => item.countryId === country.id) || (db.products || [])[0];
@@ -6634,6 +6721,43 @@ function voiceRecord(db, user, type, detail, metadata = {}) {
   return record;
 }
 
+async function createOutboundCallWorkflow(db, user, body = {}) {
+  ensureAiProfile(db.profile);
+  const purpose = String(body.purpose || body.context || body.module || "AgriNexus outbound support").trim();
+  const recipient = outboundCallRecipientForPurpose(purpose, body);
+  const message = String(body.message || `This is AgriNexus calling about ${purpose}. You can speak after the greeting and the AI assistant will help route the next step.`).trim();
+  const delivery = await startTwilioOutboundCall({ to: recipient, message, context: purpose });
+  const record = {
+    id: crypto.randomUUID(),
+    callNumber: `CALL-${String((db.profile.outboundCalls || []).length + 1).padStart(3, "0")}`,
+    purpose,
+    to: recipient || "",
+    from: process.env.TWILIO_PHONE_NUMBER || "",
+    message,
+    status: delivery.ok ? "calling-live" : delivery.status,
+    provider: "twilio",
+    delivery,
+    createdBy: user.email,
+    createdAt: new Date().toISOString()
+  };
+  db.profile.outboundCalls = db.profile.outboundCalls || [];
+  db.profile.outboundCalls.unshift(record);
+  db.profile.outboundCalls = db.profile.outboundCalls.slice(0, 30);
+  voiceRecord(db, user, "phone-call", delivery.ok ? `Outbound call started: ${purpose}` : `Outbound call needs setup: ${purpose}`, { callId: record.id, to: record.to, status: record.status, delivery });
+  logIntegration(db, {
+    providerId: "phone-voice",
+    module: "AI",
+    action: "phone.outbound_call_requested",
+    status: delivery.ok ? "success" : "needs-setup",
+    detail: delivery.ok ? `${record.callNumber} started to ${record.to}.` : `${record.callNumber} could not start. Missing/setup: ${(delivery.missing || [delivery.error || delivery.status]).join(", ")}.`,
+    metadata: { callId: record.id, purpose, delivery },
+    dispatch: false
+  });
+  addActivity(db.profile, delivery.ok ? `Outbound call started: ${purpose}` : `Outbound call prepared but needs setup: ${purpose}`);
+  rememberAgentMemory(db.profile, `Outbound call workflow: ${purpose}, status ${record.status}.`, { source: "outbound-call", category: "communications", module: "AI", confidence: 0.9 });
+  return record;
+}
+
 function xmlEscape(value) {
   return String(value || "")
     .replace(/&/g, "&amp;")
@@ -6767,6 +6891,7 @@ function deepVoiceIntent(lower) {
   if (includesAny(["safety review", "review safety"])) return { tool: "health.safety", module: "Healthcare", action: "Run safety review", section: "health" };
   if (includesAny(["care plan", "careplan"])) return { tool: "health.careplan", module: "Healthcare", action: "Generate care plan", section: "health" };
   if (includesAny(["video provider", "video doctor", "show injury", "show the injury", "show wound", "open video for patient", "video telehealth", "video visit"])) return { tool: "health.video_session", module: "Healthcare", action: "Open telehealth video", section: "health" };
+  if (includesAny(["call provider", "call doctor", "call nurse", "call clinic", "call buyer", "call recruiter", "call instructor", "make outbound call", "place outbound call", "phone the provider", "phone the buyer"])) return { tool: "communications.outbound_call", module: "AI", action: "Place outbound call", section: "agent" };
 
   if (includesAny(["video buyer", "show buyer", "show the buyer", "show crops", "show crop", "show seller", "crop video", "video crop", "open video for buyer"])) return { tool: "trade.buyer_video", module: "AgriTrade", action: "Open buyer crop video", section: "trade" };
   if ((includesAny(["buyer", "customer"]) && includesAny(["speak", "talk", "call", "message", "contact"]))) return { tool: "trade.buyer_contact", module: "AgriTrade", action: "Contact buyer", section: "trade" };
@@ -8999,6 +9124,7 @@ function agentToolRegistry() {
     { tool: "health.followup", module: "Healthcare", action: "Schedule follow-up", section: "health", description: "Schedule a telehealth follow-up or callback." },
     { tool: "health.safety", module: "Healthcare", action: "Run safety review", section: "health", description: "Run a safety review for health risk, escalation, or care quality." },
     { tool: "health.careplan", module: "Healthcare", action: "Generate care plan", section: "health", description: "Generate a care plan for a patient." },
+    { tool: "communications.outbound_call", module: "AI", action: "Place outbound call", section: "agent", description: "Place a real outbound phone call through Twilio to a buyer, telehealth provider, recruiter, learner support contact, or configured destination after confirmation." },
     { tool: "trade.market_review", module: "AgriTrade", action: "Review market", section: "trade", description: "Review market, create an order, price crops, or prepare a selling workflow." },
     { tool: "trade.buyer_contact", module: "AgriTrade", action: "Contact buyer", section: "trade", description: "Speak to, call, message, or contact a buyer about selling crops." },
     { tool: "trade.operational_efficiency", module: "AgriTrade", action: "Review operational efficiency", section: "trade", description: "Optimize trade operations, identify bottlenecks, reduce delay, improve profit, and connect buyer, route, drone, quality, cold-chain, logistics, and payment evidence." },
@@ -11404,6 +11530,35 @@ async function runAgentCommand(db, user, command, options = {}) {
     return tradeOperationalEfficiencyReview(db, user, text);
   }
 
+  if (/\b(call|phone|dial|ring)\b/.test(lower) && /\b(buyer|seller|provider|doctor|nurse|clinic|telehealth|recruiter|employer|instructor|teacher|support|caregiver)\b/.test(lower)) {
+    const purpose = /buyer|seller|trade|crop|order/.test(lower) ? "buyer trade call"
+      : /doctor|nurse|clinic|telehealth|provider|patient|caregiver/.test(lower) ? "telehealth provider call"
+      : /recruiter|employer|job|workforce/.test(lower) ? "workforce recruiter call"
+      : /instructor|teacher|learning|course/.test(lower) ? "learning support call"
+      : "AgriNexus support call";
+    if (conversational && !wantsExecute) {
+      return stageAgentAction(db, text, {
+        module: "AI",
+        tool: "communications.outbound_call",
+        action: `Place ${purpose}`,
+        section: purpose.includes("buyer") ? "trade" : purpose.includes("telehealth") ? "health" : purpose.includes("workforce") ? "workforce" : "agent",
+        planner: "outbound-call-router",
+        confidence: 0.87,
+        rationale: "Outbound phone calls require confirmation before Twilio places the call.",
+        userFacingPlan: `I can place a real outbound call for ${purpose}. Say yes to call, or no to cancel.`
+      });
+    }
+    const call = await createOutboundCallWorkflow(db, user, { purpose });
+    return {
+      intent: "phone.outbound_call_requested",
+      response: call.delivery?.ok
+        ? `Calling now. I started ${call.callNumber} to ${call.to}. When they answer, AgriNexus will greet them and let them speak back to the assistant.`
+        : `I prepared the outbound call, but it needs setup before it can dial live: ${(call.delivery?.missing || [call.delivery?.error || call.status]).join(", ")}.`,
+      status: call.delivery?.ok ? "completed" : "needs-setup",
+      metadata: { conversationMode: true, redirectSection: purpose.includes("buyer") ? "trade" : purpose.includes("telehealth") ? "health" : "agent", outboundCall: call, suggestedReplies: ["explain that", "open communications", "cancel"] }
+    };
+  }
+
   if (/(learning|course|lesson|instructor|tutor|workforce|job|recruiter|employer|health|telehealth|provider|caregiver|admin|support|integration)/.test(lower) && /(message|chat|communicate|reply|conversation|thread|contact|notify|sms|whatsapp|text)/.test(lower)) {
     const moduleName = /learning|course|lesson|instructor|tutor/.test(lower)
       ? "Learning"
@@ -12503,6 +12658,23 @@ async function api(req, res, url) {
       "x-content-type-options": "nosniff"
     });
     return res.end(audio.buffer);
+  }
+
+  if (url.pathname === "/api/voice/phone/outbound-twiml" && (req.method === "GET" || req.method === "POST")) {
+    const phoneUser = phoneVoiceUser(db);
+    const language = twilioLanguage(phoneUser?.language || "en");
+    const actionUrl = `${process.env.PUBLIC_BASE_URL || ""}/api/voice/phone/gather`;
+    const message = String(url.searchParams.get("message") || "This is AgriNexus. You are connected to the AI assistant. Please say what you need after the prompt.").slice(0, 700);
+    const greeting = await phoneVoicePrompt(message, language);
+    const prompt = await phoneVoicePrompt("You can say telehealth intake, contact buyer, apply for job, track delivery, or speak with support. What should AgriNexus do?", language);
+    return twimlResponse(res, `<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+  ${greeting}
+  <Gather input="speech dtmf" action="${xmlEscape(actionUrl || "/api/voice/phone/gather")}" method="POST" language="${xmlEscape(language)}" speechTimeout="auto" actionOnEmptyResult="true">
+    ${prompt}
+  </Gather>
+  ${await phoneVoicePrompt("I did not hear a response. Please call the AgriNexus number again or use the web assistant.", language)}
+</Response>`);
   }
 
   if (url.pathname === "/api/voice/phone/incoming" && req.method === "POST") {
@@ -15350,6 +15522,16 @@ async function api(req, res, url) {
     const state = publicState(db, user);
     state.voiceResult = { text, sessionId: record.id, provider, audioDataUrl: audio?.audioDataUrl || null, model: audio?.model || null, voice: audio?.voice || null, error: speechError, configuredProvider: process.env.VOICE_TTS_PROVIDER || null, hasOpenAiKey: Boolean(process.env.OPENAI_API_KEY) };
     return send(res, 200, state);
+  }
+
+  if (url.pathname === "/api/voice/phone/outbound-call" && req.method === "POST") {
+    if (!canUse(user, "ai")) return send(res, 403, { error: "Role does not allow outbound calls" });
+    const body = await readBody(req);
+    const record = await createOutboundCallWorkflow(db, user, body);
+    await writeDb(db);
+    const state = publicState(db, user);
+    state.outboundCallResult = record;
+    return send(res, record.delivery?.ok ? 200 : 409, state);
   }
 
   if (url.pathname === "/api/translate" && req.method === "POST") {
