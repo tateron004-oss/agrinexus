@@ -215,10 +215,12 @@ for (const [section, buttons] of Object.entries(expectedSections)) {
   assert(styles.includes(marker), `User workflow containment style missing: ${marker}`);
 });
 
-assert(html.includes("/app.js?v=nexus-behavior-156"), "Index must force browsers to load current User-mode workflow JS");
-assert(html.includes("/styles.css?v=nexus-behavior-156"), "Index must force browsers to load current User-mode workflow CSS");
+assert(html.includes("/app.js?v=nexus-behavior-157"), "Index must force browsers to load current User-mode workflow JS");
+assert(html.includes("/styles.css?v=nexus-behavior-157"), "Index must force browsers to load current User-mode workflow CSS");
 assert(html.includes("topSettingsClose"), "User Settings menu needs a visible close button");
-assert(sw.includes('CACHE_NAME = "agrinexus-pwa-v136"'), "Service worker cache must be bumped after User-mode workflow fixes");
+assert(app.includes("voiceShouldResumeAfterUiAction"), "Guide Me and other User actions need to preserve active voice listening");
+assert(app.includes("resumeVoiceAfterUiAction(shouldResumeVoice"), "Guide Me and other User actions need to restore voice after UI transitions");
+assert(sw.includes('CACHE_NAME = "agrinexus-pwa-v137"'), "Service worker cache must be bumped after User-mode workflow fixes");
 assert(styles.includes("body.user-mode .top-settings-close"), "User Settings close button needs visible app-mode styling");
 assert(app.includes('const guideCommand = "help me understand the platform"'), "Guide Me must map to a visible user workflow instead of a silent dynamic command");
 assert(app.includes("function renderUserAccessibilityPanel"), "User mode needs a contained accessibility panel with its own controls");

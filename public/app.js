@@ -18,6 +18,7 @@ let voiceFirstMode = localStorage.getItem("agrinexusVoiceFirst") !== "off";
 let voiceAutoRestart = voiceFirstMode;
 let voiceStopRequested = false;
 let voiceSpeaking = false;
+let voiceResumeAfterSpeech = false;
 let lastSpokenText = "";
 let lastSpokenAt = 0;
 let activeVoiceAudio = null;
@@ -51,8 +52,8 @@ let routeTrackingWatchId = null;
 let routeTrackingPoints = [];
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-156";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v136";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-157";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v137";
 
 const countryLanguageMap = {
   nigeria: "en",
@@ -12261,9 +12262,11 @@ function speakVoiceResponse(textOverride) {
     activeVoiceAudio = null;
     voiceSpeaking = false;
     voiceAutoRestart = voiceFirstMode;
-    if (voiceFirstMode && !voiceRecognition && !voiceStopRequested && !document.hidden) {
+    const shouldResume = voiceFirstMode || voiceResumeAfterSpeech;
+    if (shouldResume && !voiceRecognition && !voiceStopRequested && !document.hidden) {
+      voiceResumeAfterSpeech = false;
       setTimeout(() => {
-        if (!voiceRecognition && voiceFirstMode && !voiceSpeaking && !voiceStopRequested) startVoiceListening();
+        if (!voiceRecognition && !voiceSpeaking && !voiceStopRequested) startVoiceListening();
       }, 700);
     }
   };
@@ -12403,6 +12406,26 @@ function enableHeyAgriNexusMode() {
   voiceStopRequested = false;
   localStorage.setItem("agrinexusVoiceFirst", "on");
   refreshMicSupport();
+}
+
+function voiceShouldResumeAfterUiAction() {
+  return Boolean(voiceRecognition || voiceFirstMode);
+}
+
+function resumeVoiceAfterUiAction(shouldResume, options = {}) {
+  if (!shouldResume) return;
+  voiceStopRequested = false;
+  voiceAutoRestart = true;
+  voiceResumeAfterSpeech = true;
+  const attempts = options.attempts || [450, 1200, 2400, 4800, 7200];
+  attempts.forEach(delay => {
+    setTimeout(() => {
+      if (!document.hidden && !voiceRecognition && !voiceSpeaking && !voiceStopRequested) {
+        voiceResumeAfterSpeech = false;
+        startVoiceListening();
+      }
+    }, delay);
+  });
 }
 
 function setCommandInputs(command) {
@@ -13412,6 +13435,7 @@ async function runSimpleAction(eventOrButton) {
   if (!button) return;
   eventOrButton?.preventDefault?.();
   eventOrButton?.stopPropagation?.();
+  const shouldResumeVoice = experienceMode === "user" && voiceShouldResumeAfterUiAction();
   if (experienceMode === "user") {
     closeAskNexus({ silent: true });
     $("#jarvisPanel")?.classList.add("hidden");
@@ -13428,12 +13452,14 @@ async function runSimpleAction(eventOrButton) {
         if (status) status.textContent = `${label} opened. Review the details and choose Yes or No.`;
         const targetSection = mapped.section || currentSectionId() || (mapped.workflow === "ai" ? "agent" : mapped.workflow === "map" ? "map" : mapped.workflow);
         const opened = openMappedUserWorkflow(mapped, targetSection);
+        resumeVoiceAfterUiAction(shouldResumeVoice);
         if (!opened && $("#simpleActionStatus")) $("#simpleActionStatus").textContent = `${label} needs attention. Ask Nexus in your own words or choose another action.`;
         return;
       }
       setCommandInputs(button.dataset.simpleCommand);
       openAskNexus();
       await handleVoiceCommand(button.dataset.simpleCommand);
+      resumeVoiceAfterUiAction(shouldResumeVoice);
       if ($("#simpleActionStatus")) $("#simpleActionStatus").textContent = `${label} sent to Nexus.`;
       return;
     }
@@ -13445,6 +13471,7 @@ async function runSimpleAction(eventOrButton) {
   }
   if (button.dataset.simpleSection) {
     activateSectionFromButton(button);
+    resumeVoiceAfterUiAction(shouldResumeVoice);
     if (status) status.textContent = `${label} opened.`;
     return;
   }
