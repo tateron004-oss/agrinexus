@@ -22,12 +22,12 @@ function requireScript(scriptName) {
 }
 
 requireMarkers("current browser cache contract", html, [
-  "/styles.css?v=nexus-behavior-171",
-  "/app.js?v=nexus-behavior-171"
+  "/styles.css?v=nexus-behavior-172",
+  "/app.js?v=nexus-behavior-172"
 ]);
 requireMarkers("service worker cache contract", sw, [
-  'CACHE_NAME = "agrinexus-pwa-v151"',
-  'BUILD_VERSION = "nexus-behavior-171"',
+  'CACHE_NAME = "agrinexus-pwa-v152"',
+  'BUILD_VERSION = "nexus-behavior-172"',
   "`/app.js?v=${BUILD_VERSION}`",
   "`/styles.css?v=${BUILD_VERSION}`",
   "purgeOldCaches",
@@ -197,6 +197,13 @@ requireMarkers("language and voice contract", app, [
   "agrinexusLiveKnowledgeFeeds",
   "function speakVoiceResponse",
   "function setVoiceResponse",
+  "voiceDemoQuietMode",
+  "function disableNexusVoiceForDemo",
+  "function enableNexusVoiceForDemo",
+  "function isNexusVoiceOffCommand",
+  "function isNexusVoiceOnCommand",
+  "Demo quiet mode is on",
+  "allowVoiceFirst: false",
   "/api/voice/transcribe",
   "/api/voice/speak",
   "/api/agent/command"

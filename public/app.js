@@ -18,6 +18,7 @@ let lastFocusedElement = null;
 let voiceRecognition = null;
 let lastVoiceResponse = "Ready for a command.";
 let voiceFirstMode = localStorage.getItem("agrinexusVoiceFirst") !== "off";
+let voiceDemoQuietMode = localStorage.getItem("agrinexusDemoQuiet") === "on";
 let voiceAutoRestart = voiceFirstMode;
 let voiceStopRequested = false;
 let voiceSpeaking = false;
@@ -55,8 +56,8 @@ let routeTrackingWatchId = null;
 let routeTrackingPoints = [];
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-171";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v151";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-172";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v152";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
 const VOICE_ATTENTION_DELAY_MS = 900;
@@ -10035,16 +10036,19 @@ function addGlobalMapControl(targetMap) {
 }
 
 function startAskNexusAfterLogin() {
-  enableHeyAgriNexusMode();
+  if (voiceDemoQuietMode) {
+    disableNexusVoiceForDemo("Demo quiet mode is on. Nexus voice will stay off until you turn it back on.", { silent: true });
+    return;
+  }
   openAskNexus();
-  voiceAutoRestart = true;
-  voiceStopRequested = false;
-  setVoiceStatus("voice-first");
+  voiceAutoRestart = voiceFirstMode;
+  voiceStopRequested = !voiceFirstMode;
+  setVoiceStatus(voiceFirstMode ? "voice-first" : "standby");
   const message = `Welcome ${userFirstName()}. Ask Nexus is ready. If the browser asks for the microphone, choose allow.`;
-  setVoiceResponse(message, false, { allowVoiceFirst: true });
+  setVoiceResponse(message, false, { allowVoiceFirst: false });
   [80, 360, 900, 1800].forEach(delay => {
     setTimeout(() => {
-      if (!document.hidden && voiceFirstMode && !voiceRecognition && !voiceSpeaking && !voiceStopRequested) {
+      if (!voiceDemoQuietMode && !document.hidden && voiceFirstMode && !voiceRecognition && !voiceSpeaking && !voiceStopRequested) {
         startVoiceListening();
       }
     }, delay);
@@ -12710,6 +12714,10 @@ async function executeAgentPlan() {
 
 function setVoiceResponse(message, speak = false, options = {}) {
   const allowVoiceFirst = options.allowVoiceFirst !== false;
+  if (voiceDemoQuietMode && !options.allowDemoQuietSpeech) {
+    speak = false;
+    options = { ...options, allowVoiceFirst: false };
+  }
   const token = ++voiceTranslationToken;
   const interruptToken = voiceInterruptToken;
   const responseMessage = speak || options.forceHandoff ? composeJarvisResponse(message, options) : message;
@@ -12776,7 +12784,7 @@ function welcomeSignedInUser() {
   sessionStorage.setItem(welcomeKey, "shown");
   const behavior = nexusBehaviorMode();
   const message = `${behavior.greeting} ${behavior.prompt}`;
-  setVoiceResponse(message, false, { allowVoiceFirst: true });
+  setVoiceResponse(message, false, { allowVoiceFirst: false });
 }
 
 async function createGovernmentBriefing() {
@@ -12799,8 +12807,10 @@ async function createGovernmentBriefing() {
 
 function toggleVoiceFirstMode() {
   voiceFirstMode = !voiceFirstMode;
+  if (voiceFirstMode) voiceDemoQuietMode = false;
   voiceAutoRestart = voiceFirstMode;
   localStorage.setItem("agrinexusVoiceFirst", voiceFirstMode ? "on" : "off");
+  localStorage.setItem("agrinexusDemoQuiet", voiceDemoQuietMode ? "on" : "off");
   ["#voiceFirstBtn", "#globalVoiceFirstBtn"].forEach(selector => {
     const button = $(selector);
     if (!button) return;
@@ -12810,6 +12820,55 @@ function toggleVoiceFirstMode() {
   setVoiceStatus(voiceFirstMode ? "voice-first" : "standby");
   setVoiceResponse(voiceFirstMode ? "Hey AgriNexus mode is on. You can also call me Nexus. Say Nexus, then tell me what you need. I will speak back and keep listening when the browser allows it." : "Hey AgriNexus mode is off.", voiceFirstMode);
   if (voiceFirstMode) startVoiceListening();
+}
+
+function disableNexusVoiceForDemo(message = "Demo quiet mode is on. Nexus voice is off until you turn it back on.", options = {}) {
+  voiceDemoQuietMode = true;
+  voiceFirstMode = false;
+  voiceAutoRestart = false;
+  voiceStopRequested = true;
+  voiceResumeAfterSpeech = false;
+  localStorage.setItem("agrinexusVoiceFirst", "off");
+  localStorage.setItem("agrinexusDemoQuiet", "on");
+  clearAgentProgressTimers();
+  if (voiceRecognition) {
+    try {
+      voiceRecognition.stop();
+    } catch (error) {
+      // Recognition may already be stopped.
+    }
+    voiceRecognition = null;
+  }
+  stopVoicePlayback({ hard: true });
+  setVoiceStatus("standby");
+  updateNexusBehaviorLayer("ready", message);
+  ["#voiceFirstBtn", "#globalVoiceFirstBtn"].forEach(selector => {
+    const button = $(selector);
+    if (!button) return;
+    button.classList.remove("primary");
+    button.setAttribute("aria-pressed", "false");
+  });
+  refreshMicSupport();
+  lastVoiceResponse = translateText(message);
+  ["#globalAssistantStatus", "#globalVoiceOutputStatus", "#voiceTranscript", "#jarvisSummary"].forEach(selector => {
+    const element = $(selector);
+    if (element) element.textContent = lastVoiceResponse;
+  });
+  updateUserCaptionPanel(lastVoiceResponse, { expanded: true });
+  if (!options.silent) toast(message);
+}
+
+function enableNexusVoiceForDemo(message = "Nexus voice is back on. Say Nexus, then tell me what you need.") {
+  voiceDemoQuietMode = false;
+  voiceFirstMode = true;
+  voiceAutoRestart = true;
+  voiceStopRequested = false;
+  localStorage.setItem("agrinexusVoiceFirst", "on");
+  localStorage.setItem("agrinexusDemoQuiet", "off");
+  refreshMicSupport();
+  setVoiceStatus("voice-first");
+  setVoiceResponse(message, true);
+  startVoiceListening();
 }
 
 function chooseSpeechVoice(locale) {
@@ -12856,6 +12915,10 @@ function interruptNexusSpeech(reason = "I stopped speaking and I am ready for th
 }
 
 function speakVoiceResponse(textOverride) {
+  if (voiceDemoQuietMode) {
+    stopVoicePlayback({ hard: true });
+    return;
+  }
   const text = textOverride || lastVoiceResponse;
   const compact = String(text || "").replace(/\s+/g, " ").trim();
   const interruptToken = voiceInterruptToken;
@@ -12961,7 +13024,9 @@ function refreshMicSupport() {
   if (status) {
     status.classList.toggle("ready", ready);
     status.classList.toggle("blocked", !ready);
-    status.textContent = ready
+    status.textContent = voiceDemoQuietMode
+      ? "Demo quiet mode is on. Nexus voice and auto-listening are off."
+      : ready
       ? `Microphone ready for ${languageName} (${locale}). Click Mic, then allow browser access.`
       : `${languageName} voice input is not available in this browser. Type your request and click Run command.`;
   }
@@ -12976,6 +13041,13 @@ function refreshMicSupport() {
       if (selector === "#jarvisListenBtn") button.textContent = "Mic unavailable";
       return;
     }
+    if (voiceDemoQuietMode) {
+      if (selector === "#globalListenBtn") button.textContent = "Voice off";
+      if (selector === "#voiceListenBtn") button.textContent = "Voice off";
+      if (selector === "#jarvisListenBtn") button.textContent = "Voice off";
+      button.title = "Demo quiet mode is on. Type 'turn voice on' to re-enable voice.";
+      return;
+    }
     if (selector === "#globalListenBtn") button.textContent = voiceRecognition ? "Stop listening" : "Mic: Start listening";
     if (selector === "#voiceListenBtn") button.textContent = voiceRecognition ? "Stop listening" : "Mic: Start listening";
     if (selector === "#jarvisListenBtn") button.textContent = voiceRecognition ? "Stop" : "Listen";
@@ -12984,7 +13056,7 @@ function refreshMicSupport() {
   if (voiceFirstButton) {
     voiceFirstButton.classList.toggle("primary", voiceFirstMode);
     voiceFirstButton.setAttribute("aria-pressed", String(voiceFirstMode));
-    voiceFirstButton.textContent = voiceFirstMode ? "Hey AgriNexus: On" : "Hey AgriNexus: Off";
+    voiceFirstButton.textContent = voiceDemoQuietMode ? "Nexus voice: Off" : voiceFirstMode ? "Hey AgriNexus: On" : "Hey AgriNexus: Off";
   }
 }
 
@@ -13016,20 +13088,43 @@ function cleanWakeCommand(command) {
     .trim();
 }
 
+function isNexusVoiceOffCommand(command) {
+  const lower = String(command || "").toLowerCase();
+  if (/^(turn off|shut off|go quiet|be quiet|mute|silent|silence|stop talking|stop speaking|quiet mode|demo quiet)$/i.test(lower.trim())) return true;
+  return /\b(turn|switch|shut|cut)\s+(off|down)\s+(nexus\s+)?(voice|speech|talking|audio|mic|microphone)\b/.test(lower)
+    || /\b(mute|silence|quiet)\s+(nexus|agrinexus|voice|speech|audio)\b/.test(lower)
+    || /\b(nexus|agrinexus)\s+(mute|silence|be quiet|go quiet|stop talking)\b/.test(lower)
+    || /\b(go quiet|demo quiet|quiet mode|silent mode|presentation mode)\b/.test(lower)
+    || /\b(stop talking for demo|stop speaking for demo|disable voice|disable speech|stop voice first|stop hands[-\s]?free)\b/.test(lower);
+}
+
+const nexusDemoQuietExamples = ["mute nexus", "go quiet", "demo quiet", "stop talking for demo", "turn off voice"];
+
+function isNexusVoiceOnCommand(command) {
+  const lower = String(command || "").toLowerCase();
+  if (/^(turn on|turn voice on|voice on|talk again|speak again|unmute|wake up|wake voice|end quiet mode)$/i.test(lower.trim())) return true;
+  return /\b(turn|switch)\s+(on|up)\s+(nexus\s+)?(voice|speech|talking|audio|mic|microphone)\b/.test(lower)
+    || /\b(unmute|unsilence)\s+(nexus|agrinexus|voice|speech|audio)\b/.test(lower)
+    || /\b(nexus|agrinexus)\s+(talk again|speak again|voice on|turn back on|wake voice)\b/.test(lower)
+    || /\b(end quiet mode|leave quiet mode|demo voice on|enable voice|enable speech|voice first|hands[-\s]?free)\b/.test(lower);
+}
+
 function enableHeyAgriNexusMode() {
+  voiceDemoQuietMode = false;
   voiceFirstMode = true;
   voiceAutoRestart = true;
   voiceStopRequested = false;
   localStorage.setItem("agrinexusVoiceFirst", "on");
+  localStorage.setItem("agrinexusDemoQuiet", "off");
   refreshMicSupport();
 }
 
 function voiceShouldResumeAfterUiAction() {
-  return Boolean(voiceRecognition || voiceFirstMode);
+  return !voiceDemoQuietMode && Boolean(voiceRecognition || voiceFirstMode);
 }
 
 function resumeVoiceAfterUiAction(shouldResume, options = {}) {
-  if (!shouldResume) return;
+  if (!shouldResume || voiceDemoQuietMode) return;
   voiceStopRequested = false;
   voiceAutoRestart = true;
   voiceResumeAfterSpeech = true;
@@ -13167,6 +13262,14 @@ async function handleVoiceCommand(rawCommand) {
   if (command) rememberConversationTurn(command, "");
   if (command) updateNexusAwareness(command, { silent: true });
   if (command) speechSafetyRisk(command, "voice");
+  if (isNexusVoiceOffCommand(lower)) {
+    disableNexusVoiceForDemo("Demo quiet mode is on. Nexus voice is off until you turn it back on.");
+    return;
+  }
+  if (isNexusVoiceOnCommand(lower)) {
+    enableNexusVoiceForDemo("Nexus voice is back on. Say Nexus, then tell me what you need.");
+    return;
+  }
   if (isGlobalStopCommand(lower)) {
     clearConversationHold("Stopped. I cleared the current choice and I am ready for the next instruction.");
     resetNexusForNextPrompt("Stopped. Ask me the next question or tell me where to go next.");
@@ -13598,14 +13701,12 @@ async function handleVoiceCommand(rawCommand) {
     setVoiceResponse("Simple voice mode is on. I will keep reasoning in the background and talk you through the next action.", true);
     return;
   }
-  if (lower.includes("turn on voice") || lower.includes("voice first") || lower.includes("hands free") || lower.includes("hands-free")) {
-    if (!voiceFirstMode) toggleVoiceFirstMode();
-    else setVoiceResponse("Voice-first mode is already on. Say a command when the microphone is listening.", true);
+  if (isNexusVoiceOnCommand(lower)) {
+    enableNexusVoiceForDemo(voiceFirstMode ? "Voice-first mode is already on. Say a command when the microphone is listening." : "Nexus voice is back on. Say Nexus, then tell me what you need.");
     return;
   }
-  if (lower.includes("turn off voice") || lower.includes("stop voice first") || lower.includes("stop hands free") || lower.includes("stop hands-free")) {
-    if (voiceFirstMode) toggleVoiceFirstMode();
-    else setVoiceResponse("Voice-first mode is already off.");
+  if (isNexusVoiceOffCommand(lower)) {
+    disableNexusVoiceForDemo(voiceDemoQuietMode ? "Demo quiet mode is already on. Nexus voice will stay off." : "Demo quiet mode is on. Nexus voice is off until you turn it back on.");
     return;
   }
   if (lower.includes("status") || lower.includes("readiness") || lower.includes("what is left")) {
@@ -14218,6 +14319,11 @@ async function resumeNextMission() {
 }
 
 function startVoiceListening() {
+  if (voiceDemoQuietMode) {
+    setVoiceStatus("standby");
+    refreshMicSupport();
+    return;
+  }
   const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
   if (!Recognition) {
     refreshMicSupport();
