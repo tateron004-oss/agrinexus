@@ -6,6 +6,7 @@ const root = path.resolve(__dirname, "..");
 const app = fs.readFileSync(path.join(root, "public", "app.js"), "utf8");
 const styles = fs.readFileSync(path.join(root, "public", "styles.css"), "utf8");
 const html = fs.readFileSync(path.join(root, "public", "index.html"), "utf8");
+const server = fs.readFileSync(path.join(root, "server.js"), "utf8");
 
 function hasAll(haystack, values, message) {
   values.forEach(value => assert(haystack.includes(value), `${message}: missing ${value}`));
@@ -346,8 +347,8 @@ assert(app.includes("Stopped. Ask me the next question or tell me where to go ne
 assert(styles.includes("pointer-events: none") && styles.includes(".user-caption-actions") && styles.includes("pointer-events: auto"), "Caption panel must not block workflow action clicks");
 assert(styles.includes("width: min(300px, calc(100vw - 24px))") && styles.includes("max-height: 138px"), "Caption panel must default to a small bubble");
 assert(styles.includes(".user-caption-panel.expanded") && styles.includes("display: none") && styles.includes("display: grid"), "Caption input controls must appear only in expanded caption mode");
-assert(html.includes("nexus-behavior-166"), "Index must force browsers to load Nexus behavior CSS");
-assert(html.includes("nexus-behavior-166"), "Index must force browsers to load Nexus behavior JS");
+assert(html.includes("nexus-behavior-167"), "Index must force browsers to load Nexus behavior CSS");
+assert(html.includes("nexus-behavior-167"), "Index must force browsers to load Nexus behavior JS");
 assert(app.includes("shipmentPreviewMapCanvas") && app.includes("renderShipmentPreviewMap"), "Shipment preview maps must use real Leaflet canvases");
 assert(app.includes("healthHotspotMapCanvas") && app.includes("renderHealthHotspotPreviewMap"), "Health hotspot maps must use real Leaflet canvases");
 assert(app.includes("function shipmentTrackingState") && app.includes("function drawShipmentRoute"), "Shipment maps must render operational tracking state, not decorative routes");
@@ -358,6 +359,10 @@ assert(app.includes("World_Street_Map") && app.includes("Operational map") && ap
 assert(app.includes("/api/trade/tracking") && app.includes("Refresh live tracking") && app.includes("Live GPS provider"), "Trade shipment workflows must expose live logistics/GPS tracking refresh");
 assert(app.includes("World_Boundaries_and_Places/MapServer/tile"), "Satellite maps must show country names and borders");
 assert(app.includes("startAskNexusAfterLogin") && app.includes("Welcome ${userFirstName()}"), "Ask Nexus should wake into voice-first mode after login");
+assert(html.includes("Rural Health Access Network"), "Health module needs the rural health access network workspace");
+assert(html.includes('data-health="symptom-guide"') && html.includes('data-health="nearest-clinic"') && html.includes('data-health="mobile-clinic"') && html.includes('data-health="pharmacy"') && html.includes('data-health="handoff"'), "Rural health access buttons must be visible");
+assert(app.includes("/api/health/rural-network") && app.includes("renderRuralHealthAccessMap"), "Rural health workflows must call the backend and render a real map");
+assert(server.includes("safeSymptomGuidance") && server.includes("notDiagnosis: true") && server.includes("ruralHealthNetworkCatalog"), "Backend rural health network must be non-diagnostic and backed by a catalog");
 assert(html.includes("topSettingsClose"), "Settings menu needs an explicit close control");
 assert(app.includes("voiceShouldResumeAfterUiAction"), "User button actions must preserve active voice listening");
 assert(app.includes("resumeVoiceAfterUiAction(shouldResumeVoice"), "User button actions must restore voice after guided workflows");

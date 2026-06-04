@@ -13,7 +13,7 @@
   <link rel="icon" href="/icons/agri-nexus-192.png" type="image/png">
   <link rel="apple-touch-icon" href="/icons/agri-nexus-192.png">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-  <link rel="stylesheet" href="/styles.css?v=nexus-behavior-166">
+  <link rel="stylesheet" href="/styles.css?v=nexus-behavior-167">
 </head>
 <body>
   <a class="skip-link" href="#mainContent">Skip to main content</a>
@@ -585,6 +585,36 @@
             <article>
               <h3>Care Plans</h3>
               <div id="carePlanList" class="activity"></div>
+            </article>
+          </div>
+          <div class="cards two rural-health-network">
+            <article class="accessibility-card">
+              <div class="tag-row"><span>Rural health access</span><span>Not a diagnosis</span></div>
+              <h3>Rural Health Access Network</h3>
+              <p>Help a patient speak symptoms, find nearby clinic support, request a mobile clinic, locate pharmacy help, and create a paper-to-digital handoff packet.</p>
+              <div id="ruralHealthAccessPanel" class="rows"></div>
+              <div class="action-row">
+                <button data-health="symptom-guide" class="primary" type="button">Speak symptoms</button>
+                <button data-health="nearest-clinic" type="button">Closest clinic</button>
+                <button data-health="mobile-clinic" type="button">Mobile clinic</button>
+                <button data-health="pharmacy" type="button">Find pharmacy</button>
+                <button data-health="handoff" type="button">Build handoff</button>
+              </div>
+            </article>
+            <article>
+              <div class="tag-row"><span>Clinic + pharmacy map</span><span>Rural route</span></div>
+              <h3>Care Access Map</h3>
+              <div id="ruralHealthAccessMapCanvas" class="shipment-real-map health-hotspot-real-map" aria-label="Rural clinic, mobile clinic, and pharmacy map"></div>
+            </article>
+          </div>
+          <div class="cards two">
+            <article>
+              <h3>Rural Health Evidence</h3>
+              <div id="ruralHealthAccessList" class="activity"></div>
+            </article>
+            <article>
+              <h3>Patient Handoff Packet</h3>
+              <div id="ruralHealthHandoffPanel" class="activity"></div>
             </article>
           </div>
           <div class="cards two">
@@ -1427,6 +1457,6 @@
   <div id="toast" class="toast hidden" role="status" aria-live="polite" aria-atomic="true"></div>
   <div id="screenReaderStatus" class="sr-only" role="status" aria-live="polite" aria-atomic="true"></div>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="/app.js?v=nexus-behavior-166"></script>
+  <script src="/app.js?v=nexus-behavior-167"></script>
 </body>
 </html>

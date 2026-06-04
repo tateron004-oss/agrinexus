@@ -4277,6 +4277,89 @@ function ensureHealthProfile(profile) {
     representative: "Community accessibility aide"
   };
   profile.telehealthAccessibility = profile.telehealthAccessibility || [];
+  profile.ruralSymptomGuides = profile.ruralSymptomGuides || [];
+  profile.ruralClinicMatches = profile.ruralClinicMatches || [];
+  profile.mobileClinicRequests = profile.mobileClinicRequests || [];
+  profile.pharmacyRequests = profile.pharmacyRequests || [];
+  profile.ruralHealthHandoffPackets = profile.ruralHealthHandoffPackets || [];
+}
+
+function ruralHealthNetworkCatalog(db) {
+  const countries = db.countries || [];
+  const byName = name => countries.find(item => String(item.name || "").toLowerCase().includes(name.toLowerCase()));
+  const kenya = byName("Kenya") || countries.find(item => item.id === "kenya") || countries[0] || { name: "Kenya", lat: -0.0236, lng: 37.9062 };
+  const nigeria = byName("Nigeria") || countries.find(item => item.id === "nigeria") || countries[0] || { name: "Nigeria", lat: 9.082, lng: 8.6753 };
+  const drc = byName("DRC") || byName("Congo") || countries.find(item => item.id === "drc") || countries[0] || { name: "DRC", lat: -2.8799, lng: 23.656 };
+  const ghana = byName("Ghana") || countries.find(item => item.id === "ghana") || countries[0] || { name: "Ghana", lat: 7.9465, lng: -1.0232 };
+  const place = (country, offsetLat, offsetLng) => ({
+    lat: Number((Number(country.lat || 0) + offsetLat).toFixed(4)),
+    lng: Number((Number(country.lng || 0) + offsetLng).toFixed(4))
+  });
+  return {
+    clinics: [
+      { id: "clinic-kenya-rural-a", name: "Rural Kenya Partner Clinic Desk", country: "Kenya", type: "clinic", services: ["primary care intake", "maternal health", "telehealth callback"], languages: ["en", "sw"], contact: "+254-000-000-101", hours: "08:00-18:00", digitalStatus: "paper-to-digital handoff supported", ...place(kenya, -0.18, 0.21) },
+      { id: "clinic-kenya-mobile-base", name: "Nairobi Rural Outreach Base", country: "Kenya", type: "clinic", services: ["mobile clinic staging", "pharmacy referral", "community health worker"], languages: ["en", "sw"], contact: "+254-000-000-102", hours: "mobile outreach schedule", digitalStatus: "low-bandwidth packet supported", ...place(kenya, 0.26, -0.32) },
+      { id: "clinic-nigeria-rural-a", name: "Nigeria Community Care Access Point", country: "Nigeria", type: "clinic", services: ["telehealth triage", "referral handoff", "health education"], languages: ["en", "ha", "yo", "ig"], contact: "+234-000-000-201", hours: "08:00-17:00", digitalStatus: "paper-to-digital handoff supported", ...place(nigeria, 0.32, -0.28) },
+      { id: "clinic-drc-rural-a", name: "DRC Community Health Handoff Desk", country: "DRC", type: "clinic", services: ["outbreak awareness", "telehealth callback", "referral"], languages: ["fr", "sw"], contact: "+243-000-000-301", hours: "community schedule", digitalStatus: "voice-first intake supported", ...place(drc, -0.44, 0.22) },
+      { id: "clinic-ghana-rural-a", name: "Ghana Rural Health Access Point", country: "Ghana", type: "clinic", services: ["primary care callback", "pharmacy routing", "follow-up"], languages: ["en"], contact: "+233-000-000-401", hours: "08:00-17:00", digitalStatus: "offline packet supported", ...place(ghana, 0.24, 0.27) }
+    ],
+    mobileClinics: [
+      { id: "mobile-kenya-1", name: "Kenya Mobile Clinic Team A", country: "Kenya", type: "mobile-clinic", services: ["field outreach", "vitals collection", "medicine handoff"], languages: ["en", "sw"], contact: "+254-000-000-501", hours: "dispatch window 24-48 hrs", digitalStatus: "SMS and paper handoff", ...place(kenya, -0.38, 0.52) },
+      { id: "mobile-nigeria-1", name: "Nigeria Mobile Health Outreach Team", country: "Nigeria", type: "mobile-clinic", services: ["community screening", "referral pickup", "health education"], languages: ["en", "ha"], contact: "+234-000-000-502", hours: "dispatch window 24-48 hrs", digitalStatus: "voice callback and paper handoff", ...place(nigeria, -0.22, 0.44) },
+      { id: "mobile-drc-1", name: "DRC Rural Outreach Team", country: "DRC", type: "mobile-clinic", services: ["remote access support", "outbreak-aware handoff", "provider callback"], languages: ["fr", "sw"], contact: "+243-000-000-503", hours: "dispatch by risk and route", digitalStatus: "low-bandwidth handoff", ...place(drc, 0.36, -0.31) }
+    ],
+    pharmacies: [
+      { id: "pharmacy-kenya-1", name: "Kenya Rural Pharmacy Network Desk", country: "Kenya", type: "pharmacy", services: ["medicine availability", "refill coordination", "provider-reviewed packet"], languages: ["en", "sw"], contact: "+254-000-000-601", hours: "08:00-20:00", digitalStatus: "SMS availability check", ...place(kenya, 0.12, 0.42) },
+      { id: "pharmacy-nigeria-1", name: "Nigeria Community Pharmacy Access Desk", country: "Nigeria", type: "pharmacy", services: ["refill coordination", "medicine pickup", "care packet review"], languages: ["en", "ha", "yo"], contact: "+234-000-000-602", hours: "08:00-20:00", digitalStatus: "SMS availability check", ...place(nigeria, 0.42, 0.16) },
+      { id: "pharmacy-drc-1", name: "DRC Pharmacy Handoff Point", country: "DRC", type: "pharmacy", services: ["medicine availability", "provider referral", "care packet support"], languages: ["fr", "sw"], contact: "+243-000-000-603", hours: "09:00-18:00", digitalStatus: "paper-to-digital handoff", ...place(drc, -0.18, -0.43) },
+      { id: "pharmacy-ghana-1", name: "Ghana Pharmacy Support Desk", country: "Ghana", type: "pharmacy", services: ["refill request", "medication education", "pickup coordination"], languages: ["en"], contact: "+233-000-000-604", hours: "08:00-19:00", digitalStatus: "SMS handoff", ...place(ghana, -0.31, 0.18) }
+    ]
+  };
+}
+
+function nearestRuralHealthSites(db, patientPoint, type = "clinic", limit = 3) {
+  const catalog = ruralHealthNetworkCatalog(db);
+  const sites = type === "pharmacy" ? catalog.pharmacies : type === "mobile-clinic" ? catalog.mobileClinics : catalog.clinics;
+  return sites
+    .map(site => ({ ...site, distanceKm: distanceKmBetween(patientPoint, site) }))
+    .sort((a, b) => (a.distanceKm ?? 99999) - (b.distanceKm ?? 99999))
+    .slice(0, limit);
+}
+
+function safeSymptomGuidance(symptoms = "", country = {}) {
+  const text = String(symptoms || "").toLowerCase();
+  const redFlags = [
+    ["trouble breathing", /\b(can'?t breathe|cannot breathe|short of breath|trouble breathing|breathing hard)\b/],
+    ["chest pain", /\b(chest pain|pressure in chest)\b/],
+    ["confusion or fainting", /\b(confused|confusion|faint|passed out|unconscious)\b/],
+    ["severe bleeding", /\b(bleeding a lot|heavy bleeding|severe bleeding|blood won't stop)\b/],
+    ["severe dehydration", /\b(no urine|very dry|dehydrated|cannot keep fluids|sunken eyes)\b/],
+    ["pregnancy danger sign", /\b(pregnant|pregnancy).*\b(bleeding|pain|fever|headache|swelling)\b/],
+    ["infant or elderly high-risk concern", /\b(baby|infant|newborn|elderly|old person)\b.*\b(fever|weak|not eating|not drinking)\b/],
+    ["high fever or severe pain", /\b(high fever|very hot|severe pain|worst pain|stiff neck)\b/]
+  ];
+  const matchedRedFlags = redFlags.filter(([, pattern]) => pattern.test(text)).map(([label]) => label);
+  const possibleExplanations = [];
+  if (/\b(fever|hot|headache|chills|body ache)\b/.test(text)) possibleExplanations.push("fever-like illness or infection concern");
+  if (/\b(vomit|diarrhea|stomach|belly|nausea)\b/.test(text)) possibleExplanations.push("stomach illness or dehydration risk");
+  if (/\b(cough|breath|sore throat|chest)\b/.test(text)) possibleExplanations.push("respiratory illness concern");
+  if (/\b(cut|wound|injury|fall|swelling|rash|burn)\b/.test(text)) possibleExplanations.push("injury, wound, skin, or swelling concern");
+  if (/\b(heat|sun|tired|dizzy|weak|thirst)\b/.test(text)) possibleExplanations.push("heat stress or dehydration concern");
+  if (/\b(medicine|medication|refill|pharmacy|drug)\b/.test(text)) possibleExplanations.push("medicine access or refill support need");
+  if (!possibleExplanations.length) possibleExplanations.push("general health concern that needs a trained health worker review");
+  return {
+    notDiagnosis: true,
+    safetyText: "Nexus is not a doctor and does not diagnose. It helps explain symptoms in plain language, spot danger signs, and prepare a safer clinic, mobile clinic, pharmacy, or provider handoff.",
+    urgency: matchedRedFlags.length ? "urgent-human-review" : country.risk === "High" ? "priority-review" : "routine-review",
+    redFlags: matchedRedFlags,
+    possibleExplanations,
+    plainLanguage: matchedRedFlags.length
+      ? `Danger sign found: ${matchedRedFlags.join(", ")}. The safest next step is urgent human review or emergency/local clinic support.`
+      : `This may fit: ${possibleExplanations.join(", ")}. A trained health worker should confirm what is happening.`,
+    nextSteps: matchedRedFlags.length
+      ? ["Seek urgent local care or emergency help now", "Do not wait for an app-only answer", "Send the handoff packet to a clinic or community health worker"]
+      : ["Start a guided intake", "Choose closest clinic or mobile clinic", "Create a handoff packet in the patient's language", "Use pharmacy mode only for provider-reviewed medicine support"]
+  };
 }
 
 function ensureTradeProfile(profile) {
@@ -14798,6 +14881,196 @@ async function api(req, res, url) {
     addWorkflowNote(db.profile, body.note, "Health note");
     await writeDb(db);
     return send(res, 200, publicState(db, user));
+  }
+
+  if (url.pathname === "/api/health/rural-network" && req.method === "POST") {
+    if (!canUse(user, "health")) return send(res, 403, { error: "Role does not allow rural health access workflows" });
+    const body = await readBody(req);
+    const { country, route } = activeContext(db);
+    ensureHealthProfile(db.profile);
+    const type = String(body.type || "symptom-guide").trim();
+    const patientName = String(body.patientName || db.profile.healthIntakes?.[0]?.patientName || "Community patient").trim();
+    const symptoms = String(body.symptoms || body.needSummary || body.careNote || "fever, headache, stomach pain, injury, medicine, or access concern").trim();
+    const preferredLanguage = String(body.preferredLanguage || db.profile.accessibilityProfile?.language || user.language || "en").trim();
+    const contactMethod = String(body.contactMethod || "voice callback, SMS, or WhatsApp").trim();
+    const locationText = String(body.patientLocation || body.location || country.name).trim();
+    const patientPoint = knownMapLocation(locationText, country) || { label: country.name, lat: country.lat, lng: country.lng, country: country.name };
+    const nearestClinic = nearestRuralHealthSites(db, patientPoint, "clinic", 3);
+    const nearestMobileClinic = nearestRuralHealthSites(db, patientPoint, "mobile-clinic", 2);
+    const nearestPharmacy = nearestRuralHealthSites(db, patientPoint, "pharmacy", 3);
+    const guidance = safeSymptomGuidance(symptoms, country);
+    const activeIntake = db.profile.healthIntakes[0] || {
+      id: crypto.randomUUID(),
+      patientRef: `AN-PAT-${country.id.toUpperCase()}-RURAL`,
+      patientName,
+      countryId: country.id,
+      needSummary: symptoms,
+      riskLevel: guidance.urgency,
+      queueStatus: "Rural access review",
+      representativeStatus: "Community aide pending",
+      preferredLanguage,
+      contactMethod,
+      accessibilityNeeds: "voice-first, captions, large print, caregiver handoff",
+      caregiverName: "Community health aide",
+      createdAt: new Date().toISOString()
+    };
+    if (!db.profile.healthIntakes.find(item => item.id === activeIntake.id)) db.profile.healthIntakes.unshift(activeIntake);
+    activeIntake.patientName = patientName || activeIntake.patientName;
+    activeIntake.preferredLanguage = preferredLanguage;
+    activeIntake.contactMethod = contactMethod;
+    activeIntake.needSummary = symptoms || activeIntake.needSummary;
+    activeIntake.locationText = locationText;
+    activeIntake.patientPoint = patientPoint;
+
+    const now = new Date().toISOString();
+    let record;
+    let providerId = "health-telehealth";
+    let action = "rural_health.symptom_guided";
+    let detail = `${activeIntake.patientRef} rural symptom guide prepared.`;
+    if (type === "nearest-clinic") {
+      record = {
+        id: crypto.randomUUID(),
+        matchNumber: `RHC-${String(db.profile.ruralClinicMatches.length + 1).padStart(3, "0")}`,
+        patientRef: activeIntake.patientRef,
+        patientName,
+        patientPoint,
+        nearestClinic: nearestClinic[0],
+        clinicOptions: nearestClinic,
+        routeContext: { routeId: route.id, routeName: route.name, checkpoint: db.profile.activeCheckpoint },
+        status: "clinic options ready",
+        createdAt: now
+      };
+      db.profile.ruralClinicMatches.unshift(record);
+      db.profile.ruralClinicMatches = db.profile.ruralClinicMatches.slice(0, 20);
+      activeIntake.queueStatus = "Closest clinic options ready";
+      providerId = "maps";
+      action = "rural_health.clinic_matched";
+      detail = `${record.matchNumber} closest clinic match prepared for ${patientName}.`;
+    } else if (type === "mobile-clinic") {
+      record = {
+        id: crypto.randomUUID(),
+        requestNumber: `RHM-${String(db.profile.mobileClinicRequests.length + 1).padStart(3, "0")}`,
+        patientRef: activeIntake.patientRef,
+        patientName,
+        patientPoint,
+        mobileClinic: nearestMobileClinic[0],
+        mobileClinicOptions: nearestMobileClinic,
+        dispatchWindow: guidance.urgency === "urgent-human-review" ? "urgent local escalation and mobile team review" : "24-48 hour outreach window",
+        status: "mobile clinic request staged",
+        createdAt: now
+      };
+      db.profile.mobileClinicRequests.unshift(record);
+      db.profile.mobileClinicRequests = db.profile.mobileClinicRequests.slice(0, 20);
+      activeIntake.queueStatus = "Mobile clinic request staged";
+      providerId = "health-notifications";
+      action = "rural_health.mobile_clinic_requested";
+      detail = `${record.requestNumber} mobile clinic request staged for ${patientName}.`;
+    } else if (type === "pharmacy") {
+      record = {
+        id: crypto.randomUUID(),
+        requestNumber: `RHP-${String(db.profile.pharmacyRequests.length + 1).padStart(3, "0")}`,
+        patientRef: activeIntake.patientRef,
+        patientName,
+        patientPoint,
+        pharmacy: nearestPharmacy[0],
+        pharmacyOptions: nearestPharmacy,
+        medicineConcern: String(body.medicineConcern || "medicine availability, refill, or provider-reviewed pickup support").trim(),
+        providerReviewRequired: true,
+        status: "pharmacy options ready",
+        createdAt: now
+      };
+      db.profile.pharmacyRequests.unshift(record);
+      db.profile.pharmacyRequests = db.profile.pharmacyRequests.slice(0, 20);
+      activeIntake.queueStatus = "Pharmacy options ready";
+      providerId = "health-notifications";
+      action = "rural_health.pharmacy_matched";
+      detail = `${record.requestNumber} pharmacy access options prepared for ${patientName}.`;
+    } else if (type === "handoff") {
+      record = {
+        id: crypto.randomUUID(),
+        packetNumber: `RHH-${String(db.profile.ruralHealthHandoffPackets.length + 1).padStart(3, "0")}`,
+        patientRef: activeIntake.patientRef,
+        patientName,
+        preferredLanguage,
+        contactMethod,
+        patientPoint,
+        symptoms,
+        urgency: guidance.urgency,
+        redFlags: guidance.redFlags,
+        possibleExplanations: guidance.possibleExplanations,
+        notDiagnosis: true,
+        clinic: nearestClinic[0],
+        mobileClinic: nearestMobileClinic[0],
+        pharmacy: nearestPharmacy[0],
+        plainLanguageSummary: guidance.plainLanguage,
+        packetForPaperClinic: [
+          `Patient: ${patientName}`,
+          `Symptoms spoken: ${symptoms}`,
+          `Safety note: ${guidance.safetyText}`,
+          `Urgency: ${guidance.urgency}`,
+          `Preferred language: ${preferredLanguage}`,
+          `Contact: ${contactMethod}`,
+          `Nearest clinic: ${nearestClinic[0]?.name || "not available"}`,
+          `Nearest pharmacy: ${nearestPharmacy[0]?.name || "not available"}`
+        ],
+        status: "handoff packet ready",
+        createdAt: now
+      };
+      db.profile.ruralHealthHandoffPackets.unshift(record);
+      db.profile.ruralHealthHandoffPackets = db.profile.ruralHealthHandoffPackets.slice(0, 20);
+      activeIntake.queueStatus = "Paper-to-digital handoff ready";
+      providerId = "health-ehr";
+      action = "rural_health.handoff_packet_ready";
+      detail = `${record.packetNumber} rural handoff packet prepared for paper or non-digital clinic use.`;
+    } else {
+      record = {
+        id: crypto.randomUUID(),
+        guideNumber: `RHG-${String(db.profile.ruralSymptomGuides.length + 1).padStart(3, "0")}`,
+        patientRef: activeIntake.patientRef,
+        patientName,
+        preferredLanguage,
+        contactMethod,
+        patientPoint,
+        symptoms,
+        notDiagnosis: true,
+        safetyText: guidance.safetyText,
+        urgency: guidance.urgency,
+        redFlags: guidance.redFlags,
+        possibleExplanations: guidance.possibleExplanations,
+        plainLanguage: guidance.plainLanguage,
+        nextSteps: guidance.nextSteps,
+        nearestClinic: nearestClinic[0],
+        mobileClinic: nearestMobileClinic[0],
+        pharmacy: nearestPharmacy[0],
+        status: "plain-language symptom guide ready",
+        createdAt: now
+      };
+      db.profile.ruralSymptomGuides.unshift(record);
+      db.profile.ruralSymptomGuides = db.profile.ruralSymptomGuides.slice(0, 20);
+      activeIntake.queueStatus = guidance.urgency === "urgent-human-review" ? "Urgent human review recommended" : "Symptom guide ready";
+    }
+
+    db.profile.aiActivity = `${detail} Nexus is not diagnosing; it is preparing access, safety, and handoff support.`;
+    logIntegration(db, {
+      providerId,
+      module: "Healthcare",
+      action,
+      detail,
+      metadata: {
+        recordId: record.id,
+        patientRef: activeIntake.patientRef,
+        type,
+        urgency: record.urgency || guidance.urgency,
+        notDiagnosis: true,
+        countryId: country.id
+      }
+    });
+    addActivity(db.profile, db.profile.aiActivity);
+    addWorkflowNote(db.profile, body.note, "Rural health access note");
+    await writeDb(db);
+    const state = publicState(db, user);
+    state.ruralHealthResult = { type, record, guidance, nearestClinic, nearestMobileClinic, nearestPharmacy };
+    return send(res, 200, state);
   }
 
   if (url.pathname === "/api/health/intake-simulation" && req.method === "POST") {

@@ -371,6 +371,30 @@ async function call(path, body) {
   assert(guidedIntake.profile.telehealthReferrals.length >= 1);
   assert(guidedIntake.profile.telehealthFollowUps.length >= 1);
   assert(guidedIntake.profile.integrationEvents.some(event => event.action === "telehealth.followup_scheduled"));
+  const symptomGuide = await call("/api/health/rural-network", {
+    type: "symptom-guide",
+    patientName: "Grace Wanjiku",
+    symptoms: "Fever and headache for two days with weakness",
+    patientLocation: "Nairobi",
+    preferredLanguage: "sw",
+    contactMethod: "voice callback, SMS, or WhatsApp"
+  });
+  assert(symptomGuide.ruralHealthResult.record.notDiagnosis === true);
+  assert(symptomGuide.profile.ruralSymptomGuides.length >= 1);
+  assert(symptomGuide.profile.integrationEvents.some(event => event.action === "rural_health.symptom_guided"));
+  const clinicMatch = await call("/api/health/rural-network", { type: "nearest-clinic", patientName: "Grace Wanjiku", patientLocation: "Nairobi" });
+  assert(clinicMatch.profile.ruralClinicMatches.length >= 1);
+  assert(clinicMatch.ruralHealthResult.record.nearestClinic.name);
+  const mobileClinic = await call("/api/health/rural-network", { type: "mobile-clinic", patientName: "Grace Wanjiku", patientLocation: "Nairobi" });
+  assert(mobileClinic.profile.mobileClinicRequests.length >= 1);
+  assert(mobileClinic.ruralHealthResult.record.mobileClinic.name);
+  const pharmacy = await call("/api/health/rural-network", { type: "pharmacy", patientName: "Grace Wanjiku", patientLocation: "Nairobi", medicineConcern: "provider-reviewed refill support" });
+  assert(pharmacy.profile.pharmacyRequests.length >= 1);
+  assert(pharmacy.ruralHealthResult.record.providerReviewRequired === true);
+  const ruralHandoff = await call("/api/health/rural-network", { type: "handoff", patientName: "Grace Wanjiku", symptoms: "Fever and headache for two days", patientLocation: "Nairobi", preferredLanguage: "sw" });
+  assert(ruralHandoff.profile.ruralHealthHandoffPackets.length >= 1);
+  assert(ruralHandoff.ruralHealthResult.record.notDiagnosis === true);
+  assert(ruralHandoff.ruralHealthResult.record.packetForPaperClinic.length >= 5);
   const representative = await call("/api/health/action", { type: "representative" });
   assert(representative.profile.representativeConnections >= 1);
   assert(representative.profile.integrationEvents.some(event => event.action === "representative.connected"));
