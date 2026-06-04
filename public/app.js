@@ -54,8 +54,13 @@ let routeTrackingWatchId = null;
 let routeTrackingPoints = [];
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-160";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v140";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-161";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v141";
+const VOICE_RESTART_DELAY_MS = 320;
+const VOICE_UI_FOCUS_DELAY_MS = 80;
+const VOICE_ATTENTION_DELAY_MS = 900;
+const VOICE_POST_STOP_REDIRECT_DELAY_MS = 80;
+const VOICE_UI_RESUME_DELAYS_MS = [180, 650, 1500, 3200, 5200];
 
 const countryLanguageMap = {
   nigeria: "en",
@@ -2587,10 +2592,10 @@ function voiceLanguageName() {
 }
 
 function speechRateForLanguage(language = languageCode()) {
-  const rates = { en: 0.94, fr: 0.88, sw: 0.86, ar: 0.82, es: 0.9 };
+  const rates = { en: 1.04, fr: 0.97, sw: 0.96, ar: 0.92, es: 1.0 };
   const slowMode = localStorage.getItem("agrinexusSlowSpeech") === "on";
-  const baseRate = rates[language] || 0.9;
-  return Number((slowMode ? Math.max(0.72, baseRate * 0.88) : baseRate).toFixed(2));
+  const baseRate = rates[language] || 1.0;
+  return Number((slowMode ? Math.max(0.78, baseRate * 0.9) : baseRate).toFixed(2));
 }
 
 function speechPitchForLanguage(language = languageCode()) {
@@ -12316,7 +12321,7 @@ function speakVoiceResponse(textOverride) {
       voiceResumeAfterSpeech = false;
       setTimeout(() => {
         if (!voiceRecognition && !voiceSpeaking && !voiceStopRequested) startVoiceListening();
-      }, 700);
+      }, VOICE_RESTART_DELAY_MS);
     }
   };
   const browserSpeak = () => {
@@ -12466,7 +12471,7 @@ function resumeVoiceAfterUiAction(shouldResume, options = {}) {
   voiceStopRequested = false;
   voiceAutoRestart = true;
   voiceResumeAfterSpeech = true;
-  const attempts = options.attempts || [450, 1200, 2400, 4800, 7200];
+  const attempts = options.attempts || VOICE_UI_RESUME_DELAYS_MS;
   attempts.forEach(delay => {
     setTimeout(() => {
       if (!document.hidden && !voiceRecognition && !voiceSpeaking && !voiceStopRequested) {
@@ -12497,7 +12502,7 @@ function openAskNexus() {
   globalBar?.classList.add("assistant-attention");
   setTimeout(() => {
     globalBar?.classList.remove("assistant-attention");
-  }, 1600);
+  }, VOICE_ATTENTION_DELAY_MS);
   if (globalBar && window.matchMedia("(max-width: 980px)").matches) {
     globalBar.scrollIntoView({ behavior: "smooth", block: "start" });
   } else {
@@ -12505,7 +12510,7 @@ function openAskNexus() {
   }
   setTimeout(() => {
     (globalInput || dockInput)?.focus();
-  }, 220);
+  }, VOICE_UI_FOCUS_DELAY_MS);
   setVoiceResponse("Ask AgriNexus is open. Type a request or use the Mic button.", false, { allowVoiceFirst: false });
   announce("Ask AgriNexus opened");
 }
@@ -13660,7 +13665,7 @@ function startVoiceListening() {
     if (voiceFirstMode && voiceAutoRestart && !voiceSpeaking && !voiceStopRequested && !document.hidden) {
       setTimeout(() => {
         if (!voiceRecognition && voiceFirstMode && voiceAutoRestart && !voiceSpeaking) startVoiceListening();
-      }, 900);
+      }, VOICE_RESTART_DELAY_MS);
     }
   };
   voiceRecognition.onresult = event => {
@@ -13679,12 +13684,12 @@ function startVoiceListening() {
         setTimeout(() => {
           setCommandInputs(stopRedirect);
           void handleVoiceCommand(stopRedirect);
-        }, 120);
+        }, VOICE_POST_STOP_REDIRECT_DELAY_MS);
       }
       return;
     }
     setVoiceStatus("thinking");
-    setVoiceResponse(`I heard: ${command}. Give me a moment.`, false, { allowVoiceFirst: false });
+    setVoiceResponse(`Heard: ${command}.`, false, { allowVoiceFirst: false });
     request("/api/voice/transcribe", { method: "POST", body: { transcript: command, language: languageCode(), locale: voiceLocale() } }).catch(() => {});
     handleVoiceCommand(command);
   };
