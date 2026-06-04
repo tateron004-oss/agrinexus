@@ -55,8 +55,8 @@ let routeTrackingWatchId = null;
 let routeTrackingPoints = [];
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-167";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v147";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-168";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v148";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
 const VOICE_ATTENTION_DELAY_MS = 900;
@@ -8873,6 +8873,10 @@ function render() {
   const mobileClinicRequests = data.profile.mobileClinicRequests || [];
   const pharmacyRequests = data.profile.pharmacyRequests || [];
   const ruralHealthHandoffPackets = data.profile.ruralHealthHandoffPackets || [];
+  const mobileClinicSupplyRequests = data.profile.mobileClinicSupplyRequests || [];
+  const mobileClinicSupplyMatches = data.profile.mobileClinicSupplyMatches || [];
+  const mobileClinicSupplyDispatches = data.profile.mobileClinicSupplyDispatches || [];
+  const mobileClinicSupplyDeliveries = data.profile.mobileClinicSupplyDeliveries || [];
   const advancedHealthOps = [
     ...(data.profile.telehealthAppointments || []).map(item => ({ title: item.appointmentNumber, detail: `${item.patientRef} - ${item.status} - ${item.modality}` })),
     ...(data.profile.telehealthProviderAssignments || []).map(item => ({ title: item.assignmentNumber, detail: `${item.patientRef} - ${item.providerName} - ${item.status}` })),
@@ -8921,6 +8925,10 @@ function render() {
   const latestMobileClinic = mobileClinicRequests[0];
   const latestPharmacy = pharmacyRequests[0];
   const latestHandoffPacket = ruralHealthHandoffPackets[0];
+  const latestSupplyRequest = mobileClinicSupplyRequests[0];
+  const latestSupplyMatch = mobileClinicSupplyMatches[0];
+  const latestSupplyDispatch = mobileClinicSupplyDispatches[0];
+  const latestSupplyDelivery = mobileClinicSupplyDeliveries[0];
   $("#ruralHealthAccessPanel").innerHTML = [
     row("Patient", latestSymptomGuide?.patientName || activeIntake?.patientName || "No rural access case yet"),
     row("Safety boundary", "Nexus explains and routes. It does not diagnose."),
@@ -8942,6 +8950,22 @@ function render() {
   $("#ruralHealthHandoffPanel").innerHTML = latestHandoffPacket
     ? `<div><strong>${translateText(latestHandoffPacket.packetNumber)}</strong><span>${translateText(latestHandoffPacket.plainLanguageSummary || "Handoff ready")}</span><small>${translateText((latestHandoffPacket.packetForPaperClinic || []).join(" | "))}</small></div>`
     : "<div>No handoff packet yet. Build handoff creates a plain-language packet for a paper or non-digital clinic.</div>";
+  $("#mobileClinicSupplyPanel").innerHTML = [
+    row("Mobile clinic", latestSupplyDispatch?.destination || latestSupplyRequest?.mobileClinicName || latestMobileClinic?.mobileClinic?.name || "No supply request yet"),
+    row("Supply need", latestSupplyRequest?.supplyNeeds || latestSupplyDispatch?.supplies || "Request gloves, tests, wound care, PPE, equipment, or approved medicine support"),
+    row("Supply source", latestSupplyMatch?.selectedSource?.name || latestSupplyRequest?.suggestedSource?.name || "Find supply source"),
+    row("Status", latestSupplyDelivery?.status || latestSupplyDispatch?.status || latestSupplyMatch?.status || latestSupplyRequest?.status || "Ready to request"),
+    row("Compliance", latestSupplyMatch?.coldChainRequired || latestSupplyRequest?.coldChainRequired ? "Cold-chain flag active" : latestSupplyMatch?.providerReviewRequired || latestSupplyRequest?.providerReviewRequired ? "Provider/pharmacist review required" : "Basic supply routing")
+  ].join("");
+  const supplyEvidence = [
+    ...mobileClinicSupplyRequests.map(item => ({ title: item.requestNumber, detail: `${item.mobileClinicName} - ${item.supplyNeeds} - ${item.urgency}` })),
+    ...mobileClinicSupplyMatches.map(item => ({ title: item.matchNumber, detail: `${item.mobileClinicName} - ${item.selectedSource?.name || "source"} - ${item.selectedSource?.distanceKm ?? "?"} km` })),
+    ...mobileClinicSupplyDispatches.map(item => ({ title: item.dispatchNumber, detail: `${item.supplySource?.name || "source"} to ${item.destination} - ETA ${item.eta}` })),
+    ...mobileClinicSupplyDeliveries.map(item => ({ title: item.deliveryNumber, detail: `${item.receivedBy} - ${item.condition} - ${item.status}` }))
+  ];
+  $("#mobileClinicSupplyList").innerHTML = supplyEvidence.length
+    ? supplyEvidence.slice(0, 12).map(item => `<div><strong>${translateText(item.title)}</strong><span>${translateText(item.detail)}</span></div>`).join("")
+    : "<div>No mobile clinic supply evidence yet. Request supplies, find a source, track delivery, or confirm delivery.</div>";
 
   $("#healthAiPanel").innerHTML = [
     row("Risk", country.risk),
@@ -10056,7 +10080,8 @@ function ruralHealthFallbackSites(country = activeCountry()) {
   return [
     { type: "clinic", name: `${country.name} rural clinic access point`, distanceKm: 24, services: ["primary care intake", "telehealth callback"], ...point(.22, -.28) },
     { type: "mobile-clinic", name: `${country.name} mobile clinic route`, distanceKm: 41, services: ["field outreach", "vitals collection"], ...point(-.35, .44) },
-    { type: "pharmacy", name: `${country.name} pharmacy support desk`, distanceKm: 18, services: ["medicine availability", "refill coordination"], ...point(.14, .36) }
+    { type: "pharmacy", name: `${country.name} pharmacy support desk`, distanceKm: 18, services: ["medicine availability", "refill coordination"], ...point(.14, .36) },
+    { type: "medical-supply", name: `${country.name} medical supply depot`, distanceKm: 32, services: ["PPE", "rapid tests", "wound care", "clinic equipment"], ...point(-.12, .58) }
   ];
 }
 
@@ -10066,12 +10091,18 @@ function ruralHealthMapSites() {
   const mobileRequests = data.profile.mobileClinicRequests || [];
   const pharmacyRequests = data.profile.pharmacyRequests || [];
   const handoffPackets = data.profile.ruralHealthHandoffPackets || [];
+  const supplyRequests = data.profile.mobileClinicSupplyRequests || [];
+  const supplyMatches = data.profile.mobileClinicSupplyMatches || [];
+  const supplyDispatches = data.profile.mobileClinicSupplyDispatches || [];
   const sites = [
     ...clinicMatches.flatMap(item => item.clinicOptions || [item.nearestClinic]).filter(Boolean).map(item => ({ ...item, type: "clinic" })),
     ...mobileRequests.flatMap(item => item.mobileClinicOptions || [item.mobileClinic]).filter(Boolean).map(item => ({ ...item, type: "mobile-clinic" })),
     ...pharmacyRequests.flatMap(item => item.pharmacyOptions || [item.pharmacy]).filter(Boolean).map(item => ({ ...item, type: "pharmacy" })),
     ...guides.flatMap(item => [item.nearestClinic && { ...item.nearestClinic, type: "clinic" }, item.mobileClinic && { ...item.mobileClinic, type: "mobile-clinic" }, item.pharmacy && { ...item.pharmacy, type: "pharmacy" }]).filter(Boolean),
-    ...handoffPackets.flatMap(item => [item.clinic && { ...item.clinic, type: "clinic" }, item.mobileClinic && { ...item.mobileClinic, type: "mobile-clinic" }, item.pharmacy && { ...item.pharmacy, type: "pharmacy" }]).filter(Boolean)
+    ...handoffPackets.flatMap(item => [item.clinic && { ...item.clinic, type: "clinic" }, item.mobileClinic && { ...item.mobileClinic, type: "mobile-clinic" }, item.pharmacy && { ...item.pharmacy, type: "pharmacy" }]).filter(Boolean),
+    ...supplyRequests.flatMap(item => item.supplyOptions || [item.suggestedSource]).filter(Boolean).map(item => ({ ...item, type: "medical-supply" })),
+    ...supplyMatches.flatMap(item => item.supplyOptions || [item.selectedSource]).filter(Boolean).map(item => ({ ...item, type: "medical-supply" })),
+    ...supplyDispatches.flatMap(item => [item.supplySource]).filter(Boolean).map(item => ({ ...item, type: "medical-supply" }))
   ];
   const seen = new Set();
   return (sites.length ? sites : ruralHealthFallbackSites()).filter(site => {
@@ -10124,7 +10155,8 @@ function renderRuralHealthAccessMap() {
   const colorByType = {
     clinic: "#1b8f68",
     "mobile-clinic": "#7c3aed",
-    pharmacy: "#0f72b8"
+    pharmacy: "#0f72b8",
+    "medical-supply": "#c2410c"
   };
   sites.forEach(site => {
     const color = colorByType[site.type] || "#173240";
@@ -10925,13 +10957,17 @@ function tradeUserCopy(action, product) {
 }
 
 function healthUserCopy(action, accessAction) {
-  if (["symptom-guide", "nearest-clinic", "mobile-clinic", "pharmacy", "handoff"].includes(action)) {
+  if (["symptom-guide", "nearest-clinic", "mobile-clinic", "pharmacy", "handoff", "supply-request", "supply-match", "supply-dispatch", "supply-delivery"].includes(action)) {
     const copy = {
       "symptom-guide": ["Explain symptoms safely", "Tell AgriNexus symptoms in plain words. It will explain possible concerns, danger signs, and the safest next step without diagnosing.", "Speak or type symptoms"],
       "nearest-clinic": ["Find closest clinic", "AgriNexus matches the patient location to nearby clinic options and shows them on the map.", "Find clinic"],
       "mobile-clinic": ["Request mobile clinic", "AgriNexus prepares a mobile clinic outreach request for rural areas where the patient cannot easily travel.", "Request mobile clinic"],
       pharmacy: ["Find pharmacy help", "AgriNexus finds pharmacy support and keeps provider review attached before medication action.", "Find pharmacy"],
-      handoff: ["Build clinic handoff", "AgriNexus creates a paper-to-digital packet a clinic, community health worker, pharmacy, or mobile clinic can understand.", "Build handoff"]
+      handoff: ["Build clinic handoff", "AgriNexus creates a paper-to-digital packet a clinic, community health worker, pharmacy, or mobile clinic can understand.", "Build handoff"],
+      "supply-request": ["Request clinic supplies", "AgriNexus records what the mobile clinic needs, where it is, patient volume, urgency, and compliance flags.", "Request supplies"],
+      "supply-match": ["Find supply source", "AgriNexus matches the mobile clinic to pharmacy, depot, county store, or approved supply source options.", "Find source"],
+      "supply-dispatch": ["Track supply delivery", "AgriNexus prepares dispatch tracking between the supply source and mobile clinic route.", "Start dispatch"],
+      "supply-delivery": ["Confirm supply delivery", "AgriNexus records received supplies, delivery proof, and compliance notes for audit.", "Confirm delivery"]
     }[action];
     return {
       title: copy[0],
@@ -11299,7 +11335,8 @@ function workflowConfig(workflow, action, element) {
   if (workflow === "health") {
     const accessAction = ["accessibility", "caption", "caregiver", "consent", "vitals", "referral", "followup"].includes(action);
     const advancedHealthActions = new Set(["appointment", "provider", "history", "prescription", "emergency", "note", "outcome"]);
-    const ruralHealthActions = new Set(["symptom-guide", "nearest-clinic", "mobile-clinic", "pharmacy", "handoff"]);
+    const ruralHealthActions = new Set(["symptom-guide", "nearest-clinic", "mobile-clinic", "pharmacy", "handoff", "supply-request", "supply-match", "supply-dispatch", "supply-delivery"]);
+    const supplyActions = new Set(["supply-request", "supply-match", "supply-dispatch", "supply-delivery"]);
     const advisorDataset = element?.dataset || {};
     const titleMap = {
       intake: "Start intake",
@@ -11326,7 +11363,11 @@ function workflowConfig(workflow, action, element) {
       "nearest-clinic": "Find closest clinic",
       "mobile-clinic": "Request mobile clinic",
       pharmacy: "Find pharmacy",
-      handoff: "Build rural handoff"
+      handoff: "Build rural handoff",
+      "supply-request": "Request supplies",
+      "supply-match": "Find supply source",
+      "supply-dispatch": "Track supply delivery",
+      "supply-delivery": "Confirm supply delivery"
     };
     const summaryMap = {
       intake: "Collect patient need, urgency, accessibility supports, language, caregiver, and callback details before opening the telehealth case.",
@@ -11349,11 +11390,15 @@ function workflowConfig(workflow, action, element) {
       "nearest-clinic": "Find nearby clinic options and map the patient's route context for rural access support.",
       "mobile-clinic": "Create a mobile clinic outreach request for a patient who cannot easily reach care.",
       pharmacy: "Find pharmacy access support while keeping provider review attached before medication action.",
-      handoff: "Create a paper-to-digital handoff packet for clinics or providers that do not have a digital system."
+      handoff: "Create a paper-to-digital handoff packet for clinics or providers that do not have a digital system.",
+      "supply-request": "Create a mobile clinic supply request for PPE, tests, wound care, equipment, basic supplies, or provider-reviewed medicine support.",
+      "supply-match": "Match the mobile clinic to nearby approved pharmacies, depots, county stores, or medical supply sources.",
+      "supply-dispatch": "Create dispatch tracking from the supply source to the mobile clinic route.",
+      "supply-delivery": "Confirm supply receipt and compliance evidence for the mobile clinic."
     };
     const ruralFields = ruralHealthActions.has(action) ? [
-      { name: "patientName", label: "Patient or household name", value: advisorDataset.patientName || (data.profile.healthIntakes || [])[0]?.patientName || "Community patient", placeholder: "Name or household reference" },
-      { name: "symptoms", label: "What the patient says", type: "textarea", rows: 4, value: advisorDataset.symptoms || "Fever and headache for two days, weak and worried about travel to clinic.", placeholder: "Speak or type symptoms in plain words" },
+      { name: "patientName", label: supplyActions.has(action) ? "Mobile clinic team or route" : "Patient or household name", value: advisorDataset.patientName || (supplyActions.has(action) ? "Mobile clinic outreach team" : (data.profile.healthIntakes || [])[0]?.patientName || "Community patient"), placeholder: supplyActions.has(action) ? "Team, clinic route, or outreach unit" : "Name or household reference" },
+      { name: supplyActions.has(action) ? "supplyNeeds" : "symptoms", label: supplyActions.has(action) ? "Supplies needed" : "What the patient says", type: "textarea", rows: 4, value: advisorDataset.supplyNeeds || advisorDataset.symptoms || (supplyActions.has(action) ? "Malaria tests, gloves, wound care, ORS, PPE, and blood pressure cuff batteries." : "Fever and headache for two days, weak and worried about travel to clinic."), placeholder: supplyActions.has(action) ? "List supplies, equipment, tests, PPE, or approved medicine support" : "Speak or type symptoms in plain words" },
       { name: "patientLocation", label: "Patient location", value: advisorDataset.patientLocation || activeCountry().name, placeholder: "Village, city, region, or country" },
       { name: "preferredLanguage", label: "Preferred language", type: "select", value: languageCode(), options: [
         { value: "en", label: "English" },
@@ -11368,7 +11413,13 @@ function workflowConfig(workflow, action, element) {
         { value: "community health worker", label: "Community health worker" },
         { value: "caregiver handoff", label: "Caregiver handoff" }
       ] },
-      ...(action === "pharmacy" ? [{ name: "medicineConcern", label: "Medicine or refill concern", type: "textarea", rows: 2, value: "Check availability or refill support after provider review." }] : [])
+      ...(action === "pharmacy" ? [{ name: "medicineConcern", label: "Medicine or refill concern", type: "textarea", rows: 2, value: "Check availability or refill support after provider review." }] : []),
+      ...(supplyActions.has(action) ? [
+        { name: "patientVolume", label: "Patient volume", value: "40 patients expected", placeholder: "Example: 40 patients expected" },
+        { name: "deliveryWindow", label: "Delivery window", value: "same day or next outreach window", placeholder: "Example: today, 24 hours, next outreach" },
+        ...(action === "supply-dispatch" ? [{ name: "driverOrCourier", label: "Driver or courier", value: "Community health logistics driver" }, { name: "eta", label: "ETA", value: "2-4 hours, route conditions permitting" }] : []),
+        ...(action === "supply-delivery" ? [{ name: "receivedBy", label: "Received by", value: "Mobile clinic lead" }, { name: "condition", label: "Condition", value: "received and counted" }] : [])
+      ] : [])
     ] : [];
     const intakeFields = ruralHealthActions.has(action) ? ruralFields : action === "intake" ? [
       { name: "patientName", label: "Patient or household name", value: "Community patient", placeholder: "Name or household reference" },
@@ -11418,7 +11469,7 @@ function workflowConfig(workflow, action, element) {
       body: action === "video" ? { type: "health" } : { type: action },
       fields: intakeFields,
       success: ruralHealthActions.has(action) ? "Rural health access workflow complete" : "Health action complete",
-      record: ruralHealthActions.has(action) ? "Rural symptom guide, clinic/mobile clinic/pharmacy match, handoff packet, map evidence, provider audit event, and activity feed" : advancedHealthActions.has(action) ? "Advanced care operation record, active intake status, EHR/telehealth/notification evidence, and activity feed" : accessAction ? "Telehealth accessibility case note, active intake status, provider evidence, and activity feed" : "Intake queue, representative status, safety review, care plan, or AI activity",
+      record: supplyActions.has(action) ? "Mobile clinic supply request, source match, dispatch route, delivery confirmation, compliance notes, map evidence, provider audit event, and activity feed" : ruralHealthActions.has(action) ? "Rural symptom guide, clinic/mobile clinic/pharmacy match, handoff packet, map evidence, provider audit event, and activity feed" : advancedHealthActions.has(action) ? "Advanced care operation record, active intake status, EHR/telehealth/notification evidence, and activity feed" : accessAction ? "Telehealth accessibility case note, active intake status, provider evidence, and activity feed" : "Intake queue, representative status, safety review, care plan, or AI activity",
       provider: ruralHealthActions.has(action) ? "Health, map, notification, and EHR-style handoff provider events are recorded when applicable." : "Telehealth, notification, EHR, and AI provider events are recorded when applicable.",
       guide: experienceMode === "user" ? userCopy.guide : ruralHealthActions.has(action)
         ? "Capture the patient's words, location, language, and contact method. Confirming creates access evidence and keeps the safety boundary clear: Nexus is not diagnosing."
@@ -11434,12 +11485,12 @@ function workflowConfig(workflow, action, element) {
         detail: "Open camera so the patient or caregiver can show the provider the injury or visible concern.",
         consent: "Ask permission before showing an injury, face, household, document, or private health detail."
       } : null,
-      userOutcome: ruralHealthActions.has(action) ? "AgriNexus prepares the rural care access path, map evidence, and handoff support." : action === "video" ? "AgriNexus prepares the provider video handoff and fallback contact path." : action === "provider" || action === "appointment" ? "AgriNexus prepares the provider contact path and saves the handoff." : action === "safety" || action === "inspector" ? "AgriNexus records the hotspot review and recommended next step." : "AgriNexus creates the care record and keeps provider support connected.",
-      userRecord: ruralHealthActions.has(action) ? "The patient's words, language, location, clinic/pharmacy options, safety guidance, and handoff packet stay connected." : "The intake, provider contact, accessibility needs, hotspot context, and follow-up evidence stay connected for the care team.",
+      userOutcome: supplyActions.has(action) ? "AgriNexus connects the mobile clinic to supply sources, route tracking, and delivery evidence." : ruralHealthActions.has(action) ? "AgriNexus prepares the rural care access path, map evidence, and handoff support." : action === "video" ? "AgriNexus prepares the provider video handoff and fallback contact path." : action === "provider" || action === "appointment" ? "AgriNexus prepares the provider contact path and saves the handoff." : action === "safety" || action === "inspector" ? "AgriNexus records the hotspot review and recommended next step." : "AgriNexus creates the care record and keeps provider support connected.",
+      userRecord: supplyActions.has(action) ? "The supply need, mobile clinic route, source, courier, compliance flags, and delivery proof stay connected." : ruralHealthActions.has(action) ? "The patient's words, language, location, clinic/pharmacy options, safety guidance, and handoff packet stay connected." : "The intake, provider contact, accessibility needs, hotspot context, and follow-up evidence stay connected for the care team.",
       checklist: [
         { title: "Country context", detail: `${activeCountry().name}: ${activeCountry().queue}`, status: "live", label: activeCountry().risk },
         { title: "Active case", detail: (data.profile.healthIntakes || [])[0]?.patientRef || "No intake yet", status: (data.profile.healthIntakes || []).length ? "ready" : "pending", label: "Case" },
-        ...(ruralHealthActions.has(action) ? [{ title: "Care access", detail: `${(data.profile.ruralClinicMatches || []).length} clinic match, ${(data.profile.pharmacyRequests || []).length} pharmacy request, ${(data.profile.mobileClinicRequests || []).length} mobile clinic request`, status: "ready", label: "Rural" }] : []),
+        ...(ruralHealthActions.has(action) ? [{ title: supplyActions.has(action) ? "Supply chain" : "Care access", detail: supplyActions.has(action) ? `${(data.profile.mobileClinicSupplyRequests || []).length} request, ${(data.profile.mobileClinicSupplyMatches || []).length} match, ${(data.profile.mobileClinicSupplyDispatches || []).length} dispatch, ${(data.profile.mobileClinicSupplyDeliveries || []).length} delivery` : `${(data.profile.ruralClinicMatches || []).length} clinic match, ${(data.profile.pharmacyRequests || []).length} pharmacy request, ${(data.profile.mobileClinicRequests || []).length} mobile clinic request`, status: "ready", label: supplyActions.has(action) ? "Supplies" : "Rural" }] : []),
         ...(action === "video" ? [{ title: "Video handoff", detail: (data.profile.videoSessions || [])[0]?.sessionNumber || "No video session yet", status: (data.profile.videoSessions || []).length ? "ready" : "pending", label: "Video" }] : []),
         { title: accessAction ? "Assistive support" : "Governance", detail: accessAction ? "Captions, visual support, caregiver handoff, and rural fallback remain attached to the session." : `${activeCountry().quality}% data quality, ${activeCountry().safety}% safety override`, status: "ready", label: accessAction ? "Access" : "Safety" }
       ]
@@ -13130,6 +13181,23 @@ async function handleVoiceCommand(rawCommand) {
   if (/\b(mobile clinic|clinic come|come to me|outreach team|field clinic|community health worker)\b/.test(lower)) {
     goSection("health");
     return openWorkflowByVoice("health", "mobile-clinic", "I opened Rural Health Access and prepared a mobile clinic outreach request.", { patientLocation: activeCountry().name });
+  }
+  if (/\b(mobile clinic|outreach team|field clinic|clinic team)\b.*\b(supplies|supply|stock|inventory|medicine|ppe|gloves|tests|wound|equipment|restock)\b/.test(lower)
+    || /\b(supplies|supply|stock|inventory|restock|ppe|gloves|tests|wound care)\b.*\b(mobile clinic|outreach team|field clinic|clinic team)\b/.test(lower)) {
+    goSection("health");
+    return openWorkflowByVoice("health", "supply-request", "I opened Mobile Clinic Supply Network and prepared a supply request.", { patientLocation: activeCountry().name, supplyNeeds: command });
+  }
+  if (/\b(find|match|source|where)\b.*\b(supply|supplies|depot|warehouse|medical store|pharmacy stock|inventory)\b/.test(lower)) {
+    goSection("health");
+    return openWorkflowByVoice("health", "supply-match", "I opened Mobile Clinic Supply Network and prepared the supply source match.", { patientLocation: activeCountry().name, supplyNeeds: command });
+  }
+  if (/\b(track|dispatch|deliver|delivery|driver|courier)\b.*\b(supply|supplies|medical kit|clinic kit|ppe|tests|medicine)\b/.test(lower)) {
+    goSection("health");
+    return openWorkflowByVoice("health", "supply-dispatch", "I opened Mobile Clinic Supply Network and prepared supply delivery tracking.", { patientLocation: activeCountry().name, supplyNeeds: command });
+  }
+  if (/\b(confirm|received|delivered|arrived)\b.*\b(supply|supplies|medical kit|clinic kit|ppe|tests|medicine)\b/.test(lower)) {
+    goSection("health");
+    return openWorkflowByVoice("health", "supply-delivery", "I opened Mobile Clinic Supply Network and prepared delivery confirmation.", { patientLocation: activeCountry().name, supplyNeeds: command });
   }
   if (/\b(pharmacy|medicine|medication|refill|drug|prescription pickup)\b/.test(lower)) {
     goSection("health");

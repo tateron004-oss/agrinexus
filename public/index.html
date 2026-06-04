@@ -13,7 +13,7 @@
   <link rel="icon" href="/icons/agri-nexus-192.png" type="image/png">
   <link rel="apple-touch-icon" href="/icons/agri-nexus-192.png">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-  <link rel="stylesheet" href="/styles.css?v=nexus-behavior-167">
+  <link rel="stylesheet" href="/styles.css?v=nexus-behavior-168">
 </head>
 <body>
   <a class="skip-link" href="#mainContent">Skip to main content</a>
@@ -615,6 +615,24 @@
             <article>
               <h3>Patient Handoff Packet</h3>
               <div id="ruralHealthHandoffPanel" class="activity"></div>
+            </article>
+          </div>
+          <div class="cards two mobile-clinic-supply-network">
+            <article class="accessibility-card">
+              <div class="tag-row"><span>Mobile clinic supplies</span><span>Supply chain</span></div>
+              <h3>Mobile Clinic Supply Network</h3>
+              <p>Connect mobile clinic teams to approved pharmacies, depots, supply stores, route tracking, and delivery confirmation.</p>
+              <div id="mobileClinicSupplyPanel" class="rows"></div>
+              <div class="action-row">
+                <button data-health="supply-request" class="primary" type="button">Request supplies</button>
+                <button data-health="supply-match" type="button">Find supply source</button>
+                <button data-health="supply-dispatch" type="button">Track supply delivery</button>
+                <button data-health="supply-delivery" type="button">Confirm delivery</button>
+              </div>
+            </article>
+            <article>
+              <h3>Supply Chain Evidence</h3>
+              <div id="mobileClinicSupplyList" class="activity"></div>
             </article>
           </div>
           <div class="cards two">
@@ -1457,6 +1475,6 @@
   <div id="toast" class="toast hidden" role="status" aria-live="polite" aria-atomic="true"></div>
   <div id="screenReaderStatus" class="sr-only" role="status" aria-live="polite" aria-atomic="true"></div>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="/app.js?v=nexus-behavior-167"></script>
+  <script src="/app.js?v=nexus-behavior-168"></script>
 </body>
 </html>

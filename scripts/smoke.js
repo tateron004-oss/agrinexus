@@ -395,6 +395,26 @@ async function call(path, body) {
   assert(ruralHandoff.profile.ruralHealthHandoffPackets.length >= 1);
   assert(ruralHandoff.ruralHealthResult.record.notDiagnosis === true);
   assert(ruralHandoff.ruralHealthResult.record.packetForPaperClinic.length >= 5);
+  const supplyRequest = await call("/api/health/rural-network", {
+    type: "supply-request",
+    patientName: "Mobile clinic team A",
+    patientLocation: "Nairobi",
+    supplyNeeds: "Malaria tests, gloves, wound care, ORS, PPE, and blood pressure cuff batteries",
+    patientVolume: "40 patients expected",
+    deliveryWindow: "same day"
+  });
+  assert(supplyRequest.profile.mobileClinicSupplyRequests.length >= 1);
+  assert(supplyRequest.ruralHealthResult.record.supplyOptions.length >= 1);
+  assert(supplyRequest.profile.integrationEvents.some(event => event.action === "rural_health.supply_request_created"));
+  const supplyMatch = await call("/api/health/rural-network", { type: "supply-match", patientName: "Mobile clinic team A", patientLocation: "Nairobi", supplyNeeds: "Malaria tests, gloves, ORS, and PPE" });
+  assert(supplyMatch.profile.mobileClinicSupplyMatches.length >= 1);
+  assert(supplyMatch.ruralHealthResult.record.selectedSource.name);
+  const supplyDispatch = await call("/api/health/rural-network", { type: "supply-dispatch", patientName: "Mobile clinic team A", patientLocation: "Nairobi", driverOrCourier: "Community health logistics driver", eta: "2-4 hours" });
+  assert(supplyDispatch.profile.mobileClinicSupplyDispatches.length >= 1);
+  assert(supplyDispatch.ruralHealthResult.record.status === "dispatched");
+  const supplyDelivery = await call("/api/health/rural-network", { type: "supply-delivery", patientName: "Mobile clinic team A", patientLocation: "Nairobi", receivedBy: "Mobile clinic lead", condition: "received and counted" });
+  assert(supplyDelivery.profile.mobileClinicSupplyDeliveries.length >= 1);
+  assert(supplyDelivery.ruralHealthResult.record.status === "delivered");
   const representative = await call("/api/health/action", { type: "representative" });
   assert(representative.profile.representativeConnections >= 1);
   assert(representative.profile.integrationEvents.some(event => event.action === "representative.connected"));

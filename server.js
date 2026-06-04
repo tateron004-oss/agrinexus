@@ -4282,6 +4282,10 @@ function ensureHealthProfile(profile) {
   profile.mobileClinicRequests = profile.mobileClinicRequests || [];
   profile.pharmacyRequests = profile.pharmacyRequests || [];
   profile.ruralHealthHandoffPackets = profile.ruralHealthHandoffPackets || [];
+  profile.mobileClinicSupplyRequests = profile.mobileClinicSupplyRequests || [];
+  profile.mobileClinicSupplyMatches = profile.mobileClinicSupplyMatches || [];
+  profile.mobileClinicSupplyDispatches = profile.mobileClinicSupplyDispatches || [];
+  profile.mobileClinicSupplyDeliveries = profile.mobileClinicSupplyDeliveries || [];
 }
 
 function ruralHealthNetworkCatalog(db) {
@@ -4313,17 +4317,42 @@ function ruralHealthNetworkCatalog(db) {
       { id: "pharmacy-nigeria-1", name: "Nigeria Community Pharmacy Access Desk", country: "Nigeria", type: "pharmacy", services: ["refill coordination", "medicine pickup", "care packet review"], languages: ["en", "ha", "yo"], contact: "+234-000-000-602", hours: "08:00-20:00", digitalStatus: "SMS availability check", ...place(nigeria, 0.42, 0.16) },
       { id: "pharmacy-drc-1", name: "DRC Pharmacy Handoff Point", country: "DRC", type: "pharmacy", services: ["medicine availability", "provider referral", "care packet support"], languages: ["fr", "sw"], contact: "+243-000-000-603", hours: "09:00-18:00", digitalStatus: "paper-to-digital handoff", ...place(drc, -0.18, -0.43) },
       { id: "pharmacy-ghana-1", name: "Ghana Pharmacy Support Desk", country: "Ghana", type: "pharmacy", services: ["refill request", "medication education", "pickup coordination"], languages: ["en"], contact: "+233-000-000-604", hours: "08:00-19:00", digitalStatus: "SMS handoff", ...place(ghana, -0.31, 0.18) }
+    ],
+    supplySources: [
+      { id: "supply-kenya-county-store", name: "Kenya County Medical Supply Store", country: "Kenya", type: "medical-supply", services: ["PPE", "rapid tests", "wound care", "maternal kits", "basic clinic equipment"], contact: "+254-000-000-701", hours: "08:00-18:00", compliance: ["licensed-supplier", "controlled items require provider approval"], coldChain: true, ...place(kenya, -0.08, 0.58) },
+      { id: "supply-kenya-pharmacy-depot", name: "Kenya Pharmacy Supply Depot", country: "Kenya", type: "medical-supply", services: ["medicine refills", "gloves", "ORS", "malaria tests", "blood pressure cuffs"], contact: "+254-000-000-702", hours: "08:00-20:00", compliance: ["pharmacist review", "cold chain flag available"], coldChain: true, ...place(kenya, 0.38, -0.16) },
+      { id: "supply-nigeria-community-store", name: "Nigeria Community Health Supply Store", country: "Nigeria", type: "medical-supply", services: ["rapid tests", "PPE", "wound care", "screening kits"], contact: "+234-000-000-703", hours: "08:00-18:00", compliance: ["licensed-supplier", "provider approval for medicines"], coldChain: false, ...place(nigeria, -0.34, 0.18) },
+      { id: "supply-drc-outreach-store", name: "DRC Outreach Medical Supply Store", country: "DRC", type: "medical-supply", services: ["PPE", "infection-control kits", "wound care", "ORS", "rapid tests"], contact: "+243-000-000-704", hours: "risk-based dispatch", compliance: ["outbreak-aware inventory", "provider approval for medicines"], coldChain: true, ...place(drc, 0.18, 0.48) },
+      { id: "supply-ghana-rural-store", name: "Ghana Rural Medical Supply Point", country: "Ghana", type: "medical-supply", services: ["basic clinic kits", "PPE", "wound care", "BP cuffs", "ORS"], contact: "+233-000-000-705", hours: "08:00-18:00", compliance: ["licensed-supplier"], coldChain: false, ...place(ghana, 0.46, -0.12) }
     ]
   };
 }
 
 function nearestRuralHealthSites(db, patientPoint, type = "clinic", limit = 3) {
   const catalog = ruralHealthNetworkCatalog(db);
-  const sites = type === "pharmacy" ? catalog.pharmacies : type === "mobile-clinic" ? catalog.mobileClinics : catalog.clinics;
+  const sites = type === "pharmacy" ? catalog.pharmacies : type === "mobile-clinic" ? catalog.mobileClinics : type === "medical-supply" ? catalog.supplySources : catalog.clinics;
   return sites
     .map(site => ({ ...site, distanceKm: distanceKmBetween(patientPoint, site) }))
     .sort((a, b) => (a.distanceKm ?? 99999) - (b.distanceKm ?? 99999))
     .slice(0, limit);
+}
+
+function medicalSupplyFlags(supplyText = "") {
+  const value = String(supplyText || "").toLowerCase();
+  const controlled = /\b(antibiotic|opioid|morphine|controlled|prescription|injectable|vaccine|insulin)\b/.test(value);
+  const coldChain = /\b(vaccine|insulin|cold chain|refrigerated|temperature)\b/.test(value);
+  const urgent = /\b(urgent|emergency|out of stock|stockout|no stock|critical|today|now)\b/.test(value);
+  return {
+    providerReviewRequired: controlled,
+    pharmacistReviewRequired: controlled || /\b(medicine|medication|drug|refill|prescription)\b/.test(value),
+    coldChainRequired: coldChain,
+    urgency: urgent ? "urgent-restock" : "routine-restock",
+    complianceNotes: [
+      controlled ? "Provider/pharmacist approval required for controlled or prescription medicines." : "Basic supplies can be routed through approved supply source.",
+      coldChain ? "Cold-chain handling and temperature evidence required." : "Cold-chain handling not required unless source flags it.",
+      "Nexus coordinates supply access; it does not authorize clinical use of medicines."
+    ]
+  };
 }
 
 function safeSymptomGuidance(symptoms = "", country = {}) {
@@ -14898,6 +14927,7 @@ async function api(req, res, url) {
     const nearestClinic = nearestRuralHealthSites(db, patientPoint, "clinic", 3);
     const nearestMobileClinic = nearestRuralHealthSites(db, patientPoint, "mobile-clinic", 2);
     const nearestPharmacy = nearestRuralHealthSites(db, patientPoint, "pharmacy", 3);
+    const nearestSupplySources = nearestRuralHealthSites(db, patientPoint, "medical-supply", 3);
     const guidance = safeSymptomGuidance(symptoms, country);
     const activeIntake = db.profile.healthIntakes[0] || {
       id: crypto.randomUUID(),
@@ -14927,7 +14957,117 @@ async function api(req, res, url) {
     let providerId = "health-telehealth";
     let action = "rural_health.symptom_guided";
     let detail = `${activeIntake.patientRef} rural symptom guide prepared.`;
-    if (type === "nearest-clinic") {
+    if (type === "supply-request") {
+      const supplyNeeds = String(body.supplyNeeds || "malaria tests, gloves, wound care, ORS, blood pressure cuff batteries, and PPE").trim();
+      const patientVolume = String(body.patientVolume || "40 patients expected").trim();
+      const deliveryWindow = String(body.deliveryWindow || "same day or next outreach window").trim();
+      const flags = medicalSupplyFlags(supplyNeeds);
+      const mobileClinic = nearestMobileClinic[0];
+      const supplySource = nearestSupplySources[0];
+      record = {
+        id: crypto.randomUUID(),
+        requestNumber: `RHS-${String(db.profile.mobileClinicSupplyRequests.length + 1).padStart(3, "0")}`,
+        patientRef: activeIntake.patientRef,
+        mobileClinicName: String(body.mobileClinicName || mobileClinic?.name || "Mobile clinic team").trim(),
+        locationText,
+        patientPoint,
+        supplyNeeds,
+        patientVolume,
+        urgency: flags.urgency,
+        deliveryWindow,
+        nearestMobileClinic: mobileClinic,
+        suggestedSource: supplySource,
+        supplyOptions: nearestSupplySources,
+        providerReviewRequired: flags.providerReviewRequired,
+        pharmacistReviewRequired: flags.pharmacistReviewRequired,
+        coldChainRequired: flags.coldChainRequired,
+        complianceNotes: flags.complianceNotes,
+        status: "supply request created",
+        createdAt: now
+      };
+      db.profile.mobileClinicSupplyRequests.unshift(record);
+      db.profile.mobileClinicSupplyRequests = db.profile.mobileClinicSupplyRequests.slice(0, 20);
+      activeIntake.queueStatus = "Mobile clinic supply request created";
+      providerId = "health-notifications";
+      action = "rural_health.supply_request_created";
+      detail = `${record.requestNumber} supply request created for ${record.mobileClinicName}.`;
+    } else if (type === "supply-match") {
+      const request = db.profile.mobileClinicSupplyRequests[0] || null;
+      const supplyNeeds = String(body.supplyNeeds || request?.supplyNeeds || "clinic supplies and approved medicine support").trim();
+      const flags = medicalSupplyFlags(supplyNeeds);
+      record = {
+        id: crypto.randomUUID(),
+        matchNumber: `RHS-MATCH-${String(db.profile.mobileClinicSupplyMatches.length + 1).padStart(3, "0")}`,
+        requestNumber: request?.requestNumber || null,
+        patientRef: activeIntake.patientRef,
+        mobileClinicName: String(body.mobileClinicName || request?.mobileClinicName || nearestMobileClinic[0]?.name || "Mobile clinic team").trim(),
+        patientPoint,
+        supplyNeeds,
+        selectedSource: nearestSupplySources[0],
+        supplyOptions: nearestSupplySources,
+        routeContext: { routeId: route.id, routeName: route.name, checkpoint: db.profile.activeCheckpoint },
+        providerReviewRequired: flags.providerReviewRequired,
+        pharmacistReviewRequired: flags.pharmacistReviewRequired,
+        coldChainRequired: flags.coldChainRequired || nearestSupplySources[0]?.coldChain,
+        complianceNotes: flags.complianceNotes,
+        status: "supply source matched",
+        createdAt: now
+      };
+      db.profile.mobileClinicSupplyMatches.unshift(record);
+      db.profile.mobileClinicSupplyMatches = db.profile.mobileClinicSupplyMatches.slice(0, 20);
+      activeIntake.queueStatus = "Supply source matched";
+      providerId = "maps";
+      action = "rural_health.supply_source_matched";
+      detail = `${record.matchNumber} matched ${record.mobileClinicName} to ${record.selectedSource?.name || "supply source"}.`;
+    } else if (type === "supply-dispatch") {
+      const match = db.profile.mobileClinicSupplyMatches[0] || null;
+      const request = db.profile.mobileClinicSupplyRequests[0] || null;
+      const selectedSource = match?.selectedSource || request?.suggestedSource || nearestSupplySources[0];
+      const destination = match?.mobileClinicName || request?.mobileClinicName || nearestMobileClinic[0]?.name || "Mobile clinic team";
+      record = {
+        id: crypto.randomUUID(),
+        dispatchNumber: `RHS-DISP-${String(db.profile.mobileClinicSupplyDispatches.length + 1).padStart(3, "0")}`,
+        requestNumber: request?.requestNumber || null,
+        matchNumber: match?.matchNumber || null,
+        patientRef: activeIntake.patientRef,
+        supplySource: selectedSource,
+        destination,
+        driverOrCourier: String(body.driverOrCourier || "Community health logistics driver").trim(),
+        supplies: String(body.supplyNeeds || match?.supplyNeeds || request?.supplyNeeds || "clinic supply packet").trim(),
+        eta: String(body.eta || "2-4 hours, route conditions permitting").trim(),
+        status: "dispatched",
+        routeContext: { routeId: route.id, routeName: route.name, checkpoint: db.profile.activeCheckpoint },
+        complianceNotes: match?.complianceNotes || request?.complianceNotes || medicalSupplyFlags(body.supplyNeeds).complianceNotes,
+        createdAt: now
+      };
+      db.profile.mobileClinicSupplyDispatches.unshift(record);
+      db.profile.mobileClinicSupplyDispatches = db.profile.mobileClinicSupplyDispatches.slice(0, 20);
+      activeIntake.queueStatus = "Supply dispatch started";
+      providerId = "trade-logistics";
+      action = "rural_health.supply_dispatch_started";
+      detail = `${record.dispatchNumber} supply dispatch started from ${selectedSource?.name || "supply source"} to ${destination}.`;
+    } else if (type === "supply-delivery") {
+      const dispatch = db.profile.mobileClinicSupplyDispatches[0] || null;
+      record = {
+        id: crypto.randomUUID(),
+        deliveryNumber: `RHS-DEL-${String(db.profile.mobileClinicSupplyDeliveries.length + 1).padStart(3, "0")}`,
+        dispatchNumber: dispatch?.dispatchNumber || null,
+        patientRef: activeIntake.patientRef,
+        receivedBy: String(body.receivedBy || "Mobile clinic lead").trim(),
+        condition: String(body.condition || "received and counted").trim(),
+        supplies: String(body.supplyNeeds || dispatch?.supplies || "clinic supply packet").trim(),
+        status: "delivered",
+        proof: "local confirmation, route evidence, and supply audit record",
+        complianceNotes: dispatch?.complianceNotes || medicalSupplyFlags(body.supplyNeeds).complianceNotes,
+        createdAt: now
+      };
+      db.profile.mobileClinicSupplyDeliveries.unshift(record);
+      db.profile.mobileClinicSupplyDeliveries = db.profile.mobileClinicSupplyDeliveries.slice(0, 20);
+      activeIntake.queueStatus = "Supply delivery confirmed";
+      providerId = "health-ehr";
+      action = "rural_health.supply_delivery_confirmed";
+      detail = `${record.deliveryNumber} supply delivery confirmed by ${record.receivedBy}.`;
+    } else if (type === "nearest-clinic") {
       record = {
         id: crypto.randomUUID(),
         matchNumber: `RHC-${String(db.profile.ruralClinicMatches.length + 1).padStart(3, "0")}`,
@@ -15069,7 +15209,7 @@ async function api(req, res, url) {
     addWorkflowNote(db.profile, body.note, "Rural health access note");
     await writeDb(db);
     const state = publicState(db, user);
-    state.ruralHealthResult = { type, record, guidance, nearestClinic, nearestMobileClinic, nearestPharmacy };
+    state.ruralHealthResult = { type, record, guidance, nearestClinic, nearestMobileClinic, nearestPharmacy, nearestSupplySources };
     return send(res, 200, state);
   }
 

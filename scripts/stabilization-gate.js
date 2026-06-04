@@ -1,4 +1,4 @@
-const assert = require("node:assert/strict");
+﻿const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 
@@ -22,12 +22,12 @@ function requireScript(scriptName) {
 }
 
 requireMarkers("current browser cache contract", html, [
-  "/styles.css?v=nexus-behavior-167",
-  "/app.js?v=nexus-behavior-167"
+  "/styles.css?v=nexus-behavior-168",
+  "/app.js?v=nexus-behavior-168"
 ]);
 requireMarkers("service worker cache contract", sw, [
-  'CACHE_NAME = "agrinexus-pwa-v147"',
-  'BUILD_VERSION = "nexus-behavior-167"',
+  'CACHE_NAME = "agrinexus-pwa-v148"',
+  'BUILD_VERSION = "nexus-behavior-168"',
   "`/app.js?v=${BUILD_VERSION}`",
   "`/styles.css?v=${BUILD_VERSION}`",
   "purgeOldCaches",
@@ -94,6 +94,9 @@ requireMarkers("simple user workflow contract", app, [
   "ruralHealthAccessMapCanvas",
   "renderRuralHealthAccessMap",
   "/api/health/rural-network",
+  "Mobile Clinic Supply Network",
+  "mobileClinicSupplyRequests",
+  "medical-supply",
   "World_Imagery/MapServer/tile",
   "World_Boundaries_and_Places/MapServer/tile",
   "L.control.layers",
