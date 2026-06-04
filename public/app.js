@@ -56,8 +56,8 @@ let routeTrackingWatchId = null;
 let routeTrackingPoints = [];
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-173";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v153";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-174";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v154";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
 const VOICE_ATTENTION_DELAY_MS = 900;
@@ -6406,6 +6406,7 @@ function allModeVoiceCommandCatalog() {
       "Nexus, open agritrade",
       "Nexus, open the map",
       "Nexus, run system integrity check",
+      "Nexus, show manual testing path",
       "Nexus, go quiet",
       "Nexus, turn voice back on",
       "Nexus, contact the listed telehealth provider",
@@ -6778,6 +6779,7 @@ function voiceCommandGroups() {
         "Nexus, what can you do",
         "Nexus, show voice help",
         "Nexus, run system integrity check",
+        "Nexus, show manual testing path",
         "Nexus, go quiet",
         "Nexus, turn voice back on",
         "Nexus, what can I say in telehealth",
@@ -6935,6 +6937,18 @@ function platformIntegrityStressSummary() {
   const ready = items.filter(item => item.ready).length;
   const lines = items.map(item => `${item.label}: ${item.ready ? "ready" : "needs attention"} - ${item.detail}`);
   return `Platform integrity stress check: ${ready} of ${items.length} areas ready. ${lines.join(" ")}`;
+}
+
+function manualTestingPathSummary() {
+  const paths = [
+    "User path: sign in as User, ask Nexus to go quiet, open Learn, start a course, change language to French, open Health, start intake, open Trade, sell crop, open Map, track delivery.",
+    "Voice path: ask Nexus what it can do, stop it, turn voice back on, ask what to call it, ask for system integrity, then ask for the manual testing path.",
+    "Map path: open Map, check route intelligence, verify real tile loading, zoom out to global view, confirm route, clinic, hotspot, and shipment map panels are not cartoon placeholders.",
+    "Provider truth path: run live service check, then confirm Nexus says live, local, provider-ready, or needs credentials without pretending a missing provider is connected.",
+    "Admin path: sign in as Admin, run health check, run live service check, open integrations, review provider pipeline, and confirm user-only screens do not expose admin repair controls.",
+    "Investor path: sign in as Investor, run investor voice demo, present the platform, show maps, show Agent AI, then ask Nexus to explain impact and readiness."
+  ];
+  return `Manual testing path is ready. ${paths.join(" ")}`;
 }
 
 function renderVoiceAssistant() {
@@ -13300,6 +13314,12 @@ async function handleVoiceCommand(rawCommand) {
     updateNexusBehaviorLayer("answering", "Nexus is reporting platform integrity across voice, language, mobile, roles, memory, recovery, and demo flow.");
     renderLiveVoiceSuggestions(["Nexus, go quiet", "Nexus, turn voice back on", "Nexus, open map", "Nexus, run investor voice demo"]);
     setVoiceResponse(platformIntegrityStressSummary(), true);
+    return;
+  }
+  if (/\b(manual testing path|manual test path|testing checklist|test checklist|walkthrough path|demo checklist|what should i test first)\b/.test(lower)) {
+    updateNexusBehaviorLayer("answering", "Nexus is giving the manual testing path for User, voice, maps, providers, Admin, and Investor.");
+    renderLiveVoiceSuggestions(["Nexus, open learning", "Nexus, start telehealth intake", "Nexus, sell crop", "Nexus, run live service check"]);
+    setVoiceResponse(manualTestingPathSummary(), true);
     return;
   }
   if (isGlobalStopCommand(lower)) {
