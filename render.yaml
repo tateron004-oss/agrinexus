@@ -206,6 +206,16 @@ services:
         value: https://agrinexus-provider-engines.onrender.com/trade/payments
       - key: TRADE_LOGISTICS_WEBHOOK_URL
         value: https://agrinexus-provider-engines.onrender.com/trade/logistics
+      - key: TRADE_LOGISTICS_TRACKING_URL
+        value: https://agrinexus-provider-engines.onrender.com/trade/logistics
+      - key: LOGISTICS_TRACKING_PROVIDER
+        value: webhook
+      - key: LOGISTICS_TRACKING_URL
+        value: https://agrinexus-provider-engines.onrender.com/trade/logistics
+      - key: LOGISTICS_TRACKING_API_KEY
+        sync: false
+      - key: LOGISTICS_TRACKING_TIMEOUT_MS
+        value: "5000"
       - key: TRADE_MARKET_WEBHOOK_URL
         value: https://agrinexus-provider-engines.onrender.com/trade/market
       - key: TRADE_PROVIDER_API_KEY

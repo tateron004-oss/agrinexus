@@ -59,7 +59,7 @@ const PROVIDER_CONFIG = {
   "health-ehr": { modeEnv: "HEALTH_EHR_PROVIDER", credentialEnvs: ["HEALTH_EHR_WEBHOOK_URL", "HEALTH_PROVIDER_API_KEY"] },
   "health-notifications": { modeEnv: "HEALTH_NOTIFICATION_PROVIDER", credentialEnvs: ["HEALTH_NOTIFICATION_WEBHOOK_URL", "HEALTH_PROVIDER_API_KEY"] },
   "trade-payments": { modeEnv: "TRADE_PAYMENT_PROVIDER", credentialEnvs: ["TRADE_PAYMENT_WEBHOOK_URL", "TRADE_PROVIDER_API_KEY"] },
-  "trade-logistics": { modeEnv: "TRADE_LOGISTICS_PROVIDER", credentialEnvs: ["TRADE_LOGISTICS_WEBHOOK_URL", "TRADE_PROVIDER_API_KEY"] },
+  "trade-logistics": { modeEnv: "TRADE_LOGISTICS_PROVIDER", credentialEnvs: ["TRADE_LOGISTICS_WEBHOOK_URL", "TRADE_LOGISTICS_TRACKING_URL", "LOGISTICS_TRACKING_URL", "TRADE_PROVIDER_API_KEY", "LOGISTICS_TRACKING_API_KEY"] },
   "trade-market": { modeEnv: "TRADE_MARKET_PROVIDER", credentialEnvs: ["TRADE_MARKET_WEBHOOK_URL", "TRADE_PROVIDER_API_KEY"] },
   "field-drones": { modeEnv: "DRONE_PROVIDER", credentialEnvs: ["DRONE_WEBHOOK_URL", "DRONE_PROVIDER_API_KEY"] },
   "voice-stt": { modeEnv: "VOICE_STT_PROVIDER", credentialEnvs: ["VOICE_STT_WEBHOOK_URL", "VOICE_PROVIDER_API_KEY"] },
@@ -3656,6 +3656,31 @@ async function productionLiveServiceCheck(db, user) {
     { results: communicationResults.map(item => ({ ...item, credentialHint: providerCredentialHint(item.providerId) })) }
   );
 
+  ensureTradeProfile(db.profile);
+  const { route: activeRouteForCheck, country: activeCountryForCheck } = activeContext(db);
+  const logisticsOrder = db.profile.orders[db.profile.orders.length - 1] || {
+    id: "live-service-logistics-check",
+    orderNumber: "AN-LIVE-LOGISTICS-CHECK",
+    trackingNumber: "AN-LIVE-LOGISTICS-CHECK",
+    product: "Provider tracking test shipment",
+    countryId: activeCountryForCheck.id,
+    routeId: activeRouteForCheck.id,
+    checkpoint: db.profile.activeCheckpoint || activeRouteForCheck.checkpoints?.[0] || "Pickup",
+    checkpointIndex: Math.max(0, activeRouteForCheck.checkpoints?.findIndex(item => item === db.profile.activeCheckpoint) || 0),
+    stage: db.profile.routeStage || "Tracking"
+  };
+  const logisticsTracking = await refreshOrderLogisticsTracking(db, logisticsOrder, user, "logistics.live_service_check")
+    .catch(error => ({ ok: false, delivery: { attempted: true, ok: false, status: "dispatch-error", error: error.message }, tracking: null }));
+  push(
+    "logistics-gps",
+    "Logistics/GPS tracking provider",
+    Boolean(logisticsTracking.delivery?.ok),
+    logisticsTracking.delivery?.ok
+      ? `Logistics provider returned tracking through ${logisticsTracking.tracking?.provider || "trade-logistics"}.`
+      : providerDeliveryDetail("trade-logistics", "Logistics/GPS tracking", logisticsTracking.delivery, "Logistics/GPS tracking needs a real endpoint or matching provider-engine credentials."),
+    { delivery: logisticsTracking.delivery, tracking: logisticsTracking.tracking, credentialHint: providerCredentialHint("trade-logistics") }
+  );
+
   const report = {
     id: crypto.randomUUID(),
     status: checks.every(check => check.ok) ? "ready" : "needs-setup",
@@ -3918,6 +3943,121 @@ function providerRuntime(providerId) {
     webhookUrl: explicitWebhook || bridgeWebhook,
     apiKey: apiKey ? process.env[apiKey] || "" : ""
   };
+}
+
+function logisticsTrackingRuntime() {
+  const baseRuntime = providerRuntime("trade-logistics");
+  return {
+    provider: process.env.LOGISTICS_TRACKING_PROVIDER || process.env.TRADE_LOGISTICS_PROVIDER || baseRuntime.mode || "sandbox",
+    url: process.env.LOGISTICS_TRACKING_URL || process.env.TRADE_LOGISTICS_TRACKING_URL || baseRuntime.webhookUrl || "",
+    apiKey: process.env.LOGISTICS_TRACKING_API_KEY || process.env.TRADE_PROVIDER_API_KEY || baseRuntime.apiKey || "",
+    timeoutMs: Number(process.env.LOGISTICS_TRACKING_TIMEOUT_MS || PROVIDER_WEBHOOK_TIMEOUT_MS)
+  };
+}
+
+function logisticsPointForOrder(route, order) {
+  const checkpoints = route?.checkpoints || [];
+  const points = route?.points || [];
+  const checkpointIndex = Number.isFinite(Number(order?.checkpointIndex))
+    ? Number(order.checkpointIndex)
+    : Math.max(0, checkpoints.findIndex(checkpoint => checkpoint === order?.checkpoint));
+  return points[Math.max(0, Math.min(checkpointIndex < 0 ? 0 : checkpointIndex, Math.max(0, points.length - 1)))] || points[0] || null;
+}
+
+function normalizeLogisticsTrackingResponse(payload = {}, { order, route, deliveryStatus = "local", provider = "AgriNexus logistics" } = {}) {
+  const data = payload.tracking || payload.shipment || payload.data || payload;
+  const point = logisticsPointForOrder(route, order);
+  const latitude = Number(data.latitude ?? data.lat ?? data.location?.lat ?? data.currentLocation?.lat ?? point?.[0]);
+  const longitude = Number(data.longitude ?? data.lng ?? data.lon ?? data.location?.lng ?? data.location?.lon ?? data.currentLocation?.lng ?? point?.[1]);
+  const events = Array.isArray(data.events) ? data.events : Array.isArray(data.timeline) ? data.timeline : [];
+  const status = data.status || data.stage || data.shipmentStatus || order?.stage || "Tracking";
+  return {
+    provider: data.provider || payload.provider || provider,
+    source: deliveryStatus,
+    trackingNumber: data.trackingNumber || data.tracking_number || data.waybill || data.waybillNumber || order?.trackingNumber || order?.orderNumber,
+    carrier: data.carrier || data.carrierName || data.courier || data.provider || payload.provider || provider,
+    status,
+    eta: data.eta || data.estimatedDelivery || data.estimated_delivery || data.deliveryWindow || "",
+    currentLocation: data.currentLocation?.label || data.current_location || data.locationName || data.city || order?.checkpoint || "",
+    latitude: Number.isFinite(latitude) ? latitude : null,
+    longitude: Number.isFinite(longitude) ? longitude : null,
+    speedKph: data.speedKph || data.speed_kph || null,
+    lastEvent: data.lastEvent || data.event || events[0]?.detail || events[0]?.label || "",
+    events: events.slice(0, 8),
+    updatedAt: data.updatedAt || data.timestamp || new Date().toISOString(),
+    rawAccepted: Boolean(payload.accepted || payload.ok)
+  };
+}
+
+async function refreshOrderLogisticsTracking(db, order, user, action = "logistics.tracking_status") {
+  ensureTradeProfile(db.profile);
+  if (!order) return { ok: false, status: "missing-order", tracking: null };
+  const route = db.routes.find(item => item.id === order.routeId) || activeContext(db).route;
+  const runtime = logisticsTrackingRuntime();
+  const provider = runtime.provider || "trade-logistics";
+  const payload = {
+    id: crypto.randomUUID(),
+    providerId: "trade-logistics",
+    action,
+    order: {
+      id: order.id,
+      orderNumber: order.orderNumber,
+      trackingNumber: order.trackingNumber || order.orderNumber,
+      product: order.product,
+      stage: order.stage,
+      checkpoint: order.checkpoint,
+      routeId: order.routeId,
+      routeName: route?.name
+    },
+    route: {
+      id: route?.id,
+      name: route?.name,
+      checkpoints: route?.checkpoints || [],
+      points: route?.points || []
+    },
+    context: {
+      user: user?.email || "",
+      countryId: order.countryId,
+      activeCheckpoint: db.profile.activeCheckpoint,
+      createdAt: new Date().toISOString()
+    }
+  };
+  let delivery = { attempted: false, ok: false, status: "sandbox" };
+  let responsePayload = {};
+  if (runtime.url && runtime.provider !== "sandbox") {
+    try {
+      const response = await fetchWithTimeout(runtime.url, {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          accept: "application/json",
+          ...(runtime.apiKey ? { authorization: `Bearer ${runtime.apiKey}` } : {})
+        },
+        body: JSON.stringify(payload)
+      }, runtime.timeoutMs);
+      responsePayload = await response.json().catch(() => ({}));
+      delivery = { attempted: true, ok: response.ok, status: response.status, url: runtime.url };
+    } catch (error) {
+      delivery = { attempted: true, ok: false, status: "provider-error", error: error.message, url: runtime.url };
+    }
+  }
+  const source = delivery.ok ? "live-provider" : delivery.attempted ? "provider-error-local-fallback" : "local-route-estimate";
+  const tracking = normalizeLogisticsTrackingResponse(responsePayload, { order, route, deliveryStatus: source, provider });
+  order.trackingNumber = tracking.trackingNumber || order.trackingNumber || order.orderNumber;
+  order.liveTracking = tracking;
+  order.updatedAt = tracking.updatedAt;
+  logIntegration(db, {
+    providerId: "trade-logistics",
+    module: "AgriTrade",
+    action,
+    status: delivery.ok ? "success" : delivery.attempted ? "needs-provider-review" : "local-estimate",
+    detail: delivery.ok
+      ? `${order.orderNumber} live logistics tracking refreshed by ${tracking.provider}.`
+      : `${order.orderNumber} logistics tracking updated from ${source}.`,
+    metadata: { orderId: order.id, delivery, tracking },
+    dispatch: false
+  });
+  return { ok: delivery.ok || !REQUIRE_LIVE_SERVICES, delivery, tracking };
 }
 
 async function dispatchProviderWebhook(db, event) {
@@ -14955,6 +15095,7 @@ async function api(req, res, url) {
       checkpointIndex: 0,
       stage: "Packed",
       stageIndex: 1,
+      trackingNumber: `AN-TRK-${String(db.profile.orders.length + 1).padStart(4, "0")}`,
       buyerInterest: product?.buyerInterest || 50,
       total: product ? product.price * 20 : 1200,
       timeline: [
@@ -14976,10 +15117,14 @@ async function api(req, res, url) {
       detail: `${order.orderNumber} created with ${order.buyerInterest}% buyer interest.`,
       metadata: { orderId: order.id, productId: order.productId }
     });
+    const trackingResult = await refreshOrderLogisticsTracking(db, order, user, "logistics.order_created_tracking");
     addActivity(db.profile, `Order created for ${order.product}.`);
+    addActivity(db.profile, trackingResult.delivery?.ok ? `Live logistics tracking connected for ${order.orderNumber}.` : `Shipment tracking prepared for ${order.orderNumber}.`);
     addWorkflowNote(db.profile, body.note, "Order note");
     await writeDb(db);
-    return send(res, 200, publicState(db, user));
+    const state = publicState(db, user);
+    state.logisticsTrackingResult = trackingResult;
+    return send(res, 200, state);
   }
 
   if (url.pathname === "/api/trade/advance" && req.method === "POST") {
@@ -15005,10 +15150,31 @@ async function api(req, res, url) {
       detail: `${order.orderNumber} moved to ${order.checkpoint}.`,
       metadata: { orderId: order.id, stage: order.stage, checkpoint: order.checkpoint }
     });
+    const trackingResult = await refreshOrderLogisticsTracking(db, order, user, "logistics.tracking_status");
     addActivity(db.profile, `Order advanced to ${db.profile.routeStage}.`);
+    addActivity(db.profile, trackingResult.delivery?.ok ? `Live logistics provider refreshed ${order.orderNumber}.` : `Shipment tracker refreshed ${order.orderNumber} from route state.`);
     addWorkflowNote(db.profile, body.note, "Logistics note");
     await writeDb(db);
-    return send(res, 200, publicState(db, user));
+    const state = publicState(db, user);
+    state.logisticsTrackingResult = trackingResult;
+    return send(res, 200, state);
+  }
+
+  if (url.pathname === "/api/trade/tracking" && req.method === "POST") {
+    if (!canUse(user, "trade")) return send(res, 403, { error: "Role does not allow trade workflows" });
+    const body = await readBody(req);
+    ensureTradeProfile(db.profile);
+    const order = body.orderId
+      ? db.profile.orders.find(item => item.id === body.orderId)
+      : db.profile.orders[db.profile.orders.length - 1];
+    if (!order) return send(res, 409, { error: "Create an order first" });
+    const trackingResult = await refreshOrderLogisticsTracking(db, order, user, "logistics.manual_tracking_refresh");
+    addActivity(db.profile, trackingResult.delivery?.ok ? `Live shipment tracking refreshed for ${order.orderNumber}.` : `Shipment tracking refreshed for ${order.orderNumber}.`);
+    addWorkflowNote(db.profile, body.note, "Tracking note");
+    await writeDb(db);
+    const state = publicState(db, user);
+    state.logisticsTrackingResult = trackingResult;
+    return send(res, 200, state);
   }
 
   if (url.pathname === "/api/trade/wallet" && req.method === "POST") {

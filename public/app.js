@@ -54,8 +54,8 @@ let routeTrackingWatchId = null;
 let routeTrackingPoints = [];
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-165";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v145";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-166";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v146";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
 const VOICE_ATTENTION_DELAY_MS = 900;
@@ -9025,7 +9025,9 @@ function render() {
     row("Route", route.name),
     row("Stage", latestOrder?.stage || data.profile.routeStage),
     row("Checkpoint", latestOrder?.checkpoint || data.profile.activeCheckpoint),
-    row("Latest order", latestOrder?.orderNumber || "None")
+    row("Latest order", latestOrder?.orderNumber || "None"),
+    row("Tracking source", latestOrder?.liveTracking?.source === "live-provider" ? "Live GPS provider" : latestOrder?.liveTracking?.source === "provider-error-local-fallback" ? "Provider fallback" : "Platform route tracker"),
+    row("Provider", latestOrder?.liveTracking?.provider || "AgriNexus route tracker")
   ].join("");
   $("#shipmentMapPreview").innerHTML = shipmentMapHtml({
     route,
@@ -9712,6 +9714,7 @@ function renderMap() {
 
 function shipmentTrackingState(route = activeRoute(), order = null) {
   const checkpoints = route?.checkpoints || [];
+  const live = order?.liveTracking || {};
   const activeCheckpoint = order?.checkpoint || data?.profile?.activeCheckpoint || checkpoints[0] || "Pickup";
   const checkpointIndex = checkpoints.findIndex(checkpoint => checkpoint === activeCheckpoint);
   const safeIndex = Math.max(0, Math.min(checkpointIndex < 0 ? 0 : checkpointIndex, Math.max(0, checkpoints.length - 1)));
@@ -9727,10 +9730,15 @@ function shipmentTrackingState(route = activeRoute(), order = null) {
     completed,
     total,
     progress,
-    nextCheckpoint,
+    nextCheckpoint: live.currentLocation || nextCheckpoint,
     remainingStops,
-    eta: remainingStops ? `${etaHours}-${etaHours + 4} hrs` : "Arriving now",
-    status: order?.stage || data?.profile?.routeStage || "Tracking"
+    eta: live.eta || (remainingStops ? `${etaHours}-${etaHours + 4} hrs` : "Arriving now"),
+    status: live.status || order?.stage || data?.profile?.routeStage || "Tracking",
+    provider: live.provider || "AgriNexus route tracker",
+    source: live.source || "local-route-estimate",
+    trackingNumber: live.trackingNumber || order?.trackingNumber || order?.orderNumber || "",
+    livePoint: Number.isFinite(Number(live.latitude)) && Number.isFinite(Number(live.longitude)) ? [Number(live.latitude), Number(live.longitude)] : null,
+    lastEvent: live.lastEvent || ""
   };
 }
 
@@ -9748,7 +9756,7 @@ function drawShipmentRoute(layer, route = activeRoute(), { order = null, active 
   if (!window.L || !layer || !route?.points?.length) return;
   const state = shipmentTrackingState(route, order);
   const points = route.points || [];
-  const currentPoint = points[Math.min(state.safeIndex, points.length - 1)] || points[0];
+  const currentPoint = state.livePoint || points[Math.min(state.safeIndex, points.length - 1)] || points[0];
   const completedPoints = points.slice(0, Math.min(state.safeIndex + 1, points.length));
   const remainingPoints = points.slice(Math.min(state.safeIndex, points.length - 1));
   const routeColor = active ? "#0f5f9c" : "#5f7380";
@@ -9791,7 +9799,7 @@ function drawShipmentRoute(layer, route = activeRoute(), { order = null, active 
   if (includeCurrentMarker && currentPoint) {
     L.marker(currentPoint, { icon: shipmentMarkerIcon("Live shipment") })
       .addTo(layer)
-      .bindPopup(`<strong>${translateText("Shipment tracking")}</strong><br>${translateText(state.activeCheckpoint)}<br>${translateText(`ETA: ${state.eta}`)}`);
+      .bindPopup(`<strong>${translateText("Shipment tracking")}</strong><br>${translateText(state.nextCheckpoint || state.activeCheckpoint)}<br>${translateText(`ETA: ${state.eta}`)}<br>${translateText(state.source === "live-provider" ? "Live provider GPS" : "Platform tracking")}`);
   }
 }
 
@@ -10349,7 +10357,8 @@ function shipmentMapHtml({ route = activeRoute(), order = null, product = firstP
   const safeIndex = state.safeIndex;
   const destination = route.checkpoints?.[route.checkpoints.length - 1] || "Buyer handoff";
   const shipmentTitle = order?.orderNumber ? `${order.orderNumber} - ${product?.name || order.product || "Crop shipment"}` : product?.name || "Crop shipment";
-  const trackingId = order?.orderNumber || `AGX-${String(route.id || "route").toUpperCase()}-${String(product?.id || "crop").toUpperCase()}`;
+  const trackingId = state.trackingNumber || order?.orderNumber || `AGX-${String(route.id || "route").toUpperCase()}-${String(product?.id || "crop").toUpperCase()}`;
+  const liveLabel = state.source === "live-provider" ? "Live GPS provider" : state.source === "provider-error-local-fallback" ? "Provider fallback" : "Platform route tracker";
   const checkpointTags = (route.checkpoints || []).map((checkpoint, index) => {
     const status = index < safeIndex ? "Cleared" : index === safeIndex ? "Current" : "Upcoming";
     return `<span class="${index < safeIndex ? "done" : ""} ${index === safeIndex ? "active" : ""}">${translateText(status)}: ${translateText(checkpoint)}</span>`;
@@ -10368,6 +10377,8 @@ function shipmentMapHtml({ route = activeRoute(), order = null, product = firstP
         <div><strong>${translateText("Progress")}</strong><span>${state.progress}%</span></div>
         <div><strong>${translateText("ETA")}</strong><span>${translateText(state.eta)}</span></div>
         <div><strong>${translateText("Next stop")}</strong><span>${translateText(state.nextCheckpoint)}</span></div>
+        <div><strong>${translateText("Tracking source")}</strong><span>${translateText(liveLabel)}</span></div>
+        <div><strong>${translateText("Provider")}</strong><span>${translateText(state.provider)}</span></div>
       </div>
       <div class="shipment-progress-bar" aria-label="${translateText(`Shipment progress ${state.progress} percent`)}"><span style="width:${state.progress}%"></span></div>
       <div id="shipmentPreviewMapCanvas" class="shipment-real-map" role="img" aria-label="${escapeHtml(`${route.name} full-scale shipment map with route checkpoints, facilities, and surrounding areas.`)}"></div>
@@ -10745,14 +10756,14 @@ function tradeUserCopy(action, product) {
       { title: action === "buyer-video" ? "Save video handoff" : "Open thread", detail: action === "buyer-video" ? "Press confirm to record the video-ready buyer session and fallback channels." : "Press the confirm button to record the buyer conversation." }
     ]
   };
-  if (action === "advance" || action === "route") return {
-    title: action === "advance" ? "Track my shipment" : "Check shipment route",
+  if (action === "advance" || action === "route" || action === "tracking") return {
+    title: action === "tracking" ? "Refresh live tracking" : action === "advance" ? "Track my shipment" : "Check shipment route",
     summary: "See where the crop shipment is now, what checkpoint comes next, and what needs attention before delivery.",
-    guide: "This uses the active shipment lane. Confirming advances or reviews the order checkpoint and keeps route evidence tied to the crop order.",
+    guide: action === "tracking" ? "This asks the logistics/GPS provider for the latest shipment status. If no live provider is connected, AgriNexus keeps the route evidence current from the platform record." : "This uses the active shipment lane. Confirming advances or reviews the order checkpoint and keeps route evidence tied to the crop order.",
     steps: [
-      { title: "Look at the map", detail: "The red marker shows where the shipment is now." },
-      { title: "Review checkpoint", detail: "Check pickup, current stop, and buyer handoff." },
-      { title: "Confirm next move", detail: "Press the main button to update the shipment route record." }
+      { title: "Look at the map", detail: "The shipment marker shows where the provider or platform places the crop now." },
+      { title: "Review checkpoint", detail: "Check pickup, current stop, buyer handoff, ETA, provider, and tracking source." },
+      { title: action === "tracking" ? "Refresh provider status" : "Confirm next move", detail: action === "tracking" ? "Press refresh to ask the logistics provider for the latest GPS or shipment update." : "Press the main button to update the shipment route record." }
     ]
   };
   if (["drone-plan", "drone", "drone-intervention", "drone-report", "drone-irrigation", "drone-pest", "drone-spray", "drone-yield", "drone-compliance"].includes(action)) return {
@@ -11255,6 +11266,7 @@ function workflowConfig(workflow, action, element) {
     const pathMap = {
       order: "/api/trade/order",
       advance: "/api/trade/advance",
+      tracking: "/api/trade/tracking",
       wallet: "/api/trade/wallet",
       "buyer-contact": "/api/trade/buyer-contact",
       "buyer-message": "/api/trade/message",
@@ -11849,6 +11861,7 @@ function runWorkflowAction(workflow, action, element) {
       return mutate("/api/trade/order", { productId }, "Order created");
     }
     if (action === "advance") return mutate("/api/trade/advance", {}, "Order advanced");
+    if (action === "tracking") return mutate("/api/trade/tracking", {}, "Shipment tracking refreshed");
     if (action === "wallet") return mutate("/api/trade/wallet", { provider: "M-Pesa", amount: 120 }, "Payment posted");
     if (action === "drone-plan") return mutate("/api/trade/drone-mission", { productId: firstProduct()?.id }, "Drone mission planned");
     if (action === "drone") return mutate("/api/trade/drone-scan", { productId: firstProduct()?.id }, "Drone scan complete");
@@ -14551,6 +14564,7 @@ function bindStatic() {
   $$("[data-health]").forEach(button => button.onclick = () => openHealthWorkflow(button.dataset.health, button));
   $("#runIntakeSimulationBtn").onclick = openGuidedIntakeSimulation;
   $$(".order").forEach(button => button.onclick = () => openWorkflowModal(workflowConfig("trade", "order", { dataset: { productId: button.dataset.productId } })));
+  $("#refreshTrackingBtn").onclick = () => openWorkflowModal(workflowConfig("trade", "tracking", { dataset: {} }));
   $("#advanceOrderBtn").onclick = () => openWorkflowModal(workflowConfig("trade", "advance", { dataset: {} }));
   $("#droneMissionBtn").onclick = () => openWorkflowModal(workflowConfig("trade", "drone-plan", { dataset: { productId: firstProduct()?.id } }));
   $("#droneScanBtn").onclick = () => openWorkflowModal(workflowConfig("trade", "drone", { dataset: { productId: firstProduct()?.id } }));

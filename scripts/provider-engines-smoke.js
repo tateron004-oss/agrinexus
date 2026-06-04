@@ -107,6 +107,10 @@ async function call(base, route, body) {
       DRONE_PROVIDER: "webhook",
       TRADE_PAYMENT_WEBHOOK_URL: `${providerBase}/trade/payments`,
       TRADE_LOGISTICS_WEBHOOK_URL: `${providerBase}/trade/logistics`,
+      TRADE_LOGISTICS_TRACKING_URL: `${providerBase}/trade/logistics`,
+      LOGISTICS_TRACKING_PROVIDER: "webhook",
+      LOGISTICS_TRACKING_URL: `${providerBase}/trade/logistics`,
+      LOGISTICS_TRACKING_API_KEY: "trade-test-key",
       TRADE_MARKET_WEBHOOK_URL: `${providerBase}/trade/market`,
       DRONE_WEBHOOK_URL: `${providerBase}/field/drones`
     },
@@ -126,6 +130,13 @@ async function call(base, route, body) {
     for (const providerId of ["learning-courses", "learning-certificates", "workforce-jobs", "workforce-calendar", "workforce-shifts", "health-ehr", "trade-payments", "field-drones", "translation", "auth-users", "auth-password-reset"]) {
       await call(appBase, "/api/integrations/test", { providerId });
     }
+    const createdOrder = await call(appBase, "/api/trade/order", { productId: "cassava-ng" });
+    assert(createdOrder.logisticsTrackingResult.tracking.trackingNumber);
+    assert(createdOrder.logisticsTrackingResult.tracking.provider === "agrinexus-provider-engine-logistics");
+    const refreshedTracking = await call(appBase, "/api/trade/tracking", {});
+    assert(refreshedTracking.logisticsTrackingResult.delivery.ok === true);
+    assert(refreshedTracking.logisticsTrackingResult.tracking.source === "live-provider");
+    assert(refreshedTracking.profile.orders.at(-1).liveTracking.provider === "agrinexus-provider-engine-logistics");
     await wait(700);
     const events = await call(providerBase, "/events");
     assert(events.events.some(event => event.providerId === "local-ai"));
@@ -136,6 +147,7 @@ async function call(base, route, body) {
     assert(events.events.some(event => event.providerId === "workforce-shifts"));
     assert(events.events.some(event => event.providerId === "health-ehr"));
     assert(events.events.some(event => event.providerId === "trade-payments"));
+    assert(events.events.some(event => event.providerId === "trade-logistics"));
     assert(events.events.some(event => event.providerId === "field-drones"));
     assert(events.events.some(event => event.providerId === "voice-stt"));
     assert(events.events.some(event => event.providerId === "voice-tts"));

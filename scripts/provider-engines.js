@@ -197,6 +197,43 @@ const server = http.createServer(async (req, res) => {
       });
       return send(res, 200, { ok: true, accepted: true, provider: "local-communications" });
     }
+    if (req.url === "/trade/logistics") {
+      const route = payload.route || {};
+      const order = payload.order || {};
+      const checkpoints = route.checkpoints || [];
+      const points = route.points || [];
+      const checkpoint = order.checkpoint || checkpoints[0] || "Pickup";
+      const index = Math.max(0, checkpoints.findIndex(item => item === checkpoint));
+      const point = points[Math.min(index < 0 ? 0 : index, Math.max(0, points.length - 1))] || [0, 0];
+      const remaining = Math.max(0, checkpoints.length - (index + 1));
+      const tracking = {
+        provider: "agrinexus-provider-engine-logistics",
+        carrier: process.env.LOGISTICS_TEST_CARRIER || "AgriNexus Logistics Bridge",
+        trackingNumber: order.trackingNumber || order.orderNumber || `AGX-${Date.now()}`,
+        status: order.stage || "Tracking",
+        currentLocation: checkpoint,
+        latitude: point[0],
+        longitude: point[1],
+        eta: remaining ? `${remaining * 5 + 3}-${remaining * 5 + 7} hrs` : "Arriving now",
+        lastEvent: `${order.orderNumber || "Shipment"} tracking refreshed at ${checkpoint}.`,
+        events: [
+          { label: "Tracking refreshed", detail: `${checkpoint} confirmed by logistics bridge.`, createdAt: new Date().toISOString() },
+          { label: order.stage || "Tracking", detail: route.name || "Active route", createdAt: new Date().toISOString() }
+        ],
+        updatedAt: new Date().toISOString()
+      };
+      writeEvent({
+        id: `logistics-${Date.now()}`,
+        endpoint: req.url,
+        module: endpoint.module,
+        action: payload.action || "logistics.tracking_status",
+        providerId: "trade-logistics",
+        detail: tracking.lastEvent,
+        metadata: { tracking },
+        receivedAt: new Date().toISOString()
+      });
+      return send(res, 200, { ok: true, accepted: true, provider: tracking.provider, tracking });
+    }
     if (req.url === "/billing/subscriptions") {
       writeEvent({
         id: `billing-${Date.now()}`,
