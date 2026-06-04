@@ -55,8 +55,8 @@ let routeTrackingWatchId = null;
 let routeTrackingPoints = [];
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-169";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v149";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-170";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v150";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
 const VOICE_ATTENTION_DELAY_MS = 900;
@@ -9862,6 +9862,17 @@ function drawShipmentRoute(layer, route = activeRoute(), { order = null, active 
 }
 
 function addRealMapTiles(targetMap) {
+  if (!targetMap || !window.L) return {};
+  if (!targetMap.getPane("countryLabels")) {
+    targetMap.createPane("countryLabels");
+    targetMap.getPane("countryLabels").style.zIndex = 420;
+    targetMap.getPane("countryLabels").style.pointerEvents = "none";
+  }
+  if (!targetMap.getPane("mapGrid")) {
+    targetMap.createPane("mapGrid");
+    targetMap.getPane("mapGrid").style.zIndex = 430;
+    targetMap.getPane("mapGrid").style.pointerEvents = "none";
+  }
   const operationalLayer = L.tileLayer("https://services.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}", {
     maxZoom: 19,
     attribution: "Esri World Street Map"
@@ -9873,13 +9884,14 @@ function addRealMapTiles(targetMap) {
   const labelLayer = L.tileLayer("https://services.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}", {
     maxZoom: 19,
     attribution: "Esri boundaries and places",
-    pane: "tilePane",
+    pane: "countryLabels",
     opacity: .95
   });
   const streetLayer = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
     maxZoom: 19,
     attribution: "OpenStreetMap contributors"
   });
+  const gridLayer = createGlobalGridLayer();
   let fallbackAdded = false;
   const activateFallback = () => {
     if (fallbackAdded || targetMap.hasLayer(streetLayer)) return;
@@ -9890,14 +9902,83 @@ function addRealMapTiles(targetMap) {
   satelliteLayer.on("tileerror", activateFallback);
   operationalLayer.addTo(targetMap);
   labelLayer.addTo(targetMap);
+  gridLayer.addTo(targetMap);
   L.control.layers({
     "Operational map": operationalLayer,
     "Satellite imagery": satelliteLayer,
     "Street map": streetLayer
   }, {
-    "Country names and borders": labelLayer
+    "Country names and borders": labelLayer,
+    "Latitude/longitude grid": gridLayer
   }, { collapsed: true }).addTo(targetMap);
   L.control.scale({ metric: true, imperial: false }).addTo(targetMap);
+  addGlobalMapControl(targetMap);
+  return { operationalLayer, satelliteLayer, streetLayer, labelLayer, gridLayer };
+}
+
+function globalMapBounds() {
+  return L.latLngBounds([[-60, -180], [80, 180]]);
+}
+
+function mapGridLabel(value, axis) {
+  if (value === 0) return "0 deg";
+  if (axis === "lat") return `${Math.abs(value)} deg ${value > 0 ? "N" : "S"}`;
+  return `${Math.abs(value)} deg ${value > 0 ? "E" : "W"}`;
+}
+
+function createGlobalGridLayer() {
+  const layer = L.layerGroup();
+  const lineStyle = {
+    color: "#173240",
+    weight: 1,
+    opacity: .28,
+    interactive: false,
+    pane: "mapGrid"
+  };
+  for (let lat = -60; lat <= 75; lat += 15) {
+    L.polyline([[lat, -180], [lat, 180]], lineStyle).addTo(layer);
+    L.marker([lat, -176], {
+      interactive: false,
+      icon: L.divIcon({
+        className: "map-grid-label",
+        html: mapGridLabel(lat, "lat"),
+        iconSize: [58, 18],
+        iconAnchor: [0, 9]
+      })
+    }).addTo(layer);
+  }
+  for (let lng = -180; lng <= 180; lng += 30) {
+    L.polyline([[-60, lng], [80, lng]], lineStyle).addTo(layer);
+    L.marker([78, lng], {
+      interactive: false,
+      icon: L.divIcon({
+        className: "map-grid-label map-grid-label-lng",
+        html: mapGridLabel(lng, "lng"),
+        iconSize: [64, 18],
+        iconAnchor: [32, 9]
+      })
+    }).addTo(layer);
+  }
+  return layer;
+}
+
+function addGlobalMapControl(targetMap) {
+  const control = L.control({ position: "topleft" });
+  control.onAdd = () => {
+    const wrap = L.DomUtil.create("div", "leaflet-bar global-map-control");
+    const button = L.DomUtil.create("button", "", wrap);
+    button.type = "button";
+    button.title = translateText("Zoom to global map");
+    button.setAttribute("aria-label", translateText("Zoom to global map"));
+    button.textContent = translateText("Global");
+    L.DomEvent.disableClickPropagation(wrap);
+    L.DomEvent.on(button, "click", event => {
+      L.DomEvent.preventDefault(event);
+      targetMap.fitBounds(globalMapBounds(), { padding: [22, 22], maxZoom: 2 });
+    });
+    return wrap;
+  };
+  control.addTo(targetMap);
 }
 
 function startAskNexusAfterLogin() {
@@ -9998,7 +10079,7 @@ function renderUserRealMap() {
     tap: true,
     worldCopyJump: true,
     preferCanvas: true,
-    minZoom: 2
+    minZoom: 1
   }).setView([3.2, 20.5], 3);
   addRealMapTiles(userMap);
 
@@ -10050,7 +10131,7 @@ function renderUserHealthMap() {
     tap: true,
     worldCopyJump: true,
     preferCanvas: true,
-    minZoom: 2
+    minZoom: 1
   }).setView([3.2, 20.5], 3);
   addRealMapTiles(userHealthMap);
 
@@ -10211,7 +10292,7 @@ function renderRuralHealthAccessMap() {
     tap: true,
     worldCopyJump: true,
     preferCanvas: true,
-    minZoom: 2
+    minZoom: 1
   }).setView([latestPoint.lat, latestPoint.lng], 7);
   addRealMapTiles(ruralHealthAccessMap);
   addRuralHealthMapLegend(ruralHealthAccessMap);
@@ -10251,7 +10332,7 @@ function renderShipmentPreviewMap() {
     tap: true,
     worldCopyJump: true,
     preferCanvas: true,
-    minZoom: 2
+    minZoom: 1
   }).setView([3.2, 20.5], 3);
   addRealMapTiles(shipmentPreviewMap);
   const routeLayer = L.layerGroup().addTo(shipmentPreviewMap);
@@ -10293,7 +10374,7 @@ function renderHealthHotspotPreviewMap() {
     tap: true,
     worldCopyJump: true,
     preferCanvas: true,
-    minZoom: 2
+    minZoom: 1
   }).setView([3.2, 20.5], 3);
   addRealMapTiles(healthHotspotPreviewMap);
   const regionLayer = L.layerGroup().addTo(healthHotspotPreviewMap);
@@ -10339,7 +10420,7 @@ function renderWorkflowLiveMap(config = pendingWorkflow || {}) {
     tap: true,
     worldCopyJump: true,
     preferCanvas: true,
-    minZoom: 2
+    minZoom: 1
   }).setView([country.lat, country.lng], Math.max(4, Number(country.zoom || 5)));
   addRealMapTiles(workflowLeafletMap);
 

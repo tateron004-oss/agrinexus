@@ -215,8 +215,8 @@ for (const [section, buttons] of Object.entries(expectedSections)) {
   assert(styles.includes(marker), `User workflow containment style missing: ${marker}`);
 });
 
-assert(html.includes("/app.js?v=nexus-behavior-169"), "Index must force browsers to load current User-mode workflow JS");
-assert(html.includes("/styles.css?v=nexus-behavior-169"), "Index must force browsers to load current User-mode workflow CSS");
+assert(html.includes("/app.js?v=nexus-behavior-170"), "Index must force browsers to load current User-mode workflow JS");
+assert(html.includes("/styles.css?v=nexus-behavior-170"), "Index must force browsers to load current User-mode workflow CSS");
 assert(html.includes("topSettingsClose"), "User Settings menu needs a visible close button");
 assert(app.includes("voiceShouldResumeAfterUiAction"), "Guide Me and other User actions need to preserve active voice listening");
 assert(app.includes("resumeVoiceAfterUiAction(shouldResumeVoice"), "Guide Me and other User actions need to restore voice after UI transitions");
@@ -231,10 +231,14 @@ assert(styles.includes(".rural-map-legend") && styles.includes(".legend-supply")
 assert(app.includes("World_Street_Map"), "User maps should default to a real operational street map");
 assert(app.includes("World_Imagery/MapServer/tile"), "User maps should keep real satellite imagery available");
 assert(app.includes("Operational map") && app.includes("Satellite imagery") && app.includes("Street map"), "User maps should expose real base-map choices");
+assert(app.includes("function createGlobalGridLayer") && app.includes("Latitude/longitude grid"), "User maps must expose latitude/longitude gridlines");
+assert(app.includes("function addGlobalMapControl") && app.includes("function globalMapBounds"), "User maps must support a one-click global view");
+assert(app.includes('pane: "countryLabels"') && app.includes('"Country names and borders"'), "User maps must keep country names and borders above the base map");
+assert(styles.includes(".map-grid-label") && styles.includes(".global-map-control"), "User maps need visible grid and global control styling");
 assert(app.includes("/api/trade/tracking") && app.includes("Live GPS provider") && app.includes("Platform route tracker"), "User shipment tracking should show provider source and local fallback clearly");
 assert(app.includes("World_Boundaries_and_Places/MapServer/tile"), "User maps should include country names and border labels");
 assert(app.includes("startAskNexusAfterLogin"), "User mode should start Ask Nexus after login");
-assert(sw.includes('CACHE_NAME = "agrinexus-pwa-v149"'), "Service worker cache must be bumped after User-mode workflow fixes");
+assert(sw.includes('CACHE_NAME = "agrinexus-pwa-v150"'), "Service worker cache must be bumped after User-mode workflow fixes");
 assert(styles.includes("body.user-mode .top-settings-close"), "User Settings close button needs visible app-mode styling");
 assert(app.includes('const guideCommand = "help me understand the platform"'), "Guide Me must map to a visible user workflow instead of a silent dynamic command");
 assert(app.includes("function renderUserAccessibilityPanel"), "User mode needs a contained accessibility panel with its own controls");

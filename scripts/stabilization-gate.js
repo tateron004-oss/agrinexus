@@ -22,12 +22,12 @@ function requireScript(scriptName) {
 }
 
 requireMarkers("current browser cache contract", html, [
-  "/styles.css?v=nexus-behavior-169",
-  "/app.js?v=nexus-behavior-169"
+  "/styles.css?v=nexus-behavior-170",
+  "/app.js?v=nexus-behavior-170"
 ]);
 requireMarkers("service worker cache contract", sw, [
-  'CACHE_NAME = "agrinexus-pwa-v149"',
-  'BUILD_VERSION = "nexus-behavior-169"',
+  'CACHE_NAME = "agrinexus-pwa-v150"',
+  'BUILD_VERSION = "nexus-behavior-170"',
   "`/app.js?v=${BUILD_VERSION}`",
   "`/styles.css?v=${BUILD_VERSION}`",
   "purgeOldCaches",
@@ -101,6 +101,11 @@ requireMarkers("simple user workflow contract", app, [
   "medical-supply",
   "World_Imagery/MapServer/tile",
   "World_Boundaries_and_Places/MapServer/tile",
+  "function createGlobalGridLayer",
+  "Latitude/longitude grid",
+  "function addGlobalMapControl",
+  "function globalMapBounds",
+  "pane: \"countryLabels\"",
   "L.control.layers",
   "startAskNexusAfterLogin",
   "pendingWorkflow = config",
@@ -139,6 +144,8 @@ requireMarkers("partial-window prevention", styles, [
   ".global-assistant:not(.hidden)",
   ".jarvis-panel:not(.hidden)",
   ".modal:not(.hidden)",
+  ".map-grid-label",
+  ".global-map-control",
   ".rural-map-legend",
   ".legend-supply",
   "min-height: calc(100dvh - 16px)",
