@@ -17,8 +17,8 @@ includesAll(html, [
   "Close menu",
   'id="userCaptionPanel"',
   'data-caption-action="close"',
-  "/styles.css?v=nexus-behavior-163",
-  "/app.js?v=nexus-behavior-163"
+  "/styles.css?v=nexus-behavior-164",
+  "/app.js?v=nexus-behavior-164"
 ], "HTML grandma-mode shell");
 
 includesAll(app, [
@@ -118,6 +118,7 @@ includesAll(styles, [
 
 assert(app.includes("shipmentPreviewMapCanvas") && app.includes("renderShipmentPreviewMap"), "Grandma mode shipment preview needs a real map canvas");
 assert(app.includes("healthHotspotMapCanvas") && app.includes("renderHealthHotspotPreviewMap"), "Grandma mode health preview needs a real map canvas");
+assert(app.includes("shipment-tracker-strip") && app.includes("shipment-progress-bar"), "Grandma mode shipment tracking needs clear logistics status");
 assert(app.includes("World_Imagery/MapServer/tile"), "Grandma mode maps should default to real satellite imagery");
 assert(app.includes("World_Boundaries_and_Places/MapServer/tile"), "Grandma mode maps should show readable country labels and borders");
 assert(app.includes("startAskNexusAfterLogin"), "Grandma mode should wake Ask Nexus after login");
@@ -125,8 +126,8 @@ assert(!/function shipmentMapHtml[\s\S]*?<svg[\s\S]*?function healthHotspotHtml/
 assert(!/function healthHotspotHtml[\s\S]*?<svg[\s\S]*?function workflowOutcomeHtml/.test(app), "Health preview must not render cartoon SVG maps");
 
 includesAll(sw, [
-  'CACHE_NAME = "agrinexus-pwa-v143"',
-  'BUILD_VERSION = "nexus-behavior-163"'
+  'CACHE_NAME = "agrinexus-pwa-v144"',
+  'BUILD_VERSION = "nexus-behavior-164"'
 ], "Service worker freshness");
 
 console.log("Grandma mode user pass passed");

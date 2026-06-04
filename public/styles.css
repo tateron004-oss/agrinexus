@@ -494,8 +494,12 @@ a:focus-visible,
 .user-service-buttons .service-learning { border-color: #42a8e8; background: linear-gradient(135deg, #e7f6ff, #ffffff 62%); }
 .user-service-buttons .service-workforce { border-color: #57bd76; background: linear-gradient(135deg, #e7f9ed, #ffffff 62%); }
 .user-service-buttons .service-health { border-color: #e76f7a; background: linear-gradient(135deg, #fff0f1, #ffffff 62%); }
-.user-service-buttons .service-trade { border-color: #d9a71d; background: linear-gradient(135deg, #fff4c7, #ffffff 62%); }
-.user-service-buttons .service-map { border-color: #a7c7ef; background: linear-gradient(180deg, #ffffff, #f0f6ff); }
+.user-service-buttons .service-trade,
+.user-service-buttons .service-map {
+  border-color: #314656;
+  background: #ffffff;
+  color: #142531;
+}
 .user-service-buttons .service-agent { border-color: #9d8be8; background: linear-gradient(135deg, #f2edff, #ffffff 62%); }
 .user-service-buttons .service-profile { border-color: #c8b8ee; background: linear-gradient(180deg, #ffffff, #f7f3ff); }
 .user-intelligence-card {
@@ -1430,19 +1434,19 @@ body.user-mode .user-preview-actions {
   margin-top: 6px;
 }
 body.user-mode .user-preview-actions button {
-  min-height: 48px;
-  padding: 8px 6px;
-  border: 2px solid #173240;
-  border-radius: 12px;
-  background: #ffffff;
-  color: #173240;
+  min-height: 50px;
+  padding: 10px 8px;
+  border: 1px solid #263b47;
+  border-radius: 8px;
+  background: #f8fafc;
+  color: #142531;
   font-size: .84rem;
   font-weight: 950;
   line-height: 1.12;
   white-space: normal;
 }
 body.user-mode .user-preview-actions button:first-child {
-  background: #173240;
+  background: #142531;
   color: #ffffff;
 }
 body.user-mode .user-preview-summary.compact {
@@ -1457,6 +1461,12 @@ body.user-mode .user-preview-summary.compact {
   }
   body.user-mode .user-real-map-meta {
     grid-template-columns: 1fr;
+  }
+  .shipment-tracker-strip {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .shipment-tracker-strip span {
+    font-size: .84rem;
   }
 }
 .learning-path-card,
@@ -1956,9 +1966,18 @@ body.user-mode #workforce .user-process-actions .primary {
   background: linear-gradient(135deg, #176f38, #22984e);
   color: #ffffff;
 }
-body.user-mode .user-module-buttons .service-health { background: linear-gradient(180deg, #ffffff, #ffeded); border-color: #e48181; }
-body.user-mode .user-module-buttons .service-trade { background: linear-gradient(180deg, #ffffff, #fff4cc); border-color: #d9ae32; }
-body.user-mode .user-module-buttons .service-map { background: linear-gradient(180deg, #ffffff, #e8f2ff); border-color: #6fa9e9; }
+body.user-mode .user-module-buttons .service-health { background: #ffffff; border-color: #b84a57; }
+body.user-mode .user-module-buttons .service-trade,
+body.user-mode .user-module-buttons .service-map {
+  background: #ffffff;
+  border-color: #314656;
+  color: #142531;
+  box-shadow: 0 8px 18px rgba(15, 35, 44, .08);
+}
+body.user-mode .user-module-buttons .service-trade strong,
+body.user-mode .user-module-buttons .service-map strong {
+  color: #142531;
+}
 body.user-mode .user-module-buttons .service-agent { background: linear-gradient(180deg, #ffffff, #f0eaff); border-color: #9986e8; }
 body.user-mode .user-module-buttons .service-profile { background: linear-gradient(180deg, #ffffff, #f0eaff); border-color: #a58bdc; }
 body.user-mode .user-outcome-panel article {
@@ -3425,6 +3444,76 @@ body.admin-mode .user-workspace {
   border-radius: 12px;
   background: #eef3f5;
 }
+.shipment-tracker-marker {
+  display: block;
+  pointer-events: auto;
+}
+.shipment-tracker-marker span {
+  display: inline-block;
+  width: 26px;
+  height: 26px;
+  border: 3px solid #ffffff;
+  border-radius: 50%;
+  background: #0f766e;
+  box-shadow: 0 0 0 3px rgba(15, 118, 110, .28), 0 8px 18px rgba(0, 0, 0, .28);
+  vertical-align: middle;
+}
+.shipment-tracker-marker b {
+  display: inline-block;
+  max-width: 88px;
+  margin-left: 6px;
+  padding: 5px 7px;
+  border: 1px solid rgba(15, 35, 44, .18);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, .94);
+  color: #142531;
+  font-size: 10px;
+  font-weight: 950;
+  line-height: 1.05;
+  box-shadow: 0 8px 18px rgba(0, 0, 0, .16);
+}
+.shipment-tracker-strip {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+.shipment-tracker-strip div {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+  padding: 10px;
+  border: 1px solid #d2dde3;
+  border-radius: 8px;
+  background: #f8fafc;
+}
+.shipment-tracker-strip strong {
+  color: #445968;
+  font-size: .72rem;
+  font-weight: 950;
+  line-height: 1.1;
+  text-transform: uppercase;
+}
+.shipment-tracker-strip span {
+  min-width: 0;
+  color: #142531;
+  font-size: .92rem;
+  font-weight: 950;
+  line-height: 1.18;
+  overflow-wrap: break-word;
+}
+.shipment-progress-bar {
+  height: 10px;
+  overflow: hidden;
+  border: 1px solid #c7d4dc;
+  border-radius: 999px;
+  background: #e8eef2;
+}
+.shipment-progress-bar span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #0f766e, #0f5f9c);
+}
 .shipment-real-map .leaflet-pane,
 .shipment-real-map .leaflet-control-container {
   z-index: 1;
@@ -3466,16 +3555,21 @@ body.admin-mode .user-workspace {
   gap: 6px;
 }
 .shipment-checkpoints span {
-  padding: 7px 9px;
-  border-radius: 999px;
-  border: 1px solid #cfe4df;
-  background: #ffffff;
+  padding: 8px 9px;
+  border-radius: 8px;
+  border: 1px solid #d2dde3;
+  background: #f8fafc;
   font-weight: 850;
 }
+.shipment-checkpoints span.done {
+  border-color: #b7d7d2;
+  background: #ecfdf5;
+  color: #0f5f56;
+}
 .shipment-checkpoints span.active {
-  border-color: #d94c31;
-  background: #fff1ed;
-  color: #8c2a18;
+  border-color: #142531;
+  background: #142531;
+  color: #ffffff;
 }
 .health-hotspot-card {
   display: grid;
@@ -5121,9 +5215,12 @@ body.user-mode .grandma-workflow:not(.hidden) .modal-actions button {
   body.user-mode .shipment-map-meta {
     grid-template-columns: 1fr;
   }
+  body.user-mode .shipment-tracker-strip {
+    grid-template-columns: 1fr;
+  }
 
   body.user-mode .shipment-real-map {
-    min-height: 160px;
+    min-height: 280px;
   }
 
   body.user-mode .health-hotspot-real-map {

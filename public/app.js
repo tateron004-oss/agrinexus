@@ -54,8 +54,8 @@ let routeTrackingWatchId = null;
 let routeTrackingPoints = [];
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-163";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v143";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-164";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v144";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
 const VOICE_ATTENTION_DELAY_MS = 900;
@@ -7783,6 +7783,8 @@ function userServicePhotoHtml(type = "agent", title = "Service") {
 function userRealMapHtml(title = "Live route map") {
   const route = activeRoute();
   const country = activeCountry();
+  const order = data.profile.orders?.[data.profile.orders.length - 1] || null;
+  const state = shipmentTrackingState(route, order);
   const regions = (data.countries || []).map(item => item.name).slice(0, 5).join(", ");
   return `
     <div class="user-real-map-card">
@@ -7793,6 +7795,13 @@ function userRealMapHtml(title = "Live route map") {
         </div>
         <small>${translateText(country.risk || "Monitored")}</small>
       </div>
+      <div class="shipment-tracker-strip user-tracker-strip" aria-label="${translateText("Route tracking summary")}">
+        <div><strong>${translateText("Current")}</strong><span>${translateText(state.activeCheckpoint)}</span></div>
+        <div><strong>${translateText("Next")}</strong><span>${translateText(state.nextCheckpoint)}</span></div>
+        <div><strong>${translateText("ETA")}</strong><span>${translateText(state.eta)}</span></div>
+        <div><strong>${translateText("Progress")}</strong><span>${state.progress}%</span></div>
+      </div>
+      <div class="shipment-progress-bar user-route-progress" aria-label="${translateText(`Route progress ${state.progress} percent`)}"><span style="width:${state.progress}%"></span></div>
       <div id="userMapCanvas" class="user-real-map" role="img" aria-label="${translateText(`Real map for ${route.name}, showing checkpoints, facilities, and route risk.`)}"></div>
       <div class="user-real-map-meta">
         <div><strong>${translateText("Region")}</strong><span>${translateText("Africa operations")}</span></div>
@@ -9679,12 +9688,11 @@ function renderMap() {
 
   data.routes.forEach(item => {
     const active = item.id === route.id;
-    L.polyline(item.points, { color: active ? "#176fc7" : item.color, weight: active ? 5 : 3, opacity: .85 }).addTo(layers.routes);
-    item.checkpoints.forEach((checkpoint, index) => {
-      const point = item.points[Math.min(index, item.points.length - 1)];
-      L.circleMarker(point, { radius: checkpoint === data.profile.activeCheckpoint ? 9 : 6, color: item.color, fillColor: "white", fillOpacity: 1, weight: 3 })
-        .addTo(layers.routes)
-        .bindTooltip(translateText(checkpoint));
+    drawShipmentRoute(layers.routes, item, {
+      order: active ? data.profile.orders?.[data.profile.orders.length - 1] : null,
+      active,
+      includeCurrentMarker: active,
+      muted: !active
     });
   });
 
@@ -9700,6 +9708,91 @@ function renderMap() {
   map.setView([country.lat, country.lng], country.zoom);
   drawLiveRouteTracking();
   setTimeout(() => map.invalidateSize(), 100);
+}
+
+function shipmentTrackingState(route = activeRoute(), order = null) {
+  const checkpoints = route?.checkpoints || [];
+  const activeCheckpoint = order?.checkpoint || data?.profile?.activeCheckpoint || checkpoints[0] || "Pickup";
+  const checkpointIndex = checkpoints.findIndex(checkpoint => checkpoint === activeCheckpoint);
+  const safeIndex = Math.max(0, Math.min(checkpointIndex < 0 ? 0 : checkpointIndex, Math.max(0, checkpoints.length - 1)));
+  const completed = checkpoints.length ? safeIndex + 1 : 1;
+  const total = Math.max(1, checkpoints.length);
+  const progress = Math.round((completed / total) * 100);
+  const nextCheckpoint = checkpoints[Math.min(safeIndex + 1, total - 1)] || checkpoints[total - 1] || "Buyer handoff";
+  const remainingStops = Math.max(0, total - completed);
+  const etaHours = Math.max(2, remainingStops * 5 + 3);
+  return {
+    activeCheckpoint,
+    safeIndex,
+    completed,
+    total,
+    progress,
+    nextCheckpoint,
+    remainingStops,
+    eta: remainingStops ? `${etaHours}-${etaHours + 4} hrs` : "Arriving now",
+    status: order?.stage || data?.profile?.routeStage || "Tracking"
+  };
+}
+
+function shipmentMarkerIcon(label = "Shipment") {
+  return L.divIcon({
+    className: "shipment-tracker-marker",
+    html: `<span aria-hidden="true"></span><b>${escapeHtml(translateText(label))}</b>`,
+    iconSize: [112, 34],
+    iconAnchor: [18, 17],
+    popupAnchor: [0, -14]
+  });
+}
+
+function drawShipmentRoute(layer, route = activeRoute(), { order = null, active = true, includeCurrentMarker = true, muted = false } = {}) {
+  if (!window.L || !layer || !route?.points?.length) return;
+  const state = shipmentTrackingState(route, order);
+  const points = route.points || [];
+  const currentPoint = points[Math.min(state.safeIndex, points.length - 1)] || points[0];
+  const completedPoints = points.slice(0, Math.min(state.safeIndex + 1, points.length));
+  const remainingPoints = points.slice(Math.min(state.safeIndex, points.length - 1));
+  const routeColor = active ? "#0f5f9c" : "#5f7380";
+  const completedColor = active ? "#0f766e" : "#8b9aa3";
+  const remainingColor = active ? "#f59e0b" : "#a5b1b8";
+  if (completedPoints.length > 1) {
+    L.polyline(completedPoints, {
+      color: completedColor,
+      weight: active ? 7 : 4,
+      opacity: muted ? .55 : .95,
+      lineCap: "round",
+      lineJoin: "round"
+    }).addTo(layer).bindTooltip(translateText("Completed shipment leg"));
+  }
+  if (remainingPoints.length > 1) {
+    L.polyline(remainingPoints, {
+      color: remainingColor,
+      weight: active ? 6 : 4,
+      opacity: muted ? .45 : .92,
+      dashArray: active ? "12 10" : "8 10",
+      lineCap: "round",
+      lineJoin: "round"
+    }).addTo(layer).bindTooltip(translateText("Remaining shipment leg"));
+  } else if (points.length > 1) {
+    L.polyline(points, { color: routeColor, weight: active ? 6 : 4, opacity: muted ? .5 : .85 }).addTo(layer);
+  }
+  (route.checkpoints || []).forEach((checkpoint, index) => {
+    const point = points[Math.min(index, points.length - 1)];
+    if (!point) return;
+    const isCurrent = index === state.safeIndex;
+    const isDone = index < state.safeIndex;
+    L.circleMarker(point, {
+      radius: isCurrent ? 9 : 6,
+      color: isCurrent ? "#111827" : isDone ? completedColor : "#334155",
+      fillColor: isCurrent ? "#ffffff" : isDone ? completedColor : "#ffffff",
+      fillOpacity: 1,
+      weight: isCurrent ? 4 : 2
+    }).addTo(layer).bindPopup(`<strong>${translateText(checkpoint)}</strong><br>${translateText(isCurrent ? "Current shipment checkpoint" : isDone ? "Completed checkpoint" : "Next checkpoint")}`);
+  });
+  if (includeCurrentMarker && currentPoint) {
+    L.marker(currentPoint, { icon: shipmentMarkerIcon("Live shipment") })
+      .addTo(layer)
+      .bindPopup(`<strong>${translateText("Shipment tracking")}</strong><br>${translateText(state.activeCheckpoint)}<br>${translateText(`ETA: ${state.eta}`)}`);
+  }
 }
 
 function addRealMapTiles(targetMap) {
@@ -9840,12 +9933,6 @@ function renderUserRealMap() {
   userMapLayers.markers = L.layerGroup().addTo(userMap);
   userMapLayers.facilities = L.layerGroup().addTo(userMap);
 
-  const routeLine = L.polyline(route.points || [], {
-    color: "#176fc7",
-    weight: 6,
-    opacity: .9
-  }).addTo(userMapLayers.route);
-
   L.rectangle([[-35, -20], [36, 55]], {
     color: "#173240",
     weight: 1,
@@ -9853,18 +9940,10 @@ function renderUserRealMap() {
     dashArray: "10 8",
     opacity: .45
   }).addTo(userMapLayers.route).bindPopup(translateText("Regional Africa operations view. Zoom or drag to inspect surrounding areas."));
-
-  (route.checkpoints || []).forEach((checkpoint, index) => {
-    const point = (route.points || [])[Math.min(index, Math.max(0, (route.points || []).length - 1))];
-    if (!point) return;
-    const isActive = checkpoint === data.profile.activeCheckpoint;
-    L.circleMarker(point, {
-      radius: isActive ? 10 : 7,
-      color: isActive ? "#173240" : "#176fc7",
-      fillColor: isActive ? "#ffc857" : "#ffffff",
-      fillOpacity: 1,
-      weight: 3
-    }).addTo(userMapLayers.route).bindPopup(`<strong>${translateText(checkpoint)}</strong><br>${translateText(isActive ? "Current checkpoint" : "Route checkpoint")}`);
+  drawShipmentRoute(userMapLayers.route, route, {
+    order: data.profile.orders?.[data.profile.orders.length - 1],
+    active: true,
+    includeCurrentMarker: true
   });
 
   addOperationalCountryMarkers(userMap, userMapLayers.markers, country);
@@ -9952,20 +10031,11 @@ function renderShipmentPreviewMap() {
   const routeLayer = L.layerGroup().addTo(shipmentPreviewMap);
   const markerLayer = L.layerGroup().addTo(shipmentPreviewMap);
   const facilityLayer = L.layerGroup().addTo(shipmentPreviewMap);
-  if (route?.points?.length) {
-    L.polyline(route.points, { color: "#176fc7", weight: 6, opacity: .92 }).addTo(routeLayer);
-    (route.checkpoints || []).forEach((checkpoint, index) => {
-      const point = route.points[Math.min(index, route.points.length - 1)];
-      const active = checkpoint === data.profile.activeCheckpoint;
-      L.circleMarker(point, {
-        radius: active ? 10 : 7,
-        color: active ? "#173240" : "#176fc7",
-        fillColor: active ? "#ffc857" : "#ffffff",
-        fillOpacity: 1,
-        weight: 3
-      }).addTo(routeLayer).bindPopup(`<strong>${translateText(checkpoint)}</strong><br>${translateText(active ? "Current shipment checkpoint" : "Shipment checkpoint")}`);
-    });
-  }
+  drawShipmentRoute(routeLayer, route, {
+    order: data.profile.orders?.[data.profile.orders.length - 1],
+    active: true,
+    includeCurrentMarker: true
+  });
   addOperationalCountryMarkers(shipmentPreviewMap, markerLayer, country);
   addNearbyFacilityMarkers(facilityLayer, country, "Logistics support point");
   fitMapToSurroundingRegion(shipmentPreviewMap, route, country, 6);
@@ -10050,17 +10120,10 @@ function renderWorkflowLiveMap(config = pendingWorkflow || {}) {
   const routeLayer = L.layerGroup().addTo(workflowLeafletMap);
   const markerLayer = L.layerGroup().addTo(workflowLeafletMap);
   if (mode !== "health" && route?.points?.length) {
-    const routeLine = L.polyline(route.points, { color: "#176fc7", weight: 6, opacity: .9 }).addTo(routeLayer);
-    (route.checkpoints || []).forEach((checkpoint, index) => {
-      const point = route.points[Math.min(index, route.points.length - 1)];
-      const active = checkpoint === data.profile.activeCheckpoint;
-      L.circleMarker(point, {
-        radius: active ? 10 : 7,
-        color: "#173240",
-        fillColor: active ? "#ffc857" : "#ffffff",
-        fillOpacity: 1,
-        weight: 3
-      }).addTo(routeLayer).bindPopup(`<strong>${translateText(checkpoint)}</strong><br>${translateText("Workflow checkpoint")}`);
+    drawShipmentRoute(routeLayer, route, {
+      order: config.routePreview?.order || data.profile.orders?.[data.profile.orders.length - 1],
+      active: true,
+      includeCurrentMarker: true
     });
   }
   addOperationalCountryMarkers(workflowLeafletMap, markerLayer, country, { health: mode === "health" });
@@ -10274,14 +10337,15 @@ function workflowRealUseCoachHtml(config) {
 
 function shipmentMapHtml({ route = activeRoute(), order = null, product = firstProduct(), title = "Shipment route" } = {}) {
   if (!route?.points?.length) return "";
-  const activeCheckpoint = order?.checkpoint || data.profile.activeCheckpoint || route.checkpoints?.[0] || "Pickup";
-  const checkpointIndex = Math.max(0, route.checkpoints?.findIndex(checkpoint => checkpoint === activeCheckpoint) ?? 0);
-  const safeIndex = Math.min(checkpointIndex < 0 ? 0 : checkpointIndex, route.points.length - 1);
+  const state = shipmentTrackingState(route, order);
+  const activeCheckpoint = state.activeCheckpoint;
+  const safeIndex = state.safeIndex;
   const destination = route.checkpoints?.[route.checkpoints.length - 1] || "Buyer handoff";
   const shipmentTitle = order?.orderNumber ? `${order.orderNumber} - ${product?.name || order.product || "Crop shipment"}` : product?.name || "Crop shipment";
+  const trackingId = order?.orderNumber || `AGX-${String(route.id || "route").toUpperCase()}-${String(product?.id || "crop").toUpperCase()}`;
   const checkpointTags = (route.checkpoints || []).map((checkpoint, index) => {
-    const status = index < safeIndex ? "Done" : index === safeIndex ? "Here now" : "Next";
-    return `<span class="${index === safeIndex ? "active" : ""}">${translateText(status)}: ${translateText(checkpoint)}</span>`;
+    const status = index < safeIndex ? "Cleared" : index === safeIndex ? "Current" : "Upcoming";
+    return `<span class="${index < safeIndex ? "done" : ""} ${index === safeIndex ? "active" : ""}">${translateText(status)}: ${translateText(checkpoint)}</span>`;
   }).join("");
   return `
     <section class="shipment-map-card">
@@ -10292,6 +10356,13 @@ function shipmentMapHtml({ route = activeRoute(), order = null, product = firstP
         </div>
         <small>${translateText(order?.stage || data.profile.routeStage || "Tracking")}</small>
       </div>
+      <div class="shipment-tracker-strip" aria-label="${translateText("Shipment tracking status")}">
+        <div><strong>${translateText("Tracking ID")}</strong><span>${translateText(trackingId)}</span></div>
+        <div><strong>${translateText("Progress")}</strong><span>${state.progress}%</span></div>
+        <div><strong>${translateText("ETA")}</strong><span>${translateText(state.eta)}</span></div>
+        <div><strong>${translateText("Next stop")}</strong><span>${translateText(state.nextCheckpoint)}</span></div>
+      </div>
+      <div class="shipment-progress-bar" aria-label="${translateText(`Shipment progress ${state.progress} percent`)}"><span style="width:${state.progress}%"></span></div>
       <div id="shipmentPreviewMapCanvas" class="shipment-real-map" role="img" aria-label="${escapeHtml(`${route.name} full-scale shipment map with route checkpoints, facilities, and surrounding areas.`)}"></div>
       <div class="shipment-map-meta">
         <div><strong>${translateText("Pickup")}</strong><span>${translateText(route.checkpoints?.[0] || "Field pickup")}</span></div>
