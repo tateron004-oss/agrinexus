@@ -3518,6 +3518,59 @@ body.admin-mode .user-workspace {
 .shipment-real-map .leaflet-control-container {
   z-index: 1;
 }
+.rural-map-legend-control {
+  max-width: min(260px, calc(100vw - 36px));
+  pointer-events: auto;
+}
+.rural-map-legend {
+  display: grid;
+  gap: 5px;
+  padding: 10px 11px;
+  border: 1px solid rgba(23, 50, 64, .2);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, .94);
+  color: #173240;
+  box-shadow: 0 12px 30px rgba(20, 37, 49, .18);
+  backdrop-filter: blur(8px);
+}
+.rural-map-legend strong {
+  font-size: .74rem;
+  font-weight: 950;
+  line-height: 1.05;
+  text-transform: uppercase;
+}
+.rural-map-legend span {
+  display: grid;
+  grid-template-columns: 13px minmax(0, 1fr);
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+  font-size: .76rem;
+  font-weight: 850;
+  line-height: 1.15;
+  overflow-wrap: break-word;
+}
+.rural-map-legend b {
+  width: 11px;
+  height: 11px;
+  border: 2px solid #173240;
+  border-radius: 999px;
+}
+.legend-patient {
+  background: #f5c542;
+}
+.legend-clinic {
+  background: #1b8f68;
+}
+.legend-mobile {
+  background: #7c3aed;
+}
+.legend-pharmacy {
+  background: #0f72b8;
+}
+.legend-supply {
+  background: #c2410c;
+}
 .health-hotspot-real-map {
   background: #eef3f5;
 }

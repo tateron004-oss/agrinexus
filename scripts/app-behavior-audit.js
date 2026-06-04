@@ -1,4 +1,4 @@
-﻿const assert = require("node:assert");
+const assert = require("node:assert");
 const fs = require("node:fs");
 const path = require("node:path");
 
@@ -341,14 +341,14 @@ assert(!html.includes('data-caption-action="stop"'), "Caption box should not exp
 assert(app.includes("activeVoiceRequestController.abort"), "Voice stop must abort pending OpenAI voice requests");
 assert(app.includes("function postStopRedirectCommand"), "Voice stop must support redirecting to the next prompt");
 assert(app.includes("voiceStopTranslations"), "Voice stop controls must translate in every supported language");
-assert(app.includes("detente") && app.includes("arrete") && app.includes("simama") && app.includes("اوقف"), "Voice stop parser must understand multilingual stop phrases");
+assert(app.includes("detente") && app.includes("arrete") && app.includes("simama") && app.includes("\u0627\u0648\u0642\u0641"), "Voice stop parser must understand multilingual stop phrases");
 assert(app.includes("function resetNexusForNextPrompt"), "Voice stop must reset Nexus so the next question can be asked immediately");
 assert(app.includes("Stopped. Ask me the next question or tell me where to go next."), "Voice stop recovery must tell users they can ask the next prompt");
 assert(styles.includes("pointer-events: none") && styles.includes(".user-caption-actions") && styles.includes("pointer-events: auto"), "Caption panel must not block workflow action clicks");
 assert(styles.includes("width: min(300px, calc(100vw - 24px))") && styles.includes("max-height: 138px"), "Caption panel must default to a small bubble");
 assert(styles.includes(".user-caption-panel.expanded") && styles.includes("display: none") && styles.includes("display: grid"), "Caption input controls must appear only in expanded caption mode");
-assert(html.includes("nexus-behavior-168"), "Index must force browsers to load Nexus behavior CSS");
-assert(html.includes("nexus-behavior-168"), "Index must force browsers to load Nexus behavior JS");
+assert(html.includes("nexus-behavior-169"), "Index must force browsers to load Nexus behavior CSS");
+assert(html.includes("nexus-behavior-169"), "Index must force browsers to load Nexus behavior JS");
 assert(app.includes("shipmentPreviewMapCanvas") && app.includes("renderShipmentPreviewMap"), "Shipment preview maps must use real Leaflet canvases");
 assert(app.includes("healthHotspotMapCanvas") && app.includes("renderHealthHotspotPreviewMap"), "Health hotspot maps must use real Leaflet canvases");
 assert(app.includes("function shipmentTrackingState") && app.includes("function drawShipmentRoute"), "Shipment maps must render operational tracking state, not decorative routes");
@@ -365,6 +365,8 @@ assert(html.includes("Mobile Clinic Supply Network"), "Health module needs the m
 assert(html.includes('data-health="supply-request"') && html.includes('data-health="supply-match"') && html.includes('data-health="supply-dispatch"') && html.includes('data-health="supply-delivery"'), "Mobile clinic supply workflow buttons must be visible");
 assert(app.includes("/api/health/rural-network") && app.includes("renderRuralHealthAccessMap"), "Rural health workflows must call the backend and render a real map");
 assert(app.includes("medical-supply") && app.includes("Mobile Clinic Supply Network"), "Mobile clinic supplies must appear in UI and map routing");
+assert(app.includes("function drawRuralHealthNetwork") && app.includes("addRuralHealthMapLegend"), "Rural health workflows must render a visible clinic, pharmacy, mobile clinic, and supply route network");
+assert(styles.includes(".rural-map-legend") && styles.includes(".legend-supply"), "Rural health maps need a readable legend for clinics, pharmacies, mobile clinics, and supply routes");
 assert(server.includes("safeSymptomGuidance") && server.includes("notDiagnosis: true") && server.includes("ruralHealthNetworkCatalog"), "Backend rural health network must be non-diagnostic and backed by a catalog");
 assert(server.includes("mobileClinicSupplyRequests") && server.includes("medicalSupplyFlags") && server.includes("rural_health.supply_dispatch_started"), "Backend mobile clinic supply network must create supply requests, compliance flags, and dispatch evidence");
 assert(html.includes("topSettingsClose"), "Settings menu needs an explicit close control");

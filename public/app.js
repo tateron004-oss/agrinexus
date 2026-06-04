@@ -55,8 +55,8 @@ let routeTrackingWatchId = null;
 let routeTrackingPoints = [];
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-168";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v148";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-169";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v149";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
 const VOICE_ATTENTION_DELAY_MS = 900;
@@ -10113,6 +10113,78 @@ function ruralHealthMapSites() {
   });
 }
 
+function latestRuralHealthPoint(country = activeCountry()) {
+  return (data.profile.ruralSymptomGuides || [])[0]?.patientPoint
+    || (data.profile.ruralClinicMatches || [])[0]?.patientPoint
+    || (data.profile.mobileClinicRequests || [])[0]?.patientPoint
+    || (data.profile.pharmacyRequests || [])[0]?.patientPoint
+    || (data.profile.mobileClinicSupplyRequests || [])[0]?.patientPoint
+    || (data.profile.mobileClinicSupplyMatches || [])[0]?.patientPoint
+    || { label: country.name, lat: country.lat, lng: country.lng };
+}
+
+function ruralHealthMapLegendHtml() {
+  return `
+    <div class="rural-map-legend">
+      <strong>${translateText("Rural health map")}</strong>
+      <span><b class="legend-patient"></b>${translateText("Patient or mobile clinic")}</span>
+      <span><b class="legend-clinic"></b>${translateText("Clinic")}</span>
+      <span><b class="legend-mobile"></b>${translateText("Mobile clinic")}</span>
+      <span><b class="legend-pharmacy"></b>${translateText("Pharmacy")}</span>
+      <span><b class="legend-supply"></b>${translateText("Medical supplies")}</span>
+    </div>
+  `;
+}
+
+function addRuralHealthMapLegend(targetMap) {
+  const control = L.control({ position: "bottomleft" });
+  control.onAdd = () => {
+    const div = L.DomUtil.create("div", "rural-map-legend-control");
+    div.innerHTML = ruralHealthMapLegendHtml();
+    L.DomEvent.disableClickPropagation(div);
+    return div;
+  };
+  control.addTo(targetMap);
+}
+
+function drawRuralHealthNetwork(layer, originPoint, sites = [], options = {}) {
+  if (!originPoint || !Number.isFinite(Number(originPoint.lat)) || !Number.isFinite(Number(originPoint.lng))) return;
+  const colorByType = {
+    clinic: "#1b8f68",
+    "mobile-clinic": "#7c3aed",
+    pharmacy: "#0f72b8",
+    "medical-supply": "#c2410c"
+  };
+  const labelByType = {
+    clinic: "Clinic option",
+    "mobile-clinic": "Mobile clinic route",
+    pharmacy: "Pharmacy option",
+    "medical-supply": "Supply source"
+  };
+  L.marker([originPoint.lat, originPoint.lng])
+    .addTo(layer)
+    .bindPopup(`<strong>${translateText(options.originLabel || "Patient/community location")}</strong><br>${translateText(originPoint.label || activeCountry().name)}`);
+  sites.forEach(site => {
+    const color = colorByType[site.type] || "#173240";
+    const radius = site.type === "medical-supply" ? 9 : site.type === "mobile-clinic" ? 10 : 8;
+    L.circleMarker([site.lat, site.lng], {
+      radius,
+      color: "#173240",
+      fillColor: color,
+      fillOpacity: .88,
+      weight: site.type === "medical-supply" ? 3 : 2
+    }).addTo(layer).bindPopup(`<strong>${translateText(site.name)}</strong><br>${translateText(labelByType[site.type] || "Care point")}<br>${translateText((site.services || []).join(", ") || "rural health support")}<br>${site.distanceKm ? `${site.distanceKm} km` : translateText("distance pending")}`);
+    L.polyline([[originPoint.lat, originPoint.lng], [site.lat, site.lng]], {
+      color,
+      weight: site.type === "medical-supply" ? 5 : 3,
+      opacity: site.type === "medical-supply" ? .88 : .62,
+      dashArray: site.type === "mobile-clinic" ? "8 7" : site.type === "medical-supply" ? "" : "4 8",
+      lineCap: "round",
+      lineJoin: "round"
+    }).addTo(layer).bindTooltip(translateText(site.type === "medical-supply" ? "Supply route" : labelByType[site.type] || "Care route"));
+  });
+}
+
 function renderRuralHealthAccessMap() {
   const canvas = $("#ruralHealthAccessMapCanvas");
   if (!canvas || !data) return;
@@ -10131,12 +10203,7 @@ function renderRuralHealthAccessMap() {
   if (canvas._leaflet_id) canvas.replaceWith(canvas.cloneNode(false));
   const target = $("#ruralHealthAccessMapCanvas");
   const country = activeCountry();
-  const latestPoint = (data.profile.ruralSymptomGuides || [])[0]?.patientPoint
-    || (data.profile.ruralClinicMatches || [])[0]?.patientPoint
-    || (data.profile.mobileClinicRequests || [])[0]?.patientPoint
-    || (data.profile.pharmacyRequests || [])[0]?.patientPoint
-    || (data.profile.ruralHealthHandoffPackets || [])[0]?.patientPoint
-    || { label: country.name, lat: country.lat, lng: country.lng };
+  const latestPoint = latestRuralHealthPoint(country);
   ruralHealthAccessMap = L.map(target, {
     zoomControl: true,
     attributionControl: true,
@@ -10147,33 +10214,10 @@ function renderRuralHealthAccessMap() {
     minZoom: 2
   }).setView([latestPoint.lat, latestPoint.lng], 7);
   addRealMapTiles(ruralHealthAccessMap);
+  addRuralHealthMapLegend(ruralHealthAccessMap);
   const layer = L.layerGroup().addTo(ruralHealthAccessMap);
   const sites = ruralHealthMapSites();
-  L.marker([latestPoint.lat, latestPoint.lng])
-    .addTo(layer)
-    .bindPopup(`<strong>${translateText("Patient/community location")}</strong><br>${translateText(latestPoint.label || country.name)}`);
-  const colorByType = {
-    clinic: "#1b8f68",
-    "mobile-clinic": "#7c3aed",
-    pharmacy: "#0f72b8",
-    "medical-supply": "#c2410c"
-  };
-  sites.forEach(site => {
-    const color = colorByType[site.type] || "#173240";
-    L.circleMarker([site.lat, site.lng], {
-      radius: site.type === "mobile-clinic" ? 10 : 8,
-      color: "#173240",
-      fillColor: color,
-      fillOpacity: .86,
-      weight: 2
-    }).addTo(layer).bindPopup(`<strong>${translateText(site.name)}</strong><br>${translateText(site.type || "care point")}<br>${translateText((site.services || []).join(", ") || "rural health support")}<br>${site.distanceKm ? `${site.distanceKm} km` : translateText("distance pending")}`);
-    L.polyline([[latestPoint.lat, latestPoint.lng], [site.lat, site.lng]], {
-      color,
-      weight: 2,
-      opacity: .55,
-      dashArray: site.type === "mobile-clinic" ? "6 6" : ""
-    }).addTo(layer);
-  });
+  drawRuralHealthNetwork(layer, latestPoint, sites);
   addOperationalCountryMarkers(ruralHealthAccessMap, layer, country, { health: true });
   const bounds = L.latLngBounds([[latestPoint.lat, latestPoint.lng], ...sites.map(site => [site.lat, site.lng])]);
   if (bounds.isValid?.()) ruralHealthAccessMap.fitBounds(bounds.pad(.45), { maxZoom: 8, padding: [30, 30] });
@@ -10307,9 +10351,22 @@ function renderWorkflowLiveMap(config = pendingWorkflow || {}) {
       active: true,
       includeCurrentMarker: true
     });
+  } else if (mode === "health") {
+    const point = latestRuralHealthPoint(country);
+    const sites = ruralHealthMapSites();
+    addRuralHealthMapLegend(workflowLeafletMap);
+    drawRuralHealthNetwork(routeLayer, point, sites, { originLabel: "Patient or mobile clinic location" });
   }
   addOperationalCountryMarkers(workflowLeafletMap, markerLayer, country, { health: mode === "health" });
-  fitMapToSurroundingRegion(workflowLeafletMap, route, country, mode === "health" ? 5 : 6);
+  if (mode === "health") {
+    const point = latestRuralHealthPoint(country);
+    const sites = ruralHealthMapSites();
+    const bounds = L.latLngBounds([[point.lat, point.lng], ...sites.map(site => [site.lat, site.lng])]);
+    if (bounds.isValid?.()) workflowLeafletMap.fitBounds(bounds.pad(.45), { maxZoom: 8, padding: [30, 30] });
+    else fitMapToSurroundingRegion(workflowLeafletMap, route, country, 5);
+  } else {
+    fitMapToSurroundingRegion(workflowLeafletMap, route, country, 6);
+  }
   setTimeout(() => workflowLeafletMap?.invalidateSize(), 140);
 }
 

@@ -1,4 +1,4 @@
-﻿const assert = require("node:assert/strict");
+const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 
@@ -22,12 +22,12 @@ function requireScript(scriptName) {
 }
 
 requireMarkers("current browser cache contract", html, [
-  "/styles.css?v=nexus-behavior-168",
-  "/app.js?v=nexus-behavior-168"
+  "/styles.css?v=nexus-behavior-169",
+  "/app.js?v=nexus-behavior-169"
 ]);
 requireMarkers("service worker cache contract", sw, [
-  'CACHE_NAME = "agrinexus-pwa-v148"',
-  'BUILD_VERSION = "nexus-behavior-168"',
+  'CACHE_NAME = "agrinexus-pwa-v149"',
+  'BUILD_VERSION = "nexus-behavior-169"',
   "`/app.js?v=${BUILD_VERSION}`",
   "`/styles.css?v=${BUILD_VERSION}`",
   "purgeOldCaches",
@@ -93,6 +93,8 @@ requireMarkers("simple user workflow contract", app, [
   "renderHealthHotspotPreviewMap",
   "ruralHealthAccessMapCanvas",
   "renderRuralHealthAccessMap",
+  "function drawRuralHealthNetwork",
+  "addRuralHealthMapLegend",
   "/api/health/rural-network",
   "Mobile Clinic Supply Network",
   "mobileClinicSupplyRequests",
@@ -137,6 +139,8 @@ requireMarkers("partial-window prevention", styles, [
   ".global-assistant:not(.hidden)",
   ".jarvis-panel:not(.hidden)",
   ".modal:not(.hidden)",
+  ".rural-map-legend",
+  ".legend-supply",
   "min-height: calc(100dvh - 16px)",
   "max-height: calc(100dvh - 16px)",
   "overflow-wrap: break-word",
