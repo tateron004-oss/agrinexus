@@ -11746,6 +11746,22 @@ async function runAgentCommand(db, user, command, options = {}) {
   const shouldUseDailySafety = earlyUtilityKind === "weather" && /\b(grandma|grandmother|elder|older|senior|patient|too hot|safe to walk|walk today|walking today)\b/.test(lower);
   const asksForReasonedGuidance = /\b(curious|not have all the data|without all the data|not sure|unsure)\b/.test(lower);
   const shouldKeepUtility = earlyUtilityKind && !shouldUseDailySafety && !asksForReasonedGuidance;
+  if (/(what should i call you|what do i call you|short name|abbreviat|nickname|who are you|your name)/.test(lower)) {
+    db.profile.agentMemory.lastStatus = "assistant-alias-ready";
+    db.profile.agentMemory.lastSummary = "The assistant short name is Nexus.";
+    db.profile.agentMemory.updatedAt = new Date().toISOString();
+    return {
+      intent: "conversation.assistant_alias",
+      response: "You can call me Nexus. AgriNexus is the full platform name, and Nexus is the short voice command for everyday use.",
+      status: "completed",
+      metadata: {
+        conversationMode: true,
+        assistantName: "AgriNexus",
+        assistantAlias: "Nexus",
+        wakePhrases: ["Hey AgriNexus", "Nexus"]
+      }
+    };
+  }
   if (isDailyAdvisorQuestion(lower) && !shouldKeepUtility) {
     return dailyLifeAdvisorResponse(db, user, text, lower, options);
   }
@@ -11793,23 +11809,6 @@ async function runAgentCommand(db, user, command, options = {}) {
   if (/(issue|create|generate).*(my\s+)?certificate|certificate/.test(lower) && /(learning|course|lesson|certificate|my)/.test(lower)) {
     const result = await executeAgentTool(db, user, { tool: "learning.certificate" });
     return { intent: "learning.certificate", response: result, status: "completed", metadata: { conversationMode: conversational, redirectSection: "learning" } };
-  }
-
-  if (/(what should i call you|what do i call you|short name|abbreviat|nickname|who are you|your name)/.test(lower)) {
-    db.profile.agentMemory.lastStatus = "assistant-alias-ready";
-    db.profile.agentMemory.lastSummary = "The assistant short name is Nexus.";
-    db.profile.agentMemory.updatedAt = new Date().toISOString();
-    return {
-      intent: "conversation.assistant_alias",
-      response: "You can call me Nexus. AgriNexus is the full platform name, and Nexus is the short voice command for everyday use.",
-      status: "completed",
-      metadata: {
-        conversationMode: true,
-        assistantName: "AgriNexus",
-        assistantAlias: "Nexus",
-        wakePhrases: ["Hey AgriNexus", "Nexus"]
-      }
-    };
   }
 
   if (/(onboard|create|build|prepare|generate).*(provider|partner|partnership|vendor)/.test(lower) || /(provider|partner|vendor).*(onboard|partnership|packet|plan)/.test(lower)) {

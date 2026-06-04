@@ -18,6 +18,7 @@
     "app:behavior-audit": "node scripts/app-behavior-audit.js",
     "app:jarvis-qa": "node scripts/jarvis-behavior-qa.js",
     "app:mobile-native-qa": "node scripts/mobile-native-qa.js",
+    "platform:integrity-stress": "node scripts/platform-integrity-stress.js",
     "placeholder:audit": "node scripts/no-placeholder-audit.js",
     "stabilization:gate": "node scripts/stabilization-gate.js",
     "production:clickthrough": "node scripts/production-clickthrough.js",

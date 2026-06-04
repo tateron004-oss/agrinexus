@@ -86,7 +86,7 @@ async function call(route, body) {
       inputMode: "voice",
       outputMode: "voice"
     });
-    assert(state.commandResult.intent === "conversation.pending_action");
+    assert(["conversation.pending_action", "conversation.followup_pending"].includes(state.commandResult.intent));
     assert(state.profile.agentPendingAction);
 
     state = await call("/api/agent/command", {

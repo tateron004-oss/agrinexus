@@ -15,6 +15,7 @@ const checks = [
   npmCheck("app:behavior-audit"),
   npmCheck("app:jarvis-qa"),
   npmCheck("app:mobile-native-qa"),
+  npmCheck("platform:integrity-stress"),
   npmCheck("placeholder:audit"),
   npmCheck("stabilization:gate"),
   npmCheck("production:clickthrough"),
