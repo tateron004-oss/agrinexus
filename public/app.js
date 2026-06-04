@@ -54,8 +54,8 @@ let routeTrackingWatchId = null;
 let routeTrackingPoints = [];
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-162";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v142";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-163";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v143";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
 const VOICE_ATTENTION_DELAY_MS = 900;
@@ -9707,6 +9707,12 @@ function addRealMapTiles(targetMap) {
     maxZoom: 19,
     attribution: "Esri World Imagery"
   });
+  const labelLayer = L.tileLayer("https://services.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}", {
+    maxZoom: 19,
+    attribution: "Esri boundaries and places",
+    pane: "tilePane",
+    opacity: .95
+  });
   const streetLayer = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
     maxZoom: 19,
     attribution: "OpenStreetMap contributors"
@@ -9718,11 +9724,31 @@ function addRealMapTiles(targetMap) {
     streetLayer.addTo(targetMap);
   });
   satelliteLayer.addTo(targetMap);
+  labelLayer.addTo(targetMap);
   L.control.layers({
-    "Satellite": satelliteLayer,
+    "Satellite + labels": satelliteLayer,
     "Street map": streetLayer
-  }, {}, { collapsed: true }).addTo(targetMap);
+  }, {
+    "Country names and borders": labelLayer
+  }, { collapsed: true }).addTo(targetMap);
   L.control.scale({ metric: true, imperial: false }).addTo(targetMap);
+}
+
+function startAskNexusAfterLogin() {
+  enableHeyAgriNexusMode();
+  openAskNexus();
+  voiceAutoRestart = true;
+  voiceStopRequested = false;
+  setVoiceStatus("voice-first");
+  const message = `Welcome ${userFirstName()}. Ask Nexus is ready. If the browser asks for the microphone, choose allow.`;
+  setVoiceResponse(message, false, { allowVoiceFirst: true });
+  [80, 360, 900, 1800].forEach(delay => {
+    setTimeout(() => {
+      if (!document.hidden && voiceFirstMode && !voiceRecognition && !voiceSpeaking && !voiceStopRequested) {
+        startVoiceListening();
+      }
+    }, delay);
+  });
 }
 
 function surroundingMapBounds(route = activeRoute(), country = activeCountry()) {
@@ -14310,6 +14336,7 @@ function bindStatic() {
     try {
       data = await request("/api/login", { method: "POST", body: { email: $("#email").value, password: $("#password").value } });
       render();
+      startAskNexusAfterLogin();
       toast("Signed in");
     } catch (error) {
       $("#loginMessage").textContent = error.message;

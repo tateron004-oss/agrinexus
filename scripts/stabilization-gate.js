@@ -22,12 +22,12 @@ function requireScript(scriptName) {
 }
 
 requireMarkers("current browser cache contract", html, [
-  "/styles.css?v=nexus-behavior-162",
-  "/app.js?v=nexus-behavior-162"
+  "/styles.css?v=nexus-behavior-163",
+  "/app.js?v=nexus-behavior-163"
 ]);
 requireMarkers("service worker cache contract", sw, [
-  'CACHE_NAME = "agrinexus-pwa-v142"',
-  'BUILD_VERSION = "nexus-behavior-162"',
+  'CACHE_NAME = "agrinexus-pwa-v143"',
+  'BUILD_VERSION = "nexus-behavior-163"',
   "`/app.js?v=${BUILD_VERSION}`",
   "`/styles.css?v=${BUILD_VERSION}`",
   "purgeOldCaches",
@@ -88,7 +88,9 @@ requireMarkers("simple user workflow contract", app, [
   "healthHotspotMapCanvas",
   "renderHealthHotspotPreviewMap",
   "World_Imagery/MapServer/tile",
+  "World_Boundaries_and_Places/MapServer/tile",
   "L.control.layers",
+  "startAskNexusAfterLogin",
   "pendingWorkflow = config",
   "return renderUserProcessScreen(sectionId, config, mapped, label)",
   "closeAskNexus({ silent: true })",
