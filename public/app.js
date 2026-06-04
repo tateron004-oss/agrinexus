@@ -55,8 +55,8 @@ let routeTrackingWatchId = null;
 let routeTrackingPoints = [];
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-170";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v150";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-171";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v151";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
 const VOICE_ATTENTION_DELAY_MS = 900;
@@ -9861,6 +9861,49 @@ function drawShipmentRoute(layer, route = activeRoute(), { order = null, active 
   }
 }
 
+function addLiveMapStatusControl(targetMap) {
+  const state = {
+    loaded: 0,
+    errors: 0,
+    lastLayer: "Operational map"
+  };
+  const control = L.control({ position: "topright" });
+  control.onAdd = () => {
+    const div = L.DomUtil.create("div", "live-map-status-control");
+    div.innerHTML = `
+      <strong>${translateText("Live map")}</strong>
+      <span data-live-map-status>${translateText("Loading real map tiles")}</span>
+      <small>${translateText("Grid, country lines, scale, and global view active")}</small>
+    `;
+    L.DomEvent.disableClickPropagation(div);
+    return div;
+  };
+  control.addTo(targetMap);
+  const update = () => {
+    const label = targetMap.getContainer()?.querySelector("[data-live-map-status]");
+    if (!label) return;
+    const status = state.loaded
+      ? `${state.loaded} ${translateText("real tile(s) loaded")} - ${translateText(state.lastLayer)}`
+      : state.errors
+        ? `${translateText("Tile provider retrying")} - ${state.errors} ${translateText("error(s)")}`
+        : translateText("Loading real map tiles");
+    label.textContent = status;
+  };
+  update();
+  return {
+    tileLoad(layerName) {
+      state.loaded += 1;
+      state.lastLayer = layerName || state.lastLayer;
+      update();
+    },
+    tileError(layerName) {
+      state.errors += 1;
+      state.lastLayer = layerName || state.lastLayer;
+      update();
+    }
+  };
+}
+
 function addRealMapTiles(targetMap) {
   if (!targetMap || !window.L) return {};
   if (!targetMap.getPane("countryLabels")) {
@@ -9892,6 +9935,16 @@ function addRealMapTiles(targetMap) {
     attribution: "OpenStreetMap contributors"
   });
   const gridLayer = createGlobalGridLayer();
+  const statusControl = addLiveMapStatusControl(targetMap);
+  [
+    [operationalLayer, "Operational map"],
+    [satelliteLayer, "Satellite imagery"],
+    [labelLayer, "Country names and borders"],
+    [streetLayer, "Street map"]
+  ].forEach(([layer, layerName]) => {
+    layer.on("tileload", () => statusControl.tileLoad(layerName));
+    layer.on("tileerror", () => statusControl.tileError(layerName));
+  });
   let fallbackAdded = false;
   const activateFallback = () => {
     if (fallbackAdded || targetMap.hasLayer(streetLayer)) return;

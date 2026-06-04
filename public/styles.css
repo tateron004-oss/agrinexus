@@ -3554,6 +3554,37 @@ body.admin-mode .user-workspace {
   outline: 2px solid #1b8f68;
   outline-offset: 1px;
 }
+.live-map-status-control {
+  display: grid;
+  gap: 4px;
+  max-width: min(250px, calc(100vw - 36px));
+  padding: 9px 10px;
+  border: 1px solid rgba(23, 50, 64, .22);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, .94);
+  color: #173240;
+  box-shadow: 0 12px 30px rgba(20, 37, 49, .16);
+  pointer-events: auto;
+}
+.live-map-status-control strong {
+  font-size: .72rem;
+  font-weight: 950;
+  line-height: 1.05;
+  text-transform: uppercase;
+}
+.live-map-status-control span {
+  color: #0f5f9c;
+  font-size: .78rem;
+  font-weight: 950;
+  line-height: 1.15;
+  overflow-wrap: break-word;
+}
+.live-map-status-control small {
+  color: #456b60;
+  font-size: .7rem;
+  font-weight: 800;
+  line-height: 1.15;
+}
 .rural-map-legend-control {
   max-width: min(260px, calc(100vw - 36px));
   pointer-events: auto;

@@ -347,8 +347,8 @@ assert(app.includes("Stopped. Ask me the next question or tell me where to go ne
 assert(styles.includes("pointer-events: none") && styles.includes(".user-caption-actions") && styles.includes("pointer-events: auto"), "Caption panel must not block workflow action clicks");
 assert(styles.includes("width: min(300px, calc(100vw - 24px))") && styles.includes("max-height: 138px"), "Caption panel must default to a small bubble");
 assert(styles.includes(".user-caption-panel.expanded") && styles.includes("display: none") && styles.includes("display: grid"), "Caption input controls must appear only in expanded caption mode");
-assert(html.includes("nexus-behavior-170"), "Index must force browsers to load Nexus behavior CSS");
-assert(html.includes("nexus-behavior-170"), "Index must force browsers to load Nexus behavior JS");
+assert(html.includes("nexus-behavior-171"), "Index must force browsers to load Nexus behavior CSS");
+assert(html.includes("nexus-behavior-171"), "Index must force browsers to load Nexus behavior JS");
 assert(app.includes("shipmentPreviewMapCanvas") && app.includes("renderShipmentPreviewMap"), "Shipment preview maps must use real Leaflet canvases");
 assert(app.includes("healthHotspotMapCanvas") && app.includes("renderHealthHotspotPreviewMap"), "Health hotspot maps must use real Leaflet canvases");
 assert(app.includes("function shipmentTrackingState") && app.includes("function drawShipmentRoute"), "Shipment maps must render operational tracking state, not decorative routes");
@@ -358,8 +358,9 @@ assert(app.includes("World_Imagery/MapServer/tile"), "Maps must include real sat
 assert(app.includes("World_Street_Map") && app.includes("Operational map") && app.includes("Street map"), "Maps must default to a real operational street layer with fallback choices");
 assert(app.includes("function createGlobalGridLayer") && app.includes("Latitude/longitude grid"), "Maps must expose a latitude/longitude grid overlay");
 assert(app.includes("function addGlobalMapControl") && app.includes("function globalMapBounds"), "Maps must include a global zoom control");
+assert(app.includes("function addLiveMapStatusControl") && app.includes("real tile(s) loaded"), "Maps must expose in-app live tile loading status");
 assert(app.includes('pane: "countryLabels"') && app.includes('"Country names and borders"'), "Maps must show country boundaries and labels above the base tiles");
-assert(styles.includes(".map-grid-label") && styles.includes(".global-map-control"), "Real map grid and global controls need visible professional styling");
+assert(styles.includes(".map-grid-label") && styles.includes(".global-map-control") && styles.includes(".live-map-status-control"), "Real map grid, global controls, and live tile status need visible professional styling");
 assert(app.includes("/api/trade/tracking") && app.includes("Refresh live tracking") && app.includes("Live GPS provider"), "Trade shipment workflows must expose live logistics/GPS tracking refresh");
 assert(app.includes("World_Boundaries_and_Places/MapServer/tile"), "Satellite maps must show country names and borders");
 assert(app.includes("startAskNexusAfterLogin") && app.includes("Welcome ${userFirstName()}"), "Ask Nexus should wake into voice-first mode after login");

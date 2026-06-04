@@ -22,12 +22,12 @@ function requireScript(scriptName) {
 }
 
 requireMarkers("current browser cache contract", html, [
-  "/styles.css?v=nexus-behavior-170",
-  "/app.js?v=nexus-behavior-170"
+  "/styles.css?v=nexus-behavior-171",
+  "/app.js?v=nexus-behavior-171"
 ]);
 requireMarkers("service worker cache contract", sw, [
-  'CACHE_NAME = "agrinexus-pwa-v150"',
-  'BUILD_VERSION = "nexus-behavior-170"',
+  'CACHE_NAME = "agrinexus-pwa-v151"',
+  'BUILD_VERSION = "nexus-behavior-171"',
   "`/app.js?v=${BUILD_VERSION}`",
   "`/styles.css?v=${BUILD_VERSION}`",
   "purgeOldCaches",
@@ -105,6 +105,8 @@ requireMarkers("simple user workflow contract", app, [
   "Latitude/longitude grid",
   "function addGlobalMapControl",
   "function globalMapBounds",
+  "function addLiveMapStatusControl",
+  "real tile(s) loaded",
   "pane: \"countryLabels\"",
   "L.control.layers",
   "startAskNexusAfterLogin",
@@ -146,6 +148,7 @@ requireMarkers("partial-window prevention", styles, [
   ".modal:not(.hidden)",
   ".map-grid-label",
   ".global-map-control",
+  ".live-map-status-control",
   ".rural-map-legend",
   ".legend-supply",
   "min-height: calc(100dvh - 16px)",
