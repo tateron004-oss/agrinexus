@@ -215,8 +215,8 @@ for (const [section, buttons] of Object.entries(expectedSections)) {
   assert(styles.includes(marker), `User workflow containment style missing: ${marker}`);
 });
 
-assert(html.includes("/app.js?v=nexus-behavior-164"), "Index must force browsers to load current User-mode workflow JS");
-assert(html.includes("/styles.css?v=nexus-behavior-164"), "Index must force browsers to load current User-mode workflow CSS");
+assert(html.includes("/app.js?v=nexus-behavior-165"), "Index must force browsers to load current User-mode workflow JS");
+assert(html.includes("/styles.css?v=nexus-behavior-165"), "Index must force browsers to load current User-mode workflow CSS");
 assert(html.includes("topSettingsClose"), "User Settings menu needs a visible close button");
 assert(app.includes("voiceShouldResumeAfterUiAction"), "Guide Me and other User actions need to preserve active voice listening");
 assert(app.includes("resumeVoiceAfterUiAction(shouldResumeVoice"), "Guide Me and other User actions need to restore voice after UI transitions");
@@ -226,11 +226,12 @@ assert(app.includes("shipmentPreviewMapCanvas") && app.includes("renderShipmentP
 assert(app.includes("function shipmentTrackingState") && app.includes("shipment-tracker-strip"), "User route tracking should show logistics status, not a decorative route card");
 assert(styles.includes(".shipment-tracker-marker") && styles.includes(".shipment-progress-bar"), "User route tracking needs professional marker and progress styling");
 assert(app.includes("healthHotspotMapCanvas") && app.includes("renderHealthHotspotPreviewMap"), "User health previews must be real Leaflet maps");
-assert(app.includes("World_Imagery/MapServer/tile"), "User maps should default to real satellite imagery");
-assert(app.includes("Satellite") && app.includes("Street map"), "User maps should expose real base-map choices");
+assert(app.includes("World_Street_Map"), "User maps should default to a real operational street map");
+assert(app.includes("World_Imagery/MapServer/tile"), "User maps should keep real satellite imagery available");
+assert(app.includes("Operational map") && app.includes("Satellite imagery") && app.includes("Street map"), "User maps should expose real base-map choices");
 assert(app.includes("World_Boundaries_and_Places/MapServer/tile"), "User maps should include country names and border labels");
 assert(app.includes("startAskNexusAfterLogin"), "User mode should start Ask Nexus after login");
-assert(sw.includes('CACHE_NAME = "agrinexus-pwa-v144"'), "Service worker cache must be bumped after User-mode workflow fixes");
+assert(sw.includes('CACHE_NAME = "agrinexus-pwa-v145"'), "Service worker cache must be bumped after User-mode workflow fixes");
 assert(styles.includes("body.user-mode .top-settings-close"), "User Settings close button needs visible app-mode styling");
 assert(app.includes('const guideCommand = "help me understand the platform"'), "Guide Me must map to a visible user workflow instead of a silent dynamic command");
 assert(app.includes("function renderUserAccessibilityPanel"), "User mode needs a contained accessibility panel with its own controls");

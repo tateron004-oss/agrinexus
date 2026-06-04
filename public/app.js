@@ -54,8 +54,8 @@ let routeTrackingWatchId = null;
 let routeTrackingPoints = [];
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-164";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v144";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-165";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v145";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
 const VOICE_ATTENTION_DELAY_MS = 900;
@@ -9796,6 +9796,10 @@ function drawShipmentRoute(layer, route = activeRoute(), { order = null, active 
 }
 
 function addRealMapTiles(targetMap) {
+  const operationalLayer = L.tileLayer("https://services.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}", {
+    maxZoom: 19,
+    attribution: "Esri World Street Map"
+  });
   const satelliteLayer = L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", {
     maxZoom: 19,
     attribution: "Esri World Imagery"
@@ -9811,15 +9815,18 @@ function addRealMapTiles(targetMap) {
     attribution: "OpenStreetMap contributors"
   });
   let fallbackAdded = false;
-  satelliteLayer.on("tileerror", () => {
+  const activateFallback = () => {
     if (fallbackAdded || targetMap.hasLayer(streetLayer)) return;
     fallbackAdded = true;
     streetLayer.addTo(targetMap);
-  });
-  satelliteLayer.addTo(targetMap);
+  };
+  operationalLayer.on("tileerror", activateFallback);
+  satelliteLayer.on("tileerror", activateFallback);
+  operationalLayer.addTo(targetMap);
   labelLayer.addTo(targetMap);
   L.control.layers({
-    "Satellite + labels": satelliteLayer,
+    "Operational map": operationalLayer,
+    "Satellite imagery": satelliteLayer,
     "Street map": streetLayer
   }, {
     "Country names and borders": labelLayer
