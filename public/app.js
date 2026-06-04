@@ -54,8 +54,8 @@ let routeTrackingWatchId = null;
 let routeTrackingPoints = [];
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-161";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v141";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-162";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v142";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
 const VOICE_ATTENTION_DELAY_MS = 900;
@@ -9667,7 +9667,7 @@ function renderMap() {
   const route = activeRoute();
   if (!map) {
     map = L.map("mapCanvas").setView([8, 20], 3);
-    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom: 19, attribution: "OpenStreetMap" }).addTo(map);
+    addRealMapTiles(map);
     layers.routes = L.layerGroup().addTo(map);
     layers.markers = L.layerGroup().addTo(map);
     layers.facilities = L.layerGroup().addTo(map);
@@ -9703,10 +9703,25 @@ function renderMap() {
 }
 
 function addRealMapTiles(targetMap) {
-  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+  const satelliteLayer = L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", {
+    maxZoom: 19,
+    attribution: "Esri World Imagery"
+  });
+  const streetLayer = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
     maxZoom: 19,
     attribution: "OpenStreetMap contributors"
-  }).addTo(targetMap);
+  });
+  let fallbackAdded = false;
+  satelliteLayer.on("tileerror", () => {
+    if (fallbackAdded || targetMap.hasLayer(streetLayer)) return;
+    fallbackAdded = true;
+    streetLayer.addTo(targetMap);
+  });
+  satelliteLayer.addTo(targetMap);
+  L.control.layers({
+    "Satellite": satelliteLayer,
+    "Street map": streetLayer
+  }, {}, { collapsed: true }).addTo(targetMap);
   L.control.scale({ metric: true, imperial: false }).addTo(targetMap);
 }
 

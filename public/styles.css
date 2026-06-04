@@ -1301,10 +1301,10 @@ body.user-mode .user-real-map-card {
   gap: 10px;
   min-width: 0;
   padding: 12px;
-  border: 2px solid #b8d8e8;
-  border-radius: 16px;
-  background: #f7fcff;
-  box-shadow: 0 12px 26px rgba(23, 50, 64, .08);
+  border: 1px solid #c8d6dd;
+  border-radius: 12px;
+  background: #ffffff;
+  box-shadow: 0 10px 24px rgba(15, 35, 44, .1);
 }
 body.user-mode .user-real-map-head {
   display: flex;
@@ -1346,20 +1346,20 @@ body.user-mode .user-real-map-head small {
   word-break: normal;
 }
 body.user-mode .user-real-map {
-  height: min(56vh, 430px);
-  min-height: 320px;
+  height: min(62vh, 520px);
+  min-height: 380px;
   width: 100%;
   overflow: hidden;
-  border: 3px solid #173240;
-  border-radius: 18px;
-  background: #b9d8e8;
+  border: 1px solid #aebfc8;
+  border-radius: 12px;
+  background: #eef3f5;
 }
 body.user-mode .user-health-map-card {
-  border-color: #efc2c8;
-  background: #fff9f9;
+  border-color: #d4dde2;
+  background: #ffffff;
 }
 body.user-mode .user-health-real-map {
-  background: #d8e8ef;
+  background: #eef3f5;
 }
 body.user-mode .user-real-map .leaflet-control-container,
 body.user-mode .user-real-map .leaflet-pane {
@@ -3376,10 +3376,10 @@ body.admin-mode .user-workspace {
   display: grid;
   gap: 10px;
   padding: 12px;
-  border: 1px solid #bcd9d1;
-  border-radius: 14px;
-  background: linear-gradient(180deg, #ffffff, #edf8f4);
-  box-shadow: 0 12px 30px rgba(18, 70, 56, .08);
+  border: 1px solid #c8d6dd;
+  border-radius: 12px;
+  background: #ffffff;
+  box-shadow: 0 10px 24px rgba(15, 35, 44, .1);
 }
 .shipment-map-head {
   display: flex;
@@ -3418,19 +3418,19 @@ body.admin-mode .user-workspace {
 }
 .shipment-real-map {
   width: 100%;
-  min-height: 360px;
-  height: min(54vh, 460px);
+  min-height: 400px;
+  height: min(62vh, 540px);
   overflow: hidden;
-  border: 3px solid #173240;
-  border-radius: 14px;
-  background: #d8e8ef;
+  border: 1px solid #aebfc8;
+  border-radius: 12px;
+  background: #eef3f5;
 }
 .shipment-real-map .leaflet-pane,
 .shipment-real-map .leaflet-control-container {
   z-index: 1;
 }
 .health-hotspot-real-map {
-  background: #f3e8ea;
+  background: #eef3f5;
 }
 .shipment-map-meta {
   display: grid;
@@ -3481,9 +3481,9 @@ body.admin-mode .user-workspace {
   display: grid;
   gap: 10px;
   padding: 12px;
-  border: 1px solid #e3c4c8;
-  border-radius: 14px;
-  background: linear-gradient(180deg, #ffffff, #fff1f2);
+  border: 1px solid #c8d6dd;
+  border-radius: 12px;
+  background: #ffffff;
 }
 .hotspot-list {
   display: grid;
@@ -3672,11 +3672,11 @@ body.admin-mode .user-workspace {
 }
 .workflow-live-map,
 .workflow-live-workbench {
-  min-height: 280px;
+  min-height: 380px;
   overflow: hidden;
-  border: 2px solid #173240;
-  border-radius: 16px;
-  background: #dcecf3;
+  border: 1px solid #aebfc8;
+  border-radius: 12px;
+  background: #eef3f5;
 }
 .workflow-live-map .leaflet-control-container,
 .workflow-live-map .leaflet-pane {
@@ -4451,7 +4451,7 @@ article {
 .ai-status small { color: rgba(255,255,255,.82); font-weight: 800; }
 .map-layout { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 14px; }
 #map { isolation: isolate; }
-#mapCanvas { position: relative; z-index: 0; min-height: 590px; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; box-shadow: var(--shadow); background: var(--panel); }
+#mapCanvas { position: relative; z-index: 0; min-height: 640px; border: 1px solid #aebfc8; border-radius: 10px; overflow: hidden; box-shadow: var(--shadow); background: #eef3f5; }
 #mapCanvas .leaflet-pane,
 #mapCanvas .leaflet-control-container { z-index: 0; }
 #mapCanvas .leaflet-top,
