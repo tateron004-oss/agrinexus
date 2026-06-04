@@ -356,8 +356,8 @@ assert(app.includes("Stopped. Ask me the next question or tell me where to go ne
 assert(styles.includes("pointer-events: none") && styles.includes(".user-caption-actions") && styles.includes("pointer-events: auto"), "Caption panel must not block workflow action clicks");
 assert(styles.includes("width: min(300px, calc(100vw - 24px))") && styles.includes("max-height: 138px"), "Caption panel must default to a small bubble");
 assert(styles.includes(".user-caption-panel.expanded") && styles.includes("display: none") && styles.includes("display: grid"), "Caption input controls must appear only in expanded caption mode");
-assert(html.includes("nexus-behavior-174"), "Index must force browsers to load Nexus behavior CSS");
-assert(html.includes("nexus-behavior-174"), "Index must force browsers to load Nexus behavior JS");
+assert(html.includes("nexus-behavior-175"), "Index must force browsers to load Nexus behavior CSS");
+assert(html.includes("nexus-behavior-175"), "Index must force browsers to load Nexus behavior JS");
 assert(app.includes("shipmentPreviewMapCanvas") && app.includes("renderShipmentPreviewMap"), "Shipment preview maps must use real Leaflet canvases");
 assert(app.includes("healthHotspotMapCanvas") && app.includes("renderHealthHotspotPreviewMap"), "Health hotspot maps must use real Leaflet canvases");
 assert(app.includes("function shipmentTrackingState") && app.includes("function drawShipmentRoute"), "Shipment maps must render operational tracking state, not decorative routes");
@@ -377,7 +377,10 @@ assert(html.includes("Rural Health Access Network"), "Health module needs the ru
 assert(html.includes('data-health="symptom-guide"') && html.includes('data-health="nearest-clinic"') && html.includes('data-health="mobile-clinic"') && html.includes('data-health="pharmacy"') && html.includes('data-health="handoff"'), "Rural health access buttons must be visible");
 assert(html.includes("Mobile Clinic Supply Network"), "Health module needs the mobile clinic supply network workspace");
 assert(html.includes('data-health="supply-request"') && html.includes('data-health="supply-match"') && html.includes('data-health="supply-dispatch"') && html.includes('data-health="supply-delivery"'), "Mobile clinic supply workflow buttons must be visible");
+assert(html.includes("Mobile Clinic Revenue Desk"), "Health module needs the mobile clinic revenue/payment workspace");
+assert(html.includes('data-health="clinic-service-menu"') && html.includes('data-health="clinic-payment-request"') && html.includes('data-health="clinic-receipt"') && html.includes('data-health="clinic-payout"'), "Mobile clinic revenue workflow buttons must be visible");
 assert(app.includes("/api/health/rural-network") && app.includes("renderRuralHealthAccessMap"), "Rural health workflows must call the backend and render a real map");
+assert(app.includes("/api/health/mobile-clinic-revenue") && server.includes("mobileClinicRevenueRecords") && server.includes("mobile_clinic.payment_requested"), "Mobile clinic revenue workflows must call the backend and record billing evidence");
 assert(app.includes("medical-supply") && app.includes("Mobile Clinic Supply Network"), "Mobile clinic supplies must appear in UI and map routing");
 assert(app.includes("function drawRuralHealthNetwork") && app.includes("addRuralHealthMapLegend"), "Rural health workflows must render a visible clinic, pharmacy, mobile clinic, and supply route network");
 assert(styles.includes(".rural-map-legend") && styles.includes(".legend-supply"), "Rural health maps need a readable legend for clinics, pharmacies, mobile clinics, and supply routes");

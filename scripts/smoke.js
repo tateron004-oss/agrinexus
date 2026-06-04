@@ -415,6 +415,35 @@ async function call(path, body) {
   const supplyDelivery = await call("/api/health/rural-network", { type: "supply-delivery", patientName: "Mobile clinic team A", patientLocation: "Nairobi", receivedBy: "Mobile clinic lead", condition: "received and counted" });
   assert(supplyDelivery.profile.mobileClinicSupplyDeliveries.length >= 1);
   assert(supplyDelivery.ruralHealthResult.record.status === "delivered");
+  const serviceMenu = await call("/api/health/mobile-clinic-revenue", {
+    type: "clinic-service-menu",
+    providerName: "Kenya Mobile Clinic Team A",
+    patientName: "Grace Wanjiku",
+    service: "Mobile clinic visit, vitals support, and telehealth handoff",
+    amount: 1500,
+    currency: "KES",
+    paymentMethod: "mobile money"
+  });
+  assert(serviceMenu.profile.mobileClinicRevenueRecords.length >= 1);
+  assert(serviceMenu.mobileClinicRevenueResult.record.serviceMenu.length >= 1);
+  assert(serviceMenu.profile.integrationEvents.some(event => event.action === "mobile_clinic.service_menu_published"));
+  const paymentRequest = await call("/api/health/mobile-clinic-revenue", {
+    type: "clinic-payment-request",
+    providerName: "Kenya Mobile Clinic Team A",
+    patientName: "Grace Wanjiku",
+    service: "Mobile clinic visit and provider handoff",
+    amount: 1500,
+    currency: "KES",
+    paymentMethod: "mobile money"
+  });
+  assert(paymentRequest.mobileClinicRevenueResult.record.status === "payment requested");
+  assert(paymentRequest.profile.integrationEvents.some(event => event.action === "mobile_clinic.payment_requested"));
+  const receipt = await call("/api/health/mobile-clinic-revenue", { type: "clinic-receipt", providerName: "Kenya Mobile Clinic Team A", patientName: "Grace Wanjiku", amount: 1500, currency: "KES" });
+  assert(receipt.mobileClinicRevenueResult.record.receiptNumber);
+  assert(receipt.profile.integrationEvents.some(event => event.action === "mobile_clinic.receipt_issued"));
+  const payout = await call("/api/health/mobile-clinic-revenue", { type: "clinic-payout", providerName: "Kenya Mobile Clinic Team A", patientName: "Grace Wanjiku", amount: 1500, currency: "KES" });
+  assert(payout.mobileClinicRevenueResult.record.payoutNumber);
+  assert(payout.profile.integrationEvents.some(event => event.action === "mobile_clinic.payout_prepared"));
   const representative = await call("/api/health/action", { type: "representative" });
   assert(representative.profile.representativeConnections >= 1);
   assert(representative.profile.integrationEvents.some(event => event.action === "representative.connected"));

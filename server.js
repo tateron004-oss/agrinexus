@@ -4286,6 +4286,7 @@ function ensureHealthProfile(profile) {
   profile.mobileClinicSupplyMatches = profile.mobileClinicSupplyMatches || [];
   profile.mobileClinicSupplyDispatches = profile.mobileClinicSupplyDispatches || [];
   profile.mobileClinicSupplyDeliveries = profile.mobileClinicSupplyDeliveries || [];
+  profile.mobileClinicRevenueRecords = profile.mobileClinicRevenueRecords || [];
 }
 
 function ruralHealthNetworkCatalog(db) {
@@ -15209,6 +15210,99 @@ async function api(req, res, url) {
     await writeDb(db);
     const state = publicState(db, user);
     state.ruralHealthResult = { type, record, guidance, nearestClinic, nearestMobileClinic, nearestPharmacy, nearestSupplySources };
+    return send(res, 200, state);
+  }
+
+  if (url.pathname === "/api/health/mobile-clinic-revenue" && req.method === "POST") {
+    if (!canUse(user, "health")) return send(res, 403, { error: "Role does not allow mobile clinic revenue workflows" });
+    const body = await readBody(req);
+    const { country, route } = activeContext(db);
+    ensureHealthProfile(db.profile);
+    const type = String(body.type || "clinic-payment-request").trim();
+    const now = new Date().toISOString();
+    const intake = db.profile.healthIntakes[0] || {
+      id: crypto.randomUUID(),
+      patientRef: `AN-PAT-${country.id.toUpperCase()}-REV`,
+      patientName: String(body.patientName || "Community patient").trim(),
+      countryId: country.id,
+      needSummary: "Mobile clinic revenue workflow",
+      riskLevel: "Routine",
+      queueStatus: "Mobile clinic billing review",
+      representativeStatus: "Provider desk pending",
+      preferredLanguage: String(body.preferredLanguage || user.language || "en").trim(),
+      contactMethod: "voice callback, SMS, or WhatsApp",
+      accessibilityNeeds: "plain language, audio, captions, receipt summary",
+      createdAt: now
+    };
+    if (!db.profile.healthIntakes.find(item => item.id === intake.id)) db.profile.healthIntakes.unshift(intake);
+    const mobileClinic = (db.profile.mobileClinicRequests || [])[0]?.mobileClinic || nearestRuralHealthSites(db, { label: country.name, lat: country.lat, lng: country.lng, country: country.name }, "mobile-clinic", 1)[0];
+    const providerName = String(body.providerName || mobileClinic?.name || `${country.name} Mobile Clinic Team`).trim();
+    const patientName = String(body.patientName || intake.patientName || "Community patient").trim();
+    const service = String(body.service || "mobile clinic visit, vitals collection, telehealth handoff, and follow-up support").trim();
+    const currency = String(body.currency || (country.name === "Kenya" ? "KES" : country.name === "Nigeria" ? "NGN" : country.name === "DRC" ? "CDF" : "USD")).trim();
+    const amount = Number(body.amount || (type === "clinic-service-menu" ? 0 : 1500));
+    const paymentMethod = String(body.paymentMethod || "mobile money, cash receipt, card, or sponsor voucher").trim();
+    const previous = db.profile.mobileClinicRevenueRecords[0] || null;
+    const serviceMenu = [
+      { name: "Mobile clinic visit", price: amount || 1500, currency, note: "Provider confirms clinical service before payment is requested." },
+      { name: "Vitals and intake support", price: Math.max(300, Math.round((amount || 1500) * 0.35)), currency, note: "Non-diagnostic collection and handoff support." },
+      { name: "Telehealth referral handoff", price: Math.max(500, Math.round((amount || 1500) * 0.45)), currency, note: "Referral packet and communication workflow." },
+      { name: "Pharmacy/supply coordination", price: Math.max(400, Math.round((amount || 1500) * 0.4)), currency, note: "Availability, route, and compliance evidence." }
+    ];
+    const statusMap = {
+      "clinic-service-menu": "service menu published",
+      "clinic-payment-request": "payment requested",
+      "clinic-receipt": "receipt issued",
+      "clinic-payout": "provider payout prepared"
+    };
+    const record = {
+      id: crypto.randomUUID(),
+      revenueNumber: `MCR-${String(db.profile.mobileClinicRevenueRecords.length + 1).padStart(3, "0")}`,
+      type,
+      patientRef: intake.patientRef,
+      patientName,
+      providerName,
+      mobileClinic,
+      service,
+      amount,
+      currency,
+      paymentMethod,
+      status: statusMap[type] || "payment workflow recorded",
+      previousRevenueNumber: previous?.revenueNumber || null,
+      serviceMenu,
+      receiptNumber: type === "clinic-receipt" ? `MCR-RCPT-${String(db.profile.mobileClinicRevenueRecords.length + 1).padStart(3, "0")}` : null,
+      payoutNumber: type === "clinic-payout" ? `MCR-PAY-${String(db.profile.mobileClinicRevenueRecords.length + 1).padStart(3, "0")}` : null,
+      payerInstruction: "Confirm the patient, sponsor, or care partner understands the service, price, receipt, and refund/support path before collecting payment.",
+      payoutInstruction: "Provider payout remains pending until payment provider settlement, patient/sponsor confirmation, and compliance review are complete.",
+      clinicalBoundary: "AgriNexus records billing, receipt, routing, and evidence only. Clinical judgment stays with licensed providers.",
+      routeContext: { routeId: route.id, routeName: route.name, checkpoint: db.profile.activeCheckpoint },
+      createdAt: now
+    };
+    db.profile.mobileClinicRevenueRecords.unshift(record);
+    db.profile.mobileClinicRevenueRecords = db.profile.mobileClinicRevenueRecords.slice(0, 30);
+    intake.patientName = patientName;
+    intake.queueStatus = `Mobile clinic ${record.status}`;
+    const eventAction = type === "clinic-service-menu"
+      ? "mobile_clinic.service_menu_published"
+      : type === "clinic-receipt"
+        ? "mobile_clinic.receipt_issued"
+        : type === "clinic-payout"
+          ? "mobile_clinic.payout_prepared"
+          : "mobile_clinic.payment_requested";
+    const detail = `${record.revenueNumber} ${record.status} for ${providerName}: ${amount ? `${currency} ${amount}` : "service menu"} ${service}.`;
+    logIntegration(db, {
+      providerId: type === "clinic-payout" ? "billing" : "health-notifications",
+      module: "Healthcare",
+      action: eventAction,
+      detail,
+      metadata: { recordId: record.id, patientRef: intake.patientRef, type, amount, currency, providerName, countryId: country.id }
+    });
+    db.profile.aiActivity = `${detail} ${record.clinicalBoundary}`;
+    addActivity(db.profile, db.profile.aiActivity);
+    addWorkflowNote(db.profile, body.note, "Mobile clinic revenue note");
+    await writeDb(db);
+    const state = publicState(db, user);
+    state.mobileClinicRevenueResult = { type, record };
     return send(res, 200, state);
   }
 

@@ -13,7 +13,7 @@
   <link rel="icon" href="/icons/agri-nexus-192.png" type="image/png">
   <link rel="apple-touch-icon" href="/icons/agri-nexus-192.png">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-  <link rel="stylesheet" href="/styles.css?v=nexus-behavior-174">
+  <link rel="stylesheet" href="/styles.css?v=nexus-behavior-175">
 </head>
 <body>
   <a class="skip-link" href="#mainContent">Skip to main content</a>
@@ -633,6 +633,23 @@
             <article>
               <h3>Supply Chain Evidence</h3>
               <div id="mobileClinicSupplyList" class="activity"></div>
+            </article>
+          </div>
+          <div class="cards two mobile-clinic-revenue-network">
+            <article class="accessibility-card">
+              <div class="tag-row"><span>Mobile clinic revenue</span><span>Provider payments</span></div>
+              <h3>Mobile Clinic Revenue Desk</h3>
+              <p>Help mobile clinic providers publish service pricing, request payment, issue receipts, and prepare payout evidence without replacing clinical judgment.</p>
+              <div class="action-row">
+                <button data-health="clinic-service-menu" class="primary" type="button">Service menu</button>
+                <button data-health="clinic-payment-request" type="button">Request payment</button>
+                <button data-health="clinic-receipt" type="button">Issue receipt</button>
+                <button data-health="clinic-payout" type="button">Provider payout</button>
+              </div>
+            </article>
+            <article>
+              <h3>Revenue Evidence</h3>
+              <div id="mobileClinicRevenueList" class="activity"></div>
             </article>
           </div>
           <div class="cards two">
@@ -1475,6 +1492,6 @@
   <div id="toast" class="toast hidden" role="status" aria-live="polite" aria-atomic="true"></div>
   <div id="screenReaderStatus" class="sr-only" role="status" aria-live="polite" aria-atomic="true"></div>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="/app.js?v=nexus-behavior-174"></script>
+  <script src="/app.js?v=nexus-behavior-175"></script>
 </body>
 </html>
