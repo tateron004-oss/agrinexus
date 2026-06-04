@@ -54,8 +54,8 @@ let routeTrackingWatchId = null;
 let routeTrackingPoints = [];
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-159";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v139";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-160";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v140";
 
 const countryLanguageMap = {
   nigeria: "en",
@@ -2465,8 +2465,8 @@ function runUserModeSelfTest() {
       if (!simpleUserCommandWorkflow(button.command)) missing.push(`${section}: ${button.label}`);
     });
   });
-  const currentScript = [...document.scripts].some(script => String(script.src || "").includes("nexus-behavior-142"));
-  const currentStyle = [...document.styleSheets].some(sheet => String(sheet.href || "").includes("nexus-behavior-142"));
+  const currentScript = [...document.scripts].some(script => String(script.src || "").includes(AGRINEXUS_BUILD_VERSION));
+  const currentStyle = [...document.styleSheets].some(sheet => String(sheet.href || "").includes(AGRINEXUS_BUILD_VERSION));
   if (!currentScript || !currentStyle) missing.push("new app files");
   const ok = missing.length === 0;
   const message = ok
