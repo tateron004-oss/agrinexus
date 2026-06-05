@@ -56,8 +56,8 @@ let routeTrackingWatchId = null;
 let routeTrackingPoints = [];
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-176";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v156";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-177";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v157";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
 const VOICE_ATTENTION_DELAY_MS = 900;
@@ -9127,12 +9127,30 @@ function render() {
   $("#walletPanel").innerHTML = [
     row("Balance", money(data.profile.wallet)),
     row("Transactions", data.profile.walletTransactions.length),
-    row("Last transaction", data.profile.walletTransactions[0]?.provider || "None")
+    row("Last transaction", data.profile.walletTransactions[0]?.provider || "None"),
+    row("Platform revenue", money((data.profile.platformTransactionFees || []).reduce((sum, fee) => sum + Number(fee.feeAmount || 0), 0))),
+    row("Fee records", (data.profile.platformTransactionFees || []).length)
   ].join("");
 
   $("#walletLedger").innerHTML = data.profile.walletTransactions.length
-    ? data.profile.walletTransactions.map(tx => `<div><strong>${tx.provider}</strong><span>${tx.type || "credit"} ${money(tx.amount)} - ${tx.status || "posted"}</span></div>`).join("")
+    ? data.profile.walletTransactions.map(tx => `<div><strong>${tx.provider}</strong><span>${tx.type || "credit"} ${money(tx.amount)} - ${tx.status || "posted"}</span>${tx.platformFeeAmount ? `<small>${translateText(`Gross ${money(tx.grossAmount || tx.amount)} - AgriNexus fee ${money(tx.platformFeeAmount)} - seller net ${money(tx.amount)}`)}</small>` : ""}</div>`).join("")
     : "<div>No wallet transactions yet.</div>";
+
+  if ($("#platformFeePanel")) {
+    const fees = data.profile.platformTransactionFees || [];
+    const feeTotal = fees.reduce((sum, fee) => sum + Number(fee.feeAmount || 0), 0);
+    $("#platformFeePanel").innerHTML = [
+      row("Fee model", `${fees[0]?.feePercent || 2.5}% per settled transaction`),
+      row("Fees captured", fees.length),
+      row("Revenue earned", money(feeTotal))
+    ].join("");
+  }
+  if ($("#platformFeeLedger")) {
+    const fees = data.profile.platformTransactionFees || [];
+    $("#platformFeeLedger").innerHTML = fees.length
+      ? fees.slice(0, 12).map(fee => `<div><strong>${translateText(fee.feeNumber)}</strong><span>${translateText(`${fee.productName} - ${fee.buyerName} / ${fee.sellerName}`)}</span><small>${translateText(`Gross ${fee.currency} ${fee.grossAmount} - AgriNexus fee ${fee.currency} ${fee.feeAmount} - seller net ${fee.currency} ${fee.sellerNetAmount}`)}</small></div>`).join("")
+      : "<div>No platform transaction fees yet. Prepare settlement after delivery to capture AgriNexus revenue.</div>";
+  }
 
   const latestOrder = data.profile.orders[data.profile.orders.length - 1];
   $("#tradeOrderCount").textContent = data.profile.orders.length;
@@ -9204,12 +9222,13 @@ function render() {
       row("Buyer", latestShipping?.buyerName || latestThread?.buyerName || "No buyer selected"),
       row("Seller", latestShipping?.sellerName || data.user?.name || "Current seller"),
       row("Route", latestShipping?.routeName || route.name),
-      row("Status", latestShipping?.status || "Ready to quote or book")
+      row("Status", latestShipping?.status || "Ready to quote or book"),
+      row("AgriNexus fee", latestShipping?.platformFee ? `${latestShipping.platformFee.currency} ${latestShipping.platformFee.feeAmount}` : "Captured at settlement")
     ].join("");
   }
   if ($("#tradeLogisticsList")) {
     $("#tradeLogisticsList").innerHTML = tradeLogisticsRecords.length
-      ? tradeLogisticsRecords.slice(0, 12).map(item => `<div><strong>${translateText(item.logisticsNumber)}</strong><span>${translateText(`${item.productName} - ${item.status} - ${item.direction} - ${item.pickupLocation} to ${item.deliveryLocation}`)}</span><small>${translateText(`${item.currency} ${item.amount} - ${item.trackingNumber}`)}</small></div>`).join("")
+      ? tradeLogisticsRecords.slice(0, 12).map(item => `<div><strong>${translateText(item.logisticsNumber)}</strong><span>${translateText(`${item.productName} - ${item.status} - ${item.direction} - ${item.pickupLocation} to ${item.deliveryLocation}`)}</span><small>${translateText(`${item.currency} ${item.amount} - ${item.trackingNumber}${item.platformFee ? ` - fee ${item.currency} ${item.platformFee.feeAmount} - seller net ${item.currency} ${item.sellerNetAmount}` : ""}`)}</small></div>`).join("")
       : "<div>No shipping evidence yet. Quote shipment, book shipment, schedule pickup, confirm delivery, or prepare settlement.</div>";
   }
   const tradeOps = [
@@ -11192,7 +11211,7 @@ function tradeUserCopy(action, product) {
       "buyer-pickup": ["Buyer pickup", "Schedule the buyer or buyer's driver to collect the crop from the seller or collection point.", "pickup"],
       "seller-delivery": ["Deliver to buyer", "Schedule the seller, cooperative, or driver to deliver the crop to the buyer, market, processor, or export point.", "delivery"],
       "delivery-confirm": ["Confirm delivery", "Record that the buyer received the crop and attach delivery proof before payment is released.", "delivery proof"],
-      settlement: ["Prepare payout", "Prepare the seller payout or settlement record after shipment and delivery evidence are complete.", "settlement"]
+      settlement: ["Prepare payout", "Prepare the seller payout, capture the AgriNexus transaction fee, and record settlement after shipment and delivery evidence are complete.", "settlement"]
     }[action];
     return {
       title: copy[0],
@@ -11887,7 +11906,7 @@ function workflowConfig(workflow, action, element) {
       eyebrow: "Trade workflow",
       title: titleMap[action] || "Trade action",
       userTitle: userCopy.title,
-      summary: isTradeLogisticsAction ? "Create buyer-to-seller or seller-to-buyer logistics evidence with pickup point, delivery point, carrier, shipment quote, booking, tracking, delivery proof, and settlement readiness." : ["buyer-message", "buyer-whatsapp", "buyer-sms"].includes(action) ? "Open a buyer-seller message thread tied to the active crop, order, route, quality, payment, and provider-ready communication evidence. SMS and WhatsApp attempt live Twilio delivery when configured." : action === "buyer-contact" ? "Prepare a buyer communication workflow with the active crop, order, route context, channel, and message draft before sending through live communications." : isDroneAction ? "Run a complete agritech drone workflow: compliant flight planning, crop intelligence, findings, map evidence, and field intervention tasks." : isAdvancedDroneAction ? "Create farmer-facing drone intelligence that turns aerial evidence into irrigation, pest, spray, yield, compliance, and buyer-readiness decisions." : isAdvancedTrade ? "Create a concrete commercial operations record with provider evidence for quote, quality, cold-chain, export, contract, or payment release." : "Confirm the market, wallet, logistics, or AI action before the trade ledger changes.",
+      summary: isTradeLogisticsAction ? "Create buyer-to-seller or seller-to-buyer logistics evidence with pickup point, delivery point, carrier, shipment quote, booking, tracking, delivery proof, settlement readiness, and AgriNexus transaction-fee capture at payout." : ["buyer-message", "buyer-whatsapp", "buyer-sms"].includes(action) ? "Open a buyer-seller message thread tied to the active crop, order, route, quality, payment, and provider-ready communication evidence. SMS and WhatsApp attempt live Twilio delivery when configured." : action === "buyer-contact" ? "Prepare a buyer communication workflow with the active crop, order, route context, channel, and message draft before sending through live communications." : isDroneAction ? "Run a complete agritech drone workflow: compliant flight planning, crop intelligence, findings, map evidence, and field intervention tasks." : isAdvancedDroneAction ? "Create farmer-facing drone intelligence that turns aerial evidence into irrigation, pest, spray, yield, compliance, and buyer-readiness decisions." : isAdvancedTrade ? "Create a concrete commercial operations record with provider evidence for quote, quality, cold-chain, export, contract, or payment release." : "Confirm the market, wallet, logistics, or AI action before the trade ledger changes.",
       userSummary: userCopy.summary,
       confirmLabel: titleMap[action] || "Confirm",
       path: pathMap[action] || "/api/ai/run",
@@ -11895,7 +11914,7 @@ function workflowConfig(workflow, action, element) {
       guide: experienceMode === "user" ? userCopy.guide : action === "order"
         ? "Choose the crop/product, quantity, buyer, and pickup point. Confirming creates a real order record, active route, checkpoint, and trade evidence."
         : isTradeLogisticsAction
-          ? "Choose buyer, seller, direction, pickup point, delivery point, carrier, and amount. Confirming creates shipping evidence and refreshes tracking."
+          ? "Choose buyer, seller, direction, pickup point, delivery point, carrier, and amount. Confirming creates shipping evidence, refreshes tracking, and captures the AgriNexus transaction fee when settlement is prepared."
         : isDroneAction || isAdvancedDroneAction
           ? "Choose the crop lot, field zone, and scan objective. Confirming creates drone mission or scan evidence tied to the map and trade route."
           : action === "route" || action === "advance"
@@ -11910,8 +11929,8 @@ function workflowConfig(workflow, action, element) {
         detail: "Open camera so the farmer can show crop quality, quantity, packaging, field condition, or pickup readiness.",
         consent: "Ask permission before showing the farm, buyer, seller, route, payment, or private household details."
       } : null,
-      userOutcome: isTradeLogisticsAction ? "AgriNexus creates the shipping record, route evidence, delivery proof path, and settlement readiness." : action === "order" ? "AgriNexus creates the order and connects it to the shipment lane." : action === "advance" ? "AgriNexus moves the shipment to the next checkpoint." : "AgriNexus keeps the buyer conversation connected to the crop route.",
-      userRecord: isTradeLogisticsAction ? "The buyer, seller, crop, pickup, delivery, carrier, tracking, proof, and settlement evidence stay connected." : "The crop order, buyer message, checkpoint, and route evidence stay connected so the shipment can be tracked later.",
+      userOutcome: isTradeLogisticsAction ? "AgriNexus creates the shipping record, route evidence, delivery proof path, settlement readiness, and platform revenue evidence." : action === "order" ? "AgriNexus creates the order and connects it to the shipment lane." : action === "advance" ? "AgriNexus moves the shipment to the next checkpoint." : "AgriNexus keeps the buyer conversation connected to the crop route.",
+      userRecord: isTradeLogisticsAction ? "The buyer, seller, crop, pickup, delivery, carrier, tracking, proof, settlement, AgriNexus fee, and seller net payout evidence stay connected." : "The crop order, buyer message, checkpoint, and route evidence stay connected so the shipment can be tracked later.",
       fields: [
         ...(action !== "advance" ? [{ name: "productId", label: "Crop or product", type: "select", value: product?.id || productId || "", options: productSelectOptions() }] : []),
         ...(action === "order" ? [
@@ -11957,7 +11976,7 @@ function workflowConfig(workflow, action, element) {
         ] : [])
       ],
       success: isTradeLogisticsAction ? "Buyer-seller shipping workflow complete" : action === "buyer-video" ? "Buyer video handoff ready" : ["buyer-message", "buyer-whatsapp", "buyer-sms"].includes(action) ? "Buyer-seller thread opened" : action === "buyer-contact" ? "Buyer contact prepared" : action === "wallet" ? "Payment posted" : action === "advance" ? "Order advanced" : action === "order" ? "Order created" : action === "drone-plan" ? "Drone mission planned" : action === "drone" ? "Drone scan complete" : action === "drone-intervention" ? "Field intervention assigned" : isAdvancedDroneAction ? "Advanced drone operation complete" : isAdvancedTrade ? "Advanced trade operation complete" : "AI action complete",
-      record: isTradeLogisticsAction ? "Buyer/seller shipping quote, booking, pickup, delivery proof, live tracking, route evidence, settlement, and provider audit event" : "Order book, wallet ledger, message thread, route timeline, drone mission, field scan, intervention task, trade event, or AI evidence",
+      record: isTradeLogisticsAction ? "Buyer/seller shipping quote, booking, pickup, delivery proof, live tracking, route evidence, settlement, AgriNexus transaction fee, seller net payout, and provider audit event" : "Order book, wallet ledger, message thread, route timeline, drone mission, field scan, intervention task, trade event, or AI evidence",
       provider: isTradeLogisticsAction ? "Trade logistics and payment provider evidence is recorded; live GPS providers are used when credentials are connected." : "Market, communications, drone, payment, logistics, or AI provider event is recorded.",
       checklist: [
         { title: "Product/order", detail: latestOrder ? `${latestOrder.orderNumber} - ${latestOrder.stage}` : product?.name || "No product selected", status: latestOrder || product ? "live" : "pending", label: "Trade" },
@@ -11966,6 +11985,7 @@ function workflowConfig(workflow, action, element) {
         ...(action === "buyer-video" ? [{ title: "Video handoff", detail: (data.profile.videoSessions || [])[0]?.sessionNumber || "No video session yet", status: (data.profile.videoSessions || []).length ? "ready" : "pending", label: "Video" }] : []),
         { title: "Route", detail: activeRoute().name, status: "ready", label: data.profile.activeCheckpoint },
         ...(isTradeLogisticsAction ? [{ title: "Shipping evidence", detail: `${(data.profile.tradeLogisticsRecords || []).length} buyer/seller logistics record(s)`, status: "ready", label: "Shipping" }] : []),
+        ...(isTradeLogisticsAction ? [{ title: "AgriNexus revenue", detail: `${(data.profile.platformTransactionFees || []).length} transaction fee record(s)`, status: "ready", label: "Fee" }] : []),
         { title: "Wallet", detail: `${money(data.profile.wallet || 0)} current balance`, status: "ready", label: "Wallet" },
         { title: "Drone mission", detail: (data.profile.droneMissions || [])[0]?.missionRef || "No flight plan yet", status: (data.profile.droneMissions || []).length ? "ready" : "pending", label: "Flight" },
         { title: "Drone evidence", detail: (data.profile.droneScans || [])[0]?.scanRef || "No scan yet", status: (data.profile.droneScans || []).length ? "ready" : "pending", label: "Field" },

@@ -581,6 +581,11 @@ async function call(path, body) {
   const tradeSettlement = await call("/api/trade/logistics", { type: "settlement", productId: "avocado-ke", amount: 120, currency: "KES" });
   assert(tradeSettlement.tradeLogisticsResult.record.status === "settlement prepared");
   assert(tradeSettlement.profile.walletTransactions.some(tx => tx.status === "settlement-prepared"));
+  assert(tradeSettlement.profile.platformTransactionFees.length >= 1);
+  assert(tradeSettlement.tradeLogisticsResult.record.platformFee.status === "captured");
+  assert(tradeSettlement.tradeLogisticsResult.record.platformFee.feeAmount > 0);
+  assert(tradeSettlement.profile.walletTransactions.some(tx => tx.platformFeeAmount === tradeSettlement.tradeLogisticsResult.record.platformFee.feeAmount));
+  assert(tradeSettlement.profile.integrationEvents.some(event => event.action === "platform.transaction_fee_captured"));
   const healthVideo = await call("/api/video/session", { type: "health", videoNote: "Show injury swelling to the telehealth provider." });
   assert(healthVideo.videoSessionResult.type === "telehealth-video");
   assert(healthVideo.profile.videoSessions.length >= 2);

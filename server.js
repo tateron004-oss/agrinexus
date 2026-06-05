@@ -4156,10 +4156,24 @@ async function createTradeLogisticsWorkflow(db, user, body = {}) {
     dispatch: false
   });
   if (type === "settlement") {
+    const fee = createPlatformTransactionFee(db, {
+      orderId: order.id,
+      orderNumber: order.orderNumber,
+      logisticsId: record.id,
+      logisticsNumber: record.logisticsNumber,
+      buyerName,
+      sellerName,
+      productName,
+      grossAmount: amount,
+      currency
+    });
     const tx = {
       id: crypto.randomUUID(),
       provider: "AgriNexus settlement",
-      amount,
+      amount: fee.sellerNetAmount,
+      grossAmount: amount,
+      platformFeeAmount: fee.feeAmount,
+      platformFeeId: fee.id,
       currency,
       type: "credit",
       status: "settlement-prepared",
@@ -4167,7 +4181,9 @@ async function createTradeLogisticsWorkflow(db, user, body = {}) {
       logisticsId: record.id,
       createdAt: record.createdAt
     };
-    db.profile.wallet = Number(db.profile.wallet || 0) + amount;
+    record.platformFee = fee;
+    record.sellerNetAmount = fee.sellerNetAmount;
+    db.profile.wallet = Number(db.profile.wallet || 0) + fee.sellerNetAmount;
     db.profile.walletTransactions.unshift(tx);
   }
   addActivity(db.profile, `${record.logisticsNumber} ${record.status} for ${productName}.`);
@@ -4509,6 +4525,8 @@ function safeSymptomGuidance(symptoms = "", country = {}) {
 function ensureTradeProfile(profile) {
   profile.orders = profile.orders || [];
   profile.walletTransactions = profile.walletTransactions || [];
+  profile.platformTransactionFees = profile.platformTransactionFees || [];
+  profile.platformRevenueLedger = profile.platformRevenueLedger || [];
   profile.tradeEvents = profile.tradeEvents || [];
   profile.buyerContacts = profile.buyerContacts || [];
   profile.tradeMessageThreads = profile.tradeMessageThreads || [];
@@ -4532,6 +4550,67 @@ function ensureTradeProfile(profile) {
   profile.droneYieldForecasts = profile.droneYieldForecasts || [];
   profile.droneComplianceAudits = profile.droneComplianceAudits || [];
   profile.fieldInterventions = profile.fieldInterventions || [];
+}
+
+function platformTransactionFeeRate() {
+  const configured = Number(process.env.AGRINEXUS_TRANSACTION_FEE_RATE || process.env.PLATFORM_TRANSACTION_FEE_RATE || 0.025);
+  if (!Number.isFinite(configured) || configured < 0) return 0.025;
+  return Math.min(configured, 0.25);
+}
+
+function createPlatformTransactionFee(db, details = {}) {
+  ensureTradeProfile(db.profile);
+  const currency = details.currency || "USD";
+  const rate = platformTransactionFeeRate();
+  const grossAmount = Number(details.grossAmount || details.amount || 0);
+  const feeAmount = Number((grossAmount * rate).toFixed(2));
+  const sellerNetAmount = Number(Math.max(0, grossAmount - feeAmount).toFixed(2));
+  const fee = {
+    id: crypto.randomUUID(),
+    feeNumber: `AN-FEE-${String(db.profile.platformTransactionFees.length + 1).padStart(4, "0")}`,
+    module: "AgriTrade",
+    type: "transaction-fee",
+    orderId: details.orderId || null,
+    orderNumber: details.orderNumber || null,
+    logisticsId: details.logisticsId || null,
+    logisticsNumber: details.logisticsNumber || null,
+    buyerName: details.buyerName || "Buyer",
+    sellerName: details.sellerName || "Seller",
+    productName: details.productName || "Crop transaction",
+    grossAmount,
+    feeRate: rate,
+    feePercent: Number((rate * 100).toFixed(2)),
+    feeAmount,
+    sellerNetAmount,
+    currency,
+    status: "captured",
+    revenueModel: "AgriNexus earns this fee when a buyer/seller transaction reaches settlement.",
+    createdAt: new Date().toISOString()
+  };
+  db.profile.platformTransactionFees.unshift(fee);
+  db.profile.platformTransactionFees = db.profile.platformTransactionFees.slice(0, 60);
+  db.profile.platformRevenueLedger.unshift({
+    id: crypto.randomUUID(),
+    source: "AgriTrade transaction fee",
+    amount: feeAmount,
+    currency,
+    status: "earned",
+    feeId: fee.id,
+    orderId: fee.orderId,
+    createdAt: fee.createdAt
+  });
+  db.profile.platformRevenueLedger = db.profile.platformRevenueLedger.slice(0, 80);
+  addTradeEvent(db.profile, { type: "platform.transaction_fee_captured", label: `${fee.feeNumber} captured ${currency} ${feeAmount} AgriNexus fee from ${fee.productName} settlement.` });
+  logIntegration(db, {
+    providerId: "trade-payments",
+    module: "AgriTrade",
+    action: "platform.transaction_fee_captured",
+    status: "success",
+    detail: `${fee.feeNumber} captured ${currency} ${feeAmount} platform fee; seller net ${currency} ${sellerNetAmount}.`,
+    metadata: { fee },
+    dispatch: false
+  });
+  return fee;
 }
 
 function ensureAiProfile(profile) {
