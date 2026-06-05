@@ -356,8 +356,8 @@ assert(app.includes("Stopped. Ask me the next question or tell me where to go ne
 assert(styles.includes("pointer-events: none") && styles.includes(".user-caption-actions") && styles.includes("pointer-events: auto"), "Caption panel must not block workflow action clicks");
 assert(styles.includes("width: min(300px, calc(100vw - 24px))") && styles.includes("max-height: 138px"), "Caption panel must default to a small bubble");
 assert(styles.includes(".user-caption-panel.expanded") && styles.includes("display: none") && styles.includes("display: grid"), "Caption input controls must appear only in expanded caption mode");
-assert(html.includes("nexus-behavior-179"), "Index must force browsers to load Nexus behavior CSS");
-assert(html.includes("nexus-behavior-179"), "Index must force browsers to load Nexus behavior JS");
+assert(html.includes("nexus-behavior-180"), "Index must force browsers to load Nexus behavior CSS");
+assert(html.includes("nexus-behavior-180"), "Index must force browsers to load Nexus behavior JS");
 assert(app.includes("shipmentPreviewMapCanvas") && app.includes("renderShipmentPreviewMap"), "Shipment preview maps must use real Leaflet canvases");
 assert(app.includes("healthHotspotMapCanvas") && app.includes("renderHealthHotspotPreviewMap"), "Health hotspot maps must use real Leaflet canvases");
 assert(app.includes("function shipmentTrackingState") && app.includes("function drawShipmentRoute"), "Shipment maps must render operational tracking state, not decorative routes");
@@ -403,6 +403,10 @@ assert(app.includes("resumeVoiceAfterUiAction(shouldResumeVoice"), "User button 
 assert(app.includes("VOICE_RESTART_DELAY_MS = 320"), "Voice listening should restart quickly after Nexus speaks");
 assert(app.includes("VOICE_UI_RESUME_DELAYS_MS = [180, 650, 1500, 3200, 5200]"), "User actions should restore mic listening quickly");
 assert(app.includes("Heard: ${command}"), "Voice acknowledgement should stay short and responsive");
+assert(app.includes("function nexusWakeGreeting") && app.includes("How can I assist you?"), "Nexus must greet the signed-in user by name before taking commands");
+assert(app.includes("function stageNexusSpokenCommand") && app.includes("Should I do that now?"), "Nexus must repeat a heard command and wait for yes before execution");
+assert(app.includes("function executePendingNexusSpokenCommand") && app.includes("source: \"nexus-confirmation\""), "Confirmed Nexus commands must execute through the main voice handler");
+assert(app.includes("agrinexusAutonomousLearningLog") && app.includes("command-confirmed"), "Nexus must record autonomous learning evidence for confirmed commands");
 assert(app.includes("if (!id) return \"dashboard\";"), "Language changes must survive an empty hash without querying '#'");
 assert(app.includes("document.getElementById(id)?.classList.contains(\"section\")"), "Section hash lookup must avoid invalid CSS selectors during language switching");
 assert(app.includes("I want to sell maize"), "Nexus behavior layer should support natural trade requests without button hunting");

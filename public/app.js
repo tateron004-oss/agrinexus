@@ -32,6 +32,8 @@ let activeVoiceRequestController = null;
 let voiceConversationTurns = Number(localStorage.getItem("agrinexusVoiceTurns") || 0);
 let liveVoiceSuggestions = [];
 let agentReasoningVisible = localStorage.getItem("agrinexusReasoningVisible") === "true";
+let pendingNexusSpokenCommand = null;
+let nexusAwaitingCommand = false;
 let agentPerformanceState = {
   lastCommand: "",
   startedAt: 0,
@@ -56,8 +58,8 @@ let routeTrackingWatchId = null;
 let routeTrackingPoints = [];
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-179";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v159";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-180";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v160";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
 const VOICE_ATTENTION_DELAY_MS = 900;
@@ -10172,8 +10174,10 @@ function startAskNexusAfterLogin() {
   openAskNexus();
   voiceAutoRestart = voiceFirstMode;
   voiceStopRequested = !voiceFirstMode;
+  nexusAwaitingCommand = true;
   setVoiceStatus(voiceFirstMode ? "voice-first" : "standby");
-  const message = `Welcome ${userFirstName()}. Ask Nexus is ready. If the browser asks for the microphone, choose allow.`;
+  const message = `Welcome ${userFirstName()}. Nexus is ready. Say Nexus, then tell me what you need. I will repeat it first and wait for yes.`;
+  recordNexusAutonomousLearning({ type: "login-greeting", command: "Nexus ready after login" });
   setVoiceResponse(message, false, { allowVoiceFirst: false });
   [80, 360, 900, 1800].forEach(delay => {
     setTimeout(() => {
@@ -13480,12 +13484,120 @@ function isWakePhraseOnly(command) {
   return wakePhrases.includes(normalized);
 }
 
+function isNexusGreetingOnly(command) {
+  const normalized = normalizedWakeText(command);
+  if (!normalized) return false;
+  return [
+    "hello nexus", "hi nexus", "hello agrinexus", "hi agrinexus",
+    "good morning nexus", "good afternoon nexus", "good evening nexus",
+    "bonjour nexus", "salut nexus", "bonjour agrinexus", "habari nexus", "hujambo nexus"
+  ].includes(normalized);
+}
+
+function nexusWakeGreeting(kind = "wake") {
+  const name = userFirstName();
+  return kind === "hello"
+    ? `Hello ${name}. How can I assist you?`
+    : `Yes ${name}. How can I assist you?`;
+}
+
 function cleanWakeCommand(command) {
   return String(command || "")
     .replace(/^\s*(hey\s+)?(nexus|agrinexus|agri\s+nexus|agri)\s*[,:\-]?\s*/i, "")
+    .replace(/^\s*(hello|hi|good\s+morning|good\s+afternoon|good\s+evening)\s+(nexus|agrinexus|agri\s+nexus|agri)\s*[,:\-]?\s*/i, "")
     .replace(/^\s*(bonjour|salut|habari|hujambo)\s+(nexus|agrinexus|agri\s+nexus|agri)\s*[,:\-]?\s*/i, "")
     .replace(/^\s*(مرحبا|يا)?\s*(اغرينكسوس|نيكسس)\s*[,:\-]?\s*/i, "")
     .trim();
+}
+
+function nexusHasOpenWorkflowPrompt() {
+  const inline = $(".user-inline-workflow:not(.hidden)");
+  const modal = $("#workflowModal");
+  return Boolean((pendingWorkflow && inline) || (modal && !modal.classList.contains("hidden")));
+}
+
+function isNexusCommandConfirmation(lower) {
+  const value = String(lower || "").trim();
+  return /^(yes|yes nexus|yes please|confirm|confirmed|approve|approved|do it|do this|do this now|go ahead|run it|start it|execute|execute it|that is right|correct)$/i.test(value)
+    || /\b(yes do it|yes go ahead|confirm that|run that|execute that|start that|please do it)\b/i.test(value);
+}
+
+function isNexusCommandRejection(lower) {
+  const value = String(lower || "").trim();
+  return /^(no|no nexus|cancel|cancel that|do not|don't|wrong|not that|choose another|clear that|forget that|nevermind|never mind)$/i.test(value)
+    || /\b(cancel that|wrong command|not what i said|do not do that|don't do that|forget it|choose another)\b/i.test(value);
+}
+
+function shouldStageNexusSpokenCommand(command, lower, options = {}) {
+  if (options.skipCommandConfirmation || options.confirmed || options.source === "system") return false;
+  if (options.wakeOnly || !command || command.trim().length < 3) return false;
+  if (nexusHasOpenWorkflowPrompt()) return false;
+  if (isNexusCommandConfirmation(lower) || isNexusCommandRejection(lower)) return false;
+  if (isGlobalStopCommand(lower) || isNexusVoiceOffCommand(lower) || isNexusVoiceOnCommand(lower)) return false;
+  return true;
+}
+
+function summarizeNexusCommandForRepeat(command) {
+  const clean = String(command || "").replace(/\s+/g, " ").trim();
+  if (clean.length <= 170) return clean;
+  return `${clean.slice(0, 167).trim()}...`;
+}
+
+function recordNexusAutonomousLearning(event = {}) {
+  try {
+    const key = "agrinexusAutonomousLearningLog";
+    const entries = JSON.parse(localStorage.getItem(key) || "[]");
+    entries.unshift({
+      at: new Date().toISOString(),
+      mode: experienceMode || "platform",
+      section: currentSectionId?.() || "dashboard",
+      language: languageCode?.() || "en",
+      userName: userFirstName?.() || "user",
+      ...event
+    });
+    localStorage.setItem(key, JSON.stringify(entries.slice(0, 80)));
+  } catch (error) {
+    console.warn("Could not record Nexus learning event", error);
+  }
+}
+
+function stageNexusSpokenCommand(command) {
+  pendingNexusSpokenCommand = {
+    command,
+    summary: summarizeNexusCommandForRepeat(command),
+    createdAt: Date.now(),
+    mode: experienceMode || "platform",
+    section: currentSectionId?.() || "dashboard",
+    language: languageCode?.() || "en"
+  };
+  nexusAwaitingCommand = false;
+  recordNexusAutonomousLearning({ type: "command-staged", command: pendingNexusSpokenCommand.summary });
+  updateNexusBehaviorLayer("confirming", `Nexus heard: ${pendingNexusSpokenCommand.summary}`);
+  renderLiveVoiceSuggestions(["yes", "no", "Nexus stop"]);
+  setVoiceResponse(`I heard: ${pendingNexusSpokenCommand.summary}. Should I do that now?`, true);
+}
+
+async function executePendingNexusSpokenCommand() {
+  if (!pendingNexusSpokenCommand) {
+    setVoiceResponse("I do not have a command waiting. Say Nexus, then tell me what you need.", true);
+    return;
+  }
+  const staged = pendingNexusSpokenCommand;
+  pendingNexusSpokenCommand = null;
+  nexusAwaitingCommand = false;
+  recordNexusAutonomousLearning({ type: "command-confirmed", command: staged.summary });
+  updateNexusBehaviorLayer("acting", `Nexus is executing: ${staged.summary}`);
+  setVoiceResponse(`Confirmed. I am doing this now: ${staged.summary}.`, true);
+  await handleVoiceCommand(staged.command, { skipCommandConfirmation: true, confirmed: true, source: "nexus-confirmation" });
+}
+
+function clearPendingNexusSpokenCommand(message = "Canceled. Tell me what you want to do next.") {
+  const staged = pendingNexusSpokenCommand;
+  pendingNexusSpokenCommand = null;
+  nexusAwaitingCommand = false;
+  recordNexusAutonomousLearning({ type: "command-canceled", command: staged?.summary || "" });
+  updateNexusBehaviorLayer("ready", message);
+  setVoiceResponse(message, true);
 }
 
 function isNexusVoiceOffCommand(command) {
@@ -13597,6 +13709,7 @@ function toggleAskNexus() {
 
 function openWorkflowByVoice(workflow, action, response, dataset = {}) {
   const config = workflowConfig(workflow, action, { dataset });
+  recordNexusAutonomousLearning({ type: "workflow-opened", workflow, action, command: response || "" });
   setActiveAgentJourney(workflow, action, response || "");
   if (!config) {
     runWorkflowAction(workflow, action, { dataset });
@@ -13646,9 +13759,10 @@ function commandGoal(command) {
     .trim();
 }
 
-async function handleVoiceCommand(rawCommand) {
+async function handleVoiceCommand(rawCommand, options = {}) {
   if (!data) return setVoiceResponse("Sign in first, then I can operate the platform.");
   const localizedCommand = normalizeLocalizedVoiceCommand(rawCommand);
+  const greetingOnly = isNexusGreetingOnly(localizedCommand);
   const wakeOnly = isWakePhraseOnly(localizedCommand);
   let command = cleanWakeCommand(localizedCommand);
   const understanding = adaptiveCommandUnderstanding(command);
@@ -13670,6 +13784,14 @@ async function handleVoiceCommand(rawCommand) {
     enableNexusVoiceForDemo("Nexus voice is back on. Say Nexus, then tell me what you need.");
     return;
   }
+  if (pendingNexusSpokenCommand && isNexusCommandConfirmation(lower)) {
+    await executePendingNexusSpokenCommand();
+    return;
+  }
+  if (pendingNexusSpokenCommand && isNexusCommandRejection(lower)) {
+    clearPendingNexusSpokenCommand("Canceled. Tell me what you want Nexus to do instead.");
+    return;
+  }
   if (/\b(system integrity|platform integrity|integrity check|stress test|polish check|demo readiness|final check|readiness pass)\b/.test(lower)) {
     updateNexusBehaviorLayer("answering", "Nexus is reporting platform integrity across voice, language, mobile, roles, memory, recovery, and demo flow.");
     renderLiveVoiceSuggestions(["Nexus, go quiet", "Nexus, turn voice back on", "Nexus, open map", "Nexus, run investor voice demo"]);
@@ -13683,6 +13805,8 @@ async function handleVoiceCommand(rawCommand) {
     return;
   }
   if (isGlobalStopCommand(lower)) {
+    pendingNexusSpokenCommand = null;
+    nexusAwaitingCommand = false;
     clearConversationHold("Stopped. I cleared the current choice and I am ready for the next instruction.");
     resetNexusForNextPrompt("Stopped. Ask me the next question or tell me where to go next.");
     if (stopRedirect) {
@@ -13691,6 +13815,19 @@ async function handleVoiceCommand(rawCommand) {
         void handleVoiceCommand(stopRedirect);
       }, 120);
     }
+    return;
+  }
+  if (!lower && (wakeOnly || greetingOnly)) {
+    openAskNexus();
+    enableHeyAgriNexusMode();
+    nexusAwaitingCommand = true;
+    recordNexusAutonomousLearning({ type: "wake", command: normalizedWakeText(localizedCommand) });
+    setVoiceResponse(nexusWakeGreeting(greetingOnly ? "hello" : "wake"), true);
+    return;
+  }
+  if (!lower) return setVoiceResponse("I am listening. Just tell me what you need.", true);
+  if (shouldStageNexusSpokenCommand(command, lower, { ...options, wakeOnly })) {
+    stageNexusSpokenCommand(command);
     return;
   }
   updateNexusBehaviorLayer("thinking", command ? `Nexus is deciding how to help with: ${command}` : "Nexus is listening.");
@@ -13738,14 +13875,6 @@ async function handleVoiceCommand(rawCommand) {
     setVoiceResponse("Guided journey cleared. Tell me what you want to do next.", true);
     return;
   }
-  if (!lower && wakeOnly) {
-    openAskNexus();
-    enableHeyAgriNexusMode();
-    setVoiceResponse(`I'm here, ${userFirstName()}. You can call me ${assistantShortName}. Just tell me what you need, and I will help one step at a time.`, true);
-    return;
-  }
-  if (!lower) return setVoiceResponse("I am listening. Just tell me what you need.", true);
-
   if (isConversationRepairCommand(lower)) {
     handleConversationRepair(command);
     return;
@@ -14581,6 +14710,7 @@ async function runBackendAgentCommand(command, locationContext = null) {
     const mode = $("#jarvisMode");
     if (mode) mode.textContent = `conversation turn ${voiceConversationTurns}`;
     markAgentPerformance("completed", result.intent || "agent-command");
+    recordNexusAutonomousLearning({ type: "agent-completed", command, intent: result.intent || "agent-command" });
     updateNexusAwareness(command, { silent: true });
     updateNexusBehaviorLayer("speaking", result.response || "Done. I am ready for your next step.");
     setVoiceResponse(result.response || "Done. I am ready for your next step.", true, { handoffText: result.metadata?.turnCoach?.nextQuestion || "", alreadyTranslated: result.metadata?.translatedResponse === true });
@@ -14624,6 +14754,7 @@ async function runUtilityAgentCommand(command, fallbackAnswer = "", locationCont
     }
     renderLiveVoiceSuggestions(localizedVoiceSuggestionItems(result, ["what is next today", "track my shipment", "open telehealth", "tell me the weather"]));
     markAgentPerformance("completed", result.intent || "utility-assistant");
+    recordNexusAutonomousLearning({ type: "utility-completed", command, intent: result.intent || "utility-assistant" });
     updateNexusAwareness(command, { silent: true });
     updateNexusBehaviorLayer("speaking", result.response || fallbackAnswer || "Done. I am ready for your next question.");
     setVoiceResponse(result.response || fallbackAnswer || "Done. I am ready for your next question.", true, { handoffText: result.metadata?.turnCoach?.nextQuestion || "", alreadyTranslated: result.metadata?.translatedResponse === true });
