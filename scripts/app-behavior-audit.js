@@ -356,8 +356,8 @@ assert(app.includes("Stopped. Ask me the next question or tell me where to go ne
 assert(styles.includes("pointer-events: none") && styles.includes(".user-caption-actions") && styles.includes("pointer-events: auto"), "Caption panel must not block workflow action clicks");
 assert(styles.includes("width: min(300px, calc(100vw - 24px))") && styles.includes("max-height: 138px"), "Caption panel must default to a small bubble");
 assert(styles.includes(".user-caption-panel.expanded") && styles.includes("display: none") && styles.includes("display: grid"), "Caption input controls must appear only in expanded caption mode");
-assert(html.includes("nexus-behavior-180"), "Index must force browsers to load Nexus behavior CSS");
-assert(html.includes("nexus-behavior-180"), "Index must force browsers to load Nexus behavior JS");
+assert(html.includes("nexus-behavior-181"), "Index must force browsers to load Nexus behavior CSS");
+assert(html.includes("nexus-behavior-181"), "Index must force browsers to load Nexus behavior JS");
 assert(app.includes("shipmentPreviewMapCanvas") && app.includes("renderShipmentPreviewMap"), "Shipment preview maps must use real Leaflet canvases");
 assert(app.includes("healthHotspotMapCanvas") && app.includes("renderHealthHotspotPreviewMap"), "Health hotspot maps must use real Leaflet canvases");
 assert(app.includes("function shipmentTrackingState") && app.includes("function drawShipmentRoute"), "Shipment maps must render operational tracking state, not decorative routes");
@@ -382,6 +382,9 @@ assert(app.includes("AGRINEXUS TRANSACTION RECEIPT") && app.includes("Seller net
 assert(html.includes("Buyer Checkout") && html.includes('data-action="payment-checkout"'), "Trade needs a buyer checkout workflow button");
 assert(app.includes("/api/trade/payment-checkout") && app.includes("paymentCheckoutRecords") && app.includes("Paystack") && app.includes("Flutterwave"), "Frontend must expose Paystack/Flutterwave buyer checkout records");
 assert(server.includes("function initializeTradePaymentCheckout") && server.includes("api.paystack.co/transaction/initialize") && server.includes("api.flutterwave.com/v3/payments") && server.includes("PAYSTACK_SUBACCOUNT_CODE"), "Backend must initialize Paystack and Flutterwave checkout with split-fee setup");
+assert(server.includes("public-weather-openmeteo") && server.includes("public-who-outbreaks") && server.includes("public-osm-geocoding") && server.includes("public-osm-services"), "Backend must expose public weather, outbreak, geocoding, and service-search providers");
+assert(server.includes("function publicProviderProbePack") && server.includes("/api/providers/public-intelligence-check"), "Backend must provide a public intelligence provider check endpoint");
+assert(html.includes('data-action="public-intelligence"') && app.includes("/api/providers/public-intelligence-check"), "Integrations UI must expose a public intelligence provider workflow");
 assert(app.includes("World_Boundaries_and_Places/MapServer/tile"), "Satellite maps must show country names and borders");
 assert(app.includes("startAskNexusAfterLogin") && app.includes("Welcome ${userFirstName()}"), "Ask Nexus should wake into voice-first mode after login");
 assert(html.includes("Rural Health Access Network"), "Health module needs the rural health access network workspace");

@@ -58,8 +58,8 @@ let routeTrackingWatchId = null;
 let routeTrackingPoints = [];
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-180";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v160";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-181";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v161";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
 const VOICE_ATTENTION_DELAY_MS = 900;
@@ -12138,6 +12138,25 @@ function workflowConfig(workflow, action, element) {
     });
   }
   if (workflow === "integrations") {
+    if (action === "public-intelligence") {
+      const publicProviders = data.providers.filter(provider => ["public-weather-openmeteo", "public-who-outbreaks", "public-osm-geocoding", "public-osm-services", "kenya-afyalink-facility-registry"].includes(provider.id));
+      return simpleWorkflowConfig({
+        eyebrow: "Public provider workflow",
+        title: "Test public intelligence providers",
+        summary: "Check Open-Meteo weather, WHO outbreak awareness, OpenStreetMap geocoding, OpenStreetMap service search, and Kenya facility registry readiness.",
+        confirmLabel: "Test public intelligence",
+        path: "/api/providers/public-intelligence-check",
+        body: {},
+        success: "Public intelligence checked",
+        record: "Public provider probe report, integration event, and readiness evidence",
+        provider: "Uses public/no-key data where available and marks credentialed government APIs separately.",
+        checklist: [
+          { title: "Weather", detail: publicProviders.find(provider => provider.id === "public-weather-openmeteo")?.detail || "Open-Meteo adapter ready", status: "ready", label: "Open-Meteo" },
+          { title: "Outbreaks", detail: publicProviders.find(provider => provider.id === "public-who-outbreaks")?.detail || "WHO adapter ready", status: "ready", label: "WHO" },
+          { title: "Map services", detail: `${publicProviders.filter(provider => provider.status === "connected").length}/${publicProviders.length} public provider(s) connected or adapter-ready`, status: "live", label: "Public" }
+        ]
+      });
+    }
     if (action === "test-all") {
       return simpleWorkflowConfig({
         eyebrow: "Integration workflow",
@@ -14656,6 +14675,10 @@ async function handleVoiceCommand(rawCommand, options = {}) {
     goSection("integrations");
     await runLiveServiceCheck();
     return;
+  }
+  if (/\b(public intelligence|public providers|open meteo|open-meteo|who outbreak|outbreak feed|osm services|openstreetmap services)\b/.test(lower)) {
+    goSection("integrations");
+    return openWorkflowByVoice("integrations", "public-intelligence", "Public intelligence provider check is ready.");
   }
   if (lower.includes("health check")) {
     goSection("admin");

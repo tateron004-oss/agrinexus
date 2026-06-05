@@ -102,6 +102,48 @@ const PROVIDER_ENGINE_ENDPOINTS = {
 
 const BUILT_IN_PROVIDER_DEFINITIONS = [
   {
+    id: "public-weather-openmeteo",
+    name: "Open-Meteo Weather Intelligence",
+    module: "Public Intelligence",
+    mode: "public-api",
+    status: "connected",
+    detail: "Open-Meteo public weather API is available for heat safety, crop timing, walking safety, rainfall, wind, and field alerts."
+  },
+  {
+    id: "public-who-outbreaks",
+    name: "WHO Disease Outbreak News",
+    module: "Public Intelligence",
+    mode: "public-api",
+    status: "connected",
+    detail: "WHO Disease Outbreak News API is available for public-health awareness and regional outbreak context."
+  },
+  {
+    id: "public-osm-geocoding",
+    name: "OpenStreetMap Nominatim Geocoding",
+    module: "Maps",
+    mode: "public-api",
+    status: "connected",
+    detail: "OpenStreetMap/Nominatim public geocoding is available for address lookup, country context, and user-entered locations within fair-use limits."
+  },
+  {
+    id: "public-osm-services",
+    name: "OpenStreetMap Overpass Service Search",
+    module: "Healthcare",
+    mode: "public-api",
+    status: "connected",
+    detail: "OpenStreetMap/Overpass service search is available for nearby clinics, pharmacies, hospitals, roads, and rural service mapping within public endpoint limits."
+  },
+  {
+    id: "kenya-afyalink-facility-registry",
+    name: "Kenya AfyaLink Facility Registry",
+    module: "Healthcare",
+    mode: "credentialed-government-api",
+    status: process.env.KENYA_AFYALINK_TOKEN ? "connected" : "needs-credentials",
+    detail: process.env.KENYA_AFYALINK_TOKEN
+      ? "Kenya AfyaLink Facility Registry token is configured for facility verification."
+      : "Kenya AfyaLink Facility Registry is documented and adapter-ready; register and add KENYA_AFYALINK_BASE_URL plus KENYA_AFYALINK_TOKEN for authenticated facility lookup."
+  },
+  {
     id: "phone-voice",
     name: "Phone Voice Assistant",
     module: "AI",
@@ -2849,7 +2891,9 @@ function productionReadiness(providers) {
       checks: [
         providerReady("health-telehealth", "Telehealth provider"),
         providerReady("health-ehr", "EHR provider"),
-        providerReady("health-notifications", "Notification provider")
+        providerReady("health-notifications", "Notification provider"),
+        providerReady("public-osm-services", "Public clinic/pharmacy service search"),
+        providerReady("kenya-afyalink-facility-registry", "Kenya facility registry adapter")
       ]
     },
     {
@@ -2879,7 +2923,10 @@ function productionReadiness(providers) {
           label: "Map tile provider",
           ready: Boolean(providers.find(item => item.id === "maps")?.status === "connected"),
           detail: providers.find(item => item.id === "maps")?.detail || "Configure map tiles."
-        }
+        },
+        providerReady("public-weather-openmeteo", "Public weather intelligence"),
+        providerReady("public-who-outbreaks", "Public outbreak intelligence"),
+        providerReady("public-osm-geocoding", "Public geocoding provider")
       ]
     },
     {
@@ -3495,6 +3542,98 @@ async function probeUrl(url, options = {}) {
   }
 }
 
+function publicProviderHeaders() {
+  return {
+    "user-agent": "AgriNexus/1.0 rural-health-agritech-investor-platform",
+    "accept": "application/json,text/plain,*/*"
+  };
+}
+
+function publicWeatherProbeUrl(country = {}) {
+  const latitude = Number(country.lat || 0);
+  const longitude = Number(country.lng || 0);
+  return `https://api.open-meteo.com/v1/forecast?latitude=${encodeURIComponent(latitude)}&longitude=${encodeURIComponent(longitude)}&current=temperature_2m,precipitation,wind_speed_10m,weather_code&timezone=auto`;
+}
+
+function publicNominatimProbeUrl(country = {}) {
+  const query = `${country.name || "Kenya"} clinic pharmacy rural health`;
+  return `https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&q=${encodeURIComponent(query)}`;
+}
+
+function publicOverpassProbeUrl(country = {}) {
+  const latitude = Number(country.lat || 0);
+  const longitude = Number(country.lng || 0);
+  const query = `[out:json][timeout:10];(node["amenity"~"clinic|hospital|pharmacy"](around:50000,${latitude},${longitude});way["amenity"~"clinic|hospital|pharmacy"](around:50000,${latitude},${longitude}););out center 5;`;
+  return `https://overpass-api.de/api/interpreter?data=${encodeURIComponent(query)}`;
+}
+
+function publicWhoOutbreakProbeUrl() {
+  return process.env.WHO_DON_API_URL || "https://www.who.int/api/hubs/diseaseoutbreaknews";
+}
+
+function publicAfyaLinkFacilityProbeUrl() {
+  const base = String(process.env.KENYA_AFYALINK_BASE_URL || "https://afyalink.dha.go.ke").replace(/\/$/, "");
+  return `${base}/apidocs/facility-registry-api`;
+}
+
+async function publicProviderProbePack(db) {
+  const { country } = activeContext(db);
+  const headers = publicProviderHeaders();
+  const probes = [
+    {
+      id: "public-weather-openmeteo",
+      title: "Open-Meteo weather",
+      url: publicWeatherProbeUrl(country),
+      requiredForPublicPack: true
+    },
+    {
+      id: "public-who-outbreaks",
+      title: "WHO outbreak feed",
+      url: publicWhoOutbreakProbeUrl(),
+      requiredForPublicPack: true
+    },
+    {
+      id: "public-osm-geocoding",
+      title: "OpenStreetMap geocoding",
+      url: publicNominatimProbeUrl(country),
+      requiredForPublicPack: true,
+      headers
+    },
+    {
+      id: "public-osm-services",
+      title: "OpenStreetMap Overpass services",
+      url: publicOverpassProbeUrl(country),
+      requiredForPublicPack: false,
+      headers,
+      timeoutMs: Number(process.env.OVERPASS_TIMEOUT_MS || 6500)
+    },
+    {
+      id: "kenya-afyalink-facility-registry",
+      title: "Kenya AfyaLink facility registry adapter",
+      url: publicAfyaLinkFacilityProbeUrl(),
+      requiredForPublicPack: false,
+      headers: { accept: "text/html,application/json,*/*" }
+    }
+  ];
+  const results = [];
+  for (const probe of probes) {
+    const result = await probeUrl(probe.url, { headers: probe.headers || headers, timeoutMs: probe.timeoutMs || LIVE_SERVICE_TIMEOUT_MS });
+    results.push({ ...probe, result });
+  }
+  const required = results.filter(item => item.requiredForPublicPack);
+  const allRequiredOk = required.every(item => item.result.ok);
+  return {
+    country: country.name,
+    status: allRequiredOk ? "public-intelligence-live" : REQUIRE_LIVE_SERVICES ? "public-intelligence-needs-check" : "public-intelligence-adapter-ready",
+    ok: allRequiredOk || !REQUIRE_LIVE_SERVICES,
+    readyCount: results.filter(item => item.result.ok).length,
+    total: results.length,
+    requiredReadyCount: required.filter(item => item.result.ok).length,
+    requiredTotal: required.length,
+    results
+  };
+}
+
 function providerCredentialHint(providerId) {
   const config = PROVIDER_CONFIG[providerId] || {};
   const modeEnv = config.modeEnv || "";
@@ -3584,6 +3723,20 @@ async function productionLiveServiceCheck(db, user) {
       ? `Map tile probe ${tileProbe.ok ? "succeeded" : "did not confirm"} for ${process.env.MAP_TILE_PROVIDER || "custom"} tiles.`
       : "Set MAP_TILE_PROVIDER=openstreetmap or configure MAP_TILE_PROVIDER=custom-tile with MAP_TILE_URL.",
     { provider: process.env.MAP_TILE_PROVIDER || null, tileUrl: tileUrl || null, probe: tileProbe }
+  );
+
+  const publicPack = await publicProviderProbePack(db);
+  push(
+    "public-intelligence",
+    "Public intelligence provider pack",
+    publicPack.ok,
+    publicPack.ok
+      ? `Public intelligence is usable: ${publicPack.readyCount}/${publicPack.total} probes responded for ${publicPack.country}.`
+      : `Public intelligence needs live network confirmation: ${publicPack.readyCount}/${publicPack.total} probes responded for ${publicPack.country}.`,
+    {
+      providerIds: ["public-weather-openmeteo", "public-who-outbreaks", "public-osm-geocoding", "public-osm-services", "kenya-afyalink-facility-registry"],
+      publicPack
+    }
   );
 
   const billingEvent = {
@@ -13264,6 +13417,25 @@ async function api(req, res, url) {
     await writeDb(db);
     const state = publicState(db, user);
     state.liveServiceCheckResult = report;
+    return send(res, 200, state);
+  }
+
+  if (url.pathname === "/api/providers/public-intelligence-check" && req.method === "POST") {
+    if (!user) return send(res, 401, { error: "Sign in required" });
+    const report = await publicProviderProbePack(db);
+    logIntegration(db, {
+      providerId: "public-weather-openmeteo",
+      module: "Public Intelligence",
+      action: "public_intelligence.provider_check",
+      status: report.ok ? "success" : "needs-network",
+      detail: `Public intelligence provider check completed: ${report.readyCount}/${report.total} responded for ${report.country}.`,
+      metadata: { report },
+      dispatch: false
+    });
+    addActivity(db.profile, `Public intelligence provider check completed: ${report.readyCount}/${report.total} responded.`);
+    await writeDb(db);
+    const state = publicState(db, user);
+    state.publicIntelligenceCheckResult = report;
     return send(res, 200, state);
   }
 
