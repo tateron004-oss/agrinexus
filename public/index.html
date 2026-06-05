@@ -13,7 +13,7 @@
   <link rel="icon" href="/icons/agri-nexus-192.png" type="image/png">
   <link rel="apple-touch-icon" href="/icons/agri-nexus-192.png">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-  <link rel="stylesheet" href="/styles.css?v=nexus-behavior-182">
+  <link rel="stylesheet" href="/styles.css?v=nexus-behavior-183">
 </head>
 <body>
   <a class="skip-link" href="#mainContent">Skip to main content</a>
@@ -31,6 +31,15 @@
     </div>
     <form id="loginForm" class="login-card">
       <h2>Sign in</h2>
+      <label>Language
+        <select id="loginLanguageSelect" aria-label="Choose language before sign in">
+          <option value="en">English</option>
+          <option value="fr">Francais</option>
+          <option value="sw">Kiswahili</option>
+          <option value="ar">Arabic</option>
+          <option value="es">Spanish</option>
+        </select>
+      </label>
       <label>Email<input id="email" value="user@agrinexus.org" autocomplete="username"></label>
       <label>Password<input id="password" value="User2026!" type="password" autocomplete="current-password"></label>
       <div id="loginProfiles" class="login-profiles" aria-label="Demo user levels"></div>
@@ -1525,6 +1534,6 @@
   <div id="toast" class="toast hidden" role="status" aria-live="polite" aria-atomic="true"></div>
   <div id="screenReaderStatus" class="sr-only" role="status" aria-live="polite" aria-atomic="true"></div>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="/app.js?v=nexus-behavior-182"></script>
+  <script src="/app.js?v=nexus-behavior-183"></script>
 </body>
 </html>

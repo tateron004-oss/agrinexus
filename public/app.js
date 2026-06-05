@@ -58,8 +58,8 @@ let routeTrackingWatchId = null;
 let routeTrackingPoints = [];
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-182";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v162";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-183";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v163";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
 const VOICE_ATTENTION_DELAY_MS = 900;
@@ -90,6 +90,7 @@ let voiceTranslationToken = 0;
 
 const voiceStopTranslations = {
   es: {
+    "Hello": "Hola",
     "Stop": "Detener",
     "Stop speaking": "Detener voz",
     "Stopped. I am ready when you are.": "Detenido. Estoy listo cuando usted lo este.",
@@ -98,6 +99,7 @@ const voiceStopTranslations = {
     "I stopped speaking and I am ready for the next instruction.": "Deje de hablar y estoy listo para la siguiente instruccion."
   },
   fr: {
+    "Hello": "Bonjour",
     "Stop": "Arreter",
     "Stop speaking": "Arreter la voix",
     "Stopped. I am ready when you are.": "Arrete. Je suis pret quand vous l'etes.",
@@ -106,6 +108,7 @@ const voiceStopTranslations = {
     "I stopped speaking and I am ready for the next instruction.": "J'ai arrete de parler et je suis pret pour la prochaine instruction."
   },
   sw: {
+    "Hello": "Habari",
     "Stop": "Simamisha",
     "Stop speaking": "Simamisha sauti",
     "Stopped. I am ready when you are.": "Nimesimama. Niko tayari utakaponihitaji.",
@@ -114,6 +117,7 @@ const voiceStopTranslations = {
     "I stopped speaking and I am ready for the next instruction.": "Nimeacha kuzungumza na niko tayari kwa maagizo yanayofuata."
   },
   ar: {
+    "Hello": "\u0645\u0631\u062d\u0628\u0627",
     "Stop": "\u0625\u064a\u0642\u0627\u0641",
     "Stop speaking": "\u0623\u0648\u0642\u0641 \u0627\u0644\u0635\u0648\u062a",
     "Stopped. I am ready when you are.": "\u062a\u0645 \u0627\u0644\u0625\u064a\u0642\u0627\u0641. \u0623\u0646\u0627 \u062c\u0627\u0647\u0632 \u0639\u0646\u062f\u0645\u0627 \u062a\u0643\u0648\u0646 \u062c\u0627\u0647\u0632\u0627.",
@@ -1284,6 +1288,77 @@ Object.entries(workflowPhraseTranslations).forEach(([lang, entries]) => {
 });
 
 Object.entries(workspaceTranslations).forEach(([lang, entries]) => {
+  contentTranslations[lang] = { ...(contentTranslations[lang] || {}), ...entries };
+});
+
+const loginPersonalizationTranslations = {
+  es: {
+    "Sign in": "Iniciar sesion",
+    "Language": "Idioma",
+    "Choose language before sign in": "Elija idioma antes de iniciar sesion",
+    "Email": "Correo electronico",
+    "Password": "Contrasena",
+    "No login yet?": "Aun no tiene inicio de sesion?",
+    "Your name": "Su nombre",
+    "Type your name": "Escriba su nombre",
+    "Start as User": "Comenzar como usuario",
+    "Enter platform": "Entrar a la plataforma",
+    "Nexus will greet you by name and keep the app simple.": "Nexus le saludara por su nombre y mantendra la app sencilla.",
+    "Please type your name so Nexus can greet you.": "Escriba su nombre para que Nexus pueda saludarle.",
+    "Nexus is opening your workspace.": "Nexus esta abriendo su espacio de trabajo.",
+    "How can I assist you?": "Como puedo ayudarle?"
+  },
+  fr: {
+    "Sign in": "Se connecter",
+    "Language": "Langue",
+    "Choose language before sign in": "Choisissez la langue avant de vous connecter",
+    "Email": "E-mail",
+    "Password": "Mot de passe",
+    "No login yet?": "Pas encore de compte?",
+    "Your name": "Votre nom",
+    "Type your name": "Tapez votre nom",
+    "Start as User": "Commencer comme utilisateur",
+    "Enter platform": "Entrer dans la plateforme",
+    "Nexus will greet you by name and keep the app simple.": "Nexus vous saluera par votre nom et gardera l'application simple.",
+    "Please type your name so Nexus can greet you.": "Tapez votre nom pour que Nexus puisse vous saluer.",
+    "Nexus is opening your workspace.": "Nexus ouvre votre espace de travail.",
+    "How can I assist you?": "Comment puis-je vous aider?"
+  },
+  sw: {
+    "Sign in": "Ingia",
+    "Language": "Lugha",
+    "Choose language before sign in": "Chagua lugha kabla ya kuingia",
+    "Email": "Barua pepe",
+    "Password": "Nenosiri",
+    "No login yet?": "Huna akaunti bado?",
+    "Your name": "Jina lako",
+    "Type your name": "Andika jina lako",
+    "Start as User": "Anza kama mtumiaji",
+    "Enter platform": "Ingia kwenye jukwaa",
+    "Nexus will greet you by name and keep the app simple.": "Nexus atakusalimu kwa jina na kuweka programu iwe rahisi.",
+    "Please type your name so Nexus can greet you.": "Tafadhali andika jina lako ili Nexus akusalimu.",
+    "Nexus is opening your workspace.": "Nexus anafungua nafasi yako ya kazi.",
+    "How can I assist you?": "Ninawezaje kukusaidia?"
+  },
+  ar: {
+    "Sign in": "\u062a\u0633\u062c\u064a\u0644 \u0627\u0644\u062f\u062e\u0648\u0644",
+    "Language": "\u0627\u0644\u0644\u063a\u0629",
+    "Choose language before sign in": "\u0627\u062e\u062a\u0631 \u0627\u0644\u0644\u063a\u0629 \u0642\u0628\u0644 \u062a\u0633\u062c\u064a\u0644 \u0627\u0644\u062f\u062e\u0648\u0644",
+    "Email": "\u0627\u0644\u0628\u0631\u064a\u062f \u0627\u0644\u0625\u0644\u0643\u062a\u0631\u0648\u0646\u064a",
+    "Password": "\u0643\u0644\u0645\u0629 \u0627\u0644\u0645\u0631\u0648\u0631",
+    "No login yet?": "\u0644\u0627 \u062a\u0645\u0644\u0643 \u062a\u0633\u062c\u064a\u0644 \u062f\u062e\u0648\u0644 \u0628\u0639\u062f\u061f",
+    "Your name": "\u0627\u0633\u0645\u0643",
+    "Type your name": "\u0627\u0643\u062a\u0628 \u0627\u0633\u0645\u0643",
+    "Start as User": "\u0627\u0628\u062f\u0623 \u0643\u0645\u0633\u062a\u062e\u062f\u0645",
+    "Enter platform": "\u0627\u062f\u062e\u0644 \u0627\u0644\u0645\u0646\u0635\u0629",
+    "Nexus will greet you by name and keep the app simple.": "\u0633\u064a\u062d\u064a\u064a\u0643 \u0646\u0643\u0633\u0633 \u0628\u0627\u0633\u0645\u0643 \u0648\u064a\u062c\u0639\u0644 \u0627\u0644\u062a\u0637\u0628\u064a\u0642 \u0628\u0633\u064a\u0637\u0627.",
+    "Please type your name so Nexus can greet you.": "\u0627\u0643\u062a\u0628 \u0627\u0633\u0645\u0643 \u0644\u0643\u064a \u064a\u062d\u064a\u064a\u0643 \u0646\u0643\u0633\u0633.",
+    "Nexus is opening your workspace.": "\u0646\u0643\u0633\u0633 \u064a\u0641\u062a\u062d \u0645\u0633\u0627\u062d\u0629 \u0639\u0645\u0644\u0643.",
+    "How can I assist you?": "\u0643\u064a\u0641 \u064a\u0645\u0643\u0646\u0646\u064a \u0645\u0633\u0627\u0639\u062f\u062a\u0643\u061f"
+  }
+};
+
+Object.entries(loginPersonalizationTranslations).forEach(([lang, entries]) => {
   contentTranslations[lang] = { ...(contentTranslations[lang] || {}), ...entries };
 });
 
@@ -2584,7 +2659,7 @@ function learningText() {
 }
 
 function languageCode() {
-  return data.user?.language || "en";
+  return data?.user?.language || localStorage.getItem("agrinexusLoginLanguage") || "en";
 }
 
 function voiceLocale() {
@@ -4038,6 +4113,16 @@ function applyContentTranslations() {
     if (!element.dataset.originalAriaLabel) element.dataset.originalAriaLabel = element.getAttribute("aria-label") || "";
     element.setAttribute("aria-label", translateText(element.dataset.originalAriaLabel));
   });
+}
+
+function setLoginLanguage(language) {
+  if (!voiceLocaleMap[language]) return;
+  localStorage.setItem("agrinexusLoginLanguage", language);
+  const selector = $("#loginLanguageSelect");
+  if (selector) selector.value = language;
+  document.documentElement.setAttribute("lang", language);
+  document.documentElement.setAttribute("dir", language === "ar" ? "rtl" : "ltr");
+  applyContentTranslations();
 }
 
 function translatedTrack(track) {
@@ -14916,16 +15001,21 @@ function renderLoginProfiles() {
 
 async function startGuestUserSession() {
   const guestName = String($("#guestName")?.value || "").replace(/\s+/g, " ").trim();
+  const loginLanguage = localStorage.getItem("agrinexusLoginLanguage") || "en";
   if (!guestName) {
-    $("#loginMessage").textContent = "Please type your name so Nexus can greet you.";
+    $("#loginMessage").textContent = translateText("Please type your name so Nexus can greet you.");
     $("#guestName")?.focus();
     return;
   }
   localStorage.setItem("agrinexusGuestDisplayName", guestName.slice(0, 80));
-  $("#loginMessage").textContent = `Hello ${guestName.split(/\s+/)[0]}. Nexus is opening your workspace.`;
+  $("#loginMessage").textContent = `${translateText("Hello")} ${guestName.split(/\s+/)[0]}. ${translateText("Nexus is opening your workspace.")}`;
   try {
     data = await request("/api/login", { method: "POST", body: { email: "user@agrinexus.org", password: "User2026!" } });
     if (data?.user) data.user.name = guestName.slice(0, 80);
+    if (loginLanguage && loginLanguage !== data?.user?.language) {
+      data = await request("/api/user/language", { method: "POST", body: { language: loginLanguage } });
+      if (data?.user) data.user.name = guestName.slice(0, 80);
+    }
     render();
     startAskNexusAfterLogin();
     toast(`Hello ${userFirstName()}`);
@@ -15663,7 +15753,11 @@ function bindStatic() {
     event.preventDefault();
     try {
       localStorage.removeItem("agrinexusGuestDisplayName");
+      const loginLanguage = localStorage.getItem("agrinexusLoginLanguage") || "en";
       data = await request("/api/login", { method: "POST", body: { email: $("#email").value, password: $("#password").value } });
+      if (loginLanguage && loginLanguage !== data?.user?.language) {
+        data = await request("/api/user/language", { method: "POST", body: { language: loginLanguage } });
+      }
       render();
       startAskNexusAfterLogin();
       toast("Signed in");
@@ -15671,6 +15765,11 @@ function bindStatic() {
       $("#loginMessage").textContent = error.message;
     }
   });
+  const loginLanguageSelect = $("#loginLanguageSelect");
+  if (loginLanguageSelect) {
+    loginLanguageSelect.value = localStorage.getItem("agrinexusLoginLanguage") || "en";
+    loginLanguageSelect.onchange = event => setLoginLanguage(event.target.value);
+  }
   const guestStartBtn = $("#guestStartBtn");
   if (guestStartBtn) guestStartBtn.onclick = startGuestUserSession;
 
@@ -15976,6 +16075,7 @@ async function boot() {
   installAgriNexusNativeBridge();
   bindStatic();
   captureOriginalText();
+  setLoginLanguage(localStorage.getItem("agrinexusLoginLanguage") || "en");
   try {
     data = await request("/api/state");
     render();
