@@ -127,6 +127,22 @@ a:focus-visible,
   font-size: .78rem;
   font-weight: 700;
 }
+.guest-start {
+  display: grid;
+  gap: 10px;
+  margin: 18px 0;
+  padding: 14px;
+  border: 1px solid rgba(23, 50, 64, .14);
+  border-radius: 10px;
+  background: #eef8f3;
+}
+.guest-start strong { font-size: 1rem; }
+.guest-start label { margin: 0; }
+.guest-start small {
+  color: var(--muted);
+  font-weight: 800;
+  line-height: 1.35;
+}
 .message { color: #9b2c2c; min-height: 1.3em; }
 .topbar {
   position: static;

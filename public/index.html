@@ -13,7 +13,7 @@
   <link rel="icon" href="/icons/agri-nexus-192.png" type="image/png">
   <link rel="apple-touch-icon" href="/icons/agri-nexus-192.png">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-  <link rel="stylesheet" href="/styles.css?v=nexus-behavior-181">
+  <link rel="stylesheet" href="/styles.css?v=nexus-behavior-182">
 </head>
 <body>
   <a class="skip-link" href="#mainContent">Skip to main content</a>
@@ -34,6 +34,12 @@
       <label>Email<input id="email" value="user@agrinexus.org" autocomplete="username"></label>
       <label>Password<input id="password" value="User2026!" type="password" autocomplete="current-password"></label>
       <div id="loginProfiles" class="login-profiles" aria-label="Demo user levels"></div>
+      <div class="guest-start" aria-label="Start without a login">
+        <strong>No login yet?</strong>
+        <label>Your name<input id="guestName" placeholder="Type your name"></label>
+        <button id="guestStartBtn" type="button" class="primary">Start as User</button>
+        <small>Nexus will greet you by name and keep the app simple.</small>
+      </div>
       <button class="primary" type="submit">Enter platform</button>
       <p id="loginMessage" class="message" role="alert" aria-live="assertive"></p>
     </form>
@@ -1519,6 +1525,6 @@
   <div id="toast" class="toast hidden" role="status" aria-live="polite" aria-atomic="true"></div>
   <div id="screenReaderStatus" class="sr-only" role="status" aria-live="polite" aria-atomic="true"></div>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="/app.js?v=nexus-behavior-181"></script>
+  <script src="/app.js?v=nexus-behavior-182"></script>
 </body>
 </html>

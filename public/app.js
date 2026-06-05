@@ -58,8 +58,8 @@ let routeTrackingWatchId = null;
 let routeTrackingPoints = [];
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-181";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v161";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-182";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v162";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
 const VOICE_ATTENTION_DELAY_MS = 900;
@@ -13183,6 +13183,8 @@ function userFirstName() {
 }
 
 function userDisplayName() {
+  const guestName = String(localStorage.getItem("agrinexusGuestDisplayName") || "").trim();
+  if (guestName) return guestName;
   const name = String(data?.user?.name || "").trim();
   const role = String(data?.user?.role || "").trim();
   const roleLike = new Set([
@@ -14912,6 +14914,26 @@ function renderLoginProfiles() {
   captureOriginalText(target);
 }
 
+async function startGuestUserSession() {
+  const guestName = String($("#guestName")?.value || "").replace(/\s+/g, " ").trim();
+  if (!guestName) {
+    $("#loginMessage").textContent = "Please type your name so Nexus can greet you.";
+    $("#guestName")?.focus();
+    return;
+  }
+  localStorage.setItem("agrinexusGuestDisplayName", guestName.slice(0, 80));
+  $("#loginMessage").textContent = `Hello ${guestName.split(/\s+/)[0]}. Nexus is opening your workspace.`;
+  try {
+    data = await request("/api/login", { method: "POST", body: { email: "user@agrinexus.org", password: "User2026!" } });
+    if (data?.user) data.user.name = guestName.slice(0, 80);
+    render();
+    startAskNexusAfterLogin();
+    toast(`Hello ${userFirstName()}`);
+  } catch (error) {
+    $("#loginMessage").textContent = error.message;
+  }
+}
+
 async function runVoiceTextCommand() {
   const input = $("#voiceTextCommand");
   await handleVoiceCommand(input?.value || "");
@@ -15640,6 +15662,7 @@ function bindStatic() {
   $("#loginForm").addEventListener("submit", async event => {
     event.preventDefault();
     try {
+      localStorage.removeItem("agrinexusGuestDisplayName");
       data = await request("/api/login", { method: "POST", body: { email: $("#email").value, password: $("#password").value } });
       render();
       startAskNexusAfterLogin();
@@ -15648,8 +15671,11 @@ function bindStatic() {
       $("#loginMessage").textContent = error.message;
     }
   });
+  const guestStartBtn = $("#guestStartBtn");
+  if (guestStartBtn) guestStartBtn.onclick = startGuestUserSession;
 
   $("#logoutBtn").onclick = async () => {
+    localStorage.removeItem("agrinexusGuestDisplayName");
     await request("/api/logout", { method: "POST" });
     location.reload();
   };
