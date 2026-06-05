@@ -528,6 +528,12 @@ async function call(path, body) {
   const wallet = await call("/api/trade/wallet", { provider: "M-Pesa", amount: 120 });
   assert(wallet.profile.walletTransactions.length >= 1);
   assert(wallet.profile.integrationEvents.some(event => event.action === "wallet.transaction"));
+  const paymentCheckout = await call("/api/trade/payment-checkout", { provider: "paystack", productId: "avocado-ke", buyerEmail: "buyer@example.com", amount: 120, currency: "KES" });
+  assert(paymentCheckout.tradePaymentCheckoutResult.checkoutNumber);
+  assert(paymentCheckout.tradePaymentCheckoutResult.platformFeeAmount > 0);
+  assert(paymentCheckout.tradePaymentCheckoutResult.sellerNetAmount > 0);
+  assert(paymentCheckout.profile.paymentCheckoutRecords.length >= 1);
+  assert(paymentCheckout.profile.integrationEvents.some(event => event.action === "payment.checkout_requested"));
   const buyerMessage = await call("/api/trade/message", { channel: "in-app chat", message: "Please confirm price, quality evidence, route timing, and payment terms." });
   assert(buyerMessage.tradeMessageResult.thread.status === "active");
   assert(buyerMessage.profile.tradeMessageThreads.length >= 1);

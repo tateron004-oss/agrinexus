@@ -13,7 +13,7 @@
   <link rel="icon" href="/icons/agri-nexus-192.png" type="image/png">
   <link rel="apple-touch-icon" href="/icons/agri-nexus-192.png">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-  <link rel="stylesheet" href="/styles.css?v=nexus-behavior-178">
+  <link rel="stylesheet" href="/styles.css?v=nexus-behavior-179">
 </head>
 <body>
   <a class="skip-link" href="#mainContent">Skip to main content</a>
@@ -809,7 +809,10 @@
               <h3>AgriNexus Transaction Fees</h3>
               <div id="platformFeePanel" class="rows"></div>
               <div id="platformFeeLedger" class="activity"></div>
-              <div class="action-row"><button data-pay="M-Pesa:120">M-Pesa +120</button><button data-pay="MTN:140">MTN +140</button><button data-pay="Airtel:110">Airtel +110</button></div>
+              <h3>Buyer Checkout</h3>
+              <div id="paymentCheckoutPanel" class="rows"></div>
+              <div id="paymentCheckoutList" class="activity"></div>
+              <div class="action-row"><button data-workflow="trade" data-action="payment-checkout" class="primary" type="button">Create buyer checkout</button><button data-pay="M-Pesa:120">M-Pesa +120</button><button data-pay="MTN:140">MTN +140</button><button data-pay="Airtel:110">Airtel +110</button></div>
             </article>
             <article>
               <h3>Order Operations</h3>
@@ -1515,6 +1518,6 @@
   <div id="toast" class="toast hidden" role="status" aria-live="polite" aria-atomic="true"></div>
   <div id="screenReaderStatus" class="sr-only" role="status" aria-live="polite" aria-atomic="true"></div>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="/app.js?v=nexus-behavior-178"></script>
+  <script src="/app.js?v=nexus-behavior-179"></script>
 </body>
 </html>

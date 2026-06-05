@@ -163,6 +163,7 @@ const workflowActions = [
   ["trade", "seller-delivery"],
   ["trade", "delivery-confirm"],
   ["trade", "settlement"],
+  ["trade", "payment-checkout"],
   ["trade", "wallet"],
   ["trade", "buyer-message"],
   ["trade", "buyer-whatsapp"],

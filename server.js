@@ -4527,6 +4527,7 @@ function ensureTradeProfile(profile) {
   profile.walletTransactions = profile.walletTransactions || [];
   profile.platformTransactionFees = profile.platformTransactionFees || [];
   profile.platformRevenueLedger = profile.platformRevenueLedger || [];
+  profile.paymentCheckoutRecords = profile.paymentCheckoutRecords || [];
   profile.tradeEvents = profile.tradeEvents || [];
   profile.buyerContacts = profile.buyerContacts || [];
   profile.tradeMessageThreads = profile.tradeMessageThreads || [];
@@ -4611,6 +4612,151 @@ function createPlatformTransactionFee(db, details = {}) {
     dispatch: false
   });
   return fee;
+}
+
+function paymentProviderMode(body = {}) {
+  return String(body.provider || process.env.PAYMENT_PROVIDER || process.env.TRADE_PAYMENT_PROVIDER || "local")
+    .trim()
+    .toLowerCase();
+}
+
+function paymentSubunitAmount(amount, currency = "USD") {
+  const noMinorUnit = new Set(["XAF", "XOF", "BIF", "DJF", "GNF", "JPY", "KMF", "KRW", "MGA", "PYG", "RWF", "UGX", "VND", "VUV", "XPF"]);
+  const multiplier = noMinorUnit.has(String(currency || "").toUpperCase()) ? 1 : 100;
+  return Math.max(1, Math.round(Number(amount || 0) * multiplier));
+}
+
+async function initializeTradePaymentCheckout(db, user, body = {}) {
+  ensureTradeProfile(db.profile);
+  const provider = paymentProviderMode(body);
+  const { country, route } = activeContext(db);
+  const order = body.orderId
+    ? db.profile.orders.find(item => item.id === body.orderId)
+    : db.profile.orders[db.profile.orders.length - 1];
+  const product = order
+    ? (db.products || []).find(item => item.id === order.productId)
+    : selectedTradeProduct(db, body.productId, country);
+  const grossAmount = Number(body.amount || order?.total || product?.price || 120);
+  const currency = String(body.currency || (country.name === "Kenya" ? "KES" : country.name === "Nigeria" ? "NGN" : country.name === "Ghana" ? "GHS" : "USD")).toUpperCase();
+  const feeRate = platformTransactionFeeRate();
+  const platformFeeAmount = Number((grossAmount * feeRate).toFixed(2));
+  const sellerNetAmount = Number(Math.max(0, grossAmount - platformFeeAmount).toFixed(2));
+  const checkout = {
+    id: crypto.randomUUID(),
+    checkoutNumber: `AN-CHECKOUT-${String(db.profile.paymentCheckoutRecords.length + 1).padStart(4, "0")}`,
+    provider,
+    status: "local-checkout-ready",
+    orderId: order?.id || null,
+    orderNumber: order?.orderNumber || null,
+    productId: product?.id || order?.productId || null,
+    productName: product?.name || order?.product || body.productName || "Crop transaction",
+    buyerEmail: String(body.buyerEmail || user.email || "buyer@example.com").trim().toLowerCase(),
+    buyerName: String(body.buyerName || db.profile.buyerContacts?.[0]?.buyerName || product?.buyerName || `${country.name} buyer`).trim(),
+    sellerName: String(body.sellerName || user.name || "Farmer seller").trim(),
+    grossAmount,
+    currency,
+    feeRate,
+    feePercent: Number((feeRate * 100).toFixed(2)),
+    platformFeeAmount,
+    sellerNetAmount,
+    routeName: route.name,
+    reference: `ANPAY-${Date.now()}-${String(db.profile.paymentCheckoutRecords.length + 1).padStart(3, "0")}`,
+    checkoutUrl: null,
+    providerResponse: null,
+    setupRequired: [],
+    createdAt: new Date().toISOString()
+  };
+  const callbackBase = String(body.callbackUrl || process.env.PAYMENT_CALLBACK_URL || process.env.PUBLIC_BASE_URL || "").replace(/\/$/, "");
+  if (provider === "paystack" && process.env.PAYSTACK_SECRET_KEY) {
+    const payload = {
+      email: checkout.buyerEmail,
+      amount: paymentSubunitAmount(grossAmount, currency),
+      currency,
+      reference: checkout.reference,
+      callback_url: callbackBase ? `${callbackBase}/api/trade/payment-callback/paystack` : undefined,
+      metadata: JSON.stringify({
+        checkoutId: checkout.id,
+        orderId: checkout.orderId,
+        productName: checkout.productName,
+        platformFeeAmount,
+        sellerNetAmount,
+        module: "AgriTrade"
+      })
+    };
+    if (process.env.PAYSTACK_SUBACCOUNT_CODE) {
+      payload.subaccount = process.env.PAYSTACK_SUBACCOUNT_CODE;
+      payload.transaction_charge = paymentSubunitAmount(platformFeeAmount, currency);
+      payload.bearer = process.env.PAYSTACK_BEARER || "subaccount";
+    } else {
+      checkout.setupRequired.push("PAYSTACK_SUBACCOUNT_CODE is needed for automatic seller/platform split payments.");
+    }
+    try {
+      const response = await fetchWithTimeout("https://api.paystack.co/transaction/initialize", {
+        method: "POST",
+        headers: { authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}`, "content-type": "application/json" },
+        body: JSON.stringify(payload)
+      }, 10000);
+      const json = await response.json().catch(() => ({}));
+      checkout.providerResponse = json;
+      checkout.status = response.ok && json.status ? "paystack-checkout-ready" : "paystack-checkout-error";
+      checkout.checkoutUrl = json.data?.authorization_url || null;
+      if (!response.ok || !json.status) checkout.setupRequired.push(json.message || `Paystack returned ${response.status}`);
+    } catch (error) {
+      checkout.status = "paystack-checkout-error";
+      checkout.setupRequired.push(error.message);
+    }
+  } else if (provider === "flutterwave" && process.env.FLUTTERWAVE_SECRET_KEY) {
+    const subaccounts = process.env.FLUTTERWAVE_SUBACCOUNT_ID ? [{
+      id: process.env.FLUTTERWAVE_SUBACCOUNT_ID,
+      transaction_charge_type: "flat",
+      transaction_charge: platformFeeAmount
+    }] : undefined;
+    if (!subaccounts) checkout.setupRequired.push("FLUTTERWAVE_SUBACCOUNT_ID is needed for automatic split payments.");
+    try {
+      const response = await fetchWithTimeout("https://api.flutterwave.com/v3/payments", {
+        method: "POST",
+        headers: { authorization: `Bearer ${process.env.FLUTTERWAVE_SECRET_KEY}`, "content-type": "application/json" },
+        body: JSON.stringify({
+          tx_ref: checkout.reference,
+          amount: grossAmount,
+          currency,
+          redirect_url: callbackBase ? `${callbackBase}/api/trade/payment-callback/flutterwave` : undefined,
+          customer: { email: checkout.buyerEmail, name: checkout.buyerName },
+          customizations: { title: "AgriNexus Crop Transaction", description: checkout.productName },
+          meta: { checkoutId: checkout.id, orderId: checkout.orderId, platformFeeAmount, sellerNetAmount },
+          subaccounts
+        })
+      }, 10000);
+      const json = await response.json().catch(() => ({}));
+      checkout.providerResponse = json;
+      checkout.status = response.ok && json.status === "success" ? "flutterwave-checkout-ready" : "flutterwave-checkout-error";
+      checkout.checkoutUrl = json.data?.link || null;
+      if (!response.ok || json.status !== "success") checkout.setupRequired.push(json.message || `Flutterwave returned ${response.status}`);
+    } catch (error) {
+      checkout.status = "flutterwave-checkout-error";
+      checkout.setupRequired.push(error.message);
+    }
+  } else {
+    checkout.setupRequired.push(provider === "paystack"
+      ? "Add PAYSTACK_SECRET_KEY and PAYSTACK_SUBACCOUNT_CODE in Render."
+      : provider === "flutterwave"
+        ? "Add FLUTTERWAVE_SECRET_KEY and FLUTTERWAVE_SUBACCOUNT_ID in Render."
+        : "Set PAYMENT_PROVIDER to paystack or flutterwave in Render.");
+  }
+  db.profile.paymentCheckoutRecords.unshift(checkout);
+  db.profile.paymentCheckoutRecords = db.profile.paymentCheckoutRecords.slice(0, 50);
+  addTradeEvent(db.profile, { type: "payment.checkout_requested", label: `${checkout.checkoutNumber} ${checkout.provider} checkout prepared for ${currency} ${grossAmount}; AgriNexus fee ${currency} ${platformFeeAmount}.` });
+  logIntegration(db, {
+    providerId: "trade-payments",
+    module: "AgriTrade",
+    action: "payment.checkout_requested",
+    status: checkout.checkoutUrl ? "success" : "needs-credentials",
+    detail: `${checkout.checkoutNumber} ${checkout.provider} checkout ${checkout.checkoutUrl ? "ready" : "needs setup"}.`,
+    metadata: { checkout },
+    dispatch: false
+  });
+  addActivity(db.profile, `${checkout.provider} checkout prepared: ${checkout.checkoutNumber}.`);
+  return checkout;
 }
 
 function ensureAiProfile(profile) {
@@ -15886,6 +16032,17 @@ async function api(req, res, url) {
     const state = publicState(db, user);
     state.tradeLogisticsResult = result;
     state.logisticsTrackingResult = result.trackingResult;
+    return send(res, 200, state);
+  }
+
+  if (url.pathname === "/api/trade/payment-checkout" && req.method === "POST") {
+    if (!canUse(user, "trade")) return send(res, 403, { error: "Role does not allow trade payment checkout workflows" });
+    const body = await readBody(req);
+    const checkout = await initializeTradePaymentCheckout(db, user, body);
+    addWorkflowNote(db.profile, body.note, "Payment checkout note");
+    await writeDb(db);
+    const state = publicState(db, user);
+    state.tradePaymentCheckoutResult = checkout;
     return send(res, 200, state);
   }
 

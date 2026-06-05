@@ -56,8 +56,8 @@ let routeTrackingWatchId = null;
 let routeTrackingPoints = [];
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-178";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v158";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-179";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v159";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
 const VOICE_ATTENTION_DELAY_MS = 900;
@@ -6460,6 +6460,7 @@ function workflowVoiceAliases(workflow, action) {
     "trade:seller-delivery": ["seller delivery", "deliver to buyer", "seller to buyer", "take crop to buyer"],
     "trade:delivery-confirm": ["confirm delivery", "delivery proof", "buyer received", "shipment arrived"],
     "trade:settlement": ["settle payment", "release settlement", "farmer payout", "seller payout"],
+    "trade:payment-checkout": ["buyer checkout", "create checkout", "paystack checkout", "flutterwave checkout", "collect payment", "buyer pay"],
     "trade:drone": ["run drone scan", "scan farm", "check field", "farm check", "drone farm", "check crop field"],
     "trade:drone-plan": ["plan drone mission", "flight plan"],
     "map:facility-route": ["find facility", "clinic route", "health facility"],
@@ -7575,6 +7576,7 @@ const simpleUserSections = {
       { label: "Show Crop", command: "open video for buyer to show crops" },
       { label: "Create Order", command: "create a crop order" },
       { label: "Ship Crop", command: "book shipment for my crop" },
+      { label: "Buyer Pay", command: "create buyer checkout" },
       { label: "Track Route", command: "track my route" },
       { label: "Scan Farm", command: "run drone scan" }
     ]
@@ -8256,6 +8258,7 @@ function simpleUserCommandWorkflow(command = "") {
   if (lower.includes("seller delivery") || lower.includes("deliver to buyer")) return { workflow: "trade", action: "seller-delivery", response: "Seller delivery is ready.", dataset: { productId } };
   if (lower.includes("confirm delivery") || lower.includes("delivery proof")) return { workflow: "trade", action: "delivery-confirm", response: "Delivery confirmation is ready.", dataset: { productId } };
   if (lower.includes("settlement") || lower.includes("seller payout") || lower.includes("farmer payout")) return { workflow: "trade", action: "settlement", response: "Settlement workflow is ready.", dataset: { productId } };
+  if (lower.includes("buyer checkout") || lower.includes("create checkout") || lower.includes("collect payment") || lower.includes("buyer pay")) return { workflow: "trade", action: "payment-checkout", response: "Buyer checkout is ready.", dataset: { productId } };
   if (lower.includes("track my route") || lower.includes("check route")) return { workflow: "ai", action: "route", response: "Route intelligence is ready.", dataset: {} };
   if (lower.includes("drone scan") || lower.includes("scan farm") || lower.includes("check farm")) return { workflow: "trade", action: "drone", response: "Drone scan is ready.", dataset: { productId } };
   if (lower.includes("nearest health facility") || lower.includes("find facility")) return { workflow: "map", action: "facility-route", response: "Facility route is ready.", dataset: {} };
@@ -9151,6 +9154,23 @@ function render() {
     $("#platformFeeLedger").innerHTML = fees.length
       ? fees.slice(0, 12).map(fee => `<div><strong>${translateText(fee.feeNumber)}</strong><span>${translateText(`${fee.productName} - ${fee.buyerName} / ${fee.sellerName}`)}</span><small>${translateText(`Gross ${fee.currency} ${fee.grossAmount} - AgriNexus fee ${fee.currency} ${fee.feeAmount} - seller net ${fee.currency} ${fee.sellerNetAmount}`)}</small>${receiptButton("platform-fee", fee.id)}</div>`).join("")
       : "<div>No platform transaction fees yet. Prepare settlement after delivery to capture AgriNexus revenue.</div>";
+  }
+  if ($("#paymentCheckoutPanel")) {
+    const checkouts = data.profile.paymentCheckoutRecords || [];
+    const latestCheckout = checkouts[0];
+    $("#paymentCheckoutPanel").innerHTML = [
+      row("Provider", latestCheckout?.provider || "Set PAYMENT_PROVIDER to paystack or flutterwave"),
+      row("Status", latestCheckout?.status || "No checkout yet"),
+      row("Gross", latestCheckout ? `${latestCheckout.currency} ${latestCheckout.grossAmount}` : "Create buyer checkout"),
+      row("AgriNexus fee", latestCheckout ? `${latestCheckout.currency} ${latestCheckout.platformFeeAmount}` : "Calculated at checkout"),
+      row("Seller net", latestCheckout ? `${latestCheckout.currency} ${latestCheckout.sellerNetAmount}` : "Calculated at checkout")
+    ].join("");
+  }
+  if ($("#paymentCheckoutList")) {
+    const checkouts = data.profile.paymentCheckoutRecords || [];
+    $("#paymentCheckoutList").innerHTML = checkouts.length
+      ? checkouts.slice(0, 10).map(item => `<div><strong>${translateText(item.checkoutNumber)}</strong><span>${translateText(`${item.provider} - ${item.status} - ${item.productName}`)}</span><small>${translateText(`${item.currency} ${item.grossAmount} - fee ${item.currency} ${item.platformFeeAmount} - seller net ${item.currency} ${item.sellerNetAmount}`)}</small>${item.checkoutUrl ? `<a href="${escapeHtml(item.checkoutUrl)}" target="_blank" rel="noopener">${translateText("Open checkout")}</a>` : `<small>${translateText((item.setupRequired || []).join(" ") || "Checkout provider credentials needed.")}</small>`}</div>`).join("")
+      : "<div>No buyer checkout yet. Create buyer checkout to request payment through Paystack or Flutterwave.</div>";
   }
 
   const latestOrder = data.profile.orders[data.profile.orders.length - 1];
@@ -11205,6 +11225,17 @@ function workforceUserCopy(action, role, blocked = false) {
 }
 
 function tradeUserCopy(action, product) {
+  if (action === "payment-checkout") return {
+    title: "Buyer checkout",
+    summary: "Create a Paystack or Flutterwave checkout link so the buyer can pay, the seller payout can be tracked, and the AgriNexus transaction fee can be captured.",
+    guide: "This prepares the live payment request. If provider keys are not in Render yet, AgriNexus records exactly what setup is missing and still shows the fee, gross, and seller net payout.",
+    steps: [
+      { title: "Choose crop", detail: `Use ${product?.name || "the selected crop"} or choose the crop being sold.` },
+      { title: "Set buyer", detail: "Add buyer email/name so the checkout can be created." },
+      { title: "Review money", detail: "Confirm gross amount, AgriNexus fee, and seller net payout." },
+      { title: "Create checkout", detail: "Press the main button to call Paystack or Flutterwave when credentials are connected." }
+    ]
+  };
   if (["logistics-quote", "shipping-booking", "buyer-pickup", "seller-delivery", "delivery-confirm", "settlement"].includes(action)) {
     const copy = {
       "logistics-quote": ["Price my shipment", "Get a shipping price for moving the crop between seller, buyer, and the delivery point.", "quote"],
@@ -11863,7 +11894,7 @@ function workflowConfig(workflow, action, element) {
     const productId = element.dataset.productId || firstProduct()?.id;
     const product = data.products.find(item => item.id === productId) || firstProduct();
     const latestOrder = data.profile.orders[data.profile.orders.length - 1];
-    const titleMap = { order: "Create order", advance: "Advance order", wallet: "Post M-Pesa payment", "buyer-message": "Open buyer-seller thread", "buyer-whatsapp": "WhatsApp buyer", "buyer-sms": "SMS buyer", "buyer-video": "Open buyer video", "logistics-quote": "Quote shipment", "shipping-booking": "Book shipment", "buyer-pickup": "Schedule buyer pickup", "seller-delivery": "Schedule seller delivery", "delivery-confirm": "Confirm delivery", settlement: "Prepare settlement", "drone-plan": "Plan drone mission", drone: "Run drone field scan", "drone-intervention": "Assign field intervention", "drone-report": "Create drone field report", "drone-irrigation": "Create irrigation plan", "drone-pest": "Create pest alert", "drone-spray": "Create spray plan", "drone-yield": "Create yield forecast", "drone-compliance": "Run drone compliance audit", quote: "Send buyer quote", quality: "Run quality inspection", "cold-chain": "Run cold-chain check", export: "Prepare export packet", contract: "Draft contract packet", release: "Release payment", price: "Run price AI", route: "Run route AI", "trade-advisor": "Review trade next step" };
+    const titleMap = { order: "Create order", advance: "Advance order", wallet: "Post M-Pesa payment", "buyer-message": "Open buyer-seller thread", "buyer-whatsapp": "WhatsApp buyer", "buyer-sms": "SMS buyer", "buyer-video": "Open buyer video", "logistics-quote": "Quote shipment", "shipping-booking": "Book shipment", "buyer-pickup": "Schedule buyer pickup", "seller-delivery": "Schedule seller delivery", "delivery-confirm": "Confirm delivery", settlement: "Prepare settlement", "payment-checkout": "Create buyer checkout", "drone-plan": "Plan drone mission", drone: "Run drone field scan", "drone-intervention": "Assign field intervention", "drone-report": "Create drone field report", "drone-irrigation": "Create irrigation plan", "drone-pest": "Create pest alert", "drone-spray": "Create spray plan", "drone-yield": "Create yield forecast", "drone-compliance": "Run drone compliance audit", quote: "Send buyer quote", quality: "Run quality inspection", "cold-chain": "Run cold-chain check", export: "Prepare export packet", contract: "Draft contract packet", release: "Release payment", price: "Run price AI", route: "Run route AI", "trade-advisor": "Review trade next step" };
     titleMap["buyer-contact"] = "Contact buyer";
     const pathMap = {
       order: "/api/trade/order",
@@ -11881,6 +11912,7 @@ function workflowConfig(workflow, action, element) {
       "seller-delivery": "/api/trade/logistics",
       "delivery-confirm": "/api/trade/logistics",
       settlement: "/api/trade/logistics",
+      "payment-checkout": "/api/trade/payment-checkout",
       "drone-plan": "/api/trade/drone-mission",
       drone: "/api/trade/drone-scan",
       "drone-intervention": "/api/trade/drone-intervention",
@@ -11901,17 +11933,18 @@ function workflowConfig(workflow, action, element) {
     const isAdvancedDroneAction = ["drone-report", "drone-irrigation", "drone-pest", "drone-spray", "drone-yield", "drone-compliance"].includes(action);
     const isAdvancedTrade = ["quote", "quality", "cold-chain", "export", "contract", "release"].includes(action);
     const isTradeLogisticsAction = ["logistics-quote", "shipping-booking", "buyer-pickup", "seller-delivery", "delivery-confirm", "settlement"].includes(action);
+    const isPaymentCheckoutAction = action === "payment-checkout";
     const droneTypeMap = { "drone-report": "field-report", "drone-irrigation": "irrigation", "drone-pest": "pest", "drone-spray": "spray", "drone-yield": "yield", "drone-compliance": "compliance" };
     const userCopy = tradeUserCopy(action, product);
     return simpleWorkflowConfig({
       eyebrow: "Trade workflow",
       title: titleMap[action] || "Trade action",
       userTitle: userCopy.title,
-      summary: isTradeLogisticsAction ? "Create buyer-to-seller or seller-to-buyer logistics evidence with pickup point, delivery point, carrier, shipment quote, booking, tracking, delivery proof, settlement readiness, and AgriNexus transaction-fee capture at payout." : ["buyer-message", "buyer-whatsapp", "buyer-sms"].includes(action) ? "Open a buyer-seller message thread tied to the active crop, order, route, quality, payment, and provider-ready communication evidence. SMS and WhatsApp attempt live Twilio delivery when configured." : action === "buyer-contact" ? "Prepare a buyer communication workflow with the active crop, order, route context, channel, and message draft before sending through live communications." : isDroneAction ? "Run a complete agritech drone workflow: compliant flight planning, crop intelligence, findings, map evidence, and field intervention tasks." : isAdvancedDroneAction ? "Create farmer-facing drone intelligence that turns aerial evidence into irrigation, pest, spray, yield, compliance, and buyer-readiness decisions." : isAdvancedTrade ? "Create a concrete commercial operations record with provider evidence for quote, quality, cold-chain, export, contract, or payment release." : "Confirm the market, wallet, logistics, or AI action before the trade ledger changes.",
+      summary: isPaymentCheckoutAction ? "Create a live buyer checkout request through Paystack or Flutterwave, including gross amount, AgriNexus transaction fee, seller net payout, provider status, and checkout URL when credentials are connected." : isTradeLogisticsAction ? "Create buyer-to-seller or seller-to-buyer logistics evidence with pickup point, delivery point, carrier, shipment quote, booking, tracking, delivery proof, settlement readiness, and AgriNexus transaction-fee capture at payout." : ["buyer-message", "buyer-whatsapp", "buyer-sms"].includes(action) ? "Open a buyer-seller message thread tied to the active crop, order, route, quality, payment, and provider-ready communication evidence. SMS and WhatsApp attempt live Twilio delivery when configured." : action === "buyer-contact" ? "Prepare a buyer communication workflow with the active crop, order, route context, channel, and message draft before sending through live communications." : isDroneAction ? "Run a complete agritech drone workflow: compliant flight planning, crop intelligence, findings, map evidence, and field intervention tasks." : isAdvancedDroneAction ? "Create farmer-facing drone intelligence that turns aerial evidence into irrigation, pest, spray, yield, compliance, and buyer-readiness decisions." : isAdvancedTrade ? "Create a concrete commercial operations record with provider evidence for quote, quality, cold-chain, export, contract, or payment release." : "Confirm the market, wallet, logistics, or AI action before the trade ledger changes.",
       userSummary: userCopy.summary,
       confirmLabel: titleMap[action] || "Confirm",
       path: pathMap[action] || "/api/ai/run",
-      body: action === "order" ? { productId } : action === "wallet" ? { provider: "M-Pesa", amount: 120 } : action === "buyer-contact" ? { productId } : action === "buyer-message" ? { productId, channel: "in-app chat" } : action === "buyer-whatsapp" ? { productId, channel: "WhatsApp" } : action === "buyer-sms" ? { productId, channel: "SMS" } : action === "buyer-video" ? { type: "trade", productId } : isTradeLogisticsAction ? { type: action, productId } : isDroneAction ? { productId } : isAdvancedDroneAction ? { type: droneTypeMap[action], productId } : isAdvancedTrade ? { type: action, productId } : action === "advance" ? {} : { type: action },
+      body: action === "order" ? { productId } : action === "wallet" ? { provider: "M-Pesa", amount: 120 } : action === "buyer-contact" ? { productId } : action === "buyer-message" ? { productId, channel: "in-app chat" } : action === "buyer-whatsapp" ? { productId, channel: "WhatsApp" } : action === "buyer-sms" ? { productId, channel: "SMS" } : action === "buyer-video" ? { type: "trade", productId } : isPaymentCheckoutAction ? { productId, provider: "paystack" } : isTradeLogisticsAction ? { type: action, productId } : isDroneAction ? { productId } : isAdvancedDroneAction ? { type: droneTypeMap[action], productId } : isAdvancedTrade ? { type: action, productId } : action === "advance" ? {} : { type: action },
       guide: experienceMode === "user" ? userCopy.guide : action === "order"
         ? "Choose the crop/product, quantity, buyer, and pickup point. Confirming creates a real order record, active route, checkpoint, and trade evidence."
         : isTradeLogisticsAction
@@ -11974,11 +12007,27 @@ function workflowConfig(workflow, action, element) {
             { value: "GHS", label: "GHS" },
             { value: "USD", label: "USD" }
           ] }
+        ] : []),
+        ...(isPaymentCheckoutAction ? [
+          { name: "provider", label: "Payment provider", type: "select", value: "paystack", options: [
+            { value: "paystack", label: "Paystack" },
+            { value: "flutterwave", label: "Flutterwave" }
+          ] },
+          { name: "buyerEmail", label: "Buyer email", value: data.user?.email || "buyer@example.com", placeholder: "buyer@example.com" },
+          { name: "buyerName", label: "Buyer name", value: (data.profile.buyerContacts || [])[0]?.buyerName || "Regional buyer cooperative", placeholder: "Buyer, cooperative, processor, or exporter" },
+          { name: "sellerName", label: "Seller name", value: data.user?.name || "Farmer seller", placeholder: "Farmer, cooperative, or seller" },
+          { name: "amount", label: "Gross amount", value: latestOrder?.total || product?.price || "120", placeholder: "Example: 120" },
+          { name: "currency", label: "Currency", type: "select", value: activeCountry().name === "Kenya" ? "KES" : activeCountry().name === "Nigeria" ? "NGN" : activeCountry().name === "Ghana" ? "GHS" : "USD", options: [
+            { value: "KES", label: "KES" },
+            { value: "NGN", label: "NGN" },
+            { value: "GHS", label: "GHS" },
+            { value: "USD", label: "USD" }
+          ] }
         ] : [])
       ],
-      success: isTradeLogisticsAction ? "Buyer-seller shipping workflow complete" : action === "buyer-video" ? "Buyer video handoff ready" : ["buyer-message", "buyer-whatsapp", "buyer-sms"].includes(action) ? "Buyer-seller thread opened" : action === "buyer-contact" ? "Buyer contact prepared" : action === "wallet" ? "Payment posted" : action === "advance" ? "Order advanced" : action === "order" ? "Order created" : action === "drone-plan" ? "Drone mission planned" : action === "drone" ? "Drone scan complete" : action === "drone-intervention" ? "Field intervention assigned" : isAdvancedDroneAction ? "Advanced drone operation complete" : isAdvancedTrade ? "Advanced trade operation complete" : "AI action complete",
-      record: isTradeLogisticsAction ? "Buyer/seller shipping quote, booking, pickup, delivery proof, live tracking, route evidence, settlement, AgriNexus transaction fee, seller net payout, and provider audit event" : "Order book, wallet ledger, message thread, route timeline, drone mission, field scan, intervention task, trade event, or AI evidence",
-      provider: isTradeLogisticsAction ? "Trade logistics and payment provider evidence is recorded; live GPS providers are used when credentials are connected." : "Market, communications, drone, payment, logistics, or AI provider event is recorded.",
+      success: isPaymentCheckoutAction ? "Buyer checkout prepared" : isTradeLogisticsAction ? "Buyer-seller shipping workflow complete" : action === "buyer-video" ? "Buyer video handoff ready" : ["buyer-message", "buyer-whatsapp", "buyer-sms"].includes(action) ? "Buyer-seller thread opened" : action === "buyer-contact" ? "Buyer contact prepared" : action === "wallet" ? "Payment posted" : action === "advance" ? "Order advanced" : action === "order" ? "Order created" : action === "drone-plan" ? "Drone mission planned" : action === "drone" ? "Drone scan complete" : action === "drone-intervention" ? "Field intervention assigned" : isAdvancedDroneAction ? "Advanced drone operation complete" : isAdvancedTrade ? "Advanced trade operation complete" : "AI action complete",
+      record: isPaymentCheckoutAction ? "Paystack/Flutterwave checkout request, provider response, gross amount, AgriNexus transaction fee, seller net payout, and audit evidence" : isTradeLogisticsAction ? "Buyer/seller shipping quote, booking, pickup, delivery proof, live tracking, route evidence, settlement, AgriNexus transaction fee, seller net payout, and provider audit event" : "Order book, wallet ledger, message thread, route timeline, drone mission, field scan, intervention task, trade event, or AI evidence",
+      provider: isPaymentCheckoutAction ? "Paystack uses transaction_charge with a seller subaccount when PAYSTACK_SECRET_KEY and PAYSTACK_SUBACCOUNT_CODE are configured. Flutterwave uses subaccount split settings when FLUTTERWAVE_SECRET_KEY and FLUTTERWAVE_SUBACCOUNT_ID are configured." : isTradeLogisticsAction ? "Trade logistics and payment provider evidence is recorded; live GPS providers are used when credentials are connected." : "Market, communications, drone, payment, logistics, or AI provider event is recorded.",
       checklist: [
         { title: "Product/order", detail: latestOrder ? `${latestOrder.orderNumber} - ${latestOrder.stage}` : product?.name || "No product selected", status: latestOrder || product ? "live" : "pending", label: "Trade" },
         { title: "Buyer contact", detail: (data.profile.buyerContacts || [])[0]?.buyerName || "No buyer contact yet", status: (data.profile.buyerContacts || []).length ? "ready" : "pending", label: "Buyer" },
@@ -11987,6 +12036,7 @@ function workflowConfig(workflow, action, element) {
         { title: "Route", detail: activeRoute().name, status: "ready", label: data.profile.activeCheckpoint },
         ...(isTradeLogisticsAction ? [{ title: "Shipping evidence", detail: `${(data.profile.tradeLogisticsRecords || []).length} buyer/seller logistics record(s)`, status: "ready", label: "Shipping" }] : []),
         ...(isTradeLogisticsAction ? [{ title: "AgriNexus revenue", detail: `${(data.profile.platformTransactionFees || []).length} transaction fee record(s)`, status: "ready", label: "Fee" }] : []),
+        ...(isPaymentCheckoutAction ? [{ title: "Payment checkout", detail: `${(data.profile.paymentCheckoutRecords || []).length} Paystack/Flutterwave checkout record(s)`, status: "ready", label: "Checkout" }] : []),
         { title: "Wallet", detail: `${money(data.profile.wallet || 0)} current balance`, status: "ready", label: "Wallet" },
         { title: "Drone mission", detail: (data.profile.droneMissions || [])[0]?.missionRef || "No flight plan yet", status: (data.profile.droneMissions || []).length ? "ready" : "pending", label: "Flight" },
         { title: "Drone evidence", detail: (data.profile.droneScans || [])[0]?.scanRef || "No scan yet", status: (data.profile.droneScans || []).length ? "ready" : "pending", label: "Field" },
@@ -13918,6 +13968,11 @@ async function handleVoiceCommand(rawCommand) {
     goSection("trade");
     return openWorkflowByVoice("trade", "settlement", "I opened Trade and prepared settlement. Confirm delivery proof before payment release.", { productId: firstProduct()?.id });
   }
+  if (/\b(create|open|send|start|prepare)\b.*\b(buyer checkout|checkout|payment link|paystack|flutterwave)\b/.test(lower)
+    || /\b(collect payment|buyer pay|buyer payment|take payment)\b/.test(lower)) {
+    goSection("trade");
+    return openWorkflowByVoice("trade", "payment-checkout", "I opened Trade and prepared buyer checkout through Paystack or Flutterwave.", { productId: firstProduct()?.id });
+  }
   if (/\b(sell|market|create|start)\b.*\b(crop|produce|harvest|maize|corn|rice|cassava|yam|beans)\b.*\b(buyer|customer|market|cooperative)\b/.test(lower) && /\b(track|trace|follow|watch|delivery|shipment|route|sale)\b/.test(lower)) {
     goSection("trade");
     return openWorkflowByVoice("trade", "order", "I opened Trade and prepared the crop sale. The workflow connects the buyer, order, route map, sale record, and delivery tracking.", { productId: firstProduct()?.id });
@@ -14426,6 +14481,10 @@ async function handleVoiceCommand(rawCommand) {
   if (lower.includes("settlement") || lower.includes("seller payout") || lower.includes("farmer payout")) {
     goSection("trade");
     return openWorkflowByVoice("trade", "settlement", "Trade settlement workflow is ready.", { productId: firstProduct()?.id });
+  }
+  if (lower.includes("buyer checkout") || lower.includes("create checkout") || lower.includes("collect payment") || lower.includes("paystack") || lower.includes("flutterwave")) {
+    goSection("trade");
+    return openWorkflowByVoice("trade", "payment-checkout", "Buyer checkout workflow is ready.", { productId: firstProduct()?.id });
   }
   if (lower.includes("flight plan") || lower.includes("drone mission") || lower.includes("plan drone")) {
     goSection("trade");
