@@ -25,6 +25,7 @@ const HOST = process.env.HOST || (IS_HOSTED ? "0.0.0.0" : "127.0.0.1");
 const AI_MODEL = process.env.OPENAI_MODEL || "gpt-5.4-mini";
 const AI_REASONING_MODEL = process.env.OPENAI_REASONING_MODEL || process.env.OPENAI_AGENT_MODEL || AI_MODEL;
 const AI_TRANSLATION_MODEL = process.env.OPENAI_TRANSLATION_MODEL || process.env.OPENAI_AGENT_MODEL || AI_MODEL;
+const AGRINEXUS_RELEASE = "2026-06-05-live-services";
 const ROOT = __dirname;
 const DATA_DIR = process.env.AGRINEXUS_DATA_DIR || ROOT;
 const DB_PATH = process.env.AGRINEXUS_DB_PATH || path.join(DATA_DIR, "db.json");
@@ -2650,6 +2651,16 @@ function liveEngineManifest(db) {
   ].map(engine => {
     const providerStates = engine.providerIds.map(id => providerById[id]).filter(Boolean);
     const credentials = engineCredentialState(engine.credentials);
+    if (engine.id === "voice" && process.env.OPENAI_API_KEY) {
+      const openAiVoiceKeys = new Set(["VOICE_STT_PROVIDER", "VOICE_TTS_PROVIDER"]);
+      for (const credential of credentials) {
+        if (openAiVoiceKeys.has(credential.key) && !credential.ready) {
+          credential.ready = true;
+          credential.value = `${credential.value || "configured"} (OpenAI key active)`;
+          credential.detail = "OpenAI voice is active because OPENAI_API_KEY is configured; set the Render value to openai for a clean literal-provider match.";
+        }
+      }
+    }
     const readyProviders = providerStates.filter(provider => provider.status === "connected").length;
     const readyCredentials = credentials.filter(item => item.ready).length;
     const ready = readyProviders === providerStates.length && readyCredentials === credentials.length;
@@ -2672,6 +2683,7 @@ function liveEngineManifest(db) {
   });
   const readyCount = engines.filter(engine => engine.ready).length;
   return {
+    release: AGRINEXUS_RELEASE,
     status: readyCount === engines.length ? "all-engines-connected" : "engines-need-credentials",
     readyCount,
     total: engines.length,
@@ -13324,6 +13336,7 @@ async function api(req, res, url) {
     return send(res, 200, {
       ok: status.ok,
       service: "agrinexus",
+      release: AGRINEXUS_RELEASE,
       mode: process.env.NODE_ENV || "development",
       port: PORT,
       strictLiveMode: REQUIRE_LIVE_SERVICES,
@@ -16788,14 +16801,15 @@ async function api(req, res, url) {
     let audio = null;
     let speechError = null;
     let provider = process.env.VOICE_TTS_PROVIDER || (process.env.OPENAI_API_KEY ? "openai" : "browser");
-    if (provider === "openai" || body.forceOpenAi === true) {
+    const shouldUseOpenAiAudio = Boolean(process.env.OPENAI_API_KEY) && provider !== "browser";
+    if (provider === "openai" || body.forceOpenAi === true || shouldUseOpenAiAudio) {
       try {
         audio = await openAiSpeechAudio({
           text,
           voice: body.voice || process.env.OPENAI_TTS_VOICE,
           responseFormat: body.responseFormat || "mp3"
         });
-        provider = audio?.provider || provider;
+        provider = audio?.provider || "openai";
       } catch (error) {
         speechError = error.message || "OpenAI speech request failed";
         provider = "openai-audio-error";
