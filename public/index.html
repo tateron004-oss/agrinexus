@@ -13,7 +13,7 @@
   <link rel="icon" href="/icons/agri-nexus-192.png" type="image/png">
   <link rel="apple-touch-icon" href="/icons/agri-nexus-192.png">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-  <link rel="stylesheet" href="/styles.css?v=nexus-behavior-175">
+  <link rel="stylesheet" href="/styles.css?v=nexus-behavior-176">
 </head>
 <body>
   <a class="skip-link" href="#mainContent">Skip to main content</a>
@@ -826,6 +826,26 @@
               <div id="tradeEvents" class="activity"></div>
             </article>
           </div>
+          <div class="cards two buyer-seller-shipping-network">
+            <article>
+              <div class="tag-row"><span>Buyer/Seller shipping</span><span>Logistics evidence</span></div>
+              <h3>Buyer/Seller Shipping Desk</h3>
+              <p>Move crops from seller to buyer or buyer pickup to seller handoff with quote, booking, tracking, delivery proof, and settlement evidence.</p>
+              <div id="tradeLogisticsPanel" class="rows"></div>
+              <div class="action-row">
+                <button data-workflow="trade" data-action="logistics-quote" class="primary" type="button">Quote shipment</button>
+                <button data-workflow="trade" data-action="shipping-booking" type="button">Book shipment</button>
+                <button data-workflow="trade" data-action="buyer-pickup" type="button">Buyer pickup</button>
+                <button data-workflow="trade" data-action="seller-delivery" type="button">Seller delivery</button>
+                <button data-workflow="trade" data-action="delivery-confirm" type="button">Confirm delivery</button>
+                <button data-workflow="trade" data-action="settlement" type="button">Settlement</button>
+              </div>
+            </article>
+            <article>
+              <h3>Shipping Evidence</h3>
+              <div id="tradeLogisticsList" class="activity"></div>
+            </article>
+          </div>
           <div class="cards two">
             <article>
               <div class="tag-row"><span>Advanced trade</span><span>Commercial ops</span></div>
@@ -1492,6 +1512,6 @@
   <div id="toast" class="toast hidden" role="status" aria-live="polite" aria-atomic="true"></div>
   <div id="screenReaderStatus" class="sr-only" role="status" aria-live="polite" aria-atomic="true"></div>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="/app.js?v=nexus-behavior-175"></script>
+  <script src="/app.js?v=nexus-behavior-176"></script>
 </body>
 </html>

@@ -356,8 +356,8 @@ assert(app.includes("Stopped. Ask me the next question or tell me where to go ne
 assert(styles.includes("pointer-events: none") && styles.includes(".user-caption-actions") && styles.includes("pointer-events: auto"), "Caption panel must not block workflow action clicks");
 assert(styles.includes("width: min(300px, calc(100vw - 24px))") && styles.includes("max-height: 138px"), "Caption panel must default to a small bubble");
 assert(styles.includes(".user-caption-panel.expanded") && styles.includes("display: none") && styles.includes("display: grid"), "Caption input controls must appear only in expanded caption mode");
-assert(html.includes("nexus-behavior-175"), "Index must force browsers to load Nexus behavior CSS");
-assert(html.includes("nexus-behavior-175"), "Index must force browsers to load Nexus behavior JS");
+assert(html.includes("nexus-behavior-176"), "Index must force browsers to load Nexus behavior CSS");
+assert(html.includes("nexus-behavior-176"), "Index must force browsers to load Nexus behavior JS");
 assert(app.includes("shipmentPreviewMapCanvas") && app.includes("renderShipmentPreviewMap"), "Shipment preview maps must use real Leaflet canvases");
 assert(app.includes("healthHotspotMapCanvas") && app.includes("renderHealthHotspotPreviewMap"), "Health hotspot maps must use real Leaflet canvases");
 assert(app.includes("function shipmentTrackingState") && app.includes("function drawShipmentRoute"), "Shipment maps must render operational tracking state, not decorative routes");
@@ -371,6 +371,10 @@ assert(app.includes("function addLiveMapStatusControl") && app.includes("real ti
 assert(app.includes('pane: "countryLabels"') && app.includes('"Country names and borders"'), "Maps must show country boundaries and labels above the base tiles");
 assert(styles.includes(".map-grid-label") && styles.includes(".global-map-control") && styles.includes(".live-map-status-control"), "Real map grid, global controls, and live tile status need visible professional styling");
 assert(app.includes("/api/trade/tracking") && app.includes("Refresh live tracking") && app.includes("Live GPS provider"), "Trade shipment workflows must expose live logistics/GPS tracking refresh");
+assert(html.includes("Buyer/Seller Shipping Desk"), "Trade needs a buyer/seller shipping desk");
+assert(html.includes('data-action="logistics-quote"') && html.includes('data-action="shipping-booking"') && html.includes('data-action="buyer-pickup"') && html.includes('data-action="seller-delivery"') && html.includes('data-action="delivery-confirm"') && html.includes('data-action="settlement"'), "Trade logistics buttons must be visible");
+assert(app.includes("/api/trade/logistics") && app.includes("Buyer-seller shipping workflow complete") && app.includes("Price my shipment") && app.includes("ship my crop"), "Trade logistics workflows must call the backend with user-facing copy");
+assert(server.includes("tradeLogisticsRecords") && server.includes("logistics.${type}") && server.includes("settlement-prepared"), "Backend must record buyer/seller logistics and settlement evidence");
 assert(app.includes("World_Boundaries_and_Places/MapServer/tile"), "Satellite maps must show country names and borders");
 assert(app.includes("startAskNexusAfterLogin") && app.includes("Welcome ${userFirstName()}"), "Ask Nexus should wake into voice-first mode after login");
 assert(html.includes("Rural Health Access Network"), "Health module needs the rural health access network workspace");

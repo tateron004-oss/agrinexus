@@ -56,8 +56,8 @@ let routeTrackingWatchId = null;
 let routeTrackingPoints = [];
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-175";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v155";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-176";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v156";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
 const VOICE_ATTENTION_DELAY_MS = 900;
@@ -6454,6 +6454,12 @@ function workflowVoiceAliases(workflow, action) {
     "trade:buyer-whatsapp": ["whatsapp buyer", "call buyer"],
     "trade:buyer-sms": ["sms buyer", "text buyer"],
     "trade:advance": ["track delivery", "track shipment", "advance order", "where my product", "track my product", "track my sale", "track sale and product", "track transaction", "track location", "where is my order", "where is my transaction", "product location"],
+    "trade:logistics-quote": ["quote shipment", "shipping quote", "delivery quote", "how much to ship", "logistics quote"],
+    "trade:shipping-booking": ["book shipment", "ship my crop", "schedule shipment", "book delivery", "arrange transport"],
+    "trade:buyer-pickup": ["buyer pickup", "buyer pick up", "buyer collect", "buyer to seller"],
+    "trade:seller-delivery": ["seller delivery", "deliver to buyer", "seller to buyer", "take crop to buyer"],
+    "trade:delivery-confirm": ["confirm delivery", "delivery proof", "buyer received", "shipment arrived"],
+    "trade:settlement": ["settle payment", "release settlement", "farmer payout", "seller payout"],
     "trade:drone": ["run drone scan", "scan farm", "check field", "farm check", "drone farm", "check crop field"],
     "trade:drone-plan": ["plan drone mission", "flight plan"],
     "map:facility-route": ["find facility", "clinic route", "health facility"],
@@ -7568,6 +7574,7 @@ const simpleUserSections = {
       { label: "Contact Buyer", command: "contact my buyer" },
       { label: "Show Crop", command: "open video for buyer to show crops" },
       { label: "Create Order", command: "create a crop order" },
+      { label: "Ship Crop", command: "book shipment for my crop" },
       { label: "Track Route", command: "track my route" },
       { label: "Scan Farm", command: "run drone scan" }
     ]
@@ -8243,6 +8250,12 @@ function simpleUserCommandWorkflow(command = "") {
   if (lower.includes("open video for buyer") || lower.includes("show crops") || lower.includes("show crop")) return { workflow: "trade", action: "buyer-video", response: "Buyer crop video is ready.", dataset: { productId } };
   if ((lower.includes("sell my crop") || lower.includes("sell crop")) && (lower.includes("track my sale") || lower.includes("track sale") || lower.includes("delivery"))) return { workflow: "trade", action: "order", response: "Crop sale and delivery tracking is ready.", dataset: { productId } };
   if (lower.includes("crop order") || lower.includes("create order")) return { workflow: "trade", action: "order", response: "Crop order is ready.", dataset: { productId } };
+  if (lower.includes("quote shipment") || lower.includes("shipping quote")) return { workflow: "trade", action: "logistics-quote", response: "Shipment quote is ready.", dataset: { productId } };
+  if (lower.includes("book shipment") || lower.includes("ship my crop") || lower.includes("book delivery")) return { workflow: "trade", action: "shipping-booking", response: "Shipping booking is ready.", dataset: { productId } };
+  if (lower.includes("buyer pickup") || lower.includes("buyer pick up")) return { workflow: "trade", action: "buyer-pickup", response: "Buyer pickup is ready.", dataset: { productId } };
+  if (lower.includes("seller delivery") || lower.includes("deliver to buyer")) return { workflow: "trade", action: "seller-delivery", response: "Seller delivery is ready.", dataset: { productId } };
+  if (lower.includes("confirm delivery") || lower.includes("delivery proof")) return { workflow: "trade", action: "delivery-confirm", response: "Delivery confirmation is ready.", dataset: { productId } };
+  if (lower.includes("settlement") || lower.includes("seller payout") || lower.includes("farmer payout")) return { workflow: "trade", action: "settlement", response: "Settlement workflow is ready.", dataset: { productId } };
   if (lower.includes("track my route") || lower.includes("check route")) return { workflow: "ai", action: "route", response: "Route intelligence is ready.", dataset: {} };
   if (lower.includes("drone scan") || lower.includes("scan farm") || lower.includes("check farm")) return { workflow: "trade", action: "drone", response: "Drone scan is ready.", dataset: { productId } };
   if (lower.includes("nearest health facility") || lower.includes("find facility")) return { workflow: "map", action: "facility-route", response: "Facility route is ready.", dataset: {} };
@@ -9182,6 +9195,23 @@ function render() {
   $("#tradeEvents").innerHTML = (data.profile.tradeEvents || []).length
     ? data.profile.tradeEvents.map(event => `<div><strong>${event.type}</strong><span>${event.label}</span></div>`).join("")
     : "<div>No trade events yet.</div>";
+  const tradeLogisticsRecords = data.profile.tradeLogisticsRecords || [];
+  const latestShipping = tradeLogisticsRecords[0];
+  if ($("#tradeLogisticsPanel")) {
+    $("#tradeLogisticsPanel").innerHTML = [
+      row("Latest shipment", latestShipping?.logisticsNumber || "No shipping workflow yet"),
+      row("Direction", latestShipping?.direction || "Seller-to-buyer or buyer pickup"),
+      row("Buyer", latestShipping?.buyerName || latestThread?.buyerName || "No buyer selected"),
+      row("Seller", latestShipping?.sellerName || data.user?.name || "Current seller"),
+      row("Route", latestShipping?.routeName || route.name),
+      row("Status", latestShipping?.status || "Ready to quote or book")
+    ].join("");
+  }
+  if ($("#tradeLogisticsList")) {
+    $("#tradeLogisticsList").innerHTML = tradeLogisticsRecords.length
+      ? tradeLogisticsRecords.slice(0, 12).map(item => `<div><strong>${translateText(item.logisticsNumber)}</strong><span>${translateText(`${item.productName} - ${item.status} - ${item.direction} - ${item.pickupLocation} to ${item.deliveryLocation}`)}</span><small>${translateText(`${item.currency} ${item.amount} - ${item.trackingNumber}`)}</small></div>`).join("")
+      : "<div>No shipping evidence yet. Quote shipment, book shipment, schedule pickup, confirm delivery, or prepare settlement.</div>";
+  }
   const tradeOps = [
     ...(data.profile.tradeQuotes || []).map(item => ({ title: item.quoteNumber, detail: `${item.productName} - ${item.status} - ${money(item.price || 0)}` })),
     ...(data.profile.qualityInspections || []).map(item => ({ title: item.inspectionNumber, detail: `${item.productName} - ${item.grade} - ${item.status}` })),
@@ -11155,6 +11185,27 @@ function workforceUserCopy(action, role, blocked = false) {
 }
 
 function tradeUserCopy(action, product) {
+  if (["logistics-quote", "shipping-booking", "buyer-pickup", "seller-delivery", "delivery-confirm", "settlement"].includes(action)) {
+    const copy = {
+      "logistics-quote": ["Price my shipment", "Get a shipping price for moving the crop between seller, buyer, and the delivery point.", "quote"],
+      "shipping-booking": ["Ship my crop", "Book the crop shipment so the buyer, seller, pickup point, delivery point, carrier, route, and tracking record stay connected.", "booking"],
+      "buyer-pickup": ["Buyer pickup", "Schedule the buyer or buyer's driver to collect the crop from the seller or collection point.", "pickup"],
+      "seller-delivery": ["Deliver to buyer", "Schedule the seller, cooperative, or driver to deliver the crop to the buyer, market, processor, or export point.", "delivery"],
+      "delivery-confirm": ["Confirm delivery", "Record that the buyer received the crop and attach delivery proof before payment is released.", "delivery proof"],
+      settlement: ["Prepare payout", "Prepare the seller payout or settlement record after shipment and delivery evidence are complete.", "settlement"]
+    }[action];
+    return {
+      title: copy[0],
+      summary: copy[1],
+      guide: "This creates a buyer-seller logistics workflow. AgriNexus keeps the crop, buyer, seller, route, pickup, delivery, tracking, proof, and payment evidence together so the farmer can understand the full movement of the sale.",
+      steps: [
+        { title: "Choose crop", detail: `Use ${product?.name || "the selected crop"} or choose the crop being sold.` },
+        { title: "Confirm people", detail: "Add the buyer, seller, and carrier or driver." },
+        { title: "Confirm locations", detail: "Set where the crop starts and where the buyer expects it." },
+        { title: `Create ${copy[2]}`, detail: "Press the main button to save the shipping record, update tracking, and create provider-ready evidence." }
+      ]
+    };
+  }
   if (action === "order") return {
     title: "Sell my crop",
     summary: "Tell AgriNexus what crop you want to sell, who the buyer is, and where pickup should happen.",
@@ -11792,7 +11843,7 @@ function workflowConfig(workflow, action, element) {
     const productId = element.dataset.productId || firstProduct()?.id;
     const product = data.products.find(item => item.id === productId) || firstProduct();
     const latestOrder = data.profile.orders[data.profile.orders.length - 1];
-    const titleMap = { order: "Create order", advance: "Advance order", wallet: "Post M-Pesa payment", "buyer-message": "Open buyer-seller thread", "buyer-whatsapp": "WhatsApp buyer", "buyer-sms": "SMS buyer", "buyer-video": "Open buyer video", "drone-plan": "Plan drone mission", drone: "Run drone field scan", "drone-intervention": "Assign field intervention", "drone-report": "Create drone field report", "drone-irrigation": "Create irrigation plan", "drone-pest": "Create pest alert", "drone-spray": "Create spray plan", "drone-yield": "Create yield forecast", "drone-compliance": "Run drone compliance audit", quote: "Send buyer quote", quality: "Run quality inspection", "cold-chain": "Run cold-chain check", export: "Prepare export packet", contract: "Draft contract packet", release: "Release payment", price: "Run price AI", route: "Run route AI", "trade-advisor": "Review trade next step" };
+    const titleMap = { order: "Create order", advance: "Advance order", wallet: "Post M-Pesa payment", "buyer-message": "Open buyer-seller thread", "buyer-whatsapp": "WhatsApp buyer", "buyer-sms": "SMS buyer", "buyer-video": "Open buyer video", "logistics-quote": "Quote shipment", "shipping-booking": "Book shipment", "buyer-pickup": "Schedule buyer pickup", "seller-delivery": "Schedule seller delivery", "delivery-confirm": "Confirm delivery", settlement: "Prepare settlement", "drone-plan": "Plan drone mission", drone: "Run drone field scan", "drone-intervention": "Assign field intervention", "drone-report": "Create drone field report", "drone-irrigation": "Create irrigation plan", "drone-pest": "Create pest alert", "drone-spray": "Create spray plan", "drone-yield": "Create yield forecast", "drone-compliance": "Run drone compliance audit", quote: "Send buyer quote", quality: "Run quality inspection", "cold-chain": "Run cold-chain check", export: "Prepare export packet", contract: "Draft contract packet", release: "Release payment", price: "Run price AI", route: "Run route AI", "trade-advisor": "Review trade next step" };
     titleMap["buyer-contact"] = "Contact buyer";
     const pathMap = {
       order: "/api/trade/order",
@@ -11804,6 +11855,12 @@ function workflowConfig(workflow, action, element) {
       "buyer-whatsapp": "/api/trade/message",
       "buyer-sms": "/api/trade/message",
       "buyer-video": "/api/video/session",
+      "logistics-quote": "/api/trade/logistics",
+      "shipping-booking": "/api/trade/logistics",
+      "buyer-pickup": "/api/trade/logistics",
+      "seller-delivery": "/api/trade/logistics",
+      "delivery-confirm": "/api/trade/logistics",
+      settlement: "/api/trade/logistics",
       "drone-plan": "/api/trade/drone-mission",
       drone: "/api/trade/drone-scan",
       "drone-intervention": "/api/trade/drone-intervention",
@@ -11823,26 +11880,29 @@ function workflowConfig(workflow, action, element) {
     const isDroneAction = ["drone-plan", "drone", "drone-intervention"].includes(action);
     const isAdvancedDroneAction = ["drone-report", "drone-irrigation", "drone-pest", "drone-spray", "drone-yield", "drone-compliance"].includes(action);
     const isAdvancedTrade = ["quote", "quality", "cold-chain", "export", "contract", "release"].includes(action);
+    const isTradeLogisticsAction = ["logistics-quote", "shipping-booking", "buyer-pickup", "seller-delivery", "delivery-confirm", "settlement"].includes(action);
     const droneTypeMap = { "drone-report": "field-report", "drone-irrigation": "irrigation", "drone-pest": "pest", "drone-spray": "spray", "drone-yield": "yield", "drone-compliance": "compliance" };
     const userCopy = tradeUserCopy(action, product);
     return simpleWorkflowConfig({
       eyebrow: "Trade workflow",
       title: titleMap[action] || "Trade action",
       userTitle: userCopy.title,
-      summary: ["buyer-message", "buyer-whatsapp", "buyer-sms"].includes(action) ? "Open a buyer-seller message thread tied to the active crop, order, route, quality, payment, and provider-ready communication evidence. SMS and WhatsApp attempt live Twilio delivery when configured." : action === "buyer-contact" ? "Prepare a buyer communication workflow with the active crop, order, route context, channel, and message draft before sending through live communications." : isDroneAction ? "Run a complete agritech drone workflow: compliant flight planning, crop intelligence, findings, map evidence, and field intervention tasks." : isAdvancedDroneAction ? "Create farmer-facing drone intelligence that turns aerial evidence into irrigation, pest, spray, yield, compliance, and buyer-readiness decisions." : isAdvancedTrade ? "Create a concrete commercial operations record with provider evidence for quote, quality, cold-chain, export, contract, or payment release." : "Confirm the market, wallet, logistics, or AI action before the trade ledger changes.",
+      summary: isTradeLogisticsAction ? "Create buyer-to-seller or seller-to-buyer logistics evidence with pickup point, delivery point, carrier, shipment quote, booking, tracking, delivery proof, and settlement readiness." : ["buyer-message", "buyer-whatsapp", "buyer-sms"].includes(action) ? "Open a buyer-seller message thread tied to the active crop, order, route, quality, payment, and provider-ready communication evidence. SMS and WhatsApp attempt live Twilio delivery when configured." : action === "buyer-contact" ? "Prepare a buyer communication workflow with the active crop, order, route context, channel, and message draft before sending through live communications." : isDroneAction ? "Run a complete agritech drone workflow: compliant flight planning, crop intelligence, findings, map evidence, and field intervention tasks." : isAdvancedDroneAction ? "Create farmer-facing drone intelligence that turns aerial evidence into irrigation, pest, spray, yield, compliance, and buyer-readiness decisions." : isAdvancedTrade ? "Create a concrete commercial operations record with provider evidence for quote, quality, cold-chain, export, contract, or payment release." : "Confirm the market, wallet, logistics, or AI action before the trade ledger changes.",
       userSummary: userCopy.summary,
       confirmLabel: titleMap[action] || "Confirm",
       path: pathMap[action] || "/api/ai/run",
-      body: action === "order" ? { productId } : action === "wallet" ? { provider: "M-Pesa", amount: 120 } : action === "buyer-contact" ? { productId } : action === "buyer-message" ? { productId, channel: "in-app chat" } : action === "buyer-whatsapp" ? { productId, channel: "WhatsApp" } : action === "buyer-sms" ? { productId, channel: "SMS" } : action === "buyer-video" ? { type: "trade", productId } : isDroneAction ? { productId } : isAdvancedDroneAction ? { type: droneTypeMap[action], productId } : isAdvancedTrade ? { type: action, productId } : action === "advance" ? {} : { type: action },
+      body: action === "order" ? { productId } : action === "wallet" ? { provider: "M-Pesa", amount: 120 } : action === "buyer-contact" ? { productId } : action === "buyer-message" ? { productId, channel: "in-app chat" } : action === "buyer-whatsapp" ? { productId, channel: "WhatsApp" } : action === "buyer-sms" ? { productId, channel: "SMS" } : action === "buyer-video" ? { type: "trade", productId } : isTradeLogisticsAction ? { type: action, productId } : isDroneAction ? { productId } : isAdvancedDroneAction ? { type: droneTypeMap[action], productId } : isAdvancedTrade ? { type: action, productId } : action === "advance" ? {} : { type: action },
       guide: experienceMode === "user" ? userCopy.guide : action === "order"
         ? "Choose the crop/product, quantity, buyer, and pickup point. Confirming creates a real order record, active route, checkpoint, and trade evidence."
+        : isTradeLogisticsAction
+          ? "Choose buyer, seller, direction, pickup point, delivery point, carrier, and amount. Confirming creates shipping evidence and refreshes tracking."
         : isDroneAction || isAdvancedDroneAction
           ? "Choose the crop lot, field zone, and scan objective. Confirming creates drone mission or scan evidence tied to the map and trade route."
           : action === "route" || action === "advance"
             ? "Review the active route and checkpoint. Confirming updates route intelligence or moves the order to the next logistics step."
             : "Review the buyer, channel, and product context. Confirming creates the trade communication or provider evidence.",
       steps: userCopy.steps,
-      routePreview: ["order", "advance", "route", "buyer-contact", "buyer-message", "buyer-whatsapp", "buyer-sms", "buyer-video"].includes(action)
+      routePreview: ["order", "advance", "route", "buyer-contact", "buyer-message", "buyer-whatsapp", "buyer-sms", "buyer-video", "logistics-quote", "shipping-booking", "buyer-pickup", "seller-delivery", "delivery-confirm", "settlement"].includes(action)
         ? { route: activeRoute(), order: latestOrder, product, title: action === "order" ? "Crop route preview" : "Shipment tracking map" }
         : null,
       videoPreview: action === "buyer-video" ? {
@@ -11850,8 +11910,8 @@ function workflowConfig(workflow, action, element) {
         detail: "Open camera so the farmer can show crop quality, quantity, packaging, field condition, or pickup readiness.",
         consent: "Ask permission before showing the farm, buyer, seller, route, payment, or private household details."
       } : null,
-      userOutcome: action === "order" ? "AgriNexus creates the order and connects it to the shipment lane." : action === "advance" ? "AgriNexus moves the shipment to the next checkpoint." : "AgriNexus keeps the buyer conversation connected to the crop route.",
-      userRecord: "The crop order, buyer message, checkpoint, and route evidence stay connected so the shipment can be tracked later.",
+      userOutcome: isTradeLogisticsAction ? "AgriNexus creates the shipping record, route evidence, delivery proof path, and settlement readiness." : action === "order" ? "AgriNexus creates the order and connects it to the shipment lane." : action === "advance" ? "AgriNexus moves the shipment to the next checkpoint." : "AgriNexus keeps the buyer conversation connected to the crop route.",
+      userRecord: isTradeLogisticsAction ? "The buyer, seller, crop, pickup, delivery, carrier, tracking, proof, and settlement evidence stay connected." : "The crop order, buyer message, checkpoint, and route evidence stay connected so the shipment can be tracked later.",
       fields: [
         ...(action !== "advance" ? [{ name: "productId", label: "Crop or product", type: "select", value: product?.id || productId || "", options: productSelectOptions() }] : []),
         ...(action === "order" ? [
@@ -11873,17 +11933,39 @@ function workflowConfig(workflow, action, element) {
         ...(["buyer-contact", "buyer-message", "buyer-whatsapp", "buyer-sms", "buyer-video"].includes(action) ? [
           { name: "buyerName", label: "Buyer name", value: "Regional buyer cooperative", placeholder: "Buyer name" },
           { name: action === "buyer-video" ? "videoNote" : "messageDraft", label: action === "buyer-video" ? "What should the buyer see?" : "Message draft", type: "textarea", rows: 3, value: action === "buyer-video" ? "Show crop quality, quantity, packaging, damage, field condition, and pickup readiness." : "Hello, I am ready to discuss crop quantity, quality, delivery route, and payment timing." }
+        ] : []),
+        ...(isTradeLogisticsAction ? [
+          { name: "buyerName", label: "Buyer name", value: (data.profile.buyerContacts || [])[0]?.buyerName || "Regional buyer cooperative", placeholder: "Buyer, cooperative, processor, or exporter" },
+          { name: "sellerName", label: "Seller name", value: data.user?.name || "Farmer seller", placeholder: "Farmer, cooperative, or seller" },
+          { name: "quantity", label: "Quantity", value: latestOrder?.quantity || "20 bags", placeholder: "Example: 20 bags" },
+          { name: "direction", label: "Direction", type: "select", value: action === "buyer-pickup" ? "buyer-to-seller pickup" : "seller-to-buyer delivery", options: [
+            { value: "seller-to-buyer delivery", label: "Seller to buyer" },
+            { value: "buyer-to-seller pickup", label: "Buyer pickup" },
+            { value: "third-party logistics", label: "Third-party logistics" }
+          ] },
+          { name: "pickupLocation", label: "Pickup location", value: latestOrder?.checkpoint || data.profile.activeCheckpoint || "Farm collection point", placeholder: "Farm, warehouse, collection point" },
+          { name: "deliveryLocation", label: "Delivery location", value: activeRoute().checkpoints?.[activeRoute().checkpoints.length - 1] || "Buyer delivery point", placeholder: "Buyer address, market, processor, or export hub" },
+          { name: "carrier", label: "Carrier or driver", value: "AgriNexus logistics partner", placeholder: "Driver, courier, cooperative truck, or logistics provider" },
+          { name: "amount", label: "Shipping amount", value: "120", placeholder: "Example: 120" },
+          { name: "currency", label: "Currency", type: "select", value: activeCountry().name === "Kenya" ? "KES" : activeCountry().name === "Nigeria" ? "NGN" : activeCountry().name === "DRC" ? "CDF" : "USD", options: [
+            { value: "KES", label: "KES" },
+            { value: "NGN", label: "NGN" },
+            { value: "CDF", label: "CDF" },
+            { value: "GHS", label: "GHS" },
+            { value: "USD", label: "USD" }
+          ] }
         ] : [])
       ],
-      success: action === "buyer-video" ? "Buyer video handoff ready" : ["buyer-message", "buyer-whatsapp", "buyer-sms"].includes(action) ? "Buyer-seller thread opened" : action === "buyer-contact" ? "Buyer contact prepared" : action === "wallet" ? "Payment posted" : action === "advance" ? "Order advanced" : action === "order" ? "Order created" : action === "drone-plan" ? "Drone mission planned" : action === "drone" ? "Drone scan complete" : action === "drone-intervention" ? "Field intervention assigned" : isAdvancedDroneAction ? "Advanced drone operation complete" : isAdvancedTrade ? "Advanced trade operation complete" : "AI action complete",
-      record: "Order book, wallet ledger, message thread, route timeline, drone mission, field scan, intervention task, trade event, or AI evidence",
-      provider: "Market, communications, drone, payment, logistics, or AI provider event is recorded.",
+      success: isTradeLogisticsAction ? "Buyer-seller shipping workflow complete" : action === "buyer-video" ? "Buyer video handoff ready" : ["buyer-message", "buyer-whatsapp", "buyer-sms"].includes(action) ? "Buyer-seller thread opened" : action === "buyer-contact" ? "Buyer contact prepared" : action === "wallet" ? "Payment posted" : action === "advance" ? "Order advanced" : action === "order" ? "Order created" : action === "drone-plan" ? "Drone mission planned" : action === "drone" ? "Drone scan complete" : action === "drone-intervention" ? "Field intervention assigned" : isAdvancedDroneAction ? "Advanced drone operation complete" : isAdvancedTrade ? "Advanced trade operation complete" : "AI action complete",
+      record: isTradeLogisticsAction ? "Buyer/seller shipping quote, booking, pickup, delivery proof, live tracking, route evidence, settlement, and provider audit event" : "Order book, wallet ledger, message thread, route timeline, drone mission, field scan, intervention task, trade event, or AI evidence",
+      provider: isTradeLogisticsAction ? "Trade logistics and payment provider evidence is recorded; live GPS providers are used when credentials are connected." : "Market, communications, drone, payment, logistics, or AI provider event is recorded.",
       checklist: [
         { title: "Product/order", detail: latestOrder ? `${latestOrder.orderNumber} - ${latestOrder.stage}` : product?.name || "No product selected", status: latestOrder || product ? "live" : "pending", label: "Trade" },
         { title: "Buyer contact", detail: (data.profile.buyerContacts || [])[0]?.buyerName || "No buyer contact yet", status: (data.profile.buyerContacts || []).length ? "ready" : "pending", label: "Buyer" },
         { title: "Message thread", detail: (data.profile.tradeMessageThreads || [])[0]?.productName || "No buyer-seller thread yet", status: (data.profile.tradeMessageThreads || []).length ? "ready" : "pending", label: "Chat" },
         ...(action === "buyer-video" ? [{ title: "Video handoff", detail: (data.profile.videoSessions || [])[0]?.sessionNumber || "No video session yet", status: (data.profile.videoSessions || []).length ? "ready" : "pending", label: "Video" }] : []),
         { title: "Route", detail: activeRoute().name, status: "ready", label: data.profile.activeCheckpoint },
+        ...(isTradeLogisticsAction ? [{ title: "Shipping evidence", detail: `${(data.profile.tradeLogisticsRecords || []).length} buyer/seller logistics record(s)`, status: "ready", label: "Shipping" }] : []),
         { title: "Wallet", detail: `${money(data.profile.wallet || 0)} current balance`, status: "ready", label: "Wallet" },
         { title: "Drone mission", detail: (data.profile.droneMissions || [])[0]?.missionRef || "No flight plan yet", status: (data.profile.droneMissions || []).length ? "ready" : "pending", label: "Flight" },
         { title: "Drone evidence", detail: (data.profile.droneScans || [])[0]?.scanRef || "No scan yet", status: (data.profile.droneScans || []).length ? "ready" : "pending", label: "Field" },
@@ -13641,6 +13723,30 @@ async function handleVoiceCommand(rawCommand) {
     goSection("trade");
     return openWorkflowByVoice("trade", "buyer-video", "I opened Trade and prepared the buyer crop video workflow. Press Open camera when the farmer agrees.");
   }
+  if (/\b(quote|price|cost|how much)\b.*\b(ship|shipping|shipment|delivery|deliver|transport|logistics)\b/.test(lower)) {
+    goSection("trade");
+    return openWorkflowByVoice("trade", "logistics-quote", "I opened Trade and prepared a shipment quote. Add the pickup, delivery point, buyer, seller, and amount.", { productId: firstProduct()?.id });
+  }
+  if (/\b(book|schedule|arrange|start|create)\b.*\b(ship|shipment|shipping|delivery|transport|logistics)\b/.test(lower) || /\b(ship my crop|ship crop|send crop to buyer|move crop to buyer)\b/.test(lower)) {
+    goSection("trade");
+    return openWorkflowByVoice("trade", "shipping-booking", "I opened Trade and prepared crop shipping. This connects the seller, buyer, pickup point, delivery point, carrier, tracking, and route evidence.", { productId: firstProduct()?.id });
+  }
+  if (/\b(buyer pickup|buyer pick up|buyer collect|buyer collection|buyer to seller|buyer driver)\b/.test(lower)) {
+    goSection("trade");
+    return openWorkflowByVoice("trade", "buyer-pickup", "I opened Trade and prepared buyer pickup. Confirm where the buyer or driver will collect the crop.", { productId: firstProduct()?.id });
+  }
+  if (/\b(seller delivery|seller to buyer|deliver to buyer|delivery to buyer|take crop to buyer|bring crop to buyer)\b/.test(lower)) {
+    goSection("trade");
+    return openWorkflowByVoice("trade", "seller-delivery", "I opened Trade and prepared seller delivery. Confirm the buyer destination and carrier.", { productId: firstProduct()?.id });
+  }
+  if (/\b(confirm|prove|proof|received|arrived|arrive)\b.*\b(delivery|shipment|crop|buyer|order)\b/.test(lower)) {
+    goSection("trade");
+    return openWorkflowByVoice("trade", "delivery-confirm", "I opened Trade and prepared delivery confirmation. Record buyer receipt before settlement.", { productId: firstProduct()?.id });
+  }
+  if (/\b(settle|settlement|release payment|release payout|farmer payout|seller payout|pay seller|pay farmer)\b/.test(lower) && /\b(trade|buyer|seller|shipment|crop|payment|payout|sale)\b/.test(lower)) {
+    goSection("trade");
+    return openWorkflowByVoice("trade", "settlement", "I opened Trade and prepared settlement. Confirm delivery proof before payment release.", { productId: firstProduct()?.id });
+  }
   if (/\b(sell|market|create|start)\b.*\b(crop|produce|harvest|maize|corn|rice|cassava|yam|beans)\b.*\b(buyer|customer|market|cooperative)\b/.test(lower) && /\b(track|trace|follow|watch|delivery|shipment|route|sale)\b/.test(lower)) {
     goSection("trade");
     return openWorkflowByVoice("trade", "order", "I opened Trade and prepared the crop sale. The workflow connects the buyer, order, route map, sale record, and delivery tracking.", { productId: firstProduct()?.id });
@@ -14126,6 +14232,30 @@ async function handleVoiceCommand(rawCommand) {
     }
     return openWorkflowByVoice("trade", "buyer-contact", "Buyer contact workflow is ready.", { productId: firstProduct()?.id });
   }
+  if (lower.includes("shipping quote") || lower.includes("quote shipment") || (lower.includes("cost") && lower.includes("ship"))) {
+    goSection("trade");
+    return openWorkflowByVoice("trade", "logistics-quote", "Shipment quote workflow is ready.", { productId: firstProduct()?.id });
+  }
+  if (lower.includes("book shipment") || lower.includes("ship my crop") || lower.includes("book delivery") || lower.includes("arrange transport")) {
+    goSection("trade");
+    return openWorkflowByVoice("trade", "shipping-booking", "Shipping booking workflow is ready.", { productId: firstProduct()?.id });
+  }
+  if (lower.includes("buyer pickup") || lower.includes("buyer pick up") || lower.includes("buyer collect")) {
+    goSection("trade");
+    return openWorkflowByVoice("trade", "buyer-pickup", "Buyer pickup workflow is ready.", { productId: firstProduct()?.id });
+  }
+  if (lower.includes("seller delivery") || lower.includes("deliver to buyer") || lower.includes("seller to buyer")) {
+    goSection("trade");
+    return openWorkflowByVoice("trade", "seller-delivery", "Seller delivery workflow is ready.", { productId: firstProduct()?.id });
+  }
+  if (lower.includes("confirm delivery") || lower.includes("delivery proof") || lower.includes("shipment arrived")) {
+    goSection("trade");
+    return openWorkflowByVoice("trade", "delivery-confirm", "Delivery confirmation workflow is ready.", { productId: firstProduct()?.id });
+  }
+  if (lower.includes("settlement") || lower.includes("seller payout") || lower.includes("farmer payout")) {
+    goSection("trade");
+    return openWorkflowByVoice("trade", "settlement", "Trade settlement workflow is ready.", { productId: firstProduct()?.id });
+  }
   if (lower.includes("flight plan") || lower.includes("drone mission") || lower.includes("plan drone")) {
     goSection("trade");
     return openWorkflowByVoice("trade", "drone-plan", "Drone mission workflow is ready.", { productId: firstProduct()?.id });
@@ -14142,7 +14272,7 @@ async function handleVoiceCommand(rawCommand) {
     goSection("trade");
     return openWorkflowByVoice("trade", "order", "Buyer order workflow is ready.", { productId: firstProduct()?.id });
   }
-  if (lower.includes("advance order") || lower.includes("logistics") || lower.includes("ship")) {
+  if (lower.includes("advance order") || lower.includes("logistics status") || lower.includes("shipment status")) {
     goSection("trade");
     return openWorkflowByVoice("trade", "advance", "Logistics advance workflow is ready.");
   }

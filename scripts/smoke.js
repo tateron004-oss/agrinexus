@@ -545,6 +545,42 @@ async function call(path, body) {
   assert(buyerVideo.videoSessionResult.type === "buyer-crop-video");
   assert(buyerVideo.profile.videoSessions.length >= 1);
   assert(buyerVideo.profile.integrationEvents.some(event => event.action === "trade.buyer_video_session_ready"));
+  const logisticsQuote = await call("/api/trade/logistics", {
+    type: "logistics-quote",
+    productId: "avocado-ke",
+    buyerName: "Nairobi buyer desk",
+    sellerName: "Grace farmer",
+    pickupLocation: "Kiambu farm collection point",
+    deliveryLocation: "Nairobi buyer market",
+    amount: 120,
+    currency: "KES"
+  });
+  assert(logisticsQuote.tradeLogisticsResult.record.status === "quote prepared");
+  assert(logisticsQuote.profile.tradeLogisticsRecords.length >= 1);
+  assert(logisticsQuote.profile.integrationEvents.some(event => event.action === "logistics.logistics-quote"));
+  const shippingBooking = await call("/api/trade/logistics", {
+    type: "shipping-booking",
+    productId: "avocado-ke",
+    buyerName: "Nairobi buyer desk",
+    sellerName: "Grace farmer",
+    pickupLocation: "Kiambu farm collection point",
+    deliveryLocation: "Nairobi buyer market",
+    amount: 120,
+    currency: "KES"
+  });
+  assert(shippingBooking.tradeLogisticsResult.record.status === "shipment booked");
+  assert(shippingBooking.profile.orders[shippingBooking.profile.orders.length - 1].stage === "Booked for pickup");
+  const buyerPickup = await call("/api/trade/logistics", { type: "buyer-pickup", productId: "avocado-ke", direction: "buyer-to-seller pickup" });
+  assert(buyerPickup.tradeLogisticsResult.record.status === "buyer pickup scheduled");
+  assert(buyerPickup.tradeLogisticsResult.record.direction === "buyer-to-seller pickup");
+  const sellerDelivery = await call("/api/trade/logistics", { type: "seller-delivery", productId: "avocado-ke", direction: "seller-to-buyer delivery" });
+  assert(sellerDelivery.tradeLogisticsResult.record.status === "seller delivery scheduled");
+  const deliveryConfirm = await call("/api/trade/logistics", { type: "delivery-confirm", productId: "avocado-ke" });
+  assert(deliveryConfirm.tradeLogisticsResult.record.status === "delivery confirmed");
+  assert(/delivery photo|signature|receiver/i.test(deliveryConfirm.tradeLogisticsResult.record.proof));
+  const tradeSettlement = await call("/api/trade/logistics", { type: "settlement", productId: "avocado-ke", amount: 120, currency: "KES" });
+  assert(tradeSettlement.tradeLogisticsResult.record.status === "settlement prepared");
+  assert(tradeSettlement.profile.walletTransactions.some(tx => tx.status === "settlement-prepared"));
   const healthVideo = await call("/api/video/session", { type: "health", videoNote: "Show injury swelling to the telehealth provider." });
   assert(healthVideo.videoSessionResult.type === "telehealth-video");
   assert(healthVideo.profile.videoSessions.length >= 2);

@@ -4060,6 +4060,120 @@ async function refreshOrderLogisticsTracking(db, order, user, action = "logistic
   return { ok: delivery.ok || !REQUIRE_LIVE_SERVICES, delivery, tracking };
 }
 
+async function createTradeLogisticsWorkflow(db, user, body = {}) {
+  ensureTradeProfile(db.profile);
+  const { country, route } = activeContext(db);
+  const type = String(body.type || "shipping-booking").trim();
+  let order = body.orderId
+    ? db.profile.orders.find(item => item.id === body.orderId)
+    : db.profile.orders[db.profile.orders.length - 1];
+  const product = order
+    ? (db.products || []).find(item => item.id === order.productId)
+    : selectedTradeProduct(db, body.productId, country);
+  if (!order) {
+    order = {
+      id: crypto.randomUUID(),
+      orderNumber: `AN-ORD-${String(db.profile.orders.length + 1).padStart(4, "0")}`,
+      productId: product?.id || null,
+      product: product?.name || body.productName || "Active crop lot",
+      countryId: country.id,
+      routeId: route.id,
+      checkpoint: route.checkpoints?.[0] || db.profile.activeCheckpoint,
+      checkpointIndex: 0,
+      stage: "Shipping planned",
+      stageIndex: 0,
+      trackingNumber: `AN-TRK-${String(db.profile.orders.length + 1).padStart(4, "0")}`,
+      buyerInterest: product?.buyerInterest || 70,
+      total: product ? Number(product.price || 0) * 20 : Number(body.amount || 1200),
+      timeline: [{ label: "Shipping workflow opened", checkpoint: route.checkpoints?.[0] || db.profile.activeCheckpoint, createdAt: new Date().toISOString() }],
+      createdAt: new Date().toISOString()
+    };
+    db.profile.orders.push(order);
+  }
+  const buyerName = String(body.buyerName || db.profile.buyerContacts?.[0]?.buyerName || product?.buyerName || `${country.name} verified buyer desk`).trim();
+  const sellerName = String(body.sellerName || user.name || "Farmer seller").trim();
+  const productName = String(body.productName || order.product || product?.name || "Active crop lot").trim();
+  const pickupLocation = String(body.pickupLocation || order.checkpoint || db.profile.activeCheckpoint || `${country.name} seller collection point`).trim();
+  const deliveryLocation = String(body.deliveryLocation || route.checkpoints?.[route.checkpoints.length - 1] || `${country.name} buyer delivery point`).trim();
+  const quantity = String(body.quantity || "20 bags").trim();
+  const direction = String(body.direction || (type === "buyer-pickup" ? "buyer-to-seller pickup" : "seller-to-buyer delivery")).trim();
+  const carrier = String(body.carrier || "AgriNexus logistics partner").trim();
+  const currency = String(body.currency || (country.name === "Kenya" ? "KES" : country.name === "Nigeria" ? "NGN" : country.name === "DRC" ? "CDF" : "USD")).trim();
+  const amount = Number(body.amount || Math.max(25, Math.round(Number(order.total || 1200) * 0.12)));
+  const statusMap = {
+    "logistics-quote": "quote prepared",
+    "shipping-booking": "shipment booked",
+    "buyer-pickup": "buyer pickup scheduled",
+    "seller-delivery": "seller delivery scheduled",
+    tracking: "tracking refreshed",
+    "delivery-confirm": "delivery confirmed",
+    settlement: "settlement prepared"
+  };
+  const trackingResult = await refreshOrderLogisticsTracking(db, order, user, `logistics.${type}`);
+  const record = {
+    id: crypto.randomUUID(),
+    logisticsNumber: `AN-SHIP-${String(db.profile.tradeLogisticsRecords.length + 1).padStart(4, "0")}`,
+    type,
+    orderId: order.id,
+    orderNumber: order.orderNumber,
+    trackingNumber: order.trackingNumber,
+    productId: order.productId,
+    productName,
+    quantity,
+    buyerName,
+    sellerName,
+    direction,
+    carrier,
+    pickupLocation,
+    deliveryLocation,
+    routeId: route.id,
+    routeName: route.name,
+    checkpoint: order.checkpoint,
+    status: statusMap[type] || "logistics recorded",
+    amount,
+    currency,
+    eta: String(body.eta || trackingResult.tracking?.eta || "route conditions pending"),
+    proof: type === "delivery-confirm" ? "delivery photo/signature/receiver confirmation required" : type === "settlement" ? "payment release waits for delivery proof and buyer confirmation" : "provider-ready logistics evidence created",
+    liveTracking: trackingResult.tracking,
+    providerDelivery: trackingResult.delivery,
+    createdAt: new Date().toISOString()
+  };
+  order.stage = type === "delivery-confirm" ? "Delivered" : type === "shipping-booking" ? "Booked for pickup" : type === "buyer-pickup" ? "Buyer pickup scheduled" : type === "seller-delivery" ? "Seller delivery scheduled" : order.stage || "Shipping planned";
+  order.checkpoint = pickupLocation;
+  order.timeline.unshift({ label: record.status, checkpoint: pickupLocation, createdAt: record.createdAt });
+  db.profile.activeCheckpoint = pickupLocation;
+  db.profile.routeStage = order.stage;
+  db.profile.tradeLogisticsRecords.unshift(record);
+  db.profile.tradeLogisticsRecords = db.profile.tradeLogisticsRecords.slice(0, 40);
+  addTradeEvent(db.profile, { type: `logistics.${type}`, label: `${record.logisticsNumber} ${record.status} for ${productName}: ${sellerName} to ${buyerName}.` });
+  logIntegration(db, {
+    providerId: type === "settlement" ? "trade-payments" : "trade-logistics",
+    module: "AgriTrade",
+    action: `logistics.${type}`,
+    status: trackingResult.delivery?.ok ? "success" : "local-estimate",
+    detail: `${record.logisticsNumber} ${record.status}: ${direction}, ${pickupLocation} to ${deliveryLocation}.`,
+    metadata: { recordId: record.id, orderId: order.id, type, direction, amount, currency, tracking: trackingResult.tracking },
+    dispatch: false
+  });
+  if (type === "settlement") {
+    const tx = {
+      id: crypto.randomUUID(),
+      provider: "AgriNexus settlement",
+      amount,
+      currency,
+      type: "credit",
+      status: "settlement-prepared",
+      orderId: order.id,
+      logisticsId: record.id,
+      createdAt: record.createdAt
+    };
+    db.profile.wallet = Number(db.profile.wallet || 0) + amount;
+    db.profile.walletTransactions.unshift(tx);
+  }
+  addActivity(db.profile, `${record.logisticsNumber} ${record.status} for ${productName}.`);
+  return { record, order, trackingResult };
+}
+
 async function dispatchProviderWebhook(db, event) {
   const provider = runtimeProviderById(db, event.providerId);
   const runtime = providerRuntime(event.providerId);
@@ -4407,6 +4521,7 @@ function ensureTradeProfile(profile) {
   profile.paymentReleases = profile.paymentReleases || [];
   profile.tradeEfficiencyReviews = profile.tradeEfficiencyReviews || [];
   profile.tradeCommunicationBriefs = profile.tradeCommunicationBriefs || [];
+  profile.tradeLogisticsRecords = profile.tradeLogisticsRecords || [];
   profile.droneMissions = profile.droneMissions || [];
   profile.droneScans = profile.droneScans || [];
   profile.droneFindings = profile.droneFindings || [];
@@ -15680,6 +15795,18 @@ async function api(req, res, url) {
     await writeDb(db);
     const state = publicState(db, user);
     state.logisticsTrackingResult = trackingResult;
+    return send(res, 200, state);
+  }
+
+  if (url.pathname === "/api/trade/logistics" && req.method === "POST") {
+    if (!canUse(user, "trade")) return send(res, 403, { error: "Role does not allow trade logistics workflows" });
+    const body = await readBody(req);
+    const result = await createTradeLogisticsWorkflow(db, user, body);
+    addWorkflowNote(db.profile, body.note, "Buyer-seller logistics note");
+    await writeDb(db);
+    const state = publicState(db, user);
+    state.tradeLogisticsResult = result;
+    state.logisticsTrackingResult = result.trackingResult;
     return send(res, 200, state);
   }
 
