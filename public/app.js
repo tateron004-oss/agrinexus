@@ -56,8 +56,8 @@ let routeTrackingWatchId = null;
 let routeTrackingPoints = [];
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-177";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v157";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-178";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v158";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
 const VOICE_ATTENTION_DELAY_MS = 900;
@@ -9031,12 +9031,13 @@ function render() {
     ? supplyEvidence.slice(0, 12).map(item => `<div><strong>${translateText(item.title)}</strong><span>${translateText(item.detail)}</span></div>`).join("")
     : "<div>No mobile clinic supply evidence yet. Request supplies, find a source, track delivery, or confirm delivery.</div>";
   const revenueEvidence = mobileClinicRevenueRecords.map(item => ({
+    id: item.id,
     title: item.revenueNumber,
     detail: `${item.providerName} - ${item.status} - ${item.amount ? `${item.currency} ${item.amount}` : "service menu"} - ${item.service}`
   }));
   if ($("#mobileClinicRevenueList")) {
     $("#mobileClinicRevenueList").innerHTML = revenueEvidence.length
-      ? revenueEvidence.slice(0, 12).map(item => `<div><strong>${translateText(item.title)}</strong><span>${translateText(item.detail)}</span></div>`).join("")
+      ? revenueEvidence.slice(0, 12).map(item => `<div><strong>${translateText(item.title)}</strong><span>${translateText(item.detail)}</span>${receiptButton("mobile-clinic", item.id)}</div>`).join("")
       : "<div>No mobile clinic revenue evidence yet. Publish services, request payment, issue a receipt, or prepare payout.</div>";
   }
 
@@ -9133,7 +9134,7 @@ function render() {
   ].join("");
 
   $("#walletLedger").innerHTML = data.profile.walletTransactions.length
-    ? data.profile.walletTransactions.map(tx => `<div><strong>${tx.provider}</strong><span>${tx.type || "credit"} ${money(tx.amount)} - ${tx.status || "posted"}</span>${tx.platformFeeAmount ? `<small>${translateText(`Gross ${money(tx.grossAmount || tx.amount)} - AgriNexus fee ${money(tx.platformFeeAmount)} - seller net ${money(tx.amount)}`)}</small>` : ""}</div>`).join("")
+    ? data.profile.walletTransactions.map(tx => `<div><strong>${tx.provider}</strong><span>${tx.type || "credit"} ${money(tx.amount)} - ${tx.status || "posted"}</span>${tx.platformFeeAmount ? `<small>${translateText(`Gross ${money(tx.grossAmount || tx.amount)} - AgriNexus fee ${money(tx.platformFeeAmount)} - seller net ${money(tx.amount)}`)}</small>` : ""}${receiptButton("wallet", tx.id)}</div>`).join("")
     : "<div>No wallet transactions yet.</div>";
 
   if ($("#platformFeePanel")) {
@@ -9148,7 +9149,7 @@ function render() {
   if ($("#platformFeeLedger")) {
     const fees = data.profile.platformTransactionFees || [];
     $("#platformFeeLedger").innerHTML = fees.length
-      ? fees.slice(0, 12).map(fee => `<div><strong>${translateText(fee.feeNumber)}</strong><span>${translateText(`${fee.productName} - ${fee.buyerName} / ${fee.sellerName}`)}</span><small>${translateText(`Gross ${fee.currency} ${fee.grossAmount} - AgriNexus fee ${fee.currency} ${fee.feeAmount} - seller net ${fee.currency} ${fee.sellerNetAmount}`)}</small></div>`).join("")
+      ? fees.slice(0, 12).map(fee => `<div><strong>${translateText(fee.feeNumber)}</strong><span>${translateText(`${fee.productName} - ${fee.buyerName} / ${fee.sellerName}`)}</span><small>${translateText(`Gross ${fee.currency} ${fee.grossAmount} - AgriNexus fee ${fee.currency} ${fee.feeAmount} - seller net ${fee.currency} ${fee.sellerNetAmount}`)}</small>${receiptButton("platform-fee", fee.id)}</div>`).join("")
       : "<div>No platform transaction fees yet. Prepare settlement after delivery to capture AgriNexus revenue.</div>";
   }
 
@@ -9237,7 +9238,7 @@ function render() {
     ...(data.profile.coldChainChecks || []).map(item => ({ title: item.checkNumber, detail: `${item.productName} - ${item.temperatureC} C - ${item.status}` })),
     ...(data.profile.exportReadiness || []).map(item => ({ title: item.exportNumber, detail: `${item.productName} - ${item.status}` })),
     ...(data.profile.contractPackets || []).map(item => ({ title: item.contractNumber, detail: `${item.productName} - ${item.status}` })),
-    ...(data.profile.paymentReleases || []).map(item => ({ title: item.releaseNumber, detail: `${money(item.amount || 0)} - ${item.status}` }))
+    ...(data.profile.paymentReleases || []).map(item => ({ title: item.releaseNumber, detail: `${money(item.amount || 0)} - ${item.status}`, receiptType: "payment-release", receiptId: item.id }))
   ];
   $("#tradeAdvancedPanel").innerHTML = [
     row("Quotes", (data.profile.tradeQuotes || []).length),
@@ -9248,7 +9249,7 @@ function render() {
     row("Payment releases", (data.profile.paymentReleases || []).length)
   ].join("");
   $("#tradeAdvancedList").innerHTML = tradeOps.length
-    ? tradeOps.slice(0, 10).map(item => `<div><strong>${item.title}</strong><span>${item.detail}</span></div>`).join("")
+    ? tradeOps.slice(0, 10).map(item => `<div><strong>${item.title}</strong><span>${item.detail}</span>${item.receiptType ? receiptButton(item.receiptType, item.receiptId) : ""}</div>`).join("")
     : "<div>No advanced trade operations have been run yet.</div>";
   const droneMissions = data.profile.droneMissions || [];
   const droneScans = data.profile.droneScans || [];
@@ -12625,6 +12626,13 @@ function bindDynamic() {
     event.stopPropagation();
     runWorkflowAction(element.dataset.workflow, element.dataset.action, element);
   });
+  $$("[data-download-receipt]").forEach(button => {
+    button.onclick = event => {
+      event.preventDefault();
+      event.stopPropagation();
+      downloadTransactionReceipt(button.dataset.downloadReceipt, button.dataset.receiptId);
+    };
+  });
   $$(".dashboard-jump").forEach(button => button.onclick = event => {
     event.stopPropagation();
     goSection(button.dataset.jump);
@@ -12689,6 +12697,149 @@ async function exportEvidencePacket() {
   } catch (error) {
     toast(error.message);
   }
+}
+
+function transactionReceiptCatalog() {
+  const profile = data?.profile || {};
+  return [
+    ...(profile.walletTransactions || []).map(item => ({
+      type: "wallet",
+      id: item.id,
+      receiptNumber: item.receiptNumber || `AN-WALLET-${String(item.id || "").slice(0, 8)}`,
+      module: "AgriTrade",
+      title: item.provider || "Wallet transaction",
+      status: item.status || "posted",
+      amount: item.amount,
+      grossAmount: item.grossAmount,
+      platformFeeAmount: item.platformFeeAmount,
+      sellerNetAmount: item.amount,
+      currency: item.currency || "USD",
+      createdAt: item.createdAt,
+      lines: [
+        ["Transaction type", item.type || "credit"],
+        ["Order", item.orderId || "Not linked"],
+        ["Logistics", item.logisticsId || "Not linked"]
+      ]
+    })),
+    ...(profile.platformTransactionFees || []).map(item => ({
+      type: "platform-fee",
+      id: item.id,
+      receiptNumber: item.feeNumber || `AN-FEE-${String(item.id || "").slice(0, 8)}`,
+      module: "AgriTrade",
+      title: "AgriNexus transaction fee",
+      status: item.status || "captured",
+      amount: item.feeAmount,
+      grossAmount: item.grossAmount,
+      platformFeeAmount: item.feeAmount,
+      sellerNetAmount: item.sellerNetAmount,
+      currency: item.currency || "USD",
+      createdAt: item.createdAt,
+      lines: [
+        ["Product", item.productName || "Crop transaction"],
+        ["Buyer", item.buyerName || "Buyer"],
+        ["Seller", item.sellerName || "Seller"],
+        ["Fee rate", `${item.feePercent || 0}%`],
+        ["Order", item.orderNumber || item.orderId || "Not linked"]
+      ]
+    })),
+    ...(profile.mobileClinicRevenueRecords || []).map(item => ({
+      type: "mobile-clinic",
+      id: item.id,
+      receiptNumber: item.receiptNumber || item.revenueNumber || `MCR-${String(item.id || "").slice(0, 8)}`,
+      module: "Healthcare",
+      title: item.service || "Mobile clinic transaction",
+      status: item.status || "recorded",
+      amount: item.amount,
+      currency: item.currency || "USD",
+      createdAt: item.createdAt,
+      lines: [
+        ["Provider", item.providerName || "Mobile clinic provider"],
+        ["Patient or sponsor", item.patientName || "Patient"],
+        ["Payment method", item.paymentMethod || "Not specified"],
+        ["Clinical boundary", item.clinicalBoundary || "AgriNexus records payment evidence only."]
+      ]
+    })),
+    ...(profile.paymentReleases || []).map(item => ({
+      type: "payment-release",
+      id: item.id,
+      receiptNumber: item.releaseNumber || `AN-REL-${String(item.id || "").slice(0, 8)}`,
+      module: "AgriTrade",
+      title: "Payment release",
+      status: item.status || "released",
+      amount: item.amount,
+      currency: item.currency || "USD",
+      createdAt: item.createdAt,
+      lines: [
+        ["Product", item.productName || "Trade product"],
+        ["Buyer", item.buyerName || "Buyer"],
+        ["Seller", item.sellerName || "Seller"]
+      ]
+    }))
+  ].filter(item => item.id || item.receiptNumber);
+}
+
+function receiptRecordByKey(type, id) {
+  return transactionReceiptCatalog().find(item => item.type === type && String(item.id || item.receiptNumber) === String(id));
+}
+
+function transactionReceiptText(record) {
+  const issuedAt = new Date().toISOString();
+  const lines = [
+    "AGRINEXUS TRANSACTION RECEIPT",
+    "================================",
+    `Receipt: ${record.receiptNumber}`,
+    `Module: ${record.module}`,
+    `Transaction: ${record.title}`,
+    `Status: ${record.status}`,
+    `Issued: ${issuedAt}`,
+    `Recorded: ${record.createdAt || "Not recorded"}`,
+    "",
+    "AMOUNTS",
+    "-------",
+    `Currency: ${record.currency || "USD"}`,
+    `Amount: ${record.currency || "USD"} ${record.amount ?? 0}`
+  ];
+  if (record.grossAmount !== undefined) lines.push(`Gross amount: ${record.currency || "USD"} ${record.grossAmount}`);
+  if (record.platformFeeAmount !== undefined) lines.push(`AgriNexus fee: ${record.currency || "USD"} ${record.platformFeeAmount}`);
+  if (record.sellerNetAmount !== undefined) lines.push(`Seller net payout: ${record.currency || "USD"} ${record.sellerNetAmount}`);
+  lines.push("", "DETAILS", "-------");
+  (record.lines || []).forEach(([label, value]) => lines.push(`${label}: ${value || "Not specified"}`));
+  lines.push(
+    "",
+    "NOTICE",
+    "------",
+    "This receipt is generated from AgriNexus workflow records. Live payment settlement depends on the connected payment provider, bank, mobile money, or marketplace processor.",
+    "",
+    `Generated by AgriNexus ${AGRINEXUS_BUILD_VERSION}`
+  );
+  return lines.join("\n");
+}
+
+function downloadTextFile(filename, content) {
+  const blob = new Blob([content], { type: "text/plain;charset=utf-8" });
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(blob);
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(link.href), 1000);
+}
+
+function downloadTransactionReceipt(type, id) {
+  const record = receiptRecordByKey(type, id);
+  if (!record) {
+    toast("Receipt record not found");
+    return;
+  }
+  const filename = `${record.receiptNumber || "agrinexus-receipt"}.txt`.replace(/[^a-z0-9._-]/gi, "-");
+  downloadTextFile(filename, transactionReceiptText(record));
+  toast("Receipt downloaded");
+}
+
+function receiptButton(type, id) {
+  if (!id) return "";
+  return `<button type="button" data-download-receipt="${escapeHtml(type)}" data-receipt-id="${escapeHtml(String(id))}">${translateText("Download receipt")}</button>`;
 }
 
 async function runAdminHealthCheckDirect() {
