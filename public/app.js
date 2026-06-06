@@ -13600,6 +13600,13 @@ function isNexusGreetingOnly(command) {
   ].includes(normalized);
 }
 
+function isNexusGreetingPrefix(command) {
+  const normalized = normalizedWakeText(command);
+  if (!normalized) return false;
+  return /^(hello|hi|good morning|good afternoon|good evening)\s+(nexus|agrinexus|agri nexus|agri)\b/.test(normalized)
+    || /^(bonjour|salut|habari|hujambo)\s+(nexus|agrinexus|agri nexus|agri)\b/.test(normalized);
+}
+
 function nexusWakeGreeting(kind = "wake") {
   const name = userFirstName();
   return kind === "hello"
@@ -13765,7 +13772,15 @@ function setCommandInputs(command) {
   if ($("#workflowVoiceInput")) $("#workflowVoiceInput").value = value;
 }
 
+function closeTopSettingsMenu() {
+  const panel = $("#topActions");
+  if (!panel) return;
+  panel.classList.remove("open");
+  $("#topSettingsToggle")?.setAttribute("aria-expanded", "false");
+}
+
 function openAskNexus() {
+  closeTopSettingsMenu();
   const globalInput = $("#globalCommandInput");
   const globalBar = $("#globalAssistantBar");
   const panel = $("#jarvisPanel");
@@ -13869,8 +13884,17 @@ async function handleVoiceCommand(rawCommand, options = {}) {
   if (!data) return setVoiceResponse("Sign in first, then I can operate the platform.");
   const localizedCommand = normalizeLocalizedVoiceCommand(rawCommand);
   const greetingOnly = isNexusGreetingOnly(localizedCommand);
+  const greetingPrefix = isNexusGreetingPrefix(localizedCommand);
   const wakeOnly = isWakePhraseOnly(localizedCommand);
   let command = cleanWakeCommand(localizedCommand);
+  if (greetingOnly || (greetingPrefix && !/\b(open|start|show|apply|sell|buy|contact|call|message|run|create|track|find|change|switch|translate)\b/i.test(command))) {
+    openAskNexus();
+    enableHeyAgriNexusMode();
+    nexusAwaitingCommand = true;
+    recordNexusAutonomousLearning({ type: "greeting", command: normalizedWakeText(localizedCommand) });
+    setVoiceResponse(nexusWakeGreeting("hello"), true);
+    return;
+  }
   const understanding = adaptiveCommandUnderstanding(command);
   const stopRedirect = postStopRedirectCommand(command);
   if (understanding.rewrittenCommand && !isUniversalLanguageCommand(command) && !isGlobalStopCommand(understanding.rewrittenCommand.toLowerCase())) {
@@ -15729,13 +15753,6 @@ function bindStatic() {
     goSection(sectionFromHash(), { updateHash: false, instant: true });
   });
 
-  const closeTopSettings = () => {
-    const panel = $("#topActions");
-    if (!panel) return;
-    panel.classList.remove("open");
-    $("#topSettingsToggle")?.setAttribute("aria-expanded", "false");
-  };
-
   $("#topSettingsToggle").onclick = () => {
     const panel = $("#topActions");
     const open = !panel.classList.contains("open");
@@ -15745,7 +15762,7 @@ function bindStatic() {
   };
   const topSettingsClose = $("#topSettingsClose");
   if (topSettingsClose) topSettingsClose.onclick = () => {
-    closeTopSettings();
+    closeTopSettingsMenu();
     announce("Settings closed");
   };
 
@@ -15817,7 +15834,7 @@ function bindStatic() {
   });
   $("#workspaceAskBtn").onclick = openAskNexus;
   $("#accessibilityToggle").onclick = () => {
-    closeTopSettings();
+    closeTopSettingsMenu();
     if (experienceMode === "user") {
       $("#accessibilityPanel")?.classList.add("hidden");
       $("#accessibilityToggle").setAttribute("aria-expanded", "true");
@@ -15834,12 +15851,12 @@ function bindStatic() {
   };
   const topCaptionsBtn = $("#topCaptionsBtn");
   if (topCaptionsBtn) topCaptionsBtn.onclick = () => {
-    closeTopSettings();
+    closeTopSettingsMenu();
     openCaptionBox("Nexus captions are open. Speak or type your request.");
   };
   const topHomeBtn = $("#topHomeBtn");
   if (topHomeBtn) topHomeBtn.onclick = () => {
-    closeTopSettings();
+    closeTopSettingsMenu();
     closeAskNexus({ silent: true });
     closeUserCaptionPanel();
     goSection("dashboard", { instant: true });

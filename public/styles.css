@@ -833,7 +833,7 @@ body.user-mode .app {
 body.user-mode .topbar {
   position: sticky;
   top: 0;
-  z-index: 120;
+  z-index: 80;
   padding: 10px 12px;
   border-bottom: 1px solid #dce9ed;
   background: rgba(255, 255, 255, .96);
@@ -863,7 +863,7 @@ body.user-mode .top-actions {
   top: 58px;
   left: 10px;
   right: 10px;
-  z-index: 130;
+  z-index: 90;
   display: none;
   grid-template-columns: 1fr;
   padding: 10px;
@@ -5205,13 +5205,22 @@ body.user-mode .global-assistant:not(.hidden) * {
 body.user-mode .global-assistant:not(.hidden) .global-assistant-head {
   position: sticky !important;
   top: 0 !important;
-  z-index: 2 !important;
+  z-index: 2501 !important;
   display: grid !important;
   grid-template-columns: minmax(0, 1fr) auto !important;
   gap: 10px !important;
   align-items: start !important;
   padding-bottom: 8px !important;
   background: #ffffff !important;
+}
+
+.global-assistant:not(.hidden) .assistant-close,
+body.user-mode .global-assistant:not(.hidden) .assistant-close,
+.jarvis-panel:not(.hidden) .jarvis-close,
+body.user-mode .grandma-workflow:not(.hidden) .modal-close {
+  position: relative !important;
+  z-index: 2502 !important;
+  pointer-events: auto !important;
 }
 
 .global-assistant:not(.hidden) .global-assistant-head > div,
