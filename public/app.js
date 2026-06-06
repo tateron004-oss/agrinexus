@@ -3005,7 +3005,7 @@ function applySpeechSafetyToDecision(decision, command = "", source = "voice") {
 
 function normalizeImperfectSpeech(command = "") {
   const original = String(command || "").replace(/\s+/g, " ").trim();
-  const lower = normalizeToolText(original);
+  const lower = normalizeMultilingualBehaviorCommand(normalizeToolText(original));
   const replacements = [
     [/\bagri\s*trade\b/g, "agritrade"],
     [/\bagri\s*nexus\b/g, "agrinexus"],
@@ -3031,6 +3031,121 @@ function normalizeImperfectSpeech(command = "") {
     rewritten = rewritten.replace(pattern, value);
   });
   return rewritten.replace(/\s+/g, " ").trim() || original;
+}
+
+function behaviorTextVariants(command = "") {
+  const raw = String(command || "").replace(/\s+/g, " ").trim();
+  const latin = raw.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  const compact = latin.replace(/[^\p{L}\p{N}\s]/gu, " ").replace(/\s+/g, " ").trim();
+  return { raw, latin, compact };
+}
+
+function normalizeMultilingualBehaviorCommand(command = "") {
+  const { raw, compact } = behaviorTextVariants(command);
+  if (!raw) return raw;
+  const patterns = [
+    {
+      command: "change language to english",
+      match: [
+        /\b(cambia|cambiar|cambie|pon|poner|usa|usar|habla|hablar|responde|responder).*\b(ingles|english)\b/,
+        /\b(change|switch|set|use|speak|respond).*\b(english|ingles|anglais|kiingereza)\b/,
+        /\b(change|switch|set|use|speak|respond).*\b(nigeria|nigerian)\b/
+      ]
+    },
+    {
+      command: "change language to spanish",
+      match: [
+        /\b(cambia|cambiar|cambie|pon|poner|usa|usar|habla|hablar|responde|responder).*\b(espanol|spanish)\b/,
+        /\b(change|switch|set|use|speak|respond).*\b(spanish|espanol|kihispania)\b/
+      ]
+    },
+    {
+      command: "change language to french",
+      match: [
+        /\b(change|switch|set|use|speak|respond|cambiar|hablar).*\b(french|francais|frances|kifaransa|drc|congo)\b/,
+        /\b(change|switch|set|use|speak|respond).*\b(french|francais|frances)\b/
+      ]
+    },
+    {
+      command: "change language to kiswahili",
+      match: [
+        /\b(change|switch|set|use|speak|respond|cambiar|hablar).*\b(kiswahili|swahili|suajili|kenya|kenyan)\b/,
+        /\b(badilisha|tumia|ongea|zungumza|jibu).*\b(kiswahili|swahili)\b/
+      ]
+    },
+    {
+      command: "change language to arabic",
+      match: [
+        /\b(change|switch|set|use|speak|respond|cambiar|hablar).*\b(arabic|arabe|kiarabu|egypt|egyptian)\b/,
+        /(?:\u063a\u064a\u0631|\u0628\u062f\u0644|\u062a\u0643\u0644\u0645|\u0627\u0633\u062a\u062e\u062f\u0645).*(?:\u0639\u0631\u0628\u064a|\u0627\u0644\u0639\u0631\u0628\u064a\u0629|\u0645\u0635\u0631)/
+      ]
+    },
+    {
+      command: "open telehealth and start intake",
+      match: [
+        /\b(abre|abrir|necesito|quiero|ayuda).*\b(salud|doctor|medico|clinica|telemedicina|enfermera|dolor|enfermo)\b/,
+        /\b(ouvre|ouvrir|besoin|aide).*\b(sante|medecin|docteur|clinique|telemedecine|hopital|douleur|malade)\b/,
+        /\b(fungua|hitaji|nahitaji|nisaidie).*\b(afya|daktari|kliniki|hospitali|mgonjwa|maumivu)\b/,
+        /(?:\u0635\u062d\u0629|\u0637\u0628\u064a\u0628|\u0639\u064a\u0627\u062f\u0629|\u0645\u0631\u064a\u0636|\u0623\u0644\u0645|\u0645\u0633\u062a\u0634\u0641\u0649)/
+      ]
+    },
+    {
+      command: "show me jobs",
+      match: [
+        /\b(abre|buscar|busca|quiero|necesito|aplicar|solicitar).*\b(trabajo|empleo|puesto|rol)\b/,
+        /\b(ouvre|chercher|cherche|besoin|postuler).*\b(travail|emploi|poste|role)\b/,
+        /\b(fungua|tafuta|nahitaji|omba).*\b(kazi|ajira)\b/,
+        /(?:\u0639\u0645\u0644|\u0648\u0638\u064a\u0641\u0629|\u062a\u0642\u062f\u0645)/
+      ]
+    },
+    {
+      command: "start a course",
+      match: [
+        /\b(abre|abrir|empezar|iniciar|quiero|necesito).*\b(aprendizaje|curso|leccion|clase|capacitacion|certificado)\b/,
+        /\b(ouvre|commencer|demarrer|besoin).*\b(apprentissage|cours|lecon|formation|certificat)\b/,
+        /\b(fungua|anza|nahitaji|nataka).*\b(mafunzo|kozi|somo|cheti)\b/,
+        /(?:\u062a\u0639\u0644\u0645|\u062f\u0631\u0633|\u062f\u0648\u0631\u0629|\u0634\u0647\u0627\u062f\u0629)/
+      ]
+    },
+    {
+      command: "sell my crop",
+      match: [
+        /\b(vender|vendo|vende|quiero vender|comprador|mercado).*\b(cosecha|cultivo|maiz|arroz|yuca|producto)\b/,
+        /\b(vendre|acheteur|marche|marchand).*\b(recolte|culture|mais|riz|manioc|produit)\b/,
+        /\b(uza|kuuza|mnunuzi|soko).*\b(mazao|mahindi|mchele|muhogo|bidhaa)\b/,
+        /(?:\u0628\u064a\u0639|\u0645\u062d\u0635\u0648\u0644|\u0645\u0634\u062a\u0631\u064a|\u0633\u0648\u0642)/
+      ]
+    },
+    {
+      command: "buy a crop",
+      match: [
+        /\b(comprar|quiero comprar|busco).*\b(cosecha|cultivo|maiz|arroz|yuca|producto)\b/,
+        /\b(acheter|je veux acheter|cherche).*\b(recolte|culture|mais|riz|manioc|produit)\b/,
+        /\b(nunua|kununua|natafuta).*\b(mazao|mahindi|mchele|muhogo|bidhaa)\b/,
+        /(?:\u0627\u0634\u062a\u0631\u064a|\u0634\u0631\u0627\u0621|\u0645\u062d\u0635\u0648\u0644)/
+      ]
+    },
+    {
+      command: "open map and check route risk",
+      match: [
+        /\b(abre|abrir|mostrar|rastrea|seguir|ubicar).*\b(mapa|ruta|envio|entrega|ubicacion|camino)\b/,
+        /\b(ouvre|ouvrir|montre|suivre|localiser).*\b(carte|itineraire|livraison|position|route)\b/,
+        /\b(fungua|onyesha|fuatilia|tafuta).*\b(ramani|njia|usafirishaji|mahali)\b/,
+        /(?:\u062e\u0631\u064a\u0637\u0629|\u0645\u0633\u0627\u0631|\u0645\u0648\u0642\u0639|\u062a\u0648\u0635\u064a\u0644)/
+      ]
+    },
+    {
+      command: "run drone scan on my farm",
+      match: [
+        /\b(drone|dron|escanea|revisar).*\b(finca|campo|granja|cultivo)\b/,
+        /\b(drone|scanner|analyser).*\b(champ|ferme|culture)\b/,
+        /\b(drone|kagua|chunguza).*\b(shamba|mazao)\b/,
+        /(?:\u0637\u0627\u0626\u0631\u0629 \u0628\u062f\u0648\u0646 \u0637\u064a\u0627\u0631|\u062f\u0631\u0648\u0646|\u0645\u0632\u0631\u0639\u0629|\u062d\u0642\u0644)/
+      ]
+    }
+  ];
+  const hit = patterns.find(item => item.match.some(pattern => pattern.test(compact) || pattern.test(raw)));
+  return hit ? hit.command : compact || raw;
 }
 
 function adaptiveCommandUnderstanding(command = "") {
@@ -3289,6 +3404,13 @@ function nexusAdaptiveUnderstandingSummary() {
 
 function languageFromVoiceCommand(command) {
   const lower = String(command || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  if (/[\u0627-\u064a]/.test(command)) {
+    if (/\u0627\u0646\u062c\u0644\u064a\u0632\u064a|\u0627\u0646\u0643\u0644\u064a\u0632\u064a|\u0627\u0644\u0627\u0646\u062c\u0644\u064a\u0632\u064a\u0629/.test(command)) return "en";
+    if (/\u0641\u0631\u0646\u0633\u064a|\u0627\u0644\u0641\u0631\u0646\u0633\u064a\u0629/.test(command)) return "fr";
+    if (/\u0633\u0648\u0627\u062d\u064a\u0644\u064a|\u0643\u0633\u0648\u0627\u062d\u064a\u0644\u064a/.test(command)) return "sw";
+    if (/\u0639\u0631\u0628\u064a|\u0627\u0644\u0639\u0631\u0628\u064a\u0629|\u0645\u0635\u0631/.test(command)) return "ar";
+    if (/\u0627\u0633\u0628\u0627\u0646\u064a|\u0627\u0644\u0627\u0633\u0628\u0627\u0646\u064a\u0629/.test(command)) return "es";
+  }
   const languages = {
     english: "en",
     anglais: "en",
@@ -3325,7 +3447,8 @@ function languageFromVoiceCommand(command) {
 function isUniversalLanguageCommand(command) {
   const lower = String(command || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
   return /\b(change|switch|set|translate|language|speak|talk|respond|reply|use|cambiar|idioma|langue|lugha|lingua|hablar|parler|ongea|zungumza|responder)\b/.test(lower)
-    && Boolean(languageFromVoiceCommand(lower));
+    && Boolean(languageFromVoiceCommand(command))
+    || (/[\u0627-\u064a]/.test(command) && /(\u063a\u064a\u0631|\u0628\u062f\u0644|\u062a\u0643\u0644\u0645|\u0627\u0633\u062a\u062e\u062f\u0645|\u0627\u0644\u0644\u063a\u0629)/.test(command) && Boolean(languageFromVoiceCommand(command)));
 }
 
 function migrantFriendlyVoiceIntent(command = "") {
@@ -13573,6 +13696,8 @@ function refreshMicSupport() {
 function normalizedWakeText(command) {
   return String(command || "")
     .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
     .replace(/[.,!?;:"'()[\]{}]/g, " ")
     .replace(/\s+/g, " ")
     .trim();
@@ -13581,8 +13706,10 @@ function normalizedWakeText(command) {
 function isWakePhraseOnly(command) {
   const normalized = normalizedWakeText(command);
   if (!normalized) return false;
+  if (/^(?:\u0645\u0631\u062d\u0628\u0627|\u064a\u0627)?\s*(?:\u0646\u0643\u0633\u0633|\u0627\u063a\u0631\u064a\u0646\u064a\u0643\u0633\u0633)$/.test(normalized)) return true;
   const wakePhrases = [
     "hey agrinexus", "agri nexus", "agrinexus", "hey nexus", "nexus", "hey agri", "agri",
+    "hola agrinexus", "hola nexus", "buenos dias nexus", "buenas tardes nexus", "buenas noches nexus",
     "bonjour agrinexus", "salut agrinexus", "bonjour nexus",
     "habari agrinexus", "hujambo agrinexus", "habari nexus",
     "مرحبا اغرينكسوس", "يا اغرينكسوس", "اغرينكسوس", "نيكسس"
@@ -13596,31 +13723,90 @@ function isNexusGreetingOnly(command) {
   return [
     "hello nexus", "hi nexus", "hello agrinexus", "hi agrinexus",
     "good morning nexus", "good afternoon nexus", "good evening nexus",
+    "hola nexus", "hola agrinexus", "buenos dias nexus", "buenas tardes nexus", "buenas noches nexus",
     "bonjour nexus", "salut nexus", "bonjour agrinexus", "habari nexus", "hujambo nexus"
-  ].includes(normalized);
+  ].includes(normalized)
+    || /^(?:\u0645\u0631\u062d\u0628\u0627|\u0627\u0647\u0644\u0627|\u0635\u0628\u0627\u062d \u0627\u0644\u062e\u064a\u0631|\u0645\u0633\u0627\u0621 \u0627\u0644\u062e\u064a\u0631)\s+(?:\u0646\u0643\u0633\u0633|\u0627\u063a\u0631\u064a\u0646\u064a\u0643\u0633\u0633|nexus|agrinexus)$/.test(normalized);
 }
 
 function isNexusGreetingPrefix(command) {
   const normalized = normalizedWakeText(command);
   if (!normalized) return false;
   return /^(hello|hi|good morning|good afternoon|good evening)\s+(nexus|agrinexus|agri nexus|agri)\b/.test(normalized)
-    || /^(bonjour|salut|habari|hujambo)\s+(nexus|agrinexus|agri nexus|agri)\b/.test(normalized);
+    || /^(hola|buenos dias|buenas tardes|buenas noches|bonjour|salut|habari|hujambo)\s+(nexus|agrinexus|agri nexus|agri)\b/.test(normalized)
+    || /^(?:\u0645\u0631\u062d\u0628\u0627|\u0627\u0647\u0644\u0627|\u0635\u0628\u0627\u062d \u0627\u0644\u062e\u064a\u0631|\u0645\u0633\u0627\u0621 \u0627\u0644\u062e\u064a\u0631)\s+(?:\u0646\u0643\u0633\u0633|\u0627\u063a\u0631\u064a\u0646\u064a\u0643\u0633\u0633|nexus|agrinexus)\b/.test(normalized);
+}
+
+function nexusLocalizedBehaviorCopy(key, values = {}) {
+  const name = values.name || userFirstName();
+  const language = languageCode();
+  const copy = {
+    en: {
+      hello: `Hello ${name}. How can I assist you?`,
+      wake: `Yes ${name}. How can I assist you?`,
+      heard: `I heard: ${values.command || ""}. Should I do that now?`,
+      confirmed: `Confirmed. I am doing this now: ${values.command || ""}.`,
+      canceled: "Canceled. Tell me what you want Nexus to do instead.",
+      ready: "I am listening. Tell me what you need."
+    },
+    es: {
+      hello: `Hola ${name}. Como puedo ayudarte?`,
+      wake: `Si ${name}. Como puedo ayudarte?`,
+      heard: `Escuche: ${values.command || ""}. Quieres que lo haga ahora?`,
+      confirmed: `Confirmado. Lo hare ahora: ${values.command || ""}.`,
+      canceled: "Cancelado. Dime que quieres que haga Nexus.",
+      ready: "Estoy escuchando. Dime que necesitas."
+    },
+    fr: {
+      hello: `Bonjour ${name}. Comment puis-je vous aider?`,
+      wake: `Oui ${name}. Comment puis-je vous aider?`,
+      heard: `J'ai entendu: ${values.command || ""}. Voulez-vous que je le fasse maintenant?`,
+      confirmed: `Confirme. Je le fais maintenant: ${values.command || ""}.`,
+      canceled: "Annule. Dites-moi ce que Nexus doit faire.",
+      ready: "J'ecoute. Dites-moi ce dont vous avez besoin."
+    },
+    sw: {
+      hello: `Habari ${name}. Ninawezaje kukusaidia?`,
+      wake: `Ndiyo ${name}. Ninawezaje kukusaidia?`,
+      heard: `Nimesikia: ${values.command || ""}. Nifanye sasa?`,
+      confirmed: `Imethibitishwa. Ninafanya sasa: ${values.command || ""}.`,
+      canceled: "Imeghairiwa. Niambie Nexus ifanye nini.",
+      ready: "Ninasikiliza. Niambie unahitaji nini."
+    },
+    ar: {
+      hello: `\u0645\u0631\u062d\u0628\u0627 ${name}. \u0643\u064a\u0641 \u0627\u0633\u0627\u0639\u062f\u0643\u061f`,
+      wake: `\u0646\u0639\u0645 ${name}. \u0643\u064a\u0641 \u0627\u0633\u0627\u0639\u062f\u0643\u061f`,
+      heard: `\u0633\u0645\u0639\u062a: ${values.command || ""}. \u0647\u0644 \u0627\u0646\u0641\u0630 \u0630\u0644\u0643 \u0627\u0644\u0622\u0646\u061f`,
+      confirmed: `\u062a\u0645 \u0627\u0644\u062a\u0627\u0643\u064a\u062f. \u0633\u0627\u0646\u0641\u0630 \u0627\u0644\u0622\u0646: ${values.command || ""}.`,
+      canceled: "\u062a\u0645 \u0627\u0644\u0627\u0644\u063a\u0627\u0621. \u0627\u062e\u0628\u0631\u0646\u064a \u0645\u0627\u0630\u0627 \u062a\u0631\u064a\u062f \u0645\u0646 \u0646\u0643\u0633\u0633.",
+      ready: "\u0627\u0646\u0627 \u0627\u0633\u062a\u0645\u0639. \u0627\u062e\u0628\u0631\u0646\u064a \u0645\u0627\u0630\u0627 \u062a\u062d\u062a\u0627\u062c."
+    }
+  };
+  return copy[language]?.[key] || copy.en[key] || "";
 }
 
 function nexusWakeGreeting(kind = "wake") {
-  const name = userFirstName();
-  return kind === "hello"
-    ? `Hello ${name}. How can I assist you?`
-    : `Yes ${name}. How can I assist you?`;
+  return nexusLocalizedBehaviorCopy(kind === "hello" ? "hello" : "wake");
 }
 
 function cleanWakeCommand(command) {
   return String(command || "")
     .replace(/^\s*(hey\s+)?(nexus|agrinexus|agri\s+nexus|agri)\s*[,:\-]?\s*/i, "")
     .replace(/^\s*(hello|hi|good\s+morning|good\s+afternoon|good\s+evening)\s+(nexus|agrinexus|agri\s+nexus|agri)\s*[,:\-]?\s*/i, "")
+    .replace(/^\s*(hola|buenos\s+dias|buenas\s+tardes|buenas\s+noches|bonjour|salut|habari|hujambo)\s+(nexus|agrinexus|agri\s+nexus|agri)\s*[,:\-]?\s*/i, "")
+    .replace(/^\s*(\u0645\u0631\u062d\u0628\u0627|\u0627\u0647\u0644\u0627|\u0635\u0628\u0627\u062d\s+\u0627\u0644\u062e\u064a\u0631|\u0645\u0633\u0627\u0621\s+\u0627\u0644\u062e\u064a\u0631)?\s*(\u0646\u0643\u0633\u0633|\u0627\u063a\u0631\u064a\u0646\u064a\u0643\u0633\u0633)\s*[,:\-]?\s*/i, "")
     .replace(/^\s*(bonjour|salut|habari|hujambo)\s+(nexus|agrinexus|agri\s+nexus|agri)\s*[,:\-]?\s*/i, "")
     .replace(/^\s*(مرحبا|يا)?\s*(اغرينكسوس|نيكسس)\s*[,:\-]?\s*/i, "")
     .trim();
+}
+
+function hasBehaviorActionVerb(command = "") {
+  const normalized = normalizeMultilingualBehaviorCommand(command);
+  return /\b(open|start|show|apply|sell|buy|contact|call|message|run|create|track|find|change|switch|translate|help|guide|explain)\b/i.test(normalized)
+    || /\b(abre|abrir|empezar|iniciar|mostrar|buscar|aplicar|vender|comprar|contactar|llamar|mensaje|rastrear|cambiar|traducir|ayuda)\b/i.test(command)
+    || /\b(ouvre|ouvrir|commencer|montrer|chercher|postuler|vendre|acheter|contacter|appeler|message|suivre|changer|traduire|aide)\b/i.test(command)
+    || /\b(fungua|anza|onyesha|tafuta|omba|uza|nunua|piga|tuma|fuatilia|badilisha|tafsiri|saidia)\b/i.test(command)
+    || /[\u0627\u0641\u062a\u062d\u0627\u0628\u062f\u0623\u063a\u064a\u0631\u0628\u062f\u0644\u0628\u064a\u0639\u0627\u0634\u062a\u0631\u064a\u0627\u062a\u0635\u0644\u0627\u0631\u0633\u0644\u062a\u0631\u062c\u0645\u0633\u0627\u0639\u062f]/.test(command);
 }
 
 function nexusHasOpenWorkflowPrompt() {
@@ -13630,15 +13816,23 @@ function nexusHasOpenWorkflowPrompt() {
 }
 
 function isNexusCommandConfirmation(lower) {
-  const value = String(lower || "").trim();
+  const value = String(lower || "").trim().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
   return /^(yes|yes nexus|yes please|confirm|confirmed|approve|approved|do it|do this|do this now|go ahead|run it|start it|execute|execute it|that is right|correct)$/i.test(value)
-    || /\b(yes do it|yes go ahead|confirm that|run that|execute that|start that|please do it)\b/i.test(value);
+    || /^(si|si nexus|si por favor|claro|confirmar|confirmado|adelante|hazlo|hazlo ahora)$/i.test(value)
+    || /^(oui|oui nexus|confirmer|confirme|vas y|d accord|daccord)$/i.test(value)
+    || /^(ndiyo|ndio|sawa|thibitisha|endelea|fanya|fanya sasa)$/i.test(value)
+    || /^(?:\u0646\u0639\u0645|\u0627\u0643\u062f|\u062a\u0627\u0643\u064a\u062f|\u0648\u0627\u0641\u0642|\u0627\u0641\u0639\u0644|\u0627\u0646\u0641\u0630)$/i.test(value)
+    || /\b(yes do it|yes go ahead|confirm that|run that|execute that|start that|please do it|si hazlo|oui vas y|ndiyo fanya)\b/i.test(value);
 }
 
 function isNexusCommandRejection(lower) {
-  const value = String(lower || "").trim();
+  const value = String(lower || "").trim().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
   return /^(no|no nexus|cancel|cancel that|do not|don't|wrong|not that|choose another|clear that|forget that|nevermind|never mind)$/i.test(value)
-    || /\b(cancel that|wrong command|not what i said|do not do that|don't do that|forget it|choose another)\b/i.test(value);
+    || /^(cancelar|cancela|para|detente|otra opcion|no eso|incorrecto)$/i.test(value)
+    || /^(non|annuler|annule|arrete|pas ca|autre option)$/i.test(value)
+    || /^(hapana|simama|ghairi|si hivyo|chagua nyingine)$/i.test(value)
+    || /^(?:\u0644\u0627|\u0627\u0644\u063a\u0627\u0621|\u0627\u0644\u063a|\u062a\u0648\u0642\u0641|\u0644\u064a\u0633 \u0647\u0630\u0627)$/i.test(value)
+    || /\b(cancel that|wrong command|not what i said|do not do that|don't do that|forget it|choose another|otra opcion|pas ca|si hivyo)\b/i.test(value);
 }
 
 function shouldStageNexusSpokenCommand(command, lower, options = {}) {
@@ -13687,7 +13881,7 @@ function stageNexusSpokenCommand(command) {
   recordNexusAutonomousLearning({ type: "command-staged", command: pendingNexusSpokenCommand.summary });
   updateNexusBehaviorLayer("confirming", `Nexus heard: ${pendingNexusSpokenCommand.summary}`);
   renderLiveVoiceSuggestions(["yes", "no", "Nexus stop"]);
-  setVoiceResponse(`I heard: ${pendingNexusSpokenCommand.summary}. Should I do that now?`, true);
+  setVoiceResponse(nexusLocalizedBehaviorCopy("heard", { command: pendingNexusSpokenCommand.summary }), true);
 }
 
 async function executePendingNexusSpokenCommand() {
@@ -13700,7 +13894,7 @@ async function executePendingNexusSpokenCommand() {
   nexusAwaitingCommand = false;
   recordNexusAutonomousLearning({ type: "command-confirmed", command: staged.summary });
   updateNexusBehaviorLayer("acting", `Nexus is executing: ${staged.summary}`);
-  setVoiceResponse(`Confirmed. I am doing this now: ${staged.summary}.`, true);
+  setVoiceResponse(nexusLocalizedBehaviorCopy("confirmed", { command: staged.summary }), true);
   await handleVoiceCommand(staged.command, { skipCommandConfirmation: true, confirmed: true, source: "nexus-confirmation" });
 }
 
@@ -13710,7 +13904,9 @@ function clearPendingNexusSpokenCommand(message = "Canceled. Tell me what you wa
   nexusAwaitingCommand = false;
   recordNexusAutonomousLearning({ type: "command-canceled", command: staged?.summary || "" });
   updateNexusBehaviorLayer("ready", message);
-  setVoiceResponse(message, true);
+  setVoiceResponse(message === "Canceled. Tell me what you want to do next." || message === "Canceled. Tell me what you want Nexus to do instead."
+    ? nexusLocalizedBehaviorCopy("canceled")
+    : message, true);
 }
 
 function isNexusVoiceOffCommand(command) {
@@ -13887,7 +14083,8 @@ async function handleVoiceCommand(rawCommand, options = {}) {
   const greetingPrefix = isNexusGreetingPrefix(localizedCommand);
   const wakeOnly = isWakePhraseOnly(localizedCommand);
   let command = cleanWakeCommand(localizedCommand);
-  if (greetingOnly || (greetingPrefix && !/\b(open|start|show|apply|sell|buy|contact|call|message|run|create|track|find|change|switch|translate)\b/i.test(command))) {
+  command = normalizeMultilingualBehaviorCommand(command);
+  if (greetingOnly || (greetingPrefix && !hasBehaviorActionVerb(command))) {
     openAskNexus();
     enableHeyAgriNexusMode();
     nexusAwaitingCommand = true;
