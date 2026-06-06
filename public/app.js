@@ -58,8 +58,8 @@ let routeTrackingWatchId = null;
 let routeTrackingPoints = [];
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-183";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v163";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-184";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v164";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
 const VOICE_ATTENTION_DELAY_MS = 900;
@@ -70,21 +70,24 @@ const countryLanguageMap = {
   nigeria: "en",
   kenya: "sw",
   egypt: "ar",
-  drc: "fr"
+  drc: "fr",
+  brazil: "pt"
 };
 const voiceLocaleMap = {
   en: "en-US",
   fr: "fr-FR",
   sw: "sw-KE",
   ar: "ar-EG",
-  es: "es-ES"
+  es: "es-ES",
+  pt: "pt-BR"
 };
 const voiceLanguageNames = {
   en: "English",
   fr: "French",
   sw: "Kiswahili",
   ar: "Arabic",
-  es: "Spanish"
+  es: "Spanish",
+  pt: "Portuguese"
 };
 let voiceTranslationToken = 0;
 
@@ -97,6 +100,15 @@ const voiceStopTranslations = {
     "Stopped. Ask me the next question or tell me where to go next.": "Detenido. Hagame la siguiente pregunta o digame a donde ir despues.",
     "Nexus stopped speaking": "Nexus dejo de hablar",
     "I stopped speaking and I am ready for the next instruction.": "Deje de hablar y estoy listo para la siguiente instruccion."
+  },
+  pt: {
+    "Hello": "Ola",
+    "Stop": "Parar",
+    "Stop speaking": "Parar voz",
+    "Stopped. I am ready when you are.": "Parei. Estou pronto quando voce estiver.",
+    "Stopped. Ask me the next question or tell me where to go next.": "Parei. Faca a proxima pergunta ou diga para onde devo ir.",
+    "Nexus stopped speaking": "Nexus parou de falar",
+    "I stopped speaking and I am ready for the next instruction.": "Parei de falar e estou pronto para a proxima instrucao."
   },
   fr: {
     "Hello": "Bonjour",
@@ -1308,6 +1320,22 @@ const loginPersonalizationTranslations = {
     "Nexus is opening your workspace.": "Nexus esta abriendo su espacio de trabajo.",
     "How can I assist you?": "Como puedo ayudarle?"
   },
+  pt: {
+    "Sign in": "Entrar",
+    "Language": "Idioma",
+    "Choose language before sign in": "Escolha o idioma antes de entrar",
+    "Email": "E-mail",
+    "Password": "Senha",
+    "No login yet?": "Ainda nao tem login?",
+    "Your name": "Seu nome",
+    "Type your name": "Digite seu nome",
+    "Start as User": "Comecar como usuario",
+    "Enter platform": "Entrar na plataforma",
+    "Nexus will greet you by name and keep the app simple.": "Nexus vai cumprimentar voce pelo nome e manter o aplicativo simples.",
+    "Please type your name so Nexus can greet you.": "Digite seu nome para que Nexus possa cumprimentar voce.",
+    "Nexus is opening your workspace.": "Nexus esta abrindo seu espaco de trabalho.",
+    "How can I assist you?": "Como posso ajudar?"
+  },
   fr: {
     "Sign in": "Se connecter",
     "Language": "Langue",
@@ -1361,6 +1389,45 @@ const loginPersonalizationTranslations = {
 Object.entries(loginPersonalizationTranslations).forEach(([lang, entries]) => {
   contentTranslations[lang] = { ...(contentTranslations[lang] || {}), ...entries };
 });
+
+contentTranslations.pt = {
+  ...(contentTranslations.pt || {}),
+  "Nexus, what can you do": "Nexus, o que voce pode fazer",
+  "Nexus, show voice help": "Nexus, mostre ajuda de voz",
+  "Nexus, run full mission": "Nexus, execute a missao completa",
+  "Nexus, test provider engines": "Nexus, teste os motores de provedores",
+  "Nexus, open learning": "Nexus, abra aprendizado",
+  "Nexus, open workforce": "Nexus, abra trabalho",
+  "Nexus, open telehealth": "Nexus, abra telesaude",
+  "Nexus, open agritrade": "Nexus, abra AgriTrade",
+  "Nexus, open maps": "Nexus, abra mapas",
+  "Nexus, build captions": "Nexus, crie legendas",
+  "Nexus, create audio guide": "Nexus, crie guia de audio",
+  "Nexus, complete my lesson": "Nexus, complete minha aula",
+  "Nexus, issue my certificate": "Nexus, emita meu certificado",
+  "Nexus, apply for that job": "Nexus, ajude-me a candidatar para esse trabalho",
+  "Nexus, review my workforce gaps": "Nexus, revise minhas lacunas de trabalho",
+  "Nexus, start telehealth intake": "Nexus, inicie a entrada de telesaude",
+  "Nexus, connect me to a provider": "Nexus, conecte-me a um provedor",
+  "Nexus, contact my buyer": "Nexus, contate meu comprador",
+  "Nexus, run drone scan": "Nexus, execute varredura de drone",
+  "Start here": "Comece aqui",
+  "Go to a workspace": "Ir para um espaco",
+  "Learning": "Aprendizado",
+  "Workforce": "Trabalho",
+  "Telehealth": "Telesaude",
+  "Farm, Trade, And Drones": "Fazenda, comercio e drones",
+  "Behavior": "Comportamento",
+  "Assistant readiness": "Prontidao do assistente",
+  "Progress": "Progresso",
+  "Ready": "Pronto",
+  "Stop": "Parar",
+  "Stop speaking": "Parar voz",
+  "Choose language": "Escolha o idioma",
+  "Close": "Fechar",
+  "Say: change language to French, Arabic, Swahili, Spanish, Portuguese, or English.": "Diga: mudar idioma para frances, arabe, swahili, espanhol, portugues ou ingles.",
+  "Language changed to Portuguese. The platform text and voice responses will use Portuguese where translation is available.": "Idioma mudado para portugues. O texto da plataforma e as respostas de voz usarao portugues quando houver traducao."
+};
 
 const workflowModalTranslations = {
   fr: {
@@ -1581,7 +1648,7 @@ const userModeTranslationPack = {
     "Make sure buttons are ready.": "Asegurar que los botones esten listos.",
     "Readiness": "Preparacion",
     "Choose language": "Elegir idioma",
-    "Say: change language to French, Arabic, Swahili, Spanish, or English.": "Diga: cambiar idioma a frances, arabe, suajili, espanol o ingles.",
+    "Say: change language to French, Arabic, Swahili, Spanish, Portuguese, or English.": "Diga: cambiar idioma a frances, arabe, suajili, espanol, portugues o ingles.",
     "Open a service": "Abrir un servicio",
     "Talk to Nexus": "Hablar con Nexus",
     "Learn": "Aprender",
@@ -1629,7 +1696,7 @@ const userModeTranslationPack = {
     "Make sure buttons are ready.": "Verifier que les boutons sont prets.",
     "Readiness": "Preparation",
     "Choose language": "Choisir la langue",
-    "Say: change language to French, Arabic, Swahili, Spanish, or English.": "Dites : changer la langue en francais, arabe, swahili, espagnol ou anglais.",
+    "Say: change language to French, Arabic, Swahili, Spanish, Portuguese, or English.": "Dites : changer la langue en francais, arabe, swahili, espagnol, portugais ou anglais.",
     "Open a service": "Ouvrir un service",
     "Talk to Nexus": "Parler a Nexus",
     "Learn": "Apprendre",
@@ -1677,7 +1744,7 @@ const userModeTranslationPack = {
     "Make sure buttons are ready.": "Hakikisha vitufe viko tayari.",
     "Readiness": "Utayari",
     "Choose language": "Chagua lugha",
-    "Say: change language to French, Arabic, Swahili, Spanish, or English.": "Sema: badilisha lugha kwenda Kifaransa, Kiarabu, Kiswahili, Kihispania, au Kiingereza.",
+    "Say: change language to French, Arabic, Swahili, Spanish, Portuguese, or English.": "Sema: badilisha lugha kwenda Kifaransa, Kiarabu, Kiswahili, Kihispania, Kireno, au Kiingereza.",
     "Open a service": "Fungua huduma",
     "Talk to Nexus": "Ongea na Nexus",
     "Learn": "Jifunze",
@@ -3048,6 +3115,7 @@ function normalizeMultilingualBehaviorCommand(command = "") {
       command: "change language to english",
       match: [
         /\b(cambia|cambiar|cambie|pon|poner|usa|usar|habla|hablar|responde|responder).*\b(ingles|english)\b/,
+        /\b(mudar|mude|trocar|troque|usar|use|falar|fale|responder|responda).*\b(ingles|english)\b/,
         /\b(change|switch|set|use|speak|respond).*\b(english|ingles|anglais|kiingereza)\b/,
         /\b(change|switch|set|use|speak|respond).*\b(nigeria|nigerian)\b/
       ]
@@ -3056,13 +3124,22 @@ function normalizeMultilingualBehaviorCommand(command = "") {
       command: "change language to spanish",
       match: [
         /\b(cambia|cambiar|cambie|pon|poner|usa|usar|habla|hablar|responde|responder).*\b(espanol|spanish)\b/,
+        /\b(mudar|mude|trocar|troque|usar|use|falar|fale|responder|responda).*\b(espanhol|spanish|espanol)\b/,
         /\b(change|switch|set|use|speak|respond).*\b(spanish|espanol|kihispania)\b/
+      ]
+    },
+    {
+      command: "change language to portuguese",
+      match: [
+        /\b(change|switch|set|use|speak|respond|cambiar|hablar).*\b(portuguese|portugues|portuguesa|brazil|brasil|brasileiro)\b/,
+        /\b(mudar|mude|trocar|troque|usar|use|falar|fale|responder|responda).*\b(portugues|portuguese|brasil|brazil|brasileiro)\b/
       ]
     },
     {
       command: "change language to french",
       match: [
         /\b(change|switch|set|use|speak|respond|cambiar|hablar).*\b(french|francais|frances|kifaransa|drc|congo)\b/,
+        /\b(mudar|mude|trocar|troque|usar|use|falar|fale|responder|responda).*\b(frances|french|francais)\b/,
         /\b(change|switch|set|use|speak|respond).*\b(french|francais|frances)\b/
       ]
     },
@@ -3070,6 +3147,7 @@ function normalizeMultilingualBehaviorCommand(command = "") {
       command: "change language to kiswahili",
       match: [
         /\b(change|switch|set|use|speak|respond|cambiar|hablar).*\b(kiswahili|swahili|suajili|kenya|kenyan)\b/,
+        /\b(mudar|mude|trocar|troque|usar|use|falar|fale|responder|responda).*\b(swahili|kiswahili|quenia|kenya)\b/,
         /\b(badilisha|tumia|ongea|zungumza|jibu).*\b(kiswahili|swahili)\b/
       ]
     },
@@ -3077,6 +3155,7 @@ function normalizeMultilingualBehaviorCommand(command = "") {
       command: "change language to arabic",
       match: [
         /\b(change|switch|set|use|speak|respond|cambiar|hablar).*\b(arabic|arabe|kiarabu|egypt|egyptian)\b/,
+        /\b(mudar|mude|trocar|troque|usar|use|falar|fale|responder|responda).*\b(arabe|arabic|egito|egypt)\b/,
         /(?:\u063a\u064a\u0631|\u0628\u062f\u0644|\u062a\u0643\u0644\u0645|\u0627\u0633\u062a\u062e\u062f\u0645).*(?:\u0639\u0631\u0628\u064a|\u0627\u0644\u0639\u0631\u0628\u064a\u0629|\u0645\u0635\u0631)/
       ]
     },
@@ -3084,6 +3163,7 @@ function normalizeMultilingualBehaviorCommand(command = "") {
       command: "open telehealth and start intake",
       match: [
         /\b(abre|abrir|necesito|quiero|ayuda).*\b(salud|doctor|medico|clinica|telemedicina|enfermera|dolor|enfermo)\b/,
+        /\b(abrir|abre|preciso|quero|ajuda|me ajuda).*\b(saude|medico|doutor|clinica|telemedicina|enfermeira|dor|doente|remedio)\b/,
         /\b(ouvre|ouvrir|besoin|aide).*\b(sante|medecin|docteur|clinique|telemedecine|hopital|douleur|malade)\b/,
         /\b(fungua|hitaji|nahitaji|nisaidie).*\b(afya|daktari|kliniki|hospitali|mgonjwa|maumivu)\b/,
         /(?:\u0635\u062d\u0629|\u0637\u0628\u064a\u0628|\u0639\u064a\u0627\u062f\u0629|\u0645\u0631\u064a\u0636|\u0623\u0644\u0645|\u0645\u0633\u062a\u0634\u0641\u0649)/
@@ -3093,6 +3173,7 @@ function normalizeMultilingualBehaviorCommand(command = "") {
       command: "show me jobs",
       match: [
         /\b(abre|buscar|busca|quiero|necesito|aplicar|solicitar).*\b(trabajo|empleo|puesto|rol)\b/,
+        /\b(abrir|abre|buscar|procura|procurar|quero|preciso|candidatar|aplicar).*\b(trabalho|emprego|vaga|cargo|servico)\b/,
         /\b(ouvre|chercher|cherche|besoin|postuler).*\b(travail|emploi|poste|role)\b/,
         /\b(fungua|tafuta|nahitaji|omba).*\b(kazi|ajira)\b/,
         /(?:\u0639\u0645\u0644|\u0648\u0638\u064a\u0641\u0629|\u062a\u0642\u062f\u0645)/
@@ -3102,6 +3183,7 @@ function normalizeMultilingualBehaviorCommand(command = "") {
       command: "start a course",
       match: [
         /\b(abre|abrir|empezar|iniciar|quiero|necesito).*\b(aprendizaje|curso|leccion|clase|capacitacion|certificado)\b/,
+        /\b(abrir|abre|comecar|iniciar|quero|preciso).*\b(aprendizado|curso|aula|licao|treinamento|certificado)\b/,
         /\b(ouvre|commencer|demarrer|besoin).*\b(apprentissage|cours|lecon|formation|certificat)\b/,
         /\b(fungua|anza|nahitaji|nataka).*\b(mafunzo|kozi|somo|cheti)\b/,
         /(?:\u062a\u0639\u0644\u0645|\u062f\u0631\u0633|\u062f\u0648\u0631\u0629|\u0634\u0647\u0627\u062f\u0629)/
@@ -3111,6 +3193,7 @@ function normalizeMultilingualBehaviorCommand(command = "") {
       command: "sell my crop",
       match: [
         /\b(vender|vendo|vende|quiero vender|comprador|mercado).*\b(cosecha|cultivo|maiz|arroz|yuca|producto)\b/,
+        /\b(vender|vendo|comprador|mercado|negociar).*\b(colheita|plantacao|milho|arroz|mandioca|produto|safra)\b/,
         /\b(vendre|acheteur|marche|marchand).*\b(recolte|culture|mais|riz|manioc|produit)\b/,
         /\b(uza|kuuza|mnunuzi|soko).*\b(mazao|mahindi|mchele|muhogo|bidhaa)\b/,
         /(?:\u0628\u064a\u0639|\u0645\u062d\u0635\u0648\u0644|\u0645\u0634\u062a\u0631\u064a|\u0633\u0648\u0642)/
@@ -3120,6 +3203,7 @@ function normalizeMultilingualBehaviorCommand(command = "") {
       command: "buy a crop",
       match: [
         /\b(comprar|quiero comprar|busco).*\b(cosecha|cultivo|maiz|arroz|yuca|producto)\b/,
+        /\b(comprar|quero comprar|procuro|buscar).*\b(colheita|plantacao|milho|arroz|mandioca|produto|safra)\b/,
         /\b(acheter|je veux acheter|cherche).*\b(recolte|culture|mais|riz|manioc|produit)\b/,
         /\b(nunua|kununua|natafuta).*\b(mazao|mahindi|mchele|muhogo|bidhaa)\b/,
         /(?:\u0627\u0634\u062a\u0631\u064a|\u0634\u0631\u0627\u0621|\u0645\u062d\u0635\u0648\u0644)/
@@ -3129,6 +3213,7 @@ function normalizeMultilingualBehaviorCommand(command = "") {
       command: "open map and check route risk",
       match: [
         /\b(abre|abrir|mostrar|rastrea|seguir|ubicar).*\b(mapa|ruta|envio|entrega|ubicacion|camino)\b/,
+        /\b(abrir|abre|mostrar|rastrear|seguir|localizar).*\b(mapa|rota|envio|entrega|localizacao|caminho)\b/,
         /\b(ouvre|ouvrir|montre|suivre|localiser).*\b(carte|itineraire|livraison|position|route)\b/,
         /\b(fungua|onyesha|fuatilia|tafuta).*\b(ramani|njia|usafirishaji|mahali)\b/,
         /(?:\u062e\u0631\u064a\u0637\u0629|\u0645\u0633\u0627\u0631|\u0645\u0648\u0642\u0639|\u062a\u0648\u0635\u064a\u0644)/
@@ -3138,6 +3223,7 @@ function normalizeMultilingualBehaviorCommand(command = "") {
       command: "run drone scan on my farm",
       match: [
         /\b(drone|dron|escanea|revisar).*\b(finca|campo|granja|cultivo)\b/,
+        /\b(drone|escanear|verificar|analisar).*\b(fazenda|campo|plantacao|roca|lavoura)\b/,
         /\b(drone|scanner|analyser).*\b(champ|ferme|culture)\b/,
         /\b(drone|kagua|chunguza).*\b(shamba|mazao)\b/,
         /(?:\u0637\u0627\u0626\u0631\u0629 \u0628\u062f\u0648\u0646 \u0637\u064a\u0627\u0631|\u062f\u0631\u0648\u0646|\u0645\u0632\u0631\u0639\u0629|\u062d\u0642\u0644)/
@@ -3154,12 +3240,12 @@ function adaptiveCommandUnderstanding(command = "") {
   const lower = normalizeToolText(normalized);
   const words = lower.split(/\s+/).filter(Boolean);
   const families = [
-    { intent: "health", command: "open telehealth and start intake", terms: ["doctor", "nurse", "clinic", "hospital", "pain", "hurt", "injury", "sick", "medicine", "health", "care", "provider", "telehealth", "medico", "salud", "sante", "hopital", "afya"] },
-    { intent: "workforce", command: "show me jobs", terms: ["job", "work", "role", "apply", "worker", "shift", "interview", "employment", "skills", "trabajo", "emploi", "kazi"] },
-    { intent: "trade", command: "sell my crop", terms: ["crop", "buyer", "seller", "sell", "buy", "market", "price", "payment", "wallet", "order", "farm", "harvest", "maize", "rice", "cassava", "producto", "vendre", "acheter", "soko", "mazao"] },
-    { intent: "map", command: "open map and check route risk", terms: ["map", "route", "road", "location", "track", "where", "facility", "delivery", "shipment", "gps", "ruta", "carte", "ramani", "njia"] },
-    { intent: "learning", command: "start a course", terms: ["learn", "course", "lesson", "training", "certificate", "student", "quiz", "school", "study", "aprender", "cours", "kujifunza", "somo"] },
-    { intent: "drone", command: "run drone scan on my farm", terms: ["drone", "scan", "footage", "field", "pest", "irrigation", "aerial", "farm video"] }
+    { intent: "health", command: "open telehealth and start intake", terms: ["doctor", "nurse", "clinic", "hospital", "pain", "hurt", "injury", "sick", "medicine", "health", "care", "provider", "telehealth", "medico", "salud", "sante", "hopital", "afya", "saude", "doutor", "clinica", "dor", "doente", "remedio"] },
+    { intent: "workforce", command: "show me jobs", terms: ["job", "work", "role", "apply", "worker", "shift", "interview", "employment", "skills", "trabajo", "emploi", "kazi", "trabalho", "emprego", "vaga", "cargo", "servico"] },
+    { intent: "trade", command: "sell my crop", terms: ["crop", "buyer", "seller", "sell", "buy", "market", "price", "payment", "wallet", "order", "farm", "harvest", "maize", "rice", "cassava", "producto", "vendre", "acheter", "soko", "mazao", "colheita", "plantacao", "milho", "mandioca", "comprador", "mercado", "safra"] },
+    { intent: "map", command: "open map and check route risk", terms: ["map", "route", "road", "location", "track", "where", "facility", "delivery", "shipment", "gps", "ruta", "carte", "ramani", "njia", "mapa", "rota", "localizacao", "entrega", "envio", "caminho"] },
+    { intent: "learning", command: "start a course", terms: ["learn", "course", "lesson", "training", "certificate", "student", "quiz", "school", "study", "aprender", "cours", "kujifunza", "somo", "curso", "aula", "licao", "treinamento", "certificado", "aluno"] },
+    { intent: "drone", command: "run drone scan on my farm", terms: ["drone", "scan", "footage", "field", "pest", "irrigation", "aerial", "farm video", "fazenda", "roca", "lavoura", "plantacao"] }
   ];
   const scored = families.map(family => {
     const hits = family.terms.filter(term => lower.includes(term)).length;
@@ -3437,16 +3523,22 @@ function languageFromVoiceCommand(command) {
     spanish: "es",
     espanol: "es",
     espanhol: "es",
-    kihispania: "es"
+    kihispania: "es",
+    portuguese: "pt",
+    portugues: "pt",
+    portuguesa: "pt",
+    brazil: "pt",
+    brasil: "pt",
+    brasileiro: "pt"
   };
-  const match = lower.match(/\b(?:to|into|in|as|use|speak|talk|respond|reply|change|switch|set|translate)\s+(english|anglais|ingles|kiingereza|nigeria|nigerian|french|francais|frances|kifaransa|drc|congo|swahili|kiswahili|suajili|kenya|kenyan|arabic|arabe|kiarabu|egypt|egyptian|spanish|espanol|espanhol|kihispania)\b/);
+  const match = lower.match(/\b(?:to|into|in|as|use|speak|talk|respond|reply|change|switch|set|translate|mudar|trocar|usar|falar|responder)\s+(english|anglais|ingles|kiingereza|nigeria|nigerian|french|francais|frances|kifaransa|drc|congo|swahili|kiswahili|suajili|kenya|kenyan|arabic|arabe|kiarabu|egypt|egyptian|spanish|espanol|espanhol|kihispania|portuguese|portugues|portuguesa|brazil|brasil|brasileiro)\b/);
   if (match?.[1]) return languages[match[1]] || "";
   return Object.entries(languages).find(([name]) => lower.includes(name))?.[1] || "";
 }
 
 function isUniversalLanguageCommand(command) {
   const lower = String(command || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-  return /\b(change|switch|set|translate|language|speak|talk|respond|reply|use|cambiar|idioma|langue|lugha|lingua|hablar|parler|ongea|zungumza|responder)\b/.test(lower)
+  return /\b(change|switch|set|translate|language|speak|talk|respond|reply|use|cambiar|idioma|langue|lugha|lingua|hablar|parler|ongea|zungumza|responder|mudar|trocar|usar|falar|lingua|portugues)\b/.test(lower)
     && Boolean(languageFromVoiceCommand(command))
     || (/[\u0627-\u064a]/.test(command) && /(\u063a\u064a\u0631|\u0628\u062f\u0644|\u062a\u0643\u0644\u0645|\u0627\u0633\u062a\u062e\u062f\u0645|\u0627\u0644\u0644\u063a\u0629)/.test(command) && Boolean(languageFromVoiceCommand(command)));
 }
@@ -4054,7 +4146,7 @@ function moduleUseExplanation(moduleId) {
 async function changeLanguageByVoice(command) {
   const language = languageFromVoiceCommand(command);
   if (!language) {
-    setVoiceResponse("I can change language to English, French, Kiswahili, Arabic, or Spanish. Tell me which language you want.", true);
+    setVoiceResponse("I can change language to English, French, Kiswahili, Arabic, Spanish, or Portuguese. Tell me which language you want.", true);
     return;
   }
   try {
@@ -5356,7 +5448,7 @@ function nexusHighIntelligenceSnapshot() {
   )));
   const topPriority = brief.priorities[0] || { title: "Start guided support", command: "what should I do next", reason: "Nexus needs a first user goal." };
   const risk = brief.priorities.find(item => item.category === "provider" || item.category === "production" || item.category === "alert");
-  const language = `${voiceLanguageName()} active; commands can switch English, French, Arabic, Kiswahili, and Spanish.`;
+  const language = `${voiceLanguageName()} active; commands can switch English, French, Arabic, Kiswahili, Spanish, and Portuguese.`;
   const autonomyLevel = activeAgentJourney?.next
     ? "guided autonomy with a live journey"
     : pendingWorkflow
@@ -5897,7 +5989,7 @@ function isGlobalStopCommand(lower) {
     .replace(/^(hey|hi|hello|okay|ok|hola|bonjour|salut|jambo|habari|مرحبا|اهلا)\s+/i, "")
     .replace(/^(agri\s*nexus|agrinexus|nexus|نكسس)\s*/i, "")
     .trim();
-  const multilingualStop = /^(stop|pause|wait|hold on|be quiet|interrupt|cancel|cancel that|stop that|stop it|wrong|that'?s wrong|that is wrong|never mind|reset|start over|para|parar|deten|detente|detener|silencio|callate|cancela|cancelar|espera|arr[ée]te|arrete|arreter|stoppe|tais toi|silence|annule|pause|attends|simama|nyamaza|acha|ghairi|subiri|tulia|komesha|اوقف|توقف|اسكت|الغ|انتظر|اصمت|كفى)(\s+(talking|speaking|voice|audio|now|please|for now|hablar|voz|audio|ahora|por favor|parler|voix|sauti|kuongea|الكلام|الصوت|الان|رجاء))?$/i;
+  const multilingualStop = /^(stop|pause|wait|hold on|be quiet|interrupt|cancel|cancel that|stop that|stop it|wrong|that'?s wrong|that is wrong|never mind|reset|start over|para|parar|pare|pausar|espera|espere|cancela|cancelar|quieto|silencio|nao|deten|detente|detener|callate|arr[ée]te|arrete|arreter|stoppe|tais toi|silence|annule|pause|attends|simama|nyamaza|acha|ghairi|subiri|tulia|komesha|اوقف|توقف|اسكت|الغ|انتظر|اصمت|كفى)(\s+(talking|speaking|voice|audio|now|please|for now|hablar|voz|audio|ahora|por favor|falar|voz|audio|agora|por favor|parler|voix|sauti|kuongea|الكلام|الصوت|الان|رجاء))?$/i;
   if (multilingualStop.test(cleaned) || multilingualStop.test(normalizedCleaned)) return true;
   return /\b(agri\s*nexus|agrinexus|nexus|نكسس)\b.*\b(stop|pause|be quiet|interrupt|cancel|stop talking|stop speaking|para|detente|detener|silencio|arr[ée]te|arrete|tais toi|simama|nyamaza|acha|اوقف|توقف|اسكت|اصمت|الغ)\b/i.test(value)
     || /\b(agri\s*nexus|agrinexus|nexus)\b.*\b(para|detente|detener|silencio|arrete|tais toi|simama|nyamaza|acha)\b/i.test(normalized);
@@ -7046,7 +7138,8 @@ function voiceCommandGroups() {
         "Nexus, change language to French",
         "Nexus, change language to Kiswahili",
         "Nexus, change language to Arabic",
-        "Nexus, change language to Spanish"
+        "Nexus, change language to Spanish",
+        "Nexus, change language to Portuguese"
       ]
     },
     {
@@ -7688,12 +7781,13 @@ function renderUserWorkspace() {
           ["fr", "French"],
           ["sw", "Kiswahili"],
           ["ar", "Arabic"],
-          ["es", "Spanish"]
+          ["es", "Spanish"],
+          ["pt", "Portuguese"]
         ].map(([code, label]) => `<button type="button" class="${languageCode() === code ? "active" : ""}" data-user-language="${code}" aria-pressed="${languageCode() === code}">
           ${translateText(label)}
         </button>`).join("")}
       </div>
-      <span>${translateText("Say: change language to French, Arabic, Swahili, Spanish, or English.")}</span>
+      <span>${translateText("Say: change language to French, Arabic, Swahili, Spanish, Portuguese, or English.")}</span>
     </section>
     <section class="user-service-buttons" aria-label="${translateText("Open a service")}">
       ${serviceButtons.map(item => `<button type="button" class="${escapeHtml(item.className)}" style="--service-photo: url('${escapeHtml(item.photo)}')" ${item.ask ? `data-mobile-ask="true"` : `data-simple-section="${item.section}"`}>
@@ -12008,7 +12102,8 @@ function workflowConfig(workflow, action, element) {
         { value: "fr", label: "French" },
         { value: "sw", label: "Kiswahili" },
         { value: "ar", label: "Arabic" },
-        { value: "es", label: "Spanish" }
+        { value: "es", label: "Spanish" },
+        { value: "pt", label: "Portuguese" }
       ] },
       { name: "contactMethod", label: "Best contact method", type: "select", value: "voice callback, SMS, or WhatsApp", options: [
         { value: "voice callback, SMS, or WhatsApp", label: "Voice, SMS, WhatsApp" },
@@ -12664,7 +12759,8 @@ function workflowConfig(workflow, action, element) {
             { value: "fr", label: "French" },
             { value: "ar", label: "Arabic" },
             { value: "sw", label: "Swahili" },
-            { value: "es", label: "Spanish" }
+            { value: "es", label: "Spanish" },
+            { value: "pt", label: "Portuguese" }
           ]
         }
       ],
@@ -13710,6 +13806,7 @@ function isWakePhraseOnly(command) {
   const wakePhrases = [
     "hey agrinexus", "agri nexus", "agrinexus", "hey nexus", "nexus", "hey agri", "agri",
     "hola agrinexus", "hola nexus", "buenos dias nexus", "buenas tardes nexus", "buenas noches nexus",
+    "ola agrinexus", "ola nexus", "oi nexus", "bom dia nexus", "boa tarde nexus", "boa noite nexus",
     "bonjour agrinexus", "salut agrinexus", "bonjour nexus",
     "habari agrinexus", "hujambo agrinexus", "habari nexus",
     "مرحبا اغرينكسوس", "يا اغرينكسوس", "اغرينكسوس", "نيكسس"
@@ -13724,6 +13821,7 @@ function isNexusGreetingOnly(command) {
     "hello nexus", "hi nexus", "hello agrinexus", "hi agrinexus",
     "good morning nexus", "good afternoon nexus", "good evening nexus",
     "hola nexus", "hola agrinexus", "buenos dias nexus", "buenas tardes nexus", "buenas noches nexus",
+    "ola nexus", "ola agrinexus", "oi nexus", "bom dia nexus", "boa tarde nexus", "boa noite nexus",
     "bonjour nexus", "salut nexus", "bonjour agrinexus", "habari nexus", "hujambo nexus"
   ].includes(normalized)
     || /^(?:\u0645\u0631\u062d\u0628\u0627|\u0627\u0647\u0644\u0627|\u0635\u0628\u0627\u062d \u0627\u0644\u062e\u064a\u0631|\u0645\u0633\u0627\u0621 \u0627\u0644\u062e\u064a\u0631)\s+(?:\u0646\u0643\u0633\u0633|\u0627\u063a\u0631\u064a\u0646\u064a\u0643\u0633\u0633|nexus|agrinexus)$/.test(normalized);
@@ -13733,7 +13831,7 @@ function isNexusGreetingPrefix(command) {
   const normalized = normalizedWakeText(command);
   if (!normalized) return false;
   return /^(hello|hi|good morning|good afternoon|good evening)\s+(nexus|agrinexus|agri nexus|agri)\b/.test(normalized)
-    || /^(hola|buenos dias|buenas tardes|buenas noches|bonjour|salut|habari|hujambo)\s+(nexus|agrinexus|agri nexus|agri)\b/.test(normalized)
+    || /^(hola|buenos dias|buenas tardes|buenas noches|ola|oi|bom dia|boa tarde|boa noite|bonjour|salut|habari|hujambo)\s+(nexus|agrinexus|agri nexus|agri)\b/.test(normalized)
     || /^(?:\u0645\u0631\u062d\u0628\u0627|\u0627\u0647\u0644\u0627|\u0635\u0628\u0627\u062d \u0627\u0644\u062e\u064a\u0631|\u0645\u0633\u0627\u0621 \u0627\u0644\u062e\u064a\u0631)\s+(?:\u0646\u0643\u0633\u0633|\u0627\u063a\u0631\u064a\u0646\u064a\u0643\u0633\u0633|nexus|agrinexus)\b/.test(normalized);
 }
 
@@ -13748,6 +13846,14 @@ function nexusLocalizedBehaviorCopy(key, values = {}) {
       confirmed: `Confirmed. I am doing this now: ${values.command || ""}.`,
       canceled: "Canceled. Tell me what you want Nexus to do instead.",
       ready: "I am listening. Tell me what you need."
+    },
+    pt: {
+      hello: `Ola ${name}. Como posso ajudar?`,
+      wake: `Sim ${name}. Como posso ajudar?`,
+      heard: `Eu ouvi: ${values.command || ""}. Quer que eu faca isso agora?`,
+      confirmed: `Confirmado. Vou fazer isso agora: ${values.command || ""}.`,
+      canceled: "Cancelado. Diga o que voce quer que Nexus faca.",
+      ready: "Estou ouvindo. Diga o que voce precisa."
     },
     es: {
       hello: `Hola ${name}. Como puedo ayudarte?`,
@@ -13793,7 +13899,7 @@ function cleanWakeCommand(command) {
   return String(command || "")
     .replace(/^\s*(hey\s+)?(nexus|agrinexus|agri\s+nexus|agri)\s*[,:\-]?\s*/i, "")
     .replace(/^\s*(hello|hi|good\s+morning|good\s+afternoon|good\s+evening)\s+(nexus|agrinexus|agri\s+nexus|agri)\s*[,:\-]?\s*/i, "")
-    .replace(/^\s*(hola|buenos\s+dias|buenas\s+tardes|buenas\s+noches|bonjour|salut|habari|hujambo)\s+(nexus|agrinexus|agri\s+nexus|agri)\s*[,:\-]?\s*/i, "")
+    .replace(/^\s*(hola|buenos\s+dias|buenas\s+tardes|buenas\s+noches|ola|oi|bom\s+dia|boa\s+tarde|boa\s+noite|bonjour|salut|habari|hujambo)\s+(nexus|agrinexus|agri\s+nexus|agri)\s*[,:\-]?\s*/i, "")
     .replace(/^\s*(\u0645\u0631\u062d\u0628\u0627|\u0627\u0647\u0644\u0627|\u0635\u0628\u0627\u062d\s+\u0627\u0644\u062e\u064a\u0631|\u0645\u0633\u0627\u0621\s+\u0627\u0644\u062e\u064a\u0631)?\s*(\u0646\u0643\u0633\u0633|\u0627\u063a\u0631\u064a\u0646\u064a\u0643\u0633\u0633)\s*[,:\-]?\s*/i, "")
     .replace(/^\s*(bonjour|salut|habari|hujambo)\s+(nexus|agrinexus|agri\s+nexus|agri)\s*[,:\-]?\s*/i, "")
     .replace(/^\s*(مرحبا|يا)?\s*(اغرينكسوس|نيكسس)\s*[,:\-]?\s*/i, "")
@@ -13804,6 +13910,7 @@ function hasBehaviorActionVerb(command = "") {
   const normalized = normalizeMultilingualBehaviorCommand(command);
   return /\b(open|start|show|apply|sell|buy|contact|call|message|run|create|track|find|change|switch|translate|help|guide|explain)\b/i.test(normalized)
     || /\b(abre|abrir|empezar|iniciar|mostrar|buscar|aplicar|vender|comprar|contactar|llamar|mensaje|rastrear|cambiar|traducir|ayuda)\b/i.test(command)
+    || /\b(abrir|abre|comecar|iniciar|mostrar|buscar|procurar|aplicar|candidatar|vender|comprar|contatar|ligar|mensagem|rastrear|seguir|mudar|trocar|traduzir|ajuda|ajudar)\b/i.test(command)
     || /\b(ouvre|ouvrir|commencer|montrer|chercher|postuler|vendre|acheter|contacter|appeler|message|suivre|changer|traduire|aide)\b/i.test(command)
     || /\b(fungua|anza|onyesha|tafuta|omba|uza|nunua|piga|tuma|fuatilia|badilisha|tafsiri|saidia)\b/i.test(command)
     || /[\u0627\u0641\u062a\u062d\u0627\u0628\u062f\u0623\u063a\u064a\u0631\u0628\u062f\u0644\u0628\u064a\u0639\u0627\u0634\u062a\u0631\u064a\u0627\u062a\u0635\u0644\u0627\u0631\u0633\u0644\u062a\u0631\u062c\u0645\u0633\u0627\u0639\u062f]/.test(command);
@@ -13819,6 +13926,7 @@ function isNexusCommandConfirmation(lower) {
   const value = String(lower || "").trim().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
   return /^(yes|yes nexus|yes please|confirm|confirmed|approve|approved|do it|do this|do this now|go ahead|run it|start it|execute|execute it|that is right|correct)$/i.test(value)
     || /^(si|si nexus|si por favor|claro|confirmar|confirmado|adelante|hazlo|hazlo ahora)$/i.test(value)
+    || /^(sim|sim nexus|sim por favor|claro|confirmar|confirmado|pode|pode fazer|faca|faz isso|vai em frente)$/i.test(value)
     || /^(oui|oui nexus|confirmer|confirme|vas y|d accord|daccord)$/i.test(value)
     || /^(ndiyo|ndio|sawa|thibitisha|endelea|fanya|fanya sasa)$/i.test(value)
     || /^(?:\u0646\u0639\u0645|\u0627\u0643\u062f|\u062a\u0627\u0643\u064a\u062f|\u0648\u0627\u0641\u0642|\u0627\u0641\u0639\u0644|\u0627\u0646\u0641\u0630)$/i.test(value)
@@ -13829,6 +13937,7 @@ function isNexusCommandRejection(lower) {
   const value = String(lower || "").trim().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
   return /^(no|no nexus|cancel|cancel that|do not|don't|wrong|not that|choose another|clear that|forget that|nevermind|never mind)$/i.test(value)
     || /^(cancelar|cancela|para|detente|otra opcion|no eso|incorrecto)$/i.test(value)
+    || /^(nao|nao nexus|cancelar|cancela|pare|para|parar|outra opcao|nao isso|errado|incorreto)$/i.test(value)
     || /^(non|annuler|annule|arrete|pas ca|autre option)$/i.test(value)
     || /^(hapana|simama|ghairi|si hivyo|chagua nyingine)$/i.test(value)
     || /^(?:\u0644\u0627|\u0627\u0644\u063a\u0627\u0621|\u0627\u0644\u063a|\u062a\u0648\u0642\u0641|\u0644\u064a\u0633 \u0647\u0630\u0627)$/i.test(value)
@@ -15641,7 +15750,7 @@ function bindStatic() {
         panel.classList.toggle("hidden", !willOpen);
         if (willOpen) {
           panel.scrollIntoView({ behavior: "smooth", block: "center" });
-          setVoiceResponse("Choose a language, or say change language to French, Arabic, Kiswahili, Spanish, or English.", false, { allowVoiceFirst: false });
+          setVoiceResponse("Choose a language, or say change language to French, Arabic, Kiswahili, Spanish, Portuguese, or English.", false, { allowVoiceFirst: false });
         }
       }
       return;

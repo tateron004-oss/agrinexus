@@ -20,6 +20,7 @@ hasAll(app, [
   "[\"sw\", \"Kiswahili\"]",
   "[\"ar\", \"Arabic\"]",
   "[\"es\", \"Spanish\"]",
+  "[\"pt\", \"Portuguese\"]",
   "[data-user-language]",
   "function renderUserSimpleActiveSection",
   "simpleUserSections",
@@ -68,6 +69,12 @@ hasAll(app, [
   "agrinexusSpeechSafety",
   "rate: speechRateForLanguage()",
   "function normalizeImperfectSpeech",
+  "function normalizeMultilingualBehaviorCommand",
+  "pt: \"pt-BR\"",
+  "Ola ${name}. Como posso ajudar?",
+  "mudar|mude|trocar|troque",
+  "colheita",
+  "Nexus, change language to Portuguese",
   "function adaptiveCommandUnderstanding",
   "agrinexusAdaptiveUnderstanding",
   "nexusAdaptiveUnderstandingSummary",
@@ -356,8 +363,8 @@ assert(app.includes("Stopped. Ask me the next question or tell me where to go ne
 assert(styles.includes("pointer-events: none") && styles.includes(".user-caption-actions") && styles.includes("pointer-events: auto"), "Caption panel must not block workflow action clicks");
 assert(styles.includes("width: min(300px, calc(100vw - 24px))") && styles.includes("max-height: 138px"), "Caption panel must default to a small bubble");
 assert(styles.includes(".user-caption-panel.expanded") && styles.includes("display: none") && styles.includes("display: grid"), "Caption input controls must appear only in expanded caption mode");
-assert(html.includes("nexus-behavior-183"), "Index must force browsers to load Nexus behavior CSS");
-assert(html.includes("nexus-behavior-183"), "Index must force browsers to load Nexus behavior JS");
+assert(html.includes("nexus-behavior-184"), "Index must force browsers to load Nexus behavior CSS");
+assert(html.includes("nexus-behavior-184"), "Index must force browsers to load Nexus behavior JS");
 assert(app.includes("shipmentPreviewMapCanvas") && app.includes("renderShipmentPreviewMap"), "Shipment preview maps must use real Leaflet canvases");
 assert(app.includes("healthHotspotMapCanvas") && app.includes("renderHealthHotspotPreviewMap"), "Health hotspot maps must use real Leaflet canvases");
 assert(app.includes("function shipmentTrackingState") && app.includes("function drawShipmentRoute"), "Shipment maps must render operational tracking state, not decorative routes");
