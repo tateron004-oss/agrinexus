@@ -13,7 +13,7 @@
   <link rel="icon" href="/icons/agri-nexus-192.png" type="image/png">
   <link rel="apple-touch-icon" href="/icons/agri-nexus-192.png">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-  <link rel="stylesheet" href="/styles.css?v=nexus-behavior-184">
+  <link rel="stylesheet" href="/styles.css?v=nexus-behavior-185">
 </head>
 <body>
   <a class="skip-link" href="#mainContent">Skip to main content</a>
@@ -1011,6 +1011,26 @@
             </div>
             <div id="missionDashboardPanel" class="mission-grid"></div>
           </div>
+          <div class="cards two">
+            <article>
+              <div class="tag-row"><span>Cloud Agent Brain</span><span id="cloudAgentScore">0/6</span></div>
+              <h3>Controlled Autonomy</h3>
+              <p id="cloudAgentSummary">Ready to run safe missions, pause sensitive work, self-correct, and show audit evidence.</p>
+              <div class="action-row">
+                <button id="cloudAgentRunBtn" class="primary" type="button">Launch cloud mission</button>
+                <button id="cloudAgentTickBtn" type="button">Run safe queue</button>
+                <button id="cloudAgentApproveBtn" type="button">Approve paused work</button>
+                <button id="cloudAgentTemplateBtn" type="button">Create tool template</button>
+              </div>
+              <div id="cloudAgentStatus" class="agent-action-status" role="status">Cloud agent standing by.</div>
+              <div id="cloudAgentRunPanel" class="task-list"></div>
+            </article>
+            <article>
+              <div class="tag-row"><span>Transparent workflow</span><span id="cloudAgentRuntime">local-cloud-sim</span></div>
+              <h3>Audit And Self-Correction</h3>
+              <div id="cloudAgentAuditPanel" class="activity"></div>
+            </article>
+          </div>
           <div class="voice-command">
             <div>
               <div class="tag-row"><span>Voice command</span><span id="voiceStatus">standby</span></div>
@@ -1537,6 +1557,6 @@
   <div id="toast" class="toast hidden" role="status" aria-live="polite" aria-atomic="true"></div>
   <div id="screenReaderStatus" class="sr-only" role="status" aria-live="polite" aria-atomic="true"></div>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="/app.js?v=nexus-behavior-184"></script>
+  <script src="/app.js?v=nexus-behavior-185"></script>
 </body>
 </html>

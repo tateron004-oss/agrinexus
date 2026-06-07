@@ -17,6 +17,7 @@
     "user-mode:audit": "node scripts/user-mode-workflow-audit.js",
     "app:behavior-audit": "node scripts/app-behavior-audit.js",
     "app:jarvis-qa": "node scripts/jarvis-behavior-qa.js",
+    "app:cloud-agent-qa": "node scripts/cloud-agent-qa.js",
     "app:mobile-native-qa": "node scripts/mobile-native-qa.js",
     "platform:integrity-stress": "node scripts/platform-integrity-stress.js",
     "placeholder:audit": "node scripts/no-placeholder-audit.js",

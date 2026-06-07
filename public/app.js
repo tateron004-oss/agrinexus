@@ -58,8 +58,8 @@ let routeTrackingWatchId = null;
 let routeTrackingPoints = [];
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-184";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v164";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-185";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v165";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
 const VOICE_ATTENTION_DELAY_MS = 900;
@@ -4841,6 +4841,52 @@ function renderMissionDashboard() {
   target.innerHTML = cards.join("");
 }
 
+function renderCloudAgentPanel() {
+  const target = $("#cloudAgentRunPanel");
+  if (!target || !data) return;
+  const cloud = data.cloudAgent || {};
+  const latestRun = cloud.latestRun || (data.profile.cloudAgentRuns || [])[0];
+  const runs = cloud.runs || data.profile.cloudAgentRuns || [];
+  const audit = cloud.audit || data.profile.cloudAgentAudit || [];
+  const corrections = cloud.corrections || data.profile.cloudAgentCorrections || [];
+  const statusText = `${cloud.readyCount || 0}/${cloud.total || 6}`;
+  if ($("#cloudAgentScore")) $("#cloudAgentScore").textContent = statusText;
+  if ($("#cloudAgentRuntime")) $("#cloudAgentRuntime").textContent = translateText(cloud.cloudRuntime || "local-cloud-sim");
+  if ($("#cloudAgentSummary")) $("#cloudAgentSummary").textContent = translateText(cloud.summary || "Nexus cloud agent is ready.");
+  if ($("#cloudAgentStatus")) {
+    $("#cloudAgentStatus").textContent = translateText(`${cloud.mode || "controlled-cloud-agent"} - ${cloud.status || "ready"} - ${cloud.pendingApprovals || 0} approval item(s)`);
+  }
+  const phaseHtml = latestRun?.transparentWorkflow?.length
+    ? latestRun.transparentWorkflow.map(phase => taskItem(
+      phase.title,
+      phase.detail,
+      phase.status === "complete" || phase.status === "approved" ? "ready" : phase.status === "running" ? "active" : "pending",
+      phase.status || "waiting",
+      { simpleCommand: `Nexus, explain ${phase.title}` }
+    )).join("")
+    : taskItem("No cloud mission yet", "Launch a mission to see observe, plan, approve, act, verify, and learn phases.", "pending", "Ready", { simpleCommand: "Nexus, launch cloud agent mission" });
+  const runHtml = runs.length
+    ? runs.slice(0, 3).map(run => taskItem(
+      run.goal || "Cloud agent mission",
+      run.summary || `${run.safeSteps || 0} safe step(s), ${run.blockedSteps || 0} approval-gated step(s).`,
+      run.status === "completed" ? "ready" : run.status === "executing" ? "active" : "pending",
+      run.status || "ready",
+      { simpleCommand: `Nexus, explain cloud mission ${run.status || "ready"}` }
+    )).join("")
+    : "";
+  target.innerHTML = `${phaseHtml}${runHtml}`;
+  const auditTarget = $("#cloudAgentAuditPanel");
+  if (auditTarget) {
+    const correctionHtml = corrections.length
+      ? corrections.slice(0, 3).map(item => `<div><strong>${translateText("Self-correction")} - ${translateText(item.status)}</strong><span>${translateText(item.strategy || item.error || "Correction created")}</span></div>`).join("")
+      : "";
+    const auditHtml = audit.length
+      ? audit.slice(0, 6).map(item => `<div><strong>${translateText(item.type)} - ${translateText(item.status)}</strong><span>${translateText(item.summary || "Cloud agent audit event")}</span><small>${translateText(item.actor || "Nexus")} - ${translateText(item.createdAt || "")}</small></div>`).join("")
+      : `<div><strong>${translateText("No audit events yet")}</strong><span>${translateText("Cloud missions will record every plan, action, pause, correction, and approval.")}</span></div>`;
+    auditTarget.innerHTML = `${correctionHtml}${auditHtml}`;
+  }
+}
+
 function renderAgentCenter() {
   const plan = (data.profile.agentPlans || [])[0];
   const executions = data.profile.agentExecutions || [];
@@ -4877,6 +4923,7 @@ function renderAgentCenter() {
     ? plan.steps.map(step => taskItem(`${step.module}: ${step.action}`, step.detail, step.status === "executed" ? "done" : "active", step.tool, agentStepAction(step))).join("")
     : taskItem("No agent plan yet", "Create a mission plan to see cross-module tool steps.", "pending", "Plan", { workflow: "ai", action: "command" });
   renderMissionDashboard();
+  renderCloudAgentPanel();
   if ($("#nexusBrainScore")) $("#nexusBrainScore").textContent = `${brainOs.readyCount}/${brainOs.total}`;
   if ($("#nexusBrainPrinciples")) $("#nexusBrainPrinciples").textContent = brainOs.principles.map(item => translateText(item)).join(" | ");
   if ($("#nexusBrainPanel")) {
@@ -7491,7 +7538,7 @@ function renderLaunchSupportPanels() {
 }
 
 function applyPermissions() {
-  $$("[data-workflow], [data-ai], [data-workforce], [data-health], [data-pay], [data-module-test], [data-command-preset], [data-pilot-scenario], [data-persona], [data-simple-command], [data-simple-section], [data-simple-pilot], [data-simple-demo], [data-simple-mission], [data-simple-action], .provider-test, #adminHealthCheck, #liveServiceCheckBtn, #liveServiceCheckFromIntegrations, #aiConsoleRun, #agentPlanBtn, #agentExecuteBtn, #agentBriefingBtn, #agentMissionBtn, #missionResumeBtn, #missionAutopilotBtn, #demoRunBtn, #wowDemoBtn, #remoteLaunchKitBtn, #startOnboardingBtn, #openSupportBtn, #inviteSubscriberBtn, #addTestUserBtn, #addAdminUserBtn, [data-ai-review], [data-notify], #voiceListenBtn, #voiceRunBtn, #voiceFirstBtn, #voiceSpeakBtn, #voiceHelpBtn, #globalListenBtn, #globalRunBtn, #globalYesBtn, #globalNoBtn, #globalReadBtn, #globalVoiceHelpBtn, #globalInstallBtn, #jarvisListenBtn, #jarvisRunBtn, #jarvisMissionBtn, #jarvisReadBtn").forEach(element => {
+  $$("[data-workflow], [data-ai], [data-workforce], [data-health], [data-pay], [data-module-test], [data-command-preset], [data-pilot-scenario], [data-persona], [data-simple-command], [data-simple-section], [data-simple-pilot], [data-simple-demo], [data-simple-mission], [data-simple-action], .provider-test, #adminHealthCheck, #liveServiceCheckBtn, #liveServiceCheckFromIntegrations, #aiConsoleRun, #agentPlanBtn, #agentExecuteBtn, #agentBriefingBtn, #agentMissionBtn, #missionResumeBtn, #missionAutopilotBtn, #cloudAgentRunBtn, #cloudAgentTickBtn, #cloudAgentApproveBtn, #cloudAgentTemplateBtn, #demoRunBtn, #wowDemoBtn, #remoteLaunchKitBtn, #startOnboardingBtn, #openSupportBtn, #inviteSubscriberBtn, #addTestUserBtn, #addAdminUserBtn, [data-ai-review], [data-notify], #voiceListenBtn, #voiceRunBtn, #voiceFirstBtn, #voiceSpeakBtn, #voiceHelpBtn, #globalListenBtn, #globalRunBtn, #globalYesBtn, #globalNoBtn, #globalReadBtn, #globalVoiceHelpBtn, #globalInstallBtn, #jarvisListenBtn, #jarvisRunBtn, #jarvisMissionBtn, #jarvisReadBtn").forEach(element => {
     const area = element.dataset.workflow
       || (element.dataset.ai ? "ai" : null)
       || (element.dataset.workforce ? "workforce" : null)
@@ -7513,6 +7560,10 @@ function applyPermissions() {
       || (element.id === "agentPlanBtn" ? "ai" : null)
       || (element.id === "agentExecuteBtn" ? "ai" : null)
       || (element.id === "agentBriefingBtn" ? "ai" : null)
+      || (element.id === "cloudAgentRunBtn" ? "ai" : null)
+      || (element.id === "cloudAgentTickBtn" ? "ai" : null)
+      || (element.id === "cloudAgentApproveBtn" ? "ai" : null)
+      || (element.id === "cloudAgentTemplateBtn" ? "ai" : null)
       || (element.id === "voiceListenBtn" ? "ai" : null)
       || (element.id === "voiceRunBtn" ? "ai" : null)
       || (element.id === "voiceFirstBtn" ? "ai" : null)
@@ -13439,6 +13490,89 @@ async function executeAgentPlan() {
   }
 }
 
+async function launchCloudAgentMission() {
+  const status = $("#cloudAgentStatus");
+  const goal = $("#agentGoal")?.value?.trim() || "Run a controlled AgriNexus cloud-agent mission across the highest-value workflow.";
+  if (status) status.textContent = "Launching controlled cloud-agent mission...";
+  try {
+    data = await request("/api/cloud-agent/run", { method: "POST", body: { goal, autonomous: true, execute: true, approved: false } });
+    render();
+    goSection("agent", { instant: true });
+    const result = data.cloudAgentResult?.run || data.cloudAgent?.latestRun;
+    const message = result?.summary || "Cloud agent mission launched. Safe steps ran and sensitive steps paused for approval.";
+    if ($("#cloudAgentStatus")) $("#cloudAgentStatus").textContent = message;
+    setVoiceResponse(message, true);
+    toast("Cloud agent launched");
+  } catch (error) {
+    if (status) status.textContent = error.message;
+    toast(error.message);
+  }
+}
+
+async function runCloudAgentQueue() {
+  const status = $("#cloudAgentStatus");
+  if (status) status.textContent = "Running the safe cloud-agent queue...";
+  try {
+    data = await request("/api/cloud-agent/tick", { method: "POST", body: { approved: false } });
+    render();
+    goSection("agent", { instant: true });
+    const message = data.cloudAgentTick?.run?.summary || data.cloudAgentTick?.summary || "Cloud agent queue checked.";
+    if ($("#cloudAgentStatus")) $("#cloudAgentStatus").textContent = message;
+    setVoiceResponse(message, true);
+    toast("Cloud queue checked");
+  } catch (error) {
+    if (status) status.textContent = error.message;
+    toast(error.message);
+  }
+}
+
+async function approveCloudAgentWork() {
+  const status = $("#cloudAgentStatus");
+  const run = (data.profile.cloudAgentRuns || []).find(item => item.status === "needs-approval" || (item.steps || []).some(step => step.approvalStatus === "needed"))
+    || (data.profile.cloudAgentRuns || [])[0];
+  if (!run) return toast("Launch a cloud agent mission first");
+  if (status) status.textContent = "Approving paused cloud-agent work...";
+  try {
+    data = await request("/api/cloud-agent/approve", { method: "POST", body: { runId: run.id } });
+    render();
+    goSection("agent", { instant: true });
+    const message = data.cloudAgentApproval?.run?.summary || "Cloud-agent approval completed.";
+    if ($("#cloudAgentStatus")) $("#cloudAgentStatus").textContent = message;
+    setVoiceResponse(message, true);
+    toast("Cloud work approved");
+  } catch (error) {
+    if (status) status.textContent = error.message;
+    toast(error.message);
+  }
+}
+
+async function createCloudAgentTemplate() {
+  const status = $("#cloudAgentStatus");
+  const goal = $("#agentGoal")?.value?.trim() || "New supervised AgriNexus tool";
+  if (status) status.textContent = "Creating a supervised tool template...";
+  try {
+    data = await request("/api/cloud-agent/tool-template", {
+      method: "POST",
+      body: {
+        title: goal.length > 80 ? `${goal.slice(0, 77)}...` : goal,
+        module: "Agent AI",
+        description: `Proposed supervised template based on mission: ${goal}`,
+        commandExamples: [`Nexus, help me with ${goal}`, `AgriNexus, create a plan for ${goal}`]
+      }
+    });
+    render();
+    goSection("agent", { instant: true });
+    const template = data.cloudAgentToolTemplate;
+    const message = template ? `${template.title} created as ${template.status}.` : "Tool template created.";
+    if ($("#cloudAgentStatus")) $("#cloudAgentStatus").textContent = message;
+    setVoiceResponse(message);
+    toast("Tool template created");
+  } catch (error) {
+    if (status) status.textContent = error.message;
+    toast(error.message);
+  }
+}
+
 function setVoiceResponse(message, speak = false, options = {}) {
   const allowVoiceFirst = options.allowVoiceFirst !== false;
   if (voiceDemoQuietMode && !options.allowDemoQuietSpeech) {
@@ -16277,6 +16411,10 @@ function bindStatic() {
   $("#agentMissionBtn").onclick = runJarvisFullMission;
   $("#missionResumeBtn").onclick = resumeNextMission;
   $("#missionAutopilotBtn").onclick = startFarmerAutopilotMission;
+  $("#cloudAgentRunBtn").onclick = launchCloudAgentMission;
+  $("#cloudAgentTickBtn").onclick = runCloudAgentQueue;
+  $("#cloudAgentApproveBtn").onclick = approveCloudAgentWork;
+  $("#cloudAgentTemplateBtn").onclick = createCloudAgentTemplate;
   $("#voiceListenBtn").onclick = startVoiceListening;
   $("#voiceRunBtn").onclick = runVoiceTextCommand;
   $("#voiceFirstBtn").onclick = toggleVoiceFirstMode;

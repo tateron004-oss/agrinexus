@@ -1566,6 +1566,7 @@ function publicState(db, user) {
     noVendorUpgradeTen: noVendorUpgradeTenPack(db, user, providers),
     maximumOperationalEfficiency: maximumOperationalEfficiencyModel(db, user, providers),
     autonomousOperatingLoop: autonomousOperatingLoopModel(db, user, providers),
+    cloudAgent: cloudAgentTransparencyPacket(db, user),
     remoteLaunchKit: remoteRuralFarmerLaunchKit(db, user, providers),
     sessionBriefing: sessionBriefingModel(db, user, providers),
     impactDashboard: impactDashboardModel(db, providers),
@@ -4947,6 +4948,11 @@ function ensureAiProfile(profile) {
   profile.agentBriefings = profile.agentBriefings || [];
   profile.missionBrainRuns = profile.missionBrainRuns || [];
   profile.trustedOsReviews = profile.trustedOsReviews || [];
+  profile.cloudAgentRuns = profile.cloudAgentRuns || [];
+  profile.cloudAgentQueue = profile.cloudAgentQueue || [];
+  profile.cloudAgentToolTemplates = profile.cloudAgentToolTemplates || [];
+  profile.cloudAgentCorrections = profile.cloudAgentCorrections || [];
+  profile.cloudAgentAudit = profile.cloudAgentAudit || [];
   profile.agentMemory = profile.agentMemory || {
     activeAudience: "government",
     activeMission: "rural transformation",
@@ -4990,6 +4996,14 @@ function ensureAiProfile(profile) {
     stagedActions: 0,
     confirmedActions: 0,
     lastSignal: "ready"
+  };
+  profile.agentMemory.cloudAgent = profile.agentMemory.cloudAgent || {
+    operatingMode: "controlled-cloud-agent",
+    lastRunId: null,
+    lastAuditId: null,
+    lastSelfCorrectionId: null,
+    lastSummary: "Cloud autonomy is ready for supervised missions.",
+    updatedAt: new Date().toISOString()
   };
 }
 
@@ -5172,6 +5186,442 @@ async function createAndExecuteAutopilotMission(db, user, goal, note = "Approved
   db.profile.agentMemory.lastSummary = execution.summary;
   db.profile.agentMemory.updatedAt = new Date().toISOString();
   return { plan, execution };
+}
+
+function cloudAgentPolicy(user = {}) {
+  const highImpact = [
+    "health.intake",
+    "health.representative",
+    "health.consent",
+    "health.referral",
+    "health.careplan",
+    "communications.outbound_call",
+    "trade.buyer_contact",
+    "trade.wallet_payment",
+    "workforce.apply_role",
+    "workforce.schedule_interview",
+    "workforce.schedule_shift",
+    "integrations.test_all",
+    "admin.health_check"
+  ];
+  return {
+    mode: "controlled-cloud-agent",
+    cloudRuntime: IS_HOSTED ? "render-cloud" : "local-cloud-sim",
+    canRunSafeToolsAutomatically: true,
+    canCreateToolTemplates: user.role === "admin" || user.role === "investor",
+    canExecuteGeneratedCode: false,
+    canSelfDeploy: false,
+    canRetrainModel: false,
+    requiresApprovalFor: highImpact,
+    safetyRules: [
+      "Use only registered AgriNexus workflow tools.",
+      "Create proposed tool templates only; do not generate or execute arbitrary code.",
+      "Require approval before calls, messages, payments, applications, referrals, care plans, admin changes, or provider actions.",
+      "Healthcare support is navigation, intake, safety, referral, and education support only; no diagnosis.",
+      "Every run must create transparent audit evidence and a plain-language summary."
+    ]
+  };
+}
+
+function cloudAgentToolCatalog(db, user = {}) {
+  ensureAiProfile(db.profile);
+  const providers = runtimeProviders(db);
+  const policy = cloudAgentPolicy(user);
+  const liveProviderIds = new Set(providers.filter(provider => provider.status === "connected").map(provider => provider.id));
+  const baseTools = agentToolRegistry().map(tool => {
+    const requiresApproval = policy.requiresApprovalFor.includes(tool.tool)
+      || /(call|message|contact|payment|wallet|apply|interview|shift|consent|referral|care plan|provider|admin|health check)/i.test(`${tool.tool} ${tool.action} ${tool.description}`);
+    const providerBacked = /communications|integrations|admin|ai\.copilot|map\.route|trade|health|workforce|learning|drone/i.test(tool.tool);
+    return {
+      ...tool,
+      id: tool.tool,
+      source: "registered-tool",
+      status: providerBacked ? "workflow-ready" : "local-ready",
+      engineMode: liveProviderIds.size ? "live-or-local" : "local-workflow",
+      requiresApproval,
+      evidence: requiresApproval ? "Approval gate and audit event required." : "Can run as a safe local workflow step."
+    };
+  });
+  const templates = (db.profile.cloudAgentToolTemplates || []).map(template => ({
+    id: template.id,
+    tool: template.tool || `template.${template.slug}`,
+    module: template.module || "Agent AI",
+    action: template.action || template.title,
+    section: template.section || sectionForAgentModule(template.module || "Agent AI"),
+    description: template.description,
+    source: "tool-template",
+    status: template.status,
+    engineMode: "template-needs-approved-binding",
+    requiresApproval: true,
+    evidence: "Admin-approved template before execution."
+  }));
+  return {
+    total: baseTools.length + templates.length,
+    baseTools,
+    templates,
+    modules: [...new Set([...baseTools, ...templates].map(item => item.module))].sort(),
+    approvalRequired: [...baseTools, ...templates].filter(item => item.requiresApproval).length,
+    policy
+  };
+}
+
+function cloudAgentStepRisk(step = {}, catalog = null) {
+  const tool = catalog?.baseTools?.find(item => item.tool === step.tool)
+    || catalog?.templates?.find(item => item.tool === step.tool)
+    || agentToolRegistry().find(item => item.tool === step.tool);
+  const text = `${step.tool || ""} ${step.module || ""} ${step.action || ""} ${step.detail || ""} ${tool?.description || ""}`;
+  const highImpact = /(call|message|contact buyer|payment|wallet|apply|interview|shift|consent|referral|careplan|care plan|vitals|provider|admin|health check|outbound|sms|whatsapp)/i.test(text);
+  const healthSensitive = /health|patient|telehealth|injury|symptom|care|doctor|clinic|pharmacy/i.test(text);
+  return {
+    level: highImpact ? "approval-required" : healthSensitive ? "sensitive-guidance" : "safe-local",
+    requiresApproval: Boolean(highImpact || tool?.requiresApproval),
+    reasons: [
+      highImpact ? "May contact people, change records, affect money, health, jobs, providers, or admin operations." : null,
+      healthSensitive && !highImpact ? "Health-related guidance stays supervised and avoids diagnosis." : null,
+      tool?.requiresApproval ? "Tool registry marks this action as confirmation-gated." : null
+    ].filter(Boolean),
+    toolStatus: tool?.status || "registered"
+  };
+}
+
+function cloudAgentAudit(profile, entry) {
+  ensureAiProfile(profile);
+  const audit = {
+    id: crypto.randomUUID(),
+    createdAt: new Date().toISOString(),
+    ...entry
+  };
+  profile.cloudAgentAudit.unshift(audit);
+  profile.cloudAgentAudit = profile.cloudAgentAudit.slice(0, 100);
+  profile.agentMemory.cloudAgent.lastAuditId = audit.id;
+  profile.agentMemory.cloudAgent.updatedAt = audit.createdAt;
+  return audit;
+}
+
+function createCloudAgentToolTemplate(db, user, body = {}) {
+  ensureAiProfile(db.profile);
+  const policy = cloudAgentPolicy(user);
+  if (!policy.canCreateToolTemplates) {
+    const error = new Error("Only admin or investor access can create cloud-agent tool templates.");
+    error.statusCode = 403;
+    throw error;
+  }
+  const title = String(body.title || body.name || "New supervised tool template").trim();
+  const moduleName = String(body.module || conversationModuleSignal(title).module || "Agent AI").trim();
+  const slug = title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 48) || `template-${Date.now()}`;
+  const template = {
+    id: crypto.randomUUID(),
+    slug,
+    tool: `template.${slug}`,
+    title,
+    module: moduleName,
+    section: body.section || sectionForAgentModule(moduleName),
+    action: String(body.action || title).trim(),
+    description: String(body.description || "A proposed supervised workflow template that must be reviewed before it can run.").trim(),
+    commandExamples: Array.isArray(body.commandExamples) ? body.commandExamples.slice(0, 6) : [
+      `Nexus, ${title.toLowerCase()}`,
+      `AgriNexus, help me with ${title.toLowerCase()}`
+    ],
+    inputSchema: body.inputSchema || { type: "object", properties: { goal: { type: "string" }, notes: { type: "string" } } },
+    status: body.approved === true && user.role === "admin" ? "approved-template" : "draft-needs-approval",
+    safety: "Template only. It cannot execute arbitrary code and must be bound to registered tools or reviewed provider adapters.",
+    createdBy: user.email,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  };
+  db.profile.cloudAgentToolTemplates.unshift(template);
+  db.profile.cloudAgentToolTemplates = db.profile.cloudAgentToolTemplates.slice(0, 30);
+  cloudAgentAudit(db.profile, {
+    type: "tool-template-created",
+    status: template.status,
+    summary: `${template.title} created as ${template.status}.`,
+    actor: user.email,
+    templateId: template.id
+  });
+  logIntegration(db, {
+    providerId: "cloud-agent",
+    module: "AI",
+    action: "cloud_agent.tool_template_created",
+    status: "success",
+    detail: `${template.title} tool template created with approval status ${template.status}.`,
+    metadata: { templateId: template.id, status: template.status },
+    dispatch: false
+  });
+  return template;
+}
+
+function createCloudAgentRun(db, user, goal, options = {}) {
+  ensureAiProfile(db.profile);
+  const policy = cloudAgentPolicy(user);
+  const catalog = cloudAgentToolCatalog(db, user);
+  const plan = buildAutopilotPlan(db, goal, user);
+  const transparentWorkflow = [
+    { id: "observe", title: "Observe", status: "complete", detail: "Nexus read profile state, country, route, providers, and memory." },
+    { id: "plan", title: "Plan", status: "complete", detail: `Nexus built ${plan.steps.length} step(s) from registered workflow tools.` },
+    { id: "approve", title: "Approval gate", status: "waiting", detail: "Risky actions wait for explicit operator approval." },
+    { id: "act", title: "Act", status: "waiting", detail: "Safe workflow steps can run through the supervised tool registry." },
+    { id: "verify", title: "Verify", status: "waiting", detail: "Each step records result, retry, and evidence." },
+    { id: "learn", title: "Learn", status: "waiting", detail: "Successful patterns and corrections update Nexus memory." }
+  ];
+  const steps = plan.steps.map(step => {
+    const risk = cloudAgentStepRisk(step, catalog);
+    return {
+      ...step,
+      status: "queued",
+      risk,
+      requiresApproval: risk.requiresApproval,
+      approvalStatus: risk.requiresApproval ? "needed" : "not-needed"
+    };
+  });
+  const run = {
+    id: crypto.randomUUID(),
+    goal,
+    mode: "controlled-cloud-agent",
+    status: options.autonomous ? "queued" : "awaiting-approval",
+    cloudRuntime: policy.cloudRuntime,
+    planId: plan.id,
+    policy,
+    toolCatalog: { total: catalog.total, modules: catalog.modules, approvalRequired: catalog.approvalRequired },
+    transparentWorkflow,
+    steps,
+    blockedSteps: steps.filter(step => step.requiresApproval).length,
+    safeSteps: steps.filter(step => !step.requiresApproval).length,
+    summary: `Cloud agent prepared ${steps.length} step(s): ${steps.filter(step => !step.requiresApproval).length} safe step(s), ${steps.filter(step => step.requiresApproval).length} approval-gated step(s).`,
+    createdBy: user.email,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  };
+  db.profile.agentPlans.unshift(plan);
+  db.profile.agentPlans = db.profile.agentPlans.slice(0, 12);
+  db.profile.cloudAgentRuns.unshift(run);
+  db.profile.cloudAgentRuns = db.profile.cloudAgentRuns.slice(0, 30);
+  if (options.autonomous) {
+    db.profile.cloudAgentQueue.unshift({ id: crypto.randomUUID(), runId: run.id, status: "queued", createdAt: new Date().toISOString() });
+    db.profile.cloudAgentQueue = db.profile.cloudAgentQueue.slice(0, 30);
+  }
+  db.profile.agentMemory.cloudAgent.lastRunId = run.id;
+  db.profile.agentMemory.cloudAgent.lastSummary = run.summary;
+  db.profile.agentMemory.cloudAgent.updatedAt = run.updatedAt;
+  cloudAgentAudit(db.profile, {
+    type: "run-created",
+    status: run.status,
+    summary: run.summary,
+    actor: user.email,
+    runId: run.id,
+    blockedSteps: run.blockedSteps,
+    safeSteps: run.safeSteps
+  });
+  rememberAgentMemory(db.profile, `Cloud agent mission prepared: ${goal}. ${run.summary}`, { source: "cloud-agent-run", category: "pattern", module: "Agent AI", confidence: 0.91 });
+  logIntegration(db, {
+    providerId: "cloud-agent",
+    module: "AI",
+    action: "cloud_agent.run_created",
+    status: "success",
+    detail: run.summary,
+    metadata: { runId: run.id, goal, safeSteps: run.safeSteps, blockedSteps: run.blockedSteps },
+    dispatch: false
+  });
+  addActivity(db.profile, run.summary);
+  return run;
+}
+
+function cloudAgentSelfCorrection(db, user, step, error) {
+  ensureAiProfile(db.profile);
+  const correction = {
+    id: crypto.randomUUID(),
+    stepId: step.id,
+    tool: step.tool,
+    module: step.module,
+    action: step.action,
+    error: String(error?.message || step.error || "Step failed"),
+    strategy: step.tool === "ai.copilot"
+      ? "Escalate to human review because fallback copilot also failed."
+      : "Retry through ai.copilot as a supervised fallback summary, then ask for review if needed.",
+    fallbackStep: step.tool === "ai.copilot" ? null : {
+      id: crypto.randomUUID(),
+      module: "AI",
+      tool: "ai.copilot",
+      action: `Self-correct ${step.action}`,
+      detail: `Review failed cloud-agent step ${step.tool}: ${String(error?.message || step.error || "unknown error")}`,
+      status: "pending-approval"
+    },
+    status: "created",
+    createdAt: new Date().toISOString()
+  };
+  db.profile.cloudAgentCorrections.unshift(correction);
+  db.profile.cloudAgentCorrections = db.profile.cloudAgentCorrections.slice(0, 50);
+  db.profile.agentMemory.cloudAgent.lastSelfCorrectionId = correction.id;
+  db.profile.agentMemory.cloudAgent.updatedAt = correction.createdAt;
+  cloudAgentAudit(db.profile, {
+    type: "self-correction-created",
+    status: "created",
+    summary: `${step.action} failed; Nexus created a supervised correction path.`,
+    actor: user.email,
+    runStepId: step.id,
+    correctionId: correction.id
+  });
+  return correction;
+}
+
+async function executeCloudAgentRun(db, user, run, options = {}) {
+  ensureAiProfile(db.profile);
+  const approved = options.approved === true;
+  run.status = "executing";
+  run.updatedAt = new Date().toISOString();
+  run.transparentWorkflow = (run.transparentWorkflow || []).map(phase => {
+    if (phase.id === "approve") return { ...phase, status: approved ? "approved" : "safe-only" };
+    if (phase.id === "act") return { ...phase, status: "running" };
+    return phase;
+  });
+  const executedSteps = [];
+  const blockedSteps = [];
+  for (const step of run.steps || []) {
+    if (step.requiresApproval && !approved) {
+      const blocked = { ...step, status: "blocked-awaiting-approval", approvalStatus: "needed" };
+      blockedSteps.push(blocked);
+      executedSteps.push(blocked);
+      continue;
+    }
+    const result = await executeAgentStepWithRetry(db, user, { ...step, status: "pending-approval" }, 2);
+    if (result.status === "failed") {
+      const correction = cloudAgentSelfCorrection(db, user, result, result.error);
+      if (correction.fallbackStep) {
+        const fallback = await executeAgentStepWithRetry(db, user, correction.fallbackStep, 1);
+        correction.status = fallback.status === "executed" ? "fallback-executed" : "needs-human-review";
+        correction.fallbackResult = fallback.result || fallback.error;
+        result.selfCorrection = {
+          id: correction.id,
+          status: correction.status,
+          strategy: correction.strategy,
+          fallbackResult: correction.fallbackResult
+        };
+        if (fallback.status === "executed") result.status = "self-corrected";
+      }
+    }
+    executedSteps.push(result);
+  }
+  const failed = executedSteps.filter(step => step.status === "failed");
+  const blocked = executedSteps.filter(step => step.status === "blocked-awaiting-approval");
+  const completed = executedSteps.filter(step => ["executed", "self-corrected"].includes(step.status));
+  run.steps = executedSteps;
+  run.status = failed.length ? "needs-human-review" : blocked.length ? "needs-approval" : "completed";
+  run.summary = failed.length
+    ? `Cloud agent completed ${completed.length}/${executedSteps.length} step(s); ${failed.length} need human review.`
+    : blocked.length
+      ? `Cloud agent completed ${completed.length} safe step(s) and paused ${blocked.length} approval-gated step(s).`
+      : `Cloud agent completed all ${completed.length} controlled workflow step(s).`;
+  run.updatedAt = new Date().toISOString();
+  run.transparentWorkflow = (run.transparentWorkflow || []).map(phase => {
+    if (phase.id === "act") return { ...phase, status: "complete", detail: run.summary };
+    if (phase.id === "verify") return { ...phase, status: failed.length ? "needs-review" : "complete", detail: `${completed.length} completed, ${blocked.length} blocked, ${failed.length} failed.` };
+    if (phase.id === "learn") return { ...phase, status: "complete", detail: "Run result and corrections were stored in Nexus memory." };
+    return phase;
+  });
+  const execution = {
+    id: crypto.randomUUID(),
+    planId: run.planId,
+    cloudRunId: run.id,
+    goal: run.goal,
+    status: run.status === "completed" ? "completed" : run.status,
+    summary: run.summary,
+    steps: executedSteps.map(step => ({ module: step.module, tool: step.tool, action: step.action, status: step.status, attempts: step.attempts, result: step.result, error: step.error, selfCorrection: step.selfCorrection })),
+    note: approved ? "Cloud-agent run executed with approval." : "Cloud-agent run executed safe steps only.",
+    createdAt: new Date().toISOString()
+  };
+  db.profile.agentExecutions.unshift(execution);
+  db.profile.agentExecutions = db.profile.agentExecutions.slice(0, 20);
+  db.profile.cloudAgentQueue = (db.profile.cloudAgentQueue || []).map(item => item.runId === run.id ? { ...item, status: run.status, updatedAt: run.updatedAt } : item).slice(0, 30);
+  db.profile.agentMemory.cloudAgent.lastRunId = run.id;
+  db.profile.agentMemory.cloudAgent.lastSummary = run.summary;
+  db.profile.agentMemory.cloudAgent.updatedAt = run.updatedAt;
+  rememberAgentMemory(db.profile, `Cloud agent result: ${run.summary}`, { source: "cloud-agent-execution", category: "pattern", module: "Agent AI", confidence: 0.92 });
+  cloudAgentAudit(db.profile, {
+    type: "run-executed",
+    status: run.status,
+    summary: run.summary,
+    actor: user.email,
+    runId: run.id,
+    executionId: execution.id
+  });
+  logIntegration(db, {
+    providerId: "cloud-agent",
+    module: "AI",
+    action: "cloud_agent.run_executed",
+    status: run.status === "completed" ? "success" : "needs-review",
+    detail: run.summary,
+    metadata: { runId: run.id, executionId: execution.id, status: run.status },
+    dispatch: false
+  });
+  addActivity(db.profile, run.summary);
+  return { run, execution };
+}
+
+async function cloudAgentTick(db, user, options = {}) {
+  ensureAiProfile(db.profile);
+  const queued = (db.profile.cloudAgentQueue || []).find(item => item.status === "queued" || item.status === "needs-approval");
+  if (!queued) {
+    const audit = cloudAgentAudit(db.profile, {
+      type: "queue-tick",
+      status: "idle",
+      summary: "Cloud agent queue checked; no queued missions were waiting.",
+      actor: user.email
+    });
+    return { status: "idle", summary: audit.summary, audit };
+  }
+  const run = (db.profile.cloudAgentRuns || []).find(item => item.id === queued.runId);
+  if (!run) {
+    queued.status = "missing-run";
+    return { status: "missing-run", summary: "Queued cloud-agent run could not be found." };
+  }
+  return executeCloudAgentRun(db, user, run, { approved: options.approved === true });
+}
+
+function cloudAgentTransparencyPacket(db, user) {
+  ensureAiProfile(db.profile);
+  const catalog = cloudAgentToolCatalog(db, user);
+  const latestRun = (db.profile.cloudAgentRuns || [])[0] || null;
+  const latestAudit = (db.profile.cloudAgentAudit || [])[0] || null;
+  const pendingApprovals = (db.profile.cloudAgentRuns || []).reduce((total, run) => total + (run.steps || []).filter(step => step.status === "blocked-awaiting-approval" || step.approvalStatus === "needed").length, 0);
+  const readyCount = [
+    catalog.total >= 30,
+    Boolean((db.profile.cloudAgentRuns || []).length),
+    Boolean((db.profile.cloudAgentAudit || []).length),
+    Boolean((db.profile.agentMemory?.longTermFacts || []).length || (db.profile.agentMemory?.learnedPatterns || []).length),
+    Boolean((db.profile.cloudAgentCorrections || []).length || (db.profile.agentExecutions || []).length),
+    Boolean(runtimeProviders(db).some(provider => provider.status === "connected"))
+  ].filter(Boolean).length;
+  return {
+    status: latestRun?.status || "ready",
+    mode: "controlled-cloud-agent",
+    cloudRuntime: IS_HOSTED ? "render-cloud" : "local-cloud-sim",
+    readyCount,
+    total: 6,
+    score: Math.round((readyCount / 6) * 100),
+    summary: latestRun?.summary || "Nexus cloud agent is ready to plan, run safe tools, pause high-impact work, self-correct failures, and show its audit trail.",
+    latestRun,
+    latestAudit,
+    runs: (db.profile.cloudAgentRuns || []).slice(0, 5),
+    queued: (db.profile.cloudAgentQueue || []).slice(0, 5),
+    corrections: (db.profile.cloudAgentCorrections || []).slice(0, 5),
+    audit: (db.profile.cloudAgentAudit || []).slice(0, 10),
+    tools: {
+      total: catalog.total,
+      approvalRequired: catalog.approvalRequired,
+      modules: catalog.modules,
+      examples: catalog.baseTools.slice(0, 8)
+    },
+    templates: catalog.templates,
+    policy: catalog.policy,
+    pendingApprovals,
+    unlockedBehavior: [
+      "Cloud mission queue",
+      "Registered tool execution",
+      "Approval-gated autonomy",
+      "Self-correction attempts",
+      "Memory-backed learning",
+      "Transparent audit trail"
+    ]
+  };
 }
 
 function addTradeEvent(profile, event) {
@@ -12192,6 +12642,38 @@ async function runAgentCommand(db, user, command, options = {}) {
   if (/\b(trusted operating system|trusted os|people can rely on|actually rely on|can we trust|trust review|dependable platform|reliable operating system|production trust|trust score)\b/.test(lower)) {
     return trustedOperatingSystemCommandResponse(db, user, text, options);
   }
+  if (/\b(approve|confirm|run paused|continue paused)\b/.test(lower) && /\b(cloud agent|cloud-agent|cloud mission|autonomous agent|agent queue)\b/.test(lower)) {
+    const run = (db.profile.cloudAgentRuns || []).find(item => item.status === "needs-approval" || (item.steps || []).some(step => step.approvalStatus === "needed"))
+      || (db.profile.cloudAgentRuns || [])[0];
+    if (!run) {
+      return {
+        intent: "cloud_agent.no_run",
+        response: "I do not see a cloud-agent mission waiting yet. Say, Nexus, launch a cloud agent mission, and I will prepare one.",
+        status: "needs-input",
+        metadata: { redirectSection: "agent" }
+      };
+    }
+    const result = await executeCloudAgentRun(db, user, run, { approved: true });
+    return {
+      intent: "cloud_agent.approved",
+      response: `Approved cloud-agent work is complete. ${result.run.summary}`,
+      status: result.run.status,
+      metadata: { redirectSection: "agent", runId: result.run.id, executionId: result.execution.id, mode: "controlled-cloud-agent" }
+    };
+  }
+  if (/\b(cloud agent|cloud-agent|cloud mission|autonomous agent|controlled autonomy|agent queue|self correct|self-correct)\b/.test(lower)) {
+    const goal = text
+      .replace(/^(run|start|create|use|activate|launch|show|explain)?\s*(the\s+)?(cloud\s*agent|cloud-agent|cloud\s*mission|autonomous\s*agent|controlled\s*autonomy|agent\s*queue)\s*(mode|mission|for|to)?/i, "")
+      .trim() || text || "Run a controlled AgriNexus cloud-agent mission.";
+    const run = createCloudAgentRun(db, user, goal, { autonomous: true });
+    const result = await executeCloudAgentRun(db, user, run, { approved: options.confirm === true || lower.includes("approve") || lower.includes("confirmed") });
+    return {
+      intent: "cloud_agent.launched",
+      response: `${result.run.summary} I used registered tools, paused sensitive actions when approval was needed, and recorded the audit trail.`,
+      status: result.run.status,
+      metadata: { redirectSection: "agent", runId: result.run.id, executionId: result.execution.id, mode: "controlled-cloud-agent" }
+    };
+  }
   if (lower.includes("autopilot") || lower.includes("auto pilot") || lower.includes("take over") || lower.includes("run the mission")) {
     const goal = text.replace(/^(run|start|create|use|activate)?\s*(agent\s+)?(auto\s*pilot|autopilot)\s*(mode)?\s*(for|to)?/i, "").trim() || text || "Run an AgriNexus autopilot mission.";
     if (conversational && !options.confirm) {
@@ -16693,6 +17175,94 @@ async function api(req, res, url) {
     addActivity(db.profile, `Agent plan created: ${goal}`);
     await writeDb(db);
     return send(res, 200, publicState(db, user));
+  }
+
+  if (url.pathname === "/api/cloud-agent/status" && req.method === "GET") {
+    if (!canUse(user, "ai")) return send(res, 403, { error: "Role does not allow cloud agent status" });
+    const state = publicState(db, user);
+    state.cloudAgent = cloudAgentTransparencyPacket(db, user);
+    return send(res, 200, state);
+  }
+
+  if (url.pathname === "/api/cloud-agent/run" && req.method === "POST") {
+    if (!canUse(user, "ai")) return send(res, 403, { error: "Role does not allow cloud agent runs" });
+    const body = await readBody(req);
+    const goal = String(body.goal || "Run a controlled AgriNexus cloud-agent mission.").trim();
+    const run = createCloudAgentRun(db, user, goal, { autonomous: body.autonomous === true });
+    let result = { run };
+    if (body.execute === true || body.approved === true) {
+      result = await executeCloudAgentRun(db, user, run, { approved: body.approved === true });
+    }
+    addWorkflowNote(db.profile, body.note, "Cloud agent note");
+    await writeDb(db);
+    const state = publicState(db, user);
+    state.cloudAgentResult = result;
+    return send(res, 200, state);
+  }
+
+  if (url.pathname === "/api/cloud-agent/tick" && req.method === "POST") {
+    if (!canUse(user, "ai")) return send(res, 403, { error: "Role does not allow cloud agent queue execution" });
+    const body = await readBody(req);
+    const result = await cloudAgentTick(db, user, { approved: body.approved === true });
+    await writeDb(db);
+    const state = publicState(db, user);
+    state.cloudAgentTick = result;
+    return send(res, 200, state);
+  }
+
+  if (url.pathname === "/api/cloud-agent/tool-template" && req.method === "POST") {
+    if (!canUse(user, "ai")) return send(res, 403, { error: "Role does not allow cloud agent tool templates" });
+    const body = await readBody(req);
+    try {
+      const template = createCloudAgentToolTemplate(db, user, body);
+      await writeDb(db);
+      const state = publicState(db, user);
+      state.cloudAgentToolTemplate = template;
+      return send(res, 200, state);
+    } catch (error) {
+      return send(res, error.statusCode || 400, { error: error.message || "Tool template could not be created" });
+    }
+  }
+
+  if (url.pathname === "/api/cloud-agent/approve" && req.method === "POST") {
+    if (!canUse(user, "ai")) return send(res, 403, { error: "Role does not allow cloud agent approval" });
+    const body = await readBody(req);
+    ensureAiProfile(db.profile);
+    let approvalResult = null;
+    if (body.templateId) {
+      const template = db.profile.cloudAgentToolTemplates.find(item => item.id === body.templateId);
+      if (!template) return send(res, 404, { error: "Cloud agent tool template not found" });
+      if (user.role !== "admin") return send(res, 403, { error: "Only admin can approve tool templates" });
+      template.status = "approved-template";
+      template.approvedBy = user.email;
+      template.approvedAt = new Date().toISOString();
+      template.updatedAt = template.approvedAt;
+      approvalResult = { template };
+      cloudAgentAudit(db.profile, {
+        type: "tool-template-approved",
+        status: "approved-template",
+        summary: `${template.title} approved for future supervised binding.`,
+        actor: user.email,
+        templateId: template.id
+      });
+    }
+    if (body.runId) {
+      const run = db.profile.cloudAgentRuns.find(item => item.id === body.runId);
+      if (!run) return send(res, 404, { error: "Cloud agent run not found" });
+      approvalResult = await executeCloudAgentRun(db, user, run, { approved: true });
+    }
+    if (!approvalResult) return send(res, 400, { error: "Provide runId or templateId to approve." });
+    await writeDb(db);
+    const state = publicState(db, user);
+    state.cloudAgentApproval = approvalResult;
+    return send(res, 200, state);
+  }
+
+  if (url.pathname === "/api/cloud-agent/audit" && req.method === "GET") {
+    if (!canUse(user, "ai")) return send(res, 403, { error: "Role does not allow cloud agent audit" });
+    const state = publicState(db, user);
+    state.cloudAgentAudit = (db.profile.cloudAgentAudit || []).slice(0, 50);
+    return send(res, 200, state);
   }
 
   if (url.pathname === "/api/agent/execute" && req.method === "POST") {
