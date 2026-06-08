@@ -13,7 +13,7 @@
   <link rel="icon" href="/icons/agri-nexus-192.png" type="image/png">
   <link rel="apple-touch-icon" href="/icons/agri-nexus-192.png">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-  <link rel="stylesheet" href="/styles.css?v=nexus-behavior-185">
+  <link rel="stylesheet" href="/styles.css?v=nexus-behavior-186">
 </head>
 <body>
   <a class="skip-link" href="#mainContent">Skip to main content</a>
@@ -281,10 +281,12 @@
             </div>
             <div class="pilot-actions">
               <button id="remoteLaunchKitBtn" class="primary" type="button">Build remote launch kit</button>
+              <button id="womenFamilyWorkflowBtn" class="primary" type="button" data-workflow="women-family" data-action="start">Support women & families</button>
               <button id="pilotRuralAccessBtn" class="primary" type="button" data-pilot-scenario="rural-access">Run rural access pilot</button>
               <button id="pilotFarmerMarketBtn" type="button" data-pilot-scenario="farmer-market">Run farmer market pilot</button>
               <button id="pilotHealthWorkforceBtn" type="button" data-pilot-scenario="health-workforce">Run health workforce pilot</button>
             </div>
+            <div id="womenFamilyPanel" class="pilot-report"></div>
             <div id="localPilotReport" class="pilot-report"></div>
           </div>
           <div class="demo-command">
@@ -1557,6 +1559,6 @@
   <div id="toast" class="toast hidden" role="status" aria-live="polite" aria-atomic="true"></div>
   <div id="screenReaderStatus" class="sr-only" role="status" aria-live="polite" aria-atomic="true"></div>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="/app.js?v=nexus-behavior-185"></script>
+  <script src="/app.js?v=nexus-behavior-186"></script>
 </body>
 </html>

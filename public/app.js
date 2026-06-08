@@ -58,8 +58,8 @@ let routeTrackingWatchId = null;
 let routeTrackingPoints = [];
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-185";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v165";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-186";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v166";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
 const VOICE_ATTENTION_DELAY_MS = 900;
@@ -7506,6 +7506,30 @@ function latestOnboardingRun() {
 function renderLaunchSupportPanels() {
   const run = latestOnboardingRun();
   const tickets = data.profile.supportTickets || [];
+  const womenFamilyTarget = $("#womenFamilyPanel");
+  if (womenFamilyTarget) {
+    const support = data.womenFamilySupport || { summary: "Women and family support is ready.", metrics: [], providerTruth: [] };
+    const latest = support.latest;
+    const latestHtml = latest ? `
+      <div>
+        <strong>${translateText(`${latest.runNumber} - ${latest.status}`)}</strong>
+        <span>${translateText(`${latest.beneficiaryGroup}: ${latest.primaryNeed}`)}</span>
+        <small>${translateText(`${latest.cooperativeName} | ${latest.country} | ${latest.childProtection}`)}</small>
+      </div>
+    ` : `
+      <div>
+        <strong>${translateText("Women & family support ready")}</strong>
+        <span>${translateText(support.summary)}</span>
+      </div>
+    `;
+    const providerHtml = (support.providerTruth || []).slice(0, 4).map(item => `
+      <div>
+        <strong>${translateText(item.title)} - ${translateText(item.status)}</strong>
+        <span>${translateText(item.detail)}</span>
+      </div>
+    `).join("");
+    womenFamilyTarget.innerHTML = `${latestHtml}${providerHtml}`;
+  }
   const pilotTarget = $("#localPilotReport");
   if (pilotTarget) {
     const pilots = data.profile.localPilotRuns || [];
@@ -7819,6 +7843,11 @@ function renderUserWorkspace() {
         ${userVisualIconHtml("map")}
         <strong>${translateText("Language")}</strong>
         <span>${translateText("Change screen and voice language.")}</span>
+      </button>
+      <button type="button" class="user-fast-action family" data-simple-command="${escapeHtml("help my family on the farm")}">
+        ${userVisualIconHtml("trade")}
+        <strong>${translateText("Family support")}</strong>
+        <span>${translateText("Help women farmers, caregivers, youth learners, and cooperatives.")}</span>
       </button>
     </section>
     <section id="userLanguagePanel" class="user-language-panel hidden" aria-label="${translateText("Choose language")}">
@@ -8583,6 +8612,9 @@ function simpleUserCommandWorkflow(command = "") {
   const productId = firstProduct()?.id;
   const migrantIntent = migrantFriendlyVoiceIntent(command);
   if (migrantIntent) return migrantIntent;
+  if (/\b(women|woman|mother|mothers|family|caregiver|children|child|youth|girls|cooperative)\b/.test(lower) && /\b(farm|farmer|agriculture|crop|sell|market|health|learn|school|support|help|clinic)\b/.test(lower)) {
+    return { workflow: "women-family", action: "start", response: "Women and family farm support is ready.", dataset: {} };
+  }
   if (lower.includes("start training") || lower.includes("start a course")) return { workflow: "learning", action: "start", response: "Course start is ready.", dataset: {} };
   if (lower.includes("complete my lesson") || lower.includes("finish lesson")) return { workflow: "learning", action: "lesson", response: "Lesson completion is ready.", dataset: {} };
   if (lower.includes("issue my certificate") || lower.includes("certificate")) return { section: "learning", config: learningCertificateWorkflowConfig(), response: "Certificate workflow is ready." };
@@ -11453,8 +11485,8 @@ function roleWorkflowConfig(roleId) {
   };
 }
 
-function simpleWorkflowConfig({ eyebrow, title, userTitle, summary, userSummary, confirmLabel, path, body, success, record, provider, checklist, fields, guide, steps, routePreview, healthPreview, videoPreview, userOutcome, userRecord }) {
-  return { eyebrow, title, userTitle, summary, userSummary, confirmLabel, path, body, success, record, provider, checklist, fields, guide, steps, routePreview, healthPreview, videoPreview, userOutcome, userRecord };
+function simpleWorkflowConfig({ eyebrow, title, userTitle, summary, userSummary, confirmLabel, path, body, redirectSection, success, record, provider, checklist, fields, guide, steps, routePreview, healthPreview, videoPreview, userOutcome, userRecord }) {
+  return { eyebrow, title, userTitle, summary, userSummary, confirmLabel, path, body, redirectSection, success, record, provider, checklist, fields, guide, steps, routePreview, healthPreview, videoPreview, userOutcome, userRecord };
 }
 
 function courseSelectOptions() {
@@ -11902,6 +11934,59 @@ function workflowConfig(workflow, action, element) {
         { title: "Module", detail: moduleName, status: "ready", label: "Area" },
         { title: "Channel", detail: channel, status: channel === "in-app chat" ? "ready" : "live", label: "Route" },
         { title: "Provider status", detail: channel === "WhatsApp" ? (data.providers.find(item => item.id === "whatsapp-delivery")?.detail || "WhatsApp provider pending") : channel === "SMS" ? (data.providers.find(item => item.id === "sms-delivery")?.detail || "SMS provider pending") : "Local two-way thread is available now", status: "ready", label: "Comms" }
+      ]
+    });
+  }
+  if (workflow === "women-family") {
+    const country = activeCountry();
+    const route = activeRoute();
+    const support = data.womenFamilySupport || { status: "ready", latest: null, metrics: [] };
+    return simpleWorkflowConfig({
+      eyebrow: "Women & family workflow",
+      title: "Start women and family agriculture support",
+      userTitle: "Help my family on the farm",
+      summary: "Create a real cross-module support path for women farmers, caregivers, youth safe learning, family health access, cooperative selling, accessibility, and partner evidence.",
+      userSummary: "Nexus will help with family farm support, safe learning, clinic/pharmacy navigation, buyer support, and simple next steps.",
+      confirmLabel: "Start support path",
+      path: "/api/women-family/workflow",
+      body: {
+        beneficiaryGroup: "Women farmers, caregivers, and youth learners",
+        cooperativeName: `${country.name} Women Farmer Cooperative`,
+        primaryNeed: "Farm income, family health access, youth learning, and cooperative selling support",
+        language: languageCode()
+      },
+      redirectSection: "dashboard",
+      success: "Women and family support path opened",
+      record: "Women/family support run, learning plan, workforce plan, health navigation, cooperative sale path, map insight, notification, activity, and provider audit evidence",
+      provider: "Uses local workflow evidence now; live course, telehealth, job, trade, communications, and map providers attach when credentials are connected.",
+      guide: "Nexus creates one easy support path that connects farm income, family health access, safe youth learning, cooperative selling, and accessibility support. It does not diagnose medical conditions or use children as workers.",
+      routePreview: { route },
+      healthPreview: { country },
+      userOutcome: "AgriNexus opens the support path and tells the user the next safe step.",
+      userRecord: "Support run, family need, cooperative name, learning plan, health navigation, trade plan, map insight, and audit evidence are saved.",
+      fields: [
+        { name: "beneficiaryGroup", label: "Who needs support?", value: "Women farmers, caregivers, and youth learners", placeholder: "Example: women farmers in my cooperative" },
+        { name: "cooperativeName", label: "Group or cooperative name", value: `${country.name} Women Farmer Cooperative`, placeholder: "Example: Nairobi Women Growers" },
+        { type: "textarea", name: "primaryNeed", label: "What help is needed?", rows: 3, value: "Farm income, family health access, youth learning, and cooperative selling support", placeholder: "Example: sell maize, help mothers reach clinic support, teach youth safely" },
+        { type: "select", name: "language", label: "Preferred language", value: languageCode(), options: [
+          { value: "en", label: "English" },
+          { value: "fr", label: "French" },
+          { value: "sw", label: "Kiswahili" },
+          { value: "ar", label: "Arabic" },
+          { value: "es", label: "Spanish" },
+          { value: "pt", label: "Portuguese" }
+        ] }
+      ],
+      steps: [
+        { title: "Listen", detail: "Nexus captures the family, cooperative, language, and farm support need." },
+        { title: "Protect", detail: "Youth support is safe learning and family support, not child labor. Health support is navigation, not diagnosis." },
+        { title: "Connect", detail: "Nexus links learning, workforce, telehealth navigation, crop selling, route/map, accessibility, and communication evidence." },
+        { title: "Guide next", detail: "The user gets a simple next step they can speak or tap." }
+      ],
+      checklist: [
+        { title: "Country context", detail: `${country.name}: ${country.queue}, ${country.risk} risk`, status: "live", label: country.risk },
+        { title: "Route context", detail: `${route.name} at ${data.profile.activeCheckpoint}`, status: "ready", label: "Map" },
+        { title: "Existing support", detail: support.latest ? `${support.latest.runNumber} already active` : "No women/family support path yet", status: support.latest ? "live" : "ready", label: support.status || "Ready" }
       ]
     });
   }

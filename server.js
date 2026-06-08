@@ -1567,6 +1567,7 @@ function publicState(db, user) {
     maximumOperationalEfficiency: maximumOperationalEfficiencyModel(db, user, providers),
     autonomousOperatingLoop: autonomousOperatingLoopModel(db, user, providers),
     cloudAgent: cloudAgentTransparencyPacket(db, user),
+    womenFamilySupport: womenFamilyAgricultureModel(db, providers),
     remoteLaunchKit: remoteRuralFarmerLaunchKit(db, user, providers),
     sessionBriefing: sessionBriefingModel(db, user, providers),
     impactDashboard: impactDashboardModel(db, providers),
@@ -1589,7 +1590,9 @@ function impactDashboardModel(db, providers = runtimeProviders(db)) {
   ensureTradeProfile(db.profile);
   ensureAiProfile(db.profile);
   ensureCommunicationProfile(db.profile);
+  ensureOperationsProfile(db.profile);
   const orders = db.profile.orders || [];
+  const womenFamilyRuns = db.profile.womenFamilyRuns || [];
   const tradeValue = orders.reduce((sum, order) => sum + Number(order.total || 0), 0);
   const trained = new Set([...(db.profile.completedCourses || []), ...(db.profile.certificates || []).map(item => item.courseId)]).size;
   const providerEvents = (db.profile.integrationEvents || []).length;
@@ -1602,6 +1605,7 @@ function impactDashboardModel(db, providers = runtimeProviders(db)) {
     + Math.min(15, (db.profile.applications || []).length * 7)
     + Math.min(15, orders.length * 5)
     + Math.min(15, communications * 4)
+    + Math.min(10, womenFamilyRuns.length * 5)
   ));
   const metrics = [
     { label: "Learners trained", value: trained, detail: `${(db.profile.enrollments || []).length} enrollment(s), ${(db.profile.certificates || []).length} certificate(s)` },
@@ -1609,6 +1613,7 @@ function impactDashboardModel(db, providers = runtimeProviders(db)) {
     { label: "Telehealth cases", value: (db.profile.healthIntakes || []).length, detail: `${(db.profile.carePlans || []).length} care plan(s), ${(db.profile.telehealthFollowUps || []).length} follow-up(s)` },
     { label: "Trade value", value: tradeValue, detail: `${orders.length} order(s), ${(db.profile.walletTransactions || []).length} wallet transaction(s)`, format: "money" },
     { label: "Communication threads", value: communications, detail: "Learning, workforce, telehealth, provider, and buyer-seller threads" },
+    { label: "Women & family support", value: womenFamilyRuns.length, detail: `${womenFamilyRuns.filter(item => item.status === "active" || item.status === "pilot-ready").length} active support path(s) for women farmers, youth learning, caregivers, and cooperatives` },
     { label: "Provider evidence", value: providerEvents, detail: `${connectedProviders}/${providers.length} connected provider(s)` },
     { label: "Rural access score", value: ruralAccessScore, detail: "Composite learning, care, work, trade, communication, and evidence score", suffix: "%" }
   ];
@@ -1638,6 +1643,7 @@ function missionTimelineModel(db) {
   (db.profile.healthIntakes || []).slice(0, 3).forEach(item => add("Healthcare", "Telehealth intake opened", item.patientRef || item.needSummary, item.queueStatus || "active", item.createdAt, item.riskLevel));
   (db.profile.orders || []).slice(-3).forEach(item => add("AgriTrade", "Trade order created", `${item.orderNumber || item.id}: ${item.product}`, item.stage || "active", item.createdAt, item.checkpoint));
   (db.profile.droneScans || []).slice(0, 3).forEach(item => add("AgriTech", "Drone field scan completed", `${item.productName}: ${item.cropHealthScore}% crop health`, item.status || "complete", item.createdAt, item.scanRef));
+  (db.profile.womenFamilyRuns || []).slice(0, 3).forEach(item => add("Women & Family", "Women and family support path opened", `${item.beneficiaryGroup}: ${item.primaryNeed}`, item.status || "active", item.createdAt, item.runNumber));
   (db.profile.communicationThreads || []).slice(0, 3).forEach(item => add(item.module || "Communications", "Two-way thread opened", `${item.channel} with ${item.participantName}`, item.status, item.createdAt, item.subject));
   (db.profile.aiOrchestrations || []).slice(0, 3).forEach(item => add("AI", "AI orchestration reviewed", item.recommendation, item.status, item.createdAt, item.aiRunId));
   (db.profile.integrationEvents || []).slice(0, 5).forEach(item => add(item.module || "Integrations", item.action, item.detail, item.status, item.createdAt, item.providerName || item.providerId));
@@ -4037,6 +4043,7 @@ function adminSnapshot(db, providers = runtimeProviders(db)) {
     { name: "Learning", status: "connected", records: (profile.enrollments || []).length + (profile.certificates || []).length },
     { name: "Workforce", status: "connected", records: (profile.applications || []).length + (profile.shiftSchedule || []).length },
     { name: "Healthcare", status: "connected", records: (profile.healthIntakes || []).length + (profile.carePlans || []).length + (profile.safetyReviews || []).length },
+    { name: "Women & Family", status: "connected", records: (profile.womenFamilyRuns || []).length },
     { name: "AgriTrade", status: "connected", records: (profile.orders || []).length + (profile.walletTransactions || []).length },
     { name: "Integrations", status: "connected", records: (profile.integrationEvents || []).length },
     { name: "Maps/AI", status: "ready", records: (db.routes || []).length + (db.countries || []).length }
@@ -6523,11 +6530,157 @@ function ensureOperationsProfile(profile) {
   profile.usageEvents = profile.usageEvents || [];
   profile.subscriberAccounts = profile.subscriberAccounts || [];
   profile.localPilotRuns = profile.localPilotRuns || [];
+  profile.womenFamilyRuns = profile.womenFamilyRuns || [];
   profile.workflowIntelligence = profile.workflowIntelligence || [];
   profile.providerPartnerships = profile.providerPartnerships || [];
   profile.providerOutreach = profile.providerOutreach || [];
   profile.providerShortlist = profile.providerShortlist || [];
   profile.remoteLaunchKits = profile.remoteLaunchKits || [];
+}
+
+function womenFamilyAgricultureModel(db, providers = runtimeProviders(db)) {
+  ensureOperationsProfile(db.profile);
+  ensureLearningProfile(db.profile);
+  ensureWorkforceProfile(db.profile);
+  ensureHealthProfile(db.profile);
+  ensureTradeProfile(db.profile);
+  ensureCommunicationProfile(db.profile);
+  const { country, route } = activeContext(db);
+  const runs = db.profile.womenFamilyRuns || [];
+  const latest = runs[0] || null;
+  const providerReady = id => providers.find(provider => provider.id === id)?.status || "provider-ready";
+  const activeGroups = new Set(runs.map(run => run.beneficiaryGroup).filter(Boolean));
+  const metrics = [
+    { label: "Support paths", value: runs.length, detail: "Women farmer, caregiver, youth learning, cooperative, and clinic navigation paths created" },
+    { label: "Women farmers", value: runs.filter(run => /women|woman|mother|caregiver/i.test(run.beneficiaryGroup || "")).length, detail: "Runs focused on women farmers, mothers, and caregivers" },
+    { label: "Youth safe learning", value: runs.filter(run => run.childProtection).length, detail: "Education support is framed as safe learning, not child labor" },
+    { label: "Cooperative selling", value: runs.filter(run => run.cooperativePlan?.status).length, detail: "Crop-to-market and buyer communication plans attached" }
+  ];
+  const actions = [
+    { title: "Start women farmer support", command: "Nexus, help women farmers and families" },
+    { title: "Build youth safe learning path", command: "Nexus, create safe learning support for children on the farm" },
+    { title: "Open family health access", command: "Nexus, help a mother reach clinic support" },
+    { title: "Prepare cooperative sale", command: "Nexus, help our women cooperative sell crops" }
+  ];
+  return {
+    status: runs.length ? "active" : "ready",
+    summary: latest
+      ? `${latest.runNumber} is active for ${latest.beneficiaryGroup} in ${latest.country}: ${latest.primaryNeed}.`
+      : `Ready to support women farmers, caregivers, youth learners, and cooperatives in ${country.name}.`,
+    country: country.name,
+    route: route.name,
+    latest,
+    metrics,
+    activeGroups: Array.from(activeGroups),
+    providerTruth: [
+      { title: "Learning catalog", status: providerReady("learning-courses"), detail: "Courses and youth learning support can use local catalog until a provider is connected." },
+      { title: "Telehealth navigation", status: providerReady("health-telehealth"), detail: "Routes families to intake, representative, accessibility, clinic, and pharmacy workflows without diagnosis." },
+      { title: "Trade marketplace", status: providerReady("trade-market"), detail: "Creates buyer contact, order, route, and cooperative selling evidence." },
+      { title: "Communications", status: providerReady("sms-delivery"), detail: "SMS, WhatsApp, phone, or local thread evidence is recorded based on configured providers." }
+    ],
+    actions
+  };
+}
+
+function runWomenFamilyAgricultureWorkflow(db, user, body = {}) {
+  ensureOperationsProfile(db.profile);
+  ensureLearningProfile(db.profile);
+  ensureWorkforceProfile(db.profile);
+  ensureHealthProfile(db.profile);
+  ensureTradeProfile(db.profile);
+  ensureAiProfile(db.profile);
+  ensureCommunicationProfile(db.profile);
+  const { country, route } = activeContext(db);
+  const product = (db.products || []).find(item => item.countryId === country.id) || (db.products || [])[0] || {};
+  const course = db.courses.find(item => item.id === body.courseId) || db.courses.find(item => /farm|agri|health|business|safety/i.test(item.title || "")) || db.courses[0] || {};
+  const role = db.roles.find(item => item.country === country.name) || db.roles[0] || {};
+  const now = new Date().toISOString();
+  const runNumber = `AN-WFAM-${String((db.profile.womenFamilyRuns || []).length + 1).padStart(3, "0")}`;
+  const beneficiaryGroup = String(body.beneficiaryGroup || "Women farmers, caregivers, and youth learners").trim();
+  const primaryNeed = String(body.primaryNeed || body.supportNeed || "Farm income, family health access, youth learning, and cooperative selling support").trim();
+  const cooperativeName = String(body.cooperativeName || `${country.name} Women Farmer Cooperative`).trim();
+  const run = {
+    id: crypto.randomUUID(),
+    runNumber,
+    title: "Women & Family Agriculture Support",
+    country: country.name,
+    countryId: country.id,
+    route: route.name,
+    routeId: route.id,
+    checkpoint: db.profile.activeCheckpoint || route.checkpoints?.[0] || "",
+    beneficiaryGroup,
+    primaryNeed,
+    cooperativeName,
+    status: "active",
+    childProtection: "Youth support is education, safety, nutrition, and family learning support. It is not child labor or clinical diagnosis.",
+    accessibility: {
+      language: body.language || user.language || db.profile.accessibilityProfile?.language || "en",
+      supports: ["voice guidance", "captions", "large-print summaries", "caregiver handoff", "low-bandwidth follow-up"]
+    },
+    learningPlan: {
+      courseId: course.id || null,
+      title: course.title || "Farm and family learning path",
+      goal: "Short, practical learning for women farmers and youth family support in simple language.",
+      status: "ready"
+    },
+    workforcePlan: {
+      roleId: role.id || null,
+      title: role.title || "Farm support role",
+      goal: "Connect women and family members to safe work, training, cooperative support, and paid opportunities.",
+      status: "ready"
+    },
+    healthAccessPlan: {
+      goal: "Guide family health access, intake, clinic/pharmacy navigation, and representative handoff without diagnosis.",
+      safetyBoundary: "AgriNexus explains options and helps connect support; licensed providers handle clinical decisions.",
+      nextStep: "Start intake, find clinic/pharmacy, or request mobile clinic support.",
+      status: "navigation-ready"
+    },
+    cooperativePlan: {
+      productId: product.id || null,
+      productName: product.name || "farm crop",
+      buyerStep: "Prepare buyer contact, sale order, route tracking, and receipt evidence.",
+      status: "market-ready"
+    },
+    createdBy: user.email,
+    createdAt: now
+  };
+  db.profile.womenFamilyRuns.unshift(run);
+  db.profile.womenFamilyRuns = db.profile.womenFamilyRuns.slice(0, 30);
+  addMapInsight(db.profile, {
+    type: "women-family-support",
+    label: `${country.name} women and family agriculture support`,
+    detail: `${cooperativeName}: ${primaryNeed}. Route ${route.name}, checkpoint ${run.checkpoint}.`,
+    routeName: route.name,
+    checkpoint: run.checkpoint
+  });
+  addNotification(db.profile, {
+    module: "Women & Family",
+    providerId: "notifications",
+    channel: "in-app",
+    message: `${runNumber} opened for ${beneficiaryGroup}.`,
+    createdBy: user.name
+  });
+  logIntegration(db, {
+    providerId: "openai",
+    module: "Women & Family",
+    action: "women_family.workflow_created",
+    detail: `${runNumber} opened in ${country.name}: ${primaryNeed}.`,
+    metadata: {
+      runId: run.id,
+      runNumber,
+      countryId: country.id,
+      routeId: route.id,
+      courseId: course.id || null,
+      roleId: role.id || null,
+      productId: product.id || null,
+      childProtection: run.childProtection
+    },
+    dispatch: false
+  });
+  addUsageEvent(db.profile, { module: "Women & Family", action: "women_family.workflow_created", detail: runNumber, user: user.email });
+  addActivity(db.profile, `${run.title} opened for ${beneficiaryGroup} in ${country.name}.`);
+  rememberAgentMemory(db.profile, `Women and family support active: ${beneficiaryGroup} needs ${primaryNeed} through ${cooperativeName}.`, { source: "women-family-workflow", category: "pattern", module: "Women & Family", confidence: 0.94 });
+  return run;
 }
 
 function providerCandidateGroups() {
@@ -7529,6 +7682,13 @@ async function executeAgentTool(db, user, step) {
       : `Prepared outbound call ${call.callNumber}, but it needs setup: ${(call.delivery?.missing || [call.delivery?.error || call.status]).join(", ")}.`;
   }
 
+  if (step.tool === "women_family.support_path") {
+    const run = runWomenFamilyAgricultureWorkflow(db, user, {
+      primaryNeed: step.detail || "Women and family agriculture support requested by Nexus command"
+    });
+    return `Opened ${run.runNumber} for ${run.beneficiaryGroup}: ${run.primaryNeed}.`;
+  }
+
   if (step.tool === "trade.market_review") {
     ensureTradeProfile(db.profile);
     const product = (db.products || []).find(item => item.countryId === country.id) || (db.products || [])[0];
@@ -7661,6 +7821,7 @@ async function executeAgentStepWithRetry(db, user, step, maxAttempts = 2) {
     Learning: "learning-courses",
     Workforce: "workforce-jobs",
     Healthcare: "health-telehealth",
+    "Women & Family": "openai",
     AgriTrade: "trade-market",
     AgriTech: "field-drones",
     "Field Intelligence": "field-drones",
@@ -8946,6 +9107,7 @@ function backendPredictiveAdvisorModel(db, user, command = "") {
 function conversationModuleSignal(text) {
   const lower = String(text || "").toLowerCase();
   const signals = [
+    { module: "Women & Family", section: "dashboard", keys: ["women", "woman", "mother", "mothers", "family farm", "family agriculture", "women farmer", "women farmers", "children on the farm", "youth learning", "girls in agriculture", "cooperative"] },
     { module: "Healthcare", section: "health", keys: ["telehealth", "health", "patient", "care", "doctor", "nurse", "clinic", "outbreak", "ebola", "vitals", "referral", "hearing", "visual", "blind", "deaf"] },
     { module: "Learning", section: "learning", keys: ["learning", "training", "course", "lesson", "quiz", "certificate", "learner", "student", "captions", "audio guide"] },
     { module: "Workforce", section: "workforce", keys: ["workforce", "work", "job", "role", "worker", "candidate", "interview", "shift", "mentor", "apply", "hiring", "position", "money", "income"] },
@@ -8979,6 +9141,7 @@ function updateConversationUserModel(profile, command) {
   const nameMatch = text.match(/\b(?:my name is|i am|i'm|this is)\s+([A-Z][a-zA-Z'-]{1,30})\b/);
   if (nameMatch) model.name = nameMatch[1];
   if (/\bfarmer|crop|field|buyer|sell|farm\b/.test(lower)) model.currentPersona = "farmer-or-trade-operator";
+  if (/\bwomen|woman|mother|mothers|family farm|family agriculture|women farmer|women farmers|children on the farm|youth learning|girls in agriculture|cooperative\b/.test(lower)) model.currentPersona = "women-family-rural-support";
   if (/\bpatient|care|telehealth|doctor|health\b/.test(lower)) model.currentPersona = "health-access-user";
   if (/\blearner|student|training|course|lesson\b/.test(lower)) model.currentPersona = "learner";
   if (/\bjob|workforce|worker|candidate|interview\b/.test(lower)) model.currentPersona = "workforce-candidate";
@@ -9027,6 +9190,7 @@ function localConversationalAnswer(db, user, command, moduleSignal, memories, op
     Learning: `Learning can guide a learner through course selection, lesson progress, captions, audio guides, offline packets, quizzes, and certificates. The strongest experience is conversational: I ask the learner's goal, language, and access needs, then move one step at a time.`,
     Workforce: `Workforce can help someone build a profile, review readiness gaps, match roles, apply, schedule interviews, assign mentors, verify documents, plan shifts, and prepare payroll or performance evidence.`,
     AgriTrade: `AgriTrade can help a farmer or seller review crop readiness, run drone field intelligence, prepare buyer communication, create orders, assess route risk, check quality and cold-chain needs, and prepare payment evidence.`,
+    "Women & Family": `Women and family agriculture support can guide women farmers, mothers, caregivers, youth learners, and cooperatives through safe learning, family health navigation, crop-to-market selling, accessibility support, and evidence for partners without replacing clinicians or exposing children to labor.`,
     Maps: `Maps can connect country context, route checkpoints, facility access, route risk, public-health or trade evidence, and live location tracking when the browser allows GPS.`,
     Integrations: `Integrations can test live engines, provider status, OpenAI, voice, translation, maps, jobs, courses, telehealth, trade, drones, communications, billing, and auth readiness.`,
     "Agent AI": `The agent layer can listen, remember context, answer questions, stage safe actions, ask for confirmation, run approved workflows, summarize what happened, and recommend the next best step.`
@@ -9229,6 +9393,7 @@ function sectionForAgentModule(module) {
     Learning: "learning",
     Workforce: "workforce",
     Healthcare: "health",
+    "Women & Family": "dashboard",
     AgriTrade: "trade",
     AgriTech: "trade",
     Maps: "map",
@@ -9247,6 +9412,7 @@ function workflowActionToAgentAction(action = {}) {
     workforce: "Workforce",
     health: "Healthcare",
     trade: "AgriTrade",
+    "women-family": "Women & Family",
     map: "Maps",
     integrations: "Integrations",
     admin: "Admin",
@@ -9270,6 +9436,7 @@ function workflowActionToAgentAction(action = {}) {
     "health:caregiver": "health.caregiver",
     "health:safety": "health.safety",
     "health:careplan": "health.careplan",
+    "women-family:start": "women_family.support_path",
     "trade:order": "trade.market_review",
     "trade:buyer-contact": "trade.buyer_contact",
     "trade:drone": "drone.field_scan",
@@ -10333,6 +10500,7 @@ function agentToolRegistry() {
     { tool: "health.safety", module: "Healthcare", action: "Run safety review", section: "health", description: "Run a safety review for health risk, escalation, or care quality." },
     { tool: "health.careplan", module: "Healthcare", action: "Generate care plan", section: "health", description: "Generate a care plan for a patient." },
     { tool: "communications.outbound_call", module: "AI", action: "Place outbound call", section: "agent", description: "Place a real outbound phone call through Twilio to a buyer, telehealth provider, recruiter, learner support contact, or configured destination after confirmation." },
+    { tool: "women_family.support_path", module: "Women & Family", action: "Start women and family agriculture support", section: "dashboard", description: "Open support for women farmers, mothers, caregivers, youth safe learning, cooperative selling, family health access, and farm income guidance." },
     { tool: "trade.market_review", module: "AgriTrade", action: "Review market", section: "trade", description: "Review market, create an order, price crops, or prepare a selling workflow." },
     { tool: "trade.buyer_contact", module: "AgriTrade", action: "Contact buyer", section: "trade", description: "Speak to, call, message, or contact a buyer about selling crops." },
     { tool: "trade.operational_efficiency", module: "AgriTrade", action: "Review operational efficiency", section: "trade", description: "Optimize trade operations, identify bottlenecks, reduce delay, improve profit, and connect buyer, route, drone, quality, cold-chain, logistics, and payment evidence." },
@@ -10371,6 +10539,18 @@ function tokenizeAgentText(text) {
     hear: "hearing caption accessibility",
     hearing: "caption accessibility",
     farmer: "crop trade drone field market buyer",
+    woman: "women family mother caregiver cooperative farm health learning trade",
+    women: "family mother caregiver cooperative farm health learning trade",
+    mother: "women family caregiver health child learning farm",
+    mothers: "women family caregiver health child learning farm",
+    caregiver: "family health patient support accessibility",
+    child: "youth children learning safety family",
+    children: "youth child learning safety family",
+    youth: "children learning safety family",
+    girl: "women youth learning safety family",
+    girls: "women youth learning safety family",
+    cooperative: "women family farm trade buyer market group",
+    family: "women caregiver child youth health learning farm",
     crop: "farm field drone trade market buyer",
     crops: "farm field drone trade market buyer",
     sell: "trade market buyer order",
@@ -14697,6 +14877,18 @@ async function api(req, res, url) {
     await writeDb(db);
     const state = publicState(db, user);
     state.remoteLaunchKitResult = kit;
+    return send(res, 200, state);
+  }
+
+  if (url.pathname === "/api/women-family/workflow" && req.method === "POST") {
+    if (!canUse(user, "ai") && !canUse(user, "health") && !canUse(user, "trade") && !canUse(user, "learning")) {
+      return send(res, 403, { error: "Role does not allow women and family agriculture support workflows" });
+    }
+    const body = await readBody(req);
+    const run = runWomenFamilyAgricultureWorkflow(db, user, body);
+    await writeDb(db);
+    const state = publicState(db, user);
+    state.womenFamilyResult = run;
     return send(res, 200, state);
   }
 
