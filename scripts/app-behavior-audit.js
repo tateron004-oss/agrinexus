@@ -440,7 +440,8 @@ assert(app.includes("VOICE_RESTART_DELAY_MS = 320"), "Voice listening should res
 assert(app.includes("VOICE_UI_RESUME_DELAYS_MS = [180, 650, 1500, 3200, 5200]"), "User actions should restore mic listening quickly");
 assert(app.includes("Heard: ${command}"), "Voice acknowledgement should stay short and responsive");
 assert(app.includes("function nexusWakeGreeting") && app.includes("How can I assist you?"), "Nexus must greet the signed-in user by name before taking commands");
-assert(app.includes("function stageNexusSpokenCommand") && app.includes("Should I do that now?"), "Nexus must repeat a heard command and wait for yes before execution");
+assert(app.includes("function stageNexusSpokenCommand") && app.includes("I am doing it now."), "Nexus must repeat a clear heard command and move into the action without a long confirmation prompt");
+assert(app.includes("Nexus opened the requested workflow and is waiting for the next command."), "Voice workflows must open actions and wait for the next command instead of forcing another confirmation");
 assert(app.includes("function executePendingNexusSpokenCommand") && app.includes("source: \"nexus-confirmation\""), "Confirmed Nexus commands must execute through the main voice handler");
 assert(app.includes("agrinexusAutonomousLearningLog") && app.includes("command-confirmed"), "Nexus must record autonomous learning evidence for confirmed commands");
 assert(app.includes("if (!id) return \"dashboard\";"), "Language changes must survive an empty hash without querying '#'");

@@ -3017,7 +3017,7 @@ function speechSafetyRisk(command = "", source = "voice") {
     ? `Voice safety is active for ${categories.join(", ") || voiceLanguageName()} because spoken or translated commands can be misheard.`
     : `Voice safety is monitoring ${voiceLanguageName()} commands.`;
   const confirmationPrompt = needsConfirmation
-    ? `I heard: ${heardText}. If that is right, say yes or press Do this now. If not, say stop or repeat it slowly.`
+    ? `I heard: ${heardText}. If that is right, say yes. If not, say stop or repeat it slowly.`
     : "";
   const safety = {
     language,
@@ -14405,7 +14405,7 @@ function nexusLocalizedBehaviorCopy(key, values = {}) {
     en: {
       hello: `Hello ${name}. How can I assist you?`,
       wake: `Yes ${name}. How can I assist you?`,
-      heard: `I heard: ${values.command || ""}. Should I do that now?`,
+      heard: `I heard: ${values.command || ""}. I am doing it now.`,
       confirmed: `Confirmed. I am doing this now: ${values.command || ""}.`,
       canceled: "Canceled. Tell me what you want Nexus to do instead.",
       ready: "I am listening. Tell me what you need."
@@ -14413,7 +14413,7 @@ function nexusLocalizedBehaviorCopy(key, values = {}) {
     pt: {
       hello: `Ola ${name}. Como posso ajudar?`,
       wake: `Sim ${name}. Como posso ajudar?`,
-      heard: `Eu ouvi: ${values.command || ""}. Quer que eu faca isso agora?`,
+      heard: `Eu ouvi: ${values.command || ""}. Vou fazer agora.`,
       confirmed: `Confirmado. Vou fazer isso agora: ${values.command || ""}.`,
       canceled: "Cancelado. Diga o que voce quer que Nexus faca.",
       ready: "Estou ouvindo. Diga o que voce precisa."
@@ -14421,7 +14421,7 @@ function nexusLocalizedBehaviorCopy(key, values = {}) {
     es: {
       hello: `Hola ${name}. Como puedo ayudarte?`,
       wake: `Si ${name}. Como puedo ayudarte?`,
-      heard: `Escuche: ${values.command || ""}. Quieres que lo haga ahora?`,
+      heard: `Escuche: ${values.command || ""}. Lo hare ahora.`,
       confirmed: `Confirmado. Lo hare ahora: ${values.command || ""}.`,
       canceled: "Cancelado. Dime que quieres que haga Nexus.",
       ready: "Estoy escuchando. Dime que necesitas."
@@ -14429,7 +14429,7 @@ function nexusLocalizedBehaviorCopy(key, values = {}) {
     fr: {
       hello: `Bonjour ${name}. Comment puis-je vous aider?`,
       wake: `Oui ${name}. Comment puis-je vous aider?`,
-      heard: `J'ai entendu: ${values.command || ""}. Voulez-vous que je le fasse maintenant?`,
+      heard: `J'ai entendu: ${values.command || ""}. Je le fais maintenant.`,
       confirmed: `Confirme. Je le fais maintenant: ${values.command || ""}.`,
       canceled: "Annule. Dites-moi ce que Nexus doit faire.",
       ready: "J'ecoute. Dites-moi ce dont vous avez besoin."
@@ -14437,7 +14437,7 @@ function nexusLocalizedBehaviorCopy(key, values = {}) {
     sw: {
       hello: `Habari ${name}. Ninawezaje kukusaidia?`,
       wake: `Ndiyo ${name}. Ninawezaje kukusaidia?`,
-      heard: `Nimesikia: ${values.command || ""}. Nifanye sasa?`,
+      heard: `Nimesikia: ${values.command || ""}. Ninafanya sasa.`,
       confirmed: `Imethibitishwa. Ninafanya sasa: ${values.command || ""}.`,
       canceled: "Imeghairiwa. Niambie Nexus ifanye nini.",
       ready: "Ninasikiliza. Niambie unahitaji nini."
@@ -14445,7 +14445,7 @@ function nexusLocalizedBehaviorCopy(key, values = {}) {
     ar: {
       hello: `\u0645\u0631\u062d\u0628\u0627 ${name}. \u0643\u064a\u0641 \u0627\u0633\u0627\u0639\u062f\u0643\u061f`,
       wake: `\u0646\u0639\u0645 ${name}. \u0643\u064a\u0641 \u0627\u0633\u0627\u0639\u062f\u0643\u061f`,
-      heard: `\u0633\u0645\u0639\u062a: ${values.command || ""}. \u0647\u0644 \u0627\u0646\u0641\u0630 \u0630\u0644\u0643 \u0627\u0644\u0622\u0646\u061f`,
+      heard: `\u0633\u0645\u0639\u062a: ${values.command || ""}. \u0633\u0627\u0646\u0641\u0630 \u0630\u0644\u0643 \u0627\u0644\u0622\u0646.`,
       confirmed: `\u062a\u0645 \u0627\u0644\u062a\u0627\u0643\u064a\u062f. \u0633\u0627\u0646\u0641\u0630 \u0627\u0644\u0622\u0646: ${values.command || ""}.`,
       canceled: "\u062a\u0645 \u0627\u0644\u0627\u0644\u063a\u0627\u0621. \u0627\u062e\u0628\u0631\u0646\u064a \u0645\u0627\u0630\u0627 \u062a\u0631\u064a\u062f \u0645\u0646 \u0646\u0643\u0633\u0633.",
       ready: "\u0627\u0646\u0627 \u0627\u0633\u062a\u0645\u0639. \u0627\u062e\u0628\u0631\u0646\u064a \u0645\u0627\u0630\u0627 \u062a\u062d\u062a\u0627\u062c."
@@ -14514,7 +14514,7 @@ function shouldStageNexusSpokenCommand(command, lower, options = {}) {
   if (isNexusCommandConfirmation(lower) || isNexusCommandRejection(lower)) return false;
   if (isGlobalStopCommand(lower) || isNexusVoiceOffCommand(lower) || isNexusVoiceOnCommand(lower)) return false;
   if (isNaturalQuestionOrConversation(command)) return false;
-  return hasBehaviorActionVerb(command) || speechSafetyRisk(command, "voice").sensitive;
+  return false;
 }
 
 function summarizeNexusCommandForRepeat(command) {
@@ -14577,7 +14577,8 @@ async function handleSimpleCourseStartCommand(command = "") {
     goSection("learning", { instant: true });
     if (experienceMode === "user") renderUserSimpleActiveSection("learning");
     const title = translatedCourse(activeCourse() || course).title;
-    const message = `Yes. I started ${title}. Tell me what you want next.`;
+    const heard = summarizeNexusCommandForRepeat(command || "start my course");
+    const message = `I heard: ${heard}. I started ${title}. Tell me what you want next.`;
     recordNexusAutonomousLearning({ type: "course-started", command, courseId: course.id });
     updateNexusBehaviorLayer("ready", message);
     renderLiveVoiceSuggestions(["complete my lesson", "read this lesson", "build captions", "Nexus stop"]);
@@ -14823,11 +14824,13 @@ async function executeWorkflowConfigFromVoice(config, response = "") {
 
 function openWorkflowByVoice(workflow, action, response, dataset = {}) {
   const config = workflowConfig(workflow, action, { dataset });
+  const heard = summarizeNexusCommandForRepeat(agentPerformanceState.lastCommand || "");
+  const actionLead = heard ? `I heard: ${heard}. ` : "";
   recordNexusAutonomousLearning({ type: "workflow-opened", workflow, action, command: response || "" });
   setActiveAgentJourney(workflow, action, response || "");
   if (!config) {
     runWorkflowAction(workflow, action, { dataset });
-    setVoiceResponse(response || "Workflow command sent.");
+    setVoiceResponse(`${actionLead}${response || "I opened that action."}`.trim(), true);
     return;
   }
   if (confirmedVoiceActionActive) {
@@ -14839,13 +14842,13 @@ function openWorkflowByVoice(workflow, action, response, dataset = {}) {
     goSection(userSection, { instant: true, openDefaultAction: false, keepAssistant: false });
     renderUserSimpleActiveSection(userSection);
     renderUserProcessScreen(userSection, config, { response }, response || config.userTitle || config.title || "Selected action");
-    updateNexusBehaviorLayer("confirming", "Nexus prepared the workflow and is waiting for your yes.");
-    setVoiceResponse(`${response || "Process is ready."} Press Do this now to continue or Choose another to cancel.`, true);
+    updateNexusBehaviorLayer("ready", "Nexus opened the requested workflow and is waiting for the next command.");
+    setVoiceResponse(`${actionLead}${response || "I opened that action."} Tell me what you want next.`.trim(), true);
     return;
   }
-  updateNexusBehaviorLayer("confirming", "Nexus prepared the workflow and is waiting for your yes.");
+  updateNexusBehaviorLayer("ready", "Nexus opened the requested workflow and is waiting for the next command.");
   openWorkflowModal(config);
-  setVoiceResponse(`${response || "Workflow staged."} Review the workflow, then say confirm or use the confirm button.`);
+  setVoiceResponse(`${actionLead}${response || "I opened that action."}`.trim(), true);
 }
 
 function voiceStatusSummary() {
