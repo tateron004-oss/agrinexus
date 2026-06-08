@@ -120,6 +120,16 @@ services:
         value: gpt-4o-mini-tts
       - key: OPENAI_TTS_VOICE
         value: coral
+      - key: OPENAI_WEB_SEARCH_ENABLED
+        value: "false"
+      - key: WEB_SEARCH_PROVIDER
+        sync: false
+      - key: TAVILY_API_KEY
+        sync: false
+      - key: BRAVE_SEARCH_API_KEY
+        sync: false
+      - key: EXA_API_KEY
+        sync: false
       - key: AI_PROVIDER
         value: webhook
       - key: AI_WEBHOOK_URL
@@ -170,6 +180,8 @@ services:
         sync: false
       - key: GOOGLE_MAPS_API_KEY
         sync: false
+      - key: ROUTING_PROVIDER
+        sync: false
       - key: ROUTING_WEBHOOK_URL
         sync: false
       - key: LEARNING_COURSE_PROVIDER
@@ -181,6 +193,18 @@ services:
       - key: LEARNING_CERTIFICATE_WEBHOOK_URL
         value: https://agrinexus-provider-engines.onrender.com/learning/certificates
       - key: LEARNING_PROVIDER_API_KEY
+        sync: false
+      - key: LEARNING_LMS_PROVIDER
+        sync: false
+      - key: MOODLE_BASE_URL
+        sync: false
+      - key: MOODLE_TOKEN
+        sync: false
+      - key: OPENEDX_BASE_URL
+        sync: false
+      - key: OPENEDX_API_KEY
+        sync: false
+      - key: OPENEDX_CLIENT_ID
         sync: false
       - key: WORKFORCE_JOB_PROVIDER
         value: webhook
@@ -204,12 +228,24 @@ services:
         value: https://agrinexus-provider-engines.onrender.com/workforce/shifts
       - key: WORKFORCE_PROVIDER_API_KEY
         sync: false
+      - key: JOB_SEARCH_PROVIDER
+        sync: false
+      - key: ADZUNA_APP_ID
+        sync: false
+      - key: ADZUNA_APP_KEY
+        sync: false
+      - key: JOB_SEARCH_API_KEY
+        sync: false
+      - key: JOB_SEARCH_WEBHOOK_URL
+        sync: false
       - key: HEALTH_TELEHEALTH_PROVIDER
         value: webhook
       - key: HEALTH_NOTIFICATION_PROVIDER
         value: webhook
       - key: HEALTH_EHR_PROVIDER
         value: webhook
+      - key: HEALTH_RECORD_PROVIDER
+        sync: false
       - key: HEALTH_TELEHEALTH_WEBHOOK_URL
         value: https://agrinexus-provider-engines.onrender.com/health/telehealth
       - key: HEALTH_NOTIFICATION_WEBHOOK_URL
@@ -217,6 +253,14 @@ services:
       - key: HEALTH_EHR_WEBHOOK_URL
         value: https://agrinexus-provider-engines.onrender.com/health/ehr
       - key: HEALTH_PROVIDER_API_KEY
+        sync: false
+      - key: OPENMRS_BASE_URL
+        sync: false
+      - key: OPENMRS_TOKEN
+        sync: false
+      - key: OPENMRS_USERNAME
+        sync: false
+      - key: OPENMRS_PASSWORD
         sync: false
       - key: PAYMENT_PROVIDER
         sync: false
@@ -259,4 +303,16 @@ services:
       - key: DRONE_WEBHOOK_URL
         value: https://agrinexus-provider-engines.onrender.com/field/drones
       - key: DRONE_PROVIDER_API_KEY
+        sync: false
+      - key: SATELLITE_PROVIDER
+        sync: false
+      - key: SENTINEL_HUB_CLIENT_ID
+        sync: false
+      - key: SENTINEL_HUB_CLIENT_SECRET
+        sync: false
+      - key: SENTINEL_HUB_INSTANCE_ID
+        sync: false
+      - key: SATELLITE_API_KEY
+        sync: false
+      - key: SATELLITE_WEBHOOK_URL
         sync: false

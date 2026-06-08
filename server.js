@@ -72,7 +72,13 @@ const PROVIDER_CONFIG = {
   "email-delivery": { modeEnv: "EMAIL_PROVIDER", credentialEnvs: ["EMAIL_WEBHOOK_URL", "COMMUNICATION_PROVIDER_API_KEY"] },
   "sms-delivery": { modeEnv: "SMS_PROVIDER", credentialEnvs: ["SMS_WEBHOOK_URL", "COMMUNICATION_PROVIDER_API_KEY"] },
   "whatsapp-delivery": { modeEnv: "WHATSAPP_PROVIDER", credentialEnvs: ["WHATSAPP_WEBHOOK_URL", "COMMUNICATION_PROVIDER_API_KEY"] },
-  "billing-subscriptions": { modeEnv: "BILLING_PROVIDER", credentialEnvs: ["BILLING_WEBHOOK_URL", "BILLING_PROVIDER_API_KEY"] }
+  "billing-subscriptions": { modeEnv: "BILLING_PROVIDER", credentialEnvs: ["BILLING_WEBHOOK_URL", "BILLING_PROVIDER_API_KEY"] },
+  "web-search": { modeEnv: "WEB_SEARCH_PROVIDER", credentialEnvs: ["OPENAI_API_KEY", "TAVILY_API_KEY", "BRAVE_SEARCH_API_KEY", "EXA_API_KEY"] },
+  "routing-geocoding": { modeEnv: "ROUTING_PROVIDER", credentialEnvs: ["MAPBOX_ACCESS_TOKEN", "OPENROUTESERVICE_API_KEY", "GOOGLE_MAPS_API_KEY", "ROUTING_WEBHOOK_URL"] },
+  "learning-lms": { modeEnv: "LEARNING_LMS_PROVIDER", credentialEnvs: ["MOODLE_BASE_URL", "MOODLE_TOKEN", "OPENEDX_BASE_URL", "OPENEDX_API_KEY"] },
+  "workforce-job-search": { modeEnv: "JOB_SEARCH_PROVIDER", credentialEnvs: ["ADZUNA_APP_ID", "ADZUNA_APP_KEY", "JOB_SEARCH_API_KEY"] },
+  "health-openmrs": { modeEnv: "HEALTH_RECORD_PROVIDER", credentialEnvs: ["OPENMRS_BASE_URL", "OPENMRS_USERNAME", "OPENMRS_PASSWORD", "OPENMRS_TOKEN"] },
+  "satellite-field-data": { modeEnv: "SATELLITE_PROVIDER", credentialEnvs: ["SENTINEL_HUB_CLIENT_ID", "SENTINEL_HUB_CLIENT_SECRET", "SENTINEL_HUB_INSTANCE_ID", "SATELLITE_API_KEY"] }
 };
 
 const PROVIDER_ENGINE_ENDPOINTS = {
@@ -98,7 +104,13 @@ const PROVIDER_ENGINE_ENDPOINTS = {
   "email-delivery": "/communications/email",
   "sms-delivery": "/communications/sms",
   "whatsapp-delivery": "/communications/whatsapp",
-  "billing-subscriptions": "/billing/subscriptions"
+  "billing-subscriptions": "/billing/subscriptions",
+  "web-search": "/intelligence/search",
+  "routing-geocoding": "/maps/routing",
+  "learning-lms": "/learning/lms",
+  "workforce-job-search": "/workforce/job-search",
+  "health-openmrs": "/health/openmrs",
+  "satellite-field-data": "/field/satellite"
 };
 
 const BUILT_IN_PROVIDER_DEFINITIONS = [
@@ -145,6 +157,54 @@ const BUILT_IN_PROVIDER_DEFINITIONS = [
       : "Kenya AfyaLink Facility Registry is documented and adapter-ready; register and add KENYA_AFYALINK_BASE_URL plus KENYA_AFYALINK_TOKEN for authenticated facility lookup."
   },
   {
+    id: "web-search",
+    name: "Live Web Search Brain",
+    module: "AI",
+    mode: "search-provider",
+    status: "needs-credentials",
+    detail: "Connect OpenAI web search or Tavily, Brave, or Exa so Nexus can answer current internet questions with source-aware context."
+  },
+  {
+    id: "routing-geocoding",
+    name: "Routing and Geocoding Intelligence",
+    module: "Maps",
+    mode: "map-routing-provider",
+    status: "needs-credentials",
+    detail: "Connect Mapbox, OpenRouteService, Google Maps, or a routing webhook for address lookup, route timing, shipment paths, and clinic/pharmacy directions."
+  },
+  {
+    id: "learning-lms",
+    name: "Learning Management System",
+    module: "Learning",
+    mode: "lms-provider",
+    status: "needs-credentials",
+    detail: "Connect Moodle or Open edX for real course catalogs, enrollments, progress, quizzes, and certificates."
+  },
+  {
+    id: "workforce-job-search",
+    name: "Live Job Search Network",
+    module: "Workforce",
+    mode: "job-search-provider",
+    status: "needs-credentials",
+    detail: "Connect Adzuna or another job-search API for real job listings, search, matching, and application evidence."
+  },
+  {
+    id: "health-openmrs",
+    name: "OpenMRS Health Record Adapter",
+    module: "Healthcare",
+    mode: "ehr-provider",
+    status: "needs-credentials",
+    detail: "Connect OpenMRS or a clinic EHR/FHIR endpoint for consented intake handoff and provider records. AgriNexus remains support/navigation, not diagnosis."
+  },
+  {
+    id: "satellite-field-data",
+    name: "Satellite Field Intelligence",
+    module: "AgriTrade",
+    mode: "satellite-provider",
+    status: "needs-credentials",
+    detail: "Connect Sentinel Hub or a satellite imagery provider for NDVI, crop stress, irrigation, and field-condition intelligence."
+  },
+  {
     id: "phone-voice",
     name: "Phone Voice Assistant",
     module: "AI",
@@ -155,6 +215,176 @@ const BUILT_IN_PROVIDER_DEFINITIONS = [
 ];
 
 const REAL_PROVIDER_CANDIDATES = [
+  {
+    id: "tavily",
+    name: "Tavily Search",
+    category: "internet-brain",
+    module: "AI",
+    providerId: "web-search",
+    partnershipType: "internet-brain",
+    region: "Global",
+    website: "https://docs.tavily.com/",
+    apiStatus: "api-available",
+    integrationLevel: "agentic-web-search",
+    bestUse: "AI-agent optimized live web search for current information, source grounding, and research answers.",
+    credentials: ["TAVILY_API_KEY"],
+    workflowFit: ["current answers", "source-grounded research", "internet-aware Nexus"],
+    status: "candidate",
+    nextAction: "Create Tavily API key, add TAVILY_API_KEY in Render, then run live service check."
+  },
+  {
+    id: "brave-search",
+    name: "Brave Search API",
+    category: "internet-brain",
+    module: "AI",
+    providerId: "web-search",
+    partnershipType: "internet-brain",
+    region: "Global",
+    website: "https://brave.com/search/api/",
+    apiStatus: "api-available",
+    integrationLevel: "independent-web-index",
+    bestUse: "Independent live web index for current facts, news, search results, and AI answer grounding.",
+    credentials: ["BRAVE_SEARCH_API_KEY"],
+    workflowFit: ["web search", "news/current events", "source grounding"],
+    status: "candidate",
+    nextAction: "Create Brave Search API key, add BRAVE_SEARCH_API_KEY in Render, then run live service check."
+  },
+  {
+    id: "exa-search",
+    name: "Exa Search",
+    category: "internet-brain",
+    module: "AI",
+    providerId: "web-search",
+    partnershipType: "internet-brain",
+    region: "Global",
+    website: "https://docs.exa.ai/",
+    apiStatus: "api-available",
+    integrationLevel: "neural-web-search",
+    bestUse: "Semantic search for AI agents that need high-quality web context and deeper research.",
+    credentials: ["EXA_API_KEY"],
+    workflowFit: ["semantic search", "research context", "agent reasoning"],
+    status: "candidate",
+    nextAction: "Create Exa API key, add EXA_API_KEY in Render, then run live service check."
+  },
+  {
+    id: "mapbox",
+    name: "Mapbox",
+    category: "map-routing",
+    module: "Maps",
+    providerId: "routing-geocoding",
+    partnershipType: "routing",
+    region: "Global",
+    website: "https://docs.mapbox.com/",
+    apiStatus: "api-available",
+    integrationLevel: "geocoding-directions-places",
+    bestUse: "Address search, routes, clinic/pharmacy directions, shipment pathing, and professional map intelligence.",
+    credentials: ["MAPBOX_ACCESS_TOKEN"],
+    workflowFit: ["geocoding", "route tracking", "nearby services", "ETA"],
+    status: "candidate",
+    nextAction: "Create Mapbox access token, add MAPBOX_ACCESS_TOKEN in Render, then run live service check."
+  },
+  {
+    id: "openrouteservice",
+    name: "OpenRouteService",
+    category: "map-routing",
+    module: "Maps",
+    providerId: "routing-geocoding",
+    partnershipType: "routing",
+    region: "Global",
+    website: "https://openrouteservice.org/dev/",
+    apiStatus: "api-available",
+    integrationLevel: "routing-geocoding-isochrones",
+    bestUse: "OpenStreetMap-backed directions, route optimization, geocoding, isochrones, and logistics route analysis.",
+    credentials: ["OPENROUTESERVICE_API_KEY"],
+    workflowFit: ["route planning", "shipment ETA", "clinic reachability", "rural route safety"],
+    status: "candidate",
+    nextAction: "Create OpenRouteService API key, add OPENROUTESERVICE_API_KEY in Render, then run live service check."
+  },
+  {
+    id: "moodle",
+    name: "Moodle LMS",
+    category: "course-catalog",
+    module: "Learning",
+    providerId: "learning-lms",
+    partnershipType: "learning",
+    region: "Global",
+    website: "https://docs.moodle.org/dev/Web_services",
+    apiStatus: "api-available",
+    integrationLevel: "lms-catalog-progress-certificates",
+    bestUse: "Owned learning catalog, enrollments, progress, quizzes, certificates, and multilingual course delivery.",
+    credentials: ["MOODLE_BASE_URL", "MOODLE_TOKEN"],
+    workflowFit: ["course catalog", "enrollment", "progress sync", "certificate evidence"],
+    status: "candidate",
+    nextAction: "Create Moodle site/token, add MOODLE_BASE_URL and MOODLE_TOKEN in Render, then run live service check."
+  },
+  {
+    id: "openedx",
+    name: "Open edX",
+    category: "course-catalog",
+    module: "Learning",
+    providerId: "learning-lms",
+    partnershipType: "learning",
+    region: "Global",
+    website: "https://docs.openedx.org/",
+    apiStatus: "api-available",
+    integrationLevel: "course-platform-api",
+    bestUse: "Large-scale course platform for formal training paths, learner progress, and certificate workflows.",
+    credentials: ["OPENEDX_BASE_URL", "OPENEDX_API_KEY"],
+    workflowFit: ["course delivery", "learner records", "certificate evidence"],
+    status: "candidate",
+    nextAction: "Create Open edX API credentials, add OPENEDX_BASE_URL and OPENEDX_API_KEY in Render, then run live service check."
+  },
+  {
+    id: "adzuna",
+    name: "Adzuna Jobs API",
+    category: "job-network",
+    module: "Workforce",
+    providerId: "workforce-job-search",
+    partnershipType: "workforce",
+    region: "Global",
+    website: "https://developer.adzuna.com/",
+    apiStatus: "api-available",
+    integrationLevel: "job-search-api",
+    bestUse: "Live job listings, employer research, salary data, role search, and workforce matching.",
+    credentials: ["ADZUNA_APP_ID", "ADZUNA_APP_KEY"],
+    workflowFit: ["job search", "role matching", "application tracking"],
+    status: "candidate",
+    nextAction: "Create Adzuna API app, add ADZUNA_APP_ID and ADZUNA_APP_KEY in Render, then run live service check."
+  },
+  {
+    id: "openmrs",
+    name: "OpenMRS",
+    category: "ehr-fhir",
+    module: "Healthcare",
+    providerId: "health-openmrs",
+    partnershipType: "ehr",
+    region: "Global health",
+    website: "https://rest.openmrs.org/",
+    apiStatus: "api-available",
+    integrationLevel: "open-source-ehr-rest-fhir",
+    bestUse: "Clinic-owned patient records, consented intake handoff, provider notes, and rural health documentation.",
+    credentials: ["OPENMRS_BASE_URL", "OPENMRS_TOKEN"],
+    workflowFit: ["intake handoff", "clinic record", "provider documentation"],
+    status: "candidate",
+    nextAction: "Stand up or partner with an OpenMRS clinic, add OPENMRS_BASE_URL and OPENMRS_TOKEN in Render, then run live service check."
+  },
+  {
+    id: "sentinel-hub-direct",
+    name: "Sentinel Hub Direct",
+    category: "drone-data",
+    module: "AgriTrade",
+    providerId: "satellite-field-data",
+    partnershipType: "drone",
+    region: "Global",
+    website: "https://www.sentinel-hub.com/develop/api/",
+    apiStatus: "api-available",
+    integrationLevel: "satellite-imagery-field-intelligence",
+    bestUse: "Satellite field imagery, vegetation index, NDVI-style evidence, crop stress, water, and harvest guidance.",
+    credentials: ["SENTINEL_HUB_CLIENT_ID", "SENTINEL_HUB_CLIENT_SECRET"],
+    workflowFit: ["field scan", "crop stress", "farmer guidance", "buyer evidence"],
+    status: "candidate",
+    nextAction: "Create Sentinel Hub OAuth credentials, add SENTINEL_HUB_CLIENT_ID and SENTINEL_HUB_CLIENT_SECRET in Render, then run live service check."
+  },
   {
     id: "udemy-business",
     name: "Udemy Business",
@@ -2532,6 +2762,19 @@ function applyHighestFunctionalityMode(db, user, result, command) {
   return result;
 }
 
+function firstConfiguredEnv(keys = []) {
+  return keys.find(key => key && Boolean(process.env[key]));
+}
+
+function namedProviderStatus(provider, readyKey, connectedDetail, missingDetail, mode = provider.mode) {
+  return {
+    ...provider,
+    mode,
+    status: readyKey ? "connected" : "needs-credentials",
+    detail: readyKey ? connectedDetail(readyKey) : missingDetail
+  };
+}
+
 function runtimeProviders(db) {
   const baseProviders = [...(db.providers || [])];
   for (const provider of BUILT_IN_PROVIDER_DEFINITIONS) {
@@ -2585,6 +2828,76 @@ function runtimeProviders(db) {
           ? "Strict live mode requires MAP_TILE_PROVIDER=openstreetmap or MAP_TILE_PROVIDER=custom-tile with MAP_TILE_URL."
           : provider.detail
       };
+    }
+    if (provider.id === "web-search") {
+      const openAiWebReady = process.env.OPENAI_WEB_SEARCH_ENABLED === "true" && Boolean(process.env.OPENAI_API_KEY);
+      const readyKey = firstConfiguredEnv(["TAVILY_API_KEY", "BRAVE_SEARCH_API_KEY", "EXA_API_KEY", openAiWebReady ? "OPENAI_API_KEY" : ""]);
+      const mode = process.env.WEB_SEARCH_PROVIDER || (readyKey === "TAVILY_API_KEY" ? "tavily" : readyKey === "BRAVE_SEARCH_API_KEY" ? "brave" : readyKey === "EXA_API_KEY" ? "exa" : readyKey === "OPENAI_API_KEY" ? "openai-web-search" : "not-configured");
+      return namedProviderStatus(
+        provider,
+        readyKey,
+        key => `Live web search brain configured through ${mode} using ${key}. Nexus can ground current-event and internet questions through this provider.`,
+        "Add OPENAI_WEB_SEARCH_ENABLED=true with OPENAI_API_KEY, or add TAVILY_API_KEY, BRAVE_SEARCH_API_KEY, or EXA_API_KEY for live internet search.",
+        mode
+      );
+    }
+    if (provider.id === "routing-geocoding") {
+      const readyKey = firstConfiguredEnv(["MAPBOX_ACCESS_TOKEN", "OPENROUTESERVICE_API_KEY", "GOOGLE_MAPS_API_KEY", "ROUTING_WEBHOOK_URL"]);
+      const mode = process.env.ROUTING_PROVIDER || (readyKey === "MAPBOX_ACCESS_TOKEN" ? "mapbox" : readyKey === "OPENROUTESERVICE_API_KEY" ? "openrouteservice" : readyKey === "GOOGLE_MAPS_API_KEY" ? "google-maps" : readyKey === "ROUTING_WEBHOOK_URL" ? "routing-webhook" : "not-configured");
+      return namedProviderStatus(
+        provider,
+        readyKey,
+        key => `Routing/geocoding configured through ${mode} using ${key}. Nexus can support address lookup, clinic/pharmacy directions, shipment routes, and ETA workflows.`,
+        "Add MAPBOX_ACCESS_TOKEN, OPENROUTESERVICE_API_KEY, GOOGLE_MAPS_API_KEY, or ROUTING_WEBHOOK_URL for live routing and geocoding.",
+        mode
+      );
+    }
+    if (provider.id === "learning-lms") {
+      const moodleReady = Boolean(process.env.MOODLE_BASE_URL && process.env.MOODLE_TOKEN);
+      const openEdxReady = Boolean(process.env.OPENEDX_BASE_URL && (process.env.OPENEDX_API_KEY || process.env.OPENEDX_CLIENT_ID));
+      const readyKey = moodleReady ? "MOODLE_TOKEN" : openEdxReady ? "OPENEDX_API_KEY" : "";
+      const mode = process.env.LEARNING_LMS_PROVIDER || (moodleReady ? "moodle" : openEdxReady ? "openedx" : "not-configured");
+      return namedProviderStatus(
+        provider,
+        readyKey,
+        () => `Learning LMS configured through ${mode}. Nexus can attach real course catalog, enrollment, progress, quiz, and certificate workflows.`,
+        "Add MOODLE_BASE_URL + MOODLE_TOKEN, or OPENEDX_BASE_URL + OPENEDX_API_KEY/OPENEDX_CLIENT_ID for a real course provider.",
+        mode
+      );
+    }
+    if (provider.id === "workforce-job-search") {
+      const adzunaReady = Boolean(process.env.ADZUNA_APP_ID && process.env.ADZUNA_APP_KEY);
+      const readyKey = adzunaReady ? "ADZUNA_APP_KEY" : firstConfiguredEnv(["JOB_SEARCH_API_KEY", "JOB_SEARCH_WEBHOOK_URL"]);
+      const mode = process.env.JOB_SEARCH_PROVIDER || (adzunaReady ? "adzuna" : readyKey === "JOB_SEARCH_WEBHOOK_URL" ? "job-search-webhook" : readyKey ? "job-search-api" : "not-configured");
+      return namedProviderStatus(
+        provider,
+        readyKey,
+        key => `Live job search configured through ${mode} using ${key}. Nexus can support current job listing search, matching, and workforce application flows.`,
+        "Add ADZUNA_APP_ID + ADZUNA_APP_KEY, or JOB_SEARCH_API_KEY/JOB_SEARCH_WEBHOOK_URL for a real job listings provider.",
+        mode
+      );
+    }
+    if (provider.id === "health-openmrs") {
+      const openMrsReady = Boolean(process.env.OPENMRS_BASE_URL && (process.env.OPENMRS_TOKEN || (process.env.OPENMRS_USERNAME && process.env.OPENMRS_PASSWORD)));
+      return namedProviderStatus(
+        provider,
+        openMrsReady ? "OPENMRS_BASE_URL" : "",
+        () => "OpenMRS/EHR adapter configured. Nexus can create consented intake handoff records and provider-facing documentation while staying inside support/navigation boundaries.",
+        "Add OPENMRS_BASE_URL plus OPENMRS_TOKEN, or OPENMRS_USERNAME + OPENMRS_PASSWORD, for real clinic/EHR handoff.",
+        process.env.HEALTH_RECORD_PROVIDER || (openMrsReady ? "openmrs" : "not-configured")
+      );
+    }
+    if (provider.id === "satellite-field-data") {
+      const sentinelReady = Boolean(process.env.SENTINEL_HUB_CLIENT_ID && process.env.SENTINEL_HUB_CLIENT_SECRET);
+      const readyKey = sentinelReady ? "SENTINEL_HUB_CLIENT_ID" : firstConfiguredEnv(["SENTINEL_HUB_INSTANCE_ID", "SATELLITE_API_KEY", "SATELLITE_WEBHOOK_URL"]);
+      const mode = process.env.SATELLITE_PROVIDER || (sentinelReady ? "sentinel-hub" : readyKey === "SATELLITE_WEBHOOK_URL" ? "satellite-webhook" : readyKey ? "satellite-api" : "not-configured");
+      return namedProviderStatus(
+        provider,
+        readyKey,
+        key => `Satellite field intelligence configured through ${mode} using ${key}. Nexus can turn field imagery into farmer-facing crop stress, water, pest, and harvest guidance.`,
+        "Add SENTINEL_HUB_CLIENT_ID + SENTINEL_HUB_CLIENT_SECRET, or SATELLITE_API_KEY/SATELLITE_WEBHOOK_URL for real field imagery intelligence.",
+        mode
+      );
     }
     const config = PROVIDER_CONFIG[provider.id];
     if (config) {
@@ -2664,6 +2977,12 @@ function integrationStatus(db) {
       communications: ["EMAIL_PROVIDER", "EMAIL_WEBHOOK_URL", "SMS_PROVIDER", "SMS_WEBHOOK_URL", "WHATSAPP_PROVIDER", "WHATSAPP_WEBHOOK_URL", "COMMUNICATION_PROVIDER_API_KEY"],
       billing: ["BILLING_PROVIDER", "BILLING_WEBHOOK_URL", "BILLING_PROVIDER_API_KEY", "BILLING_PRICE_ID"],
       maps: ["MAP_TILE_PROVIDER=openstreetmap or MAP_TILE_PROVIDER=custom-tile + MAP_TILE_URL"],
+      internetBrain: ["OPENAI_WEB_SEARCH_ENABLED=true + OPENAI_API_KEY", "or TAVILY_API_KEY", "or BRAVE_SEARCH_API_KEY", "or EXA_API_KEY"],
+      routingGeocoding: ["MAPBOX_ACCESS_TOKEN", "or OPENROUTESERVICE_API_KEY", "or GOOGLE_MAPS_API_KEY", "or ROUTING_WEBHOOK_URL"],
+      realLearningCatalog: ["MOODLE_BASE_URL + MOODLE_TOKEN", "or OPENEDX_BASE_URL + OPENEDX_API_KEY"],
+      realJobNetwork: ["ADZUNA_APP_ID + ADZUNA_APP_KEY", "or JOB_SEARCH_API_KEY/JOB_SEARCH_WEBHOOK_URL"],
+      realHealthRecords: ["OPENMRS_BASE_URL + OPENMRS_TOKEN", "or OPENMRS_USERNAME + OPENMRS_PASSWORD"],
+      satelliteFieldData: ["SENTINEL_HUB_CLIENT_ID + SENTINEL_HUB_CLIENT_SECRET", "or SATELLITE_API_KEY/SATELLITE_WEBHOOK_URL"],
       legal: ["/terms.html", "/privacy.html", "/refund.html"],
       regression: ["npm run production:regression", "npm run production:complete-check"]
     },
@@ -3967,6 +4286,57 @@ async function productionLiveServiceCheck(db, user) {
     }
   );
 
+  const runtimeProvider = id => runtimeProviders(db).find(provider => provider.id === id) || {};
+  const directProviderChecks = [
+    {
+      id: "web-search",
+      title: "Live web/search brain",
+      readyDetail: "Live web/search provider is configured for current internet-aware Nexus answers.",
+      missingDetail: "Add OPENAI_WEB_SEARCH_ENABLED=true with OPENAI_API_KEY, or add TAVILY_API_KEY, BRAVE_SEARCH_API_KEY, or EXA_API_KEY."
+    },
+    {
+      id: "routing-geocoding",
+      title: "Routing/geocoding provider",
+      readyDetail: "Routing/geocoding provider is configured for directions, address lookup, shipment ETAs, clinic/pharmacy location, and route intelligence.",
+      missingDetail: "Add MAPBOX_ACCESS_TOKEN, OPENROUTESERVICE_API_KEY, GOOGLE_MAPS_API_KEY, or ROUTING_WEBHOOK_URL."
+    },
+    {
+      id: "learning-lms",
+      title: "Real LMS/course provider",
+      readyDetail: "Learning LMS provider is configured for real course catalogs, enrollments, progress, quizzes, and certificates.",
+      missingDetail: "Add MOODLE_BASE_URL + MOODLE_TOKEN, or OPENEDX_BASE_URL + OPENEDX_API_KEY/OPENEDX_CLIENT_ID."
+    },
+    {
+      id: "workforce-job-search",
+      title: "Live job search provider",
+      readyDetail: "Live job search provider is configured for current job listings, matching, and application workflows.",
+      missingDetail: "Add ADZUNA_APP_ID + ADZUNA_APP_KEY, or JOB_SEARCH_API_KEY/JOB_SEARCH_WEBHOOK_URL."
+    },
+    {
+      id: "health-openmrs",
+      title: "OpenMRS/EHR provider",
+      readyDetail: "OpenMRS/EHR provider is configured for consented intake handoffs and clinic/provider documentation.",
+      missingDetail: "Add OPENMRS_BASE_URL plus OPENMRS_TOKEN, or OPENMRS_USERNAME + OPENMRS_PASSWORD."
+    },
+    {
+      id: "satellite-field-data",
+      title: "Satellite/drone field intelligence provider",
+      readyDetail: "Satellite/drone field intelligence provider is configured for crop stress, field imagery, irrigation, pest, and harvest guidance.",
+      missingDetail: "Add SENTINEL_HUB_CLIENT_ID + SENTINEL_HUB_CLIENT_SECRET, or SATELLITE_API_KEY/SATELLITE_WEBHOOK_URL."
+    }
+  ];
+  for (const item of directProviderChecks) {
+    const provider = runtimeProvider(item.id);
+    const ok = provider.status === "connected";
+    push(
+      item.id,
+      item.title,
+      ok,
+      ok ? `${item.readyDetail} ${provider.detail || ""}`.trim() : item.missingDetail,
+      { provider: { id: provider.id, name: provider.name, mode: provider.mode, status: provider.status, detail: provider.detail }, credentialHint: providerCredentialHint(item.id) }
+    );
+  }
+
   const billingEvent = {
     providerId: "billing-subscriptions",
     module: "Platform",
@@ -4175,6 +4545,15 @@ function productionActivationGuide(db, providers = runtimeProviders(db)) {
       env: ["BILLING_PROVIDER", "BILLING_WEBHOOK_URL", "BILLING_PROVIDER_API_KEY", "BILLING_PRICE_ID", "EMAIL_PROVIDER", "EMAIL_WEBHOOK_URL", "SMS_PROVIDER", "SMS_WEBHOOK_URL", "WHATSAPP_PROVIDER", "WHATSAPP_WEBHOOK_URL", "COMMUNICATION_PROVIDER_API_KEY"],
       nextAction: "Add billing price id and communications provider endpoints, then test notification and billing workflows.",
       testAction: "test-all"
+    }),
+    group({
+      id: "internet-brain-provider-depth",
+      title: "Internet Brain and Real Provider Depth",
+      summary: "Connects live web search, premium routing/geocoding, LMS catalogs, real job listings, OpenMRS/EHR handoff, and satellite field intelligence.",
+      providerIds: ["web-search", "routing-geocoding", "learning-lms", "workforce-job-search", "health-openmrs", "satellite-field-data"],
+      env: [],
+      nextAction: "Add one approved provider key per slot, then run live service check. Examples: Tavily/Brave/Exa, Mapbox/OpenRouteService, Moodle/Open edX, Adzuna, OpenMRS, Sentinel Hub.",
+      testAction: "live-service-check"
     })
   ];
   const readyCount = groups.filter(item => item.ready).length;
@@ -7093,6 +7472,24 @@ function runWomenFamilyAgricultureWorkflow(db, user, body = {}) {
 function providerCandidateGroups() {
   return [
     {
+      id: "internet-brain",
+      title: "Live internet brain provider",
+      module: "AI",
+      partnershipType: "internet-brain",
+      providerId: "web-search",
+      plainLanguage: "Lets Nexus answer current questions using live internet search instead of only built-in platform knowledge.",
+      ruralFarmerValue: "Helps farmers, students, workers, and families ask normal questions about weather, prices, health alerts, services, and opportunities."
+    },
+    {
+      id: "map-routing",
+      title: "Real routing and geocoding provider",
+      module: "Maps",
+      partnershipType: "routing",
+      providerId: "routing-geocoding",
+      plainLanguage: "Turns addresses, villages, clinics, pharmacies, farms, buyers, and routes into real map locations and directions.",
+      ruralFarmerValue: "Helps a farmer or patient find the nearest service, understand a shipment route, and estimate travel or delivery time."
+    },
+    {
       id: "course-catalog",
       title: "Real course provider catalog",
       module: "Learning",
@@ -7246,14 +7643,14 @@ function providerCandidateCountryCoverage(candidates, groups) {
     { id: "pan-africa", name: "Pan-African", region: "Multi-country", priority: "platform-wide", strengths: ["shared provider bridge", "voice AI", "translation", "satellite/drone data", "farmer marketplace expansion"] }
   ];
   const countrySpecific = {
-    nigeria: ["flutterwave", "paystack", "pawapay", "terminal-africa", "useri", "zowasel", "eosda", "sentinel-hub", "udemy-business", "ulesson", "country-health-privacy-counsel", "data-protection-officer", "clinical-governance-review"],
-    drc: ["pawapay", "eosda", "sentinel-hub", "leaf-agriculture", "ithalamed", "sentros", "udemy-business", "local-employer-network", "country-health-privacy-counsel", "data-protection-officer", "clinical-governance-review"],
-    kenya: ["pawapay", "flutterwave", "terminal-africa", "furaha", "eosda", "sentinel-hub", "ulesson", "local-employer-network", "country-health-privacy-counsel", "data-protection-officer", "clinical-governance-review"],
-    egypt: ["eosda", "sentinel-hub", "leaf-agriculture", "udemy-business", "pluralsight-skills", "ithalamed", "local-employer-network", "country-health-privacy-counsel", "data-protection-officer", "clinical-governance-review"],
-    ghana: ["flutterwave", "paystack", "pawapay", "terminal-africa", "zowasel", "eosda", "ulesson", "local-employer-network", "country-health-privacy-counsel", "data-protection-officer", "clinical-governance-review"],
-    rwanda: ["pawapay", "eosda", "sentinel-hub", "ithalamed", "sentros", "ulesson", "local-employer-network", "country-health-privacy-counsel", "data-protection-officer", "clinical-governance-review"],
-    tanzania: ["pawapay", "terminal-africa", "furaha", "eosda", "sentinel-hub", "ulesson", "local-employer-network", "country-health-privacy-counsel", "data-protection-officer", "clinical-governance-review"],
-    "south-africa": ["recomed", "paystack", "flutterwave", "terminal-africa", "eosda", "sentinel-hub", "pluralsight-skills", "local-employer-network", "country-health-privacy-counsel", "data-protection-officer", "clinical-governance-review"],
+    nigeria: ["tavily", "brave-search", "mapbox", "openrouteservice", "moodle", "adzuna", "openmrs", "sentinel-hub-direct", "flutterwave", "paystack", "pawapay", "terminal-africa", "useri", "zowasel", "eosda", "sentinel-hub", "udemy-business", "ulesson", "country-health-privacy-counsel", "data-protection-officer", "clinical-governance-review"],
+    drc: ["tavily", "openrouteservice", "moodle", "adzuna", "openmrs", "sentinel-hub-direct", "pawapay", "eosda", "sentinel-hub", "leaf-agriculture", "ithalamed", "sentros", "udemy-business", "local-employer-network", "country-health-privacy-counsel", "data-protection-officer", "clinical-governance-review"],
+    kenya: ["tavily", "brave-search", "mapbox", "openrouteservice", "moodle", "adzuna", "openmrs", "sentinel-hub-direct", "pawapay", "flutterwave", "terminal-africa", "furaha", "eosda", "sentinel-hub", "ulesson", "local-employer-network", "country-health-privacy-counsel", "data-protection-officer", "clinical-governance-review"],
+    egypt: ["tavily", "exa-search", "mapbox", "openrouteservice", "moodle", "openedx", "adzuna", "openmrs", "sentinel-hub-direct", "eosda", "sentinel-hub", "leaf-agriculture", "udemy-business", "pluralsight-skills", "ithalamed", "local-employer-network", "country-health-privacy-counsel", "data-protection-officer", "clinical-governance-review"],
+    ghana: ["tavily", "brave-search", "mapbox", "openrouteservice", "moodle", "adzuna", "openmrs", "sentinel-hub-direct", "flutterwave", "paystack", "pawapay", "terminal-africa", "zowasel", "eosda", "ulesson", "local-employer-network", "country-health-privacy-counsel", "data-protection-officer", "clinical-governance-review"],
+    rwanda: ["tavily", "openrouteservice", "moodle", "adzuna", "openmrs", "sentinel-hub-direct", "pawapay", "eosda", "sentinel-hub", "ithalamed", "sentros", "ulesson", "local-employer-network", "country-health-privacy-counsel", "data-protection-officer", "clinical-governance-review"],
+    tanzania: ["tavily", "openrouteservice", "moodle", "adzuna", "openmrs", "sentinel-hub-direct", "pawapay", "terminal-africa", "furaha", "eosda", "sentinel-hub", "ulesson", "local-employer-network", "country-health-privacy-counsel", "data-protection-officer", "clinical-governance-review"],
+    "south-africa": ["tavily", "brave-search", "mapbox", "openrouteservice", "moodle", "openedx", "adzuna", "openmrs", "sentinel-hub-direct", "recomed", "paystack", "flutterwave", "terminal-africa", "eosda", "sentinel-hub", "pluralsight-skills", "local-employer-network", "country-health-privacy-counsel", "data-protection-officer", "clinical-governance-review"],
     "pan-africa": candidates.map(candidate => candidate.id)
   };
   const categoryTitles = Object.fromEntries(groups.map(group => [group.id, group.title]));
@@ -7338,6 +7735,28 @@ function providerPartnershipCatalog(type = "telehealth") {
     .slice(0, 5)
     .map(candidate => candidate.name);
   const catalog = {
+    "internet-brain": {
+      title: "Live internet brain provider partnership",
+      module: "AI",
+      providerId: "web-search",
+      useCase: "Current web search, source-grounded answers, live research, crop/news/health context, and internet-aware Nexus reasoning.",
+      requiredCredentials: ["OPENAI_WEB_SEARCH_ENABLED + OPENAI_API_KEY", "or TAVILY_API_KEY", "or BRAVE_SEARCH_API_KEY", "or EXA_API_KEY"],
+      pilotOffer: "Run a live-search intelligence pilot where Nexus answers current rural agriculture, health-access, weather, market, and service questions with source-aware context.",
+      nextSteps: ["Choose search provider", "Add API key in Render", "Run live service check", "Test current event questions", "Review source and safety behavior"],
+      sampleQuestions: ["Can Nexus search current web data?", "Can results be source-grounded?", "What rate limits and costs apply for rural users?"],
+      candidateProviders: candidateNames("internet-brain")
+    },
+    routing: {
+      title: "Routing and geocoding provider partnership",
+      module: "Maps",
+      providerId: "routing-geocoding",
+      useCase: "Address lookup, clinic/pharmacy finding, shipment routes, ETA, buyer/seller map evidence, and rural service navigation.",
+      requiredCredentials: ["MAPBOX_ACCESS_TOKEN", "or OPENROUTESERVICE_API_KEY", "or GOOGLE_MAPS_API_KEY", "or ROUTING_WEBHOOK_URL"],
+      pilotOffer: "Run a rural route pilot that maps clinics, pharmacies, farms, buyers, and shipments with real geocoding and route evidence.",
+      nextSteps: ["Choose map/routing provider", "Add API key in Render", "Run live service check", "Test route and nearby-service workflows", "Review map accuracy in target countries"],
+      sampleQuestions: ["Can we geocode rural addresses?", "Can routes show ETA and distance?", "Can clinics, pharmacies, and delivery checkpoints appear on the map?"],
+      candidateProviders: candidateNames("routing")
+    },
     telehealth: {
       title: "Telehealth provider partnership",
       module: "Healthcare",
@@ -7449,6 +7868,8 @@ function providerPartnershipCatalog(type = "telehealth") {
     }
   };
   if (groupByPartnership[type] && !catalog[type]) return catalog[groupByPartnership[type].partnershipType] || catalog.telehealth;
+  if (type === "internet-brain") return catalog["internet-brain"];
+  if (type === "map-routing") return catalog.routing;
   if (type === "course-catalog") return catalog.learning;
   if (type === "job-network") return catalog.workforce;
   if (type === "telehealth-provider") return catalog.telehealth;

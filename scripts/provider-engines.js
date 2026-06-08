@@ -34,7 +34,13 @@ const endpoints = {
   "/communications/email": { module: "Platform", keyEnv: "COMMUNICATION_PROVIDER_API_KEY" },
   "/communications/sms": { module: "Platform", keyEnv: "COMMUNICATION_PROVIDER_API_KEY" },
   "/communications/whatsapp": { module: "Platform", keyEnv: "COMMUNICATION_PROVIDER_API_KEY" },
-  "/billing/subscriptions": { module: "Platform", keyEnv: "BILLING_PROVIDER_API_KEY" }
+  "/billing/subscriptions": { module: "Platform", keyEnv: "BILLING_PROVIDER_API_KEY" },
+  "/intelligence/search": { module: "AI", keyEnv: "AI_PROVIDER_API_KEY" },
+  "/maps/routing": { module: "Maps", keyEnv: "TRADE_PROVIDER_API_KEY" },
+  "/learning/lms": { module: "Learning", keyEnv: "LEARNING_PROVIDER_API_KEY" },
+  "/workforce/job-search": { module: "Workforce", keyEnv: "WORKFORCE_PROVIDER_API_KEY" },
+  "/health/openmrs": { module: "Healthcare", keyEnv: "HEALTH_PROVIDER_API_KEY" },
+  "/field/satellite": { module: "AgriTrade", keyEnv: "DRONE_PROVIDER_API_KEY" }
 };
 
 function readEvents() {
