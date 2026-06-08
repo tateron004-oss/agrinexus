@@ -14812,6 +14812,62 @@ function answerNexusHearingCheck() {
   setVoiceResponse(`${status} Tell me what you need next.`, true);
 }
 
+function nexusCommonPhraseResponse(command = "") {
+  const value = normalizeToolText(command);
+  if (!value) return "";
+  const name = userFirstName();
+  const responses = [
+    {
+      match: /\b(thank you|thanks|thanks nexus|appreciate it|good job|nice job|that helped|gracias|merci|asante|shukran)\b/,
+      response: `You're welcome, ${name}. I am here when you need the next step.`,
+      suggestions: ["what should I do next", "open learning", "go quiet"]
+    },
+    {
+      match: /\b(wait|hold on|one second|give me a minute|pause for a moment|not yet|stand by)\b/,
+      response: "No rush. I will wait. Say Nexus when you are ready.",
+      pause: true,
+      suggestions: ["Nexus listen", "Nexus stop", "Nexus open map"]
+    },
+    {
+      match: /\b(say that again|repeat that|repeat|what did you say|i missed that|read that again)\b/,
+      response: lastVoiceResponse && lastVoiceResponse !== "Ready for a command." ? lastVoiceResponse : "I am ready. Tell me what you need, and I will guide one step at a time.",
+      suggestions: ["slow down", "what now", "open help"]
+    },
+    {
+      match: /\b(slow down|speak slower|talk slower|too fast|slower please)\b/,
+      response: "Okay. I will slow down and keep answers shorter.",
+      slow: true,
+      suggestions: ["repeat that", "what now", "open learning"]
+    },
+    {
+      match: /\b(i do not understand|i don't understand|i dont understand|i am confused|i'm confused|im confused|i am lost|i'm lost|im lost|this is confusing|help me understand)\b/,
+      response: "I hear you. We will keep it simple. Tell me the area: learn, work, health, crops, map, or help.",
+      suggestions: ["learn", "work", "health", "crops", "map"]
+    },
+    {
+      match: /\b(what now|what next|what should i do now|next step please|where do i start|help me start)\b/,
+      response: nextStepAssistantAnswer(),
+      suggestions: ["open learning", "open telehealth", "sell my crop"]
+    },
+    {
+      match: /\b(i am testing|this is a test|testing nexus|test mode|demo test)\b/,
+      response: "Test received. I can hear the command path. Try a real action next, like open learning or change language to English.",
+      suggestions: ["open learning", "change language to English", "can you hear me"]
+    },
+    {
+      match: /\b(hello again|hi again|you there|are you there|nexus are you there)\b/,
+      response: `Yes, ${name}. I am here. What do you want to do next?`,
+      suggestions: ["open learning", "open health", "open map"]
+    }
+  ];
+  const found = responses.find(item => item.match.test(value));
+  if (!found) return "";
+  if (found.slow) localStorage.setItem("agrinexusSlowSpeech", "on");
+  if (found.pause) enterNexusConversationPause(found.response);
+  renderLiveVoiceSuggestions(found.suggestions || ["what now", "open learning", "stop"]);
+  return found.response;
+}
+
 function commandGoal(command) {
   return command
     .replace(/^(please\s+)?(create|build|make|generate)\s+(an?\s+)?(agent\s+)?plan( for| to)?/i, "")
@@ -14837,6 +14893,11 @@ async function handleVoiceCommand(rawCommand, options = {}) {
   }
   if (isNexusHearingCheckCommand(command || localizedCommand)) {
     answerNexusHearingCheck();
+    return;
+  }
+  const commonPhrase = nexusCommonPhraseResponse(command || localizedCommand);
+  if (commonPhrase) {
+    setVoiceResponse(commonPhrase, true);
     return;
   }
   const understanding = adaptiveCommandUnderstanding(command);
