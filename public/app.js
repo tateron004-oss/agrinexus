@@ -14824,6 +14824,20 @@ function cleanSpokenUserName(name = "") {
     .join(" ");
 }
 
+function nexusSupportedLanguageNames() {
+  return "English, French, Kiswahili, Arabic, Spanish, and Portuguese";
+}
+
+function nexusIntroLanguageNote(introLanguage = {}) {
+  if (!introLanguage?.label) return "";
+  const current = languageDisplayName();
+  if (introLanguage.code && introLanguage.code === languageCode()) return "";
+  if (introLanguage.fullMode) {
+    return ` I heard your introduction in ${introLanguage.label}. I am currently speaking ${current}. Say switch to ${introLanguage.label} if you want me to use it.`;
+  }
+  return ` I heard your name phrase in ${introLanguage.label}. I am currently speaking ${current}. Full app language modes are ${nexusSupportedLanguageNames()}.`;
+}
+
 function nexusIntroductionResponse(command = "") {
   const raw = String(command || "").trim();
   const value = normalizeToolText(raw);
@@ -14831,23 +14845,25 @@ function nexusIntroductionResponse(command = "") {
   if (!value && !unicodeValue) return "";
   if (/\b(i am testing|this is a test|testing nexus|test mode|i am confused|i am lost)\b/.test(value)) return "";
   const introPatterns = [
-    /\b(?:my name is|this is|i am|i'm|im|call me|it is|it's|its)\s+([\p{L}\p{M}][\p{L}\p{M}' -]{1,42})\b/iu,
-    /\b(?:me llamo|mi nombre es|soy)\s+([\p{L}\p{M}][\p{L}\p{M}' -]{1,42})\b/iu,
-    /\b(?:meu nome e|me chamo|chamo me|eu sou|sou)\s+([\p{L}\p{M}][\p{L}\p{M}' -]{1,42})\b/iu,
-    /\b(?:je m'appelle|je suis|mon nom est)\s+([\p{L}\p{M}][\p{L}\p{M}' -]{1,42})\b/iu,
-    /\b(?:jina langu ni|mimi ni|naitwa|wananiita)\s+([\p{L}\p{M}][\p{L}\p{M}' -]{1,42})\b/iu,
-    /\b(?:sunana|suna na)\s+([\p{L}\p{M}][\p{L}\p{M}' -]{1,42})\b/iu,
-    /\b(?:oruko mi ni|oruko mi)\s+([\p{L}\p{M}][\p{L}\p{M}' -]{1,42})\b/iu,
-    /\b(?:aha m bu|aha m)\s+([\p{L}\p{M}][\p{L}\p{M}' -]{1,42})\b/iu,
-    /\b(?:kombo na ngai ezali|kombo na ngai)\s+([\p{L}\p{M}][\p{L}\p{M}' -]{1,42})\b/iu,
-    /\b(?:nitwa|izina ryanjye ni)\s+([\p{L}\p{M}][\p{L}\p{M}' -]{1,42})\b/iu,
-    /\b(?:igama lami ngu|igama lam ngu|igama lami)\s+([\p{L}\p{M}][\p{L}\p{M}' -]{1,42})\b/iu,
-    /\b(?:ana ismi|ismi|ana)\s+([\p{L}\p{M}][\p{L}\p{M}' -]{1,42})\b/iu,
-    /(?:اسمي|أنا|انا)\s+([\p{L}\p{M}][\p{L}\p{M}' -]{1,42})/u
+    { label: "English", code: "en", fullMode: true, pattern: /\b(?:my name is|this is|i am|i'm|im|call me|it is|it's|its)\s+([\p{L}\p{M}][\p{L}\p{M}' -]{1,42})\b/iu },
+    { label: "Spanish", code: "es", fullMode: true, pattern: /\b(?:me llamo|mi nombre es|soy)\s+([\p{L}\p{M}][\p{L}\p{M}' -]{1,42})\b/iu },
+    { label: "Portuguese", code: "pt", fullMode: true, pattern: /\b(?:meu nome e|me chamo|chamo me|eu sou|sou)\s+([\p{L}\p{M}][\p{L}\p{M}' -]{1,42})\b/iu },
+    { label: "French", code: "fr", fullMode: true, pattern: /\b(?:je m'appelle|je suis|mon nom est)\s+([\p{L}\p{M}][\p{L}\p{M}' -]{1,42})\b/iu },
+    { label: "Kiswahili", code: "sw", fullMode: true, pattern: /\b(?:jina langu ni|mimi ni|naitwa|wananiita)\s+([\p{L}\p{M}][\p{L}\p{M}' -]{1,42})\b/iu },
+    { label: "Hausa", fullMode: false, pattern: /\b(?:sunana|suna na)\s+([\p{L}\p{M}][\p{L}\p{M}' -]{1,42})\b/iu },
+    { label: "Yoruba", fullMode: false, pattern: /\b(?:oruko mi ni|oruko mi)\s+([\p{L}\p{M}][\p{L}\p{M}' -]{1,42})\b/iu },
+    { label: "Igbo", fullMode: false, pattern: /\b(?:aha m bu|aha m)\s+([\p{L}\p{M}][\p{L}\p{M}' -]{1,42})\b/iu },
+    { label: "Lingala", fullMode: false, pattern: /\b(?:kombo na ngai ezali|kombo na ngai)\s+([\p{L}\p{M}][\p{L}\p{M}' -]{1,42})\b/iu },
+    { label: "Kinyarwanda", fullMode: false, pattern: /\b(?:nitwa|izina ryanjye ni)\s+([\p{L}\p{M}][\p{L}\p{M}' -]{1,42})\b/iu },
+    { label: "Zulu or Xhosa", fullMode: false, pattern: /\b(?:igama lami ngu|igama lam ngu|igama lami)\s+([\p{L}\p{M}][\p{L}\p{M}' -]{1,42})\b/iu },
+    { label: "Arabic", code: "ar", fullMode: true, pattern: /\b(?:ana ismi|ismi|ana)\s+([\p{L}\p{M}][\p{L}\p{M}' -]{1,42})\b/iu },
+    { label: "Arabic", code: "ar", fullMode: true, pattern: /(?:اسمي|أنا|انا)\s+([\p{L}\p{M}][\p{L}\p{M}' -]{1,42})/u }
   ];
-  const intro = introPatterns.map(pattern => unicodeValue.match(pattern)).find(Boolean);
+  const intro = introPatterns
+    .map(entry => ({ ...entry, match: unicodeValue.match(entry.pattern) }))
+    .find(entry => entry.match);
   if (!intro) return "";
-  const spokenName = cleanSpokenUserName(intro[1]);
+  const spokenName = cleanSpokenUserName(intro.match[1]);
   if (!spokenName || /^(nexus|agrinexus|testing|confused|lost|ready|here)$/i.test(spokenName)) return "";
   localStorage.setItem("agrinexusGuestDisplayName", spokenName);
   if (data?.user) data.user.name = spokenName;
@@ -14857,7 +14873,7 @@ function nexusIntroductionResponse(command = "") {
   updateNexusBehaviorLayer("listening", `Nexus learned the user's name is ${spokenName}.`);
   recordNexusAutonomousLearning({ type: "user-name", command: value, userName: spokenName });
   renderLiveVoiceSuggestions(["open learning", "open telehealth", "what can you do"]);
-  return `Hello ${spokenName}. I am Nexus. How can I assist you?`;
+  return `Hello ${spokenName}. I am Nexus.${nexusIntroLanguageNote(intro)} How can I assist you?`;
 }
 
 function nexusCommonPhraseResponse(command = "") {
