@@ -854,30 +854,13 @@ body.user-mode .brand span {
   text-overflow: ellipsis;
 }
 body.user-mode .top-settings-toggle {
-  display: inline-flex;
-  padding: 8px 10px;
-  font-size: .82rem;
+  display: none !important;
 }
 body.user-mode .top-actions {
-  position: absolute;
-  top: 58px;
-  left: 10px;
-  right: 10px;
-  z-index: 90;
-  display: none;
-  grid-template-columns: 1fr;
-  padding: 10px;
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  background: #ffffff;
-  box-shadow: 0 16px 38px rgba(23, 50, 64, .16);
+  display: none !important;
 }
 body.user-mode .top-actions.open {
-  display: grid;
-}
-body.user-mode .top-actions select,
-body.user-mode .top-actions button {
-  width: 100%;
+  display: none !important;
 }
 body.user-mode .top-settings-close {
   background: #14213d;
