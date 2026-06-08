@@ -930,6 +930,45 @@ body.user-mode .user-workspace-hero p {
   line-height: 1.35;
   text-align: center;
 }
+body.user-mode .user-language-quickbar {
+  display: grid;
+  gap: 8px;
+  width: 100%;
+  margin-top: 10px;
+  padding: 10px;
+  border: 2px solid rgba(23, 50, 64, .18);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, .88);
+}
+body.user-mode .user-language-quickbar > span {
+  color: #173240;
+  font-size: .86rem;
+  font-weight: 950;
+  text-align: center;
+}
+body.user-mode .user-language-quickbar > div {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+}
+body.user-mode .user-language-quickbar button {
+  min-width: 0;
+  min-height: 38px;
+  padding: 7px 5px;
+  border: 2px solid #d7e4e8;
+  border-radius: 12px;
+  background: #f7fbfc;
+  color: #173240;
+  font-size: .78rem;
+  font-weight: 950;
+  line-height: 1.05;
+  white-space: normal;
+}
+body.user-mode .user-language-quickbar button.active {
+  border-color: #173240;
+  background: #173240;
+  color: #ffffff;
+}
 body.user-mode .user-hero-actions {
   min-width: 0;
   grid-template-columns: 1fr;
