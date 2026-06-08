@@ -14555,6 +14555,42 @@ function askUserToRepeatMisheardPhrase(command = "") {
   setVoiceResponse(`I may have heard that wrong. I heard: ${heard}. Please repeat it slowly, or say Nexus stop.`, true);
 }
 
+function isSimpleCourseStartCommand(command = "") {
+  const lower = normalizeToolText(command);
+  return /\b(start|begin|open|continue|take)\b.*\b(my\s+)?(course|class|lesson|training)\b/.test(lower)
+    || /\b(course|class|lesson|training)\b.*\b(start|begin|continue)\b/.test(lower);
+}
+
+async function handleSimpleCourseStartCommand(command = "") {
+  const course = activeCourse();
+  if (!course) {
+    goSection("learning");
+    setVoiceResponse("Yes. Learning is open. I need a course selected before I can start it.", true);
+    return true;
+  }
+  pendingNexusSpokenCommand = null;
+  pendingAgentClarification = null;
+  updateNexusBehaviorLayer("acting", `Nexus is starting course: ${translatedCourse(course).title}`);
+  try {
+    data = await request("/api/learning/start", { method: "POST", body: { courseId: course.id } });
+    render();
+    goSection("learning", { instant: true });
+    if (experienceMode === "user") renderUserSimpleActiveSection("learning");
+    const title = translatedCourse(activeCourse() || course).title;
+    const message = `Yes. I started ${title}. Tell me what you want next.`;
+    recordNexusAutonomousLearning({ type: "course-started", command, courseId: course.id });
+    updateNexusBehaviorLayer("ready", message);
+    renderLiveVoiceSuggestions(["complete my lesson", "read this lesson", "build captions", "Nexus stop"]);
+    setVoiceResponse(message, true);
+    return true;
+  } catch (error) {
+    goSection("learning");
+    if (experienceMode === "user") renderUserSimpleActiveSection("learning");
+    setVoiceResponse("Yes. Learning is open. I could not save the course start yet, but you can choose the course on this screen.", true);
+    return true;
+  }
+}
+
 function recordNexusAutonomousLearning(event = {}) {
   try {
     const key = "agrinexusAutonomousLearningLog";
@@ -15097,6 +15133,10 @@ async function handleVoiceCommand(rawCommand, options = {}) {
     return;
   }
   if (!lower) return setVoiceResponse("I am listening. Just tell me what you need.", true);
+  if (isSimpleCourseStartCommand(command)) {
+    await handleSimpleCourseStartCommand(command);
+    return;
+  }
   if (shouldAskRepeatForUnclearVoiceCommand(command, options)) {
     askUserToRepeatMisheardPhrase(command);
     return;
