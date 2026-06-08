@@ -58,8 +58,8 @@ let routeTrackingWatchId = null;
 let routeTrackingPoints = [];
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-188";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v168";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-189";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v169";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
 const VOICE_ATTENTION_DELAY_MS = 900;
@@ -9148,10 +9148,12 @@ function render() {
     const enrollment = courseEnrollment(course.id);
     const workforceLinks = catalogCourse.workforceLinks || [];
     return `
-      <article class="catalog-card ${catalogCourse.enrollmentStatus === "certified" ? "complete" : ""}" data-course-card="${course.id}">
+      <article class="catalog-action-row ${catalogCourse.enrollmentStatus === "certified" ? "complete" : ""}" data-course-action="${course.id}">
         <div class="tag-row"><span>${catalogCourse.catalogNumber || course.id}</span><span>${localizedCourse.track}</span><span>${localizedCourse.level || "Core"}</span></div>
-        <h3>${localizedCourse.title}</h3>
-        <p>${translateText((catalogCourse.outcomes || [])[0] || `${course.readiness}% readiness impact`)}</p>
+        <div>
+          <h3>${localizedCourse.title}</h3>
+          <p>${translateText((catalogCourse.outcomes || [])[0] || `${course.readiness}% readiness impact`)}</p>
+        </div>
         <div class="catalog-meta">
           ${row("Next lesson", translatedModule(course, catalogCourse.nextLesson || (course.modules || [])[0] || course.title))}
           ${row("Duration", translatedDuration(course.duration))}
@@ -9172,16 +9174,23 @@ function render() {
     const enrollment = courseEnrollment(course.id);
     const certified = (data.profile.completedCourses || []).includes(course.id);
     return `
-    <article class="course-card ${certified ? "complete" : ""}" data-course-card="${course.id}">
+    <article class="course-action-row ${certified ? "complete" : ""}" data-course-action="${course.id}">
       <div class="tag-row"><span>${localizedCourse.track}</span><span>${localizedCourse.level || "Core"}</span></div>
-      <h3>${localizedCourse.title}</h3>
-      <p>${(localizedCourse.modules || []).join(", ")}</p>
-      <div class="skill-list">${(localizedCourse.skills || []).map(skill => `<span>${skill}</span>`).join("")}</div>
-      <div class="progress"><span style="width:${enrollment?.progress || (certified ? 100 : 0)}%"></span></div>
-      ${row(copy.status, courseStatus(course))}
-      ${row(copy.impact, `+${course.readiness}%`)}
-      ${row(copy.duration, translatedDuration(course.duration))}
-      <button class="primary course" data-course="${course.id}">${enrollment ? copy.continueCourse : copy.startCourse}</button>
+      <div>
+        <h3>${localizedCourse.title}</h3>
+        <p>${(localizedCourse.modules || []).join(", ")}</p>
+        <div class="skill-list">${(localizedCourse.skills || []).map(skill => `<span>${skill}</span>`).join("")}</div>
+      </div>
+      <div class="course-action-metrics">
+        <div class="progress"><span style="width:${enrollment?.progress || (certified ? 100 : 0)}%"></span></div>
+        ${row(copy.status, courseStatus(course))}
+        ${row(copy.impact, `+${course.readiness}%`)}
+        ${row(copy.duration, translatedDuration(course.duration))}
+      </div>
+      <div class="action-row">
+        <button class="primary course" data-course="${course.id}">${enrollment ? copy.continueCourse : copy.startCourse}</button>
+        <button class="catalog-lesson" data-course="${course.id}" type="button">${copy.completeLesson || "Complete lesson"}</button>
+      </div>
     </article>
   `}).join("");
 
@@ -13287,9 +13296,9 @@ function bindDynamic() {
       openWorkflowModal(workflowConfig("learning", "start", { dataset: {} }));
     }
   });
-  $$(".course-card").forEach(card => card.onclick = event => {
+  $$("[data-course-action]").forEach(card => card.onclick = event => {
     if (event.target.closest("button")) return;
-    const course = data.courses.find(item => item.id === card.dataset.courseCard);
+    const course = data.courses.find(item => item.id === card.dataset.courseAction);
     if (course) {
       data.profile.activeCourseId = course.id;
       openWorkflowModal(workflowConfig("learning", "start", { dataset: {} }));
@@ -16077,11 +16086,11 @@ function bindStatic() {
       sendModuleNotification(notifyButton.dataset.notify);
       return;
     }
-    const courseCard = event.target.closest(".course-card");
+    const courseCard = event.target.closest("[data-course-action]");
     if (courseCard) {
       event.preventDefault();
       event.stopPropagation();
-      const course = data.courses.find(item => item.id === courseCard.dataset.courseCard);
+      const course = data.courses.find(item => item.id === courseCard.dataset.courseAction);
       if (course) {
         data.profile.activeCourseId = course.id;
         openWorkflowModal(workflowConfig("learning", "start", { dataset: {} }));

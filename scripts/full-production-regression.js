@@ -14,6 +14,7 @@ const checks = [
   npmCheck("user-mode:audit"),
   npmCheck("women-family:qa"),
   npmCheck("women-children:qa"),
+  npmCheck("learning:functionality-qa"),
   npmCheck("cross-platform:qa"),
   npmCheck("app:behavior-audit"),
   npmCheck("app:jarvis-qa"),
