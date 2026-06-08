@@ -14812,6 +14812,46 @@ function answerNexusHearingCheck() {
   setVoiceResponse(`${status} Tell me what you need next.`, true);
 }
 
+function cleanSpokenUserName(name = "") {
+  return String(name)
+    .replace(/[^\p{L}\p{M}' -]/gu, " ")
+    .replace(/\b(and|but|so|please|thanks|thank you|today|now|here)\b.*$/i, "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .split(/\s+/)
+    .slice(0, 3)
+    .map(part => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
+    .join(" ");
+}
+
+function nexusIntroductionResponse(command = "") {
+  const raw = String(command || "").trim();
+  const value = normalizeToolText(raw);
+  const unicodeValue = raw.toLowerCase();
+  if (!value && !unicodeValue) return "";
+  if (/\b(i am testing|this is a test|testing nexus|test mode|i am confused|i am lost)\b/.test(value)) return "";
+  const introPatterns = [
+    /\b(?:my name is|this is|i am|i'm|im|call me|it is|it's|its)\s+([\p{L}\p{M}][\p{L}\p{M}' -]{1,42})\b/iu,
+    /\b(?:me llamo|mi nombre es|soy)\s+([\p{L}\p{M}][\p{L}\p{M}' -]{1,42})\b/iu,
+    /\b(?:je m'appelle|je suis|mon nom est)\s+([\p{L}\p{M}][\p{L}\p{M}' -]{1,42})\b/iu,
+    /\b(?:jina langu ni|mimi ni|naitwa)\s+([\p{L}\p{M}][\p{L}\p{M}' -]{1,42})\b/iu,
+    /(?:اسمي|أنا|انا)\s+([\p{L}\p{M}][\p{L}\p{M}' -]{1,42})/u
+  ];
+  const intro = introPatterns.map(pattern => unicodeValue.match(pattern)).find(Boolean);
+  if (!intro) return "";
+  const spokenName = cleanSpokenUserName(intro[1]);
+  if (!spokenName || /^(nexus|agrinexus|testing|confused|lost|ready|here)$/i.test(spokenName)) return "";
+  localStorage.setItem("agrinexusGuestDisplayName", spokenName);
+  if (data?.user) data.user.name = spokenName;
+  pendingAgentClarification = null;
+  pendingNexusSpokenCommand = null;
+  nexusAwaitingCommand = true;
+  updateNexusBehaviorLayer("listening", `Nexus learned the user's name is ${spokenName}.`);
+  recordNexusAutonomousLearning({ type: "user-name", command: value, userName: spokenName });
+  renderLiveVoiceSuggestions(["open learning", "open telehealth", "what can you do"]);
+  return `Hello ${spokenName}. I am Nexus. How can I assist you?`;
+}
+
 function nexusCommonPhraseResponse(command = "") {
   const value = normalizeToolText(command);
   if (!value) return "";
@@ -14883,6 +14923,14 @@ async function handleVoiceCommand(rawCommand, options = {}) {
   const wakeOnly = isWakePhraseOnly(localizedCommand);
   let command = cleanWakeCommand(localizedCommand);
   command = normalizeMultilingualBehaviorCommand(command);
+  const introductionResponse = nexusIntroductionResponse(command || localizedCommand);
+  if (introductionResponse) {
+    openAskNexus();
+    enableHeyAgriNexusMode();
+    setVoiceResponse(introductionResponse, true);
+    render();
+    return;
+  }
   if (greetingOnly || (greetingPrefix && !hasBehaviorActionVerb(command))) {
     openAskNexus();
     enableHeyAgriNexusMode();
