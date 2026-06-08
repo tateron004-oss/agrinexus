@@ -58,8 +58,8 @@ let routeTrackingWatchId = null;
 let routeTrackingPoints = [];
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-186";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v166";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-187";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v167";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
 const VOICE_ATTENTION_DELAY_MS = 900;
@@ -7849,6 +7849,11 @@ function renderUserWorkspace() {
         <strong>${translateText("Family support")}</strong>
         <span>${translateText("Help women farmers, caregivers, youth learners, and cooperatives.")}</span>
       </button>
+      <button type="button" class="user-fast-action learning" data-simple-command="${escapeHtml("help my child learn today")}">
+        ${userVisualIconHtml("learning")}
+        <strong>${translateText("Family learning")}</strong>
+        <span>${translateText("Start safe voice lessons for women, children, youth, and caregivers.")}</span>
+      </button>
     </section>
     <section id="userLanguagePanel" class="user-language-panel hidden" aria-label="${translateText("Choose language")}">
       <div class="user-language-header">
@@ -8612,6 +8617,9 @@ function simpleUserCommandWorkflow(command = "") {
   const productId = firstProduct()?.id;
   const migrantIntent = migrantFriendlyVoiceIntent(command);
   if (migrantIntent) return migrantIntent;
+  if (/\b(women|woman|mother|mothers|children|child|youth|girl|girls|family|caregiver|school|student|students)\b/.test(lower) && /\b(learn|learning|lesson|school|study|read|reading|course|tutor|classroom|teach|education)\b/.test(lower)) {
+    return { workflow: "women-children-learning", action: "start", response: "Women and children learning is ready.", dataset: {} };
+  }
   if (/\b(women|woman|mother|mothers|family|caregiver|children|child|youth|girls|cooperative)\b/.test(lower) && /\b(farm|farmer|agriculture|crop|sell|market|health|learn|school|support|help|clinic)\b/.test(lower)) {
     return { workflow: "women-family", action: "start", response: "Women and family farm support is ready.", dataset: {} };
   }
@@ -9141,6 +9149,26 @@ function render() {
   $("#learningAccommodationList").innerHTML = learningAccommodations.length
     ? learningAccommodations.map(item => `<div><strong>${item.title}</strong><span>${item.courseTitle} - ${(item.supports || []).join(", ")}</span></div>`).join("")
     : "<div>No accessible learning accommodations prepared yet.</div>";
+
+  const womenChildrenHub = data.womenChildrenLearningHub || { paths: [], metrics: [], commands: [], providerTruth: {}, summary: "" };
+  if ($("#womenChildrenLearningPanel")) {
+    const latest = womenChildrenHub.latest;
+    const latestHtml = latest
+      ? `<div><strong>${translateText(`${latest.planNumber} - ${latest.pathTitle}`)}</strong><span>${translateText(`${latest.learnerGroup}: ${latest.supportNeed}`)}</span><small>${translateText(`${latest.courseTitle} | ${latest.language} | ${latest.childSafety}`)}</small></div>`
+      : `<div><strong>${translateText("Ready for family learning")}</strong><span>${translateText(womenChildrenHub.summary || "Start a voice-first learning plan for women, children, youth, mothers, caregivers, and cooperative classrooms.")}</span></div>`;
+    const metricHtml = (womenChildrenHub.metrics || []).slice(0, 4).map(item => `<div><strong>${translateText(item.label)}: ${item.value}</strong><span>${translateText(item.detail)}</span></div>`).join("");
+    const providerTruth = womenChildrenHub.providerTruth || {};
+    $("#womenChildrenLearningPanel").innerHTML = `${latestHtml}${metricHtml}<div><strong>${translateText("Provider truth")} - ${translateText(providerTruth.status || "local-catalog")}</strong><span>${translateText(providerTruth.detail || "Local curriculum workflow runs now; signed course providers can attach later.")}</span></div>`;
+  }
+  if ($("#womenChildrenLearningPathPanel")) {
+    $("#womenChildrenLearningPathPanel").innerHTML = (womenChildrenHub.paths || []).slice(0, 4).map(path => `
+      <div>
+        <strong>${translateText(path.title)}</strong>
+        <span>${translateText(path.audience)} - ${translateText(path.goal)}</span>
+        <small>${translateText(path.safety)}</small>
+      </div>
+    `).join("") || `<div>${translateText("No women and children learning paths loaded yet.")}</div>`;
+  }
 
   renderProviderEvidence("#learningIntegrationPanel", "Learning", "No learning provider evidence yet. Start a course, complete a lesson, finish a quiz, issue a certificate, or test learning engines.");
   renderCommunicationPanel("#learningCommunicationPanel", "Learning", "No learning support thread yet. Message the instructor to create a two-way learning record.");
@@ -11934,6 +11962,57 @@ function workflowConfig(workflow, action, element) {
         { title: "Module", detail: moduleName, status: "ready", label: "Area" },
         { title: "Channel", detail: channel, status: channel === "in-app chat" ? "ready" : "live", label: "Route" },
         { title: "Provider status", detail: channel === "WhatsApp" ? (data.providers.find(item => item.id === "whatsapp-delivery")?.detail || "WhatsApp provider pending") : channel === "SMS" ? (data.providers.find(item => item.id === "sms-delivery")?.detail || "SMS provider pending") : "Local two-way thread is available now", status: "ready", label: "Comms" }
+      ]
+    });
+  }
+  if (workflow === "women-children-learning") {
+    const hub = data.womenChildrenLearningHub || { paths: [], latest: null, providerTruth: {} };
+    const paths = hub.paths || [];
+    const firstPath = paths[0] || {};
+    return simpleWorkflowConfig({
+      eyebrow: "Women & children learning",
+      title: "Start women and children learning hub",
+      userTitle: "Help my child learn",
+      summary: "Create a voice-first family classroom plan for women farmers, mothers, girls, children, youth learners, caregivers, and cooperative groups.",
+      userSummary: "Nexus will start a simple family learning plan with voice, pictures, safe child learning, course progress, and a clear next lesson.",
+      confirmLabel: "Start family learning",
+      path: "/api/learning/women-children",
+      body: {
+        pathId: firstPath.id || "women-farmer-business",
+        learnerGroup: firstPath.audience || "Women farmers, caregivers, and youth learners",
+        supportNeed: "Voice-first, picture-supported, low-bandwidth learning for my family",
+        language: languageCode()
+      },
+      redirectSection: "learning",
+      success: "Women and children learning plan opened",
+      record: "Family learning plan, course enrollment, assignment, accessibility packet, cohort, provider audit event, activity, and Nexus memory",
+      provider: "Runs now with the local AgriNexus curriculum. A signed course catalog provider can attach later without changing the workflow.",
+      guide: "This is education, family support, and resource navigation. It does not create child labor, diagnose medical conditions, or replace licensed teachers or health providers.",
+      userOutcome: "Nexus opens a safe lesson path and tells the learner or caregiver what to do first.",
+      userRecord: "Plan number, learner group, lesson path, accessibility supports, course evidence, and audit event are saved.",
+      fields: [
+        { type: "select", name: "pathId", label: "Learning path", value: firstPath.id || "women-farmer-business", options: paths.map(path => ({ value: path.id, label: `${path.title} - ${path.audience}` })) },
+        { name: "learnerGroup", label: "Who is learning?", value: firstPath.audience || "Women farmers, caregivers, and youth learners", placeholder: "Example: mothers and girls in our village" },
+        { type: "textarea", name: "supportNeed", label: "What help is needed?", rows: 3, value: "Voice-first, picture-supported, low-bandwidth learning for my family", placeholder: "Example: help my child read, help women farmers learn selling, help mothers learn clinic resources" },
+        { type: "select", name: "language", label: "Preferred language", value: languageCode(), options: [
+          { value: "en", label: "English" },
+          { value: "fr", label: "French" },
+          { value: "sw", label: "Kiswahili" },
+          { value: "ar", label: "Arabic" },
+          { value: "es", label: "Spanish" },
+          { value: "pt", label: "Portuguese" }
+        ] }
+      ],
+      steps: [
+        { title: "Listen", detail: "Nexus captures the learner group, language, and support need." },
+        { title: "Choose path", detail: "The hub selects women farmer business, children/youth safe learning, family health education, or cooperative classroom." },
+        { title: "Open lesson", detail: "Nexus starts the connected course, assignment, accessible packet, and cohort record." },
+        { title: "Protect", detail: "Child/youth support remains learning and safety guidance, not work assignment or medical diagnosis." }
+      ],
+      checklist: [
+        { title: "Available paths", detail: `${paths.length || 0} family classroom path(s) loaded`, status: "ready", label: "Catalog" },
+        { title: "Provider truth", detail: hub.providerTruth?.detail || "Local curriculum workflow is available now", status: hub.providerTruth?.status || "local-catalog", label: "Learning" },
+        { title: "Latest plan", detail: hub.latest ? `${hub.latest.planNumber} already active` : "No family learning plan yet", status: hub.latest ? "live" : "ready", label: hub.status || "Ready" }
       ]
     });
   }

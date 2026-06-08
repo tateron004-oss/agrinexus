@@ -13,7 +13,7 @@
   <link rel="icon" href="/icons/agri-nexus-192.png" type="image/png">
   <link rel="apple-touch-icon" href="/icons/agri-nexus-192.png">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-  <link rel="stylesheet" href="/styles.css?v=nexus-behavior-186">
+  <link rel="stylesheet" href="/styles.css?v=nexus-behavior-187">
 </head>
 <body>
   <a class="skip-link" href="#mainContent">Skip to main content</a>
@@ -404,6 +404,23 @@
               <div class="tag-row"><span>Assistive pathway</span><span>Rural access</span></div>
               <h3>Learner Accommodation Plan</h3>
               <div id="learningAccommodationList" class="activity"></div>
+            </article>
+          </div>
+          <div class="cards two">
+            <article class="accessibility-card">
+              <div class="tag-row"><span>Women & children</span><span>Voice-first</span></div>
+              <h3>Women & Children Learning Hub</h3>
+              <p>Create safe family learning paths for women farmers, mothers, girls, children, youth learners, caregivers, and cooperative classrooms.</p>
+              <div id="womenChildrenLearningPanel" class="activity"></div>
+              <div class="action-row">
+                <button data-workflow="women-children-learning" data-action="start" class="primary">Start family learning</button>
+                <button data-simple-command="help my child learn today">Ask Nexus tutor</button>
+              </div>
+            </article>
+            <article class="accessibility-card">
+              <div class="tag-row"><span>Safe learning</span><span>No child labor</span></div>
+              <h3>Family Classroom Paths</h3>
+              <div id="womenChildrenLearningPathPanel" class="activity"></div>
             </article>
           </div>
           <div id="trackStrip" class="track-strip"></div>
@@ -1559,6 +1576,6 @@
   <div id="toast" class="toast hidden" role="status" aria-live="polite" aria-atomic="true"></div>
   <div id="screenReaderStatus" class="sr-only" role="status" aria-live="polite" aria-atomic="true"></div>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="/app.js?v=nexus-behavior-186"></script>
+  <script src="/app.js?v=nexus-behavior-187"></script>
 </body>
 </html>

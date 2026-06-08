@@ -1556,6 +1556,7 @@ function publicState(db, user) {
     providers,
     providerCandidates,
     capabilities: capabilityMatrix(db, providers),
+    womenChildrenLearningHub: womenChildrenLearningHubModel(db, providers),
     intelligentAssistant: intelligentAssistantModel(db, user, providers),
     behaviorModel: assistantBehaviorModel(db, user),
     conversationEvidence: conversationEvidencePack(db),
@@ -1593,6 +1594,7 @@ function impactDashboardModel(db, providers = runtimeProviders(db)) {
   ensureOperationsProfile(db.profile);
   const orders = db.profile.orders || [];
   const womenFamilyRuns = db.profile.womenFamilyRuns || [];
+  const womenChildrenPlans = db.profile.womenChildrenLearningPlans || [];
   const tradeValue = orders.reduce((sum, order) => sum + Number(order.total || 0), 0);
   const trained = new Set([...(db.profile.completedCourses || []), ...(db.profile.certificates || []).map(item => item.courseId)]).size;
   const providerEvents = (db.profile.integrationEvents || []).length;
@@ -1606,6 +1608,7 @@ function impactDashboardModel(db, providers = runtimeProviders(db)) {
     + Math.min(15, orders.length * 5)
     + Math.min(15, communications * 4)
     + Math.min(10, womenFamilyRuns.length * 5)
+    + Math.min(10, womenChildrenPlans.length * 5)
   ));
   const metrics = [
     { label: "Learners trained", value: trained, detail: `${(db.profile.enrollments || []).length} enrollment(s), ${(db.profile.certificates || []).length} certificate(s)` },
@@ -1614,8 +1617,9 @@ function impactDashboardModel(db, providers = runtimeProviders(db)) {
     { label: "Trade value", value: tradeValue, detail: `${orders.length} order(s), ${(db.profile.walletTransactions || []).length} wallet transaction(s)`, format: "money" },
     { label: "Communication threads", value: communications, detail: "Learning, workforce, telehealth, provider, and buyer-seller threads" },
     { label: "Women & family support", value: womenFamilyRuns.length, detail: `${womenFamilyRuns.filter(item => item.status === "active" || item.status === "pilot-ready").length} active support path(s) for women farmers, youth learning, caregivers, and cooperatives` },
+    { label: "Women & children learning", value: womenChildrenPlans.length, detail: `${womenChildrenPlans.filter(item => item.status === "active").length} active family classroom, safe youth learning, mother/caregiver education, and cooperative learning plan(s)` },
     { label: "Provider evidence", value: providerEvents, detail: `${connectedProviders}/${providers.length} connected provider(s)` },
-    { label: "Rural access score", value: ruralAccessScore, detail: "Composite learning, care, work, trade, communication, and evidence score", suffix: "%" }
+    { label: "Rural access score", value: ruralAccessScore, detail: "Composite learning, women/family support, care, work, trade, communication, and evidence score", suffix: "%" }
   ];
   return {
     status: ruralAccessScore >= 80 ? "investor-ready" : ruralAccessScore >= 55 ? "pilot-ready" : "build-evidence",
@@ -1639,6 +1643,7 @@ function missionTimelineModel(db) {
   });
   (db.profile.enrollments || []).slice(0, 3).forEach(item => add("Learning", "Course pathway started", `${item.progress || 0}% progress`, item.status || "active", item.startedAt, item.courseId));
   (db.profile.certificates || []).slice(0, 3).forEach(item => add("Learning", "Certificate issued", item.title || item.courseId, "complete", item.issuedAt, item.certificateNumber));
+  (db.profile.womenChildrenLearningPlans || []).slice(0, 3).forEach(item => add("Learning", "Women and children learning plan opened", `${item.learnerGroup}: ${item.pathTitle}`, item.status || "active", item.createdAt, item.planNumber));
   (db.profile.applications || []).slice(0, 3).forEach(item => add("Workforce", "Role application submitted", item.roleTitle, item.status || "submitted", item.submittedAt, item.id));
   (db.profile.healthIntakes || []).slice(0, 3).forEach(item => add("Healthcare", "Telehealth intake opened", item.patientRef || item.needSummary, item.queueStatus || "active", item.createdAt, item.riskLevel));
   (db.profile.orders || []).slice(-3).forEach(item => add("AgriTrade", "Trade order created", `${item.orderNumber || item.id}: ${item.product}`, item.stage || "active", item.createdAt, item.checkpoint));
@@ -4449,6 +4454,7 @@ function ensureLearningProfile(profile) {
   profile.enrollments = profile.enrollments || [];
   profile.completedCourses = profile.completedCourses || [];
   profile.certificates = profile.certificates || [];
+  profile.womenChildrenLearningPlans = profile.womenChildrenLearningPlans || [];
   profile.learningPath = profile.learningPath || "Foundation Pathway";
   profile.learningStreak = profile.learningStreak || 0;
   profile.learningHours = profile.learningHours || 0;
@@ -4525,6 +4531,202 @@ function learningCatalog(db) {
     tracks,
     courses
   };
+}
+
+function womenChildrenLearningPaths(db) {
+  const findCourse = pattern => (db.courses || []).find(course => pattern.test(`${course.id} ${course.title} ${course.track}`)) || (db.courses || [])[0] || {};
+  return [
+    {
+      id: "women-farmer-business",
+      title: "Women Farmer Business Path",
+      audience: "Women farmers and mothers",
+      ageGroup: "adult",
+      linkedCourseId: findCourse(/digital|business|farm|agri|trade/i).id || null,
+      goal: "Help women farmers plan crops, sell safely, use mobile money, lead cooperatives, and protect household income.",
+      lessons: ["Plan the crop", "Know the buyer", "Count the money", "Use mobile money safely", "Lead the cooperative"],
+      supports: ["voice lesson", "picture cards", "low-bandwidth packet", "cooperative practice"],
+      safety: "Designed for adult women and caregiver-led learning."
+    },
+    {
+      id: "children-youth-safe-learning",
+      title: "Children & Youth Safe Learning",
+      audience: "Children and youth learners",
+      ageGroup: "child-youth",
+      linkedCourseId: findCourse(/foundation|digital|safety|health|telehealth/i).id || null,
+      goal: "Support school skills, reading, math, digital literacy, hygiene, and farm awareness without creating child labor.",
+      lessons: ["Read and count", "Learn safely about farming", "Wash hands and drink safe water", "Ask an adult for help", "Use the phone for learning"],
+      supports: ["large pictures", "read-aloud tutor", "short quiz", "guardian mode"],
+      safety: "This is education and safety support. It is not work assignment, labor placement, or medical diagnosis."
+    },
+    {
+      id: "family-health-nutrition",
+      title: "Family Health, Nutrition & Safety",
+      audience: "Mothers, caregivers, and family learners",
+      ageGroup: "family",
+      linkedCourseId: findCourse(/health|telehealth|safety|nutrition/i).id || null,
+      goal: "Teach simple resource navigation, hygiene, nutrition, heat safety, clinic/pharmacy access, and when to seek urgent help.",
+      lessons: ["Clean water", "Food and nutrition basics", "Heat and walking safety", "Clinic and pharmacy help", "Danger signs need urgent local help"],
+      supports: ["audio guide", "caption packet", "caregiver handoff", "clinic resource links"],
+      safety: "Provides education and access guidance only. Licensed health providers make clinical decisions."
+    },
+    {
+      id: "women-cooperative-classroom",
+      title: "Women Cooperative Classroom",
+      audience: "Women farmer groups and cooperatives",
+      ageGroup: "adult-group",
+      linkedCourseId: findCourse(/leadership|business|trade|digital|farm/i).id || null,
+      goal: "Run group learning for savings, crop quality, buyer communication, safe payments, record keeping, and leadership.",
+      lessons: ["Group goal", "Savings practice", "Quality checklist", "Buyer message practice", "Receipt and delivery proof"],
+      supports: ["group cohort", "facilitator notes", "voice practice", "certificate readiness"],
+      safety: "Built for cooperative learning and transparent record keeping."
+    }
+  ];
+}
+
+function womenChildrenLearningHubModel(db, providers = runtimeProviders(db)) {
+  ensureLearningProfile(db.profile);
+  const plans = db.profile.womenChildrenLearningPlans || [];
+  const paths = womenChildrenLearningPaths(db);
+  const latest = plans[0] || null;
+  const provider = providers.find(item => item.id === "learning-courses") || {};
+  return {
+    status: plans.length ? "active" : "ready",
+    summary: latest
+      ? `${latest.planNumber} is active for ${latest.learnerGroup}: ${latest.pathTitle}.`
+      : "Ready for women farmer lessons, children and youth safe learning, family health education, and cooperative classrooms.",
+    latest,
+    paths,
+    metrics: [
+      { label: "Family learning plans", value: plans.length, detail: "Women, children, youth, caregiver, and cooperative plans created" },
+      { label: "Safe youth plans", value: plans.filter(plan => plan.childSafety).length, detail: "Plans with explicit child-protection language" },
+      { label: "Voice-first support", value: plans.filter(plan => (plan.supports || []).some(item => /voice|audio|read/i.test(item))).length, detail: "Plans ready for read-aloud and low-literacy support" },
+      { label: "Certificates ready", value: plans.filter(plan => plan.certificatePath?.status === "ready").length, detail: "Learning paths connected to progress and credential evidence" }
+    ],
+    providerTruth: {
+      status: provider.status || "local-catalog",
+      detail: provider.status === "connected"
+        ? "Live learning provider is connected."
+        : "Local curriculum workflow runs now; signed course providers can attach later."
+    },
+    commands: [
+      "Nexus, help my child learn today",
+      "Nexus, start women farmer business learning",
+      "Nexus, open the women cooperative classroom",
+      "Nexus, read the family health lesson"
+    ]
+  };
+}
+
+function runWomenChildrenLearningWorkflow(db, user, body = {}) {
+  ensureLearningProfile(db.profile);
+  ensureOperationsProfile(db.profile);
+  ensureAiProfile(db.profile);
+  const paths = womenChildrenLearningPaths(db);
+  const selectedPath = paths.find(path => path.id === body.pathId) || paths.find(path => /child|youth/i.test(body.learnerGroup || "") && path.ageGroup === "child-youth") || paths[0];
+  const course = (db.courses || []).find(item => item.id === (body.courseId || selectedPath.linkedCourseId)) || (db.courses || [])[0] || {};
+  const now = new Date().toISOString();
+  const planNumber = `AN-FLEARN-${String((db.profile.womenChildrenLearningPlans || []).length + 1).padStart(3, "0")}`;
+  const learnerGroup = String(body.learnerGroup || selectedPath.audience).trim();
+  const language = body.language || user.language || db.profile.accessibilityProfile?.language || "en";
+  const supportNeed = String(body.supportNeed || "Voice-first, picture-supported, low-bandwidth learning").trim();
+  let enrollment = course.id ? getEnrollment(db.profile, course.id) : null;
+  if (course.id && !enrollment) {
+    enrollment = {
+      id: crypto.randomUUID(),
+      courseId: course.id,
+      status: "in_progress",
+      progress: 25,
+      score: 0,
+      activeModuleIndex: 0,
+      completedModules: [],
+      startedAt: now,
+      completedAt: null
+    };
+    db.profile.enrollments.unshift(enrollment);
+  } else if (enrollment) {
+    enrollment.status = enrollment.status === "completed" ? "completed" : "in_progress";
+    enrollment.progress = Math.max(Number(enrollment.progress || 0), 35);
+  }
+  if (course.id) db.profile.activeCourseId = course.id;
+  const plan = {
+    id: crypto.randomUUID(),
+    planNumber,
+    pathId: selectedPath.id,
+    pathTitle: selectedPath.title,
+    learnerGroup,
+    ageGroup: selectedPath.ageGroup,
+    language,
+    supportNeed,
+    courseId: course.id || null,
+    courseTitle: course.title || selectedPath.title,
+    lessonPlan: selectedPath.lessons.map((lesson, index) => ({ step: index + 1, title: lesson, status: index === 0 ? "active" : "ready" })),
+    supports: selectedPath.supports,
+    childSafety: selectedPath.safety,
+    nexusTutor: {
+      status: "ready",
+      prompts: ["Read this lesson slowly", "Explain with pictures", "Quiz me", "What should we learn next?"]
+    },
+    certificatePath: {
+      status: "ready",
+      rule: "Complete lessons and quiz before issuing certificate evidence."
+    },
+    createdBy: user.email,
+    createdAt: now,
+    status: "active"
+  };
+  db.profile.womenChildrenLearningPlans.unshift(plan);
+  db.profile.womenChildrenLearningPlans = db.profile.womenChildrenLearningPlans.slice(0, 30);
+  db.profile.learningAssignments.unshift({
+    id: crypto.randomUUID(),
+    assignmentNumber: `AN-FAM-ASG-${String(db.profile.learningAssignments.length + 1).padStart(3, "0")}`,
+    courseId: course.id || null,
+    courseTitle: course.title || selectedPath.title,
+    title: `${selectedPath.title} first lesson`,
+    instructions: `Use voice, pictures, and simple questions to complete: ${selectedPath.lessons[0]}.`,
+    dueWindow: "next family learning session",
+    status: "assigned",
+    createdAt: now
+  });
+  db.profile.learningAccommodations.unshift({
+    id: crypto.randomUUID(),
+    courseId: course.id || null,
+    courseTitle: course.title || selectedPath.title,
+    mode: "family-learning",
+    title: "Family voice and picture learning packet",
+    language,
+    supports: ["read aloud", "captions", "large picture cards", "guardian support", "low-bandwidth summary"],
+    status: "ready",
+    createdAt: now
+  });
+  db.profile.learningCohorts.unshift({
+    id: crypto.randomUUID(),
+    cohortNumber: `AN-FAM-COH-${String(db.profile.learningCohorts.length + 1).padStart(3, "0")}`,
+    courseId: course.id || null,
+    courseTitle: course.title || selectedPath.title,
+    cohortName: `${learnerGroup} learning circle`,
+    learnerCount: Number(body.learnerCount || (selectedPath.ageGroup === "child-youth" ? 12 : 24)),
+    facilitator: body.facilitator || "Family learning facilitator",
+    status: "active",
+    createdAt: now
+  });
+  db.profile.learningAssignments = db.profile.learningAssignments.slice(0, 20);
+  db.profile.learningAccommodations = db.profile.learningAccommodations.slice(0, 20);
+  db.profile.learningCohorts = db.profile.learningCohorts.slice(0, 20);
+  db.profile.learningStreak = Number(db.profile.learningStreak || 0) + 1;
+  db.profile.learningHours = Number((Number(db.profile.learningHours || 0) + 0.5).toFixed(2));
+  db.profile.readiness = Math.min(100, Number(db.profile.readiness || 0) + 5);
+  recalcReadiness(db.profile);
+  logIntegration(db, {
+    providerId: "learning-courses",
+    module: "Learning",
+    action: "learning.women_children_plan_created",
+    detail: `${planNumber} created for ${learnerGroup}: ${selectedPath.title}.`,
+    metadata: { planId: plan.id, pathId: selectedPath.id, courseId: course.id || null, childSafety: selectedPath.safety }
+  });
+  addUsageEvent(db.profile, { module: "Learning", action: "learning.women_children_plan_created", detail: planNumber, user: user.email });
+  addActivity(db.profile, `${plan.pathTitle} created for ${learnerGroup}.`);
+  rememberAgentMemory(db.profile, `Family learning plan active: ${learnerGroup} using ${plan.pathTitle} in ${language}.`, { source: "women-children-learning", category: "pattern", module: "Learning", confidence: 0.93 });
+  return plan;
 }
 
 function ensureWorkforceProfile(profile) {
@@ -7574,6 +7776,10 @@ async function executeAgentTool(db, user, step) {
   if (step.tool === "learning.access_caption") return prepareLearningAccess(db, user, "caption");
   if (step.tool === "learning.access_visual") return prepareLearningAccess(db, user, "visual");
   if (step.tool === "learning.access_offline") return prepareLearningAccess(db, user, "low-bandwidth");
+  if (step.tool === "learning.women_children_hub") {
+    const plan = runWomenChildrenLearningWorkflow(db, user, { supportNeed: step.detail || "Women and children learning support requested by Nexus command" });
+    return `Opened ${plan.planNumber} for ${plan.learnerGroup}: ${plan.pathTitle}.`;
+  }
 
   if (step.tool === "workforce.match_role") {
     ensureWorkforceProfile(db.profile);
@@ -9409,6 +9615,7 @@ function workflowActionToAgentAction(action = {}) {
   const workflowAction = action.action || action.ai || "";
   const moduleByWorkflow = {
     learning: "Learning",
+    "women-children-learning": "Learning",
     workforce: "Workforce",
     health: "Healthcare",
     trade: "AgriTrade",
@@ -9424,6 +9631,7 @@ function workflowActionToAgentAction(action = {}) {
     "learning:lesson": "learning.complete_lesson",
     "learning:quiz": "learning.quiz",
     "learning:certificate": "learning.certificate",
+    "women-children-learning:start": "learning.women_children_hub",
     "workforce:build-profile": "workforce.build_profile",
     "workforce:apply-role": "workforce.apply_role",
     "workforce:interview": "workforce.schedule_interview",
@@ -10482,6 +10690,7 @@ function agentToolRegistry() {
     { tool: "learning.access_caption", module: "Learning", action: "Prepare captions", section: "learning", description: "Create captions for deaf or hard-of-hearing learners." },
     { tool: "learning.access_visual", module: "Learning", action: "Prepare visual and audio supports", section: "learning", description: "Create large print, audio guide, or screen reader support for visually impaired learners." },
     { tool: "learning.access_offline", module: "Learning", action: "Prepare offline packet", section: "learning", description: "Prepare low-bandwidth or offline learning support." },
+    { tool: "learning.women_children_hub", module: "Learning", action: "Start women and children learning hub", section: "learning", description: "Create a voice-first family learning plan for women farmers, children, youth, mothers, caregivers, family health education, school support, cooperative classroom, and safe child learning." },
     { tool: "workforce.build_profile", module: "Workforce", action: "Verify profile", section: "workforce", description: "Build or verify a candidate profile for job readiness." },
     { tool: "workforce.match_role", module: "Workforce", action: "Match workforce role", section: "workforce", description: "Find a job, role, placement, readiness gap, or candidate match." },
     { tool: "workforce.apply_role", module: "Workforce", action: "Apply to role", section: "workforce", description: "Submit or prepare a job application for the best matched role." },
@@ -15400,6 +15609,16 @@ async function api(req, res, url) {
     addWorkflowNote(db.profile, body.note, "Learning accessibility note");
     await writeDb(db);
     return send(res, 200, publicState(db, user));
+  }
+
+  if (url.pathname === "/api/learning/women-children" && req.method === "POST") {
+    if (!canUse(user, "learning")) return send(res, 403, { error: "Role does not allow women and children learning workflows" });
+    const body = await readBody(req);
+    const plan = runWomenChildrenLearningWorkflow(db, user, body);
+    await writeDb(db);
+    const state = publicState(db, user);
+    state.womenChildrenLearningResult = plan;
+    return send(res, 200, state);
   }
 
   if (url.pathname === "/api/learning/advanced" && req.method === "POST") {
