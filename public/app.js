@@ -6074,6 +6074,16 @@ function guideAmbiguousUserWithoutChoice(clarification) {
 
 function isGlobalStopCommand(lower) {
   const value = String(lower || "").trim();
+  const simpleValue = value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^\w\s-]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .toLowerCase();
+  const fuzzyWakeStop = /^(?:texas|nexas|nexis|nexus|nextus|next\s+us|next\s+is|neck\s+sus|neck\s+is|agri|agree|angry|a\s+grain|agrinexus|agri\s+nexus)\s+(?:stop|pause|cancel|be quiet|stop talking|stop speaking|silence|quiet)$/i;
+  const fuzzyBareStop = /^(?:texas|nexas|nexis|nextus|next\s+us|neck\s+sus)$/i;
+  if (fuzzyWakeStop.test(simpleValue) || fuzzyBareStop.test(simpleValue)) return true;
   const normalized = value
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
@@ -14972,8 +14982,19 @@ async function handleVoiceCommand(rawCommand, options = {}) {
     setVoiceResponse(commonPhrase, true);
     return;
   }
-  const understanding = adaptiveCommandUnderstanding(command);
   const stopRedirect = postStopRedirectCommand(command);
+  if (isGlobalStopCommand(String(command || localizedCommand).toLowerCase())) {
+    enterNexusConversationPause("Stopped. Nexus is paused and will ignore background conversation until you say Nexus again.");
+    if (stopRedirect) {
+      leaveNexusConversationPause("Nexus heard your next instruction after stop.");
+      setTimeout(() => {
+        setCommandInputs(stopRedirect);
+        void handleVoiceCommand(stopRedirect);
+      }, 120);
+    }
+    return;
+  }
+  const understanding = adaptiveCommandUnderstanding(command);
   if (understanding.rewrittenCommand && !isUniversalLanguageCommand(command) && !isGlobalStopCommand(understanding.rewrittenCommand.toLowerCase())) {
     command = understanding.rewrittenCommand;
   }

@@ -371,6 +371,7 @@ assert(app.includes("activeVoiceRequestController.abort"), "Voice stop must abor
 assert(app.includes("function postStopRedirectCommand"), "Voice stop must support redirecting to the next prompt");
 assert(app.includes("voiceStopTranslations"), "Voice stop controls must translate in every supported language");
 assert(app.includes("detente") && app.includes("arrete") && app.includes("simama") && app.includes("\u0627\u0648\u0642\u0641"), "Voice stop parser must understand multilingual stop phrases");
+assert(app.includes("fuzzyWakeStop") && app.includes("texas") && app.includes("nexis"), "Voice stop parser must catch common Nexus mishears like Texas stop");
 assert(app.includes("function resetNexusForNextPrompt"), "Voice stop must reset Nexus so the next question can be asked immediately");
 assert(app.includes("Stopped. Ask me the next question or tell me where to go next."), "Voice stop recovery must tell users they can ask the next prompt");
 assert(styles.includes("pointer-events: none") && styles.includes(".user-caption-actions") && styles.includes("pointer-events: auto"), "Caption panel must not block workflow action clicks");
