@@ -13,7 +13,7 @@
   <link rel="icon" href="/icons/agri-nexus-192.png" type="image/png">
   <link rel="apple-touch-icon" href="/icons/agri-nexus-192.png">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-  <link rel="stylesheet" href="/styles.css?v=nexus-behavior-187">
+  <link rel="stylesheet" href="/styles.css?v=nexus-behavior-188">
 </head>
 <body>
   <a class="skip-link" href="#mainContent">Skip to main content</a>
@@ -208,6 +208,19 @@
             </article>
           </div>
           <div id="dashboardProcess" class="process-board command-board advanced-only"></div>
+          <div class="cards two advanced-only">
+            <article>
+              <div class="tag-row"><span>Cross-platform functions</span><span id="crossPlatformFunctionStatus">Ready</span></div>
+              <h3>Selected AgriNexus Functions</h3>
+              <p>Run the selected 1, 3, 4, 5, 6, and 10 functions from dashboard, integrations, admin, investor, user voice, or Ask Nexus.</p>
+              <div id="crossPlatformFunctionPanel" class="activity"></div>
+            </article>
+            <article>
+              <div class="tag-row"><span>Latest evidence</span><span id="crossPlatformFunctionLatestStatus">No run yet</span></div>
+              <h3>Cross-Platform Run Evidence</h3>
+              <div id="crossPlatformFunctionRunPanel" class="activity"></div>
+            </article>
+          </div>
           <div class="stats advanced-only">
             <article><span id="kpiCountries">0</span><small>Countries</small></article>
             <article><span id="kpiPatients">0</span><small>Patients</small></article>
@@ -1576,6 +1589,6 @@
   <div id="toast" class="toast hidden" role="status" aria-live="polite" aria-atomic="true"></div>
   <div id="screenReaderStatus" class="sr-only" role="status" aria-live="polite" aria-atomic="true"></div>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="/app.js?v=nexus-behavior-187"></script>
+  <script src="/app.js?v=nexus-behavior-188"></script>
 </body>
 </html>

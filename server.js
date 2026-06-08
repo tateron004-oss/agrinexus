@@ -1537,6 +1537,209 @@ function remoteRuralFarmerLaunchKit(db, user, providers = runtimeProviders(db), 
   return kit;
 }
 
+function crossPlatformFunctionDefinitions(db, user, providers = runtimeProviders(db)) {
+  const { country, route } = activeContext(db);
+  const providerStatus = id => providers.find(provider => provider.id === id)?.status || "local-workflow";
+  return [
+    {
+      id: "remote-country-focus",
+      number: 1,
+      title: "Country and rural market focus",
+      module: "Map & AI",
+      command: "Nexus, set my rural market focus",
+      summary: `Use ${country.name}, ${route.name}, language, map risk, and provider coverage as the operating context.`,
+      action: "Map country, route, provider coverage, language, farmer use case, and next local-market step.",
+      evidence: "Remote launch kit, country coverage, map context, and provider-candidate evidence.",
+      providerIds: ["maps", "translation"],
+      status: providerStatus("maps")
+    },
+    {
+      id: "crop-sale-simulation",
+      number: 3,
+      title: "Crop sale, buyer, and logistics workflow",
+      module: "AgriTrade",
+      command: "Nexus, help me sell my crop and track delivery",
+      summary: "Create a crop sale path with buyer message, order evidence, shipment tracking, route status, and payment readiness.",
+      action: "Create or refresh trade order, logistics booking, route tracking, buyer evidence, and payment-readiness record.",
+      evidence: "Order, logistics record, tracking evidence, trade event, provider audit, and activity record.",
+      providerIds: ["trade-market", "trade-logistics", "trade-payments", "maps"],
+      status: providerStatus("trade-market")
+    },
+    {
+      id: "field-intelligence",
+      number: 4,
+      title: "Drone and field intelligence",
+      module: "AgriTech",
+      command: "Nexus, check my field and explain it simply",
+      summary: "Turn drone or satellite-style field evidence into simple farmer guidance about crop stress, pests, water, and harvest readiness.",
+      action: "Create drone mission, run field scan, add map insight, and prepare plain-language intervention guidance.",
+      evidence: "Drone mission, scan, intervention-ready insight, map intelligence, and provider audit event.",
+      providerIds: ["field-drones", "maps", "trade-market"],
+      status: providerStatus("field-drones")
+    },
+    {
+      id: "telehealth-navigation",
+      number: 5,
+      title: "Safe telehealth and mobile clinic navigation",
+      module: "Healthcare",
+      command: "Nexus, walk me through telehealth",
+      summary: "Capture symptoms and access needs, prepare safe navigation, and route the person toward clinic/provider support without diagnosis.",
+      action: "Open intake, accessibility needs, consent-style note, provider handoff packet, and follow-up evidence.",
+      evidence: "Telehealth intake, accessibility plan, referral-ready record, activity, and provider audit event.",
+      providerIds: ["health-telehealth", "health-ehr", "health-notifications"],
+      status: providerStatus("health-telehealth")
+    },
+    {
+      id: "learning-workforce",
+      number: 6,
+      title: "Learning to income pathway",
+      module: "Learning & Workforce",
+      command: "Nexus, connect learning to income",
+      summary: "Start practical learning, accessibility support, certificate evidence, workforce readiness, and job-placement preparation.",
+      action: "Create family learning plan, assignment, accessibility packet, workforce profile evidence, and readiness activity.",
+      evidence: "Learning plan, enrollment, assignment, accommodation, workforce badge, readiness update, and audit events.",
+      providerIds: ["learning-courses", "learning-certificates", "workforce-jobs"],
+      status: providerStatus("learning-courses")
+    },
+    {
+      id: "live-credential-path",
+      number: 10,
+      title: "Live credential and provider activation path",
+      module: "Integrations",
+      command: "Nexus, prepare live engine credentials",
+      summary: "Create the partner packets and credential map for learning, telehealth, trade, drone, compliance, and live service checks.",
+      action: "Create provider partnership packets, credential checklist, readiness evidence, and next Render setup steps.",
+      evidence: "Provider packets, credential list, outreach questions, audit events, and live-readiness summary.",
+      providerIds: ["openai", "learning-courses", "health-telehealth", "trade-market", "field-drones", "maps"],
+      status: providerStatus("openai")
+    }
+  ];
+}
+
+function crossPlatformFunctionPack(db, user, providers = runtimeProviders(db)) {
+  ensureOperationsProfile(db.profile);
+  const functions = crossPlatformFunctionDefinitions(db, user, providers);
+  const runs = db.profile.crossPlatformFunctionRuns || [];
+  const latest = runs[0] || null;
+  return {
+    status: runs.length ? "active" : "ready",
+    summary: "Selected platform functions are available across User, Investor, Admin, dashboard, integrations, and Nexus voice commands.",
+    selectedNumbers: [1, 3, 4, 5, 6, 10],
+    functions,
+    latest,
+    metrics: [
+      { label: "Selected functions", value: functions.length, detail: "Country focus, crop sale, field intelligence, telehealth, learning-to-income, and live credentials" },
+      { label: "Runs created", value: runs.length, detail: "Cross-platform function activations recorded" },
+      { label: "Connected/live-ready providers", value: functions.reduce((sum, item) => sum + item.providerIds.filter(providerId => ["connected", "ready"].includes(providers.find(provider => provider.id === providerId)?.status)).length, 0), detail: "Provider slots currently connected or ready across selected functions" }
+    ],
+    commands: functions.map(item => item.command)
+  };
+}
+
+async function runCrossPlatformFunction(db, user, body = {}) {
+  ensureOperationsProfile(db.profile);
+  ensureLearningProfile(db.profile);
+  ensureWorkforceProfile(db.profile);
+  ensureHealthProfile(db.profile);
+  ensureTradeProfile(db.profile);
+  ensureAiProfile(db.profile);
+  const providers = runtimeProviders(db);
+  const definitions = crossPlatformFunctionDefinitions(db, user, providers);
+  const selected = definitions.find(item => item.id === body.functionId) || definitions[0];
+  const { country, route } = activeContext(db);
+  const now = new Date().toISOString();
+  const created = [];
+  if (selected.id === "remote-country-focus") {
+    const kit = remoteRuralFarmerLaunchKit(db, user, providers, { persist: true });
+    created.push(`Remote launch kit ${kit.id}`);
+  } else if (selected.id === "crop-sale-simulation") {
+    const product = selectedTradeProduct(db, body.productId, country);
+    const logistics = await createTradeLogisticsWorkflow(db, user, {
+      productId: product?.id,
+      type: "shipping-booking",
+      buyerName: body.buyerName || `${country.name} verified buyer desk`,
+      productName: product?.name || "Active crop lot",
+      quantity: body.quantity || "20 bags"
+    });
+    created.push(`${logistics.record.orderNumber || logistics.record.logisticsNumber} crop sale/logistics path`);
+  } else if (selected.id === "field-intelligence") {
+    const product = selectedTradeProduct(db, body.productId, country);
+    const mission = createDroneMission(db, { productId: product?.id, source: user.email, objective: body.objective });
+    const { scan } = createDroneScan(db, { productId: product?.id, source: user.email, scanType: "crop-health-and-risk" });
+    created.push(`${mission.missionRef} drone mission`, `${scan.scanRef} field scan`);
+  } else if (selected.id === "telehealth-navigation") {
+    const intake = {
+      id: crypto.randomUUID(),
+      patientRef: `AN-PAT-${country.id.toUpperCase()}-${String(db.profile.healthIntakes.length + 1).padStart(3, "0")}`,
+      patientName: body.patientName || "Community patient",
+      countryId: country.id,
+      needSummary: body.needSummary || "Safe telehealth navigation, accessibility support, and provider handoff request",
+      riskLevel: body.urgency || (country.risk === "High" || country.heat >= 38 ? "Priority" : "Routine"),
+      queueStatus: "Cross-platform telehealth navigation opened",
+      representativeStatus: "Provider navigation pending",
+      preferredLanguage: body.language || user.language || db.profile.accessibilityProfile?.language || "en",
+      accessibilityNeeds: body.accessibilityNeeds || "Voice callback, captions, large-print/audio summary, caregiver support",
+      contactMethod: body.contactMethod || "Voice callback plus SMS/WhatsApp summary",
+      caregiverName: body.caregiverName || "Community health aide",
+      routeContext: { routeId: route.id, routeName: route.name, checkpoint: db.profile.activeCheckpoint },
+      clinicalBoundary: "Navigation and resource support only. AgriNexus does not diagnose or replace licensed care.",
+      createdAt: now
+    };
+    db.profile.healthIntakes.unshift(intake);
+    db.profile.healthIntakes = db.profile.healthIntakes.slice(0, 30);
+    created.push(`${intake.patientRef} telehealth navigation intake`);
+  } else if (selected.id === "learning-workforce") {
+    const plan = runWomenChildrenLearningWorkflow(db, user, {
+      pathId: body.pathId || "women-farmer-business",
+      learnerGroup: body.learnerGroup || "Women farmers, youth learners, and rural workers",
+      supportNeed: body.supportNeed || "Practical learning that connects to income and safe work"
+    });
+    if (!db.profile.workforceBadges.includes("Profile Verified")) db.profile.workforceBadges.push("Profile Verified");
+    db.profile.candidateStage = "Learning-to-income pathway active";
+    recalcReadiness(db.profile);
+    created.push(`${plan.planNumber} learning plan`, "workforce profile verified");
+  } else if (selected.id === "live-credential-path") {
+    ["learning", "telehealth", "trade", "drone", "compliance"].forEach(type => {
+      const packet = createProviderPartnership(db, user, type, "Created from cross-platform live credential path.");
+      created.push(`${packet.title} packet`);
+    });
+  }
+  const run = {
+    id: crypto.randomUUID(),
+    runNumber: `AN-XFUNC-${String((db.profile.crossPlatformFunctionRuns || []).length + 1).padStart(3, "0")}`,
+    functionId: selected.id,
+    number: selected.number,
+    title: selected.title,
+    module: selected.module,
+    command: selected.command,
+    summary: selected.summary,
+    action: selected.action,
+    evidence: selected.evidence,
+    createdRecords: created,
+    countryId: country.id,
+    countryName: country.name,
+    routeId: route.id,
+    routeName: route.name,
+    status: "completed",
+    createdBy: user.email,
+    createdAt: now
+  };
+  db.profile.crossPlatformFunctionRuns.unshift(run);
+  db.profile.crossPlatformFunctionRuns = db.profile.crossPlatformFunctionRuns.slice(0, 30);
+  logIntegration(db, {
+    providerId: selected.providerIds[0] || "openai",
+    module: selected.module,
+    action: "platform.cross_function_run",
+    status: "success",
+    detail: `${run.runNumber} ran ${selected.title}: ${created.join("; ") || selected.evidence}.`,
+    metadata: { functionId: selected.id, number: selected.number, createdRecords: created }
+  });
+  addUsageEvent(db.profile, { module: "Platform", action: "platform.cross_function_run", detail: selected.title, user: user.email });
+  addActivity(db.profile, `${selected.title} completed across platform functions.`);
+  rememberAgentMemory(db.profile, `Cross-platform function ${selected.title} completed in ${country.name}: ${created.join("; ") || selected.evidence}.`, { source: "cross-platform-functions", category: "pattern", module: selected.module, confidence: 0.94 });
+  return run;
+}
+
 function publicState(db, user) {
   const providers = runtimeProviders(db);
   ensureOperationsProfile(db.profile);
@@ -1568,6 +1771,7 @@ function publicState(db, user) {
     maximumOperationalEfficiency: maximumOperationalEfficiencyModel(db, user, providers),
     autonomousOperatingLoop: autonomousOperatingLoopModel(db, user, providers),
     cloudAgent: cloudAgentTransparencyPacket(db, user),
+    crossPlatformFunctions: crossPlatformFunctionPack(db, user, providers),
     womenFamilySupport: womenFamilyAgricultureModel(db, providers),
     remoteLaunchKit: remoteRuralFarmerLaunchKit(db, user, providers),
     sessionBriefing: sessionBriefingModel(db, user, providers),
@@ -6738,6 +6942,7 @@ function ensureOperationsProfile(profile) {
   profile.providerOutreach = profile.providerOutreach || [];
   profile.providerShortlist = profile.providerShortlist || [];
   profile.remoteLaunchKits = profile.remoteLaunchKits || [];
+  profile.crossPlatformFunctionRuns = profile.crossPlatformFunctionRuns || [];
 }
 
 function womenFamilyAgricultureModel(db, providers = runtimeProviders(db)) {
@@ -7779,6 +7984,20 @@ async function executeAgentTool(db, user, step) {
   if (step.tool === "learning.women_children_hub") {
     const plan = runWomenChildrenLearningWorkflow(db, user, { supportNeed: step.detail || "Women and children learning support requested by Nexus command" });
     return `Opened ${plan.planNumber} for ${plan.learnerGroup}: ${plan.pathTitle}.`;
+  }
+
+  if (step.tool === "platform.cross_function") {
+    const text = `${step.functionId || ""} ${step.detail || ""} ${step.action || ""} ${step.title || ""}`.toLowerCase();
+    const functionId = step.functionId
+      || (/\b(crop|sell|buyer|delivery|logistics|shipment|track)\b/.test(text) ? "crop-sale-simulation" : null)
+      || (/\b(drone|field|scan|crop stress|pest|harvest|farm evidence)\b/.test(text) ? "field-intelligence" : null)
+      || (/\b(telehealth|clinic|patient|provider|health|mobile clinic|pharmacy)\b/.test(text) ? "telehealth-navigation" : null)
+      || (/\b(learning|workforce|income|job|course|certificate|training)\b/.test(text) ? "learning-workforce" : null)
+      || (/\b(credential|engine|provider|live|render|integration)\b/.test(text) ? "live-credential-path" : null)
+      || "remote-country-focus";
+    const run = await runCrossPlatformFunction(db, user, { functionId });
+    const evidence = run.createdRecords?.length ? run.createdRecords.join("; ") : run.evidence;
+    return `Ran ${run.runNumber}: ${run.title}. ${evidence}`;
   }
 
   if (step.tool === "workforce.match_role") {
@@ -9620,6 +9839,7 @@ function workflowActionToAgentAction(action = {}) {
     health: "Healthcare",
     trade: "AgriTrade",
     "women-family": "Women & Family",
+    "cross-platform": "Platform",
     map: "Maps",
     integrations: "Integrations",
     admin: "Admin",
@@ -9645,6 +9865,12 @@ function workflowActionToAgentAction(action = {}) {
     "health:safety": "health.safety",
     "health:careplan": "health.careplan",
     "women-family:start": "women_family.support_path",
+    "cross-platform:remote-country-focus": "platform.cross_function",
+    "cross-platform:crop-sale-simulation": "platform.cross_function",
+    "cross-platform:field-intelligence": "platform.cross_function",
+    "cross-platform:telehealth-navigation": "platform.cross_function",
+    "cross-platform:learning-workforce": "platform.cross_function",
+    "cross-platform:live-credential-path": "platform.cross_function",
     "trade:order": "trade.market_review",
     "trade:buyer-contact": "trade.buyer_contact",
     "trade:drone": "drone.field_scan",
@@ -9668,6 +9894,7 @@ function workflowActionToAgentAction(action = {}) {
     tool,
     action: registry?.action || action.title || "Run recommended action",
     section: registry?.section || action.section || workflow || "agent",
+    functionId: action.functionId || (workflow === "cross-platform" ? workflowAction : null),
     roleId: action.roleId || null,
     productId: action.productId || null
   };
@@ -10710,6 +10937,7 @@ function agentToolRegistry() {
     { tool: "health.careplan", module: "Healthcare", action: "Generate care plan", section: "health", description: "Generate a care plan for a patient." },
     { tool: "communications.outbound_call", module: "AI", action: "Place outbound call", section: "agent", description: "Place a real outbound phone call through Twilio to a buyer, telehealth provider, recruiter, learner support contact, or configured destination after confirmation." },
     { tool: "women_family.support_path", module: "Women & Family", action: "Start women and family agriculture support", section: "dashboard", description: "Open support for women farmers, mothers, caregivers, youth safe learning, cooperative selling, family health access, and farm income guidance." },
+    { tool: "platform.cross_function", module: "Platform", action: "Run selected cross-platform function", section: "dashboard", description: "Run selected AgriNexus functions 1, 3, 4, 5, 6, or 10 across rural country focus, crop sale and logistics, drone field intelligence, telehealth navigation, learning-to-income, and live credential activation." },
     { tool: "trade.market_review", module: "AgriTrade", action: "Review market", section: "trade", description: "Review market, create an order, price crops, or prepare a selling workflow." },
     { tool: "trade.buyer_contact", module: "AgriTrade", action: "Contact buyer", section: "trade", description: "Speak to, call, message, or contact a buyer about selling crops." },
     { tool: "trade.operational_efficiency", module: "AgriTrade", action: "Review operational efficiency", section: "trade", description: "Optimize trade operations, identify bottlenecks, reduce delay, improve profit, and connect buyer, route, drone, quality, cold-chain, logistics, and payment evidence." },
@@ -14292,6 +14520,16 @@ async function api(req, res, url) {
     await writeDb(db);
     const state = publicState(db, user);
     state.autonomousOperatingLoopResult = loop;
+    return send(res, 200, state);
+  }
+
+  if (url.pathname === "/api/platform/cross-function" && req.method === "POST") {
+    if (!user) return send(res, 401, { error: "Sign in required" });
+    const body = await readBody(req);
+    const run = await runCrossPlatformFunction(db, user, body);
+    await writeDb(db);
+    const state = publicState(db, user);
+    state.crossPlatformFunctionResult = run;
     return send(res, 200, state);
   }
 

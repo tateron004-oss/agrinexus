@@ -58,8 +58,8 @@ let routeTrackingWatchId = null;
 let routeTrackingPoints = [];
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-187";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v167";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-188";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v168";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
 const VOICE_ATTENTION_DELAY_MS = 900;
@@ -6787,6 +6787,12 @@ function workflowVoiceAliases(workflow, action) {
   const aliases = {
     "learning:start": ["start course", "take course", "begin training", "learn", "teach me", "school help", "class start", "i want learn", "learn please"],
     "learning:lesson": ["finish lesson", "complete lesson", "lesson done", "finish class"],
+    "cross-platform:remote-country-focus": ["set rural market focus", "country focus", "focus my country", "prepare rural market", "start rural farmer launch"],
+    "cross-platform:crop-sale-simulation": ["sell my crop and track delivery", "sell crop and track", "crop sale workflow", "buyer logistics workflow", "track my sale and product"],
+    "cross-platform:field-intelligence": ["check my field and explain it simply", "field intelligence", "drone field intelligence", "explain crop stress", "scan my farm and explain"],
+    "cross-platform:telehealth-navigation": ["walk me through telehealth", "safe telehealth navigation", "mobile clinic navigation", "help patient reach clinic", "healthcare support workflow"],
+    "cross-platform:learning-workforce": ["connect learning to income", "learning to income", "course to job", "training to workforce", "learn and find work"],
+    "cross-platform:live-credential-path": ["prepare live engine credentials", "live credential path", "provider activation path", "connect live engines", "prepare provider credentials"],
     "workforce:apply-role": ["apply for job", "apply for role", "get work", "job please", "i want work", "work help", "need money work", "job apply"],
     "workforce:shift": ["plan shift", "schedule shift", "work time", "job schedule"],
     "health:intake": ["start intake", "need doctor", "health help", "doctor help", "i sick", "i am sick", "pain help", "clinic help", "medicine help"],
@@ -7501,6 +7507,43 @@ function renderConversationPanel() {
 
 function latestOnboardingRun() {
   return (data.profile.onboardingRuns || [])[0];
+}
+
+function renderCrossPlatformFunctionPanels() {
+  if (!data) return;
+  const pack = data.crossPlatformFunctions || { functions: [], latest: null, metrics: [], status: "ready" };
+  const status = $("#crossPlatformFunctionStatus");
+  if (status) status.textContent = translateText(pack.status || "ready");
+  const latestStatus = $("#crossPlatformFunctionLatestStatus");
+  if (latestStatus) latestStatus.textContent = pack.latest ? translateText(pack.latest.status || "completed") : translateText("No run yet");
+  const panel = $("#crossPlatformFunctionPanel");
+  if (panel) {
+    panel.innerHTML = (pack.functions || []).length
+      ? pack.functions.map(item => `
+        <div>
+          <strong>${translateText(`${item.number}. ${item.title}`)}</strong>
+          <span>${translateText(item.summary)}</span>
+          <small>${translateText(item.command)}</small>
+          <div class="action-row compact">
+            <button type="button" class="primary" data-workflow="cross-platform" data-action="${item.id}">${translateText("Run function")}</button>
+          </div>
+        </div>
+      `).join("")
+      : `<div><strong>${translateText("Cross-platform functions ready")}</strong><span>${translateText("Selected functions will appear after the platform state loads.")}</span></div>`;
+  }
+  const runPanel = $("#crossPlatformFunctionRunPanel");
+  if (runPanel) {
+    const latest = pack.latest;
+    const metrics = (pack.metrics || []).map(item => `<div><strong>${translateText(item.label)}</strong><span>${translateText(`${item.value} - ${item.detail}`)}</span></div>`).join("");
+    const latestHtml = latest ? `
+      <div>
+        <strong>${translateText(`${latest.runNumber} - ${latest.title}`)}</strong>
+        <span>${translateText(latest.createdRecords?.length ? latest.createdRecords.join("; ") : latest.evidence)}</span>
+        <small>${translateText(`${latest.countryName || "Active country"} | ${latest.routeName || "Active route"}`)}</small>
+      </div>
+    ` : `<div><strong>${translateText("Ready to run")}</strong><span>${translateText(pack.summary || "Run one selected function to create evidence.")}</span></div>`;
+    runPanel.innerHTML = `${latestHtml}${metrics}`;
+  }
 }
 
 function renderLaunchSupportPanels() {
@@ -8623,6 +8666,24 @@ function simpleUserCommandWorkflow(command = "") {
   if (/\b(women|woman|mother|mothers|family|caregiver|children|child|youth|girls|cooperative)\b/.test(lower) && /\b(farm|farmer|agriculture|crop|sell|market|health|learn|school|support|help|clinic)\b/.test(lower)) {
     return { workflow: "women-family", action: "start", response: "Women and family farm support is ready.", dataset: {} };
   }
+  if (lower.includes("rural market focus") || lower.includes("focus my country") || lower.includes("country focus")) {
+    return { workflow: "cross-platform", action: "remote-country-focus", response: "Country and rural market focus is ready.", dataset: {} };
+  }
+  if ((lower.includes("sell") || lower.includes("sale") || lower.includes("buyer")) && (lower.includes("track") || lower.includes("delivery") || lower.includes("logistics"))) {
+    return { workflow: "cross-platform", action: "crop-sale-simulation", response: "Crop sale, buyer, and delivery tracking is ready.", dataset: { productId } };
+  }
+  if ((lower.includes("field") || lower.includes("farm") || lower.includes("crop")) && (lower.includes("explain") || lower.includes("drone") || lower.includes("scan") || lower.includes("stress"))) {
+    return { workflow: "cross-platform", action: "field-intelligence", response: "Drone and field intelligence is ready.", dataset: { productId } };
+  }
+  if ((lower.includes("telehealth") || lower.includes("clinic") || lower.includes("patient")) && (lower.includes("walk") || lower.includes("navigate") || lower.includes("support") || lower.includes("safe"))) {
+    return { workflow: "cross-platform", action: "telehealth-navigation", response: "Safe telehealth navigation is ready.", dataset: {} };
+  }
+  if ((lower.includes("learning") || lower.includes("course") || lower.includes("training")) && (lower.includes("income") || lower.includes("work") || lower.includes("job"))) {
+    return { workflow: "cross-platform", action: "learning-workforce", response: "Learning to income pathway is ready.", dataset: {} };
+  }
+  if ((lower.includes("credential") || lower.includes("provider") || lower.includes("engine")) && (lower.includes("live") || lower.includes("connect") || lower.includes("prepare"))) {
+    return { workflow: "cross-platform", action: "live-credential-path", response: "Live engine credential path is ready.", dataset: {} };
+  }
   if (lower.includes("start training") || lower.includes("start a course")) return { workflow: "learning", action: "start", response: "Course start is ready.", dataset: {} };
   if (lower.includes("complete my lesson") || lower.includes("finish lesson")) return { workflow: "learning", action: "lesson", response: "Lesson completion is ready.", dataset: {} };
   if (lower.includes("issue my certificate") || lower.includes("certificate")) return { section: "learning", config: learningCertificateWorkflowConfig(), response: "Certificate workflow is ready." };
@@ -8723,7 +8784,9 @@ function renderWorkflowBoards(country, route) {
   const hasRep = (data.profile.representativeConnections || 0) > 0;
   const hasSafety = (data.profile.safetyReviews || []).length > 0;
   const hasCarePlan = (data.profile.carePlans || []).length > 0;
+  const crossFunction = (data.crossPlatformFunctions?.functions || [])[0];
   renderProcessBoard("#dashboardProcess", [
+    { module: "Platform", title: "Run selected cross-platform function", text: crossFunction ? `${crossFunction.title}: ${crossFunction.summary}` : "Run one of the selected platform functions across user, investor, admin, integrations, and voice.", workflow: "cross-platform", action: crossFunction?.id || "remote-country-focus", status: data.crossPlatformFunctions?.status === "active" ? "done" : "active", statusLabel: "1,3,4,5,6,10", button: "Run function", primary: true },
     { module: "Learning", title: activeLearningEnrollment ? "Continue active course" : "Start learning record", text: activeLearningCourse ? `${translatedCourse(activeLearningCourse).title}: complete lessons, quiz, and certificate from the learning studio.` : "Open the learning studio and start a verified course.", workflow: "learning", action: activeLearningEnrollment ? "lesson" : "start", status: activeLearningEnrollment?.progress >= 100 ? "done" : "active", statusLabel: activeLearningEnrollment ? `${activeLearningEnrollment.progress || 0}%` : "Start here", button: activeLearningEnrollment ? "Complete lesson" : "Start course", primary: true },
     { module: "Workforce", title: hasApplication ? "Move placement forward" : "Build workforce pipeline", text: hasApplication ? "Schedule interview, assign mentor, and move into a paid shift." : "Verify the candidate profile and submit a role application.", workflow: "workforce", action: hasProfile ? "apply-role" : "build-profile", roleId: role?.id, status: hasShift ? "done" : "active", statusLabel: data.profile.candidateStage || "Ready", button: hasProfile ? "Apply to role" : "Build profile" },
     { module: "Healthcare", title: hasCarePlan ? "Review care operations" : "Open care case", text: hasCarePlan ? "Run safety, representative, and AI care-plan follow-up." : `Start a patient intake for ${country.name} and move it through care planning.`, workflow: "health", action: hasIntake ? "careplan" : "intake", status: hasCarePlan ? "done" : "active", statusLabel: country.queue, button: hasIntake ? "Generate care plan" : "Start intake" },
@@ -8805,6 +8868,7 @@ function render() {
   renderSimpleHome();
   renderUserWorkspace();
   renderElevationPanels();
+  renderCrossPlatformFunctionPanels();
   $("#sessionBriefingStatus").textContent = translateText(sessionBriefing.status || "ready");
   $("#sessionBriefingPanel").innerHTML = [
     `<div><strong>${translateText(sessionBriefing.title || "Welcome back")}</strong><span>${translateText(sessionBriefing.message || "Ask AgriNexus what to do next.")}</span></div>`,
@@ -11899,6 +11963,58 @@ function learningCertificateWorkflowConfig() {
 }
 
 function workflowConfig(workflow, action, element) {
+  if (workflow === "cross-platform") {
+    const pack = data.crossPlatformFunctions || { functions: [] };
+    const fn = (pack.functions || []).find(item => item.id === action) || (pack.functions || [])[0] || {
+      id: action,
+      title: "Selected AgriNexus function",
+      module: "Platform",
+      command: "Nexus, run selected function",
+      summary: "Run a selected cross-platform AgriNexus function.",
+      action: "Create platform evidence and update Nexus memory.",
+      evidence: "Workflow record, provider audit, activity, and Nexus memory",
+      providerIds: []
+    };
+    const redirectMap = {
+      "remote-country-focus": "map",
+      "crop-sale-simulation": "trade",
+      "field-intelligence": "trade",
+      "telehealth-navigation": "health",
+      "learning-workforce": "learning",
+      "live-credential-path": "integrations"
+    };
+    return simpleWorkflowConfig({
+      eyebrow: `Function ${fn.number || ""}`.trim(),
+      title: fn.title,
+      userTitle: fn.title,
+      summary: fn.summary,
+      userSummary: `Nexus will ${String(fn.action || "run this function").toLowerCase()}`,
+      confirmLabel: "Run function",
+      path: "/api/platform/cross-function",
+      body: {
+        functionId: fn.id,
+        productId: element?.dataset?.productId || firstProduct()?.id,
+        language: languageCode()
+      },
+      redirectSection: redirectMap[fn.id] || "dashboard",
+      success: "Cross-platform function complete",
+      record: fn.evidence,
+      provider: (fn.providerIds || []).length ? `Provider slots: ${fn.providerIds.join(", ")}` : "Local workflow evidence is created now; live providers connect when credentials are available.",
+      guide: "This action creates real platform records and Nexus memory so the same function can be shown from User, Investor, Admin, dashboard, integrations, or voice.",
+      userOutcome: "Nexus runs the selected function, records what happened, and moves you to the related workspace.",
+      userRecord: "Run number, module record, provider audit event, activity, and Nexus memory are saved.",
+      steps: [
+        { title: "Confirm function", detail: fn.command || "Run selected function" },
+        { title: "Create evidence", detail: fn.action || "Create platform records and audit events." },
+        { title: "Open workspace", detail: `Nexus opens ${redirectMap[fn.id] || "dashboard"} so the user can continue.` }
+      ],
+      checklist: [
+        { title: "Selected", detail: `Function ${fn.number || "selected"}: ${fn.title}`, status: "ready", label: "Ready" },
+        { title: "Evidence", detail: fn.evidence || "Platform record and audit evidence", status: "ready", label: "Records" },
+        { title: "Provider path", detail: (fn.providerIds || []).join(", ") || "Local workflow", status: fn.status || "ready", label: fn.status || "Ready" }
+      ]
+    });
+  }
   if (workflow === "communications") {
     const communicationMap = {
       "learning-chat": ["Learning", "in-app chat", "Message instructor", "Ask the learning coach for help with the active course, captions, quiz prep, or next lesson."],
