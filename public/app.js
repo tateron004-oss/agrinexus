@@ -11237,6 +11237,7 @@ function renderWorkflowLiveMap(config = pendingWorkflow || {}) {
 function closeWorkflowModal() {
   stopWorkflowCamera();
   pendingWorkflow = null;
+  document.body.classList.remove("workflow-open");
   const captionPanel = $("#userCaptionPanel");
   if (captionPanel) {
     captionPanel.classList.remove("has-pending-workflow");
@@ -11573,6 +11574,7 @@ function stopWorkflowCamera() {
 
 function openWorkflowModal(config) {
   pendingWorkflow = config;
+  document.body.classList.add("workflow-open");
   lastFocusedElement = document.activeElement;
   closeAskNexus({ silent: true });
   $("#workflowModal")?.classList.remove("grandma-workflow");
