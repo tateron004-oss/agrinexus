@@ -14791,6 +14791,27 @@ function isNaturalConversationCommand(lower) {
   return followUp || question || humanNeed || value.split(/\s+/).length >= 9;
 }
 
+function isNexusHearingCheckCommand(command = "") {
+  const value = normalizeToolText(command);
+  if (!value) return false;
+  return /\b(can you hear me|do you hear me|can nexus hear me|are you listening|are you hearing me|you hear me|you listening|is the mic working|is my mic working|microphone working|mic working|did you hear that|did you get that)\b/.test(value)
+    || /\b(me escuchas|me oyes|puedes oirme|puedes escucharme|microfono funciona)\b/.test(value)
+    || /\b(tu m entends|vous m entendez|tu ecoutes|micro fonctionne)\b/.test(value)
+    || /\b(unanisikia|unasikia|mic inafanya kazi|kipaza sauti kinafanya kazi)\b/.test(value)
+    || /(?:\u0647\u0644 \u062a\u0633\u0645\u0639\u0646\u064a|\u062a\u0633\u0645\u0639\u0646\u064a|\u0627\u0644\u0645\u064a\u0643\u0631\u0648\u0641\u0648\u0646 \u064a\u0639\u0645\u0644)/.test(command);
+}
+
+function answerNexusHearingCheck() {
+  pendingAgentClarification = null;
+  pendingNexusSpokenCommand = null;
+  updateNexusBehaviorLayer("listening", "Nexus confirmed the user can be heard.");
+  const status = voiceRecognition
+    ? "Yes, I hear you. I am listening now."
+    : "Yes, I received that. If you spoke it, your microphone reached Nexus. I am ready.";
+  renderLiveVoiceSuggestions(["Nexus, open learning", "Nexus, open telehealth", "Nexus, stop"]);
+  setVoiceResponse(`${status} Tell me what you need next.`, true);
+}
+
 function commandGoal(command) {
   return command
     .replace(/^(please\s+)?(create|build|make|generate)\s+(an?\s+)?(agent\s+)?plan( for| to)?/i, "")
@@ -14812,6 +14833,10 @@ async function handleVoiceCommand(rawCommand, options = {}) {
     nexusAwaitingCommand = true;
     recordNexusAutonomousLearning({ type: "greeting", command: normalizedWakeText(localizedCommand) });
     setVoiceResponse(nexusWakeGreeting("hello"), true);
+    return;
+  }
+  if (isNexusHearingCheckCommand(command || localizedCommand)) {
+    answerNexusHearingCheck();
     return;
   }
   const understanding = adaptiveCommandUnderstanding(command);
