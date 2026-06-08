@@ -14513,13 +14513,46 @@ function shouldStageNexusSpokenCommand(command, lower, options = {}) {
   if (nexusHasOpenWorkflowPrompt()) return false;
   if (isNexusCommandConfirmation(lower) || isNexusCommandRejection(lower)) return false;
   if (isGlobalStopCommand(lower) || isNexusVoiceOffCommand(lower) || isNexusVoiceOnCommand(lower)) return false;
-  return true;
+  if (isNaturalQuestionOrConversation(command)) return false;
+  return hasBehaviorActionVerb(command) || speechSafetyRisk(command, "voice").sensitive;
 }
 
 function summarizeNexusCommandForRepeat(command) {
   const clean = String(command || "").replace(/\s+/g, " ").trim();
   if (clean.length <= 170) return clean;
   return `${clean.slice(0, 167).trim()}...`;
+}
+
+function isNaturalQuestionOrConversation(command = "") {
+  const lower = normalizeToolText(command);
+  if (!lower) return false;
+  return /^(what|whats|what is|how|how do|how can|why|when|where|who|can you|could you|would you|tell me|explain|describe)\b/.test(lower)
+    || /\b(can you hear me|are you listening|do you hear me|thank you|thanks|hello|hi|good morning|good afternoon|good evening|what can you do|who are you)\b/.test(lower);
+}
+
+function shouldAskRepeatForUnclearVoiceCommand(command = "", options = {}) {
+  if (options.skipCommandConfirmation || options.confirmed || options.source === "system") return false;
+  const lower = normalizeToolText(command);
+  if (!lower || lower.length < 3) return false;
+  if (isGlobalStopCommand(lower) || isUniversalLanguageCommand(command)) return false;
+  if (isNaturalQuestionOrConversation(command)) return false;
+  if (hasBehaviorActionVerb(command)) return false;
+  const tokens = lower.split(/\s+/).filter(Boolean);
+  const suspiciousWake = /\b(texas|nexas|nexis|nextus|next\s+us|neck\s+sus|neck\s+is|agree|angry)\b/.test(lower);
+  const shortUnclear = tokens.length <= 4 && !/\b(learn|learning|work|job|jobs|health|clinic|doctor|trade|crop|crops|farm|map|route|buyer|seller|drone|weather|time)\b/.test(lower);
+  const trailingStop = /\b(stop|pause|cancel|quiet|silence)\b/.test(lower);
+  return suspiciousWake || shortUnclear || trailingStop;
+}
+
+function askUserToRepeatMisheardPhrase(command = "") {
+  const heard = summarizeNexusCommandForRepeat(command || "that");
+  pendingNexusSpokenCommand = null;
+  pendingAgentClarification = null;
+  nexusAwaitingCommand = true;
+  updateNexusBehaviorLayer("listening", `Nexus may have misheard: ${heard}`);
+  recordNexusAutonomousLearning({ type: "misheard-repeat", command: heard });
+  renderLiveVoiceSuggestions(["repeat slowly", "Nexus stop", "open learning", "open telehealth"]);
+  setVoiceResponse(`I may have heard that wrong. I heard: ${heard}. Please repeat it slowly, or say Nexus stop.`, true);
 }
 
 function recordNexusAutonomousLearning(event = {}) {
@@ -14908,6 +14941,11 @@ function nexusCommonPhraseResponse(command = "") {
       suggestions: ["slow down", "what now", "open help"]
     },
     {
+      match: /\b(repeat slowly|i will repeat|let me repeat|i said it wrong|you heard me wrong|that is not what i said)\b/,
+      response: "Go ahead. Say it again slowly, and I will repeat what I heard before doing anything.",
+      suggestions: ["open learning", "open telehealth", "Nexus stop"]
+    },
+    {
       match: /\b(slow down|speak slower|talk slower|too fast|slower please)\b/,
       response: "Okay. I will slow down and keep answers shorter.",
       slow: true,
@@ -15059,6 +15097,10 @@ async function handleVoiceCommand(rawCommand, options = {}) {
     return;
   }
   if (!lower) return setVoiceResponse("I am listening. Just tell me what you need.", true);
+  if (shouldAskRepeatForUnclearVoiceCommand(command, options)) {
+    askUserToRepeatMisheardPhrase(command);
+    return;
+  }
   if (shouldStageNexusSpokenCommand(command, lower, { ...options, wakeOnly })) {
     stageNexusSpokenCommand(command);
     return;
