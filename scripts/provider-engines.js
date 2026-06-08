@@ -9,6 +9,7 @@ const PORT = Number(process.env.PROVIDER_ENGINE_PORT || process.env.PORT || 4280
 const IS_HOSTED = process.env.NODE_ENV === "production" || Boolean(process.env.RENDER || process.env.RENDER_SERVICE_ID || process.env.RENDER_EXTERNAL_URL);
 const HOST = process.env.PROVIDER_ENGINE_HOST || process.env.HOST || (IS_HOSTED ? "0.0.0.0" : "127.0.0.1");
 const LOG_PATH = path.join(__dirname, "..", "provider-events.json");
+const PROVIDER_ENGINE_RELEASE = "provider-brain-30";
 
 const endpoints = {
   "/ai/responses": { module: "AI", keyEnv: "AI_PROVIDER_API_KEY" },
@@ -105,7 +106,7 @@ function readBody(req) {
 const server = http.createServer(async (req, res) => {
   try {
     if (req.method === "GET" && req.url === "/healthz") {
-      return send(res, 200, { ok: true, service: "agrinexus-provider-engines", endpoints: Object.keys(endpoints).length });
+      return send(res, 200, { ok: true, service: "agrinexus-provider-engines", release: PROVIDER_ENGINE_RELEASE, endpoints: Object.keys(endpoints).length });
     }
     if (req.method === "GET" && req.url === "/events") {
       return send(res, 200, { ok: true, events: readEvents() });
