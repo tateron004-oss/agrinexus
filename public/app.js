@@ -14833,8 +14833,16 @@ function nexusIntroductionResponse(command = "") {
   const introPatterns = [
     /\b(?:my name is|this is|i am|i'm|im|call me|it is|it's|its)\s+([\p{L}\p{M}][\p{L}\p{M}' -]{1,42})\b/iu,
     /\b(?:me llamo|mi nombre es|soy)\s+([\p{L}\p{M}][\p{L}\p{M}' -]{1,42})\b/iu,
+    /\b(?:meu nome e|me chamo|chamo me|eu sou|sou)\s+([\p{L}\p{M}][\p{L}\p{M}' -]{1,42})\b/iu,
     /\b(?:je m'appelle|je suis|mon nom est)\s+([\p{L}\p{M}][\p{L}\p{M}' -]{1,42})\b/iu,
-    /\b(?:jina langu ni|mimi ni|naitwa)\s+([\p{L}\p{M}][\p{L}\p{M}' -]{1,42})\b/iu,
+    /\b(?:jina langu ni|mimi ni|naitwa|wananiita)\s+([\p{L}\p{M}][\p{L}\p{M}' -]{1,42})\b/iu,
+    /\b(?:sunana|suna na)\s+([\p{L}\p{M}][\p{L}\p{M}' -]{1,42})\b/iu,
+    /\b(?:oruko mi ni|oruko mi)\s+([\p{L}\p{M}][\p{L}\p{M}' -]{1,42})\b/iu,
+    /\b(?:aha m bu|aha m)\s+([\p{L}\p{M}][\p{L}\p{M}' -]{1,42})\b/iu,
+    /\b(?:kombo na ngai ezali|kombo na ngai)\s+([\p{L}\p{M}][\p{L}\p{M}' -]{1,42})\b/iu,
+    /\b(?:nitwa|izina ryanjye ni)\s+([\p{L}\p{M}][\p{L}\p{M}' -]{1,42})\b/iu,
+    /\b(?:igama lami ngu|igama lam ngu|igama lami)\s+([\p{L}\p{M}][\p{L}\p{M}' -]{1,42})\b/iu,
+    /\b(?:ana ismi|ismi|ana)\s+([\p{L}\p{M}][\p{L}\p{M}' -]{1,42})\b/iu,
     /(?:اسمي|أنا|انا)\s+([\p{L}\p{M}][\p{L}\p{M}' -]{1,42})/u
   ];
   const intro = introPatterns.map(pattern => unicodeValue.match(pattern)).find(Boolean);
