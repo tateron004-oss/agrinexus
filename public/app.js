@@ -3501,6 +3501,10 @@ function languageFromVoiceCommand(command) {
   }
   const languages = {
     english: "en",
+    eng: "en",
+    englsh: "en",
+    englisch: "en",
+    inglish: "en",
     anglais: "en",
     ingles: "en",
     kiingereza: "en",
@@ -3533,7 +3537,7 @@ function languageFromVoiceCommand(command) {
     brasil: "pt",
     brasileiro: "pt"
   };
-  const match = lower.match(/\b(?:to|into|in|as|use|speak|talk|respond|reply|change|switch|set|translate|mudar|trocar|usar|falar|responder)\s+(english|anglais|ingles|kiingereza|nigeria|nigerian|french|francais|frances|kifaransa|drc|congo|swahili|kiswahili|suajili|kenya|kenyan|arabic|arabe|kiarabu|egypt|egyptian|spanish|espanol|espanhol|kihispania|portuguese|portugues|portuguesa|brazil|brasil|brasileiro)\b/);
+  const match = lower.match(/\b(?:to|into|in|as|use|speak|talk|respond|reply|change|switch|set|translate|mudar|trocar|usar|falar|responder)\s+(english|eng|englsh|englisch|inglish|anglais|ingles|kiingereza|nigeria|nigerian|french|francais|frances|kifaransa|drc|congo|swahili|kiswahili|suajili|kenya|kenyan|arabic|arabe|kiarabu|egypt|egyptian|spanish|espanol|espanhol|kihispania|portuguese|portugues|portuguesa|brazil|brasil|brasileiro)\b/);
   if (match?.[1]) return languages[match[1]] || "";
   return Object.entries(languages).find(([name]) => lower.includes(name))?.[1] || "";
 }
@@ -3570,7 +3574,7 @@ function userLanguageQuickSwitchHtml() {
 
 function isUniversalLanguageCommand(command) {
   const lower = String(command || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-  return /\b(change|switch|set|translate|language|speak|talk|respond|reply|use|cambiar|idioma|langue|lugha|lingua|hablar|parler|ongea|zungumza|responder|mudar|trocar|usar|falar|lingua|portugues)\b/.test(lower)
+  return /\b(change|switch|set|translate|language|speak|talk|respond|reply|use|back|return|cambiar|idioma|langue|lugha|lingua|hablar|parler|ongea|zungumza|responder|mudar|trocar|usar|falar|lingua|portugues)\b/.test(lower)
     && Boolean(languageFromVoiceCommand(command))
     || (/[\u0627-\u064a]/.test(command) && /(\u063a\u064a\u0631|\u0628\u062f\u0644|\u062a\u0643\u0644\u0645|\u0627\u0633\u062a\u062e\u062f\u0645|\u0627\u0644\u0644\u063a\u0629)/.test(command) && Boolean(languageFromVoiceCommand(command)));
 }
@@ -4185,6 +4189,7 @@ async function changeLanguageByVoice(command) {
     const previousLanguage = languageCode();
     data = await request("/api/user/language", { method: "POST", body: { language } });
     render();
+    refreshLanguageEverywhere();
     if (previousLanguage !== languageCode()) refreshVoiceForLanguageChange();
     const label = voiceLanguageName();
     updateNexusBehaviorLayer("ready", `Nexus will keep listening and responding in ${label}.`);
@@ -4360,6 +4365,21 @@ function applyContentTranslations() {
     if (!element.dataset.originalAriaLabel) element.dataset.originalAriaLabel = element.getAttribute("aria-label") || "";
     element.setAttribute("aria-label", translateText(element.dataset.originalAriaLabel));
   });
+}
+
+function refreshLanguageEverywhere() {
+  applyPlatformLanguage();
+  applyContentTranslations();
+  const active = currentSectionId?.() || "dashboard";
+  if (experienceMode === "user") {
+    if (active === "dashboard") {
+      renderUserWorkspace();
+    } else if (simpleUserSections[active]) {
+      renderUserSimpleActiveSection(active);
+    }
+  }
+  applyContentTranslations();
+  refreshMicSupport();
 }
 
 function setLoginLanguage(language) {
@@ -13450,7 +13470,10 @@ async function mutate(path, body, success) {
     updateNexusBehaviorLayer("thinking", "Nexus is running the selected workflow.");
     data = await request(path, { method: "POST", body });
     render();
-    if (path === "/api/user/language" && previousLanguage !== languageCode()) refreshVoiceForLanguageChange();
+    if (path === "/api/user/language") {
+      refreshLanguageEverywhere();
+      if (previousLanguage !== languageCode()) refreshVoiceForLanguageChange();
+    }
     updateNexusBehaviorLayer("ready", success || "Workflow complete.");
     toast(success);
   } catch (error) {
@@ -14809,6 +14832,12 @@ async function handleVoiceCommand(rawCommand, options = {}) {
     enableNexusVoiceForDemo("Nexus voice is back on. Say Nexus, then tell me what you need.");
     return;
   }
+  if (isUniversalLanguageCommand(command)) {
+    pendingNexusSpokenCommand = null;
+    pendingAgentClarification = null;
+    await changeLanguageByVoice(command);
+    return;
+  }
   if (pendingNexusSpokenCommand && isNexusCommandConfirmation(lower)) {
     await executePendingNexusSpokenCommand();
     return;
@@ -14857,11 +14886,6 @@ async function handleVoiceCommand(rawCommand, options = {}) {
   if (isVoiceMissionRequest(command)) {
     pendingAgentClarification = null;
     await startVoiceMission(command);
-    return;
-  }
-  if (isUniversalLanguageCommand(command)) {
-    pendingAgentClarification = null;
-    await changeLanguageByVoice(command);
     return;
   }
   if (/\b(speech safety|translation safety|voice safety|speak slower|slow down|talk slower|slower voice)\b/.test(lower)) {
