@@ -34,6 +34,7 @@ let voiceConversationTurns = Number(localStorage.getItem("agrinexusVoiceTurns") 
 let liveVoiceSuggestions = [];
 let agentReasoningVisible = localStorage.getItem("agrinexusReasoningVisible") === "true";
 let pendingNexusSpokenCommand = null;
+let confirmedVoiceActionActive = false;
 let nexusAwaitingCommand = false;
 let agentPerformanceState = {
   lastCommand: "",
@@ -14530,8 +14531,13 @@ async function executePendingNexusSpokenCommand() {
   nexusAwaitingCommand = false;
   recordNexusAutonomousLearning({ type: "command-confirmed", command: staged.summary });
   updateNexusBehaviorLayer("acting", `Nexus is executing: ${staged.summary}`);
-  setVoiceResponse(nexusLocalizedBehaviorCopy("confirmed", { command: staged.summary }), true);
-  await handleVoiceCommand(staged.command, { skipCommandConfirmation: true, confirmed: true, source: "nexus-confirmation" });
+  setVoiceResponse(nexusLocalizedBehaviorCopy("confirmed", { command: staged.summary }), false, { allowVoiceFirst: false });
+  confirmedVoiceActionActive = true;
+  try {
+    await handleVoiceCommand(staged.command, { skipCommandConfirmation: true, confirmed: true, source: "nexus-confirmation" });
+  } finally {
+    confirmedVoiceActionActive = false;
+  }
 }
 
 function clearPendingNexusSpokenCommand(message = "Canceled. Tell me what you want to do next.") {
@@ -14661,6 +14667,56 @@ function toggleAskNexus() {
   }
 }
 
+async function executeWorkflowConfigFromVoice(config, response = "") {
+  if (!config) return false;
+  pendingWorkflow = null;
+  const sectionId = config.redirectSection || currentSectionId();
+  updateNexusBehaviorLayer("acting", `Nexus is completing: ${config.title || config.confirmLabel || "workflow"}`);
+  recordVoiceEvent(`Confirmed workflow: ${config.title || config.confirmLabel || "workflow"}.`, "progress");
+  if (config.redirectSection && canOpenSection(config.redirectSection)) goSection(config.redirectSection, { instant: true });
+  if (!config.path) {
+    render();
+    const message = `${config.success || response || "Done."} Choose another action when ready.`;
+    setVoiceResponse(message, true);
+    return true;
+  }
+  try {
+    data = await request(config.path, { method: "POST", body: { ...(config.body || {}) } });
+    data = await request("/api/intelligence/workflow", {
+      method: "POST",
+      body: {
+        module: config.eyebrow || config.body?.module || "Platform",
+        action: config.title || config.confirmLabel || "Workflow completed",
+        summary: config.summary || "",
+        record: config.record || "",
+        provider: config.provider || ""
+      }
+    });
+    render();
+    const targetSection = config.redirectSection || sectionId;
+    if (targetSection && canOpenSection(targetSection)) {
+      goSection(targetSection, { instant: true });
+      if (experienceMode === "user" && targetSection !== "dashboard" && simpleUserSections[targetSection]) {
+        renderUserSimpleActiveSection(targetSection);
+      }
+    }
+    const intelligence = data.workflowIntelligenceResult || (data.profile.workflowIntelligence || [])[0];
+    const message = experienceMode === "user"
+      ? `${config.success || "Done."} I saved it and opened the right section. Choose another button or ask Nexus for the next step.`
+      : `${config.success || "Workflow complete."} ${intelligence?.nextStep || "The evidence is saved."}`;
+    recordVoiceEvent(message, "done");
+    updateNexusBehaviorLayer("ready", message);
+    setVoiceResponse(message, true);
+    toast(config.success || "Workflow complete");
+    return true;
+  } catch (error) {
+    const message = error.message || "Workflow failed";
+    voiceErrorRecovery(error, config.title || config.confirmLabel || "");
+    setVoiceResponse(`I could not complete that workflow: ${message}`, true);
+    return true;
+  }
+}
+
 function openWorkflowByVoice(workflow, action, response, dataset = {}) {
   const config = workflowConfig(workflow, action, { dataset });
   recordNexusAutonomousLearning({ type: "workflow-opened", workflow, action, command: response || "" });
@@ -14668,6 +14724,10 @@ function openWorkflowByVoice(workflow, action, response, dataset = {}) {
   if (!config) {
     runWorkflowAction(workflow, action, { dataset });
     setVoiceResponse(response || "Workflow command sent.");
+    return;
+  }
+  if (confirmedVoiceActionActive) {
+    void executeWorkflowConfigFromVoice(config, response);
     return;
   }
   const userSection = workflow === "ai" ? "agent" : workflow === "map" ? "map" : workflow;
