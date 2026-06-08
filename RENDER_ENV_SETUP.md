@@ -45,6 +45,7 @@ Replace these before calling it production:
 - `DATABASE_URL`: Render PostgreSQL external database URL.
 - `OPENAI_API_KEY`: live OpenAI API key.
 - `MAP_TILE_URL`: production map tile URL if not using the default OpenStreetMap tile URL.
+- `MAPBOX_ACCESS_TOKEN` or `OPENROUTESERVICE_API_KEY`: live routing/geocoding key for professional maps, route tracking, clinic/pharmacy search, and shipment routing.
 - `BILLING_PRICE_ID`: Stripe or billing provider subscription price id.
 - `BILLING_CHECKOUT_URL`: optional hosted checkout URL if your billing provider supplies one.
 
@@ -93,6 +94,10 @@ Production communications variables:
 - `WHATSAPP_PROVIDER=webhook`
 - `WHATSAPP_WEBHOOK_URL=https://YOUR-AGRINEXUS-PROVIDER-ENGINES.onrender.com/communications/whatsapp`
 - `COMMUNICATION_PROVIDER_API_KEY`
+- Optional Twilio messaging values when using Twilio directly:
+  - `TWILIO_SMS_FROM`
+  - `TWILIO_WHATSAPP_FROM`
+  - `TWILIO_MESSAGING_SERVICE_SID`
 
 Production billing variables:
 
@@ -101,6 +106,28 @@ Production billing variables:
 - `BILLING_PROVIDER_API_KEY`
 - `BILLING_PRICE_ID`
 - `BILLING_CHECKOUT_URL` if available
+
+Direct payment checkout variables for crop sales, medical supply orders, mobile clinic payments, transaction receipts, and AgriNexus transaction fees:
+
+Paystack:
+
+- `PAYMENT_PROVIDER=paystack`
+- `PAYSTACK_SECRET_KEY`
+- `PAYSTACK_SUBACCOUNT_CODE` if using split payments
+- `PAYSTACK_BEARER=subaccount` unless Paystack directs otherwise
+
+Flutterwave:
+
+- `PAYMENT_PROVIDER=flutterwave`
+- `FLUTTERWAVE_SECRET_KEY`
+- `FLUTTERWAVE_SUBACCOUNT_ID` if using split payments
+
+Live maps and routing variables:
+
+- `MAPBOX_ACCESS_TOKEN` for Mapbox maps/geocoding/routing.
+- `OPENROUTESERVICE_API_KEY` for OpenRouteService directions/geocoding.
+- `GOOGLE_MAPS_API_KEY` if using Google Maps Platform instead.
+- `ROUTING_WEBHOOK_URL` if routing goes through a custom logistics/GPS middleware service.
 
 ## Verify
 

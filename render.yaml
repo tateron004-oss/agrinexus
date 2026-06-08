@@ -138,6 +138,22 @@ services:
         value: https://agrinexus-provider-engines.onrender.com/voice/speak
       - key: VOICE_PROVIDER_API_KEY
         sync: false
+      - key: PHONE_PROVIDER
+        value: twilio
+      - key: PUBLIC_BASE_URL
+        value: https://agrinexus-platform.onrender.com
+      - key: TWILIO_ACCOUNT_SID
+        sync: false
+      - key: TWILIO_AUTH_TOKEN
+        sync: false
+      - key: TWILIO_PHONE_NUMBER
+        sync: false
+      - key: TWILIO_SMS_FROM
+        sync: false
+      - key: TWILIO_WHATSAPP_FROM
+        sync: false
+      - key: TWILIO_MESSAGING_SERVICE_SID
+        sync: false
       - key: TRANSLATION_PROVIDER
         value: webhook
       - key: TRANSLATION_WEBHOOK_URL
@@ -148,6 +164,14 @@ services:
         value: openstreetmap
       - key: MAP_TILE_URL
         value: https://tile.openstreetmap.org/{z}/{x}/{y}.png
+      - key: MAPBOX_ACCESS_TOKEN
+        sync: false
+      - key: OPENROUTESERVICE_API_KEY
+        sync: false
+      - key: GOOGLE_MAPS_API_KEY
+        sync: false
+      - key: ROUTING_WEBHOOK_URL
+        sync: false
       - key: LEARNING_COURSE_PROVIDER
         value: webhook
       - key: LEARNING_COURSE_WEBHOOK_URL
@@ -194,6 +218,8 @@ services:
         value: https://agrinexus-provider-engines.onrender.com/health/ehr
       - key: HEALTH_PROVIDER_API_KEY
         sync: false
+      - key: PAYMENT_PROVIDER
+        sync: false
       - key: TRADE_PAYMENT_PROVIDER
         value: webhook
       - key: TRADE_LOGISTICS_PROVIDER
@@ -202,6 +228,16 @@ services:
         value: webhook
       - key: DRONE_PROVIDER
         value: webhook
+      - key: PAYSTACK_SECRET_KEY
+        sync: false
+      - key: PAYSTACK_SUBACCOUNT_CODE
+        sync: false
+      - key: PAYSTACK_BEARER
+        value: subaccount
+      - key: FLUTTERWAVE_SECRET_KEY
+        sync: false
+      - key: FLUTTERWAVE_SUBACCOUNT_ID
+        sync: false
       - key: TRADE_PAYMENT_WEBHOOK_URL
         value: https://agrinexus-provider-engines.onrender.com/trade/payments
       - key: TRADE_LOGISTICS_WEBHOOK_URL
