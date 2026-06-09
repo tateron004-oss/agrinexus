@@ -4953,6 +4953,7 @@ function renderAgentCenter() {
   const jarvisReadiness = data.jarvisReadiness || { readyCount: 0, total: 6, score: 0, items: [] };
   const brain = nexusBrainState(commands[0]?.command || "");
   const brainOs = nexusBrainOsModel();
+  const collective = data.collectiveIntelligence || { status: "ready", score: 0, patterns: [], proposals: [] };
   const intelligence = nexusHighIntelligenceSnapshot();
   const latestOrchestration = (data.profile.aiOrchestrations || [])[0];
   const deepMemory = nexusDeepMemorySignals();
@@ -4995,6 +4996,25 @@ function renderAgentCenter() {
         <span>${translateText(item.detail || "Evidence recorded")}</span>
       </div>
     `).join("");
+  }
+  if ($("#collectiveIntelligenceScore")) $("#collectiveIntelligenceScore").textContent = `${Number(collective.score || 0)}%`;
+  if ($("#collectiveIntelligenceStatus")) $("#collectiveIntelligenceStatus").textContent = translateText(collective.plainLanguageSummary || "Collective intelligence is learning from platform usage.");
+  if ($("#collectiveIntelligencePanel")) {
+    $("#collectiveIntelligencePanel").innerHTML = (collective.patterns || []).length
+      ? (collective.patterns || []).map(item => taskItem(
+        item.title,
+        `${item.evidence || ""} ${item.recommendation || ""}`.trim(),
+        Number(item.strength || 0) >= 70 ? "ready" : "pending",
+        `${Number(item.strength || 0)}%`,
+        { simpleCommand: `Nexus, explain collective intelligence for ${item.module}` }
+      )).join("")
+      : taskItem("Collective brain standing by", "Run collective brain to let Nexus review commands, recovery events, providers, workflows, and module usage.", "pending", "Ready", { simpleCommand: "Nexus, run collective intelligence" });
+  }
+  if ($("#collectiveEvolutionPanel")) {
+    const proposals = data.profile.collectiveEvolutionProposals || collective.proposals || [];
+    $("#collectiveEvolutionPanel").innerHTML = proposals.length
+      ? proposals.slice(0, 6).map(item => `<div><strong>${translateText(item.title || "Evolution proposal")}</strong><span>${translateText(item.recommendedChange || item.why || "Governed platform improvement")}</span><small>${translateText(`${item.module || "Platform"} - ${item.status || "proposed"} - Admin approval required`)}</small></div>`).join("")
+      : `<div><strong>${translateText("No proposals yet")}</strong><span>${translateText("Run collective brain to generate governed self-evolution recommendations from real usage evidence.")}</span></div>`;
   }
   if ($("#nexusIntelligenceScore")) $("#nexusIntelligenceScore").textContent = `${intelligence.score}%`;
   if ($("#nexusIntelligenceMode")) $("#nexusIntelligenceMode").textContent = translateText(intelligence.mode);
@@ -7720,7 +7740,7 @@ function renderLaunchSupportPanels() {
 }
 
 function applyPermissions() {
-  $$("[data-workflow], [data-ai], [data-workforce], [data-health], [data-pay], [data-module-test], [data-command-preset], [data-pilot-scenario], [data-persona], [data-simple-command], [data-simple-section], [data-simple-pilot], [data-simple-demo], [data-simple-mission], [data-simple-action], .provider-test, #adminHealthCheck, #liveServiceCheckBtn, #liveServiceCheckFromIntegrations, #aiConsoleRun, #agentPlanBtn, #agentExecuteBtn, #agentBriefingBtn, #agentMissionBtn, #missionResumeBtn, #missionAutopilotBtn, #cloudAgentRunBtn, #cloudAgentTickBtn, #cloudAgentApproveBtn, #cloudAgentTemplateBtn, #demoRunBtn, #wowDemoBtn, #remoteLaunchKitBtn, #startOnboardingBtn, #openSupportBtn, #inviteSubscriberBtn, #addTestUserBtn, #addAdminUserBtn, [data-ai-review], [data-notify], #voiceListenBtn, #voiceRunBtn, #voiceFirstBtn, #voiceSpeakBtn, #voiceHelpBtn, #globalListenBtn, #globalRunBtn, #globalYesBtn, #globalNoBtn, #globalReadBtn, #globalVoiceHelpBtn, #globalInstallBtn, #jarvisListenBtn, #jarvisRunBtn, #jarvisMissionBtn, #jarvisReadBtn").forEach(element => {
+  $$("[data-workflow], [data-ai], [data-workforce], [data-health], [data-pay], [data-module-test], [data-command-preset], [data-pilot-scenario], [data-persona], [data-simple-command], [data-simple-section], [data-simple-pilot], [data-simple-demo], [data-simple-mission], [data-simple-action], .provider-test, #adminHealthCheck, #liveServiceCheckBtn, #liveServiceCheckFromIntegrations, #aiConsoleRun, #agentPlanBtn, #agentExecuteBtn, #agentBriefingBtn, #agentMissionBtn, #missionResumeBtn, #missionAutopilotBtn, #cloudAgentRunBtn, #cloudAgentTickBtn, #cloudAgentApproveBtn, #cloudAgentTemplateBtn, #runCollectiveIntelligenceBtn, #demoRunBtn, #wowDemoBtn, #remoteLaunchKitBtn, #startOnboardingBtn, #openSupportBtn, #inviteSubscriberBtn, #addTestUserBtn, #addAdminUserBtn, [data-ai-review], [data-notify], #voiceListenBtn, #voiceRunBtn, #voiceFirstBtn, #voiceSpeakBtn, #voiceHelpBtn, #globalListenBtn, #globalRunBtn, #globalYesBtn, #globalNoBtn, #globalReadBtn, #globalVoiceHelpBtn, #globalInstallBtn, #jarvisListenBtn, #jarvisRunBtn, #jarvisMissionBtn, #jarvisReadBtn").forEach(element => {
     const area = element.dataset.workflow
       || (element.dataset.ai ? "ai" : null)
       || (element.dataset.workforce ? "workforce" : null)
@@ -7746,6 +7766,7 @@ function applyPermissions() {
       || (element.id === "cloudAgentTickBtn" ? "ai" : null)
       || (element.id === "cloudAgentApproveBtn" ? "ai" : null)
       || (element.id === "cloudAgentTemplateBtn" ? "ai" : null)
+      || (element.id === "runCollectiveIntelligenceBtn" ? "ai" : null)
       || (element.id === "voiceListenBtn" ? "ai" : null)
       || (element.id === "voiceRunBtn" ? "ai" : null)
       || (element.id === "voiceFirstBtn" ? "ai" : null)
@@ -15182,6 +15203,10 @@ async function handleVoiceCommand(rawCommand, options = {}) {
     setVoiceResponse(nexusLiveKnowledgeFeedSummary(), true);
     return;
   }
+  if (/\b(collective intelligence|collective brain|self evolve|self evolution|evolution engine|learn from everyone|community intelligence|nexus learn from users|make yourself better|improve yourself)\b/.test(lower)) {
+    await runCollectiveIntelligence();
+    return;
+  }
   if (pendingAgentClarification && await answerAgentClarification(command)) return;
   if (/\b(cancel|stop|clear|end)\s+(journey|guided journey|next step|follow through)\b/.test(lower)) {
     activeAgentJourney = null;
@@ -16113,6 +16138,25 @@ async function runLocalPilotScenario(event) {
 async function runRemoteLaunchKit() {
   await mutate("/api/pilot/remote-launch-kit", {}, "Remote rural farmer launch kit created");
   goSection("dashboard");
+}
+
+async function runCollectiveIntelligence() {
+  try {
+    updateNexusBehaviorLayer("thinking", "Nexus is reviewing collective usage patterns and governed self-evolution proposals.");
+    data = await request("/api/intelligence/collective-evolution", { method: "POST", body: { persist: true } });
+    render();
+    goSection("agent");
+    const result = data.collectiveIntelligenceResult || data.collectiveIntelligence || {};
+    const message = result.plainLanguageSummary || "Collective intelligence review complete. Nexus created governed self-evolution recommendations for admin review.";
+    renderLiveVoiceSuggestions(["explain the top proposal", "open admin", "run platform integrity", "Nexus stop"]);
+    updateNexusBehaviorLayer("ready", message);
+    setVoiceResponse(message, true);
+    toast("Collective intelligence review complete");
+  } catch (error) {
+    updateNexusBehaviorLayer("ready", error.message || "Collective intelligence needs attention.");
+    setVoiceResponse(error.message || "Collective intelligence could not run yet.", true);
+    toast(error.message);
+  }
 }
 
 async function runSimpleAction(eventOrButton) {
@@ -17181,6 +17225,7 @@ function bindStatic() {
   $("#cloudAgentTickBtn").onclick = runCloudAgentQueue;
   $("#cloudAgentApproveBtn").onclick = approveCloudAgentWork;
   $("#cloudAgentTemplateBtn").onclick = createCloudAgentTemplate;
+  $("#runCollectiveIntelligenceBtn").onclick = runCollectiveIntelligence;
   $("#voiceListenBtn").onclick = startVoiceListening;
   $("#voiceRunBtn").onclick = runVoiceTextCommand;
   $("#voiceFirstBtn").onclick = toggleVoiceFirstMode;

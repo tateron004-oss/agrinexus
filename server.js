@@ -2000,6 +2000,7 @@ function publicState(db, user) {
     noVendorUpgradeTen: noVendorUpgradeTenPack(db, user, providers),
     maximumOperationalEfficiency: maximumOperationalEfficiencyModel(db, user, providers),
     autonomousOperatingLoop: autonomousOperatingLoopModel(db, user, providers),
+    collectiveIntelligence: collectiveIntelligenceEngine(db, user, providers),
     cloudAgent: cloudAgentTransparencyPacket(db, user),
     crossPlatformFunctions: crossPlatformFunctionPack(db, user, providers),
     womenFamilySupport: womenFamilyAgricultureModel(db, providers),
@@ -2730,6 +2731,190 @@ function autonomousOperatingLoopModel(db, user, providers = runtimeProviders(db)
     addActivity(db.profile, `Autonomous operating loop completed: ${loop.currentDecision.module} next.`);
   }
   return loop;
+}
+
+function collectiveIntelligenceEngine(db, user, providers = runtimeProviders(db), options = {}) {
+  ensureLearningProfile(db.profile);
+  ensureWorkforceProfile(db.profile);
+  ensureHealthProfile(db.profile);
+  ensureTradeProfile(db.profile);
+  ensureAiProfile(db.profile);
+  ensureCommunicationProfile(db.profile);
+  ensureOperationsProfile(db.profile);
+  const { country, route } = activeContext(db);
+  const commands = db.profile.agentCommands || [];
+  const conversations = db.profile.agentConversation || [];
+  const events = db.profile.integrationEvents || [];
+  const activity = db.profile.activity || [];
+  const memory = db.profile.agentMemory || {};
+  const recoveries = memory.recoveryHistory || [];
+  const clarifications = memory.clarificationHistory || [];
+  const workflowIntel = db.profile.workflowIntelligence || [];
+  const connected = providers.filter(provider => provider.status === "connected");
+  const providerGaps = providers.filter(provider => provider.status !== "connected").slice(0, 8);
+  const commandText = commands.slice(0, 80).map(item => `${item.command || ""} ${item.intent || ""}`).join(" ").toLowerCase();
+  const conversationText = conversations.slice(0, 80).map(item => `${item.user || item.command || ""} ${item.assistant || item.response || ""}`).join(" ").toLowerCase();
+  const moduleSignals = [
+    { module: "Learning", count: (db.profile.enrollments || []).length + (db.profile.completedCourses || []).length + (db.profile.certificates || []).length, terms: ["course", "learn", "lesson", "training", "certificate"] },
+    { module: "Workforce", count: (db.profile.applications || []).length + (db.profile.shiftSchedule || []).length + Number(db.profile.interviews || 0), terms: ["job", "work", "role", "apply", "interview"] },
+    { module: "Telehealth", count: (db.profile.healthIntakes || []).length + (db.profile.mobileClinicRequests || []).length + (db.profile.pharmacyRequests || []).length + (db.profile.supplyRequests || []).length, terms: ["health", "clinic", "doctor", "pharmacy", "medicine", "symptom"] },
+    { module: "AgriTrade", count: (db.profile.orders || []).length + (db.profile.buyerContacts || []).length + (db.profile.tradeMessageThreads || []).length + (db.profile.walletTransactions || []).length, terms: ["sell", "buy", "buyer", "seller", "crop", "payment", "shipment"] },
+    { module: "Drone And Field", count: (db.profile.droneScans || []).length + (db.profile.droneMissions || []).length + (db.profile.fieldInterventions || []).length, terms: ["drone", "field", "crop stress", "pest", "harvest"] },
+    { module: "Maps And Logistics", count: (db.profile.mapInsights || []).length + (db.profile.locationRoutePackets || []).length + (db.profile.facilityRoutes || []).length + (db.profile.routeDisruptions || []).length, terms: ["map", "route", "track", "location", "delivery"] },
+    { module: "Voice And Language", count: commands.length + recoveries.length + clarifications.length, terms: ["repeat", "misheard", "language", "translate", "stop", "hello"] }
+  ].map(signal => {
+    const mentions = signal.terms.reduce((sum, term) => sum + ((commandText.match(new RegExp(term.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "g")) || []).length), 0);
+    return {
+      ...signal,
+      mentions,
+      strength: Math.min(100, Math.round(signal.count * 10 + mentions * 8))
+    };
+  }).sort((a, b) => b.strength - a.strength);
+  const clarityScore = Math.max(0, 100 - recoveries.length * 8 - clarifications.length * 5);
+  const workflowScore = Math.min(100, 35 + workflowIntel.length * 4 + activity.length);
+  const providerScore = Math.round((connected.length / Math.max(1, providers.length)) * 100);
+  const evidenceScore = Math.min(100, Math.round((events.length + commands.length + conversations.length + workflowIntel.length) / 4));
+  const score = Math.round((clarityScore * 0.25) + (workflowScore * 0.25) + (providerScore * 0.2) + (evidenceScore * 0.15) + (Math.min(100, moduleSignals[0]?.strength || 0) * 0.15));
+  const patterns = [
+    {
+      id: "speech-recovery",
+      title: "Speech And Mishear Learning",
+      module: "Voice",
+      strength: Math.max(35, 100 - clarityScore),
+      evidence: `${recoveries.length} recovery event(s), ${clarifications.length} clarification event(s), ${commands.length} command(s).`,
+      recommendation: recoveries.length || clarifications.length
+        ? "Expand fuzzy wake words, repeat what Nexus heard, and ask one simple question before sensitive actions."
+        : "Keep monitoring voice clarity while users test in English, Spanish, French, Kiswahili, Portuguese, and Arabic."
+    },
+    {
+      id: "module-demand",
+      title: "Highest User Demand",
+      module: moduleSignals[0]?.module || "Platform",
+      strength: moduleSignals[0]?.strength || 0,
+      evidence: `${moduleSignals[0]?.count || 0} record(s), ${moduleSignals[0]?.mentions || 0} recent mention(s).`,
+      recommendation: `Make ${moduleSignals[0]?.module || "the active module"} more guided, more visual, and easier to complete by voice.`
+    },
+    {
+      id: "provider-readiness",
+      title: "Provider Readiness Gap",
+      module: "Integrations",
+      strength: 100 - providerScore,
+      evidence: `${connected.length}/${providers.length} provider(s) connected. ${providerGaps.map(item => item.name || item.id).join(", ") || "No provider gaps detected"}.`,
+      recommendation: providerGaps.length
+        ? "Show provider truth clearly, keep local simulations useful, and ask admin for the next credential to connect."
+        : "Use connected providers in workflow answers and evidence reports."
+    },
+    {
+      id: "rural-context",
+      title: "Rural Context Memory",
+      module: country.name,
+      strength: Math.min(100, 45 + (conversationText.includes("farmer") ? 20 : 0) + (conversationText.includes("clinic") ? 15 : 0) + (conversationText.includes("route") ? 10 : 0)),
+      evidence: `${country.name} active context, ${route.name} corridor, ${memory.longTermFacts?.length || 0} long-term fact(s).`,
+      recommendation: "Keep responses plain, local, and one step at a time for farmers, elders, patients, learners, and workers."
+    }
+  ];
+  const proposalSeed = [
+    {
+      key: "voice-phrase-expansion",
+      title: "Expand Voice Phrase Recovery",
+      module: "Voice",
+      why: "Users may speak fast, use imperfect English, or be misheard by the browser microphone.",
+      recommendedChange: "Add more African, Arabic, Portuguese, French, Kiswahili, Spanish, and imperfect-English phrase variants before routing actions.",
+      evidence: patterns[0].evidence,
+      risk: "Low. It improves recognition but should not trigger sensitive actions without confirmation."
+    },
+    {
+      key: "guided-module-entry",
+      title: "Make Every Module Start With One Guided Choice",
+      module: moduleSignals[0]?.module || "Platform",
+      why: "Non-technical users need the platform to feel like a guide, not a control room.",
+      recommendedChange: "When a user opens a module, Nexus should ask one short question, show one primary action, then complete the visible workflow.",
+      evidence: patterns[1].evidence,
+      risk: "Medium. Needs careful testing so admin and investor modes keep their depth."
+    },
+    {
+      key: "rural-health-resource-routing",
+      title: "Strengthen Rural Health Resource Routing",
+      module: "Telehealth",
+      why: "Mobile clinics and pharmacies may not have digital systems, but they still need intake, supply, callback, and map support.",
+      recommendedChange: "Use paper-to-digital intake, mobile clinic routing, pharmacy lookup, medical supply requests, voice summaries, and clear non-diagnosis language.",
+      evidence: `${(db.profile.healthIntakes || []).length} intake(s), ${(db.profile.mobileClinicRequests || []).length} mobile clinic request(s), ${(db.profile.pharmacyRequests || []).length} pharmacy request(s).`,
+      risk: "High. Keep clinical advice out of scope and route urgent issues to local emergency services or licensed providers."
+    },
+    {
+      key: "trade-route-clarity",
+      title: "Improve Trade Route And Payment Clarity",
+      module: "AgriTrade",
+      why: "Farmers need to understand buyer contact, route tracking, delivery proof, receipt, and transaction fee steps.",
+      recommendedChange: "Guide crop sale workflows as seller to buyer to route to delivery proof to payment receipt to platform fee evidence.",
+      evidence: `${(db.profile.orders || []).length} order(s), ${(db.profile.locationRoutePackets || []).length} route packet(s), ${(db.profile.paymentCheckoutRecords || []).length} checkout record(s).`,
+      risk: "High. Payment and settlement steps must remain auditable and provider-backed when live."
+    },
+    {
+      key: "collective-provider-brain",
+      title: "Build A Provider Learning Queue",
+      module: "Integrations",
+      why: "Provider gaps should turn into an organized action list instead of confusing users.",
+      recommendedChange: "Rank missing vendors by country, urgency, module impact, credentials needed, and investor value.",
+      evidence: patterns[2].evidence,
+      risk: "Medium. Provider availability must be shown honestly."
+    }
+  ];
+  const proposals = proposalSeed.map((proposal, index) => ({
+    id: `${proposal.key}-${new Date().toISOString().slice(0, 10)}`,
+    rank: index + 1,
+    status: "proposed",
+    approvalRequired: true,
+    createdAt: new Date().toISOString(),
+    ...proposal
+  }));
+  const model = {
+    id: crypto.randomUUID(),
+    status: score >= 85 ? "collective-brain-ready" : score >= 65 ? "collective-brain-learning" : "collective-brain-needs-more-evidence",
+    score,
+    country: country.name,
+    route: route.name,
+    patterns,
+    proposals,
+    guardrails: [
+      "Nexus can recommend self-evolution, but production changes require admin or developer approval.",
+      "Healthcare, payments, applications, provider communications, and legal actions remain confirmation-gated.",
+      "Nexus must explain provider gaps honestly instead of pretending a live vendor is connected.",
+      "Every accepted change must remain testable through workflow, language, voice, and role checks."
+    ],
+    plainLanguageSummary: `Collective intelligence score is ${score}%. Nexus learned from ${commands.length} command(s), ${conversations.length} conversation turn(s), ${events.length} provider event(s), and ${workflowIntel.length} workflow intelligence record(s). The top self-evolution proposal is ${proposals[0].title}, with admin approval required before production changes.`,
+    createdAt: new Date().toISOString()
+  };
+  if (options.persist) {
+    db.profile.collectiveIntelligenceRuns.unshift(model);
+    db.profile.collectiveIntelligenceRuns = db.profile.collectiveIntelligenceRuns.slice(0, 30);
+    const existingKeys = new Set((db.profile.collectiveEvolutionProposals || []).map(item => item.key || item.title));
+    proposals.forEach(proposal => {
+      if (!existingKeys.has(proposal.key)) db.profile.collectiveEvolutionProposals.unshift(proposal);
+    });
+    db.profile.collectiveEvolutionProposals = db.profile.collectiveEvolutionProposals.slice(0, 40);
+    db.profile.agentMemory.collectivePatterns = patterns;
+    db.profile.agentMemory.evolutionBacklog = db.profile.collectiveEvolutionProposals.slice(0, 12);
+    db.profile.agentMemory.collectiveIntelligence = {
+      status: model.status,
+      lastScore: model.score,
+      lastSummary: model.plainLanguageSummary,
+      updatedAt: model.createdAt
+    };
+    db.profile.agentMemory.lastSummary = model.plainLanguageSummary;
+    db.profile.agentMemory.updatedAt = model.createdAt;
+    rememberAgentMemory(db.profile, model.plainLanguageSummary, { source: "collective-intelligence", category: "learning", module: "Agent AI", confidence: 0.94 });
+    logIntegration(db, {
+      providerId: "agent-memory",
+      module: "AI",
+      action: "agent.collective_intelligence_evolution",
+      detail: `Collective intelligence reviewed ${patterns.length} pattern(s) and proposed ${proposals.length} governed evolution item(s).`,
+      metadata: { modelId: model.id, score: model.score, proposals: proposals.map(item => item.title) },
+      dispatch: false
+    });
+    addActivity(db.profile, `Collective intelligence review completed: ${score}% with ${proposals.length} proposal(s).`);
+  }
+  return model;
 }
 
 function applyHighestFunctionalityMode(db, user, result, command) {
@@ -5745,6 +5930,8 @@ function ensureAiProfile(profile) {
   profile.cloudAgentToolTemplates = profile.cloudAgentToolTemplates || [];
   profile.cloudAgentCorrections = profile.cloudAgentCorrections || [];
   profile.cloudAgentAudit = profile.cloudAgentAudit || [];
+  profile.collectiveIntelligenceRuns = profile.collectiveIntelligenceRuns || [];
+  profile.collectiveEvolutionProposals = profile.collectiveEvolutionProposals || [];
   profile.agentMemory = profile.agentMemory || {
     activeAudience: "government",
     activeMission: "rural transformation",
@@ -5795,6 +5982,14 @@ function ensureAiProfile(profile) {
     lastAuditId: null,
     lastSelfCorrectionId: null,
     lastSummary: "Cloud autonomy is ready for supervised missions.",
+    updatedAt: new Date().toISOString()
+  };
+  profile.agentMemory.collectivePatterns = profile.agentMemory.collectivePatterns || [];
+  profile.agentMemory.evolutionBacklog = profile.agentMemory.evolutionBacklog || [];
+  profile.agentMemory.collectiveIntelligence = profile.agentMemory.collectiveIntelligence || {
+    status: "ready",
+    lastScore: 0,
+    lastSummary: "Collective intelligence is ready to learn from platform usage.",
     updatedAt: new Date().toISOString()
   };
 }
@@ -14941,6 +15136,21 @@ async function api(req, res, url) {
     await writeDb(db);
     const state = publicState(db, user);
     state.autonomousOperatingLoopResult = loop;
+    return send(res, 200, state);
+  }
+
+  if (url.pathname === "/api/intelligence/collective-evolution" && req.method === "GET") {
+    if (!user) return send(res, 401, { error: "Sign in required" });
+    return send(res, 200, collectiveIntelligenceEngine(db, user, runtimeProviders(db)));
+  }
+
+  if (url.pathname === "/api/intelligence/collective-evolution" && req.method === "POST") {
+    if (!user) return send(res, 401, { error: "Sign in required" });
+    const body = await readBody(req);
+    const model = collectiveIntelligenceEngine(db, user, runtimeProviders(db), { persist: body.persist !== false });
+    await writeDb(db);
+    const state = publicState(db, user);
+    state.collectiveIntelligenceResult = model;
     return send(res, 200, state);
   }
 

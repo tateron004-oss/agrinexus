@@ -482,6 +482,17 @@ assert(app.includes("visibilitychange"), "Nexus behavior layer should recover vo
 assert(app.includes("Nexus is resuming voice-first listening"), "Nexus behavior layer should explain listening recovery");
 assert(app.includes("providerActionDepthStatus"), "Nexus behavior layer should summarize real provider action depth");
 assert(app.includes("mobilePermissionRecoveryGuide"), "Nexus behavior layer should guide mobile permission recovery");
+assert(server.includes("function collectiveIntelligenceEngine"), "Backend needs a collective intelligence engine");
+assert(server.includes("/api/intelligence/collective-evolution"), "Backend needs a collective self-evolution endpoint");
+assert(server.includes("agent.collective_intelligence_evolution"), "Collective intelligence needs provider/audit evidence");
+assert(server.includes("collectiveEvolutionProposals"), "Collective intelligence needs a governed evolution backlog");
+assert(html.includes("runCollectiveIntelligenceBtn"), "Agent Center needs a collective brain button");
+assert(html.includes("Self-Evolution Proposals"), "Agent Center needs visible self-evolution proposals");
+assert(html.includes("Admin approval required"), "Self-evolution UI must show governance approval language");
+assert(app.includes("function runCollectiveIntelligence"), "Frontend needs a collective intelligence runner");
+assert(app.includes("data.collectiveIntelligence"), "Frontend needs to render collective intelligence state");
+assert(app.includes("/api/intelligence/collective-evolution"), "Frontend must call the collective evolution endpoint");
+assert(app.includes("collective intelligence|collective brain|self evolve"), "Voice layer must recognize collective intelligence commands");
 
 console.log("App behavior audit passed");
 console.log("Checked: app-mode language picker, service buttons, section containment, workflow confirmations, voice routes, overflow wrapping, and advanced-panel hiding.");
