@@ -15573,6 +15573,14 @@ async function handleVoiceCommand(rawCommand, options = {}) {
     setVoiceResponse("Map is open. You can say track my route, show map risk, find a health facility, or explain the map.", true);
     return;
   }
+  if (/\b(show|open|display|map|track|trace)\b.*\b(trade|crop|shipment|delivery|market|logistics)\b.*\b(route|path|corridor|tracking)\b.*\bfrom\s+[^,.]+\s+\bto\s+[^,.]+/.test(lower)
+    || /\b(trade|crop|shipment|delivery|market|logistics)\b.*\b(route|path|corridor|tracking)\b.*\bfrom\s+[^,.]+\s+\bto\s+[^,.]+/.test(lower)) {
+    goSection("map");
+    setActiveAgentJourney("map", "country-trade-route", "Country-to-country trade route opened by voice.");
+    renderLiveVoiceSuggestions(["run route risk", "track shipment", "message buyer", "create order"]);
+    await runBackendAgentCommand(command);
+    return;
+  }
   if (/\b(buyer|customer|purchaser|client|seller|farmer|pickup|delivery|deliver|ship|shipment|product|products|crop|order|sale)\b/.test(lower)
     && /\b(address|location|lagos|kenya|nairobi|route|map|track|tracking|where|deliver|delivery|purchased|bought|sold)\b/.test(lower)) {
     goSection("map");

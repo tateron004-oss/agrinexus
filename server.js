@@ -12670,6 +12670,7 @@ function knownMapLocation(query = "", fallbackCountry = null) {
   const value = String(query || "").toLowerCase();
   const known = [
     { keys: ["lagos"], label: "Lagos, Nigeria", lat: 6.5244, lng: 3.3792, country: "Nigeria" },
+    { keys: ["nigeria"], label: "Nigeria", lat: 9.082, lng: 8.6753, country: "Nigeria" },
     { keys: ["nairobi"], label: "Nairobi, Kenya", lat: -1.2921, lng: 36.8219, country: "Kenya" },
     { keys: ["kenya"], label: "Kenya", lat: -0.0236, lng: 37.9062, country: "Kenya" },
     { keys: ["kinshasa"], label: "Kinshasa, DRC", lat: -4.4419, lng: 15.2663, country: "DRC" },
@@ -12712,6 +12713,15 @@ function isBuyerSellerLocationRouteCommand(lower = "") {
     || /\b(i am|i'm|we are|seller is|farmer is|pickup is)\b.*\b(in|at|near|around)\b/.test(value);
   const hasRouteAction = /\b(route|map|track|tracking|where|deliver|delivery|purchased|bought|sold|ship|shipment)\b/.test(value);
   return hasBuyerOrSeller && hasLocationPair && hasRouteAction;
+}
+
+function isTradeCountryRouteCommand(lower = "") {
+  const value = String(lower || "");
+  const hasTradeRoute = /\b(trade|crop|shipment|delivery|seller|buyer|market|logistics)\b.*\b(route|map|tracking|track|path|corridor)\b/.test(value)
+    || /\b(route|map|tracking|track|path|corridor)\b.*\b(trade|crop|shipment|delivery|seller|buyer|market|logistics)\b/.test(value);
+  const hasFromTo = /\bfrom\s+[^,.]+\s+\bto\s+[^,.]+/.test(value) || /\bbetween\s+[^,.]+\s+\band\s+[^,.]+/.test(value);
+  const hasKnownPlaces = /\b(nigeria|kenya|lagos|nairobi|drc|congo|egypt|ghana|rwanda|tanzania|south africa|cairo|accra|kigali|kinshasa)\b/.test(value);
+  return hasTradeRoute && hasFromTo && hasKnownPlaces;
 }
 
 function distanceKmBetween(a, b) {
@@ -14012,7 +14022,7 @@ async function runAgentCommand(db, user, command, options = {}) {
       if (intake) return intake;
     }
   }
-  if (isBuyerSellerLocationRouteCommand(lower)) {
+  if (isBuyerSellerLocationRouteCommand(lower) || isTradeCountryRouteCommand(lower)) {
     return tradeLocationRouteResponse(db, user, text, options);
   }
   if (/\b(new mission brain|mission brain|nexus mission brain|activate mission brain|build mission brain|all 10 mission brain|all ten mission brain|goal brain|mission intelligence)\b/.test(lower)) {
