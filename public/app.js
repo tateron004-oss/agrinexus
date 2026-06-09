@@ -14885,7 +14885,8 @@ function openWorkflowByVoice(workflow, action, response, dataset = {}) {
     renderUserSimpleActiveSection(userSection);
     renderUserProcessScreen(userSection, config, { response }, response || config.userTitle || config.title || "Selected action");
     updateNexusBehaviorLayer("ready", "Nexus opened the requested workflow and is waiting for the next command.");
-    setVoiceResponse(`${actionLead}${response || "I opened that action."} Tell me what you want next.`.trim(), true);
+    const shortResponse = response || config.userTitle || config.title || "I opened that action.";
+    setVoiceResponse(`${actionLead}${shortResponse}`.trim(), true);
     return;
   }
   updateNexusBehaviorLayer("ready", "Nexus opened the requested workflow and is waiting for the next command.");
@@ -14969,7 +14970,7 @@ function nexusIntroductionResponse(command = "") {
   if (!value && !unicodeValue) return "";
   if (/\b(i am testing|this is a test|testing nexus|test mode|i am confused|i am lost)\b/.test(value)) return "";
   const introPatterns = [
-    { label: "English", code: "en", fullMode: true, pattern: /\b(?:my name is|this is|i am|i'm|im|call me|it is|it's|its)\s+([\p{L}\p{M}][\p{L}\p{M}' -]{1,42})\b/iu },
+    { label: "English", code: "en", fullMode: true, pattern: /\b(?:my name is|my name's|my names|name is|name's|names|this is|i am|i'm|im|call me|it is|it's|its)\s+([\p{L}\p{M}][\p{L}\p{M}' -]{1,42})\b/iu },
     { label: "Spanish", code: "es", fullMode: true, pattern: /\b(?:me llamo|mi nombre es|soy)\s+([\p{L}\p{M}][\p{L}\p{M}' -]{1,42})\b/iu },
     { label: "Portuguese", code: "pt", fullMode: true, pattern: /\b(?:meu nome e|me chamo|chamo me|eu sou|sou)\s+([\p{L}\p{M}][\p{L}\p{M}' -]{1,42})\b/iu },
     { label: "French", code: "fr", fullMode: true, pattern: /\b(?:je m'appelle|je suis|mon nom est)\s+([\p{L}\p{M}][\p{L}\p{M}' -]{1,42})\b/iu },
@@ -14998,6 +14999,80 @@ function nexusIntroductionResponse(command = "") {
   recordNexusAutonomousLearning({ type: "user-name", command: value, userName: spokenName });
   renderLiveVoiceSuggestions(["open learning", "open telehealth", "what can you do"]);
   return `Hello ${spokenName}. I am Nexus.${nexusIntroLanguageNote(intro)} How can I assist you?`;
+}
+
+function simpleUserDirectVoiceIntent(command = "") {
+  const lower = normalizeToolText(command);
+  if (!lower) return null;
+  const productId = firstProduct()?.id;
+  const roleId = firstEligibleRole()?.id;
+  const has = words => words.some(word => new RegExp(`\\b${word}\\b`).test(lower));
+  const vagueHelp = /^(help|help me|i need help|need help|please help|nexus help)$/i.test(lower);
+  if (vagueHelp) {
+    return {
+      type: "clarify",
+      response: `I can help, ${userFirstName()}. Is this for health, work, learning, crops, or the map?`,
+      suggestions: ["health", "work", "learning", "crops", "map"]
+    };
+  }
+  if (has(["health", "doctor", "clinic", "sick", "pain", "medicine", "care", "telehealth", "nurse"])) {
+    return {
+      type: "workflow",
+      workflow: "health",
+      action: has(["provider", "doctor", "nurse", "call", "contact", "speak", "talk"]) ? "provider" : "intake",
+      response: "Health is open. I will guide you one step at a time.",
+      dataset: {}
+    };
+  }
+  const cropWords = has(["crop", "crops", "maize", "corn", "rice", "cassava", "yam", "beans", "produce", "harvest", "farm", "product"]);
+  const sellWords = has(["sell", "selling", "buyer", "market", "trade", "order", "customer"]);
+  const trackWords = has(["track", "delivery", "shipment", "route", "where", "location", "transaction"]);
+  if (cropWords && sellWords && trackWords) {
+    return {
+      type: "workflow",
+      workflow: "trade",
+      action: "order",
+      response: "Crop sale is open. I will help create the order and track delivery.",
+      dataset: { productId }
+    };
+  }
+  if (cropWords && sellWords) {
+    return {
+      type: "workflow",
+      workflow: "trade",
+      action: "buyer-contact",
+      response: "Trade is open. I will help find or contact the buyer.",
+      dataset: { productId }
+    };
+  }
+  if (has(["job", "work", "role", "apply", "employment", "shift"])) {
+    return {
+      type: "workflow",
+      workflow: "workforce",
+      action: has(["apply", "role", "job"]) ? "apply-role" : "build-profile",
+      response: "Work is open. I will help with the next job step.",
+      dataset: { roleId }
+    };
+  }
+  if (has(["learn", "course", "lesson", "training", "school", "class"])) {
+    return {
+      type: "workflow",
+      workflow: "learning",
+      action: "start",
+      response: "Learning is open. I will help start the course.",
+      dataset: {}
+    };
+  }
+  if (has(["map", "route", "location", "where", "track"])) {
+    return {
+      type: "workflow",
+      workflow: "map",
+      action: "inspector",
+      response: "Map is open. I will help with location or route tracking.",
+      dataset: {}
+    };
+  }
+  return null;
 }
 
 function nexusCommonPhraseResponse(command = "") {
@@ -15191,6 +15266,20 @@ async function handleVoiceCommand(rawCommand, options = {}) {
     return;
   }
   updateNexusBehaviorLayer("thinking", command ? `Nexus is deciding how to help with: ${command}` : "Nexus is listening.");
+  const simpleIntent = experienceMode === "user" ? simpleUserDirectVoiceIntent(command) : null;
+  if (simpleIntent?.type === "clarify") {
+    pendingAgentClarification = null;
+    pendingNexusSpokenCommand = null;
+    renderLiveVoiceSuggestions(simpleIntent.suggestions || ["health", "work", "learning", "crops", "map"]);
+    updateNexusBehaviorLayer("listening", "Nexus asked one short clarifying question instead of guessing.");
+    setVoiceResponse(simpleIntent.response, true);
+    return;
+  }
+  if (simpleIntent?.type === "workflow") {
+    pendingAgentClarification = null;
+    pendingNexusSpokenCommand = null;
+    return openWorkflowByVoice(simpleIntent.workflow, simpleIntent.action, simpleIntent.response, simpleIntent.dataset || {});
+  }
   if (isVoiceMissionRequest(command)) {
     pendingAgentClarification = null;
     await startVoiceMission(command);

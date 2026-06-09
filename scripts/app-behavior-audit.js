@@ -453,6 +453,11 @@ assert(app.includes("These commands are available in User, Admin, and Investor m
 assert(app.includes("what commands work in all modes"), "Voice help should expose an all-three-modes command phrase");
 assert(app.includes("User, Admin, or Investor mode"), "Voice help response must say Nexus works in all three modes");
 assert(app.includes("function migrantFriendlyVoiceIntent"), "Voice layer needs migrant-friendly imperfect English intent routing");
+assert(app.includes("function simpleUserDirectVoiceIntent"), "User voice mode needs short direct routing before advisor/demo explanations");
+assert(app.includes("Is this for health, work, learning, crops, or the map?"), "Vague User help requests should ask one short clarifying question instead of guessing");
+assert(app.includes("Health is open. I will guide you one step at a time."), "User health voice command should open Health with a short response");
+assert(app.includes("Trade is open. I will help find or contact the buyer."), "User crop-sale voice command should open Trade with a short response");
+assert(app.includes("name's|my names|name is|name's|names"), "Name capture should accept natural name phrases");
 assert(app.includes("doctor help"), "Voice help needs migrant-friendly health phrasing");
 assert(app.includes("job please"), "Voice help needs migrant-friendly workforce phrasing");
 assert(app.includes("where my product"), "Voice help needs migrant-friendly product tracking phrasing");
