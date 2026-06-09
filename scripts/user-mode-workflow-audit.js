@@ -36,6 +36,7 @@ const expectedSections = {
     ["Scan Farm", "run drone scan", "workflow: \"trade\"", "action: \"drone\""]
   ],
   map: [
+    ["Full Map", "open full scale map", "directAction: \"full-map\""],
     ["Check Route", "check route risk", "workflow: \"ai\"", "action: \"route\""],
     ["Check Farm", "run drone scan", "workflow: \"trade\"", "action: \"drone\""],
     ["Find Facility", "find nearest health facility", "workflow: \"map\"", "action: \"facility-route\""],

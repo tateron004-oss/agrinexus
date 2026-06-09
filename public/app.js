@@ -3603,6 +3603,9 @@ function migrantFriendlyVoiceIntent(command = "") {
   if (hasAny(["learn", "school", "class", "course", "lesson", "teach", "training", "certificate", "study"])) {
     return { workflow: "learning", action: "start", section: "learning", response: "I opened Learning to help start a course.", dataset: {} };
   }
+  if (isFullScaleMapCommand(command)) {
+    return { section: "map", directAction: "full-map", response: "Full map is open. You can zoom, drag, check route risk, find facilities, or track shipment movement.", dataset: {} };
+  }
   if (hasAny(["map", "place", "location", "road", "route", "where"])) {
     return { workflow: "map", action: "inspector", section: "map", response: "I opened the map. You can ask for route, facility, product, or risk help.", dataset: {} };
   }
@@ -8181,6 +8184,7 @@ const simpleUserSections = {
     prompt: "Choose what you want Nexus to check.",
     className: "service-map",
     buttons: [
+      { label: "Full Map", command: "open full scale map" },
       { label: "Check Route", command: "check route risk" },
       { label: "Check Farm", command: "run drone scan" },
       { label: "Find Facility", command: "find nearest health facility" },
@@ -8737,6 +8741,9 @@ function renderUserProcessScreen(sectionId, config, mapped = {}, label = "Select
 
 function openMappedUserWorkflow(mapped, sectionId = currentSectionId()) {
   if (!mapped) return false;
+  if (mapped.directAction === "full-map") {
+    return openFullScaleUserMap(mapped.response);
+  }
   if (mapped.conversational) {
     setCommandInputs(mapped.command || "");
     openAskNexus();
@@ -8883,6 +8890,7 @@ function simpleUserCommandWorkflow(command = "") {
   if (lower.includes("buyer checkout") || lower.includes("create checkout") || lower.includes("collect payment") || lower.includes("buyer pay")) return { workflow: "trade", action: "payment-checkout", response: "Buyer checkout is ready.", dataset: { productId } };
   if (lower.includes("track my route") || lower.includes("check route")) return { workflow: "ai", action: "route", response: "Route intelligence is ready.", dataset: {} };
   if (lower.includes("drone scan") || lower.includes("scan farm") || lower.includes("check farm")) return { workflow: "trade", action: "drone", response: "Drone scan is ready.", dataset: { productId } };
+  if (isFullScaleMapCommand(command)) return { section: "map", directAction: "full-map", response: "Full map is open. You can zoom, drag, check route risk, find facilities, or track shipment movement.", dataset: {} };
   if (lower.includes("nearest health facility") || lower.includes("find facility")) return { workflow: "map", action: "facility-route", response: "Facility route is ready.", dataset: {} };
   if (lower.includes("explain the map")) return { workflow: "map", action: "inspector", response: "Map explanation is ready.", dataset: {} };
   if (lower.includes("help me") || lower.includes("what should i do next") || lower.includes("understand the platform")) return { workflow: "ai", action: "orchestrate", response: "Nexus help is ready.", dataset: {} };
@@ -14927,6 +14935,35 @@ function openLearningCaptionSupport(response = "Captions are open. Speak now and
   return true;
 }
 
+function isFullScaleMapCommand(command = "") {
+  const text = normalizeToolText(command);
+  return /\b(open|show|display|take me to|bring up|launch)\b.*\b(full scale map|full-scale map|full map|large map|big map|global map|world map|real map|map view)\b/.test(text)
+    || /\b(full scale map|full-scale map|full map|large map|big map|global map|world map|real map)\b/.test(text);
+}
+
+function openFullScaleUserMap(response = "Full map is open. You can zoom, drag, check route risk, find facilities, or track shipment movement.") {
+  const heard = summarizeNexusCommandForRepeat(agentPerformanceState.spokenCommand || agentPerformanceState.lastCommand || "");
+  const actionLead = heard ? `I heard: ${heard}. ` : "";
+  closeAskNexus({ silent: true });
+  $("#workflowModal")?.classList.add("hidden");
+  closeUserCaptionPanel();
+  goSection("map", { instant: true, openDefaultAction: false, keepAssistant: false });
+  if (experienceMode === "user") {
+    renderUserSimpleActiveSection("map");
+    $(`#map .user-inline-workflow`)?.classList.add("hidden");
+  }
+  renderLiveVoiceSuggestions(["check route risk", "find nearest health facility", "track my route", "explain the map"]);
+  setTimeout(() => {
+    renderUserRealMap();
+    map?.invalidateSize?.();
+    userMap?.invalidateSize?.();
+  }, 120);
+  recordVoiceEvent("Opened the full map view from voice.", "done");
+  updateNexusBehaviorLayer("ready", "Nexus opened the full map view and is ready for route or facility commands.");
+  setVoiceResponse(`${actionLead}${response}`.trim(), true);
+  return true;
+}
+
 function voiceStatusSummary() {
   const readiness = data.admin?.readiness;
   const automation = data.automation;
@@ -15114,6 +15151,13 @@ function simpleUserDirectVoiceIntent(command = "") {
       dataset: {}
     };
   }
+  if (isFullScaleMapCommand(command)) {
+    return {
+      type: "direct",
+      directAction: "full-map",
+      response: "Full map is open. You can zoom, drag, check route risk, find facilities, or track shipment movement."
+    };
+  }
   if (has(["map", "route", "location", "where", "track"])) {
     return {
       type: "workflow",
@@ -15250,6 +15294,12 @@ async function handleVoiceCommand(rawCommand, options = {}) {
     setVoiceResponse(earlySimpleIntent.response, true);
     return;
   }
+  if (earlySimpleIntent?.type === "direct" && earlySimpleIntent.directAction === "full-map") {
+    pendingAgentClarification = null;
+    pendingNexusSpokenCommand = null;
+    agentPerformanceState.lastCommand = command;
+    return openFullScaleUserMap(earlySimpleIntent.response);
+  }
   if (earlySimpleIntent?.type === "workflow") {
     pendingAgentClarification = null;
     pendingNexusSpokenCommand = null;
@@ -15344,6 +15394,11 @@ async function handleVoiceCommand(rawCommand, options = {}) {
     setVoiceResponse(simpleIntent.response, true);
     return;
   }
+  if (simpleIntent?.type === "direct" && simpleIntent.directAction === "full-map") {
+    pendingAgentClarification = null;
+    pendingNexusSpokenCommand = null;
+    return openFullScaleUserMap(simpleIntent.response);
+  }
   if (simpleIntent?.type === "workflow") {
     pendingAgentClarification = null;
     pendingNexusSpokenCommand = null;
@@ -15417,6 +15472,7 @@ async function handleVoiceCommand(rawCommand, options = {}) {
   const migrantIntent = migrantFriendlyVoiceIntent(command);
   if (migrantIntent) {
     if (migrantIntent.section && canOpenSection(migrantIntent.section)) goSection(migrantIntent.section);
+    if (migrantIntent.directAction === "full-map") return openFullScaleUserMap(migrantIntent.response);
     return openWorkflowByVoice(migrantIntent.workflow, migrantIntent.action, migrantIntent.response, migrantIntent.dataset || {});
   }
   if (/\b(voice persona|how will you talk|conversation style|who are you in this mode)\b/.test(lower)) {

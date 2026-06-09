@@ -172,6 +172,8 @@ hasAll(app, [
   "function learningCertificateWorkflowConfig",
   "function openLearningCaptionSupport",
   "Captions are open. Speak now and Nexus will write the words here",
+  "function openFullScaleUserMap",
+  "Full map is open. You can zoom, drag, check route risk, find facilities, or track shipment movement.",
   "renderUserProcessScreen(userSection, config",
   "$(\"#workflowConfirm\").onclick",
   "Nexus is completing this workflow now.",
