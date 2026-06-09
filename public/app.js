@@ -6613,6 +6613,7 @@ function jarvisHandoffLine(handoffText = "") {
 }
 
 function composeJarvisResponse(message, options = {}) {
+  if (experienceMode === "user" && !options.forceHandoff) return message;
   if (options.allowHandoff === false || !shouldAddJarvisHandoff(message)) return message;
   return `${message} ${jarvisHandoffLine(options.handoffText)}`;
 }
