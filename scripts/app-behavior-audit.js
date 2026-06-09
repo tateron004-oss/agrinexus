@@ -493,6 +493,16 @@ assert(app.includes("function runCollectiveIntelligence"), "Frontend needs a col
 assert(app.includes("data.collectiveIntelligence"), "Frontend needs to render collective intelligence state");
 assert(app.includes("/api/intelligence/collective-evolution"), "Frontend must call the collective evolution endpoint");
 assert(app.includes("collective intelligence|collective brain|self evolve"), "Voice layer must recognize collective intelligence commands");
+assert(server.includes("function frontierNexusBrainModel"), "Backend needs the highest-level Frontier Nexus Brain model");
+assert(server.includes("/api/intelligence/frontier-brain"), "Backend needs a Frontier Nexus Brain endpoint");
+assert(server.includes("agent.frontier_nexus_brain"), "Frontier brain needs provider/audit evidence");
+assert(server.includes("frontierBrainRuns"), "Frontier brain needs persistent run history");
+assert(html.includes("runFrontierBrainBtn"), "Agent Center needs an activate highest level button");
+assert(html.includes("Frontier Nexus Brain"), "Agent Center needs visible Frontier Nexus Brain UI");
+assert(app.includes("function runFrontierBrain"), "Frontend needs a Frontier Nexus Brain runner");
+assert(app.includes("data.frontierBrain"), "Frontend needs to render Frontier Nexus Brain state");
+assert(app.includes("/api/intelligence/frontier-brain"), "Frontend must call the Frontier Nexus Brain endpoint");
+assert(app.includes("highest level|frontier brain|frontier nexus"), "Voice layer must recognize highest-level Frontier brain commands");
 
 console.log("App behavior audit passed");
 console.log("Checked: app-mode language picker, service buttons, section containment, workflow confirmations, voice routes, overflow wrapping, and advanced-panel hiding.");

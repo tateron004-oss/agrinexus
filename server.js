@@ -2001,6 +2001,7 @@ function publicState(db, user) {
     maximumOperationalEfficiency: maximumOperationalEfficiencyModel(db, user, providers),
     autonomousOperatingLoop: autonomousOperatingLoopModel(db, user, providers),
     collectiveIntelligence: collectiveIntelligenceEngine(db, user, providers),
+    frontierBrain: frontierNexusBrainModel(db, user, providers),
     cloudAgent: cloudAgentTransparencyPacket(db, user),
     crossPlatformFunctions: crossPlatformFunctionPack(db, user, providers),
     womenFamilySupport: womenFamilyAgricultureModel(db, providers),
@@ -2913,6 +2914,144 @@ function collectiveIntelligenceEngine(db, user, providers = runtimeProviders(db)
       dispatch: false
     });
     addActivity(db.profile, `Collective intelligence review completed: ${score}% with ${proposals.length} proposal(s).`);
+  }
+  return model;
+}
+
+function frontierNexusBrainModel(db, user, providers = runtimeProviders(db), options = {}) {
+  ensureLearningProfile(db.profile);
+  ensureWorkforceProfile(db.profile);
+  ensureHealthProfile(db.profile);
+  ensureTradeProfile(db.profile);
+  ensureAiProfile(db.profile);
+  ensureCommunicationProfile(db.profile);
+  ensureOperationsProfile(db.profile);
+  const { country, route } = activeContext(db);
+  const collective = collectiveIntelligenceEngine(db, user, providers);
+  const loop = autonomousOperatingLoopModel(db, user, providers);
+  const efficiency = maximumOperationalEfficiencyModel(db, user, providers);
+  const production = productionCompleteness(db, providers);
+  const readiness = jarvisReadinessModel(db, user, providers);
+  const impact = impactDashboardModel(db, providers);
+  const connected = providers.filter(provider => provider.status === "connected");
+  const liveProviderScore = Math.round((connected.length / Math.max(1, providers.length)) * 100);
+  const evidenceCount = (db.profile.activity || []).length
+    + (db.profile.integrationEvents || []).length
+    + (db.profile.agentCommands || []).length
+    + (db.profile.workflowIntelligence || []).length;
+  const activeRecords = {
+    learning: (db.profile.enrollments || []).length + (db.profile.certificates || []).length,
+    workforce: (db.profile.applications || []).length + (db.profile.shiftSchedule || []).length,
+    health: (db.profile.healthIntakes || []).length + (db.profile.mobileClinicRequests || []).length + (db.profile.pharmacyRequests || []).length,
+    trade: (db.profile.orders || []).length + (db.profile.buyerContacts || []).length + (db.profile.paymentCheckoutRecords || []).length,
+    maps: (db.profile.mapInsights || []).length + (db.profile.locationRoutePackets || []).length + (db.profile.facilityRoutes || []).length,
+    voice: (db.profile.agentCommands || []).length + (db.profile.voiceSessions || []).length
+  };
+  const layer = (id, title, score, mode, evidence, nextAction, command) => ({
+    id,
+    title,
+    score: Math.max(0, Math.min(100, Math.round(score))),
+    mode,
+    evidence,
+    nextAction,
+    command,
+    status: score >= 85 ? "frontier-ready" : score >= 65 ? "strong" : "needs-depth"
+  });
+  const layers = [
+    layer("conversation", "Human Conversation Brain", readiness.score || 0, "voice-first", `${(db.profile.agentCommands || []).length} command(s), multilingual speech recovery, greeting, stop, and follow-up behavior.`, "Keep making responses shorter, warmer, and more adaptive to imperfect speech.", "Nexus, talk to me naturally"),
+    layer("memory", "Long-Term Memory And Personalization", Math.min(100, 50 + (db.profile.agentMemory.longTermFacts || []).length * 6 + (db.profile.agentMemory.advisorHistory || []).length * 4), "persistent", `${(db.profile.agentMemory.longTermFacts || []).length} long-term fact(s), ${(db.profile.agentMemory.advisorHistory || []).length} advisor event(s).`, "Use remembered user needs to greet, guide, and recommend the next safest step.", "Nexus, what do you remember"),
+    layer("workflow", "Autonomous Workflow Orchestration", efficiency.overallScore || 0, "observe-decide-act-verify-learn", `${loop.currentDecision?.module || "Platform"} selected as current autonomous decision.`, "Open the best next workflow, verify evidence, then recommend what comes next.", "Nexus, what should I do next"),
+    layer("collective", "Collective Intelligence And Self-Evolution", collective.score || 0, "governed-learning", `${(collective.patterns || []).length} pattern(s), ${(collective.proposals || []).length} proposal(s), admin approval required.`, "Convert repeated user friction into tested improvement proposals.", "Nexus, run collective intelligence"),
+    layer("provider-truth", "Live Provider Truth Layer", liveProviderScore, "truthful-live-or-local", `${connected.length}/${providers.length} provider(s) connected.`, "Use live providers when configured and clearly label local simulations when not.", "Nexus, run live service check"),
+    layer("rural-health", "Rural Health Resource Network", Math.min(100, 55 + activeRecords.health * 8), "non-diagnostic-access", `${activeRecords.health} health access record(s), mobile clinic, pharmacy, supply, video, and intake workflows.`, "Guide patients to resources, clinics, pharmacies, supply requests, and provider handoffs without diagnosing.", "Nexus, open telehealth"),
+    layer("agritrade", "AgriTrade Operating Desk", Math.min(100, 50 + activeRecords.trade * 7), "buyer-seller-logistics", `${activeRecords.trade} trade record(s), order, route, buyer contact, payment, and receipt workflows.`, "Guide crop sale, buyer contact, logistics tracking, delivery proof, and transaction fee evidence.", "Nexus, sell my crop and track delivery"),
+    layer("maps", "Geospatial And Logistics Intelligence", Math.min(100, 50 + activeRecords.maps * 8), "map-first", `${activeRecords.maps} map/location record(s), real tile provider readiness, route and facility evidence.`, "Show maps wherever location, clinic, pharmacy, shipment, route, or field evidence matters.", "Nexus, open the map"),
+    layer("learning-workforce", "Learning To Workforce Pathway", Math.min(100, 50 + (activeRecords.learning + activeRecords.workforce) * 6), "skills-to-placement", `${activeRecords.learning} learning record(s), ${activeRecords.workforce} workforce record(s).`, "Turn courses into certificates, role matches, applications, interviews, and placement evidence.", "Nexus, start my course and help me find work"),
+    layer("governance", "Investor/Admin Governance And Safety", Math.min(100, 55 + evidenceCount / 3 + (production.readyCount || 0) * 4), "auditable", `${evidenceCount} evidence signal(s), ${production.readyCount || 0}/${production.total || 0} production readiness item(s).`, "Keep admin/investor views transparent, auditable, role-limited, and provider-honest.", "Nexus, present the platform")
+  ];
+  const score = Math.round(layers.reduce((sum, item) => sum + item.score, 0) / layers.length);
+  const weakest = [...layers].sort((a, b) => a.score - b.score).slice(0, 3);
+  const strongest = [...layers].sort((a, b) => b.score - a.score).slice(0, 3);
+  const missions = [
+    {
+      persona: "Farmer",
+      goal: "Sell crop, understand crop risk, track shipment, and receive simple next-step advice.",
+      command: "Nexus, help me sell my crop and track delivery",
+      workflow: "Trade, maps, drone, buyer contact, logistics, payment receipt"
+    },
+    {
+      persona: "Patient Or Elder",
+      goal: "Explain symptoms safely, find care resources, contact provider, locate clinic or pharmacy, and request follow-up.",
+      command: "Nexus, I need health help",
+      workflow: "Telehealth intake, accessibility, rural health access, pharmacy, mobile clinic, supply network"
+    },
+    {
+      persona: "Learner",
+      goal: "Start course, get captions/audio, complete lesson, receive certificate, and connect to work.",
+      command: "Nexus, start my course",
+      workflow: "Learning path, accessibility support, certificate, workforce readiness"
+    },
+    {
+      persona: "Worker",
+      goal: "Find role, apply, prepare for interview, schedule work, and track readiness gaps.",
+      command: "Nexus, help me apply for a job",
+      workflow: "Workforce profile, role match, application, interview, mentor, shift"
+    },
+    {
+      persona: "Admin",
+      goal: "Monitor live services, users, provider gaps, transaction readiness, safety, and evidence.",
+      command: "Nexus, run full system integrity",
+      workflow: "Admin readiness, integrations, live service check, audit evidence"
+    },
+    {
+      persona: "Investor",
+      goal: "See the story, impact, operational depth, frontier brain, and provider truth clearly.",
+      command: "Nexus, present the platform",
+      workflow: "Investor story, impact dashboard, frontier brain, live readiness, demo evidence"
+    }
+  ];
+  const model = {
+    id: crypto.randomUUID(),
+    status: score >= 88 ? "frontier-operating" : score >= 72 ? "frontier-ready-for-testing" : "frontier-learning",
+    score,
+    country: country.name,
+    route: route.name,
+    strongest,
+    weakest,
+    layers,
+    missions,
+    operatingPrinciple: "Nexus should feel simple to the user, powerful to the admin, credible to the investor, and truthful about what is live versus locally simulated.",
+    guardrails: [
+      "No silent self-modifying code.",
+      "No medical diagnosis.",
+      "No fake provider claims.",
+      "No payment or legal action without clear records and confirmation.",
+      "Sensitive workflow actions must remain auditable."
+    ],
+    plainLanguageSummary: `Frontier Nexus Brain is at ${score}%. The strongest layers are ${strongest.map(item => item.title).join(", ")}. The next highest-value improvements are ${weakest.map(item => item.title).join(", ")}. Nexus can coordinate the platform as a conversational operating system while staying honest about live provider limits.`,
+    createdAt: new Date().toISOString()
+  };
+  if (options.persist) {
+    db.profile.frontierBrainRuns.unshift(model);
+    db.profile.frontierBrainRuns = db.profile.frontierBrainRuns.slice(0, 30);
+    db.profile.agentMemory.frontierBrain = {
+      status: model.status,
+      lastScore: model.score,
+      lastSummary: model.plainLanguageSummary,
+      updatedAt: model.createdAt
+    };
+    db.profile.agentMemory.lastSummary = model.plainLanguageSummary;
+    db.profile.agentMemory.updatedAt = model.createdAt;
+    rememberAgentMemory(db.profile, model.plainLanguageSummary, { source: "frontier-nexus-brain", category: "operations", module: "Agent AI", confidence: 0.95 });
+    logIntegration(db, {
+      providerId: "agent-memory",
+      module: "AI",
+      action: "agent.frontier_nexus_brain",
+      detail: `Frontier Nexus Brain scored ${score}% across ${layers.length} operating layer(s).`,
+      metadata: { modelId: model.id, status: model.status, weakest: weakest.map(item => item.title), missions: missions.map(item => item.persona) },
+      dispatch: false
+    });
+    addActivity(db.profile, `Frontier Nexus Brain activated: ${score}%.`);
   }
   return model;
 }
@@ -5932,6 +6071,7 @@ function ensureAiProfile(profile) {
   profile.cloudAgentAudit = profile.cloudAgentAudit || [];
   profile.collectiveIntelligenceRuns = profile.collectiveIntelligenceRuns || [];
   profile.collectiveEvolutionProposals = profile.collectiveEvolutionProposals || [];
+  profile.frontierBrainRuns = profile.frontierBrainRuns || [];
   profile.agentMemory = profile.agentMemory || {
     activeAudience: "government",
     activeMission: "rural transformation",
@@ -5990,6 +6130,12 @@ function ensureAiProfile(profile) {
     status: "ready",
     lastScore: 0,
     lastSummary: "Collective intelligence is ready to learn from platform usage.",
+    updatedAt: new Date().toISOString()
+  };
+  profile.agentMemory.frontierBrain = profile.agentMemory.frontierBrain || {
+    status: "ready",
+    lastScore: 0,
+    lastSummary: "Frontier Nexus Brain is ready to coordinate the highest operating layer.",
     updatedAt: new Date().toISOString()
   };
 }
@@ -15151,6 +15297,21 @@ async function api(req, res, url) {
     await writeDb(db);
     const state = publicState(db, user);
     state.collectiveIntelligenceResult = model;
+    return send(res, 200, state);
+  }
+
+  if (url.pathname === "/api/intelligence/frontier-brain" && req.method === "GET") {
+    if (!user) return send(res, 401, { error: "Sign in required" });
+    return send(res, 200, frontierNexusBrainModel(db, user, runtimeProviders(db)));
+  }
+
+  if (url.pathname === "/api/intelligence/frontier-brain" && req.method === "POST") {
+    if (!user) return send(res, 401, { error: "Sign in required" });
+    const body = await readBody(req);
+    const model = frontierNexusBrainModel(db, user, runtimeProviders(db), { persist: body.persist !== false });
+    await writeDb(db);
+    const state = publicState(db, user);
+    state.frontierBrainResult = model;
     return send(res, 200, state);
   }
 

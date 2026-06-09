@@ -4954,6 +4954,7 @@ function renderAgentCenter() {
   const brain = nexusBrainState(commands[0]?.command || "");
   const brainOs = nexusBrainOsModel();
   const collective = data.collectiveIntelligence || { status: "ready", score: 0, patterns: [], proposals: [] };
+  const frontier = data.frontierBrain || { status: "ready", score: 0, layers: [], missions: [] };
   const intelligence = nexusHighIntelligenceSnapshot();
   const latestOrchestration = (data.profile.aiOrchestrations || [])[0];
   const deepMemory = nexusDeepMemorySignals();
@@ -5015,6 +5016,25 @@ function renderAgentCenter() {
     $("#collectiveEvolutionPanel").innerHTML = proposals.length
       ? proposals.slice(0, 6).map(item => `<div><strong>${translateText(item.title || "Evolution proposal")}</strong><span>${translateText(item.recommendedChange || item.why || "Governed platform improvement")}</span><small>${translateText(`${item.module || "Platform"} - ${item.status || "proposed"} - Admin approval required`)}</small></div>`).join("")
       : `<div><strong>${translateText("No proposals yet")}</strong><span>${translateText("Run collective brain to generate governed self-evolution recommendations from real usage evidence.")}</span></div>`;
+  }
+  if ($("#frontierBrainScore")) $("#frontierBrainScore").textContent = `${Number(frontier.score || 0)}%`;
+  if ($("#frontierBrainStatus")) $("#frontierBrainStatus").textContent = translateText(frontier.status || "ready");
+  if ($("#frontierBrainSummary")) $("#frontierBrainSummary").textContent = translateText(frontier.plainLanguageSummary || "Frontier Nexus Brain coordinates conversation, memory, workflows, maps, providers, safety, learning, and investor evidence.");
+  if ($("#frontierBrainLayerPanel")) {
+    $("#frontierBrainLayerPanel").innerHTML = (frontier.layers || []).length
+      ? (frontier.layers || []).slice(0, 10).map(item => taskItem(
+        item.title,
+        `${item.evidence || ""} Next: ${item.nextAction || ""}`.trim(),
+        Number(item.score || 0) >= 85 ? "ready" : Number(item.score || 0) >= 65 ? "active" : "pending",
+        `${Number(item.score || 0)}%`,
+        { simpleCommand: item.command || "Nexus, highest level" }
+      )).join("")
+      : taskItem("Frontier brain standing by", "Activate highest level to coordinate the platform into one conversational operating model.", "pending", "Ready", { simpleCommand: "Nexus, activate highest level" });
+  }
+  if ($("#frontierBrainMissionPanel")) {
+    $("#frontierBrainMissionPanel").innerHTML = (frontier.missions || []).length
+      ? (frontier.missions || []).map(item => `<div><strong>${translateText(item.persona || "User")}</strong><span>${translateText(item.goal || "Nexus guided mission")}</span><small>${translateText(item.command || "Nexus, help me")}</small></div>`).join("")
+      : `<div><strong>${translateText("Mission control ready")}</strong><span>${translateText("Nexus will show farmer, patient, learner, worker, admin, and investor missions after activation.")}</span></div>`;
   }
   if ($("#nexusIntelligenceScore")) $("#nexusIntelligenceScore").textContent = `${intelligence.score}%`;
   if ($("#nexusIntelligenceMode")) $("#nexusIntelligenceMode").textContent = translateText(intelligence.mode);
@@ -7740,7 +7760,7 @@ function renderLaunchSupportPanels() {
 }
 
 function applyPermissions() {
-  $$("[data-workflow], [data-ai], [data-workforce], [data-health], [data-pay], [data-module-test], [data-command-preset], [data-pilot-scenario], [data-persona], [data-simple-command], [data-simple-section], [data-simple-pilot], [data-simple-demo], [data-simple-mission], [data-simple-action], .provider-test, #adminHealthCheck, #liveServiceCheckBtn, #liveServiceCheckFromIntegrations, #aiConsoleRun, #agentPlanBtn, #agentExecuteBtn, #agentBriefingBtn, #agentMissionBtn, #missionResumeBtn, #missionAutopilotBtn, #cloudAgentRunBtn, #cloudAgentTickBtn, #cloudAgentApproveBtn, #cloudAgentTemplateBtn, #runCollectiveIntelligenceBtn, #demoRunBtn, #wowDemoBtn, #remoteLaunchKitBtn, #startOnboardingBtn, #openSupportBtn, #inviteSubscriberBtn, #addTestUserBtn, #addAdminUserBtn, [data-ai-review], [data-notify], #voiceListenBtn, #voiceRunBtn, #voiceFirstBtn, #voiceSpeakBtn, #voiceHelpBtn, #globalListenBtn, #globalRunBtn, #globalYesBtn, #globalNoBtn, #globalReadBtn, #globalVoiceHelpBtn, #globalInstallBtn, #jarvisListenBtn, #jarvisRunBtn, #jarvisMissionBtn, #jarvisReadBtn").forEach(element => {
+  $$("[data-workflow], [data-ai], [data-workforce], [data-health], [data-pay], [data-module-test], [data-command-preset], [data-pilot-scenario], [data-persona], [data-simple-command], [data-simple-section], [data-simple-pilot], [data-simple-demo], [data-simple-mission], [data-simple-action], .provider-test, #adminHealthCheck, #liveServiceCheckBtn, #liveServiceCheckFromIntegrations, #aiConsoleRun, #agentPlanBtn, #agentExecuteBtn, #agentBriefingBtn, #agentMissionBtn, #missionResumeBtn, #missionAutopilotBtn, #cloudAgentRunBtn, #cloudAgentTickBtn, #cloudAgentApproveBtn, #cloudAgentTemplateBtn, #runCollectiveIntelligenceBtn, #runFrontierBrainBtn, #demoRunBtn, #wowDemoBtn, #remoteLaunchKitBtn, #startOnboardingBtn, #openSupportBtn, #inviteSubscriberBtn, #addTestUserBtn, #addAdminUserBtn, [data-ai-review], [data-notify], #voiceListenBtn, #voiceRunBtn, #voiceFirstBtn, #voiceSpeakBtn, #voiceHelpBtn, #globalListenBtn, #globalRunBtn, #globalYesBtn, #globalNoBtn, #globalReadBtn, #globalVoiceHelpBtn, #globalInstallBtn, #jarvisListenBtn, #jarvisRunBtn, #jarvisMissionBtn, #jarvisReadBtn").forEach(element => {
     const area = element.dataset.workflow
       || (element.dataset.ai ? "ai" : null)
       || (element.dataset.workforce ? "workforce" : null)
@@ -7767,6 +7787,7 @@ function applyPermissions() {
       || (element.id === "cloudAgentApproveBtn" ? "ai" : null)
       || (element.id === "cloudAgentTemplateBtn" ? "ai" : null)
       || (element.id === "runCollectiveIntelligenceBtn" ? "ai" : null)
+      || (element.id === "runFrontierBrainBtn" ? "ai" : null)
       || (element.id === "voiceListenBtn" ? "ai" : null)
       || (element.id === "voiceRunBtn" ? "ai" : null)
       || (element.id === "voiceFirstBtn" ? "ai" : null)
@@ -15207,6 +15228,10 @@ async function handleVoiceCommand(rawCommand, options = {}) {
     await runCollectiveIntelligence();
     return;
   }
+  if (/\b(highest level|frontier brain|frontier nexus|activate frontier|maximum intelligence|top level nexus|strongest version|ultimate nexus|take it to the highest)\b/.test(lower)) {
+    await runFrontierBrain();
+    return;
+  }
   if (pendingAgentClarification && await answerAgentClarification(command)) return;
   if (/\b(cancel|stop|clear|end)\s+(journey|guided journey|next step|follow through)\b/.test(lower)) {
     activeAgentJourney = null;
@@ -16155,6 +16180,25 @@ async function runCollectiveIntelligence() {
   } catch (error) {
     updateNexusBehaviorLayer("ready", error.message || "Collective intelligence needs attention.");
     setVoiceResponse(error.message || "Collective intelligence could not run yet.", true);
+    toast(error.message);
+  }
+}
+
+async function runFrontierBrain() {
+  try {
+    updateNexusBehaviorLayer("thinking", "Nexus is activating the highest operating layer across conversation, memory, workflows, providers, maps, and safety.");
+    data = await request("/api/intelligence/frontier-brain", { method: "POST", body: { persist: true } });
+    render();
+    goSection("agent");
+    const result = data.frontierBrainResult || data.frontierBrain || {};
+    const message = result.plainLanguageSummary || "Frontier Nexus Brain is active. Nexus is coordinating the highest operating layer across the platform.";
+    renderLiveVoiceSuggestions(["help a farmer", "help a patient", "start my course", "present the platform"]);
+    updateNexusBehaviorLayer("ready", message);
+    setVoiceResponse(message, true);
+    toast("Frontier Nexus Brain activated");
+  } catch (error) {
+    updateNexusBehaviorLayer("ready", error.message || "Frontier Nexus Brain needs attention.");
+    setVoiceResponse(error.message || "Frontier Nexus Brain could not activate yet.", true);
     toast(error.message);
   }
 }
@@ -17226,6 +17270,7 @@ function bindStatic() {
   $("#cloudAgentApproveBtn").onclick = approveCloudAgentWork;
   $("#cloudAgentTemplateBtn").onclick = createCloudAgentTemplate;
   $("#runCollectiveIntelligenceBtn").onclick = runCollectiveIntelligence;
+  $("#runFrontierBrainBtn").onclick = runFrontierBrain;
   $("#voiceListenBtn").onclick = startVoiceListening;
   $("#voiceRunBtn").onclick = runVoiceTextCommand;
   $("#voiceFirstBtn").onclick = toggleVoiceFirstMode;
