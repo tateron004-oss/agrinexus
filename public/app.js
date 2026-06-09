@@ -3604,7 +3604,7 @@ function migrantFriendlyVoiceIntent(command = "") {
     return { workflow: "learning", action: "start", section: "learning", response: "I opened Learning to help start a course.", dataset: {} };
   }
   if (isFullScaleMapCommand(command)) {
-    return { section: "map", directAction: "full-map", response: "Full map is open. You can zoom, drag, check route risk, find facilities, or track shipment movement.", dataset: {} };
+    return { section: "map", directAction: "full-map", response: isMapTrackingCommand(command) ? "Full global map is open with shipment tracking. You can zoom, drag, check the route, and follow crop or delivery movement." : "Full map is open. You can zoom, drag, check route risk, find facilities, or track shipment movement.", dataset: {} };
   }
   if (hasAny(["map", "place", "location", "road", "route", "where"])) {
     return { workflow: "map", action: "inspector", section: "map", response: "I opened the map. You can ask for route, facility, product, or risk help.", dataset: {} };
@@ -8890,7 +8890,7 @@ function simpleUserCommandWorkflow(command = "") {
   if (lower.includes("buyer checkout") || lower.includes("create checkout") || lower.includes("collect payment") || lower.includes("buyer pay")) return { workflow: "trade", action: "payment-checkout", response: "Buyer checkout is ready.", dataset: { productId } };
   if (lower.includes("track my route") || lower.includes("check route")) return { workflow: "ai", action: "route", response: "Route intelligence is ready.", dataset: {} };
   if (lower.includes("drone scan") || lower.includes("scan farm") || lower.includes("check farm")) return { workflow: "trade", action: "drone", response: "Drone scan is ready.", dataset: { productId } };
-  if (isFullScaleMapCommand(command)) return { section: "map", directAction: "full-map", response: "Full map is open. You can zoom, drag, check route risk, find facilities, or track shipment movement.", dataset: {} };
+  if (isFullScaleMapCommand(command)) return { section: "map", directAction: "full-map", response: isMapTrackingCommand(command) ? "Full global map is open with shipment tracking. You can zoom, drag, check the route, and follow crop or delivery movement." : "Full map is open. You can zoom, drag, check route risk, find facilities, or track shipment movement.", dataset: {} };
   if (lower.includes("nearest health facility") || lower.includes("find facility")) return { workflow: "map", action: "facility-route", response: "Facility route is ready.", dataset: {} };
   if (lower.includes("explain the map")) return { workflow: "map", action: "inspector", response: "Map explanation is ready.", dataset: {} };
   if (lower.includes("help me") || lower.includes("what should i do next") || lower.includes("understand the platform")) return { workflow: "ai", action: "orchestrate", response: "Nexus help is ready.", dataset: {} };
@@ -14941,6 +14941,12 @@ function isFullScaleMapCommand(command = "") {
     || /\b(full scale map|full-scale map|full map|large map|big map|global map|world map|real map)\b/.test(text);
 }
 
+function isMapTrackingCommand(command = "") {
+  const text = normalizeToolText(command);
+  return /\b(show|open|display|track|tracking|trace|where|locate)\b.*\b(tracking|shipment|delivery|route|sale|order|product|crop|transaction|location)\b/.test(text)
+    || /\b(show tracking|shipment tracking|delivery tracking|route tracking|track shipment|track delivery|track my sale|track product|track crop|where is my order)\b/.test(text);
+}
+
 function openFullScaleUserMap(response = "Full map is open. You can zoom, drag, check route risk, find facilities, or track shipment movement.") {
   const heard = summarizeNexusCommandForRepeat(agentPerformanceState.spokenCommand || agentPerformanceState.lastCommand || "");
   const actionLead = heard ? `I heard: ${heard}. ` : "";
@@ -14954,6 +14960,7 @@ function openFullScaleUserMap(response = "Full map is open. You can zoom, drag, 
   }
   renderLiveVoiceSuggestions(["check route risk", "find nearest health facility", "track my route", "explain the map"]);
   setTimeout(() => {
+    renderMap();
     renderUserRealMap();
     map?.invalidateSize?.();
     userMap?.invalidateSize?.();
@@ -15155,7 +15162,7 @@ function simpleUserDirectVoiceIntent(command = "") {
     return {
       type: "direct",
       directAction: "full-map",
-      response: "Full map is open. You can zoom, drag, check route risk, find facilities, or track shipment movement."
+      response: isMapTrackingCommand(command) ? "Full global map is open with shipment tracking. You can zoom, drag, check the route, and follow crop or delivery movement." : "Full map is open. You can zoom, drag, check route risk, find facilities, or track shipment movement."
     };
   }
   if (has(["map", "route", "location", "where", "track"])) {
