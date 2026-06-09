@@ -458,6 +458,7 @@ assert(app.includes("spokenCommand"), "Voice readback must preserve the user's o
 assert(app.includes("Is this for health, work, learning, crops, or the map?"), "Vague User help requests should ask one short clarifying question instead of guessing");
 assert(app.includes("Health is open. I will guide you one step at a time."), "User health voice command should open Health with a short response");
 assert(app.includes("Pharmacy help is open. I will help find medicine support and keep provider review attached."), "User medicine voice command should open pharmacy support before provider/intake routing");
+assert(app.includes("Clinic search is open. I will help find the closest clinic option and show it on the map."), "User clinic-near-me voice command should open nearest clinic/map support before provider routing");
 assert(app.includes("Trade is open. I will help find or contact the buyer."), "User crop-sale voice command should open Trade with a short response");
 assert(app.includes("name's|my names|name is|name's|names"), "Name capture should accept natural name phrases");
 assert(app.includes("doctor help"), "Voice help needs migrant-friendly health phrasing");

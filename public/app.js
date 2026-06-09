@@ -15025,6 +15025,15 @@ function simpleUserDirectVoiceIntent(command = "") {
       dataset: { patientLocation: activeCountry().name }
     };
   }
+  if (has(["clinic", "hospital"]) && has(["near", "nearest", "closest", "find", "where", "location", "map", "around"])) {
+    return {
+      type: "workflow",
+      workflow: "health",
+      action: "nearest-clinic",
+      response: "Clinic search is open. I will help find the closest clinic option and show it on the map.",
+      dataset: { patientLocation: activeCountry().name }
+    };
+  }
   if (has(["health", "doctor", "clinic", "sick", "pain", "medicine", "care", "telehealth", "nurse"])) {
     return {
       type: "workflow",
