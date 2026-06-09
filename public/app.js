@@ -15016,6 +15016,15 @@ function simpleUserDirectVoiceIntent(command = "") {
       suggestions: ["health", "work", "learning", "crops", "map"]
     };
   }
+  if (has(["medicine", "medication", "pharmacy", "refill", "drug", "prescription", "remedy", "pills"])) {
+    return {
+      type: "workflow",
+      workflow: "health",
+      action: "pharmacy",
+      response: "Pharmacy help is open. I will help find medicine support and keep provider review attached.",
+      dataset: { patientLocation: activeCountry().name }
+    };
+  }
   if (has(["health", "doctor", "clinic", "sick", "pain", "medicine", "care", "telehealth", "nurse"])) {
     return {
       type: "workflow",
