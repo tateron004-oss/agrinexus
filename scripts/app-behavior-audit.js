@@ -170,6 +170,8 @@ hasAll(app, [
   "action: \"orchestrate\"",
   "openDefaultAction: false",
   "function learningCertificateWorkflowConfig",
+  "function openLearningCaptionSupport",
+  "Captions are open. Speak now and Nexus will write the words here",
   "renderUserProcessScreen(userSection, config",
   "$(\"#workflowConfirm\").onclick",
   "Nexus is completing this workflow now.",

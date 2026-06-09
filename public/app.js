@@ -7080,6 +7080,9 @@ function bestDynamicVoiceTool(command = "") {
 async function runDynamicVoiceTool(command = "") {
   const tool = bestDynamicVoiceTool(command);
   if (!tool) return false;
+  if (isLearningCaptionCommand(command, tool)) {
+    return openLearningCaptionSupport("Captions are open. Speak now and Nexus will write the words here while keeping the learning support ready.");
+  }
   if (tool.type === "section") {
     goSection(tool.section);
     recordVoiceEvent(`Opened ${tool.label} from a dynamic voice tool.`, "done");
@@ -8848,7 +8851,9 @@ function simpleUserCommandWorkflow(command = "") {
   if (lower.includes("start training") || lower.includes("start a course")) return { workflow: "learning", action: "start", response: "Course start is ready.", dataset: {} };
   if (lower.includes("complete my lesson") || lower.includes("finish lesson")) return { workflow: "learning", action: "lesson", response: "Lesson completion is ready.", dataset: {} };
   if (lower.includes("issue my certificate") || lower.includes("certificate")) return { section: "learning", config: learningCertificateWorkflowConfig(), response: "Certificate workflow is ready." };
-  if (lower.includes("build captions") || lower.includes("captions")) return { section: "learning", config: learningAccessibilityWorkflowConfig("caption"), response: "Caption support is ready." };
+  if (lower.includes("build captions") || lower.includes("make captions") || lower.includes("open captions") || lower.includes("captions")) {
+    return { section: "learning", config: learningAccessibilityWorkflowConfig("caption"), response: "Captions are open. Speak now and Nexus will write the words here while keeping learning support ready." };
+  }
   if (lower.includes("show me jobs") || lower.includes("find jobs")) return { workflow: "workforce", action: "build-profile", response: "Job support is ready.", dataset: { roleId } };
   if (lower.includes("apply for")) return { workflow: "workforce", action: "apply-role", response: "Job application is ready.", dataset: { roleId } };
   if (lower.includes("review my workforce gaps") || lower.includes("skills")) return { workflow: "workforce", action: "mentor", response: "Skills review is ready.", dataset: { roleId } };
@@ -14896,6 +14901,32 @@ function openWorkflowByVoice(workflow, action, response, dataset = {}) {
   setVoiceResponse(`${actionLead}${response || "I opened that action."}`.trim(), true);
 }
 
+function isLearningCaptionCommand(command = "", tool = null) {
+  const text = normalizeToolText(`${command || ""} ${tool?.label || ""} ${tool?.action || ""} ${tool?.workflow || ""}`);
+  if (!/\b(caption|captions|subtitle|subtitles|transcript)\b/.test(text)) return false;
+  if (/\b(patient|telehealth|health|doctor|clinic|provider|relay)\b/.test(text)) return false;
+  return /\b(build|make|create|open|turn on|start|learning|lesson|course)\b/.test(text);
+}
+
+function openLearningCaptionSupport(response = "Captions are open. Speak now and Nexus will write the words here.") {
+  const heard = summarizeNexusCommandForRepeat(agentPerformanceState.spokenCommand || agentPerformanceState.lastCommand || "");
+  const actionLead = heard ? `I heard: ${heard}. ` : "";
+  const config = learningAccessibilityWorkflowConfig("caption");
+  recordNexusAutonomousLearning({ type: "workflow-opened", workflow: "learning", action: "caption", command: response });
+  setActiveAgentJourney("learning", "caption", response);
+  goSection("learning", { instant: true, openDefaultAction: false, keepAssistant: false });
+  if (experienceMode === "user") {
+    renderUserSimpleActiveSection("learning");
+    renderUserProcessScreen("learning", config, { response }, "Build captions");
+  } else {
+    openWorkflowModal(config);
+  }
+  openCaptionBox(response);
+  updateNexusBehaviorLayer("ready", "Nexus opened caption support and is ready to write spoken words.");
+  setVoiceResponse(`${actionLead}${response}`.trim(), true);
+  return true;
+}
+
 function voiceStatusSummary() {
   const readiness = data.admin?.readiness;
   const automation = data.automation;
@@ -15964,10 +15995,8 @@ async function handleVoiceCommand(rawCommand, options = {}) {
     return openWorkflowByVoice("partnership", type, "Provider partnership packet workflow is ready.");
   }
 
-  if (lower.includes("build caption") || lower.includes("caption lesson") || lower.includes("learning caption")) {
-    goSection("learning");
-    openWorkflowModal(learningAccessibilityWorkflowConfig("caption"));
-    return setVoiceResponse("Caption workflow is ready. Say confirm to build captions or cancel to close it.", true);
+  if (lower.includes("build caption") || lower.includes("make caption") || lower.includes("open caption") || lower.includes("caption lesson") || lower.includes("learning caption")) {
+    return openLearningCaptionSupport("Captions are open. Speak now and Nexus will write the words here while keeping learning support ready.");
   }
   if (lower.includes("audio guide") || lower.includes("screen reader") || lower.includes("visual guide")) {
     goSection("learning");
