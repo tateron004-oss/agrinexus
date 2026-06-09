@@ -38,6 +38,7 @@ let confirmedVoiceActionActive = false;
 let nexusAwaitingCommand = false;
 let agentPerformanceState = {
   lastCommand: "",
+  spokenCommand: "",
   startedAt: 0,
   acknowledgedAt: 0,
   completedAt: 0,
@@ -14445,8 +14446,8 @@ function nexusLocalizedBehaviorCopy(key, values = {}) {
   const language = languageCode();
   const copy = {
     en: {
-      hello: `Hello ${name}. How can I assist you?`,
-      wake: `Yes ${name}. How can I assist you?`,
+      hello: `Hello ${name}. How can I help you?`,
+      wake: `Yes ${name}. How can I help you?`,
       heard: `I heard: ${values.command || ""}. I am doing it now.`,
       confirmed: `Confirmed. I am doing this now: ${values.command || ""}.`,
       canceled: "Canceled. Tell me what you want Nexus to do instead.",
@@ -14866,7 +14867,7 @@ async function executeWorkflowConfigFromVoice(config, response = "") {
 
 function openWorkflowByVoice(workflow, action, response, dataset = {}) {
   const config = workflowConfig(workflow, action, { dataset });
-  const heard = summarizeNexusCommandForRepeat(agentPerformanceState.lastCommand || "");
+  const heard = summarizeNexusCommandForRepeat(agentPerformanceState.spokenCommand || agentPerformanceState.lastCommand || "");
   const actionLead = heard ? `I heard: ${heard}. ` : "";
   recordNexusAutonomousLearning({ type: "workflow-opened", workflow, action, command: response || "" });
   setActiveAgentJourney(workflow, action, response || "");
@@ -14998,7 +14999,7 @@ function nexusIntroductionResponse(command = "") {
   updateNexusBehaviorLayer("listening", `Nexus learned the user's name is ${spokenName}.`);
   recordNexusAutonomousLearning({ type: "user-name", command: value, userName: spokenName });
   renderLiveVoiceSuggestions(["open learning", "open telehealth", "what can you do"]);
-  return `Hello ${spokenName}. I am Nexus.${nexusIntroLanguageNote(intro)} How can I assist you?`;
+  return `Hello ${spokenName}. How can I help you?`;
 }
 
 function simpleUserDirectVoiceIntent(command = "") {
@@ -15151,6 +15152,7 @@ async function handleVoiceCommand(rawCommand, options = {}) {
   const wakeOnly = isWakePhraseOnly(localizedCommand);
   let command = cleanWakeCommand(localizedCommand);
   command = normalizeMultilingualBehaviorCommand(command);
+  const spokenCommand = command || cleanWakeCommand(localizedCommand);
   const introductionResponse = nexusIntroductionResponse(command || localizedCommand);
   if (introductionResponse) {
     openAskNexus();
@@ -15188,6 +15190,22 @@ async function handleVoiceCommand(rawCommand, options = {}) {
     }
     return;
   }
+  agentPerformanceState.spokenCommand = spokenCommand || command;
+  const earlySimpleIntent = experienceMode === "user" ? simpleUserDirectVoiceIntent(spokenCommand || command) : null;
+  if (earlySimpleIntent?.type === "clarify") {
+    pendingAgentClarification = null;
+    pendingNexusSpokenCommand = null;
+    renderLiveVoiceSuggestions(earlySimpleIntent.suggestions || ["health", "work", "learning", "crops", "map"]);
+    updateNexusBehaviorLayer("listening", "Nexus asked one short clarifying question instead of guessing.");
+    setVoiceResponse(earlySimpleIntent.response, true);
+    return;
+  }
+  if (earlySimpleIntent?.type === "workflow") {
+    pendingAgentClarification = null;
+    pendingNexusSpokenCommand = null;
+    agentPerformanceState.lastCommand = command;
+    return openWorkflowByVoice(earlySimpleIntent.workflow, earlySimpleIntent.action, earlySimpleIntent.response, earlySimpleIntent.dataset || {});
+  }
   const understanding = adaptiveCommandUnderstanding(command);
   if (understanding.rewrittenCommand && !isUniversalLanguageCommand(command) && !isGlobalStopCommand(understanding.rewrittenCommand.toLowerCase())) {
     command = understanding.rewrittenCommand;
@@ -15195,6 +15213,7 @@ async function handleVoiceCommand(rawCommand, options = {}) {
   const lower = command.toLowerCase();
   markAgentPerformance("heard", "voice-command");
   agentPerformanceState.lastCommand = command;
+  agentPerformanceState.spokenCommand = spokenCommand || command;
   if (command) rememberConversationTurn(command, "");
   if (command) updateNexusAwareness(command, { silent: true });
   if (command) speechSafetyRisk(command, "voice");

@@ -303,7 +303,7 @@ hasAll(app, [
   "Full app language modes are",
   "Say switch to",
   "Nexus learned the user's name",
-  "How can I assist you?",
+  "How can I help you?",
   "meu nome e",
   "oruko mi ni",
   "sunana",
@@ -439,7 +439,7 @@ assert(app.includes("resumeVoiceAfterUiAction(shouldResumeVoice"), "User button 
 assert(app.includes("VOICE_RESTART_DELAY_MS = 320"), "Voice listening should restart quickly after Nexus speaks");
 assert(app.includes("VOICE_UI_RESUME_DELAYS_MS = [180, 650, 1500, 3200, 5200]"), "User actions should restore mic listening quickly");
 assert(app.includes("Heard: ${command}"), "Voice acknowledgement should stay short and responsive");
-assert(app.includes("function nexusWakeGreeting") && app.includes("How can I assist you?"), "Nexus must greet the signed-in user by name before taking commands");
+assert(app.includes("function nexusWakeGreeting") && app.includes("How can I help you?"), "Nexus must greet the signed-in user by name before taking commands");
 assert(app.includes("function stageNexusSpokenCommand") && app.includes("I am doing it now."), "Nexus must repeat a clear heard command and move into the action without a long confirmation prompt");
 assert(app.includes("Nexus opened the requested workflow and is waiting for the next command."), "Voice workflows must open actions and wait for the next command instead of forcing another confirmation");
 assert(app.includes("function executePendingNexusSpokenCommand") && app.includes("source: \"nexus-confirmation\""), "Confirmed Nexus commands must execute through the main voice handler");
@@ -454,6 +454,7 @@ assert(app.includes("what commands work in all modes"), "Voice help should expos
 assert(app.includes("User, Admin, or Investor mode"), "Voice help response must say Nexus works in all three modes");
 assert(app.includes("function migrantFriendlyVoiceIntent"), "Voice layer needs migrant-friendly imperfect English intent routing");
 assert(app.includes("function simpleUserDirectVoiceIntent"), "User voice mode needs short direct routing before advisor/demo explanations");
+assert(app.includes("spokenCommand"), "Voice readback must preserve the user's original spoken phrase before internal routing rewrites");
 assert(app.includes("Is this for health, work, learning, crops, or the map?"), "Vague User help requests should ask one short clarifying question instead of guessing");
 assert(app.includes("Health is open. I will guide you one step at a time."), "User health voice command should open Health with a short response");
 assert(app.includes("Trade is open. I will help find or contact the buyer."), "User crop-sale voice command should open Trade with a short response");
