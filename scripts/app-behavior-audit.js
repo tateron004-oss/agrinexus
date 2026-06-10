@@ -492,6 +492,9 @@ assert(app.includes("\\b(help|assist|walk me through|guide|start|run|i need|i wa
 assert(app.includes("\\b(help|assist|guide).*\\b(sell|selling)\\b"), "Crop-sale mission should catch help sell my crop phrasing");
 assert(app.includes("function fillWorkflowFieldByVoice"), "Advanced voice needs form filling by speech");
 assert(app.includes("function guidedHealthIntakeHtml"), "Telehealth intake needs a dedicated guided intake screen");
+assert(app.includes("function guidedHealthProviderHtml"), "Doctor/provider requests need a dedicated guided screen");
+assert(app.includes("function openDoctorHelpNow"), "Doctor/provider voice requests must open a visible screen directly");
+assert(app.includes("directAction: \"doctor-help\""), "Doctor/provider simple voice intent must route as a direct action");
 assert(app.includes("Step 1: Who needs care?"), "Guided intake must open with a plain first question");
 assert(app.includes("function activeWorkflowFieldCandidates"), "Voice field filling must target visible inline workflow fields");
 assert(app.includes("function healthIntakeVoiceFieldMatch"), "Health intake needs natural voice field matching");

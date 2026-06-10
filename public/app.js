@@ -7228,7 +7228,8 @@ function activeWorkflowFieldCandidates() {
 }
 
 function healthIntakeVoiceFieldMatch(command = "") {
-  if (!isHealthIntakeWorkflow(pendingWorkflow)) return null;
+  const providerMode = isHealthProviderWorkflow(pendingWorkflow);
+  if (!isHealthIntakeWorkflow(pendingWorkflow) && !providerMode) return null;
   const raw = String(command || "").trim();
   const lower = normalizeToolText(raw);
   if (!raw || isUniversalLanguageCommand(raw) || isGlobalStopCommand(lower)) return null;
@@ -7238,7 +7239,7 @@ function healthIntakeVoiceFieldMatch(command = "") {
     || /^(english|french|kiswahili|swahili|arabic|spanish|portuguese)$/.exec(lower);
   if (languageMatch) return { requested: "preferred language", value: ({ swahili: "sw", kiswahili: "sw", english: "en", french: "fr", arabic: "ar", spanish: "es", portuguese: "pt" }[languageMatch[1]] || languageMatch[1]) };
   const contactMatch = lower.match(/\b(whatsapp|sms|text|call|phone|callback|community aide|caregiver)\b/);
-  if (contactMatch && /\b(contact|reach|call|message|whatsapp|sms|text|phone|callback|aide|caregiver)\b/.test(lower)) {
+  if (contactMatch && /\b(contact|reach|call|message|whatsapp|sms|text|phone|callback|aide|caregiver|video)\b/.test(lower)) {
     const contactValues = {
       call: "Low-bandwidth callback",
       phone: "Low-bandwidth callback",
@@ -7250,7 +7251,10 @@ function healthIntakeVoiceFieldMatch(command = "") {
       caregiver: "Community aide"
     };
     const value = contactValues[contactMatch[1]] || contactMatch[1];
-    return { requested: "best contact method", value };
+    return { requested: providerMode ? "best provider connection" : "best contact method", value };
+  }
+  if (providerMode && /\b(video call|video|camera)\b/.test(lower)) {
+    return { requested: "best provider connection", value: "video call" };
   }
   const urgencyMatch = lower.match(/\b(routine|priority|urgent|high|emergency)\b/);
   if (urgencyMatch && /\b(urgency|urgent|emergency|serious|priority|bad|danger)\b/.test(lower)) {
@@ -7263,7 +7267,7 @@ function healthIntakeVoiceFieldMatch(command = "") {
     return { requested: "photo video note", value: raw.replace(/[.?!]$/, "") };
   }
   if (/\b(i need|need|pain|fever|medicine|doctor|clinic|sick|injury|hurt|headache|stomach|cough|dizzy|weak|bleeding|swelling)\b/.test(lower)) {
-    return { requested: "primary health need", value: raw.replace(/[.?!]$/, "") };
+    return { requested: providerMode ? "what kind of help is needed" : "primary health need", value: raw.replace(/[.?!]$/, "") };
   }
   return null;
 }
@@ -7289,7 +7293,7 @@ function fillWorkflowFieldByVoice(command = "") {
   field.dispatchEvent(new Event("input", { bubbles: true }));
   field.dispatchEvent(new Event("change", { bubbles: true }));
   recordVoiceEvent(`Updated ${field.dataset.workflowField} to ${value}.`, "progress");
-  const next = nextGuidedIntakePrompt(field.dataset.workflowField);
+  const next = isHealthProviderWorkflow(pendingWorkflow) ? nextGuidedProviderPrompt(field.dataset.workflowField) : nextGuidedIntakePrompt(field.dataset.workflowField);
   setVoiceResponse(next ? `I added that. ${next}` : `I added that. Say yes when the intake looks right.`, true);
   return true;
 }
@@ -8739,6 +8743,10 @@ function isHealthIntakeWorkflow(config = {}) {
   return workflowMode(config) === "health" && (config.body?.type === "intake" || /intake/i.test(`${config.title || ""} ${config.userTitle || ""}`));
 }
 
+function isHealthProviderWorkflow(config = {}) {
+  return workflowMode(config) === "health" && (config.body?.type === "provider" || /provider|doctor|nurse|clinician|care team/i.test(`${config.title || ""} ${config.userTitle || ""} ${config.summary || ""}`));
+}
+
 function guidedHealthIntakeSteps() {
   return [
     { field: "patientName", title: "Step 1: Who needs care?", say: "Say: patient name is Ron, or type the name." },
@@ -8749,10 +8757,47 @@ function guidedHealthIntakeSteps() {
   ];
 }
 
+function guidedHealthProviderHtml(config = {}) {
+  if (!isHealthProviderWorkflow(config)) return "";
+  const steps = [
+    { title: "Step 1: What help is needed?", say: "Say: I need a doctor, I need medicine, or I need a clinic." },
+    { title: "Step 2: How should the provider connect?", say: "Say: call me, video call, WhatsApp, SMS, or community aide." },
+    { title: "Step 3: What language or access support?", say: "Say: English, French, Kiswahili, Arabic, Spanish, captions, audio, or large print." },
+    { title: "Step 4: Confirm the request", say: "Say: yes, or press Do this now when the request looks right." }
+  ];
+  return `
+    <div class="user-guided-provider" role="group" aria-label="${escapeHtml(translateText("Doctor and provider guide"))}">
+      <div class="user-guided-provider-current">
+        <small>${translateText("Doctor help is open")}</small>
+        <strong>${translateText("Tell Nexus what kind of care connection you need.")}</strong>
+        <span>${translateText("Nexus helps organize provider contact, language, access support, and callback details. It does not diagnose or replace a licensed clinician.")}</span>
+      </div>
+      <div class="user-guided-provider-steps">
+        ${steps.map((step, index) => `<article>
+          <b>${index + 1}</b>
+          <strong>${translateText(step.title)}</strong>
+          <span>${translateText(step.say)}</span>
+        </article>`).join("")}
+      </div>
+    </div>
+  `;
+}
+
 function nextGuidedIntakePrompt(fieldName = "") {
   const steps = guidedHealthIntakeSteps();
   const index = steps.findIndex(step => step.field === fieldName);
   return steps[index + 1]?.title || "Review the intake, then say yes or press Do this now.";
+}
+
+function nextGuidedProviderPrompt(fieldName = "") {
+  const prompts = {
+    patientName: "What kind of care connection is needed?",
+    careNeed: "How should the provider connect: call, video, WhatsApp, SMS, or community health worker?",
+    connectionType: "What language or access support is needed?",
+    preferredLanguage: "Review the request, then say yes or press Do this now.",
+    accessibilityNeeds: "Review the request, then say yes or press Do this now."
+  };
+  return prompts[fieldName] || "Review the request, then say yes or press Do this now.";
 }
 
 function guidedHealthIntakeHtml(config = {}) {
@@ -8824,6 +8869,7 @@ function userProcessScreenHtml(config = {}, mapped = {}, label = "Selected actio
         </div>`).join("")}
       </div>
       ${guidedHealthIntakeHtml(config)}
+      ${guidedHealthProviderHtml(config)}
       ${workflowFieldsHtml(config.fields || [], "user-process-fields")}
       <div class="user-process-actions">
         <button type="button" class="primary" data-inline-workflow-confirm aria-label="${escapeHtml(translateText(config.confirmLabel || "Do this now"))}">${translateText("Do this now")}</button>
@@ -12764,6 +12810,26 @@ function workflowConfig(workflow, action, element) {
         ...(action === "supply-delivery" ? [{ name: "receivedBy", label: "Received by", value: "Mobile clinic lead" }, { name: "condition", label: "Condition", value: "received and counted" }] : [])
       ] : [])
     ] : [];
+    const providerFields = action === "provider" ? [
+      { name: "patientName", label: "Patient or household name", value: (data.profile.healthIntakes || [])[0]?.patientName || userFirstName() || "Community patient", placeholder: "Name or household reference" },
+      { name: "careNeed", label: "What kind of help is needed?", type: "textarea", rows: 3, value: advisorDataset.careNeed || "I need to speak with a doctor or provider.", placeholder: "Example: I need a doctor, medicine, clinic, injury review, or follow-up." },
+      { name: "connectionType", label: "Best provider connection", type: "select", value: advisorDataset.connectionType || "low-bandwidth callback", options: [
+        { value: "low-bandwidth callback", label: "Low-bandwidth callback" },
+        { value: "video call", label: "Video call" },
+        { value: "WhatsApp", label: "WhatsApp" },
+        { value: "SMS", label: "SMS" },
+        { value: "community health worker", label: "Community health worker" }
+      ] },
+      { name: "preferredLanguage", label: "Preferred language", type: "select", value: languageCode(), options: [
+        { value: "en", label: "English" },
+        { value: "fr", label: "French" },
+        { value: "sw", label: "Kiswahili" },
+        { value: "ar", label: "Arabic" },
+        { value: "es", label: "Spanish" },
+        { value: "pt", label: "Portuguese" }
+      ] },
+      { name: "accessibilityNeeds", label: "Accessibility or communication support", value: advisorDataset.accessibilityNeeds || "Captions, audio narration, large print, caregiver handoff", placeholder: "Captions, audio, large print, caregiver, low-bandwidth, etc." }
+    ] : [];
     const intakeFields = mobileClinicRevenueActions.has(action) ? revenueFields : ruralHealthActions.has(action) ? ruralFields : action === "intake" ? [
       { name: "patientName", label: "Patient or household name", value: "Community patient", placeholder: "Name or household reference" },
       { name: "needSummary", label: "Primary health need", type: "textarea", rows: 3, value: advisorDataset.needSummary || `${activeCountry().name} intake for heat, queue, field access, and care support` },
@@ -12790,7 +12856,7 @@ function workflowConfig(workflow, action, element) {
         { value: "Community aide", label: "Community aide" }
       ] },
       { name: "caregiverName", label: "Caregiver or community aide", value: "Community accessibility aide", placeholder: "Caregiver, aide, or trusted contact" }
-    ] : [
+    ] : action === "provider" ? providerFields : [
       { name: "caseFocus", label: "Case focus", value: (data.profile.healthIntakes || [])[0]?.patientRef || `${activeCountry().name} community care case`, placeholder: "Patient, household, or case reference" },
       { name: "supportNeed", label: "Support needed", type: "select", value: advisorDataset.supportNeed || (accessAction ? "Accessibility support" : "Provider review"), options: [
         { value: "Provider review", label: "Provider review" },
@@ -15114,6 +15180,20 @@ function openHealthIntakeNow(response = "Telehealth intake is open. Step 1: Who 
   return true;
 }
 
+function openDoctorHelpNow(response = "Doctor help is open. Tell Nexus what kind of care connection you need. This is not a diagnosis.") {
+  const heard = summarizeNexusCommandForRepeat(agentPerformanceState.spokenCommand || agentPerformanceState.lastCommand || "");
+  const actionLead = heard ? `I heard: ${heard}. ` : "";
+  const config = workflowConfig("health", "provider", { dataset: { careNeed: "I need to speak with a doctor or provider." } });
+  if (!config) return openWorkflowByVoice("health", "provider", response);
+  recordNexusAutonomousLearning({ type: "workflow-opened", workflow: "health", action: "provider", command: response });
+  setActiveAgentJourney("health", "provider", response);
+  forceOpenUserProcessScreen("health", config, { response }, "Doctor help");
+  renderLiveVoiceSuggestions(["I need a doctor", "call me", "video call", "Spanish", "yes"]);
+  updateNexusBehaviorLayer("ready", "Nexus opened the doctor/provider contact screen and is waiting for care connection details.");
+  setVoiceResponse(`${actionLead}${response}`.trim(), true);
+  return true;
+}
+
 function voiceStatusSummary() {
   const readiness = data.admin?.readiness;
   const automation = data.automation;
@@ -15253,6 +15333,15 @@ function simpleUserDirectVoiceIntent(command = "") {
       dataset: { patientLocation: activeCountry().name }
     };
   }
+  if ((has(["doctor", "provider", "nurse", "clinician"]) && has(["need", "want", "talk", "speak", "call", "contact", "see", "connect", "help"]))
+    || /\b(i need|i want|i want a|i need a|help me find|connect me to|talk to|speak to|call)\b.*\b(doctor|provider|nurse|clinician)\b/.test(lower)
+    || /\b(doctor help|medical provider|health provider|see a doctor)\b/.test(lower)) {
+    return {
+      type: "direct",
+      directAction: "doctor-help",
+      response: "Doctor help is open. Tell Nexus what kind of care connection you need. This is not a diagnosis."
+    };
+  }
   if (has(["intake", "admission", "admit", "assessment"]) || /\b(open|start|begin|create|launch)\b.*\b(intake|admission|assessment)\b/.test(lower)) {
     return {
       type: "direct",
@@ -15261,13 +15350,19 @@ function simpleUserDirectVoiceIntent(command = "") {
     };
   }
   if (has(["health", "doctor", "clinic", "sick", "pain", "medicine", "care", "telehealth", "nurse"])) {
-    return {
-      type: "workflow",
-      workflow: "health",
-      action: has(["provider", "doctor", "nurse", "call", "contact", "speak", "talk"]) ? "provider" : "intake",
-      response: "Health is open. I will guide you one step at a time.",
-      dataset: {}
-    };
+    return has(["provider", "doctor", "nurse", "call", "contact", "speak", "talk"])
+      ? {
+          type: "direct",
+          directAction: "doctor-help",
+          response: "Doctor help is open. Tell Nexus what kind of care connection you need. This is not a diagnosis."
+        }
+      : {
+          type: "workflow",
+          workflow: "health",
+          action: "intake",
+          response: "Health is open. I will guide you one step at a time.",
+          dataset: {}
+        };
   }
   const cropWords = has(["crop", "crops", "maize", "corn", "rice", "cassava", "yam", "beans", "produce", "harvest", "farm", "product"]);
   const sellWords = has(["sell", "selling", "buyer", "market", "trade", "order", "customer"]);
@@ -15467,6 +15562,12 @@ async function handleVoiceCommand(rawCommand, options = {}) {
     agentPerformanceState.lastCommand = command;
     return openHealthIntakeNow(earlySimpleIntent.response);
   }
+  if (earlySimpleIntent?.type === "direct" && earlySimpleIntent.directAction === "doctor-help") {
+    pendingAgentClarification = null;
+    pendingNexusSpokenCommand = null;
+    agentPerformanceState.lastCommand = command;
+    return openDoctorHelpNow(earlySimpleIntent.response);
+  }
   if (earlySimpleIntent?.type === "workflow") {
     pendingAgentClarification = null;
     pendingNexusSpokenCommand = null;
@@ -15570,6 +15671,11 @@ async function handleVoiceCommand(rawCommand, options = {}) {
     pendingAgentClarification = null;
     pendingNexusSpokenCommand = null;
     return openHealthIntakeNow(simpleIntent.response);
+  }
+  if (simpleIntent?.type === "direct" && simpleIntent.directAction === "doctor-help") {
+    pendingAgentClarification = null;
+    pendingNexusSpokenCommand = null;
+    return openDoctorHelpNow(simpleIntent.response);
   }
   if (simpleIntent?.type === "workflow") {
     pendingAgentClarification = null;
