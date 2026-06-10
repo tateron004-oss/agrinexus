@@ -491,6 +491,11 @@ assert(app.includes("opening the first step now"), "Mission requests should begi
 assert(app.includes("\\b(help|assist|walk me through|guide|start|run|i need|i want|please)\\b"), "Mission detection should accept natural help and want phrases");
 assert(app.includes("\\b(help|assist|guide).*\\b(sell|selling)\\b"), "Crop-sale mission should catch help sell my crop phrasing");
 assert(app.includes("function fillWorkflowFieldByVoice"), "Advanced voice needs form filling by speech");
+assert(app.includes("function guidedHealthIntakeHtml"), "Telehealth intake needs a dedicated guided intake screen");
+assert(app.includes("Step 1: Who needs care?"), "Guided intake must open with a plain first question");
+assert(app.includes("function activeWorkflowFieldCandidates"), "Voice field filling must target visible inline workflow fields");
+assert(app.includes("function healthIntakeVoiceFieldMatch"), "Health intake needs natural voice field matching");
+assert(app.includes("Spanish") && app.includes("Portuguese"), "Guided intake language options must include Spanish and Portuguese");
 assert(app.includes("function voiceWorkflowStatus"), "Advanced voice needs workflow status readout");
 assert(app.includes("function voiceErrorRecovery"), "Advanced voice needs recovery when actions fail");
 assert(app.includes("function modeSpecificVoicePersona"), "Advanced voice needs mode-specific persona behavior");

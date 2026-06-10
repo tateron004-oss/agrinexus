@@ -7220,15 +7220,66 @@ function voiceWorkflowStatus() {
   return `${open} ${activeAgentJourneySummary()} ${voiceMissionStatus()} Latest voice events: ${events || "none yet"}.`;
 }
 
+function activeWorkflowFieldCandidates() {
+  const inlineFields = $$(".user-inline-workflow:not(.hidden) [data-workflow-field]");
+  if (inlineFields.length) return inlineFields;
+  if (!$("#workflowModal")?.classList.contains("hidden")) return $$("#workflowModal [data-workflow-field]");
+  return [];
+}
+
+function healthIntakeVoiceFieldMatch(command = "") {
+  if (!isHealthIntakeWorkflow(pendingWorkflow)) return null;
+  const raw = String(command || "").trim();
+  const lower = normalizeToolText(raw);
+  if (!raw || isUniversalLanguageCommand(raw) || isGlobalStopCommand(lower)) return null;
+  const nameMatch = raw.match(/\b(?:patient name is|household name is|my name is|this is|name is|i am|i'm|im|call me)\s+([\p{L}\p{M}' -]{2,48})\b/iu);
+  if (nameMatch) return { requested: "patient household name", value: cleanSpokenUserName(nameMatch[1]) || nameMatch[1].trim() };
+  const languageMatch = lower.match(/\b(?:preferred language is|language is|speak|speaks|use)\s+(english|french|kiswahili|swahili|arabic|spanish|portuguese)\b/)
+    || /^(english|french|kiswahili|swahili|arabic|spanish|portuguese)$/.exec(lower);
+  if (languageMatch) return { requested: "preferred language", value: ({ swahili: "sw", kiswahili: "sw", english: "en", french: "fr", arabic: "ar", spanish: "es", portuguese: "pt" }[languageMatch[1]] || languageMatch[1]) };
+  const contactMatch = lower.match(/\b(whatsapp|sms|text|call|phone|callback|community aide|caregiver)\b/);
+  if (contactMatch && /\b(contact|reach|call|message|whatsapp|sms|text|phone|callback|aide|caregiver)\b/.test(lower)) {
+    const contactValues = {
+      call: "Low-bandwidth callback",
+      phone: "Low-bandwidth callback",
+      callback: "Low-bandwidth callback",
+      text: "SMS",
+      sms: "SMS",
+      whatsapp: "WhatsApp",
+      "community aide": "Community aide",
+      caregiver: "Community aide"
+    };
+    const value = contactValues[contactMatch[1]] || contactMatch[1];
+    return { requested: "best contact method", value };
+  }
+  const urgencyMatch = lower.match(/\b(routine|priority|urgent|high|emergency)\b/);
+  if (urgencyMatch && /\b(urgency|urgent|emergency|serious|priority|bad|danger)\b/.test(lower)) {
+    return { requested: "urgency", value: urgencyMatch[1] === "urgent" ? "Priority" : urgencyMatch[1].replace(/^./, char => char.toUpperCase()) };
+  }
+  if (/\b(caption|captions|large print|blind|vision|deaf|hearing|audio|caregiver|aide|screen reader)\b/.test(lower)) {
+    return { requested: "accessibility needs", value: raw.replace(/[.?!]$/, "") };
+  }
+  if (/\b(photo|video|wound|rash|swelling|injury|bleeding|fall|show provider|camera)\b/.test(lower)) {
+    return { requested: "photo video note", value: raw.replace(/[.?!]$/, "") };
+  }
+  if (/\b(i need|need|pain|fever|medicine|doctor|clinic|sick|injury|hurt|headache|stomach|cough|dizzy|weak|bleeding|swelling)\b/.test(lower)) {
+    return { requested: "primary health need", value: raw.replace(/[.?!]$/, "") };
+  }
+  return null;
+}
+
 function fillWorkflowFieldByVoice(command = "") {
-  if (!pendingWorkflow || $("#workflowModal")?.classList.contains("hidden")) return false;
-  const match = [/(?:set|change|enter|put|make)\s+(.+?)\s+(?:to|as)\s+(.+)/i, /(.+?)\s+(?:is|equals)\s+(.+)/i]
+  if (!pendingWorkflow) return false;
+  const candidates = activeWorkflowFieldCandidates();
+  if (!candidates.length) return false;
+  const naturalMatch = healthIntakeVoiceFieldMatch(command);
+  const match = naturalMatch || [/(?:set|change|enter|put|make)\s+(.+?)\s+(?:to|as)\s+(.+)/i, /(.+?)\s+(?:is|equals)\s+(.+)/i]
     .map(pattern => command.match(pattern))
     .find(Boolean);
   if (!match) return false;
-  const requested = normalizeToolText(match[1]);
-  const value = match[2].trim().replace(/[.?!]$/, "");
-  const field = $$("[data-workflow-field]").find(item => {
+  const requested = normalizeToolText(naturalMatch ? match.requested : match[1]);
+  const value = String(naturalMatch ? match.value : match[2]).trim().replace(/[.?!]$/, "");
+  const field = candidates.find(item => {
     const label = normalizeToolText(item.closest("label")?.textContent || item.dataset.workflowField || "");
     const name = normalizeToolText(item.dataset.workflowField || "");
     return label.includes(requested) || requested.includes(name) || name.includes(requested);
@@ -7238,7 +7289,8 @@ function fillWorkflowFieldByVoice(command = "") {
   field.dispatchEvent(new Event("input", { bubbles: true }));
   field.dispatchEvent(new Event("change", { bubbles: true }));
   recordVoiceEvent(`Updated ${field.dataset.workflowField} to ${value}.`, "progress");
-  setVoiceResponse(`Updated ${field.dataset.workflowField} to ${value}. Say yes to confirm when ready.`, true);
+  const next = nextGuidedIntakePrompt(field.dataset.workflowField);
+  setVoiceResponse(next ? `I added that. ${next}` : `I added that. Say yes when the intake looks right.`, true);
   return true;
 }
 
@@ -8683,6 +8735,48 @@ function userProcessSteps(config = {}) {
   ];
 }
 
+function isHealthIntakeWorkflow(config = {}) {
+  return workflowMode(config) === "health" && (config.body?.type === "intake" || /intake/i.test(`${config.title || ""} ${config.userTitle || ""}`));
+}
+
+function guidedHealthIntakeSteps() {
+  return [
+    { field: "patientName", title: "Step 1: Who needs care?", say: "Say: patient name is Ron, or type the name." },
+    { field: "needSummary", title: "Step 2: What is happening?", say: "Say: I need medicine, I have pain, or I need a clinic." },
+    { field: "urgency", title: "Step 3: How serious is it?", say: "Say: routine, priority, high, or emergency." },
+    { field: "preferredLanguage", title: "Step 4: What language should we use?", say: "Say: English, French, Kiswahili, Arabic, Spanish, or Portuguese." },
+    { field: "contactMethod", title: "Step 5: How should help reach you?", say: "Say: call me, SMS, WhatsApp, or community aide." }
+  ];
+}
+
+function nextGuidedIntakePrompt(fieldName = "") {
+  const steps = guidedHealthIntakeSteps();
+  const index = steps.findIndex(step => step.field === fieldName);
+  return steps[index + 1]?.title || "Review the intake, then say yes or press Do this now.";
+}
+
+function guidedHealthIntakeHtml(config = {}) {
+  if (!isHealthIntakeWorkflow(config)) return "";
+  const steps = guidedHealthIntakeSteps();
+  return `
+    <div class="user-guided-intake" role="group" aria-label="${escapeHtml(translateText("Telehealth intake guide"))}">
+      <div class="user-guided-intake-current">
+        <small>${translateText("Nexus will walk you through this")}</small>
+        <strong>${translateText("Step 1: Who needs care?")}</strong>
+        <span>${translateText("Speak naturally or type in the boxes below. Nexus will not diagnose. It prepares a care request, access needs, language, and callback path.")}</span>
+      </div>
+      <div class="user-guided-intake-steps">
+        ${steps.map((step, index) => `<article>
+          <b>${index + 1}</b>
+          <strong>${translateText(step.title)}</strong>
+          <span>${translateText(step.say)}</span>
+        </article>`).join("")}
+      </div>
+      <p>${translateText("If anything sounds dangerous or urgent, contact local emergency help or a health worker immediately. Nexus is only organizing access and information.")}</p>
+    </div>
+  `;
+}
+
 function workflowFieldsHtml(fields = [], className = "workflow-fields") {
   if (!fields.length) return "";
   return `<div class="${escapeHtml(className)}">${fields.map(field => {
@@ -8729,6 +8823,7 @@ function userProcessScreenHtml(config = {}, mapped = {}, label = "Selected actio
           <span>${translateText(step.detail)}</span>
         </div>`).join("")}
       </div>
+      ${guidedHealthIntakeHtml(config)}
       ${workflowFieldsHtml(config.fields || [], "user-process-fields")}
       <div class="user-process-actions">
         <button type="button" class="primary" data-inline-workflow-confirm aria-label="${escapeHtml(translateText(config.confirmLabel || "Do this now"))}">${translateText("Do this now")}</button>
@@ -11720,7 +11815,8 @@ function openWorkflowModal(config) {
 }
 
 function workflowFieldValues() {
-  return Object.fromEntries($$("[data-workflow-field]").map(field => [field.dataset.workflowField, field.value]));
+  const fields = activeWorkflowFieldCandidates();
+  return Object.fromEntries(fields.map(field => [field.dataset.workflowField, field.value]));
 }
 
 function lessonWorkflowConfig(course, moduleIndex) {
@@ -12682,7 +12778,9 @@ function workflowConfig(workflow, action, element) {
         { value: "en", label: "English" },
         { value: "fr", label: "French" },
         { value: "sw", label: "Kiswahili" },
-        { value: "ar", label: "Arabic" }
+        { value: "ar", label: "Arabic" },
+        { value: "es", label: "Spanish" },
+        { value: "pt", label: "Portuguese" }
       ] },
       { name: "accessibilityNeeds", label: "Accessibility needs", value: "Captions, audio narration, large print, caregiver handoff", placeholder: "Captions, audio, screen reader, caregiver, etc." },
       { name: "contactMethod", label: "Best contact method", type: "select", value: "Low-bandwidth callback", options: [
@@ -15002,7 +15100,7 @@ function openFullScaleUserMap(response = "Full map is open. You can zoom, drag, 
   return true;
 }
 
-function openHealthIntakeNow(response = "Telehealth intake is open. Fill the visible intake fields, then press Do this now. This is not a diagnosis.") {
+function openHealthIntakeNow(response = "Telehealth intake is open. Step 1: Who needs care? Say the patient or household name, or type it in the first box. This is not a diagnosis.") {
   const heard = summarizeNexusCommandForRepeat(agentPerformanceState.spokenCommand || agentPerformanceState.lastCommand || "");
   const actionLead = heard ? `I heard: ${heard}. ` : "";
   const config = workflowConfig("health", "intake", { dataset: {} });
@@ -15010,7 +15108,8 @@ function openHealthIntakeNow(response = "Telehealth intake is open. Fill the vis
   recordNexusAutonomousLearning({ type: "workflow-opened", workflow: "health", action: "intake", command: response });
   setActiveAgentJourney("health", "intake", response);
   forceOpenUserProcessScreen("health", config, { response }, "Telehealth intake");
-  updateNexusBehaviorLayer("ready", "Nexus opened the telehealth intake form and is waiting for details.");
+  renderLiveVoiceSuggestions(["patient name is Ron", "I need medicine", "Spanish", "call me on WhatsApp", "yes"]);
+  updateNexusBehaviorLayer("ready", "Nexus opened the guided telehealth intake screen and is waiting for the first answer.");
   setVoiceResponse(`${actionLead}${response}`.trim(), true);
   return true;
 }
@@ -15158,7 +15257,7 @@ function simpleUserDirectVoiceIntent(command = "") {
     return {
       type: "direct",
       directAction: "health-intake",
-      response: "Telehealth intake is open. Fill the visible intake fields, then press Do this now. This is not a diagnosis."
+      response: "Telehealth intake is open. Step 1: Who needs care? Say the patient or household name, or type it in the first box. This is not a diagnosis."
     };
   }
   if (has(["health", "doctor", "clinic", "sick", "pain", "medicine", "care", "telehealth", "nurse"])) {
@@ -15305,6 +15404,10 @@ async function handleVoiceCommand(rawCommand, options = {}) {
   let command = cleanWakeCommand(localizedCommand);
   command = normalizeMultilingualBehaviorCommand(command);
   const spokenCommand = command || cleanWakeCommand(localizedCommand);
+  const visibleInlineWorkflow = $(".user-inline-workflow:not(.hidden)");
+  if (pendingWorkflow && visibleInlineWorkflow && !isUniversalLanguageCommand(command || localizedCommand) && !isGlobalStopCommand(String(command || localizedCommand).toLowerCase())) {
+    if (fillWorkflowFieldByVoice(command || localizedCommand)) return;
+  }
   const introductionResponse = nexusIntroductionResponse(command || localizedCommand);
   if (introductionResponse) {
     openAskNexus();
@@ -15778,7 +15881,6 @@ async function handleVoiceCommand(rawCommand, options = {}) {
     return openWorkflowByVoice("learning", "start", "I can help you learn. I opened Learning and prepared the course start workflow.");
   }
 
-  const visibleInlineWorkflow = $(".user-inline-workflow:not(.hidden)");
   if (pendingWorkflow && visibleInlineWorkflow) {
     if (fillWorkflowFieldByVoice(command)) return;
     if (lower === "read" || lower.includes("read this") || lower.includes("read workflow") || lower.includes("repeat")) {
