@@ -65,6 +65,8 @@ for (const [section, buttons] of Object.entries(expectedSections)) {
   "function openMappedUserWorkflow",
   "pendingWorkflow = config",
   "function renderUserProcessScreen",
+  "open intake",
+  "Telehealth intake is open. I will collect the care request, access needs, language, callback, and safety details. This is not a diagnosis.",
   "function userProcessScreenHtml",
   "return renderUserProcessScreen(sectionId, config, mapped, label)",
   "closeAskNexus({ silent: true })",

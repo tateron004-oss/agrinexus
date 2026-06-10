@@ -6955,7 +6955,7 @@ function workflowVoiceAliases(workflow, action) {
     "cross-platform:live-credential-path": ["prepare live engine credentials", "live credential path", "provider activation path", "connect live engines", "prepare provider credentials"],
     "workforce:apply-role": ["apply for job", "apply for role", "get work", "job please", "i want work", "work help", "need money work", "job apply"],
     "workforce:shift": ["plan shift", "schedule shift", "work time", "job schedule"],
-    "health:intake": ["start intake", "need doctor", "health help", "doctor help", "i sick", "i am sick", "pain help", "clinic help", "medicine help"],
+    "health:intake": ["start intake", "open intake", "begin intake", "create intake", "patient intake", "need doctor", "health help", "doctor help", "i sick", "i am sick", "pain help", "clinic help", "medicine help"],
     "health:provider": ["contact provider", "talk to provider", "telehealth provider", "talk doctor", "speak doctor", "call doctor", "doctor now"],
     "health:clinic-service-menu": ["mobile clinic service menu", "clinic prices", "clinic services", "publish clinic prices"],
     "health:clinic-payment-request": ["mobile clinic payment", "request payment", "charge patient", "bill patient", "clinic billing", "collect payment", "monetize clinic"],
@@ -8865,7 +8865,9 @@ function simpleUserCommandWorkflow(command = "") {
   if (lower.includes("apply for")) return { workflow: "workforce", action: "apply-role", response: "Job application is ready.", dataset: { roleId } };
   if (lower.includes("review my workforce gaps") || lower.includes("skills")) return { workflow: "workforce", action: "mentor", response: "Skills review is ready.", dataset: { roleId } };
   if (lower.includes("schedule my shift") || lower.includes("plan shift")) return { workflow: "workforce", action: "shift", response: "Shift planning is ready.", dataset: { roleId } };
-  if (lower.includes("telehealth intake") || lower.includes("start intake")) return { workflow: "health", action: "intake", response: "Telehealth intake is ready.", dataset: {} };
+  if (lower.includes("telehealth intake") || lower.includes("start intake") || lower.includes("open intake") || lower.includes("begin intake") || lower.includes("create intake") || lower.includes("patient intake")) {
+    return { workflow: "health", action: "intake", response: "Telehealth intake is open. I will collect the care request, access needs, language, callback, and safety details. This is not a diagnosis.", dataset: {} };
+  }
   if (lower.includes("telehealth access") || lower.includes("talk to provider") || lower.includes("speak to provider")) return { workflow: "health", action: "provider", response: "Provider access is ready.", dataset: {} };
   if (lower.includes("open video for provider") || lower.includes("show injury") || lower.includes("video for provider")) return { workflow: "health", action: "video", response: "Provider video is ready.", dataset: {} };
   if (lower.includes("contact the listed telehealth provider") || lower.includes("contact listed telehealth provider") || lower.includes("contact telehealth provider listed")) return { workflow: "health", action: "provider", response: "Listed telehealth provider contact is ready.", dataset: {} };
@@ -15110,6 +15112,15 @@ function simpleUserDirectVoiceIntent(command = "") {
       dataset: { patientLocation: activeCountry().name }
     };
   }
+  if (has(["intake", "admission", "admit", "assessment"]) || /\b(open|start|begin|create|launch)\b.*\b(intake|admission|assessment)\b/.test(lower)) {
+    return {
+      type: "workflow",
+      workflow: "health",
+      action: "intake",
+      response: "Telehealth intake is open. I will collect the care request, access needs, language, callback, and safety details. This is not a diagnosis.",
+      dataset: {}
+    };
+  }
   if (has(["health", "doctor", "clinic", "sick", "pain", "medicine", "care", "telehealth", "nurse"])) {
     return {
       type: "workflow",
@@ -16121,7 +16132,7 @@ async function handleVoiceCommand(rawCommand, options = {}) {
 
   if (lower.includes("intake") || lower.includes("patient intake") || lower.includes("telehealth intake")) {
     goSection("health");
-    return openWorkflowByVoice("health", "intake", "Telehealth intake workflow is ready.");
+    return openWorkflowByVoice("health", "intake", "Telehealth intake is open. I will collect the care request, access needs, language, callback, and safety details. This is not a diagnosis.");
   }
   if (lower.includes("provider") || lower.includes("representative") || lower.includes("connect me") || lower.includes("reach a doctor") || lower.includes("reach a nurse")) {
     goSection("health");
