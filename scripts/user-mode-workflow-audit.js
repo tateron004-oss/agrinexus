@@ -71,6 +71,8 @@ for (const [section, buttons] of Object.entries(expectedSections)) {
   "directAction: \"health-intake\"",
   "function guidedHealthIntakeHtml",
   "function guidedHealthProviderHtml",
+  "const directHealthGuide = isHealthIntakeWorkflow(config) || isHealthProviderWorkflow(config)",
+  "config.userTitle = \"Doctor help\"",
   "function activeWorkflowFieldCandidates",
   "function healthIntakeVoiceFieldMatch",
   "Step 1: Who needs care?",

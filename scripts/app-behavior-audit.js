@@ -495,6 +495,8 @@ assert(app.includes("function guidedHealthIntakeHtml"), "Telehealth intake needs
 assert(app.includes("function guidedHealthProviderHtml"), "Doctor/provider requests need a dedicated guided screen");
 assert(app.includes("function openDoctorHelpNow"), "Doctor/provider voice requests must open a visible screen directly");
 assert(app.includes("directAction: \"doctor-help\""), "Doctor/provider simple voice intent must route as a direct action");
+assert(app.includes("const directHealthGuide = isHealthIntakeWorkflow(config) || isHealthProviderWorkflow(config)"), "Doctor/intake screens must skip the generic Focus and 1-2-3 process block");
+assert(app.includes("config.userTitle = \"Doctor help\""), "Doctor voice command must show a doctor-specific screen title");
 assert(app.includes("Step 1: Who needs care?"), "Guided intake must open with a plain first question");
 assert(app.includes("function activeWorkflowFieldCandidates"), "Voice field filling must target visible inline workflow fields");
 assert(app.includes("function healthIntakeVoiceFieldMatch"), "Health intake needs natural voice field matching");

@@ -8845,6 +8845,7 @@ function userProcessScreenHtml(config = {}, mapped = {}, label = "Selected actio
   const steps = userProcessSteps(config);
   const route = config.routePreview?.route || activeRoute();
   const country = config.healthPreview?.country || activeCountry();
+  const directHealthGuide = isHealthIntakeWorkflow(config) || isHealthProviderWorkflow(config);
   const focus = mode === "health"
     ? `${country.name}: ${country.risk} risk`
     : mode === "trade" || mode === "map"
@@ -8857,7 +8858,7 @@ function userProcessScreenHtml(config = {}, mapped = {}, label = "Selected actio
         <strong>${translateText(title)}</strong>
         <span>${translateText(summary)}</span>
       </div>
-      <div class="user-process-focus">
+      ${directHealthGuide ? "" : `<div class="user-process-focus">
         <strong>${translateText("Focus")}</strong>
         <span>${translateText(focus)}</span>
       </div>
@@ -8867,7 +8868,7 @@ function userProcessScreenHtml(config = {}, mapped = {}, label = "Selected actio
           <strong>${translateText(step.title)}</strong>
           <span>${translateText(step.detail)}</span>
         </div>`).join("")}
-      </div>
+      </div>`}
       ${guidedHealthIntakeHtml(config)}
       ${guidedHealthProviderHtml(config)}
       ${workflowFieldsHtml(config.fields || [], "user-process-fields")}
@@ -15189,6 +15190,9 @@ function openDoctorHelpNow(response = "Doctor help is open. Tell Nexus what kind
   const actionLead = heard ? `I heard: ${heard}. ` : "";
   const config = workflowConfig("health", "provider", { dataset: { careNeed: "I need to speak with a doctor or provider." } });
   if (!config) return openWorkflowByVoice("health", "provider", response);
+  config.userTitle = "Doctor help";
+  config.userSummary = "Tell Nexus what care connection is needed, how the provider should reach you, and what language or access support you need.";
+  config.confirmLabel = "Request doctor help";
   recordNexusAutonomousLearning({ type: "workflow-opened", workflow: "health", action: "provider", command: response });
   setActiveAgentJourney("health", "provider", response);
   forceOpenUserProcessScreen("health", config, { response }, "Doctor help");
