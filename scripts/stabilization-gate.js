@@ -111,7 +111,7 @@ requireMarkers("simple user workflow contract", app, [
   "L.control.layers",
   "startAskNexusAfterLogin",
   "pendingWorkflow = config",
-  "return renderUserProcessScreen(sectionId, config, mapped, label)",
+  "return forceOpenUserProcessScreen(sectionId, config, mapped, label)",
   "closeAskNexus({ silent: true })",
   "row(\"How this works\"",
   "workflowStepHtml",

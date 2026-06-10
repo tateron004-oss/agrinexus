@@ -8739,7 +8739,7 @@ function userProcessScreenHtml(config = {}, mapped = {}, label = "Selected actio
   `;
 }
 
-function renderUserProcessScreen(sectionId, config, mapped = {}, label = "Selected action") {
+function renderUserProcessScreen(sectionId, config, mapped = {}, label = "Selected action", options = {}) {
   if (experienceMode !== "user" || !config) return false;
   const panel = $(`#${sectionId} .user-inline-workflow`);
   if (!panel) return false;
@@ -8748,11 +8748,36 @@ function renderUserProcessScreen(sectionId, config, mapped = {}, label = "Select
   $("#workflowModal")?.classList.add("hidden");
   panel.classList.remove("hidden");
   panel.innerHTML = userProcessScreenHtml(config, mapped, label);
-  updateUserCaptionPanel(mapped.response || "Process is ready. Press Do this now to continue.", { expanded: true });
+  if (options.speak !== false) updateUserCaptionPanel(mapped.response || "Process is ready. Press Do this now to continue.", { expanded: true });
   panel.scrollIntoView({ behavior: "smooth", block: "start" });
   $(`#${sectionId} .user-module-status`) && ($(`#${sectionId} .user-module-status`).textContent = translateText("Process opened. Review it, then press Do this now."));
-  setVoiceResponse(mapped.response || "Process is ready. Review it, then press Do this now.", true);
+  if (options.speak !== false) setVoiceResponse(mapped.response || "Process is ready. Review it, then press Do this now.", true);
   return true;
+}
+
+function forceOpenUserProcessScreen(sectionId, config, mapped = {}, label = "Selected action") {
+  if (experienceMode !== "user" || !config) return false;
+  goSection(sectionId, { instant: true, openDefaultAction: false, keepAssistant: false, scroll: false });
+  renderUserSimpleActiveSection(sectionId);
+  const rendered = renderUserProcessScreen(sectionId, config, mapped, label, { speak: false });
+  const ensureVisible = () => {
+    const activeSection = $(`#${sectionId}`);
+    const panel = activeSection?.querySelector(".user-inline-workflow");
+    const hasFields = !config.fields?.length || Boolean(panel?.querySelector("[data-workflow-field]"));
+    if (!activeSection?.classList.contains("active") || !panel || panel.classList.contains("hidden") || !hasFields) {
+      goSection(sectionId, { instant: true, openDefaultAction: false, keepAssistant: false, scroll: false });
+      renderUserSimpleActiveSection(sectionId);
+      renderUserProcessScreen(sectionId, config, mapped, label, { speak: false });
+    }
+    const visiblePanel = $(`#${sectionId} .user-inline-workflow:not(.hidden)`);
+    visiblePanel?.scrollIntoView({ behavior: "smooth", block: "start" });
+    const firstField = visiblePanel?.querySelector("[data-workflow-field]");
+    firstField?.focus?.({ preventScroll: true });
+  };
+  requestAnimationFrame(ensureVisible);
+  setTimeout(ensureVisible, 120);
+  updateUserCaptionPanel(mapped.response || "Process is open. Fill the visible fields, then press Do this now.", { expanded: true });
+  return rendered;
 }
 
 function openMappedUserWorkflow(mapped, sectionId = currentSectionId()) {
@@ -8776,7 +8801,7 @@ function openMappedUserWorkflow(mapped, sectionId = currentSectionId()) {
   try {
     if (experienceMode === "user") {
       const label = mapped.label || simpleUserSections[sectionId]?.buttons?.find(button => button.command === mapped.command)?.label || config.userTitle || config.title || "Selected action";
-      return renderUserProcessScreen(sectionId, config, mapped, label);
+      return forceOpenUserProcessScreen(sectionId, config, mapped, label);
     }
     openWorkflowModal(config);
   } catch (error) {
@@ -14904,9 +14929,7 @@ function openWorkflowByVoice(workflow, action, response, dataset = {}) {
   }
   const userSection = workflow === "ai" ? "agent" : workflow === "map" ? "map" : workflow;
   if (experienceMode === "user" && simpleUserSections[userSection]) {
-    goSection(userSection, { instant: true, openDefaultAction: false, keepAssistant: false });
-    renderUserSimpleActiveSection(userSection);
-    renderUserProcessScreen(userSection, config, { response }, response || config.userTitle || config.title || "Selected action");
+    forceOpenUserProcessScreen(userSection, config, { response }, response || config.userTitle || config.title || "Selected action");
     updateNexusBehaviorLayer("ready", "Nexus opened the requested workflow and is waiting for the next command.");
     const shortResponse = response || config.userTitle || config.title || "I opened that action.";
     setVoiceResponse(`${actionLead}${shortResponse}`.trim(), true);
@@ -14975,6 +14998,19 @@ function openFullScaleUserMap(response = "Full map is open. You can zoom, drag, 
   }, 120);
   recordVoiceEvent("Opened the full map view from voice.", "done");
   updateNexusBehaviorLayer("ready", "Nexus opened the full map view and is ready for route or facility commands.");
+  setVoiceResponse(`${actionLead}${response}`.trim(), true);
+  return true;
+}
+
+function openHealthIntakeNow(response = "Telehealth intake is open. Fill the visible intake fields, then press Do this now. This is not a diagnosis.") {
+  const heard = summarizeNexusCommandForRepeat(agentPerformanceState.spokenCommand || agentPerformanceState.lastCommand || "");
+  const actionLead = heard ? `I heard: ${heard}. ` : "";
+  const config = workflowConfig("health", "intake", { dataset: {} });
+  if (!config) return openWorkflowByVoice("health", "intake", response);
+  recordNexusAutonomousLearning({ type: "workflow-opened", workflow: "health", action: "intake", command: response });
+  setActiveAgentJourney("health", "intake", response);
+  forceOpenUserProcessScreen("health", config, { response }, "Telehealth intake");
+  updateNexusBehaviorLayer("ready", "Nexus opened the telehealth intake form and is waiting for details.");
   setVoiceResponse(`${actionLead}${response}`.trim(), true);
   return true;
 }
@@ -15120,11 +15156,9 @@ function simpleUserDirectVoiceIntent(command = "") {
   }
   if (has(["intake", "admission", "admit", "assessment"]) || /\b(open|start|begin|create|launch)\b.*\b(intake|admission|assessment)\b/.test(lower)) {
     return {
-      type: "workflow",
-      workflow: "health",
-      action: "intake",
-      response: "Telehealth intake is open. I will collect the care request, access needs, language, callback, and safety details. This is not a diagnosis.",
-      dataset: {}
+      type: "direct",
+      directAction: "health-intake",
+      response: "Telehealth intake is open. Fill the visible intake fields, then press Do this now. This is not a diagnosis."
     };
   }
   if (has(["health", "doctor", "clinic", "sick", "pain", "medicine", "care", "telehealth", "nurse"])) {
@@ -15324,6 +15358,12 @@ async function handleVoiceCommand(rawCommand, options = {}) {
     agentPerformanceState.lastCommand = command;
     return openFullScaleUserMap(earlySimpleIntent.response);
   }
+  if (earlySimpleIntent?.type === "direct" && earlySimpleIntent.directAction === "health-intake") {
+    pendingAgentClarification = null;
+    pendingNexusSpokenCommand = null;
+    agentPerformanceState.lastCommand = command;
+    return openHealthIntakeNow(earlySimpleIntent.response);
+  }
   if (earlySimpleIntent?.type === "workflow") {
     pendingAgentClarification = null;
     pendingNexusSpokenCommand = null;
@@ -15422,6 +15462,11 @@ async function handleVoiceCommand(rawCommand, options = {}) {
     pendingAgentClarification = null;
     pendingNexusSpokenCommand = null;
     return openFullScaleUserMap(simpleIntent.response);
+  }
+  if (simpleIntent?.type === "direct" && simpleIntent.directAction === "health-intake") {
+    pendingAgentClarification = null;
+    pendingNexusSpokenCommand = null;
+    return openHealthIntakeNow(simpleIntent.response);
   }
   if (simpleIntent?.type === "workflow") {
     pendingAgentClarification = null;

@@ -553,7 +553,7 @@ assert(app.includes('lower.includes("help me")'), "Do this/help commands need fu
 assert(app.includes('action: "orchestrate"'), "Do this should open a real AI orchestration workflow");
 assert(app.includes("openDefaultAction: false"), "User tab clicks must open the service page, not auto-launch workflow cards");
 assert(app.includes("function learningCertificateWorkflowConfig"), "User app certificate button needs its own certificate workflow instead of course fallback");
-assert(app.includes("return renderUserProcessScreen(sectionId, config, mapped, label)"), "User app mapped workflows must open process screens");
+assert(app.includes("return forceOpenUserProcessScreen(sectionId, config, mapped, label)"), "User app mapped workflows must force visible process screens");
 assert(app.includes('$("#workflowConfirm").onclick'), "Workflow Confirm button needs a direct click handler");
 assert(app.includes("Nexus is completing this workflow now."), "Workflow Confirm should show immediate progress feedback");
 assert(app.includes("await handleVoiceCommand(button.dataset.simpleCommand)"), "User app conversational buttons must still send commands to Nexus");
