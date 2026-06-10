@@ -176,6 +176,8 @@ hasAll(app, [
   "Full map is open. You can zoom, drag, check route risk, find facilities, or track shipment movement.",
   "open intake",
   "Telehealth intake is open. I will collect the care request, access needs, language, callback, and safety details. This is not a diagnosis.",
+  "function workflowFieldsHtml",
+  "user-process-fields",
   "renderUserProcessScreen(userSection, config",
   "$(\"#workflowConfirm\").onclick",
   "Nexus is completing this workflow now.",

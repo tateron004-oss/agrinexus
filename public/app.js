@@ -8683,6 +8683,21 @@ function userProcessSteps(config = {}) {
   ];
 }
 
+function workflowFieldsHtml(fields = [], className = "workflow-fields") {
+  if (!fields.length) return "";
+  return `<div class="${escapeHtml(className)}">${fields.map(field => {
+    const value = field.value || "";
+    const options = field.options || [];
+    if (field.type === "select") {
+      return `<label class="field-label">${translateText(field.label)}<select data-workflow-field="${field.name}">${options.map(option => `<option value="${option.value}" ${option.value === value ? "selected" : ""}>${translateText(option.label)}</option>`).join("")}</select></label>`;
+    }
+    if (field.type === "textarea") {
+      return `<label class="field-label">${translateText(field.label)}<textarea rows="${field.rows || 3}" data-workflow-field="${field.name}" placeholder="${translateText(field.placeholder || "")}">${translateText(value)}</textarea></label>`;
+    }
+    return `<label class="field-label">${translateText(field.label)}<input type="${field.type === "password" ? "password" : "text"}" data-workflow-field="${field.name}" value="${translateText(value)}" placeholder="${translateText(field.placeholder || "")}"></label>`;
+  }).join("")}</div>`;
+}
+
 function userProcessScreenHtml(config = {}, mapped = {}, label = "Selected action") {
   const mode = workflowMode(config);
   const coach = config.realUseCoach || workflowRealUseCoach(config);
@@ -8714,6 +8729,7 @@ function userProcessScreenHtml(config = {}, mapped = {}, label = "Selected actio
           <span>${translateText(step.detail)}</span>
         </div>`).join("")}
       </div>
+      ${workflowFieldsHtml(config.fields || [], "user-process-fields")}
       <div class="user-process-actions">
         <button type="button" class="primary" data-inline-workflow-confirm aria-label="${escapeHtml(translateText(config.confirmLabel || "Do this now"))}">${translateText("Do this now")}</button>
         <button type="button" data-inline-workflow-cancel>${translateText("Choose another")}</button>
@@ -11655,17 +11671,7 @@ function openWorkflowModal(config) {
   stopWorkflowCamera();
   $("#workflowShipmentMap").innerHTML = `${workflowOperatingScreenHtml(config)}${videoSessionPreviewHtml(config)}`;
   $("#workflowSteps").innerHTML = workflowStepHtml(config.steps || []);
-  $("#workflowFields").innerHTML = (config.fields || []).map(field => {
-    const value = field.value || "";
-    const options = field.options || [];
-    if (field.type === "select") {
-      return `<label class="field-label">${translateText(field.label)}<select data-workflow-field="${field.name}">${options.map(option => `<option value="${option.value}" ${option.value === value ? "selected" : ""}>${translateText(option.label)}</option>`).join("")}</select></label>`;
-    }
-    if (field.type === "textarea") {
-      return `<label class="field-label">${translateText(field.label)}<textarea rows="${field.rows || 3}" data-workflow-field="${field.name}" placeholder="${translateText(field.placeholder || "")}">${translateText(value)}</textarea></label>`;
-    }
-    return `<label class="field-label">${translateText(field.label)}<input type="${field.type === "password" ? "password" : "text"}" data-workflow-field="${field.name}" value="${translateText(value)}" placeholder="${translateText(field.placeholder || "")}"></label>`;
-  }).join("");
+  $("#workflowFields").innerHTML = workflowFieldsHtml(config.fields || [], "workflow-fields");
   $("#workflowChecklist").innerHTML = (config.checklist || []).map(item => taskItem(item.title, item.detail, item.status || "ready", item.label || "Ready")).join("");
   $("#workflowOutcome").innerHTML = workflowOutcomeHtml(config);
   $("#workflowNote").value = config.note || "";
