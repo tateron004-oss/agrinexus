@@ -498,6 +498,9 @@ assert(app.includes("directAction: \"doctor-help\""), "Doctor/provider simple vo
 assert(app.includes("Step 1: Who needs care?"), "Guided intake must open with a plain first question");
 assert(app.includes("function activeWorkflowFieldCandidates"), "Voice field filling must target visible inline workflow fields");
 assert(app.includes("function healthIntakeVoiceFieldMatch"), "Health intake needs natural voice field matching");
+const userSimpleRenderBlock = app.slice(app.indexOf("function renderUserSimpleActiveSection"), app.indexOf("function renderUserInlineWorkflow"));
+assert(userSimpleRenderBlock.indexOf("user-inline-workflow hidden") < userSimpleRenderBlock.indexOf("userModulePreviewHtml(sectionId)"), "User command workflow must render above module preview/provider content");
+assert(app.includes("moduleShell.scrollTo"), "User command workflow must scroll the phone-style module shell to the opened command");
 assert(app.includes("Spanish") && app.includes("Portuguese"), "Guided intake language options must include Spanish and Portuguese");
 assert(app.includes("function voiceWorkflowStatus"), "Advanced voice needs workflow status readout");
 assert(app.includes("function voiceErrorRecovery"), "Advanced voice needs recovery when actions fail");

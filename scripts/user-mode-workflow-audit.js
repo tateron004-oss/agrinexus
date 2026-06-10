@@ -83,6 +83,8 @@ for (const [section, buttons] of Object.entries(expectedSections)) {
   "Telehealth intake is open. Step 1: Who needs care? Say the patient or household name, or type it in the first box. This is not a diagnosis.",
   "function userProcessScreenHtml",
   "return forceOpenUserProcessScreen(sectionId, config, mapped, label)",
+  "panel.closest(\".user-simple-module\")",
+  "moduleShell.scrollTo",
   "closeAskNexus({ silent: true })",
   "row(\"How this works\"",
   "workflowStepHtml",

@@ -8661,6 +8661,7 @@ function renderUserSimpleActiveSection(sectionId = currentSectionId()) {
       <h2>${translateText(config.title)}</h2>
       <p>${translateText(config.prompt || "Tap one button.")}</p>
       ${userLanguageQuickSwitchHtml()}
+      <div class="user-inline-workflow hidden" role="dialog" aria-live="polite"></div>
       ${userModulePreviewHtml(sectionId)}
       ${sectionId === "learning" || sectionId === "workforce" ? `<span class="user-actions-label">${translateText("More actions")}</span>` : ""}
       <div id="grandmaConfirmPanel" class="grandma-confirm-panel hidden" role="status" aria-live="polite"></div>
@@ -8669,7 +8670,6 @@ function renderUserSimpleActiveSection(sectionId = currentSectionId()) {
           <strong>${translateText(action.label)}</strong>
         </button>`).join("")}
       </div>
-      <div class="user-inline-workflow hidden" role="dialog" aria-live="polite"></div>
       <div class="user-module-status" role="status">${translateText("Nexus is ready.")}</div>
     </section>
   `);
@@ -8890,7 +8890,9 @@ function renderUserProcessScreen(sectionId, config, mapped = {}, label = "Select
   panel.classList.remove("hidden");
   panel.innerHTML = userProcessScreenHtml(config, mapped, label);
   if (options.speak !== false) updateUserCaptionPanel(mapped.response || "Process is ready. Press Do this now to continue.", { expanded: true });
-  panel.scrollIntoView({ behavior: "smooth", block: "start" });
+  const moduleShell = panel.closest(".user-simple-module");
+  if (moduleShell) moduleShell.scrollTo({ top: Math.max(0, panel.offsetTop - 12), behavior: "smooth" });
+  panel.scrollIntoView({ behavior: "smooth", block: "nearest" });
   $(`#${sectionId} .user-module-status`) && ($(`#${sectionId} .user-module-status`).textContent = translateText("Process opened. Review it, then press Do this now."));
   if (options.speak !== false) setVoiceResponse(mapped.response || "Process is ready. Review it, then press Do this now.", true);
   return true;
@@ -8911,7 +8913,9 @@ function forceOpenUserProcessScreen(sectionId, config, mapped = {}, label = "Sel
       renderUserProcessScreen(sectionId, config, mapped, label, { speak: false });
     }
     const visiblePanel = $(`#${sectionId} .user-inline-workflow:not(.hidden)`);
-    visiblePanel?.scrollIntoView({ behavior: "smooth", block: "start" });
+    const moduleShell = visiblePanel?.closest(".user-simple-module");
+    if (moduleShell && visiblePanel) moduleShell.scrollTo({ top: Math.max(0, visiblePanel.offsetTop - 12), behavior: "smooth" });
+    visiblePanel?.scrollIntoView({ behavior: "smooth", block: "nearest" });
     const firstField = visiblePanel?.querySelector("[data-workflow-field]");
     firstField?.focus?.({ preventScroll: true });
   };
