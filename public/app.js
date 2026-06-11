@@ -15309,6 +15309,89 @@ function nexusIntroductionResponse(command = "") {
   return `Hello ${spokenName}. How can I help you?`;
 }
 
+function nexusSmartIntentRouter(command = "") {
+  const lower = normalizeToolText(command);
+  if (!lower) return null;
+  if (isUniversalLanguageCommand(command) || isGlobalStopCommand(lower) || isNaturalQuestionOrConversation(command)) return null;
+  const words = new Set(lower.split(/\s+/).filter(Boolean));
+  const hasAny = list => list.some(word => lower.includes(word) || words.has(word));
+  const scoreFor = (strong = [], weak = []) => strong.reduce((score, word) => score + (lower.includes(word) || words.has(word) ? 3 : 0), 0)
+    + weak.reduce((score, word) => score + (lower.includes(word) || words.has(word) ? 1 : 0), 0);
+  const needScore = scoreFor(["need", "want", "help", "please", "connect", "find", "show", "open", "start", "call", "talk", "speak"], ["me", "my", "i"]);
+  const intents = [
+    {
+      key: "doctor",
+      label: "doctor help",
+      score: needScore + scoreFor(["doctor", "provider", "nurse", "clinician", "physician", "medical help", "care provider", "health worker"], ["sick", "pain", "hurt", "injury"]),
+      route: { type: "direct", directAction: "doctor-help", response: "Doctor help is open. Tell Nexus what kind of care connection you need. This is not a diagnosis." }
+    },
+    {
+      key: "pharmacy",
+      label: "pharmacy help",
+      score: needScore + scoreFor(["medicine", "medication", "pharmacy", "refill", "drug", "pills", "prescription"], ["treatment", "remedy"]),
+      route: { type: "workflow", workflow: "health", action: "pharmacy", response: "Pharmacy help is open. I will help find medicine support and keep provider review attached.", dataset: { patientLocation: activeCountry().name } }
+    },
+    {
+      key: "clinic",
+      label: "nearest clinic",
+      score: needScore + scoreFor(["clinic", "hospital", "nearest clinic", "closest clinic", "health center"], ["near", "closest", "nearby", "location", "map", "around"]),
+      route: { type: "workflow", workflow: "health", action: "nearest-clinic", response: "Clinic search is open. I will help find the closest clinic option and show it on the map.", dataset: { patientLocation: activeCountry().name } }
+    },
+    {
+      key: "intake",
+      label: "intake",
+      score: needScore + scoreFor(["intake", "assessment", "admission", "health help", "telehealth intake"], ["care", "symptom", "symptoms", "not well"]),
+      route: { type: "direct", directAction: "health-intake", response: "Telehealth intake is open. Step 1: Who needs care? Say the patient or household name, or type it in the first box. This is not a diagnosis." }
+    },
+    {
+      key: "learning",
+      label: "learning",
+      score: needScore + scoreFor(["learn", "course", "lesson", "training", "school", "class", "certificate"], ["study", "teach"]),
+      route: { type: "workflow", workflow: "learning", action: "start", response: "Learning is open. I will help start the course.", dataset: {} }
+    },
+    {
+      key: "work",
+      label: "work",
+      score: needScore + scoreFor(["job", "work", "role", "apply", "employment", "shift"], ["hire", "earn", "worker"]),
+      route: { type: "workflow", workflow: "workforce", action: hasAny(["apply", "role", "job"]) ? "apply-role" : "build-profile", response: "Work is open. I will help with the next job step.", dataset: { roleId: firstEligibleRole()?.id } }
+    },
+    {
+      key: "sell-crop",
+      label: "sell crops",
+      score: needScore + scoreFor(["sell", "buyer", "market", "trade", "customer"], ["crop", "crops", "maize", "corn", "rice", "cassava", "yam", "beans", "produce", "harvest", "farm", "product"]),
+      route: { type: "workflow", workflow: "trade", action: "buyer-contact", response: "Trade is open. I will help find or contact the buyer.", dataset: { productId: firstProduct()?.id } }
+    },
+    {
+      key: "track",
+      label: "tracking map",
+      score: needScore + scoreFor(["track", "tracking", "route", "shipment", "delivery", "where is", "location", "transaction"], ["crop", "product", "order", "sale"]),
+      route: { type: "direct", directAction: "full-map", response: "Full global map is open with shipment tracking. You can zoom, drag, check the route, and follow crop or delivery movement." }
+    },
+    {
+      key: "map",
+      label: "map",
+      score: needScore + scoreFor(["map", "route", "location", "where", "show map", "global map"], ["area", "place"]),
+      route: { type: "direct", directAction: "full-map", response: "Full map is open. You can zoom, drag, check route risk, find facilities, or track shipment movement." }
+    }
+  ]
+    .map(intent => ({ ...intent, score: Number(intent.score || 0) }))
+    .filter(intent => intent.score >= 4)
+    .sort((a, b) => b.score - a.score);
+  if (!intents.length) return null;
+  const [top, second] = intents;
+  if (second && top.score - second.score < 2 && top.score < 8) {
+    const options = intents.slice(0, 3).map(intent => ({ label: intent.label, command: intent.route.directAction === "doctor-help" ? "I need a doctor" : intent.route.workflow === "health" && intent.route.action === "pharmacy" ? "I need medicine" : intent.route.workflow === "health" && intent.route.action === "nearest-clinic" ? "find a clinic near me" : intent.route.workflow === "learning" ? "start a course" : intent.route.workflow === "workforce" ? "find work" : intent.route.workflow === "trade" ? "sell my crop" : "open map", section: intent.route.directAction === "doctor-help" ? "health" : intent.route.workflow || "map", detail: intent.label }));
+    return {
+      type: "clarify",
+      response: `I heard a few possible needs. Do you mean ${options.map(option => option.label).join(", ")}?`,
+      suggestions: options.map(option => option.command),
+      clarification: { original: command, options }
+    };
+  }
+  recordNexusAutonomousLearning({ type: "smart-intent", command, intent: top.key, score: top.score });
+  return top.route;
+}
+
 function simpleUserDirectVoiceIntent(command = "") {
   const lower = normalizeToolText(command);
   if (!lower) return null;
@@ -15323,6 +15406,8 @@ function simpleUserDirectVoiceIntent(command = "") {
       suggestions: ["health", "work", "learning", "crops", "map"]
     };
   }
+  const smartIntent = nexusSmartIntentRouter(command);
+  if (smartIntent) return smartIntent;
   if (has(["medicine", "medication", "pharmacy", "refill", "drug", "prescription", "remedy", "pills"])) {
     return {
       type: "workflow",
@@ -15551,7 +15636,7 @@ async function handleVoiceCommand(rawCommand, options = {}) {
   agentPerformanceState.spokenCommand = spokenCommand || command;
   const earlySimpleIntent = experienceMode === "user" ? simpleUserDirectVoiceIntent(spokenCommand || command) : null;
   if (earlySimpleIntent?.type === "clarify") {
-    pendingAgentClarification = null;
+    pendingAgentClarification = earlySimpleIntent.clarification || null;
     pendingNexusSpokenCommand = null;
     renderLiveVoiceSuggestions(earlySimpleIntent.suggestions || ["health", "work", "learning", "crops", "map"]);
     updateNexusBehaviorLayer("listening", "Nexus asked one short clarifying question instead of guessing.");
@@ -15663,7 +15748,7 @@ async function handleVoiceCommand(rawCommand, options = {}) {
   updateNexusBehaviorLayer("thinking", command ? `Nexus is deciding how to help with: ${command}` : "Nexus is listening.");
   const simpleIntent = experienceMode === "user" ? simpleUserDirectVoiceIntent(command) : null;
   if (simpleIntent?.type === "clarify") {
-    pendingAgentClarification = null;
+    pendingAgentClarification = simpleIntent.clarification || null;
     pendingNexusSpokenCommand = null;
     renderLiveVoiceSuggestions(simpleIntent.suggestions || ["health", "work", "learning", "crops", "map"]);
     updateNexusBehaviorLayer("listening", "Nexus asked one short clarifying question instead of guessing.");

@@ -63,6 +63,8 @@ for (const [section, buttons] of Object.entries(expectedSections)) {
 
 [
   "function openMappedUserWorkflow",
+  "function nexusSmartIntentRouter",
+  "recordNexusAutonomousLearning({ type: \"smart-intent\"",
   "pendingWorkflow = config",
   "function renderUserProcessScreen",
   "function workflowFieldsHtml",

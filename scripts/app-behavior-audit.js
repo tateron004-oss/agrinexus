@@ -466,6 +466,10 @@ assert(app.includes("what commands work in all modes"), "Voice help should expos
 assert(app.includes("User, Admin, or Investor mode"), "Voice help response must say Nexus works in all three modes");
 assert(app.includes("function migrantFriendlyVoiceIntent"), "Voice layer needs migrant-friendly imperfect English intent routing");
 assert(app.includes("function simpleUserDirectVoiceIntent"), "User voice mode needs short direct routing before advisor/demo explanations");
+assert(app.includes("function nexusSmartIntentRouter"), "Nexus needs a scored smart intent router before legacy voice routing");
+assert(app.includes("recordNexusAutonomousLearning({ type: \"smart-intent\""), "Smart intent routing must record learning evidence");
+assert(app.includes("pendingAgentClarification = earlySimpleIntent.clarification || null"), "Early smart clarification must preserve choices for the next user answer");
+assert(app.includes("pendingAgentClarification = simpleIntent.clarification || null"), "Smart clarification must preserve choices after command cleanup");
 assert(app.includes("spokenCommand"), "Voice readback must preserve the user's original spoken phrase before internal routing rewrites");
 assert(app.includes("Is this for health, work, learning, crops, or the map?"), "Vague User help requests should ask one short clarifying question instead of guessing");
 assert(app.includes("Health is open. I will guide you one step at a time."), "User health voice command should open Health with a short response");
