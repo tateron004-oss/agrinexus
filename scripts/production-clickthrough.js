@@ -276,7 +276,11 @@ assert(server.includes("function isOpenDialogConversation"), "Backend needs an o
 assert(app.includes("function isOpenDialogVoiceQuestion"), "Voice UI must route natural dialog before fixed workflow cards");
 assert(server.includes("You are not limited to a menu"), "Open dialog must let Nexus answer freely while staying inside safety rails");
 assert(server.includes("function ruralCommunicationSupportModel"), "Backend must shape open dialog for rural farmers and low-tech users");
+assert(server.includes("function frontierCommunicationIntelligenceModel"), "Backend must include frontier communication intelligence for farmer-proof and grandma-proof dialog");
+assert(server.includes("confidence") && server.includes("urgency") && server.includes("accessibilitySupport"), "Frontier communication must score confidence, urgency, and accessibility support");
+assert(server.includes("Do not punish imperfect grammar or mixed language."), "Frontier communication must support imperfect speech and mixed-language rural users");
 assert(app.includes("function ruralCommunicationResponseTuning"), "Frontend voice responses must be simplified for farmer and grandma mode");
+assert(app.includes("result.metadata?.frontierCommunication?.nextQuestion"), "Frontend must surface the frontier next-best question in voice suggestions");
 assert(app.includes("crop bad") && app.includes("child sick") && app.includes("need medicine"), "Voice layer must understand short rural problem statements");
 assert(server.includes("function aiReasoningSnapshot"), "Backend needs a memory-backed AI reasoning snapshot");
 assert(server.includes("reasoningHistory") && app.includes("optionsConsidered"), "Agent reasoning must preserve decision history and options considered");

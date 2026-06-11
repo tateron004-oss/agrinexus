@@ -68,6 +68,8 @@ for (const [section, buttons] of Object.entries(expectedSections)) {
   "function nexusHumanResponsePolicy",
   "function ruralCommunicationResponseTuning",
   "health, crops, work, learning, map, or medicine",
+  "result.metadata?.frontierCommunication?.nextQuestion",
+  "Nexus is ready for one answer",
   "const responseMessage = nexusHumanResponsePolicy(rawResponseMessage",
   "function handleNexusSelfCorrection",
   "recordNexusAutonomousLearning({ type: \"self-correction\"",

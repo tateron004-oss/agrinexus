@@ -16924,6 +16924,17 @@ async function runBackendAgentCommand(command, locationContext = null) {
       refreshVoiceForLanguageChange();
     }
     renderLiveVoiceSuggestions(localizedVoiceSuggestionItems(result, contextualVoiceSuggestions(result.metadata?.redirectSection || currentSectionId())));
+    if (result.metadata?.frontierCommunication?.nextQuestion) {
+      const nextQuestion = result.metadata.frontierCommunication.nextQuestion;
+      const frontierSuggestions = [
+        { command: nextQuestion, label: nextQuestion },
+        { command: "say that again slowly", label: "Repeat slowly" },
+        { command: "explain simply", label: "Explain simply" },
+        { command: "Nexus stop", label: "Stop" }
+      ];
+      renderLiveVoiceSuggestions([...frontierSuggestions, ...localizedVoiceSuggestionItems(result, [])]);
+      updateNexusBehaviorLayer("listening", `Nexus is ready for one answer: ${nextQuestion}`);
+    }
     if (result.metadata?.voiceMission?.phrase && $("#globalAssistantStatus")) {
       $("#globalAssistantStatus").textContent = result.metadata.voiceMission.phrase;
     }

@@ -471,6 +471,8 @@ assert(app.includes("recordNexusAutonomousLearning({ type: \"smart-intent\""), "
 assert(app.includes("function nexusHumanResponsePolicy"), "Nexus spoken responses must pass through a human response governor");
 assert(app.includes("function ruralCommunicationResponseTuning"), "Nexus needs a rural communication tuning layer for farmers, elders, and low-tech users");
 assert(app.includes("health, crops, work, learning, map, or medicine"), "Misheard rural speech must recover with simple choices");
+assert(app.includes("result.metadata?.frontierCommunication?.nextQuestion"), "Voice UI must focus suggestions around the frontier next-best question");
+assert(app.includes("Nexus is ready for one answer"), "Voice UI must guide one answer at a time after frontier communication");
 assert(app.includes("const responseMessage = nexusHumanResponsePolicy(rawResponseMessage"), "Voice responses must be shortened and de-roboticized before display, translation, and speech");
 assert(app.includes("function handleNexusSelfCorrection"), "Nexus needs a self-correction handler for wrong or misunderstood commands");
 assert(app.includes("recordNexusAutonomousLearning({ type: \"self-correction\""), "Nexus self-correction must record learning evidence");
@@ -492,6 +494,10 @@ assert(server.includes("function isCurrentKnowledgeQuestion"), "Backend must det
 assert(server.includes("function isOpenDialogConversation"), "Backend must detect open-dialog conversation beyond hard-coded command phrases");
 assert(server.includes("function ruralCommunicationSupportModel"), "Backend must shape conversation for rural farmers, patients, learners, workers, and elders");
 assert(server.includes("Ask one question at a time."), "Rural communication model must enforce one-question-at-a-time guidance");
+assert(server.includes("function frontierCommunicationIntelligenceModel"), "Backend needs a frontier communication model for urgency, confidence, language, accessibility, and next-best question");
+assert(server.includes("Frontier communication decision"), "Conversation brain must use the frontier communication decision when speaking");
+assert(server.includes("Do not punish imperfect grammar or mixed language."), "Frontier communication must protect imperfect speech and mixed-language users");
+assert(server.includes("frontierCommunication"), "Agent command results must preserve frontier communication metadata for testing and audit");
 assert(server.includes("You are not limited to a menu"), "Backend open-dialog prompt must instruct Nexus to answer beyond fixed menus");
 assert(server.includes("!openDialog && isActionRequest"), "Open dialog should not automatically stage yes/no workflows unless the command is clear");
 assert(server.includes("function isConversationalHealthProviderQuestion"), "Backend must detect conversational health-provider questions");

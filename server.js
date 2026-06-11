@@ -10412,6 +10412,90 @@ function ruralCommunicationSupportModel(command = "", moduleSignal = null, user 
   };
 }
 
+function frontierCommunicationIntelligenceModel(command = "", moduleSignal = null, user = {}, options = {}) {
+  const value = String(command || "").toLowerCase().replace(/\s+/g, " ").trim();
+  const words = value.split(/\s+/).filter(Boolean);
+  const ruralSupport = ruralCommunicationSupportModel(command, moduleSignal, user);
+  const urgencySignals = [
+    /\b(emergency|urgent|danger|bleeding|cannot breathe|trouble breathing|chest pain|unconscious|seizure|poison|baby sick|child sick|very hot|dehydrated)\b/.test(value),
+    /\b(crop dying|crop bad|plant sick|pest|disease|all crop|harvest failing|buyer waiting|shipment stuck)\b/.test(value),
+    /\b(no money|no food|no medicine|no clinic|no doctor|stranded|lost|unsafe route)\b/.test(value)
+  ].filter(Boolean).length;
+  const uncertaintySignals = [
+    /\b(maybe|not sure|dont know|don't know|i no understand|no understand|confused|what do i do|help me|can you help|i think|maybe)\b/.test(value),
+    words.length <= 5,
+    /\b(thing|stuff|problem|bad|sick|help)\b/.test(value) && !/\b(where|what|who|when|how)\b/.test(value)
+  ].filter(Boolean).length;
+  const accessSignals = [
+    /\b(blind|cant see|can't see|visual|deaf|cant hear|can't hear|hearing|read aloud|caption|slow|speak slowly|grandma|elder|old|low tech|no phone|shared phone)\b/.test(value),
+    /\b(no internet|bad internet|low signal|offline|battery|small phone|rural)\b/.test(value)
+  ].filter(Boolean).length;
+  const languageSignals = [
+    /\b(translate|language|french|swahili|kiswahili|arabic|spanish|portuguese|english|hausa|yoruba|igbo|amharic|oromo|kinyarwanda|lingala)\b/.test(value),
+    Boolean(options.targetLanguage && options.targetLanguage !== "en")
+  ].filter(Boolean).length;
+  const locationNeeded = /\b(near me|nearest|closest|where|clinic|pharmacy|route|map|market|buyer|seller|job|kenya|south africa|nigeria|ghana|rwanda|tanzania|egypt|drc|congo|village|farm)\b/.test(value);
+  const outcomeNeeded = /\b(apply|sell|buy|call|contact|find|choose|decide|learn|start|track|deliver|medicine|doctor|clinic|course|job)\b/.test(value);
+  const confidence = Math.max(0.36, Math.min(0.96,
+    0.52
+    + (moduleSignal?.score ? Math.min(0.18, moduleSignal.score * 0.06) : 0)
+    + (outcomeNeeded ? 0.1 : 0)
+    + (locationNeeded ? 0.06 : 0)
+    - (uncertaintySignals * 0.08)
+  ));
+  const urgency = urgencySignals >= 2 ? "high" : urgencySignals === 1 ? "medium" : "normal";
+  const communicationMode = accessSignals ? "accessibility-first" : languageSignals ? "multilingual-plain-language" : uncertaintySignals ? "clarify-before-action" : "plain-action-guide";
+  const answerShape = urgency === "high"
+    ? "safety-first"
+    : confidence < 0.58
+      ? "one-question-clarifier"
+      : outcomeNeeded
+        ? "answer-then-next-step"
+        : "short-teachback";
+  const nextQuestions = {
+    Healthcare: urgency === "high" ? "Is the person safe right now, and where are they?" : "Where are you, and do you want clinic, medicine, or phone/video health help?",
+    Learning: "What do you want to learn today, and should I explain it slowly or with captions?",
+    Workforce: "What country do you want to work in, and what work or school experience do you have?",
+    AgriTrade: "What crop is it, where is the farm, and are you trying to save it, sell it, or move it?",
+    Maps: "Where are you starting from, and where do you need to go?",
+    Platform: "Tell me the area: health, crops, work, learning, map, or market."
+  };
+  const nextQuestion = nextQuestions[ruralSupport.module] || nextQuestions.Platform;
+  const safeguards = [
+    ruralSupport.module === "Healthcare" ? "No diagnosis; guide access, danger signs, consent, clinic, pharmacy, or emergency help." : null,
+    ruralSupport.module === "Workforce" ? "No job promise; explain pathways and prepare application evidence." : null,
+    ruralSupport.module === "AgriTrade" ? "No crop disease certainty without photo/data; ask for crop, location, symptoms, buyer or route context." : null,
+    "If confidence is low, ask one question before action.",
+    "Keep the response short enough for voice."
+  ].filter(Boolean);
+  return {
+    version: "frontier-rural-communication-v1",
+    module: ruralSupport.module,
+    audience: ruralSupport.audience,
+    likelyNeed: ruralSupport.likelyNeed,
+    confidence: Number(confidence.toFixed(2)),
+    urgency,
+    communicationMode,
+    answerShape,
+    nextQuestion,
+    locationNeeded,
+    outcomeNeeded,
+    languageSupport: languageSignals ? "translate-or-adapt-language" : "use-current-language",
+    accessibilitySupport: accessSignals ? "offer-audio-captions-slower-speech" : "standard",
+    teachBack: `I hear that you may need ${ruralSupport.likelyNeed}.`,
+    rules: [
+      "Start by reflecting the user's need in simple words.",
+      "Use at most three short sentences before asking for the next detail.",
+      "Ask one question at a time.",
+      "Prefer local examples: farm, clinic, medicine, job, market, route, lesson.",
+      "Do not punish imperfect grammar or mixed language.",
+      "If the user sounds stuck, guide instead of listing menus.",
+      "If there is risk, explain danger signs and route to human help."
+    ],
+    safeguards
+  };
+}
+
 function updateConversationUserModel(profile, command) {
   ensureAiProfile(profile);
   const text = String(command || "").trim();
@@ -10457,6 +10541,7 @@ function localConversationalAnswer(db, user, command, moduleSignal, memories, op
   const modeContext = options.modeContext || {};
   const platformMode = options.mode || modeContext.mode || "user";
   const ruralSupport = ruralCommunicationSupportModel(command, moduleSignal, user);
+  const frontierCommunication = frontierCommunicationIntelligenceModel(command, moduleSignal, user, options);
   const memoryPreview = memories
     .slice(0, 2)
     .map(item => String(item.text || item.response || item.command || "").replace(/\s+/g, " ").trim())
@@ -10485,10 +10570,9 @@ function localConversationalAnswer(db, user, command, moduleSignal, memories, op
   db.profile.agentMemory.lastRecommendedAction = next || null;
   if (platformMode === "user" && (options.openDialog || isOpenDialogConversation(command, options))) {
     return [
-      `I understand, ${ruralSupport.userName}. This sounds like ${ruralSupport.likelyNeed}.`,
-      ruralSupport.plainGoal,
-      ruralSupport.safetyRule,
-      ruralSupport.nextQuestion
+      `${frontierCommunication.teachBack}`,
+      frontierCommunication.urgency === "high" ? frontierCommunication.safeguards[0] || ruralSupport.safetyRule : ruralSupport.plainGoal,
+      frontierCommunication.nextQuestion
     ].join(" ");
   }
   return [
@@ -10509,6 +10593,7 @@ async function conversationalReasoningResponse(db, user, command, options = {}) 
   const reasoningLanguageProduction = reasoningLanguageProductionEngine(db, user, command, { moduleSignal, memories, reasoning, targetLanguage: options.targetLanguage });
   const openDialog = isOpenDialogConversation(command, options);
   const ruralSupport = ruralCommunicationSupportModel(command, moduleSignal, user);
+  const frontierCommunication = frontierCommunicationIntelligenceModel(command, moduleSignal, user, options);
   const { country, route } = activeContext(db);
   const modeContext = options.modeContext || {};
   const platformMode = options.mode || modeContext.mode || "user";
@@ -10553,12 +10638,16 @@ async function conversationalReasoningResponse(db, user, command, options = {}) 
                 `Use this next-question style when useful: ${ruralSupport.nextQuestion}`,
                 `Safety boundary: ${ruralSupport.safetyRule}`,
                 `Communication rules: ${ruralSupport.styleRules.join(" ")}`,
+                `Frontier communication decision: confidence ${frontierCommunication.confidence}, urgency ${frontierCommunication.urgency}, mode ${frontierCommunication.communicationMode}, answer shape ${frontierCommunication.answerShape}.`,
+                `Frontier next question: ${frontierCommunication.nextQuestion}`,
+                `Frontier rules: ${frontierCommunication.rules.join(" ")}`,
+                `Frontier safeguards: ${frontierCommunication.safeguards.join(" ")}`,
                 "Carry the conversation across turns. If the user asks a follow-up like tell me more, why, or what next, use the recent conversation context instead of starting over.",
                 "If an action may affect records, health, jobs, payment, providers, or messages, recommend confirmation instead of pretending it is already done.",
                 "End with one clear next step the user can say, but do not force a yes/no workflow unless the user clearly asked you to execute."
               ].join(" ")
             },
-            { role: "user", content: JSON.stringify({ command, moduleSignal, country, route, checkpoint: db.profile.activeCheckpoint, profileSummary, memories, reasoning, ruralSupport, platformMode, modeContext }) }
+            { role: "user", content: JSON.stringify({ command, moduleSignal, country, route, checkpoint: db.profile.activeCheckpoint, profileSummary, memories, reasoning, ruralSupport, frontierCommunication, platformMode, modeContext }) }
           ],
           max_output_tokens: 360
         })
@@ -10594,7 +10683,7 @@ async function conversationalReasoningResponse(db, user, command, options = {}) 
     module: "AI",
     action: "agent.conversation_brain_answered",
     detail: `Conversation brain answered in ${moduleSignal.module}.`,
-    metadata: { provider, command, module: moduleSignal.module, memoriesUsed: memories.map(item => item.id).filter(Boolean), reasoning, reasoningLanguageProduction, ruralSupport },
+    metadata: { provider, command, module: moduleSignal.module, memoriesUsed: memories.map(item => item.id).filter(Boolean), reasoning, reasoningLanguageProduction, ruralSupport, frontierCommunication },
     dispatch: false
   });
   const shouldStage = options.conversational && !openDialog && isActionRequest(lower) && moduleSignal.section !== "dashboard";
@@ -10614,7 +10703,7 @@ async function conversationalReasoningResponse(db, user, command, options = {}) 
       return {
         ...staged,
         response: `${responseText} I can also stage ${plan.action.toLowerCase()} now. Say "yes" to run it, or "no" to cancel.`,
-        metadata: { ...staged.metadata, provider, conversationBrain: true, moduleSignal, reasoning, reasoningLanguageProduction, ruralSupport }
+        metadata: { ...staged.metadata, provider, conversationBrain: true, moduleSignal, reasoning, reasoningLanguageProduction, ruralSupport, frontierCommunication }
       };
     }
   }
@@ -10622,7 +10711,7 @@ async function conversationalReasoningResponse(db, user, command, options = {}) 
     intent: "conversation.open_reasoning",
     response: responseText,
     status: "completed",
-    metadata: { conversationMode: true, openDialog, platformMode, modeContext, redirectSection: moduleSignal.section, provider, moduleSignal, memoriesUsed: memories.map(item => item.id).filter(Boolean), reasoning, reasoningLanguageProduction, ruralSupport }
+    metadata: { conversationMode: true, openDialog, platformMode, modeContext, redirectSection: moduleSignal.section, provider, moduleSignal, memoriesUsed: memories.map(item => item.id).filter(Boolean), reasoning, reasoningLanguageProduction, ruralSupport, frontierCommunication }
   };
 }
 
