@@ -6621,6 +6621,39 @@ function composeJarvisResponse(message, options = {}) {
   return `${message} ${jarvisHandoffLine(options.handoffText)}`;
 }
 
+function nexusHumanResponsePolicy(message = "", options = {}) {
+  const text = String(message || "").replace(/\s+/g, " ").trim();
+  if (!text) return "";
+  if (options.allowLongResponse || options.longForm || options.source === "briefing") return text;
+  const speaking = Boolean(options.speak || options.forceHandoff || voiceFirstMode);
+  const simpleMode = experienceMode === "user" || speaking;
+  let human = text
+    .replace(/\bworkflow is ready\b/gi, "is open")
+    .replace(/\bprepared the\b/gi, "opened the")
+    .replace(/\bprepared a\b/gi, "opened a")
+    .replace(/\bI heard:\s*/gi, "I heard ")
+    .replace(/\s*You can keep talking, or say:[^.]+\.?/gi, "")
+    .replace(/\s*Top actions:[\s\S]+$/i, "")
+    .replace(/\s*Say yes to create[^.]+\.?/gi, "")
+    .replace(/\s*Should I do that now\??/gi, "")
+    .replace(/\s*Would you like me to do that now\??/gi, "");
+  if (simpleMode) {
+    const legal = /\b(not a diagnosis|emergency|danger|provider|consent|payment|billing|privacy)\b/i.test(human);
+    const sentences = human.match(/[^.!?]+[.!?]+|[^.!?]+$/g) || [human];
+    const limit = legal ? 3 : 2;
+    human = sentences.slice(0, limit).join(" ").trim();
+    const max = legal ? 360 : 230;
+    if (human.length > max) {
+      const clipped = human.slice(0, max).replace(/\s+\S*$/, "").trim();
+      human = `${clipped}.`;
+    }
+  }
+  if (/\b(opened|started|changed|found|created|connected|tracked)\b/i.test(human) && !/[.!?]$/.test(human)) {
+    human += ".";
+  }
+  return human.replace(/\s+/g, " ").trim();
+}
+
 function agenticJarvisModePlan(mode = experienceMode) {
   const normalized = normalizeExperienceMode(mode);
   const guide = intuitiveConversationGuide(currentSectionId());
@@ -14251,7 +14284,8 @@ function setVoiceResponse(message, speak = false, options = {}) {
   }
   const token = ++voiceTranslationToken;
   const interruptToken = voiceInterruptToken;
-  const responseMessage = speak || options.forceHandoff ? composeJarvisResponse(message, options) : message;
+  const rawResponseMessage = speak || options.forceHandoff ? composeJarvisResponse(message, options) : message;
+  const responseMessage = nexusHumanResponsePolicy(rawResponseMessage, { ...options, speak });
   updateNexusBehaviorLayer(speak ? "speaking" : "ready", responseMessage);
   lastVoiceResponse = responseMessage;
   rememberConversationTurn(agentPerformanceState.lastCommand || conversationModeState.lastQuestion || "", responseMessage);
@@ -14764,6 +14798,43 @@ function isNexusCommandRejection(lower) {
     || /^(hapana|simama|ghairi|si hivyo|chagua nyingine)$/i.test(value)
     || /^(?:\u0644\u0627|\u0627\u0644\u063a\u0627\u0621|\u0627\u0644\u063a|\u062a\u0648\u0642\u0641|\u0644\u064a\u0633 \u0647\u0630\u0627)$/i.test(value)
     || /\b(cancel that|wrong command|not what i said|do not do that|don't do that|forget it|choose another|otra opcion|pas ca|si hivyo)\b/i.test(value);
+}
+
+function handleNexusSelfCorrection(command = "") {
+  const lower = normalizeToolText(command);
+  if (!lower) return false;
+  const correction = /\b(wrong|not that|not what i said|you heard me wrong|you misunderstood|misheard|that is wrong|that's wrong|go back|clear that|try again|start over|i said it wrong|repeat after me)\b/.test(lower)
+    || /\b(no eso|incorrecto|entendiste mal|otra vez|volver|corrige)\b/.test(lower)
+    || /\b(pas ca|tu as mal compris|reprends|corrige)\b/.test(lower)
+    || /\b(si hivyo|umesikia vibaya|rudia|sahihisha)\b/.test(lower);
+  if (!correction) return false;
+  pendingNexusSpokenCommand = null;
+  pendingAgentClarification = null;
+  pendingWorkflow = null;
+  pendingGrandmaAction = null;
+  activeVoiceMission = null;
+  activeAgentJourney = null;
+  $$(".user-inline-workflow:not(.hidden)").forEach(panel => panel.classList.add("hidden"));
+  if (!$("#workflowModal")?.classList.contains("hidden")) closeWorkflowModal();
+  stopVoicePlayback({ hard: true });
+  clearAgentProgressTimers();
+  nexusAwaitingCommand = true;
+  voiceStopRequested = false;
+  voiceAutoRestart = voiceFirstMode;
+  const heard = summarizeNexusCommandForRepeat(command);
+  recordNexusAutonomousLearning({ type: "self-correction", command: heard });
+  try {
+    const key = "agrinexusBehaviorRecovery";
+    const entries = JSON.parse(localStorage.getItem(key) || "[]");
+    entries.unshift({ at: new Date().toISOString(), command: heard, mode: experienceMode, language: languageCode() });
+    localStorage.setItem(key, JSON.stringify(entries.slice(0, 40)));
+  } catch (error) {
+    console.warn("Could not save behavior recovery", error);
+  }
+  updateNexusBehaviorLayer("listening", "Nexus cleared the last action and is ready to hear it again.");
+  renderLiveVoiceSuggestions(["say it again", "open health", "sell my crop", "Nexus stop"]);
+  setVoiceResponse("Got it. I cleared that. Say it again in your own words, and I will repeat what I heard before acting.", true, { allowHandoff: false });
+  return true;
 }
 
 function shouldStageNexusSpokenCommand(command, lower, options = {}) {
@@ -15616,6 +15687,7 @@ async function handleVoiceCommand(rawCommand, options = {}) {
     answerNexusHearingCheck();
     return;
   }
+  if (handleNexusSelfCorrection(command || localizedCommand)) return;
   const commonPhrase = nexusCommonPhraseResponse(command || localizedCommand);
   if (commonPhrase) {
     setVoiceResponse(commonPhrase, true);

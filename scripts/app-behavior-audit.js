@@ -468,6 +468,11 @@ assert(app.includes("function migrantFriendlyVoiceIntent"), "Voice layer needs m
 assert(app.includes("function simpleUserDirectVoiceIntent"), "User voice mode needs short direct routing before advisor/demo explanations");
 assert(app.includes("function nexusSmartIntentRouter"), "Nexus needs a scored smart intent router before legacy voice routing");
 assert(app.includes("recordNexusAutonomousLearning({ type: \"smart-intent\""), "Smart intent routing must record learning evidence");
+assert(app.includes("function nexusHumanResponsePolicy"), "Nexus spoken responses must pass through a human response governor");
+assert(app.includes("const responseMessage = nexusHumanResponsePolicy(rawResponseMessage"), "Voice responses must be shortened and de-roboticized before display, translation, and speech");
+assert(app.includes("function handleNexusSelfCorrection"), "Nexus needs a self-correction handler for wrong or misunderstood commands");
+assert(app.includes("recordNexusAutonomousLearning({ type: \"self-correction\""), "Nexus self-correction must record learning evidence");
+assert(app.includes("agrinexusBehaviorRecovery"), "Nexus behavior recovery events must be retained locally for future improvement");
 assert(app.includes("pendingAgentClarification = earlySimpleIntent.clarification || null"), "Early smart clarification must preserve choices for the next user answer");
 assert(app.includes("pendingAgentClarification = simpleIntent.clarification || null"), "Smart clarification must preserve choices after command cleanup");
 assert(app.includes("spokenCommand"), "Voice readback must preserve the user's original spoken phrase before internal routing rewrites");
