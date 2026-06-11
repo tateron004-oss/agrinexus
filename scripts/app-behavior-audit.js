@@ -481,8 +481,14 @@ assert(app.includes("await handleNexusRealtimeAdjustment(command || localizedCom
 assert(app.includes("function isOpenKnowledgeQuestion"), "Nexus needs an open knowledge-question detector for natural Q&A before workflow routing");
 assert(app.includes("healthAdvisorQuestion") && app.includes("careerAdvisorQuestion"), "Open knowledge detection must recognize health-provider and career-path questions before workflow routing");
 assert(app.includes("biochemistry") && app.includes("doctor|provider|clinician"), "Open knowledge detection must include real user phrases for doctors, graduates, and jobs");
+assert(app.includes("function isOpenDialogVoiceQuestion"), "Nexus needs an open-dialog voice detector so unknown human questions do not require hard-coded phrases");
+assert(app.includes("Nexus is treating this as open dialog, not a fixed menu command."), "Open dialog must route before fixed User-mode workflow cards");
+assert(app.includes("Nexus cleared the old choice and is answering the new question."), "Stale clarification prompts must yield to fresh open dialog");
 assert(app.includes("await runBackendAgentCommand(command, locationContext)"), "Open knowledge questions must route to the backend conversation brain");
 assert(server.includes("function isCurrentKnowledgeQuestion"), "Backend must detect current market, location, availability, and provider knowledge questions");
+assert(server.includes("function isOpenDialogConversation"), "Backend must detect open-dialog conversation beyond hard-coded command phrases");
+assert(server.includes("You are not limited to a menu"), "Backend open-dialog prompt must instruct Nexus to answer beyond fixed menus");
+assert(server.includes("!openDialog && isActionRequest"), "Open dialog should not automatically stage yes/no workflows unless the command is clear");
 assert(server.includes("function isConversationalHealthProviderQuestion"), "Backend must detect conversational health-provider questions");
 assert(server.includes("async function healthProviderGuidanceResponse"), "Backend must answer health-provider questions safely without diagnosing");
 assert(server.includes("function isCareerPathQuestion"), "Backend must detect career and job-path questions");

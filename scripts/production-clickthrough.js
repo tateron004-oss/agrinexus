@@ -272,6 +272,9 @@ assert(server.includes("lastAdaptiveSignals"), "Conversation brain must remember
 assert(app.includes("Adaptive style"), "Agent UI must show adaptive conversation style");
 assert(server.includes("conversation.behavior_model"), "Voice agent must explain its behavior model");
 assert(server.includes("function conversationalReasoningResponse"), "Backend needs an open-ended conversational reasoning brain");
+assert(server.includes("function isOpenDialogConversation"), "Backend needs an open-dialog detector beyond hard-coded phrases");
+assert(app.includes("function isOpenDialogVoiceQuestion"), "Voice UI must route natural dialog before fixed workflow cards");
+assert(server.includes("You are not limited to a menu"), "Open dialog must let Nexus answer freely while staying inside safety rails");
 assert(server.includes("function aiReasoningSnapshot"), "Backend needs a memory-backed AI reasoning snapshot");
 assert(server.includes("reasoningHistory") && app.includes("optionsConsidered"), "Agent reasoning must preserve decision history and options considered");
 assert(server.includes("function dailyLifeAdvisorResponse"), "Backend needs day-to-day advisor reasoning for farmers, learners, workers, and grandma support");

@@ -10316,6 +10316,28 @@ function isOpenEndedConversation(lower) {
     || /\b(question|wondering|understand|explain|tell me|what about|how about|can it|can you|could it|does it|will it)\b/.test(value);
 }
 
+function isClearWorkflowExecution(lower) {
+  const value = String(lower || "").trim();
+  if (!value) return false;
+  return /^(open|start|run|show|change|switch|translate|track|apply|complete|issue|create|call|message|contact|schedule|submit|send)\b/.test(value)
+    && /\b(map|course|lesson|certificate|language|route|shipment|job|role|doctor|provider|clinic|buyer|seller|crop|order|payment|wallet|intake|caption|audio|drone|health check|live service|mission|autopilot)\b/.test(value);
+}
+
+function isOpenDialogConversation(command = "", options = {}) {
+  const value = String(command || "").toLowerCase().replace(/\s+/g, " ").trim();
+  if (!value) return false;
+  if (isClearWorkflowExecution(value)) return false;
+  if (/^(yes|yeah|yep|no|nope|cancel|stop|pause|quiet|confirm|do it|run it)\b/.test(value)) return false;
+  if (/\b(change|switch|set|use)\s+(language|voice|mode)\b/.test(value)) return false;
+  if (utilityAssistantKind(command, value)) return false;
+  if (isOpenEndedConversation(value)) return true;
+  const tokens = value.split(/\s+/).filter(Boolean);
+  const lifeProblem = /\b(i|im|i'm|we|my|our|someone|patient|farmer|student|worker|learner|mother|child|family)\b.*\b(need|want|have|has|looking|trying|graduated|studied|sick|hurt|pain|medicine|doctor|clinic|job|work|apply|learn|course|sell|buy|crop|farm|route|buyer|provider|confused|understand|help)\b/.test(value);
+  const ruralContext = /\b(farmer|crop|maize|cassava|rice|clinic|pharmacy|doctor|provider|course|job|market|buyer|seller|kenya|south africa|nigeria|ghana|rwanda|tanzania|egypt|drc|congo|africa|village|rural)\b/.test(value);
+  const conversationalAsk = /\b(help me|walk me|guide me|talk to me|what do i do|what should i do|i don't know|i dont know|can you help|please help)\b/.test(value);
+  return (tokens.length >= 6 && (lifeProblem || conversationalAsk || (options.inputMode === "voice" && ruralContext && !isActionRequest(value))));
+}
+
 function isActionRequest(lower) {
   return /\b(open|start|run|create|build|make|send|submit|apply|schedule|connect|contact|call|message|advance|complete|issue|record|capture|test|deploy|change|switch|translate|track|prepare)\b/.test(String(lower || ""));
 }
@@ -10406,6 +10428,7 @@ async function conversationalReasoningResponse(db, user, command, options = {}) 
   const memories = retrieveAgentMemories(db.profile, command, 5);
   const reasoning = aiReasoningSnapshot(db, user, command, moduleSignal, memories, options);
   const reasoningLanguageProduction = reasoningLanguageProductionEngine(db, user, command, { moduleSignal, memories, reasoning, targetLanguage: options.targetLanguage });
+  const openDialog = isOpenDialogConversation(command, options);
   const { country, route } = activeContext(db);
   const modeContext = options.modeContext || {};
   const platformMode = options.mode || modeContext.mode || "user";
@@ -10444,9 +10467,11 @@ async function conversationalReasoningResponse(db, user, command, options = {}) 
                 "Answer the user's question conversationally in plain language.",
                 "Use the platform context; do not claim external real-time facts unless they are provided.",
                 modeInstructions[platformMode] || modeInstructions.user,
+                "You are not limited to a menu. Treat unknown phrases as open dialog: infer the human problem, answer what you can, and ask one useful clarifying question if needed.",
+                "For low-digital-literacy users, avoid menus and technical labels. Speak like a trusted guide.",
                 "Carry the conversation across turns. If the user asks a follow-up like tell me more, why, or what next, use the recent conversation context instead of starting over.",
                 "If an action may affect records, health, jobs, payment, providers, or messages, recommend confirmation instead of pretending it is already done.",
-                "End with one clear next step the user can say."
+                "End with one clear next step the user can say, but do not force a yes/no workflow unless the user clearly asked you to execute."
               ].join(" ")
             },
             { role: "user", content: JSON.stringify({ command, moduleSignal, country, route, checkpoint: db.profile.activeCheckpoint, profileSummary, memories, reasoning, platformMode, modeContext }) }
@@ -10488,7 +10513,7 @@ async function conversationalReasoningResponse(db, user, command, options = {}) 
     metadata: { provider, command, module: moduleSignal.module, memoriesUsed: memories.map(item => item.id).filter(Boolean), reasoning, reasoningLanguageProduction },
     dispatch: false
   });
-  const shouldStage = options.conversational && isActionRequest(lower) && moduleSignal.section !== "dashboard";
+  const shouldStage = options.conversational && !openDialog && isActionRequest(lower) && moduleSignal.section !== "dashboard";
   if (shouldStage) {
     const plan = planAgentToolLocally(command);
     if (plan && plan.tool !== "ai.copilot") {
@@ -10513,7 +10538,7 @@ async function conversationalReasoningResponse(db, user, command, options = {}) 
     intent: "conversation.open_reasoning",
     response: responseText,
     status: "completed",
-    metadata: { conversationMode: true, platformMode, modeContext, redirectSection: moduleSignal.section, provider, moduleSignal, memoriesUsed: memories.map(item => item.id).filter(Boolean), reasoning, reasoningLanguageProduction }
+    metadata: { conversationMode: true, openDialog, platformMode, modeContext, redirectSection: moduleSignal.section, provider, moduleSignal, memoriesUsed: memories.map(item => item.id).filter(Boolean), reasoning, reasoningLanguageProduction }
   };
 }
 
@@ -14529,6 +14554,9 @@ async function runAgentCommand(db, user, command, options = {}) {
   }
   if (conversational && isCurrentKnowledgeQuestion(text)) {
     return currentKnowledgeQuestionResponse(db, user, text, options);
+  }
+  if (conversational && isOpenDialogConversation(text, options)) {
+    return conversationalReasoningResponse(db, user, text, { ...options, openDialog: true });
   }
   if (/(track|follow|watch).*(my\s+)?route/.test(lower) && /(real time|realtime|live|gps|location)/.test(lower)) {
     return liveRouteTrackingResponse(db, user, text);

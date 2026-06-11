@@ -6291,6 +6291,11 @@ async function answerAgentClarification(command) {
     pendingAgentClarification.misses = (pendingAgentClarification.misses || 0) + 1;
     if (pendingAgentClarification.misses >= 1) {
       pendingAgentClarification = null;
+      if (isOpenKnowledgeQuestion(command) || isOpenDialogVoiceQuestion(command)) {
+        updateNexusBehaviorLayer("thinking", "Nexus cleared the old choice and is answering the new question.");
+        await runBackendAgentCommand(command);
+        return true;
+      }
       setVoiceResponse("I cleared that old step. You do not need exact words. Tell me what you need, or say stop.", true);
       return true;
     }
@@ -14962,6 +14967,26 @@ function isOpenKnowledgeQuestion(command = "") {
   return healthAdvisorQuestion || careerAdvisorQuestion || (startsLikeQuestion && (currentSignals || domainSignals)) || (currentSignals && domainSignals);
 }
 
+function isClearWorkflowVoiceCommand(command = "") {
+  const lower = normalizeToolText(command);
+  if (!lower) return false;
+  return /^(open|start|run|show|change|switch|translate|track|apply|complete|issue|create|call|message|contact|schedule|submit|send)\b/.test(lower)
+    && /\b(map|course|lesson|certificate|language|route|shipment|job|role|doctor|provider|clinic|buyer|seller|crop|order|payment|wallet|intake|caption|audio|drone|health check|live service|mission|autopilot)\b/.test(lower);
+}
+
+function isOpenDialogVoiceQuestion(command = "") {
+  const lower = normalizeToolText(command);
+  if (!lower) return false;
+  if (isUniversalLanguageCommand(command) || isGlobalStopCommand(lower) || isClearWorkflowVoiceCommand(command)) return false;
+  if (/\b(weather|temperature|temp|what time|time is it|appointment|remind me|reminder|forecast)\b/.test(lower)) return false;
+  if (/^(yes|yeah|yep|no|nope|cancel|confirm|do it|run it)\b/.test(lower)) return false;
+  if (/^(what|whats|what is|how|why|when|where|who|which|can|could|would|should|tell|explain|describe|summarize)\b/.test(lower)) return true;
+  const tokens = lower.split(/\s+/).filter(Boolean);
+  const lifeProblem = /\b(i|im|i'm|we|my|our|someone|patient|farmer|student|worker|learner|mother|child|family)\b.*\b(need|want|have|has|looking|trying|graduated|studied|sick|hurt|pain|medicine|doctor|clinic|job|work|apply|learn|course|sell|buy|crop|farm|route|buyer|provider|confused|understand|help)\b/.test(lower);
+  const conversationalAsk = /\b(help me|walk me|guide me|talk to me|what do i do|what should i do|i don't know|i dont know|can you help|please help)\b/.test(lower);
+  return tokens.length >= 6 && (lifeProblem || conversationalAsk);
+}
+
 function shouldAskRepeatForUnclearVoiceCommand(command = "", options = {}) {
   if (options.skipCommandConfirmation || options.confirmed || options.source === "system") return false;
   const lower = normalizeToolText(command);
@@ -15814,6 +15839,15 @@ async function handleVoiceCommand(rawCommand, options = {}) {
     pendingNexusSpokenCommand = null;
     updateNexusBehaviorLayer("thinking", "Nexus is listening to the full question and checking live knowledge with platform context.");
     renderLiveVoiceSuggestions(["ask one follow-up", "open health", "open workforce", "Nexus stop"]);
+    const locationContext = await browserWeatherLocation(spokenCommand || command);
+    await runBackendAgentCommand(spokenCommand || command, locationContext);
+    return;
+  }
+  if (isOpenDialogVoiceQuestion(spokenCommand || command)) {
+    pendingAgentClarification = null;
+    pendingNexusSpokenCommand = null;
+    updateNexusBehaviorLayer("thinking", "Nexus is treating this as open dialog, not a fixed menu command.");
+    renderLiveVoiceSuggestions(["ask a follow-up", "guide me step by step", "open the right area", "Nexus stop"]);
     const locationContext = await browserWeatherLocation(spokenCommand || command);
     await runBackendAgentCommand(spokenCommand || command, locationContext);
     return;
