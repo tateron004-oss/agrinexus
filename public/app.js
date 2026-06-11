@@ -6627,6 +6627,12 @@ function nexusHumanResponsePolicy(message = "", options = {}) {
   if (options.allowLongResponse || options.longForm || options.source === "briefing") return text;
   const speaking = Boolean(options.speak || options.forceHandoff || voiceFirstMode);
   const simpleMode = experienceMode === "user" || speaking;
+  let shortAnswerMode = false;
+  try {
+    shortAnswerMode = localStorage.getItem("agrinexusShortAnswers") === "on";
+  } catch (error) {
+    shortAnswerMode = false;
+  }
   let human = text
     .replace(/\bworkflow is ready\b/gi, "is open")
     .replace(/\bprepared the\b/gi, "opened the")
@@ -6637,12 +6643,12 @@ function nexusHumanResponsePolicy(message = "", options = {}) {
     .replace(/\s*Say yes to create[^.]+\.?/gi, "")
     .replace(/\s*Should I do that now\??/gi, "")
     .replace(/\s*Would you like me to do that now\??/gi, "");
-  if (simpleMode) {
+  if (simpleMode || shortAnswerMode) {
     const legal = /\b(not a diagnosis|emergency|danger|provider|consent|payment|billing|privacy)\b/i.test(human);
     const sentences = human.match(/[^.!?]+[.!?]+|[^.!?]+$/g) || [human];
-    const limit = legal ? 3 : 2;
+    const limit = shortAnswerMode && !legal ? 1 : legal ? 3 : 2;
     human = sentences.slice(0, limit).join(" ").trim();
-    const max = legal ? 360 : 230;
+    const max = shortAnswerMode && !legal ? 150 : legal ? 360 : 230;
     if (human.length > max) {
       const clipped = human.slice(0, max).replace(/\s+\S*$/, "").trim();
       human = `${clipped}.`;
@@ -14837,6 +14843,86 @@ function handleNexusSelfCorrection(command = "") {
   return true;
 }
 
+async function handleNexusRealtimeAdjustment(command = "") {
+  const lower = normalizeToolText(command);
+  if (!lower) return false;
+  const mentionsAdjustment = /\b(wrong|not right|needs adjustment|need adjustment|adjust|fix|repair|not working|broken|confusing|too hard|too much|clunky|bad|cannot see|can't see|hard to see|in the way|blocking|too big|too small|not intaking|not opening|doesn't open|does not open|button.*(?:doesn't|does not|won't|will not)|confirm.*(?:doesn't|does not|won't|will not))\b/.test(lower);
+  const mentionsWorkflow = /\b(workflow|process|screen|page|panel|window|button|intake|map|caption|captions|speech|voice|talking|response|answer)\b/.test(lower);
+  const directMapAdjustment = /\b(expand|bigger|large|full screen|full map|zoom out|global|world|scale|can't see|cannot see|show)\b.*\b(map|route|tracking|location)\b/.test(lower)
+    || /\b(map|route|tracking|location)\b.*\b(expand|bigger|large|full screen|full map|zoom out|global|world|scale|can't see|cannot see)\b/.test(lower);
+  const intakeAdjustment = /\b(intake|patient intake|telehealth intake|care intake)\b.*\b(wrong|not working|not intaking|not opening|fix|restart|adjust|start over|open|show)\b/.test(lower)
+    || /\b(open|fix|restart|adjust|show)\b.*\b(intake|patient intake|telehealth intake|care intake)\b/.test(lower);
+  const captionAdjustment = /\b(caption|captions|transcript|caption box)\b.*\b(blocking|in the way|too big|close|hide|move|smaller|minimize)\b/.test(lower)
+    || /\b(close|hide|move|minimize|make smaller)\b.*\b(caption|captions|transcript|caption box)\b/.test(lower);
+  const speechAdjustment = /\b(too much talking|talking too much|too wordy|shorter|stop explaining|less talking|robotic|too robotic|be natural|simple answer|short answer)\b/.test(lower);
+  const buttonRepair = /\b(button|confirm|do this now|submit|yes button|main button)\b.*\b(not working|doesn't work|does not work|won't work|will not work|missing|no button|can't click|cannot click)\b/.test(lower)
+    || /\b(can't click|cannot click|click does not work|click doesn't work)\b/.test(lower);
+  if (!mentionsAdjustment && !directMapAdjustment && !intakeAdjustment && !captionAdjustment && !speechAdjustment && !buttonRepair) return false;
+
+  const current = currentSectionId?.() || "dashboard";
+  recordNexusAutonomousLearning({ type: "realtime-adjustment", command, section: current });
+  try {
+    const key = "agrinexusRealtimeAdjustments";
+    const entries = JSON.parse(localStorage.getItem(key) || "[]");
+    entries.unshift({ at: new Date().toISOString(), command, section: current, mode: experienceMode, language: languageCode() });
+    localStorage.setItem(key, JSON.stringify(entries.slice(0, 60)));
+  } catch (error) {
+    console.warn("Could not save realtime adjustment", error);
+  }
+
+  if (speechAdjustment) {
+    localStorage.setItem("agrinexusShortAnswers", "on");
+    localStorage.setItem("agrinexusSlowSpeech", "on");
+    updateNexusBehaviorLayer("listening", "Nexus switched to shorter, simpler responses.");
+    renderLiveVoiceSuggestions(["say it again", "open health", "open map", "Nexus stop"]);
+    setVoiceResponse("Got it. I will use shorter answers and less explanation.", true, { allowHandoff: false });
+    return true;
+  }
+
+  if (captionAdjustment) {
+    closeUserCaptionPanel();
+    updateNexusBehaviorLayer("ready", "Nexus moved captions out of the way.");
+    renderLiveVoiceSuggestions(["open captions", "read this to me", "open map", "Nexus stop"]);
+    setVoiceResponse("I moved the caption box out of the way. Say open captions when you need it again.", true, { allowHandoff: false });
+    return true;
+  }
+
+  if (directMapAdjustment || (mentionsAdjustment && /\b(map|route|tracking|location)\b/.test(lower))) {
+    pendingAgentClarification = null;
+    pendingNexusSpokenCommand = null;
+    return openFullScaleUserMap("I expanded the map. You can zoom, drag, view the route, and track shipment or clinic locations.");
+  }
+
+  if (intakeAdjustment || (mentionsAdjustment && /\b(intake|telehealth|patient|doctor|provider|clinic|health)\b/.test(lower))) {
+    pendingAgentClarification = null;
+    pendingNexusSpokenCommand = null;
+    return openHealthIntakeNow("I reopened the intake correctly. Step 1: tell me who needs care. This is not a diagnosis.");
+  }
+
+  if (buttonRepair && pendingWorkflow) {
+    updateNexusBehaviorLayer("acting", "Nexus is completing the visible workflow by voice because the button was not usable.");
+    setVoiceResponse("I can do that by voice. I am running the visible workflow now.", true, { allowHandoff: false });
+    await executeWorkflowConfigFromVoice(pendingWorkflow, "Workflow completed by voice.");
+    return true;
+  }
+
+  if (mentionsAdjustment && mentionsWorkflow) {
+    const section = current === "dashboard" ? "agent" : current;
+    if (canOpenSection(section)) goSection(section, { instant: true, openDefaultAction: false, keepAssistant: false });
+    if (experienceMode === "user" && simpleUserSections[section]) renderUserSimpleActiveSection(section);
+    $$(".user-inline-workflow:not(.hidden)").forEach(panel => {
+      const shell = panel.closest(".user-simple-module");
+      if (shell) shell.scrollTo({ top: Math.max(0, panel.offsetTop - 12), behavior: "smooth" });
+      panel.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    });
+    updateNexusBehaviorLayer("listening", "Nexus heard workflow feedback and is ready to adjust the current step.");
+    renderLiveVoiceSuggestions(["make it simpler", "open full map", "restart intake", "hide captions"]);
+    setVoiceResponse("I hear the adjustment. Tell me what to change: make it simpler, expand the map, restart intake, hide captions, or run the workflow by voice.", true, { allowHandoff: false });
+    return true;
+  }
+  return false;
+}
+
 function shouldStageNexusSpokenCommand(command, lower, options = {}) {
   if (options.skipCommandConfirmation || options.confirmed || options.source === "system") return false;
   if (options.wakeOnly || !command || command.trim().length < 3) return false;
@@ -15687,6 +15773,7 @@ async function handleVoiceCommand(rawCommand, options = {}) {
     answerNexusHearingCheck();
     return;
   }
+  if (await handleNexusRealtimeAdjustment(command || localizedCommand)) return;
   if (handleNexusSelfCorrection(command || localizedCommand)) return;
   const commonPhrase = nexusCommonPhraseResponse(command || localizedCommand);
   if (commonPhrase) {

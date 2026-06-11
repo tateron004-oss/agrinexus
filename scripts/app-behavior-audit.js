@@ -473,6 +473,11 @@ assert(app.includes("const responseMessage = nexusHumanResponsePolicy(rawRespons
 assert(app.includes("function handleNexusSelfCorrection"), "Nexus needs a self-correction handler for wrong or misunderstood commands");
 assert(app.includes("recordNexusAutonomousLearning({ type: \"self-correction\""), "Nexus self-correction must record learning evidence");
 assert(app.includes("agrinexusBehaviorRecovery"), "Nexus behavior recovery events must be retained locally for future improvement");
+assert(app.includes("async function handleNexusRealtimeAdjustment"), "Nexus needs a real-time adjustment layer for workflow, map, intake, caption, and speech feedback");
+assert(app.includes("recordNexusAutonomousLearning({ type: \"realtime-adjustment\""), "Real-time adjustment feedback must be captured as autonomous learning evidence");
+assert(app.includes("agrinexusRealtimeAdjustments"), "Real-time adjustment history must be retained locally for behavior improvement");
+assert(app.includes("localStorage.setItem(\"agrinexusShortAnswers\", \"on\")"), "Nexus must let users switch to shorter, less robotic responses by conversation");
+assert(app.includes("await handleNexusRealtimeAdjustment(command || localizedCommand)"), "Voice handler must run real-time adjustment before generic correction or routing");
 assert(app.includes("pendingAgentClarification = earlySimpleIntent.clarification || null"), "Early smart clarification must preserve choices for the next user answer");
 assert(app.includes("pendingAgentClarification = simpleIntent.clarification || null"), "Smart clarification must preserve choices after command cleanup");
 assert(app.includes("spokenCommand"), "Voice readback must preserve the user's original spoken phrase before internal routing rewrites");
