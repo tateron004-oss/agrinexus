@@ -3094,7 +3094,23 @@ function normalizeImperfectSpeech(command = "") {
     [/\bteach me\b/g, "start a course"],
     [/\bi want learn\b/g, "start a course"],
     [/\bi need job\b/g, "show me jobs"],
-    [/\bi need doctor\b/g, "open telehealth and start intake"]
+    [/\bi need doctor\b/g, "open telehealth and start intake"],
+    [/\bcrop bad\b/g, "my crop looks bad what should I do"],
+    [/\bplant sick\b/g, "my plant looks sick what should I do"],
+    [/\bmaize bad\b/g, "my maize crop looks bad what should I do"],
+    [/\bcassava bad\b/g, "my cassava crop looks bad what should I do"],
+    [/\bchild sick\b/g, "my child is sick what should I do"],
+    [/\bbaby sick\b/g, "my baby is sick what should I do"],
+    [/\bneed medicine\b/g, "I need medicine and pharmacy help"],
+    [/\bmedicine help\b/g, "I need medicine and pharmacy help"],
+    [/\bclinic near\b/g, "find a clinic near me"],
+    [/\bwhere clinic\b/g, "find a clinic near me"],
+    [/\bjob kenya\b/g, "help me find work in Kenya"],
+    [/\bjob south africa\b/g, "help me find work in South Africa"],
+    [/\bno understand\b/g, "I do not understand please explain simply"],
+    [/\bi no understand\b/g, "I do not understand please explain simply"],
+    [/\bhelp farm\b/g, "help me with my farm problem"],
+    [/\bmarket how much\b/g, "what is the market price"]
   ];
   let rewritten = lower;
   replacements.forEach(([pattern, value]) => {
@@ -6626,8 +6642,33 @@ function composeJarvisResponse(message, options = {}) {
   return `${message} ${jarvisHandoffLine(options.handoffText)}`;
 }
 
+function ruralCommunicationResponseTuning(message = "", options = {}) {
+  let text = String(message || "").replace(/\s+/g, " ").trim();
+  if (!text) return "";
+  const lowTechMode = experienceMode === "user" || options.speak || voiceFirstMode;
+  if (!lowTechMode || options.allowLongResponse || options.longForm) return text;
+  text = text
+    .replace(/\bworkflow\b/gi, "step")
+    .replace(/\bmodule\b/gi, "area")
+    .replace(/\bredirect\b/gi, "move")
+    .replace(/\bmetadata\b/gi, "details")
+    .replace(/\bprovider directory\b/gi, "clinic list")
+    .replace(/\bintake\b/gi, "first questions")
+    .replace(/\btelehealth\b/gi, "phone or video health help");
+  const questionMatch = text.match(/[^.!?]*\?+/g);
+  if (questionMatch && questionMatch.length > 1) {
+    const firstQuestion = questionMatch[0].trim();
+    const before = text.slice(0, text.indexOf(questionMatch[0])).trim();
+    text = `${before} ${firstQuestion}`.trim();
+  }
+  if (/\b(i may have heard|heard that wrong|not sure|unclear)\b/i.test(text)) {
+    return "I may have heard that wrong. Say it again slowly, or say health, crops, work, learning, map, or medicine.";
+  }
+  return text;
+}
+
 function nexusHumanResponsePolicy(message = "", options = {}) {
-  const text = String(message || "").replace(/\s+/g, " ").trim();
+  const text = ruralCommunicationResponseTuning(message, options);
   if (!text) return "";
   if (options.allowLongResponse || options.longForm || options.source === "briefing") return text;
   const speaking = Boolean(options.speak || options.forceHandoff || voiceFirstMode);
@@ -14984,7 +15025,8 @@ function isOpenDialogVoiceQuestion(command = "") {
   const tokens = lower.split(/\s+/).filter(Boolean);
   const lifeProblem = /\b(i|im|i'm|we|my|our|someone|patient|farmer|student|worker|learner|mother|child|family)\b.*\b(need|want|have|has|looking|trying|graduated|studied|sick|hurt|pain|medicine|doctor|clinic|job|work|apply|learn|course|sell|buy|crop|farm|route|buyer|provider|confused|understand|help)\b/.test(lower);
   const conversationalAsk = /\b(help me|walk me|guide me|talk to me|what do i do|what should i do|i don't know|i dont know|can you help|please help)\b/.test(lower);
-  return tokens.length >= 6 && (lifeProblem || conversationalAsk);
+  const ruralShortProblem = /\b(crop bad|farm bad|plant sick|maize bad|cassava bad|child sick|baby sick|mother sick|need medicine|medicine help|no doctor|no clinic|job kenya|job south africa|find work|want learn|no understand|i no understand|help farm|market how much)\b/.test(lower);
+  return ruralShortProblem || (tokens.length >= 6 && (lifeProblem || conversationalAsk));
 }
 
 function shouldAskRepeatForUnclearVoiceCommand(command = "", options = {}) {

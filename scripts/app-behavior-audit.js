@@ -469,6 +469,8 @@ assert(app.includes("function simpleUserDirectVoiceIntent"), "User voice mode ne
 assert(app.includes("function nexusSmartIntentRouter"), "Nexus needs a scored smart intent router before legacy voice routing");
 assert(app.includes("recordNexusAutonomousLearning({ type: \"smart-intent\""), "Smart intent routing must record learning evidence");
 assert(app.includes("function nexusHumanResponsePolicy"), "Nexus spoken responses must pass through a human response governor");
+assert(app.includes("function ruralCommunicationResponseTuning"), "Nexus needs a rural communication tuning layer for farmers, elders, and low-tech users");
+assert(app.includes("health, crops, work, learning, map, or medicine"), "Misheard rural speech must recover with simple choices");
 assert(app.includes("const responseMessage = nexusHumanResponsePolicy(rawResponseMessage"), "Voice responses must be shortened and de-roboticized before display, translation, and speech");
 assert(app.includes("function handleNexusSelfCorrection"), "Nexus needs a self-correction handler for wrong or misunderstood commands");
 assert(app.includes("recordNexusAutonomousLearning({ type: \"self-correction\""), "Nexus self-correction must record learning evidence");
@@ -482,11 +484,14 @@ assert(app.includes("function isOpenKnowledgeQuestion"), "Nexus needs an open kn
 assert(app.includes("healthAdvisorQuestion") && app.includes("careerAdvisorQuestion"), "Open knowledge detection must recognize health-provider and career-path questions before workflow routing");
 assert(app.includes("biochemistry") && app.includes("doctor|provider|clinician"), "Open knowledge detection must include real user phrases for doctors, graduates, and jobs");
 assert(app.includes("function isOpenDialogVoiceQuestion"), "Nexus needs an open-dialog voice detector so unknown human questions do not require hard-coded phrases");
+assert(app.includes("crop bad") && app.includes("child sick") && app.includes("need medicine") && app.includes("job kenya"), "Open dialog must include rural imperfect-speech support phrases");
 assert(app.includes("Nexus is treating this as open dialog, not a fixed menu command."), "Open dialog must route before fixed User-mode workflow cards");
 assert(app.includes("Nexus cleared the old choice and is answering the new question."), "Stale clarification prompts must yield to fresh open dialog");
 assert(app.includes("await runBackendAgentCommand(command, locationContext)"), "Open knowledge questions must route to the backend conversation brain");
 assert(server.includes("function isCurrentKnowledgeQuestion"), "Backend must detect current market, location, availability, and provider knowledge questions");
 assert(server.includes("function isOpenDialogConversation"), "Backend must detect open-dialog conversation beyond hard-coded command phrases");
+assert(server.includes("function ruralCommunicationSupportModel"), "Backend must shape conversation for rural farmers, patients, learners, workers, and elders");
+assert(server.includes("Ask one question at a time."), "Rural communication model must enforce one-question-at-a-time guidance");
 assert(server.includes("You are not limited to a menu"), "Backend open-dialog prompt must instruct Nexus to answer beyond fixed menus");
 assert(server.includes("!openDialog && isActionRequest"), "Open dialog should not automatically stage yes/no workflows unless the command is clear");
 assert(server.includes("function isConversationalHealthProviderQuestion"), "Backend must detect conversational health-provider questions");

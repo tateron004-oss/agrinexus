@@ -10335,11 +10335,81 @@ function isOpenDialogConversation(command = "", options = {}) {
   const lifeProblem = /\b(i|im|i'm|we|my|our|someone|patient|farmer|student|worker|learner|mother|child|family)\b.*\b(need|want|have|has|looking|trying|graduated|studied|sick|hurt|pain|medicine|doctor|clinic|job|work|apply|learn|course|sell|buy|crop|farm|route|buyer|provider|confused|understand|help)\b/.test(value);
   const ruralContext = /\b(farmer|crop|maize|cassava|rice|clinic|pharmacy|doctor|provider|course|job|market|buyer|seller|kenya|south africa|nigeria|ghana|rwanda|tanzania|egypt|drc|congo|africa|village|rural)\b/.test(value);
   const conversationalAsk = /\b(help me|walk me|guide me|talk to me|what do i do|what should i do|i don't know|i dont know|can you help|please help)\b/.test(value);
-  return (tokens.length >= 6 && (lifeProblem || conversationalAsk || (options.inputMode === "voice" && ruralContext && !isActionRequest(value))));
+  const shortRuralProblem = /\b(crop bad|farm bad|plant sick|maize bad|cassava bad|child sick|baby sick|mother sick|need medicine|no doctor|no clinic|need job|find work|want learn|no understand|dont understand|don't understand|market price|buyer where|route safe)\b/.test(value);
+  return shortRuralProblem || (tokens.length >= 6 && (lifeProblem || conversationalAsk || (options.inputMode === "voice" && ruralContext && !isActionRequest(value))));
 }
 
 function isActionRequest(lower) {
   return /\b(open|start|run|create|build|make|send|submit|apply|schedule|connect|contact|call|message|advance|complete|issue|record|capture|test|deploy|change|switch|translate|track|prepare)\b/.test(String(lower || ""));
+}
+
+function ruralCommunicationSupportModel(command = "", moduleSignal = null, user = {}) {
+  const value = String(command || "").toLowerCase();
+  const moduleName = moduleSignal?.module || conversationModuleSignal(command).module;
+  const name = String(user?.name || "").split(/\s+/)[0] || "there";
+  const models = {
+    Healthcare: {
+      audience: "patient, caregiver, elder, or mobile clinic user",
+      likelyNeed: /\b(medicine|pharmacy|drug|remedy|pills)\b/.test(value) ? "medicine or pharmacy access" : "care access",
+      plainGoal: "Help the person understand the safe next care step without diagnosing.",
+      nextQuestion: "Where are you, and is this an emergency right now?",
+      safetyRule: "Do not diagnose. Ask about danger signs and guide to urgent help when needed."
+    },
+    Learning: {
+      audience: "student, learner, parent, or low-literacy user",
+      likelyNeed: "a lesson explained in simple words",
+      plainGoal: "Help the learner choose one skill and complete one small step.",
+      nextQuestion: "What do you want to learn today?",
+      safetyRule: "Keep instructions short and offer audio, captions, or slower speech."
+    },
+    Workforce: {
+      audience: "job seeker, graduate, worker, or family supporter",
+      likelyNeed: /\b(graduated|degree|university|biochemistry|biology|chemistry)\b/.test(value) ? "career guidance after school" : "job access",
+      plainGoal: "Help the person understand realistic roles and prepare one application step.",
+      nextQuestion: "What country do you want to work in, and what skill or school background do you have?",
+      safetyRule: "Do not promise a job. Explain options and prepare the next application step."
+    },
+    AgriTrade: {
+      audience: "farmer, seller, buyer, cooperative, or family farm",
+      likelyNeed: /\b(bad|sick|disease|pest|dry|yellow|dying)\b/.test(value) ? "crop problem guidance" : "market, buyer, or delivery help",
+      plainGoal: "Help the farmer protect the crop, understand market choices, and move one step toward selling or delivery.",
+      nextQuestion: "What crop is it, and what village or area is the farm in?",
+      safetyRule: "Do not guess crop disease as fact. Ask for photo, location, crop, and urgency."
+    },
+    Maps: {
+      audience: "traveler, driver, health worker, farmer, or logistics user",
+      likelyNeed: "location, route, or nearby service guidance",
+      plainGoal: "Help the person see where to go and what route or place matters.",
+      nextQuestion: "What place are you starting from, and where do you need to go?",
+      safetyRule: "Use map/provider data when available and explain uncertainty clearly."
+    },
+    Platform: {
+      audience: "non-technical user",
+      likelyNeed: "general guidance",
+      plainGoal: "Understand the person's goal and guide one step at a time.",
+      nextQuestion: "Tell me what you need: health, crops, work, learning, map, or market.",
+      safetyRule: "Avoid technical language and ask only one question."
+    }
+  };
+  const selected = models[moduleName] || models.Platform;
+  return {
+    userName: name,
+    module: moduleName,
+    ...selected,
+    styleRules: [
+      "Use short sentences.",
+      "Use everyday words.",
+      "Ask one question at a time.",
+      "Repeat the user's goal in simple language.",
+      "If unsure, ask a gentle clarification instead of forcing a menu.",
+      "Offer voice, captions, slower speech, and local language support."
+    ],
+    examples: [
+      "I understand. Let us take this one step at a time.",
+      "Tell me where you are, then I can guide the next step.",
+      "I may have heard that wrong. Say it again slowly, or say health, crops, work, learning, or map."
+    ]
+  };
 }
 
 function updateConversationUserModel(profile, command) {
@@ -10386,6 +10456,7 @@ function localConversationalAnswer(db, user, command, moduleSignal, memories, op
   const { country, route } = activeContext(db);
   const modeContext = options.modeContext || {};
   const platformMode = options.mode || modeContext.mode || "user";
+  const ruralSupport = ruralCommunicationSupportModel(command, moduleSignal, user);
   const memoryPreview = memories
     .slice(0, 2)
     .map(item => String(item.text || item.response || item.command || "").replace(/\s+/g, " ").trim())
@@ -10412,6 +10483,14 @@ function localConversationalAnswer(db, user, command, moduleSignal, memories, op
       ? "Investor conversation: I will focus on impact, proof, readiness, rural value, and a clear presentation story."
       : "User conversation: I will keep this simple, voice-first, and one step at a time.";
   db.profile.agentMemory.lastRecommendedAction = next || null;
+  if (platformMode === "user" && (options.openDialog || isOpenDialogConversation(command, options))) {
+    return [
+      `I understand, ${ruralSupport.userName}. This sounds like ${ruralSupport.likelyNeed}.`,
+      ruralSupport.plainGoal,
+      ruralSupport.safetyRule,
+      ruralSupport.nextQuestion
+    ].join(" ");
+  }
   return [
     modeLine,
     base,
@@ -10429,6 +10508,7 @@ async function conversationalReasoningResponse(db, user, command, options = {}) 
   const reasoning = aiReasoningSnapshot(db, user, command, moduleSignal, memories, options);
   const reasoningLanguageProduction = reasoningLanguageProductionEngine(db, user, command, { moduleSignal, memories, reasoning, targetLanguage: options.targetLanguage });
   const openDialog = isOpenDialogConversation(command, options);
+  const ruralSupport = ruralCommunicationSupportModel(command, moduleSignal, user);
   const { country, route } = activeContext(db);
   const modeContext = options.modeContext || {};
   const platformMode = options.mode || modeContext.mode || "user";
@@ -10469,12 +10549,16 @@ async function conversationalReasoningResponse(db, user, command, options = {}) 
                 modeInstructions[platformMode] || modeInstructions.user,
                 "You are not limited to a menu. Treat unknown phrases as open dialog: infer the human problem, answer what you can, and ask one useful clarifying question if needed.",
                 "For low-digital-literacy users, avoid menus and technical labels. Speak like a trusted guide.",
+                `Rural communication model: audience is ${ruralSupport.audience}; likely need is ${ruralSupport.likelyNeed}; plain goal is ${ruralSupport.plainGoal}`,
+                `Use this next-question style when useful: ${ruralSupport.nextQuestion}`,
+                `Safety boundary: ${ruralSupport.safetyRule}`,
+                `Communication rules: ${ruralSupport.styleRules.join(" ")}`,
                 "Carry the conversation across turns. If the user asks a follow-up like tell me more, why, or what next, use the recent conversation context instead of starting over.",
                 "If an action may affect records, health, jobs, payment, providers, or messages, recommend confirmation instead of pretending it is already done.",
                 "End with one clear next step the user can say, but do not force a yes/no workflow unless the user clearly asked you to execute."
               ].join(" ")
             },
-            { role: "user", content: JSON.stringify({ command, moduleSignal, country, route, checkpoint: db.profile.activeCheckpoint, profileSummary, memories, reasoning, platformMode, modeContext }) }
+            { role: "user", content: JSON.stringify({ command, moduleSignal, country, route, checkpoint: db.profile.activeCheckpoint, profileSummary, memories, reasoning, ruralSupport, platformMode, modeContext }) }
           ],
           max_output_tokens: 360
         })
@@ -10510,7 +10594,7 @@ async function conversationalReasoningResponse(db, user, command, options = {}) 
     module: "AI",
     action: "agent.conversation_brain_answered",
     detail: `Conversation brain answered in ${moduleSignal.module}.`,
-    metadata: { provider, command, module: moduleSignal.module, memoriesUsed: memories.map(item => item.id).filter(Boolean), reasoning, reasoningLanguageProduction },
+    metadata: { provider, command, module: moduleSignal.module, memoriesUsed: memories.map(item => item.id).filter(Boolean), reasoning, reasoningLanguageProduction, ruralSupport },
     dispatch: false
   });
   const shouldStage = options.conversational && !openDialog && isActionRequest(lower) && moduleSignal.section !== "dashboard";
@@ -10530,7 +10614,7 @@ async function conversationalReasoningResponse(db, user, command, options = {}) 
       return {
         ...staged,
         response: `${responseText} I can also stage ${plan.action.toLowerCase()} now. Say "yes" to run it, or "no" to cancel.`,
-        metadata: { ...staged.metadata, provider, conversationBrain: true, moduleSignal, reasoning, reasoningLanguageProduction }
+        metadata: { ...staged.metadata, provider, conversationBrain: true, moduleSignal, reasoning, reasoningLanguageProduction, ruralSupport }
       };
     }
   }
@@ -10538,7 +10622,7 @@ async function conversationalReasoningResponse(db, user, command, options = {}) 
     intent: "conversation.open_reasoning",
     response: responseText,
     status: "completed",
-    metadata: { conversationMode: true, openDialog, platformMode, modeContext, redirectSection: moduleSignal.section, provider, moduleSignal, memoriesUsed: memories.map(item => item.id).filter(Boolean), reasoning, reasoningLanguageProduction }
+    metadata: { conversationMode: true, openDialog, platformMode, modeContext, redirectSection: moduleSignal.section, provider, moduleSignal, memoriesUsed: memories.map(item => item.id).filter(Boolean), reasoning, reasoningLanguageProduction, ruralSupport }
   };
 }
 
