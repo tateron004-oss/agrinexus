@@ -478,6 +478,12 @@ assert(app.includes("recordNexusAutonomousLearning({ type: \"realtime-adjustment
 assert(app.includes("agrinexusRealtimeAdjustments"), "Real-time adjustment history must be retained locally for behavior improvement");
 assert(app.includes("localStorage.setItem(\"agrinexusShortAnswers\", \"on\")"), "Nexus must let users switch to shorter, less robotic responses by conversation");
 assert(app.includes("await handleNexusRealtimeAdjustment(command || localizedCommand)"), "Voice handler must run real-time adjustment before generic correction or routing");
+assert(app.includes("function isOpenKnowledgeQuestion"), "Nexus needs an open knowledge-question detector for natural Q&A before workflow routing");
+assert(app.includes("await runBackendAgentCommand(command, locationContext)"), "Open knowledge questions must route to the backend conversation brain");
+assert(server.includes("function isCurrentKnowledgeQuestion"), "Backend must detect current market, location, availability, and provider knowledge questions");
+assert(server.includes("async function liveKnowledgeContextForCommand"), "Backend must gather live/provider knowledge context before answering current questions");
+assert(server.includes("async function currentKnowledgeQuestionResponse"), "Backend needs a current-knowledge conversational response path");
+assert(server.includes("maize price feed"), "Market price questions must avoid pretending without a verified live price feed");
 assert(app.includes("pendingAgentClarification = earlySimpleIntent.clarification || null"), "Early smart clarification must preserve choices for the next user answer");
 assert(app.includes("pendingAgentClarification = simpleIntent.clarification || null"), "Smart clarification must preserve choices after command cleanup");
 assert(app.includes("spokenCommand"), "Voice readback must preserve the user's original spoken phrase before internal routing rewrites");

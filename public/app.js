@@ -14946,6 +14946,18 @@ function isNaturalQuestionOrConversation(command = "") {
     || /\b(can you hear me|are you listening|do you hear me|thank you|thanks|hello|hi|good morning|good afternoon|good evening|what can you do|who are you)\b/.test(lower);
 }
 
+function isOpenKnowledgeQuestion(command = "") {
+  const lower = normalizeToolText(command);
+  if (!lower) return false;
+  if (isUniversalLanguageCommand(command) || isGlobalStopCommand(lower)) return false;
+  if (/\b(change|switch|set|use)\s+(language|voice|mode)\b/.test(lower)) return false;
+  if (/\b(weather|temperature|temp|too hot|safe to walk|walk today|rain|raining|forecast)\b/.test(lower)) return false;
+  const startsLikeQuestion = /^(what|whats|what is|how much|how many|where|when|which|compare|tell me|explain|is it|are there|can you find|look up|search)\b/.test(lower);
+  const currentSignals = /\b(current|today|now|latest|live|real[-\s]?time|right now|this week|this month|price|cost|rate|market|outbreak|route delay|near me|nearby|available|availability)\b/.test(lower);
+  const domainSignals = /\b(maize|corn|rice|cassava|yam|beans|crop|commodity|market|buyer|seller|kenya|south africa|nigeria|ghana|rwanda|tanzania|egypt|drc|congo|clinic|pharmacy|hospital|jobs|courses|route|shipment|logistics)\b/.test(lower);
+  return (startsLikeQuestion && (currentSignals || domainSignals)) || (currentSignals && domainSignals);
+}
+
 function shouldAskRepeatForUnclearVoiceCommand(command = "", options = {}) {
   if (options.skipCommandConfirmation || options.confirmed || options.source === "system") return false;
   const lower = normalizeToolText(command);
@@ -15858,6 +15870,13 @@ async function handleVoiceCommand(rawCommand, options = {}) {
   }
   if (pendingNexusSpokenCommand && isNexusCommandRejection(lower)) {
     clearPendingNexusSpokenCommand("Canceled. Tell me what you want Nexus to do instead.");
+    return;
+  }
+  if (isOpenKnowledgeQuestion(command)) {
+    updateNexusBehaviorLayer("thinking", "Nexus is checking live knowledge and platform context before answering.");
+    renderLiveVoiceSuggestions(["compare markets", "open trade", "track route", "run live service check"]);
+    const locationContext = await browserWeatherLocation(command);
+    await runBackendAgentCommand(command, locationContext);
     return;
   }
   if (/\b(system integrity|platform integrity|integrity check|stress test|polish check|demo readiness|final check|readiness pass)\b/.test(lower)) {

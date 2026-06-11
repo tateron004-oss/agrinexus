@@ -75,6 +75,8 @@ for (const [section, buttons] of Object.entries(expectedSections)) {
   "agrinexusRealtimeAdjustments",
   "localStorage.setItem(\"agrinexusShortAnswers\", \"on\")",
   "await handleNexusRealtimeAdjustment(command || localizedCommand)",
+  "function isOpenKnowledgeQuestion",
+  "Nexus is checking live knowledge and platform context before answering.",
   "pendingWorkflow = config",
   "function renderUserProcessScreen",
   "function workflowFieldsHtml",

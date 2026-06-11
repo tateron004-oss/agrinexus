@@ -10550,6 +10550,252 @@ function backendSmartCommandResponse(db, user, command = "", options = {}) {
   return null;
 }
 
+function isCurrentKnowledgeQuestion(command = "") {
+  const lower = String(command || "").toLowerCase().trim();
+  if (!lower) return false;
+  if (/\b(weather|temperature|temp|too hot|safe to walk|walk today|rain|raining|forecast)\b/.test(lower)) return false;
+  const questionStart = /^(what|what's|whats|how much|how many|where|when|which|compare|tell me|explain|is it|are there|can you find|look up|search)\b/.test(lower);
+  const currentSignal = /\b(current|today|now|latest|live|real[-\s]?time|right now|this week|this month|price|cost|rate|market|outbreak|route delay|near me|nearby|available|availability)\b/.test(lower);
+  const domainSignal = /\b(maize|corn|rice|cassava|yam|beans|crop|crops|commodity|market|buyer|seller|kenya|south africa|nigeria|ghana|rwanda|tanzania|egypt|drc|congo|clinic|pharmacy|hospital|jobs|courses|route|shipment|logistics)\b/.test(lower);
+  return (questionStart && (currentSignal || domainSignal)) || (currentSignal && domainSignal);
+}
+
+function extractKnowledgeSearchQuery(command = "") {
+  const clean = String(command || "").replace(/\s+/g, " ").trim();
+  if (!clean) return "rural Africa agriculture market update";
+  if (/\b(maize|corn)\b/i.test(clean) && /\b(kenya|south africa)\b/i.test(clean)) return `${clean} current wholesale retail maize price Kenya South Africa`;
+  if (/\b(price|cost|market|commodity)\b/i.test(clean)) return `${clean} current market price Africa`;
+  if (/\b(clinic|pharmacy|hospital|near me|nearby)\b/i.test(clean)) return `${clean} current location map Africa`;
+  return clean;
+}
+
+async function fetchTavilyKnowledge(query) {
+  if (!process.env.TAVILY_API_KEY) return null;
+  const response = await fetchWithTimeout("https://api.tavily.com/search", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({
+      api_key: process.env.TAVILY_API_KEY,
+      query,
+      search_depth: "basic",
+      max_results: 5,
+      include_answer: true
+    })
+  }, 9000);
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(payload.error || payload.message || response.statusText);
+  const results = (payload.results || []).slice(0, 5).map(item => ({
+    title: item.title || item.url || "Search result",
+    url: item.url || "",
+    snippet: item.content || item.snippet || ""
+  }));
+  return { provider: "tavily", answer: payload.answer || "", results };
+}
+
+async function fetchBraveKnowledge(query) {
+  if (!process.env.BRAVE_SEARCH_API_KEY) return null;
+  const url = `https://api.search.brave.com/res/v1/web/search?q=${encodeURIComponent(query)}&count=5&freshness=pd`;
+  const response = await fetchWithTimeout(url, {
+    headers: {
+      accept: "application/json",
+      "x-subscription-token": process.env.BRAVE_SEARCH_API_KEY
+    }
+  }, 9000);
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(payload.error?.detail || payload.message || response.statusText);
+  const results = (payload.web?.results || []).slice(0, 5).map(item => ({
+    title: item.title || item.url || "Search result",
+    url: item.url || "",
+    snippet: item.description || item.extra_snippets?.[0] || ""
+  }));
+  return { provider: "brave", answer: "", results };
+}
+
+async function fetchOpenAiWebKnowledge(query) {
+  if (!process.env.OPENAI_API_KEY || process.env.OPENAI_WEB_SEARCH_ENABLED !== "true") return null;
+  const response = await fetchWithTimeout("https://api.openai.com/v1/responses", {
+    method: "POST",
+    headers: {
+      authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+      "content-type": "application/json"
+    },
+    body: JSON.stringify({
+      model: process.env.OPENAI_WEB_SEARCH_MODEL || process.env.OPENAI_AGENT_MODEL || process.env.OPENAI_MODEL || "gpt-4o-mini",
+      tools: [{ type: "web_search_preview" }],
+      input: `Find current, source-aware information for this AgriNexus user question. Be concise and include uncertainty if prices vary by region or date: ${query}`,
+      max_output_tokens: 450
+    })
+  }, 12000);
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(payload.error?.message || response.statusText);
+  return { provider: "openai-web-search", answer: extractResponseText(payload), results: [] };
+}
+
+async function fetchProviderBridgeKnowledge(query, command) {
+  const runtime = providerRuntime("web-search");
+  if (!runtime.webhookUrl || runtime.mode === "sandbox") return null;
+  const response = await fetchWithTimeout(runtime.webhookUrl, {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      accept: "application/json",
+      ...(runtime.apiKey ? { authorization: `Bearer ${runtime.apiKey}` } : {})
+    },
+    body: JSON.stringify({ query, command, context: "agrinexus-live-knowledge" })
+  }, PROVIDER_WEBHOOK_TIMEOUT_MS + 4000);
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(payload.error || payload.message || response.statusText);
+  const results = (payload.results || payload.items || payload.sources || []).slice(0, 5).map(item => ({
+    title: item.title || item.name || item.url || "Provider result",
+    url: item.url || item.link || "",
+    snippet: item.snippet || item.content || item.description || item.summary || ""
+  }));
+  return { provider: payload.provider || runtime.mode || "provider-bridge", answer: payload.answer || payload.summary || payload.text || "", results };
+}
+
+async function liveKnowledgeContextForCommand(db, user, command = "") {
+  const query = extractKnowledgeSearchQuery(command);
+  const attempts = [
+    () => fetchProviderBridgeKnowledge(query, command),
+    () => fetchTavilyKnowledge(query),
+    () => fetchBraveKnowledge(query),
+    () => fetchOpenAiWebKnowledge(query)
+  ];
+  const errors = [];
+  for (const attempt of attempts) {
+    try {
+      const result = await attempt();
+      if (result && (result.answer || result.results?.length)) {
+        logIntegration(db, {
+          providerId: "web-search",
+          module: "AI",
+          action: "agent.live_knowledge_lookup",
+          detail: `Live knowledge lookup answered by ${result.provider}.`,
+          metadata: { query, provider: result.provider, resultCount: result.results?.length || 0 },
+          dispatch: false
+        });
+        return { ok: true, query, ...result, checkedAt: new Date().toISOString() };
+      }
+    } catch (error) {
+      errors.push(error.message || String(error));
+    }
+  }
+  const providers = runtimeProviders(db);
+  const webProvider = providers.find(provider => provider.id === "web-search");
+  return {
+    ok: false,
+    query,
+    provider: "local-no-live-search",
+    answer: "",
+    results: [],
+    checkedAt: new Date().toISOString(),
+    reason: webProvider?.detail || "Live internet search is not configured. Add Tavily, Brave, Exa, OpenAI web search, or a provider bridge endpoint.",
+    errors: errors.slice(0, 3)
+  };
+}
+
+function localKnowledgeFallbackAnswer(db, command = "", live = {}) {
+  const lower = String(command || "").toLowerCase();
+  const { country, route } = activeContext(db);
+  if (/\b(maize|corn)\b/.test(lower) && /\b(price|cost|market|how much)\b/.test(lower)) {
+    return `I do not have a verified live maize price feed connected in this runtime. I can still help you compare Kenya, South Africa, and nearby markets by checking buyer offers, route cost, quality, moisture, quantity, and timing. For a real quote, connect a market data/search provider or ask Nexus to create a buyer price check workflow.`;
+  }
+  if (/\b(price|cost|market|commodity)\b/.test(lower)) {
+    return `I do not have a verified live market-price feed connected right now. I can still prepare a practical market check using the active country ${country.name}, route ${route.name}, crop quality, buyer demand, delivery cost, and payment readiness.`;
+  }
+  return `I can answer from platform context, but I do not have live internet evidence for that question yet. Connect the web-search provider to make this a current, source-aware answer.`;
+}
+
+async function currentKnowledgeQuestionResponse(db, user, command = "", options = {}) {
+  const live = await liveKnowledgeContextForCommand(db, user, command);
+  const moduleSignal = conversationModuleSignal(command);
+  const memories = retrieveAgentMemories(db.profile, command, 5);
+  const { country, route } = activeContext(db);
+  let response = "";
+  let provider = live.provider;
+  if (process.env.OPENAI_API_KEY) {
+    try {
+      const aiResponse = await fetchWithTimeout("https://api.openai.com/v1/responses", {
+        method: "POST",
+        headers: {
+          authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+          "content-type": "application/json"
+        },
+        body: JSON.stringify({
+          model: process.env.OPENAI_AGENT_MODEL || process.env.OPENAI_MODEL || "gpt-4o-mini",
+          input: [
+            {
+              role: "system",
+              content: [
+                "You are Nexus, the AgriNexus voice assistant.",
+                "Answer like a helpful person, not a workflow menu.",
+                "If live context has sources, use them carefully and mention that prices vary by source, date, grade, region, and currency.",
+                "If live context is not available, say that plainly and offer the next useful step.",
+                "Keep spoken answers concise: 2 to 4 short sentences."
+              ].join(" ")
+            },
+            {
+              role: "user",
+              content: JSON.stringify({
+                question: command,
+                activeCountry: country,
+                activeRoute: route,
+                liveKnowledge: live,
+                moduleSignal,
+                memories,
+                targetLanguage: options.targetLanguage || user?.language || "en"
+              })
+            }
+          ],
+          max_output_tokens: 360
+        })
+      }, 14000);
+      const payload = await aiResponse.json().catch(() => ({}));
+      if (!aiResponse.ok) throw new Error(payload.error?.message || aiResponse.statusText);
+      response = extractResponseText(payload);
+      provider = `${provider}+openai-answer`;
+    } catch (error) {
+      response = live.ok
+        ? `${live.answer || "I found live context."} ${live.results?.[0]?.snippet || ""}`.trim()
+        : localKnowledgeFallbackAnswer(db, command, live);
+      provider = `${provider}-local-answer`;
+      logIntegration(db, {
+        providerId: "openai",
+        module: "AI",
+        action: "agent.current_knowledge_answer_error",
+        status: "fallback",
+        detail: error.message || "OpenAI current knowledge answer failed.",
+        metadata: { command, liveProvider: live.provider },
+        dispatch: false
+      });
+    }
+  } else {
+    response = live.ok
+      ? `${live.answer || "I found live context."} ${live.results?.slice(0, 2).map(item => `${item.title}: ${item.snippet}`).join(" ")}`.trim()
+      : localKnowledgeFallbackAnswer(db, command, live);
+  }
+  if (!response) response = localKnowledgeFallbackAnswer(db, command, live);
+  db.profile.agentMemory.lastStatus = live.ok ? "current-knowledge-answered" : "current-knowledge-needs-provider";
+  db.profile.agentMemory.lastSummary = response;
+  db.profile.agentMemory.updatedAt = new Date().toISOString();
+  db.profile.agentMemory.liveKnowledgeHistory = [
+    { id: crypto.randomUUID(), command, provider, ok: live.ok, query: live.query, checkedAt: live.checkedAt, response },
+    ...(db.profile.agentMemory.liveKnowledgeHistory || [])
+  ].slice(0, 25);
+  return {
+    intent: live.ok ? "conversation.current_knowledge_answered" : "conversation.current_knowledge_needs_provider",
+    status: live.ok ? "completed" : "needs-provider",
+    response,
+    metadata: {
+      conversationMode: true,
+      redirectSection: moduleSignal.section === "dashboard" ? "agent" : moduleSignal.section,
+      provider,
+      liveKnowledge: live,
+      suggestedReplies: live.ok ? ["compare markets", "open trade", "track route"] : ["create buyer price check", "open trade", "run live service check"]
+    }
+  };
+}
+
 function learnFromAgentCommand(db, command, result) {
   ensureAiProfile(db.profile);
   updateConversationUserModel(db.profile, command);
@@ -14089,6 +14335,9 @@ async function runAgentCommand(db, user, command, options = {}) {
   }
   const addressedModuleGreeting = await moduleGreetingResponse(db, user, text, lower);
   if (addressedModuleGreeting) return addressedModuleGreeting;
+  if (conversational && isCurrentKnowledgeQuestion(text)) {
+    return currentKnowledgeQuestionResponse(db, user, text, options);
+  }
   if (/(track|follow|watch).*(my\s+)?route/.test(lower) && /(real time|realtime|live|gps|location)/.test(lower)) {
     return liveRouteTrackingResponse(db, user, text);
   }
