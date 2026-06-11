@@ -479,8 +479,14 @@ assert(app.includes("agrinexusRealtimeAdjustments"), "Real-time adjustment histo
 assert(app.includes("localStorage.setItem(\"agrinexusShortAnswers\", \"on\")"), "Nexus must let users switch to shorter, less robotic responses by conversation");
 assert(app.includes("await handleNexusRealtimeAdjustment(command || localizedCommand)"), "Voice handler must run real-time adjustment before generic correction or routing");
 assert(app.includes("function isOpenKnowledgeQuestion"), "Nexus needs an open knowledge-question detector for natural Q&A before workflow routing");
+assert(app.includes("healthAdvisorQuestion") && app.includes("careerAdvisorQuestion"), "Open knowledge detection must recognize health-provider and career-path questions before workflow routing");
+assert(app.includes("biochemistry") && app.includes("doctor|provider|clinician"), "Open knowledge detection must include real user phrases for doctors, graduates, and jobs");
 assert(app.includes("await runBackendAgentCommand(command, locationContext)"), "Open knowledge questions must route to the backend conversation brain");
 assert(server.includes("function isCurrentKnowledgeQuestion"), "Backend must detect current market, location, availability, and provider knowledge questions");
+assert(server.includes("function isConversationalHealthProviderQuestion"), "Backend must detect conversational health-provider questions");
+assert(server.includes("async function healthProviderGuidanceResponse"), "Backend must answer health-provider questions safely without diagnosing");
+assert(server.includes("function isCareerPathQuestion"), "Backend must detect career and job-path questions");
+assert(server.includes("async function careerPathGuidanceResponse"), "Backend must answer graduate career questions with practical pathways");
 assert(server.includes("async function liveKnowledgeContextForCommand"), "Backend must gather live/provider knowledge context before answering current questions");
 assert(server.includes("async function currentKnowledgeQuestionResponse"), "Backend needs a current-knowledge conversational response path");
 assert(server.includes("maize price feed"), "Market price questions must avoid pretending without a verified live price feed");

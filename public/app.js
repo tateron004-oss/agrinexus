@@ -14952,10 +14952,14 @@ function isOpenKnowledgeQuestion(command = "") {
   if (isUniversalLanguageCommand(command) || isGlobalStopCommand(lower)) return false;
   if (/\b(change|switch|set|use)\s+(language|voice|mode)\b/.test(lower)) return false;
   if (/\b(weather|temperature|temp|too hot|safe to walk|walk today|rain|raining|forecast)\b/.test(lower)) return false;
-  const startsLikeQuestion = /^(what|whats|what is|how much|how many|where|when|which|compare|tell me|explain|is it|are there|can you find|look up|search)\b/.test(lower);
+  const startsLikeQuestion = /^(what|whats|what is|how much|how many|where|when|which|who|compare|tell me|explain|is it|are there|can you|could you|would you|can you find|look up|search)\b/.test(lower);
   const currentSignals = /\b(current|today|now|latest|live|real[-\s]?time|right now|this week|this month|price|cost|rate|market|outbreak|route delay|near me|nearby|available|availability)\b/.test(lower);
-  const domainSignals = /\b(maize|corn|rice|cassava|yam|beans|crop|commodity|market|buyer|seller|kenya|south africa|nigeria|ghana|rwanda|tanzania|egypt|drc|congo|clinic|pharmacy|hospital|jobs|courses|route|shipment|logistics)\b/.test(lower);
-  return (startsLikeQuestion && (currentSignals || domainSignals)) || (currentSignals && domainSignals);
+  const domainSignals = /\b(maize|corn|rice|cassava|yam|beans|crop|commodity|market|buyer|seller|kenya|south africa|nigeria|ghana|rwanda|tanzania|egypt|drc|congo|clinic|pharmacy|hospital|doctor|provider|nurse|cold|flu|cough|sore throat|symptom|medicine|medication|jobs|career|degree|graduate|graduated|university|biochemistry|biology|chemistry|lab|laboratory|courses|route|shipment|logistics)\b/.test(lower);
+  const healthAdvisorQuestion = /\b(who|what kind|which|best|right)\b.*\b(doctor|provider|clinician|nurse|clinic)\b/.test(lower)
+    || /\b(doctor|provider|clinic|nurse)\b.*\b(cold|flu|fever|cough|sore throat|runny nose|symptom|medicine|medication)\b/.test(lower);
+  const careerAdvisorQuestion = /\b(graduated|graduate|degree|university|diploma|certificate|studied|study|biochemistry|biology|chemistry|lab|laboratory)\b/.test(lower)
+    && /\b(job|jobs|career|apply|work|role|roles|hiring|opportunities|kenya|south africa)\b/.test(lower);
+  return healthAdvisorQuestion || careerAdvisorQuestion || (startsLikeQuestion && (currentSignals || domainSignals)) || (currentSignals && domainSignals);
 }
 
 function shouldAskRepeatForUnclearVoiceCommand(command = "", options = {}) {
@@ -15805,6 +15809,15 @@ async function handleVoiceCommand(rawCommand, options = {}) {
     return;
   }
   agentPerformanceState.spokenCommand = spokenCommand || command;
+  if (isOpenKnowledgeQuestion(spokenCommand || command)) {
+    pendingAgentClarification = null;
+    pendingNexusSpokenCommand = null;
+    updateNexusBehaviorLayer("thinking", "Nexus is listening to the full question and checking live knowledge with platform context.");
+    renderLiveVoiceSuggestions(["ask one follow-up", "open health", "open workforce", "Nexus stop"]);
+    const locationContext = await browserWeatherLocation(spokenCommand || command);
+    await runBackendAgentCommand(spokenCommand || command, locationContext);
+    return;
+  }
   const earlySimpleIntent = experienceMode === "user" ? simpleUserDirectVoiceIntent(spokenCommand || command) : null;
   if (earlySimpleIntent?.type === "clarify") {
     pendingAgentClarification = earlySimpleIntent.clarification || null;

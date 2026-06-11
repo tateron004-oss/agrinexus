@@ -10295,9 +10295,9 @@ function conversationModuleSignal(text) {
   const lower = String(text || "").toLowerCase();
   const signals = [
     { module: "Women & Family", section: "dashboard", keys: ["women", "woman", "mother", "mothers", "family farm", "family agriculture", "women farmer", "women farmers", "children on the farm", "youth learning", "girls in agriculture", "cooperative"] },
-    { module: "Healthcare", section: "health", keys: ["telehealth", "health", "patient", "care", "doctor", "nurse", "clinic", "outbreak", "ebola", "vitals", "referral", "hearing", "visual", "blind", "deaf"] },
-    { module: "Learning", section: "learning", keys: ["learning", "training", "course", "lesson", "quiz", "certificate", "learner", "student", "captions", "audio guide"] },
-    { module: "Workforce", section: "workforce", keys: ["workforce", "work", "job", "role", "worker", "candidate", "interview", "shift", "mentor", "apply", "hiring", "position", "money", "income"] },
+    { module: "Healthcare", section: "health", keys: ["telehealth", "health", "patient", "care", "doctor", "provider", "clinician", "nurse", "clinic", "cold", "flu", "cough", "fever", "symptom", "medicine", "pharmacy", "outbreak", "ebola", "vitals", "referral", "hearing", "visual", "blind", "deaf"] },
+    { module: "Learning", section: "learning", keys: ["learning", "training", "course", "lesson", "quiz", "certificate", "learner", "student", "graduate", "graduated", "university", "degree", "captions", "audio guide"] },
+    { module: "Workforce", section: "workforce", keys: ["workforce", "work", "job", "jobs", "career", "role", "worker", "candidate", "biochemistry", "biology", "chemistry", "laboratory", "interview", "shift", "mentor", "apply", "hiring", "position", "money", "income"] },
     { module: "AgriTrade", section: "trade", keys: ["agritrade", "trade", "farmer", "crop", "buyer", "sell", "market", "order", "wallet", "payment", "logistics", "drone", "field", "farm"] },
     { module: "Maps", section: "map", keys: ["map", "route", "location", "gps", "geospatial", "corridor", "country", "risk"] },
     { module: "Integrations", section: "integrations", keys: ["integration", "provider", "engine", "api", "service", "credential", "render", "openai", "twilio"] },
@@ -10558,6 +10558,192 @@ function isCurrentKnowledgeQuestion(command = "") {
   const currentSignal = /\b(current|today|now|latest|live|real[-\s]?time|right now|this week|this month|price|cost|rate|market|outbreak|route delay|near me|nearby|available|availability)\b/.test(lower);
   const domainSignal = /\b(maize|corn|rice|cassava|yam|beans|crop|crops|commodity|market|buyer|seller|kenya|south africa|nigeria|ghana|rwanda|tanzania|egypt|drc|congo|clinic|pharmacy|hospital|jobs|courses|route|shipment|logistics)\b/.test(lower);
   return (questionStart && (currentSignal || domainSignal)) || (currentSignal && domainSignal);
+}
+
+function isConversationalHealthProviderQuestion(command = "") {
+  const lower = String(command || "").toLowerCase().trim();
+  if (!lower) return false;
+  const asksProviderType = /\b(who|what kind|which|best|right|nearest|closest|where)\b.*\b(doctor|provider|clinician|nurse|clinic|hospital)\b/.test(lower);
+  const careWords = /\b(cold|flu|fever|cough|sore throat|runny nose|headache|symptom|sick|ill|medicine|medication|pharmacy)\b/.test(lower);
+  const providerWords = /\b(doctor|provider|clinician|nurse|clinic|hospital|pharmacy|medicine)\b/.test(lower);
+  return (asksProviderType && (careWords || providerWords)) || (careWords && providerWords && /\b(who|what|which|where|can you|help|need)\b/.test(lower));
+}
+
+async function healthProviderGuidanceResponse(db, user, command = "", options = {}) {
+  const { country } = activeContext(db);
+  const memories = retrieveAgentMemories(db.profile, command, 4);
+  const safeLocal = [
+    "I can help you choose the right kind of care, but I am not a doctor and I cannot diagnose you.",
+    "For cold-like symptoms, a primary care clinic, community health nurse, general practitioner, or telehealth provider is usually the right first step.",
+    "If there is trouble breathing, chest pain, severe weakness, dehydration, a very high fever, pregnancy, a baby, an older adult, or symptoms getting worse, treat it as urgent and seek emergency care.",
+    "Tell me your location and whether you want a clinic, telehealth, or pharmacy support, and I will guide the next step."
+  ].join(" ");
+  let response = safeLocal;
+  let provider = "local-health-provider-advisor";
+  if (process.env.OPENAI_API_KEY) {
+    try {
+      const aiResponse = await fetchWithTimeout("https://api.openai.com/v1/responses", {
+        method: "POST",
+        headers: {
+          authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+          "content-type": "application/json"
+        },
+        body: JSON.stringify({
+          model: process.env.OPENAI_AGENT_MODEL || process.env.OPENAI_MODEL || "gpt-4o-mini",
+          input: [
+            {
+              role: "system",
+              content: [
+                "You are Nexus, the AgriNexus health access guide for rural users.",
+                "Do not diagnose. Do not claim one doctor is best unless a real provider directory is supplied.",
+                "Explain the safest type of provider in plain language.",
+                "Ask one short follow-up question that moves the user toward clinic, telehealth, pharmacy, or urgent care.",
+                "Mention urgent warning signs briefly.",
+                "Keep the spoken answer concise and natural."
+              ].join(" ")
+            },
+            { role: "user", content: JSON.stringify({ question: command, country, memories, targetLanguage: options.targetLanguage || user?.language || "en" }) }
+          ],
+          max_output_tokens: 260
+        })
+      }, 12000);
+      const payload = await aiResponse.json().catch(() => ({}));
+      if (!aiResponse.ok) throw new Error(payload.error?.message || aiResponse.statusText);
+      response = extractResponseText(payload) || safeLocal;
+      provider = "openai-health-provider-advisor";
+    } catch (error) {
+      logIntegration(db, {
+        providerId: "openai",
+        module: "Healthcare",
+        action: "agent.health_provider_advisor_error",
+        status: "fallback",
+        detail: error.message || "OpenAI health provider advisor unavailable.",
+        metadata: { command },
+        dispatch: false
+      });
+    }
+  }
+  db.profile.agentMemory.activeModule = "Healthcare";
+  db.profile.agentMemory.lastRecommendedSection = "health";
+  db.profile.agentMemory.lastStatus = "health-provider-guidance";
+  db.profile.agentMemory.lastSummary = response;
+  db.profile.agentMemory.updatedAt = new Date().toISOString();
+  rememberAgentMemory(db.profile, `Health provider question: ${command}`, { source: "health-provider-advisor", module: "Healthcare", category: "question", confidence: 0.9 });
+  logIntegration(db, {
+    providerId: "openai",
+    module: "Healthcare",
+    action: "agent.health_provider_guidance",
+    detail: response.slice(0, 240),
+    metadata: { provider, command, country: country.name },
+    dispatch: false
+  });
+  return {
+    intent: "health.provider_guidance",
+    status: "completed",
+    response,
+    metadata: {
+      conversationMode: true,
+      redirectSection: "health",
+      provider,
+      suggestedReplies: ["find a clinic near me", "start telehealth intake", "find pharmacy support", "show urgent warning signs"]
+    }
+  };
+}
+
+function isCareerPathQuestion(command = "") {
+  const lower = String(command || "").toLowerCase().trim();
+  if (!lower) return false;
+  const educationSignal = /\b(graduated|graduate|degree|university|college|diploma|certificate|studied|study|biochemistry|biology|chemistry|laboratory|lab)\b/.test(lower);
+  const workSignal = /\b(job|jobs|career|apply|work|role|roles|hiring|opportunities|employment|profession|kenya|south africa|nigeria|ghana|rwanda|tanzania|egypt)\b/.test(lower);
+  return educationSignal && workSignal;
+}
+
+async function careerPathGuidanceResponse(db, user, command = "", options = {}) {
+  const { country } = activeContext(db);
+  const live = /\b(current|latest|available|hiring|jobs|apply|kenya|south africa|near me|today)\b/i.test(command)
+    ? await liveKnowledgeContextForCommand(db, user, `${command} biochemistry graduate jobs Africa`)
+    : null;
+  const pathways = [
+    "laboratory technician or technologist",
+    "quality assurance or quality control in food, agriculture, or manufacturing",
+    "pharmaceutical manufacturing, sales, or regulatory support",
+    "public-health or clinical laboratory support",
+    "research assistant or clinical research coordinator",
+    "water, soil, seed, or environmental testing",
+    "agri-biotech, crop science, or seed company trainee"
+  ];
+  const local = `With a biochemistry background, strong paths in Kenya or South Africa can include ${pathways.slice(0, 5).join(", ")}, and ${pathways[5]}. I can help compare Kenya and South Africa, build your application profile, and prepare your CV. Which country do you want first, and do you prefer lab work, healthcare, agriculture, or industry?`;
+  let response = local;
+  let provider = live?.ok ? `${live.provider}+career-local` : "local-career-path-advisor";
+  if (process.env.OPENAI_API_KEY) {
+    try {
+      const aiResponse = await fetchWithTimeout("https://api.openai.com/v1/responses", {
+        method: "POST",
+        headers: {
+          authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+          "content-type": "application/json"
+        },
+        body: JSON.stringify({
+          model: process.env.OPENAI_AGENT_MODEL || process.env.OPENAI_MODEL || "gpt-4o-mini",
+          input: [
+            {
+              role: "system",
+              content: [
+                "You are Nexus, the AgriNexus career and workforce guide for rural and early-career users.",
+                "Answer like a helpful human career coach.",
+                "Do not invent specific live job openings unless liveKnowledge provides them.",
+                "Give practical career paths and one clear next question.",
+                "Offer to open Workforce and build an application profile.",
+                "Keep the spoken answer concise."
+              ].join(" ")
+            },
+            { role: "user", content: JSON.stringify({ question: command, activeCountry: country, liveKnowledge: live, pathways, targetLanguage: options.targetLanguage || user?.language || "en" }) }
+          ],
+          max_output_tokens: 320
+        })
+      }, 14000);
+      const payload = await aiResponse.json().catch(() => ({}));
+      if (!aiResponse.ok) throw new Error(payload.error?.message || aiResponse.statusText);
+      response = extractResponseText(payload) || local;
+      provider = live?.ok ? `${live.provider}+openai-career-advisor` : "openai-career-advisor";
+    } catch (error) {
+      logIntegration(db, {
+        providerId: "openai",
+        module: "Workforce",
+        action: "agent.career_path_advisor_error",
+        status: "fallback",
+        detail: error.message || "OpenAI career path advisor unavailable.",
+        metadata: { command, liveProvider: live?.provider || "none" },
+        dispatch: false
+      });
+    }
+  }
+  db.profile.agentMemory.activeModule = "Workforce";
+  db.profile.agentMemory.lastRecommendedSection = "workforce";
+  db.profile.agentMemory.lastStatus = "career-path-guidance";
+  db.profile.agentMemory.lastSummary = response;
+  db.profile.agentMemory.updatedAt = new Date().toISOString();
+  rememberAgentMemory(db.profile, `Career path question: ${command}`, { source: "career-path-advisor", module: "Workforce", category: "question", confidence: 0.9 });
+  logIntegration(db, {
+    providerId: "openai",
+    module: "Workforce",
+    action: "agent.career_path_guidance",
+    detail: response.slice(0, 240),
+    metadata: { provider, command, liveProvider: live?.provider || "not-requested", liveOk: Boolean(live?.ok) },
+    dispatch: false
+  });
+  return {
+    intent: "workforce.career_path_guidance",
+    status: "completed",
+    response,
+    metadata: {
+      conversationMode: true,
+      redirectSection: "workforce",
+      provider,
+      liveKnowledge: live || null,
+      suggestedReplies: ["open workforce", "build my application profile", "show Kenya jobs", "show South Africa jobs"]
+    }
+  };
 }
 
 function extractKnowledgeSearchQuery(command = "") {
@@ -14335,6 +14521,12 @@ async function runAgentCommand(db, user, command, options = {}) {
   }
   const addressedModuleGreeting = await moduleGreetingResponse(db, user, text, lower);
   if (addressedModuleGreeting) return addressedModuleGreeting;
+  if (conversational && isConversationalHealthProviderQuestion(text)) {
+    return healthProviderGuidanceResponse(db, user, text, options);
+  }
+  if (conversational && isCareerPathQuestion(text)) {
+    return careerPathGuidanceResponse(db, user, text, options);
+  }
   if (conversational && isCurrentKnowledgeQuestion(text)) {
     return currentKnowledgeQuestionResponse(db, user, text, options);
   }
