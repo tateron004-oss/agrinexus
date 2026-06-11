@@ -6,10 +6,12 @@ const root = path.join(__dirname, "..");
 const html = fs.readFileSync(path.join(root, "public", "index.html"), "utf8");
 const app = fs.readFileSync(path.join(root, "public", "app.js"), "utf8");
 const server = fs.readFileSync(path.join(root, "server.js"), "utf8");
+const ruralConversationEval = fs.readFileSync(path.join(root, "scripts", "synthetic-rural-conversation-eval.js"), "utf8");
 const styles = fs.readFileSync(path.join(root, "public", "styles.css"), "utf8");
 const sw = fs.readFileSync(path.join(root, "public", "sw.js"), "utf8");
 const manifest = fs.readFileSync(path.join(root, "public", "manifest.webmanifest"), "utf8");
 const nativeBridge = fs.readFileSync(path.join(root, "public", "native-bridge.json"), "utf8");
+const pkg = JSON.parse(fs.readFileSync(path.join(root, "package.json"), "utf8"));
 
 const pages = ["index.html", "status.html", "terms.html", "privacy.html", "refund.html", "manifest.webmanifest", "native-bridge.json", "sw.js", "icons/agri-nexus-icon.svg", "icons/agri-nexus-192.png", "icons/agri-nexus-512.png"];
 for (const page of pages) {
@@ -282,6 +284,8 @@ assert(server.includes("Do not punish imperfect grammar or mixed language."), "F
 assert(app.includes("function ruralCommunicationResponseTuning"), "Frontend voice responses must be simplified for farmer and grandma mode");
 assert(app.includes("result.metadata?.frontierCommunication?.nextQuestion"), "Frontend must surface the frontier next-best question in voice suggestions");
 assert(app.includes("crop bad") && app.includes("child sick") && app.includes("need medicine"), "Voice layer must understand short rural problem statements");
+assert(pkg.scripts["conversation:rural-eval"] === "node scripts/synthetic-rural-conversation-eval.js", "Package scripts must expose the synthetic rural conversation evaluator");
+assert(ruralConversationEval.includes("Synthetic rural conversation eval") && ruralConversationEval.includes("frontierCommunication") && ruralConversationEval.includes("too wordy") && ruralConversationEval.includes("technical language leaked"), "Synthetic rural conversation evaluator must score frontier metadata, length, and technical language");
 assert(server.includes("function aiReasoningSnapshot"), "Backend needs a memory-backed AI reasoning snapshot");
 assert(server.includes("reasoningHistory") && app.includes("optionsConsidered"), "Agent reasoning must preserve decision history and options considered");
 assert(server.includes("function dailyLifeAdvisorResponse"), "Backend needs day-to-day advisor reasoning for farmers, learners, workers, and grandma support");

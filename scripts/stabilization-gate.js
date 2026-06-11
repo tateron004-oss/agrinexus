@@ -234,6 +234,7 @@ requireMarkers("live production service contract", server, [
   "user-mode:audit",
   "app:behavior-audit",
   "app:jarvis-qa",
+  "conversation:rural-eval",
   "app:mobile-native-qa",
   "placeholder:audit",
   "production:clickthrough",
