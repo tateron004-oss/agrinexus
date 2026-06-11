@@ -286,6 +286,8 @@ assert(app.includes("result.metadata?.frontierCommunication?.nextQuestion"), "Fr
 assert(app.includes("crop bad") && app.includes("child sick") && app.includes("need medicine"), "Voice layer must understand short rural problem statements");
 assert(pkg.scripts["conversation:rural-eval"] === "node scripts/synthetic-rural-conversation-eval.js", "Package scripts must expose the synthetic rural conversation evaluator");
 assert(ruralConversationEval.includes("Synthetic rural conversation eval") && ruralConversationEval.includes("frontierCommunication") && ruralConversationEval.includes("too wordy") && ruralConversationEval.includes("technical language leaked"), "Synthetic rural conversation evaluator must score frontier metadata, length, and technical language");
+assert(ruralConversationEval.includes("writeScoreHistory") && ruralConversationEval.includes("rural-conversation-history.json") && ruralConversationEval.includes("weakCases"), "Synthetic rural conversation evaluator must save score history and weak-case watchlists");
+assert(ruralConversationEval.includes("expandedCases") && ruralConversationEval.includes("providerTruth") && ruralConversationEval.includes("mixed-language"), "Synthetic rural conversation evaluator must include expanded, provider-truth, and mixed-language scenarios");
 assert(server.includes("function aiReasoningSnapshot"), "Backend needs a memory-backed AI reasoning snapshot");
 assert(server.includes("reasoningHistory") && app.includes("optionsConsidered"), "Agent reasoning must preserve decision history and options considered");
 assert(server.includes("function dailyLifeAdvisorResponse"), "Backend needs day-to-day advisor reasoning for farmers, learners, workers, and grandma support");

@@ -10293,13 +10293,21 @@ function backendPredictiveAdvisorModel(db, user, command = "") {
 
 function conversationModuleSignal(text) {
   const lower = String(text || "").toLowerCase();
+  if (/\b(wrong|not|instead|mean|meant)\b.*\b(crop|farm|farmer|maize|cassava|field|harvest|buyer|sell)\b/.test(lower)
+    || /\b(crop|farm|farmer|maize|cassava|field|harvest|buyer|sell)\b.*\b(not doctor|not health|not clinic|not job)\b/.test(lower)) {
+    return { module: "AgriTrade", section: "trade", score: 4 };
+  }
+  if (/\b(wrong|not|instead|mean|meant)\b.*\b(medicine|clinic|doctor|health|sick|child|patient|pharmacy)\b/.test(lower)
+    || /\b(medicine|clinic|doctor|health|sick|child|patient|pharmacy)\b.*\b(not job|not crop|not work)\b/.test(lower)) {
+    return { module: "Healthcare", section: "health", score: 4 };
+  }
   const signals = [
     { module: "Women & Family", section: "dashboard", keys: ["women", "woman", "mother", "mothers", "family farm", "family agriculture", "women farmer", "women farmers", "children on the farm", "youth learning", "girls in agriculture", "cooperative"] },
-    { module: "Healthcare", section: "health", keys: ["telehealth", "health", "patient", "care", "doctor", "provider", "clinician", "nurse", "clinic", "cold", "flu", "cough", "fever", "symptom", "medicine", "pharmacy", "outbreak", "ebola", "vitals", "referral", "hearing", "visual", "blind", "deaf"] },
+    { module: "Healthcare", section: "health", keys: ["telehealth", "health", "patient", "care", "doctor", "provider", "clinician", "nurse", "clinic", "mobile clinic", "register", "registration", "mother", "mama", "mi mama", "body pain", "pain", "sick", "what now", "cold", "flu", "cough", "fever", "symptom", "medicine", "pharmacy", "remedio", "outbreak", "ebola", "vitals", "referral", "hearing", "visual", "blind", "deaf"] },
     { module: "Learning", section: "learning", keys: ["learning", "training", "course", "lesson", "quiz", "certificate", "learner", "student", "graduate", "graduated", "university", "degree", "captions", "audio guide"] },
     { module: "Workforce", section: "workforce", keys: ["workforce", "work", "job", "jobs", "career", "role", "worker", "candidate", "biochemistry", "biology", "chemistry", "laboratory", "interview", "shift", "mentor", "apply", "hiring", "position", "money", "income"] },
-    { module: "AgriTrade", section: "trade", keys: ["agritrade", "trade", "farmer", "crop", "buyer", "sell", "market", "order", "wallet", "payment", "logistics", "drone", "field", "farm"] },
-    { module: "Maps", section: "map", keys: ["map", "route", "location", "gps", "geospatial", "corridor", "country", "risk"] },
+    { module: "AgriTrade", section: "trade", keys: ["agritrade", "trade", "farmer", "crop", "buyer", "sell", "market", "order", "wallet", "payment", "logistics", "drone", "field", "farm", "no rain", "crop dying", "crop bad", "plant sick", "maize bad", "cassava bad", "pest", "disease", "drought", "irrigation", "field moisture", "yellow leaves", "bugs eating"] },
+    { module: "Maps", section: "map", keys: ["map", "route", "location", "gps", "geospatial", "corridor", "country", "risk", "driver lost", "lost driver", "no gps", "where to go", "road safe", "road unsafe", "clinic near", "pharmacy near"] },
     { module: "Integrations", section: "integrations", keys: ["integration", "provider", "engine", "api", "service", "credential", "render", "openai", "twilio"] },
     { module: "Agent AI", section: "agent", keys: ["agent", "agrinexus", "nexus", "assistant", "voice", "conversation", "autopilot", "mission", "reason"] }
   ];
@@ -10327,16 +10335,33 @@ function isOpenDialogConversation(command = "", options = {}) {
   const value = String(command || "").toLowerCase().replace(/\s+/g, " ").trim();
   if (!value) return false;
   if (isClearWorkflowExecution(value)) return false;
-  if (/^(yes|yeah|yep|no|nope|cancel|stop|pause|quiet|confirm|do it|run it)\b/.test(value)) return false;
+  if (/^(yes|yeah|yep|confirm|do it|run it)\b/.test(value)) return false;
+  if (/^(no|nope)\s*$/.test(value)) return false;
+  if (/^(cancel|stop|pause|quiet)\b/.test(value)) return false;
   if (/\b(change|switch|set|use)\s+(language|voice|mode)\b/.test(value)) return false;
-  if (utilityAssistantKind(command, value)) return false;
+  const cropDistress = /\b(no rain|crop dying|crop bad|plant sick|maize bad|cassava bad|pest|disease|harvest failing|farm problem)\b/.test(value);
+  if (utilityAssistantKind(command, value) && !cropDistress) return false;
   if (isOpenEndedConversation(value)) return true;
   const tokens = value.split(/\s+/).filter(Boolean);
-  const lifeProblem = /\b(i|im|i'm|we|my|our|someone|patient|farmer|student|worker|learner|mother|child|family)\b.*\b(need|want|have|has|looking|trying|graduated|studied|sick|hurt|pain|medicine|doctor|clinic|job|work|apply|learn|course|sell|buy|crop|farm|route|buyer|provider|confused|understand|help)\b/.test(value);
+  const lifeProblem = /\b(i|im|i'm|we|my|our|someone|patient|farmer|student|worker|learner|mother|child|family)\b.*\b(need|want|have|has|looking|trying|register|registration|graduated|studied|sick|hurt|pain|medicine|doctor|clinic|mobile clinic|job|work|apply|learn|course|sell|buy|crop|farm|route|buyer|provider|confused|understand|help)\b/.test(value);
   const ruralContext = /\b(farmer|crop|maize|cassava|rice|clinic|pharmacy|doctor|provider|course|job|market|buyer|seller|kenya|south africa|nigeria|ghana|rwanda|tanzania|egypt|drc|congo|africa|village|rural)\b/.test(value);
   const conversationalAsk = /\b(help me|walk me|guide me|talk to me|what do i do|what should i do|i don't know|i dont know|can you help|please help)\b/.test(value);
-  const shortRuralProblem = /\b(crop bad|farm bad|plant sick|maize bad|cassava bad|child sick|baby sick|mother sick|need medicine|no doctor|no clinic|need job|find work|want learn|no understand|dont understand|don't understand|market price|buyer where|route safe)\b/.test(value);
+  const shortRuralProblem = /\b(crop bad|crop dying|no rain|farm bad|plant sick|maize bad|cassava bad|child sick|baby sick|mother sick|body pain|pain sick|sick what now|mobile clinic|register my mother|need medicine|no doctor|no clinic|need job|find work|want learn|no understand|dont understand|don't understand|market price|buyer where|route safe)\b/.test(value);
   return shortRuralProblem || (tokens.length >= 6 && (lifeProblem || conversationalAsk || (options.inputMode === "voice" && ruralContext && !isActionRequest(value))));
+}
+
+function isRuralDistressConversation(command = "") {
+  const value = String(command || "").toLowerCase().replace(/\s+/g, " ").trim();
+  if (!value) return false;
+  const cropDistress = /\b(no rain|crop dying|crop bad|plant sick|maize bad|cassava bad|pest|disease|harvest failing|farm problem|yellow leaves|bugs eating|farm dry|field dry|crop dry|crop stress|crops going bad)\b/.test(value)
+    && /\b(crop|crops|farm|farmer|field|maize|cassava|plant|plants|harvest|soil|rain|water|irrigat)\b/.test(value);
+  const careDistress = /\b(cannot breathe|can't breathe|no doctor|no clinic|baby sick|child sick|mother sick|grandma sick|mama sick|mi mama sick|ayuda.*clinic|ayuda.*sick|preciso remedio|medicine for child|medicine.*child|child.*medicine|bleeding|very hot|weak|need medicine|body pain|pain sick)\b/.test(value);
+  const lowLiteracyNeed = /\b(no understand|don't understand|dont understand|cannot read|can't read|too many words|bad internet|no computer|i am confused|i'm confused)\b/.test(value);
+  const workDistress = /\b(need work|find work|no job|need job|apply job|no certificate|finished school|graduated university)\b/.test(value);
+  const mapDistress = /\b(driver lost|lost driver|no gps|where to go|road unsafe|road safe|route safe|map near|clinic near|pharmacy near)\b/.test(value);
+  const correctionDistress = /\b(wrong|heard me wrong|you heard|not doctor|not job|not health|not crop|i mean|mean)\b/.test(value)
+    && /\b(crop|farm|medicine|clinic|doctor|health|job|work|map|route|course|lesson)\b/.test(value);
+  return cropDistress || careDistress || lowLiteracyNeed || workDistress || mapDistress || correctionDistress;
 }
 
 function isActionRequest(lower) {
@@ -14651,6 +14676,9 @@ async function runAgentCommand(db, user, command, options = {}) {
       const intake = continueConversationalIntake(db, user, text);
       if (intake) return intake;
     }
+  }
+  if (conversational && isRuralDistressConversation(text)) {
+    return conversationalReasoningResponse(db, user, text, { ...options, openDialog: true });
   }
   if (isBuyerSellerLocationRouteCommand(lower) || isTradeCountryRouteCommand(lower)) {
     return tradeLocationRouteResponse(db, user, text, options);
