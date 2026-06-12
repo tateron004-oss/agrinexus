@@ -90,6 +90,8 @@ async function call(route, body) {
       assert(result.metadata.reasonedActionBridge.openCommand?.startsWith("Nexus,"), `${domain} should include a voice-open command`);
       assert(result.metadata.reasonedActionBridge.recoveryPhrase?.includes("Nexus stop"), `${domain} should include voice recovery language`);
       assert(result.metadata.reasonedActionBridge.visibleOutcome, `${domain} should explain what the user will see`);
+      assert(result.metadata.outcomeLoop?.nextVisibleAction, `${domain} should carry a guided outcome loop`);
+      assert(state.profile.agentMemory.activeOutcomeLoop?.oneQuestion, `${domain} should save the outcome loop in memory`);
       assert(result.response.includes("Best next action"), `${domain} response should include best next action`);
     }
 

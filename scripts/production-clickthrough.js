@@ -382,6 +382,7 @@ assert(server.includes("function conversationalReasoningResponse"), "Backend nee
 assert(server.includes("function offlineReasoningBrainModel") && server.includes("function offlineReasoningKnowledgeBase"), "Backend needs an Offline Reasoning Brain for high-function local reasoning without live providers");
 assert(server.includes("/api/intelligence/offline-reasoning") && server.includes("conversation.offline_reasoning_brain"), "Offline Reasoning Brain must be callable by API and Ask Nexus");
 assert(server.includes("function reasonedActionBridgePlan") && server.includes("reasonedActionBridge") && server.includes("visibleOutcome") && server.includes("recoveryPhrase"), "Offline reasoning must turn into a visible action bridge with recovery language");
+assert(server.includes("function guidedOutcomeLoopFromResult") && server.includes("function activeOutcomeLoopBrief") && server.includes("activeOutcomeLoop") && app.includes("Outcome loop"), "Conversation brain must carry a guided outcome loop across turns");
 assert(server.includes("function isOpenDialogConversation"), "Backend needs an open-dialog detector beyond hard-coded phrases");
 assert(app.includes("function isOpenDialogVoiceQuestion"), "Voice UI must route natural dialog before fixed workflow cards");
 assert(server.includes("You are not limited to a menu"), "Open dialog must let Nexus answer freely while staying inside safety rails");
@@ -560,14 +561,14 @@ assert(app.includes('workflow === "admin-user"'), "Admin test login button needs
 assert(app.includes("Only an existing Admin can run this workflow"), "Admin login flow must explain admin-only protection");
 assert(server.includes('adminAccount.role = "Admin"'), "Backend must force admin test logins to Admin");
 assert(server.includes("admin_user.created"), "Admin test login must create auth audit evidence");
-assert(html.includes("styles.css?v=nexus-behavior-193"), "Index must force browsers to load the latest Nexus behavior shell");
-assert(html.includes("app.js?v=nexus-behavior-193"), "Index must force browsers to load the latest Nexus behavior code");
+assert(html.includes("styles.css?v=nexus-behavior-194"), "Index must force browsers to load the latest Nexus behavior shell");
+assert(html.includes("app.js?v=nexus-behavior-194"), "Index must force browsers to load the latest Nexus behavior code");
 assert(html.includes("topSettingsClose"), "Settings menu needs a visible close control");
 assert(app.includes("voiceShouldResumeAfterUiAction") && app.includes("voiceResumeAfterSpeech"), "User actions must preserve and restore listening voice sessions");
 assert(app.includes("VOICE_RESTART_DELAY_MS = 320"), "Voice listening should restart faster after Nexus speaks");
 assert(app.includes("VOICE_UI_FOCUS_DELAY_MS = 80"), "Ask Nexus should focus quickly after opening");
 assert(app.includes("VOICE_ATTENTION_DELAY_MS = 900"), "Ask Nexus attention animation should clear quickly");
-assert(sw.includes("agrinexus-pwa-v173"), "Service worker cache must refresh the installed app after native voice bridge updates");
+assert(sw.includes("agrinexus-pwa-v174"), "Service worker cache must refresh the installed app after native voice bridge updates");
 assert(html.includes("userWorkspace"), "Dashboard needs a User Workspace for standard users");
 assert(html.includes("userMobileDock"), "Legacy mobile dock markup should remain safely hidden for cache compatibility");
 assert(html.includes("What Do You Need Help With Today?"), "Dashboard simple start should use user-ready language");
@@ -1029,7 +1030,7 @@ assert(app.includes("serviceWorker.register"), "Missing service worker registrat
 assert(app.includes("AGRINEXUS_BUILD_VERSION") && app.includes("AGRINEXUS_PWA_CACHE_VERSION"), "App needs explicit freshness constants");
 assert(app.includes("AGRINEXUS_PURGE_OLD_CACHES"), "App should ask the service worker to purge old build caches");
 assert(app.includes("controllerchange") && app.includes("agrinexusReloadedForBuild"), "App should reload once when a newer service worker takes control");
-assert(sw.includes("BUILD_VERSION = \"nexus-behavior-193\""), "Service worker must know the current app build version");
+assert(sw.includes("BUILD_VERSION = \"nexus-behavior-194\""), "Service worker must know the current app build version");
 assert(sw.includes("purgeOldCaches") && sw.includes("AGRINEXUS_PURGE_OLD_CACHES"), "Service worker must purge old caches on activation and message");
 assert(sw.includes("`/app.js?v=${BUILD_VERSION}`") && sw.includes("`/styles.css?v=${BUILD_VERSION}`"), "Service worker must precache versioned JS and CSS");
 assert(app.includes("installAgriNexusApp"), "Missing in-app install handler");

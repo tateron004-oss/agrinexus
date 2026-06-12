@@ -63,8 +63,11 @@ async function call(route, body) {
     assert(state.profile.agentMemory.lastRecommendedAction);
     assert(state.profile.agentMemory.activeVoiceMission);
     assert(state.profile.agentMemory.turnCoach);
+    assert(state.profile.agentMemory.activeOutcomeLoop);
+    assert(state.commandResult.metadata.outcomeLoop);
     assert(state.commandResult.metadata.turnCoach);
     assert(state.conversationEvidence);
+    assert(state.conversationEvidence.outcomeLoop);
     assert(state.conversationEvidence.counts.commands >= 1);
     assert(state.conversationEvidence.evidence.some(item => /Latest command/i.test(item)));
     assert(state.agentCapabilities.totalTools >= 30);
@@ -77,8 +80,8 @@ async function call(route, body) {
       inputMode: "voice",
       outputMode: "voice"
     });
-    assert(state.commandResult.intent === "conversation.voice_mission_status");
-    assert(state.commandResult.metadata.voiceMission);
+    assert(["conversation.voice_mission_status", "conversation.outcome_loop_status"].includes(state.commandResult.intent));
+    assert(state.commandResult.metadata.voiceMission || state.commandResult.metadata.outcomeLoop);
 
     state = await call("/api/agent/command", {
       command: "do the next step",
@@ -157,7 +160,9 @@ async function call(route, body) {
     assert(state.commandResult.intent === "conversation.guided_mission_status");
     assert(state.commandResult.metadata.guidedMission);
     assert(state.profile.agentMemory.turnCoach.nextQuestion);
+    assert(state.profile.agentMemory.activeOutcomeLoop.oneQuestion);
     assert(state.conversationEvidence.guidedMission);
+    assert(state.conversationEvidence.evidence.some(item => /Outcome loop/i.test(item)));
 
     state = await call("/api/agent/command", {
       command: "no",

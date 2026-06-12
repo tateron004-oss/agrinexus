@@ -22,12 +22,12 @@ function requireScript(scriptName) {
 }
 
 requireMarkers("current browser cache contract", html, [
-  "/styles.css?v=nexus-behavior-193",
-  "/app.js?v=nexus-behavior-193"
+  "/styles.css?v=nexus-behavior-194",
+  "/app.js?v=nexus-behavior-194"
 ]);
 requireMarkers("service worker cache contract", sw, [
-  'CACHE_NAME = "agrinexus-pwa-v173"',
-  'BUILD_VERSION = "nexus-behavior-193"',
+  'CACHE_NAME = "agrinexus-pwa-v174"',
+  'BUILD_VERSION = "nexus-behavior-194"',
   "`/app.js?v=${BUILD_VERSION}`",
   "`/styles.css?v=${BUILD_VERSION}`",
   "purgeOldCaches",
@@ -213,9 +213,12 @@ requireMarkers("offline reasoning contract", server, [
   "function offlineReasoningBrainModel",
   "function offlineReasoningKnowledgeBase",
   "function reasonedActionBridgePlan",
+  "function guidedOutcomeLoopFromResult",
+  "function activeOutcomeLoopBrief",
   "conversation.offline_reasoning_brain",
   "/api/intelligence/offline-reasoning",
-  "reasonedActionBridge"
+  "reasonedActionBridge",
+  "activeOutcomeLoop"
 ]);
 
 requireMarkers("admin investor user mode contract", app, [

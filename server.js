@@ -1018,18 +1018,20 @@ function conversationEvidencePack(db) {
   const pending = db.profile.agentPendingAction || null;
   const guided = activeGuidedMissionBrief(db);
   const voice = activeVoiceMissionBrief(db);
+  const outcome = activeOutcomeLoopBrief(db);
   const status = pending
     ? "waiting-confirmation"
     : memory.activeClarification
       ? "asking-clarification"
       : memory.activeRecovery
         ? "recovering-unclear-command"
-        : guided?.status || "ready";
+        : outcome?.status || guided?.status || "ready";
   const evidence = [
     latestCommand ? `Latest command: ${latestCommand.command}` : "No voice command recorded yet.",
     latestCommand ? `Understood as: ${latestCommand.intent}` : "Assistant understanding will appear after the first command.",
     pending ? `Pending action: ${pending.action || pending.tool || "workflow"} in ${pending.module || "AgriNexus"}` : "No pending action waiting for approval.",
     guided ? `Guided mission: ${guided.progress}% complete` : "No guided mission checklist active.",
+    outcome ? `Outcome loop: ${outcome.nextVisibleAction}` : "No guided outcome loop active.",
     memory.activeJarvisSession ? `AgriNexus session: ${memory.activeJarvisSession.goal}` : "No AgriNexus session active.",
     memory.turnCoach?.nextQuestion ? `Next prompt: ${memory.turnCoach.nextQuestion}` : "Next prompt will appear after conversation starts."
   ];
@@ -1042,6 +1044,7 @@ function conversationEvidencePack(db) {
     activeRecovery: memory.activeRecovery || null,
     guidedMission: guided,
     voiceMission: voice,
+    outcomeLoop: outcome,
     activeJarvisSession: memory.activeJarvisSession || null,
     turnCoach: memory.turnCoach || null,
     quality: memory.conversationQuality || {},
@@ -6449,6 +6452,8 @@ function ensureAiProfile(profile) {
   profile.agentMemory.recoveryHistory = profile.agentMemory.recoveryHistory || [];
   profile.agentMemory.activeGuidedMission = profile.agentMemory.activeGuidedMission || null;
   profile.agentMemory.guidedMissionHistory = profile.agentMemory.guidedMissionHistory || [];
+  profile.agentMemory.activeOutcomeLoop = profile.agentMemory.activeOutcomeLoop || null;
+  profile.agentMemory.outcomeLoopHistory = profile.agentMemory.outcomeLoopHistory || [];
   profile.agentMemory.turnCoach = profile.agentMemory.turnCoach || null;
   profile.agentMemory.activeJarvisSession = profile.agentMemory.activeJarvisSession || null;
   profile.agentMemory.jarvisSessionHistory = profile.agentMemory.jarvisSessionHistory || [];
@@ -11674,13 +11679,16 @@ function commandRecord(db, user, command, result) {
   db.profile.agentCommands = db.profile.agentCommands.slice(0, 30);
   const voiceMission = updateActiveVoiceMission(db, user, command, result);
   const guidedMission = updateGuidedMissionMemory(db, user, command, result);
+  const outcomeLoop = guidedOutcomeLoopFromResult(db, user, command, result, guidedMission);
+  result.metadata = { ...(result.metadata || {}), guidedMission, outcomeLoop };
+  record.metadata = result.metadata || {};
   logIntegration(db, {
     providerId: "openai",
     module: "AI",
     action: "agent.command",
     status: record.status === "failed" ? "failed" : "success",
     detail: `${record.intent}: ${record.response}`,
-    metadata: { commandId: record.id, command, voiceMissionId: voiceMission?.id || null, guidedMissionId: guidedMission?.id || null }
+    metadata: { commandId: record.id, command, voiceMissionId: voiceMission?.id || null, guidedMissionId: guidedMission?.id || null, outcomeLoopId: outcomeLoop?.id || null }
   });
   addActivity(db.profile, `Voice command: ${record.intent} - ${record.response}`);
   return record;
@@ -14187,15 +14195,84 @@ function activeGuidedMissionBrief(db) {
   };
 }
 
+function guidedOutcomeLoopFromResult(db, user, command, result = {}, guidedMission = null) {
+  ensureAiProfile(db.profile);
+  const memory = db.profile.agentMemory;
+  const moduleSignal = result.metadata?.moduleSignal || conversationModuleSignal(command);
+  const section = result.metadata?.redirectSection || moduleSignal.section || "dashboard";
+  const bridge = result.metadata?.reasonedActionBridge || result.metadata?.offlineReasoningBrain?.actionBridge || null;
+  const guided = guidedMission || memory.activeGuidedMission || null;
+  const status = String(result.status || "completed");
+  const intent = String(result.intent || "");
+  const needsConfirmation = status === "needs-confirmation" || Boolean(bridge?.status === "needs-confirmation") || Boolean(result.metadata?.pendingAction);
+  const needsOneAnswer = status === "needs-input" || intent.includes("clarification") || intent.includes("voice_recovery") || Boolean(bridge?.oneQuestion);
+  const nextVisibleAction = bridge?.primaryAction
+    || guided?.currentStep?.detail
+    || result.metadata?.pendingAction?.action
+    || result.metadata?.suggestedReplies?.[0]
+    || "Guide the next useful step";
+  const oneQuestion = bridge?.oneQuestion
+    || result.metadata?.turnCoach?.nextQuestion
+    || guided?.currentStep?.detail
+    || "What do you want Nexus to help you finish first?";
+  const recoveryPhrase = bridge?.recoveryPhrase
+    || "If I misunderstood, say Nexus stop, then tell me the area: health, crops, work, learning, map, or buyer.";
+  const loop = {
+    id: crypto.randomUUID(),
+    name: "Guided Outcome Loop",
+    status: needsConfirmation ? "waiting-confirmation" : needsOneAnswer ? "waiting-one-answer" : "guiding",
+    modeCoverage: ["User", "Admin", "Investor"],
+    heard: String(command || "").trim(),
+    intent,
+    workspace: bridge?.screen || moduleSignal.module || "AgriNexus",
+    section,
+    nextVisibleAction,
+    oneQuestion,
+    needsConfirmation,
+    recoveryPhrase,
+    evidenceTarget: bridge?.visibleOutcome || "Create workflow evidence, update memory, and keep the next step visible.",
+    sayNext: needsConfirmation ? "yes" : bridge?.openCommand || result.metadata?.suggestedReplies?.[0] || "what should I do next",
+    guidedMissionId: guided?.id || null,
+    reasoningId: result.metadata?.offlineReasoningBrain?.id || null,
+    createdAt: new Date().toISOString()
+  };
+  memory.activeOutcomeLoop = loop;
+  memory.outcomeLoopHistory = [loop, ...(memory.outcomeLoopHistory || [])].slice(0, 24);
+  memory.lastOutcomeLoopSummary = `${loop.workspace}: ${loop.nextVisibleAction}. ${loop.oneQuestion}`;
+  return loop;
+}
+
+function activeOutcomeLoopBrief(db) {
+  const loop = db.profile.agentMemory?.activeOutcomeLoop;
+  if (!loop) return null;
+  return {
+    id: loop.id,
+    status: loop.status,
+    workspace: loop.workspace,
+    section: loop.section,
+    nextVisibleAction: loop.nextVisibleAction,
+    oneQuestion: loop.oneQuestion,
+    needsConfirmation: loop.needsConfirmation,
+    recoveryPhrase: loop.recoveryPhrase,
+    sayNext: loop.sayNext,
+    evidenceTarget: loop.evidenceTarget,
+    phrase: `${loop.workspace}: ${loop.nextVisibleAction}. ${loop.oneQuestion}`
+  };
+}
+
 function buildConversationTurnCoach(db, user, command, result = {}) {
   ensureAiProfile(db.profile);
   const behavior = assistantBehaviorModel(db, user);
   const intent = String(result.intent || "");
   const status = String(result.status || "");
   const section = result.metadata?.redirectSection || conversationModuleSignal(command).section || "dashboard";
+  const bridge = result.metadata?.reasonedActionBridge || result.metadata?.offlineReasoningBrain?.actionBridge || null;
   let nextQuestion = "What would you like to do next?";
   let mode = "guide";
-  if (status === "needs-confirmation") {
+  if (bridge) {
+    mode = bridge.status === "needs-confirmation" ? "confirm" : "guided-outcome";
+    nextQuestion = bridge.oneQuestion || bridge.confirmPhrase || "Should I open the next workflow now?";
+  } else if (status === "needs-confirmation") {
     mode = "confirm";
     nextQuestion = "Should I run that workflow now? Say yes to continue, or no to cancel.";
   } else if (intent.includes("clarification_started") || intent.includes("voice_recovery")) {
@@ -14222,6 +14299,12 @@ function buildConversationTurnCoach(db, user, command, result = {}) {
     nextQuestion,
     persona: behavior.currentPersona,
     accessibilityMode: behavior.accessibilityMode,
+    outcomeLoop: bridge ? {
+      screen: bridge.screen,
+      nextVisibleAction: bridge.primaryAction,
+      visibleOutcome: bridge.visibleOutcome,
+      recoveryPhrase: bridge.recoveryPhrase
+    } : null,
     createdAt: new Date().toISOString()
   };
 }
@@ -14771,6 +14854,15 @@ function conversationFollowUpResponse(db, user, text, lower) {
   if (!wantsExplanation && !wantsNavigation && !wantsNext && !wantsMission) return null;
 
   if (wantsMission) {
+    const outcome = activeOutcomeLoopBrief(db);
+    if (outcome && !/\b(checklist|guided mission)\b/.test(lower)) {
+      return {
+        intent: "conversation.outcome_loop_status",
+        response: `${outcome.phrase}. Say ${outcome.sayNext} when you are ready, or say Nexus stop if I misunderstood.`,
+        status: outcome.status || "completed",
+        metadata: { conversationMode: true, redirectSection: outcome.section || "dashboard", outcomeLoop: outcome }
+      };
+    }
     const guided = /\b(checklist|guided mission)\b/.test(lower) ? activeGuidedMissionBrief(db) : null;
     if (guided) {
       return {
@@ -17441,6 +17533,55 @@ async function runAgentCommand(db, user, command, options = {}) {
   }
   if (conversational && isCareerPathQuestion(text)) {
     return careerPathGuidanceResponse(db, user, text, options);
+  }
+  if (conversational && /^(continue|next step|do the next|run the next|start the next|do that|let's do that|lets do that|proceed|take me there|open that|show me|go there|explain that|repeat that|say that again)$/i.test(text.trim())) {
+    const followUp = conversationFollowUpResponse(db, user, text, lower);
+    if (followUp) return followUp;
+  }
+  if (conversational && /\b(current mission|mission status|where are we|what are we doing|what step|where am i|orient me|checklist|guided mission)\b/.test(lower)) {
+    const followUp = conversationFollowUpResponse(db, user, text, lower);
+    if (followUp) return followUp;
+  }
+  if (/(what should i call you|what do i call you|short name|abbreviat|nickname|who are you|your name)/.test(lower)) {
+    db.profile.agentMemory.lastStatus = "assistant-alias-ready";
+    db.profile.agentMemory.lastSummary = "The assistant short name is Nexus.";
+    db.profile.agentMemory.updatedAt = new Date().toISOString();
+    return {
+      intent: "conversation.assistant_alias",
+      response: "You can call me Nexus. AgriNexus is the full platform name, and Nexus is the short voice command for everyday use.",
+      status: "completed",
+      metadata: {
+        conversationMode: true,
+        assistantName: "AgriNexus",
+        assistantAlias: "Nexus",
+        wakePhrases: ["Hey AgriNexus", "Nexus"]
+      }
+    };
+  }
+  if (lower.includes("capability registry") || lower.includes("technical capability") || lower.includes("what tools can you run") || lower.includes("what can you operate")) {
+    const registry = agentCapabilityRegistryState(db);
+    db.profile.agentMemory.lastStatus = "capability-registry-ready";
+    db.profile.agentMemory.lastSummary = `AgriNexus has ${registry.totalTools} supervised agent tool(s), ${registry.confirmationTools} requiring confirmation, and ${registry.liveTools} connected to live engines.`;
+    db.profile.agentMemory.updatedAt = new Date().toISOString();
+    return {
+      intent: "agent.capability_registry",
+      response: `I can operate ${registry.totalTools} supervised tools across learning, workforce, telehealth, trade, drones, maps, integrations, admin, profile, and AI. ${registry.confirmationTools} tools require confirmation before action. ${registry.liveTools} are live-engine backed right now; the rest run as local workflow evidence until providers are connected.`,
+      status: "completed",
+      metadata: { conversationMode: conversational, redirectSection: "agent", capabilityRegistry: registry }
+    };
+  }
+  if (lower.includes("agrinexus readiness") || lower.includes("agrinexus level") || lower.includes("command readiness") || lower.includes("command level") || lower.includes("all six") || lower.includes("all 6")) {
+    const readiness = jarvisReadinessModel(db, user);
+    db.profile.agentMemory.lastStatus = "agrinexus-readiness-reviewed";
+    db.profile.agentMemory.lastSummary = readiness.summary;
+    db.profile.agentMemory.updatedAt = new Date().toISOString();
+    const missing = readiness.items.filter(item => !item.ready).map(item => item.title).slice(0, 3);
+    return {
+      intent: "agent.agrinexus_readiness",
+      response: `${readiness.summary} Current score is ${readiness.score} percent. ${missing.length ? `The biggest remaining unlocks are ${missing.join(", ")}.` : "All six layers are ready."} I can keep improving the software layer now and will clearly show which parts need hosted credentials or native app packaging.`,
+      status: readiness.status,
+      metadata: { conversationMode: conversational, redirectSection: "agent", jarvisReadiness: readiness }
+    };
   }
   if (conversational && isCurrentKnowledgeQuestion(text)) {
     return currentKnowledgeQuestionResponse(db, user, text, options);
