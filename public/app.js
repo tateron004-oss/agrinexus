@@ -10505,6 +10505,23 @@ function render() {
     ${countryCoverageHtml}
     ${providerCandidateHtml}
   `;
+  const platformIntel = data.platformIntelligence || {};
+  if ($("#platformIntelligenceScore")) $("#platformIntelligenceScore").textContent = `${Number(platformIntel.score || 0)}%`;
+  if ($("#platformIntelligencePanel")) {
+    const counts = platformIntel.readyCounts || {};
+    $("#platformIntelligencePanel").innerHTML = [
+      `<div><strong>${translateText(platformIntel.status || "active")}</strong><span>${translateText(platformIntel.summary || "Platform intelligence is ready.")}</span></div>`,
+      `<div><strong>${translateText("Source rule")}</strong><span>${translateText(platformIntel.sourceTruth || "Nexus labels local, platform, simulated, and live provider sources.")}</span></div>`,
+      `<div><strong>${translateText("Records")}</strong><span>${translateText(`${counts.localDirectory || 0} directory, ${counts.calendarLite || 0} schedule, ${counts.crmContacts || 0} CRM, ${counts.agentBlueprints || 0} agent blueprint(s)`)}</span></div>`,
+      ...(platformIntel.dailyPlan?.steps || []).slice(0, 3).map(step => `<div><strong>${translateText(step.title || step.module)}</strong><span>${translateText(`${step.module || "Platform"} - ${step.action || "Ready"}`)}</span><small>${translateText(step.source || "platform")}</small></div>`),
+      ...((platformIntel.suggestedCommands || []).slice(0, 4).map(command => `<div><strong>${translateText("Try")}</strong><span>${translateText(command)}</span></div>`))
+    ].join("");
+  }
+  if ($("#platformDirectoryPanel")) {
+    $("#platformDirectoryPanel").innerHTML = (platformIntel.directoryPreview || []).length
+      ? (platformIntel.directoryPreview || []).map(record => `<div><strong>${translateText(`${record.name} - ${record.type}`)}</strong><span>${translateText(`${record.country}: ${record.service}`)}</span><small>${translateText(`Source: ${record.source}; ${record.status}`)}</small></div>`).join("")
+      : `<div><strong>${translateText("No local directory records")}</strong><span>${translateText("Add records manually or import CSV before live provider feeds are connected.")}</span></div>`;
+  }
   renderCommunicationPanel("#providerCommunicationPanel", "Platform", "No provider support thread yet. Message the provider desk to create a two-way operations record.");
 
   $("#environmentPanel").innerHTML = [
@@ -13434,6 +13451,71 @@ function workflowConfig(workflow, action, element) {
         { title: "Pilot offer", detail: "Creates a funder-ready pilot offer that can be discussed with real providers.", status: "ready", label: "Pilot" },
         { title: "Credential list", detail: "Lists the exact environment values or endpoints needed later.", status: "ready", label: "Keys" },
         { title: "Partner questions", detail: "Creates plain-language questions for provider discovery calls.", status: "ready", label: "Outreach" }
+      ]
+    });
+  }
+  if (workflow === "platform-intelligence") {
+    const configs = {
+      "search-clinic": {
+        title: "Search saved clinic resources",
+        summary: "Search the AgriNexus local directory for clinic or mobile clinic records that can support a user before a live provider directory is connected.",
+        confirmLabel: "Search clinic",
+        path: "/api/platform-intelligence/search",
+        body: { query: "clinic mobile clinic Kenya rural", type: "clinic", country: "Kenya" },
+        success: "Clinic directory searched",
+        record: "Search history, source truth, local directory match, and integration audit evidence",
+        provider: "Saved AgriNexus directory. This is usable local platform data, not live-verified external provider data."
+      },
+      "search-course": {
+        title: "Search saved course catalog",
+        summary: "Search the providerless learning catalog for courses that can be shown before a live LMS or course provider is connected.",
+        confirmLabel: "Search courses",
+        path: "/api/platform-intelligence/search",
+        body: { query: "women farmers course crop market", type: "course", country: "Pan-African" },
+        success: "Course directory searched",
+        record: "Search history, course source label, local catalog result, and integration audit evidence",
+        provider: "Saved AgriNexus directory and local course records."
+      },
+      "search-job": {
+        title: "Search saved workforce roles",
+        summary: "Search local workforce records for jobs or placement paths before live job-board provider data is connected.",
+        confirmLabel: "Search jobs",
+        path: "/api/platform-intelligence/search",
+        body: { query: "farm job Kenya operations assistant", type: "job", country: "Kenya" },
+        success: "Job directory searched",
+        record: "Search history, job match, source truth, and workforce audit evidence",
+        provider: "Saved AgriNexus directory and local workforce records."
+      },
+      "daily-plan": {
+        title: "Create Nexus day plan",
+        summary: "Build a practical day plan from saved schedule, workflows, and next-best actions so Nexus can guide without Google Calendar yet.",
+        confirmLabel: "Plan day",
+        path: "/api/platform-intelligence/daily-plan",
+        body: { goal: "Help the user make progress across health, learning, trade, and partner follow-up today" },
+        success: "Daily plan created",
+        record: "Calendar-lite plan, smart next actions, activity feed, and integration audit evidence",
+        provider: "AgriNexus calendar-lite and platform records."
+      },
+      "draft-message": {
+        title: "Draft partner message",
+        summary: "Create a reviewable SMS, WhatsApp, email, or partner-message draft without sending it live.",
+        confirmLabel: "Draft message",
+        path: "/api/platform-intelligence/draft",
+        body: { audience: "partner", topic: "mobile clinic and rural pharmacy pilot", channel: "WhatsApp/SMS/email draft" },
+        success: "Message drafted",
+        record: "Draft center record, review status, activity feed, and audit evidence",
+        provider: "Local draft center; live send uses Twilio/email when approved and configured."
+      }
+    };
+    const selected = configs[action] || configs["search-clinic"];
+    return simpleWorkflowConfig({
+      eyebrow: "Platform intelligence workflow",
+      ...selected,
+      redirectSection: "integrations",
+      checklist: [
+        { title: "Source-aware", detail: "Nexus labels whether the answer came from saved local records, platform context, simulated evidence, or live providers.", status: "ready", label: "Source" },
+        { title: "Providerless", detail: "Works before vendor credentials by using saved platform data.", status: "ready", label: "Local" },
+        { title: "Upgradeable", detail: "The same interface can later point to provider feeds, CSV imports, or APIs.", status: "ready", label: "Live path" }
       ]
     });
   }

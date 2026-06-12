@@ -1973,6 +1973,7 @@ async function runCrossPlatformFunction(db, user, body = {}) {
 function publicState(db, user) {
   const providers = runtimeProviders(db);
   ensureOperationsProfile(db.profile);
+  ensurePlatformIntelligenceProfile(db.profile);
   const providerCandidates = providerCandidateCatalog(db, providers);
   const agentCapabilities = agentCapabilityRegistryState(db, providers);
   const jarvisReadiness = jarvisReadinessModel(db, user, providers);
@@ -2006,6 +2007,7 @@ function publicState(db, user) {
     crossPlatformFunctions: crossPlatformFunctionPack(db, user, providers),
     womenFamilySupport: womenFamilyAgricultureModel(db, providers),
     remoteLaunchKit: remoteRuralFarmerLaunchKit(db, user, providers),
+    platformIntelligence: platformIntelligenceModel(db, user),
     sessionBriefing: sessionBriefingModel(db, user, providers),
     impactDashboard: impactDashboardModel(db, providers),
     missionTimeline: missionTimelineModel(db),
@@ -7663,6 +7665,224 @@ function ensureOperationsProfile(profile) {
   profile.providerShortlist = profile.providerShortlist || [];
   profile.remoteLaunchKits = profile.remoteLaunchKits || [];
   profile.crossPlatformFunctionRuns = profile.crossPlatformFunctionRuns || [];
+}
+
+function ensurePlatformIntelligenceProfile(profile) {
+  profile.platformIntelligence = profile.platformIntelligence || {};
+  const intelligence = profile.platformIntelligence;
+  intelligence.localDirectory = intelligence.localDirectory || [];
+  intelligence.calendarLite = intelligence.calendarLite || [];
+  intelligence.crmContacts = intelligence.crmContacts || [];
+  intelligence.messageDrafts = intelligence.messageDrafts || [];
+  intelligence.agentBlueprints = intelligence.agentBlueprints || [];
+  intelligence.searchHistory = intelligence.searchHistory || [];
+  intelligence.dailyPlans = intelligence.dailyPlans || [];
+  intelligence.imports = intelligence.imports || [];
+  intelligence.sourcePolicy = intelligence.sourcePolicy || {
+    local: "Saved AgriNexus directory",
+    platform: "AgriNexus workflow context",
+    simulated: "Local pilot evidence",
+    external: "Live provider evidence when credentials are connected"
+  };
+  if (!intelligence.localDirectory.length) {
+    intelligence.localDirectory = [
+      { id: "dir-health-kenya-clinic", type: "clinic", name: "Kenya Rural Clinic Desk", country: "Kenya", region: "Nairobi county rural outreach", service: "mobile clinic intake, nurse callback, referral support", contact: "+254 700 100 200", language: "English, Swahili", status: "saved-local", source: "seeded-local-directory", notes: "Demo-ready clinic access record until a licensed provider directory is connected." },
+      { id: "dir-health-kenya-pharmacy", type: "pharmacy", name: "Kenya Pharmacy Resource Desk", country: "Kenya", region: "Nairobi and surrounding counties", service: "medicine request, stock callback, pickup coordination", contact: "pharmacy-desk@example.com", language: "English, Swahili", status: "saved-local", source: "seeded-local-directory", notes: "Local resource record; does not verify inventory until a pharmacy partner is connected." },
+      { id: "dir-health-nigeria-mobile", type: "mobile-clinic", name: "Nigeria Mobile Clinic Route A", country: "Nigeria", region: "Kaduna rural corridor", service: "community intake, vitals, caregiver callback, referral transport", contact: "+234 700 200 1000", language: "English, Hausa support planned", status: "saved-local", source: "seeded-local-directory", notes: "Mobile clinic route simulation record for pilot planning." },
+      { id: "dir-course-women-farmers", type: "course", name: "Women Farmers Crop-to-Market Basics", country: "Pan-African", region: "Rural agriculture", service: "voice-first course, captions, certificate evidence", contact: "learning@agrinexus.local", language: "English, French, Swahili, Arabic, Spanish", status: "saved-local", source: "seeded-local-directory", notes: "Providerless catalog record that can be replaced by LMS catalog data." },
+      { id: "dir-job-farm-operator", type: "job", name: "Farm Operations Assistant", country: "Kenya", region: "Nakuru and Nairobi supply corridor", service: "entry agricultural operations role, interview prep, certificate review", contact: "workforce@agrinexus.local", language: "English, Swahili", status: "saved-local", source: "seeded-local-directory", notes: "Local job network record until live job provider is connected." },
+      { id: "dir-buyer-lagos-maize", type: "buyer", name: "Lagos Maize Buyer Desk", country: "Nigeria", region: "Lagos market corridor", service: "maize purchase inquiry, quality evidence, delivery coordination", contact: "buyer-lagos@example.com", language: "English", status: "saved-local", source: "seeded-local-directory", notes: "Buyer/seller workflow record for trade conversations." },
+      { id: "dir-logistics-east-west", type: "logistics", name: "East-West Crop Logistics Desk", country: "Pan-African", region: "Kenya to Nigeria route planning", service: "shipment planning, checkpoint tracking, driver updates", contact: "logistics@agrinexus.local", language: "English, French, Swahili", status: "saved-local", source: "seeded-local-directory", notes: "Local logistics record; exact GPS requires provider credentials." },
+      { id: "dir-drone-field-scout", type: "drone", name: "Field Scout Drone Evidence Desk", country: "Pan-African", region: "Smallholder farm plots", service: "crop photo review, drone scan packet, field task creation", contact: "drone@agrinexus.local", language: "English", status: "saved-local", source: "seeded-local-directory", notes: "Drone workflow record; live imagery requires drone/satellite provider." }
+    ];
+  }
+  if (!intelligence.crmContacts.length) {
+    intelligence.crmContacts = [
+      { id: "crm-investor-rural-health", name: "Rural Health Investor Lead", type: "investor", organization: "Impact Partner Pipeline", country: "Kenya", status: "warm", nextStep: "Send mobile clinic and pharmacy access brief", lastTouch: "", notes: "Interested in rural clinic/pharmacy coordination and voice-first intake." },
+      { id: "crm-provider-mobile-clinic", name: "Mobile Clinic Partner Lead", type: "provider", organization: "Community Health Network", country: "Kenya", status: "discovery", nextStep: "Confirm service areas, intake fields, callback workflow, and payment process", lastTouch: "", notes: "No EHR required for pilot; AgriNexus can start with intake and referral records." },
+      { id: "crm-buyer-market", name: "Regional Buyer Coordinator", type: "buyer", organization: "Crop Buyer Network", country: "Nigeria", status: "pilot-ready", nextStep: "Share crop evidence, pricing, and logistics packet", lastTouch: "", notes: "Can test buyer-seller communication before live marketplace provider." }
+    ];
+  }
+  if (!intelligence.agentBlueprints.length) {
+    intelligence.agentBlueprints = [
+      { id: "agent-health-access", name: "Health Access Agent", domain: "Healthcare", goal: "Guide intake, clinic/pharmacy lookup, mobile clinic support, safety boundaries, and provider handoff.", status: "active-local", tools: ["directory.search", "intake.guide", "message.draft", "calendar.plan"] },
+      { id: "agent-farmer-trade", name: "Farmer Trade Agent", domain: "AgriTrade", goal: "Help a farmer sell crops, contact buyers, track delivery, and explain crop/route evidence simply.", status: "active-local", tools: ["directory.search", "trade.order", "map.route", "message.draft"] },
+      { id: "agent-learning-coach", name: "Learning Coach Agent", domain: "Learning", goal: "Help learners choose courses, use captions/audio, complete lessons, and prepare certificates.", status: "active-local", tools: ["directory.search", "course.plan", "calendar.plan"] },
+      { id: "agent-workforce-coach", name: "Workforce Coach Agent", domain: "Workforce", goal: "Help users find roles, build profiles, prepare interviews, and track applications.", status: "active-local", tools: ["directory.search", "application.guide", "message.draft"] }
+    ];
+  }
+  if (!intelligence.calendarLite.length) {
+    intelligence.calendarLite = [
+      { id: "cal-mobile-clinic-demo", title: "Mobile clinic intake window", module: "Healthcare", country: "Kenya", date: new Date(Date.now() + 86400000).toISOString(), status: "scheduled-local", action: "Prepare patient intake and clinic/pharmacy map." },
+      { id: "cal-course-demo", title: "Women farmers lesson session", module: "Learning", country: "Pan-African", date: new Date(Date.now() + 2 * 86400000).toISOString(), status: "scheduled-local", action: "Open voice-first lesson and accessibility supports." },
+      { id: "cal-buyer-demo", title: "Buyer follow-up for maize lot", module: "AgriTrade", country: "Nigeria", date: new Date(Date.now() + 3 * 86400000).toISOString(), status: "scheduled-local", action: "Draft buyer update and check route evidence." }
+    ];
+  }
+  return intelligence;
+}
+
+function platformIntelligenceSearch(db, user, query = "", filters = {}) {
+  const intelligence = ensurePlatformIntelligenceProfile(db.profile);
+  const text = String(query || "").toLowerCase();
+  const type = String(filters.type || "").toLowerCase();
+  const country = String(filters.country || "").toLowerCase();
+  const tokens = tokenizeAgentText(`${query} ${type} ${country}`);
+  const sourceRecords = intelligence.localDirectory || [];
+  const scored = sourceRecords
+    .filter(record => !type || String(record.type || "").toLowerCase() === type)
+    .filter(record => !country || String(record.country || "").toLowerCase().includes(country) || String(record.region || "").toLowerCase().includes(country))
+    .map(record => {
+      const haystack = tokenizeAgentText(`${record.type} ${record.name} ${record.country} ${record.region} ${record.service} ${record.language} ${record.notes}`);
+      const score = tokens.reduce((total, token) => total + (haystack.includes(token) ? 2 : String(`${record.type} ${record.name} ${record.country} ${record.region} ${record.service}`).toLowerCase().includes(token) ? 1 : 0), 0)
+        + (text && String(record.type || "").toLowerCase().includes(text) ? 2 : 0);
+      return { ...record, score };
+    })
+    .sort((a, b) => b.score - a.score || String(a.name).localeCompare(String(b.name)));
+  const matches = (tokens.length ? scored.filter(record => record.score > 0) : scored).slice(0, 8);
+  const result = {
+    id: crypto.randomUUID(),
+    query,
+    filters,
+    matches,
+    source: "saved-local-directory",
+    sourceLabel: "Saved AgriNexus directory",
+    sourceTruth: matches.length
+      ? "These records are usable inside AgriNexus now. They are not live-verified external provider data until credentials or partner feeds are connected."
+      : "No saved local record matched. Add a record manually, import CSV data, or connect a live provider.",
+    createdAt: new Date().toISOString()
+  };
+  intelligence.searchHistory.unshift(result);
+  intelligence.searchHistory = intelligence.searchHistory.slice(0, 30);
+  return result;
+}
+
+function platformIntelligenceDailyPlan(db, user, goal = "") {
+  const intelligence = ensurePlatformIntelligenceProfile(db.profile);
+  const { country } = activeContext(db);
+  const schedule = [...(intelligence.calendarLite || [])]
+    .sort((a, b) => Date.parse(a.date || "") - Date.parse(b.date || ""))
+    .slice(0, 4);
+  const smart = smartNextActions(db, user).items.slice(0, 4);
+  const plan = {
+    id: crypto.randomUUID(),
+    title: "Nexus day plan",
+    goal: String(goal || "Help the user make progress today").trim(),
+    country: country.name,
+    source: "platform-records-and-saved-schedule",
+    steps: [
+      ...schedule.map(item => ({ module: item.module, title: item.title, action: item.action, when: item.date, source: "calendar-lite" })),
+      ...smart.map(item => ({ module: item.module, title: item.title, action: item.detail, when: "today", source: "smart-next-actions" }))
+    ].slice(0, 6),
+    createdAt: new Date().toISOString()
+  };
+  intelligence.dailyPlans.unshift(plan);
+  intelligence.dailyPlans = intelligence.dailyPlans.slice(0, 20);
+  addActivity(db.profile, `Platform intelligence daily plan created: ${plan.goal}.`);
+  return plan;
+}
+
+function platformIntelligenceDraft(db, user, body = {}) {
+  const intelligence = ensurePlatformIntelligenceProfile(db.profile);
+  const audience = String(body.audience || "partner").trim();
+  const topic = String(body.topic || body.query || "AgriNexus platform follow-up").trim();
+  const record = {
+    id: crypto.randomUUID(),
+    draftNumber: `NEX-DRAFT-${String((intelligence.messageDrafts || []).length + 1).padStart(3, "0")}`,
+    audience,
+    topic,
+    channel: String(body.channel || "WhatsApp/SMS/email draft").trim(),
+    text: `Hello, this is AgriNexus. I am following up about ${topic}. We can support this with saved platform records, guided workflows, voice support, and clear next steps. Please confirm the best contact, service area, and next action.`,
+    status: "drafted-local",
+    source: "nexus-platform-intelligence",
+    createdBy: user?.email || "Nexus",
+    createdAt: new Date().toISOString()
+  };
+  intelligence.messageDrafts.unshift(record);
+  intelligence.messageDrafts = intelligence.messageDrafts.slice(0, 40);
+  addActivity(db.profile, `${record.draftNumber} created for ${audience}: ${topic}.`);
+  return record;
+}
+
+function platformIntelligenceModel(db, user, query = "") {
+  const intelligence = ensurePlatformIntelligenceProfile(db.profile);
+  const localRecords = intelligence.localDirectory || [];
+  const readyCounts = {
+    localDirectory: localRecords.length,
+    calendarLite: (intelligence.calendarLite || []).length,
+    crmContacts: (intelligence.crmContacts || []).length,
+    messageDrafts: (intelligence.messageDrafts || []).length,
+    agentBlueprints: (intelligence.agentBlueprints || []).length,
+    imports: (intelligence.imports || []).length
+  };
+  const total = Object.values(readyCounts).reduce((sum, count) => sum + count, 0);
+  const latestSearch = (intelligence.searchHistory || [])[0] || null;
+  return {
+    status: "active-providerless-intelligence",
+    summary: "Platform Intelligence lets Nexus use saved local directories, calendar-lite planning, CRM-style partner records, message drafts, and specialized local agents before live provider feeds are connected.",
+    sourceTruth: "Nexus will label answers as saved local directory, platform workflow context, simulated pilot evidence, or live provider evidence when external credentials are connected.",
+    readyCounts,
+    score: Math.min(100, 50 + Math.min(30, localRecords.length * 3) + Math.min(20, total)),
+    latestSearch,
+    directoryPreview: localRecords.slice(0, 8),
+    dailyPlan: (intelligence.dailyPlans || [])[0] || null,
+    crmPreview: (intelligence.crmContacts || []).slice(0, 5),
+    agentBlueprints: (intelligence.agentBlueprints || []).slice(0, 6),
+    suggestedCommands: [
+      "Nexus, find a clinic in Kenya from our directory",
+      "Nexus, find medicine support near Nairobi",
+      "Nexus, show courses for women farmers",
+      "Nexus, find a farm job in Kenya",
+      "Nexus, help me contact a buyer",
+      "Nexus, plan my day",
+      "Nexus, draft a partner message",
+      "Nexus, what source are you using?"
+    ]
+  };
+}
+
+function platformIntelligenceCommandResponse(db, user, text, options = {}) {
+  const lower = String(text || "").toLowerCase();
+  if (!/\b(directory|saved provider|local provider|platform intelligence|find clinic|find pharmacy|find medicine|medicine support|show courses|find course|farm job|find job|buyer|logistics desk|plan my day|daily plan|draft.*message|source are you using|what source)\b/.test(lower)) return null;
+  const wantsPlan = /\b(plan my day|daily plan|what do i have today|today's plan)\b/.test(lower);
+  const wantsDraft = /\b(draft|write|prepare).*\b(message|email|sms|whatsapp|partner|buyer|investor|provider)\b/.test(lower);
+  if (wantsPlan) {
+    const plan = platformIntelligenceDailyPlan(db, user, text);
+    return {
+      intent: "platform_intelligence.daily_plan",
+      status: "completed",
+      response: `I built a day plan from saved AgriNexus records. First: ${plan.steps[0]?.title || "choose one goal"}. Source: ${plan.source}.`,
+      metadata: { conversationMode: true, redirectSection: "agent", platformIntelligence: true, plan }
+    };
+  }
+  if (wantsDraft) {
+    const draft = platformIntelligenceDraft(db, user, { audience: lower.includes("buyer") ? "buyer" : lower.includes("investor") ? "investor" : lower.includes("provider") ? "provider" : "partner", topic: text });
+    return {
+      intent: "platform_intelligence.message_drafted",
+      status: "completed",
+      response: `I drafted ${draft.draftNumber}. Source: saved platform context. It is ready to review before sending through SMS, WhatsApp, phone, or email.`,
+      metadata: { conversationMode: true, redirectSection: "agent", platformIntelligence: true, draft }
+    };
+  }
+  const type = /\b(clinic|doctor|provider|health)\b/.test(lower) ? "clinic"
+    : /\b(pharmacy|medicine|pills|drug)\b/.test(lower) ? "pharmacy"
+    : /\b(course|lesson|learn|training)\b/.test(lower) ? "course"
+    : /\b(job|work|role)\b/.test(lower) ? "job"
+    : /\b(buyer|sell|market)\b/.test(lower) ? "buyer"
+    : /\b(logistics|shipment|delivery|route)\b/.test(lower) ? "logistics"
+    : /\b(drone|field|crop scan)\b/.test(lower) ? "drone"
+    : "";
+  const country = ["kenya", "nigeria", "drc", "congo", "egypt", "ghana", "rwanda", "tanzania", "south africa"].find(item => lower.includes(item)) || "";
+  const result = platformIntelligenceSearch(db, user, text, { type, country });
+  const top = result.matches[0];
+  const answer = top
+    ? `I found ${top.name} in the saved AgriNexus directory for ${top.country}. It supports ${top.service}. Source: ${result.sourceLabel}. Important: this is usable platform data, not live-verified external provider data until a partner feed is connected.`
+    : `I do not have a saved match yet. Source: ${result.sourceLabel}. Add a record, import CSV data, or connect a live provider and I can search it.`;
+  return {
+    intent: "platform_intelligence.directory_search",
+    status: top ? "completed" : "needs-data",
+    response: answer,
+    metadata: { conversationMode: true, redirectSection: type === "clinic" || type === "pharmacy" ? "health" : type === "course" ? "learning" : type === "job" ? "workforce" : type === "buyer" || type === "logistics" || type === "drone" ? "trade" : "agent", platformIntelligence: true, result }
+  };
 }
 
 function womenFamilyAgricultureModel(db, providers = runtimeProviders(db)) {
@@ -14680,6 +14900,8 @@ async function runAgentCommand(db, user, command, options = {}) {
   if (conversational && isRuralDistressConversation(text)) {
     return conversationalReasoningResponse(db, user, text, { ...options, openDialog: true });
   }
+  const platformIntelligenceCommand = platformIntelligenceCommandResponse(db, user, text, options);
+  if (platformIntelligenceCommand) return platformIntelligenceCommand;
   if (isBuyerSellerLocationRouteCommand(lower) || isTradeCountryRouteCommand(lower)) {
     return tradeLocationRouteResponse(db, user, text, options);
   }
@@ -16589,6 +16811,143 @@ async function api(req, res, url) {
     await writeDb(db);
     const state = publicState(db, user);
     state.partnershipResult = partnership;
+    return send(res, 200, state);
+  }
+
+  if (url.pathname === "/api/platform-intelligence/search" && req.method === "POST") {
+    if (!canUse(user, "ai")) return send(res, 403, { error: "Role does not allow platform intelligence search" });
+    const body = await readBody(req);
+    const result = platformIntelligenceSearch(db, user, String(body.query || ""), { type: body.type || "", country: body.country || "" });
+    logIntegration(db, {
+      providerId: "platform-intelligence",
+      module: "AI",
+      action: "platform_intelligence.directory_search",
+      detail: `Platform intelligence searched local directory for: ${body.query || body.type || "all records"}.`,
+      metadata: { query: body.query || "", type: body.type || "", country: body.country || "", matches: result.matches.length },
+      dispatch: false
+    });
+    await writeDb(db);
+    const state = publicState(db, user);
+    state.platformIntelligenceResult = result;
+    return send(res, 200, state);
+  }
+
+  if (url.pathname === "/api/platform-intelligence/record" && req.method === "POST") {
+    if (!canUse(user, "integrations")) return send(res, 403, { error: "Role does not allow platform intelligence record management" });
+    const body = await readBody(req);
+    const intelligence = ensurePlatformIntelligenceProfile(db.profile);
+    const record = {
+      id: crypto.randomUUID(),
+      type: String(body.type || "provider").trim(),
+      name: String(body.name || "New local resource").trim(),
+      country: String(body.country || "Pan-African").trim(),
+      region: String(body.region || body.country || "Rural region").trim(),
+      service: String(body.service || "Local resource support").trim(),
+      contact: String(body.contact || "not provided").trim(),
+      language: String(body.language || "English").trim(),
+      status: "saved-local",
+      source: "manual-platform-intelligence-record",
+      notes: String(body.notes || "Added manually before live provider feed is connected.").trim(),
+      createdBy: user.email,
+      createdAt: new Date().toISOString()
+    };
+    intelligence.localDirectory.unshift(record);
+    intelligence.localDirectory = intelligence.localDirectory.slice(0, 250);
+    addActivity(db.profile, `Platform intelligence record added: ${record.name}.`);
+    logIntegration(db, {
+      providerId: "platform-intelligence",
+      module: "AI",
+      action: "platform_intelligence.record_added",
+      detail: `${record.type} record added: ${record.name}.`,
+      metadata: { record },
+      dispatch: false
+    });
+    await writeDb(db);
+    const state = publicState(db, user);
+    state.platformIntelligenceRecord = record;
+    return send(res, 200, state);
+  }
+
+  if (url.pathname === "/api/platform-intelligence/import" && req.method === "POST") {
+    if (!canUse(user, "integrations")) return send(res, 403, { error: "Role does not allow platform intelligence imports" });
+    const body = await readBody(req);
+    const intelligence = ensurePlatformIntelligenceProfile(db.profile);
+    const text = String(body.csv || body.text || "").trim();
+    if (!text) return send(res, 400, { error: "CSV text is required" });
+    const lines = text.split(/\r?\n/).map(line => line.trim()).filter(Boolean);
+    const headers = (lines.shift() || "type,name,country,region,service,contact,language,notes").split(",").map(item => item.trim().toLowerCase());
+    const rows = lines.map(line => {
+      const values = line.split(",").map(item => item.trim());
+      const row = Object.fromEntries(headers.map((key, index) => [key, values[index] || ""]));
+      return {
+        id: crypto.randomUUID(),
+        type: row.type || "provider",
+        name: row.name || row.title || "Imported resource",
+        country: row.country || "Pan-African",
+        region: row.region || row.area || row.country || "Rural region",
+        service: row.service || row.description || "Imported local resource",
+        contact: row.contact || row.phone || row.email || "not provided",
+        language: row.language || "English",
+        status: "saved-local",
+        source: "csv-platform-intelligence-import",
+        notes: row.notes || "Imported before live provider feed is connected.",
+        createdBy: user.email,
+        createdAt: new Date().toISOString()
+      };
+    }).filter(row => row.name);
+    intelligence.localDirectory.unshift(...rows);
+    intelligence.localDirectory = intelligence.localDirectory.slice(0, 250);
+    const importRecord = { id: crypto.randomUUID(), rows: rows.length, createdBy: user.email, createdAt: new Date().toISOString() };
+    intelligence.imports.unshift(importRecord);
+    intelligence.imports = intelligence.imports.slice(0, 20);
+    addActivity(db.profile, `Platform intelligence CSV import added ${rows.length} record(s).`);
+    logIntegration(db, {
+      providerId: "platform-intelligence",
+      module: "AI",
+      action: "platform_intelligence.csv_imported",
+      detail: `${rows.length} platform intelligence record(s) imported.`,
+      metadata: { importRecord },
+      dispatch: false
+    });
+    await writeDb(db);
+    const state = publicState(db, user);
+    state.platformIntelligenceImport = importRecord;
+    return send(res, 200, state);
+  }
+
+  if (url.pathname === "/api/platform-intelligence/daily-plan" && req.method === "POST") {
+    if (!canUse(user, "ai")) return send(res, 403, { error: "Role does not allow platform intelligence planning" });
+    const body = await readBody(req);
+    const plan = platformIntelligenceDailyPlan(db, user, String(body.goal || ""));
+    logIntegration(db, {
+      providerId: "platform-intelligence",
+      module: "AI",
+      action: "platform_intelligence.daily_plan",
+      detail: `Daily platform plan created: ${plan.goal}.`,
+      metadata: { planId: plan.id, steps: plan.steps.length },
+      dispatch: false
+    });
+    await writeDb(db);
+    const state = publicState(db, user);
+    state.platformIntelligenceDailyPlan = plan;
+    return send(res, 200, state);
+  }
+
+  if (url.pathname === "/api/platform-intelligence/draft" && req.method === "POST") {
+    if (!canUse(user, "ai")) return send(res, 403, { error: "Role does not allow platform intelligence drafts" });
+    const body = await readBody(req);
+    const draft = platformIntelligenceDraft(db, user, body);
+    logIntegration(db, {
+      providerId: "platform-intelligence",
+      module: "AI",
+      action: "platform_intelligence.message_drafted",
+      detail: `${draft.draftNumber} drafted for ${draft.audience}.`,
+      metadata: { draftId: draft.id, audience: draft.audience, channel: draft.channel },
+      dispatch: false
+    });
+    await writeDb(db);
+    const state = publicState(db, user);
+    state.platformIntelligenceDraft = draft;
     return send(res, 200, state);
   }
 

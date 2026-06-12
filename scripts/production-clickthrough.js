@@ -141,6 +141,11 @@ const endpoints = [
   "/api/partnership/create",
   "/api/providers/candidates",
   "/api/providers/candidates/shortlist",
+  "/api/platform-intelligence/search",
+  "/api/platform-intelligence/record",
+  "/api/platform-intelligence/import",
+  "/api/platform-intelligence/daily-plan",
+  "/api/platform-intelligence/draft",
   "/api/admin/subscriber",
   "/api/admin/test-user",
   "/api/admin/admin-user",
@@ -192,6 +197,12 @@ assert(app.includes("African Country Coverage Desk"), "Frontend must render a co
 assert(app.includes("Legal/compliance"), "Frontend must expose a legal/compliance provider workflow");
 assert(app.includes('workflow === "provider-candidate"'), "Frontend must wire provider candidate buttons to a real shortlist workflow");
 assert(app.includes("/api/providers/candidates/shortlist"), "Frontend must call the provider shortlist endpoint");
+assert(html.includes("Platform Intelligence Desk"), "Integrations must include a providerless platform intelligence desk");
+assert(server.includes("function ensurePlatformIntelligenceProfile"), "Backend must create platform intelligence storage");
+assert(server.includes("function platformIntelligenceSearch"), "Backend must search saved local provider records");
+assert(server.includes("platform_intelligence.directory_search"), "Platform intelligence search must create audit evidence and voice intent");
+assert(app.includes('workflow === "platform-intelligence"'), "Frontend must wire platform intelligence buttons to real workflows");
+assert(app.includes("/api/platform-intelligence/daily-plan") && app.includes("/api/platform-intelligence/draft"), "Frontend must call platform intelligence planning and draft endpoints");
 assert(app.includes("activeVoiceAudio"), "Voice playback needs a single active audio guard");
 assert(html.includes("Buyer-Seller Communication Hub"), "AgriTrade needs a buyer-seller communication hub");
 assert(server.includes("function createBuyerSellerMessage"), "Backend needs buyer-seller message thread creation");
