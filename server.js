@@ -1761,6 +1761,105 @@ function offlineReasoningScenarioSignal(command = "") {
   return best && best.score > 0 ? best : { key: "platform", hits: [], score: 0 };
 }
 
+function reasonedActionBridgePlan(db, user, command = "", reasoning = {}) {
+  const { country, route } = activeContext(db);
+  const section = reasoning.redirectSection || "agent";
+  const domain = reasoning.domainKey || "platform";
+  const bridgeByDomain = {
+    health: {
+      screen: "Telehealth",
+      primaryAction: "Open the health intake and ask one symptom question",
+      confirmPhrase: "I heard you need health help. I can open intake now.",
+      openCommand: "Nexus, start telehealth intake",
+      visibleOutcome: "A patient intake, provider handoff path, clinic/pharmacy support, and safety guidance appear.",
+      recoveryPhrase: "If this is not health help, say Nexus stop, then say crop, work, learning, map, or buyer."
+    },
+    trade: {
+      screen: "AgriTrade",
+      primaryAction: "Open crop sale support and prepare buyer/order evidence",
+      confirmPhrase: "I heard you want trade or crop-sale help. I can open the crop sale workflow now.",
+      openCommand: "Nexus, help me sell my crop",
+      visibleOutcome: "A crop, buyer, order, route, receipt, and communication workflow appears.",
+      recoveryPhrase: "If the buyer or crop is wrong, say Nexus stop, then name the crop, buyer, or route."
+    },
+    drone: {
+      screen: "Drone Intelligence",
+      primaryAction: "Open a farmer-friendly field scan and explain the likely crop issue",
+      confirmPhrase: "I heard you want field or drone support. I can open the scan workflow now.",
+      openCommand: "Nexus, run drone scan on my farm",
+      visibleOutcome: "A field scan, farmer-language finding, action task, and crop-risk note appears.",
+      recoveryPhrase: "If I heard the field problem wrong, say Nexus stop, then describe what you see in the crop."
+    },
+    learning: {
+      screen: "Learning",
+      primaryAction: "Open the course path and choose accessibility support",
+      confirmPhrase: "I heard you want learning help. I can open the course path now.",
+      openCommand: "Nexus, start a course",
+      visibleOutcome: "A course, lesson, caption/audio support, quiz, and certificate path appears.",
+      recoveryPhrase: "If this is the wrong course, say Nexus stop, then tell me what skill you want to learn."
+    },
+    workforce: {
+      screen: "Workforce",
+      primaryAction: "Open job readiness and show application next steps",
+      confirmPhrase: "I heard you want work or job help. I can open workforce support now.",
+      openCommand: "Nexus, show me jobs",
+      visibleOutcome: "A profile, readiness gaps, course-to-job path, role match, and application action appears.",
+      recoveryPhrase: "If this is the wrong job, say Nexus stop, then tell me the country, skill, or job type."
+    },
+    map: {
+      screen: "Global Map",
+      primaryAction: "Open the map and focus route, clinic, buyer, or shipment context",
+      confirmPhrase: "I heard you need map or route help. I can open the full map now.",
+      openCommand: "Nexus, open full scale global map",
+      visibleOutcome: "A scalable map, route context, risk signal, and next route question appears.",
+      recoveryPhrase: "If the location is wrong, say Nexus stop, then give the starting place and destination."
+    },
+    family: {
+      screen: "Women And Family Support",
+      primaryAction: "Open family support and choose health, learning, safety, or crop help",
+      confirmPhrase: "I heard you need women, child, or family support. I can open the support path now.",
+      openCommand: "Nexus, open women and family support",
+      visibleOutcome: "A safe support path, learning option, health resource, and follow-up question appears.",
+      recoveryPhrase: "If I misunderstood who needs help, say Nexus stop, then say woman, child, farmer, learner, or patient."
+    },
+    platform: {
+      screen: "Ask Nexus",
+      primaryAction: "Ask one clarifying question and choose the right workspace",
+      confirmPhrase: "I heard you need help choosing the next step. I can guide one step at a time.",
+      openCommand: "Nexus, what should I do next?",
+      visibleOutcome: "Nexus asks one simple question, chooses a workspace, and records the reasoning evidence.",
+      recoveryPhrase: "If I choose the wrong direction, say Nexus stop, then say the area: health, crops, work, learning, or map."
+    }
+  };
+  const base = bridgeByDomain[domain] || bridgeByDomain[section] || bridgeByDomain.platform;
+  const confidence = Number(reasoning.confidence || 0);
+  const needsConfirmation = reasoning.status === "needs-human-review" || confidence < 82;
+  return {
+    id: crypto.randomUUID(),
+    status: needsConfirmation ? "needs-confirmation" : "ready-to-open",
+    modeCoverage: ["User", "Admin", "Investor"],
+    heard: String(command || reasoning.command || "").trim(),
+    screen: base.screen,
+    section,
+    primaryAction: base.primaryAction,
+    confirmPhrase: base.confirmPhrase,
+    openCommand: base.openCommand,
+    visibleOutcome: base.visibleOutcome,
+    oneQuestion: reasoning.nextQuestion || "What outcome do you want first?",
+    recoveryPhrase: base.recoveryPhrase,
+    evidence: [
+      `Country context: ${country.name || "not selected"}`,
+      `Route context: ${route.name || "not selected"}`,
+      `Reasoning confidence: ${confidence || "not scored"}%`,
+      `Provider boundary: ${reasoning.providerBoundary || "local workflow evidence only"}`
+    ],
+    voiceScript: needsConfirmation
+      ? `${base.confirmPhrase} Say yes and I will continue, or tell me what to change.`
+      : `${base.confirmPhrase} I am opening the right workspace and will ask one question.`,
+    createdAt: new Date().toISOString()
+  };
+}
+
 function offlineReasoningBrainModel(db, user, command = "", options = {}) {
   ensureAiProfile(db.profile);
   ensureLearningProfile(db.profile);
@@ -1815,6 +1914,7 @@ function offlineReasoningBrainModel(db, user, command = "", options = {}) {
     plainLanguageSummary: `${domain.title}: I can reason locally with ${confidence}% confidence. Best next action: ${domain.suggestedCommand}. Next question: ${domain.nextQuestion}`,
     createdAt: new Date().toISOString()
   };
+  reasoning.actionBridge = reasonedActionBridgePlan(db, user, text, reasoning);
   if (options.persist) {
     db.profile.offlineReasoningRuns = db.profile.offlineReasoningRuns || [];
     db.profile.offlineReasoningRuns.unshift(reasoning);
@@ -1825,7 +1925,7 @@ function offlineReasoningBrainModel(db, user, command = "", options = {}) {
       module: "AI",
       action: "agent.offline_reasoning_brain",
       detail: reasoning.plainLanguageSummary,
-      metadata: { reasoningId: reasoning.id, domain: signal.key, confidence, reviewNeeded, localData },
+      metadata: { reasoningId: reasoning.id, actionBridgeId: reasoning.actionBridge.id, domain: signal.key, confidence, reviewNeeded, localData },
       dispatch: false
     });
     addActivity(db.profile, `Offline Reasoning Brain reviewed ${domain.title} at ${confidence}% confidence.`);
@@ -1839,21 +1939,23 @@ function offlineReasoningBrainModel(db, user, command = "", options = {}) {
 
 function offlineReasoningCommandResponse(db, user, text = "", options = {}) {
   const lower = String(text || "").toLowerCase();
-  const explicitReasoning = /\b(offline reasoning|local reasoning|reasoning brain|offline brain|local brain|decision tree|scenario reasoning|confidence score|high functional reasoning|reason through this|reason through|think through|what should i do if)\b/.test(lower);
+  const explicitReasoning = /\b(offline reasoning|local reasoning|reasoning brain|offline brain|local brain|decision tree|scenario reasoning|confidence score|high functional reasoning|reason through this|reason through|think through|turn reasoning into action|reasoning into action|what should i do if)\b/.test(lower);
   const providerBoundReasoning = /\b(without live providers|without providers|without vendors|no providers|no vendors)\b/.test(lower)
     && /\b(reason|reasoning|decision|scenario|think|plan|brain|confidence)\b/.test(lower);
   const explicit = explicitReasoning || providerBoundReasoning;
   if (!explicit) return null;
   const reasoning = offlineReasoningBrainModel(db, user, text, { persist: true });
+  const bridge = reasoning.actionBridge;
   return {
     intent: "conversation.offline_reasoning_brain",
-    response: `${reasoning.plainLanguageSummary} ${reasoning.safetyBoundary}`,
+    response: `${bridge.voiceScript} ${reasoning.plainLanguageSummary} ${reasoning.safetyBoundary}`,
     status: reasoning.status,
     metadata: {
       conversationMode: true,
       redirectSection: reasoning.redirectSection,
       offlineReasoningBrain: reasoning,
-      suggestedReplies: [reasoning.recommendedAction, "ask one follow-up", "show me the decision tree", "what needs human review"]
+      reasonedActionBridge: bridge,
+      suggestedReplies: [bridge.openCommand, "yes", "ask one follow-up", "show me the decision tree"]
     }
   };
 }

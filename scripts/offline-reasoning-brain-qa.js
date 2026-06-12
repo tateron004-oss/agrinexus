@@ -85,6 +85,11 @@ async function call(route, body) {
       assert(result.metadata.offlineReasoningBrain.nextQuestion, `${domain} should ask the next best question`);
       assert(result.metadata.offlineReasoningBrain.confidence >= 54, `${domain} should include a confidence score`);
       assert(result.metadata.offlineReasoningBrain.providerBoundary.includes("local data"), `${domain} should explain provider boundary`);
+      assert(result.metadata.reasonedActionBridge, `${domain} should include a reasoned action bridge`);
+      assert(result.metadata.reasonedActionBridge.screen, `${domain} should route to a visible screen`);
+      assert(result.metadata.reasonedActionBridge.openCommand?.startsWith("Nexus,"), `${domain} should include a voice-open command`);
+      assert(result.metadata.reasonedActionBridge.recoveryPhrase?.includes("Nexus stop"), `${domain} should include voice recovery language`);
+      assert(result.metadata.reasonedActionBridge.visibleOutcome, `${domain} should explain what the user will see`);
       assert(result.response.includes("Best next action"), `${domain} response should include best next action`);
     }
 
@@ -94,6 +99,7 @@ async function call(route, body) {
     });
     assert(direct.offlineReasoningBrainResult, "direct endpoint should return offline reasoning result");
     assert(direct.offlineReasoningBrainResult.whatNexusKnows.length >= 3, "direct endpoint should include local knowledge facts");
+    assert(direct.offlineReasoningBrainResult.actionBridge?.modeCoverage?.includes("User"), "direct endpoint should include all-mode action bridge coverage");
     assert((direct.profile.offlineReasoningRuns || []).length >= 1, "offline reasoning should save evidence");
 
     console.log("Offline reasoning brain QA passed");
