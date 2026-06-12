@@ -395,8 +395,8 @@ assert(app.includes("Stopped. Ask me the next question or tell me where to go ne
 assert(styles.includes("pointer-events: none") && styles.includes(".user-caption-actions") && styles.includes("pointer-events: auto"), "Caption panel must not block workflow action clicks");
 assert(styles.includes("width: min(300px, calc(100vw - 24px))") && styles.includes("max-height: 138px"), "Caption panel must default to a small bubble");
 assert(styles.includes(".user-caption-panel.expanded") && styles.includes("display: none") && styles.includes("display: grid"), "Caption input controls must appear only in expanded caption mode");
-assert(html.includes("nexus-behavior-190"), "Index must force browsers to load Nexus behavior CSS");
-assert(html.includes("nexus-behavior-190"), "Index must force browsers to load Nexus behavior JS");
+assert(html.includes("nexus-behavior-191"), "Index must force browsers to load Nexus behavior CSS");
+assert(html.includes("nexus-behavior-191"), "Index must force browsers to load Nexus behavior JS");
 assert(app.includes("shipmentPreviewMapCanvas") && app.includes("renderShipmentPreviewMap"), "Shipment preview maps must use real Leaflet canvases");
 assert(app.includes("healthHotspotMapCanvas") && app.includes("renderHealthHotspotPreviewMap"), "Health hotspot maps must use real Leaflet canvases");
 assert(app.includes("function shipmentTrackingState") && app.includes("function drawShipmentRoute"), "Shipment maps must render operational tracking state, not decorative routes");
@@ -431,6 +431,9 @@ assert(html.includes("guestName") && html.includes("guestStartBtn") && app.inclu
 assert(app.includes("agrinexusGuestDisplayName") && app.includes('translateText("Hello")') && app.includes('translateText("Nexus is opening your workspace.")'), "Guest User mode must greet the person by name before entering the workspace");
 assert(html.includes("loginLanguageSelect") && app.includes("function setLoginLanguage") && app.includes("agrinexusLoginLanguage"), "Login screen must support language selection before sign-in");
 assert(app.includes('request("/api/user/language"') && app.includes("loginLanguage !== data?.user?.language"), "Selected login language must carry into signed-in User/Admin/Investor sessions");
+assert(app.includes("function appAutoLanguageChoice"), "App voice layer must detect spoken language before command routing");
+assert(app.includes("function applyAutoLanguageFromSpeech"), "App voice layer must auto-apply detected language across User, Admin, and Investor modes");
+assert(app.includes("Nexus detected ${choice.label}") && app.includes("Detected ${choice.label}. Keep speaking naturally."), "Auto language detection must give mode-wide feedback without blocking the command");
 assert(app.includes("loginPersonalizationTranslations") && app.includes("Nexus will greet you by name and keep the app simple."), "Personal greeting/login text must be covered by multilingual translations");
 assert(html.includes('data-health="symptom-guide"') && html.includes('data-health="nearest-clinic"') && html.includes('data-health="mobile-clinic"') && html.includes('data-health="pharmacy"') && html.includes('data-health="handoff"'), "Rural health access buttons must be visible");
 assert(html.includes("Mobile Clinic Supply Network"), "Health module needs the mobile clinic supply network workspace");

@@ -61,8 +61,8 @@ let routeTrackingWatchId = null;
 let routeTrackingPoints = [];
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-190";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v170";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-191";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v171";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
 const VOICE_ATTENTION_DELAY_MS = 900;
@@ -3557,6 +3557,49 @@ function languageFromVoiceCommand(command) {
   const match = lower.match(/\b(?:to|into|in|as|use|speak|talk|respond|reply|change|switch|set|translate|mudar|trocar|usar|falar|responder)\s+(english|eng|englsh|englisch|inglish|anglais|ingles|kiingereza|nigeria|nigerian|french|francais|frances|kifaransa|drc|congo|swahili|kiswahili|suajili|kenya|kenyan|arabic|arabe|kiarabu|egypt|egyptian|spanish|espanol|espanhol|kihispania|portuguese|portugues|portuguesa|brazil|brasil|brasileiro)\b/);
   if (match?.[1]) return languages[match[1]] || "";
   return Object.entries(languages).find(([name]) => lower.includes(name))?.[1] || "";
+}
+
+function appAutoLanguageChoice(command = "") {
+  const raw = String(command || "");
+  const lower = raw.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  if (!lower.trim() && !/[\u0627-\u064a]/.test(raw)) return null;
+  if (isUniversalLanguageCommand(raw)) return null;
+  if (/[\u0627-\u064a]/.test(raw)) return { language: "ar", label: "Arabic", evidence: "Arabic script" };
+  const choices = [
+    { language: "es", label: "Spanish", tests: [/\bhola\b/, /\bbuenos dias\b/, /\bbuenas tardes\b/, /\bbuenas noches\b/, /\bme llamo\b/, /\bmi nombre es\b/, /\byo necesito\b/, /\bnecesito ayuda\b/, /\bquiero\b/, /\bespanol\b/] },
+    { language: "fr", label: "French", tests: [/\bbonjour\b/, /\bbonsoir\b/, /\bsalut\b/, /\bje m appelle\b/, /\bje suis\b/, /\bmon nom est\b/, /\bj ai besoin\b/, /\bfrancais\b/, /\baidez[-\s]?moi\b/] },
+    { language: "sw", label: "Kiswahili", tests: [/\bjambo\b/, /\bhabari\b/, /\bmambo\b/, /\bnaitwa\b/, /\bjina langu\b/, /\bninahitaji\b/, /\btafadhali\b/, /\bkiswahili\b/, /\bswahili\b/] },
+    { language: "pt", label: "Portuguese", tests: [/\bola\b/, /\bbom dia\b/, /\bboa tarde\b/, /\bboa noite\b/, /\bme chamo\b/, /\bmeu nome e\b/, /\bpreciso\b/, /\bportugues\b/] },
+    { language: "en", label: "English", tests: [/\benglish\b/, /\bspeak english\b/, /\buse english\b/, /\bback to english\b/, /\bhello\b/, /\bgood morning\b/, /\bgood afternoon\b/, /\bmy name is\b/, /\bi need help\b/] }
+  ];
+  return choices.find(choice => choice.tests.some(pattern => pattern.test(lower))) || null;
+}
+
+async function applyAutoLanguageFromSpeech(rawCommand, options = {}) {
+  if (options.skipLanguageAutoDetect || !data?.user) return null;
+  const choice = appAutoLanguageChoice(rawCommand);
+  if (!choice || choice.language === languageCode()) return null;
+  try {
+    const previousLanguage = languageCode();
+    data = await request("/api/user/language", { method: "POST", body: { language: choice.language } });
+    localStorage.setItem("agrinexusAutoLanguage", JSON.stringify({
+      language: choice.language,
+      label: choice.label,
+      evidence: choice.evidence || "spoken phrase",
+      mode: experienceMode || data?.user?.role || "platform",
+      createdAt: new Date().toISOString()
+    }));
+    render();
+    refreshLanguageEverywhere();
+    if (previousLanguage !== languageCode()) refreshVoiceForLanguageChange();
+    updateNexusBehaviorLayer("listening", `Nexus detected ${choice.label} and changed language for ${experienceModeLabel()}.`);
+    const status = $("#globalAssistantStatus");
+    if (status) status.textContent = translateText(`Detected ${choice.label}. Keep speaking naturally.`);
+    return choice;
+  } catch (error) {
+    console.warn("Auto language detection failed", error);
+    return null;
+  }
 }
 
 function languageDisplayName(code = languageCode()) {
@@ -16480,6 +16523,7 @@ function commandGoal(command) {
 
 async function handleVoiceCommand(rawCommand, options = {}) {
   if (!data) return setVoiceResponse("Sign in first, then I can operate the platform.");
+  const autoLanguage = await applyAutoLanguageFromSpeech(rawCommand, options);
   const localizedCommand = normalizeLocalizedVoiceCommand(rawCommand);
   const greetingOnly = isNexusGreetingOnly(localizedCommand);
   const greetingPrefix = isNexusGreetingPrefix(localizedCommand);
@@ -16487,6 +16531,10 @@ async function handleVoiceCommand(rawCommand, options = {}) {
   let command = cleanWakeCommand(localizedCommand);
   command = normalizeMultilingualBehaviorCommand(command);
   const spokenCommand = command || cleanWakeCommand(localizedCommand);
+  if (autoLanguage) {
+    agentPerformanceState.lastCommand = command || localizedCommand || rawCommand;
+    recordNexusAutonomousLearning({ type: "auto-language-detected", command: rawCommand, language: autoLanguage.label, mode: experienceMode || data?.user?.role || "platform" });
+  }
   const visibleInlineWorkflow = $(".user-inline-workflow:not(.hidden)");
   if (pendingWorkflow && visibleInlineWorkflow && !isUniversalLanguageCommand(command || localizedCommand) && !isGlobalStopCommand(String(command || localizedCommand).toLowerCase())) {
     if (fillWorkflowFieldByVoice(command || localizedCommand)) return;
