@@ -1019,6 +1019,7 @@ function conversationEvidencePack(db) {
   const guided = activeGuidedMissionBrief(db);
   const voice = activeVoiceMissionBrief(db);
   const outcome = activeOutcomeLoopBrief(db);
+  const supervisor = memory.conversationSupervisor || null;
   const status = pending
     ? "waiting-confirmation"
     : memory.activeClarification
@@ -1032,6 +1033,7 @@ function conversationEvidencePack(db) {
     pending ? `Pending action: ${pending.action || pending.tool || "workflow"} in ${pending.module || "AgriNexus"}` : "No pending action waiting for approval.",
     guided ? `Guided mission: ${guided.progress}% complete` : "No guided mission checklist active.",
     outcome ? `Outcome loop: ${outcome.nextVisibleAction}` : "No guided outcome loop active.",
+    supervisor ? `Conversation supervisor: ${supervisor.lastScore || 0}/100 - ${supervisor.status}` : "Conversation supervisor ready.",
     memory.activeJarvisSession ? `AgriNexus session: ${memory.activeJarvisSession.goal}` : "No AgriNexus session active.",
     memory.turnCoach?.nextQuestion ? `Next prompt: ${memory.turnCoach.nextQuestion}` : "Next prompt will appear after conversation starts."
   ];
@@ -1045,6 +1047,7 @@ function conversationEvidencePack(db) {
     guidedMission: guided,
     voiceMission: voice,
     outcomeLoop: outcome,
+    conversationSupervisor: supervisor,
     activeJarvisSession: memory.activeJarvisSession || null,
     turnCoach: memory.turnCoach || null,
     quality: memory.conversationQuality || {},
@@ -6454,6 +6457,13 @@ function ensureAiProfile(profile) {
   profile.agentMemory.guidedMissionHistory = profile.agentMemory.guidedMissionHistory || [];
   profile.agentMemory.activeOutcomeLoop = profile.agentMemory.activeOutcomeLoop || null;
   profile.agentMemory.outcomeLoopHistory = profile.agentMemory.outcomeLoopHistory || [];
+  profile.agentMemory.conversationSupervisor = profile.agentMemory.conversationSupervisor || {
+    status: "ready",
+    lastScore: 0,
+    lastSummary: "Conversation Supervisor is ready to review Nexus answers before handoff.",
+    updatedAt: new Date().toISOString()
+  };
+  profile.agentMemory.conversationSupervisorHistory = profile.agentMemory.conversationSupervisorHistory || [];
   profile.agentMemory.turnCoach = profile.agentMemory.turnCoach || null;
   profile.agentMemory.activeJarvisSession = profile.agentMemory.activeJarvisSession || null;
   profile.agentMemory.jarvisSessionHistory = profile.agentMemory.jarvisSessionHistory || [];
@@ -11635,6 +11645,108 @@ async function executeAgentStepWithRetry(db, user, step, maxAttempts = 2) {
   };
 }
 
+function conversationSupervisorReview(db, user, command, result = {}) {
+  ensureAiProfile(db.profile);
+  const response = String(result.response || "");
+  const lowerCommand = String(command || "").toLowerCase();
+  const lowerResponse = response.toLowerCase();
+  const metadata = result.metadata || {};
+  const moduleSignal = conversationModuleSignal(command);
+  const issues = [];
+  const strengths = [];
+  let score = 100;
+  const words = response.trim() ? response.trim().split(/\s+/).length : 0;
+  const section = metadata.redirectSection || moduleSignal.section || "dashboard";
+  const safetySensitive = /\b(doctor|clinic|patient|medicine|pharmacy|injury|symptom|diagnos|prescribe|payment|pay|wallet|emergency|child|children)\b/.test(lowerCommand);
+  const hasConfirmation = String(result.status || "") === "needs-confirmation" || /\b(say yes|yes to continue|confirm|no to cancel)\b/.test(lowerResponse);
+  const hasRecovery = /\b(nexus stop|stop|if i misunderstood|wrong|change|cancel)\b/.test(lowerResponse)
+    || Boolean(metadata.reasonedActionBridge?.recoveryPhrase)
+    || Boolean(metadata.outcomeLoop?.recoveryPhrase);
+  const hasAction = /\b(open|start|show|create|connect|track|apply|run|prepare|ask|guide|route|call|message)\b/.test(lowerResponse)
+    || Boolean(metadata.outcomeLoop?.nextVisibleAction)
+    || Boolean(metadata.reasonedActionBridge?.primaryAction);
+  const hasOneQuestion = /\?/.test(response)
+    || Boolean(metadata.turnCoach?.nextQuestion)
+    || Boolean(metadata.outcomeLoop?.oneQuestion)
+    || Boolean(metadata.reasonedActionBridge?.oneQuestion);
+  const providerHonest = !/\b(live provider completed|doctor accepted|payment sent|job guaranteed|prescription ready)\b/.test(lowerResponse)
+    || /\b(local|simulated|provider|credential|human review|not a doctor|confirmation)\b/.test(lowerResponse);
+
+  if (words > 115) {
+    score -= 12;
+    issues.push("response-too-long");
+  } else {
+    strengths.push("plain-length");
+  }
+  if (!section || section === "dashboard") {
+    score -= 8;
+    issues.push("weak-workspace-routing");
+  } else {
+    strengths.push("workspace-routed");
+  }
+  if (!hasAction) {
+    score -= 14;
+    issues.push("missing-next-action");
+  } else {
+    strengths.push("actionable");
+  }
+  if (!hasOneQuestion && String(result.status || "") !== "completed") {
+    score -= 8;
+    issues.push("missing-one-question");
+  } else if (hasOneQuestion) {
+    strengths.push("one-question-present");
+  }
+  if (!hasRecovery && (String(result.intent || "").includes("conversation") || metadata.conversationMode)) {
+    score -= 8;
+    issues.push("missing-recovery-language");
+  } else if (hasRecovery) {
+    strengths.push("recovery-ready");
+  }
+  if (safetySensitive && !/\b(human review|emergency|not a doctor|provider|confirmation|safety|care)\b/.test(lowerResponse)) {
+    score -= 12;
+    issues.push("safety-boundary-thin");
+  } else if (safetySensitive) {
+    strengths.push("safety-aware");
+  }
+  if (!providerHonest) {
+    score -= 18;
+    issues.push("provider-truth-risk");
+  } else {
+    strengths.push("provider-honest");
+  }
+  score = Math.max(35, Math.min(100, score));
+
+  const shortVersion = words > 80
+    ? `${metadata.outcomeLoop?.workspace || moduleSignal.module || "Nexus"}: ${metadata.outcomeLoop?.nextVisibleAction || metadata.reasonedActionBridge?.primaryAction || "I can guide the next step"}. ${metadata.outcomeLoop?.oneQuestion || metadata.turnCoach?.nextQuestion || "What do you want to do next?"}`
+    : response;
+  const review = {
+    id: crypto.randomUUID(),
+    status: score >= 86 ? "strong" : score >= 70 ? "needs-watch" : "needs-repair",
+    score,
+    command,
+    intent: result.intent || "unknown",
+    section,
+    issues,
+    strengths: [...new Set(strengths)].slice(0, 8),
+    shortVersion,
+    recoveryPhrase: metadata.outcomeLoop?.recoveryPhrase || metadata.reasonedActionBridge?.recoveryPhrase || "If I misunderstood, say Nexus stop and tell me the area again.",
+    nextBestQuestion: metadata.outcomeLoop?.oneQuestion || metadata.turnCoach?.nextQuestion || metadata.reasonedActionBridge?.oneQuestion || "What do you want Nexus to help you finish first?",
+    createdAt: new Date().toISOString()
+  };
+  const memory = db.profile.agentMemory;
+  memory.conversationSupervisor = {
+    status: review.status,
+    lastScore: review.score,
+    lastSummary: `${review.intent}: ${review.status} at ${review.score}/100`,
+    updatedAt: review.createdAt
+  };
+  memory.conversationSupervisorHistory = [review, ...(memory.conversationSupervisorHistory || [])].slice(0, 30);
+  if (review.status === "needs-repair") {
+    memory.conversationQuality.lastSignal = "supervisor-needs-repair";
+  }
+  return review;
+}
+
 function commandRecord(db, user, command, result) {
   ensureAiProfile(db.profile);
   addConversationTurn(db.profile, "user", command, { email: user.email });
@@ -11681,6 +11793,8 @@ function commandRecord(db, user, command, result) {
   const guidedMission = updateGuidedMissionMemory(db, user, command, result);
   const outcomeLoop = guidedOutcomeLoopFromResult(db, user, command, result, guidedMission);
   result.metadata = { ...(result.metadata || {}), guidedMission, outcomeLoop };
+  const supervisor = conversationSupervisorReview(db, user, command, result);
+  result.metadata = { ...(result.metadata || {}), conversationSupervisor: supervisor };
   record.metadata = result.metadata || {};
   logIntegration(db, {
     providerId: "openai",
@@ -11688,7 +11802,7 @@ function commandRecord(db, user, command, result) {
     action: "agent.command",
     status: record.status === "failed" ? "failed" : "success",
     detail: `${record.intent}: ${record.response}`,
-    metadata: { commandId: record.id, command, voiceMissionId: voiceMission?.id || null, guidedMissionId: guidedMission?.id || null, outcomeLoopId: outcomeLoop?.id || null }
+    metadata: { commandId: record.id, command, voiceMissionId: voiceMission?.id || null, guidedMissionId: guidedMission?.id || null, outcomeLoopId: outcomeLoop?.id || null, supervisorId: supervisor?.id || null, supervisorScore: supervisor?.score || null }
   });
   addActivity(db.profile, `Voice command: ${record.intent} - ${record.response}`);
   return record;

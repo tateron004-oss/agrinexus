@@ -65,9 +65,12 @@ async function call(route, body) {
     assert(state.profile.agentMemory.turnCoach);
     assert(state.profile.agentMemory.activeOutcomeLoop);
     assert(state.commandResult.metadata.outcomeLoop);
+    assert(state.profile.agentMemory.conversationSupervisor?.lastScore > 0);
+    assert(state.commandResult.metadata.conversationSupervisor?.score > 0);
     assert(state.commandResult.metadata.turnCoach);
     assert(state.conversationEvidence);
     assert(state.conversationEvidence.outcomeLoop);
+    assert(state.conversationEvidence.conversationSupervisor);
     assert(state.conversationEvidence.counts.commands >= 1);
     assert(state.conversationEvidence.evidence.some(item => /Latest command/i.test(item)));
     assert(state.agentCapabilities.totalTools >= 30);

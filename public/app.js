@@ -61,8 +61,8 @@ let routeTrackingWatchId = null;
 let routeTrackingPoints = [];
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-194";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v174";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-195";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v175";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
 const VOICE_ATTENTION_DELAY_MS = 900;
@@ -5157,6 +5157,7 @@ function renderAgentCenter() {
     `<div><strong>Guided checklist</strong><span>${translateText(memory.activeGuidedMission?.currentStep?.title || memory.activeGuidedMission?.status || "No guided checklist active")} ${memory.activeGuidedMission ? `- ${Number(memory.activeGuidedMission.progress || 0)}%` : ""}</span></div>`,
     `<div><strong>Outcome loop</strong><span>${translateText(memory.activeOutcomeLoop?.nextVisibleAction || "No guided outcome loop active")}</span></div>`,
     `<div><strong>Outcome question</strong><span>${translateText(memory.activeOutcomeLoop?.oneQuestion || "No outcome question active")}</span></div>`,
+    `<div><strong>Supervisor score</strong><span>${Number(memory.conversationSupervisor?.lastScore || 0)}/100 - ${translateText(memory.conversationSupervisor?.status || "ready")}</span></div>`,
     `<div><strong>Current question</strong><span>${translateText(memory.activeClarification?.question || "No clarification needed")}</span></div>`,
     `<div><strong>Recovery prompt</strong><span>${translateText(memory.activeRecovery?.suggestions?.join(", ") || "No recovery prompt active")}</span></div>`,
     `<div><strong>Conversation mode</strong><span>${translateText(memory.userModel?.preferredInteraction || "voice-first guidance")} - ${translateText(memory.userModel?.communicationStyle || "plain-language support")}</span></div>`,
@@ -5182,6 +5183,7 @@ function renderAgentCenter() {
     `<div><strong>What I completed</strong><span>${translateText(executions[0]?.summary || "No execution yet")}</span></div>`,
     `<div><strong>Evidence status</strong><span>${translateText(evidencePack.status || "ready")} - ${Number(evidencePack.counts?.commands || 0)} ${translateText("command(s)")}</span></div>`,
     `<div><strong>Outcome loop</strong><span>${translateText(evidencePack.outcomeLoop?.phrase || "No guided outcome loop active")}</span></div>`,
+    `<div><strong>Supervisor</strong><span>${Number(evidencePack.conversationSupervisor?.lastScore || 0)}/100 - ${translateText(evidencePack.conversationSupervisor?.lastSummary || "Conversation Supervisor ready")}</span></div>`,
     `<div><strong>Evidence pack</strong><span>${translateText((evidencePack.evidence || []).slice(0, 3).join(" | ") || "No conversation evidence yet")}</span></div>`,
     `<div><strong>Tool registry</strong><span>${Number(agentCapabilities.totalTools || 0)} ${translateText("supervised tool(s)")} - ${Number(agentCapabilities.confirmationTools || 0)} ${translateText("need confirmation")}</span></div>`
   ].join("");
