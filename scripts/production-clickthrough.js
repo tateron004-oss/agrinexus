@@ -289,6 +289,12 @@ assert(server.includes("autonomous_orchestration.mission_started"), "Autonomous 
 assert(app.includes('workflow === "autonomous-orchestration"'), "Frontend must wire autonomous orchestration buttons to real workflows");
 assert(app.includes("/api/autonomous-orchestration/mission") && app.includes("/api/autonomous-orchestration/cycle"), "Frontend must call autonomous orchestration mission and cycle endpoints");
 assert(pkg.scripts["orchestration:intelligence-qa"] === "node scripts/autonomous-orchestration-qa.js", "Package scripts must expose autonomous orchestration QA");
+assert(server.includes("function ensurePhoneVoiceSessions"), "Phone assistant must persist caller session state");
+assert(server.includes("function extractCallerName"), "Phone assistant must extract caller name before command mode");
+assert(server.includes("function phoneLanguageChoice"), "Phone assistant must map spoken language choices");
+assert(server.includes("Hi, I am AgriNexus. Who am I speaking with?"), "Incoming phone greeting must be short and name-first");
+assert(server.includes("step=language") && server.includes("step=command"), "Phone assistant must move through name, language, and command steps");
+assert(pkg.scripts["phone:greeting-qa"] === "node scripts/phone-greeting-qa.js", "Package scripts must expose phone greeting QA");
 assert(app.includes("activeVoiceAudio"), "Voice playback needs a single active audio guard");
 assert(html.includes("Buyer-Seller Communication Hub"), "AgriTrade needs a buyer-seller communication hub");
 assert(server.includes("function createBuyerSellerMessage"), "Backend needs buyer-seller message thread creation");

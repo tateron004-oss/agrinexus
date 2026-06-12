@@ -11605,6 +11605,80 @@ function phoneVoiceUser(db) {
   return db.users.find(item => item.role === "Admin") || db.users[0];
 }
 
+function ensurePhoneVoiceSessions(profile) {
+  ensureAiProfile(profile);
+  profile.phoneVoiceSessions = profile.phoneVoiceSessions || [];
+  return profile.phoneVoiceSessions;
+}
+
+function phoneSessionKey(body = {}, fallback = "") {
+  return String(body.CallSid || body.callSid || body.From || body.from || fallback || "phone-session").slice(0, 120);
+}
+
+function getPhoneVoiceSession(db, key) {
+  const sessions = ensurePhoneVoiceSessions(db.profile);
+  let session = sessions.find(item => item.key === key);
+  if (!session) {
+    session = {
+      id: crypto.randomUUID(),
+      key,
+      callerName: "",
+      language: "",
+      locale: "en-US",
+      step: "name",
+      commands: [],
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+    sessions.unshift(session);
+    db.profile.phoneVoiceSessions = sessions.slice(0, 60);
+  }
+  return session;
+}
+
+function updatePhoneVoiceSession(db, session, patch = {}) {
+  Object.assign(session, patch, { updatedAt: new Date().toISOString() });
+  db.profile.phoneVoiceSessions = ensurePhoneVoiceSessions(db.profile).slice(0, 60);
+  return session;
+}
+
+function extractCallerName(text = "") {
+  const cleaned = String(text || "").trim().replace(/[^\p{L}\p{N}\s'-]/gu, " ").replace(/\s+/g, " ");
+  const match = cleaned.match(/\b(?:my name is|i am|i'm|this is|it is|it's|call me)\s+([\p{L}][\p{L}'-]{1,30})/iu);
+  const candidate = match ? match[1] : cleaned.split(/\s+/).find(word => /^[\p{L}][\p{L}'-]{1,30}$/u.test(word));
+  if (!candidate) return "";
+  return candidate.charAt(0).toUpperCase() + candidate.slice(1);
+}
+
+function phoneLanguageChoice(text = "") {
+  const lower = String(text || "").toLowerCase();
+  const choices = [
+    { code: "en", locale: "en-US", label: "English", tests: ["english", "inglés", "anglais", "kiingereza"] },
+    { code: "es", locale: "es-ES", label: "Spanish", tests: ["spanish", "espanol", "español", "castellano", "inglés no"] },
+    { code: "fr", locale: "fr-FR", label: "French", tests: ["french", "français", "francais", "française"] },
+    { code: "sw", locale: "sw-KE", label: "Kiswahili", tests: ["swahili", "kiswahili", "swa hili"] },
+    { code: "ar", locale: "ar-EG", label: "Arabic", tests: ["arabic", "arabe", "عربي", "العربية"] },
+    { code: "ha", locale: "en-US", label: "Hausa", tests: ["hausa"] },
+    { code: "yo", locale: "en-US", label: "Yoruba", tests: ["yoruba"] },
+    { code: "ig", locale: "en-US", label: "Igbo", tests: ["igbo", "ibo"] },
+    { code: "am", locale: "en-US", label: "Amharic", tests: ["amharic", "amhara"] },
+    { code: "om", locale: "en-US", label: "Oromo", tests: ["oromo"] },
+    { code: "rw", locale: "en-US", label: "Kinyarwanda", tests: ["kinyarwanda", "rwanda"] },
+    { code: "ln", locale: "fr-FR", label: "Lingala", tests: ["lingala"] }
+  ];
+  return choices.find(choice => choice.tests.some(test => lower.includes(test))) || null;
+}
+
+function phoneLanguagePrompt(name = "") {
+  const prefix = name ? `Thank you, ${name}. ` : "";
+  return `${prefix}What language should I use? Say English, Spanish, French, Swahili, Arabic, Hausa, Yoruba, Igbo, Amharic, Oromo, Kinyarwanda, or Lingala.`;
+}
+
+function phoneCommandPrompt(name = "", label = "English") {
+  const greeting = name ? `Hello ${name}. ` : "";
+  return `${greeting}I will use ${label}. How can AgriNexus help you today?`;
+}
+
 async function openAiTranscribeAudio({ audioBase64, mimeType = "audio/webm", filename = "agrinexus-voice.webm", language }) {
   if (!process.env.OPENAI_API_KEY || !audioBase64) return null;
   const bytes = Buffer.from(String(audioBase64).replace(/^data:[^,]+,/, ""), "base64");
@@ -18369,25 +18443,25 @@ async function api(req, res, url) {
   }
 
   if (url.pathname === "/api/voice/phone/incoming" && req.method === "POST") {
-    const phoneUser = phoneVoiceUser(db);
-    const language = twilioLanguage(phoneUser?.language || "en");
-    const actionUrl = `${process.env.PUBLIC_BASE_URL || ""}/api/voice/phone/gather`;
-    const greeting = await phoneVoicePrompt("You are speaking with the AgriNexus AI assistant. This is an AI generated voice. Tell me what you need, such as telehealth intake, apply for a job, contact my buyer, or test provider engines.", language);
-    const prompt = await phoneVoicePrompt("What would you like AgriNexus to do?", language);
-    const noCommand = await phoneVoicePrompt("I did not hear a command. Please call back or use the web assistant.", language);
+    const body = await readBody(req);
+    const session = getPhoneVoiceSession(db, phoneSessionKey(body, req.headers["x-forwarded-for"] || "twilio"));
+    updatePhoneVoiceSession(db, session, { step: "name", callerName: "", language: "", locale: "en-US" });
+    const language = "en-US";
+    const actionUrl = `${process.env.PUBLIC_BASE_URL || ""}/api/voice/phone/gather?step=name`;
+    const greeting = await phoneVoicePrompt("Hi, I am AgriNexus. Who am I speaking with?", language);
+    const noCommand = await phoneVoicePrompt("I did not hear your name. Please call back, or use the web assistant.", language);
     logIntegration(db, {
       providerId: "phone-voice",
       module: "AI",
       action: "phone.incoming",
-      detail: "Incoming phone voice assistant session opened.",
-      metadata: { from: req.headers["x-forwarded-for"] || "twilio" }
+      detail: "Incoming phone voice assistant session opened with name-first greeting.",
+      metadata: { from: body.From || body.from || req.headers["x-forwarded-for"] || "twilio", sessionId: session.id }
     });
     await writeDb(db);
     return twimlResponse(res, `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
-  ${greeting}
   <Gather input="speech dtmf" action="${xmlEscape(actionUrl || "/api/voice/phone/gather")}" method="POST" language="${xmlEscape(language)}" speechTimeout="auto" actionOnEmptyResult="true">
-    ${prompt}
+    ${greeting}
   </Gather>
   ${noCommand}
 </Response>`);
@@ -18396,34 +18470,72 @@ async function api(req, res, url) {
   if (url.pathname === "/api/voice/phone/gather" && req.method === "POST") {
     const phoneUser = phoneVoiceUser(db);
     const body = await readBody(req);
-    const language = twilioLanguage(phoneUser?.language || "en");
+    const session = getPhoneVoiceSession(db, phoneSessionKey(body, req.headers["x-forwarded-for"] || "twilio"));
+    const step = String(url.searchParams.get("step") || session.step || "command");
+    const language = step === "name" ? "en-US" : (session.locale || twilioLanguage(session.language || phoneUser?.language || "en"));
     const command = String(body.SpeechResult || body.speechResult || body.Digits || body.digits || "").trim();
     if (!command) {
-      const retryPrompt = await phoneVoicePrompt("Please say a command, like start telehealth intake, apply for that job, or run full mission.", language);
+      const retryText = step === "name"
+        ? "Please say your name."
+        : step === "language"
+          ? phoneLanguagePrompt(session.callerName)
+          : `Please say a command, ${session.callerName || "caller"}, like start telehealth intake, apply for that job, or run full mission.`;
+      const retryPrompt = await phoneVoicePrompt(retryText, language);
+      const retryStep = step === "name" || step === "language" ? step : "command";
       return twimlResponse(res, `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
-  <Gather input="speech dtmf" action="${xmlEscape((process.env.PUBLIC_BASE_URL || "") + "/api/voice/phone/gather")}" method="POST" language="${xmlEscape(language)}" speechTimeout="auto" actionOnEmptyResult="true">
+  <Gather input="speech dtmf" action="${xmlEscape((process.env.PUBLIC_BASE_URL || "") + `/api/voice/phone/gather?step=${retryStep}`)}" method="POST" language="${xmlEscape(language)}" speechTimeout="auto" actionOnEmptyResult="true">
     ${retryPrompt}
+  </Gather>
+</Response>`);
+    }
+    if (step === "name") {
+      const callerName = extractCallerName(command) || "friend";
+      updatePhoneVoiceSession(db, session, { callerName, step: "language" });
+      await writeDb(db);
+      const prompt = await phoneVoicePrompt(phoneLanguagePrompt(callerName), "en-US");
+      return twimlResponse(res, `<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+  <Gather input="speech dtmf" action="${xmlEscape((process.env.PUBLIC_BASE_URL || "") + "/api/voice/phone/gather?step=language")}" method="POST" language="en-US" speechTimeout="auto" actionOnEmptyResult="true">
+    ${prompt}
+  </Gather>
+</Response>`);
+    }
+    if (step === "language") {
+      const choice = phoneLanguageChoice(command) || { code: phoneUser?.language || "en", locale: twilioLanguage(phoneUser?.language || "en"), label: voiceLanguageLabel(phoneUser?.language || "en") };
+      updatePhoneVoiceSession(db, session, { language: choice.code, locale: choice.locale, step: "command" });
+      phoneUser.language = choice.code;
+      await writeDb(db);
+      const prompt = await phoneVoicePrompt(phoneCommandPrompt(session.callerName, choice.label), choice.locale);
+      return twimlResponse(res, `<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+  <Gather input="speech dtmf" action="${xmlEscape((process.env.PUBLIC_BASE_URL || "") + "/api/voice/phone/gather?step=command")}" method="POST" language="${xmlEscape(choice.locale)}" speechTimeout="auto" actionOnEmptyResult="true">
+    ${prompt}
   </Gather>
 </Response>`);
     }
     const result = await runAgentCommand(db, phoneUser, command, { confirm: true, conversational: true, note: "Phone call voice assistant command" });
     commandRecord(db, phoneUser, command, result);
+    session.commands.unshift({ command, response: result.response, createdAt: new Date().toISOString() });
+    session.commands = session.commands.slice(0, 20);
+    updatePhoneVoiceSession(db, session, { step: "command" });
     voiceRecord(db, phoneUser, "phone-call", `Phone command handled: ${command}`, {
       command,
       response: result.response,
       callSid: body.CallSid || body.callSid || null,
       from: body.From || body.from || null,
-      provider: "twilio"
+      provider: "twilio",
+      callerName: session.callerName || "",
+      language: session.language || phoneUser.language || "en"
     });
     await writeDb(db);
     const response = String(result.response || "Command completed.").slice(0, 900);
-    const spokenResponse = await phoneVoicePrompt(response, language);
-    const nextPrompt = await phoneVoicePrompt("You can say another command, or hang up when finished.", language);
+    const spokenResponse = await phoneVoicePrompt(response, session.locale || language);
+    const nextPrompt = await phoneVoicePrompt(`${session.callerName || "Caller"}, you can say another command, or hang up when finished.`, session.locale || language);
     return twimlResponse(res, `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
   ${spokenResponse}
-  <Gather input="speech dtmf" action="${xmlEscape((process.env.PUBLIC_BASE_URL || "") + "/api/voice/phone/gather")}" method="POST" language="${xmlEscape(language)}" speechTimeout="auto" actionOnEmptyResult="false">
+  <Gather input="speech dtmf" action="${xmlEscape((process.env.PUBLIC_BASE_URL || "") + "/api/voice/phone/gather?step=command")}" method="POST" language="${xmlEscape(session.locale || language)}" speechTimeout="auto" actionOnEmptyResult="false">
     ${nextPrompt}
   </Gather>
 </Response>`);

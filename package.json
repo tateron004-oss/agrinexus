@@ -12,6 +12,7 @@
     "provider-engines": "node scripts/provider-engines.js",
     "provider-engines:smoke": "node scripts/provider-engines-smoke.js",
     "conversation:smoke": "node scripts/conversation-brain-smoke.js",
+    "phone:greeting-qa": "node scripts/phone-greeting-qa.js",
     "conversation:rural-eval": "node scripts/synthetic-rural-conversation-eval.js",
     "platform:intelligence-qa": "node scripts/platform-intelligence-qa.js",
     "operational:intelligence-qa": "node scripts/operational-intelligence-qa.js",
