@@ -2016,6 +2016,7 @@ function publicState(db, user) {
     networkIntelligence: networkIntelligenceModel(db, user, providers),
     ecosystemIntelligence: ecosystemIntelligenceModel(db, user, providers),
     executiveIntelligence: executiveIntelligenceSuiteModel(db, user, providers),
+    autonomousOrchestration: autonomousOrchestrationModel(db, user, providers),
     sessionBriefing: sessionBriefingModel(db, user, providers),
     impactDashboard: impactDashboardModel(db, providers),
     missionTimeline: missionTimelineModel(db),
@@ -9573,6 +9574,340 @@ function executiveIntelligenceCommandResponse(db, user, text, options = {}) {
   };
 }
 
+function ensureAutonomousOrchestrationProfile(profile) {
+  ensureExecutiveIntelligenceProfile(profile);
+  profile.autonomousOrchestration = profile.autonomousOrchestration || {};
+  const orchestration = profile.autonomousOrchestration;
+  orchestration.missions = orchestration.missions || [];
+  orchestration.cycles = orchestration.cycles || [];
+  orchestration.reports = orchestration.reports || [];
+  orchestration.blockers = orchestration.blockers || [];
+  orchestration.resumptions = orchestration.resumptions || [];
+  return orchestration;
+}
+
+function orchestrationMissionTemplates() {
+  return [
+    {
+      id: "launch-country",
+      title: "Launch AgriNexus in a country",
+      goal: "Turn a country launch idea into a tracked pilot plan with proof, gaps, partners, and next actions.",
+      defaultCountry: "Kenya",
+      steps: [
+        { id: "strategy", title: "Run strategic launch intelligence", engine: "executive", focus: "strategic-intelligence" },
+        { id: "market", title: "Rank market and country opportunity", engine: "executive", focus: "market-intelligence" },
+        { id: "governance", title: "Review healthcare, privacy, payment, and country risks", engine: "executive", focus: "governance-intelligence" },
+        { id: "health-ecosystem", title: "Coordinate rural health, mobile clinic, pharmacy, and map mission", engine: "ecosystem", missionId: "rural-health-access" },
+        { id: "trade-ecosystem", title: "Coordinate crop sale, buyer, route, delivery, and receipt mission", engine: "ecosystem", missionId: "crop-sale-delivery" },
+        { id: "provider-gaps", title: "Check live provider gaps and source truth", engine: "network", serviceId: "health-network" },
+        { id: "investor-proof", title: "Build investor proof and next mission report", engine: "executive", focus: "strategic-intelligence" }
+      ]
+    },
+    {
+      id: "rural-health-network",
+      title: "Build rural health access network",
+      goal: "Coordinate patient intake, mobile clinics, pharmacies, maps, communications, and safety guardrails.",
+      defaultCountry: "Kenya",
+      steps: [
+        { id: "health-ecosystem", title: "Coordinate mobile clinic and pharmacy mission", engine: "ecosystem", missionId: "rural-health-access" },
+        { id: "clinic-route", title: "Route clinic, pharmacy, and map provider lanes", engine: "network", serviceId: "health-network" },
+        { id: "governance", title: "Review no-diagnosis, consent, and privacy guardrails", engine: "executive", focus: "governance-intelligence" },
+        { id: "communications", title: "Check phone, SMS, WhatsApp, and email readiness", engine: "network", serviceId: "communications-network" },
+        { id: "report", title: "Create health access mission report", engine: "executive", focus: "strategic-intelligence" }
+      ]
+    },
+    {
+      id: "crop-commerce-network",
+      title: "Build crop commerce and logistics network",
+      goal: "Coordinate farmer, buyer, market price, route, shipment, payment, receipt, and communication evidence.",
+      defaultCountry: "Kenya",
+      steps: [
+        { id: "trade-ecosystem", title: "Coordinate crop sale and delivery mission", engine: "ecosystem", missionId: "crop-sale-delivery" },
+        { id: "market-route", title: "Route market, buyer, logistics, and map providers", engine: "network", serviceId: "trade-market-network" },
+        { id: "revenue", title: "Build transaction fee and subscription revenue model", engine: "executive", focus: "revenue-intelligence" },
+        { id: "field", title: "Coordinate drone or field evidence for crop quality", engine: "ecosystem", missionId: "field-rescue" },
+        { id: "report", title: "Create crop commerce mission report", engine: "executive", focus: "market-intelligence" }
+      ]
+    },
+    {
+      id: "investor-demo",
+      title: "Prepare investor-ready proof mission",
+      goal: "Create a complete investor story across health, trade, learning, workforce, maps, voice, providers, revenue, and governance.",
+      defaultCountry: "Kenya",
+      steps: [
+        { id: "strategy", title: "Run strategic investor intelligence", engine: "executive", focus: "strategic-intelligence" },
+        { id: "health", title: "Run health ecosystem proof", engine: "ecosystem", missionId: "rural-health-access" },
+        { id: "trade", title: "Run trade ecosystem proof", engine: "ecosystem", missionId: "crop-sale-delivery" },
+        { id: "learning-work", title: "Run learning-to-work proof", engine: "ecosystem", missionId: "learning-to-work" },
+        { id: "revenue", title: "Run revenue intelligence", engine: "executive", focus: "revenue-intelligence" },
+        { id: "governance", title: "Run governance intelligence", engine: "executive", focus: "governance-intelligence" },
+        { id: "improve", title: "Run self-improving intelligence before demo", engine: "executive", focus: "self-improving-intelligence" }
+      ]
+    }
+  ];
+}
+
+function orchestrationTemplateFromText(text = "") {
+  const lower = String(text || "").toLowerCase();
+  if (/\b(investor|demo|funding|presentation|proof)\b/.test(lower)) return "investor-demo";
+  if (/\b(health|clinic|pharmacy|mobile clinic|patient|medicine)\b/.test(lower)) return "rural-health-network";
+  if (/\b(crop|sell|buyer|market|shipment|logistics|payment|receipt|maize|cassava)\b/.test(lower)) return "crop-commerce-network";
+  if (/\b(launch|country|kenya|nigeria|ghana|rwanda|tanzania|egypt|drc|south africa)\b/.test(lower)) return "launch-country";
+  return "launch-country";
+}
+
+function runAutonomousOrchestrationMission(db, user, body = {}) {
+  const orchestration = ensureAutonomousOrchestrationProfile(db.profile);
+  const query = String(body.query || body.goal || body.command || "Launch AgriNexus mission").trim();
+  const templateId = body.templateId || orchestrationTemplateFromText(query);
+  const template = orchestrationMissionTemplates().find(item => item.id === templateId) || orchestrationMissionTemplates()[0];
+  const country = body.country || networkCountryFromText(query, db) || template.defaultCountry;
+  const mission = {
+    id: crypto.randomUUID(),
+    missionNumber: `NEX-ORCH-${String((orchestration.missions || []).length + 1).padStart(3, "0")}`,
+    templateId: template.id,
+    title: template.title,
+    goal: query || template.goal,
+    country,
+    status: "active",
+    score: 0,
+    currentStepId: template.steps[0]?.id || "",
+    steps: template.steps.map((step, index) => ({
+      ...step,
+      order: index + 1,
+      status: index === 0 ? "ready" : "waiting",
+      evidence: "",
+      sourceLabel: "pending",
+      completedAt: ""
+    })),
+    blockers: [],
+    nextQuestion: orchestrationNextQuestion(template.id),
+    createdBy: user.email,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  };
+  orchestration.missions.unshift(mission);
+  orchestration.missions = orchestration.missions.slice(0, 80);
+  rememberAgentMemory(db.profile, `Autonomous orchestration mission ${mission.missionNumber}: ${mission.title} in ${country}.`, { source: "autonomous-orchestration", category: "mission", module: "Orchestration", confidence: 0.9 });
+  logIntegration(db, {
+    providerId: "autonomous-orchestration",
+    module: "Orchestration",
+    action: "orchestration.mission_created",
+    status: "success",
+    detail: `${mission.missionNumber} created for ${mission.title}.`,
+    metadata: { mission },
+    dispatch: false
+  });
+  addActivity(db.profile, `${mission.missionNumber} autonomous mission created: ${mission.title}.`);
+  return runAutonomousOrchestrationCycle(db, user, { missionId: mission.id, maxSteps: body.maxSteps || 3 });
+}
+
+function runAutonomousOrchestrationCycle(db, user, body = {}) {
+  const orchestration = ensureAutonomousOrchestrationProfile(db.profile);
+  const mission = (orchestration.missions || []).find(item => item.id === body.missionId || item.missionNumber === body.missionId) || (orchestration.missions || [])[0];
+  if (!mission) throw new Error("No autonomous orchestration mission found");
+  const maxSteps = Math.max(1, Math.min(10, Number(body.maxSteps || 3)));
+  const completed = [];
+  const blockers = [];
+  for (const step of mission.steps) {
+    if (completed.length >= maxSteps) break;
+    if (step.status === "done") continue;
+    const result = runOrchestrationStepEngine(db, user, mission, step);
+    step.status = result.status;
+    step.evidence = result.evidence;
+    step.sourceLabel = result.sourceLabel;
+    step.completedAt = result.status === "done" ? new Date().toISOString() : "";
+    completed.push({ stepId: step.id, title: step.title, status: step.status, evidence: step.evidence, sourceLabel: step.sourceLabel });
+    if (result.blocker) blockers.push(result.blocker);
+  }
+  const doneCount = mission.steps.filter(step => step.status === "done").length;
+  const nextStep = mission.steps.find(step => step.status !== "done") || null;
+  mission.status = doneCount === mission.steps.length ? "completed" : blockers.length ? "needs-human-input" : "active";
+  mission.score = Math.round((doneCount / Math.max(1, mission.steps.length)) * 100);
+  mission.currentStepId = nextStep?.id || "";
+  mission.blockers = [...blockers, ...(mission.blockers || [])].slice(0, 20);
+  mission.nextQuestion = nextStep ? orchestrationQuestionForStep(nextStep) : "Should I prepare the outcome report now?";
+  mission.updatedAt = new Date().toISOString();
+  const cycle = {
+    id: crypto.randomUUID(),
+    cycleNumber: `NEX-CYCLE-${String((orchestration.cycles || []).length + 1).padStart(3, "0")}`,
+    missionId: mission.id,
+    missionNumber: mission.missionNumber,
+    completedSteps: completed,
+    blockers,
+    status: mission.status,
+    score: mission.score,
+    nextStep: nextStep ? { id: nextStep.id, title: nextStep.title, engine: nextStep.engine } : null,
+    nextQuestion: mission.nextQuestion,
+    createdAt: new Date().toISOString()
+  };
+  orchestration.cycles.unshift(cycle);
+  orchestration.cycles = orchestration.cycles.slice(0, 80);
+  if (blockers.length) orchestration.blockers.unshift(...blockers.map(blocker => ({ id: crypto.randomUUID(), missionId: mission.id, ...blocker, createdAt: cycle.createdAt })));
+  orchestration.blockers = orchestration.blockers.slice(0, 80);
+  rememberAgentMemory(db.profile, `Orchestration cycle ${cycle.cycleNumber}: ${mission.title} is ${mission.score}% complete.`, { source: "autonomous-orchestration", category: "progress", module: "Orchestration", confidence: 0.88 });
+  logIntegration(db, {
+    providerId: "autonomous-orchestration",
+    module: "Orchestration",
+    action: "orchestration.cycle_completed",
+    status: "success",
+    detail: `${cycle.cycleNumber} advanced ${mission.missionNumber} to ${mission.score}%.`,
+    metadata: { cycle, mission },
+    dispatch: false
+  });
+  addActivity(db.profile, `${cycle.cycleNumber} orchestration cycle completed: ${mission.score}% done.`);
+  return { mission, cycle };
+}
+
+function runOrchestrationStepEngine(db, user, mission, step) {
+  const query = `${mission.goal} ${step.title} ${mission.country}`;
+  if (step.engine === "executive") {
+    const result = runExecutiveIntelligenceAnalysis(db, user, { focus: step.focus, query });
+    return { status: "done", evidence: `${result.record.analysisNumber}: ${result.record.recommendation}`, sourceLabel: "executive-intelligence" };
+  }
+  if (step.engine === "ecosystem") {
+    const result = runEcosystemMission(db, user, { missionId: step.missionId, query, country: mission.country });
+    return { status: "done", evidence: `${result.record.missionNumber}: ${result.record.plainOutcome}`, sourceLabel: result.record.sourceLabels.join(", ") };
+  }
+  if (step.engine === "network") {
+    const result = runNetworkIntelligenceQuery(db, user, { query, serviceId: step.serviceId, country: mission.country });
+    const needsProvider = result.record.status !== "live-capable";
+    return {
+      status: "done",
+      evidence: `${result.record.queryNumber}: ${result.record.serviceTitle} via ${result.record.sourceLabel}`,
+      sourceLabel: result.record.sourceLabel,
+      blocker: needsProvider ? { stepId: step.id, title: step.title, blocker: `Live provider credentials still needed for ${result.record.serviceTitle}.`, severity: "medium" } : null
+    };
+  }
+  return { status: "done", evidence: "Local orchestration step recorded.", sourceLabel: "local-platform-fallback" };
+}
+
+function orchestrationNextQuestion(templateId = "") {
+  const questions = {
+    "launch-country": "Which country should I use first, and is this for investors, government, or field users?",
+    "rural-health-network": "Which region needs clinic or pharmacy support first?",
+    "crop-commerce-network": "What crop, where is it, and where should it be sold or delivered?",
+    "investor-demo": "Who is the audience: investor, government, NGO, clinic partner, or farmer group?"
+  };
+  return questions[templateId] || "What outcome should Nexus complete first?";
+}
+
+function orchestrationQuestionForStep(step = {}) {
+  if (/governance|risk|privacy/i.test(step.title)) return "Do you want the safety and compliance report first?";
+  if (/provider|gap|readiness/i.test(step.title)) return "Should I show the live provider gaps next?";
+  if (/health|clinic|pharmacy/i.test(step.title)) return "Which clinic, pharmacy, or region should I focus on?";
+  if (/trade|crop|buyer|delivery/i.test(step.title)) return "What crop and route should I use for the next step?";
+  if (/investor|proof|report/i.test(step.title)) return "Should I prepare the investor proof report now?";
+  return "Should I continue to the next mission step?";
+}
+
+function buildAutonomousOrchestrationReport(db, user, body = {}) {
+  const orchestration = ensureAutonomousOrchestrationProfile(db.profile);
+  const mission = (orchestration.missions || []).find(item => item.id === body.missionId || item.missionNumber === body.missionId) || (orchestration.missions || [])[0];
+  if (!mission) throw new Error("No autonomous orchestration mission found");
+  const done = mission.steps.filter(step => step.status === "done");
+  const waiting = mission.steps.filter(step => step.status !== "done");
+  const report = {
+    id: crypto.randomUUID(),
+    reportNumber: `NEX-REPORT-${String((orchestration.reports || []).length + 1).padStart(3, "0")}`,
+    missionId: mission.id,
+    missionNumber: mission.missionNumber,
+    title: `${mission.title} outcome report`,
+    status: mission.status,
+    score: mission.score,
+    summary: `${mission.title} is ${mission.score}% complete with ${done.length}/${mission.steps.length} step(s) completed.`,
+    completedEvidence: done.map(step => ({ title: step.title, evidence: step.evidence, sourceLabel: step.sourceLabel })),
+    remainingSteps: waiting.map(step => ({ title: step.title, status: step.status, nextQuestion: orchestrationQuestionForStep(step) })),
+    blockers: mission.blockers || [],
+    nextAction: waiting[0] ? `Continue with: ${waiting[0].title}` : "Package final proof and share with the audience.",
+    createdBy: user.email,
+    createdAt: new Date().toISOString()
+  };
+  orchestration.reports.unshift(report);
+  orchestration.reports = orchestration.reports.slice(0, 80);
+  logIntegration(db, {
+    providerId: "autonomous-orchestration",
+    module: "Orchestration",
+    action: "orchestration.report_created",
+    status: "success",
+    detail: `${report.reportNumber} created for ${mission.missionNumber}.`,
+    metadata: { report },
+    dispatch: false
+  });
+  addActivity(db.profile, `${report.reportNumber} orchestration report created.`);
+  return report;
+}
+
+function autonomousOrchestrationModel(db, user, providers = runtimeProviders(db)) {
+  const orchestration = ensureAutonomousOrchestrationProfile(db.profile);
+  const executive = executiveIntelligenceSuiteModel(db, user, providers);
+  const templates = orchestrationMissionTemplates();
+  const latestMission = (orchestration.missions || [])[0] || null;
+  const score = Math.min(100, Math.round(58 + Math.min(18, (orchestration.missions || []).length * 4) + Math.min(14, (orchestration.cycles || []).length * 3) + Math.min(10, executive.score / 10)));
+  return {
+    status: latestMission ? "autonomous-orchestration-active" : "autonomous-orchestration-ready",
+    score,
+    summary: "Autonomous Orchestration turns a big goal into a tracked mission, runs the right intelligence engines in order, records evidence, watches blockers, asks only needed questions, resumes progress, and creates outcome reports.",
+    autonomyBoundary: "Nexus can plan, run local intelligence workflows, record evidence, and recommend next actions. Real external calls, payments, dispatch, clinical care, and provider-system writes still require live providers and confirmation.",
+    templates,
+    latestMission,
+    latestCycle: (orchestration.cycles || [])[0] || null,
+    latestReport: (orchestration.reports || [])[0] || null,
+    activeMissions: (orchestration.missions || []).filter(mission => mission.status !== "completed").slice(0, 5),
+    blockers: (orchestration.blockers || []).slice(0, 5),
+    suggestedCommands: [
+      "Nexus, launch AgriNexus in Kenya",
+      "Nexus, build rural health access network in Kenya",
+      "Nexus, build crop commerce network for maize",
+      "Nexus, prepare investor-ready proof mission",
+      "Nexus, continue the current mission",
+      "Nexus, create the mission report"
+    ]
+  };
+}
+
+function autonomousOrchestrationCommandResponse(db, user, text, options = {}) {
+  const lower = String(text || "").toLowerCase();
+  const orchestrationSignal = /\b(autonomous orchestration|orchestration|orchestrate|mission operator|launch agrinexus|launch.*kenya|launch.*nigeria|build rural health access network|build crop commerce network|prepare investor.*proof|continue.*mission|resume.*mission|mission report|run the mission|manage.*mission)\b/.test(lower);
+  if (!orchestrationSignal) return null;
+  const moduleSignal = { module: "Orchestration", section: "integrations", score: 3, source: "autonomous-orchestration" };
+  const frontierCommunication = frontierCommunicationIntelligenceModel(text, moduleSignal, user, options);
+  if (/\b(status|what can|explain|describe)\b/.test(lower) && !/\b(run|start|launch|build|continue|resume|report)\b/.test(lower)) {
+    const model = autonomousOrchestrationModel(db, user);
+    return {
+      intent: "autonomous_orchestration.status",
+      status: "completed",
+      response: `Autonomous Orchestration is ${model.status} at ${model.score}%. It can create missions, run steps, watch blockers, resume progress, and build reports.`,
+      metadata: { conversationMode: true, redirectSection: "integrations", autonomousOrchestration: true, model, moduleSignal, frontierCommunication }
+    };
+  }
+  if (/\b(report|outcome report|mission report)\b/.test(lower)) {
+    const report = buildAutonomousOrchestrationReport(db, user, {});
+    return {
+      intent: "autonomous_orchestration.report_created",
+      status: report.status,
+      response: `${report.reportNumber}: ${report.summary} Next: ${report.nextAction}`,
+      metadata: { conversationMode: true, redirectSection: "integrations", autonomousOrchestration: true, report, moduleSignal, frontierCommunication }
+    };
+  }
+  if (/\b(continue|resume|next step|keep going)\b/.test(lower)) {
+    const result = runAutonomousOrchestrationCycle(db, user, { maxSteps: 3 });
+    return {
+      intent: "autonomous_orchestration.cycle_completed",
+      status: result.mission.status,
+      response: `${result.cycle.cycleNumber}: I advanced ${result.mission.title} to ${result.mission.score}%. ${result.mission.nextQuestion}`,
+      metadata: { conversationMode: true, redirectSection: "integrations", autonomousOrchestration: true, mission: result.mission, cycle: result.cycle, moduleSignal, frontierCommunication }
+    };
+  }
+  const result = runAutonomousOrchestrationMission(db, user, { query: text, maxSteps: 3 });
+  return {
+    intent: "autonomous_orchestration.mission_started",
+    status: result.mission.status,
+    response: `${result.mission.missionNumber}: I started ${result.mission.title} and advanced it to ${result.mission.score}%. ${result.mission.nextQuestion}`,
+    metadata: { conversationMode: true, redirectSection: "integrations", autonomousOrchestration: true, mission: result.mission, cycle: result.cycle, moduleSignal, frontierCommunication }
+  };
+}
+
 function womenFamilyAgricultureModel(db, providers = runtimeProviders(db)) {
   ensureOperationsProfile(db.profile);
   ensureLearningProfile(db.profile);
@@ -16587,6 +16922,8 @@ async function runAgentCommand(db, user, command, options = {}) {
   }
   const adaptiveAutonomyCommand = adaptiveAutonomyCommandResponse(db, user, text, options);
   if (adaptiveAutonomyCommand) return adaptiveAutonomyCommand;
+  const autonomousOrchestrationCommand = autonomousOrchestrationCommandResponse(db, user, text, options);
+  if (autonomousOrchestrationCommand) return autonomousOrchestrationCommand;
   const executiveIntelligenceCommand = executiveIntelligenceCommandResponse(db, user, text, options);
   if (executiveIntelligenceCommand) return executiveIntelligenceCommand;
   const ecosystemIntelligenceCommand = ecosystemIntelligenceCommandResponse(db, user, text, options);
@@ -18834,6 +19171,46 @@ async function api(req, res, url) {
       revenuePaths: model.revenuePaths.length,
       nextImprovement: model.improvement.nextImprovement
     });
+  }
+
+  if (url.pathname === "/api/autonomous-orchestration/status" && req.method === "GET") {
+    if (!canUse(user, "ai")) return send(res, 403, { error: "Role does not allow autonomous orchestration" });
+    return send(res, 200, autonomousOrchestrationModel(db, user, runtimeProviders(db)));
+  }
+
+  if (url.pathname === "/api/autonomous-orchestration/templates" && req.method === "GET") {
+    if (!canUse(user, "ai")) return send(res, 403, { error: "Role does not allow orchestration templates" });
+    return send(res, 200, { templates: orchestrationMissionTemplates(), model: autonomousOrchestrationModel(db, user, runtimeProviders(db)) });
+  }
+
+  if (url.pathname === "/api/autonomous-orchestration/mission" && req.method === "POST") {
+    if (!canUse(user, "ai")) return send(res, 403, { error: "Role does not allow autonomous orchestration missions" });
+    const body = await readBody(req);
+    const result = runAutonomousOrchestrationMission(db, user, body);
+    await writeDb(db);
+    const state = publicState(db, user);
+    state.autonomousOrchestrationMission = result;
+    return send(res, 200, state);
+  }
+
+  if (url.pathname === "/api/autonomous-orchestration/cycle" && req.method === "POST") {
+    if (!canUse(user, "ai")) return send(res, 403, { error: "Role does not allow orchestration cycles" });
+    const body = await readBody(req);
+    const result = runAutonomousOrchestrationCycle(db, user, body);
+    await writeDb(db);
+    const state = publicState(db, user);
+    state.autonomousOrchestrationCycle = result;
+    return send(res, 200, state);
+  }
+
+  if (url.pathname === "/api/autonomous-orchestration/report" && req.method === "POST") {
+    if (!canUse(user, "ai")) return send(res, 403, { error: "Role does not allow orchestration reports" });
+    const body = await readBody(req);
+    const report = buildAutonomousOrchestrationReport(db, user, body);
+    await writeDb(db);
+    const state = publicState(db, user);
+    state.autonomousOrchestrationReport = report;
+    return send(res, 200, state);
   }
 
   if (url.pathname === "/api/demo/run" && req.method === "POST") {

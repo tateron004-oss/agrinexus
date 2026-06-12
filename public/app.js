@@ -10645,6 +10645,35 @@ function render() {
       improve ? `<div><strong>${translateText(`Improve next: ${improve.area}`)}</strong><span>${translateText(improve.fix)}</span><small>${translateText(improve.priority)}</small></div>` : ""
     ].join("") || `<div><strong>${translateText("Priorities")}</strong><span>${translateText("Executive priorities are loading.")}</span></div>`;
   }
+  const orchestration = data.autonomousOrchestration || {};
+  if ($("#autonomousOrchestrationScore")) $("#autonomousOrchestrationScore").textContent = `${Number(orchestration.score || 0)}%`;
+  if ($("#autonomousOrchestrationPanel")) {
+    $("#autonomousOrchestrationPanel").innerHTML = [
+      `<div><strong>${translateText(orchestration.status || "autonomous-orchestration-ready")}</strong><span>${translateText(orchestration.summary || "Autonomous orchestration is ready.")}</span></div>`,
+      `<div><strong>${translateText("Boundary")}</strong><span>${translateText(orchestration.autonomyBoundary || "Nexus plans and runs local intelligence; external actions still need confirmation.")}</span></div>`,
+      orchestration.latestMission ? `<div><strong>${translateText(`${orchestration.latestMission.missionNumber}: ${orchestration.latestMission.title}`)}</strong><span>${translateText(`${orchestration.latestMission.score}% complete - ${orchestration.latestMission.status}`)}</span><small>${translateText(orchestration.latestMission.nextQuestion || "")}</small></div>` : `<div><strong>${translateText("No active mission")}</strong><span>${translateText("Start a launch, health network, crop commerce, or investor proof mission.")}</span></div>`,
+      orchestration.latestCycle ? `<div><strong>${translateText(`Latest cycle: ${orchestration.latestCycle.cycleNumber}`)}</strong><span>${translateText(`${orchestration.latestCycle.status} - ${orchestration.latestCycle.score}%`)}</span><small>${translateText(orchestration.latestCycle.nextQuestion || "")}</small></div>` : `<div><strong>${translateText("Cycle")}</strong><span>${translateText("Run Continue after a mission starts to advance the next steps.")}</span></div>`,
+      orchestration.latestReport ? `<div><strong>${translateText(orchestration.latestReport.reportNumber)}</strong><span>${translateText(orchestration.latestReport.summary)}</span><small>${translateText(orchestration.latestReport.nextAction || "")}</small></div>` : ""
+    ].join("");
+  }
+  if ($("#orchestrationProgressPanel")) {
+    const mission = orchestration.latestMission || {};
+    const stepHtml = (mission.steps || []).slice(0, 7).map(step => `
+      <div>
+        <strong>${translateText(`${step.order}. ${step.title}`)}</strong>
+        <span>${translateText(`${step.status} - ${step.engine}`)}</span>
+        <small>${translateText(step.evidence || step.sourceLabel || "Waiting")}</small>
+      </div>
+    `).join("");
+    const blockerHtml = (orchestration.blockers || []).slice(0, 3).map(blocker => `
+      <div>
+        <strong>${translateText(`Blocker: ${blocker.title || blocker.stepId}`)}</strong>
+        <span>${translateText(blocker.blocker || "Live provider setup needed.")}</span>
+        <small>${translateText(blocker.severity || "medium")}</small>
+      </div>
+    `).join("");
+    $("#orchestrationProgressPanel").innerHTML = stepHtml + blockerHtml || `<div><strong>${translateText("Mission progress")}</strong><span>${translateText("No mission steps yet.")}</span></div>`;
+  }
   renderCommunicationPanel("#providerCommunicationPanel", "Platform", "No provider support thread yet. Message the provider desk to create a two-way operations record.");
 
   $("#environmentPanel").innerHTML = [
@@ -13985,6 +14014,81 @@ function workflowConfig(workflow, action, element) {
         { title: "Decision", detail: "Nexus creates a recommendation, not just a status card.", status: "ready", label: "Decide" },
         { title: "Proof", detail: "Nexus ties the recommendation to investor, launch, revenue, governance, or improvement evidence.", status: "ready", label: "Proof" },
         { title: "Next action", detail: "Nexus names the next thing to run, fix, connect, or present.", status: "ready", label: "Next" }
+      ]
+    });
+  }
+  if (workflow === "autonomous-orchestration") {
+    const configs = {
+      launch: {
+        title: "Launch AgriNexus in Kenya",
+        summary: "Create a country launch mission, run strategy, market, governance, health, trade, provider gap, and investor proof steps.",
+        confirmLabel: "Start launch mission",
+        path: "/api/autonomous-orchestration/mission",
+        body: { templateId: "launch-country", query: "Launch AgriNexus in Kenya for rural health, agriculture, learning, workforce, trade, maps, and investors", country: "Kenya", maxSteps: 4 },
+        success: "Launch mission started",
+        record: "Mission plan, completed steps, evidence, blockers, next question, memory, and audit events",
+        provider: "Runs local intelligence engines now; external dispatch, payments, provider writes, and GPS still require live providers and confirmation."
+      },
+      health: {
+        title: "Build rural health access network",
+        summary: "Start a mission for mobile clinic, pharmacy, clinic, map, communications, consent, and no-diagnosis guardrails.",
+        confirmLabel: "Start health mission",
+        path: "/api/autonomous-orchestration/mission",
+        body: { templateId: "rural-health-network", query: "Build rural health access network with mobile clinic pharmacy clinic map and communications in Kenya", country: "Kenya", maxSteps: 4 },
+        success: "Health network mission started",
+        record: "Health mission, provider gaps, governance, communications readiness, and report path",
+        provider: "Coordinates local health access now; real clinic, pharmacy, EHR, SMS, WhatsApp, and phone require providers."
+      },
+      commerce: {
+        title: "Build crop commerce network",
+        summary: "Start a mission for farmer, buyer, market, route, shipment, payment, receipt, drone, and field evidence.",
+        confirmLabel: "Start commerce mission",
+        path: "/api/autonomous-orchestration/mission",
+        body: { templateId: "crop-commerce-network", query: "Build crop commerce network for maize buyer delivery payment receipt and route tracking in Kenya", country: "Kenya", maxSteps: 4 },
+        success: "Crop commerce mission started",
+        record: "Trade mission, market route, revenue model, drone/field support, and source truth",
+        provider: "Real payments and logistics dispatch require provider credentials; local evidence and guided workflow run now."
+      },
+      investor: {
+        title: "Prepare investor-ready proof mission",
+        summary: "Create a complete investor proof path across strategy, health, trade, learning, revenue, governance, and improvement.",
+        confirmLabel: "Start investor proof",
+        path: "/api/autonomous-orchestration/mission",
+        body: { templateId: "investor-demo", query: "Prepare investor-ready proof mission for AgriNexus across all modules and intelligence layers", country: "Kenya", maxSteps: 5 },
+        success: "Investor proof mission started",
+        record: "Investor proof mission, cross-module evidence, revenue, governance, and improvement results",
+        provider: "Uses all intelligence layers to produce investor-ready proof from current platform capability."
+      },
+      continue: {
+        title: "Continue active autonomous mission",
+        summary: "Resume the latest mission, run the next available steps, update blockers, and record progress.",
+        confirmLabel: "Continue mission",
+        path: "/api/autonomous-orchestration/cycle",
+        body: { maxSteps: 3 },
+        success: "Mission advanced",
+        record: "Cycle record, completed steps, blockers, current score, and next question",
+        provider: "Nexus resumes the latest mission and advances only safe local intelligence steps."
+      },
+      report: {
+        title: "Create autonomous mission report",
+        summary: "Package mission progress, completed evidence, blockers, remaining work, and next action into a report.",
+        confirmLabel: "Create report",
+        path: "/api/autonomous-orchestration/report",
+        body: {},
+        success: "Mission report created",
+        record: "Outcome report, evidence, remaining steps, blockers, and next action",
+        provider: "Reports are built from recorded mission evidence and source truth."
+      }
+    };
+    const selected = configs[action] || configs.launch;
+    return simpleWorkflowConfig({
+      eyebrow: "Autonomous orchestration workflow",
+      ...selected,
+      redirectSection: "integrations",
+      checklist: [
+        { title: "Plan", detail: "Nexus turns the goal into ordered mission steps.", status: "ready", label: "Plan" },
+        { title: "Run", detail: "Nexus runs the correct intelligence engines and records evidence.", status: "ready", label: "Run" },
+        { title: "Resume", detail: "Nexus tracks blockers, next questions, progress, and reports.", status: "ready", label: "Track" }
       ]
     });
   }

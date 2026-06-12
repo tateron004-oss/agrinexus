@@ -167,6 +167,11 @@ const endpoints = [
   "/api/executive-intelligence/analyze",
   "/api/executive-intelligence/roadmap",
   "/api/executive-intelligence/readiness",
+  "/api/autonomous-orchestration/status",
+  "/api/autonomous-orchestration/templates",
+  "/api/autonomous-orchestration/mission",
+  "/api/autonomous-orchestration/cycle",
+  "/api/autonomous-orchestration/report",
   "/api/admin/subscriber",
   "/api/admin/test-user",
   "/api/admin/admin-user",
@@ -275,6 +280,15 @@ assert(server.includes("executive_intelligence.analysis_completed"), "Executive 
 assert(app.includes('workflow === "executive-intelligence"'), "Frontend must wire executive intelligence buttons to real workflows");
 assert(app.includes("/api/executive-intelligence/analyze"), "Frontend must call executive analysis endpoint");
 assert(pkg.scripts["executive:intelligence-qa"] === "node scripts/executive-intelligence-qa.js", "Package scripts must expose executive intelligence QA");
+assert(html.includes("Autonomous Mission Operator"), "Integrations must include an autonomous mission operator");
+assert(server.includes("function ensureAutonomousOrchestrationProfile"), "Backend must create autonomous orchestration storage");
+assert(server.includes("function runAutonomousOrchestrationMission"), "Backend must start autonomous orchestration missions");
+assert(server.includes("function runAutonomousOrchestrationCycle"), "Backend must advance autonomous orchestration cycles");
+assert(server.includes("function buildAutonomousOrchestrationReport"), "Backend must create autonomous orchestration reports");
+assert(server.includes("autonomous_orchestration.mission_started"), "Autonomous orchestration must create voice mission intent");
+assert(app.includes('workflow === "autonomous-orchestration"'), "Frontend must wire autonomous orchestration buttons to real workflows");
+assert(app.includes("/api/autonomous-orchestration/mission") && app.includes("/api/autonomous-orchestration/cycle"), "Frontend must call autonomous orchestration mission and cycle endpoints");
+assert(pkg.scripts["orchestration:intelligence-qa"] === "node scripts/autonomous-orchestration-qa.js", "Package scripts must expose autonomous orchestration QA");
 assert(app.includes("activeVoiceAudio"), "Voice playback needs a single active audio guard");
 assert(html.includes("Buyer-Seller Communication Hub"), "AgriTrade needs a buyer-seller communication hub");
 assert(server.includes("function createBuyerSellerMessage"), "Backend needs buyer-seller message thread creation");
