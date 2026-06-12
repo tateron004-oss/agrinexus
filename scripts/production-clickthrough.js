@@ -155,6 +155,10 @@ const endpoints = [
   "/api/adaptive-autonomy/run",
   "/api/adaptive-autonomy/nudge",
   "/api/adaptive-autonomy/learn",
+  "/api/network-intelligence/status",
+  "/api/network-intelligence/query",
+  "/api/network-intelligence/action-readiness",
+  "/api/network-intelligence/provider-map",
   "/api/admin/subscriber",
   "/api/admin/test-user",
   "/api/admin/admin-user",
@@ -233,6 +237,16 @@ assert(server.includes("adaptive_autonomy.cycle_completed"), "Adaptive autonomy 
 assert(app.includes('workflow === "adaptive-autonomy"'), "Frontend must wire adaptive autonomy buttons to real workflows");
 assert(app.includes("/api/adaptive-autonomy/run") && app.includes("/api/adaptive-autonomy/learn"), "Frontend must call adaptive autonomy run and learn endpoints");
 assert(pkg.scripts["adaptive:autonomy-qa"] === "node scripts/adaptive-autonomy-qa.js", "Package scripts must expose adaptive autonomy QA");
+assert(html.includes("Network Intelligence Desk"), "Integrations must include a network intelligence desk");
+assert(server.includes("function ensureNetworkedIntelligenceProfile"), "Backend must create network intelligence storage");
+assert(server.includes("function networkServiceRegistry"), "Backend must define a provider service registry");
+assert(server.includes("function networkProviderMatch"), "Backend must match requests to provider lanes");
+assert(server.includes("function networkActionReadiness"), "Backend must report network action readiness");
+assert(server.includes("function networkCountryCoverageModel"), "Backend must expose country coverage for network intelligence");
+assert(server.includes("network_intelligence.query_routed"), "Network intelligence must create voice query-routed intent");
+assert(app.includes('workflow === "network-intelligence"'), "Frontend must wire network intelligence buttons to real workflows");
+assert(app.includes("/api/network-intelligence/query") && app.includes("/api/network-intelligence/action-readiness"), "Frontend must call network intelligence query and readiness endpoints");
+assert(pkg.scripts["network:intelligence-qa"] === "node scripts/network-intelligence-qa.js", "Package scripts must expose network intelligence QA");
 assert(app.includes("activeVoiceAudio"), "Voice playback needs a single active audio guard");
 assert(html.includes("Buyer-Seller Communication Hub"), "AgriTrade needs a buyer-seller communication hub");
 assert(server.includes("function createBuyerSellerMessage"), "Backend needs buyer-seller message thread creation");

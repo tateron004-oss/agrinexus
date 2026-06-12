@@ -1976,6 +1976,7 @@ function publicState(db, user) {
   ensurePlatformIntelligenceProfile(db.profile);
   ensureOperationalIntelligenceProfile(db.profile);
   ensureAdaptiveAutonomyProfile(db.profile);
+  ensureNetworkedIntelligenceProfile(db.profile);
   const providerCandidates = providerCandidateCatalog(db, providers);
   const agentCapabilities = agentCapabilityRegistryState(db, providers);
   const jarvisReadiness = jarvisReadinessModel(db, user, providers);
@@ -2012,6 +2013,7 @@ function publicState(db, user) {
     platformIntelligence: platformIntelligenceModel(db, user),
     operationalIntelligence: operationalIntelligenceModel(db, user),
     adaptiveAutonomy: adaptiveAutonomyModel(db, user, providers),
+    networkIntelligence: networkIntelligenceModel(db, user, providers),
     sessionBriefing: sessionBriefingModel(db, user, providers),
     impactDashboard: impactDashboardModel(db, providers),
     missionTimeline: missionTimelineModel(db),
@@ -8635,6 +8637,291 @@ function adaptiveAutonomyCommandResponse(db, user, text, options = {}) {
     status: "completed",
     response: `Adaptive autonomy is ${model.status} at ${model.score}%. Top signal: ${model.activeSignals[0]?.title || "no urgent signal"}.`,
     metadata: { conversationMode: true, redirectSection: "agent", adaptiveAutonomy: true, model }
+  };
+}
+
+function ensureNetworkedIntelligenceProfile(profile) {
+  ensureAdaptiveAutonomyProfile(profile);
+  profile.networkIntelligence = profile.networkIntelligence || {};
+  const network = profile.networkIntelligence;
+  network.queries = network.queries || [];
+  network.providerRoutes = network.providerRoutes || [];
+  network.actionReadiness = network.actionReadiness || [];
+  network.countryMatches = network.countryMatches || [];
+  network.serviceRegistry = network.serviceRegistry || [];
+  network.sourceAudits = network.sourceAudits || [];
+  network.liveGaps = network.liveGaps || [];
+  return network;
+}
+
+function networkServiceRegistry(providers = []) {
+  const statusFor = id => providers.find(provider => provider.id === id) || { id, status: "needs-credentials", mode: "not-configured", detail: "Provider slot not found." };
+  const registry = [
+    { id: "internet-brain", title: "Live internet brain", module: "AI", providerIds: ["web-search", "openai"], keywords: ["current", "today", "latest", "internet", "price", "weather", "news", "market", "question"], countries: ["Pan-African", "Nigeria", "DRC", "Kenya", "Egypt", "Ghana", "Rwanda", "Tanzania", "South Africa"], localFallback: "Open dialog, platform records, and saved local directory." },
+    { id: "maps-routing", title: "Maps, geocoding, and routing", module: "Map & AI", providerIds: ["maps", "routing-geocoding"], keywords: ["map", "route", "closest", "near", "location", "gps", "track", "directions", "shipment"], countries: ["Pan-African", "Nigeria", "DRC", "Kenya", "Egypt", "Ghana", "Rwanda", "Tanzania", "South Africa"], localFallback: "Saved route context, OpenStreetMap tiles when enabled, and local route evidence." },
+    { id: "health-network", title: "Clinic, mobile clinic, pharmacy, and EHR network", module: "Healthcare", providerIds: ["health-telehealth", "health-ehr", "health-openmrs", "health-notifications"], keywords: ["doctor", "clinic", "mobile clinic", "pharmacy", "medicine", "patient", "provider", "intake", "ehr"], countries: ["Kenya", "Nigeria", "DRC", "Egypt", "Ghana", "Rwanda", "Tanzania", "South Africa", "Pan-African"], localFallback: "Local clinic/pharmacy records, safety-bounded intake, provider handoff drafts, and mobile clinic workflow." },
+    { id: "learning-network", title: "Course catalog and certificate network", module: "Learning", providerIds: ["learning-lms", "learning-courses", "learning-certificates"], keywords: ["course", "learn", "lesson", "certificate", "training", "catalog", "student"], countries: ["Pan-African", "Kenya", "Nigeria", "Ghana", "Rwanda", "Tanzania", "South Africa", "Egypt", "DRC"], localFallback: "Local AgriNexus course catalog, progress, quiz, accessibility, and certificate evidence." },
+    { id: "workforce-network", title: "Jobs, workforce, and shift network", module: "Workforce", providerIds: ["workforce-job-search", "workforce-jobs", "workforce-calendar", "workforce-hris", "workforce-shifts"], keywords: ["job", "work", "role", "apply", "shift", "interview", "worker", "hiring"], countries: ["Kenya", "Nigeria", "Ghana", "Rwanda", "Tanzania", "South Africa", "Egypt", "DRC", "Pan-African"], localFallback: "Local job records, profile build, application workflow, interview prep, mentor, and shift simulation." },
+    { id: "trade-market-network", title: "Buyer, seller, market price, payment, and logistics network", module: "AgriTrade", providerIds: ["trade-market", "trade-logistics", "trade-payments", "billing-subscriptions"], keywords: ["buyer", "seller", "sell", "crop", "maize", "cassava", "price", "order", "payment", "receipt", "delivery", "shipment"], countries: ["Kenya", "Nigeria", "Ghana", "Rwanda", "Tanzania", "South Africa", "Egypt", "DRC", "Pan-African"], localFallback: "Local buyer desk, order workflow, route evidence, wallet/receipt path, and buyer/seller communication." },
+    { id: "field-drone-network", title: "Drone, satellite, and field intelligence network", module: "AgriTech", providerIds: ["drones", "satellite-field-data", "maps"], keywords: ["drone", "field", "scan", "satellite", "crop health", "soil", "pest", "harvest", "yield"], countries: ["Pan-African", "Kenya", "Nigeria", "Ghana", "Rwanda", "Tanzania", "South Africa", "Egypt", "DRC"], localFallback: "Local drone mission, scan packet, field intervention, and simple farmer explanation." },
+    { id: "communications-network", title: "Phone, SMS, WhatsApp, and email network", module: "Communications", providerIds: ["phone-voice", "sms-delivery", "whatsapp-delivery", "email-delivery"], keywords: ["call", "phone", "sms", "whatsapp", "message", "email", "notify", "contact", "speak"], countries: ["Pan-African", "Kenya", "Nigeria", "DRC", "Egypt", "Ghana", "Rwanda", "Tanzania", "South Africa"], localFallback: "In-app thread, message drafts, phone prompt, and notification record until live delivery is configured." }
+  ];
+  return registry.map(service => {
+    const serviceProviders = service.providerIds.map(statusFor);
+    const connected = serviceProviders.filter(provider => provider.status === "connected");
+    const ready = connected.length > 0;
+    return {
+      ...service,
+      providers: serviceProviders.map(provider => ({ id: provider.id, name: provider.name || provider.id, status: provider.status, mode: provider.mode, detail: provider.detail })),
+      connectedCount: connected.length,
+      providerCount: serviceProviders.length,
+      status: ready ? "live-capable" : "local-fallback",
+      sourceLabel: ready ? "live-provider-capable" : "local-platform-fallback",
+      confidence: ready ? Math.min(98, 74 + connected.length * 6) : 58,
+      nextCredential: serviceProviders.find(provider => provider.status !== "connected")?.id || ""
+    };
+  });
+}
+
+function networkIntentFromText(text = "") {
+  const lower = String(text || "").toLowerCase();
+  if (/\b(doctor|clinic|medicine|pharmacy|patient|health|telehealth|mobile clinic|provider|ehr|intake)\b/.test(lower)) return "health-network";
+  if (/\b(course|learn|lesson|training|certificate|catalog|student)\b/.test(lower)) return "learning-network";
+  if (/\b(job|work|role|apply|shift|interview|worker|hiring)\b/.test(lower)) return "workforce-network";
+  if (/\b(buyer|seller|sell|crop|maize|cassava|price|order|payment|receipt|delivery|shipment|market)\b/.test(lower)) return "trade-market-network";
+  if (/\b(drone|field|scan|satellite|crop health|soil|pest|harvest|yield)\b/.test(lower)) return "field-drone-network";
+  if (/\b(map|route|closest|near me|near|location|gps|track|directions)\b/.test(lower)) return "maps-routing";
+  if (/\b(call|phone|sms|whatsapp|message|email|notify|contact|speak)\b/.test(lower)) return "communications-network";
+  if (/\b(current|today|latest|internet|weather|news|question)\b/.test(lower)) return "internet-brain";
+  return "internet-brain";
+}
+
+function networkCountryFromText(text = "", db = null) {
+  const lower = String(text || "").toLowerCase();
+  const countries = ["Nigeria", "DRC", "Congo", "Kenya", "Egypt", "Ghana", "Rwanda", "Tanzania", "South Africa", "Ethiopia", "Brazil"];
+  const found = countries.find(country => lower.includes(country.toLowerCase()));
+  if (found === "Congo") return "DRC";
+  if (found) return found;
+  if (db) return activeContext(db).country.name || "Pan-African";
+  return "Pan-African";
+}
+
+function networkProviderMatch(db, user, query = "", options = {}) {
+  const providers = runtimeProviders(db);
+  const registry = networkServiceRegistry(providers);
+  const intentId = options.serviceId || networkIntentFromText(query);
+  const country = options.country || networkCountryFromText(query, db);
+  const service = registry.find(item => item.id === intentId) || registry[0];
+  const localSearchType = service.id === "health-network" ? (/\b(pharmacy|medicine)\b/i.test(query) ? "pharmacy" : "clinic")
+    : service.id === "learning-network" ? "course"
+    : service.id === "workforce-network" ? "job"
+    : service.id === "trade-market-network" ? "buyer"
+    : service.id === "field-drone-network" ? "drone"
+    : service.id === "maps-routing" ? "logistics"
+    : "";
+  const localResult = localSearchType ? platformIntelligenceSearch(db, user, query || service.title, { type: localSearchType, country }) : { matches: [] };
+  const topProvider = service.providers.find(provider => provider.status === "connected") || service.providers[0] || {};
+  const sourceLabel = service.connectedCount ? "live-provider-capable" : localResult.matches?.length ? "saved-local-directory" : "local-platform-fallback";
+  const confidence = Math.max(service.confidence || 50, localResult.matches?.length ? 70 : 0);
+  const match = {
+    id: crypto.randomUUID(),
+    query,
+    serviceId: service.id,
+    serviceTitle: service.title,
+    module: service.module,
+    country,
+    status: service.status,
+    sourceLabel,
+    sourceTruth: service.connectedCount
+      ? `Nexus found ${service.connectedCount} connected provider path(s). External results still depend on provider terms, coverage, and request approval.`
+      : `Nexus can run local AgriNexus workflow evidence now. Live external results need credentials for: ${service.providerIds.join(", ")}.`,
+    confidence,
+    topProvider,
+    connectedProviders: service.providers.filter(provider => provider.status === "connected"),
+    providerOptions: service.providers,
+    localFallback: service.localFallback,
+    localMatches: (localResult.matches || []).slice(0, 5),
+    actionReadiness: networkActionReadiness(db, service, query),
+    createdAt: new Date().toISOString()
+  };
+  return match;
+}
+
+function networkActionReadiness(db, serviceOrId, query = "") {
+  const providers = runtimeProviders(db);
+  const registry = networkServiceRegistry(providers);
+  const service = typeof serviceOrId === "string" ? registry.find(item => item.id === serviceOrId) : serviceOrId;
+  const selected = service || registry.find(item => item.id === networkIntentFromText(query)) || registry[0];
+  const live = (selected.providers || []).filter(provider => provider.status === "connected");
+  const guardedActions = [];
+  if (/health/i.test(selected.module)) guardedActions.push("No diagnosis or prescription. Prepare intake and licensed-provider handoff only.");
+  if (/trade/i.test(selected.module)) guardedActions.push("No real payment, payout, or transaction fee without live payment provider and approval.");
+  if (/communication/i.test(selected.module)) guardedActions.push("No external SMS, WhatsApp, email, or call without configured provider and recipient.");
+  if (/map/i.test(selected.module) || /agritech/i.test(selected.module)) guardedActions.push("Label local route or field evidence until live GPS, drone, satellite, or geocoding data is connected.");
+  return {
+    serviceId: selected.id,
+    serviceTitle: selected.title,
+    module: selected.module,
+    status: live.length ? "live-capable" : "local-workflow-ready",
+    confidence: live.length ? Math.min(96, 76 + live.length * 5) : 62,
+    canDoNow: [
+      `Route the request to ${selected.module}`,
+      "Search saved AgriNexus records",
+      "Open the matching workflow",
+      "Draft or stage the next action",
+      "Record source truth and audit evidence"
+    ],
+    needsLiveProviderFor: live.length ? [] : [
+      "Current external data",
+      "Real provider inventory or availability",
+      "Real dispatch, payment, GPS, or partner-system updates"
+    ],
+    guardrails: guardedActions.length ? guardedActions : ["Use source labels and ask for confirmation before external actions."],
+    providerIds: selected.providerIds,
+    connectedProviderIds: live.map(provider => provider.id)
+  };
+}
+
+function runNetworkIntelligenceQuery(db, user, body = {}) {
+  const network = ensureNetworkedIntelligenceProfile(db.profile);
+  const query = String(body.query || body.command || "Find the best real-world provider path").trim();
+  const match = networkProviderMatch(db, user, query, body);
+  const record = {
+    id: crypto.randomUUID(),
+    queryNumber: `NEX-NET-${String((network.queries || []).length + 1).padStart(3, "0")}`,
+    query,
+    serviceId: match.serviceId,
+    serviceTitle: match.serviceTitle,
+    module: match.module,
+    country: match.country,
+    status: match.status,
+    sourceLabel: match.sourceLabel,
+    sourceTruth: match.sourceTruth,
+    confidence: match.confidence,
+    topProviderId: match.topProvider?.id || "",
+    localFallback: match.localFallback,
+    localMatches: match.localMatches,
+    actionReadiness: match.actionReadiness,
+    createdBy: user.email,
+    createdAt: match.createdAt
+  };
+  network.queries.unshift(record);
+  network.queries = network.queries.slice(0, 80);
+  network.providerRoutes.unshift({
+    id: crypto.randomUUID(),
+    queryId: record.id,
+    module: record.module,
+    providerId: record.topProviderId || "local-fallback",
+    status: record.status,
+    sourceLabel: record.sourceLabel,
+    createdAt: record.createdAt
+  });
+  network.providerRoutes = network.providerRoutes.slice(0, 80);
+  network.sourceAudits.unshift({ id: crypto.randomUUID(), queryId: record.id, sourceLabel: record.sourceLabel, sourceTruth: record.sourceTruth, confidence: record.confidence, createdAt: record.createdAt });
+  network.sourceAudits = network.sourceAudits.slice(0, 80);
+  rememberAgentMemory(db.profile, `Network intelligence query ${record.queryNumber}: ${query}. Source ${record.sourceLabel}.`, { source: "network-intelligence", category: "provider-routing", module: record.module, confidence: record.confidence / 100 });
+  logIntegration(db, {
+    providerId: "network-intelligence",
+    module: record.module,
+    action: "network.query_routed",
+    status: "success",
+    detail: `${record.queryNumber} routed to ${record.serviceTitle}: ${record.sourceLabel}.`,
+    metadata: { record },
+    dispatch: false
+  });
+  addActivity(db.profile, `${record.queryNumber} network query routed: ${record.serviceTitle}.`);
+  return { record, match };
+}
+
+function networkCountryCoverageModel(db, providers = runtimeProviders(db)) {
+  const registry = networkServiceRegistry(providers);
+  const countries = ["Nigeria", "DRC", "Kenya", "Egypt", "Ghana", "Rwanda", "Tanzania", "South Africa", "Pan-African"];
+  return countries.map(country => {
+    const services = registry.filter(service => (service.countries || []).includes(country));
+    const liveCapable = services.filter(service => service.status === "live-capable").length;
+    return {
+      country,
+      serviceCount: services.length,
+      liveCapable,
+      localFallback: services.length - liveCapable,
+      status: liveCapable ? "partly-live" : "local-ready",
+      plainAnswer: liveCapable
+        ? `${country} has ${liveCapable} live-capable service lane(s) and local fallback for the rest.`
+        : `${country} can run local AgriNexus workflows now; live providers are still needed for current external data.`
+    };
+  });
+}
+
+function networkIntelligenceModel(db, user, providers = runtimeProviders(db)) {
+  const network = ensureNetworkedIntelligenceProfile(db.profile);
+  const registry = networkServiceRegistry(providers);
+  const liveServices = registry.filter(service => service.status === "live-capable").length;
+  const score = Math.min(100, Math.round(42 + liveServices * 6 + Math.min(20, (network.queries || []).length * 2) + Math.min(16, (network.providerRoutes || []).length * 2)));
+  network.serviceRegistry = registry.map(service => ({ id: service.id, title: service.title, status: service.status, connectedCount: service.connectedCount, providerCount: service.providerCount, sourceLabel: service.sourceLabel }));
+  network.liveGaps = registry.filter(service => service.status !== "live-capable").map(service => ({ id: service.id, title: service.title, providerIds: service.providerIds, nextCredential: service.nextCredential }));
+  network.countryMatches = networkCountryCoverageModel(db, providers);
+  return {
+    status: liveServices ? "network-intelligence-partly-live" : "network-intelligence-local-ready",
+    score,
+    summary: "Network Intelligence gives Nexus a provider-aware outside-world routing layer for clinics, pharmacies, jobs, courses, buyers, logistics, maps, weather, drone/satellite data, payments, phone, SMS, WhatsApp, and live internet search.",
+    sourceTruth: "Every answer is labeled as live-provider-capable, saved-local-directory, or local-platform-fallback so investors and users know what is real now and what needs credentials.",
+    registry: network.serviceRegistry,
+    liveServices,
+    totalServices: registry.length,
+    latestQuery: (network.queries || [])[0] || null,
+    latestRoute: (network.providerRoutes || [])[0] || null,
+    liveGaps: network.liveGaps,
+    countryCoverage: network.countryMatches,
+    suggestedCommands: [
+      "Nexus, use network intelligence to find the closest clinic in Kenya",
+      "Nexus, check current maize market price in Kenya",
+      "Nexus, find live job providers for farm work",
+      "Nexus, route my crop shipment from Kenya to Nigeria",
+      "Nexus, find medicine support near Nairobi",
+      "Nexus, check weather before harvest",
+      "Nexus, find drone or satellite field support",
+      "Nexus, network intelligence status"
+    ]
+  };
+}
+
+function networkIntelligenceCommandResponse(db, user, text, options = {}) {
+  const lower = String(text || "").toLowerCase();
+  const networkSignal = /\b(network intelligence|networked intelligence|live provider|real provider|provider network|outside world|current|today|latest|closest|near me|market price|weather|live job|live course|live clinic|live pharmacy|route my crop|track.*shipment|internet brain)\b/.test(lower);
+  if (!networkSignal) return null;
+  if (/\b(status|readiness|what is connected|what providers|network intelligence)\b/.test(lower) && !/\b(find|route|price|weather|closest|near|track|check)\b/.test(lower)) {
+    const model = networkIntelligenceModel(db, user);
+    return {
+      intent: "network_intelligence.status",
+      status: "completed",
+      response: `Network intelligence is ${model.status} at ${model.score}%. Live-capable service lanes: ${model.liveServices}/${model.totalServices}.`,
+      metadata: { conversationMode: true, redirectSection: "integrations", networkIntelligence: true, model }
+    };
+  }
+  const result = runNetworkIntelligenceQuery(db, user, { query: text });
+  const record = result.record;
+  const local = record.localMatches?.[0];
+  const wantsMap = /\b(map|route|track|tracking|shipment|gps|location|where|near me|closest|nearest)\b/.test(lower);
+  const section = wantsMap ? "map" : adaptiveModuleSection(record.module);
+  const moduleSignal = {
+    module: section === "map" ? "Maps" : record.module,
+    section,
+    score: 3,
+    source: "network-intelligence"
+  };
+  const frontierCommunication = frontierCommunicationIntelligenceModel(text, moduleSignal, user, options);
+  const liveText = record.status === "live-capable"
+    ? `I found a live-ready path for ${record.serviceTitle}.`
+    : `I can guide this now with saved AgriNexus information; real-time outside listings need the live credentials.`;
+  const fallback = local ? ` I found ${local.name}.` : ` I can use ${record.localFallback}.`;
+  const nextQuestion = section === "map"
+    ? "Where should I start the map from?"
+    : frontierCommunication.nextQuestion;
+  return {
+    intent: "network_intelligence.query_routed",
+    status: record.status,
+    response: `${liveText} Source: ${record.sourceLabel}.${fallback} ${nextQuestion}`,
+    metadata: { conversationMode: true, redirectSection: section, networkIntelligence: true, record, match: result.match, moduleSignal, frontierCommunication }
   };
 }
 
@@ -15652,6 +15939,8 @@ async function runAgentCommand(db, user, command, options = {}) {
   }
   const adaptiveAutonomyCommand = adaptiveAutonomyCommandResponse(db, user, text, options);
   if (adaptiveAutonomyCommand) return adaptiveAutonomyCommand;
+  const networkIntelligenceCommand = networkIntelligenceCommandResponse(db, user, text, options);
+  if (networkIntelligenceCommand) return networkIntelligenceCommand;
   const operationalIntelligenceCommand = operationalIntelligenceCommandResponse(db, user, text, options);
   if (operationalIntelligenceCommand) return operationalIntelligenceCommand;
   if (conversational && isRuralDistressConversation(text)) {
@@ -17786,6 +18075,43 @@ async function api(req, res, url) {
     const state = publicState(db, user);
     state.adaptiveAutonomyLearning = update;
     return send(res, 200, state);
+  }
+
+  if (url.pathname === "/api/network-intelligence/status" && req.method === "GET") {
+    if (!canUse(user, "ai")) return send(res, 403, { error: "Role does not allow network intelligence" });
+    return send(res, 200, networkIntelligenceModel(db, user, runtimeProviders(db)));
+  }
+
+  if (url.pathname === "/api/network-intelligence/query" && req.method === "POST") {
+    if (!canUse(user, "ai")) return send(res, 403, { error: "Role does not allow network intelligence queries" });
+    const body = await readBody(req);
+    const result = runNetworkIntelligenceQuery(db, user, body);
+    await writeDb(db);
+    const state = publicState(db, user);
+    state.networkIntelligenceQuery = result;
+    return send(res, 200, state);
+  }
+
+  if (url.pathname === "/api/network-intelligence/action-readiness" && req.method === "POST") {
+    if (!canUse(user, "ai")) return send(res, 403, { error: "Role does not allow network action readiness" });
+    const body = await readBody(req);
+    const readiness = networkActionReadiness(db, String(body.serviceId || networkIntentFromText(body.query || "")), String(body.query || ""));
+    const network = ensureNetworkedIntelligenceProfile(db.profile);
+    network.actionReadiness.unshift({ id: crypto.randomUUID(), ...readiness, query: body.query || "", createdAt: new Date().toISOString() });
+    network.actionReadiness = network.actionReadiness.slice(0, 80);
+    await writeDb(db);
+    const state = publicState(db, user);
+    state.networkActionReadiness = readiness;
+    return send(res, 200, state);
+  }
+
+  if (url.pathname === "/api/network-intelligence/provider-map" && req.method === "GET") {
+    if (!canUse(user, "ai")) return send(res, 403, { error: "Role does not allow network provider map" });
+    return send(res, 200, {
+      registry: networkServiceRegistry(runtimeProviders(db)),
+      countryCoverage: networkCountryCoverageModel(db, runtimeProviders(db)),
+      model: networkIntelligenceModel(db, user, runtimeProviders(db))
+    });
   }
 
   if (url.pathname === "/api/demo/run" && req.method === "POST") {

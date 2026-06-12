@@ -10564,6 +10564,33 @@ function render() {
       </div>
     `).join("") || `<div><strong>${translateText("Guardrails")}</strong><span>${translateText("Adaptive guardrails are loading.")}</span></div>`;
   }
+  const network = data.networkIntelligence || {};
+  if ($("#networkIntelligenceScore")) $("#networkIntelligenceScore").textContent = `${Number(network.score || 0)}%`;
+  if ($("#networkIntelligencePanel")) {
+    $("#networkIntelligencePanel").innerHTML = [
+      `<div><strong>${translateText(network.status || "network-intelligence-local-ready")}</strong><span>${translateText(network.summary || "Network intelligence is ready.")}</span></div>`,
+      `<div><strong>${translateText("Source truth")}</strong><span>${translateText(network.sourceTruth || "Nexus labels live provider, saved local, and local fallback sources.")}</span></div>`,
+      `<div><strong>${translateText("Service lanes")}</strong><span>${translateText(`${network.liveServices || 0}/${network.totalServices || 0} live-capable lanes`)}</span></div>`,
+      network.latestQuery ? `<div><strong>${translateText(`Latest query: ${network.latestQuery.queryNumber}`)}</strong><span>${translateText(`${network.latestQuery.serviceTitle} - ${network.latestQuery.sourceLabel}`)}</span><small>${translateText(network.latestQuery.sourceTruth || "")}</small></div>` : `<div><strong>${translateText("Latest query")}</strong><span>${translateText("Ask Nexus for a clinic, market price, route, job, course, or provider network.")}</span></div>`,
+      ...((network.registry || []).slice(0, 4).map(service => `<div><strong>${translateText(`${service.title}: ${service.status}`)}</strong><span>${translateText(`${service.connectedCount}/${service.providerCount} provider path(s) connected`)}</span><small>${translateText(service.sourceLabel)}</small></div>`))
+    ].join("");
+  }
+  if ($("#networkCoveragePanel")) {
+    const countryHtml = (network.countryCoverage || []).slice(0, 5).map(country => `
+      <div>
+        <strong>${translateText(`${country.country}: ${country.status}`)}</strong>
+        <span>${translateText(country.plainAnswer)}</span>
+        <small>${translateText(`${country.liveCapable}/${country.serviceCount} live-capable service lane(s)`)}</small>
+      </div>
+    `).join("");
+    const gapHtml = (network.liveGaps || []).slice(0, 4).map(gap => `
+      <div>
+        <strong>${translateText(`Live gap: ${gap.title}`)}</strong>
+        <span>${translateText(`Next provider slot: ${gap.nextCredential || (gap.providerIds || [])[0] || "provider credentials"}`)}</span>
+      </div>
+    `).join("");
+    $("#networkCoveragePanel").innerHTML = countryHtml + gapHtml || `<div><strong>${translateText("Coverage")}</strong><span>${translateText("Network coverage is loading.")}</span></div>`;
+  }
   renderCommunicationPanel("#providerCommunicationPanel", "Platform", "No provider support thread yet. Message the provider desk to create a two-way operations record.");
 
   $("#environmentPanel").innerHTML = [
@@ -13689,6 +13716,71 @@ function workflowConfig(workflow, action, element) {
         { title: "Monitor", detail: "Nexus checks goals, gaps, and stale workflows.", status: "ready", label: "Watch" },
         { title: "Nudge", detail: "Nexus prepares a simple proactive next action.", status: "ready", label: "Guide" },
         { title: "Guardrails", detail: "External sends, payments, live GPS, and clinical decisions remain protected.", status: "ready", label: "Safe" }
+      ]
+    });
+  }
+  if (workflow === "network-intelligence") {
+    const configs = {
+      clinic: {
+        title: "Find clinic or pharmacy provider path",
+        summary: "Route a rural health request through live clinic/pharmacy/EHR providers when connected, or saved local clinic/pharmacy workflows when not connected.",
+        confirmLabel: "Route health request",
+        path: "/api/network-intelligence/query",
+        body: { query: "Find the closest clinic or pharmacy support near Nairobi Kenya", serviceId: "health-network", country: "Kenya" },
+        success: "Health network request routed",
+        record: "Network query, provider route, source truth, local fallback, readiness, memory, and audit evidence",
+        provider: "Uses health provider lanes when connected; otherwise uses local clinic/pharmacy directory and safety-bounded intake workflow."
+      },
+      "market-price": {
+        title: "Check crop market price provider path",
+        summary: "Route a current market price question through live web/search/market providers when connected, or local trade context when not connected.",
+        confirmLabel: "Route market query",
+        path: "/api/network-intelligence/query",
+        body: { query: "Check current maize market price in Kenya today", serviceId: "trade-market-network", country: "Kenya" },
+        success: "Market network request routed",
+        record: "Network query, market provider route, source truth, local fallback, confidence, and audit evidence",
+        provider: "Current prices require a live internet/market provider; local fallback can guide buyer/order workflow."
+      },
+      "crop-route": {
+        title: "Route crop shipment provider path",
+        summary: "Route a shipment and tracking request through live map/routing/logistics providers when connected, or local route evidence when not connected.",
+        confirmLabel: "Route shipment",
+        path: "/api/network-intelligence/query",
+        body: { query: "Route my crop shipment from Kenya to Nigeria and show tracking readiness", serviceId: "maps-routing", country: "Kenya" },
+        success: "Shipment network request routed",
+        record: "Network query, route/logistics provider match, source truth, readiness, and audit evidence",
+        provider: "Live GPS/logistics requires provider credentials; local fallback keeps route evidence and workflow tracking."
+      },
+      "provider-map": {
+        title: "Open network provider map",
+        summary: "Review all provider service lanes, connected counts, country coverage, and local fallback paths.",
+        confirmLabel: "Review provider map",
+        path: "/api/workflow/record",
+        body: { module: "Integrations", action: "network.provider_map_reviewed", section: "integrations", detail: "Network provider map reviewed from the integrations workspace." },
+        success: "Provider map reviewed",
+        record: "Workflow review event, provider map state, country coverage, and activity feed",
+        provider: "Provider map uses the network intelligence model already loaded in state."
+      },
+      readiness: {
+        title: "Check network action readiness",
+        summary: "Score what Nexus can do now, what needs live providers, and what guardrails apply before acting.",
+        confirmLabel: "Check readiness",
+        path: "/api/network-intelligence/action-readiness",
+        body: { query: "Can Nexus contact a clinic, route a shipment, check price, or send a message now?", serviceId: "health-network" },
+        success: "Network action readiness checked",
+        record: "Readiness record, can-do-now list, live-provider requirements, guardrails, and audit evidence",
+        provider: "Readiness labels live, local, and guarded actions before user-facing execution."
+      }
+    };
+    const selected = configs[action] || configs.clinic;
+    return simpleWorkflowConfig({
+      eyebrow: "Network intelligence workflow",
+      ...selected,
+      redirectSection: "integrations",
+      checklist: [
+        { title: "Provider route", detail: "Nexus chooses the best service lane and provider slot.", status: "ready", label: "Route" },
+        { title: "Source truth", detail: "Nexus labels live provider, saved local directory, or local fallback.", status: "ready", label: "Truth" },
+        { title: "Action guard", detail: "External dispatch, payments, diagnosis, and GPS remain protected until provider setup and approval.", status: "ready", label: "Safe" }
       ]
     });
   }
