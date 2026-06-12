@@ -56,7 +56,7 @@ async function twilioPost(route, body) {
     assert(incoming.includes("Who am I speaking with"), "incoming call should ask for caller name first");
     assert(incoming.includes("step=name"), "incoming gather should route to name step");
 
-    const name = await twilioPost("/api/voice/phone/gather?step=name", { SpeechResult: "my name is Ron", From: "+15555550123", CallSid: "CA-phone-greeting" });
+    const name = await twilioPost("/api/voice/phone/gather?step=name", { SpeechResult: "Ron", From: "+15555550123", CallSid: "CA-phone-greeting" });
     assert(name.includes("Thank you, Ron"), "name step should greet caller by extracted name");
     assert(name.includes("What language should I use"), "name step should ask for language");
     assert(name.includes("step=language"), "name step should route to language step");
@@ -70,6 +70,13 @@ async function twilioPost(route, body) {
     const command = await twilioPost("/api/voice/phone/gather?step=command", { SpeechResult: "start telehealth intake", From: "+15555550123", CallSid: "CA-phone-greeting" });
     assert(command.includes("Ron"), "command response should continue personalized phone session");
     assert(command.includes("step=command"), "command response should keep phone in command mode");
+
+    await twilioPost("/api/voice/phone/incoming", { From: "+15555550124", CallSid: "CA-phone-auto-language" });
+    const autoLanguage = await twilioPost("/api/voice/phone/gather?step=name", { SpeechResult: "hola me llamo Maria", From: "+15555550124", CallSid: "CA-phone-auto-language" });
+    assert(autoLanguage.includes("Hello Maria"), "auto language path should keep extracted caller name");
+    assert(autoLanguage.includes("I heard Spanish"), "auto language path should detect spoken language without asking again");
+    assert(autoLanguage.includes("language=\"es-ES\""), "auto language path should switch Twilio gather language");
+    assert(autoLanguage.includes("step=command"), "auto language path should go directly to command mode");
 
     console.log("Phone greeting QA passed");
   } finally {

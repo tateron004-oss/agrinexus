@@ -11644,7 +11644,7 @@ function updatePhoneVoiceSession(db, session, patch = {}) {
 
 function extractCallerName(text = "") {
   const cleaned = String(text || "").trim().replace(/[^\p{L}\p{N}\s'-]/gu, " ").replace(/\s+/g, " ");
-  const match = cleaned.match(/\b(?:my name is|i am|i'm|this is|it is|it's|call me)\s+([\p{L}][\p{L}'-]{1,30})/iu);
+  const match = cleaned.match(/\b(?:my name is|i am|i'm|this is|it is|it's|call me|my names|mi nombre es|me llamo|soy|je m appelle|je suis|mon nom est|jina langu ni|naitwa|mimi ni|ana ismi|ismi)\s+([\p{L}][\p{L}'-]{1,30})/iu);
   const candidate = match ? match[1] : cleaned.split(/\s+/).find(word => /^[\p{L}][\p{L}'-]{1,30}$/u.test(word));
   if (!candidate) return "";
   return candidate.charAt(0).toUpperCase() + candidate.slice(1);
@@ -11667,6 +11667,30 @@ function phoneLanguageChoice(text = "") {
     { code: "ln", locale: "fr-FR", label: "Lingala", tests: ["lingala"] }
   ];
   return choices.find(choice => choice.tests.some(test => lower.includes(test))) || null;
+}
+
+function phoneAutoLanguageChoice(text = "") {
+  const lower = String(text || "").toLowerCase();
+  const choices = [
+    { code: "en", locale: "en-US", label: "English", tests: ["english", "hello", "good morning", "good afternoon", "good evening", "my name is", "this is"] },
+    { code: "es", locale: "es-ES", label: "Spanish", tests: ["spanish", "espanol", "castellano", "hola", "buenos dias", "buenas tardes", "buenas noches", "me llamo", "mi nombre es", "yo necesito"] },
+    { code: "fr", locale: "fr-FR", label: "French", tests: ["french", "francais", "bonjour", "bonsoir", "salut", "je m appelle", "je suis", "mon nom est", "j ai besoin"] },
+    { code: "sw", locale: "sw-KE", label: "Kiswahili", tests: ["swahili", "kiswahili", "jambo", "habari", "mambo", "naitwa", "jina langu", "ninahitaji"] },
+    { code: "ar", locale: "ar-EG", label: "Arabic", tests: ["arabic", "arabe", "salaam", "salam", "marhaba", "ana ismi", "ismi"] },
+    { code: "ha", locale: "en-US", label: "Hausa", tests: ["hausa", "sannu", "ina kwana", "sunana"] },
+    { code: "yo", locale: "en-US", label: "Yoruba", tests: ["yoruba", "bawo", "ekaro", "oruko mi"] },
+    { code: "ig", locale: "en-US", label: "Igbo", tests: ["igbo", "ibo", "ndewo", "ututu oma", "aha m"] },
+    { code: "am", locale: "en-US", label: "Amharic", tests: ["amharic", "amhara", "selam", "tena yistilign"] },
+    { code: "om", locale: "en-US", label: "Oromo", tests: ["oromo", "akkam", "maqaan koo"] },
+    { code: "rw", locale: "en-US", label: "Kinyarwanda", tests: ["kinyarwanda", "rwanda", "muraho", "amakuru"] },
+    { code: "ln", locale: "fr-FR", label: "Lingala", tests: ["lingala", "mbote"] }
+  ];
+  return choices.find(choice => choice.tests.some(test => lower.includes(test))) || phoneLanguageChoice(text);
+}
+
+function phoneAutoLanguagePrompt(name = "", label = "English") {
+  const greeting = name ? `Hello ${name}. ` : "";
+  return `${greeting}I heard ${label}, so I will use ${label}. How can AgriNexus help you today?`;
 }
 
 function phoneLanguagePrompt(name = "") {
@@ -18491,6 +18515,19 @@ async function api(req, res, url) {
     }
     if (step === "name") {
       const callerName = extractCallerName(command) || "friend";
+      const autoChoice = phoneAutoLanguageChoice(command);
+      if (autoChoice) {
+        updatePhoneVoiceSession(db, session, { callerName, language: autoChoice.code, locale: autoChoice.locale, step: "command" });
+        phoneUser.language = autoChoice.code;
+        await writeDb(db);
+        const prompt = await phoneVoicePrompt(phoneAutoLanguagePrompt(callerName, autoChoice.label), autoChoice.locale);
+        return twimlResponse(res, `<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+  <Gather input="speech dtmf" action="${xmlEscape((process.env.PUBLIC_BASE_URL || "") + "/api/voice/phone/gather?step=command")}" method="POST" language="${xmlEscape(autoChoice.locale)}" speechTimeout="auto" actionOnEmptyResult="true">
+    ${prompt}
+  </Gather>
+</Response>`);
+      }
       updatePhoneVoiceSession(db, session, { callerName, step: "language" });
       await writeDb(db);
       const prompt = await phoneVoicePrompt(phoneLanguagePrompt(callerName), "en-US");

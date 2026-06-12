@@ -292,6 +292,8 @@ assert(pkg.scripts["orchestration:intelligence-qa"] === "node scripts/autonomous
 assert(server.includes("function ensurePhoneVoiceSessions"), "Phone assistant must persist caller session state");
 assert(server.includes("function extractCallerName"), "Phone assistant must extract caller name before command mode");
 assert(server.includes("function phoneLanguageChoice"), "Phone assistant must map spoken language choices");
+assert(server.includes("function phoneAutoLanguageChoice"), "Phone assistant must auto-detect language from first caller response");
+assert(server.includes("phoneAutoLanguagePrompt"), "Phone assistant must skip language question when language is detected");
 assert(server.includes("Hi, I am AgriNexus. Who am I speaking with?"), "Incoming phone greeting must be short and name-first");
 assert(server.includes("step=language") && server.includes("step=command"), "Phone assistant must move through name, language, and command steps");
 assert(pkg.scripts["phone:greeting-qa"] === "node scripts/phone-greeting-qa.js", "Package scripts must expose phone greeting QA");
