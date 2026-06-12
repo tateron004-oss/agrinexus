@@ -10543,6 +10543,27 @@ function render() {
       </div>
     `).join("") || `<div><strong>${translateText("Workflow scores")}</strong><span>${translateText("Run workflows to create completion evidence.")}</span></div>`;
   }
+  const adaptive = data.adaptiveAutonomy || {};
+  if ($("#adaptiveAutonomyScore")) $("#adaptiveAutonomyScore").textContent = `${Number(adaptive.score || 0)}%`;
+  if ($("#adaptiveAutonomyPanel")) {
+    $("#adaptiveAutonomyPanel").innerHTML = [
+      `<div><strong>${translateText(adaptive.status || "adaptive-autonomous-ready")}</strong><span>${translateText(adaptive.summary || "Adaptive autonomy is ready.")}</span></div>`,
+      `<div><strong>${translateText("Boundary")}</strong><span>${translateText(adaptive.autonomyBoundary || "Nexus monitors and nudges locally; external actions still need live providers or approval.")}</span></div>`,
+      adaptive.latestRun ? `<div><strong>${translateText(`Latest run: ${adaptive.latestRun.runNumber}`)}</strong><span>${translateText(adaptive.latestRun.summary || "Monitoring complete")}</span></div>` : `<div><strong>${translateText("Monitor")}</strong><span>${translateText("Run the monitor to inspect goals, gaps, providers, and stale workflows.")}</span></div>`,
+      adaptive.latestNudge ? `<div><strong>${translateText(`Nudge: ${adaptive.latestNudge.nudgeNumber}`)}</strong><span>${translateText(`${adaptive.latestNudge.module}: ${adaptive.latestNudge.nextAction}`)}</span><small>${translateText(adaptive.latestNudge.message || "")}</small></div>` : `<div><strong>${translateText("Proactive nudge")}</strong><span>${translateText("No nudge has been created yet.")}</span></div>`,
+      adaptive.latestLearning ? `<div><strong>${translateText(`Learned: ${adaptive.latestLearning.updateNumber}`)}</strong><span>${translateText(adaptive.latestLearning.lesson)}</span><small>${translateText(adaptive.latestLearning.behaviorChange)}</small></div>` : `<div><strong>${translateText("Learning")}</strong><span>${translateText("Nexus can remember feedback like: give shorter answers or ask one question.")}</span></div>`,
+      ...(adaptive.activeSignals || []).slice(0, 3).map(signal => `<div><strong>${translateText(`${signal.priority}: ${signal.title}`)}</strong><span>${translateText(signal.detail)}</span><small>${translateText(`Next: ${signal.action}`)}</small></div>`)
+    ].join("");
+  }
+  if ($("#adaptiveGuardrailPanel")) {
+    $("#adaptiveGuardrailPanel").innerHTML = (adaptive.preventionRules || []).map(rule => `
+      <div>
+        <strong>${translateText(rule.title)}</strong>
+        <span>${translateText(rule.rule)}</span>
+        <small>${translateText(`${rule.module} - ${rule.status}`)}</small>
+      </div>
+    `).join("") || `<div><strong>${translateText("Guardrails")}</strong><span>${translateText("Adaptive guardrails are loading.")}</span></div>`;
+  }
   renderCommunicationPanel("#providerCommunicationPanel", "Platform", "No provider support thread yet. Message the provider desk to create a two-way operations record.");
 
   $("#environmentPanel").innerHTML = [
@@ -13603,6 +13624,71 @@ function workflowConfig(workflow, action, element) {
         { title: "Goal-aware", detail: "Nexus creates and remembers the operational goal.", status: "ready", label: "Goal" },
         { title: "Decision-aware", detail: "Nexus ranks next steps using workflow evidence and saved resources.", status: "ready", label: "Brain" },
         { title: "Recovery-aware", detail: "Nexus records workflow issues and gives a simple recovery path.", status: "ready", label: "Fix" }
+      ]
+    });
+  }
+  if (workflow === "adaptive-autonomy") {
+    const configs = {
+      run: {
+        title: "Run adaptive autonomy monitor",
+        summary: "Inspect goals, workflow gaps, provider truth, stale records, and user confusion signals, then prepare proactive nudges without external dispatch.",
+        confirmLabel: "Run monitor",
+        path: "/api/adaptive-autonomy/run",
+        body: { limit: 5, request: "Run adaptive monitoring across all AgriNexus modules" },
+        success: "Adaptive monitor complete",
+        record: "Monitoring run, active signals, proactive nudges, activity feed, notification, and audit evidence",
+        provider: "Local adaptive autonomy works now. Live providers improve signal accuracy but are not required for monitoring."
+      },
+      nudge: {
+        title: "Create proactive nudge",
+        summary: "Prepare one simple next-step prompt from the strongest active signal so Nexus can guide the user before they get stuck.",
+        confirmLabel: "Create nudge",
+        path: "/api/adaptive-autonomy/nudge",
+        body: { title: "Nexus proactive next step", module: "Platform", nextAction: "Ask one clear question and open the best workflow", priority: "medium" },
+        success: "Proactive nudge created",
+        record: "Nudge record, notification, memory, and audit evidence",
+        provider: "Nudge stays inside AgriNexus unless a live communication provider is configured and approved."
+      },
+      learn: {
+        title: "Record adaptive learning",
+        summary: "Teach Nexus a behavior preference, such as shorter answers, one question at a time, or opening the workflow before explaining.",
+        confirmLabel: "Record learning",
+        path: "/api/adaptive-autonomy/learn",
+        body: { lesson: "Users need shorter answers, one question at a time, and visible workflow action first.", behaviorChange: "Use fewer words, ask one question, and open the most relevant workflow before explaining details." },
+        success: "Adaptive learning recorded",
+        record: "Learning update, user pattern, memory, and audit evidence",
+        provider: "Stored in Nexus memory and applied to future conversation behavior."
+      },
+      "watch-health": {
+        title: "Watch health intake path",
+        summary: "Monitor whether health intake, clinic/pharmacy support, provider handoff, and safety boundaries are ready.",
+        confirmLabel: "Watch health",
+        path: "/api/adaptive-autonomy/run",
+        body: { limit: 5, request: "Watch health intake, clinic, pharmacy, provider handoff, and safety boundaries" },
+        success: "Health watch complete",
+        record: "Health signals, intake nudges, provider truth, and audit evidence",
+        provider: "Local health navigation works now; live clinic, pharmacy, and EHR partners improve external accuracy."
+      },
+      "watch-trade": {
+        title: "Watch crop sale and shipment path",
+        summary: "Monitor crop sale, buyer communication, route tracking, payment/receipt path, drone evidence, and logistics readiness.",
+        confirmLabel: "Watch trade",
+        path: "/api/adaptive-autonomy/run",
+        body: { limit: 5, request: "Watch crop sale, buyer, route, shipment, drone, payment, and receipt workflows" },
+        success: "Trade watch complete",
+        record: "Trade signals, route nudges, buyer/shipment readiness, and audit evidence",
+        provider: "Local trade workflow works now; live marketplace, payment, GPS, and logistics providers improve real-world execution."
+      }
+    };
+    const selected = configs[action] || configs.run;
+    return simpleWorkflowConfig({
+      eyebrow: "Adaptive autonomy workflow",
+      ...selected,
+      redirectSection: "integrations",
+      checklist: [
+        { title: "Monitor", detail: "Nexus checks goals, gaps, and stale workflows.", status: "ready", label: "Watch" },
+        { title: "Nudge", detail: "Nexus prepares a simple proactive next action.", status: "ready", label: "Guide" },
+        { title: "Guardrails", detail: "External sends, payments, live GPS, and clinical decisions remain protected.", status: "ready", label: "Safe" }
       ]
     });
   }

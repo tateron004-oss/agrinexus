@@ -151,6 +151,10 @@ const endpoints = [
   "/api/operational-intelligence/playbook",
   "/api/operational-intelligence/issue",
   "/api/operational-intelligence/decision",
+  "/api/adaptive-autonomy/status",
+  "/api/adaptive-autonomy/run",
+  "/api/adaptive-autonomy/nudge",
+  "/api/adaptive-autonomy/learn",
   "/api/admin/subscriber",
   "/api/admin/test-user",
   "/api/admin/admin-user",
@@ -219,6 +223,16 @@ assert(server.includes("operational_intelligence.issue_recorded"), "Operational 
 assert(app.includes('workflow === "operational-intelligence"'), "Frontend must wire operational intelligence buttons to real workflows");
 assert(app.includes("/api/operational-intelligence/goal") && app.includes("/api/operational-intelligence/playbook"), "Frontend must call operational intelligence goal and playbook endpoints");
 assert(pkg.scripts["operational:intelligence-qa"] === "node scripts/operational-intelligence-qa.js", "Package scripts must expose operational intelligence QA");
+assert(html.includes("Adaptive Autonomous Intelligence"), "Integrations must include an adaptive autonomous intelligence desk");
+assert(server.includes("function ensureAdaptiveAutonomyProfile"), "Backend must create adaptive autonomy storage");
+assert(server.includes("function buildAdaptiveSignals"), "Backend must inspect adaptive autonomy signals");
+assert(server.includes("function runAdaptiveAutonomyCycle"), "Backend must run controlled adaptive autonomy cycles");
+assert(server.includes("function createAdaptiveNudge"), "Backend must create proactive nudges");
+assert(server.includes("function recordAdaptiveLearning"), "Backend must record adaptive learning updates");
+assert(server.includes("adaptive_autonomy.cycle_completed"), "Adaptive autonomy must create voice cycle intent");
+assert(app.includes('workflow === "adaptive-autonomy"'), "Frontend must wire adaptive autonomy buttons to real workflows");
+assert(app.includes("/api/adaptive-autonomy/run") && app.includes("/api/adaptive-autonomy/learn"), "Frontend must call adaptive autonomy run and learn endpoints");
+assert(pkg.scripts["adaptive:autonomy-qa"] === "node scripts/adaptive-autonomy-qa.js", "Package scripts must expose adaptive autonomy QA");
 assert(app.includes("activeVoiceAudio"), "Voice playback needs a single active audio guard");
 assert(html.includes("Buyer-Seller Communication Hub"), "AgriTrade needs a buyer-seller communication hub");
 assert(server.includes("function createBuyerSellerMessage"), "Backend needs buyer-seller message thread creation");

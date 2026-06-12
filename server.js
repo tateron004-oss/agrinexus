@@ -1975,6 +1975,7 @@ function publicState(db, user) {
   ensureOperationsProfile(db.profile);
   ensurePlatformIntelligenceProfile(db.profile);
   ensureOperationalIntelligenceProfile(db.profile);
+  ensureAdaptiveAutonomyProfile(db.profile);
   const providerCandidates = providerCandidateCatalog(db, providers);
   const agentCapabilities = agentCapabilityRegistryState(db, providers);
   const jarvisReadiness = jarvisReadinessModel(db, user, providers);
@@ -2010,6 +2011,7 @@ function publicState(db, user) {
     remoteLaunchKit: remoteRuralFarmerLaunchKit(db, user, providers),
     platformIntelligence: platformIntelligenceModel(db, user),
     operationalIntelligence: operationalIntelligenceModel(db, user),
+    adaptiveAutonomy: adaptiveAutonomyModel(db, user, providers),
     sessionBriefing: sessionBriefingModel(db, user, providers),
     impactDashboard: impactDashboardModel(db, providers),
     missionTimeline: missionTimelineModel(db),
@@ -8312,6 +8314,327 @@ function operationalIntelligenceCommandResponse(db, user, text, options = {}) {
     status: "completed",
     response: `Operational intelligence is ${model.status} at ${model.score}%. Open issues: ${model.openIssues}. Strongest next step: ${model.latestDecision?.bestChoice?.title || model.suggestedCommands[0]}.`,
     metadata: { conversationMode: true, redirectSection: "agent", operationalIntelligence: true, model }
+  };
+}
+
+function ensureAdaptiveAutonomyProfile(profile) {
+  ensureOperationalIntelligenceProfile(profile);
+  profile.adaptiveAutonomy = profile.adaptiveAutonomy || {};
+  const autonomy = profile.adaptiveAutonomy;
+  autonomy.monitoringRuns = autonomy.monitoringRuns || [];
+  autonomy.proactiveNudges = autonomy.proactiveNudges || [];
+  autonomy.learningUpdates = autonomy.learningUpdates || [];
+  autonomy.autonomousActions = autonomy.autonomousActions || [];
+  autonomy.watchlist = autonomy.watchlist || [];
+  autonomy.escalations = autonomy.escalations || [];
+  autonomy.userPatterns = autonomy.userPatterns || [];
+  autonomy.preventionRules = autonomy.preventionRules || [
+    { id: "health-safety", title: "Health safety boundary", rule: "Do not diagnose, prescribe, or replace licensed care. For urgent danger, guide to local emergency help.", module: "Healthcare", status: "active" },
+    { id: "money-guard", title: "Money movement guard", rule: "Do not complete real payment, payout, or transaction fee without live provider confirmation and user approval.", module: "AgriTrade", status: "active" },
+    { id: "external-send-guard", title: "External communication guard", rule: "Draft and stage messages automatically; live SMS, WhatsApp, email, or phone sending depends on configured provider credentials.", module: "Communications", status: "active" },
+    { id: "gps-provider-truth", title: "Location truth guard", rule: "Use local route evidence until live GPS/geocoding/logistics provider data is available.", module: "Map & AI", status: "active" },
+    { id: "plain-language-first", title: "Plain-language recovery", rule: "When user confusion or low-tech context is detected, use one short step, ask one question, and avoid technical terms.", module: "AI", status: "active" }
+  ];
+  return autonomy;
+}
+
+function adaptiveModuleSection(module = "Platform") {
+  if (/health/i.test(module)) return "health";
+  if (/learn/i.test(module)) return "learning";
+  if (/work/i.test(module)) return "workforce";
+  if (/trade|agri|drone/i.test(module)) return "trade";
+  if (/map/i.test(module)) return "map";
+  return "agent";
+}
+
+function buildAdaptiveSignals(db, user, providers = runtimeProviders(db)) {
+  const autonomy = ensureAdaptiveAutonomyProfile(db.profile);
+  const operational = operationalIntelligenceModel(db, user);
+  const signals = [];
+  const now = Date.now();
+  const addSignal = (type, module, title, detail, priority = "medium", action = "Review next step", confidence = 0.78) => {
+    signals.push({
+      id: crypto.randomUUID(),
+      type,
+      module,
+      section: adaptiveModuleSection(module),
+      title,
+      detail,
+      priority,
+      action,
+      confidence,
+      createdAt: new Date().toISOString()
+    });
+  };
+  (operational.workflowScores || []).forEach(score => {
+    if (Number(score.percent || 0) < 75) {
+      addSignal(
+        "workflow-gap",
+        score.module,
+        `${score.module} needs follow-through`,
+        `${score.evidence}. Completion is ${score.percent}%, so Nexus should guide the next visible action.`,
+        Number(score.percent || 0) < 35 ? "high" : "medium",
+        (operationalNextStepsForModule(score.module) || [])[0] || "Open workflow"
+      );
+    }
+  });
+  (operational.activeGoals || []).forEach(goal => {
+    const ageHours = Math.round((now - Date.parse(goal.updatedAt || goal.createdAt || new Date().toISOString())) / 3600000);
+    if (ageHours >= 12 || Number(goal.completionScore || 0) < 70) {
+      addSignal(
+        "goal-needs-progress",
+        goal.module,
+        `${goal.goalNumber} needs progress`,
+        `${goal.title}. Current completion ${goal.completionScore || 0}%.`,
+        ageHours >= 24 ? "high" : "medium",
+        (goal.nextSteps || [])[0] || "Move the goal forward",
+        0.86
+      );
+    }
+  });
+  const latestIssue = operational.latestIssue;
+  if (latestIssue && !["resolved", "closed"].includes(latestIssue.status)) {
+    addSignal(
+      "recovery-needed",
+      latestIssue.module,
+      `${latestIssue.issueNumber} is still open`,
+      latestIssue.detail,
+      latestIssue.severity === "high" ? "high" : "medium",
+      (latestIssue.recoverySteps || [])[1] || "Open recovery path",
+      0.94
+    );
+  }
+  const disconnectedProviders = providers.filter(provider => provider.status !== "connected").length;
+  if (disconnectedProviders) {
+    addSignal(
+      "provider-gap",
+      "Integrations",
+      "Live provider gaps remain",
+      `${disconnectedProviders} provider slot(s) are not fully connected. Nexus should label local vs live evidence clearly.`,
+      "medium",
+      "Show provider truth before action",
+      0.82
+    );
+  }
+  if (!(db.profile.healthIntakes || []).length) {
+    addSignal("missing-intake", "Healthcare", "No health intake yet", "Telehealth can be stronger if Nexus opens a plain-language intake record.", "medium", "Start intake");
+  }
+  if (!(db.profile.orders || []).length) {
+    addSignal("missing-trade-order", "AgriTrade", "No crop order yet", "Crop sale demos become stronger when an order, route, receipt, and buyer message exist.", "medium", "Create crop order");
+  }
+  if (!(db.profile.enrollments || []).length) {
+    addSignal("missing-learning-path", "Learning", "No active learner path yet", "Learning feels stronger when a learner is enrolled and a next lesson is visible.", "medium", "Start course");
+  }
+  if (!(db.profile.applications || []).length) {
+    addSignal("missing-workforce-path", "Workforce", "No job application yet", "Workforce feels stronger when a candidate profile and application are visible.", "medium", "Apply for role");
+  }
+  const unique = [];
+  const seen = new Set();
+  for (const signal of signals.sort((a, b) => ({ high: 3, medium: 2, low: 1 }[b.priority] || 0) - ({ high: 3, medium: 2, low: 1 }[a.priority] || 0))) {
+    const key = `${signal.type}:${signal.module}`;
+    if (!seen.has(key)) {
+      seen.add(key);
+      unique.push(signal);
+    }
+  }
+  autonomy.watchlist = unique.slice(0, 12);
+  return autonomy.watchlist;
+}
+
+function createAdaptiveNudge(db, user, signalOrBody = {}) {
+  const autonomy = ensureAdaptiveAutonomyProfile(db.profile);
+  const signal = signalOrBody.title ? signalOrBody : buildAdaptiveSignals(db, user)[0] || {};
+  const module = signal.module || signalOrBody.module || "Platform";
+  const nudge = {
+    id: crypto.randomUUID(),
+    nudgeNumber: `NEX-AUTO-${String((autonomy.proactiveNudges || []).length + 1).padStart(3, "0")}`,
+    module,
+    section: adaptiveModuleSection(module),
+    title: signal.title || signalOrBody.title || "Nexus proactive next step",
+    message: signal.detail || signalOrBody.message || "Nexus found a useful next step and prepared a simple prompt.",
+    nextAction: signal.action || signalOrBody.nextAction || "Ask one question and guide the user forward",
+    priority: signal.priority || signalOrBody.priority || "medium",
+    status: "ready",
+    sourceSignalId: signal.id || null,
+    createdBy: user.email,
+    createdAt: new Date().toISOString()
+  };
+  autonomy.proactiveNudges.unshift(nudge);
+  autonomy.proactiveNudges = autonomy.proactiveNudges.slice(0, 80);
+  addNotification(db.profile, {
+    module,
+    providerId: "adaptive-autonomy",
+    channel: "in-app",
+    message: `${nudge.nudgeNumber}: ${nudge.nextAction}`,
+    createdBy: "Nexus"
+  });
+  rememberAgentMemory(db.profile, `Adaptive nudge created for ${module}: ${nudge.nextAction}.`, { source: "adaptive-autonomy", category: "proactive", module, confidence: 0.9 });
+  logIntegration(db, {
+    providerId: "adaptive-autonomy",
+    module,
+    action: "adaptive.nudge_created",
+    status: "success",
+    detail: `${nudge.nudgeNumber}: ${nudge.title}.`,
+    metadata: { nudge },
+    dispatch: false
+  });
+  return nudge;
+}
+
+function runAdaptiveAutonomyCycle(db, user, body = {}) {
+  const autonomy = ensureAdaptiveAutonomyProfile(db.profile);
+  const providers = runtimeProviders(db);
+  const signals = buildAdaptiveSignals(db, user, providers);
+  const nudges = signals.slice(0, Number(body.limit || 5)).map(signal => createAdaptiveNudge(db, user, signal));
+  const run = {
+    id: crypto.randomUUID(),
+    runNumber: `NEX-LOOP-${String((autonomy.monitoringRuns || []).length + 1).padStart(3, "0")}`,
+    mode: "controlled-adaptive-autonomy",
+    status: "completed-local",
+    summary: `${signals.length} signal(s) inspected and ${nudges.length} proactive nudge(s) prepared.`,
+    signals: signals.slice(0, 10),
+    nudges: nudges.map(nudge => ({ id: nudge.id, nudgeNumber: nudge.nudgeNumber, module: nudge.module, nextAction: nudge.nextAction })),
+    guardrails: (autonomy.preventionRules || []).map(rule => rule.title),
+    createdBy: user.email,
+    createdAt: new Date().toISOString()
+  };
+  autonomy.monitoringRuns.unshift(run);
+  autonomy.monitoringRuns = autonomy.monitoringRuns.slice(0, 50);
+  autonomy.autonomousActions.unshift({
+    id: crypto.randomUUID(),
+    actionNumber: `NEX-ACT-${String((autonomy.autonomousActions || []).length + 1).padStart(3, "0")}`,
+    type: "monitor-and-nudge",
+    status: "completed-local",
+    detail: run.summary,
+    requiresApprovalForExternalAction: true,
+    createdAt: run.createdAt
+  });
+  autonomy.autonomousActions = autonomy.autonomousActions.slice(0, 80);
+  addActivity(db.profile, `${run.runNumber} adaptive autonomy cycle completed.`);
+  addUsageEvent(db.profile, { module: "AI", action: "adaptive.autonomy_cycle", detail: run.summary, user: user.email });
+  logIntegration(db, {
+    providerId: "adaptive-autonomy",
+    module: "AI",
+    action: "adaptive.autonomy_cycle",
+    status: "success",
+    detail: run.summary,
+    metadata: { runNumber: run.runNumber, signalCount: signals.length, nudgeCount: nudges.length },
+    dispatch: false
+  });
+  return { run, signals, nudges };
+}
+
+function recordAdaptiveLearning(db, user, body = {}) {
+  const autonomy = ensureAdaptiveAutonomyProfile(db.profile);
+  const lesson = String(body.lesson || body.feedback || body.detail || "User preference recorded for adaptive behavior").trim();
+  const module = body.module || operationalModuleFromText(lesson);
+  const update = {
+    id: crypto.randomUUID(),
+    updateNumber: `NEX-LEARN-${String((autonomy.learningUpdates || []).length + 1).padStart(3, "0")}`,
+    module,
+    lesson,
+    behaviorChange: String(body.behaviorChange || "Use shorter responses, ask one question, and open the most relevant workflow first.").trim(),
+    status: "learned-local",
+    createdBy: user.email,
+    createdAt: new Date().toISOString()
+  };
+  autonomy.learningUpdates.unshift(update);
+  autonomy.learningUpdates = autonomy.learningUpdates.slice(0, 80);
+  autonomy.userPatterns.unshift({ id: crypto.randomUUID(), module, pattern: lesson, responseStyle: update.behaviorChange, createdAt: update.createdAt });
+  autonomy.userPatterns = autonomy.userPatterns.slice(0, 80);
+  rememberAgentMemory(db.profile, `Adaptive learning update: ${lesson}. Behavior change: ${update.behaviorChange}.`, { source: "adaptive-learning", category: "preference", module, confidence: 0.95 });
+  logIntegration(db, {
+    providerId: "adaptive-autonomy",
+    module,
+    action: "adaptive.learning_recorded",
+    status: "success",
+    detail: `${update.updateNumber}: ${lesson}`,
+    metadata: { update },
+    dispatch: false
+  });
+  return update;
+}
+
+function adaptiveAutonomyModel(db, user, providers = runtimeProviders(db)) {
+  const autonomy = ensureAdaptiveAutonomyProfile(db.profile);
+  const operational = operationalIntelligenceModel(db, user);
+  const signals = buildAdaptiveSignals(db, user, providers);
+  const high = signals.filter(signal => signal.priority === "high").length;
+  const providerConnected = providers.filter(provider => provider.status === "connected").length;
+  const score = Math.max(1, Math.min(100, Math.round(
+    45
+    + Math.min(20, (autonomy.learningUpdates || []).length * 4)
+    + Math.min(20, (autonomy.monitoringRuns || []).length * 5)
+    + Math.min(15, (autonomy.proactiveNudges || []).length * 2)
+    + Math.min(10, providerConnected)
+    - Math.min(25, high * 5)
+  )));
+  return {
+    status: score >= 80 ? "adaptive-autonomous-active" : score >= 60 ? "adaptive-autonomous-learning" : "adaptive-autonomous-ready",
+    score,
+    summary: "Adaptive Autonomous Intelligence lets Nexus monitor goals, learn user patterns, prepare proactive nudges, catch stale workflows, and guide the next best action with safety guardrails.",
+    autonomyBoundary: "Nexus can monitor, nudge, draft, remember, and prepare local workflow actions automatically. Real provider dispatch, payments, clinical decisions, external messages, and live GPS still require credentials and/or approval.",
+    operationalScore: operational.score,
+    activeSignals: signals.slice(0, 8),
+    latestRun: (autonomy.monitoringRuns || [])[0] || null,
+    latestNudge: (autonomy.proactiveNudges || [])[0] || null,
+    latestLearning: (autonomy.learningUpdates || [])[0] || null,
+    preventionRules: (autonomy.preventionRules || []).slice(0, 8),
+    proactiveNudges: (autonomy.proactiveNudges || []).slice(0, 8),
+    learningUpdates: (autonomy.learningUpdates || []).slice(0, 6),
+    autonomousActions: (autonomy.autonomousActions || []).slice(0, 8),
+    suggestedCommands: [
+      "Nexus, run adaptive autonomy",
+      "Nexus, monitor my goals",
+      "Nexus, what should happen next automatically",
+      "Nexus, learn that I need shorter answers",
+      "Nexus, watch my crop sale",
+      "Nexus, watch my health intake",
+      "Nexus, create a proactive nudge",
+      "Nexus, adaptive autonomy status"
+    ]
+  };
+}
+
+function adaptiveAutonomyCommandResponse(db, user, text, options = {}) {
+  const lower = String(text || "").toLowerCase();
+  const adaptiveSignal = /\b(adaptive autonomy|adaptive autonomous|autonomous intelligence|monitor my goals|watch my|proactive|nudge|learn that|remember that|what should happen next automatically|run adaptive|autonomy status|auto monitor|keep an eye)\b/.test(lower);
+  if (!adaptiveSignal) return null;
+  if (/\b(learn that|remember that|adapt|from now on|i prefer|i need shorter|too much talking|talk less|explain simply)\b/.test(lower)) {
+    const update = recordAdaptiveLearning(db, user, { lesson: text });
+    return {
+      intent: "adaptive_autonomy.learning_recorded",
+      status: "completed",
+      response: `Learned. ${update.behaviorChange}`,
+      metadata: { conversationMode: true, redirectSection: "agent", adaptiveAutonomy: true, update }
+    };
+  }
+  if (/\b(nudge|remind|prompt|proactive)\b/.test(lower) && !/\b(run adaptive|monitor)\b/.test(lower)) {
+    const signal = buildAdaptiveSignals(db, user).find(item => lower.includes(String(item.module || "").toLowerCase())) || buildAdaptiveSignals(db, user)[0] || {};
+    const nudge = createAdaptiveNudge(db, user, signal);
+    return {
+      intent: "adaptive_autonomy.nudge_created",
+      status: "completed",
+      response: `${nudge.nudgeNumber} is ready. ${nudge.nextAction}.`,
+      metadata: { conversationMode: true, redirectSection: nudge.section || "agent", adaptiveAutonomy: true, nudge }
+    };
+  }
+  if (/\b(run adaptive|monitor|watch my|keep an eye|what should happen next automatically|auto monitor)\b/.test(lower)) {
+    const result = runAdaptiveAutonomyCycle(db, user, { request: text });
+    const first = result.nudges[0];
+    return {
+      intent: "adaptive_autonomy.cycle_completed",
+      status: "completed",
+      response: `${result.run.runNumber} complete. I found ${result.signals.length} signal(s). First next step: ${first?.nextAction || "nothing urgent right now"}.`,
+      metadata: { conversationMode: true, redirectSection: first?.section || "agent", adaptiveAutonomy: true, run: result.run, signals: result.signals, nudges: result.nudges }
+    };
+  }
+  const model = adaptiveAutonomyModel(db, user);
+  return {
+    intent: "adaptive_autonomy.status",
+    status: "completed",
+    response: `Adaptive autonomy is ${model.status} at ${model.score}%. Top signal: ${model.activeSignals[0]?.title || "no urgent signal"}.`,
+    metadata: { conversationMode: true, redirectSection: "agent", adaptiveAutonomy: true, model }
   };
 }
 
@@ -15327,6 +15650,8 @@ async function runAgentCommand(db, user, command, options = {}) {
       if (intake) return intake;
     }
   }
+  const adaptiveAutonomyCommand = adaptiveAutonomyCommandResponse(db, user, text, options);
+  if (adaptiveAutonomyCommand) return adaptiveAutonomyCommand;
   const operationalIntelligenceCommand = operationalIntelligenceCommandResponse(db, user, text, options);
   if (operationalIntelligenceCommand) return operationalIntelligenceCommand;
   if (conversational && isRuralDistressConversation(text)) {
@@ -17425,6 +17750,41 @@ async function api(req, res, url) {
     await writeDb(db);
     const state = publicState(db, user);
     state.operationalIntelligenceDecision = review;
+    return send(res, 200, state);
+  }
+
+  if (url.pathname === "/api/adaptive-autonomy/status" && req.method === "GET") {
+    if (!canUse(user, "ai")) return send(res, 403, { error: "Role does not allow adaptive autonomy" });
+    return send(res, 200, adaptiveAutonomyModel(db, user, runtimeProviders(db)));
+  }
+
+  if (url.pathname === "/api/adaptive-autonomy/run" && req.method === "POST") {
+    if (!canUse(user, "ai")) return send(res, 403, { error: "Role does not allow adaptive autonomy cycles" });
+    const body = await readBody(req);
+    const result = runAdaptiveAutonomyCycle(db, user, body);
+    await writeDb(db);
+    const state = publicState(db, user);
+    state.adaptiveAutonomyRun = result;
+    return send(res, 200, state);
+  }
+
+  if (url.pathname === "/api/adaptive-autonomy/nudge" && req.method === "POST") {
+    if (!canUse(user, "ai")) return send(res, 403, { error: "Role does not allow adaptive nudges" });
+    const body = await readBody(req);
+    const nudge = createAdaptiveNudge(db, user, body);
+    await writeDb(db);
+    const state = publicState(db, user);
+    state.adaptiveAutonomyNudge = nudge;
+    return send(res, 200, state);
+  }
+
+  if (url.pathname === "/api/adaptive-autonomy/learn" && req.method === "POST") {
+    if (!canUse(user, "ai")) return send(res, 403, { error: "Role does not allow adaptive learning" });
+    const body = await readBody(req);
+    const update = recordAdaptiveLearning(db, user, body);
+    await writeDb(db);
+    const state = publicState(db, user);
+    state.adaptiveAutonomyLearning = update;
     return send(res, 200, state);
   }
 
