@@ -18,6 +18,7 @@
     "adaptive:autonomy-qa": "node scripts/adaptive-autonomy-qa.js",
     "network:intelligence-qa": "node scripts/network-intelligence-qa.js",
     "ecosystem:intelligence-qa": "node scripts/ecosystem-intelligence-qa.js",
+    "executive:intelligence-qa": "node scripts/executive-intelligence-qa.js",
     "workflow:audit": "node scripts/workflow-button-audit.js",
     "grandma:pass": "node scripts/grandma-mode-user-pass.js",
     "user-mode:audit": "node scripts/user-mode-workflow-audit.js",

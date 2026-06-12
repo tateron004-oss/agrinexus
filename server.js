@@ -2015,6 +2015,7 @@ function publicState(db, user) {
     adaptiveAutonomy: adaptiveAutonomyModel(db, user, providers),
     networkIntelligence: networkIntelligenceModel(db, user, providers),
     ecosystemIntelligence: ecosystemIntelligenceModel(db, user, providers),
+    executiveIntelligence: executiveIntelligenceSuiteModel(db, user, providers),
     sessionBriefing: sessionBriefingModel(db, user, providers),
     impactDashboard: impactDashboardModel(db, providers),
     missionTimeline: missionTimelineModel(db),
@@ -9262,6 +9263,316 @@ function ecosystemIntelligenceCommandResponse(db, user, text, options = {}) {
   };
 }
 
+function ensureExecutiveIntelligenceProfile(profile) {
+  ensureEcosystemIntelligenceProfile(profile);
+  profile.executiveIntelligence = profile.executiveIntelligence || {};
+  const executive = profile.executiveIntelligence;
+  executive.analyses = executive.analyses || [];
+  executive.decisions = executive.decisions || [];
+  executive.roadmaps = executive.roadmaps || [];
+  executive.revenueModels = executive.revenueModels || [];
+  executive.governanceReviews = executive.governanceReviews || [];
+  executive.improvementCycles = executive.improvementCycles || [];
+  return executive;
+}
+
+function executiveIntelligencePillars() {
+  return [
+    {
+      id: "strategic-intelligence",
+      title: "Strategic Intelligence",
+      question: "Where should AgriNexus go next?",
+      promise: "Ranks launch regions, partner priorities, investor proof points, and the next mission to run.",
+      outputs: ["launch priority", "partner path", "investor proof", "next mission"]
+    },
+    {
+      id: "market-intelligence",
+      title: "Market Intelligence",
+      question: "Where is the strongest need and opportunity?",
+      promise: "Compares rural health gaps, crop trade opportunity, learning demand, workforce need, and provider coverage.",
+      outputs: ["country opportunity", "crop demand", "health access gap", "workforce demand"]
+    },
+    {
+      id: "governance-intelligence",
+      title: "Governance Intelligence",
+      question: "What must be safe, compliant, and explainable?",
+      promise: "Tracks healthcare boundaries, payment controls, privacy, consent, user role limits, and country launch rules.",
+      outputs: ["safety boundary", "compliance gap", "approval need", "audit proof"]
+    },
+    {
+      id: "revenue-intelligence",
+      title: "Revenue Intelligence",
+      question: "How can AgriNexus make money while helping people?",
+      promise: "Models subscriptions, transaction fees, mobile clinic enablement, marketplace fees, provider seats, and investor value.",
+      outputs: ["subscription path", "transaction fee", "provider plan", "receipt evidence"]
+    },
+    {
+      id: "self-improving-intelligence",
+      title: "Self-Improving Intelligence",
+      question: "What should Nexus improve next?",
+      promise: "Learns from workflow friction, voice confusion, provider gaps, failed checks, user feedback, and mission outcomes.",
+      outputs: ["friction fix", "voice repair", "provider gap", "next upgrade"]
+    }
+  ];
+}
+
+function executiveCountryOpportunity(db, providers = runtimeProviders(db)) {
+  const coverage = networkCountryCoverageModel(db, providers);
+  const providerGroups = providerCandidateCatalog(db, providers).countryCoverage || [];
+  const needWeights = {
+    Kenya: { health: 88, trade: 84, learning: 82, workforce: 80, launch: 92 },
+    Nigeria: { health: 86, trade: 92, learning: 84, workforce: 86, launch: 90 },
+    Ghana: { health: 80, trade: 82, learning: 82, workforce: 78, launch: 84 },
+    Rwanda: { health: 78, trade: 76, learning: 84, workforce: 80, launch: 82 },
+    Tanzania: { health: 82, trade: 84, learning: 78, workforce: 78, launch: 83 },
+    Egypt: { health: 80, trade: 78, learning: 80, workforce: 82, launch: 80 },
+    DRC: { health: 92, trade: 80, learning: 78, workforce: 76, launch: 76 },
+    "South Africa": { health: 78, trade: 86, learning: 84, workforce: 88, launch: 82 },
+    "Pan-African": { health: 84, trade: 86, learning: 84, workforce: 82, launch: 88 }
+  };
+  return coverage.map(country => {
+    const weights = needWeights[country.country] || needWeights["Pan-African"];
+    const candidate = providerGroups.find(item => item.name === country.country) || {};
+    const providerScore = Math.min(20, Number(country.liveCapable || 0) * 5 + Number(candidate.providerCount || 0));
+    const impactScore = Math.round((weights.health + weights.trade + weights.learning + weights.workforce) / 4);
+    const score = Math.min(100, Math.round(weights.launch * 0.35 + impactScore * 0.45 + providerScore));
+    return {
+      country: country.country,
+      score,
+      rankReason: `${country.country} combines rural health, agriculture, learning, workforce, and provider readiness signals.`,
+      healthNeed: weights.health,
+      tradeOpportunity: weights.trade,
+      learningNeed: weights.learning,
+      workforceNeed: weights.workforce,
+      providerReadiness: providerScore,
+      status: score >= 88 ? "launch-priority" : score >= 82 ? "strong-candidate" : "watchlist"
+    };
+  }).sort((a, b) => b.score - a.score);
+}
+
+function executiveRevenuePaths(db, providers = runtimeProviders(db)) {
+  const paymentReady = providers.some(provider => ["trade-payments", "billing-subscriptions"].includes(provider.id) && provider.status === "connected");
+  const communicationsReady = providers.some(provider => ["phone-voice", "sms-delivery", "whatsapp-delivery", "email-delivery"].includes(provider.id) && provider.status === "connected");
+  return [
+    { id: "subscription", title: "User, clinic, cooperative, or provider subscription", status: "model-ready", fee: "monthly platform access", proof: "Role-based app, admin, investor views, voice assistant, records, and workflow evidence." },
+    { id: "transaction-fee", title: "Crop sale, logistics, payment, or marketplace transaction fee", status: paymentReady ? "live-provider-capable" : "provider-needed", fee: "small percentage or fixed processing fee", proof: "Buyer/seller communication, order draft, receipt path, route tracking, and payment provider bridge." },
+    { id: "mobile-clinic-enablement", title: "Mobile clinic enablement fee", status: communicationsReady ? "live-provider-capable" : "local-workflow-ready", fee: "per clinic, per intake, or per served region", proof: "Digital intake, clinic/pharmacy map, communications, pharmacy supply coordination, and audit trail." },
+    { id: "training-certification", title: "Learning and certificate revenue", status: "catalog-ready-local", fee: "course seat, certificate fee, or workforce training bundle", proof: "Course path, progress, accessibility support, certificate evidence, and job connection." },
+    { id: "provider-onboarding", title: "Provider onboarding and data services", status: "partnership-ready", fee: "setup fee, integration fee, or partner dashboard fee", proof: "Provider candidate pipeline, readiness checks, source truth, and ecosystem graph." }
+  ];
+}
+
+function executiveGovernanceChecklist(db, providers = runtimeProviders(db)) {
+  const readiness = productionCompleteness(db, providers);
+  return [
+    { area: "Healthcare", status: "guarded", rule: "Nexus supports access, intake, education, and referral; it does not diagnose, prescribe, or replace licensed care." },
+    { area: "Payments", status: providers.some(provider => provider.id === "trade-payments" && provider.status === "connected") ? "provider-ready" : "needs-provider", rule: "Real money movement, transaction fees, refunds, and payouts require payment provider credentials and approval." },
+    { area: "Privacy and consent", status: "workflow-ready", rule: "Health, identity, voice, and location workflows must ask consent and preserve audit records." },
+    { area: "Country launch", status: "review-needed", rule: "Each launch country needs legal review for healthcare, payments, data protection, telecoms, and marketplace rules." },
+    { area: "Role-based access", status: readiness.readyCount >= 1 ? "ready" : "review", rule: "Standard users should not see admin or investor controls; admin and investor modes remain separate." },
+    { area: "Source truth", status: "ready", rule: "Every live, local, or fallback answer should be labeled so users and investors know what powered it." }
+  ];
+}
+
+function executiveImprovementSignals(db, user, providers = runtimeProviders(db)) {
+  const operational = operationalIntelligenceModel(db, user);
+  const adaptive = adaptiveAutonomyModel(db, user, providers);
+  const network = networkIntelligenceModel(db, user, providers);
+  const ecosystem = ecosystemIntelligenceModel(db, user, providers);
+  const signals = [
+    ...(operational.workflowScores || []).filter(score => Number(score.percent || 0) < 85).slice(0, 3).map(score => ({
+      area: score.module,
+      issue: `${score.module} workflow completion is ${score.percent}%.`,
+      fix: (operationalNextStepsForModule(score.module) || [])[0] || "Open the workflow and complete the next visible action.",
+      priority: Number(score.percent || 0) < 60 ? "high" : "medium"
+    })),
+    ...(network.liveGaps || []).slice(0, 3).map(gap => ({
+      area: gap.title,
+      issue: `Live provider gap remains for ${gap.title}.`,
+      fix: `Add credentials for ${gap.nextCredential || (gap.providerIds || [])[0] || "the provider slot"}.`,
+      priority: "medium"
+    })),
+    ...(adaptive.activeSignals || []).slice(0, 2).map(signal => ({
+      area: signal.module,
+      issue: signal.detail,
+      fix: signal.action,
+      priority: signal.priority
+    }))
+  ];
+  if (!signals.length) {
+    signals.push({ area: "Investor proof", issue: "The platform is ready for stronger proof capture.", fix: "Run health, trade, map, learning, and ecosystem missions before the next investor demo.", priority: "medium" });
+  }
+  return {
+    status: "learning-loop-active",
+    signals: signals.slice(0, 8),
+    score: Math.min(100, Math.round(60 + Math.min(20, (db.profile.agentMemory?.items || []).length) + Math.min(20, (ecosystem.recentRuns || []).length * 4))),
+    nextImprovement: signals[0]
+  };
+}
+
+function executiveIntelligenceSuiteModel(db, user, providers = runtimeProviders(db)) {
+  const executive = ensureExecutiveIntelligenceProfile(db.profile);
+  const pillars = executiveIntelligencePillars();
+  const opportunities = executiveCountryOpportunity(db, providers);
+  const revenuePaths = executiveRevenuePaths(db, providers);
+  const governance = executiveGovernanceChecklist(db, providers);
+  const improvement = executiveImprovementSignals(db, user, providers);
+  const ecosystem = ecosystemIntelligenceModel(db, user, providers);
+  const score = Math.min(100, Math.round(54 + Math.min(15, (executive.analyses || []).length * 3) + Math.min(12, ecosystem.score / 10) + Math.min(19, improvement.score / 5)));
+  return {
+    status: "executive-intelligence-ready",
+    score,
+    summary: "Executive Intelligence adds Strategic, Market, Governance, Revenue, and Self-Improving Intelligence so Nexus can advise launch priorities, investor proof, country opportunity, monetization, compliance, and next upgrades.",
+    pillars,
+    launchPriorities: opportunities.slice(0, 5),
+    revenuePaths,
+    governance,
+    improvement,
+    latestAnalysis: (executive.analyses || [])[0] || null,
+    latestDecision: (executive.decisions || [])[0] || null,
+    suggestedCommands: [
+      "Nexus, run strategic intelligence for launch priority",
+      "Nexus, compare Kenya and Nigeria for market opportunity",
+      "Nexus, show governance risks for telehealth and payments",
+      "Nexus, build a revenue plan for AgriNexus",
+      "Nexus, what should improve next before investors",
+      "Nexus, executive intelligence status"
+    ]
+  };
+}
+
+function executiveFocusFromText(text = "") {
+  const lower = String(text || "").toLowerCase();
+  if (/\b(strategy|strategic|strategic intelligence|launch priority|partner|investor|government|funding|roadmap)\b/.test(lower)) return "strategic-intelligence";
+  if (/\b(market|country|opportunity|crop demand|health gap|compare)\b/.test(lower)) return "market-intelligence";
+  if (/\b(governance|compliance|legal|privacy|risk|safe|safety|healthcare rule|payment rule)\b/.test(lower)) return "governance-intelligence";
+  if (/\b(revenue|money|monetize|monetise|subscription|fee|transaction|investor value|business model)\b/.test(lower)) return "revenue-intelligence";
+  if (/\b(improve|self improve|self-improve|upgrade|friction|fix|what next|better|learn)\b/.test(lower)) return "self-improving-intelligence";
+  return "strategic-intelligence";
+}
+
+function runExecutiveIntelligenceAnalysis(db, user, body = {}) {
+  const executive = ensureExecutiveIntelligenceProfile(db.profile);
+  const query = String(body.query || body.command || "Run executive intelligence").trim();
+  const focus = body.focus || executiveFocusFromText(query);
+  const suite = executiveIntelligenceSuiteModel(db, user, runtimeProviders(db));
+  const pillar = suite.pillars.find(item => item.id === focus) || suite.pillars[0];
+  const topCountry = suite.launchPriorities[0] || {};
+  const record = {
+    id: crypto.randomUUID(),
+    analysisNumber: `NEX-EXEC-${String((executive.analyses || []).length + 1).padStart(3, "0")}`,
+    focus: pillar.id,
+    title: pillar.title,
+    query,
+    status: "analysis-ready",
+    score: suite.score,
+    recommendation: executiveRecommendationForFocus(pillar.id, suite),
+    topCountry,
+    proofPoints: executiveProofPointsForFocus(pillar.id, suite),
+    nextActions: executiveNextActionsForFocus(pillar.id, suite),
+    revenuePaths: suite.revenuePaths.slice(0, 3),
+    governance: suite.governance.slice(0, 4),
+    improvement: suite.improvement,
+    createdBy: user.email,
+    createdAt: new Date().toISOString()
+  };
+  executive.analyses.unshift(record);
+  executive.analyses = executive.analyses.slice(0, 80);
+  executive.decisions.unshift({
+    id: crypto.randomUUID(),
+    analysisId: record.id,
+    decisionNumber: `NEX-DECIDE-${String((executive.decisions || []).length + 1).padStart(3, "0")}`,
+    focus: record.focus,
+    recommendation: record.recommendation,
+    nextAction: record.nextActions[0],
+    createdAt: record.createdAt
+  });
+  executive.decisions = executive.decisions.slice(0, 80);
+  if (pillar.id === "revenue-intelligence") executive.revenueModels.unshift({ id: crypto.randomUUID(), analysisId: record.id, paths: record.revenuePaths, createdAt: record.createdAt });
+  if (pillar.id === "governance-intelligence") executive.governanceReviews.unshift({ id: crypto.randomUUID(), analysisId: record.id, checklist: record.governance, createdAt: record.createdAt });
+  if (pillar.id === "self-improving-intelligence") executive.improvementCycles.unshift({ id: crypto.randomUUID(), analysisId: record.id, signals: record.improvement.signals, createdAt: record.createdAt });
+  executive.revenueModels = executive.revenueModels.slice(0, 50);
+  executive.governanceReviews = executive.governanceReviews.slice(0, 50);
+  executive.improvementCycles = executive.improvementCycles.slice(0, 50);
+  rememberAgentMemory(db.profile, `Executive intelligence ${record.analysisNumber}: ${record.title}. ${record.recommendation}`, { source: "executive-intelligence", category: "strategy", module: "Executive", confidence: record.score / 100 });
+  logIntegration(db, {
+    providerId: "executive-intelligence",
+    module: "Executive",
+    action: "executive.analysis_completed",
+    status: "success",
+    detail: `${record.analysisNumber} completed ${record.title}.`,
+    metadata: { record },
+    dispatch: false
+  });
+  addActivity(db.profile, `${record.analysisNumber} executive intelligence completed: ${record.title}.`);
+  return { record, suite };
+}
+
+function executiveRecommendationForFocus(focus, suite) {
+  const country = suite.launchPriorities[0]?.country || "Kenya";
+  const recommendations = {
+    "strategic-intelligence": `Prioritize ${country} as the first proof region, then show rural health access, crop sale, map routing, voice guidance, and provider readiness in one story.`,
+    "market-intelligence": `${country} is the strongest current opportunity because need, rural use cases, and provider readiness score highest in the model.`,
+    "governance-intelligence": "Lead with safety: access support, consent, source truth, no diagnosis, no unapproved payments, and clear country legal review before scale.",
+    "revenue-intelligence": "Use a blended model: subscriptions, transaction fees, mobile clinic enablement, training/certification revenue, and provider onboarding.",
+    "self-improving-intelligence": `Fix the highest friction signal first: ${suite.improvement.nextImprovement?.fix || "run more missions and review user friction."}`
+  };
+  return recommendations[focus] || recommendations["strategic-intelligence"];
+}
+
+function executiveProofPointsForFocus(focus, suite) {
+  const common = [
+    "Voice-first Nexus guidance across user, admin, and investor modes",
+    "Source truth labels for live provider, saved local, and local fallback data",
+    "Ecosystem graph connecting people, providers, maps, communications, and payments"
+  ];
+  const byFocus = {
+    "strategic-intelligence": ["Country launch ranking", "Partner priority list", "Investor demo narrative"],
+    "market-intelligence": ["Country opportunity score", "Rural health and trade need", "Provider coverage by region"],
+    "governance-intelligence": ["Healthcare safety boundary", "Payment and privacy controls", "Role-based access separation"],
+    "revenue-intelligence": ["Transaction fee path", "Subscription path", "Mobile clinic and provider monetization"],
+    "self-improving-intelligence": ["Friction signals", "Next upgrade recommendation", "Memory-backed improvement loop"]
+  };
+  return [...common, ...(byFocus[focus] || byFocus["strategic-intelligence"])];
+}
+
+function executiveNextActionsForFocus(focus, suite) {
+  const country = suite.launchPriorities[0]?.country || "Kenya";
+  const actions = {
+    "strategic-intelligence": [`Run an ecosystem mission in ${country}`, "Capture screenshots of health, trade, map, voice, and provider graph", "Prepare investor proof narrative"],
+    "market-intelligence": [`Compare ${country} against Nigeria and Ghana`, "Collect crop, clinic, pharmacy, job, and course provider candidates", "Pick the first rural pilot region"],
+    "governance-intelligence": ["Review healthcare disclaimers and consent", "Review payment and transaction fee controls", "Prepare country-specific legal checklist"],
+    "revenue-intelligence": ["Choose initial subscription tiers", "Set transaction fee model", "Connect Paystack or Flutterwave when ready"],
+    "self-improving-intelligence": [(suite.improvement.nextImprovement?.fix || "Run user testing and record friction"), "Retest voice prompts in English, French, Spanish, Arabic, and Swahili", "Run stabilization and conversation QA"]
+  };
+  return actions[focus] || actions["strategic-intelligence"];
+}
+
+function executiveIntelligenceCommandResponse(db, user, text, options = {}) {
+  const lower = String(text || "").toLowerCase();
+  const executiveSignal = /\b(executive intelligence|strategic intelligence|market intelligence|governance intelligence|revenue intelligence|self improving intelligence|self-improving intelligence|launch priority|investor proof|investor story|country opportunity|business model|monetize|monetise|compliance risk|what should improve|what comes next|where should.*launch|which country|funding strategy)\b/.test(lower);
+  if (!executiveSignal) return null;
+  if (/\b(status|what can|explain|describe)\b/.test(lower) && !/\b(run|build|compare|show|choose|decide|analyze|analyse)\b/.test(lower)) {
+    const model = executiveIntelligenceSuiteModel(db, user);
+    return {
+      intent: "executive_intelligence.status",
+      status: "completed",
+      response: `Executive Intelligence is ready at ${model.score}%. It includes Strategic, Market, Governance, Revenue, and Self-Improving Intelligence for launch, funding, safety, monetization, and upgrades.`,
+      metadata: { conversationMode: true, redirectSection: "integrations", executiveIntelligence: true, model }
+    };
+  }
+  const result = runExecutiveIntelligenceAnalysis(db, user, { query: text });
+  const record = result.record;
+  const moduleSignal = { module: "Executive", section: "integrations", score: 3, source: "executive-intelligence" };
+  const frontierCommunication = frontierCommunicationIntelligenceModel(text, moduleSignal, user, options);
+  return {
+    intent: "executive_intelligence.analysis_completed",
+    status: record.status,
+    response: `${record.title}: ${record.recommendation} Next: ${record.nextActions[0]}`,
+    metadata: { conversationMode: true, redirectSection: "integrations", executiveIntelligence: true, record, suite: result.suite, moduleSignal, frontierCommunication }
+  };
+}
+
 function womenFamilyAgricultureModel(db, providers = runtimeProviders(db)) {
   ensureOperationsProfile(db.profile);
   ensureLearningProfile(db.profile);
@@ -16276,6 +16587,8 @@ async function runAgentCommand(db, user, command, options = {}) {
   }
   const adaptiveAutonomyCommand = adaptiveAutonomyCommandResponse(db, user, text, options);
   if (adaptiveAutonomyCommand) return adaptiveAutonomyCommand;
+  const executiveIntelligenceCommand = executiveIntelligenceCommandResponse(db, user, text, options);
+  if (executiveIntelligenceCommand) return executiveIntelligenceCommand;
   const ecosystemIntelligenceCommand = ecosystemIntelligenceCommandResponse(db, user, text, options);
   if (ecosystemIntelligenceCommand) return ecosystemIntelligenceCommand;
   const networkIntelligenceCommand = networkIntelligenceCommandResponse(db, user, text, options);
@@ -18479,6 +18792,48 @@ async function api(req, res, url) {
   if (url.pathname === "/api/ecosystem-intelligence/readiness" && req.method === "GET") {
     if (!canUse(user, "ai")) return send(res, 403, { error: "Role does not allow ecosystem readiness" });
     return send(res, 200, ecosystemReadinessModel(db, runtimeProviders(db)));
+  }
+
+  if (url.pathname === "/api/executive-intelligence/status" && req.method === "GET") {
+    if (!canUse(user, "ai")) return send(res, 403, { error: "Role does not allow executive intelligence" });
+    return send(res, 200, executiveIntelligenceSuiteModel(db, user, runtimeProviders(db)));
+  }
+
+  if (url.pathname === "/api/executive-intelligence/analyze" && req.method === "POST") {
+    if (!canUse(user, "ai")) return send(res, 403, { error: "Role does not allow executive analysis" });
+    const body = await readBody(req);
+    const result = runExecutiveIntelligenceAnalysis(db, user, body);
+    await writeDb(db);
+    const state = publicState(db, user);
+    state.executiveAnalysis = result;
+    return send(res, 200, state);
+  }
+
+  if (url.pathname === "/api/executive-intelligence/roadmap" && req.method === "GET") {
+    if (!canUse(user, "ai")) return send(res, 403, { error: "Role does not allow executive roadmap" });
+    const model = executiveIntelligenceSuiteModel(db, user, runtimeProviders(db));
+    return send(res, 200, {
+      status: model.status,
+      launchPriorities: model.launchPriorities,
+      pillars: model.pillars,
+      revenuePaths: model.revenuePaths,
+      governance: model.governance,
+      improvement: model.improvement,
+      suggestedCommands: model.suggestedCommands
+    });
+  }
+
+  if (url.pathname === "/api/executive-intelligence/readiness" && req.method === "GET") {
+    if (!canUse(user, "ai")) return send(res, 403, { error: "Role does not allow executive readiness" });
+    const model = executiveIntelligenceSuiteModel(db, user, runtimeProviders(db));
+    return send(res, 200, {
+      score: model.score,
+      status: model.status,
+      topCountry: model.launchPriorities[0],
+      governanceReady: model.governance.filter(item => item.status === "ready" || item.status === "guarded" || item.status === "workflow-ready").length,
+      revenuePaths: model.revenuePaths.length,
+      nextImprovement: model.improvement.nextImprovement
+    });
   }
 
   if (url.pathname === "/api/demo/run" && req.method === "POST") {

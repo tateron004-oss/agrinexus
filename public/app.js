@@ -10614,6 +10614,37 @@ function render() {
     `).join("");
     $("#ecosystemGraphPanel").innerHTML = edgeHtml || `<div><strong>${translateText("Ecosystem graph")}</strong><span>${translateText("Relationships are loading.")}</span></div>`;
   }
+  const executive = data.executiveIntelligence || {};
+  if ($("#executiveIntelligenceScore")) $("#executiveIntelligenceScore").textContent = `${Number(executive.score || 0)}%`;
+  if ($("#executiveIntelligencePanel")) {
+    $("#executiveIntelligencePanel").innerHTML = [
+      `<div><strong>${translateText(executive.status || "executive-intelligence-ready")}</strong><span>${translateText(executive.summary || "Executive intelligence is ready.")}</span></div>`,
+      executive.latestAnalysis ? `<div><strong>${translateText(`Latest analysis: ${executive.latestAnalysis.analysisNumber}`)}</strong><span>${translateText(executive.latestAnalysis.recommendation || "")}</span><small>${translateText((executive.latestAnalysis.nextActions || [])[0] || "")}</small></div>` : `<div><strong>${translateText("Latest analysis")}</strong><span>${translateText("Ask Nexus to run strategy, market, governance, revenue, or improvement intelligence.")}</span></div>`,
+      ...((executive.pillars || []).slice(0, 5).map(pillar => `<div><strong>${translateText(pillar.title)}</strong><span>${translateText(pillar.promise)}</span><small>${translateText(pillar.question)}</small></div>`))
+    ].join("");
+  }
+  if ($("#executivePriorityPanel")) {
+    const launchHtml = (executive.launchPriorities || []).slice(0, 3).map(country => `
+      <div>
+        <strong>${translateText(`${country.country}: ${country.score}%`)}</strong>
+        <span>${translateText(country.rankReason)}</span>
+        <small>${translateText(country.status)}</small>
+      </div>
+    `).join("");
+    const revenueHtml = (executive.revenuePaths || []).slice(0, 3).map(path => `
+      <div>
+        <strong>${translateText(path.title)}</strong>
+        <span>${translateText(`${path.fee} - ${path.status}`)}</span>
+        <small>${translateText(path.proof)}</small>
+      </div>
+    `).join("");
+    const improve = executive.improvement?.nextImprovement;
+    $("#executivePriorityPanel").innerHTML = [
+      launchHtml,
+      revenueHtml,
+      improve ? `<div><strong>${translateText(`Improve next: ${improve.area}`)}</strong><span>${translateText(improve.fix)}</span><small>${translateText(improve.priority)}</small></div>` : ""
+    ].join("") || `<div><strong>${translateText("Priorities")}</strong><span>${translateText("Executive priorities are loading.")}</span></div>`;
+  }
   renderCommunicationPanel("#providerCommunicationPanel", "Platform", "No provider support thread yet. Message the provider desk to create a two-way operations record.");
 
   $("#environmentPanel").innerHTML = [
@@ -13879,6 +13910,81 @@ function workflowConfig(workflow, action, element) {
         { title: "Actors", detail: "Nexus identifies the people and providers involved.", status: "ready", label: "People" },
         { title: "Service lanes", detail: "Nexus coordinates health, trade, maps, learning, work, communications, or field intelligence together.", status: "ready", label: "Lanes" },
         { title: "Outcome", detail: "Nexus records the mission, source truth, guardrail, and next question.", status: "ready", label: "Done" }
+      ]
+    });
+  }
+  if (workflow === "executive-intelligence") {
+    const configs = {
+      strategy: {
+        title: "Run strategic launch intelligence",
+        summary: "Choose launch priority, partner path, investor proof story, and the next mission to run.",
+        confirmLabel: "Run strategy",
+        path: "/api/executive-intelligence/analyze",
+        body: { focus: "strategic-intelligence", query: "Run strategic intelligence for AgriNexus launch priority, investor proof, and partner path" },
+        success: "Strategic intelligence complete",
+        record: "Launch priority, investor proof points, recommended country, next actions, and decision record",
+        provider: "Uses platform, operational, adaptive, network, and ecosystem signals already inside AgriNexus."
+      },
+      market: {
+        title: "Run market opportunity intelligence",
+        summary: "Compare countries, rural health gaps, crop trade opportunity, learning demand, workforce need, and provider coverage.",
+        confirmLabel: "Run market",
+        path: "/api/executive-intelligence/analyze",
+        body: { focus: "market-intelligence", query: "Compare Kenya Nigeria Ghana Rwanda Tanzania DRC Egypt and South Africa for market opportunity" },
+        success: "Market intelligence complete",
+        record: "Country ranking, rural opportunity, provider readiness, and launch watchlist",
+        provider: "Uses local opportunity scores and connected provider readiness until live market datasets are connected."
+      },
+      governance: {
+        title: "Run governance and safety intelligence",
+        summary: "Review healthcare boundaries, payment controls, privacy, consent, role separation, and country launch review needs.",
+        confirmLabel: "Run governance",
+        path: "/api/executive-intelligence/analyze",
+        body: { focus: "governance-intelligence", query: "Show governance risks for telehealth payments privacy marketplace and country launch" },
+        success: "Governance intelligence complete",
+        record: "Safety checklist, compliance gaps, source truth, approval needs, and audit proof",
+        provider: "This is planning support, not legal advice; country-specific legal review remains required."
+      },
+      revenue: {
+        title: "Run revenue intelligence",
+        summary: "Model subscriptions, transaction fees, mobile clinic enablement, training certificates, provider onboarding, and investor value.",
+        confirmLabel: "Run revenue",
+        path: "/api/executive-intelligence/analyze",
+        body: { focus: "revenue-intelligence", query: "Build revenue plan for subscriptions transaction fees mobile clinics learning certificates and providers" },
+        success: "Revenue intelligence complete",
+        record: "Revenue paths, monetization status, provider needs, proof evidence, and next action",
+        provider: "Real billing and money movement require payment provider credentials and confirmation."
+      },
+      improve: {
+        title: "Run self-improving intelligence",
+        summary: "Find the next highest-impact upgrade from workflow friction, voice behavior, provider gaps, and mission evidence.",
+        confirmLabel: "Run improvement",
+        path: "/api/executive-intelligence/analyze",
+        body: { focus: "self-improving-intelligence", query: "What should improve next before investors and rural user testing" },
+        success: "Self-improving intelligence complete",
+        record: "Friction signals, recommended fix, voice/workflow improvement, provider gap, and learning record",
+        provider: "Uses local QA, memory, workflow, and provider readiness evidence."
+      },
+      roadmap: {
+        title: "Build executive roadmap",
+        summary: "Create a whole-suite roadmap across strategy, market, governance, revenue, and self-improvement.",
+        confirmLabel: "Build roadmap",
+        path: "/api/executive-intelligence/analyze",
+        body: { focus: "strategic-intelligence", query: "Build executive roadmap for launch funding partners governance revenue and improvements" },
+        success: "Executive roadmap built",
+        record: "Roadmap, launch priority, revenue paths, governance checklist, improvement loop, and next mission",
+        provider: "Roadmap uses the current platform intelligence ladder and provider readiness state."
+      }
+    };
+    const selected = configs[action] || configs.strategy;
+    return simpleWorkflowConfig({
+      eyebrow: "Executive intelligence workflow",
+      ...selected,
+      redirectSection: "integrations",
+      checklist: [
+        { title: "Decision", detail: "Nexus creates a recommendation, not just a status card.", status: "ready", label: "Decide" },
+        { title: "Proof", detail: "Nexus ties the recommendation to investor, launch, revenue, governance, or improvement evidence.", status: "ready", label: "Proof" },
+        { title: "Next action", detail: "Nexus names the next thing to run, fix, connect, or present.", status: "ready", label: "Next" }
       ]
     });
   }

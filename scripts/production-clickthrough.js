@@ -163,6 +163,10 @@ const endpoints = [
   "/api/ecosystem-intelligence/mission",
   "/api/ecosystem-intelligence/graph",
   "/api/ecosystem-intelligence/readiness",
+  "/api/executive-intelligence/status",
+  "/api/executive-intelligence/analyze",
+  "/api/executive-intelligence/roadmap",
+  "/api/executive-intelligence/readiness",
   "/api/admin/subscriber",
   "/api/admin/test-user",
   "/api/admin/admin-user",
@@ -260,6 +264,17 @@ assert(server.includes("ecosystem_intelligence.mission_coordinated"), "Ecosystem
 assert(app.includes('workflow === "ecosystem-intelligence"'), "Frontend must wire ecosystem intelligence buttons to real workflows");
 assert(app.includes("/api/ecosystem-intelligence/mission"), "Frontend must call ecosystem mission endpoint");
 assert(pkg.scripts["ecosystem:intelligence-qa"] === "node scripts/ecosystem-intelligence-qa.js", "Package scripts must expose ecosystem intelligence QA");
+assert(html.includes("Executive Intelligence Suite"), "Integrations must include an executive intelligence suite");
+assert(server.includes("function ensureExecutiveIntelligenceProfile"), "Backend must create executive intelligence storage");
+assert(server.includes("function executiveIntelligencePillars"), "Backend must expose strategic, market, governance, revenue, and self-improving pillars");
+assert(server.includes("function runExecutiveIntelligenceAnalysis"), "Backend must run executive intelligence analyses");
+assert(server.includes("function executiveRevenuePaths"), "Backend must model revenue intelligence");
+assert(server.includes("function executiveGovernanceChecklist"), "Backend must model governance intelligence");
+assert(server.includes("function executiveImprovementSignals"), "Backend must model self-improving intelligence");
+assert(server.includes("executive_intelligence.analysis_completed"), "Executive intelligence must create voice analysis intent");
+assert(app.includes('workflow === "executive-intelligence"'), "Frontend must wire executive intelligence buttons to real workflows");
+assert(app.includes("/api/executive-intelligence/analyze"), "Frontend must call executive analysis endpoint");
+assert(pkg.scripts["executive:intelligence-qa"] === "node scripts/executive-intelligence-qa.js", "Package scripts must expose executive intelligence QA");
 assert(app.includes("activeVoiceAudio"), "Voice playback needs a single active audio guard");
 assert(html.includes("Buyer-Seller Communication Hub"), "AgriTrade needs a buyer-seller communication hub");
 assert(server.includes("function createBuyerSellerMessage"), "Backend needs buyer-seller message thread creation");
