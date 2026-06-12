@@ -61,8 +61,8 @@ let routeTrackingWatchId = null;
 let routeTrackingPoints = [];
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-196";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v176";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-197";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v177";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
 const VOICE_ATTENTION_DELAY_MS = 900;
@@ -6214,6 +6214,20 @@ function isGlobalStopCommand(lower) {
     || /\b(agri\s*nexus|agrinexus|nexus)\b.*\b(para|detente|detener|silencio|arrete|tais toi|simama|nyamaza|acha)\b/i.test(normalized);
 }
 
+function isStopAndContinueWorkingCommand(command = "") {
+  const value = String(command || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^\w\s-]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .toLowerCase();
+  if (!value || !isGlobalStopCommand(value)) return false;
+  return /\b(continue|keep|resume|go back to|return to)\b.*\b(working|work|my work|what i was doing|using the app|testing)\b/.test(value)
+    || /\b(i want|i need|let me|allow me)\b.*\b(work|working|continue)\b/.test(value)
+    || /\b(close|dismiss|hide|get out of the way)\b/.test(value);
+}
+
 function postStopRedirectCommand(command = "") {
   const value = String(command || "").trim();
   if (!value) return "";
@@ -6226,6 +6240,7 @@ function postStopRedirectCommand(command = "") {
   const stopWords = "(?:stop|pause|cancel|be quiet|interrupt|para|parar|deten|detente|detener|silencio|callate|arrete|arreter|tais toi|simama|nyamaza|acha|ghairi|subiri|اوقف|توقف|اسكت|اصمت|الغ)";
   const prefix = new RegExp(`^(?:hey\\s+|hi\\s+|hello\\s+|hola\\s+|bonjour\\s+|jambo\\s+)?(?:agri\\s*nexus|agrinexus|nexus|نكسس)?\\s*${stopWords}\\s*(?:and|then|now|please|,|;|:|-|i want to|i need to|take me to|go to)?\\s*`, "i");
   const redirected = normalized.replace(prefix, "").trim();
+  if (isStopAndContinueWorkingCommand(value) || /^(i\s+)?(want|need|would like)?\s*(to\s+)?(continue|keep|resume|go back to|return to)\s+(working|work|my work|what i was doing|using the app|testing)$/i.test(redirected)) return "";
   if (!redirected || redirected === normalized || isGlobalStopCommand(redirected)) return "";
   return redirected;
 }
@@ -6281,6 +6296,27 @@ function leaveNexusConversationPause(message = "Nexus is listening again.") {
   const status = $("#globalVoiceOutputStatus");
   if (status) status.textContent = translateText(message);
   refreshMicSupport();
+}
+
+function stopNexusAndReturnToWork(message = "Stopped. Nexus is closed so you can continue working.") {
+  voiceConversationPaused = true;
+  pendingAgentClarification = null;
+  activeVoiceMission = null;
+  activeAgentJourney = null;
+  pendingGrandmaAction = null;
+  pendingNexusSpokenCommand = null;
+  nexusAwaitingCommand = false;
+  voiceStopRequested = true;
+  voiceAutoRestart = false;
+  voiceResumeAfterSpeech = false;
+  clearAgentProgressTimers();
+  stopVoicePlayback({ hard: true });
+  updateNexusBehaviorLayer("paused", message);
+  setVoiceStatus("paused");
+  setCommandInputs("");
+  closeAskNexus({ silent: true });
+  announce(message);
+  toast(message);
 }
 
 function isFreshActionDuringClarification(lower) {
@@ -16578,6 +16614,10 @@ async function handleVoiceCommand(rawCommand, options = {}) {
   }
   const stopRedirect = postStopRedirectCommand(command);
   if (isGlobalStopCommand(String(command || localizedCommand).toLowerCase())) {
+    if (isStopAndContinueWorkingCommand(command || localizedCommand)) {
+      stopNexusAndReturnToWork("Stopped. Nexus is closed so you can continue working.");
+      return;
+    }
     enterNexusConversationPause("Stopped. Nexus is paused and will ignore background conversation until you say Nexus again.");
     if (stopRedirect) {
       leaveNexusConversationPause("Nexus heard your next instruction after stop.");
@@ -16694,6 +16734,10 @@ async function handleVoiceCommand(rawCommand, options = {}) {
     return;
   }
   if (isGlobalStopCommand(lower)) {
+    if (isStopAndContinueWorkingCommand(command || localizedCommand)) {
+      stopNexusAndReturnToWork("Stopped. Nexus is closed so you can continue working.");
+      return;
+    }
     enterNexusConversationPause("Stopped. Nexus is paused and will ignore background conversation until you say Nexus again.");
     if (stopRedirect) {
       leaveNexusConversationPause("Nexus heard your next instruction after stop.");
@@ -18036,6 +18080,10 @@ function startVoiceListening() {
       }
     }
     if (isGlobalStopCommand(String(cleanedCommand || localizedCommand || command).toLowerCase())) {
+      if (isStopAndContinueWorkingCommand(cleanedCommand || localizedCommand || command)) {
+        stopNexusAndReturnToWork("Stopped. Nexus is closed so you can continue working.");
+        return;
+      }
       enterNexusConversationPause("Stopped. Nexus is paused and will ignore background conversation until you say Nexus again.");
       if (stopRedirect) {
         leaveNexusConversationPause("Nexus heard your next instruction after stop.");

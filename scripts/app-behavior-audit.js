@@ -387,6 +387,9 @@ assert(!html.includes('data-user-voice-action="stop"'), "User voice dock should 
 assert(!html.includes('data-caption-action="stop"'), "Caption box should not expose a visible stop button");
 assert(app.includes("activeVoiceRequestController.abort"), "Voice stop must abort pending OpenAI voice requests");
 assert(app.includes("function postStopRedirectCommand"), "Voice stop must support redirecting to the next prompt");
+assert(app.includes("function isStopAndContinueWorkingCommand"), "Voice stop must understand continue-working as a close request");
+assert(app.includes("function stopNexusAndReturnToWork"), "Voice stop must close Ask Nexus when the user wants to keep working");
+assert(app.includes("Stopped. Nexus is closed so you can continue working."), "Voice stop close path must acknowledge and get out of the user's way");
 assert(app.includes("voiceStopTranslations"), "Voice stop controls must translate in every supported language");
 assert(app.includes("detente") && app.includes("arrete") && app.includes("simama") && app.includes("\u0627\u0648\u0642\u0641"), "Voice stop parser must understand multilingual stop phrases");
 assert(app.includes("fuzzyWakeStop") && app.includes("texas") && app.includes("nexis"), "Voice stop parser must catch common Nexus mishears like Texas stop");
@@ -395,8 +398,8 @@ assert(app.includes("Stopped. Ask me the next question or tell me where to go ne
 assert(styles.includes("pointer-events: none") && styles.includes(".user-caption-actions") && styles.includes("pointer-events: auto"), "Caption panel must not block workflow action clicks");
 assert(styles.includes("width: min(300px, calc(100vw - 24px))") && styles.includes("max-height: 138px"), "Caption panel must default to a small bubble");
 assert(styles.includes(".user-caption-panel.expanded") && styles.includes("display: none") && styles.includes("display: grid"), "Caption input controls must appear only in expanded caption mode");
-assert(html.includes("nexus-behavior-196"), "Index must force browsers to load Nexus behavior CSS");
-assert(html.includes("nexus-behavior-196"), "Index must force browsers to load Nexus behavior JS");
+assert(html.includes("nexus-behavior-197"), "Index must force browsers to load Nexus behavior CSS");
+assert(html.includes("nexus-behavior-197"), "Index must force browsers to load Nexus behavior JS");
 assert(app.includes("shipmentPreviewMapCanvas") && app.includes("renderShipmentPreviewMap"), "Shipment preview maps must use real Leaflet canvases");
 assert(app.includes("healthHotspotMapCanvas") && app.includes("renderHealthHotspotPreviewMap"), "Health hotspot maps must use real Leaflet canvases");
 assert(app.includes("function shipmentTrackingState") && app.includes("function drawShipmentRoute"), "Shipment maps must render operational tracking state, not decorative routes");
