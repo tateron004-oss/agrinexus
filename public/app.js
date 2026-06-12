@@ -10522,6 +10522,27 @@ function render() {
       ? (platformIntel.directoryPreview || []).map(record => `<div><strong>${translateText(`${record.name} - ${record.type}`)}</strong><span>${translateText(`${record.country}: ${record.service}`)}</span><small>${translateText(`Source: ${record.source}; ${record.status}`)}</small></div>`).join("")
       : `<div><strong>${translateText("No local directory records")}</strong><span>${translateText("Add records manually or import CSV before live provider feeds are connected.")}</span></div>`;
   }
+  const operationalIntel = data.operationalIntelligence || {};
+  if ($("#operationalIntelligenceScore")) $("#operationalIntelligenceScore").textContent = `${Number(operationalIntel.score || 0)}%`;
+  if ($("#operationalIntelligencePanel")) {
+    $("#operationalIntelligencePanel").innerHTML = [
+      `<div><strong>${translateText(operationalIntel.status || "operational-intelligence-ready")}</strong><span>${translateText(operationalIntel.summary || "Operational intelligence is ready.")}</span></div>`,
+      `<div><strong>${translateText("Source rule")}</strong><span>${translateText(operationalIntel.sourceTruth || "Nexus labels local, provider-ready, and live-connected evidence.")}</span></div>`,
+      operationalIntel.latestGoal ? `<div><strong>${translateText(`Latest goal: ${operationalIntel.latestGoal.goalNumber}`)}</strong><span>${translateText(`${operationalIntel.latestGoal.module}: ${operationalIntel.latestGoal.title}`)}</span><small>${translateText((operationalIntel.latestGoal.nextSteps || [])[0] || "Next step ready")}</small></div>` : `<div><strong>${translateText("Goal memory")}</strong><span>${translateText("Track a goal to create outcome memory.")}</span></div>`,
+      operationalIntel.latestPlaybookRun ? `<div><strong>${translateText(`Latest playbook: ${operationalIntel.latestPlaybookRun.runNumber}`)}</strong><span>${translateText(operationalIntel.latestPlaybookRun.title)}</span><small>${translateText(operationalIntel.latestPlaybookRun.outcome || "Outcome recorded")}</small></div>` : `<div><strong>${translateText("Playbooks")}</strong><span>${translateText(`${(operationalIntel.playbooks || []).length} operational playbook(s) loaded`)}</span></div>`,
+      operationalIntel.latestIssue ? `<div><strong>${translateText(`Recovery: ${operationalIntel.latestIssue.issueNumber}`)}</strong><span>${translateText(`${operationalIntel.latestIssue.module}: ${operationalIntel.latestIssue.detail}`)}</span><small>${translateText((operationalIntel.latestIssue.recoverySteps || [])[1] || "Recovery path ready")}</small></div>` : `<div><strong>${translateText("Recovery")}</strong><span>${translateText("No active workflow issue recorded.")}</span></div>`,
+      ...(operationalIntel.suggestedCommands || []).slice(0, 3).map(command => `<div><strong>${translateText("Try")}</strong><span>${translateText(command)}</span></div>`)
+    ].join("");
+  }
+  if ($("#operationalWorkflowPanel")) {
+    $("#operationalWorkflowPanel").innerHTML = (operationalIntel.workflowScores || []).map(item => `
+      <div>
+        <strong>${translateText(`${item.module}: ${item.percent}%`)}</strong>
+        <span>${translateText(item.evidence || "Evidence pending")}</span>
+        <div class="progress"><span style="width:${Math.max(0, Math.min(100, Number(item.percent || 0)))}%"></span></div>
+      </div>
+    `).join("") || `<div><strong>${translateText("Workflow scores")}</strong><span>${translateText("Run workflows to create completion evidence.")}</span></div>`;
+  }
   renderCommunicationPanel("#providerCommunicationPanel", "Platform", "No provider support thread yet. Message the provider desk to create a two-way operations record.");
 
   $("#environmentPanel").innerHTML = [
@@ -13516,6 +13537,72 @@ function workflowConfig(workflow, action, element) {
         { title: "Source-aware", detail: "Nexus labels whether the answer came from saved local records, platform context, simulated evidence, or live providers.", status: "ready", label: "Source" },
         { title: "Providerless", detail: "Works before vendor credentials by using saved platform data.", status: "ready", label: "Local" },
         { title: "Upgradeable", detail: "The same interface can later point to provider feeds, CSV imports, or APIs.", status: "ready", label: "Live path" }
+      ]
+    });
+  }
+  if (workflow === "operational-intelligence") {
+    const goalText = "Help a rural user complete the right AgriNexus workflow with simple next steps";
+    const configs = {
+      goal: {
+        title: "Track operational goal",
+        summary: "Create a goal that Nexus can remember, score, and guide across learning, workforce, health, trade, map, and AI workflows.",
+        confirmLabel: "Track goal",
+        path: "/api/operational-intelligence/goal",
+        body: { goal: goalText },
+        success: "Operational goal tracked",
+        record: "Goal record, module score, next steps, outcome memory, activity, and audit evidence",
+        provider: "Nexus operational intelligence uses platform records now and can attach live provider evidence later."
+      },
+      "playbook-health": {
+        title: "Run health access playbook",
+        summary: "Run the health access playbook for intake, clinic/pharmacy lookup, mobile clinic support, provider handoff, and safety boundaries.",
+        confirmLabel: "Run health playbook",
+        path: "/api/operational-intelligence/playbook",
+        body: { type: "health-access", request: "Help the user reach health, clinic, pharmacy, or mobile clinic support" },
+        success: "Health playbook started",
+        record: "Playbook run, goal, safe next steps, outcome memory, provider-ready evidence, and audit trail",
+        provider: "Navigation works now. Live clinic/pharmacy/EHR providers attach when credentials or partners are connected."
+      },
+      "playbook-trade": {
+        title: "Run crop sale playbook",
+        summary: "Run the crop sale playbook for buyer contact, order creation, shipment tracking, map route evidence, payment path, and receipt support.",
+        confirmLabel: "Run crop playbook",
+        path: "/api/operational-intelligence/playbook",
+        body: { type: "crop-sale", request: "Help the farmer sell crops, contact the buyer, and track delivery" },
+        success: "Crop playbook started",
+        record: "Playbook run, goal, buyer/logistics next steps, outcome memory, and trade audit evidence",
+        provider: "Local workflow runs now. Live marketplace, logistics, GPS, and payments attach when providers are connected."
+      },
+      decision: {
+        title: "Rank best next step",
+        summary: "Ask Nexus to compare saved resources, workflow scores, and smart next actions to recommend the best next move.",
+        confirmLabel: "Rank next step",
+        path: "/api/operational-intelligence/decision",
+        body: { query: "What is the best next step for a rural user who needs clinic, course, work, or crop support?" },
+        success: "Decision review complete",
+        record: "Decision review, confidence event, ranked choices, source labels, memory, and audit evidence",
+        provider: "Uses saved platform records and smart actions now; live provider data improves ranking later."
+      },
+      issue: {
+        title: "Report workflow issue",
+        summary: "Record a problem like a wrong screen, unclear workflow, blocked button, map issue, or intake problem so Nexus can guide recovery.",
+        confirmLabel: "Report issue",
+        path: "/api/operational-intelligence/issue",
+        body: { detail: "The workflow needs adjustment and should recover with one clear next action" },
+        success: "Recovery issue recorded",
+        record: "Issue report, recovery steps, feedback loop, memory, activity, and audit evidence",
+        provider: "This is an internal Nexus recovery loop for user, investor, and admin testing."
+      }
+    };
+    const selected = configs[action] || configs.goal;
+    return simpleWorkflowConfig({
+      eyebrow: "Operational intelligence workflow",
+      ...selected,
+      redirectSection: "integrations",
+      checklist: [
+        { title: "Goal-aware", detail: "Nexus creates and remembers the operational goal.", status: "ready", label: "Goal" },
+        { title: "Decision-aware", detail: "Nexus ranks next steps using workflow evidence and saved resources.", status: "ready", label: "Brain" },
+        { title: "Recovery-aware", detail: "Nexus records workflow issues and gives a simple recovery path.", status: "ready", label: "Fix" }
       ]
     });
   }

@@ -1974,6 +1974,7 @@ function publicState(db, user) {
   const providers = runtimeProviders(db);
   ensureOperationsProfile(db.profile);
   ensurePlatformIntelligenceProfile(db.profile);
+  ensureOperationalIntelligenceProfile(db.profile);
   const providerCandidates = providerCandidateCatalog(db, providers);
   const agentCapabilities = agentCapabilityRegistryState(db, providers);
   const jarvisReadiness = jarvisReadinessModel(db, user, providers);
@@ -2008,6 +2009,7 @@ function publicState(db, user) {
     womenFamilySupport: womenFamilyAgricultureModel(db, providers),
     remoteLaunchKit: remoteRuralFarmerLaunchKit(db, user, providers),
     platformIntelligence: platformIntelligenceModel(db, user),
+    operationalIntelligence: operationalIntelligenceModel(db, user),
     sessionBriefing: sessionBriefingModel(db, user, providers),
     impactDashboard: impactDashboardModel(db, providers),
     missionTimeline: missionTimelineModel(db),
@@ -7882,6 +7884,434 @@ function platformIntelligenceCommandResponse(db, user, text, options = {}) {
     status: top ? "completed" : "needs-data",
     response: answer,
     metadata: { conversationMode: true, redirectSection: type === "clinic" || type === "pharmacy" ? "health" : type === "course" ? "learning" : type === "job" ? "workforce" : type === "buyer" || type === "logistics" || type === "drone" ? "trade" : "agent", platformIntelligence: true, result }
+  };
+}
+
+function ensureOperationalIntelligenceProfile(profile) {
+  ensureOperationsProfile(profile);
+  ensurePlatformIntelligenceProfile(profile);
+  profile.operationalIntelligence = profile.operationalIntelligence || {};
+  const intelligence = profile.operationalIntelligence;
+  intelligence.goals = intelligence.goals || [];
+  intelligence.outcomeMemory = intelligence.outcomeMemory || [];
+  intelligence.issueReports = intelligence.issueReports || [];
+  intelligence.playbookRuns = intelligence.playbookRuns || [];
+  intelligence.decisionReviews = intelligence.decisionReviews || [];
+  intelligence.confidenceEvents = intelligence.confidenceEvents || [];
+  intelligence.feedbackLoops = intelligence.feedbackLoops || [];
+  intelligence.missionControl = intelligence.missionControl || [];
+  intelligence.playbooks = intelligence.playbooks || [
+    {
+      id: "health-access",
+      module: "Healthcare",
+      title: "Health access and mobile clinic playbook",
+      trigger: "I need a doctor, medicine, clinic, pharmacy, or mobile clinic help",
+      plainOutcome: "Open intake, find clinic/pharmacy records, prepare safe questions, and connect to human care support.",
+      steps: ["Listen to the health need", "Open intake", "Find clinic/pharmacy support", "Prepare handoff", "Record follow-up"],
+      guardrail: "Resource navigation only. AgriNexus does not diagnose, prescribe, or replace licensed care."
+    },
+    {
+      id: "crop-sale",
+      module: "AgriTrade",
+      title: "Crop sale, buyer, and shipment playbook",
+      trigger: "I want to sell, buy, contact a buyer, create an order, or track delivery",
+      plainOutcome: "Create a crop sale path, contact buyer support, plan delivery, show route evidence, and track the order.",
+      steps: ["Identify crop and buyer goal", "Find buyer/logistics record", "Create order", "Open route tracking", "Record payment/receipt path"],
+      guardrail: "Payments and live logistics require provider credentials before real money or GPS dispatch occurs."
+    },
+    {
+      id: "learning-path",
+      module: "Learning",
+      title: "Learning and certificate playbook",
+      trigger: "I want to learn, start a course, complete a lesson, use captions, or get a certificate",
+      plainOutcome: "Select a course, open the lesson, support accessibility, record progress, and prepare certificate evidence.",
+      steps: ["Choose course", "Start lesson", "Support captions/audio", "Complete checkpoint", "Prepare certificate"],
+      guardrail: "Local catalog works now; signed course providers can replace or extend the catalog."
+    },
+    {
+      id: "workforce-placement",
+      module: "Workforce",
+      title: "Workforce placement playbook",
+      trigger: "I need work, jobs, a role, an application, interview, shift, or mentor",
+      plainOutcome: "Build candidate profile, match roles, apply, prepare interview support, and track placement.",
+      steps: ["Build profile", "Match role", "Apply", "Prepare interview", "Track shift or placement"],
+      guardrail: "Live job listings require a provider feed; local job records work for pilot evidence."
+    },
+    {
+      id: "field-intelligence",
+      module: "AgriTech",
+      title: "Drone and field intelligence playbook",
+      trigger: "I want a drone scan, crop health review, field risk, or farmer explanation",
+      plainOutcome: "Create field evidence, explain crop risk simply, prepare intervention tasks, and link buyer-quality proof.",
+      steps: ["Capture field concern", "Run local scan workflow", "Explain risk plainly", "Create field task", "Attach evidence to trade"],
+      guardrail: "Live drone/satellite imagery requires vendor credentials; local scan workflow records pilot evidence."
+    },
+    {
+      id: "investor-proof",
+      module: "Platform",
+      title: "Investor proof and evidence playbook",
+      trigger: "I need investor proof, demo evidence, readiness, or platform status",
+      plainOutcome: "Collect impact metrics, mission timeline, provider evidence, readiness gaps, and next setup plan.",
+      steps: ["Gather records", "Score readiness", "List live gaps", "Export evidence", "Recommend next move"],
+      guardrail: "Evidence is labeled local, simulated, provider-ready, or live-connected."
+    }
+  ];
+  return intelligence;
+}
+
+function operationalModuleFromText(text = "") {
+  const lower = String(text || "").toLowerCase();
+  if (/\b(doctor|clinic|medicine|pharmacy|patient|health|telehealth|mobile clinic|provider|injury|symptom)\b/.test(lower)) return "Healthcare";
+  if (/\b(course|lesson|learn|training|certificate|caption|student|school|study)\b/.test(lower)) return "Learning";
+  if (/\b(job|work|role|apply|application|shift|mentor|interview|worker|workforce)\b/.test(lower)) return "Workforce";
+  if (/\b(sell|buyer|crop|trade|order|delivery|shipment|route|payment|receipt|market|maize|cassava|farm)\b/.test(lower)) return "AgriTrade";
+  if (/\b(drone|field|scan|soil|harvest|pest|crop health|satellite)\b/.test(lower)) return "AgriTech";
+  if (/\b(map|location|where|near|route|gps|track)\b/.test(lower)) return "Map & AI";
+  return conversationModuleSignal(text).module || "Platform";
+}
+
+function operationalWorkflowScores(db) {
+  ensureLearningProfile(db.profile);
+  ensureWorkforceProfile(db.profile);
+  ensureHealthProfile(db.profile);
+  ensureTradeProfile(db.profile);
+  ensureAiProfile(db.profile);
+  ensureCommunicationProfile(db.profile);
+  const score = (parts) => {
+    const ready = parts.filter(Boolean).length;
+    return Math.round((ready / Math.max(1, parts.length)) * 100);
+  };
+  const scores = [
+    {
+      module: "Learning",
+      percent: score([(db.profile.enrollments || []).length, (db.profile.completedCourses || []).length, (db.profile.certificates || []).length, (db.profile.learningAccommodations || []).length]),
+      evidence: `${(db.profile.enrollments || []).length} enrollment(s), ${(db.profile.certificates || []).length} certificate(s)`
+    },
+    {
+      module: "Workforce",
+      percent: score([(db.profile.workforceBadges || []).includes("Profile Verified"), (db.profile.applications || []).length, (db.profile.interviews || 0) > 0, (db.profile.shiftSchedule || []).length]),
+      evidence: `${(db.profile.applications || []).length} application(s), ${db.profile.interviews || 0} interview(s)`
+    },
+    {
+      module: "Healthcare",
+      percent: score([(db.profile.healthIntakes || []).length, (db.profile.carePlans || []).length, (db.profile.representativeConnections || 0) > 0, (db.profile.communicationThreads || []).some(item => item.module === "Healthcare")]),
+      evidence: `${(db.profile.healthIntakes || []).length} intake(s), ${(db.profile.carePlans || []).length} care plan(s)`
+    },
+    {
+      module: "AgriTrade",
+      percent: score([(db.profile.orders || []).length, (db.profile.tradeMessageThreads || []).length, (db.profile.walletTransactions || []).length, (db.profile.logisticsBookings || []).length]),
+      evidence: `${(db.profile.orders || []).length} order(s), ${(db.profile.tradeMessageThreads || []).length} buyer thread(s)`
+    },
+    {
+      module: "AgriTech",
+      percent: score([(db.profile.droneMissions || []).length, (db.profile.droneScans || []).length, (db.profile.fieldInterventions || []).length, (db.profile.orders || []).length]),
+      evidence: `${(db.profile.droneScans || []).length} scan(s), ${(db.profile.fieldInterventions || []).length} intervention(s)`
+    },
+    {
+      module: "Map & AI",
+      percent: score([(db.profile.aiRuns || []).length, (db.profile.mapEvidence || []).length, (db.profile.routeTracking || []).length, (db.profile.integrationEvents || []).some(item => /map|route/i.test(item.action || item.module || ""))]),
+      evidence: `${(db.profile.aiRuns || []).length} AI run(s), ${(db.profile.mapEvidence || []).length} map evidence record(s)`
+    }
+  ];
+  return scores;
+}
+
+function operationalIntelligenceModel(db, user) {
+  const intelligence = ensureOperationalIntelligenceProfile(db.profile);
+  const scores = operationalWorkflowScores(db);
+  const average = Math.round(scores.reduce((sum, item) => sum + Number(item.percent || 0), 0) / Math.max(1, scores.length));
+  const openIssues = (intelligence.issueReports || []).filter(item => !["resolved", "closed"].includes(item.status)).length;
+  const activeGoals = (intelligence.goals || []).filter(item => item.status === "active").slice(0, 6);
+  const playbookReadiness = Math.min(100, 55 + Math.min(25, (intelligence.playbooks || []).length * 4) + Math.min(20, (intelligence.playbookRuns || []).length * 3));
+  return {
+    status: average >= 75 ? "operational-intelligence-active" : "operational-intelligence-learning",
+    score: Math.round((average + playbookReadiness + Math.max(0, 100 - openIssues * 8)) / 3),
+    summary: "Operational Intelligence gives Nexus goals, playbooks, decision review, workflow recovery, outcome memory, and mission tracking across user, investor, and admin modes.",
+    sourceTruth: "It uses AgriNexus records now and labels live provider results separately when external services are connected.",
+    workflowScores: scores,
+    playbookReadiness,
+    openIssues,
+    activeGoals,
+    latestGoal: (intelligence.goals || [])[0] || null,
+    latestIssue: (intelligence.issueReports || [])[0] || null,
+    latestDecision: (intelligence.decisionReviews || [])[0] || null,
+    latestPlaybookRun: (intelligence.playbookRuns || [])[0] || null,
+    playbooks: (intelligence.playbooks || []).slice(0, 8),
+    outcomeMemory: (intelligence.outcomeMemory || []).slice(0, 8),
+    suggestedCommands: [
+      "Nexus, create a goal to sell maize and track delivery",
+      "Nexus, run the health access playbook",
+      "Nexus, rank my next best step",
+      "Nexus, this workflow is wrong",
+      "Nexus, what is incomplete",
+      "Nexus, run the crop sale playbook",
+      "Nexus, help me recover the intake workflow",
+      "Nexus, operational intelligence status"
+    ]
+  };
+}
+
+function operationalNextStepsForModule(module, text = "") {
+  const lower = String(text || "").toLowerCase();
+  const catalog = {
+    Healthcare: ["Open a plain-language intake", "Search clinic/pharmacy support", "Prepare provider handoff", "Record follow-up and safety boundary"],
+    Learning: ["Choose a course", "Open the lesson workspace", "Enable captions/audio support", "Record progress and certificate path"],
+    Workforce: ["Build candidate profile", "Match role", "Submit application", "Prepare interview or shift support"],
+    AgriTrade: ["Identify crop and buyer goal", "Find buyer/logistics support", "Create order", "Open route tracking and receipt path"],
+    AgriTech: ["Capture field concern", "Run scan workflow", "Explain risk in simple language", "Create intervention task"],
+    "Map & AI": ["Open full map", "Select route or area", "Explain risk and distance", "Save map evidence"],
+    Platform: ["Clarify the goal", "Pick the best module", "Run the next safe workflow", "Record evidence"]
+  };
+  const steps = catalog[module] || catalog.Platform;
+  if (/\b(emergency|danger|bleeding|can't breathe|cannot breathe|unconscious)\b/.test(lower)) {
+    return ["Tell the user to contact local emergency help now", "Record this as urgent navigation support", "Prepare caregiver/provider handoff", "Do not diagnose"];
+  }
+  return steps;
+}
+
+function createOperationalGoal(db, user, body = {}) {
+  const intelligence = ensureOperationalIntelligenceProfile(db.profile);
+  const goalText = String(body.goal || body.title || body.query || "Help this user complete the next AgriNexus workflow").trim();
+  const module = body.module || operationalModuleFromText(goalText);
+  const scores = operationalWorkflowScores(db);
+  const moduleScore = scores.find(item => item.module === module)?.percent || scores.find(item => module.includes(item.module))?.percent || 0;
+  const goal = {
+    id: crypto.randomUUID(),
+    goalNumber: `NEX-GOAL-${String((intelligence.goals || []).length + 1).padStart(3, "0")}`,
+    title: goalText,
+    module,
+    status: "active",
+    owner: user.email,
+    userName: user.name,
+    completionScore: moduleScore,
+    nextSteps: operationalNextStepsForModule(module, goalText),
+    evidence: [`${module} workflow score ${moduleScore}%`, "Goal stored in Nexus operational memory"],
+    source: "nexus-operational-intelligence",
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  };
+  intelligence.goals.unshift(goal);
+  intelligence.goals = intelligence.goals.slice(0, 60);
+  intelligence.outcomeMemory.unshift({ id: crypto.randomUUID(), type: "goal", summary: `${goal.goalNumber}: ${goal.title}`, module, status: "active", createdAt: goal.createdAt });
+  intelligence.outcomeMemory = intelligence.outcomeMemory.slice(0, 80);
+  rememberAgentMemory(db.profile, `Operational goal created: ${goal.title}. Next step: ${goal.nextSteps[0]}.`, { source: "operational-intelligence", category: "goal", module, confidence: 0.91 });
+  addActivity(db.profile, `${goal.goalNumber} created: ${goal.title}.`);
+  logIntegration(db, {
+    providerId: "operational-intelligence",
+    module,
+    action: "operational.goal_created",
+    status: "success",
+    detail: `${goal.goalNumber} created for ${module}: ${goal.title}.`,
+    metadata: { goal },
+    dispatch: false
+  });
+  return goal;
+}
+
+function selectOperationalPlaybook(db, type = "", text = "") {
+  const intelligence = ensureOperationalIntelligenceProfile(db.profile);
+  const lower = `${type} ${text}`.toLowerCase();
+  const playbooks = intelligence.playbooks || [];
+  const explicit = playbooks.find(item => item.id === type);
+  if (explicit) return explicit;
+  if (/\b(doctor|clinic|medicine|pharmacy|health|intake|mobile clinic)\b/.test(lower)) return playbooks.find(item => item.id === "health-access");
+  if (/\b(sell|buyer|crop|shipment|trade|delivery|order|payment)\b/.test(lower)) return playbooks.find(item => item.id === "crop-sale");
+  if (/\b(learn|course|lesson|certificate|caption|student)\b/.test(lower)) return playbooks.find(item => item.id === "learning-path");
+  if (/\b(job|work|apply|role|shift|interview)\b/.test(lower)) return playbooks.find(item => item.id === "workforce-placement");
+  if (/\b(drone|field|scan|crop health|pest|soil)\b/.test(lower)) return playbooks.find(item => item.id === "field-intelligence");
+  if (/\b(investor|proof|evidence|status|readiness)\b/.test(lower)) return playbooks.find(item => item.id === "investor-proof");
+  return playbooks[0];
+}
+
+function runOperationalPlaybook(db, user, type = "", body = {}) {
+  const intelligence = ensureOperationalIntelligenceProfile(db.profile);
+  const request = String(body.request || body.goal || body.query || type || "Run operational playbook").trim();
+  const playbook = selectOperationalPlaybook(db, type, request);
+  const goal = createOperationalGoal(db, user, { goal: request, module: playbook?.module || operationalModuleFromText(request) });
+  const run = {
+    id: crypto.randomUUID(),
+    runNumber: `NEX-PLAY-${String((intelligence.playbookRuns || []).length + 1).padStart(3, "0")}`,
+    playbookId: playbook?.id || "general",
+    title: playbook?.title || "General operational playbook",
+    module: playbook?.module || goal.module,
+    request,
+    goalId: goal.id,
+    status: "completed-local",
+    steps: (playbook?.steps || goal.nextSteps || []).map((title, index) => ({ id: `${playbook?.id || "general"}-${index + 1}`, title, status: index === 0 ? "started" : "ready", order: index + 1 })),
+    outcome: playbook?.plainOutcome || "Nexus created an operational path and next steps.",
+    guardrail: playbook?.guardrail || "External actions remain labeled until live providers are connected.",
+    createdBy: user.email,
+    createdAt: new Date().toISOString()
+  };
+  intelligence.playbookRuns.unshift(run);
+  intelligence.playbookRuns = intelligence.playbookRuns.slice(0, 60);
+  intelligence.outcomeMemory.unshift({ id: crypto.randomUUID(), type: "playbook", summary: `${run.runNumber}: ${run.title}`, module: run.module, status: run.status, createdAt: run.createdAt });
+  intelligence.outcomeMemory = intelligence.outcomeMemory.slice(0, 80);
+  rememberAgentMemory(db.profile, `Operational playbook ran: ${run.title}. Outcome: ${run.outcome}.`, { source: "operational-playbook", category: "pattern", module: run.module, confidence: 0.93 });
+  addActivity(db.profile, `${run.runNumber} completed: ${run.title}.`);
+  logIntegration(db, {
+    providerId: "operational-intelligence",
+    module: run.module,
+    action: "operational.playbook_run",
+    status: "success",
+    detail: `${run.runNumber} ran ${run.title}.`,
+    metadata: { run },
+    dispatch: false
+  });
+  return { run, goal };
+}
+
+function recordOperationalIssue(db, user, body = {}) {
+  const intelligence = ensureOperationalIntelligenceProfile(db.profile);
+  const detail = String(body.detail || body.issue || body.query || "User reported a workflow issue").trim();
+  const module = body.module || operationalModuleFromText(detail);
+  const issue = {
+    id: crypto.randomUUID(),
+    issueNumber: `NEX-FIX-${String((intelligence.issueReports || []).length + 1).padStart(3, "0")}`,
+    module,
+    detail,
+    status: "guided-recovery",
+    severity: /\b(can't|cannot|broken|wrong|not working|blank|stuck|freeze|partial|missing)\b/i.test(detail) ? "high" : "standard",
+    recoverySteps: [
+      "Stop the current explanation and acknowledge the issue",
+      `Open the ${module} workflow from the top of the screen`,
+      "Show one clear next action instead of a long explanation",
+      "Record the issue for admin/investor review"
+    ],
+    createdBy: user.email,
+    createdAt: new Date().toISOString()
+  };
+  intelligence.issueReports.unshift(issue);
+  intelligence.issueReports = intelligence.issueReports.slice(0, 80);
+  intelligence.feedbackLoops.unshift({ id: crypto.randomUUID(), issueId: issue.id, module, status: "active", nextAction: issue.recoverySteps[1], createdAt: issue.createdAt });
+  intelligence.feedbackLoops = intelligence.feedbackLoops.slice(0, 80);
+  rememberAgentMemory(db.profile, `User reported ${module} issue: ${detail}. Nexus should recover with fewer words and a visible action.`, { source: "workflow-issue", category: "correction", module, confidence: 0.97 });
+  addActivity(db.profile, `${issue.issueNumber} recorded for ${module}: ${detail}.`);
+  logIntegration(db, {
+    providerId: "operational-intelligence",
+    module,
+    action: "operational.issue_recorded",
+    status: "needs-review",
+    detail: `${issue.issueNumber}: ${detail}`,
+    metadata: { issue },
+    dispatch: false
+  });
+  return issue;
+}
+
+function operationalDecisionReview(db, user, query = "") {
+  const intelligence = ensureOperationalIntelligenceProfile(db.profile);
+  const module = operationalModuleFromText(query);
+  const directoryType = module === "Healthcare" ? "clinic"
+    : module === "Learning" ? "course"
+    : module === "Workforce" ? "job"
+    : module === "AgriTrade" ? "buyer"
+    : module === "AgriTech" ? "drone"
+    : "";
+  const directory = directoryType ? platformIntelligenceSearch(db, user, query, { type: directoryType }) : { matches: [] };
+  const smart = smartNextActions(db, user).items || [];
+  const workflowScore = operationalWorkflowScores(db).find(item => item.module === module)?.percent || 0;
+  const choices = [
+    ...(directory.matches || []).slice(0, 3).map((item, index) => ({
+      rank: index + 1,
+      title: item.name,
+      source: "saved-local-directory",
+      reason: item.service,
+      confidence: Math.min(96, 72 + Number(item.score || 0) * 4)
+    })),
+    ...smart.filter(item => !module || item.module === module || module.includes(item.module)).slice(0, 3).map((item, index) => ({
+      rank: (directory.matches || []).slice(0, 3).length + index + 1,
+      title: item.title,
+      source: "smart-next-actions",
+      reason: item.detail,
+      confidence: Math.min(92, 66 + workflowScore / 3)
+    }))
+  ].slice(0, 5);
+  const review = {
+    id: crypto.randomUUID(),
+    reviewNumber: `NEX-DEC-${String((intelligence.decisionReviews || []).length + 1).padStart(3, "0")}`,
+    query,
+    module,
+    workflowScore,
+    bestChoice: choices[0] || { title: "Clarify the goal", source: "conversation", reason: "Nexus needs one more detail to rank the next step.", confidence: 60 },
+    choices,
+    explanation: choices[0]
+      ? `Best next step for ${module}: ${choices[0].title}. Source: ${choices[0].source}.`
+      : `I need one more detail before ranking choices for ${module}.`,
+    createdBy: user.email,
+    createdAt: new Date().toISOString()
+  };
+  intelligence.decisionReviews.unshift(review);
+  intelligence.decisionReviews = intelligence.decisionReviews.slice(0, 60);
+  intelligence.confidenceEvents.unshift({ id: crypto.randomUUID(), module, confidence: review.bestChoice.confidence, reason: review.bestChoice.reason, createdAt: review.createdAt });
+  intelligence.confidenceEvents = intelligence.confidenceEvents.slice(0, 80);
+  rememberAgentMemory(db.profile, `Decision review ${review.reviewNumber}: ${review.explanation}`, { source: "operational-decision", category: "decision", module, confidence: (review.bestChoice.confidence || 70) / 100 });
+  logIntegration(db, {
+    providerId: "operational-intelligence",
+    module,
+    action: "operational.decision_review",
+    status: "success",
+    detail: review.explanation,
+    metadata: { review },
+    dispatch: false
+  });
+  return review;
+}
+
+function operationalIntelligenceCommandResponse(db, user, text, options = {}) {
+  const lower = String(text || "").toLowerCase();
+  const operationalSignal = /\b(operational intelligence|goal|playbook|what is incomplete|incomplete|decision review|rank|best next step|workflow is wrong|wrong workflow|needs adjustment|not working|recover|issue|fix this|correct this|track my goal|mission status|outcome)\b/.test(lower);
+  if (!operationalSignal) return null;
+  if (/\b(workflow is wrong|wrong workflow|needs adjustment|not working|recover|issue|fix this|correct this|map needs|intake.*wrong|button.*wrong|blank|stuck|partial)\b/.test(lower)) {
+    const issue = recordOperationalIssue(db, user, { detail: text });
+    return {
+      intent: "operational_intelligence.issue_recorded",
+      status: "guided-recovery",
+      response: `I recorded ${issue.issueNumber} for ${issue.module}. I will keep it simple: ${issue.recoverySteps[1]}.`,
+      metadata: { conversationMode: true, redirectSection: conversationModuleSignal(text).section || "agent", operationalIntelligence: true, issue }
+    };
+  }
+  if (/\b(playbook|run health|run crop|run learning|run workforce|run field|run investor|run proof)\b/.test(lower)) {
+    const selected = /\bhealth|doctor|clinic|medicine|pharmacy\b/.test(lower) ? "health-access"
+      : /\bcrop|sell|buyer|trade|shipment|delivery\b/.test(lower) ? "crop-sale"
+      : /\blearn|course|lesson|certificate\b/.test(lower) ? "learning-path"
+      : /\bjob|work|workforce|apply|shift\b/.test(lower) ? "workforce-placement"
+      : /\bdrone|field|scan\b/.test(lower) ? "field-intelligence"
+      : /\binvestor|proof|evidence\b/.test(lower) ? "investor-proof"
+      : "";
+    const result = runOperationalPlaybook(db, user, selected, { request: text });
+    return {
+      intent: "operational_intelligence.playbook_run",
+      status: "completed",
+      response: `${result.run.title} is running. First step: ${result.run.steps[0]?.title || "start"}. ${result.run.guardrail}`,
+      metadata: { conversationMode: true, redirectSection: conversationModuleSignal(text).section || "agent", operationalIntelligence: true, run: result.run, goal: result.goal }
+    };
+  }
+  if (/\b(decision review|rank|best next step|best option|what should i do next)\b/.test(lower)) {
+    const review = operationalDecisionReview(db, user, text);
+    return {
+      intent: "operational_intelligence.decision_reviewed",
+      status: "completed",
+      response: review.explanation,
+      metadata: { conversationMode: true, redirectSection: conversationModuleSignal(text).section || "agent", operationalIntelligence: true, review }
+    };
+  }
+  if (/\b(create|track|start|save|remember).*\b(goal|mission|outcome)\b/.test(lower) || /\b(goal to|track my goal)\b/.test(lower)) {
+    const cleaned = text.replace(/\b(nexus|create|track|start|save|remember|goal|mission|outcome|to|for)\b/gi, " ").replace(/\s+/g, " ").trim() || text;
+    const goal = createOperationalGoal(db, user, { goal: cleaned });
+    return {
+      intent: "operational_intelligence.goal_created",
+      status: "completed",
+      response: `${goal.goalNumber} is active for ${goal.module}. Next: ${goal.nextSteps[0]}.`,
+      metadata: { conversationMode: true, redirectSection: conversationModuleSignal(goal.title).section || "agent", operationalIntelligence: true, goal }
+    };
+  }
+  const model = operationalIntelligenceModel(db, user);
+  return {
+    intent: "operational_intelligence.status",
+    status: "completed",
+    response: `Operational intelligence is ${model.status} at ${model.score}%. Open issues: ${model.openIssues}. Strongest next step: ${model.latestDecision?.bestChoice?.title || model.suggestedCommands[0]}.`,
+    metadata: { conversationMode: true, redirectSection: "agent", operationalIntelligence: true, model }
   };
 }
 
@@ -14897,6 +15327,8 @@ async function runAgentCommand(db, user, command, options = {}) {
       if (intake) return intake;
     }
   }
+  const operationalIntelligenceCommand = operationalIntelligenceCommandResponse(db, user, text, options);
+  if (operationalIntelligenceCommand) return operationalIntelligenceCommand;
   if (conversational && isRuralDistressConversation(text)) {
     return conversationalReasoningResponse(db, user, text, { ...options, openDialog: true });
   }
@@ -16948,6 +17380,51 @@ async function api(req, res, url) {
     await writeDb(db);
     const state = publicState(db, user);
     state.platformIntelligenceDraft = draft;
+    return send(res, 200, state);
+  }
+
+  if (url.pathname === "/api/operational-intelligence/status" && req.method === "GET") {
+    if (!canUse(user, "ai")) return send(res, 403, { error: "Role does not allow operational intelligence" });
+    return send(res, 200, operationalIntelligenceModel(db, user));
+  }
+
+  if (url.pathname === "/api/operational-intelligence/goal" && req.method === "POST") {
+    if (!canUse(user, "ai")) return send(res, 403, { error: "Role does not allow operational intelligence goals" });
+    const body = await readBody(req);
+    const goal = createOperationalGoal(db, user, body);
+    await writeDb(db);
+    const state = publicState(db, user);
+    state.operationalIntelligenceGoal = goal;
+    return send(res, 200, state);
+  }
+
+  if (url.pathname === "/api/operational-intelligence/playbook" && req.method === "POST") {
+    if (!canUse(user, "ai")) return send(res, 403, { error: "Role does not allow operational intelligence playbooks" });
+    const body = await readBody(req);
+    const result = runOperationalPlaybook(db, user, String(body.type || body.playbookId || ""), body);
+    await writeDb(db);
+    const state = publicState(db, user);
+    state.operationalIntelligencePlaybook = result;
+    return send(res, 200, state);
+  }
+
+  if (url.pathname === "/api/operational-intelligence/issue" && req.method === "POST") {
+    if (!canUse(user, "ai")) return send(res, 403, { error: "Role does not allow operational intelligence issue recovery" });
+    const body = await readBody(req);
+    const issue = recordOperationalIssue(db, user, body);
+    await writeDb(db);
+    const state = publicState(db, user);
+    state.operationalIntelligenceIssue = issue;
+    return send(res, 200, state);
+  }
+
+  if (url.pathname === "/api/operational-intelligence/decision" && req.method === "POST") {
+    if (!canUse(user, "ai")) return send(res, 403, { error: "Role does not allow operational intelligence decisions" });
+    const body = await readBody(req);
+    const review = operationalDecisionReview(db, user, String(body.query || body.goal || ""));
+    await writeDb(db);
+    const state = publicState(db, user);
+    state.operationalIntelligenceDecision = review;
     return send(res, 200, state);
   }
 

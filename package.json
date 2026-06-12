@@ -14,6 +14,7 @@
     "conversation:smoke": "node scripts/conversation-brain-smoke.js",
     "conversation:rural-eval": "node scripts/synthetic-rural-conversation-eval.js",
     "platform:intelligence-qa": "node scripts/platform-intelligence-qa.js",
+    "operational:intelligence-qa": "node scripts/operational-intelligence-qa.js",
     "workflow:audit": "node scripts/workflow-button-audit.js",
     "grandma:pass": "node scripts/grandma-mode-user-pass.js",
     "user-mode:audit": "node scripts/user-mode-workflow-audit.js",

@@ -146,6 +146,11 @@ const endpoints = [
   "/api/platform-intelligence/import",
   "/api/platform-intelligence/daily-plan",
   "/api/platform-intelligence/draft",
+  "/api/operational-intelligence/status",
+  "/api/operational-intelligence/goal",
+  "/api/operational-intelligence/playbook",
+  "/api/operational-intelligence/issue",
+  "/api/operational-intelligence/decision",
   "/api/admin/subscriber",
   "/api/admin/test-user",
   "/api/admin/admin-user",
@@ -203,6 +208,17 @@ assert(server.includes("function platformIntelligenceSearch"), "Backend must sea
 assert(server.includes("platform_intelligence.directory_search"), "Platform intelligence search must create audit evidence and voice intent");
 assert(app.includes('workflow === "platform-intelligence"'), "Frontend must wire platform intelligence buttons to real workflows");
 assert(app.includes("/api/platform-intelligence/daily-plan") && app.includes("/api/platform-intelligence/draft"), "Frontend must call platform intelligence planning and draft endpoints");
+assert(html.includes("Operational Intelligence Desk"), "Integrations must include an operational intelligence desk");
+assert(server.includes("function ensureOperationalIntelligenceProfile"), "Backend must create operational intelligence storage");
+assert(server.includes("function operationalIntelligenceModel"), "Backend must expose an operational intelligence model");
+assert(server.includes("function createOperationalGoal"), "Backend must create operational goals");
+assert(server.includes("function runOperationalPlaybook"), "Backend must run operational playbooks");
+assert(server.includes("function recordOperationalIssue"), "Backend must record workflow issues and recovery steps");
+assert(server.includes("function operationalDecisionReview"), "Backend must rank operational next steps");
+assert(server.includes("operational_intelligence.issue_recorded"), "Operational intelligence must create voice issue-recovery intent");
+assert(app.includes('workflow === "operational-intelligence"'), "Frontend must wire operational intelligence buttons to real workflows");
+assert(app.includes("/api/operational-intelligence/goal") && app.includes("/api/operational-intelligence/playbook"), "Frontend must call operational intelligence goal and playbook endpoints");
+assert(pkg.scripts["operational:intelligence-qa"] === "node scripts/operational-intelligence-qa.js", "Package scripts must expose operational intelligence QA");
 assert(app.includes("activeVoiceAudio"), "Voice playback needs a single active audio guard");
 assert(html.includes("Buyer-Seller Communication Hub"), "AgriTrade needs a buyer-seller communication hub");
 assert(server.includes("function createBuyerSellerMessage"), "Backend needs buyer-seller message thread creation");
