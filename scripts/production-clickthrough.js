@@ -159,6 +159,10 @@ const endpoints = [
   "/api/network-intelligence/query",
   "/api/network-intelligence/action-readiness",
   "/api/network-intelligence/provider-map",
+  "/api/ecosystem-intelligence/status",
+  "/api/ecosystem-intelligence/mission",
+  "/api/ecosystem-intelligence/graph",
+  "/api/ecosystem-intelligence/readiness",
   "/api/admin/subscriber",
   "/api/admin/test-user",
   "/api/admin/admin-user",
@@ -247,6 +251,15 @@ assert(server.includes("network_intelligence.query_routed"), "Network intelligen
 assert(app.includes('workflow === "network-intelligence"'), "Frontend must wire network intelligence buttons to real workflows");
 assert(app.includes("/api/network-intelligence/query") && app.includes("/api/network-intelligence/action-readiness"), "Frontend must call network intelligence query and readiness endpoints");
 assert(pkg.scripts["network:intelligence-qa"] === "node scripts/network-intelligence-qa.js", "Package scripts must expose network intelligence QA");
+assert(html.includes("Ecosystem Intelligence Command"), "Integrations must include an ecosystem intelligence command center");
+assert(server.includes("function ensureEcosystemIntelligenceProfile"), "Backend must create ecosystem intelligence storage");
+assert(server.includes("function ecosystemActorGraph"), "Backend must model ecosystem actors and relationships");
+assert(server.includes("function runEcosystemMission"), "Backend must coordinate ecosystem missions");
+assert(server.includes("function ecosystemReadinessModel"), "Backend must score ecosystem readiness");
+assert(server.includes("ecosystem_intelligence.mission_coordinated"), "Ecosystem intelligence must create voice mission intent");
+assert(app.includes('workflow === "ecosystem-intelligence"'), "Frontend must wire ecosystem intelligence buttons to real workflows");
+assert(app.includes("/api/ecosystem-intelligence/mission"), "Frontend must call ecosystem mission endpoint");
+assert(pkg.scripts["ecosystem:intelligence-qa"] === "node scripts/ecosystem-intelligence-qa.js", "Package scripts must expose ecosystem intelligence QA");
 assert(app.includes("activeVoiceAudio"), "Voice playback needs a single active audio guard");
 assert(html.includes("Buyer-Seller Communication Hub"), "AgriTrade needs a buyer-seller communication hub");
 assert(server.includes("function createBuyerSellerMessage"), "Backend needs buyer-seller message thread creation");

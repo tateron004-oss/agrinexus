@@ -2014,6 +2014,7 @@ function publicState(db, user) {
     operationalIntelligence: operationalIntelligenceModel(db, user),
     adaptiveAutonomy: adaptiveAutonomyModel(db, user, providers),
     networkIntelligence: networkIntelligenceModel(db, user, providers),
+    ecosystemIntelligence: ecosystemIntelligenceModel(db, user, providers),
     sessionBriefing: sessionBriefingModel(db, user, providers),
     impactDashboard: impactDashboardModel(db, providers),
     missionTimeline: missionTimelineModel(db),
@@ -8922,6 +8923,342 @@ function networkIntelligenceCommandResponse(db, user, text, options = {}) {
     status: record.status,
     response: `${liveText} Source: ${record.sourceLabel}.${fallback} ${nextQuestion}`,
     metadata: { conversationMode: true, redirectSection: section, networkIntelligence: true, record, match: result.match, moduleSignal, frontierCommunication }
+  };
+}
+
+function ensureEcosystemIntelligenceProfile(profile) {
+  ensureNetworkedIntelligenceProfile(profile);
+  profile.ecosystemIntelligence = profile.ecosystemIntelligence || {};
+  const ecosystem = profile.ecosystemIntelligence;
+  ecosystem.missions = ecosystem.missions || [];
+  ecosystem.graphNodes = ecosystem.graphNodes || [];
+  ecosystem.graphEdges = ecosystem.graphEdges || [];
+  ecosystem.readinessAudits = ecosystem.readinessAudits || [];
+  ecosystem.outcomes = ecosystem.outcomes || [];
+  ecosystem.coordinationRuns = ecosystem.coordinationRuns || [];
+  return ecosystem;
+}
+
+function ecosystemMissionTemplates() {
+  return [
+    {
+      id: "rural-health-access",
+      title: "Rural health access mission",
+      modules: ["Healthcare", "Map & AI", "Communications"],
+      serviceLanes: ["health-network", "maps-routing", "communications-network"],
+      actors: ["patient", "mobile-clinic", "clinic", "pharmacy", "caregiver"],
+      plainOutcome: "Help a person explain a need, find clinic or pharmacy support, prepare safe intake, and contact help without diagnosing.",
+      steps: [
+        "Ask one simple safety question and record symptoms in plain language.",
+        "Find clinic, mobile clinic, or pharmacy options by country or local directory.",
+        "Open map or route support when a location is known.",
+        "Prepare call, SMS, WhatsApp, or in-app provider message.",
+        "Record consent, source truth, and next follow-up."
+      ],
+      guardrail: "No diagnosis, prescription, or clinical decision. Route to licensed care, emergency help, or medicine access support."
+    },
+    {
+      id: "crop-sale-delivery",
+      title: "Crop sale and delivery mission",
+      modules: ["AgriTrade", "Map & AI", "Communications"],
+      serviceLanes: ["trade-market-network", "maps-routing", "communications-network"],
+      actors: ["farmer", "buyer", "seller", "logistics-provider", "payment-provider"],
+      plainOutcome: "Help a farmer sell crops, speak to a buyer, prepare an order, map a route, and track delivery evidence.",
+      steps: [
+        "Ask crop, quantity, farm location, and buyer destination.",
+        "Check buyer or market path and label whether the source is live or local.",
+        "Draft the order, price note, and buyer message.",
+        "Open route and shipment tracking readiness.",
+        "Prepare receipt or transaction fee evidence when payment provider is connected."
+      ],
+      guardrail: "No real payment, payout, or logistics dispatch without confirmation and connected provider credentials."
+    },
+    {
+      id: "field-rescue",
+      title: "Field rescue and drone mission",
+      modules: ["AgriTech", "AgriTrade", "Map & AI"],
+      serviceLanes: ["field-drone-network", "trade-market-network", "maps-routing"],
+      actors: ["farmer", "field-agent", "drone-operator", "buyer", "agronomy-advisor"],
+      plainOutcome: "Turn field evidence into a simple farmer explanation, intervention plan, buyer update, and route decision.",
+      steps: [
+        "Ask crop, visible problem, field location, and photo or drone evidence.",
+        "Interpret field data in simple words and separate facts from guesses.",
+        "Suggest safe next field actions and what evidence is still needed.",
+        "Warn buyer or logistics if harvest quality or timing changed.",
+        "Record field packet and follow-up question."
+      ],
+      guardrail: "No crop disease certainty without field data, photo, drone, satellite, or agronomist confirmation."
+    },
+    {
+      id: "learning-to-work",
+      title: "Learning to workforce mission",
+      modules: ["Learning", "Workforce", "Communications"],
+      serviceLanes: ["learning-network", "workforce-network", "communications-network"],
+      actors: ["learner", "trainer", "employer", "mentor", "job-network"],
+      plainOutcome: "Guide a learner from course selection to practice, certificate evidence, job match, and application support.",
+      steps: [
+        "Ask what the learner wants to learn and how they prefer to learn.",
+        "Find or stage a course path and accessibility support.",
+        "Connect the skill to jobs or apprenticeship options.",
+        "Prepare application, interview, and certificate evidence.",
+        "Record progress and next lesson or job step."
+      ],
+      guardrail: "No job promise. Prepare evidence, application steps, and provider handoff."
+    },
+    {
+      id: "women-family-support",
+      title: "Women and family agriculture mission",
+      modules: ["Learning", "Healthcare", "AgriTrade", "Workforce"],
+      serviceLanes: ["learning-network", "health-network", "trade-market-network", "workforce-network"],
+      actors: ["woman-farmer", "caregiver", "child-learner", "clinic", "buyer", "cooperative"],
+      plainOutcome: "Support women farmers, caregivers, and children with safe learning, health access, cooperative selling, and work pathways.",
+      steps: [
+        "Ask who needs help and what is most urgent today.",
+        "Choose learning, clinic, crop sale, or work support first.",
+        "Keep child support framed as safe learning, not labor.",
+        "Prepare cooperative buyer or clinic communication when needed.",
+        "Record family-safe next steps and follow-up."
+      ],
+      guardrail: "Protect children, avoid clinical decisions, and keep family support simple, safe, and consent-based."
+    },
+    {
+      id: "whole-ecosystem",
+      title: "Whole ecosystem mission",
+      modules: ["Healthcare", "Learning", "Workforce", "AgriTrade", "Map & AI", "Communications"],
+      serviceLanes: ["health-network", "learning-network", "workforce-network", "trade-market-network", "maps-routing", "communications-network"],
+      actors: ["farmer", "patient", "learner", "worker", "clinic", "pharmacy", "buyer", "logistics-provider", "course-provider", "job-network"],
+      plainOutcome: "Coordinate the right health, learning, work, trade, map, and communication path from one spoken request.",
+      steps: [
+        "Listen for the main problem and the person involved.",
+        "Choose the first service lane and hold the other lanes in reserve.",
+        "Open the correct workflow and explain what is real now.",
+        "Ask one next question to complete the mission.",
+        "Record outcome evidence and unresolved provider gaps."
+      ],
+      guardrail: "Confirm before external actions and label live, saved-local, or local-fallback source truth."
+    }
+  ];
+}
+
+function ecosystemMissionFromText(text = "") {
+  const lower = String(text || "").toLowerCase();
+  if (/\b(mobile clinic|clinic|pharmacy|medicine|patient|doctor|health|intake|ehr|sick)\b/.test(lower)) return "rural-health-access";
+  if (/\b(sell|buyer|seller|crop|maize|cassava|order|payment|delivery|shipment|market|receipt)\b/.test(lower)) return "crop-sale-delivery";
+  if (/\b(drone|satellite|field|scan|crop bad|crop dying|pest|soil|harvest|yield)\b/.test(lower)) return "field-rescue";
+  if (/\b(course|learn|lesson|certificate|training|job|work|apply|career|mentor)\b/.test(lower)) return "learning-to-work";
+  if (/\b(women|woman|mother|children|child|family|caregiver|cooperative|girls)\b/.test(lower)) return "women-family-support";
+  if (/\b(ecosystem|whole platform|coordinate|all services|operating system|end to end|end-to-end)\b/.test(lower)) return "whole-ecosystem";
+  return "whole-ecosystem";
+}
+
+function ecosystemActorGraph(db, providers = runtimeProviders(db)) {
+  const registry = networkServiceRegistry(providers);
+  const statusForLane = laneId => registry.find(service => service.id === laneId) || {};
+  const nodes = [
+    { id: "farmer", label: "Farmer", group: "community", plainRole: "Asks for crop, sale, field, health, learning, or work help." },
+    { id: "patient", label: "Patient", group: "community", plainRole: "Gets intake, clinic, pharmacy, and safe care navigation." },
+    { id: "learner", label: "Learner", group: "community", plainRole: "Starts courses, accessibility support, certificates, and skill paths." },
+    { id: "worker", label: "Worker", group: "community", plainRole: "Builds a profile, finds roles, applies, and prepares for interviews." },
+    { id: "clinic", label: "Clinic", group: "health", plainRole: "Receives intake or referral handoff when connected." },
+    { id: "pharmacy", label: "Pharmacy", group: "health", plainRole: "Supports medicine access, location, and supply requests when connected." },
+    { id: "mobile-clinic", label: "Mobile clinic", group: "health", plainRole: "Moves care closer to rural patients and records visits." },
+    { id: "course-provider", label: "Course provider", group: "learning", plainRole: "Provides catalog, lessons, progress, and certificate evidence." },
+    { id: "job-network", label: "Job network", group: "workforce", plainRole: "Provides job listings, applications, shifts, and employer handoff." },
+    { id: "buyer", label: "Buyer", group: "trade", plainRole: "Receives crop offer, order, quality evidence, and delivery updates." },
+    { id: "logistics-provider", label: "Logistics provider", group: "trade", plainRole: "Provides shipment, route, tracking, and delivery evidence." },
+    { id: "payment-provider", label: "Payment provider", group: "trade", plainRole: "Handles checkout, transaction fee, receipt, and payout when connected." },
+    { id: "drone-operator", label: "Drone/satellite operator", group: "field", plainRole: "Provides field scan, crop stress, and route intelligence." },
+    { id: "nexus", label: "Nexus", group: "agent", plainRole: "Coordinates the ecosystem, explains next steps, and records source truth." }
+  ];
+  const edges = [
+    { from: "patient", to: "clinic", lane: "health-network", relationship: "intake and care handoff" },
+    { from: "patient", to: "pharmacy", lane: "health-network", relationship: "medicine access support" },
+    { from: "mobile-clinic", to: "pharmacy", lane: "health-network", relationship: "medical supply coordination" },
+    { from: "farmer", to: "buyer", lane: "trade-market-network", relationship: "crop offer and buyer communication" },
+    { from: "buyer", to: "logistics-provider", lane: "maps-routing", relationship: "delivery route and tracking" },
+    { from: "farmer", to: "payment-provider", lane: "trade-market-network", relationship: "receipt and transaction fee evidence" },
+    { from: "farmer", to: "drone-operator", lane: "field-drone-network", relationship: "field scan and crop condition evidence" },
+    { from: "learner", to: "course-provider", lane: "learning-network", relationship: "course path and certificate evidence" },
+    { from: "worker", to: "job-network", lane: "workforce-network", relationship: "job match and application handoff" },
+    { from: "nexus", to: "patient", lane: "communications-network", relationship: "voice, caption, phone, SMS, WhatsApp, or in-app guidance" },
+    { from: "nexus", to: "farmer", lane: "communications-network", relationship: "plain-language advisor and mission follow-up" }
+  ].map(edge => {
+    const service = statusForLane(edge.lane);
+    return {
+      ...edge,
+      serviceTitle: service.title || edge.lane,
+      status: service.status || "local-fallback",
+      sourceLabel: service.sourceLabel || "local-platform-fallback",
+      connectedCount: service.connectedCount || 0,
+      providerCount: service.providerCount || 0
+    };
+  });
+  return { nodes, edges };
+}
+
+function ecosystemReadinessModel(db, providers = runtimeProviders(db)) {
+  const registry = networkServiceRegistry(providers);
+  const graph = ecosystemActorGraph(db, providers);
+  const templates = ecosystemMissionTemplates();
+  const liveLanes = registry.filter(service => service.status === "live-capable").length;
+  const localLanes = registry.length - liveLanes;
+  return {
+    status: liveLanes ? "ecosystem-partly-live" : "ecosystem-local-operational",
+    score: Math.min(100, Math.round(48 + liveLanes * 5 + Math.min(18, graph.edges.length))),
+    liveLanes,
+    localLanes,
+    totalLanes: registry.length,
+    graphNodes: graph.nodes.length,
+    graphEdges: graph.edges.length,
+    missionCount: templates.length,
+    guardrails: [
+      "Healthcare stays access, safety, and provider handoff; Nexus does not diagnose or prescribe.",
+      "Payments, real calls, external messages, dispatch, and GPS updates require connected providers and confirmation.",
+      "Every mission records source truth so users know live data from saved local fallback.",
+      "Nexus asks one clear next question when location, crop, person, or provider is missing."
+    ]
+  };
+}
+
+function runEcosystemMission(db, user, body = {}) {
+  const ecosystem = ensureEcosystemIntelligenceProfile(db.profile);
+  const query = String(body.query || body.command || "Coordinate the AgriNexus ecosystem").trim();
+  const missionId = body.missionId || ecosystemMissionFromText(query);
+  const template = ecosystemMissionTemplates().find(item => item.id === missionId) || ecosystemMissionTemplates().find(item => item.id === "whole-ecosystem");
+  const country = body.country || networkCountryFromText(query, db);
+  const routes = (template.serviceLanes || []).map(serviceId => networkProviderMatch(db, user, query, { serviceId, country }));
+  const graph = ecosystemActorGraph(db, runtimeProviders(db));
+  const liveRoutes = routes.filter(route => route.status === "live-capable").length;
+  const record = {
+    id: crypto.randomUUID(),
+    missionNumber: `NEX-ECO-${String((ecosystem.missions || []).length + 1).padStart(3, "0")}`,
+    missionId: template.id,
+    title: template.title,
+    query,
+    country,
+    modules: template.modules,
+    actors: template.actors,
+    serviceLanes: template.serviceLanes,
+    status: liveRoutes ? "partly-live-coordinated" : "local-ecosystem-coordinated",
+    score: Math.min(98, Math.round(62 + liveRoutes * 7 + routes.length * 3)),
+    plainOutcome: template.plainOutcome,
+    steps: template.steps.map((step, index) => ({
+      id: `step-${index + 1}`,
+      title: step,
+      serviceLane: template.serviceLanes[index % template.serviceLanes.length],
+      status: routes[index % routes.length]?.status || "local-workflow-ready",
+      sourceLabel: routes[index % routes.length]?.sourceLabel || "local-platform-fallback"
+    })),
+    sourceLabels: Array.from(new Set(routes.map(route => route.sourceLabel))),
+    routeSummary: routes.map(route => ({
+      serviceId: route.serviceId,
+      serviceTitle: route.serviceTitle,
+      module: route.module,
+      status: route.status,
+      sourceLabel: route.sourceLabel,
+      confidence: route.confidence,
+      topProviderId: route.topProvider?.id || "",
+      localMatches: (route.localMatches || []).slice(0, 2).map(match => match.name)
+    })),
+    graphEdges: graph.edges.filter(edge => template.serviceLanes.includes(edge.lane)).slice(0, 8),
+    guardrail: template.guardrail,
+    nextQuestion: ecosystemNextQuestion(template.id),
+    createdBy: user.email,
+    createdAt: new Date().toISOString()
+  };
+  ecosystem.missions.unshift(record);
+  ecosystem.missions = ecosystem.missions.slice(0, 80);
+  ecosystem.coordinationRuns.unshift({ id: crypto.randomUUID(), missionId: record.id, missionNumber: record.missionNumber, status: record.status, score: record.score, createdAt: record.createdAt });
+  ecosystem.coordinationRuns = ecosystem.coordinationRuns.slice(0, 80);
+  ecosystem.outcomes.unshift({ id: crypto.randomUUID(), missionId: record.id, title: record.title, outcome: record.plainOutcome, nextQuestion: record.nextQuestion, createdAt: record.createdAt });
+  ecosystem.outcomes = ecosystem.outcomes.slice(0, 80);
+  ecosystem.graphNodes = graph.nodes;
+  ecosystem.graphEdges = graph.edges;
+  ecosystem.readinessAudits.unshift({ id: crypto.randomUUID(), missionId: record.id, score: record.score, sourceLabels: record.sourceLabels, guardrail: record.guardrail, createdAt: record.createdAt });
+  ecosystem.readinessAudits = ecosystem.readinessAudits.slice(0, 80);
+  rememberAgentMemory(db.profile, `Ecosystem mission ${record.missionNumber}: ${record.title} for ${country}.`, { source: "ecosystem-intelligence", category: "coordination", module: record.modules.join(", "), confidence: record.score / 100 });
+  logIntegration(db, {
+    providerId: "ecosystem-intelligence",
+    module: "Ecosystem",
+    action: "ecosystem.mission_coordinated",
+    status: "success",
+    detail: `${record.missionNumber} coordinated ${record.title} across ${record.serviceLanes.length} service lane(s).`,
+    metadata: { record },
+    dispatch: false
+  });
+  addActivity(db.profile, `${record.missionNumber} ecosystem mission coordinated: ${record.title}.`);
+  return { record, routes, graph };
+}
+
+function ecosystemNextQuestion(missionId = "") {
+  const questions = {
+    "rural-health-access": "Where is the patient, and do they need clinic, pharmacy, mobile clinic, or phone help first?",
+    "crop-sale-delivery": "What crop, how much, where is it now, and where should it go?",
+    "field-rescue": "What crop is affected, what do you see, and can you share a photo or field location?",
+    "learning-to-work": "What skill do you want to learn, and what job or income goal should it support?",
+    "women-family-support": "Who needs help first today: mother, child learner, farmer, patient, or cooperative?",
+    "whole-ecosystem": "What outcome should Nexus coordinate first: health, learning, work, trade, map, or communication?"
+  };
+  return questions[missionId] || questions["whole-ecosystem"];
+}
+
+function ecosystemIntelligenceModel(db, user, providers = runtimeProviders(db)) {
+  const ecosystem = ensureEcosystemIntelligenceProfile(db.profile);
+  const graph = ecosystemActorGraph(db, providers);
+  const readiness = ecosystemReadinessModel(db, providers);
+  const templates = ecosystemMissionTemplates();
+  ecosystem.graphNodes = graph.nodes;
+  ecosystem.graphEdges = graph.edges;
+  const missionBoost = Math.min(18, (ecosystem.missions || []).length * 3);
+  return {
+    status: readiness.status,
+    score: Math.min(100, readiness.score + missionBoost),
+    summary: "Ecosystem Intelligence lets Nexus coordinate people, providers, workflows, maps, communications, payments, learning, jobs, clinics, pharmacies, buyers, logistics, and field intelligence as one rural operating system.",
+    plainPromise: "A user can ask for an outcome, and Nexus decides which service lanes should work together, what can happen now, what needs live providers, and what question to ask next.",
+    readiness,
+    graph,
+    missions: templates,
+    latestMission: (ecosystem.missions || [])[0] || null,
+    latestOutcome: (ecosystem.outcomes || [])[0] || null,
+    recentRuns: (ecosystem.coordinationRuns || []).slice(0, 5),
+    suggestedCommands: [
+      "Nexus, coordinate a mobile clinic and pharmacy mission in Kenya",
+      "Nexus, help me sell maize and track delivery to Nigeria",
+      "Nexus, coordinate drone field support and buyer update",
+      "Nexus, connect my course to a job application",
+      "Nexus, support women farmers and children with learning and health access",
+      "Nexus, ecosystem intelligence status"
+    ]
+  };
+}
+
+function ecosystemIntelligenceCommandResponse(db, user, text, options = {}) {
+  const lower = String(text || "").toLowerCase();
+  const ecosystemSignal = /\b(ecosystem intelligence|coordinate|connect.*network|whole platform|whole ecosystem|end to end|end-to-end|mobile clinic.*pharmacy|pharmacy.*mobile clinic|sell.*crop.*track|buyer.*delivery|buyer.*logistics|course.*job|clinic.*map|doctor.*pharmacy|women.*children.*agriculture|field.*buyer.*route)\b/.test(lower);
+  if (!ecosystemSignal) return null;
+  if (/\b(status|what can|readiness|explain|describe)\b/.test(lower) && !/\b(coordinate|run|start|help|connect|sell|find|track)\b/.test(lower)) {
+    const model = ecosystemIntelligenceModel(db, user);
+    return {
+      intent: "ecosystem_intelligence.status",
+      status: "completed",
+      response: `Ecosystem Intelligence is ${model.status} at ${model.score}%. Nexus can coordinate ${model.readiness.missionCount} mission types across ${model.readiness.graphNodes} actors and ${model.readiness.graphEdges} relationships.`,
+      metadata: { conversationMode: true, redirectSection: "integrations", ecosystemIntelligence: true, model }
+    };
+  }
+  const result = runEcosystemMission(db, user, { query: text });
+  const record = result.record;
+  const moduleSignal = {
+    module: record.modules[0] || "Ecosystem",
+    section: record.modules.some(module => /map/i.test(module)) ? "map" : adaptiveModuleSection(record.modules[0] || "Platform"),
+    score: 3,
+    source: "ecosystem-intelligence"
+  };
+  const frontierCommunication = frontierCommunicationIntelligenceModel(text, moduleSignal, user, options);
+  return {
+    intent: "ecosystem_intelligence.mission_coordinated",
+    status: record.status,
+    response: `I can coordinate that as ${record.title}. ${record.plainOutcome} Source: ${record.sourceLabels.join(", ")}. ${record.nextQuestion}`,
+    metadata: { conversationMode: true, redirectSection: moduleSignal.section, ecosystemIntelligence: true, record, routes: result.routes, moduleSignal, frontierCommunication }
   };
 }
 
@@ -15939,6 +16276,8 @@ async function runAgentCommand(db, user, command, options = {}) {
   }
   const adaptiveAutonomyCommand = adaptiveAutonomyCommandResponse(db, user, text, options);
   if (adaptiveAutonomyCommand) return adaptiveAutonomyCommand;
+  const ecosystemIntelligenceCommand = ecosystemIntelligenceCommandResponse(db, user, text, options);
+  if (ecosystemIntelligenceCommand) return ecosystemIntelligenceCommand;
   const networkIntelligenceCommand = networkIntelligenceCommandResponse(db, user, text, options);
   if (networkIntelligenceCommand) return networkIntelligenceCommand;
   const operationalIntelligenceCommand = operationalIntelligenceCommandResponse(db, user, text, options);
@@ -18112,6 +18451,34 @@ async function api(req, res, url) {
       countryCoverage: networkCountryCoverageModel(db, runtimeProviders(db)),
       model: networkIntelligenceModel(db, user, runtimeProviders(db))
     });
+  }
+
+  if (url.pathname === "/api/ecosystem-intelligence/status" && req.method === "GET") {
+    if (!canUse(user, "ai")) return send(res, 403, { error: "Role does not allow ecosystem intelligence" });
+    return send(res, 200, ecosystemIntelligenceModel(db, user, runtimeProviders(db)));
+  }
+
+  if (url.pathname === "/api/ecosystem-intelligence/mission" && req.method === "POST") {
+    if (!canUse(user, "ai")) return send(res, 403, { error: "Role does not allow ecosystem missions" });
+    const body = await readBody(req);
+    const result = runEcosystemMission(db, user, body);
+    await writeDb(db);
+    const state = publicState(db, user);
+    state.ecosystemMission = result;
+    return send(res, 200, state);
+  }
+
+  if (url.pathname === "/api/ecosystem-intelligence/graph" && req.method === "GET") {
+    if (!canUse(user, "ai")) return send(res, 403, { error: "Role does not allow ecosystem graph" });
+    return send(res, 200, {
+      graph: ecosystemActorGraph(db, runtimeProviders(db)),
+      model: ecosystemIntelligenceModel(db, user, runtimeProviders(db))
+    });
+  }
+
+  if (url.pathname === "/api/ecosystem-intelligence/readiness" && req.method === "GET") {
+    if (!canUse(user, "ai")) return send(res, 403, { error: "Role does not allow ecosystem readiness" });
+    return send(res, 200, ecosystemReadinessModel(db, runtimeProviders(db)));
   }
 
   if (url.pathname === "/api/demo/run" && req.method === "POST") {

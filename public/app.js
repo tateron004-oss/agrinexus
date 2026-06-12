@@ -10591,6 +10591,29 @@ function render() {
     `).join("");
     $("#networkCoveragePanel").innerHTML = countryHtml + gapHtml || `<div><strong>${translateText("Coverage")}</strong><span>${translateText("Network coverage is loading.")}</span></div>`;
   }
+  const ecosystem = data.ecosystemIntelligence || {};
+  if ($("#ecosystemIntelligenceScore")) $("#ecosystemIntelligenceScore").textContent = `${Number(ecosystem.score || 0)}%`;
+  if ($("#ecosystemIntelligencePanel")) {
+    const readiness = ecosystem.readiness || {};
+    $("#ecosystemIntelligencePanel").innerHTML = [
+      `<div><strong>${translateText(ecosystem.status || "ecosystem-local-operational")}</strong><span>${translateText(ecosystem.summary || "Ecosystem intelligence is ready.")}</span></div>`,
+      `<div><strong>${translateText("Plain promise")}</strong><span>${translateText(ecosystem.plainPromise || "Ask for an outcome and Nexus coordinates the right service lanes.")}</span></div>`,
+      `<div><strong>${translateText("Mission coverage")}</strong><span>${translateText(`${readiness.missionCount || 0} missions, ${readiness.graphNodes || 0} actors, ${readiness.graphEdges || 0} relationships`)}</span></div>`,
+      ecosystem.latestMission ? `<div><strong>${translateText(`Latest mission: ${ecosystem.latestMission.missionNumber}`)}</strong><span>${translateText(`${ecosystem.latestMission.title} - ${ecosystem.latestMission.status}`)}</span><small>${translateText(ecosystem.latestMission.nextQuestion || "")}</small></div>` : `<div><strong>${translateText("Latest mission")}</strong><span>${translateText("Ask Nexus to coordinate a clinic, crop sale, field scan, course-to-job path, or family support mission.")}</span></div>`,
+      ...((ecosystem.missions || []).slice(0, 3).map(mission => `<div><strong>${translateText(mission.title)}</strong><span>${translateText(mission.plainOutcome)}</span><small>${translateText((mission.modules || []).join(", "))}</small></div>`))
+    ].join("");
+  }
+  if ($("#ecosystemGraphPanel")) {
+    const graph = ecosystem.graph || {};
+    const edgeHtml = (graph.edges || []).slice(0, 7).map(edge => `
+      <div>
+        <strong>${translateText(`${edge.from} to ${edge.to}`)}</strong>
+        <span>${translateText(edge.relationship)}</span>
+        <small>${translateText(`${edge.serviceTitle}: ${edge.sourceLabel}`)}</small>
+      </div>
+    `).join("");
+    $("#ecosystemGraphPanel").innerHTML = edgeHtml || `<div><strong>${translateText("Ecosystem graph")}</strong><span>${translateText("Relationships are loading.")}</span></div>`;
+  }
   renderCommunicationPanel("#providerCommunicationPanel", "Platform", "No provider support thread yet. Message the provider desk to create a two-way operations record.");
 
   $("#environmentPanel").innerHTML = [
@@ -13781,6 +13804,81 @@ function workflowConfig(workflow, action, element) {
         { title: "Provider route", detail: "Nexus chooses the best service lane and provider slot.", status: "ready", label: "Route" },
         { title: "Source truth", detail: "Nexus labels live provider, saved local directory, or local fallback.", status: "ready", label: "Truth" },
         { title: "Action guard", detail: "External dispatch, payments, diagnosis, and GPS remain protected until provider setup and approval.", status: "ready", label: "Safe" }
+      ]
+    });
+  }
+  if (workflow === "ecosystem-intelligence") {
+    const configs = {
+      health: {
+        title: "Coordinate rural health access",
+        summary: "Coordinate patient intake, mobile clinic, clinic, pharmacy, map, and communications support as one safety-bounded mission.",
+        confirmLabel: "Coordinate health mission",
+        path: "/api/ecosystem-intelligence/mission",
+        body: { missionId: "rural-health-access", query: "Coordinate a mobile clinic, clinic, pharmacy, map, and patient intake mission in Kenya", country: "Kenya" },
+        success: "Health ecosystem mission coordinated",
+        record: "Mission record, provider routes, graph relationships, safety guardrail, next question, source truth, and audit evidence",
+        provider: "Uses live providers when connected; otherwise coordinates saved clinic/pharmacy records, intake, map readiness, and in-app communication."
+      },
+      trade: {
+        title: "Coordinate crop sale and delivery",
+        summary: "Coordinate farmer, buyer, seller, order, payment readiness, route, shipment tracking, and buyer communication.",
+        confirmLabel: "Coordinate crop sale",
+        path: "/api/ecosystem-intelligence/mission",
+        body: { missionId: "crop-sale-delivery", query: "Help me sell maize, contact a buyer, create an order, and track delivery from Kenya to Nigeria", country: "Kenya" },
+        success: "Crop sale ecosystem mission coordinated",
+        record: "Trade mission, buyer/logistics/payment routes, map readiness, source truth, receipt path, and communication evidence",
+        provider: "Real dispatch and payments require connected providers; local mission still builds buyer, order, route, and receipt evidence."
+      },
+      field: {
+        title: "Coordinate field rescue and drone support",
+        summary: "Coordinate farmer field evidence, drone/satellite support, simple crop explanation, buyer update, and route planning.",
+        confirmLabel: "Coordinate field rescue",
+        path: "/api/ecosystem-intelligence/mission",
+        body: { missionId: "field-rescue", query: "Coordinate drone field scan, crop problem support, buyer update, and route plan", country: "Kenya" },
+        success: "Field ecosystem mission coordinated",
+        record: "Field mission, drone route, crop support packet, buyer update path, map evidence, and source truth",
+        provider: "Drone and satellite data improve certainty; local mission keeps field evidence and simple farmer guidance."
+      },
+      "learning-work": {
+        title: "Coordinate learning to workforce path",
+        summary: "Coordinate course selection, accessibility support, certificate evidence, job match, application, and interview prep.",
+        confirmLabel: "Coordinate learner path",
+        path: "/api/ecosystem-intelligence/mission",
+        body: { missionId: "learning-to-work", query: "Connect a farming course to a job application and certificate path", country: "Kenya" },
+        success: "Learning-to-work ecosystem mission coordinated",
+        record: "Course path, job route, certificate evidence, application support, mentor step, and audit evidence",
+        provider: "Live catalogs and jobs improve freshness; local mission still shows course, progress, certificate, and application behavior."
+      },
+      "women-family": {
+        title: "Coordinate women and family agriculture support",
+        summary: "Coordinate women farmer support, child-safe learning, clinic access, cooperative selling, and workforce pathways.",
+        confirmLabel: "Coordinate family support",
+        path: "/api/ecosystem-intelligence/mission",
+        body: { missionId: "women-family-support", query: "Support women farmers, children learning, clinic access, and cooperative crop selling", country: "Kenya" },
+        success: "Women and family ecosystem mission coordinated",
+        record: "Family support mission, safe learning, health navigation, cooperative trade, workforce route, and source truth",
+        provider: "Local workflows work now; live providers increase clinic, learning, job, and buyer coverage."
+      },
+      graph: {
+        title: "Review ecosystem provider graph",
+        summary: "Open the actor and relationship graph connecting farmers, patients, learners, workers, providers, buyers, logistics, pharmacies, and Nexus.",
+        confirmLabel: "Review graph",
+        path: "/api/ecosystem-intelligence/mission",
+        body: { missionId: "whole-ecosystem", query: "Review the whole AgriNexus ecosystem graph and service relationships", country: "Pan-African" },
+        success: "Ecosystem graph mission recorded",
+        record: "Actor graph, service relationships, source labels, readiness score, and coordination evidence",
+        provider: "The graph uses provider status, local workflows, and source truth from the current platform state."
+      }
+    };
+    const selected = configs[action] || configs.health;
+    return simpleWorkflowConfig({
+      eyebrow: "Ecosystem intelligence workflow",
+      ...selected,
+      redirectSection: "integrations",
+      checklist: [
+        { title: "Actors", detail: "Nexus identifies the people and providers involved.", status: "ready", label: "People" },
+        { title: "Service lanes", detail: "Nexus coordinates health, trade, maps, learning, work, communications, or field intelligence together.", status: "ready", label: "Lanes" },
+        { title: "Outcome", detail: "Nexus records the mission, source truth, guardrail, and next question.", status: "ready", label: "Done" }
       ]
     });
   }
