@@ -1628,6 +1628,236 @@ function noVendorUpgradeTenPack(db, user, providers = runtimeProviders(db), opti
   return pack;
 }
 
+function offlineReasoningKnowledgeBase(db, user) {
+  const { country, route } = activeContext(db);
+  const course = (db.courses || []).find(item => item.id === db.profile.activeCourseId) || (db.courses || [])[0] || {};
+  const role = (db.roles || []).find(item => roleReadiness(db.profile, item).eligible) || (db.roles || [])[0] || {};
+  const product = (db.products || []).find(item => item.countryId === country.id) || (db.products || [])[0] || {};
+  return {
+    health: {
+      title: "Rural health access reasoning",
+      facts: [
+        "Nexus is not a doctor and does not diagnose.",
+        "Nexus can collect symptoms, safety signals, language, accessibility needs, caregiver support, and contact method.",
+        "Nexus can prepare provider handoff, clinic/pharmacy/mobile-clinic search, follow-up, and emergency guidance."
+      ],
+      decisionTree: ["Check danger signs first", "Ask what happened and where the person is", "Capture language and access needs", "Route to intake, clinic, pharmacy, mobile clinic, or provider handoff"],
+      redFlags: ["trouble breathing", "heavy bleeding", "unconscious", "chest pain", "severe dehydration", "confusion", "seizure", "very young child with danger signs"],
+      nextQuestion: "Is the person safe right now, and what symptom or injury needs help?",
+      suggestedCommand: "Nexus, start telehealth intake",
+      section: "health"
+    },
+    trade: {
+      title: "Crop sale and buyer reasoning",
+      facts: [
+        `${product.name || "The active crop"} can be organized into a local lot, buyer message, order, route, payment-readiness record, and receipt.`,
+        "Nexus can create local buyer/seller communication evidence before a real marketplace partner is signed.",
+        "Nexus should confirm before sending buyer messages, booking shipment, or preparing payment actions."
+      ],
+      decisionTree: ["Ask crop and quantity", "Check field quality or drone evidence", "Prepare buyer contact", "Create order evidence", "Track route and delivery", "Prepare transaction receipt"],
+      redFlags: ["unclear buyer", "payment dispute", "unsafe route", "spoiled crop", "missing quantity", "price disagreement"],
+      nextQuestion: "What crop are you selling, how much do you have, and do you already have a buyer?",
+      suggestedCommand: "Nexus, help me sell my crop",
+      section: "trade"
+    },
+    drone: {
+      title: "Drone and field reasoning",
+      facts: [
+        "Nexus can interpret local drone-style findings in simple farmer language.",
+        "Nexus can separate likely crop stress, water issues, pest pressure, and harvest readiness from technical imagery terms.",
+        "Nexus should recommend a field check or provider/vendor review before costly intervention."
+      ],
+      decisionTree: ["Ask crop and field location", "Capture what the farmer sees", "Run local field scan evidence", "Explain finding simply", "Create intervention task", "Attach buyer-readiness evidence"],
+      redFlags: ["rapid crop loss", "widespread pest damage", "standing water", "drought stress", "unknown chemical exposure"],
+      nextQuestion: "What crop is in the field, and what looks wrong to the farmer?",
+      suggestedCommand: "Nexus, run drone scan on my farm",
+      section: "trade"
+    },
+    learning: {
+      title: "Learning path reasoning",
+      facts: [
+        `${course.title || "The active course"} can be started locally and connected to captions, audio guide, low-bandwidth packet, quiz, and certificate evidence.`,
+        "Nexus can ask the learner goal and accessibility needs before choosing the next lesson.",
+        "Nexus can connect certificate evidence to workforce readiness."
+      ],
+      decisionTree: ["Ask learning goal", "Choose course", "Set language/accessibility support", "Start lesson", "Complete quiz", "Issue certificate", "Connect to workforce"],
+      redFlags: ["cannot read", "poor internet", "hearing support needed", "visual support needed", "child learner needs protection"],
+      nextQuestion: "What does the learner want to learn, and do they need audio, captions, or large text?",
+      suggestedCommand: "Nexus, start a course",
+      section: "learning"
+    },
+    workforce: {
+      title: "Workforce readiness reasoning",
+      facts: [
+        `${role.title || "The active role"} can be matched against local readiness, course certificates, interview prep, mentor support, and application evidence.`,
+        "Nexus can guide job seekers with imperfect language by asking one question at a time.",
+        "Nexus should not promise employment without a real employer/provider."
+      ],
+      decisionTree: ["Ask desired work", "Build profile", "Check readiness gaps", "Recommend course or mentor", "Apply to role when eligible", "Prepare interview or shift"],
+      redFlags: ["missing identity evidence", "unmet safety training", "unclear availability", "role not eligible yet", "payment setup missing"],
+      nextQuestion: "What kind of work does the person want, and are they ready to apply now?",
+      suggestedCommand: "Nexus, show me jobs",
+      section: "workforce"
+    },
+    map: {
+      title: "Map, clinic, route, and logistics reasoning",
+      facts: [
+        `${route.name || "The active corridor"} can be reviewed with local route risk, shipment checkpoints, clinic/pharmacy/mobile-clinic points, and map evidence.`,
+        "Nexus can open the map, show surrounding context, and explain route risk plainly.",
+        "Live GPS depends on browser permission and provider setup."
+      ],
+      decisionTree: ["Ask origin and destination", "Open map", "Check route risk", "Show checkpoints or facilities", "Track status", "Prepare next action"],
+      redFlags: ["unsafe road", "clinic too far", "cold-chain risk", "delayed shipment", "unknown destination"],
+      nextQuestion: "Where is the person, crop, clinic, buyer, or shipment starting from and going to?",
+      suggestedCommand: "Nexus, open full scale global map",
+      section: "map"
+    },
+    family: {
+      title: "Women, children, and family agriculture reasoning",
+      facts: [
+        "Nexus can support women and children with training, safety, health access, crop support, learning, and income pathways.",
+        "Children and vulnerable users require extra safety, consent, and human review.",
+        "Nexus can provide resource navigation and plain-language support without replacing professionals."
+      ],
+      decisionTree: ["Ask who needs support", "Check safety and consent", "Choose learning, health, crop, or workforce path", "Use simple language", "Record follow-up need"],
+      redFlags: ["child safety", "violence", "medical danger", "exploitation", "school-age work risk"],
+      nextQuestion: "Is this for a woman, child, family, farmer, learner, or patient, and what support is most urgent?",
+      suggestedCommand: "Nexus, open women and family support",
+      section: "learning"
+    },
+    platform: {
+      title: "Platform operating reasoning",
+      facts: [
+        "Without live providers, Nexus can still reason from local data, workflows, memory, maps, simulated catalogs, and saved evidence.",
+        "Nexus must separate local capability from live vendor capability.",
+        "Nexus should give one next action, one next question, and a confidence score."
+      ],
+      decisionTree: ["Classify the request", "Use local knowledge and records", "Check safety/provider boundary", "Recommend next action", "Ask one question", "Record evidence"],
+      redFlags: ["health diagnosis", "payment execution", "legal advice", "employment guarantee", "external message without confirmation"],
+      nextQuestion: "What outcome do you want Nexus to help complete first?",
+      suggestedCommand: "Nexus, what should I do next?",
+      section: "agent"
+    }
+  };
+}
+
+function offlineReasoningScenarioSignal(command = "") {
+  const lower = String(command || "").toLowerCase();
+  const candidates = [
+    { key: "health", terms: ["doctor", "clinic", "patient", "medicine", "pharmacy", "health", "sick", "injury", "pain", "telehealth", "mobile clinic", "symptom"] },
+    { key: "trade", terms: ["sell", "buyer", "crop", "maize", "cassava", "rice", "market", "order", "payment", "wallet", "seller", "price"] },
+    { key: "drone", terms: ["drone", "field", "crop stress", "pest", "soil", "irrigation", "harvest", "footage", "scan", "farm problem"] },
+    { key: "learning", terms: ["learn", "course", "lesson", "training", "student", "learner", "certificate", "quiz", "audio", "caption"] },
+    { key: "workforce", terms: ["job", "work", "role", "apply", "worker", "employment", "shift", "interview", "mentor", "skills"] },
+    { key: "map", terms: ["map", "route", "track", "shipment", "location", "gps", "near me", "nearest", "facility", "delivery", "logistics"] },
+    { key: "family", terms: ["woman", "women", "child", "children", "family", "mother", "girls", "youth", "school", "caregiver"] },
+    { key: "platform", terms: ["offline", "without provider", "without live", "reason", "decision tree", "confidence", "what should", "next step", "local"] }
+  ];
+  const scored = candidates.map(candidate => {
+    const hits = candidate.terms.filter(term => lower.includes(term));
+    return { ...candidate, hits, score: hits.length };
+  }).sort((a, b) => b.score - a.score);
+  const best = scored[0];
+  return best && best.score > 0 ? best : { key: "platform", hits: [], score: 0 };
+}
+
+function offlineReasoningBrainModel(db, user, command = "", options = {}) {
+  ensureAiProfile(db.profile);
+  ensureLearningProfile(db.profile);
+  ensureWorkforceProfile(db.profile);
+  ensureHealthProfile(db.profile);
+  ensureTradeProfile(db.profile);
+  ensureCommunicationProfile(db.profile);
+  const text = String(command || "").trim() || "Reason through the best local next step without live providers.";
+  const knowledge = offlineReasoningKnowledgeBase(db, user);
+  const signal = offlineReasoningScenarioSignal(text);
+  const domain = knowledge[signal.key] || knowledge.platform;
+  const memories = retrieveAgentMemories(db.profile, text, 5);
+  const localData = {
+    courses: (db.courses || []).length,
+    roles: (db.roles || []).length,
+    products: (db.products || []).length,
+    countries: (db.countries || []).length,
+    routes: (db.routes || []).length,
+    healthIntakes: (db.profile.healthIntakes || []).length,
+    applications: (db.profile.applications || []).length,
+    orders: (db.profile.orders || []).length,
+    droneScans: (db.profile.droneScans || []).length,
+    communicationThreads: (db.profile.communicationThreads || []).length + (db.profile.tradeMessageThreads || []).length
+  };
+  const localDataScore = Math.min(28, Object.values(localData).filter(value => Number(value) > 0).length * 3);
+  const clueScore = Math.min(32, Number(signal.score || 0) * 8);
+  const memoryScore = Math.min(18, memories.length * 4);
+  const workflowScore = domain.decisionTree.length >= 4 ? 12 : 6;
+  const safetyRisk = domain.redFlags.some(flag => text.toLowerCase().includes(flag)) ? 12 : 0;
+  const confidence = Math.max(54, Math.min(96, 48 + clueScore + memoryScore + localDataScore + workflowScore - safetyRisk));
+  const reviewNeeded = safetyRisk > 0 || /diagnos|prescribe|pay now|send money|guarantee job|legal/i.test(text);
+  const reasoning = {
+    id: crypto.randomUUID(),
+    status: reviewNeeded ? "needs-human-review" : confidence >= 82 ? "high-confidence-local-reasoning" : "needs-one-more-answer",
+    command: text,
+    domainKey: signal.key,
+    title: domain.title,
+    confidence,
+    confidenceLabel: confidence >= 85 ? "high" : confidence >= 70 ? "medium" : "needs more information",
+    whatNexusKnows: domain.facts,
+    decisionTree: domain.decisionTree,
+    redFlags: domain.redFlags,
+    nextQuestion: domain.nextQuestion,
+    recommendedAction: domain.suggestedCommand,
+    redirectSection: domain.section,
+    localData,
+    memoriesUsed: memories.map(item => ({ id: item.id, category: item.category, text: item.text || item.response || item.command, confidence: item.confidence })),
+    providerBoundary: "This reasoning uses AgriNexus local data, simulated catalogs, saved workflow evidence, maps, and memory. It does not claim a live provider acted unless credentials are connected.",
+    safetyBoundary: reviewNeeded
+      ? "Human or provider review is required before sensitive health, payment, employment, legal, or external communication action."
+      : "Nexus can guide the next local workflow, but still asks confirmation before sensitive actions.",
+    plainLanguageSummary: `${domain.title}: I can reason locally with ${confidence}% confidence. Best next action: ${domain.suggestedCommand}. Next question: ${domain.nextQuestion}`,
+    createdAt: new Date().toISOString()
+  };
+  if (options.persist) {
+    db.profile.offlineReasoningRuns = db.profile.offlineReasoningRuns || [];
+    db.profile.offlineReasoningRuns.unshift(reasoning);
+    db.profile.offlineReasoningRuns = db.profile.offlineReasoningRuns.slice(0, 30);
+    rememberAgentMemory(db.profile, `Offline Reasoning Brain used ${domain.title} for: ${text}. Next question: ${domain.nextQuestion}`, { source: "offline-reasoning-brain", category: "pattern", module: domain.title, confidence: confidence / 100 });
+    logIntegration(db, {
+      providerId: "local-offline-reasoning",
+      module: "AI",
+      action: "agent.offline_reasoning_brain",
+      detail: reasoning.plainLanguageSummary,
+      metadata: { reasoningId: reasoning.id, domain: signal.key, confidence, reviewNeeded, localData },
+      dispatch: false
+    });
+    addActivity(db.profile, `Offline Reasoning Brain reviewed ${domain.title} at ${confidence}% confidence.`);
+    db.profile.agentMemory.lastOfflineReasoningBrain = reasoning;
+    db.profile.agentMemory.lastStatus = reasoning.status;
+    db.profile.agentMemory.lastSummary = reasoning.plainLanguageSummary;
+    db.profile.agentMemory.updatedAt = reasoning.createdAt;
+  }
+  return reasoning;
+}
+
+function offlineReasoningCommandResponse(db, user, text = "", options = {}) {
+  const lower = String(text || "").toLowerCase();
+  const explicitReasoning = /\b(offline reasoning|local reasoning|reasoning brain|offline brain|local brain|decision tree|scenario reasoning|confidence score|high functional reasoning|reason through this|reason through|think through|what should i do if)\b/.test(lower);
+  const providerBoundReasoning = /\b(without live providers|without providers|without vendors|no providers|no vendors)\b/.test(lower)
+    && /\b(reason|reasoning|decision|scenario|think|plan|brain|confidence)\b/.test(lower);
+  const explicit = explicitReasoning || providerBoundReasoning;
+  if (!explicit) return null;
+  const reasoning = offlineReasoningBrainModel(db, user, text, { persist: true });
+  return {
+    intent: "conversation.offline_reasoning_brain",
+    response: `${reasoning.plainLanguageSummary} ${reasoning.safetyBoundary}`,
+    status: reasoning.status,
+    metadata: {
+      conversationMode: true,
+      redirectSection: reasoning.redirectSection,
+      offlineReasoningBrain: reasoning,
+      suggestedReplies: [reasoning.recommendedAction, "ask one follow-up", "show me the decision tree", "what needs human review"]
+    }
+  };
+}
+
 function remoteRuralFarmerLaunchKit(db, user, providers = runtimeProviders(db), options = {}) {
   ensureOperationsProfile(db.profile);
   ensureLearningProfile(db.profile);
@@ -17018,6 +17248,8 @@ async function runAgentCommand(db, user, command, options = {}) {
       if (intake) return intake;
     }
   }
+  const offlineReasoningCommand = offlineReasoningCommandResponse(db, user, text, options);
+  if (offlineReasoningCommand) return offlineReasoningCommand;
   const adaptiveAutonomyCommand = adaptiveAutonomyCommandResponse(db, user, text, options);
   if (adaptiveAutonomyCommand) return adaptiveAutonomyCommand;
   const autonomousOrchestrationCommand = autonomousOrchestrationCommandResponse(db, user, text, options);
@@ -18297,6 +18529,16 @@ async function api(req, res, url) {
     await writeDb(db);
     const state = publicState(db, user);
     state.noVendorUpgradeTenResult = pack;
+    return send(res, 200, state);
+  }
+
+  if (url.pathname === "/api/intelligence/offline-reasoning" && req.method === "POST") {
+    if (!user) return send(res, 401, { error: "Sign in required" });
+    const body = await readBody(req);
+    const reasoning = offlineReasoningBrainModel(db, user, body.command || body.prompt || "", { persist: body.persist !== false });
+    await writeDb(db);
+    const state = publicState(db, user);
+    state.offlineReasoningBrainResult = reasoning;
     return send(res, 200, state);
   }
 

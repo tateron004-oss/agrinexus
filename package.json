@@ -14,6 +14,7 @@
     "conversation:smoke": "node scripts/conversation-brain-smoke.js",
     "phone:greeting-qa": "node scripts/phone-greeting-qa.js",
     "conversation:rural-eval": "node scripts/synthetic-rural-conversation-eval.js",
+    "offline:reasoning-qa": "node scripts/offline-reasoning-brain-qa.js",
     "platform:intelligence-qa": "node scripts/platform-intelligence-qa.js",
     "operational:intelligence-qa": "node scripts/operational-intelligence-qa.js",
     "adaptive:autonomy-qa": "node scripts/adaptive-autonomy-qa.js",

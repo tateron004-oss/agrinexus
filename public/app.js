@@ -61,8 +61,8 @@ let routeTrackingWatchId = null;
 let routeTrackingPoints = [];
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-191";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v171";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-192";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v172";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
 const VOICE_ATTENTION_DELAY_MS = 900;
@@ -7524,6 +7524,8 @@ function voiceCommandGroups() {
         "Nexus, production one through eight",
         "Nexus, what am I trying to do",
         "Nexus, what do you remember",
+        "Nexus, use offline reasoning brain",
+        "Nexus, reason through this without live providers",
         "Nexus, run full mission",
         "Nexus, run admin intelligence",
         "Nexus, explain this to investors",
