@@ -94,6 +94,8 @@ async function call(route, body) {
       assert(state.profile.agentMemory.activeOutcomeLoop?.oneQuestion, `${domain} should save the outcome loop in memory`);
       assert(result.metadata.conversationSupervisor?.score > 0, `${domain} should pass through Conversation Supervisor`);
       assert(state.profile.agentMemory.conversationSupervisor?.lastScore > 0, `${domain} should save supervisor score`);
+      assert(result.metadata.reasoningGovernance?.decisionTrace?.length >= 4, `${domain} should include reasoning governance trace`);
+      assert(state.profile.agentMemory.reasoningGovernance?.lastScore > 0, `${domain} should save governance score`);
       assert(result.response.includes("Best next action"), `${domain} response should include best next action`);
     }
 

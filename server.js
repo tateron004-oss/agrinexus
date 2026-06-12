@@ -1020,6 +1020,7 @@ function conversationEvidencePack(db) {
   const voice = activeVoiceMissionBrief(db);
   const outcome = activeOutcomeLoopBrief(db);
   const supervisor = memory.conversationSupervisor || null;
+  const governance = memory.reasoningGovernance || null;
   const status = pending
     ? "waiting-confirmation"
     : memory.activeClarification
@@ -1034,6 +1035,7 @@ function conversationEvidencePack(db) {
     guided ? `Guided mission: ${guided.progress}% complete` : "No guided mission checklist active.",
     outcome ? `Outcome loop: ${outcome.nextVisibleAction}` : "No guided outcome loop active.",
     supervisor ? `Conversation supervisor: ${supervisor.lastScore || 0}/100 - ${supervisor.status}` : "Conversation supervisor ready.",
+    governance ? `Reasoning governance: ${governance.lastScore || 0}/100 - ${governance.status}` : "Reasoning governance ready.",
     memory.activeJarvisSession ? `AgriNexus session: ${memory.activeJarvisSession.goal}` : "No AgriNexus session active.",
     memory.turnCoach?.nextQuestion ? `Next prompt: ${memory.turnCoach.nextQuestion}` : "Next prompt will appear after conversation starts."
   ];
@@ -1048,6 +1050,7 @@ function conversationEvidencePack(db) {
     voiceMission: voice,
     outcomeLoop: outcome,
     conversationSupervisor: supervisor,
+    reasoningGovernance: governance,
     activeJarvisSession: memory.activeJarvisSession || null,
     turnCoach: memory.turnCoach || null,
     quality: memory.conversationQuality || {},
@@ -6464,6 +6467,13 @@ function ensureAiProfile(profile) {
     updatedAt: new Date().toISOString()
   };
   profile.agentMemory.conversationSupervisorHistory = profile.agentMemory.conversationSupervisorHistory || [];
+  profile.agentMemory.reasoningGovernance = profile.agentMemory.reasoningGovernance || {
+    status: "ready",
+    lastScore: 0,
+    lastSummary: "Reasoning Governance is ready to prove Nexus decisions.",
+    updatedAt: new Date().toISOString()
+  };
+  profile.agentMemory.reasoningGovernanceHistory = profile.agentMemory.reasoningGovernanceHistory || [];
   profile.agentMemory.turnCoach = profile.agentMemory.turnCoach || null;
   profile.agentMemory.activeJarvisSession = profile.agentMemory.activeJarvisSession || null;
   profile.agentMemory.jarvisSessionHistory = profile.agentMemory.jarvisSessionHistory || [];
@@ -11747,6 +11757,82 @@ function conversationSupervisorReview(db, user, command, result = {}) {
   return review;
 }
 
+function reasoningGovernanceReview(db, user, command, result = {}, supervisor = null) {
+  ensureAiProfile(db.profile);
+  const metadata = result.metadata || {};
+  const moduleSignal = conversationModuleSignal(command);
+  const bridge = metadata.reasonedActionBridge || metadata.offlineReasoningBrain?.actionBridge || null;
+  const outcome = metadata.outcomeLoop || null;
+  const offline = metadata.offlineReasoningBrain || null;
+  const providers = runtimeProviders(db);
+  const liveProviders = providers.filter(item => ["ready", "connected"].includes(item.status)).map(item => item.id);
+  const section = metadata.redirectSection || outcome?.section || bridge?.section || moduleSignal.section || "dashboard";
+  const supervisorScore = Number(supervisor?.score || metadata.conversationSupervisor?.score || 0);
+  const reasoningConfidence = Number(offline?.confidence || supervisorScore || 70);
+  const needsHumanReview = String(result.status || "").includes("review")
+    || String(offline?.status || "").includes("review")
+    || Boolean(metadata.pendingAction?.requiresConfirmation)
+    || /\b(doctor|diagnos|prescribe|emergency|payment|pay now|child|legal|guarantee job)\b/i.test(String(command || ""));
+  const correctionRequested = /\b(wrong|not right|misunderstood|fix that|adjust|correct|bad answer|try again|that is not what i meant)\b/i.test(String(command || ""));
+  const sourceBoundary = offline?.providerBoundary
+    || (liveProviders.length
+      ? `Live-ready providers available: ${liveProviders.slice(0, 6).join(", ")}. Nexus still marks which actions are local evidence versus live execution.`
+      : "This decision is based on local platform data, saved workflow evidence, configured public data, and simulated provider-ready workflows unless a live provider credential confirms execution.");
+  const uncertainty = [];
+  if (!liveProviders.length) uncertainty.push("No live provider confirmation was used for this decision.");
+  if (!section || section === "dashboard") uncertainty.push("Workspace routing is broad and may need one more answer.");
+  if (reasoningConfidence < 82) uncertainty.push("Confidence is below high-confidence threshold.");
+  if (needsHumanReview) uncertainty.push("Sensitive domain requires human, provider, or operator review before final action.");
+  const decisionTrace = [
+    { step: "heard", detail: String(command || "").trim() || "No command text supplied." },
+    { step: "classified", detail: `${moduleSignal.module || "AgriNexus"} / ${section}` },
+    { step: "reasoned", detail: offline?.title || metadata.reasoning?.title || "Used conversation context, local workflow state, and behavior model." },
+    { step: "action", detail: outcome?.nextVisibleAction || bridge?.primaryAction || metadata.pendingAction?.action || "Guide the next useful step." },
+    { step: "question", detail: outcome?.oneQuestion || bridge?.oneQuestion || metadata.turnCoach?.nextQuestion || "Ask one clear next question." },
+    { step: "boundary", detail: sourceBoundary }
+  ];
+  const governanceScore = Math.max(35, Math.min(100,
+    Math.round((reasoningConfidence * 0.45) + ((supervisorScore || 75) * 0.35) + (sourceBoundary ? 10 : 0) + (needsHumanReview ? 2 : 10))
+  ));
+  const review = {
+    id: crypto.randomUUID(),
+    status: needsHumanReview ? "human-review-aware" : governanceScore >= 86 ? "governed-strong" : governanceScore >= 70 ? "governed-watch" : "governed-repair",
+    governanceScore,
+    command,
+    intent: result.intent || "unknown",
+    section,
+    confidence: reasoningConfidence,
+    confidenceLabel: reasoningConfidence >= 86 ? "high" : reasoningConfidence >= 70 ? "medium" : "needs more information",
+    decisionTrace,
+    sourceBoundary,
+    uncertainty,
+    safetyGuardrails: [
+      "Ask for confirmation before changing records, sending messages, payments, applications, or provider workflows.",
+      "Do not diagnose, prescribe, guarantee jobs, promise payments, or claim live provider action without credentials.",
+      "Use human/provider review for health, children, emergency, legal, payment, and employment decisions."
+    ],
+    humanReviewRequired: needsHumanReview,
+    correctionRequested,
+    correctionPath: correctionRequested
+      ? "Nexus should acknowledge the correction, restate what changed, reroute to the likely workspace, and ask one clarifying question."
+      : "If the user says this is wrong, Nexus should stop, ask what was wrong, and retry with the corrected intent.",
+    proofSummary: `${section || "AgriNexus"} decision governed at ${governanceScore}/100 with ${reasoningConfidence}% reasoning confidence.`,
+    createdAt: new Date().toISOString()
+  };
+  const memory = db.profile.agentMemory;
+  memory.reasoningGovernance = {
+    status: review.status,
+    lastScore: review.governanceScore,
+    lastSummary: review.proofSummary,
+    updatedAt: review.createdAt
+  };
+  memory.reasoningGovernanceHistory = [review, ...(memory.reasoningGovernanceHistory || [])].slice(0, 40);
+  if (correctionRequested) {
+    memory.lastCorrectionRequest = review;
+  }
+  return review;
+}
+
 function commandRecord(db, user, command, result) {
   ensureAiProfile(db.profile);
   addConversationTurn(db.profile, "user", command, { email: user.email });
@@ -11795,6 +11881,8 @@ function commandRecord(db, user, command, result) {
   result.metadata = { ...(result.metadata || {}), guidedMission, outcomeLoop };
   const supervisor = conversationSupervisorReview(db, user, command, result);
   result.metadata = { ...(result.metadata || {}), conversationSupervisor: supervisor };
+  const governance = reasoningGovernanceReview(db, user, command, result, supervisor);
+  result.metadata = { ...(result.metadata || {}), reasoningGovernance: governance };
   record.metadata = result.metadata || {};
   logIntegration(db, {
     providerId: "openai",
@@ -11802,7 +11890,7 @@ function commandRecord(db, user, command, result) {
     action: "agent.command",
     status: record.status === "failed" ? "failed" : "success",
     detail: `${record.intent}: ${record.response}`,
-    metadata: { commandId: record.id, command, voiceMissionId: voiceMission?.id || null, guidedMissionId: guidedMission?.id || null, outcomeLoopId: outcomeLoop?.id || null, supervisorId: supervisor?.id || null, supervisorScore: supervisor?.score || null }
+    metadata: { commandId: record.id, command, voiceMissionId: voiceMission?.id || null, guidedMissionId: guidedMission?.id || null, outcomeLoopId: outcomeLoop?.id || null, supervisorId: supervisor?.id || null, supervisorScore: supervisor?.score || null, governanceId: governance?.id || null, governanceScore: governance?.governanceScore || null }
   });
   addActivity(db.profile, `Voice command: ${record.intent} - ${record.response}`);
   return record;
@@ -17655,6 +17743,24 @@ async function runAgentCommand(db, user, command, options = {}) {
   if (conversational && /\b(current mission|mission status|where are we|what are we doing|what step|where am i|orient me|checklist|guided mission)\b/.test(lower)) {
     const followUp = conversationFollowUpResponse(db, user, text, lower);
     if (followUp) return followUp;
+  }
+  if (/\b(show reasoning proof|reasoning proof|why did you choose|why did nexus choose|decision trace|show decision trace|governance proof|prove your reasoning|explain your reasoning)\b/.test(lower)) {
+    const latest = (db.profile.agentMemory.reasoningGovernanceHistory || [])[0] || null;
+    const active = latest || {
+      status: "ready",
+      governanceScore: 0,
+      confidenceLabel: "not started",
+      decisionTrace: [],
+      sourceBoundary: "No governed command has been recorded yet.",
+      uncertainty: ["Ask Nexus a real command first, then ask for reasoning proof."],
+      proofSummary: "Reasoning Governance is ready."
+    };
+    return {
+      intent: "conversation.reasoning_governance_status",
+      response: `${active.proofSummary || "Reasoning proof is ready."} Confidence is ${active.confidenceLabel || "unknown"}. Boundary: ${active.sourceBoundary || "No boundary recorded yet."}`,
+      status: latest ? "completed" : "needs-input",
+      metadata: { conversationMode: true, redirectSection: active.section || "agent", reasoningGovernance: active }
+    };
   }
   if (/(what should i call you|what do i call you|short name|abbreviat|nickname|who are you|your name)/.test(lower)) {
     db.profile.agentMemory.lastStatus = "assistant-alias-ready";

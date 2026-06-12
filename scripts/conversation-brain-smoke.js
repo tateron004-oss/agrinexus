@@ -67,15 +67,27 @@ async function call(route, body) {
     assert(state.commandResult.metadata.outcomeLoop);
     assert(state.profile.agentMemory.conversationSupervisor?.lastScore > 0);
     assert(state.commandResult.metadata.conversationSupervisor?.score > 0);
+    assert(state.profile.agentMemory.reasoningGovernance?.lastScore > 0);
+    assert(state.commandResult.metadata.reasoningGovernance?.decisionTrace?.length >= 4);
     assert(state.commandResult.metadata.turnCoach);
     assert(state.conversationEvidence);
     assert(state.conversationEvidence.outcomeLoop);
     assert(state.conversationEvidence.conversationSupervisor);
+    assert(state.conversationEvidence.reasoningGovernance);
     assert(state.conversationEvidence.counts.commands >= 1);
     assert(state.conversationEvidence.evidence.some(item => /Latest command/i.test(item)));
     assert(state.agentCapabilities.totalTools >= 30);
     assert(state.agentCapabilities.confirmationTools > 0);
     assert(state.profile.agentMemory.conversationQuality.openEndedAnswers >= 1);
+
+    state = await call("/api/agent/command", {
+      command: "show reasoning proof",
+      conversational: true,
+      inputMode: "voice",
+      outputMode: "voice"
+    });
+    assert(state.commandResult.intent === "conversation.reasoning_governance_status");
+    assert(state.commandResult.metadata.reasoningGovernance.decisionTrace.length >= 4);
 
     state = await call("/api/agent/command", {
       command: "where are we",
