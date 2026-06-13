@@ -61,8 +61,8 @@ let routeTrackingWatchId = null;
 let routeTrackingPoints = [];
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-200";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v180";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-201";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v181";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
 const VOICE_ATTENTION_DELAY_MS = 900;
@@ -5344,6 +5344,7 @@ function rememberConversationTurn(command = "", response = "") {
   const currentMemory = conversationMemoryForMode(mode);
   const cleanedCommand = String(command || "").trim();
   const isNewCommand = cleanedCommand && cleanedCommand !== currentMemory.lastQuestion;
+  const activeV2 = currentMemory.conversationMode2 || {};
   const nextMemory = {
     ...currentMemory,
     mode,
@@ -5354,9 +5355,125 @@ function rememberConversationTurn(command = "", response = "") {
     lastSection: currentSectionId(),
     language: voiceLanguageName(),
     turnCount: Number(currentMemory.turnCount || 0) + (isNewCommand ? 1 : 0),
+    conversationMode2: {
+      ...activeV2,
+      activeTopic: cleanedCommand ? (inferNexusIntent(cleanedCommand).label || activeV2.activeTopic || currentSectionId()) : (activeV2.activeTopic || currentMemory.lastTopic || currentSectionId()),
+      lastUserWords: cleanedCommand || activeV2.lastUserWords || "",
+      lastNexusReply: response || activeV2.lastNexusReply || "",
+      lastMode: conversationPlatformLabel(mode),
+      updatedAt: new Date().toISOString()
+    },
     updatedAt: new Date().toISOString()
   };
   saveConversationModeMemory(mode, nextMemory);
+}
+
+function conversationMode2Status(mode = conversationPlatformMode()) {
+  const memory = conversationMemoryForMode(mode);
+  const v2 = memory.conversationMode2 || {};
+  return {
+    enabled: true,
+    mode,
+    label: "Nexus Conversation Mode 2.0",
+    activeTopic: v2.activeTopic || memory.lastTopic || currentSectionId(),
+    lastUserWords: v2.lastUserWords || memory.lastQuestion || "",
+    lastNexusReply: v2.lastNexusReply || memory.lastAnswer || "",
+    guard: "listen-first, act-only-when-clear",
+    style: "short, warm, one-question-at-a-time"
+  };
+}
+
+function saveConversationMode2Decision(command = "", decision = {}) {
+  const mode = conversationPlatformMode();
+  const memory = conversationMemoryForMode(mode);
+  const current = memory.conversationMode2 || {};
+  const intent = inferNexusIntent(command || current.lastUserWords || "");
+  const next = {
+    ...memory,
+    conversationMode2: {
+      ...current,
+      enabled: true,
+      activeTopic: intent.label || current.activeTopic || currentSectionId(),
+      lastDecision: decision.kind || "listening",
+      lastConfidence: Number(decision.confidence || intent.confidence || 0),
+      lastUserWords: String(command || current.lastUserWords || "").trim(),
+      awaiting: decision.awaiting || "",
+      guard: decision.guard || "listen-first",
+      updatedAt: new Date().toISOString()
+    },
+    updatedAt: new Date().toISOString()
+  };
+  saveConversationModeMemory(mode, next);
+}
+
+function conversationMode2Decision(command = "", options = {}) {
+  const lower = normalizeToolText(command);
+  const explicitWake = isExplicitNexusWakeOrCommand(command);
+  if (!lower) return { kind: "silent", confidence: 0, action: "wait", shouldAct: false };
+  if (isGlobalStopCommand(lower)) return { kind: "stop", confidence: 1, action: "stop", shouldAct: true };
+  if (isLikelySideConversationWithoutNexusCommand(command)) {
+    return { kind: "side-conversation", confidence: 0.91, action: "pause", shouldAct: false, guard: "background-talk" };
+  }
+  if (isUniversalLanguageCommand(command) || hasBehaviorActionVerb(command) || isClearWorkflowVoiceCommand(command)) {
+    return { kind: "clear-command", confidence: 0.9, action: "route", shouldAct: true, guard: "clear-action" };
+  }
+  if (isOpenKnowledgeQuestion(command) || isOpenDialogVoiceQuestion(command) || isNaturalQuestionOrConversation(command)) {
+    return { kind: "conversation", confidence: 0.82, action: "answer", shouldAct: true, guard: "open-dialog" };
+  }
+  if (isModeFollowUpCommand(lower)) {
+    return { kind: "follow-up", confidence: 0.8, action: "answer", shouldAct: true, guard: "topic-memory" };
+  }
+  if (/\b(okay|ok|alright|cool|got it|i see|yes thanks|no thanks|that helps|sounds good)\b/.test(lower)) {
+    return {
+      kind: "casual",
+      confidence: 0.77,
+      action: "reply",
+      shouldAct: false,
+      response: "Got you. I'm here when you need me.",
+      guard: "casual-talk"
+    };
+  }
+  const tokens = lower.split(/\s+/).filter(Boolean);
+  const hasNeedWord = /\b(help|need|want|looking|trying|problem|issue|sick|hurt|crop|job|learn|doctor|medicine|buyer|map|route)\b/.test(lower);
+  if (options.source === "voice" && !explicitWake && tokens.length >= 5 && !hasNeedWord) {
+    return { kind: "background", confidence: 0.74, action: "pause", shouldAct: false, guard: "unclear-background" };
+  }
+  if (tokens.length <= 5 && !hasNeedWord && !explicitWake) {
+    return {
+      kind: "unclear",
+      confidence: 0.62,
+      action: "clarify",
+      shouldAct: false,
+      awaiting: "one-simple-follow-up",
+      response: "I want to make sure I got you. Is this about health, crops, work, learning, or the map?",
+      guard: "do-not-act-unless-clear"
+    };
+  }
+  return { kind: "conversation", confidence: 0.64, action: "answer", shouldAct: true, guard: "open-dialog-fallback" };
+}
+
+function handleConversationMode2Preflight(command = "", options = {}) {
+  const decision = conversationMode2Decision(command, options);
+  saveConversationMode2Decision(command, decision);
+  if (decision.action === "pause") {
+    pauseNexusForSideConversation(command);
+    return true;
+  }
+  if (decision.action === "clarify") {
+    pendingAgentClarification = null;
+    pendingNexusSpokenCommand = null;
+    nexusAwaitingCommand = true;
+    updateNexusBehaviorLayer("listening", "Conversation Mode 2.0 is asking one simple follow-up.");
+    renderLiveVoiceSuggestions(["health", "crops", "work", "learning", "map"]);
+    setVoiceResponse(decision.response || "I want to make sure I got you. Is this about health, crops, work, learning, or the map?", true, { allowHandoff: false });
+    return true;
+  }
+  if (decision.action === "reply" && decision.response) {
+    updateNexusBehaviorLayer("listening", "Conversation Mode 2.0 handled casual talk without starting a workflow.");
+    setVoiceResponse(decision.response, true, { allowHandoff: false });
+    return true;
+  }
+  return false;
 }
 
 function modeConversationContext(command = "") {
@@ -5377,6 +5494,7 @@ function modeConversationContext(command = "") {
     userName: userFirstName(),
     command,
     activeJourney: activeAgentJourneySummary(),
+    conversationMode2: conversationMode2Status(mode),
     lastQuestion: modeMemory.lastQuestion || "",
     lastAnswer: modeMemory.lastAnswer || "",
     lastTopic: modeMemory.lastTopic || "",
@@ -16566,6 +16684,11 @@ function nexusCommonPhraseResponse(command = "") {
   const value = normalizeToolText(command);
   if (!value) return "";
   const name = userFirstName();
+  if (/\b(conversation mode|conversation mode 2|conversation mode two|talk naturally|open conversation|natural conversation)\b/.test(value)) {
+    const status = conversationMode2Status();
+    renderLiveVoiceSuggestions(["health", "crops", "work", "learning", "map"]);
+    return `${status.label} is on. I will listen first, keep the topic in mind, ask one simple question when I am unsure, and only act when the request is clear.`;
+  }
   const responses = [
     {
       match: /\b(thank you|thanks|thanks nexus|appreciate it|good job|nice job|that helped|gracias|merci|asante|shukran)\b/,
@@ -16697,6 +16820,7 @@ async function handleVoiceCommand(rawCommand, options = {}) {
     pauseNexusForSideConversation(command || localizedCommand || rawCommand);
     return;
   }
+  if (handleConversationMode2Preflight(command || localizedCommand || rawCommand, options)) return;
   agentPerformanceState.spokenCommand = spokenCommand || command;
   if (isOpenKnowledgeQuestion(spokenCommand || command)) {
     pendingAgentClarification = null;
