@@ -215,6 +215,9 @@ async function call(route, body) {
     assert.strictEqual(music.commandResult.intent, "utility.music", "music requests should be utility-backed");
     assert.strictEqual(music.commandResult.metadata.music.provider, "spotify", "music request should use the Spotify provider contract");
     assert(["needs-spotify-credentials", "needs-spotify-user-auth", "playback-started"].includes(music.commandResult.metadata.music.status), "music request should report Spotify execution state");
+    if (music.commandResult.metadata.music.status !== "playback-started") {
+      assert.strictEqual(music.commandResult.metadata.testPlayback.type, "browser-web-audio", "music request should expose browser test playback when Spotify is not live");
+    }
     assert(/Spotify|music provider|play/i.test(music.commandResult.response), "music request should be honest about Spotify execution or setup");
     const encyclopediaCrop = await call("/api/agent/command", {
       command: "Nexus, what is photosynthesis and why does it matter for maize?",

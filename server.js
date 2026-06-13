@@ -17587,8 +17587,8 @@ async function executeSpotifyMusicPlayback(db, user, text, options = {}) {
       ...request,
       ok: false,
       response: clientReady
-        ? `I can play ${intent.query} once Spotify is authorized for this user. Open the Spotify connection, then say the request again.`
-        : `I understand the music request for ${intent.query}. Spotify is not connected yet, so I prepared a safe search handoff.`,
+        ? `I can play ${intent.query} from Spotify once this user authorizes Spotify. For testing now, I will play a short Nexus test audio sample in the app.`
+        : `I understand the music request for ${intent.query}. Spotify is not connected yet, so I will play a short Nexus test audio sample in the app and keep the provider path ready.`,
       url: intent.url
     };
   }
@@ -17676,6 +17676,11 @@ async function musicProviderCommandResponse(db, user, text, options = {}) {
         spotifyType: playback.spotifyType || "",
         spotifyUri: playback.spotifyUri || "",
         url: playback.url || fallback?.url || ""
+      },
+      testPlayback: {
+        ready: !playback.ok,
+        type: "browser-web-audio",
+        purpose: "Proves real in-app playback before Spotify catalog authorization."
       },
       suggestedReplies: ["play Luther Vandross", "pause music", "what time is it", "weather in Addis"]
     }

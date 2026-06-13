@@ -62,8 +62,8 @@ let routeTrackingWatchId = null;
 let routeTrackingPoints = [];
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-213";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v193";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-214";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v194";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
 const VOICE_ATTENTION_DELAY_MS = 900;
@@ -2984,12 +2984,54 @@ function musicAssistantIntent(command = "") {
   };
 }
 
+async function playNexusMusicTestAudio(query = "music") {
+  const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+  if (!AudioContextClass) return false;
+  const context = new AudioContextClass();
+  await context.resume();
+  const gain = context.createGain();
+  gain.gain.setValueAtTime(0.0001, context.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.12, context.currentTime + 0.08);
+  gain.gain.exponentialRampToValueAtTime(0.0001, context.currentTime + 6.2);
+  gain.connect(context.destination);
+  const soulNotes = [261.63, 329.63, 392, 440, 392, 329.63, 293.66, 261.63];
+  const afrobeatNotes = [220, 277.18, 329.63, 369.99, 440, 369.99, 329.63, 277.18];
+  const gospelNotes = [196, 246.94, 293.66, 392, 493.88, 392, 293.66, 246.94];
+  const lower = String(query || "").toLowerCase();
+  const notes = /afro|beat|nigeria/.test(lower) ? afrobeatNotes : /gospel|church/.test(lower) ? gospelNotes : soulNotes;
+  notes.forEach((frequency, index) => {
+    const start = context.currentTime + index * 0.36;
+    const osc = context.createOscillator();
+    const noteGain = context.createGain();
+    osc.type = index % 2 ? "triangle" : "sine";
+    osc.frequency.setValueAtTime(frequency, start);
+    noteGain.gain.setValueAtTime(0.0001, start);
+    noteGain.gain.exponentialRampToValueAtTime(0.32, start + 0.04);
+    noteGain.gain.exponentialRampToValueAtTime(0.0001, start + 0.31);
+    osc.connect(noteGain);
+    noteGain.connect(gain);
+    osc.start(start);
+    osc.stop(start + 0.34);
+  });
+  const bass = context.createOscillator();
+  bass.type = "sine";
+  bass.frequency.setValueAtTime(65.41, context.currentTime);
+  bass.connect(gain);
+  bass.start(context.currentTime);
+  bass.stop(context.currentTime + 6.1);
+  setTimeout(() => context.close().catch(() => {}), 7000);
+  toast(`Playing Nexus test audio for ${query}`);
+  return true;
+}
+
 async function runMusicAssistantCommand(command = "") {
   const intent = musicAssistantIntent(command);
   if (!intent) return false;
   updateNexusBehaviorLayer("answering", "Nexus understood this as an everyday music request and is checking the connected music provider.");
   renderLiveVoiceSuggestions(["what time is it", "weather in Nairobi", "open learning", "Nexus stop"]);
-  await runUtilityAgentCommand(command, intent.response, null);
+  const result = await runUtilityAgentCommand(command, intent.response, null);
+  const music = result?.metadata?.music;
+  if (music && music.status !== "playback-started") await playNexusMusicTestAudio(intent.query);
   return true;
 }
 
@@ -18620,11 +18662,13 @@ async function runUtilityAgentCommand(command, fallbackAnswer = "", locationCont
     updateNexusAwareness(command, { silent: true });
     updateNexusBehaviorLayer("speaking", result.response || fallbackAnswer || "Done. I am ready for your next question.");
     setVoiceResponse(result.response || fallbackAnswer || "Done. I am ready for your next question.", true, { handoffText: result.metadata?.turnCoach?.nextQuestion || "", alreadyTranslated: result.metadata?.translatedResponse === true });
+    return result;
   } catch (error) {
     markAgentPerformance("failed", "utility-assistant-error");
     const local = fallbackAnswer || nexusUtilityAssistantResponseV2(command);
     updateNexusBehaviorLayer("speaking", "Nexus is using local app context because the backend command engine is unavailable.");
     setVoiceResponse(local ? `${local} I used local app context because the live command engine was unavailable.` : (error.message || "Ask Nexus could not answer that utility question yet."), true);
+    return null;
   }
 }
 
