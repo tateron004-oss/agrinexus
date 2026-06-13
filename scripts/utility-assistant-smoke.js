@@ -61,6 +61,31 @@ async function call(route, body) {
   try {
     await waitForServer();
     await call("/api/login", { email: "demo@agrinexus.org", password: "Prototype2026!" });
+    const communicationsReadiness = await call("/api/communications/execution-readiness");
+    assert.strictEqual(communicationsReadiness.total, 3, "Communications readiness should cover phone, SMS, and WhatsApp");
+    assert(communicationsReadiness.channels.some(item => item.id === "phone" && item.endpoint === "/api/voice/phone/outbound-call"), "Phone readiness should point to outbound call execution");
+    assert(communicationsReadiness.channels.some(item => item.id === "sms" && item.endpoint === "/api/notifications/send"), "SMS readiness should point to notification execution");
+    assert(communicationsReadiness.channels.some(item => item.id === "whatsapp" && item.endpoint === "/api/notifications/send"), "WhatsApp readiness should point to notification execution");
+    const nativeSession = await call("/api/native/voice-runtime", {
+      device: { platform: "android", appVersion: "1.2.0", deviceId: "smoke-device" },
+      wakeMode: "always-on",
+      permissions: {
+        microphone: "granted",
+        speechRecognition: "granted",
+        backgroundAudio: "granted",
+        notifications: "granted",
+        geolocation: "background",
+        camera: "granted",
+        secureStorage: "granted"
+      },
+      pushToken: "smoke-token",
+      visibleListeningIndicator: true,
+      oneTapOff: true,
+      wakeAuditEnabled: true
+    });
+    assert.strictEqual(nativeSession.nativePermissionSession.status, "native-always-on-ready", "Native permission registration should report always-on ready");
+    assert.strictEqual(nativeSession.nativeVoiceRuntime.latestNativeSession.status, "native-always-on-ready", "Native runtime should expose the latest permission session");
+    assert(nativeSession.nativeVoiceRuntime.items.some(item => item.id === "always-on-wake" && item.ready), "Always-on wake should become ready after native permission registration");
     const utilityBodies = [
       ["utility.time", "Nexus, what time is it?"],
       ["utility.weather", "Nexus, what is the weather for the farmer today?"],
@@ -394,6 +419,8 @@ async function call(route, body) {
   }
 
   console.log("Utility assistant smoke passed");
+  console.log("- Ask Nexus communications execution readiness");
+  console.log("- Ask Nexus native always-on permission session");
   console.log("- Ask Nexus backend time answer");
   console.log("- Ask Nexus backend weather answer");
   console.log("- Ask Nexus backend crop timing answer");

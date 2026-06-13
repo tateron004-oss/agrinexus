@@ -1184,6 +1184,7 @@ function jarvisReadinessModel(db, user, providers = runtimeProviders(db)) {
 
 function nativeVoiceRuntimeModel(db, user, providers = runtimeProviders(db)) {
   ensureAiProfile(db.profile);
+  db.profile.nativePermissionSessions = db.profile.nativePermissionSessions || [];
   const bridgePath = path.join(PUBLIC, "native-bridge.json");
   let bridge = {};
   try {
@@ -1198,6 +1199,8 @@ function nativeVoiceRuntimeModel(db, user, providers = runtimeProviders(db)) {
   const openAiVoiceReady = connected("voice-stt") && connected("voice-tts") && hasEnv("OPENAI_API_KEY");
   const phoneReady = connected("phone-voice") && hasEnv("TWILIO_ACCOUNT_SID") && hasEnv("TWILIO_AUTH_TOKEN") && hasEnv("TWILIO_PHONE_NUMBER");
   const nativeBridgeReady = Boolean(bridge.version && bridge.wakeRuntime && bridge.commandEnvelope && bridge.webCallbacks);
+  const latestNativeSession = (db.profile.nativePermissionSessions || [])[0] || null;
+  const nativeAlwaysOnReady = Boolean(latestNativeSession?.readiness?.alwaysOnReady || latestNativeSession?.alwaysOnReady);
   const locationReady = connected("maps") || hasEnv("MAPBOX_ACCESS_TOKEN") || hasEnv("GOOGLE_MAPS_API_KEY") || hasEnv("OPENROUTESERVICE_API_KEY");
   const productionMemoryReady = hasEnv("DATABASE_URL") && usingPostgresState() && Boolean(loadOptional("pg"));
   const items = [
@@ -1232,9 +1235,11 @@ function nativeVoiceRuntimeModel(db, user, providers = runtimeProviders(db)) {
     {
       id: "always-on-wake",
       title: "Always-On Wake",
-      ready: false,
-      mode: "requires-native-shell",
-      evidence: "Browsers cannot safely provide hidden always-on wake. Android/iOS packaging must request OS-level mic/background audio with privacy controls."
+      ready: nativeAlwaysOnReady,
+      mode: nativeAlwaysOnReady ? "native-permission-active" : "requires-native-shell",
+      evidence: nativeAlwaysOnReady
+        ? `Native shell reported microphone, background audio, and wake mode active on ${latestNativeSession.platform || "mobile"}.`
+        : "Browsers cannot safely provide hidden always-on wake. Android/iOS packaging must request OS-level mic/background audio with privacy controls."
     },
     {
       id: "camera-media",
@@ -1270,9 +1275,138 @@ function nativeVoiceRuntimeModel(db, user, providers = runtimeProviders(db)) {
     commandEnvelope: bridge.commandEnvelope || {},
     apiEndpoints: bridge.apiEndpoints || {},
     moduleVoiceExamples: bridge.moduleVoiceExamples || {},
+    latestNativeSession,
     items,
     nextNativeStep: "Package AgriNexus with Capacitor, React Native, Flutter, or another native shell, then map native callbacks into window.AgriNexusNativeBridge.receive().",
     privacyRule: bridge.wakeRuntime?.privacyRule || "Use visible listening status, user permission, and a one-tap off switch.",
+    updatedAt: new Date().toISOString()
+  };
+}
+
+function permissionGranted(value) {
+  return ["granted", "foreground", "background", true].includes(value);
+}
+
+function registerNativePermissionSession(db, user, body = {}) {
+  ensureAiProfile(db.profile);
+  db.profile.nativePermissionSessions = db.profile.nativePermissionSessions || [];
+  const permissions = body.permissions || {};
+  const device = body.device || {};
+  const wakeMode = String(body.wakeMode || permissions.wakeMode || "manual").toLowerCase();
+  const microphoneReady = permissionGranted(permissions.microphone);
+  const backgroundAudioReady = permissionGranted(permissions.backgroundAudio) || permissionGranted(permissions.backgroundAudioMode);
+  const notificationsReady = permissionGranted(permissions.notifications) || Boolean(body.pushToken);
+  const locationReady = permissionGranted(permissions.geolocation) || permissions.geolocation === "background";
+  const cameraReady = permissionGranted(permissions.camera);
+  const alwaysOnReady = microphoneReady && backgroundAudioReady && /always|wake|background/.test(wakeMode);
+  const session = {
+    id: crypto.randomUUID(),
+    platform: String(device.platform || body.platform || "unknown"),
+    appVersion: String(device.appVersion || body.appVersion || ""),
+    deviceId: String(device.deviceId || body.deviceId || "").slice(0, 80),
+    wakeMode,
+    pushTokenPresent: Boolean(body.pushToken),
+    permissions: {
+      microphone: permissions.microphone || "unknown",
+      speechRecognition: permissions.speechRecognition || permissions.speech || "unknown",
+      notifications: permissions.notifications || (body.pushToken ? "granted" : "unknown"),
+      backgroundAudio: permissions.backgroundAudio || permissions.backgroundAudioMode || "unknown",
+      geolocation: permissions.geolocation || "unknown",
+      camera: permissions.camera || "unknown",
+      secureStorage: permissions.secureStorage || "unknown"
+    },
+    readiness: {
+      microphoneReady,
+      backgroundAudioReady,
+      notificationsReady,
+      locationReady,
+      cameraReady,
+      alwaysOnReady
+    },
+    privacyControls: {
+      visibleListeningIndicator: body.visibleListeningIndicator !== false,
+      oneTapOff: body.oneTapOff !== false,
+      wakeAuditEnabled: body.wakeAuditEnabled !== false
+    },
+    status: alwaysOnReady ? "native-always-on-ready" : microphoneReady ? "native-voice-ready" : "needs-native-permission",
+    createdBy: user?.email || "native",
+    createdAt: new Date().toISOString()
+  };
+  db.profile.nativePermissionSessions.unshift(session);
+  db.profile.nativePermissionSessions = db.profile.nativePermissionSessions.slice(0, 40);
+  db.profile.agentMemory.lastStatus = session.status;
+  db.profile.agentMemory.lastSummary = alwaysOnReady
+    ? "Native always-on Nexus wake mode is reported ready by the mobile shell."
+    : "Native voice permissions were recorded; always-on wake still needs microphone, background audio, and wake mode.";
+  db.profile.agentMemory.updatedAt = session.createdAt;
+  logIntegration(db, {
+    providerId: "native-mobile",
+    module: "Agent AI",
+    action: "native.permissions_registered",
+    status: alwaysOnReady ? "success" : "needs-setup",
+    detail: `${session.platform} native permissions registered: ${session.status}.`,
+    metadata: { sessionId: session.id, readiness: session.readiness, wakeMode },
+    dispatch: false
+  });
+  return session;
+}
+
+function communicationsExecutionReadiness(db, user, body = {}) {
+  const providers = runtimeProviders(db);
+  const provider = id => providers.find(item => item.id === id) || {};
+  const smsTo = twilioRecipientForProvider("sms-delivery", body);
+  const whatsappTo = twilioRecipientForProvider("whatsapp-delivery", body);
+  const phoneTo = outboundCallRecipientForPurpose(body.purpose || "AgriNexus outbound support", body);
+  const twilioCore = hasTwilioMessagingCore();
+  const voiceCore = hasTwilioVoiceCore();
+  const channels = [
+    {
+      id: "phone",
+      title: "Outbound phone calls",
+      providerId: "phone-voice",
+      ready: Boolean(voiceCore && phoneTo),
+      providerStatus: provider("phone-voice").status || "unknown",
+      destinationReady: Boolean(phoneTo),
+      endpoint: "/api/voice/phone/outbound-call",
+      requiredEnv: ["PHONE_PROVIDER=twilio", "TWILIO_ACCOUNT_SID", "TWILIO_AUTH_TOKEN", "TWILIO_PHONE_NUMBER", "PUBLIC_BASE_URL", "DEMO_CALL_TO or contact number"],
+      canExecuteNow: Boolean(voiceCore && phoneTo)
+    },
+    {
+      id: "sms",
+      title: "SMS delivery",
+      providerId: "sms-delivery",
+      ready: Boolean(twilioCore && smsTo),
+      providerStatus: provider("sms-delivery").status || "unknown",
+      destinationReady: Boolean(smsTo),
+      endpoint: "/api/notifications/send",
+      requiredEnv: ["SMS_PROVIDER=twilio", "TWILIO_ACCOUNT_SID", "TWILIO_AUTH_TOKEN", "TWILIO_PHONE_NUMBER", "DEMO_SMS_TO or channel recipient"],
+      canExecuteNow: Boolean(twilioCore && smsTo)
+    },
+    {
+      id: "whatsapp",
+      title: "WhatsApp delivery",
+      providerId: "whatsapp-delivery",
+      ready: Boolean(twilioCore && whatsappTo),
+      providerStatus: provider("whatsapp-delivery").status || "unknown",
+      destinationReady: Boolean(whatsappTo),
+      endpoint: "/api/notifications/send",
+      requiredEnv: ["WHATSAPP_PROVIDER=twilio", "TWILIO_ACCOUNT_SID", "TWILIO_AUTH_TOKEN", "TWILIO_PHONE_NUMBER", "TWILIO_WHATSAPP_FROM or Twilio WhatsApp sender", "DEMO_WHATSAPP_TO or channel recipient"],
+      canExecuteNow: Boolean(twilioCore && whatsappTo)
+    }
+  ];
+  const readyCount = channels.filter(item => item.ready).length;
+  return {
+    status: readyCount === channels.length ? "live-communications-ready" : readyCount ? "partial-live-communications-ready" : "communications-provider-ready",
+    readyCount,
+    total: channels.length,
+    channels,
+    voiceCommands: [
+      "Nexus, call Ron",
+      "Nexus, send SMS to the provider",
+      "Nexus, WhatsApp the buyer",
+      "Nexus, follow up now"
+    ],
+    safety: "Live phone, SMS, and WhatsApp actions remain confirmation-gated before real delivery.",
     updatedAt: new Date().toISOString()
   };
 }
@@ -19977,6 +20111,23 @@ async function api(req, res, url) {
 
   if (url.pathname === "/api/native/voice-runtime" && req.method === "GET") {
     return send(res, 200, nativeVoiceRuntimeModel(db, user));
+  }
+
+  if (url.pathname === "/api/native/voice-runtime" && req.method === "POST") {
+    if (!user) return send(res, 401, { error: "Sign in required" });
+    const body = await readBody(req);
+    const session = registerNativePermissionSession(db, user, body);
+    await writeDb(db);
+    const state = publicState(db, user);
+    state.nativePermissionSession = session;
+    state.nativeVoiceRuntime = nativeVoiceRuntimeModel(db, user);
+    return send(res, 200, state);
+  }
+
+  if (url.pathname === "/api/communications/execution-readiness" && (req.method === "GET" || req.method === "POST")) {
+    if (!user) return send(res, 401, { error: "Sign in required" });
+    const body = req.method === "POST" ? await readBody(req) : {};
+    return send(res, 200, communicationsExecutionReadiness(db, user, body));
   }
 
   if (url.pathname === "/api/engines/render-env-plan" && req.method === "GET") {

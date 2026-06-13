@@ -1,6 +1,6 @@
 {
   "name": "AgriNexus Native Voice Bridge",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "purpose": "Contract for Android, iOS, and desktop shells that wrap the AgriNexus web platform with deeper device permissions.",
   "wakePhrases": ["Hey AgriNexus", "Hey Nexus", "Nexus", "Agri"],
   "assistantNames": {
@@ -43,12 +43,15 @@
     "voice.interrupt",
     "voice.language_changed",
     "voice.permission_changed",
+    "voice.always_on_started",
+    "voice.always_on_stopped",
     "voice.playback_started",
     "voice.playback_finished",
     "camera.capture_ready",
     "camera.media_attached",
     "notification.opened",
     "notification.permission_changed",
+    "push.token_registered",
     "location.route_update",
     "location.region_changed",
     "offline.queue_flushed",
@@ -68,6 +71,10 @@
     "voice.listen",
     "permissions.status",
     "permissions.request",
+    "permissions.register",
+    "push.register",
+    "wake.start",
+    "wake.stop",
     "camera.capture",
     "media.attach",
     "route.track",
@@ -97,11 +104,44 @@
     "voice": "/api/voice/respond",
     "voiceTranscribe": "/api/voice/transcribe",
     "nativeRuntime": "/api/native/voice-runtime",
+    "nativePermissionSession": "/api/native/voice-runtime",
+    "communicationsReadiness": "/api/communications/execution-readiness",
     "liveServices": "/api/production/live-service-check",
     "memory": "/api/agent/memory-summary",
     "telehealth": "/api/health/intake",
     "workforce": "/api/workforce/apply",
     "trade": "/api/trade/action"
+  },
+  "nativePermissionSession": {
+    "method": "POST",
+    "endpoint": "/api/native/voice-runtime",
+    "requiredPayload": {
+      "device": { "platform": "ios|android", "appVersion": "string", "deviceId": "hashed optional" },
+      "wakeMode": "always-on|foreground|manual",
+      "permissions": {
+        "microphone": "granted",
+        "speechRecognition": "granted",
+        "backgroundAudio": "granted",
+        "notifications": "granted",
+        "geolocation": "foreground|background",
+        "camera": "granted",
+        "secureStorage": "granted"
+      },
+      "pushToken": "optional native push token"
+    },
+    "readyState": "native-always-on-ready when microphone, background audio, and always-on wake mode are active.",
+    "privacyControls": ["visibleListeningIndicator", "oneTapOff", "wakeAuditEnabled"]
+  },
+  "communicationsExecution": {
+    "method": "GET or POST",
+    "endpoint": "/api/communications/execution-readiness",
+    "channels": ["phone", "sms", "whatsapp"],
+    "executionEndpoints": {
+      "phone": "/api/voice/phone/outbound-call",
+      "sms": "/api/notifications/send",
+      "whatsapp": "/api/notifications/send"
+    },
+    "confirmationRule": "Ask Nexus must confirm before a real call, SMS, or WhatsApp delivery."
   },
   "offlineQueue": {
     "queueableCommands": ["agent.command", "notification.schedule", "route.track", "media.attach"],
