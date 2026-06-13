@@ -14,6 +14,7 @@ const requirements = [
   ["autopilot mission queue", app.includes("function nexusAutopilotQueue") && server.includes("agent.autopilot_executed") && server.includes("previewSteps")],
   ["real provider action depth", app.includes("function providerActionDepthStatus") && server.includes("live-service-check") && server.includes("dispatchProviderWebhook")],
   ["voice interruption", app.includes("function interruptNexusSpeech") && app.includes("function stopNexusSpeaking") && app.includes("I stopped speaking") && app.includes("stopVoicePlayback") && app.includes("activeVoiceRequestController.abort")],
+  ["side conversation pause", app.includes("function isLikelySideConversationWithoutNexusCommand") && app.includes("function pauseNexusForSideConversation") && app.includes("I heard people talking, so I paused")],
   ["post-stop next prompt recovery", app.includes("function resetNexusForNextPrompt") && app.includes("Stopped. Ask me the next question or tell me where to go next.") && app.includes("setCommandInputs(\"\")")],
   ["proactive alerts", app.includes("function nexusProactiveAlerts") && app.includes("autopilot-waiting") && app.includes("renderNotificationPanel")],
   ["mobile permission polish", app.includes("function mobilePermissionRecoveryGuide") && app.includes("requestProductionMobilePermission") && app.includes("Connection restored")],

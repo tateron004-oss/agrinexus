@@ -390,6 +390,9 @@ assert(app.includes("function postStopRedirectCommand"), "Voice stop must suppor
 assert(app.includes("function isStopAndContinueWorkingCommand"), "Voice stop must understand continue-working as a close request");
 assert(app.includes("function stopNexusAndReturnToWork"), "Voice stop must close Ask Nexus when the user wants to keep working");
 assert(app.includes("Stopped. Nexus is closed so you can continue working."), "Voice stop close path must acknowledge and get out of the user's way");
+assert(app.includes("function isLikelySideConversationWithoutNexusCommand"), "Nexus must detect side conversation before guessing at a command");
+assert(app.includes("function pauseNexusForSideConversation"), "Nexus must pause silently when it hears multiple people without a clear command");
+assert(app.includes("I heard people talking, so I paused. Say Nexus when you want me."), "Side-conversation pause must explain briefly and wait for a wake phrase");
 assert(app.includes("i m|im|am|call me"), "Nexus introduction handling must catch casual name phrases like hey I am Javar");
 assert(app.includes("stopVoicePlayback({ hard: true });") && app.includes("setVoiceResponse(introductionResponse, true);"), "Nexus must interrupt old speech before greeting a newly introduced user");
 assert(app.includes("Hey ${name}. What do you need?") && app.includes("Got you: ${values.command || \"\"}. I'm on it."), "Nexus voice tone should stay warm and conversational, not formal");
@@ -401,8 +404,8 @@ assert(app.includes("Stopped. Ask me the next question or tell me where to go ne
 assert(styles.includes("pointer-events: none") && styles.includes(".user-caption-actions") && styles.includes("pointer-events: auto"), "Caption panel must not block workflow action clicks");
 assert(styles.includes("width: min(300px, calc(100vw - 24px))") && styles.includes("max-height: 138px"), "Caption panel must default to a small bubble");
 assert(styles.includes(".user-caption-panel.expanded") && styles.includes("display: none") && styles.includes("display: grid"), "Caption input controls must appear only in expanded caption mode");
-assert(html.includes("nexus-behavior-199"), "Index must force browsers to load Nexus behavior CSS");
-assert(html.includes("nexus-behavior-199"), "Index must force browsers to load Nexus behavior JS");
+assert(html.includes("nexus-behavior-200"), "Index must force browsers to load Nexus behavior CSS");
+assert(html.includes("nexus-behavior-200"), "Index must force browsers to load Nexus behavior JS");
 assert(app.includes("shipmentPreviewMapCanvas") && app.includes("renderShipmentPreviewMap"), "Shipment preview maps must use real Leaflet canvases");
 assert(app.includes("healthHotspotMapCanvas") && app.includes("renderHealthHotspotPreviewMap"), "Health hotspot maps must use real Leaflet canvases");
 assert(app.includes("function shipmentTrackingState") && app.includes("function drawShipmentRoute"), "Shipment maps must render operational tracking state, not decorative routes");

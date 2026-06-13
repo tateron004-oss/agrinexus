@@ -61,8 +61,8 @@ let routeTrackingWatchId = null;
 let routeTrackingPoints = [];
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-199";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v179";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-200";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v180";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
 const VOICE_ATTENTION_DELAY_MS = 900;
@@ -6260,6 +6260,55 @@ function isExplicitNexusWakeOrCommand(command = "") {
     || isNexusGreetingPrefix(normalized)
     || /^(hey\s+)?(nexus|agrinexus|agri nexus|agri)\b/.test(normalized)
     || isNexusResumeListeningCommand(normalized);
+}
+
+function isLikelySideConversationWithoutNexusCommand(command = "") {
+  const lower = normalizeToolText(command);
+  if (!lower || lower.length < 6) return false;
+  if (isExplicitNexusWakeOrCommand(command) || isGlobalStopCommand(lower) || isUniversalLanguageCommand(command)) return false;
+  if (isNexusHearingCheckCommand(command) || isNexusResumeListeningCommand(command)) return false;
+  if (hasBehaviorActionVerb(command) || isNaturalQuestionOrConversation(command) || isOpenDialogVoiceQuestion(command)) return false;
+  const tokens = lower.split(/\s+/).filter(Boolean);
+  const clearServiceTerm = /\b(learn|learning|course|class|lesson|work|job|jobs|health|doctor|clinic|medicine|pharmacy|trade|crop|crops|farm|buyer|seller|map|route|shipment|drone|weather|time|appointment)\b/.test(lower);
+  if (clearServiceTerm && tokens.length <= 7) return false;
+  const sideTalkPatterns = [
+    /\b(he|she|they|we|you)\s+(said|says|asked|told|was saying|were saying|are talking|were talking)\b/,
+    /\b(tell|ask|show|give)\s+(him|her|them|that person|the person)\b/,
+    /\b(i was talking to|we are talking|we were talking|someone else|not you|not nexus|side conversation|another person|two people|both talking|people talking)\b/,
+    /\b(wait|hold on|one second).*\b(he|she|they|we|you)\b/,
+    /\b(what did you say|what are you saying|why did you say|no i said|i told you)\b/
+  ];
+  if (sideTalkPatterns.some(pattern => pattern.test(lower))) return true;
+  const speakerMarkers = (lower.match(/\b(i|you|he|she|we|they|him|her|them)\b/g) || []).length;
+  const conjunctions = (lower.match(/\b(and|but|so|then|because)\b/g) || []).length;
+  return tokens.length >= 10 && speakerMarkers >= 3 && conjunctions >= 1 && !clearServiceTerm;
+}
+
+function pauseNexusForSideConversation(command = "") {
+  const message = "I heard people talking, so I paused. Say Nexus when you want me.";
+  voiceConversationPaused = true;
+  pendingAgentClarification = null;
+  activeVoiceMission = null;
+  activeAgentJourney = null;
+  pendingGrandmaAction = null;
+  pendingNexusSpokenCommand = null;
+  nexusAwaitingCommand = false;
+  clearAgentProgressTimers();
+  stopVoicePlayback({ hard: true });
+  voiceStopRequested = false;
+  voiceAutoRestart = voiceFirstMode;
+  updateNexusBehaviorLayer("paused", message);
+  setVoiceStatus(voiceFirstMode ? "paused" : "standby");
+  lastVoiceResponse = translateText(message);
+  ["#globalAssistantStatus", "#globalVoiceOutputStatus", "#voiceTranscript", "#jarvisSummary"].forEach(selector => {
+    const element = $(selector);
+    if (element) element.textContent = lastVoiceResponse;
+  });
+  updateUserCaptionPanel(lastVoiceResponse);
+  setCommandInputs("");
+  recordNexusAutonomousLearning({ type: "side-conversation-paused", command: normalizeToolText(command) });
+  toast(lastVoiceResponse);
+  refreshMicSupport();
 }
 
 function enterNexusConversationPause(message = "Nexus is paused. I will ignore background conversation until you say Nexus again or press the mic.") {
@@ -16644,6 +16693,10 @@ async function handleVoiceCommand(rawCommand, options = {}) {
     }
     return;
   }
+  if (options.source === "voice" && isLikelySideConversationWithoutNexusCommand(command || localizedCommand || rawCommand)) {
+    pauseNexusForSideConversation(command || localizedCommand || rawCommand);
+    return;
+  }
   agentPerformanceState.spokenCommand = spokenCommand || command;
   if (isOpenKnowledgeQuestion(spokenCommand || command)) {
     pendingAgentClarification = null;
@@ -18110,10 +18163,14 @@ function startVoiceListening() {
       }
       return;
     }
+    if (isLikelySideConversationWithoutNexusCommand(cleanedCommand || localizedCommand || command)) {
+      pauseNexusForSideConversation(cleanedCommand || localizedCommand || command);
+      return;
+    }
     setVoiceStatus("thinking");
     setVoiceResponse(`Heard: ${command}.`, false, { allowVoiceFirst: false });
     request("/api/voice/transcribe", { method: "POST", body: { transcript: command, language: languageCode(), locale: voiceLocale() } }).catch(() => {});
-    handleVoiceCommand(command);
+    handleVoiceCommand(command, { source: "voice" });
   };
   voiceRecognition.start();
 }
