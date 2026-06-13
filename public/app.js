@@ -62,8 +62,8 @@ let routeTrackingWatchId = null;
 let routeTrackingPoints = [];
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-206";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v186";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-207";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v187";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
 const VOICE_ATTENTION_DELAY_MS = 900;
@@ -16590,6 +16590,8 @@ function isOpenKnowledgeQuestion(command = "") {
   if (/\b(weather|temperature|temp|too hot|safe to walk|walk today|rain|raining|forecast)\b/.test(lower)) return false;
   const startsLikeQuestion = /^(what|whats|what is|how much|how many|where|when|which|who|compare|tell me|explain|is it|are there|can you|could you|would you|can you find|look up|search)\b/.test(lower);
   const currentSignals = /\b(current|today|now|latest|live|real[-\s]?time|right now|this week|this month|price|cost|rate|market|outbreak|route delay|near me|nearby|available|availability)\b/.test(lower);
+  const definitionShape = /^(what is|whats|explain|define|tell me about|describe|teach me)\b/.test(lower) && !currentSignals;
+  if (definitionShape) return false;
   const domainSignals = /\b(maize|corn|rice|cassava|yam|beans|crop|commodity|market|buyer|seller|kenya|south africa|nigeria|ghana|rwanda|tanzania|egypt|drc|congo|clinic|pharmacy|hospital|doctor|provider|nurse|cold|flu|cough|sore throat|symptom|medicine|medication|jobs|career|degree|graduate|graduated|university|biochemistry|biology|chemistry|lab|laboratory|courses|route|shipment|logistics)\b/.test(lower);
   const healthAdvisorQuestion = /\b(who|what kind|which|best|right)\b.*\b(doctor|provider|clinician|nurse|clinic)\b/.test(lower)
     || /\b(doctor|provider|clinic|nurse)\b.*\b(cold|flu|fever|cough|sore throat|runny nose|symptom|medicine|medication)\b/.test(lower);

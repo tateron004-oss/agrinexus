@@ -143,6 +143,33 @@ async function call(route, body) {
     assert.strictEqual(music.commandResult.intent, "utility.music", "music requests should be utility-backed");
     assert(music.commandResult.metadata.music.url.includes("youtube.com/results"), "music request should include a safe search handoff");
     assert(/cannot directly control protected music services|music provider/i.test(music.commandResult.response), "music request should be honest about provider limits");
+    const encyclopediaCrop = await call("/api/agent/command", {
+      command: "Nexus, what is photosynthesis and why does it matter for maize?",
+      conversational: true,
+      inputMode: "voice",
+      outputMode: "voice"
+    });
+    assert.strictEqual(encyclopediaCrop.commandResult.intent, "conversation.encyclopedia_answered", "farming knowledge should use Encyclopedia Brain");
+    assert.strictEqual(encyclopediaCrop.commandResult.metadata.encyclopediaBrain, true, "encyclopedia response should expose brain metadata");
+    assert(/sunlight|plant|maize|food/i.test(encyclopediaCrop.commandResult.response), "photosynthesis answer should be useful for a farmer");
+    const encyclopediaHealth = await call("/api/agent/command", {
+      command: "Nexus, what causes malaria and what should a family know?",
+      conversational: true,
+      inputMode: "voice",
+      outputMode: "voice"
+    });
+    assert.strictEqual(encyclopediaHealth.commandResult.intent, "conversation.encyclopedia_answered", "health education should use Encyclopedia Brain");
+    assert(/not diagnose|cannot diagnose|emergency|clinic|mosquito/i.test(encyclopediaHealth.commandResult.response), "health encyclopedia answer should include safety boundaries");
+    const translatedEncyclopedia = await call("/api/agent/command", {
+      command: "Nexus, what is photosynthesis and why does it matter for maize?",
+      conversational: true,
+      inputMode: "voice",
+      outputMode: "voice",
+      targetLanguage: "fr"
+    });
+    assert.strictEqual(translatedEncyclopedia.commandResult.intent, "conversation.encyclopedia_answered", "translated encyclopedia should preserve intent");
+    assert.strictEqual(translatedEncyclopedia.commandResult.metadata.translatedResponse, true, "translated encyclopedia response should use translation pipeline");
+    assert.notStrictEqual(translatedEncyclopedia.commandResult.response, translatedEncyclopedia.commandResult.metadata.originalResponse, "translated encyclopedia response should not remain English-only");
     const buyerRoute = await call("/api/agent/command", {
       command: "Nexus, a buyer purchased my products in Lagos and I am in Kenya. Track the delivery location.",
       conversational: true,
@@ -263,6 +290,9 @@ async function call(route, body) {
   console.log("- Ask Nexus backend field alert answer");
   console.log("- Ask Nexus backend health safety answer");
   console.log("- Ask Nexus backend music handoff");
+  console.log("- Ask Nexus Encyclopedia Brain farming answer");
+  console.log("- Ask Nexus Encyclopedia Brain health education boundary");
+  console.log("- Ask Nexus translated Encyclopedia Brain answer");
   console.log("- Ask Nexus backend Situation Agent eight-point model");
   console.log("- Ask Nexus pre-provider hardening model");
   console.log("- Ask Nexus backend shipment answer");

@@ -13662,6 +13662,8 @@ function isCurrentKnowledgeQuestion(command = "") {
   if (/\b(weather|temperature|temp|too hot|safe to walk|walk today|rain|raining|forecast)\b/.test(lower)) return false;
   const questionStart = /^(what|what's|whats|how much|how many|where|when|which|compare|tell me|explain|is it|are there|can you find|look up|search)\b/.test(lower);
   const currentSignal = /\b(current|today|now|latest|live|real[-\s]?time|right now|this week|this month|price|cost|rate|market|outbreak|route delay|near me|nearby|available|availability)\b/.test(lower);
+  const definitionShape = /^(what is|what's|whats|explain|define|tell me about|describe|teach me)\b/.test(lower) && !currentSignal;
+  if (definitionShape) return false;
   const domainSignal = /\b(maize|corn|rice|cassava|yam|beans|crop|crops|commodity|market|buyer|seller|kenya|south africa|nigeria|ghana|rwanda|tanzania|egypt|drc|congo|clinic|pharmacy|hospital|jobs|courses|route|shipment|logistics)\b/.test(lower);
   return (questionStart && (currentSignal || domainSignal)) || (currentSignal && domainSignal);
 }
@@ -13996,6 +13998,150 @@ function localKnowledgeFallbackAnswer(db, command = "", live = {}) {
     return `I do not have a verified live market-price feed connected right now. I can still prepare a practical market check using the active country ${country.name}, route ${route.name}, crop quality, buyer demand, delivery cost, and payment readiness.`;
   }
   return `I can answer from platform context, but I do not have live internet evidence for that question yet. Connect the web-search provider to make this a current, source-aware answer.`;
+}
+
+function isEverydayEncyclopediaQuestion(command = "") {
+  const lower = String(command || "").toLowerCase().trim();
+  if (!lower) return false;
+  if (utilityAssistantKind(command, lower) || isCurrentKnowledgeQuestion(command)) return false;
+  if (/\b(open|start|run|create|submit|send|call|message|apply|pay|checkout|book|schedule|delete|change language|switch language)\b/.test(lower)) return false;
+  if (/\b(platform|agrinexus|nexus|dashboard|admin|investor|workflow|live service|provider engine|render|github|login|password)\b/.test(lower)
+    && /\b(how do i use|where is|open|start|button|tab|screen|page|mode|setting)\b/.test(lower)) return false;
+  const questionShape = /^(what|what's|whats|why|how|how does|how do|when|where|who|which|can you explain|explain|tell me about|teach me|describe|define)\b/.test(lower);
+  const everydayTopics = /\b(photosynthesis|soil|fertilizer|compost|irrigation|maize|cassava|rice|beans|crop|crops|plant|plants|harvest|rain|drought|pest|malaria|cholera|fever|cold|cough|medicine|nutrition|pregnancy|first aid|clean water|sanitation|saving|savings|budget|money|loan|interest|inflation|business|market|education|school|study|job|career|internet|phone|whatsapp|ai|drone|gps|weather|climate|safety|child|children|women|family)\b/.test(lower);
+  const ruralQuestion = /\b(farmer|farm|grandma|mother|child|village|rural|clinic|pharmacy|school|market|buyer|seller)\b/.test(lower) && /\b(what|why|how|explain|tell|teach|mean|means|understand)\b/.test(lower);
+  return questionShape && (everydayTopics || ruralQuestion || lower.split(/\s+/).length >= 5);
+}
+
+function encyclopediaTopicSignal(command = "") {
+  const lower = String(command || "").toLowerCase();
+  const topics = [
+    { id: "health", section: "health", label: "health access", terms: ["malaria", "cholera", "fever", "cold", "cough", "medicine", "nutrition", "pregnancy", "first aid", "clean water", "sanitation", "clinic", "pharmacy"] },
+    { id: "agriculture", section: "trade", label: "farming and crops", terms: ["photosynthesis", "soil", "fertilizer", "compost", "irrigation", "maize", "cassava", "rice", "beans", "crop", "plant", "harvest", "drought", "pest"] },
+    { id: "money", section: "trade", label: "money and markets", terms: ["saving", "savings", "budget", "money", "loan", "interest", "inflation", "business", "market", "price"] },
+    { id: "learning", section: "learning", label: "learning and study", terms: ["education", "school", "study", "course", "learn", "student", "teacher"] },
+    { id: "work", section: "workforce", label: "jobs and work", terms: ["job", "career", "work", "interview", "cv", "resume", "skill"] },
+    { id: "technology", section: "agent", label: "technology", terms: ["internet", "phone", "whatsapp", "ai", "drone", "gps", "map"] }
+  ];
+  return topics.find(topic => topic.terms.some(term => lower.includes(term))) || { id: "life", section: "agent", label: "everyday life", terms: [] };
+}
+
+function localEncyclopediaAnswer(db, user, command = "", topic = encyclopediaTopicSignal(command)) {
+  const lower = String(command || "").toLowerCase();
+  const { country } = activeContext(db);
+  const prefix = "Here is the simple answer.";
+  if (topic.id === "health") {
+    const emergency = "If there is trouble breathing, chest pain, severe weakness, heavy bleeding, fainting, confusion, a baby is very sick, or danger is present, seek emergency help now.";
+    if (/\b(malaria)\b/.test(lower)) {
+      return `${prefix} Malaria is an illness spread by infected mosquitoes. Common warning signs can include fever, chills, headache, body pain, vomiting, or weakness. I cannot diagnose anyone, but I can help explain the risk, prepare a clinic or pharmacy question, and guide a telehealth intake. ${emergency}`;
+    }
+    if (/\b(cholera|diarrhea|clean water|sanitation)\b/.test(lower)) {
+      return `${prefix} Cholera and severe diarrhea can spread through unsafe water or poor sanitation. The practical protection steps are clean drinking water, handwashing, safe food handling, and getting help quickly if there is dehydration. I cannot diagnose, but I can help find clinic, pharmacy, or mobile clinic support. ${emergency}`;
+    }
+    return `${prefix} For health questions, Nexus can explain the issue in plain words, help prepare questions for a clinic, pharmacy, or telehealth provider, and watch for urgent danger signs. I do not diagnose or replace a clinician. ${emergency}`;
+  }
+  if (topic.id === "agriculture") {
+    if (/\b(photosynthesis)\b/.test(lower)) {
+      return `${prefix} Photosynthesis is how a plant uses sunlight, water, and air to make food for itself. For a farmer, that means leaves need light, enough water, healthy soil, and low stress. If maize leaves are yellow or weak, Nexus can help check water, soil nutrients, pests, weather, and drone evidence before harvest or selling.`;
+    }
+    if (/\b(yellow|turn yellow|crop bad|pest|drought|soil|fertilizer|compost|irrigation)\b/.test(lower)) {
+      return `${prefix} Crops can turn yellow from low nitrogen, too much or too little water, pests, disease, poor soil, or heat stress. The safe next step is to inspect the leaves, soil moisture, roots, and recent weather, then compare with drone or photo evidence before spending money on treatment.`;
+    }
+    return `${prefix} For farming, Nexus can explain crop problems, planting timing, soil care, water planning, pest checks, harvest readiness, buyer quality evidence, and route risk in simple language for ${country.name}.`;
+  }
+  if (topic.id === "money") {
+    return `${prefix} For money and markets, Nexus can explain the idea, separate fixed costs from variable costs, estimate risk, and help a seller compare price, quality, transport, timing, and payment safety. I will not claim a live market price unless a live provider or search source confirms it.`;
+  }
+  if (topic.id === "learning") {
+    return `${prefix} For learning, Nexus can explain a topic simply, ask what the learner already understands, give an example, create a short practice step, and support captions, audio, low-bandwidth reading, and certificates when the course workflow is used.`;
+  }
+  if (topic.id === "work") {
+    return `${prefix} For work, Nexus can explain career paths, help match skills to jobs, build an application profile, prepare interview answers, and guide the user one step at a time. Live job listings need a job provider or web-search connection.`;
+  }
+  if (topic.id === "technology") {
+    return `${prefix} For technology, Nexus can explain tools like phones, WhatsApp, GPS, maps, drones, and AI in everyday words, then connect the explanation to a real AgriNexus action when the user is ready.`;
+  }
+  return `${prefix} I can explain everyday topics in plain language, connect the answer to health, farming, learning, work, trade, maps, or technology, and ask one useful follow-up. If the question needs current internet facts, I will say that and use live search when configured.`;
+}
+
+async function everydayEncyclopediaResponse(db, user, command = "", options = {}) {
+  const topic = encyclopediaTopicSignal(command);
+  const memories = retrieveAgentMemories(db.profile, command, 4);
+  const { country, route } = activeContext(db);
+  let response = localEncyclopediaAnswer(db, user, command, topic);
+  let provider = "local-encyclopedia-brain";
+  if (process.env.OPENAI_API_KEY) {
+    try {
+      const aiResponse = await fetchWithTimeout("https://api.openai.com/v1/responses", {
+        method: "POST",
+        headers: {
+          authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+          "content-type": "application/json"
+        },
+        body: JSON.stringify({
+          model: process.env.OPENAI_AGENT_MODEL || process.env.OPENAI_MODEL || "gpt-4o-mini",
+          input: [
+            {
+              role: "system",
+              content: [
+                "You are Nexus, the AgriNexus encyclopedia brain and everyday life advisor.",
+                "Answer like a warm, practical person speaking to a low-tech rural user.",
+                "Use simple language, short sentences, and one useful next step.",
+                "Do not diagnose medical conditions. Explain health topics as education and access guidance only.",
+                "Do not claim live prices, live locations, or current events unless live context is provided.",
+                "If the user speaks imperfectly, infer the helpful question and answer without making them feel wrong.",
+                "Keep the spoken answer concise: usually 3 to 5 short sentences."
+              ].join(" ")
+            },
+            { role: "user", content: JSON.stringify({ question: command, topic, activeCountry: country, route, memories, targetLanguage: options.targetLanguage || user?.language || "en" }) }
+          ],
+          max_output_tokens: 420
+        })
+      }, 14000);
+      const payload = await aiResponse.json().catch(() => ({}));
+      if (!aiResponse.ok) throw new Error(payload.error?.message || aiResponse.statusText);
+      response = extractResponseText(payload) || response;
+      provider = "openai-encyclopedia-brain";
+    } catch (error) {
+      provider = "local-after-openai-encyclopedia-error";
+      logIntegration(db, {
+        providerId: "openai",
+        module: "AI",
+        action: "agent.encyclopedia_brain_error",
+        status: "fallback",
+        detail: error.message || "OpenAI encyclopedia brain unavailable.",
+        metadata: { command, topic },
+        dispatch: false
+      });
+    }
+  }
+  ensureAiProfile(db.profile);
+  db.profile.agentMemory.lastStatus = "encyclopedia-answered";
+  db.profile.agentMemory.lastSummary = response;
+  db.profile.agentMemory.lastRecommendedSection = topic.section;
+  db.profile.agentMemory.updatedAt = new Date().toISOString();
+  rememberAgentMemory(db.profile, `Encyclopedia question on ${topic.label}: ${command}`, { source: "nexus-encyclopedia-brain", category: "question", module: "AI", confidence: 0.86 });
+  logIntegration(db, {
+    providerId: "openai",
+    module: "AI",
+    action: "agent.encyclopedia_brain_answered",
+    detail: response.slice(0, 240),
+    metadata: { provider, topic, command, country: country.name, memoriesUsed: memories.map(item => item.id).filter(Boolean) },
+    dispatch: false
+  });
+  return {
+    intent: "conversation.encyclopedia_answered",
+    status: "completed",
+    response,
+    metadata: {
+      conversationMode: true,
+      encyclopediaBrain: true,
+      provider,
+      topic,
+      redirectSection: topic.section || "agent",
+      suggestedReplies: ["explain simpler", "give me an example", "what should I do next", "open the right section"]
+    }
+  };
 }
 
 async function currentKnowledgeQuestionResponse(db, user, command = "", options = {}) {
@@ -17919,6 +18065,9 @@ async function runAgentCommand(db, user, command, options = {}) {
       status: readiness.status,
       metadata: { conversationMode: conversational, redirectSection: "agent", jarvisReadiness: readiness }
     };
+  }
+  if (conversational && isEverydayEncyclopediaQuestion(text)) {
+    return everydayEncyclopediaResponse(db, user, text, options);
   }
   if (conversational && isCurrentKnowledgeQuestion(text)) {
     return currentKnowledgeQuestionResponse(db, user, text, options);
