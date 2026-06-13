@@ -16753,11 +16753,75 @@ function extractTemperatureF(text) {
   return null;
 }
 
+function africanCityLocationCatalog() {
+  return [
+    { aliases: ["nairobi"], label: "Nairobi, Kenya", city: "Nairobi", country: "Kenya", latitude: -1.2864, longitude: 36.8172, timeZone: "Africa/Nairobi" },
+    { aliases: ["mombasa"], label: "Mombasa, Kenya", city: "Mombasa", country: "Kenya", latitude: -4.0435, longitude: 39.6682, timeZone: "Africa/Nairobi" },
+    { aliases: ["kisumu"], label: "Kisumu, Kenya", city: "Kisumu", country: "Kenya", latitude: -0.0917, longitude: 34.768, timeZone: "Africa/Nairobi" },
+    { aliases: ["eldoret"], label: "Eldoret, Kenya", city: "Eldoret", country: "Kenya", latitude: 0.5143, longitude: 35.2698, timeZone: "Africa/Nairobi" },
+    { aliases: ["lagos"], label: "Lagos, Nigeria", city: "Lagos", country: "Nigeria", latitude: 6.5244, longitude: 3.3792, timeZone: "Africa/Lagos" },
+    { aliases: ["abuja"], label: "Abuja, Nigeria", city: "Abuja", country: "Nigeria", latitude: 9.0765, longitude: 7.3986, timeZone: "Africa/Lagos" },
+    { aliases: ["kano"], label: "Kano, Nigeria", city: "Kano", country: "Nigeria", latitude: 12.0022, longitude: 8.592, timeZone: "Africa/Lagos" },
+    { aliases: ["accra"], label: "Accra, Ghana", city: "Accra", country: "Ghana", latitude: 5.6037, longitude: -0.187, timeZone: "Africa/Accra" },
+    { aliases: ["kumasi"], label: "Kumasi, Ghana", city: "Kumasi", country: "Ghana", latitude: 6.6666, longitude: -1.6163, timeZone: "Africa/Accra" },
+    { aliases: ["kinshasa"], label: "Kinshasa, DRC", city: "Kinshasa", country: "DRC", latitude: -4.4419, longitude: 15.2663, timeZone: "Africa/Kinshasa" },
+    { aliases: ["goma"], label: "Goma, DRC", city: "Goma", country: "DRC", latitude: -1.6585, longitude: 29.2205, timeZone: "Africa/Lubumbashi" },
+    { aliases: ["kigali"], label: "Kigali, Rwanda", city: "Kigali", country: "Rwanda", latitude: -1.9441, longitude: 30.0619, timeZone: "Africa/Kigali" },
+    { aliases: ["dar es salaam", "dar"], label: "Dar es Salaam, Tanzania", city: "Dar es Salaam", country: "Tanzania", latitude: -6.7924, longitude: 39.2083, timeZone: "Africa/Dar_es_Salaam" },
+    { aliases: ["arusha"], label: "Arusha, Tanzania", city: "Arusha", country: "Tanzania", latitude: -3.3869, longitude: 36.683, timeZone: "Africa/Dar_es_Salaam" },
+    { aliases: ["kampala"], label: "Kampala, Uganda", city: "Kampala", country: "Uganda", latitude: 0.3476, longitude: 32.5825, timeZone: "Africa/Kampala" },
+    { aliases: ["cairo"], label: "Cairo, Egypt", city: "Cairo", country: "Egypt", latitude: 30.0444, longitude: 31.2357, timeZone: "Africa/Cairo" },
+    { aliases: ["alexandria"], label: "Alexandria, Egypt", city: "Alexandria", country: "Egypt", latitude: 31.2001, longitude: 29.9187, timeZone: "Africa/Cairo" },
+    { aliases: ["addis ababa", "addis"], label: "Addis Ababa, Ethiopia", city: "Addis Ababa", country: "Ethiopia", latitude: 8.9806, longitude: 38.7578, timeZone: "Africa/Addis_Ababa" },
+    { aliases: ["johannesburg", "joburg"], label: "Johannesburg, South Africa", city: "Johannesburg", country: "South Africa", latitude: -26.2041, longitude: 28.0473, timeZone: "Africa/Johannesburg" },
+    { aliases: ["cape town"], label: "Cape Town, South Africa", city: "Cape Town", country: "South Africa", latitude: -33.9249, longitude: 18.4241, timeZone: "Africa/Johannesburg" }
+  ];
+}
+
+function extractExplicitPlace(text = "") {
+  const match = String(text || "").match(/\b(?:in|for|near|around)\s+([A-Za-z\u00C0-\u024F\s.'-]{3,40})\??$/i);
+  return match?.[1]?.trim() || "";
+}
+
+function knownAfricanCityLocation(text = "") {
+  const lower = String(text || "").toLowerCase();
+  const explicit = extractExplicitPlace(text).toLowerCase();
+  const searchable = `${lower} ${explicit}`.replace(/\s+/g, " ").trim();
+  const found = africanCityLocationCatalog().find(place =>
+    place.aliases.some(alias => {
+      const normalizedAlias = alias.toLowerCase();
+      return searchable === normalizedAlias
+        || searchable.includes(` ${normalizedAlias}`)
+        || searchable.includes(`${normalizedAlias} `)
+        || searchable.endsWith(` ${normalizedAlias}`);
+    })
+  );
+  if (!found) return null;
+  return { ...found, source: "known-african-city" };
+}
+
+function musicAssistantIntent(text = "") {
+  const lower = String(text || "").toLowerCase();
+  if (!/\b(play|open|find|search|start|put on|listen to)\b/.test(lower)) return null;
+  if (!/\b(music|song|songs|playlist|artist|album|soul|rnb|r&b|gospel|afrobeats|jazz|hip hop|hip-hop|reggae)\b/.test(lower)) return null;
+  const query = String(text || "")
+    .replace(/\bnexus\b/ig, "")
+    .replace(/\b(can you|please|could you|would you|open|play|find|search|start|put on|listen to)\b/ig, " ")
+    .replace(/\s+/g, " ")
+    .trim() || "90s soul music playlist";
+  return {
+    query,
+    url: `https://www.youtube.com/results?search_query=${encodeURIComponent(query)}`,
+    response: `I can help with that. I cannot directly control protected music services without a connected music provider, but I can open or guide a search for ${query} and keep working with you here.`
+  };
+}
+
 function utilityAssistantKind(text, lower) {
   const raw = String(text || "").toLowerCase();
   if (/\b(walk me through|guide me through|show me how|help me use|how do i use|how to use)\b/.test(lower)) return "";
   if (/\b(what time is it|current time|time now|tell me the time|hora es|quelle heure|saa ngapi)\b/.test(lower) || /(\u0627\u0644\u0648\u0642\u062a|\u0627\u0644\u0633\u0627\u0639\u0629)/.test(raw)) return "time";
   if (/\b(weather|temperature|temp|too hot|how hot|heat|outside|walk|walking|rain|forecast|clima|meteo|météo|hali ya hewa)\b/.test(lower) || /(\u0627\u0644\u0637\u0642\u0633|\u0627\u0644\u062d\u0631\u0627\u0631\u0629)/.test(raw)) return "weather";
+  if (musicAssistantIntent(text)) return "music";
   if (/\b(crop timing|planting time|when should i plant|when to plant|best time to plant|harvest time|when should i harvest|when to harvest|crop calendar|plant today|harvest today)\b/.test(lower)) return "crop-timing";
   if (/\b(remind me|appointment reminder|reminder|remind|notify me|call reminder|visit reminder)\b/.test(lower) && /\b(appointment|visit|telehealth|doctor|provider|shift|schedule)\b/.test(lower)) return "appointment-reminder";
   if (/\b(route delay|route delays|delay|delays|delayed|traffic|road blocked|roadblock|late delivery|delivery delay|delivery delays|shipment delay|shipment delays|route problem)\b/.test(lower)) return "route-delay";
@@ -16846,9 +16910,17 @@ async function utilityWeatherAnswer(db, text, options = {}) {
   const farmAdvice = /\b(farm|crop|plant|harvest|field|drone|water|irrigat)\b/i.test(text)
     ? "For farming, use this as a planning signal: check field moisture, inspect crop stress, and run drone or map intelligence before planting, watering, or moving harvest."
     : walkingAdvice;
-  const locationLine = context.location ? "using your current browser location" : `for ${context.country}`;
+  const locationLine = context.location?.source === "browser-geolocation"
+    ? "using your current browser location"
+    : `for ${context.location?.label || context.country}`;
   const windLine = context.windSpeed ? ` Wind is about ${context.windSpeed}.` : "";
   return `Weather check ${locationLine}: about ${context.temperatureF} degrees Fahrenheit, ${context.temperatureC} Celsius, with ${String(context.risk || "routine").toLowerCase()} operating risk from ${live ? "live provider context" : "platform country context"}.${windLine} ${farmAdvice}`;
+}
+
+function utilityMusicAnswer(text) {
+  const intent = musicAssistantIntent(text);
+  if (!intent) return "I can help find music, but I need the artist, style, decade, or playlist you want.";
+  return `${intent.response} Search link: ${intent.url}`;
 }
 
 async function utilityCropTimingAnswer(db, text, options = {}) {
@@ -17134,6 +17206,8 @@ async function utilityAssistantCommandResponse(db, user, text, lower, options = 
     ? utilityTimeAnswer(options)
     : kind === "weather"
       ? await utilityWeatherAnswer(db, text, options)
+      : kind === "music"
+        ? utilityMusicAnswer(text)
       : kind === "crop-timing"
         ? await utilityCropTimingAnswer(db, text, options)
         : kind === "appointment-reminder"
@@ -17163,6 +17237,7 @@ async function utilityAssistantCommandResponse(db, user, text, lower, options = 
       : ["crop-timing", "buyer-message", "field-alert"].includes(kind) ? "trade"
         : kind === "situation-agent" ? situationAgent.situation.section
           : kind === "pre-provider-readiness" ? "integrations"
+        : kind === "music" ? "dashboard"
         : kind === "next-step" ? (smartNextActions(db, user).items[0]?.section || "dashboard")
           : "dashboard";
   ensureAiProfile(db.profile);
@@ -17172,6 +17247,7 @@ async function utilityAssistantCommandResponse(db, user, text, lower, options = 
   rememberAgentMemory(db.profile, `Utility assistant answered ${kind}: ${text}`, { source: "ask-nexus-utility", category: "pattern", module: "Agent AI", confidence: 0.87 });
   logIntegration(db, {
     providerId: kind === "weather" ? "weather"
+      : kind === "music" ? "openai"
       : ["shipment", "route-delay"].includes(kind) ? "trade-logistics"
         : ["appointment", "appointment-reminder", "health-safety"].includes(kind) ? "health-telehealth"
       : ["crop-timing", "buyer-message"].includes(kind) ? "trade-market"
@@ -17181,7 +17257,7 @@ async function utilityAssistantCommandResponse(db, user, text, lower, options = 
     module: "Agent AI",
     action: `utility.${kind}`,
     detail: response.slice(0, 240),
-    metadata: { kind, timeZone: options.timeZone || "", command: text, situationAgent, preProviderHardening: preProviderModel, location: options.location || options.currentLocation || null },
+    metadata: { kind, timeZone: options.timeZone || "", command: text, situationAgent, preProviderHardening: preProviderModel, music: kind === "music" ? musicAssistantIntent(text) : null, location: options.location || options.currentLocation || knownAfricanCityLocation(text) || null },
     dispatch: false
   });
   return {
@@ -17195,7 +17271,8 @@ async function utilityAssistantCommandResponse(db, user, text, lower, options = 
       situationAgent,
       preProviderHardening: preProviderModel,
       kind,
-      location: options.location || options.currentLocation || null,
+      music: kind === "music" ? musicAssistantIntent(text) : null,
+      location: options.location || options.currentLocation || knownAfricanCityLocation(text) || null,
       suggestedReplies: ["what should I do next", "track my shipment", "message buyer", "field alert", "health safety reminder", "what works without providers"]
     }
   };
@@ -17203,7 +17280,7 @@ async function utilityAssistantCommandResponse(db, user, text, lower, options = 
 
 async function dailyContextSnapshot(db, text) {
   const { country, route } = activeContext(db);
-  const requestedLocation = arguments.length > 2 ? arguments[2] || {} : {};
+  const requestedLocation = arguments.length > 2 ? arguments[2] || knownAfricanCityLocation(text) || {} : knownAfricanCityLocation(text) || {};
   const fallbackTempF = extractTemperatureF(text) || fahrenheitFromCelsius(country.heat || 31);
   const providerUrl = process.env.DAILY_CONTEXT_WEBHOOK_URL || process.env.WEATHER_WEBHOOK_URL || process.env.WEATHER_API_URL || "";
   const latitude = Number(requestedLocation.latitude || requestedLocation.lat || 0);
@@ -17644,6 +17721,44 @@ async function runAgentCommand(db, user, command, options = {}) {
       if (intake) return intake;
     }
   }
+  if (isBuyerSellerLocationRouteCommand(lower) || isTradeCountryRouteCommand(lower)) {
+    return tradeLocationRouteResponse(db, user, text, options);
+  }
+  if (/\b(new mission brain|mission brain|nexus mission brain|activate mission brain|build mission brain|all 10 mission brain|all ten mission brain|goal brain|mission intelligence)\b/.test(lower)) {
+    return missionBrainCommandResponse(db, user, text, options);
+  }
+  if (/\b(trusted operating system|trusted os|people can rely on|actually rely on|can we trust|trust review|dependable platform|reliable operating system|production trust|trust score)\b/.test(lower)) {
+    return trustedOperatingSystemCommandResponse(db, user, text, options);
+  }
+  if (/\b(call|phone|dial|ring)\b/.test(lower) && /\b(buyer|seller|provider|doctor|nurse|clinic|telehealth|recruiter|employer|instructor|teacher|support|caregiver)\b/.test(lower)) {
+    const purpose = /buyer|seller|trade|crop|order/.test(lower) ? "buyer trade call"
+      : /doctor|nurse|clinic|telehealth|provider|patient|caregiver/.test(lower) ? "telehealth provider call"
+      : /recruiter|employer|job|workforce/.test(lower) ? "workforce recruiter call"
+      : /instructor|teacher|learning|course/.test(lower) ? "learning support call"
+      : "AgriNexus support call";
+    const wantsCallExecute = options.confirm === true || lower.includes("execute") || lower.includes("run it") || lower.includes("do it");
+    if (conversational && !wantsCallExecute) {
+      return stageAgentAction(db, text, {
+        module: "AI",
+        tool: "communications.outbound_call",
+        action: `Place ${purpose}`,
+        section: purpose.includes("buyer") ? "trade" : purpose.includes("telehealth") ? "health" : purpose.includes("workforce") ? "workforce" : "agent",
+        planner: "outbound-call-router",
+        confidence: 0.87,
+        rationale: "Outbound phone calls require confirmation before Twilio places the call.",
+        userFacingPlan: `I can place a real outbound call for ${purpose}. Say yes to call, or no to cancel.`
+      });
+    }
+    const call = await createOutboundCallWorkflow(db, user, { purpose });
+    return {
+      intent: "phone.outbound_call_requested",
+      response: call.delivery?.ok
+        ? `Calling now. I started ${call.callNumber} to ${call.to}. When they answer, AgriNexus will greet them and let them speak back to the assistant.`
+        : `I prepared the outbound call, but it needs setup before it can dial live: ${(call.delivery?.missing || [call.delivery?.error || call.status]).join(", ")}.`,
+      status: call.delivery?.ok ? "completed" : "needs-setup",
+      metadata: { conversationMode: true, redirectSection: purpose.includes("buyer") ? "trade" : purpose.includes("telehealth") ? "health" : "agent", outboundCall: call, suggestedReplies: ["explain that", "open communications", "cancel"] }
+    };
+  }
   const offlineReasoningCommand = offlineReasoningCommandResponse(db, user, text, options);
   if (offlineReasoningCommand) return offlineReasoningCommand;
   const adaptiveAutonomyCommand = adaptiveAutonomyCommandResponse(db, user, text, options);
@@ -17654,6 +17769,8 @@ async function runAgentCommand(db, user, command, options = {}) {
   if (executiveIntelligenceCommand) return executiveIntelligenceCommand;
   const ecosystemIntelligenceCommand = ecosystemIntelligenceCommandResponse(db, user, text, options);
   if (ecosystemIntelligenceCommand) return ecosystemIntelligenceCommand;
+  const earlyUtilityCommand = await utilityAssistantCommandResponse(db, user, text, lower, options);
+  if (earlyUtilityCommand) return earlyUtilityCommand;
   const networkIntelligenceCommand = networkIntelligenceCommandResponse(db, user, text, options);
   if (networkIntelligenceCommand) return networkIntelligenceCommand;
   const operationalIntelligenceCommand = operationalIntelligenceCommandResponse(db, user, text, options);

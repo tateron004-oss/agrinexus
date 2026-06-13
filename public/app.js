@@ -62,8 +62,8 @@ let routeTrackingWatchId = null;
 let routeTrackingPoints = [];
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-205";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v185";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-206";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v186";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
 const VOICE_ATTENTION_DELAY_MS = 900;
@@ -2846,9 +2846,53 @@ function explicitWeatherPlace(command = "") {
   return match?.[1]?.trim() || "";
 }
 
+function africanCityLocationCatalog() {
+  return [
+    { aliases: ["nairobi"], label: "Nairobi, Kenya", city: "Nairobi", country: "Kenya", latitude: -1.2864, longitude: 36.8172, timeZone: "Africa/Nairobi" },
+    { aliases: ["mombasa"], label: "Mombasa, Kenya", city: "Mombasa", country: "Kenya", latitude: -4.0435, longitude: 39.6682, timeZone: "Africa/Nairobi" },
+    { aliases: ["kisumu"], label: "Kisumu, Kenya", city: "Kisumu", country: "Kenya", latitude: -0.0917, longitude: 34.768, timeZone: "Africa/Nairobi" },
+    { aliases: ["eldoret"], label: "Eldoret, Kenya", city: "Eldoret", country: "Kenya", latitude: 0.5143, longitude: 35.2698, timeZone: "Africa/Nairobi" },
+    { aliases: ["lagos"], label: "Lagos, Nigeria", city: "Lagos", country: "Nigeria", latitude: 6.5244, longitude: 3.3792, timeZone: "Africa/Lagos" },
+    { aliases: ["abuja"], label: "Abuja, Nigeria", city: "Abuja", country: "Nigeria", latitude: 9.0765, longitude: 7.3986, timeZone: "Africa/Lagos" },
+    { aliases: ["kano"], label: "Kano, Nigeria", city: "Kano", country: "Nigeria", latitude: 12.0022, longitude: 8.592, timeZone: "Africa/Lagos" },
+    { aliases: ["accra"], label: "Accra, Ghana", city: "Accra", country: "Ghana", latitude: 5.6037, longitude: -0.187, timeZone: "Africa/Accra" },
+    { aliases: ["kumasi"], label: "Kumasi, Ghana", city: "Kumasi", country: "Ghana", latitude: 6.6666, longitude: -1.6163, timeZone: "Africa/Accra" },
+    { aliases: ["kinshasa"], label: "Kinshasa, DRC", city: "Kinshasa", country: "DRC", latitude: -4.4419, longitude: 15.2663, timeZone: "Africa/Kinshasa" },
+    { aliases: ["goma"], label: "Goma, DRC", city: "Goma", country: "DRC", latitude: -1.6585, longitude: 29.2205, timeZone: "Africa/Lubumbashi" },
+    { aliases: ["kigali"], label: "Kigali, Rwanda", city: "Kigali", country: "Rwanda", latitude: -1.9441, longitude: 30.0619, timeZone: "Africa/Kigali" },
+    { aliases: ["dar es salaam", "dar"], label: "Dar es Salaam, Tanzania", city: "Dar es Salaam", country: "Tanzania", latitude: -6.7924, longitude: 39.2083, timeZone: "Africa/Dar_es_Salaam" },
+    { aliases: ["arusha"], label: "Arusha, Tanzania", city: "Arusha", country: "Tanzania", latitude: -3.3869, longitude: 36.683, timeZone: "Africa/Dar_es_Salaam" },
+    { aliases: ["kampala"], label: "Kampala, Uganda", city: "Kampala", country: "Uganda", latitude: 0.3476, longitude: 32.5825, timeZone: "Africa/Kampala" },
+    { aliases: ["cairo"], label: "Cairo, Egypt", city: "Cairo", country: "Egypt", latitude: 30.0444, longitude: 31.2357, timeZone: "Africa/Cairo" },
+    { aliases: ["alexandria"], label: "Alexandria, Egypt", city: "Alexandria", country: "Egypt", latitude: 31.2001, longitude: 29.9187, timeZone: "Africa/Cairo" },
+    { aliases: ["addis ababa", "addis"], label: "Addis Ababa, Ethiopia", city: "Addis Ababa", country: "Ethiopia", latitude: 8.9806, longitude: 38.7578, timeZone: "Africa/Addis_Ababa" },
+    { aliases: ["johannesburg", "joburg"], label: "Johannesburg, South Africa", city: "Johannesburg", country: "South Africa", latitude: -26.2041, longitude: 28.0473, timeZone: "Africa/Johannesburg" },
+    { aliases: ["cape town"], label: "Cape Town, South Africa", city: "Cape Town", country: "South Africa", latitude: -33.9249, longitude: 18.4241, timeZone: "Africa/Johannesburg" }
+  ];
+}
+
+function cityLocationFromCommand(command = "") {
+  const lower = normalizeToolText(command);
+  const explicit = normalizeToolText(explicitWeatherPlace(command));
+  const searchable = `${lower} ${explicit}`.trim();
+  const found = africanCityLocationCatalog().find(place =>
+    place.aliases.some(alias => {
+      const normalizedAlias = normalizeToolText(alias);
+      return searchable === normalizedAlias
+        || searchable.includes(` ${normalizedAlias}`)
+        || searchable.includes(`${normalizedAlias} `)
+        || searchable.endsWith(` ${normalizedAlias}`);
+    })
+  );
+  if (!found) return null;
+  return { ...found, source: "known-african-city" };
+}
+
 async function browserWeatherLocation(command = "") {
   if (!isWeatherLocationQuestion(command)) return null;
   const explicit = explicitWeatherPlace(command);
+  const knownCity = cityLocationFromCommand(command);
+  if (knownCity) return knownCity;
   if (explicit) return { label: explicit, source: "spoken-location" };
   if (!navigator.geolocation) return null;
   const secureEnough = window.isSecureContext || ["localhost", "127.0.0.1"].includes(location.hostname);
@@ -2923,6 +2967,37 @@ function healthSafetyAssistantAnswer() {
   return `Health safety reminder for ${country.name}: ${heatLine} ${intake ? `Latest intake is ${intake.patientRef || "recorded"}.` : "No current intake is open."} For severe symptoms or danger, contact local emergency help immediately.`;
 }
 
+function musicAssistantIntent(command = "") {
+  const lower = normalizeToolText(command);
+  if (!/\b(play|open|find|search|start|put on|listen to)\b/.test(lower)) return null;
+  if (!/\b(music|song|songs|playlist|artist|album|soul|rnb|r&b|gospel|afrobeats|jazz|hip hop|hip-hop|reggae)\b/.test(lower)) return null;
+  const cleaned = String(command || "")
+    .replace(/\bnexus\b/ig, "")
+    .replace(/\b(can you|please|could you|would you|open|play|find|search|start|put on|listen to)\b/ig, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  const query = cleaned || "90s soul music playlist";
+  return {
+    query,
+    url: `https://www.youtube.com/results?search_query=${encodeURIComponent(query)}`,
+    response: `I can help with that. I cannot directly control protected music services without a connected music provider, but I can open a search for ${query} and keep working with you here.`
+  };
+}
+
+async function runMusicAssistantCommand(command = "") {
+  const intent = musicAssistantIntent(command);
+  if (!intent) return false;
+  updateNexusBehaviorLayer("answering", "Nexus understood this as an everyday music request and is using a safe media handoff.");
+  renderLiveVoiceSuggestions(["what time is it", "weather in Nairobi", "open learning", "Nexus stop"]);
+  try {
+    window.open(intent.url, "_blank", "noopener,noreferrer");
+  } catch {
+    // Browser popup rules may block this outside a direct click. The spoken answer still gives the next step.
+  }
+  await runUtilityAgentCommand(command, intent.response, null);
+  return true;
+}
+
 function nextStepAssistantAnswer() {
   const course = activeCourse();
   const role = firstEligibleRole();
@@ -2969,6 +3044,8 @@ function nexusUtilityAssistantResponseV2(command = "") {
   if (/\b(weather|temperature|too hot|heat|outside|walk|walking|rain|forecast|clima|meteo|météo|hali ya hewa)\b/.test(haystack) || /(\u0627\u0644\u0637\u0642\u0633|\u0627\u0644\u062d\u0631\u0627\u0631\u0629)/.test(raw)) {
     return weatherAssistantAnswer(command);
   }
+  const musicIntent = musicAssistantIntent(command);
+  if (musicIntent) return musicIntent.response;
   if (/\b(crop timing|planting time|when should i plant|when to plant|best time to plant|harvest time|when should i harvest|when to harvest|crop calendar|plant today|harvest today)\b/.test(lower)) return cropTimingAssistantAnswer();
   if (/\b(route delay|route delays|delay|delays|delayed|traffic|road blocked|roadblock|late delivery|delivery delay|delivery delays|shipment delay|shipment delays|route problem)\b/.test(lower)) return routeDelayAssistantAnswer();
   if (/\b(buyer message|message buyer|contact buyer|buyer update|text buyer|whatsapp buyer|send buyer|talk to buyer|speak to buyer)\b/.test(lower)) return buyerMessageAssistantAnswer();
@@ -17644,6 +17721,8 @@ async function handleVoiceCommand(rawCommand, options = {}) {
     handleConversationRepair(command);
     return;
   }
+
+  if (await runMusicAssistantCommand(command)) return;
 
   const utilityAnswer = nexusUtilityAssistantResponseV2(command);
   if (utilityAnswer) {

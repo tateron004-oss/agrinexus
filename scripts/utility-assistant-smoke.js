@@ -70,6 +70,7 @@ async function call(route, body) {
       ["utility.buyer-message", "Nexus, prepare a buyer message"],
       ["utility.field-alert", "Nexus, give me a field alert"],
       ["utility.health-safety", "Nexus, give me a health safety reminder"],
+      ["utility.music", "Nexus, can you play some 90s soul music?"],
       ["utility.situation-agent", "Nexus, manage this situation"],
       ["utility.pre-provider-readiness", "Nexus, what works without providers?"],
       ["utility.shipment", "Nexus, how long until my shipment arrives?"],
@@ -123,6 +124,25 @@ async function call(route, body) {
     assert.strictEqual(locatedWeather.commandResult.intent, "utility.weather", "weather question with coordinates should stay utility.weather");
     assert.strictEqual(locatedWeather.commandResult.metadata.location.label, "Lagos", "weather command should preserve supplied location");
     assert(/current browser location|Lagos|location/i.test(locatedWeather.commandResult.response), "weather response should reference location context");
+    const cityWeather = await call("/api/agent/command", {
+      command: "Nexus, hows the weather today in Nairobi?",
+      conversational: true,
+      inputMode: "voice",
+      outputMode: "voice",
+      timeZone: "Africa/Nairobi"
+    });
+    assert.strictEqual(cityWeather.commandResult.intent, "utility.weather", "city weather should stay utility.weather");
+    assert.strictEqual(cityWeather.commandResult.metadata.location.label, "Nairobi, Kenya", "city weather should resolve Nairobi coordinates");
+    assert(/Nairobi|weather|degrees/i.test(cityWeather.commandResult.response), "city weather should speak the requested city");
+    const music = await call("/api/agent/command", {
+      command: "Nexus, can you play some soul music from the 90s?",
+      conversational: true,
+      inputMode: "voice",
+      outputMode: "voice"
+    });
+    assert.strictEqual(music.commandResult.intent, "utility.music", "music requests should be utility-backed");
+    assert(music.commandResult.metadata.music.url.includes("youtube.com/results"), "music request should include a safe search handoff");
+    assert(/cannot directly control protected music services|music provider/i.test(music.commandResult.response), "music request should be honest about provider limits");
     const buyerRoute = await call("/api/agent/command", {
       command: "Nexus, a buyer purchased my products in Lagos and I am in Kenya. Track the delivery location.",
       conversational: true,
@@ -242,6 +262,7 @@ async function call(route, body) {
   console.log("- Ask Nexus backend buyer message answer");
   console.log("- Ask Nexus backend field alert answer");
   console.log("- Ask Nexus backend health safety answer");
+  console.log("- Ask Nexus backend music handoff");
   console.log("- Ask Nexus backend Situation Agent eight-point model");
   console.log("- Ask Nexus pre-provider hardening model");
   console.log("- Ask Nexus backend shipment answer");
@@ -254,6 +275,7 @@ async function call(route, body) {
   console.log("- Ask Nexus backend next-step answer");
   console.log("- Ask Nexus pre-provider multilingual responses: es, fr, sw, ar");
   console.log("- Ask Nexus weather location handoff");
+  console.log("- Ask Nexus city weather lookup");
   console.log("- Ask Nexus buyer-to-seller map route packet");
   console.log("- Nexus Mission Brain all 10 intelligence layers");
   console.log("- Nexus Trusted OS all 10 trust pillars");
