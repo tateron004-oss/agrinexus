@@ -407,6 +407,10 @@ assert(app.includes("I think you mean ${intentLabels[profile.intent]}"), "Rural 
 assert(app.includes("function nexusConversationGovernor") && app.includes("function handleNexusConversationGovernor"), "Nexus needs a conversation governor before workflow routing");
 assert(app.includes("Short answers are on") && app.includes("You're right. I may have heard that wrong") && app.includes("We will do one step at a time"), "Conversation governor must support short answers, correction repair, and one-step guidance");
 assert(app.includes("handleNexusConversationGovernor(command || localizedCommand || rawCommand, options)"), "Voice handler must run the conversation governor before Conversation Mode routing");
+assert(app.includes("function conversationIntakePlans") && app.includes("function startConversationIntake") && app.includes("function handleConversationIntakeAnswer"), "Nexus needs conversation-based intake plans and answer handling");
+assert(app.includes("health access intake") && app.includes("crop sale intake") && app.includes("work support intake") && app.includes("learning intake") && app.includes("map and route intake"), "Conversation intake must cover health, trade, workforce, learning, and map");
+assert(app.includes("function repairConversationIntake") && app.includes("conversation-intake-repair"), "Intent repair loop must step back inside an active conversation intake");
+assert(app.includes("activeConversationIntake && handleConversationIntakeAnswer(command || localizedCommand || rawCommand)") && app.includes("startConversationIntakeFromCommand(command || localizedCommand || rawCommand)"), "Voice handler must process active and new conversation intakes before generic routing");
 assert(app.includes("I want to make sure I got you. Is this about health, crops, work, learning, or the map?"), "Conversation Mode 2.0 must ask one simple follow-up instead of guessing");
 assert(app.includes("i m|im|am|call me"), "Nexus introduction handling must catch casual name phrases like hey I am Javar");
 assert(app.includes("stopVoicePlayback({ hard: true });") && app.includes("setVoiceResponse(introductionResponse, true);"), "Nexus must interrupt old speech before greeting a newly introduced user");
@@ -419,8 +423,8 @@ assert(app.includes("Stopped. Ask me the next question or tell me where to go ne
 assert(styles.includes("pointer-events: none") && styles.includes(".user-caption-actions") && styles.includes("pointer-events: auto"), "Caption panel must not block workflow action clicks");
 assert(styles.includes("width: min(300px, calc(100vw - 24px))") && styles.includes("max-height: 138px"), "Caption panel must default to a small bubble");
 assert(styles.includes(".user-caption-panel.expanded") && styles.includes("display: none") && styles.includes("display: grid"), "Caption input controls must appear only in expanded caption mode");
-assert(html.includes("nexus-behavior-204"), "Index must force browsers to load Nexus behavior CSS");
-assert(html.includes("nexus-behavior-204"), "Index must force browsers to load Nexus behavior JS");
+assert(html.includes("nexus-behavior-205"), "Index must force browsers to load Nexus behavior CSS");
+assert(html.includes("nexus-behavior-205"), "Index must force browsers to load Nexus behavior JS");
 assert(app.includes("shipmentPreviewMapCanvas") && app.includes("renderShipmentPreviewMap"), "Shipment preview maps must use real Leaflet canvases");
 assert(app.includes("healthHotspotMapCanvas") && app.includes("renderHealthHotspotPreviewMap"), "Health hotspot maps must use real Leaflet canvases");
 assert(app.includes("function shipmentTrackingState") && app.includes("function drawShipmentRoute"), "Shipment maps must render operational tracking state, not decorative routes");

@@ -50,6 +50,7 @@ let agentProgressTimers = [];
 let pendingAgentClarification = null;
 let activeAgentJourney = null;
 let activeVoiceMission = null;
+let activeConversationIntake = JSON.parse(localStorage.getItem("agrinexusConversationIntake") || "null");
 let voiceEventStream = [];
 let conversationModeState = JSON.parse(localStorage.getItem("agrinexusConversationModeState") || "{}");
 let conversationModeMemories = JSON.parse(localStorage.getItem("agrinexusConversationModeMemories") || "{}");
@@ -61,8 +62,8 @@ let routeTrackingWatchId = null;
 let routeTrackingPoints = [];
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-204";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v184";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-205";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v185";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
 const VOICE_ATTENTION_DELAY_MS = 900;
@@ -5695,6 +5696,254 @@ function handleNexusConversationGovernor(command = "", options = {}) {
 function nexusConversationGovernorSummary() {
   const status = conversationMode2Status();
   return `${status.label} now includes a conversation governor. Nexus can greet, pause for background talk, recover from wrong hearing, switch to short answers, guide confused users one question at a time, and clarify rural or mixed-language speech before acting.`;
+}
+
+function conversationIntakePlans() {
+  return {
+    health: {
+      label: "health access intake",
+      workflow: "health",
+      action: "intake",
+      section: "health",
+      match: /\b(doctor|health|clinic|medicine|pharmacy|sick|pain|hurt|injury|care|provider|telehealth|intake|dawa|dokita|clinic)\b/,
+      fields: [
+        { key: "careNeed", label: "care need", question: "Who needs help, and what is the health concern? This is not a diagnosis." },
+        { key: "location", label: "location", question: "What area, village, city, or country is the person in?" },
+        { key: "language", label: "language", question: "What language should the provider or aide use?" },
+        { key: "contactMethod", label: "contact method", question: "Should help reach them by phone call, SMS, WhatsApp, video, or community aide?" },
+        { key: "accessNeeds", label: "access needs", question: "Do they need captions, audio, large text, caregiver help, or another access support?" }
+      ],
+      openResponse: "I collected the health details and opened the intake. Review it, then say yes to save it. This is not a diagnosis."
+    },
+    trade: {
+      label: "crop sale intake",
+      workflow: "trade",
+      action: "buyer-contact",
+      section: "trade",
+      match: /\b(sell|buyer|market|crop|maize|corn|rice|cassava|yam|beans|harvest|farm|shamba|soko|order|delivery)\b/,
+      fields: [
+        { key: "crop", label: "crop", question: "What crop or product do you want to sell or move?" },
+        { key: "quantity", label: "quantity", question: "How much do you have, even if it is only an estimate?" },
+        { key: "pickupLocation", label: "pickup location", question: "Where is the crop starting from?" },
+        { key: "buyerLocation", label: "buyer or market location", question: "Where is the buyer, market, or delivery area?" },
+        { key: "contactMethod", label: "contact method", question: "Should Nexus prepare WhatsApp, SMS, phone, or route tracking?" }
+      ],
+      openResponse: "I collected the crop sale details and opened Trade. Review the buyer step, then say yes to save it."
+    },
+    workforce: {
+      label: "work support intake",
+      workflow: "workforce",
+      action: "apply-role",
+      section: "workforce",
+      match: /\b(job|work|role|apply|employment|shift|interview|kazi|aiki|trabajo|travail|trabalho)\b/,
+      fields: [
+        { key: "country", label: "country", question: "What country or area do you want to work in?" },
+        { key: "workType", label: "kind of work", question: "What kind of work can you do, or what role do you want?" },
+        { key: "experience", label: "experience", question: "What experience, training, or school background should Nexus include?" },
+        { key: "contactMethod", label: "contact method", question: "How should an employer reach you: phone, SMS, WhatsApp, or email?" }
+      ],
+      openResponse: "I collected the work details and opened Workforce. Review the role application, then say yes to save it."
+    },
+    learning: {
+      label: "learning intake",
+      workflow: "learning",
+      action: "start",
+      section: "learning",
+      match: /\b(learn|course|lesson|training|school|certificate|teach|study|class|somo|curso|cours)\b/,
+      fields: [
+        { key: "goal", label: "learning goal", question: "What do you want to learn?" },
+        { key: "language", label: "language", question: "What language should the lesson use?" },
+        { key: "support", label: "learning support", question: "Do you want captions, audio, slow teaching, large text, or quiz help?" }
+      ],
+      openResponse: "I collected the learning details and opened Learning. Review the course step, then say yes to save it."
+    },
+    map: {
+      label: "map and route intake",
+      workflow: "map",
+      action: "inspector",
+      section: "map",
+      match: /\b(map|route|road|location|track|shipment|delivery|where|ramani|njia|ruta|rota)\b/,
+      fields: [
+        { key: "start", label: "starting point", question: "Where are you starting from?" },
+        { key: "destination", label: "destination", question: "Where do you need to go or track?" },
+        { key: "purpose", label: "purpose", question: "Is this for a clinic, crop shipment, buyer route, or safety check?" }
+      ],
+      openResponse: "I collected the route details and opened the map. Review the route support, then ask Nexus to track or check risk."
+    }
+  };
+}
+
+function conversationIntakePlanFromCommand(command = "") {
+  const lower = normalizeRuralSpeechAliases(command);
+  const bridge = ruralCommunicationBridge(command);
+  const plans = conversationIntakePlans();
+  if (plans[bridge.profile.intent] && bridge.profile.intent !== "general") return plans[bridge.profile.intent];
+  return Object.values(plans).find(plan => plan.match.test(lower)) || null;
+}
+
+function saveConversationIntake(session = activeConversationIntake) {
+  activeConversationIntake = session;
+  if (session) localStorage.setItem("agrinexusConversationIntake", JSON.stringify(session));
+  else localStorage.removeItem("agrinexusConversationIntake");
+}
+
+function conversationIntakeSummary(session = activeConversationIntake) {
+  if (!session) return "No conversation intake is active.";
+  const plan = conversationIntakePlans()[session.type];
+  const answered = Object.entries(session.answers || {}).map(([key, value]) => `${key}: ${value}`).join("; ");
+  const next = plan?.fields?.[session.index]?.question || "ready to open the workflow";
+  return `${plan?.label || "conversation intake"} has ${Object.keys(session.answers || {}).length} answer(s). ${answered || "No answers yet"}. Next: ${next}`;
+}
+
+function startConversationIntake(type, command = "") {
+  const plan = conversationIntakePlans()[type] || conversationIntakePlanFromCommand(command);
+  if (!plan) return false;
+  const resolvedType = Object.entries(conversationIntakePlans()).find(([, value]) => value === plan)?.[0] || type;
+  const session = {
+    type: resolvedType,
+    mode: conversationPlatformMode(),
+    language: languageCode(),
+    startedBy: command,
+    answers: {},
+    index: 0,
+    startedAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  };
+  saveConversationIntake(session);
+  pendingAgentClarification = null;
+  pendingNexusSpokenCommand = null;
+  nexusAwaitingCommand = true;
+  goSection(plan.section, { instant: true, openDefaultAction: false, keepAssistant: true });
+  renderLiveVoiceSuggestions(["answer in your own words", "repeat the question", "Nexus stop", "cancel intake"]);
+  recordNexusAutonomousLearning({ type: "conversation-intake-started", command, intakeType: resolvedType, mode: conversationPlatformMode() });
+  updateNexusBehaviorLayer("listening", `Nexus started conversation-based intake: ${plan.label}.`);
+  setVoiceResponse(`Okay. I will ask one question at a time. ${plan.fields[0].question}`, true, { allowHandoff: false });
+  return true;
+}
+
+function startConversationIntakeFromCommand(command = "") {
+  const lower = normalizeToolText(command);
+  const wantsIntake = /\b(walk me through|guide me through|ask me questions|one question at a time|start intake|open intake|conversation intake|help me apply|help me sell|help me learn|i need a doctor|i need medicine|i need work|i want to sell|help me track)\b/.test(lower);
+  if (!wantsIntake) return false;
+  const plan = conversationIntakePlanFromCommand(command);
+  if (!plan) return false;
+  const type = Object.entries(conversationIntakePlans()).find(([, value]) => value === plan)?.[0];
+  return startConversationIntake(type, command);
+}
+
+function cancelConversationIntake(message = "Canceled. Tell Nexus what you need next.") {
+  saveConversationIntake(null);
+  pendingAgentClarification = null;
+  pendingNexusSpokenCommand = null;
+  nexusAwaitingCommand = true;
+  updateNexusBehaviorLayer("listening", "Nexus canceled conversation intake.");
+  renderLiveVoiceSuggestions(["health", "crops", "work", "learning", "map"]);
+  setVoiceResponse(message, true, { allowHandoff: false });
+  return true;
+}
+
+function applyConversationIntakeToVisibleWorkflow(session = activeConversationIntake) {
+  if (!session) return;
+  const fields = activeWorkflowFieldCandidates();
+  if (!fields.length) return;
+  const plan = conversationIntakePlans()[session.type];
+  const values = session.answers || {};
+  fields.forEach(field => {
+    const haystack = normalizeToolText(`${field.dataset.workflowField || ""} ${field.closest("label")?.textContent || ""}`);
+    const match = (plan?.fields || []).find(item => haystack.includes(normalizeToolText(item.key)) || haystack.includes(normalizeToolText(item.label)) || normalizeToolText(item.label).includes(haystack));
+    const fallbackValue = Object.values(values).find(Boolean);
+    const value = match ? values[match.key] : fallbackValue;
+    if (!field.value && value) {
+      field.value = value;
+      field.dispatchEvent(new Event("input", { bubbles: true }));
+      field.dispatchEvent(new Event("change", { bubbles: true }));
+    }
+  });
+}
+
+function completeConversationIntake(session = activeConversationIntake) {
+  if (!session) return false;
+  const plan = conversationIntakePlans()[session.type];
+  if (!plan) return false;
+  const summary = conversationIntakeSummary(session);
+  recordNexusAutonomousLearning({ type: "conversation-intake-completed", command: summary, intakeType: session.type, mode: conversationPlatformMode() });
+  try {
+    const key = "agrinexusConversationIntakeHistory";
+    const entries = JSON.parse(localStorage.getItem(key) || "[]");
+    entries.unshift({ ...session, completedAt: new Date().toISOString(), summary });
+    localStorage.setItem(key, JSON.stringify(entries.slice(0, 50)));
+  } catch (error) {
+    console.warn("Could not save conversation intake history", error);
+  }
+  saveConversationIntake(null);
+  openWorkflowByVoice(plan.workflow, plan.action, `${plan.openResponse} ${summary}`, { ...session.answers, conversationIntake: true });
+  setTimeout(() => applyConversationIntakeToVisibleWorkflow(session), 80);
+  setTimeout(() => applyConversationIntakeToVisibleWorkflow(session), 260);
+  return true;
+}
+
+function handleConversationIntakeAnswer(command = "") {
+  if (!activeConversationIntake) return false;
+  const lower = normalizeToolText(command);
+  if (isGlobalStopCommand(lower) || /\b(cancel intake|cancel this intake|stop intake|close intake|start over)\b/.test(lower)) {
+    return cancelConversationIntake();
+  }
+  if (/\b(repeat|say that again|repeat the question|what question)\b/.test(lower)) {
+    const plan = conversationIntakePlans()[activeConversationIntake.type];
+    const question = plan?.fields?.[activeConversationIntake.index]?.question || "Tell me what you need next.";
+    setVoiceResponse(question, true, { allowHandoff: false });
+    return true;
+  }
+  const plan = conversationIntakePlans()[activeConversationIntake.type];
+  const field = plan?.fields?.[activeConversationIntake.index];
+  if (!plan || !field) return completeConversationIntake(activeConversationIntake);
+  const answer = String(command || "").replace(/\s+/g, " ").trim();
+  if (!answer || answer.length < 2) {
+    setVoiceResponse("I did not catch that. Say it again in your own words.", true, { allowHandoff: false });
+    return true;
+  }
+  const next = {
+    ...activeConversationIntake,
+    answers: { ...(activeConversationIntake.answers || {}), [field.key]: answer },
+    index: activeConversationIntake.index + 1,
+    updatedAt: new Date().toISOString()
+  };
+  saveConversationIntake(next);
+  const nextField = plan.fields[next.index];
+  recordNexusAutonomousLearning({ type: "conversation-intake-answer", command: answer, field: field.key, intakeType: next.type });
+  if (nextField) {
+    renderLiveVoiceSuggestions(["answer in your own words", "repeat the question", "cancel intake"]);
+    updateNexusBehaviorLayer("listening", `Nexus added ${field.label} and is asking the next intake question.`);
+    setVoiceResponse(`I added that. ${nextField.question}`, true, { allowHandoff: false });
+    return true;
+  }
+  return completeConversationIntake(next);
+}
+
+function repairConversationIntake(command = "") {
+  if (!activeConversationIntake) return false;
+  const plan = conversationIntakePlans()[activeConversationIntake.type];
+  if (!plan) return false;
+  const previousIndex = Math.max(0, Number(activeConversationIntake.index || 0) - 1);
+  const field = plan.fields[previousIndex] || plan.fields[0];
+  const answers = { ...(activeConversationIntake.answers || {}) };
+  if (field?.key) delete answers[field.key];
+  const repaired = {
+    ...activeConversationIntake,
+    answers,
+    index: previousIndex,
+    repairedAt: new Date().toISOString(),
+    repairReason: command
+  };
+  saveConversationIntake(repaired);
+  pendingAgentClarification = null;
+  pendingNexusSpokenCommand = null;
+  nexusAwaitingCommand = true;
+  recordNexusAutonomousLearning({ type: "conversation-intake-repair", command, field: field?.key || "", intakeType: repaired.type });
+  updateNexusBehaviorLayer("listening", `Nexus stepped back in ${plan.label}.`);
+  renderLiveVoiceSuggestions(["answer again", "repeat the question", "cancel intake"]);
+  setVoiceResponse(`You're right. I removed the last answer. ${field?.question || "Tell me that part again."}`, true, { allowHandoff: false });
+  return true;
 }
 
 function saveConversationMode2Decision(command = "", decision = {}) {
@@ -16122,8 +16371,10 @@ function handleNexusSelfCorrection(command = "") {
     || /\b(pas ca|tu as mal compris|reprends|corrige)\b/.test(lower)
     || /\b(si hivyo|umesikia vibaya|rudia|sahihisha)\b/.test(lower);
   if (!correction) return false;
+  if (repairConversationIntake(command)) return true;
   pendingNexusSpokenCommand = null;
   pendingAgentClarification = null;
+  saveConversationIntake(null);
   pendingWorkflow = null;
   pendingGrandmaAction = null;
   activeVoiceMission = null;
@@ -17157,6 +17408,14 @@ async function handleVoiceCommand(rawCommand, options = {}) {
     }
     return;
   }
+  if (isUniversalLanguageCommand(command || localizedCommand)) {
+    pendingNexusSpokenCommand = null;
+    pendingAgentClarification = null;
+    await changeLanguageByVoice(command || localizedCommand);
+    return;
+  }
+  if (activeConversationIntake && handleConversationIntakeAnswer(command || localizedCommand || rawCommand)) return;
+  if (startConversationIntakeFromCommand(command || localizedCommand || rawCommand)) return;
   if (options.source === "voice" && isLikelySideConversationWithoutNexusCommand(command || localizedCommand || rawCommand)) {
     pauseNexusForSideConversation(command || localizedCommand || rawCommand);
     return;
