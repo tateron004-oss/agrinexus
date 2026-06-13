@@ -62,8 +62,8 @@ let routeTrackingWatchId = null;
 let routeTrackingPoints = [];
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-212";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v192";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-213";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v193";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
 const VOICE_ATTENTION_DELAY_MS = 900;
@@ -2980,20 +2980,15 @@ function musicAssistantIntent(command = "") {
   return {
     query,
     url: `https://www.youtube.com/results?search_query=${encodeURIComponent(query)}`,
-    response: `I can help with that. I cannot directly control protected music services without a connected music provider, but I can open a search for ${query} and keep working with you here.`
+    response: `I can help with that. I will check the connected music provider for ${query}; if it is not authorized yet, I will tell you how to connect it.`
   };
 }
 
 async function runMusicAssistantCommand(command = "") {
   const intent = musicAssistantIntent(command);
   if (!intent) return false;
-  updateNexusBehaviorLayer("answering", "Nexus understood this as an everyday music request and is using a safe media handoff.");
+  updateNexusBehaviorLayer("answering", "Nexus understood this as an everyday music request and is checking the connected music provider.");
   renderLiveVoiceSuggestions(["what time is it", "weather in Nairobi", "open learning", "Nexus stop"]);
-  try {
-    window.open(intent.url, "_blank", "noopener,noreferrer");
-  } catch {
-    // Browser popup rules may block this outside a direct click. The spoken answer still gives the next step.
-  }
   await runUtilityAgentCommand(command, intent.response, null);
   return true;
 }

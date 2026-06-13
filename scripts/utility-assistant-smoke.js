@@ -86,6 +86,9 @@ async function call(route, body) {
     assert.strictEqual(nativeSession.nativePermissionSession.status, "native-always-on-ready", "Native permission registration should report always-on ready");
     assert.strictEqual(nativeSession.nativeVoiceRuntime.latestNativeSession.status, "native-always-on-ready", "Native runtime should expose the latest permission session");
     assert(nativeSession.nativeVoiceRuntime.items.some(item => item.id === "always-on-wake" && item.ready), "Always-on wake should become ready after native permission registration");
+    const musicStatus = await call("/api/music/spotify/status");
+    assert.strictEqual(musicStatus.provider, "spotify", "Music status should expose Spotify as the music provider");
+    assert.strictEqual(musicStatus.loginUrl, "/api/music/spotify/login", "Music status should expose the Spotify connection route");
     const utilityBodies = [
       ["utility.time", "Nexus, what time is it?"],
       ["utility.weather", "Nexus, what is the weather for the farmer today?"],
@@ -210,8 +213,9 @@ async function call(route, body) {
       outputMode: "voice"
     });
     assert.strictEqual(music.commandResult.intent, "utility.music", "music requests should be utility-backed");
-    assert(music.commandResult.metadata.music.url.includes("youtube.com/results"), "music request should include a safe search handoff");
-    assert(/cannot directly control protected music services|music provider/i.test(music.commandResult.response), "music request should be honest about provider limits");
+    assert.strictEqual(music.commandResult.metadata.music.provider, "spotify", "music request should use the Spotify provider contract");
+    assert(["needs-spotify-credentials", "needs-spotify-user-auth", "playback-started"].includes(music.commandResult.metadata.music.status), "music request should report Spotify execution state");
+    assert(/Spotify|music provider|play/i.test(music.commandResult.response), "music request should be honest about Spotify execution or setup");
     const encyclopediaCrop = await call("/api/agent/command", {
       command: "Nexus, what is photosynthesis and why does it matter for maize?",
       conversational: true,
@@ -430,6 +434,7 @@ async function call(route, body) {
   console.log("- Ask Nexus backend field alert answer");
   console.log("- Ask Nexus backend health safety answer");
   console.log("- Ask Nexus backend music handoff");
+  console.log("- Ask Nexus Spotify music provider contract");
   console.log("- Ask Nexus Encyclopedia Brain farming answer");
   console.log("- Ask Nexus Encyclopedia Brain health education boundary");
   console.log("- Ask Nexus translated Encyclopedia Brain answer");

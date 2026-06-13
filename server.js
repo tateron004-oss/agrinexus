@@ -37,6 +37,7 @@ const LIVE_SERVICE_TIMEOUT_MS = Number(process.env.LIVE_SERVICE_TIMEOUT_MS || 30
 const sessions = new Map();
 const rateBuckets = new Map();
 const phoneAudioCache = new Map();
+const spotifyOAuthStates = new Map();
 const COUNTRY_LANGUAGE = {
   nigeria: "en",
   kenya: "sw",
@@ -73,6 +74,7 @@ const PROVIDER_CONFIG = {
   "sms-delivery": { modeEnv: "SMS_PROVIDER", credentialEnvs: ["SMS_WEBHOOK_URL", "COMMUNICATION_PROVIDER_API_KEY"] },
   "whatsapp-delivery": { modeEnv: "WHATSAPP_PROVIDER", credentialEnvs: ["WHATSAPP_WEBHOOK_URL", "COMMUNICATION_PROVIDER_API_KEY"] },
   "billing-subscriptions": { modeEnv: "BILLING_PROVIDER", credentialEnvs: ["BILLING_WEBHOOK_URL", "BILLING_PROVIDER_API_KEY"] },
+  "music-playback": { modeEnv: "MUSIC_PROVIDER", credentialEnvs: ["SPOTIFY_CLIENT_ID", "SPOTIFY_CLIENT_SECRET", "SPOTIFY_REFRESH_TOKEN"] },
   "web-search": { modeEnv: "WEB_SEARCH_PROVIDER", credentialEnvs: ["OPENAI_API_KEY", "TAVILY_API_KEY", "BRAVE_SEARCH_API_KEY", "EXA_API_KEY"] },
   "routing-geocoding": { modeEnv: "ROUTING_PROVIDER", credentialEnvs: ["MAPBOX_ACCESS_TOKEN", "OPENROUTESERVICE_API_KEY", "GOOGLE_MAPS_API_KEY", "ROUTING_WEBHOOK_URL"] },
   "learning-lms": { modeEnv: "LEARNING_LMS_PROVIDER", credentialEnvs: ["MOODLE_BASE_URL", "MOODLE_TOKEN", "OPENEDX_BASE_URL", "OPENEDX_API_KEY"] },
@@ -105,6 +107,7 @@ const PROVIDER_ENGINE_ENDPOINTS = {
   "sms-delivery": "/communications/sms",
   "whatsapp-delivery": "/communications/whatsapp",
   "billing-subscriptions": "/billing/subscriptions",
+  "music-playback": "/media/music",
   "web-search": "/intelligence/search",
   "routing-geocoding": "/maps/routing",
   "learning-lms": "/learning/lms",
@@ -155,6 +158,14 @@ const BUILT_IN_PROVIDER_DEFINITIONS = [
     detail: process.env.KENYA_AFYALINK_TOKEN
       ? "Kenya AfyaLink Facility Registry token is configured for facility verification."
       : "Kenya AfyaLink Facility Registry is documented and adapter-ready; register and add KENYA_AFYALINK_BASE_URL plus KENYA_AFYALINK_TOKEN for authenticated facility lookup."
+  },
+  {
+    id: "music-playback",
+    name: "Music Playback Provider",
+    module: "AI",
+    mode: "spotify-ready",
+    status: "needs-credentials",
+    detail: "Connect Spotify so Nexus can search and start playback from voice commands such as play Luther Vandross soul music."
   },
   {
     id: "web-search",
@@ -3734,6 +3745,20 @@ function runtimeProviders(db) {
           : provider.detail
       };
     }
+    if (provider.id === "music-playback") {
+      const spotifyConnected = spotifyPlaybackConfigured();
+      const spotifyReady = Boolean(process.env.SPOTIFY_CLIENT_ID && (process.env.SPOTIFY_CLIENT_SECRET || process.env.SPOTIFY_CLIENT_ID) && process.env.SPOTIFY_REDIRECT_URI);
+      return {
+        ...provider,
+        mode: process.env.MUSIC_PROVIDER || (process.env.SPOTIFY_CLIENT_ID ? "spotify" : "not-configured"),
+        status: spotifyConnected ? "connected" : spotifyReady ? "needs-user-auth" : "needs-credentials",
+        detail: spotifyConnected
+          ? "Spotify playback is connected with client credentials and a user refresh token. Nexus can search and start playback on an active Spotify device."
+          : spotifyReady
+          ? "Spotify app credentials are configured. Sign in through /api/music/spotify/login once to create SPOTIFY_REFRESH_TOKEN for playback."
+          : "Add MUSIC_PROVIDER=spotify, SPOTIFY_CLIENT_ID, SPOTIFY_CLIENT_SECRET, and SPOTIFY_REDIRECT_URI. Playback also requires Spotify user authorization and usually Spotify Premium."
+      };
+    }
     if (provider.id === "web-search") {
       const openAiWebReady = process.env.OPENAI_WEB_SEARCH_ENABLED === "true" && Boolean(process.env.OPENAI_API_KEY);
       const readyKey = firstConfiguredEnv(["TAVILY_API_KEY", "BRAVE_SEARCH_API_KEY", "EXA_API_KEY", openAiWebReady ? "OPENAI_API_KEY" : ""]);
@@ -3881,6 +3906,7 @@ function integrationStatus(db) {
       auth: ["AUTH_PROVIDER", "AUTH_WEBHOOK_URL", "PASSWORD_RESET_PROVIDER", "PASSWORD_RESET_WEBHOOK_URL", "AUTH_PROVIDER_API_KEY"],
       communications: ["EMAIL_PROVIDER", "EMAIL_WEBHOOK_URL", "SMS_PROVIDER", "SMS_WEBHOOK_URL", "WHATSAPP_PROVIDER", "WHATSAPP_WEBHOOK_URL", "COMMUNICATION_PROVIDER_API_KEY"],
       billing: ["BILLING_PROVIDER", "BILLING_WEBHOOK_URL", "BILLING_PROVIDER_API_KEY", "BILLING_PRICE_ID"],
+      musicPlayback: ["MUSIC_PROVIDER=spotify", "SPOTIFY_CLIENT_ID", "SPOTIFY_CLIENT_SECRET", "SPOTIFY_REDIRECT_URI", "Authorize once at /api/music/spotify/login to store a user refresh token"],
       maps: ["MAP_TILE_PROVIDER=openstreetmap or MAP_TILE_PROVIDER=custom-tile + MAP_TILE_URL"],
       internetBrain: ["OPENAI_WEB_SEARCH_ENABLED=true + OPENAI_API_KEY", "or TAVILY_API_KEY", "or BRAVE_SEARCH_API_KEY", "or EXA_API_KEY"],
       routingGeocoding: ["MAPBOX_ACCESS_TOKEN", "or OPENROUTESERVICE_API_KEY", "or GOOGLE_MAPS_API_KEY", "or ROUTING_WEBHOOK_URL"],
@@ -4412,6 +4438,12 @@ function productionReadiness(providers) {
           ready: Boolean(process.env.BILLING_PRICE_ID),
           detail: process.env.BILLING_PRICE_ID ? "Billing price configured." : "Set BILLING_PRICE_ID for subscriptions."
         }
+      ]
+    },
+    {
+      module: "Media",
+      checks: [
+        providerReady("music-playback", "Spotify music playback provider")
       ]
     }
   );
@@ -17456,6 +17488,200 @@ function musicAssistantIntent(text = "") {
   };
 }
 
+function spotifyPlaybackConfigured() {
+  return Boolean(process.env.SPOTIFY_CLIENT_ID && (process.env.SPOTIFY_CLIENT_SECRET || process.env.SPOTIFY_CLIENT_ID) && (process.env.SPOTIFY_REFRESH_TOKEN || process.env.SPOTIFY_ACCESS_TOKEN));
+}
+
+function ensureMusicProfile(profile) {
+  ensureAiProfile(profile);
+  profile.musicConnections = profile.musicConnections || [];
+  profile.musicPlaybackRequests = profile.musicPlaybackRequests || [];
+}
+
+function spotifyRedirectUri(req) {
+  if (process.env.SPOTIFY_REDIRECT_URI) return process.env.SPOTIFY_REDIRECT_URI;
+  const base = process.env.PUBLIC_BASE_URL || process.env.RENDER_EXTERNAL_URL || `http://${req.headers.host}`;
+  return `${String(base).replace(/\/$/, "")}/api/music/spotify/callback`;
+}
+
+function spotifyUserConnection(db, user) {
+  ensureMusicProfile(db.profile);
+  return db.profile.musicConnections.find(item => item.userId === user?.id && item.provider === "spotify" && item.refreshToken)
+    || db.profile.musicConnections.find(item => item.provider === "spotify" && item.refreshToken)
+    || null;
+}
+
+async function spotifyTokenRequest(params) {
+  if (!process.env.SPOTIFY_CLIENT_ID) throw new Error("SPOTIFY_CLIENT_ID is required");
+  const headers = { "content-type": "application/x-www-form-urlencoded" };
+  if (process.env.SPOTIFY_CLIENT_SECRET) {
+    headers.authorization = `Basic ${Buffer.from(`${process.env.SPOTIFY_CLIENT_ID}:${process.env.SPOTIFY_CLIENT_SECRET}`).toString("base64")}`;
+  } else {
+    params.client_id = process.env.SPOTIFY_CLIENT_ID;
+  }
+  const response = await fetch("https://accounts.spotify.com/api/token", {
+    method: "POST",
+    headers,
+    body: new URLSearchParams(params)
+  });
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(payload.error_description || payload.error || "Spotify token request failed");
+  return payload;
+}
+
+async function spotifyAccessTokenForUser(db, user) {
+  const connection = spotifyUserConnection(db, user);
+  if (process.env.SPOTIFY_ACCESS_TOKEN && !connection?.refreshToken) {
+    return { accessToken: process.env.SPOTIFY_ACCESS_TOKEN, source: "env-access-token" };
+  }
+  const refreshToken = connection?.refreshToken || process.env.SPOTIFY_REFRESH_TOKEN;
+  if (!refreshToken) return null;
+  const token = await spotifyTokenRequest({ grant_type: "refresh_token", refresh_token: refreshToken });
+  return { accessToken: token.access_token, source: connection ? "user-refresh-token" : "env-refresh-token", expiresIn: token.expires_in };
+}
+
+async function spotifyApi(pathname, options = {}, accessToken) {
+  const response = await fetch(`https://api.spotify.com/v1${pathname}`, {
+    ...options,
+    headers: {
+      authorization: `Bearer ${accessToken}`,
+      "content-type": "application/json",
+      ...(options.headers || {})
+    }
+  });
+  const text = await response.text();
+  const payload = text ? JSON.parse(text) : {};
+  if (!response.ok) {
+    const message = payload?.error?.message || payload?.error || response.statusText || "Spotify API failed";
+    const error = new Error(message);
+    error.statusCode = response.status;
+    throw error;
+  }
+  return payload;
+}
+
+async function executeSpotifyMusicPlayback(db, user, text, options = {}) {
+  ensureMusicProfile(db.profile);
+  const intent = musicAssistantIntent(text);
+  if (!intent) return null;
+  const request = {
+    id: crypto.randomUUID(),
+    provider: "spotify",
+    query: intent.query,
+    requestedBy: user?.email || "guest",
+    status: "provider-not-connected",
+    createdAt: new Date().toISOString()
+  };
+  const clientReady = Boolean(process.env.SPOTIFY_CLIENT_ID && (process.env.SPOTIFY_CLIENT_SECRET || process.env.SPOTIFY_ACCESS_TOKEN || process.env.SPOTIFY_REFRESH_TOKEN));
+  const token = clientReady ? await spotifyAccessTokenForUser(db, user).catch(error => {
+    request.error = error.message;
+    return null;
+  }) : null;
+  if (!token?.accessToken) {
+    request.status = clientReady ? "needs-spotify-user-auth" : "needs-spotify-credentials";
+    request.next = clientReady ? "Open /api/music/spotify/login while signed in, authorize Spotify, then retry the voice command." : "Add MUSIC_PROVIDER=spotify, SPOTIFY_CLIENT_ID, SPOTIFY_CLIENT_SECRET, and SPOTIFY_REDIRECT_URI.";
+    request.fallbackUrl = intent.url;
+    db.profile.musicPlaybackRequests.unshift(request);
+    db.profile.musicPlaybackRequests = db.profile.musicPlaybackRequests.slice(0, 50);
+    return {
+      ...request,
+      ok: false,
+      response: clientReady
+        ? `I can play ${intent.query} once Spotify is authorized for this user. Open the Spotify connection, then say the request again.`
+        : `I understand the music request for ${intent.query}. Spotify is not connected yet, so I prepared a safe search handoff.`,
+      url: intent.url
+    };
+  }
+  const search = await spotifyApi(`/search?${new URLSearchParams({ q: intent.query, type: "track,playlist,artist", limit: "5" })}`, {}, token.accessToken);
+  const track = search.tracks?.items?.[0] || null;
+  const playlist = search.playlists?.items?.find(item => item?.uri) || null;
+  const artist = search.artists?.items?.[0] || null;
+  const playbackBody = track
+    ? { uris: [track.uri] }
+    : playlist
+    ? { context_uri: playlist.uri }
+    : artist
+    ? { context_uri: artist.uri }
+    : null;
+  if (!playbackBody) {
+    request.status = "no-spotify-match";
+    request.fallbackUrl = intent.url;
+    db.profile.musicPlaybackRequests.unshift(request);
+    db.profile.musicPlaybackRequests = db.profile.musicPlaybackRequests.slice(0, 50);
+    return { ...request, ok: false, response: `I could not find a Spotify match for ${intent.query}. I prepared a search handoff instead.`, url: intent.url };
+  }
+  const playPath = options.deviceId ? `/me/player/play?${new URLSearchParams({ device_id: options.deviceId })}` : "/me/player/play";
+  await spotifyApi(playPath, { method: "PUT", body: JSON.stringify(playbackBody) }, token.accessToken);
+  const selected = track || playlist || artist;
+  request.status = "playback-started";
+  request.spotifyUri = selected.uri;
+  request.spotifyName = selected.name;
+  request.spotifyType = track ? "track" : playlist ? "playlist" : "artist";
+  request.tokenSource = token.source;
+  db.profile.musicPlaybackRequests.unshift(request);
+  db.profile.musicPlaybackRequests = db.profile.musicPlaybackRequests.slice(0, 50);
+  logIntegration(db, {
+    providerId: "music-playback",
+    module: "Agent AI",
+    action: "music.spotify_playback_started",
+    status: "success",
+    detail: `Spotify playback started for ${request.spotifyName}.`,
+    metadata: { requestId: request.id, query: request.query, spotifyType: request.spotifyType },
+    dispatch: false
+  });
+  rememberAgentMemory(db.profile, `Music playback started through Spotify: ${request.spotifyName} for ${intent.query}.`, { source: "spotify-music-provider", category: "preference", module: "Agent AI", confidence: 0.9 });
+  return {
+    ...request,
+    ok: true,
+    response: `Playing ${request.spotifyName} on Spotify now.`
+  };
+}
+
+async function musicProviderCommandResponse(db, user, text, options = {}) {
+  const playback = await executeSpotifyMusicPlayback(db, user, text, options);
+  if (!playback) return null;
+  const fallback = musicAssistantIntent(text);
+  const response = playback.response || fallback?.response || "Music request handled.";
+  const situationAgent = nexusSituationAgentModel(db, user, text, "music");
+  ensureAiProfile(db.profile);
+  db.profile.agentMemory.lastStatus = "utility.music";
+  db.profile.agentMemory.lastSummary = response;
+  db.profile.agentMemory.updatedAt = new Date().toISOString();
+  rememberAgentMemory(db.profile, `Utility assistant handled music through Spotify provider path: ${text}`, { source: "ask-nexus-utility", category: "preference", module: "Agent AI", confidence: 0.88 });
+  logIntegration(db, {
+    providerId: "music-playback",
+    module: "Agent AI",
+    action: "utility.music",
+    status: playback.ok ? "success" : playback.status,
+    detail: response.slice(0, 240),
+    metadata: { query: playback.query, status: playback.status, spotifyName: playback.spotifyName || "", situationAgent },
+    dispatch: false
+  });
+  return {
+    intent: "utility.music",
+    response,
+    status: playback.ok ? "completed" : playback.status,
+    metadata: {
+      conversationMode: true,
+      redirectSection: "dashboard",
+      utilityAssistant: true,
+      situationAgent,
+      kind: "music",
+      music: {
+        provider: "spotify",
+        query: playback.query,
+        status: playback.status,
+        ok: playback.ok,
+        spotifyName: playback.spotifyName || "",
+        spotifyType: playback.spotifyType || "",
+        spotifyUri: playback.spotifyUri || "",
+        url: playback.url || fallback?.url || ""
+      },
+      suggestedReplies: ["play Luther Vandross", "pause music", "what time is it", "weather in Addis"]
+    }
+  };
+}
+
 function utilityAssistantKind(text, lower) {
   const raw = String(text || "").toLowerCase();
   if (/\b(walk me through|guide me through|show me how|help me use|how do i use|how to use)\b/.test(lower)) return "";
@@ -18226,6 +18452,7 @@ function nexusPreProviderHardeningModel(db, user, text = "") {
 async function utilityAssistantCommandResponse(db, user, text, lower, options = {}) {
   const kind = utilityAssistantKind(text, lower);
   if (!kind) return null;
+  if (kind === "music") return await musicProviderCommandResponse(db, user, text, options);
   const preProviderModel = kind === "pre-provider-readiness" ? nexusPreProviderHardeningModel(db, user, text) : null;
   const response = kind === "time"
     ? utilityTimeAnswer(options)
@@ -20107,6 +20334,88 @@ async function api(req, res, url) {
 
   if (url.pathname === "/api/engines/manifest" && req.method === "GET") {
     return send(res, 200, liveEngineManifest(db));
+  }
+
+  if (url.pathname === "/api/music/spotify/status" && req.method === "GET") {
+    if (!user) return send(res, 401, { error: "Sign in required" });
+    const provider = runtimeProviders(db).find(item => item.id === "music-playback") || {};
+    const connection = spotifyUserConnection(db, user);
+    return send(res, 200, {
+      provider: "spotify",
+      status: connection?.refreshToken ? "connected" : provider.status || "needs-credentials",
+      connected: Boolean(connection?.refreshToken || spotifyPlaybackConfigured()),
+      providerStatus: provider.status || "unknown",
+      loginUrl: "/api/music/spotify/login",
+      scopes: ["user-modify-playback-state", "user-read-playback-state"],
+      note: "Spotify playback requires a signed-in Spotify user, an active Spotify device, and usually Spotify Premium."
+    });
+  }
+
+  if (url.pathname === "/api/music/spotify/login" && req.method === "GET") {
+    if (!user) return send(res, 401, { error: "Sign in required before connecting Spotify" });
+    if (!process.env.SPOTIFY_CLIENT_ID) return send(res, 400, { error: "SPOTIFY_CLIENT_ID is required" });
+    const state = crypto.randomBytes(18).toString("hex");
+    const sid = parseCookies(req).agrinexus_sid || "";
+    spotifyOAuthStates.set(state, { userId: user.id, sid, createdAt: Date.now() });
+    const params = new URLSearchParams({
+      response_type: "code",
+      client_id: process.env.SPOTIFY_CLIENT_ID,
+      scope: "user-modify-playback-state user-read-playback-state",
+      redirect_uri: spotifyRedirectUri(req),
+      state
+    });
+    res.writeHead(302, { Location: `https://accounts.spotify.com/authorize?${params.toString()}` });
+    return res.end();
+  }
+
+  if (url.pathname === "/api/music/spotify/callback" && req.method === "GET") {
+    const state = url.searchParams.get("state") || "";
+    const code = url.searchParams.get("code") || "";
+    const error = url.searchParams.get("error") || "";
+    const stored = spotifyOAuthStates.get(state);
+    if (state) spotifyOAuthStates.delete(state);
+    if (error) return send(res, 400, { error: `Spotify authorization failed: ${error}` });
+    if (!stored || !code) return send(res, 400, { error: "Spotify authorization state was not recognized" });
+    const authUser = db.users.find(item => item.id === stored.userId);
+    if (!authUser) return send(res, 404, { error: "Spotify connection user not found" });
+    try {
+      const token = await spotifyTokenRequest({
+        grant_type: "authorization_code",
+        code,
+        redirect_uri: spotifyRedirectUri(req)
+      });
+      ensureMusicProfile(db.profile);
+      const existing = spotifyUserConnection(db, authUser);
+      const connection = existing || { id: crypto.randomUUID(), provider: "spotify", userId: authUser.id, createdAt: new Date().toISOString() };
+      connection.refreshToken = token.refresh_token || connection.refreshToken;
+      connection.scope = token.scope || "user-modify-playback-state user-read-playback-state";
+      connection.tokenType = token.token_type || "Bearer";
+      connection.updatedAt = new Date().toISOString();
+      connection.userEmail = authUser.email;
+      if (!existing) db.profile.musicConnections.unshift(connection);
+      logIntegration(db, {
+        providerId: "music-playback",
+        module: "Agent AI",
+        action: "music.spotify_connected",
+        status: "success",
+        detail: `Spotify playback connected for ${authUser.email}.`,
+        metadata: { userId: authUser.id, scope: connection.scope },
+        dispatch: false
+      });
+      await writeDb(db);
+      res.writeHead(302, { Location: "/?spotify=connected" });
+      return res.end();
+    } catch (callbackError) {
+      return send(res, 400, { error: callbackError.message || "Spotify callback failed" });
+    }
+  }
+
+  if (url.pathname === "/api/music/play" && req.method === "POST") {
+    if (!user) return send(res, 401, { error: "Sign in required" });
+    const body = await readBody(req);
+    const result = await musicProviderCommandResponse(db, user, body.command || body.query || "play music", { deviceId: body.deviceId });
+    await writeDb(db);
+    return send(res, 200, { musicPlayback: result, state: publicState(db, user) });
   }
 
   if (url.pathname === "/api/native/voice-runtime" && req.method === "GET") {
