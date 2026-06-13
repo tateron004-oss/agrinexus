@@ -2893,6 +2893,101 @@ function dailyOperatorBriefing(db, user, providers = runtimeProviders(db)) {
   };
 }
 
+function isPersonalAssistantBriefingCommand(lower = "") {
+  const value = String(lower || "").trim();
+  return /^(good morning|good afternoon|good evening|morning|afternoon|evening)\b/.test(value)
+    || /\b(start my day|brief me|daily briefing|morning briefing|operator briefing|what needs attention|what needs my attention|what should i know today|check my day|give me my briefing|what matters today|what should i focus on)\b/.test(value);
+}
+
+function formatReminderForBriefing(reminder = {}) {
+  if (!reminder.task) return "";
+  return `${reminder.task}${reminder.whenLabel ? ` ${reminder.whenLabel}` : ""}`;
+}
+
+function nexusPersonalAssistantBriefing(db, user, command = "", providers = runtimeProviders(db)) {
+  ensureLearningProfile(db.profile);
+  ensureWorkforceProfile(db.profile);
+  ensureHealthProfile(db.profile);
+  ensureTradeProfile(db.profile);
+  ensureAiProfile(db.profile);
+  ensureAssistantReminders(db.profile);
+  const daily = dailyOperatorBriefing(db, user, providers);
+  const smart = smartNextActions(db, user, providers).items.slice(0, 4);
+  const predictive = backendPredictiveAdvisorModel(db, user, command || "what needs attention");
+  const { country, route } = activeContext(db);
+  const name = db.profile.agentMemory.userName || user?.name?.split(/\s+/)[0] || "there";
+  const reminders = (db.profile.assistantReminders || [])
+    .filter(item => item.status !== "canceled")
+    .sort((a, b) => Date.parse(a.scheduledAt || a.createdAt || 0) - Date.parse(b.scheduledAt || b.createdAt || 0))
+    .slice(0, 3);
+  const topReminder = reminders[0] ? formatReminderForBriefing(reminders[0]) : "";
+  const health = (db.profile.healthIntakes || [])[0]
+    ? `Health: latest intake is ${(db.profile.healthIntakes || [])[0].patientRef || "recorded"}, with follow-up ${((db.profile.telehealthFollowUps || []).length ? "scheduled" : "not scheduled yet")}.`
+    : `Health: no active intake is open. If someone feels unwell, I can start a simple intake.`;
+  const trade = (db.profile.orders || [])[0]
+    ? `Trade: ${(db.profile.orders || [])[0].orderNumber || "the active order"} is at ${db.profile.activeCheckpoint || "the current checkpoint"} on ${route.name}.`
+    : `Farm and trade: no active order yet. I can help check the crop, contact a buyer, or plan a route.`;
+  const learningWork = `${(db.profile.enrollments || []).length} learning enrollment(s), ${(db.profile.applications || []).length} job application(s), and ${(db.profile.shiftSchedule || []).length} shift(s) are saved.`;
+  const providerLine = `${providers.filter(provider => provider.status === "connected").length}/${providers.length} provider engine(s) connected.`;
+  const top = smart[0] || predictive?.predictions?.[0] || null;
+  const nextLine = top?.title
+    ? `Best next step: ${top.title}.`
+    : top?.message
+      ? `Best next step: ${top.message}`
+      : "Best next step: tell me health, farm, work, learning, map, or buyer.";
+  const response = [
+    `Good ${new Date().getHours() < 12 ? "morning" : "day"} ${name}. Here is what matters.`,
+    topReminder ? `Reminder: ${topReminder}.` : "No urgent reminder is waiting.",
+    health,
+    trade,
+    `Learning and work: ${learningWork}`,
+    `Location context: ${country.name}, ${route.name}. ${providerLine}`,
+    nextLine,
+    "Say do the next step, open telehealth, check my crop, call a contact, or list reminders."
+  ].join(" ");
+  const briefing = {
+    mode: "nexus-personal-assistant-briefing",
+    name,
+    reminders,
+    attention: [health, trade, `Learning and work: ${learningWork}`, providerLine],
+    daily,
+    predictive,
+    nextActions: smart,
+    response,
+    createdAt: new Date().toISOString()
+  };
+  db.profile.agentMemory.lastStatus = "personal-assistant-briefing";
+  db.profile.agentMemory.lastSummary = response;
+  db.profile.agentMemory.lastRecommendedAction = smart[0] || db.profile.agentMemory.lastRecommendedAction || null;
+  db.profile.agentMemory.updatedAt = briefing.createdAt;
+  db.profile.agentBriefings = db.profile.agentBriefings || [];
+  db.profile.agentBriefings.unshift({
+    id: crypto.randomUUID(),
+    title: "Nexus Personal Assistant Brief",
+    purpose: "voice-first daily guidance",
+    plainLanguageSummary: response,
+    createdBy: user.email,
+    createdAt: briefing.createdAt
+  });
+  db.profile.agentBriefings = db.profile.agentBriefings.slice(0, 20);
+  rememberAgentMemory(db.profile, `Personal assistant briefing delivered: ${nextLine}`, { source: "nexus-personal-assistant-briefing", category: "pattern", module: "Agent AI", confidence: 0.92 });
+  logIntegration(db, {
+    providerId: "openai",
+    module: "Agent AI",
+    action: "agent.personal_assistant_briefing",
+    status: "success",
+    detail: response.slice(0, 240),
+    metadata: { reminders: reminders.length, nextActions: smart.map(item => item.id || item.title), predictiveScore: predictive?.scoring?.score || null },
+    dispatch: false
+  });
+  return {
+    intent: "conversation.personal_assistant_briefing",
+    response,
+    status: "completed",
+    metadata: { conversationMode: true, redirectSection: top?.section || predictive?.scoring?.moduleSignal?.section || "dashboard", briefing }
+  };
+}
+
 function maximumOperationalEfficiencyModel(db, user, providers = runtimeProviders(db), options = {}) {
   ensureLearningProfile(db.profile);
   ensureWorkforceProfile(db.profile);
@@ -18301,6 +18396,9 @@ async function runAgentCommand(db, user, command, options = {}) {
       const intake = continueConversationalIntake(db, user, text);
       if (intake) return intake;
     }
+  }
+  if (isPersonalAssistantBriefingCommand(lower)) {
+    return nexusPersonalAssistantBriefing(db, user, text, runtimeProviders(db));
   }
   if (isBuyerSellerLocationRouteCommand(lower) || isTradeCountryRouteCommand(lower)) {
     return tradeLocationRouteResponse(db, user, text, options);

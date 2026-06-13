@@ -125,6 +125,23 @@ async function call(route, body) {
     });
     assert.strictEqual(canceledReminder.commandResult.intent, "assistant.reminder_canceled", "Nexus should cancel the latest reminder");
     assert.strictEqual(canceledReminder.profile.assistantReminders[0].status, "canceled", "Canceled reminder should remain in history with canceled status");
+    const morningBrief = await call("/api/agent/command", {
+      command: "Good morning Nexus",
+      conversational: true,
+      inputMode: "voice",
+      outputMode: "voice"
+    });
+    assert.strictEqual(morningBrief.commandResult.intent, "conversation.personal_assistant_briefing", "Good morning should return a personal assistant briefing");
+    assert.strictEqual(morningBrief.commandResult.metadata.briefing.mode, "nexus-personal-assistant-briefing", "Briefing should expose the personal assistant mode");
+    assert(morningBrief.commandResult.response.includes("Here is what matters"), "Briefing should use human assistant language");
+    const attentionBrief = await call("/api/agent/command", {
+      command: "Nexus, what needs my attention today?",
+      conversational: true,
+      inputMode: "voice",
+      outputMode: "voice"
+    });
+    assert.strictEqual(attentionBrief.commandResult.intent, "conversation.personal_assistant_briefing", "Attention checks should route to the personal assistant briefing");
+    assert(attentionBrief.commandResult.metadata.briefing.predictive.scoring.score >= 0, "Attention briefing should include predictive intelligence");
     for (const targetLanguage of ["es", "fr", "sw", "ar"]) {
       const state = await call("/api/agent/command", {
         command: "Nexus, what works without providers?",
@@ -371,6 +388,7 @@ async function call(route, body) {
   console.log("- Ask Nexus backend daily plan answer");
   console.log("- Ask Nexus backend next-step answer");
   console.log("- Ask Nexus personal assistant reminders");
+  console.log("- Ask Nexus personal assistant daily briefing");
   console.log("- Ask Nexus pre-provider multilingual responses: es, fr, sw, ar");
   console.log("- Ask Nexus weather location handoff");
   console.log("- Ask Nexus city weather lookup");
