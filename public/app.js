@@ -62,8 +62,8 @@ let routeTrackingWatchId = null;
 let routeTrackingPoints = [];
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-217";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v197";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-219";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v199";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
 const VOICE_ATTENTION_DELAY_MS = 900;
@@ -145,8 +145,8 @@ const voiceStopTranslations = {
 
 const demoLoginProfiles = [
   { label: "Admin", role: "Full control", email: "admin@agrinexus.org", password: "Admin2026!" },
-  { label: "Standard User", role: "Services, no admin", email: "user@agrinexus.org", password: "User2026!" },
-  { label: "Investor", role: "Guided demo", email: "investor@agrinexus.org", password: "Investor2026!" }
+  { label: "User", role: "Simple services", email: "user@agrinexus.org", password: "User2026!" },
+  { label: "Investor", role: "Guided proof view", email: "investor@agrinexus.org", password: "Investor2026!" }
 ];
 
 const countryLanguageLabel = {
@@ -10283,7 +10283,7 @@ function render() {
   const behaviorModel = data.behaviorModel || {};
   $("#loginView").classList.add("hidden");
   $("#appView").classList.remove("hidden");
-  $("#userLine").textContent = `${data.user.name} - ${data.user.role}`;
+  $("#userLine").textContent = `${userHeaderName()} - ${friendlyRoleLabel(data.user.role)}`;
   applyPlatformLanguage();
   applyRoleNavigation();
   applyExperienceMode();
@@ -12267,14 +12267,19 @@ function startAskNexusAfterLogin() {
     disableNexusVoiceForDemo("Demo quiet mode is on. Nexus voice will stay off until you turn it back on.", { silent: true });
     return;
   }
-  openAskNexus();
   voiceAutoRestart = voiceFirstMode;
   voiceStopRequested = !voiceFirstMode;
   nexusAwaitingCommand = true;
   setVoiceStatus(voiceFirstMode ? "voice-first" : "standby");
   const message = `Welcome ${userFirstName()}. Nexus is ready. Say Nexus, then tell me what you need. I will repeat it first and wait for yes.`;
   recordNexusAutonomousLearning({ type: "login-greeting", command: "Nexus ready after login" });
+  if (defaultExperienceMode() !== "user") {
+    openAskNexus();
+  } else {
+    closeAskNexus({ silent: true });
+  }
   setVoiceResponse(message, false, { allowVoiceFirst: false });
+  updateUserCaptionPanel(message, { expanded: false });
   [80, 360, 900, 1800].forEach(delay => {
     setTimeout(() => {
       if (!voiceDemoQuietMode && !document.hidden && voiceFirstMode && !voiceRecognition && !voiceSpeaking && !voiceStopRequested) {
@@ -16000,6 +16005,19 @@ function setVoiceResponse(message, speak = false, options = {}) {
 
 function userFirstName() {
   return userDisplayName().split(/\s+/)[0] || "there";
+}
+
+function friendlyRoleLabel(role = data?.user?.role) {
+  const value = String(role || "").toLowerCase();
+  if (value.includes("standard") || value === "user") return "User";
+  if (value.includes("admin")) return "Admin";
+  if (value.includes("investor")) return "Investor";
+  return String(role || "User");
+}
+
+function userHeaderName() {
+  const name = userDisplayName();
+  return name === "there" ? friendlyRoleLabel(data?.user?.role) : name;
 }
 
 function userDisplayName() {

@@ -58,8 +58,8 @@ const server = fs.readFileSync("server.js", "utf8");
   assert(!styles.includes(`.${oldMarker}`), `Learning styles should not use old card marker: ${oldMarker}`);
 });
 
-assert(html.includes("nexus-behavior-217"), "Index must force latest learning functionality build");
-assert(app.includes("nexus-behavior-217"), "App must expose latest learning functionality build");
-assert(fs.readFileSync("public/sw.js", "utf8").includes("agrinexus-pwa-v197"), "Service worker cache must be bumped for learning functionality");
+assert(html.includes("nexus-behavior-219"), "Index must force latest learning functionality build");
+assert(app.includes("nexus-behavior-219"), "App must expose latest learning functionality build");
+assert(fs.readFileSync("public/sw.js", "utf8").includes("agrinexus-pwa-v199"), "Service worker cache must be bumped for learning functionality");
 
 console.log("Learning functionality QA passed");
