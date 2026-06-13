@@ -397,6 +397,10 @@ assert(app.includes("function conversationMode2Status"), "Nexus needs a named Co
 assert(app.includes("function conversationMode2Decision"), "Nexus Conversation Mode 2.0 must classify speech before acting");
 assert(app.includes("function handleConversationMode2Preflight"), "Voice routing must run a Conversation Mode 2.0 preflight before generic command routing");
 assert(app.includes("listen-first, act-only-when-clear"), "Conversation Mode 2.0 must use a listen-first action safety rule");
+assert(app.includes("function ruralSpeechProfile"), "Nexus needs a rural speech profile for imperfect English, mixed language, and rural shorthand");
+assert(app.includes("pikin sick") && app.includes("crop no good") && app.includes("where market dey") && app.includes("no sabi"), "Rural speech profile must recognize common non-standard phrases");
+assert(app.includes("imperfect-language-routing") && app.includes("one-rural-follow-up"), "Conversation Mode 2.0 must route or clarify rural speech safely");
+assert(app.includes("function ruralSpeechProfileSummary"), "Nexus needs a rural speech profile summary for testing and explainability");
 assert(app.includes("I want to make sure I got you. Is this about health, crops, work, learning, or the map?"), "Conversation Mode 2.0 must ask one simple follow-up instead of guessing");
 assert(app.includes("i m|im|am|call me"), "Nexus introduction handling must catch casual name phrases like hey I am Javar");
 assert(app.includes("stopVoicePlayback({ hard: true });") && app.includes("setVoiceResponse(introductionResponse, true);"), "Nexus must interrupt old speech before greeting a newly introduced user");
@@ -409,8 +413,8 @@ assert(app.includes("Stopped. Ask me the next question or tell me where to go ne
 assert(styles.includes("pointer-events: none") && styles.includes(".user-caption-actions") && styles.includes("pointer-events: auto"), "Caption panel must not block workflow action clicks");
 assert(styles.includes("width: min(300px, calc(100vw - 24px))") && styles.includes("max-height: 138px"), "Caption panel must default to a small bubble");
 assert(styles.includes(".user-caption-panel.expanded") && styles.includes("display: none") && styles.includes("display: grid"), "Caption input controls must appear only in expanded caption mode");
-assert(html.includes("nexus-behavior-201"), "Index must force browsers to load Nexus behavior CSS");
-assert(html.includes("nexus-behavior-201"), "Index must force browsers to load Nexus behavior JS");
+assert(html.includes("nexus-behavior-202"), "Index must force browsers to load Nexus behavior CSS");
+assert(html.includes("nexus-behavior-202"), "Index must force browsers to load Nexus behavior JS");
 assert(app.includes("shipmentPreviewMapCanvas") && app.includes("renderShipmentPreviewMap"), "Shipment preview maps must use real Leaflet canvases");
 assert(app.includes("healthHotspotMapCanvas") && app.includes("renderHealthHotspotPreviewMap"), "Health hotspot maps must use real Leaflet canvases");
 assert(app.includes("function shipmentTrackingState") && app.includes("function drawShipmentRoute"), "Shipment maps must render operational tracking state, not decorative routes");

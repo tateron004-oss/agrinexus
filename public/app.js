@@ -61,8 +61,8 @@ let routeTrackingWatchId = null;
 let routeTrackingPoints = [];
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-201";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v181";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-202";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v182";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
 const VOICE_ATTENTION_DELAY_MS = 900;
@@ -3073,6 +3073,92 @@ function applySpeechSafetyToDecision(decision, command = "", source = "voice") {
   };
 }
 
+function ruralSpeechProfile(command = "") {
+  const original = String(command || "").replace(/\s+/g, " ").trim();
+  const lower = normalizeToolText(original);
+  const normalized = normalizeMultilingualBehaviorCommand(lower);
+  const words = normalized.split(/\s+/).filter(Boolean);
+  const has = patterns => patterns.some(pattern => pattern.test(normalized) || pattern.test(lower));
+  const imperfectEnglish = has([
+    /\b(i no|me no|we no|no sabi|no understand|no get|no fit|i dey|we dey|dey|wan|wanna|abeg|pikin|mama|wahala|small small|make you|how i go|where .* dey)\b/,
+    /\b(i need|i want|need|want)\s+(doctor|job|work|medicine|market|buyer|sell|buy|learn|course|map)\b/,
+    /\b(body pain|body dey pain|head pain|stomach pain|crop no good|farm no good|plant no good|road no good)\b/
+  ]);
+  const languageGroups = [
+    /\b(ayuda|necesito|quiero|trabajo|salud|medicina|clinica|comprador|vender|comprar|ruta|mapa)\b/.test(lower),
+    /\b(aide|besoin|travail|sante|medecin|clinique|acheteur|vendre|acheter|route|carte)\b/.test(lower),
+    /\b(nahitaji|nataka|nisaidie|kazi|afya|daktari|kliniki|mnunuzi|uza|nunua|ramani|njia)\b/.test(lower),
+    /\b(preciso|quero|ajuda|trabalho|saude|medico|clinica|comprador|vender|comprar|rota|mapa)\b/.test(lower),
+    /[\u0621-\u064a]/.test(original)
+  ].filter(Boolean).length;
+  const mixedLanguage = languageGroups >= 1 && /\b(nexus|help|doctor|job|work|crop|farm|sell|buyer|map|route|medicine|clinic|market)\b/.test(lower);
+  const lowLiteracy = has([
+    /\b(no read|cannot read|can't read|cant read|no understand|i no understand|too many words|speak simple|talk simple|slow|grandma|elder|old person)\b/,
+    /\b(read for me|explain simple|say simple|small words|not school|no school)\b/
+  ]);
+  const urgent = has([
+    /\b(cannot breathe|cant breathe|can't breathe|bleeding|unconscious|emergency|urgent|baby sick|pikin sick|child sick|very hot|high fever|danger)\b/
+  ]);
+  const scores = {
+    health: [
+      /\b(doctor|nurse|clinic|hospital|medicine|pharmacy|sick|pain|hurt|injury|bleeding|fever|body pain|pikin sick|child sick|mama sick|health|care|afya|daktari|clinica|medecin|medico)\b/,
+      /\b(no doctor|no clinic|need medicine|medicine no dey|body dey pain)\b/
+    ].reduce((score, pattern) => score + (pattern.test(normalized) || pattern.test(lower) ? 1 : 0), 0),
+    trade: [
+      /\b(crop|farm|maize|cassava|rice|beans|yam|buyer|seller|sell|buy|market|price|harvest|plant|field|crop no good|farm no good|where market dey|mazao|shamba|comprador|acheteur)\b/,
+      /\b(i wan sell|want sell|sell my|buy crop|buyer far|road not safe)\b/
+    ].reduce((score, pattern) => score + (pattern.test(normalized) || pattern.test(lower) ? 1 : 0), 0),
+    workforce: [
+      /\b(job|work|work dey|find work|need work|need job|apply|employment|money|role|shift|interview|kazi|trabajo|travail|trabalho)\b/,
+      /\b(i wan work|job for|work for|i no get work)\b/
+    ].reduce((score, pattern) => score + (pattern.test(normalized) || pattern.test(lower) ? 1 : 0), 0),
+    learning: [
+      /\b(learn|course|lesson|school|training|certificate|teach|study|class|no understand lesson|read for me|explain simple|mafunzo|curso|cours)\b/,
+      /\b(i wan learn|want learn|teach me|lesson hard)\b/
+    ].reduce((score, pattern) => score + (pattern.test(normalized) || pattern.test(lower) ? 1 : 0), 0),
+    map: [
+      /\b(map|route|road|where|location|near|nearest|driver lost|lost driver|gps|track|shipment|delivery|where .* dey|ramani|ruta|route|rota)\b/,
+      /\b(where road|road no good|where clinic|where market|where my product)\b/
+    ].reduce((score, pattern) => score + (pattern.test(normalized) || pattern.test(lower) ? 1 : 0), 0)
+  };
+  const ranked = Object.entries(scores).sort((a, b) => b[1] - a[1]);
+  const [intent, score] = ranked[0] || ["general", 0];
+  const rewriteMap = {
+    health: urgent ? "open telehealth emergency help" : "open telehealth and start intake",
+    trade: "sell my crop",
+    workforce: "show me jobs",
+    learning: "start a course",
+    map: "open map and check route risk"
+  };
+  const confidence = Math.min(0.94, Math.max(0.35, (score * 0.22) + (imperfectEnglish ? 0.16 : 0) + (mixedLanguage ? 0.1 : 0) + (lowLiteracy ? 0.08 : 0) + (words.length >= 4 ? 0.08 : 0)));
+  const nextQuestions = {
+    health: urgent ? "Where is the person, and are they safe right now?" : "Where are you, and do you need clinic, medicine, or phone/video help?",
+    trade: "What crop is it, and are you trying to save it, sell it, or move it?",
+    workforce: "What country do you want to work in, and what kind of work can you do?",
+    learning: "What do you want to learn, and should I explain it slowly?",
+    map: "Where are you starting from, and where do you need to go?",
+    general: "Is this about health, crops, work, learning, or the map?"
+  };
+  return {
+    original,
+    normalized,
+    intent: score ? intent : "general",
+    confidence: Number(confidence.toFixed(2)),
+    rewriteCommand: score ? rewriteMap[intent] : "",
+    imperfectEnglish,
+    mixedLanguage,
+    lowLiteracy,
+    urgent,
+    nextQuestion: nextQuestions[score ? intent : "general"],
+    style: lowLiteracy || imperfectEnglish || mixedLanguage ? "simple-human-one-question" : "standard"
+  };
+}
+
+function ruralSpeechProfileSummary(command = "") {
+  const profile = ruralSpeechProfile(command);
+  return `Rural speech profile: ${profile.intent}, confidence ${Math.round(profile.confidence * 100)} percent, style ${profile.style}. Next question: ${profile.nextQuestion}`;
+}
+
 function normalizeImperfectSpeech(command = "") {
   const original = String(command || "").replace(/\s+/g, " ").trim();
   const lower = normalizeMultilingualBehaviorCommand(normalizeToolText(original));
@@ -3102,20 +3188,41 @@ function normalizeImperfectSpeech(command = "") {
     [/\bchild sick\b/g, "my child is sick what should I do"],
     [/\bbaby sick\b/g, "my baby is sick what should I do"],
     [/\bneed medicine\b/g, "I need medicine and pharmacy help"],
+    [/\bmedicine no dey\b/g, "I need medicine and pharmacy help"],
+    [/\bbody pain\b/g, "I am sick and need health help"],
+    [/\bbody dey pain\b/g, "I am sick and need health help"],
+    [/\bpikin sick\b/g, "my child is sick what should I do"],
+    [/\bmama sick\b/g, "my mother is sick what should I do"],
     [/\bmedicine help\b/g, "I need medicine and pharmacy help"],
     [/\bclinic near\b/g, "find a clinic near me"],
     [/\bwhere clinic\b/g, "find a clinic near me"],
+    [/\bwhere clinic dey\b/g, "find a clinic near me"],
     [/\bjob kenya\b/g, "help me find work in Kenya"],
     [/\bjob south africa\b/g, "help me find work in South Africa"],
+    [/\bwork dey\b/g, "show me jobs"],
+    [/\bi wan work\b/g, "show me jobs"],
+    [/\bi wan learn\b/g, "start a course"],
+    [/\bi wan sell\b/g, "sell my crop"],
+    [/\bi wan buy\b/g, "buy a crop"],
     [/\bno understand\b/g, "I do not understand please explain simply"],
     [/\bi no understand\b/g, "I do not understand please explain simply"],
+    [/\bno sabi\b/g, "I do not understand please explain simply"],
+    [/\bi no sabi\b/g, "I do not understand please explain simply"],
+    [/\bno fit read\b/g, "please read this slowly and explain simply"],
+    [/\bspeak simple\b/g, "please explain simply"],
     [/\bhelp farm\b/g, "help me with my farm problem"],
+    [/\bcrop no good\b/g, "my crop looks bad what should I do"],
+    [/\bfarm no good\b/g, "my farm has a problem what should I do"],
+    [/\bwhere market dey\b/g, "show me the market and buyer route"],
     [/\bmarket how much\b/g, "what is the market price"]
   ];
   let rewritten = lower;
   replacements.forEach(([pattern, value]) => {
     rewritten = rewritten.replace(pattern, value);
   });
+  const profile = ruralSpeechProfile(rewritten);
+  const hasAction = /\b(open|start|show|apply|sell|buy|contact|call|message|run|create|track|find|explain|change|switch|translate|confirm|cancel|stop)\b/.test(rewritten);
+  if (profile.rewriteCommand && profile.confidence >= 0.58 && !hasAction) rewritten = profile.rewriteCommand;
   return rewritten.replace(/\s+/g, " ").trim() || original;
 }
 
@@ -3255,6 +3362,7 @@ function normalizeMultilingualBehaviorCommand(command = "") {
 
 function adaptiveCommandUnderstanding(command = "") {
   const original = String(command || "").replace(/\s+/g, " ").trim();
+  const ruralProfile = ruralSpeechProfile(original);
   const normalized = normalizeImperfectSpeech(original);
   const lower = normalizeToolText(normalized);
   const words = lower.split(/\s+/).filter(Boolean);
@@ -3275,9 +3383,9 @@ function adaptiveCommandUnderstanding(command = "") {
   const rewrittenCommand = best?.hits && !hasAction
     ? best.command
     : normalized;
-  const confidence = Math.min(.96, Math.max(.45, (best?.score || 0) + (hasAction ? .42 : .28) + (words.length >= 4 ? .12 : 0)));
+  const confidence = Math.min(.96, Math.max(.45, (best?.score || 0) + (hasAction ? .42 : .28) + (words.length >= 4 ? .12 : 0) + (ruralProfile.intent !== "general" ? .08 : 0) + (ruralProfile.lowLiteracy ? .04 : 0)));
   const context = nexusContextMemoryModel(original, best?.hits ? best.intent : "general");
-  const needsHumanCheck = confidence < .72 || (best?.hits > 0 && !hasAction);
+  const needsHumanCheck = confidence < .72 || (best?.hits > 0 && !hasAction && ruralProfile.confidence < .72);
   const understanding = {
     original,
     normalized,
@@ -3286,10 +3394,15 @@ function adaptiveCommandUnderstanding(command = "") {
     confidence: Number(confidence.toFixed(2)),
     needsHumanCheck,
     context,
-    nextQuestion: nexusNextBestQuestion(best?.hits ? best.intent : "general", original, context),
-    reason: best?.hits
-      ? `Matched ${best.intent} from ${best.hits} speech clue(s).`
-      : "No strong workflow clue found yet.",
+    ruralProfile,
+    nextQuestion: ruralProfile.intent !== "general"
+      ? ruralProfile.nextQuestion
+      : nexusNextBestQuestion(best?.hits ? best.intent : "general", original, context),
+    reason: ruralProfile.intent !== "general"
+      ? `Rural speech profile matched ${ruralProfile.intent} at ${Math.round(ruralProfile.confidence * 100)} percent.`
+      : best?.hits
+        ? `Matched ${best.intent} from ${best.hits} speech clue(s).`
+        : "No strong workflow clue found yet.",
     updatedAt: new Date().toISOString()
   };
   localStorage.setItem("agrinexusAdaptiveUnderstanding", JSON.stringify(understanding));
@@ -3640,13 +3753,32 @@ function isUniversalLanguageCommand(command) {
 }
 
 function migrantFriendlyVoiceIntent(command = "") {
-  const lower = normalizeToolText(command);
+  const profile = ruralSpeechProfile(command);
+  const lower = normalizeToolText(normalizeImperfectSpeech(command));
   const productId = firstProduct()?.id;
   const roleId = firstEligibleRole()?.id;
   const hasAny = words => words.some(word => new RegExp(`\\b${word}\\b`).test(lower));
   const hasProduct = hasAny(["crop", "crops", "maize", "corn", "rice", "cassava", "yam", "beans", "food", "produce", "harvest", "farm", "product", "products", "goods", "item", "items", "order"]);
   const hasTrade = hasAny(["buyer", "buy", "buying", "purchase", "sell", "selling", "sale", "seller", "customer", "market", "transaction", "payment"]);
   const hasTracking = hasAny(["where", "track", "tracking", "trace", "route", "road", "delivery", "deliver", "location", "locate", "shipment", "move", "moving", "transaction"]);
+  if (profile.urgent && profile.intent === "health") {
+    return { workflow: "health", action: "emergency", section: "health", response: "I hear health urgency. I opened emergency help. If there is danger right now, call local emergency help first.", dataset: {} };
+  }
+  if (profile.intent === "trade" && profile.confidence >= 0.64) {
+    return { workflow: "trade", action: hasTracking ? "tracking" : "buyer-contact", section: "trade", response: profile.lowLiteracy ? "I opened crop help. Tell me the crop and where the farm is." : "I opened Trade to help with the crop, buyer, route, or market step.", dataset: { productId } };
+  }
+  if (profile.intent === "health" && profile.confidence >= 0.64) {
+    return { workflow: "health", action: lower.includes("medicine") || lower.includes("pharmacy") ? "pharmacy" : "intake", section: "health", response: "I opened Health. Tell me where you are and what help you need. This is not a diagnosis.", dataset: {} };
+  }
+  if (profile.intent === "workforce" && profile.confidence >= 0.64) {
+    return { workflow: "workforce", action: "build-profile", section: "workforce", response: "I opened Work. Tell me the country and the kind of work you can do.", dataset: { roleId } };
+  }
+  if (profile.intent === "learning" && profile.confidence >= 0.64) {
+    return { workflow: "learning", action: "start", section: "learning", response: "I opened Learning. Tell me what you want to learn, and I can explain it slowly.", dataset: {} };
+  }
+  if (profile.intent === "map" && profile.confidence >= 0.64) {
+    return { workflow: "map", action: "inspector", section: "map", response: "I opened the map. Tell me where you are starting and where you need to go.", dataset: {} };
+  }
   if (hasProduct && hasTrade && hasTracking) {
     return { workflow: "ai", action: "route", section: "map", response: "I opened the map to track your product, transaction, sale route, and delivery location.", dataset: {} };
   }
@@ -5379,7 +5511,7 @@ function conversationMode2Status(mode = conversationPlatformMode()) {
     lastUserWords: v2.lastUserWords || memory.lastQuestion || "",
     lastNexusReply: v2.lastNexusReply || memory.lastAnswer || "",
     guard: "listen-first, act-only-when-clear",
-    style: "short, warm, one-question-at-a-time"
+    style: "short, warm, one-question-at-a-time, imperfect-English-and-mixed-language-friendly"
   };
 }
 
@@ -5408,6 +5540,7 @@ function saveConversationMode2Decision(command = "", decision = {}) {
 
 function conversationMode2Decision(command = "", options = {}) {
   const lower = normalizeToolText(command);
+  const ruralProfile = ruralSpeechProfile(command);
   const explicitWake = isExplicitNexusWakeOrCommand(command);
   if (!lower) return { kind: "silent", confidence: 0, action: "wait", shouldAct: false };
   if (isGlobalStopCommand(lower)) return { kind: "stop", confidence: 1, action: "stop", shouldAct: true };
@@ -5416,6 +5549,28 @@ function conversationMode2Decision(command = "", options = {}) {
   }
   if (isUniversalLanguageCommand(command) || hasBehaviorActionVerb(command) || isClearWorkflowVoiceCommand(command)) {
     return { kind: "clear-command", confidence: 0.9, action: "route", shouldAct: true, guard: "clear-action" };
+  }
+  if (ruralProfile.intent !== "general" && ruralProfile.confidence >= 0.7) {
+    return {
+      kind: "rural-speech",
+      confidence: ruralProfile.confidence,
+      action: "route",
+      shouldAct: true,
+      guard: "imperfect-language-routing",
+      ruralProfile
+    };
+  }
+  if (ruralProfile.intent !== "general" && ruralProfile.confidence >= 0.5) {
+    return {
+      kind: "rural-clarify",
+      confidence: ruralProfile.confidence,
+      action: "clarify",
+      shouldAct: false,
+      awaiting: "one-rural-follow-up",
+      response: ruralProfile.nextQuestion,
+      guard: "ask-before-acting",
+      ruralProfile
+    };
   }
   if (isOpenKnowledgeQuestion(command) || isOpenDialogVoiceQuestion(command) || isNaturalQuestionOrConversation(command)) {
     return { kind: "conversation", confidence: 0.82, action: "answer", shouldAct: true, guard: "open-dialog" };
