@@ -303,7 +303,7 @@ hasAll(app, [
   "lower.includes(\"read the current response\")",
   "function isUniversalLanguageCommand",
   "function changeLanguageByVoice",
-  "pendingAgentClarification = null;\n    await changeLanguageByVoice(command);",
+  "await changeLanguageByVoice(command);",
   "function isGlobalStopCommand",
   "function clearConversationHold",
   "function isFreshActionDuringClarification",
@@ -390,6 +390,8 @@ assert(app.includes("function postStopRedirectCommand"), "Voice stop must suppor
 assert(app.includes("function isStopAndContinueWorkingCommand"), "Voice stop must understand continue-working as a close request");
 assert(app.includes("function stopNexusAndReturnToWork"), "Voice stop must close Ask Nexus when the user wants to keep working");
 assert(app.includes("Stopped. Nexus is closed so you can continue working."), "Voice stop close path must acknowledge and get out of the user's way");
+assert(app.includes("i m|im|am|call me"), "Nexus introduction handling must catch casual name phrases like hey I am Javar");
+assert(app.includes("stopVoicePlayback({ hard: true });") && app.includes("setVoiceResponse(introductionResponse, true);"), "Nexus must interrupt old speech before greeting a newly introduced user");
 assert(app.includes("voiceStopTranslations"), "Voice stop controls must translate in every supported language");
 assert(app.includes("detente") && app.includes("arrete") && app.includes("simama") && app.includes("\u0627\u0648\u0642\u0641"), "Voice stop parser must understand multilingual stop phrases");
 assert(app.includes("fuzzyWakeStop") && app.includes("texas") && app.includes("nexis"), "Voice stop parser must catch common Nexus mishears like Texas stop");
@@ -398,8 +400,8 @@ assert(app.includes("Stopped. Ask me the next question or tell me where to go ne
 assert(styles.includes("pointer-events: none") && styles.includes(".user-caption-actions") && styles.includes("pointer-events: auto"), "Caption panel must not block workflow action clicks");
 assert(styles.includes("width: min(300px, calc(100vw - 24px))") && styles.includes("max-height: 138px"), "Caption panel must default to a small bubble");
 assert(styles.includes(".user-caption-panel.expanded") && styles.includes("display: none") && styles.includes("display: grid"), "Caption input controls must appear only in expanded caption mode");
-assert(html.includes("nexus-behavior-197"), "Index must force browsers to load Nexus behavior CSS");
-assert(html.includes("nexus-behavior-197"), "Index must force browsers to load Nexus behavior JS");
+assert(html.includes("nexus-behavior-198"), "Index must force browsers to load Nexus behavior CSS");
+assert(html.includes("nexus-behavior-198"), "Index must force browsers to load Nexus behavior JS");
 assert(app.includes("shipmentPreviewMapCanvas") && app.includes("renderShipmentPreviewMap"), "Shipment preview maps must use real Leaflet canvases");
 assert(app.includes("healthHotspotMapCanvas") && app.includes("renderHealthHotspotPreviewMap"), "Health hotspot maps must use real Leaflet canvases");
 assert(app.includes("function shipmentTrackingState") && app.includes("function drawShipmentRoute"), "Shipment maps must render operational tracking state, not decorative routes");
@@ -521,7 +523,7 @@ assert(app.includes("Health is open. I will guide you one step at a time."), "Us
 assert(app.includes("Pharmacy help is open. I will help find medicine support and keep provider review attached."), "User medicine voice command should open pharmacy support before provider/intake routing");
 assert(app.includes("Clinic search is open. I will help find the closest clinic option and show it on the map."), "User clinic-near-me voice command should open nearest clinic/map support before provider routing");
 assert(app.includes("Trade is open. I will help find or contact the buyer."), "User crop-sale voice command should open Trade with a short response");
-assert(app.includes("name's|my names|name is|name's|names"), "Name capture should accept natural name phrases");
+assert(app.includes("my name's|my names|my name|name is|name's|names") && app.includes("i m|im|am|call me"), "Name capture should accept natural name phrases");
 assert(app.includes("doctor help"), "Voice help needs migrant-friendly health phrasing");
 assert(app.includes("job please"), "Voice help needs migrant-friendly workforce phrasing");
 assert(app.includes("where my product"), "Voice help needs migrant-friendly product tracking phrasing");

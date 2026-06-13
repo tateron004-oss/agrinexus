@@ -61,8 +61,8 @@ let routeTrackingWatchId = null;
 let routeTrackingPoints = [];
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-197";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v177";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-198";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v178";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
 const VOICE_ATTENTION_DELAY_MS = 900;
@@ -16259,10 +16259,11 @@ function nexusIntroductionResponse(command = "") {
   const raw = String(command || "").trim();
   const value = normalizeToolText(raw);
   const unicodeValue = raw.toLowerCase();
-  if (!value && !unicodeValue) return "";
+  const spokenValue = normalizedWakeText(raw);
+  if (!value && !unicodeValue && !spokenValue) return "";
   if (/\b(i am testing|this is a test|testing nexus|test mode|i am confused|i am lost)\b/.test(value)) return "";
   const introPatterns = [
-    { label: "English", code: "en", fullMode: true, pattern: /\b(?:my name is|my name's|my names|name is|name's|names|this is|i am|i'm|im|call me|it is|it's|its)\s+([\p{L}\p{M}][\p{L}\p{M}' -]{1,42})\b/iu },
+    { label: "English", code: "en", fullMode: true, pattern: /\b(?:my name is|my name's|my names|my name|name is|name's|names|this is|this|i am|i'm|i m|im|am|call me|it is|it's|its)\s+([\p{L}\p{M}][\p{L}\p{M}' -]{1,42})\b/iu },
     { label: "Spanish", code: "es", fullMode: true, pattern: /\b(?:me llamo|mi nombre es|soy)\s+([\p{L}\p{M}][\p{L}\p{M}' -]{1,42})\b/iu },
     { label: "Portuguese", code: "pt", fullMode: true, pattern: /\b(?:meu nome e|me chamo|chamo me|eu sou|sou)\s+([\p{L}\p{M}][\p{L}\p{M}' -]{1,42})\b/iu },
     { label: "French", code: "fr", fullMode: true, pattern: /\b(?:je m'appelle|je suis|mon nom est)\s+([\p{L}\p{M}][\p{L}\p{M}' -]{1,42})\b/iu },
@@ -16277,11 +16278,12 @@ function nexusIntroductionResponse(command = "") {
     { label: "Arabic", code: "ar", fullMode: true, pattern: /(?:اسمي|أنا|انا)\s+([\p{L}\p{M}][\p{L}\p{M}' -]{1,42})/u }
   ];
   const intro = introPatterns
-    .map(entry => ({ ...entry, match: unicodeValue.match(entry.pattern) }))
+    .map(entry => ({ ...entry, match: unicodeValue.match(entry.pattern) || spokenValue.match(entry.pattern) }))
     .find(entry => entry.match);
   if (!intro) return "";
   const spokenName = cleanSpokenUserName(intro.match[1]);
   if (!spokenName || /^(nexus|agrinexus|testing|confused|lost|ready|here)$/i.test(spokenName)) return "";
+  if (/\b(what|where|why|how|need|want|open|start|help|sell|buy|doctor|clinic|course|map|platform|workflow)\b/i.test(spokenName)) return "";
   localStorage.setItem("agrinexusGuestDisplayName", spokenName);
   if (data?.user) data.user.name = spokenName;
   pendingAgentClarification = null;
@@ -16587,6 +16589,7 @@ async function handleVoiceCommand(rawCommand, options = {}) {
   }
   const introductionResponse = nexusIntroductionResponse(command || localizedCommand);
   if (introductionResponse) {
+    stopVoicePlayback({ hard: true });
     openAskNexus();
     enableHeyAgriNexusMode();
     setVoiceResponse(introductionResponse, true);
@@ -16594,6 +16597,7 @@ async function handleVoiceCommand(rawCommand, options = {}) {
     return;
   }
   if (greetingOnly || (greetingPrefix && !hasBehaviorActionVerb(command))) {
+    stopVoicePlayback({ hard: true });
     openAskNexus();
     enableHeyAgriNexusMode();
     nexusAwaitingCommand = true;
