@@ -98,6 +98,33 @@ async function call(route, body) {
       assert(state.commandResult.response.length > 20, `${intent} should produce a useful spoken answer`);
       assert((state.profile.agentMemory.rememberedContexts || []).some(item => item.intent === intent), `${intent} should be remembered as command evidence`);
     }
+    const scheduledReminder = await call("/api/agent/command", {
+      command: "Nexus, remind me to call Ron tomorrow at 9 am",
+      conversational: true,
+      inputMode: "voice",
+      outputMode: "voice",
+      timeZone: "America/Los_Angeles"
+    });
+    assert.strictEqual(scheduledReminder.commandResult.intent, "assistant.reminder_scheduled", "Nexus should schedule a personal assistant reminder");
+    assert.strictEqual(scheduledReminder.profile.assistantReminders[0].task, "call Ron", "Reminder task should be saved in plain language");
+    assert.strictEqual(scheduledReminder.profile.assistantReminders[0].contactName, "Ron", "Reminder should recognize the named contact");
+    assert(scheduledReminder.profile.notifications.some(item => item.reminderId === scheduledReminder.profile.assistantReminders[0].id), "Reminder should create an in-app notification");
+    const reminderList = await call("/api/agent/command", {
+      command: "Nexus, list my reminders",
+      conversational: true,
+      inputMode: "voice",
+      outputMode: "voice"
+    });
+    assert.strictEqual(reminderList.commandResult.intent, "assistant.reminders_listed", "Nexus should list active reminders");
+    assert(reminderList.commandResult.response.includes("call Ron"), "Reminder list should include the saved task");
+    const canceledReminder = await call("/api/agent/command", {
+      command: "Nexus, cancel reminder",
+      conversational: true,
+      inputMode: "voice",
+      outputMode: "voice"
+    });
+    assert.strictEqual(canceledReminder.commandResult.intent, "assistant.reminder_canceled", "Nexus should cancel the latest reminder");
+    assert.strictEqual(canceledReminder.profile.assistantReminders[0].status, "canceled", "Canceled reminder should remain in history with canceled status");
     for (const targetLanguage of ["es", "fr", "sw", "ar"]) {
       const state = await call("/api/agent/command", {
         command: "Nexus, what works without providers?",
@@ -343,6 +370,7 @@ async function call(route, body) {
   console.log("- Ask Nexus backend appointment answer");
   console.log("- Ask Nexus backend daily plan answer");
   console.log("- Ask Nexus backend next-step answer");
+  console.log("- Ask Nexus personal assistant reminders");
   console.log("- Ask Nexus pre-provider multilingual responses: es, fr, sw, ar");
   console.log("- Ask Nexus weather location handoff");
   console.log("- Ask Nexus city weather lookup");

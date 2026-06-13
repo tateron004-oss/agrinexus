@@ -6525,6 +6525,7 @@ function ensureAiProfile(profile) {
   profile.videoSessions = profile.videoSessions || [];
   profile.agentBriefings = profile.agentBriefings || [];
   profile.phoneContacts = profile.phoneContacts || [];
+  profile.assistantReminders = profile.assistantReminders || [];
   profile.missionBrainRuns = profile.missionBrainRuns || [];
   profile.trustedOsReviews = profile.trustedOsReviews || [];
   profile.cloudAgentRuns = profile.cloudAgentRuns || [];
@@ -7982,6 +7983,12 @@ function addNotification(profile, notice) {
   profile.notifications = profile.notifications || [];
   profile.notifications.unshift({ id: crypto.randomUUID(), createdAt: new Date().toISOString(), status: "sent", ...notice });
   profile.notifications = profile.notifications.slice(0, 50);
+}
+
+function ensureAssistantReminders(profile) {
+  ensureAiProfile(profile);
+  profile.assistantReminders = profile.assistantReminders || [];
+  return profile.assistantReminders;
 }
 
 function ensureCommunicationProfile(profile) {
@@ -17234,6 +17241,183 @@ function utilityAssistantKind(text, lower) {
   return "";
 }
 
+function parseAssistantReminderTime(text = "", options = {}) {
+  const lower = String(text || "").toLowerCase();
+  const now = new Date();
+  const addMs = ms => new Date(now.getTime() + ms);
+  const explicitTime = lower.match(/\bat\s+(\d{1,2})(?::(\d{2}))?\s*(am|pm)?\b/);
+  const setClock = date => {
+    if (!explicitTime) return date;
+    let hour = Number(explicitTime[1]);
+    const minute = Number(explicitTime[2] || 0);
+    const meridiem = explicitTime[3] || "";
+    if (meridiem === "pm" && hour < 12) hour += 12;
+    if (meridiem === "am" && hour === 12) hour = 0;
+    const adjusted = new Date(date);
+    adjusted.setHours(hour, minute, 0, 0);
+    if (adjusted.getTime() <= now.getTime()) adjusted.setDate(adjusted.getDate() + 1);
+    return adjusted;
+  };
+  const relative = lower.match(/\bin\s+(\d{1,3})\s*(minute|minutes|min|hour|hours|hr|day|days|week|weeks)\b/);
+  if (relative) {
+    const amount = Number(relative[1]);
+    const unit = relative[2];
+    const multiplier = /minute|min/.test(unit) ? 60 * 1000
+      : /hour|hr/.test(unit) ? 60 * 60 * 1000
+        : /week/.test(unit) ? 7 * 24 * 60 * 60 * 1000
+          : 24 * 60 * 60 * 1000;
+    const date = addMs(amount * multiplier);
+    return { scheduledAt: date.toISOString(), whenLabel: `in ${amount} ${unit}` };
+  }
+  const dayNames = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
+  const weekdayIndex = dayNames.findIndex(day => lower.includes(day));
+  if (weekdayIndex >= 0) {
+    const date = new Date(now);
+    const daysAhead = (weekdayIndex - date.getDay() + 7) % 7 || 7;
+    date.setDate(date.getDate() + daysAhead);
+    const scheduled = setClock(date);
+    return { scheduledAt: scheduled.toISOString(), whenLabel: `${dayNames[weekdayIndex]}${explicitTime ? ` at ${explicitTime[0].replace(/^at\s+/, "")}` : ""}` };
+  }
+  if (/\btomorrow\b/.test(lower)) {
+    const date = new Date(now);
+    date.setDate(date.getDate() + 1);
+    const scheduled = setClock(date);
+    return { scheduledAt: scheduled.toISOString(), whenLabel: `tomorrow${explicitTime ? ` at ${explicitTime[0].replace(/^at\s+/, "")}` : ""}` };
+  }
+  if (/\btonight\b/.test(lower)) {
+    const date = new Date(now);
+    date.setHours(19, 0, 0, 0);
+    if (date.getTime() <= now.getTime()) date.setDate(date.getDate() + 1);
+    return { scheduledAt: date.toISOString(), whenLabel: "tonight" };
+  }
+  if (/\blater today\b|\bthis afternoon\b/.test(lower)) {
+    const date = new Date(now);
+    date.setHours(/\bafternoon\b/.test(lower) ? 15 : now.getHours() + 3, 0, 0, 0);
+    if (date.getTime() <= now.getTime()) date.setTime(now.getTime() + 3 * 60 * 60 * 1000);
+    return { scheduledAt: date.toISOString(), whenLabel: /\bafternoon\b/.test(lower) ? "this afternoon" : "later today" };
+  }
+  if (explicitTime) {
+    const scheduled = setClock(new Date(now));
+    return { scheduledAt: scheduled.toISOString(), whenLabel: explicitTime[0].replace(/^at\s+/, "") };
+  }
+  const fallback = addMs(24 * 60 * 60 * 1000);
+  return { scheduledAt: fallback.toISOString(), whenLabel: "tomorrow" };
+}
+
+function extractAssistantReminderTask(text = "") {
+  const source = String(text || "")
+    .replace(/\bnexus\b/ig, " ")
+    .replace(/\b(hey|please|can you|could you|would you)\b/ig, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  const match = source.match(/\b(?:remind me to|remind me about|notify me to|notify me about|set a reminder to|set reminder to|remember to|follow up to|follow up about)\s+(.+)/i);
+  const task = (match?.[1] || source)
+    .replace(/\b(in\s+\d{1,3}\s*(minutes?|mins?|hours?|hrs?|days?|weeks?)|tomorrow|tonight|later today|this afternoon|on\s+(sunday|monday|tuesday|wednesday|thursday|friday|saturday)|at\s+\d{1,2}(:\d{2})?\s*(am|pm)?)\b/ig, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  return task || "follow up";
+}
+
+function assistantReminderModule(task = "") {
+  const lower = String(task || "").toLowerCase();
+  if (/(doctor|clinic|provider|health|medicine|pharmacy|patient|mobile clinic|medical supply|nurse)/.test(lower)) return { module: "Healthcare", section: "health", providerId: "health-notifications" };
+  if (/(buyer|seller|crop|shipment|delivery|route|market|order|payment|vendor|supplier)/.test(lower)) return { module: "AgriTrade", section: "trade", providerId: "trade-logistics" };
+  if (/(job|work|shift|interview|role|recruiter|employer|application)/.test(lower)) return { module: "Workforce", section: "workforce", providerId: "workforce-notifications" };
+  if (/(course|lesson|learn|study|certificate|training|class)/.test(lower)) return { module: "Learning", section: "learning", providerId: "learning-courses" };
+  if (/(map|location|route|gps|track|where)/.test(lower)) return { module: "Maps", section: "map", providerId: "map-tiles" };
+  return { module: "Agent AI", section: "agent", providerId: "openai" };
+}
+
+function createAssistantReminder(db, user, text, options = {}) {
+  ensureAssistantReminders(db.profile);
+  const task = extractAssistantReminderTask(text);
+  const timing = parseAssistantReminderTime(text, options);
+  const moduleContext = assistantReminderModule(task);
+  const callName = extractContactNameFromCall(task);
+  const contact = callName ? findPhoneContact(db, callName) : null;
+  const reminder = {
+    id: crypto.randomUUID(),
+    reminderNumber: `REM-${String((db.profile.assistantReminders || []).length + 1).padStart(3, "0")}`,
+    task,
+    scheduledAt: timing.scheduledAt,
+    whenLabel: timing.whenLabel,
+    module: moduleContext.module,
+    section: moduleContext.section,
+    status: "scheduled",
+    sourceCommand: text,
+    contactName: contact?.name || callName || "",
+    contactPhone: contact?.phone || "",
+    createdBy: user.email,
+    createdAt: new Date().toISOString()
+  };
+  db.profile.assistantReminders.unshift(reminder);
+  db.profile.assistantReminders = db.profile.assistantReminders.slice(0, 80);
+  addNotification(db.profile, {
+    module: moduleContext.module,
+    providerId: moduleContext.providerId,
+    channel: "in-app assistant reminder",
+    message: `${reminder.reminderNumber}: ${task} ${timing.whenLabel}.`,
+    createdBy: user?.email || "Ask Nexus",
+    reminderId: reminder.id,
+    scheduledAt: reminder.scheduledAt
+  });
+  rememberAgentMemory(db.profile, `Reminder set: ${task} ${timing.whenLabel}.`, { source: "assistant-reminder", category: "preference", module: moduleContext.module, confidence: 0.93 });
+  logIntegration(db, {
+    providerId: moduleContext.providerId,
+    module: moduleContext.module,
+    action: "assistant.reminder_scheduled",
+    status: "success",
+    detail: `${reminder.reminderNumber} scheduled: ${task} ${timing.whenLabel}.`,
+    metadata: { reminderId: reminder.id, scheduledAt: reminder.scheduledAt, contactKnown: Boolean(contact) },
+    dispatch: false
+  });
+  db.profile.agentMemory.lastStatus = "assistant-reminder-scheduled";
+  db.profile.agentMemory.lastSummary = `Reminder set: ${task} ${timing.whenLabel}.`;
+  db.profile.agentMemory.updatedAt = new Date().toISOString();
+  return reminder;
+}
+
+function assistantReminderCommandResponse(db, user, text, lower, options = {}) {
+  ensureAssistantReminders(db.profile);
+  const hasExplicitReminderTime = /\b(in\s+\d{1,3}\s*(minutes?|mins?|hours?|hrs?|days?|weeks?)|tomorrow|tonight|later today|this afternoon|sunday|monday|tuesday|wednesday|thursday|friday|saturday|at\s+\d{1,2}(:\d{2})?\s*(am|pm)?)\b/.test(lower);
+  if (!hasExplicitReminderTime && /\b(remind me|reminder|notify me)\b/.test(lower) && /\b(appointment|visit|telehealth|doctor|provider|shift|schedule)\b/.test(lower)) {
+    return null;
+  }
+  if (/\b(list|show|what are|read|tell me)\b/.test(lower) && /\b(reminders|reminder|follow ups|follow-ups)\b/.test(lower)) {
+    const active = (db.profile.assistantReminders || []).filter(item => item.status !== "canceled").slice(0, 5);
+    const response = active.length
+      ? `You have ${active.length} reminder${active.length === 1 ? "" : "s"}. ${active.map(item => `${item.reminderNumber}: ${item.task}, ${item.whenLabel}`).join(". ")}.`
+      : "You do not have active reminders yet. Say, Nexus, remind me to call Ron tomorrow, or remind me to order medical supplies Friday.";
+    return { intent: "assistant.reminders_listed", response, status: "completed", metadata: { conversationMode: true, redirectSection: "agent", reminders: active } };
+  }
+  if (/\b(cancel|clear|delete|remove)\b/.test(lower) && /\b(reminder|reminders|follow up|follow-up)\b/.test(lower)) {
+    const reminder = (db.profile.assistantReminders || []).find(item => item.status !== "canceled");
+    if (!reminder) return { intent: "assistant.no_reminder_to_cancel", response: "I do not see an active reminder to cancel.", status: "needs-input", metadata: { conversationMode: true, redirectSection: "agent" } };
+    reminder.status = "canceled";
+    reminder.canceledAt = new Date().toISOString();
+    db.profile.agentMemory.lastStatus = "assistant-reminder-canceled";
+    db.profile.agentMemory.lastSummary = `Canceled ${reminder.reminderNumber}: ${reminder.task}.`;
+    db.profile.agentMemory.updatedAt = reminder.canceledAt;
+    logIntegration(db, { providerId: "openai", module: reminder.module || "Agent AI", action: "assistant.reminder_canceled", detail: `${reminder.reminderNumber} canceled.`, metadata: { reminderId: reminder.id }, dispatch: false });
+    return { intent: "assistant.reminder_canceled", response: `Canceled ${reminder.reminderNumber}: ${reminder.task}.`, status: "completed", metadata: { conversationMode: true, redirectSection: reminder.section || "agent", reminder } };
+  }
+  if (/\b(remind me|set a reminder|set reminder|notify me|remember to|follow up)\b/.test(lower)) {
+    const reminder = createAssistantReminder(db, user, text, options);
+    const contactLine = reminder.contactName && !reminder.contactPhone
+      ? ` I do not have ${reminder.contactName}'s number yet, so give me the number if you want me to call later.`
+      : reminder.contactName && reminder.contactPhone
+        ? ` I also found ${reminder.contactName}'s saved phone number for the call workflow.`
+        : "";
+    return {
+      intent: "assistant.reminder_scheduled",
+      response: `Done. I will remind you to ${reminder.task} ${reminder.whenLabel}.${contactLine}`,
+      status: "completed",
+      metadata: { conversationMode: true, redirectSection: reminder.section, reminder, suggestedReplies: ["list reminders", "what should I do next", "call contact"] }
+    };
+  }
+  return null;
+}
+
 function formatUtilityDate(dateValue, timeZone = "") {
   const parsed = Date.parse(dateValue || "");
   if (!Number.isFinite(parsed)) return "";
@@ -18166,6 +18350,8 @@ async function runAgentCommand(db, user, command, options = {}) {
   if (executiveIntelligenceCommand) return executiveIntelligenceCommand;
   const ecosystemIntelligenceCommand = ecosystemIntelligenceCommandResponse(db, user, text, options);
   if (ecosystemIntelligenceCommand) return ecosystemIntelligenceCommand;
+  const earlyReminderCommand = assistantReminderCommandResponse(db, user, text, lower, options);
+  if (earlyReminderCommand) return earlyReminderCommand;
   const earlyUtilityCommand = await utilityAssistantCommandResponse(db, user, text, lower, options);
   if (earlyUtilityCommand) return earlyUtilityCommand;
   const networkIntelligenceCommand = networkIntelligenceCommandResponse(db, user, text, options);
@@ -18379,6 +18565,8 @@ async function runAgentCommand(db, user, command, options = {}) {
   if (isDailyAdvisorQuestion(lower) && !shouldKeepUtility) {
     return dailyLifeAdvisorResponse(db, user, text, lower, options);
   }
+  const directReminderCommand = assistantReminderCommandResponse(db, user, text, lower, options);
+  if (directReminderCommand) return directReminderCommand;
   const directUtilityCommand = await utilityAssistantCommandResponse(db, user, text, lower, options);
   if (directUtilityCommand) return directUtilityCommand;
   const directFollowUp = /^(continue|next step|do the next|run the next|start the next|do that|let's do that|lets do that|proceed|take me there|open that|show me|go there|where are we|what step|orient me|explain that|repeat that)\b/.test(lower);
