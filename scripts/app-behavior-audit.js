@@ -314,22 +314,22 @@ hasAll(app, [
   "Full app language modes are",
   "Say switch to",
   "Nexus learned the user's name",
-  "How can I help you?",
+  "What do you need?",
   "meu nome e",
   "oruko mi ni",
   "sunana",
   "kombo na ngai",
   "function nexusCommonPhraseResponse",
-  "I will slow down and keep answers shorter",
-  "We will keep it simple",
+  "I'll slow down and keep it short",
+  "We'll keep it simple",
   "function shouldAskRepeatForUnclearVoiceCommand",
   "function askUserToRepeatMisheardPhrase",
-  "Please repeat it slowly",
-  "I will repeat what I heard before doing anything",
+  "Say it slowly",
+  "I'll repeat it before I act",
   "function isSimpleCourseStartCommand",
   "function handleSimpleCourseStartCommand",
-  "Tell me what you want next",
-  "You do not need perfect words",
+  "What do you want next",
+  "You don't need perfect words",
   "I hear you",
   "We can do this together",
   "you are not stuck",
@@ -392,6 +392,7 @@ assert(app.includes("function stopNexusAndReturnToWork"), "Voice stop must close
 assert(app.includes("Stopped. Nexus is closed so you can continue working."), "Voice stop close path must acknowledge and get out of the user's way");
 assert(app.includes("i m|im|am|call me"), "Nexus introduction handling must catch casual name phrases like hey I am Javar");
 assert(app.includes("stopVoicePlayback({ hard: true });") && app.includes("setVoiceResponse(introductionResponse, true);"), "Nexus must interrupt old speech before greeting a newly introduced user");
+assert(app.includes("Hey ${name}. What do you need?") && app.includes("Got you: ${values.command || \"\"}. I'm on it."), "Nexus voice tone should stay warm and conversational, not formal");
 assert(app.includes("voiceStopTranslations"), "Voice stop controls must translate in every supported language");
 assert(app.includes("detente") && app.includes("arrete") && app.includes("simama") && app.includes("\u0627\u0648\u0642\u0641"), "Voice stop parser must understand multilingual stop phrases");
 assert(app.includes("fuzzyWakeStop") && app.includes("texas") && app.includes("nexis"), "Voice stop parser must catch common Nexus mishears like Texas stop");
@@ -400,8 +401,8 @@ assert(app.includes("Stopped. Ask me the next question or tell me where to go ne
 assert(styles.includes("pointer-events: none") && styles.includes(".user-caption-actions") && styles.includes("pointer-events: auto"), "Caption panel must not block workflow action clicks");
 assert(styles.includes("width: min(300px, calc(100vw - 24px))") && styles.includes("max-height: 138px"), "Caption panel must default to a small bubble");
 assert(styles.includes(".user-caption-panel.expanded") && styles.includes("display: none") && styles.includes("display: grid"), "Caption input controls must appear only in expanded caption mode");
-assert(html.includes("nexus-behavior-198"), "Index must force browsers to load Nexus behavior CSS");
-assert(html.includes("nexus-behavior-198"), "Index must force browsers to load Nexus behavior JS");
+assert(html.includes("nexus-behavior-199"), "Index must force browsers to load Nexus behavior CSS");
+assert(html.includes("nexus-behavior-199"), "Index must force browsers to load Nexus behavior JS");
 assert(app.includes("shipmentPreviewMapCanvas") && app.includes("renderShipmentPreviewMap"), "Shipment preview maps must use real Leaflet canvases");
 assert(app.includes("healthHotspotMapCanvas") && app.includes("renderHealthHotspotPreviewMap"), "Health hotspot maps must use real Leaflet canvases");
 assert(app.includes("function shipmentTrackingState") && app.includes("function drawShipmentRoute"), "Shipment maps must render operational tracking state, not decorative routes");
@@ -458,9 +459,9 @@ assert(app.includes("resumeVoiceAfterUiAction(shouldResumeVoice"), "User button 
 assert(app.includes("VOICE_RESTART_DELAY_MS = 320"), "Voice listening should restart quickly after Nexus speaks");
 assert(app.includes("VOICE_UI_RESUME_DELAYS_MS = [180, 650, 1500, 3200, 5200]"), "User actions should restore mic listening quickly");
 assert(app.includes("Heard: ${command}"), "Voice acknowledgement should stay short and responsive");
-assert(app.includes("function nexusWakeGreeting") && app.includes("How can I help you?"), "Nexus must greet the signed-in user by name before taking commands");
+assert(app.includes("function nexusWakeGreeting") && app.includes("What do you need?"), "Nexus must greet the signed-in user by name before taking commands");
 assert(app.includes('experienceMode === "user" && !options.forceHandoff'), "Standard User voice responses must not automatically append the same handoff ending");
-assert(app.includes("function stageNexusSpokenCommand") && app.includes("I am doing it now."), "Nexus must repeat a clear heard command and move into the action without a long confirmation prompt");
+assert(app.includes("function stageNexusSpokenCommand") && app.includes("I'm on it."), "Nexus must repeat a clear heard command and move into the action without a long confirmation prompt");
 assert(app.includes("Nexus opened the requested workflow and is waiting for the next command."), "Voice workflows must open actions and wait for the next command instead of forcing another confirmation");
 assert(app.includes("function executePendingNexusSpokenCommand") && app.includes("source: \"nexus-confirmation\""), "Confirmed Nexus commands must execute through the main voice handler");
 assert(app.includes("agrinexusAutonomousLearningLog") && app.includes("command-confirmed"), "Nexus must record autonomous learning evidence for confirmed commands");

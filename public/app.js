@@ -61,8 +61,8 @@ let routeTrackingWatchId = null;
 let routeTrackingPoints = [];
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-198";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v178";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-199";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v179";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
 const VOICE_ATTENTION_DELAY_MS = 900;
@@ -6179,7 +6179,7 @@ function guideAmbiguousUserWithoutChoice(clarification) {
   const suggestions = options.map(option => option.command || option.label);
   renderLiveVoiceSuggestions(suggestions);
   updateNexusBehaviorLayer("listening", "Nexus is guiding without forcing a choice.");
-  setVoiceResponse("I can help. You do not need perfect words. Tell me what you need, and I will take you to the right place.", true);
+  setVoiceResponse("I can help. You don't need perfect words. Tell me what you need, and I will take you to the right place.", true);
 }
 
 function isGlobalStopCommand(lower) {
@@ -6398,7 +6398,7 @@ async function answerAgentClarification(command) {
         await runBackendAgentCommand(command);
         return true;
       }
-      setVoiceResponse("I cleared that old step. You do not need exact words. Tell me what you need, or say stop.", true);
+      setVoiceResponse("I cleared that old step. You don't need exact words. Tell me what you need, or say stop.", true);
       return true;
     }
     const names = pendingAgentClarification.options.map(option => option.label).join(", ");
@@ -6766,9 +6766,21 @@ function nexusHumanResponsePolicy(message = "", options = {}) {
     shortAnswerMode = false;
   }
   let human = text
+    .replace(/\bConfirmed\.\s*/gi, "Got it. ")
+    .replace(/\bCanceled\.\s*/gi, "No problem. ")
+    .replace(/\bI am\b/g, "I'm")
+    .replace(/\bI will\b/g, "I'll")
+    .replace(/\bYou do not\b/g, "You don't")
     .replace(/\bworkflow is ready\b/gi, "is open")
     .replace(/\bprepared the\b/gi, "opened the")
     .replace(/\bprepared a\b/gi, "opened a")
+    .replace(/\bI am doing it now\b/gi, "I'm on it")
+    .replace(/\bI am doing this now\b/gi, "I'm on it")
+    .replace(/\bI will guide this step slowly\b/gi, "I'll walk with you")
+    .replace(/\bI will guide you one step at a time\b/gi, "I'll walk with you")
+    .replace(/\bTell me what you need next\b/gi, "What do you need next")
+    .replace(/\bTell me what you need\b/gi, "What do you need")
+    .replace(/\bHow can I help you\b/gi, "What do you need")
     .replace(/\bI heard:\s*/gi, "I heard ")
     .replace(/\s*You can keep talking, or say:[^.]+\.?/gi, "")
     .replace(/\s*Top actions:[\s\S]+$/i, "")
@@ -15492,12 +15504,12 @@ function nexusLocalizedBehaviorCopy(key, values = {}) {
   const language = languageCode();
   const copy = {
     en: {
-      hello: `Hello ${name}. How can I help you?`,
-      wake: `Yes ${name}. How can I help you?`,
-      heard: `I heard: ${values.command || ""}. I am doing it now.`,
-      confirmed: `Confirmed. I am doing this now: ${values.command || ""}.`,
-      canceled: "Canceled. Tell me what you want Nexus to do instead.",
-      ready: "I am listening. Tell me what you need."
+      hello: `Hey ${name}. What do you need?`,
+      wake: `Yes ${name}. I'm here. What do you need?`,
+      heard: `Got you: ${values.command || ""}. I'm on it.`,
+      confirmed: `Got it. I'm doing this: ${values.command || ""}.`,
+      canceled: "No problem. What do you want instead?",
+      ready: "I'm listening. What do you need?"
     },
     pt: {
       hello: `Ola ${name}. Como posso ajudar?`,
@@ -15821,7 +15833,7 @@ async function handleSimpleCourseStartCommand(command = "") {
     if (experienceMode === "user") renderUserSimpleActiveSection("learning");
     const title = translatedCourse(activeCourse() || course).title;
     const heard = summarizeNexusCommandForRepeat(command || "start my course");
-    const message = `I heard: ${heard}. I started ${title}. Tell me what you want next.`;
+    const message = `I heard: ${heard}. I started ${title}. What do you want next?`;
     recordNexusAutonomousLearning({ type: "course-started", command, courseId: course.id });
     updateNexusBehaviorLayer("ready", message);
     renderLiveVoiceSuggestions(["complete my lesson", "read this lesson", "build captions", "Nexus stop"]);
@@ -15888,13 +15900,13 @@ async function executePendingNexusSpokenCommand() {
   }
 }
 
-function clearPendingNexusSpokenCommand(message = "Canceled. Tell me what you want to do next.") {
+function clearPendingNexusSpokenCommand(message = "No problem. What do you want next?") {
   const staged = pendingNexusSpokenCommand;
   pendingNexusSpokenCommand = null;
   nexusAwaitingCommand = false;
   recordNexusAutonomousLearning({ type: "command-canceled", command: staged?.summary || "" });
   updateNexusBehaviorLayer("ready", message);
-  setVoiceResponse(message === "Canceled. Tell me what you want to do next." || message === "Canceled. Tell me what you want Nexus to do instead."
+  setVoiceResponse(message === "No problem. What do you want next?" || message === "Canceled. Tell me what you want Nexus to do instead."
     ? nexusLocalizedBehaviorCopy("canceled")
     : message, true);
 }
@@ -16223,10 +16235,10 @@ function answerNexusHearingCheck() {
   pendingNexusSpokenCommand = null;
   updateNexusBehaviorLayer("listening", "Nexus confirmed the user can be heard.");
   const status = voiceRecognition
-    ? "Yes, I hear you. I am listening now."
-    : "Yes, I received that. If you spoke it, your microphone reached Nexus. I am ready.";
+    ? "Yes, I hear you. I'm listening."
+    : "Yes, I got that. Your mic reached Nexus.";
   renderLiveVoiceSuggestions(["Nexus, open learning", "Nexus, open telehealth", "Nexus, stop"]);
-  setVoiceResponse(`${status} Tell me what you need next.`, true);
+  setVoiceResponse(`${status} What do you need next?`, true);
 }
 
 function cleanSpokenUserName(name = "") {
@@ -16250,9 +16262,9 @@ function nexusIntroLanguageNote(introLanguage = {}) {
   const current = languageDisplayName();
   if (introLanguage.code && introLanguage.code === languageCode()) return "";
   if (introLanguage.fullMode) {
-    return ` I heard your introduction in ${introLanguage.label}. I am currently speaking ${current}. Say switch to ${introLanguage.label} if you want me to use it.`;
+    return ` I heard ${introLanguage.label}. Right now I'm using ${current}. Say switch to ${introLanguage.label} if you want that.`;
   }
-  return ` I heard your name phrase in ${introLanguage.label}. I am currently speaking ${current}. Full app language modes are ${nexusSupportedLanguageNames()}.`;
+  return ` I heard a ${introLanguage.label} name phrase. Right now I'm using ${current}. Full app language modes are ${nexusSupportedLanguageNames()}.`;
 }
 
 function nexusIntroductionResponse(command = "") {
@@ -16292,7 +16304,7 @@ function nexusIntroductionResponse(command = "") {
   updateNexusBehaviorLayer("listening", `Nexus learned the user's name is ${spokenName}.`);
   recordNexusAutonomousLearning({ type: "user-name", command: value, userName: spokenName });
   renderLiveVoiceSuggestions(["open learning", "open telehealth", "what can you do"]);
-  return `Hello ${spokenName}. How can I help you?`;
+  return `Hey ${spokenName}. What do you need?`;
 }
 
 function nexusSmartIntentRouter(command = "") {
@@ -16508,34 +16520,34 @@ function nexusCommonPhraseResponse(command = "") {
   const responses = [
     {
       match: /\b(thank you|thanks|thanks nexus|appreciate it|good job|nice job|that helped|gracias|merci|asante|shukran)\b/,
-      response: `You're welcome, ${name}. I am here when you need the next step.`,
+      response: `You're welcome, ${name}. I'm here when you need me.`,
       suggestions: ["what should I do next", "open learning", "go quiet"]
     },
     {
       match: /\b(wait|hold on|one second|give me a minute|pause for a moment|not yet|stand by)\b/,
-      response: "No rush. I will wait. Say Nexus when you are ready.",
+      response: "No rush. I'll wait. Say Nexus when you're ready.",
       pause: true,
       suggestions: ["Nexus listen", "Nexus stop", "Nexus open map"]
     },
     {
       match: /\b(say that again|repeat that|repeat|what did you say|i missed that|read that again)\b/,
-      response: lastVoiceResponse && lastVoiceResponse !== "Ready for a command." ? lastVoiceResponse : "I am ready. Tell me what you need, and I will guide one step at a time.",
+      response: lastVoiceResponse && lastVoiceResponse !== "Ready for a command." ? lastVoiceResponse : "I'm ready. Tell me what you need, and I'll walk with you.",
       suggestions: ["slow down", "what now", "open help"]
     },
     {
       match: /\b(repeat slowly|i will repeat|let me repeat|i said it wrong|you heard me wrong|that is not what i said)\b/,
-      response: "Go ahead. Say it again slowly, and I will repeat what I heard before doing anything.",
+      response: "Go ahead. Say it slowly, and I'll repeat it before I act.",
       suggestions: ["open learning", "open telehealth", "Nexus stop"]
     },
     {
       match: /\b(slow down|speak slower|talk slower|too fast|slower please)\b/,
-      response: "Okay. I will slow down and keep answers shorter.",
+      response: "Okay. I'll slow down and keep it short.",
       slow: true,
       suggestions: ["repeat that", "what now", "open learning"]
     },
     {
       match: /\b(i do not understand|i don't understand|i dont understand|i am confused|i'm confused|im confused|i am lost|i'm lost|im lost|this is confusing|help me understand)\b/,
-      response: "I hear you. We will keep it simple. Tell me the area: learn, work, health, crops, map, or help.",
+      response: "I hear you. We'll keep it simple. Say learn, work, health, crops, map, or help.",
       suggestions: ["learn", "work", "health", "crops", "map"]
     },
     {
@@ -16545,12 +16557,12 @@ function nexusCommonPhraseResponse(command = "") {
     },
     {
       match: /\b(i am testing|this is a test|testing nexus|test mode|demo test)\b/,
-      response: "Test received. I can hear the command path. Try a real action next, like open learning or change language to English.",
+      response: "Test came through. Try something real next, like open learning or change language to English.",
       suggestions: ["open learning", "change language to English", "can you hear me"]
     },
     {
       match: /\b(hello again|hi again|you there|are you there|nexus are you there)\b/,
-      response: `Yes, ${name}. I am here. What do you want to do next?`,
+      response: `Yes, ${name}. I'm here. What do you want to do next?`,
       suggestions: ["open learning", "open health", "open map"]
     }
   ];
@@ -16715,7 +16727,7 @@ async function handleVoiceCommand(rawCommand, options = {}) {
     return;
   }
   if (pendingNexusSpokenCommand && isNexusCommandRejection(lower)) {
-    clearPendingNexusSpokenCommand("Canceled. Tell me what you want Nexus to do instead.");
+    clearPendingNexusSpokenCommand("No problem. What do you want instead?");
     return;
   }
   if (isOpenKnowledgeQuestion(command)) {
