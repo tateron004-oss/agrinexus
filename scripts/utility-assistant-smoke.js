@@ -254,6 +254,45 @@ async function call(route, body) {
     assert.strictEqual(translatedBuyerRoute.commandResult.metadata.translatedDisplay, true, "Buyer route should translate display metadata");
     assert.strictEqual(translatedBuyerRoute.commandResult.metadata.localized.packet.nextSteps.length, translatedBuyerRoute.commandResult.metadata.packet.nextSteps.length, "Localized buyer route should translate packet next steps");
     assert.notStrictEqual(translatedBuyerRoute.commandResult.metadata.localized.packet.nextSteps[0], translatedBuyerRoute.commandResult.metadata.packet.nextSteps[0], "Localized buyer route next step should change from English");
+    const missingRon = await call("/api/agent/command", {
+      command: "Nexus, call Ron",
+      conversational: true,
+      inputMode: "voice",
+      outputMode: "voice"
+    });
+    assert.strictEqual(missingRon.commandResult.intent, "phone.contact_number_needed", "Named contact call should ask for a missing phone number");
+    assert.strictEqual(missingRon.profile.agentMemory.pendingContactCall.name, "Ron", "Missing contact call should remember the requested name");
+    const savedRon = await call("/api/agent/command", {
+      command: "Ron is +15555550100",
+      conversational: true,
+      inputMode: "voice",
+      outputMode: "voice"
+    });
+    assert.strictEqual(savedRon.commandResult.intent, "phone.contact_saved_call_ready", "Providing a number should save contact and stage a call");
+    assert.strictEqual(savedRon.profile.phoneContacts.find(contact => contact.name === "Ron")?.phone, "+15555550100", "Saved contact should retain the normalized phone number");
+    assert.strictEqual(savedRon.profile.agentPendingAction.recipientPhone, "+15555550100", "Staged call should carry the saved phone number");
+    const confirmedRon = await call("/api/agent/command", {
+      command: "yes",
+      conversational: true,
+      inputMode: "voice",
+      outputMode: "voice"
+    });
+    assert.strictEqual(confirmedRon.commandResult.intent, "conversation.confirmed", "Confirmed named contact call should run through confirmation");
+    assert.strictEqual((confirmedRon.profile.outboundCalls || [])[0].to, "+15555550100", "Confirmed named contact call should dial the saved phone number");
+    const rememberedRon = await call("/api/agent/command", {
+      command: "Nexus, call Ron",
+      conversational: true,
+      inputMode: "voice",
+      outputMode: "voice"
+    });
+    assert.strictEqual(rememberedRon.commandResult.intent, "phone.contact_call_ready", "Saved contact call should be ready from memory");
+    assert.strictEqual(rememberedRon.profile.agentPendingAction.recipientPhone, "+15555550100", "Saved contact memory should stage the saved number");
+    await call("/api/agent/command", {
+      command: "no",
+      conversational: true,
+      inputMode: "voice",
+      outputMode: "voice"
+    });
     const stagedCall = await call("/api/agent/command", {
       command: "Nexus, call the buyer",
       conversational: true,
@@ -299,6 +338,7 @@ async function call(route, body) {
   console.log("- Ask Nexus translated Mission Brain display metadata");
   console.log("- Ask Nexus translated Trusted OS display metadata");
   console.log("- Ask Nexus translated buyer route packet metadata");
+  console.log("- Ask Nexus phone contact memory and confirmed named calling");
   console.log("- Ask Nexus outbound call staging and confirmation");
   console.log("- Ask Nexus backend appointment answer");
   console.log("- Ask Nexus backend daily plan answer");

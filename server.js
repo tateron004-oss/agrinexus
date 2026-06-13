@@ -4618,6 +4618,116 @@ function normalizePhoneNumber(value) {
   return clean;
 }
 
+function ensurePhoneContactBook(db) {
+  ensureAiProfile(db.profile);
+  db.profile.phoneContacts = db.profile.phoneContacts || [];
+  db.profile.agentMemory.pendingContactCall = db.profile.agentMemory.pendingContactCall || null;
+  return db.profile.phoneContacts;
+}
+
+function contactDisplayName(value = "") {
+  const cleaned = String(value || "")
+    .replace(/[^\p{L}\p{N}\s'.-]/gu, " ")
+    .replace(/\b(please|now|today|thanks|thank you|phone|call|dial|ring|number|contact)\b/gi, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  if (!cleaned) return "";
+  return cleaned
+    .split(" ")
+    .filter(Boolean)
+    .slice(0, 4)
+    .map(part => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+}
+
+function contactLookupKey(value = "") {
+  return contactDisplayName(value).toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+}
+
+function extractPhoneNumberFromText(text = "") {
+  const match = String(text || "").match(/(?:\+\d{1,3}[\s().-]*)?\d(?:[\d\s().-]{6,}\d)/);
+  return match ? normalizePhoneNumber(match[0]) : "";
+}
+
+function extractContactNameFromCall(text = "") {
+  const source = String(text || "");
+  const match = source.match(/\b(?:call|phone|dial|ring)\s+(?:my\s+|the\s+)?([a-zA-Z][a-zA-Z\s'.-]{1,48})/i);
+  if (!match) return "";
+  const raw = match[1]
+    .replace(/\b(on|at|about|for|because|please|now|today|with|to|from)\b.*$/i, "")
+    .trim();
+  const name = contactDisplayName(raw);
+  const generic = /^(buyer|seller|provider|doctor|nurse|clinic|telehealth|recruiter|employer|instructor|teacher|support|caregiver|pharmacy|vendor|supplier|emergency)$/i;
+  return name && !generic.test(name) ? name : "";
+}
+
+function extractContactNameWithPhone(text = "", fallbackName = "") {
+  const source = String(text || "");
+  const phone = extractPhoneNumberFromText(source);
+  if (!phone) return contactDisplayName(fallbackName);
+  const beforePhone = source.slice(0, source.indexOf(source.match(/(?:\+\d{1,3}[\s().-]*)?\d(?:[\d\s().-]{6,}\d)/)?.[0] || ""));
+  const nameMatch = beforePhone.match(/\b(?:remember|save|add|store)?\s*(?:that\s+)?(?:my\s+)?([a-zA-Z][a-zA-Z\s'.-]{1,48}?)(?:'s| is| number| phone| contact| at|:)?\s*$/i);
+  const candidate = contactDisplayName(nameMatch?.[1] || fallbackName);
+  const noise = /^(his|her|their|the|this|that|number|phone|contact|is|at|for)$/i;
+  return candidate && !noise.test(candidate) ? candidate : contactDisplayName(fallbackName);
+}
+
+function inferContactRelationship(text = "") {
+  const lower = String(text || "").toLowerCase();
+  if (/(medical supply|medicine|pharmacy|drug|clinic supply|vendor|supplier)/.test(lower)) return "medical supply contact";
+  if (/(buyer|sell|crop|trade|market|order)/.test(lower)) return "buyer or trade contact";
+  if (/(seller|farmer|supplier|produce)/.test(lower)) return "seller contact";
+  if (/(doctor|nurse|clinic|telehealth|provider|patient|health)/.test(lower)) return "health provider contact";
+  if (/(job|workforce|recruiter|employer|role)/.test(lower)) return "workforce contact";
+  if (/(teacher|course|lesson|learning|instructor)/.test(lower)) return "learning support contact";
+  return "saved contact";
+}
+
+function upsertPhoneContact(db, user, { name, phone, relationship = "saved contact", source = "voice" }) {
+  const contacts = ensurePhoneContactBook(db);
+  const cleanName = contactDisplayName(name);
+  const cleanPhone = normalizePhoneNumber(phone);
+  if (!cleanName || !cleanPhone) return null;
+  const lookup = contactLookupKey(cleanName);
+  const now = new Date().toISOString();
+  const existing = contacts.find(item => item.lookup === lookup || normalizePhoneNumber(item.phone) === cleanPhone);
+  const record = {
+    id: existing?.id || crypto.randomUUID(),
+    name: cleanName,
+    lookup,
+    phone: cleanPhone,
+    relationship,
+    source,
+    createdBy: existing?.createdBy || user.email,
+    createdAt: existing?.createdAt || now,
+    updatedAt: now
+  };
+  db.profile.phoneContacts = existing
+    ? contacts.map(item => item.id === existing.id ? record : item)
+    : [record, ...contacts];
+  db.profile.phoneContacts = db.profile.phoneContacts.slice(0, 80);
+  rememberAgentMemory(db.profile, `${cleanName} phone contact saved as ${relationship}.`, { source: "phone-contact-book", category: "communications", module: "AI", confidence: 0.94 });
+  logIntegration(db, {
+    providerId: "phone-voice",
+    module: "AI",
+    action: "phone.contact_saved",
+    status: "success",
+    detail: `Saved phone contact ${cleanName} for ${relationship}.`,
+    metadata: { contactId: record.id, relationship },
+    dispatch: false
+  });
+  return record;
+}
+
+function findPhoneContact(db, name = "") {
+  const contacts = ensurePhoneContactBook(db);
+  const lookup = contactLookupKey(name);
+  if (!lookup) return null;
+  return contacts.find(item => item.lookup === lookup)
+    || contacts.find(item => item.lookup.includes(lookup) || lookup.includes(item.lookup))
+    || null;
+}
+
 function outboundCallRecipientForPurpose(purpose = "", body = {}) {
   const lower = String(purpose || "").toLowerCase();
   const direct = normalizePhoneNumber(body.to || body.phone || body.recipientPhone || body.callbackNumber);
@@ -6414,6 +6524,7 @@ function ensureAiProfile(profile) {
   profile.voiceSessions = profile.voiceSessions || [];
   profile.videoSessions = profile.videoSessions || [];
   profile.agentBriefings = profile.agentBriefings || [];
+  profile.phoneContacts = profile.phoneContacts || [];
   profile.missionBrainRuns = profile.missionBrainRuns || [];
   profile.trustedOsReviews = profile.trustedOsReviews || [];
   profile.cloudAgentRuns = profile.cloudAgentRuns || [];
@@ -6506,6 +6617,7 @@ function ensureAiProfile(profile) {
     lastSummary: "Frontier Nexus Brain is ready to coordinate the highest operating layer.",
     updatedAt: new Date().toISOString()
   };
+  profile.agentMemory.pendingContactCall = profile.agentMemory.pendingContactCall || null;
 }
 
 function buildAgentPlan(db, goal, user) {
@@ -11463,10 +11575,16 @@ async function executeAgentTool(db, user, step) {
   }
 
   if (step.tool === "communications.outbound_call") {
-    const call = await createOutboundCallWorkflow(db, user, { purpose: step.detail || "AgriNexus outbound call" });
+    const call = await createOutboundCallWorkflow(db, user, {
+      purpose: step.purpose || step.detail || "AgriNexus outbound call",
+      to: step.to || step.recipientPhone,
+      recipientPhone: step.recipientPhone || step.to,
+      contactName: step.contactName || ""
+    });
+    const contactLabel = step.contactName ? ` to ${step.contactName}` : "";
     return call.delivery?.ok
-      ? `Started outbound call ${call.callNumber} to ${call.to}.`
-      : `Prepared outbound call ${call.callNumber}, but it needs setup: ${(call.delivery?.missing || [call.delivery?.error || call.status]).join(", ")}.`;
+      ? `Calling${contactLabel}. Started outbound call ${call.callNumber} to ${call.to}.`
+      : `Prepared outbound call${contactLabel} as ${call.callNumber}, but it needs setup: ${(call.delivery?.missing || [call.delivery?.error || call.status]).join(", ")}.`;
   }
 
   if (step.tool === "women_family.support_path") {
@@ -15360,6 +15478,135 @@ function localizedWorkflowPhrase(lower) {
   return phrases.find(item => item.patterns.some(pattern => normalized.includes(pattern)))?.command || "";
 }
 
+function stagePhoneContactCall(db, command, contact, purpose = "") {
+  const cleanPurpose = purpose || `call ${contact.name}`;
+  const section = /(doctor|nurse|clinic|health|medicine|pharmacy|medical)/i.test(contact.relationship || cleanPurpose) ? "health"
+    : /(buyer|seller|trade|crop|supplier|vendor)/i.test(contact.relationship || cleanPurpose) ? "trade"
+    : /(job|workforce|recruiter|employer)/i.test(contact.relationship || cleanPurpose) ? "workforce"
+    : "agent";
+  const staged = stageAgentAction(db, command, {
+    module: "AI",
+    tool: "communications.outbound_call",
+    action: `Call ${contact.name}`,
+    section,
+    planner: "phone-contact-memory",
+    confidence: 0.93,
+    rationale: "Nexus found a saved contact and is waiting for confirmation before placing a live phone call.",
+    userFacingPlan: `Say yes to call ${contact.name}, or no to cancel.`,
+    contactName: contact.name,
+    recipientPhone: contact.phone,
+    to: contact.phone,
+    purpose: cleanPurpose
+  });
+  db.profile.agentMemory.lastStatus = "phone-contact-call-ready";
+  db.profile.agentMemory.lastSummary = `I found ${contact.name}. Say yes to call, or no to cancel.`;
+  return {
+    ...staged,
+    intent: "phone.contact_call_ready",
+    response: `I found ${contact.name}. Say yes and I will call ${contact.name}. Say no to cancel.`,
+    metadata: {
+      ...(staged.metadata || {}),
+      contactId: contact.id,
+      contactName: contact.name,
+      recipientPhone: contact.phone,
+      relationship: contact.relationship
+    }
+  };
+}
+
+async function phoneContactMemoryCommandResponse(db, user, text, lower, options = {}) {
+  ensurePhoneContactBook(db);
+  const pendingContactCall = db.profile.agentMemory.pendingContactCall || null;
+  const phone = extractPhoneNumberFromText(text);
+  const callName = extractContactNameFromCall(text);
+  const saveContactSignal = /\b(remember|save|store|add)\b/.test(lower) && /\b(number|phone|contact|call)\b/.test(lower);
+  const numberMentioned = /\d(?:[\d\s().-]{6,}\d)/.test(String(text || ""));
+
+  if (numberMentioned && !phone) {
+    const name = pendingContactCall?.name || callName || "that contact";
+    db.profile.agentMemory.lastStatus = "phone-contact-country-code-needed";
+    db.profile.agentMemory.lastSummary = `I need the full country code before I can save ${name}.`;
+    return {
+      intent: "phone.contact_country_code_needed",
+      response: `I need the full phone number with country code before I save it. For Kenya use +254, for Nigeria use +234, for Ghana use +233, and for the United States use +1.`,
+      status: "needs-input",
+      metadata: { conversationMode: true, redirectSection: "agent", pendingContactCall }
+    };
+  }
+
+  if (phone && (pendingContactCall || callName || saveContactSignal)) {
+    const name = extractContactNameWithPhone(text, pendingContactCall?.name || callName);
+    if (!name) {
+      return {
+        intent: "phone.contact_name_needed",
+        response: "I have the phone number. What name should I save it under?",
+        status: "needs-input",
+        metadata: { conversationMode: true, redirectSection: "agent", phone }
+      };
+    }
+    const contact = upsertPhoneContact(db, user, {
+      name,
+      phone,
+      relationship: pendingContactCall?.relationship || inferContactRelationship(text),
+      source: pendingContactCall ? "pending-call-number-capture" : "voice-contact-save"
+    });
+    db.profile.agentMemory.pendingContactCall = null;
+    if (pendingContactCall || /\b(call|phone|dial|ring)\b/i.test(text)) {
+      const staged = stagePhoneContactCall(db, text, contact, pendingContactCall?.purpose || `call ${contact.name}`);
+      return {
+        ...staged,
+        intent: "phone.contact_saved_call_ready",
+        response: `I saved ${contact.name}. Say yes and I will call ${contact.name}. Say no to save the number without calling now.`
+      };
+    }
+    db.profile.agentMemory.lastStatus = "phone-contact-saved";
+    db.profile.agentMemory.lastSummary = `Saved ${contact.name} for future calls.`;
+    return {
+      intent: "phone.contact_saved",
+      response: `Saved ${contact.name}. You can say, "Nexus, call ${contact.name}" any time.`,
+      status: "completed",
+      metadata: { conversationMode: true, redirectSection: "agent", contact }
+    };
+  }
+
+  if (/\b(what number|which number|show number|do you have.*number)\b/.test(lower)) {
+    const name = contactDisplayName(lower.replace(/\b(what number|which number|show number|do you have|for|is|saved|number|phone)\b/g, " "));
+    const contact = findPhoneContact(db, name);
+    if (contact) {
+      return {
+        intent: "phone.contact_lookup",
+        response: `${contact.name} is saved as ${contact.phone}.`,
+        status: "completed",
+        metadata: { conversationMode: true, redirectSection: "agent", contact }
+      };
+    }
+  }
+
+  if (/\b(call|phone|dial|ring)\b/.test(lower) && callName) {
+    const contact = findPhoneContact(db, callName);
+    if (contact) return stagePhoneContactCall(db, text, contact, `call ${contact.name}`);
+    const pending = {
+      id: crypto.randomUUID(),
+      name: callName,
+      relationship: inferContactRelationship(text),
+      purpose: `call ${callName}`,
+      sourceCommand: text,
+      createdAt: new Date().toISOString()
+    };
+    db.profile.agentMemory.pendingContactCall = pending;
+    db.profile.agentMemory.lastStatus = "phone-contact-number-needed";
+    db.profile.agentMemory.lastSummary = `I need ${callName}'s phone number before I can call.`;
+    return {
+      intent: "phone.contact_number_needed",
+      response: `I can call ${callName}, but I do not have ${callName}'s phone number yet. Please give me the number with country code, and I will remember it.`,
+      status: "needs-input",
+      metadata: { conversationMode: true, redirectSection: "agent", pendingContactCall: pending, suggestedReplies: [`${callName} is +254700000000`, "cancel"] }
+    };
+  }
+
+  return null;
+}
+
 async function executePendingAgentAction(db, user, pending) {
   if (!pending) return { intent: "conversation.no_pending_action", response: "There is no pending action to confirm.", status: "needs-input" };
   db.profile.agentPendingAction = null;
@@ -15415,7 +15662,11 @@ async function executePendingAgentAction(db, user, pending) {
       module: pending.module,
       tool: pending.tool,
       action: pending.action,
-      detail: `Confirmed conversation command: ${pending.command}`,
+      detail: pending.purpose || `Confirmed conversation command: ${pending.command}`,
+      contactName: pending.contactName || "",
+      recipientPhone: pending.recipientPhone || pending.to || "",
+      to: pending.to || pending.recipientPhone || "",
+      purpose: pending.purpose || pending.action || "",
       status: "pending-approval"
     };
     const result = await executeAgentStepWithRetry(db, user, step, 2);
@@ -18153,6 +18404,8 @@ async function runAgentCommand(db, user, command, options = {}) {
   }
   const wantsExecute = options.confirm === true || lower.includes("execute") || lower.includes("run it") || lower.includes("do it");
   const pendingAction = db.profile.agentPendingAction;
+  const phoneContactCommand = await phoneContactMemoryCommandResponse(db, user, text, lower, options);
+  if (phoneContactCommand) return phoneContactCommand;
 
   if (/(complete|finish|advance).*(my\s+)?lesson|next lesson/.test(lower)) {
     const result = await executeAgentTool(db, user, { tool: "learning.complete_lesson" });
