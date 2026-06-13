@@ -61,8 +61,8 @@ let routeTrackingWatchId = null;
 let routeTrackingPoints = [];
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-202";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v182";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-203";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v183";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
 const VOICE_ATTENTION_DELAY_MS = 900;
@@ -3073,9 +3073,37 @@ function applySpeechSafetyToDecision(decision, command = "", source = "voice") {
   };
 }
 
+function normalizeRuralSpeechAliases(command = "") {
+  let text = normalizeToolText(command);
+  const replacements = [
+    [/\b(nexas|nexis|nextus|next\s+us|neck\s+sus|neck\s+is|nexus's|nexuses)\b/g, "nexus"],
+    [/\b(agri\s*next|agree\s*nexus|angry\s*nexus)\b/g, "agrinexus"],
+    [/\b(docta|dokita|doktor|likita|hakim|tabib)\b/g, "doctor"],
+    [/\b(kliniki|clinic\s+near|hospitali|dispensary|health\s+post)\b/g, "clinic"],
+    [/\b(dawa|oogun|magani|ogwu|medhanit|remedio|medicina)\b/g, "medicine"],
+    [/\b(shamba|gona|oko|ugbo|ersha|fazenda|campo)\b/g, "farm"],
+    [/\b(mazao|harvest|produce|cosecha|colheita)\b/g, "crop"],
+    [/\b(soko|kasuwa|oja|ahia|gebeya|mercado|marche)\b/g, "market"],
+    [/\b(kazi|aiki|ise|oru|sera|emploi|trabajo|trabalho)\b/g, "work"],
+    [/\b(mnunuzi|comprador|acheteur)\b/g, "buyer"],
+    [/\b(uza|vender|vendre)\b/g, "sell"],
+    [/\b(nunua|comprar|acheter)\b/g, "buy"],
+    [/\b(ramani|mapa|carte)\b/g, "map"],
+    [/\b(njia|rota|ruta|itineraire)\b/g, "route"],
+    [/\b(somo|curso|cours|aula|lesson\s+hard)\b/g, "course"],
+    [/\b(mwalimu|teacher|teach\s+me)\b/g, "teach me"],
+    [/\b(pikin|mtoto|child|kid)\b/g, "child"],
+    [/\b(mama|mother|mom|mum)\b/g, "mother"]
+  ];
+  replacements.forEach(([pattern, value]) => {
+    text = text.replace(pattern, value);
+  });
+  return text.replace(/\s+/g, " ").trim();
+}
+
 function ruralSpeechProfile(command = "") {
   const original = String(command || "").replace(/\s+/g, " ").trim();
-  const lower = normalizeToolText(original);
+  const lower = normalizeRuralSpeechAliases(original);
   const normalized = normalizeMultilingualBehaviorCommand(lower);
   const words = normalized.split(/\s+/).filter(Boolean);
   const has = patterns => patterns.some(pattern => pattern.test(normalized) || pattern.test(lower));
@@ -3089,6 +3117,7 @@ function ruralSpeechProfile(command = "") {
     /\b(aide|besoin|travail|sante|medecin|clinique|acheteur|vendre|acheter|route|carte)\b/.test(lower),
     /\b(nahitaji|nataka|nisaidie|kazi|afya|daktari|kliniki|mnunuzi|uza|nunua|ramani|njia)\b/.test(lower),
     /\b(preciso|quero|ajuda|trabalho|saude|medico|clinica|comprador|vender|comprar|rota|mapa)\b/.test(lower),
+    /\b(biko|abeg|wahala|sabi|dey|pikin|mama|likita|magani|kasuwa|gona|dokita|dawa|shamba|mazao|soko|kazi|ramani|njia)\b/.test(normalizeToolText(original)),
     /[\u0621-\u064a]/.test(original)
   ].filter(Boolean).length;
   const mixedLanguage = languageGroups >= 1 && /\b(nexus|help|doctor|job|work|crop|farm|sell|buyer|map|route|medicine|clinic|market)\b/.test(lower);
@@ -3102,11 +3131,11 @@ function ruralSpeechProfile(command = "") {
   const scores = {
     health: [
       /\b(doctor|nurse|clinic|hospital|medicine|pharmacy|sick|pain|hurt|injury|bleeding|fever|body pain|pikin sick|child sick|mama sick|health|care|afya|daktari|clinica|medecin|medico)\b/,
-      /\b(no doctor|no clinic|need medicine|medicine no dey|body dey pain)\b/
+      /\b(no doctor|no clinic|need medicine|medicine no dey|body dey pain|child sick|mother sick)\b/
     ].reduce((score, pattern) => score + (pattern.test(normalized) || pattern.test(lower) ? 1 : 0), 0),
     trade: [
       /\b(crop|farm|maize|cassava|rice|beans|yam|buyer|seller|sell|buy|market|price|harvest|plant|field|crop no good|farm no good|where market dey|mazao|shamba|comprador|acheteur)\b/,
-      /\b(i wan sell|want sell|sell my|buy crop|buyer far|road not safe)\b/
+      /\b(i wan sell|want sell|sell my|buy crop|buyer far|road not safe|market price|farm problem)\b/
     ].reduce((score, pattern) => score + (pattern.test(normalized) || pattern.test(lower) ? 1 : 0), 0),
     workforce: [
       /\b(job|work|work dey|find work|need work|need job|apply|employment|money|role|shift|interview|kazi|trabajo|travail|trabalho)\b/,
@@ -3159,9 +3188,39 @@ function ruralSpeechProfileSummary(command = "") {
   return `Rural speech profile: ${profile.intent}, confidence ${Math.round(profile.confidence * 100)} percent, style ${profile.style}. Next question: ${profile.nextQuestion}`;
 }
 
+function ruralCommunicationBridge(command = "") {
+  const heard = String(command || "").replace(/\s+/g, " ").trim();
+  const normalized = normalizeRuralSpeechAliases(heard);
+  const profile = ruralSpeechProfile(normalized || heard);
+  const tokens = normalized.split(/\s+/).filter(Boolean);
+  const suspectedWakeMishear = /\b(texas|nexas|nexis|nextus|next\s+us|neck\s+sus|neck\s+is|agree\s+nexus|angry\s+nexus)\b/.test(normalizeToolText(heard));
+  const shortButUseful = profile.intent !== "general" && tokens.length <= 5;
+  const needsOneQuestion = profile.intent !== "general" && profile.confidence >= 0.46 && profile.confidence < 0.7;
+  const intentLabels = {
+    health: "health help",
+    trade: "crop or market help",
+    workforce: "work help",
+    learning: "learning help",
+    map: "map or route help",
+    general: "general help"
+  };
+  return {
+    heard,
+    normalized,
+    profile,
+    suspectedWakeMishear,
+    shortButUseful,
+    needsOneQuestion,
+    intentLabel: intentLabels[profile.intent] || intentLabels.general,
+    response: profile.intent === "general"
+      ? "I may have heard that wrong. Say it again slowly, or say health, crops, work, learning, map, or medicine."
+      : `I think you mean ${intentLabels[profile.intent]}. ${profile.nextQuestion}`
+  };
+}
+
 function normalizeImperfectSpeech(command = "") {
   const original = String(command || "").replace(/\s+/g, " ").trim();
-  const lower = normalizeMultilingualBehaviorCommand(normalizeToolText(original));
+  const lower = normalizeMultilingualBehaviorCommand(normalizeRuralSpeechAliases(original));
   const replacements = [
     [/\bagri\s*trade\b/g, "agritrade"],
     [/\bagri\s*nexus\b/g, "agrinexus"],
@@ -5540,7 +5599,8 @@ function saveConversationMode2Decision(command = "", decision = {}) {
 
 function conversationMode2Decision(command = "", options = {}) {
   const lower = normalizeToolText(command);
-  const ruralProfile = ruralSpeechProfile(command);
+  const ruralBridge = ruralCommunicationBridge(command);
+  const ruralProfile = ruralBridge.profile;
   const explicitWake = isExplicitNexusWakeOrCommand(command);
   if (!lower) return { kind: "silent", confidence: 0, action: "wait", shouldAct: false };
   if (isGlobalStopCommand(lower)) return { kind: "stop", confidence: 1, action: "stop", shouldAct: true };
@@ -5567,9 +5627,10 @@ function conversationMode2Decision(command = "", options = {}) {
       action: "clarify",
       shouldAct: false,
       awaiting: "one-rural-follow-up",
-      response: ruralProfile.nextQuestion,
+      response: ruralBridge.response,
       guard: "ask-before-acting",
-      ruralProfile
+      ruralProfile,
+      ruralBridge
     };
   }
   if (isOpenKnowledgeQuestion(command) || isOpenDialogVoiceQuestion(command) || isNaturalQuestionOrConversation(command)) {
@@ -16114,6 +16175,8 @@ function shouldAskRepeatForUnclearVoiceCommand(command = "", options = {}) {
   if (isGlobalStopCommand(lower) || isUniversalLanguageCommand(command)) return false;
   if (isNaturalQuestionOrConversation(command)) return false;
   if (hasBehaviorActionVerb(command)) return false;
+  const ruralBridge = ruralCommunicationBridge(command);
+  if (ruralBridge.profile.intent !== "general" && ruralBridge.profile.confidence >= 0.5) return false;
   const tokens = lower.split(/\s+/).filter(Boolean);
   const suspiciousWake = /\b(texas|nexas|nexis|nextus|next\s+us|neck\s+sus|neck\s+is|agree|angry)\b/.test(lower);
   const shortUnclear = tokens.length <= 4 && !/\b(learn|learning|work|job|jobs|health|clinic|doctor|trade|crop|crops|farm|map|route|buyer|seller|drone|weather|time)\b/.test(lower);
@@ -16123,13 +16186,14 @@ function shouldAskRepeatForUnclearVoiceCommand(command = "", options = {}) {
 
 function askUserToRepeatMisheardPhrase(command = "") {
   const heard = summarizeNexusCommandForRepeat(command || "that");
+  const bridge = ruralCommunicationBridge(command);
   pendingNexusSpokenCommand = null;
   pendingAgentClarification = null;
   nexusAwaitingCommand = true;
   updateNexusBehaviorLayer("listening", `Nexus may have misheard: ${heard}`);
   recordNexusAutonomousLearning({ type: "misheard-repeat", command: heard });
-  renderLiveVoiceSuggestions(["repeat slowly", "Nexus stop", "open learning", "open telehealth"]);
-  setVoiceResponse(`I may have heard that wrong. I heard: ${heard}. Please repeat it slowly, or say Nexus stop.`, true);
+  renderLiveVoiceSuggestions(["repeat slowly", "health", "crops", "work", "map"]);
+  setVoiceResponse(bridge.response || `I may have heard that wrong. I heard: ${heard}. Please repeat it slowly, or say Nexus stop.`, true);
 }
 
 function isSimpleCourseStartCommand(command = "") {
