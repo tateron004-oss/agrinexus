@@ -35,7 +35,7 @@ $trainingSlides = @(
     Steps = @(
       "Review summary cards for countries, patients, facilities, and orders.",
       "Check the work queue for active learning, health, workforce, trade, and AI tasks.",
-      "Click Run WOW investor demo to populate a complete scenario.",
+      "Click Run investor proof run to populate a complete scenario.",
       "Use module cards to move into the next workflow."
     )
     Result = "You should see recent activity, storyboard evidence, and a clear overview of the platform."

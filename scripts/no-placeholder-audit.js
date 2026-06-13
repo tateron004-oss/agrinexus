@@ -32,7 +32,12 @@ const prohibitedVisiblePhrases = [
   "lorem ipsum",
   "not wired",
   "nothing happens",
-  "under construction"
+  "under construction",
+  "investor simulation",
+  "run wow investor demo",
+  "run standard demo",
+  "ready to simulate",
+  "local pilot simulation"
 ];
 
 function read(relative) {

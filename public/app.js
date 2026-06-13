@@ -62,8 +62,8 @@ let routeTrackingWatchId = null;
 let routeTrackingPoints = [];
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-216";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v196";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-217";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v197";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
 const VOICE_ATTENTION_DELAY_MS = 900;
@@ -1824,11 +1824,11 @@ Object.entries(userModeTranslationPack).forEach(([lang, entries]) => {
 
 const demoAccessibilityTranslations = {
   fr: {
-    "Investor simulation": "Simulation investisseur",
+    "Investor proof run": "Parcours de preuve investisseur",
     "WOW Demo Mode": "Mode demo WOW",
     "Run a complete rural Nigeria scenario: accessible learning, workforce placement, telehealth accessibility, trade logistics, map intelligence, AI recommendations, notifications, and provider evidence.": "Lancer un scenario rural complet au Nigeria : apprentissage accessible, placement emploi, telesante accessible, logistique commerciale, intelligence carte, recommandations IA, notifications et preuves fournisseur.",
-    "Run WOW investor demo": "Lancer la demo investisseur WOW",
-    "Run standard demo": "Lancer la demo standard",
+    "Run investor proof run": "Lancer le parcours de preuve investisseur",
+    "Run standard proof run": "Lancer le parcours de preuve standard",
     "Accessible learner starts": "L'apprenant accessible demarre",
     "Training becomes work": "La formation devient emploi",
     "Telehealth meets ADA needs": "La telesante repond aux besoins d'accessibilite",
@@ -1838,7 +1838,7 @@ const demoAccessibilityTranslations = {
     "Run the WOW demo to complete the rural Nigeria accessibility scenario.": "Lancez la demo WOW pour completer le scenario d'accessibilite rural au Nigeria.",
     "Learning records can become workforce readiness, applications, mentor support, and shifts.": "Les dossiers de formation deviennent preparation emploi, candidatures, mentorat et quarts.",
     "Captions, audio support, caregiver handoff, and low-bandwidth support are ready to run.": "Sous-titres, support audio, passation aidant et mode faible bande passante sont prets.",
-    "Every simulated action creates state, activity, provider evidence, and notifications.": "Chaque action simulee cree un etat, une activite, des preuves fournisseur et des notifications.",
+    "Every pilot action creates state, activity, provider evidence, and notifications.": "Chaque action pilote cree un etat, une activite, des preuves fournisseur et des notifications.",
     "Telehealth course completed with captions, audio guide, screen-reader outline, and offline packet.": "Cours de telesante termine avec sous-titres, guide audio, plan lecteur d'ecran et paquet hors ligne.",
     "Candidate is verified, matched to a health access role, assigned mentor support, and scheduled for a paid shift.": "Le candidat est verifie, associe a un role d'acces sante, accompagne par un mentor et planifie pour un quart paye.",
     "Patient receives caption relay, audio description, caregiver notification, and low-bandwidth callback support.": "Le patient recoit relais sous-titres, description audio, notification aidant et rappel faible bande passante.",
@@ -1851,7 +1851,7 @@ const demoAccessibilityTranslations = {
     "AI run + governance trail": "Execution IA + piste gouvernance",
     "Market + payment + logistics": "Marche + paiement + logistique",
     "Audit-ready operating record": "Dossier operationnel pret audit",
-    "Ready to simulate": "Pret a simuler",
+    "Ready to run": "Pret a lancer",
     "Workflow chain": "Chaine de flux",
     "Access pathway": "Parcours d'acces",
     "Audit trail": "Piste d'audit",
@@ -1893,11 +1893,11 @@ const demoAccessibilityTranslations = {
     "No telehealth accessibility notes recorded yet.": "Aucune note d'accessibilite telesante enregistree."
   },
   sw: {
-    "Investor simulation": "Uigaji wa wawekezaji",
+    "Investor proof run": "Uendeshaji wa uthibitisho kwa wawekezaji",
     "WOW Demo Mode": "Hali ya onyesho la WOW",
     "Run a complete rural Nigeria scenario: accessible learning, workforce placement, telehealth accessibility, trade logistics, map intelligence, AI recommendations, notifications, and provider evidence.": "Endesha tukio kamili la vijijini Nigeria: mafunzo jumuishi, upangaji wa kazi, teleshauri jumuishi, usafirishaji wa biashara, uchambuzi wa ramani, mapendekezo ya AI, arifa, na ushahidi wa watoa huduma.",
-    "Run WOW investor demo": "Endesha onyesho la WOW kwa wawekezaji",
-    "Run standard demo": "Endesha onyesho la kawaida",
+    "Run investor proof run": "Endesha uthibitisho kwa wawekezaji",
+    "Run standard proof run": "Endesha uthibitisho wa kawaida",
     "Accessible learner starts": "Mwanafunzi jumuishi anaanza",
     "Training becomes work": "Mafunzo yanakuwa kazi",
     "Telehealth meets ADA needs": "Teleshauri inakidhi mahitaji ya ufikivu",
@@ -1907,7 +1907,7 @@ const demoAccessibilityTranslations = {
     "Run the WOW demo to complete the rural Nigeria accessibility scenario.": "Endesha onyesho la WOW kukamilisha tukio la ufikivu vijijini Nigeria.",
     "Learning records can become workforce readiness, applications, mentor support, and shifts.": "Rekodi za mafunzo zinaweza kuwa utayari wa kazi, maombi, msaada wa mshauri, na zamu.",
     "Captions, audio support, caregiver handoff, and low-bandwidth support are ready to run.": "Manukuu, msaada wa sauti, makabidhiano kwa mlezi, na msaada wa intaneti hafifu viko tayari.",
-    "Every simulated action creates state, activity, provider evidence, and notifications.": "Kila kitendo cha uigaji huunda hali, shughuli, ushahidi wa mtoa huduma, na arifa.",
+    "Every pilot action creates state, activity, provider evidence, and notifications.": "Kila hatua ya majaribio huunda hali, shughuli, ushahidi wa mtoa huduma, na arifa.",
     "Telehealth course completed with captions, audio guide, screen-reader outline, and offline packet.": "Kozi ya teleshauri imekamilika kwa manukuu, mwongozo wa sauti, muhtasari wa kisoma-skrini, na kifurushi cha nje ya mtandao.",
     "Candidate is verified, matched to a health access role, assigned mentor support, and scheduled for a paid shift.": "Mgombea amethibitishwa, ameunganishwa na nafasi ya ufikivu wa afya, amepewa mshauri, na kupangiwa zamu ya kulipwa.",
     "Patient receives caption relay, audio description, caregiver notification, and low-bandwidth callback support.": "Mgonjwa hupokea relay ya manukuu, maelezo ya sauti, arifa ya mlezi, na msaada wa kupigiwa simu kwa intaneti hafifu.",
@@ -1920,7 +1920,7 @@ const demoAccessibilityTranslations = {
     "AI run + governance trail": "Uendeshaji wa AI + njia ya usimamizi",
     "Market + payment + logistics": "Soko + malipo + usafirishaji",
     "Audit-ready operating record": "Rekodi ya uendeshaji iliyo tayari kukaguliwa",
-    "Ready to simulate": "Tayari kuiga",
+    "Ready to run": "Tayari kuanza",
     "Workflow chain": "Mnyororo wa mtiririko",
     "Access pathway": "Njia ya ufikivu",
     "Audit trail": "Njia ya ukaguzi",
@@ -1972,17 +1972,17 @@ const demoAccessibilityTranslations = {
     "Accessibility prepared": "Ufikivu umetayarishwa"
   },
   ar: {
-    "Investor simulation": "\u0645\u062d\u0627\u0643\u0627\u0629 \u0627\u0644\u0645\u0633\u062a\u062b\u0645\u0631",
+    "Investor proof run": "\u062a\u0634\u063a\u064a\u0644 \u0625\u062b\u0628\u0627\u062a \u0644\u0644\u0645\u0633\u062a\u062b\u0645\u0631",
     "WOW Demo Mode": "\u0648\u0636\u0639 \u0639\u0631\u0636 WOW",
-    "Run WOW investor demo": "\u062a\u0634\u063a\u064a\u0644 \u0639\u0631\u0636 WOW \u0644\u0644\u0645\u0633\u062a\u062b\u0645\u0631",
-    "Run standard demo": "\u062a\u0634\u063a\u064a\u0644 \u0627\u0644\u0639\u0631\u0636 \u0627\u0644\u0642\u064a\u0627\u0633\u064a",
+    "Run investor proof run": "\u0628\u062f\u0621 \u062a\u0634\u063a\u064a\u0644 \u0625\u062b\u0628\u0627\u062a \u0644\u0644\u0645\u0633\u062a\u062b\u0645\u0631",
+    "Run standard proof run": "\u0628\u062f\u0621 \u062a\u0634\u063a\u064a\u0644 \u0625\u062b\u0628\u0627\u062a \u0642\u064a\u0627\u0633\u064a",
     "Accessible learner starts": "\u0628\u062f\u0621 \u0627\u0644\u0645\u062a\u0639\u0644\u0645 \u0627\u0644\u0645\u064a\u0633\u0631",
     "Training becomes work": "\u0627\u0644\u062a\u062f\u0631\u064a\u0628 \u064a\u0635\u0628\u062d \u0639\u0645\u0644\u0627",
     "Telehealth meets ADA needs": "\u0627\u0644\u0637\u0628 \u0639\u0646 \u0628\u0639\u062f \u064a\u0644\u0628\u064a \u0627\u062d\u062a\u064a\u0627\u062c\u0627\u062a \u0627\u0644\u0648\u0635\u0648\u0644",
     "AI remains supervised": "\u0627\u0644\u0630\u0643\u0627\u0621 \u064a\u0628\u0642\u0649 \u062a\u062d\u062a \u0627\u0644\u0625\u0634\u0631\u0627\u0641",
     "Trade engine moves value": "\u0645\u062d\u0631\u0643 \u0627\u0644\u062a\u062c\u0627\u0631\u0629 \u064a\u062d\u0631\u0643 \u0627\u0644\u0642\u064a\u0645\u0629",
     "Investor proof appears": "\u062a\u0638\u0647\u0631 \u0623\u062f\u0644\u0629 \u0627\u0644\u0645\u0633\u062a\u062b\u0645\u0631",
-    "Ready to simulate": "\u062c\u0627\u0647\u0632 \u0644\u0644\u0645\u062d\u0627\u0643\u0627\u0629",
+    "Ready to run": "\u062c\u0627\u0647\u0632 \u0644\u0644\u062a\u0634\u063a\u064a\u0644",
     "Workflow chain": "\u0633\u0644\u0633\u0644\u0629 \u0627\u0644\u0639\u0645\u0644",
     "Access pathway": "\u0645\u0633\u0627\u0631 \u0627\u0644\u0648\u0635\u0648\u0644",
     "Audit trail": "\u0645\u0633\u0627\u0631 \u0627\u0644\u062a\u062f\u0642\u064a\u0642",
@@ -10392,10 +10392,10 @@ function render() {
     </article>
   `).join("");
   const demoMoments = data.profile.demoMoments || [
-    { title: "Accessible learner starts", detail: "Run the WOW demo to complete the rural Nigeria accessibility scenario.", evidence: "Ready to simulate", status: "active" },
+    { title: "Accessible learner starts", detail: "Run the investor proof workflow to complete the rural Nigeria accessibility scenario.", evidence: "Ready to run", status: "active" },
     { title: "Training becomes work", detail: "Learning records can become workforce readiness, applications, mentor support, and shifts.", evidence: "Workflow chain", status: "active" },
     { title: "Telehealth meets ADA needs", detail: "Captions, audio support, caregiver handoff, and low-bandwidth support are ready to run.", evidence: "Access pathway", status: "active" },
-    { title: "Investor proof appears", detail: "Every simulated action creates state, activity, provider evidence, and notifications.", evidence: "Audit trail", status: "active" }
+    { title: "Investor proof appears", detail: "Every pilot action creates state, activity, provider evidence, and notifications.", evidence: "Audit trail", status: "active" }
   ];
   $("#demoStoryboard").innerHTML = demoMoments.map((moment, index) => `
     <article class="demo-moment ${moment.status || "active"}">
@@ -11378,7 +11378,7 @@ function render() {
         taskItem("Tile provider", mapsProvider.detail || mapsProvider.status || "Ready", mapsProvider.status === "needs-credentials" ? "blocked" : "ready", mapsProvider.status || "Ready", { providerId: "maps" }),
         taskItem("Country markers", `${data.countries.length} country markers available`, "ready", "Markers", { mapAction: "focus" }),
         taskItem("Route lines", `${data.routes.length} route corridor(s) available`, "ready", "Routes", { workflow: "ai", action: "route" }),
-        taskItem("AI provider", openAiProvider.detail || data.profile.aiProvider || "Fallback simulation", openAiProvider.status === "needs-credentials" ? "blocked" : "ready", openAiProvider.mode || "AI", { providerId: "openai" }),
+        taskItem("AI provider", openAiProvider.detail || data.profile.aiProvider || "Local AI fallback", openAiProvider.status === "needs-credentials" ? "blocked" : "ready", openAiProvider.mode || "AI", { providerId: "openai" }),
         `<button class="primary workspace-action" type="button" data-map-action="focus">${translateText("Focus map context")}</button>`,
         `<button class="workspace-action" type="button" data-map-action="route">${translateText("Assess route risk")}</button>`
       ]
@@ -11498,7 +11498,7 @@ function render() {
     const counts = platformIntel.readyCounts || {};
     $("#platformIntelligencePanel").innerHTML = [
       `<div><strong>${translateText(platformIntel.status || "active")}</strong><span>${translateText(platformIntel.summary || "Platform intelligence is ready.")}</span></div>`,
-      `<div><strong>${translateText("Source rule")}</strong><span>${translateText(platformIntel.sourceTruth || "Nexus labels local, platform, simulated, and live provider sources.")}</span></div>`,
+      `<div><strong>${translateText("Source rule")}</strong><span>${translateText(platformIntel.sourceTruth || "Nexus labels local records, platform context, pilot evidence, and live provider sources.")}</span></div>`,
       `<div><strong>${translateText("Records")}</strong><span>${translateText(`${counts.localDirectory || 0} directory, ${counts.calendarLite || 0} schedule, ${counts.crmContacts || 0} CRM, ${counts.agentBlueprints || 0} agent blueprint(s)`)}</span></div>`,
       ...(platformIntel.dailyPlan?.steps || []).slice(0, 3).map(step => `<div><strong>${translateText(step.title || step.module)}</strong><span>${translateText(`${step.module || "Platform"} - ${step.action || "Ready"}`)}</span><small>${translateText(step.source || "platform")}</small></div>`),
       ...((platformIntel.suggestedCommands || []).slice(0, 4).map(command => `<div><strong>${translateText("Try")}</strong><span>${translateText(command)}</span></div>`))
@@ -11861,7 +11861,7 @@ function render() {
     ["Health", `${country.name}: ${country.queue}, ${country.risk} risk, ${intakes.length} intake(s), ${carePlans.length} care plan(s).`],
     ["Wallet", `${money(data.profile.wallet)} across ${data.profile.walletTransactions.length} transaction(s).`],
     ["Orders", `${data.profile.orders.length} order(s) on ${route.name}.`],
-    ["AI", `${data.profile.aiActivity} Provider: ${data.profile.aiProvider || "offline-simulation"}${data.profile.aiModel ? ` (${data.profile.aiModel})` : ""}.`]
+    ["AI", `${data.profile.aiActivity} Provider: ${data.profile.aiProvider || "local-ai-fallback"}${data.profile.aiModel ? ` (${data.profile.aiModel})` : ""}.`]
   ].map(([title, text]) => `<article><h3>${title}</h3><p>${text}</p></article>`).join("");
 
   applyContentTranslations();
@@ -14636,7 +14636,7 @@ function workflowConfig(workflow, action, element) {
       ...selected,
       redirectSection: "integrations",
       checklist: [
-        { title: "Source-aware", detail: "Nexus labels whether the answer came from saved local records, platform context, simulated evidence, or live providers.", status: "ready", label: "Source" },
+        { title: "Source-aware", detail: "Nexus labels whether the answer came from saved local records, platform context, pilot evidence, or live providers.", status: "ready", label: "Source" },
         { title: "Providerless", detail: "Works before vendor credentials by using saved platform data.", status: "ready", label: "Local" },
         { title: "Upgradeable", detail: "The same interface can later point to provider feeds, CSV imports, or APIs.", status: "ready", label: "Live path" }
       ]
@@ -15334,7 +15334,7 @@ function openGuidedIntakeSimulation() {
   const country = activeCountry();
   openWorkflowModal({
     eyebrow: "Guided telehealth intake",
-    title: "Run patient intake simulation",
+    title: "Start guided patient intake",
     summary: "Create a realistic intake record with consent, vitals, accessibility support, referral, follow-up, and provider evidence.",
     confirmLabel: "Run guided intake",
     path: "/api/health/intake-simulation",
@@ -15347,7 +15347,7 @@ function openGuidedIntakeSimulation() {
       contactMethod: "Voice callback plus SMS summary",
       caregiverName: "Community accessibility aide"
     },
-    success: "Guided intake simulation complete",
+    success: "Guided intake complete",
     record: "Patient intake, consent, vitals, accessibility packet, referral, follow-up, and provider events",
     provider: "Telehealth, EHR, and notification provider evidence is recorded. Live providers dispatch when credentials are connected.",
     checklist: [
@@ -19034,7 +19034,7 @@ async function runExecutiveDemo() {
 }
 
 async function runWowDemo() {
-  await mutate("/api/demo/wow", {}, "WOW investor demo completed");
+  await mutate("/api/demo/wow", {}, "Investor proof run completed");
   goSection("dashboard");
 }
 

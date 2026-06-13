@@ -23418,7 +23418,7 @@ async function api(req, res, url) {
       countryId: country.id,
       needSummary,
       riskLevel,
-      queueStatus: "Guided intake simulation complete",
+      queueStatus: "Guided intake complete",
       representativeStatus: "Accessibility aide connected",
       preferredLanguage,
       accessibilityNeeds,
@@ -23498,11 +23498,11 @@ async function api(req, res, url) {
     db.profile.telehealthReferrals = db.profile.telehealthReferrals.slice(0, 20);
     db.profile.telehealthFollowUps = db.profile.telehealthFollowUps.slice(0, 20);
     db.profile.representativeConnections += 1;
-    country.queue = "Guided intake simulation complete";
+    country.queue = "Guided intake complete";
     country.patients += 1;
 
     const events = [
-      ["health-telehealth", "intake.created", `${intake.patientRef} guided telehealth intake simulation recorded.`],
+      ["health-telehealth", "intake.created", `${intake.patientRef} guided telehealth intake record created.`],
       ["health-ehr", "telehealth.consent_recorded", `${consent.patientRef} consent captured during guided intake.`],
       ["health-telehealth", "telehealth.vitals_captured", `${vitals.patientRef} vitals captured during guided intake.`],
       ["health-ehr", "telehealth.accessibility_plan", `${accessRecord.patientRef} accessible intake packet prepared.`],
@@ -23518,9 +23518,9 @@ async function api(req, res, url) {
         metadata: { intakeId: intake.id, patientRef: intake.patientRef, simulation: true }
       });
     }
-    db.profile.aiActivity = `Guided intake simulation completed for ${intake.patientRef}: consent, vitals, accessibility, referral, and follow-up are ready.`;
+    db.profile.aiActivity = `Guided intake completed for ${intake.patientRef}: consent, vitals, accessibility, referral, and follow-up are ready.`;
     addActivity(db.profile, db.profile.aiActivity);
-    addWorkflowNote(db.profile, body.note, "Guided intake simulation note");
+    addWorkflowNote(db.profile, body.note, "Guided intake note");
     await writeDb(db);
     return send(res, 200, { ...publicState(db, user), intakeSimulationResult: { intake, consent, vitals, accessRecord, referral, followUp } });
   }
