@@ -61,8 +61,8 @@ let routeTrackingWatchId = null;
 let routeTrackingPoints = [];
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-203";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v183";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-204";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v184";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
 const VOICE_ATTENTION_DELAY_MS = 900;
@@ -5572,6 +5572,129 @@ function conversationMode2Status(mode = conversationPlatformMode()) {
     guard: "listen-first, act-only-when-clear",
     style: "short, warm, one-question-at-a-time, imperfect-English-and-mixed-language-friendly"
   };
+}
+
+function nexusConversationSignals(command = "", options = {}) {
+  const raw = String(command || "").replace(/\s+/g, " ").trim();
+  const lower = normalizeToolText(raw);
+  const bridge = ruralCommunicationBridge(raw);
+  const tokens = lower.split(/\s+/).filter(Boolean);
+  const mode = conversationPlatformMode();
+  const currentMemory = conversationMemoryForMode(mode);
+  const correction = /\b(no i said|i said|that is wrong|that's wrong|wrong|not what i said|not what i asked|you heard me wrong|you got it wrong|wrong section|wrong area|not that|no not that)\b/.test(lower);
+  const frustration = /\b(this is confusing|too much|stop talking|talk less|too many words|you keep talking|not helping|i am lost|i'm lost|im lost|this is hard|i don't know how|i dont know how|i no sabi|no sabi)\b/.test(lower);
+  const greeting = /\b(good morning|good afternoon|good evening|hello nexus|hi nexus|hey nexus|nexus hello|are you awake|you awake|can you hear me|are you listening)\b/.test(lower);
+  const wantsShort = /\b(short answer|keep it short|less words|just answer|just do it|no story|do not explain|don't explain|dont explain|too much talking|stop explaining)\b/.test(lower);
+  const wantsGuide = /\b(help me say it|i don't know what to say|i dont know what to say|i do not know what to say|walk me through|guide me|ask me questions|one question at a time)\b/.test(lower);
+  const actionVerb = hasBehaviorActionVerb(raw) || isClearWorkflowVoiceCommand(raw);
+  const openQuestion = isOpenKnowledgeQuestion(raw) || isOpenDialogVoiceQuestion(raw) || isNaturalQuestionOrConversation(raw);
+  const backgroundRisk = options.source === "voice" && !isExplicitNexusWakeOrCommand(raw) && tokens.length >= 8 && !actionVerb && !openQuestion && bridge.profile.intent === "general";
+  return {
+    raw,
+    lower,
+    bridge,
+    mode,
+    currentMemory,
+    correction,
+    frustration,
+    greeting,
+    wantsShort,
+    wantsGuide,
+    actionVerb,
+    openQuestion,
+    backgroundRisk,
+    lastTopic: currentMemory.lastTopic || currentSectionId(),
+    lastQuestion: currentMemory.lastQuestion || "",
+    profileIntent: bridge.profile.intent,
+    confidence: bridge.profile.confidence
+  };
+}
+
+function nexusConversationGovernor(command = "", options = {}) {
+  const signals = nexusConversationSignals(command, options);
+  const name = userFirstName();
+  if (!signals.raw) return { handled: false, reason: "empty" };
+  if (isGlobalStopCommand(signals.lower)) return { handled: false, reason: "stop-command" };
+  if (isUniversalLanguageCommand(signals.raw)) return { handled: false, reason: "language-command" };
+  if (signals.backgroundRisk) {
+    return {
+      handled: true,
+      action: "pause",
+      status: "paused",
+      response: "I heard background conversation, so I paused. Say Nexus when you want me.",
+      suggestions: ["Nexus listen", "Nexus stop", "Nexus open health"]
+    };
+  }
+  if (signals.correction) {
+    return {
+      handled: true,
+      action: "repair",
+      status: "listening",
+      response: "You're right. I may have heard that wrong. Say it again in your own words, and I'll repeat the meaning before I act.",
+      suggestions: ["say it again slowly", "health", "crops", "work", "map"]
+    };
+  }
+  if (signals.wantsShort) {
+    return {
+      handled: true,
+      action: "short-mode",
+      status: "ready",
+      response: "Got it. Short answers are on. I'll repeat the meaning, then act when it is clear.",
+      suggestions: ["open health", "sell crop", "show map"]
+    };
+  }
+  if (signals.frustration || signals.wantsGuide) {
+    return {
+      handled: true,
+      action: "guide",
+      status: "listening",
+      response: "I hear you. We will do one step at a time. Tell me only this: health, crops, work, learning, map, or medicine?",
+      suggestions: ["health", "crops", "work", "learning", "map", "medicine"]
+    };
+  }
+  if (signals.greeting && !signals.actionVerb && !signals.openQuestion) {
+    return {
+      handled: true,
+      action: "greet",
+      status: "listening",
+      response: `Yes ${name}. I'm here. What do you need?`,
+      suggestions: ["health", "crops", "work", "learning", "map"]
+    };
+  }
+  if (signals.profileIntent !== "general" && signals.confidence >= 0.46 && signals.confidence < 0.7 && !signals.actionVerb) {
+    return {
+      handled: true,
+      action: "meaning-check",
+      status: "listening",
+      response: signals.bridge.response,
+      suggestions: [signals.profileIntent, "yes", "say it again", "Nexus stop"]
+    };
+  }
+  return { handled: false, reason: "let-router-continue", signals };
+}
+
+function handleNexusConversationGovernor(command = "", options = {}) {
+  const decision = nexusConversationGovernor(command, options);
+  if (!decision.handled) return false;
+  if (decision.action === "short-mode") localStorage.setItem("agrinexusShortAnswers", "on");
+  if (decision.action === "pause") {
+    pauseNexusForSideConversation(command);
+    return true;
+  }
+  pendingAgentClarification = null;
+  pendingNexusSpokenCommand = null;
+  nexusAwaitingCommand = decision.action !== "short-mode";
+  updateNexusBehaviorLayer(decision.status || "listening", `Nexus conversation governor: ${decision.action}.`);
+  renderLiveVoiceSuggestions(decision.suggestions || ["health", "crops", "work", "learning", "map"]);
+  recordNexusAutonomousLearning({ type: "conversation-governor", command, action: decision.action, mode: conversationPlatformMode() });
+  setVoiceResponse(decision.response, true, { allowHandoff: false });
+  rememberConversationTurn(command, decision.response);
+  return true;
+}
+
+function nexusConversationGovernorSummary() {
+  const status = conversationMode2Status();
+  return `${status.label} now includes a conversation governor. Nexus can greet, pause for background talk, recover from wrong hearing, switch to short answers, guide confused users one question at a time, and clarify rural or mixed-language speech before acting.`;
 }
 
 function saveConversationMode2Decision(command = "", decision = {}) {
@@ -16904,9 +17027,8 @@ function nexusCommonPhraseResponse(command = "") {
   if (!value) return "";
   const name = userFirstName();
   if (/\b(conversation mode|conversation mode 2|conversation mode two|talk naturally|open conversation|natural conversation)\b/.test(value)) {
-    const status = conversationMode2Status();
     renderLiveVoiceSuggestions(["health", "crops", "work", "learning", "map"]);
-    return `${status.label} is on. I will listen first, keep the topic in mind, ask one simple question when I am unsure, and only act when the request is clear.`;
+    return nexusConversationGovernorSummary();
   }
   const responses = [
     {
@@ -17039,6 +17161,7 @@ async function handleVoiceCommand(rawCommand, options = {}) {
     pauseNexusForSideConversation(command || localizedCommand || rawCommand);
     return;
   }
+  if (handleNexusConversationGovernor(command || localizedCommand || rawCommand, options)) return;
   if (handleConversationMode2Preflight(command || localizedCommand || rawCommand, options)) return;
   agentPerformanceState.spokenCommand = spokenCommand || command;
   if (isOpenKnowledgeQuestion(spokenCommand || command)) {
