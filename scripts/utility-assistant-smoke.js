@@ -337,6 +337,36 @@ async function call(route, body) {
       inputMode: "voice",
       outputMode: "voice"
     });
+    const actionReminder = await call("/api/agent/command", {
+      command: "Nexus, remind me to call Ron in 2 hours",
+      conversational: true,
+      inputMode: "voice",
+      outputMode: "voice"
+    });
+    assert.strictEqual(actionReminder.commandResult.intent, "assistant.reminder_scheduled", "Action memory reminder should be scheduled");
+    assert.strictEqual(actionReminder.profile.assistantReminders[0].contactPhone, "+15555550100", "Action memory reminder should attach saved contact phone");
+    const actionSummary = await call("/api/agent/command", {
+      command: "Nexus, what did you promise me?",
+      conversational: true,
+      inputMode: "voice",
+      outputMode: "voice"
+    });
+    assert.strictEqual(actionSummary.commandResult.intent, "assistant.action_memory_summary", "Nexus should summarize open promises");
+    assert(actionSummary.commandResult.metadata.actionMemory.some(item => item.title.includes("call Ron")), "Action memory should include the Ron follow-up");
+    const followUpNow = await call("/api/agent/command", {
+      command: "Nexus, follow up now",
+      conversational: true,
+      inputMode: "voice",
+      outputMode: "voice"
+    });
+    assert.strictEqual(followUpNow.commandResult.intent, "phone.contact_call_ready", "Follow up now should stage the saved contact call");
+    assert.strictEqual(followUpNow.profile.agentPendingAction.recipientPhone, "+15555550100", "Follow-up call should carry the saved contact number");
+    await call("/api/agent/command", {
+      command: "no",
+      conversational: true,
+      inputMode: "voice",
+      outputMode: "voice"
+    });
     const stagedCall = await call("/api/agent/command", {
       command: "Nexus, call the buyer",
       conversational: true,
@@ -383,6 +413,7 @@ async function call(route, body) {
   console.log("- Ask Nexus translated Trusted OS display metadata");
   console.log("- Ask Nexus translated buyer route packet metadata");
   console.log("- Ask Nexus phone contact memory and confirmed named calling");
+  console.log("- Ask Nexus action memory and proactive follow-up");
   console.log("- Ask Nexus outbound call staging and confirmation");
   console.log("- Ask Nexus backend appointment answer");
   console.log("- Ask Nexus backend daily plan answer");

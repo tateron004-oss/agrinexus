@@ -265,8 +265,8 @@ for (const [section, buttons] of Object.entries(expectedSections)) {
   assert(styles.includes(marker), `User workflow containment style missing: ${marker}`);
 });
 
-assert(html.includes("/app.js?v=nexus-behavior-210"), "Index must force browsers to load current User-mode workflow JS");
-assert(html.includes("/styles.css?v=nexus-behavior-210"), "Index must force browsers to load current User-mode workflow CSS");
+assert(html.includes("/app.js?v=nexus-behavior-211"), "Index must force browsers to load current User-mode workflow JS");
+assert(html.includes("/styles.css?v=nexus-behavior-211"), "Index must force browsers to load current User-mode workflow CSS");
 assert(html.includes("topSettingsClose"), "User Settings menu needs a visible close button");
 assert(styles.includes("body.user-mode .top-settings-toggle") && styles.includes("display: none !important"), "User mode must hide the top Settings button after login");
 assert(styles.includes("body.user-mode .top-actions") && styles.includes("body.user-mode .top-actions.open") && styles.includes("display: none !important"), "User mode must not expose the old top Settings menu after login");
@@ -291,7 +291,7 @@ assert(styles.includes(".map-grid-label") && styles.includes(".global-map-contro
 assert(app.includes("/api/trade/tracking") && app.includes("Live GPS provider") && app.includes("Platform route tracker"), "User shipment tracking should show provider source and local fallback clearly");
 assert(app.includes("World_Boundaries_and_Places/MapServer/tile"), "User maps should include country names and border labels");
 assert(app.includes("startAskNexusAfterLogin"), "User mode should start Ask Nexus after login");
-assert(sw.includes('CACHE_NAME = "agrinexus-pwa-v190"'), "Service worker cache must be bumped after User-mode workflow fixes");
+assert(sw.includes('CACHE_NAME = "agrinexus-pwa-v191"'), "Service worker cache must be bumped after User-mode workflow fixes");
 assert(styles.includes("body.user-mode .top-settings-close"), "User Settings close button needs visible app-mode styling");
 assert(app.includes('const guideCommand = "help me understand the platform"'), "Guide Me must map to a visible user workflow instead of a silent dynamic command");
 assert(app.includes("function renderUserAccessibilityPanel"), "User mode needs a contained accessibility panel with its own controls");

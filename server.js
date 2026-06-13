@@ -6621,6 +6621,7 @@ function ensureAiProfile(profile) {
   profile.agentBriefings = profile.agentBriefings || [];
   profile.phoneContacts = profile.phoneContacts || [];
   profile.assistantReminders = profile.assistantReminders || [];
+  profile.assistantActionMemory = profile.assistantActionMemory || [];
   profile.missionBrainRuns = profile.missionBrainRuns || [];
   profile.trustedOsReviews = profile.trustedOsReviews || [];
   profile.cloudAgentRuns = profile.cloudAgentRuns || [];
@@ -8084,6 +8085,12 @@ function ensureAssistantReminders(profile) {
   ensureAiProfile(profile);
   profile.assistantReminders = profile.assistantReminders || [];
   return profile.assistantReminders;
+}
+
+function ensureAssistantActionMemory(profile) {
+  ensureAiProfile(profile);
+  profile.assistantActionMemory = profile.assistantActionMemory || [];
+  return profile.assistantActionMemory;
 }
 
 function ensureCommunicationProfile(profile) {
@@ -17513,6 +17520,214 @@ function assistantReminderCommandResponse(db, user, text, lower, options = {}) {
   return null;
 }
 
+function buildAssistantActionMemory(db, user, command = "") {
+  ensureAssistantActionMemory(db.profile);
+  const items = [];
+  const add = item => items.push({
+    id: item.id || crypto.randomUUID(),
+    title: item.title,
+    detail: item.detail,
+    module: item.module || "Agent AI",
+    section: item.section || "agent",
+    priority: item.priority || "medium",
+    status: item.status || "open",
+    source: item.source || "nexus-action-memory",
+    tool: item.tool || "",
+    command: item.command || "",
+    reminderId: item.reminderId || "",
+    contactName: item.contactName || "",
+    contactPhone: item.contactPhone || "",
+    createdAt: item.createdAt || new Date().toISOString()
+  });
+  const pending = db.profile.agentPendingAction;
+  if (pending) {
+    add({
+      title: `Waiting for confirmation: ${pending.action || pending.command || "pending action"}`,
+      detail: "Say yes to run it, or no to cancel.",
+      module: pending.module || "Agent AI",
+      section: pending.section || "agent",
+      priority: "high",
+      status: "needs-confirmation",
+      source: "pending-action",
+      tool: pending.tool || "",
+      command: pending.command || ""
+    });
+  }
+  for (const reminder of (db.profile.assistantReminders || []).filter(item => item.status !== "canceled").slice(0, 5)) {
+    add({
+      title: `Reminder: ${reminder.task}`,
+      detail: `${reminder.whenLabel || "soon"}${reminder.contactName ? `, contact ${reminder.contactName}` : ""}`,
+      module: reminder.module || "Agent AI",
+      section: reminder.section || "agent",
+      priority: Date.parse(reminder.scheduledAt || "") <= Date.now() + 3 * 60 * 60 * 1000 ? "high" : "medium",
+      status: "scheduled",
+      source: "assistant-reminder",
+      reminderId: reminder.id,
+      contactName: reminder.contactName || "",
+      contactPhone: reminder.contactPhone || "",
+      command: reminder.task || ""
+    });
+  }
+  if ((db.profile.healthIntakes || []).length && !(db.profile.telehealthFollowUps || []).length) {
+    const intake = db.profile.healthIntakes[0];
+    add({
+      title: "Schedule health follow-up",
+      detail: `${intake.patientRef || "Patient"} has intake evidence but no follow-up yet.`,
+      module: "Healthcare",
+      section: "health",
+      priority: "high",
+      tool: "health.followup",
+      command: "schedule telehealth follow up",
+      source: "health-continuity"
+    });
+  }
+  if ((db.profile.orders || []).length) {
+    const order = db.profile.orders[0];
+    add({
+      title: "Check trade route and buyer handoff",
+      detail: `${order.orderNumber || "Active order"} is at ${db.profile.activeCheckpoint || order.checkpoint || "current checkpoint"}.`,
+      module: "AgriTrade",
+      section: "trade",
+      priority: "medium",
+      tool: "map.route_risk",
+      command: "track shipment and check route risk",
+      source: "trade-continuity"
+    });
+  }
+  if ((db.profile.applications || []).length && !(db.profile.interviews || 0)) {
+    add({
+      title: "Prepare workforce interview",
+      detail: "A job application exists, but interview support is not scheduled.",
+      module: "Workforce",
+      section: "workforce",
+      priority: "medium",
+      tool: "workforce.schedule_interview",
+      command: "schedule interview",
+      source: "workforce-continuity"
+    });
+  }
+  if ((db.profile.enrollments || []).length && !(db.profile.certificates || []).length) {
+    add({
+      title: "Continue learning path",
+      detail: "Learning is started, but no certificate is issued yet.",
+      module: "Learning",
+      section: "learning",
+      priority: "medium",
+      tool: "learning.complete_lesson",
+      command: "complete my lesson",
+      source: "learning-continuity"
+    });
+  }
+  const smart = smartNextActions(db, user, runtimeProviders(db)).items[0];
+  if (smart) {
+    add({
+      title: smart.title,
+      detail: smart.detail || smart.reason || "Nexus recommends this as the next best step.",
+      module: smart.module || "Agent AI",
+      section: smart.section || "dashboard",
+      priority: smart.priority || "medium",
+      command: smart.command || smart.title,
+      source: "smart-next-action"
+    });
+  }
+  const prioritized = items.sort((a, b) => {
+    const score = value => value === "high" ? 3 : value === "medium" ? 2 : 1;
+    return score(b.priority) - score(a.priority);
+  }).slice(0, 12);
+  db.profile.assistantActionMemory = prioritized;
+  db.profile.agentMemory.lastActionMemory = {
+    command,
+    count: prioritized.length,
+    top: prioritized[0] || null,
+    updatedAt: new Date().toISOString()
+  };
+  return prioritized;
+}
+
+function actionMemoryToolForItem(item = {}) {
+  if (item.tool) return { tool: item.tool, module: item.module, action: item.title, section: item.section };
+  const text = `${item.title || ""} ${item.detail || ""} ${item.command || ""}`.toLowerCase();
+  if (/call|phone|dial|ring/.test(text) && item.contactName) return { tool: "communications.outbound_call", module: "AI", action: `Call ${item.contactName}`, section: item.section || "agent" };
+  if (/follow-up|follow up|patient|intake|health/.test(text)) return { tool: "health.followup", module: "Healthcare", action: "Schedule health follow-up", section: "health" };
+  if (/buyer|crop|trade|shipment|route|delivery/.test(text)) return { tool: "map.route_risk", module: "Maps", action: "Check route and shipment", section: "map" };
+  if (/job|interview|workforce/.test(text)) return { tool: "workforce.schedule_interview", module: "Workforce", action: "Prepare interview support", section: "workforce" };
+  if (/learn|lesson|course|certificate/.test(text)) return { tool: "learning.complete_lesson", module: "Learning", action: "Continue learning", section: "learning" };
+  return { tool: "", module: item.module || "Agent AI", action: item.title || "Continue task", section: item.section || "dashboard" };
+}
+
+function assistantActionMemoryCommandResponse(db, user, text, lower, options = {}) {
+  const wantsSummary = /\b(what did you promise|what are you tracking|what is unfinished|unfinished|open loops|action memory|what are you holding|what have you got|what are you watching)\b/.test(lower);
+  const wantsFollowUp = /\b(follow up now|follow-up now|continue last task|continue my last task|do the follow up|do the follow-up|handle the next promise|run the next promise|finish the open loop)\b/.test(lower);
+  if (!wantsSummary && !wantsFollowUp) return null;
+  const memory = buildAssistantActionMemory(db, user, text);
+  if (!memory.length) {
+    return {
+      intent: "assistant.action_memory_empty",
+      response: "I am not holding an unfinished promise right now. Tell me what you want done, and I will remember the next step.",
+      status: "completed",
+      metadata: { conversationMode: true, redirectSection: "dashboard", actionMemory: [] }
+    };
+  }
+  const top = memory[0];
+  if (wantsSummary && !wantsFollowUp) {
+    const response = `I am tracking ${memory.length} open item${memory.length === 1 ? "" : "s"}. First: ${top.title}. ${top.detail} You can say, "Nexus, follow up now," and I will continue safely.`;
+    db.profile.agentMemory.lastStatus = "assistant-action-memory-summary";
+    db.profile.agentMemory.lastSummary = response;
+    db.profile.agentMemory.updatedAt = new Date().toISOString();
+    return {
+      intent: "assistant.action_memory_summary",
+      response,
+      status: "completed",
+      metadata: { conversationMode: true, redirectSection: top.section || "dashboard", actionMemory: memory }
+    };
+  }
+  if (top.source === "pending-action") {
+    return {
+      intent: "assistant.action_memory_pending_confirmation",
+      response: `I am already waiting on this: ${top.title}. Say yes to run it, or no to cancel.`,
+      status: "needs-confirmation",
+      metadata: { conversationMode: true, redirectSection: top.section || "agent", actionMemory: memory, top }
+    };
+  }
+  if (/call|phone|dial|ring/.test(`${top.title} ${top.command}`.toLowerCase()) && top.contactName) {
+    const contact = findPhoneContact(db, top.contactName);
+    if (contact) return stagePhoneContactCall(db, text, contact, `follow up: ${top.command || top.title}`);
+    db.profile.agentMemory.pendingContactCall = {
+      id: crypto.randomUUID(),
+      name: top.contactName,
+      relationship: inferContactRelationship(top.command || top.title),
+      purpose: `follow up: ${top.command || top.title}`,
+      sourceCommand: text,
+      createdAt: new Date().toISOString()
+    };
+    return {
+      intent: "phone.contact_number_needed",
+      response: `I can follow up with ${top.contactName}, but I still need the phone number with country code. Give me the number and I will remember it.`,
+      status: "needs-input",
+      metadata: { conversationMode: true, redirectSection: "agent", actionMemory: memory, pendingContactCall: db.profile.agentMemory.pendingContactCall }
+    };
+  }
+  const tool = actionMemoryToolForItem(top);
+  if (tool.tool) {
+    return stageAgentAction(db, text, {
+      module: tool.module,
+      tool: tool.tool,
+      action: tool.action,
+      section: tool.section,
+      planner: "assistant-action-memory",
+      confidence: 0.9,
+      rationale: "Nexus selected the highest-priority unfinished promise or follow-up item.",
+      userFacingPlan: `Say yes to continue: ${tool.action}.`
+    });
+  }
+  return {
+    intent: "assistant.action_memory_opened",
+    response: `I am opening the next item: ${top.title}. ${top.detail}`,
+    status: "completed",
+    metadata: { conversationMode: true, redirectSection: top.section || "dashboard", actionMemory: memory, top }
+  };
+}
+
 function formatUtilityDate(dateValue, timeZone = "") {
   const parsed = Date.parse(dateValue || "");
   if (!Number.isFinite(parsed)) return "";
@@ -18448,6 +18663,8 @@ async function runAgentCommand(db, user, command, options = {}) {
   if (executiveIntelligenceCommand) return executiveIntelligenceCommand;
   const ecosystemIntelligenceCommand = ecosystemIntelligenceCommandResponse(db, user, text, options);
   if (ecosystemIntelligenceCommand) return ecosystemIntelligenceCommand;
+  const earlyActionMemoryCommand = assistantActionMemoryCommandResponse(db, user, text, lower, options);
+  if (earlyActionMemoryCommand) return earlyActionMemoryCommand;
   const earlyReminderCommand = assistantReminderCommandResponse(db, user, text, lower, options);
   if (earlyReminderCommand) return earlyReminderCommand;
   const earlyUtilityCommand = await utilityAssistantCommandResponse(db, user, text, lower, options);
@@ -18663,6 +18880,8 @@ async function runAgentCommand(db, user, command, options = {}) {
   if (isDailyAdvisorQuestion(lower) && !shouldKeepUtility) {
     return dailyLifeAdvisorResponse(db, user, text, lower, options);
   }
+  const directActionMemoryCommand = assistantActionMemoryCommandResponse(db, user, text, lower, options);
+  if (directActionMemoryCommand) return directActionMemoryCommand;
   const directReminderCommand = assistantReminderCommandResponse(db, user, text, lower, options);
   if (directReminderCommand) return directReminderCommand;
   const directUtilityCommand = await utilityAssistantCommandResponse(db, user, text, lower, options);
