@@ -62,8 +62,8 @@ let routeTrackingWatchId = null;
 let routeTrackingPoints = [];
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-214";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v194";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-215";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v195";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
 const VOICE_ATTENTION_DELAY_MS = 900;
@@ -2970,7 +2970,7 @@ function healthSafetyAssistantAnswer() {
 function musicAssistantIntent(command = "") {
   const lower = normalizeToolText(command);
   if (!/\b(play|open|find|search|start|put on|listen to)\b/.test(lower)) return null;
-  if (!/\b(music|song|songs|playlist|artist|album|soul|rnb|r&b|gospel|afrobeats|jazz|hip hop|hip-hop|reggae)\b/.test(lower)) return null;
+  if (!/\b(music|song|songs|playlist|artist|album|soul|rnb|r&b|gospel|afrobeats|jazz|hip hop|hip-hop|reggae|rumba|luther|vandross|nigerian|congolese|kenyan|motivational|calm|training)\b/.test(lower)) return null;
   const cleaned = String(command || "")
     .replace(/\bnexus\b/ig, "")
     .replace(/\b(can you|please|could you|would you|open|play|find|search|start|put on|listen to)\b/ig, " ")
@@ -2984,9 +2984,29 @@ function musicAssistantIntent(command = "") {
   };
 }
 
+function nexusMusicTestCatalog(query = "") {
+  const lower = String(query || "").toLowerCase();
+  const catalog = [
+    { id: "luther-soul", label: "Luther Vandross style soul test", match: /luther|vandross/, notes: [261.63, 329.63, 392, 493.88, 440, 392, 329.63, 293.66], bass: 65.41, tempo: 0.42, wave: "sine" },
+    { id: "gospel", label: "Gospel test", match: /gospel(?!.*kenya|.*kenyan)/, notes: [196, 246.94, 293.66, 392, 493.88, 392, 293.66, 246.94], bass: 98, tempo: 0.38, wave: "triangle" },
+    { id: "afrobeats", label: "Afrobeats test", match: /afro|afrobeats/, notes: [220, 277.18, 329.63, 369.99, 440, 369.99, 329.63, 277.18], bass: 73.42, tempo: 0.28, wave: "square" },
+    { id: "rnb-90s", label: "90s R&B test", match: /90|rnb|r&b/, notes: [246.94, 311.13, 369.99, 415.3, 369.99, 311.13, 277.18, 246.94], bass: 61.74, tempo: 0.4, wave: "sine" },
+    { id: "jazz", label: "Jazz relaxation test", match: /jazz|relax/, notes: [233.08, 277.18, 349.23, 415.3, 466.16, 415.3, 349.23, 277.18], bass: 58.27, tempo: 0.5, wave: "triangle" },
+    { id: "farmer-training", label: "Farmer training test", match: /farmer|farm|training/, notes: [261.63, 293.66, 329.63, 392, 329.63, 293.66, 261.63, 196], bass: 65.41, tempo: 0.34, wave: "triangle" },
+    { id: "telehealth-calm", label: "Telehealth waiting room test", match: /telehealth|waiting|calm/, notes: [174.61, 220, 261.63, 329.63, 261.63, 220, 196, 174.61], bass: 43.65, tempo: 0.55, wave: "sine" },
+    { id: "learner-motivational", label: "Learner motivation test", match: /motivational|learner|learn|student/, notes: [261.63, 329.63, 392, 523.25, 493.88, 392, 329.63, 392], bass: 65.41, tempo: 0.32, wave: "triangle" },
+    { id: "nigerian-afrobeats", label: "Nigerian Afrobeats test", match: /nigeria|nigerian/, notes: [196, 246.94, 293.66, 349.23, 440, 349.23, 293.66, 246.94], bass: 49, tempo: 0.26, wave: "square" },
+    { id: "congolese-rumba", label: "Congolese rumba test", match: /congo|congolese|rumba/, notes: [220, 261.63, 329.63, 392, 329.63, 261.63, 246.94, 220], bass: 55, tempo: 0.36, wave: "triangle" },
+    { id: "kenyan-gospel", label: "Kenyan gospel test", match: /kenya|kenyan/, notes: [196, 246.94, 293.66, 392, 523.25, 392, 293.66, 246.94], bass: 98, tempo: 0.34, wave: "triangle" },
+    { id: "reggae", label: "Reggae test", match: /reggae/, notes: [196, 246.94, 293.66, 246.94, 196, 246.94, 293.66, 329.63], bass: 49, tempo: 0.44, wave: "square" }
+  ];
+  return catalog.find(item => item.match.test(lower)) || catalog[0];
+}
+
 async function playNexusMusicTestAudio(query = "music") {
   const AudioContextClass = window.AudioContext || window.webkitAudioContext;
   if (!AudioContextClass) return false;
+  const track = nexusMusicTestCatalog(query);
   const context = new AudioContextClass();
   await context.resume();
   const gain = context.createGain();
@@ -2994,33 +3014,28 @@ async function playNexusMusicTestAudio(query = "music") {
   gain.gain.exponentialRampToValueAtTime(0.12, context.currentTime + 0.08);
   gain.gain.exponentialRampToValueAtTime(0.0001, context.currentTime + 6.2);
   gain.connect(context.destination);
-  const soulNotes = [261.63, 329.63, 392, 440, 392, 329.63, 293.66, 261.63];
-  const afrobeatNotes = [220, 277.18, 329.63, 369.99, 440, 369.99, 329.63, 277.18];
-  const gospelNotes = [196, 246.94, 293.66, 392, 493.88, 392, 293.66, 246.94];
-  const lower = String(query || "").toLowerCase();
-  const notes = /afro|beat|nigeria/.test(lower) ? afrobeatNotes : /gospel|church/.test(lower) ? gospelNotes : soulNotes;
-  notes.forEach((frequency, index) => {
-    const start = context.currentTime + index * 0.36;
+  track.notes.forEach((frequency, index) => {
+    const start = context.currentTime + index * track.tempo;
     const osc = context.createOscillator();
     const noteGain = context.createGain();
-    osc.type = index % 2 ? "triangle" : "sine";
+    osc.type = index % 2 ? track.wave : "sine";
     osc.frequency.setValueAtTime(frequency, start);
     noteGain.gain.setValueAtTime(0.0001, start);
     noteGain.gain.exponentialRampToValueAtTime(0.32, start + 0.04);
-    noteGain.gain.exponentialRampToValueAtTime(0.0001, start + 0.31);
+    noteGain.gain.exponentialRampToValueAtTime(0.0001, start + Math.max(0.18, track.tempo - 0.05));
     osc.connect(noteGain);
     noteGain.connect(gain);
     osc.start(start);
-    osc.stop(start + 0.34);
+    osc.stop(start + Math.max(0.22, track.tempo - 0.02));
   });
   const bass = context.createOscillator();
   bass.type = "sine";
-  bass.frequency.setValueAtTime(65.41, context.currentTime);
+  bass.frequency.setValueAtTime(track.bass, context.currentTime);
   bass.connect(gain);
   bass.start(context.currentTime);
   bass.stop(context.currentTime + 6.1);
   setTimeout(() => context.close().catch(() => {}), 7000);
-  toast(`Playing Nexus test audio for ${query}`);
+  toast(`Playing ${track.label}`);
   return true;
 }
 

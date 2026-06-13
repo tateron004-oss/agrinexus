@@ -17475,7 +17475,7 @@ function knownAfricanCityLocation(text = "") {
 function musicAssistantIntent(text = "") {
   const lower = String(text || "").toLowerCase();
   if (!/\b(play|open|find|search|start|put on|listen to)\b/.test(lower)) return null;
-  if (!/\b(music|song|songs|playlist|artist|album|soul|rnb|r&b|gospel|afrobeats|jazz|hip hop|hip-hop|reggae)\b/.test(lower)) return null;
+  if (!/\b(music|song|songs|playlist|artist|album|soul|rnb|r&b|gospel|afrobeats|jazz|hip hop|hip-hop|reggae|rumba|luther|vandross|nigerian|congolese|kenyan|motivational|calm|training)\b/.test(lower)) return null;
   const query = String(text || "")
     .replace(/\bnexus\b/ig, "")
     .replace(/\b(can you|please|could you|would you|open|play|find|search|start|put on|listen to)\b/ig, " ")

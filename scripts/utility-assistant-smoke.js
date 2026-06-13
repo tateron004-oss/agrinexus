@@ -219,6 +219,31 @@ async function call(route, body) {
       assert.strictEqual(music.commandResult.metadata.testPlayback.type, "browser-web-audio", "music request should expose browser test playback when Spotify is not live");
     }
     assert(/Spotify|music provider|play/i.test(music.commandResult.response), "music request should be honest about Spotify execution or setup");
+    const musicCatalogCommands = [
+      "Nexus, play soul music from Luther Vandross",
+      "Nexus, play gospel music",
+      "Nexus, play Afrobeats",
+      "Nexus, play reggae",
+      "Nexus, play 90s R&B",
+      "Nexus, play jazz for relaxing",
+      "Nexus, play music for a farmer training session",
+      "Nexus, play calm music for a telehealth waiting room",
+      "Nexus, play motivational music for learners",
+      "Nexus, play Nigerian Afrobeats",
+      "Nexus, play Congolese rumba",
+      "Nexus, play Kenyan gospel"
+    ];
+    for (const command of musicCatalogCommands) {
+      const musicState = await call("/api/agent/command", {
+        command,
+        conversational: true,
+        inputMode: "voice",
+        outputMode: "voice"
+      });
+      assert.strictEqual(musicState.commandResult.intent, "utility.music", `${command} should route to music`);
+      assert.strictEqual(musicState.commandResult.metadata.music.provider, "spotify", `${command} should use Spotify provider contract`);
+      assert(musicState.commandResult.metadata.testPlayback?.type === "browser-web-audio" || musicState.commandResult.metadata.music.status === "playback-started", `${command} should expose test playback or live playback`);
+    }
     const encyclopediaCrop = await call("/api/agent/command", {
       command: "Nexus, what is photosynthesis and why does it matter for maize?",
       conversational: true,
