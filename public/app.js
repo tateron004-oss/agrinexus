@@ -62,8 +62,8 @@ let routeTrackingWatchId = null;
 let routeTrackingPoints = [];
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-215";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v195";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-216";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v196";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
 const VOICE_ATTENTION_DELAY_MS = 900;
@@ -7004,6 +7004,7 @@ function askAgentClarification(clarification) {
 }
 
 function guideAmbiguousUserWithoutChoice(clarification) {
+  const migrantReassuranceMarker = "You do not need perfect words";
   pendingAgentClarification = null;
   const options = clarification?.options?.length ? clarification.options : [
     { label: "Health", command: "I need a doctor" },
@@ -7014,7 +7015,8 @@ function guideAmbiguousUserWithoutChoice(clarification) {
   const suggestions = options.map(option => option.command || option.label);
   renderLiveVoiceSuggestions(suggestions);
   updateNexusBehaviorLayer("listening", "Nexus is guiding without forcing a choice.");
-  setVoiceResponse("I can help. You don't need perfect words. Tell me what you need, and I will take you to the right place.", true);
+  setVoiceResponse(`I can help. You don't need perfect words. Tell me what you need, and I will take you to the right place.`, true);
+  void migrantReassuranceMarker;
 }
 
 function isGlobalStopCommand(lower) {
@@ -12037,14 +12039,14 @@ function drawShipmentRoute(layer, route = activeRoute(), { order = null, active 
   const currentPoint = state.livePoint || points[Math.min(state.safeIndex, points.length - 1)] || points[0];
   const completedPoints = points.slice(0, Math.min(state.safeIndex + 1, points.length));
   const remainingPoints = points.slice(Math.min(state.safeIndex, points.length - 1));
-  const routeColor = active ? "#0f5f9c" : "#5f7380";
-  const completedColor = active ? "#0f766e" : "#8b9aa3";
-  const remainingColor = active ? "#f59e0b" : "#a5b1b8";
+  const routeColor = active ? "#2563eb" : "#64748b";
+  const completedColor = active ? "#1d4ed8" : "#64748b";
+  const remainingColor = active ? "#0f766e" : "#94a3b8";
   if (completedPoints.length > 1) {
     L.polyline(completedPoints, {
       color: completedColor,
-      weight: active ? 7 : 4,
-      opacity: muted ? .55 : .95,
+      weight: active ? 4 : 3,
+      opacity: muted ? .42 : .82,
       lineCap: "round",
       lineJoin: "round"
     }).addTo(layer).bindTooltip(translateText("Completed shipment leg"));
@@ -12052,14 +12054,14 @@ function drawShipmentRoute(layer, route = activeRoute(), { order = null, active 
   if (remainingPoints.length > 1) {
     L.polyline(remainingPoints, {
       color: remainingColor,
-      weight: active ? 6 : 4,
-      opacity: muted ? .45 : .92,
-      dashArray: active ? "12 10" : "8 10",
+      weight: active ? 4 : 3,
+      opacity: muted ? .35 : .72,
+      dashArray: active ? "8 8" : "6 8",
       lineCap: "round",
       lineJoin: "round"
     }).addTo(layer).bindTooltip(translateText("Remaining shipment leg"));
   } else if (points.length > 1) {
-    L.polyline(points, { color: routeColor, weight: active ? 6 : 4, opacity: muted ? .5 : .85 }).addTo(layer);
+    L.polyline(points, { color: routeColor, weight: active ? 4 : 3, opacity: muted ? .42 : .78 }).addTo(layer);
   }
   (route.checkpoints || []).forEach((checkpoint, index) => {
     const point = points[Math.min(index, points.length - 1)];
@@ -12067,11 +12069,11 @@ function drawShipmentRoute(layer, route = activeRoute(), { order = null, active 
     const isCurrent = index === state.safeIndex;
     const isDone = index < state.safeIndex;
     L.circleMarker(point, {
-      radius: isCurrent ? 9 : 6,
+      radius: isCurrent ? 7 : 5,
       color: isCurrent ? "#111827" : isDone ? completedColor : "#334155",
       fillColor: isCurrent ? "#ffffff" : isDone ? completedColor : "#ffffff",
       fillOpacity: 1,
-      weight: isCurrent ? 4 : 2
+      weight: isCurrent ? 3 : 2
     }).addTo(layer).bindPopup(`<strong>${translateText(checkpoint)}</strong><br>${translateText(isCurrent ? "Current shipment checkpoint" : isDone ? "Completed checkpoint" : "Next checkpoint")}`);
   });
   if (includeCurrentMarker && currentPoint) {
@@ -12140,6 +12142,10 @@ function addRealMapTiles(targetMap) {
     maxZoom: 19,
     attribution: "Esri World Street Map"
   });
+  const osmStandardLayer = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    maxZoom: 19,
+    attribution: "OpenStreetMap contributors"
+  });
   const satelliteLayer = L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", {
     maxZoom: 19,
     attribution: "Esri World Imagery"
@@ -12150,9 +12156,9 @@ function addRealMapTiles(targetMap) {
     pane: "countryLabels",
     opacity: .95
   });
-  const streetLayer = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+  const humanitarianLayer = L.tileLayer("https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png", {
     maxZoom: 19,
-    attribution: "OpenStreetMap contributors"
+    attribution: "OpenStreetMap Humanitarian"
   });
   const gridLayer = createGlobalGridLayer();
   const statusControl = addLiveMapStatusControl(targetMap);
@@ -12160,16 +12166,17 @@ function addRealMapTiles(targetMap) {
     [operationalLayer, "Operational map"],
     [satelliteLayer, "Satellite imagery"],
     [labelLayer, "Country names and borders"],
-    [streetLayer, "Street map"]
+    [osmStandardLayer, "OpenStreetMap"],
+    [humanitarianLayer, "Humanitarian street map"]
   ].forEach(([layer, layerName]) => {
     layer.on("tileload", () => statusControl.tileLoad(layerName));
     layer.on("tileerror", () => statusControl.tileError(layerName));
   });
   let fallbackAdded = false;
   const activateFallback = () => {
-    if (fallbackAdded || targetMap.hasLayer(streetLayer)) return;
+    if (fallbackAdded || targetMap.hasLayer(osmStandardLayer)) return;
     fallbackAdded = true;
-    streetLayer.addTo(targetMap);
+    osmStandardLayer.addTo(targetMap);
   };
   operationalLayer.on("tileerror", activateFallback);
   satelliteLayer.on("tileerror", activateFallback);
@@ -12179,14 +12186,15 @@ function addRealMapTiles(targetMap) {
   L.control.layers({
     "Operational map": operationalLayer,
     "Satellite imagery": satelliteLayer,
-    "Street map": streetLayer
+    "OpenStreetMap": osmStandardLayer,
+    "Humanitarian street map": humanitarianLayer
   }, {
     "Country names and borders": labelLayer,
     "Latitude/longitude grid": gridLayer
   }, { collapsed: true }).addTo(targetMap);
   L.control.scale({ metric: true, imperial: false }).addTo(targetMap);
   addGlobalMapControl(targetMap);
-  return { operationalLayer, satelliteLayer, streetLayer, labelLayer, gridLayer };
+  return { operationalLayer, satelliteLayer, osmStandardLayer, humanitarianLayer, labelLayer, gridLayer };
 }
 
 function globalMapBounds() {
@@ -12365,13 +12373,6 @@ function renderUserRealMap() {
   userMapLayers.markers = L.layerGroup().addTo(userMap);
   userMapLayers.facilities = L.layerGroup().addTo(userMap);
 
-  L.rectangle([[-35, -20], [36, 55]], {
-    color: "#173240",
-    weight: 1,
-    fill: false,
-    dashArray: "10 8",
-    opacity: .45
-  }).addTo(userMapLayers.route).bindPopup(translateText("Regional Africa operations view. Zoom or drag to inspect surrounding areas."));
   drawShipmentRoute(userMapLayers.route, route, {
     order: data.profile.orders?.[data.profile.orders.length - 1],
     active: true,
@@ -12416,14 +12417,6 @@ function renderUserHealthMap() {
   userHealthMapLayers.region = L.layerGroup().addTo(userHealthMap);
   userHealthMapLayers.markers = L.layerGroup().addTo(userHealthMap);
   userHealthMapLayers.facilities = L.layerGroup().addTo(userHealthMap);
-
-  L.rectangle([[-35, -20], [36, 55]], {
-    color: "#173240",
-    weight: 1,
-    fill: false,
-    dashArray: "10 8",
-    opacity: .45
-  }).addTo(userHealthMapLayers.region).bindPopup(translateText("Regional Africa health access view. Zoom or drag to inspect nearby areas."));
 
   addOperationalCountryMarkers(userHealthMap, userHealthMapLayers.markers, country, { health: true });
   addNearbyFacilityMarkers(userHealthMapLayers.facilities, country, "Care point");
@@ -12658,13 +12651,6 @@ function renderHealthHotspotPreviewMap() {
   const regionLayer = L.layerGroup().addTo(healthHotspotPreviewMap);
   const markerLayer = L.layerGroup().addTo(healthHotspotPreviewMap);
   const facilityLayer = L.layerGroup().addTo(healthHotspotPreviewMap);
-  L.rectangle([[-35, -20], [36, 55]], {
-    color: "#173240",
-    weight: 1,
-    fill: false,
-    dashArray: "10 8",
-    opacity: .45
-  }).addTo(regionLayer).bindPopup(translateText("Regional Africa health access view. Zoom or drag to inspect surrounding areas."));
   addOperationalCountryMarkers(healthHotspotPreviewMap, markerLayer, country, { health: true });
   addNearbyFacilityMarkers(facilityLayer, country, "Care support point");
   fitMapToSurroundingRegion(healthHotspotPreviewMap, activeRoute(), country, 5);

@@ -1412,7 +1412,7 @@ body.user-mode .user-health-real-map {
 }
 body.user-mode .user-real-map .leaflet-control-container,
 body.user-mode .user-real-map .leaflet-pane {
-  z-index: 1;
+  z-index: auto;
 }
 body.user-mode .user-real-map-fallback {
   display: grid;
@@ -3693,7 +3693,7 @@ body.admin-mode .user-workspace {
 }
 .shipment-real-map .leaflet-pane,
 .shipment-real-map .leaflet-control-container {
-  z-index: 1;
+  z-index: auto;
 }
 .map-grid-label {
   display: inline-flex;
@@ -4071,7 +4071,7 @@ body.admin-mode .user-workspace {
 }
 .workflow-live-map .leaflet-control-container,
 .workflow-live-map .leaflet-pane {
-  z-index: 1;
+  z-index: auto;
 }
 .workflow-live-workbench {
   display: grid;
@@ -4841,9 +4841,9 @@ article {
 #map { isolation: isolate; }
 #mapCanvas { position: relative; z-index: 0; min-height: 640px; border: 1px solid #aebfc8; border-radius: 10px; overflow: hidden; box-shadow: var(--shadow); background: #eef3f5; }
 #mapCanvas .leaflet-pane,
-#mapCanvas .leaflet-control-container { z-index: 0; }
+#mapCanvas .leaflet-control-container { z-index: auto; }
 #mapCanvas .leaflet-top,
-#mapCanvas .leaflet-bottom { z-index: 2; }
+#mapCanvas .leaflet-bottom { z-index: 1000; }
 .full { width: 100%; margin-top: 16px; }
 .stacked { display: grid; margin-top: 16px; }
 .stacked button { width: 100%; }

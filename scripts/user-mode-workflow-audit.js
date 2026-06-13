@@ -152,7 +152,7 @@ for (const [section, buttons] of Object.entries(expectedSections)) {
   "userHealthMapCanvas",
   "OpenStreetMap",
   "Africa operations",
-  "Regional Africa operations view",
+  "Humanitarian street map",
   "function surroundingMapBounds",
   "function fitMapToSurroundingRegion",
   "L.control.scale",
@@ -265,8 +265,8 @@ for (const [section, buttons] of Object.entries(expectedSections)) {
   assert(styles.includes(marker), `User workflow containment style missing: ${marker}`);
 });
 
-assert(html.includes("/app.js?v=nexus-behavior-215"), "Index must force browsers to load current User-mode workflow JS");
-assert(html.includes("/styles.css?v=nexus-behavior-215"), "Index must force browsers to load current User-mode workflow CSS");
+assert(html.includes("/app.js?v=nexus-behavior-216"), "Index must force browsers to load current User-mode workflow JS");
+assert(html.includes("/styles.css?v=nexus-behavior-216"), "Index must force browsers to load current User-mode workflow CSS");
 assert(html.includes("topSettingsClose"), "User Settings menu needs a visible close button");
 assert(styles.includes("body.user-mode .top-settings-toggle") && styles.includes("display: none !important"), "User mode must hide the top Settings button after login");
 assert(styles.includes("body.user-mode .top-actions") && styles.includes("body.user-mode .top-actions.open") && styles.includes("display: none !important"), "User mode must not expose the old top Settings menu after login");
@@ -282,7 +282,8 @@ assert(app.includes("function drawRuralHealthNetwork") && app.includes("addRural
 assert(styles.includes(".rural-map-legend") && styles.includes(".legend-supply"), "User health maps need a readable legend for care and supply routes");
 assert(app.includes("World_Street_Map"), "User maps should default to a real operational street map");
 assert(app.includes("World_Imagery/MapServer/tile"), "User maps should keep real satellite imagery available");
-assert(app.includes("Operational map") && app.includes("Satellite imagery") && app.includes("Street map"), "User maps should expose real base-map choices");
+assert(app.includes("Operational map") && app.includes("Satellite imagery") && app.includes("OpenStreetMap") && app.includes("Humanitarian street map"), "User maps should expose real base-map choices");
+assert(!app.includes("Regional Africa operations view") && !app.includes("Regional Africa health access view"), "User maps should avoid cartoon-like regional overlay labels");
 assert(app.includes("function createGlobalGridLayer") && app.includes("Latitude/longitude grid"), "User maps must expose latitude/longitude gridlines");
 assert(app.includes("function addGlobalMapControl") && app.includes("function globalMapBounds"), "User maps must support a one-click global view");
 assert(app.includes("function addLiveMapStatusControl") && app.includes("real tile(s) loaded"), "User maps need in-app live tile loading status");
@@ -291,7 +292,7 @@ assert(styles.includes(".map-grid-label") && styles.includes(".global-map-contro
 assert(app.includes("/api/trade/tracking") && app.includes("Live GPS provider") && app.includes("Platform route tracker"), "User shipment tracking should show provider source and local fallback clearly");
 assert(app.includes("World_Boundaries_and_Places/MapServer/tile"), "User maps should include country names and border labels");
 assert(app.includes("startAskNexusAfterLogin"), "User mode should start Ask Nexus after login");
-assert(sw.includes('CACHE_NAME = "agrinexus-pwa-v195"'), "Service worker cache must be bumped after User-mode workflow fixes");
+assert(sw.includes('CACHE_NAME = "agrinexus-pwa-v196"'), "Service worker cache must be bumped after User-mode workflow fixes");
 assert(styles.includes("body.user-mode .top-settings-close"), "User Settings close button needs visible app-mode styling");
 assert(app.includes('const guideCommand = "help me understand the platform"'), "Guide Me must map to a visible user workflow instead of a silent dynamic command");
 assert(app.includes("function renderUserAccessibilityPanel"), "User mode needs a contained accessibility panel with its own controls");
