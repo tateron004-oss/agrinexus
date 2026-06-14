@@ -236,7 +236,12 @@ const expandedCases = [
   { persona: "women-support", prompt: "Nexus women farmers need help with children and crops", section: "dashboard", expectAny: [/women|farmers|children|crops|health|learn/], maxWords: 105 },
   { persona: "elder-simple", prompt: "Nexus grandma wants just one button for help", section: "dashboard", expectAny: [/health|crops|work|learning|map|one|help/], maxWords: 90 },
   { persona: "phone-call-style", prompt: "Nexus call clinic but I no know words", section: "health", expectAny: [/clinic|call|health|where|need/], forbidAny: [/diagnos/], maxWords: 95 },
-  { persona: "market-buyer-language", prompt: "Nexus buyer speaks French I speak English help sale", section: "trade", expectAny: [/buyer|french|english|sale|message/], maxWords: 100 }
+  { persona: "market-buyer-language", prompt: "Nexus buyer speaks French I speak English help sale", section: "trade", expectAny: [/buyer|french|english|sale|message/], maxWords: 100 },
+  { persona: "limited-language-health", prompt: "Nexus no english baby sick help", section: "health", urgent: true, expectAny: [/baby|safe|where|health|doctor|clinic/], forbidAny: [/diagnos/], maxWords: 80 },
+  { persona: "low-literacy-medicine", prompt: "Nexus no school no read medicine help", section: "health", expectAny: [/medicine|health|where|clinic|pharmacy|simple/], forbidAny: [/diagnos/], maxWords: 85 },
+  { persona: "fear-caregiver", prompt: "Nexus I scared my mother pain I don't know words", section: "health", urgent: true, expectAny: [/mother|safe|where|health|care|pain/], forbidAny: [/diagnos/], maxWords: 85 },
+  { persona: "farmer-no-words", prompt: "Nexus crop bad I don't know words", section: "trade", expectAny: [/crop|farm|where|what|help/], forbidAny: [/guarantee/], maxWords: 85 },
+  { persona: "indirect-village", prompt: "Nexus people here sick no words village far", section: "health", expectAny: [/health|where|village|safe|clinic/], forbidAny: [/diagnos/], maxWords: 85 }
 ];
 
 const cases = [...coreCases, ...expandedCases];

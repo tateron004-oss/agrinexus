@@ -407,6 +407,9 @@ assert(app.includes("I think you mean ${intentLabels[profile.intent]}"), "Rural 
 assert(app.includes("function nexusConversationGovernor") && app.includes("function handleNexusConversationGovernor"), "Nexus needs a conversation governor before workflow routing");
 assert(app.includes("Short answers are on") && app.includes("You're right. I may have heard that wrong") && app.includes("We will do one step at a time"), "Conversation governor must support short answers, correction repair, and one-step guidance");
 assert(app.includes("handleNexusConversationGovernor(command || localizedCommand || rawCommand, options)"), "Voice handler must run the conversation governor before Conversation Mode routing");
+assert(server.includes("function conversationResilienceModel") && server.includes("conversation-resilience-v1"), "Backend needs a conversation resilience model for low-literacy, stressed, and incomplete speech");
+assert(server.includes("No perfect sentence required.") && server.includes("No shame for education level, accent, mixed language, or incomplete words."), "Conversation resilience must protect imperfect speech and mixed-language users");
+assert(server.includes("resilience-teachback-missing") && server.includes("resilience-aware"), "Conversation supervisor must audit resilience teach-back behavior");
 assert(app.includes("function conversationIntakePlans") && app.includes("function startConversationIntake") && app.includes("function handleConversationIntakeAnswer"), "Nexus needs conversation-based intake plans and answer handling");
 assert(app.includes("health access intake") && app.includes("crop sale intake") && app.includes("work support intake") && app.includes("learning intake") && app.includes("map and route intake"), "Conversation intake must cover health, trade, workforce, learning, and map");
 assert(app.includes("function repairConversationIntake") && app.includes("conversation-intake-repair"), "Intent repair loop must step back inside an active conversation intake");
@@ -423,8 +426,8 @@ assert(app.includes("Stopped. Ask me the next question or tell me where to go ne
 assert(styles.includes("pointer-events: none") && styles.includes(".user-caption-actions") && styles.includes("pointer-events: auto"), "Caption panel must not block workflow action clicks");
 assert(styles.includes("width: min(300px, calc(100vw - 24px))") && styles.includes("max-height: 138px"), "Caption panel must default to a small bubble");
 assert(styles.includes(".user-caption-panel.expanded") && styles.includes("display: none") && styles.includes("display: grid"), "Caption input controls must appear only in expanded caption mode");
-assert(html.includes("nexus-behavior-225"), "Index must force browsers to load Nexus behavior CSS");
-assert(html.includes("nexus-behavior-225"), "Index must force browsers to load Nexus behavior JS");
+assert(html.includes("nexus-behavior-226"), "Index must force browsers to load Nexus behavior CSS");
+assert(html.includes("nexus-behavior-226"), "Index must force browsers to load Nexus behavior JS");
 assert(html.includes("governmentReadinessPanel") && html.includes('data-government-action="pilot"') && html.includes('data-government-action="report"') && html.includes('data-government-action="heatmap"'), "Dashboard needs government readiness actions for public-sector pilots");
 assert(app.includes("function renderGovernmentReadinessPanel") && app.includes("function runGovernmentReadinessAction") && app.includes("data-government-action"), "Frontend must render and run public-sector readiness actions");
 assert(server.includes("function governmentReadinessModel") && server.includes("/api/government/readiness") && server.includes("government.readiness_reviewed"), "Backend must persist and audit government readiness evidence");

@@ -3002,6 +3002,7 @@ function assistantBehaviorModel(db, user) {
   const communicationStyle = model.communicationStyle || "plain-language-step-by-step";
   const accessibilityMode = model.accessibilityMode || db.profile.accessibilityProfile?.supportMode || "standard";
   const stakeholderAudience = stakeholderAudienceConversationModel("", user, model);
+  const resilience = conversationResilienceModel("", user, model);
   const audience = model.currentAudience === "investor-government"
     ? "investors, government leaders, and non-technical decision makers"
     : stakeholderAudience.active
@@ -3023,6 +3024,7 @@ function assistantBehaviorModel(db, user) {
     role,
     audience,
     stakeholderAudience,
+    resilience,
     currentPersona,
     communicationStyle,
     accessibilityMode,
@@ -3045,6 +3047,7 @@ function assistantBehaviorModel(db, user) {
       "Keep AI actions supervised and explain when human review matters.",
       "Adapt to role, language, accessibility needs, and remembered preferences.",
       "Adapt to stakeholder audience: government, NGO, farmer, or grandma/elder/patient.",
+      "Assume the user may not know formal words; teach back the meaning before routing.",
       "When uncertain, ask one helpful question instead of dumping instructions."
     ],
     lowTechBehaviors: [
@@ -3065,6 +3068,74 @@ function assistantBehaviorModel(db, user) {
       memories: (db.profile.agentMemory.preferences || []).length + (db.profile.agentMemory.longTermFacts || []).length,
       guidedIntakes: (db.profile.agentMemory.conversationalIntakes || []).length
     }
+  };
+}
+
+function conversationResilienceModel(command = "", user = {}, model = {}) {
+  const value = String(command || "").toLowerCase().replace(/\s+/g, " ").trim();
+  const words = value.split(/\s+/).filter(Boolean);
+  const savedStyle = String(model.communicationStyle || "").toLowerCase();
+  const languageConfidenceRisk = /\b(no english|small english|broken english|bad english|no words|don't know words|dont know words|cannot explain|can't explain|cant explain|my language|translate|mixed language|speak slow|talk slow)\b/.test(value);
+  const literacyRisk = /\b(no school|not educated|cannot read|can't read|cant read|cannot write|can't write|cant write|illiterate|low literacy|read for me|explain simple|too many words)\b/.test(value)
+    || savedStyle.includes("plain-language")
+    || savedStyle.includes("rural");
+  const fearOrStress = /\b(scared|afraid|fear|panic|worried|confused|i don't know|i dont know|help me|please|urgent|emergency|pain|sick|weak|lost|stuck)\b/.test(value);
+  const fragmentSpeech = words.length > 0 && (words.length <= 6 || /\b(thing|bad|help|sick|hot|pain|crop|doctor|medicine|job|map|clinic)\b/.test(value));
+  const medicalFragility = /\b(baby|child|pregnant|elder|grandma|bleeding|breathe|breathing|unconscious|chest pain|fever|very hot|medicine|doctor|clinic|pharmacy|injury|pain|sick)\b/.test(value);
+  const userMayBeIndirect = /\b(my mother|my child|my wife|my husband|my family|neighbor|village|community|people here|they said)\b/.test(value);
+  const active = Boolean(value)
+    ? languageConfidenceRisk || literacyRisk || fearOrStress || fragmentSpeech || medicalFragility || userMayBeIndirect
+    : literacyRisk || savedStyle.includes("pan-african-rural");
+  const score = Math.min(100, Math.max(20,
+    38
+    + (languageConfidenceRisk ? 16 : 0)
+    + (literacyRisk ? 16 : 0)
+    + (fearOrStress ? 12 : 0)
+    + (fragmentSpeech ? 10 : 0)
+    + (medicalFragility ? 14 : 0)
+    + (userMayBeIndirect ? 8 : 0)
+  ));
+  const responseContract = active
+    ? [
+      "Reflect: say what Nexus thinks the person means in simple words.",
+      "Safety: if health or danger appears, ask safety and location first.",
+      "Clarify: ask only one question.",
+      "Guide: name one next step the user can do or say.",
+      "Respect: never shame grammar, education, accent, or missing details."
+    ]
+    : [
+      "Answer directly.",
+      "Ask one useful follow-up question if needed.",
+      "Keep provider and safety boundaries clear."
+    ];
+  return {
+    id: "conversation-resilience-v1",
+    active,
+    score,
+    languageConfidenceRisk,
+    literacyRisk,
+    fearOrStress,
+    fragmentSpeech,
+    medicalFragility,
+    userMayBeIndirect,
+    responseMode: active ? "teach-back-one-question" : "normal-conversation",
+    plainOpening: medicalFragility
+      ? "I hear health concern. I am not a doctor, but I can help find the safest next step."
+      : fragmentSpeech
+        ? "I may have heard only part of that. I will go slowly."
+        : "I hear you. I will keep this simple.",
+    nextQuestion: medicalFragility
+      ? "Is the person safe right now, and where are they?"
+      : languageConfidenceRisk || literacyRisk
+        ? "Tell me one word first: health, crop, work, learning, map, or medicine."
+        : "What do you need first?",
+    responseContract,
+    safetyRules: [
+      "No perfect sentence required.",
+      "No shame for education level, accent, mixed language, or incomplete words.",
+      "Confirm meaning before sensitive actions.",
+      "Use human/provider review for health, children, medicine, payments, jobs, and legal decisions."
+    ]
   };
 }
 
@@ -3156,8 +3227,14 @@ function behaviorFollowUpForResult(result = {}) {
 
 function adaptiveBehaviorNudge(behavior = {}, result = {}) {
   const status = String(result.status || "");
+  const section = String(result.metadata?.redirectSection || result.metadata?.moduleSignal?.section || "").toLowerCase();
+  const module = String(result.metadata?.moduleSignal?.module || result.metadata?.module || "").toLowerCase();
   if (status === "needs-confirmation") return "Say yes when you are ready, or no if you want me to stop.";
   if (behavior.accessibilityMode && behavior.accessibilityMode !== "standard") return "I can read this aloud, simplify it, or keep going step by step.";
+  if (section === "health" || module.includes("health")) return "You can ask me to start intake, find clinic or pharmacy support, call a provider, add captions, or check safety risk.";
+  if (section === "trade" || module.includes("agritrade")) return "You can ask me to contact the buyer, check the field, plan the route, or explain the crop evidence.";
+  if (section === "workforce" || module.includes("workforce")) return "You can ask me to match a role, apply, prepare for interview, or schedule a shift.";
+  if (section === "learning" || module.includes("learning")) return "You can ask me to start the course, complete a lesson, build captions, or issue a certificate.";
   if (behavior.currentPersona === "farmer-or-trade-operator") return "You can ask me to contact the buyer, check the field, plan the route, or explain the crop evidence.";
   if (behavior.currentPersona === "health-access-user") return "You can ask me to start intake, connect a representative, add captions, or check safety risk.";
   if (behavior.currentPersona === "workforce-candidate") return "You can ask me to match a role, apply, prepare for interview, or schedule a shift.";
@@ -12456,6 +12533,7 @@ function conversationSupervisorReview(db, user, command, result = {}) {
   const lowerResponse = response.toLowerCase();
   const metadata = result.metadata || {};
   const moduleSignal = conversationModuleSignal(command);
+  const resilience = metadata.conversationResilience || conversationResilienceModel(command, user, db.profile.agentMemory?.userModel || {});
   const issues = [];
   const strengths = [];
   let score = 100;
@@ -12518,6 +12596,12 @@ function conversationSupervisorReview(db, user, command, result = {}) {
   } else {
     strengths.push("provider-honest");
   }
+  if (resilience.active && !/\b(i hear|i may have heard|tell me one|where are|safe right now|go slowly|simple)\b/.test(lowerResponse)) {
+    score -= 10;
+    issues.push("resilience-teachback-missing");
+  } else if (resilience.active) {
+    strengths.push("resilience-aware");
+  }
   score = Math.max(35, Math.min(100, score));
 
   const shortVersion = words > 80
@@ -12535,6 +12619,7 @@ function conversationSupervisorReview(db, user, command, result = {}) {
     shortVersion,
     recoveryPhrase: metadata.outcomeLoop?.recoveryPhrase || metadata.reasonedActionBridge?.recoveryPhrase || "If I misunderstood, say Nexus stop and tell me the area again.",
     nextBestQuestion: metadata.outcomeLoop?.oneQuestion || metadata.turnCoach?.nextQuestion || metadata.reasonedActionBridge?.oneQuestion || "What do you want Nexus to help you finish first?",
+    resilience,
     createdAt: new Date().toISOString()
   };
   const memory = db.profile.agentMemory;
@@ -14032,7 +14117,7 @@ function isRuralDistressConversation(command = "") {
   if (!value) return false;
   const cropDistress = /\b(no rain|crop dying|crop bad|plant sick|maize bad|cassava bad|pest|disease|harvest failing|farm problem|yellow leaves|bugs eating|farm dry|field dry|crop dry|crop stress|crops going bad)\b/.test(value)
     && /\b(crop|crops|farm|farmer|field|maize|cassava|plant|plants|harvest|soil|rain|water|irrigat)\b/.test(value);
-  const careDistress = /\b(cannot breathe|can't breathe|no doctor|no clinic|baby sick|child sick|mother sick|grandma sick|mama sick|mi mama sick|ayuda.*clinic|ayuda.*sick|preciso remedio|medicine for child|medicine.*child|child.*medicine|bleeding|very hot|weak|need medicine|body pain|pain sick)\b/.test(value);
+  const careDistress = /\b(cannot breathe|can't breathe|no doctor|no clinic|baby sick|child sick|mother sick|grandma sick|mama sick|mi mama sick|people here sick|village.*sick|sick.*village|sick.*no words|no words.*sick|ayuda.*clinic|ayuda.*sick|preciso remedio|medicine for child|medicine.*child|child.*medicine|bleeding|very hot|weak|need medicine|body pain|pain sick)\b/.test(value);
   const lowLiteracyNeed = /\b(no understand|don't understand|dont understand|cannot read|can't read|too many words|bad internet|no computer|i am confused|i'm confused)\b/.test(value);
   const workDistress = /\b(need work|find work|no job|need job|apply job|no certificate|finished school|graduated university)\b/.test(value);
   const mapDistress = /\b(driver lost|lost driver|no gps|where to go|road unsafe|road safe|route safe|map near|clinic near|pharmacy near)\b/.test(value);
@@ -14049,6 +14134,7 @@ function ruralCommunicationSupportModel(command = "", moduleSignal = null, user 
   const value = String(command || "").toLowerCase();
   const moduleName = moduleSignal?.module || conversationModuleSignal(command).module;
   const name = String(user?.name || "").split(/\s+/)[0] || "there";
+  const resilience = conversationResilienceModel(command, user, {});
   const stakeholderAudience = stakeholderAudienceConversationModel(command, user, {});
   const africaStyle = ruralAfricaConversationModel(command, user);
   const kenyaStyle = ruralKenyaCommunicationModel(command, user);
@@ -14101,6 +14187,7 @@ function ruralCommunicationSupportModel(command = "", moduleSignal = null, user 
     userName: name,
     module: moduleName,
     ...selected,
+    resilience,
     stakeholderAudience,
     africaStyle,
     kenyaStyle,
@@ -14109,6 +14196,7 @@ function ruralCommunicationSupportModel(command = "", moduleSignal = null, user 
       "Use everyday words.",
       "Ask one question at a time.",
       "Repeat the user's goal in simple language.",
+      resilience.active ? `Use conversation resilience: ${resilience.responseContract.join(" ")}` : null,
       `Shape the answer for ${stakeholderAudience.key}: ${stakeholderAudience.responseShape}.`,
       "If unsure, ask a gentle clarification instead of forcing a menu.",
       "Offer voice, captions, slower speech, and local language support.",
@@ -14206,6 +14294,7 @@ function frontierCommunicationIntelligenceModel(command = "", moduleSignal = nul
   const value = String(command || "").toLowerCase().replace(/\s+/g, " ").trim();
   const words = value.split(/\s+/).filter(Boolean);
   const ruralSupport = ruralCommunicationSupportModel(command, moduleSignal, user);
+  const resilience = ruralSupport.resilience || conversationResilienceModel(command, user, {});
   const stakeholderAudience = ruralSupport.stakeholderAudience || stakeholderAudienceConversationModel(command, user, {});
   const africaStyle = ruralSupport.africaStyle || ruralAfricaConversationModel(command, user);
   const kenyaStyle = ruralSupport.kenyaStyle || ruralKenyaCommunicationModel(command, user);
@@ -14266,6 +14355,7 @@ function frontierCommunicationIntelligenceModel(command = "", moduleSignal = nul
     module: ruralSupport.module,
     audience: ruralSupport.audience,
     stakeholderAudience,
+    resilience,
     likelyNeed: ruralSupport.likelyNeed,
     confidence: Number(confidence.toFixed(2)),
     urgency,
@@ -14283,6 +14373,7 @@ function frontierCommunicationIntelligenceModel(command = "", moduleSignal = nul
     teachBack: `I hear that you may need ${ruralSupport.likelyNeed}.`,
     rules: [
       "Start by reflecting the user's need in simple words.",
+      resilience.active ? "Use teach-back before action because the user may not have formal words." : null,
       `Use stakeholder behavior for ${stakeholderAudience.key}: ${stakeholderAudience.tone}.`,
       "Use at most three short sentences before asking for the next detail.",
       "Ask one question at a time.",
@@ -14315,6 +14406,7 @@ function updateConversationUserModel(profile, command) {
   if (/\binvestor|funding|presentation\b/.test(lower)) model.currentAudience = "investor-government";
   if (/\bvoice|speak|talk|listen|microphone|agrinexus|nexus\b/.test(lower)) model.preferredInteraction = "voice-first";
   if (/\bnon technical|non-technical|simple|easy|plain language|low tech|low-tech\b/.test(lower)) model.communicationStyle = "plain-language-step-by-step";
+  if (/\b(no school|not educated|cannot read|can't read|cant read|cannot write|can't write|cant write|no english|small english|broken english|dont know words|don't know words|explain simple|read for me)\b/.test(lower)) model.communicationStyle = "conversation-resilience-v1";
   if (/\b(rural africa|african farmer|grandma|elder|incomplete sentence|broken english|mixed language|pidgin|speak simple|talk simple|village)\b/.test(lower)) model.communicationStyle = "pan-african-rural-plain-language";
   if (/\b(kenya|kenyan|kiswahili|swahili|shamba|soko|dawa|kliniki|rural farmer|village farmer|grandma|elder|farmer language|plain village)\b/.test(lower)) model.communicationStyle = "rural-kenya-plain-kiswahili";
   if (/\bread aloud|audio|voice guide|blind|visual|visually impaired|large print|screen reader\b/.test(lower)) model.accessibilityMode = "visual-or-audio-support";
@@ -14348,6 +14440,7 @@ function localConversationalAnswer(db, user, command, moduleSignal, memories, op
   const platformMode = options.mode || modeContext.mode || "user";
   const ruralSupport = ruralCommunicationSupportModel(command, moduleSignal, user);
   const frontierCommunication = frontierCommunicationIntelligenceModel(command, moduleSignal, user, options);
+  const resilience = ruralSupport.resilience || conversationResilienceModel(command, user, db.profile.agentMemory.userModel || {});
   const stakeholderAudience = ruralSupport.stakeholderAudience || stakeholderAudienceConversationModel(command, user, db.profile.agentMemory.userModel || {});
   const africaStyle = ruralSupport.africaStyle || ruralAfricaConversationModel(command, user);
   const kenyaStyle = ruralSupport.kenyaStyle || ruralKenyaCommunicationModel(command, user);
@@ -14391,6 +14484,13 @@ function localConversationalAnswer(db, user, command, moduleSignal, memories, op
       `Focus: ${stakeholderAudience.wants.slice(0, 4).join(", ")}.`,
       moduleSignal.module === "Healthcare" ? "It can collect access needs, prepare handoff packets, and support clinic, pharmacy, or mobile-clinic routing without diagnosing." : base,
       stakeholderAudience.nextQuestion
+    ].join(" ");
+  }
+  if (resilience.active && platformMode === "user") {
+    return [
+      resilience.plainOpening,
+      moduleSignal.module === "Healthcare" ? ruralSupport.safetyRule : ruralSupport.plainGoal,
+      resilience.nextQuestion
     ].join(" ");
   }
   if (platformMode === "user" && (options.openDialog || isOpenDialogConversation(command, options))) {
@@ -14440,6 +14540,7 @@ async function conversationalReasoningResponse(db, user, command, options = {}) 
   const openDialog = isOpenDialogConversation(command, options);
   const ruralSupport = ruralCommunicationSupportModel(command, moduleSignal, user);
   const frontierCommunication = frontierCommunicationIntelligenceModel(command, moduleSignal, user, options);
+  const resilience = ruralSupport.resilience || conversationResilienceModel(command, user, db.profile.agentMemory.userModel || {});
   const stakeholderAudience = ruralSupport.stakeholderAudience || stakeholderAudienceConversationModel(command, user, db.profile.agentMemory.userModel || {});
   const africaStyle = ruralSupport.africaStyle || ruralAfricaConversationModel(command, user);
   const kenyaStyle = ruralSupport.kenyaStyle || ruralKenyaCommunicationModel(command, user);
@@ -14483,6 +14584,7 @@ async function conversationalReasoningResponse(db, user, command, options = {}) 
                 modeInstructions[platformMode] || modeInstructions.user,
                 "You are not limited to a menu. Treat unknown phrases as open dialog: infer the human problem, answer what you can, and ask one useful clarifying question if needed.",
                 "For low-digital-literacy users, avoid menus and technical labels. Speak like a trusted guide.",
+                `Conversation resilience model: ${resilience.id}; active ${resilience.active}; score ${resilience.score}; mode ${resilience.responseMode}; contract: ${resilience.responseContract.join(" ")}; safety rules: ${resilience.safetyRules.join(" ")}`,
                 `Stakeholder audience model: ${stakeholderAudience.key}; audience is ${stakeholderAudience.audience}; tone is ${stakeholderAudience.tone}; response shape is ${stakeholderAudience.responseShape}; next question is ${stakeholderAudience.nextQuestion}`,
                 `Rural communication model: audience is ${ruralSupport.audience}; likely need is ${ruralSupport.likelyNeed}; plain goal is ${ruralSupport.plainGoal}`,
                 `Rural Africa communication style: ${africaStyle.style}. ${africaStyle.policy} ${africaStyle.active ? `Fragment examples: ${africaStyle.examples.join(" | ")}` : ""}`,
@@ -14500,7 +14602,7 @@ async function conversationalReasoningResponse(db, user, command, options = {}) 
                 "End with one clear next step the user can say, but do not force a yes/no workflow unless the user clearly asked you to execute."
               ].join(" ")
             },
-            { role: "user", content: JSON.stringify({ command, moduleSignal, country, route, checkpoint: db.profile.activeCheckpoint, profileSummary, memories, reasoning, ruralSupport, frontierCommunication, stakeholderAudience, ruralAfricaCommunication: africaStyle, ruralKenyaCommunication: kenyaStyle, platformMode, modeContext }) }
+            { role: "user", content: JSON.stringify({ command, moduleSignal, country, route, checkpoint: db.profile.activeCheckpoint, profileSummary, memories, reasoning, ruralSupport, frontierCommunication, conversationResilience: resilience, stakeholderAudience, ruralAfricaCommunication: africaStyle, ruralKenyaCommunication: kenyaStyle, platformMode, modeContext }) }
           ],
           max_output_tokens: 360
         })
@@ -14536,7 +14638,7 @@ async function conversationalReasoningResponse(db, user, command, options = {}) 
     module: "AI",
     action: "agent.conversation_brain_answered",
     detail: `Conversation brain answered in ${moduleSignal.module}.`,
-    metadata: { provider, command, module: moduleSignal.module, memoriesUsed: memories.map(item => item.id).filter(Boolean), reasoning, reasoningLanguageProduction, ruralSupport, frontierCommunication, stakeholderAudience, ruralAfricaCommunication: africaStyle, ruralKenyaCommunication: kenyaStyle },
+    metadata: { provider, command, module: moduleSignal.module, memoriesUsed: memories.map(item => item.id).filter(Boolean), reasoning, reasoningLanguageProduction, ruralSupport, frontierCommunication, conversationResilience: resilience, stakeholderAudience, ruralAfricaCommunication: africaStyle, ruralKenyaCommunication: kenyaStyle },
     dispatch: false
   });
   const shouldStage = options.conversational && !openDialog && isActionRequest(lower) && moduleSignal.section !== "dashboard";
@@ -14556,7 +14658,7 @@ async function conversationalReasoningResponse(db, user, command, options = {}) 
       return {
         ...staged,
         response: `${responseText} I can also stage ${plan.action.toLowerCase()} now. Say "yes" to run it, or "no" to cancel.`,
-        metadata: { ...staged.metadata, provider, conversationBrain: true, moduleSignal, reasoning, reasoningLanguageProduction, ruralSupport, frontierCommunication }
+        metadata: { ...staged.metadata, provider, conversationBrain: true, moduleSignal, reasoning, reasoningLanguageProduction, ruralSupport, frontierCommunication, conversationResilience: resilience, stakeholderAudience, ruralAfricaCommunication: africaStyle, ruralKenyaCommunication: kenyaStyle }
       };
     }
   }
@@ -14564,7 +14666,7 @@ async function conversationalReasoningResponse(db, user, command, options = {}) 
     intent: "conversation.open_reasoning",
     response: responseText,
     status: "completed",
-    metadata: { conversationMode: true, openDialog, platformMode, modeContext, redirectSection: moduleSignal.section, provider, moduleSignal, memoriesUsed: memories.map(item => item.id).filter(Boolean), reasoning, reasoningLanguageProduction, ruralSupport, frontierCommunication }
+    metadata: { conversationMode: true, openDialog, platformMode, modeContext, redirectSection: moduleSignal.section, provider, moduleSignal, memoriesUsed: memories.map(item => item.id).filter(Boolean), reasoning, reasoningLanguageProduction, ruralSupport, frontierCommunication, conversationResilience: resilience, stakeholderAudience, ruralAfricaCommunication: africaStyle, ruralKenyaCommunication: kenyaStyle }
   };
 }
 
@@ -19677,6 +19779,11 @@ async function runAgentCommand(db, user, command, options = {}) {
   const earlyReminderCommand = assistantReminderCommandResponse(db, user, text, lower, options);
   if (earlyReminderCommand) return earlyReminderCommand;
   if (conversational && isRuralDistressConversation(text)) {
+    return conversationalReasoningResponse(db, user, text, { ...options, openDialog: true });
+  }
+  const resilienceRoute = conversationModuleSignal(text);
+  const resilience = conversationResilienceModel(text, user, db.profile.agentMemory?.userModel || {});
+  if (conversational && resilience.active && resilienceRoute.section && resilienceRoute.section !== "dashboard") {
     return conversationalReasoningResponse(db, user, text, { ...options, openDialog: true });
   }
   const earlyUtilityCommand = await utilityAssistantCommandResponse(db, user, text, lower, options);
