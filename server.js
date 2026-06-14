@@ -13970,6 +13970,7 @@ function ruralCommunicationSupportModel(command = "", moduleSignal = null, user 
   const value = String(command || "").toLowerCase();
   const moduleName = moduleSignal?.module || conversationModuleSignal(command).module;
   const name = String(user?.name || "").split(/\s+/)[0] || "there";
+  const africaStyle = ruralAfricaConversationModel(command, user);
   const kenyaStyle = ruralKenyaCommunicationModel(command, user);
   const models = {
     Healthcare: {
@@ -14020,6 +14021,7 @@ function ruralCommunicationSupportModel(command = "", moduleSignal = null, user 
     userName: name,
     module: moduleName,
     ...selected,
+    africaStyle,
     kenyaStyle,
     styleRules: [
       "Use short sentences.",
@@ -14028,8 +14030,11 @@ function ruralCommunicationSupportModel(command = "", moduleSignal = null, user 
       "Repeat the user's goal in simple language.",
       "If unsure, ask a gentle clarification instead of forcing a menu.",
       "Offer voice, captions, slower speech, and local language support.",
+      africaStyle.active ? "For rural Africa, accept incomplete sentences, fragments, mixed language, and repeated attempts without shame." : null,
+      africaStyle.active && moduleName === "Healthcare" ? "For medical speech, do not diagnose; ask danger signs and location first, then route to human care, clinic, mobile clinic, pharmacy, or emergency help." : null,
       kenyaStyle.active ? "For rural Kenya, use respectful Kiswahili/plain Kenyan English support: short sentences, one question, clear meaning, no caricature." : null
     ].filter(Boolean),
+    ruralAfricaPhrases: africaStyle.active ? africaStyle.examples : [],
     localPhrases: kenyaStyle.active ? kenyaStyle.phrases : [],
     examples: kenyaStyle.active ? [
       "Pole. Nimekusikia. Sorry, I hear you.",
@@ -14040,7 +14045,49 @@ function ruralCommunicationSupportModel(command = "", moduleSignal = null, user 
       "Tell me where you are, then I can guide the next step.",
       "I may have heard that wrong. Say it again slowly, or say health, crops, work, learning, or map."
     ],
-    localCommunicationStyle: kenyaStyle.style
+    localCommunicationStyle: kenyaStyle.active ? kenyaStyle.style : africaStyle.style
+  };
+}
+
+function ruralAfricaConversationModel(command = "", user = {}) {
+  const value = String(command || "").toLowerCase().replace(/\s+/g, " ").trim();
+  const words = value.split(/\s+/).filter(Boolean);
+  const userLanguage = String(user?.language || "").toLowerCase();
+  const incompleteSentence = words.length <= 7
+    || /\b(no|need|want|help|sick|pain|hot|bleed|medicine|doctor|clinic|crop|bad|rain|job|work|learn|map|lost)\b/.test(value)
+    || !/[.?!]$/.test(String(command || "").trim());
+  const ruralSignal = /\b(africa|rural|village|farm|farmer|grandma|elder|mother|mama|child|baby|doctor|clinic|medicine|pharmacy|crop|market|buyer|job|course|map|road|route|nigeria|ghana|kenya|tanzania|rwanda|uganda|ethiopia|egypt|drc|congo|senegal|mali|zambia|south africa|hausa|yoruba|igbo|swahili|kiswahili|amharic|oromo|lingala|french|arabic|portuguese|pidgin)\b/.test(value);
+  const mixedLanguageSignal = /\b(ayuda|aide|preciso|remedio|dawa|magani|oogun|kliniki|likita|daktari|kazi|shamba|soko|mazao|tafadhali|abeg|wahala|dey|sabi)\b/.test(value)
+    || ["sw", "fr", "ar", "pt", "ha", "yo", "ig", "am"].includes(userLanguage);
+  const healthFragment = /\b(baby|child|mama|mother|grandma|elder|person|patient)?\s*(hot|fever|sick|pain|bleed|bleeding|weak|dizzy|breath|breathe|medicine|doctor|clinic|pharmacy|injury|wound|rash|vomit|diarrhea)\b/.test(value)
+    || /\b(no doctor|no clinic|need medicine|medicine finished|body pain|child sick|baby hot|mama sick)\b/.test(value);
+  const active = ruralSignal || mixedLanguageSignal || (incompleteSentence && healthFragment);
+  return {
+    active,
+    style: active ? "pan-african-rural-plain-language" : "standard",
+    policy: "Accept incomplete rural African speech, mixed language, and fragments; never shame grammar; never invent medical certainty.",
+    responseShape: active ? "reflect the likely need, ask one safety or location question, then guide the next practical step" : "standard plain-language",
+    medicalSafety: {
+      boundary: "Nexus is not a doctor and does not diagnose.",
+      dangerSigns: ["trouble breathing", "heavy bleeding", "unconscious", "chest pain", "severe weakness", "baby or elder very sick", "fast worsening symptoms"],
+      firstQuestion: healthFragment ? "Is the person breathing, awake, and safe right now? Where are they?" : "Where are you, and what help do you need first?",
+      nextSteps: ["emergency help", "nearest clinic", "mobile clinic", "pharmacy support", "provider callback", "paper-to-digital handoff"]
+    },
+    examples: [
+      "Baby hot... no doctor.",
+      "Medicine finished... village far.",
+      "Crop bad... rain no come.",
+      "Job please... no certificate.",
+      "Map clinic... near me."
+    ],
+    intentOpeners: {
+      Healthcare: healthFragment ? "I hear health danger. Is the person breathing, awake, and safe right now? Where are they?" : "I hear health help. Where are you, and do you need clinic, medicine, or phone help?",
+      Learning: "I hear learning help. What do you want to learn first?",
+      Workforce: "I hear work help. What country are you in, and what work can you do?",
+      AgriTrade: "I hear farm or market help. What crop is it, and where is the farm?",
+      Maps: "I hear map help. Where are you starting, and where do you need to go?",
+      Platform: "I may have heard only part of that. Say one word: health, crop, work, learning, map, or medicine."
+    }
   };
 }
 
@@ -14077,6 +14124,7 @@ function frontierCommunicationIntelligenceModel(command = "", moduleSignal = nul
   const value = String(command || "").toLowerCase().replace(/\s+/g, " ").trim();
   const words = value.split(/\s+/).filter(Boolean);
   const ruralSupport = ruralCommunicationSupportModel(command, moduleSignal, user);
+  const africaStyle = ruralSupport.africaStyle || ruralAfricaConversationModel(command, user);
   const kenyaStyle = ruralSupport.kenyaStyle || ruralKenyaCommunicationModel(command, user);
   const urgencySignals = [
     /\b(emergency|urgent|danger|bleeding|cannot breathe|trouble breathing|chest pain|unconscious|seizure|poison|baby sick|child sick|very hot|dehydrated)\b/.test(value),
@@ -14144,7 +14192,9 @@ function frontierCommunicationIntelligenceModel(command = "", moduleSignal = nul
     outcomeNeeded,
     languageSupport: languageSignals ? "translate-or-adapt-language" : "use-current-language",
     accessibilitySupport: accessSignals ? "offer-audio-captions-slower-speech" : "standard",
-    localCommunicationStyle: kenyaStyle.style,
+    localCommunicationStyle: kenyaStyle.active ? kenyaStyle.style : africaStyle.style,
+    ruralAfricaPhrases: africaStyle.active ? africaStyle.examples : [],
+    medicalSafety: africaStyle.active ? africaStyle.medicalSafety : null,
     localPhrases: kenyaStyle.active ? kenyaStyle.phrases : [],
     teachBack: `I hear that you may need ${ruralSupport.likelyNeed}.`,
     rules: [
@@ -14153,6 +14203,8 @@ function frontierCommunicationIntelligenceModel(command = "", moduleSignal = nul
       "Ask one question at a time.",
       "Prefer local examples: farm, clinic, medicine, job, market, route, lesson.",
       "Do not punish imperfect grammar or mixed language.",
+      africaStyle.active ? "Accept incomplete rural African speech and ask one clarifying question instead of forcing a menu." : null,
+      africaStyle.active && ruralSupport.module === "Healthcare" ? "Medical users may speak in fragments; ask danger signs and location before any other detail." : null,
       "If the user sounds stuck, guide instead of listing menus.",
       "If there is risk, explain danger signs and route to human help.",
       kenyaStyle.active ? "For rural Kenya, use light Kiswahili/plain English, one question, clear meaning, and no fake dialect." : null
@@ -14176,6 +14228,7 @@ function updateConversationUserModel(profile, command) {
   if (/\binvestor|government|ministry|funding|presentation\b/.test(lower)) model.currentAudience = "investor-government";
   if (/\bvoice|speak|talk|listen|microphone|agrinexus|nexus\b/.test(lower)) model.preferredInteraction = "voice-first";
   if (/\bnon technical|non-technical|simple|easy|plain language|low tech|low-tech\b/.test(lower)) model.communicationStyle = "plain-language-step-by-step";
+  if (/\b(rural africa|african farmer|grandma|elder|incomplete sentence|broken english|mixed language|pidgin|speak simple|talk simple|village)\b/.test(lower)) model.communicationStyle = "pan-african-rural-plain-language";
   if (/\b(kenya|kenyan|kiswahili|swahili|shamba|soko|dawa|kliniki|rural farmer|village farmer|grandma|elder|farmer language|plain village)\b/.test(lower)) model.communicationStyle = "rural-kenya-plain-kiswahili";
   if (/\bread aloud|audio|voice guide|blind|visual|visually impaired|large print|screen reader\b/.test(lower)) model.accessibilityMode = "visual-or-audio-support";
   if (/\bdeaf|hearing impaired|hard of hearing|caption|captions|transcript|sign language\b/.test(lower)) model.accessibilityMode = "hearing-support";
@@ -14208,6 +14261,7 @@ function localConversationalAnswer(db, user, command, moduleSignal, memories, op
   const platformMode = options.mode || modeContext.mode || "user";
   const ruralSupport = ruralCommunicationSupportModel(command, moduleSignal, user);
   const frontierCommunication = frontierCommunicationIntelligenceModel(command, moduleSignal, user, options);
+  const africaStyle = ruralSupport.africaStyle || ruralAfricaConversationModel(command, user);
   const kenyaStyle = ruralSupport.kenyaStyle || ruralKenyaCommunicationModel(command, user);
   const memoryPreview = memories
     .slice(0, 2)
@@ -14236,6 +14290,13 @@ function localConversationalAnswer(db, user, command, moduleSignal, memories, op
       : "User conversation: I will keep this simple, voice-first, and one step at a time.";
   db.profile.agentMemory.lastRecommendedAction = next || null;
   if (platformMode === "user" && (options.openDialog || isOpenDialogConversation(command, options))) {
+    if (africaStyle.active && !kenyaStyle.active) {
+      return [
+        africaStyle.intentOpeners[moduleSignal.module] || africaStyle.intentOpeners.Platform,
+        moduleSignal.module === "Healthcare" ? africaStyle.medicalSafety.boundary : ruralSupport.plainGoal,
+        frontierCommunication.nextQuestion
+      ].join(" ");
+    }
     if (kenyaStyle.active) {
       return [
         kenyaStyle.intentOpeners[moduleSignal.module] || kenyaStyle.intentOpeners.Platform,
@@ -14268,6 +14329,7 @@ async function conversationalReasoningResponse(db, user, command, options = {}) 
   const openDialog = isOpenDialogConversation(command, options);
   const ruralSupport = ruralCommunicationSupportModel(command, moduleSignal, user);
   const frontierCommunication = frontierCommunicationIntelligenceModel(command, moduleSignal, user, options);
+  const africaStyle = ruralSupport.africaStyle || ruralAfricaConversationModel(command, user);
   const kenyaStyle = ruralSupport.kenyaStyle || ruralKenyaCommunicationModel(command, user);
   const { country, route } = activeContext(db);
   const modeContext = options.modeContext || {};
@@ -14310,6 +14372,8 @@ async function conversationalReasoningResponse(db, user, command, options = {}) 
                 "You are not limited to a menu. Treat unknown phrases as open dialog: infer the human problem, answer what you can, and ask one useful clarifying question if needed.",
                 "For low-digital-literacy users, avoid menus and technical labels. Speak like a trusted guide.",
                 `Rural communication model: audience is ${ruralSupport.audience}; likely need is ${ruralSupport.likelyNeed}; plain goal is ${ruralSupport.plainGoal}`,
+                `Rural Africa communication style: ${africaStyle.style}. ${africaStyle.policy} ${africaStyle.active ? `Fragment examples: ${africaStyle.examples.join(" | ")}` : ""}`,
+                africaStyle.active && moduleSignal.module === "Healthcare" ? `Medical fragment safety: ${africaStyle.medicalSafety.boundary} First ask: ${africaStyle.medicalSafety.firstQuestion}. Danger signs: ${africaStyle.medicalSafety.dangerSigns.join(", ")}.` : "",
                 `Rural Kenya communication style: ${kenyaStyle.style}. ${kenyaStyle.policy} ${kenyaStyle.active ? `Useful phrases: ${kenyaStyle.phrases.join(" | ")}` : ""}`,
                 `Use this next-question style when useful: ${ruralSupport.nextQuestion}`,
                 `Safety boundary: ${ruralSupport.safetyRule}`,
@@ -14323,7 +14387,7 @@ async function conversationalReasoningResponse(db, user, command, options = {}) 
                 "End with one clear next step the user can say, but do not force a yes/no workflow unless the user clearly asked you to execute."
               ].join(" ")
             },
-            { role: "user", content: JSON.stringify({ command, moduleSignal, country, route, checkpoint: db.profile.activeCheckpoint, profileSummary, memories, reasoning, ruralSupport, frontierCommunication, ruralKenyaCommunication: kenyaStyle, platformMode, modeContext }) }
+            { role: "user", content: JSON.stringify({ command, moduleSignal, country, route, checkpoint: db.profile.activeCheckpoint, profileSummary, memories, reasoning, ruralSupport, frontierCommunication, ruralAfricaCommunication: africaStyle, ruralKenyaCommunication: kenyaStyle, platformMode, modeContext }) }
           ],
           max_output_tokens: 360
         })
@@ -14359,7 +14423,7 @@ async function conversationalReasoningResponse(db, user, command, options = {}) 
     module: "AI",
     action: "agent.conversation_brain_answered",
     detail: `Conversation brain answered in ${moduleSignal.module}.`,
-    metadata: { provider, command, module: moduleSignal.module, memoriesUsed: memories.map(item => item.id).filter(Boolean), reasoning, reasoningLanguageProduction, ruralSupport, frontierCommunication, ruralKenyaCommunication: kenyaStyle },
+    metadata: { provider, command, module: moduleSignal.module, memoriesUsed: memories.map(item => item.id).filter(Boolean), reasoning, reasoningLanguageProduction, ruralSupport, frontierCommunication, ruralAfricaCommunication: africaStyle, ruralKenyaCommunication: kenyaStyle },
     dispatch: false
   });
   const shouldStage = options.conversational && !openDialog && isActionRequest(lower) && moduleSignal.section !== "dashboard";
@@ -19326,8 +19390,34 @@ async function runAgentCommand(db, user, command, options = {}) {
   }
   const conversational = options.conversational === true;
   if (!text) return { intent: "empty-command", response: "Give me a command and I will route it.", status: "needs-input" };
-  if (/\b(speak|talk|communicate|respond|listen)\b.*\b(rural kenya|kenyan farmer|kenya farmer|kiswahili farmer|swahili farmer|grandma|elder|village farmer|farmer language|plain village)\b/.test(lower)
-    || /\b(talk like|speak like)\b.*\b(grandma|farmer|rural kenya|kenyan)\b/.test(lower)) {
+  if (/\b(speak|talk|communicate|respond|listen)\b.*\b(rural africa|african farmer|african grandma|grandma|elder|village farmer|farmer language|plain village|incomplete sentence|broken english|mixed language)\b/.test(lower)
+    || /\b(talk like|speak like)\b.*\b(grandma|farmer|rural africa|african)\b/.test(lower)) {
+    const africaStyle = ruralAfricaConversationModel(text, user);
+    const model = db.profile.agentMemory.userModel || {};
+    model.communicationStyle = "pan-african-rural-plain-language";
+    model.preferredInteraction = "voice-first";
+    model.lastSeenAt = new Date().toISOString();
+    db.profile.agentMemory.userModel = model;
+    rememberAgentMemory(db.profile, "Nexus should accept incomplete rural African speech: fragments, mixed language, repeated attempts, one question at a time, and no shame.", { source: "rural-africa-style-command", category: "preference", module: "Agent AI", confidence: 0.95 });
+    return {
+      intent: "conversation.rural_africa_style_enabled",
+      response: "Yes. I will listen for short, incomplete sentences and mixed language. I will reflect what I think you mean, ask one question at a time, and for health I will check danger signs and location first. I will not diagnose.",
+      status: "completed",
+      metadata: {
+        conversationMode: true,
+        redirectSection: options.modeContext?.section || "agent",
+        ruralAfricaCommunication: africaStyle,
+        frontierCommunication: {
+          communicationMode: "pan-african-rural-plain-language",
+          nextQuestion: "Tell me one word first: health, crop, work, learning, map, or medicine.",
+          confidence: 0.94,
+          urgency: "normal"
+        }
+      }
+    };
+  }
+  if (/\b(speak|talk|communicate|respond|listen)\b.*\b(rural kenya|kenyan farmer|kenya farmer|kiswahili farmer|swahili farmer|kiswahili|swahili)\b/.test(lower)
+    || /\b(talk like|speak like)\b.*\b(rural kenya|kenyan|kiswahili|swahili)\b/.test(lower)) {
     const kenyaStyle = ruralKenyaCommunicationModel(text, { ...user, language: /\b(kiswahili|swahili)\b/.test(lower) ? "sw" : user.language });
     const model = db.profile.agentMemory.userModel || {};
     model.communicationStyle = "rural-kenya-plain-kiswahili";

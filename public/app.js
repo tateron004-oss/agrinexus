@@ -62,8 +62,8 @@ let routeTrackingWatchId = null;
 let routeTrackingPoints = [];
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-223";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v203";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-224";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v204";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
 const VOICE_ATTENTION_DELAY_MS = 900;
@@ -3322,6 +3322,7 @@ function ruralCommunicationBridge(command = "") {
   const heard = String(command || "").replace(/\s+/g, " ").trim();
   const normalized = normalizeRuralSpeechAliases(heard);
   const profile = ruralSpeechProfile(normalized || heard);
+  const africaStyle = ruralAfricaConversationStyle(heard || normalized, profile);
   const kenyaStyle = ruralKenyaCommunicationStyle(heard || normalized);
   const tokens = normalized.split(/\s+/).filter(Boolean);
   const suspectedWakeMishear = /\b(texas|nexas|nexis|nextus|next\s+us|neck\s+sus|neck\s+is|agree\s+nexus|angry\s+nexus)\b/.test(normalizeToolText(heard));
@@ -3342,14 +3343,62 @@ function ruralCommunicationBridge(command = "") {
     suspectedWakeMishear,
     shortButUseful,
     needsOneQuestion,
+    africaStyle,
     kenyaStyle,
     intentLabel: intentLabels[profile.intent] || intentLabels.general,
-    response: kenyaStyle.active
+    response: africaStyle.active
+      ? ruralAfricaPlainResponse(profile)
+      : kenyaStyle.active
       ? ruralKenyaPlainResponse(profile, intentLabels)
       : profile.intent === "general"
       ? "I may have heard that wrong. Say it again slowly, or say health, crops, work, learning, map, or medicine."
       : `I think you mean ${intentLabels[profile.intent]}. ${profile.nextQuestion}`
   };
+}
+
+function ruralAfricaConversationStyle(command = "", profile = ruralSpeechProfile(command)) {
+  const lower = normalizeToolText(command);
+  const fragments = lower.split(/\s+/).filter(Boolean);
+  const incompleteSentence = fragments.length <= 7
+    || /\b(no|need|want|help|sick|pain|hot|bleed|medicine|doctor|clinic|crop|bad|rain|job|work|learn|map|lost)\b/.test(lower)
+    || !/[.?!]$/.test(String(command || "").trim());
+  const active = profile.lowLiteracy
+    || profile.imperfectEnglish
+    || profile.mixedLanguage
+    || incompleteSentence && /\b(africa|rural|village|farm|farmer|grandma|elder|mother|mama|child|baby|doctor|clinic|medicine|pharmacy|crop|market|buyer|job|course|map|road|route|nigeria|ghana|kenya|tanzania|rwanda|uganda|ethiopia|egypt|drc|congo|senegal|mali|zambia|south africa|hausa|yoruba|igbo|swahili|kiswahili|amharic|oromo|lingala|french|arabic|portuguese)\b/.test(lower);
+  return {
+    active,
+    style: active ? "pan-african-rural-plain-language" : "standard",
+    promise: "Understand incomplete rural speech across Africa: short fragments, mixed language, one question at a time, no shame, no diagnosis.",
+    medicalRules: [
+      "Do not diagnose.",
+      "Check danger signs first.",
+      "Ask where the person is.",
+      "Route urgent symptoms to emergency or nearest human care.",
+      "Prepare clinic, mobile clinic, pharmacy, or provider handoff."
+    ],
+    examples: [
+      "Baby hot... no doctor.",
+      "Medicine finished... village far.",
+      "Crop bad... rain no come.",
+      "Job please... no certificate.",
+      "Map clinic... near me."
+    ]
+  };
+}
+
+function ruralAfricaPlainResponse(profile = {}) {
+  const openers = {
+    health: profile.urgent
+      ? "I hear health danger. Is the person breathing, awake, and safe right now? Where are they?"
+      : "I hear health help. Where are you, and do you need clinic, medicine, or phone help?",
+    trade: "I hear farm or market help. What crop is it, and where is the farm?",
+    workforce: "I hear work help. What country are you in, and what work can you do?",
+    learning: "I hear learning help. What do you want to learn first?",
+    map: "I hear map help. Where are you starting, and where do you need to go?",
+    general: "I may have heard only part of that. Say one word: health, crop, work, learning, map, or medicine."
+  };
+  return openers[profile.intent] || openers.general;
 }
 
 function ruralKenyaCommunicationStyle(command = "") {
@@ -7663,6 +7712,7 @@ function ruralCommunicationResponseTuning(message = "", options = {}) {
   const lowTechMode = experienceMode === "user" || options.speak || voiceFirstMode;
   if (!lowTechMode || options.allowLongResponse || options.longForm) return text;
   const command = options.command || agentPerformanceState.lastCommand || conversationModeState.lastQuestion || "";
+  const africaStyle = ruralAfricaConversationStyle(command);
   const kenyaStyle = ruralKenyaCommunicationStyle(command);
   text = text
     .replace(/\bworkflow\b/gi, "step")
@@ -7679,9 +7729,17 @@ function ruralCommunicationResponseTuning(message = "", options = {}) {
     text = `${before} ${firstQuestion}`.trim();
   }
   if (/\b(i may have heard|heard that wrong|not sure|unclear)\b/i.test(text)) {
-    return kenyaStyle.active
+    return africaStyle.active
+      ? "I may have heard only part of that. Say one word: health, crop, work, learning, map, or medicine."
+      : kenyaStyle.active
       ? "Pole. I may have heard that wrong. Say it again slowly, or say shamba, afya, kazi, masomo, ramani, or dawa."
       : "I may have heard that wrong. Say it again slowly, or say health, crops, work, learning, map, or medicine.";
+  }
+  if (africaStyle.active && !kenyaStyle.active && !/\b(I hear|I may have heard|Tell me|Where are you)\b/.test(text)) {
+    const profile = ruralSpeechProfile(command);
+    if (profile.lowLiteracy || profile.imperfectEnglish || profile.mixedLanguage) {
+      text = `I hear you. ${text}`;
+    }
   }
   if (kenyaStyle.active && !/\b(Pole|Twende|Sawa|Afya kwanza)\b/.test(text)) {
     const profile = ruralSpeechProfile(command);

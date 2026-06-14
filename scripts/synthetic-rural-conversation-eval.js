@@ -177,6 +177,10 @@ const expandedCases = [
   { persona: "pharmacy-cost", prompt: "Nexus medicine cost too much can you help me find support", section: "health", expectAny: [/medicine|pharmacy|support|where/], forbidAny: [/diagnos/], maxWords: 95 },
   { persona: "cold-provider", prompt: "Nexus who treats cold in my area", section: "health", expectAny: [/clinic|doctor|provider|care|where/], forbidAny: [/best doctor is/, /diagnos/], maxWords: 95 },
   { persona: "symptom-unclear", prompt: "Nexus body pain sick what now", section: "health", expectAny: [/safe|health|where|care/], forbidAny: [/diagnos/], maxWords: 90 },
+  { persona: "incomplete-health-baby", prompt: "Nexus baby hot no doctor", section: "health", urgent: true, expectAny: [/baby|safe|where|urgent|doctor|clinic/], forbidAny: [/diagnos/], maxWords: 80 },
+  { persona: "incomplete-medicine-village", prompt: "Nexus medicine finished village far", section: "health", expectAny: [/medicine|clinic|pharmacy|where|health/], forbidAny: [/diagnos/], maxWords: 90 },
+  { persona: "fragment-clinic-map", prompt: "Nexus clinic map near", section: "map", expectAny: [/clinic|map|where|near/], maxWords: 90 },
+  { persona: "fragment-grandma-pain", prompt: "Nexus grandma pain weak", section: "health", urgent: true, expectAny: [/grandma|safe|where|care|urgent/], forbidAny: [/diagnos/], maxWords: 80 },
 
   { persona: "farmer-pest", prompt: "Nexus bugs eating maize leaves what should farmer do", section: "trade", expectAny: [/maize|crop|farm|where|photo|save/], forbidAny: [/guarantee/], maxWords: 95 },
   { persona: "farmer-drought", prompt: "Nexus no rain crop dying help me", section: "trade", urgent: true, expectAny: [/crop|farm|rain|where|save/], maxWords: 95 },
