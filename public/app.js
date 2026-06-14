@@ -62,8 +62,8 @@ let routeTrackingWatchId = null;
 let routeTrackingPoints = [];
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-219";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v199";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-220";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v200";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
 const VOICE_ATTENTION_DELAY_MS = 900;
@@ -8895,8 +8895,71 @@ function renderLaunchSupportPanels() {
   }
 }
 
+function renderGovernmentReadinessPanel() {
+  const panel = $("#governmentReadinessPanel");
+  if (!panel || !data) return;
+  const model = data.governmentReadiness || {};
+  const latest = data.governmentReadinessResult || (data.profile.governmentReadinessRuns || [])[0] || null;
+  const source = latest || model;
+  const impact = source.impact || {};
+  const topRegions = (source.heatmap || []).slice(0, 4);
+  const pilots = (source.pilotRegions || []).slice(0, 3);
+  const compliance = (source.compliance || []).slice(0, 3);
+  const procurement = (source.procurement || []).slice(0, 3);
+  const lowBandwidth = (source.lowBandwidth || []).slice(0, 3);
+  const latestHtml = latest ? `
+    <div>
+      <strong>${translateText(`${latest.runNumber || "Government run"} - ${latest.status || "ready"}`)}</strong>
+      <span>${translateText(latest.summary || source.summary || "Government readiness is ready.")}</span>
+      <small>${translateText(`${latest.action || "review"} | ${latest.activeCountry || source.activeCountry || "Active country"} | ${latest.createdAt ? new Date(latest.createdAt).toLocaleString() : ""}`)}</small>
+    </div>
+  ` : `
+    <div>
+      <strong>${translateText("Government operating view ready")}</strong>
+      <span>${translateText(source.summary || "Build a government pilot, prepare a 90-day report, or open the regional needs map.")}</span>
+      <small>${translateText(`${impact.connectedProviders || 0}/${impact.providerTotal || 0} provider(s), ${impact.countriesTracked || 0} country/region records`)}</small>
+    </div>
+  `;
+  const heatmapHtml = topRegions.map(item => `
+    <div class="${escapeHtml(item.priority || "")}">
+      <strong>${translateText(`${item.country} - ${item.priority} need`)}</strong>
+      <span>${translateText(`Need score ${item.needScore}/100. ${item.focus?.slice(0, 2).join("; ") || "Rural access review ready."}`)}</span>
+      <small>${translateText(`${item.queue || "Queue ready"} | ${item.risk || "risk tracked"} | ${item.facilities || 0} facility record(s)`)}</small>
+    </div>
+  `).join("");
+  const pilotHtml = pilots.map(item => `
+    <div>
+      <strong>${translateText(`Pilot phase ${item.phase}: ${item.country}`)}</strong>
+      <span>${translateText((item.first30Days || []).slice(0, 2).join(" "))}</span>
+      <small>${translateText((item.successMetrics || []).slice(0, 2).join(" | "))}</small>
+    </div>
+  `).join("");
+  const complianceHtml = compliance.map(item => `
+    <div>
+      <strong>${translateText(`${item.title} - ${item.status}`)}</strong>
+      <span>${translateText(item.detail)}</span>
+    </div>
+  `).join("");
+  const lowBandwidthHtml = lowBandwidth.map(item => `<div><strong>${translateText("Low-bandwidth proof")}</strong><span>${translateText(item)}</span></div>`).join("");
+  const procurementHtml = procurement.map(item => `
+    <div>
+      <strong>${translateText(item.title)}</strong>
+      <span>${translateText(item.detail)}</span>
+      <small>${translateText(item.feeModel)}</small>
+    </div>
+  `).join("");
+  panel.innerHTML = [
+    latestHtml,
+    heatmapHtml,
+    pilotHtml,
+    complianceHtml,
+    lowBandwidthHtml,
+    procurementHtml
+  ].filter(Boolean).join("") || `<div><strong>${translateText("Government readiness")}</strong><span>${translateText("Ready to create public-sector evidence.")}</span></div>`;
+}
+
 function applyPermissions() {
-  $$("[data-workflow], [data-ai], [data-workforce], [data-health], [data-pay], [data-module-test], [data-command-preset], [data-pilot-scenario], [data-persona], [data-simple-command], [data-simple-section], [data-simple-pilot], [data-simple-demo], [data-simple-mission], [data-simple-action], .provider-test, #adminHealthCheck, #liveServiceCheckBtn, #liveServiceCheckFromIntegrations, #aiConsoleRun, #agentPlanBtn, #agentExecuteBtn, #agentBriefingBtn, #agentMissionBtn, #missionResumeBtn, #missionAutopilotBtn, #cloudAgentRunBtn, #cloudAgentTickBtn, #cloudAgentApproveBtn, #cloudAgentTemplateBtn, #runCollectiveIntelligenceBtn, #runFrontierBrainBtn, #demoRunBtn, #wowDemoBtn, #remoteLaunchKitBtn, #startOnboardingBtn, #openSupportBtn, #inviteSubscriberBtn, #addTestUserBtn, #addAdminUserBtn, [data-ai-review], [data-notify], #voiceListenBtn, #voiceRunBtn, #voiceFirstBtn, #voiceSpeakBtn, #voiceHelpBtn, #globalListenBtn, #globalRunBtn, #globalYesBtn, #globalNoBtn, #globalReadBtn, #globalVoiceHelpBtn, #globalInstallBtn, #jarvisListenBtn, #jarvisRunBtn, #jarvisMissionBtn, #jarvisReadBtn").forEach(element => {
+  $$("[data-workflow], [data-ai], [data-workforce], [data-health], [data-pay], [data-module-test], [data-command-preset], [data-pilot-scenario], [data-government-action], [data-persona], [data-simple-command], [data-simple-section], [data-simple-pilot], [data-simple-demo], [data-simple-mission], [data-simple-action], .provider-test, #adminHealthCheck, #liveServiceCheckBtn, #liveServiceCheckFromIntegrations, #aiConsoleRun, #agentPlanBtn, #agentExecuteBtn, #agentBriefingBtn, #agentMissionBtn, #missionResumeBtn, #missionAutopilotBtn, #cloudAgentRunBtn, #cloudAgentTickBtn, #cloudAgentApproveBtn, #cloudAgentTemplateBtn, #runCollectiveIntelligenceBtn, #runFrontierBrainBtn, #demoRunBtn, #wowDemoBtn, #remoteLaunchKitBtn, #startOnboardingBtn, #openSupportBtn, #inviteSubscriberBtn, #addTestUserBtn, #addAdminUserBtn, [data-ai-review], [data-notify], #voiceListenBtn, #voiceRunBtn, #voiceFirstBtn, #voiceSpeakBtn, #voiceHelpBtn, #globalListenBtn, #globalRunBtn, #globalYesBtn, #globalNoBtn, #globalReadBtn, #globalVoiceHelpBtn, #globalInstallBtn, #jarvisListenBtn, #jarvisRunBtn, #jarvisMissionBtn, #jarvisReadBtn").forEach(element => {
     const area = element.dataset.workflow
       || (element.dataset.ai ? "ai" : null)
       || (element.dataset.workforce ? "workforce" : null)
@@ -8905,6 +8968,7 @@ function applyPermissions() {
       || (element.dataset.moduleTest ? "integrations" : null)
       || (element.dataset.commandPreset ? "ai" : null)
       || (element.dataset.pilotScenario ? "ai" : null)
+      || (element.dataset.governmentAction ? "ai" : null)
       || (element.dataset.persona ? "ai" : null)
       || (element.dataset.simpleCommand ? "ai" : null)
       || (element.dataset.simpleSection ? element.dataset.simpleSection : null)
@@ -11854,6 +11918,7 @@ function render() {
 
   renderWorkflowBoards(country, route);
   renderLaunchSupportPanels();
+  renderGovernmentReadinessPanel();
 
   $("#profileGrid").innerHTML = [
     ["Learning", `${data.profile.completedCourses.length} completed, ${data.profile.quizScore} quiz score, ${data.profile.certificates.length} certificate(s), ${data.profile.learningHours || 0} learning hour(s).`],
@@ -18718,6 +18783,35 @@ async function runLocalPilotScenario(event) {
   goSection("dashboard");
 }
 
+async function runGovernmentReadinessAction(eventOrAction) {
+  const button = eventOrAction?.currentTarget || eventOrAction?.target?.closest?.("[data-government-action]") || null;
+  const action = typeof eventOrAction === "string" ? eventOrAction : (button?.dataset?.governmentAction || "pilot");
+  const label = action === "report" ? "Preparing 90-day government report..."
+    : action === "heatmap" ? "Opening regional needs map..."
+    : "Building government pilot...";
+  const panel = $("#governmentReadinessPanel");
+  if (panel) panel.innerHTML = `<div><strong>${translateText(label)}</strong><span>${translateText("Nexus is organizing impact, pilot regions, data sovereignty, compliance, low-bandwidth proof, and procurement evidence.")}</span></div>`;
+  try {
+    data = await request("/api/government/readiness", { method: "POST", body: { action } });
+    render();
+    if (action === "heatmap") {
+      goSection("map");
+      setTimeout(() => renderMap(), 80);
+    } else {
+      goSection("dashboard");
+    }
+    const result = data.governmentReadinessResult || data.governmentReadiness || {};
+    const message = result.summary || "Government readiness evidence is ready.";
+    updateNexusBehaviorLayer("ready", message);
+    setVoiceResponse(message, true);
+    toast(action === "report" ? "Government report prepared" : action === "heatmap" ? "Regional needs map opened" : "Government pilot built");
+  } catch (error) {
+    if (panel) panel.innerHTML = `<div><strong>${translateText("Government readiness needs attention")}</strong><span>${escapeHtml(error.message || "The workflow could not run yet.")}</span></div>`;
+    updateNexusBehaviorLayer("ready", error.message || "Government readiness needs attention.");
+    toast(error.message);
+  }
+}
+
 async function runRemoteLaunchKit() {
   await mutate("/api/pilot/remote-launch-kit", {}, "Remote rural farmer launch kit created");
   goSection("dashboard");
@@ -19488,6 +19582,13 @@ function bindStatic() {
       runLiveInvestorDemoMode();
       return;
     }
+    const governmentActionButton = event.target.closest("[data-government-action]");
+    if (governmentActionButton) {
+      event.preventDefault();
+      event.stopPropagation();
+      runGovernmentReadinessAction(event);
+      return;
+    }
     if (event.target.closest("#globalCloseBtn") || event.target.closest("#globalBackBtn") || event.target.closest("#jarvisCloseBtn")) {
       event.preventDefault();
       event.stopPropagation();
@@ -19892,6 +19993,9 @@ function bindStatic() {
   });
   $$("[data-pilot-scenario]").forEach(button => {
     button.onclick = runLocalPilotScenario;
+  });
+  $$("[data-government-action]").forEach(button => {
+    button.onclick = runGovernmentReadinessAction;
   });
   const remoteLaunchKitBtn = $("#remoteLaunchKitBtn");
   if (remoteLaunchKitBtn) remoteLaunchKitBtn.onclick = runRemoteLaunchKit;

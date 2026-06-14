@@ -2503,6 +2503,7 @@ function publicState(db, user) {
     ecosystemIntelligence: ecosystemIntelligenceModel(db, user, providers),
     executiveIntelligence: executiveIntelligenceSuiteModel(db, user, providers),
     autonomousOrchestration: autonomousOrchestrationModel(db, user, providers),
+    governmentReadiness: governmentReadinessModel(db, user, providers),
     sessionBriefing: sessionBriefingModel(db, user, providers),
     impactDashboard: impactDashboardModel(db, providers),
     missionTimeline: missionTimelineModel(db),
@@ -2515,6 +2516,159 @@ function publicState(db, user) {
     admin: adminSnapshot(db, providers),
     profile: db.profile
   };
+}
+
+function governmentReadinessModel(db, user, providers = runtimeProviders(db), options = {}) {
+  ensureLearningProfile(db.profile);
+  ensureWorkforceProfile(db.profile);
+  ensureHealthProfile(db.profile);
+  ensureTradeProfile(db.profile);
+  ensureAiProfile(db.profile);
+  ensureCommunicationProfile(db.profile);
+  ensureOperationsProfile(db.profile);
+  const countries = (db.countries || []).filter(Boolean);
+  const active = activeContext(db);
+  const connectedProviders = providers.filter(provider => provider.status === "connected").length;
+  const providerNames = providers.filter(provider => provider.status === "connected").slice(0, 6).map(provider => provider.name || provider.id);
+  const evidenceCount = (db.profile.integrationEvents || []).length
+    + (db.profile.agentCommands || []).length
+    + (db.profile.healthIntakes || []).length
+    + (db.profile.orders || []).length
+    + (db.profile.applications || []).length
+    + (db.profile.enrollments || []).length;
+  const heatmap = countries.map(country => {
+    const riskText = `${country.risk || ""} ${country.queue || ""}`.toLowerCase();
+    const healthScore = riskText.includes("high") || riskText.includes("critical") ? 92 : riskText.includes("moderate") ? 68 : 44;
+    const accessGap = Math.max(24, Math.min(95, 100 - Number(country.facilities || 0) * 3 + Math.round(Number(country.patients || 0) / 25000)));
+    const learningGap = Math.max(22, Math.min(88, 54 + Math.round(Number(country.heat || 28) / 3)));
+    const tradeNeed = Math.max(30, Math.min(90, 42 + ((country.products || []).length * 8) + (country.routeId === active.route.id ? 12 : 0)));
+    const needScore = Math.round((healthScore * 0.34) + (accessGap * 0.26) + (learningGap * 0.18) + (tradeNeed * 0.22));
+    return {
+      countryId: country.id,
+      country: country.name,
+      region: country.region || "Africa",
+      queue: country.queue,
+      risk: country.risk,
+      facilities: country.facilities,
+      patients: country.patients,
+      heat: country.heat,
+      needScore,
+      priority: needScore >= 82 ? "highest" : needScore >= 68 ? "high" : needScore >= 52 ? "moderate" : "watch",
+      focus: [
+        healthScore >= 68 ? "mobile clinics and pharmacy access" : "preventive health access",
+        accessGap >= 68 ? "low-bandwidth field intake" : "provider coordination",
+        tradeNeed >= 68 ? "farmer trade route support" : "training and workforce readiness"
+      ]
+    };
+  }).sort((a, b) => b.needScore - a.needScore);
+  const pilotRegions = heatmap.slice(0, 4).map((item, index) => ({
+    phase: index + 1,
+    country: item.country,
+    priority: item.priority,
+    focus: item.focus,
+    first30Days: [
+      "Register local field coordinators and mobile clinic contacts.",
+      "Run voice-first intake, learning, workforce, trade, map, and pharmacy-access proof.",
+      "Collect auditable evidence from each workflow."
+    ],
+    successMetrics: [
+      "Patients routed to nearest care resource or mobile clinic.",
+      "Learners started and certificates issued.",
+      "Farmers matched to buyer/logistics route evidence.",
+      "Provider gaps documented for government procurement."
+    ]
+  }));
+  const procurement = [
+    { title: "Government pilot license", detail: "90-day ministry or county pilot with dashboards, evidence exports, training, and support.", feeModel: "pilot setup plus monthly platform fee" },
+    { title: "Mobile clinic operating network", detail: "Clinic intake, route planning, pharmacy-resource requests, receipts, and service evidence.", feeModel: "clinic subscription plus transaction fee where legally allowed" },
+    { title: "Farmer trade and logistics network", detail: "Buyer/seller communication, route tracking, settlement receipts, and AgriNexus platform fee evidence.", feeModel: "transaction fee after buyer/seller transaction completion" },
+    { title: "Learning and workforce readiness", detail: "Course access, certificates, job readiness, role applications, and partner reporting.", feeModel: "seat license, sponsored learner, or workforce partner fee" }
+  ];
+  const compliance = [
+    { title: "Data sovereignty", status: "implementation-ready", detail: "Country-specific hosting, export controls, data retention, and agency access rules can be configured per deployment." },
+    { title: "Healthcare boundary", status: "active guardrail", detail: "Nexus provides access, intake, resource navigation, and plain-language education, not diagnosis or prescribing." },
+    { title: "Payments and trade", status: "provider-ready", detail: "Paystack, Flutterwave, mobile money, escrow, settlement, receipts, and transaction fees need country-specific legal review." },
+    { title: "Children and vulnerable users", status: "supervised", detail: "Women and children workflows stay resource-focused, consent-aware, and human-review oriented." }
+  ];
+  const lowBandwidth = [
+    "Voice-first commands and plain-language guidance reduce typing burden.",
+    "Local workflow evidence continues when provider engines are unavailable.",
+    "PWA cache, compact user mode, captions, and offline-ready records support low-connectivity areas.",
+    "SMS, WhatsApp, and phone workflows are provider-ready for rural fallback communication."
+  ];
+  const report = {
+    title: "90-Day Government Pilot Report",
+    audience: "Ministry leaders, county officials, public health partners, agriculture offices, education partners, and funders",
+    sections: [
+      "Rural access baseline and priority regions",
+      "Mobile clinic, pharmacy, and telehealth access evidence",
+      "Women, children, farmer, learner, and workforce support outcomes",
+      "Trade, drone, map, logistics, and payment readiness",
+      "Provider gaps, legal/compliance review, and procurement pathway"
+    ],
+    evidence: [
+      `${evidenceCount} platform evidence item(s) available now`,
+      `${connectedProviders}/${providers.length} provider(s) connected or ready`,
+      `${heatmap.length} country/region readiness record(s) modeled`
+    ]
+  };
+  const model = {
+    id: crypto.randomUUID(),
+    status: connectedProviders >= 5 ? "government-pilot-ready" : "provider-setup-visible",
+    activeCountry: active.country.name,
+    activeRoute: active.route.name,
+    summary: `Government readiness is organized for ${active.country.name} with ${heatmap.length} regional need records, ${pilotRegions.length} pilot region(s), ${connectedProviders}/${providers.length} connected or ready provider(s), and ${evidenceCount} evidence item(s).`,
+    impact: {
+      evidenceCount,
+      connectedProviders,
+      providerTotal: providers.length,
+      providerNames,
+      countriesTracked: heatmap.length,
+      priorityRegions: heatmap.filter(item => item.priority === "highest" || item.priority === "high").length
+    },
+    pilotRegions,
+    report,
+    ministryPartnerMode: {
+      title: "Ministry / Partner Mode",
+      operatingView: "Shows public-sector impact, region gaps, provider setup, compliance guardrails, pilot proof, and procurement options without exposing private admin controls.",
+      partnerRoles: ["Ministry reviewer", "County health lead", "Agriculture extension partner", "Mobile clinic coordinator", "Pharmacy/resource partner", "Funder/investor observer"]
+    },
+    compliance,
+    lowBandwidth,
+    heatmap,
+    procurement,
+    recommendedActions: [
+      "Select one country or county pilot region.",
+      "Invite one mobile clinic partner, one pharmacy/resource partner, and one agriculture extension partner.",
+      "Run a 90-day pilot report every week.",
+      "Use evidence exports for government, NGO, and investor briefings."
+    ],
+    createdAt: new Date().toISOString()
+  };
+  if (options.persist) {
+    db.profile.governmentReadinessRuns = db.profile.governmentReadinessRuns || [];
+    const run = {
+      ...model,
+      action: options.action || "review",
+      runNumber: `AN-GOV-${String(db.profile.governmentReadinessRuns.length + 1).padStart(3, "0")}`,
+      createdBy: user?.email || "system"
+    };
+    db.profile.governmentReadinessRuns.unshift(run);
+    db.profile.governmentReadinessRuns = db.profile.governmentReadinessRuns.slice(0, 20);
+    logIntegration(db, {
+      providerId: "database",
+      module: "Government",
+      action: "government.readiness_reviewed",
+      status: "success",
+      detail: `${run.runNumber} prepared ${run.report.title} with ${run.pilotRegions.length} pilot region(s), sovereignty/compliance review, low-bandwidth proof, and procurement model.`,
+      metadata: { runNumber: run.runNumber, action: run.action, priorityRegions: run.impact.priorityRegions },
+      dispatch: false
+    });
+    addActivity(db.profile, `${run.runNumber} government readiness review completed.`);
+    rememberAgentMemory(db.profile, `Government readiness prepared for ${run.activeCountry}: ${run.summary}`, { source: "government-readiness", category: "pattern", module: "Government", confidence: 0.94 });
+    return run;
+  }
+  return model;
 }
 
 function impactDashboardModel(db, providers = runtimeProviders(db)) {
@@ -19982,10 +20136,14 @@ async function runAgentCommand(db, user, command, options = {}) {
 
   if (lower.includes("briefing") || lower.includes("government") || lower.includes("ministry") || lower.includes("presentation") || lower.includes("report")) {
     const briefing = agentBriefing(db, user, text || "government presentation");
+    const readiness = governmentReadinessModel(db, user, runtimeProviders(db), {
+      persist: true,
+      action: lower.includes("procurement") ? "procurement" : lower.includes("pilot") ? "pilot" : lower.includes("heatmap") || lower.includes("region") ? "heatmap" : "briefing"
+    });
     return {
       intent: "government-briefing",
-      response: `${briefing.title} is ready. Summary: ${briefing.plainLanguageSummary}`,
-      metadata: { briefingId: briefing.id, readiness: briefing.productionReadiness }
+      response: `${briefing.title} is ready. ${readiness.summary} I also prepared the pilot region setup, ministry partner view, data sovereignty and compliance panel, low-bandwidth proof, regional need heatmap, and procurement model.`,
+      metadata: { conversationMode: true, redirectSection: "dashboard", briefingId: briefing.id, readiness: briefing.productionReadiness, governmentReadiness: readiness }
     };
   }
 
@@ -21760,6 +21918,21 @@ async function api(req, res, url) {
     await writeDb(db);
     const state = publicState(db, user);
     state.remoteLaunchKitResult = kit;
+    return send(res, 200, state);
+  }
+
+  if (url.pathname === "/api/government/readiness" && req.method === "POST") {
+    if (!canUse(user, "ai")) return send(res, 403, { error: "Role does not allow government readiness workflows" });
+    const body = await readBody(req);
+    const run = governmentReadinessModel(db, user, runtimeProviders(db), { persist: true, action: body.action || "review" });
+    if (body.action === "report") {
+      const packet = evidenceExportPacket(db, user, "government");
+      run.evidenceExportId = packet.id;
+      run.report.content = packet.content;
+    }
+    await writeDb(db);
+    const state = publicState(db, user);
+    state.governmentReadinessResult = run;
     return send(res, 200, state);
   }
 
