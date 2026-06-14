@@ -3001,8 +3001,11 @@ function assistantBehaviorModel(db, user) {
   const currentPersona = model.currentPersona || "general-operator";
   const communicationStyle = model.communicationStyle || "plain-language-step-by-step";
   const accessibilityMode = model.accessibilityMode || db.profile.accessibilityProfile?.supportMode || "standard";
+  const stakeholderAudience = stakeholderAudienceConversationModel("", user, model);
   const audience = model.currentAudience === "investor-government"
     ? "investors, government leaders, and non-technical decision makers"
+    : stakeholderAudience.active
+      ? stakeholderAudience.audience
     : currentPersona === "farmer-or-trade-operator"
       ? "farmers, crop sellers, buyer coordinators, and field teams"
       : currentPersona === "health-access-user"
@@ -3019,6 +3022,7 @@ function assistantBehaviorModel(db, user) {
     language,
     role,
     audience,
+    stakeholderAudience,
     currentPersona,
     communicationStyle,
     accessibilityMode,
@@ -3040,6 +3044,7 @@ function assistantBehaviorModel(db, user) {
       "Explain actions as everyday tasks like start care, learn a lesson, apply for work, sell crops, or check the farm.",
       "Keep AI actions supervised and explain when human review matters.",
       "Adapt to role, language, accessibility needs, and remembered preferences.",
+      "Adapt to stakeholder audience: government, NGO, farmer, or grandma/elder/patient.",
       "When uncertain, ask one helpful question instead of dumping instructions."
     ],
     lowTechBehaviors: [
@@ -3060,6 +3065,80 @@ function assistantBehaviorModel(db, user) {
       memories: (db.profile.agentMemory.preferences || []).length + (db.profile.agentMemory.longTermFacts || []).length,
       guidedIntakes: (db.profile.agentMemory.conversationalIntakes || []).length
     }
+  };
+}
+
+function stakeholderAudienceConversationModel(command = "", user = {}, model = {}) {
+  const value = String(command || "").toLowerCase().replace(/\s+/g, " ").trim();
+  const savedAudience = String(model.currentAudience || "").toLowerCase();
+  const savedPersona = String(model.currentPersona || "").toLowerCase();
+  let key = "community";
+  const explicitGovernment = /\b(government|ministry|minister|county|district|public sector|policy|procurement|health department|agriculture department|official|regulator|cabinet|mayor)\b/.test(value);
+  const explicitNgo = /\b(ngo|nonprofit|non-profit|field partner|implementing partner|donor|foundation|aid|relief|program officer|community organization|cbo)\b/.test(value);
+  const explicitGrandma = /\b(grandma|grandmother|elder|old person|patient|caregiver|mama|mother|child|family)\b/.test(value);
+  const explicitFarmer = /\b(farmer|farm|crop|field|seller|buyer|cooperative|smallholder|producer|harvest|market)\b/.test(value);
+  if (explicitNgo) key = "ngo";
+  else if (explicitGovernment) key = "government";
+  else if (explicitGrandma) key = "grandma";
+  else if (explicitFarmer) key = "farmer";
+  else if (savedAudience.includes("ngo")) key = "ngo";
+  else if (savedAudience.includes("government")) key = "government";
+  else if (savedPersona.includes("health-access")) key = "grandma";
+  else if (savedPersona.includes("farmer")) key = "farmer";
+  const models = {
+    government: {
+      key: "government",
+      audience: "government leaders, ministry officials, regulators, public-sector buyers, and non-technical decision makers",
+      tone: "clear, accountable, evidence-led, policy-safe, procurement-aware",
+      responseShape: "start with public value, then risk controls, readiness evidence, implementation step, and one decision question",
+      wants: ["national benefit", "regional rollout", "cost-benefit", "data governance", "risk controls", "compliance", "jobs and health impact"],
+      nextQuestion: "Which public outcome matters most right now: health access, farmer income, workforce, learning, or national readiness?"
+    },
+    ngo: {
+      key: "ngo",
+      audience: "NGO leaders, field teams, donors, community organizers, and implementation partners",
+      tone: "field-practical, impact-focused, respectful, measurable, community-first",
+      responseShape: "start with the community need, then field workflow, safeguards, evidence, partner handoff, and one next action",
+      wants: ["beneficiary support", "field logistics", "monitoring and evaluation", "case records", "training", "referral networks", "donor evidence"],
+      nextQuestion: "Which field outcome should we support first: clinic access, farmer support, learning, jobs, or supplies?"
+    },
+    farmer: {
+      key: "farmer",
+      audience: "farmers, smallholder producers, cooperatives, buyers, sellers, and field agents",
+      tone: "plain, practical, respectful, action-first, no jargon",
+      responseShape: "repeat the crop or problem, ask one location/crop question, then guide crop, buyer, route, payment, or field scan",
+      wants: ["crop health", "buyer access", "fair price", "safe route", "payment proof", "drone/simple field advice", "market timing"],
+      nextQuestion: "What crop is it, and are you trying to save it, sell it, or move it?"
+    },
+    grandma: {
+      key: "grandma",
+      audience: "grandma, elders, patients, caregivers, low-literacy users, and families",
+      tone: "gentle, slow, reassuring, safety-first, one question at a time",
+      responseShape: "reflect the need, check safety and location, use simple words, avoid diagnosis, and offer phone, captions, or caregiver help",
+      wants: ["health safety", "medicine help", "clinic location", "read-aloud guidance", "family support", "simple learning", "safe daily choices"],
+      nextQuestion: "Are you safe right now, and where are you?"
+    },
+    community: {
+      key: "community",
+      audience: "rural African communities, families, learners, workers, farmers, patients, NGOs, and public leaders",
+      tone: "warm, plain-language, cross-cultural, non-technical, practical",
+      responseShape: "identify the audience, reflect the need, ask one question, and route to the safest useful workflow",
+      wants: ["health", "crops", "learning", "work", "maps", "communications", "evidence"],
+      nextQuestion: "Who are we helping first: government, NGO, farmer, or grandma?"
+    }
+  };
+  const selected = models[key] || models.community;
+  return {
+    ...selected,
+    active: key !== "community" || Boolean(value),
+    behaviorRules: [
+      "Do not use the same wording for every audience.",
+      "Keep non-technical users away from backend/admin language.",
+      "Give decision makers evidence and controls.",
+      "Give field partners implementation steps and measurable proof.",
+      "Give farmers direct crop, buyer, route, and payment help.",
+      "Give grandma and patients safety-first support without diagnosis."
+    ]
   };
 }
 
@@ -13970,6 +14049,7 @@ function ruralCommunicationSupportModel(command = "", moduleSignal = null, user 
   const value = String(command || "").toLowerCase();
   const moduleName = moduleSignal?.module || conversationModuleSignal(command).module;
   const name = String(user?.name || "").split(/\s+/)[0] || "there";
+  const stakeholderAudience = stakeholderAudienceConversationModel(command, user, {});
   const africaStyle = ruralAfricaConversationModel(command, user);
   const kenyaStyle = ruralKenyaCommunicationModel(command, user);
   const models = {
@@ -14021,6 +14101,7 @@ function ruralCommunicationSupportModel(command = "", moduleSignal = null, user 
     userName: name,
     module: moduleName,
     ...selected,
+    stakeholderAudience,
     africaStyle,
     kenyaStyle,
     styleRules: [
@@ -14028,6 +14109,7 @@ function ruralCommunicationSupportModel(command = "", moduleSignal = null, user 
       "Use everyday words.",
       "Ask one question at a time.",
       "Repeat the user's goal in simple language.",
+      `Shape the answer for ${stakeholderAudience.key}: ${stakeholderAudience.responseShape}.`,
       "If unsure, ask a gentle clarification instead of forcing a menu.",
       "Offer voice, captions, slower speech, and local language support.",
       africaStyle.active ? "For rural Africa, accept incomplete sentences, fragments, mixed language, and repeated attempts without shame." : null,
@@ -14124,6 +14206,7 @@ function frontierCommunicationIntelligenceModel(command = "", moduleSignal = nul
   const value = String(command || "").toLowerCase().replace(/\s+/g, " ").trim();
   const words = value.split(/\s+/).filter(Boolean);
   const ruralSupport = ruralCommunicationSupportModel(command, moduleSignal, user);
+  const stakeholderAudience = ruralSupport.stakeholderAudience || stakeholderAudienceConversationModel(command, user, {});
   const africaStyle = ruralSupport.africaStyle || ruralAfricaConversationModel(command, user);
   const kenyaStyle = ruralSupport.kenyaStyle || ruralKenyaCommunicationModel(command, user);
   const urgencySignals = [
@@ -14182,6 +14265,7 @@ function frontierCommunicationIntelligenceModel(command = "", moduleSignal = nul
     version: "frontier-rural-communication-v1",
     module: ruralSupport.module,
     audience: ruralSupport.audience,
+    stakeholderAudience,
     likelyNeed: ruralSupport.likelyNeed,
     confidence: Number(confidence.toFixed(2)),
     urgency,
@@ -14199,6 +14283,7 @@ function frontierCommunicationIntelligenceModel(command = "", moduleSignal = nul
     teachBack: `I hear that you may need ${ruralSupport.likelyNeed}.`,
     rules: [
       "Start by reflecting the user's need in simple words.",
+      `Use stakeholder behavior for ${stakeholderAudience.key}: ${stakeholderAudience.tone}.`,
       "Use at most three short sentences before asking for the next detail.",
       "Ask one question at a time.",
       "Prefer local examples: farm, clinic, medicine, job, market, route, lesson.",
@@ -14221,11 +14306,13 @@ function updateConversationUserModel(profile, command) {
   const nameMatch = text.match(/\b(?:my name is|i am|i'm|this is)\s+([A-Z][a-zA-Z'-]{1,30})\b/);
   if (nameMatch) model.name = nameMatch[1];
   if (/\bfarmer|crop|field|buyer|sell|farm\b/.test(lower)) model.currentPersona = "farmer-or-trade-operator";
+  if (/\b(government|ministry|minister|county|district|public sector|policy|procurement|official|regulator)\b/.test(lower)) model.currentAudience = "government";
+  if (/\b(ngo|nonprofit|non-profit|field partner|implementing partner|donor|foundation|aid|relief|community organization|cbo)\b/.test(lower)) model.currentAudience = "ngo";
   if (/\bwomen|woman|mother|mothers|family farm|family agriculture|women farmer|women farmers|children on the farm|youth learning|girls in agriculture|cooperative\b/.test(lower)) model.currentPersona = "women-family-rural-support";
   if (/\bpatient|care|telehealth|doctor|health\b/.test(lower)) model.currentPersona = "health-access-user";
   if (/\blearner|student|training|course|lesson\b/.test(lower)) model.currentPersona = "learner";
   if (/\bjob|workforce|worker|candidate|interview\b/.test(lower)) model.currentPersona = "workforce-candidate";
-  if (/\binvestor|government|ministry|funding|presentation\b/.test(lower)) model.currentAudience = "investor-government";
+  if (/\binvestor|funding|presentation\b/.test(lower)) model.currentAudience = "investor-government";
   if (/\bvoice|speak|talk|listen|microphone|agrinexus|nexus\b/.test(lower)) model.preferredInteraction = "voice-first";
   if (/\bnon technical|non-technical|simple|easy|plain language|low tech|low-tech\b/.test(lower)) model.communicationStyle = "plain-language-step-by-step";
   if (/\b(rural africa|african farmer|grandma|elder|incomplete sentence|broken english|mixed language|pidgin|speak simple|talk simple|village)\b/.test(lower)) model.communicationStyle = "pan-african-rural-plain-language";
@@ -14261,6 +14348,7 @@ function localConversationalAnswer(db, user, command, moduleSignal, memories, op
   const platformMode = options.mode || modeContext.mode || "user";
   const ruralSupport = ruralCommunicationSupportModel(command, moduleSignal, user);
   const frontierCommunication = frontierCommunicationIntelligenceModel(command, moduleSignal, user, options);
+  const stakeholderAudience = ruralSupport.stakeholderAudience || stakeholderAudienceConversationModel(command, user, db.profile.agentMemory.userModel || {});
   const africaStyle = ruralSupport.africaStyle || ruralAfricaConversationModel(command, user);
   const kenyaStyle = ruralSupport.kenyaStyle || ruralKenyaCommunicationModel(command, user);
   const memoryPreview = memories
@@ -14289,7 +14377,30 @@ function localConversationalAnswer(db, user, command, moduleSignal, memories, op
       ? "Investor conversation: I will focus on impact, proof, readiness, rural value, and a clear presentation story."
       : "User conversation: I will keep this simple, voice-first, and one step at a time.";
   db.profile.agentMemory.lastRecommendedAction = next || null;
+  if (stakeholderAudience.key === "government") {
+    return [
+      "For government, the value is public-service delivery with evidence.",
+      `Focus: ${stakeholderAudience.wants.slice(0, 4).join(", ")}.`,
+      moduleSignal.module === "Healthcare" ? "Health guidance stays non-diagnostic and routes people to human care." : base,
+      stakeholderAudience.nextQuestion
+    ].join(" ");
+  }
+  if (stakeholderAudience.key === "ngo") {
+    return [
+      "For an NGO or field partner, Nexus turns community need into a trackable field workflow.",
+      `Focus: ${stakeholderAudience.wants.slice(0, 4).join(", ")}.`,
+      moduleSignal.module === "Healthcare" ? "It can collect access needs, prepare handoff packets, and support clinic, pharmacy, or mobile-clinic routing without diagnosing." : base,
+      stakeholderAudience.nextQuestion
+    ].join(" ");
+  }
   if (platformMode === "user" && (options.openDialog || isOpenDialogConversation(command, options))) {
+    if (stakeholderAudience.key === "grandma") {
+      return [
+        "I hear you.",
+        moduleSignal.module === "Healthcare" ? "I am not a doctor, but I can help you find the safest next care step." : ruralSupport.plainGoal,
+        stakeholderAudience.nextQuestion
+      ].join(" ");
+    }
     if (africaStyle.active && !kenyaStyle.active) {
       return [
         africaStyle.intentOpeners[moduleSignal.module] || africaStyle.intentOpeners.Platform,
@@ -14329,6 +14440,7 @@ async function conversationalReasoningResponse(db, user, command, options = {}) 
   const openDialog = isOpenDialogConversation(command, options);
   const ruralSupport = ruralCommunicationSupportModel(command, moduleSignal, user);
   const frontierCommunication = frontierCommunicationIntelligenceModel(command, moduleSignal, user, options);
+  const stakeholderAudience = ruralSupport.stakeholderAudience || stakeholderAudienceConversationModel(command, user, db.profile.agentMemory.userModel || {});
   const africaStyle = ruralSupport.africaStyle || ruralAfricaConversationModel(command, user);
   const kenyaStyle = ruralSupport.kenyaStyle || ruralKenyaCommunicationModel(command, user);
   const { country, route } = activeContext(db);
@@ -14371,6 +14483,7 @@ async function conversationalReasoningResponse(db, user, command, options = {}) 
                 modeInstructions[platformMode] || modeInstructions.user,
                 "You are not limited to a menu. Treat unknown phrases as open dialog: infer the human problem, answer what you can, and ask one useful clarifying question if needed.",
                 "For low-digital-literacy users, avoid menus and technical labels. Speak like a trusted guide.",
+                `Stakeholder audience model: ${stakeholderAudience.key}; audience is ${stakeholderAudience.audience}; tone is ${stakeholderAudience.tone}; response shape is ${stakeholderAudience.responseShape}; next question is ${stakeholderAudience.nextQuestion}`,
                 `Rural communication model: audience is ${ruralSupport.audience}; likely need is ${ruralSupport.likelyNeed}; plain goal is ${ruralSupport.plainGoal}`,
                 `Rural Africa communication style: ${africaStyle.style}. ${africaStyle.policy} ${africaStyle.active ? `Fragment examples: ${africaStyle.examples.join(" | ")}` : ""}`,
                 africaStyle.active && moduleSignal.module === "Healthcare" ? `Medical fragment safety: ${africaStyle.medicalSafety.boundary} First ask: ${africaStyle.medicalSafety.firstQuestion}. Danger signs: ${africaStyle.medicalSafety.dangerSigns.join(", ")}.` : "",
@@ -14387,7 +14500,7 @@ async function conversationalReasoningResponse(db, user, command, options = {}) 
                 "End with one clear next step the user can say, but do not force a yes/no workflow unless the user clearly asked you to execute."
               ].join(" ")
             },
-            { role: "user", content: JSON.stringify({ command, moduleSignal, country, route, checkpoint: db.profile.activeCheckpoint, profileSummary, memories, reasoning, ruralSupport, frontierCommunication, ruralAfricaCommunication: africaStyle, ruralKenyaCommunication: kenyaStyle, platformMode, modeContext }) }
+            { role: "user", content: JSON.stringify({ command, moduleSignal, country, route, checkpoint: db.profile.activeCheckpoint, profileSummary, memories, reasoning, ruralSupport, frontierCommunication, stakeholderAudience, ruralAfricaCommunication: africaStyle, ruralKenyaCommunication: kenyaStyle, platformMode, modeContext }) }
           ],
           max_output_tokens: 360
         })
@@ -14423,7 +14536,7 @@ async function conversationalReasoningResponse(db, user, command, options = {}) 
     module: "AI",
     action: "agent.conversation_brain_answered",
     detail: `Conversation brain answered in ${moduleSignal.module}.`,
-    metadata: { provider, command, module: moduleSignal.module, memoriesUsed: memories.map(item => item.id).filter(Boolean), reasoning, reasoningLanguageProduction, ruralSupport, frontierCommunication, ruralAfricaCommunication: africaStyle, ruralKenyaCommunication: kenyaStyle },
+    metadata: { provider, command, module: moduleSignal.module, memoriesUsed: memories.map(item => item.id).filter(Boolean), reasoning, reasoningLanguageProduction, ruralSupport, frontierCommunication, stakeholderAudience, ruralAfricaCommunication: africaStyle, ruralKenyaCommunication: kenyaStyle },
     dispatch: false
   });
   const shouldStage = options.conversational && !openDialog && isActionRequest(lower) && moduleSignal.section !== "dashboard";
@@ -15443,6 +15556,7 @@ function activeOutcomeLoopBrief(db) {
 function buildConversationTurnCoach(db, user, command, result = {}) {
   ensureAiProfile(db.profile);
   const behavior = assistantBehaviorModel(db, user);
+  const stakeholderAudience = result.metadata?.stakeholderAudience || behavior.stakeholderAudience || stakeholderAudienceConversationModel(command, user, db.profile.agentMemory.userModel || {});
   const intent = String(result.intent || "");
   const status = String(result.status || "");
   const section = result.metadata?.redirectSection || conversationModuleSignal(command).section || "dashboard";
@@ -15458,6 +15572,12 @@ function buildConversationTurnCoach(db, user, command, result = {}) {
   } else if (intent.includes("clarification_started") || intent.includes("voice_recovery")) {
     mode = "clarify";
     nextQuestion = "Choose one option in your own words and I will continue.";
+  } else if (stakeholderAudience.key === "government") {
+    nextQuestion = "Do you want public impact, readiness evidence, cost-benefit, or risk controls next?";
+  } else if (stakeholderAudience.key === "ngo") {
+    nextQuestion = "Do you want field workflow, beneficiary support, evidence, or partner handoff next?";
+  } else if (stakeholderAudience.key === "grandma") {
+    nextQuestion = "Are you safe right now, and where are you?";
   } else if (behavior.accessibilityMode && behavior.accessibilityMode !== "standard") {
     mode = "accessibility";
     nextQuestion = "Do you want me to read this aloud, make it simpler, or continue?";
@@ -15478,6 +15598,7 @@ function buildConversationTurnCoach(db, user, command, result = {}) {
     section,
     nextQuestion,
     persona: behavior.currentPersona,
+    stakeholderAudience: stakeholderAudience.key,
     accessibilityMode: behavior.accessibilityMode,
     outcomeLoop: bridge ? {
       screen: bridge.screen,
@@ -19390,6 +19511,36 @@ async function runAgentCommand(db, user, command, options = {}) {
   }
   const conversational = options.conversational === true;
   if (!text) return { intent: "empty-command", response: "Give me a command and I will route it.", status: "needs-input" };
+  if (/\b(speak|talk|communicate|respond|listen|behave|present)\b.*\b(government|ministry|ngo|field partner|farmer|grandma|elder|patient)\b/.test(lower)
+    || /\b(set|change|switch)\b.*\b(audience|mode|behavior)\b.*\b(government|ministry|ngo|farmer|grandma|elder|patient)\b/.test(lower)) {
+    const stakeholderAudience = stakeholderAudienceConversationModel(text, user, {});
+    const model = db.profile.agentMemory.userModel || {};
+    if (stakeholderAudience.key === "government") model.currentAudience = "government";
+    if (stakeholderAudience.key === "ngo") model.currentAudience = "ngo";
+    if (stakeholderAudience.key === "farmer") model.currentPersona = "farmer-or-trade-operator";
+    if (stakeholderAudience.key === "grandma") model.currentPersona = "health-access-user";
+    model.communicationStyle = stakeholderAudience.key === "grandma" ? "pan-african-rural-plain-language" : `${stakeholderAudience.key}-stakeholder-guided`;
+    model.preferredInteraction = "voice-first";
+    model.lastSeenAt = new Date().toISOString();
+    db.profile.agentMemory.userModel = model;
+    rememberAgentMemory(db.profile, `Nexus stakeholder audience set to ${stakeholderAudience.key}: ${stakeholderAudience.responseShape}.`, { source: "stakeholder-audience-command", category: "preference", module: "Agent AI", confidence: 0.94 });
+    return {
+      intent: "conversation.stakeholder_audience_enabled",
+      response: `Yes. I will speak for the ${stakeholderAudience.key} audience. ${stakeholderAudience.responseShape} ${stakeholderAudience.nextQuestion}`,
+      status: "completed",
+      metadata: {
+        conversationMode: true,
+        redirectSection: options.modeContext?.section || (stakeholderAudience.key === "government" || stakeholderAudience.key === "ngo" ? "dashboard" : "agent"),
+        stakeholderAudience,
+        frontierCommunication: {
+          communicationMode: `${stakeholderAudience.key}-stakeholder-guided`,
+          nextQuestion: stakeholderAudience.nextQuestion,
+          confidence: 0.94,
+          urgency: "normal"
+        }
+      }
+    };
+  }
   if (/\b(speak|talk|communicate|respond|listen)\b.*\b(rural africa|african farmer|african grandma|grandma|elder|village farmer|farmer language|plain village|incomplete sentence|broken english|mixed language)\b/.test(lower)
     || /\b(talk like|speak like)\b.*\b(grandma|farmer|rural africa|african)\b/.test(lower)) {
     const africaStyle = ruralAfricaConversationModel(text, user);

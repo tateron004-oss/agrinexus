@@ -423,8 +423,8 @@ assert(app.includes("Stopped. Ask me the next question or tell me where to go ne
 assert(styles.includes("pointer-events: none") && styles.includes(".user-caption-actions") && styles.includes("pointer-events: auto"), "Caption panel must not block workflow action clicks");
 assert(styles.includes("width: min(300px, calc(100vw - 24px))") && styles.includes("max-height: 138px"), "Caption panel must default to a small bubble");
 assert(styles.includes(".user-caption-panel.expanded") && styles.includes("display: none") && styles.includes("display: grid"), "Caption input controls must appear only in expanded caption mode");
-assert(html.includes("nexus-behavior-224"), "Index must force browsers to load Nexus behavior CSS");
-assert(html.includes("nexus-behavior-224"), "Index must force browsers to load Nexus behavior JS");
+assert(html.includes("nexus-behavior-225"), "Index must force browsers to load Nexus behavior CSS");
+assert(html.includes("nexus-behavior-225"), "Index must force browsers to load Nexus behavior JS");
 assert(html.includes("governmentReadinessPanel") && html.includes('data-government-action="pilot"') && html.includes('data-government-action="report"') && html.includes('data-government-action="heatmap"'), "Dashboard needs government readiness actions for public-sector pilots");
 assert(app.includes("function renderGovernmentReadinessPanel") && app.includes("function runGovernmentReadinessAction") && app.includes("data-government-action"), "Frontend must render and run public-sector readiness actions");
 assert(server.includes("function governmentReadinessModel") && server.includes("/api/government/readiness") && server.includes("government.readiness_reviewed"), "Backend must persist and audit government readiness evidence");
@@ -538,6 +538,7 @@ assert(server.includes("function isCurrentKnowledgeQuestion"), "Backend must det
 assert(server.includes("function isOpenDialogConversation"), "Backend must detect open-dialog conversation beyond hard-coded command phrases");
 assert(server.includes("function ruralCommunicationSupportModel"), "Backend must shape conversation for rural farmers, patients, learners, workers, and elders");
 assert(server.includes("Ask one question at a time."), "Rural communication model must enforce one-question-at-a-time guidance");
+assert(server.includes("function stakeholderAudienceConversationModel") && server.includes("government leaders, ministry officials") && server.includes("NGO leaders, field teams") && server.includes("Give grandma and patients safety-first support"), "Backend must adapt Nexus conversation for government, NGO, farmer, and grandma audiences");
 assert(server.includes("function ruralAfricaConversationModel") && server.includes("pan-african-rural-plain-language") && server.includes("Medical users may speak in fragments"), "Backend must support pan-African incomplete-sentence medical and rural conversation");
 assert(server.includes("function ruralKenyaCommunicationModel") && server.includes("rural-kenya-plain-kiswahili") && server.includes("not a fake accent"), "Backend must support rural Kenya/Kiswahili plain-language communication without fake dialect");
 assert(server.includes("function frontierCommunicationIntelligenceModel"), "Backend needs a frontier communication model for urgency, confidence, language, accessibility, and next-best question");
