@@ -2596,6 +2596,61 @@ function governmentReadinessModel(db, user, providers = runtimeProviders(db), op
     "PWA cache, compact user mode, captions, and offline-ready records support low-connectivity areas.",
     "SMS, WhatsApp, and phone workflows are provider-ready for rural fallback communication."
   ];
+  const pilotStory = {
+    title: "Kenya Rural Health, Farmer Trade, And Learning Pilot",
+    region: "Nairobi county edge, Kiambu rural corridor, and connected farm communities",
+    plainLanguagePitch: "Start with one rural corridor where patients need mobile clinic access, farmers need buyer/logistics support, and families need simple learning and workforce pathways.",
+    whyThisWorksBeforeProviders: "AgriNexus can run the full workflow with local pilot records, voice guidance, maps, receipts, reports, and provider-gap evidence before signed vendors are connected.",
+    dayInLife: [
+      "A patient speaks symptoms or access needs; Nexus opens intake, explains it is not a diagnosis, and routes the person to a clinic or mobile clinic resource.",
+      "A farmer asks to sell crops; Nexus creates a trade path, shows route context, prepares buyer communication, and tracks transaction evidence.",
+      "A learner starts a course; Nexus guides the lesson, records progress, and connects the skill to workforce readiness.",
+      "A ministry or NGO reviewer sees impact, gaps, pilot proof, cost model, and next provider steps in one report."
+    ]
+  };
+  const demoDataPack = {
+    label: "Preloaded realistic pilot data",
+    status: "ready-for-demo",
+    records: [
+      { type: "mobile clinic", count: 3, example: "Kiambu Mobile Clinic Route A", purpose: "show clinic contact, intake queue, route, and callback workflow" },
+      { type: "pharmacy/resource point", count: 4, example: "Rural Pharmacy Partner Lead", purpose: "show medicine/resource access request and map location workflow" },
+      { type: "farmer/seller", count: 5, example: "Maize cooperative seller", purpose: "show crop sale, buyer message, route tracking, and receipt proof" },
+      { type: "buyer/logistics partner", count: 4, example: "Regional grain buyer", purpose: "show two-way buyer/seller communication and shipment status" },
+      { type: "course", count: (db.courses || []).length, example: (db.courses || [])[0]?.title || "Farm safety and digital trade basics", purpose: "show course selection, lesson progress, quiz, and certificate" },
+      { type: "job role", count: (db.roles || []).length, example: (db.roles || [])[0]?.title || "Mobile clinic assistant", purpose: "show readiness gaps, application, interview, mentor, and shift" },
+      { type: "drone/field scan", count: Math.max(3, (db.profile.droneScans || []).length), example: "Crop stress scan", purpose: "show simple field interpretation and recommended farmer action" }
+    ]
+  };
+  const walkthroughScripts = [
+    { role: "Farmer", say: "Nexus, help me sell my maize and track delivery.", outcome: "Nexus opens crop sale, buyer message, route tracking, payment/receipt path, and next-step guidance." },
+    { role: "Patient", say: "Nexus, I need a clinic near me.", outcome: "Nexus opens rural health access, clinic/mobile clinic resource view, intake, map, and non-diagnostic safety language." },
+    { role: "Learner", say: "Nexus, start my agriculture course.", outcome: "Nexus opens course selection, lesson progress, captions/audio support, quiz, and certificate path." },
+    { role: "Worker", say: "Nexus, help me apply for work.", outcome: "Nexus opens role options, readiness gaps, application record, interview, mentor, and shift workflow." },
+    { role: "Mobile clinic", say: "Nexus, prepare today's patient route and medicine resource list.", outcome: "Nexus opens intake queue, clinic route context, resource request, receipts, and follow-up evidence." },
+    { role: "NGO", say: "Nexus, show the pilot impact and gaps.", outcome: "Nexus summarizes evidence, country gaps, low-bandwidth readiness, partner needs, and next funding actions." },
+    { role: "Investor", say: "Nexus, explain the business model.", outcome: "Nexus explains subscriptions, pilot fees, transaction fees, provider setup, and evidence-backed scale path." },
+    { role: "Ministry leader", say: "Nexus, prepare a government readiness report.", outcome: "Nexus prepares regional need heatmap, pilot plan, compliance boundary, procurement model, and 90-day report." }
+  ];
+  const pilotReadinessChecklist = [
+    { item: "Pilot region selected", status: "ready", detail: pilotStory.region },
+    { item: "Mobile clinic and pharmacy/resource partner targets", status: "ready-to-invite", detail: "Use local directory records until signed providers are connected." },
+    { item: "Learning and workforce demo records", status: "ready", detail: `${(db.courses || []).length} course(s), ${(db.roles || []).length} role(s), and workflow evidence available.` },
+    { item: "Map and route proof", status: "ready", detail: "Live map tiles, route context, global view, and shipment tracking workflow are available; logistics GPS provider still improves precision." },
+    { item: "Voice and translation readiness", status: "ready", detail: "Nexus supports voice-first guidance, captions, multilingual responses, and stop/recovery behavior." },
+    { item: "Legal and safety boundary", status: "ready-for-review", detail: "No diagnosis, no prescribing, no guaranteed jobs, no unapproved payments, and country-specific legal review before scale." },
+    { item: "Provider credential gap list", status: "visible", detail: "Course, job, telehealth/EHR, drone, logistics, payment, SMS/WhatsApp, and map vendor credentials remain tracked." }
+  ];
+  const costBenefit = {
+    title: "Public-Sector Cost Benefit",
+    benefits: [
+      "Reduces paper intake and scattered coordination for mobile clinics and community health teams.",
+      "Creates one evidence trail for health access, learning, workforce, farmer trade, logistics, and partner reporting.",
+      "Supports low-literacy and low-bandwidth users through voice, captions, simple screens, and guided workflows.",
+      "Helps government and NGOs see where provider gaps exist before spending on full integrations."
+    ],
+    monetization: procurement.map(item => `${item.title}: ${item.feeModel}`),
+    investorProof: "The pilot can show usage, workflow completion, partner gaps, transaction evidence, and procurement readiness before live provider contracts are signed."
+  };
   const report = {
     title: "90-Day Government Pilot Report",
     audience: "Ministry leaders, county officials, public health partners, agriculture offices, education partners, and funders",
@@ -2627,6 +2682,8 @@ function governmentReadinessModel(db, user, providers = runtimeProviders(db), op
       priorityRegions: heatmap.filter(item => item.priority === "highest" || item.priority === "high").length
     },
     pilotRegions,
+    pilotStory,
+    demoDataPack,
     report,
     ministryPartnerMode: {
       title: "Ministry / Partner Mode",
@@ -2637,6 +2694,9 @@ function governmentReadinessModel(db, user, providers = runtimeProviders(db), op
     lowBandwidth,
     heatmap,
     procurement,
+    walkthroughScripts,
+    pilotReadinessChecklist,
+    costBenefit,
     recommendedActions: [
       "Select one country or county pilot region.",
       "Invite one mobile clinic partner, one pharmacy/resource partner, and one agriculture extension partner.",
@@ -2759,6 +2819,7 @@ function evidenceExportPacket(db, user, audience = "investor") {
   const impact = impactDashboardModel(db);
   const timeline = missionTimelineModel(db);
   const briefing = sessionBriefingModel(db, user, runtimeProviders(db));
+  const government = governmentReadinessModel(db, user, runtimeProviders(db));
   const lines = [
     "# AgriNexus Evidence Packet",
     "",
@@ -2772,6 +2833,24 @@ function evidenceExportPacket(db, user, audience = "investor") {
     "",
     "## Impact Metrics",
     ...impact.metrics.map(item => `- ${item.label}: ${item.format === "money" ? `$${Number(item.value || 0).toLocaleString()}` : `${item.value}${item.suffix || ""}`} - ${item.detail}`),
+    "",
+    "## Pilot Story",
+    `- ${government.pilotStory.title}: ${government.pilotStory.plainLanguagePitch}`,
+    `- Region: ${government.pilotStory.region}`,
+    `- Before live providers: ${government.pilotStory.whyThisWorksBeforeProviders}`,
+    "",
+    "## Realistic Demo Data",
+    ...government.demoDataPack.records.map(item => `- ${item.type}: ${item.count} record(s) - ${item.example} - ${item.purpose}`),
+    "",
+    "## Role Walkthroughs",
+    ...government.walkthroughScripts.map(item => `- ${item.role}: say "${item.say}" - ${item.outcome}`),
+    "",
+    "## Pilot Readiness Checklist",
+    ...government.pilotReadinessChecklist.map(item => `- ${item.item}: ${item.status} - ${item.detail}`),
+    "",
+    "## Cost Benefit And Monetization",
+    ...government.costBenefit.benefits.map(item => `- ${item}`),
+    ...government.costBenefit.monetization.map(item => `- ${item}`),
     "",
     "## Mission Timeline",
     ...timeline.items.slice(0, 12).map(item => `- ${item.module}: ${item.title} - ${item.detail} (${item.status})`),
@@ -20142,7 +20221,7 @@ async function runAgentCommand(db, user, command, options = {}) {
     });
     return {
       intent: "government-briefing",
-      response: `${briefing.title} is ready. ${readiness.summary} I also prepared the pilot region setup, ministry partner view, data sovereignty and compliance panel, low-bandwidth proof, regional need heatmap, and procurement model.`,
+      response: `${briefing.title} is ready. ${readiness.summary} I also prepared the pilot story, realistic demo data, role walkthroughs, ministry partner view, data sovereignty and compliance panel, low-bandwidth proof, regional need heatmap, procurement model, cost-benefit case, and partner readiness checklist.`,
       metadata: { conversationMode: true, redirectSection: "dashboard", briefingId: briefing.id, readiness: briefing.productionReadiness, governmentReadiness: readiness }
     };
   }

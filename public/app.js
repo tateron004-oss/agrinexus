@@ -62,8 +62,8 @@ let routeTrackingWatchId = null;
 let routeTrackingPoints = [];
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-220";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v200";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-221";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v201";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
 const VOICE_ATTENTION_DELAY_MS = 900;
@@ -8907,6 +8907,11 @@ function renderGovernmentReadinessPanel() {
   const compliance = (source.compliance || []).slice(0, 3);
   const procurement = (source.procurement || []).slice(0, 3);
   const lowBandwidth = (source.lowBandwidth || []).slice(0, 3);
+  const pilotStory = source.pilotStory || {};
+  const demoRecords = (source.demoDataPack?.records || []).slice(0, 5);
+  const walkthroughs = (source.walkthroughScripts || []).slice(0, 4);
+  const checklist = (source.pilotReadinessChecklist || []).slice(0, 5);
+  const costBenefit = source.costBenefit || {};
   const latestHtml = latest ? `
     <div>
       <strong>${translateText(`${latest.runNumber || "Government run"} - ${latest.status || "ready"}`)}</strong>
@@ -8920,6 +8925,13 @@ function renderGovernmentReadinessPanel() {
       <small>${translateText(`${impact.connectedProviders || 0}/${impact.providerTotal || 0} provider(s), ${impact.countriesTracked || 0} country/region records`)}</small>
     </div>
   `;
+  const storyHtml = pilotStory.title ? `
+    <div>
+      <strong>${translateText(pilotStory.title)}</strong>
+      <span>${translateText(pilotStory.plainLanguagePitch || "")}</span>
+      <small>${translateText(`${pilotStory.region || ""} | ${pilotStory.whyThisWorksBeforeProviders || ""}`)}</small>
+    </div>
+  ` : "";
   const heatmapHtml = topRegions.map(item => `
     <div class="${escapeHtml(item.priority || "")}">
       <strong>${translateText(`${item.country} - ${item.priority} need`)}</strong>
@@ -8934,6 +8946,24 @@ function renderGovernmentReadinessPanel() {
       <small>${translateText((item.successMetrics || []).slice(0, 2).join(" | "))}</small>
     </div>
   `).join("");
+  const demoHtml = demoRecords.map(item => `
+    <div>
+      <strong>${translateText(`${item.type}: ${item.example}`)}</strong>
+      <span>${translateText(`${item.count} record(s) ready - ${item.purpose}`)}</span>
+    </div>
+  `).join("");
+  const walkthroughHtml = walkthroughs.map(item => `
+    <div>
+      <strong>${translateText(`${item.role}: "${item.say}"`)}</strong>
+      <span>${translateText(item.outcome)}</span>
+    </div>
+  `).join("");
+  const checklistHtml = checklist.map(item => `
+    <div>
+      <strong>${translateText(`${item.item} - ${item.status}`)}</strong>
+      <span>${translateText(item.detail)}</span>
+    </div>
+  `).join("");
   const complianceHtml = compliance.map(item => `
     <div>
       <strong>${translateText(`${item.title} - ${item.status}`)}</strong>
@@ -8941,6 +8971,13 @@ function renderGovernmentReadinessPanel() {
     </div>
   `).join("");
   const lowBandwidthHtml = lowBandwidth.map(item => `<div><strong>${translateText("Low-bandwidth proof")}</strong><span>${translateText(item)}</span></div>`).join("");
+  const costBenefitHtml = costBenefit.title ? `
+    <div>
+      <strong>${translateText(costBenefit.title)}</strong>
+      <span>${translateText((costBenefit.benefits || []).slice(0, 2).join(" "))}</span>
+      <small>${translateText(costBenefit.investorProof || "")}</small>
+    </div>
+  ` : "";
   const procurementHtml = procurement.map(item => `
     <div>
       <strong>${translateText(item.title)}</strong>
@@ -8950,10 +8987,15 @@ function renderGovernmentReadinessPanel() {
   `).join("");
   panel.innerHTML = [
     latestHtml,
+    storyHtml,
     heatmapHtml,
     pilotHtml,
+    demoHtml,
+    walkthroughHtml,
+    checklistHtml,
     complianceHtml,
     lowBandwidthHtml,
+    costBenefitHtml,
     procurementHtml
   ].filter(Boolean).join("") || `<div><strong>${translateText("Government readiness")}</strong><span>${translateText("Ready to create public-sector evidence.")}</span></div>`;
 }
