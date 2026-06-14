@@ -3286,6 +3286,7 @@ function behaviorFollowUpForResult(result = {}) {
   if (status === "needs-confirmation") return "Say yes to continue, or no to cancel.";
   if (status === "needs-input") return "Tell me the next answer in your own words.";
   if (intent.includes("progress_summary")) return "You can say what should I do next if you want the next guided step.";
+  if (intent.includes("platform_explained")) return "You can ask me to open telehealth, learning, workforce, trade, maps, or voice help.";
   if (intent.includes("platform_guide")) return "You can say the suggested command when you are ready.";
   if (intent.includes("investor_presentation")) return "You can say read this aloud when you want the presentation voiceover.";
   if (intent.includes("ten_item_model")) return "You can test any item by saying its command.";
@@ -3296,6 +3297,7 @@ function adaptiveBehaviorNudge(behavior = {}, result = {}) {
   const status = String(result.status || "");
   const section = String(result.metadata?.redirectSection || result.metadata?.moduleSignal?.section || "").toLowerCase();
   const module = String(result.metadata?.moduleSignal?.module || result.metadata?.module || "").toLowerCase();
+  if (String(result.intent || "").includes("platform_explained")) return behaviorFollowUpForResult(result);
   if (result.metadata?.conversationResilience?.groupSpeechRisk) return "";
   if (status === "needs-confirmation") return "Say yes when you are ready, or no if you want me to stop.";
   if (behavior.accessibilityMode && behavior.accessibilityMode !== "standard") return "I can read this aloud, simplify it, or keep going step by step.";
@@ -3323,6 +3325,7 @@ function suggestedRepliesForResult(result = {}, behavior = {}) {
   if (status === "paused") return ["continue", "repeat that", "take me there"];
   if (behavior.accessibilityMode && behavior.accessibilityMode !== "standard") return ["read it aloud", "make it simpler", "continue"];
   if (intent.includes("open_reasoning")) return ["do the next step", "explain that", "take me there"];
+  if (intent.includes("platform_explained")) return result.metadata?.suggestedReplies || ["open telehealth", "start a course", "sell my crop"];
   if (intent.includes("followup_explained")) return ["yes", "no", "tell me more"];
   if (intent.includes("acknowledged")) return ["do the next step", "what should I do next", "open that"];
   if (intent.includes("workflow_outcome_summary")) return ["do the next step", "explain that", "show evidence"];
@@ -3342,7 +3345,7 @@ function humanizeAgentResult(db, user, result = {}, command = "") {
   if (command) updateConversationUserModel(db.profile, command);
   const behavior = assistantBehaviorModel(db, user);
   const original = String(result.response || "I am ready.");
-  const alreadyNatural = /^(I hear you|Absolutely|Got it|Done|Here is|Welcome|I can|I opened|I created|I submitted|The full intelligent model)/i.test(original);
+  const alreadyNatural = /^(AgriNexus|Nexus|I hear you|Absolutely|Got it|Done|Here is|Welcome|I can|I opened|I created|I submitted|The full intelligent model)/i.test(original);
   const prefix = alreadyNatural ? "" : "Got it. ";
   const followUp = adaptiveBehaviorNudge(behavior, result);
   const suggestedReplies = suggestedRepliesForResult(result, behavior);
@@ -20018,6 +20021,24 @@ async function runAgentCommand(db, user, command, options = {}) {
         ? `${summary.total} long-term memories are active. Strongest areas: ${moduleLine || "general platform"}. User need signals: ${needsLine || "standard support"}. Recent memories: ${memories.map(item => item.text).join(" | ")}`
         : "I do not have long-term memories yet. Say remember, then tell me an important fact or preference.",
       metadata: { memories, longTermMemory: summary }
+    };
+  }
+  if (/\b(what is|what's|explain|describe|tell me about|who are you|what do you do)\b.*\b(agrinexus|agri\s+nexus|nexus|platform)\b/.test(lower)
+    || /\b(agrinexus|agri\s+nexus|nexus)\b.*\b(what is|explain|describe|tell me about|what do you do|who are you)\b/.test(lower)) {
+    db.profile.agentMemory.activeClarification = null;
+    db.profile.agentMemory.activeRecovery = null;
+    db.profile.agentMemory.lastStatus = "platform-explained";
+    db.profile.agentMemory.lastSummary = "AgriNexus platform explanation delivered.";
+    db.profile.agentMemory.updatedAt = new Date().toISOString();
+    return {
+      intent: "conversation.platform_explained",
+      response: "AgriNexus is a voice-guided AI operating platform for rural agriculture, telehealth, learning, workforce, trade, maps, drone intelligence, translation, and provider workflows. Nexus is the assistant inside it: it listens, answers questions, opens the right service, asks before important actions, and guides people one safe step at a time.",
+      status: "completed",
+      metadata: {
+        conversationMode: true,
+        redirectSection: "agent",
+        suggestedReplies: ["start telehealth intake", "sell my crop", "find work", "start a course", "open map"]
+      }
     };
   }
   if (conversational
