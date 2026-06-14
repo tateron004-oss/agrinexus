@@ -3076,32 +3076,75 @@ function conversationResilienceModel(command = "", user = {}, model = {}) {
   const words = value.split(/\s+/).filter(Boolean);
   const savedStyle = String(model.communicationStyle || "").toLowerCase();
   const languageConfidenceRisk = /\b(no english|small english|broken english|bad english|no words|don't know words|dont know words|cannot explain|can't explain|cant explain|my language|translate|mixed language|speak slow|talk slow)\b/.test(value);
+  const multilingualBridgeRisk = /\b(ayuda|aide|preciso|remedio|dawa|magani|oogun|kliniki|likita|daktari|kazi|shamba|soko|mazao|tafadhali|abeg|wahala|dey|sabi|habari|msaada|bonjour|salut|hola|arabic|french|swahili|kiswahili|hausa|yoruba|igbo|amharic|oromo|lingala|portuguese)\b/.test(value);
   const literacyRisk = /\b(no school|not educated|cannot read|can't read|cant read|cannot write|can't write|cant write|illiterate|low literacy|read for me|explain simple|too many words)\b/.test(value)
     || savedStyle.includes("plain-language")
     || savedStyle.includes("rural");
   const fearOrStress = /\b(scared|afraid|fear|panic|worried|confused|i don't know|i dont know|help me|please|urgent|emergency|pain|sick|weak|lost|stuck)\b/.test(value);
   const fragmentSpeech = words.length > 0 && (words.length <= 6 || /\b(thing|bad|help|sick|hot|pain|crop|doctor|medicine|job|map|clinic)\b/.test(value));
-  const medicalFragility = /\b(baby|child|pregnant|elder|grandma|bleeding|breathe|breathing|unconscious|chest pain|fever|very hot|medicine|doctor|clinic|pharmacy|injury|pain|sick)\b/.test(value);
+  const correctionOrMishear = /\b(stop|wrong|misheard|heard wrong|not that|no not|i mean|meant|again|repeat|say again|texas stop|nexis stop|nexus stop)\b/.test(value);
+  const correctedAwayFromHealth = /\b(not doctor|not health|not clinic|not medicine)\b.*\b(crop|farm|maize|cassava|field|buyer|sell|market)\b/.test(value)
+    || /\b(crop|farm|maize|cassava|field|buyer|sell|market)\b.*\b(not doctor|not health|not clinic|not medicine)\b/.test(value);
+  const medicalFragility = !correctedAwayFromHealth && /\b(baby|child|pregnant|elder|grandma|bleeding|breathe|breathing|unconscious|chest pain|fever|very hot|medicine|doctor|clinic|pharmacy|injury|pain|sick|dawa|magani|oogun|remedio|kliniki|daktari|likita)\b/.test(value);
   const userMayBeIndirect = /\b(my mother|my child|my wife|my husband|my family|neighbor|village|community|people here|they said)\b/.test(value);
+  const highConsequence = /\b(medicine|doctor|clinic|pharmacy|child|baby|pregnant|payment|pay|money|wallet|job|apply|legal|police|border|emergency|bleeding|breathe|unconscious)\b/.test(value);
+  const groupSpeechRisk = /\b(people talking|two people|many people|background|noise|crowd|family talking|not talking to you)\b/.test(value);
   const active = Boolean(value)
-    ? languageConfidenceRisk || literacyRisk || fearOrStress || fragmentSpeech || medicalFragility || userMayBeIndirect
+    ? languageConfidenceRisk || multilingualBridgeRisk || literacyRisk || fearOrStress || fragmentSpeech || medicalFragility || userMayBeIndirect || correctionOrMishear || groupSpeechRisk
     : literacyRisk || savedStyle.includes("pan-african-rural");
   const score = Math.min(100, Math.max(20,
     38
     + (languageConfidenceRisk ? 16 : 0)
+    + (multilingualBridgeRisk ? 12 : 0)
     + (literacyRisk ? 16 : 0)
     + (fearOrStress ? 12 : 0)
     + (fragmentSpeech ? 10 : 0)
     + (medicalFragility ? 14 : 0)
     + (userMayBeIndirect ? 8 : 0)
+    + (correctionOrMishear ? 10 : 0)
+    + (highConsequence ? 8 : 0)
   ));
+  const communicationProfile = groupSpeechRisk
+    ? "pause-for-clear-wake-phrase"
+    : correctionOrMishear
+      ? "repair-and-confirm-before-action"
+      : medicalFragility
+        ? "safety-first-health-teachback"
+      : multilingualBridgeRisk || languageConfidenceRisk
+        ? "mixed-language-meaning-bridge"
+        : literacyRisk
+          ? "low-literacy-read-aloud"
+          : fragmentSpeech
+            ? "fragment-to-intent"
+            : "direct-conversation";
+  const confidenceBand = score >= 82 ? "high-resilience-needed" : score >= 60 ? "moderate-resilience-needed" : active ? "light-resilience-needed" : "normal";
+  const supportMoves = [
+    active ? "Repeat the likely meaning before action." : null,
+    active ? "Use one short sentence, then one question." : null,
+    languageConfidenceRisk || multilingualBridgeRisk ? "Accept mixed language and translate the meaning, not just the words." : null,
+    literacyRisk ? "Offer read-aloud, captions, and simple examples." : null,
+    correctionOrMishear ? "Stop the prior path, apologize briefly, and ask the corrected area." : null,
+    groupSpeechRisk ? "Pause instead of guessing when speech may not be directed to Nexus." : null,
+    highConsequence ? "Confirm before health, medicine, payment, job, legal, or contact actions." : null
+  ].filter(Boolean);
+  const nextQuestionByModule = {
+    Healthcare: medicalFragility
+      ? "Is the person breathing, awake, and safe right now, and where are they?"
+      : "Are you asking for a clinic, medicine, a provider call, or safety help?",
+    AgriTrade: "What crop is it, and do you want to save it, sell it, or move it?",
+    Workforce: "What work can you do, and what country or city are you in?",
+    Learning: "What do you want to learn, and should I explain it slowly or read it aloud?",
+    Maps: "Where are you starting, and where do you need to go?",
+    Platform: "Tell me one word first: health, crop, work, learning, map, or medicine."
+  };
   const responseContract = active
     ? [
       "Reflect: say what Nexus thinks the person means in simple words.",
       "Safety: if health or danger appears, ask safety and location first.",
       "Clarify: ask only one question.",
       "Guide: name one next step the user can do or say.",
-      "Respect: never shame grammar, education, accent, or missing details."
+      "Respect: never shame grammar, education, accent, or missing details.",
+      "Repair: if the user corrects Nexus, stop the old path and restate the corrected meaning."
     ]
     : [
       "Answer directly.",
@@ -3109,32 +3152,56 @@ function conversationResilienceModel(command = "", user = {}, model = {}) {
       "Keep provider and safety boundaries clear."
     ];
   return {
-    id: "conversation-resilience-v1",
+    id: "conversation-resilience-v2",
+    lineage: "conversation-resilience-v1",
     active,
     score,
+    confidenceBand,
+    communicationProfile,
     languageConfidenceRisk,
+    multilingualBridgeRisk,
     literacyRisk,
     fearOrStress,
     fragmentSpeech,
     medicalFragility,
     userMayBeIndirect,
+    correctionOrMishear,
+    highConsequence,
+    groupSpeechRisk,
     responseMode: active ? "teach-back-one-question" : "normal-conversation",
-    plainOpening: medicalFragility
+    plainOpening: groupSpeechRisk
+      ? "I hear people talking. I will pause instead of guessing."
+      : correctionOrMishear
+        ? "You are right. I may have heard that wrong. I will stop and reset."
+      : medicalFragility
       ? "I hear health concern. I am not a doctor, but I can help find the safest next step."
       : fragmentSpeech
         ? "I may have heard only part of that. I will go slowly."
         : "I hear you. I will keep this simple.",
-    nextQuestion: medicalFragility
+    nextQuestion: groupSpeechRisk
+      ? "Say Nexus and one clear area when you want me: health, crop, work, learning, map, or medicine."
+      : correctionOrMishear
+        ? "Tell me the corrected area: health, crop, work, learning, map, or medicine."
+      : medicalFragility
       ? "Is the person safe right now, and where are they?"
       : languageConfidenceRisk || literacyRisk
         ? "Tell me one word first: health, crop, work, learning, map, or medicine."
         : "What do you need first?",
+    nextQuestionByModule,
+    supportMoves,
+    conversationRepairScript: [
+      "Stop the current workflow if the user says stop, wrong, or not that.",
+      "Say: I may have heard that wrong.",
+      "Ask for one corrected word or area.",
+      "Do not keep explaining the old workflow."
+    ],
     responseContract,
     safetyRules: [
       "No perfect sentence required.",
       "No shame for education level, accent, mixed language, or incomplete words.",
       "Confirm meaning before sensitive actions.",
-      "Use human/provider review for health, children, medicine, payments, jobs, and legal decisions."
+      "Use human/provider review for health, children, medicine, payments, jobs, and legal decisions.",
+      "When more than one person may be speaking, pause and wait for a clear Nexus wake phrase."
     ]
   };
 }
@@ -3229,6 +3296,7 @@ function adaptiveBehaviorNudge(behavior = {}, result = {}) {
   const status = String(result.status || "");
   const section = String(result.metadata?.redirectSection || result.metadata?.moduleSignal?.section || "").toLowerCase();
   const module = String(result.metadata?.moduleSignal?.module || result.metadata?.module || "").toLowerCase();
+  if (result.metadata?.conversationResilience?.groupSpeechRisk) return "";
   if (status === "needs-confirmation") return "Say yes when you are ready, or no if you want me to stop.";
   if (behavior.accessibilityMode && behavior.accessibilityMode !== "standard") return "I can read this aloud, simplify it, or keep going step by step.";
   if (section === "health" || module.includes("health")) return "You can ask me to start intake, find clinic or pharmacy support, call a provider, add captions, or check safety risk.";
@@ -3278,7 +3346,7 @@ function humanizeAgentResult(db, user, result = {}, command = "") {
   const prefix = alreadyNatural ? "" : "Got it. ";
   const followUp = adaptiveBehaviorNudge(behavior, result);
   const suggestedReplies = suggestedRepliesForResult(result, behavior);
-  const response = `${prefix}${original}${/[.!?]$/.test(original.trim()) ? "" : "."} ${followUp}`;
+  const response = [`${prefix}${original}${/[.!?]$/.test(original.trim()) ? "" : "."}`, followUp].filter(Boolean).join(" ");
   return {
     ...result,
     response,
@@ -14065,7 +14133,7 @@ function conversationModuleSignal(text) {
   }
   const signals = [
     { module: "Women & Family", section: "dashboard", keys: ["women", "woman", "mother", "mothers", "family farm", "family agriculture", "women farmer", "women farmers", "children on the farm", "youth learning", "girls in agriculture", "cooperative"] },
-    { module: "Healthcare", section: "health", keys: ["telehealth", "health", "patient", "care", "doctor", "provider", "clinician", "nurse", "clinic", "mobile clinic", "register", "registration", "mother", "mama", "mi mama", "body pain", "pain", "sick", "what now", "cold", "flu", "cough", "fever", "symptom", "medicine", "pharmacy", "remedio", "outbreak", "ebola", "vitals", "referral", "hearing", "visual", "blind", "deaf"] },
+    { module: "Healthcare", section: "health", keys: ["telehealth", "health", "patient", "care", "doctor", "provider", "clinician", "nurse", "clinic", "mobile clinic", "register", "registration", "mother", "mama", "mi mama", "body pain", "pain", "sick", "what now", "cold", "flu", "cough", "fever", "symptom", "medicine", "pharmacy", "remedio", "dawa", "magani", "oogun", "kliniki", "daktari", "likita", "outbreak", "ebola", "vitals", "referral", "hearing", "visual", "blind", "deaf"] },
     { module: "Learning", section: "learning", keys: ["learning", "training", "course", "lesson", "quiz", "certificate", "learner", "student", "graduate", "graduated", "university", "degree", "captions", "audio guide"] },
     { module: "Workforce", section: "workforce", keys: ["workforce", "work", "job", "jobs", "career", "role", "worker", "candidate", "biochemistry", "biology", "chemistry", "laboratory", "interview", "shift", "mentor", "apply", "hiring", "position", "money", "income"] },
     { module: "AgriTrade", section: "trade", keys: ["agritrade", "trade", "farmer", "crop", "buyer", "sell", "market", "order", "wallet", "payment", "logistics", "drone", "field", "farm", "no rain", "crop dying", "crop bad", "plant sick", "maize bad", "cassava bad", "pest", "disease", "drought", "irrigation", "field moisture", "yellow leaves", "bugs eating"] },
@@ -14487,10 +14555,18 @@ function localConversationalAnswer(db, user, command, moduleSignal, memories, op
     ].join(" ");
   }
   if (resilience.active && platformMode === "user") {
+    if (resilience.groupSpeechRisk) {
+      return [
+        resilience.plainOpening,
+        "I will not act on side conversation.",
+        "Say Nexus with one clear request when you want me."
+      ].join(" ");
+    }
+    const resilienceQuestion = resilience.nextQuestionByModule?.[moduleSignal.module] || resilience.nextQuestion;
     return [
       resilience.plainOpening,
       moduleSignal.module === "Healthcare" ? ruralSupport.safetyRule : ruralSupport.plainGoal,
-      resilience.nextQuestion
+      resilienceQuestion
     ].join(" ");
   }
   if (platformMode === "user" && (options.openDialog || isOpenDialogConversation(command, options))) {
@@ -14584,7 +14660,7 @@ async function conversationalReasoningResponse(db, user, command, options = {}) 
                 modeInstructions[platformMode] || modeInstructions.user,
                 "You are not limited to a menu. Treat unknown phrases as open dialog: infer the human problem, answer what you can, and ask one useful clarifying question if needed.",
                 "For low-digital-literacy users, avoid menus and technical labels. Speak like a trusted guide.",
-                `Conversation resilience model: ${resilience.id}; active ${resilience.active}; score ${resilience.score}; mode ${resilience.responseMode}; contract: ${resilience.responseContract.join(" ")}; safety rules: ${resilience.safetyRules.join(" ")}`,
+                `Conversation resilience model: ${resilience.id}; lineage ${resilience.lineage}; profile ${resilience.communicationProfile}; active ${resilience.active}; score ${resilience.score}; band ${resilience.confidenceBand}; mode ${resilience.responseMode}; support moves: ${resilience.supportMoves.join(" ")}; contract: ${resilience.responseContract.join(" ")}; safety rules: ${resilience.safetyRules.join(" ")}`,
                 `Stakeholder audience model: ${stakeholderAudience.key}; audience is ${stakeholderAudience.audience}; tone is ${stakeholderAudience.tone}; response shape is ${stakeholderAudience.responseShape}; next question is ${stakeholderAudience.nextQuestion}`,
                 `Rural communication model: audience is ${ruralSupport.audience}; likely need is ${ruralSupport.likelyNeed}; plain goal is ${ruralSupport.plainGoal}`,
                 `Rural Africa communication style: ${africaStyle.style}. ${africaStyle.policy} ${africaStyle.active ? `Fragment examples: ${africaStyle.examples.join(" | ")}` : ""}`,
@@ -19783,7 +19859,7 @@ async function runAgentCommand(db, user, command, options = {}) {
   }
   const resilienceRoute = conversationModuleSignal(text);
   const resilience = conversationResilienceModel(text, user, db.profile.agentMemory?.userModel || {});
-  if (conversational && resilience.active && resilienceRoute.section && resilienceRoute.section !== "dashboard") {
+  if (conversational && resilience.active && resilienceRoute.section) {
     return conversationalReasoningResponse(db, user, text, { ...options, openDialog: true });
   }
   const earlyUtilityCommand = await utilityAssistantCommandResponse(db, user, text, lower, options);

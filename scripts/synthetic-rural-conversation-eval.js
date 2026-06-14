@@ -241,7 +241,12 @@ const expandedCases = [
   { persona: "low-literacy-medicine", prompt: "Nexus no school no read medicine help", section: "health", expectAny: [/medicine|health|where|clinic|pharmacy|simple/], forbidAny: [/diagnos/], maxWords: 85 },
   { persona: "fear-caregiver", prompt: "Nexus I scared my mother pain I don't know words", section: "health", urgent: true, expectAny: [/mother|safe|where|health|care|pain/], forbidAny: [/diagnos/], maxWords: 85 },
   { persona: "farmer-no-words", prompt: "Nexus crop bad I don't know words", section: "trade", expectAny: [/crop|farm|where|what|help/], forbidAny: [/guarantee/], maxWords: 85 },
-  { persona: "indirect-village", prompt: "Nexus people here sick no words village far", section: "health", expectAny: [/health|where|village|safe|clinic/], forbidAny: [/diagnos/], maxWords: 85 }
+  { persona: "indirect-village", prompt: "Nexus people here sick no words village far", section: "health", expectAny: [/health|where|village|safe|clinic/], forbidAny: [/diagnos/], maxWords: 85 },
+  { persona: "repair-not-doctor-crop", prompt: "Nexus stop not doctor crop bad maize", section: "trade", expectAny: [/crop|maize|farm|where|save|sell|move/], forbidAny: [/diagnos/], maxWords: 85 },
+  { persona: "mixed-language-medicine", prompt: "Nexus dawa finished grandma weak", section: "health", expectAny: [/medicine|health|grandma|where|clinic|pharmacy/], forbidAny: [/diagnos/], maxWords: 85 },
+  { persona: "group-speech-pause", prompt: "Nexus people talking background not talking to you", section: "dashboard", expectAny: [/pause|nexus|health|crop|work|learning|map|what/], maxWords: 85 },
+  { persona: "high-consequence-payment", prompt: "Nexus buyer paid but money no come should I release crop", section: "trade", expectAny: [/buyer|paid|money|payment|crop|confirm|check/], forbidAny: [/release.*crop.*now/], maxWords: 100 },
+  { persona: "low-literacy-learning-read", prompt: "Nexus read for me lesson too many words", section: "learning", expectAny: [/read|lesson|learn|slow|voice|caption/], maxWords: 90 }
 ];
 
 const cases = [...coreCases, ...expandedCases];
