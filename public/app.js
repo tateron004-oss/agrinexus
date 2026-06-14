@@ -62,8 +62,8 @@ let routeTrackingWatchId = null;
 let routeTrackingPoints = [];
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-222";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v202";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-223";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v203";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
 const VOICE_ATTENTION_DELAY_MS = 900;
@@ -3322,6 +3322,7 @@ function ruralCommunicationBridge(command = "") {
   const heard = String(command || "").replace(/\s+/g, " ").trim();
   const normalized = normalizeRuralSpeechAliases(heard);
   const profile = ruralSpeechProfile(normalized || heard);
+  const kenyaStyle = ruralKenyaCommunicationStyle(heard || normalized);
   const tokens = normalized.split(/\s+/).filter(Boolean);
   const suspectedWakeMishear = /\b(texas|nexas|nexis|nextus|next\s+us|neck\s+sus|neck\s+is|agree\s+nexus|angry\s+nexus)\b/.test(normalizeToolText(heard));
   const shortButUseful = profile.intent !== "general" && tokens.length <= 5;
@@ -3341,11 +3342,53 @@ function ruralCommunicationBridge(command = "") {
     suspectedWakeMishear,
     shortButUseful,
     needsOneQuestion,
+    kenyaStyle,
     intentLabel: intentLabels[profile.intent] || intentLabels.general,
-    response: profile.intent === "general"
+    response: kenyaStyle.active
+      ? ruralKenyaPlainResponse(profile, intentLabels)
+      : profile.intent === "general"
       ? "I may have heard that wrong. Say it again slowly, or say health, crops, work, learning, map, or medicine."
       : `I think you mean ${intentLabels[profile.intent]}. ${profile.nextQuestion}`
   };
+}
+
+function ruralKenyaCommunicationStyle(command = "") {
+  const lower = normalizeToolText(command);
+  const active = /\b(kenya|kenyan|kiswahili|swahili|shamba|mazao|soko|dawa|kliniki|daktari|mama|nyanya|bibi|mtoto|tafadhali|pole|habari|niko|nataka|nahitaji|nisaidie|msaada|bei|mahindi|ngombe|maziwa|matatu|m-pesa|mpesa)\b/.test(lower)
+    || /\b(rural farmer|village farmer|grandma|elder|plain village|speak simple|talk simple|farmer language)\b/.test(lower);
+  return {
+    active,
+    style: active ? "rural-kenya-plain-kiswahili" : "standard",
+    promise: "Respectful plain language for rural Kenya: short sentences, one question at a time, light Kiswahili words with clear meaning, no fake accent.",
+    principles: [
+      "Respect the person first.",
+      "Use short sentences.",
+      "Ask one question at a time.",
+      "Use familiar Kiswahili words only when useful.",
+      "Explain the meaning clearly.",
+      "Do not fake tribal dialects or caricature rural speech."
+    ],
+    phrases: [
+      "Pole. Nimekusikia. Sorry, I hear you.",
+      "Twende hatua moja. Let us go one step.",
+      "Unahitaji nini kwanza? What do you need first?",
+      "Ni shamba, afya, kazi, masomo, au ramani? Is it farm, health, work, learning, or map?",
+      "Nitasema kwa maneno rahisi. I will use simple words."
+    ]
+  };
+}
+
+function ruralKenyaPlainResponse(profile = {}, intentLabels = {}) {
+  const openers = {
+    health: "Pole. Afya kwanza. Health first. Where are you, and do you need clinic, medicine, or phone help?",
+    trade: "Sawa. Tuanze na shamba. Let us start with the farm. What crop is it, and do you want to sell it, move it, or check a problem?",
+    workforce: "Sawa. Let us look for work. What country do you want to work in, and what work can you do?",
+    learning: "Sawa. We will learn slowly. What lesson do you want, and should I read it aloud?",
+    map: "Sawa. Open the route. Where are you starting from, and where do you need to go?",
+    general: "Pole. Nimekusikia. Say it again slowly, or say shamba, afya, kazi, masomo, ramani, or dawa."
+  };
+  if (profile.intent && openers[profile.intent]) return openers[profile.intent];
+  return `Twende hatua moja. I think you mean ${intentLabels[profile.intent] || "help"}. ${profile.nextQuestion || "What do you need first?"}`;
 }
 
 function normalizeImperfectSpeech(command = "") {
@@ -7619,6 +7662,8 @@ function ruralCommunicationResponseTuning(message = "", options = {}) {
   if (!text) return "";
   const lowTechMode = experienceMode === "user" || options.speak || voiceFirstMode;
   if (!lowTechMode || options.allowLongResponse || options.longForm) return text;
+  const command = options.command || agentPerformanceState.lastCommand || conversationModeState.lastQuestion || "";
+  const kenyaStyle = ruralKenyaCommunicationStyle(command);
   text = text
     .replace(/\bworkflow\b/gi, "step")
     .replace(/\bmodule\b/gi, "area")
@@ -7634,7 +7679,15 @@ function ruralCommunicationResponseTuning(message = "", options = {}) {
     text = `${before} ${firstQuestion}`.trim();
   }
   if (/\b(i may have heard|heard that wrong|not sure|unclear)\b/i.test(text)) {
-    return "I may have heard that wrong. Say it again slowly, or say health, crops, work, learning, map, or medicine.";
+    return kenyaStyle.active
+      ? "Pole. I may have heard that wrong. Say it again slowly, or say shamba, afya, kazi, masomo, ramani, or dawa."
+      : "I may have heard that wrong. Say it again slowly, or say health, crops, work, learning, map, or medicine.";
+  }
+  if (kenyaStyle.active && !/\b(Pole|Twende|Sawa|Afya kwanza)\b/.test(text)) {
+    const profile = ruralSpeechProfile(command);
+    if (profile.lowLiteracy || profile.mixedLanguage || /\b(grandma|farmer|kenya|kiswahili|swahili|shamba|dawa|soko)\b/i.test(command)) {
+      text = `Twende hatua moja. ${text}`;
+    }
   }
   return text;
 }
@@ -16125,7 +16178,7 @@ function setVoiceResponse(message, speak = false, options = {}) {
   const token = ++voiceTranslationToken;
   const interruptToken = voiceInterruptToken;
   const rawResponseMessage = speak || options.forceHandoff ? composeJarvisResponse(message, options) : message;
-  const responseMessage = nexusHumanResponsePolicy(rawResponseMessage, { ...options, speak });
+  const responseMessage = nexusHumanResponsePolicy(rawResponseMessage, { ...options, speak, command: options.command || agentPerformanceState.lastCommand || conversationModeState.lastQuestion || "" });
   updateNexusBehaviorLayer(speak ? "speaking" : "ready", responseMessage);
   lastVoiceResponse = responseMessage;
   rememberConversationTurn(agentPerformanceState.lastCommand || conversationModeState.lastQuestion || "", responseMessage);
@@ -18793,7 +18846,7 @@ async function runBackendAgentCommand(command, locationContext = null) {
     recordNexusAutonomousLearning({ type: "agent-completed", command, intent: result.intent || "agent-command" });
     updateNexusAwareness(command, { silent: true });
     updateNexusBehaviorLayer("speaking", result.response || "Done. I am ready for your next step.");
-    setVoiceResponse(result.response || "Done. I am ready for your next step.", true, { handoffText: result.metadata?.turnCoach?.nextQuestion || "", alreadyTranslated: result.metadata?.translatedResponse === true });
+    setVoiceResponse(result.response || "Done. I am ready for your next step.", true, { handoffText: result.metadata?.turnCoach?.nextQuestion || "", alreadyTranslated: result.metadata?.translatedResponse === true, command });
   } catch (error) {
     clearAgentProgressTimers();
     markAgentPerformance("failed", "agent-command-error");

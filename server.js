@@ -13970,6 +13970,7 @@ function ruralCommunicationSupportModel(command = "", moduleSignal = null, user 
   const value = String(command || "").toLowerCase();
   const moduleName = moduleSignal?.module || conversationModuleSignal(command).module;
   const name = String(user?.name || "").split(/\s+/)[0] || "there";
+  const kenyaStyle = ruralKenyaCommunicationModel(command, user);
   const models = {
     Healthcare: {
       audience: "patient, caregiver, elder, or mobile clinic user",
@@ -14019,19 +14020,56 @@ function ruralCommunicationSupportModel(command = "", moduleSignal = null, user 
     userName: name,
     module: moduleName,
     ...selected,
+    kenyaStyle,
     styleRules: [
       "Use short sentences.",
       "Use everyday words.",
       "Ask one question at a time.",
       "Repeat the user's goal in simple language.",
       "If unsure, ask a gentle clarification instead of forcing a menu.",
-      "Offer voice, captions, slower speech, and local language support."
-    ],
-    examples: [
+      "Offer voice, captions, slower speech, and local language support.",
+      kenyaStyle.active ? "For rural Kenya, use respectful Kiswahili/plain Kenyan English support: short sentences, one question, clear meaning, no caricature." : null
+    ].filter(Boolean),
+    localPhrases: kenyaStyle.active ? kenyaStyle.phrases : [],
+    examples: kenyaStyle.active ? [
+      "Pole. Nimekusikia. Sorry, I hear you.",
+      "Twende hatua moja. Let us go one step.",
+      "Unahitaji nini kwanza? What do you need first?"
+    ] : [
       "I understand. Let us take this one step at a time.",
       "Tell me where you are, then I can guide the next step.",
       "I may have heard that wrong. Say it again slowly, or say health, crops, work, learning, or map."
-    ]
+    ],
+    localCommunicationStyle: kenyaStyle.style
+  };
+}
+
+function ruralKenyaCommunicationModel(command = "", user = {}) {
+  const value = String(command || "").toLowerCase().replace(/\s+/g, " ").trim();
+  const userLanguage = String(user?.language || "").toLowerCase();
+  const active = userLanguage === "sw"
+    || /\b(kenya|kenyan|kiswahili|swahili|shamba|mazao|soko|dawa|kliniki|daktari|mama|nyanya|bibi|mtoto|tafadhali|pole|habari|niko|nataka|nahitaji|nisaidie|msaada|bei|mahindi|ngombe|maziwa|matatu|m-pesa|mpesa)\b/.test(value)
+    || /\b(rural farmer|village farmer|grandma|elder|plain village|speak simple|talk simple|farmer language)\b/.test(value);
+  return {
+    active,
+    style: active ? "rural-kenya-plain-kiswahili" : "standard",
+    policy: "Respectful rural Kenya support means Kiswahili/plain Kenyan English, not a fake accent or tribal caricature.",
+    responseShape: active ? "greet gently, reflect need, ask one practical question, explain any Kiswahili word in plain meaning" : "standard plain-language",
+    phrases: [
+      "Pole. Nimekusikia. Sorry, I hear you.",
+      "Twende hatua moja. Let us go one step.",
+      "Unahitaji nini kwanza? What do you need first?",
+      "Ni shamba, afya, kazi, masomo, au ramani? Is it farm, health, work, learning, or map?",
+      "Nitasema kwa maneno rahisi. I will use simple words."
+    ],
+    intentOpeners: {
+      Healthcare: "Pole. Afya kwanza. Where are you, and do you need clinic, medicine, or phone help?",
+      Learning: "Sawa. We will learn slowly. What lesson do you want first?",
+      Workforce: "Sawa. Let us look for work. What country and what work can you do?",
+      AgriTrade: "Sawa. Tuanze na shamba. What crop is it, and do you want to sell, move, or check a problem?",
+      Maps: "Sawa. Tell me the start place and the place you need to reach.",
+      Platform: "Twende hatua moja. Tell me first: health, crops, work, learning, map, or medicine."
+    }
   };
 }
 
@@ -14039,6 +14077,7 @@ function frontierCommunicationIntelligenceModel(command = "", moduleSignal = nul
   const value = String(command || "").toLowerCase().replace(/\s+/g, " ").trim();
   const words = value.split(/\s+/).filter(Boolean);
   const ruralSupport = ruralCommunicationSupportModel(command, moduleSignal, user);
+  const kenyaStyle = ruralSupport.kenyaStyle || ruralKenyaCommunicationModel(command, user);
   const urgencySignals = [
     /\b(emergency|urgent|danger|bleeding|cannot breathe|trouble breathing|chest pain|unconscious|seizure|poison|baby sick|child sick|very hot|dehydrated)\b/.test(value),
     /\b(crop dying|crop bad|plant sick|pest|disease|all crop|harvest failing|buyer waiting|shipment stuck)\b/.test(value),
@@ -14105,6 +14144,8 @@ function frontierCommunicationIntelligenceModel(command = "", moduleSignal = nul
     outcomeNeeded,
     languageSupport: languageSignals ? "translate-or-adapt-language" : "use-current-language",
     accessibilitySupport: accessSignals ? "offer-audio-captions-slower-speech" : "standard",
+    localCommunicationStyle: kenyaStyle.style,
+    localPhrases: kenyaStyle.active ? kenyaStyle.phrases : [],
     teachBack: `I hear that you may need ${ruralSupport.likelyNeed}.`,
     rules: [
       "Start by reflecting the user's need in simple words.",
@@ -14113,8 +14154,9 @@ function frontierCommunicationIntelligenceModel(command = "", moduleSignal = nul
       "Prefer local examples: farm, clinic, medicine, job, market, route, lesson.",
       "Do not punish imperfect grammar or mixed language.",
       "If the user sounds stuck, guide instead of listing menus.",
-      "If there is risk, explain danger signs and route to human help."
-    ],
+      "If there is risk, explain danger signs and route to human help.",
+      kenyaStyle.active ? "For rural Kenya, use light Kiswahili/plain English, one question, clear meaning, and no fake dialect." : null
+    ].filter(Boolean),
     safeguards
   };
 }
@@ -14134,6 +14176,7 @@ function updateConversationUserModel(profile, command) {
   if (/\binvestor|government|ministry|funding|presentation\b/.test(lower)) model.currentAudience = "investor-government";
   if (/\bvoice|speak|talk|listen|microphone|agrinexus|nexus\b/.test(lower)) model.preferredInteraction = "voice-first";
   if (/\bnon technical|non-technical|simple|easy|plain language|low tech|low-tech\b/.test(lower)) model.communicationStyle = "plain-language-step-by-step";
+  if (/\b(kenya|kenyan|kiswahili|swahili|shamba|soko|dawa|kliniki|rural farmer|village farmer|grandma|elder|farmer language|plain village)\b/.test(lower)) model.communicationStyle = "rural-kenya-plain-kiswahili";
   if (/\bread aloud|audio|voice guide|blind|visual|visually impaired|large print|screen reader\b/.test(lower)) model.accessibilityMode = "visual-or-audio-support";
   if (/\bdeaf|hearing impaired|hard of hearing|caption|captions|transcript|sign language\b/.test(lower)) model.accessibilityMode = "hearing-support";
   if (/\blow bandwidth|offline|poor internet|bad internet|no internet|rural signal\b/.test(lower)) model.connectivityMode = "low-bandwidth";
@@ -14165,6 +14208,7 @@ function localConversationalAnswer(db, user, command, moduleSignal, memories, op
   const platformMode = options.mode || modeContext.mode || "user";
   const ruralSupport = ruralCommunicationSupportModel(command, moduleSignal, user);
   const frontierCommunication = frontierCommunicationIntelligenceModel(command, moduleSignal, user, options);
+  const kenyaStyle = ruralSupport.kenyaStyle || ruralKenyaCommunicationModel(command, user);
   const memoryPreview = memories
     .slice(0, 2)
     .map(item => String(item.text || item.response || item.command || "").replace(/\s+/g, " ").trim())
@@ -14192,6 +14236,13 @@ function localConversationalAnswer(db, user, command, moduleSignal, memories, op
       : "User conversation: I will keep this simple, voice-first, and one step at a time.";
   db.profile.agentMemory.lastRecommendedAction = next || null;
   if (platformMode === "user" && (options.openDialog || isOpenDialogConversation(command, options))) {
+    if (kenyaStyle.active) {
+      return [
+        kenyaStyle.intentOpeners[moduleSignal.module] || kenyaStyle.intentOpeners.Platform,
+        ruralSupport.safetyRule,
+        frontierCommunication.nextQuestion
+      ].join(" ");
+    }
     return [
       `${frontierCommunication.teachBack}`,
       frontierCommunication.urgency === "high" ? frontierCommunication.safeguards[0] || ruralSupport.safetyRule : ruralSupport.plainGoal,
@@ -14217,6 +14268,7 @@ async function conversationalReasoningResponse(db, user, command, options = {}) 
   const openDialog = isOpenDialogConversation(command, options);
   const ruralSupport = ruralCommunicationSupportModel(command, moduleSignal, user);
   const frontierCommunication = frontierCommunicationIntelligenceModel(command, moduleSignal, user, options);
+  const kenyaStyle = ruralSupport.kenyaStyle || ruralKenyaCommunicationModel(command, user);
   const { country, route } = activeContext(db);
   const modeContext = options.modeContext || {};
   const platformMode = options.mode || modeContext.mode || "user";
@@ -14258,6 +14310,7 @@ async function conversationalReasoningResponse(db, user, command, options = {}) 
                 "You are not limited to a menu. Treat unknown phrases as open dialog: infer the human problem, answer what you can, and ask one useful clarifying question if needed.",
                 "For low-digital-literacy users, avoid menus and technical labels. Speak like a trusted guide.",
                 `Rural communication model: audience is ${ruralSupport.audience}; likely need is ${ruralSupport.likelyNeed}; plain goal is ${ruralSupport.plainGoal}`,
+                `Rural Kenya communication style: ${kenyaStyle.style}. ${kenyaStyle.policy} ${kenyaStyle.active ? `Useful phrases: ${kenyaStyle.phrases.join(" | ")}` : ""}`,
                 `Use this next-question style when useful: ${ruralSupport.nextQuestion}`,
                 `Safety boundary: ${ruralSupport.safetyRule}`,
                 `Communication rules: ${ruralSupport.styleRules.join(" ")}`,
@@ -14270,7 +14323,7 @@ async function conversationalReasoningResponse(db, user, command, options = {}) 
                 "End with one clear next step the user can say, but do not force a yes/no workflow unless the user clearly asked you to execute."
               ].join(" ")
             },
-            { role: "user", content: JSON.stringify({ command, moduleSignal, country, route, checkpoint: db.profile.activeCheckpoint, profileSummary, memories, reasoning, ruralSupport, frontierCommunication, platformMode, modeContext }) }
+            { role: "user", content: JSON.stringify({ command, moduleSignal, country, route, checkpoint: db.profile.activeCheckpoint, profileSummary, memories, reasoning, ruralSupport, frontierCommunication, ruralKenyaCommunication: kenyaStyle, platformMode, modeContext }) }
           ],
           max_output_tokens: 360
         })
@@ -14306,7 +14359,7 @@ async function conversationalReasoningResponse(db, user, command, options = {}) 
     module: "AI",
     action: "agent.conversation_brain_answered",
     detail: `Conversation brain answered in ${moduleSignal.module}.`,
-    metadata: { provider, command, module: moduleSignal.module, memoriesUsed: memories.map(item => item.id).filter(Boolean), reasoning, reasoningLanguageProduction, ruralSupport, frontierCommunication },
+    metadata: { provider, command, module: moduleSignal.module, memoriesUsed: memories.map(item => item.id).filter(Boolean), reasoning, reasoningLanguageProduction, ruralSupport, frontierCommunication, ruralKenyaCommunication: kenyaStyle },
     dispatch: false
   });
   const shouldStage = options.conversational && !openDialog && isActionRequest(lower) && moduleSignal.section !== "dashboard";
@@ -19273,6 +19326,33 @@ async function runAgentCommand(db, user, command, options = {}) {
   }
   const conversational = options.conversational === true;
   if (!text) return { intent: "empty-command", response: "Give me a command and I will route it.", status: "needs-input" };
+  if (/\b(speak|talk|communicate|respond|listen)\b.*\b(rural kenya|kenyan farmer|kenya farmer|kiswahili farmer|swahili farmer|grandma|elder|village farmer|farmer language|plain village)\b/.test(lower)
+    || /\b(talk like|speak like)\b.*\b(grandma|farmer|rural kenya|kenyan)\b/.test(lower)) {
+    const kenyaStyle = ruralKenyaCommunicationModel(text, { ...user, language: /\b(kiswahili|swahili)\b/.test(lower) ? "sw" : user.language });
+    const model = db.profile.agentMemory.userModel || {};
+    model.communicationStyle = "rural-kenya-plain-kiswahili";
+    model.preferredInteraction = "voice-first";
+    if (/\b(kiswahili|swahili)\b/.test(lower)) model.lastRequestedLanguage = "sw";
+    model.lastSeenAt = new Date().toISOString();
+    db.profile.agentMemory.userModel = model;
+    rememberAgentMemory(db.profile, "Nexus should use respectful rural Kenya plain-language support: short sentences, light Kiswahili, one question at a time, no fake dialect.", { source: "rural-kenya-style-command", category: "preference", module: "Agent AI", confidence: 0.94 });
+    return {
+      intent: "conversation.rural_kenya_style_enabled",
+      response: "Yes. I will use a respectful rural Kenya style: short sentences, one question at a time, and simple Kiswahili words like shamba, soko, dawa, and kliniki when helpful. I will not fake a tribal dialect.",
+      status: "completed",
+      metadata: {
+        conversationMode: true,
+        redirectSection: options.modeContext?.section || "agent",
+        ruralKenyaCommunication: kenyaStyle,
+        frontierCommunication: {
+          communicationMode: "rural-kenya-plain-kiswahili",
+          nextQuestion: "What do you need first: shamba, afya, kazi, masomo, ramani, or dawa?",
+          confidence: 0.93,
+          urgency: "normal"
+        }
+      }
+    };
+  }
   if (conversational && db.profile.agentMemory.activeClarification) {
     const clarified = continueClarification(db, user, text);
     if (clarified) return clarified;
@@ -19355,15 +19435,15 @@ async function runAgentCommand(db, user, command, options = {}) {
   if (earlyActionMemoryCommand) return earlyActionMemoryCommand;
   const earlyReminderCommand = assistantReminderCommandResponse(db, user, text, lower, options);
   if (earlyReminderCommand) return earlyReminderCommand;
+  if (conversational && isRuralDistressConversation(text)) {
+    return conversationalReasoningResponse(db, user, text, { ...options, openDialog: true });
+  }
   const earlyUtilityCommand = await utilityAssistantCommandResponse(db, user, text, lower, options);
   if (earlyUtilityCommand) return earlyUtilityCommand;
   const networkIntelligenceCommand = networkIntelligenceCommandResponse(db, user, text, options);
   if (networkIntelligenceCommand) return networkIntelligenceCommand;
   const operationalIntelligenceCommand = operationalIntelligenceCommandResponse(db, user, text, options);
   if (operationalIntelligenceCommand) return operationalIntelligenceCommand;
-  if (conversational && isRuralDistressConversation(text)) {
-    return conversationalReasoningResponse(db, user, text, { ...options, openDialog: true });
-  }
   const platformIntelligenceCommand = platformIntelligenceCommandResponse(db, user, text, options);
   if (platformIntelligenceCommand) return platformIntelligenceCommand;
   if (isBuyerSellerLocationRouteCommand(lower) || isTradeCountryRouteCommand(lower)) {
