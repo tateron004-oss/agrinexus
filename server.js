@@ -13367,8 +13367,8 @@ function phoneAutoLanguageChoice(text = "") {
 }
 
 function phoneAutoLanguagePrompt(name = "", label = "English") {
-  const greeting = name ? `Hello ${name}. ` : "";
-  return `${greeting}I heard ${label}, so I will use ${label}. How can AgriNexus help you today?`;
+  const greeting = name ? `Hello ${name}, how can I assist you? ` : "How can I assist you? ";
+  return `${greeting}I heard ${label}, so I will use ${label}.`;
 }
 
 function phoneLanguagePrompt(name = "") {
@@ -13377,8 +13377,8 @@ function phoneLanguagePrompt(name = "") {
 }
 
 function phoneCommandPrompt(name = "", label = "English") {
-  const greeting = name ? `Hello ${name}. ` : "";
-  return `${greeting}I will use ${label}. How can AgriNexus help you today?`;
+  const greeting = name ? `Hello ${name}, how can I assist you?` : "How can I assist you?";
+  return `${greeting} I will use ${label}.`;
 }
 
 async function openAiTranscribeAudio({ audioBase64, mimeType = "audio/webm", filename = "agrinexus-voice.webm", language }) {
@@ -22272,7 +22272,8 @@ async function api(req, res, url) {
     await writeDb(db);
     const response = String(result.response || "Command completed.").slice(0, 900);
     const spokenResponse = await phoneVoicePrompt(response, session.locale || language);
-    const nextPrompt = await phoneVoicePrompt("You can say another command, or hang up when finished.", session.locale || language);
+    const nextPromptName = session.callerName ? `${session.callerName}, ` : "";
+    const nextPrompt = await phoneVoicePrompt(`${nextPromptName}you can say another command, or hang up when finished.`, session.locale || language);
     return twimlResponse(res, `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
   ${spokenResponse}
