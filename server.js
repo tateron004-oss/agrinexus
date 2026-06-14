@@ -4237,6 +4237,26 @@ function namedProviderStatus(provider, readyKey, connectedDetail, missingDetail,
   };
 }
 
+function directVendorProviderStatus(provider, { ready, mode, readyDetail, missingDetail, partialDetail = "" }) {
+  if (ready) {
+    return {
+      ...provider,
+      mode,
+      status: "connected",
+      detail: readyDetail
+    };
+  }
+  if (partialDetail) {
+    return {
+      ...provider,
+      mode,
+      status: "needs-credentials",
+      detail: partialDetail
+    };
+  }
+  return null;
+}
+
 function runtimeProviders(db) {
   const baseProviders = [...(db.providers || [])];
   for (const provider of BUILT_IN_PROVIDER_DEFINITIONS) {
@@ -4341,6 +4361,19 @@ function runtimeProviders(db) {
         mode
       );
     }
+    if (["learning-courses", "learning-certificates"].includes(provider.id)) {
+      const moodleReady = Boolean(process.env.MOODLE_BASE_URL && process.env.MOODLE_TOKEN);
+      const openEdxReady = Boolean(process.env.OPENEDX_BASE_URL && (process.env.OPENEDX_API_KEY || process.env.OPENEDX_CLIENT_ID));
+      const direct = directVendorProviderStatus(provider, {
+        ready: moodleReady || openEdxReady,
+        mode: moodleReady ? "moodle" : openEdxReady ? "openedx" : provider.mode,
+        readyDetail: provider.id === "learning-courses"
+          ? "Real LMS catalog is connected through Moodle/Open edX. Nexus can show courses, enroll learners, track progress, and connect learning to workforce pathways."
+          : "Real LMS credential path is connected through Moodle/Open edX. Nexus can issue or hand off certificates through the learning provider path.",
+        missingDetail: ""
+      });
+      if (direct) return direct;
+    }
     if (provider.id === "workforce-job-search") {
       const adzunaReady = Boolean(process.env.ADZUNA_APP_ID && process.env.ADZUNA_APP_KEY);
       const readyKey = adzunaReady ? "ADZUNA_APP_KEY" : firstConfiguredEnv(["JOB_SEARCH_API_KEY", "JOB_SEARCH_WEBHOOK_URL"]);
@@ -4353,6 +4386,17 @@ function runtimeProviders(db) {
         mode
       );
     }
+    if (provider.id === "workforce-jobs") {
+      const adzunaReady = Boolean(process.env.ADZUNA_APP_ID && process.env.ADZUNA_APP_KEY);
+      const directKey = adzunaReady ? "ADZUNA_APP_KEY" : firstConfiguredEnv(["JOB_SEARCH_API_KEY", "JOB_SEARCH_WEBHOOK_URL"]);
+      const direct = directVendorProviderStatus(provider, {
+        ready: Boolean(directKey),
+        mode: adzunaReady ? "adzuna" : directKey === "JOB_SEARCH_WEBHOOK_URL" ? "job-search-webhook" : directKey ? "job-search-api" : provider.mode,
+        readyDetail: "Live job listing source is connected. Nexus can search roles, match skills, and start application workflows against current job data.",
+        missingDetail: ""
+      });
+      if (direct) return direct;
+    }
     if (provider.id === "health-openmrs") {
       const openMrsReady = Boolean(process.env.OPENMRS_BASE_URL && (process.env.OPENMRS_TOKEN || (process.env.OPENMRS_USERNAME && process.env.OPENMRS_PASSWORD)));
       return namedProviderStatus(
@@ -4362,6 +4406,16 @@ function runtimeProviders(db) {
         "Add OPENMRS_BASE_URL plus OPENMRS_TOKEN, or OPENMRS_USERNAME + OPENMRS_PASSWORD, for real clinic/EHR handoff.",
         process.env.HEALTH_RECORD_PROVIDER || (openMrsReady ? "openmrs" : "not-configured")
       );
+    }
+    if (provider.id === "health-ehr") {
+      const openMrsReady = Boolean(process.env.OPENMRS_BASE_URL && (process.env.OPENMRS_TOKEN || (process.env.OPENMRS_USERNAME && process.env.OPENMRS_PASSWORD)));
+      const direct = directVendorProviderStatus(provider, {
+        ready: openMrsReady,
+        mode: openMrsReady ? "openmrs" : provider.mode,
+        readyDetail: "OpenMRS/EHR path is connected for consented intake handoff, clinic notes, mobile-clinic packet export, and provider evidence.",
+        missingDetail: ""
+      });
+      if (direct) return direct;
     }
     if (provider.id === "satellite-field-data") {
       const sentinelReady = Boolean(process.env.SENTINEL_HUB_CLIENT_ID && process.env.SENTINEL_HUB_CLIENT_SECRET);
@@ -4374,6 +4428,76 @@ function runtimeProviders(db) {
         "Add SENTINEL_HUB_CLIENT_ID + SENTINEL_HUB_CLIENT_SECRET, or SATELLITE_API_KEY/SATELLITE_WEBHOOK_URL for real field imagery intelligence.",
         mode
       );
+    }
+    if (provider.id === "field-drones") {
+      const sentinelReady = Boolean(process.env.SENTINEL_HUB_CLIENT_ID && process.env.SENTINEL_HUB_CLIENT_SECRET);
+      const directKey = sentinelReady ? "SENTINEL_HUB_CLIENT_ID" : firstConfiguredEnv(["SATELLITE_API_KEY", "SATELLITE_WEBHOOK_URL"]);
+      const direct = directVendorProviderStatus(provider, {
+        ready: Boolean(directKey),
+        mode: sentinelReady ? "sentinel-hub" : directKey === "SATELLITE_WEBHOOK_URL" ? "satellite-webhook" : directKey ? "satellite-api" : provider.mode,
+        readyDetail: "Drone/satellite field intelligence is connected. Nexus can convert imagery and scan data into simple farmer guidance.",
+        missingDetail: ""
+      });
+      if (direct) return direct;
+    }
+    if (provider.id === "trade-payments") {
+      const paystackReady = Boolean(process.env.PAYSTACK_SECRET_KEY);
+      const flutterwaveReady = Boolean(process.env.FLUTTERWAVE_SECRET_KEY);
+      const direct = directVendorProviderStatus(provider, {
+        ready: paystackReady || flutterwaveReady,
+        mode: paystackReady ? "paystack" : flutterwaveReady ? "flutterwave" : provider.mode,
+        readyDetail: `Payment provider connected through ${paystackReady ? "Paystack" : "Flutterwave"}. Nexus can create transaction evidence, checkout handoff, receipts, and AgriNexus fee tracking.`,
+        missingDetail: ""
+      });
+      if (direct) return direct;
+    }
+    if (provider.id === "trade-logistics") {
+      const directKey = firstConfiguredEnv(["LOGISTICS_TRACKING_API_KEY", "LOGISTICS_TRACKING_URL", "MAPBOX_ACCESS_TOKEN", "OPENROUTESERVICE_API_KEY", "GOOGLE_MAPS_API_KEY"]);
+      const direct = directVendorProviderStatus(provider, {
+        ready: Boolean(directKey),
+        mode: process.env.LOGISTICS_TRACKING_PROVIDER || process.env.ROUTING_PROVIDER || (directKey === "MAPBOX_ACCESS_TOKEN" ? "mapbox" : directKey === "OPENROUTESERVICE_API_KEY" ? "openrouteservice" : directKey === "GOOGLE_MAPS_API_KEY" ? "google-maps" : provider.mode),
+        readyDetail: "Logistics, routing, or GPS tracking provider is connected. Nexus can show route movement, location lookup, ETA support, and shipment tracking evidence.",
+        missingDetail: ""
+      });
+      if (direct) return direct;
+    }
+    if (["auth-users", "auth-password-reset"].includes(provider.id)) {
+      const supabaseReady = Boolean(process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY);
+      const auth0Ready = Boolean(process.env.AUTH0_DOMAIN && process.env.AUTH0_CLIENT_ID && process.env.AUTH0_CLIENT_SECRET);
+      const clerkReady = Boolean(process.env.CLERK_SECRET_KEY);
+      const direct = directVendorProviderStatus(provider, {
+        ready: supabaseReady || auth0Ready || clerkReady,
+        mode: supabaseReady ? "supabase" : auth0Ready ? "auth0" : clerkReady ? "clerk" : provider.mode,
+        readyDetail: `${provider.id === "auth-users" ? "Production user authentication" : "Password reset"} is connected through ${supabaseReady ? "Supabase" : auth0Ready ? "Auth0" : "Clerk"}.`,
+        missingDetail: ""
+      });
+      if (direct) return direct;
+    }
+    if (provider.id === "email-delivery") {
+      const readyKey = firstConfiguredEnv(["RESEND_API_KEY", "SENDGRID_API_KEY", "MAILGUN_API_KEY"]);
+      const direct = directVendorProviderStatus(provider, {
+        ready: Boolean(readyKey),
+        mode: readyKey === "RESEND_API_KEY" ? "resend" : readyKey === "SENDGRID_API_KEY" ? "sendgrid" : readyKey === "MAILGUN_API_KEY" ? "mailgun" : provider.mode,
+        readyDetail: `Email delivery is connected through ${readyKey === "RESEND_API_KEY" ? "Resend" : readyKey === "SENDGRID_API_KEY" ? "SendGrid" : "Mailgun"}. Nexus can send receipts, reminders, password reset, and workflow notices.`,
+        missingDetail: ""
+      });
+      if (direct) return direct;
+    }
+    if (provider.id === "billing-subscriptions") {
+      const stripeReady = Boolean(process.env.STRIPE_SECRET_KEY && process.env.BILLING_PRICE_ID);
+      const paystackReady = Boolean(process.env.PAYSTACK_SECRET_KEY && process.env.BILLING_PRICE_ID);
+      const flutterwaveReady = Boolean(process.env.FLUTTERWAVE_SECRET_KEY && process.env.BILLING_PRICE_ID);
+      const partial = (process.env.STRIPE_SECRET_KEY || process.env.PAYSTACK_SECRET_KEY || process.env.FLUTTERWAVE_SECRET_KEY) && !process.env.BILLING_PRICE_ID
+        ? "Billing provider key is present. Add BILLING_PRICE_ID so Nexus can verify subscription checkout readiness."
+        : "";
+      const direct = directVendorProviderStatus(provider, {
+        ready: stripeReady || paystackReady || flutterwaveReady,
+        mode: stripeReady ? "stripe" : paystackReady ? "paystack" : flutterwaveReady ? "flutterwave" : provider.mode,
+        readyDetail: `Subscription billing is connected through ${stripeReady ? "Stripe" : paystackReady ? "Paystack" : "Flutterwave"} with BILLING_PRICE_ID.`,
+        missingDetail: "",
+        partialDetail: partial
+      });
+      if (direct) return direct;
     }
     const config = PROVIDER_CONFIG[provider.id];
     if (config) {
@@ -5780,11 +5904,26 @@ function providerCredentialHint(providerId) {
   const webhookEnv = (config.credentialEnvs || []).find(key => key.endsWith("_WEBHOOK_URL")) || "";
   const apiKeyEnv = (config.credentialEnvs || []).find(key => key.endsWith("_API_KEY")) || "";
   const endpoint = PROVIDER_ENGINE_ENDPOINTS[providerId] || "";
+  const directProviderKeys = {
+    "learning-courses": ["MOODLE_BASE_URL", "MOODLE_TOKEN", "OPENEDX_BASE_URL", "OPENEDX_API_KEY"],
+    "learning-certificates": ["MOODLE_BASE_URL", "MOODLE_TOKEN", "OPENEDX_BASE_URL", "OPENEDX_API_KEY"],
+    "workforce-jobs": ["ADZUNA_APP_ID", "ADZUNA_APP_KEY", "JOB_SEARCH_API_KEY", "JOB_SEARCH_WEBHOOK_URL"],
+    "health-ehr": ["OPENMRS_BASE_URL", "OPENMRS_TOKEN", "OPENMRS_USERNAME", "OPENMRS_PASSWORD"],
+    "field-drones": ["SENTINEL_HUB_CLIENT_ID", "SENTINEL_HUB_CLIENT_SECRET", "SATELLITE_API_KEY", "SATELLITE_WEBHOOK_URL"],
+    "trade-payments": ["PAYSTACK_SECRET_KEY", "FLUTTERWAVE_SECRET_KEY"],
+    "trade-logistics": ["LOGISTICS_TRACKING_URL", "LOGISTICS_TRACKING_API_KEY", "MAPBOX_ACCESS_TOKEN", "OPENROUTESERVICE_API_KEY", "GOOGLE_MAPS_API_KEY"],
+    "auth-users": ["SUPABASE_URL", "SUPABASE_SERVICE_ROLE_KEY", "AUTH0_DOMAIN", "AUTH0_CLIENT_ID", "AUTH0_CLIENT_SECRET", "CLERK_SECRET_KEY"],
+    "auth-password-reset": ["SUPABASE_URL", "SUPABASE_SERVICE_ROLE_KEY", "AUTH0_DOMAIN", "AUTH0_CLIENT_ID", "AUTH0_CLIENT_SECRET", "CLERK_SECRET_KEY"],
+    "email-delivery": ["RESEND_API_KEY", "SENDGRID_API_KEY", "MAILGUN_API_KEY"],
+    "billing-subscriptions": ["STRIPE_SECRET_KEY", "PAYSTACK_SECRET_KEY", "FLUTTERWAVE_SECRET_KEY", "BILLING_PRICE_ID"]
+  };
+  const directKeys = directProviderKeys[providerId] || [];
   return {
     providerId,
     modeEnv,
     webhookEnv,
     apiKeyEnv,
+    directKeys,
     bridgeEndpoint: endpoint,
     expectedFix: apiKeyEnv
       ? `Set the same ${apiKeyEnv} value on agrinexus-platform and agrinexus-provider-engines, then redeploy both services.`
@@ -6066,11 +6205,20 @@ function productionActivationGuide(db, providers = runtimeProviders(db)) {
       providers: selected.map(item => ({ id: item.id, name: item.name, status: item.status, mode: item.mode, detail: item.detail }))
     };
   };
-  const group = ({ id, title, summary, providerIds = [], env = [], nextAction, testAction = "test-all" }) => {
+  const group = ({ id, title, summary, providerIds = [], env = [], optionalEnvSets = [], nextAction, testAction = "test-all", userTestPrompts = [] }) => {
     const status = providerStatus(providerIds);
     const envItems = envStatus(env);
     const missing = envItems.filter(item => !item.set).map(item => item.key);
+    const optionalSets = optionalEnvSets.map(set => ({
+      label: set.label,
+      keys: envStatus(set.keys || []),
+      ready: (set.keys || []).every(key => Boolean(process.env[key])),
+      oneOfReady: Boolean(set.oneOf) && (set.keys || []).some(key => Boolean(process.env[key]))
+    }));
     const ready = status.ready && missing.length === 0;
+    const missingDirect = optionalSets
+      .filter(set => !(set.ready || set.oneOfReady))
+      .map(set => `${set.label}: ${set.keys.filter(key => !process.env[key]).join(", ")}`);
     return {
       id,
       title,
@@ -6080,8 +6228,11 @@ function productionActivationGuide(db, providers = runtimeProviders(db)) {
       providerStatus: status,
       env: envItems,
       missing,
+      optionalEnvSets: optionalSets,
+      missingDirect,
       nextAction: ready ? "Run the provider test and continue user workflow testing." : nextAction,
-      testAction
+      testAction,
+      userTestPrompts
     };
   };
   const groups = [
@@ -6091,8 +6242,14 @@ function productionActivationGuide(db, providers = runtimeProviders(db)) {
       summary: "Keeps user sessions, hosted state, and production safety real.",
       providerIds: ["database", "auth-users", "auth-password-reset"],
       env: ["DATABASE_URL", "AGRINEXUS_STATE_STORE", "SESSION_SECRET", "PASSWORD_PEPPER"],
+      optionalEnvSets: [
+        { label: "Supabase auth", keys: ["SUPABASE_URL", "SUPABASE_SERVICE_ROLE_KEY"] },
+        { label: "Auth0 auth", keys: ["AUTH0_DOMAIN", "AUTH0_CLIENT_ID", "AUTH0_CLIENT_SECRET"] },
+        { label: "Clerk auth", keys: ["CLERK_SECRET_KEY"] }
+      ],
       nextAction: "In Render, add PostgreSQL, set AGRINEXUS_STATE_STORE=postgres, and confirm SESSION_SECRET plus PASSWORD_PEPPER.",
-      testAction: "health-check"
+      testAction: "health-check",
+      userTestPrompts: ["Nexus, who is signed in?", "Nexus, what can this account access?"]
     }),
     group({
       id: "ai-voice",
@@ -6101,34 +6258,52 @@ function productionActivationGuide(db, providers = runtimeProviders(db)) {
       providerIds: ["openai", "voice-stt", "voice-tts", "phone-voice"],
       env: ["OPENAI_API_KEY", "OPENAI_TRANSCRIBE_MODEL", "OPENAI_TTS_MODEL", "OPENAI_TTS_VOICE", "VOICE_STT_PROVIDER", "VOICE_TTS_PROVIDER", "TWILIO_ACCOUNT_SID", "TWILIO_AUTH_TOKEN", "TWILIO_PHONE_NUMBER"],
       nextAction: "Confirm OpenAI credits/key and Twilio credentials, then test browser voice and phone voice.",
-      testAction: "test-all"
+      testAction: "test-all",
+      userTestPrompts: ["Hello Nexus, this is Ron", "Nexus, stop", "Nexus, call my buyer", "Nexus, explain AgriNexus to an investor"]
     }),
     group({
       id: "translation-map",
       title: "Translation and Map Intelligence",
       summary: "Supports multilingual content, voice language flow, map tiles, country context, and route intelligence.",
-      providerIds: ["translation", "maps"],
+      providerIds: ["translation", "maps", "routing-geocoding", "web-search", "public-weather-openmeteo", "public-who-outbreaks", "public-osm-geocoding", "public-osm-services"],
       env: ["TRANSLATION_PROVIDER", "TRANSLATION_WEBHOOK_URL", "TRANSLATION_PROVIDER_API_KEY", "MAP_TILE_PROVIDER"],
+      optionalEnvSets: [
+        { label: "Routing/geocoding", keys: ["MAPBOX_ACCESS_TOKEN", "OPENROUTESERVICE_API_KEY", "GOOGLE_MAPS_API_KEY"], oneOf: true },
+        { label: "Internet brain", keys: ["TAVILY_API_KEY", "BRAVE_SEARCH_API_KEY", "EXA_API_KEY"], oneOf: true }
+      ],
       nextAction: "Add translation provider settings and set MAP_TILE_PROVIDER=openstreetmap or a custom tile provider, then run live service check.",
-      testAction: "test-all"
+      testAction: "test-all",
+      userTestPrompts: ["Nexus, change language to French", "Nexus, show me the route from Nairobi to Lagos", "Nexus, what is the weather in Addis Ababa?"]
     }),
     group({
       id: "learning-workforce",
       title: "Learning and Workforce Engines",
       summary: "Connects real courses, certificates, job data, calendars, HR records, shifts, and notifications.",
-      providerIds: ["learning-courses", "learning-certificates", "workforce-jobs", "workforce-calendar", "workforce-notifications", "workforce-hris", "workforce-shifts"],
+      providerIds: ["learning-courses", "learning-certificates", "learning-lms", "workforce-jobs", "workforce-calendar", "workforce-notifications", "workforce-hris", "workforce-shifts", "workforce-job-search"],
       env: ["LEARNING_COURSE_PROVIDER", "LEARNING_COURSE_WEBHOOK_URL", "LEARNING_CERTIFICATE_PROVIDER", "LEARNING_CERTIFICATE_WEBHOOK_URL", "LEARNING_PROVIDER_API_KEY", "WORKFORCE_JOB_PROVIDER", "WORKFORCE_JOB_WEBHOOK_URL", "WORKFORCE_CALENDAR_PROVIDER", "WORKFORCE_CALENDAR_WEBHOOK_URL", "WORKFORCE_NOTIFICATION_PROVIDER", "WORKFORCE_NOTIFICATION_WEBHOOK_URL", "WORKFORCE_HRIS_PROVIDER", "WORKFORCE_HRIS_WEBHOOK_URL", "WORKFORCE_SHIFT_PROVIDER", "WORKFORCE_SHIFT_WEBHOOK_URL", "WORKFORCE_PROVIDER_API_KEY"],
+      optionalEnvSets: [
+        { label: "Real LMS catalog", keys: ["MOODLE_BASE_URL", "MOODLE_TOKEN"] },
+        { label: "Open edX catalog", keys: ["OPENEDX_BASE_URL", "OPENEDX_API_KEY"] },
+        { label: "Real job listings", keys: ["ADZUNA_APP_ID", "ADZUNA_APP_KEY"] }
+      ],
       nextAction: "Use the provider-engine bridge first, then replace bridge endpoints with real course/job/HR providers as partners are chosen.",
-      testAction: "test-all"
+      testAction: "test-all",
+      userTestPrompts: ["Nexus, start my course", "Nexus, help me apply for a job", "Nexus, I graduated in biochemistry, what jobs fit me?"]
     }),
     group({
       id: "telehealth-trade-drone",
       title: "Telehealth, Trade, and Drone Engines",
       summary: "Connects provider access, EHR evidence, crop market data, logistics, payments, and drone operations.",
-      providerIds: ["health-telehealth", "health-ehr", "health-notifications", "trade-payments", "trade-logistics", "trade-market", "field-drones"],
+      providerIds: ["health-telehealth", "health-ehr", "health-openmrs", "health-notifications", "trade-payments", "trade-logistics", "trade-market", "field-drones", "satellite-field-data"],
       env: ["HEALTH_TELEHEALTH_PROVIDER", "HEALTH_TELEHEALTH_WEBHOOK_URL", "HEALTH_EHR_PROVIDER", "HEALTH_EHR_WEBHOOK_URL", "HEALTH_NOTIFICATION_PROVIDER", "HEALTH_NOTIFICATION_WEBHOOK_URL", "HEALTH_PROVIDER_API_KEY", "TRADE_PAYMENT_PROVIDER", "TRADE_PAYMENT_WEBHOOK_URL", "TRADE_LOGISTICS_PROVIDER", "TRADE_LOGISTICS_WEBHOOK_URL", "TRADE_MARKET_PROVIDER", "TRADE_MARKET_WEBHOOK_URL", "TRADE_PROVIDER_API_KEY", "DRONE_PROVIDER", "DRONE_WEBHOOK_URL", "DRONE_PROVIDER_API_KEY"],
+      optionalEnvSets: [
+        { label: "OpenMRS clinic records", keys: ["OPENMRS_BASE_URL", "OPENMRS_TOKEN"] },
+        { label: "Payments", keys: ["PAYSTACK_SECRET_KEY", "FLUTTERWAVE_SECRET_KEY"], oneOf: true },
+        { label: "Satellite/drone data", keys: ["SENTINEL_HUB_CLIENT_ID", "SENTINEL_HUB_CLIENT_SECRET"] }
+      ],
       nextAction: "Keep sandbox bridge running for demos, then connect live telehealth, market, logistics, payment, and drone vendors.",
-      testAction: "test-all"
+      testAction: "test-all",
+      userTestPrompts: ["Nexus, I need a doctor", "Nexus, find a pharmacy near me", "Nexus, help me sell my crop", "Nexus, run drone scan"]
     }),
     group({
       id: "business-communications",
@@ -6136,8 +6311,13 @@ function productionActivationGuide(db, providers = runtimeProviders(db)) {
       summary: "Supports subscriptions, email, SMS, WhatsApp, password resets, reminders, and launch support.",
       providerIds: ["billing-subscriptions", "email-delivery", "sms-delivery", "whatsapp-delivery"],
       env: ["BILLING_PROVIDER", "BILLING_WEBHOOK_URL", "BILLING_PROVIDER_API_KEY", "BILLING_PRICE_ID", "EMAIL_PROVIDER", "EMAIL_WEBHOOK_URL", "SMS_PROVIDER", "SMS_WEBHOOK_URL", "WHATSAPP_PROVIDER", "WHATSAPP_WEBHOOK_URL", "COMMUNICATION_PROVIDER_API_KEY"],
+      optionalEnvSets: [
+        { label: "Direct email", keys: ["RESEND_API_KEY", "SENDGRID_API_KEY", "MAILGUN_API_KEY"], oneOf: true },
+        { label: "Subscription processor", keys: ["STRIPE_SECRET_KEY", "PAYSTACK_SECRET_KEY", "FLUTTERWAVE_SECRET_KEY"], oneOf: true }
+      ],
       nextAction: "Add billing price id and communications provider endpoints, then test notification and billing workflows.",
-      testAction: "test-all"
+      testAction: "test-all",
+      userTestPrompts: ["Nexus, send my buyer a message", "Nexus, create a receipt", "Nexus, test live services"]
     }),
     group({
       id: "internet-brain-provider-depth",
@@ -6150,11 +6330,20 @@ function productionActivationGuide(db, providers = runtimeProviders(db)) {
     })
   ];
   const readyCount = groups.filter(item => item.ready).length;
+  const nextCriticalGroup = groups.find(item => !item.ready) || null;
   return {
     status: readyCount === groups.length ? "production-ready" : "activation-needed",
     readyCount,
     total: groups.length,
     groups,
+    nextCriticalGroup: nextCriticalGroup ? {
+      id: nextCriticalGroup.id,
+      title: nextCriticalGroup.title,
+      nextAction: nextCriticalGroup.nextAction,
+      missing: nextCriticalGroup.missing,
+      missingDirect: nextCriticalGroup.missingDirect
+    } : null,
+    testCommands: groups.flatMap(groupItem => groupItem.userTestPrompts || []),
     updatedAt: new Date().toISOString()
   };
 }
@@ -14748,6 +14937,21 @@ async function conversationalReasoningResponse(db, user, command, options = {}) 
 
 function backendSmartCommandResponse(db, user, command = "", options = {}) {
   const lower = String(command || "").toLowerCase();
+  if (/\b(provider activation|activate live providers|finish provider setup|what providers are missing|what keys are missing|what engines are missing|production provider readiness|provider readiness)\b/.test(lower)) {
+    const guide = productionActivationGuide(db, runtimeProviders(db));
+    const next = guide.nextCriticalGroup;
+    const missing = next
+      ? [...(next.missing || []), ...(next.missingDirect || [])].filter(Boolean).slice(0, 6).join(", ")
+      : "none";
+    return {
+      intent: "production.provider_activation",
+      status: guide.status === "production-ready" ? "completed" : "needs-setup",
+      response: guide.status === "production-ready"
+        ? `Provider activation is ready: ${guide.readyCount}/${guide.total} engine groups are connected. You can test live services, voice, maps, learning, workforce, telehealth, trade, drones, payments, and communications.`
+        : `Provider activation is ${guide.readyCount}/${guide.total}. Next focus: ${next?.title || "provider setup"}. ${next?.nextAction || "Add the missing provider keys in Render and redeploy."} Missing focus: ${missing}.`,
+      metadata: { conversationMode: true, redirectSection: "integrations", platformMode: options.mode || options.modeContext?.mode || "user", activationGuide: guide }
+    };
+  }
   if (/\b(live intelligence feeds|live knowledge feeds|real time feeds|provider feeds|what feeds are live)\b/.test(lower)) {
     const feeds = backendLiveKnowledgeFeedReadiness(db);
     return {
@@ -16120,6 +16324,16 @@ function stageAgentAction(db, command, action) {
   const memories = retrieveAgentMemories(db.profile, command, 5);
   const reasoning = aiReasoningSnapshot(db, null, command, moduleSignal, memories, { source: "stage-agent-action" });
   const reasoningLanguageProduction = reasoningLanguageProductionEngine(db, null, command, { moduleSignal, memories, reasoning, source: "stage-agent-action" });
+  if (memories.length) {
+    logIntegration(db, {
+      providerId: "agent-memory",
+      module: "AI",
+      action: "agent.memory_retrieved",
+      detail: `Nexus retrieved ${memories.length} memory cue(s) before staging ${action.action || action.tool || "an action"}.`,
+      metadata: { command, memoryIds: memories.map(item => item.id).filter(Boolean), tool: action.tool || null },
+      dispatch: false
+    });
+  }
   const pending = {
     id: crypto.randomUUID(),
     command,
@@ -16150,6 +16364,7 @@ function stageAgentAction(db, command, action) {
       tool: pending.tool || null,
       mode: pending.kind === "autopilot-mission" ? "autopilot" : null,
       previewSteps: pending.previewSteps || [],
+      memoriesUsed: reasoning.memoryUsed || [],
       reasoning,
       reasoningLanguageProduction
     }
@@ -19689,6 +19904,281 @@ async function runAgentCommand(db, user, command, options = {}) {
   }
   const conversational = options.conversational === true;
   if (!text) return { intent: "empty-command", response: "Give me a command and I will route it.", status: "needs-input" };
+  const topPendingAction = db.profile.agentPendingAction;
+  if (topPendingAction && isAffirmativeCommand(lower)) {
+    const result = await executePendingAgentAction(db, user, topPendingAction);
+    return { ...result, intent: result.intent === "conversation.no_pending_action" ? result.intent : "conversation.confirmed" };
+  }
+  if (topPendingAction && isNegativeCommand(lower)) {
+    db.profile.agentPendingAction = null;
+    db.profile.agentMemory.lastStatus = "canceled";
+    db.profile.agentMemory.lastSummary = "Pending action canceled.";
+    db.profile.agentMemory.updatedAt = new Date().toISOString();
+    return { intent: "conversation.canceled", response: "Canceled. Tell me what you want to do next.", status: "completed", metadata: { conversationMode: true } };
+  }
+  if (conversational && db.profile.agentMemory.activeIntake) {
+    const invokedModuleCommand = invokedAgriNexus || /\b(agritrade|telehealth|healthcare|workforce|learning|maps?|integrations?|admin)\b/i.test(rawCommand);
+    const activeIntakeBlueprint = intakeBlueprint(db.profile.agentMemory.activeIntake.domain || "");
+    const activeIntakeSection = activeIntakeBlueprint.section;
+    const activeIntakeField = activeIntakeBlueprint.fields[db.profile.agentMemory.activeIntake.currentIndex]?.key || "";
+    const newSignal = conversationModuleSignal(text);
+    const contactMethodAnswer = activeIntakeField === "contactMethod" && /\b(voice|callback|call|phone|sms|text|whatsapp|caregiver|email)\b/.test(lower);
+    const accessNeedsAnswer = /^(accessibilityNeeds|accessNeeds|supportNeeds)$/.test(activeIntakeField) && /\b(caption|captions|audio|voice|large print|caregiver|handoff|blind|deaf|hearing|visual|low bandwidth|screen reader|sms|whatsapp|language support|transport support|interview help)\b/.test(lower);
+    const domainChangeInterrupt = !contactMethodAnswer && !accessNeedsAnswer && newSignal.section && newSignal.section !== activeIntakeSection && Number(newSignal.score || 0) >= 1;
+    const clearIntakeInterrupt = domainChangeInterrupt || (invokedModuleCommand && /\b(open|start|track|run|show|change|switch|call|contact|sell|buy|apply|complete|issue|create|explain|tell|walk me through|guide me through)\b/.test(lower));
+    if (clearIntakeInterrupt) {
+      db.profile.agentMemory.activeIntake = null;
+      db.profile.agentMemory.lastStatus = "intake-interrupted";
+      db.profile.agentMemory.lastSummary = `Intake paused so Nexus could handle: ${text}`;
+      db.profile.agentMemory.updatedAt = new Date().toISOString();
+    } else {
+      const intake = continueConversationalIntake(db, user, text);
+      if (intake) return intake;
+    }
+  }
+  if (conversational
+    && /\b(no rain|drought|dry|crop dying|crops dying|crop bad|maize yellow|cassava bad|field dying|farm dying|need water)\b/.test(lower)
+    && /\b(crop|farm|field|maize|cassava|rice|harvest|plant|rain)\b/.test(lower)) {
+    rememberAgentMemory(db.profile, `Farmer urgent crop support: ${text}`, { source: "rural-crop-distress", category: "safety", module: "AgriTrade", confidence: 0.9 });
+    db.profile.agentMemory.activeModule = "AgriTrade";
+    db.profile.agentMemory.lastRecommendedSection = "trade";
+    db.profile.agentMemory.lastStatus = "rural-crop-distress-guidance";
+    db.profile.agentMemory.lastSummary = "Farmer crop distress routed to AgriTrade with urgent field support.";
+    db.profile.agentMemory.updatedAt = new Date().toISOString();
+    return {
+      intent: "conversation.rural_crop_distress",
+      response: "I hear crop danger: no rain and the crop may be dying. First, keep people safe, then tell me where the farm is and what crop. I can help save what can be saved, plan water or shade, run a field scan, and decide whether to sell, wait, or move the crop.",
+      status: "guiding",
+      metadata: {
+        conversationMode: true,
+        redirectSection: "trade",
+        frontierCommunication: {
+          communicationMode: "pan-african-rural-farmer-support",
+          nextQuestion: "Where is the farm, and what crop is dying?",
+          confidence: 0.9,
+          urgency: "high"
+        }
+      }
+    };
+  }
+  if (/(trade|agritade|agritrade|crop|buyer|route|order|logistics|drone|farm)/.test(lower) && /(efficiency|efficient|optimize|optimise|operations|operational|bottleneck|delay|cost|waste|profit|improve|performance)/.test(lower)) {
+    return tradeOperationalEfficiencyReview(db, user, text);
+  }
+  if (/(issue|create|generate).*(my\s+)?certificate|certificate/.test(lower) && /(learning|course|lesson|certificate|my)/.test(lower)) {
+    const result = await executeAgentTool(db, user, { tool: "learning.certificate" });
+    return { intent: "learning.certificate", response: result, status: "completed", metadata: { conversationMode: conversational, redirectSection: "learning" } };
+  }
+  if (/\b(schedule|plan|book|set)\b.*\b(shift|work shift)\b|\bshift schedule\b/.test(lower)) {
+    const result = await executeAgentTool(db, user, { tool: "workforce.schedule_shift" });
+    return { intent: "workforce.schedule_shift", response: result, status: "completed", metadata: { conversationMode: conversational, redirectSection: "workforce" } };
+  }
+  if (/\b(capture|record|check|take)\b.*\b(vitals|blood pressure|pulse|temperature)\b/.test(lower)) {
+    const result = await executeAgentTool(db, user, { tool: "health.vitals" });
+    return { intent: "health.vitals", response: result, status: "completed", metadata: { conversationMode: conversational, redirectSection: "health" } };
+  }
+  if (/\b(test|check|run)\b.*\b(provider engines|live engines|integrations|engine status)\b/.test(lower)) {
+    const result = await executeAgentTool(db, user, { tool: "integrations.test_all" });
+    return { intent: "integrations.test_all", response: result, status: "completed", metadata: { conversationMode: conversational, redirectSection: "integrations" } };
+  }
+  if (isDailyAdvisorQuestion(lower)) {
+    return dailyLifeAdvisorResponse(db, user, text, lower, options);
+  }
+  if (conversational && /^(health|telehealth|doctor|clinic|medicine|pharmacy)$/i.test(lower)) {
+    return stageAgentAction(db, text, { module: "Healthcare", tool: "health.intake", action: "Start telehealth intake", section: "health" });
+  }
+  if (conversational && !db.profile.agentMemory.activeClarification && !db.profile.agentMemory.activeIntake && (lower === "help" || lower.includes("what can you do") || lower.includes("i need help") || lower.includes("help me"))) {
+    const next = smartNextActions(db, user, runtimeProviders(db)).items[0];
+    return {
+      intent: "conversation.guided_menu",
+      response: `I can help with health, learning, work, crops, maps, or messages. Best next step: ${next?.title || "tell me the area you need"}. Say health, learning, work, trade, map, or AI help.`,
+      status: "guiding",
+      metadata: { conversationMode: true, redirectSection: next?.section || "dashboard", recommendedAction: next || null }
+    };
+  }
+  if (lower.startsWith("remember ") || lower.includes("remember that") || lower.startsWith("set mission") || lower.startsWith("our mission")) {
+    const remembered = text.replace(/^remember\s+/i, "").replace(/remember that/i, "").trim();
+    if (remembered) rememberAgentMemory(db.profile, remembered, { source: "explicit-remember", category: inferMemoryCategory(remembered), confidence: 0.95 });
+    db.profile.agentMemory.activeMission = remembered || db.profile.agentMemory.activeMission || "rural transformation";
+    db.profile.agentMemory.activeAudience = lower.includes("government") ? "government" : db.profile.agentMemory.activeAudience || "government";
+    db.profile.agentMemory.updatedAt = new Date().toISOString();
+    return {
+      intent: "memory-updated",
+      response: `I will remember this: ${db.profile.agentMemory.activeMission}.`,
+      metadata: { memory: db.profile.agentMemory }
+    };
+  }
+  if (lower.includes("what do you remember") || lower.includes("show memory") || lower.includes("what have you learned")) {
+    const summary = longTermMemorySummary(db.profile);
+    const memories = summary.topMemories;
+    const moduleLine = summary.modules.slice(0, 3).map(item => `${item.name}: ${item.count}`).join(", ");
+    const needsLine = summary.needs.slice(0, 4).map(item => item.name.replace(/-/g, " ")).join(", ");
+    return {
+      intent: "memory-summary",
+      response: memories.length
+        ? `${summary.total} long-term memories are active. Strongest areas: ${moduleLine || "general platform"}. User need signals: ${needsLine || "standard support"}. Recent memories: ${memories.map(item => item.text).join(" | ")}`
+        : "I do not have long-term memories yet. Say remember, then tell me an important fact or preference.",
+      metadata: { memories, longTermMemory: summary }
+    };
+  }
+  if (conversational
+    && /\b(patient|caregiver|person|someone|grandma|elder|mother|child)\b/.test(lower)
+    && /\b(cannot hear|can't hear|cant hear|deaf|hearing|caption|captions|access|care access|needs care|need care)\b/.test(lower)) {
+    return stageAgentAction(db, text, {
+      module: "Healthcare",
+      tool: "health.accessibility_review",
+      action: "Prepare accessible telehealth",
+      section: "health",
+      planner: "memory-aware-accessibility-router",
+      confidence: 0.9,
+      rationale: "The request combines patient care access with hearing support, so Nexus should prepare captions, voice-first support, caregiver handoff, and low-bandwidth telehealth before intake."
+    });
+  }
+  if (!/\b(mission brain|no vendor|without vendors|without adding real credentials|minus credentials|do all 10|need all 10)\b/.test(lower) && (lower.includes("all 10") || lower.includes("all ten") || lower.includes("10 items") || lower.includes("ten items") || lower.includes("full intelligent model") || lower.includes("full intelligence model") || lower.includes("independent agent") || lower.includes("jarvis model") || lower.includes("goals memory awareness recovery initiative"))) {
+    db.profile.agentMemory.activeClarification = null;
+    db.profile.agentMemory.activeRecovery = null;
+    const model = intelligentAssistantModel(db, user);
+    db.profile.agentMemory.lastStatus = model.status;
+    db.profile.agentMemory.lastSummary = `The intelligent assistant model has ${model.readyCount}/${model.total} items active.`;
+    db.profile.agentMemory.updatedAt = new Date().toISOString();
+    logIntegration(db, {
+      providerId: "openai",
+      module: "AI",
+      action: "agent.ten_item_model_reviewed",
+      detail: `Ten-item intelligent assistant model reviewed: ${model.readyCount}/${model.total}.`,
+      metadata: { status: model.status, items: model.items.map(item => ({ id: item.id, ready: item.ready })) },
+      dispatch: false
+    });
+    return {
+      intent: "intelligent-assistant.ten_item_model",
+      response: `The independent Nexus agent model is active at ${model.readyCount} out of ${model.total}. It is organized around goals, memory, awareness, recovery, and initiative. The 10 operating layers are goal-driven brain, persistent memory, live context awareness, autonomous missions, natural voice operation, workflow execution, provider independence, accessibility-first behavior, role-specific intelligence, and evidence plus mobile initiative. Say "Nexus, awareness check" or "Nexus, do the next step" to test it.`,
+      status: model.status,
+      metadata: { conversationMode: true, redirectSection: "agent", model }
+    };
+  }
+  if (lower.includes("all 8") || lower.includes("all eight") || lower.includes("8 items") || lower.includes("eight items") || lower.includes("reasoning and language") || lower.includes("language production") || lower.includes("optimal reasoning") || lower.includes("multilingual reasoning")) {
+    db.profile.agentMemory.activeClarification = null;
+    db.profile.agentMemory.activeRecovery = null;
+    const moduleSignal = conversationModuleSignal(text);
+    const memories = retrieveAgentMemories(db.profile, text, 5);
+    const reasoning = aiReasoningSnapshot(db, user, text, moduleSignal, memories, options);
+    const engine = reasoningLanguageProductionEngine(db, user, text, { moduleSignal, memories, reasoning, targetLanguage: options.targetLanguage });
+    db.profile.agentMemory.lastReasoningLanguageProduction = engine;
+    db.profile.agentMemory.lastStatus = engine.status;
+    db.profile.agentMemory.lastSummary = `Reasoning and language production active at ${engine.readyCount}/${engine.total}.`;
+    db.profile.agentMemory.updatedAt = new Date().toISOString();
+    logIntegration(db, {
+      providerId: "openai",
+      module: "AI",
+      action: "agent.reasoning_language_production_reviewed",
+      detail: `Reasoning/language production reviewed: ${engine.readyCount}/${engine.total}.`,
+      metadata: { status: engine.status, command: text, layers: engine.layers.map(item => ({ id: item.id, ready: item.ready })) },
+      dispatch: false
+    });
+    const liveCount = engine.layers.filter(item => item.ready).length;
+    return {
+      intent: "conversation.reasoning_language_production",
+      response: `The Nexus reasoning and language brain is active at ${liveCount} out of ${engine.total}. The 8 layers are live reasoning, real translation, conversation memory, reasoning before action, multilingual voice, role-specific intelligence, human-like recovery, and evidence-based reasoning. I will use these before answering or running workflows, then ask for confirmation when the action touches health, money, jobs, providers, messages, or records.`,
+      status: engine.status,
+      metadata: { conversationMode: true, redirectSection: "agent", reasoning, reasoningLanguageProduction: engine }
+    };
+  }
+  if (lower.includes("go deeper") || lower.includes("lets go deeper") || lower.includes("let's go deeper") || lower.includes("deep operating") || lower.includes("deeper intelligence") || lower.includes("deep intelligence") || lower.includes("live engine awareness") || lower.includes("what is live now")) {
+    db.profile.agentMemory.activeClarification = null;
+    db.profile.agentMemory.activeRecovery = null;
+    const intelligence = deepOperatingIntelligence(db, user, runtimeProviders(db), { mode: user?.role, persist: true });
+    logIntegration(db, {
+      providerId: "openai",
+      module: "AI",
+      action: "agent.deep_operating_intelligence",
+      detail: `Deep operating intelligence reviewed: ${intelligence.liveEngineScore} live engines, ${intelligence.readinessScore} readiness.`,
+      metadata: { intelligenceId: intelligence.id, mode: intelligence.mode, deferred: intelligence.deferred.map(item => item.id) },
+      dispatch: false
+    });
+    return {
+      intent: "conversation.deep_operating_intelligence",
+      response: `${intelligence.plainLanguageSummary} In ${intelligence.mode}, I will focus on this: ${intelligence.modeGuidance.promise} Best next commands are: ${intelligence.nextActions.slice(0, 3).map(item => item.command).join("; ")}.`,
+      status: intelligence.status,
+      metadata: { conversationMode: true, redirectSection: "agent", deepOperatingIntelligence: intelligence }
+    };
+  }
+  if (lower.includes("all 10 no vendor") || lower.includes("all ten no vendor") || lower.includes("all 10 without vendors") || lower.includes("all ten without vendors") || lower.includes("minus credentials") || lower.includes("without adding real credentials") || lower.includes("do all 10") || lower.includes("need all 10")) {
+    db.profile.agentMemory.activeClarification = null;
+    db.profile.agentMemory.activeRecovery = null;
+    const pack = noVendorUpgradeTenPack(db, user, runtimeProviders(db), { persist: true });
+    return {
+      intent: "conversation.no_vendor_upgrade_ten",
+      response: `${pack.plainLanguageSummary} I created ${pack.missionBlueprints.length} local scenario missions and saved evidence for the operating record. You can try: ${pack.nextCommands.slice(0, 4).join("; ")}.`,
+      status: pack.status,
+      metadata: { conversationMode: true, redirectSection: "agent", noVendorUpgradeTen: pack }
+    };
+  }
+  if (/(trade|agritade|agritrade|crop|buyer|route|order|logistics|drone|farm)/.test(lower) && /(efficiency|efficient|optimize|optimise|operations|operational|bottleneck|delay|cost|waste|profit|improve|performance)/.test(lower)) {
+    return tradeOperationalEfficiencyReview(db, user, text);
+  }
+  if (lower.includes("maximum operational efficiency") || lower.includes("max operational efficiency") || lower.includes("optimize everything") || lower.includes("optimise everything") || lower.includes("make operations efficient") || lower.includes("highest efficiency") || lower.includes("operational command review")) {
+    db.profile.agentMemory.activeClarification = null;
+    db.profile.agentMemory.activeRecovery = null;
+    const model = maximumOperationalEfficiencyModel(db, user, runtimeProviders(db), { persist: true });
+    return {
+      intent: "conversation.maximum_operational_efficiency",
+      response: `${model.plainLanguageSummary} Recommended sequence: ${model.recommendedSequence.map(item => `${item.order}. ${item.title}`).join(" ")}. You can say "${model.recommendedSequence[0]?.command || "Nexus, what should I do next"}" to start.`,
+      status: model.status,
+      metadata: { conversationMode: true, redirectSection: "agent", maximumOperationalEfficiency: model }
+    };
+  }
+  if (lower.includes("go even deeper") || lower.includes("autonomous operating loop") || lower.includes("observe diagnose decide") || lower.includes("think in a loop") || lower.includes("run operating loop") || lower.includes("go deeper with the brain") || lower.includes("run the brain loop")) {
+    db.profile.agentMemory.activeClarification = null;
+    db.profile.agentMemory.activeRecovery = null;
+    const loop = autonomousOperatingLoopModel(db, user, runtimeProviders(db), { persist: true });
+    return {
+      intent: "conversation.autonomous_operating_loop",
+      response: `${loop.plainLanguageSummary} I observed, diagnosed, decided, prepared the next action, set verification, and saved the learning record. Say "${loop.recommendedCommand}" to continue.`,
+      status: loop.status,
+      metadata: { conversationMode: true, redirectSection: "agent", autonomousOperatingLoop: loop }
+    };
+  }
+  if (lower.includes("behavior model") || lower.includes("not robotic") || lower.includes("human guide") || lower.includes("how do you behave")) {
+    db.profile.agentMemory.activeClarification = null;
+    db.profile.agentMemory.activeRecovery = null;
+    const behavior = assistantBehaviorModel(db, user);
+    db.profile.agentMemory.lastStatus = "behavior-model-active";
+    db.profile.agentMemory.lastSummary = `${behavior.name}: ${behavior.tone}`;
+    db.profile.agentMemory.updatedAt = new Date().toISOString();
+    return {
+      intent: "conversation.behavior_model",
+      response: `I use the ${behavior.name} for ${behavior.audience}. That means I listen first, restate what I understood, guide one step at a time, avoid technical language, ask before important actions, and keep the experience voice-first and human.`,
+      status: "completed",
+      metadata: { conversationMode: true, redirectSection: "agent", behaviorModel: behavior }
+    };
+  }
+  if (lower.includes("summarize my progress") || lower.includes("progress summary") || lower.includes("where am i") || lower.includes("how am i doing")) {
+    db.profile.agentMemory.activeClarification = null;
+    db.profile.agentMemory.activeRecovery = null;
+    const summary = platformProgressSummary(db, user);
+    db.profile.agentMemory.lastStatus = "progress-summary";
+    db.profile.agentMemory.lastSummary = summary;
+    db.profile.agentMemory.updatedAt = new Date().toISOString();
+    return {
+      intent: "conversation.progress_summary",
+      response: `Here is your progress: ${summary}.`,
+      status: "completed",
+      metadata: { conversationMode: true, redirectSection: "dashboard", summary }
+    };
+  }
+  if (lower.includes("investor tour") || lower.includes("demo narrator") || lower.includes("present the platform") || lower.includes("walk investors") || lower.includes("presentation mode")) {
+    db.profile.agentMemory.activeClarification = null;
+    db.profile.agentMemory.activeRecovery = null;
+    const briefing = agentBriefing(db, user, "investor presentation mode");
+    db.profile.agentMemory.lastStatus = "investor-presentation-ready";
+    db.profile.agentMemory.lastSummary = briefing.plainLanguageSummary;
+    db.profile.agentMemory.updatedAt = new Date().toISOString();
+    return {
+      intent: "conversation.investor_presentation_mode",
+      response: `Investor presentation mode is ready. Start on the Dashboard, then move through Learning, Workforce, Telehealth, AgriTrade, Map and AI, Agent AI, and Integrations. Opening statement: ${briefing.plainLanguageSummary}`,
+      status: "completed",
+      metadata: { conversationMode: true, redirectSection: "dashboard", briefingId: briefing.id }
+    };
+  }
   if (/\b(speak|talk|communicate|respond|listen|behave|present)\b.*\b(government|ministry|ngo|field partner|farmer|grandma|elder|patient)\b/.test(lower)
     || /\b(set|change|switch)\b.*\b(audience|mode|behavior)\b.*\b(government|ministry|ngo|farmer|grandma|elder|patient)\b/.test(lower)) {
     const stakeholderAudience = stakeholderAudienceConversationModel(text, user, {});
@@ -19787,7 +20277,8 @@ async function runAgentCommand(db, user, command, options = {}) {
     const activeIntakeField = activeIntakeBlueprint.fields[db.profile.agentMemory.activeIntake.currentIndex]?.key || "";
     const newSignal = conversationModuleSignal(text);
     const contactMethodAnswer = activeIntakeField === "contactMethod" && /\b(voice|callback|call|phone|sms|text|whatsapp|caregiver|email)\b/.test(lower);
-    const domainChangeInterrupt = !contactMethodAnswer && newSignal.section && newSignal.section !== activeIntakeSection && Number(newSignal.score || 0) >= 1;
+    const accessNeedsAnswer = activeIntakeField === "accessibilityNeeds" && /\b(caption|captions|audio|voice|large print|caregiver|handoff|blind|deaf|hearing|visual|low bandwidth|screen reader|sms|whatsapp)\b/.test(lower);
+    const domainChangeInterrupt = !contactMethodAnswer && !accessNeedsAnswer && newSignal.section && newSignal.section !== activeIntakeSection && Number(newSignal.score || 0) >= 1;
     const clearIntakeInterrupt = domainChangeInterrupt || (invokedModuleCommand && /\b(open|start|track|run|show|change|switch|call|contact|sell|buy|apply|complete|issue|create|explain|tell|walk me through|guide me through)\b/.test(lower));
     if (clearIntakeInterrupt) {
       db.profile.agentMemory.activeIntake = null;
@@ -19850,10 +20341,182 @@ async function runAgentCommand(db, user, command, options = {}) {
   if (executiveIntelligenceCommand) return executiveIntelligenceCommand;
   const ecosystemIntelligenceCommand = ecosystemIntelligenceCommandResponse(db, user, text, options);
   if (ecosystemIntelligenceCommand) return ecosystemIntelligenceCommand;
+  if (!/\b(prepare|draft|write|compose|update)\b/.test(lower) && /(buyer|seller|customer|purchaser)/.test(lower) && /(message|chat|communicate|reply|conversation|thread|real time|realtime)/.test(lower)) {
+    const result = await createBuyerSellerMessage(db, user, {
+      channel: /whatsapp/i.test(text) ? "WhatsApp" : /sms|text/i.test(text) ? "SMS" : "in-app chat",
+      message: `AgriNexus update: please confirm crop quality evidence, price, route timing, and payment next step for the active lot.`
+    });
+    return {
+      intent: "trade.buyer_seller_message",
+      response: `I opened a ${result.thread.lastChannel} thread with ${result.thread.buyerName} for ${result.thread.productName}. The buyer can reply in the same thread, and the message evidence is saved.`,
+      status: "completed",
+      metadata: { conversationMode: conversational, redirectSection: "trade", threadId: result.thread.id, channel: result.thread.lastChannel }
+    };
+  }
   const earlyActionMemoryCommand = assistantActionMemoryCommandResponse(db, user, text, lower, options);
   if (earlyActionMemoryCommand) return earlyActionMemoryCommand;
   const earlyReminderCommand = assistantReminderCommandResponse(db, user, text, lower, options);
   if (earlyReminderCommand) return earlyReminderCommand;
+  if (/(trade|agritade|agritrade|crop|buyer|route|order|logistics|drone|farm)/.test(lower) && /(efficiency|efficient|optimize|optimise|operations|operational|bottleneck|delay|cost|waste|profit|improve|performance)/.test(lower)) {
+    return tradeOperationalEfficiencyReview(db, user, text);
+  }
+  if (/\b(trade update|buyer update|route update|logistics update|operations brief|status report|message the buyer|notify the driver|handoff message|prepare.*buyer.*update|buyer.*route.*payment)\b/.test(lower)) {
+    return tradeOperationalCommunicationBrief(db, user, text);
+  }
+  if (/\b(check|assess|review|inspect|analyze|analyse)\b.*\b(route|road|corridor|shipment path|delivery path)\b/.test(lower)) {
+    if (conversational && !options.confirm) {
+      return stageAgentAction(db, text, { module: "Maps", tool: "map.route_risk", action: "Assess route", section: "map" });
+    }
+    const result = await executeAgentStepWithRetry(db, user, {
+      id: crypto.randomUUID(),
+      module: "Maps",
+      tool: "map.route_risk",
+      action: "Assess route",
+      detail: text,
+      status: "pending-approval"
+    }, 2);
+    return {
+      intent: "map.route_risk",
+      response: `Route check is ready. ${result.result || "I assessed the active route and saved map evidence."}`,
+      status: result.status === "executed" ? "completed" : "needs-review",
+      metadata: { conversationMode: true, redirectSection: "map", tool: "map.route_risk", attempts: result.attempts }
+    };
+  }
+  if (/\b(track|follow|show|monitor)\b.*\b(route|delivery|shipment|location|gps|movement)\b.*\b(real time|live|now|map)?\b/.test(lower)
+    || /\b(real time|live)\b.*\b(route|delivery|shipment|tracking|gps)\b/.test(lower)) {
+    return liveRouteTrackingResponse(db, user, text);
+  }
+  if (/(video|camera|show|see|visual|face to face|face-to-face)/.test(lower) && /(buyer|seller|crop|crops|produce|harvest|quality|field|farm)/.test(lower)) {
+    if (conversational && !options.confirm) {
+      return stageAgentAction(db, text, { module: "AgriTrade", tool: "trade.buyer_video", action: "Open buyer crop video", section: "trade" });
+    }
+    const session = createVideoSessionWorkflow(db, user, { type: "buyer-crop-video", subject: "crop quality video", note: text });
+    return {
+      intent: "trade.buyer_video_session_ready",
+      response: `Buyer crop video is ready. ${session.sessionNumber} lets the farmer show crop quality, quantity, packaging, field condition, or pickup readiness to the buyer or seller.`,
+      status: "completed",
+      metadata: { conversationMode: true, redirectSection: "trade", videoSessionId: session.id, sessionNumber: session.sessionNumber }
+    };
+  }
+  if (/(video|camera|show|see|visual|face to face|face-to-face)/.test(lower) && /(injury|wound|rash|swelling|fall|patient|doctor|provider|telehealth|health)/.test(lower)) {
+    if (conversational && !options.confirm) {
+      return stageAgentAction(db, text, { module: "Healthcare", tool: "health.video_session", action: "Open telehealth video", section: "health" });
+    }
+    const session = createVideoSessionWorkflow(db, user, { type: "telehealth-video", subject: "telehealth video support", note: text });
+    return {
+      intent: "health.video_session_ready",
+      response: `Telehealth video is ready. ${session.sessionNumber} can help the patient show visible concerns to a provider. Nexus is not diagnosing; it is preparing a clearer care handoff.`,
+      status: "completed",
+      metadata: { conversationMode: true, redirectSection: "health", videoSessionId: session.id, sessionNumber: session.sessionNumber }
+    };
+  }
+  if (!/\b(prepare|draft|write|compose|update)\b/.test(lower) && /(buyer|seller|customer|purchaser)/.test(lower) && /(message|chat|communicate|reply|conversation|thread|real time|realtime)/.test(lower)) {
+    const result = await createBuyerSellerMessage(db, user, {
+      channel: /whatsapp/i.test(text) ? "WhatsApp" : /sms|text/i.test(text) ? "SMS" : "in-app chat",
+      message: `AgriNexus update: please confirm crop quality evidence, price, route timing, and payment next step for the active lot.`
+    });
+    return {
+      intent: "trade.buyer_seller_message",
+      response: `I opened a ${result.thread.lastChannel} thread with ${result.thread.buyerName} for ${result.thread.productName}. The buyer can reply in the same thread, and the message evidence is saved.`,
+      status: "completed",
+      metadata: { conversationMode: conversational, redirectSection: "trade", threadId: result.thread.id, channel: result.thread.lastChannel }
+    };
+  }
+  if ((lower.includes("buyer") || lower.includes("customer")) && (lower.includes("speak") || lower.includes("talk") || lower.includes("call") || lower.includes("message") || lower.includes("contact"))) {
+    const contact = createBuyerContactWorkflow(db, user, text);
+    db.profile.agentMemory.lastStatus = "buyer-contact-ready";
+    db.profile.agentMemory.lastSummary = `Prepared ${contact.channel} with ${contact.buyerName} for ${contact.productName}.`;
+    db.profile.agentMemory.updatedAt = new Date().toISOString();
+    return {
+      intent: "trade.buyer_contact",
+      response: `I opened AgriTrade and prepared a ${contact.channel} workflow for ${contact.buyerName} about ${contact.productName}. Message draft: ${contact.message}`,
+      status: "needs-confirmation",
+      metadata: { redirectSection: "trade", contactId: contact.id, orderId: contact.orderId, channel: contact.channel }
+    };
+  }
+  if (/(onboard|create|build|prepare|generate).*(provider|partner|partnership|vendor)/.test(lower) || /(provider|partner|vendor).*(onboard|partnership|packet|plan)/.test(lower)) {
+    const type = lower.includes("telehealth") || lower.includes("health") || lower.includes("ehr") ? "telehealth"
+      : lower.includes("workforce") || lower.includes("job") || lower.includes("employer") ? "workforce"
+      : lower.includes("learning") || lower.includes("course") || lower.includes("training") || lower.includes("lms") ? "learning"
+      : lower.includes("drone") || lower.includes("field") ? "drone"
+      : lower.includes("trade") || lower.includes("buyer") || lower.includes("market") || lower.includes("logistics") || lower.includes("payment") ? "trade"
+      : lower.includes("sms") || lower.includes("whatsapp") || lower.includes("email") || lower.includes("phone") || lower.includes("communication") ? "communications"
+      : "telehealth";
+    const partnership = createProviderPartnership(db, user, type, text);
+    return {
+      intent: "provider.partnership_packet_created",
+      response: `${partnership.title} is ready. I created the partner packet, pilot offer, credential list, outreach questions, next steps, and audit evidence. Open Integrations to review it.`,
+      status: "completed",
+      metadata: { conversationMode: conversational, redirectSection: "integrations", partnershipId: partnership.id, type, requiredCredentials: partnership.requiredCredentials }
+    };
+  }
+  if (isSimpleDataExplanation(lower)) {
+    return simpleDataExplanationResponse(db, user, text, lower);
+  }
+  const earlyModuleHelp = moduleVoiceHelpResponse(db, text, lower);
+  if (earlyModuleHelp) return earlyModuleHelp;
+  if (conversational && !isIntakeStart(lower) && /\b(ask me questions|ask questions|interview me|guide me with questions|question mode|walk me through questions)\b/.test(lower)) {
+    const signal = conversationModuleSignal(text);
+    return startClarification(db, user, text, signal.score ? signal : conversationModuleSignal(`${text} ${db.profile.agentMemory.activeModule || ""}`));
+  }
+  if (conversational && isIntakeStart(lower)) {
+    const started = startConversationalIntake(db, text, intakeDomainFromText(lower));
+    return started;
+  }
+  if (conversational && /\b(guide|support|walk|lead|coach)\b/.test(lower) && /\b(farmer|student|patient|worker|learner|job seeker|caregiver)\b/.test(lower) && !/\b(start to finish|end to end|sell|payment|buyer)\b/.test(lower)) {
+    const roleGuide = roleGuidanceResponse(db, user, text);
+    if (roleGuide) return roleGuide;
+  }
+  if (conversational && /(help|guide|support|move|take).*(farmer|patient|learner|worker|community|seller).*(sell|care|job|training|payment|buyer|safe|safely|end to end|start to finish)/.test(lower)) {
+    const preview = buildAutopilotPlan(db, text, user);
+    return stageAgentAction(db, text, {
+      kind: "autopilot-mission",
+      module: "AI",
+      action: `Run multistep voice mission with ${preview.steps.length} steps`,
+      section: "agent",
+      goal: text,
+      previewSteps: preview.steps.map(step => ({ module: step.module, tool: step.tool, action: step.action }))
+    });
+  }
+  if (lower.includes("voice demo") || lower.includes("investor voice demo") || lower.includes("show investors") || lower.includes("demo mode")) {
+    return voiceInvestorDemo(db, user);
+  }
+  if ((lower.includes("apply") || lower.includes("application")) && (lower.includes("job") || lower.includes("role") || lower.includes("workforce") || lower.includes("position"))) {
+    if (conversational && !options.confirm) {
+      return stageAgentAction(db, text, { kind: "workforce-application", module: "Workforce", action: "apply for the best matched role", section: "workforce" });
+    }
+    const result = submitBestWorkforceApplication(db, user, text);
+    db.profile.agentMemory.lastStatus = result.status;
+    db.profile.agentMemory.lastSummary = result.response;
+    db.profile.agentMemory.updatedAt = new Date().toISOString();
+    return {
+      intent: result.status === "completed" ? "workforce.application_submitted" : "workforce.application_help",
+      response: result.response,
+      status: result.status,
+      metadata: {
+        redirectSection: "workforce",
+        roleId: result.role?.id || null,
+        applicationId: result.application?.id || null,
+        readiness: result.readiness || null
+      }
+    };
+  }
+  if (/(outbreak|infected|infection|ebola|disease risk|region safe|safe to deploy|safe for telehealth)/.test(lower) && /(telehealth|health|region|congo|drc|uganda|africa|outreach)/.test(lower)) {
+    return publicHealthRiskBriefing(db, user, text, lower);
+  }
+  if (conversational && /(field|farm|crop|crops|maize|cassava|avocado|harvest|produce)/.test(lower) && /(stress|damage|bad|evidence|proof|quality|selling|sell|buyer|market|pest|water|dry|disease)/.test(lower)) {
+    return stageAgentAction(db, text, {
+      module: "AgriTech",
+      tool: /\b(buyer|sell|selling|quality|market|evidence|proof)\b/.test(lower) ? "drone.field_scan" : "drone.intervention_task",
+      action: /\b(buyer|sell|selling|quality|market|evidence|proof)\b/.test(lower) ? "Run field evidence scan" : "Create field intervention task",
+      section: "trade",
+      planner: "farmer-evidence-router",
+      confidence: 0.86,
+      rationale: "Farmer described crop or field stress and asked for evidence or buyer readiness, so Nexus should stage a visible workflow before action."
+    });
+  }
+  const earlyAddressedModuleGreeting = await moduleGreetingResponse(db, user, text, lower);
+  if (earlyAddressedModuleGreeting) return earlyAddressedModuleGreeting;
   if (conversational && isRuralDistressConversation(text)) {
     return conversationalReasoningResponse(db, user, text, { ...options, openDialog: true });
   }
@@ -19870,6 +20533,18 @@ async function runAgentCommand(db, user, command, options = {}) {
   if (operationalIntelligenceCommand) return operationalIntelligenceCommand;
   const platformIntelligenceCommand = platformIntelligenceCommandResponse(db, user, text, options);
   if (platformIntelligenceCommand) return platformIntelligenceCommand;
+  if (!/\b(prepare|draft|write|compose|update)\b/.test(lower) && /(buyer|seller|customer|purchaser)/.test(lower) && /(message|chat|communicate|reply|conversation|thread|real time|realtime)/.test(lower)) {
+    const result = await createBuyerSellerMessage(db, user, {
+      channel: /whatsapp/i.test(text) ? "WhatsApp" : /sms|text/i.test(text) ? "SMS" : "in-app chat",
+      message: `AgriNexus update: please confirm crop quality evidence, price, route timing, and payment next step for the active lot.`
+    });
+    return {
+      intent: "trade.buyer_seller_message",
+      response: `I opened a ${result.thread.lastChannel} thread with ${result.thread.buyerName} for ${result.thread.productName}. The buyer can reply in the same thread, and the message evidence is saved.`,
+      status: "completed",
+      metadata: { conversationMode: conversational, redirectSection: "trade", threadId: result.thread.id, channel: result.thread.lastChannel }
+    };
+  }
   if (isBuyerSellerLocationRouteCommand(lower) || isTradeCountryRouteCommand(lower)) {
     return tradeLocationRouteResponse(db, user, text, options);
   }
@@ -21522,6 +22197,8 @@ async function api(req, res, url) {
     const step = String(url.searchParams.get("step") || session.step || "command");
     const language = step === "name" ? "en-US" : (session.locale || twilioLanguage(session.language || phoneUser?.language || "en"));
     const command = String(body.SpeechResult || body.speechResult || body.Digits || body.digits || "").trim();
+    const commandLower = command.toLowerCase();
+    const skippedNameWithCommand = step === "name" && /\b(start|open|run|apply|track|contact|call|telehealth|intake|job|delivery|mission|buyer|provider|doctor|pharmacy|course|map)\b/.test(commandLower);
     if (!command) {
       const retryText = step === "name"
         ? "Please say your name."
@@ -21537,7 +22214,7 @@ async function api(req, res, url) {
   </Gather>
 </Response>`);
     }
-    if (step === "name") {
+    if (step === "name" && !skippedNameWithCommand) {
       const callerName = extractCallerName(command) || "friend";
       const autoChoice = phoneAutoLanguageChoice(command);
       if (autoChoice) {
@@ -21559,8 +22236,11 @@ async function api(req, res, url) {
 <Response>
   <Gather input="speech dtmf" action="${xmlEscape((process.env.PUBLIC_BASE_URL || "") + "/api/voice/phone/gather?step=language")}" method="POST" language="en-US" speechTimeout="auto" actionOnEmptyResult="true">
     ${prompt}
-  </Gather>
+      </Gather>
 </Response>`);
+    }
+    if (skippedNameWithCommand) {
+      updatePhoneVoiceSession(db, session, { callerName: session.callerName || "caller", step: "command", language: session.language || phoneUser?.language || "en", locale: session.locale || twilioLanguage(session.language || phoneUser?.language || "en") });
     }
     if (step === "language") {
       const choice = phoneLanguageChoice(command) || { code: phoneUser?.language || "en", locale: twilioLanguage(phoneUser?.language || "en"), label: voiceLanguageLabel(phoneUser?.language || "en") };
@@ -21592,11 +22272,12 @@ async function api(req, res, url) {
     await writeDb(db);
     const response = String(result.response || "Command completed.").slice(0, 900);
     const spokenResponse = await phoneVoicePrompt(response, session.locale || language);
-    const nextPrompt = await phoneVoicePrompt(`${session.callerName || "Caller"}, you can say another command, or hang up when finished.`, session.locale || language);
+    const nextPrompt = await phoneVoicePrompt("You can say another command, or hang up when finished.", session.locale || language);
     return twimlResponse(res, `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
   ${spokenResponse}
   <Gather input="speech dtmf" action="${xmlEscape((process.env.PUBLIC_BASE_URL || "") + "/api/voice/phone/gather?step=command")}" method="POST" language="${xmlEscape(session.locale || language)}" speechTimeout="auto" actionOnEmptyResult="false">
+    <!-- You can say another command -->
     ${nextPrompt}
   </Gather>
 </Response>`);

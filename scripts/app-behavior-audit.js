@@ -428,8 +428,16 @@ assert(app.includes("Stopped. Ask me the next question or tell me where to go ne
 assert(styles.includes("pointer-events: none") && styles.includes(".user-caption-actions") && styles.includes("pointer-events: auto"), "Caption panel must not block workflow action clicks");
 assert(styles.includes("width: min(300px, calc(100vw - 24px))") && styles.includes("max-height: 138px"), "Caption panel must default to a small bubble");
 assert(styles.includes(".user-caption-panel.expanded") && styles.includes("display: none") && styles.includes("display: grid"), "Caption input controls must appear only in expanded caption mode");
-assert(html.includes("nexus-behavior-227"), "Index must force browsers to load Nexus behavior CSS");
-assert(html.includes("nexus-behavior-227"), "Index must force browsers to load Nexus behavior JS");
+assert(html.includes("nexus-behavior-228"), "Index must force browsers to load Nexus behavior CSS");
+assert(html.includes("nexus-behavior-228"), "Index must force browsers to load Nexus behavior JS");
+assert(server.includes("function productionActivationGuide"), "Backend needs a live activation guide");
+assert(server.includes("function directVendorProviderStatus"), "Backend must recognize direct vendor credentials");
+assert(server.includes("optionalEnvSets"), "Activation guide must show real provider depth options");
+assert(server.includes("production.provider_activation"), "Nexus must explain provider activation readiness");
+assert(server.includes("SUPABASE_SERVICE_ROLE_KEY"), "Auth provider slots must include Supabase");
+assert(server.includes("RESEND_API_KEY"), "Email provider slots must include Resend");
+assert(server.includes("PAYSTACK_SECRET_KEY"), "Payment provider slots must include Paystack");
+assert(server.includes("SENTINEL_HUB_CLIENT_SECRET"), "Drone/satellite provider slots must include Sentinel Hub");
 assert(html.includes("governmentReadinessPanel") && html.includes('data-government-action="pilot"') && html.includes('data-government-action="report"') && html.includes('data-government-action="heatmap"'), "Dashboard needs government readiness actions for public-sector pilots");
 assert(app.includes("function renderGovernmentReadinessPanel") && app.includes("function runGovernmentReadinessAction") && app.includes("data-government-action"), "Frontend must render and run public-sector readiness actions");
 assert(server.includes("function governmentReadinessModel") && server.includes("/api/government/readiness") && server.includes("government.readiness_reviewed"), "Backend must persist and audit government readiness evidence");

@@ -40,6 +40,48 @@ services:
         sync: false
       - key: BILLING_PROVIDER_API_KEY
         sync: false
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: MAPBOX_ACCESS_TOKEN
+        sync: false
+      - key: OPENROUTESERVICE_API_KEY
+        sync: false
+      - key: GOOGLE_MAPS_API_KEY
+        sync: false
+      - key: MOODLE_BASE_URL
+        sync: false
+      - key: MOODLE_TOKEN
+        sync: false
+      - key: OPENEDX_BASE_URL
+        sync: false
+      - key: OPENEDX_API_KEY
+        sync: false
+      - key: ADZUNA_APP_ID
+        sync: false
+      - key: ADZUNA_APP_KEY
+        sync: false
+      - key: OPENMRS_BASE_URL
+        sync: false
+      - key: OPENMRS_TOKEN
+        sync: false
+      - key: PAYSTACK_SECRET_KEY
+        sync: false
+      - key: FLUTTERWAVE_SECRET_KEY
+        sync: false
+      - key: LOGISTICS_TRACKING_URL
+        sync: false
+      - key: LOGISTICS_TRACKING_API_KEY
+        sync: false
+      - key: SENTINEL_HUB_CLIENT_ID
+        sync: false
+      - key: SENTINEL_HUB_CLIENT_SECRET
+        sync: false
+      - key: RESEND_API_KEY
+        sync: false
+      - key: SENDGRID_API_KEY
+        sync: false
+      - key: STRIPE_SECRET_KEY
+        sync: false
 
   - type: web
     name: agrinexus-platform
@@ -80,10 +122,30 @@ services:
         value: https://agrinexus-provider-engines.onrender.com/auth/password-reset
       - key: AUTH_PROVIDER_API_KEY
         sync: false
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: AUTH0_DOMAIN
+        sync: false
+      - key: AUTH0_CLIENT_ID
+        sync: false
+      - key: AUTH0_CLIENT_SECRET
+        sync: false
+      - key: CLERK_SECRET_KEY
+        sync: false
       - key: EMAIL_PROVIDER
         value: webhook
       - key: EMAIL_WEBHOOK_URL
         value: https://agrinexus-provider-engines.onrender.com/communications/email
+      - key: EMAIL_FROM
+        sync: false
+      - key: RESEND_API_KEY
+        sync: false
+      - key: SENDGRID_API_KEY
+        sync: false
+      - key: MAILGUN_API_KEY
+        sync: false
       - key: SMS_PROVIDER
         value: webhook
       - key: SMS_WEBHOOK_URL
@@ -103,6 +165,10 @@ services:
       - key: BILLING_PRICE_ID
         sync: false
       - key: BILLING_CHECKOUT_URL
+        sync: false
+      - key: STRIPE_SECRET_KEY
+        sync: false
+      - key: STRIPE_WEBHOOK_SECRET
         sync: false
       - key: DATABASE_URL
         sync: false
