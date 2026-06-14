@@ -423,8 +423,8 @@ assert(app.includes("Stopped. Ask me the next question or tell me where to go ne
 assert(styles.includes("pointer-events: none") && styles.includes(".user-caption-actions") && styles.includes("pointer-events: auto"), "Caption panel must not block workflow action clicks");
 assert(styles.includes("width: min(300px, calc(100vw - 24px))") && styles.includes("max-height: 138px"), "Caption panel must default to a small bubble");
 assert(styles.includes(".user-caption-panel.expanded") && styles.includes("display: none") && styles.includes("display: grid"), "Caption input controls must appear only in expanded caption mode");
-assert(html.includes("nexus-behavior-221"), "Index must force browsers to load Nexus behavior CSS");
-assert(html.includes("nexus-behavior-221"), "Index must force browsers to load Nexus behavior JS");
+assert(html.includes("nexus-behavior-222"), "Index must force browsers to load Nexus behavior CSS");
+assert(html.includes("nexus-behavior-222"), "Index must force browsers to load Nexus behavior JS");
 assert(html.includes("governmentReadinessPanel") && html.includes('data-government-action="pilot"') && html.includes('data-government-action="report"') && html.includes('data-government-action="heatmap"'), "Dashboard needs government readiness actions for public-sector pilots");
 assert(app.includes("function renderGovernmentReadinessPanel") && app.includes("function runGovernmentReadinessAction") && app.includes("data-government-action"), "Frontend must render and run public-sector readiness actions");
 assert(server.includes("function governmentReadinessModel") && server.includes("/api/government/readiness") && server.includes("government.readiness_reviewed"), "Backend must persist and audit government readiness evidence");
@@ -432,6 +432,9 @@ assert(server.includes("Ministry / Partner Mode") && server.includes("Data sover
 assert(server.includes("Kenya Rural Health, Farmer Trade, And Learning Pilot") && server.includes("Preloaded realistic pilot data") && server.includes("Pilot Readiness Checklist"), "Government readiness must include pilot story, realistic data, and partner checklist");
 assert(server.includes("Farmer") && server.includes("Patient") && server.includes("Mobile clinic") && server.includes("Ministry leader"), "Government readiness walkthroughs must cover real stakeholder roles");
 assert(app.includes("pilotStory") && app.includes("demoRecords") && app.includes("walkthroughs") && app.includes("costBenefitHtml"), "Frontend must show the deeper pre-connectivity proof layer");
+assert(server.includes("decisionMakerQuestionBank") && server.includes("monitoringEvaluation") && server.includes("budgetEnvelope"), "Government readiness must answer decision-maker questions, metrics, and budget needs");
+assert(server.includes("riskMitigation") && server.includes("partnerOnboardingChecklist") && server.includes("Implementation Timeline"), "Government readiness must include risks, partner onboarding, and implementation path");
+assert(app.includes("questions") && app.includes("monitoring") && app.includes("onboardingHtml") && app.includes("budgetHtml"), "Frontend must show decision-maker Q&A, monitoring, onboarding, and budget proof");
 assert(app.includes("shipmentPreviewMapCanvas") && app.includes("renderShipmentPreviewMap"), "Shipment preview maps must use real Leaflet canvases");
 assert(app.includes("healthHotspotMapCanvas") && app.includes("renderHealthHotspotPreviewMap"), "Health hotspot maps must use real Leaflet canvases");
 assert(app.includes("function shipmentTrackingState") && app.includes("function drawShipmentRoute"), "Shipment maps must render operational tracking state, not decorative routes");

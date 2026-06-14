@@ -563,8 +563,8 @@ assert(app.includes('workflow === "admin-user"'), "Admin test login button needs
 assert(app.includes("Only an existing Admin can run this workflow"), "Admin login flow must explain admin-only protection");
 assert(server.includes('adminAccount.role = "Admin"'), "Backend must force admin test logins to Admin");
 assert(server.includes("admin_user.created"), "Admin test login must create auth audit evidence");
-assert(html.includes("styles.css?v=nexus-behavior-221"), "Index must force browsers to load the latest Nexus behavior shell");
-assert(html.includes("app.js?v=nexus-behavior-221"), "Index must force browsers to load the latest Nexus behavior code");
+assert(html.includes("styles.css?v=nexus-behavior-222"), "Index must force browsers to load the latest Nexus behavior shell");
+assert(html.includes("app.js?v=nexus-behavior-222"), "Index must force browsers to load the latest Nexus behavior code");
 assert(html.includes("governmentReadinessPanel") && html.includes('data-government-action="pilot"') && html.includes('data-government-action="report"') && html.includes('data-government-action="heatmap"'), "Dashboard needs a government readiness operating panel with pilot, report, and heatmap actions");
 assert(app.includes("function renderGovernmentReadinessPanel") && app.includes("function runGovernmentReadinessAction") && app.includes("/api/government/readiness"), "Frontend must render and run government readiness workflows");
 assert(server.includes("function governmentReadinessModel") && server.includes("/api/government/readiness") && server.includes("government.readiness_reviewed"), "Backend must model, persist, and audit government readiness workflows");
@@ -572,6 +572,9 @@ assert(server.includes("Data sovereignty") && server.includes("90-Day Government
 assert(server.includes("Kenya Rural Health, Farmer Trade, And Learning Pilot") && server.includes("Preloaded realistic pilot data") && server.includes("Role Walkthroughs"), "Government readiness must include one clear pilot story, demo data, and walkthrough scripts");
 assert(server.includes("Public-Sector Cost Benefit") && server.includes("Pilot Readiness Checklist") && server.includes("Before live providers"), "Government readiness must include cost-benefit, checklist, and pre-provider proof");
 assert(app.includes("demoDataPack") && app.includes("walkthroughScripts") && app.includes("pilotReadinessChecklist") && app.includes("costBenefit"), "Frontend government panel must render demo data, walkthroughs, checklist, and cost benefit");
+assert(server.includes("decisionMakerQuestionBank") && server.includes("Monitoring, Evaluation, Accountability, And Learning") && server.includes("Pilot Budget Envelope"), "Government readiness must include decision-maker Q&A, MEAL metrics, and budget envelope");
+assert(server.includes("implementationTimeline") && server.includes("riskMitigation") && server.includes("partnerOnboardingChecklist"), "Government readiness must include timeline, risk controls, and partner onboarding checklist");
+assert(app.includes("questionHtml") && app.includes("monitoringHtml") && app.includes("timelineHtml") && app.includes("riskHtml") && app.includes("budgetHtml"), "Frontend government panel must render decision-maker proof sections");
 assert(html.includes("topSettingsClose"), "Settings menu needs a visible close control");
 assert(app.includes("voiceShouldResumeAfterUiAction") && app.includes("voiceResumeAfterSpeech"), "User actions must preserve and restore listening voice sessions");
 assert(app.includes("VOICE_RESTART_DELAY_MS = 320"), "Voice listening should restart faster after Nexus speaks");
@@ -579,7 +582,7 @@ assert(app.includes("VOICE_UI_FOCUS_DELAY_MS = 80"), "Ask Nexus should focus qui
 assert(app.includes("VOICE_ATTENTION_DELAY_MS = 900"), "Ask Nexus attention animation should clear quickly");
 assert(app.includes("i m|im|am|call me"), "Voice conversation must recognize casual name introductions");
 assert(app.includes("setVoiceResponse(introductionResponse, true);"), "Voice conversation must greet the user after learning their name");
-assert(sw.includes("agrinexus-pwa-v201"), "Service worker cache must refresh the installed app after native voice bridge updates");
+assert(sw.includes("agrinexus-pwa-v202"), "Service worker cache must refresh the installed app after native voice bridge updates");
 assert(html.includes("userWorkspace"), "Dashboard needs a User Workspace for standard users");
 assert(html.includes("userMobileDock"), "Legacy mobile dock markup should remain safely hidden for cache compatibility");
 assert(html.includes("What Do You Need Help With Today?"), "Dashboard simple start should use user-ready language");
@@ -1055,7 +1058,7 @@ assert(app.includes("serviceWorker.register"), "Missing service worker registrat
 assert(app.includes("AGRINEXUS_BUILD_VERSION") && app.includes("AGRINEXUS_PWA_CACHE_VERSION"), "App needs explicit freshness constants");
 assert(app.includes("AGRINEXUS_PURGE_OLD_CACHES"), "App should ask the service worker to purge old build caches");
 assert(app.includes("controllerchange") && app.includes("agrinexusReloadedForBuild"), "App should reload once when a newer service worker takes control");
-assert(sw.includes("BUILD_VERSION = \"nexus-behavior-221\""), "Service worker must know the current app build version");
+assert(sw.includes("BUILD_VERSION = \"nexus-behavior-222\""), "Service worker must know the current app build version");
 assert(sw.includes("purgeOldCaches") && sw.includes("AGRINEXUS_PURGE_OLD_CACHES"), "Service worker must purge old caches on activation and message");
 assert(sw.includes("`/app.js?v=${BUILD_VERSION}`") && sw.includes("`/styles.css?v=${BUILD_VERSION}`"), "Service worker must precache versioned JS and CSS");
 assert(app.includes("installAgriNexusApp"), "Missing in-app install handler");

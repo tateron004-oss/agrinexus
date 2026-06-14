@@ -62,8 +62,8 @@ let routeTrackingWatchId = null;
 let routeTrackingPoints = [];
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-221";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v201";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-222";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v202";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
 const VOICE_ATTENTION_DELAY_MS = 900;
@@ -8912,6 +8912,12 @@ function renderGovernmentReadinessPanel() {
   const walkthroughs = (source.walkthroughScripts || []).slice(0, 4);
   const checklist = (source.pilotReadinessChecklist || []).slice(0, 5);
   const costBenefit = source.costBenefit || {};
+  const questions = (source.decisionMakerQuestionBank || []).slice(0, 3);
+  const monitoring = source.monitoringEvaluation || {};
+  const timeline = (source.implementationTimeline || []).slice(0, 4);
+  const risks = (source.riskMitigation || []).slice(0, 3);
+  const onboarding = (source.partnerOnboardingChecklist || []).slice(0, 4);
+  const budget = source.budgetEnvelope || {};
   const latestHtml = latest ? `
     <div>
       <strong>${translateText(`${latest.runNumber || "Government run"} - ${latest.status || "ready"}`)}</strong>
@@ -8978,6 +8984,44 @@ function renderGovernmentReadinessPanel() {
       <small>${translateText(costBenefit.investorProof || "")}</small>
     </div>
   ` : "";
+  const questionHtml = questions.map(item => `
+    <div>
+      <strong>${translateText(item.question)}</strong>
+      <span>${translateText(item.answer)}</span>
+    </div>
+  `).join("");
+  const monitoringHtml = monitoring.title ? `
+    <div>
+      <strong>${translateText(monitoring.title)}</strong>
+      <span>${translateText((monitoring.metrics || []).slice(0, 3).map(item => `${item.label}: ${item.measure}`).join(" "))}</span>
+      <small>${translateText((monitoring.reportingCadence || []).join(" | "))}</small>
+    </div>
+  ` : "";
+  const timelineHtml = timeline.map(item => `
+    <div>
+      <strong>${translateText(`${item.phase}: ${item.title}`)}</strong>
+      <span>${translateText(item.detail)}</span>
+    </div>
+  `).join("");
+  const riskHtml = risks.map(item => `
+    <div>
+      <strong>${translateText(`Risk: ${item.risk}`)}</strong>
+      <span>${translateText(item.mitigation)}</span>
+    </div>
+  `).join("");
+  const onboardingHtml = onboarding.length ? `
+    <div>
+      <strong>${translateText("Partner onboarding checklist")}</strong>
+      <span>${onboarding.map(item => translateText(item)).join(" | ")}</span>
+    </div>
+  ` : "";
+  const budgetHtml = budget.title ? `
+    <div>
+      <strong>${translateText(budget.title)}</strong>
+      <span>${translateText((budget.ranges || []).map(item => `${item.tier}: ${item.range}`).join(" | "))}</span>
+      <small>${translateText(budget.note || "")}</small>
+    </div>
+  ` : "";
   const procurementHtml = procurement.map(item => `
     <div>
       <strong>${translateText(item.title)}</strong>
@@ -8996,6 +9040,12 @@ function renderGovernmentReadinessPanel() {
     complianceHtml,
     lowBandwidthHtml,
     costBenefitHtml,
+    questionHtml,
+    monitoringHtml,
+    timelineHtml,
+    riskHtml,
+    onboardingHtml,
+    budgetHtml,
     procurementHtml
   ].filter(Boolean).join("") || `<div><strong>${translateText("Government readiness")}</strong><span>${translateText("Ready to create public-sector evidence.")}</span></div>`;
 }

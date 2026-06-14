@@ -2651,6 +2651,69 @@ function governmentReadinessModel(db, user, providers = runtimeProviders(db), op
     monetization: procurement.map(item => `${item.title}: ${item.feeModel}`),
     investorProof: "The pilot can show usage, workflow completion, partner gaps, transaction evidence, and procurement readiness before live provider contracts are signed."
   };
+  const decisionMakerQuestionBank = [
+    {
+      question: "Will this work before our clinics, pharmacies, schools, or buyers have digital systems?",
+      answer: "Yes. AgriNexus can begin with local pilot records, voice intake, maps, receipts, and provider-gap evidence, then connect live vendors when partners are ready."
+    },
+    {
+      question: "How does this protect patients and avoid acting like a doctor?",
+      answer: "Nexus supports access, intake, education, routing, and follow-up evidence. It does not diagnose, prescribe, or replace licensed providers, and urgent cases are routed to human help."
+    },
+    {
+      question: "How do we measure whether a rural pilot is working?",
+      answer: "Track completed intakes, clinic/resource routing, course starts, certificates, job applications, crop orders, route evidence, provider gaps closed, and user satisfaction."
+    },
+    {
+      question: "Can it support low-literacy and multilingual communities?",
+      answer: "Yes. The user side is voice-first, captioned, translated, simple-button driven, and designed for low-bandwidth use with guided one-step workflows."
+    },
+    {
+      question: "What do we need from government, NGOs, or partners first?",
+      answer: "Pick one pilot region, identify clinic/resource contacts, assign field coordinators, approve local compliance review, and confirm which provider credentials will be connected later."
+    }
+  ];
+  const monitoringEvaluation = {
+    title: "Monitoring, Evaluation, Accountability, And Learning",
+    metrics: [
+      { label: "Access", measure: "Patient, farmer, learner, and worker workflows started and completed." },
+      { label: "Quality", measure: "Human-review gates, safety flags, translated guidance, and error recovery events." },
+      { label: "Equity", measure: "Women, children, disabled users, low-literacy users, and rural community participation." },
+      { label: "Economics", measure: "Trade value, mobile clinic service records, transaction receipts, and provider cost avoidance." },
+      { label: "Provider readiness", measure: "Partner contacts created, credential gaps closed, and live-service checks passed." }
+    ],
+    reportingCadence: ["Weekly pilot dashboard", "Monthly NGO/government report", "90-day investment and procurement report"]
+  };
+  const implementationTimeline = [
+    { phase: "Week 1-2", title: "Pilot setup", detail: "Choose region, field coordinator, clinic/resource contacts, farmer group, course/job focus, and legal review owner." },
+    { phase: "Week 3-4", title: "Community onboarding", detail: "Train field users, run voice-first intake, map clinic/pharmacy points, create first course/work/trade records." },
+    { phase: "Month 2", title: "Proof and provider gap closure", detail: "Run weekly evidence reports, identify live provider needs, prepare payment/logistics/telehealth/vendor connection plan." },
+    { phase: "Month 3", title: "Procurement decision", detail: "Review impact, cost benefit, compliance status, user feedback, provider readiness, and rollout budget." }
+  ];
+  const riskMitigation = [
+    { risk: "Health liability", mitigation: "Keep clear non-diagnostic language, human/provider escalation, emergency warning, consent, and audit logs." },
+    { risk: "Connectivity failure", mitigation: "Use PWA cache, phone/SMS/WhatsApp fallback, local records, captions, and low-bandwidth workflows." },
+    { risk: "Data privacy", mitigation: "Apply country-specific hosting, role limits, retention rules, consent tracking, and legal review before live patient data." },
+    { risk: "Payment compliance", mitigation: "Use licensed payment providers, country review, receipts, fee transparency, and no unapproved escrow promises." },
+    { risk: "Adoption barriers", mitigation: "Keep user mode simple, voice-first, translated, guided, and field-worker assisted." }
+  ];
+  const partnerOnboardingChecklist = [
+    "Name the pilot region and public-sector sponsor.",
+    "Identify mobile clinic, pharmacy/resource, farmer group, learning, workforce, logistics, payment, and drone/satellite contacts.",
+    "Confirm language, accessibility, low-bandwidth, and field-support needs.",
+    "Approve legal review for healthcare, payments, privacy, telecoms, children, and marketplace operations.",
+    "Choose pilot success metrics and reporting cadence.",
+    "Decide which live provider credentials will be connected first."
+  ];
+  const budgetEnvelope = {
+    title: "Pilot Budget Envelope",
+    note: "Exact pricing depends on country, partner scope, live provider costs, legal review, field staffing, and support level.",
+    ranges: [
+      { tier: "Discovery pilot", range: "$15k-$50k", fit: "One region, guided demo data, partner discovery, field training, weekly evidence reports." },
+      { tier: "90-day operating pilot", range: "$75k-$250k", fit: "Multiple workflows, field coordinators, live communications, selected provider credentials, compliance support." },
+      { tier: "National scale plan", range: "$500k+", fit: "Multi-region rollout, production integrations, analytics, support desk, procurement, security, and legal operations." }
+    ]
+  };
   const report = {
     title: "90-Day Government Pilot Report",
     audience: "Ministry leaders, county officials, public health partners, agriculture offices, education partners, and funders",
@@ -2697,6 +2760,12 @@ function governmentReadinessModel(db, user, providers = runtimeProviders(db), op
     walkthroughScripts,
     pilotReadinessChecklist,
     costBenefit,
+    decisionMakerQuestionBank,
+    monitoringEvaluation,
+    implementationTimeline,
+    riskMitigation,
+    partnerOnboardingChecklist,
+    budgetEnvelope,
     recommendedActions: [
       "Select one country or county pilot region.",
       "Invite one mobile clinic partner, one pharmacy/resource partner, and one agriculture extension partner.",
@@ -2851,6 +2920,26 @@ function evidenceExportPacket(db, user, audience = "investor") {
     "## Cost Benefit And Monetization",
     ...government.costBenefit.benefits.map(item => `- ${item}`),
     ...government.costBenefit.monetization.map(item => `- ${item}`),
+    "",
+    "## Decision Maker Questions",
+    ...government.decisionMakerQuestionBank.map(item => `- Q: ${item.question} A: ${item.answer}`),
+    "",
+    "## Monitoring And Evaluation",
+    ...government.monitoringEvaluation.metrics.map(item => `- ${item.label}: ${item.measure}`),
+    ...government.monitoringEvaluation.reportingCadence.map(item => `- Reporting: ${item}`),
+    "",
+    "## Implementation Timeline",
+    ...government.implementationTimeline.map(item => `- ${item.phase}: ${item.title} - ${item.detail}`),
+    "",
+    "## Risk Controls",
+    ...government.riskMitigation.map(item => `- ${item.risk}: ${item.mitigation}`),
+    "",
+    "## Partner Onboarding Checklist",
+    ...government.partnerOnboardingChecklist.map(item => `- ${item}`),
+    "",
+    "## Budget Envelope",
+    `- ${government.budgetEnvelope.note}`,
+    ...government.budgetEnvelope.ranges.map(item => `- ${item.tier}: ${item.range} - ${item.fit}`),
     "",
     "## Mission Timeline",
     ...timeline.items.slice(0, 12).map(item => `- ${item.module}: ${item.title} - ${item.detail} (${item.status})`),
@@ -20221,7 +20310,7 @@ async function runAgentCommand(db, user, command, options = {}) {
     });
     return {
       intent: "government-briefing",
-      response: `${briefing.title} is ready. ${readiness.summary} I also prepared the pilot story, realistic demo data, role walkthroughs, ministry partner view, data sovereignty and compliance panel, low-bandwidth proof, regional need heatmap, procurement model, cost-benefit case, and partner readiness checklist.`,
+      response: `${briefing.title} is ready. ${readiness.summary} I also prepared the pilot story, realistic demo data, role walkthroughs, decision-maker Q&A, monitoring and evaluation metrics, implementation timeline, risk controls, partner onboarding checklist, budget envelope, data sovereignty and compliance panel, regional need heatmap, procurement model, and cost-benefit case.`,
       metadata: { conversationMode: true, redirectSection: "dashboard", briefingId: briefing.id, readiness: briefing.productionReadiness, governmentReadiness: readiness }
     };
   }
