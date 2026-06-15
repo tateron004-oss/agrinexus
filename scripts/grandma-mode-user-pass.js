@@ -17,8 +17,8 @@ includesAll(html, [
   "Close menu",
   'id="userCaptionPanel"',
   'data-caption-action="close"',
-  "/styles.css?v=nexus-behavior-255",
-  "/app.js?v=nexus-behavior-255"
+  "/styles.css?v=nexus-behavior-256",
+  "/app.js?v=nexus-behavior-256"
 ], "HTML grandma-mode shell");
 
 includesAll(app, [
@@ -130,10 +130,11 @@ assert(!/function shipmentMapHtml[\s\S]*?<svg[\s\S]*?function healthHotspotHtml/
 assert(!/function healthHotspotHtml[\s\S]*?<svg[\s\S]*?function workflowOutcomeHtml/.test(app), "Health preview must not render cartoon SVG maps");
 
 includesAll(sw, [
-  'CACHE_NAME = "agrinexus-pwa-v235"',
-  'BUILD_VERSION = "nexus-behavior-255"'
+  'CACHE_NAME = "agrinexus-pwa-v236"',
+  'BUILD_VERSION = "nexus-behavior-256"'
 ], "Service worker freshness");
 
 console.log("Grandma mode user pass passed");
 console.log("Checked: Settings escape, Guide Me, close/back paths, captions containment, voice continuity, big user buttons, workflow mappings, readable wrapping, map panels, and no user-facing repair/admin trap.");
+
 

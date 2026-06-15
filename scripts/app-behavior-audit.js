@@ -104,6 +104,10 @@ hasAll(app, [
   "voiceRecognition.interimResults = streamingVoiceEnabled()",
   "window.AgriNexusNativeVoice",
   "keepStreamingOpen",
+  "function updateNexusVoiceSession",
+  "function scheduleNexusSpeech",
+  "function cancelQueuedNexusSpeech",
+  "function markNexusUserSpeechFinal",
   "voiceDemoQuietMode",
   "function disableNexusVoiceForDemo",
   "function enableNexusVoiceForDemo",
@@ -443,8 +447,8 @@ assert(app.includes("Unified Nexus brain asked one simple recovery question inst
 assert(styles.includes("pointer-events: none") && styles.includes(".user-caption-actions") && styles.includes("pointer-events: auto"), "Caption panel must not block workflow action clicks");
 assert(styles.includes("width: min(300px, calc(100vw - 24px))") && styles.includes("max-height: 138px"), "Caption panel must default to a small bubble");
 assert(styles.includes(".user-caption-panel.expanded") && styles.includes("display: none") && styles.includes("display: grid"), "Caption input controls must appear only in expanded caption mode");
-assert(html.includes("nexus-behavior-255"), "Index must force browsers to load Nexus behavior CSS");
-assert(html.includes("nexus-behavior-255"), "Index must force browsers to load Nexus behavior JS");
+assert(html.includes("nexus-behavior-256"), "Index must force browsers to load Nexus behavior CSS");
+assert(html.includes("nexus-behavior-256"), "Index must force browsers to load Nexus behavior JS");
 assert(server.includes("function productionActivationGuide"), "Backend needs a live activation guide");
 assert(server.includes("function directVendorProviderStatus"), "Backend must recognize direct vendor credentials");
 assert(server.includes("optionalEnvSets"), "Activation guide must show real provider depth options");
@@ -523,6 +527,7 @@ assert(app.includes("Nexus heard you. One moment."), "Voice acknowledgement shou
 assert(app.includes("function resumeVoiceListeningAfterSpeech"), "Voice should clearly recover to listening after Nexus speaks");
 assert(app.includes("function streamingVoiceEnabled") && app.includes("function updateStreamingVoicePartial") && app.includes("function registerNativeVoiceSession"), "Voice layer must support streaming-style partial capture and native app bridge state");
 assert(app.includes("voiceRecognition.interimResults = streamingVoiceEnabled()") && app.includes("const keepStreamingOpen = streamingVoiceEnabled()"), "Voice recognition must stay open for streaming/native-style sessions");
+assert(app.includes("function updateNexusVoiceSession") && app.includes("function scheduleNexusSpeech") && app.includes("function cancelQueuedNexusSpeech") && app.includes("NEXUS_USER_SPEAKING_HOLD_MS"), "Voice behavior must be governed by one Nexus session controller");
 assert(app.includes("function beginNexusVoiceTurn") && app.includes("function ignoreStaleNexusTurn") && app.includes("activeAgentCommandController.abort"), "New voice input must suppress stale previous responses");
 assert(app.includes("function nexusWakeGreeting") && app.includes("What do you need?"), "Nexus must greet the signed-in user by name before taking commands");
 assert(app.includes('experienceMode === "user" && !options.forceHandoff'), "Standard User voice responses must not automatically append the same handoff ending");
@@ -663,4 +668,5 @@ assert(app.includes("highest level|frontier brain|frontier nexus"), "Voice layer
 
 console.log("App behavior audit passed");
 console.log("Checked: app-mode language picker, service buttons, section containment, workflow confirmations, voice routes, overflow wrapping, and advanced-panel hiding.");
+
 

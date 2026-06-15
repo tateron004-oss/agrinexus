@@ -1,5 +1,5 @@
-﻿const CACHE_NAME = "agrinexus-pwa-v235";
-const BUILD_VERSION = "nexus-behavior-255";
+﻿const CACHE_NAME = "agrinexus-pwa-v236";
+const BUILD_VERSION = "nexus-behavior-256";
 const APP_SHELL = [
   "/",
   "/index.html",
@@ -62,4 +62,5 @@ self.addEventListener("fetch", event => {
       .catch(() => caches.match(event.request).then(cached => cached || (networkFirst ? caches.match("/index.html") : caches.match("/index.html"))))
   );
 });
+
 

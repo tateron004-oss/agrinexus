@@ -22,12 +22,12 @@ function requireScript(scriptName) {
 }
 
 requireMarkers("current browser cache contract", html, [
-  "/styles.css?v=nexus-behavior-255",
-  "/app.js?v=nexus-behavior-255"
+  "/styles.css?v=nexus-behavior-256",
+  "/app.js?v=nexus-behavior-256"
 ]);
 requireMarkers("service worker cache contract", sw, [
-  'CACHE_NAME = "agrinexus-pwa-v235"',
-  'BUILD_VERSION = "nexus-behavior-255"',
+  'CACHE_NAME = "agrinexus-pwa-v236"',
+  'BUILD_VERSION = "nexus-behavior-256"',
   "`/app.js?v=${BUILD_VERSION}`",
   "`/styles.css?v=${BUILD_VERSION}`",
   "purgeOldCaches",
@@ -267,4 +267,5 @@ requireMarkers("live production service contract", server, [
 
 console.log("Stabilization gate passed");
 console.log("Checked: cache freshness, no user-facing repair controls, User-mode workflows, no partial windows, language/voice behavior, role separation, live-service contract, and regression coverage.");
+
 

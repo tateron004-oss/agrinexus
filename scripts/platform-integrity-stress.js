@@ -24,8 +24,8 @@ function forbidMarkers(label, haystack, markers) {
 }
 
 requireMarkers("1. live browser QA and cache freshness", html + sw + app + JSON.stringify(pkg.scripts), [
-  "nexus-behavior-255",
-  "agrinexus-pwa-v235",
+  "nexus-behavior-256",
+  "agrinexus-pwa-v236",
   "AGRINEXUS_BUILD_VERSION",
   "AGRINEXUS_PWA_CACHE_VERSION",
   "controllerchange",
@@ -160,4 +160,5 @@ console.log("- role separation");
 console.log("- persistent memory behavior");
 console.log("- failure recovery");
 console.log("- demo path alignment");
+
 
