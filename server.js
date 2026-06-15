@@ -19979,8 +19979,9 @@ async function runAgentCommand(db, user, command, options = {}) {
       metadata: { conversationMode: true, redirectSection: "dashboard", suppressBehaviorNudge: true, suggestedReplies: ["I need medicine", "find a clinic near me", "help me sell my crop"] }
     };
   }
-  if (conversational && (/^(home|go home|nexus home|agrinexus home|agri nexus home|open home|main screen|dashboard|back home|take me home)$/i.test(lower)
-    || /\b(open|go|return|take me|back)\b.*\b(home|dashboard|main screen)\b/.test(lower))) {
+  if (conversational && (/^(home|go home|nexus home|agrinexus home|agri nexus home|open home|main screen|dashboard|back home|take me home|main menu|main menu home|menu home)$/i.test(lower)
+    || /\b(main menu|menu)(?:\s+(home|dashboard))?\b/.test(lower)
+    || /\b(open|go|return|take me|back)\b.*\b(home|dashboard|main screen|main menu|menu)\b/.test(lower))) {
     const name = db.profile.agentMemory.userModel?.name || db.profile.agentMemory.userName || user?.name?.split(/\s+/)[0] || "there";
     return {
       intent: "conversation.home",

@@ -64,8 +64,8 @@ let routeTrackingWatchId = null;
 let routeTrackingPoints = [];
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-236";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v216";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-237";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v217";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
 const VOICE_ATTENTION_DELAY_MS = 900;
@@ -17536,6 +17536,22 @@ function openMedicineHelpNow(response = "I can help with medicine access, but I 
   return true;
 }
 
+function openClinicHelpNow(response = "I can help find clinic support. Tell me your village, city, or nearest landmark, and I will guide the closest clinic or mobile clinic path.") {
+  const actionLead = "";
+  const config = workflowConfig("health", "nearest-clinic", { dataset: { patientLocation: activeCountry().name } });
+  if (!config) return openWorkflowByVoice("health", "nearest-clinic", response, { patientLocation: activeCountry().name });
+  config.userTitle = "Find clinic support";
+  config.userSummary = "Tell Nexus where the person is, then Nexus can guide clinic, mobile clinic, map route, or provider handoff support.";
+  config.confirmLabel = "Find clinic";
+  recordNexusAutonomousLearning({ type: "workflow-opened", workflow: "health", action: "nearest-clinic", command: response });
+  setActiveAgentJourney("health", "nearest-clinic", response);
+  forceOpenUserProcessScreen("health", config, { response }, "Find clinic");
+  renderLiveVoiceSuggestions(["use my location", "find clinic", "find pharmacy", "start intake"]);
+  updateNexusBehaviorLayer("ready", "Nexus opened clinic support and is waiting for location details.");
+  setVoiceResponse(`${actionLead}${response}`.trim(), true, { allowHandoff: false });
+  return true;
+}
+
 function openDoctorHelpNow(response = "Doctor help is open. Tell Nexus what kind of care connection you need. This is not a diagnosis.") {
   const actionLead = "";
   const config = workflowConfig("health", "provider", { dataset: { careNeed: "I need to speak with a doctor or provider." } });
@@ -17752,7 +17768,8 @@ function simpleUserDirectVoiceIntent(command = "") {
   const has = words => words.some(word => new RegExp(`\\b${word}\\b`).test(lower));
   const vagueHelp = /^(help|help me|i need help|need help|please help|nexus help)$/i.test(lower);
   if (/^(home|go home|nexus home|agrinexus home|agri nexus home|open home|main screen|dashboard|back home|take me home)$/.test(lower)
-    || /\b(open|go|return|take me|back)\b.*\b(home|dashboard|main screen)\b/.test(lower)) {
+    || /\b(main menu|menu)(?:\s+(home|dashboard))?\b/.test(lower)
+    || /\b(open|go|return|take me|back)\b.*\b(home|dashboard|main screen|main menu|menu)\b/.test(lower)) {
     return {
       type: "direct",
       directAction: "home",
@@ -17766,13 +17783,11 @@ function simpleUserDirectVoiceIntent(command = "") {
       suggestions: ["health", "work", "learning", "crops", "map"]
     };
   }
-  if (/\b(clinic|hospital|health center|health centre|pharmacy)\b/.test(lower) && /\b(map|near|nearest|nearby|closest|where|location|find|show)\b/.test(lower)) {
+  if (/\b(clinic|hospital|health center|health centre)\b/.test(lower) && /\b(map|near|nearest|nearby|closest|where|location|find|show|me)\b/.test(lower)) {
     return {
-      type: "workflow",
-      workflow: "map",
-      action: "facility-route",
-      response: "I can show clinic or pharmacy support on the map. Share your village, city, or location, and I will guide the closest facility route.",
-      dataset: { patientLocation: activeCountry().name }
+      type: "direct",
+      directAction: "clinic-help",
+      response: "I can help find clinic support. Tell me your village, city, or nearest landmark, and I will guide the closest clinic or mobile clinic path."
     };
   }
   const smartIntent = nexusSmartIntentRouter(command);
@@ -17917,6 +17932,7 @@ function runSimpleUserVoiceIntent(intent, command = "") {
   if (intent.type === "direct" && intent.directAction === "home") return openNexusHome(intent.response);
   if (intent.type === "direct" && intent.directAction === "health-intake") return openHealthIntakeNow(intent.response);
   if (intent.type === "direct" && intent.directAction === "medicine-help") return openMedicineHelpNow(intent.response);
+  if (intent.type === "direct" && intent.directAction === "clinic-help") return openClinicHelpNow(intent.response);
   if (intent.type === "direct" && intent.directAction === "doctor-help") return openDoctorHelpNow(intent.response);
   if (intent.type === "workflow") return openWorkflowByVoice(intent.workflow, intent.action, intent.response, intent.dataset || {});
   return false;
@@ -17941,7 +17957,8 @@ function nexusConversationFirstIntent(command = "") {
   const name = userFirstName();
   const has = words => words.some(word => new RegExp(`\\b${word}\\b`).test(lower));
   if (/^(home|go home|nexus home|agrinexus home|agri nexus home|open home|main screen|dashboard|back home|take me home)$/.test(lower)
-    || /\b(open|go|return|take me|back)\b.*\b(home|dashboard|main screen)\b/.test(lower)) {
+    || /\b(main menu|menu)(?:\s+(home|dashboard))?\b/.test(lower)
+    || /\b(open|go|return|take me|back)\b.*\b(home|dashboard|main screen|main menu|menu)\b/.test(lower)) {
     return {
       type: "direct",
       directAction: "home",
@@ -18004,11 +18021,9 @@ function nexusConversationFirstIntent(command = "") {
   }
   if (has(["clinic", "hospital", "mobile clinic", "health center", "health centre"]) && has(["near", "nearest", "closest", "find", "where", "map", "location", "around"])) {
     return {
-      type: "workflow",
-      workflow: "health",
-      action: "nearest-clinic",
-      response: "I can help find clinic support. Tell me your village, city, or nearest landmark, and I will guide the clinic or mobile clinic path.",
-      dataset: { patientLocation: activeCountry().name }
+      type: "direct",
+      directAction: "clinic-help",
+      response: "I can help find clinic support. Tell me your village, city, or nearest landmark, and I will guide the clinic or mobile clinic path."
     };
   }
   if (has(["doctor", "nurse", "provider", "clinician"]) && has(["need", "want", "speak", "talk", "call", "contact", "see", "find", "help"])) {
@@ -18176,7 +18191,7 @@ function commandGoal(command) {
     .trim();
 }
 
-async function handleVoiceCommand(rawCommand, options = {}) {
+async function handleVoiceCommandCore(rawCommand, options = {}) {
   if (!data) return setVoiceResponse("Sign in first, then I can operate the platform.");
   const turnToken = options.turnToken || null;
   const autoLanguage = await applyAutoLanguageFromSpeech(rawCommand, options);
@@ -18401,10 +18416,25 @@ async function handleVoiceCommand(rawCommand, options = {}) {
     pendingNexusSpokenCommand = null;
     return openFullScaleUserMap(simpleIntent.response);
   }
+  if (simpleIntent?.type === "direct" && simpleIntent.directAction === "home") {
+    pendingAgentClarification = null;
+    pendingNexusSpokenCommand = null;
+    return openNexusHome(simpleIntent.response);
+  }
   if (simpleIntent?.type === "direct" && simpleIntent.directAction === "health-intake") {
     pendingAgentClarification = null;
     pendingNexusSpokenCommand = null;
     return openHealthIntakeNow(simpleIntent.response);
+  }
+  if (simpleIntent?.type === "direct" && simpleIntent.directAction === "medicine-help") {
+    pendingAgentClarification = null;
+    pendingNexusSpokenCommand = null;
+    return openMedicineHelpNow(simpleIntent.response);
+  }
+  if (simpleIntent?.type === "direct" && simpleIntent.directAction === "clinic-help") {
+    pendingAgentClarification = null;
+    pendingNexusSpokenCommand = null;
+    return openClinicHelpNow(simpleIntent.response);
   }
   if (simpleIntent?.type === "direct" && simpleIntent.directAction === "doctor-help") {
     pendingAgentClarification = null;
@@ -19277,6 +19307,31 @@ async function handleVoiceCommand(rawCommand, options = {}) {
   const locationContext = await browserWeatherLocation(command);
   if (ignoreStaleNexusTurn(turnToken, "backend answer")) return;
   await runBackendAgentCommand(command, locationContext, { turnToken });
+}
+
+function voiceCrashRecoveryMessage(command = "") {
+  const lower = normalizeToolText(command);
+  if (/\b(home|dashboard|main menu|menu)\b/.test(lower)) return "I reset the voice route and opened home. What do you need next?";
+  if (/\b(clinic|hospital|health center|health centre)\b/.test(lower)) return "I reset the voice route. I can help find clinic support. Tell me your village, city, or nearest landmark.";
+  if (/\b(medicine|medication|pharmacy|refill|drug|pills)\b/.test(lower)) return "I reset the voice route. I can help with medicine access, but I cannot prescribe. Tell me the medicine concern and where you are.";
+  return "I reset the voice route. Say it again in your own words, and I will keep the next answer short.";
+}
+
+async function handleVoiceCommand(rawCommand, options = {}) {
+  try {
+    return await handleVoiceCommandCore(rawCommand, options);
+  } catch (error) {
+    console.error("Nexus voice command failed", error);
+    clearAgentProgressTimers();
+    abortActiveAgentCommand();
+    pendingAgentClarification = null;
+    pendingNexusSpokenCommand = null;
+    activeConversationIntake = null;
+    setVoiceStatus(voiceFirstMode ? "voice-first" : "standby");
+    updateNexusBehaviorLayer("ready", "Nexus recovered from a voice route error and is ready for a simpler retry.");
+    setVoiceResponse(voiceCrashRecoveryMessage(rawCommand), true, { allowHandoff: false });
+    return null;
+  }
 }
 
 async function runBackendAgentCommand(command, locationContext = null, options = {}) {
