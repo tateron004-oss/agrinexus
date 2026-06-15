@@ -89,8 +89,8 @@ let routeTrackingWatchId = null;
 let routeTrackingPoints = [];
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-259";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v239";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-260";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v240";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
 const VOICE_ATTENTION_DELAY_MS = 900;
@@ -3782,6 +3782,22 @@ function normalizeMultilingualBehaviorCommand(command = "") {
 
 function adaptiveCommandUnderstanding(command = "") {
   const original = String(command || "").replace(/\s+/g, " ").trim();
+  const learnedRule = findNexusAdaptiveRule(original);
+  if (learnedRule) {
+    const context = nexusContextMemoryModel(original, "adaptive");
+    return {
+      original,
+      normalized: learnedRule.target,
+      rewrittenCommand: learnedRule.target,
+      intent: "adaptive",
+      confidence: Number(Math.max(0.86, learnedRule.confidence || 0.86).toFixed(2)),
+      needsHumanCheck: false,
+      context,
+      ruralProfile: ruralSpeechProfile(learnedRule.target),
+      nextQuestion: nexusNextBestQuestion("adaptive", original, context),
+      learnedRule
+    };
+  }
   const ruralProfile = ruralSpeechProfile(original);
   const normalized = normalizeImperfectSpeech(original);
   const lower = normalizeToolText(normalized);
@@ -6616,6 +6632,12 @@ function nexusBrainLearningRules() {
     userModel.communicationStyle || "plain-language guidance",
     userModel.lastAdaptiveSignals?.accessibility || "standard accessibility"
   ];
+  const adaptivePreferences = loadNexusAdaptivePreferences();
+  const adaptiveRules = loadNexusAdaptiveRules();
+  if (adaptivePreferences.answerLength === "short") preferences.push("short answers");
+  if (adaptivePreferences.languageStyle === "plain") preferences.push("plain language");
+  if (adaptivePreferences.speechPace === "slow") preferences.push("slower speech");
+  if (adaptiveRules[0]) preferences.push(`learned phrase: ${adaptiveRules[0].source} -> ${adaptiveRules[0].target}`);
   const modeMemory = conversationMemoryForMode(conversationPlatformMode());
   if (modeMemory.lastTopic) preferences.push(`continue topic: ${modeMemory.lastTopic}`);
   if (memory.turnCoach?.nextQuestion) preferences.push(`next prompt: ${memory.turnCoach.nextQuestion}`);
@@ -7948,13 +7970,14 @@ function nexusHumanResponsePolicy(message = "", options = {}) {
   const text = nexusCommandCenterHumanize(ruralCommunicationResponseTuning(message, options));
   if (!text) return "";
   if (options.allowLongResponse || options.longForm || options.source === "briefing") return text;
+  const adaptivePreferences = loadNexusAdaptivePreferences();
   const speaking = Boolean(options.speak || options.forceHandoff || voiceFirstMode);
   const simpleMode = experienceMode === "user" || speaking;
   let shortAnswerMode = false;
   try {
-    shortAnswerMode = localStorage.getItem("agrinexusShortAnswers") === "on";
+    shortAnswerMode = localStorage.getItem("agrinexusShortAnswers") === "on" || adaptivePreferences.answerLength === "short";
   } catch (error) {
-    shortAnswerMode = false;
+    shortAnswerMode = adaptivePreferences.answerLength === "short";
   }
   let human = text
     .replace(/\bConfirmed\.\s*/gi, "Got it. ")
@@ -7978,6 +8001,15 @@ function nexusHumanResponsePolicy(message = "", options = {}) {
     .replace(/\s*Say yes to create[^.]+\.?/gi, "")
     .replace(/\s*Should I do that now\??/gi, "")
     .replace(/\s*Would you like me to do that now\??/gi, "");
+  if (adaptivePreferences.languageStyle === "plain") {
+    human = human
+      .replace(/\butilize\b/gi, "use")
+      .replace(/\bprovider handoff\b/gi, "care note")
+      .replace(/\bworkflow\b/gi, "step")
+      .replace(/\boperational\b/gi, "work")
+      .replace(/\bcoordination\b/gi, "help")
+      .replace(/\bevidence\b/gi, "record");
+  }
   human = nexusCommandCenterHumanize(human);
   if (simpleMode || shortAnswerMode) {
     const legal = /\b(not a diagnosis|emergency|danger|provider|consent|payment|billing|privacy)\b/i.test(human);
@@ -8072,7 +8104,16 @@ function nexusDeepMemorySignals() {
   const memory = data?.profile?.agentMemory || {};
   const moduleMemory = memory.moduleMemory || {};
   const userNeeds = memory.userNeeds || {};
+  const adaptiveRules = loadNexusAdaptiveRules().map(rule => ({ text: `${rule.source} means ${rule.target}`, confidence: rule.confidence || 0.86 }));
+  const adaptivePreferences = loadNexusAdaptivePreferences();
+  const preferenceFacts = [
+    adaptivePreferences.answerLength ? { text: `answer length preference: ${adaptivePreferences.answerLength}`, confidence: 0.9 } : null,
+    adaptivePreferences.languageStyle ? { text: `language style preference: ${adaptivePreferences.languageStyle}`, confidence: 0.9 } : null,
+    adaptivePreferences.speechPace ? { text: `speech pace preference: ${adaptivePreferences.speechPace}`, confidence: 0.9 } : null
+  ].filter(Boolean);
   const facts = [
+    ...adaptiveRules,
+    ...preferenceFacts,
     ...(memory.preferences || []),
     ...(memory.learnedPatterns || []),
     ...(memory.longTermFacts || []),
@@ -18011,6 +18052,182 @@ function recordNexusAutonomousLearning(event = {}) {
   }
 }
 
+const NEXUS_ADAPTIVE_RULES_KEY = "agrinexusAdaptiveLearningRules";
+const NEXUS_ADAPTIVE_PREFERENCES_KEY = "agrinexusAdaptivePreferences";
+
+function normalizeAdaptivePhrase(value = "") {
+  return normalizeToolText(value)
+    .replace(/^(hey\s+)?(nexus|agrinexus|agri nexus|agri)\s*/i, "")
+    .replace(/[^\p{L}\p{N}\s]/gu, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function loadNexusAdaptiveRules() {
+  try {
+    return JSON.parse(localStorage.getItem(NEXUS_ADAPTIVE_RULES_KEY) || "[]");
+  } catch (error) {
+    return [];
+  }
+}
+
+function saveNexusAdaptiveRules(rules = []) {
+  localStorage.setItem(NEXUS_ADAPTIVE_RULES_KEY, JSON.stringify(rules.slice(0, 60)));
+}
+
+function loadNexusAdaptivePreferences() {
+  try {
+    return JSON.parse(localStorage.getItem(NEXUS_ADAPTIVE_PREFERENCES_KEY) || "{}");
+  } catch (error) {
+    return {};
+  }
+}
+
+function saveNexusAdaptivePreferences(preferences = {}) {
+  localStorage.setItem(NEXUS_ADAPTIVE_PREFERENCES_KEY, JSON.stringify(preferences));
+}
+
+function nexusIntentCommandFromMeaning(meaning = "") {
+  const lower = normalizeAdaptivePhrase(meaning);
+  if (!lower) return "";
+  if (/\b(pharmacy|medicine|medication|dawa|drug|pills)\b/.test(lower)) return "I need medicine and pharmacy help";
+  if (/\b(clinic|hospital|near me|nearest clinic|health center|health centre)\b/.test(lower)) return "find a clinic near me";
+  if (/\b(doctor|provider|nurse|health|telehealth|care|patient)\b/.test(lower)) return "I need a doctor";
+  if (/\b(sell|buyer|market|crop|maize|cassava|rice|harvest|trade)\b/.test(lower)) return "help me sell my crop";
+  if (/\b(route|shipment|delivery|track|map|location|gps)\b/.test(lower)) return "open map and check route risk";
+  if (/\b(job|work|apply|role|interview|workforce|kazi)\b/.test(lower)) return "I need work";
+  if (/\b(course|learn|lesson|training|certificate|school|somo)\b/.test(lower)) return "start a course";
+  if (/\b(drone|field scan|crop scan|farm scan|pest)\b/.test(lower)) return "run drone scan on my farm";
+  return lower;
+}
+
+function rememberNexusAdaptiveRule(sourcePhrase = "", meaning = "", options = {}) {
+  const source = normalizeAdaptivePhrase(sourcePhrase);
+  const target = nexusIntentCommandFromMeaning(meaning);
+  if (!source || !target || source.length < 2) return null;
+  const rules = loadNexusAdaptiveRules().filter(rule => normalizeAdaptivePhrase(rule.source) !== source);
+  const rule = {
+    id: `rule-${Date.now()}`,
+    source,
+    target,
+    meaning: String(meaning || target).trim(),
+    mode: experienceMode || "platform",
+    language: languageCode(),
+    userName: userFirstName(),
+    uses: 0,
+    confidence: Number(options.confidence || 0.88),
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  };
+  rules.unshift(rule);
+  saveNexusAdaptiveRules(rules);
+  recordNexusAutonomousLearning({ type: "adaptive-rule-learned", command: source, target, meaning: rule.meaning });
+  return rule;
+}
+
+function findNexusAdaptiveRule(command = "") {
+  const phrase = normalizeAdaptivePhrase(command);
+  if (!phrase) return null;
+  const rules = loadNexusAdaptiveRules();
+  const phraseWords = new Set(phrase.split(/\s+/).filter(Boolean));
+  const match = rules.find(rule => {
+    const source = normalizeAdaptivePhrase(rule.source);
+    if (!source) return false;
+    if (phrase === source || phrase.includes(source) || source.includes(phrase)) return true;
+    const sourceWords = source.split(/\s+/).filter(Boolean);
+    if (sourceWords.length <= 1) return phraseWords.has(source);
+    const overlap = sourceWords.filter(word => phraseWords.has(word)).length;
+    return overlap >= Math.min(2, sourceWords.length);
+  });
+  if (!match) return null;
+  match.uses = Number(match.uses || 0) + 1;
+  match.updatedAt = new Date().toISOString();
+  saveNexusAdaptiveRules([match, ...rules.filter(rule => rule.id !== match.id)]);
+  recordNexusAutonomousLearning({ type: "adaptive-rule-used", command: phrase, target: match.target, rule: match.source });
+  return match;
+}
+
+function learnNexusPreferenceFromCommand(command = "") {
+  const lower = normalizeAdaptivePhrase(command);
+  if (!lower) return null;
+  const preferences = loadNexusAdaptivePreferences();
+  let learned = null;
+  if (/\b(say less|talk less|too much talking|short answer|short answers|be brief|no stories|stop giving stories|keep it short)\b/.test(lower)) {
+    preferences.answerLength = "short";
+    localStorage.setItem("agrinexusShortAnswers", "on");
+    learned = "short answers";
+  }
+  if (/\b(simple words|plain words|make it simple|simpler|grandma|farmer language|i cannot read|cant read|can't read)\b/.test(lower)) {
+    preferences.languageStyle = "plain";
+    learned = learned ? `${learned}, plain language` : "plain language";
+  }
+  if (/\b(slow down|speak slower|talk slower|too fast|slower)\b/.test(lower)) {
+    preferences.speechPace = "slow";
+    localStorage.setItem("agrinexusSlowSpeech", "on");
+    learned = learned ? `${learned}, slower speech` : "slower speech";
+  }
+  if (!learned) return null;
+  preferences.updatedAt = new Date().toISOString();
+  saveNexusAdaptivePreferences(preferences);
+  recordNexusAutonomousLearning({ type: "adaptive-preference-learned", command: lower, preference: learned });
+  return learned;
+}
+
+function parseNexusTeachCommand(command = "") {
+  const text = String(command || "").trim();
+  const lower = normalizeToolText(text);
+  const patterns = [
+    /\bwhen i say\s+["']?([^"']+?)["']?\s+(?:i mean|it means|that means|you should|open|start)\s+["']?([^"']+?)["']?$/i,
+    /\bif i say\s+["']?([^"']+?)["']?\s+(?:i mean|it means|that means|you should|open|start)\s+["']?([^"']+?)["']?$/i,
+    /\blearn this\s*[:,-]?\s*["']?([^"']+?)["']?\s+(?:means|is|should mean)\s+["']?([^"']+?)["']?$/i,
+    /\bremember\s+["']?([^"']+?)["']?\s+(?:means|is|should mean)\s+["']?([^"']+?)["']?$/i
+  ];
+  const match = patterns.map(pattern => text.match(pattern)).find(Boolean);
+  if (match) return { source: match[1], meaning: match[2] };
+  const meant = lower.match(/\b(?:i meant|i mean|should be|not that.*(?:i meant|i mean))\s+(.+)$/i);
+  if (meant && agentPerformanceState.lastCommand) {
+    return { source: agentPerformanceState.lastCommand, meaning: meant[1] };
+  }
+  return null;
+}
+
+function nexusAdaptiveLearningSummary() {
+  const rules = loadNexusAdaptiveRules();
+  const preferences = loadNexusAdaptivePreferences();
+  const recent = rules.slice(0, 3).map(rule => `${rule.source} means ${rule.target}`).join("; ") || "no taught phrase yet";
+  const prefs = [
+    preferences.answerLength === "short" ? "short answers" : null,
+    preferences.languageStyle === "plain" ? "plain words" : null,
+    preferences.speechPace === "slow" ? "slower speech" : null
+  ].filter(Boolean).join(", ") || "standard tone";
+  return `Adaptive learning is active. I have ${rules.length} taught phrase rule(s). Recent: ${recent}. Preferences: ${prefs}.`;
+}
+
+function handleNexusAdaptiveLearningCommand(command = "") {
+  const preference = learnNexusPreferenceFromCommand(command);
+  const teach = parseNexusTeachCommand(command);
+  if (teach) {
+    const rule = rememberNexusAdaptiveRule(teach.source, teach.meaning);
+    if (rule) {
+      renderLiveVoiceSuggestions([rule.target, "what did you learn", "Nexus stop"]);
+      updateNexusBehaviorLayer("learning", `Nexus learned: ${rule.source} -> ${rule.target}`);
+      setVoiceResponse(`I learned that. Next time you say ${rule.source}, I will treat it as ${rule.target}.`, true, { allowHandoff: false });
+      return true;
+    }
+  }
+  if (preference) {
+    renderLiveVoiceSuggestions(["what did you learn", "keep going", "Nexus stop"]);
+    updateNexusBehaviorLayer("learning", `Nexus learned preference: ${preference}`);
+    setVoiceResponse(`Got it. I learned your preference: ${preference}.`, true, { allowHandoff: false });
+    return true;
+  }
+  if (/\b(adaptive learning|can you learn|can you adapt|what did you learn|show learned phrases|show learning memory|what have you adapted|how are you adapting)\b/.test(normalizeToolText(command))) {
+    setVoiceResponse(nexusAdaptiveLearningSummary(), true, { allowHandoff: false });
+    return true;
+  }
+  return false;
+}
+
 function stageNexusSpokenCommand(command) {
   pendingNexusSpokenCommand = {
     command,
@@ -19426,6 +19643,8 @@ async function unifiedNexusConversationBrain(rawCommand = "", context = {}) {
     return true;
   }
 
+  if (handleNexusAdaptiveLearningCommand(command || localized || rawCommand)) return true;
+
   const introductionResponse = nexusIntroductionResponse(command || localized);
   if (introductionResponse) {
     stopVoicePlayback({ hard: true });
@@ -19477,6 +19696,19 @@ async function unifiedNexusConversationBrain(rawCommand = "", context = {}) {
 
   if (await handleNexusRealtimeAdjustment(command || localized)) return true;
   if (handleNexusSelfCorrection(command || localized)) return true;
+
+  const adaptiveUnderstanding = context.adaptiveReroute ? null : adaptiveCommandUnderstanding(command || localized || rawCommand);
+  if (adaptiveUnderstanding?.learnedRule && adaptiveUnderstanding.rewrittenCommand && adaptiveUnderstanding.rewrittenCommand !== command) {
+    updateNexusBehaviorLayer("learning", `Nexus used learned phrase: ${adaptiveUnderstanding.learnedRule.source}`);
+    recordNexusAutonomousLearning({
+      type: "adaptive-rule-routed",
+      command: command || localized || rawCommand,
+      target: adaptiveUnderstanding.rewrittenCommand
+    });
+    setCommandInputs(adaptiveUnderstanding.rewrittenCommand);
+    await handleVoiceCommand(adaptiveUnderstanding.rewrittenCommand, { ...context, skipUnifiedBrain: false, adaptiveReroute: true });
+    return true;
+  }
 
   const visibleInlineWorkflow = $(".user-inline-workflow:not(.hidden)");
   if (pendingWorkflow && visibleInlineWorkflow) {
@@ -19800,6 +20032,7 @@ async function handleVoiceCommandCore(rawCommand, options = {}) {
     await changeLanguageByVoice(command);
     return;
   }
+  if (handleNexusAdaptiveLearningCommand(command || localizedCommand || rawCommand)) return;
   if (pendingNexusSpokenCommand && isNexusCommandConfirmation(lower)) {
     await executePendingNexusSpokenCommand();
     return;
