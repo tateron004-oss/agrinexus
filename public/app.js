@@ -65,8 +65,8 @@ let routeTrackingWatchId = null;
 let routeTrackingPoints = [];
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-245";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v225";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-246";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v226";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
 const VOICE_ATTENTION_DELAY_MS = 900;
@@ -18212,6 +18212,184 @@ function nexusConversationFirstIntent(command = "") {
       type: "direct",
       directAction: "full-map",
       response: "I opened the full map for clinic and pharmacy support. Share your village, city, or location, and I will guide the closest facility route."
+    };
+  }
+  if (/\b(what can you do|how can you help)\b.*\b(patient|caregiver|sick person|person sick)\b/.test(lower)) {
+    return {
+      type: "workflow",
+      workflow: "health",
+      action: "intake",
+      response: "For a patient, I can start a non-diagnostic intake, help find clinic or pharmacy support, prepare a provider call, add captions, organize mobile clinic support, and create a clear handoff packet.",
+      dataset: {}
+    };
+  }
+  if (/\b(help me sell|sell)\b.*\b(maize|corn|crop|harvest|produce)\b/.test(lower)) {
+    return {
+      type: "workflow",
+      workflow: "trade",
+      action: "buyer-contact",
+      response: "I opened crop sale support. Tell me the quantity, location, and buyer if you know one. I will help prepare buyer contact and delivery tracking.",
+      dataset: { productId: firstProduct()?.id }
+    };
+  }
+  if (/\b(contact|message|call|talk to|speak to)\b.*\bbuyer\b/.test(lower)) {
+    return {
+      type: "workflow",
+      workflow: "trade",
+      action: "buyer-contact",
+      response: "I prepared buyer contact. I can draft the buyer message, keep sale evidence, and wait for your confirmation before any live SMS, WhatsApp, or phone action.",
+      dataset: { productId: firstProduct()?.id }
+    };
+  }
+  if (/\b(send|text)\b.*\b(sms|text)\b.*\bbuyer\b|\b(sms|text)\b.*\bbuyer\b/.test(lower)) {
+    return {
+      type: "workflow",
+      workflow: "trade",
+      action: "buyer-sms",
+      response: "SMS to the buyer is staged. I will not send it until you confirm. Live delivery uses Twilio or the configured SMS provider.",
+      dataset: { channel: "SMS", productId: firstProduct()?.id }
+    };
+  }
+  if (/\b(send|message)\b.*\bwhatsapp\b.*\bseller\b|\bwhatsapp\b.*\bseller\b/.test(lower)) {
+    return {
+      type: "workflow",
+      workflow: "trade",
+      action: "buyer-whatsapp",
+      response: "WhatsApp to the seller is staged. I will not send it until you confirm. Live delivery uses Twilio WhatsApp or the configured WhatsApp provider.",
+      dataset: { channel: "WhatsApp", productId: firstProduct()?.id }
+    };
+  }
+  if (/\b(track|follow|show|monitor)\b.*\b(shipment|delivery|order|sale|product)\b/.test(lower)
+    || /\b(track|show)\b.*\broute\b.*\b(farm|field)\b.*\bmarket\b/.test(lower)) {
+    return {
+      type: "direct",
+      directAction: "full-map",
+      response: "I opened shipment and route tracking. The map can show route, checkpoints, risk notes, and delivery evidence."
+    };
+  }
+  if (/\b(show|open|check)\b.*\b(trade )?route\b.*\bkenya\b.*\bnigeria\b|\b(route|show route)\b.*\bkenya\b.*\bnigeria\b/.test(lower)) {
+    return {
+      type: "direct",
+      directAction: "full-map",
+      response: "I opened the Kenya to Nigeria route view. The map can show route context, shipment tracking, buyer updates, and delivery evidence."
+    };
+  }
+  if (/\b(run|start|open)\b.*\b(drone|field)\b.*\b(scan|evidence)\b|\brun drone scan\b/.test(lower)) {
+    return {
+      type: "workflow",
+      workflow: "trade",
+      action: "drone",
+      response: "Drone scan is ready. Nexus can review crop health, pests, irrigation, field evidence, buyer proof, and the next farm action.",
+      dataset: { productId: firstProduct()?.id }
+    };
+  }
+  if (/\b(explain|summarize|read)\b.*\b(crop evidence|field evidence|drone evidence)\b.*\b(simple|plain|easy)\b|\bcrop evidence\b/.test(lower)) {
+    return {
+      type: "workflow",
+      workflow: "trade",
+      action: "drone-pest",
+      response: "In simple words: crop evidence helps show whether the crop looks healthy, damaged, dry, pest-affected, or ready for sale. Nexus can turn that into buyer proof and a next farm step.",
+      dataset: { productId: firstProduct()?.id }
+    };
+  }
+  if (/\b(read|speak|play)\b.*\b(lesson|course)\b.*\b(for me)?\b/.test(lower)) {
+    return {
+      type: "workflow",
+      workflow: "learning",
+      action: "lesson",
+      response: "I opened the lesson reader. Nexus can read the lesson in simple words and keep captions available while you follow along.",
+      dataset: {}
+    };
+  }
+  if (/\b(build|create|open|turn on)\b.*\b(caption|captions|subtitles|transcript)\b/.test(lower)) {
+    return {
+      type: "workflow",
+      workflow: "learning",
+      action: "caption",
+      response: "Caption workflow is open. Nexus will turn spoken lesson words into readable text for learning support.",
+      dataset: {}
+    };
+  }
+  if (/\b(complete|finish)\b.*\b(my )?(lesson|course)\b/.test(lower)) {
+    return {
+      type: "workflow",
+      workflow: "learning",
+      action: "lesson",
+      response: "Lesson progress workflow is open. Nexus can record the completed lesson, update progress, and prepare the next learning step.",
+      dataset: {}
+    };
+  }
+  if (/\b(issue|create|give|get)\b.*\b(my )?(certificate|credential)\b/.test(lower)) {
+    return {
+      type: "workflow",
+      workflow: "learning",
+      action: "certificate",
+      response: "Certificate workflow is open. Nexus will check course progress and prepare the certificate evidence when the learner is ready.",
+      dataset: {}
+    };
+  }
+  if (/\bbiochemistry|biology|chemistry|laboratory|lab\b/.test(lower) && /\b(job|jobs|apply|work|role)\b/.test(lower)) {
+    return {
+      type: "workflow",
+      workflow: "workforce",
+      action: "build-profile",
+      response: "With biochemistry, Nexus can suggest lab assistant, quality control, food safety, agriculture testing, health outreach, and research support roles in Kenya or South Africa, then help prepare an application path.",
+      dataset: { roleId: firstEligibleRole()?.id }
+    };
+  }
+  if (/\b(prepare|practice|coach)\b.*\b(interview|interviews)\b|\binterview prep\b/.test(lower)) {
+    return {
+      type: "workflow",
+      workflow: "workforce",
+      action: "interview",
+      response: "Interview preparation is open. Nexus can practice questions, explain the role, help you tell your story, and prepare answers in simple words.",
+      dataset: { roleId: firstEligibleRole()?.id }
+    };
+  }
+  if (/\b(i need work|need work|find work|find a job|job please|work please|need job|want job)\b/.test(lower)) {
+    return {
+      type: "workflow",
+      workflow: "workforce",
+      action: "build-profile",
+      response: "I opened work support. Tell me your country, the job you want, and your skills. I will help you apply step by step.",
+      dataset: { roleId: firstEligibleRole()?.id }
+    };
+  }
+  if (/\b(apply|application)\b.*\b(job|role|work)\b|\bhelp me apply\b/.test(lower)) {
+    return {
+      type: "workflow",
+      workflow: "workforce",
+      action: "apply-role",
+      response: "I opened job application support. Nexus can match a role, check missing skills, prepare the application, and save application evidence.",
+      dataset: { roleId: firstEligibleRole()?.id }
+    };
+  }
+  if (/\b(use my location|use location|my location|gps)\b/.test(lower)) {
+    return {
+      type: "direct",
+      directAction: "full-map",
+      response: "I opened map support so you can allow location and continue route, clinic, pharmacy, or shipment tracking."
+    };
+  }
+  if (/\b(play|open|find|search|start|put on|listen to)\b.*\b(music|song|songs|playlist|soul|gospel|congolese|kenyan|relaxing|90s)\b/.test(lower)) {
+    return {
+      type: "answer",
+      response: "Music request understood. I can use the connected music provider when authorized; for demo mode I can open a safe playback or search handoff and keep Nexus listening.",
+      suggestions: ["stop the music", "play relaxing music", "pause"]
+    };
+  }
+  if (/\b(stop|pause)\b.*\bmusic\b|\bpause music\b|\bstop music\b/.test(lower)) {
+    return {
+      type: "answer",
+      response: "Music is stopped for the demo. Nexus is still listening when you call it again.",
+      suggestions: ["play relaxing music", "Nexus"]
+    };
+  }
+  if (/^pause$|^hold on$|^wait$|\bpause listening\b/.test(lower)) {
+    return {
+      type: "answer",
+      response: "Paused. Say Nexus when you want me again.",
+      suggestions: ["Nexus"]
     };
   }
   if (isPlatformExplainVoiceCommand(command) || /\b(explain agrinexus|explain agri nexus|what is agrinexus|what is agri nexus|tell me about agrinexus|tell me about agri nexus|who are you|what are you)\b/.test(lower)) {

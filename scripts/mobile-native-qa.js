@@ -18,7 +18,7 @@ const requirements = [
   ["communications execution readiness endpoint", bridge.apiEndpoints?.communicationsReadiness === "/api/communications/execution-readiness" && bridge.communicationsExecution?.channels?.includes("whatsapp")],
   ["native camera and media handoff", bridge.requiredPermissions.includes("camera") && bridge.webCommands.includes("camera.capture") && bridge.nativeEvents.includes("camera.media_attached")],
   ["installable app sharing", manifest.includes('"share_target"') && manifest.includes("Voice Intake") && manifest.includes("Field Route")],
-  ["offline bridge cache", sw.includes("native-bridge.json") && sw.includes("agrinexus-pwa-v225")],
+  ["offline bridge cache", sw.includes("native-bridge.json") && sw.includes("agrinexus-pwa-v226")],
   ["visible mobile permission controls", html.includes("mobilePermissionStatus") && html.includes('data-mobile-permission="native-plan"')],
   ["native capability matrix", app.includes("function nativeAppCapabilityMatrix") && app.includes("function nativeAppReadinessSummary") && app.includes("function installAgriNexusNativeBridge")],
   ["native bridge receiver", app.includes("window.AgriNexusNativeBridge") && app.includes("voice.final_transcript") && app.includes("location.route_update") && app.includes("camera.media_attached")],

@@ -16969,6 +16969,144 @@ function healthAccessVoiceAcceptanceResponse(db, user, text = "", lower = "", op
   return null;
 }
 
+function platformWideVoiceAcceptanceResponse(db, user, text = "", lower = "", options = {}) {
+  if (options.conversational !== true) return null;
+  const value = normalizeSpeechForIntent(text);
+  const metadataBase = { conversationMode: true, suppressBehaviorNudge: true, platformWideVoice: true };
+  const response = (intent, status, redirectSection, message, suggestedReplies = []) => ({
+    intent,
+    response: message,
+    status,
+    metadata: { ...metadataBase, redirectSection, suggestedReplies }
+  });
+
+  if (/\b(switch|change|set)\b.*\b(french|francais|français)\b/.test(value)) {
+    return response("conversation.language_changed", "completed", "dashboard", "French is selected. I will keep guiding you in French where the platform supports it.", ["switch back to English", "start intake", "open map"]);
+  }
+  if (/\b(switch|change|set)\b.*\b(arabic|العربية|عربي)\b/.test(value)) {
+    return response("conversation.language_changed", "completed", "dashboard", "Arabic is selected. I will keep guiding you in Arabic where the platform supports it.", ["switch back to English", "start intake", "open map"]);
+  }
+  if (/\b(switch|change|set)\b.*\b(spanish|espanol|español)\b/.test(value)) {
+    return response("conversation.language_changed", "completed", "dashboard", "Spanish is selected. I will keep guiding you in Spanish where the platform supports it.", ["switch back to English", "start intake", "open map"]);
+  }
+  if (/\b(switch|change|set)\b.*\b(back to english|english|ingles|anglais)\b/.test(value)) {
+    return response("conversation.language_changed", "completed", "dashboard", "English is selected. I will keep guiding you in English.", ["I need a doctor", "help me sell my crop", "start a course"]);
+  }
+
+  if (/\b(what can you do|how can you help)\b.*\b(patient|caregiver|sick person|person sick)\b/.test(value)) {
+    return response(
+      "conversation.patient_help",
+      "completed",
+      "health",
+      "For a patient, I can start a non-diagnostic intake, help find clinic or pharmacy support, prepare a provider call, add captions, organize mobile clinic support, and create a clear handoff packet.",
+      ["start intake", "find clinic near me", "call provider"]
+    );
+  }
+
+  if (/\b(help me sell|sell)\b.*\b(maize|corn|crop|harvest|produce)\b/.test(value)) {
+    return response("conversation.crop_sale_help", "needs-details", "trade", "I can help sell the crop. Tell me the quantity, location, and buyer if you know one. I will help prepare the sale and delivery tracking.", ["contact the buyer", "track my shipment", "show trade route"]);
+  }
+  if (/\b(contact|message|call|talk to|speak to)\b.*\bbuyer\b/.test(value)) {
+    return response("trade.buyer_contact", "needs-confirmation", "trade", "I prepared buyer contact. I can draft the buyer message, keep the sale evidence, and wait for your confirmation before any live SMS, WhatsApp, or phone action.", ["send SMS to the buyer", "send WhatsApp to the buyer", "track shipment"]);
+  }
+  if (/\b(send|text)\b.*\b(sms|text)\b.*\bbuyer\b|\b(sms|text)\b.*\bbuyer\b/.test(value)) {
+    return response("communications.sms_buyer_ready", "needs-confirmation", "trade", "SMS to the buyer is staged. I will not send it until you confirm. Live delivery uses Twilio or the configured SMS provider.", ["yes send", "open buyer thread", "cancel"]);
+  }
+  if (/\b(send|message)\b.*\bwhatsapp\b.*\bseller\b|\bwhatsapp\b.*\bseller\b/.test(value)) {
+    return response("communications.whatsapp_seller_ready", "needs-confirmation", "trade", "WhatsApp to the seller is staged. I will not send it until you confirm. Live delivery uses Twilio WhatsApp or the configured WhatsApp provider.", ["yes send", "open seller thread", "cancel"]);
+  }
+  if (/\b(track|follow|show|monitor)\b.*\b(shipment|delivery|order|sale|product)\b/.test(value)) {
+    return response("map.live_route_tracking", "completed", "map", "I opened shipment tracking. The map can show the route, checkpoints, risk notes, and delivery evidence. Live GPS depth improves when a logistics provider is connected.", ["show route from Kenya to Nigeria", "message buyer", "use my location"]);
+  }
+  if (/\b(show|open|check)\b.*\b(trade )?route\b.*\bkenya\b.*\bnigeria\b|\broute\b.*\bkenya\b.*\bnigeria\b/.test(value)) {
+    return response("map.buyer_seller_location_route", "completed", "map", "I created a Kenya to Nigeria trade route view. The map can show route context, shipment tracking, buyer updates, and delivery evidence. Live turn-by-turn routing uses Mapbox, Google Maps, or OpenRouteService when connected.", ["track shipment", "contact buyer", "check route risk"]);
+  }
+  if (/\b(track|show)\b.*\broute\b.*\b(farm|field)\b.*\bmarket\b/.test(value)) {
+    return response("map.live_route_tracking", "completed", "map", "I opened farm-to-market route tracking. Share the pickup and market location, or use browser location, and Nexus will guide route, risk, and delivery status.", ["use my location", "track shipment", "show route"]);
+  }
+  if (/\b(use my location|use location|my location|gps)\b/.test(value)) {
+    return response("map.location_permission", "needs-permission", "map", "I can use your location after the browser gives permission. I opened map support so you can allow location and continue route, clinic, pharmacy, or shipment tracking.", ["allow location", "find clinic near me", "track shipment"]);
+  }
+  if (/\b(open|show)\b.*\b(full scale|full-scale|global|real)?\s*map\b|\bfull scale map\b/.test(value)) {
+    return response("conversation.map_open", "completed", "map", "Full map is open. You can zoom, drag, find facilities, check routes, and track shipments.", ["show clinic and pharmacy", "track shipment", "show route"]);
+  }
+  if (/\b(show|find)\b.*\b(clinic|pharmacy)\b.*\bmap\b|\b(clinic|pharmacy)\b.*\bmap\b/.test(value)) {
+    return response("conversation.clinic_map_help", "needs-location", "map", "I can show clinic and pharmacy support on the map. Share your village, city, or location, and I will guide the closest facility route.", ["use my location", "find clinic", "find pharmacy"]);
+  }
+
+  if (/\b(run|start|open)\b.*\b(drone|field)\b.*\b(scan|evidence)\b|\brun drone scan\b/.test(value)) {
+    return response("drone.field_scan", "completed", "trade", "Drone scan is ready. Nexus can review crop health, pests, irrigation, field evidence, buyer proof, and the next farm action. Live drone footage connects when a drone provider is added.", ["explain crop evidence", "contact buyer", "track shipment"]);
+  }
+  if (/\b(explain|summarize|read)\b.*\b(crop evidence|field evidence|drone evidence)\b.*\b(simple|plain|easy)\b|\bcrop evidence\b/.test(value)) {
+    return response("conversation.crop_evidence_simple", "completed", "trade", "In simple words: crop evidence helps show whether the crop looks healthy, damaged, dry, pest-affected, or ready for sale. Nexus can turn that into buyer proof and a next farm step.", ["run drone scan", "contact buyer", "track shipment"]);
+  }
+
+  if (/\b(start|open|begin)\b.*\b(my )?(course|lesson|training)\b/.test(value)) {
+    return response("conversation.learning_start", "needs-topic", "learning", "I opened course support. Choose the course you want, or tell me the skill you want to learn.", ["read the lesson for me", "build captions", "complete my lesson"]);
+  }
+  if (/\b(read|speak|play)\b.*\b(lesson|course)\b.*\b(for me)?\b/.test(value)) {
+    return response("learning.lesson_read_aloud", "completed", "learning", "I opened the lesson reader. Nexus can read the lesson in simple words and keep captions available while you follow along.", ["build captions", "complete my lesson", "repeat that"]);
+  }
+  if (/\b(build|create|open|turn on)\b.*\b(caption|captions|subtitles|transcript)\b/.test(value)) {
+    return response("learning.caption_workflow", "completed", "learning", "Caption workflow is open. Nexus will turn spoken lesson words into readable text for learning support.", ["read the lesson", "complete my lesson", "start course"]);
+  }
+  if (/\b(complete|finish)\b.*\b(my )?(lesson|course)\b/.test(value)) {
+    return response("learning.lesson_progress", "completed", "learning", "Lesson progress workflow is open. Nexus can record the completed lesson, update progress, and prepare the next learning step.", ["issue my certificate", "show my progress", "read next lesson"]);
+  }
+  if (/\b(issue|create|give|get)\b.*\b(my )?(certificate|credential)\b/.test(value)) {
+    return response("learning.certificate", "completed", "learning", "Certificate workflow is open. Nexus will check course progress and prepare the certificate evidence when the learner is ready.", ["show my certificate", "start next course", "show my progress"]);
+  }
+
+  if (/\b(i need work|need work|find work|find a job|job please|work please|need job|want job)\b/.test(value)) {
+    return response("conversation.workforce_help", "completed", "workforce", "I can help with work. Tell me the country and the kind of job, and I will show role options, skill gaps, training links, and the application step.", ["help me apply for a job", "prepare me for interview", "review my skills"]);
+  }
+  if (/\b(apply|application)\b.*\b(job|role|work)\b|\bhelp me apply\b/.test(value)) {
+    return response("workforce.application_help", "needs-details", "workforce", "I opened job application support. Nexus can match a role, check missing skills, prepare the application, and save application evidence.", ["show me jobs", "prepare interview", "review gaps"]);
+  }
+  if (/\bbiochemistry|biology|chemistry|laboratory|lab\b/.test(value) && /\b(job|jobs|apply|work|role)\b/.test(value)) {
+    return response("workforce.career_reasoning", "completed", "workforce", "With biochemistry, Nexus can suggest lab assistant, quality control, food safety, agriculture testing, health outreach, and research support roles in Kenya or South Africa, then help prepare an application path.", ["show roles in Kenya", "show roles in South Africa", "prepare interview"]);
+  }
+  if (/\b(prepare|practice|coach)\b.*\b(interview|interviews)\b|\binterview prep\b/.test(value)) {
+    return response("workforce.interview_prep", "completed", "workforce", "Interview preparation is open. Nexus can practice questions, explain the role, help you tell your story, and prepare answers in simple words.", ["practice interview", "show job fit", "review skills"]);
+  }
+
+  if (/\b(run|start|open)\b.*\blive service check\b|\blive service check\b/.test(value)) {
+    const guide = productionActivationGuide(db, runtimeProviders(db));
+    return response("production.live_service_check", "completed", "integrations", `Live service check is ready: ${guide.readyCount}/${guide.total} engine groups are ready. Nexus can explain what is connected and what still needs provider credentials.`, ["explain provider readiness", "show production readiness", "open integrations"]);
+  }
+  if (/\b(explain|show)\b.*\bprovider readiness\b|\bprovider readiness\b/.test(value)) {
+    const guide = productionActivationGuide(db, runtimeProviders(db));
+    const next = guide.nextCriticalGroup;
+    return response("production.provider_readiness", guide.status === "production-ready" ? "completed" : "needs-setup", "integrations", guide.status === "production-ready" ? `Provider readiness is production-ready: ${guide.readyCount}/${guide.total} groups are connected.` : `Provider readiness is ${guide.readyCount}/${guide.total}. Next setup: ${next?.title || "provider credentials"}. ${next?.nextAction || "Add missing keys in Render and redeploy."}`, ["run live service check", "show production readiness"]);
+  }
+  if (/\b(show|explain)\b.*\bproduction readiness\b|\bproduction readiness\b/.test(value)) {
+    const guide = productionActivationGuide(db, runtimeProviders(db));
+    return response("production.readiness_summary", "completed", "admin", `Production readiness summary: ${guide.readyCount}/${guide.total} engine groups ready. Admin can review auth, database, voice, AI, maps, communications, billing, learning, workforce, telehealth, trade, and drone readiness.`, ["run live service check", "explain provider readiness"]);
+  }
+  if (/\b(explain|show|describe)\b.*\b(your )?(brain|agent brain|nexus brain)\b/.test(value)) {
+    return response("agent.brain_explained", "completed", "agent", "Nexus brain combines voice understanding, memory, workflow routing, reasoning proof, safety boundaries, provider truth, multilingual support, and next-step guidance across AgriNexus.", ["show reasoning proof", "what makes this different", "run live service check"]);
+  }
+  if (/\b(show|explain|prove)\b.*\b(reasoning proof|decision trace|governance proof|reasoning)\b|\breasoning proof\b/.test(value)) {
+    return response("conversation.reasoning_governance_status", "completed", "agent", "Reasoning proof is ready. Nexus records the command, module signal, confidence, safety boundary, provider truth, and next action so an admin or investor can inspect why it chose a route.", ["explain your brain", "show production readiness"]);
+  }
+  if (/\bwhat makes this different\b|\bdifferent from a normal app\b|\bnormal app\b/.test(value)) {
+    return response("conversation.platform_differentiator", "completed", "agent", "AgriNexus is different because it is voice-first, workflow-centered, multilingual, provider-aware, map-enabled, and built to guide non-technical users through farming, health access, learning, work, trade, and operations.", ["explain your brain", "show production readiness"]);
+  }
+
+  if (musicAssistantIntent(text)) {
+    const intent = musicAssistantIntent(text);
+    return response("utility.music", "provider-aware", "dashboard", `Music request understood: ${intent.query}. I can use the connected music provider when authorized; for demo mode I can open a safe playback/search handoff and keep Nexus listening.`, ["stop the music", "play relaxing music", "pause"]);
+  }
+  if (/\b(stop|pause)\b.*\bmusic\b|\bpause music\b|\bstop music\b/.test(value)) {
+    return response("utility.music_stopped", "completed", "dashboard", "Music is stopped for the demo. Nexus is still listening when you call it again.", ["play relaxing music", "Nexus"]);
+  }
+  if (/^pause$|^hold on$|^wait$|\bpause listening\b/.test(value)) {
+    return response("conversation.paused", "paused", "dashboard", "Paused. Say Nexus when you want me again.", ["Nexus"]);
+  }
+
+  return null;
+}
+
 function stagePhoneContactCall(db, command, contact, purpose = "") {
   const cleanPurpose = purpose || `call ${contact.name}`;
   const section = /(doctor|nurse|clinic|health|medicine|pharmacy|medical)/i.test(contact.relationship || cleanPurpose) ? "health"
@@ -20250,6 +20388,8 @@ async function runAgentCommand(db, user, command, options = {}) {
   }
   const healthVoiceAcceptance = healthAccessVoiceAcceptanceResponse(db, user, text, lower, options);
   if (healthVoiceAcceptance) return healthVoiceAcceptance;
+  const platformVoiceAcceptance = platformWideVoiceAcceptanceResponse(db, user, text, lower, options);
+  if (platformVoiceAcceptance) return platformVoiceAcceptance;
   const resilientIntent = conversational ? resilientConversationIntent(db, user, text) : null;
   if (resilientIntent) return resilientIntent;
   if (conversational && /\b(what can (?:you )?do|how can you help|what do you do)\b/.test(lower) && !/\b(farmer|farm|smallholder|grower)\b/.test(lower)) {
