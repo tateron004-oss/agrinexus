@@ -64,8 +64,8 @@ let routeTrackingWatchId = null;
 let routeTrackingPoints = [];
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-233";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v213";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-234";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v214";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
 const VOICE_ATTENTION_DELAY_MS = 900;
@@ -16788,9 +16788,9 @@ function isNexusGreetingOnly(command) {
   const normalized = normalizedWakeText(command);
   if (!normalized) return false;
   return [
-    "hello", "hi", "good morning", "good afternoon", "good evening",
+    "hello", "hi", "good morning", "goodmorning", "good afternoon", "goodafternoon", "good evening", "goodevening",
     "hello nexus", "hi nexus", "hello agrinexus", "hi agrinexus",
-    "good morning nexus", "good afternoon nexus", "good evening nexus",
+    "good morning nexus", "goodmorning nexus", "good afternoon nexus", "goodafternoon nexus", "good evening nexus", "goodevening nexus",
     "hola", "buenos dias", "buenas tardes", "buenas noches",
     "hola nexus", "hola agrinexus", "buenos dias nexus", "buenas tardes nexus", "buenas noches nexus",
     "ola", "oi", "bom dia", "boa tarde", "boa noite",
@@ -17396,8 +17396,7 @@ async function executeWorkflowConfigFromVoice(config, response = "") {
 
 function openWorkflowByVoice(workflow, action, response, dataset = {}) {
   const config = workflowConfig(workflow, action, { dataset });
-  const heard = summarizeNexusCommandForRepeat(agentPerformanceState.spokenCommand || agentPerformanceState.lastCommand || "");
-  const actionLead = heard ? `I heard: ${heard}. ` : "";
+  const actionLead = "";
   recordNexusAutonomousLearning({ type: "workflow-opened", workflow, action, command: response || "" });
   setActiveAgentJourney(workflow, action, response || "");
   if (!config) {
@@ -17430,8 +17429,7 @@ function isLearningCaptionCommand(command = "", tool = null) {
 }
 
 function openLearningCaptionSupport(response = "Captions are open. Speak now and Nexus will write the words here.") {
-  const heard = summarizeNexusCommandForRepeat(agentPerformanceState.spokenCommand || agentPerformanceState.lastCommand || "");
-  const actionLead = heard ? `I heard: ${heard}. ` : "";
+  const actionLead = "";
   const config = learningAccessibilityWorkflowConfig("caption");
   recordNexusAutonomousLearning({ type: "workflow-opened", workflow: "learning", action: "caption", command: response });
   setActiveAgentJourney("learning", "caption", response);
@@ -17461,8 +17459,7 @@ function isMapTrackingCommand(command = "") {
 }
 
 function openFullScaleUserMap(response = "Full map is open. You can zoom, drag, check route risk, find facilities, or track shipment movement.") {
-  const heard = summarizeNexusCommandForRepeat(agentPerformanceState.spokenCommand || agentPerformanceState.lastCommand || "");
-  const actionLead = heard ? `I heard: ${heard}. ` : "";
+  const actionLead = "";
   closeAskNexus({ silent: true });
   $("#workflowModal")?.classList.add("hidden");
   closeUserCaptionPanel();
@@ -17485,8 +17482,7 @@ function openFullScaleUserMap(response = "Full map is open. You can zoom, drag, 
 }
 
 function openHealthIntakeNow(response = "Telehealth intake is open. Step 1: Who needs care? Say the patient or household name, or type it in the first box. This is not a diagnosis.") {
-  const heard = summarizeNexusCommandForRepeat(agentPerformanceState.spokenCommand || agentPerformanceState.lastCommand || "");
-  const actionLead = heard ? `I heard: ${heard}. ` : "";
+  const actionLead = "";
   const config = workflowConfig("health", "intake", { dataset: {} });
   if (!config) return openWorkflowByVoice("health", "intake", response);
   recordNexusAutonomousLearning({ type: "workflow-opened", workflow: "health", action: "intake", command: response });
@@ -17499,8 +17495,7 @@ function openHealthIntakeNow(response = "Telehealth intake is open. Step 1: Who 
 }
 
 function openDoctorHelpNow(response = "Doctor help is open. Tell Nexus what kind of care connection you need. This is not a diagnosis.") {
-  const heard = summarizeNexusCommandForRepeat(agentPerformanceState.spokenCommand || agentPerformanceState.lastCommand || "");
-  const actionLead = heard ? `I heard: ${heard}. ` : "";
+  const actionLead = "";
   const config = workflowConfig("health", "provider", { dataset: { careNeed: "I need to speak with a doctor or provider." } });
   if (!config) return openWorkflowByVoice("health", "provider", response);
   config.userTitle = "Doctor help";
@@ -17877,6 +17872,177 @@ function runSimpleUserVoiceIntent(intent, command = "") {
   return false;
 }
 
+function nexusConversationFirstResponse(response, suggestions = [], status = "answering") {
+  pendingAgentClarification = null;
+  pendingNexusSpokenCommand = null;
+  updateNexusBehaviorLayer(status, "Nexus answered conversationally before opening any menu.");
+  renderLiveVoiceSuggestions(suggestions.length ? suggestions : ["health", "crops", "work", "learning", "map"]);
+  setVoiceResponse(response, true, { allowHandoff: false });
+  return true;
+}
+
+function nexusConversationFirstIntent(command = "") {
+  const lower = normalizeToolText(command);
+  if (!lower) return null;
+  const name = userFirstName();
+  const has = words => words.some(word => new RegExp(`\\b${word}\\b`).test(lower));
+  const exactGreeting = /^(hello|hi|hey|good morning|goodmorning|good afternoon|goodafternoon|good evening|goodevening|hola|buenos dias|buenas tardes|bonjour|salut|habari|hujambo|ola|oi|bom dia|boa tarde)\b(?:\s+(nexus|agrinexus|agri nexus|agri))?$/.test(lower);
+  if (exactGreeting) {
+    return {
+      type: "answer",
+      response: `Hey ${name}. How can I assist you?`,
+      suggestions: ["I need a doctor", "help me sell my crop", "start a course", "find work", "open map"]
+    };
+  }
+  if (/\b(can you hear me|are you listening|do you hear me|you hear me|nexus you there|are you there)\b/.test(lower)) {
+    return {
+      type: "answer",
+      response: `Yes ${name}, I can hear you. Tell me what you need in your own words.`,
+      suggestions: ["I need medicine", "my crop is bad", "clinic near me", "find work"]
+    };
+  }
+  if (/\b(explain agrinexus|what is agrinexus|tell me about agrinexus|who are you|what are you)\b/.test(lower)) {
+    return {
+      type: "answer",
+      response: "AgriNexus is a voice-first support platform for farming, health access, learning, workforce, trade, maps, and local services. Nexus is the assistant that listens, guides, opens the right workflow, and keeps the next step simple.",
+      suggestions: ["help a farmer", "help a patient", "open learning", "open map"]
+    };
+  }
+  if (/\b(what can you do|how can you help|what do you do|help me understand)\b/.test(lower)) {
+    return {
+      type: "answer",
+      response: "I can help with health support, medicine access, farming problems, crop sales, learning, jobs, routes, maps, reminders, and provider handoffs. Tell me the problem, not the button.",
+      suggestions: ["I need a doctor", "my crop is bad", "help me sell maize", "start my course"]
+    };
+  }
+  if (/\b(help.*farmer|farmer|farmers|farming|farm)\b/.test(lower) && /\b(help|support|what can|how can|tell|explain)\b/.test(lower)) {
+    return {
+      type: "answer",
+      response: "For a farmer, I can explain crop problems in simple words, help prepare a crop sale, show buyer and route support, open the map, guide drone or field evidence, and suggest the next safe step.",
+      suggestions: ["my crop is bad", "sell my crop", "show route", "open map"]
+    };
+  }
+  if (/\b(baby|child|kid|mother|grandma|patient|person)\b.*\b(sick|ill|hurt|pain|fever|injury|medicine|doctor|clinic)\b/.test(lower)
+    || /\b(sick baby|baby sick|child sick|patient sick|someone is sick|i am sick|i need health help)\b/.test(lower)) {
+    return {
+      type: "workflow",
+      workflow: "health",
+      action: "intake",
+      response: "I can help with health support. First, tell me who needs care and where they are. If this is urgent or dangerous, contact local emergency help now. This is not a diagnosis.",
+      dataset: {}
+    };
+  }
+  if (has(["medicine", "medication", "pharmacy", "refill", "drug", "pills"])) {
+    return {
+      type: "workflow",
+      workflow: "health",
+      action: "pharmacy",
+      response: "I can help with medicine access. Tell me the medicine name if you know it, where you are, and whether a provider needs to review it. I cannot prescribe.",
+      dataset: { patientLocation: activeCountry().name }
+    };
+  }
+  if (has(["clinic", "hospital", "mobile clinic", "health center", "health centre"]) && has(["near", "nearest", "closest", "find", "where", "map", "location", "around"])) {
+    return {
+      type: "workflow",
+      workflow: "health",
+      action: "nearest-clinic",
+      response: "I can help find clinic support. Tell me your village, city, or nearest landmark, and I will guide the clinic or mobile clinic path.",
+      dataset: { patientLocation: activeCountry().name }
+    };
+  }
+  if (has(["doctor", "nurse", "provider", "clinician"]) && has(["need", "want", "speak", "talk", "call", "contact", "see", "find", "help"])) {
+    return {
+      type: "direct",
+      directAction: "doctor-help",
+      response: "I can help you reach care support. Tell me what is happening, where you are, and whether you need phone, WhatsApp, video, clinic, or pharmacy help. This is not a diagnosis."
+    };
+  }
+  if (/\b(i need health|need health|health help|telehealth help|medical help|i need care|need care|i am sick|im sick|i feel sick|not feeling well)\b/.test(lower)) {
+    return {
+      type: "workflow",
+      workflow: "health",
+      action: "intake",
+      response: "I can help with health support. First, tell me who needs care and where they are. This is not a diagnosis, but I can help prepare the intake and next support step.",
+      dataset: {}
+    };
+  }
+  if (/\b(my crop is bad|crop is bad|crop bad|field is bad|plants are sick|plant is sick|crop problem|field problem|yellow leaves|wilting|pests|crop dying|farm problem)\b/.test(lower)) {
+    return {
+      type: "workflow",
+      workflow: "trade",
+      action: "drone-pest",
+      response: "I can help with the crop problem. Tell me the crop, where the farm is, and what you see. I will guide field evidence, simple next steps, buyer proof, and route planning.",
+      dataset: { productId: firstProduct()?.id, objective: command }
+    };
+  }
+  if ((has(["sell", "selling", "buyer", "market", "trade"]) && has(["crop", "maize", "rice", "cassava", "beans", "produce", "harvest", "product"]))
+    || /\b(help me sell|sell my crop|sell maize|find buyer|talk to buyer)\b/.test(lower)) {
+    return {
+      type: "workflow",
+      workflow: "trade",
+      action: "buyer-contact",
+      response: "I can help sell the crop. Tell me the crop, quantity, location, and buyer if you know one. I will help prepare the sale and delivery tracking.",
+      dataset: { productId: firstProduct()?.id }
+    };
+  }
+  if (/\b(track|where is|route|delivery|shipment|sale location|product location|transaction location)\b/.test(lower)) {
+    return {
+      type: "direct",
+      directAction: "full-map",
+      response: "I opened the full map for tracking. Share the pickup and delivery locations, and I will guide the route, risk, and shipment status."
+    };
+  }
+  if (/\b(i need work|need work|find work|find a job|job in|apply for|employment|workforce|role)\b/.test(lower)) {
+    return {
+      type: "workflow",
+      workflow: "workforce",
+      action: has(["apply"]) ? "apply-role" : "build-profile",
+      response: "I can help with work. Tell me your country, the type of job, and your skills. I will show the role path and application step.",
+      dataset: { roleId: firstEligibleRole()?.id }
+    };
+  }
+  if (/\b(start.*course|course|lesson|training|learn|teach me|school|class)\b/.test(lower)) {
+    return {
+      type: "workflow",
+      workflow: "learning",
+      action: "start",
+      response: "I can help you learn. Tell me the skill you want, or I can start the recommended course and read it with captions or audio.",
+      dataset: {}
+    };
+  }
+  if (/\b(caption|captions|subtitle|transcript)\b/.test(lower)) {
+    return /\b(health|doctor|clinic|telehealth|patient|provider)\b/.test(lower)
+      ? {
+          type: "workflow",
+          workflow: "health",
+          action: "caption",
+          response: "Telehealth captions are open. Speak naturally, and Nexus will help turn the conversation into readable text.",
+          dataset: {}
+        }
+      : {
+          type: "workflow",
+          workflow: "learning",
+          action: "caption",
+          response: "Learning captions are open. Speak naturally, and Nexus will write the lesson words clearly.",
+          dataset: {}
+        };
+  }
+  if (/\b(open|show|full|global|real|map|route|location)\b.*\b(map|route|location|tracking)\b/.test(lower) || /^(map|open map|show map)$/.test(lower)) {
+    return {
+      type: "direct",
+      directAction: "full-map",
+      response: "Full map is open. You can zoom, drag, find facilities, check routes, and track shipments."
+    };
+  }
+  return null;
+}
+
+function runConversationFirstIntent(intent, command = "") {
+  if (!intent) return false;
+  if (intent.type === "answer") return nexusConversationFirstResponse(intent.response, intent.suggestions || []);
+  return runSimpleUserVoiceIntent(intent, command);
+}
+
 function nexusCommonPhraseResponse(command = "") {
   const value = normalizeToolText(command);
   if (!value) return "";
@@ -18002,6 +18168,8 @@ async function handleVoiceCommand(rawCommand, options = {}) {
     setVoiceResponse(commonPhrase, true);
     return;
   }
+  const conversationFirstIntent = nexusConversationFirstIntent(spokenCommand || command || localizedCommand || rawCommand);
+  if (runConversationFirstIntent(conversationFirstIntent, spokenCommand || command || localizedCommand || rawCommand)) return;
   const stopRedirect = postStopRedirectCommand(command);
   if (isGlobalStopCommand(String(command || localizedCommand).toLowerCase())) {
     if (isStopAndContinueWorkingCommand(command || localizedCommand)) {
