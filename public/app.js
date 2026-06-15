@@ -65,8 +65,8 @@ let routeTrackingWatchId = null;
 let routeTrackingPoints = [];
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-243";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v223";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-244";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v224";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
 const VOICE_ATTENTION_DELAY_MS = 900;
@@ -5911,7 +5911,7 @@ function nexusConversationGovernor(command = "", options = {}) {
       handled: true,
       action: "greet",
       status: "listening",
-      response: `Yes ${name}. I'm here. What do you need?`,
+      response: nexusConversationalWake("hello"),
       suggestions: ["health", "crops", "work", "learning", "map"]
     };
   }
@@ -7059,7 +7059,7 @@ function beginAgentNoDeadAir(command) {
   agentProgressTimers = [
     setTimeout(() => setAgentProgressMessage(`I am checking ${plainCommand}.`), 1600),
     setTimeout(() => setAgentProgressMessage("Still working. I will keep this short."), 4800),
-    setTimeout(() => setAgentProgressMessage("I am still here. Say stop any time."), 8500)
+    setTimeout(() => setAgentProgressMessage("I am still with you. Say stop any time."), 8500)
   ];
 }
 
@@ -16896,7 +16896,7 @@ function nexusLocalizedBehaviorCopy(key, values = {}) {
   const copy = {
     en: {
       hello: `Hey ${name}. What do you need?`,
-      wake: `Yes ${name}. I'm here. What do you need?`,
+      wake: `Yes ${name}?`,
       heard: `Got you: ${values.command || ""}. I'm on it.`,
       confirmed: `Got it. I'm doing this: ${values.command || ""}.`,
       canceled: "No problem. What do you want instead?",
@@ -16904,7 +16904,7 @@ function nexusLocalizedBehaviorCopy(key, values = {}) {
     },
     pt: {
       hello: `Ola ${name}. Como posso ajudar?`,
-      wake: `Sim ${name}. Como posso ajudar?`,
+      wake: `Sim ${name}?`,
       heard: `Eu ouvi: ${values.command || ""}. Vou fazer agora.`,
       confirmed: `Confirmado. Vou fazer isso agora: ${values.command || ""}.`,
       canceled: "Cancelado. Diga o que voce quer que Nexus faca.",
@@ -16912,7 +16912,7 @@ function nexusLocalizedBehaviorCopy(key, values = {}) {
     },
     es: {
       hello: `Hola ${name}. Como puedo ayudarte?`,
-      wake: `Si ${name}. Como puedo ayudarte?`,
+      wake: `Si ${name}?`,
       heard: `Escuche: ${values.command || ""}. Lo hare ahora.`,
       confirmed: `Confirmado. Lo hare ahora: ${values.command || ""}.`,
       canceled: "Cancelado. Dime que quieres que haga Nexus.",
@@ -16920,7 +16920,7 @@ function nexusLocalizedBehaviorCopy(key, values = {}) {
     },
     fr: {
       hello: `Bonjour ${name}. Comment puis-je vous aider?`,
-      wake: `Oui ${name}. Comment puis-je vous aider?`,
+      wake: `Oui ${name}?`,
       heard: `J'ai entendu: ${values.command || ""}. Je le fais maintenant.`,
       confirmed: `Confirme. Je le fais maintenant: ${values.command || ""}.`,
       canceled: "Annule. Dites-moi ce que Nexus doit faire.",
@@ -16928,7 +16928,7 @@ function nexusLocalizedBehaviorCopy(key, values = {}) {
     },
     sw: {
       hello: `Habari ${name}. Ninawezaje kukusaidia?`,
-      wake: `Ndiyo ${name}. Ninawezaje kukusaidia?`,
+      wake: `Ndiyo ${name}?`,
       heard: `Nimesikia: ${values.command || ""}. Ninafanya sasa.`,
       confirmed: `Imethibitishwa. Ninafanya sasa: ${values.command || ""}.`,
       canceled: "Imeghairiwa. Niambie Nexus ifanye nini.",
@@ -16936,7 +16936,7 @@ function nexusLocalizedBehaviorCopy(key, values = {}) {
     },
     ar: {
       hello: `\u0645\u0631\u062d\u0628\u0627 ${name}. \u0643\u064a\u0641 \u0627\u0633\u0627\u0639\u062f\u0643\u061f`,
-      wake: `\u0646\u0639\u0645 ${name}. \u0643\u064a\u0641 \u0627\u0633\u0627\u0639\u062f\u0643\u061f`,
+      wake: `\u0646\u0639\u0645 ${name}\u061f`,
       heard: `\u0633\u0645\u0639\u062a: ${values.command || ""}. \u0633\u0627\u0646\u0641\u0630 \u0630\u0644\u0643 \u0627\u0644\u0622\u0646.`,
       confirmed: `\u062a\u0645 \u0627\u0644\u062a\u0627\u0643\u064a\u062f. \u0633\u0627\u0646\u0641\u0630 \u0627\u0644\u0622\u0646: ${values.command || ""}.`,
       canceled: "\u062a\u0645 \u0627\u0644\u0627\u0644\u063a\u0627\u0621. \u0627\u062e\u0628\u0631\u0646\u064a \u0645\u0627\u0630\u0627 \u062a\u0631\u064a\u062f \u0645\u0646 \u0646\u0643\u0633\u0633.",
@@ -16948,6 +16948,22 @@ function nexusLocalizedBehaviorCopy(key, values = {}) {
 
 function nexusWakeGreeting(kind = "wake") {
   return nexusLocalizedBehaviorCopy(kind === "hello" ? "hello" : "wake");
+}
+
+function nexusWakeMemoryKey() {
+  const userKey = data?.user?.email || data?.user?.id || userDisplayName() || "guest";
+  return `agrinexusWakeIntroduced:${userKey}:${languageCode()}`;
+}
+
+function nexusConversationalWake(kind = "wake") {
+  if (kind !== "hello") {
+    localStorage.setItem(nexusWakeMemoryKey(), "true");
+    return nexusWakeGreeting("wake");
+  }
+  const key = nexusWakeMemoryKey();
+  const introduced = localStorage.getItem(key) === "true";
+  localStorage.setItem(key, "true");
+  return introduced ? nexusWakeGreeting("wake") : nexusWakeGreeting("hello");
 }
 
 function cleanWakeCommand(command) {
@@ -18410,7 +18426,7 @@ async function handleVoiceCommandCore(rawCommand, options = {}) {
     enableHeyAgriNexusMode();
     nexusAwaitingCommand = true;
     recordNexusAutonomousLearning({ type: "greeting", command: normalizedWakeText(localizedCommand) });
-    setVoiceResponse(nexusWakeGreeting("hello"), true);
+    setVoiceResponse(nexusConversationalWake("hello"), true, { allowHandoff: false });
     return;
   }
   if (isPlatformExplainVoiceCommand(spokenCommand || command || localizedCommand || rawCommand)) {
@@ -18567,7 +18583,7 @@ async function handleVoiceCommandCore(rawCommand, options = {}) {
     enableHeyAgriNexusMode();
     nexusAwaitingCommand = true;
     recordNexusAutonomousLearning({ type: "wake", command: normalizedWakeText(localizedCommand) });
-    setVoiceResponse(nexusWakeGreeting(greetingOnly ? "hello" : "wake"), true);
+    setVoiceResponse(nexusConversationalWake(greetingOnly ? "hello" : "wake"), true, { allowHandoff: false });
     return;
   }
   if (!lower) return setVoiceResponse("I am listening. Just tell me what you need.", true);
@@ -20002,7 +20018,7 @@ function startVoiceListening() {
       }
       leaveNexusConversationPause("Nexus heard you. I am listening again.");
       if (resumeCommand || isWakePhraseOnly(localizedCommand) || isNexusGreetingOnly(localizedCommand)) {
-        setVoiceResponse(nexusWakeGreeting(isNexusGreetingOnly(localizedCommand) ? "hello" : "wake"), true);
+        setVoiceResponse(nexusConversationalWake(isNexusGreetingOnly(localizedCommand) ? "hello" : "wake"), true, { allowHandoff: false });
         return;
       }
     }
