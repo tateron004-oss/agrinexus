@@ -13280,7 +13280,7 @@ async function phoneVoicePrompt(text, language) {
   const fallback = twilioSay(text, language);
   if (!process.env.OPENAI_API_KEY || !process.env.PUBLIC_BASE_URL) return fallback;
   try {
-    const audio = await openAiSpeechAudio({ text, voice: "coral", responseFormat: "mp3" });
+    const audio = await openAiSpeechAudio({ text, voice: process.env.OPENAI_TTS_VOICE || "onyx", responseFormat: "mp3" });
     if (!audio?.audioDataUrl) return fallback;
     const id = crypto.randomUUID();
     const base64 = audio.audioDataUrl.replace(/^data:audio\/[^;]+;base64,/, "");
@@ -13423,7 +13423,7 @@ async function openAiTranscribeAudio({ audioBase64, mimeType = "audio/webm", fil
 
 async function openAiSpeechAudio({ text, voice, responseFormat = "mp3" }) {
   if (!process.env.OPENAI_API_KEY) return null;
-  const requestedVoice = voice || process.env.OPENAI_TTS_VOICE || "coral";
+  const requestedVoice = voice || process.env.OPENAI_TTS_VOICE || "onyx";
   const createSpeech = selectedVoice => fetch("https://api.openai.com/v1/audio/speech", {
     method: "POST",
     headers: {
@@ -13435,7 +13435,7 @@ async function openAiSpeechAudio({ text, voice, responseFormat = "mp3" }) {
       voice: selectedVoice,
       input: String(text || "").slice(0, 4096),
       response_format: responseFormat,
-      instructions: process.env.OPENAI_TTS_INSTRUCTIONS || "Speak warmly and naturally, like a calm coach guiding a non-technical rural user. Use conversational pacing and avoid a robotic announcer tone."
+      instructions: process.env.OPENAI_TTS_INSTRUCTIONS || "Speak as Nexus, a calm, confident AI command assistant. Use a warm executive-assistant tone, measured pacing, short pauses, and concise phrasing. Sound natural and reassuring for non-technical rural users. Do not sound like a robotic announcer, radio host, or cartoon character."
     })
   });
   let response = await createSpeech(requestedVoice);

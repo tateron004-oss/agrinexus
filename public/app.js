@@ -89,8 +89,8 @@ let routeTrackingWatchId = null;
 let routeTrackingPoints = [];
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-261";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v241";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-262";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v242";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
 const VOICE_ATTENTION_DELAY_MS = 900;
@@ -100,7 +100,8 @@ const VOICE_FINAL_DEBOUNCE_MS = 120;
 const VOICE_PARTIAL_BARGE_IN_MIN_CHARS = 4;
 const NEXUS_SPEECH_GATE_DELAY_MS = 280;
 const NEXUS_USER_SPEAKING_HOLD_MS = 950;
-const OPENAI_TTS_VOICE_FALLBACK = "coral";
+const NEXUS_TTS_PROFILE_VERSION = "executive-assistant-v1";
+const OPENAI_TTS_VOICE_FALLBACK = "onyx";
 const OPENAI_TTS_VOICE_CHOICES = new Set(["alloy", "ash", "ballad", "coral", "echo", "fable", "nova", "onyx", "sage", "shimmer", "verse"]);
 
 const countryLanguageMap = {
@@ -16773,7 +16774,16 @@ function enableNexusVoiceForDemo(message = "Nexus voice is back on. Say Nexus, t
 }
 
 function preferredOpenAiTtsVoice() {
+  const profileVersion = String(localStorage.getItem("agrinexusVoiceProfileVersion") || "");
   const stored = String(localStorage.getItem("agrinexusOpenAiTtsVoice") || "").trim().toLowerCase();
+  if (profileVersion !== NEXUS_TTS_PROFILE_VERSION && (!stored || stored === "coral")) {
+    localStorage.setItem("agrinexusOpenAiTtsVoice", OPENAI_TTS_VOICE_FALLBACK);
+    localStorage.setItem("agrinexusVoiceProfileVersion", NEXUS_TTS_PROFILE_VERSION);
+    return OPENAI_TTS_VOICE_FALLBACK;
+  }
+  if (profileVersion !== NEXUS_TTS_PROFILE_VERSION) {
+    localStorage.setItem("agrinexusVoiceProfileVersion", NEXUS_TTS_PROFILE_VERSION);
+  }
   if (OPENAI_TTS_VOICE_CHOICES.has(stored)) return stored;
   localStorage.setItem("agrinexusOpenAiTtsVoice", OPENAI_TTS_VOICE_FALLBACK);
   return OPENAI_TTS_VOICE_FALLBACK;

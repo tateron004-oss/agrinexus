@@ -1,8 +1,10 @@
 param(
   [string]$PlatformUrl = "https://agrinexus-platform.onrender.com",
   [string]$UserName = "Ron",
+  [string]$DesktopVoiceName = "",
   [string]$SessionCookie = $env:AGRINEXUS_SESSION_COOKIE,
-  [switch]$NoOpenBrowser
+  [switch]$NoOpenBrowser,
+  [switch]$QuietDiagnostics
 )
 
 $ErrorActionPreference = "Stop"
@@ -29,11 +31,19 @@ $stopPhrases = @(
 $script:WaitingForCommand = $false
 $script:LastWakeAt = Get-Date
 $script:LastCommand = ""
+$script:LastHypothesisAt = Get-Date
+$script:LastSpeechDetectedAt = Get-Date
 
 function Write-NexusStatus {
   param([string]$Message)
   $stamp = Get-Date -Format "HH:mm:ss"
   Write-Host "[$stamp] $Message"
+}
+
+function Write-NexusDiagnostic {
+  param([string]$Message)
+  if ($QuietDiagnostics) { return }
+  Write-NexusStatus $Message
 }
 
 function Speak-Nexus {
@@ -102,11 +112,56 @@ function Remove-WakePrefix {
 }
 
 $script:Synth = New-Object System.Speech.Synthesis.SpeechSynthesizer
-$script:Synth.Rate = 0
+$script:Synth.Rate = -1
 $script:Synth.Volume = 100
+$preferredDesktopVoices = @(
+  $DesktopVoiceName,
+  "Microsoft David Desktop",
+  "Microsoft Mark",
+  "Microsoft Guy",
+  "Microsoft Ryan",
+  "Microsoft George",
+  "Microsoft Richard",
+  "Microsoft James"
+) | Where-Object { ![string]::IsNullOrWhiteSpace($_) }
+foreach ($voiceName in $preferredDesktopVoices) {
+  try {
+    $script:Synth.SelectVoice($voiceName)
+    Write-NexusStatus "Desktop voice selected: $voiceName"
+    break
+  } catch {
+    # Try the next installed Windows voice.
+  }
+}
 
-$recognizer = New-Object System.Speech.Recognition.SpeechRecognitionEngine
-$recognizer.SetInputToDefaultAudioDevice()
+try {
+  $recognizer = New-Object System.Speech.Recognition.SpeechRecognitionEngine
+  $recognizer.SetInputToDefaultAudioDevice()
+} catch {
+  Write-Host ""
+  Write-Host "AgriNexus Desktop Wake Listener could not start voice recognition." -ForegroundColor Yellow
+  Write-Host ""
+  Write-Host "Windows reported:" -ForegroundColor Yellow
+  Write-Host "  $($_.Exception.Message)"
+  Write-Host ""
+  Write-Host "What this means:"
+  Write-Host "  The Nexus desktop listener is installed, but this Windows profile does not have"
+  Write-Host "  a SAPI speech recognition engine available for PowerShell to use."
+  Write-Host ""
+  Write-Host "Fix:"
+  Write-Host "  1. Open Windows Settings."
+  Write-Host "  2. Go to Time & language > Language & region."
+  Write-Host "  3. Make sure English (United States) is installed."
+  Write-Host "  4. Open the language options and install Speech / Speech recognition."
+  Write-Host "  5. Go to Settings > Privacy & security > Microphone and allow microphone access."
+  Write-Host "  6. Restart PowerShell and run this listener again."
+  Write-Host ""
+  Write-Host "Browser voice still works while AgriNexus is open. This desktop listener is the"
+  Write-Host "extra Windows layer needed for Chrome-closed wake behavior."
+  Write-Host ""
+  Read-Host "Press Enter to close"
+  exit 1
+}
 
 $wakeChoices = New-Object System.Speech.Recognition.Choices
 $wakeChoices.Add($wakePhrases)
@@ -120,6 +175,29 @@ $dictationGrammar.Name = "AgriNexus native dictation"
 
 $recognizer.LoadGrammar($wakeGrammar)
 $recognizer.LoadGrammar($dictationGrammar)
+
+Register-ObjectEvent -InputObject $recognizer -EventName SpeechDetected -SourceIdentifier AgriNexusSpeechDetected -Action {
+  $script:LastSpeechDetectedAt = Get-Date
+  Write-NexusDiagnostic "Speech detected. Listening for Nexus or a command..."
+}
+
+Register-ObjectEvent -InputObject $recognizer -EventName SpeechHypothesized -SourceIdentifier AgriNexusSpeechHypothesized -Action {
+  $now = Get-Date
+  if ((New-TimeSpan -Start $script:LastHypothesisAt -End $now).TotalMilliseconds -lt 1200) { return }
+  $script:LastHypothesisAt = $now
+  $text = ($EventArgs.Result.Text -replace "\s+", " ").Trim()
+  if (![string]::IsNullOrWhiteSpace($text)) {
+    Write-NexusDiagnostic "Trying to understand: $text"
+  }
+}
+
+Register-ObjectEvent -InputObject $recognizer -EventName SpeechRecognitionRejected -SourceIdentifier AgriNexusSpeechRejected -Action {
+  Write-NexusDiagnostic "Speech heard, but Windows did not recognize it as a clear Nexus command. Try saying: Nexus open the map."
+}
+
+Register-ObjectEvent -InputObject $recognizer -EventName AudioSignalProblemOccurred -SourceIdentifier AgriNexusAudioProblem -Action {
+  Write-NexusDiagnostic "Audio problem: $($EventArgs.AudioSignalProblem). Check microphone input level and default microphone."
+}
 
 Register-ObjectEvent -InputObject $recognizer -EventName SpeechRecognized -SourceIdentifier AgriNexusSpeechRecognized -Action {
   $text = ($EventArgs.Result.Text -replace "\s+", " ").Trim()
@@ -165,6 +243,8 @@ Write-Host "Session handoff: $(if ([string]::IsNullOrWhiteSpace($SessionCookie))
 Write-Host "Wake phrases: $($wakePhrases -join ', ')"
 Write-Host "Stop phrases: $($stopPhrases -join ', ')"
 Write-Host "Privacy: visible listener. Close this PowerShell window to stop."
+Write-Host "Diagnostics: say 'Nexus'. If the microphone works, this window should print Speech detected or Heard."
+Write-Host "Tip: if nothing prints when you talk, set your Windows default input microphone and allow desktop apps to use it."
 Write-Host ""
 
 Speak-Nexus "AgriNexus desktop listener is ready. Say Nexus when you need me."
