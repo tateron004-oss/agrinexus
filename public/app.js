@@ -30,6 +30,8 @@ let activeVoiceAudio = null;
 let voicePlaybackToken = 0;
 let voiceInterruptToken = 0;
 let activeVoiceRequestController = null;
+let nexusVoiceTurnToken = 0;
+let activeAgentCommandController = null;
 let voiceConversationTurns = Number(localStorage.getItem("agrinexusVoiceTurns") || 0);
 let liveVoiceSuggestions = [];
 let agentReasoningVisible = localStorage.getItem("agrinexusReasoningVisible") === "true";
@@ -62,8 +64,8 @@ let routeTrackingWatchId = null;
 let routeTrackingPoints = [];
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-231";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v211";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-232";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v212";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
 const VOICE_ATTENTION_DELAY_MS = 900;
@@ -2531,12 +2533,19 @@ async function request(path, options = {}) {
 }
 
 async function requestWithTimeout(path, options = {}, timeoutMs = 18000) {
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+  const controller = options.controller || new AbortController();
+  let timedOut = false;
+  const timeout = setTimeout(() => {
+    timedOut = true;
+    controller.abort();
+  }, timeoutMs);
   try {
     return await request(path, { ...options, signal: controller.signal });
   } catch (error) {
-    if (error.name === "AbortError") throw new Error("Nexus timed out waiting for the live engine. I kept the workflow safe; try again or use a direct module button.");
+    if (error.name === "AbortError") {
+      if (!timedOut && options.abortReason === "superseded") throw error;
+      throw new Error("Nexus timed out waiting for the live engine. I kept the workflow safe; try again or use a direct module button.");
+    }
     throw error;
   } finally {
     clearTimeout(timeout);
@@ -3041,12 +3050,14 @@ async function playNexusMusicTestAudio(query = "music") {
   return true;
 }
 
-async function runMusicAssistantCommand(command = "") {
+async function runMusicAssistantCommand(command = "", options = {}) {
+  const turnToken = options.turnToken || null;
   const intent = musicAssistantIntent(command);
   if (!intent) return false;
   updateNexusBehaviorLayer("answering", "Nexus understood this as an everyday music request and is checking the connected music provider.");
   renderLiveVoiceSuggestions(["what time is it", "weather in Nairobi", "open learning", "Nexus stop"]);
-  const result = await runUtilityAgentCommand(command, intent.response, null);
+  const result = await runUtilityAgentCommand(command, intent.response, null, { turnToken });
+  if (ignoreStaleNexusTurn(turnToken, "music answer")) return true;
   const music = result?.metadata?.music;
   if (music && music.status !== "playback-started") await playNexusMusicTestAudio(intent.query);
   return true;
@@ -16271,6 +16282,7 @@ async function createCloudAgentTemplate() {
 }
 
 function setVoiceResponse(message, speak = false, options = {}) {
+  if (options.turnToken && !isCurrentNexusVoiceTurn(options.turnToken)) return;
   const allowVoiceFirst = options.allowVoiceFirst !== false;
   if (voiceDemoQuietMode && !options.allowDemoQuietSpeech) {
     speak = false;
@@ -16297,7 +16309,7 @@ function setVoiceResponse(message, speak = false, options = {}) {
       method: "POST",
       body: { text: responseMessage, sourceLanguage: "en", targetLanguage: languageCode(), context: "voice-response" }
     }).then(result => {
-      if (token !== voiceTranslationToken || interruptToken !== voiceInterruptToken) return;
+      if (token !== voiceTranslationToken || interruptToken !== voiceInterruptToken || (options.turnToken && !isCurrentNexusVoiceTurn(options.turnToken))) return;
       const translated = result.translationResult?.translatedText || responseMessage;
       lastVoiceResponse = translated;
       if (transcript) transcript.textContent = translated;
@@ -16307,7 +16319,7 @@ function setVoiceResponse(message, speak = false, options = {}) {
       announce(translated);
       if (interruptToken === voiceInterruptToken && (speak || (voiceFirstMode && allowVoiceFirst))) speakVoiceResponse(translated);
     }).catch(() => {
-      if (interruptToken === voiceInterruptToken && (speak || (voiceFirstMode && allowVoiceFirst))) speakVoiceResponse(responseMessage);
+      if (interruptToken === voiceInterruptToken && (!options.turnToken || isCurrentNexusVoiceTurn(options.turnToken)) && (speak || (voiceFirstMode && allowVoiceFirst))) speakVoiceResponse(responseMessage);
     });
     return;
   }
@@ -16555,6 +16567,40 @@ function stopVoicePlayback(options = {}) {
   if ("speechSynthesis" in window) window.speechSynthesis.cancel();
   voiceSpeaking = false;
   voiceAutoRestart = voiceFirstMode;
+}
+
+function abortActiveAgentCommand() {
+  if (!activeAgentCommandController) return;
+  try {
+    activeAgentCommandController.abort();
+  } catch (error) {
+    // Request may already be settled.
+  }
+  activeAgentCommandController = null;
+}
+
+function beginNexusVoiceTurn(command = "") {
+  nexusVoiceTurnToken += 1;
+  stopVoicePlayback({ hard: true });
+  abortActiveAgentCommand();
+  clearAgentProgressTimers();
+  voiceStopRequested = false;
+  voiceAutoRestart = voiceFirstMode;
+  updateNexusBehaviorLayer("thinking", command ? `Nexus is listening to the newest request: ${command}` : "Nexus is listening to the newest request.");
+  const outputStatus = $("#globalVoiceOutputStatus");
+  if (outputStatus) outputStatus.textContent = translateText("Nexus heard the new request.");
+  return nexusVoiceTurnToken;
+}
+
+function isCurrentNexusVoiceTurn(turnToken) {
+  return !turnToken || turnToken === nexusVoiceTurnToken;
+}
+
+function ignoreStaleNexusTurn(turnToken, label = "stale response") {
+  if (isCurrentNexusVoiceTurn(turnToken)) return false;
+  clearAgentProgressTimers();
+  updateNexusBehaviorLayer("listening", `Nexus ignored a ${label} because you already asked something newer.`);
+  return true;
 }
 
 function interruptNexusSpeech(reason = "I stopped speaking and I am ready for the next instruction.") {
@@ -17901,7 +17947,9 @@ function commandGoal(command) {
 
 async function handleVoiceCommand(rawCommand, options = {}) {
   if (!data) return setVoiceResponse("Sign in first, then I can operate the platform.");
+  const turnToken = options.turnToken || null;
   const autoLanguage = await applyAutoLanguageFromSpeech(rawCommand, options);
+  if (ignoreStaleNexusTurn(turnToken, "voice command")) return;
   const localizedCommand = normalizeLocalizedVoiceCommand(rawCommand);
   const greetingOnly = isNexusGreetingOnly(localizedCommand);
   const greetingPrefix = isNexusGreetingPrefix(localizedCommand);
@@ -17989,7 +18037,8 @@ async function handleVoiceCommand(rawCommand, options = {}) {
     updateNexusBehaviorLayer("thinking", "Nexus is listening to the full question and checking live knowledge with platform context.");
     renderLiveVoiceSuggestions(["ask one follow-up", "open health", "open workforce", "Nexus stop"]);
     const locationContext = await browserWeatherLocation(spokenCommand || command);
-    await runBackendAgentCommand(spokenCommand || command, locationContext);
+    if (ignoreStaleNexusTurn(turnToken, "knowledge answer")) return;
+    await runBackendAgentCommand(spokenCommand || command, locationContext, { turnToken });
     return;
   }
   if (isOpenDialogVoiceQuestion(spokenCommand || command)) {
@@ -17998,7 +18047,8 @@ async function handleVoiceCommand(rawCommand, options = {}) {
     updateNexusBehaviorLayer("thinking", "Nexus is treating this as open dialog, not a fixed menu command.");
     renderLiveVoiceSuggestions(["ask a follow-up", "guide me step by step", "open the right area", "Nexus stop"]);
     const locationContext = await browserWeatherLocation(spokenCommand || command);
-    await runBackendAgentCommand(spokenCommand || command, locationContext);
+    if (ignoreStaleNexusTurn(turnToken, "open dialog answer")) return;
+    await runBackendAgentCommand(spokenCommand || command, locationContext, { turnToken });
     return;
   }
   const earlySimpleIntent = experienceMode === "user" ? simpleUserDirectVoiceIntent(spokenCommand || command) : null;
@@ -18041,7 +18091,8 @@ async function handleVoiceCommand(rawCommand, options = {}) {
     updateNexusBehaviorLayer("thinking", "Nexus is checking live knowledge and platform context before answering.");
     renderLiveVoiceSuggestions(["compare markets", "open trade", "track route", "run live service check"]);
     const locationContext = await browserWeatherLocation(command);
-    await runBackendAgentCommand(command, locationContext);
+    if (ignoreStaleNexusTurn(turnToken, "knowledge answer")) return;
+    await runBackendAgentCommand(command, locationContext, { turnToken });
     return;
   }
   if (/\b(system integrity|platform integrity|integrity check|stress test|polish check|demo readiness|final check|readiness pass)\b/.test(lower)) {
@@ -18174,14 +18225,15 @@ async function handleVoiceCommand(rawCommand, options = {}) {
     return;
   }
 
-  if (await runMusicAssistantCommand(command)) return;
+  if (await runMusicAssistantCommand(command, { turnToken })) return;
 
   const utilityAnswer = nexusUtilityAssistantResponseV2(command);
   if (utilityAnswer) {
     updateNexusBehaviorLayer("answering", "Nexus is answering a practical daily question.");
     renderLiveVoiceSuggestions(["open map", "open telehealth", "track my shipment", "what is next today"]);
     const locationContext = await browserWeatherLocation(command);
-    await runUtilityAgentCommand(command, utilityAnswer, locationContext);
+    if (ignoreStaleNexusTurn(turnToken, "utility answer")) return;
+    await runUtilityAgentCommand(command, utilityAnswer, locationContext, { turnToken });
     return;
   }
 
@@ -18291,7 +18343,7 @@ async function handleVoiceCommand(rawCommand, options = {}) {
     goSection("map");
     setActiveAgentJourney("map", "country-trade-route", "Country-to-country trade route opened by voice.");
     renderLiveVoiceSuggestions(["run route risk", "track shipment", "message buyer", "create order"]);
-    await runBackendAgentCommand(command);
+    await runBackendAgentCommand(command, null, { turnToken });
     return;
   }
   if (/\b(buyer|customer|purchaser|client|seller|farmer|pickup|delivery|deliver|ship|shipment|product|products|crop|order|sale)\b/.test(lower)
@@ -18299,7 +18351,7 @@ async function handleVoiceCommand(rawCommand, options = {}) {
     goSection("map");
     setActiveAgentJourney("map", "buyer-route", "Buyer-to-seller route opened by voice.");
     renderLiveVoiceSuggestions(["run route risk", "message buyer", "track my route in real time", "create order"]);
-    await runBackendAgentCommand(command);
+    await runBackendAgentCommand(command, null, { turnToken });
     return;
   }
   if (/\b(contact|call|message|whatsapp|text|speak to|talk to|connect)\b.*\b(listed\s+)?(telehealth\s+)?(provider|doctor|nurse|clinic)\b/.test(lower) || /\b(listed\s+telehealth\s+provider|telehealth\s+provider\s+listed)\b/.test(lower)) {
@@ -18516,11 +18568,11 @@ async function handleVoiceCommand(rawCommand, options = {}) {
   }
   if (lower.includes("help me understand the platform") || lower.includes("ask question")) {
     goSection("agent");
-    await runBackendAgentCommand("help me understand the platform and guide my next step");
+    await runBackendAgentCommand("help me understand the platform and guide my next step", null, { turnToken });
     return;
   }
   if (lower.includes("explain next step") || lower.includes("what should i do next")) {
-    await runBackendAgentCommand("what should I do next");
+    await runBackendAgentCommand("what should I do next", null, { turnToken });
     return;
   }
   if (lower.includes("read the current response") || lower.includes("read current response") || lower.includes("read to me")) {
@@ -18537,36 +18589,36 @@ async function handleVoiceCommand(rawCommand, options = {}) {
     return;
   }
   if (/(outbreak|infected|infection|ebola|disease risk|region safe|safe to deploy|safe for telehealth)/.test(lower) && /(telehealth|health|region|congo|drc|uganda|africa|outreach)/.test(lower)) {
-    await runBackendAgentCommand(command);
+    await runBackendAgentCommand(command, null, { turnToken });
     return;
   }
 
   if ((lower.includes("agritrade") || lower.includes("agri trade")) && (lower.includes("what do you do") || lower.includes("tell me about") || lower.includes("about the platform") || lower.includes("change") || lower.includes("language") || lower.includes("translate") || lower.includes("speak") || lower.includes("use ") || lower.includes("respond") || lower.includes("reply") || lower.includes("parle") || lower.includes("habla") || lower.includes("utilise") || lower.includes("badilisha") || lower.includes("tumia") || lower.includes("zungumza") || lower.includes("ongea") || lower.includes("anglais") || lower.includes("ingles") || lower.includes("francais") || lower.includes("frances") || lower.includes("kiswahili") || lower.includes("kiingereza") || lower.includes("kifaransa") || lower.includes("kiarabu") || lower.includes("kihispania") || lower.includes("arabe") || lower.includes("espanol"))) {
-    await runBackendAgentCommand(command);
+    await runBackendAgentCommand(command, null, { turnToken });
     return;
   }
 
   if (voiceFirstMode && isNaturalConversationCommand(lower)) {
-    await runBackendAgentCommand(command);
+    await runBackendAgentCommand(command, null, { turnToken });
     return;
   }
 
   if ((lower.includes("agritrade") || lower.includes("agri trade") || lower.includes("trade") || lower.includes("buyer") || lower.includes("crop") || lower.includes("route") || lower.includes("logistics")) && (lower.includes("efficiency") || lower.includes("efficient") || lower.includes("optimize") || lower.includes("optimise") || lower.includes("operations") || lower.includes("operational") || lower.includes("bottleneck") || lower.includes("delay") || lower.includes("cost") || lower.includes("waste") || lower.includes("profit") || lower.includes("performance"))) {
-    await runBackendAgentCommand(command);
+    await runBackendAgentCommand(command, null, { turnToken });
     return;
   }
   if ((lower.includes("agritrade") || lower.includes("agri trade") || lower.includes("trade") || lower.includes("buyer") || lower.includes("crop") || lower.includes("route") || lower.includes("logistics") || lower.includes("driver") || lower.includes("farmer") || lower.includes("field")) && (lower.includes("communicat") || lower.includes("message") || lower.includes("update") || lower.includes("brief") || lower.includes("status") || lower.includes("report") || lower.includes("say to") || lower.includes("tell the") || lower.includes("notify") || lower.includes("script") || lower.includes("handoff"))) {
-    await runBackendAgentCommand(command);
+    await runBackendAgentCommand(command, null, { turnToken });
     return;
   }
 
   if ((lower.includes("what can i say") || lower.includes("what can") || lower.includes("commands") || lower.includes("examples")) && (lower.includes("agritrade") || lower.includes("trade") || lower.includes("telehealth") || lower.includes("health") || lower.includes("workforce") || lower.includes("learning") || lower.includes("maps"))) {
-    await runBackendAgentCommand(command);
+    await runBackendAgentCommand(command, null, { turnToken });
     return;
   }
 
   if (lower.includes("investor voice demo") || lower.includes("voice demo mode") || lower.includes("show investors") || lower.includes("demo mode")) {
-    await runBackendAgentCommand(command);
+    await runBackendAgentCommand(command, null, { turnToken });
     return;
   }
 
@@ -18742,11 +18794,11 @@ async function handleVoiceCommand(rawCommand, options = {}) {
     return;
   }
   if (lower.includes("what happened") || lower.includes("what just happened") || lower.includes("what did you do") || lower.includes("what evidence") || lower.includes("explain the last workflow") || lower.includes("good morning agrinexus") || lower.includes("good morning nexus") || lower.includes("daily briefing") || lower.includes("operator briefing") || lower.includes("morning briefing")) {
-    await runBackendAgentCommand(command);
+    await runBackendAgentCommand(command, null, { turnToken });
     return;
   }
   if (/(learning|course|lesson|instructor|workforce|job|recruiter|employer|health|telehealth|caregiver|care team|provider|admin|support)/.test(lower) && /(message|chat|communicate|contact|notify|sms|whatsapp|text)/.test(lower)) {
-    await runBackendAgentCommand(command);
+    await runBackendAgentCommand(command, null, { turnToken });
     return;
   }
   if (lower.includes("create") && lower.includes("plan") || lower.startsWith("plan ")) {
@@ -18980,10 +19032,16 @@ async function handleVoiceCommand(rawCommand, options = {}) {
   if (await runDynamicVoiceTool(command)) return;
 
   const locationContext = await browserWeatherLocation(command);
-  await runBackendAgentCommand(command, locationContext);
+  if (ignoreStaleNexusTurn(turnToken, "backend answer")) return;
+  await runBackendAgentCommand(command, locationContext, { turnToken });
 }
 
-async function runBackendAgentCommand(command, locationContext = null) {
+async function runBackendAgentCommand(command, locationContext = null, options = {}) {
+  const turnToken = options.turnToken || null;
+  if (ignoreStaleNexusTurn(turnToken, "backend answer")) return null;
+  abortActiveAgentCommand();
+  const controller = new AbortController();
+  activeAgentCommandController = controller;
   try {
     const previousLanguage = languageCode();
     voiceConversationTurns += 1;
@@ -18993,6 +19051,8 @@ async function runBackendAgentCommand(command, locationContext = null) {
     beginAgentNoDeadAir(command);
     data = await requestWithTimeout("/api/agent/command", {
       method: "POST",
+      controller,
+      abortReason: "superseded",
       body: {
         command,
         confirm: false,
@@ -19007,6 +19067,8 @@ async function runBackendAgentCommand(command, locationContext = null) {
         note: "Command submitted from Nexus Voice Assistant"
       }
     }, 12000);
+    if (activeAgentCommandController === controller) activeAgentCommandController = null;
+    if (ignoreStaleNexusTurn(turnToken, "backend answer")) return null;
     clearAgentProgressTimers();
     render();
     const result = data.commandResult || {};
@@ -19039,8 +19101,11 @@ async function runBackendAgentCommand(command, locationContext = null) {
     recordNexusAutonomousLearning({ type: "agent-completed", command, intent: result.intent || "agent-command" });
     updateNexusAwareness(command, { silent: true });
     updateNexusBehaviorLayer("speaking", result.response || "Done. I am ready for your next step.");
-    setVoiceResponse(result.response || "Done. I am ready for your next step.", true, { handoffText: result.metadata?.turnCoach?.nextQuestion || "", alreadyTranslated: result.metadata?.translatedResponse === true, command });
+    setVoiceResponse(result.response || "Done. I am ready for your next step.", true, { handoffText: result.metadata?.turnCoach?.nextQuestion || "", alreadyTranslated: result.metadata?.translatedResponse === true, command, turnToken });
+    return result;
   } catch (error) {
+    if (activeAgentCommandController === controller) activeAgentCommandController = null;
+    if (error.name === "AbortError" || ignoreStaleNexusTurn(turnToken, "backend error")) return null;
     clearAgentProgressTimers();
     markAgentPerformance("failed", "agent-command-error");
     updateNexusBehaviorLayer("ready", "Nexus is ready to help in simpler words.");
@@ -19049,7 +19114,12 @@ async function runBackendAgentCommand(command, locationContext = null) {
   }
 }
 
-async function runUtilityAgentCommand(command, fallbackAnswer = "", locationContext = null) {
+async function runUtilityAgentCommand(command, fallbackAnswer = "", locationContext = null, options = {}) {
+  const turnToken = options.turnToken || null;
+  if (ignoreStaleNexusTurn(turnToken, "utility answer")) return null;
+  abortActiveAgentCommand();
+  const controller = new AbortController();
+  activeAgentCommandController = controller;
   try {
     const previousLanguage = languageCode();
     voiceConversationTurns += 1;
@@ -19058,6 +19128,8 @@ async function runUtilityAgentCommand(command, fallbackAnswer = "", locationCont
     updateNexusBehaviorLayer("thinking", "Nexus is checking the real platform record before answering.");
     data = await requestWithTimeout("/api/agent/command", {
       method: "POST",
+      controller,
+      abortReason: "superseded",
       body: {
         command,
         confirm: false,
@@ -19072,6 +19144,8 @@ async function runUtilityAgentCommand(command, fallbackAnswer = "", locationCont
         note: "Ask Nexus daily utility assistant"
       }
     }, 12000);
+    if (activeAgentCommandController === controller) activeAgentCommandController = null;
+    if (ignoreStaleNexusTurn(turnToken, "utility answer")) return null;
     render();
     const result = data.commandResult || {};
     if (result.metadata?.redirectSection) goSection(result.metadata.redirectSection);
@@ -19083,13 +19157,15 @@ async function runUtilityAgentCommand(command, fallbackAnswer = "", locationCont
     recordNexusAutonomousLearning({ type: "utility-completed", command, intent: result.intent || "utility-assistant" });
     updateNexusAwareness(command, { silent: true });
     updateNexusBehaviorLayer("speaking", result.response || fallbackAnswer || "Done. I am ready for your next question.");
-    setVoiceResponse(result.response || fallbackAnswer || "Done. I am ready for your next question.", true, { handoffText: result.metadata?.turnCoach?.nextQuestion || "", alreadyTranslated: result.metadata?.translatedResponse === true });
+    setVoiceResponse(result.response || fallbackAnswer || "Done. I am ready for your next question.", true, { handoffText: result.metadata?.turnCoach?.nextQuestion || "", alreadyTranslated: result.metadata?.translatedResponse === true, turnToken });
     return result;
   } catch (error) {
+    if (activeAgentCommandController === controller) activeAgentCommandController = null;
+    if (error.name === "AbortError" || ignoreStaleNexusTurn(turnToken, "utility error")) return null;
     markAgentPerformance("failed", "utility-assistant-error");
     const local = fallbackAnswer || nexusUtilityAssistantResponseV2(command);
     updateNexusBehaviorLayer("speaking", "Nexus is using local app context because the backend command engine is unavailable.");
-    setVoiceResponse(local ? `${local} I used local app context because the live command engine was unavailable.` : (error.message || "Ask Nexus could not answer that utility question yet."), true);
+    setVoiceResponse(local ? `${local} I used local app context because the live command engine was unavailable.` : (error.message || "Ask Nexus could not answer that utility question yet."), true, { turnToken });
     return null;
   }
 }
@@ -19463,12 +19539,13 @@ function startVoiceListening() {
       pauseNexusForSideConversation(cleanedCommand || localizedCommand || command);
       return;
     }
+    const turnToken = beginNexusVoiceTurn(cleanedCommand || localizedCommand || command);
     setVoiceStatus("thinking");
     updateNexusBehaviorLayer("thinking", "Nexus heard you and is preparing the next response.");
     const outputStatus = $("#globalVoiceOutputStatus");
     if (outputStatus) outputStatus.textContent = translateText("Nexus heard you. One moment.");
     request("/api/voice/transcribe", { method: "POST", body: { transcript: command, language: languageCode(), locale: voiceLocale() } }).catch(() => {});
-    handleVoiceCommand(command, { source: "voice" });
+    handleVoiceCommand(command, { source: "voice", turnToken });
   };
   voiceRecognition.start();
 }

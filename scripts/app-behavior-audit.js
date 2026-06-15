@@ -428,8 +428,8 @@ assert(app.includes("Stopped. Ask me the next question or tell me where to go ne
 assert(styles.includes("pointer-events: none") && styles.includes(".user-caption-actions") && styles.includes("pointer-events: auto"), "Caption panel must not block workflow action clicks");
 assert(styles.includes("width: min(300px, calc(100vw - 24px))") && styles.includes("max-height: 138px"), "Caption panel must default to a small bubble");
 assert(styles.includes(".user-caption-panel.expanded") && styles.includes("display: none") && styles.includes("display: grid"), "Caption input controls must appear only in expanded caption mode");
-assert(html.includes("nexus-behavior-231"), "Index must force browsers to load Nexus behavior CSS");
-assert(html.includes("nexus-behavior-231"), "Index must force browsers to load Nexus behavior JS");
+assert(html.includes("nexus-behavior-232"), "Index must force browsers to load Nexus behavior CSS");
+assert(html.includes("nexus-behavior-232"), "Index must force browsers to load Nexus behavior JS");
 assert(server.includes("function productionActivationGuide"), "Backend needs a live activation guide");
 assert(server.includes("function directVendorProviderStatus"), "Backend must recognize direct vendor credentials");
 assert(server.includes("optionalEnvSets"), "Activation guide must show real provider depth options");
@@ -506,6 +506,7 @@ assert(app.includes("VOICE_RESTART_DELAY_MS = 320"), "Voice listening should res
 assert(app.includes("VOICE_UI_RESUME_DELAYS_MS = [180, 650, 1500, 3200, 5200]"), "User actions should restore mic listening quickly");
 assert(app.includes("Nexus heard you. One moment."), "Voice acknowledgement should stay short and responsive");
 assert(app.includes("function resumeVoiceListeningAfterSpeech"), "Voice should clearly recover to listening after Nexus speaks");
+assert(app.includes("function beginNexusVoiceTurn") && app.includes("function ignoreStaleNexusTurn") && app.includes("activeAgentCommandController.abort"), "New voice input must suppress stale previous responses");
 assert(app.includes("function nexusWakeGreeting") && app.includes("What do you need?"), "Nexus must greet the signed-in user by name before taking commands");
 assert(app.includes('experienceMode === "user" && !options.forceHandoff'), "Standard User voice responses must not automatically append the same handoff ending");
 assert(app.includes("function stageNexusSpokenCommand") && app.includes("I'm on it."), "Nexus must repeat a clear heard command and move into the action without a long confirmation prompt");
@@ -547,7 +548,7 @@ assert(app.includes("function isOpenDialogVoiceQuestion"), "Nexus needs an open-
 assert(app.includes("crop bad") && app.includes("child sick") && app.includes("need medicine") && app.includes("job kenya"), "Open dialog must include rural imperfect-speech support phrases");
 assert(app.includes("Nexus is treating this as open dialog, not a fixed menu command."), "Open dialog must route before fixed User-mode workflow cards");
 assert(app.includes("Nexus cleared the old choice and is answering the new question."), "Stale clarification prompts must yield to fresh open dialog");
-assert(app.includes("await runBackendAgentCommand(command, locationContext)"), "Open knowledge questions must route to the backend conversation brain");
+assert(app.includes("await runBackendAgentCommand(command, locationContext, { turnToken })"), "Open knowledge questions must route to the backend conversation brain");
 assert(server.includes("function isCurrentKnowledgeQuestion"), "Backend must detect current market, location, availability, and provider knowledge questions");
 assert(server.includes("function isOpenDialogConversation"), "Backend must detect open-dialog conversation beyond hard-coded command phrases");
 assert(server.includes("function ruralCommunicationSupportModel"), "Backend must shape conversation for rural farmers, patients, learners, workers, and elders");
