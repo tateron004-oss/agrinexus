@@ -89,8 +89,8 @@ let routeTrackingWatchId = null;
 let routeTrackingPoints = [];
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-263";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v243";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-264";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v244";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
 const VOICE_ATTENTION_DELAY_MS = 900;
@@ -7934,6 +7934,8 @@ function nexusCommandCenterHumanize(message = "") {
   let text = String(message || "").replace(/\s+/g, " ").trim();
   if (!text) return "";
   const replacements = [
+    [/\b([A-Z][A-Za-z /-]+) workflow is ready\b/g, "I opened $1"],
+    [/\b([A-Z][A-Za-z /-]+) workflow opened\b/g, "I opened $1"],
     [/\bworkflow is ready\b/gi, "I opened that step"],
     [/\bWorkflow is ready\b/g, "I opened that step"],
     [/\bworkflow opened\b/gi, "I opened it"],
@@ -7950,6 +7952,8 @@ function nexusCommandCenterHumanize(message = "") {
     [/\bI heard that\./gi, "I hear you."],
     [/\bI heard you\./gi, "I hear you."],
     [/\bWhat do you need next\??/gi, "What should we do next?"],
+    [/\bI heard you, but I need one clearer direction\./gi, "I caught part of that."],
+    [/\bI heard a few possible needs\./gi, "I caught a couple of possibilities."],
     [/\bI heard\s+/gi, "I heard "],
     [/\bWhat do you need\??/gi, "How can I assist you?"],
     [/\bTell Nexus\b/gi, "Tell me"],
@@ -7961,6 +7965,8 @@ function nexusCommandCenterHumanize(message = "") {
   text = text
     .replace(/\bI opened that step\.?\s*I opened that step\.?/gi, "I opened that step.")
     .replace(/\bI hear you\.\s*I hear you\./gi, "I hear you.")
+    .replace(/\bI opened ([^.]+?)\s+is ready\./gi, "I opened $1.")
+    .replace(/\bI opened ([^.]+?)\s+is open\./gi, "I opened $1.")
     .replace(/\s+([.!?])/g, "$1")
     .replace(/\s+/g, " ")
     .trim();
@@ -7987,6 +7993,12 @@ function nexusHumanResponsePolicy(message = "", options = {}) {
     .replace(/\bI will\b/g, "I'll")
     .replace(/\bYou do not\b/g, "You don't")
     .replace(/\bworkflow is ready\b/gi, "is open")
+    .replace(/\bworkflow ready\b/gi, "is open")
+    .replace(/\bprocess is ready\b/gi, "I opened the step")
+    .replace(/\bProcess is ready\b/g, "I opened the step")
+    .replace(/\bPress Do this now\b/gi, "Press the main button")
+    .replace(/\bpress Do this now\b/gi, "press the main button")
+    .replace(/\bDo this now\b/g, "the main button")
     .replace(/\bprepared the\b/gi, "opened the")
     .replace(/\bprepared a\b/gi, "opened a")
     .replace(/\bI am doing it now\b/gi, "I'm on it")
@@ -8001,7 +8013,10 @@ function nexusHumanResponsePolicy(message = "", options = {}) {
     .replace(/\s*Top actions:[\s\S]+$/i, "")
     .replace(/\s*Say yes to create[^.]+\.?/gi, "")
     .replace(/\s*Should I do that now\??/gi, "")
-    .replace(/\s*Would you like me to do that now\??/gi, "");
+    .replace(/\s*Would you like me to do that now\??/gi, "")
+    .replace(/\bI need one clearer direction\b/gi, "tell me which one you mean")
+    .replace(/\bAre you asking about\b/gi, "Do you mean")
+    .replace(/\bYou can say one of those exactly and I will continue\b/gi, "Say it in your own words and I'll continue");
   if (adaptivePreferences.languageStyle === "plain") {
     human = human
       .replace(/\butilize\b/gi, "use")

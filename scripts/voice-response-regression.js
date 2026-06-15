@@ -148,6 +148,8 @@ async function call(route, body) {
 
 (async () => {
   assert(appSource.includes('const OPENAI_TTS_VOICE_FALLBACK = "verse"'), "Nexus web voice should default to the faster natural Verse profile");
+  assert(appSource.includes('const NEXUS_TTS_PROFILE_VERSION = "natural-assistant-v2"'), "Nexus should migrate browsers to the natural assistant voice profile");
+  assert(appSource.includes("I caught part of that") && appSource.includes("Press the main button") && appSource.includes("Say it in your own words and I'll continue"), "Nexus spoken responses should use natural conversation wording instead of stiff workflow/menu language");
   assert(appSource.includes("function freshLeafletCanvas") && appSource.includes("Workflow map failed to render") && appSource.includes("Health map failed to render"), "Clinic/map voice flows need safe Leaflet crash guards");
   fs.copyFileSync(path.join(root, "db.json"), tempDb);
   const server = spawn(process.execPath, ["server.js"], {
@@ -174,7 +176,7 @@ async function call(route, body) {
       assert.strictEqual(result.intent, check.intent, `${check.prompt} should route to ${check.intent}, got ${result.intent}`);
       assert.strictEqual(result.metadata?.redirectSection, check.section, `${check.prompt} should redirect to ${check.section}, got ${result.metadata?.redirectSection}`);
       assert(response.includes(check.includes), `${check.prompt} response should include "${check.includes}", got "${response}"`);
-      assert(!/I may have heard only part of that|Say health, learning, work, trade, map, or AI help/i.test(response), `${check.prompt} must not fall back to old menu language`);
+      assert(!/I may have heard only part of that|Say health, learning, work, trade, map, or AI help|would you like me to do that now|should I do that now/i.test(response), `${check.prompt} must not fall back to old menu language`);
     }
     console.log("Voice response regression passed");
     for (const check of checks) console.log(`- ${check.prompt} -> ${check.intent}`);

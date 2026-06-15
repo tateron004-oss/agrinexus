@@ -16488,11 +16488,11 @@ function voiceRecoveryResponse(db) {
   };
   db.profile.agentMemory.activeRecovery = recovery;
   db.profile.agentMemory.lastStatus = "voice-recovery";
-  db.profile.agentMemory.lastSummary = `I need one clearer direction: ${suggestions.join(", or ")}.`;
+  db.profile.agentMemory.lastSummary = `I caught part of that. Possible directions: ${suggestions.join(", or ")}.`;
   db.profile.agentMemory.updatedAt = recovery.createdAt;
   return {
     intent: "conversation.voice_recovery",
-    response: `I heard you, but I need one clearer direction. Are you asking about ${suggestions.join(", or ")}? You can say one of those exactly and I will continue.`,
+    response: `I caught part of that. Do you mean ${suggestions.join(", or ")}? Say it in your own words and I'll continue.`,
     status: "needs-input",
     metadata: { conversationMode: true, redirectSection: context.section || "agent", suggestions, recovery }
   };
