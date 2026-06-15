@@ -50,7 +50,7 @@ const values = {
   OPENAI_TRANSCRIBE_MODEL: existing.OPENAI_TRANSCRIBE_MODEL || "gpt-4o-mini-transcribe",
   OPENAI_TTS_MODEL: existing.OPENAI_TTS_MODEL || "gpt-4o-mini-tts",
   OPENAI_TTS_VOICE: existing.OPENAI_TTS_VOICE || "coral",
-  OPENAI_TTS_INSTRUCTIONS: existing.OPENAI_TTS_INSTRUCTIONS || "Speak warmly and naturally, like a calm coach guiding a non-technical rural user. Use conversational pacing and avoid a robotic announcer tone.",
+  OPENAI_TTS_INSTRUCTIONS: existing.OPENAI_TTS_INSTRUCTIONS || "Speak as Nexus, a warm and capable AI assistant. Sound natural, conversational, and reassuring. Use clear everyday language, a steady medium pace, short sentences, and light warmth. Avoid sounding slow, robotic, dramatic, like a radio announcer, or like a cartoon character.",
   VOICE_STT_WEBHOOK_URL: existing.VOICE_STT_WEBHOOK_URL || `${providerBase}/voice/transcribe`,
   VOICE_TTS_WEBHOOK_URL: existing.VOICE_TTS_WEBHOOK_URL || `${providerBase}/voice/speak`,
   VOICE_PROVIDER_API_KEY: existing.VOICE_PROVIDER_API_KEY || secret(32),

@@ -89,8 +89,8 @@ let routeTrackingWatchId = null;
 let routeTrackingPoints = [];
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-262";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v242";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-263";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v243";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
 const VOICE_ATTENTION_DELAY_MS = 900;
@@ -100,8 +100,8 @@ const VOICE_FINAL_DEBOUNCE_MS = 120;
 const VOICE_PARTIAL_BARGE_IN_MIN_CHARS = 4;
 const NEXUS_SPEECH_GATE_DELAY_MS = 280;
 const NEXUS_USER_SPEAKING_HOLD_MS = 950;
-const NEXUS_TTS_PROFILE_VERSION = "executive-assistant-v1";
-const OPENAI_TTS_VOICE_FALLBACK = "onyx";
+const NEXUS_TTS_PROFILE_VERSION = "natural-assistant-v2";
+const OPENAI_TTS_VOICE_FALLBACK = "verse";
 const OPENAI_TTS_VOICE_CHOICES = new Set(["alloy", "ash", "ballad", "coral", "echo", "fable", "nova", "onyx", "sage", "shimmer", "verse"]);
 
 const countryLanguageMap = {
@@ -10298,8 +10298,24 @@ function renderUserSimpleActiveSection(sectionId = currentSectionId()) {
       <div class="user-module-status" role="status">${translateText("Nexus is ready.")}</div>
     </section>
   `);
-  if (sectionId === "map" || sectionId === "trade") setTimeout(renderUserRealMap, 80);
-  if (sectionId === "health") setTimeout(renderUserHealthMap, 80);
+  if (sectionId === "map" || sectionId === "trade") setTimeout(() => {
+    try {
+      renderUserRealMap();
+    } catch (error) {
+      console.error("User map failed to render", error);
+      const canvas = $("#userMapCanvas");
+      if (canvas) canvas.innerHTML = `<div class="user-real-map-fallback">${translateText("Map could not load yet. The workflow is still ready; refresh the map or continue safely.")}</div>`;
+    }
+  }, 80);
+  if (sectionId === "health") setTimeout(() => {
+    try {
+      renderUserHealthMap();
+    } catch (error) {
+      console.error("Health map failed to render", error);
+      const canvas = $("#userHealthMapCanvas");
+      if (canvas) canvas.innerHTML = `<div class="user-real-map-fallback">${translateText("Health map could not load yet. Clinic, pharmacy, and provider support are still available.")}</div>`;
+    }
+  }, 80);
 }
 
 function renderUserInlineWorkflow(sectionId, config) {
@@ -12961,6 +12977,17 @@ function addKenyaMedicalTransportLayer(targetMap, layer, country = activeCountry
   });
 }
 
+function freshLeafletCanvas(selector) {
+  const canvas = $(selector);
+  if (!canvas) return null;
+  if (canvas._leaflet_id) {
+    const fresh = canvas.cloneNode(false);
+    canvas.replaceWith(fresh);
+    return fresh.isConnected ? fresh : $(selector);
+  }
+  return canvas.isConnected ? canvas : null;
+}
+
 function renderUserRealMap() {
   const canvas = $("#userMapCanvas");
   if (!canvas || !data) return;
@@ -12980,7 +13007,9 @@ function renderUserRealMap() {
 
   const country = voiceMapCountryOverride || activeCountry();
   const route = activeRoute();
-  userMap = L.map(canvas, {
+  const target = freshLeafletCanvas("#userMapCanvas");
+  if (!target) return;
+  userMap = L.map(target, {
     zoomControl: true,
     attributionControl: true,
     scrollWheelZoom: true,
@@ -13026,7 +13055,9 @@ function renderUserHealthMap() {
   }
 
   const country = activeCountry();
-  userHealthMap = L.map(canvas, {
+  const target = freshLeafletCanvas("#userHealthMapCanvas");
+  if (!target) return;
+  userHealthMap = L.map(target, {
     zoomControl: true,
     attributionControl: true,
     scrollWheelZoom: true,
@@ -13183,8 +13214,8 @@ function renderRuralHealthAccessMap() {
     }
     ruralHealthAccessMap = null;
   }
-  if (canvas._leaflet_id) canvas.replaceWith(canvas.cloneNode(false));
-  const target = $("#ruralHealthAccessMapCanvas");
+  const target = freshLeafletCanvas("#ruralHealthAccessMapCanvas");
+  if (!target) return;
   const country = activeCountry();
   const latestPoint = latestRuralHealthPoint(country);
   ruralHealthAccessMap = L.map(target, {
@@ -13223,8 +13254,8 @@ function renderShipmentPreviewMap() {
     }
     shipmentPreviewMap = null;
   }
-  if (canvas._leaflet_id) canvas.replaceWith(canvas.cloneNode(false));
-  const target = $("#shipmentPreviewMapCanvas");
+  const target = freshLeafletCanvas("#shipmentPreviewMapCanvas");
+  if (!target) return;
   const route = activeRoute();
   const country = activeCountry();
   shipmentPreviewMap = L.map(target, {
@@ -13266,8 +13297,8 @@ function renderHealthHotspotPreviewMap() {
     }
     healthHotspotPreviewMap = null;
   }
-  if (canvas._leaflet_id) canvas.replaceWith(canvas.cloneNode(false));
-  const target = $("#healthHotspotMapCanvas");
+  const target = freshLeafletCanvas("#healthHotspotMapCanvas");
+  if (!target) return;
   const country = activeCountry();
   healthHotspotPreviewMap = L.map(target, {
     zoomControl: true,
@@ -13303,8 +13334,8 @@ function renderWorkflowLiveMap(config = pendingWorkflow || {}) {
     }
     workflowLeafletMap = null;
   }
-  if (canvas._leaflet_id) canvas.replaceWith(canvas.cloneNode(false));
-  const target = $("#workflowLiveMapCanvas");
+  const target = freshLeafletCanvas("#workflowLiveMapCanvas");
+  if (!target) return;
   const mode = workflowMode(config);
   const country = config.healthPreview?.country || activeCountry();
   const route = config.routePreview?.route || activeRoute();
@@ -13707,7 +13738,15 @@ function openWorkflowModal(config) {
   $("#workflowVoiceInput").value = "";
   $("#workflowVoicePrompt").textContent = translateText("Voice ready: say yes to confirm, no to cancel, or read to hear this workflow.");
   $("#workflowModal").classList.remove("hidden");
-  renderWorkflowLiveMap(config);
+  try {
+    renderWorkflowLiveMap(config);
+  } catch (error) {
+    console.error("Workflow map failed to render", error);
+    const mapCanvas = $("#workflowLiveMapCanvas");
+    if (mapCanvas) {
+      mapCanvas.innerHTML = `<div class="user-real-map-fallback">${translateText("Map could not load in this window. The workflow is still open; refresh map or continue the action safely.")}</div>`;
+    }
+  }
   $("#workflowStartCamera")?.addEventListener("click", startWorkflowCamera);
   $("#workflowStopCamera")?.addEventListener("click", stopWorkflowCamera);
   $("[data-workflow-focus-field]")?.addEventListener("click", () => {
@@ -16776,7 +16815,7 @@ function enableNexusVoiceForDemo(message = "Nexus voice is back on. Say Nexus, t
 function preferredOpenAiTtsVoice() {
   const profileVersion = String(localStorage.getItem("agrinexusVoiceProfileVersion") || "");
   const stored = String(localStorage.getItem("agrinexusOpenAiTtsVoice") || "").trim().toLowerCase();
-  if (profileVersion !== NEXUS_TTS_PROFILE_VERSION && (!stored || stored === "coral")) {
+  if (profileVersion !== NEXUS_TTS_PROFILE_VERSION && (!stored || stored === "coral" || stored === "onyx")) {
     localStorage.setItem("agrinexusOpenAiTtsVoice", OPENAI_TTS_VOICE_FALLBACK);
     localStorage.setItem("agrinexusVoiceProfileVersion", NEXUS_TTS_PROFILE_VERSION);
     return OPENAI_TTS_VOICE_FALLBACK;

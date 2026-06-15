@@ -112,7 +112,7 @@ function Remove-WakePrefix {
 }
 
 $script:Synth = New-Object System.Speech.Synthesis.SpeechSynthesizer
-$script:Synth.Rate = -1
+$script:Synth.Rate = 1
 $script:Synth.Volume = 100
 $preferredDesktopVoices = @(
   $DesktopVoiceName,

@@ -64,7 +64,7 @@ const shared = {
   OPENAI_TRANSCRIBE_MODEL: fromEnv("OPENAI_TRANSCRIBE_MODEL", "gpt-4o-mini-transcribe"),
   OPENAI_TTS_MODEL: fromEnv("OPENAI_TTS_MODEL", "gpt-4o-mini-tts"),
   OPENAI_TTS_VOICE: fromEnv("OPENAI_TTS_VOICE", "coral"),
-  OPENAI_TTS_INSTRUCTIONS: fromEnv("OPENAI_TTS_INSTRUCTIONS", "Speak warmly and naturally, like a calm coach guiding a non-technical rural user. Use conversational pacing and avoid a robotic announcer tone."),
+  OPENAI_TTS_INSTRUCTIONS: fromEnv("OPENAI_TTS_INSTRUCTIONS", "Speak as Nexus, a warm and capable AI assistant. Sound natural, conversational, and reassuring. Use clear everyday language, a steady medium pace, short sentences, and light warmth. Avoid sounding slow, robotic, dramatic, like a radio announcer, or like a cartoon character."),
   OPENAI_WEB_SEARCH_ENABLED: fromEnv("OPENAI_WEB_SEARCH_ENABLED", "false"),
   WEB_SEARCH_PROVIDER: fromEnv("WEB_SEARCH_PROVIDER", ""),
   TAVILY_API_KEY: fromEnv("TAVILY_API_KEY", ""),

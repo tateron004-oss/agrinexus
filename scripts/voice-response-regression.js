@@ -7,6 +7,7 @@ const root = path.join(__dirname, "..");
 const port = Number(process.env.VOICE_RESPONSE_CHECK_PORT || 4424);
 const base = `http://127.0.0.1:${port}`;
 const tempDb = path.join(root, "tmp-voice-response-check-db.json");
+const appSource = fs.readFileSync(path.join(root, "public", "app.js"), "utf8");
 let cookie = "";
 
 const checks = [
@@ -146,6 +147,8 @@ async function call(route, body) {
 }
 
 (async () => {
+  assert(appSource.includes('const OPENAI_TTS_VOICE_FALLBACK = "verse"'), "Nexus web voice should default to the faster natural Verse profile");
+  assert(appSource.includes("function freshLeafletCanvas") && appSource.includes("Workflow map failed to render") && appSource.includes("Health map failed to render"), "Clinic/map voice flows need safe Leaflet crash guards");
   fs.copyFileSync(path.join(root, "db.json"), tempDb);
   const server = spawn(process.execPath, ["server.js"], {
     cwd: root,
