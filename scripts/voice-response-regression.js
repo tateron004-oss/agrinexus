@@ -12,6 +12,7 @@ let cookie = "";
 
 const checks = [
   { prompt: "Goodmorning", intent: "conversation.greeting", section: "dashboard", includes: "Good morning" },
+  { prompt: "Hello Nexus, my name is Ron.", intent: "conversation.greeting", section: "dashboard", includes: "Hello Ron, how can I assist you?" },
   { prompt: "Can you hear me?", intent: "conversation.hearing_check", section: "dashboard", includes: "I can hear you" },
   { prompt: "Nexus home", intent: "conversation.home", section: "dashboard", includes: "Home is open" },
   { prompt: "Nexus main menu home", intent: "conversation.home", section: "dashboard", includes: "Home is open" },

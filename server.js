@@ -20547,7 +20547,9 @@ async function runAgentCommand(db, user, command, options = {}) {
   }
   const onboardingPhrase = /^(i am|i'm)\s+new\b/i.test(text) || /\b(how do i|where do i start|show me how|help me use|start training)\b/i.test(text);
   const spokenName = onboardingPhrase ? "" : extractConversationalName(text);
-  if (spokenName && /^(my name is|i am|i'm|call me)\b/i.test(text)) {
+  const directNameIntro = /^(my name is|i am|i'm|this is|call me)\b/i.test(text)
+    || /^(hi|hello|hey|good morning|good afternoon|good evening)\s+(nexus|agrinexus|agri\s+nexus)?[,:\-]?\s*(my name is|i am|i'm|this is|call me)\b/i.test(text);
+  if (spokenName && directNameIntro) {
     db.profile.agentMemory.userName = spokenName;
     db.profile.agentMemory.userModel = { ...(db.profile.agentMemory.userModel || {}), name: spokenName, preferredInteraction: "voice-first", lastSeenAt: new Date().toISOString() };
     rememberAgentMemory(db.profile, `User name is ${spokenName}.`, { source: "voice-greeting", category: "fact", module: "Profile", confidence: 0.96 });
