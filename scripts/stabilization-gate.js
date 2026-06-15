@@ -22,12 +22,12 @@ function requireScript(scriptName) {
 }
 
 requireMarkers("current browser cache contract", html, [
-  "/styles.css?v=nexus-behavior-249",
-  "/app.js?v=nexus-behavior-249"
+  "/styles.css?v=nexus-behavior-250",
+  "/app.js?v=nexus-behavior-250"
 ]);
 requireMarkers("service worker cache contract", sw, [
-  'CACHE_NAME = "agrinexus-pwa-v229"',
-  'BUILD_VERSION = "nexus-behavior-249"',
+  'CACHE_NAME = "agrinexus-pwa-v230"',
+  'BUILD_VERSION = "nexus-behavior-250"',
   "`/app.js?v=${BUILD_VERSION}`",
   "`/styles.css?v=${BUILD_VERSION}`",
   "purgeOldCaches",

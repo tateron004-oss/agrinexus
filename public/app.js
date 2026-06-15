@@ -66,8 +66,8 @@ let routeTrackingWatchId = null;
 let routeTrackingPoints = [];
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-249";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v229";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-250";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v230";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
 const VOICE_ATTENTION_DELAY_MS = 900;
@@ -20399,6 +20399,29 @@ async function resumeNextMission() {
   await executeAgentPlan();
 }
 
+function scheduleVoiceRecovery(message = "I did not hear speech. I am still listening.", options = {}) {
+  const recoverable = options.recoverable !== false;
+  const delay = Number(options.delay || VOICE_RESTART_DELAY_MS);
+  const translated = translateText(message);
+  lastVoiceResponse = translated;
+  setVoiceStatus(voiceFirstMode && recoverable ? "voice-first" : "standby");
+  ["#globalAssistantStatus", "#globalVoiceOutputStatus", "#voiceTranscript", "#jarvisSummary"].forEach(selector => {
+    const element = $(selector);
+    if (element) element.textContent = translated;
+  });
+  updateUserCaptionPanel(translated, { expanded: true });
+  updateNexusBehaviorLayer(recoverable ? "listening" : "standby", message);
+  refreshMicSupport();
+  if (!recoverable || !voiceFirstMode || voiceConversationPaused || document.hidden) return;
+  voiceStopRequested = false;
+  voiceAutoRestart = true;
+  setTimeout(() => {
+    if (!voiceRecognition && voiceFirstMode && voiceAutoRestart && !voiceSpeaking && !voiceStopRequested && !document.hidden) {
+      startVoiceListening();
+    }
+  }, delay);
+}
+
 function startVoiceListening() {
   if (voiceDemoQuietMode) {
     setVoiceStatus("standby");
@@ -20448,13 +20471,22 @@ function startVoiceListening() {
   };
   voiceRecognition.onerror = event => {
     setVoiceStatus("standby");
-    const message = event.error === "not-allowed"
+    const error = event.error || "microphone unavailable";
+    const recoverableErrors = new Set(["no-speech", "aborted", "network", "audio-capture"]);
+    const permissionBlocked = error === "not-allowed" || error === "service-not-allowed";
+    const message = permissionBlocked
       ? "Microphone permission was blocked. Click the browser permission icon near the address bar and allow microphone access, or type your request."
-      : `Voice input stopped: ${event.error || "microphone unavailable"}`;
-    setVoiceResponse(message);
-    voiceStopRequested = true;
+      : error === "no-speech"
+        ? "I did not hear speech. I am still listening. Say Nexus, then tell me what you need."
+        : error === "audio-capture"
+          ? "The microphone signal dropped. I am reconnecting voice now."
+          : `Voice input paused: ${error}. I am reconnecting voice now.`;
+    voiceStopRequested = permissionBlocked;
     voiceRecognition = null;
-    refreshMicSupport();
+    scheduleVoiceRecovery(message, {
+      recoverable: !permissionBlocked && recoverableErrors.has(error),
+      delay: error === "no-speech" ? 180 : VOICE_RESTART_DELAY_MS
+    });
   };
   voiceRecognition.onend = () => {
     setVoiceStatus(voiceConversationPaused ? "paused" : voiceFirstMode ? "voice-first" : "standby");

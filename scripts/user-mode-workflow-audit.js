@@ -265,8 +265,8 @@ for (const [section, buttons] of Object.entries(expectedSections)) {
   assert(styles.includes(marker), `User workflow containment style missing: ${marker}`);
 });
 
-assert(html.includes("/app.js?v=nexus-behavior-249"), "Index must force browsers to load current User-mode workflow JS");
-assert(html.includes("/styles.css?v=nexus-behavior-249"), "Index must force browsers to load current User-mode workflow CSS");
+assert(html.includes("/app.js?v=nexus-behavior-250"), "Index must force browsers to load current User-mode workflow JS");
+assert(html.includes("/styles.css?v=nexus-behavior-250"), "Index must force browsers to load current User-mode workflow CSS");
 assert(html.includes("topSettingsClose"), "User Settings menu needs a visible close button");
 assert(styles.includes("body.user-mode .top-settings-toggle") && styles.includes("display: none !important"), "User mode must hide the top Settings button after login");
 assert(styles.includes("body.user-mode .top-actions") && styles.includes("body.user-mode .top-actions.open") && styles.includes("display: none !important"), "User mode must not expose the old top Settings menu after login");
@@ -274,6 +274,9 @@ assert(app.includes("voiceShouldResumeAfterUiAction"), "Guide Me and other User 
 assert(app.includes("resumeVoiceAfterUiAction(shouldResumeVoice"), "Guide Me and other User actions need to restore voice after UI transitions");
 assert(app.includes("VOICE_RESTART_DELAY_MS = 320"), "User voice loop should restart quickly after Nexus speaks");
 assert(app.includes("VOICE_UI_RESUME_DELAYS_MS = [180, 650, 1500, 3200, 5200]"), "User actions should bring the mic back quickly");
+assert(app.includes("function scheduleVoiceRecovery"), "Voice no-speech and temporary microphone errors need automatic recovery");
+assert(app.includes('error === "no-speech"') && app.includes("I did not hear speech. I am still listening"), "No-speech must be treated as a listening recovery, not a crash");
+assert(app.includes('voiceStopRequested = permissionBlocked'), "Only permission-blocked voice errors should hard-stop the voice loop");
 assert(app.includes("shipmentPreviewMapCanvas") && app.includes("renderShipmentPreviewMap"), "User route/shipment previews must be real Leaflet maps");
 assert(app.includes("function shipmentTrackingState") && app.includes("shipment-tracker-strip"), "User route tracking should show logistics status, not a decorative route card");
 assert(styles.includes(".shipment-tracker-marker") && styles.includes(".shipment-progress-bar"), "User route tracking needs professional marker and progress styling");
@@ -295,7 +298,7 @@ assert(app.includes("startAskNexusAfterLogin"), "User mode should start Ask Nexu
 assert(app.includes('label: "User", role: "Simple services"'), "Login profile should show User instead of technical Standard User copy");
 assert(app.includes("function friendlyRoleLabel") && app.includes("function userHeaderName"), "User topbar must hide technical role names like Standard User");
 assert(app.includes('if (defaultExperienceMode() !== "user")') && app.includes("closeAskNexus({ silent: true })"), "User login greeting must not force the full Ask Nexus panel open");
-assert(sw.includes('CACHE_NAME = "agrinexus-pwa-v229"'), "Service worker cache must be bumped after User-mode workflow fixes");
+assert(sw.includes('CACHE_NAME = "agrinexus-pwa-v230"'), "Service worker cache must be bumped after User-mode workflow fixes");
 assert(styles.includes("body.user-mode .top-settings-close"), "User Settings close button needs visible app-mode styling");
 assert(app.includes('const guideCommand = "help me understand the platform"'), "Guide Me must map to a visible user workflow instead of a silent dynamic command");
 assert(app.includes("function renderUserAccessibilityPanel"), "User mode needs a contained accessibility panel with its own controls");
