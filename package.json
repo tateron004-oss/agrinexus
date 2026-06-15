@@ -31,6 +31,7 @@
     "cross-platform:qa": "node scripts/cross-platform-functions-qa.js",
     "app:behavior-audit": "node scripts/app-behavior-audit.js",
     "app:jarvis-qa": "node scripts/jarvis-behavior-qa.js",
+    "voice:response-check": "node scripts/voice-response-regression.js",
     "app:cloud-agent-qa": "node scripts/cloud-agent-qa.js",
     "app:mobile-native-qa": "node scripts/mobile-native-qa.js",
     "platform:integrity-stress": "node scripts/platform-integrity-stress.js",

@@ -3347,7 +3347,7 @@ function humanizeAgentResult(db, user, result = {}, command = "") {
   if (command) updateConversationUserModel(db.profile, command);
   const behavior = assistantBehaviorModel(db, user);
   const original = String(result.response || "I am ready.");
-  const alreadyNatural = /^(AgriNexus|Nexus|For|A sick|Hello|Yes|I hear you|Absolutely|Got it|Done|Here is|Welcome|I can|I opened|I created|I submitted|The full intelligent model)/i.test(original);
+  const alreadyNatural = /^(AgriNexus|Nexus|For|A sick|Good morning|Good afternoon|Good evening|Hello|Yes|I hear you|Absolutely|Got it|Done|Here is|Welcome|I can|I opened|I created|I submitted|Full map|The full intelligent model)/i.test(original);
   const prefix = alreadyNatural ? "" : "Got it. ";
   const followUp = adaptiveBehaviorNudge(behavior, result);
   const suggestedReplies = suggestedRepliesForResult(result, behavior);
@@ -19961,6 +19961,46 @@ async function runAgentCommand(db, user, command, options = {}) {
       if (intake) return intake;
     }
   }
+  if (conversational && /^(good\s*morning|good\s*afternoon|good\s*evening|hello|hi|hey)\b(?:\s+(nexus|agrinexus|agri\s+nexus))?$/i.test(lower)) {
+    const name = db.profile.agentMemory.userModel?.name || db.profile.agentMemory.userName || user?.name?.split(/\s+/)[0] || "there";
+    return {
+      intent: "conversation.greeting",
+      response: `Good morning ${name}. How can I assist you?`,
+      status: "completed",
+      metadata: { conversationMode: true, redirectSection: "dashboard", suppressBehaviorNudge: true, suggestedReplies: ["I need a doctor", "my crop is bad", "start a course", "open the map"] }
+    };
+  }
+  if (conversational && /\b(can you hear me|are you listening|do you hear me|you hear me|are you there)\b/.test(lower)) {
+    const name = db.profile.agentMemory.userModel?.name || db.profile.agentMemory.userName || user?.name?.split(/\s+/)[0] || "there";
+    return {
+      intent: "conversation.hearing_check",
+      response: `Yes ${name}, I can hear you. Tell me what you need in your own words.`,
+      status: "completed",
+      metadata: { conversationMode: true, redirectSection: "dashboard", suppressBehaviorNudge: true, suggestedReplies: ["I need medicine", "find a clinic near me", "help me sell my crop"] }
+    };
+  }
+  if (conversational && /\b(what can you do|how can you help|what do you do)\b/.test(lower) && !/\b(farmer|farm|smallholder|grower)\b/.test(lower)) {
+    return {
+      intent: "conversation.capability_summary",
+      response: "I can help with health support, medicine access, farming problems, crop sales, learning, jobs, maps, routes, reminders, and provider handoffs. Tell me the problem, not the button.",
+      status: "completed",
+      metadata: { conversationMode: true, redirectSection: "agent", suppressBehaviorNudge: true, suggestedReplies: ["I need a doctor", "my crop is bad", "start a course", "open the map"] }
+    };
+  }
+  if (conversational && (/\b(what is|what's|explain|describe|tell me about|who are you|what do you do)\b.*\b(agrinexus|agri\s+nexus|nexus|platform)\b/.test(lower)
+    || /\b(agrinexus|agri\s+nexus|nexus|platform)\b.*\b(what is|explain|describe|tell me about|what do you do|who are you)\b/.test(lower))) {
+    db.profile.agentMemory.activeClarification = null;
+    db.profile.agentMemory.activeRecovery = null;
+    db.profile.agentMemory.lastStatus = "platform-explained";
+    db.profile.agentMemory.lastSummary = "AgriNexus platform explanation delivered.";
+    db.profile.agentMemory.updatedAt = new Date().toISOString();
+    return {
+      intent: "conversation.platform_explained",
+      response: "AgriNexus helps people use farming, health access, learning, jobs, trade, maps, and local services by voice. Nexus is the assistant inside it: it listens, answers in simple words, opens the right service, and guides the next step.",
+      status: "completed",
+      metadata: { conversationMode: true, redirectSection: "agent", suppressBehaviorNudge: true, suggestedReplies: ["help a farmer", "I need a doctor", "help me sell my crop", "open map"] }
+    };
+  }
   if (conversational && /\b(what can you do|how can you help|help)\b.*\b(farmer|farm|smallholder|grower)\b/.test(lower)) {
     return {
       intent: "conversation.farmer_help",
@@ -20009,6 +20049,14 @@ async function runAgentCommand(db, user, command, options = {}) {
       metadata: { conversationMode: true, redirectSection: "health", suppressBehaviorNudge: true, suggestedReplies: ["use my location", "start intake", "find pharmacy"] }
     };
   }
+  if (conversational && /\b(i need|need|want|find|see|speak to|talk to|call|contact|help me)\b.*\b(doctor|nurse|provider|clinician)\b|\b(doctor help|medical provider|health provider|see a doctor)\b/.test(lower)) {
+    return {
+      intent: "conversation.doctor_help",
+      response: "I can help you reach care support. Tell me what is happening, where you are, and whether you need phone, WhatsApp, video, clinic, or pharmacy help. This is not a diagnosis.",
+      status: "needs-details",
+      metadata: { conversationMode: true, redirectSection: "health", suppressBehaviorNudge: true, suggestedReplies: ["start intake", "find clinic", "call provider"] }
+    };
+  }
   if (conversational && /\b(medicine|medication|pharmacy|pills|drug|refill|prescription|dawa|remedy)\b/.test(lower)) {
     return {
       intent: "conversation.medicine_help",
@@ -20025,12 +20073,37 @@ async function runAgentCommand(db, user, command, options = {}) {
       metadata: { conversationMode: true, redirectSection: "trade", suppressBehaviorNudge: true, suggestedReplies: ["run field scan", "explain crop problem", "contact buyer"] }
     };
   }
+  if (conversational && ((/\b(help me|i want to|i need to|need to|want to)?\s*(sell|market|trade)\b.*\b(crop|maize|rice|cassava|beans|produce|harvest|product)\b/.test(lower))
+    || /\b(help me sell|sell my crop|sell maize|find buyer|talk to buyer|contact buyer)\b/.test(lower))) {
+    return {
+      intent: "conversation.crop_sale_help",
+      response: "I can help sell the crop. Tell me the crop, quantity, location, and buyer if you know one. I will help prepare the sale and delivery tracking.",
+      status: "needs-details",
+      metadata: { conversationMode: true, redirectSection: "trade", suppressBehaviorNudge: true, suggestedReplies: ["maize in Kenya", "find a buyer", "track delivery"] }
+    };
+  }
   if (conversational && /\b(i need|need|want|find|looking for|help me)\b.*\b(work|job|jobs|employment|role|paid work|shift)\b|\b(work|job|jobs|employment|role|paid work|shift)\b.*\b(help|apply|find|need|want)\b/.test(lower)) {
     return {
       intent: "conversation.workforce_help",
       response: "I can help with work. Tell me the country and the kind of job, and I will show role options, skill gaps, training links, and the application step.",
       status: "completed",
       metadata: { conversationMode: true, redirectSection: "workforce", suppressBehaviorNudge: true, suggestedReplies: ["show me jobs", "apply for a role", "review my skills"] }
+    };
+  }
+  if (conversational && /\b(start|begin|open|take|launch)?\s*(a\s+)?(course|lesson|training|class)\b|\b(i want to learn|teach me|start learning|help me learn)\b/.test(lower)) {
+    return {
+      intent: "conversation.learning_start",
+      response: "I can help you learn. Tell me the skill you want, or I can start the recommended course and read it with captions or audio.",
+      status: "needs-topic",
+      metadata: { conversationMode: true, redirectSection: "learning", suppressBehaviorNudge: true, suggestedReplies: ["start recommended course", "build captions", "read the lesson"] }
+    };
+  }
+  if (conversational && /\b(open|show|display|launch|bring up)?\s*(the\s+)?(full\s+|global\s+|real\s+)?map\b|\b(route|location|tracking)\s+map\b/.test(lower)) {
+    return {
+      intent: "conversation.map_open",
+      response: "Full map is open. You can zoom, drag, find facilities, check routes, and track shipments.",
+      status: "completed",
+      metadata: { conversationMode: true, redirectSection: "map", suppressBehaviorNudge: true, suggestedReplies: ["find clinic near me", "track shipment", "show trade route"] }
     };
   }
   if (conversational
