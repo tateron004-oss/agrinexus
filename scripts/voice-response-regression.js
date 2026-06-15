@@ -12,10 +12,13 @@ let cookie = "";
 const checks = [
   { prompt: "Goodmorning", intent: "conversation.greeting", section: "dashboard", includes: "Good morning" },
   { prompt: "Can you hear me?", intent: "conversation.hearing_check", section: "dashboard", includes: "I can hear you" },
+  { prompt: "Nexus home", intent: "conversation.home", section: "dashboard", includes: "Home is open" },
   { prompt: "What can you do?", intent: "conversation.capability_summary", section: "agent", includes: "Tell me the problem" },
   { prompt: "Explain AgriNexus.", intent: "conversation.platform_explained", section: "agent", includes: "AgriNexus helps people" },
   { prompt: "What can you do for a farmer?", intent: "conversation.farmer_help", section: "trade", includes: "For a farmer" },
+  { prompt: "What can you for the farmer?", intent: "conversation.farmer_help", section: "trade", includes: "For a farmer" },
   { prompt: "I need medicine.", intent: "conversation.medicine_help", section: "health", includes: "I cannot prescribe" },
+  { prompt: "I want medicine.", intent: "conversation.medicine_help", section: "health", includes: "I cannot prescribe" },
   { prompt: "Find a clinic near me.", intent: "conversation.clinic_map_help", section: "map", includes: "clinic or pharmacy support on the map" },
   { prompt: "I need a doctor.", intent: "conversation.doctor_help", section: "health", includes: "This is not a diagnosis" },
   { prompt: "My crop is bad.", intent: "conversation.crop_help", section: "trade", includes: "crop problem" },

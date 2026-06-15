@@ -64,8 +64,8 @@ let routeTrackingWatchId = null;
 let routeTrackingPoints = [];
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-235";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v215";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-236";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v216";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
 const VOICE_ATTENTION_DELAY_MS = 900;
@@ -17490,6 +17490,23 @@ function openFullScaleUserMap(response = "Full map is open. You can zoom, drag, 
   return true;
 }
 
+function openNexusHome(response = "Home is open. What do you need next?") {
+  const actionLead = "";
+  pendingAgentClarification = null;
+  pendingNexusSpokenCommand = null;
+  pendingWorkflow = null;
+  closeAskNexus({ silent: true });
+  $("#workflowModal")?.classList.add("hidden");
+  closeUserCaptionPanel();
+  goSection("dashboard", { instant: true, scroll: false, openDefaultAction: false, keepAssistant: false });
+  if (experienceMode === "user") renderUserWorkspace();
+  renderLiveVoiceSuggestions(["I need medicine", "help me sell my crop", "start a course", "open the map"]);
+  recordVoiceEvent("Returned to home from voice.", "done");
+  updateNexusBehaviorLayer("ready", "Nexus returned to the home screen and is ready for the next request.");
+  setVoiceResponse(`${actionLead}${response}`.trim(), true, { allowHandoff: false });
+  return true;
+}
+
 function openHealthIntakeNow(response = "Telehealth intake is open. Step 1: Who needs care? Say the patient or household name, or type it in the first box. This is not a diagnosis.") {
   const actionLead = "";
   const config = workflowConfig("health", "intake", { dataset: {} });
@@ -17500,6 +17517,22 @@ function openHealthIntakeNow(response = "Telehealth intake is open. Step 1: Who 
   renderLiveVoiceSuggestions(["patient name is Ron", "I need medicine", "Spanish", "call me on WhatsApp", "yes"]);
   updateNexusBehaviorLayer("ready", "Nexus opened the guided telehealth intake screen and is waiting for the first answer.");
   setVoiceResponse(`${actionLead}${response}`.trim(), true);
+  return true;
+}
+
+function openMedicineHelpNow(response = "I can help with medicine access, but I cannot prescribe. Tell me what medicine or health concern, and where you are. I can look for pharmacy support, clinic handoff, or provider review.") {
+  const actionLead = "";
+  const config = workflowConfig("health", "pharmacy", { dataset: { patientLocation: activeCountry().name } });
+  if (!config) return openWorkflowByVoice("health", "pharmacy", response, { patientLocation: activeCountry().name });
+  config.userTitle = "Medicine and pharmacy help";
+  config.userSummary = "Tell Nexus what medicine or pharmacy support is needed, where the person is, and whether provider review is needed.";
+  config.confirmLabel = "Find medicine support";
+  recordNexusAutonomousLearning({ type: "workflow-opened", workflow: "health", action: "pharmacy", command: response });
+  setActiveAgentJourney("health", "pharmacy", response);
+  forceOpenUserProcessScreen("health", config, { response }, "Medicine help");
+  renderLiveVoiceSuggestions(["find pharmacy", "start intake", "call provider", "use my location"]);
+  updateNexusBehaviorLayer("ready", "Nexus opened medicine and pharmacy support and is waiting for location or medicine details.");
+  setVoiceResponse(`${actionLead}${response}`.trim(), true, { allowHandoff: false });
   return true;
 }
 
@@ -17718,6 +17751,14 @@ function simpleUserDirectVoiceIntent(command = "") {
   const roleId = firstEligibleRole()?.id;
   const has = words => words.some(word => new RegExp(`\\b${word}\\b`).test(lower));
   const vagueHelp = /^(help|help me|i need help|need help|please help|nexus help)$/i.test(lower);
+  if (/^(home|go home|nexus home|agrinexus home|agri nexus home|open home|main screen|dashboard|back home|take me home)$/.test(lower)
+    || /\b(open|go|return|take me|back)\b.*\b(home|dashboard|main screen)\b/.test(lower)) {
+    return {
+      type: "direct",
+      directAction: "home",
+      response: `Home is open, ${userFirstName()}. What do you need next?`
+    };
+  }
   if (vagueHelp) {
     return {
       type: "clarify",
@@ -17756,11 +17797,9 @@ function simpleUserDirectVoiceIntent(command = "") {
   }
   if (has(["medicine", "medication", "pharmacy", "refill", "drug", "prescription", "remedy", "pills"])) {
     return {
-      type: "workflow",
-      workflow: "health",
-      action: "pharmacy",
-      response: "I can help with medicine access, but I cannot prescribe. Tell me what medicine or health concern, and where you are. I will help find pharmacy support or provider review.",
-      dataset: { patientLocation: activeCountry().name }
+      type: "direct",
+      directAction: "medicine-help",
+      response: "I can help with medicine access, but I cannot prescribe. Tell me what medicine or health concern, and where you are. I will help find pharmacy support or provider review."
     };
   }
   if (has(["clinic", "hospital"]) && has(["near", "nearest", "closest", "find", "where", "location", "map", "around", "my"])) {
@@ -17875,7 +17914,9 @@ function runSimpleUserVoiceIntent(intent, command = "") {
   pendingNexusSpokenCommand = null;
   agentPerformanceState.lastCommand = command;
   if (intent.type === "direct" && intent.directAction === "full-map") return openFullScaleUserMap(intent.response);
+  if (intent.type === "direct" && intent.directAction === "home") return openNexusHome(intent.response);
   if (intent.type === "direct" && intent.directAction === "health-intake") return openHealthIntakeNow(intent.response);
+  if (intent.type === "direct" && intent.directAction === "medicine-help") return openMedicineHelpNow(intent.response);
   if (intent.type === "direct" && intent.directAction === "doctor-help") return openDoctorHelpNow(intent.response);
   if (intent.type === "workflow") return openWorkflowByVoice(intent.workflow, intent.action, intent.response, intent.dataset || {});
   return false;
@@ -17899,6 +17940,14 @@ function nexusConversationFirstIntent(command = "") {
   if (!lower) return null;
   const name = userFirstName();
   const has = words => words.some(word => new RegExp(`\\b${word}\\b`).test(lower));
+  if (/^(home|go home|nexus home|agrinexus home|agri nexus home|open home|main screen|dashboard|back home|take me home)$/.test(lower)
+    || /\b(open|go|return|take me|back)\b.*\b(home|dashboard|main screen)\b/.test(lower)) {
+    return {
+      type: "direct",
+      directAction: "home",
+      response: `Home is open, ${name}. What do you need next?`
+    };
+  }
   const exactGreeting = /^(hello|hi|hey|good morning|goodmorning|good afternoon|goodafternoon|good evening|goodevening|hola|buenos dias|buenas tardes|bonjour|salut|habari|hujambo|ola|oi|bom dia|boa tarde)\b(?:\s+(nexus|agrinexus|agri nexus|agri))?$/.test(lower);
   if (exactGreeting) {
     return {
@@ -17928,7 +17977,8 @@ function nexusConversationFirstIntent(command = "") {
       suggestions: ["I need a doctor", "my crop is bad", "help me sell maize", "start my course"]
     };
   }
-  if (/\b(help.*farmer|farmer|farmers|farming|farm)\b/.test(lower) && /\b(help|support|what can|how can|tell|explain)\b/.test(lower)) {
+  if ((/\b(help.*farmer|farmer|farmers|farming|farm)\b/.test(lower) && /\b(help|support|what can|how can|tell|explain)\b/.test(lower))
+    || /\bwhat can you\b.*\b(farmer|farm|farmers|farming)\b/.test(lower)) {
     return {
       type: "answer",
       response: "For a farmer, I can explain crop problems in simple words, help prepare a crop sale, show buyer and route support, open the map, guide drone or field evidence, and suggest the next safe step.",
@@ -17947,11 +17997,9 @@ function nexusConversationFirstIntent(command = "") {
   }
   if (has(["medicine", "medication", "pharmacy", "refill", "drug", "pills"])) {
     return {
-      type: "workflow",
-      workflow: "health",
-      action: "pharmacy",
-      response: "I can help with medicine access. Tell me the medicine name if you know it, where you are, and whether a provider needs to review it. I cannot prescribe.",
-      dataset: { patientLocation: activeCountry().name }
+      type: "direct",
+      directAction: "medicine-help",
+      response: "I can help with medicine access. Tell me the medicine name if you know it, where you are, and whether a provider needs to review it. I cannot prescribe."
     };
   }
   if (has(["clinic", "hospital", "mobile clinic", "health center", "health centre"]) && has(["near", "nearest", "closest", "find", "where", "map", "location", "around"])) {

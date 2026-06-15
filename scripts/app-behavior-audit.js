@@ -428,8 +428,8 @@ assert(app.includes("Stopped. Ask me the next question or tell me where to go ne
 assert(styles.includes("pointer-events: none") && styles.includes(".user-caption-actions") && styles.includes("pointer-events: auto"), "Caption panel must not block workflow action clicks");
 assert(styles.includes("width: min(300px, calc(100vw - 24px))") && styles.includes("max-height: 138px"), "Caption panel must default to a small bubble");
 assert(styles.includes(".user-caption-panel.expanded") && styles.includes("display: none") && styles.includes("display: grid"), "Caption input controls must appear only in expanded caption mode");
-assert(html.includes("nexus-behavior-235"), "Index must force browsers to load Nexus behavior CSS");
-assert(html.includes("nexus-behavior-235"), "Index must force browsers to load Nexus behavior JS");
+assert(html.includes("nexus-behavior-236"), "Index must force browsers to load Nexus behavior CSS");
+assert(html.includes("nexus-behavior-236"), "Index must force browsers to load Nexus behavior JS");
 assert(server.includes("function productionActivationGuide"), "Backend needs a live activation guide");
 assert(server.includes("function directVendorProviderStatus"), "Backend must recognize direct vendor credentials");
 assert(server.includes("optionalEnvSets"), "Activation guide must show real provider depth options");

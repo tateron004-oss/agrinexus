@@ -19979,6 +19979,16 @@ async function runAgentCommand(db, user, command, options = {}) {
       metadata: { conversationMode: true, redirectSection: "dashboard", suppressBehaviorNudge: true, suggestedReplies: ["I need medicine", "find a clinic near me", "help me sell my crop"] }
     };
   }
+  if (conversational && (/^(home|go home|nexus home|agrinexus home|agri nexus home|open home|main screen|dashboard|back home|take me home)$/i.test(lower)
+    || /\b(open|go|return|take me|back)\b.*\b(home|dashboard|main screen)\b/.test(lower))) {
+    const name = db.profile.agentMemory.userModel?.name || db.profile.agentMemory.userName || user?.name?.split(/\s+/)[0] || "there";
+    return {
+      intent: "conversation.home",
+      response: `Home is open, ${name}. What do you need next?`,
+      status: "completed",
+      metadata: { conversationMode: true, redirectSection: "dashboard", suppressBehaviorNudge: true, suggestedReplies: ["I need medicine", "help me sell my crop", "start a course", "open the map"] }
+    };
+  }
   if (conversational && /\b(what can you do|how can you help|what do you do)\b/.test(lower) && !/\b(farmer|farm|smallholder|grower)\b/.test(lower)) {
     return {
       intent: "conversation.capability_summary",
@@ -20001,7 +20011,8 @@ async function runAgentCommand(db, user, command, options = {}) {
       metadata: { conversationMode: true, redirectSection: "agent", suppressBehaviorNudge: true, suggestedReplies: ["help a farmer", "I need a doctor", "help me sell my crop", "open map"] }
     };
   }
-  if (conversational && /\b(what can you do|how can you help|help)\b.*\b(farmer|farm|smallholder|grower)\b/.test(lower)) {
+  if (conversational && (/\b(what can you do|how can you help|help)\b.*\b(farmer|farm|smallholder|grower)\b/.test(lower)
+    || /\bwhat can you\b.*\b(farmer|farm|smallholder|grower)\b/.test(lower))) {
     return {
       intent: "conversation.farmer_help",
       response: "For a farmer, I can help check a bad crop, explain drone or field data, find a buyer, compare route risk, track a shipment, and prepare sale evidence. Tell me the crop and where the farm is.",
