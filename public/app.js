@@ -65,8 +65,8 @@ let routeTrackingWatchId = null;
 let routeTrackingPoints = [];
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-238";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v218";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-239";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v219";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
 const VOICE_ATTENTION_DELAY_MS = 900;
@@ -7782,8 +7782,45 @@ function ruralCommunicationResponseTuning(message = "", options = {}) {
   return text;
 }
 
+function nexusCommandCenterHumanize(message = "") {
+  let text = String(message || "").replace(/\s+/g, " ").trim();
+  if (!text) return "";
+  const replacements = [
+    [/\bworkflow is ready\b/gi, "I opened that step"],
+    [/\bWorkflow is ready\b/g, "I opened that step"],
+    [/\bworkflow opened\b/gi, "I opened it"],
+    [/\bworkflow is open\b/gi, "I opened it"],
+    [/\bTelehealth intake is open\b/gi, "I opened health intake"],
+    [/\bProvider connection workflow is ready\b/gi, "I opened provider connection"],
+    [/\bDoctor help is open\b/gi, "I opened doctor support"],
+    [/\bCourse start workflow is ready\b/gi, "I opened course start"],
+    [/\bRole application workflow is ready\b/gi, "I opened job application"],
+    [/\bBuyer contact workflow is ready\b/gi, "I opened buyer contact"],
+    [/\bBuyer order workflow is ready\b/gi, "I opened the order step"],
+    [/\bDrone field scan workflow is ready\b/gi, "I opened field scan"],
+    [/\bFull map is open\b/gi, "I opened the full map"],
+    [/\bI heard that\./gi, "I hear you."],
+    [/\bI heard you\./gi, "I hear you."],
+    [/\bWhat do you need next\??/gi, "What should we do next?"],
+    [/\bI heard\s+/gi, "I heard "],
+    [/\bWhat do you need\??/gi, "How can I assist you?"],
+    [/\bTell Nexus\b/gi, "Tell me"],
+    [/\bSay Nexus\b/gi, "Say Nexus"]
+  ];
+  replacements.forEach(([pattern, replacement]) => {
+    text = text.replace(pattern, replacement);
+  });
+  text = text
+    .replace(/\bI opened that step\.?\s*I opened that step\.?/gi, "I opened that step.")
+    .replace(/\bI hear you\.\s*I hear you\./gi, "I hear you.")
+    .replace(/\s+([.!?])/g, "$1")
+    .replace(/\s+/g, " ")
+    .trim();
+  return text;
+}
+
 function nexusHumanResponsePolicy(message = "", options = {}) {
-  const text = ruralCommunicationResponseTuning(message, options);
+  const text = nexusCommandCenterHumanize(ruralCommunicationResponseTuning(message, options));
   if (!text) return "";
   if (options.allowLongResponse || options.longForm || options.source === "briefing") return text;
   const speaking = Boolean(options.speak || options.forceHandoff || voiceFirstMode);
@@ -7816,6 +7853,7 @@ function nexusHumanResponsePolicy(message = "", options = {}) {
     .replace(/\s*Say yes to create[^.]+\.?/gi, "")
     .replace(/\s*Should I do that now\??/gi, "")
     .replace(/\s*Would you like me to do that now\??/gi, "");
+  human = nexusCommandCenterHumanize(human);
   if (simpleMode || shortAnswerMode) {
     const legal = /\b(not a diagnosis|emergency|danger|provider|consent|payment|billing|privacy)\b/i.test(human);
     const sentences = human.match(/[^.!?]+[.!?]+|[^.!?]+$/g) || [human];
@@ -17163,8 +17201,7 @@ async function handleSimpleCourseStartCommand(command = "") {
     goSection("learning", { instant: true });
     if (experienceMode === "user") renderUserSimpleActiveSection("learning");
     const title = translatedCourse(activeCourse() || course).title;
-    const heard = summarizeNexusCommandForRepeat(command || "start my course");
-    const message = `I heard: ${heard}. I started ${title}. What do you want next?`;
+    const message = `I started ${title}. I can read it, build captions, or help you finish the lesson.`;
     recordNexusAutonomousLearning({ type: "course-started", command, courseId: course.id });
     updateNexusBehaviorLayer("ready", message);
     renderLiveVoiceSuggestions(["complete my lesson", "read this lesson", "build captions", "Nexus stop"]);
@@ -17525,7 +17562,7 @@ function openHealthIntakeNow(response = "Telehealth intake is open. Step 1: Who 
   return true;
 }
 
-function openMedicineHelpNow(response = "I can help with medicine access, but I cannot prescribe. Tell me what medicine or health concern, and where you are. I can look for pharmacy support, clinic handoff, or provider review.") {
+function openMedicineHelpNow(response = "I can help with medicine access. I opened pharmacy support. Tell me the medicine concern and where you are. I cannot prescribe, but I can help prepare the right support step.") {
   const actionLead = "";
   const config = workflowConfig("health", "pharmacy", { dataset: { patientLocation: activeCountry().name } });
   if (!config) return openWorkflowByVoice("health", "pharmacy", response, { patientLocation: activeCountry().name });
@@ -17541,7 +17578,7 @@ function openMedicineHelpNow(response = "I can help with medicine access, but I 
   return true;
 }
 
-function openClinicHelpNow(response = "I can help find clinic support. Tell me your village, city, or nearest landmark, and I will guide the closest clinic or mobile clinic path.") {
+function openClinicHelpNow(response = "I opened clinic support. Tell me your village, city, or nearest landmark, and I will help guide the closest clinic, mobile clinic, or map route.") {
   const actionLead = "";
   const config = workflowConfig("health", "nearest-clinic", { dataset: { patientLocation: activeCountry().name } });
   if (!config) return openWorkflowByVoice("health", "nearest-clinic", response, { patientLocation: activeCountry().name });
@@ -17557,7 +17594,7 @@ function openClinicHelpNow(response = "I can help find clinic support. Tell me y
   return true;
 }
 
-function openCropProblemHelpNow(response = "I can help with the crop problem. Tell me the crop, where the farm is, and what you see. I will guide a field scan, simple next steps, buyer proof, and route planning.") {
+function openCropProblemHelpNow(response = "I'm with you. I opened crop support. Tell me the crop, where the farm is, and what looks wrong. I will help with simple next steps, field evidence, buyer proof, and route planning.") {
   const actionLead = "";
   const config = workflowConfig("trade", "drone-pest", { dataset: { productId: firstProduct()?.id, objective: response } });
   if (!config) return openWorkflowByVoice("trade", "drone-pest", response, { productId: firstProduct()?.id, objective: response });
@@ -17573,7 +17610,7 @@ function openCropProblemHelpNow(response = "I can help with the crop problem. Te
   return true;
 }
 
-function openDoctorHelpNow(response = "Doctor help is open. Tell Nexus what kind of care connection you need. This is not a diagnosis.") {
+function openDoctorHelpNow(response = "I'm with you. I opened doctor support. Tell me what happened, where the person is, and whether you need phone, WhatsApp, video, clinic, or pharmacy help. This is not a diagnosis.") {
   const actionLead = "";
   const config = workflowConfig("health", "provider", { dataset: { careNeed: "I need to speak with a doctor or provider." } });
   if (!config) return openWorkflowByVoice("health", "provider", response);
@@ -17995,7 +18032,7 @@ function nexusConversationFirstIntent(command = "") {
   if (exactGreeting) {
     return {
       type: "answer",
-      response: `Hey ${name}. How can I assist you?`,
+      response: `Hello ${name}. How can I assist you?`,
       suggestions: ["I need a doctor", "help me sell my crop", "start a course", "find work", "open map"]
     };
   }
@@ -18016,7 +18053,7 @@ function nexusConversationFirstIntent(command = "") {
   if (/\b(what can you do|how can you help|what do you do|help me understand)\b/.test(lower)) {
     return {
       type: "answer",
-      response: "I can help with health support, medicine access, farming problems, crop sales, learning, jobs, routes, maps, reminders, and provider handoffs. Tell me the problem, not the button.",
+      response: "I can listen in normal words, answer questions, open the right workspace, and guide health support, medicine access, crops, sales, jobs, learning, maps, reminders, and provider handoffs.",
       suggestions: ["I need a doctor", "my crop is bad", "help me sell maize", "start my course"]
     };
   }
@@ -18024,7 +18061,7 @@ function nexusConversationFirstIntent(command = "") {
     || /\bwhat can you\b.*\b(farmer|farm|farmers|farming)\b/.test(lower)) {
     return {
       type: "answer",
-      response: "For a farmer, I can explain crop problems in simple words, help prepare a crop sale, show buyer and route support, open the map, guide drone or field evidence, and suggest the next safe step.",
+      response: "For a farmer, I can explain crop problems in plain words, help sell a harvest, prepare buyer messages, show route support, open the map, guide field evidence, and suggest the next safe step.",
       suggestions: ["my crop is bad", "sell my crop", "show route", "open map"]
     };
   }
@@ -18034,7 +18071,7 @@ function nexusConversationFirstIntent(command = "") {
       type: "workflow",
       workflow: "health",
       action: "intake",
-      response: "I can help with health support. First, tell me who needs care and where they are. If this is urgent or dangerous, contact local emergency help now. This is not a diagnosis.",
+      response: "I'm with you. I opened health intake. Tell me who needs care and where they are. If this is urgent or dangerous, contact local emergency help now. This is not a diagnosis.",
       dataset: {}
     };
   }
@@ -18042,21 +18079,21 @@ function nexusConversationFirstIntent(command = "") {
     return {
       type: "direct",
       directAction: "medicine-help",
-      response: "I can help with medicine access. Tell me the medicine name if you know it, where you are, and whether a provider needs to review it. I cannot prescribe."
+      response: "I can help with medicine access. I opened pharmacy support. Tell me the medicine name if you know it, where you are, and whether a provider should review it. I cannot prescribe."
     };
   }
   if (has(["clinic", "hospital", "mobile clinic", "health center", "health centre"]) && has(["near", "nearest", "closest", "find", "where", "map", "location", "around"])) {
     return {
       type: "direct",
       directAction: "clinic-help",
-      response: "I can help find clinic support. Tell me your village, city, or nearest landmark, and I will guide the clinic or mobile clinic path."
+      response: "I opened clinic support. Tell me your village, city, or nearest landmark, and I will guide the clinic, mobile clinic, or map route."
     };
   }
   if (has(["doctor", "nurse", "provider", "clinician"]) && has(["need", "want", "speak", "talk", "call", "contact", "see", "find", "help"])) {
     return {
       type: "direct",
       directAction: "doctor-help",
-      response: "I can help you reach care support. Tell me what is happening, where you are, and whether you need phone, WhatsApp, video, clinic, or pharmacy help. This is not a diagnosis."
+      response: "I'm with you. I opened doctor support. Tell me what happened, where you are, and whether you need phone, WhatsApp, video, clinic, or pharmacy help. This is not a diagnosis."
     };
   }
   if (/\b(i need health|need health|health help|telehealth help|medical help|i need care|need care|i am sick|im sick|i feel sick|not feeling well)\b/.test(lower)) {
@@ -18064,7 +18101,7 @@ function nexusConversationFirstIntent(command = "") {
       type: "workflow",
       workflow: "health",
       action: "intake",
-      response: "I can help with health support. First, tell me who needs care and where they are. This is not a diagnosis, but I can help prepare the intake and next support step.",
+      response: "I'm with you. I opened health intake. Tell me who needs care and where they are. This is not a diagnosis, but I can help prepare the next support step.",
       dataset: {}
     };
   }
@@ -18072,7 +18109,7 @@ function nexusConversationFirstIntent(command = "") {
     return {
       type: "direct",
       directAction: "crop-help",
-      response: "I can help with the crop problem. Tell me the crop, where the farm is, and what you see. I will guide field evidence, simple next steps, buyer proof, and route planning."
+      response: "I can help with the crop problem. I'm with you. I opened crop support. Tell me the crop, where the farm is, and what looks wrong."
     };
   }
   if ((has(["sell", "selling", "buyer", "market", "trade"]) && has(["crop", "maize", "rice", "cassava", "beans", "produce", "harvest", "product"]))
@@ -18081,7 +18118,7 @@ function nexusConversationFirstIntent(command = "") {
       type: "workflow",
       workflow: "trade",
       action: "buyer-contact",
-      response: "I can help sell the crop. Tell me the crop, quantity, location, and buyer if you know one. I will help prepare the sale and delivery tracking.",
+      response: "I can help sell the crop. I opened buyer support. Tell me the crop, quantity, location, and buyer if you know one. I will help prepare the sale and delivery tracking.",
       dataset: { productId: firstProduct()?.id }
     };
   }
@@ -18097,7 +18134,7 @@ function nexusConversationFirstIntent(command = "") {
       type: "workflow",
       workflow: "workforce",
       action: has(["apply"]) ? "apply-role" : "build-profile",
-      response: "I can help with work. Tell me your country, the type of job, and your skills. I will show the role path and application step.",
+      response: "I can help with work. I opened job support. Tell me your country, the job you want, and your skills. I will show the role path and application step.",
       dataset: { roleId: firstEligibleRole()?.id }
     };
   }
@@ -18106,7 +18143,7 @@ function nexusConversationFirstIntent(command = "") {
       type: "workflow",
       workflow: "learning",
       action: "start",
-      response: "I can help you learn. Tell me the skill you want, or I can start the recommended course and read it with captions or audio.",
+      response: "I can help you learn. I opened course support. Tell me the skill you want, or I can start the recommended course with captions or audio.",
       dataset: {}
     };
   }
@@ -18152,6 +18189,16 @@ function nexusCommonPhraseResponse(command = "") {
     return nexusConversationGovernorSummary();
   }
   const responses = [
+    {
+      match: /\b(good morning|goodmorning|good afternoon|goodafternoon|good evening|goodevening|hello nexus|hi nexus|hey nexus)\b/,
+      response: `Hello ${name}. How can I assist you?`,
+      suggestions: ["I need a doctor", "help me sell my crop", "start a course", "open map"]
+    },
+    {
+      match: /\b(talk to me|can you help me|help me please|i need help|walk with me|guide me)\b/,
+      response: "I'm here with you. Tell me the problem in your own words, and I will open the right place.",
+      suggestions: ["health", "crops", "work", "learning", "map"]
+    },
     {
       match: /\b(thank you|thanks|thanks nexus|appreciate it|good job|nice job|that helped|gracias|merci|asante|shukran)\b/,
       response: `You're welcome, ${name}. I'm here when you need me.`,
