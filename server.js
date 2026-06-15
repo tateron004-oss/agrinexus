@@ -16872,6 +16872,103 @@ function resilientConversationIntent(db, user, rawText = "") {
   return null;
 }
 
+function healthAccessVoiceAcceptanceResponse(db, user, text = "", lower = "", options = {}) {
+  if (options.conversational !== true) return null;
+  const value = normalizeSpeechForIntent(text);
+  const metadataBase = { conversationMode: true, suppressBehaviorNudge: true, healthAccessVoice: true };
+  const response = (intent, status, redirectSection, message, suggestedReplies = ["start intake", "find clinic", "call provider"]) => ({
+    intent,
+    response: message,
+    status,
+    metadata: { ...metadataBase, redirectSection, suggestedReplies }
+  });
+
+  if (/\b(caption|captions|transcript|subtitles?)\b.*\b(telehealth|health|patient|doctor|provider|clinic|care)\b|\b(telehealth|health|patient|doctor|provider|clinic|care)\b.*\b(caption|captions|transcript|subtitles?)\b/.test(value)) {
+    return response(
+      "conversation.telehealth_captions",
+      "completed",
+      "health",
+      "I can build captions for telehealth. I will prepare a caption relay so the patient, caregiver, and provider can read the conversation clearly.",
+      ["start caption relay", "start intake", "call provider"]
+    );
+  }
+
+  if (/\b(healthcare|health care|medical|clinic|telehealth)\b.*\b(partner|provider|practitioner|ngo|government)\b|\b(partner|provider|practitioner|ngo|government)\b.*\b(healthcare|health care|medical|clinic|telehealth)\b/.test(value)) {
+    return response(
+      "conversation.healthcare_partner_explain",
+      "completed",
+      "health",
+      "For a healthcare partner, AgriNexus supports non-diagnostic intake, mobile clinic coordination, clinic and pharmacy location help, captions, provider handoff packets, and follow-up evidence.",
+      ["start intake", "show mobile clinic support", "show pharmacy on the map"]
+    );
+  }
+
+  if (/\b(mobile clinic|field clinic|outreach clinic|clinic outreach|rural clinic)\b/.test(value)) {
+    return response(
+      "conversation.mobile_clinic_help",
+      "completed",
+      "health",
+      "Mobile clinic support helps a patient start intake, share location, prepare a provider handoff, find clinic or pharmacy resources, and organize outreach follow-up. Nexus is not a doctor and does not diagnose.",
+      ["start health intake", "find a clinic near me", "show pharmacy on the map"]
+    );
+  }
+
+  if (/\b(no english|cannot read|can't read|cant read|i cannot read|i cant read|illiterate|read for me|help me read|baby sick|child sick|sick baby)\b/.test(value)
+    || /\b(start|open|begin)\b.*\b(health )?(intake|telehealth intake|patient intake)\b/.test(value)
+    || /\b(health )?(intake|telehealth intake|patient intake)\b.*\b(start|open|begin|help)\b/.test(value)
+    || /^start intake$/.test(value)) {
+    return response(
+      "conversation.health_intake",
+      "needs-details",
+      "health",
+      "I started health intake. Tell me who needs care and where they are. This is not a diagnosis; it helps prepare the safest next support step.",
+      ["patient name", "find clinic", "I need medicine"]
+    );
+  }
+
+  if (/\b(pharmacy|medicine|medication|refill|drug|pills)\b/.test(value) && /\b(map|show|find|near|nearest|where|location)\b/.test(value)) {
+    return response(
+      "conversation.clinic_map_help",
+      "needs-location",
+      "map",
+      "I can show clinic or pharmacy support on the map. Share your village, city, or location, and I will guide the closest facility route.",
+      ["use my location", "find clinic", "find pharmacy"]
+    );
+  }
+
+  if (/\b(clinic|hospital|health center|health centre)\b/.test(value) && /\b(map|near|nearest|nearby|closest|where|location|find|show)\b/.test(value)) {
+    return response(
+      "conversation.clinic_map_help",
+      "needs-location",
+      "map",
+      "I can show clinic or pharmacy support on the map. Share your village, city, or location, and I will guide the closest facility route.",
+      ["use my location", "find clinic", "find pharmacy"]
+    );
+  }
+
+  if (/\b(call|contact|speak to|talk to|connect to|reach|get)\b.*\b(provider|doctor|nurse|clinician)\b|\b(i need|need|want|see|find|help)\b.*\b(doctor|provider|nurse|clinician)\b/.test(value)) {
+    return response(
+      "conversation.doctor_help",
+      "needs-details",
+      "health",
+      "I can help you reach care support. Tell me what is happening, where you are, and whether you need phone, WhatsApp, video, clinic, or pharmacy help. This is not a diagnosis.",
+      ["start intake", "find clinic", "call provider"]
+    );
+  }
+
+  if (/\b(medicine|medication|pharmacy|refill|drug|pills|prescription|dawa|remedy)\b/.test(value)) {
+    return response(
+      "conversation.medicine_help",
+      "needs-location",
+      "health",
+      "I can help with medicine access, but I cannot prescribe. Tell me what medicine or health concern, and where you are. I can look for pharmacy support, clinic handoff, or provider review.",
+      ["find pharmacy", "start intake", "call provider"]
+    );
+  }
+
+  return null;
+}
+
 function stagePhoneContactCall(db, command, contact, purpose = "") {
   const cleanPurpose = purpose || `call ${contact.name}`;
   const section = /(doctor|nurse|clinic|health|medicine|pharmacy|medical)/i.test(contact.relationship || cleanPurpose) ? "health"
@@ -20151,6 +20248,8 @@ async function runAgentCommand(db, user, command, options = {}) {
       metadata: { conversationMode: true, redirectSection: "dashboard", suppressBehaviorNudge: true, suggestedReplies: ["I need medicine", "help me sell my crop", "start a course", "open the map"] }
     };
   }
+  const healthVoiceAcceptance = healthAccessVoiceAcceptanceResponse(db, user, text, lower, options);
+  if (healthVoiceAcceptance) return healthVoiceAcceptance;
   const resilientIntent = conversational ? resilientConversationIntent(db, user, text) : null;
   if (resilientIntent) return resilientIntent;
   if (conversational && /\b(what can (?:you )?do|how can you help|what do you do)\b/.test(lower) && !/\b(farmer|farm|smallholder|grower)\b/.test(lower)) {

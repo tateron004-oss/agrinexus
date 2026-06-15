@@ -65,8 +65,8 @@ let routeTrackingWatchId = null;
 let routeTrackingPoints = [];
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-244";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v224";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-245";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v225";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
 const VOICE_ATTENTION_DELAY_MS = 900;
@@ -18166,6 +18166,52 @@ function nexusConversationFirstIntent(command = "") {
       type: "answer",
       response: `Yes ${name}, I can hear you. Tell me what you need in your own words.`,
       suggestions: ["I need medicine", "my crop is bad", "clinic near me", "find work"]
+    };
+  }
+  if (/\b(caption|captions|transcript|subtitles?)\b.*\b(telehealth|health|patient|doctor|provider|clinic|care)\b|\b(telehealth|health|patient|doctor|provider|clinic|care)\b.*\b(caption|captions|transcript|subtitles?)\b/.test(lower)) {
+    return {
+      type: "workflow",
+      workflow: "health",
+      action: "caption",
+      response: "I can build captions for telehealth. I opened the caption relay so the patient, caregiver, and provider can read the conversation clearly.",
+      dataset: {}
+    };
+  }
+  if (/\b(healthcare|health care|medical|clinic|telehealth)\b.*\b(partner|provider|practitioner|ngo|government)\b|\b(partner|provider|practitioner|ngo|government)\b.*\b(healthcare|health care|medical|clinic|telehealth)\b/.test(lower)) {
+    return {
+      type: "workflow",
+      workflow: "partnership",
+      action: "telehealth",
+      response: "I opened healthcare partner support. AgriNexus can show non-diagnostic intake, mobile clinic coordination, clinic and pharmacy location help, captions, provider handoff packets, and follow-up evidence.",
+      dataset: {}
+    };
+  }
+  if (/\b(mobile clinic|field clinic|outreach clinic|clinic outreach|rural clinic)\b/.test(lower)) {
+    return {
+      type: "workflow",
+      workflow: "health",
+      action: "mobile-clinic",
+      response: "I opened mobile clinic support. Nexus can help start intake, share location, prepare a provider handoff, find clinic or pharmacy resources, and organize outreach follow-up. This is not a diagnosis.",
+      dataset: { patientLocation: activeCountry().name }
+    };
+  }
+  if (/\b(no english|cannot read|can't read|cant read|i cannot read|i cant read|illiterate|read for me|help me read|baby sick|child sick|sick baby)\b/.test(lower)
+    || /\b(start|open|begin)\b.*\b(health )?(intake|telehealth intake|patient intake)\b/.test(lower)
+    || /\b(health )?(intake|telehealth intake|patient intake)\b.*\b(start|open|begin|help)\b/.test(lower)
+    || /^start intake$/.test(lower)) {
+    return {
+      type: "workflow",
+      workflow: "health",
+      action: "intake",
+      response: "I started health intake. Tell me who needs care and where they are. This is not a diagnosis; it helps prepare the safest next support step.",
+      dataset: {}
+    };
+  }
+  if (/\b(pharmacy|medicine|medication|refill|drug|pills)\b/.test(lower) && /\b(map|show|find|near|nearest|where|location)\b/.test(lower)) {
+    return {
+      type: "direct",
+      directAction: "full-map",
+      response: "I opened the full map for clinic and pharmacy support. Share your village, city, or location, and I will guide the closest facility route."
     };
   }
   if (isPlatformExplainVoiceCommand(command) || /\b(explain agrinexus|explain agri nexus|what is agrinexus|what is agri nexus|tell me about agrinexus|tell me about agri nexus|who are you|what are you)\b/.test(lower)) {
