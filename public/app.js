@@ -69,8 +69,8 @@ let routeTrackingWatchId = null;
 let routeTrackingPoints = [];
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-253";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v233";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-254";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v234";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
 const VOICE_ATTENTION_DELAY_MS = 900;
@@ -18945,6 +18945,239 @@ function runConversationFirstIntent(intent, command = "") {
   return runSimpleUserVoiceIntent(intent, command);
 }
 
+async function executeUnifiedNexusIntent(intent, command = "", options = {}) {
+  if (!intent) return false;
+  clearAgentProgressTimers();
+  const lower = normalizeToolText(command);
+  const turnToken = options.turnToken || null;
+  agentPerformanceState.lastCommand = command;
+  agentPerformanceState.spokenCommand = command;
+  if (command) {
+    rememberConversationTurn(command, "");
+    updateNexusAwareness(command, { silent: true });
+    speechSafetyRisk(command, options.source || "voice");
+  }
+
+  if (intent.type === "answer") {
+    pendingAgentClarification = null;
+    pendingNexusSpokenCommand = null;
+    renderLiveVoiceSuggestions(intent.suggestions || ["health", "crops", "work", "learning", "map"]);
+    updateNexusBehaviorLayer("answering", intent.reason || "Unified Nexus brain answered directly.");
+    setVoiceResponse(intent.response, true, { allowHandoff: false, command, source: "unified-brain" });
+    return true;
+  }
+
+  if (intent.type === "clarify") {
+    pendingAgentClarification = intent.clarification || null;
+    pendingNexusSpokenCommand = null;
+    renderLiveVoiceSuggestions(intent.suggestions || ["health", "medicine", "clinic", "crops", "work", "learning", "map"]);
+    updateNexusBehaviorLayer("listening", intent.reason || "Unified Nexus brain asked one question before acting.");
+    setVoiceResponse(intent.response, true, { allowHandoff: false, command, source: "unified-brain" });
+    return true;
+  }
+
+  if (intent.type === "direct" || intent.type === "workflow") {
+    pendingAgentClarification = null;
+    pendingNexusSpokenCommand = null;
+    return runSimpleUserVoiceIntent(intent, command);
+  }
+
+  if (intent.type === "backend") {
+    pendingAgentClarification = null;
+    pendingNexusSpokenCommand = null;
+    updateNexusBehaviorLayer("thinking", intent.reason || "Unified Nexus brain is using the live conversation engine.");
+    renderLiveVoiceSuggestions(intent.suggestions || ["ask a follow-up", "open health", "open map", "Nexus stop"]);
+    const locationContext = await browserWeatherLocation(command);
+    if (ignoreStaleNexusTurn(turnToken, "unified backend answer")) return true;
+    await runBackendAgentCommand(command, locationContext, { turnToken });
+    return true;
+  }
+
+  if (intent.type === "tool") {
+    pendingAgentClarification = null;
+    pendingNexusSpokenCommand = null;
+    if (intent.tool === "music") return runMusicAssistantCommand(command, { turnToken });
+    if (intent.tool === "dynamic") return runDynamicVoiceTool(command);
+    if (intent.tool === "intelligence") return handleNexusIntelligenceRouter(command);
+    if (intent.tool === "advisor") return handleAdvisorBrainCommand(command);
+  }
+
+  if (intent.type === "utility") {
+    pendingAgentClarification = null;
+    pendingNexusSpokenCommand = null;
+    const locationContext = await browserWeatherLocation(command);
+    await runUtilityAgentCommand(command, intent.response, locationContext, { turnToken });
+    return true;
+  }
+
+  return false;
+}
+
+async function unifiedNexusConversationBrain(rawCommand = "", context = {}) {
+  const localized = normalizeLocalizedVoiceCommand(rawCommand);
+  const cleaned = normalizeMultilingualBehaviorCommand(cleanWakeCommand(localized));
+  const command = cleaned || cleanWakeCommand(localized) || localized || rawCommand;
+  const lower = normalizeToolText(command);
+  const spoken = command || rawCommand;
+  const turnToken = context.turnToken || null;
+  const stopRedirect = postStopRedirectCommand(command);
+
+  if (await answerPendingNexusQuestion(command || localized || rawCommand)) return true;
+
+  if (isGlobalStopCommand(String(command || localized || rawCommand).toLowerCase())) {
+    if (isStopAndContinueWorkingCommand(command || localized || rawCommand)) {
+      stopNexusAndReturnToWork("Stopped. Nexus is closed so you can continue working.");
+      return true;
+    }
+    enterNexusConversationPause("Stopped. Nexus is paused and will ignore background conversation until you say Nexus again.");
+    if (stopRedirect) {
+      leaveNexusConversationPause("Nexus heard your next instruction after stop.");
+      setTimeout(() => {
+        setCommandInputs(stopRedirect);
+        void handleVoiceCommand(stopRedirect, { ...context, skipUnifiedBrain: false });
+      }, VOICE_POST_STOP_REDIRECT_DELAY_MS);
+    }
+    return true;
+  }
+
+  if (isUniversalLanguageCommand(command || localized)) {
+    pendingNexusSpokenCommand = null;
+    pendingAgentClarification = null;
+    await changeLanguageByVoice(command || localized);
+    return true;
+  }
+
+  const introductionResponse = nexusIntroductionResponse(command || localized);
+  if (introductionResponse) {
+    stopVoicePlayback({ hard: true });
+    openAskNexus();
+    enableHeyAgriNexusMode();
+    setVoiceResponse(introductionResponse, true, { allowHandoff: false, source: "unified-brain" });
+    render();
+    return true;
+  }
+
+  const greetingOnly = isNexusGreetingOnly(localized);
+  const greetingPrefix = isNexusGreetingPrefix(localized);
+  const wakeOnly = isWakePhraseOnly(localized);
+  if (greetingOnly || wakeOnly || (greetingPrefix && !hasBehaviorActionVerb(command))) {
+    stopVoicePlayback({ hard: true });
+    openAskNexus();
+    enableHeyAgriNexusMode();
+    nexusAwaitingCommand = true;
+    recordNexusAutonomousLearning({ type: "greeting", command: normalizedWakeText(localized) });
+    setVoiceResponse(nexusConversationalWake(greetingOnly ? "hello" : "wake"), true, { allowHandoff: false, source: "unified-brain" });
+    return true;
+  }
+
+  if (!lower) {
+    setVoiceResponse("I am listening. Tell me what you need in your own words.", true, { allowHandoff: false, source: "unified-brain" });
+    return true;
+  }
+
+  if (isNexusVoiceOffCommand(lower)) {
+    disableNexusVoiceForDemo("Demo quiet mode is on. Nexus voice is off until you turn it back on.");
+    return true;
+  }
+  if (isNexusVoiceOnCommand(lower)) {
+    voiceConversationPaused = false;
+    enableNexusVoiceForDemo("Nexus voice is back on. Say Nexus, then tell me what you need.");
+    return true;
+  }
+
+  if (await handleNexusRealtimeAdjustment(command || localized)) return true;
+  if (handleNexusSelfCorrection(command || localized)) return true;
+
+  const visibleInlineWorkflow = $(".user-inline-workflow:not(.hidden)");
+  if (pendingWorkflow && visibleInlineWorkflow) {
+    if (fillWorkflowFieldByVoice(command || localized)) return true;
+    if (isNewServiceRequestOverWorkflow(command || localized)) {
+      clearOpenWorkflowForNewVoiceRequest(command || localized);
+    } else if (!isOpenDialogVoiceQuestion(command) && !isOpenKnowledgeQuestion(command)) {
+      const coach = workflowRealUseCoach(pendingWorkflow);
+      setVoiceResponse(`I still have ${pendingWorkflow.title || "this step"} open. Answer the visible question, say yes to confirm, no to cancel, or say new request to switch. ${coach.question || ""}`, true, { allowHandoff: false, source: "unified-brain" });
+      return true;
+    }
+  }
+
+  if (activeConversationIntake && handleConversationIntakeAnswer(command || localized || rawCommand)) return true;
+  if (startConversationIntakeFromCommand(command || localized || rawCommand)) return true;
+
+  if (context.source === "voice" && isLikelySideConversationWithoutNexusCommand(command || localized || rawCommand)) {
+    pauseNexusForSideConversation(command || localized || rawCommand);
+    return true;
+  }
+
+  if (isNexusHearingCheckCommand(command || localized)) {
+    answerNexusHearingCheck();
+    return true;
+  }
+
+  const commonPhrase = nexusCommonPhraseResponse(command || localized);
+  if (commonPhrase) {
+    setVoiceResponse(commonPhrase, true, { allowHandoff: false, source: "unified-brain" });
+    return true;
+  }
+
+  const conversationIntent = nexusConversationFirstIntent(spoken || command || rawCommand);
+  if (conversationIntent) {
+    return executeUnifiedNexusIntent(conversationIntent, spoken || command || rawCommand, context);
+  }
+
+  const simpleIntent = simpleUserDirectVoiceIntent(spoken || command);
+  if (simpleIntent) {
+    return executeUnifiedNexusIntent(simpleIntent, spoken || command, context);
+  }
+
+  const migrantIntent = migrantFriendlyVoiceIntent(command);
+  if (migrantIntent) {
+    return executeUnifiedNexusIntent(migrantIntent, command, context);
+  }
+
+  const utilityAnswer = nexusUtilityAssistantResponseV2(command);
+  if (utilityAnswer) {
+    updateNexusBehaviorLayer("answering", "Unified Nexus brain is answering a practical daily question.");
+    renderLiveVoiceSuggestions(["open map", "open telehealth", "track my shipment", "what is next today"]);
+    return executeUnifiedNexusIntent({ type: "utility", response: utilityAnswer }, command, context);
+  }
+
+  if (await runMusicAssistantCommand(command, { turnToken })) return true;
+  if (await handleNexusIntelligenceRouter(command)) return true;
+  if (handleAdvisorBrainCommand(command)) return true;
+  if (await runDynamicVoiceTool(command)) return true;
+
+  if (isOpenKnowledgeQuestion(command) || isOpenDialogVoiceQuestion(command) || hasBehaviorActionVerb(command) || isNaturalQuestionOrConversation(command)) {
+    return executeUnifiedNexusIntent({
+      type: "backend",
+      reason: "Unified Nexus brain routed natural speech to the live AI conversation engine.",
+      suggestions: ["ask a follow-up", "open the right area", "guide me step by step", "Nexus stop"]
+    }, command, context);
+  }
+
+  const bridge = ruralCommunicationBridge(command);
+  if (bridge.profile?.intent && bridge.profile.intent !== "general" && bridge.profile.confidence >= 0.45) {
+    const routed = nexusConversationFirstIntent(bridge.profile.rewriteCommand || bridge.normalized || command);
+    if (routed) return executeUnifiedNexusIntent(routed, bridge.profile.rewriteCommand || command, context);
+  }
+
+  return executeUnifiedNexusIntent({
+    type: "clarify",
+    response: "I may have heard only part of that. Tell me one thing: health, medicine, clinic, crops, work, learning, or map.",
+    suggestions: ["health", "medicine", "clinic", "crops", "work", "learning", "map"],
+    reason: "Unified Nexus brain asked one simple recovery question instead of guessing.",
+    clarification: {
+      original: command,
+      options: [
+        { label: "Health", section: "health", command: "I need a doctor", detail: "Health, clinic, medicine, intake, or provider help." },
+        { label: "Crops", section: "trade", command: "my crop is bad", detail: "Crop problem, farmer support, buyer, sale, or route." },
+        { label: "Work", section: "workforce", command: "I need work", detail: "Jobs, applications, skills, or interview support." },
+        { label: "Learning", section: "learning", command: "start a course", detail: "Courses, lessons, captions, or certificates." },
+        { label: "Map", section: "map", command: "open map", detail: "Map, route, clinic, pharmacy, shipment, or location." }
+      ]
+    }
+  }, command, context);
+}
+
 function nexusCommonPhraseResponse(command = "") {
   const value = normalizeToolText(command);
   if (!value) return "";
@@ -19043,6 +19276,7 @@ async function handleVoiceCommandCore(rawCommand, options = {}) {
     agentPerformanceState.lastCommand = command || localizedCommand || rawCommand;
     recordNexusAutonomousLearning({ type: "auto-language-detected", command: rawCommand, language: autoLanguage.label, mode: experienceMode || data?.user?.role || "platform" });
   }
+  if (!options.skipUnifiedBrain && await unifiedNexusConversationBrain(rawCommand, { ...options, turnToken, autoLanguage })) return;
   if (await answerPendingNexusQuestion(command || localizedCommand || rawCommand)) return;
   const visibleInlineWorkflow = $(".user-inline-workflow:not(.hidden)");
   if (pendingWorkflow && visibleInlineWorkflow && !isUniversalLanguageCommand(command || localizedCommand) && !isGlobalStopCommand(String(command || localizedCommand).toLowerCase())) {
