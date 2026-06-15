@@ -3297,6 +3297,7 @@ function adaptiveBehaviorNudge(behavior = {}, result = {}) {
   const status = String(result.status || "");
   const section = String(result.metadata?.redirectSection || result.metadata?.moduleSignal?.section || "").toLowerCase();
   const module = String(result.metadata?.moduleSignal?.module || result.metadata?.module || "").toLowerCase();
+  if (result.metadata?.suppressBehaviorNudge) return "";
   if (String(result.intent || "").includes("platform_explained")) return behaviorFollowUpForResult(result);
   if (result.metadata?.conversationResilience?.groupSpeechRisk) return "";
   if (status === "needs-confirmation") return "Say yes when you are ready, or no if you want me to stop.";
@@ -3316,6 +3317,7 @@ function adaptiveBehaviorNudge(behavior = {}, result = {}) {
 function suggestedRepliesForResult(result = {}, behavior = {}) {
   const intent = String(result.intent || "");
   const status = String(result.status || "");
+  if (result.metadata?.suggestedReplies) return result.metadata.suggestedReplies;
   if (intent.includes("clarification_started")) return result.metadata?.suggestedReplies || ["contact buyer", "start intake", "apply for role"];
   if (intent.includes("clarification_resolved")) return ["yes", "no", "explain that"];
   if (intent.includes("voice_recovery") && result.metadata?.suggestions) return result.metadata.suggestions;
@@ -3345,7 +3347,7 @@ function humanizeAgentResult(db, user, result = {}, command = "") {
   if (command) updateConversationUserModel(db.profile, command);
   const behavior = assistantBehaviorModel(db, user);
   const original = String(result.response || "I am ready.");
-  const alreadyNatural = /^(AgriNexus|Nexus|I hear you|Absolutely|Got it|Done|Here is|Welcome|I can|I opened|I created|I submitted|The full intelligent model)/i.test(original);
+  const alreadyNatural = /^(AgriNexus|Nexus|For|A sick|Hello|Yes|I hear you|Absolutely|Got it|Done|Here is|Welcome|I can|I opened|I created|I submitted|The full intelligent model)/i.test(original);
   const prefix = alreadyNatural ? "" : "Got it. ";
   const followUp = adaptiveBehaviorNudge(behavior, result);
   const suggestedReplies = suggestedRepliesForResult(result, behavior);
@@ -19906,7 +19908,27 @@ async function runAgentCommand(db, user, command, options = {}) {
     lower = text.toLowerCase();
   }
   const conversational = options.conversational === true;
-  if (!text) return { intent: "empty-command", response: "Give me a command and I will route it.", status: "needs-input" };
+  if (!text) {
+    const name = db.profile.agentMemory.userModel?.name || db.profile.agentMemory.userName || user?.name?.split(/\s+/)[0] || "there";
+    return {
+      intent: "conversation.greeting",
+      response: `Yes ${name}, how can I assist you?`,
+      status: "completed",
+      metadata: { conversationMode: true, redirectSection: "dashboard", suppressBehaviorNudge: true, suggestedReplies: ["I need a clinic", "my crop is bad", "start a course"] }
+    };
+  }
+  const spokenName = extractConversationalName(text);
+  if (spokenName && /^(my name is|i am|i'm|call me)\b/i.test(text)) {
+    db.profile.agentMemory.userName = spokenName;
+    db.profile.agentMemory.userModel = { ...(db.profile.agentMemory.userModel || {}), name: spokenName, preferredInteraction: "voice-first", lastSeenAt: new Date().toISOString() };
+    rememberAgentMemory(db.profile, `User name is ${spokenName}.`, { source: "voice-greeting", category: "fact", module: "Profile", confidence: 0.96 });
+    return {
+      intent: "conversation.greeting",
+      response: `Hello ${spokenName}, how can I assist you?`,
+      status: "completed",
+      metadata: { conversationMode: true, redirectSection: "dashboard", userName: spokenName, suppressBehaviorNudge: true, suggestedReplies: ["I need a clinic", "my crop is bad", "help me find work"] }
+    };
+  }
   const topPendingAction = db.profile.agentPendingAction;
   if (topPendingAction && isAffirmativeCommand(lower)) {
     const result = await executePendingAgentAction(db, user, topPendingAction);
@@ -19938,6 +19960,54 @@ async function runAgentCommand(db, user, command, options = {}) {
       const intake = continueConversationalIntake(db, user, text);
       if (intake) return intake;
     }
+  }
+  if (conversational && /\b(what can you do|how can you help|help)\b.*\b(farmer|farm|smallholder|grower)\b/.test(lower)) {
+    return {
+      intent: "conversation.farmer_help",
+      response: "For a farmer, I can help check a bad crop, explain drone or field data, find a buyer, compare route risk, track a shipment, and prepare sale evidence. Tell me the crop and where the farm is.",
+      status: "completed",
+      metadata: { conversationMode: true, redirectSection: "trade", suppressBehaviorNudge: true, suggestedReplies: ["my crop is bad", "find a buyer", "track my shipment"] }
+    };
+  }
+  if (conversational && /\b(baby|child|infant)\b.*\b(sick|hot|fever|weak|pain|vomit|cough|not breathing|cannot breathe|can't breathe|cant breathe)\b/.test(lower)) {
+    return {
+      intent: "conversation.health_urgent_child",
+      response: "A sick baby can be urgent. If the baby has trouble breathing, is very weak, not waking, has seizures, blue lips, or a very high fever, seek emergency help now. Where are you, and is the baby breathing normally?",
+      status: "urgent-guidance",
+      metadata: { conversationMode: true, redirectSection: "health", suppressBehaviorNudge: true, frontierCommunication: { urgency: "high", nextQuestion: "Where are you, and is the baby breathing normally?", confidence: 0.94 }, suggestedReplies: ["find clinic", "call provider", "start intake"] }
+    };
+  }
+  if (conversational && /\b(help|support|care|assist)\b.*\b(patient|person|mother|father|grandma|elder|caregiver)\b|\b(patient|person|mother|father|grandma|elder|caregiver)\b.*\b(help|support|care|assist)\b/.test(lower)) {
+    return {
+      intent: "conversation.patient_help",
+      response: "I can help the patient get to the right support. I can start intake, find clinic or pharmacy options, prepare a provider call, add captions, or create a caregiver handoff. Is this urgent, and where is the patient?",
+      status: "completed",
+      metadata: { conversationMode: true, redirectSection: "health", suppressBehaviorNudge: true, suggestedReplies: ["start intake", "find clinic", "I need medicine"] }
+    };
+  }
+  if (conversational && /\b(clinic|hospital|health center|health centre)\b/.test(lower)) {
+    return {
+      intent: "conversation.clinic_help",
+      response: "I can help find clinic support. Share your village, city, or location, and I will guide the closest clinic or mobile clinic path. If this is an emergency, call local emergency help now.",
+      status: "needs-location",
+      metadata: { conversationMode: true, redirectSection: "health", suppressBehaviorNudge: true, suggestedReplies: ["use my location", "start intake", "find pharmacy"] }
+    };
+  }
+  if (conversational && /\b(medicine|medication|pharmacy|pills|drug|refill|prescription|dawa|remedy)\b/.test(lower)) {
+    return {
+      intent: "conversation.medicine_help",
+      response: "I can help with medicine access, but I cannot prescribe. Tell me what medicine or health concern, and where you are. I can look for pharmacy support, clinic handoff, or provider review.",
+      status: "needs-location",
+      metadata: { conversationMode: true, redirectSection: "health", suppressBehaviorNudge: true, suggestedReplies: ["find pharmacy", "start intake", "call provider"] }
+    };
+  }
+  if (conversational && /\b(crop|plant|field|maize|cassava|rice|beans|harvest)\b.*\b(bad|dying|yellow|sick|dry|pest|disease|wilting|weak)\b|\b(my crop is bad|crop is bad|crop bad|farm bad|plant sick)\b/.test(lower)) {
+    return {
+      intent: "conversation.crop_help",
+      response: "I can help with the crop problem. Tell me the crop, where the farm is, and what you see: yellow leaves, dry soil, pests, spots, or wilting. I can guide a field scan, simple next steps, buyer evidence, and route planning.",
+      status: "completed",
+      metadata: { conversationMode: true, redirectSection: "trade", suppressBehaviorNudge: true, suggestedReplies: ["run field scan", "explain crop problem", "contact buyer"] }
+    };
   }
   if (conversational
     && /\b(no rain|drought|dry|crop dying|crops dying|crop bad|maize yellow|cassava bad|field dying|farm dying|need water)\b/.test(lower)

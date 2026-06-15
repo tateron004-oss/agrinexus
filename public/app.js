@@ -62,8 +62,8 @@ let routeTrackingWatchId = null;
 let routeTrackingPoints = [];
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-228";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v208";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-229";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v209";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
 const VOICE_ATTENTION_DELAY_MS = 900;
@@ -4392,12 +4392,30 @@ function nexusIntelligenceRouterDecision(command = "") {
     });
   }
   if (signals.health) {
+    if (signals.lower.includes("medicine") || signals.lower.includes("pharmacy")) {
+      return decision("answer", {
+        confidence: .93,
+        section: "health",
+        response: "I can help with medicine access, but I cannot prescribe. Tell me what medicine or health concern, and where you are. I can look for pharmacy support, clinic handoff, or provider review.",
+        suggestions: ["find pharmacy", "start intake", "call provider"]
+      });
+    }
+    if (signals.lower.includes("clinic") || signals.lower.includes("hospital")) {
+      return decision("answer", {
+        confidence: .93,
+        section: "health",
+        response: "I can help find clinic support. Share your village, city, or location, and I will guide the closest clinic or mobile clinic path. If this is an emergency, call local emergency help now.",
+        suggestions: ["use my location", "start intake", "find pharmacy"]
+      });
+    }
     return decision("workflow", {
       confidence: .88,
       section: "health",
       workflow: "health",
       action: signals.lower.includes("region") || signals.lower.includes("risk") ? "safety" : "intake",
-      response: "I am opening health support. Nexus will guide intake, provider support, accessibility, and regional risk one step at a time.",
+      response: signals.lower.includes("baby") || signals.lower.includes("child")
+        ? "A sick child may need urgent care. If there is trouble breathing, severe weakness, seizures, blue lips, or a very high fever, seek emergency help now. Where are you, and is the child breathing normally?"
+        : "I can help with health support. Tell me what happened and where the person is. I can guide intake, clinic or pharmacy support, provider contact, captions, or caregiver handoff.",
       suggestions: ["start intake", "talk to provider", "check region", "accessibility help"]
     });
   }
@@ -4418,7 +4436,7 @@ function nexusIntelligenceRouterDecision(command = "") {
       section: "trade",
       workflow: "trade",
       action: signals.advisor.cropSpoilage ? "drone-pest" : "drone",
-      response: `${cropAdvice.message} I am opening drone field intelligence so Nexus can create crop evidence and the next field action.`,
+      response: `I can help with the crop problem. Tell me the crop, where the farm is, and what you see: yellow leaves, dry soil, pests, spots, or wilting. ${cropAdvice.message}`,
       dataset: { productId: context.product?.id, objective: cropAdvice.actions.join("; ") },
       suggestions: ["run drone scan", "create irrigation plan", "pest alert", "check route risk"]
     });
@@ -7025,9 +7043,9 @@ function beginAgentNoDeadAir(command) {
   clearAgentProgressTimers();
   const plainCommand = String(command || "your request").trim() || "your request";
   agentProgressTimers = [
-    setTimeout(() => setAgentProgressMessage(`I am still with you. I am checking the safest way to help with ${plainCommand}.`), 3200),
-    setTimeout(() => setAgentProgressMessage("This is taking a little longer. I will keep you moving with the safest available workflow."), 8500),
-    setTimeout(() => setAgentProgressMessage("I am still here. Say stop any time if you want me to pause."), 14000)
+    setTimeout(() => setAgentProgressMessage(`I am checking ${plainCommand}.`), 1600),
+    setTimeout(() => setAgentProgressMessage("Still working. I will keep this short."), 4800),
+    setTimeout(() => setAgentProgressMessage("I am still here. Say stop any time."), 8500)
   ];
 }
 
@@ -17467,7 +17485,7 @@ function nexusIntroductionResponse(command = "") {
   updateNexusBehaviorLayer("listening", `Nexus learned the user's name is ${spokenName}.`);
   recordNexusAutonomousLearning({ type: "user-name", command: value, userName: spokenName });
   renderLiveVoiceSuggestions(["open learning", "open telehealth", "what can you do"]);
-  return `Hey ${spokenName}. What do you need?`;
+  return `Hello ${spokenName}, how can I assist you?`;
 }
 
 function nexusSmartIntentRouter(command = "") {
@@ -17484,43 +17502,43 @@ function nexusSmartIntentRouter(command = "") {
       key: "doctor",
       label: "doctor help",
       score: needScore + scoreFor(["doctor", "provider", "nurse", "clinician", "physician", "medical help", "care provider", "health worker"], ["sick", "pain", "hurt", "injury"]),
-      route: { type: "direct", directAction: "doctor-help", response: "Doctor help is open. Tell Nexus what kind of care connection you need. This is not a diagnosis." }
+      route: { type: "direct", directAction: "doctor-help", response: "I can help you get medical support. Tell me what is happening and where you are. I will guide you to a clinic, mobile clinic, pharmacy, or provider handoff. This is not a diagnosis." }
     },
     {
       key: "pharmacy",
       label: "pharmacy help",
       score: needScore + scoreFor(["medicine", "medication", "pharmacy", "refill", "drug", "pills", "prescription"], ["treatment", "remedy"]),
-      route: { type: "workflow", workflow: "health", action: "pharmacy", response: "Pharmacy help is open. I will help find medicine support and keep provider review attached.", dataset: { patientLocation: activeCountry().name } }
+      route: { type: "workflow", workflow: "health", action: "pharmacy", response: "I can help with medicine access, but I cannot prescribe. Tell me what medicine or health concern, and where you are. I will help find pharmacy support or a provider review.", dataset: { patientLocation: activeCountry().name } }
     },
     {
       key: "clinic",
       label: "nearest clinic",
       score: needScore + scoreFor(["clinic", "hospital", "nearest clinic", "closest clinic", "health center"], ["near", "closest", "nearby", "location", "map", "around"]),
-      route: { type: "workflow", workflow: "health", action: "nearest-clinic", response: "Clinic search is open. I will help find the closest clinic option and show it on the map.", dataset: { patientLocation: activeCountry().name } }
+      route: { type: "workflow", workflow: "health", action: "nearest-clinic", response: "I can help find clinic support. Share your village, city, or location, and I will guide the closest clinic or mobile clinic path. If this is an emergency, call local emergency help now.", dataset: { patientLocation: activeCountry().name } }
     },
     {
       key: "intake",
       label: "intake",
       score: needScore + scoreFor(["intake", "assessment", "admission", "health help", "telehealth intake"], ["care", "symptom", "symptoms", "not well"]),
-      route: { type: "direct", directAction: "health-intake", response: "Telehealth intake is open. Step 1: Who needs care? Say the patient or household name, or type it in the first box. This is not a diagnosis." }
+      route: { type: "direct", directAction: "health-intake", response: "I can start intake. Step one: who needs care? Say the patient or household name. This is not a diagnosis; it helps prepare safe support." }
     },
     {
       key: "learning",
       label: "learning",
       score: needScore + scoreFor(["learn", "course", "lesson", "training", "school", "class", "certificate"], ["study", "teach"]),
-      route: { type: "workflow", workflow: "learning", action: "start", response: "Learning is open. I will help start the course.", dataset: {} }
+      route: { type: "workflow", workflow: "learning", action: "start", response: "I can help you learn. Tell me the skill you want, or I can start the recommended course and read it with captions or audio.", dataset: {} }
     },
     {
       key: "work",
       label: "work",
       score: needScore + scoreFor(["job", "work", "role", "apply", "employment", "shift"], ["hire", "earn", "worker"]),
-      route: { type: "workflow", workflow: "workforce", action: hasAny(["apply", "role", "job"]) ? "apply-role" : "build-profile", response: "Work is open. I will help with the next job step.", dataset: { roleId: firstEligibleRole()?.id } }
+      route: { type: "workflow", workflow: "workforce", action: hasAny(["apply", "role", "job"]) ? "apply-role" : "build-profile", response: "I can help with work. Tell me the country and the kind of job, and I will show the role path, gaps, and application step.", dataset: { roleId: firstEligibleRole()?.id } }
     },
     {
       key: "sell-crop",
       label: "sell crops",
       score: needScore + scoreFor(["sell", "buyer", "market", "trade", "customer"], ["crop", "crops", "maize", "corn", "rice", "cassava", "yam", "beans", "produce", "harvest", "farm", "product"]),
-      route: { type: "workflow", workflow: "trade", action: "buyer-contact", response: "Trade is open. I will help find or contact the buyer.", dataset: { productId: firstProduct()?.id } }
+      route: { type: "workflow", workflow: "trade", action: "buyer-contact", response: "I can help sell the crop. Tell me the crop, quantity, and where it is. I will help find a buyer, prepare the order, and track delivery.", dataset: { productId: firstProduct()?.id } }
     },
     {
       key: "track",
@@ -17574,7 +17592,7 @@ function simpleUserDirectVoiceIntent(command = "") {
       type: "workflow",
       workflow: "health",
       action: "pharmacy",
-      response: "Pharmacy help is open. I will help find medicine support and keep provider review attached.",
+      response: "I can help with medicine access, but I cannot prescribe. Tell me what medicine or health concern, and where you are. I will help find pharmacy support or provider review.",
       dataset: { patientLocation: activeCountry().name }
     };
   }
@@ -17583,7 +17601,7 @@ function simpleUserDirectVoiceIntent(command = "") {
       type: "workflow",
       workflow: "health",
       action: "nearest-clinic",
-      response: "Clinic search is open. I will help find the closest clinic option and show it on the map.",
+      response: "I can help find clinic support. Share your village, city, or location, and I will guide the closest clinic or mobile clinic path. If this is an emergency, call local emergency help now.",
       dataset: { patientLocation: activeCountry().name }
     };
   }
@@ -17593,14 +17611,14 @@ function simpleUserDirectVoiceIntent(command = "") {
     return {
       type: "direct",
       directAction: "doctor-help",
-      response: "Doctor help is open. Tell Nexus what kind of care connection you need. This is not a diagnosis."
+      response: "I can help you get medical support. Tell me what is happening and where you are. I will guide you to a clinic, mobile clinic, pharmacy, or provider handoff. This is not a diagnosis."
     };
   }
   if (has(["intake", "admission", "admit", "assessment"]) || /\b(open|start|begin|create|launch)\b.*\b(intake|admission|assessment)\b/.test(lower)) {
     return {
       type: "direct",
       directAction: "health-intake",
-      response: "Telehealth intake is open. Step 1: Who needs care? Say the patient or household name, or type it in the first box. This is not a diagnosis."
+      response: "I can start intake. Step one: who needs care? Say the patient or household name. This is not a diagnosis; it helps prepare safe support."
     };
   }
   if (has(["health", "doctor", "clinic", "sick", "pain", "medicine", "care", "telehealth", "nurse"])) {
@@ -17608,13 +17626,13 @@ function simpleUserDirectVoiceIntent(command = "") {
       ? {
           type: "direct",
           directAction: "doctor-help",
-          response: "Doctor help is open. Tell Nexus what kind of care connection you need. This is not a diagnosis."
+          response: "I can help you get medical support. Tell me what is happening and where you are. I will guide you to a clinic, mobile clinic, pharmacy, or provider handoff. This is not a diagnosis."
         }
       : {
           type: "workflow",
           workflow: "health",
           action: "intake",
-          response: "Health is open. I will guide you one step at a time.",
+          response: "I can help with health support. Tell me what happened, where the person is, and whether this is urgent. I will guide one step at a time.",
           dataset: {}
         };
   }
@@ -17635,7 +17653,7 @@ function simpleUserDirectVoiceIntent(command = "") {
       type: "workflow",
       workflow: "trade",
       action: "buyer-contact",
-      response: "Trade is open. I will help find or contact the buyer.",
+      response: "I can help sell the crop. Tell me the crop, quantity, and where it is. I will help find a buyer, prepare the order, and track delivery.",
       dataset: { productId }
     };
   }
@@ -17644,7 +17662,7 @@ function simpleUserDirectVoiceIntent(command = "") {
       type: "workflow",
       workflow: "workforce",
       action: has(["apply", "role", "job"]) ? "apply-role" : "build-profile",
-      response: "Work is open. I will help with the next job step.",
+      response: "I can help with work. Tell me the country and the kind of job, and I will show the role path, gaps, and application step.",
       dataset: { roleId }
     };
   }
@@ -17653,7 +17671,7 @@ function simpleUserDirectVoiceIntent(command = "") {
       type: "workflow",
       workflow: "learning",
       action: "start",
-      response: "Learning is open. I will help start the course.",
+      response: "I can help you learn. Tell me the skill you want, or I can start the recommended course and read it with captions or audio.",
       dataset: {}
     };
   }
@@ -18871,7 +18889,7 @@ async function runBackendAgentCommand(command, locationContext = null) {
         targetLanguage: languageCode(),
         note: "Command submitted from Nexus Voice Assistant"
       }
-    }, 18000);
+    }, 12000);
     clearAgentProgressTimers();
     render();
     const result = data.commandResult || {};
