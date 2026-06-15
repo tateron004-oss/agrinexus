@@ -425,11 +425,15 @@ assert(app.includes("detente") && app.includes("arrete") && app.includes("simama
 assert(app.includes("fuzzyWakeStop") && app.includes("texas") && app.includes("nexis"), "Voice stop parser must catch common Nexus mishears like Texas stop");
 assert(app.includes("function resetNexusForNextPrompt"), "Voice stop must reset Nexus so the next question can be asked immediately");
 assert(app.includes("Stopped. Ask me the next question or tell me where to go next."), "Voice stop recovery must tell users they can ask the next prompt");
+assert(app.includes("function answerPendingNexusQuestion"), "Nexus must answer a pending question before routing a new command");
+assert(app.includes("function shouldKeepListeningDuringSpeech"), "Nexus must keep listening while it asks a short question");
+assert(app.includes("voiceRecognition && !keepListeningForAnswer"), "Nexus must not shut off the mic when waiting for a spoken answer");
+assert(app.includes("if (await answerPendingNexusQuestion(command || localizedCommand || rawCommand)) return;"), "Pending yes/no answers must run before menus and workflow routers");
 assert(styles.includes("pointer-events: none") && styles.includes(".user-caption-actions") && styles.includes("pointer-events: auto"), "Caption panel must not block workflow action clicks");
 assert(styles.includes("width: min(300px, calc(100vw - 24px))") && styles.includes("max-height: 138px"), "Caption panel must default to a small bubble");
 assert(styles.includes(".user-caption-panel.expanded") && styles.includes("display: none") && styles.includes("display: grid"), "Caption input controls must appear only in expanded caption mode");
-assert(html.includes("nexus-behavior-252"), "Index must force browsers to load Nexus behavior CSS");
-assert(html.includes("nexus-behavior-252"), "Index must force browsers to load Nexus behavior JS");
+assert(html.includes("nexus-behavior-253"), "Index must force browsers to load Nexus behavior CSS");
+assert(html.includes("nexus-behavior-253"), "Index must force browsers to load Nexus behavior JS");
 assert(server.includes("function productionActivationGuide"), "Backend needs a live activation guide");
 assert(server.includes("function directVendorProviderStatus"), "Backend must recognize direct vendor credentials");
 assert(server.includes("optionalEnvSets"), "Activation guide must show real provider depth options");

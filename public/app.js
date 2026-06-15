@@ -41,6 +41,7 @@ let liveVoiceSuggestions = [];
 let agentReasoningVisible = localStorage.getItem("agrinexusReasoningVisible") === "true";
 let pendingNexusSpokenCommand = null;
 let confirmedVoiceActionActive = false;
+let pendingNexusAnswerContext = null;
 let nexusAwaitingCommand = false;
 let agentPerformanceState = {
   lastCommand: "",
@@ -68,8 +69,8 @@ let routeTrackingWatchId = null;
 let routeTrackingPoints = [];
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-252";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v232";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-253";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v233";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
 const VOICE_ATTENTION_DELAY_MS = 900;
@@ -16536,6 +16537,7 @@ function setVoiceResponse(message, speak = false, options = {}) {
   updateNexusBehaviorLayer(speak ? "speaking" : "ready", responseMessage);
   lastVoiceResponse = responseMessage;
   lastVoiceResponseAt = now;
+  rememberNexusAnswerContext(responseMessage, options);
   rememberConversationTurn(agentPerformanceState.lastCommand || conversationModeState.lastQuestion || "", responseMessage);
   const transcript = $("#voiceTranscript");
   if (transcript) transcript.textContent = responseMessage;
@@ -16909,7 +16911,8 @@ function speakVoiceResponse(textOverride) {
   lastSpokenText = compact;
   lastSpokenAt = now;
   stopVoicePlayback();
-  if (voiceRecognition) {
+  const keepListeningForAnswer = shouldKeepListeningDuringSpeech(compact);
+  if (voiceRecognition && !keepListeningForAnswer) {
     const activeRecognition = voiceRecognition;
     voiceRecognition = null;
     voiceAutoRestart = false;
@@ -16921,7 +16924,7 @@ function speakVoiceResponse(textOverride) {
   }
   const playbackToken = ++voicePlaybackToken;
   voiceSpeaking = true;
-  voiceAutoRestart = false;
+  voiceAutoRestart = keepListeningForAnswer || false;
   const updateVoiceOutputStatus = message => {
     const localStatus = $("#voicePlaybackStatus");
     const globalStatus = $("#globalVoiceOutputStatus");
@@ -17230,6 +17233,140 @@ function isNexusCommandRejection(lower) {
     || /^(hapana|simama|ghairi|si hivyo|chagua nyingine)$/i.test(value)
     || /^(?:\u0644\u0627|\u0627\u0644\u063a\u0627\u0621|\u0627\u0644\u063a|\u062a\u0648\u0642\u0641|\u0644\u064a\u0633 \u0647\u0630\u0627)$/i.test(value)
     || /\b(cancel that|wrong command|not what i said|do not do that|don't do that|forget it|choose another|otra opcion|pas ca|si hivyo)\b/i.test(value);
+}
+
+function visibleWorkflowAnswerOpen() {
+  const inline = $(".user-inline-workflow:not(.hidden)");
+  const modal = $("#workflowModal");
+  return Boolean((pendingWorkflow && inline) || (pendingWorkflow && modal && !modal.classList.contains("hidden")));
+}
+
+function answerChoiceFromSpeech(command = "") {
+  const lower = normalizeToolText(command);
+  if (!lower) return "";
+  const choices = [
+    { id: "clinic", pattern: /\b(clinic|hospital|health center|health centre|dispensary|facility|near me|nearest|closest)\b/ },
+    { id: "medicine", pattern: /\b(medicine|medication|pharmacy|drug|pills|refill|dawa|magani|oogun|remedio|medicina)\b/ },
+    { id: "doctor", pattern: /\b(doctor|nurse|provider|clinician|call provider|speak to provider|video|phone help|phone|whatsapp)\b/ },
+    { id: "health", pattern: /\b(health|care|intake|telehealth|sick|pain|baby|child|patient)\b/ },
+    { id: "crop", pattern: /\b(crop|farm|field|sell|buyer|market|maize|cassava|harvest)\b/ },
+    { id: "work", pattern: /\b(work|job|jobs|role|apply|employment)\b/ },
+    { id: "learning", pattern: /\b(learn|learning|course|lesson|training|certificate)\b/ },
+    { id: "map", pattern: /\b(map|route|track|tracking|shipment|location|gps)\b/ }
+  ];
+  return choices.find(choice => choice.pattern.test(lower))?.id || "";
+}
+
+function nexusAnswerContextFromMessage(message = "", options = {}) {
+  const lower = normalizeToolText(message);
+  const choices = [];
+  const add = id => {
+    if (!choices.includes(id)) choices.push(id);
+  };
+  if (/\b(clinic|hospital|health facility|mobile clinic)\b/.test(lower)) add("clinic");
+  if (/\b(medicine|pharmacy|medication|drug)\b/.test(lower)) add("medicine");
+  if (/\b(doctor|nurse|provider|phone help|video|whatsapp)\b/.test(lower)) add("doctor");
+  if (/\b(health|care|intake|telehealth|patient)\b/.test(lower)) add("health");
+  if (/\b(crop|farm|field|buyer|sell|market)\b/.test(lower)) add("crop");
+  if (/\b(work|job|role|apply)\b/.test(lower)) add("work");
+  if (/\b(learning|course|lesson|training)\b/.test(lower)) add("learning");
+  if (/\b(map|route|tracking|shipment|location)\b/.test(lower)) add("map");
+  const workflowConfirm = visibleWorkflowAnswerOpen()
+    || /\b(say yes|press do this now|do this now|confirm|submit|approve)\b/.test(lower);
+  const askedQuestion = /[?]|\b(where are you|do you need|which one|tell me|say yes|say no|choose|what do you need)\b/.test(lower);
+  if (!askedQuestion && !workflowConfirm) return null;
+  const defaultChoice = /\b(do you need (a )?clinic|want (a )?clinic|find clinic)\b/.test(lower) ? "clinic"
+    : /\b(do you need medicine|want medicine|pharmacy)\b/.test(lower) ? "medicine"
+    : /\b(do you need (a )?doctor|call provider|speak to provider)\b/.test(lower) ? "doctor"
+    : "";
+  return {
+    createdAt: Date.now(),
+    question: message,
+    choices,
+    defaultChoice,
+    workflowConfirm,
+    source: options.source || "voice-response"
+  };
+}
+
+function rememberNexusAnswerContext(message = "", options = {}) {
+  const context = nexusAnswerContextFromMessage(message, options);
+  if (context) pendingNexusAnswerContext = context;
+}
+
+function clearNexusAnswerContext() {
+  pendingNexusAnswerContext = null;
+}
+
+function shouldKeepListeningDuringSpeech(text = "") {
+  if (!voiceFirstMode || !pendingNexusAnswerContext) return false;
+  const lower = normalizeToolText(text || pendingNexusAnswerContext.question || "");
+  return pendingNexusAnswerContext.workflowConfirm
+    || /[?]/.test(String(text || pendingNexusAnswerContext.question || ""))
+    || /\b(where are you|do you need|which one|tell me|say yes|say no|choose|what do you need)\b/.test(lower);
+}
+
+async function runNexusAnswerChoice(choice, originalCommand = "") {
+  clearNexusAnswerContext();
+  pendingAgentClarification = null;
+  pendingNexusSpokenCommand = null;
+  if (choice === "clinic") return openClinicHelpNow("Yes. I opened clinic support. Tell me your village, city, or nearest landmark.");
+  if (choice === "medicine") return openMedicineHelpNow("Yes. I opened medicine support. Tell me the medicine concern and where you are. I cannot prescribe.");
+  if (choice === "doctor" || choice === "health") return openDoctorHelpNow("Yes. I opened doctor support. Tell me what happened and where the person is. This is not a diagnosis.");
+  if (choice === "crop") return openCropProblemHelpNow("Yes. I opened crop support. Tell me the crop and what looks wrong.");
+  if (choice === "work") return openWorkflowByVoice("workforce", "build-profile", "Yes. I opened work support. Tell me your country, skills, and the job you want.", { roleId: firstEligibleRole()?.id });
+  if (choice === "learning") return openWorkflowByVoice("learning", "start", "Yes. I opened course support. Tell me what you want to learn.");
+  if (choice === "map") return openFullScaleUserMap("Yes. I opened the map. Tell me the place or route you want to see.");
+  setVoiceResponse("Yes. Tell me one word: clinic, medicine, doctor, crops, work, learning, or map.", true, { allowHandoff: false, source: "answer-context" });
+  void originalCommand;
+  return true;
+}
+
+async function answerPendingNexusQuestion(command = "") {
+  const lower = normalizeToolText(command);
+  const freshContext = pendingNexusAnswerContext && Date.now() - pendingNexusAnswerContext.createdAt < 90000;
+  const openWorkflow = visibleWorkflowAnswerOpen();
+  if (!freshContext && !openWorkflow && !pendingAgentClarification) return false;
+  if (isUniversalLanguageCommand(command) || isGlobalStopCommand(lower)) return false;
+
+  if (openWorkflow && isNexusCommandConfirmation(lower)) {
+    clearNexusAnswerContext();
+    await confirmPendingWorkflow();
+    return true;
+  }
+  if (openWorkflow && isNexusCommandRejection(lower)) {
+    closeWorkflowModal();
+    $$(".user-inline-workflow:not(.hidden)").forEach(panel => panel.classList.add("hidden"));
+    pendingWorkflow = null;
+    clearNexusAnswerContext();
+    setVoiceResponse("Okay. I canceled that. What do you need instead?", true, { allowHandoff: false, source: "answer-context" });
+    return true;
+  }
+  if (pendingAgentClarification && (isNexusCommandConfirmation(lower) || isNexusCommandRejection(lower) || answerChoiceFromSpeech(command))) {
+    return answerAgentClarification(command);
+  }
+
+  const context = freshContext ? pendingNexusAnswerContext : null;
+  if (!context) return false;
+  const spokenChoice = answerChoiceFromSpeech(command);
+  if (spokenChoice) return runNexusAnswerChoice(spokenChoice, command);
+  if (isNexusCommandConfirmation(lower)) {
+    if (context.defaultChoice) return runNexusAnswerChoice(context.defaultChoice, command);
+    if (context.choices.length === 1) return runNexusAnswerChoice(context.choices[0], command);
+    if (context.workflowConfirm && openWorkflow) {
+      clearNexusAnswerContext();
+      await confirmPendingWorkflow();
+      return true;
+    }
+    setVoiceResponse("Yes. Which one do you want: clinic, medicine, doctor, crops, work, learning, or map?", true, { allowHandoff: false, source: "answer-context" });
+    return true;
+  }
+  if (isNexusCommandRejection(lower)) {
+    clearNexusAnswerContext();
+    setVoiceResponse("Okay. What do you want instead?", true, { allowHandoff: false, source: "answer-context" });
+    return true;
+  }
+  return false;
 }
 
 function handleNexusSelfCorrection(command = "") {
@@ -18906,6 +19043,7 @@ async function handleVoiceCommandCore(rawCommand, options = {}) {
     agentPerformanceState.lastCommand = command || localizedCommand || rawCommand;
     recordNexusAutonomousLearning({ type: "auto-language-detected", command: rawCommand, language: autoLanguage.label, mode: experienceMode || data?.user?.role || "platform" });
   }
+  if (await answerPendingNexusQuestion(command || localizedCommand || rawCommand)) return;
   const visibleInlineWorkflow = $(".user-inline-workflow:not(.hidden)");
   if (pendingWorkflow && visibleInlineWorkflow && !isUniversalLanguageCommand(command || localizedCommand) && !isGlobalStopCommand(String(command || localizedCommand).toLowerCase())) {
     if (isNewServiceRequestOverWorkflow(command || localizedCommand)) {
