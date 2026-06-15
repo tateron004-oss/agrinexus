@@ -89,8 +89,8 @@ let routeTrackingWatchId = null;
 let routeTrackingPoints = [];
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-258";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v238";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-259";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v239";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
 const VOICE_ATTENTION_DELAY_MS = 900;
@@ -6036,7 +6036,7 @@ function nexusConversationGovernor(command = "", options = {}) {
       handled: true,
       action: "greet",
       status: "listening",
-      response: nexusConversationalWake("hello"),
+      response: nexusConversationalWake("hello", command),
       suggestions: ["health", "crops", "work", "learning", "map"]
     };
   }
@@ -17534,8 +17534,19 @@ function nexusLocalizedBehaviorCopy(key, values = {}) {
   return copy[language]?.[key] || copy.en[key] || "";
 }
 
-function nexusWakeGreeting(kind = "wake") {
-  return nexusLocalizedBehaviorCopy(kind === "hello" ? "hello" : "wake");
+function nexusTimeAwareGreeting(command = "") {
+  const normalized = normalizedWakeText(command);
+  const name = userFirstName();
+  if (languageCode() !== "en") return "";
+  if (/\bgood morning\b|\bgoodmorning\b/.test(normalized)) return `Good morning ${name}. Nexus is open. How can I assist you?`;
+  if (/\bgood afternoon\b|\bgoodafternoon\b/.test(normalized)) return `Good afternoon ${name}. Nexus is open. How can I assist you?`;
+  if (/\bgood evening\b|\bgoodevening\b/.test(normalized)) return `Good evening ${name}. Nexus is open. How can I assist you?`;
+  return "";
+}
+
+function nexusWakeGreeting(kind = "wake", command = "") {
+  if (kind === "hello") return nexusTimeAwareGreeting(command) || nexusLocalizedBehaviorCopy("hello").replace("What do you need?", "Nexus is open. How can I assist you?");
+  return nexusLocalizedBehaviorCopy("wake");
 }
 
 function nexusWakeMemoryKey() {
@@ -17543,15 +17554,15 @@ function nexusWakeMemoryKey() {
   return `agrinexusWakeIntroduced:${userKey}:${languageCode()}`;
 }
 
-function nexusConversationalWake(kind = "wake") {
+function nexusConversationalWake(kind = "wake", command = "") {
   if (kind !== "hello") {
     localStorage.setItem(nexusWakeMemoryKey(), "true");
-    return nexusWakeGreeting("wake");
+    return nexusWakeGreeting("wake", command);
   }
   const key = nexusWakeMemoryKey();
   const introduced = localStorage.getItem(key) === "true";
   localStorage.setItem(key, "true");
-  return introduced ? nexusWakeGreeting("wake") : nexusWakeGreeting("hello");
+  return introduced ? nexusWakeGreeting("wake", command) : nexusWakeGreeting("hello", command);
 }
 
 function cleanWakeCommand(command) {
@@ -19434,7 +19445,7 @@ async function unifiedNexusConversationBrain(rawCommand = "", context = {}) {
     enableHeyAgriNexusMode();
     nexusAwaitingCommand = true;
     recordNexusAutonomousLearning({ type: "greeting", command: normalizedWakeText(localized) });
-    setVoiceResponse(nexusConversationalWake(greetingOnly ? "hello" : "wake"), true, { allowHandoff: false, source: "unified-brain" });
+    setVoiceResponse(nexusConversationalWake(greetingOnly ? "hello" : "wake", localized), true, { allowHandoff: false, source: "unified-brain" });
     return true;
   }
 
@@ -19680,7 +19691,7 @@ async function handleVoiceCommandCore(rawCommand, options = {}) {
     enableHeyAgriNexusMode();
     nexusAwaitingCommand = true;
     recordNexusAutonomousLearning({ type: "greeting", command: normalizedWakeText(localizedCommand) });
-    setVoiceResponse(nexusConversationalWake("hello"), true, { allowHandoff: false });
+    setVoiceResponse(nexusConversationalWake("hello", localizedCommand), true, { allowHandoff: false });
     return;
   }
   if (isPlatformExplainVoiceCommand(spokenCommand || command || localizedCommand || rawCommand)) {
@@ -19837,7 +19848,7 @@ async function handleVoiceCommandCore(rawCommand, options = {}) {
     enableHeyAgriNexusMode();
     nexusAwaitingCommand = true;
     recordNexusAutonomousLearning({ type: "wake", command: normalizedWakeText(localizedCommand) });
-    setVoiceResponse(nexusConversationalWake(greetingOnly ? "hello" : "wake"), true, { allowHandoff: false });
+    setVoiceResponse(nexusConversationalWake(greetingOnly ? "hello" : "wake", localizedCommand), true, { allowHandoff: false });
     return;
   }
   if (!lower) return setVoiceResponse("I am listening. Just tell me what you need.", true);
@@ -21261,7 +21272,7 @@ function processFinalVoiceCommand(command = "", options = {}) {
     }
     leaveNexusConversationPause("Nexus heard you. I am listening again.");
     if (resumeCommand || isWakePhraseOnly(localizedCommand) || isNexusGreetingOnly(localizedCommand)) {
-      setVoiceResponse(nexusConversationalWake(isNexusGreetingOnly(localizedCommand) ? "hello" : "wake"), true, { allowHandoff: false });
+      setVoiceResponse(nexusConversationalWake(isNexusGreetingOnly(localizedCommand) ? "hello" : "wake", localizedCommand), true, { allowHandoff: false });
       return;
     }
   }
