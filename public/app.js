@@ -64,8 +64,8 @@ let routeTrackingWatchId = null;
 let routeTrackingPoints = [];
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-232";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v212";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-233";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v213";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
 const VOICE_ATTENTION_DELAY_MS = 900;
@@ -16788,13 +16788,17 @@ function isNexusGreetingOnly(command) {
   const normalized = normalizedWakeText(command);
   if (!normalized) return false;
   return [
+    "hello", "hi", "good morning", "good afternoon", "good evening",
     "hello nexus", "hi nexus", "hello agrinexus", "hi agrinexus",
     "good morning nexus", "good afternoon nexus", "good evening nexus",
+    "hola", "buenos dias", "buenas tardes", "buenas noches",
     "hola nexus", "hola agrinexus", "buenos dias nexus", "buenas tardes nexus", "buenas noches nexus",
+    "ola", "oi", "bom dia", "boa tarde", "boa noite",
     "ola nexus", "ola agrinexus", "oi nexus", "bom dia nexus", "boa tarde nexus", "boa noite nexus",
+    "bonjour", "salut", "habari", "hujambo",
     "bonjour nexus", "salut nexus", "bonjour agrinexus", "habari nexus", "hujambo nexus"
   ].includes(normalized)
-    || /^(?:\u0645\u0631\u062d\u0628\u0627|\u0627\u0647\u0644\u0627|\u0635\u0628\u0627\u062d \u0627\u0644\u062e\u064a\u0631|\u0645\u0633\u0627\u0621 \u0627\u0644\u062e\u064a\u0631)\s+(?:\u0646\u0643\u0633\u0633|\u0627\u063a\u0631\u064a\u0646\u064a\u0643\u0633\u0633|nexus|agrinexus)$/.test(normalized);
+    || /^(?:\u0645\u0631\u062d\u0628\u0627|\u0627\u0647\u0644\u0627|\u0635\u0628\u0627\u062d \u0627\u0644\u062e\u064a\u0631|\u0645\u0633\u0627\u0621 \u0627\u0644\u062e\u064a\u0631)(?:\s+(?:\u0646\u0643\u0633\u0633|\u0627\u063a\u0631\u064a\u0646\u064a\u0643\u0633\u0633|nexus|agrinexus))?$/.test(normalized);
 }
 
 function isNexusGreetingPrefix(command) {
