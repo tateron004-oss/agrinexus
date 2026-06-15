@@ -21,6 +21,7 @@ const checks = [
   { prompt: "you can do what", intent: "conversation.capability_summary", section: "agent", includes: "listen in normal words" },
   { prompt: "que puedes hacer", intent: "conversation.capability_summary", section: "agent", includes: "listen in normal words" },
   { prompt: "Explain AgriNexus.", intent: "conversation.platform_explained", section: "agent", includes: "AgriNexus helps people" },
+  { prompt: "explain agrinexus", intent: "conversation.platform_explained", section: "agent", includes: "AgriNexus helps people" },
   { prompt: "Nexus, explain AgriNexus.", intent: "conversation.platform_explained", section: "agent", includes: "AgriNexus helps people" },
   { prompt: "Can you explain AgriNexus?", intent: "conversation.platform_explained", section: "agent", includes: "AgriNexus helps people" },
   { prompt: "Tell me what AgriNexus is.", intent: "conversation.platform_explained", section: "agent", includes: "AgriNexus helps people" },

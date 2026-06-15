@@ -26,6 +26,8 @@ const AI_MODEL = process.env.OPENAI_MODEL || "gpt-5.4-mini";
 const AI_REASONING_MODEL = process.env.OPENAI_REASONING_MODEL || process.env.OPENAI_AGENT_MODEL || AI_MODEL;
 const AI_TRANSLATION_MODEL = process.env.OPENAI_TRANSLATION_MODEL || process.env.OPENAI_AGENT_MODEL || AI_MODEL;
 const AGRINEXUS_RELEASE = "2026-06-05-live-services";
+const AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-265";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v245";
 const ROOT = __dirname;
 const DATA_DIR = process.env.AGRINEXUS_DATA_DIR || ROOT;
 const DB_PATH = process.env.AGRINEXUS_DB_PATH || path.join(DATA_DIR, "db.json");
@@ -16886,6 +16888,36 @@ function resilientConversationIntent(db, user, rawText = "") {
   return null;
 }
 
+function urgentHealthSafetyResponse(db, user, text = "") {
+  const lower = normalizeSpeechForIntent(text);
+  const vulnerablePerson = /\b(baby|child|kid|infant|mother|father|grandma|grandmother|elder|person|patient|my child|my baby)\b/.test(lower);
+  const babyOrChildHealth = /\b(baby|child|kid|infant|my child|my baby)\b/.test(lower) && /\b(sick|hot|fever|weak|pain|vomit|cough|hurt|help|no english|no doctor)\b/.test(lower);
+  const dangerSign = /\b(cannot breathe|can't breathe|cant breathe|not breathing|no breathing|trouble breathing|hard breathing|bleeding|blood|seizure|convulsion|unconscious|not waking|very weak|weak|blue lips|chest pain|high fever|very hot|farm accident|accident)\b/.test(lower);
+  const healthNeed = /\b(sick|hurt|pain|injury|doctor|clinic|medicine|health|help|fever|hot)\b/.test(lower);
+  if (!(babyOrChildHealth || (dangerSign && (vulnerablePerson || healthNeed)))) return null;
+  db.profile.agentMemory.activeModule = "Healthcare";
+  db.profile.agentMemory.lastStatus = "urgent-health-safety";
+  db.profile.agentMemory.lastSummary = `Urgent health safety guidance for: ${text}`;
+  db.profile.agentMemory.updatedAt = new Date().toISOString();
+  rememberAgentMemory(db.profile, `Urgent health concern reported: ${text}`, { source: "urgent-health-safety", category: "safety", module: "Healthcare", confidence: 0.97 });
+  return {
+    intent: "conversation.health_urgent_safety",
+    response: "This may be urgent. If the person cannot breathe, is bleeding badly, not waking, or getting worse, seek emergency help now. I am not a doctor. Where are you, and is the person breathing normally?",
+    status: "urgent-guidance",
+    metadata: {
+      conversationMode: true,
+      redirectSection: "health",
+      suppressBehaviorNudge: true,
+      frontierCommunication: {
+        urgency: "high",
+        nextQuestion: "Where are you, and is the person breathing normally?",
+        confidence: 0.97
+      },
+      suggestedReplies: ["find clinic", "call provider", "start intake"]
+    }
+  };
+}
+
 function healthAccessVoiceAcceptanceResponse(db, user, text = "", lower = "", options = {}) {
   if (options.conversational !== true) return null;
   const value = normalizeSpeechForIntent(text);
@@ -20621,6 +20653,8 @@ async function runAgentCommand(db, user, command, options = {}) {
       metadata: { conversationMode: true, redirectSection: "dashboard", suppressBehaviorNudge: true, suggestedReplies: ["I need medicine", "help me sell my crop", "start a course", "open the map"] }
     };
   }
+  const urgentHealth = conversational ? urgentHealthSafetyResponse(db, user, text) : null;
+  if (urgentHealth) return urgentHealth;
   const healthVoiceAcceptance = healthAccessVoiceAcceptanceResponse(db, user, text, lower, options);
   if (healthVoiceAcceptance) return healthVoiceAcceptance;
   const platformVoiceAcceptance = platformWideVoiceAcceptanceResponse(db, user, text, lower, options);
@@ -22686,6 +22720,8 @@ async function api(req, res, url) {
       ok: status.ok,
       service: "agrinexus",
       release: AGRINEXUS_RELEASE,
+      webBuild: AGRINEXUS_WEB_BUILD_VERSION,
+      pwaCache: AGRINEXUS_PWA_CACHE_VERSION,
       mode: process.env.NODE_ENV || "development",
       port: PORT,
       strictLiveMode: REQUIRE_LIVE_SERVICES,

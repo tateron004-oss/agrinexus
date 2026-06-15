@@ -1076,6 +1076,8 @@ assert(app.includes("serviceWorker.register"), "Missing service worker registrat
 assert(app.includes("AGRINEXUS_BUILD_VERSION") && app.includes("AGRINEXUS_PWA_CACHE_VERSION"), "App needs explicit freshness constants");
 assert(app.includes("AGRINEXUS_PURGE_OLD_CACHES"), "App should ask the service worker to purge old build caches");
 assert(app.includes("controllerchange") && app.includes("agrinexusReloadedForBuild"), "App should reload once when a newer service worker takes control");
+assert(app.includes("function verifyLoadedBuildWithServer") && app.includes("Old app build detected") && app.includes("Clear site data before demo"), "App must verify loaded build against server and guide old-cache recovery");
+assert(server.includes("AGRINEXUS_WEB_BUILD_VERSION") && server.includes("webBuild") && server.includes("pwaCache"), "Health endpoint must publish current web build and PWA cache version");
 assert(sw.includes("BUILD_VERSION = \"nexus-behavior-265\""), "Service worker must know the current app build version");
 assert(sw.includes("purgeOldCaches") && sw.includes("AGRINEXUS_PURGE_OLD_CACHES"), "Service worker must purge old caches on activation and message");
 assert(sw.includes("`/app.js?v=${BUILD_VERSION}`") && sw.includes("`/styles.css?v=${BUILD_VERSION}`"), "Service worker must precache versioned JS and CSS");

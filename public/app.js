@@ -2610,12 +2610,15 @@ function registerWebApp() {
     });
     navigator.serviceWorker.register(`/sw.js?v=${AGRINEXUS_PWA_CACHE_VERSION}`)
       .then(registration => {
-        updateInstallStatus("Web app mode is ready. You can install AgriNexus from this browser.");
+        updateInstallStatus(`Web app mode is ready. Build ${AGRINEXUS_BUILD_VERSION}.`);
         registration.update?.();
         const worker = registration.waiting || registration.active || navigator.serviceWorker.controller;
         worker?.postMessage?.({ type: "AGRINEXUS_PURGE_OLD_CACHES", build: AGRINEXUS_BUILD_VERSION, cache: AGRINEXUS_PWA_CACHE_VERSION });
+        verifyLoadedBuildWithServer();
       })
       .catch(() => updateInstallStatus("Web app mode could not start here. You can still use AgriNexus in the browser."));
+  } else {
+    verifyLoadedBuildWithServer();
   }
   window.addEventListener("beforeinstallprompt", event => {
     event.preventDefault();
@@ -2631,6 +2634,42 @@ function registerWebApp() {
 function updateInstallStatus(message) {
   const status = $("#globalAssistantStatus");
   if (status && message) status.textContent = message;
+}
+
+async function purgeBrowserBuildCache() {
+  if ("caches" in window) {
+    const keys = await caches.keys();
+    await Promise.all(keys.filter(key => key.startsWith("agrinexus-pwa-")).map(key => caches.delete(key)));
+  }
+  const registrations = "serviceWorker" in navigator ? await navigator.serviceWorker.getRegistrations() : [];
+  await Promise.all(registrations.map(registration => registration.update?.()));
+}
+
+async function verifyLoadedBuildWithServer() {
+  try {
+    const response = await fetch(`/api/healthz?clientBuild=${encodeURIComponent(AGRINEXUS_BUILD_VERSION)}`, {
+      cache: "no-store",
+      headers: { "cache-control": "no-cache" }
+    });
+    if (!response.ok) return;
+    const health = await response.json();
+    const expectedBuild = health.webBuild || AGRINEXUS_BUILD_VERSION;
+    const expectedCache = health.pwaCache || AGRINEXUS_PWA_CACHE_VERSION;
+    const statusText = `Build ${AGRINEXUS_BUILD_VERSION} loaded. Server expects ${expectedBuild}.`;
+    updateInstallStatus(statusText);
+    if (expectedBuild === AGRINEXUS_BUILD_VERSION && expectedCache === AGRINEXUS_PWA_CACHE_VERSION) return;
+    const refreshKey = `agrinexusForcedBuildRefresh:${expectedBuild}:${expectedCache}`;
+    if (sessionStorage.getItem(refreshKey) === "done") {
+      toast(`Build mismatch remains. Loaded ${AGRINEXUS_BUILD_VERSION}, server expects ${expectedBuild}. Clear site data before demo.`);
+      return;
+    }
+    sessionStorage.setItem(refreshKey, "done");
+    updateInstallStatus(`Old app build detected. Refreshing to ${expectedBuild}.`);
+    await purgeBrowserBuildCache();
+    window.location.replace(`${window.location.pathname}?build=${encodeURIComponent(expectedBuild)}${window.location.hash || ""}`);
+  } catch {
+    updateInstallStatus(`Build ${AGRINEXUS_BUILD_VERSION} loaded. Server build check unavailable.`);
+  }
 }
 
 async function installAgriNexusApp() {
