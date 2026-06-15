@@ -7179,17 +7179,29 @@ function ruralHealthNetworkCatalog(db) {
     clinics: [
       { id: "clinic-kenya-rural-a", name: "Rural Kenya Partner Clinic Desk", country: "Kenya", type: "clinic", services: ["primary care intake", "maternal health", "telehealth callback"], languages: ["en", "sw"], contact: "+254-000-000-101", hours: "08:00-18:00", digitalStatus: "paper-to-digital handoff supported", ...place(kenya, -0.18, 0.21) },
       { id: "clinic-kenya-mobile-base", name: "Nairobi Rural Outreach Base", country: "Kenya", type: "clinic", services: ["mobile clinic staging", "pharmacy referral", "community health worker"], languages: ["en", "sw"], contact: "+254-000-000-102", hours: "mobile outreach schedule", digitalStatus: "low-bandwidth packet supported", ...place(kenya, 0.26, -0.32) },
+      { id: "clinic-kenya-kibera", name: "Kibera Community Clinic Access Point", country: "Kenya", region: "Kibera, Nairobi", type: "clinic", services: ["walk-in intake", "maternal and child health referral", "telehealth callback"], languages: ["en", "sw"], contact: "+254-000-000-103", hours: "08:00-18:00", digitalStatus: "paper-to-digital intake supported", lat: -1.3133, lng: 36.7892 },
+      { id: "clinic-kenya-mukuru", name: "Mukuru Health Outreach Point", country: "Kenya", region: "Mukuru, Nairobi", type: "clinic", services: ["community health worker", "mobile clinic pickup", "basic intake"], languages: ["en", "sw"], contact: "+254-000-000-104", hours: "outreach schedule", digitalStatus: "low-bandwidth voice packet", lat: -1.3197, lng: 36.8778 },
+      { id: "clinic-kenya-mathare", name: "Mathare Community Health Desk", country: "Kenya", region: "Mathare, Nairobi", type: "clinic", services: ["clinic referral", "youth and family care support", "provider callback"], languages: ["en", "sw"], contact: "+254-000-000-105", hours: "08:00-17:00", digitalStatus: "SMS and paper handoff", lat: -1.2617, lng: 36.857 },
+      { id: "clinic-kenya-kawangware", name: "Kawangware Clinic Referral Desk", country: "Kenya", region: "Kawangware, Nairobi", type: "clinic", services: ["primary care referral", "pharmacy routing", "telehealth callback"], languages: ["en", "sw"], contact: "+254-000-000-106", hours: "08:00-18:00", digitalStatus: "paper-to-digital handoff", lat: -1.2824, lng: 36.7519 },
+      { id: "clinic-kenya-kiambu", name: "Kiambu County Rural Clinic Link", country: "Kenya", region: "Kiambu county", type: "clinic", services: ["county clinic referral", "mobile outreach coordination", "maternal health handoff"], languages: ["en", "sw"], contact: "+254-000-000-107", hours: "08:00-17:00", digitalStatus: "county handoff packet", lat: -1.1714, lng: 36.8356 },
+      { id: "clinic-kenya-thika", name: "Thika Medical Transport Referral Point", country: "Kenya", region: "Thika", type: "clinic", services: ["transport referral", "clinic routing", "mobile team staging"], languages: ["en", "sw"], contact: "+254-000-000-108", hours: "08:00-18:00", digitalStatus: "SMS referral supported", lat: -1.0333, lng: 37.0693 },
       { id: "clinic-nigeria-rural-a", name: "Nigeria Community Care Access Point", country: "Nigeria", type: "clinic", services: ["telehealth triage", "referral handoff", "health education"], languages: ["en", "ha", "yo", "ig"], contact: "+234-000-000-201", hours: "08:00-17:00", digitalStatus: "paper-to-digital handoff supported", ...place(nigeria, 0.32, -0.28) },
       { id: "clinic-drc-rural-a", name: "DRC Community Health Handoff Desk", country: "DRC", type: "clinic", services: ["outbreak awareness", "telehealth callback", "referral"], languages: ["fr", "sw"], contact: "+243-000-000-301", hours: "community schedule", digitalStatus: "voice-first intake supported", ...place(drc, -0.44, 0.22) },
       { id: "clinic-ghana-rural-a", name: "Ghana Rural Health Access Point", country: "Ghana", type: "clinic", services: ["primary care callback", "pharmacy routing", "follow-up"], languages: ["en"], contact: "+233-000-000-401", hours: "08:00-17:00", digitalStatus: "offline packet supported", ...place(ghana, 0.24, 0.27) }
     ],
     mobileClinics: [
       { id: "mobile-kenya-1", name: "Kenya Mobile Clinic Team A", country: "Kenya", type: "mobile-clinic", services: ["field outreach", "vitals collection", "medicine handoff"], languages: ["en", "sw"], contact: "+254-000-000-501", hours: "dispatch window 24-48 hrs", digitalStatus: "SMS and paper handoff", ...place(kenya, -0.38, 0.52) },
+      { id: "mobile-kenya-nairobi-east", name: "Nairobi East Mobile Clinic Route", country: "Kenya", region: "Mukuru, Embakasi, Mathare", type: "mobile-clinic", services: ["mobile intake", "medicine pickup coordination", "provider referral"], languages: ["en", "sw"], contact: "+254-000-000-511", hours: "dispatch by queue and road access", digitalStatus: "voice-first route packet", lat: -1.305, lng: 36.872 },
+      { id: "mobile-kenya-nairobi-west", name: "Nairobi West Mobile Clinic Route", country: "Kenya", region: "Kibera, Kawangware, Kangemi", type: "mobile-clinic", services: ["family health outreach", "clinic transport support", "provider callback"], languages: ["en", "sw"], contact: "+254-000-000-512", hours: "dispatch by queue and safety", digitalStatus: "SMS and paper handoff", lat: -1.287, lng: 36.766 },
+      { id: "mobile-kenya-kiambu-thika", name: "Kiambu-Thika Mobile Clinic Corridor", country: "Kenya", region: "Kiambu, Ruiru, Thika", type: "mobile-clinic", services: ["rural pickup coordination", "maternal referral", "clinic transport handoff"], languages: ["en", "sw"], contact: "+254-000-000-513", hours: "county outreach schedule", digitalStatus: "low-bandwidth handoff", lat: -1.085, lng: 37.02 },
       { id: "mobile-nigeria-1", name: "Nigeria Mobile Health Outreach Team", country: "Nigeria", type: "mobile-clinic", services: ["community screening", "referral pickup", "health education"], languages: ["en", "ha"], contact: "+234-000-000-502", hours: "dispatch window 24-48 hrs", digitalStatus: "voice callback and paper handoff", ...place(nigeria, -0.22, 0.44) },
       { id: "mobile-drc-1", name: "DRC Rural Outreach Team", country: "DRC", type: "mobile-clinic", services: ["remote access support", "outbreak-aware handoff", "provider callback"], languages: ["fr", "sw"], contact: "+243-000-000-503", hours: "dispatch by risk and route", digitalStatus: "low-bandwidth handoff", ...place(drc, 0.36, -0.31) }
     ],
     pharmacies: [
       { id: "pharmacy-kenya-1", name: "Kenya Rural Pharmacy Network Desk", country: "Kenya", type: "pharmacy", services: ["medicine availability", "refill coordination", "provider-reviewed packet"], languages: ["en", "sw"], contact: "+254-000-000-601", hours: "08:00-20:00", digitalStatus: "SMS availability check", ...place(kenya, 0.12, 0.42) },
+      { id: "pharmacy-kenya-kibera", name: "Kibera Pharmacy Access Desk", country: "Kenya", region: "Kibera, Nairobi", type: "pharmacy", services: ["medicine availability check", "provider-reviewed refill packet", "caregiver pickup note"], languages: ["en", "sw"], contact: "+254-000-000-611", hours: "08:00-20:00", digitalStatus: "SMS availability check", lat: -1.312, lng: 36.794 },
+      { id: "pharmacy-kenya-mukuru", name: "Mukuru Pharmacy Resource Point", country: "Kenya", region: "Mukuru, Nairobi", type: "pharmacy", services: ["medicine pickup coordination", "pharmacist review flag", "mobile clinic handoff"], languages: ["en", "sw"], contact: "+254-000-000-612", hours: "08:00-19:00", digitalStatus: "voice and SMS callback", lat: -1.316, lng: 36.884 },
+      { id: "pharmacy-kenya-kiambu", name: "Kiambu Pharmacy Referral Desk", country: "Kenya", region: "Kiambu county", type: "pharmacy", services: ["refill support", "clinic handoff", "cold-chain flag"], languages: ["en", "sw"], contact: "+254-000-000-613", hours: "08:00-19:00", digitalStatus: "county pharmacy packet", lat: -1.174, lng: 36.829 },
       { id: "pharmacy-nigeria-1", name: "Nigeria Community Pharmacy Access Desk", country: "Nigeria", type: "pharmacy", services: ["refill coordination", "medicine pickup", "care packet review"], languages: ["en", "ha", "yo"], contact: "+234-000-000-602", hours: "08:00-20:00", digitalStatus: "SMS availability check", ...place(nigeria, 0.42, 0.16) },
       { id: "pharmacy-drc-1", name: "DRC Pharmacy Handoff Point", country: "DRC", type: "pharmacy", services: ["medicine availability", "provider referral", "care packet support"], languages: ["fr", "sw"], contact: "+243-000-000-603", hours: "09:00-18:00", digitalStatus: "paper-to-digital handoff", ...place(drc, -0.18, -0.43) },
       { id: "pharmacy-ghana-1", name: "Ghana Pharmacy Support Desk", country: "Ghana", type: "pharmacy", services: ["refill request", "medication education", "pickup coordination"], languages: ["en"], contact: "+233-000-000-604", hours: "08:00-19:00", digitalStatus: "SMS handoff", ...place(ghana, -0.31, 0.18) }
@@ -7197,6 +7209,8 @@ function ruralHealthNetworkCatalog(db) {
     supplySources: [
       { id: "supply-kenya-county-store", name: "Kenya County Medical Supply Store", country: "Kenya", type: "medical-supply", services: ["PPE", "rapid tests", "wound care", "maternal kits", "basic clinic equipment"], contact: "+254-000-000-701", hours: "08:00-18:00", compliance: ["licensed-supplier", "controlled items require provider approval"], coldChain: true, ...place(kenya, -0.08, 0.58) },
       { id: "supply-kenya-pharmacy-depot", name: "Kenya Pharmacy Supply Depot", country: "Kenya", type: "medical-supply", services: ["medicine refills", "gloves", "ORS", "malaria tests", "blood pressure cuffs"], contact: "+254-000-000-702", hours: "08:00-20:00", compliance: ["pharmacist review", "cold chain flag available"], coldChain: true, ...place(kenya, 0.38, -0.16) },
+      { id: "supply-kenya-nairobi-medical", name: "Nairobi Medical Supply Dispatch Point", country: "Kenya", region: "Nairobi county", type: "medical-supply", services: ["PPE", "ORS", "wound care", "malaria tests", "mobile clinic stock"], contact: "+254-000-000-711", hours: "08:00-20:00", compliance: ["licensed-supplier", "provider approval for medicines"], coldChain: true, lat: -1.2921, lng: 36.8219 },
+      { id: "supply-kenya-thika-store", name: "Thika County Medical Supply Point", country: "Kenya", region: "Kiambu and Thika corridor", type: "medical-supply", services: ["maternal kits", "wound care", "PPE", "rapid tests", "basic clinic equipment"], contact: "+254-000-000-712", hours: "08:00-18:00", compliance: ["licensed-supplier", "cold chain flag available"], coldChain: true, lat: -1.0333, lng: 37.0693 },
       { id: "supply-nigeria-community-store", name: "Nigeria Community Health Supply Store", country: "Nigeria", type: "medical-supply", services: ["rapid tests", "PPE", "wound care", "screening kits"], contact: "+234-000-000-703", hours: "08:00-18:00", compliance: ["licensed-supplier", "provider approval for medicines"], coldChain: false, ...place(nigeria, -0.34, 0.18) },
       { id: "supply-drc-outreach-store", name: "DRC Outreach Medical Supply Store", country: "DRC", type: "medical-supply", services: ["PPE", "infection-control kits", "wound care", "ORS", "rapid tests"], contact: "+243-000-000-704", hours: "risk-based dispatch", compliance: ["outbreak-aware inventory", "provider approval for medicines"], coldChain: true, ...place(drc, 0.18, 0.48) },
       { id: "supply-ghana-rural-store", name: "Ghana Rural Medical Supply Point", country: "Ghana", type: "medical-supply", services: ["basic clinic kits", "PPE", "wound care", "BP cuffs", "ORS"], contact: "+233-000-000-705", hours: "08:00-18:00", compliance: ["licensed-supplier"], coldChain: false, ...place(ghana, 0.46, -0.12) }
@@ -16876,11 +16890,11 @@ function healthAccessVoiceAcceptanceResponse(db, user, text = "", lower = "", op
   if (options.conversational !== true) return null;
   const value = normalizeSpeechForIntent(text);
   const metadataBase = { conversationMode: true, suppressBehaviorNudge: true, healthAccessVoice: true };
-  const response = (intent, status, redirectSection, message, suggestedReplies = ["start intake", "find clinic", "call provider"]) => ({
+  const response = (intent, status, redirectSection, message, suggestedReplies = ["start intake", "find clinic", "call provider"], extraMetadata = {}) => ({
     intent,
     response: message,
     status,
-    metadata: { ...metadataBase, redirectSection, suggestedReplies }
+    metadata: { ...metadataBase, redirectSection, suggestedReplies, ...extraMetadata }
   });
 
   if (/\b(caption|captions|transcript|subtitles?)\b.*\b(telehealth|health|patient|doctor|provider|clinic|care)\b|\b(telehealth|health|patient|doctor|provider|clinic|care)\b.*\b(caption|captions|transcript|subtitles?)\b/.test(value)) {
@@ -16923,6 +16937,31 @@ function healthAccessVoiceAcceptanceResponse(db, user, text = "", lower = "", op
       "health",
       "I started health intake. Tell me who needs care and where they are. This is not a diagnosis; it helps prepare the safest next support step.",
       ["patient name", "find clinic", "I need medicine"]
+    );
+  }
+
+  const requestedHealthLocation = knownMapLocation(value);
+  if (/\b(kenya|nairobi|kibera|mukuru|mathare|kawangware|kangemi|kiambu|thika|ruiru)\b/.test(value)
+    && /\b(medical transport|health transport|clinic route|mobile clinic|township|townships|village|villages|pharmacy|medical supply|care route)\b/.test(value)) {
+    return response(
+      "map.kenya_medical_transport",
+      "completed",
+      "map",
+      "I opened Kenya medical transport mapping. The map can show Nairobi township and village access points including Kibera, Mukuru, Mathare, Kawangware, Kangemi, Kiambu, Ruiru, and Thika, with clinic, pharmacy, mobile clinic, and medical supply corridors.",
+      ["find clinic near Kibera", "show pharmacy near Mukuru", "track mobile clinic route"],
+      { countryId: "kenya", countryName: "Kenya", lat: 0.0236, lng: 37.9062, mapLayer: "kenya-medical-transport" }
+    );
+  }
+  if (requestedHealthLocation
+    && /\b(clinic|hospital|health center|health centre|pharmacy|medicine|mobile clinic|medical transport|medical supply)\b/.test(value)
+    && /\b(map|show|find|near|nearest|nearby|closest|where|location|route|transport)\b/.test(value)) {
+    return response(
+      "map.kenya_medical_transport",
+      "completed",
+      "map",
+      `I opened health transport mapping for ${requestedHealthLocation.label}. Nexus can show nearby clinic, pharmacy, mobile clinic, and medical supply access points, then help prepare a non-diagnostic intake or transport handoff.`,
+      ["start intake", "show pharmacy on the map", "track mobile clinic route"],
+      { countryId: "kenya", countryName: "Kenya", lat: 0.0236, lng: 37.9062, mapLayer: "kenya-medical-transport", requestedLocation: requestedHealthLocation }
     );
   }
 
@@ -17122,6 +17161,17 @@ function platformWideVoiceAcceptanceResponse(db, user, text = "", lower = "", op
   }
   if (/\b(use my location|use location|my location|gps)\b/.test(value)) {
     return response("map.location_permission", "needs-permission", "map", "I can use your location after the browser gives permission. I opened map support so you can allow location and continue route, clinic, pharmacy, or shipment tracking.", ["allow location", "find clinic near me", "track shipment"]);
+  }
+  if (/\b(kenya|nairobi|kibera|mukuru|mathare|kawangware|kangemi|kiambu|thika|ruiru)\b/.test(value)
+    && /\b(medical transport|health transport|clinic route|mobile clinic|township|townships|village|villages|pharmacy|medical supply|care route)\b/.test(value)) {
+    return response(
+      "map.kenya_medical_transport",
+      "completed",
+      "map",
+      "I opened Kenya medical transport mapping. The map can show Nairobi township and village access points including Kibera, Mukuru, Mathare, Kawangware, Kangemi, Kiambu, Ruiru, and Thika, with clinic, pharmacy, mobile clinic, and medical supply corridors.",
+      ["find clinic near Kibera", "show pharmacy near Mukuru", "track mobile clinic route"],
+      { countryId: "kenya", countryName: "Kenya", lat: 0.0236, lng: 37.9062, mapLayer: "kenya-medical-transport" }
+    );
   }
   if (requestedMapCountry && /\b(map|maps|location|country|where|zoom)\b/.test(value)) {
     return response(
@@ -18427,6 +18477,21 @@ function knownMapLocation(query = "", fallbackCountry = null) {
     { keys: ["nigeria"], label: "Nigeria", lat: 9.082, lng: 8.6753, country: "Nigeria" },
     { keys: ["mombasa", "mombassa"], label: "Mombasa, Kenya", lat: -4.0435, lng: 39.6682, country: "Kenya" },
     { keys: ["nairobi"], label: "Nairobi, Kenya", lat: -1.2921, lng: 36.8219, country: "Kenya" },
+    { keys: ["kibera"], label: "Kibera, Nairobi, Kenya", lat: -1.3133, lng: 36.7892, country: "Kenya" },
+    { keys: ["mukuru"], label: "Mukuru, Nairobi, Kenya", lat: -1.3197, lng: 36.8778, country: "Kenya" },
+    { keys: ["mathare"], label: "Mathare, Nairobi, Kenya", lat: -1.2617, lng: 36.857, country: "Kenya" },
+    { keys: ["kawangware"], label: "Kawangware, Nairobi, Kenya", lat: -1.2824, lng: 36.7519, country: "Kenya" },
+    { keys: ["kangemi"], label: "Kangemi, Nairobi, Kenya", lat: -1.2676, lng: 36.7478, country: "Kenya" },
+    { keys: ["kiambu"], label: "Kiambu, Kenya", lat: -1.1714, lng: 36.8356, country: "Kenya" },
+    { keys: ["thika"], label: "Thika, Kenya", lat: -1.0333, lng: 37.0693, country: "Kenya" },
+    { keys: ["ruiru"], label: "Ruiru, Kenya", lat: -1.1466, lng: 36.9609, country: "Kenya" },
+    { keys: ["machakos"], label: "Machakos, Kenya", lat: -1.5177, lng: 37.2634, country: "Kenya" },
+    { keys: ["kitengela"], label: "Kitengela, Kenya", lat: -1.4763, lng: 36.9615, country: "Kenya" },
+    { keys: ["nakuru"], label: "Nakuru, Kenya", lat: -0.3031, lng: 36.08, country: "Kenya" },
+    { keys: ["naivasha"], label: "Naivasha, Kenya", lat: -0.7172, lng: 36.431, country: "Kenya" },
+    { keys: ["kisumu"], label: "Kisumu, Kenya", lat: -0.0917, lng: 34.768, country: "Kenya" },
+    { keys: ["eldoret"], label: "Eldoret, Kenya", lat: 0.5143, lng: 35.2698, country: "Kenya" },
+    { keys: ["garissa"], label: "Garissa, Kenya", lat: -0.4536, lng: 39.6401, country: "Kenya" },
     { keys: ["kenya"], label: "Kenya", lat: -0.0236, lng: 37.9062, country: "Kenya" },
     { keys: ["kinshasa"], label: "Kinshasa, DRC", lat: -4.4419, lng: 15.2663, country: "DRC" },
     { keys: ["congo", "drc"], label: "Democratic Republic of the Congo", lat: -2.8799, lng: 23.656, country: "DRC" },
@@ -18901,6 +18966,14 @@ function africanCityLocationCatalog() {
   return [
     { aliases: ["nairobi"], label: "Nairobi, Kenya", city: "Nairobi", country: "Kenya", latitude: -1.2864, longitude: 36.8172, timeZone: "Africa/Nairobi" },
     { aliases: ["mombasa"], label: "Mombasa, Kenya", city: "Mombasa", country: "Kenya", latitude: -4.0435, longitude: 39.6682, timeZone: "Africa/Nairobi" },
+    { aliases: ["kibera"], label: "Kibera, Nairobi, Kenya", city: "Kibera", country: "Kenya", latitude: -1.3133, longitude: 36.7892, timeZone: "Africa/Nairobi" },
+    { aliases: ["mukuru"], label: "Mukuru, Nairobi, Kenya", city: "Mukuru", country: "Kenya", latitude: -1.3197, longitude: 36.8778, timeZone: "Africa/Nairobi" },
+    { aliases: ["mathare"], label: "Mathare, Nairobi, Kenya", city: "Mathare", country: "Kenya", latitude: -1.2617, longitude: 36.857, timeZone: "Africa/Nairobi" },
+    { aliases: ["kawangware"], label: "Kawangware, Nairobi, Kenya", city: "Kawangware", country: "Kenya", latitude: -1.2824, longitude: 36.7519, timeZone: "Africa/Nairobi" },
+    { aliases: ["kangemi"], label: "Kangemi, Nairobi, Kenya", city: "Kangemi", country: "Kenya", latitude: -1.2676, longitude: 36.7478, timeZone: "Africa/Nairobi" },
+    { aliases: ["kiambu"], label: "Kiambu, Kenya", city: "Kiambu", country: "Kenya", latitude: -1.1714, longitude: 36.8356, timeZone: "Africa/Nairobi" },
+    { aliases: ["thika"], label: "Thika, Kenya", city: "Thika", country: "Kenya", latitude: -1.0333, longitude: 37.0693, timeZone: "Africa/Nairobi" },
+    { aliases: ["ruiru"], label: "Ruiru, Kenya", city: "Ruiru", country: "Kenya", latitude: -1.1466, longitude: 36.9609, timeZone: "Africa/Nairobi" },
     { aliases: ["kisumu"], label: "Kisumu, Kenya", city: "Kisumu", country: "Kenya", latitude: -0.0917, longitude: 34.768, timeZone: "Africa/Nairobi" },
     { aliases: ["eldoret"], label: "Eldoret, Kenya", city: "Eldoret", country: "Kenya", latitude: 0.5143, longitude: 35.2698, timeZone: "Africa/Nairobi" },
     { aliases: ["lagos"], label: "Lagos, Nigeria", city: "Lagos", country: "Nigeria", latitude: 6.5244, longitude: 3.3792, timeZone: "Africa/Lagos" },

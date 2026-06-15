@@ -66,8 +66,8 @@ let routeTrackingWatchId = null;
 let routeTrackingPoints = [];
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-248";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v228";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-249";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v229";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
 const VOICE_ATTENTION_DELAY_MS = 900;
@@ -2952,6 +2952,14 @@ function africanCityLocationCatalog() {
   return [
     { aliases: ["nairobi"], label: "Nairobi, Kenya", city: "Nairobi", country: "Kenya", latitude: -1.2864, longitude: 36.8172, timeZone: "Africa/Nairobi" },
     { aliases: ["mombasa"], label: "Mombasa, Kenya", city: "Mombasa", country: "Kenya", latitude: -4.0435, longitude: 39.6682, timeZone: "Africa/Nairobi" },
+    { aliases: ["kibera"], label: "Kibera, Nairobi, Kenya", city: "Kibera", country: "Kenya", latitude: -1.3133, longitude: 36.7892, timeZone: "Africa/Nairobi" },
+    { aliases: ["mukuru"], label: "Mukuru, Nairobi, Kenya", city: "Mukuru", country: "Kenya", latitude: -1.3197, longitude: 36.8778, timeZone: "Africa/Nairobi" },
+    { aliases: ["mathare"], label: "Mathare, Nairobi, Kenya", city: "Mathare", country: "Kenya", latitude: -1.2617, longitude: 36.857, timeZone: "Africa/Nairobi" },
+    { aliases: ["kawangware"], label: "Kawangware, Nairobi, Kenya", city: "Kawangware", country: "Kenya", latitude: -1.2824, longitude: 36.7519, timeZone: "Africa/Nairobi" },
+    { aliases: ["kangemi"], label: "Kangemi, Nairobi, Kenya", city: "Kangemi", country: "Kenya", latitude: -1.2676, longitude: 36.7478, timeZone: "Africa/Nairobi" },
+    { aliases: ["kiambu"], label: "Kiambu, Kenya", city: "Kiambu", country: "Kenya", latitude: -1.1714, longitude: 36.8356, timeZone: "Africa/Nairobi" },
+    { aliases: ["thika"], label: "Thika, Kenya", city: "Thika", country: "Kenya", latitude: -1.0333, longitude: 37.0693, timeZone: "Africa/Nairobi" },
+    { aliases: ["ruiru"], label: "Ruiru, Kenya", city: "Ruiru", country: "Kenya", latitude: -1.1466, longitude: 36.9609, timeZone: "Africa/Nairobi" },
     { aliases: ["kisumu"], label: "Kisumu, Kenya", city: "Kisumu", country: "Kenya", latitude: -0.0917, longitude: 34.768, timeZone: "Africa/Nairobi" },
     { aliases: ["eldoret"], label: "Eldoret, Kenya", city: "Eldoret", country: "Kenya", latitude: 0.5143, longitude: 35.2698, timeZone: "Africa/Nairobi" },
     { aliases: ["lagos"], label: "Lagos, Nigeria", city: "Lagos", country: "Nigeria", latitude: 6.5244, longitude: 3.3792, timeZone: "Africa/Lagos" },
@@ -12822,6 +12830,67 @@ function addNearbyFacilityMarkers(layer, country = activeCountry(), label = "Fac
   });
 }
 
+function kenyaMedicalTransportSites() {
+  return [
+    { type: "clinic", name: "Kibera Community Clinic Access Point", area: "Kibera, Nairobi", lat: -1.3133, lng: 36.7892, services: ["walk-in intake", "maternal and child referral", "telehealth callback"] },
+    { type: "clinic", name: "Mukuru Health Outreach Point", area: "Mukuru, Nairobi", lat: -1.3197, lng: 36.8778, services: ["community health worker", "mobile pickup", "basic intake"] },
+    { type: "clinic", name: "Mathare Community Health Desk", area: "Mathare, Nairobi", lat: -1.2617, lng: 36.857, services: ["clinic referral", "family support", "provider callback"] },
+    { type: "clinic", name: "Kawangware Clinic Referral Desk", area: "Kawangware, Nairobi", lat: -1.2824, lng: 36.7519, services: ["primary care referral", "pharmacy routing", "telehealth callback"] },
+    { type: "mobile-clinic", name: "Nairobi West Mobile Clinic Route", area: "Kibera, Kawangware, Kangemi", lat: -1.287, lng: 36.766, services: ["family outreach", "clinic transport", "provider callback"] },
+    { type: "mobile-clinic", name: "Nairobi East Mobile Clinic Route", area: "Mukuru, Embakasi, Mathare", lat: -1.305, lng: 36.872, services: ["mobile intake", "medicine pickup", "provider referral"] },
+    { type: "clinic", name: "Kiambu County Rural Clinic Link", area: "Kiambu county", lat: -1.1714, lng: 36.8356, services: ["county clinic referral", "maternal handoff", "mobile outreach"] },
+    { type: "mobile-clinic", name: "Kiambu-Thika Mobile Clinic Corridor", area: "Kiambu, Ruiru, Thika", lat: -1.085, lng: 37.02, services: ["rural pickup", "clinic transport", "maternal referral"] },
+    { type: "pharmacy", name: "Kibera Pharmacy Access Desk", area: "Kibera, Nairobi", lat: -1.312, lng: 36.794, services: ["medicine availability", "provider-reviewed refill", "caregiver pickup note"] },
+    { type: "pharmacy", name: "Mukuru Pharmacy Resource Point", area: "Mukuru, Nairobi", lat: -1.316, lng: 36.884, services: ["medicine pickup", "pharmacist review flag", "mobile clinic handoff"] },
+    { type: "pharmacy", name: "Kiambu Pharmacy Referral Desk", area: "Kiambu county", lat: -1.174, lng: 36.829, services: ["refill support", "clinic handoff", "cold-chain flag"] },
+    { type: "medical-supply", name: "Nairobi Medical Supply Dispatch Point", area: "Nairobi county", lat: -1.2921, lng: 36.8219, services: ["PPE", "ORS", "wound care", "mobile clinic stock"] },
+    { type: "medical-supply", name: "Thika County Medical Supply Point", area: "Thika corridor", lat: -1.0333, lng: 37.0693, services: ["maternal kits", "rapid tests", "basic clinic equipment"] }
+  ];
+}
+
+function isKenyaMapContext(country = activeCountry()) {
+  return normalizeSpeechForIntent(country?.name || country?.id || "") === "kenya";
+}
+
+function addKenyaMedicalTransportLayer(targetMap, layer, country = activeCountry()) {
+  if (!targetMap || !layer || !window.L || !isKenyaMapContext(country)) return;
+  const colors = {
+    clinic: "#0f766e",
+    "mobile-clinic": "#2563eb",
+    pharmacy: "#7c3aed",
+    "medical-supply": "#b45309"
+  };
+  const corridorGroups = [
+    ["Kibera Community Clinic Access Point", "Nairobi West Mobile Clinic Route", "Kibera Pharmacy Access Desk", "Nairobi Medical Supply Dispatch Point"],
+    ["Mukuru Health Outreach Point", "Nairobi East Mobile Clinic Route", "Mukuru Pharmacy Resource Point", "Nairobi Medical Supply Dispatch Point"],
+    ["Kiambu County Rural Clinic Link", "Kiambu-Thika Mobile Clinic Corridor", "Kiambu Pharmacy Referral Desk", "Thika County Medical Supply Point"]
+  ];
+  const sites = kenyaMedicalTransportSites();
+  sites.forEach(site => {
+    const color = colors[site.type] || "#173240";
+    L.circleMarker([site.lat, site.lng], {
+      radius: site.type === "mobile-clinic" ? 8 : 7,
+      color: "#173240",
+      fillColor: color,
+      fillOpacity: .88,
+      weight: 2
+    })
+      .addTo(layer)
+      .bindPopup(`<strong>${translateText(site.name)}</strong><br>${translateText(site.area)}<br>${translateText(site.services.join(", "))}`);
+  });
+  corridorGroups.forEach(group => {
+    const points = group
+      .map(name => sites.find(site => site.name === name))
+      .filter(Boolean)
+      .map(site => [site.lat, site.lng]);
+    if (points.length > 1) {
+      L.polyline(points, { color: "#2563eb", weight: 3, opacity: .58, dashArray: "6 6" })
+        .addTo(layer)
+        .bindPopup(`<strong>${translateText("Kenya medical transport corridor")}</strong><br>${translateText(group.join(" -> "))}`);
+    }
+  });
+}
+
 function renderUserRealMap() {
   const canvas = $("#userMapCanvas");
   if (!canvas || !data) return;
@@ -12864,6 +12933,7 @@ function renderUserRealMap() {
 
   addOperationalCountryMarkers(userMap, userMapLayers.markers, country);
   addNearbyFacilityMarkers(userMapLayers.facilities, country, "Support point");
+  addKenyaMedicalTransportLayer(userMap, userMapLayers.facilities, country);
   fitMapToSurroundingRegion(userMap, route, country, 5);
   setTimeout(() => userMap?.invalidateSize(), 120);
 }
@@ -12903,11 +12973,19 @@ function renderUserHealthMap() {
 
   addOperationalCountryMarkers(userHealthMap, userHealthMapLayers.markers, country, { health: true });
   addNearbyFacilityMarkers(userHealthMapLayers.facilities, country, "Care point");
+  addKenyaMedicalTransportLayer(userHealthMap, userHealthMapLayers.facilities, country);
   fitMapToSurroundingRegion(userHealthMap, activeRoute(), country, 5);
   setTimeout(() => userHealthMap?.invalidateSize(), 120);
 }
 
 function ruralHealthFallbackSites(country = activeCountry()) {
+  if (isKenyaMapContext(country)) {
+    return kenyaMedicalTransportSites().map((site, index) => ({
+      ...site,
+      id: `kenya-medical-transport-${index + 1}`,
+      distanceKm: site.type === "mobile-clinic" ? 12 : site.type === "pharmacy" ? 6 : site.type === "medical-supply" ? 18 : 9
+    }));
+  }
   const point = (latOffset, lngOffset) => ({
     lat: Number((Number(country.lat || 0) + latOffset).toFixed(4)),
     lng: Number((Number(country.lng || 0) + lngOffset).toFixed(4))
@@ -19943,7 +20021,7 @@ async function runBackendAgentCommand(command, locationContext = null, options =
     clearAgentProgressTimers();
     render();
     const result = data.commandResult || {};
-    if (result.intent === "map.country_open") {
+    if (result.intent === "map.country_open" || result.intent === "map.kenya_medical_transport") {
       const country = countryFromAgentMapMetadata(result.metadata || {});
       if (country) {
         markAgentPerformance("completed", result.intent);
@@ -20028,7 +20106,7 @@ async function runUtilityAgentCommand(command, fallbackAnswer = "", locationCont
     if (ignoreStaleNexusTurn(turnToken, "utility answer")) return null;
     render();
     const result = data.commandResult || {};
-    if (result.intent === "map.country_open") {
+    if (result.intent === "map.country_open" || result.intent === "map.kenya_medical_transport") {
       const country = countryFromAgentMapMetadata(result.metadata || {});
       if (country) {
         markAgentPerformance("completed", result.intent);

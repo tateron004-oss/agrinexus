@@ -29,6 +29,8 @@ const checks = [
   { prompt: "necesito medicina", intent: "conversation.medicine_help", section: "health", includes: "I cannot prescribe" },
   { prompt: "Find a clinic near me.", intent: "conversation.clinic_map_help", section: "map", includes: "clinic or pharmacy support on the map" },
   { prompt: "Nexus, find a clinic near me.", intent: "conversation.clinic_map_help", section: "map", includes: "clinic or pharmacy support on the map" },
+  { prompt: "Nexus, show Kenya medical transport townships and villages on the map.", intent: "map.kenya_medical_transport", section: "map", includes: "Kibera" },
+  { prompt: "Nexus, find a clinic near Kibera Kenya.", intent: "map.kenya_medical_transport", section: "map", includes: "Kibera" },
   { prompt: "Nexus, show pharmacy on the map.", intent: "conversation.clinic_map_help", section: "map", includes: "clinic or pharmacy support on the map" },
   { prompt: "Find me a clinic.", intent: "conversation.clinic_map_help", section: "map", includes: "clinic or pharmacy support on the map" },
   { prompt: "clinic near", intent: "conversation.clinic_map_help", section: "map", includes: "clinic or pharmacy support on the map" },
