@@ -428,8 +428,8 @@ assert(app.includes("Stopped. Ask me the next question or tell me where to go ne
 assert(styles.includes("pointer-events: none") && styles.includes(".user-caption-actions") && styles.includes("pointer-events: auto"), "Caption panel must not block workflow action clicks");
 assert(styles.includes("width: min(300px, calc(100vw - 24px))") && styles.includes("max-height: 138px"), "Caption panel must default to a small bubble");
 assert(styles.includes(".user-caption-panel.expanded") && styles.includes("display: none") && styles.includes("display: grid"), "Caption input controls must appear only in expanded caption mode");
-assert(html.includes("nexus-behavior-251"), "Index must force browsers to load Nexus behavior CSS");
-assert(html.includes("nexus-behavior-251"), "Index must force browsers to load Nexus behavior JS");
+assert(html.includes("nexus-behavior-252"), "Index must force browsers to load Nexus behavior CSS");
+assert(html.includes("nexus-behavior-252"), "Index must force browsers to load Nexus behavior JS");
 assert(server.includes("function productionActivationGuide"), "Backend needs a live activation guide");
 assert(server.includes("function directVendorProviderStatus"), "Backend must recognize direct vendor credentials");
 assert(server.includes("optionalEnvSets"), "Activation guide must show real provider depth options");
@@ -532,7 +532,9 @@ assert(app.includes("function ruralKenyaCommunicationStyle") && app.includes("Tw
 assert(app.includes("health, crops, work, learning, map, or medicine"), "Misheard rural speech must recover with simple choices");
 assert(app.includes("result.metadata?.frontierCommunication?.nextQuestion"), "Voice UI must focus suggestions around the frontier next-best question");
 assert(app.includes("Nexus is ready for one answer"), "Voice UI must guide one answer at a time after frontier communication");
-assert(app.includes("const responseMessage = nexusHumanResponsePolicy(rawResponseMessage"), "Voice responses must be shortened and de-roboticized before display, translation, and speech");
+assert(app.includes("let responseMessage = nexusHumanResponsePolicy(rawResponseMessage"), "Voice responses must be shortened and de-roboticized before display, translation, and speech");
+assert(app.includes("function conciseVoiceResponse") && app.includes("function repeatSafeVoiceResponse") && app.includes("I will stop repeating"), "Voice responses must stay short and avoid repeating the same answer while a user is struggling");
+assert(app.includes("function isLikelyNexusSelfEcho") && app.includes("Nexus stopped speaking because it heard a new user phrase."), "Voice barge-in must stop old speech while guarding against Nexus hearing itself");
 assert(app.includes("function handleNexusSelfCorrection"), "Nexus needs a self-correction handler for wrong or misunderstood commands");
 assert(app.includes("recordNexusAutonomousLearning({ type: \"self-correction\""), "Nexus self-correction must record learning evidence");
 assert(app.includes("agrinexusBehaviorRecovery"), "Nexus behavior recovery events must be retained locally for future improvement");

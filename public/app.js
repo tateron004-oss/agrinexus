@@ -28,6 +28,8 @@ let voiceConversationPaused = false;
 let lastSpokenText = "";
 let lastSpokenAt = 0;
 let lastVoiceResponseAt = 0;
+let lastVoiceResponseSignature = "";
+let lastVoiceResponseRepeatCount = 0;
 let activeVoiceAudio = null;
 let voicePlaybackToken = 0;
 let voiceInterruptToken = 0;
@@ -66,8 +68,8 @@ let routeTrackingWatchId = null;
 let routeTrackingPoints = [];
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-251";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v231";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-252";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v232";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
 const VOICE_ATTENTION_DELAY_MS = 900;
@@ -16526,7 +16528,8 @@ function setVoiceResponse(message, speak = false, options = {}) {
   const token = ++voiceTranslationToken;
   const interruptToken = voiceInterruptToken;
   const rawResponseMessage = speak || options.forceHandoff ? composeJarvisResponse(message, options) : message;
-  const responseMessage = nexusHumanResponsePolicy(rawResponseMessage, { ...options, speak, command: options.command || agentPerformanceState.lastCommand || conversationModeState.lastQuestion || "" });
+  let responseMessage = nexusHumanResponsePolicy(rawResponseMessage, { ...options, speak, command: options.command || agentPerformanceState.lastCommand || conversationModeState.lastQuestion || "" });
+  responseMessage = repeatSafeVoiceResponse(responseMessage, { ...options, speak });
   const compactResponse = String(responseMessage || "").replace(/\s+/g, " ").trim();
   const now = Date.now();
   const duplicateSpeech = Boolean(speak && compactResponse && compactResponse === String(lastVoiceResponse || "").replace(/\s+/g, " ").trim() && now - lastVoiceResponseAt < 8000);
@@ -16806,6 +16809,52 @@ function stopVoicePlayback(options = {}) {
   if ("speechSynthesis" in window) window.speechSynthesis.cancel();
   voiceSpeaking = false;
   voiceAutoRestart = voiceFirstMode;
+}
+
+function voiceResponseSignature(text = "") {
+  return normalizeToolText(text).split(/\s+/).filter(Boolean).slice(0, 18).join(" ");
+}
+
+function conciseVoiceResponse(message = "", options = {}) {
+  const text = String(message || "").replace(/\s+/g, " ").trim();
+  if (!text || options.allowLongResponse || options.longForm) return text;
+  const shouldShorten = options.speak || voiceFirstMode || experienceMode === "user" || localStorage.getItem("agrinexusShortAnswers") === "on";
+  if (!shouldShorten) return text;
+  const sentences = text.match(/[^.!?]+[.!?]+/g) || [];
+  const sentenceLimit = experienceMode === "user" || localStorage.getItem("agrinexusShortAnswers") === "on" ? 2 : 3;
+  const sentenceText = sentences.length ? sentences.slice(0, sentenceLimit).join(" ").trim() : text;
+  const words = sentenceText.split(/\s+/).filter(Boolean);
+  const maxWords = experienceMode === "user" ? 42 : 58;
+  if (words.length <= maxWords) return sentenceText;
+  return `${words.slice(0, maxWords).join(" ")}.`;
+}
+
+function repeatSafeVoiceResponse(message = "", options = {}) {
+  const compact = conciseVoiceResponse(message, options);
+  const signature = voiceResponseSignature(compact);
+  const now = Date.now();
+  if (options.speak && signature && signature === lastVoiceResponseSignature && now - lastVoiceResponseAt < 45000) {
+    lastVoiceResponseRepeatCount += 1;
+  } else {
+    lastVoiceResponseRepeatCount = 0;
+  }
+  lastVoiceResponseSignature = signature;
+  if (lastVoiceResponseRepeatCount >= 1 && options.speak) {
+    return "I hear you. I will stop repeating. Say it again slowly, or say one word: health, medicine, crop, work, learning, map, or stop.";
+  }
+  return compact;
+}
+
+function isLikelyNexusSelfEcho(command = "") {
+  const heard = normalizeToolText(command);
+  const spoken = normalizeToolText(lastVoiceResponse);
+  if (!heard || !spoken || heard.length < 18) return false;
+  if (spoken.includes(heard) || heard.includes(spoken.slice(0, Math.min(80, spoken.length)))) return true;
+  const heardTokens = new Set(heard.split(/\s+/).filter(token => token.length > 3));
+  const spokenTokens = new Set(spoken.split(/\s+/).filter(token => token.length > 3));
+  if (heardTokens.size < 4 || spokenTokens.size < 4) return false;
+  const overlap = [...heardTokens].filter(token => spokenTokens.has(token)).length;
+  return overlap / Math.max(heardTokens.size, 1) >= 0.68;
 }
 
 function abortActiveAgentCommand() {
@@ -17389,7 +17438,7 @@ function askUserToRepeatMisheardPhrase(command = "") {
   updateNexusBehaviorLayer("listening", `Nexus may have misheard: ${heard}`);
   recordNexusAutonomousLearning({ type: "misheard-repeat", command: heard });
   renderLiveVoiceSuggestions(["repeat slowly", "health", "crops", "work", "map"]);
-  setVoiceResponse(bridge.response || `I may have heard that wrong. I heard: ${heard}. Please repeat it slowly, or say Nexus stop.`, true);
+  setVoiceResponse(bridge.response || "I may have heard that wrong. Say it again slowly, or say one word: health, crop, work, learning, map, or stop.", true, { allowHandoff: false });
 }
 
 function isSimpleCourseStartCommand(command = "") {
@@ -20506,10 +20555,16 @@ function startVoiceListening() {
     }
   };
   voiceRecognition.onresult = event => {
-    if (voiceSpeaking) return;
     const latest = event.results?.[event.results.length - 1];
     if (latest && latest.isFinal === false) return;
     const command = latest?.[0]?.transcript || event.results?.[0]?.[0]?.transcript || "";
+    if (voiceSpeaking) {
+      if (isLikelyNexusSelfEcho(command)) return;
+      stopVoicePlayback({ hard: true });
+      updateNexusBehaviorLayer("listening", "Nexus stopped speaking because it heard a new user phrase.");
+      const outputStatus = $("#globalVoiceOutputStatus");
+      if (outputStatus) outputStatus.textContent = translateText("I stopped. Listening to your new phrase.");
+    }
     setCommandInputs(command);
     const localizedCommand = normalizeLocalizedVoiceCommand(command);
     const cleanedCommand = cleanWakeCommand(localizedCommand);
