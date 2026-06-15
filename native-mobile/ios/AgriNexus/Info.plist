@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>NSCameraUsageDescription</key>
+    <string>AgriNexus uses the camera for telehealth video handoff, crop evidence, and buyer proof.</string>
+    <key>NSLocationWhenInUseUsageDescription</key>
+    <string>AgriNexus uses location for clinic, pharmacy, route, shipment, and field support.</string>
+    <key>NSMicrophoneUsageDescription</key>
+    <string>AgriNexus uses the microphone so Nexus can listen to user requests.</string>
+    <key>NSSpeechRecognitionUsageDescription</key>
+    <string>AgriNexus uses speech recognition to turn voice requests into Nexus actions.</string>
+    <key>UIBackgroundModes</key>
+    <array>
+        <string>audio</string>
+        <string>fetch</string>
+        <string>location</string>
+    </array>
+</dict>
+</plist>
+
