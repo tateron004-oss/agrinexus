@@ -17115,6 +17115,24 @@ function platformWideVoiceAcceptanceResponse(db, user, text = "", lower = "", op
   });
   const requestedMapCountry = africanMapCountryTarget(db, value);
 
+  if (/\b(explain|describe|define|summarize)\s+(agrinexus|agri nexus|nexus|platform)\b/.test(value)
+    || /\b(tell me|tell us)\s+(what|about)\s+(agrinexus|agri nexus|nexus|platform)\b/.test(value)
+    || /\b(what|who)\s+(is|are)\s+(agrinexus|agri nexus|nexus|the platform)\b/.test(value)
+    || /\b(agrinexus|agri nexus|nexus|platform)\b.*\b(what is|explain|describe|tell me about|what do you do|who are you|means|mean)\b/.test(value)) {
+    db.profile.agentMemory.activeClarification = null;
+    db.profile.agentMemory.activeRecovery = null;
+    db.profile.agentMemory.lastStatus = "platform-explained";
+    db.profile.agentMemory.lastSummary = "AgriNexus platform explanation delivered.";
+    db.profile.agentMemory.updatedAt = new Date().toISOString();
+    return response(
+      "conversation.platform_explained",
+      "completed",
+      "agent",
+      "AgriNexus helps people use farming, health access, learning, jobs, trade, maps, and local services by voice. Nexus is the assistant inside it: it listens, answers in simple words, opens the right service, and guides the next step.",
+      ["help a farmer", "I need a doctor", "help me sell my crop", "open map"]
+    );
+  }
+
   if (/\b(switch|change|set)\b.*\b(french|francais|français)\b/.test(value)) {
     return response("conversation.language_changed", "completed", "dashboard", "French is selected. I will keep guiding you in French where the platform supports it.", ["switch back to English", "start intake", "open map"]);
   }

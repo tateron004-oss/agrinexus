@@ -66,8 +66,8 @@ let routeTrackingWatchId = null;
 let routeTrackingPoints = [];
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-250";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v230";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-251";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v231";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
 const VOICE_ATTENTION_DELAY_MS = 900;
@@ -8304,9 +8304,9 @@ function isPlatformExplainVoiceCommand(command = "") {
   const lower = normalizeToolText(command);
   if (!lower) return false;
   const platformName = /\b(agrinexus|agri nexus|agri-nexus|nexus|the platform|this platform|your platform|app|system)\b/.test(lower);
-  const explainVerb = /\b(explain|describe|tell me about|what is|whats|what are|who are you|what do you do|what does it do|what does this do|summarize)\b/.test(lower);
+  const explainVerb = /\b(explain|describe|tell me about|tell me what|what is|whats|what are|who are you|what do you do|what does it do|what does this do|summarize|define)\b/.test(lower);
   return (platformName && explainVerb)
-    || /\b(explain the platform|tell me about the platform|what is the platform|what can agrinexus do|what can agri nexus do|define agrinexus|define agri nexus)\b/.test(lower);
+    || /\b(explain the platform|tell me about the platform|tell me what the platform is|what is the platform|what can agrinexus do|what can agri nexus do|define agrinexus|define agri nexus|explain agrinexus|explain agri nexus|what agrinexus is|what agri nexus is)\b/.test(lower);
 }
 
 function voiceToolTokens(value = "") {
@@ -18357,6 +18357,13 @@ function nexusConversationFirstIntent(command = "") {
   const has = words => words.some(word => new RegExp(`\\b${word}\\b`).test(lower));
   const resilientIntent = nexusResilientConversationIntent(command);
   if (!lower) return resilientIntent || null;
+  if (isPlatformExplainVoiceCommand(command)) {
+    return {
+      type: "answer",
+      response: nexusPlatformExplainAnswer(),
+      suggestions: ["help a farmer", "help a patient", "open learning", "open map"]
+    };
+  }
   if (/^(home|go home|nexus home|agrinexus home|agri nexus home|open home|main screen|dashboard|back home|take me home)$/.test(lower)
     || /\b(main menu|menu)(?:\s+(home|dashboard))?\b/.test(lower)
     || /\b(open|go|return|take me|back)\b.*\b(home|dashboard|main screen|main menu|menu)\b/.test(lower)) {
