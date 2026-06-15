@@ -20,6 +20,8 @@ const checks = [
   npmCheck("app:jarvis-qa"),
   npmCheck("app:cloud-agent-qa"),
   npmCheck("app:mobile-native-qa"),
+  npmCheck("app:native-runtime-qa"),
+  npmCheck("app:native-desktop-qa"),
   npmCheck("platform:integrity-stress"),
   npmCheck("placeholder:audit"),
   npmCheck("stabilization:gate"),

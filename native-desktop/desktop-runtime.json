@@ -1,0 +1,40 @@
+{
+  "name": "AgriNexus Native Desktop Companion",
+  "version": "1.0.0",
+  "purpose": "Computer-wide visible wake listener for AgriNexus when Chrome is closed or browser microphone access is unavailable.",
+  "platforms": {
+    "windows": {
+      "runtime": "PowerShell + System.Speech",
+      "entrypoint": "native-desktop/windows/NexusWakeListener.ps1",
+      "wakeMode": "visible-always-on-console",
+      "permissions": ["microphone", "speechRecognition", "speechSynthesis", "network"],
+      "status": "prototype-ready"
+    },
+    "macos": {
+      "runtime": "native app wrapper recommended",
+      "wakeMode": "requires notarized app with microphone and speech recognition permissions",
+      "status": "contract-ready"
+    },
+    "linux": {
+      "runtime": "native app wrapper recommended",
+      "wakeMode": "requires desktop speech engine and microphone permission",
+      "status": "contract-ready"
+    }
+  },
+  "wakePhrases": ["Nexus", "Hey Nexus", "Agri", "Hey AgriNexus", "Good morning Nexus"],
+  "stopPhrases": ["Nexus stop", "stop listening", "be quiet", "pause nexus"],
+  "handoff": {
+    "api": "https://agrinexus-platform.onrender.com/api/agent/command",
+    "inputMode": "native",
+    "outputMode": "voice",
+    "opensBrowser": true,
+    "auth": "Use AGRINEXUS_SESSION_COOKIE or a production native auth token when the hosted API requires sign-in."
+  },
+  "privacyControls": [
+    "visible listener window",
+    "spoken ready message",
+    "stop phrases",
+    "close terminal to stop",
+    "no hidden background listening"
+  ]
+}

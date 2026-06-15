@@ -89,8 +89,8 @@ let routeTrackingWatchId = null;
 let routeTrackingPoints = [];
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-260";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v240";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-261";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v241";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
 const VOICE_ATTENTION_DELAY_MS = 900;
@@ -8203,7 +8203,8 @@ function nativeAppCapabilityMatrix() {
     { id: "notifications", title: "Proactive alerts", ready: permission.notifications, detail: permission.notifications ? "Browser alerts can be requested; in-app alerts always work." : "Native push notifications need app packaging." },
     { id: "location", title: "GPS route mode", ready: permission.location, detail: permission.location ? "Location permission can support route and field intelligence." : "Native GPS permission is needed for background route support." },
     { id: "provider-depth", title: "Live engine depth", ready: Object.values(providerDepth).some(group => group.ready > 0), detail: "Provider bridge status is visible and workflows continue locally while vendors connect." },
-    { id: "native-bridge", title: "Native bridge contract", ready: true, detail: "public/native-bridge.json defines events, permissions, wake phrases, and API endpoints for Android/iOS wrappers." }
+    { id: "native-bridge", title: "Native bridge contract", ready: true, detail: "public/native-bridge.json defines events, permissions, wake phrases, and API endpoints for Android/iOS wrappers." },
+    { id: "desktop-wake", title: "Desktop wake companion", ready: true, detail: "Windows companion can listen visibly with OS microphone permission, open AgriNexus, and hand commands to the hosted API when Chrome is closed." }
   ];
 }
 
@@ -8214,7 +8215,7 @@ function nativeAppReadinessSummary() {
     ready,
     total: items.length,
     items,
-    summary: `${ready}/${items.length} mobile Jarvis capabilities are ready in the web build. Native packaging is the unlock for always-on wake, background GPS, push notifications, and OS-level microphone behavior.`
+    summary: `${ready}/${items.length} Jarvis-style native capabilities are ready in the web build. Mobile packaging unlocks phone background GPS and push alerts; the desktop companion unlocks visible computer-wide wake listening when Chrome is closed.`
   };
 }
 
@@ -20763,9 +20764,9 @@ async function handleVoiceCommandCore(rawCommand, options = {}) {
     };
     return;
   }
-  if (lower.includes("native app") || lower.includes("highest level app") || lower.includes("always on") || lower.includes("always-on") || lower.includes("background listening")) {
+  if (lower.includes("native app") || lower.includes("highest level app") || lower.includes("always on") || lower.includes("always-on") || lower.includes("background listening") || lower.includes("desktop companion") || lower.includes("computer-wide") || lower.includes("chrome is closed")) {
     const readiness = nativeAppReadinessSummary();
-    setVoiceResponse(`${readiness.summary} I can run the browser-safe assistant now, and the native bridge is ready for Android and iOS packaging when you want always-on wake, background GPS, push alerts, and deeper device permissions.`, true);
+    setVoiceResponse(`${readiness.summary} I can run the browser-safe assistant now. For true wake behavior when Chrome is closed, use the visible desktop companion. For phone-style always-on behavior, use the native Android or iOS wrapper.`, true);
     return;
   }
   if (lower.includes("proactive alerts") || lower.includes("what needs attention") || lower.includes("alert me")) {

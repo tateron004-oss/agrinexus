@@ -1,4 +1,4 @@
-﻿const assert = require("node:assert/strict");
+const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 
@@ -22,12 +22,12 @@ function requireScript(scriptName) {
 }
 
 requireMarkers("current browser cache contract", html, [
-  "/styles.css?v=nexus-behavior-260",
-  "/app.js?v=nexus-behavior-260"
+  "/styles.css?v=nexus-behavior-261",
+  "/app.js?v=nexus-behavior-261"
 ]);
 requireMarkers("service worker cache contract", sw, [
-  'CACHE_NAME = "agrinexus-pwa-v240"',
-  'BUILD_VERSION = "nexus-behavior-260"',
+  'CACHE_NAME = "agrinexus-pwa-v241"',
+  'BUILD_VERSION = "nexus-behavior-261"',
   "`/app.js?v=${BUILD_VERSION}`",
   "`/styles.css?v=${BUILD_VERSION}`",
   "purgeOldCaches",

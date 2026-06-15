@@ -16803,7 +16803,7 @@ function resilientConversationIntent(db, user, rawText = "") {
     "open map", "map please", "show route", "mapa", "carte", "ramani", "rota", "خريطة", "طريق", "موقع"
   ];
 
-  if (has(capabilitySignals) && has(["farmer", "farm", "smallholder", "grower"])) {
+  if (has(capabilitySignals) && !/\b(agritrade|agri trade|auto\s*pilot|autopilot)\b/.test(text) && has(["farmer", "farm", "smallholder", "grower"]) && !/\b(start to finish|end to end|safely|safe)\b/.test(text)) {
     return {
       intent: "conversation.farmer_help",
       response: "For a farmer, I can help check a bad crop, explain drone or field data, find a buyer, compare route risk, track a shipment, and prepare sale evidence. Tell me the crop and where the farm is.",
@@ -16811,7 +16811,7 @@ function resilientConversationIntent(db, user, rawText = "") {
       metadata: { ...metadataBase, redirectSection: "trade", suggestedReplies: ["my crop is bad", "find a buyer", "track my shipment"] }
     };
   }
-  if (has(capabilitySignals)) {
+  if (has(capabilitySignals) && !/\b(agritrade|agri trade)\b/.test(text)) {
     return {
       intent: "conversation.capability_summary",
       response: "I can listen in normal words, answer questions, open the right workspace, and guide health support, medicine access, crops, sales, jobs, learning, maps, reminders, and provider handoffs.",
@@ -16843,7 +16843,7 @@ function resilientConversationIntent(db, user, rawText = "") {
       metadata: { ...metadataBase, redirectSection: "health", suggestedReplies: ["find pharmacy", "start intake", "call provider"] }
     };
   }
-  if (has(cropProblemSignals)) {
+  if (has(cropProblemSignals) && !/\b(auto\s*pilot|autopilot)\b/.test(text)) {
     return {
       intent: "conversation.crop_help",
       response: "I can help with the crop problem. Tell me the crop, where the farm is, and what you see: yellow leaves, dry soil, pests, spots, or wilting. I can guide a field scan, simple next steps, buyer evidence, and route planning.",
@@ -16851,7 +16851,7 @@ function resilientConversationIntent(db, user, rawText = "") {
       metadata: { ...metadataBase, redirectSection: "trade", suggestedReplies: ["run field scan", "explain crop problem", "contact buyer"] }
     };
   }
-  if (has(cropSaleSignals)) {
+  if (has(cropSaleSignals) && !/\b(start to finish|end to end|safely|safe)\b/.test(text)) {
     return {
       intent: "conversation.crop_sale_help",
       response: "I can help sell the crop. Tell me the crop, quantity, location, and buyer if you know one. I will help prepare the sale and delivery tracking.",
@@ -16859,7 +16859,7 @@ function resilientConversationIntent(db, user, rawText = "") {
       metadata: { ...metadataBase, redirectSection: "trade", suggestedReplies: ["maize in Kenya", "find a buyer", "track delivery"] }
     };
   }
-  if (has(workSignals)) {
+  if (has(workSignals) && !/\bapply\b.*\b(that job|this job|the job)\b/.test(text)) {
     return {
       intent: "conversation.workforce_help",
       response: "I can help with work. Tell me the country and the kind of job, and I will show role options, skill gaps, training links, and the application step.",
@@ -16867,7 +16867,7 @@ function resilientConversationIntent(db, user, rawText = "") {
       metadata: { ...metadataBase, redirectSection: "workforce", suggestedReplies: ["show me jobs", "apply for a role", "review my skills"] }
     };
   }
-  if (has(learningSignals)) {
+  if (has(learningSignals) && !/\b(i am new|i'm new|how do i|where do i start|show me how|walk me through|guide me)\b/.test(text)) {
     return {
       intent: "conversation.learning_start",
       response: "I can help you learn. Tell me the skill you want, or I can start the recommended course and read it with captions or audio.",
@@ -16931,6 +16931,9 @@ function healthAccessVoiceAcceptanceResponse(db, user, text = "", lower = "", op
     || /\b(start|open|begin)\b.*\b(health )?(intake|telehealth intake|patient intake)\b/.test(value)
     || /\b(health )?(intake|telehealth intake|patient intake)\b.*\b(start|open|begin|help)\b/.test(value)
     || /^start intake$/.test(value)) {
+    if (/\b(ask me questions|ask questions|question|questions|one question)\b/.test(value)) {
+      return startConversationalIntake(db, text, "health");
+    }
     return response(
       "conversation.health_intake",
       "needs-details",
@@ -17115,10 +17118,10 @@ function platformWideVoiceAcceptanceResponse(db, user, text = "", lower = "", op
   });
   const requestedMapCountry = africanMapCountryTarget(db, value);
 
-  if (/\b(explain|describe|define|summarize)\s+(agrinexus|agri nexus|nexus|platform)\b/.test(value)
+  if (!/\b(agritrade|agri trade)\b/.test(value) && (/\b(explain|describe|define|summarize)\s+(agrinexus|agri nexus|nexus|platform)\b/.test(value)
     || /\b(tell me|tell us)\s+(what|about)\s+(agrinexus|agri nexus|nexus|platform)\b/.test(value)
     || /\b(what|who)\s+(is|are)\s+(agrinexus|agri nexus|nexus|the platform)\b/.test(value)
-    || /\b(agrinexus|agri nexus|nexus|platform)\b.*\b(what is|explain|describe|tell me about|what do you do|who are you|means|mean)\b/.test(value)) {
+    || /\b(agrinexus|agri nexus|nexus|platform)\b.*\b(what is|explain|describe|tell me about|what do you do|who are you|means|mean)\b/.test(value))) {
     db.profile.agentMemory.activeClarification = null;
     db.profile.agentMemory.activeRecovery = null;
     db.profile.agentMemory.lastStatus = "platform-explained";
@@ -17134,16 +17137,20 @@ function platformWideVoiceAcceptanceResponse(db, user, text = "", lower = "", op
   }
 
   if (/\b(switch|change|set)\b.*\b(french|francais|français)\b/.test(value)) {
-    return response("conversation.language_changed", "completed", "dashboard", "French is selected. I will keep guiding you in French where the platform supports it.", ["switch back to English", "start intake", "open map"]);
+    changeUserLanguage(db, user, "fr");
+    return response("conversation.language_changed", "completed", "dashboard", "French is selected. I will keep guiding you in French where the platform supports it.", ["switch back to English", "start intake", "open map"], { language: "fr" });
   }
   if (/\b(switch|change|set)\b.*\b(arabic|العربية|عربي)\b/.test(value)) {
-    return response("conversation.language_changed", "completed", "dashboard", "Arabic is selected. I will keep guiding you in Arabic where the platform supports it.", ["switch back to English", "start intake", "open map"]);
+    changeUserLanguage(db, user, "ar");
+    return response("conversation.language_changed", "completed", "dashboard", "Arabic is selected. I will keep guiding you in Arabic where the platform supports it.", ["switch back to English", "start intake", "open map"], { language: "ar" });
   }
   if (/\b(switch|change|set)\b.*\b(spanish|espanol|español)\b/.test(value)) {
-    return response("conversation.language_changed", "completed", "dashboard", "Spanish is selected. I will keep guiding you in Spanish where the platform supports it.", ["switch back to English", "start intake", "open map"]);
+    changeUserLanguage(db, user, "es");
+    return response("conversation.language_changed", "completed", "dashboard", "Spanish is selected. I will keep guiding you in Spanish where the platform supports it.", ["switch back to English", "start intake", "open map"], { language: "es" });
   }
   if (/\b(switch|change|set)\b.*\b(back to english|english|ingles|anglais)\b/.test(value)) {
-    return response("conversation.language_changed", "completed", "dashboard", "English is selected. I will keep guiding you in English.", ["I need a doctor", "help me sell my crop", "start a course"]);
+    changeUserLanguage(db, user, "en");
+    return response("conversation.language_changed", "completed", "dashboard", "English is selected. I will keep guiding you in English.", ["I need a doctor", "help me sell my crop", "start a course"], { language: "en" });
   }
 
   if (/\b(what can you do|how can you help)\b.*\b(patient|caregiver|sick person|person sick)\b/.test(value)) {
@@ -17156,10 +17163,13 @@ function platformWideVoiceAcceptanceResponse(db, user, text = "", lower = "", op
     );
   }
 
-  if (/\b(help me sell|sell)\b.*\b(maize|corn|crop|harvest|produce)\b/.test(value)) {
+  if (/\b(help me sell|sell)\b.*\b(maize|corn|crop|harvest|produce)\b/.test(value) && !/\b(start to finish|end to end|safely|safe)\b/.test(value)) {
     return response("conversation.crop_sale_help", "needs-details", "trade", "I can help sell the crop. Tell me the quantity, location, and buyer if you know one. I will help prepare the sale and delivery tracking.", ["contact the buyer", "track my shipment", "show trade route"]);
   }
-  if (/\b(contact|message|call|talk to|speak to)\b.*\bbuyer\b/.test(value)) {
+  if (/\b(message|chat|thread|communicate|reply)\b.*\bbuyer\b|\bbuyer\b.*\b(message|chat|thread|communicate|reply)\b/.test(value)) {
+    return null;
+  }
+  if (/\b(contact|call|talk to|speak to)\b.*\bbuyer\b/.test(value)) {
     return response("trade.buyer_contact", "needs-confirmation", "trade", "I prepared buyer contact. I can draft the buyer message, keep the sale evidence, and wait for your confirmation before any live SMS, WhatsApp, or phone action.", ["send SMS to the buyer", "send WhatsApp to the buyer", "track shipment"]);
   }
   if (/\b(send|text)\b.*\b(sms|text)\b.*\bbuyer\b|\b(sms|text)\b.*\bbuyer\b/.test(value)) {
@@ -17215,7 +17225,7 @@ function platformWideVoiceAcceptanceResponse(db, user, text = "", lower = "", op
     return response("conversation.crop_evidence_simple", "completed", "trade", "In simple words: crop evidence helps show whether the crop looks healthy, damaged, dry, pest-affected, or ready for sale. Nexus can turn that into buyer proof and a next farm step.", ["run drone scan", "contact buyer", "track shipment"]);
   }
 
-  if (/\b(start|open|begin)\b.*\b(my )?(course|lesson|training)\b/.test(value)) {
+  if (/\b(start|open|begin)\b.*\b(my )?(course|lesson|training)\b/.test(value) && !/\b(i am new|i'm new|how do i|where do i start|show me how|walk me through|guide me)\b/.test(value)) {
     return response("conversation.learning_start", "needs-topic", "learning", "I opened course support. Choose the course you want, or tell me the skill you want to learn.", ["read the lesson for me", "build captions", "complete my lesson"]);
   }
   if (/\b(read|speak|play)\b.*\b(lesson|course)\b.*\b(for me)?\b/.test(value)) {
@@ -17232,9 +17242,11 @@ function platformWideVoiceAcceptanceResponse(db, user, text = "", lower = "", op
   }
 
   if (/\b(i need work|need work|find work|find a job|job please|work please|need job|want job)\b/.test(value)) {
+    if (/\bapply\b.*\b(that job|this job|the job)\b/.test(value)) return null;
     return response("conversation.workforce_help", "completed", "workforce", "I can help with work. Tell me the country and the kind of job, and I will show role options, skill gaps, training links, and the application step.", ["help me apply for a job", "prepare me for interview", "review my skills"]);
   }
   if (/\b(apply|application)\b.*\b(job|role|work)\b|\bhelp me apply\b/.test(value)) {
+    if (/\b(that job|this job|the job)\b/.test(value)) return null;
     return response("workforce.application_help", "needs-details", "workforce", "I opened job application support. Nexus can match a role, check missing skills, prepare the application, and save application evidence.", ["show me jobs", "prepare interview", "review gaps"]);
   }
   if (/\bbiochemistry|biology|chemistry|laboratory|lab\b/.test(value) && /\b(job|jobs|apply|work|role)\b/.test(value)) {
@@ -17259,6 +17271,17 @@ function platformWideVoiceAcceptanceResponse(db, user, text = "", lower = "", op
   }
   if (/\b(explain|show|describe)\b.*\b(your )?(brain|agent brain|nexus brain)\b/.test(value)) {
     return response("agent.brain_explained", "completed", "agent", "Nexus brain combines voice understanding, memory, workflow routing, reasoning proof, safety boundaries, provider truth, multilingual support, and next-step guidance across AgriNexus.", ["show reasoning proof", "what makes this different", "run live service check"]);
+  }
+  if (/\b(all 8|all eight|8 items|eight items|reasoning and language|language production|optimal reasoning|multilingual reasoning)\b/.test(value)) {
+    const moduleSignal = conversationModuleSignal(text);
+    const memories = retrieveAgentMemories(db.profile, text, 5);
+    const reasoning = aiReasoningSnapshot(db, user, text, moduleSignal, memories, options);
+    const engine = reasoningLanguageProductionEngine(db, user, text, { moduleSignal, memories, reasoning, targetLanguage: options.targetLanguage });
+    db.profile.agentMemory.lastReasoningLanguageProduction = engine;
+    db.profile.agentMemory.lastStatus = engine.status;
+    db.profile.agentMemory.lastSummary = `Reasoning and language production active at ${engine.readyCount}/${engine.total}.`;
+    db.profile.agentMemory.updatedAt = new Date().toISOString();
+    return response("conversation.reasoning_language_production", engine.status, "agent", `The Nexus reasoning and language brain is active at ${engine.readyCount} out of ${engine.total}. The 8 layers are live reasoning, translation, memory, reasoning before action, multilingual voice, role intelligence, human recovery, and evidence-based reasoning.`, ["show reasoning proof", "explain your brain"], { reasoning, reasoningLanguageProduction: engine });
   }
   if (/\b(show|explain|prove)\b.*\b(reasoning proof|decision trace|governance proof|reasoning)\b|\breasoning proof\b/.test(value)) {
     return response("conversation.reasoning_governance_status", "completed", "agent", "Reasoning proof is ready. Nexus records the command, module signal, confidence, safety boundary, provider truth, and next action so an admin or investor can inspect why it chose a route.", ["explain your brain", "show production readiness"]);
@@ -19037,11 +19060,11 @@ function knownAfricanCityLocation(text = "") {
 
 function musicAssistantIntent(text = "") {
   const lower = String(text || "").toLowerCase();
-  if (!/\b(play|open|find|search|start|put on|listen to)\b/.test(lower)) return null;
-  if (!/\b(music|song|songs|playlist|artist|album|soul|rnb|r&b|gospel|afrobeats|jazz|hip hop|hip-hop|reggae|rumba|luther|vandross|nigerian|congolese|kenyan|motivational|calm|training)\b/.test(lower)) return null;
+  if (!/\b(play|open|find|search|put on|listen to)\b/.test(lower)) return null;
+  if (!/\b(music|song|songs|playlist|artist|album|soul|rnb|r&b|gospel|afrobeats|jazz|hip hop|hip-hop|reggae|rumba|luther|vandross|nigerian|congolese|kenyan|motivational|calm)\b/.test(lower)) return null;
   const query = String(text || "")
     .replace(/\bnexus\b/ig, "")
-    .replace(/\b(can you|please|could you|would you|open|play|find|search|start|put on|listen to)\b/ig, " ")
+    .replace(/\b(can you|please|could you|would you|open|play|find|search|put on|listen to)\b/ig, " ")
     .replace(/\s+/g, " ")
     .trim() || "90s soul music playlist";
   return {
@@ -20522,7 +20545,8 @@ async function runAgentCommand(db, user, command, options = {}) {
       metadata: { conversationMode: true, redirectSection: "dashboard", suppressBehaviorNudge: true, suggestedReplies: ["I need a clinic", "my crop is bad", "start a course"] }
     };
   }
-  const spokenName = extractConversationalName(text);
+  const onboardingPhrase = /^(i am|i'm)\s+new\b/i.test(text) || /\b(how do i|where do i start|show me how|help me use|start training)\b/i.test(text);
+  const spokenName = onboardingPhrase ? "" : extractConversationalName(text);
   if (spokenName && /^(my name is|i am|i'm|call me)\b/i.test(text)) {
     db.profile.agentMemory.userName = spokenName;
     db.profile.agentMemory.userModel = { ...(db.profile.agentMemory.userModel || {}), name: spokenName, preferredInteraction: "voice-first", lastSeenAt: new Date().toISOString() };
@@ -20601,7 +20625,7 @@ async function runAgentCommand(db, user, command, options = {}) {
   if (platformVoiceAcceptance) return platformVoiceAcceptance;
   const resilientIntent = conversational ? resilientConversationIntent(db, user, text) : null;
   if (resilientIntent) return resilientIntent;
-  if (conversational && /\b(what can (?:you )?do|how can you help|what do you do)\b/.test(lower) && !/\b(farmer|farm|smallholder|grower)\b/.test(lower)) {
+  if (conversational && /\b(what can (?:you )?do|how can you help|what do you do)\b/.test(lower) && !/\b(agritrade|agri\s*trade|farmer|farm|smallholder|grower)\b/.test(lower)) {
     return {
       intent: "conversation.capability_summary",
       response: "I can listen in normal words, answer questions, open the right workspace, and guide health support, medicine access, crops, sales, jobs, learning, maps, reminders, and provider handoffs.",
@@ -20609,7 +20633,7 @@ async function runAgentCommand(db, user, command, options = {}) {
       metadata: { conversationMode: true, redirectSection: "agent", suppressBehaviorNudge: true, suggestedReplies: ["I need a doctor", "my crop is bad", "start a course", "open the map"] }
     };
   }
-  if (conversational && (/\b(what is|what's|explain|describe|tell me about|who are you|what do you do)\b.*\b(agrinexus|agri\s+nexus|nexus|platform)\b/.test(lower)
+  if (conversational && !/\b(agritrade|agri\s*trade)\b/.test(lower) && (/\b(what is|what's|explain|describe|tell me about|who are you|what do you do)\b.*\b(agrinexus|agri\s+nexus|nexus|platform)\b/.test(lower)
     || /\b(agrinexus|agri\s+nexus|nexus|platform)\b.*\b(what is|explain|describe|tell me about|what do you do|who are you)\b/.test(lower))) {
     db.profile.agentMemory.activeClarification = null;
     db.profile.agentMemory.activeRecovery = null;
@@ -20623,7 +20647,7 @@ async function runAgentCommand(db, user, command, options = {}) {
       metadata: { conversationMode: true, redirectSection: "agent", suppressBehaviorNudge: true, suggestedReplies: ["help a farmer", "I need a doctor", "help me sell my crop", "open map"] }
     };
   }
-  if (conversational && (/\b(what can (?:you )?do|how can you help|help)\b.*\b(farmer|farm|smallholder|grower)\b/.test(lower)
+  if (conversational && !/\b(start to finish|end to end|safely|safe|auto\s*pilot|autopilot)\b/.test(lower) && (/\b(what can (?:you )?do|how can you help|help)\b.*\b(farmer|farm|smallholder|grower)\b/.test(lower)
     || /\bwhat can you\b.*\b(farmer|farm|smallholder|grower)\b/.test(lower))) {
     return {
       intent: "conversation.farmer_help",
@@ -20647,6 +20671,22 @@ async function runAgentCommand(db, user, command, options = {}) {
       status: "completed",
       metadata: { conversationMode: true, redirectSection: "health", suppressBehaviorNudge: true, suggestedReplies: ["start caption relay", "start intake", "call provider"] }
     };
+  }
+  if (conversational && /\b(guide|support|walk|lead|coach)\b.*\b(farmer|student|patient|worker|learner|job seeker|caregiver)\b/.test(lower) && !/\b(start to finish|end to end|sell|payment|buyer)\b/.test(lower)) {
+    return roleGuidanceResponse(db, user, text);
+  }
+  if (conversational
+    && /\b(patient|caregiver|person|someone|grandma|elder|mother|child)\b/.test(lower)
+    && /\b(cannot hear|can't hear|cant hear|deaf|hearing|caption|captions|access|care access|needs care|need care)\b/.test(lower)) {
+    return stageAgentAction(db, text, {
+      module: "Healthcare",
+      tool: "health.accessibility_review",
+      action: "Prepare accessible telehealth",
+      section: "health",
+      planner: "memory-aware-accessibility-router",
+      confidence: 0.9,
+      rationale: "The request combines patient care access with hearing support, so Nexus should prepare captions, voice-first support, caregiver handoff, and low-bandwidth telehealth before intake."
+    });
   }
   if (conversational && /\b(help|support|care|assist)\b.*\b(patient|person|mother|father|grandma|elder|caregiver)\b|\b(patient|person|mother|father|grandma|elder|caregiver)\b.*\b(help|support|care|assist)\b/.test(lower)) {
     return {
@@ -20688,7 +20728,7 @@ async function runAgentCommand(db, user, command, options = {}) {
       metadata: { conversationMode: true, redirectSection: "health", suppressBehaviorNudge: true, suggestedReplies: ["find pharmacy", "start intake", "call provider"] }
     };
   }
-  if (conversational && /\b(crop|plant|field|maize|cassava|rice|beans|harvest)\b.*\b(bad|dying|yellow|sick|dry|pest|disease|wilting|weak)\b|\b(my crop is bad|crop is bad|crop bad|farm bad|plant sick)\b/.test(lower)) {
+  if (conversational && !/\b(auto\s*pilot|autopilot)\b/.test(lower) && /\b(crop|plant|field|maize|cassava|rice|beans|harvest)\b.*\b(bad|dying|yellow|sick|dry|pest|disease|wilting|weak)\b|\b(my crop is bad|crop is bad|crop bad|farm bad|plant sick)\b/.test(lower)) {
     return {
       intent: "conversation.crop_help",
       response: "I can help with the crop problem. Tell me the crop, where the farm is, and what you see: yellow leaves, dry soil, pests, spots, or wilting. I can guide a field scan, simple next steps, buyer evidence, and route planning.",
@@ -20696,7 +20736,7 @@ async function runAgentCommand(db, user, command, options = {}) {
       metadata: { conversationMode: true, redirectSection: "trade", suppressBehaviorNudge: true, suggestedReplies: ["run field scan", "explain crop problem", "contact buyer"] }
     };
   }
-  if (conversational && ((/\b(help me|i want to|i need to|need to|want to)?\s*(sell|market|trade)\b.*\b(crop|maize|rice|cassava|beans|produce|harvest|product)\b/.test(lower))
+  if (conversational && !/\b(start to finish|end to end|safely|safe)\b/.test(lower) && ((/\b(help me|i want to|i need to|need to|want to)?\s*(sell|market|trade)\b.*\b(crop|maize|rice|cassava|beans|produce|harvest|product)\b/.test(lower))
     || /\b(help me sell|sell my crop|sell maize|find buyer|talk to buyer|contact buyer)\b/.test(lower))) {
     return {
       intent: "conversation.crop_sale_help",
@@ -20705,7 +20745,7 @@ async function runAgentCommand(db, user, command, options = {}) {
       metadata: { conversationMode: true, redirectSection: "trade", suppressBehaviorNudge: true, suggestedReplies: ["maize in Kenya", "find a buyer", "track delivery"] }
     };
   }
-  if (conversational && /\b(i need|need|want|find|looking for|help me)\b.*\b(work|job|jobs|employment|role|paid work|shift)\b|\b(work|job|jobs|employment|role|paid work|shift)\b.*\b(help|apply|find|need|want)\b/.test(lower)) {
+  if (conversational && !/\bapply\b.*\b(that job|this job|the job)\b/.test(lower) && /\b(i need|need|want|find|looking for|help me)\b.*\b(work|job|jobs|employment|role|paid work|shift)\b|\b(work|job|jobs|employment|role|paid work|shift)\b.*\b(help|apply|find|need|want)\b/.test(lower)) {
     return {
       intent: "conversation.workforce_help",
       response: "I can help with work. Tell me the country and the kind of job, and I will show role options, skill gaps, training links, and the application step.",
@@ -20713,7 +20753,7 @@ async function runAgentCommand(db, user, command, options = {}) {
       metadata: { conversationMode: true, redirectSection: "workforce", suppressBehaviorNudge: true, suggestedReplies: ["show me jobs", "apply for a role", "review my skills"] }
     };
   }
-  if (conversational && /\b(start|begin|open|take|launch)?\s*(a\s+)?(course|lesson|training|class)\b|\b(i want to learn|teach me|start learning|help me learn)\b/.test(lower)) {
+  if (conversational && !/\b(i am new|i'm new|how do i|where do i start|show me how|walk me through|guide me)\b/.test(lower) && /\b(start|begin|open|take|launch)?\s*(a\s+)?(course|lesson|training|class)\b|\b(i want to learn|teach me|start learning|help me learn)\b/.test(lower)) {
     return {
       intent: "conversation.learning_start",
       response: "I can help you learn. Tell me the skill you want, or I can start the recommended course and read it with captions or audio.",
@@ -20813,8 +20853,8 @@ async function runAgentCommand(db, user, command, options = {}) {
       metadata: { memories, longTermMemory: summary }
     };
   }
-  if (/\b(what is|what's|explain|describe|tell me about|who are you|what do you do)\b.*\b(agrinexus|agri\s+nexus|nexus|platform)\b/.test(lower)
-    || /\b(agrinexus|agri\s+nexus|nexus)\b.*\b(what is|explain|describe|tell me about|what do you do|who are you)\b/.test(lower)) {
+  if (!/\b(agritrade|agri\s*trade)\b/.test(lower) && (/\b(what is|what's|explain|describe|tell me about|who are you|what do you do)\b.*\b(agrinexus|agri\s+nexus|nexus|platform)\b/.test(lower)
+    || /\b(agrinexus|agri\s+nexus|nexus)\b.*\b(what is|explain|describe|tell me about|what do you do|who are you)\b/.test(lower))) {
     db.profile.agentMemory.activeClarification = null;
     db.profile.agentMemory.activeRecovery = null;
     db.profile.agentMemory.lastStatus = "platform-explained";
@@ -21074,8 +21114,18 @@ async function runAgentCommand(db, user, command, options = {}) {
     };
   }
   if (conversational && db.profile.agentMemory.activeClarification) {
-    const clarified = continueClarification(db, user, text);
-    if (clarified) return clarified;
+    const clearActionOverride = invokedAgriNexus
+      && /\b(message|contact|call|open|start|track|show|run|sell|buy|apply|complete|issue|create|help|find)\b/.test(lower)
+      && /\b(buyer|seller|clinic|doctor|medicine|pharmacy|course|lesson|job|work|map|route|shipment|crop|provider|intake)\b/.test(lower);
+    if (clearActionOverride) {
+      db.profile.agentMemory.activeClarification = null;
+      db.profile.agentMemory.lastStatus = "clarification-overridden";
+      db.profile.agentMemory.lastSummary = `Clarification paused so Nexus could handle: ${text}`;
+      db.profile.agentMemory.updatedAt = new Date().toISOString();
+    } else {
+      const clarified = continueClarification(db, user, text);
+      if (clarified) return clarified;
+    }
   }
   if (conversational && db.profile.agentMemory.activeRecovery) {
     const recovered = continueVoiceRecovery(db, user, text);

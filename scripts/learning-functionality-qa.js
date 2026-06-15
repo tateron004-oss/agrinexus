@@ -1,4 +1,4 @@
-﻿const fs = require("fs");
+const fs = require("fs");
 
 function assert(condition, message) {
   if (!condition) {
@@ -58,9 +58,9 @@ const server = fs.readFileSync("server.js", "utf8");
   assert(!styles.includes(`.${oldMarker}`), `Learning styles should not use old card marker: ${oldMarker}`);
 });
 
-assert(html.includes("nexus-behavior-260"), "Index must force latest learning functionality build");
-assert(app.includes("nexus-behavior-260"), "App must expose latest learning functionality build");
-assert(fs.readFileSync("public/sw.js", "utf8").includes("agrinexus-pwa-v240"), "Service worker cache must be bumped for learning functionality");
+assert(html.includes("nexus-behavior-261"), "Index must force latest learning functionality build");
+assert(app.includes("nexus-behavior-261"), "App must expose latest learning functionality build");
+assert(fs.readFileSync("public/sw.js", "utf8").includes("agrinexus-pwa-v241"), "Service worker cache must be bumped for learning functionality");
 
 console.log("Learning functionality QA passed");
 

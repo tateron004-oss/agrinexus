@@ -14,6 +14,9 @@ const iosController = read("native-mobile/ios/AgriNexus/NexusWebViewController.s
 const iosRuntime = read("native-mobile/ios/AgriNexus/NexusVoiceRuntime.swift");
 const injectedBridge = read("native-mobile/bridge/agrinexus-native-voice.js");
 const readme = read("native-mobile/README.md");
+const desktopRuntime = JSON.parse(read("native-desktop/desktop-runtime.json"));
+const desktopReadme = read("native-desktop/README.md");
+const windowsWakeListener = read("native-desktop/windows/NexusWakeListener.ps1");
 
 const checks = [
   ["bridge contract exists", bridge.nativeEvents.includes("voice.final_transcript") && bridge.webCommands.includes("wake.start")],
@@ -26,7 +29,10 @@ const checks = [
   ["ios webview bridge", iosController.includes("WKScriptMessageHandler") && iosController.includes("agrinexusNative") && iosController.includes("/api/native/voice-runtime")],
   ["ios voice runtime", iosRuntime.includes("SFSpeechRecognizer") && iosRuntime.includes("AVAudioEngine") && iosRuntime.includes("voice.final_transcript")],
   ["web to native shim", injectedBridge.includes("window.AgriNexusNativeVoice") && injectedBridge.includes("wake.start") && injectedBridge.includes("permissions.request")],
-  ["documentation", readme.includes("OS microphone permission") && readme.includes("visible listening indicator")]
+  ["documentation", readme.includes("OS microphone permission") && readme.includes("visible listening indicator")],
+  ["desktop runtime contract", bridge.nativeRuntimeSource?.desktop === "native-desktop" && desktopRuntime.platforms.windows.entrypoint === "native-desktop/windows/NexusWakeListener.ps1"],
+  ["desktop visible wake listener", windowsWakeListener.includes("System.Speech") && windowsWakeListener.includes("visible listener") && windowsWakeListener.includes("AGRINEXUS_SESSION_COOKIE") && windowsWakeListener.includes("/api/agent/command")],
+  ["desktop documentation", desktopReadme.includes("Chrome is closed") && desktopReadme.includes("SessionCookie")]
 ];
 
 const missing = checks.filter(([, ok]) => !ok).map(([name]) => name);

@@ -35,6 +35,7 @@
     "app:cloud-agent-qa": "node scripts/cloud-agent-qa.js",
     "app:mobile-native-qa": "node scripts/mobile-native-qa.js",
     "app:native-runtime-qa": "node scripts/native-mobile-runtime-qa.js",
+    "app:native-desktop-qa": "node scripts/native-desktop-runtime-qa.js",
     "platform:integrity-stress": "node scripts/platform-integrity-stress.js",
     "placeholder:audit": "node scripts/no-placeholder-audit.js",
     "stabilization:gate": "node scripts/stabilization-gate.js",
