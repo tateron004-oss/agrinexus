@@ -65,8 +65,8 @@ let routeTrackingWatchId = null;
 let routeTrackingPoints = [];
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-240";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v220";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-241";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v221";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
 const VOICE_ATTENTION_DELAY_MS = 900;
@@ -8185,6 +8185,21 @@ function normalizeToolText(value = "") {
     .replace(/[^a-z0-9\s-]/g, " ")
     .replace(/\s+/g, " ")
     .trim();
+}
+
+function normalizeSpeechForIntent(value = "") {
+  return String(value || "")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^\p{L}\p{N}\s]/gu, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function speechSignalMatches(value = "", signals = []) {
+  const text = normalizeSpeechForIntent(value);
+  return signals.some(signal => signal instanceof RegExp ? signal.test(text) : text.includes(normalizeSpeechForIntent(signal)));
 }
 
 function isPlatformExplainVoiceCommand(command = "") {
@@ -18014,11 +18029,50 @@ function nexusPlatformExplainAnswer() {
   return "AgriNexus helps people use farming, health access, learning, jobs, trade, maps, and local services by voice. Nexus is the assistant inside it: it listens, answers in simple words, opens the right service, and guides the next step.";
 }
 
+function nexusResilientConversationIntent(command = "") {
+  const text = normalizeSpeechForIntent(command);
+  if (!text) return null;
+  const has = signals => speechSignalMatches(text, signals);
+  const capability = [/\bwhat can (?:you )?do\b/, /\bwhat you do\b/, /\byou can do what\b/, /\bhow help\b/, "que puedes hacer", "que haces", "que peux tu faire", "que fais tu", "unaweza kufanya nini", "unafanya nini", "o que voce pode fazer", "ماذا تفعل", "ماذا تستطيع", "ماذا يمكنك"];
+  const medicine = [/\b(need|want|find|get|help)\s+(medicine|medication|pills|drug|refill|pharmacy)\b/, /\b(medicine|medication|pills|drug|refill|pharmacy)\s+(need|want|help|please|where)\b/, "dawa", "medicina", "medicamento", "remedio", "medicament", "pharmacie", "nahitaji dawa", "nina hitaji dawa", "necesito medicina", "preciso remedio", "دواء", "صيدلية", "ادوية", "أدوية"];
+  const clinic = [/\b(clinic|hospital|health center|health centre)\s+(near|nearby|closest|where|find|map|please)\b/, /\b(near|nearby|closest|where|find|map)\s+(clinic|hospital|health center|health centre)\b/, "clinic near", "find clinic", "clinica cerca", "clinique pres", "kliniki karibu", "hospitali karibu", "عيادة", "مستشفى", "clinica perto"];
+  const doctor = [/\b(need|want|see|call|talk|speak|find|help)\s+(doctor|nurse|provider|clinician)\b/, /\b(doctor|nurse|provider|clinician)\s+(need|please|help|call|where)\b/, "doctor please", "daktari", "medico", "docteur", "infirmier", "enfermera", "طبيب", "دكتور", "ممرض"];
+  const cropBad = [/\b(crop|farm|field|plant|maize|cassava|rice|beans|harvest|shamba)\s+(bad|sick|dying|yellow|dry|pest|bugs|problem|weak)\b/, /\b(bad|sick|dying|yellow|dry|pest|bugs|problem|weak)\s+(crop|farm|field|plant|maize|cassava|rice|beans|harvest|shamba)\b/, "crop bad", "farm bad", "maize yellow", "shamba mbaya", "cultivo malo", "cosecha mala", "recolte mauvaise", "campo ruim", "محصول سيء", "زرع مريض"];
+  const cropSale = [/\b(sell|selling|market|buyer|trade)\s+(crop|maize|cassava|rice|beans|produce|harvest|product)\b/, /\b(crop|maize|cassava|rice|beans|produce|harvest|product)\s+(sell|buyer|market|trade)\b/, "sell crop", "buyer crop", "vender cosecha", "vendo cosecha", "vendre recolte", "kuuza mazao", "nataka kuuza", "بيع المحصول", "comprador", "acheteur", "mnunuzi"];
+  const work = [/\b(need|want|find|looking|help)\s+(work|job|jobs|employment|role|paid work)\b/, /\b(work|job|jobs|employment|role|paid work)\s+(need|want|please|help|find)\b/, "job please", "work please", "kazi", "nataka kazi", "trabajo", "empleo", "travail", "emploi", "preciso trabalho", "عمل", "وظيفة"];
+  const learning = [/\b(start|begin|open|take|need|want|help)\s+(course|lesson|training|class|learn|learning)\b/, /\b(course|lesson|training|class|learn|learning)\s+(start|begin|please|help|want|need)\b/, "teach me", "want learn", "i no understand lesson", "curso", "leccion", "cours", "lecon", "somo", "kujifunza", "aprender", "تعلم", "دورة"];
+  const map = [/\b(open|show|find|need|want)\s+(map|route|location|tracking)\b/, /\b(map|route|location|tracking)\s+(open|show|please|where|need)\b/, "open map", "map please", "show route", "mapa", "carte", "ramani", "rota", "خريطة", "طريق", "موقع"];
+  if (has(capability) && has(["farmer", "farm", "smallholder", "grower"])) {
+    return {
+      type: "answer",
+      response: "For a farmer, I can explain crop problems in plain words, help sell a harvest, prepare buyer messages, show route support, open the map, guide field evidence, and suggest the next safe step.",
+      suggestions: ["my crop is bad", "sell my crop", "show route", "open map"]
+    };
+  }
+  if (has(capability)) {
+    return {
+      type: "answer",
+      response: "I can listen in normal words, answer questions, open the right workspace, and guide health support, medicine access, crops, sales, jobs, learning, maps, reminders, and provider handoffs.",
+      suggestions: ["I need a doctor", "my crop is bad", "start a course", "open the map"]
+    };
+  }
+  if (has(clinic)) return { type: "direct", directAction: "clinic-help", response: "I opened clinic support. Tell me your village, city, or nearest landmark, and I will guide the clinic, mobile clinic, or map route." };
+  if (has(doctor)) return { type: "direct", directAction: "doctor-help", response: "I'm with you. I opened doctor support. Tell me what happened, where you are, and whether you need phone, WhatsApp, video, clinic, or pharmacy help. This is not a diagnosis." };
+  if (has(medicine)) return { type: "direct", directAction: "medicine-help", response: "I can help with medicine access. I opened pharmacy support. Tell me the medicine name if you know it, where you are, and whether a provider should review it. I cannot prescribe." };
+  if (has(cropBad)) return { type: "direct", directAction: "crop-help", response: "I can help with the crop problem. I'm with you. I opened crop support. Tell me the crop, where the farm is, and what looks wrong." };
+  if (has(cropSale)) return { type: "workflow", workflow: "trade", action: "buyer-contact", response: "I can help sell the crop. I opened buyer support. Tell me the crop, quantity, location, and buyer if you know one. I will help prepare the sale and delivery tracking.", dataset: { productId: firstProduct()?.id } };
+  if (has(work)) return { type: "workflow", workflow: "workforce", action: "build-profile", response: "I can help with work. I opened job support. Tell me your country, the job you want, and your skills. I will show the role path and application step.", dataset: { roleId: firstEligibleRole()?.id } };
+  if (has(learning)) return { type: "workflow", workflow: "learning", action: "start", response: "I can help you learn. I opened course support. Tell me the skill you want, or I can start the recommended course with captions or audio.", dataset: {} };
+  if (has(map)) return { type: "direct", directAction: "full-map", response: "Full map is open. You can zoom, drag, find facilities, check routes, and track shipments." };
+  return null;
+}
+
 function nexusConversationFirstIntent(command = "") {
   const lower = normalizeToolText(command);
-  if (!lower) return null;
   const name = userFirstName();
   const has = words => words.some(word => new RegExp(`\\b${word}\\b`).test(lower));
+  const resilientIntent = nexusResilientConversationIntent(command);
+  if (!lower) return resilientIntent || null;
   if (/^(home|go home|nexus home|agrinexus home|agri nexus home|open home|main screen|dashboard|back home|take me home)$/.test(lower)
     || /\b(main menu|menu)(?:\s+(home|dashboard))?\b/.test(lower)
     || /\b(open|go|return|take me|back)\b.*\b(home|dashboard|main screen|main menu|menu)\b/.test(lower)) {
@@ -18028,6 +18082,7 @@ function nexusConversationFirstIntent(command = "") {
       response: `Home is open, ${name}. What do you need next?`
     };
   }
+  if (resilientIntent) return resilientIntent;
   const exactGreeting = /^(hello|hi|hey|good morning|goodmorning|good afternoon|goodafternoon|good evening|goodevening|hola|buenos dias|buenas tardes|bonjour|salut|habari|hujambo|ola|oi|bom dia|boa tarde)\b(?:\s+(nexus|agrinexus|agri nexus|agri))?$/.test(lower);
   if (exactGreeting) {
     return {

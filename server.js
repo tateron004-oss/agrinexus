@@ -16711,6 +16711,167 @@ function localizedWorkflowPhrase(lower) {
   return phrases.find(item => item.patterns.some(pattern => normalized.includes(pattern)))?.command || "";
 }
 
+function normalizeSpeechForIntent(value = "") {
+  return String(value || "")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^\p{L}\p{N}\s]/gu, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function hasSpeechSignal(text = "", signals = []) {
+  const value = normalizeSpeechForIntent(text);
+  return signals.some(signal => {
+    if (signal instanceof RegExp) return signal.test(value);
+    return value.includes(normalizeSpeechForIntent(signal));
+  });
+}
+
+function resilientConversationIntent(db, user, rawText = "") {
+  const text = normalizeSpeechForIntent(rawText);
+  if (!text) return null;
+  const metadataBase = { conversationMode: true, suppressBehaviorNudge: true, resilientSpeech: true };
+  const has = signals => hasSpeechSignal(text, signals);
+  const capabilitySignals = [
+    /\bwhat can (?:you )?do\b/, /\bwhat you do\b/, /\byou can do what\b/, /\bhow help\b/,
+    "que puedes hacer", "que haces", "que hace", "que peut tu faire", "que peux tu faire", "que fais tu",
+    "unaweza kufanya nini", "unafanya nini", "o que voce pode fazer", "o que faz",
+    "ماذا تفعل", "ماذا تستطيع", "ماذا يمكنك"
+  ];
+  const medicineSignals = [
+    /\b(need|want|find|get|help)\s+(medicine|medication|pills|drug|refill|pharmacy)\b/,
+    /\b(medicine|medication|pills|drug|refill|pharmacy)\s+(need|want|help|please|where)\b/,
+    "dawa", "medicina", "medicamento", "remedio", "medicament", "medicaments", "pharmacie",
+    "nahitaji dawa", "nina hitaji dawa", "necesito medicina", "preciso remedio",
+    "دواء", "صيدلية", "ادوية", "أدوية"
+  ];
+  const clinicSignals = [
+    /\b(clinic|hospital|health center|health centre)\s+(near|nearby|closest|where|find|map|please)\b/,
+    /\b(near|nearby|closest|where|find|map)\s+(clinic|hospital|health center|health centre)\b/,
+    "clinic near", "find clinic", "clinic please", "clinica cerca", "clinica", "clinique pres", "clinique",
+    "kliniki karibu", "hospitali karibu", "عيادة", "مستشفى", "clinica perto"
+  ];
+  const doctorSignals = [
+    /\b(need|want|see|call|talk|speak|find|help)\s+(doctor|nurse|provider|clinician)\b/,
+    /\b(doctor|nurse|provider|clinician)\s+(need|please|help|call|where)\b/,
+    "doctor please", "daktari", "medico", "medica", "docteur", "infirmier", "enfermera",
+    "طبيب", "دكتور", "ممرض"
+  ];
+  const cropProblemSignals = [
+    /\b(crop|farm|field|plant|maize|cassava|rice|beans|harvest|shamba)\s+(bad|sick|dying|yellow|dry|pest|bugs|problem|weak)\b/,
+    /\b(bad|sick|dying|yellow|dry|pest|bugs|problem|weak)\s+(crop|farm|field|plant|maize|cassava|rice|beans|harvest|shamba)\b/,
+    "crop bad", "farm bad", "maize yellow", "shamba mbaya", "mimea mbaya", "cultivo malo", "cosecha mala",
+    "recolte mauvaise", "campo ruim", "محصول سيء", "زرع مريض"
+  ];
+  const cropSaleSignals = [
+    /\b(sell|selling|market|buyer|trade)\s+(crop|maize|cassava|rice|beans|produce|harvest|product)\b/,
+    /\b(crop|maize|cassava|rice|beans|produce|harvest|product)\s+(sell|buyer|market|trade)\b/,
+    "sell crop", "buyer crop", "vender cosecha", "vendo cosecha", "vendre recolte", "kuuza mazao",
+    "nataka kuuza", "بيع المحصول", "comprador", "acheteur", "mnunuzi"
+  ];
+  const workSignals = [
+    /\b(need|want|find|looking|help)\s+(work|job|jobs|employment|role|paid work)\b/,
+    /\b(work|job|jobs|employment|role|paid work)\s+(need|want|please|help|find)\b/,
+    "job please", "work please", "kazi", "nataka kazi", "trabajo", "empleo", "travail", "emploi",
+    "preciso trabalho", "عمل", "وظيفة"
+  ];
+  const learningSignals = [
+    /\b(start|begin|open|take|need|want|help)\s+(course|lesson|training|class|learn|learning)\b/,
+    /\b(course|lesson|training|class|learn|learning)\s+(start|begin|please|help|want|need)\b/,
+    "teach me", "want learn", "i no understand lesson", "curso", "leccion", "cours", "lecon",
+    "somo", "kujifunza", "aprender", "تعلم", "دورة"
+  ];
+  const mapSignals = [
+    /\b(open|show|find|need|want)\s+(map|route|location|tracking)\b/,
+    /\b(map|route|location|tracking)\s+(open|show|please|where|need)\b/,
+    "open map", "map please", "show route", "mapa", "carte", "ramani", "rota", "خريطة", "طريق", "موقع"
+  ];
+
+  if (has(capabilitySignals) && has(["farmer", "farm", "smallholder", "grower"])) {
+    return {
+      intent: "conversation.farmer_help",
+      response: "For a farmer, I can help check a bad crop, explain drone or field data, find a buyer, compare route risk, track a shipment, and prepare sale evidence. Tell me the crop and where the farm is.",
+      status: "completed",
+      metadata: { ...metadataBase, redirectSection: "trade", suggestedReplies: ["my crop is bad", "find a buyer", "track my shipment"] }
+    };
+  }
+  if (has(capabilitySignals)) {
+    return {
+      intent: "conversation.capability_summary",
+      response: "I can listen in normal words, answer questions, open the right workspace, and guide health support, medicine access, crops, sales, jobs, learning, maps, reminders, and provider handoffs.",
+      status: "completed",
+      metadata: { ...metadataBase, redirectSection: "agent", suggestedReplies: ["I need a doctor", "my crop is bad", "start a course", "open the map"] }
+    };
+  }
+  if (has(clinicSignals)) {
+    return {
+      intent: "conversation.clinic_map_help",
+      response: "I can show clinic or pharmacy support on the map. Share your village, city, or location, and I will guide the closest facility route.",
+      status: "needs-location",
+      metadata: { ...metadataBase, redirectSection: "map", suggestedReplies: ["use my location", "find clinic", "find pharmacy"] }
+    };
+  }
+  if (has(doctorSignals)) {
+    return {
+      intent: "conversation.doctor_help",
+      response: "I can help you reach care support. Tell me what is happening, where you are, and whether you need phone, WhatsApp, video, clinic, or pharmacy help. This is not a diagnosis.",
+      status: "needs-details",
+      metadata: { ...metadataBase, redirectSection: "health", suggestedReplies: ["start intake", "find clinic", "call provider"] }
+    };
+  }
+  if (has(medicineSignals)) {
+    return {
+      intent: "conversation.medicine_help",
+      response: "I can help with medicine access, but I cannot prescribe. Tell me what medicine or health concern, and where you are. I can look for pharmacy support, clinic handoff, or provider review.",
+      status: "needs-location",
+      metadata: { ...metadataBase, redirectSection: "health", suggestedReplies: ["find pharmacy", "start intake", "call provider"] }
+    };
+  }
+  if (has(cropProblemSignals)) {
+    return {
+      intent: "conversation.crop_help",
+      response: "I can help with the crop problem. Tell me the crop, where the farm is, and what you see: yellow leaves, dry soil, pests, spots, or wilting. I can guide a field scan, simple next steps, buyer evidence, and route planning.",
+      status: "completed",
+      metadata: { ...metadataBase, redirectSection: "trade", suggestedReplies: ["run field scan", "explain crop problem", "contact buyer"] }
+    };
+  }
+  if (has(cropSaleSignals)) {
+    return {
+      intent: "conversation.crop_sale_help",
+      response: "I can help sell the crop. Tell me the crop, quantity, location, and buyer if you know one. I will help prepare the sale and delivery tracking.",
+      status: "needs-details",
+      metadata: { ...metadataBase, redirectSection: "trade", suggestedReplies: ["maize in Kenya", "find a buyer", "track delivery"] }
+    };
+  }
+  if (has(workSignals)) {
+    return {
+      intent: "conversation.workforce_help",
+      response: "I can help with work. Tell me the country and the kind of job, and I will show role options, skill gaps, training links, and the application step.",
+      status: "completed",
+      metadata: { ...metadataBase, redirectSection: "workforce", suggestedReplies: ["show me jobs", "apply for a role", "review my skills"] }
+    };
+  }
+  if (has(learningSignals)) {
+    return {
+      intent: "conversation.learning_start",
+      response: "I can help you learn. Tell me the skill you want, or I can start the recommended course and read it with captions or audio.",
+      status: "needs-topic",
+      metadata: { ...metadataBase, redirectSection: "learning", suggestedReplies: ["start recommended course", "build captions", "read the lesson"] }
+    };
+  }
+  if (has(mapSignals)) {
+    return {
+      intent: "conversation.map_open",
+      response: "Full map is open. You can zoom, drag, find facilities, check routes, and track shipments.",
+      status: "completed",
+      metadata: { ...metadataBase, redirectSection: "map", suggestedReplies: ["find clinic near me", "track shipment", "show trade route"] }
+    };
+  }
+  return null;
+}
+
 function stagePhoneContactCall(db, command, contact, purpose = "") {
   const cleanPurpose = purpose || `call ${contact.name}`;
   const section = /(doctor|nurse|clinic|health|medicine|pharmacy|medical)/i.test(contact.relationship || cleanPurpose) ? "health"
@@ -19990,6 +20151,8 @@ async function runAgentCommand(db, user, command, options = {}) {
       metadata: { conversationMode: true, redirectSection: "dashboard", suppressBehaviorNudge: true, suggestedReplies: ["I need medicine", "help me sell my crop", "start a course", "open the map"] }
     };
   }
+  const resilientIntent = conversational ? resilientConversationIntent(db, user, text) : null;
+  if (resilientIntent) return resilientIntent;
   if (conversational && /\b(what can (?:you )?do|how can you help|what do you do)\b/.test(lower) && !/\b(farmer|farm|smallholder|grower)\b/.test(lower)) {
     return {
       intent: "conversation.capability_summary",
