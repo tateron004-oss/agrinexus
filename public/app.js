@@ -20,11 +20,16 @@ let voiceRecognition = null;
 let lastVoiceResponse = "Ready for a command.";
 let voiceFirstMode = localStorage.getItem("agrinexusVoiceFirst") !== "off";
 let voiceDemoQuietMode = localStorage.getItem("agrinexusDemoQuiet") === "on";
+let voiceStreamingMode = localStorage.getItem("agrinexusStreamingVoice") !== "off";
 let voiceAutoRestart = voiceFirstMode;
 let voiceStopRequested = false;
 let voiceSpeaking = false;
 let voiceResumeAfterSpeech = false;
 let voiceConversationPaused = false;
+let voiceInterimTranscript = "";
+let voiceInterimStartedAt = 0;
+let voiceLastPartialAt = 0;
+let voiceFinalDebounceTimer = null;
 let lastSpokenText = "";
 let lastSpokenAt = 0;
 let lastVoiceResponseAt = 0;
@@ -43,6 +48,8 @@ let pendingNexusSpokenCommand = null;
 let confirmedVoiceActionActive = false;
 let pendingNexusAnswerContext = null;
 let nexusAwaitingCommand = false;
+let nativeVoiceBridgeReady = false;
+let nativeVoiceSession = JSON.parse(localStorage.getItem("agrinexusNativeVoiceSession") || "null");
 let agentPerformanceState = {
   lastCommand: "",
   spokenCommand: "",
@@ -69,13 +76,15 @@ let routeTrackingWatchId = null;
 let routeTrackingPoints = [];
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-254";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v234";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-255";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v235";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
 const VOICE_ATTENTION_DELAY_MS = 900;
 const VOICE_POST_STOP_REDIRECT_DELAY_MS = 80;
 const VOICE_UI_RESUME_DELAYS_MS = [180, 650, 1500, 3200, 5200];
+const VOICE_FINAL_DEBOUNCE_MS = 120;
+const VOICE_PARTIAL_BARGE_IN_MIN_CHARS = 4;
 const OPENAI_TTS_VOICE_FALLBACK = "coral";
 const OPENAI_TTS_VOICE_CHOICES = new Set(["alloy", "ash", "ballad", "coral", "echo", "fable", "nova", "onyx", "sage", "shimmer", "verse"]);
 
@@ -16765,10 +16774,141 @@ function nexusListeningReadyMessage() {
     : "Nexus is ready. Press Mic or type your next question.";
 }
 
+function streamingVoiceEnabled() {
+  return Boolean(voiceStreamingMode && voiceFirstMode && !voiceDemoQuietMode);
+}
+
+function setStreamingVoiceEnabled(enabled = true, reason = "") {
+  voiceStreamingMode = Boolean(enabled);
+  localStorage.setItem("agrinexusStreamingVoice", voiceStreamingMode ? "on" : "off");
+  updateNativeVoiceBridgeState(voiceStreamingMode ? "streaming-ready" : "streaming-off", { reason });
+  refreshMicSupport();
+}
+
+function normalizeVoicePartial(text = "") {
+  return String(text || "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function nativeVoiceBridge() {
+  return window.AgriNexusNativeVoice
+    || window.NexusNativeVoice
+    || window.ReactNativeWebView
+    || window.webkit?.messageHandlers?.agrinexusVoice
+    || null;
+}
+
+function postNativeVoiceMessage(bridge, payload) {
+  try {
+    if (typeof bridge?.onNexusVoiceState === "function") {
+      bridge.onNexusVoiceState(payload);
+      return true;
+    }
+    if (typeof bridge?.onVoiceState === "function") {
+      bridge.onVoiceState(payload);
+      return true;
+    }
+    if (typeof bridge?.postMessage === "function") {
+      bridge.postMessage(JSON.stringify(payload));
+      return true;
+    }
+    if (typeof bridge?.postMessage === "object" && typeof bridge.postMessage?.postMessage === "function") {
+      bridge.postMessage.postMessage(JSON.stringify(payload));
+      return true;
+    }
+  } catch (error) {
+    console.warn("Native voice bridge update failed", error);
+  }
+  return false;
+}
+
+function updateNativeVoiceBridgeState(state, payload = {}) {
+  const bridge = nativeVoiceBridge();
+  nativeVoiceBridgeReady = Boolean(bridge);
+  const session = {
+    id: nativeVoiceSession?.id || `voice-${Date.now()}`,
+    state,
+    build: AGRINEXUS_BUILD_VERSION,
+    streaming: streamingVoiceEnabled(),
+    voiceFirst: voiceFirstMode,
+    locale: voiceLocale(),
+    language: languageCode(),
+    updatedAt: new Date().toISOString(),
+    ...payload
+  };
+  nativeVoiceSession = session;
+  localStorage.setItem("agrinexusNativeVoiceSession", JSON.stringify(session));
+  if (bridge) postNativeVoiceMessage(bridge, { type: "agrinexus.voice.state", ...session });
+  return session;
+}
+
+function registerNativeVoiceSession(reason = "web-voice-session") {
+  nativeVoiceSession = {
+    id: `voice-${Date.now()}`,
+    build: AGRINEXUS_BUILD_VERSION,
+    state: "ready",
+    reason,
+    streaming: streamingVoiceEnabled(),
+    voiceFirst: voiceFirstMode,
+    locale: voiceLocale(),
+    language: languageCode(),
+    updatedAt: new Date().toISOString()
+  };
+  localStorage.setItem("agrinexusNativeVoiceSession", JSON.stringify(nativeVoiceSession));
+  updateNativeVoiceBridgeState("ready", { reason });
+  return nativeVoiceSession;
+}
+
+function nativeVoiceReadinessSummary() {
+  const bridge = nativeVoiceBridge();
+  const mode = streamingVoiceEnabled() ? "streaming web voice is on" : "streaming web voice is off";
+  const native = bridge ? "native bridge is detected" : "native bridge hooks are ready for the mobile app shell";
+  return `${mode}; ${native}; locale ${voiceLocale()}.`;
+}
+
+function shouldBargeInFromPartial(text = "") {
+  const partial = normalizeVoicePartial(text);
+  if (partial.length < VOICE_PARTIAL_BARGE_IN_MIN_CHARS) return false;
+  if (isLikelyNexusSelfEcho(partial)) return false;
+  const lower = normalizeToolText(partial);
+  if (isGlobalStopCommand(lower)) return true;
+  if (answerChoiceFromSpeech(partial)) return true;
+  if (/\b(nexus|agrinexus|doctor|medicine|clinic|work|job|course|learn|crop|sell|buyer|map|route|stop|yes|no)\b/.test(lower)) return true;
+  return partial.split(/\s+/).filter(Boolean).length >= 4;
+}
+
+function updateStreamingVoicePartial(text = "", options = {}) {
+  const partial = normalizeVoicePartial(text);
+  if (!partial) return;
+  voiceInterimTranscript = partial;
+  voiceLastPartialAt = Date.now();
+  if (!voiceInterimStartedAt) voiceInterimStartedAt = voiceLastPartialAt;
+  const message = `Hearing: ${partial}`;
+  ["#globalVoiceOutputStatus", "#voiceTranscript", "#jarvisSummary"].forEach(selector => {
+    const element = $(selector);
+    if (element) element.textContent = translateText(message);
+  });
+  updateNativeVoiceBridgeState("partial", { transcript: partial, source: options.source || "web-speech" });
+  if (voiceSpeaking && shouldBargeInFromPartial(partial)) {
+    stopVoicePlayback({ hard: true });
+    updateNexusBehaviorLayer("listening", "Nexus stopped speaking because it heard a new human phrase.");
+    const outputStatus = $("#globalVoiceOutputStatus");
+    if (outputStatus) outputStatus.textContent = translateText("I stopped. Listening to your new phrase.");
+  }
+}
+
+function clearStreamingVoicePartial() {
+  voiceInterimTranscript = "";
+  voiceInterimStartedAt = 0;
+  voiceLastPartialAt = 0;
+}
+
 function resumeVoiceListeningAfterSpeech(playbackToken, interruptToken) {
   if (playbackToken !== voicePlaybackToken || interruptToken !== voiceInterruptToken) return;
   voiceSpeaking = false;
   voiceAutoRestart = voiceFirstMode;
+  updateNativeVoiceBridgeState(voiceFirstMode ? "listening-ready" : "standby", { reason: "speech-finished" });
   const message = nexusListeningReadyMessage();
   const outputStatus = $("#globalVoiceOutputStatus");
   if (outputStatus) outputStatus.textContent = translateText(message);
@@ -16811,6 +16951,7 @@ function stopVoicePlayback(options = {}) {
   if ("speechSynthesis" in window) window.speechSynthesis.cancel();
   voiceSpeaking = false;
   voiceAutoRestart = voiceFirstMode;
+  updateNativeVoiceBridgeState(options.hard ? "interrupted" : "speech-stopped", { reason: options.reason || "voice-playback-stop" });
 }
 
 function voiceResponseSignature(text = "") {
@@ -16912,7 +17053,8 @@ function speakVoiceResponse(textOverride) {
   lastSpokenAt = now;
   stopVoicePlayback();
   const keepListeningForAnswer = shouldKeepListeningDuringSpeech(compact);
-  if (voiceRecognition && !keepListeningForAnswer) {
+  const keepStreamingOpen = streamingVoiceEnabled();
+  if (voiceRecognition && !keepListeningForAnswer && !keepStreamingOpen) {
     const activeRecognition = voiceRecognition;
     voiceRecognition = null;
     voiceAutoRestart = false;
@@ -16924,7 +17066,8 @@ function speakVoiceResponse(textOverride) {
   }
   const playbackToken = ++voicePlaybackToken;
   voiceSpeaking = true;
-  voiceAutoRestart = keepListeningForAnswer || false;
+  voiceAutoRestart = keepListeningForAnswer || keepStreamingOpen || false;
+  updateNativeVoiceBridgeState("speaking", { text: compact.slice(0, 180), keepListening: voiceAutoRestart });
   const updateVoiceOutputStatus = message => {
     const localStatus = $("#voicePlaybackStatus");
     const globalStatus = $("#globalVoiceOutputStatus");
@@ -17012,6 +17155,7 @@ function refreshMicSupport() {
   const languageName = voiceLanguageName();
   const locale = voiceLocale();
   const status = $("#globalMicStatus");
+  const streamingStatus = streamingVoiceEnabled() ? " Streaming mode is on." : "";
   if (status) {
     status.classList.toggle("ready", ready);
     status.classList.toggle("blocked", !ready);
@@ -17020,7 +17164,7 @@ function refreshMicSupport() {
       : voiceDemoQuietMode
       ? "Demo quiet mode is on. Nexus voice and auto-listening are off."
       : ready
-      ? `Microphone ready for ${languageName} (${locale}). Click Mic, then allow browser access.`
+      ? `Microphone ready for ${languageName} (${locale}). Click Mic, then allow browser access.${streamingStatus}`
       : `${languageName} voice input is not available in this browser. Type your request and click Run command.`;
   }
   ["#globalListenBtn", "#voiceListenBtn", "#jarvisListenBtn", "#workflowListenBtn"].forEach(selector => {
@@ -19084,6 +19228,17 @@ async function unifiedNexusConversationBrain(rawCommand = "", context = {}) {
     enableNexusVoiceForDemo("Nexus voice is back on. Say Nexus, then tell me what you need.");
     return true;
   }
+  if (/\b(streaming voice|seamless voice|native voice|continuous voice|live voice)\b/.test(lower)) {
+    const turnOff = /\b(off|disable|stop|turn off)\b/.test(lower);
+    setStreamingVoiceEnabled(!turnOff, "voice-command");
+    const summary = nativeVoiceReadinessSummary();
+    setVoiceResponse(turnOff
+      ? "Streaming voice is off. I will still listen when you press Mic."
+      : `Streaming voice is on. Speak naturally, interrupt me when needed, and I will keep the conversation moving. ${summary}`,
+      true,
+      { allowHandoff: false, source: "unified-brain" });
+    return true;
+  }
 
   if (await handleNexusRealtimeAdjustment(command || localized)) return true;
   if (handleNexusSelfCorrection(command || localized)) return true;
@@ -20850,6 +21005,75 @@ function scheduleVoiceRecovery(message = "I did not hear speech. I am still list
   }, delay);
 }
 
+function processFinalVoiceCommand(command = "", options = {}) {
+  const finalCommand = normalizeVoicePartial(command);
+  if (!finalCommand) return;
+  clearStreamingVoicePartial();
+  updateNativeVoiceBridgeState("final", { transcript: finalCommand, source: options.source || "voice" });
+  if (voiceSpeaking) {
+    if (isLikelyNexusSelfEcho(finalCommand)) return;
+    stopVoicePlayback({ hard: true, reason: "new-final-command" });
+    updateNexusBehaviorLayer("listening", "Nexus stopped speaking because it heard a new user phrase.");
+    const outputStatus = $("#globalVoiceOutputStatus");
+    if (outputStatus) outputStatus.textContent = translateText("I stopped. Listening to your new phrase.");
+  }
+  setCommandInputs(finalCommand);
+  const localizedCommand = normalizeLocalizedVoiceCommand(finalCommand);
+  const cleanedCommand = cleanWakeCommand(localizedCommand);
+  const stopRedirect = postStopRedirectCommand(cleanedCommand || localizedCommand || finalCommand);
+  if (voiceConversationPaused) {
+    const resumeCommand = isNexusResumeListeningCommand(localizedCommand || finalCommand);
+    const explicitWake = isExplicitNexusWakeOrCommand(localizedCommand || finalCommand);
+    if (!resumeCommand && !explicitWake) {
+      setVoiceStatus("paused");
+      updateNativeVoiceBridgeState("paused", { transcript: finalCommand });
+      return;
+    }
+    leaveNexusConversationPause("Nexus heard you. I am listening again.");
+    if (resumeCommand || isWakePhraseOnly(localizedCommand) || isNexusGreetingOnly(localizedCommand)) {
+      setVoiceResponse(nexusConversationalWake(isNexusGreetingOnly(localizedCommand) ? "hello" : "wake"), true, { allowHandoff: false });
+      return;
+    }
+  }
+  if (isGlobalStopCommand(String(cleanedCommand || localizedCommand || finalCommand).toLowerCase())) {
+    if (isStopAndContinueWorkingCommand(cleanedCommand || localizedCommand || finalCommand)) {
+      stopNexusAndReturnToWork("Stopped. Nexus is closed so you can continue working.");
+      return;
+    }
+    enterNexusConversationPause("Stopped. Nexus is paused and will ignore background conversation until you say Nexus again.");
+    if (stopRedirect) {
+      leaveNexusConversationPause("Nexus heard your next instruction after stop.");
+      setTimeout(() => {
+        setCommandInputs(stopRedirect);
+        void handleVoiceCommand(stopRedirect);
+      }, VOICE_POST_STOP_REDIRECT_DELAY_MS);
+    }
+    return;
+  }
+  if (isLikelySideConversationWithoutNexusCommand(cleanedCommand || localizedCommand || finalCommand)) {
+    pauseNexusForSideConversation(cleanedCommand || localizedCommand || finalCommand);
+    return;
+  }
+  const turnToken = beginNexusVoiceTurn(cleanedCommand || localizedCommand || finalCommand);
+  setVoiceStatus("thinking");
+  updateNativeVoiceBridgeState("thinking", { transcript: cleanedCommand || localizedCommand || finalCommand, turnToken });
+  updateNexusBehaviorLayer("thinking", "Nexus heard you and is preparing the next response.");
+  const outputStatus = $("#globalVoiceOutputStatus");
+  if (outputStatus) outputStatus.textContent = translateText("Nexus heard you. One moment.");
+  request("/api/voice/transcribe", { method: "POST", body: { transcript: finalCommand, language: languageCode(), locale: voiceLocale() } }).catch(() => {});
+  handleVoiceCommand(finalCommand, { source: "voice", turnToken });
+}
+
+function scheduleFinalVoiceCommand(command = "", options = {}) {
+  const finalCommand = normalizeVoicePartial(command);
+  if (!finalCommand) return;
+  clearTimeout(voiceFinalDebounceTimer);
+  voiceFinalDebounceTimer = setTimeout(() => {
+    voiceFinalDebounceTimer = null;
+    processFinalVoiceCommand(finalCommand, options);
+  }, Number(options.delay ?? VOICE_FINAL_DEBOUNCE_MS));
+}
+
 function startVoiceListening() {
   if (voiceDemoQuietMode) {
     setVoiceStatus("standby");
@@ -20886,15 +21110,19 @@ function startVoiceListening() {
   voiceStopRequested = false;
   voiceRecognition = new Recognition();
   voiceRecognition.lang = voiceLocale();
-  voiceRecognition.interimResults = false;
-  voiceRecognition.continuous = voiceFirstMode;
-  voiceRecognition.maxAlternatives = 3;
+  voiceRecognition.interimResults = streamingVoiceEnabled();
+  voiceRecognition.continuous = voiceFirstMode || streamingVoiceEnabled();
+  voiceRecognition.maxAlternatives = streamingVoiceEnabled() ? 5 : 3;
   voiceRecognition.onstart = () => {
+    registerNativeVoiceSession("web-streaming-start");
+    updateNativeVoiceBridgeState("listening", { locale: voiceLocale() });
     setVoiceStatus(voiceConversationPaused ? "paused" : "listening");
     const status = $("#globalMicStatus");
     if (status) status.textContent = voiceConversationPaused
       ? `Paused in ${voiceLanguageName()} (${voiceLocale()}). I will ignore background conversation until you say Nexus again.`
-      : `Listening in ${voiceLanguageName()} (${voiceLocale()}). Say "Hey AgriNexus" or ask for a workflow like "open telehealth."`;
+      : streamingVoiceEnabled()
+        ? `Streaming voice in ${voiceLanguageName()} (${voiceLocale()}). Speak naturally; Nexus can be interrupted.`
+        : `Listening in ${voiceLanguageName()} (${voiceLocale()}). Say "Hey AgriNexus" or ask for a workflow like "open telehealth."`;
     refreshMicSupport();
   };
   voiceRecognition.onerror = event => {
@@ -20911,6 +21139,7 @@ function startVoiceListening() {
           : `Voice input paused: ${error}. I am reconnecting voice now.`;
     voiceStopRequested = permissionBlocked;
     voiceRecognition = null;
+    updateNativeVoiceBridgeState(permissionBlocked ? "permission-blocked" : "recovering", { error });
     scheduleVoiceRecovery(message, {
       recoverable: !permissionBlocked && recoverableErrors.has(error),
       delay: error === "no-speech" ? 180 : VOICE_RESTART_DELAY_MS
@@ -20919,6 +21148,8 @@ function startVoiceListening() {
   voiceRecognition.onend = () => {
     setVoiceStatus(voiceConversationPaused ? "paused" : voiceFirstMode ? "voice-first" : "standby");
     voiceRecognition = null;
+    clearStreamingVoicePartial();
+    updateNativeVoiceBridgeState(voiceConversationPaused ? "paused" : voiceFirstMode ? "auto-restart" : "standby", { reason: "recognition-ended" });
     refreshMicSupport();
     if (voiceFirstMode && voiceAutoRestart && !voiceSpeaking && !voiceStopRequested && !document.hidden) {
       setTimeout(() => {
@@ -20927,59 +21158,18 @@ function startVoiceListening() {
     }
   };
   voiceRecognition.onresult = event => {
-    const latest = event.results?.[event.results.length - 1];
-    if (latest && latest.isFinal === false) return;
-    const command = latest?.[0]?.transcript || event.results?.[0]?.[0]?.transcript || "";
-    if (voiceSpeaking) {
-      if (isLikelyNexusSelfEcho(command)) return;
-      stopVoicePlayback({ hard: true });
-      updateNexusBehaviorLayer("listening", "Nexus stopped speaking because it heard a new user phrase.");
-      const outputStatus = $("#globalVoiceOutputStatus");
-      if (outputStatus) outputStatus.textContent = translateText("I stopped. Listening to your new phrase.");
+    let interimTranscript = "";
+    let finalTranscript = "";
+    const startIndex = typeof event.resultIndex === "number" ? event.resultIndex : 0;
+    for (let index = startIndex; index < event.results.length; index += 1) {
+      const result = event.results[index];
+      const transcript = normalizeVoicePartial(result?.[0]?.transcript || "");
+      if (!transcript) continue;
+      if (result.isFinal) finalTranscript = `${finalTranscript} ${transcript}`.trim();
+      else interimTranscript = `${interimTranscript} ${transcript}`.trim();
     }
-    setCommandInputs(command);
-    const localizedCommand = normalizeLocalizedVoiceCommand(command);
-    const cleanedCommand = cleanWakeCommand(localizedCommand);
-    const stopRedirect = postStopRedirectCommand(cleanedCommand || localizedCommand || command);
-    if (voiceConversationPaused) {
-      const resumeCommand = isNexusResumeListeningCommand(localizedCommand || command);
-      const explicitWake = isExplicitNexusWakeOrCommand(localizedCommand || command);
-      if (!resumeCommand && !explicitWake) {
-        setVoiceStatus("paused");
-        return;
-      }
-      leaveNexusConversationPause("Nexus heard you. I am listening again.");
-      if (resumeCommand || isWakePhraseOnly(localizedCommand) || isNexusGreetingOnly(localizedCommand)) {
-        setVoiceResponse(nexusConversationalWake(isNexusGreetingOnly(localizedCommand) ? "hello" : "wake"), true, { allowHandoff: false });
-        return;
-      }
-    }
-    if (isGlobalStopCommand(String(cleanedCommand || localizedCommand || command).toLowerCase())) {
-      if (isStopAndContinueWorkingCommand(cleanedCommand || localizedCommand || command)) {
-        stopNexusAndReturnToWork("Stopped. Nexus is closed so you can continue working.");
-        return;
-      }
-      enterNexusConversationPause("Stopped. Nexus is paused and will ignore background conversation until you say Nexus again.");
-      if (stopRedirect) {
-        leaveNexusConversationPause("Nexus heard your next instruction after stop.");
-        setTimeout(() => {
-          setCommandInputs(stopRedirect);
-          void handleVoiceCommand(stopRedirect);
-        }, VOICE_POST_STOP_REDIRECT_DELAY_MS);
-      }
-      return;
-    }
-    if (isLikelySideConversationWithoutNexusCommand(cleanedCommand || localizedCommand || command)) {
-      pauseNexusForSideConversation(cleanedCommand || localizedCommand || command);
-      return;
-    }
-    const turnToken = beginNexusVoiceTurn(cleanedCommand || localizedCommand || command);
-    setVoiceStatus("thinking");
-    updateNexusBehaviorLayer("thinking", "Nexus heard you and is preparing the next response.");
-    const outputStatus = $("#globalVoiceOutputStatus");
-    if (outputStatus) outputStatus.textContent = translateText("Nexus heard you. One moment.");
-    request("/api/voice/transcribe", { method: "POST", body: { transcript: command, language: languageCode(), locale: voiceLocale() } }).catch(() => {});
-    handleVoiceCommand(command, { source: "voice", turnToken });
+    if (interimTranscript) updateStreamingVoicePartial(interimTranscript, { source: "interim" });
+    if (finalTranscript) scheduleFinalVoiceCommand(finalTranscript, { source: "voice" });
   };
   voiceRecognition.start();
 }

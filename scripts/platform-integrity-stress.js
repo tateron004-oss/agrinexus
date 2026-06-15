@@ -1,4 +1,4 @@
-const assert = require("node:assert/strict");
+﻿const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 
@@ -24,8 +24,8 @@ function forbidMarkers(label, haystack, markers) {
 }
 
 requireMarkers("1. live browser QA and cache freshness", html + sw + app + JSON.stringify(pkg.scripts), [
-  "nexus-behavior-254",
-  "agrinexus-pwa-v234",
+  "nexus-behavior-255",
+  "agrinexus-pwa-v235",
   "AGRINEXUS_BUILD_VERSION",
   "AGRINEXUS_PWA_CACHE_VERSION",
   "controllerchange",
@@ -160,3 +160,4 @@ console.log("- role separation");
 console.log("- persistent memory behavior");
 console.log("- failure recovery");
 console.log("- demo path alignment");
+

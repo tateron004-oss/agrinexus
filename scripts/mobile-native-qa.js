@@ -1,4 +1,4 @@
-const assert = require("assert");
+﻿const assert = require("assert");
 const fs = require("fs");
 const path = require("path");
 
@@ -18,10 +18,11 @@ const requirements = [
   ["communications execution readiness endpoint", bridge.apiEndpoints?.communicationsReadiness === "/api/communications/execution-readiness" && bridge.communicationsExecution?.channels?.includes("whatsapp")],
   ["native camera and media handoff", bridge.requiredPermissions.includes("camera") && bridge.webCommands.includes("camera.capture") && bridge.nativeEvents.includes("camera.media_attached")],
   ["installable app sharing", manifest.includes('"share_target"') && manifest.includes("Voice Intake") && manifest.includes("Field Route")],
-  ["offline bridge cache", sw.includes("native-bridge.json") && sw.includes("agrinexus-pwa-v234")],
+  ["offline bridge cache", sw.includes("native-bridge.json") && sw.includes("agrinexus-pwa-v235")],
   ["visible mobile permission controls", html.includes("mobilePermissionStatus") && html.includes('data-mobile-permission="native-plan"')],
   ["native capability matrix", app.includes("function nativeAppCapabilityMatrix") && app.includes("function nativeAppReadinessSummary") && app.includes("function installAgriNexusNativeBridge")],
   ["native bridge receiver", app.includes("window.AgriNexusNativeBridge") && app.includes("voice.final_transcript") && app.includes("location.route_update") && app.includes("camera.media_attached")],
+  ["streaming voice native state bridge", app.includes("function streamingVoiceEnabled") && app.includes("function registerNativeVoiceSession") && app.includes("function updateNativeVoiceBridgeState") && app.includes("window.AgriNexusNativeVoice") && app.includes("voiceRecognition.interimResults = streamingVoiceEnabled()")],
   ["native app voice answer", app.includes("highest level app") && app.includes("always-on wake")],
   ["short wake alias", app.includes('"hey agri"') && app.includes('"agri"')],
   ["contained mobile permission layout", styles.includes(".mobile-permission-strip") && styles.includes("grid-template-columns: repeat(4")]
@@ -32,3 +33,4 @@ assert.deepStrictEqual(missing, [], `Missing mobile native requirements: ${missi
 
 console.log("Mobile native readiness QA passed");
 for (const [name] of requirements) console.log(`- ${name}`);
+
