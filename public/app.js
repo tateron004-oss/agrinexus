@@ -65,8 +65,8 @@ let routeTrackingWatchId = null;
 let routeTrackingPoints = [];
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-241";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v221";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-242";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v222";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
 const VOICE_ATTENTION_DELAY_MS = 900;
@@ -16346,6 +16346,7 @@ async function createCloudAgentTemplate() {
 
 function setVoiceResponse(message, speak = false, options = {}) {
   if (options.turnToken && !isCurrentNexusVoiceTurn(options.turnToken)) return;
+  if (speak || options.forceHandoff) clearAgentProgressTimers();
   const allowVoiceFirst = options.allowVoiceFirst !== false;
   if (voiceDemoQuietMode && !options.allowDemoQuietSpeech) {
     speak = false;
@@ -16688,6 +16689,16 @@ function speakVoiceResponse(textOverride) {
   lastSpokenText = compact;
   lastSpokenAt = now;
   stopVoicePlayback();
+  if (voiceRecognition) {
+    const activeRecognition = voiceRecognition;
+    voiceRecognition = null;
+    voiceAutoRestart = false;
+    try {
+      activeRecognition.stop();
+    } catch (error) {
+      // Recognition may already be stopped.
+    }
+  }
   const playbackToken = ++voicePlaybackToken;
   voiceSpeaking = true;
   voiceAutoRestart = false;
@@ -17994,6 +18005,7 @@ function simpleUserDirectVoiceIntent(command = "") {
 
 function runSimpleUserVoiceIntent(intent, command = "") {
   if (!intent) return false;
+  clearAgentProgressTimers();
   if (intent.type === "clarify") {
     pendingAgentClarification = intent.clarification || null;
     pendingNexusSpokenCommand = null;
@@ -18017,6 +18029,7 @@ function runSimpleUserVoiceIntent(intent, command = "") {
 }
 
 function nexusConversationFirstResponse(response, suggestions = [], status = "answering") {
+  clearAgentProgressTimers();
   pendingAgentClarification = null;
   pendingNexusSpokenCommand = null;
   updateNexusBehaviorLayer(status, "Nexus answered conversationally before opening any menu.");
@@ -18375,13 +18388,14 @@ async function handleVoiceCommandCore(rawCommand, options = {}) {
   }
   if (await handleNexusRealtimeAdjustment(command || localizedCommand)) return;
   if (handleNexusSelfCorrection(command || localizedCommand)) return;
+  const conversationFirstIntent = nexusConversationFirstIntent(spokenCommand || command || localizedCommand || rawCommand);
+  if (runConversationFirstIntent(conversationFirstIntent, spokenCommand || command || localizedCommand || rawCommand)) return;
   const commonPhrase = nexusCommonPhraseResponse(command || localizedCommand);
   if (commonPhrase) {
+    clearAgentProgressTimers();
     setVoiceResponse(commonPhrase, true);
     return;
   }
-  const conversationFirstIntent = nexusConversationFirstIntent(spokenCommand || command || localizedCommand || rawCommand);
-  if (runConversationFirstIntent(conversationFirstIntent, spokenCommand || command || localizedCommand || rawCommand)) return;
   const stopRedirect = postStopRedirectCommand(command);
   if (isGlobalStopCommand(String(command || localizedCommand).toLowerCase())) {
     if (isStopAndContinueWorkingCommand(command || localizedCommand)) {
@@ -19929,6 +19943,7 @@ function startVoiceListening() {
     }
   };
   voiceRecognition.onresult = event => {
+    if (voiceSpeaking) return;
     const latest = event.results?.[event.results.length - 1];
     if (latest && latest.isFinal === false) return;
     const command = latest?.[0]?.transcript || event.results?.[0]?.[0]?.transcript || "";
