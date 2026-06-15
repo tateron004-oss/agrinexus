@@ -64,8 +64,8 @@ let routeTrackingWatchId = null;
 let routeTrackingPoints = [];
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-234";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v214";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-235";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v215";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
 const VOICE_ATTENTION_DELAY_MS = 900;
@@ -4331,7 +4331,7 @@ function nexusIntentSignals(command = "") {
     advisor,
     question: /^(what|how|why|when|where|who|can|could|would|should|does|do|is|are|tell|explain|describe|summarize)\b/.test(lower),
     nextStep: phrase(["what should i do", "what now", "what next", "next step", "guide me", "walk me through", "help me decide"]),
-    platformExplain: phrase(["what is agrinexus", "tell me about agrinexus", "explain agrinexus", "what do you do", "who are you", "explain the platform"]),
+    platformExplain: isPlatformExplainVoiceCommand(command) || phrase(["what is agrinexus", "what is agri nexus", "tell me about agrinexus", "tell me about agri nexus", "explain agrinexus", "explain agri nexus", "what do you do", "who are you", "explain the platform"]),
     health: advisor.emergency || advisor.mediaIntake || has(["doctor", "nurse", "clinic", "hospital", "health", "telehealth", "provider", "injury", "pain", "medicine", "care", "sick"]),
     learning: advisor.learnerSupport || has(["learn", "course", "lesson", "training", "certificate", "student", "quiz", "study", "caption", "audio"]),
     workforce: advisor.workforceSupport || has(["job", "work", "worker", "role", "apply", "shift", "interview", "skills", "employment"]),
@@ -8146,6 +8146,15 @@ function normalizeToolText(value = "") {
     .replace(/[^a-z0-9\s-]/g, " ")
     .replace(/\s+/g, " ")
     .trim();
+}
+
+function isPlatformExplainVoiceCommand(command = "") {
+  const lower = normalizeToolText(command);
+  if (!lower) return false;
+  const platformName = /\b(agrinexus|agri nexus|agri-nexus|nexus|the platform|this platform|your platform|app|system)\b/.test(lower);
+  const explainVerb = /\b(explain|describe|tell me about|what is|whats|what are|who are you|what do you do|what does it do|what does this do|summarize)\b/.test(lower);
+  return (platformName && explainVerb)
+    || /\b(explain the platform|tell me about the platform|what is the platform|what can agrinexus do|what can agri nexus do|define agrinexus|define agri nexus)\b/.test(lower);
 }
 
 function voiceToolTokens(value = "") {
@@ -17881,6 +17890,10 @@ function nexusConversationFirstResponse(response, suggestions = [], status = "an
   return true;
 }
 
+function nexusPlatformExplainAnswer() {
+  return "AgriNexus helps people use farming, health access, learning, jobs, trade, maps, and local services by voice. Nexus is the assistant inside it: it listens, answers in simple words, opens the right service, and guides the next step.";
+}
+
 function nexusConversationFirstIntent(command = "") {
   const lower = normalizeToolText(command);
   if (!lower) return null;
@@ -17901,10 +17914,10 @@ function nexusConversationFirstIntent(command = "") {
       suggestions: ["I need medicine", "my crop is bad", "clinic near me", "find work"]
     };
   }
-  if (/\b(explain agrinexus|what is agrinexus|tell me about agrinexus|who are you|what are you)\b/.test(lower)) {
+  if (isPlatformExplainVoiceCommand(command) || /\b(explain agrinexus|explain agri nexus|what is agrinexus|what is agri nexus|tell me about agrinexus|tell me about agri nexus|who are you|what are you)\b/.test(lower)) {
     return {
       type: "answer",
-      response: "AgriNexus is a voice-first support platform for farming, health access, learning, workforce, trade, maps, and local services. Nexus is the assistant that listens, guides, opens the right workflow, and keeps the next step simple.",
+      response: nexusPlatformExplainAnswer(),
       suggestions: ["help a farmer", "help a patient", "open learning", "open map"]
     };
   }
@@ -18155,6 +18168,16 @@ async function handleVoiceCommand(rawCommand, options = {}) {
     nexusAwaitingCommand = true;
     recordNexusAutonomousLearning({ type: "greeting", command: normalizedWakeText(localizedCommand) });
     setVoiceResponse(nexusWakeGreeting("hello"), true);
+    return;
+  }
+  if (isPlatformExplainVoiceCommand(spokenCommand || command || localizedCommand || rawCommand)) {
+    pendingAgentClarification = null;
+    pendingNexusSpokenCommand = null;
+    openAskNexus();
+    enableHeyAgriNexusMode();
+    renderLiveVoiceSuggestions(["help a farmer", "I need a doctor", "help me sell my crop", "start a course", "open map"]);
+    updateNexusBehaviorLayer("answering", "Nexus explained AgriNexus directly without opening a menu.");
+    setVoiceResponse(nexusPlatformExplainAnswer(), true, { allowHandoff: false, command: spokenCommand || command || rawCommand });
     return;
   }
   if (isNexusHearingCheckCommand(command || localizedCommand)) {
