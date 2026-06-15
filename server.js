@@ -19977,12 +19977,28 @@ async function runAgentCommand(db, user, command, options = {}) {
       metadata: { conversationMode: true, redirectSection: "health", suppressBehaviorNudge: true, frontierCommunication: { urgency: "high", nextQuestion: "Where are you, and is the baby breathing normally?", confidence: 0.94 }, suggestedReplies: ["find clinic", "call provider", "start intake"] }
     };
   }
+  if (conversational && /\b(caption|captions|transcript|subtitles?)\b.*\b(telehealth|health|patient|doctor|provider|clinic|care)\b|\b(telehealth|health|patient|doctor|provider|clinic|care)\b.*\b(caption|captions|transcript|subtitles?)\b/.test(lower)) {
+    return {
+      intent: "conversation.telehealth_captions",
+      response: "I can build captions for telehealth. I will prepare a caption relay so the patient, caregiver, and provider can read the conversation clearly.",
+      status: "completed",
+      metadata: { conversationMode: true, redirectSection: "health", suppressBehaviorNudge: true, suggestedReplies: ["start caption relay", "start intake", "call provider"] }
+    };
+  }
   if (conversational && /\b(help|support|care|assist)\b.*\b(patient|person|mother|father|grandma|elder|caregiver)\b|\b(patient|person|mother|father|grandma|elder|caregiver)\b.*\b(help|support|care|assist)\b/.test(lower)) {
     return {
       intent: "conversation.patient_help",
       response: "I can help the patient get to the right support. I can start intake, find clinic or pharmacy options, prepare a provider call, add captions, or create a caregiver handoff. Is this urgent, and where is the patient?",
       status: "completed",
       metadata: { conversationMode: true, redirectSection: "health", suppressBehaviorNudge: true, suggestedReplies: ["start intake", "find clinic", "I need medicine"] }
+    };
+  }
+  if (conversational && /\b(clinic|hospital|health center|health centre|pharmacy)\b/.test(lower) && /\b(map|near|nearest|nearby|closest|where|location|find|show)\b/.test(lower)) {
+    return {
+      intent: "conversation.clinic_map_help",
+      response: "I can show clinic or pharmacy support on the map. Share your village, city, or location, and I will guide the closest facility route.",
+      status: "needs-location",
+      metadata: { conversationMode: true, redirectSection: "map", suppressBehaviorNudge: true, suggestedReplies: ["use my location", "find clinic", "find pharmacy"] }
     };
   }
   if (conversational && /\b(clinic|hospital|health center|health centre)\b/.test(lower)) {
@@ -20007,6 +20023,14 @@ async function runAgentCommand(db, user, command, options = {}) {
       response: "I can help with the crop problem. Tell me the crop, where the farm is, and what you see: yellow leaves, dry soil, pests, spots, or wilting. I can guide a field scan, simple next steps, buyer evidence, and route planning.",
       status: "completed",
       metadata: { conversationMode: true, redirectSection: "trade", suppressBehaviorNudge: true, suggestedReplies: ["run field scan", "explain crop problem", "contact buyer"] }
+    };
+  }
+  if (conversational && /\b(i need|need|want|find|looking for|help me)\b.*\b(work|job|jobs|employment|role|paid work|shift)\b|\b(work|job|jobs|employment|role|paid work|shift)\b.*\b(help|apply|find|need|want)\b/.test(lower)) {
+    return {
+      intent: "conversation.workforce_help",
+      response: "I can help with work. Tell me the country and the kind of job, and I will show role options, skill gaps, training links, and the application step.",
+      status: "completed",
+      metadata: { conversationMode: true, redirectSection: "workforce", suppressBehaviorNudge: true, suggestedReplies: ["show me jobs", "apply for a role", "review my skills"] }
     };
   }
   if (conversational

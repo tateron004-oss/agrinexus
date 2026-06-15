@@ -107,6 +107,14 @@ const coreCases = [
     maxWords: 85
   },
   {
+    persona: "telehealth-captions",
+    prompt: "Nexus can you build captions for telehealth",
+    section: "health",
+    expectAny: [/caption|captions|read/, /patient|caregiver|provider|telehealth/],
+    forbidAny: [/diagnos/],
+    maxWords: 75
+  },
+  {
     persona: "farmer-imperfect-speech",
     prompt: "Nexus crop bad maize yellow help farm",
     section: "trade",
@@ -128,6 +136,13 @@ const coreCases = [
     expectAny: [/job|work|career|role/, /kenya|south africa|country|skill/],
     forbidAny: [/guarantee.*job/],
     maxWords: 110
+  },
+  {
+    persona: "simple-work-request",
+    prompt: "Nexus I need work",
+    section: "workforce",
+    expectAny: [/work|job|role|skill|country/],
+    maxWords: 75
   },
   {
     persona: "low-literacy-learner",

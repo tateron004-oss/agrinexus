@@ -62,8 +62,8 @@ let routeTrackingWatchId = null;
 let routeTrackingPoints = [];
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-229";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v209";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-230";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v210";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
 const VOICE_ATTENTION_DELAY_MS = 900;
@@ -8494,6 +8494,29 @@ function fillWorkflowFieldByVoice(command = "") {
   const next = isHealthProviderWorkflow(pendingWorkflow) ? nextGuidedProviderPrompt(field.dataset.workflowField) : nextGuidedIntakePrompt(field.dataset.workflowField);
   setVoiceResponse(next ? `I added that. ${next}` : `I added that. Say yes when the intake looks right.`, true);
   return true;
+}
+
+function isNewServiceRequestOverWorkflow(command = "") {
+  const lower = normalizeToolText(command);
+  if (!lower) return false;
+  if (isNexusCommandConfirmation(lower) || isNexusCommandRejection(lower)) return false;
+  if (/^(read|repeat|say that again|yes|no|cancel|close|stop|routine|priority|urgent|high|emergency|english|spanish|french|kiswahili|swahili|arabic|portuguese)$/i.test(lower)) return false;
+  if (/^(patient name is|my name is|name is|call me|phone is|number is|use whatsapp|sms|video call|call me)\b/.test(lower)) return false;
+  const requestShape = /\b(can you|could you|please|i need|need|i want|want|help me|find|open|show|build|make|start|apply|sell|track|where|what can you do|how can you help)\b/.test(lower);
+  const domainShape = /\b(work|job|clinic|doctor|provider|medicine|pharmacy|telehealth|health|patient|baby|child|sick|crop|farm|field|buyer|sell|trade|map|route|tracking|caption|captions|transcript|course|learn|learning|lesson|training)\b/.test(lower);
+  const shortProblem = /\b(my crop is bad|crop is bad|crop bad|field is bad|baby is sick|child is sick|need medicine|need work|clinic near me|find my clinic|build captions|telehealth captions)\b/.test(lower);
+  return shortProblem || (requestShape && domainShape);
+}
+
+function clearOpenWorkflowForNewVoiceRequest(command = "") {
+  const visibleInlineWorkflow = $(".user-inline-workflow:not(.hidden)");
+  if (visibleInlineWorkflow) visibleInlineWorkflow.classList.add("hidden");
+  $("#workflowModal")?.classList.add("hidden");
+  pendingWorkflow = null;
+  pendingGrandmaAction = null;
+  pendingAgentClarification = null;
+  updateNexusBehaviorLayer("thinking", `Nexus switched to the new request: ${command}`);
+  recordNexusAutonomousLearning({ type: "workflow-switched", command });
 }
 
 function voiceReadbackText() {
@@ -17585,8 +17608,35 @@ function simpleUserDirectVoiceIntent(command = "") {
       suggestions: ["health", "work", "learning", "crops", "map"]
     };
   }
+  if (/\b(clinic|hospital|health center|health centre|pharmacy)\b/.test(lower) && /\b(map|near|nearest|nearby|closest|where|location|find|show)\b/.test(lower)) {
+    return {
+      type: "workflow",
+      workflow: "map",
+      action: "facility-route",
+      response: "I can show clinic or pharmacy support on the map. Share your village, city, or location, and I will guide the closest facility route.",
+      dataset: { patientLocation: activeCountry().name }
+    };
+  }
   const smartIntent = nexusSmartIntentRouter(command);
   if (smartIntent) return smartIntent;
+  if (/\b(caption|captions|transcript|subtitles)\b/.test(lower) && /\b(telehealth|health|patient|doctor|provider|clinic|care)\b/.test(lower)) {
+    return {
+      type: "workflow",
+      workflow: "health",
+      action: "caption",
+      response: "I can build captions for telehealth. I opened the caption relay so the patient, caregiver, and provider can read the conversation clearly.",
+      dataset: { patientLocation: activeCountry().name }
+    };
+  }
+  if (/\b(my crop is bad|crop is bad|crop bad|field is bad|plant is sick|plants are sick|crop problem|field problem|crop stress|yellow leaves|wilting|pests|spots|dry soil)\b/.test(lower)) {
+    return {
+      type: "workflow",
+      workflow: "trade",
+      action: "drone-pest",
+      response: "I can help with the crop problem. Tell me the crop, where the farm is, and what you see. I opened field support so Nexus can guide a scan, simple next steps, buyer evidence, and route planning.",
+      dataset: { productId, objective: command }
+    };
+  }
   if (has(["medicine", "medication", "pharmacy", "refill", "drug", "prescription", "remedy", "pills"])) {
     return {
       type: "workflow",
@@ -17596,7 +17646,7 @@ function simpleUserDirectVoiceIntent(command = "") {
       dataset: { patientLocation: activeCountry().name }
     };
   }
-  if (has(["clinic", "hospital"]) && has(["near", "nearest", "closest", "find", "where", "location", "map", "around"])) {
+  if (has(["clinic", "hospital"]) && has(["near", "nearest", "closest", "find", "where", "location", "map", "around", "my"])) {
     return {
       type: "workflow",
       workflow: "health",
@@ -17694,6 +17744,26 @@ function simpleUserDirectVoiceIntent(command = "") {
   return null;
 }
 
+function runSimpleUserVoiceIntent(intent, command = "") {
+  if (!intent) return false;
+  if (intent.type === "clarify") {
+    pendingAgentClarification = intent.clarification || null;
+    pendingNexusSpokenCommand = null;
+    renderLiveVoiceSuggestions(intent.suggestions || ["health", "work", "learning", "crops", "map"]);
+    updateNexusBehaviorLayer("listening", "Nexus asked one short clarifying question instead of guessing.");
+    setVoiceResponse(intent.response, true);
+    return true;
+  }
+  pendingAgentClarification = null;
+  pendingNexusSpokenCommand = null;
+  agentPerformanceState.lastCommand = command;
+  if (intent.type === "direct" && intent.directAction === "full-map") return openFullScaleUserMap(intent.response);
+  if (intent.type === "direct" && intent.directAction === "health-intake") return openHealthIntakeNow(intent.response);
+  if (intent.type === "direct" && intent.directAction === "doctor-help") return openDoctorHelpNow(intent.response);
+  if (intent.type === "workflow") return openWorkflowByVoice(intent.workflow, intent.action, intent.response, intent.dataset || {});
+  return false;
+}
+
 function nexusCommonPhraseResponse(command = "") {
   const value = normalizeToolText(command);
   if (!value) return "";
@@ -17782,7 +17852,11 @@ async function handleVoiceCommand(rawCommand, options = {}) {
   }
   const visibleInlineWorkflow = $(".user-inline-workflow:not(.hidden)");
   if (pendingWorkflow && visibleInlineWorkflow && !isUniversalLanguageCommand(command || localizedCommand) && !isGlobalStopCommand(String(command || localizedCommand).toLowerCase())) {
+    if (isNewServiceRequestOverWorkflow(command || localizedCommand)) {
+      clearOpenWorkflowForNewVoiceRequest(command || localizedCommand);
+    } else {
     if (fillWorkflowFieldByVoice(command || localizedCommand)) return;
+    }
   }
   const introductionResponse = nexusIntroductionResponse(command || localizedCommand);
   if (introductionResponse) {
@@ -17844,6 +17918,8 @@ async function handleVoiceCommand(rawCommand, options = {}) {
   if (handleNexusConversationGovernor(command || localizedCommand || rawCommand, options)) return;
   if (handleConversationMode2Preflight(command || localizedCommand || rawCommand, options)) return;
   agentPerformanceState.spokenCommand = spokenCommand || command;
+  const preDialogSimpleIntent = experienceMode === "user" ? simpleUserDirectVoiceIntent(spokenCommand || command) : null;
+  if (preDialogSimpleIntent && runSimpleUserVoiceIntent(preDialogSimpleIntent, spokenCommand || command)) return;
   if (isOpenKnowledgeQuestion(spokenCommand || command)) {
     pendingAgentClarification = null;
     pendingNexusSpokenCommand = null;
@@ -17863,38 +17939,7 @@ async function handleVoiceCommand(rawCommand, options = {}) {
     return;
   }
   const earlySimpleIntent = experienceMode === "user" ? simpleUserDirectVoiceIntent(spokenCommand || command) : null;
-  if (earlySimpleIntent?.type === "clarify") {
-    pendingAgentClarification = earlySimpleIntent.clarification || null;
-    pendingNexusSpokenCommand = null;
-    renderLiveVoiceSuggestions(earlySimpleIntent.suggestions || ["health", "work", "learning", "crops", "map"]);
-    updateNexusBehaviorLayer("listening", "Nexus asked one short clarifying question instead of guessing.");
-    setVoiceResponse(earlySimpleIntent.response, true);
-    return;
-  }
-  if (earlySimpleIntent?.type === "direct" && earlySimpleIntent.directAction === "full-map") {
-    pendingAgentClarification = null;
-    pendingNexusSpokenCommand = null;
-    agentPerformanceState.lastCommand = command;
-    return openFullScaleUserMap(earlySimpleIntent.response);
-  }
-  if (earlySimpleIntent?.type === "direct" && earlySimpleIntent.directAction === "health-intake") {
-    pendingAgentClarification = null;
-    pendingNexusSpokenCommand = null;
-    agentPerformanceState.lastCommand = command;
-    return openHealthIntakeNow(earlySimpleIntent.response);
-  }
-  if (earlySimpleIntent?.type === "direct" && earlySimpleIntent.directAction === "doctor-help") {
-    pendingAgentClarification = null;
-    pendingNexusSpokenCommand = null;
-    agentPerformanceState.lastCommand = command;
-    return openDoctorHelpNow(earlySimpleIntent.response);
-  }
-  if (earlySimpleIntent?.type === "workflow") {
-    pendingAgentClarification = null;
-    pendingNexusSpokenCommand = null;
-    agentPerformanceState.lastCommand = command;
-    return openWorkflowByVoice(earlySimpleIntent.workflow, earlySimpleIntent.action, earlySimpleIntent.response, earlySimpleIntent.dataset || {});
-  }
+  if (earlySimpleIntent && runSimpleUserVoiceIntent(earlySimpleIntent, spokenCommand || command)) return;
   const understanding = adaptiveCommandUnderstanding(command);
   if (understanding.rewrittenCommand && !isUniversalLanguageCommand(command) && !isGlobalStopCommand(understanding.rewrittenCommand.toLowerCase())) {
     command = understanding.rewrittenCommand;
@@ -18322,6 +18367,11 @@ async function handleVoiceCommand(rawCommand, options = {}) {
   }
 
   if (pendingWorkflow && visibleInlineWorkflow) {
+    if (isNewServiceRequestOverWorkflow(command)) {
+      clearOpenWorkflowForNewVoiceRequest(command);
+      await handleVoiceCommand(command, { ...options, skipCommandConfirmation: true });
+      return;
+    }
     if (fillWorkflowFieldByVoice(command)) return;
     if (lower === "read" || lower.includes("read this") || lower.includes("read workflow") || lower.includes("repeat")) {
       readWorkflowModal();
@@ -18670,6 +18720,10 @@ async function handleVoiceCommand(rawCommand, options = {}) {
     return openWorkflowByVoice("partnership", type, "Provider partnership packet workflow is ready.");
   }
 
+  if (/\b(caption|captions|transcript|subtitle|subtitles)\b/.test(lower) && /\b(telehealth|health|patient|doctor|provider|clinic|care)\b/.test(lower)) {
+    goSection("health");
+    return openWorkflowByVoice("health", "caption", "I can build captions for telehealth. I opened the caption relay so the patient, caregiver, and provider can read the conversation clearly.");
+  }
   if (lower.includes("build caption") || lower.includes("make caption") || lower.includes("open caption") || lower.includes("caption lesson") || lower.includes("learning caption")) {
     return openLearningCaptionSupport("Captions are open. Speak now and Nexus will write the words here while keeping learning support ready.");
   }
