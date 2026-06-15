@@ -18425,6 +18425,7 @@ function knownMapLocation(query = "", fallbackCountry = null) {
   const known = [
     { keys: ["lagos"], label: "Lagos, Nigeria", lat: 6.5244, lng: 3.3792, country: "Nigeria" },
     { keys: ["nigeria"], label: "Nigeria", lat: 9.082, lng: 8.6753, country: "Nigeria" },
+    { keys: ["mombasa", "mombassa"], label: "Mombasa, Kenya", lat: -4.0435, lng: 39.6682, country: "Kenya" },
     { keys: ["nairobi"], label: "Nairobi, Kenya", lat: -1.2921, lng: 36.8219, country: "Kenya" },
     { keys: ["kenya"], label: "Kenya", lat: -0.0236, lng: 37.9062, country: "Kenya" },
     { keys: ["kinshasa"], label: "Kinshasa, DRC", lat: -4.4419, lng: 15.2663, country: "DRC" },
@@ -18446,6 +18447,17 @@ function knownMapLocation(query = "", fallbackCountry = null) {
 
 function extractTradeRouteLocations(text = "", country = null) {
   const value = String(text || "").replace(/\s+/g, " ").trim();
+  const directFromToMatch = value.match(/\bfrom\s+(.+?)\s+\bto\s+(.+?)(?:[?.!]|$)/i);
+  if (directFromToMatch) {
+    const originText = directFromToMatch[1].trim();
+    const destinationText = directFromToMatch[2].trim();
+    return {
+      originText,
+      destinationText,
+      origin: knownMapLocation(originText, country),
+      destination: knownMapLocation(destinationText, country)
+    };
+  }
   const buyerMatch = value.match(/\b(?:buyer|customer|purchaser|client)\b.*?\b(?:in|at|near|around|to|from)\s+([^,.]+(?:,\s*[^,.]+)?)/i);
   const sellerMatch = value.match(/\b(?:i am|i'm|we are|seller is|farmer is|pickup is|origin is|from)\s+(?:in|at|near|around)?\s*([^,.]+(?:,\s*[^,.]+)?)/i);
   const toMatch = value.match(/\b(?:to|deliver to|ship to|send to)\s+([^,.]+(?:,\s*[^,.]+)?)/i);
@@ -18551,8 +18563,8 @@ function tradeLocationRouteResponse(db, user, text, options = {}) {
   return {
     intent: "map.buyer_seller_location_route",
     response: distanceKm
-      ? `I created the route packet for ${packet.productName}: seller pickup ${packet.sellerLocation}, buyer delivery ${packet.buyerLocation}. Direct distance is about ${distanceKm} kilometers. I opened the map so you can review route risk, shipment tracking, buyer updates, and delivery evidence. Live turn-by-turn routing will use Mapbox, Google Maps, or OpenRouteService when credentials are connected.`
-      : `I created the route packet for ${packet.productName}: seller pickup ${packet.sellerLocation}, buyer delivery ${packet.buyerLocation}. I opened the map so you can review route risk, shipment tracking, buyer updates, and delivery evidence. Add a full address or routing provider for exact turn-by-turn distance.`,
+      ? `I created the route packet for ${packet.productName}: ${packet.sellerLocation} to ${packet.buyerLocation}. Direct distance is about ${distanceKm} kilometers. I opened the map so you can review route risk, shipment tracking, buyer updates, and delivery evidence. Live turn-by-turn routing will use Mapbox, Google Maps, or OpenRouteService when credentials are connected.`
+      : `I created the route packet for ${packet.productName}: ${packet.sellerLocation} to ${packet.buyerLocation}. I opened the map so you can review route risk, shipment tracking, buyer updates, and delivery evidence. Add a full address or routing provider for exact turn-by-turn distance.`,
     status: "completed",
     metadata: {
       conversationMode: true,

@@ -72,6 +72,7 @@ const checks = [
   { prompt: "Nexus, contact the buyer.", intent: "trade.buyer_contact", section: "trade", includes: "buyer contact" },
   { prompt: "Nexus, track my shipment.", intent: "map.live_route_tracking", section: "map", includes: "shipment tracking" },
   { prompt: "Nexus, show trade route from Kenya to Nigeria.", intent: "map.buyer_seller_location_route", section: "map", includes: "Kenya to Nigeria" },
+  { prompt: "Nexus, show me a trade route from Mombassa Kenya to Nairobi Kenya.", intent: "map.buyer_seller_location_route", section: "map", includes: "Mombassa Kenya to Nairobi Kenya" },
   { prompt: "Nexus, run drone scan.", intent: "drone.field_scan", section: "trade", includes: "Drone scan" },
   { prompt: "Nexus, explain the crop evidence in simple words.", intent: "conversation.crop_evidence_simple", section: "trade", includes: "crop evidence" },
   { prompt: "Nexus, start my course.", intent: "conversation.learning_start", section: "learning", includes: "course support" },

@@ -66,8 +66,8 @@ let routeTrackingWatchId = null;
 let routeTrackingPoints = [];
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-247";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v227";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-248";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v228";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
 const VOICE_ATTENTION_DELAY_MS = 900;
@@ -19183,8 +19183,9 @@ async function handleVoiceCommandCore(rawCommand, options = {}) {
     setVoiceResponse("Map is open. You can say track my route, show map risk, find a health facility, or explain the map.", true);
     return;
   }
-  if (/\b(show|open|display|map|track|trace)\b.*\b(trade|crop|shipment|delivery|market|logistics)\b.*\b(route|path|corridor|tracking)\b.*\bfrom\s+[^,.]+\s+\bto\s+[^,.]+/.test(lower)
-    || /\b(trade|crop|shipment|delivery|market|logistics)\b.*\b(route|path|corridor|tracking)\b.*\bfrom\s+[^,.]+\s+\bto\s+[^,.]+/.test(lower)) {
+  if (/\b(show|open|display|map|track|trace)\b.*\b(trade|crop|shipment|delivery|market|logistics)\b.*\b(route|path|corridor|tracking)\b.*\bfrom\s+.+?\s+\bto\s+.+/.test(lower)
+    || /\b(trade|crop|shipment|delivery|market|logistics)\b.*\b(route|path|corridor|tracking)\b.*\bfrom\s+.+?\s+\bto\s+.+/.test(lower)
+    || /\b(route|path|corridor|tracking)\b.*\bfrom\s+.+?\s+\bto\s+.+/.test(lower)) {
     goSection("map");
     setActiveAgentJourney("map", "country-trade-route", "Country-to-country trade route opened by voice.");
     renderLiveVoiceSuggestions(["run route risk", "track shipment", "message buyer", "create order"]);
