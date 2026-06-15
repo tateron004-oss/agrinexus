@@ -89,8 +89,8 @@ let routeTrackingWatchId = null;
 let routeTrackingPoints = [];
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-264";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v244";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-265";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v245";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
 const VOICE_ATTENTION_DELAY_MS = 900;
@@ -19705,6 +19705,18 @@ async function unifiedNexusConversationBrain(rawCommand = "", context = {}) {
     pendingNexusSpokenCommand = null;
     pendingAgentClarification = null;
     await changeLanguageByVoice(command || localized);
+    return true;
+  }
+
+  if (isPlatformExplainVoiceCommand(spoken || command || localized || rawCommand)) {
+    clearOpenWorkflowForNewVoiceRequest(spoken || command || rawCommand);
+    pendingAgentClarification = null;
+    pendingNexusSpokenCommand = null;
+    openAskNexus();
+    enableHeyAgriNexusMode();
+    renderLiveVoiceSuggestions(["help a farmer", "I need a doctor", "help me sell my crop", "start a course", "open map"]);
+    updateNexusBehaviorLayer("answering", "Nexus answered the platform explanation directly before any open workflow could intercept it.");
+    setVoiceResponse(nexusPlatformExplainAnswer(), true, { allowHandoff: false, command: spoken || command || rawCommand, source: "unified-brain-platform-explain" });
     return true;
   }
 

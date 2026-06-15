@@ -445,11 +445,13 @@ assert(app.includes("async function unifiedNexusConversationBrain"), "Nexus need
 assert(app.includes("async function executeUnifiedNexusIntent"), "Unified Nexus brain must execute answer, direct, workflow, utility, and backend decisions through one path");
 assert(app.indexOf("unifiedNexusConversationBrain(rawCommand") < app.indexOf("runUserModeHardLanding(spokenCommand"), "Unified Nexus brain must run before hard landing and older workflow routers");
 assert(app.includes("Unified Nexus brain asked one simple recovery question instead of guessing."), "Unified Nexus brain must clarify instead of letting old routers guess");
+assert(app.indexOf("unified-brain-platform-explain") < app.indexOf("handleNexusAdaptiveLearningCommand(command || localized || rawCommand)"), "Platform explanation must run before adaptive/workflow interception");
+assert(app.indexOf("unified-brain-platform-explain") < app.indexOf("if (pendingWorkflow && visibleInlineWorkflow)"), "Platform explanation must run before open workflow handling");
 assert(styles.includes("pointer-events: none") && styles.includes(".user-caption-actions") && styles.includes("pointer-events: auto"), "Caption panel must not block workflow action clicks");
 assert(styles.includes("width: min(300px, calc(100vw - 24px))") && styles.includes("max-height: 138px"), "Caption panel must default to a small bubble");
 assert(styles.includes(".user-caption-panel.expanded") && styles.includes("display: none") && styles.includes("display: grid"), "Caption input controls must appear only in expanded caption mode");
-assert(html.includes("nexus-behavior-264"), "Index must force browsers to load Nexus behavior CSS");
-assert(html.includes("nexus-behavior-264"), "Index must force browsers to load Nexus behavior JS");
+assert(html.includes("nexus-behavior-265"), "Index must force browsers to load Nexus behavior CSS");
+assert(html.includes("nexus-behavior-265"), "Index must force browsers to load Nexus behavior JS");
 assert(server.includes("function productionActivationGuide"), "Backend needs a live activation guide");
 assert(server.includes("function directVendorProviderStatus"), "Backend must recognize direct vendor credentials");
 assert(server.includes("optionalEnvSets"), "Activation guide must show real provider depth options");
