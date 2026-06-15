@@ -65,8 +65,8 @@ let routeTrackingWatchId = null;
 let routeTrackingPoints = [];
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-242";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v222";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-243";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v223";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
 const VOICE_ATTENTION_DELAY_MS = 900;
@@ -10106,6 +10106,7 @@ function renderUserSimpleActiveSection(sectionId = currentSectionId()) {
   const config = simpleUserSections[sectionId];
   const target = config ? $(`#${sectionId}`) : null;
   if (!target) return;
+  document.body.classList.toggle("user-map-full-open", sectionId === "map");
   target.querySelector(":scope > .user-simple-module")?.remove();
   target.insertAdjacentHTML("afterbegin", `
     <section class="user-simple-module ${sectionId === "learning" || sectionId === "workforce" ? "user-choice-module" : ""}" aria-label="${translateText(config.title)}">
@@ -10357,6 +10358,8 @@ function renderUserProcessScreen(sectionId, config, mapped = {}, label = "Select
 
 function forceOpenUserProcessScreen(sectionId, config, mapped = {}, label = "Selected action") {
   if (experienceMode !== "user" || !config) return false;
+  closeAskNexus({ silent: true });
+  closeUserCaptionPanel();
   goSection(sectionId, { instant: true, openDefaultAction: false, keepAssistant: false, scroll: false });
   renderUserSimpleActiveSection(sectionId);
   const rendered = renderUserProcessScreen(sectionId, config, mapped, label, { speak: false });
@@ -17540,6 +17543,7 @@ function openFullScaleUserMap(response = "Full map is open. You can zoom, drag, 
   closeAskNexus({ silent: true });
   $("#workflowModal")?.classList.add("hidden");
   closeUserCaptionPanel();
+  document.body.classList.add("user-map-full-open");
   goSection("map", { instant: true, openDefaultAction: false, keepAssistant: false });
   if (experienceMode === "user") {
     renderUserSimpleActiveSection("map");
@@ -17563,6 +17567,7 @@ function openNexusHome(response = "Home is open. What do you need next?") {
   pendingAgentClarification = null;
   pendingNexusSpokenCommand = null;
   pendingWorkflow = null;
+  document.body.classList.remove("user-map-full-open");
   closeAskNexus({ silent: true });
   $("#workflowModal")?.classList.add("hidden");
   closeUserCaptionPanel();
@@ -18028,6 +18033,42 @@ function runSimpleUserVoiceIntent(intent, command = "") {
   return false;
 }
 
+function runUserModeHardLanding(command = "") {
+  if (experienceMode !== "user") return false;
+  const lower = normalizeSpeechForIntent(command);
+  if (!lower || isUniversalLanguageCommand(command) || isGlobalStopCommand(lower)) return false;
+  const openProcess = (section, workflow, action, response, dataset = {}) => {
+    const config = workflowConfig(workflow, action, { dataset });
+    if (!config) return false;
+    pendingAgentClarification = null;
+    pendingNexusSpokenCommand = null;
+    pendingWorkflow = config;
+    clearAgentProgressTimers();
+    recordNexusAutonomousLearning({ type: "hard-user-landing", command, workflow, action });
+    forceOpenUserProcessScreen(section, config, { response, dataset }, response || config.userTitle || config.title || "Selected action");
+    updateNexusBehaviorLayer("ready", `Nexus opened ${section} from a plain user request.`);
+    setVoiceResponse(response, true, { allowHandoff: false, command });
+    return true;
+  };
+  if (/\b(i need work|need work|find work|find a job|job please|work please|need job|want job|kazi|nataka kazi|trabajo|empleo)\b/.test(lower)) {
+    return openProcess("workforce", "workforce", "build-profile", "I opened work support. Tell me your country, the job you want, and your skills. I will help you apply step by step.", { roleId: firstEligibleRole()?.id });
+  }
+  if (/\b(start a course|start course|take course|begin course|start learning|want learn|i want learn|learn please|somo|kujifunza|aprender)\b/.test(lower)) {
+    return openProcess("learning", "learning", "start", "I opened course support. Choose the course you want, or tell me the skill you want to learn.");
+  }
+  if (/\b(help me sell my crop|sell my crop|sell crop|find buyer|buyer crop|market my crop|kuuza mazao|nataka kuuza|vender cosecha|vendre recolte)\b/.test(lower)) {
+    return openProcess("trade", "trade", "buyer-contact", "I opened crop sale support. Tell me the crop, quantity, and location. I will help prepare buyer contact and delivery tracking.", { productId: firstProduct()?.id });
+  }
+  if (/\b(open map|show map|full map|global map|real map|map please|ramani|track route|track shipment|track my sale|show tracking)\b/.test(lower)) {
+    pendingAgentClarification = null;
+    pendingNexusSpokenCommand = null;
+    clearAgentProgressTimers();
+    recordNexusAutonomousLearning({ type: "hard-user-landing", command, workflow: "map", action: "full-map" });
+    return openFullScaleUserMap(isMapTrackingCommand(command) ? "I opened the full map for tracking. You can zoom, drag, check the route, and follow shipment or clinic locations." : "I opened the full map. You can zoom, drag, find facilities, check routes, and track shipments.");
+  }
+  return false;
+}
+
 function nexusConversationFirstResponse(response, suggestions = [], status = "answering") {
   clearAgentProgressTimers();
   pendingAgentClarification = null;
@@ -18388,6 +18429,7 @@ async function handleVoiceCommandCore(rawCommand, options = {}) {
   }
   if (await handleNexusRealtimeAdjustment(command || localizedCommand)) return;
   if (handleNexusSelfCorrection(command || localizedCommand)) return;
+  if (runUserModeHardLanding(spokenCommand || command || localizedCommand || rawCommand)) return;
   const conversationFirstIntent = nexusConversationFirstIntent(spokenCommand || command || localizedCommand || rawCommand);
   if (runConversationFirstIntent(conversationFirstIntent, spokenCommand || command || localizedCommand || rawCommand)) return;
   const commonPhrase = nexusCommonPhraseResponse(command || localizedCommand);

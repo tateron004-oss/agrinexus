@@ -1403,6 +1403,19 @@ body.user-mode .user-real-map {
   border-radius: 12px;
   background: #eef3f5;
 }
+body.user-mode.user-map-full-open #map .user-simple-module {
+  min-height: calc(100vh - 32px);
+}
+body.user-mode.user-map-full-open #map .user-module-preview {
+  align-items: stretch;
+}
+body.user-mode.user-map-full-open #map .user-real-map-card {
+  min-height: calc(100vh - 280px);
+}
+body.user-mode.user-map-full-open #map .user-real-map {
+  height: clamp(560px, 72vh, 820px);
+  min-height: 560px;
+}
 body.user-mode .user-health-map-card {
   border-color: #d4dde2;
   background: #ffffff;
@@ -1503,6 +1516,10 @@ body.user-mode .user-preview-summary.compact {
   body.user-mode .user-real-map {
     height: min(45vh, 320px);
     min-height: 230px;
+  }
+  body.user-mode.user-map-full-open #map .user-real-map {
+    height: 64vh;
+    min-height: 420px;
   }
   body.user-mode .user-real-map-meta {
     grid-template-columns: 1fr;
