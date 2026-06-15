@@ -62,13 +62,15 @@ let routeTrackingWatchId = null;
 let routeTrackingPoints = [];
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-230";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v210";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-231";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v211";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
 const VOICE_ATTENTION_DELAY_MS = 900;
 const VOICE_POST_STOP_REDIRECT_DELAY_MS = 80;
 const VOICE_UI_RESUME_DELAYS_MS = [180, 650, 1500, 3200, 5200];
+const OPENAI_TTS_VOICE_FALLBACK = "coral";
+const OPENAI_TTS_VOICE_CHOICES = new Set(["alloy", "ash", "ballad", "coral", "echo", "fable", "nova", "onyx", "sage", "shimmer", "verse"]);
 
 const countryLanguageMap = {
   nigeria: "en",
@@ -16448,13 +16450,82 @@ function enableNexusVoiceForDemo(message = "Nexus voice is back on. Say Nexus, t
   startVoiceListening();
 }
 
+function preferredOpenAiTtsVoice() {
+  const stored = String(localStorage.getItem("agrinexusOpenAiTtsVoice") || "").trim().toLowerCase();
+  if (OPENAI_TTS_VOICE_CHOICES.has(stored)) return stored;
+  localStorage.setItem("agrinexusOpenAiTtsVoice", OPENAI_TTS_VOICE_FALLBACK);
+  return OPENAI_TTS_VOICE_FALLBACK;
+}
+
+function browserVoiceStorageKey(locale) {
+  return `agrinexusBrowserVoice:${String(locale || "en-US").toLowerCase()}`;
+}
+
+function voiceMatchesLocale(voice, locale) {
+  const exact = String(locale || "").toLowerCase();
+  const language = exact.split("-")[0];
+  const voiceLang = String(voice?.lang || "").toLowerCase();
+  return voiceLang === exact || Boolean(language && voiceLang.startsWith(`${language}-`));
+}
+
 function chooseSpeechVoice(locale) {
   if (!("speechSynthesis" in window)) return null;
   const voices = window.speechSynthesis.getVoices?.() || [];
-  const language = locale.split("-")[0];
-  return voices.find(voice => voice.lang === locale)
-    || voices.find(voice => voice.lang?.toLowerCase().startsWith(`${language}-`))
-    || null;
+  const storageKey = browserVoiceStorageKey(locale);
+  const savedName = String(localStorage.getItem(storageKey) || "").trim();
+  const saved = voices.find(voice => savedName && voice.name === savedName && voiceMatchesLocale(voice, locale));
+  if (saved) return saved;
+  const candidates = voices
+    .filter(voice => voiceMatchesLocale(voice, locale))
+    .map(voice => {
+      const name = String(voice.name || "").toLowerCase();
+      const score = [
+        String(voice.lang || "").toLowerCase() === String(locale || "").toLowerCase() ? 40 : 0,
+        voice.localService ? 8 : 0,
+        /\b(neural|natural|online|google|microsoft|zira|susan|samantha|joanna|ava)\b/.test(name) ? 6 : 0,
+        /\b(default|compact|legacy)\b/.test(name) ? -6 : 0
+      ].reduce((sum, value) => sum + value, 0);
+      return { voice, score };
+    })
+    .sort((a, b) => b.score - a.score || String(a.voice.name || "").localeCompare(String(b.voice.name || "")));
+  const selected = candidates[0]?.voice || null;
+  if (selected?.name) localStorage.setItem(storageKey, selected.name);
+  return selected;
+}
+
+function installStableSpeechVoicePreference() {
+  if (!("speechSynthesis" in window)) return;
+  chooseSpeechVoice(voiceLocale());
+  const previous = window.speechSynthesis.onvoiceschanged;
+  window.speechSynthesis.onvoiceschanged = event => {
+    if (typeof previous === "function") previous.call(window.speechSynthesis, event);
+    chooseSpeechVoice(voiceLocale());
+  };
+}
+
+function nexusListeningReadyMessage() {
+  return voiceFirstMode
+    ? "Nexus is listening now. Ask your next question."
+    : "Nexus is ready. Press Mic or type your next question.";
+}
+
+function resumeVoiceListeningAfterSpeech(playbackToken, interruptToken) {
+  if (playbackToken !== voicePlaybackToken || interruptToken !== voiceInterruptToken) return;
+  voiceSpeaking = false;
+  voiceAutoRestart = voiceFirstMode;
+  const message = nexusListeningReadyMessage();
+  const outputStatus = $("#globalVoiceOutputStatus");
+  if (outputStatus) outputStatus.textContent = translateText(message);
+  updateNexusBehaviorLayer(voiceFirstMode ? "listening" : "ready", message);
+  setVoiceStatus(voiceFirstMode ? "voice-first" : "standby");
+  refreshMicSupport();
+  const shouldResume = voiceFirstMode || voiceResumeAfterSpeech;
+  if (shouldResume && !voiceRecognition && !voiceStopRequested && !document.hidden) {
+    voiceResumeAfterSpeech = false;
+    setTimeout(() => {
+      if (!voiceRecognition && !voiceSpeaking && !voiceStopRequested && voiceFirstMode) startVoiceListening();
+    }, VOICE_RESTART_DELAY_MS);
+  }
 }
 
 function stopVoicePlayback(options = {}) {
@@ -16516,15 +16587,7 @@ function speakVoiceResponse(textOverride) {
   const finishSpeaking = () => {
     if (playbackToken !== voicePlaybackToken || interruptToken !== voiceInterruptToken) return;
     activeVoiceAudio = null;
-    voiceSpeaking = false;
-    voiceAutoRestart = voiceFirstMode;
-    const shouldResume = voiceFirstMode || voiceResumeAfterSpeech;
-    if (shouldResume && !voiceRecognition && !voiceStopRequested && !document.hidden) {
-      voiceResumeAfterSpeech = false;
-      setTimeout(() => {
-        if (!voiceRecognition && !voiceSpeaking && !voiceStopRequested) startVoiceListening();
-      }, VOICE_RESTART_DELAY_MS);
-    }
+    resumeVoiceListeningAfterSpeech(playbackToken, interruptToken);
   };
   const browserSpeak = () => {
     updateVoiceOutputStatus("OpenAI voice audio is not available, so robotic browser speech is turned off.");
@@ -16533,7 +16596,7 @@ function speakVoiceResponse(textOverride) {
   };
   updateVoiceOutputStatus("Requesting OpenAI voice audio...");
   activeVoiceRequestController = new AbortController();
-  request("/api/voice/speak", { method: "POST", signal: activeVoiceRequestController.signal, body: { text, language: languageCode(), locale: voiceLocale(), rate: speechRateForLanguage(), pitch: speechPitchForLanguage(), forceOpenAi: true, voice: "coral" } })
+  request("/api/voice/speak", { method: "POST", signal: activeVoiceRequestController.signal, body: { text, language: languageCode(), locale: voiceLocale(), rate: speechRateForLanguage(), pitch: speechPitchForLanguage(), forceOpenAi: true, voice: preferredOpenAiTtsVoice() } })
     .then(result => {
       if (playbackToken !== voicePlaybackToken || interruptToken !== voiceInterruptToken) return;
       activeVoiceRequestController = null;
@@ -19401,7 +19464,9 @@ function startVoiceListening() {
       return;
     }
     setVoiceStatus("thinking");
-    setVoiceResponse(`Heard: ${command}.`, false, { allowVoiceFirst: false });
+    updateNexusBehaviorLayer("thinking", "Nexus heard you and is preparing the next response.");
+    const outputStatus = $("#globalVoiceOutputStatus");
+    if (outputStatus) outputStatus.textContent = translateText("Nexus heard you. One moment.");
     request("/api/voice/transcribe", { method: "POST", body: { transcript: command, language: languageCode(), locale: voiceLocale() } }).catch(() => {});
     handleVoiceCommand(command, { source: "voice" });
   };
@@ -20253,6 +20318,7 @@ function bindStatic() {
   });
   window.addEventListener("online", () => updateNexusBehaviorLayer("ready", "Connection restored. Nexus can use live services when configured."));
   window.addEventListener("offline", () => updateNexusBehaviorLayer("ready", "Connection offline. Nexus will keep local workflows available."));
+  installStableSpeechVoicePreference();
   refreshMicSupport();
   $("#jarvisToggle").onclick = toggleAskNexus;
   $("#jarvisCloseBtn").onclick = closeAskNexus;
