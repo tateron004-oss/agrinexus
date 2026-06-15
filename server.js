@@ -19990,10 +19990,10 @@ async function runAgentCommand(db, user, command, options = {}) {
       metadata: { conversationMode: true, redirectSection: "dashboard", suppressBehaviorNudge: true, suggestedReplies: ["I need medicine", "help me sell my crop", "start a course", "open the map"] }
     };
   }
-  if (conversational && /\b(what can you do|how can you help|what do you do)\b/.test(lower) && !/\b(farmer|farm|smallholder|grower)\b/.test(lower)) {
+  if (conversational && /\b(what can (?:you )?do|how can you help|what do you do)\b/.test(lower) && !/\b(farmer|farm|smallholder|grower)\b/.test(lower)) {
     return {
       intent: "conversation.capability_summary",
-      response: "I can help with health support, medicine access, farming problems, crop sales, learning, jobs, maps, routes, reminders, and provider handoffs. Tell me the problem, not the button.",
+      response: "I can listen in normal words, answer questions, open the right workspace, and guide health support, medicine access, crops, sales, jobs, learning, maps, reminders, and provider handoffs.",
       status: "completed",
       metadata: { conversationMode: true, redirectSection: "agent", suppressBehaviorNudge: true, suggestedReplies: ["I need a doctor", "my crop is bad", "start a course", "open the map"] }
     };
@@ -20012,7 +20012,7 @@ async function runAgentCommand(db, user, command, options = {}) {
       metadata: { conversationMode: true, redirectSection: "agent", suppressBehaviorNudge: true, suggestedReplies: ["help a farmer", "I need a doctor", "help me sell my crop", "open map"] }
     };
   }
-  if (conversational && (/\b(what can you do|how can you help|help)\b.*\b(farmer|farm|smallholder|grower)\b/.test(lower)
+  if (conversational && (/\b(what can (?:you )?do|how can you help|help)\b.*\b(farmer|farm|smallholder|grower)\b/.test(lower)
     || /\bwhat can you\b.*\b(farmer|farm|smallholder|grower)\b/.test(lower))) {
     return {
       intent: "conversation.farmer_help",
@@ -21521,7 +21521,7 @@ async function runAgentCommand(db, user, command, options = {}) {
     };
   }
 
-  if (conversational && (lower === "help" || lower.includes("what can you do") || lower.includes("i need help") || lower.includes("help me"))) {
+  if (conversational && (lower === "help" || /\bwhat can (?:you )?do\b/.test(lower) || lower.includes("i need help") || lower.includes("help me"))) {
     const next = smartNextActions(db, user).items[0];
     db.profile.agentPendingAction = null;
     db.profile.agentMemory.lastStatus = "guiding-user";
@@ -21674,7 +21674,7 @@ async function runAgentCommand(db, user, command, options = {}) {
     });
   }
 
-  if (lower.includes("help") || lower.includes("what can you do")) {
+  if (lower.includes("help") || /\bwhat can (?:you )?do\b/.test(lower)) {
     return {
       intent: "capability-summary",
       response: "I can listen by voice or text, remember the active mission, explain what I heard, create approved action plans, run workflows, prepare government briefings, advance learning, match workforce roles, prepare accessible telehealth, review trade, run drone missions, assess maps, test providers, and report readiness."

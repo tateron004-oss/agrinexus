@@ -65,8 +65,8 @@ let routeTrackingWatchId = null;
 let routeTrackingPoints = [];
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-239";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v219";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-240";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v220";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
 const VOICE_ATTENTION_DELAY_MS = 900;
@@ -18050,7 +18050,7 @@ function nexusConversationFirstIntent(command = "") {
       suggestions: ["help a farmer", "help a patient", "open learning", "open map"]
     };
   }
-  if (/\b(what can you do|how can you help|what do you do|help me understand)\b/.test(lower)) {
+  if (/\b(what can (?:you )?do|how can you help|what do you do|help me understand)\b/.test(lower)) {
     return {
       type: "answer",
       response: "I can listen in normal words, answer questions, open the right workspace, and guide health support, medicine access, crops, sales, jobs, learning, maps, reminders, and provider handoffs.",
