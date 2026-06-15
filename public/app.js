@@ -89,8 +89,8 @@ let routeTrackingWatchId = null;
 let routeTrackingPoints = [];
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-257";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v237";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-258";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v238";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
 const VOICE_ATTENTION_DELAY_MS = 900;
@@ -17289,10 +17289,88 @@ function setVoiceStatus(status) {
   updateNexusBehaviorLayer(status);
 }
 
-function refreshMicSupport() {
-  const supported = Boolean(window.SpeechRecognition || window.webkitSpeechRecognition);
+function browserVoiceRuntimeProfile() {
+  const userAgent = navigator.userAgent || "";
+  const isEdge = /\bEdg\//i.test(userAgent);
+  const isOpera = /\bOPR\//i.test(userAgent) || /\bOpera\b/i.test(userAgent);
+  const isChrome = /\bChrome\//i.test(userAgent) && !isEdge && !isOpera;
+  const isChromeIos = /\bCriOS\//i.test(userAgent);
+  const isChromium = (isChrome || isChromeIos || isEdge || /\bChromium\//i.test(userAgent)) && !isOpera;
+  const isSafari = /\bSafari\//i.test(userAgent) && !isChromium;
+  const recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
   const secureEnough = window.isSecureContext || ["localhost", "127.0.0.1"].includes(location.hostname);
-  const ready = supported && secureEnough;
+  const browserName = isChrome || isChromeIos
+    ? "Chrome"
+    : isEdge
+      ? "Microsoft Edge"
+      : isSafari
+        ? "Safari"
+        : "this browser";
+  return {
+    browserName,
+    isChrome: isChrome || isChromeIos,
+    isChromium,
+    isSafari,
+    recognitionName: window.SpeechRecognition ? "SpeechRecognition" : window.webkitSpeechRecognition ? "webkitSpeechRecognition" : "none",
+    supported: Boolean(recognition),
+    secureEnough,
+    bestForWebVoice: Boolean(isChromium && recognition && secureEnough)
+  };
+}
+
+function chromeVoiceRuntimeReady() {
+  const profile = browserVoiceRuntimeProfile();
+  return profile.isChrome && profile.supported && profile.secureEnough;
+}
+
+function chromeVoiceStatusMessage() {
+  const profile = browserVoiceRuntimeProfile();
+  const languageName = voiceLanguageName();
+  const locale = voiceLocale();
+  const streamingStatus = streamingVoiceEnabled() ? " Streaming mode is on." : "";
+  if (!profile.supported) return `${profile.browserName} does not expose browser speech recognition here. Open the app in desktop Chrome, then use Ask AgriNexus typed commands until microphone support is available.`;
+  if (!profile.secureEnough) return `${profile.browserName} needs HTTPS, localhost, or 127.0.0.1 before microphone voice can start. Open the hosted Render URL or your local server URL, then allow the microphone.`;
+  if (profile.isChrome) return `Chrome voice ready for ${languageName} (${locale}). Click Mic, choose Allow for microphone, and keep this tab open while testing.${streamingStatus}`;
+  return `${profile.browserName} voice ready for ${languageName} (${locale}). Chrome is the recommended browser for the most reliable Ask Nexus voice testing.${streamingStatus}`;
+}
+
+function applyChromeVoiceRuntimeDefaults(recognition) {
+  if (!recognition) return recognition;
+  recognition.lang = voiceLocale();
+  recognition.interimResults = streamingVoiceEnabled() || chromeVoiceRuntimeReady();
+  recognition.continuous = voiceFirstMode || streamingVoiceEnabled() || chromeVoiceRuntimeReady();
+  recognition.maxAlternatives = chromeVoiceRuntimeReady() ? 5 : streamingVoiceEnabled() ? 5 : 3;
+  return recognition;
+}
+
+async function chromeMicrophonePermissionState() {
+  if (!navigator.permissions?.query) return "unknown";
+  try {
+    const result = await navigator.permissions.query({ name: "microphone" });
+    return result?.state || "unknown";
+  } catch (error) {
+    return "unknown";
+  }
+}
+
+async function refreshChromeVoicePermissionHint() {
+  const profile = browserVoiceRuntimeProfile();
+  if (!profile.isChrome) return;
+  const status = $("#globalMicStatus");
+  if (!status || voiceRecognition || voiceDemoQuietMode || voiceConversationPaused) return;
+  const permissionState = await chromeMicrophonePermissionState();
+  if (permissionState === "denied") {
+    status.classList.add("blocked");
+    status.textContent = "Chrome blocked the microphone. Click the tune or lock icon near the address bar, set Microphone to Allow, then reload the page.";
+  } else if (permissionState === "granted") {
+    status.classList.add("ready");
+    status.textContent = chromeVoiceStatusMessage();
+  }
+}
+
+function refreshMicSupport() {
+  const profile = browserVoiceRuntimeProfile();
+  const ready = profile.supported && profile.secureEnough;
   const languageName = voiceLanguageName();
   const locale = voiceLocale();
   const status = $("#globalMicStatus");
@@ -17305,14 +17383,18 @@ function refreshMicSupport() {
       : voiceDemoQuietMode
       ? "Demo quiet mode is on. Nexus voice and auto-listening are off."
       : ready
-      ? `Microphone ready for ${languageName} (${locale}). Click Mic, then allow browser access.${streamingStatus}`
-      : `${languageName} voice input is not available in this browser. Type your request and click Run command.`;
+      ? profile.isChrome
+        ? chromeVoiceStatusMessage()
+        : `${profile.browserName} microphone ready for ${languageName} (${locale}). Click Mic, then allow browser access.${streamingStatus}`
+      : profile.secureEnough
+        ? `${languageName} voice input is not available in ${profile.browserName}. Open desktop Chrome for the best Ask Nexus voice experience, or type your request and click Run command.`
+        : `${profile.browserName} needs HTTPS, localhost, or 127.0.0.1 before microphone voice can start. Type your request, or open the secure hosted URL.`;
   }
   ["#globalListenBtn", "#voiceListenBtn", "#jarvisListenBtn", "#workflowListenBtn"].forEach(selector => {
     const button = $(selector);
     if (!button) return;
     button.disabled = !ready;
-    button.title = ready ? "Use your microphone to ask AgriNexus" : "Use typed command in this browser";
+    button.title = ready ? profile.isChrome ? "Use Chrome microphone with Ask AgriNexus" : "Use your microphone to ask AgriNexus" : "Use typed command in this browser";
     if (!ready) {
       if (selector === "#globalListenBtn") button.textContent = "Mic unavailable";
       if (selector === "#voiceListenBtn") button.textContent = "Mic unavailable";
@@ -17343,6 +17425,7 @@ function refreshMicSupport() {
     voiceFirstButton.setAttribute("aria-pressed", String(voiceFirstMode));
     voiceFirstButton.textContent = voiceConversationPaused ? "Nexus: Paused" : voiceDemoQuietMode ? "Nexus voice: Off" : voiceFirstMode ? "Hey AgriNexus: On" : "Hey AgriNexus: Off";
   }
+  refreshChromeVoicePermissionHint();
 }
 
 function normalizedWakeText(command) {
@@ -20340,6 +20423,11 @@ async function handleVoiceCommandCore(rawCommand, options = {}) {
     setVoiceResponse(`Mobile permission check: microphone ${permissions.microphone ? "available" : "not available"}, notifications ${permissions.notifications ? "available" : "not available"}, location ${permissions.location ? "available" : "not available"}. ${permissions.guidance}`, true);
     return;
   }
+  if (lower.includes("chrome voice") || lower.includes("chrome mic") || lower.includes("chrome microphone") || lower.includes("chrome setup") || lower.includes("browser voice setup")) {
+    setVoiceResponse(chromeVoiceStatusMessage(), true);
+    refreshMicSupport();
+    return;
+  }
   if (lower.includes("agentic behavior") || lower.includes("jarvis behavior") || lower.includes("performance check") || lower.includes("behavior check") || lower.includes("are you agentic")) {
     const scorecard = agenticBehaviorScorecard();
     setVoiceResponse(`Agentic behavior check: ${scorecard.mode}. I am ${scorecard.behavior}. Last timed response: ${scorecard.latencyMs || 0} ms. Memory: ${scorecard.memoryCount} item(s). Autopilot waiting: ${scorecard.autopilotWaiting}. Mobile readiness: ${scorecard.mobileReady}. Provider depth: ${scorecard.providerReady}.`, true);
@@ -21222,10 +21310,16 @@ function startVoiceListening() {
     refreshMicSupport();
     return;
   }
+  const profile = browserVoiceRuntimeProfile();
   const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
   if (!Recognition) {
     refreshMicSupport();
-    setVoiceResponse("Microphone voice input is not available in this browser. Type your request in Ask AgriNexus and click Run command.");
+    setVoiceResponse(`${profile.browserName} does not expose microphone speech recognition here. Open the app in desktop Chrome for voice, or type your request in Ask AgriNexus and click Run command.`);
+    return;
+  }
+  if (!profile.secureEnough) {
+    refreshMicSupport();
+    setVoiceResponse(`${profile.browserName} needs HTTPS, localhost, or 127.0.0.1 before microphone voice can start. Open the hosted Render URL or local server URL, then allow microphone access.`);
     return;
   }
   if (voiceConversationPaused && voiceRecognition) {
@@ -21251,19 +21345,16 @@ function startVoiceListening() {
   }
   voiceStopRequested = false;
   voiceRecognition = new Recognition();
-  voiceRecognition.lang = voiceLocale();
-  voiceRecognition.interimResults = streamingVoiceEnabled();
-  voiceRecognition.continuous = voiceFirstMode || streamingVoiceEnabled();
-  voiceRecognition.maxAlternatives = streamingVoiceEnabled() ? 5 : 3;
+  applyChromeVoiceRuntimeDefaults(voiceRecognition);
   voiceRecognition.onstart = () => {
     registerNativeVoiceSession("web-streaming-start");
-    updateNativeVoiceBridgeState("listening", { locale: voiceLocale() });
+    updateNativeVoiceBridgeState("listening", { locale: voiceLocale(), browser: profile.browserName, recognition: profile.recognitionName });
     setVoiceStatus(voiceConversationPaused ? "paused" : "listening");
     const status = $("#globalMicStatus");
     if (status) status.textContent = voiceConversationPaused
       ? `Paused in ${voiceLanguageName()} (${voiceLocale()}). I will ignore background conversation until you say Nexus again.`
-      : streamingVoiceEnabled()
-        ? `Streaming voice in ${voiceLanguageName()} (${voiceLocale()}). Speak naturally; Nexus can be interrupted.`
+      : streamingVoiceEnabled() || profile.isChrome
+        ? `${profile.browserName} streaming voice in ${voiceLanguageName()} (${voiceLocale()}). Speak naturally; Nexus can be interrupted.`
         : `Listening in ${voiceLanguageName()} (${voiceLocale()}). Say "Hey AgriNexus" or ask for a workflow like "open telehealth."`;
     refreshMicSupport();
   };
@@ -21273,7 +21364,9 @@ function startVoiceListening() {
     const recoverableErrors = new Set(["no-speech", "aborted", "network", "audio-capture"]);
     const permissionBlocked = error === "not-allowed" || error === "service-not-allowed";
     const message = permissionBlocked
-      ? "Microphone permission was blocked. Click the browser permission icon near the address bar and allow microphone access, or type your request."
+      ? profile.isChrome
+        ? "Chrome blocked the microphone. Click the tune or lock icon near the address bar, set Microphone to Allow, then reload if needed."
+        : "Microphone permission was blocked. Click the browser permission icon near the address bar and allow microphone access, or type your request."
       : error === "no-speech"
         ? "I did not hear speech. I am still listening. Say Nexus, then tell me what you need."
         : error === "audio-capture"
