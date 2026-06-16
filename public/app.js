@@ -89,8 +89,8 @@ let routeTrackingWatchId = null;
 let routeTrackingPoints = [];
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-279";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v259";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-280";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v260";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
 const VOICE_ATTENTION_DELAY_MS = 900;
@@ -7582,9 +7582,9 @@ async function answerAgentClarification(command) {
     updateNexusBehaviorLayer("thinking", "Nexus heard a new request and cleared the old choice.");
     return false;
   }
-  const indexMatch = lower.match(/\b([1-3])\b/);
-  const selected = indexMatch
-    ? pendingAgentClarification.options[Number(indexMatch[1]) - 1]
+  const numberChoice = answerChoiceNumberFromSpeech(command);
+  const selected = numberChoice
+    ? pendingAgentClarification.options[numberChoice - 1]
     : pendingAgentClarification.options.find(option => lower === "yes" || lower.includes(option.label.toLowerCase()) || lower.includes(option.section));
   if (!selected) {
     pendingAgentClarification.misses = (pendingAgentClarification.misses || 0) + 1;
@@ -17796,9 +17796,44 @@ function answerChoiceFromSpeech(command = "") {
   return choices.find(choice => choice.pattern.test(lower))?.id || "";
 }
 
+function answerChoiceNumberFromSpeech(command = "") {
+  const lower = normalizeToolText(command)
+    .replace(/^(nexus|agrinexus|agri nexus)\s+/i, "")
+    .trim();
+  if (!lower) return 0;
+  const digit = lower.match(/\b(?:select|choose|pick|option|number|item|choice)?\s*([1-9])\b/);
+  if (digit) return Number(digit[1]);
+  const words = [
+    ["one", "first", "first one", "option one", "number one"],
+    ["two", "second", "second one", "option two", "number two"],
+    ["three", "third", "third one", "option three", "number three"],
+    ["four", "fourth", "fourth one", "option four", "number four"],
+    ["five", "fifth", "fifth one", "option five", "number five"],
+    ["six", "sixth", "sixth one", "option six", "number six"],
+    ["seven", "seventh", "seventh one", "option seven", "number seven"],
+    ["eight", "eighth", "eighth one", "option eight", "number eight"],
+    ["nine", "ninth", "ninth one", "option nine", "number nine"]
+  ];
+  const found = words.findIndex(group => group.some(word => new RegExp(`\\b${word}\\b`).test(lower)));
+  return found >= 0 ? found + 1 : 0;
+}
+
+function extractNumberedAnswerChoices(message = "") {
+  const value = String(message || "");
+  const matches = [...value.matchAll(/(?:^|[\n\r.;])\s*(?:option\s*)?([1-9])[\).:\-]?\s*([^.\n\r;]+)/gi)];
+  const ordered = [];
+  matches
+    .sort((a, b) => Number(a[1]) - Number(b[1]))
+    .forEach(match => {
+      const choice = answerChoiceFromSpeech(match[2]);
+      if (choice && !ordered.includes(choice)) ordered.push(choice);
+    });
+  return ordered;
+}
+
 function nexusAnswerContextFromMessage(message = "", options = {}) {
   const lower = normalizeToolText(message);
-  const choices = [];
+  const choices = extractNumberedAnswerChoices(message);
   const add = id => {
     if (!choices.includes(id)) choices.push(id);
   };
@@ -17887,6 +17922,8 @@ async function answerPendingNexusQuestion(command = "") {
 
   const context = freshContext ? pendingNexusAnswerContext : null;
   if (!context) return false;
+  const numberChoice = answerChoiceNumberFromSpeech(command);
+  if (numberChoice && context.choices[numberChoice - 1]) return runNexusAnswerChoice(context.choices[numberChoice - 1], command);
   const spokenChoice = answerChoiceFromSpeech(command);
   if (spokenChoice) return runNexusAnswerChoice(spokenChoice, command);
   if (isNexusCommandConfirmation(lower)) {
@@ -18647,6 +18684,8 @@ function openFullScaleUserMap(response = "Full map is open. You can zoom, drag, 
     renderUserRealMap();
     map?.invalidateSize?.();
     userMap?.invalidateSize?.();
+    const target = $("#userMapCanvas") || $("#mapCanvas") || $("#map");
+    target?.scrollIntoView?.({ behavior: "smooth", block: "start" });
   }, 120);
   recordVoiceEvent("Opened the full map view from voice.", "done");
   updateNexusBehaviorLayer("ready", "Nexus opened the full map view and is ready for route or facility commands.");
@@ -18708,6 +18747,26 @@ function openNexusHome(response = "Home is open. What do you need next?") {
   updateNexusBehaviorLayer("ready", "Nexus returned to the home screen and is ready for the next request.");
   setVoiceResponse(`${actionLead}${response}`.trim(), true, { allowHandoff: false });
   return true;
+}
+
+function isHealthFacilityMapCommand(command = "", result = {}) {
+  const lower = normalizeToolText(command);
+  const response = normalizeToolText(result?.response || "");
+  const metadataSection = result?.metadata?.redirectSection || "";
+  const facilityWords = /\b(clinic|clinics|hospital|health facility|health facilities|pharmacy|pharmacies|medicine|doctor|provider)\b/;
+  const mapWords = /\b(show|find|nearest|nearby|closest|near me|where|map|location|route)\b/;
+  return (facilityWords.test(lower) && mapWords.test(lower))
+    || metadataSection === "map"
+    || /\bclinic or pharmacy support on the map|show clinic and pharmacy|closest facility route\b/.test(response);
+}
+
+function openHealthFacilityMapNow(response = "I opened the full map for clinic and pharmacy support. Share your village, city, or location, and I will guide the closest facility route.") {
+  const spoken = response || "I opened the full map for clinic and pharmacy support. Share your village, city, or location, and I will guide the closest facility route.";
+  const opened = openFullScaleUserMap(spoken);
+  renderLiveVoiceSuggestions(["use my location", "show clinics", "show pharmacy", "call provider", "start intake"]);
+  updateNexusBehaviorLayer("ready", "Nexus opened the full health facility map first, with clinic and pharmacy support ready.");
+  setActiveAgentJourney("map", "facility-route", spoken);
+  return opened;
 }
 
 function hideVoiceWorkflowCards() {
@@ -19392,7 +19451,7 @@ function openAgentResultWorkflow(result = {}, command = "") {
   const response = result.response || "Yes, I can help. I opened the right area and I am ready for the next detail.";
   if (intent === "conversation.medicine_help") return openMedicineHelpNow(response);
   if (intent === "conversation.doctor_help" || intent === "conversation.patient_help") return openDoctorHelpNow(response);
-  if (intent === "conversation.clinic_map_help") return openClinicHelpNow(response);
+  if (intent === "conversation.clinic_map_help") return isHealthFacilityMapCommand(command, result) ? openHealthFacilityMapNow(response) : openClinicHelpNow(response);
   if (intent === "conversation.health_intake") return openHealthIntakeNow(response);
   if (intent === "conversation.telehealth_captions") return openTelehealthCaptionsNow(response);
   if (intent === "conversation.crop_help") return openCropProblemHelpNow(response);
