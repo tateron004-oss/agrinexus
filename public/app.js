@@ -89,8 +89,8 @@ let routeTrackingWatchId = null;
 let routeTrackingPoints = [];
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-278";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v258";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-279";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v259";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
 const VOICE_ATTENTION_DELAY_MS = 900;
@@ -18732,6 +18732,10 @@ function startGuidedHealthIntakeSession(kind = "intake", startedBy = "") {
       answers: { careNeed: "Mobile clinic support requested." },
       index: 1
     },
+    caption: {
+      answers: { careNeed: "Telehealth caption relay requested.", accessNeeds: "Caption relay" },
+      index: 2
+    },
     medicine: {
       answers: {},
       index: 0
@@ -18761,7 +18765,8 @@ function startGuidedHealthVoiceResponse(kind = "intake", response = "", options 
     medicine: "pharmacy",
     clinic: "nearest-clinic",
     doctor: "provider",
-    mobile: "mobile-clinic"
+    mobile: "mobile-clinic",
+    caption: "caption"
   };
   const action = actionByKind[kind] || "intake";
   const spokenResponse = response || "I can help with health support. I am not a doctor and this is not a diagnosis. First, tell me where you are and what happened.";
@@ -18876,6 +18881,13 @@ function openDoctorHelpNow(response = "I heard you need a doctor. I can guide yo
   return startGuidedHealthVoiceResponse("doctor", response, {
     suggestions: ["where I am", "what happened", "find clinic", "video call", "call provider"],
     status: "Nexus started guided doctor/provider support by voice and is waiting for location details."
+  });
+}
+
+function openTelehealthCaptionsNow(response = "I can build captions for telehealth. I opened the caption relay so the patient, caregiver, and provider can read the conversation clearly. Who needs captions first?") {
+  return startGuidedHealthVoiceResponse("caption", response, {
+    suggestions: ["patient needs captions", "caregiver needs captions", "provider needs transcript", "start intake", "call provider"],
+    status: "Nexus started guided telehealth caption relay and is waiting for who needs captions first."
   });
 }
 
@@ -19355,6 +19367,7 @@ function runSimpleUserVoiceIntent(intent, command = "") {
   if (intent.type === "direct" && intent.directAction === "workforce-guided") return openWorkforceGuidedNow(intent.response);
   if (intent.type === "direct" && intent.directAction === "learning-guided") return openLearningGuidedNow(intent.response);
   if (intent.type === "direct" && intent.directAction === "route-guided") return openRouteGuidedNow(intent.response);
+  if (intent.type === "workflow" && intent.workflow === "health" && intent.action === "caption") return openTelehealthCaptionsNow(intent.response);
   if (intent.type === "workflow") return openWorkflowByVoice(intent.workflow, intent.action, intent.response, intent.dataset || {});
   return false;
 }
@@ -19381,6 +19394,7 @@ function openAgentResultWorkflow(result = {}, command = "") {
   if (intent === "conversation.doctor_help" || intent === "conversation.patient_help") return openDoctorHelpNow(response);
   if (intent === "conversation.clinic_map_help") return openClinicHelpNow(response);
   if (intent === "conversation.health_intake") return openHealthIntakeNow(response);
+  if (intent === "conversation.telehealth_captions") return openTelehealthCaptionsNow(response);
   if (intent === "conversation.crop_help") return openCropProblemHelpNow(response);
   if (intent === "conversation.crop_sale_help") return openWorkflowByVoice("trade", "buyer-contact", response, { productId: firstProduct()?.id });
   if (intent === "conversation.workforce_help") return openWorkflowByVoice("workforce", "build-profile", response, { roleId: firstEligibleRole()?.id });
