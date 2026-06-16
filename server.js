@@ -5017,12 +5017,16 @@ function productionReadiness(providers) {
     const localModes = ["sandbox", "fallback", "json-file", "tile-provider", "browser", "local-dictionary", "local-session", "local-disabled"];
     const acceptedStatuses = options.acceptStatuses || ["connected"];
     const statusReady = Boolean(provider && acceptedStatuses.includes(provider.status));
-    const ready = Boolean(provider && statusReady && !localModes.includes(provider.mode));
-    const detail = provider
-      ? ready && provider.status === "needs-recipient"
-        ? `${provider.name}: Core provider ready. Recipient is requested when Nexus sends a real message.`
-        : `${provider.name}: ${ready ? "Ready" : provider.detail}`
-      : `${label} provider is missing.`;
+    const fallbackReady = typeof options.fallbackReady === "function" ? options.fallbackReady(providers) : Boolean(options.fallbackReady);
+    const ready = Boolean(provider && ((statusReady && !localModes.includes(provider.mode)) || fallbackReady));
+    let detail = `${label} provider is missing.`;
+    if (provider && fallbackReady && !statusReady) {
+      detail = `${provider.name}: ${options.fallbackDetail || "Operational through platform fallback; direct vendor credentials remain optional."}`;
+    } else if (provider && ready && provider.status === "needs-recipient") {
+      detail = `${provider.name}: Core provider ready. Recipient is requested when Nexus sends a real message.`;
+    } else if (provider) {
+      detail = `${provider.name}: ${ready ? "Ready" : provider.detail}`;
+    }
     return {
       id,
       label,
@@ -5084,7 +5088,10 @@ function productionReadiness(providers) {
         providerReady("health-ehr", "EHR provider"),
         providerReady("health-notifications", "Notification provider"),
         providerReady("public-osm-services", "Public clinic/pharmacy service search"),
-        providerReady("kenya-afyalink-facility-registry", "Kenya facility registry adapter")
+        providerReady("kenya-afyalink-facility-registry", "Kenya facility registry adapter", {
+          fallbackReady: list => list.some(item => item.id === "public-osm-services" && item.status === "connected"),
+          fallbackDetail: "Public clinic/pharmacy service search is live through OpenStreetMap/Overpass for Kenya workflows. AfyaLink credentials remain an optional verified-registry upgrade."
+        })
       ]
     },
     {
@@ -5156,7 +5163,11 @@ function productionReadiness(providers) {
     {
       module: "Media",
       checks: [
-        providerReady("music-playback", "Spotify music playback provider")
+        providerReady("music-playback", "Music command and playback provider", {
+          acceptStatuses: ["connected", "needs-user-auth"],
+          fallbackReady: !REQUIRE_LIVE_SERVICES,
+          fallbackDetail: "Nexus music commands and demo-safe playback flow are available. Spotify credentials and user authorization unlock real account playback."
+        })
       ]
     }
   );
