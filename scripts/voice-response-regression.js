@@ -40,6 +40,7 @@ const checks = [
   { prompt: "Find a clinic near me.", intent: "conversation.clinic_map_help", section: "map", includes: "First, tell me" },
   { prompt: "Clinic.", intent: "conversation.clinic_map_help", section: "map", includes: "I heard clinic" },
   { prompt: "Nexus, find a clinic near me.", intent: "conversation.clinic_map_help", section: "map", includes: "First, tell me" },
+  { prompt: "Nexus, show clinic on map.", intent: "conversation.clinic_map_help", section: "map", includes: "First, tell me" },
   { prompt: "Nexus, show Kenya medical transport townships and villages on the map.", intent: "map.kenya_medical_transport", section: "map", includes: "Kibera" },
   { prompt: "Nexus, find a clinic near Kibera Kenya.", intent: "map.kenya_medical_transport", section: "map", includes: "Kibera" },
   { prompt: "Nexus, show pharmacy on the map.", intent: "conversation.clinic_map_help", section: "map", includes: "First, tell me" },
