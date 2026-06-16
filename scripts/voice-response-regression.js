@@ -51,7 +51,7 @@ const checks = [
   { prompt: "doctor please", intent: "conversation.doctor_help", section: "health", includes: "This is not a diagnosis" },
   { prompt: "daktari", intent: "conversation.doctor_help", section: "health", includes: "This is not a diagnosis" },
   { prompt: "Nexus, explain mobile clinic support.", intent: "conversation.mobile_clinic_help", section: "health", includes: "Mobile clinic" },
-  { prompt: "Nexus, no English, baby sick, help.", intent: "conversation.health_intake", section: "health", includes: "This is not a diagnosis" },
+  { prompt: "Nexus, no English, baby sick, help.", intent: "conversation.health_urgent_safety", section: "health", includes: "This may be urgent" },
   { prompt: "Nexus, I cannot read. Help me with health intake.", intent: "conversation.health_intake", section: "health", includes: "This is not a diagnosis" },
   { prompt: "Nexus, build captions for telehealth.", intent: "conversation.telehealth_captions", section: "health", includes: "captions" },
   { prompt: "Nexus, explain this to a healthcare partner.", intent: "conversation.healthcare_partner_explain", section: "health", includes: "healthcare partner" },
