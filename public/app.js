@@ -89,8 +89,8 @@ let routeTrackingWatchId = null;
 let routeTrackingPoints = [];
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-277";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v257";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-278";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v258";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
 const VOICE_ATTENTION_DELAY_MS = 900;
@@ -20263,6 +20263,16 @@ async function handleVoiceCommandCore(rawCommand, options = {}) {
     agentPerformanceState.lastCommand = command || localizedCommand || rawCommand;
     recordNexusAutonomousLearning({ type: "auto-language-detected", command: rawCommand, language: autoLanguage.label, mode: experienceMode || data?.user?.role || "platform" });
   }
+  if (isPlatformExplainVoiceCommand(spokenCommand || command || localizedCommand || rawCommand)) {
+    pendingAgentClarification = null;
+    pendingNexusSpokenCommand = null;
+    openAskNexus();
+    enableHeyAgriNexusMode();
+    renderLiveVoiceSuggestions(["help a farmer", "I need a doctor", "help me sell my crop", "start a course", "open map"]);
+    updateNexusBehaviorLayer("answering", "Nexus explained AgriNexus directly without opening a menu.");
+    setVoiceResponse(nexusPlatformExplainAnswer(), true, { allowHandoff: false, command: spokenCommand || command || rawCommand });
+    return;
+  }
   const firstPriorityFallbackIntent = simpleUserDirectVoiceIntent(spokenCommand || command);
   if (isPriorityServiceVoiceIntent(firstPriorityFallbackIntent)) {
     resetConversationStateForPriorityIntent(spokenCommand || command);
@@ -20294,16 +20304,6 @@ async function handleVoiceCommandCore(rawCommand, options = {}) {
     nexusAwaitingCommand = true;
     recordNexusAutonomousLearning({ type: "greeting", command: normalizedWakeText(localizedCommand) });
     setVoiceResponse(nexusConversationalWake("hello", localizedCommand), true, { allowHandoff: false });
-    return;
-  }
-  if (isPlatformExplainVoiceCommand(spokenCommand || command || localizedCommand || rawCommand)) {
-    pendingAgentClarification = null;
-    pendingNexusSpokenCommand = null;
-    openAskNexus();
-    enableHeyAgriNexusMode();
-    renderLiveVoiceSuggestions(["help a farmer", "I need a doctor", "help me sell my crop", "start a course", "open map"]);
-    updateNexusBehaviorLayer("answering", "Nexus explained AgriNexus directly without opening a menu.");
-    setVoiceResponse(nexusPlatformExplainAnswer(), true, { allowHandoff: false, command: spokenCommand || command || rawCommand });
     return;
   }
   if (isNexusHearingCheckCommand(command || localizedCommand)) {

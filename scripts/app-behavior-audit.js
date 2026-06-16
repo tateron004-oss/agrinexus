@@ -450,8 +450,8 @@ assert(app.indexOf("unified-brain-platform-explain") < app.indexOf("if (pendingW
 assert(styles.includes("pointer-events: none") && styles.includes(".user-caption-actions") && styles.includes("pointer-events: auto"), "Caption panel must not block workflow action clicks");
 assert(styles.includes("width: min(300px, calc(100vw - 24px))") && styles.includes("max-height: 138px"), "Caption panel must default to a small bubble");
 assert(styles.includes(".user-caption-panel.expanded") && styles.includes("display: none") && styles.includes("display: grid"), "Caption input controls must appear only in expanded caption mode");
-assert(html.includes("nexus-behavior-277"), "Index must force browsers to load Nexus behavior CSS");
-assert(html.includes("nexus-behavior-277"), "Index must force browsers to load Nexus behavior JS");
+assert(html.includes("nexus-behavior-278"), "Index must force browsers to load Nexus behavior CSS");
+assert(html.includes("nexus-behavior-278"), "Index must force browsers to load Nexus behavior JS");
 assert(server.includes("function productionActivationGuide"), "Backend needs a live activation guide");
 assert(server.includes("function directVendorProviderStatus"), "Backend must recognize direct vendor credentials");
 assert(server.includes("optionalEnvSets"), "Activation guide must show real provider depth options");
@@ -599,6 +599,8 @@ assert(server.includes("async function liveKnowledgeContextForCommand"), "Backen
 assert(server.includes("async function currentKnowledgeQuestionResponse"), "Backend needs a current-knowledge conversational response path");
 assert(server.includes("maize price feed"), "Market price questions must avoid pretending without a verified live price feed");
 assert(app.includes("function runSimpleUserVoiceIntent") && app.includes("pendingAgentClarification = intent.clarification || null") && app.includes("earlySimpleIntent && runSimpleUserVoiceIntent"), "Early smart clarification must preserve choices for the next user answer");
+assert(app.indexOf("if (isPlatformExplainVoiceCommand(spokenCommand || command || localizedCommand || rawCommand))") > -1, "Voice handler must hard-route explain AgriNexus directly");
+assert(app.indexOf("if (isPlatformExplainVoiceCommand(spokenCommand || command || localizedCommand || rawCommand))") < app.indexOf("if (!options.skipUnifiedBrain && await unifiedNexusConversationBrain"), "Explain AgriNexus must run before unified brain workflow staging");
 assert(app.includes("pendingAgentClarification = simpleIntent.clarification || null"), "Smart clarification must preserve choices after command cleanup");
 assert(app.includes("spokenCommand"), "Voice readback must preserve the user's original spoken phrase before internal routing rewrites");
 assert(app.includes("Is this for health, work, learning, crops, or the map?"), "Vague User help requests should ask one short clarifying question instead of guessing");
