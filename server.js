@@ -15077,7 +15077,7 @@ async function healthProviderGuidanceResponse(db, user, command = "", options = 
   const { country } = activeContext(db);
   const memories = retrieveAgentMemories(db.profile, command, 4);
   const safeLocal = [
-    "I can help you choose the right kind of care, but I am not a doctor and I cannot diagnose you.",
+    "I can help you choose the right kind of care, but I am not a doctor and I cannot make medical decisions for you.",
     "For cold-like symptoms, a primary care clinic, community health nurse, general practitioner, or telehealth provider is usually the right first step.",
     "If there is trouble breathing, chest pain, severe weakness, dehydration, a very high fever, pregnancy, a baby, an older adult, or symptoms getting worse, treat it as urgent and seek emergency care.",
     "Tell me your location and whether you want a clinic, telehealth, or pharmacy support, and I will guide the next step."
@@ -15148,6 +15148,13 @@ async function healthProviderGuidanceResponse(db, user, command = "", options = 
     metadata: {
       conversationMode: true,
       redirectSection: "health",
+      moduleSignal: { module: "Healthcare", section: "health" },
+      frontierCommunication: {
+        urgency: /urgent|emergency|baby|bleeding|cannot breathe|weak|worse/i.test(command) ? "high" : "medium",
+        nextQuestion: "Tell me your location and whether you want clinic, telehealth, or pharmacy support.",
+        confidence: 0.92,
+        responseShape: "explain care access safely, route to health, and ask one next question"
+      },
       provider,
       suggestedReplies: ["find a clinic near me", "start telehealth intake", "find pharmacy support", "show urgent warning signs"]
     }
@@ -16536,7 +16543,11 @@ function continueClarification(db, user, command) {
 
 function stageAgentAction(db, command, action) {
   ensureAiProfile(db.profile);
-  const moduleSignal = { module: action.module || conversationModuleSignal(command).module, section: action.section || sectionForAgentModule(action.module || "AI") };
+  const commandText = normalizeSpeechForIntent(command);
+  const forceMapSection = /\b(driver lost|lost driver|no gps|where to go|farm to market|from farm to market|route|road unsafe|road safe|show market from my farm|market from my farm)\b/.test(commandText);
+  const forcedSection = forceMapSection ? "map" : (action.section || sectionForAgentModule(action.module || "AI"));
+  const forcedModule = forceMapSection ? "Maps" : (action.module || conversationModuleSignal(command).module);
+  const moduleSignal = { module: forcedModule, section: forcedSection };
   const memories = retrieveAgentMemories(db.profile, command, 5);
   const reasoning = aiReasoningSnapshot(db, null, command, moduleSignal, memories, { source: "stage-agent-action" });
   const reasoningLanguageProduction = reasoningLanguageProductionEngine(db, null, command, { moduleSignal, memories, reasoning, source: "stage-agent-action" });
@@ -16555,7 +16566,8 @@ function stageAgentAction(db, command, action) {
     command,
     createdAt: new Date().toISOString(),
     ...action,
-    section: action.section || sectionForAgentModule(action.module),
+    module: forcedModule,
+    section: forcedSection,
     preActionReasoning: {
       reasoningId: reasoning.id,
       reasoningLanguageProductionId: reasoningLanguageProduction.id,
@@ -16569,14 +16581,30 @@ function stageAgentAction(db, command, action) {
   db.profile.agentMemory.lastStatus = "waiting-for-confirmation";
   db.profile.agentMemory.lastSummary = `I can ${String(pending.action || "run this workflow").toLowerCase()}. Say or type yes to continue, or no to cancel.`;
   db.profile.agentMemory.updatedAt = pending.createdAt;
+  const nextQuestion = pending.section === "map"
+    ? "What is the starting point and destination?"
+    : pending.section === "trade"
+      ? "What crop, buyer, farm, market, road, or payment detail should I use first?"
+      : pending.section === "workforce"
+        ? "What country and skill should I use first?"
+        : pending.section === "learning"
+          ? "What lesson or skill should I use first?"
+          : "What detail should I use first?";
   return {
     intent: "conversation.pending_action",
-    response: `I heard you. I can ${String(pending.action || "run this workflow").toLowerCase()} in ${pending.module || "AgriNexus"}. Say or type "yes" to continue, or "no" to cancel.`,
+    response: `I heard: ${command}. I can ${String(pending.action || "run this workflow").toLowerCase()} in ${pending.module || "AgriNexus"}. ${nextQuestion}`,
     status: "needs-confirmation",
     metadata: {
       conversationMode: true,
       pendingActionId: pending.id,
       redirectSection: pending.section,
+      moduleSignal,
+      frontierCommunication: {
+        urgency: /unsafe|lost|angry|paid|money|sick|bleeding|cannot breathe/.test(commandText) ? "high" : "normal",
+        nextQuestion,
+        confidence: 0.9,
+        responseShape: "acknowledge the plain request, keep the correct domain, ask one useful next question"
+      },
       tool: pending.tool || null,
       mode: pending.kind === "autopilot-mission" ? "autopilot" : null,
       previewSteps: pending.previewSteps || [],
@@ -16943,7 +16971,19 @@ function hasSpeechSignal(text = "", signals = []) {
 function resilientConversationIntent(db, user, rawText = "") {
   const text = normalizeSpeechForIntent(rawText);
   if (!text) return null;
-  const metadataBase = { conversationMode: true, suppressBehaviorNudge: true, resilientSpeech: true };
+  const guidedFrontier = (module, section, nextQuestion, urgency = "normal") => ({
+    conversationMode: true,
+    suppressBehaviorNudge: true,
+    resilientSpeech: true,
+    moduleSignal: { module, section },
+    frontierCommunication: {
+      urgency,
+      nextQuestion,
+      confidence: 0.94,
+      responseShape: "acknowledge, route, guide, ask one simple next question"
+    }
+  });
+  const metadataBase = guidedFrontier("Platform", "dashboard", "Tell me one word first: health, crops, work, learning, map, or medicine.");
   const has = signals => hasSpeechSignal(text, signals);
   const capabilitySignals = [
     /\bwhat can (?:you )?do\b/, /\bwhat you do\b/, /\byou can do what\b/, /\bhow help\b/,
@@ -17003,15 +17043,15 @@ function resilientConversationIntent(db, user, rawText = "") {
   if (has(capabilitySignals) && !/\b(agritrade|agri trade|auto\s*pilot|autopilot)\b/.test(text) && has(["farmer", "farm", "smallholder", "grower"]) && !/\b(start to finish|end to end|safely|safe)\b/.test(text)) {
     return {
       intent: "conversation.farmer_help",
-      response: "For a farmer, I can help check a bad crop, explain drone or field data, find a buyer, compare route risk, track a shipment, and prepare sale evidence. Tell me the crop and where the farm is.",
+      response: "For a farmer, I can help check a bad crop, explain drone or field data, find a buyer, compare route risk, track a shipment, and prepare sale evidence. What crop and village should we start with?",
       status: "completed",
-      metadata: { ...metadataBase, redirectSection: "trade", suggestedReplies: ["my crop is bad", "find a buyer", "track my shipment"] }
+      metadata: { ...guidedFrontier("AgriTrade", "trade", "What crop and village should we start with?"), redirectSection: "trade", suggestedReplies: ["my crop is bad", "find a buyer", "track my shipment"] }
     };
   }
   if (has(capabilitySignals) && !/\b(agritrade|agri trade)\b/.test(text)) {
     return {
       intent: "conversation.capability_summary",
-      response: "I can listen in normal words, answer questions, open the right workspace, and guide health support, medicine access, crops, sales, jobs, learning, maps, reminders, and provider handoffs.",
+      response: "I can listen in normal words, answer questions, open the right workspace, and guide health support, medicine access, crops, sales, jobs, learning, maps, reminders, and provider handoffs. What do you need first?",
       status: "completed",
       metadata: { ...metadataBase, redirectSection: "agent", suggestedReplies: ["I need a doctor", "my crop is bad", "start a course", "open the map"] }
     };
@@ -17019,65 +17059,66 @@ function resilientConversationIntent(db, user, rawText = "") {
   if (has(clinicSignals)) {
     return {
       intent: "conversation.clinic_map_help",
-      response: "I heard you need a clinic or mobile clinic. I can help find care support and show the route. If this is an emergency, call local emergency help now. First, tell me your village, city, or nearest landmark.",
+      response: "I heard you need a clinic or mobile clinic. I can help find care support and show the route. If this is urgent, call local emergency help now. First, tell me what village, city, or landmark you are near.",
       status: "needs-location",
-      metadata: { ...metadataBase, redirectSection: "map", suggestedReplies: ["use my location", "find clinic", "find pharmacy"] }
+      metadata: { ...guidedFrontier("Healthcare", "health", "What village, city, or landmark are you near?", "medium"), redirectSection: "map", suggestedReplies: ["use my location", "find clinic", "find pharmacy"] }
     };
   }
   if (has(doctorSignals)) {
     return {
       intent: "conversation.doctor_help",
-      response: "I heard you need care support. I can guide you step by step. I am not a doctor and this is not a diagnosis, but I can help explain what happened, check urgent warning signs, find clinic or mobile clinic support, and prepare a provider handoff. First, tell me where you are.",
+      response: "I heard you need care support. I can guide you step by step. I cannot give medical decisions, but I can check danger signs, find clinic or mobile clinic support, and prepare a provider handoff. Where are you now?",
       status: "needs-details",
-      metadata: { ...metadataBase, redirectSection: "health", suggestedReplies: ["start intake", "find clinic", "call provider"] }
+      metadata: { ...guidedFrontier("Healthcare", "health", "Where are you now?", "medium"), redirectSection: "health", suggestedReplies: ["start intake", "find clinic", "call provider"] }
     };
   }
   if (has(medicineSignals)) {
     return {
       intent: "conversation.medicine_help",
-      response: "I heard you need medicine. I can guide you step by step. I cannot prescribe, but I can help explain the medicine concern, find pharmacy or mobile clinic support, and prepare provider review. First, tell me the medicine concern.",
+      response: "I heard you need medicine. I can guide you step by step. I cannot prescribe, but I can help find pharmacy or mobile clinic support and prepare provider review. What medicine concern and what village or city?",
       status: "needs-location",
-      metadata: { ...metadataBase, redirectSection: "health", suggestedReplies: ["find pharmacy", "start intake", "call provider"] }
+      metadata: { ...guidedFrontier("Healthcare", "health", "What medicine concern and what village or city?", "medium"), redirectSection: "health", suggestedReplies: ["find pharmacy", "start intake", "call provider"] }
     };
   }
   if (has(cropProblemSignals) && !/\b(auto\s*pilot|autopilot)\b/.test(text)) {
+    const cropUrgency = /\b(no rain|drought|dying|dead|very dry|unsafe|urgent|emergency)\b/.test(text) ? "high" : "normal";
     return {
       intent: "conversation.crop_help",
-      response: "I can help with the crop problem. Tell me the crop, where the farm is, and what you see: yellow leaves, dry soil, pests, spots, or wilting. I can guide a field scan, simple next steps, buyer evidence, and route planning.",
+      response: "I can help with the crop problem. I can guide a field scan, simple next steps, buyer evidence, and route planning. What crop is it, and what do you see on the leaves, soil, or fruit?",
       status: "completed",
-      metadata: { ...metadataBase, redirectSection: "trade", suggestedReplies: ["run field scan", "explain crop problem", "contact buyer"] }
+      metadata: { ...guidedFrontier("AgriTrade", "trade", "What crop is it, and what do you see on the leaves, soil, or fruit?", cropUrgency), redirectSection: "trade", suggestedReplies: ["run field scan", "explain crop problem", "contact buyer"] }
     };
   }
   if (has(cropSaleSignals) && !/\b(start to finish|end to end|safely|safe)\b/.test(text)) {
     return {
       intent: "conversation.crop_sale_help",
-      response: "I can help sell the crop. Tell me the crop, quantity, location, and buyer if you know one. I will help prepare the sale and delivery tracking.",
+      response: "I can help sell the crop. I will help prepare buyer contact, sale evidence, and delivery tracking. What crop, quantity, farm location, and buyer should we use?",
       status: "needs-details",
-      metadata: { ...metadataBase, redirectSection: "trade", suggestedReplies: ["maize in Kenya", "find a buyer", "track delivery"] }
+      metadata: { ...guidedFrontier("AgriTrade", "trade", "What crop, quantity, farm location, and buyer should we use?"), redirectSection: "trade", suggestedReplies: ["maize in Kenya", "find a buyer", "track delivery"] }
     };
   }
   if (has(workSignals) && !/\bapply\b.*\b(that job|this job|the job)\b/.test(text)) {
     return {
       intent: "conversation.workforce_help",
-      response: "I can help with work. Tell me the country and the kind of job, and I will show role options, skill gaps, training links, and the application step.",
+      response: "I can help with work. I will show role options, skill gaps, training links, and the application step. What country and what kind of work do you want?",
       status: "completed",
-      metadata: { ...metadataBase, redirectSection: "workforce", suggestedReplies: ["show me jobs", "apply for a role", "review my skills"] }
+      metadata: { ...guidedFrontier("Workforce", "workforce", "What country and what kind of work do you want?"), redirectSection: "workforce", suggestedReplies: ["show me jobs", "apply for a role", "review my skills"] }
     };
   }
   if (has(learningSignals) && !/\b(i am new|i'm new|how do i|where do i start|show me how|walk me through|guide me)\b/.test(text)) {
     return {
       intent: "conversation.learning_start",
-      response: "I can help you learn. Tell me the skill you want, or I can start the recommended course and read it with captions or audio.",
+      response: "I can help you learn by voice, captions, and slow lessons. I can start a recommended course and read it with support. What skill do you want to learn first?",
       status: "needs-topic",
-      metadata: { ...metadataBase, redirectSection: "learning", suggestedReplies: ["start recommended course", "build captions", "read the lesson"] }
+      metadata: { ...guidedFrontier("Learning", "learning", "What skill do you want to learn first?"), redirectSection: "learning", suggestedReplies: ["start recommended course", "build captions", "read the lesson"] }
     };
   }
   if (has(mapSignals)) {
     return {
       intent: "conversation.map_open",
-      response: "Full map is open. You can zoom, drag, find facilities, check routes, and track shipments.",
+      response: "Full map is open. You can zoom, drag, find facilities, check routes, and track shipments. Where are you starting, and where do you need to go?",
       status: "completed",
-      metadata: { ...metadataBase, redirectSection: "map", suggestedReplies: ["find clinic near me", "track shipment", "show trade route"] }
+      metadata: { ...guidedFrontier("Maps", "map", "Where are you starting, and where do you need to go?"), redirectSection: "map", suggestedReplies: ["find clinic near me", "track shipment", "show trade route"] }
     };
   }
   return null;
@@ -17132,7 +17173,21 @@ function healthAccessVoiceAcceptanceResponse(db, user, text = "", lower = "", op
       intent,
       response: message,
       status,
-      metadata: { ...metadataBase, redirectSection, suggestedReplies, ...extraMetadata }
+      metadata: {
+        ...metadataBase,
+        redirectSection,
+        moduleSignal: extraMetadata.moduleSignal || { module: "Healthcare", section: "health" },
+        frontierCommunication: extraMetadata.frontierCommunication || {
+          urgency: /urgent|emergency|bleeding|cannot breathe|very hot|weak/.test(value) ? "high" : "medium",
+          nextQuestion: message.includes("?")
+            ? message.slice(Math.max(0, message.lastIndexOf(".") + 1)).trim()
+            : "Where are you, and what health support do you need first?",
+          confidence: 0.95,
+          responseShape: "acknowledge health need, route to care support, guide one safe next step"
+        },
+        suggestedReplies,
+        ...extraMetadata
+      }
     };
   };
 
@@ -17141,7 +17196,7 @@ function healthAccessVoiceAcceptanceResponse(db, user, text = "", lower = "", op
       "conversation.telehealth_captions",
       "completed",
       "health",
-      "I can build captions for telehealth. I will prepare a caption relay so the patient, caregiver, and provider can read the conversation clearly.",
+      "I can build captions for telehealth. I will prepare a caption relay so the patient, caregiver, and provider can read clearly. Who needs captions first?",
       ["start caption relay", "start intake", "call provider"]
     );
   }
@@ -17161,12 +17216,16 @@ function healthAccessVoiceAcceptanceResponse(db, user, text = "", lower = "", op
       "conversation.mobile_clinic_help",
       "completed",
       "health",
-      "Mobile clinic support helps a patient start intake, share location, prepare a provider handoff, find clinic or pharmacy resources, and organize outreach follow-up. Nexus is not a doctor and does not diagnose.",
+      "Mobile clinic support helps a patient start intake, share location, prepare a provider handoff, find clinic or pharmacy resources, and organize outreach follow-up. Who needs help, and what village or area?",
       ["start health intake", "find a clinic near me", "show pharmacy on the map"]
     );
   }
 
-  if (/\b(no english|cannot read|can't read|cant read|i cannot read|i cant read|illiterate|read for me|help me read|baby sick|child sick|sick baby)\b/.test(value)
+  const healthAccessReadingNeed = /\b(no english|cannot read|can't read|cant read|i cannot read|i cant read|illiterate|read for me|help me read)\b/.test(value)
+    && /\b(health|doctor|clinic|medicine|pharmacy|patient|telehealth|care|sick|baby|child|mother|grandma|provider|intake)\b/.test(value)
+    && !/\b(teach|lesson|course|learn|learning|school|training)\b/.test(value);
+  if (healthAccessReadingNeed
+    || /\b(baby sick|child sick|sick baby)\b/.test(value)
     || /\b(start|open|begin)\b.*\b(health )?(intake|telehealth intake|patient intake)\b/.test(value)
     || /\b(health )?(intake|telehealth intake|patient intake)\b.*\b(start|open|begin|help)\b/.test(value)
     || /^start intake$/.test(value)) {
@@ -17177,7 +17236,7 @@ function healthAccessVoiceAcceptanceResponse(db, user, text = "", lower = "", op
       "conversation.health_intake",
       "needs-details",
       "health",
-      "I started health intake. Tell me who needs care and where they are. This is not a diagnosis; it helps prepare the safest next support step.",
+      "I started health intake. I cannot make medical decisions, but I will ask one simple question at a time and prepare the safest support step. Who needs care, and where are they?",
       ["patient name", "find clinic", "I need medicine"]
     );
   }
@@ -17189,7 +17248,7 @@ function healthAccessVoiceAcceptanceResponse(db, user, text = "", lower = "", op
       "map.kenya_medical_transport",
       "completed",
       "map",
-      "I opened Kenya medical transport mapping. The map can show Nairobi township and village access points including Kibera, Mukuru, Mathare, Kawangware, Kangemi, Kiambu, Ruiru, and Thika, with clinic, pharmacy, mobile clinic, and medical supply corridors.",
+      "I opened Kenya medical transport mapping. The map can show Nairobi township and village access points including Kibera, Mukuru, Mathare, Kawangware, Kangemi, Kiambu, Ruiru, and Thika, with clinic, pharmacy, mobile clinic, and medical supply corridors. What area should I focus on?",
       ["find clinic near Kibera", "show pharmacy near Mukuru", "track mobile clinic route"],
       { countryId: "kenya", countryName: "Kenya", lat: 0.0236, lng: 37.9062, mapLayer: "kenya-medical-transport" }
     );
@@ -17201,7 +17260,7 @@ function healthAccessVoiceAcceptanceResponse(db, user, text = "", lower = "", op
       "map.kenya_medical_transport",
       "completed",
       "map",
-      `I opened health transport mapping for ${requestedHealthLocation.label}. Nexus can show nearby clinic, pharmacy, mobile clinic, and medical supply access points, then help prepare a non-diagnostic intake or transport handoff.`,
+      `I opened health transport mapping for ${requestedHealthLocation.label}. Nexus can show nearby clinic, pharmacy, mobile clinic, and medical supply access points, then help prepare intake or transport handoff. What support point should I show first?`,
       ["start intake", "show pharmacy on the map", "track mobile clinic route"],
       { countryId: "kenya", countryName: "Kenya", lat: 0.0236, lng: 37.9062, mapLayer: "kenya-medical-transport", requestedLocation: requestedHealthLocation }
     );
@@ -17212,7 +17271,7 @@ function healthAccessVoiceAcceptanceResponse(db, user, text = "", lower = "", op
       "conversation.clinic_map_help",
       "needs-location",
       "map",
-      "I heard you need clinic or pharmacy support on the map. I can guide this step by step, show nearby clinic, mobile clinic, or pharmacy options, and help prepare a safe handoff. If this is an emergency, call local emergency help now. First, tell me your village, city, or nearest landmark.",
+      "I heard you need clinic or pharmacy support on the map. I can show nearby clinic, mobile clinic, or pharmacy options and help prepare a safe handoff. First, tell me what village, city, or landmark you are near.",
       ["use my location", "find clinic", "find pharmacy"]
     );
   }
@@ -17222,7 +17281,7 @@ function healthAccessVoiceAcceptanceResponse(db, user, text = "", lower = "", op
       "conversation.clinic_map_help",
       "needs-location",
       "map",
-      "I heard you need clinic or pharmacy support on the map. I can guide this step by step, show nearby clinic, mobile clinic, or pharmacy options, and help prepare a safe handoff. If this is an emergency, call local emergency help now. First, tell me your village, city, or nearest landmark.",
+      "I heard you need clinic or pharmacy support on the map. I can show nearby clinic, mobile clinic, or pharmacy options and help prepare a safe handoff. First, tell me what village, city, or landmark you are near.",
       ["use my location", "find clinic", "find pharmacy"]
     );
   }
@@ -17232,7 +17291,7 @@ function healthAccessVoiceAcceptanceResponse(db, user, text = "", lower = "", op
       "conversation.doctor_help",
       "needs-details",
       "health",
-      "I heard you need a doctor. I can guide you step by step. I am not a doctor and this is not a diagnosis, but I can help explain what happened, check urgent warning signs, find clinic or mobile clinic support, and prepare a provider handoff. First, tell me where you are.",
+      "I heard you need a doctor. I can guide you step by step. I cannot give medical decisions, but I can check danger signs, find clinic or mobile clinic support, and prepare a provider handoff. Where are you now?",
       ["start intake", "find clinic", "call provider"]
     );
   }
@@ -17242,7 +17301,7 @@ function healthAccessVoiceAcceptanceResponse(db, user, text = "", lower = "", op
       "conversation.medicine_help",
       "needs-location",
       "health",
-      "I heard you need medicine. I can guide you step by step. I cannot prescribe, but I can help explain the medicine concern, find pharmacy or mobile clinic support, and prepare provider review. First, tell me the medicine concern.",
+      "I heard you need medicine. I can guide you step by step. I cannot prescribe, but I can find pharmacy or mobile clinic support and prepare provider review. What medicine concern and what village or city?",
       ["find pharmacy", "start intake", "call provider"]
     );
   }
@@ -17349,6 +17408,28 @@ function platformWideVoiceAcceptanceResponse(db, user, text = "", lower = "", op
   if (options.conversational !== true) return null;
   const value = normalizeSpeechForIntent(text);
   const metadataBase = { conversationMode: true, suppressBehaviorNudge: true, platformWideVoice: true };
+  const moduleForSection = section => ({
+    health: "Healthcare",
+    trade: "AgriTrade",
+    workforce: "Workforce",
+    learning: "Learning",
+    map: "Maps",
+    dashboard: "Platform",
+    agent: "Agent AI"
+  }[section] || "Platform");
+  const nextQuestionFromMessage = (message, section) => {
+    const question = String(message || "").match(/([^.!?]*\?)/g)?.pop();
+    if (question) return question.trim();
+    return {
+      health: "Where are you, and what help is needed first?",
+      trade: "What crop, buyer, farm, market, road, or payment detail should I use first?",
+      workforce: "What country and what kind of work do you want?",
+      learning: "What lesson, course, or certificate step should I help with first?",
+      map: "What is the starting point and destination?",
+      dashboard: "What do you need first: health, crops, work, learning, map, or market?",
+      agent: "What do you want Nexus to help with first?"
+    }[section] || "What detail should I use first?";
+  };
   const response = (intent, status, redirectSection, message, suggestedReplies = [], extraMetadata = {}) => {
     if (/^needs-/.test(String(status || ""))) {
       setSimpleVoiceTurn(db, {
@@ -17371,7 +17452,19 @@ function platformWideVoiceAcceptanceResponse(db, user, text = "", lower = "", op
       intent,
       response: message,
       status,
-      metadata: { ...metadataBase, redirectSection, suggestedReplies, ...extraMetadata }
+      metadata: {
+        ...metadataBase,
+        redirectSection,
+        moduleSignal: extraMetadata.moduleSignal || { module: moduleForSection(redirectSection), section: redirectSection },
+        frontierCommunication: extraMetadata.frontierCommunication || {
+          urgency: /urgent|emergency|unsafe|lost|sick|bleeding|cannot breathe|paid|money/.test(value) ? "high" : "normal",
+          nextQuestion: nextQuestionFromMessage(message, redirectSection),
+          confidence: 0.94,
+          responseShape: "acknowledge, route, guide, and ask one useful next question"
+        },
+        suggestedReplies,
+        ...extraMetadata
+      }
     };
   };
   const simplePhrase = value
@@ -17468,6 +17561,28 @@ function platformWideVoiceAcceptanceResponse(db, user, text = "", lower = "", op
     );
   }
 
+  if (/\b(no understand|cannot read|cant read|can't read|too many words|teach by voice|read for me|explain simple)\b/.test(value)
+    && /\b(lesson|course|learn|learning|teach|school|training|voice)\b/.test(value)
+    && !/\b(health|doctor|clinic|medicine|pharmacy|patient|sick|baby|child|mother|grandma)\b/.test(value)) {
+    return response(
+      "conversation.learning_accessibility_help",
+      "needs-topic",
+      "learning",
+      "I heard learning help. I can teach by voice, read slowly, use captions, and explain the lesson in simple words. What lesson or skill should I start with?",
+      ["read lesson", "build captions", "start course"]
+    );
+  }
+
+  if (/\bbuyer\b/.test(value) && /\b(french|francais|english|translate|translation|language|speaks|speak|message|sale)\b/.test(value)) {
+    return response(
+      "trade.buyer_language_support",
+      "needs-details",
+      "trade",
+      "I heard the buyer speaks French and you speak English. I can prepare a simple sale message, translate it, keep the buyer context, and help with the sale. What crop and buyer should I use?",
+      ["write buyer message", "translate to French", "track sale"]
+    );
+  }
+
   if (/\b(help me sell|sell)\b.*\b(maize|corn|crop|harvest|produce)\b/.test(value) && !/\b(start to finish|end to end|safely|safe)\b/.test(value)) {
     return response("conversation.crop_sale_help", "needs-details", "trade", "I can help sell the crop. Tell me the quantity, location, and buyer if you know one. I will help prepare the sale and delivery tracking.", ["contact the buyer", "track my shipment", "show trade route"]);
   }
@@ -17486,11 +17601,20 @@ function platformWideVoiceAcceptanceResponse(db, user, text = "", lower = "", op
   if (/\b(track|follow|show|monitor)\b.*\b(shipment|delivery|order|sale|product)\b/.test(value)) {
     return response("map.live_route_tracking", "completed", "map", "I opened shipment tracking. The map can show the route, checkpoints, risk notes, and delivery evidence. Live GPS depth improves when a logistics provider is connected.", ["show route from Kenya to Nigeria", "message buyer", "use my location"]);
   }
-  if (/\b(show|open|check)\b.*\b(trade )?route\b.*\bkenya\b.*\bnigeria\b|\broute\b.*\bkenya\b.*\bnigeria\b/.test(value)) {
-    return response("map.buyer_seller_location_route", "completed", "map", "I created a Kenya to Nigeria trade route view. The map can show route context, shipment tracking, buyer updates, and delivery evidence. Live turn-by-turn routing uses Mapbox, Google Maps, or OpenRouteService when connected.", ["track shipment", "contact buyer", "check route risk"]);
-  }
   if (/\b(track|show)\b.*\broute\b.*\b(farm|field)\b.*\bmarket\b/.test(value)) {
     return response("map.live_route_tracking", "completed", "map", "I opened farm-to-market route tracking. Share the pickup and market location, or use browser location, and Nexus will guide route, risk, and delivery status.", ["use my location", "track shipment", "show route"]);
+  }
+  if (/\b(road|route|driver|truck|rain|unsafe|safe|lost)\b.*\b(farm|market|buyer|lagos|delivery)\b|\b(farm|market|buyer|delivery)\b.*\b(road|route|driver|truck|rain|unsafe|safe|lost)\b/.test(value)) {
+    return response(
+      "map.route_risk_guidance",
+      "needs-location",
+      "map",
+      "I opened route risk on the map. I can help with road safety, rain, driver location, farm-to-market movement, buyer delivery, and route notes. Where is the starting point and destination?",
+      ["use my location", "track shipment", "show route risk"]
+    );
+  }
+  if (/\b(show|open|check)\b.*\b(trade )?route\b.*\bkenya\b.*\bnigeria\b|\broute\b.*\bkenya\b.*\bnigeria\b/.test(value)) {
+    return response("map.buyer_seller_location_route", "completed", "map", "I created a Kenya to Nigeria trade route view. The map can show route context, shipment tracking, buyer updates, and delivery evidence. Live turn-by-turn routing uses Mapbox, Google Maps, or OpenRouteService when connected.", ["track shipment", "contact buyer", "check route risk"]);
   }
   if (/\b(use my location|use location|my location|gps)\b/.test(value)) {
     return response("map.location_permission", "needs-permission", "map", "I can use your location after the browser gives permission. I opened map support so you can allow location and continue route, clinic, pharmacy, or shipment tracking.", ["allow location", "find clinic near me", "track shipment"]);
@@ -17523,6 +17647,15 @@ function platformWideVoiceAcceptanceResponse(db, user, text = "", lower = "", op
     return response("conversation.clinic_map_help", "needs-location", "map", "I can show clinic and pharmacy support on the map. Share your village, city, or location, and I will guide the closest facility route.", ["use my location", "find clinic", "find pharmacy"]);
   }
 
+  if (/\bdrone\b.*\b(red|yellow|bad|dry|area|spot|field|farm|mean|means)\b|\b(red|yellow|bad|dry)\b.*\b(area|spot)\b.*\b(farm|field|drone)\b/.test(value)) {
+    return response(
+      "conversation.drone_simple_explanation",
+      "needs-details",
+      "trade",
+      "I heard the drone saw a red area in the farm. In simple words, red can mean that part of the crop needs attention, like water stress, pest damage, weak growth, or poor soil. What crop is in that red area?",
+      ["maize", "cassava", "run field scan"]
+    );
+  }
   if (/\b(run|start|open)\b.*\b(drone|field)\b.*\b(scan|evidence)\b|\brun drone scan\b/.test(value)) {
     return response("drone.field_scan", "completed", "trade", "Drone scan is ready. Nexus can review crop health, pests, irrigation, field evidence, buyer proof, and the next farm action. Live drone footage connects when a drone provider is added.", ["explain crop evidence", "contact buyer", "track shipment"]);
   }
@@ -17543,12 +17676,21 @@ function platformWideVoiceAcceptanceResponse(db, user, text = "", lower = "", op
     return response("learning.lesson_progress", "completed", "learning", "Lesson progress workflow is open. Nexus can record the completed lesson, update progress, and prepare the next learning step.", ["issue my certificate", "show my progress", "read next lesson"]);
   }
   if (/\b(issue|create|give|get)\b.*\b(my )?(certificate|credential)\b/.test(value)) {
-    return response("learning.certificate", "completed", "learning", "Certificate workflow is open. Nexus will check course progress and prepare the certificate evidence when the learner is ready.", ["show my certificate", "start next course", "show my progress"]);
+    return response("learning.certificate", "needs-details", "learning", "I can help with your certificate. I will check the course, lesson progress, and quiz evidence, then prepare certificate proof when ready. Which course did you finish?", ["show my progress", "start next course", "read the lesson"]);
   }
 
   if (/\b(i need work|need work|find work|find a job|job please|work please|need job|want job)\b/.test(value)) {
     if (/\bapply\b.*\b(that job|this job|the job)\b/.test(value)) return null;
     return response("conversation.workforce_help", "needs-details", "workforce", "I can help with work. Tell me the country and the kind of job, and I will show role options, skill gaps, training links, and the application step.", ["help me apply for a job", "prepare me for interview", "review my skills"]);
+  }
+  if (/\blive\b.*\bjobs?\b|\bjobs?\b.*\b(rwanda|today|current|live|provider|available)\b/.test(value)) {
+    return response(
+      "workforce.live_jobs_provider_status",
+      "needs-provider",
+      "workforce",
+      "I can check job readiness, but live current Rwanda jobs need a connected job provider. I can still prepare a local job search and provider connection path. What role should I search for?",
+      ["farm work", "health assistant", "connect job provider"]
+    );
   }
   if (/\b(apply|application)\b.*\b(job|role|work)\b|\bhelp me apply\b/.test(value)) {
     if (/\b(that job|this job|the job)\b/.test(value)) return null;
@@ -17596,6 +17738,16 @@ function platformWideVoiceAcceptanceResponse(db, user, text = "", lower = "", op
   }
   if (/\bwhat makes this different\b|\bdifferent from a normal app\b|\bnormal app\b/.test(value)) {
     return response("conversation.platform_differentiator", "completed", "agent", "AgriNexus is different because it is voice-first, workflow-centered, multilingual, provider-aware, map-enabled, and built to guide non-technical users through farming, health access, learning, work, trade, and operations.", ["explain your brain", "show production readiness"]);
+  }
+
+  if (/\b(thing bad help me|bad help me|i am confused|do not know what button|dont know what button|no understand)\b/.test(value)) {
+    return response(
+      "conversation.guided_help",
+      "needs-choice",
+      "dashboard",
+      "I hear you need help. Tell me one word first: health, crops, work, learning, map, or market?",
+      ["health", "crops", "work", "learning", "map"]
+    );
   }
 
   if (musicAssistantIntent(text)) {
@@ -20545,8 +20697,8 @@ async function dailyLifeAdvisorResponse(db, user, text, lower, options = {}) {
     rememberAgentMemory(db.profile, `Daily support: user asked about walking safety at about ${temp}F in ${context.country}.`, { source: "daily-life-advisor", category: "safety", module: "Healthcare", confidence: 0.89 });
   } else if (kind === "farmer") {
     const product = (db.products || []).find(item => item.countryId === activeContext(db).country.id) || (db.products || [])[0];
-    response = `Yes. A farmer can ask even without all the data. I will use the country, crop, route, weather/heat profile, drone evidence, and remembered farm goals. Right now I would ask one simple follow-up only if needed: what crop and what problem are you seeing? For ${product?.name || "the selected crop"}, I can suggest when to water, whether to scan the field, whether to harvest, how to protect quality, and which route or buyer step is safest.`;
-    nextStep = "Say 'Nexus, check my crop' or 'Nexus, when should I harvest' and I will guide it.";
+    response = `I can help the farmer. For ${product?.name || "the selected crop"}, I can check crop risk, water timing, field scan need, harvest timing, buyer proof, and the safest route. What crop and what problem are you seeing?`;
+    nextStep = "Say 'Nexus, check my crop' or 'Nexus, when should I harvest.'";
     rememberAgentMemory(db.profile, `Farmer daily advisor requested for ${product?.name || "crop"} using heat, route, crop, drone, and market context.`, { source: "daily-life-advisor", category: "pattern", module: "AgriTrade", confidence: 0.88 });
   } else if (kind === "learner") {
     response = "Yes. A learner can ask a rough question like 'I do not understand this' or 'what does this mean?' Nexus should explain it in plain language, connect it to the active course, offer captions or audio, and then ask one small next question instead of overwhelming the learner.";
@@ -20573,7 +20725,28 @@ async function dailyLifeAdvisorResponse(db, user, text, lower, options = {}) {
     intent: "conversation.daily_life_advisor",
     response: `${response} ${nextStep}`,
     status: "completed",
-    metadata: { conversationMode: true, redirectSection: moduleSignal.section, module: moduleSignal.module, kind, context, reasoning, memoriesUsed: memories.map(item => item.id).filter(Boolean) }
+    metadata: {
+      conversationMode: true,
+      redirectSection: moduleSignal.section,
+      module: moduleSignal.module,
+      moduleSignal,
+      frontierCommunication: {
+        urgency: /urgent|emergency|dying|unsafe|too hot|weak|sick/.test(lower) ? "high" : "normal",
+        nextQuestion: kind === "farmer"
+          ? "What crop and what problem are you seeing?"
+          : kind === "learner"
+            ? "What lesson should I explain first?"
+            : kind === "worker"
+              ? "What job or work problem should I help with first?"
+              : "What do you need help deciding first?",
+        confidence: 0.9,
+        responseShape: "answer everyday question, explain simply, guide next step"
+      },
+      kind,
+      context,
+      reasoning,
+      memoriesUsed: memories.map(item => item.id).filter(Boolean)
+    }
   };
 }
 
@@ -20857,6 +21030,26 @@ async function runAgentCommand(db, user, command, options = {}) {
   const spokenName = onboardingPhrase ? "" : extractConversationalName(text);
   const directNameIntro = /^(my name is|i am|i'm|this is|call me)\b/i.test(text)
     || /^(hi|hello|hey|good morning|good afternoon|good evening)\s+(nexus|agrinexus|agri\s+nexus)?[,:\-]?\s*(my name is|i am|i'm|this is|call me)\b/i.test(text);
+  if (conversational && /\b(i am confused|i'm confused|confused|do not know what button|dont know what button|don't know what button|what button to press|too many buttons|lost in the app)\b/.test(lower)) {
+    return {
+      intent: "conversation.guided_help",
+      response: "I hear you. Tell me one word first: health, crops, work, learning, map, or market?",
+      status: "needs-choice",
+      metadata: {
+        conversationMode: true,
+        redirectSection: "dashboard",
+        suppressBehaviorNudge: true,
+        moduleSignal: { module: "Platform", section: "dashboard" },
+        frontierCommunication: {
+          urgency: "normal",
+          nextQuestion: "Tell me one word first: health, crops, work, learning, map, or market?",
+          confidence: 0.96,
+          responseShape: "calm confused user, offer simple choices, ask one next question"
+        },
+        suggestedReplies: ["health", "crops", "work", "learning", "map"]
+      }
+    };
+  }
   if (spokenName && directNameIntro) {
     db.profile.agentMemory.userName = spokenName;
     db.profile.agentMemory.userModel = { ...(db.profile.agentMemory.userModel || {}), name: spokenName, preferredInteraction: "voice-first", lastSeenAt: new Date().toISOString() };
@@ -20981,9 +21174,9 @@ async function runAgentCommand(db, user, command, options = {}) {
   if (conversational && /\b(caption|captions|transcript|subtitles?)\b.*\b(telehealth|health|patient|doctor|provider|clinic|care)\b|\b(telehealth|health|patient|doctor|provider|clinic|care)\b.*\b(caption|captions|transcript|subtitles?)\b/.test(lower)) {
     return {
       intent: "conversation.telehealth_captions",
-      response: "I can build captions for telehealth. I will prepare a caption relay so the patient, caregiver, and provider can read the conversation clearly.",
+      response: "I can build captions for telehealth. I will prepare a caption relay so the patient, caregiver, and provider can read the conversation clearly. Who needs captions first?",
       status: "completed",
-      metadata: { conversationMode: true, redirectSection: "health", suppressBehaviorNudge: true, suggestedReplies: ["start caption relay", "start intake", "call provider"] }
+      metadata: { conversationMode: true, redirectSection: "health", suppressBehaviorNudge: true, moduleSignal: { module: "Healthcare", section: "health" }, frontierCommunication: { urgency: "normal", nextQuestion: "Who needs captions first?", confidence: 0.93, responseShape: "acknowledge accessibility need, route to health, ask one next question" }, suggestedReplies: ["start caption relay", "start intake", "call provider"] }
     };
   }
   if (conversational && /\b(guide|support|walk|lead|coach)\b.*\b(farmer|student|patient|worker|learner|job seeker|caregiver)\b/.test(lower) && !/\b(start to finish|end to end|sell|payment|buyer)\b/.test(lower)) {
@@ -21007,7 +21200,7 @@ async function runAgentCommand(db, user, command, options = {}) {
       intent: "conversation.patient_help",
       response: "I can help the patient get to the right support. I can start intake, find clinic or pharmacy options, prepare a provider call, add captions, or create a caregiver handoff. Is this urgent, and where is the patient?",
       status: "completed",
-      metadata: { conversationMode: true, redirectSection: "health", suppressBehaviorNudge: true, suggestedReplies: ["start intake", "find clinic", "I need medicine"] }
+      metadata: { conversationMode: true, redirectSection: "health", suppressBehaviorNudge: true, moduleSignal: { module: "Healthcare", section: "health" }, frontierCommunication: { urgency: /urgent|emergency|cannot breathe|bleeding|weak|sick/.test(lower) ? "high" : "medium", nextQuestion: "Is this urgent, and where is the patient?", confidence: 0.93, responseShape: "acknowledge patient need, route to health, ask one next question" }, suggestedReplies: ["start intake", "find clinic", "I need medicine"] }
     };
   }
   if (conversational && /\b(clinic|hospital|health center|health centre|pharmacy)\b/.test(lower) && /\b(map|near|nearest|nearby|closest|where|location|find|show)\b/.test(lower)) {
@@ -21015,7 +21208,7 @@ async function runAgentCommand(db, user, command, options = {}) {
       intent: "conversation.clinic_map_help",
       response: "I heard you need clinic or pharmacy support on the map. I can guide this step by step, show nearby clinic, mobile clinic, or pharmacy options, and help prepare a safe handoff. If this is an emergency, call local emergency help now. First, tell me your village, city, or nearest landmark.",
       status: "needs-location",
-      metadata: { conversationMode: true, redirectSection: "map", suppressBehaviorNudge: true, suggestedReplies: ["use my location", "find clinic", "find pharmacy"] }
+      metadata: { conversationMode: true, redirectSection: "map", suppressBehaviorNudge: true, moduleSignal: { module: "Maps", section: "map" }, frontierCommunication: { urgency: /urgent|emergency|sick|baby|weak/.test(lower) ? "high" : "medium", nextQuestion: "First, tell me your village, city, or nearest landmark.", confidence: 0.94, responseShape: "acknowledge facility need, route to map, ask one location question" }, suggestedReplies: ["use my location", "find clinic", "find pharmacy"] }
     };
   }
   if (conversational && /\b(clinic|hospital|health center|health centre)\b/.test(lower)) {
@@ -21023,7 +21216,7 @@ async function runAgentCommand(db, user, command, options = {}) {
       intent: "conversation.clinic_help",
       response: "I heard you need a clinic or mobile clinic. I can help find care support and show the route. If this is an emergency, call local emergency help now. First, tell me your village, city, or nearest landmark.",
       status: "needs-location",
-      metadata: { conversationMode: true, redirectSection: "health", suppressBehaviorNudge: true, suggestedReplies: ["use my location", "start intake", "find pharmacy"] }
+      metadata: { conversationMode: true, redirectSection: "health", suppressBehaviorNudge: true, moduleSignal: { module: "Healthcare", section: "health" }, frontierCommunication: { urgency: /urgent|emergency|sick|baby|weak/.test(lower) ? "high" : "medium", nextQuestion: "First, tell me your village, city, or nearest landmark.", confidence: 0.94, responseShape: "acknowledge clinic need, route to health, ask one location question" }, suggestedReplies: ["use my location", "start intake", "find pharmacy"] }
     };
   }
   if (conversational && /\b(i need|need|want|find|see|speak to|talk to|call|contact|help me)\b.*\b(doctor|nurse|provider|clinician)\b|\b(doctor help|medical provider|health provider|see a doctor)\b/.test(lower)) {
@@ -21113,7 +21306,23 @@ async function runAgentCommand(db, user, command, options = {}) {
   }
   if (/(issue|create|generate).*(my\s+)?certificate|certificate/.test(lower) && /(learning|course|lesson|certificate|my)/.test(lower)) {
     const result = await executeAgentTool(db, user, { tool: "learning.certificate" });
-    return { intent: "learning.certificate", response: result, status: "completed", metadata: { conversationMode: conversational, redirectSection: "learning" } };
+    return {
+      intent: "learning.certificate",
+      response: `I can help with your certificate. ${result} Which course did you finish?`,
+      status: "needs-details",
+      metadata: {
+        conversationMode: conversational,
+        redirectSection: "learning",
+        moduleSignal: { module: "Learning", section: "learning" },
+        frontierCommunication: {
+          urgency: "normal",
+          nextQuestion: "Which course did you finish?",
+          confidence: 0.94,
+          responseShape: "confirm certificate need, route to learning, ask one learner-friendly next question"
+        },
+        suggestedReplies: ["show my progress", "start next course", "read the lesson"]
+      }
+    };
   }
   if (/\b(schedule|plan|book|set)\b.*\b(shift|work shift)\b|\bshift schedule\b/.test(lower)) {
     const result = await executeAgentTool(db, user, { tool: "workforce.schedule_shift" });
@@ -21971,7 +22180,23 @@ async function runAgentCommand(db, user, command, options = {}) {
 
   if (/(issue|create|generate).*(my\s+)?certificate|certificate/.test(lower) && /(learning|course|lesson|certificate|my)/.test(lower)) {
     const result = await executeAgentTool(db, user, { tool: "learning.certificate" });
-    return { intent: "learning.certificate", response: result, status: "completed", metadata: { conversationMode: conversational, redirectSection: "learning" } };
+    return {
+      intent: "learning.certificate",
+      response: `I can help with your certificate. ${result} Which course did you finish?`,
+      status: "needs-details",
+      metadata: {
+        conversationMode: conversational,
+        redirectSection: "learning",
+        moduleSignal: { module: "Learning", section: "learning" },
+        frontierCommunication: {
+          urgency: "normal",
+          nextQuestion: "Which course did you finish?",
+          confidence: 0.94,
+          responseShape: "confirm certificate need, route to learning, ask one learner-friendly next question"
+        },
+        suggestedReplies: ["show my progress", "start next course", "read the lesson"]
+      }
+    };
   }
 
   if (/(onboard|create|build|prepare|generate).*(provider|partner|partnership|vendor)/.test(lower) || /(provider|partner|vendor).*(onboard|partnership|packet|plan)/.test(lower)) {
