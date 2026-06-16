@@ -18,6 +18,7 @@ const checks = [
   npmCheck("cross-platform:qa"),
   npmCheck("app:behavior-audit"),
   npmCheck("app:jarvis-qa"),
+  npmCheck("voice:browser-policy"),
   npmCheck("app:cloud-agent-qa"),
   npmCheck("app:mobile-native-qa"),
   npmCheck("app:native-runtime-qa"),

@@ -89,8 +89,8 @@ let routeTrackingWatchId = null;
 let routeTrackingPoints = [];
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-273";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v253";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-274";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v254";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
 const VOICE_ATTENTION_DELAY_MS = 900;
@@ -17229,16 +17229,31 @@ function voiceResponseSignature(text = "") {
   return normalizeToolText(text).split(/\s+/).filter(Boolean).slice(0, 18).join(" ");
 }
 
+function stripStandaloneVoiceAcknowledgement(text = "") {
+  return String(text || "")
+    .replace(/^\s*(got it|yes|okay|ok|sure|absolutely|i hear you)\s*[.!]\s+(?=\S)/i, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function isGuidedHealthVoiceResponse(text = "", options = {}) {
+  const value = normalizeToolText(`${options.command || ""} ${text || ""}`);
+  const healthNeed = /\b(doctor|nurse|provider|clinic|hospital|medicine|medication|pharmacy|dawa|health|care|patient|sick|injury|baby|child|grandma)\b/.test(value);
+  const guided = /\b(not a diagnosis|first tell me|where you are|village|city|landmark|medicine concern|provider handoff|mobile clinic|pharmacy support)\b/.test(value);
+  return healthNeed && guided;
+}
+
 function conciseVoiceResponse(message = "", options = {}) {
-  const text = String(message || "").replace(/\s+/g, " ").trim();
+  const text = stripStandaloneVoiceAcknowledgement(message);
   if (!text || options.allowLongResponse || options.longForm) return text;
   const shouldShorten = options.speak || voiceFirstMode || experienceMode === "user" || localStorage.getItem("agrinexusShortAnswers") === "on";
   if (!shouldShorten) return text;
   const sentences = text.match(/[^.!?]+[.!?]+/g) || [];
-  const sentenceLimit = experienceMode === "user" || localStorage.getItem("agrinexusShortAnswers") === "on" ? 1 : 2;
+  const healthGuidance = isGuidedHealthVoiceResponse(text, options);
+  const sentenceLimit = healthGuidance ? 4 : experienceMode === "user" || localStorage.getItem("agrinexusShortAnswers") === "on" ? 1 : 2;
   const sentenceText = sentences.length ? sentences.slice(0, sentenceLimit).join(" ").trim() : text;
   const words = sentenceText.split(/\s+/).filter(Boolean);
-  const maxWords = experienceMode === "user" ? 26 : 42;
+  const maxWords = healthGuidance ? 88 : experienceMode === "user" ? 26 : 42;
   if (words.length <= maxWords) return sentenceText;
   return `${words.slice(0, maxWords).join(" ")}.`;
 }
