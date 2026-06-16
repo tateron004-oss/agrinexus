@@ -575,8 +575,8 @@ assert(app.includes('workflow === "admin-user"'), "Admin test login button needs
 assert(app.includes("Only an existing Admin can run this workflow"), "Admin login flow must explain admin-only protection");
 assert(server.includes('adminAccount.role = "Admin"'), "Backend must force admin test logins to Admin");
 assert(server.includes("admin_user.created"), "Admin test login must create auth audit evidence");
-assert(html.includes("styles.css?v=nexus-behavior-270"), "Index must force browsers to load the latest Nexus behavior shell");
-assert(html.includes("app.js?v=nexus-behavior-270"), "Index must force browsers to load the latest Nexus behavior code");
+assert(html.includes("styles.css?v=nexus-behavior-271"), "Index must force browsers to load the latest Nexus behavior shell");
+assert(html.includes("app.js?v=nexus-behavior-271"), "Index must force browsers to load the latest Nexus behavior code");
 assert(html.includes("governmentReadinessPanel") && html.includes('data-government-action="pilot"') && html.includes('data-government-action="report"') && html.includes('data-government-action="heatmap"'), "Dashboard needs a government readiness operating panel with pilot, report, and heatmap actions");
 assert(app.includes("function renderGovernmentReadinessPanel") && app.includes("function runGovernmentReadinessAction") && app.includes("/api/government/readiness"), "Frontend must render and run government readiness workflows");
 assert(server.includes("function governmentReadinessModel") && server.includes("/api/government/readiness") && server.includes("government.readiness_reviewed"), "Backend must model, persist, and audit government readiness workflows");
@@ -599,7 +599,7 @@ assert(server.includes("conversation-resilience-v2") && server.includes("low-lit
 assert(server.includes("conversationRepairScript") && server.includes("Do not keep explaining the old workflow."), "Conversation resilience must stop wrong paths and repair misheard commands");
 assert(server.includes("No perfect sentence required.") && server.includes("Confirm meaning before sensitive actions."), "Conversation resilience must confirm meaning without shaming imperfect speech");
 assert(server.includes("resilience-teachback-missing") && server.includes("resilience-aware"), "Supervisor must verify resilience teach-back behavior");
-assert(sw.includes("agrinexus-pwa-v250"), "Service worker cache must refresh the installed app after native voice bridge updates");
+assert(sw.includes("agrinexus-pwa-v251"), "Service worker cache must refresh the installed app after native voice bridge updates");
 assert(html.includes("userWorkspace"), "Dashboard needs a User Workspace for standard users");
 assert(html.includes("userMobileDock"), "Legacy mobile dock markup should remain safely hidden for cache compatibility");
 assert(html.includes("What Do You Need Help With Today?"), "Dashboard simple start should use user-ready language");
@@ -1078,7 +1078,7 @@ assert(app.includes("AGRINEXUS_PURGE_OLD_CACHES"), "App should ask the service w
 assert(app.includes("controllerchange") && app.includes("agrinexusReloadedForBuild"), "App should reload once when a newer service worker takes control");
 assert(app.includes("function verifyLoadedBuildWithServer") && app.includes("Old app build detected") && app.includes("Clear site data before demo"), "App must verify loaded build against server and guide old-cache recovery");
 assert(server.includes("AGRINEXUS_WEB_BUILD_VERSION") && server.includes("webBuild") && server.includes("pwaCache"), "Health endpoint must publish current web build and PWA cache version");
-assert(sw.includes("BUILD_VERSION = \"nexus-behavior-270\""), "Service worker must know the current app build version");
+assert(sw.includes("BUILD_VERSION = \"nexus-behavior-271\""), "Service worker must know the current app build version");
 assert(sw.includes("purgeOldCaches") && sw.includes("AGRINEXUS_PURGE_OLD_CACHES"), "Service worker must purge old caches on activation and message");
 assert(sw.includes("`/app.js?v=${BUILD_VERSION}`") && sw.includes("`/styles.css?v=${BUILD_VERSION}`"), "Service worker must precache versioned JS and CSS");
 assert(app.includes("installAgriNexusApp"), "Missing in-app install handler");

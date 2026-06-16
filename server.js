@@ -26,8 +26,8 @@ const AI_MODEL = process.env.OPENAI_MODEL || "gpt-5.4-mini";
 const AI_REASONING_MODEL = process.env.OPENAI_REASONING_MODEL || process.env.OPENAI_AGENT_MODEL || AI_MODEL;
 const AI_TRANSLATION_MODEL = process.env.OPENAI_TRANSLATION_MODEL || process.env.OPENAI_AGENT_MODEL || AI_MODEL;
 const AGRINEXUS_RELEASE = "2026-06-05-live-services";
-const AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-270";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v250";
+const AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-271";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v251";
 const ROOT = __dirname;
 const DATA_DIR = process.env.AGRINEXUS_DATA_DIR || ROOT;
 const DB_PATH = process.env.AGRINEXUS_DB_PATH || path.join(DATA_DIR, "db.json");
@@ -15728,15 +15728,15 @@ function continueSimpleVoiceTurn(db, user, text = "") {
   }
   clearSimpleVoiceTurn(db);
   if (choice === "clinic") {
-    return { intent: "conversation.clinic_map_help", response: "I opened clinic or pharmacy support on the map. Tell me your village, city, or nearest landmark.", status: "needs-location", metadata: { conversationMode: true, redirectSection: "map", suppressBehaviorNudge: true, suggestedReplies: ["use my location", "Nairobi", "Kibera"] } };
+    return { intent: "conversation.clinic_map_help", response: "I heard you need a clinic or mobile clinic. I can help find care support and show the route. If this is an emergency, call local emergency help now. First, tell me your village, city, or nearest landmark.", status: "needs-location", metadata: { conversationMode: true, redirectSection: "map", suppressBehaviorNudge: true, suggestedReplies: ["use my location", "Nairobi", "Kibera"] } };
   }
   if (choice === "medicine") {
     setSimpleVoiceTurn(db, { domain: "medicine", section: "health", question: "What medicine concern, and what city or village?", choices: ["clinic", "pharmacy", "doctor"], defaultChoice: "clinic", sourceIntent: "conversation.medicine_help" });
-    return { intent: "conversation.medicine_help", response: "I heard you need medicine. Yes, I can help with medicine access. I opened medicine and pharmacy support. What city or village are you in? I cannot prescribe.", status: "needs-location", metadata: { conversationMode: true, redirectSection: "health", suppressBehaviorNudge: true, suggestedReplies: ["clinic", "pharmacy", "doctor"] } };
+    return { intent: "conversation.medicine_help", response: "I heard you need medicine. I can guide you step by step. I cannot prescribe, but I can help explain the medicine concern, find pharmacy or mobile clinic support, and prepare provider review. First, tell me the medicine concern and where you are.", status: "needs-location", metadata: { conversationMode: true, redirectSection: "health", suppressBehaviorNudge: true, suggestedReplies: ["clinic", "pharmacy", "doctor"] } };
   }
   if (choice === "doctor" || choice === "health") {
     setSimpleVoiceTurn(db, { domain: "doctor", section: "health", question: "What is happening, and where are you?", choices: ["clinic", "medicine", "provider"], defaultChoice: "clinic", sourceIntent: "conversation.doctor_help" });
-    return { intent: "conversation.doctor_help", response: "This is not a diagnosis. What is happening, and where are you?", status: "needs-details", metadata: { conversationMode: true, redirectSection: "health", suppressBehaviorNudge: true, suggestedReplies: ["clinic", "medicine", "provider"] } };
+    return { intent: "conversation.doctor_help", response: "I heard you need a doctor. I can guide you step by step. I am not a doctor and this is not a diagnosis, but I can help explain what happened, check urgent warning signs, find clinic or mobile clinic support, and prepare a provider handoff. First, tell me where you are.", status: "needs-details", metadata: { conversationMode: true, redirectSection: "health", suppressBehaviorNudge: true, suggestedReplies: ["clinic", "medicine", "provider"] } };
   }
   if (choice === "crop") {
     return { intent: "conversation.crop_help", response: "crop problem support is open. Tell me the crop and what looks wrong.", status: "needs-details", metadata: { conversationMode: true, redirectSection: "trade", suppressBehaviorNudge: true, suggestedReplies: ["maize yellow", "pests", "dry soil"] } };
@@ -16972,7 +16972,7 @@ function resilientConversationIntent(db, user, rawText = "") {
   if (has(clinicSignals)) {
     return {
       intent: "conversation.clinic_map_help",
-      response: "I can show clinic or pharmacy support on the map. Share your village, city, or location, and I will guide the closest facility route.",
+      response: "I heard you need a clinic or mobile clinic. I can help find care support and show the route. If this is an emergency, call local emergency help now. First, tell me your village, city, or nearest landmark.",
       status: "needs-location",
       metadata: { ...metadataBase, redirectSection: "map", suggestedReplies: ["use my location", "find clinic", "find pharmacy"] }
     };
@@ -16980,7 +16980,7 @@ function resilientConversationIntent(db, user, rawText = "") {
   if (has(doctorSignals)) {
     return {
       intent: "conversation.doctor_help",
-      response: "I heard you need care support. Yes, I can help you reach care support. Tell me what is happening, where you are, and whether you need phone, WhatsApp, video, clinic, or pharmacy help. This is not a diagnosis.",
+      response: "I heard you need care support. I can guide you step by step. I am not a doctor and this is not a diagnosis, but I can help explain what happened, check urgent warning signs, find clinic or mobile clinic support, and prepare a provider handoff. First, tell me where you are.",
       status: "needs-details",
       metadata: { ...metadataBase, redirectSection: "health", suggestedReplies: ["start intake", "find clinic", "call provider"] }
     };
@@ -16988,7 +16988,7 @@ function resilientConversationIntent(db, user, rawText = "") {
   if (has(medicineSignals)) {
     return {
       intent: "conversation.medicine_help",
-      response: "I heard you need medicine. Yes, I can help with medicine access. I opened medicine and pharmacy support. Tell me what medicine or health concern, and where you are. I cannot prescribe, but I can look for pharmacy support, clinic handoff, or provider review.",
+      response: "I heard you need medicine. I can guide you step by step. I cannot prescribe, but I can help explain the medicine concern, find pharmacy or mobile clinic support, and prepare provider review. First, tell me the medicine concern and where you are.",
       status: "needs-location",
       metadata: { ...metadataBase, redirectSection: "health", suggestedReplies: ["find pharmacy", "start intake", "call provider"] }
     };
@@ -17165,7 +17165,7 @@ function healthAccessVoiceAcceptanceResponse(db, user, text = "", lower = "", op
       "conversation.clinic_map_help",
       "needs-location",
       "map",
-      "I can show clinic or pharmacy support on the map. Share your village, city, or location, and I will guide the closest facility route.",
+      "I heard you need clinic or pharmacy support on the map. I can guide this step by step, show nearby clinic, mobile clinic, or pharmacy options, and help prepare a safe handoff. If this is an emergency, call local emergency help now. First, tell me your village, city, or nearest landmark.",
       ["use my location", "find clinic", "find pharmacy"]
     );
   }
@@ -17175,7 +17175,7 @@ function healthAccessVoiceAcceptanceResponse(db, user, text = "", lower = "", op
       "conversation.clinic_map_help",
       "needs-location",
       "map",
-      "I can show clinic or pharmacy support on the map. Share your village, city, or location, and I will guide the closest facility route.",
+      "I heard you need clinic or pharmacy support on the map. I can guide this step by step, show nearby clinic, mobile clinic, or pharmacy options, and help prepare a safe handoff. If this is an emergency, call local emergency help now. First, tell me your village, city, or nearest landmark.",
       ["use my location", "find clinic", "find pharmacy"]
     );
   }
@@ -17185,7 +17185,7 @@ function healthAccessVoiceAcceptanceResponse(db, user, text = "", lower = "", op
       "conversation.doctor_help",
       "needs-details",
       "health",
-      "I heard you need a doctor. Yes, I can help you reach care support. Tell me what is happening, where you are, and whether you need phone, WhatsApp, video, clinic, or pharmacy help. This is not a diagnosis.",
+      "I heard you need a doctor. I can guide you step by step. I am not a doctor and this is not a diagnosis, but I can help explain what happened, check urgent warning signs, find clinic or mobile clinic support, and prepare a provider handoff. First, tell me where you are.",
       ["start intake", "find clinic", "call provider"]
     );
   }
@@ -17195,7 +17195,7 @@ function healthAccessVoiceAcceptanceResponse(db, user, text = "", lower = "", op
       "conversation.medicine_help",
       "needs-location",
       "health",
-      "I heard you need medicine. Yes, I can help with medicine access. I opened medicine and pharmacy support. Tell me what medicine or health concern, and where you are. I cannot prescribe, but I can look for pharmacy support, clinic handoff, or provider review.",
+      "I heard you need medicine. I can guide you step by step. I cannot prescribe, but I can help explain the medicine concern, find pharmacy or mobile clinic support, and prepare provider review. First, tell me the medicine concern and where you are.",
       ["find pharmacy", "start intake", "call provider"]
     );
   }
@@ -17334,19 +17334,19 @@ function platformWideVoiceAcceptanceResponse(db, user, text = "", lower = "", op
   const simpleStandalone = [
     {
       pattern: /^(intake|health intake|telehealth intake|patient intake)$/,
-      result: () => response("conversation.health_intake", "needs-details", "health", "I heard intake. Yes, I can start health intake. I opened the intake screen; tell me who needs care and where they are. This is not a diagnosis.", ["patient name", "find clinic", "I need medicine"])
+      result: () => response("conversation.health_intake", "needs-details", "health", "I heard intake. I opened health intake and will guide one question at a time. This is not a diagnosis, but it helps prepare clinic, mobile clinic, pharmacy, or provider support. First, who needs care?", ["patient name", "find clinic", "I need medicine"])
     },
     {
       pattern: /^(doctor|doctor help|provider|nurse|care|medical care|daktari)$/,
-      result: () => response("conversation.doctor_help", "needs-details", "health", "I heard doctor help. Yes, I can help you reach care support. I opened doctor support; tell me what happened and where you are. This is not a diagnosis.", ["start intake", "find clinic", "call provider"])
+      result: () => response("conversation.doctor_help", "needs-details", "health", "I heard doctor help. I can guide you step by step. I am not a doctor and this is not a diagnosis, but I can help explain what happened, check urgent warning signs, find clinic or mobile clinic support, and prepare a provider handoff. First, tell me where you are.", ["start intake", "find clinic", "call provider"])
     },
     {
       pattern: /^(clinic|hospital|health center|health centre|kliniki|clinica|clinique)$/,
-      result: () => response("conversation.clinic_map_help", "needs-location", "map", "I heard clinic. Yes, I can help find clinic support. I opened clinic or pharmacy support on the map; tell me your village, city, or nearest landmark.", ["use my location", "find clinic", "find pharmacy"])
+      result: () => response("conversation.clinic_map_help", "needs-location", "map", "I heard clinic. I can help find clinic, mobile clinic, or pharmacy support on the map. If this is an emergency, call local emergency help now. First, tell me your village, city, or nearest landmark.", ["use my location", "find clinic", "find pharmacy"])
     },
     {
       pattern: /^(medicine|medication|pharmacy|pills|drug|refill|dawa|medicina|remedio)$/,
-      result: () => response("conversation.medicine_help", "needs-location", "health", "I heard medicine. Yes, I can help with medicine access. I opened medicine and pharmacy support; tell me the medicine concern and where you are. I cannot prescribe.", ["find pharmacy", "start intake", "call provider"])
+      result: () => response("conversation.medicine_help", "needs-location", "health", "I heard medicine. I can guide you step by step. I cannot prescribe, but I can help explain the medicine concern, find pharmacy or mobile clinic support, and prepare provider review. First, tell me the medicine concern and where you are.", ["find pharmacy", "start intake", "call provider"])
     },
     {
       pattern: /^(crop|crops|crop damage|damage|crop problem|farm problem|field problem|bad crop|maize problem|pests|yellow leaves|shamba)$/,
@@ -20963,7 +20963,7 @@ async function runAgentCommand(db, user, command, options = {}) {
   if (conversational && /\b(clinic|hospital|health center|health centre|pharmacy)\b/.test(lower) && /\b(map|near|nearest|nearby|closest|where|location|find|show)\b/.test(lower)) {
     return {
       intent: "conversation.clinic_map_help",
-      response: "I can show clinic or pharmacy support on the map. Share your village, city, or location, and I will guide the closest facility route.",
+      response: "I heard you need clinic or pharmacy support on the map. I can guide this step by step, show nearby clinic, mobile clinic, or pharmacy options, and help prepare a safe handoff. If this is an emergency, call local emergency help now. First, tell me your village, city, or nearest landmark.",
       status: "needs-location",
       metadata: { conversationMode: true, redirectSection: "map", suppressBehaviorNudge: true, suggestedReplies: ["use my location", "find clinic", "find pharmacy"] }
     };
@@ -20971,7 +20971,7 @@ async function runAgentCommand(db, user, command, options = {}) {
   if (conversational && /\b(clinic|hospital|health center|health centre)\b/.test(lower)) {
     return {
       intent: "conversation.clinic_help",
-      response: "I can help find clinic support. Share your village, city, or location, and I will guide the closest clinic or mobile clinic path. If this is an emergency, call local emergency help now.",
+      response: "I heard you need a clinic or mobile clinic. I can help find care support and show the route. If this is an emergency, call local emergency help now. First, tell me your village, city, or nearest landmark.",
       status: "needs-location",
       metadata: { conversationMode: true, redirectSection: "health", suppressBehaviorNudge: true, suggestedReplies: ["use my location", "start intake", "find pharmacy"] }
     };
@@ -20979,7 +20979,7 @@ async function runAgentCommand(db, user, command, options = {}) {
   if (conversational && /\b(i need|need|want|find|see|speak to|talk to|call|contact|help me)\b.*\b(doctor|nurse|provider|clinician)\b|\b(doctor help|medical provider|health provider|see a doctor)\b/.test(lower)) {
     return {
       intent: "conversation.doctor_help",
-      response: "I can help you reach care support. Tell me what is happening, where you are, and whether you need phone, WhatsApp, video, clinic, or pharmacy help. This is not a diagnosis.",
+      response: "I heard you need care support. I can guide you step by step. I am not a doctor and this is not a diagnosis, but I can help explain what happened, check urgent warning signs, find clinic or mobile clinic support, and prepare a provider handoff. First, tell me where you are.",
       status: "needs-details",
       metadata: { conversationMode: true, redirectSection: "health", suppressBehaviorNudge: true, suggestedReplies: ["start intake", "find clinic", "call provider"] }
     };
@@ -20987,7 +20987,7 @@ async function runAgentCommand(db, user, command, options = {}) {
   if (conversational && /\b(medicine|medication|pharmacy|pills|drug|refill|prescription|dawa|remedy)\b/.test(lower)) {
     return {
       intent: "conversation.medicine_help",
-      response: "I heard you need medicine. Yes, I can help with medicine access. I opened medicine and pharmacy support. Tell me what medicine or health concern, and where you are. I cannot prescribe, but I can look for pharmacy support, clinic handoff, or provider review.",
+      response: "I heard you need medicine. I can guide you step by step. I cannot prescribe, but I can help explain the medicine concern, find pharmacy or mobile clinic support, and prepare provider review. First, tell me the medicine concern and where you are.",
       status: "needs-location",
       metadata: { conversationMode: true, redirectSection: "health", suppressBehaviorNudge: true, suggestedReplies: ["find pharmacy", "start intake", "call provider"] }
     };
