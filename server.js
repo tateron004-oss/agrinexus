@@ -26,8 +26,8 @@ const AI_MODEL = process.env.OPENAI_MODEL || "gpt-5.4-mini";
 const AI_REASONING_MODEL = process.env.OPENAI_REASONING_MODEL || process.env.OPENAI_AGENT_MODEL || AI_MODEL;
 const AI_TRANSLATION_MODEL = process.env.OPENAI_TRANSLATION_MODEL || process.env.OPENAI_AGENT_MODEL || AI_MODEL;
 const AGRINEXUS_RELEASE = "2026-06-05-live-services";
-const AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-265";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v245";
+const AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-266";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v246";
 const ROOT = __dirname;
 const DATA_DIR = process.env.AGRINEXUS_DATA_DIR || ROOT;
 const DB_PATH = process.env.AGRINEXUS_DB_PATH || path.join(DATA_DIR, "db.json");
@@ -7585,6 +7585,7 @@ function ensureAiProfile(profile) {
   profile.agentMemory.activeClarification = profile.agentMemory.activeClarification || null;
   profile.agentMemory.clarificationHistory = profile.agentMemory.clarificationHistory || [];
   profile.agentMemory.activeRecovery = profile.agentMemory.activeRecovery || null;
+  profile.agentMemory.activeSimpleTurn = profile.agentMemory.activeSimpleTurn || null;
   profile.agentMemory.recoveryHistory = profile.agentMemory.recoveryHistory || [];
   profile.agentMemory.activeGuidedMission = profile.agentMemory.activeGuidedMission || null;
   profile.agentMemory.guidedMissionHistory = profile.agentMemory.guidedMissionHistory || [];
@@ -15607,6 +15608,143 @@ function isNegativeCommand(lower) {
   return /^(no|nope|cancel|stop|not now|hold|wait|do not|don't)$/i.test(String(lower || "").trim());
 }
 
+function clearSimpleVoiceTurn(db) {
+  if (db?.profile?.agentMemory) db.profile.agentMemory.activeSimpleTurn = null;
+}
+
+function setSimpleVoiceTurn(db, turn = {}) {
+  ensureAiProfile(db.profile);
+  db.profile.agentMemory.activeSimpleTurn = {
+    id: crypto.randomUUID(),
+    domain: turn.domain || "general",
+    section: turn.section || "dashboard",
+    question: turn.question || "What do you need?",
+    choices: turn.choices || [],
+    defaultChoice: turn.defaultChoice || "",
+    sourceIntent: turn.sourceIntent || "",
+    createdAt: new Date().toISOString()
+  };
+  db.profile.agentMemory.turnCoach = {
+    nextQuestion: db.profile.agentMemory.activeSimpleTurn.question,
+    expectedAnswer: "short-answer",
+    choices: db.profile.agentMemory.activeSimpleTurn.choices
+  };
+  db.profile.agentMemory.lastStatus = "waiting-for-short-answer";
+  db.profile.agentMemory.lastSummary = db.profile.agentMemory.activeSimpleTurn.question;
+  db.profile.agentMemory.updatedAt = db.profile.agentMemory.activeSimpleTurn.createdAt;
+  return db.profile.agentMemory.activeSimpleTurn;
+}
+
+function simpleVoiceChoiceFromText(text = "") {
+  const lower = normalizeSpeechForIntent(text);
+  const choices = [
+    { id: "crop_sale", test: /\b(sell|selling|market|buyer|trade|kuuza|vender|vendre)\b.*\b(crop|maize|cassava|rice|beans|produce|harvest|mazao)\b|\b(crop|maize|cassava|rice|beans|produce|harvest|mazao)\b.*\b(sell|buyer|market|trade)\b/ },
+    { id: "clinic", test: /\b(clinic|hospital|dispensary|facility|near|karibu|clinica|clinique|kliniki)\b/ },
+    { id: "medicine", test: /\b(medicine|medication|pharmacy|drug|pills|dawa|medicina|medicament|pharmacie)\b/ },
+    { id: "doctor", test: /\b(doctor|nurse|provider|clinician|daktari|medico|docteur)\b/ },
+    { id: "crop", test: /\b(crop|maize|cassava|rice|beans|harvest|shamba|mazao)\b/ },
+    { id: "work", test: /\b(work|job|jobs|role|apply|kazi|trabajo|travail)\b/ },
+    { id: "learning", test: /\b(learn|learning|course|lesson|training|somo|curso|cours)\b/ },
+    { id: "map", test: /\b(map|route|location|tracking|ramani|mapa|carte)\b/ },
+    { id: "yes", test: /^(yes|yep|yeah|ok|okay|confirm|do it|ndiyo|sawa|si|oui|sim|نعم)$/ },
+    { id: "no", test: /^(no|nope|cancel|stop|not now|hapana|non|nao|لا)$/ }
+  ];
+  return choices.find(choice => choice.test.test(lower))?.id || "";
+}
+
+function looksLikeShortAnswer(text = "") {
+  const lower = normalizeSpeechForIntent(text);
+  if (!lower) return false;
+  const words = lower.split(/\s+/).filter(Boolean);
+  if (words.length > 1 && /\b(i|me|my|need|want|help)\b/.test(lower)) return false;
+  if (words.length > 2 && /\b(open|start|begin|build|prepare|explain|describe|switch|change|show|track|run|apply|sell|contact|call|create|find|send|text|message|whatsapp|sms|play|pause|music|what|why|how)\b/.test(lower)) return false;
+  if (simpleVoiceChoiceFromText(lower)) return true;
+  if (words.length > 5) return false;
+  return !/\b(open|start|begin|build|prepare|explain|describe|switch|change|show|track|run|apply|sell|contact|call|create|send|text|message|whatsapp|sms|play|pause|music|what|why|how)\b/.test(lower);
+}
+
+function continueSimpleVoiceTurn(db, user, text = "") {
+  ensureAiProfile(db.profile);
+  const turn = db.profile.agentMemory.activeSimpleTurn;
+  if (!turn) return null;
+  const ageMs = Date.now() - Date.parse(turn.createdAt || 0);
+  if (ageMs > 120000) {
+    clearSimpleVoiceTurn(db);
+    return null;
+  }
+  if (!looksLikeShortAnswer(text)) return null;
+  const lower = normalizeSpeechForIntent(text);
+  const choice = simpleVoiceChoiceFromText(lower) || (lower ? "detail" : "");
+  if (choice === "no") {
+    clearSimpleVoiceTurn(db);
+    return {
+      intent: "conversation.short_answer_canceled",
+      response: "Okay. Tell me what you need next.",
+      status: "completed",
+      metadata: { conversationMode: true, redirectSection: turn.section || "dashboard", suppressBehaviorNudge: true }
+    };
+  }
+  if (choice === "yes") {
+    const next = turn.defaultChoice || turn.choices?.[0] || turn.domain || "help";
+    return continueSimpleVoiceTurn(db, user, next);
+  }
+  if (choice === "crop_sale") {
+    clearSimpleVoiceTurn(db);
+    return { intent: "conversation.crop_sale_help", response: "I can help sell the crop. Tell me the crop, quantity, location, and buyer if you know one.", status: "needs-details", metadata: { conversationMode: true, redirectSection: "trade", suppressBehaviorNudge: true, suggestedReplies: ["maize in Kenya", "find buyer", "track delivery"] } };
+  }
+  if (choice === "learning") {
+    clearSimpleVoiceTurn(db);
+    return { intent: "conversation.learning_start", response: "I can help you learn. Tell me the skill you want to learn.", status: "needs-topic", metadata: { conversationMode: true, redirectSection: "learning", suppressBehaviorNudge: true, suggestedReplies: ["farm safety", "health worker", "business"] } };
+  }
+  if (choice === "work" && /^(job|work|kazi|trabajo|travail)( please)?$/.test(lower)) {
+    clearSimpleVoiceTurn(db);
+    return { intent: "conversation.workforce_help", response: "I can help with work. Tell me the country and the kind of job.", status: "needs-details", metadata: { conversationMode: true, redirectSection: "workforce", suppressBehaviorNudge: true, suggestedReplies: ["Kenya farm work", "health assistant", "apply"] } };
+  }
+  if (choice === "work" && turn.domain !== "work") {
+    clearSimpleVoiceTurn(db);
+    return { intent: "conversation.workforce_help", response: "I can help with work. Tell me the country and the kind of job.", status: "needs-details", metadata: { conversationMode: true, redirectSection: "workforce", suppressBehaviorNudge: true, suggestedReplies: ["Kenya farm work", "health assistant", "apply"] } };
+  }
+  if (turn.domain === "learning" && lower) {
+    clearSimpleVoiceTurn(db);
+    return { intent: "conversation.learning_topic_captured", response: `Got it. I will use ${text} as the learning topic. Learning is open.`, status: "completed", metadata: { conversationMode: true, redirectSection: "learning", suppressBehaviorNudge: true, topic: text } };
+  }
+  if (turn.domain === "work" && lower) {
+    clearSimpleVoiceTurn(db);
+    return { intent: "conversation.work_detail_captured", response: `Got it. I will use ${text} for the work search. Workforce is open.`, status: "completed", metadata: { conversationMode: true, redirectSection: "workforce", suppressBehaviorNudge: true, detail: text } };
+  }
+  if (turn.domain === "crop" && lower) {
+    clearSimpleVoiceTurn(db);
+    return { intent: "conversation.crop_detail_captured", response: `Got it. I will use ${text} for crop support. AgriTrade is open.`, status: "completed", metadata: { conversationMode: true, redirectSection: "trade", suppressBehaviorNudge: true, detail: text } };
+  }
+  clearSimpleVoiceTurn(db);
+  if (choice === "clinic") {
+    return { intent: "conversation.clinic_map_help", response: "I opened clinic or pharmacy support on the map. Tell me your village, city, or nearest landmark.", status: "needs-location", metadata: { conversationMode: true, redirectSection: "map", suppressBehaviorNudge: true, suggestedReplies: ["use my location", "Nairobi", "Kibera"] } };
+  }
+  if (choice === "medicine") {
+    setSimpleVoiceTurn(db, { domain: "medicine", section: "health", question: "What medicine concern, and what city or village?", choices: ["clinic", "pharmacy", "doctor"], defaultChoice: "clinic", sourceIntent: "conversation.medicine_help" });
+    return { intent: "conversation.medicine_help", response: "I cannot prescribe, but I can help find medicine support. What city or village are you in?", status: "needs-location", metadata: { conversationMode: true, redirectSection: "health", suppressBehaviorNudge: true, suggestedReplies: ["clinic", "pharmacy", "doctor"] } };
+  }
+  if (choice === "doctor" || choice === "health") {
+    setSimpleVoiceTurn(db, { domain: "doctor", section: "health", question: "What is happening, and where are you?", choices: ["clinic", "medicine", "provider"], defaultChoice: "clinic", sourceIntent: "conversation.doctor_help" });
+    return { intent: "conversation.doctor_help", response: "This is not a diagnosis. What is happening, and where are you?", status: "needs-details", metadata: { conversationMode: true, redirectSection: "health", suppressBehaviorNudge: true, suggestedReplies: ["clinic", "medicine", "provider"] } };
+  }
+  if (choice === "crop") {
+    return { intent: "conversation.crop_help", response: "crop problem support is open. Tell me the crop and what looks wrong.", status: "needs-details", metadata: { conversationMode: true, redirectSection: "trade", suppressBehaviorNudge: true, suggestedReplies: ["maize yellow", "pests", "dry soil"] } };
+  }
+  if (choice === "map") {
+    return { intent: "conversation.map_open", response: "Map is open. Tell me the place or route.", status: "needs-details", metadata: { conversationMode: true, redirectSection: "map", suppressBehaviorNudge: true, suggestedReplies: ["Kenya", "clinic near me", "track shipment"] } };
+  }
+  if ((turn.domain === "medicine" || turn.domain === "doctor" || turn.domain === "clinic") && lower) {
+    return { intent: "conversation.location_captured", response: `Got it. I will use ${text} as the location. I opened health and map support.`, status: "completed", metadata: { conversationMode: true, redirectSection: turn.domain === "clinic" ? "map" : "health", suppressBehaviorNudge: true, locationText: text } };
+  }
+  return {
+    intent: "conversation.short_answer_received",
+    response: `Got it: ${text}. What should I do next?`,
+    status: "needs-input",
+    metadata: { conversationMode: true, redirectSection: turn.section || "dashboard", suppressBehaviorNudge: true }
+  };
+}
+
 function sectionForAgentModule(module) {
   return {
     Learning: "learning",
@@ -16922,12 +17060,24 @@ function healthAccessVoiceAcceptanceResponse(db, user, text = "", lower = "", op
   if (options.conversational !== true) return null;
   const value = normalizeSpeechForIntent(text);
   const metadataBase = { conversationMode: true, suppressBehaviorNudge: true, healthAccessVoice: true };
-  const response = (intent, status, redirectSection, message, suggestedReplies = ["start intake", "find clinic", "call provider"], extraMetadata = {}) => ({
-    intent,
-    response: message,
-    status,
-    metadata: { ...metadataBase, redirectSection, suggestedReplies, ...extraMetadata }
-  });
+  const response = (intent, status, redirectSection, message, suggestedReplies = ["start intake", "find clinic", "call provider"], extraMetadata = {}) => {
+    if (/^needs-/.test(String(status || ""))) {
+      setSimpleVoiceTurn(db, {
+        domain: intent.includes("medicine") ? "medicine" : intent.includes("clinic") ? "clinic" : "doctor",
+        section: redirectSection,
+        question: message,
+        choices: suggestedReplies,
+        defaultChoice: suggestedReplies[0] || "clinic",
+        sourceIntent: intent
+      });
+    }
+    return {
+      intent,
+      response: message,
+      status,
+      metadata: { ...metadataBase, redirectSection, suggestedReplies, ...extraMetadata }
+    };
+  };
 
   if (/\b(caption|captions|transcript|subtitles?)\b.*\b(telehealth|health|patient|doctor|provider|clinic|care)\b|\b(telehealth|health|patient|doctor|provider|clinic|care)\b.*\b(caption|captions|transcript|subtitles?)\b/.test(value)) {
     return response(
@@ -17142,12 +17292,31 @@ function platformWideVoiceAcceptanceResponse(db, user, text = "", lower = "", op
   if (options.conversational !== true) return null;
   const value = normalizeSpeechForIntent(text);
   const metadataBase = { conversationMode: true, suppressBehaviorNudge: true, platformWideVoice: true };
-  const response = (intent, status, redirectSection, message, suggestedReplies = [], extraMetadata = {}) => ({
-    intent,
-    response: message,
-    status,
-    metadata: { ...metadataBase, redirectSection, suggestedReplies, ...extraMetadata }
-  });
+  const response = (intent, status, redirectSection, message, suggestedReplies = [], extraMetadata = {}) => {
+    if (/^needs-/.test(String(status || ""))) {
+      setSimpleVoiceTurn(db, {
+        domain: intent.includes("medicine") ? "medicine"
+          : intent.includes("doctor") || intent.includes("patient") || intent.includes("health") ? "doctor"
+          : intent.includes("clinic") ? "clinic"
+          : intent.includes("crop") || redirectSection === "trade" ? "crop"
+          : intent.includes("workforce") || redirectSection === "workforce" ? "work"
+          : intent.includes("learning") || redirectSection === "learning" ? "learning"
+          : redirectSection === "map" ? "map"
+          : "general",
+        section: redirectSection,
+        question: message,
+        choices: suggestedReplies,
+        defaultChoice: suggestedReplies[0] || "",
+        sourceIntent: intent
+      });
+    }
+    return {
+      intent,
+      response: message,
+      status,
+      metadata: { ...metadataBase, redirectSection, suggestedReplies, ...extraMetadata }
+    };
+  };
   const requestedMapCountry = africanMapCountryTarget(db, value);
 
   if (!/\b(agritrade|agri trade)\b/.test(value) && (/\b(explain|describe|define|summarize)\s+(agrinexus|agri nexus|nexus|platform)\b/.test(value)
@@ -17275,7 +17444,7 @@ function platformWideVoiceAcceptanceResponse(db, user, text = "", lower = "", op
 
   if (/\b(i need work|need work|find work|find a job|job please|work please|need job|want job)\b/.test(value)) {
     if (/\bapply\b.*\b(that job|this job|the job)\b/.test(value)) return null;
-    return response("conversation.workforce_help", "completed", "workforce", "I can help with work. Tell me the country and the kind of job, and I will show role options, skill gaps, training links, and the application step.", ["help me apply for a job", "prepare me for interview", "review my skills"]);
+    return response("conversation.workforce_help", "needs-details", "workforce", "I can help with work. Tell me the country and the kind of job, and I will show role options, skill gaps, training links, and the application step.", ["help me apply for a job", "prepare me for interview", "review my skills"]);
   }
   if (/\b(apply|application)\b.*\b(job|role|work)\b|\bhelp me apply\b/.test(value)) {
     if (/\b(that job|this job|the job)\b/.test(value)) return null;
@@ -20604,6 +20773,10 @@ async function runAgentCommand(db, user, command, options = {}) {
     db.profile.agentMemory.updatedAt = new Date().toISOString();
     return { intent: "conversation.canceled", response: "Canceled. Tell me what you want to do next.", status: "completed", metadata: { conversationMode: true } };
   }
+  const urgentHealth = conversational ? urgentHealthSafetyResponse(db, user, text) : null;
+  if (urgentHealth) return urgentHealth;
+  const simpleTurn = conversational ? continueSimpleVoiceTurn(db, user, text) : null;
+  if (simpleTurn) return simpleTurn;
   if (conversational && db.profile.agentMemory.activeIntake) {
     const invokedModuleCommand = invokedAgriNexus || /\b(agritrade|telehealth|healthcare|workforce|learning|maps?|integrations?|admin)\b/i.test(rawCommand);
     const activeIntakeBlueprint = intakeBlueprint(db.profile.agentMemory.activeIntake.domain || "");
@@ -20653,8 +20826,6 @@ async function runAgentCommand(db, user, command, options = {}) {
       metadata: { conversationMode: true, redirectSection: "dashboard", suppressBehaviorNudge: true, suggestedReplies: ["I need medicine", "help me sell my crop", "start a course", "open the map"] }
     };
   }
-  const urgentHealth = conversational ? urgentHealthSafetyResponse(db, user, text) : null;
-  if (urgentHealth) return urgentHealth;
   const healthVoiceAcceptance = healthAccessVoiceAcceptanceResponse(db, user, text, lower, options);
   if (healthVoiceAcceptance) return healthVoiceAcceptance;
   const platformVoiceAcceptance = platformWideVoiceAcceptanceResponse(db, user, text, lower, options);

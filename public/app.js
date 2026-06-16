@@ -89,8 +89,8 @@ let routeTrackingWatchId = null;
 let routeTrackingPoints = [];
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-265";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v245";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-266";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v246";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
 const VOICE_ATTENTION_DELAY_MS = 900;
@@ -17235,10 +17235,10 @@ function conciseVoiceResponse(message = "", options = {}) {
   const shouldShorten = options.speak || voiceFirstMode || experienceMode === "user" || localStorage.getItem("agrinexusShortAnswers") === "on";
   if (!shouldShorten) return text;
   const sentences = text.match(/[^.!?]+[.!?]+/g) || [];
-  const sentenceLimit = experienceMode === "user" || localStorage.getItem("agrinexusShortAnswers") === "on" ? 2 : 3;
+  const sentenceLimit = experienceMode === "user" || localStorage.getItem("agrinexusShortAnswers") === "on" ? 1 : 2;
   const sentenceText = sentences.length ? sentences.slice(0, sentenceLimit).join(" ").trim() : text;
   const words = sentenceText.split(/\s+/).filter(Boolean);
-  const maxWords = experienceMode === "user" ? 42 : 58;
+  const maxWords = experienceMode === "user" ? 26 : 42;
   if (words.length <= maxWords) return sentenceText;
   return `${words.slice(0, maxWords).join(" ")}.`;
 }
@@ -20014,8 +20014,8 @@ async function handleVoiceCommandCore(rawCommand, options = {}) {
     agentPerformanceState.lastCommand = command || localizedCommand || rawCommand;
     recordNexusAutonomousLearning({ type: "auto-language-detected", command: rawCommand, language: autoLanguage.label, mode: experienceMode || data?.user?.role || "platform" });
   }
-  if (!options.skipUnifiedBrain && await unifiedNexusConversationBrain(rawCommand, { ...options, turnToken, autoLanguage })) return;
   if (await answerPendingNexusQuestion(command || localizedCommand || rawCommand)) return;
+  if (!options.skipUnifiedBrain && await unifiedNexusConversationBrain(rawCommand, { ...options, turnToken, autoLanguage })) return;
   const visibleInlineWorkflow = $(".user-inline-workflow:not(.hidden)");
   if (pendingWorkflow && visibleInlineWorkflow && !isUniversalLanguageCommand(command || localizedCommand) && !isGlobalStopCommand(String(command || localizedCommand).toLowerCase())) {
     if (isNewServiceRequestOverWorkflow(command || localizedCommand)) {

@@ -119,6 +119,44 @@ const checks = [
   { prompt: "Nexus, pause.", intent: "conversation.paused", section: "dashboard", includes: "Paused" }
 ];
 
+const dialogueChecks = [
+  {
+    setup: "Nexus, I need medicine.",
+    answer: "Nairobi",
+    intent: "conversation.location_captured",
+    section: "health",
+    includes: "Nairobi"
+  },
+  {
+    setup: "Nexus, I need a doctor.",
+    answer: "clinic",
+    intent: "conversation.clinic_map_help",
+    section: "map",
+    includes: "clinic or pharmacy support on the map"
+  },
+  {
+    setup: "Nexus, start my course.",
+    answer: "farm safety",
+    intent: "conversation.learning_topic_captured",
+    section: "learning",
+    includes: "farm safety"
+  },
+  {
+    setup: "Nexus, I need work.",
+    answer: "Kenya farm work",
+    intent: "conversation.work_detail_captured",
+    section: "workforce",
+    includes: "Kenya farm work"
+  },
+  {
+    setup: "Nexus, help me sell my crop.",
+    answer: "maize in Kisumu",
+    intent: "conversation.crop_detail_captured",
+    section: "trade",
+    includes: "maize in Kisumu"
+  }
+];
+
 function wait(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
@@ -180,8 +218,33 @@ async function call(route, body) {
       assert(response.includes(check.includes), `${check.prompt} response should include "${check.includes}", got "${response}"`);
       assert(!/I may have heard only part of that|Say health, learning, work, trade, map, or AI help|would you like me to do that now|should I do that now/i.test(response), `${check.prompt} must not fall back to old menu language`);
     }
+    for (const check of dialogueChecks) {
+      await call("/api/agent/command", {
+        command: check.setup,
+        inputMode: "voice",
+        outputMode: "voice",
+        conversational: true,
+        mode: "user",
+        targetLanguage: "en"
+      });
+      const state = await call("/api/agent/command", {
+        command: check.answer,
+        inputMode: "voice",
+        outputMode: "voice",
+        conversational: true,
+        mode: "user",
+        targetLanguage: "en"
+      });
+      const result = state.commandResult || {};
+      const response = String(result.response || "").replace(/\s+/g, " ");
+      assert.strictEqual(result.intent, check.intent, `${check.setup} then ${check.answer} should route to ${check.intent}, got ${result.intent}`);
+      assert.strictEqual(result.metadata?.redirectSection, check.section, `${check.setup} then ${check.answer} should redirect to ${check.section}, got ${result.metadata?.redirectSection}`);
+      assert(response.includes(check.includes), `${check.setup} then ${check.answer} response should include "${check.includes}", got "${response}"`);
+      assert(!/Say health, learning, work, trade, map, or AI help|would you like me to do that now|should I do that now/i.test(response), `${check.setup} then ${check.answer} must not fall back to menu language`);
+    }
     console.log("Voice response regression passed");
     for (const check of checks) console.log(`- ${check.prompt} -> ${check.intent}`);
+    for (const check of dialogueChecks) console.log(`- ${check.setup} + ${check.answer} -> ${check.intent}`);
   } finally {
     server.kill();
     try {
