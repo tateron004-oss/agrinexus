@@ -89,8 +89,8 @@ let routeTrackingWatchId = null;
 let routeTrackingPoints = [];
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-272";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v252";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-273";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v253";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
 const VOICE_ATTENTION_DELAY_MS = 900;
@@ -18695,49 +18695,69 @@ function openNexusHome(response = "Home is open. What do you need next?") {
   return true;
 }
 
-function openHealthIntakeNow(response = "I opened health intake. I will guide you one question at a time. This is not a diagnosis, but it helps prepare clinic, mobile clinic, pharmacy, or provider support. First, who needs care? Say the patient or household name.") {
-  const actionLead = "";
-  const config = workflowConfig("health", "intake", { dataset: {} });
-  if (!config) return openWorkflowByVoice("health", "intake", response);
-  recordNexusAutonomousLearning({ type: "workflow-opened", workflow: "health", action: "intake", command: response });
-  setActiveAgentJourney("health", "intake", response);
-  forceOpenUserProcessScreen("health", config, { response }, "Telehealth intake");
-  renderLiveVoiceSuggestions(["patient name is Ron", "I need medicine", "Spanish", "call me on WhatsApp", "yes"]);
-  updateNexusBehaviorLayer("ready", "Nexus opened the guided telehealth intake screen and is waiting for the first answer.");
-  setVoiceResponse(`${actionLead}${response}`.trim(), true);
+function hideVoiceWorkflowCards() {
+  $$(".user-inline-workflow").forEach(panel => {
+    panel.classList.add("hidden");
+    panel.innerHTML = "";
+  });
+  $("#workflowModal")?.classList.add("hidden");
+}
+
+function startGuidedHealthVoiceResponse(kind = "intake", response = "", options = {}) {
+  const actionByKind = {
+    intake: "intake",
+    medicine: "pharmacy",
+    clinic: "nearest-clinic",
+    doctor: "provider",
+    mobile: "mobile-clinic"
+  };
+  const action = actionByKind[kind] || "intake";
+  const spokenResponse = response || "I can help with health support. I am not a doctor and this is not a diagnosis. First, tell me where you are and what happened.";
+  pendingAgentClarification = null;
+  pendingNexusSpokenCommand = null;
+  pendingWorkflow = null;
+  clearNexusAnswerContext();
+  clearAgentProgressTimers();
+  hideVoiceWorkflowCards();
+  if (canOpenSection("health")) {
+    goSection("health", { instant: true, openDefaultAction: false, keepAssistant: true, scroll: false });
+    if (experienceMode === "user") renderUserSimpleActiveSection("health");
+  }
+  recordNexusAutonomousLearning({
+    type: "guided-health-voice",
+    workflow: "health",
+    action,
+    kind,
+    command: spokenResponse,
+    guidedOnly: true
+  });
+  setActiveAgentJourney("health", action, spokenResponse);
+  renderLiveVoiceSuggestions(options.suggestions || ["where are you", "what happened", "find clinic", "medicine", "call provider"]);
+  updateNexusBehaviorLayer("listening", options.status || "Nexus is guiding health support by voice without opening a menu card.");
+  updateUserCaptionPanel(spokenResponse, { expanded: true });
+  setVoiceResponse(spokenResponse, true, { allowHandoff: false, source: "guided-health" });
   return true;
 }
 
-function openMedicineHelpNow(response = "I heard you need medicine. I can guide you step by step. I cannot prescribe, but I can help explain the medicine concern, find pharmacy or mobile clinic support, and prepare provider review. First, tell me the medicine concern and where you are.") {
-  const actionLead = "";
-  const config = workflowConfig("health", "pharmacy", { dataset: { patientLocation: activeCountry().name } });
-  if (!config) return openWorkflowByVoice("health", "pharmacy", response, { patientLocation: activeCountry().name });
-  config.userTitle = "Medicine and pharmacy help";
-  config.userSummary = "Tell Nexus what medicine or pharmacy support is needed, where the person is, and whether provider review is needed.";
-  config.confirmLabel = "Find medicine support";
-  recordNexusAutonomousLearning({ type: "workflow-opened", workflow: "health", action: "pharmacy", command: response });
-  setActiveAgentJourney("health", "pharmacy", response);
-  forceOpenUserProcessScreen("health", config, { response }, "Medicine help");
-  renderLiveVoiceSuggestions(["find pharmacy", "start intake", "call provider", "use my location"]);
-  updateNexusBehaviorLayer("ready", "Nexus opened medicine and pharmacy support and is waiting for location or medicine details.");
-  setVoiceResponse(`${actionLead}${response}`.trim(), true, { allowHandoff: false });
-  return true;
+function openHealthIntakeNow(response = "I heard you need health intake. I will guide you one question at a time. This is not a diagnosis. First, who needs care? Say the patient or household name.") {
+  return startGuidedHealthVoiceResponse("intake", response, {
+    suggestions: ["patient name is Ron", "baby sick", "I need medicine", "use my location", "Spanish"],
+    status: "Nexus started guided health intake by voice and is waiting for the patient name."
+  });
+}
+
+function openMedicineHelpNow(response = "I heard you need medicine. I can help guide you safely. I cannot prescribe, but I can help explain the concern, look for pharmacy or mobile clinic support, and prepare provider review. First, tell me what medicine help is needed and where you are.") {
+  return startGuidedHealthVoiceResponse("medicine", response, {
+    suggestions: ["I need malaria medicine", "find pharmacy", "find clinic", "use my location", "call provider"],
+    status: "Nexus started guided medicine and pharmacy support by voice and is waiting for medicine and location details."
+  });
 }
 
 function openClinicHelpNow(response = "I heard you need a clinic or mobile clinic. I can help find care support and show the route. If this is an emergency, call local emergency help now. First, tell me your village, city, or nearest landmark.") {
-  const actionLead = "";
-  const config = workflowConfig("health", "nearest-clinic", { dataset: { patientLocation: activeCountry().name } });
-  if (!config) return openWorkflowByVoice("health", "nearest-clinic", response, { patientLocation: activeCountry().name });
-  config.userTitle = "Find clinic support";
-  config.userSummary = "Tell Nexus where the person is, then Nexus can guide clinic, mobile clinic, map route, or provider handoff support.";
-  config.confirmLabel = "Find clinic";
-  recordNexusAutonomousLearning({ type: "workflow-opened", workflow: "health", action: "nearest-clinic", command: response });
-  setActiveAgentJourney("health", "nearest-clinic", response);
-  forceOpenUserProcessScreen("health", config, { response }, "Find clinic");
-  renderLiveVoiceSuggestions(["use my location", "find clinic", "find pharmacy", "start intake"]);
-  updateNexusBehaviorLayer("ready", "Nexus opened clinic support and is waiting for location details.");
-  setVoiceResponse(`${actionLead}${response}`.trim(), true, { allowHandoff: false });
-  return true;
+  return startGuidedHealthVoiceResponse("clinic", response, {
+    suggestions: ["use my location", "find clinic", "find pharmacy", "mobile clinic", "start intake"],
+    status: "Nexus started guided clinic support by voice and is waiting for location details."
+  });
 }
 
 function openCropProblemHelpNow(response = "I'm with you. I opened crop support. Tell me the crop, where the farm is, and what looks wrong. I will help with simple next steps, field evidence, buyer proof, and route planning.") {
@@ -18757,19 +18777,10 @@ function openCropProblemHelpNow(response = "I'm with you. I opened crop support.
 }
 
 function openDoctorHelpNow(response = "I heard you need a doctor. I can guide you step by step. I am not a doctor and this is not a diagnosis, but I can help explain what happened, check for urgent warning signs, find clinic or mobile clinic support, and prepare a provider handoff. First, tell me where you are.") {
-  const actionLead = "";
-  const config = workflowConfig("health", "provider", { dataset: { careNeed: "I need to speak with a doctor or provider." } });
-  if (!config) return openWorkflowByVoice("health", "provider", response);
-  config.userTitle = "Doctor help";
-  config.userSummary = "Tell Nexus what care connection is needed, how the provider should reach you, and what language or access support you need.";
-  config.confirmLabel = "Request doctor help";
-  recordNexusAutonomousLearning({ type: "workflow-opened", workflow: "health", action: "provider", command: response });
-  setActiveAgentJourney("health", "provider", response);
-  forceOpenUserProcessScreen("health", config, { response }, "Doctor help");
-  renderLiveVoiceSuggestions(["I need a doctor", "call me", "video call", "Spanish", "yes"]);
-  updateNexusBehaviorLayer("ready", "Nexus opened the doctor/provider contact screen and is waiting for care connection details.");
-  setVoiceResponse(`${actionLead}${response}`.trim(), true, { allowHandoff: false });
-  return true;
+  return startGuidedHealthVoiceResponse("doctor", response, {
+    suggestions: ["where I am", "what happened", "find clinic", "video call", "call provider"],
+    status: "Nexus started guided doctor/provider support by voice and is waiting for location details."
+  });
 }
 
 function voiceStatusSummary() {
@@ -19643,11 +19654,9 @@ function nexusConversationFirstIntent(command = "") {
   if (/\b(baby|child|kid|mother|grandma|patient|person)\b.*\b(sick|ill|hurt|pain|fever|injury|medicine|doctor|clinic)\b/.test(lower)
     || /\b(sick baby|baby sick|child sick|patient sick|someone is sick|i am sick|i need health help)\b/.test(lower)) {
     return {
-      type: "workflow",
-      workflow: "health",
-      action: "intake",
-      response: "I'm with you. I opened health intake and will guide one question at a time. This is not a diagnosis. If this is urgent or dangerous, contact local emergency help now. First, who needs care and where are they?",
-      dataset: {}
+      type: "direct",
+      directAction: "health-intake",
+      response: "I'm with you. I will guide health intake one question at a time. This is not a diagnosis. If this is urgent or dangerous, contact local emergency help now. First, who needs care and where are they?"
     };
   }
   if (has(["medicine", "medication", "pharmacy", "refill", "drug", "pills"])) {
@@ -19673,11 +19682,9 @@ function nexusConversationFirstIntent(command = "") {
   }
   if (/\b(i need health|need health|health help|telehealth help|medical help|i need care|need care|i am sick|im sick|i feel sick|not feeling well)\b/.test(lower)) {
     return {
-      type: "workflow",
-      workflow: "health",
-      action: "intake",
-      response: "I'm with you. I opened health intake and will guide one question at a time. This is not a diagnosis, but it helps prepare the next support step. First, who needs care and where are they?",
-      dataset: {}
+      type: "direct",
+      directAction: "health-intake",
+      response: "I'm with you. I will guide health intake one question at a time. This is not a diagnosis, but it helps prepare the next support step. First, who needs care and where are they?"
     };
   }
   if (/\b(my crop is bad|crop is bad|crop bad|field is bad|plants are sick|plant is sick|crop problem|field problem|yellow leaves|wilting|pests|crop dying|farm problem)\b/.test(lower)) {
