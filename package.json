@@ -52,6 +52,7 @@
     "production:gapfill": "node scripts/fill-production-gaps.js",
     "production:validate-env": "node scripts/validate-live-env.js",
     "release:verify-live": "node scripts/verify-live-release.js",
+    "infra:live-check": "node scripts/infrastructure-live-check.js",
     "engines:report": "node scripts/engine-connection-report.js",
     "workforce:live-check": "node scripts/workforce-live-check.js",
     "db:backup": "node scripts/db-backup.js",

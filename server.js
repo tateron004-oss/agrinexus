@@ -1372,45 +1372,76 @@ function communicationsExecutionReadiness(db, user, body = {}) {
   const phoneTo = outboundCallRecipientForPurpose(body.purpose || "AgriNexus outbound support", body);
   const twilioCore = hasTwilioMessagingCore();
   const voiceCore = hasTwilioVoiceCore();
+  const channelStatus = (coreReady, destination) => {
+    if (!coreReady) return "needs-provider-credentials";
+    if (!destination) return "provider-ready-needs-recipient";
+    return "ready-to-execute";
+  };
+  const nextAction = (channel, destination) => {
+    if (destination) return "Confirm the action and Nexus can execute it.";
+    if (channel === "phone") return "Tell Nexus who to call or provide a phone number, for example: Nexus, call Ron at +254...";
+    if (channel === "sms") return "Tell Nexus who should receive the SMS or add DEMO_SMS_TO / TRADE_BUYER_SMS_TO in Render.";
+    return "Tell Nexus who should receive the WhatsApp message or add DEMO_WHATSAPP_TO / TRADE_BUYER_WHATSAPP_TO in Render.";
+  };
   const channels = [
     {
       id: "phone",
       title: "Outbound phone calls",
       providerId: "phone-voice",
       ready: Boolean(voiceCore && phoneTo),
+      providerReady: Boolean(voiceCore),
+      status: channelStatus(voiceCore, phoneTo),
       providerStatus: provider("phone-voice").status || "unknown",
       destinationReady: Boolean(phoneTo),
+      canExecuteWhenRecipientProvided: Boolean(voiceCore),
       endpoint: "/api/voice/phone/outbound-call",
       requiredEnv: ["PHONE_PROVIDER=twilio", "TWILIO_ACCOUNT_SID", "TWILIO_AUTH_TOKEN", "TWILIO_PHONE_NUMBER", "PUBLIC_BASE_URL", "DEMO_CALL_TO or contact number"],
-      canExecuteNow: Boolean(voiceCore && phoneTo)
+      canExecuteNow: Boolean(voiceCore && phoneTo),
+      nextAction: nextAction("phone", phoneTo)
     },
     {
       id: "sms",
       title: "SMS delivery",
       providerId: "sms-delivery",
       ready: Boolean(twilioCore && smsTo),
+      providerReady: Boolean(twilioCore),
+      status: channelStatus(twilioCore, smsTo),
       providerStatus: provider("sms-delivery").status || "unknown",
       destinationReady: Boolean(smsTo),
+      canExecuteWhenRecipientProvided: Boolean(twilioCore),
       endpoint: "/api/notifications/send",
       requiredEnv: ["SMS_PROVIDER=twilio", "TWILIO_ACCOUNT_SID", "TWILIO_AUTH_TOKEN", "TWILIO_PHONE_NUMBER", "DEMO_SMS_TO or channel recipient"],
-      canExecuteNow: Boolean(twilioCore && smsTo)
+      canExecuteNow: Boolean(twilioCore && smsTo),
+      nextAction: nextAction("sms", smsTo)
     },
     {
       id: "whatsapp",
       title: "WhatsApp delivery",
       providerId: "whatsapp-delivery",
       ready: Boolean(twilioCore && whatsappTo),
+      providerReady: Boolean(twilioCore),
+      status: channelStatus(twilioCore, whatsappTo),
       providerStatus: provider("whatsapp-delivery").status || "unknown",
       destinationReady: Boolean(whatsappTo),
+      canExecuteWhenRecipientProvided: Boolean(twilioCore),
       endpoint: "/api/notifications/send",
       requiredEnv: ["WHATSAPP_PROVIDER=twilio", "TWILIO_ACCOUNT_SID", "TWILIO_AUTH_TOKEN", "TWILIO_PHONE_NUMBER", "TWILIO_WHATSAPP_FROM or Twilio WhatsApp sender", "DEMO_WHATSAPP_TO or channel recipient"],
-      canExecuteNow: Boolean(twilioCore && whatsappTo)
+      canExecuteNow: Boolean(twilioCore && whatsappTo),
+      nextAction: nextAction("whatsapp", whatsappTo)
     }
   ];
   const readyCount = channels.filter(item => item.ready).length;
+  const providerReadyCount = channels.filter(item => item.providerReady).length;
   return {
-    status: readyCount === channels.length ? "live-communications-ready" : readyCount ? "partial-live-communications-ready" : "communications-provider-ready",
+    status: readyCount === channels.length
+      ? "live-communications-ready"
+      : providerReadyCount === channels.length
+        ? "communications-provider-ready-needs-recipient"
+        : providerReadyCount
+          ? "partial-communications-provider-ready"
+          : "communications-provider-needs-setup",
     readyCount,
+    providerReadyCount,
     total: channels.length,
     channels,
     voiceCommands: [
@@ -4981,17 +5012,22 @@ function productionOperationsPlan(db, providers = runtimeProviders(db)) {
 }
 
 function productionReadiness(providers) {
-  const providerReady = (id, label) => {
+  const providerReady = (id, label, options = {}) => {
     const provider = providers.find(item => item.id === id);
     const localModes = ["sandbox", "fallback", "json-file", "tile-provider", "browser", "local-dictionary", "local-session", "local-disabled"];
-    const ready = Boolean(provider && provider.status === "connected" && !localModes.includes(provider.mode));
+    const acceptedStatuses = options.acceptStatuses || ["connected"];
+    const statusReady = Boolean(provider && acceptedStatuses.includes(provider.status));
+    const ready = Boolean(provider && statusReady && !localModes.includes(provider.mode));
+    const detail = provider
+      ? ready && provider.status === "needs-recipient"
+        ? `${provider.name}: Core provider ready. Recipient is requested when Nexus sends a real message.`
+        : `${provider.name}: ${ready ? "Ready" : provider.detail}`
+      : `${label} provider is missing.`;
     return {
       id,
       label,
       ready,
-      detail: provider
-        ? `${provider.name}: ${ready ? "Ready" : provider.detail}`
-        : `${label} provider is missing.`
+      detail
     };
   };
   const moduleReadiness = [
@@ -5101,8 +5137,8 @@ function productionReadiness(providers) {
       module: "Communications",
       checks: [
         providerReady("email-delivery", "Email notification provider"),
-        providerReady("sms-delivery", "SMS notification provider"),
-        providerReady("whatsapp-delivery", "WhatsApp notification provider")
+        providerReady("sms-delivery", "SMS notification provider", { acceptStatuses: ["connected", "needs-recipient"] }),
+        providerReady("whatsapp-delivery", "WhatsApp notification provider", { acceptStatuses: ["connected", "needs-recipient"] })
       ]
     },
     {
