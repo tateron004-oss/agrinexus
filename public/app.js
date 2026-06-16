@@ -89,8 +89,8 @@ let routeTrackingWatchId = null;
 let routeTrackingPoints = [];
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-280";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v260";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-285";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v265";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
 const VOICE_ATTENTION_DELAY_MS = 900;
@@ -4586,6 +4586,16 @@ function nexusIntelligenceRouterDecision(command = "") {
       suggestions: ["call provider", "message provider", "start intake", "cancel"]
     });
   }
+  if (signals.health
+    && /\b(clinic|clinics|hospital|pharmacy|pharmacies)\b/.test(signals.lower)
+    && /\b(map|route|location|near|nearby|closest|show|find)\b/.test(signals.lower)) {
+    return decision("answer", {
+      confidence: .95,
+      section: "map",
+      response: "I opened the clinic and pharmacy map. Share your village, city, or nearest landmark, and I will guide the closest clinic, mobile clinic, or pharmacy route.",
+      suggestions: ["use my location", "find clinic", "find pharmacy", "start intake"]
+    });
+  }
   if (signals.health) {
     if (signals.lower.includes("medicine") || signals.lower.includes("pharmacy")) {
       return decision("answer", {
@@ -4599,7 +4609,7 @@ function nexusIntelligenceRouterDecision(command = "") {
       return decision("answer", {
         confidence: .93,
         section: "health",
-        response: "I heard you need a clinic or mobile clinic. I can help find care support and show the route. If this is an emergency, call local emergency help now. First, tell me your village, city, or nearest landmark.",
+        response: "I heard you need clinic support. I can guide care access, show clinic or pharmacy options on the map, and prepare a safe handoff. If this is an emergency, call local emergency help now. Share your village, city, or nearest landmark.",
         suggestions: ["use my location", "start intake", "find pharmacy"]
       });
     }
@@ -18761,7 +18771,9 @@ function isHealthFacilityMapCommand(command = "", result = {}) {
 }
 
 function openHealthFacilityMapNow(response = "I opened the full map for clinic and pharmacy support. Share your village, city, or location, and I will guide the closest facility route.") {
-  const spoken = response || "I opened the full map for clinic and pharmacy support. Share your village, city, or location, and I will guide the closest facility route.";
+  const defaultMapResponse = "I opened the clinic and pharmacy map. Share your village, city, or nearest landmark, and I will guide the closest clinic, mobile clinic, or pharmacy route.";
+  const rawSpoken = response || defaultMapResponse;
+  const spoken = /\bmap\b/i.test(rawSpoken) && /\bpharmacy|clinic and pharmacy|clinic or pharmacy\b/i.test(rawSpoken) ? rawSpoken : defaultMapResponse;
   const opened = openFullScaleUserMap(spoken);
   renderLiveVoiceSuggestions(["use my location", "show clinics", "show pharmacy", "call provider", "start intake"]);
   updateNexusBehaviorLayer("ready", "Nexus opened the full health facility map first, with clinic and pharmacy support ready.");
@@ -18913,7 +18925,7 @@ function openMedicineHelpNow(response = "I heard you need medicine. I can help g
   });
 }
 
-function openClinicHelpNow(response = "I heard you need a clinic or mobile clinic. I can help find care support and show the route. If this is an emergency, call local emergency help now. First, tell me your village, city, or nearest landmark.") {
+function openClinicHelpNow(response = "I heard you need clinic support. I can guide care access, show clinic or pharmacy options on the map, and prepare a safe handoff. If this is an emergency, call local emergency help now. Share your village, city, or nearest landmark.") {
   return startGuidedHealthVoiceResponse("clinic", response, {
     suggestions: ["use my location", "find clinic", "find pharmacy", "mobile clinic", "start intake"],
     status: "Nexus started guided clinic support by voice and is waiting for location details."
@@ -19117,7 +19129,7 @@ function nexusSmartIntentRouter(command = "") {
       key: "clinic",
       label: "nearest clinic",
       score: needScore + scoreFor(["clinic", "hospital", "nearest clinic", "closest clinic", "health center"], ["near", "closest", "nearby", "location", "map", "around"]),
-      route: { type: "direct", directAction: "clinic-help", response: "I heard you need a clinic or mobile clinic. I can help find care support and show the route. If this is an emergency, call local emergency help now. First, tell me your village, city, or nearest landmark." }
+      route: { type: "direct", directAction: "clinic-help", response: "I heard you need clinic support. I can guide care access, show clinic or pharmacy options on the map, and prepare a safe handoff. If this is an emergency, call local emergency help now. Share your village, city, or nearest landmark." }
     },
     {
       key: "crop-problem",
@@ -19280,7 +19292,7 @@ function simpleUserDirectVoiceIntent(command = "") {
     return {
       type: "direct",
       directAction: "clinic-help",
-      response: "I heard you need a clinic or mobile clinic. I can help find care support and show the route. If this is an emergency, call local emergency help now. First, tell me your village, city, or nearest landmark."
+      response: "I heard you need clinic support. I can guide care access, show clinic or pharmacy options on the map, and prepare a safe handoff. If this is an emergency, call local emergency help now. Share your village, city, or nearest landmark."
     };
   }
   const smartIntent = nexusSmartIntentRouter(command);
@@ -19312,7 +19324,7 @@ function simpleUserDirectVoiceIntent(command = "") {
     return {
       type: "direct",
       directAction: "clinic-help",
-      response: "I heard you need a clinic or mobile clinic. I can help find care support and show the route. If this is an emergency, call local emergency help now. First, tell me your village, city, or nearest landmark."
+      response: "I heard you need clinic support. I can guide care access, show clinic or pharmacy options on the map, and prepare a safe handoff. If this is an emergency, call local emergency help now. Share your village, city, or nearest landmark."
     };
   }
   if ((has(["doctor", "provider", "nurse", "clinician"]) && has(["need", "want", "talk", "speak", "call", "contact", "see", "connect", "help"]))
@@ -19419,6 +19431,7 @@ function runSimpleUserVoiceIntent(intent, command = "") {
   if (intent.type === "direct" && intent.directAction === "home") return openNexusHome(intent.response);
   if (intent.type === "direct" && intent.directAction === "health-intake") return openHealthIntakeNow(intent.response);
   if (intent.type === "direct" && intent.directAction === "medicine-help") return openMedicineHelpNow(intent.response);
+  if (intent.type === "direct" && intent.directAction === "clinic-map-help") return openHealthFacilityMapNow(intent.response);
   if (intent.type === "direct" && intent.directAction === "clinic-help") return openClinicHelpNow(intent.response);
   if (intent.type === "direct" && intent.directAction === "crop-help") return openCropProblemHelpNow(intent.response);
   if (intent.type === "direct" && intent.directAction === "doctor-help") return openDoctorHelpNow(intent.response);
@@ -19433,7 +19446,7 @@ function runSimpleUserVoiceIntent(intent, command = "") {
 
 function isPriorityServiceVoiceIntent(intent) {
   if (!intent || intent.type === "clarify") return false;
-  if (intent.type === "direct") return ["health-intake", "medicine-help", "clinic-help", "crop-help", "doctor-help", "crop-sale-guided", "workforce-guided", "learning-guided", "route-guided", "full-map", "country-map", "home"].includes(intent.directAction);
+  if (intent.type === "direct") return ["health-intake", "medicine-help", "clinic-help", "clinic-map-help", "crop-help", "doctor-help", "crop-sale-guided", "workforce-guided", "learning-guided", "route-guided", "full-map", "country-map", "home"].includes(intent.directAction);
   if (intent.type === "workflow") return ["health", "trade", "workforce", "learning", "map"].includes(intent.workflow);
   return false;
 }
@@ -19519,6 +19532,7 @@ function nexusResilientConversationIntent(command = "") {
   const has = signals => speechSignalMatches(text, signals);
   const capability = [/\bwhat can (?:you )?do\b/, /\bwhat you do\b/, /\byou can do what\b/, /\bhow help\b/, "que puedes hacer", "que haces", "que peux tu faire", "que fais tu", "unaweza kufanya nini", "unafanya nini", "o que voce pode fazer", "ماذا تفعل", "ماذا تستطيع", "ماذا يمكنك"];
   const medicine = [/\b(need|want|find|get|help)\s+(medicine|medication|pills|drug|refill|pharmacy)\b/, /\b(medicine|medication|pills|drug|refill|pharmacy)\s+(need|want|help|please|where)\b/, "dawa", "medicina", "medicamento", "remedio", "medicament", "pharmacie", "nahitaji dawa", "nina hitaji dawa", "necesito medicina", "preciso remedio", "دواء", "صيدلية", "ادوية", "أدوية"];
+  const clinicMap = [/\b(show|find|open|need|want)\b.*\b(clinic|clinics|hospital|health center|health centre|pharmacy|pharmacies)\b.*\b(map|route|location|near|nearby|closest)\b/, /\b(clinic|clinics|hospital|health center|health centre|pharmacy|pharmacies)\b.*\b(map|route|location|near|nearby|closest)\b/, "show clinic on map", "show clinic map", "clinic on map", "pharmacy on map", "show pharmacy on map", "clinic map"];
   const clinic = [/\b(clinic|hospital|health center|health centre)\s+(near|nearby|closest|where|find|map|please)\b/, /\b(near|nearby|closest|where|find|map)\s+(clinic|hospital|health center|health centre)\b/, "clinic near", "find clinic", "clinica cerca", "clinique pres", "kliniki karibu", "hospitali karibu", "عيادة", "مستشفى", "clinica perto"];
   const doctor = [/\b(need|want|see|call|talk|speak|find|help)\s+(doctor|nurse|provider|clinician)\b/, /\b(doctor|nurse|provider|clinician)\s+(need|please|help|call|where)\b/, "doctor please", "daktari", "medico", "docteur", "infirmier", "enfermera", "طبيب", "دكتور", "ممرض"];
   const cropBad = [/\b(crop|farm|field|plant|maize|cassava|rice|beans|harvest|shamba)\s+(bad|sick|dying|yellow|dry|pest|bugs|problem|weak)\b/, /\b(bad|sick|dying|yellow|dry|pest|bugs|problem|weak)\s+(crop|farm|field|plant|maize|cassava|rice|beans|harvest|shamba)\b/, "crop bad", "farm bad", "maize yellow", "shamba mbaya", "cultivo malo", "cosecha mala", "recolte mauvaise", "campo ruim", "محصول سيء", "زرع مريض"];
@@ -19540,7 +19554,8 @@ function nexusResilientConversationIntent(command = "") {
       suggestions: ["I need a doctor", "my crop is bad", "start a course", "open the map"]
     };
   }
-  if (has(clinic)) return { type: "direct", directAction: "clinic-help", response: "I heard you need a clinic or mobile clinic. I can help find care support and show the route. If this is an emergency, call local emergency help now. First, tell me your village, city, or nearest landmark." };
+  if (has(clinicMap)) return { type: "direct", directAction: "clinic-map-help", response: "I opened the clinic and pharmacy map. Share your village, city, or nearest landmark, and I will guide the closest clinic, mobile clinic, or pharmacy route." };
+  if (has(clinic)) return { type: "direct", directAction: "clinic-help", response: "I heard you need clinic support. I can guide care access, show clinic or pharmacy options on the map, and prepare a safe handoff. If this is an emergency, call local emergency help now. Share your village, city, or nearest landmark." };
   if (has(doctor)) return { type: "direct", directAction: "doctor-help", response: "I heard you need a doctor. I can guide you step by step. I am not a doctor and this is not a diagnosis, but I can help explain what happened, check urgent warning signs, find clinic or mobile clinic support, and prepare a provider handoff. First, tell me where you are." };
   if (has(medicine)) return { type: "direct", directAction: "medicine-help", response: "I heard you need medicine. I can guide you step by step. I cannot prescribe, but I can help explain the medicine concern, find pharmacy or mobile clinic support, and prepare provider review. First, tell me the medicine concern." };
   if (has(cropBad)) return { type: "direct", directAction: "crop-help", response: "I can help with the crop problem. I'm with you. I opened crop support. Tell me the crop, where the farm is, and what looks wrong." };
@@ -19863,7 +19878,7 @@ function nexusConversationFirstIntent(command = "") {
     return {
       type: "direct",
       directAction: "clinic-help",
-      response: "I heard you need a clinic or mobile clinic. I can help find care support and show the route. If this is an emergency, call local emergency help now. First, tell me your village, city, or nearest landmark."
+      response: "I heard you need clinic support. I can guide care access, show clinic or pharmacy options on the map, and prepare a safe handoff. If this is an emergency, call local emergency help now. Share your village, city, or nearest landmark."
     };
   }
   if (has(["doctor", "nurse", "provider", "clinician"]) && has(["need", "want", "speak", "talk", "call", "contact", "see", "find", "help"])) {
@@ -20113,6 +20128,12 @@ async function unifiedNexusConversationBrain(rawCommand = "", context = {}) {
     voiceConversationPaused = false;
     enableNexusVoiceForDemo("Nexus voice is back on. Say Nexus, then tell me what you need.");
     return true;
+  }
+  const facilityMapPhrase = normalizeToolText([spoken, command, localized, rawCommand].filter(Boolean).join(" "));
+  if (/\b(clinic|clinics|hospital|health center|health centre|pharmacy|pharmacies)\b/.test(facilityMapPhrase)
+    && /\b(map|route|location|near|nearby|closest|show|find)\b/.test(facilityMapPhrase)) {
+    resetConversationStateForPriorityIntent(facilityMapPhrase);
+    return openHealthFacilityMapNow("I opened the clinic and pharmacy map. Share your village, city, or nearest landmark, and I will guide the closest clinic, mobile clinic, or pharmacy route.");
   }
   if (/\b(streaming voice|seamless voice|native voice|continuous voice|live voice)\b/.test(lower)) {
     const turnOff = /\b(off|disable|stop|turn off)\b/.test(lower);
@@ -20574,6 +20595,11 @@ async function handleVoiceCommandCore(rawCommand, options = {}) {
     pendingAgentClarification = null;
     pendingNexusSpokenCommand = null;
     return openMedicineHelpNow(simpleIntent.response);
+  }
+  if (simpleIntent?.type === "direct" && simpleIntent.directAction === "clinic-map-help") {
+    pendingAgentClarification = null;
+    pendingNexusSpokenCommand = null;
+    return openHealthFacilityMapNow(simpleIntent.response);
   }
   if (simpleIntent?.type === "direct" && simpleIntent.directAction === "clinic-help") {
     pendingAgentClarification = null;

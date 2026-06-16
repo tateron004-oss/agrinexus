@@ -26,8 +26,8 @@ const AI_MODEL = process.env.OPENAI_MODEL || "gpt-5.4-mini";
 const AI_REASONING_MODEL = process.env.OPENAI_REASONING_MODEL || process.env.OPENAI_AGENT_MODEL || AI_MODEL;
 const AI_TRANSLATION_MODEL = process.env.OPENAI_TRANSLATION_MODEL || process.env.OPENAI_AGENT_MODEL || AI_MODEL;
 const AGRINEXUS_RELEASE = "2026-06-16-operational-readiness";
-const AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-280";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v260";
+const AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-285";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v265";
 const ROOT = __dirname;
 const DATA_DIR = process.env.AGRINEXUS_DATA_DIR || ROOT;
 const DB_PATH = process.env.AGRINEXUS_DB_PATH || path.join(DATA_DIR, "db.json");
@@ -15782,7 +15782,7 @@ function continueSimpleVoiceTurn(db, user, text = "") {
   }
   clearSimpleVoiceTurn(db);
   if (choice === "clinic") {
-    return { intent: "conversation.clinic_map_help", response: "I heard you need a clinic or mobile clinic. I can help find care support and show the route. If this is an emergency, call local emergency help now. First, tell me your village, city, or nearest landmark.", status: "needs-location", metadata: { conversationMode: true, redirectSection: "map", suppressBehaviorNudge: true, suggestedReplies: ["use my location", "Nairobi", "Kibera"] } };
+    return { intent: "conversation.clinic_map_help", response: "I opened the clinic and pharmacy map. Share your village, city, or nearest landmark, and I will guide the closest clinic, mobile clinic, or pharmacy route. If this is an emergency, call local emergency help now.", status: "needs-location", metadata: { conversationMode: true, redirectSection: "map", suppressBehaviorNudge: true, suggestedReplies: ["use my location", "Nairobi", "Kibera"] } };
   }
   if (choice === "medicine") {
     setSimpleVoiceTurn(db, { domain: "medicine", section: "health", question: "What medicine concern, and what city or village?", choices: ["clinic", "pharmacy", "doctor"], defaultChoice: "clinic", sourceIntent: "conversation.medicine_help" });
@@ -17059,7 +17059,7 @@ function resilientConversationIntent(db, user, rawText = "") {
   if (has(clinicSignals)) {
     return {
       intent: "conversation.clinic_map_help",
-      response: "I heard you need a clinic or mobile clinic. I can help find care support and show the route. If this is urgent, call local emergency help now. First, tell me what village, city, or landmark you are near.",
+      response: "I opened the clinic and pharmacy map. Share your village, city, or nearest landmark, and I will guide the closest clinic, mobile clinic, or pharmacy route. If this is urgent, call local emergency help now.",
       status: "needs-location",
       metadata: { ...guidedFrontier("Healthcare", "health", "What village, city, or landmark are you near?", "medium"), redirectSection: "map", suggestedReplies: ["use my location", "find clinic", "find pharmacy"] }
     };
@@ -21214,7 +21214,7 @@ async function runAgentCommand(db, user, command, options = {}) {
   if (conversational && /\b(clinic|hospital|health center|health centre)\b/.test(lower)) {
     return {
       intent: "conversation.clinic_help",
-      response: "I heard you need a clinic or mobile clinic. I can help find care support and show the route. If this is an emergency, call local emergency help now. First, tell me your village, city, or nearest landmark.",
+      response: "I heard you need clinic support. I can guide care access, show clinic or pharmacy options on the map, and prepare a safe handoff. If this is an emergency, call local emergency help now. Share your village, city, or nearest landmark.",
       status: "needs-location",
       metadata: { conversationMode: true, redirectSection: "health", suppressBehaviorNudge: true, moduleSignal: { module: "Healthcare", section: "health" }, frontierCommunication: { urgency: /urgent|emergency|sick|baby|weak/.test(lower) ? "high" : "medium", nextQuestion: "First, tell me your village, city, or nearest landmark.", confidence: 0.94, responseShape: "acknowledge clinic need, route to health, ask one location question" }, suggestedReplies: ["use my location", "start intake", "find pharmacy"] }
     };

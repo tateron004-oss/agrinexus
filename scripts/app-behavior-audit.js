@@ -454,8 +454,9 @@ assert(app.includes("function openTelehealthCaptionsNow") && app.includes('inten
 assert(app.includes("Who needs captions first?") && app.includes("Nexus started guided telehealth caption relay"), "Telehealth captions need a guided response and next question");
 assert(app.includes("function answerChoiceNumberFromSpeech") && app.includes("function extractNumberedAnswerChoices") && app.includes("context.choices[numberChoice - 1]"), "Voice choices must support select number 1/2/3 and numbered follow-up answers");
 assert(app.includes("function openHealthFacilityMapNow") && app.includes("function isHealthFacilityMapCommand") && app.includes("Nexus opened the full health facility map first"), "Clinic/pharmacy map requests must open the full map first instead of burying the map below health workflows");
-assert(html.includes("nexus-behavior-280"), "Index must force browsers to load Nexus behavior CSS");
-assert(html.includes("nexus-behavior-280"), "Index must force browsers to load Nexus behavior JS");
+assert(app.includes('directAction === "clinic-map-help"') && app.includes("const clinicMap") && app.includes("I opened the clinic and pharmacy map"), "User-mode clinic map speech must route directly to the visible clinic/pharmacy map");
+assert(html.includes("nexus-behavior-285"), "Index must force browsers to load Nexus behavior CSS");
+assert(html.includes("nexus-behavior-285"), "Index must force browsers to load Nexus behavior JS");
 assert(server.includes("function productionActivationGuide"), "Backend needs a live activation guide");
 assert(server.includes("function directVendorProviderStatus"), "Backend must recognize direct vendor credentials");
 assert(server.includes("optionalEnvSets"), "Activation guide must show real provider depth options");
@@ -610,7 +611,7 @@ assert(app.includes("spokenCommand"), "Voice readback must preserve the user's o
 assert(app.includes("Is this for health, work, learning, crops, or the map?"), "Vague User help requests should ask one short clarifying question instead of guessing");
 assert(app.includes("I opened Health. Tell me where you are and what help you need. This is not a diagnosis."), "User health voice command should open Health with a short response");
 assert(app.includes("I heard you need medicine. I can guide you step by step."), "User medicine voice command should acknowledge, explain, and guide pharmacy/mobile clinic support before provider/intake routing");
-assert(app.includes("I heard you need a clinic or mobile clinic."), "User clinic-near-me voice command should explain and guide clinic/mobile clinic/map support before provider routing");
+assert(app.includes("I heard you need clinic support."), "User clinic-near-me voice command should explain and guide clinic/mobile clinic/map support before provider routing");
 assert(app.includes("I am not a doctor and this is not a diagnosis"), "Doctor and health voice guidance must preserve the non-diagnosis safety boundary");
 assert(app.includes("I can help sell the crop.") || app.includes("I opened Trade to help with the crop sale."), "User crop-sale voice command should open Trade with a short response");
 assert(app.includes("my name's|my names|my name|name is|name's|names") && app.includes("i m|im|am|call me"), "Name capture should accept natural name phrases");
