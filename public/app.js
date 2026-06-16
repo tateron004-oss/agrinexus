@@ -89,8 +89,8 @@ let routeTrackingWatchId = null;
 let routeTrackingPoints = [];
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-271";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v251";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-272";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v252";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
 const VOICE_ATTENTION_DELAY_MS = 900;
@@ -19832,6 +19832,12 @@ async function unifiedNexusConversationBrain(rawCommand = "", context = {}) {
   const turnToken = context.turnToken || null;
   const stopRedirect = postStopRedirectCommand(command);
 
+  const firstPrioritySimpleIntent = simpleUserDirectVoiceIntent(spoken || command);
+  if (isPriorityServiceVoiceIntent(firstPrioritySimpleIntent)) {
+    resetConversationStateForPriorityIntent(spoken || command);
+    return executeUnifiedNexusIntent(firstPrioritySimpleIntent, spoken || command, context);
+  }
+
   if (await answerPendingNexusQuestion(command || localized || rawCommand)) return true;
 
   if (isGlobalStopCommand(String(command || localized || rawCommand).toLowerCase())) {
@@ -20129,6 +20135,11 @@ async function handleVoiceCommandCore(rawCommand, options = {}) {
   if (autoLanguage) {
     agentPerformanceState.lastCommand = command || localizedCommand || rawCommand;
     recordNexusAutonomousLearning({ type: "auto-language-detected", command: rawCommand, language: autoLanguage.label, mode: experienceMode || data?.user?.role || "platform" });
+  }
+  const firstPriorityFallbackIntent = simpleUserDirectVoiceIntent(spokenCommand || command);
+  if (isPriorityServiceVoiceIntent(firstPriorityFallbackIntent)) {
+    resetConversationStateForPriorityIntent(spokenCommand || command);
+    if (runSimpleUserVoiceIntent(firstPriorityFallbackIntent, spokenCommand || command)) return;
   }
   if (await answerPendingNexusQuestion(command || localizedCommand || rawCommand)) return;
   if (!options.skipUnifiedBrain && await unifiedNexusConversationBrain(rawCommand, { ...options, turnToken, autoLanguage })) return;
