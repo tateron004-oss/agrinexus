@@ -26,8 +26,8 @@ const AI_MODEL = process.env.OPENAI_MODEL || "gpt-5.4-mini";
 const AI_REASONING_MODEL = process.env.OPENAI_REASONING_MODEL || process.env.OPENAI_AGENT_MODEL || AI_MODEL;
 const AI_TRANSLATION_MODEL = process.env.OPENAI_TRANSLATION_MODEL || process.env.OPENAI_AGENT_MODEL || AI_MODEL;
 const AGRINEXUS_RELEASE = "2026-06-05-live-services";
-const AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-266";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v246";
+const AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-267";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v247";
 const ROOT = __dirname;
 const DATA_DIR = process.env.AGRINEXUS_DATA_DIR || ROOT;
 const DB_PATH = process.env.AGRINEXUS_DB_PATH || path.join(DATA_DIR, "db.json");
@@ -15722,7 +15722,7 @@ function continueSimpleVoiceTurn(db, user, text = "") {
   }
   if (choice === "medicine") {
     setSimpleVoiceTurn(db, { domain: "medicine", section: "health", question: "What medicine concern, and what city or village?", choices: ["clinic", "pharmacy", "doctor"], defaultChoice: "clinic", sourceIntent: "conversation.medicine_help" });
-    return { intent: "conversation.medicine_help", response: "I cannot prescribe, but I can help find medicine support. What city or village are you in?", status: "needs-location", metadata: { conversationMode: true, redirectSection: "health", suppressBehaviorNudge: true, suggestedReplies: ["clinic", "pharmacy", "doctor"] } };
+    return { intent: "conversation.medicine_help", response: "Yes, I can help with medicine access. I opened medicine and pharmacy support. What city or village are you in? I cannot prescribe.", status: "needs-location", metadata: { conversationMode: true, redirectSection: "health", suppressBehaviorNudge: true, suggestedReplies: ["clinic", "pharmacy", "doctor"] } };
   }
   if (choice === "doctor" || choice === "health") {
     setSimpleVoiceTurn(db, { domain: "doctor", section: "health", question: "What is happening, and where are you?", choices: ["clinic", "medicine", "provider"], defaultChoice: "clinic", sourceIntent: "conversation.doctor_help" });
@@ -16978,7 +16978,7 @@ function resilientConversationIntent(db, user, rawText = "") {
   if (has(medicineSignals)) {
     return {
       intent: "conversation.medicine_help",
-      response: "I can help with medicine access, but I cannot prescribe. Tell me what medicine or health concern, and where you are. I can look for pharmacy support, clinic handoff, or provider review.",
+      response: "Yes, I can help with medicine access. I opened medicine and pharmacy support. Tell me what medicine or health concern, and where you are. I cannot prescribe, but I can look for pharmacy support, clinic handoff, or provider review.",
       status: "needs-location",
       metadata: { ...metadataBase, redirectSection: "health", suggestedReplies: ["find pharmacy", "start intake", "call provider"] }
     };
@@ -17185,7 +17185,7 @@ function healthAccessVoiceAcceptanceResponse(db, user, text = "", lower = "", op
       "conversation.medicine_help",
       "needs-location",
       "health",
-      "I can help with medicine access, but I cannot prescribe. Tell me what medicine or health concern, and where you are. I can look for pharmacy support, clinic handoff, or provider review.",
+      "Yes, I can help with medicine access. I opened medicine and pharmacy support. Tell me what medicine or health concern, and where you are. I cannot prescribe, but I can look for pharmacy support, clinic handoff, or provider review.",
       ["find pharmacy", "start intake", "call provider"]
     );
   }
@@ -20930,7 +20930,7 @@ async function runAgentCommand(db, user, command, options = {}) {
   if (conversational && /\b(medicine|medication|pharmacy|pills|drug|refill|prescription|dawa|remedy)\b/.test(lower)) {
     return {
       intent: "conversation.medicine_help",
-      response: "I can help with medicine access, but I cannot prescribe. Tell me what medicine or health concern, and where you are. I can look for pharmacy support, clinic handoff, or provider review.",
+      response: "Yes, I can help with medicine access. I opened medicine and pharmacy support. Tell me what medicine or health concern, and where you are. I cannot prescribe, but I can look for pharmacy support, clinic handoff, or provider review.",
       status: "needs-location",
       metadata: { conversationMode: true, redirectSection: "health", suppressBehaviorNudge: true, suggestedReplies: ["find pharmacy", "start intake", "call provider"] }
     };

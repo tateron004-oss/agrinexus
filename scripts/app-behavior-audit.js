@@ -450,8 +450,8 @@ assert(app.indexOf("unified-brain-platform-explain") < app.indexOf("if (pendingW
 assert(styles.includes("pointer-events: none") && styles.includes(".user-caption-actions") && styles.includes("pointer-events: auto"), "Caption panel must not block workflow action clicks");
 assert(styles.includes("width: min(300px, calc(100vw - 24px))") && styles.includes("max-height: 138px"), "Caption panel must default to a small bubble");
 assert(styles.includes(".user-caption-panel.expanded") && styles.includes("display: none") && styles.includes("display: grid"), "Caption input controls must appear only in expanded caption mode");
-assert(html.includes("nexus-behavior-266"), "Index must force browsers to load Nexus behavior CSS");
-assert(html.includes("nexus-behavior-266"), "Index must force browsers to load Nexus behavior JS");
+assert(html.includes("nexus-behavior-267"), "Index must force browsers to load Nexus behavior CSS");
+assert(html.includes("nexus-behavior-267"), "Index must force browsers to load Nexus behavior JS");
 assert(server.includes("function productionActivationGuide"), "Backend needs a live activation guide");
 assert(server.includes("function directVendorProviderStatus"), "Backend must recognize direct vendor credentials");
 assert(server.includes("optionalEnvSets"), "Activation guide must show real provider depth options");
@@ -601,7 +601,7 @@ assert(app.includes("pendingAgentClarification = simpleIntent.clarification || n
 assert(app.includes("spokenCommand"), "Voice readback must preserve the user's original spoken phrase before internal routing rewrites");
 assert(app.includes("Is this for health, work, learning, crops, or the map?"), "Vague User help requests should ask one short clarifying question instead of guessing");
 assert(app.includes("I opened Health. Tell me where you are and what help you need. This is not a diagnosis."), "User health voice command should open Health with a short response");
-assert(app.includes("I can help with medicine access, but I cannot prescribe."), "User medicine voice command should open pharmacy support before provider/intake routing");
+assert(app.includes("Yes, I can help with medicine access. I opened medicine and pharmacy support."), "User medicine voice command should acknowledge and open pharmacy support before provider/intake routing");
 assert(app.includes("I can help find clinic support."), "User clinic-near-me voice command should open nearest clinic/map support before provider routing");
 assert(app.includes("I can help sell the crop.") || app.includes("I opened Trade to help with the crop sale."), "User crop-sale voice command should open Trade with a short response");
 assert(app.includes("my name's|my names|my name|name is|name's|names") && app.includes("i m|im|am|call me"), "Name capture should accept natural name phrases");
