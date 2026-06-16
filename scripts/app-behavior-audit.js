@@ -450,8 +450,8 @@ assert(app.indexOf("unified-brain-platform-explain") < app.indexOf("if (pendingW
 assert(styles.includes("pointer-events: none") && styles.includes(".user-caption-actions") && styles.includes("pointer-events: auto"), "Caption panel must not block workflow action clicks");
 assert(styles.includes("width: min(300px, calc(100vw - 24px))") && styles.includes("max-height: 138px"), "Caption panel must default to a small bubble");
 assert(styles.includes(".user-caption-panel.expanded") && styles.includes("display: none") && styles.includes("display: grid"), "Caption input controls must appear only in expanded caption mode");
-assert(html.includes("nexus-behavior-269"), "Index must force browsers to load Nexus behavior CSS");
-assert(html.includes("nexus-behavior-269"), "Index must force browsers to load Nexus behavior JS");
+assert(html.includes("nexus-behavior-270"), "Index must force browsers to load Nexus behavior CSS");
+assert(html.includes("nexus-behavior-270"), "Index must force browsers to load Nexus behavior JS");
 assert(server.includes("function productionActivationGuide"), "Backend needs a live activation guide");
 assert(server.includes("function directVendorProviderStatus"), "Backend must recognize direct vendor credentials");
 assert(server.includes("optionalEnvSets"), "Activation guide must show real provider depth options");
@@ -627,6 +627,11 @@ assert(app.includes("function guidedHealthIntakeHtml"), "Telehealth intake needs
 assert(app.includes("function guidedHealthProviderHtml"), "Doctor/provider requests need a dedicated guided screen");
 assert(app.includes("function openDoctorHelpNow"), "Doctor/provider voice requests must open a visible screen directly");
 assert(app.includes("directAction: \"doctor-help\""), "Doctor/provider simple voice intent must route as a direct action");
+assert(app.includes("function isPriorityServiceVoiceIntent"), "Clear service voice requests need a priority router before intake/question state");
+assert(app.includes("resetConversationStateForPriorityIntent"), "Priority service requests must clear stale intake/question state before routing");
+assert(app.indexOf("const prioritySimpleIntent = simpleUserDirectVoiceIntent(spoken || command)") > -1, "Unified Nexus brain must evaluate priority service commands");
+assert(app.indexOf("const prioritySimpleIntent = simpleUserDirectVoiceIntent(spoken || command)") < app.indexOf("if (activeConversationIntake && handleConversationIntakeAnswer(command || localized || rawCommand))"), "Doctor, medicine, clinic, work, course, crop, and map requests must route before active intake can swallow them");
+assert(!app.includes("i need a doctor|i need medicine|i need work|i want to sell"), "Conversation intake starter must not hijack plain service requests like I need a doctor");
 assert(app.includes("const directHealthGuide = isHealthIntakeWorkflow(config) || isHealthProviderWorkflow(config)"), "Doctor/intake screens must skip the generic Focus and 1-2-3 process block");
 assert(app.includes("config.userTitle = \"Doctor help\""), "Doctor voice command must show a doctor-specific screen title");
 assert(app.includes("Step 1: Who needs care?"), "Guided intake must open with a plain first question");

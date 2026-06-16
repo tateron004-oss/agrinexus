@@ -89,8 +89,8 @@ let routeTrackingWatchId = null;
 let routeTrackingPoints = [];
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-269";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v249";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-270";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v250";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
 const VOICE_ATTENTION_DELAY_MS = 900;
@@ -6257,7 +6257,7 @@ function startConversationIntake(type, command = "") {
 
 function startConversationIntakeFromCommand(command = "") {
   const lower = normalizeToolText(command);
-  const wantsIntake = /\b(walk me through|guide me through|ask me questions|one question at a time|start intake|open intake|conversation intake|help me apply|help me sell|help me learn|i need a doctor|i need medicine|i need work|i want to sell|help me track)\b/.test(lower);
+  const wantsIntake = /\b(walk me through|guide me through|ask me questions|one question at a time|start intake|open intake|begin intake|conversation intake|guided intake|intake questions|help me fill|fill out intake)\b/.test(lower);
   if (!wantsIntake) return false;
   const plan = conversationIntakePlanFromCommand(command);
   if (!plan) return false;
@@ -19228,6 +19228,21 @@ function runSimpleUserVoiceIntent(intent, command = "") {
   return false;
 }
 
+function isPriorityServiceVoiceIntent(intent) {
+  if (!intent || intent.type === "clarify") return false;
+  if (intent.type === "direct") return ["health-intake", "medicine-help", "clinic-help", "crop-help", "doctor-help", "full-map", "country-map", "home"].includes(intent.directAction);
+  if (intent.type === "workflow") return ["health", "trade", "workforce", "learning", "map"].includes(intent.workflow);
+  return false;
+}
+
+function resetConversationStateForPriorityIntent(command = "") {
+  if (activeConversationIntake) saveConversationIntake(null);
+  pendingAgentClarification = null;
+  pendingNexusSpokenCommand = null;
+  clearNexusAnswerContext();
+  if (pendingWorkflow && isNewServiceRequestOverWorkflow(command)) clearOpenWorkflowForNewVoiceRequest(command);
+}
+
 function openAgentResultWorkflow(result = {}, command = "") {
   const intent = String(result.intent || "");
   const response = result.response || "Yes, I can help. I opened the right area and I am ready for the next detail.";
@@ -19908,6 +19923,12 @@ async function unifiedNexusConversationBrain(rawCommand = "", context = {}) {
   if (await handleNexusRealtimeAdjustment(command || localized)) return true;
   if (handleNexusSelfCorrection(command || localized)) return true;
 
+  const prioritySimpleIntent = simpleUserDirectVoiceIntent(spoken || command);
+  if (isPriorityServiceVoiceIntent(prioritySimpleIntent)) {
+    resetConversationStateForPriorityIntent(spoken || command);
+    return executeUnifiedNexusIntent(prioritySimpleIntent, spoken || command, context);
+  }
+
   const adaptiveUnderstanding = context.adaptiveReroute ? null : adaptiveCommandUnderstanding(command || localized || rawCommand);
   if (adaptiveUnderstanding?.learnedRule && adaptiveUnderstanding.rewrittenCommand && adaptiveUnderstanding.rewrittenCommand !== command) {
     updateNexusBehaviorLayer("learning", `Nexus used learned phrase: ${adaptiveUnderstanding.learnedRule.source}`);
@@ -20183,6 +20204,11 @@ async function handleVoiceCommandCore(rawCommand, options = {}) {
     pendingAgentClarification = null;
     await changeLanguageByVoice(command || localizedCommand);
     return;
+  }
+  const priorityFallbackIntent = simpleUserDirectVoiceIntent(spokenCommand || command);
+  if (isPriorityServiceVoiceIntent(priorityFallbackIntent)) {
+    resetConversationStateForPriorityIntent(spokenCommand || command);
+    if (runSimpleUserVoiceIntent(priorityFallbackIntent, spokenCommand || command)) return;
   }
   if (activeConversationIntake && handleConversationIntakeAnswer(command || localizedCommand || rawCommand)) return;
   if (startConversationIntakeFromCommand(command || localizedCommand || rawCommand)) return;
