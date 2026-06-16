@@ -89,8 +89,8 @@ let routeTrackingWatchId = null;
 let routeTrackingPoints = [];
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-267";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v247";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-268";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v248";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
 const VOICE_ATTENTION_DELAY_MS = 900;
@@ -18708,7 +18708,7 @@ function openHealthIntakeNow(response = "Telehealth intake is open. Step 1: Who 
   return true;
 }
 
-function openMedicineHelpNow(response = "Yes, I can help with medicine access. I opened medicine and pharmacy support. Tell me the medicine concern and where you are. I cannot prescribe, but I can help prepare the right support step.") {
+function openMedicineHelpNow(response = "I heard you need medicine. Yes, I can help with medicine access. I opened medicine and pharmacy support. Tell me the medicine concern and where you are. I cannot prescribe, but I can help prepare the right support step.") {
   const actionLead = "";
   const config = workflowConfig("health", "pharmacy", { dataset: { patientLocation: activeCountry().name } });
   if (!config) return openWorkflowByVoice("health", "pharmacy", response, { patientLocation: activeCountry().name });
@@ -18756,7 +18756,7 @@ function openCropProblemHelpNow(response = "I'm with you. I opened crop support.
   return true;
 }
 
-function openDoctorHelpNow(response = "I'm with you. I opened doctor support. Tell me what happened, where the person is, and whether you need phone, WhatsApp, video, clinic, or pharmacy help. This is not a diagnosis.") {
+function openDoctorHelpNow(response = "I heard you need a doctor. Yes, I can help you reach care support. I opened doctor support. Tell me what happened, where the person is, and whether you need phone, WhatsApp, video, clinic, or pharmacy help. This is not a diagnosis.") {
   const actionLead = "";
   const config = workflowConfig("health", "provider", { dataset: { careNeed: "I need to speak with a doctor or provider." } });
   if (!config) return openWorkflowByVoice("health", "provider", response);
@@ -18901,7 +18901,7 @@ function nexusSmartIntentRouter(command = "") {
       key: "pharmacy",
       label: "pharmacy help",
       score: needScore + scoreFor(["medicine", "medication", "pharmacy", "refill", "drug", "pills", "prescription"], ["treatment", "remedy"]),
-      route: { type: "direct", directAction: "medicine-help", response: "Yes, I can help with medicine access. I opened medicine and pharmacy support. Tell me what medicine or health concern, and where you are. I cannot prescribe, but I will help find pharmacy support or a provider review." }
+      route: { type: "direct", directAction: "medicine-help", response: "I heard you need medicine. Yes, I can help with medicine access. I opened medicine and pharmacy support. Tell me what medicine or health concern, and where you are. I cannot prescribe, but I will help find pharmacy support or a provider review." }
     },
     {
       key: "clinic",
@@ -19024,7 +19024,7 @@ function simpleUserDirectVoiceIntent(command = "") {
     return {
       type: "direct",
       directAction: "medicine-help",
-      response: "Yes, I can help with medicine access. I opened medicine and pharmacy support. Tell me what medicine or health concern, and where you are. I cannot prescribe, but I can help find pharmacy support or provider review."
+      response: "I heard you need medicine. Yes, I can help with medicine access. I opened medicine and pharmacy support. Tell me what medicine or health concern, and where you are. I cannot prescribe, but I can help find pharmacy support or provider review."
     };
   }
   if (has(["clinic", "hospital"]) && has(["near", "nearest", "closest", "find", "where", "location", "map", "around", "my"])) {
@@ -19243,8 +19243,8 @@ function nexusResilientConversationIntent(command = "") {
     };
   }
   if (has(clinic)) return { type: "direct", directAction: "clinic-help", response: "I opened clinic support. Tell me your village, city, or nearest landmark, and I will guide the clinic, mobile clinic, or map route." };
-  if (has(doctor)) return { type: "direct", directAction: "doctor-help", response: "I'm with you. I opened doctor support. Tell me what happened, where you are, and whether you need phone, WhatsApp, video, clinic, or pharmacy help. This is not a diagnosis." };
-  if (has(medicine)) return { type: "direct", directAction: "medicine-help", response: "Yes, I can help with medicine access. I opened medicine and pharmacy support. Tell me the medicine name if you know it, where you are, and whether a provider should review it. I cannot prescribe." };
+  if (has(doctor)) return { type: "direct", directAction: "doctor-help", response: "I heard you need a doctor. Yes, I can help you reach care support. I opened doctor support. Tell me what happened, where you are, and whether you need phone, WhatsApp, video, clinic, or pharmacy help. This is not a diagnosis." };
+  if (has(medicine)) return { type: "direct", directAction: "medicine-help", response: "I heard you need medicine. Yes, I can help with medicine access. I opened medicine and pharmacy support. Tell me the medicine name if you know it, where you are, and whether a provider should review it. I cannot prescribe." };
   if (has(cropBad)) return { type: "direct", directAction: "crop-help", response: "I can help with the crop problem. I'm with you. I opened crop support. Tell me the crop, where the farm is, and what looks wrong." };
   if (has(cropSale)) return { type: "workflow", workflow: "trade", action: "buyer-contact", response: "I can help sell the crop. I opened buyer support. Tell me the crop, quantity, location, and buyer if you know one. I will help prepare the sale and delivery tracking.", dataset: { productId: firstProduct()?.id } };
   if (has(work)) return { type: "workflow", workflow: "workforce", action: "build-profile", response: "I can help with work. I opened job support. Tell me your country, the job you want, and your skills. I will show the role path and application step.", dataset: { roleId: firstEligibleRole()?.id } };
@@ -19560,7 +19560,7 @@ function nexusConversationFirstIntent(command = "") {
     return {
       type: "direct",
       directAction: "medicine-help",
-      response: "Yes, I can help with medicine access. I opened medicine and pharmacy support. Tell me the medicine name if you know it, where you are, and whether a provider should review it. I cannot prescribe."
+      response: "I heard you need medicine. Yes, I can help with medicine access. I opened medicine and pharmacy support. Tell me the medicine name if you know it, where you are, and whether a provider should review it. I cannot prescribe."
     };
   }
   if (has(["clinic", "hospital", "mobile clinic", "health center", "health centre"]) && has(["near", "nearest", "closest", "find", "where", "map", "location", "around"])) {
@@ -20114,7 +20114,7 @@ async function handleVoiceCommandCore(rawCommand, options = {}) {
   if (handleNexusConversationGovernor(command || localizedCommand || rawCommand, options)) return;
   if (handleConversationMode2Preflight(command || localizedCommand || rawCommand, options)) return;
   agentPerformanceState.spokenCommand = spokenCommand || command;
-  const preDialogSimpleIntent = experienceMode === "user" ? simpleUserDirectVoiceIntent(spokenCommand || command) : null;
+  const preDialogSimpleIntent = simpleUserDirectVoiceIntent(spokenCommand || command);
   if (preDialogSimpleIntent && runSimpleUserVoiceIntent(preDialogSimpleIntent, spokenCommand || command)) return;
   if (isOpenKnowledgeQuestion(spokenCommand || command)) {
     pendingAgentClarification = null;
@@ -20136,7 +20136,7 @@ async function handleVoiceCommandCore(rawCommand, options = {}) {
     await runBackendAgentCommand(spokenCommand || command, locationContext, { turnToken });
     return;
   }
-  const earlySimpleIntent = experienceMode === "user" ? simpleUserDirectVoiceIntent(spokenCommand || command) : null;
+  const earlySimpleIntent = simpleUserDirectVoiceIntent(spokenCommand || command);
   if (earlySimpleIntent && runSimpleUserVoiceIntent(earlySimpleIntent, spokenCommand || command)) return;
   const understanding = adaptiveCommandUnderstanding(command);
   if (understanding.rewrittenCommand && !isUniversalLanguageCommand(command) && !isGlobalStopCommand(understanding.rewrittenCommand.toLowerCase())) {
@@ -20230,7 +20230,7 @@ async function handleVoiceCommandCore(rawCommand, options = {}) {
     return;
   }
   updateNexusBehaviorLayer("thinking", command ? `Nexus is deciding how to help with: ${command}` : "Nexus is listening.");
-  const simpleIntent = experienceMode === "user" ? simpleUserDirectVoiceIntent(command) : null;
+  const simpleIntent = simpleUserDirectVoiceIntent(command);
   if (simpleIntent?.type === "clarify") {
     pendingAgentClarification = simpleIntent.clarification || null;
     pendingNexusSpokenCommand = null;
