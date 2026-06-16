@@ -26,8 +26,8 @@ const AI_MODEL = process.env.OPENAI_MODEL || "gpt-5.4-mini";
 const AI_REASONING_MODEL = process.env.OPENAI_REASONING_MODEL || process.env.OPENAI_AGENT_MODEL || AI_MODEL;
 const AI_TRANSLATION_MODEL = process.env.OPENAI_TRANSLATION_MODEL || process.env.OPENAI_AGENT_MODEL || AI_MODEL;
 const AGRINEXUS_RELEASE = "2026-06-05-live-services";
-const AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-274";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v254";
+const AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-275";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v255";
 const ROOT = __dirname;
 const DATA_DIR = process.env.AGRINEXUS_DATA_DIR || ROOT;
 const DB_PATH = process.env.AGRINEXUS_DB_PATH || path.join(DATA_DIR, "db.json");
@@ -15732,7 +15732,7 @@ function continueSimpleVoiceTurn(db, user, text = "") {
   }
   if (choice === "medicine") {
     setSimpleVoiceTurn(db, { domain: "medicine", section: "health", question: "What medicine concern, and what city or village?", choices: ["clinic", "pharmacy", "doctor"], defaultChoice: "clinic", sourceIntent: "conversation.medicine_help" });
-    return { intent: "conversation.medicine_help", response: "I heard you need medicine. I can guide you step by step. I cannot prescribe, but I can help explain the medicine concern, find pharmacy or mobile clinic support, and prepare provider review. First, tell me the medicine concern and where you are.", status: "needs-location", metadata: { conversationMode: true, redirectSection: "health", suppressBehaviorNudge: true, suggestedReplies: ["clinic", "pharmacy", "doctor"] } };
+    return { intent: "conversation.medicine_help", response: "I heard you need medicine. I can guide you step by step. I cannot prescribe, but I can help explain the medicine concern, find pharmacy or mobile clinic support, and prepare provider review. First, tell me the medicine concern.", status: "needs-location", metadata: { conversationMode: true, redirectSection: "health", suppressBehaviorNudge: true, suggestedReplies: ["clinic", "pharmacy", "doctor"] } };
   }
   if (choice === "doctor" || choice === "health") {
     setSimpleVoiceTurn(db, { domain: "doctor", section: "health", question: "What is happening, and where are you?", choices: ["clinic", "medicine", "provider"], defaultChoice: "clinic", sourceIntent: "conversation.doctor_help" });
@@ -16988,7 +16988,7 @@ function resilientConversationIntent(db, user, rawText = "") {
   if (has(medicineSignals)) {
     return {
       intent: "conversation.medicine_help",
-      response: "I heard you need medicine. I can guide you step by step. I cannot prescribe, but I can help explain the medicine concern, find pharmacy or mobile clinic support, and prepare provider review. First, tell me the medicine concern and where you are.",
+      response: "I heard you need medicine. I can guide you step by step. I cannot prescribe, but I can help explain the medicine concern, find pharmacy or mobile clinic support, and prepare provider review. First, tell me the medicine concern.",
       status: "needs-location",
       metadata: { ...metadataBase, redirectSection: "health", suggestedReplies: ["find pharmacy", "start intake", "call provider"] }
     };
@@ -17195,7 +17195,7 @@ function healthAccessVoiceAcceptanceResponse(db, user, text = "", lower = "", op
       "conversation.medicine_help",
       "needs-location",
       "health",
-      "I heard you need medicine. I can guide you step by step. I cannot prescribe, but I can help explain the medicine concern, find pharmacy or mobile clinic support, and prepare provider review. First, tell me the medicine concern and where you are.",
+      "I heard you need medicine. I can guide you step by step. I cannot prescribe, but I can help explain the medicine concern, find pharmacy or mobile clinic support, and prepare provider review. First, tell me the medicine concern.",
       ["find pharmacy", "start intake", "call provider"]
     );
   }
@@ -17346,7 +17346,7 @@ function platformWideVoiceAcceptanceResponse(db, user, text = "", lower = "", op
     },
     {
       pattern: /^(medicine|medication|pharmacy|pills|drug|refill|dawa|medicina|remedio)$/,
-      result: () => response("conversation.medicine_help", "needs-location", "health", "I heard medicine. I can guide you step by step. I cannot prescribe, but I can help explain the medicine concern, find pharmacy or mobile clinic support, and prepare provider review. First, tell me the medicine concern and where you are.", ["find pharmacy", "start intake", "call provider"])
+      result: () => response("conversation.medicine_help", "needs-location", "health", "I heard medicine. I can guide you step by step. I cannot prescribe, but I can help explain the medicine concern, find pharmacy or mobile clinic support, and prepare provider review. First, tell me the medicine concern.", ["find pharmacy", "start intake", "call provider"])
     },
     {
       pattern: /^(crop|crops|crop damage|damage|crop problem|farm problem|field problem|bad crop|maize problem|pests|yellow leaves|shamba)$/,
@@ -20987,7 +20987,7 @@ async function runAgentCommand(db, user, command, options = {}) {
   if (conversational && /\b(medicine|medication|pharmacy|pills|drug|refill|prescription|dawa|remedy)\b/.test(lower)) {
     return {
       intent: "conversation.medicine_help",
-      response: "I heard you need medicine. I can guide you step by step. I cannot prescribe, but I can help explain the medicine concern, find pharmacy or mobile clinic support, and prepare provider review. First, tell me the medicine concern and where you are.",
+      response: "I heard you need medicine. I can guide you step by step. I cannot prescribe, but I can help explain the medicine concern, find pharmacy or mobile clinic support, and prepare provider review. First, tell me the medicine concern.",
       status: "needs-location",
       metadata: { conversationMode: true, redirectSection: "health", suppressBehaviorNudge: true, suggestedReplies: ["find pharmacy", "start intake", "call provider"] }
     };

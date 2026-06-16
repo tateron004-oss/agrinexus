@@ -43,10 +43,10 @@ assert(doctor.includes("I heard you need a doctor"), "Doctor guidance must repea
 assert(doctor.includes("not a diagnosis"), "Doctor guidance must preserve health safety boundary");
 assert(doctor.includes("where you are"), "Doctor guidance must ask the next useful question");
 
-const medicine = conciseVoiceResponse("Yes. I heard you need medicine. I cannot prescribe, but I can help explain the medicine concern, find pharmacy or mobile clinic support, and prepare provider review. First, tell me the medicine concern and where you are.", { speak: true, command: "Nexus, I need medicine" });
+const medicine = conciseVoiceResponse("Yes. I heard you need medicine. I cannot prescribe, but I can help explain the medicine concern, find pharmacy or mobile clinic support, and prepare provider review. First, tell me the medicine concern.", { speak: true, command: "Nexus, I need medicine" });
 assert(!/^yes\.?$/i.test(medicine), "Medicine guidance must not collapse to Yes");
 assert(medicine.includes("I heard you need medicine"), "Medicine guidance must repeat the need");
 assert(medicine.includes("cannot prescribe"), "Medicine guidance must preserve prescribing boundary");
-assert(medicine.includes("where you are"), "Medicine guidance must ask for location");
+assert(medicine.includes("medicine concern"), "Medicine guidance must ask for the first guided detail");
 
 console.log("Voice browser policy regression passed");

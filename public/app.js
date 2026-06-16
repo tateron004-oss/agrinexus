@@ -89,8 +89,8 @@ let routeTrackingWatchId = null;
 let routeTrackingPoints = [];
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-274";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v254";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-275";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v255";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
 const VOICE_ATTENTION_DELAY_MS = 900;
@@ -4591,7 +4591,7 @@ function nexusIntelligenceRouterDecision(command = "") {
       return decision("answer", {
         confidence: .93,
         section: "health",
-        response: "I heard you need medicine. I can guide you step by step. I cannot prescribe, but I can help explain the medicine concern, find pharmacy or mobile clinic support, and prepare provider review. First, tell me the medicine concern and where you are.",
+        response: "I heard you need medicine. I can guide you step by step. I cannot prescribe, but I can help explain the medicine concern, find pharmacy or mobile clinic support, and prepare provider review. First, tell me the medicine concern.",
         suggestions: ["find pharmacy", "start intake", "call provider"]
       });
     }
@@ -17850,7 +17850,7 @@ async function runNexusAnswerChoice(choice, originalCommand = "") {
   pendingAgentClarification = null;
   pendingNexusSpokenCommand = null;
   if (choice === "clinic") return openClinicHelpNow("Yes. I can help find clinic or mobile clinic support. If this is an emergency, call local emergency help now. First, tell me your village, city, or nearest landmark.");
-  if (choice === "medicine") return openMedicineHelpNow("Yes. I opened medicine support. Tell me the medicine concern and where you are. I cannot prescribe.");
+  if (choice === "medicine") return openMedicineHelpNow("Yes. I opened medicine support. Tell me the medicine concern. I cannot prescribe.");
   if (choice === "doctor" || choice === "health") return openDoctorHelpNow("Yes. I can guide doctor or provider support step by step. I am not a doctor and this is not a diagnosis, but I can help explain what happened, check urgent warning signs, find clinic or mobile clinic support, and prepare a provider handoff. First, tell me where you are.");
   if (choice === "crop") return openCropProblemHelpNow("Yes. I opened crop support. Tell me the crop and what looks wrong.");
   if (choice === "work") return openWorkflowByVoice("workforce", "build-profile", "Yes. I opened work support. Tell me your country, skills, and the job you want.", { roleId: firstEligibleRole()?.id });
@@ -18718,6 +18718,43 @@ function hideVoiceWorkflowCards() {
   $("#workflowModal")?.classList.add("hidden");
 }
 
+function startGuidedHealthIntakeSession(kind = "intake", startedBy = "") {
+  const seedByKind = {
+    doctor: {
+      answers: { careNeed: "Doctor or provider support requested." },
+      index: 1
+    },
+    clinic: {
+      answers: { careNeed: "Clinic or mobile clinic support requested." },
+      index: 1
+    },
+    mobile: {
+      answers: { careNeed: "Mobile clinic support requested." },
+      index: 1
+    },
+    medicine: {
+      answers: {},
+      index: 0
+    },
+    intake: {
+      answers: {},
+      index: 0
+    }
+  };
+  const seed = seedByKind[kind] || seedByKind.intake;
+  saveConversationIntake({
+    type: "health",
+    mode: conversationPlatformMode(),
+    language: languageCode(),
+    startedBy,
+    guidedKind: kind,
+    answers: { ...seed.answers },
+    index: seed.index,
+    startedAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  });
+}
+
 function startGuidedHealthVoiceResponse(kind = "intake", response = "", options = {}) {
   const actionByKind = {
     intake: "intake",
@@ -18731,6 +18768,7 @@ function startGuidedHealthVoiceResponse(kind = "intake", response = "", options 
   pendingAgentClarification = null;
   pendingNexusSpokenCommand = null;
   pendingWorkflow = null;
+  startGuidedHealthIntakeSession(kind, spokenResponse);
   clearNexusAnswerContext();
   clearAgentProgressTimers();
   hideVoiceWorkflowCards();
@@ -18761,7 +18799,7 @@ function openHealthIntakeNow(response = "I heard you need health intake. I will 
   });
 }
 
-function openMedicineHelpNow(response = "I heard you need medicine. I can help guide you safely. I cannot prescribe, but I can help explain the concern, look for pharmacy or mobile clinic support, and prepare provider review. First, tell me what medicine help is needed and where you are.") {
+function openMedicineHelpNow(response = "I heard you need medicine. I can help guide you safely. I cannot prescribe, but I can help explain the concern, look for pharmacy or mobile clinic support, and prepare provider review. First, tell me what medicine help is needed.") {
   return startGuidedHealthVoiceResponse("medicine", response, {
     suggestions: ["I need malaria medicine", "find pharmacy", "find clinic", "use my location", "call provider"],
     status: "Nexus started guided medicine and pharmacy support by voice and is waiting for medicine and location details."
@@ -18927,7 +18965,7 @@ function nexusSmartIntentRouter(command = "") {
       key: "pharmacy",
       label: "pharmacy help",
       score: needScore + scoreFor(["medicine", "medication", "pharmacy", "refill", "drug", "pills", "prescription"], ["treatment", "remedy"]),
-      route: { type: "direct", directAction: "medicine-help", response: "I heard you need medicine. I can guide you step by step. I cannot prescribe, but I can help explain the medicine concern, find pharmacy or mobile clinic support, and prepare provider review. First, tell me the medicine concern and where you are." }
+      route: { type: "direct", directAction: "medicine-help", response: "I heard you need medicine. I can guide you step by step. I cannot prescribe, but I can help explain the medicine concern, find pharmacy or mobile clinic support, and prepare provider review. First, tell me the medicine concern." }
     },
     {
       key: "clinic",
@@ -19047,7 +19085,7 @@ function simpleUserDirectVoiceIntent(command = "") {
     return {
       type: "direct",
       directAction: "medicine-help",
-      response: "I heard medicine. I can guide you step by step. I cannot prescribe, but I can help explain the medicine concern, find pharmacy or mobile clinic support, and prepare provider review. First, tell me the medicine concern and where you are."
+      response: "I heard medicine. I can guide you step by step. I cannot prescribe, but I can help explain the medicine concern, find pharmacy or mobile clinic support, and prepare provider review. First, tell me the medicine concern."
     };
   }
   if (/^(crop|crops|crop damage|damage|crop problem|farm problem|field problem|bad crop|maize problem|pests|yellow leaves|shamba)$/.test(onePhrase)) {
@@ -19129,7 +19167,7 @@ function simpleUserDirectVoiceIntent(command = "") {
     return {
       type: "direct",
       directAction: "medicine-help",
-      response: "I heard you need medicine. I can guide you step by step. I cannot prescribe, but I can help explain the medicine concern, find pharmacy or mobile clinic support, and prepare provider review. First, tell me the medicine concern and where you are."
+      response: "I heard you need medicine. I can guide you step by step. I cannot prescribe, but I can help explain the medicine concern, find pharmacy or mobile clinic support, and prepare provider review. First, tell me the medicine concern."
     };
   }
   if (has(["clinic", "hospital"]) && has(["near", "nearest", "closest", "find", "where", "location", "map", "around", "my"])) {
@@ -19364,7 +19402,7 @@ function nexusResilientConversationIntent(command = "") {
   }
   if (has(clinic)) return { type: "direct", directAction: "clinic-help", response: "I heard you need a clinic or mobile clinic. I can help find care support and show the route. If this is an emergency, call local emergency help now. First, tell me your village, city, or nearest landmark." };
   if (has(doctor)) return { type: "direct", directAction: "doctor-help", response: "I heard you need a doctor. I can guide you step by step. I am not a doctor and this is not a diagnosis, but I can help explain what happened, check urgent warning signs, find clinic or mobile clinic support, and prepare a provider handoff. First, tell me where you are." };
-  if (has(medicine)) return { type: "direct", directAction: "medicine-help", response: "I heard you need medicine. I can guide you step by step. I cannot prescribe, but I can help explain the medicine concern, find pharmacy or mobile clinic support, and prepare provider review. First, tell me the medicine concern and where you are." };
+  if (has(medicine)) return { type: "direct", directAction: "medicine-help", response: "I heard you need medicine. I can guide you step by step. I cannot prescribe, but I can help explain the medicine concern, find pharmacy or mobile clinic support, and prepare provider review. First, tell me the medicine concern." };
   if (has(cropBad)) return { type: "direct", directAction: "crop-help", response: "I can help with the crop problem. I'm with you. I opened crop support. Tell me the crop, where the farm is, and what looks wrong." };
   if (has(cropSale)) return { type: "workflow", workflow: "trade", action: "buyer-contact", response: "I can help sell the crop. I opened buyer support. Tell me the crop, quantity, location, and buyer if you know one. I will help prepare the sale and delivery tracking.", dataset: { productId: firstProduct()?.id } };
   if (has(work)) return { type: "workflow", workflow: "workforce", action: "build-profile", response: "I can help with work. I opened job support. Tell me your country, the job you want, and your skills. I will show the role path and application step.", dataset: { roleId: firstEligibleRole()?.id } };
@@ -19678,7 +19716,7 @@ function nexusConversationFirstIntent(command = "") {
     return {
       type: "direct",
       directAction: "medicine-help",
-      response: "I heard you need medicine. I can guide you step by step. I cannot prescribe, but I can help explain the medicine concern, find pharmacy or mobile clinic support, and prepare provider review. First, tell me the medicine concern and where you are."
+      response: "I heard you need medicine. I can guide you step by step. I cannot prescribe, but I can help explain the medicine concern, find pharmacy or mobile clinic support, and prepare provider review. First, tell me the medicine concern."
     };
   }
   if (has(["clinic", "hospital", "mobile clinic", "health center", "health centre"]) && has(["near", "nearest", "closest", "find", "where", "map", "location", "around"])) {
@@ -21290,7 +21328,7 @@ function voiceCrashRecoveryMessage(command = "") {
   const lower = normalizeToolText(command);
   if (/\b(home|dashboard|main menu|menu)\b/.test(lower)) return "I reset the voice route and opened home. What do you need next?";
   if (/\b(clinic|hospital|health center|health centre)\b/.test(lower)) return "I reset the voice route. I can help find clinic or mobile clinic support. If this is an emergency, call local emergency help now. First, tell me your village, city, or nearest landmark.";
-  if (/\b(medicine|medication|pharmacy|refill|drug|pills)\b/.test(lower)) return "I reset the voice route. I can guide medicine access step by step. I cannot prescribe, but I can help explain the medicine concern, find pharmacy or mobile clinic support, and prepare provider review. First, tell me the medicine concern and where you are.";
+  if (/\b(medicine|medication|pharmacy|refill|drug|pills)\b/.test(lower)) return "I reset the voice route. I can guide medicine access step by step. I cannot prescribe, but I can help explain the medicine concern, find pharmacy or mobile clinic support, and prepare provider review. First, tell me the medicine concern.";
   return "I reset the voice route. Say it again in your own words, and I will keep the next answer short.";
 }
 
