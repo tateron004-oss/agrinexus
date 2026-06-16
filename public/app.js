@@ -89,8 +89,8 @@ let routeTrackingWatchId = null;
 let routeTrackingPoints = [];
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-275";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v255";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-276";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v256";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
 const VOICE_ATTENTION_DELAY_MS = 900;
@@ -18792,6 +18792,49 @@ function startGuidedHealthVoiceResponse(kind = "intake", response = "", options 
   return true;
 }
 
+function startGuidedServiceIntake(type = "", response = "", options = {}) {
+  const plan = conversationIntakePlans()[type];
+  if (!plan) return false;
+  const seed = options.seed || {};
+  const index = Number.isInteger(seed.index) ? seed.index : 0;
+  const answers = { ...(seed.answers || {}) };
+  const nextQuestion = plan.fields?.[index]?.question || "Tell me the next detail.";
+  const spokenResponse = response || `I can help with ${plan.label}. I will ask one question at a time. ${nextQuestion}`;
+  saveConversationIntake({
+    type,
+    mode: conversationPlatformMode(),
+    language: languageCode(),
+    startedBy: spokenResponse,
+    guidedKind: options.kind || type,
+    answers,
+    index,
+    startedAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  });
+  pendingAgentClarification = null;
+  pendingNexusSpokenCommand = null;
+  pendingWorkflow = null;
+  clearNexusAnswerContext();
+  clearAgentProgressTimers();
+  hideVoiceWorkflowCards();
+  if (canOpenSection(plan.section)) {
+    goSection(plan.section, { instant: true, openDefaultAction: false, keepAssistant: true, scroll: false });
+    if (experienceMode === "user") renderUserSimpleActiveSection(plan.section);
+  }
+  recordNexusAutonomousLearning({
+    type: "guided-service-intake",
+    intakeType: type,
+    command: spokenResponse,
+    mode: conversationPlatformMode()
+  });
+  setActiveAgentJourney(plan.workflow, plan.action, spokenResponse);
+  renderLiveVoiceSuggestions(options.suggestions || ["answer in your own words", "repeat the question", "Nexus stop"]);
+  updateNexusBehaviorLayer("listening", options.status || `Nexus started guided ${plan.label} and is waiting for the next detail.`);
+  updateUserCaptionPanel(spokenResponse, { expanded: true });
+  setVoiceResponse(spokenResponse, true, { allowHandoff: false, source: "guided-service" });
+  return true;
+}
+
 function openHealthIntakeNow(response = "I heard you need health intake. I will guide you one question at a time. This is not a diagnosis. First, who needs care? Say the patient or household name.") {
   return startGuidedHealthVoiceResponse("intake", response, {
     suggestions: ["patient name is Ron", "baby sick", "I need medicine", "use my location", "Spanish"],
@@ -18833,6 +18876,38 @@ function openDoctorHelpNow(response = "I heard you need a doctor. I can guide yo
   return startGuidedHealthVoiceResponse("doctor", response, {
     suggestions: ["where I am", "what happened", "find clinic", "video call", "call provider"],
     status: "Nexus started guided doctor/provider support by voice and is waiting for location details."
+  });
+}
+
+function openCropSaleGuidedNow(response = "I can help sell your crop. I will ask one question at a time, then prepare buyer contact, order evidence, and delivery tracking. First, what crop or product do you want to sell or move?") {
+  return startGuidedServiceIntake("trade", response, {
+    kind: "crop-sale",
+    suggestions: ["maize", "cassava", "beans", "repeat the question"],
+    status: "Nexus started guided crop sale support and is waiting for the crop or product."
+  });
+}
+
+function openWorkforceGuidedNow(response = "I can help with work. I will ask one question at a time, then prepare the role path and application step. First, what country or area do you want to work in?") {
+  return startGuidedServiceIntake("workforce", response, {
+    kind: "workforce",
+    suggestions: ["Kenya", "Nigeria", "farm work", "repeat the question"],
+    status: "Nexus started guided work support and is waiting for the country or area."
+  });
+}
+
+function openLearningGuidedNow(response = "I can help you learn. I will ask one question at a time, then open the right course support. First, what do you want to learn?") {
+  return startGuidedServiceIntake("learning", response, {
+    kind: "learning",
+    suggestions: ["farm safety", "health aide basics", "business skills", "repeat the question"],
+    status: "Nexus started guided learning support and is waiting for the learning goal."
+  });
+}
+
+function openRouteGuidedNow(response = "I can help with route or shipment tracking. I will ask one question at a time, then open the full map. First, where are you starting from?") {
+  return startGuidedServiceIntake("map", response, {
+    kind: "route",
+    suggestions: ["farm location", "market location", "clinic route", "repeat the question"],
+    status: "Nexus started guided map support and is waiting for the starting point."
   });
 }
 
@@ -18991,19 +19066,19 @@ function nexusSmartIntentRouter(command = "") {
       key: "learning",
       label: "learning",
       score: needScore + scoreFor(["learn", "course", "lesson", "training", "school", "class", "certificate"], ["study", "teach"]),
-      route: { type: "workflow", workflow: "learning", action: "start", response: "I can help you learn. Tell me the skill you want, or I can start the recommended course and read it with captions or audio.", dataset: {} }
+      route: { type: "direct", directAction: "learning-guided", response: "I can help you learn. I will ask one question at a time, then open the right course support. First, what do you want to learn?" }
     },
     {
       key: "work",
       label: "work",
       score: needScore + scoreFor(["job", "work", "role", "apply", "employment", "shift"], ["hire", "earn", "worker"]),
-      route: { type: "workflow", workflow: "workforce", action: hasAny(["apply", "role", "job"]) ? "apply-role" : "build-profile", response: "I can help with work. Tell me the country and the kind of job, and I will show the role path, gaps, and application step.", dataset: { roleId: firstEligibleRole()?.id } }
+      route: { type: "direct", directAction: "workforce-guided", response: "I can help with work. I will ask one question at a time, then prepare the role path and application step. First, what country or area do you want to work in?" }
     },
     {
       key: "sell-crop",
       label: "sell crops",
       score: needScore + scoreFor(["sell", "buyer", "market", "trade", "customer"], ["crop", "crops", "maize", "corn", "rice", "cassava", "yam", "beans", "produce", "harvest", "farm", "product"]),
-      route: { type: "workflow", workflow: "trade", action: "buyer-contact", response: "I can help sell the crop. Tell me the crop, quantity, and where it is. I will help find a buyer, prepare the order, and track delivery.", dataset: { productId: firstProduct()?.id } }
+      route: { type: "direct", directAction: "crop-sale-guided", response: "I can help sell your crop. I will ask one question at a time, then prepare buyer contact, order evidence, and delivery tracking. First, what crop or product do you want to sell or move?" }
     },
     {
       key: "track",
@@ -19097,38 +19172,30 @@ function simpleUserDirectVoiceIntent(command = "") {
   }
   if (/^(sell|seller|buyer|trade|market|sell crop|crop sale|kuuza|vender)$/.test(onePhrase)) {
     return {
-      type: "workflow",
-      workflow: "trade",
-      action: "buyer-contact",
-      response: "I heard crop sale. Yes, I can help sell the crop. I opened buyer support; tell me the crop, quantity, and location.",
-      dataset: { productId }
+      type: "direct",
+      directAction: "crop-sale-guided",
+      response: "I heard crop sale. I can guide it step by step. First, what crop or product do you want to sell or move?"
     };
   }
   if (/^(work|job|jobs|work needed|job needed|kazi|trabajo|emploi|travail)$/.test(onePhrase)) {
     return {
-      type: "workflow",
-      workflow: "workforce",
-      action: "build-profile",
-      response: "I heard work. Yes, I can help with work. I opened workforce support; tell me the country, job type, and your skills.",
-      dataset: { roleId }
+      type: "direct",
+      directAction: "workforce-guided",
+      response: "I heard work. I can guide it step by step. First, what country or area do you want to work in?"
     };
   }
   if (/^(apply|application|apply job|job application)$/.test(onePhrase)) {
     return {
-      type: "workflow",
-      workflow: "workforce",
-      action: "apply-role",
-      response: "I heard apply. Yes, I can help with the application. I opened job application support; choose a role or tell me the job you want.",
-      dataset: { roleId }
+      type: "direct",
+      directAction: "workforce-guided",
+      response: "I heard apply. I can guide the job application step by step. First, what country or area do you want to work in?"
     };
   }
   if (/^(course|lesson|learning|learn|training|somo|curso|class)$/.test(onePhrase)) {
     return {
-      type: "workflow",
-      workflow: "learning",
-      action: "start",
-      response: "I heard learning. Yes, I can help you learn and start a course. I opened course support; choose a course or tell me the skill you want.",
-      dataset: {}
+      type: "direct",
+      directAction: "learning-guided",
+      response: "I heard learning. I can guide it step by step. First, what do you want to learn?"
     };
   }
   if (/^(map|route|location|tracking|ramani|mapa|carte)$/.test(onePhrase)) {
@@ -19201,12 +19268,10 @@ function simpleUserDirectVoiceIntent(command = "") {
           response: "I heard you need medical help. I can guide you step by step. I am not a doctor and this is not a diagnosis, but I can help explain what happened, check urgent warning signs, find clinic or mobile clinic support, and prepare a provider handoff. First, tell me where you are."
         }
       : {
-          type: "workflow",
-          workflow: "health",
-          action: "intake",
-          response: "I can help with health support. Tell me what happened, where the person is, and whether this is urgent. I will guide one step at a time.",
-          dataset: {}
-        };
+      type: "direct",
+      directAction: "health-intake",
+      response: "I can help with health support. Tell me what happened, where the person is, and whether this is urgent. I will guide one step at a time.",
+    };
   }
   const cropWords = has(["crop", "crops", "maize", "corn", "rice", "cassava", "yam", "beans", "produce", "harvest", "farm", "product"]);
   const sellWords = has(["sell", "selling", "buyer", "market", "trade", "order", "customer"]);
@@ -19222,11 +19287,9 @@ function simpleUserDirectVoiceIntent(command = "") {
   }
   if (cropWords && sellWords) {
     return {
-      type: "workflow",
-      workflow: "trade",
-      action: "buyer-contact",
-      response: "I can help sell the crop. Tell me the crop, quantity, and where it is. I will help find a buyer, prepare the order, and track delivery.",
-      dataset: { productId }
+      type: "direct",
+      directAction: "crop-sale-guided",
+      response: "I can help sell the crop. I will ask one question at a time, then help find a buyer, prepare the order, and track delivery. First, what crop or product do you want to sell or move?"
     };
   }
   if (has(["job", "work", "role", "apply", "employment", "shift"])) {
@@ -19288,13 +19351,17 @@ function runSimpleUserVoiceIntent(intent, command = "") {
   if (intent.type === "direct" && intent.directAction === "clinic-help") return openClinicHelpNow(intent.response);
   if (intent.type === "direct" && intent.directAction === "crop-help") return openCropProblemHelpNow(intent.response);
   if (intent.type === "direct" && intent.directAction === "doctor-help") return openDoctorHelpNow(intent.response);
+  if (intent.type === "direct" && intent.directAction === "crop-sale-guided") return openCropSaleGuidedNow(intent.response);
+  if (intent.type === "direct" && intent.directAction === "workforce-guided") return openWorkforceGuidedNow(intent.response);
+  if (intent.type === "direct" && intent.directAction === "learning-guided") return openLearningGuidedNow(intent.response);
+  if (intent.type === "direct" && intent.directAction === "route-guided") return openRouteGuidedNow(intent.response);
   if (intent.type === "workflow") return openWorkflowByVoice(intent.workflow, intent.action, intent.response, intent.dataset || {});
   return false;
 }
 
 function isPriorityServiceVoiceIntent(intent) {
   if (!intent || intent.type === "clarify") return false;
-  if (intent.type === "direct") return ["health-intake", "medicine-help", "clinic-help", "crop-help", "doctor-help", "full-map", "country-map", "home"].includes(intent.directAction);
+  if (intent.type === "direct") return ["health-intake", "medicine-help", "clinic-help", "crop-help", "doctor-help", "crop-sale-guided", "workforce-guided", "learning-guided", "route-guided", "full-map", "country-map", "home"].includes(intent.directAction);
   if (intent.type === "workflow") return ["health", "trade", "workforce", "learning", "map"].includes(intent.workflow);
   return false;
 }
@@ -20449,6 +20516,26 @@ async function handleVoiceCommandCore(rawCommand, options = {}) {
     pendingAgentClarification = null;
     pendingNexusSpokenCommand = null;
     return openDoctorHelpNow(simpleIntent.response);
+  }
+  if (simpleIntent?.type === "direct" && simpleIntent.directAction === "crop-sale-guided") {
+    pendingAgentClarification = null;
+    pendingNexusSpokenCommand = null;
+    return openCropSaleGuidedNow(simpleIntent.response);
+  }
+  if (simpleIntent?.type === "direct" && simpleIntent.directAction === "workforce-guided") {
+    pendingAgentClarification = null;
+    pendingNexusSpokenCommand = null;
+    return openWorkforceGuidedNow(simpleIntent.response);
+  }
+  if (simpleIntent?.type === "direct" && simpleIntent.directAction === "learning-guided") {
+    pendingAgentClarification = null;
+    pendingNexusSpokenCommand = null;
+    return openLearningGuidedNow(simpleIntent.response);
+  }
+  if (simpleIntent?.type === "direct" && simpleIntent.directAction === "route-guided") {
+    pendingAgentClarification = null;
+    pendingNexusSpokenCommand = null;
+    return openRouteGuidedNow(simpleIntent.response);
   }
   if (simpleIntent?.type === "workflow") {
     pendingAgentClarification = null;

@@ -5,6 +5,8 @@ const app = fs.readFileSync("public/app.js", "utf8");
 
 assert(app.includes("function stripStandaloneVoiceAcknowledgement"), "Browser voice policy must strip standalone acknowledgements");
 assert(app.includes("function isGuidedHealthVoiceResponse"), "Browser voice policy must detect guided health responses");
+assert(app.includes("function startGuidedServiceIntake"), "Browser voice policy must support guided service intake beyond health");
+assert(app.includes("openCropSaleGuidedNow") && app.includes("openWorkforceGuidedNow") && app.includes("openLearningGuidedNow"), "Simple crop, work, and learning requests must guide the user instead of only opening cards");
 assert(app.includes("const sentenceLimit = healthGuidance ? 4"), "Guided health responses must keep enough sentences for the next useful question");
 assert(app.includes("const maxWords = healthGuidance ? 88"), "Guided health responses must keep enough words for safety and next-step guidance");
 

@@ -450,8 +450,8 @@ assert(app.indexOf("unified-brain-platform-explain") < app.indexOf("if (pendingW
 assert(styles.includes("pointer-events: none") && styles.includes(".user-caption-actions") && styles.includes("pointer-events: auto"), "Caption panel must not block workflow action clicks");
 assert(styles.includes("width: min(300px, calc(100vw - 24px))") && styles.includes("max-height: 138px"), "Caption panel must default to a small bubble");
 assert(styles.includes(".user-caption-panel.expanded") && styles.includes("display: none") && styles.includes("display: grid"), "Caption input controls must appear only in expanded caption mode");
-assert(html.includes("nexus-behavior-275"), "Index must force browsers to load Nexus behavior CSS");
-assert(html.includes("nexus-behavior-275"), "Index must force browsers to load Nexus behavior JS");
+assert(html.includes("nexus-behavior-276"), "Index must force browsers to load Nexus behavior CSS");
+assert(html.includes("nexus-behavior-276"), "Index must force browsers to load Nexus behavior JS");
 assert(server.includes("function productionActivationGuide"), "Backend needs a live activation guide");
 assert(server.includes("function directVendorProviderStatus"), "Backend must recognize direct vendor credentials");
 assert(server.includes("optionalEnvSets"), "Activation guide must show real provider depth options");
@@ -630,6 +630,7 @@ assert(app.includes("function guidedHealthIntakeHtml"), "Telehealth intake needs
 assert(app.includes("function guidedHealthProviderHtml"), "Doctor/provider requests need a dedicated guided screen");
 assert(app.includes("function startGuidedHealthVoiceResponse"), "Health voice requests must use guided conversation instead of menu cards");
 assert(app.includes("function startGuidedHealthIntakeSession") && app.includes("saveConversationIntake({"), "Health voice requests must start a guided intake session for follow-up answers");
+assert(app.includes("function startGuidedServiceIntake") && app.includes("crop-sale-guided") && app.includes("workforce-guided") && app.includes("learning-guided"), "Plain service requests must start guided help instead of static menu cards");
 assert(app.includes("function hideVoiceWorkflowCards"), "Guided health voice must hide stale workflow cards");
 assert(app.includes("type: \"guided-health-voice\""), "Guided health voice must still record workflow evidence");
 assert(app.includes("Nexus is guiding health support by voice without opening a menu card."), "Health voice requests must avoid the old menu workflow card");
