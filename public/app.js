@@ -89,8 +89,8 @@ let routeTrackingWatchId = null;
 let routeTrackingPoints = [];
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-285";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v265";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-286";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v266";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
 const VOICE_ATTENTION_DELAY_MS = 900;
@@ -19412,6 +19412,117 @@ function simpleUserDirectVoiceIntent(command = "") {
   return null;
 }
 
+function nexusFastLaneIntent(command = "") {
+  const raw = String(command || "");
+  const lower = normalizeToolText(cleanWakeCommand(raw) || raw);
+  if (!lower || isUniversalLanguageCommand(raw) || isGlobalStopCommand(lower)) return null;
+  const fast = intent => ({ ...intent, fastLane: true, routeLabel: intent.routeLabel || "fast-lane" });
+  const fastAnswer = (response, suggestions = [], reason = "Nexus fast lane answered a simple request.") => fast({
+    type: "answer",
+    response,
+    suggestions,
+    reason,
+    routeLabel: "fast-lane-answer"
+  });
+  const name = userFirstName();
+  if (isPlatformExplainVoiceCommand(raw)) {
+    return fastAnswer(nexusPlatformExplainAnswer(), ["help a farmer", "I need a doctor", "start a course", "open map"], "Nexus fast lane explained AgriNexus without opening a workflow.");
+  }
+  if (isNexusHearingCheckCommand(raw)) {
+    return fastAnswer(`Yes ${name}, I can hear you. Tell me what you need.`, ["I need medicine", "open map", "start a course"], "Nexus fast lane answered the hearing check.");
+  }
+  if (/\b(good morning|goodmorning|good afternoon|goodafternoon|good evening|goodevening|hello|hi nexus|hey nexus)\b/.test(lower)) {
+    return fastAnswer(`Hello ${name}. How can I assist you?`, ["I need a doctor", "help me sell my crop", "start a course", "open map"], "Nexus fast lane greeted the user.");
+  }
+  if (/\b(what can you do|what can do|you can do what|how can you help|help me use this|what do you do)\b/.test(lower)) {
+    return fastAnswer("I can answer simple questions, open health, medicine, learning, work, crop sale, maps, and guide one step at a time.", ["I need medicine", "find work", "sell my crop", "open map"], "Nexus fast lane summarized capabilities.");
+  }
+  if (/\b(caption|captions|transcript|subtitles?)\b/.test(lower) && /\b(telehealth|health|patient|doctor|provider|clinic|care)\b/.test(lower)) {
+    return fast({
+      type: "workflow",
+      workflow: "health",
+      action: "caption",
+      response: "Telehealth captions are open. Speak naturally, and Nexus will help turn the conversation into readable text.",
+      dataset: { patientLocation: activeCountry().name },
+      routeLabel: "fast-lane-health-caption"
+    });
+  }
+  if (/\b(clinic|clinics|hospital|health center|health centre|pharmacy|pharmacies)\b/.test(lower)
+    && /\b(map|route|location|near|nearby|closest|show|find)\b/.test(lower)) {
+    return fast({
+      type: "direct",
+      directAction: "clinic-map-help",
+      response: "I opened the clinic and pharmacy map. Share your village, city, or nearest landmark, and I will guide the closest clinic, mobile clinic, or pharmacy route.",
+      routeLabel: "fast-lane-clinic-map"
+    });
+  }
+  if (/\b(medicine|medication|pharmacy|pills|drug|refill|prescription|dawa|medicina|remedio)\b/.test(lower)) {
+    return fast({
+      type: "direct",
+      directAction: "medicine-help",
+      response: "I heard you need medicine. I cannot prescribe, but I can help find pharmacy or mobile clinic support and prepare provider review. First, tell me the medicine concern.",
+      routeLabel: "fast-lane-medicine"
+    });
+  }
+  if (/\b(doctor|nurse|provider|clinician|daktari)\b/.test(lower) && /\b(need|want|talk|speak|call|contact|see|find|help|please)\b/.test(lower)) {
+    return fast({
+      type: "direct",
+      directAction: "doctor-help",
+      response: "I heard you need a doctor. I am not a doctor and this is not a diagnosis, but I can guide the next safe step. First, tell me where you are.",
+      routeLabel: "fast-lane-doctor"
+    });
+  }
+  if (/\b(intake|health intake|patient intake|telehealth intake)\b/.test(lower)) {
+    return fast({
+      type: "direct",
+      directAction: "health-intake",
+      response: "I opened health intake. I will ask one question at a time. This is not a diagnosis. First, who needs care?",
+      routeLabel: "fast-lane-intake"
+    });
+  }
+  if (/\b(my crop is bad|crop is bad|crop bad|crop damage|field problem|plant sick|yellow leaves|pests|wilting|shamba mbaya)\b/.test(lower)) {
+    return fast({
+      type: "direct",
+      directAction: "crop-help",
+      response: "I can help with the crop problem. I opened crop support. Tell me the crop, farm location, and what looks wrong.",
+      routeLabel: "fast-lane-crop"
+    });
+  }
+  if (/\b(help me sell|sell my crop|sell crop|sell maize|find buyer|talk to buyer|contact buyer|kuuza mazao)\b/.test(lower)) {
+    return fast({
+      type: "direct",
+      directAction: "crop-sale-guided",
+      response: "I can help sell the crop. First, what crop or product do you want to sell or move?",
+      routeLabel: "fast-lane-trade"
+    });
+  }
+  if (/\b(i need work|need work|find work|find a job|job please|work please|need job|kazi|trabajo|emploi)\b/.test(lower)) {
+    return fast({
+      type: "direct",
+      directAction: "workforce-guided",
+      response: "I can help with work. First, what country or area do you want to work in?",
+      routeLabel: "fast-lane-workforce"
+    });
+  }
+  if (/\b(start a course|start course|take course|begin course|start learning|want learn|learn please|course|lesson|somo)\b/.test(lower)) {
+    return fast({
+      type: "direct",
+      directAction: "learning-guided",
+      response: "I can help you learn. First, what skill or course do you want?",
+      routeLabel: "fast-lane-learning"
+    });
+  }
+  if (/\b(open map|show map|full map|global map|real map|map please|ramani|mapa|carte)\b/.test(lower)) {
+    return fast({
+      type: "direct",
+      directAction: "full-map",
+      response: "Full map is open. You can zoom, find clinics, check routes, or track shipments.",
+      routeLabel: "fast-lane-map"
+    });
+  }
+  return null;
+}
+
 function runSimpleUserVoiceIntent(intent, command = "") {
   if (!intent) return false;
   clearAgentProgressTimers();
@@ -19975,8 +20086,15 @@ async function executeUnifiedNexusIntent(intent, command = "", options = {}) {
   clearAgentProgressTimers();
   const lower = normalizeToolText(command);
   const turnToken = options.turnToken || null;
+  const completedAt = Date.now();
   agentPerformanceState.lastCommand = command;
   agentPerformanceState.spokenCommand = command;
+  if (intent.fastLane) {
+    agentPerformanceState.completedAt = completedAt;
+    agentPerformanceState.lastLatencyMs = Math.max(1, completedAt - (agentPerformanceState.startedAt || completedAt));
+    agentPerformanceState.status = "completed";
+    agentPerformanceState.route = intent.routeLabel || "fast-lane";
+  }
   if (command) {
     rememberConversationTurn(command, "");
     updateNexusAwareness(command, { silent: true });
@@ -20046,6 +20164,12 @@ async function unifiedNexusConversationBrain(rawCommand = "", context = {}) {
   const spoken = command || rawCommand;
   const turnToken = context.turnToken || null;
   const stopRedirect = postStopRedirectCommand(command);
+
+  const fastLaneIntent = nexusFastLaneIntent(spoken || command || localized || rawCommand);
+  if (fastLaneIntent) {
+    resetConversationStateForPriorityIntent(spoken || command || rawCommand);
+    return executeUnifiedNexusIntent(fastLaneIntent, spoken || command || localized || rawCommand, context);
+  }
 
   const firstPrioritySimpleIntent = simpleUserDirectVoiceIntent(spoken || command);
   if (isPriorityServiceVoiceIntent(firstPrioritySimpleIntent)) {
@@ -20356,6 +20480,11 @@ async function handleVoiceCommandCore(rawCommand, options = {}) {
   if (autoLanguage) {
     agentPerformanceState.lastCommand = command || localizedCommand || rawCommand;
     recordNexusAutonomousLearning({ type: "auto-language-detected", command: rawCommand, language: autoLanguage.label, mode: experienceMode || data?.user?.role || "platform" });
+  }
+  const fastLaneIntent = nexusFastLaneIntent(spokenCommand || command || localizedCommand || rawCommand);
+  if (fastLaneIntent) {
+    resetConversationStateForPriorityIntent(spokenCommand || command || rawCommand);
+    if (await executeUnifiedNexusIntent(fastLaneIntent, spokenCommand || command || localizedCommand || rawCommand, { ...options, turnToken, autoLanguage })) return;
   }
   if (isPlatformExplainVoiceCommand(spokenCommand || command || localizedCommand || rawCommand)) {
     pendingAgentClarification = null;
