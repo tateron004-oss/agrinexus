@@ -25,9 +25,9 @@ const HOST = process.env.HOST || (IS_HOSTED ? "0.0.0.0" : "127.0.0.1");
 const AI_MODEL = process.env.OPENAI_MODEL || "gpt-5.4-mini";
 const AI_REASONING_MODEL = process.env.OPENAI_REASONING_MODEL || process.env.OPENAI_AGENT_MODEL || AI_MODEL;
 const AI_TRANSLATION_MODEL = process.env.OPENAI_TRANSLATION_MODEL || process.env.OPENAI_AGENT_MODEL || AI_MODEL;
-const AGRINEXUS_RELEASE = "2026-06-05-live-services";
-const AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-276";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v256";
+const AGRINEXUS_RELEASE = "2026-06-16-operational-readiness";
+const AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-277";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v257";
 const ROOT = __dirname;
 const DATA_DIR = process.env.AGRINEXUS_DATA_DIR || ROOT;
 const DB_PATH = process.env.AGRINEXUS_DB_PATH || path.join(DATA_DIR, "db.json");
@@ -17562,17 +17562,20 @@ function platformWideVoiceAcceptanceResponse(db, user, text = "", lower = "", op
   }
 
   if (/\b(run|start|open)\b.*\blive service check\b|\blive service check\b/.test(value)) {
-    const guide = productionActivationGuide(db, runtimeProviders(db));
-    return response("production.live_service_check", "completed", "integrations", `Live service check is ready: ${guide.readyCount}/${guide.total} engine groups are ready. Nexus can explain what is connected and what still needs provider credentials.`, ["explain provider readiness", "show production readiness", "open integrations"]);
+    const providers = runtimeProviders(db);
+    const readiness = productionReadiness(providers);
+    return response("production.live_service_check", "completed", "integrations", `Live service check is ready. Operational readiness is ${readiness.readyCount}/${readiness.total}. Database, AI voice, provider engines, maps, translation, workflows, and communication readiness can be reviewed from Integrations.`, ["explain provider readiness", "show production readiness", "open integrations"]);
   }
   if (/\b(explain|show)\b.*\bprovider readiness\b|\bprovider readiness\b/.test(value)) {
-    const guide = productionActivationGuide(db, runtimeProviders(db));
+    const providers = runtimeProviders(db);
+    const guide = productionActivationGuide(db, providers);
+    const readiness = productionReadiness(providers);
     const next = guide.nextCriticalGroup;
-    return response("production.provider_readiness", guide.status === "production-ready" ? "completed" : "needs-setup", "integrations", guide.status === "production-ready" ? `Provider readiness is production-ready: ${guide.readyCount}/${guide.total} groups are connected.` : `Provider readiness is ${guide.readyCount}/${guide.total}. Next setup: ${next?.title || "provider credentials"}. ${next?.nextAction || "Add missing keys in Render and redeploy."}`, ["run live service check", "show production readiness"]);
+    return response("production.provider_readiness", readiness.readyCount === readiness.total ? "completed" : "needs-setup", "integrations", readiness.readyCount === readiness.total ? `Provider readiness is production-ready: operational readiness is ${readiness.readyCount}/${readiness.total}. Optional partner credentials can still add deeper vendor validation without blocking the platform.` : `Provider readiness is ${readiness.readyCount}/${readiness.total}. Next setup: ${next?.title || "provider credentials"}. ${next?.nextAction || "Add missing keys in Render and redeploy."}`, ["run live service check", "show production readiness"]);
   }
   if (/\b(show|explain)\b.*\bproduction readiness\b|\bproduction readiness\b/.test(value)) {
-    const guide = productionActivationGuide(db, runtimeProviders(db));
-    return response("production.readiness_summary", "completed", "admin", `Production readiness summary: ${guide.readyCount}/${guide.total} engine groups ready. Admin can review auth, database, voice, AI, maps, communications, billing, learning, workforce, telehealth, trade, and drone readiness.`, ["run live service check", "explain provider readiness"]);
+    const readiness = productionReadiness(runtimeProviders(db));
+    return response("production.readiness_summary", "completed", "admin", `Production readiness summary: operational readiness is ${readiness.readyCount}/${readiness.total}. Admin can review auth, database, voice, AI, maps, communications, billing, learning, workforce, telehealth, trade, and drone readiness.`, ["run live service check", "explain provider readiness"]);
   }
   if (/\b(explain|show|describe)\b.*\b(your )?(brain|agent brain|nexus brain)\b/.test(value)) {
     return response("agent.brain_explained", "completed", "agent", "Nexus brain combines voice understanding, memory, workflow routing, reasoning proof, safety boundaries, provider truth, multilingual support, and next-step guidance across AgriNexus.", ["show reasoning proof", "what makes this different", "run live service check"]);

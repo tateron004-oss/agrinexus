@@ -226,7 +226,7 @@ async function call(route, body) {
       assert.strictEqual(result.intent, check.intent, `${check.prompt} should route to ${check.intent}, got ${result.intent}`);
       assert.strictEqual(result.metadata?.redirectSection, check.section, `${check.prompt} should redirect to ${check.section}, got ${result.metadata?.redirectSection}`);
       assert(response.includes(check.includes), `${check.prompt} response should include "${check.includes}", got "${response}"`);
-      assert(!/I may have heard only part of that|Say health, learning, work, trade, map, or AI help|would you like me to do that now|should I do that now/i.test(response), `${check.prompt} must not fall back to old menu language`);
+      assert(!/I may have heard only part of that|Say health, learning, work, trade, map, or AI help|would you like me to do that now|should I do that now|\d+\/7 engine groups are ready/i.test(response), `${check.prompt} must not fall back to old menu language`);
     }
     for (const check of dialogueChecks) {
       await call("/api/agent/command", {
@@ -250,7 +250,7 @@ async function call(route, body) {
       assert.strictEqual(result.intent, check.intent, `${check.setup} then ${check.answer} should route to ${check.intent}, got ${result.intent}`);
       assert.strictEqual(result.metadata?.redirectSection, check.section, `${check.setup} then ${check.answer} should redirect to ${check.section}, got ${result.metadata?.redirectSection}`);
       assert(response.includes(check.includes), `${check.setup} then ${check.answer} response should include "${check.includes}", got "${response}"`);
-      assert(!/Say health, learning, work, trade, map, or AI help|would you like me to do that now|should I do that now/i.test(response), `${check.setup} then ${check.answer} must not fall back to menu language`);
+      assert(!/Say health, learning, work, trade, map, or AI help|would you like me to do that now|should I do that now|\d+\/7 engine groups are ready/i.test(response), `${check.setup} then ${check.answer} must not fall back to menu language`);
     }
     console.log("Voice response regression passed");
     for (const check of checks) console.log(`- ${check.prompt} -> ${check.intent}`);
