@@ -116,7 +116,12 @@ function safeGitRemoteHead() {
 
   const { json: communications } = await fetchJson(`${liveBase}/api/communications/execution-readiness`, { headers: authedHeaders });
   const commChannels = communications.channels || [];
-  const commProviderReady = commChannels.filter(channel => channel.providerReady).length;
+  const channelProviderReady = channel => {
+    if (typeof channel.providerReady === "boolean") return channel.providerReady;
+    if (typeof channel.canExecuteWhenRecipientProvided === "boolean") return channel.canExecuteWhenRecipientProvided;
+    return ["connected", "needs-recipient"].includes(channel.providerStatus);
+  };
+  const commProviderReady = commChannels.filter(channelProviderReady).length;
   const commExecutable = commChannels.filter(channel => channel.canExecuteNow).length;
   if (commProviderReady < commChannels.length) warnings.push("One or more communication providers still need credentials.");
   if (commProviderReady === commChannels.length && commExecutable < commChannels.length) {
