@@ -89,8 +89,8 @@ let routeTrackingWatchId = null;
 let routeTrackingPoints = [];
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-268";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v248";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-269";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v249";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
 const VOICE_ATTENTION_DELAY_MS = 900;
@@ -18978,6 +18978,7 @@ function simpleUserDirectVoiceIntent(command = "") {
   const productId = firstProduct()?.id;
   const roleId = firstEligibleRole()?.id;
   const has = words => words.some(word => new RegExp(`\\b${word}\\b`).test(lower));
+  const onePhrase = lower.replace(/\b(nexus|agrinexus|agri nexus|please|help me|i need|need|needed|i want|want)\b/g, " ").replace(/\s+/g, " ").trim();
   const vagueHelp = /^(help|help me|i need help|need help|please help|nexus help)$/i.test(lower);
   if (/^(home|go home|nexus home|agrinexus home|agri nexus home|open home|main screen|dashboard|back home|take me home)$/.test(lower)
     || /\b(main menu|menu)(?:\s+(home|dashboard))?\b/.test(lower)
@@ -18993,6 +18994,84 @@ function simpleUserDirectVoiceIntent(command = "") {
       type: "clarify",
       response: `I can help, ${userFirstName()}. Is this for health, work, learning, crops, or the map?`,
       suggestions: ["health", "work", "learning", "crops", "map"]
+    };
+  }
+  if (/^(intake|health intake|telehealth intake|patient intake)$/.test(onePhrase)) {
+    return {
+      type: "direct",
+      directAction: "health-intake",
+      response: "I heard intake. Yes, I can start health intake. I opened the intake screen; tell me who needs care and where they are. This is not a diagnosis."
+    };
+  }
+  if (/^(doctor|doctor help|provider|nurse|care|medical care|daktari)$/.test(onePhrase)) {
+    return {
+      type: "direct",
+      directAction: "doctor-help",
+      response: "I heard doctor help. Yes, I can help you reach care support. I opened doctor support; tell me what happened and where you are. This is not a diagnosis."
+    };
+  }
+  if (/^(clinic|hospital|health center|health centre|kliniki|clinica|clinique)$/.test(onePhrase)) {
+    return {
+      type: "direct",
+      directAction: "clinic-help",
+      response: "I heard clinic. Yes, I can help find clinic support. I opened clinic or pharmacy support on the map; tell me your village, city, or nearest landmark."
+    };
+  }
+  if (/^(medicine|medication|pharmacy|pills|drug|refill|dawa|medicina|remedio)$/.test(onePhrase)) {
+    return {
+      type: "direct",
+      directAction: "medicine-help",
+      response: "I heard medicine. Yes, I can help with medicine access. I opened medicine and pharmacy support; tell me the medicine concern and where you are. I cannot prescribe."
+    };
+  }
+  if (/^(crop|crops|crop damage|damage|crop problem|farm problem|field problem|bad crop|maize problem|pests|yellow leaves|shamba)$/.test(onePhrase)) {
+    return {
+      type: "direct",
+      directAction: "crop-help",
+      response: "I heard crop damage. Yes, I can help with the crop problem. I opened crop support; tell me the crop, farm location, and what looks wrong."
+    };
+  }
+  if (/^(sell|seller|buyer|trade|market|sell crop|crop sale|kuuza|vender)$/.test(onePhrase)) {
+    return {
+      type: "workflow",
+      workflow: "trade",
+      action: "buyer-contact",
+      response: "I heard crop sale. Yes, I can help sell the crop. I opened buyer support; tell me the crop, quantity, and location.",
+      dataset: { productId }
+    };
+  }
+  if (/^(work|job|jobs|work needed|job needed|kazi|trabajo|emploi|travail)$/.test(onePhrase)) {
+    return {
+      type: "workflow",
+      workflow: "workforce",
+      action: "build-profile",
+      response: "I heard work. Yes, I can help with work. I opened workforce support; tell me the country, job type, and your skills.",
+      dataset: { roleId }
+    };
+  }
+  if (/^(apply|application|apply job|job application)$/.test(onePhrase)) {
+    return {
+      type: "workflow",
+      workflow: "workforce",
+      action: "apply-role",
+      response: "I heard apply. Yes, I can help with the application. I opened job application support; choose a role or tell me the job you want.",
+      dataset: { roleId }
+    };
+  }
+  if (/^(course|lesson|learning|learn|training|somo|curso|class)$/.test(onePhrase)) {
+    return {
+      type: "workflow",
+      workflow: "learning",
+      action: "start",
+      response: "I heard learning. Yes, I can help you learn and start a course. I opened course support; choose a course or tell me the skill you want.",
+      dataset: {}
+    };
+  }
+  if (/^(map|route|location|tracking|ramani|mapa|carte)$/.test(onePhrase)) {
+    return {
+      type: "direct",
+      directAction: "full-map",
+      response: "I heard map. Yes, Full map is open. You can zoom, find clinics, check routes, or track shipments."
     };
   }
   if (/\b(clinic|hospital|health center|health centre)\b/.test(lower) && /\b(map|near|nearest|nearby|closest|where|location|find|show|me)\b/.test(lower)) {

@@ -26,8 +26,8 @@ const AI_MODEL = process.env.OPENAI_MODEL || "gpt-5.4-mini";
 const AI_REASONING_MODEL = process.env.OPENAI_REASONING_MODEL || process.env.OPENAI_AGENT_MODEL || AI_MODEL;
 const AI_TRANSLATION_MODEL = process.env.OPENAI_TRANSLATION_MODEL || process.env.OPENAI_AGENT_MODEL || AI_MODEL;
 const AGRINEXUS_RELEASE = "2026-06-05-live-services";
-const AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-268";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v248";
+const AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-269";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v249";
 const ROOT = __dirname;
 const DATA_DIR = process.env.AGRINEXUS_DATA_DIR || ROOT;
 const DB_PATH = process.env.AGRINEXUS_DB_PATH || path.join(DATA_DIR, "db.json");
@@ -15652,9 +15652,19 @@ function simpleVoiceChoiceFromText(text = "") {
   return choices.find(choice => choice.test.test(lower))?.id || "";
 }
 
+function isStandaloneServiceVoiceCommand(text = "") {
+  const lower = normalizeSpeechForIntent(text)
+    .replace(/\b(nexus|agrinexus|agri nexus|please|help me|i need|need|needed|i want|want)\b/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  if (/^(map|route)\b|\bmap of\b|\b(full|global|country)\s+map\b/.test(lower)) return true;
+  return /^(intake|health intake|telehealth intake|patient intake|doctor|doctor help|provider|nurse|care|medical care|daktari|clinic|hospital|health center|health centre|kliniki|clinica|clinique|medicine|medication|pharmacy|pills|drug|refill|dawa|medicina|remedio|crop|crops|crop damage|damage|crop problem|farm problem|field problem|bad crop|maize problem|pests|yellow leaves|shamba|sell|seller|buyer|trade|market|sell crop|crop sale|kuuza|vender|work|job|jobs|work needed|job needed|kazi|trabajo|emploi|travail|apply|application|apply job|job application|course|lesson|learning|learn|training|somo|curso|class|map|route|location|tracking|ramani|mapa|carte)$/.test(lower);
+}
+
 function looksLikeShortAnswer(text = "") {
   const lower = normalizeSpeechForIntent(text);
   if (!lower) return false;
+  if (isStandaloneServiceVoiceCommand(lower)) return false;
   const words = lower.split(/\s+/).filter(Boolean);
   if (words.length > 1 && /\b(i|me|my|need|want|help)\b/.test(lower)) return false;
   if (words.length > 2 && /\b(open|start|begin|build|prepare|explain|describe|switch|change|show|track|run|apply|sell|contact|call|create|find|send|text|message|whatsapp|sms|play|pause|music|what|why|how)\b/.test(lower)) return false;
@@ -17317,6 +17327,53 @@ function platformWideVoiceAcceptanceResponse(db, user, text = "", lower = "", op
       metadata: { ...metadataBase, redirectSection, suggestedReplies, ...extraMetadata }
     };
   };
+  const simplePhrase = value
+    .replace(/\b(nexus|agrinexus|agri nexus|please|help me|i need|need|needed|i want|want)\b/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  const simpleStandalone = [
+    {
+      pattern: /^(intake|health intake|telehealth intake|patient intake)$/,
+      result: () => response("conversation.health_intake", "needs-details", "health", "I heard intake. Yes, I can start health intake. I opened the intake screen; tell me who needs care and where they are. This is not a diagnosis.", ["patient name", "find clinic", "I need medicine"])
+    },
+    {
+      pattern: /^(doctor|doctor help|provider|nurse|care|medical care|daktari)$/,
+      result: () => response("conversation.doctor_help", "needs-details", "health", "I heard doctor help. Yes, I can help you reach care support. I opened doctor support; tell me what happened and where you are. This is not a diagnosis.", ["start intake", "find clinic", "call provider"])
+    },
+    {
+      pattern: /^(clinic|hospital|health center|health centre|kliniki|clinica|clinique)$/,
+      result: () => response("conversation.clinic_map_help", "needs-location", "map", "I heard clinic. Yes, I can help find clinic support. I opened clinic or pharmacy support on the map; tell me your village, city, or nearest landmark.", ["use my location", "find clinic", "find pharmacy"])
+    },
+    {
+      pattern: /^(medicine|medication|pharmacy|pills|drug|refill|dawa|medicina|remedio)$/,
+      result: () => response("conversation.medicine_help", "needs-location", "health", "I heard medicine. Yes, I can help with medicine access. I opened medicine and pharmacy support; tell me the medicine concern and where you are. I cannot prescribe.", ["find pharmacy", "start intake", "call provider"])
+    },
+    {
+      pattern: /^(crop|crops|crop damage|damage|crop problem|farm problem|field problem|bad crop|maize problem|pests|yellow leaves|shamba)$/,
+      result: () => response("conversation.crop_help", "needs-details", "trade", "I heard crop damage. Yes, I can help with the crop problem. I opened crop support; tell me the crop, farm location, and what looks wrong.", ["run field scan", "explain crop problem", "contact buyer"])
+    },
+    {
+      pattern: /^(sell|seller|buyer|trade|market|sell crop|crop sale|kuuza|vender)$/,
+      result: () => response("conversation.crop_sale_help", "needs-details", "trade", "I heard crop sale. Yes, I can help sell the crop. I opened buyer support; tell me the crop, quantity, and location.", ["maize in Kenya", "find a buyer", "track delivery"])
+    },
+    {
+      pattern: /^(work|job|jobs|work needed|job needed|kazi|trabajo|emploi|travail)$/,
+      result: () => response("conversation.workforce_help", "needs-details", "workforce", "I heard work. Yes, I can help with work. I opened workforce support; tell me the country, job type, and your skills.", ["show me jobs", "apply for a role", "review my skills"])
+    },
+    {
+      pattern: /^(apply|application|apply job|job application)$/,
+      result: () => response("workforce.application_help", "needs-details", "workforce", "I heard apply. Yes, I can help with the application. I opened job application support; choose a role or tell me the job you want.", ["show jobs", "review my skills", "prepare application"])
+    },
+    {
+      pattern: /^(course|lesson|learning|learn|training|somo|curso|class)$/,
+      result: () => response("conversation.learning_start", "needs-topic", "learning", "I heard learning. Yes, I can help you learn and start a course. I opened course support; choose a course or tell me the skill you want.", ["start recommended course", "build captions", "read the lesson"])
+    },
+    {
+      pattern: /^(map|route|location|tracking|ramani|mapa|carte)$/,
+      result: () => response("conversation.map_open", "completed", "map", "I heard map. Yes, Full map is open. You can zoom, find clinics, check routes, or track shipments.", ["find clinic near me", "track shipment", "show trade route"])
+    }
+  ].find(item => item.pattern.test(simplePhrase));
+  if (simpleStandalone) return simpleStandalone.result();
   const requestedMapCountry = africanMapCountryTarget(db, value);
 
   if (!/\b(agritrade|agri trade)\b/.test(value) && (/\b(explain|describe|define|summarize)\s+(agrinexus|agri nexus|nexus|platform)\b/.test(value)
