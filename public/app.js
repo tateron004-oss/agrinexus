@@ -89,8 +89,8 @@ let routeTrackingWatchId = null;
 let routeTrackingPoints = [];
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-288";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v268";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-289";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v269";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
 const VOICE_ATTENTION_DELAY_MS = 900;
@@ -5210,6 +5210,12 @@ function goSection(sectionId, options = {}) {
 function activateSectionFromButton(button, options = {}) {
   const sectionId = button?.dataset?.section || button?.dataset?.mobileSection || button?.dataset?.simpleSection;
   if (!sectionId) return false;
+  if (experienceMode === "user" && sectionId === "map") {
+    openFullScaleUserMap("Full map is open. You can zoom, drag, find facilities, check routes, and track shipments.");
+    const status = $("#simpleActionStatus") || $("#map .user-module-status");
+    if (status) status.textContent = translateText("Full map opened.");
+    return true;
+  }
   goSection(sectionId, {
     instant: true,
     openDefaultAction: false,
