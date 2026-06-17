@@ -456,10 +456,11 @@ assert(app.includes("function answerChoiceNumberFromSpeech") && app.includes("fu
 assert(app.includes("function openHealthFacilityMapNow") && app.includes("function isHealthFacilityMapCommand") && app.includes("Nexus opened the full health facility map first"), "Clinic/pharmacy map requests must open the full map first instead of burying the map below health workflows");
 assert(app.includes('directAction === "clinic-map-help"') && app.includes("const clinicMap") && app.includes("I opened the clinic and pharmacy map"), "User-mode clinic map speech must route directly to the visible clinic/pharmacy map");
 assert(app.includes("function nexusFastLaneIntent") && app.includes("routeLabel: \"fast-lane-medicine\"") && app.includes("routeLabel: \"fast-lane-clinic-map\"") && app.includes("routeLabel: \"fast-lane-workforce\""), "Nexus needs a deterministic fast lane for simple health, map, work, learning, and trade requests");
+assert(app.includes("routeLabel: \"fast-lane-weather\"") && app.includes("function safeBrowserWeatherLocation"), "Weather questions need a fast lane and fail-safe browser location wrapper");
 assert(app.indexOf("const fastLaneIntent = nexusFastLaneIntent(spoken || command || localized || rawCommand)") < app.indexOf("if (await answerPendingNexusQuestion(command || localized || rawCommand))"), "Unified Nexus fast lane must run before pending-answer handling");
 assert(app.indexOf("const fastLaneIntent = nexusFastLaneIntent(spokenCommand || command || localizedCommand || rawCommand)") < app.indexOf("if (await answerPendingNexusQuestion(command || localizedCommand || rawCommand))"), "Main voice fast lane must run before old pending-answer context");
-assert(html.includes("nexus-behavior-286"), "Index must force browsers to load Nexus behavior CSS");
-assert(html.includes("nexus-behavior-286"), "Index must force browsers to load Nexus behavior JS");
+assert(html.includes("nexus-behavior-287"), "Index must force browsers to load Nexus behavior CSS");
+assert(html.includes("nexus-behavior-287"), "Index must force browsers to load Nexus behavior JS");
 assert(server.includes("function productionActivationGuide"), "Backend needs a live activation guide");
 assert(server.includes("function directVendorProviderStatus"), "Backend must recognize direct vendor credentials");
 assert(server.includes("optionalEnvSets"), "Activation guide must show real provider depth options");

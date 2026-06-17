@@ -26,8 +26,8 @@ const AI_MODEL = process.env.OPENAI_MODEL || "gpt-5.4-mini";
 const AI_REASONING_MODEL = process.env.OPENAI_REASONING_MODEL || process.env.OPENAI_AGENT_MODEL || AI_MODEL;
 const AI_TRANSLATION_MODEL = process.env.OPENAI_TRANSLATION_MODEL || process.env.OPENAI_AGENT_MODEL || AI_MODEL;
 const AGRINEXUS_RELEASE = "2026-06-16-operational-readiness";
-const AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-286";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v266";
+const AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-287";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v267";
 const ROOT = __dirname;
 const DATA_DIR = process.env.AGRINEXUS_DATA_DIR || ROOT;
 const DB_PATH = process.env.AGRINEXUS_DB_PATH || path.join(DATA_DIR, "db.json");
@@ -15738,6 +15738,10 @@ function continueSimpleVoiceTurn(db, user, text = "") {
   }
   if (!looksLikeShortAnswer(text)) return null;
   const lower = normalizeSpeechForIntent(text);
+  if (utilityAssistantKind(text, lower) === "weather" || isDailyAdvisorQuestion(lower)) {
+    clearSimpleVoiceTurn(db);
+    return null;
+  }
   const choice = simpleVoiceChoiceFromText(lower) || (lower ? "detail" : "");
   if (choice === "no") {
     clearSimpleVoiceTurn(db);
@@ -21077,6 +21081,9 @@ async function runAgentCommand(db, user, command, options = {}) {
   if (urgentHealth) return urgentHealth;
   const simpleTurn = conversational ? continueSimpleVoiceTurn(db, user, text) : null;
   if (simpleTurn) return simpleTurn;
+  if (conversational && utilityAssistantKind(text, lower) === "weather") {
+    return dailyLifeAdvisorResponse(db, user, text, lower, options);
+  }
   if (conversational && db.profile.agentMemory.activeIntake) {
     const invokedModuleCommand = invokedAgriNexus || /\b(agritrade|telehealth|healthcare|workforce|learning|maps?|integrations?|admin)\b/i.test(rawCommand);
     const activeIntakeBlueprint = intakeBlueprint(db.profile.agentMemory.activeIntake.domain || "");

@@ -89,8 +89,8 @@ let routeTrackingWatchId = null;
 let routeTrackingPoints = [];
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-286";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v266";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-287";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v267";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
 const VOICE_ATTENTION_DELAY_MS = 900;
@@ -3091,6 +3091,19 @@ async function browserWeatherLocation(command = "") {
       label: activeCountry().name,
       source: "location-permission-blocked",
       error: error?.message || "Location permission was blocked or unavailable."
+    };
+  }
+}
+
+async function safeBrowserWeatherLocation(command = "") {
+  try {
+    return await browserWeatherLocation(command);
+  } catch (error) {
+    console.warn("Nexus weather location context failed", error);
+    return {
+      label: cityLocationFromCommand(command)?.label || explicitWeatherPlace(command) || activeCountry().name,
+      source: "weather-location-fail-safe",
+      error: error?.message || "Weather location context was unavailable."
     };
   }
 }
@@ -19437,6 +19450,15 @@ function nexusFastLaneIntent(command = "") {
   if (/\b(what can you do|what can do|you can do what|how can you help|help me use this|what do you do)\b/.test(lower)) {
     return fastAnswer("I can answer simple questions, open health, medicine, learning, work, crop sale, maps, and guide one step at a time.", ["I need medicine", "find work", "sell my crop", "open map"], "Nexus fast lane summarized capabilities.");
   }
+  if (isWeatherLocationQuestion(lower) || /\b(what'?s|whats|what is|how is|how's|hows)\b.*\b(weather|temperature|temp|hot|rain|forecast|outside)\b/.test(lower)) {
+    return fast({
+      type: "backend",
+      response: "I am checking the weather now.",
+      suggestions: ["weather in Nairobi", "is it safe to walk", "weather in Addis", "open map"],
+      reason: "Nexus fast lane routed a natural weather question to the live utility brain.",
+      routeLabel: "fast-lane-weather"
+    });
+  }
   if (/\b(caption|captions|transcript|subtitles?)\b/.test(lower) && /\b(telehealth|health|patient|doctor|provider|clinic|care)\b/.test(lower)) {
     return fast({
       type: "workflow",
@@ -20130,7 +20152,7 @@ async function executeUnifiedNexusIntent(intent, command = "", options = {}) {
     pendingNexusSpokenCommand = null;
     updateNexusBehaviorLayer("thinking", intent.reason || "Unified Nexus brain is using the live conversation engine.");
     renderLiveVoiceSuggestions(intent.suggestions || ["ask a follow-up", "open health", "open map", "Nexus stop"]);
-    const locationContext = await browserWeatherLocation(command);
+    const locationContext = await safeBrowserWeatherLocation(command);
     if (ignoreStaleNexusTurn(turnToken, "unified backend answer")) return true;
     await runBackendAgentCommand(command, locationContext, { turnToken });
     return true;
@@ -20148,7 +20170,7 @@ async function executeUnifiedNexusIntent(intent, command = "", options = {}) {
   if (intent.type === "utility") {
     pendingAgentClarification = null;
     pendingNexusSpokenCommand = null;
-    const locationContext = await browserWeatherLocation(command);
+    const locationContext = await safeBrowserWeatherLocation(command);
     await runUtilityAgentCommand(command, intent.response, locationContext, { turnToken });
     return true;
   }
@@ -20587,7 +20609,7 @@ async function handleVoiceCommandCore(rawCommand, options = {}) {
     pendingNexusSpokenCommand = null;
     updateNexusBehaviorLayer("thinking", "Nexus is listening to the full question and checking live knowledge with platform context.");
     renderLiveVoiceSuggestions(["ask one follow-up", "open health", "open workforce", "Nexus stop"]);
-    const locationContext = await browserWeatherLocation(spokenCommand || command);
+    const locationContext = await safeBrowserWeatherLocation(spokenCommand || command);
     if (ignoreStaleNexusTurn(turnToken, "knowledge answer")) return;
     await runBackendAgentCommand(spokenCommand || command, locationContext, { turnToken });
     return;
@@ -20597,7 +20619,7 @@ async function handleVoiceCommandCore(rawCommand, options = {}) {
     pendingNexusSpokenCommand = null;
     updateNexusBehaviorLayer("thinking", "Nexus is treating this as open dialog, not a fixed menu command.");
     renderLiveVoiceSuggestions(["ask a follow-up", "guide me step by step", "open the right area", "Nexus stop"]);
-    const locationContext = await browserWeatherLocation(spokenCommand || command);
+    const locationContext = await safeBrowserWeatherLocation(spokenCommand || command);
     if (ignoreStaleNexusTurn(turnToken, "open dialog answer")) return;
     await runBackendAgentCommand(spokenCommand || command, locationContext, { turnToken });
     return;
@@ -21634,7 +21656,7 @@ async function handleVoiceCommandCore(rawCommand, options = {}) {
 
   if (await runDynamicVoiceTool(command)) return;
 
-  const locationContext = await browserWeatherLocation(command);
+  const locationContext = await safeBrowserWeatherLocation(command);
   if (ignoreStaleNexusTurn(turnToken, "backend answer")) return;
   await runBackendAgentCommand(command, locationContext, { turnToken });
 }
