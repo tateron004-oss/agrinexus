@@ -26,8 +26,8 @@ const AI_MODEL = process.env.OPENAI_MODEL || "gpt-5.4-mini";
 const AI_REASONING_MODEL = process.env.OPENAI_REASONING_MODEL || process.env.OPENAI_AGENT_MODEL || AI_MODEL;
 const AI_TRANSLATION_MODEL = process.env.OPENAI_TRANSLATION_MODEL || process.env.OPENAI_AGENT_MODEL || AI_MODEL;
 const AGRINEXUS_RELEASE = "2026-06-16-operational-readiness";
-const AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-287";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v267";
+const AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-288";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v268";
 const ROOT = __dirname;
 const DATA_DIR = process.env.AGRINEXUS_DATA_DIR || ROOT;
 const DB_PATH = process.env.AGRINEXUS_DB_PATH || path.join(DATA_DIR, "db.json");
@@ -15738,6 +15738,15 @@ function continueSimpleVoiceTurn(db, user, text = "") {
   }
   if (!looksLikeShortAnswer(text)) return null;
   const lower = normalizeSpeechForIntent(text);
+  if (isGlobalVoiceStopIntent(lower)) {
+    clearSimpleVoiceTurn(db);
+    return null;
+  }
+  const moduleSignal = conversationModuleSignal(lower);
+  if (Number(moduleSignal.score || 0) >= 2 && moduleSignal.section && moduleSignal.section !== turn.section) {
+    clearSimpleVoiceTurn(db);
+    return null;
+  }
   if (utilityAssistantKind(text, lower) === "weather" || isDailyAdvisorQuestion(lower)) {
     clearSimpleVoiceTurn(db);
     return null;
@@ -15811,6 +15820,13 @@ function continueSimpleVoiceTurn(db, user, text = "") {
     status: "needs-input",
     metadata: { conversationMode: true, redirectSection: turn.section || "dashboard", suppressBehaviorNudge: true }
   };
+}
+
+function isGlobalVoiceStopIntent(text = "") {
+  const lower = normalizeSpeechForIntent(text);
+  if (!lower) return false;
+  return /^(nexus\s+|agrinexus\s+|agri\s+nexus\s+)?(stop|pause|wait|hold on|quiet|be quiet|stop talking|stop speaking|cancel|never mind)$/i.test(lower)
+    || /^(stop|pause|wait|hold on|quiet|be quiet|cancel|never mind)\s+(nexus|agrinexus|agri\s+nexus)$/i.test(lower);
 }
 
 function sectionForAgentModule(module) {
@@ -18795,6 +18811,7 @@ function extractConversationalName(text) {
   const value = String(text || "").trim();
   const patterns = [
     /\bmy name is\s+([a-z][a-z\s'-]{1,40})/i,
+    /\bthis is\s+([a-z][a-z\s'-]{1,40})/i,
     /\bi am\s+([a-z][a-z\s'-]{1,40})/i,
     /\bi'm\s+([a-z][a-z\s'-]{1,40})/i,
     /\bcall me\s+([a-z][a-z\s'-]{1,40})/i
@@ -21028,6 +21045,20 @@ async function runAgentCommand(db, user, command, options = {}) {
       response: `Yes ${name}, how can I assist you?`,
       status: "completed",
       metadata: { conversationMode: true, redirectSection: "dashboard", suppressBehaviorNudge: true, suggestedReplies: ["I need a clinic", "my crop is bad", "start a course"] }
+    };
+  }
+  if (conversational && isGlobalVoiceStopIntent(text)) {
+    clearSimpleVoiceTurn(db);
+    db.profile.agentMemory.activeClarification = null;
+    db.profile.agentMemory.activeRecovery = null;
+    db.profile.agentMemory.lastStatus = "paused-by-user";
+    db.profile.agentMemory.lastSummary = "Nexus paused immediately from a voice stop command.";
+    db.profile.agentMemory.updatedAt = new Date().toISOString();
+    return {
+      intent: "conversation.paused",
+      response: "Paused. I will wait. Say Nexus when you want me again.",
+      status: "paused",
+      metadata: { conversationMode: true, redirectSection: "dashboard", suppressBehaviorNudge: true, suggestedReplies: ["Nexus"] }
     };
   }
   const onboardingPhrase = /^(i am|i'm)\s+new\b/i.test(text) || /\b(how do i|where do i start|show me how|help me use|start training)\b/i.test(text);
