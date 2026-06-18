@@ -14,6 +14,7 @@
     "conversation:smoke": "node scripts/conversation-brain-smoke.js",
     "conversation:certify": "node scripts/nexus-conversation-certification.js",
     "conversation:continuous": "node scripts/nexus-continuous-turn-regression.js",
+    "conversation:open": "node scripts/nexus-open-conversation-regression.js",
     "phone:greeting-qa": "node scripts/phone-greeting-qa.js",
     "conversation:rural-eval": "node scripts/synthetic-rural-conversation-eval.js",
     "offline:reasoning-qa": "node scripts/offline-reasoning-brain-qa.js",

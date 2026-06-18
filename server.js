@@ -19757,6 +19757,7 @@ async function musicProviderCommandResponse(db, user, text, options = {}) {
 function utilityAssistantKind(text, lower) {
   const raw = String(text || "").toLowerCase();
   if (/\b(walk me through|guide me through|show me how|help me use|how do i use|how to use)\b/.test(lower)) return "";
+  if (/\b(can you hear|hear me|understand|listen|talk|speak|communicate|english bad|bad english|broken english|not good english|wrong english|grandma talks|farmer talks)\b/.test(lower)) return "";
   if (/\b(what time is it|current time|time now|tell me the time|hora es|quelle heure|saa ngapi)\b/.test(lower) || /(\u0627\u0644\u0648\u0642\u062a|\u0627\u0644\u0633\u0627\u0639\u0629)/.test(raw)) return "time";
   if (/\b(weather|temperature|temp|too hot|how hot|heat|outside|walk|walking|rain|forecast|clima|meteo|météo|hali ya hewa)\b/.test(lower) || /(\u0627\u0644\u0637\u0642\u0633|\u0627\u0644\u062d\u0631\u0627\u0631\u0629)/.test(raw)) return "weather";
   if (musicAssistantIntent(text)) return "music";
@@ -21151,6 +21152,28 @@ async function runAgentCommand(db, user, command, options = {}) {
       response: `Yes ${name}, I can hear you. Tell me what you need in your own words.`,
       status: "completed",
       metadata: { conversationMode: true, redirectSection: "dashboard", suppressBehaviorNudge: true, suggestedReplies: ["I need medicine", "find a clinic near me", "help me sell my crop"] }
+    };
+  }
+  if (conversational && /\b(can you|will you|do you|are you able to|can nexus)\b.*\b(understand|talk|speak|listen|communicate|hear)\b.*\b(grandma|farmer|patient|worker|learner|people|english bad|bad english|broken english|not good english|rural|accent|accents|incomplete|not educated)\b/.test(lower)) {
+    db.profile.agentMemory.lastStatus = "people-conversation-ready";
+    db.profile.agentMemory.lastSummary = "Nexus explained open human conversation support for imperfect speech.";
+    db.profile.agentMemory.updatedAt = new Date().toISOString();
+    return {
+      intent: "conversation.people_talk_ready",
+      response: "Yes. I can talk with people in normal words, not only commands. If English is rough, I will listen for the need, repeat what I think I heard, guide one step at a time, and ask one simple question if I am unsure.",
+      status: "completed",
+      metadata: {
+        conversationMode: true,
+        redirectSection: "agent",
+        suppressBehaviorNudge: true,
+        frontierCommunication: {
+          urgency: "normal",
+          confidence: 0.95,
+          communicationMode: "open-human-conversation",
+          responseShape: "confirm capability, explain simple listening, ask one next step"
+        },
+        suggestedReplies: ["I need medicine", "crop bad", "job please", "I cannot read"]
+      }
     };
   }
   if (conversational && (/^(home|go home|nexus home|agrinexus home|agri nexus home|open home|main screen|dashboard|back home|take me home|main menu|main menu home|menu home)$/i.test(lower)
