@@ -3380,9 +3380,10 @@ function humanizeAgentResult(db, user, result = {}, command = "") {
   if (command) updateConversationUserModel(db.profile, command);
   const behavior = assistantBehaviorModel(db, user);
   const original = String(result.response || "I am ready.");
+  const suppressNudge = Boolean(result.metadata?.suppressBehaviorNudge);
   const alreadyNatural = /^(AgriNexus|Nexus|For|A sick|Good morning|Good afternoon|Good evening|Hello|Yes|I hear you|Absolutely|Got it|Done|Here is|Welcome|I can|I opened|I created|I submitted|Full map|The full intelligent model)/i.test(original);
-  const prefix = alreadyNatural ? "" : "Got it. ";
-  const followUp = adaptiveBehaviorNudge(behavior, result);
+  const prefix = alreadyNatural || suppressNudge ? "" : "Got it. ";
+  const followUp = suppressNudge ? "" : adaptiveBehaviorNudge(behavior, result);
   const suggestedReplies = suggestedRepliesForResult(result, behavior);
   const response = [`${prefix}${original}${/[.!?]$/.test(original.trim()) ? "" : "."}`, followUp].filter(Boolean).join(" ");
   return {
@@ -13810,12 +13811,16 @@ async function translateAgentDisplayBundle(db, user, result = {}, targetLanguage
 async function translateAgentCommandResult(db, user, result = {}, options = {}) {
   const targetLanguage = options.targetLanguage || user?.language || db.profile.accessibilityProfile?.language || "en";
   if (!targetLanguage || targetLanguage === "en" || !result.response) return result;
-  const translation = await translateDynamicContent(db, user, {
-    text: result.response,
-    sourceLanguage: "en",
-    targetLanguage,
-    context: `agent-command:${result.intent || "unknown"}`
-  });
+  const responseLanguage = result.metadata?.responseLanguage || "en";
+  const alreadyLocalized = responseLanguage === targetLanguage;
+  const translation = alreadyLocalized
+    ? { translatedText: result.response, provider: "localized-conversation-response", sourceLanguage: responseLanguage, targetLanguage }
+    : await translateDynamicContent(db, user, {
+        text: result.response,
+        sourceLanguage: responseLanguage,
+        targetLanguage,
+        context: `agent-command:${result.intent || "unknown"}`
+      });
   const translatedResult = {
     ...result,
     response: translation.translatedText || result.response
@@ -13826,12 +13831,12 @@ async function translateAgentCommandResult(db, user, result = {}, options = {}) 
     metadata: {
       ...(result.metadata || {}),
       originalResponse: result.response,
-      translatedResponse: true,
+      translatedResponse: !alreadyLocalized,
       translatedDisplay: true,
       localized,
       translation: {
         targetLanguage,
-        sourceLanguage: "en",
+        sourceLanguage: responseLanguage,
         provider: translation.provider,
         context: `agent-command:${result.intent || "unknown"}`
       }
@@ -15554,62 +15559,219 @@ function isGeneralConversationQuestion(command = "") {
   if (/\b(open|start|run|create|submit|send|call|message|apply|pay|checkout|book|schedule|delete|change language|switch language|track|show map|find clinic|need doctor|need medicine|sell crop|need work|start course)\b/.test(lower)) return false;
   if (/\b(doctor|clinic|medicine|pharmacy|crop|farm|buyer|seller|job|course|lesson|map|route|shipment|drone|provider|intake)\b/.test(lower)
     && /\b(need|want|help|find|where|nearest|apply|sell|track|start|open|show|call|contact)\b/.test(lower)) return false;
-  const smallTalk = /\b(how are you|how do you feel|are you okay|can we talk|talk with me|tell me a joke|make me laugh|tell me (a )?(short )?story|tell me something encouraging|encourage me|i am tired|i'm tired|i feel tired|i am nervous|i'm nervous|i feel sad|i am scared|i'm scared|i feel lost|i feel overwhelmed|what do you think|connect this to agrinexus)\b/.test(lower);
+  const smallTalk = /\b(how are you|how do you feel|are you okay|can we talk|talk with me|tell me a joke|make me laugh|tell me (a )?(short )?story|tell me something encouraging|encourage me|i am tired|i'm tired|i feel tired|i am nervous|i'm nervous|i feel sad|i am scared|i'm scared|i feel lost|i feel overwhelmed|what do you think|connect this to agrinexus|bonjour|bonsoir|salut|comment ca va|comment ça va|pouvons nous parler|hola|buenos dias|buenas tardes|buenas noches|como estas|cómo estás|podemos hablar|jambo|habari|mambo|tunaweza kuongea|ola|olá|bom dia|boa tarde|boa noite|podemos conversar|estoy cansad|je suis fatigue|nimechoka|estou cansad)\b|هل يمكننا التحدث|كيف حالك/.test(lower);
   const generalQuestion = /^(who|what|why|how|when|where|can|could|would|should|tell|explain|describe|define)\b/.test(lower)
     && /\b(nelson mandela|teamwork|leadership|patience|confidence|hope|education|family|community|trust|business idea|success|motivation|history|science|music|culture|respect|communication|rural farmers|farmers|helping rural)\b/.test(lower);
-  return smallTalk || generalQuestion;
+  const multilingualGeneral = /\b(agriculteurs ruraux|agricultores rurales|wakulima|educacion|educación|education|éducation|elimu|educacao|educação|travail d equipe|trabajo en equipo|kazi ya pamoja)\b|المزارعين|التعليم|عمل جماعي/.test(lower);
+  return smallTalk || generalQuestion || multilingualGeneral;
 }
 
-function localGeneralConversationAnswer(db, user, command = "") {
+function normalizeConversationLanguage(value = "") {
+  const language = String(value || "").toLowerCase().trim();
+  if (["english", "en-us", "en"].includes(language)) return "en";
+  if (["spanish", "espanol", "español", "castellano", "es"].includes(language)) return "es";
+  if (["french", "francais", "français", "fr"].includes(language)) return "fr";
+  if (["swahili", "kiswahili", "sw"].includes(language)) return "sw";
+  if (["arabic", "arabe", "العربية", "عربي", "ar"].includes(language)) return "ar";
+  if (["portuguese", "portugues", "português", "pt"].includes(language)) return "pt";
+  return ["ha", "yo", "ig", "am", "om", "rw", "ln"].includes(language) ? language : "en";
+}
+
+function detectGeneralConversationLanguage(command = "") {
+  const raw = String(command || "");
+  const lower = raw.toLowerCase().replace(/\s+/g, " ").trim();
+  if (/[\u0600-\u06ff]/.test(raw)) return "ar";
+  if (/\b(hola|buenos dias|buenas tardes|buenas noches|como estas|cómo estás|podemos hablar|estoy cansad|educacion|educación|agricultor|agricultores|gracias)\b/.test(lower)) return "es";
+  if (/\b(bonjour|bonsoir|salut|comment ca va|comment ça va|pouvons nous parler|je suis fatigue|fatigue|agriculteur|agriculteurs|education|éducation|merci|penses)\b/.test(lower)) return "fr";
+  if (/\b(jambo|habari|mambo|asante|tafadhali|nimechoka|mkulima|wakulima|tunaweza kuongea|elimu|shamba)\b/.test(lower)) return "sw";
+  if (/\b(ola|olá|bom dia|boa tarde|boa noite|como voce esta|como você está|podemos conversar|estou cansad|educacao|educação|agricultor|obrigado)\b/.test(lower)) return "pt";
+  if (/\b(sannu|ina kwana|na gaji|manomi|noma)\b/.test(lower)) return "ha";
+  if (/\b(ekaro|e kaaro|bawo|agbe|oko)\b/.test(lower)) return "yo";
+  if (/\b(ndewo|ututu oma|ike gwuru|onye oru ugbo|ugbo)\b/.test(lower)) return "ig";
+  if (/\b(selam|tena yistilign|ameseginalehu|gebere)\b/.test(lower)) return "am";
+  if (/\b(akkam|galatoomi|qonnaan bulaa)\b/.test(lower)) return "om";
+  if (/\b(muraho|amakuru|murakoze|umuhinzi)\b/.test(lower)) return "rw";
+  if (/\b(mbote|matondo|bilanga)\b/.test(lower)) return "ln";
+  return "";
+}
+
+function generalConversationKind(command = "") {
+  const lower = String(command || "").toLowerCase().replace(/\s+/g, " ").trim();
+  if (/\b(how are you|how do you feel|are you okay|comment ca va|comment ça va|como estas|cómo estás|habari|mambo|como voce esta|como você está)\b|كيف حالك|عامل ايه/.test(lower)) return "how_are_you";
+  if (/\b(helping rural farmers|rural farmers|farmers|agriculteurs|agricultores|wakulima|mkulima|manomi|agbe|umuhinzi|qonnaan bulaa)\b/.test(lower) && /\b(think|important|matter|value|helping|penses|important|piensas|importante|unafikiri|msaada|ajuda)\b/.test(lower)) return "rural_farmers";
+  if (/\b(can we talk|talk with me|what do you think|podemos hablar|podemos conversar|pouvons nous parler|tunaweza kuongea)\b|هل يمكننا التحدث/.test(lower)) return "talk_people";
+  if (/\b(joke|make me laugh|blague|rire|chiste|reir|reír|utani|chekesha|piada|rir)\b/.test(lower)) return "joke";
+  if (/\b(story|historia|histoire|hadithi|قصة)\b/.test(lower)) return "story";
+  if (/\b(encourag\w*|motivat\w*|hope|encourage|motiva|esperanza|espoir|tumaini|matumaini|coragem|مل)\b/.test(lower)) return "encouragement";
+  if (/\b(tired|nervous|sad|scared|lost|overwhelmed|fatigue|fatigué|fatiguée|cansad|nimechoka|triste|nerveux|nerviosa|assustad|خائف|متعب|حزين)\b/.test(lower)) return "tired";
+  if (/\bnelson mandela\b/.test(lower)) return "mandela";
+  if (/\bteamwork|travail d equipe|travail d'équipe|trabajo en equipo|kazi ya pamoja|trabalho em equipe|عمل جماعي\b/.test(lower)) return "teamwork";
+  if (/\beducation|educacion|educación|education|éducation|elimu|educacao|educação|تعليم\b/.test(lower)) return "education";
+  if (/\bconnect this to agrinexus|relie cela a agrinexus|conecta esto con agrinexus|unganisha na agrinexus|conectar isso ao agrinexus\b/.test(lower)) return "platform_bridge";
+  if (/\bpatience|paciencia|patience|subira|paciência|صبر\b/.test(lower)) return "patience";
+  if (/\bleadership|liderazgo|leadership|uongozi|liderança|قيادة\b/.test(lower)) return "leadership";
+  return "default";
+}
+
+function localGeneralConversationAnswer(db, user, command = "", options = {}) {
   const lower = String(command || "").toLowerCase().replace(/\s+/g, " ").trim();
   const name = db.profile.agentMemory.userModel?.name || db.profile.agentMemory.userName || user?.name?.split(/\s+/)[0] || "there";
+  const detectedLanguage = detectGeneralConversationLanguage(command);
+  const requestedLanguage = normalizeConversationLanguage(options.targetLanguage || user?.language || "en");
+  const language = detectedLanguage || requestedLanguage || "en";
+  const kind = generalConversationKind(command);
+  const localized = {
+    en: {
+      how_are_you: `I am here with you, ${name}. I am ready to listen, answer, and guide one step at a time. What would you like to talk about?`,
+      rural_farmers: "Helping rural farmers matters because food, income, family health, and local jobs often start with the farm. If technology listens in plain language, it can help farmers understand crop problems, find buyers, move products safely, and make better choices without needing to be technical.",
+      talk_people: "Yes. We can talk like two people. Tell me what is on your mind, and I will answer plainly or help turn it into an AgriNexus action if that is useful.",
+      joke: "I can keep it light. Here is one: the farmer asked the map for directions, and the map said, first tell me which road still exists after the rain. Now tell me if you want another one or if we should get back to work.",
+      story: "Here is a short one. A farmer had one small bag of seed and a big dry field. Instead of giving up, she planted carefully, saved water, asked neighbors for advice, and checked the field every morning. The lesson is simple: one steady step can become a harvest.",
+      encouragement: "You do not have to solve everything at once. Take one clear step, then the next one. I can stay with you, simplify the work, and help you move forward.",
+      tired: "I hear you. Take a breath and slow the moment down. If this is stress or tiredness, rest, water, and one small next step can help. If you feel unsafe or very unwell, reach a trusted person or local care now.",
+      mandela: "Nelson Mandela was a South African leader who fought apartheid, spent many years in prison, and later became president of South Africa. Many people remember him for courage, forgiveness, and leadership through difficult history.",
+      teamwork: "Teamwork means people working together toward one goal. Good teamwork needs trust, clear roles, listening, and follow-through. On AgriNexus, that can mean a farmer, clinic, driver, buyer, and support worker all seeing the next step clearly.",
+      education: "Education matters because it gives people more choices. It can help a farmer improve yield, a student find work, a patient understand care instructions, and a family make safer decisions.",
+      platform_bridge: "Connected to AgriNexus, this means Nexus can turn a normal conversation into help: explain the idea, ask one useful question, then open the right path for health, farming, learning, work, trade, or maps when the person is ready.",
+      patience: "Patience is the ability to keep moving without rushing the wrong step. It does not mean doing nothing; it means staying steady while you gather the right information and act wisely.",
+      leadership: "Leadership means helping people move toward a better outcome. The best leaders listen first, explain clearly, protect trust, and make the next step easier for everyone.",
+      default: "Yes. I can have a general conversation, explain ideas, answer simple questions, encourage you, and connect the conversation back to AgriNexus when you want action. What would you like to talk about?"
+    },
+    es: {
+      how_are_you: `Estoy aqui contigo, ${name}. Puedo escuchar, responder con calma y guiar paso a paso. ¿De que quieres hablar?`,
+      rural_farmers: "Ayudar a agricultores rurales importa porque la comida, el ingreso, la salud familiar y el trabajo local muchas veces empiezan en la finca. Si la tecnologia habla claro, puede ayudar con cultivos, compradores, rutas seguras y mejores decisiones.",
+      talk_people: "Si. Podemos hablar como personas. Dime que tienes en mente y te respondere de forma sencilla, o lo convertire en una accion de AgriNexus si te ayuda.",
+      joke: "Claro, algo ligero: el agricultor pidio una ruta al mapa, y el mapa dijo: primero dime que camino sigue vivo despues de la lluvia. Ahora dime si quieres otro chiste o volvemos al trabajo.",
+      story: "Una agricultora tenia poca semilla y un campo seco. No se rindio; planto con cuidado, ahorro agua, pidio consejo y reviso el campo cada manana. Un paso constante puede convertirse en cosecha.",
+      encouragement: "No tienes que resolver todo ahora. Da un paso claro y luego otro. Yo puedo quedarme contigo, simplificarlo y ayudarte a avanzar.",
+      tired: "Te escucho. Respira y baja la velocidad. Si es cansancio o estres, agua, descanso y un pequeno paso pueden ayudar. Si no estas seguro o te sientes muy mal, busca ayuda local ahora.",
+      mandela: "Nelson Mandela fue un lider sudafricano que lucho contra el apartheid, paso muchos anos en prision y luego fue presidente de Sudafrica. Se le recuerda por valentia, perdon y liderazgo.",
+      teamwork: "Trabajo en equipo significa que varias personas trabajan por una meta. Necesita confianza, roles claros, escucha y seguimiento.",
+      education: "La educacion importa porque da mas opciones. Puede ayudar a un agricultor, a un estudiante, a un paciente y a una familia a tomar mejores decisiones.",
+      platform_bridge: "En AgriNexus, una conversacion normal puede convertirse en ayuda: explico la idea, hago una pregunta util y abro el camino correcto para salud, campo, aprendizaje, trabajo, comercio o mapas.",
+      patience: "La paciencia es avanzar sin apresurarse al paso equivocado. Significa mantenerse firme, reunir buena informacion y actuar con cuidado.",
+      leadership: "Liderazgo es ayudar a las personas a llegar a un mejor resultado. Un buen lider escucha primero, explica claro y facilita el proximo paso.",
+      default: "Si. Puedo conversar, explicar ideas, responder preguntas sencillas, animarte y conectar la conversacion con AgriNexus cuando quieras actuar."
+    },
+    fr: {
+      how_are_you: `Je suis la avec toi, ${name}. Je peux ecouter, repondre simplement et guider une etape a la fois. De quoi veux-tu parler ?`,
+      rural_farmers: "Aider les agriculteurs ruraux est important parce que la nourriture, le revenu, la sante familiale et les emplois locaux commencent souvent a la ferme. Une technologie en langage simple peut aider avec les cultures, les acheteurs, les routes sures et les bonnes decisions.",
+      talk_people: "Oui. Nous pouvons parler comme deux personnes. Dis-moi ce que tu as en tete, et je repondrai clairement ou je le transformerai en action AgriNexus si cela t'aide.",
+      joke: "D'accord, une petite blague: le fermier a demande la route a la carte, et la carte a repondu: dis-moi d'abord quelle route existe encore apres la pluie. Tu veux une autre blague ou on retourne au travail ?",
+      story: "Voici une courte histoire. Une agricultrice avait peu de semences et un champ sec. Elle a plante avec soin, garde l'eau, demande conseil et regarde le champ chaque matin. Un pas regulier peut devenir une recolte.",
+      encouragement: "Tu n'as pas besoin de tout resoudre d'un coup. Fais une etape claire, puis la suivante. Je peux rester avec toi, simplifier et t'aider a avancer.",
+      tired: "Je t'entends. Respire et ralentis un peu. Si c'est la fatigue ou le stress, repos, eau et une petite prochaine etape peuvent aider. Si tu ne te sens pas en securite ou tres mal, cherche de l'aide locale maintenant.",
+      mandela: "Nelson Mandela etait un dirigeant sud-africain qui a lutte contre l'apartheid, a passe de longues annees en prison, puis est devenu president de l'Afrique du Sud. On se souvient de son courage, de son pardon et de son leadership.",
+      teamwork: "Le travail d'equipe signifie que des personnes avancent vers le meme objectif. Il faut de la confiance, des roles clairs, de l'ecoute et du suivi.",
+      education: "L'education est importante parce qu'elle donne plus de choix. Elle peut aider un agriculteur, un eleve, un patient et une famille a prendre de meilleures decisions.",
+      platform_bridge: "Dans AgriNexus, une conversation normale peut devenir une aide: j'explique l'idee, je pose une question utile, puis j'ouvre le bon chemin pour la sante, l'agriculture, l'apprentissage, le travail, le commerce ou les cartes.",
+      patience: "La patience, c'est continuer sans se precipiter vers la mauvaise etape. Cela veut dire rester stable, prendre la bonne information et agir avec sagesse.",
+      leadership: "Le leadership, c'est aider les gens a avancer vers un meilleur resultat. Les bons leaders ecoutent d'abord, expliquent clairement et rendent la prochaine etape plus facile.",
+      default: "Oui. Je peux discuter, expliquer des idees, repondre a des questions simples, encourager et relier la conversation a AgriNexus quand tu veux agir."
+    },
+    sw: {
+      how_are_you: `Niko hapa nawe, ${name}. Ninaweza kusikiliza, kujibu kwa lugha rahisi, na kukuongoza hatua moja kwa wakati. Ungependa kuzungumza kuhusu nini?`,
+      rural_farmers: "Kuwasaidia wakulima wa vijijini ni muhimu kwa sababu chakula, kipato, afya ya familia, na ajira za eneo huanzia shambani. Teknolojia ikizungumza kwa lugha rahisi inaweza kusaidia mazao, wanunuzi, njia salama, na maamuzi bora.",
+      talk_people: "Ndiyo. Tunaweza kuongea kama watu wawili. Niambie kilicho moyoni, nami nitajibu kwa urahisi au nigeuze kuwa hatua ya AgriNexus kama itasaidia.",
+      joke: "Sawa, kidogo tu: mkulima aliuliza ramani njia, ramani ikasema kwanza niambie barabara gani bado ipo baada ya mvua. Unataka nyingine au turudi kazini?",
+      story: "Hadithi fupi. Mkulima alikuwa na mbegu kidogo na shamba kavu. Hakukata tamaa; alipanda kwa makini, akahifadhi maji, akaomba ushauri, na akaangalia shamba kila asubuhi. Hatua ndogo ya kila siku inaweza kuwa mavuno.",
+      encouragement: "Huhitaji kutatua kila kitu mara moja. Chukua hatua moja iliyo wazi, kisha inayofuata. Nitaendelea nawe, nirahisishe kazi, na nikusaidie kusonga mbele.",
+      tired: "Nimekusikia. Vuta pumzi na punguza kasi. Kama ni uchovu au msongo, pumziko, maji, na hatua ndogo inaweza kusaidia. Kama uko hatarini au unaumwa sana, tafuta msaada wa karibu sasa.",
+      mandela: "Nelson Mandela alikuwa kiongozi wa Afrika Kusini aliyepinga apartheid, akakaa gerezani miaka mingi, kisha akawa rais wa Afrika Kusini. Watu humkumbuka kwa ujasiri, msamaha, na uongozi.",
+      teamwork: "Kazi ya pamoja ni watu kufanya kazi kwa lengo moja. Inahitaji kuaminiana, majukumu wazi, kusikilizana, na kufuatilia hatua.",
+      education: "Elimu ni muhimu kwa sababu inampa mtu chaguo zaidi. Inaweza kumsaidia mkulima, mwanafunzi, mgonjwa, na familia kufanya maamuzi salama.",
+      platform_bridge: "Ndani ya AgriNexus, mazungumzo ya kawaida yanaweza kuwa msaada: naeleza wazo, nauliza swali moja muhimu, kisha nafungua njia sahihi kwa afya, kilimo, kujifunza, kazi, biashara, au ramani.",
+      patience: "Subira ni kuendelea bila kukimbilia hatua isiyofaa. Inamaanisha kuwa mtulivu, kukusanya taarifa sahihi, na kuchukua hatua kwa busara.",
+      leadership: "Uongozi ni kusaidia watu kufika kwenye matokeo bora. Kiongozi mzuri husikiliza kwanza, hueleza wazi, na hufanya hatua inayofuata iwe rahisi.",
+      default: "Ndiyo. Ninaweza kuzungumza, kueleza mawazo, kujibu maswali rahisi, kukutia moyo, na kuunganisha mazungumzo na AgriNexus ukiwa tayari kuchukua hatua."
+    },
+    ar: {
+      how_are_you: `أنا هنا معك يا ${name}. أستطيع أن أسمعك وأجيب ببساطة وأرشدك خطوة خطوة. ما الذي تريد أن نتحدث عنه؟`,
+      rural_farmers: "مساعدة المزارعين في القرى مهمة لأن الطعام والدخل وصحة العائلة والعمل المحلي تبدأ غالبا من المزرعة. عندما تتكلم التقنية بلغة بسيطة، يمكنها مساعدة المزارع على فهم المحصول والعثور على مشترين واختيار طريق آمن.",
+      talk_people: "نعم. نستطيع أن نتحدث كأشخاص عاديين. قل لي ما الذي في بالك، وسأجيب ببساطة أو أحوله إلى خطوة داخل AgriNexus إذا كان ذلك مفيدا.",
+      joke: "حسنا، نكتة خفيفة: سأل المزارع الخريطة عن الطريق، فقالت الخريطة: أخبرني أولا أي طريق ما زال موجودا بعد المطر. هل تريد نكتة أخرى أم نعود للعمل؟",
+      story: "قصة قصيرة. كان لدى مزارعة كيس صغير من البذور وحقل جاف. لم تستسلم؛ زرعت بحذر، ووفرت الماء، وسألت الجيران، وتفقدت الحقل كل صباح. خطوة ثابتة قد تصبح حصادا.",
+      encouragement: "ليس عليك حل كل شيء مرة واحدة. خذ خطوة واضحة، ثم الخطوة التالية. سأبقى معك، أبسط الأمر، وأساعدك على التقدم.",
+      tired: "أسمعك. خذ نفسا واهدأ قليلا. إذا كان الأمر تعبا أو ضغطا، فالماء والراحة وخطوة صغيرة قد تساعد. إذا كنت غير آمن أو مريضا جدا فاطلب مساعدة قريبة الآن.",
+      mandela: "نيلسون مانديلا كان قائدا من جنوب أفريقيا حارب نظام الفصل العنصري، وقضى سنوات طويلة في السجن، ثم أصبح رئيسا. يتذكره الناس بالشجاعة والتسامح والقيادة.",
+      teamwork: "العمل الجماعي يعني أن يعمل الناس معا لهدف واحد. يحتاج إلى ثقة وأدوار واضحة واستماع ومتابعة.",
+      education: "التعليم مهم لأنه يعطي الناس خيارات أكثر. يمكن أن يساعد المزارع والطالب والمريض والعائلة على اتخاذ قرارات أفضل.",
+      platform_bridge: "داخل AgriNexus يمكن للمحادثة العادية أن تتحول إلى مساعدة: أشرح الفكرة، أسأل سؤالا مفيدا، ثم أفتح الطريق الصحيح للصحة أو الزراعة أو التعلم أو العمل أو التجارة أو الخرائط.",
+      patience: "الصبر هو أن تستمر بدون استعجال الخطوة الخاطئة. يعني أن تبقى ثابتا، تجمع المعلومة الصحيحة، ثم تتصرف بحكمة.",
+      leadership: "القيادة هي مساعدة الناس للوصول إلى نتيجة أفضل. القائد الجيد يستمع أولا، يشرح بوضوح، ويجعل الخطوة التالية أسهل.",
+      default: "نعم. أستطيع أن أتحدث معك، أشرح الأفكار، أجيب عن الأسئلة البسيطة، أشجعك، وأربط الحديث بـ AgriNexus عندما تريد أن تقوم بخطوة."
+    },
+    pt: {
+      how_are_you: `Estou aqui com voce, ${name}. Posso ouvir, responder com calma e guiar um passo de cada vez. Sobre o que voce quer falar?`,
+      rural_farmers: "Ajudar agricultores rurais importa porque comida, renda, saude da familia e trabalho local muitas vezes comecam na fazenda. Se a tecnologia fala claro, ela pode ajudar com lavouras, compradores, rotas seguras e melhores decisoes.",
+      talk_people: "Sim. Podemos conversar como duas pessoas. Diga o que esta na sua mente, e eu respondo de forma simples ou transformo isso em uma acao do AgriNexus se ajudar.",
+      joke: "Claro, algo leve: o agricultor pediu direcoes ao mapa, e o mapa disse: primeiro me diga qual estrada ainda existe depois da chuva. Quer outra ou voltamos ao trabalho?",
+      story: "Uma agricultora tinha pouca semente e um campo seco. Ela nao desistiu; plantou com cuidado, economizou agua, pediu conselho e olhou o campo toda manha. Um passo firme pode virar colheita.",
+      encouragement: "Voce nao precisa resolver tudo de uma vez. De um passo claro, depois o proximo. Eu posso ficar com voce, simplificar e ajudar a seguir em frente.",
+      tired: "Eu te escuto. Respire e va mais devagar. Se for cansaco ou estresse, agua, descanso e um pequeno passo podem ajudar. Se voce estiver inseguro ou muito mal, procure ajuda local agora.",
+      mandela: "Nelson Mandela foi um lider sul-africano que lutou contra o apartheid, passou muitos anos preso e depois se tornou presidente da Africa do Sul. Ele e lembrado por coragem, perdao e lideranca.",
+      teamwork: "Trabalho em equipe significa pessoas trabalhando juntas por um objetivo. Precisa de confianca, papeis claros, escuta e acompanhamento.",
+      education: "Educacao importa porque da mais escolhas. Pode ajudar agricultores, estudantes, pacientes e familias a tomar decisoes melhores.",
+      platform_bridge: "No AgriNexus, uma conversa normal pode virar ajuda: eu explico a ideia, faco uma pergunta util e abro o caminho certo para saude, agricultura, aprendizagem, trabalho, comercio ou mapas.",
+      patience: "Paciencia e continuar sem correr para o passo errado. Significa ficar firme, juntar boa informacao e agir com cuidado.",
+      leadership: "Lideranca e ajudar pessoas a chegar a um resultado melhor. Bons lideres escutam primeiro, explicam com clareza e tornam o proximo passo mais facil.",
+      default: "Sim. Posso conversar, explicar ideias, responder perguntas simples, encorajar e conectar a conversa ao AgriNexus quando voce quiser agir."
+    }
+  };
+  const response = (localized[language] || localized.en)[kind] || (localized[language] || localized.en).default;
+  if (language !== "en" || detectedLanguage) {
+    return { response, language, kind };
+  }
   if (/\b(how are you|how do you feel|are you okay)\b/.test(lower)) {
-    return `I am here with you, ${name}. I am ready to listen, answer, and guide one step at a time. What would you like to talk about?`;
+    return { response: localized.en.how_are_you, language: "en", kind };
   }
   if (/\b(helping rural farmers|rural farmers|farmers)\b/.test(lower) && /\b(think|important|matter|value|helping)\b/.test(lower)) {
-    return "Helping rural farmers matters because food, income, family health, and local jobs often start with the farm. If technology listens in plain language, it can help farmers understand crop problems, find buyers, move products safely, and make better choices without needing to be technical.";
+    return { response: localized.en.rural_farmers, language: "en", kind };
   }
   if (/\b(can we talk|talk with me|what do you think)\b/.test(lower)) {
-    return "Yes. We can talk like two people. Tell me what is on your mind, and I will answer plainly or help turn it into an AgriNexus action if that is useful.";
+    return { response: localized.en.talk_people, language: "en", kind };
   }
   if (/\b(joke|make me laugh)\b/.test(lower)) {
-    return "I can keep it light. Here is one: the farmer asked the map for directions, and the map said, first tell me which road still exists after the rain. Now tell me if you want another one or if we should get back to work.";
+    return { response: localized.en.joke, language: "en", kind };
   }
   if (/\b(story)\b/.test(lower)) {
-    return "Here is a short one. A farmer had one small bag of seed and a big dry field. Instead of giving up, she planted carefully, saved water, asked neighbors for advice, and checked the field every morning. The lesson is simple: one steady step can become a harvest.";
+    return { response: localized.en.story, language: "en", kind };
   }
   if (/\b(encourag\w*|motivat\w*|hope)\b/.test(lower)) {
-    return "You do not have to solve everything at once. Take one clear step, then the next one. I can stay with you, simplify the work, and help you move forward.";
+    return { response: localized.en.encouragement, language: "en", kind };
   }
   if (/\b(tired|nervous|sad|scared|lost|overwhelmed)\b/.test(lower)) {
-    return "I hear you. Take a breath and slow the moment down. If this is stress or tiredness, rest, water, and one small next step can help. If you feel unsafe or very unwell, reach a trusted person or local care now.";
+    return { response: localized.en.tired, language: "en", kind };
   }
   if (/\bnelson mandela\b/.test(lower)) {
-    return "Nelson Mandela was a South African leader who fought apartheid, spent many years in prison, and later became president of South Africa. Many people remember him for courage, forgiveness, and leadership through difficult history.";
+    return { response: localized.en.mandela, language: "en", kind };
   }
   if (/\bteamwork\b/.test(lower)) {
-    return "Teamwork means people working together toward one goal. Good teamwork needs trust, clear roles, listening, and follow-through. On AgriNexus, that can mean a farmer, clinic, driver, buyer, and support worker all seeing the next step clearly.";
+    return { response: localized.en.teamwork, language: "en", kind };
   }
   if (/\beducation\b/.test(lower)) {
-    return "Education matters because it gives people more choices. It can help a farmer improve yield, a student find work, a patient understand care instructions, and a family make safer decisions.";
+    return { response: localized.en.education, language: "en", kind };
   }
   if (/\bconnect this to agrinexus\b/.test(lower)) {
-    return "Connected to AgriNexus, this means Nexus can turn a normal conversation into help: explain the idea, ask one useful question, then open the right path for health, farming, learning, work, trade, or maps when the person is ready.";
+    return { response: localized.en.platform_bridge, language: "en", kind };
   }
   if (/\bpatience\b/.test(lower)) {
-    return "Patience is the ability to keep moving without rushing the wrong step. It does not mean doing nothing; it means staying steady while you gather the right information and act wisely.";
+    return { response: localized.en.patience, language: "en", kind };
   }
   if (/\bleadership\b/.test(lower)) {
-    return "Leadership means helping people move toward a better outcome. The best leaders listen first, explain clearly, protect trust, and make the next step easier for everyone.";
+    return { response: localized.en.leadership, language: "en", kind };
   }
-  return "Yes. I can have a general conversation, explain ideas, answer simple questions, encourage you, and connect the conversation back to AgriNexus when you want action. What would you like to talk about?";
+  return { response: localized.en.default, language: "en", kind };
 }
 
 async function generalConversationResponse(db, user, command = "", options = {}) {
   ensureAiProfile(db.profile);
   const moduleSignal = { module: "Agent AI", section: "agent" };
   const memories = retrieveAgentMemories(db.profile, command, 4);
-  let response = localGeneralConversationAnswer(db, user, command);
+  const localAnswer = localGeneralConversationAnswer(db, user, command, options);
+  let response = localAnswer.response;
+  let responseLanguage = localAnswer.language || "en";
+  let conversationKind = localAnswer.kind || "default";
   let provider = "local-general-conversation";
   if (process.env.OPENAI_API_KEY) {
     try {
@@ -15641,6 +15803,7 @@ async function generalConversationResponse(db, user, command = "", options = {})
       const payload = await aiResponse.json().catch(() => ({}));
       if (!aiResponse.ok) throw new Error(payload.error?.message || aiResponse.statusText);
       response = extractResponseText(payload) || response;
+      responseLanguage = normalizeConversationLanguage(options.targetLanguage || user?.language || detectGeneralConversationLanguage(command) || "en");
       provider = "openai-general-conversation";
     } catch (error) {
       provider = "local-after-openai-general-conversation-error";
@@ -15678,6 +15841,9 @@ async function generalConversationResponse(db, user, command = "", options = {})
       suppressBehaviorNudge: true,
       provider,
       moduleSignal,
+      responseLanguage,
+      conversationKind,
+      detectedLanguage: detectGeneralConversationLanguage(command) || null,
       suggestedReplies: ["tell me more", "explain that simpler", "connect this to AgriNexus", "what should I do next"]
     }
   };
