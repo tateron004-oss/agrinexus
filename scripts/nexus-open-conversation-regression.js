@@ -84,6 +84,42 @@ const cases = [
     section: "health",
     includes: ["one step", "where", "need"],
     label: "mixed ambiguous human need"
+  },
+  {
+    prompt: "how are you today",
+    section: "agent",
+    includes: ["here", "listen", "talk"],
+    label: "general small talk"
+  },
+  {
+    prompt: "can we talk like people",
+    section: "agent",
+    includes: ["talk", "people", "mind"],
+    label: "open human conversation"
+  },
+  {
+    prompt: "tell me something encouraging",
+    section: "agent",
+    includes: ["one", "step", "forward"],
+    label: "encouragement conversation"
+  },
+  {
+    prompt: "who was Nelson Mandela",
+    section: "agent",
+    includes: ["South African", "apartheid", "leadership"],
+    label: "general history question"
+  },
+  {
+    prompt: "what is teamwork",
+    section: "agent",
+    includes: ["people", "goal", "trust"],
+    label: "general concept question"
+  },
+  {
+    prompt: "i am tired today",
+    section: "agent",
+    includes: ["rest", "water", "small next step"],
+    label: "general emotional support"
   }
 ];
 

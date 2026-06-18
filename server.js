@@ -15547,6 +15547,135 @@ async function everydayEncyclopediaResponse(db, user, command = "", options = {}
   };
 }
 
+function isGeneralConversationQuestion(command = "") {
+  const lower = String(command || "").toLowerCase().replace(/\s+/g, " ").trim();
+  if (!lower) return false;
+  if (utilityAssistantKind(command, lower) || isCurrentKnowledgeQuestion(command) || isEverydayEncyclopediaQuestion(command)) return false;
+  if (/\b(open|start|run|create|submit|send|call|message|apply|pay|checkout|book|schedule|delete|change language|switch language|track|show map|find clinic|need doctor|need medicine|sell crop|need work|start course)\b/.test(lower)) return false;
+  if (/\b(doctor|clinic|medicine|pharmacy|crop|farm|buyer|seller|job|course|lesson|map|route|shipment|drone|provider|intake)\b/.test(lower)
+    && /\b(need|want|help|find|where|nearest|apply|sell|track|start|open|show|call|contact)\b/.test(lower)) return false;
+  const smallTalk = /\b(how are you|how do you feel|are you okay|can we talk|talk with me|tell me a joke|make me laugh|tell me a story|tell me something encouraging|encourage me|i am tired|i'm tired|i feel tired|i am nervous|i'm nervous|i feel sad|i am scared|i'm scared|i feel lost|i feel overwhelmed|what do you think)\b/.test(lower);
+  const generalQuestion = /^(who|what|why|how|when|where|can|could|would|should|tell|explain|describe|define)\b/.test(lower)
+    && /\b(nelson mandela|teamwork|leadership|patience|confidence|hope|education|family|community|trust|business idea|success|motivation|history|science|music|culture|respect|communication)\b/.test(lower);
+  return smallTalk || generalQuestion;
+}
+
+function localGeneralConversationAnswer(db, user, command = "") {
+  const lower = String(command || "").toLowerCase().replace(/\s+/g, " ").trim();
+  const name = db.profile.agentMemory.userModel?.name || db.profile.agentMemory.userName || user?.name?.split(/\s+/)[0] || "there";
+  if (/\b(how are you|how do you feel|are you okay)\b/.test(lower)) {
+    return `I am here with you, ${name}. I am ready to listen, answer, and guide one step at a time. What would you like to talk about?`;
+  }
+  if (/\b(can we talk|talk with me|what do you think)\b/.test(lower)) {
+    return "Yes. We can talk like two people. Tell me what is on your mind, and I will answer plainly or help turn it into an AgriNexus action if that is useful.";
+  }
+  if (/\b(joke|make me laugh)\b/.test(lower)) {
+    return "I can keep it light. Here is one: the farmer asked the map for directions, and the map said, first tell me which road still exists after the rain. Now tell me if you want another one or if we should get back to work.";
+  }
+  if (/\b(story)\b/.test(lower)) {
+    return "Here is a short one. A farmer had one small bag of seed and a big dry field. Instead of giving up, she planted carefully, saved water, asked neighbors for advice, and checked the field every morning. The lesson is simple: one steady step can become a harvest.";
+  }
+  if (/\b(encourag|motivat|hope)\b/.test(lower)) {
+    return "You do not have to solve everything at once. Take one clear step, then the next one. I can stay with you, simplify the work, and help you move forward.";
+  }
+  if (/\b(tired|nervous|sad|scared|lost|overwhelmed)\b/.test(lower)) {
+    return "I hear you. Take a breath and slow the moment down. If this is stress or tiredness, rest, water, and one small next step can help. If you feel unsafe or very unwell, reach a trusted person or local care now.";
+  }
+  if (/\bnelson mandela\b/.test(lower)) {
+    return "Nelson Mandela was a South African leader who fought apartheid, spent many years in prison, and later became president of South Africa. Many people remember him for courage, forgiveness, and leadership through difficult history.";
+  }
+  if (/\bteamwork\b/.test(lower)) {
+    return "Teamwork means people working together toward one goal. Good teamwork needs trust, clear roles, listening, and follow-through. On AgriNexus, that can mean a farmer, clinic, driver, buyer, and support worker all seeing the next step clearly.";
+  }
+  if (/\beducation\b/.test(lower)) {
+    return "Education matters because it gives people more choices. It can help a farmer improve yield, a student find work, a patient understand care instructions, and a family make safer decisions.";
+  }
+  if (/\bpatience\b/.test(lower)) {
+    return "Patience is the ability to keep moving without rushing the wrong step. It does not mean doing nothing; it means staying steady while you gather the right information and act wisely.";
+  }
+  if (/\bleadership\b/.test(lower)) {
+    return "Leadership means helping people move toward a better outcome. The best leaders listen first, explain clearly, protect trust, and make the next step easier for everyone.";
+  }
+  return "Yes. I can have a general conversation, explain ideas, answer simple questions, encourage you, and connect the conversation back to AgriNexus when you want action. What would you like to talk about?";
+}
+
+async function generalConversationResponse(db, user, command = "", options = {}) {
+  ensureAiProfile(db.profile);
+  const moduleSignal = { module: "Agent AI", section: "agent" };
+  const memories = retrieveAgentMemories(db.profile, command, 4);
+  let response = localGeneralConversationAnswer(db, user, command);
+  let provider = "local-general-conversation";
+  if (process.env.OPENAI_API_KEY) {
+    try {
+      const aiResponse = await fetchWithTimeout("https://api.openai.com/v1/responses", {
+        method: "POST",
+        headers: {
+          authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+          "content-type": "application/json"
+        },
+        body: JSON.stringify({
+          model: process.env.OPENAI_AGENT_MODEL || process.env.OPENAI_MODEL || "gpt-4o-mini",
+          input: [
+            {
+              role: "system",
+              content: [
+                "You are Nexus, the warm conversational assistant inside AgriNexus.",
+                "Have a natural general conversation, not a workflow menu.",
+                "Answer plainly for non-technical rural users.",
+                "If the user asks for current facts, prices, places, medical diagnosis, legal advice, or financial decisions, explain the limit and offer the safe next step.",
+                "If useful, connect the answer back to AgriNexus, but do not force a workflow.",
+                "Keep spoken answers concise and human: 2 to 5 short sentences."
+              ].join(" ")
+            },
+            { role: "user", content: JSON.stringify({ message: command, userName: user?.name, memories, targetLanguage: options.targetLanguage || user?.language || "en" }) }
+          ],
+          max_output_tokens: 340
+        })
+      }, 14000);
+      const payload = await aiResponse.json().catch(() => ({}));
+      if (!aiResponse.ok) throw new Error(payload.error?.message || aiResponse.statusText);
+      response = extractResponseText(payload) || response;
+      provider = "openai-general-conversation";
+    } catch (error) {
+      provider = "local-after-openai-general-conversation-error";
+      logIntegration(db, {
+        providerId: "openai",
+        module: "AI",
+        action: "agent.general_conversation_error",
+        status: "fallback",
+        detail: error.message || "OpenAI general conversation unavailable.",
+        metadata: { command },
+        dispatch: false
+      });
+    }
+  }
+  db.profile.agentMemory.lastStatus = "general-conversation";
+  db.profile.agentMemory.lastSummary = response;
+  db.profile.agentMemory.lastRecommendedSection = "agent";
+  db.profile.agentMemory.updatedAt = new Date().toISOString();
+  rememberAgentMemory(db.profile, `General conversation: ${command}`, { source: "nexus-general-conversation", category: "question", module: "Agent AI", confidence: 0.82 });
+  logIntegration(db, {
+    providerId: "openai",
+    module: "AI",
+    action: "agent.general_conversation_answered",
+    detail: response.slice(0, 240),
+    metadata: { provider, command, memoriesUsed: memories.map(item => item.id).filter(Boolean) },
+    dispatch: false
+  });
+  return {
+    intent: "conversation.general",
+    status: "completed",
+    response,
+    metadata: {
+      conversationMode: true,
+      redirectSection: "agent",
+      provider,
+      moduleSignal,
+      suggestedReplies: ["tell me more", "explain that simpler", "connect this to AgriNexus", "what should I do next"]
+    }
+  };
+}
+
 async function currentKnowledgeQuestionResponse(db, user, command = "", options = {}) {
   const live = await liveKnowledgeContextForCommand(db, user, command);
   const moduleSignal = conversationModuleSignal(command);
@@ -18819,11 +18948,14 @@ function extractConversationalName(text) {
   for (const pattern of patterns) {
     const match = value.match(pattern);
     if (match?.[1]) {
-      return match[1]
+      const candidate = match[1]
         .replace(/[,.!?].*$/, "")
         .trim()
         .split(/\s+/)
-        .slice(0, 3)
+        .slice(0, 3);
+      const rawCandidate = candidate.join(" ").toLowerCase();
+      if (/^(tired|sad|scared|afraid|nervous|sick|hungry|lost|confused|overwhelmed|ready|new|fine|okay|ok|good|bad|hot|cold|happy|angry|worried)(\b|$)/.test(rawCandidate)) return "";
+      return candidate
         .map(part => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
         .join(" ");
     }
@@ -21111,6 +21243,10 @@ async function runAgentCommand(db, user, command, options = {}) {
   }
   const urgentHealth = conversational ? urgentHealthSafetyResponse(db, user, text) : null;
   if (urgentHealth) return urgentHealth;
+  if (conversational && isGeneralConversationQuestion(text)) {
+    clearSimpleVoiceTurn(db);
+    return generalConversationResponse(db, user, text, options);
+  }
   const simpleTurn = conversational ? continueSimpleVoiceTurn(db, user, text) : null;
   if (simpleTurn) return simpleTurn;
   if (conversational && utilityAssistantKind(text, lower) === "weather") {
@@ -21962,6 +22098,9 @@ async function runAgentCommand(db, user, command, options = {}) {
   }
   const earlyAddressedModuleGreeting = await moduleGreetingResponse(db, user, text, lower);
   if (earlyAddressedModuleGreeting) return earlyAddressedModuleGreeting;
+  if (conversational && isGeneralConversationQuestion(text)) {
+    return generalConversationResponse(db, user, text, options);
+  }
   if (conversational && isRuralDistressConversation(text)) {
     return conversationalReasoningResponse(db, user, text, { ...options, openDialog: true });
   }
@@ -22135,6 +22274,9 @@ async function runAgentCommand(db, user, command, options = {}) {
   }
   if (conversational && isCurrentKnowledgeQuestion(text)) {
     return currentKnowledgeQuestionResponse(db, user, text, options);
+  }
+  if (conversational && isGeneralConversationQuestion(text)) {
+    return generalConversationResponse(db, user, text, options);
   }
   if (conversational && isOpenDialogConversation(text, options)) {
     return conversationalReasoningResponse(db, user, text, { ...options, openDialog: true });
@@ -22809,6 +22951,10 @@ async function runAgentCommand(db, user, command, options = {}) {
     return guide;
   }
 
+  if (conversational && isGeneralConversationQuestion(text)) {
+    return generalConversationResponse(db, user, text, options);
+  }
+
   if (conversational && isOpenEndedConversation(lower)) {
     return conversationalReasoningResponse(db, user, text, options);
   }
@@ -23104,6 +23250,9 @@ async function runAgentCommand(db, user, command, options = {}) {
   }
 
   const { country, route } = activeContext(db);
+  if (conversational && isGeneralConversationQuestion(text)) {
+    return generalConversationResponse(db, user, text, options);
+  }
   if (String(command || "").trim().split(/\s+/).length <= 5 && conversational) return voiceRecoveryResponse(db);
   const aiResult = await runAi("copilot", country, route, db.profile);
   const run = recordAiRun(db, { type: "copilot", country, route, result: aiResult, module: "AI" });
