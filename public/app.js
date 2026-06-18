@@ -89,8 +89,8 @@ let routeTrackingWatchId = null;
 let routeTrackingPoints = [];
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-289";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v269";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-290";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v270";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
 const VOICE_ATTENTION_DELAY_MS = 900;
@@ -5195,7 +5195,7 @@ function goSection(sectionId, options = {}) {
     });
   }
   if (experienceMode === "user" && options.keepAssistant !== true) closeAskNexus({ silent: true });
-  if (sectionId === "map") setTimeout(() => map && map.invalidateSize(), 100);
+  if (sectionId === "map") setTimeout(() => safeInvalidateLeafletMap(map), 100);
   renderUserSimpleActiveSection(sectionId);
   if (experienceMode === "user" && sectionId === "dashboard") renderUserWorkspace();
   if (experienceMode === "user" && options.openDefaultAction === true) {
@@ -12644,7 +12644,7 @@ function renderMap() {
   });
   map.setView([country.lat, country.lng], country.zoom);
   drawLiveRouteTracking();
-  setTimeout(() => map.invalidateSize(), 100);
+  setTimeout(() => safeInvalidateLeafletMap(map), 100);
 }
 
 function shipmentTrackingState(route = activeRoute(), order = null) {
@@ -13071,6 +13071,21 @@ function freshLeafletCanvas(selector) {
   return canvas.isConnected ? canvas : null;
 }
 
+function safeInvalidateLeafletMap(targetMap) {
+  if (!targetMap) return false;
+  try {
+    const container = targetMap.getContainer?.();
+    if (!container?.isConnected) return false;
+    const rect = container.getBoundingClientRect();
+    if (rect.width < 2 || rect.height < 2) return false;
+    targetMap.invalidateSize?.();
+    return true;
+  } catch (error) {
+    console.warn("Map resize skipped until visible", error?.message || error);
+    return false;
+  }
+}
+
 function renderUserRealMap() {
   const canvas = $("#userMapCanvas");
   if (!canvas || !data) return;
@@ -13117,7 +13132,7 @@ function renderUserRealMap() {
   addNearbyFacilityMarkers(userMapLayers.facilities, country, "Support point");
   addKenyaMedicalTransportLayer(userMap, userMapLayers.facilities, country);
   fitMapToSurroundingRegion(userMap, route, country, 5);
-  setTimeout(() => userMap?.invalidateSize(), 120);
+  setTimeout(() => safeInvalidateLeafletMap(userMap), 120);
 }
 
 function renderUserHealthMap() {
@@ -13159,7 +13174,7 @@ function renderUserHealthMap() {
   addNearbyFacilityMarkers(userHealthMapLayers.facilities, country, "Care point");
   addKenyaMedicalTransportLayer(userHealthMap, userHealthMapLayers.facilities, country);
   fitMapToSurroundingRegion(userHealthMap, activeRoute(), country, 5);
-  setTimeout(() => userHealthMap?.invalidateSize(), 120);
+  setTimeout(() => safeInvalidateLeafletMap(userHealthMap), 120);
 }
 
 function ruralHealthFallbackSites(country = activeCountry()) {
@@ -13319,7 +13334,7 @@ function renderRuralHealthAccessMap() {
   const bounds = L.latLngBounds([[latestPoint.lat, latestPoint.lng], ...sites.map(site => [site.lat, site.lng])]);
   if (bounds.isValid?.()) ruralHealthAccessMap.fitBounds(bounds.pad(.45), { maxZoom: 8, padding: [30, 30] });
   else fitMapToSurroundingRegion(ruralHealthAccessMap, activeRoute(), country, 5);
-  setTimeout(() => ruralHealthAccessMap?.invalidateSize(), 160);
+  setTimeout(() => safeInvalidateLeafletMap(ruralHealthAccessMap), 160);
 }
 
 function renderShipmentPreviewMap() {
@@ -13362,7 +13377,7 @@ function renderShipmentPreviewMap() {
   addOperationalCountryMarkers(shipmentPreviewMap, markerLayer, country);
   addNearbyFacilityMarkers(facilityLayer, country, "Logistics support point");
   fitMapToSurroundingRegion(shipmentPreviewMap, route, country, 6);
-  setTimeout(() => shipmentPreviewMap?.invalidateSize(), 140);
+  setTimeout(() => safeInvalidateLeafletMap(shipmentPreviewMap), 140);
 }
 
 function renderHealthHotspotPreviewMap() {
@@ -13399,7 +13414,7 @@ function renderHealthHotspotPreviewMap() {
   addOperationalCountryMarkers(healthHotspotPreviewMap, markerLayer, country, { health: true });
   addNearbyFacilityMarkers(facilityLayer, country, "Care support point");
   fitMapToSurroundingRegion(healthHotspotPreviewMap, activeRoute(), country, 5);
-  setTimeout(() => healthHotspotPreviewMap?.invalidateSize(), 140);
+  setTimeout(() => safeInvalidateLeafletMap(healthHotspotPreviewMap), 140);
 }
 
 function renderWorkflowLiveMap(config = pendingWorkflow || {}) {
@@ -13457,7 +13472,7 @@ function renderWorkflowLiveMap(config = pendingWorkflow || {}) {
   } else {
     fitMapToSurroundingRegion(workflowLeafletMap, route, country, 6);
   }
-  setTimeout(() => workflowLeafletMap?.invalidateSize(), 140);
+  setTimeout(() => safeInvalidateLeafletMap(workflowLeafletMap), 140);
 }
 
 function closeWorkflowModal() {
@@ -18711,8 +18726,8 @@ function openFullScaleUserMap(response = "Full map is open. You can zoom, drag, 
   setTimeout(() => {
     renderMap();
     renderUserRealMap();
-    map?.invalidateSize?.();
-    userMap?.invalidateSize?.();
+    safeInvalidateLeafletMap(map);
+    safeInvalidateLeafletMap(userMap);
     const target = $("#userMapCanvas") || $("#mapCanvas") || $("#map");
     target?.scrollIntoView?.({ behavior: "smooth", block: "start" });
   }, 120);
@@ -18740,7 +18755,7 @@ function openCountryMapFromVoice(country, response = "") {
     userMapLayers.facilities?.clearLayers?.();
     addOperationalCountryMarkers(userMap, userMapLayers.markers, voiceMapCountryOverride);
     addNearbyFacilityMarkers(userMapLayers.facilities, voiceMapCountryOverride, "Support point");
-    userMap.invalidateSize?.();
+    safeInvalidateLeafletMap(userMap);
   }, 220);
   return opened;
 }
