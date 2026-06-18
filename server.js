@@ -15550,13 +15550,13 @@ async function everydayEncyclopediaResponse(db, user, command = "", options = {}
 function isGeneralConversationQuestion(command = "") {
   const lower = String(command || "").toLowerCase().replace(/\s+/g, " ").trim();
   if (!lower) return false;
-  if (utilityAssistantKind(command, lower) || isCurrentKnowledgeQuestion(command) || isEverydayEncyclopediaQuestion(command)) return false;
+  if (utilityAssistantKind(command, lower) || isCurrentKnowledgeQuestion(command)) return false;
   if (/\b(open|start|run|create|submit|send|call|message|apply|pay|checkout|book|schedule|delete|change language|switch language|track|show map|find clinic|need doctor|need medicine|sell crop|need work|start course)\b/.test(lower)) return false;
   if (/\b(doctor|clinic|medicine|pharmacy|crop|farm|buyer|seller|job|course|lesson|map|route|shipment|drone|provider|intake)\b/.test(lower)
     && /\b(need|want|help|find|where|nearest|apply|sell|track|start|open|show|call|contact)\b/.test(lower)) return false;
-  const smallTalk = /\b(how are you|how do you feel|are you okay|can we talk|talk with me|tell me a joke|make me laugh|tell me a story|tell me something encouraging|encourage me|i am tired|i'm tired|i feel tired|i am nervous|i'm nervous|i feel sad|i am scared|i'm scared|i feel lost|i feel overwhelmed|what do you think)\b/.test(lower);
+  const smallTalk = /\b(how are you|how do you feel|are you okay|can we talk|talk with me|tell me a joke|make me laugh|tell me (a )?(short )?story|tell me something encouraging|encourage me|i am tired|i'm tired|i feel tired|i am nervous|i'm nervous|i feel sad|i am scared|i'm scared|i feel lost|i feel overwhelmed|what do you think|connect this to agrinexus)\b/.test(lower);
   const generalQuestion = /^(who|what|why|how|when|where|can|could|would|should|tell|explain|describe|define)\b/.test(lower)
-    && /\b(nelson mandela|teamwork|leadership|patience|confidence|hope|education|family|community|trust|business idea|success|motivation|history|science|music|culture|respect|communication)\b/.test(lower);
+    && /\b(nelson mandela|teamwork|leadership|patience|confidence|hope|education|family|community|trust|business idea|success|motivation|history|science|music|culture|respect|communication|rural farmers|farmers|helping rural)\b/.test(lower);
   return smallTalk || generalQuestion;
 }
 
@@ -15565,6 +15565,9 @@ function localGeneralConversationAnswer(db, user, command = "") {
   const name = db.profile.agentMemory.userModel?.name || db.profile.agentMemory.userName || user?.name?.split(/\s+/)[0] || "there";
   if (/\b(how are you|how do you feel|are you okay)\b/.test(lower)) {
     return `I am here with you, ${name}. I am ready to listen, answer, and guide one step at a time. What would you like to talk about?`;
+  }
+  if (/\b(helping rural farmers|rural farmers|farmers)\b/.test(lower) && /\b(think|important|matter|value|helping)\b/.test(lower)) {
+    return "Helping rural farmers matters because food, income, family health, and local jobs often start with the farm. If technology listens in plain language, it can help farmers understand crop problems, find buyers, move products safely, and make better choices without needing to be technical.";
   }
   if (/\b(can we talk|talk with me|what do you think)\b/.test(lower)) {
     return "Yes. We can talk like two people. Tell me what is on your mind, and I will answer plainly or help turn it into an AgriNexus action if that is useful.";
@@ -15575,7 +15578,7 @@ function localGeneralConversationAnswer(db, user, command = "") {
   if (/\b(story)\b/.test(lower)) {
     return "Here is a short one. A farmer had one small bag of seed and a big dry field. Instead of giving up, she planted carefully, saved water, asked neighbors for advice, and checked the field every morning. The lesson is simple: one steady step can become a harvest.";
   }
-  if (/\b(encourag|motivat|hope)\b/.test(lower)) {
+  if (/\b(encourag\w*|motivat\w*|hope)\b/.test(lower)) {
     return "You do not have to solve everything at once. Take one clear step, then the next one. I can stay with you, simplify the work, and help you move forward.";
   }
   if (/\b(tired|nervous|sad|scared|lost|overwhelmed)\b/.test(lower)) {
@@ -15589,6 +15592,9 @@ function localGeneralConversationAnswer(db, user, command = "") {
   }
   if (/\beducation\b/.test(lower)) {
     return "Education matters because it gives people more choices. It can help a farmer improve yield, a student find work, a patient understand care instructions, and a family make safer decisions.";
+  }
+  if (/\bconnect this to agrinexus\b/.test(lower)) {
+    return "Connected to AgriNexus, this means Nexus can turn a normal conversation into help: explain the idea, ask one useful question, then open the right path for health, farming, learning, work, trade, or maps when the person is ready.";
   }
   if (/\bpatience\b/.test(lower)) {
     return "Patience is the ability to keep moving without rushing the wrong step. It does not mean doing nothing; it means staying steady while you gather the right information and act wisely.";
@@ -15669,6 +15675,7 @@ async function generalConversationResponse(db, user, command = "", options = {})
     metadata: {
       conversationMode: true,
       redirectSection: "agent",
+      suppressBehaviorNudge: true,
       provider,
       moduleSignal,
       suggestedReplies: ["tell me more", "explain that simpler", "connect this to AgriNexus", "what should I do next"]

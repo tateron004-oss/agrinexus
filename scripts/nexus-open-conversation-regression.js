@@ -120,6 +120,18 @@ const cases = [
     section: "agent",
     includes: ["rest", "water", "small next step"],
     label: "general emotional support"
+  },
+  {
+    prompt: "what do you think about helping rural farmers",
+    section: "agent",
+    includes: ["food", "income", "plain language"],
+    label: "general farmer value conversation"
+  },
+  {
+    prompt: "connect this to AgriNexus",
+    section: "agent",
+    includes: ["normal conversation", "open the right path", "when the person is ready"],
+    label: "general conversation to platform bridge"
   }
 ];
 
