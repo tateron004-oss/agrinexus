@@ -956,6 +956,8 @@ function send(res, status, body, headers = {}) {
 }
 
 function rateLimit(req, limit = 180, windowMs = 60_000) {
+  const configuredLimit = Number(process.env.AGRINEXUS_RATE_LIMIT_PER_WINDOW || limit);
+  const effectiveLimit = Number.isFinite(configuredLimit) && configuredLimit > 0 ? configuredLimit : limit;
   const key = `${req.socket.remoteAddress || "local"}:${req.url.split("?")[0]}`;
   const now = Date.now();
   const bucket = rateBuckets.get(key) || { count: 0, resetAt: now + windowMs };
@@ -965,7 +967,7 @@ function rateLimit(req, limit = 180, windowMs = 60_000) {
   }
   bucket.count += 1;
   rateBuckets.set(key, bucket);
-  return bucket.count <= limit;
+  return bucket.count <= effectiveLimit;
 }
 
 function parseCookies(req) {
@@ -15559,10 +15561,10 @@ function isGeneralConversationQuestion(command = "") {
   if (/\b(open|start|run|create|submit|send|call|message|apply|pay|checkout|book|schedule|delete|change language|switch language|track|show map|find clinic|need doctor|need medicine|sell crop|need work|start course)\b/.test(lower)) return false;
   if (/\b(doctor|clinic|medicine|pharmacy|crop|farm|buyer|seller|job|course|lesson|map|route|shipment|drone|provider|intake)\b/.test(lower)
     && /\b(need|want|help|find|where|nearest|apply|sell|track|start|open|show|call|contact)\b/.test(lower)) return false;
-  const smallTalk = /\b(how are you|how do you feel|are you okay|can we talk|talk with me|tell me a joke|make me laugh|tell me (a )?(short )?story|tell me something encouraging|encourage me|i am tired|i'm tired|i feel tired|i am nervous|i'm nervous|i feel sad|i am scared|i'm scared|i feel lost|i feel overwhelmed|what do you think|connect this to agrinexus|bonjour|bonsoir|salut|comment ca va|comment ça va|pouvons nous parler|hola|buenos dias|buenas tardes|buenas noches|como estas|cómo estás|podemos hablar|jambo|habari|mambo|tunaweza kuongea|ola|olá|bom dia|boa tarde|boa noite|podemos conversar|estoy cansad|je suis fatigue|nimechoka|estou cansad)\b|هل يمكننا التحدث|كيف حالك/.test(lower);
+  const smallTalk = /\b(how are you|how do you feel|are you okay|can we talk|talk with me|tell me a joke|make me laugh|tell me (a )?(short )?story|tell me something encouraging|encourage me|i am tired|i'm tired|i feel tired|i am nervous|i'm nervous|i feel sad|i am scared|i'm scared|i feel lost|i feel overwhelmed|what do you think|connect this to agrinexus|bonjour|bonsoir|salut|comment ca va|comment ça va|pouvons nous parler|je suis fatigue|fatigue|je suis triste|je suis perdu|raconte moi|histoire|encourage moi|hola|buenos dias|buenas tardes|buenas noches|como estas|cómo estás|podemos hablar|estoy cansad\w*|estoy triste|estoy perdido|cuentame|historia|dame motivacion|jambo|habari|mambo|tunaweza kuongea|nimechoka|nina huzuni|nimepotea|niambie hadithi|hadithi|nipe tumaini|ola|olá|bom dia|boa tarde|boa noite|podemos conversar|estou cansad\w*|estou triste|estou perdido|conte uma historia|historia|me de coragem)\b|هل يمكننا التحدث|كيف حالك|أنا متعب|انا متعب|أنا حزين|انا حزين|أنا خائف|انا خائف|احكي لي قصة|شجعني/.test(lower);
   const generalQuestion = /^(who|what|why|how|when|where|can|could|would|should|tell|explain|describe|define)\b/.test(lower)
     && /\b(nelson mandela|teamwork|leadership|patience|confidence|hope|education|family|community|trust|business idea|success|motivation|history|science|music|culture|respect|communication|rural farmers|farmers|helping rural)\b/.test(lower);
-  const multilingualGeneral = /\b(agriculteurs ruraux|agricultores rurales|wakulima|educacion|educación|education|éducation|elimu|educacao|educação|travail d equipe|trabajo en equipo|kazi ya pamoja)\b|المزارعين|التعليم|عمل جماعي/.test(lower);
+  const multilingualGeneral = /\b(agriculteurs ruraux|agricultores rurales|agricultores rurais|wakulima|educacion|educación|education|éducation|elimu|educacao|educação|travail d equipe|trabajo en equipo|kazi ya pamoja|trabalho em equipe|paciencia|paciência|subira|la patience|liderazgo|lideranca|liderança|uongozi|le leadership)\b|المزارعين|التعليم|عمل جماعي|العمل الجماعي|الصبر|القيادة/.test(lower);
   return smallTalk || generalQuestion || multilingualGeneral;
 }
 
@@ -15581,10 +15583,11 @@ function detectGeneralConversationLanguage(command = "") {
   const raw = String(command || "");
   const lower = raw.toLowerCase().replace(/\s+/g, " ").trim();
   if (/[\u0600-\u06ff]/.test(raw)) return "ar";
-  if (/\b(hola|buenos dias|buenas tardes|buenas noches|como estas|cómo estás|podemos hablar|estoy cansad|educacion|educación|agricultor|agricultores|gracias)\b/.test(lower)) return "es";
-  if (/\b(bonjour|bonsoir|salut|comment ca va|comment ça va|pouvons nous parler|je suis fatigue|fatigue|agriculteur|agriculteurs|education|éducation|merci|penses)\b/.test(lower)) return "fr";
-  if (/\b(jambo|habari|mambo|asante|tafadhali|nimechoka|mkulima|wakulima|tunaweza kuongea|elimu|shamba)\b/.test(lower)) return "sw";
-  if (/\b(ola|olá|bom dia|boa tarde|boa noite|como voce esta|como você está|podemos conversar|estou cansad|educacao|educação|agricultor|obrigado)\b/.test(lower)) return "pt";
+  if (/\b(explica|explicame|qué|que)\b.*\b(paciencia|liderazgo|trabajo en equipo|educacion|educación)\b/.test(lower)) return "es";
+  if (/\b(ola|olá|bom dia|boa tarde|boa noite|como voce esta|como você está|podemos conversar|estou cansad\w*|educacao|educação|rurais|voce|você|ajudar|obrigado|trabalho em equipe|lideranca|conte uma historia|me de coragem|paciência|paciencia)\b/.test(lower)) return "pt";
+  if (/\b(hola|buenos dias|buenas tardes|buenas noches|como estas|cómo estás|podemos hablar|estoy cansad\w*|educacion|educación|agricultor|agricultores|gracias|trabajo en equipo|explicame|liderazgo|cuentame|dame motivacion|paciencia)\b/.test(lower)) return "es";
+  if (/\b(bonjour|bonsoir|salut|comment ca va|comment ça va|pouvons nous parler|je suis fatigue|fatigue|agriculteur|agriculteurs|pourquoi|éducation|merci|penses|travail d equipe|travail d'équipe|explique|qu est ce que|c est quoi|raconte moi|encourage moi|la patience)\b/.test(lower)) return "fr";
+  if (/\b(jambo|habari|mambo|asante|tafadhali|nimechoka|mkulima|wakulima|tunaweza kuongea|elimu|shamba|eleza|kazi ya pamoja|uongozi|niambie hadithi|nipe tumaini|subira)\b/.test(lower)) return "sw";
   if (/\b(sannu|ina kwana|na gaji|manomi|noma)\b/.test(lower)) return "ha";
   if (/\b(ekaro|e kaaro|bawo|agbe|oko)\b/.test(lower)) return "yo";
   if (/\b(ndewo|ututu oma|ike gwuru|onye oru ugbo|ugbo)\b/.test(lower)) return "ig";
@@ -15603,9 +15606,9 @@ function generalConversationKind(command = "") {
   if (/\b(joke|make me laugh|blague|rire|chiste|reir|reír|utani|chekesha|piada|rir)\b/.test(lower)) return "joke";
   if (/\b(story|historia|histoire|hadithi|قصة)\b/.test(lower)) return "story";
   if (/\b(encourag\w*|motivat\w*|hope|encourage|motiva|esperanza|espoir|tumaini|matumaini|coragem|مل)\b/.test(lower)) return "encouragement";
-  if (/\b(tired|nervous|sad|scared|lost|overwhelmed|fatigue|fatigué|fatiguée|cansad|nimechoka|triste|nerveux|nerviosa|assustad|خائف|متعب|حزين)\b/.test(lower)) return "tired";
+  if (/\b(tired|nervous|sad|scared|lost|overwhelmed|fatigue|fatigué|fatiguée|cansad\w*|nimechoka|triste|nerveux|nerviosa|assustad\w*|خائف|متعب|حزين)\b/.test(lower)) return "tired";
   if (/\bnelson mandela\b/.test(lower)) return "mandela";
-  if (/\bteamwork|travail d equipe|travail d'équipe|trabajo en equipo|kazi ya pamoja|trabalho em equipe|عمل جماعي\b/.test(lower)) return "teamwork";
+  if (/\bteamwork|travail d equipe|travail d'équipe|trabajo en equipo|kazi ya pamoja|trabalho em equipe|عمل جماعي|العمل الجماعي\b/.test(lower)) return "teamwork";
   if (/\beducation|educacion|educación|education|éducation|elimu|educacao|educação|تعليم\b/.test(lower)) return "education";
   if (/\bconnect this to agrinexus|relie cela a agrinexus|conecta esto con agrinexus|unganisha na agrinexus|conectar isso ao agrinexus\b/.test(lower)) return "platform_bridge";
   if (/\bpatience|paciencia|patience|subira|paciência|صبر\b/.test(lower)) return "patience";
