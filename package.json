@@ -13,6 +13,7 @@
     "provider-engines:smoke": "node scripts/provider-engines-smoke.js",
     "conversation:smoke": "node scripts/conversation-brain-smoke.js",
     "conversation:certify": "node scripts/nexus-conversation-certification.js",
+    "conversation:continuous": "node scripts/nexus-continuous-turn-regression.js",
     "phone:greeting-qa": "node scripts/phone-greeting-qa.js",
     "conversation:rural-eval": "node scripts/synthetic-rural-conversation-eval.js",
     "offline:reasoning-qa": "node scripts/offline-reasoning-brain-qa.js",
