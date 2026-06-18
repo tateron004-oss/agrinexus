@@ -1,6 +1,8 @@
 param(
   [string]$PlatformUrl = "https://agrinexus-platform.onrender.com",
   [string]$UserName = "Ron",
+  [string]$Email = $env:AGRINEXUS_EMAIL,
+  [string]$Password = $env:AGRINEXUS_PASSWORD,
   [string]$DesktopVoiceName = "",
   [string]$SessionCookie = $env:AGRINEXUS_SESSION_COOKIE,
   [switch]$NoOpenBrowser,
@@ -10,6 +12,9 @@ param(
 $ErrorActionPreference = "Stop"
 
 Add-Type -AssemblyName System.Speech
+
+if ([string]::IsNullOrWhiteSpace($Email)) { $Email = "user@agrinexus.org" }
+if ([string]::IsNullOrWhiteSpace($Password)) { $Password = "User2026!" }
 
 $wakePhrases = @(
   "nexus",
@@ -31,8 +36,11 @@ $stopPhrases = @(
 $script:WaitingForCommand = $false
 $script:LastWakeAt = Get-Date
 $script:LastCommand = ""
+$script:LastCommandAt = (Get-Date).AddSeconds(-20)
 $script:LastHypothesisAt = Get-Date
 $script:LastSpeechDetectedAt = Get-Date
+$script:NativeWebSession = $null
+$script:SignedInUser = $null
 
 function Write-NexusStatus {
   param([string]$Message)
@@ -65,9 +73,44 @@ function Open-AgriNexus {
   }
 }
 
+function Ensure-NexusSession {
+  if ($script:NativeWebSession -or ![string]::IsNullOrWhiteSpace($SessionCookie)) { return $true }
+  if ([string]::IsNullOrWhiteSpace($Email) -or [string]::IsNullOrWhiteSpace($Password)) { return $false }
+
+  $body = @{
+    email = $Email
+    password = $Password
+  } | ConvertTo-Json -Depth 4
+
+  try {
+    $loginResponse = Invoke-WebRequest -Method Post -Uri "$PlatformUrl/api/login" -ContentType "application/json" -Body $body -SessionVariable loginSession -TimeoutSec 30
+    $script:NativeWebSession = $loginSession
+    $loginData = $loginResponse.Content | ConvertFrom-Json
+    $script:SignedInUser = $loginData.user
+    if ([string]::IsNullOrWhiteSpace($UserName) -and $script:SignedInUser.name) {
+      $script:EffectiveUserName = $script:SignedInUser.name.Split(" ")[0]
+    }
+    Write-NexusStatus "Desktop session signed in as $($script:SignedInUser.email)."
+    return $true
+  } catch {
+    Write-NexusStatus "Desktop sign-in failed: $($_.Exception.Message)"
+    return $false
+  }
+}
+
 function Send-NexusCommand {
   param([string]$Command)
   if ([string]::IsNullOrWhiteSpace($Command)) { return }
+  $now = Get-Date
+  $normalizedCommand = ($Command.ToLowerInvariant() -replace "[^\p{L}\p{N}\s]", " " -replace "\s+", " ").Trim()
+  if ($normalizedCommand -eq $script:LastCommand -and (New-TimeSpan -Start $script:LastCommandAt -End $now).TotalSeconds -lt 2) {
+    Write-NexusDiagnostic "Ignored duplicate command: $Command"
+    return
+  }
+  $script:LastCommand = $normalizedCommand
+  $script:LastCommandAt = $now
+
+  [void](Ensure-NexusSession)
   $headers = @{}
   if (![string]::IsNullOrWhiteSpace($SessionCookie)) {
     $headers["Cookie"] = $SessionCookie
@@ -81,7 +124,11 @@ function Send-NexusCommand {
     mode = "User"
   } | ConvertTo-Json -Depth 5
   try {
-    $response = Invoke-RestMethod -Method Post -Uri "$PlatformUrl/api/agent/command" -Headers $headers -ContentType "application/json" -Body $body -TimeoutSec 30
+    if ($script:NativeWebSession) {
+      $response = Invoke-RestMethod -Method Post -Uri "$PlatformUrl/api/agent/command" -WebSession $script:NativeWebSession -ContentType "application/json" -Body $body -TimeoutSec 30
+    } else {
+      $response = Invoke-RestMethod -Method Post -Uri "$PlatformUrl/api/agent/command" -Headers $headers -ContentType "application/json" -Body $body -TimeoutSec 30
+    }
     $intent = $response.commandResult.intent
     $reply = $response.commandResult.response
     Write-NexusStatus "Command sent: $Command"
@@ -95,7 +142,11 @@ function Send-NexusCommand {
     }
   } catch {
     Write-NexusStatus "Command handoff failed: $($_.Exception.Message)"
-    Speak-Nexus "I could not reach AgriNexus yet. Check the internet or platform server."
+    if ([string]::IsNullOrWhiteSpace($SessionCookie) -and ([string]::IsNullOrWhiteSpace($Email) -or [string]::IsNullOrWhiteSpace($Password))) {
+      Speak-Nexus "I can hear you through the computer microphone. To act inside AgriNexus, add AGRINEXUS_EMAIL and AGRINEXUS_PASSWORD before starting me."
+    } else {
+      Speak-Nexus "I could not reach AgriNexus yet. Check the internet, login, or platform server."
+    }
   }
 }
 
@@ -133,6 +184,7 @@ foreach ($voiceName in $preferredDesktopVoices) {
     # Try the next installed Windows voice.
   }
 }
+$script:EffectiveUserName = $UserName
 
 try {
   $recognizer = New-Object System.Speech.Recognition.SpeechRecognitionEngine
@@ -218,7 +270,7 @@ Register-ObjectEvent -InputObject $recognizer -EventName SpeechRecognized -Sourc
     Open-AgriNexus
     if ([string]::IsNullOrWhiteSpace($afterWake)) {
       $script:WaitingForCommand = $true
-      Speak-Nexus "Yes $UserName?"
+      Speak-Nexus "Yes $script:EffectiveUserName?"
       return
     }
     $script:WaitingForCommand = $false
@@ -239,7 +291,7 @@ Register-ObjectEvent -InputObject $recognizer -EventName SpeechRecognized -Sourc
 Write-Host ""
 Write-Host "AgriNexus Desktop Wake Listener"
 Write-Host "Platform: $PlatformUrl"
-Write-Host "Session handoff: $(if ([string]::IsNullOrWhiteSpace($SessionCookie)) { 'not set; platform may ask the browser session to sign in' } else { 'session cookie provided' })"
+Write-Host "Session handoff: $(if (![string]::IsNullOrWhiteSpace($SessionCookie)) { 'session cookie provided' } elseif (![string]::IsNullOrWhiteSpace($Email)) { 'desktop login will use AGRINEXUS_EMAIL / AGRINEXUS_PASSWORD' } else { 'not set; add AGRINEXUS_EMAIL and AGRINEXUS_PASSWORD for live command execution' })"
 Write-Host "Wake phrases: $($wakePhrases -join ', ')"
 Write-Host "Stop phrases: $($stopPhrases -join ', ')"
 Write-Host "Privacy: visible listener. Close this PowerShell window to stop."

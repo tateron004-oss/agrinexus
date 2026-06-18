@@ -6,6 +6,7 @@
     "windows": {
       "runtime": "PowerShell + System.Speech",
       "entrypoint": "native-desktop/windows/NexusWakeListener.ps1",
+      "launcher": "native-desktop/windows/Start-NexusDesktopVoice.cmd",
       "wakeMode": "visible-always-on-console",
       "permissions": ["microphone", "speechRecognition", "speechSynthesis", "network"],
       "status": "prototype-ready"
@@ -28,7 +29,7 @@
     "inputMode": "native",
     "outputMode": "voice",
     "opensBrowser": true,
-    "auth": "Use AGRINEXUS_SESSION_COOKIE or a production native auth token when the hosted API requires sign-in."
+    "auth": "Use AGRINEXUS_EMAIL and AGRINEXUS_PASSWORD for desktop demo login, AGRINEXUS_SESSION_COOKIE for manual session handoff, or a production native auth token when the hosted API requires sign-in."
   },
   "privacyControls": [
     "visible listener window",

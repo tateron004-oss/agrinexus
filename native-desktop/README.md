@@ -17,13 +17,28 @@ The web app can only listen while the page is open, secure, and microphone permi
 
 ## Windows Test Path
 
+Fastest path: run the launcher:
+
+```powershell
+native-desktop/windows/Start-NexusDesktopVoice.cmd
+```
+
 Run PowerShell as the signed-in user:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File native-desktop/windows/NexusWakeListener.ps1
 ```
 
-For production handoff into a signed-in hosted session, pass a session cookie or set `AGRINEXUS_SESSION_COOKIE` before launching the listener:
+For production handoff into AgriNexus, set the user login once in the same PowerShell window before launching the listener:
+
+```powershell
+$env:AGRINEXUS_EMAIL="user@agrinexus.org"
+$env:AGRINEXUS_PASSWORD="User2026!"
+$env:AGRINEXUS_USER_NAME="Ron"
+powershell -ExecutionPolicy Bypass -File native-desktop/windows/NexusWakeListener.ps1 -UserName "Ron"
+```
+
+If you do not set credentials, the Windows listener uses the standard User demo login. You can also pass a session cookie or set `AGRINEXUS_SESSION_COOKIE`, but the email/password desktop login is the cleaner local-demo path:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File native-desktop/windows/NexusWakeListener.ps1 -UserName "Ron" -SessionCookie "connect.sid=..."
@@ -40,7 +55,7 @@ Then try:
 
 When the listener hears a wake phrase, it opens the hosted platform and replies by voice. When it hears a wake phrase plus a command, it sends the command to AgriNexus as native voice input.
 
-If no signed-in session cookie is provided and the hosted API requires sign-in, the listener still opens the platform so the user can log in. The production desktop app should replace this manual cookie with a secure native auth token.
+If no desktop login or signed-in session cookie is provided and the hosted API requires sign-in, the listener still opens the platform so the user can log in. The production desktop app should replace demo credentials with a secure native auth token.
 
 ## Production Rule
 
