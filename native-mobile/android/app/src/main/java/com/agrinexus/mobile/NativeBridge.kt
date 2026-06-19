@@ -12,8 +12,11 @@ class NativeBridge(private val controller: NexusNativeController) {
             "wake.start" -> controller.startWakeRuntime()
             "wake.stop" -> controller.stopWakeRuntime()
             "voice.stop" -> controller.stopSpeech()
+            "voice.realtime.start" -> controller.startRealtimeVoiceRuntime()
+            "voice.realtime.stop" -> controller.stopRealtimeVoiceRuntime()
+            "route.track" -> controller.startRouteTracking()
+            "camera.capture" -> controller.prepareCameraCapture()
             "voice.state" -> controller.onWebVoiceState(payload.optJSONObject("payload") ?: payload)
         }
     }
 }
-

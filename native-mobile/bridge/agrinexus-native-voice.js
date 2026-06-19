@@ -28,7 +28,18 @@
     },
     stopSpeech() {
       return postNative({ command: "voice.stop" });
+    },
+    startRealtime() {
+      return postNative({ command: "voice.realtime.start" });
+    },
+    stopRealtime() {
+      return postNative({ command: "voice.realtime.stop" });
+    },
+    requestLocation() {
+      return postNative({ command: "route.track" });
+    },
+    captureMedia() {
+      return postNative({ command: "camera.capture" });
     }
   };
 })();
-

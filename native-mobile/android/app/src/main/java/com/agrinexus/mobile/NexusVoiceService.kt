@@ -17,6 +17,10 @@ class NexusVoiceService : Service(), RecognitionListener {
     }
 
     private var recognizer: SpeechRecognizer? = null
+    private var waitingForCommand = false
+    private var lastWakeAt = 0L
+    private val followUpWindowMs = 12_000L
+    private val wakePhrases = listOf("hey agrinexus", "hey nexus", "good morning nexus", "agrinexus", "nexus", "agri")
 
     override fun onCreate() {
         super.onCreate()
@@ -35,6 +39,8 @@ class NexusVoiceService : Service(), RecognitionListener {
     private fun listen() {
         val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
             .putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+            .putExtra(RecognizerIntent.EXTRA_LANGUAGE, java.util.Locale.getDefault().toLanguageTag())
+            .putExtra(RecognizerIntent.EXTRA_LANGUAGE_PREFERENCE, java.util.Locale.getDefault().toLanguageTag())
             .putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
             .putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 5)
         recognizer?.startListening(intent)
@@ -58,7 +64,8 @@ class NexusVoiceService : Service(), RecognitionListener {
             ?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
             ?.firstOrNull()
             .orEmpty()
-        if (transcript.isNotBlank()) broadcastTranscript(transcript, false)
+        val routed = routeTranscript(transcript, false) ?: return
+        if (routed.isNotBlank()) broadcastTranscript(routed, false)
     }
 
     override fun onResults(results: android.os.Bundle?) {
@@ -66,7 +73,8 @@ class NexusVoiceService : Service(), RecognitionListener {
             ?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
             ?.firstOrNull()
             .orEmpty()
-        if (transcript.isNotBlank()) broadcastTranscript(transcript, true)
+        val routed = routeTranscript(transcript, true)
+        if (!routed.isNullOrBlank()) broadcastTranscript(routed, true)
         listen()
     }
 
@@ -79,10 +87,30 @@ class NexusVoiceService : Service(), RecognitionListener {
     override fun onEvent(eventType: Int, params: android.os.Bundle?) {}
     override fun onBind(intent: Intent?): IBinder? = null
 
+    private fun routeTranscript(transcript: String, final: Boolean): String? {
+        val clean = transcript.trim()
+        if (clean.isBlank()) return null
+        val lower = clean.lowercase()
+        val wake = wakePhrases.firstOrNull { phrase ->
+            lower == phrase || lower.startsWith("$phrase ") || lower.contains(" $phrase ")
+        }
+        val now = System.currentTimeMillis()
+        if (wake != null) {
+            waitingForCommand = true
+            lastWakeAt = now
+            val command = clean.replace(Regex("(?i)\\b${Regex.escape(wake)}\\b"), "").trim(' ', ',', '.', ':', ';')
+            return if (command.isBlank()) "Nexus" else command
+        }
+        val inFollowUp = waitingForCommand && now - lastWakeAt <= followUpWindowMs
+        if (!inFollowUp) return null
+        if (final) waitingForCommand = false
+        return clean
+    }
+
     private fun broadcastTranscript(transcript: String, final: Boolean) {
         sendBroadcast(Intent(ACTION_TRANSCRIPT)
             .putExtra("transcript", transcript)
-            .putExtra("language", "en")
+            .putExtra("language", java.util.Locale.getDefault().language.ifBlank { "en" })
             .putExtra("confidence", if (final) 0.88 else 0.55)
             .putExtra("final", final))
     }

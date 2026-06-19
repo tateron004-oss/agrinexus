@@ -9,6 +9,10 @@ final class NexusVoiceRuntime: NSObject, SFSpeechRecognizerDelegate {
     private var request: SFSpeechAudioBufferRecognitionRequest?
     private var task: SFSpeechRecognitionTask?
     private let synthesizer = AVSpeechSynthesizer()
+    private let wakePhrases = ["hey agrinexus", "hey nexus", "good morning nexus", "agrinexus", "nexus", "agri"]
+    private var waitingForCommand = false
+    private var lastWakeAt = Date.distantPast
+    private let followUpWindow: TimeInterval = 12
 
     func start() {
         stop()
@@ -28,10 +32,14 @@ final class NexusVoiceRuntime: NSObject, SFSpeechRecognizerDelegate {
         task = recognizer?.recognitionTask(with: request) { [weak self] result, error in
             guard let self else { return }
             if let text = result?.bestTranscription.formattedString, !text.isEmpty {
-                if result?.isFinal == true {
-                    self.send(type: "voice.final_transcript", data: ["transcript": text, "language": "en", "confidence": 0.9])
+                if let routed = self.routeTranscript(text, final: result?.isFinal == true) {
+                    if result?.isFinal == true {
+                        self.send(type: "voice.final_transcript", data: ["transcript": routed, "language": Locale.current.languageCode ?? "en", "confidence": 0.9])
+                    } else {
+                        self.send(type: "voice.partial_transcript", data: ["transcript": routed, "language": Locale.current.languageCode ?? "en"])
+                    }
                 } else {
-                    self.send(type: "voice.partial_transcript", data: ["transcript": text, "language": "en"])
+                    self.send(type: "voice.clarify", data: ["reason": "waiting_for_wake_phrase"])
                 }
             }
             if error != nil || result?.isFinal == true {
@@ -72,9 +80,25 @@ final class NexusVoiceRuntime: NSObject, SFSpeechRecognizerDelegate {
         }
     }
 
+    private func routeTranscript(_ transcript: String, final: Bool) -> String? {
+        let clean = transcript.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !clean.isEmpty else { return nil }
+        let lower = clean.lowercased()
+        if let wake = wakePhrases.first(where: { lower == $0 || lower.hasPrefix("\($0) ") || lower.contains(" \($0) ") }) {
+            waitingForCommand = true
+            lastWakeAt = Date()
+            let pattern = "\\b\(NSRegularExpression.escapedPattern(for: wake))\\b"
+            let command = clean.replacingOccurrences(of: pattern, with: "", options: [.regularExpression, .caseInsensitive])
+                .trimmingCharacters(in: CharacterSet(charactersIn: " ,.:;"))
+            return command.isEmpty ? "Nexus" : command
+        }
+        guard waitingForCommand, Date().timeIntervalSince(lastWakeAt) <= followUpWindow else { return nil }
+        if final { waitingForCommand = false }
+        return clean
+    }
+
     private func restartSoon() {
         stop()
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { self.start() }
     }
 }
-

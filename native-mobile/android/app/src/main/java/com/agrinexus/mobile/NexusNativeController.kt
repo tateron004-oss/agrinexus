@@ -46,15 +46,21 @@ class NexusNativeController(private val activity: Activity, private val webView:
     fun registerPermissions() {
         val payload = JSONObject()
             .put("device", JSONObject().put("platform", "android").put("appVersion", "1.0.0"))
-            .put("wakeMode", "foreground")
+            .put("wakeMode", "always-on-foreground-service")
             .put("permissions", JSONObject()
                 .put("microphone", "granted")
                 .put("speechRecognition", "granted")
                 .put("backgroundAudio", "granted")
                 .put("notifications", "granted")
                 .put("geolocation", "foreground")
+                .put("backgroundLocation", "optional")
                 .put("camera", "granted")
                 .put("secureStorage", "granted"))
+            .put("runtime", JSONObject()
+                .put("voiceGate", "wake-phrase")
+                .put("followUpWindowSeconds", 12)
+                .put("realtimeProvider", "openai-realtime-webrtc")
+                .put("fallback", "native-speech-recognizer"))
             .put("privacyControls", JSONObject()
                 .put("visibleListeningIndicator", true)
                 .put("oneTapOff", true)
@@ -78,6 +84,32 @@ class NexusNativeController(private val activity: Activity, private val webView:
     fun stopSpeech() {
         tts?.stop()
         sendToWeb("voice.interrupt", JSONObject())
+    }
+
+    fun startRealtimeVoiceRuntime() {
+        sendToWeb("voice.realtime_started", JSONObject()
+            .put("provider", "openai-realtime-webrtc")
+            .put("transport", "native-webview-webrtc")
+            .put("fallback", "native-speech-recognizer"))
+    }
+
+    fun stopRealtimeVoiceRuntime() {
+        sendToWeb("voice.realtime_stopped", JSONObject()
+            .put("provider", "openai-realtime-webrtc"))
+    }
+
+    fun startRouteTracking() {
+        sendToWeb("location.route_update", JSONObject()
+            .put("source", "native-location-permission")
+            .put("status", "ready")
+            .put("message", "Native GPS route tracking is ready when location permission is granted."))
+    }
+
+    fun prepareCameraCapture() {
+        sendToWeb("camera.capture_ready", JSONObject()
+            .put("source", "native-camera-permission")
+            .put("status", "ready")
+            .put("message", "Native camera capture is ready for crop, injury, pharmacy, or provider handoff media."))
     }
 
     fun speak(text: String) {
@@ -123,4 +155,3 @@ class NexusNativeController(private val activity: Activity, private val webView:
         }
     }
 }
-

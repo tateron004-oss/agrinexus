@@ -34,6 +34,28 @@ final class NexusWebViewController: UIViewController, WKScriptMessageHandler {
             voiceRuntime.stop()
         case "voice.stop":
             voiceRuntime.stopSpeech()
+        case "voice.realtime.start":
+            voiceRuntime.send(type: "voice.realtime_started", data: [
+                "provider": "openai-realtime-webrtc",
+                "transport": "native-webview-webrtc",
+                "fallback": "native-speech-recognizer"
+            ])
+        case "voice.realtime.stop":
+            voiceRuntime.send(type: "voice.realtime_stopped", data: [
+                "provider": "openai-realtime-webrtc"
+            ])
+        case "route.track":
+            voiceRuntime.send(type: "location.route_update", data: [
+                "source": "native-location-permission",
+                "status": "ready",
+                "message": "Native GPS route tracking is ready when location permission is granted."
+            ])
+        case "camera.capture":
+            voiceRuntime.send(type: "camera.capture_ready", data: [
+                "source": "native-camera-permission",
+                "status": "ready",
+                "message": "Native camera capture is ready for crop, injury, pharmacy, or provider handoff media."
+            ])
         default:
             break
         }
@@ -49,7 +71,7 @@ final class NexusWebViewController: UIViewController, WKScriptMessageHandler {
     private func registerNativePermissions() {
         let payload: [String: Any] = [
             "device": ["platform": "ios", "appVersion": "1.0.0"],
-            "wakeMode": "foreground",
+            "wakeMode": "always-on-foreground-audio-session",
             "permissions": [
                 "microphone": "granted",
                 "speechRecognition": "granted",
@@ -58,6 +80,12 @@ final class NexusWebViewController: UIViewController, WKScriptMessageHandler {
                 "geolocation": "foreground",
                 "camera": "granted",
                 "secureStorage": "granted"
+            ],
+            "runtime": [
+                "voiceGate": "wake-phrase",
+                "followUpWindowSeconds": 12,
+                "realtimeProvider": "openai-realtime-webrtc",
+                "fallback": "native-speech-recognizer"
             ],
             "privacyControls": [
                 "visibleListeningIndicator": true,

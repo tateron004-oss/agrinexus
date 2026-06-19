@@ -13,7 +13,7 @@ const readme = read("native-desktop/README.md");
 const app = read("public/app.js");
 
 const checks = [
-  ["bridge advertises desktop wake", bridge.version === "1.4.0" && bridge.requiredPermissions.includes("desktopWakeListenerOptional") && bridge.wakeRuntime.desktopMode.includes("Chrome is closed")],
+  ["bridge advertises desktop wake", /^1\.[4-9]\.0$/.test(bridge.version) && bridge.requiredPermissions.includes("desktopWakeListenerOptional") && bridge.wakeRuntime.desktopMode.includes("Chrome is closed")],
   ["bridge points to desktop runtime", bridge.nativeRuntimeSource.desktop === "native-desktop" && bridge.desktopRuntime.source === "native-desktop/desktop-runtime.json"],
   ["windows runtime declared", runtime.platforms.windows.runtime.includes("PowerShell") && runtime.platforms.windows.wakeMode === "visible-always-on-console"],
   ["windows launcher declared", runtime.platforms.windows.launcher === "native-desktop/windows/Start-NexusDesktopVoice.cmd" && launcher.includes("NexusWakeListener.ps1") && readme.includes("Start-NexusDesktopVoice.cmd")],

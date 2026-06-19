@@ -6,11 +6,14 @@ The web platform already contains the Nexus brain, workflows, OpenAI voice path,
 
 - OS microphone permission
 - native speech recognition
+- wake-gated listening so background conversation is not treated as a Nexus command
 - wake phrase handling for "Nexus", "Hey Nexus", "Agri", and "Hey AgriNexus"
 - native text-to-speech fallback
 - push/location/camera permission registration
 - foreground voice service on Android
 - iOS audio/speech session hooks
+- OpenAI Realtime WebRTC status/transport contract for low-latency speech-to-speech
+- provider-depth architecture endpoint for maps, clinics, pharmacy, learning, workforce, trade, drone, communications, and payment readiness
 - native-to-web events through `window.AgriNexusNativeBridge.receive(...)`
 - web-to-native state events through `window.AgriNexusNativeVoice`
 
@@ -42,6 +45,8 @@ window.AgriNexusNativeBridge.receive({
 })
 ```
 
+The native service now uses a wake gate. It forwards speech only when the phrase includes `Nexus`, `Hey Nexus`, `Agri`, or `Hey AgriNexus`, or when the user is inside the short follow-up window after waking Nexus.
+
 ## iOS Build Path
 
 1. Create/open an iOS app target in Xcode.
@@ -51,7 +56,14 @@ window.AgriNexusNativeBridge.receive({
 
 The iOS shell uses `SFSpeechRecognizer`, `AVAudioEngine`, and `WKWebView` to route speech into Nexus.
 
+The shared architecture can be checked at:
+
+```text
+https://agrinexus-platform.onrender.com/api/native/voice-architecture
+```
+
+That response reports native permissions, always-on wake readiness, realtime streaming readiness, and deeper provider data readiness.
+
 ## Privacy Rule
 
 Nexus must never hide listening. Native mode should show a visible listening indicator and provide a one-tap off switch. Sensitive actions such as provider calls, buyer messages, payments, health handoffs, and job applications still require confirmation through the AgriNexus workflow gates.
-

@@ -1,6 +1,6 @@
 {
   "name": "AgriNexus Native Desktop Companion",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "purpose": "Computer-wide visible wake listener for AgriNexus when Chrome is closed or browser microphone access is unavailable.",
   "platforms": {
     "windows": {
@@ -26,6 +26,8 @@
   "stopPhrases": ["Nexus stop", "stop listening", "be quiet", "pause nexus"],
   "handoff": {
     "api": "https://agrinexus-platform.onrender.com/api/agent/command",
+    "architectureApi": "https://agrinexus-platform.onrender.com/api/native/voice-architecture",
+    "realtimeStatusApi": "https://agrinexus-platform.onrender.com/api/voice/realtime/status",
     "inputMode": "native",
     "outputMode": "voice",
     "opensBrowser": true,
@@ -37,5 +39,12 @@
     "stop phrases",
     "close terminal to stop",
     "no hidden background listening"
-  ]
+  ],
+  "runtimePolicy": {
+    "wakeGate": "Commands are forwarded only after a wake phrase or inside the follow-up window.",
+    "followUpWindowSeconds": 12,
+    "realtimeProvider": "openai-realtime-webrtc",
+    "fallback": "System.Speech recognition and native Windows text-to-speech",
+    "sensitiveActionRule": "Calls, SMS, WhatsApp, payments, job applications, provider handoffs, and health records must be confirmed before execution."
+  }
 }

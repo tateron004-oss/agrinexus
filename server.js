@@ -26,8 +26,8 @@ const AI_MODEL = process.env.OPENAI_MODEL || "gpt-5.4-mini";
 const AI_REASONING_MODEL = process.env.OPENAI_REASONING_MODEL || process.env.OPENAI_AGENT_MODEL || AI_MODEL;
 const AI_TRANSLATION_MODEL = process.env.OPENAI_TRANSLATION_MODEL || process.env.OPENAI_AGENT_MODEL || AI_MODEL;
 const AGRINEXUS_RELEASE = "2026-06-16-operational-readiness";
-const AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-292";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v272";
+const AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-293";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v273";
 const ROOT = __dirname;
 const DATA_DIR = process.env.AGRINEXUS_DATA_DIR || ROOT;
 const DB_PATH = process.env.AGRINEXUS_DB_PATH || path.join(DATA_DIR, "db.json");
@@ -1235,6 +1235,16 @@ function nativeVoiceRuntimeModel(db, user, providers = runtimeProviders(db)) {
   const nativeAlwaysOnReady = Boolean(latestNativeSession?.readiness?.alwaysOnReady || latestNativeSession?.alwaysOnReady);
   const locationReady = connected("maps") || hasEnv("MAPBOX_ACCESS_TOKEN") || hasEnv("GOOGLE_MAPS_API_KEY") || hasEnv("OPENROUTESERVICE_API_KEY");
   const productionMemoryReady = hasEnv("DATABASE_URL") && usingPostgresState() && Boolean(loadOptional("pg"));
+  const realtimeStreamingReady = Boolean(process.env.OPENAI_API_KEY);
+  const providerDepth = providerDepthModel(providers);
+  const nativeRuntimePolicy = {
+    architecture: "native-app-voice-permissions-plus-realtime-streaming",
+    targetBehavior: "Jarvis/Siri/Alexa-style foreground app voice with native wake permissions, realtime speech when configured, and provider-aware routing.",
+    wakeRule: "Native shells listen for wake phrases and only forward commands after a wake phrase or inside a short follow-up window.",
+    privacyRule: bridge.wakeRuntime?.privacyRule || "Use visible listening status, user permission, audit records, and a one-tap off switch.",
+    sensitiveActionRule: "Calls, SMS, WhatsApp, payments, job applications, provider handoffs, and health records require explicit confirmation before execution.",
+    responseRule: "Acknowledge, repeat the need, give one short guidance step, then route or ask one clear question."
+  };
   const items = [
     {
       id: "browser-voice",
@@ -1248,7 +1258,16 @@ function nativeVoiceRuntimeModel(db, user, providers = runtimeProviders(db)) {
       title: "High Quality AI Voice",
       ready: openAiVoiceReady,
       mode: openAiVoiceReady ? "live-openai" : "provider-ready",
-      evidence: openAiVoiceReady ? "OpenAI STT/TTS is configured." : "Add OPENAI_API_KEY with VOICE_STT_PROVIDER=openai and VOICE_TTS_PROVIDER=openai."
+        evidence: openAiVoiceReady ? "OpenAI STT/TTS is configured." : "Add OPENAI_API_KEY with VOICE_STT_PROVIDER=openai and VOICE_TTS_PROVIDER=openai."
+    },
+    {
+      id: "realtime-streaming",
+      title: "Realtime Streaming Voice",
+      ready: realtimeStreamingReady,
+      mode: realtimeStreamingReady ? "openai-realtime-ready" : "needs-openai-key",
+      evidence: realtimeStreamingReady
+        ? `OpenAI Realtime voice path is available through ${openAiRealtimeModel()} with ${openAiRealtimeVoice()} voice.`
+        : "Add OPENAI_API_KEY, then optionally OPENAI_REALTIME_MODEL and OPENAI_REALTIME_VOICE for low-latency speech-to-speech."
     },
     {
       id: "phone-assistant",
@@ -1301,6 +1320,35 @@ function nativeVoiceRuntimeModel(db, user, providers = runtimeProviders(db)) {
     readyCount,
     total: items.length,
     score: Math.round((readyCount / items.length) * 100),
+    architectureLevel: "native-voice-infrastructure",
+    nativeRuntimePolicy,
+    realtimeStreaming: {
+      ready: realtimeStreamingReady,
+      endpoint: "/api/voice/realtime/call",
+      statusEndpoint: "/api/voice/realtime/status",
+      model: openAiRealtimeModel(),
+      voice: openAiRealtimeVoice(),
+      transport: "WebRTC from browser/native webview to server-negotiated OpenAI Realtime session",
+      fallback: "OpenAI TTS/STT or browser/native speech when realtime is unavailable."
+    },
+    providerDepth,
+    mobilePermissionPlan: {
+      android: {
+        permissions: ["RECORD_AUDIO", "FOREGROUND_SERVICE_MICROPHONE", "POST_NOTIFICATIONS", "ACCESS_FINE_LOCATION", "CAMERA"],
+        runtime: "Foreground voice service with wake gating and visible notification.",
+        source: "native-mobile/android"
+      },
+      ios: {
+        permissions: ["NSMicrophoneUsageDescription", "NSSpeechRecognitionUsageDescription", "UIBackgroundModes/audio"],
+        runtime: "Foreground audio/speech session with wake gating and WebView bridge.",
+        source: "native-mobile/ios/AgriNexus"
+      },
+      desktop: {
+        permissions: ["OS microphone", "speech recognition", "speech synthesis", "network"],
+        runtime: "Visible Windows listener that can wake when Chrome is closed.",
+        source: "native-desktop/windows/NexusWakeListener.ps1"
+      }
+    },
     wakePhrases: bridge.wakePhrases || ["Hey AgriNexus", "Nexus", "Agri"],
     permissions: bridge.requiredPermissions || [],
     stopPhrases: bridge.wakeRuntime?.stopPhrases || ["Nexus stop"],
@@ -1319,11 +1367,94 @@ function permissionGranted(value) {
   return ["granted", "foreground", "background", true].includes(value);
 }
 
+function providerDepthModel(providers = runtimeProviders({}), env = process.env) {
+  const provider = id => providers.find(item => item.id === id) || {};
+  const connected = id => provider(id).status === "connected";
+  const hasAny = keys => keys.some(key => Boolean(env[key] && String(env[key]).trim() && !String(env[key]).includes("replace-with")));
+  const domains = [
+    {
+      id: "conversation",
+      title: "Open conversation and reasoning",
+      ready: connected("openai") || hasAny(["OPENAI_API_KEY", "AI_WEBHOOK_URL"]),
+      providers: ["openai", "web-search"],
+      env: ["OPENAI_API_KEY", "OPENAI_WEB_SEARCH_ENABLED", "TAVILY_API_KEY", "BRAVE_SEARCH_API_KEY", "EXA_API_KEY"],
+      purpose: "General questions, rural guidance, imperfect-language understanding, and provider-aware answers."
+    },
+    {
+      id: "voice-streaming",
+      title: "Realtime voice streaming",
+      ready: Boolean(env.OPENAI_API_KEY),
+      providers: ["openai-realtime-webrtc", "voice-stt", "voice-tts"],
+      env: ["OPENAI_API_KEY", "OPENAI_REALTIME_MODEL", "OPENAI_REALTIME_VOICE", "VOICE_STT_PROVIDER", "VOICE_TTS_PROVIDER"],
+      purpose: "Low-latency speech-to-speech behavior with interruption support."
+    },
+    {
+      id: "native-permissions",
+      title: "Native app permissions",
+      ready: true,
+      providers: ["native-mobile", "native-desktop"],
+      env: [],
+      purpose: "OS microphone, foreground service, camera, GPS, notifications, and secure app handoff."
+    },
+    {
+      id: "maps-routing-location",
+      title: "Maps, routing, and GPS",
+      ready: connected("maps") || connected("routing-geocoding") || hasAny(["MAPBOX_ACCESS_TOKEN", "OPENROUTESERVICE_API_KEY", "GOOGLE_MAPS_API_KEY", "MAP_TILE_URL"]),
+      providers: ["maps", "routing-geocoding", "trade-logistics"],
+      env: ["MAP_TILE_PROVIDER", "MAP_TILE_URL", "MAPBOX_ACCESS_TOKEN", "OPENROUTESERVICE_API_KEY", "GOOGLE_MAPS_API_KEY", "LOGISTICS_TRACKING_URL"],
+      purpose: "Clinic/pharmacy maps, shipment routes, route ETAs, geocoding, and field location context."
+    },
+    {
+      id: "health-provider-depth",
+      title: "Telehealth, clinics, pharmacy, and EHR",
+      ready: connected("health-ehr") || connected("health-openmrs") || connected("telehealth-provider") || hasAny(["OPENMRS_BASE_URL", "TELEHEALTH_PROVIDER_URL", "PHARMACY_PROVIDER_URL"]),
+      providers: ["health-ehr", "health-openmrs", "telehealth-provider", "pharmacy-network"],
+      env: ["OPENMRS_BASE_URL", "OPENMRS_TOKEN", "TELEHEALTH_PROVIDER_URL", "PHARMACY_PROVIDER_URL"],
+      purpose: "Mobile-clinic intake, provider handoff, pharmacy location support, and care documentation."
+    },
+    {
+      id: "learning-workforce",
+      title: "Learning and workforce data",
+      ready: connected("learning-lms") || connected("workforce-job-search") || hasAny(["MOODLE_BASE_URL", "MOODLE_TOKEN", "OPENEDX_BASE_URL", "ADZUNA_APP_ID", "ADZUNA_APP_KEY", "JOB_SEARCH_API_KEY"]),
+      providers: ["learning-lms", "learning-courses", "learning-certificates", "workforce-job-search", "workforce-jobs"],
+      env: ["MOODLE_BASE_URL", "MOODLE_TOKEN", "OPENEDX_BASE_URL", "ADZUNA_APP_ID", "ADZUNA_APP_KEY", "JOB_SEARCH_API_KEY"],
+      purpose: "Course catalog, enrollment, certificates, job search, matching, and applications."
+    },
+    {
+      id: "agritech-field-data",
+      title: "Drone, satellite, and field intelligence",
+      ready: connected("field-drones") || connected("satellite-field-data") || hasAny(["SENTINEL_HUB_CLIENT_ID", "SENTINEL_HUB_CLIENT_SECRET", "SATELLITE_API_KEY", "DRONE_PROVIDER_URL"]),
+      providers: ["field-drones", "satellite-field-data"],
+      env: ["SENTINEL_HUB_CLIENT_ID", "SENTINEL_HUB_CLIENT_SECRET", "SATELLITE_API_KEY", "DRONE_PROVIDER_URL"],
+      purpose: "Crop stress, pest/water risk, field scan explanation, and farmer-friendly next steps."
+    },
+    {
+      id: "trade-communications-payments",
+      title: "Trade, communication, logistics, and payment",
+      ready: connected("trade-payments") || connected("sms-delivery") || connected("whatsapp-delivery") || connected("phone-voice") || hasAny(["PAYSTACK_SECRET_KEY", "FLUTTERWAVE_SECRET_KEY", "TWILIO_ACCOUNT_SID", "TWILIO_AUTH_TOKEN"]),
+      providers: ["trade-payments", "trade-logistics", "sms-delivery", "whatsapp-delivery", "phone-voice", "music-playback"],
+      env: ["PAYSTACK_SECRET_KEY", "FLUTTERWAVE_SECRET_KEY", "TWILIO_ACCOUNT_SID", "TWILIO_AUTH_TOKEN", "TWILIO_PHONE_NUMBER", "SPOTIFY_CLIENT_ID"],
+      purpose: "Buyer/seller contact, SMS, WhatsApp, outbound calls, receipts, transaction fees, and optional media playback."
+    }
+  ];
+  const readyCount = domains.filter(item => item.ready).length;
+  return {
+    status: readyCount === domains.length ? "deep-provider-data-ready" : "provider-depth-progressive-ready",
+    readyCount,
+    total: domains.length,
+    score: Math.round((readyCount / domains.length) * 100),
+    domains,
+    summary: `${readyCount}/${domains.length} provider-depth domains are live or contract-ready for Nexus native voice operations.`,
+    updatedAt: new Date().toISOString()
+  };
+}
+
 function registerNativePermissionSession(db, user, body = {}) {
   ensureAiProfile(db.profile);
   db.profile.nativePermissionSessions = db.profile.nativePermissionSessions || [];
   const permissions = body.permissions || {};
   const device = body.device || {};
+  const runtime = body.runtime || {};
   const wakeMode = String(body.wakeMode || permissions.wakeMode || "manual").toLowerCase();
   const microphoneReady = permissionGranted(permissions.microphone);
   const backgroundAudioReady = permissionGranted(permissions.backgroundAudio) || permissionGranted(permissions.backgroundAudioMode);
@@ -1344,8 +1475,15 @@ function registerNativePermissionSession(db, user, body = {}) {
       notifications: permissions.notifications || (body.pushToken ? "granted" : "unknown"),
       backgroundAudio: permissions.backgroundAudio || permissions.backgroundAudioMode || "unknown",
       geolocation: permissions.geolocation || "unknown",
+      backgroundLocation: permissions.backgroundLocation || "unknown",
       camera: permissions.camera || "unknown",
       secureStorage: permissions.secureStorage || "unknown"
+    },
+    runtime: {
+      voiceGate: runtime.voiceGate || "wake-phrase",
+      followUpWindowSeconds: Number(runtime.followUpWindowSeconds || 12),
+      realtimeProvider: runtime.realtimeProvider || "openai-realtime-webrtc",
+      fallback: runtime.fallback || "native-speech-recognizer"
     },
     readiness: {
       microphoneReady,
@@ -24109,6 +24247,27 @@ async function api(req, res, url) {
 
   if (url.pathname === "/api/native/voice-runtime" && req.method === "GET") {
     return send(res, 200, nativeVoiceRuntimeModel(db, user));
+  }
+
+  if (url.pathname === "/api/native/voice-architecture" && req.method === "GET") {
+    return send(res, 200, {
+      nativeVoiceRuntime: nativeVoiceRuntimeModel(db, user),
+      providerDepth: providerDepthModel(runtimeProviders(db)),
+      conversationCore: {
+        endpoint: "/api/agent/conversation-core",
+        mode: "secured",
+        purpose: "Open conversation, clarification, workflow routing, provider-aware answers, and imperfect-language support."
+      },
+      realtimeVoice: {
+        endpoint: "/api/voice/realtime/call",
+        statusEndpoint: "/api/voice/realtime/status",
+        provider: "openai-realtime-webrtc",
+        ready: Boolean(process.env.OPENAI_API_KEY),
+        model: openAiRealtimeModel(),
+        voice: openAiRealtimeVoice()
+      },
+      updatedAt: new Date().toISOString()
+    });
   }
 
   if (url.pathname === "/api/native/voice-runtime" && req.method === "POST") {

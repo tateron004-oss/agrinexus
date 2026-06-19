@@ -1,6 +1,6 @@
 {
   "name": "AgriNexus Native Voice Bridge",
-  "version": "1.4.0",
+  "version": "1.5.0",
   "purpose": "Contract for Android, iOS, and desktop shells that wrap the AgriNexus web platform with deeper device permissions.",
   "wakePhrases": ["Hey AgriNexus", "Hey Nexus", "Nexus", "Agri"],
   "assistantNames": {
@@ -36,7 +36,13 @@
     "desktopMode": "Use the visible native desktop companion for computer-wide wake listening when Chrome is closed. The listener owns OS microphone permission and hands commands to the hosted AgriNexus API.",
     "privacyRule": "Never run hidden listening. Show status, allow pause, and keep audit records for wake, transcript, command, and stop events.",
     "stopPhrases": ["Nexus stop", "stop talking", "pause", "be quiet", "cancel"],
-    "confirmationPhrases": ["yes", "confirm", "do it", "no", "cancel", "explain first"]
+    "confirmationPhrases": ["yes", "confirm", "do it", "no", "cancel", "explain first"],
+    "nativeWakeGate": {
+      "enabled": true,
+      "followUpWindowSeconds": 12,
+      "forwardingRule": "Native shells forward a transcript only when it includes a wake phrase or follows a wake phrase inside the follow-up window.",
+      "confusionRule": "If speech is unclear, overlapping, or below confidence threshold, send a clarify event instead of executing a workflow."
+    }
   },
   "nativeEvents": [
     "voice.wake",
@@ -49,6 +55,10 @@
     "voice.always_on_stopped",
     "voice.playback_started",
     "voice.playback_finished",
+    "voice.realtime_started",
+    "voice.realtime_stopped",
+    "voice.realtime_failed",
+    "voice.clarify",
     "camera.capture_ready",
     "camera.media_attached",
     "notification.opened",
@@ -71,6 +81,8 @@
     "voice.speak",
     "voice.stop",
     "voice.listen",
+    "voice.realtime.start",
+    "voice.realtime.stop",
     "permissions.status",
     "permissions.request",
     "permissions.register",
@@ -105,8 +117,12 @@
     "command": "/api/agent/command",
     "voice": "/api/voice/respond",
     "voiceTranscribe": "/api/voice/transcribe",
+    "realtimeVoiceStatus": "/api/voice/realtime/status",
+    "realtimeVoiceCall": "/api/voice/realtime/call",
     "nativeRuntime": "/api/native/voice-runtime",
+    "nativeVoiceArchitecture": "/api/native/voice-architecture",
     "nativePermissionSession": "/api/native/voice-runtime",
+    "conversationCore": "/api/agent/conversation-core",
     "communicationsReadiness": "/api/communications/execution-readiness",
     "liveServices": "/api/production/live-service-check",
     "memory": "/api/agent/memory-summary",
@@ -150,6 +166,24 @@
     "readyState": "native-always-on-ready when microphone, background audio, and always-on wake mode are active.",
     "privacyControls": ["visibleListeningIndicator", "oneTapOff", "wakeAuditEnabled"]
   },
+  "realtimeVoiceStreaming": {
+    "provider": "openai-realtime-webrtc",
+    "statusEndpoint": "/api/voice/realtime/status",
+    "callEndpoint": "/api/voice/realtime/call",
+    "transport": "WebRTC SDP offer from browser or native WebView; server negotiates with OpenAI using server-side credentials.",
+    "fallbacks": ["OpenAI TTS/STT", "native speech recognition and native TTS", "browser speech recognition and browser speech synthesis"],
+    "interruptRule": "User speech, Nexus stop, wake phrase correction, or native voice.interrupt immediately stops playback before the next turn."
+  },
+  "providerDepthDomains": [
+    "conversation",
+    "voice-streaming",
+    "native-permissions",
+    "maps-routing-location",
+    "health-provider-depth",
+    "learning-workforce",
+    "agritech-field-data",
+    "trade-communications-payments"
+  ],
   "communicationsExecution": {
     "method": "GET or POST",
     "endpoint": "/api/communications/execution-readiness",
