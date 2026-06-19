@@ -26,7 +26,7 @@ const liveProviderGroups = [
   },
   {
     module: "Voice Command Center",
-    providerKeys: ["VOICE_STT_PROVIDER", "VOICE_TTS_PROVIDER"],
+    providerKeys: ["VOICE_STT_PROVIDER", "VOICE_TTS_PROVIDER", "VOICE_REALTIME_PROVIDER"],
     credentialKeys: ["OPENAI_API_KEY"],
     alternateCredentialKeys: ["VOICE_STT_WEBHOOK_URL", "VOICE_TTS_WEBHOOK_URL", "VOICE_PROVIDER_API_KEY"]
   },

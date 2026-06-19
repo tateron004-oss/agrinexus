@@ -36,6 +36,9 @@ let lastVoiceResponseAt = 0;
 let lastVoiceResponseSignature = "";
 let lastVoiceResponseRepeatCount = 0;
 let activeVoiceAudio = null;
+let realtimeVoiceSession = null;
+let realtimeVoiceStarting = false;
+let realtimeVoiceStatusCache = null;
 let voicePlaybackToken = 0;
 let voiceInterruptToken = 0;
 let activeVoiceRequestController = null;
@@ -89,8 +92,8 @@ let routeTrackingWatchId = null;
 let routeTrackingPoints = [];
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-290";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v270";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-291";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v271";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
 const VOICE_ATTENTION_DELAY_MS = 900;
@@ -17493,6 +17496,176 @@ function setVoiceStatus(status) {
   updateNexusBehaviorLayer(status);
 }
 
+function realtimeVoiceSupported() {
+  const secureEnough = window.isSecureContext || ["localhost", "127.0.0.1"].includes(location.hostname);
+  return Boolean(window.RTCPeerConnection && navigator.mediaDevices?.getUserMedia && secureEnough);
+}
+
+function realtimeVoiceEnabled() {
+  return localStorage.getItem("agrinexusRealtimeVoice") !== "off";
+}
+
+function realtimeVoiceActive() {
+  return Boolean(realtimeVoiceSession?.active);
+}
+
+function realtimeVoiceStatusMessage() {
+  if (!realtimeVoiceSupported()) return "Realtime voice needs HTTPS, localhost, or 127.0.0.1 with microphone permission.";
+  const status = realtimeVoiceStatusCache?.realtimeVoice;
+  if (status?.configured) return `OpenAI Realtime voice ready: ${status.voice || "voice"} (${status.model || "realtime"}).`;
+  if (status && !status.configured) return status.note || "OpenAI Realtime voice needs OPENAI_API_KEY in hosting.";
+  return "OpenAI Realtime voice can start when the live provider is configured.";
+}
+
+async function loadRealtimeVoiceStatus(options = {}) {
+  if (!options.force && realtimeVoiceStatusCache && Date.now() - (realtimeVoiceStatusCache.checkedAt || 0) < 60000) {
+    return realtimeVoiceStatusCache;
+  }
+  const response = await fetch("/api/voice/realtime/status", {
+    method: "GET",
+    credentials: "same-origin",
+    headers: { Accept: "application/json" }
+  });
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(payload.error || `Realtime voice status failed: ${response.status}`);
+  realtimeVoiceStatusCache = { ...payload, checkedAt: Date.now() };
+  return realtimeVoiceStatusCache;
+}
+
+function handleRealtimeVoiceEvent(event) {
+  let payload = null;
+  try {
+    payload = typeof event === "string" ? JSON.parse(event) : JSON.parse(event?.data || "{}");
+  } catch {
+    return;
+  }
+  const type = String(payload.type || "");
+  const delta = payload.delta || payload.transcript || payload.text || "";
+  if (type.includes("transcript") && delta) {
+    updateStreamingVoicePartial(delta, { source: "openai-realtime" });
+  }
+  if (type === "response.done" || type === "response.audio.done") {
+    updateNexusVoiceSession({
+      state: "realtime-listening",
+      assistantSpeaking: false,
+      userSpeaking: false,
+      lastAssistantSpeechAt: Date.now()
+    }, "openai-realtime-response-done");
+  }
+  if (type === "input_audio_buffer.speech_started") {
+    markNexusUserSpeech("Realtime voice detected speech.", "openai-realtime");
+  }
+  if (type === "input_audio_buffer.speech_stopped") {
+    updateNexusVoiceSession({ userSpeaking: false }, "openai-realtime-speech-stopped");
+  }
+}
+
+function stopRealtimeVoiceSession(reason = "Realtime voice stopped.") {
+  if (!realtimeVoiceSession) return;
+  try {
+    realtimeVoiceSession.dataChannel?.close?.();
+  } catch (error) {
+    // Already closed.
+  }
+  try {
+    realtimeVoiceSession.peerConnection?.close?.();
+  } catch (error) {
+    // Already closed.
+  }
+  try {
+    realtimeVoiceSession.stream?.getTracks?.().forEach(track => track.stop());
+  } catch (error) {
+    // Stream may already be gone.
+  }
+  try {
+    realtimeVoiceSession.remoteAudio?.pause?.();
+    realtimeVoiceSession.remoteAudio.srcObject = null;
+  } catch (error) {
+    // Audio node may already be detached.
+  }
+  realtimeVoiceSession = null;
+  realtimeVoiceStarting = false;
+  setVoiceStatus("standby");
+  updateNexusBehaviorLayer("standby", reason);
+  const outputStatus = $("#globalVoiceOutputStatus");
+  if (outputStatus) outputStatus.textContent = translateText(reason);
+  refreshMicSupport();
+}
+
+async function startRealtimeVoiceSession() {
+  if (!realtimeVoiceEnabled() || !realtimeVoiceSupported()) return false;
+  if (realtimeVoiceActive()) return true;
+  if (realtimeVoiceStarting) return true;
+  realtimeVoiceStarting = true;
+  try {
+    const statusPayload = await loadRealtimeVoiceStatus();
+    if (!statusPayload?.realtimeVoice?.configured) throw new Error(statusPayload?.realtimeVoice?.note || "OpenAI Realtime voice is not configured.");
+    const peerConnection = new RTCPeerConnection();
+    const remoteAudio = new Audio();
+    remoteAudio.autoplay = true;
+    peerConnection.ontrack = event => {
+      remoteAudio.srcObject = event.streams[0];
+    };
+    const stream = await navigator.mediaDevices.getUserMedia({
+      audio: {
+        echoCancellation: true,
+        noiseSuppression: true,
+        autoGainControl: true
+      }
+    });
+    stream.getTracks().forEach(track => peerConnection.addTrack(track, stream));
+    const dataChannel = peerConnection.createDataChannel("oai-events");
+    dataChannel.onmessage = handleRealtimeVoiceEvent;
+    dataChannel.onopen = () => {
+      updateNexusBehaviorLayer("realtime-listening", "OpenAI Realtime voice is live. Speak naturally to Nexus.");
+      const outputStatus = $("#globalVoiceOutputStatus");
+      if (outputStatus) outputStatus.textContent = translateText("OpenAI Realtime voice is live. Speak naturally to Nexus.");
+    };
+    dataChannel.onerror = () => {
+      updateNexusBehaviorLayer("recovering", "Realtime voice data channel had an issue. Nexus can fall back to browser voice.");
+    };
+    const offer = await peerConnection.createOffer();
+    await peerConnection.setLocalDescription(offer);
+    const response = await fetch(`/api/voice/realtime/call?language=${encodeURIComponent(languageCode())}`, {
+      method: "POST",
+      credentials: "same-origin",
+      headers: { "Content-Type": "application/sdp", Accept: "application/sdp" },
+      body: offer.sdp
+    });
+    const answerSdp = await response.text();
+    if (!response.ok) {
+      let detail = answerSdp;
+      try {
+        detail = JSON.parse(answerSdp).error || answerSdp;
+      } catch {
+        // Keep raw SDP/text response.
+      }
+      throw new Error(detail || `Realtime voice failed: ${response.status}`);
+    }
+    await peerConnection.setRemoteDescription({ type: "answer", sdp: answerSdp });
+    realtimeVoiceSession = { peerConnection, dataChannel, stream, remoteAudio, active: true, startedAt: Date.now() };
+    realtimeVoiceStarting = false;
+    voiceStopRequested = false;
+    setVoiceStatus("listening");
+    updateNexusVoiceSession({
+      state: "realtime-listening",
+      userSpeaking: false,
+      assistantSpeaking: false
+    }, "openai-realtime-started");
+    updateNativeVoiceBridgeState("realtime-listening", { provider: "openai-realtime-webrtc", locale: voiceLocale() });
+    refreshMicSupport();
+    return true;
+  } catch (error) {
+    realtimeVoiceStarting = false;
+    stopRealtimeVoiceSession("Realtime voice did not start.");
+    const message = `OpenAI Realtime voice unavailable: ${error.message || "provider failed"}. Falling back to browser voice.`;
+    const outputStatus = $("#globalVoiceOutputStatus");
+    if (outputStatus) outputStatus.textContent = translateText(message);
+    updateNexusBehaviorLayer("fallback", message);
+    return false;
+  }
+}
+
 function browserVoiceRuntimeProfile() {
   const userAgent = navigator.userAgent || "";
   const isEdge = /\bEdg\//i.test(userAgent);
@@ -17532,6 +17705,7 @@ function chromeVoiceStatusMessage() {
   const languageName = voiceLanguageName();
   const locale = voiceLocale();
   const streamingStatus = streamingVoiceEnabled() ? " Streaming mode is on." : "";
+  if (realtimeVoiceEnabled() && realtimeVoiceSupported()) return `${realtimeVoiceStatusMessage()} Click Mic, choose Allow for microphone, and keep this tab open while testing.`;
   if (!profile.supported) return `${profile.browserName} does not expose browser speech recognition here. Open the app in desktop Chrome, then use Ask AgriNexus typed commands until microphone support is available.`;
   if (!profile.secureEnough) return `${profile.browserName} needs HTTPS, localhost, or 127.0.0.1 before microphone voice can start. Open the hosted Render URL or your local server URL, then allow the microphone.`;
   if (profile.isChrome) return `Chrome voice ready for ${languageName} (${locale}). Click Mic, choose Allow for microphone, and keep this tab open while testing.${streamingStatus}`;
@@ -17574,7 +17748,8 @@ async function refreshChromeVoicePermissionHint() {
 
 function refreshMicSupport() {
   const profile = browserVoiceRuntimeProfile();
-  const ready = profile.supported && profile.secureEnough;
+  const realtimeReady = realtimeVoiceEnabled() && realtimeVoiceSupported();
+  const ready = (profile.supported || realtimeReady) && profile.secureEnough;
   const languageName = voiceLanguageName();
   const locale = voiceLocale();
   const status = $("#globalMicStatus");
@@ -17586,6 +17761,8 @@ function refreshMicSupport() {
       ? "Nexus is paused. Background conversation is ignored. Say Nexus, listen or press Mic to continue."
       : voiceDemoQuietMode
       ? "Demo quiet mode is on. Nexus voice and auto-listening are off."
+      : realtimeVoiceActive()
+      ? `OpenAI Realtime voice is live in ${voiceLanguageName()} (${voiceLocale()}). Press Mic again to stop.`
       : ready
       ? profile.isChrome
         ? chromeVoiceStatusMessage()
@@ -17598,7 +17775,7 @@ function refreshMicSupport() {
     const button = $(selector);
     if (!button) return;
     button.disabled = !ready;
-    button.title = ready ? profile.isChrome ? "Use Chrome microphone with Ask AgriNexus" : "Use your microphone to ask AgriNexus" : "Use typed command in this browser";
+    button.title = ready ? realtimeReady ? "Use OpenAI Realtime voice with Ask AgriNexus" : profile.isChrome ? "Use Chrome microphone with Ask AgriNexus" : "Use your microphone to ask AgriNexus" : "Use typed command in this browser";
     if (!ready) {
       if (selector === "#globalListenBtn") button.textContent = "Mic unavailable";
       if (selector === "#voiceListenBtn") button.textContent = "Mic unavailable";
@@ -17619,9 +17796,9 @@ function refreshMicSupport() {
       button.title = "Nexus is ignoring background conversation. Press to listen again.";
       return;
     }
-    if (selector === "#globalListenBtn") button.textContent = voiceRecognition ? "Stop listening" : "Mic: Start listening";
-    if (selector === "#voiceListenBtn") button.textContent = voiceRecognition ? "Stop listening" : "Mic: Start listening";
-    if (selector === "#jarvisListenBtn") button.textContent = voiceRecognition ? "Stop" : "Listen";
+    if (selector === "#globalListenBtn") button.textContent = voiceRecognition || realtimeVoiceActive() ? "Stop listening" : "Mic: Start listening";
+    if (selector === "#voiceListenBtn") button.textContent = voiceRecognition || realtimeVoiceActive() ? "Stop listening" : "Mic: Start listening";
+    if (selector === "#jarvisListenBtn") button.textContent = voiceRecognition || realtimeVoiceActive() ? "Stop" : "Listen";
   });
   const voiceFirstButton = $("#globalVoiceFirstBtn");
   if (voiceFirstButton) {
@@ -22216,7 +22393,7 @@ function scheduleFinalVoiceCommand(command = "", options = {}) {
   }, Number(options.delay ?? VOICE_FINAL_DEBOUNCE_MS));
 }
 
-function startVoiceListening() {
+async function startVoiceListening() {
   if (voiceDemoQuietMode) {
     setVoiceStatus("standby");
     refreshMicSupport();
@@ -22224,11 +22401,6 @@ function startVoiceListening() {
   }
   const profile = browserVoiceRuntimeProfile();
   const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-  if (!Recognition) {
-    refreshMicSupport();
-    setVoiceResponse(`${profile.browserName} does not expose microphone speech recognition here. Open the app in desktop Chrome for voice, or type your request in Ask AgriNexus and click Run command.`);
-    return;
-  }
   if (!profile.secureEnough) {
     refreshMicSupport();
     setVoiceResponse(`${profile.browserName} needs HTTPS, localhost, or 127.0.0.1 before microphone voice can start. Open the hosted Render URL or local server URL, then allow microphone access.`);
@@ -22247,12 +22419,23 @@ function startVoiceListening() {
     stopVoicePlayback();
     setVoiceResponse("I stopped speaking. I'm listening now.", false, { allowVoiceFirst: false });
   }
+  if (realtimeVoiceActive()) {
+    stopRealtimeVoiceSession("Realtime voice stopped. Press Mic when you want Nexus to listen again.");
+    return;
+  }
   if (voiceRecognition) {
     voiceStopRequested = true;
     voiceRecognition.stop();
     voiceRecognition = null;
     setVoiceStatus("standby");
     refreshMicSupport();
+    return;
+  }
+  const realtimeStarted = await startRealtimeVoiceSession();
+  if (realtimeStarted) return;
+  if (!Recognition) {
+    refreshMicSupport();
+    setVoiceResponse(`${profile.browserName} does not expose microphone speech recognition here, and OpenAI Realtime voice is not available. Type your request in Ask AgriNexus and click Run command.`);
     return;
   }
   voiceStopRequested = false;

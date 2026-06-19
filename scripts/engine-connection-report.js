@@ -51,9 +51,9 @@ const engines = [
   },
   {
     name: "Jarvis-Style Voice",
-    purpose: "OpenAI speech-to-text and high-quality text-to-speech commands",
-    keys: ["VOICE_STT_PROVIDER", "VOICE_TTS_PROVIDER", "OPENAI_API_KEY", "OPENAI_TRANSCRIBE_MODEL", "OPENAI_TTS_MODEL", "OPENAI_TTS_VOICE"],
-    userStep: "Set VOICE_STT_PROVIDER=openai, VOICE_TTS_PROVIDER=openai, and add OPENAI_API_KEY in Render."
+    purpose: "OpenAI speech-to-text, high-quality text-to-speech, and realtime WebRTC conversation runtime",
+    keys: ["VOICE_STT_PROVIDER", "VOICE_TTS_PROVIDER", "VOICE_REALTIME_PROVIDER", "OPENAI_API_KEY", "OPENAI_TRANSCRIBE_MODEL", "OPENAI_TTS_MODEL", "OPENAI_TTS_VOICE", "OPENAI_REALTIME_MODEL", "OPENAI_REALTIME_VOICE"],
+    userStep: "Set VOICE_STT_PROVIDER=openai, VOICE_TTS_PROVIDER=openai, VOICE_REALTIME_PROVIDER=openai, and add OPENAI_API_KEY in Render."
   },
   {
     name: "Phone Voice Assistant",

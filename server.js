@@ -26,8 +26,8 @@ const AI_MODEL = process.env.OPENAI_MODEL || "gpt-5.4-mini";
 const AI_REASONING_MODEL = process.env.OPENAI_REASONING_MODEL || process.env.OPENAI_AGENT_MODEL || AI_MODEL;
 const AI_TRANSLATION_MODEL = process.env.OPENAI_TRANSLATION_MODEL || process.env.OPENAI_AGENT_MODEL || AI_MODEL;
 const AGRINEXUS_RELEASE = "2026-06-16-operational-readiness";
-const AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-290";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v270";
+const AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-291";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v271";
 const ROOT = __dirname;
 const DATA_DIR = process.env.AGRINEXUS_DATA_DIR || ROOT;
 const DB_PATH = process.env.AGRINEXUS_DB_PATH || path.join(DATA_DIR, "db.json");
@@ -1022,6 +1022,23 @@ function readBody(req) {
         reject(new Error("Invalid JSON"));
       }
     });
+  });
+}
+
+function readRawBody(req, maxBytes = 2_000_000) {
+  return new Promise((resolve, reject) => {
+    const chunks = [];
+    let size = 0;
+    req.on("data", chunk => {
+      size += chunk.length;
+      if (size > maxBytes) {
+        reject(new Error("Payload too large"));
+        return;
+      }
+      chunks.push(chunk);
+    });
+    req.on("end", () => resolve(Buffer.concat(chunks).toString("utf8")));
+    req.on("error", reject);
   });
 }
 
@@ -13251,6 +13268,8 @@ function voiceRecord(db, user, type, detail, metadata = {}) {
     status: "completed",
     provider: type === "phone-call"
       ? (process.env.PHONE_PROVIDER || "twilio-ready")
+      : type === "realtime-webrtc"
+      ? (process.env.VOICE_REALTIME_PROVIDER || "openai")
       : type === "speech-to-text"
       ? (process.env.VOICE_STT_PROVIDER || "browser")
       : (process.env.VOICE_TTS_PROVIDER || "browser"),
@@ -13261,7 +13280,7 @@ function voiceRecord(db, user, type, detail, metadata = {}) {
   db.profile.voiceSessions.unshift(record);
   db.profile.voiceSessions = db.profile.voiceSessions.slice(0, 40);
   logIntegration(db, {
-    providerId: type === "phone-call" ? "phone-voice" : type === "speech-to-text" ? "voice-stt" : "voice-tts",
+    providerId: type === "phone-call" ? "phone-voice" : type === "speech-to-text" ? "voice-stt" : type === "realtime-webrtc" ? "openai" : "voice-tts",
     module: "AI",
     action: `voice.${type}`,
     detail,
@@ -13507,6 +13526,78 @@ async function openAiSpeechAudio({ text, voice, responseFormat = "mp3" }) {
     provider: "openai-audio-speech",
     model: process.env.OPENAI_TTS_MODEL || "gpt-4o-mini-tts",
     voice: finalVoice
+  };
+}
+
+function openAiRealtimeVoice() {
+  return process.env.OPENAI_REALTIME_VOICE || process.env.OPENAI_TTS_VOICE || "marin";
+}
+
+function openAiRealtimeModel() {
+  return process.env.OPENAI_REALTIME_MODEL || "gpt-realtime-2";
+}
+
+function openAiRealtimeInstructions(user, language = "en") {
+  return process.env.OPENAI_REALTIME_INSTRUCTIONS || [
+    "You are Nexus, the live voice companion inside AgriNexus.",
+    `User: ${user?.displayName || user?.name || user?.email || "AgriNexus user"}. Preferred language code: ${language || "en"}.`,
+    "Listen patiently to imperfect speech, accents, fragments, and mixed-language phrases.",
+    "Answer like a calm human helper: short acknowledgement, simple guidance, then a clear next step.",
+    "Support farmers, patients, learners, workers, administrators, investors, mobile clinics, pharmacies, crop trade, maps, logistics, and learning.",
+    "For health, do not diagnose. Help with intake questions, safety guidance, clinic/pharmacy/mobile-clinic access, captions, and provider handoff.",
+    "When the user asks for a platform action, say what you are opening or preparing, then keep the response brief.",
+    "If the request is unclear, ask one simple question instead of listing a menu.",
+    "If the user says stop, pause immediately and wait."
+  ].join(" ");
+}
+
+function openAiRealtimeSessionConfig(user, language = "en") {
+  return {
+    type: "realtime",
+    model: openAiRealtimeModel(),
+    audio: {
+      output: {
+        voice: openAiRealtimeVoice()
+      }
+    },
+    instructions: openAiRealtimeInstructions(user, language)
+  };
+}
+
+async function openAiRealtimeSdpAnswer({ sdp, user, language = "en" }) {
+  if (!process.env.OPENAI_API_KEY) throw new Error("OPENAI_API_KEY is required for OpenAI Realtime voice.");
+  const session = openAiRealtimeSessionConfig(user, language);
+  const form = new FormData();
+  form.set("sdp", sdp);
+  form.set("session", JSON.stringify(session));
+  const safetyId = crypto
+    .createHash("sha256")
+    .update(String(user?.id || user?.email || "anonymous"))
+    .digest("hex");
+  const response = await fetchWithTimeout("https://api.openai.com/v1/realtime/calls", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+      "OpenAI-Safety-Identifier": safetyId
+    },
+    body: form
+  }, Number(process.env.OPENAI_REALTIME_TIMEOUT_MS || 20000));
+  const answer = await response.text();
+  if (!response.ok) {
+    let detail = answer;
+    try {
+      const payload = JSON.parse(answer);
+      detail = payload.error?.message || answer;
+    } catch {
+      // Realtime can return text/plain errors; keep the raw answer.
+    }
+    throw new Error(detail || `OpenAI Realtime failed: ${response.status}`);
+  }
+  return {
+    sdp: answer,
+    provider: "openai-realtime-webrtc",
+    model: session.model,
+    voice: session.audio.output.voice
   };
 }
 
@@ -27737,6 +27828,76 @@ async function api(req, res, url) {
     const state = publicState(db, user);
     state.commandResult = result;
     return send(res, 200, state);
+  }
+
+  if (url.pathname === "/api/voice/realtime/status" && req.method === "GET") {
+    if (!canUse(user, "ai")) return send(res, 403, { error: "Role does not allow realtime voice" });
+    return send(res, 200, {
+      realtimeVoice: {
+        configured: Boolean(process.env.OPENAI_API_KEY),
+        provider: process.env.VOICE_REALTIME_PROVIDER || "openai",
+        model: openAiRealtimeModel(),
+        voice: openAiRealtimeVoice(),
+        endpoint: "/api/voice/realtime/call",
+        transport: "webrtc",
+        translationReady: Boolean(process.env.OPENAI_API_KEY),
+        note: process.env.OPENAI_API_KEY
+          ? "OpenAI Realtime voice is configured for browser/mobile WebRTC."
+          : "Add OPENAI_API_KEY in hosting to enable OpenAI Realtime voice."
+      }
+    });
+  }
+
+  if (url.pathname === "/api/voice/realtime/call" && req.method === "POST") {
+    if (!canUse(user, "ai")) return send(res, 403, { error: "Role does not allow realtime voice" });
+    let sdp = "";
+    try {
+      sdp = await readRawBody(req, 2_000_000);
+    } catch (error) {
+      return send(res, 413, { error: error.message || "Realtime voice payload is too large" });
+    }
+    if (!String(sdp || "").trim()) return send(res, 400, { error: "Realtime voice SDP offer is required" });
+    try {
+      const answer = await openAiRealtimeSdpAnswer({
+        sdp,
+        user,
+        language: url.searchParams.get("language") || user.language || "en"
+      });
+      voiceRecord(db, user, "realtime-webrtc", "OpenAI Realtime voice session negotiated.", {
+        provider: answer.provider,
+        model: answer.model,
+        voice: answer.voice,
+        language: url.searchParams.get("language") || user.language || "en"
+      });
+      logIntegration(db, {
+        providerId: "openai",
+        module: "AI Voice",
+        action: "voice.realtime_webrtc_started",
+        status: "success",
+        detail: "OpenAI Realtime WebRTC session negotiated for Nexus live voice.",
+        metadata: { model: answer.model, voice: answer.voice, transport: "webrtc" },
+        dispatch: false
+      });
+      await writeDb(db);
+      return send(res, 200, answer.sdp, { "content-type": "application/sdp" });
+    } catch (error) {
+      voiceRecord(db, user, "realtime-webrtc", `OpenAI Realtime voice failed: ${error.message}`, {
+        provider: "openai-realtime-webrtc",
+        error: error.message,
+        language: url.searchParams.get("language") || user.language || "en"
+      });
+      logIntegration(db, {
+        providerId: "openai",
+        module: "AI Voice",
+        action: "voice.realtime_webrtc_failed",
+        status: "error",
+        detail: error.message || "OpenAI Realtime session failed.",
+        metadata: { transport: "webrtc" },
+        dispatch: false
+      });
+      await writeDb(db);
+      return send(res, 502, { error: error.message || "OpenAI Realtime voice failed" });
+    }
   }
 
   if (url.pathname === "/api/voice/transcribe" && req.method === "POST") {
