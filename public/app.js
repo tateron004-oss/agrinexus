@@ -92,8 +92,8 @@ let routeTrackingWatchId = null;
 let routeTrackingPoints = [];
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-293";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v273";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-294";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v274";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
 const VOICE_ATTENTION_DELAY_MS = 900;
@@ -22305,7 +22305,7 @@ function renderLoginProfiles() {
   const target = $("#loginProfiles");
   if (!target) return;
   target.innerHTML = demoLoginProfiles.map(profile => `
-    <button class="login-profile" type="button" data-login-email="${profile.email}" data-login-password="${profile.password}">
+    <button class="login-profile" type="button" data-login-email="${profile.email}" data-login-label="${profile.label}">
       <strong>${profile.label}</strong>
       <span>${profile.role}</span>
     </button>
@@ -22313,8 +22313,9 @@ function renderLoginProfiles() {
   target.querySelectorAll("[data-login-email]").forEach(button => {
     button.addEventListener("click", () => {
       $("#email").value = button.dataset.loginEmail;
-      $("#password").value = button.dataset.loginPassword;
-      $("#loginMessage").textContent = `${button.querySelector("strong")?.textContent || "Profile"} login selected.`;
+      $("#password").value = "";
+      $("#password").focus();
+      $("#loginMessage").textContent = `${button.dataset.loginLabel || "Profile"} selected. Type the password to enter.`;
     });
   });
   captureOriginalText(target);
@@ -23195,7 +23196,14 @@ function bindStatic() {
     try {
       localStorage.removeItem("agrinexusGuestDisplayName");
       const loginLanguage = localStorage.getItem("agrinexusLoginLanguage") || "en";
-      data = await request("/api/login", { method: "POST", body: { email: $("#email").value, password: $("#password").value } });
+      const email = String($("#email")?.value || "").trim().toLowerCase();
+      const password = String($("#password")?.value || "");
+      if (!email || !password.trim()) {
+        $("#loginMessage").textContent = "Email and password are required.";
+        $("#password")?.focus();
+        return;
+      }
+      data = await request("/api/login", { method: "POST", body: { email, password } });
       if (loginLanguage && loginLanguage !== data?.user?.language) {
         data = await request("/api/user/language", { method: "POST", body: { language: loginLanguage } });
       }
@@ -23527,12 +23535,8 @@ async function boot() {
   bindStatic();
   captureOriginalText();
   setLoginLanguage(localStorage.getItem("agrinexusLoginLanguage") || "en");
-  try {
-    data = await request("/api/state");
-    render();
-  } catch {
-    $("#loginView").classList.remove("hidden");
-  }
+  $("#loginView").classList.remove("hidden");
+  $("#password")?.focus();
 }
 
 boot();

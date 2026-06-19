@@ -19,6 +19,8 @@
     "conversation:core-qa": "node scripts/conversation-core-architecture-qa.js",
     "conversation:stress": "node scripts/nexus-general-conversation-stress.js",
     "phone:greeting-qa": "node scripts/phone-greeting-qa.js",
+    "auth:login-gate-qa": "node scripts/auth-login-gate-qa.js",
+    "auth:login-api-smoke": "node scripts/auth-login-api-smoke.js",
     "conversation:rural-eval": "node scripts/synthetic-rural-conversation-eval.js",
     "offline:reasoning-qa": "node scripts/offline-reasoning-brain-qa.js",
     "platform:intelligence-qa": "node scripts/platform-intelligence-qa.js",

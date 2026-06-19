@@ -26,8 +26,8 @@ const AI_MODEL = process.env.OPENAI_MODEL || "gpt-5.4-mini";
 const AI_REASONING_MODEL = process.env.OPENAI_REASONING_MODEL || process.env.OPENAI_AGENT_MODEL || AI_MODEL;
 const AI_TRANSLATION_MODEL = process.env.OPENAI_TRANSLATION_MODEL || process.env.OPENAI_AGENT_MODEL || AI_MODEL;
 const AGRINEXUS_RELEASE = "2026-06-16-operational-readiness";
-const AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-293";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v273";
+const AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-294";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v274";
 const ROOT = __dirname;
 const DATA_DIR = process.env.AGRINEXUS_DATA_DIR || ROOT;
 const DB_PATH = process.env.AGRINEXUS_DB_PATH || path.join(DATA_DIR, "db.json");
@@ -24437,7 +24437,10 @@ async function api(req, res, url) {
 
   if (url.pathname === "/api/login" && req.method === "POST") {
     const body = await readBody(req);
-    const found = db.users.find(item => item.email === body.email && item.password === body.password);
+    const email = String(body.email || "").trim().toLowerCase();
+    const password = String(body.password || "");
+    if (!email || !password.trim()) return send(res, 400, { error: "Email and password are required" });
+    const found = db.users.find(item => String(item.email || "").toLowerCase() === email && String(item.password || "") === password);
     if (!found) return send(res, 401, { error: "Invalid demo credentials" });
     if (usersChanged) await writeDb(db);
     const sid = crypto.randomBytes(24).toString("hex");
