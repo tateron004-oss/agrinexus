@@ -16,6 +16,7 @@
     "conversation:continuous": "node scripts/nexus-continuous-turn-regression.js",
     "conversation:open": "node scripts/nexus-open-conversation-regression.js",
     "conversation:multilingual": "node scripts/nexus-multilingual-general-conversation-regression.js",
+    "conversation:core-qa": "node scripts/conversation-core-architecture-qa.js",
     "conversation:stress": "node scripts/nexus-general-conversation-stress.js",
     "phone:greeting-qa": "node scripts/phone-greeting-qa.js",
     "conversation:rural-eval": "node scripts/synthetic-rural-conversation-eval.js",

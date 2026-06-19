@@ -92,8 +92,8 @@ let routeTrackingWatchId = null;
 let routeTrackingPoints = [];
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-291";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v271";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-292";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v272";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
 const VOICE_ATTENTION_DELAY_MS = 900;
@@ -20376,6 +20376,71 @@ async function executeUnifiedNexusIntent(intent, command = "", options = {}) {
   return false;
 }
 
+function nexusConversationCoreEnabled() {
+  return localStorage.getItem("agrinexusConversationCore") !== "off";
+}
+
+function normalizeNexusConversationCoreDecision(decision = {}) {
+  if (!decision || typeof decision !== "object") return null;
+  const type = ["answer", "direct", "workflow", "backend", "clarify"].includes(decision.type) ? decision.type : "";
+  if (!type) return null;
+  return {
+    type,
+    response: String(decision.response || "").replace(/\s+/g, " ").trim(),
+    directAction: decision.directAction || "",
+    workflow: decision.workflow || "",
+    action: decision.action || "",
+    dataset: decision.dataset || {},
+    suggestions: Array.isArray(decision.suggestions) ? decision.suggestions : [],
+    clarification: decision.clarification || null,
+    reason: decision.reason || "Nexus Conversation Core selected this route.",
+    confidence: Number(decision.confidence || 0),
+    provider: decision.provider || "nexus-conversation-core",
+    conversationCore: decision
+  };
+}
+
+function shouldUseNexusConversationCore(command = "", context = {}) {
+  if (!nexusConversationCoreEnabled() || context.skipConversationCore || context.adaptiveReroute) return false;
+  const lower = normalizeToolText(command);
+  if (!lower) return false;
+  if (isGlobalStopCommand(lower) || isUniversalLanguageCommand(command)) return false;
+  if (isWakePhraseOnly(command) || isNexusGreetingOnly(command)) return false;
+  return true;
+}
+
+async function runNexusConversationCore(command = "", context = {}) {
+  if (!shouldUseNexusConversationCore(command, context)) return false;
+  try {
+    updateNexusBehaviorLayer("thinking", "Nexus Conversation Core is deciding whether to answer, ask, or act.");
+    const result = await requestWithTimeout("/api/agent/conversation-core", {
+      method: "POST",
+      body: {
+        command,
+        source: context.source || "web",
+        mode: experienceMode,
+        modeContext: modeConversationContext(command),
+        targetLanguage: languageCode(),
+        language: languageCode()
+      }
+    }, Number(localStorage.getItem("agrinexusConversationCoreTimeout") || 12000));
+    const decision = normalizeNexusConversationCoreDecision(result.conversationCore);
+    if (!decision) return false;
+    const routeLabel = `${decision.provider}: ${decision.type}`;
+    updateNexusBehaviorLayer(decision.type === "clarify" ? "listening" : decision.type === "answer" ? "answering" : "acting", `Nexus Conversation Core routed this request through ${routeLabel}.`);
+    renderLiveVoiceSuggestions(decision.suggestions?.length ? decision.suggestions : ["health", "medicine", "crops", "work", "learning", "map"]);
+    if (decision.type === "backend") {
+      await executeUnifiedNexusIntent({ type: "backend", reason: decision.reason, suggestions: decision.suggestions }, command, { ...context, skipConversationCore: true });
+      return true;
+    }
+    await executeUnifiedNexusIntent(decision, command, { ...context, skipConversationCore: true });
+    return true;
+  } catch (error) {
+    updateNexusBehaviorLayer("fallback", `Conversation Core fallback: ${error.message || "unavailable"}`);
+    return false;
+  }
+}
+
 async function unifiedNexusConversationBrain(rawCommand = "", context = {}) {
   const localized = normalizeLocalizedVoiceCommand(rawCommand);
   const cleaned = normalizeMultilingualBehaviorCommand(cleanWakeCommand(localized));
@@ -20384,6 +20449,33 @@ async function unifiedNexusConversationBrain(rawCommand = "", context = {}) {
   const spoken = command || rawCommand;
   const turnToken = context.turnToken || null;
   const stopRedirect = postStopRedirectCommand(command);
+
+  if (await answerPendingNexusQuestion(command || localized || rawCommand)) return true;
+
+  if (isGlobalStopCommand(String(command || localized || rawCommand).toLowerCase())) {
+    if (isStopAndContinueWorkingCommand(command || localized || rawCommand)) {
+      stopNexusAndReturnToWork("Stopped. Nexus is closed so you can continue working.");
+      return true;
+    }
+    enterNexusConversationPause("Stopped. Nexus is paused and will ignore background conversation until you say Nexus again.");
+    if (stopRedirect) {
+      leaveNexusConversationPause("Nexus heard your next instruction after stop.");
+      setTimeout(() => {
+        setCommandInputs(stopRedirect);
+        void handleVoiceCommand(stopRedirect, { ...context, skipUnifiedBrain: false });
+      }, VOICE_POST_STOP_REDIRECT_DELAY_MS);
+    }
+    return true;
+  }
+
+  if (isUniversalLanguageCommand(command || localized)) {
+    pendingNexusSpokenCommand = null;
+    pendingAgentClarification = null;
+    await changeLanguageByVoice(command || localized);
+    return true;
+  }
+
+  if (await runNexusConversationCore(spoken || command || localized || rawCommand, context)) return true;
 
   const fastLaneIntent = nexusFastLaneIntent(spoken || command || localized || rawCommand);
   if (fastLaneIntent) {

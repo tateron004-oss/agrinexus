@@ -26,8 +26,8 @@ const AI_MODEL = process.env.OPENAI_MODEL || "gpt-5.4-mini";
 const AI_REASONING_MODEL = process.env.OPENAI_REASONING_MODEL || process.env.OPENAI_AGENT_MODEL || AI_MODEL;
 const AI_TRANSLATION_MODEL = process.env.OPENAI_TRANSLATION_MODEL || process.env.OPENAI_AGENT_MODEL || AI_MODEL;
 const AGRINEXUS_RELEASE = "2026-06-16-operational-readiness";
-const AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-291";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v271";
+const AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-292";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v272";
 const ROOT = __dirname;
 const DATA_DIR = process.env.AGRINEXUS_DATA_DIR || ROOT;
 const DB_PATH = process.env.AGRINEXUS_DB_PATH || path.join(DATA_DIR, "db.json");
@@ -15858,6 +15858,306 @@ function localGeneralConversationAnswer(db, user, command = "", options = {}) {
   return { response: localized.en.default, language: "en", kind };
 }
 
+function stripNexusWakeWords(text = "") {
+  return String(text || "")
+    .replace(/^\s*(hey\s+)?(nexus|agrinexus|agri\s+nexus)\s*[,:\-]?\s*/i, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function normalizeConversationCoreDecision(decision = {}, fallback = {}) {
+  const allowedDirect = new Set([
+    "home",
+    "health-intake",
+    "medicine-help",
+    "clinic-map-help",
+    "clinic-help",
+    "doctor-help",
+    "crop-help",
+    "crop-sale-guided",
+    "workforce-guided",
+    "learning-guided",
+    "route-guided",
+    "full-map"
+  ]);
+  const allowedWorkflows = new Set(["health", "trade", "workforce", "learning", "map", "communications", "integrations", "admin", "agent"]);
+  const type = ["answer", "direct", "workflow", "backend", "clarify"].includes(decision.type) ? decision.type : fallback.type || "clarify";
+  const response = String(decision.response || fallback.response || "I heard part of that. Tell me one thing: health, medicine, clinic, crops, work, learning, or map.").replace(/\s+/g, " ").trim();
+  const normalized = {
+    type,
+    response,
+    confidence: Math.max(0, Math.min(1, Number(decision.confidence ?? fallback.confidence ?? 0.7))),
+    provider: decision.provider || fallback.provider || "nexus-conversation-core-local",
+    reason: decision.reason || fallback.reason || "Nexus Conversation Core selected the safest next step.",
+    suggestions: Array.isArray(decision.suggestions) && decision.suggestions.length
+      ? decision.suggestions.slice(0, 6).map(item => String(item).trim()).filter(Boolean)
+      : Array.isArray(fallback.suggestions) ? fallback.suggestions.slice(0, 6) : ["health", "medicine", "clinic", "crops", "work", "learning", "map"],
+    metadata: { ...(fallback.metadata || {}), ...(decision.metadata || {}) }
+  };
+  if (type === "direct") {
+    normalized.directAction = allowedDirect.has(decision.directAction) ? decision.directAction : allowedDirect.has(fallback.directAction) ? fallback.directAction : "home";
+  }
+  if (type === "workflow") {
+    normalized.workflow = allowedWorkflows.has(decision.workflow) ? decision.workflow : allowedWorkflows.has(fallback.workflow) ? fallback.workflow : "agent";
+    normalized.action = String(decision.action || fallback.action || "copilot").replace(/[^\w-]/g, "").slice(0, 48) || "copilot";
+    normalized.dataset = typeof decision.dataset === "object" && decision.dataset ? decision.dataset : fallback.dataset || {};
+  }
+  if (type === "clarify") {
+    normalized.clarification = decision.clarification || fallback.clarification || {
+      original: fallback.command || "",
+      options: [
+        { label: "Health", command: "I need a doctor" },
+        { label: "Crops", command: "my crop is bad" },
+        { label: "Work", command: "I need work" },
+        { label: "Learning", command: "start a course" },
+        { label: "Map", command: "open map" }
+      ]
+    };
+  }
+  return normalized;
+}
+
+function localNexusConversationCoreDecision(db, user, command = "", options = {}) {
+  const text = stripNexusWakeWords(command);
+  const lower = text.toLowerCase().replace(/\s+/g, " ").trim();
+  const name = db.profile.agentMemory.userModel?.name || db.profile.agentMemory.userName || user?.name?.split(/\s+/)[0] || "there";
+  const decision = (payload) => normalizeConversationCoreDecision({
+    provider: "nexus-conversation-core-local",
+    reason: "Local Nexus Conversation Core recognized a high-confidence platform intent.",
+    ...payload
+  }, { command: text });
+  if (!lower) return decision({
+    type: "answer",
+    response: `Yes ${name}, how can I assist you?`,
+    confidence: 0.98,
+    suggestions: ["I need medicine", "my crop is bad", "start a course", "open map"]
+  });
+  if (/^(hello|hi|hey|good morning|good afternoon|good evening|goodmorning|goodafternoon|goodevening)\b/.test(lower) && !/\b(doctor|medicine|clinic|crop|work|course|map|sell|route)\b/.test(lower)) {
+    const spokenName = extractConversationalName(text);
+    if (spokenName) {
+      db.profile.agentMemory.userName = spokenName;
+      db.profile.agentMemory.userModel = { ...(db.profile.agentMemory.userModel || {}), name: spokenName, preferredInteraction: "voice-first", lastSeenAt: new Date().toISOString() };
+      rememberAgentMemory(db.profile, `User name is ${spokenName}.`, { source: "conversation-core", category: "fact", confidence: 0.96 });
+    }
+    const greetingName = spokenName || name;
+    return decision({
+      type: "answer",
+      response: `Hello ${greetingName}, how can I assist you?`,
+      confidence: 0.98,
+      suggestions: ["I need a doctor", "help me sell my crop", "start a course", "open map"]
+    });
+  }
+  if (/\b(can you hear me|are you listening|do you hear me|you hear me|are you there)\b/.test(lower)) {
+    return decision({
+      type: "answer",
+      response: `Yes ${name}, I can hear you. Tell me what you need in your own words.`,
+      confidence: 0.98,
+      suggestions: ["I need medicine", "find a clinic near me", "my crop is bad"]
+    });
+  }
+  if (/\b(what is|what's|explain|describe|tell me about|who are you|what do you do)\b.*\b(agrinexus|agri nexus|nexus|platform)\b/.test(lower)
+    || /\b(agrinexus|agri nexus|nexus|platform)\b.*\b(what is|explain|describe|tell me about|what do you do|who are you)\b/.test(lower)) {
+    return decision({
+      type: "answer",
+      response: "AgriNexus helps people use farming, health access, learning, jobs, trade, maps, and local services by voice. Nexus is the assistant inside it: it listens, answers in simple words, opens the right service, and guides the next step.",
+      confidence: 0.98,
+      suggestions: ["help a farmer", "I need a doctor", "help me sell my crop", "open map"]
+    });
+  }
+  if (/\b(what can you do|how can you help|what do you do|you can do what)\b/.test(lower)) {
+    return decision({
+      type: "answer",
+      response: "I can answer questions, open health, medicine, learning, work, crop sale, maps, and guide one step at a time. I can also use live providers when they are connected.",
+      confidence: 0.97,
+      suggestions: ["I need medicine", "find work", "sell my crop", "open map"]
+    });
+  }
+  if (/\b(start|open|begin)?\s*(health )?(intake|patient intake|telehealth intake)\b/.test(lower)) {
+    return decision({ type: "direct", directAction: "health-intake", response: "I opened health intake. I will ask one question at a time. This is not a diagnosis. First, who needs care?", confidence: 0.96, suggestions: ["adult patient", "child patient", "find clinic"] });
+  }
+  if (/\b(medicine|medication|pharmacy|pills|drug|refill|prescription|dawa|medicina|remedio|magani|oogun)\b/.test(lower)) {
+    const mapIntent = /\b(map|show|find|near|nearest|nearby|closest|where|location)\b/.test(lower);
+    return decision({
+      type: "direct",
+      directAction: mapIntent ? "clinic-map-help" : "medicine-help",
+      response: mapIntent
+        ? "I opened the clinic and pharmacy map. Share your village, city, or nearest landmark, and I will guide the closest clinic, mobile clinic, or pharmacy route."
+        : "I heard you need medicine. I cannot prescribe, but I can help find pharmacy or mobile clinic support and prepare provider review. First, tell me the medicine concern.",
+      confidence: 0.96,
+      suggestions: ["show pharmacy on map", "start intake", "call provider"]
+    });
+  }
+  if (/\b(clinic|hospital|health center|health centre|kliniki|clinica|clinique)\b/.test(lower) && /\b(map|near|nearest|nearby|closest|where|location|find|show|me)\b/.test(lower)) {
+    return decision({
+      type: "direct",
+      directAction: "clinic-map-help",
+      response: "I opened the clinic and pharmacy map. Share your village, city, or nearest landmark, and I will guide the closest clinic, mobile clinic, or pharmacy route.",
+      confidence: 0.96,
+      suggestions: ["use my location", "show pharmacy", "call provider"]
+    });
+  }
+  if (/\b(doctor|provider|nurse|clinician|daktari|medico|docteur)\b/.test(lower) && /\b(need|want|talk|speak|call|contact|see|find|help|please)\b/.test(lower)) {
+    return decision({
+      type: "direct",
+      directAction: "doctor-help",
+      response: "I heard you need a doctor. I am not a doctor and this is not a diagnosis, but I can guide the next safe step. First, tell me where you are.",
+      confidence: 0.96,
+      suggestions: ["start intake", "find clinic", "call provider"]
+    });
+  }
+  if (/\b(caption|captions|transcript|subtitles?)\b/.test(lower) && /\b(telehealth|health|patient|doctor|provider|clinic|care)\b/.test(lower)) {
+    return decision({ type: "workflow", workflow: "health", action: "caption", response: "Telehealth captions are open. Speak naturally, and Nexus will help turn the conversation into readable text.", confidence: 0.95, suggestions: ["start intake", "call provider", "hide captions"] });
+  }
+  if (/\b(mobile clinic|field clinic|outreach clinic|clinic outreach|rural clinic)\b/.test(lower)) {
+    return decision({ type: "workflow", workflow: "health", action: "mobile-clinic", response: "I opened mobile clinic support. I can guide intake, location, provider handoff, pharmacy resources, and follow-up. First, where is the patient?", confidence: 0.94, suggestions: ["start intake", "show clinic map", "supply request"] });
+  }
+  if (/\b(crop bad|my crop is bad|crop is bad|crop damage|field problem|plant sick|plants are sick|yellow leaves|pests|wilting|shamba mbaya|maize bad)\b/.test(lower)) {
+    return decision({ type: "direct", directAction: "crop-help", response: "I can help with the crop problem. I opened crop support. Tell me the crop, farm location, and what looks wrong.", confidence: 0.96, suggestions: ["run drone scan", "explain crop evidence", "sell my crop"] });
+  }
+  if (/\b(help me sell|sell my crop|sell crop|sell maize|find buyer|talk to buyer|contact buyer|kuuza mazao|vender cosecha)\b/.test(lower)) {
+    return decision({ type: "direct", directAction: "crop-sale-guided", response: "I can help sell the crop. First, what crop or product do you want to sell or move?", confidence: 0.96, suggestions: ["contact buyer", "track shipment", "show trade route"] });
+  }
+  if (/\b(track|show|open|follow)\b.*\b(shipment|delivery|order|sale|product|route)\b/.test(lower) || /\b(open|show)\b.*\b(map|route)\b/.test(lower)) {
+    return decision({ type: "direct", directAction: "full-map", response: "Full map is open. You can zoom, find facilities, check routes, or track shipments.", confidence: 0.93, suggestions: ["show clinic on map", "track shipment", "route from Kenya to Nigeria"] });
+  }
+  if (/\b(i need work|need work|find work|find a job|job please|work please|need job|kazi|trabajo|emploi|apply for a job|help me apply)\b/.test(lower)) {
+    return decision({ type: "direct", directAction: "workforce-guided", response: "I can help with work. First, what country or area do you want to work in?", confidence: 0.96, suggestions: ["apply for a job", "prepare interview", "biochemistry jobs"] });
+  }
+  if (/\b(start a course|start course|take course|begin course|start learning|want learn|learn please|course|lesson|somo|training)\b/.test(lower)) {
+    return decision({ type: "direct", directAction: "learning-guided", response: "I can help you learn. First, what skill or course do you want?", confidence: 0.95, suggestions: ["read lesson", "build captions", "issue certificate"] });
+  }
+  if (/\b(weather|temperature|temp|too hot|rain|forecast|safe to walk|walk today)\b/.test(lower)) {
+    return decision({ type: "backend", response: "I am checking weather and location context now.", confidence: 0.9, suggestions: ["weather in Nairobi", "is it safe to walk", "open map"] });
+  }
+  if (isGeneralConversationQuestion(text) || isOpenDialogConversation(text, options)) {
+    return decision({ type: "backend", response: "I am thinking through that with the conversation brain.", confidence: 0.82, suggestions: ["ask a follow-up", "open the right service", "Nexus stop"] });
+  }
+  return decision({
+    type: "clarify",
+    response: "I may have heard only part of that. Tell me one thing: health, medicine, clinic, crops, work, learning, or map.",
+    confidence: 0.62,
+    suggestions: ["health", "medicine", "clinic", "crops", "work", "learning", "map"]
+  });
+}
+
+async function openAiNexusConversationCoreDecision(db, user, command = "", options = {}, localDecision = null) {
+  if (!process.env.OPENAI_API_KEY) return null;
+  const text = stripNexusWakeWords(command);
+  if (!text) return null;
+  const moduleSignal = conversationModuleSignal(text);
+  const memories = retrieveAgentMemories(db.profile, text, 6);
+  const system = [
+    "You are Nexus Conversation Core, the single decision brain inside AgriNexus.",
+    "Return only compact JSON. Do not include markdown.",
+    "Choose exactly one type: answer, direct, workflow, backend, or clarify.",
+    "For direct actions use only: home, health-intake, medicine-help, clinic-map-help, clinic-help, doctor-help, crop-help, crop-sale-guided, workforce-guided, learning-guided, route-guided, full-map.",
+    "For workflows use only workflow health, trade, workforce, learning, map, communications, integrations, admin, or agent.",
+    "Speak simply for rural users, farmers, patients, workers, learners, administrators, and investors.",
+    "For health, never diagnose. Give safety-oriented guidance and route to clinic, pharmacy, mobile clinic, intake, captions, or provider handoff.",
+    "If unclear, ask one simple clarifying question. No menus. No long stories.",
+    "If a visible action is useful, choose direct or workflow so the app can open the right screen."
+  ].join(" ");
+  try {
+    const response = await fetchWithTimeout("https://api.openai.com/v1/responses", {
+      method: "POST",
+      headers: {
+        authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+        "content-type": "application/json"
+      },
+      body: JSON.stringify({
+        model: process.env.OPENAI_CONVERSATION_CORE_MODEL || process.env.OPENAI_AGENT_MODEL || process.env.OPENAI_MODEL || "gpt-4o-mini",
+        input: [
+          { role: "system", content: system },
+          {
+            role: "user",
+            content: JSON.stringify({
+              command: text,
+              mode: options.mode || user?.role || "user",
+              targetLanguage: options.targetLanguage || user?.language || "en",
+              moduleSignal,
+              memories,
+              localDecision,
+              expectedSchema: {
+                type: "answer|direct|workflow|backend|clarify",
+                directAction: "optional direct action",
+                workflow: "optional workflow",
+                action: "optional workflow action",
+                response: "short spoken response",
+                suggestions: ["short next command"],
+                confidence: 0.0,
+                reason: "why this decision"
+              }
+            })
+          }
+        ],
+        max_output_tokens: 420
+      })
+    }, Number(process.env.OPENAI_CONVERSATION_CORE_TIMEOUT_MS || 12000));
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(payload.error?.message || response.statusText);
+    const parsed = extractJsonObject(extractResponseText(payload));
+    if (!parsed) throw new Error("OpenAI conversation core did not return JSON.");
+    return normalizeConversationCoreDecision({
+      ...parsed,
+      provider: "openai-conversation-core",
+      metadata: {
+        ...(parsed.metadata || {}),
+        model: process.env.OPENAI_CONVERSATION_CORE_MODEL || process.env.OPENAI_AGENT_MODEL || process.env.OPENAI_MODEL || "gpt-4o-mini",
+        responseId: payload.id || null
+      }
+    }, localDecision || { command: text });
+  } catch (error) {
+    logIntegration(db, {
+      providerId: "openai",
+      module: "AI",
+      action: "agent.conversation_core_error",
+      status: "fallback",
+      detail: error.message || "OpenAI conversation core unavailable.",
+      metadata: { command: text },
+      dispatch: false
+    });
+    return null;
+  }
+}
+
+async function nexusConversationCoreDecision(db, user, command = "", options = {}) {
+  ensureAiProfile(db.profile);
+  const localDecision = localNexusConversationCoreDecision(db, user, command, options);
+  const shouldUseOpenAi = Boolean(process.env.OPENAI_API_KEY)
+    && !["direct", "workflow"].includes(localDecision.type)
+    && localDecision.confidence < Number(process.env.NEXUS_CONVERSATION_CORE_LOCAL_CONFIDENCE_CEILING || 0.93);
+  const aiDecision = shouldUseOpenAi ? await openAiNexusConversationCoreDecision(db, user, command, options, localDecision) : null;
+  const finalDecision = aiDecision || localDecision;
+  finalDecision.version = "nexus-conversation-core-v1";
+  finalDecision.command = stripNexusWakeWords(command);
+  finalDecision.mode = options.mode || user?.role || "user";
+  finalDecision.targetLanguage = options.targetLanguage || user?.language || "en";
+  db.profile.agentMemory.lastConversationCore = {
+    command: finalDecision.command,
+    type: finalDecision.type,
+    provider: finalDecision.provider,
+    confidence: finalDecision.confidence,
+    reason: finalDecision.reason,
+    createdAt: new Date().toISOString()
+  };
+  db.profile.agentMemory.updatedAt = new Date().toISOString();
+  rememberAgentMemory(db.profile, `Nexus Conversation Core handled "${finalDecision.command}" as ${finalDecision.type}.`, {
+    source: "conversation-core",
+    category: "behavior",
+    module: "Agent AI",
+    confidence: finalDecision.confidence
+  });
+  logIntegration(db, {
+    providerId: finalDecision.provider === "openai-conversation-core" ? "openai" : "database",
+    module: "AI",
+    action: "agent.conversation_core_decision",
+    detail: `Conversation Core chose ${finalDecision.type} at ${Math.round(finalDecision.confidence * 100)}% confidence.`,
+    metadata: { command: finalDecision.command, decision: finalDecision },
+    dispatch: false
+  });
+  return finalDecision;
+}
+
 async function generalConversationResponse(db, user, command = "", options = {}) {
   ensureAiProfile(db.profile);
   const moduleSignal = { module: "Agent AI", section: "agent" };
@@ -27827,6 +28127,29 @@ async function api(req, res, url) {
     await writeDb(db);
     const state = publicState(db, user);
     state.commandResult = result;
+    return send(res, 200, state);
+  }
+
+  if (url.pathname === "/api/agent/conversation-core" && req.method === "POST") {
+    if (!canUse(user, "ai")) return send(res, 403, { error: "Role does not allow conversation core" });
+    const body = await readBody(req);
+    const command = String(body.command || body.text || "").trim();
+    const decision = await nexusConversationCoreDecision(db, user, command, {
+      mode: body.mode,
+      modeContext: body.modeContext,
+      targetLanguage: body.targetLanguage || body.language || user.language,
+      source: body.source || "web",
+      location: body.location || body.currentLocation || null
+    });
+    commandRecord(db, user, command, {
+      intent: `conversation_core.${decision.type}`,
+      response: decision.response,
+      status: "completed",
+      metadata: { conversationCore: decision, redirectSection: decision.workflow || decision.directAction || "agent" }
+    });
+    await writeDb(db);
+    const state = publicState(db, user);
+    state.conversationCore = decision;
     return send(res, 200, state);
   }
 
