@@ -30,6 +30,7 @@ let voiceInterimTranscript = "";
 let voiceInterimStartedAt = 0;
 let voiceLastPartialAt = 0;
 let voiceFinalDebounceTimer = null;
+let companionUnderstandingState = null;
 let lastSpokenText = "";
 let lastSpokenAt = 0;
 let lastVoiceResponseAt = 0;
@@ -18820,6 +18821,13 @@ async function executeWorkflowConfigFromVoice(config, response = "") {
 function openWorkflowByVoice(workflow, action, response, dataset = {}) {
   const config = workflowConfig(workflow, action, { dataset });
   const actionLead = "";
+  companionRouteOutcomeMetadata(agentPerformanceState.lastCommand || response || "", {
+    actualRouteType: "workflow",
+    actualRouteName: [workflow, action].filter(Boolean).join(".") || "workflow",
+    actualRouteSource: "web.openWorkflowByVoice",
+    workflowOpened: true,
+    confirmationRequired: Boolean(config)
+  });
   recordNexusAutonomousLearning({ type: "workflow-opened", workflow, action, command: response || "" });
   setActiveAgentJourney(workflow, action, response || "");
   if (!config) {
@@ -19746,6 +19754,15 @@ function nexusFastLaneIntent(command = "") {
 function runSimpleUserVoiceIntent(intent, command = "") {
   if (!intent) return false;
   clearAgentProgressTimers();
+  companionRouteOutcomeMetadata(command, {
+    type: intent.type,
+    directAction: intent.directAction,
+    workflow: intent.workflow,
+    actualRouteName: intent.directAction || [intent.workflow, intent.action].filter(Boolean).join(".") || intent.type,
+    actualRouteSource: "web.simpleUserDirectVoiceIntent",
+    workflowOpened: intent.type === "direct" || intent.type === "workflow",
+    confirmationRequired: false
+  });
   if (intent.type === "clarify") {
     pendingAgentClarification = intent.clarification || null;
     pendingNexusSpokenCommand = null;
@@ -19791,8 +19808,29 @@ function resetConversationStateForPriorityIntent(command = "") {
 }
 
 function openAgentResultWorkflow(result = {}, command = "") {
+  if (result.metadata?.workflowDeferred) return false;
   const intent = String(result.intent || "");
   const response = result.response || "Yes, I can help. I opened the right area and I am ready for the next detail.";
+  if (COMPANION_WORKFLOW_LIKE_CONVERSATION_INTENTS?.has?.(intent) || [
+    "conversation.medicine_help",
+    "conversation.doctor_help",
+    "conversation.patient_help",
+    "conversation.clinic_map_help",
+    "conversation.health_intake",
+    "conversation.telehealth_captions",
+    "conversation.crop_help",
+    "conversation.crop_sale_help",
+    "conversation.workforce_help",
+    "conversation.learning_start",
+    "conversation.map_open"
+  ].includes(intent)) {
+    companionRouteOutcomeMetadata(command, {
+      actualRouteType: "workflow",
+      actualRouteName: intent,
+      actualRouteSource: "web.openAgentResultWorkflow",
+      workflowOpened: true
+    });
+  }
   if (intent === "conversation.medicine_help") return openMedicineHelpNow(response);
   if (intent === "conversation.doctor_help" || intent === "conversation.patient_help") return openDoctorHelpNow(response);
   if (intent === "conversation.clinic_map_help") return isHealthFacilityMapCommand(command, result) ? openHealthFacilityMapNow(response) : openClinicHelpNow(response);
@@ -20777,8 +20815,309 @@ function commandGoal(command) {
     .trim();
 }
 
+const COMPANION_UNDERSTANDING_INTENTS = new Set([
+  "conversation.greeting",
+  "conversation.question",
+  "conversation.need",
+  "conversation.clarify",
+  "conversation.support",
+  "workflow.offer",
+  "workflow.stage",
+  "execution.confirmed",
+  "execution.blocked",
+  "safety.escalation",
+  "language.change"
+]);
+
+const COMPANION_WORKFLOW_LIKE_CONVERSATION_INTENTS = new Set([
+  "conversation.health_intake",
+  "conversation.medicine_help",
+  "conversation.doctor_help",
+  "conversation.patient_help",
+  "conversation.clinic_help",
+  "conversation.clinic_map_help",
+  "conversation.mobile_clinic_help",
+  "conversation.telehealth_captions",
+  "conversation.crop_help",
+  "conversation.rural_crop_distress",
+  "conversation.crop_sale_help",
+  "conversation.workforce_help",
+  "conversation.learning_start",
+  "conversation.map_open"
+]);
+
+function companionUnderstandingClassification(command = "", options = {}) {
+  const raw = String(command || "").replace(/\s+/g, " ").trim();
+  const text = raw.replace(/^\s*(hey\s+)?(nexus|agrinexus|agri\s+nexus)\s*[,:\-]?\s*/i, "").trim();
+  const lower = normalizeToolText(text);
+  const tokens = lower.split(/\s+/).filter(Boolean);
+  const has = pattern => pattern.test(lower);
+  const explicitAction = has(/\b(open|start|run|create|build|make|send|submit|apply|schedule|connect|contact|call|message|advance|complete|issue|record|capture|test|deploy|change|switch|translate|track|prepare|show|book|pay|share|upload)\b/);
+  const domainSignals = [];
+  if (has(/\b(crop|crops|farm|field|maize|cassava|rice|beans|pest|harvest|soil|weather)\b/)) domainSignals.push("domain.agriculture");
+  if (has(/\b(work|job|jobs|employment|role|apply|application|interview|skill|workforce)\b/)) domainSignals.push("domain.workforce");
+  if (has(/\b(learn|learning|course|lesson|training|school|class|certificate)\b/)) domainSignals.push("domain.learning");
+  if (has(/\b(health|doctor|clinic|hospital|medicine|medication|pharmacy|patient|sick|pain|care|provider|nurse|baby|child)\b/)) domainSignals.push("domain.health");
+  if (has(/\b(trade|buyer|seller|market|price|order|sell|sale|payment|wallet|logistics|delivery|shipment)\b/)) domainSignals.push("domain.trade");
+  if (has(/\b(map|route|location|near|nearest|nearby|track|tracking|where)\b/)) domainSignals.push("domain.maps");
+  if (has(/\b(admin|readiness|provider|integration|operator|production|dashboard|user|audit)\b/)) domainSignals.push("domain.admin");
+  const urgent = has(/\b(emergency|urgent|danger|unconscious|not waking|not breathing|can't breathe|cannot breathe|trouble breathing|heavy bleeding|seizure|seizures|blue lips|very high fever|poison|chest pain|suicide|harm myself|harm someone)\b/);
+  const healthRisk = domainSignals.includes("domain.health") && has(/\b(baby|child|sick|fever|bleeding|breathing|pain|weak|medicine|drug|prescription|diagnose|prescribe)\b/);
+  const languageChange = has(/\b(change|switch|set|use|speak|respond)\b.*\b(language|spanish|espanol|español|french|francais|français|swahili|kiswahili|arabic|portuguese|english)\b/)
+    || has(/\b(language)\s*:\s*(en|es|fr|sw|ar|pt)\b/);
+  const support = has(/\b(confused|lost|overwhelmed|scared|afraid|nervous|tired|i don't understand|i dont understand|cannot read|can't read|cant read|help me understand|too much|not working)\b/);
+  const greeting = /^(hello|hi|hey|good morning|good afternoon|good evening|goodmorning|goodafternoon|goodevening)\b/.test(lower) && tokens.length <= 5;
+  const question = /^(what|whats|what's|what is|how|how do|how can|why|when|where|who|which|can you|could you|would you|should i|tell me|explain|describe|define)\b/.test(lower);
+  const confirmed = /^(yes|yeah|yep|confirm|confirmed|do it|run it|send it|submit it|call them|go ahead|okay do it|ok do it)\b/.test(lower);
+  const blocked = has(/\b(diagnose me|prescribe|give me a prescription|delete my account|share my information without asking|send without asking|pay without asking)\b/);
+  const need = has(/\b(i need|need|i want|want|looking for|trying to|help me|please help|my .* is|crops are failing|crop is failing|crops failing|crop failing|failing|sick|bad|problem)\b/);
+  const workflowObject = domainSignals.length > 0 || has(/\b(map|dashboard|intake|application|order|message|call|certificate|lesson|course|route|shipment|provider|buyer|seller)\b/);
+  const nounOnly = tokens.length <= 3 && domainSignals.length > 0 && !explicitAction && !question && !need;
+  let intent = "conversation.clarify";
+  let reason = "The request is short or ambiguous, so Nexus should understand before acting.";
+  let nextStep = "Ask one clarifying question.";
+  if (languageChange) {
+    intent = "language.change";
+    reason = "The user appears to be asking Nexus to change or preserve language.";
+    nextStep = "Confirm or apply language preference according to existing language rules.";
+  } else if (urgent || healthRisk && has(/\b(emergency|urgent|baby|child|breathing|bleeding|seizure|not waking|very high fever)\b/)) {
+    intent = "safety.escalation";
+    reason = "The request may involve urgent health or safety risk.";
+    nextStep = "Give safety-first guidance and ask the most important next question.";
+  } else if (blocked) {
+    intent = "execution.blocked";
+    reason = "The requested action is unsafe, unsupported, or requires qualified help/confirmation.";
+    nextStep = "Explain the limit and offer a safe alternative.";
+  } else if (confirmed) {
+    intent = "execution.confirmed";
+    reason = "The user appears to be confirming a previously staged action.";
+    nextStep = "Execute only if an existing staged action is present and confirmation rules allow it.";
+  } else if (greeting) {
+    intent = "conversation.greeting";
+    reason = "The user is greeting or waking Nexus.";
+    nextStep = "Greet warmly and invite the user to speak naturally.";
+  } else if (support) {
+    intent = "conversation.support";
+    reason = "The user may need reassurance, accessibility help, or slower guidance.";
+    nextStep = "Respond supportively and ask one simple question.";
+  } else if (question && !explicitAction) {
+    intent = "conversation.question";
+    reason = "The user is asking for an explanation or information.";
+    nextStep = "Answer in plain language before offering a workflow.";
+  } else if (explicitAction && workflowObject) {
+    intent = "workflow.stage";
+    reason = "The user used an explicit action verb with a platform/domain object.";
+    nextStep = "Stage or open the existing workflow without changing current routing behavior.";
+  } else if (explicitAction && !workflowObject) {
+    intent = "workflow.offer";
+    reason = "The user used action language, but the target is not specific enough.";
+    nextStep = "Offer the likely workflow after clarifying the goal.";
+  } else if (need) {
+    intent = "conversation.need";
+    reason = "The user expressed a need or problem rather than an explicit command.";
+    nextStep = "Understand context before offering a workflow.";
+  } else if (nounOnly) {
+    intent = "conversation.clarify";
+    reason = "The user gave a short domain phrase without enough context.";
+    nextStep = "Ask what they mean or what outcome they want.";
+  }
+  if (!COMPANION_UNDERSTANDING_INTENTS.has(intent)) intent = "conversation.clarify";
+  return {
+    version: "companion-constitution-phase-1",
+    intent,
+    source: options.source || "web",
+    rawInput: raw,
+    normalizedInput: text,
+    explicitAction,
+    domainSignals,
+    riskLevel: intent === "safety.escalation" ? "high" : intent === "execution.blocked" || domainSignals.includes("domain.health") ? "medium" : "low",
+    routeImpact: "visibility-only",
+    reason,
+    nextStep
+  };
+}
+
+function rememberCompanionUnderstanding(command = "", options = {}) {
+  companionUnderstandingState = companionUnderstandingClassification(command, options);
+  try {
+    localStorage.setItem("agrinexusCompanionUnderstanding", JSON.stringify(companionUnderstandingState));
+  } catch {
+    // Visibility-only state should never affect routing.
+  }
+  return companionUnderstandingState;
+}
+
+function companionRouteOutcomeMetadata(command = "", route = {}) {
+  const understanding = companionUnderstandingState || companionUnderstandingClassification(command, { source: "web" });
+  const name = route.actualRouteName || route.intent || route.directAction || route.workflow || route.type || "unknown";
+  const workflowOpened = Boolean(route.workflowOpened || route.type === "workflow" || route.type === "direct" || route.actualRouteType === "workflow");
+  const executionAttempted = Boolean(route.executionAttempted || route.actualRouteType === "execution");
+  const confirmationRequired = Boolean(route.confirmationRequired);
+  let actualRouteType = route.actualRouteType || "command";
+  if (!route.actualRouteType) {
+    if (route.type === "clarify") actualRouteType = "clarification";
+    else if (route.type === "answer") actualRouteType = "conversation";
+    else if (route.type === "backend") actualRouteType = "backend_agent";
+    else if (route.type === "workflow" || route.type === "direct") actualRouteType = "workflow";
+  }
+  const lower = normalizeToolText(command);
+  const singleWordInput = lower.split(/\s+/).filter(Boolean).length <= 1;
+  const conversationExpected = ["conversation.need", "conversation.clarify", "conversation.support", "conversation.question"].includes(understanding.intent);
+  let routeMismatch = false;
+  let mismatchReason = "";
+  if (conversationExpected && workflowOpened && !understanding.explicitAction) {
+    routeMismatch = true;
+    mismatchReason = `${understanding.intent} became an immediate workflow-like route without an explicit action command.`;
+  }
+  if (!routeMismatch && singleWordInput && workflowOpened && !understanding.explicitAction) {
+    routeMismatch = true;
+    mismatchReason = "Single-word input became a workflow-like route without clarification.";
+  }
+  if (!routeMismatch && understanding.intent === "safety.escalation" && workflowOpened && actualRouteType !== "safety") {
+    routeMismatch = true;
+    mismatchReason = "High-risk health or safety phrase routed to workflow before safety-first handling.";
+  }
+  if (!routeMismatch && executionAttempted && !confirmationRequired && understanding.intent !== "execution.confirmed") {
+    routeMismatch = true;
+    mismatchReason = "Execution appears to have been attempted without confirmation metadata.";
+  }
+  const outcome = {
+    companionIntent: understanding.intent,
+    actualRouteType,
+    actualRouteName: name,
+    actualRouteSource: route.actualRouteSource || "web.handleVoiceCommandCore",
+    workflowOpened,
+    executionAttempted,
+    confirmationRequired,
+    routeMismatch,
+    mismatchReason
+  };
+  try {
+    localStorage.setItem("agrinexusCompanionRouteOutcome", JSON.stringify(outcome));
+  } catch {
+    // Visibility-only state should never affect routing.
+  }
+  return outcome;
+}
+
+const COMPANION_WORKFLOW_OFFER_INTENTS = new Set([
+  "conversation.need",
+  "conversation.clarify",
+  "conversation.support",
+  "conversation.question"
+]);
+
+function companionWorkflowOfferForCommand(command = "", route = {}) {
+  const lower = normalizeToolText(command);
+  const directAction = String(route.directAction || "");
+  const workflow = String(route.workflow || "");
+  if (/\b(medicine|medication|pharmacy|pills|drug|refill|dawa|medicina|remedio)\b/.test(lower) || directAction === "medicine-help") {
+    return {
+      response: /\bi need\b|\bneed\b/.test(lower)
+        ? "I heard you need medicine. I can help you take the next safe step. Is the medicine for you, a child, or someone else? I can help prepare the concern for a clinic, pharmacy, or provider, but I can't prescribe medicine."
+        : "I heard you need medicine. I can help with medicine-related guidance. Is this for you, a child, or someone else? If there is trouble breathing, severe bleeding, seizures, or the person is not waking up, seek emergency help now.",
+      deferredWorkflowName: "health.medicine-support",
+      nextExpectedAction: "answer who the medicine is for or say start health intake",
+      confirmationPhrase: "Say start health intake or find pharmacy when you want me to open that workflow.",
+      suggestions: ["for me", "for a child", "find pharmacy"]
+    };
+  }
+  if (/\b(crop|crops|maize|cassava|rice|beans|field|farm|shamba)\b/.test(lower) && /\b(fail|failing|bad|dying|yellow|pest|spots|wilting|dry)\b/.test(lower) || directAction === "crop-help") {
+    return {
+      response: "I'm sorry you're dealing with that crop problem. What crop are you growing, and what symptoms are you seeing: yellow leaves, pests, dry soil, spots, or wilting?",
+      deferredWorkflowName: "trade.crop-support",
+      nextExpectedAction: "answer with the crop and symptoms or say start crop support",
+      confirmationPhrase: "Say start crop support when you want me to open the crop workflow.",
+      suggestions: ["maize yellow leaves", "pests", "dry soil"]
+    };
+  }
+  if (/\b(help me sell|sell my crop|sell crop|sell maize|find buyer|market maize|kuuza mazao)\b/.test(lower) || directAction === "crop-sale-guided") {
+    return {
+      response: "I can help sell the crop. How much maize do you have, and where is it located? After that, I can help with buyer contact, price, route, and delivery steps.",
+      deferredWorkflowName: "trade.crop-sale",
+      nextExpectedAction: "answer with quantity and location or say open buyer support",
+      confirmationPhrase: "Say open buyer support when you want me to open the sale workflow.",
+      suggestions: ["10 bags in Kisumu", "find buyer", "open buyer support"]
+    };
+  }
+  if (/\b(work|job|jobs|employment|role|kazi|trabajo|travail)\b/.test(lower) || directAction === "workforce-guided" || workflow === "workforce") {
+    return {
+      response: "I can help with work opportunities. What type of work are you looking for: farm work, health support, logistics, office work, or training first?",
+      deferredWorkflowName: "workforce.guided-search",
+      nextExpectedAction: "answer with the kind of work or say show workforce dashboard",
+      confirmationPhrase: "Say show workforce dashboard when you want me to open the workforce workflow.",
+      suggestions: ["farm work", "health support", "training first"]
+    };
+  }
+  return {
+    response: "I can help with that. Tell me a little more about what you need, and then I can open the right workflow if you want.",
+    deferredWorkflowName: workflow ? `${workflow}.guided-workflow` : "companion.guided-workflow",
+    nextExpectedAction: "answer the clarifying question or confirm the workflow",
+    confirmationPhrase: "Say open it when you want me to open the workflow.",
+    suggestions: ["explain more", "open it", "not now"]
+  };
+}
+
+function companionRequiredWorkflowOfferPhrase(command = "") {
+  const lower = normalizeToolText(command);
+  return /^(work|job|jobs|medicine|medication|pharmacy)$/.test(lower)
+    || /\b(i need|need|want)\b.*\b(medicine|medication|pharmacy|pills|drug|dawa)\b/.test(lower)
+    || /\b(crop|crops|maize|field|farm|shamba)\b.*\b(fail|failing)\b/.test(lower)
+    || /\b(help me sell|sell my crop|sell crop|sell maize|find buyer|market maize)\b/.test(lower);
+}
+
+function runCompanionWorkflowOfferIfNeeded(command = "", route = {}) {
+  const understanding = companionUnderstandingState || companionUnderstandingClassification(command, { source: "voice" });
+  if (!COMPANION_WORKFLOW_OFFER_INTENTS.has(understanding.intent) || understanding.explicitAction) return false;
+  if (understanding.intent === "safety.escalation" || understanding.intent === "language.change") return false;
+  if (!companionRequiredWorkflowOfferPhrase(command)) return false;
+  const routeType = route.actualRouteType || (route.type === "backend" ? "backend_agent" : route.type === "workflow" || route.type === "direct" ? "workflow" : route.type || "command");
+  const workflowLike = routeType === "workflow" || routeType === "command" || routeType === "dynamic_tool" || routeType === "backend_agent" || route.workflowOpened || route.type === "direct" || route.type === "workflow";
+  if (!workflowLike) return false;
+  const offer = companionWorkflowOfferForCommand(command, route);
+  const deferredOutcome = companionRouteOutcomeMetadata(command, {
+    ...route,
+    actualRouteType: routeType,
+    actualRouteSource: route.actualRouteSource || "web.phase3.preflight",
+    workflowOpened: true
+  });
+  const outcome = {
+    companionIntent: understanding.intent,
+    actualRouteType: "conversation",
+    actualRouteName: "workflow.offer",
+    actualRouteSource: "web.phase3.workflowOffer",
+    workflowOpened: false,
+    executionAttempted: false,
+    confirmationRequired: false,
+    routeMismatch: false,
+    mismatchReason: ""
+  };
+  const offerMetadata = {
+    workflowOffered: true,
+    workflowDeferred: true,
+    deferredWorkflowName: offer.deferredWorkflowName,
+    deferredRouteOutcome: deferredOutcome,
+    nextExpectedAction: offer.nextExpectedAction,
+    confirmationPhrase: offer.confirmationPhrase,
+    constitutionPhase: "phase-3-workflow-offer"
+  };
+  try {
+    localStorage.setItem("agrinexusCompanionRouteOutcome", JSON.stringify(outcome));
+    localStorage.setItem("agrinexusCompanionWorkflowOffer", JSON.stringify(offerMetadata));
+  } catch {
+    // Diagnostic metadata should never affect the voice response.
+  }
+  pendingAgentClarification = null;
+  pendingNexusSpokenCommand = null;
+  renderLiveVoiceSuggestions(offer.suggestions || []);
+  updateNexusBehaviorLayer("listening", "Nexus answered first and offered the workflow as a next step.");
+  setVoiceResponse(offer.response, true, { command });
+  return true;
+}
+
 async function handleVoiceCommandCore(rawCommand, options = {}) {
   if (!data) return setVoiceResponse("Sign in first, then I can operate the platform.");
+  const companionUnderstanding = rememberCompanionUnderstanding(rawCommand, { source: options.source || "voice", mode: conversationPlatformMode() });
   const turnToken = options.turnToken || null;
   const autoLanguage = await applyAutoLanguageFromSpeech(rawCommand, options);
   if (ignoreStaleNexusTurn(turnToken, "voice command")) return;
@@ -20795,6 +21134,10 @@ async function handleVoiceCommandCore(rawCommand, options = {}) {
   }
   const fastLaneIntent = nexusFastLaneIntent(spokenCommand || command || localizedCommand || rawCommand);
   if (fastLaneIntent) {
+    if (runCompanionWorkflowOfferIfNeeded(spokenCommand || command || localizedCommand || rawCommand, {
+      ...fastLaneIntent,
+      actualRouteSource: "web.nexusFastLaneIntent"
+    })) return;
     resetConversationStateForPriorityIntent(spokenCommand || command || rawCommand);
     if (await executeUnifiedNexusIntent(fastLaneIntent, spokenCommand || command || localizedCommand || rawCommand, { ...options, turnToken, autoLanguage })) return;
   }
@@ -20810,6 +21153,10 @@ async function handleVoiceCommandCore(rawCommand, options = {}) {
   }
   const firstPriorityFallbackIntent = simpleUserDirectVoiceIntent(spokenCommand || command);
   if (isPriorityServiceVoiceIntent(firstPriorityFallbackIntent)) {
+    if (runCompanionWorkflowOfferIfNeeded(spokenCommand || command, {
+      ...firstPriorityFallbackIntent,
+      actualRouteSource: "web.simpleUserDirectVoiceIntent.preflight"
+    })) return;
     resetConversationStateForPriorityIntent(spokenCommand || command);
     if (runSimpleUserVoiceIntent(firstPriorityFallbackIntent, spokenCommand || command)) return;
   }
@@ -20880,6 +21227,10 @@ async function handleVoiceCommandCore(rawCommand, options = {}) {
   }
   const priorityFallbackIntent = simpleUserDirectVoiceIntent(spokenCommand || command);
   if (isPriorityServiceVoiceIntent(priorityFallbackIntent)) {
+    if (runCompanionWorkflowOfferIfNeeded(spokenCommand || command, {
+      ...priorityFallbackIntent,
+      actualRouteSource: "web.simpleUserDirectVoiceIntent.preflight"
+    })) return;
     resetConversationStateForPriorityIntent(spokenCommand || command);
     if (runSimpleUserVoiceIntent(priorityFallbackIntent, spokenCommand || command)) return;
   }
@@ -20893,7 +21244,13 @@ async function handleVoiceCommandCore(rawCommand, options = {}) {
   if (handleConversationMode2Preflight(command || localizedCommand || rawCommand, options)) return;
   agentPerformanceState.spokenCommand = spokenCommand || command;
   const preDialogSimpleIntent = simpleUserDirectVoiceIntent(spokenCommand || command);
-  if (preDialogSimpleIntent && runSimpleUserVoiceIntent(preDialogSimpleIntent, spokenCommand || command)) return;
+  if (preDialogSimpleIntent) {
+    if (runCompanionWorkflowOfferIfNeeded(spokenCommand || command, {
+      ...preDialogSimpleIntent,
+      actualRouteSource: "web.simpleUserDirectVoiceIntent.preDialog"
+    })) return;
+    if (runSimpleUserVoiceIntent(preDialogSimpleIntent, spokenCommand || command)) return;
+  }
   if (isOpenKnowledgeQuestion(spokenCommand || command)) {
     pendingAgentClarification = null;
     pendingNexusSpokenCommand = null;
@@ -20915,7 +21272,13 @@ async function handleVoiceCommandCore(rawCommand, options = {}) {
     return;
   }
   const earlySimpleIntent = simpleUserDirectVoiceIntent(spokenCommand || command);
-  if (earlySimpleIntent && runSimpleUserVoiceIntent(earlySimpleIntent, spokenCommand || command)) return;
+  if (earlySimpleIntent) {
+    if (runCompanionWorkflowOfferIfNeeded(spokenCommand || command, {
+      ...earlySimpleIntent,
+      actualRouteSource: "web.simpleUserDirectVoiceIntent.early"
+    })) return;
+    if (runSimpleUserVoiceIntent(earlySimpleIntent, spokenCommand || command)) return;
+  }
   const understanding = adaptiveCommandUnderstanding(command);
   if (understanding.rewrittenCommand && !isUniversalLanguageCommand(command) && !isGlobalStopCommand(understanding.rewrittenCommand.toLowerCase())) {
     command = understanding.rewrittenCommand;
@@ -22004,6 +22367,7 @@ async function runBackendAgentCommand(command, locationContext = null, options =
         timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
         location: locationContext,
         targetLanguage: languageCode(),
+        companionUnderstanding: companionUnderstandingState,
         note: "Command submitted from Nexus Voice Assistant"
       }
     }, 12000);
@@ -22012,6 +22376,13 @@ async function runBackendAgentCommand(command, locationContext = null, options =
     clearAgentProgressTimers();
     render();
     const result = data.commandResult || {};
+    if (result.metadata?.companionRouteOutcome) {
+      try {
+        localStorage.setItem("agrinexusCompanionRouteOutcome", JSON.stringify(result.metadata.companionRouteOutcome));
+      } catch {
+        // Diagnostic metadata should never affect routing.
+      }
+    }
     if (result.intent === "map.country_open" || result.intent === "map.kenya_medical_transport") {
       const country = countryFromAgentMapMetadata(result.metadata || {});
       if (country) {
@@ -22022,7 +22393,7 @@ async function runBackendAgentCommand(command, locationContext = null, options =
       }
     }
     if (openAgentResultWorkflow(result, command)) return result;
-    if (result.metadata?.redirectSection) goSection(result.metadata.redirectSection);
+    if (result.metadata?.redirectSection && !result.metadata?.workflowDeferred) goSection(result.metadata.redirectSection);
     if (result.intent === "conversation.language_changed" || result.metadata?.language || previousLanguage !== languageCode()) {
       refreshVoiceForLanguageChange();
     }
@@ -22091,6 +22462,7 @@ async function runUtilityAgentCommand(command, fallbackAnswer = "", locationCont
         timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
         location: locationContext,
         targetLanguage: languageCode(),
+        companionUnderstanding: companionUnderstandingState,
         note: "Ask Nexus daily utility assistant"
       }
     }, 12000);
@@ -22098,6 +22470,13 @@ async function runUtilityAgentCommand(command, fallbackAnswer = "", locationCont
     if (ignoreStaleNexusTurn(turnToken, "utility answer")) return null;
     render();
     const result = data.commandResult || {};
+    if (result.metadata?.companionRouteOutcome) {
+      try {
+        localStorage.setItem("agrinexusCompanionRouteOutcome", JSON.stringify(result.metadata.companionRouteOutcome));
+      } catch {
+        // Diagnostic metadata should never affect routing.
+      }
+    }
     if (result.intent === "map.country_open" || result.intent === "map.kenya_medical_transport") {
       const country = countryFromAgentMapMetadata(result.metadata || {});
       if (country) {
@@ -22108,7 +22487,7 @@ async function runUtilityAgentCommand(command, fallbackAnswer = "", locationCont
       }
     }
     if (openAgentResultWorkflow(result, command)) return result;
-    if (result.metadata?.redirectSection) goSection(result.metadata.redirectSection);
+    if (result.metadata?.redirectSection && !result.metadata?.workflowDeferred) goSection(result.metadata.redirectSection);
     if (result.intent === "conversation.language_changed" || result.metadata?.language || previousLanguage !== languageCode()) {
       refreshVoiceForLanguageChange();
     }
@@ -22296,7 +22675,7 @@ async function runSimpleAction(eventOrButton) {
     return;
   }
   const latest = (data.profile.agentCommands || [])[0];
-  if (latest?.metadata?.redirectSection) goSection(latest.metadata.redirectSection);
+  if (latest?.metadata?.redirectSection && !latest?.metadata?.workflowDeferred) goSection(latest.metadata.redirectSection);
   else goSection("dashboard");
   if (status) status.textContent = latest?.response || "Returned to the dashboard. Choose a workflow to continue.";
 }

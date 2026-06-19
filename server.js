@@ -14692,6 +14692,383 @@ function isActionRequest(lower) {
   return /\b(open|start|run|create|build|make|send|submit|apply|schedule|connect|contact|call|message|advance|complete|issue|record|capture|test|deploy|change|switch|translate|track|prepare)\b/.test(String(lower || ""));
 }
 
+const COMPANION_UNDERSTANDING_INTENTS = new Set([
+  "conversation.greeting",
+  "conversation.question",
+  "conversation.need",
+  "conversation.clarify",
+  "conversation.support",
+  "workflow.offer",
+  "workflow.stage",
+  "execution.confirmed",
+  "execution.blocked",
+  "safety.escalation",
+  "language.change"
+]);
+
+function companionUnderstandingClassification(command = "", options = {}) {
+  const raw = String(command || "").replace(/\s+/g, " ").trim();
+  const text = raw.replace(/^\s*(hey\s+)?(nexus|agrinexus|agri\s+nexus)\s*[,:\-]?\s*/i, "").trim();
+  const lower = normalizeSpeechForIntent(text);
+  const tokens = lower.split(/\s+/).filter(Boolean);
+  const has = pattern => pattern.test(lower);
+  const explicitAction = has(/\b(open|start|run|create|build|make|send|submit|apply|schedule|connect|contact|call|message|advance|complete|issue|record|capture|test|deploy|change|switch|translate|track|prepare|show|book|pay|share|upload)\b/);
+  const domainSignals = [];
+  if (has(/\b(crop|crops|farm|field|maize|cassava|rice|beans|pest|harvest|soil|weather)\b/)) domainSignals.push("domain.agriculture");
+  if (has(/\b(work|job|jobs|employment|role|apply|application|interview|skill|workforce)\b/)) domainSignals.push("domain.workforce");
+  if (has(/\b(learn|learning|course|lesson|training|school|class|certificate)\b/)) domainSignals.push("domain.learning");
+  if (has(/\b(health|doctor|clinic|hospital|medicine|medication|pharmacy|patient|sick|pain|care|provider|nurse|baby|child)\b/)) domainSignals.push("domain.health");
+  if (has(/\b(trade|buyer|seller|market|price|order|sell|sale|payment|wallet|logistics|delivery|shipment)\b/)) domainSignals.push("domain.trade");
+  if (has(/\b(map|route|location|near|nearest|nearby|track|tracking|where)\b/)) domainSignals.push("domain.maps");
+  if (has(/\b(admin|readiness|provider|integration|operator|production|dashboard|user|audit)\b/)) domainSignals.push("domain.admin");
+
+  const urgent = has(/\b(emergency|urgent|danger|unconscious|not waking|not breathing|can't breathe|cannot breathe|trouble breathing|heavy bleeding|seizure|seizures|blue lips|very high fever|poison|chest pain|suicide|harm myself|harm someone)\b/);
+  const healthRisk = domainSignals.includes("domain.health") && has(/\b(baby|child|sick|fever|bleeding|breathing|pain|weak|medicine|drug|prescription|diagnose|prescribe)\b/);
+  const languageChange = has(/\b(change|switch|set|use|speak|respond)\b.*\b(language|spanish|espanol|español|french|francais|français|swahili|kiswahili|arabic|portuguese|english)\b/)
+    || has(/\b(language)\s*:\s*(en|es|fr|sw|ar|pt)\b/);
+  const support = has(/\b(confused|lost|overwhelmed|scared|afraid|nervous|tired|i don't understand|i dont understand|cannot read|can't read|cant read|help me understand|too much|not working)\b/);
+  const greeting = /^(hello|hi|hey|good morning|good afternoon|good evening|goodmorning|goodafternoon|goodevening)\b/.test(lower) && tokens.length <= 5;
+  const question = /^(what|whats|what's|what is|how|how do|how can|why|when|where|who|which|can you|could you|would you|should i|tell me|explain|describe|define)\b/.test(lower);
+  const confirmed = /^(yes|yeah|yep|confirm|confirmed|do it|run it|send it|submit it|call them|go ahead|okay do it|ok do it)\b/.test(lower);
+  const blocked = has(/\b(diagnose me|prescribe|give me a prescription|delete my account|share my information without asking|send without asking|pay without asking)\b/);
+  const need = has(/\b(i need|need|i want|want|looking for|trying to|help me|please help|necesito|busco|ayudame|ayudame|je cherche|j ai besoin|aide moi|nahitaji|nisaidie|preciso|ajude me|my .* is|crops are failing|crop is failing|crops failing|crop failing|failing|sick|bad|problem)\b/);
+  const workflowObject = domainSignals.length > 0 || has(/\b(map|dashboard|intake|application|order|message|call|certificate|lesson|course|route|shipment|provider|buyer|seller)\b/);
+  const nounOnly = tokens.length <= 3 && domainSignals.length > 0 && !explicitAction && !question && !need;
+
+  let intent = "conversation.clarify";
+  let reason = "The request is short or ambiguous, so Nexus should understand before acting.";
+  let nextStep = "Ask one clarifying question.";
+  if (languageChange) {
+    intent = "language.change";
+    reason = "The user appears to be asking Nexus to change or preserve language.";
+    nextStep = "Confirm or apply language preference according to existing language rules.";
+  } else if (urgent || healthRisk && has(/\b(emergency|urgent|baby|child|breathing|bleeding|seizure|not waking|very high fever)\b/)) {
+    intent = "safety.escalation";
+    reason = "The request may involve urgent health or safety risk.";
+    nextStep = "Give safety-first guidance and ask the most important next question.";
+  } else if (blocked) {
+    intent = "execution.blocked";
+    reason = "The requested action is unsafe, unsupported, or requires qualified help/confirmation.";
+    nextStep = "Explain the limit and offer a safe alternative.";
+  } else if (confirmed) {
+    intent = "execution.confirmed";
+    reason = "The user appears to be confirming a previously staged action.";
+    nextStep = "Execute only if an existing staged action is present and confirmation rules allow it.";
+  } else if (greeting) {
+    intent = "conversation.greeting";
+    reason = "The user is greeting or waking Nexus.";
+    nextStep = "Greet warmly and invite the user to speak naturally.";
+  } else if (support) {
+    intent = "conversation.support";
+    reason = "The user may need reassurance, accessibility help, or slower guidance.";
+    nextStep = "Respond supportively and ask one simple question.";
+  } else if (question && !explicitAction) {
+    intent = "conversation.question";
+    reason = "The user is asking for an explanation or information.";
+    nextStep = "Answer in plain language before offering a workflow.";
+  } else if (explicitAction && workflowObject) {
+    intent = "workflow.stage";
+    reason = "The user used an explicit action verb with a platform/domain object.";
+    nextStep = "Stage or open the existing workflow without changing current routing behavior.";
+  } else if (explicitAction && !workflowObject) {
+    intent = "workflow.offer";
+    reason = "The user used action language, but the target is not specific enough.";
+    nextStep = "Offer the likely workflow after clarifying the goal.";
+  } else if (need) {
+    intent = "conversation.need";
+    reason = "The user expressed a need or problem rather than an explicit command.";
+    nextStep = "Understand context before offering a workflow.";
+  } else if (nounOnly) {
+    intent = "conversation.clarify";
+    reason = "The user gave a short domain phrase without enough context.";
+    nextStep = "Ask what they mean or what outcome they want.";
+  }
+
+  if (!COMPANION_UNDERSTANDING_INTENTS.has(intent)) intent = "conversation.clarify";
+  return {
+    version: "companion-constitution-phase-1",
+    intent,
+    source: options.source || "api",
+    rawInput: raw,
+    normalizedInput: text,
+    explicitAction,
+    domainSignals,
+    riskLevel: intent === "safety.escalation" ? "high" : intent === "execution.blocked" || domainSignals.includes("domain.health") ? "medium" : "low",
+    routeImpact: "visibility-only",
+    reason,
+    nextStep
+  };
+}
+
+const COMPANION_WORKFLOW_LIKE_CONVERSATION_INTENTS = new Set([
+  "conversation.health_intake",
+  "conversation.medicine_help",
+  "conversation.doctor_help",
+  "conversation.clinic_help",
+  "conversation.clinic_map_help",
+  "conversation.mobile_clinic_help",
+  "conversation.telehealth_captions",
+  "conversation.crop_help",
+  "conversation.rural_crop_distress",
+  "conversation.crop_sale_help",
+  "conversation.workforce_help",
+  "conversation.learning_start",
+  "conversation.map_open"
+]);
+
+function companionRouteOutcomeMetadata(command = "", understanding = {}, result = {}) {
+  const intent = String(result.intent || "");
+  const status = String(result.status || "");
+  const metadata = result.metadata || {};
+  const redirectSection = String(metadata.redirectSection || "");
+  const explicitAction = Boolean(understanding.explicitAction);
+  const confirmationRequired = Boolean(
+    status === "needs-confirmation"
+    || metadata.confirmationRequired
+    || metadata.pendingAction
+    || metadata.agentPendingAction
+    || metadata.stagedAction
+  );
+  const executionAttempted = Boolean(
+    /^execution\./.test(intent)
+    || /\.(confirmed|executed|submitted|sent|called|created)$/.test(intent)
+    || /\b(executed|submitted|sent|called|created)\b/i.test(status)
+    || metadata.executionId
+    || metadata.outboundCall
+  );
+  const workflowOpened = !metadata.workflowDeferred && Boolean(
+    metadata.workflow
+    || metadata.workflowId
+    || metadata.workflowAction
+    || metadata.activeWorkflow
+    || COMPANION_WORKFLOW_LIKE_CONVERSATION_INTENTS.has(intent)
+    || /^(learning|workforce|health|trade|map|communications|integrations|admin)\./.test(intent)
+    || (!intent.startsWith("conversation.") && /^(learning|workforce|health|trade|map|communications|integrations|admin)$/.test(redirectSection))
+  );
+
+  let actualRouteType = metadata.workflowDeferred ? "conversation" : "command";
+  if (metadata.workflowDeferred) actualRouteType = "conversation";
+  else if (/language_changed|language/.test(intent) || metadata.language) actualRouteType = "language";
+  else if (/urgent|safety|emergency/.test(intent) || status === "urgent-guidance") actualRouteType = "safety";
+  else if (/clarification|clarify|needs-choice|needs-input/.test(intent) || status === "needs-choice" || status === "needs-input") actualRouteType = "clarification";
+  else if (executionAttempted) actualRouteType = "execution";
+  else if (workflowOpened) actualRouteType = "workflow";
+  else if (intent.startsWith("conversation.")) actualRouteType = "conversation";
+  else if (/dynamic_tool|tool/.test(intent)) actualRouteType = "dynamic_tool";
+  else if (/agent|reasoning|autonomy|orchestration|mission/.test(intent)) actualRouteType = "backend_agent";
+  else if (/error|failed/.test(status) || /error|failed/.test(intent)) actualRouteType = "error";
+
+  const lower = String(command || "").toLowerCase().replace(/\s+/g, " ").trim();
+  const singleWordInput = lower.split(/\s+/).filter(Boolean).length <= 1;
+  const needBasedPhrase = ["conversation.need"].includes(understanding.intent);
+  const conversationExpected = [
+    "conversation.need",
+    "conversation.clarify",
+    "conversation.support",
+    "conversation.question"
+  ].includes(understanding.intent);
+
+  let routeMismatch = false;
+  let mismatchReason = "";
+  if (conversationExpected && workflowOpened && !explicitAction) {
+    routeMismatch = true;
+    mismatchReason = `${understanding.intent} became an immediate workflow-like route without an explicit action command.`;
+  }
+  if (!routeMismatch && singleWordInput && workflowOpened && !explicitAction) {
+    routeMismatch = true;
+    mismatchReason = "Single-word input became a workflow-like route without clarification.";
+  }
+  if (!routeMismatch && needBasedPhrase && workflowOpened && !explicitAction) {
+    routeMismatch = true;
+    mismatchReason = "Need-based phrase became a workflow-like route before conversation-first understanding.";
+  }
+  if (!routeMismatch && understanding.intent === "safety.escalation" && workflowOpened && actualRouteType !== "safety") {
+    routeMismatch = true;
+    mismatchReason = "High-risk health or safety phrase routed to workflow before safety-first handling.";
+  }
+  if (!routeMismatch && executionAttempted && !confirmationRequired && understanding.intent !== "execution.confirmed") {
+    routeMismatch = true;
+    mismatchReason = "Execution appears to have been attempted without confirmation metadata.";
+  }
+
+  return {
+    companionIntent: understanding.intent || "",
+    actualRouteType,
+    actualRouteName: intent || status || "unknown",
+    actualRouteSource: metadata.provider || metadata.source || "backend.agent.command",
+    workflowOpened,
+    executionAttempted,
+    confirmationRequired,
+    routeMismatch,
+    mismatchReason
+  };
+}
+
+const COMPANION_WORKFLOW_OFFER_INTENTS = new Set([
+  "conversation.need",
+  "conversation.clarify",
+  "conversation.support",
+  "conversation.question"
+]);
+
+function companionWorkflowOfferForCommand(command = "", originalResult = {}) {
+  const lower = normalizeSpeechForIntent(command);
+  const originalIntent = String(originalResult.intent || "");
+  const originalMetadata = originalResult.metadata || {};
+  const section = originalMetadata.redirectSection || "";
+  const includesAny = terms => terms.some(term => lower.includes(term));
+  if (includesAny(["medicine", "medication", "pharmacy", "pills", "drug", "refill", "dawa", "medicina", "medicamento", "medicament", "medicaments", "remedio", "remedio"]) || /medicine|pharmacy/.test(originalIntent)) {
+    return {
+      response: /\bi need\b|\bneed\b/.test(lower)
+        ? "I heard you need medicine. I can help you take the next safe step, but I can't prescribe medicine. Is the medicine for you, a child, or someone else?"
+        : "I heard you need medicine. I can help with medicine-related guidance. Is this for you, a child, or someone else? If there is trouble breathing, severe bleeding, seizures, or the person is not waking up, seek emergency help now.",
+      deferredWorkflowName: "health.medicine-support",
+      nextExpectedAction: "answer who the medicine is for or say start health intake",
+      confirmationPhrase: "After you answer, I can help prepare the concern for a clinic, pharmacy, or provider.",
+      suggestedReplies: ["for me", "for a child", "find pharmacy"],
+      domain: "medicine",
+      section: "health"
+    };
+  }
+  if (includesAny(["crop", "crops", "maize", "cassava", "rice", "beans", "field", "farm", "shamba"]) && includesAny(["fail", "failing", "bad", "dying", "yellow", "pest", "spots", "wilting", "dry"]) || /crop_help/.test(originalIntent)) {
+    return {
+      response: "I'm sorry you're dealing with that. Let's start with the crop itself. What crop are you growing, and what symptoms are you seeing: yellow leaves, pests, dry soil, spots, or wilting?",
+      deferredWorkflowName: "trade.crop-support",
+      nextExpectedAction: "answer with the crop and symptoms or say start crop support",
+      confirmationPhrase: "After you describe the crop, I can open crop support if it would help.",
+      suggestedReplies: ["maize yellow leaves", "pests", "dry soil"],
+      domain: "crop",
+      section: "trade"
+    };
+  }
+  if (includesAny(["sell", "vender", "vendre", "kuuza", "buyer", "acheteur", "comprador", "mnunuzi", "market", "trade", "maize", "maiz", "milho", "mahindi", "corn", "harvest", "produce"]) && (includesAny(["sell", "vender", "vendre", "kuuza", "buyer", "market", "trade"]) || /crop_sale/.test(originalIntent))) {
+    return {
+      response: "I can help sell the crop and make the sale clearer. How much maize do you have, and where is it located? After that, I can help with buyer contact, price, route, delivery steps, and proof of delivery.",
+      deferredWorkflowName: "trade.crop-sale",
+      nextExpectedAction: "answer with quantity and location or say open buyer support",
+      confirmationPhrase: "After you answer, I can prepare buyer support without sending anything.",
+      suggestedReplies: ["10 bags in Kisumu", "find buyer", "open buyer support"],
+      domain: "crop",
+      section: "trade"
+    };
+  }
+  if (includesAny(["work", "job", "jobs", "employment", "role", "kazi", "trabajo", "trabalho", "travail", "emploi"]) || /workforce/.test(originalIntent) || section === "workforce") {
+    return {
+      response: "I can help with work opportunities. Let's start with one question. What type of work are you looking for: farm work, health support, logistics, office work, or training first?",
+      deferredWorkflowName: "workforce.guided-search",
+      nextExpectedAction: "answer with the kind of work or say show workforce dashboard",
+      confirmationPhrase: "After you answer, I can open the workforce step if you want it.",
+      suggestedReplies: ["farm work", "health support", "training first"],
+      domain: "work",
+      section: "workforce"
+    };
+  }
+  return {
+    response: "I can help with that. Tell me a little more about what you need, and then I can open the right workflow if you want.",
+    deferredWorkflowName: section ? `${section}.guided-workflow` : "companion.guided-workflow",
+    nextExpectedAction: "answer the clarifying question or confirm the workflow",
+    confirmationPhrase: "Say open it when you want me to open the workflow.",
+    suggestedReplies: ["explain more", "open it", "not now"],
+    domain: section || "general",
+    section: section || "dashboard"
+  };
+}
+
+function companionRequiredWorkflowOfferPhrase(command = "") {
+  const lower = normalizeSpeechForIntent(command);
+  return /^(work|job|jobs|medicine|medication|pharmacy)$/i.test(lower)
+    || /\b(i need|need|want)\b.*\b(medicine|medication|pharmacy|pills|drug|dawa)\b/.test(lower)
+    || /\b(necesito|j ai besoin|nahitaji|preciso)\b.*\b(medicina|medicamento|medicament|medicaments|dawa|remedio)\b/.test(lower)
+    || /\b(busco|je cherche|nahitaji|preciso)\b.*\b(trabajo|travail|kazi|trabalho|emploi)\b/.test(lower)
+    || /\b(crop|crops|maize|field|farm|shamba)\b.*\b(fail|failing)\b/.test(lower)
+    || /\b(help me sell|sell my crop|sell crop|sell maize|find buyer|market maize)\b/.test(lower)
+    || /\b(ayudame|aide moi|nisaidie|ajude me)\b.*\b(vender|vendre|kuuza|sell)\b.*\b(maiz|maize|mais|mahindi|milho|crop|crops)\b/.test(lower);
+}
+
+function companionLocalizedWorkflowOfferResponse(offer = {}, targetLanguage = "") {
+  const language = String(targetLanguage || "").toLowerCase();
+  if (!language || language === "en") return { response: offer.response, responseLanguage: "en" };
+  const domain = offer.domain || "general";
+  const responses = {
+    es: {
+      medicine: "Te escucho: necesitas medicina. Puedo ayudarte a tomar el siguiente paso seguro, pero no puedo recetar. Es para ti, para un nino, o para otra persona?",
+      work: "Puedo ayudarte con oportunidades de trabajo. Empecemos con una pregunta. Que tipo de trabajo buscas: campo, salud, logistica, oficina, o primero capacitacion?",
+      crop: offer.deferredWorkflowName === "trade.crop-sale"
+        ? "Puedo ayudarte con esa venta. Cuanto maiz tienes y donde esta? Despues puedo ayudar con comprador, precio, ruta, entrega y prueba de entrega."
+        : "Siento que estes pasando por ese problema con el cultivo. Que cultivo estas sembrando y que sintomas ves: hojas amarillas, plagas, suelo seco, manchas o marchitez?"
+    },
+    fr: {
+      medicine: "Je t'entends: tu as besoin de medicaments. Je peux t'aider a choisir la prochaine etape sure, mais je ne peux pas prescrire. Est-ce pour toi, pour un enfant, ou pour quelqu'un d'autre?",
+      work: "Je peux t'aider avec les possibilites de travail. Commencons par une question. Quel type de travail cherches-tu: ferme, sante, logistique, bureau, ou formation d'abord?",
+      crop: offer.deferredWorkflowName === "trade.crop-sale"
+        ? "Je peux aider pour cette vente. Quelle quantite de mais as-tu, et ou se trouve-t-il? Ensuite je peux aider avec l'acheteur, le prix, la route, la livraison et la preuve de livraison."
+        : "Je suis desole que tu aies ce probleme de culture. Quelle culture fais-tu, et quels signes vois-tu: feuilles jaunes, ravageurs, sol sec, taches ou fletrissement?"
+    },
+    sw: {
+      medicine: "Nimekusikia: unahitaji dawa. Naweza kukusaidia kuchukua hatua salama inayofuata, lakini siwezi kuandika dawa. Ni kwa ajili yako, mtoto, au mtu mwingine?",
+      work: "Naweza kusaidia na nafasi za kazi. Tuanze na swali moja. Unatafuta kazi gani: shambani, afya, usafirishaji, ofisi, au mafunzo kwanza?",
+      crop: offer.deferredWorkflowName === "trade.crop-sale"
+        ? "Naweza kusaidia kuuza mazao hayo. Una mahindi kiasi gani, na yako wapi? Baada ya hapo naweza kusaidia na mnunuzi, bei, njia, usafirishaji, na ushahidi wa kufikishwa."
+        : "Pole kwa changamoto ya mazao. Unalima zao gani, na unaona dalili gani: majani ya njano, wadudu, udongo mkavu, madoa, au kunyauka?"
+    },
+    pt: {
+      medicine: "Eu entendo: voce precisa de remedio. Posso ajudar com o proximo passo seguro, mas nao posso prescrever. E para voce, para uma crianca, ou para outra pessoa?",
+      work: "Posso ajudar com oportunidades de trabalho. Vamos comecar com uma pergunta. Que tipo de trabalho voce procura: campo, saude, logistica, escritorio, ou treinamento primeiro?",
+      crop: offer.deferredWorkflowName === "trade.crop-sale"
+        ? "Posso ajudar com essa venda. Quanto milho voce tem e onde ele esta? Depois posso ajudar com comprador, preco, rota, entrega e comprovante de entrega."
+        : "Sinto muito por esse problema na plantacao. Qual cultura voce esta cultivando e quais sinais voce ve: folhas amarelas, pragas, solo seco, manchas ou murcha?"
+    }
+  };
+  const response = responses[language]?.[domain] || offer.response;
+  return { response, responseLanguage: responses[language]?.[domain] ? language : "en" };
+}
+
+function companionWorkflowOfferResult(db, command = "", understanding = {}, result = {}, routeOutcome = {}) {
+  if (!COMPANION_WORKFLOW_OFFER_INTENTS.has(understanding.intent)) return null;
+  if (understanding.explicitAction || understanding.intent === "safety.escalation" || understanding.intent === "language.change") return null;
+  if (routeOutcome.confirmationRequired || routeOutcome.executionAttempted) return null;
+  const routeShouldDefer = companionRequiredWorkflowOfferPhrase(command);
+  if (!routeShouldDefer) return null;
+  const offer = companionWorkflowOfferForCommand(command, result);
+  const targetLanguage = result.metadata?.translation?.targetLanguage || "";
+  const localizedOffer = companionLocalizedWorkflowOfferResponse(offer, targetLanguage);
+  setSimpleVoiceTurn(db, {
+    domain: offer.domain || "general",
+    section: offer.section || "dashboard",
+    question: localizedOffer.response,
+    choices: offer.suggestedReplies || [],
+    defaultChoice: offer.suggestedReplies?.[0] || "",
+    sourceIntent: "workflow.offer"
+  });
+  return {
+    intent: result.intent || "workflow.offer",
+    response: localizedOffer.response,
+    status: "needs-clarification",
+    metadata: {
+      conversationMode: true,
+      suppressBehaviorNudge: true,
+      responseLanguage: localizedOffer.responseLanguage,
+      redirectSection: offer.section || result.metadata?.redirectSection || "",
+      workflowOffered: true,
+      workflowDeferred: true,
+      deferredWorkflowName: offer.deferredWorkflowName,
+      deferredRouteOutcome: routeOutcome,
+      deferredOriginalIntent: result.intent || "",
+      deferredRedirectSection: result.metadata?.redirectSection || offer.section || "",
+      nextExpectedAction: offer.nextExpectedAction,
+      confirmationPhrase: offer.confirmationPhrase,
+      constitutionPhase: "phase-3-workflow-offer",
+      frontierCommunication: {
+        urgency: understanding.riskLevel === "high" ? "high" : "normal",
+        nextQuestion: offer.response.match(/([^.!?]*\?)/g)?.pop()?.trim() || offer.nextExpectedAction,
+        confidence: 0.93,
+        responseShape: "conversation first, workflow offered, one useful question"
+      },
+      suggestedReplies: offer.suggestedReplies || []
+    }
+  };
+}
+
 function ruralCommunicationSupportModel(command = "", moduleSignal = null, user = {}) {
   const value = String(command || "").toLowerCase();
   const moduleName = moduleSignal?.module || conversationModuleSignal(command).module;
@@ -16492,6 +16869,14 @@ function isAffirmativeCommand(lower) {
   return /^(yes|yep|yeah|ok|okay|confirm|approved|approve|do it|run it|go ahead|proceed|please do|submit it|send it)$/i.test(String(lower || "").trim());
 }
 
+function isExplicitConfirmationCommand(lower) {
+  return /^(yes|confirm|confirmed|approved|approve|do it|run it|go ahead|proceed|please do|submit it|send it)$/i.test(String(lower || "").trim());
+}
+
+function isVagueConfirmationCommand(lower) {
+  return /^(ok|okay|sounds good|maybe|let'?s see|lets see)$/i.test(String(lower || "").trim());
+}
+
 function isNegativeCommand(lower) {
   return /^(no|nope|cancel|stop|not now|hold|wait|do not|don't)$/i.test(String(lower || "").trim());
 }
@@ -17446,10 +17831,17 @@ function stageAgentAction(db, command, action) {
           : "What detail should I use first?";
   return {
     intent: "conversation.pending_action",
-    response: `I heard: ${command}. I can ${String(pending.action || "run this workflow").toLowerCase()} in ${pending.module || "AgriNexus"}. ${nextQuestion}`,
+    response: pending.confirmationPrompt || `I heard: ${command}. I can ${String(pending.action || "run this workflow").toLowerCase()} in ${pending.module || "AgriNexus"}. ${nextQuestion}`,
     status: "needs-confirmation",
     metadata: {
       conversationMode: true,
+      confirmationRequired: true,
+      executionDeferred: true,
+      pendingActionType: pending.pendingActionType || pending.kind || pending.tool || "workflow",
+      pendingActionName: pending.action || pending.tool || "Pending action",
+      confirmationPrompt: pending.confirmationPrompt || `Do you want me to ${String(pending.action || "run this workflow").toLowerCase()} now?`,
+      allowedConfirmations: pending.allowedConfirmations || ["yes", "confirm", "do it"],
+      constitutionPhase: pending.constitutionPhase || "phase-4-confirmation-gate",
       pendingActionId: pending.id,
       redirectSection: pending.section,
       moduleSignal,
@@ -18427,7 +18819,7 @@ function platformWideVoiceAcceptanceResponse(db, user, text = "", lower = "", op
     );
   }
 
-  if (/\bbuyer\b/.test(value) && /\b(french|francais|english|translate|translation|language|speaks|speak|message|sale)\b/.test(value)) {
+  if (/\bbuyer\b/.test(value) && /\b(french|francais|english|translate|translation|language|speaks|speak)\b/.test(value)) {
     return response(
       "trade.buyer_language_support",
       "needs-details",
@@ -18750,6 +19142,19 @@ async function phoneContactMemoryCommandResponse(db, user, text, lower, options 
 async function executePendingAgentAction(db, user, pending) {
   if (!pending) return { intent: "conversation.no_pending_action", response: "There is no pending action to confirm.", status: "needs-input" };
   db.profile.agentPendingAction = null;
+  if (pending.kind === "language-change") {
+    const language = pending.language || languageFromCommand(pending.command || "");
+    if (!language || !changeUserLanguage(db, user, language)) {
+      return { intent: "conversation.language_change_failed", response: "I could not identify that language. Tell me English, Spanish, French, Arabic, or Kiswahili.", status: "needs-input", metadata: { conversationMode: true, redirectSection: "profile" } };
+    }
+    const label = voiceLanguageLabel(language);
+    return {
+      intent: "conversation.language_changed",
+      response: `${label} is selected. I will keep guiding you in ${label} where the platform supports it.`,
+      status: "completed",
+      metadata: { conversationMode: true, redirectSection: "dashboard", language, executionConfirmed: true }
+    };
+  }
   if (pending.kind === "buyer-contact") {
     const contact = createBuyerContactWorkflow(db, user, pending.command || "Contact buyer");
     return {
@@ -21862,6 +22267,102 @@ async function moduleGreetingResponse(db, user, text, lower) {
   };
 }
 
+function isInformationalBuyerConversation(lower = "") {
+  const value = String(lower || "").replace(/\s+/g, " ").trim();
+  if (!value) return false;
+  const hasBuyerOrCropSelling = /\b(buyer|buyers|customer|customers|crop selling|selling crops|sell crops|crop sales|market crops|selling maize|sell maize)\b/.test(value);
+  if (!hasBuyerOrCropSelling) return false;
+  const explicitWorkflowAction = /^(contact|message|send|draft|write|compose|open|start|create|call|share|submit)\b/.test(value)
+    || /\b(open|start)\b.*\b(buyer contact|buyer workflow|buyer message workflow)\b/.test(value)
+    || /\b(send|call|share|submit)\b.*\b(it|buyer|message|order|information|info)\b/.test(value);
+  if (explicitWorkflowAction) return false;
+  return /\b(can|could|would)\b.*\b(talk to me about|talk about|explain|discuss|tell me about)\b/.test(value)
+    || /\b(can|could|would)\b.*\b(agritrade|you|nexus)\b.*\b(talk|discuss|explain)\b/.test(value)
+    || /^(tell me about|help me understand|explain|can you explain|how do i|how can i|what should i say|what do i say|what is the best way)\b/.test(value)
+    || /\b(how do i|how can i|what should i say|help me understand)\b.*\b(buyer|buyers|selling|crop|maize)\b/.test(value);
+}
+
+async function informationalBuyerConversationResponse(db, user, text = "", options = {}) {
+  const result = await generalConversationResponse(db, user, text, options);
+  return {
+    ...result,
+    intent: "conversation.open_reasoning",
+    response: "AgriTrade can talk with you about selling crops and contacting buyers before opening any workflow. It can explain how to find buyers, what to say, how to prepare crop details, how to compare price and route risk, and when a buyer-contact workflow would help. What crop are you selling, and do you want help finding buyers, writing a message, or understanding the sale steps?",
+    status: "completed",
+    metadata: {
+      ...(result.metadata || {}),
+      conversationMode: true,
+      redirectSection: "trade",
+      moduleSignal: { module: "AgriTrade", section: "trade" },
+      workflowOffered: true,
+      workflowDeferred: true,
+      deferredWorkflowName: "trade.buyer-contact",
+      nextExpectedAction: "answer with the crop or buyer question, or say contact the buyer to stage the workflow",
+      confirmationPhrase: "Say contact the buyer when you want me to prepare the buyer-contact workflow.",
+      constitutionPhase: "phase-3b-buyer-conversation-first",
+      suggestedReplies: ["do the next step", "explain that", "contact buyer"]
+    }
+  };
+}
+
+function phase4RiskyActionForCommand(command = "") {
+  const lower = normalizeSpeechForIntent(command);
+  const base = {
+    confidence: 0.94,
+    constitutionPhase: "phase-4-confirmation-gate",
+    allowedConfirmations: ["yes", "confirm", "do it"],
+    phase4HighRisk: true
+  };
+  const gate = action => ({ ...base, ...action });
+  if (/\b(send|text|message)\b.*\b(buyer|seller|customer)\b/.test(lower)) {
+    const target = /\bseller\b/.test(lower) ? "seller" : /\bcustomer\b/.test(lower) ? "customer" : "buyer";
+    const channel = /\bwhatsapp\b/.test(lower) ? "WhatsApp" : /\b(sms|text)\b/.test(lower) ? "SMS" : "message";
+    const actionName = channel === "message" ? `send ${target} message` : `send ${channel} to the ${target}`;
+    return gate({
+      kind: "buyer-contact",
+      module: "AgriTrade",
+      tool: "trade.buyer_contact",
+      action: actionName,
+      section: "trade",
+      pendingActionType: "message",
+      confirmationPrompt: `I can prepare a ${channel === "message" ? "message" : channel} for the ${target}. Before I send anything, please confirm. Do you want me to ${actionName} now?`
+    });
+  }
+  if (/\b(call|phone|dial|ring)\b.*\b(provider|doctor|nurse|clinic|telehealth)\b/.test(lower)) {
+    const target = /\bdoctor\b/.test(lower) ? "doctor" : /\bnurse\b/.test(lower) ? "nurse" : /\bclinic\b/.test(lower) ? "clinic" : "provider";
+    return gate({ module: "AI", tool: "communications.outbound_call", action: `call ${target}`, section: "agent", pendingActionType: "outbound_call", purpose: `${target} callback`, confirmationPrompt: `I can prepare a call to the ${target}. Before I call anyone, please confirm. Do you want me to call the ${target} now?` });
+  }
+  if (/\b(submit|send)\b.*\b(application|job application)\b|\bsubmit my application\b/.test(lower)) {
+    return gate({ kind: "workforce-application", module: "Workforce", tool: "workforce.apply_role", action: "submit application", section: "workforce", pendingActionType: "application", confirmationPrompt: "I can prepare your application. Before I submit it, please confirm. Do you want me to submit the application now?" });
+  }
+  if (/\b(create|submit|place)\b.*\b(order|crop order|buyer order)\b|\bcreate the order\b/.test(lower)) {
+    return gate({ module: "AgriTrade", tool: "trade.market_review", action: "create order", section: "trade", pendingActionType: "order", confirmationPrompt: "I can prepare the order details first. Before I create the order, please confirm. Do you want me to create it now?" });
+  }
+  if (/\b(share|send)\b.*\b(my )?(information|info|personal information|details|data)\b/.test(lower)) {
+    return gate({ module: "Healthcare", tool: "health.consent", action: "share personal information", section: "health", pendingActionType: "privacy", confirmationPrompt: "I can prepare the information share. Before I share personal information, please confirm clearly. Do you want me to share it now?" });
+  }
+  if (/\b(change|set)\b.*\blanguage\b.*\b(spanish|french|arabic|english|swahili|kiswahili)\b/.test(lower)) {
+    const language = languageFromCommand(command);
+    return gate({ kind: "language-change", module: "Profile", tool: "profile.language_change", action: `change language${language ? ` to ${voiceLanguageLabel(language)}` : ""}`, section: "profile", language, pendingActionType: "settings", confirmationPrompt: `I can change your language${language ? ` to ${voiceLanguageLabel(language)}` : ""}. Please confirm before I change this setting. Do you want me to change it now?` });
+  }
+  if (/\b(schedule|book|set up)\b.*\b(appointment|visit|provider|doctor|telehealth)\b/.test(lower)) {
+    return gate({ module: "Healthcare", tool: "health.followup", action: "schedule appointment", section: "health", pendingActionType: "appointment", confirmationPrompt: "I can prepare the appointment details. Before I schedule anything, please confirm. Do you want me to schedule the appointment now?" });
+  }
+  if (/\b(make|send|submit|create)\b.*\b(payment|pay|checkout|wallet|mpesa|m-pesa)\b|\bmake payment\b/.test(lower)) {
+    return gate({ module: "AgriTrade", tool: "trade.wallet_payment", action: "make payment", section: "trade", pendingActionType: "payment", confirmationPrompt: "I can prepare the payment step. Before any payment action, please confirm. Do you want me to continue with payment now?" });
+  }
+  if (/\b(issue|create|generate)\b.*\b(certificate|credential)\b|\bissue certificate\b/.test(lower)) {
+    return gate({ module: "Learning", tool: "learning.certificate", action: "issue certificate", section: "learning", pendingActionType: "certificate", confirmationPrompt: "I can prepare the certificate. Before I issue it, please confirm. Do you want me to issue the certificate now?" });
+  }
+  if (/\b(run|start|test)\b.*\b(provider test|provider tests|provider engine|provider engines|live service check|service check)\b/.test(lower)) {
+    return gate({ module: "Integrations", tool: "integrations.test_all", action: "run provider test", section: "integrations", pendingActionType: "admin_provider_test", confirmationPrompt: "I can run the provider test. This may touch admin/provider checks, so please confirm. Do you want me to run the provider test now?" });
+  }
+  if (/\b(complete|finish)\b.*\b(lesson|course step)\b|\bcomplete lesson\b/.test(lower)) {
+    return gate({ module: "Learning", tool: "learning.complete_lesson", action: "complete lesson", section: "learning", pendingActionType: "lesson_completion", confirmationPrompt: "I can complete the lesson step. Before I mark anything complete, please confirm. Do you want me to complete the lesson now?" });
+  }
+  return null;
+}
+
 async function runAgentCommand(db, user, command, options = {}) {
   ensureAiProfile(db.profile);
   const rawCommand = String(command || "");
@@ -21903,6 +22404,35 @@ async function runAgentCommand(db, user, command, options = {}) {
   const spokenName = onboardingPhrase ? "" : extractConversationalName(text);
   const directNameIntro = /^(my name is|i am|i'm|this is|call me)\b/i.test(text)
     || /^(hi|hello|hey|good morning|good afternoon|good evening)\s+(nexus|agrinexus|agri\s+nexus)?[,:\-]?\s*(my name is|i am|i'm|this is|call me)\b/i.test(text);
+  if (conversational
+    && /\b(visually impaired|blind|cant see|can't see|visual|screen reader|large print)\b/.test(lower)
+    && /\b(telehealth|health|patient|doctor|provider|clinic|care|support)\b/.test(lower)) {
+    const model = db.profile.agentMemory.userModel || {};
+    model.accessibilityMode = "visual-or-audio-support";
+    model.preferredInteraction = "voice-first";
+    model.lastSeenAt = new Date().toISOString();
+    db.profile.agentMemory.userModel = model;
+    const staged = stageAgentAction(db, text, {
+      module: "Healthcare",
+      tool: "health.accessibility_review",
+      action: "Prepare accessible telehealth",
+      section: "health",
+      planner: "accessibility-router",
+      confidence: 0.9,
+      rationale: "The request combines telehealth with visual/audio support needs, so Nexus should stage accessible care support before any live action."
+    });
+    return {
+      ...staged,
+      metadata: {
+        ...(staged.metadata || {}),
+        behaviorModel: {
+          ...(staged.metadata?.behaviorModel || {}),
+          accessibilityMode: "visual-or-audio-support"
+        },
+        suggestedReplies: ["yes", "no", "explain that"]
+      }
+    };
+  }
   if (conversational && /\b(i am confused|i'm confused|confused|do not know what button|dont know what button|don't know what button|what button to press|too many buttons|lost in the app)\b/.test(lower)) {
     return {
       intent: "conversation.guided_help",
@@ -21935,6 +22465,24 @@ async function runAgentCommand(db, user, command, options = {}) {
     };
   }
   const topPendingAction = db.profile.agentPendingAction;
+  if (topPendingAction?.phase4HighRisk && isVagueConfirmationCommand(lower)) {
+    return {
+      intent: "conversation.confirmation_required",
+      response: `${topPendingAction.confirmationPrompt || `Please confirm before I ${String(topPendingAction.action || "continue").toLowerCase()}.`} Say yes, confirm, or do it to continue, or no to cancel.`,
+      status: "needs-confirmation",
+      metadata: {
+        conversationMode: true,
+        redirectSection: topPendingAction.section || "dashboard",
+        confirmationRequired: true,
+        executionDeferred: true,
+        pendingActionType: topPendingAction.pendingActionType || topPendingAction.kind || topPendingAction.tool || "workflow",
+        pendingActionName: topPendingAction.action || topPendingAction.tool || "Pending action",
+        confirmationPrompt: topPendingAction.confirmationPrompt || "",
+        allowedConfirmations: topPendingAction.allowedConfirmations || ["yes", "confirm", "do it"],
+        constitutionPhase: "phase-4-confirmation-gate"
+      }
+    };
+  }
   if (topPendingAction && isAffirmativeCommand(lower)) {
     const result = await executePendingAgentAction(db, user, topPendingAction);
     return { ...result, intent: result.intent === "conversation.no_pending_action" ? result.intent : "conversation.confirmed" };
@@ -21946,8 +22494,128 @@ async function runAgentCommand(db, user, command, options = {}) {
     db.profile.agentMemory.updatedAt = new Date().toISOString();
     return { intent: "conversation.canceled", response: "Canceled. Tell me what you want to do next.", status: "completed", metadata: { conversationMode: true } };
   }
+  if (!topPendingAction && conversational && isAffirmativeCommand(lower)
+    && !db.profile.agentMemory.activeSimpleTurn
+    && !db.profile.agentMemory.activeIntake
+    && !db.profile.agentMemory.activeClarification
+    && !db.profile.agentMemory.activeRecovery) {
+    return {
+      intent: "conversation.no_pending_action",
+      response: "I do not have a pending action to confirm. Tell me what you want me to help with next.",
+      status: "needs-input",
+      metadata: { conversationMode: true, redirectSection: "dashboard", confirmationRequired: false, executionDeferred: false }
+    };
+  }
   const urgentHealth = conversational ? urgentHealthSafetyResponse(db, user, text) : null;
   if (urgentHealth) return urgentHealth;
+  const phase4RiskyAction = conversational ? phase4RiskyActionForCommand(text) : null;
+  if (phase4RiskyAction) return stageAgentAction(db, text, phase4RiskyAction);
+  if (conversational && isInformationalBuyerConversation(lower)) {
+    clearSimpleVoiceTurn(db);
+    return informationalBuyerConversationResponse(db, user, text, options);
+  }
+  if (conversational && !/\b(agritrade|agri\s*trade)\b/.test(lower) && (/\b(what is|what's|explain|describe|tell me about|who are you|what do you do)\b.*\b(agrinexus|agri\s+nexus|nexus|platform)\b/.test(lower)
+    || /\b(agrinexus|agri\s+nexus|nexus|platform)\b.*\b(what is|explain|describe|tell me about|what do you do|who are you)\b/.test(lower))) {
+    db.profile.agentMemory.activeClarification = null;
+    db.profile.agentMemory.activeRecovery = null;
+    db.profile.agentMemory.lastStatus = "platform-explained";
+    db.profile.agentMemory.lastSummary = "AgriNexus platform explanation delivered.";
+    db.profile.agentMemory.updatedAt = new Date().toISOString();
+    return {
+      intent: "conversation.platform_explained",
+      response: "AgriNexus helps people use farming, health access, learning, jobs, trade, maps, and local services by voice. Nexus is the assistant inside it: it listens, answers in simple words, opens the right service, and guides the next step.",
+      status: "completed",
+      metadata: { conversationMode: true, redirectSection: "agent", suppressBehaviorNudge: true, suggestedReplies: ["help a farmer", "I need a doctor", "help me sell my crop", "open map"] }
+    };
+  }
+  const earlyFollowUpCommand = /^(explain that|repeat that|say that again|read that|what do you mean|why|where are we|what are we doing|what step|where am i|orient me|what is my checklist|continue|next step|do the next|run the next|start the next|do that|let's do that|lets do that|proceed|take me there|open that|go there)\b/.test(lower)
+    || /\b(current mission|mission status|guided mission)\b/.test(lower);
+  const earlyFollowUp = conversational && earlyFollowUpCommand ? conversationFollowUpResponse(db, user, text, lower) : null;
+  if (earlyFollowUp) return earlyFollowUp;
+  if (conversational && /\b(can you hear me|are you listening|do you hear me|you hear me|are you there)\b/.test(lower)) {
+    const name = db.profile.agentMemory.userModel?.name || db.profile.agentMemory.userName || user?.name?.split(/\s+/)[0] || "there";
+    return {
+      intent: "conversation.hearing_check",
+      response: `Yes ${name}, I can hear you. Tell me what you need in your own words.`,
+      status: "completed",
+      metadata: { conversationMode: true, redirectSection: "dashboard", suppressBehaviorNudge: true, suggestedReplies: ["I need medicine", "find a clinic near me", "help me sell my crop"] }
+    };
+  }
+  const earlySocial = conversational ? socialConversationResponse(db, user, text, lower) : null;
+  if (earlySocial) return earlySocial;
+  if (conversational && /(what should i call you|what do i call you|short name|abbreviat|nickname|who are you|your name)/.test(lower)) {
+    return {
+      intent: "conversation.assistant_alias",
+      response: "You can call me Nexus. AgriNexus is the full platform name, and Nexus is the short voice command for everyday use.",
+      status: "completed",
+      metadata: { conversationMode: true, redirectSection: "agent", assistantAlias: "Nexus", platformName: "AgriNexus" }
+    };
+  }
+  if (conversational && (lower.includes("capability registry") || lower.includes("technical capability") || lower.includes("what tools can you run") || lower.includes("what can you operate"))) {
+    const registry = agentCapabilityRegistryState(db, runtimeProviders(db));
+    return {
+      intent: "agent.capability_registry",
+      response: `I can operate ${registry.totalTools} supervised tools across learning, workforce, telehealth, trade, drones, maps, integrations, admin, profile, and AI. ${registry.confirmationTools} tools require confirmation before action. ${registry.liveTools} are live-engine backed right now; the rest run as local workflow evidence until providers are connected.`,
+      status: "completed",
+      metadata: { conversationMode: true, redirectSection: "agent", capabilityRegistry: registry }
+    };
+  }
+  if (conversational && (lower.includes("agrinexus readiness") || lower.includes("agrinexus level") || lower.includes("command readiness") || lower.includes("command level") || lower.includes("all six") || lower.includes("all 6"))) {
+    const readiness = jarvisReadinessModel(db, user);
+    const missing = readiness.items.filter(item => !item.ready).map(item => item.title).slice(0, 3);
+    return {
+      intent: "agent.agrinexus_readiness",
+      response: `${readiness.summary} Current score is ${readiness.score} percent. ${missing.length ? `The biggest remaining unlocks are ${missing.join(", ")}.` : "All six layers are ready."} I can keep improving the software layer now and will clearly show which parts need hosted credentials or native app packaging.`,
+      status: readiness.status,
+      metadata: { conversationMode: true, redirectSection: "agent", jarvisReadiness: readiness }
+    };
+  }
+  if (conversational && /\b(agrinexus|agri\s+nexus|nexus)\b/i.test(rawCommand) && /\bhelp\b.*\bfarmer\b.*\bsell\b/.test(lower)) {
+    return startJarvisMode(db, user, text);
+  }
+  if (conversational && !db.profile.agentMemory.activeClarification && /\bhelp me with my farm\b/.test(lower)) {
+    return startClarification(db, user, text, conversationModuleSignal(text));
+  }
+  if (conversational && db.profile.agentMemory.activeClarification) {
+    const clarified = continueClarification(db, user, text);
+    if (clarified) return clarified;
+  }
+  if (conversational && db.profile.agentMemory.activeRecovery) {
+    const recovered = continueVoiceRecovery(db, user, text);
+    if (recovered) return recovered;
+  }
+  if (conversational && /^unclear$/i.test(lower)) {
+    return voiceRecoveryResponse(db);
+  }
+  if (conversational
+    && /\b(visually impaired|blind|cant see|can't see|visual|screen reader|large print)\b/.test(lower)
+    && /\b(telehealth|health|patient|doctor|provider|clinic|care|support)\b/.test(lower)) {
+    const model = db.profile.agentMemory.userModel || {};
+    model.accessibilityMode = "visual-or-audio-support";
+    model.preferredInteraction = "voice-first";
+    model.lastSeenAt = new Date().toISOString();
+    db.profile.agentMemory.userModel = model;
+    const staged = stageAgentAction(db, text, {
+      module: "Healthcare",
+      tool: "health.accessibility_review",
+      action: "Prepare accessible telehealth",
+      section: "health",
+      planner: "accessibility-router",
+      confidence: 0.9,
+      rationale: "The request combines telehealth with visual/audio support needs, so Nexus should stage accessible care support before any live action."
+    });
+    return {
+      ...staged,
+      metadata: {
+        ...(staged.metadata || {}),
+        behaviorModel: {
+          ...(staged.metadata?.behaviorModel || {}),
+          accessibilityMode: "visual-or-audio-support"
+        },
+        suggestedReplies: ["yes", "no", "explain that"]
+      }
+    };
+  }
   if (conversational && isGeneralConversationQuestion(text)) {
     clearSimpleVoiceTurn(db);
     return generalConversationResponse(db, user, text, options);
@@ -22132,7 +22800,7 @@ async function runAgentCommand(db, user, command, options = {}) {
   if (conversational && /\b(medicine|medication|pharmacy|pills|drug|refill|prescription|dawa|remedy)\b/.test(lower)) {
     return {
       intent: "conversation.medicine_help",
-      response: "I heard you need medicine. I can guide you step by step. I cannot prescribe, but I can help explain the medicine concern, find pharmacy or mobile clinic support, and prepare provider review. First, tell me the medicine concern.",
+      response: "I hear you need medicine. I can guide you step by step. I cannot prescribe, but I can help explain the concern, find pharmacy or mobile clinic support, and prepare provider review. What medicine concern should we start with?",
       status: "needs-location",
       metadata: { conversationMode: true, redirectSection: "health", suppressBehaviorNudge: true, suggestedReplies: ["find pharmacy", "start intake", "call provider"] }
     };
@@ -22149,7 +22817,7 @@ async function runAgentCommand(db, user, command, options = {}) {
     || /\b(help me sell|sell my crop|sell maize|find buyer|talk to buyer|contact buyer)\b/.test(lower))) {
     return {
       intent: "conversation.crop_sale_help",
-      response: "I can help sell the crop. Tell me the crop, quantity, location, and buyer if you know one. I will help prepare the sale and delivery tracking.",
+      response: "I can help with the sale. Tell me the crop, quantity, and location first. Then I can help with buyer contact, price, route, delivery steps, and proof of delivery.",
       status: "needs-details",
       metadata: { conversationMode: true, redirectSection: "trade", suppressBehaviorNudge: true, suggestedReplies: ["maize in Kenya", "find a buyer", "track delivery"] }
     };
@@ -22157,7 +22825,7 @@ async function runAgentCommand(db, user, command, options = {}) {
   if (conversational && !/\bapply\b.*\b(that job|this job|the job)\b/.test(lower) && /\b(i need|need|want|find|looking for|help me)\b.*\b(work|job|jobs|employment|role|paid work|shift)\b|\b(work|job|jobs|employment|role|paid work|shift)\b.*\b(help|apply|find|need|want)\b/.test(lower)) {
     return {
       intent: "conversation.workforce_help",
-      response: "I can help with work. Tell me the country and the kind of job, and I will show role options, skill gaps, training links, and the application step.",
+      response: "I can help with work. Tell me the country and the kind of job you want. Then I can show role options, skill gaps, training links, and the application step.",
       status: "completed",
       metadata: { conversationMode: true, redirectSection: "workforce", suppressBehaviorNudge: true, suggestedReplies: ["show me jobs", "apply for a role", "review my skills"] }
     };
@@ -23258,6 +23926,24 @@ async function runAgentCommand(db, user, command, options = {}) {
     }
   }
 
+  if (pendingAction?.phase4HighRisk && isVagueConfirmationCommand(lower)) {
+    return {
+      intent: "conversation.confirmation_required",
+      response: `${pendingAction.confirmationPrompt || `Please confirm before I ${String(pendingAction.action || "continue").toLowerCase()}.`} Say yes, confirm, or do it to continue, or no to cancel.`,
+      status: "needs-confirmation",
+      metadata: {
+        conversationMode: true,
+        redirectSection: pendingAction.section || "dashboard",
+        confirmationRequired: true,
+        executionDeferred: true,
+        pendingActionType: pendingAction.pendingActionType || pendingAction.kind || pendingAction.tool || "workflow",
+        pendingActionName: pendingAction.action || pendingAction.tool || "Pending action",
+        confirmationPrompt: pendingAction.confirmationPrompt || "",
+        allowedConfirmations: pendingAction.allowedConfirmations || ["yes", "confirm", "do it"],
+        constitutionPhase: "phase-4-confirmation-gate"
+      }
+    };
+  }
   if (pendingAction && isAffirmativeCommand(lower)) {
     const result = await executePendingAgentAction(db, user, pendingAction);
     db.profile.agentMemory.lastStatus = result.status || "completed";
@@ -28269,6 +28955,11 @@ async function api(req, res, url) {
     if (!canUse(user, "ai")) return send(res, 403, { error: "Role does not allow agent commands" });
     const body = await readBody(req);
     const command = String(body.command || "").trim();
+    const companionUnderstanding = companionUnderstandingClassification(command, {
+      source: body.inputMode === "voice" ? "voice" : body.inputMode || "api",
+      mode: body.mode,
+      targetLanguage: body.targetLanguage || body.language || user.language
+    });
     if (body.inputMode === "voice") voiceRecord(db, user, "speech-to-text", `Voice command transcribed: ${command}`, { command });
     const rawResult = await runAgentCommand(db, user, command, {
       confirm: body.confirm === true,
@@ -28283,12 +28974,25 @@ async function api(req, res, url) {
     });
     let result = applyHighestFunctionalityMode(db, user, humanizeAgentResult(db, user, rawResult, command), command);
     result = await translateAgentCommandResult(db, user, result, { targetLanguage: body.targetLanguage || body.language || user.language });
+    const preliminaryRouteOutcome = companionRouteOutcomeMetadata(command, companionUnderstanding, result);
+    const workflowOffer = body.inputMode === "voice" || body.conversational === true
+      ? companionWorkflowOfferResult(db, command, companionUnderstanding, result, preliminaryRouteOutcome)
+      : null;
+    if (workflowOffer) result = workflowOffer;
+    const companionRouteOutcome = companionRouteOutcomeMetadata(command, companionUnderstanding, result);
+    result.metadata = {
+      ...(result.metadata || {}),
+      companionUnderstanding,
+      companionRouteOutcome
+    };
     commandRecord(db, user, command, result);
     if (body.outputMode === "voice") voiceRecord(db, user, "text-to-speech", `Voice response prepared: ${result.response}`, { response: result.response });
     addWorkflowNote(db.profile, body.note, "Agent command note");
     await writeDb(db);
     const state = publicState(db, user);
     state.commandResult = result;
+    state.companionUnderstanding = companionUnderstanding;
+    state.companionRouteOutcome = companionRouteOutcome;
     return send(res, 200, state);
   }
 
