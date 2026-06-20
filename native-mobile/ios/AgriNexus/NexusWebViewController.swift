@@ -63,6 +63,8 @@ final class NexusWebViewController: UIViewController, WKScriptMessageHandler {
                 "status": "ready",
                 "message": "Native camera capture is ready for crop, injury, pharmacy, or provider handoff media."
             ])
+        case "call.launch":
+            launchConfirmedCall(body["payload"] as? [String: Any] ?? [:])
         default:
             break
         }
@@ -111,5 +113,56 @@ final class NexusWebViewController: UIViewController, WKScriptMessageHandler {
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.httpBody = try? JSONSerialization.data(withJSONObject: payload)
         URLSession.shared.dataTask(with: request).resume()
+    }
+
+    private func launchConfirmedCall(_ payload: [String: Any]) {
+        let provider = (payload["provider"] as? String ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+        let source = (payload["source"] as? String ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+        let confirmed = payload["executionConfirmed"] as? Bool ?? false
+        let urlValue = (payload["url"] as? String ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+        let redactedPhone = (payload["redactedPhone"] as? String ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+        guard provider == "native-phone", source == "confirmed-call-handoff", confirmed else {
+            sendCallLaunchFailed(reason: "unconfirmed-or-unsupported", redactedPhone: redactedPhone)
+            return
+        }
+        guard let telURL = safeTelURL(urlValue) else {
+            sendCallLaunchFailed(reason: "malformed-tel-url", redactedPhone: redactedPhone)
+            return
+        }
+        guard UIApplication.shared.canOpenURL(telURL) else {
+            sendCallLaunchFailed(reason: "phone-ui-unavailable", redactedPhone: redactedPhone)
+            return
+        }
+        UIApplication.shared.open(telURL, options: [:]) { [weak self] opened in
+            if opened {
+                self?.voiceRuntime.send(type: "call.launch_opened", data: [
+                    "provider": "native-phone",
+                    "source": "confirmed-call-handoff",
+                    "redactedPhone": redactedPhone,
+                    "status": "phone-ui-opened"
+                ])
+            } else {
+                self?.sendCallLaunchFailed(reason: "phone-ui-open-failed", redactedPhone: redactedPhone)
+            }
+        }
+    }
+
+    private func safeTelURL(_ value: String) -> URL? {
+        guard let components = URLComponents(string: value), components.scheme == "tel" else { return nil }
+        let number = String(value.dropFirst("tel:".count)).trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !number.isEmpty else { return nil }
+        let pattern = #"^\+?[0-9][0-9\s().-]{2,31}$"#
+        guard number.range(of: pattern, options: .regularExpression) != nil else { return nil }
+        return URL(string: value)
+    }
+
+    private func sendCallLaunchFailed(reason: String, redactedPhone: String = "") {
+        voiceRuntime.send(type: "call.launch_failed", data: [
+            "provider": "native-phone",
+            "source": "confirmed-call-handoff",
+            "reason": reason,
+            "redactedPhone": redactedPhone,
+            "status": "blocked"
+        ])
     }
 }
