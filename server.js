@@ -6081,6 +6081,23 @@ function callProviderFallbackMode(provider = "") {
   return callProviderConfig(provider).fallbackMode;
 }
 
+function callProviderPublicMetadata(provider = "") {
+  const normalized = normalizeCallProvider(provider);
+  const config = callProviderConfig(normalized);
+  return {
+    provider: normalized,
+    label: config.label,
+    handoffType: config.handoffType,
+    fallbackMode: config.fallbackMode,
+    directVoiceReliable: Boolean(config.directVoiceReliable),
+    nativeEligible: Boolean(config.nativeEligible),
+    browserEligible: Boolean(config.browserEligible),
+    requiresPhone: Boolean(config.requiresPhone),
+    requiresHandle: Boolean(config.requiresHandle),
+    confirmedOnly: Boolean(config.confirmedOnly)
+  };
+}
+
 function callIntentProvider(command = "") {
   const lower = normalizeSpeechForIntent(command);
   if (/\bwhats\s*app\b|\bwhatsapp\b|\bواتساب\b|\bwasap\b|\bwatsap\b/.test(lower)) return normalizeCallProvider("whatsapp");
@@ -6276,6 +6293,7 @@ function stageBackendCallIntent(db, user, command = "", options = {}) {
   if (reminderContactMatch) return null;
   const resolution = callIntentResolution(db, { target, provider });
   if (resolution.status === "missing-target") {
+    const providerMetadata = callProviderPublicMetadata(provider);
     db.profile.agentMemory.lastStatus = "call-target-needed";
     db.profile.agentMemory.lastSummary = "Nexus needs a person, organization, or phone number before it can stage a call.";
     db.profile.agentMemory.updatedAt = new Date().toISOString();
@@ -6283,10 +6301,11 @@ function stageBackendCallIntent(db, user, command = "", options = {}) {
       intent: "call.target_needed",
       response: "Who should I call? Tell me the person, organization, or full phone number with country code.",
       status: "needs-input",
-      metadata: { conversationMode: true, redirectSection: "agent", provider, requestedProvider: provider, language }
+      metadata: { conversationMode: true, redirectSection: "agent", provider, requestedProvider: provider, providerMetadata, language }
     };
   }
   if (resolution.status === "multiple-matches") {
+    const providerMetadata = callProviderPublicMetadata(provider);
     db.profile.agentMemory.pendingContactCall = {
       id: crypto.randomUUID(),
       name: target.displayName,
@@ -6300,10 +6319,11 @@ function stageBackendCallIntent(db, user, command = "", options = {}) {
       intent: "call.multiple_matches",
       response: `I found more than one match for ${target.displayName}. Which one should I call? ${resolution.matches.map((item, index) => `${index + 1}. ${item.displayName} from ${item.source}`).join(" ")}`,
       status: "needs-choice",
-      metadata: { conversationMode: true, redirectSection: "agent", provider, requestedProvider: provider, target, resolution }
+      metadata: { conversationMode: true, redirectSection: "agent", provider, requestedProvider: provider, providerMetadata, target, resolution }
     };
   }
   if (resolution.status === "missing-number") {
+    const providerMetadata = callProviderPublicMetadata(provider);
     db.profile.agentMemory.pendingContactCall = {
       id: crypto.randomUUID(),
       name: target.displayName,
@@ -6320,7 +6340,7 @@ function stageBackendCallIntent(db, user, command = "", options = {}) {
       intent: "call.number_needed",
       response: `I can help call ${target.displayName}, but I do not have a phone number yet. Please give the number with country code, for example +254 or +1.`,
       status: "needs-input",
-      metadata: { conversationMode: true, redirectSection: "agent", provider, requestedProvider: provider, target, resolution, suggestedReplies: [`${target.displayName} is +15555550100`, "cancel"] }
+      metadata: { conversationMode: true, redirectSection: "agent", provider, requestedProvider: provider, providerMetadata, target, resolution, suggestedReplies: [`${target.displayName} is +15555550100`, "cancel"] }
     };
   }
   const resolved = resolution.matches[0];
@@ -6337,6 +6357,7 @@ function stageBackendCallIntent(db, user, command = "", options = {}) {
     relationship: resolved.relationship || target.relationship || inferContactRelationship(command)
   };
   const handoff = callProviderHandoff(provider, resolvedTarget);
+  const providerMetadata = callProviderPublicMetadata(provider);
   const section = callIntentSection(resolvedTarget, command);
   const targetLabel = resolvedTarget.displayName || resolvedTarget.redactedPhone || "this contact";
   const providerLabel = callProviderLabel(provider, { style: "stage" });
@@ -6350,6 +6371,7 @@ function stageBackendCallIntent(db, user, command = "", options = {}) {
     pendingActionType: "outbound_call",
     provider,
     requestedProvider: provider,
+    providerMetadata,
     target: resolvedTarget,
     resolution: { status: "resolved", matches: [{ ...resolvedTarget, phone: resolvedTarget.redactedPhone, e164Phone: resolvedTarget.redactedPhone }] },
     handoff,
@@ -6378,6 +6400,7 @@ function stageBackendCallIntent(db, user, command = "", options = {}) {
       ...(staged.metadata || {}),
       provider,
       requestedProvider: provider,
+      providerMetadata,
       target: { ...resolvedTarget, phone: resolvedTarget.redactedPhone, e164Phone: resolvedTarget.redactedPhone },
       resolution: { status: "resolved" },
       handoff
@@ -18391,6 +18414,7 @@ function stageAgentAction(db, command, action) {
       mode: pending.kind === "autopilot-mission" ? "autopilot" : null,
       provider: pending.provider || null,
       requestedProvider: pending.requestedProvider || null,
+      providerMetadata: pending.providerMetadata || null,
       target: pending.target || null,
       resolution: pending.resolution || null,
       handoff: pending.handoff || null,
@@ -19686,6 +19710,7 @@ async function executePendingAgentAction(db, user, pending) {
   if (pending.kind === "call" && pending.provider === "twilio") {
     const target = pending.target || {};
     const handoff = pending.handoff || callProviderHandoff("twilio", target);
+    const providerMetadata = pending.providerMetadata || callProviderPublicMetadata("twilio");
     const targetLabel = target.displayName || pending.contactName || "the contact";
     const call = await createOutboundCallWorkflow(db, user, {
       purpose: pending.purpose || `call ${targetLabel}`,
@@ -19704,6 +19729,7 @@ async function executePendingAgentAction(db, user, pending) {
         redirectSection: pending.section || "agent",
         provider: "twilio",
         requestedProvider: pending.requestedProvider || "twilio",
+        providerMetadata,
         target: { ...target, phone: target.redactedPhone || redactPhoneNumber(target.phone), e164Phone: target.redactedPhone || redactPhoneNumber(target.e164Phone) },
         resolution: pending.resolution || null,
         handoff,
@@ -19721,6 +19747,7 @@ async function executePendingAgentAction(db, user, pending) {
   if (pending.kind === "call" && pending.provider && pending.provider !== "twilio") {
     const target = pending.target || {};
     const handoff = pending.handoff || callProviderHandoff(pending.provider, target);
+    const providerMetadata = pending.providerMetadata || callProviderPublicMetadata(pending.provider);
     const targetLabel = target.displayName || pending.contactName || "the contact";
     const providerLabel = callProviderLabel(pending.provider, { style: "response" });
     return {
@@ -19732,6 +19759,7 @@ async function executePendingAgentAction(db, user, pending) {
         redirectSection: pending.section || "agent",
         provider: pending.provider,
         requestedProvider: pending.requestedProvider || pending.provider,
+        providerMetadata,
         target: { ...target, phone: target.redactedPhone || redactPhoneNumber(target.phone), e164Phone: target.redactedPhone || redactPhoneNumber(target.e164Phone) },
         resolution: pending.resolution || null,
         handoff,

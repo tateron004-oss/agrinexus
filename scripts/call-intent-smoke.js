@@ -78,6 +78,8 @@ function assertStagedCall(state, label, provider = "twilio") {
   assert.equal(pending.kind, "call", `${label} should use call pending kind`);
   assert.equal(pending.tool, "communications.outbound_call", `${label} should stage outbound call tool`);
   assert.equal(pending.provider, provider, `${label} should select ${provider}`);
+  assert.equal(pending.providerMetadata?.provider, provider, `${label} pending action should expose public provider metadata`);
+  assert.equal(result.metadata?.providerMetadata?.provider, provider, `${label} response metadata should expose public provider metadata`);
   assert.equal((state.profile?.outboundCalls || []).length, 0, `${label} should not create outbound call on first utterance`);
 }
 
@@ -136,15 +138,19 @@ function assertStagedCall(state, label, provider = "twilio") {
 
     const whatsapp = await command("call Maria on WhatsApp");
     assertStagedCall(whatsapp, "WhatsApp call", "whatsapp");
+    assert.equal(whatsapp.profile.agentPendingAction.providerMetadata.label, "WhatsApp", "WhatsApp metadata should expose stable label");
+    assert.equal(whatsapp.profile.agentPendingAction.providerMetadata.directVoiceReliable, false, "WhatsApp metadata should mark direct voice unreliable");
     assert.equal(whatsapp.profile.agentPendingAction.handoff.type, "instruction", "WhatsApp should use instruction fallback");
     assert.match(whatsapp.profile.agentPendingAction.handoff.fallbackText, /not reliable/i, "WhatsApp should not claim direct voice-call support");
     const whatsappConfirmed = await command("yes");
     assert.equal(whatsappConfirmed.commandResult.intent, "conversation.confirmed", "WhatsApp confirmation should go through pending confirmation");
+    assert.equal(whatsappConfirmed.commandResult.metadata.providerMetadata.directVoiceReliable, false, "WhatsApp confirmation should keep provider metadata");
     assert.equal(whatsappConfirmed.commandResult.metadata.liveCallPlaced, false, "WhatsApp confirmation should not place a live call");
     assert.equal((whatsappConfirmed.profile.outboundCalls || []).length, 0, "WhatsApp confirmation should not invoke Twilio");
 
     const telegram = await command("call Maria on Telegram");
     assertStagedCall(telegram, "Telegram call", "telegram");
+    assert.equal(telegram.profile.agentPendingAction.providerMetadata.fallbackMode, "known-handle-only", "Telegram metadata should mark known-handle-only fallback");
     assert.match(telegram.profile.agentPendingAction.handoff.fallbackText, /not available|needs a known Telegram/i, "Telegram should not claim unsupported direct calling works");
     await command("no");
 
@@ -152,6 +158,8 @@ function assertStagedCall(state, label, provider = "twilio") {
     assertStagedCall(staged, "call before Twilio confirmation");
     const confirmed = await command("yes");
     assert.equal(confirmed.commandResult.intent, "conversation.confirmed", "yes should execute only the staged pending call");
+    assert.equal(confirmed.commandResult.metadata.providerMetadata.label, "Phone", "Twilio confirmation should expose public provider metadata");
+    assert.equal(confirmed.commandResult.metadata.providerMetadata.requiresServerCredential, undefined, "Public provider metadata should not expose credential requirements");
     const outbound = confirmed.profile.outboundCalls?.[0];
     assert(outbound, "confirmed Twilio call should create an outbound call record");
     assert.equal(outbound.status, "needs-twilio-call-config", "missing Twilio credentials should be a safe setup result");

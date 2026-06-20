@@ -33,6 +33,7 @@ assertContains("function isKnownCallProvider", "backend should expose known-prov
 assertContains("function callProviderConfig", "backend should read provider config through a helper");
 assertContains("function callProviderLabel", "backend should derive backend labels through a helper");
 assertContains("function callProviderFallbackMode", "backend should derive fallback mode through a helper");
+assertContains("function callProviderPublicMetadata", "backend should expose public-safe provider metadata internally");
 
 assertProvider("twilio", {
   label: "Phone",
@@ -114,10 +115,31 @@ assert(handoffBlock.includes('type: "twilio-call"') && handoffBlock.includes('en
 assert(handoffBlock.includes('nativeCommand: "call.launch"'), "native-phone should remain native bridge eligible only after confirmation");
 assert(handoffBlock.includes("This platform can stage the call request and provide safe instructions after confirmation."), "unknown providers should fall back to instruction-only behavior");
 
+const publicMetadataBlock = server.slice(server.indexOf("function callProviderPublicMetadata"), server.indexOf("function callIntentProvider"));
+[
+  "provider: normalized",
+  "label: config.label",
+  "handoffType: config.handoffType",
+  "fallbackMode: config.fallbackMode",
+  "directVoiceReliable: Boolean(config.directVoiceReliable)",
+  "nativeEligible: Boolean(config.nativeEligible)",
+  "browserEligible: Boolean(config.browserEligible)",
+  "requiresPhone: Boolean(config.requiresPhone)",
+  "requiresHandle: Boolean(config.requiresHandle)",
+  "confirmedOnly: Boolean(config.confirmedOnly)"
+].forEach(needle => assert(publicMetadataBlock.includes(needle), `public provider metadata should include ${needle}`));
+assert(!publicMetadataBlock.includes("requiresServerCredential"), "public provider metadata should not expose server credential requirements");
+
+const stageBlock = server.slice(server.indexOf("function stageBackendCallIntent"), server.indexOf("function outboundCallRecipientForPurpose"));
+assert(stageBlock.includes("providerMetadata: callProviderPublicMetadata(provider)") || stageBlock.includes("const providerMetadata = callProviderPublicMetadata(provider)"), "staged calls should attach public provider metadata");
+assert(stageBlock.includes("providerMetadata,"), "staged call metadata should return public provider metadata");
+
 const executeBlock = server.slice(server.indexOf("async function executePendingAgentAction"), server.indexOf("function availableAgentTools"));
 assert(executeBlock.includes('pending.kind === "call" && pending.provider === "twilio"'), "Twilio execution branch should remain explicit");
 assert(executeBlock.includes("await createOutboundCallWorkflow"), "Twilio branch should still use backend outbound workflow");
 assert(executeBlock.includes('pending.kind === "call" && pending.provider && pending.provider !== "twilio"'), "non-Twilio branch should remain handoff-only");
 assert(executeBlock.includes("liveCallPlaced: false"), "non-Twilio confirmations should not place live calls");
+assert(executeBlock.includes('callProviderPublicMetadata("twilio")'), "confirmed Twilio responses should include public provider metadata fallback");
+assert(executeBlock.includes("callProviderPublicMetadata(pending.provider)"), "confirmed non-Twilio responses should include public provider metadata fallback");
 
 console.log("Call provider registry QA passed");

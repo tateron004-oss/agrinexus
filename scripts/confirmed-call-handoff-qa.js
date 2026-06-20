@@ -118,6 +118,8 @@ function assertStagedOnly(state, label) {
     assert.equal(nativeConfirmed.commandResult?.intent, "conversation.confirmed", "allowed confirmation should execute staged handoff");
     assert.equal(nativeConfirmed.commandResult?.metadata?.executionConfirmed, true, "confirmed handoff should expose executionConfirmed");
     assert.equal(nativeConfirmed.commandResult?.metadata?.handoff?.url, "tel:+15555550301", "confirmed native phone should return tel handoff metadata");
+    assert.equal(nativeConfirmed.commandResult?.metadata?.providerMetadata?.nativeEligible, true, "confirmed native phone should expose native eligibility metadata");
+    assert.equal(nativeConfirmed.commandResult?.metadata?.providerMetadata?.browserEligible, true, "confirmed native phone should expose browser eligibility metadata");
     assert.equal(nativeConfirmed.commandResult?.metadata?.liveCallPlaced, false, "native phone handoff should not place a live call");
 
     const missing = await command("call Unknown Person");
@@ -139,6 +141,7 @@ function assertStagedOnly(state, label) {
     assertStagedOnly(telegram, "Telegram handoff");
     const telegramConfirmed = await command("do it");
     assert.equal(telegramConfirmed.commandResult?.metadata?.provider, "telegram", "Telegram confirmation should return provider metadata");
+    assert.equal(telegramConfirmed.commandResult?.metadata?.providerMetadata?.fallbackMode, "known-handle-only", "Telegram provider metadata should remain known-handle-only");
     assert.match(telegramConfirmed.commandResult?.metadata?.handoff?.fallbackText || "", /known Telegram/i, "Telegram should keep safe fallback language");
     assert.equal(telegramConfirmed.commandResult?.metadata?.handoff?.url, "https://t.me/amina_agri", "Telegram handoff should use known handle only");
 
