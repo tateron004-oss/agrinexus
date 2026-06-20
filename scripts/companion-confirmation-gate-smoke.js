@@ -12,6 +12,11 @@ let cookie = "";
 const gatedCases = [
   ["Send the buyer a message", "message"],
   ["Call the provider", "outbound_call"],
+  ["Call John", "outbound_call"],
+  ["llama a Juan", "outbound_call"],
+  ["appelle Marie", "outbound_call"],
+  ["mpigie Amina", "outbound_call"],
+  ["اتصل بمحمد", "outbound_call"],
   ["Submit my application", "application"],
   ["Create the order", "order"],
   ["Share my information", "privacy"],
@@ -70,7 +75,18 @@ async function command(prompt) {
 }
 
 (async () => {
-  fs.copyFileSync(path.join(root, "db.json"), tempDb);
+  const seed = JSON.parse(fs.readFileSync(path.join(root, "db.json"), "utf8"));
+  seed.profile = seed.profile || {};
+  seed.profile.phoneContacts = [
+    { id: "confirm-gate-john", name: "John", lookup: "john", phone: "+15555550201", relationship: "saved contact", source: "confirmation-gate-smoke" },
+    { id: "confirm-gate-juan", name: "Juan", lookup: "juan", phone: "+15555550202", relationship: "saved contact", source: "confirmation-gate-smoke" },
+    { id: "confirm-gate-marie", name: "Marie", lookup: "marie", phone: "+15555550203", relationship: "saved contact", source: "confirmation-gate-smoke" },
+    { id: "confirm-gate-amina", name: "Amina", lookup: "amina", phone: "+15555550204", relationship: "saved contact", source: "confirmation-gate-smoke" },
+    { id: "confirm-gate-mohammed", name: "محمد", lookup: "محمد", phone: "+15555550205", relationship: "saved contact", source: "confirmation-gate-smoke" }
+  ];
+  seed.profile.agentPendingAction = null;
+  seed.profile.outboundCalls = [];
+  fs.writeFileSync(tempDb, JSON.stringify(seed, null, 2));
   const server = spawn(process.execPath, ["server.js"], {
     cwd: root,
     env: { ...process.env, PORT: String(port), AGRINEXUS_DB_PATH: tempDb, OPENAI_API_KEY: "" },
@@ -118,6 +134,12 @@ async function command(prompt) {
     assert.strictEqual(vague.commandResult?.intent, "conversation.confirmation_required", "okay should not execute high-risk action");
     assert.strictEqual(vague.commandResult?.metadata?.confirmationRequired, true, "okay should ask for explicit confirmation");
     await command("no");
+
+    const staleCall = await command("Call John");
+    assert.strictEqual(staleCall.commandResult?.metadata?.executionDeferred, true, "Call John should stage before stale confirmation checks");
+    await command("no");
+    const staleNoPending = await command("confirm");
+    assert.strictEqual(staleNoPending.commandResult?.intent, "conversation.no_pending_action", "confirm after cancel should not execute a stale call");
 
     const noPending = await command("Yes");
     assert.strictEqual(noPending.commandResult?.intent, "conversation.no_pending_action", "yes without pending action should not execute");

@@ -5867,6 +5867,12 @@ function normalizePhoneNumber(value) {
   return clean;
 }
 
+function redactPhoneNumber(value = "") {
+  const clean = normalizePhoneNumber(value);
+  if (!clean) return "";
+  return `${clean.slice(0, Math.min(4, clean.length))}${"*".repeat(Math.max(0, clean.length - 8))}${clean.slice(-4)}`;
+}
+
 function ensurePhoneContactBook(db) {
   ensureAiProfile(db.profile);
   db.profile.phoneContacts = db.profile.phoneContacts || [];
@@ -5890,7 +5896,7 @@ function contactDisplayName(value = "") {
 }
 
 function contactLookupKey(value = "") {
-  return contactDisplayName(value).toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+  return contactDisplayName(value).toLowerCase().replace(/[^\p{L}\p{N}]+/gu, " ").trim();
 }
 
 function extractPhoneNumberFromText(text = "") {
@@ -5975,6 +5981,302 @@ function findPhoneContact(db, name = "") {
   return contacts.find(item => item.lookup === lookup)
     || contacts.find(item => item.lookup.includes(lookup) || lookup.includes(item.lookup))
     || null;
+}
+
+function callIntentProvider(command = "") {
+  const lower = normalizeSpeechForIntent(command);
+  if (/\bwhats\s*app\b|\bwhatsapp\b|\bواتساب\b|\bwasap\b|\bwatsap\b/.test(lower)) return "whatsapp";
+  if (/\btelegram\b|\bتلغرام\b|\bتيليجرام\b/.test(lower)) return "telegram";
+  if (/\btwilio\b|\bphone provider\b|\bplatform call\b/.test(lower)) return "twilio";
+  if (/\bnative phone\b|\bphone dialer\b|\bdialer\b|\bsystem phone\b/.test(lower)) return "native-phone";
+  return "twilio";
+}
+
+function callIntentLanguage(options = {}) {
+  return canonicalVoiceLanguage(options.targetLanguage || options.language || "en");
+}
+
+function cleanCallTarget(value = "") {
+  return contactDisplayName(String(value || "")
+    .replace(/\b(on|at|about|for|because|please|now|today|with|to|from|por|sur|kwa|pelo|pela|whatsapp|telegram|twilio)\b.*$/i, "")
+    .replace(/\b(my|the|a|an|mi|mon|ma|meu|minha)\b/gi, " ")
+    .replace(/\s+/g, " ")
+    .trim());
+}
+
+function extractCallIntentTarget(command = "") {
+  const raw = String(command || "").trim();
+  const phone = extractPhoneNumberFromText(raw);
+  if (phone) return { type: "number", rawName: "", displayName: redactPhoneNumber(phone), phone, e164Phone: phone };
+  const patterns = [
+    /\b(?:call|phone|dial|ring)\s+(?:my\s+|the\s+)?([\p{L}\p{M}][\p{L}\p{M}\s'.-]{1,56})/iu,
+    /\bllama\s+a\s+(?:mi\s+)?([\p{L}\p{M}][\p{L}\p{M}\s'.-]{1,56})/iu,
+    /\bappelle\s+(?:mon\s+|ma\s+)?([\p{L}\p{M}][\p{L}\p{M}\s'.-]{1,56})/iu,
+    /\bmpigie\s+([\p{L}\p{M}][\p{L}\p{M}\s'.-]{1,56})/iu,
+    /\bpiga\s+simu\s+kwa\s+(?:m?y\s+)?([\p{L}\p{M}][\p{L}\p{M}\s'.-]{1,56})/iu,
+    /\bligar\s+para\s+(?:meu\s+|minha\s+)?([\p{L}\p{M}][\p{L}\p{M}\s'.-]{1,56})/iu,
+    /\bligue\s+para\s+(?:meu\s+|minha\s+)?([\p{L}\p{M}][\p{L}\p{M}\s'.-]{1,56})/iu,
+    /(?:اتصل|إتصل)\s+ب(?:ـ)?\s*([\p{L}\p{M}\s'.-]{1,56})/u
+  ];
+  const match = patterns.map(pattern => raw.match(pattern)).find(Boolean);
+  if (!match) return null;
+  const rawName = String(match[1] || "")
+    .replace(/\s+(?:on|por|sur|kwa|pelo|pela|على)\s+.*$/iu, "")
+    .trim();
+  const lowerName = normalizeSpeechForIntent(rawName);
+  const roleMap = [
+    { pattern: /^(doctor|medico|medica|m[eé]dico|m[eé]decin|daktari|طبيب|الطبيب)$/i, label: "doctor", relationship: "health provider contact" },
+    { pattern: /^(provider|proveedor|fournisseur|mtoa huduma|مزود|المزود)$/i, label: "provider", relationship: "health provider contact" },
+    { pattern: /^(buyer|comprador|acheteur|mnunuzi|مشتري|المشتري)$/i, label: "buyer", relationship: "buyer or trade contact" },
+    { pattern: /^(recruiter|employer|reclutador|employeur|mwajiri)$/i, label: "recruiter", relationship: "workforce contact" }
+  ];
+  const role = roleMap.find(item => item.pattern.test(lowerName));
+  if (role) return { type: "role", rawName, displayName: role.label, relationship: role.relationship };
+  const displayName = cleanCallTarget(rawName);
+  return displayName ? { type: "person", rawName, displayName } : null;
+}
+
+function isCallIntentCommand(command = "") {
+  const raw = String(command || "").trim();
+  const lower = normalizeSpeechForIntent(raw);
+  return Boolean(extractPhoneNumberFromText(raw))
+    || /\b(call|phone|dial|ring)\b/.test(lower)
+    || /\bllama\s+a\b|\bappelle\b|\bmpigie\b|\bpiga\s+simu\s+kwa\b|\bligar\s+para\b|\bligue\s+para\b|\bligar\s+pelo\b|\bligue\s+pelo\b/.test(lower)
+    || /(?:اتصل|إتصل)\s+ب/u.test(raw);
+}
+
+function callProviderHandoff(provider, target = {}) {
+  const phone = target.e164Phone || target.phone || "";
+  if (provider === "whatsapp") {
+    return {
+      type: "instruction",
+      url: phone ? `https://wa.me/${phone.replace(/^\+/, "")}` : "",
+      fallbackText: "WhatsApp direct voice-call links are not reliable across devices. After confirmation, Nexus can open the WhatsApp contact/chat instruction instead."
+    };
+  }
+  if (provider === "telegram") {
+    return {
+      type: "instruction",
+      url: target.handle ? `https://t.me/${String(target.handle).replace(/^@/, "")}` : "",
+      fallbackText: "Telegram direct voice calling needs a known Telegram account/handle and is not available from a plain phone number in this phase."
+    };
+  }
+  if (provider === "native-phone") {
+    return {
+      type: "instruction",
+      url: phone ? `tel:${phone}` : "",
+      nativeCommand: "call.launch",
+      fallbackText: "Native phone dialer handoff is planned for the mobile bridge, but Phase 1 stages only the confirmed backend action."
+    };
+  }
+  if (provider === "twilio") {
+    return {
+      type: "twilio-call",
+      endpoint: "/api/voice/phone/outbound-call",
+      fallbackText: "Twilio can place the call only after explicit confirmation and configured credentials."
+    };
+  }
+  return {
+    type: "instruction",
+    fallbackText: "This platform can stage the call request and provide safe instructions after confirmation."
+  };
+}
+
+function callIntentSection(target = {}, command = "") {
+  const source = `${target.relationship || ""} ${target.type || ""} ${target.displayName || ""} ${command || ""}`;
+  if (/(doctor|nurse|clinic|health|medicine|pharmacy|medical|provider)/i.test(source)) return "health";
+  if (/(buyer|seller|trade|crop|supplier|vendor)/i.test(source)) return "trade";
+  if (/(job|workforce|recruiter|employer)/i.test(source)) return "workforce";
+  if (/(teacher|course|lesson|learning|instructor)/i.test(source)) return "learning";
+  return "agent";
+}
+
+function callableContactRecord(record = {}, source = "platform") {
+  const phone = normalizePhoneNumber(record.phone || record.recipientPhone || record.callbackNumber || record.contact || record.mobile || record.to);
+  return {
+    id: record.id || crypto.randomUUID(),
+    name: contactDisplayName(record.name || record.buyerName || record.providerName || record.title || record.organization || ""),
+    lookup: contactLookupKey(record.name || record.buyerName || record.providerName || record.title || record.organization || ""),
+    phone,
+    relationship: record.relationship || record.type || source,
+    source,
+    handle: record.telegramHandle || record.telegram || ""
+  };
+}
+
+function callContactCandidates(db, target = {}) {
+  ensurePhoneContactBook(db);
+  const records = [
+    ...(db.profile.phoneContacts || []).map(item => callableContactRecord(item, "phoneContacts")),
+    ...(db.profile.buyerContacts || []).map(item => callableContactRecord(item, "buyerContacts")),
+    ...(db.profile.healthIntakes || []).map(item => callableContactRecord(item, "healthIntakes")),
+    ...(db.profile.applications || []).map(item => callableContactRecord(item, "workforceApplications")),
+    ...((db.profile.platformIntelligence?.localDirectory || [])).map(item => callableContactRecord(item, "localDirectory")),
+    ...((db.profile.platformIntelligence?.crmContacts || [])).map(item => callableContactRecord(item, "crmContacts"))
+  ].filter(item => item.name || item.phone || item.handle);
+  const lookup = contactLookupKey(target.displayName || target.rawName || "");
+  if (!lookup) return [];
+  return records
+    .filter(item => item.lookup === lookup || item.lookup.includes(lookup) || lookup.includes(item.lookup) || normalizeSpeechForIntent(item.relationship).includes(lookup))
+    .map(item => ({
+      id: item.id,
+      displayName: item.name || target.displayName,
+      phone: item.phone,
+      e164Phone: item.phone,
+      relationship: item.relationship,
+      source: item.source,
+      handle: item.handle || ""
+    }));
+}
+
+function callIntentResolution(db, parsed = {}) {
+  const target = parsed.target || null;
+  if (!target) return { status: "missing-target", matches: [] };
+  if (target.type === "number" && target.e164Phone) return { status: "resolved", matches: [{ ...target, source: "direct-input" }] };
+  const matches = callContactCandidates(db, target);
+  if (target.type === "role") {
+    const callable = matches.find(item => item.e164Phone || item.handle);
+    return {
+      status: "resolved",
+      matches: [{
+        id: callable?.id || null,
+        displayName: callable?.displayName || target.displayName,
+        phone: callable?.e164Phone || "",
+        e164Phone: callable?.e164Phone || "",
+        relationship: callable?.relationship || target.relationship || inferContactRelationship(target.displayName),
+        source: callable?.source || "role-fallback",
+        handle: callable?.handle || ""
+      }]
+    };
+  }
+  if (matches.length > 1) return { status: "multiple-matches", matches };
+  if (matches.length === 1) {
+    const match = matches[0];
+    if (!match.e164Phone && !match.handle) return { status: "missing-number", matches };
+    return { status: "resolved", matches };
+  }
+  return { status: "missing-number", matches: [] };
+}
+
+function stageBackendCallIntent(db, user, command = "", options = {}) {
+  ensurePhoneContactBook(db);
+  const pendingContactCall = db.profile.agentMemory.pendingContactCall || null;
+  const phone = extractPhoneNumberFromText(command);
+  const saveContactSignal = /\b(remember|save|store|add)\b/.test(normalizeSpeechForIntent(command)) && /\b(number|phone|contact|call)\b/.test(normalizeSpeechForIntent(command));
+  if ((pendingContactCall && phone) || saveContactSignal) return null;
+  if (!isCallIntentCommand(command)) return null;
+  const provider = callIntentProvider(command);
+  const language = callIntentLanguage(options);
+  const target = extractCallIntentTarget(command);
+  const resolution = callIntentResolution(db, { target, provider });
+  if (resolution.status === "missing-target") {
+    db.profile.agentMemory.lastStatus = "call-target-needed";
+    db.profile.agentMemory.lastSummary = "Nexus needs a person, organization, or phone number before it can stage a call.";
+    db.profile.agentMemory.updatedAt = new Date().toISOString();
+    return {
+      intent: "call.target_needed",
+      response: "Who should I call? Tell me the person, organization, or full phone number with country code.",
+      status: "needs-input",
+      metadata: { conversationMode: true, redirectSection: "agent", provider, requestedProvider: provider, language }
+    };
+  }
+  if (resolution.status === "multiple-matches") {
+    db.profile.agentMemory.pendingContactCall = {
+      id: crypto.randomUUID(),
+      name: target.displayName,
+      provider,
+      purpose: `call ${target.displayName}`,
+      sourceCommand: command,
+      matches: resolution.matches.map(item => ({ id: item.id, displayName: item.displayName, source: item.source, relationship: item.relationship })),
+      createdAt: new Date().toISOString()
+    };
+    return {
+      intent: "call.multiple_matches",
+      response: `I found more than one match for ${target.displayName}. Which one should I call? ${resolution.matches.map((item, index) => `${index + 1}. ${item.displayName} from ${item.source}`).join(" ")}`,
+      status: "needs-choice",
+      metadata: { conversationMode: true, redirectSection: "agent", provider, requestedProvider: provider, target, resolution }
+    };
+  }
+  if (resolution.status === "missing-number") {
+    db.profile.agentMemory.pendingContactCall = {
+      id: crypto.randomUUID(),
+      name: target.displayName,
+      relationship: target.relationship || inferContactRelationship(command),
+      provider,
+      purpose: `call ${target.displayName}`,
+      sourceCommand: command,
+      createdAt: new Date().toISOString()
+    };
+    db.profile.agentMemory.lastStatus = "call-number-needed";
+    db.profile.agentMemory.lastSummary = `Nexus needs ${target.displayName}'s phone number before staging the call.`;
+    db.profile.agentMemory.updatedAt = new Date().toISOString();
+    return {
+      intent: "call.number_needed",
+      response: `I can help call ${target.displayName}, but I do not have a phone number yet. Please give the number with country code, for example +254 or +1.`,
+      status: "needs-input",
+      metadata: { conversationMode: true, redirectSection: "agent", provider, requestedProvider: provider, target, resolution, suggestedReplies: [`${target.displayName} is +15555550100`, "cancel"] }
+    };
+  }
+  const resolved = resolution.matches[0];
+  const resolvedTarget = {
+    type: target.type || "person",
+    rawName: target.rawName || target.displayName || "",
+    displayName: resolved.displayName || target.displayName || redactPhoneNumber(resolved.e164Phone),
+    contactId: resolved.id || null,
+    phone: resolved.e164Phone || "",
+    e164Phone: resolved.e164Phone || "",
+    redactedPhone: redactPhoneNumber(resolved.e164Phone),
+    handle: resolved.handle || "",
+    source: resolved.source || "direct-input",
+    relationship: resolved.relationship || target.relationship || inferContactRelationship(command)
+  };
+  const handoff = callProviderHandoff(provider, resolvedTarget);
+  const section = callIntentSection(resolvedTarget, command);
+  const targetLabel = resolvedTarget.displayName || resolvedTarget.redactedPhone || "this contact";
+  const providerLabel = provider === "twilio" ? "phone" : provider;
+  const nonTwilio = provider !== "twilio";
+  const staged = stageAgentAction(db, command, {
+    kind: "call",
+    module: "AI",
+    tool: "communications.outbound_call",
+    action: `Call ${targetLabel}`,
+    section,
+    pendingActionType: "outbound_call",
+    provider,
+    requestedProvider: provider,
+    target: resolvedTarget,
+    resolution: { status: "resolved", matches: [{ ...resolvedTarget, phone: resolvedTarget.redactedPhone, e164Phone: resolvedTarget.redactedPhone }] },
+    handoff,
+    planner: "backend-call-intent",
+    confidence: target.type === "number" ? 0.96 : 0.9,
+    rationale: "Nexus parsed a call request and staged it behind explicit confirmation before any outbound action.",
+    userFacingPlan: nonTwilio
+      ? `${providerLabel} direct calling is staged as a safe handoff/instruction in Phase 1.`
+      : `Say yes to call ${targetLabel}, or no to cancel.`,
+    contactName: targetLabel,
+    recipientPhone: resolvedTarget.e164Phone,
+    to: resolvedTarget.e164Phone,
+    purpose: `call ${targetLabel}`,
+    language,
+    phase4HighRisk: true,
+    allowedConfirmations: ["yes", "confirm", "do it"],
+    confirmationPrompt: nonTwilio
+      ? `I can prepare a ${providerLabel} call handoff for ${targetLabel}, but I will not launch it without confirmation. Do you want me to continue?`
+      : `I found ${targetLabel}${resolvedTarget.redactedPhone ? ` at ${resolvedTarget.redactedPhone}` : ""}. Before I call anyone, please confirm. Do you want me to call ${targetLabel} now?`
+  });
+  return {
+    ...staged,
+    intent: "call.intent_staged",
+    response: staged.response,
+    metadata: {
+      ...(staged.metadata || {}),
+      provider,
+      requestedProvider: provider,
+      target: { ...resolvedTarget, phone: resolvedTarget.redactedPhone, e164Phone: resolvedTarget.redactedPhone },
+      resolution: { status: "resolved" },
+      handoff
+    }
+  };
 }
 
 function outboundCallRecipientForPurpose(purpose = "", body = {}) {
@@ -17981,6 +18283,11 @@ function stageAgentAction(db, command, action) {
       },
       tool: pending.tool || null,
       mode: pending.kind === "autopilot-mission" ? "autopilot" : null,
+      provider: pending.provider || null,
+      requestedProvider: pending.requestedProvider || null,
+      target: pending.target || null,
+      resolution: pending.resolution || null,
+      handoff: pending.handoff || null,
       previewSteps: pending.previewSteps || [],
       memoriesUsed: reasoning.memoryUsed || [],
       reasoning,
@@ -19270,6 +19577,28 @@ async function phoneContactMemoryCommandResponse(db, user, text, lower, options 
 async function executePendingAgentAction(db, user, pending) {
   if (!pending) return { intent: "conversation.no_pending_action", response: "There is no pending action to confirm.", status: "needs-input" };
   db.profile.agentPendingAction = null;
+  if (pending.kind === "call" && pending.provider && pending.provider !== "twilio") {
+    const target = pending.target || {};
+    const handoff = pending.handoff || callProviderHandoff(pending.provider, target);
+    const targetLabel = target.displayName || pending.contactName || "the contact";
+    const providerLabel = pending.provider === "native-phone" ? "native phone dialer" : pending.provider;
+    return {
+      intent: "call.handoff_instruction",
+      response: `${providerLabel} call handoff is ready for ${targetLabel}. ${handoff.fallbackText || "Use the provider app or dialer to continue."}${handoff.url ? ` Link: ${handoff.url}` : ""}`,
+      status: "needs-handoff",
+      metadata: {
+        conversationMode: true,
+        redirectSection: pending.section || "agent",
+        provider: pending.provider,
+        requestedProvider: pending.requestedProvider || pending.provider,
+        target: { ...target, phone: target.redactedPhone || redactPhoneNumber(target.phone), e164Phone: target.redactedPhone || redactPhoneNumber(target.e164Phone) },
+        resolution: pending.resolution || null,
+        handoff,
+        executionConfirmed: true,
+        liveCallPlaced: false
+      }
+    };
+  }
   if (pending.kind === "language-change") {
     const language = pending.language || languageFromCommand(pending.command || "");
     if (!language || !changeUserLanguage(db, user, language)) {
@@ -22611,6 +22940,27 @@ async function runAgentCommand(db, user, command, options = {}) {
       }
     };
   }
+  if (topPendingAction?.phase4HighRisk && isAffirmativeCommand(lower)) {
+    const allowed = (topPendingAction.allowedConfirmations || ["yes", "confirm", "do it"]).map(item => normalizeSpeechForIntent(item));
+    if (!allowed.includes(normalizeSpeechForIntent(lower))) {
+      return {
+        intent: "conversation.confirmation_required",
+        response: `${topPendingAction.confirmationPrompt || `Please confirm before I ${String(topPendingAction.action || "continue").toLowerCase()}.`} Say yes, confirm, or do it to continue, or no to cancel.`,
+        status: "needs-confirmation",
+        metadata: {
+          conversationMode: true,
+          redirectSection: topPendingAction.section || "dashboard",
+          confirmationRequired: true,
+          executionDeferred: true,
+          pendingActionType: topPendingAction.pendingActionType || topPendingAction.kind || topPendingAction.tool || "workflow",
+          pendingActionName: topPendingAction.action || topPendingAction.tool || "Pending action",
+          confirmationPrompt: topPendingAction.confirmationPrompt || "",
+          allowedConfirmations: topPendingAction.allowedConfirmations || ["yes", "confirm", "do it"],
+          constitutionPhase: "phase-4-confirmation-gate"
+        }
+      };
+    }
+  }
   if (topPendingAction && isAffirmativeCommand(lower)) {
     const result = await executePendingAgentAction(db, user, topPendingAction);
     return { ...result, intent: result.intent === "conversation.no_pending_action" ? result.intent : "conversation.confirmed" };
@@ -22636,6 +22986,8 @@ async function runAgentCommand(db, user, command, options = {}) {
   }
   const urgentHealth = conversational ? urgentHealthSafetyResponse(db, user, text) : null;
   if (urgentHealth) return urgentHealth;
+  const backendCallIntent = conversational ? stageBackendCallIntent(db, user, text, options) : null;
+  if (backendCallIntent) return backendCallIntent;
   const phase4RiskyAction = conversational ? phase4RiskyActionForCommand(text) : null;
   if (phase4RiskyAction) return stageAgentAction(db, text, phase4RiskyAction);
   if (conversational && isInformationalBuyerConversation(lower)) {
