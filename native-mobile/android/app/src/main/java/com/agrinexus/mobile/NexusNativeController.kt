@@ -4,6 +4,7 @@ import android.Manifest
 import android.app.Activity
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Build
 import android.speech.tts.TextToSpeech
 import android.webkit.WebView
@@ -114,6 +115,34 @@ class NexusNativeController(private val activity: Activity, private val webView:
             .put("message", "Native camera capture is ready for crop, injury, pharmacy, or provider handoff media."))
     }
 
+    fun launchConfirmedCall(payload: JSONObject) {
+        val provider = payload.optString("provider", "").trim()
+        val source = payload.optString("source", "").trim()
+        val confirmed = payload.optBoolean("executionConfirmed", false)
+        val url = payload.optString("url", "").trim()
+        val redactedPhone = payload.optString("redactedPhone", "").trim()
+        if (provider != "native-phone" || source != "confirmed-call-handoff" || !confirmed) {
+            sendCallLaunchFailed("unconfirmed-or-unsupported", redactedPhone)
+            return
+        }
+        if (!isSafeTelUrl(url)) {
+            sendCallLaunchFailed("malformed-tel-url", redactedPhone)
+            return
+        }
+        val dialIntent = Intent(Intent.ACTION_DIAL, Uri.parse(url))
+        val canDial = dialIntent.resolveActivity(activity.packageManager) != null
+        if (!canDial) {
+            sendCallLaunchFailed("dialer-unavailable", redactedPhone)
+            return
+        }
+        activity.startActivity(dialIntent)
+        sendToWeb("call.launch_opened", JSONObject()
+            .put("provider", "native-phone")
+            .put("source", "confirmed-call-handoff")
+            .put("redactedPhone", redactedPhone)
+            .put("status", "dialer-opened"))
+    }
+
     fun speak(text: String) {
         tts?.speak(text, TextToSpeech.QUEUE_FLUSH, null, "nexus-response")
     }
@@ -135,6 +164,22 @@ class NexusNativeController(private val activity: Activity, private val webView:
         sendToWeb("voice.partial_transcript", JSONObject()
             .put("transcript", transcript)
             .put("language", language))
+    }
+
+    private fun isSafeTelUrl(url: String): Boolean {
+        if (!url.startsWith("tel:")) return false
+        val number = url.removePrefix("tel:").trim()
+        if (number.isBlank()) return false
+        return Regex("^\\+?[0-9][0-9\\s().-]{2,31}$").matches(number)
+    }
+
+    private fun sendCallLaunchFailed(reason: String, redactedPhone: String = "") {
+        sendToWeb("call.launch_failed", JSONObject()
+            .put("provider", "native-phone")
+            .put("source", "confirmed-call-handoff")
+            .put("reason", reason)
+            .put("redactedPhone", redactedPhone)
+            .put("status", "blocked"))
     }
 
     private fun nativeLocaleTag(language: String): String {

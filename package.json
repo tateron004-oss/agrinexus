@@ -28,6 +28,7 @@
     "call:pending-ui-qa": "node scripts/pending-call-ui-qa.js",
     "call:confirmed-handoff-qa": "node scripts/confirmed-call-handoff-qa.js",
     "call:native-bridge-dispatch-qa": "node scripts/native-call-bridge-dispatch-qa.js",
+    "call:android-launch-qa": "node scripts/android-call-launch-qa.js",
     "phone:greeting-qa": "node scripts/phone-greeting-qa.js",
     "auth:login-gate-qa": "node scripts/auth-login-gate-qa.js",
     "auth:login-api-smoke": "node scripts/auth-login-api-smoke.js",
