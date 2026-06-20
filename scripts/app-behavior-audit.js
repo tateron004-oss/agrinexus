@@ -7,9 +7,16 @@ const app = fs.readFileSync(path.join(root, "public", "app.js"), "utf8");
 const styles = fs.readFileSync(path.join(root, "public", "styles.css"), "utf8");
 const html = fs.readFileSync(path.join(root, "public", "index.html"), "utf8");
 const server = fs.readFileSync(path.join(root, "server.js"), "utf8");
+const nativeBridge = JSON.parse(fs.readFileSync(path.join(root, "public", "native-bridge.json"), "utf8"));
 
 function hasAll(haystack, values, message) {
   values.forEach(value => assert(haystack.includes(value), `${message}: missing ${value}`));
+}
+
+function indexAfter(haystack, needle, start, message) {
+  const index = haystack.indexOf(needle, start);
+  assert(index > -1, message);
+  return index;
 }
 
 hasAll(app, [
@@ -20,7 +27,6 @@ hasAll(app, [
   "[\"sw\", \"Kiswahili\"]",
   "[\"ar\", \"Arabic\"]",
   "[\"es\", \"Spanish\"]",
-  "[\"pt\", \"Portuguese\"]",
   "[data-user-language]",
   "function renderUserSimpleActiveSection",
   "simpleUserSections",
@@ -208,6 +214,18 @@ hasAll(app, [
   "openAskNexus();",
   "await handleVoiceCommand(action.command);"
 ], "App-mode workflow behavior");
+
+const fullAppLanguageCodesMatch = app.match(/const fullAppLanguageCodes = new Set\(\[([^\]]+)\]\);/);
+assert(fullAppLanguageCodesMatch, "App should define full app language codes");
+assert(!fullAppLanguageCodesMatch[1].includes("\"pt\""), "Portuguese should not be listed as a full app/profile language");
+hasAll(app, [
+  "const partialAppLanguageCodes = new Set([\"pt\"])",
+  "pt: \"pt-BR\"",
+  "pt: \"Portuguese\"",
+  "Portuguese is partially supported"
+], "Portuguese partial language support");
+assert.deepStrictEqual(nativeBridge.languageContract.fullAppLanguages, ["en", "es", "fr", "sw", "ar"], "Native bridge should list only full app languages");
+assert.deepStrictEqual(nativeBridge.languageContract.partialLanguages, ["pt"], "Native bridge should list Portuguese as partial language support");
 
 hasAll(styles, [
   "body.user-mode #dashboard > :not(#userWorkspace)",
@@ -457,10 +475,17 @@ assert(app.includes("function openHealthFacilityMapNow") && app.includes("functi
 assert(app.includes('directAction === "clinic-map-help"') && app.includes("const clinicMap") && app.includes("I opened the clinic and pharmacy map"), "User-mode clinic map speech must route directly to the visible clinic/pharmacy map");
 assert(app.includes("function nexusFastLaneIntent") && app.includes("routeLabel: \"fast-lane-medicine\"") && app.includes("routeLabel: \"fast-lane-clinic-map\"") && app.includes("routeLabel: \"fast-lane-workforce\""), "Nexus needs a deterministic fast lane for simple health, map, work, learning, and trade requests");
 assert(app.includes("routeLabel: \"fast-lane-weather\"") && app.includes("function safeBrowserWeatherLocation"), "Weather questions need a fast lane and fail-safe browser location wrapper");
-assert(app.indexOf("const fastLaneIntent = nexusFastLaneIntent(spoken || command || localized || rawCommand)") < app.indexOf("if (await answerPendingNexusQuestion(command || localized || rawCommand))"), "Unified Nexus fast lane must run before pending-answer handling");
-assert(app.indexOf("const fastLaneIntent = nexusFastLaneIntent(spokenCommand || command || localizedCommand || rawCommand)") < app.indexOf("if (await answerPendingNexusQuestion(command || localizedCommand || rawCommand))"), "Main voice fast lane must run before old pending-answer context");
-assert(html.includes("nexus-behavior-287"), "Index must force browsers to load Nexus behavior CSS");
-assert(html.includes("nexus-behavior-287"), "Index must force browsers to load Nexus behavior JS");
+const unifiedFastLaneIndex = app.indexOf("const fastLaneIntent = nexusFastLaneIntent(spoken || command || localized || rawCommand)");
+assert(unifiedFastLaneIndex > -1, "Unified Nexus fast lane must be present");
+assert(unifiedFastLaneIndex < indexAfter(app, "if (await answerPendingNexusQuestion(command || localized || rawCommand))", unifiedFastLaneIndex, "Unified Nexus later pending-answer handling must remain after the fast lane"), "Unified Nexus fast lane must run before stale pending-answer handling");
+const mainVoiceFastLaneIndex = app.indexOf("const fastLaneIntent = nexusFastLaneIntent(spokenCommand || command || localizedCommand || rawCommand)");
+assert(mainVoiceFastLaneIndex > -1, "Main voice fast lane must be present");
+assert(mainVoiceFastLaneIndex < indexAfter(app, "if (await answerPendingNexusQuestion(command || localizedCommand || rawCommand))", mainVoiceFastLaneIndex, "Main voice later pending-answer handling must remain after the fast lane"), "Main voice fast lane must run before old pending-answer context");
+const cssBehaviorVersion = html.match(/\/styles\.css\?v=(nexus-behavior-\d+)/);
+const jsBehaviorVersion = html.match(/\/app\.js\?v=(nexus-behavior-\d+)/);
+assert(cssBehaviorVersion, "Index must force browsers to load Nexus behavior CSS with a cache-buster");
+assert(jsBehaviorVersion, "Index must force browsers to load Nexus behavior JS with a cache-buster");
+assert.strictEqual(cssBehaviorVersion[1], jsBehaviorVersion[1], "Index should use the same Nexus behavior cache-buster for CSS and JS");
 assert(server.includes("function productionActivationGuide"), "Backend needs a live activation guide");
 assert(server.includes("function directVendorProviderStatus"), "Backend must recognize direct vendor credentials");
 assert(server.includes("optionalEnvSets"), "Activation guide must show real provider depth options");
@@ -607,7 +632,7 @@ assert(server.includes("async function careerPathGuidanceResponse"), "Backend mu
 assert(server.includes("async function liveKnowledgeContextForCommand"), "Backend must gather live/provider knowledge context before answering current questions");
 assert(server.includes("async function currentKnowledgeQuestionResponse"), "Backend needs a current-knowledge conversational response path");
 assert(server.includes("maize price feed"), "Market price questions must avoid pretending without a verified live price feed");
-assert(app.includes("function runSimpleUserVoiceIntent") && app.includes("pendingAgentClarification = intent.clarification || null") && app.includes("earlySimpleIntent && runSimpleUserVoiceIntent"), "Early smart clarification must preserve choices for the next user answer");
+assert(app.includes("function runSimpleUserVoiceIntent") && app.includes("pendingAgentClarification = intent.clarification || null") && app.includes("const earlySimpleIntent = simpleUserDirectVoiceIntent(spokenCommand || command)") && app.includes("runSimpleUserVoiceIntent(earlySimpleIntent, spokenCommand || command)"), "Early smart clarification must preserve choices for the next user answer");
 assert(app.indexOf("if (isPlatformExplainVoiceCommand(spokenCommand || command || localizedCommand || rawCommand))") > -1, "Voice handler must hard-route explain AgriNexus directly");
 assert(app.indexOf("if (isPlatformExplainVoiceCommand(spokenCommand || command || localizedCommand || rawCommand))") < app.indexOf("if (!options.skipUnifiedBrain && await unifiedNexusConversationBrain"), "Explain AgriNexus must run before unified brain workflow staging");
 assert(app.includes("pendingAgentClarification = simpleIntent.clarification || null"), "Smart clarification must preserve choices after command cleanup");
@@ -649,7 +674,8 @@ assert(app.includes("directAction: \"doctor-help\""), "Doctor/provider simple vo
 assert(app.includes("function isPriorityServiceVoiceIntent"), "Clear service voice requests need a priority router before intake/question state");
 assert(app.includes("resetConversationStateForPriorityIntent"), "Priority service requests must clear stale intake/question state before routing");
 assert(app.indexOf("const firstPrioritySimpleIntent = simpleUserDirectVoiceIntent(spoken || command)") > -1, "Unified Nexus brain must route priority service commands before stale question handling");
-assert(app.indexOf("const firstPrioritySimpleIntent = simpleUserDirectVoiceIntent(spoken || command)") < app.indexOf("if (await answerPendingNexusQuestion(command || localized || rawCommand))"), "Doctor, medicine, clinic, work, course, crop, and map requests must override stale pending questions in unified brain");
+const firstPrioritySimpleIntentIndex = app.indexOf("const firstPrioritySimpleIntent = simpleUserDirectVoiceIntent(spoken || command)");
+assert(firstPrioritySimpleIntentIndex < indexAfter(app, "if (await answerPendingNexusQuestion(command || localized || rawCommand))", firstPrioritySimpleIntentIndex, "Unified Nexus later pending-answer handling must remain after priority service routing"), "Doctor, medicine, clinic, work, course, crop, and map requests must override stale pending questions in unified brain");
 assert(app.indexOf("const firstPriorityFallbackIntent = simpleUserDirectVoiceIntent(spokenCommand || command)") > -1, "Fallback voice handler must route priority service commands before stale question handling");
 assert(app.indexOf("const firstPriorityFallbackIntent = simpleUserDirectVoiceIntent(spokenCommand || command)") < app.indexOf("if (await answerPendingNexusQuestion(command || localizedCommand || rawCommand))"), "Doctor, medicine, clinic, work, course, crop, and map requests must override stale pending questions in fallback handler");
 assert(app.indexOf("const prioritySimpleIntent = simpleUserDirectVoiceIntent(spoken || command)") > -1, "Unified Nexus brain must evaluate priority service commands");
