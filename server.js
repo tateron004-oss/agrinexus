@@ -19584,6 +19584,41 @@ async function phoneContactMemoryCommandResponse(db, user, text, lower, options 
 async function executePendingAgentAction(db, user, pending) {
   if (!pending) return { intent: "conversation.no_pending_action", response: "There is no pending action to confirm.", status: "needs-input" };
   db.profile.agentPendingAction = null;
+  if (pending.kind === "call" && pending.provider === "twilio") {
+    const target = pending.target || {};
+    const handoff = pending.handoff || callProviderHandoff("twilio", target);
+    const targetLabel = target.displayName || pending.contactName || "the contact";
+    const call = await createOutboundCallWorkflow(db, user, {
+      purpose: pending.purpose || `call ${targetLabel}`,
+      to: pending.to || pending.recipientPhone,
+      recipientPhone: pending.recipientPhone || pending.to,
+      contactName: pending.contactName || targetLabel
+    });
+    return {
+      intent: "phone.outbound_call_requested",
+      response: call.delivery?.ok
+        ? `Twilio call confirmed for ${targetLabel}. Nexus started the configured outbound call.`
+        : `Twilio call confirmed for ${targetLabel}, but live dialing needs setup: ${(call.delivery?.missing || [call.delivery?.error || call.status]).join(", ")}.`,
+      status: call.delivery?.ok ? "completed" : call.status || "needs-twilio-call-config",
+      metadata: {
+        conversationMode: true,
+        redirectSection: pending.section || "agent",
+        provider: "twilio",
+        requestedProvider: pending.requestedProvider || "twilio",
+        target: { ...target, phone: target.redactedPhone || redactPhoneNumber(target.phone), e164Phone: target.redactedPhone || redactPhoneNumber(target.e164Phone) },
+        resolution: pending.resolution || null,
+        handoff,
+        executionConfirmed: true,
+        liveCallPlaced: Boolean(call.delivery?.ok),
+        callStatus: call.status,
+        callId: call.id,
+        callNumber: call.callNumber,
+        redactedTo: redactPhoneNumber(call.to),
+        deliveryStatus: call.delivery?.status || call.status,
+        missing: call.delivery?.missing || []
+      }
+    };
+  }
   if (pending.kind === "call" && pending.provider && pending.provider !== "twilio") {
     const target = pending.target || {};
     const handoff = pending.handoff || callProviderHandoff(pending.provider, target);

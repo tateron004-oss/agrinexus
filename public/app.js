@@ -9397,6 +9397,77 @@ function pendingCallDetailRows(details) {
   `).join("");
 }
 
+function isConfirmedCallHandoffResult(result = {}) {
+  const metadata = result.metadata || {};
+  const provider = metadata.provider || metadata.requestedProvider || "";
+  return Boolean(metadata.executionConfirmed && provider && (
+    result.intent === "conversation.confirmed"
+    || result.intent === "call.handoff_instruction"
+    || result.intent === "phone.outbound_call_requested"
+  ));
+}
+
+function safeConfirmedCallHandoffUrl(result = {}) {
+  const metadata = result.metadata || {};
+  const handoff = metadata.handoff || {};
+  const provider = String(metadata.provider || metadata.requestedProvider || "").toLowerCase();
+  const url = String(handoff.url || "");
+  if (provider === "native-phone" && /^tel:\+?\d[\d\s().-]*$/i.test(url)) return url;
+  if (provider === "whatsapp" && /^https:\/\/wa\.me\/\d+$/i.test(url)) return url;
+  if (provider === "telegram" && /^https:\/\/t\.me\/[A-Za-z0-9_]{3,64}$/i.test(url)) return url;
+  return "";
+}
+
+function renderConfirmedCallHandoffCard(result = {}) {
+  const metadata = result.metadata || {};
+  const target = metadata.target || {};
+  const handoff = metadata.handoff || {};
+  const provider = metadata.provider || metadata.requestedProvider || "";
+  const providerLabel = callProviderLabel(provider);
+  const targetLabel = target.displayName || target.rawName || "the contact";
+  const redactedNumber = target.redactedPhone || target.e164Phone || target.phone || metadata.redactedTo || "";
+  const safeUrl = safeConfirmedCallHandoffUrl(result);
+  const isTwilio = provider === "twilio";
+  const title = isTwilio
+    ? metadata.liveCallPlaced ? "Twilio call started" : "Twilio setup needed"
+    : "Confirmed call handoff";
+  const actionText = provider === "whatsapp"
+    ? "Open WhatsApp contact"
+    : provider === "telegram"
+      ? "Open Telegram contact"
+      : "Open call handoff";
+  const linkHtml = safeUrl
+    ? `<a class="primary confirmed-call-link" data-confirmed-call-handoff="true" href="${escapeHtml(safeUrl)}" target="_blank" rel="noopener noreferrer">${escapeHtml(translateText(actionText))}</a>`
+    : "";
+  return `<div class="conversation-turn assistant confirmed-call-handoff-card" data-confirmed-call-card="true">
+    <strong>${escapeHtml(translateText(title))}</strong>
+    <span>${escapeHtml(translateText(result.response || "The call action was confirmed."))}</span>
+    <div class="pending-call-details">
+      <div>
+        <strong>${escapeHtml(translateText("Contact"))}</strong>
+        <span>${escapeHtml(translateText(targetLabel))}</span>
+      </div>
+      <div>
+        <strong>${escapeHtml(translateText("Provider"))}</strong>
+        <span>${escapeHtml(translateText(providerLabel))}</span>
+      </div>
+      <div>
+        <strong>${escapeHtml(translateText("Number"))}</strong>
+        <span>${escapeHtml(redactedNumber ? translateText(redactedNumber) : translateText("Not shown"))}</span>
+      </div>
+      <div>
+        <strong>${escapeHtml(translateText("Status"))}</strong>
+        <span>${escapeHtml(translateText(metadata.deliveryStatus || metadata.callStatus || result.status || "confirmed"))}</span>
+      </div>
+    </div>
+    ${handoff.fallbackText ? `<small>${escapeHtml(translateText(handoff.fallbackText))}</small>` : ""}
+    ${provider === "whatsapp" ? `<small>${escapeHtml(translateText("WhatsApp voice-call deep links are not reliable; Nexus can only offer the confirmed contact/chat handoff."))}</small>` : ""}
+    ${provider === "telegram" ? `<small>${escapeHtml(translateText("Telegram direct calls need a known Telegram account; Nexus can only offer a confirmed profile handoff when available."))}</small>` : ""}
+    ${isTwilio && !metadata.liveCallPlaced ? `<small>${escapeHtml(translateText("Live dialing did not start because provider configuration is incomplete."))}</small>` : ""}
+    ${linkHtml ? `<div class="confirmed-call-actions">${linkHtml}</div>` : `<small>${escapeHtml(translateText("No browser-launchable handoff link is available. Use the provider instruction above."))}</small>`}
+  </div>`;
+}
+
 function renderPendingCallActionCard(pending = {}) {
   const details = pendingCallDetails(pending);
   return `<div class="conversation-turn assistant agent-pending-confirm-card pending-call-card" data-pending-call-card="true">
@@ -9467,12 +9538,13 @@ function renderConversationPanel() {
       </div>`
     : "";
   const callStatusHtml = !pending && /^call\./.test(String(latestResult.intent || "")) ? renderCallStatusCard(latestResult) : "";
+  const confirmedCallHtml = !pending && isConfirmedCallHandoffResult(latestResult) ? renderConfirmedCallHandoffCard(latestResult) : "";
   panel.innerHTML = (recentTurns.length ? recentTurns.map(turn => `
     <div class="conversation-turn ${turn.role === "user" ? "user" : "assistant"}">
       <strong>${turn.role === "user" ? "You" : "AgriNexus"}</strong>
       <span>${escapeHtml(turn.text)}</span>
     </div>
-  `).join("") : `<div class="conversation-turn assistant"><strong>AgriNexus</strong><span>Ask me to open telehealth, apply for a job, start training, contact a buyer, run a drone scan, or check provider engines.</span></div>`) + callStatusHtml + pendingHtml;
+  `).join("") : `<div class="conversation-turn assistant"><strong>AgriNexus</strong><span>Ask me to open telehealth, apply for a job, start training, contact a buyer, run a drone scan, or check provider engines.</span></div>`) + callStatusHtml + confirmedCallHtml + pendingHtml;
 }
 
 function latestOnboardingRun() {

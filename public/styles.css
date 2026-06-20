@@ -3294,7 +3294,8 @@ body.admin-mode .user-workspace {
   background: #fffdf2;
 }
 .pending-call-card,
-.call-status-card {
+.call-status-card,
+.confirmed-call-handoff-card {
   gap: 9px;
   max-width: 920px;
 }
@@ -3306,6 +3307,11 @@ body.admin-mode .user-workspace {
   border: 1px solid #b8d4dc;
   border-left: 6px solid #176fc7 !important;
   background: #f6fbff;
+}
+.confirmed-call-handoff-card {
+  border: 1px solid #b9d7c8;
+  border-left: 6px solid #147a52 !important;
+  background: #f5fbf7;
 }
 .pending-call-details {
   display: grid;
@@ -3337,10 +3343,26 @@ body.admin-mode .user-workspace {
   background: #ffffff;
 }
 .pending-call-card small,
-.call-status-card small {
+.call-status-card small,
+.confirmed-call-handoff-card small {
   color: var(--muted);
   font-weight: 800;
   line-height: 1.35;
+}
+.confirmed-call-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.confirmed-call-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 38px;
+  padding: 9px 12px;
+  border-radius: 8px;
+  text-decoration: none;
+  font-weight: 900;
 }
 .agent-pending-confirm-actions {
   display: grid;
