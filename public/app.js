@@ -107,6 +107,12 @@ const NEXUS_USER_SPEAKING_HOLD_MS = 950;
 const NEXUS_TTS_PROFILE_VERSION = "natural-assistant-v2";
 const OPENAI_TTS_VOICE_FALLBACK = "verse";
 const OPENAI_TTS_VOICE_CHOICES = new Set(["alloy", "ash", "ballad", "coral", "echo", "fable", "nova", "onyx", "sage", "shimmer", "verse"]);
+const BROWSER_SPEECH_FALLBACK_STORAGE_KEY = "agrinexusBrowserSpeechFallback";
+// TTS reliability policy: OpenAI TTS is the primary spoken-output path. Browser
+// speech synthesis stays off by default to avoid robotic production voice, but
+// developers/users may opt in with localStorage agrinexusBrowserSpeechFallback=on.
+// Provider failures must update visible status, clear speaking state, and allow
+// voice-first listening to resume safely; aborts/interruption are not failures.
 
 const countryLanguageMap = {
   nigeria: "en",
@@ -17008,6 +17014,10 @@ function installStableSpeechVoicePreference() {
   };
 }
 
+function browserSpeechFallbackEnabled() {
+  return localStorage.getItem(BROWSER_SPEECH_FALLBACK_STORAGE_KEY) === "on";
+}
+
 function nexusListeningReadyMessage() {
   return voiceFirstMode
     ? "Nexus is listening now. Ask your next question."
@@ -17460,10 +17470,34 @@ function speakVoiceResponse(textOverride) {
     activeVoiceAudio = null;
     resumeVoiceListeningAfterSpeech(playbackToken, interruptToken);
   };
-  const browserSpeak = () => {
-    updateVoiceOutputStatus("OpenAI voice audio is not available, so robotic browser speech is turned off.");
-    toast("OpenAI voice unavailable. Browser voice fallback is off.");
-    finishSpeaking();
+  const browserSpeak = reason => {
+    if (!browserSpeechFallbackEnabled()) {
+      updateVoiceOutputStatus(`${reason} Browser speech fallback is off by default.`);
+      toast("OpenAI voice unavailable. Browser voice fallback is off.");
+      finishSpeaking();
+      return;
+    }
+    if (!("speechSynthesis" in window)) {
+      updateVoiceOutputStatus(`${reason} Browser speech fallback is enabled but unavailable here.`);
+      finishSpeaking();
+      return;
+    }
+    try {
+      window.speechSynthesis.cancel();
+      const utterance = new SpeechSynthesisUtterance(compact);
+      const fallbackVoice = chooseSpeechVoice(voiceLocale());
+      if (fallbackVoice) utterance.voice = fallbackVoice;
+      utterance.lang = voiceLocale();
+      utterance.rate = speechRateForLanguage();
+      utterance.pitch = speechPitchForLanguage();
+      utterance.onend = finishSpeaking;
+      utterance.onerror = finishSpeaking;
+      updateVoiceOutputStatus(`${reason} Using opt-in browser speech fallback.`);
+      window.speechSynthesis.speak(utterance);
+    } catch {
+      updateVoiceOutputStatus(`${reason} Browser speech fallback could not start.`);
+      finishSpeaking();
+    }
   };
   updateVoiceOutputStatus("Requesting OpenAI voice audio...");
   activeVoiceRequestController = new AbortController();
@@ -17475,7 +17509,7 @@ function speakVoiceResponse(textOverride) {
       if (result.voiceResult?.error) {
         updateVoiceOutputStatus(`OpenAI voice error: ${result.voiceResult.error}`);
         toast("OpenAI voice error. Check Render logs for /api/voice/speak.");
-        finishSpeaking();
+        browserSpeak(`OpenAI voice error: ${result.voiceResult.error}`);
         return;
       }
       if (audioDataUrl) {
@@ -17487,27 +17521,28 @@ function speakVoiceResponse(textOverride) {
         audio.onended = finishSpeaking;
         audio.onerror = finishSpeaking;
         audio.play().catch(() => {
-          updateVoiceOutputStatus("OpenAI audio was created, but the browser blocked playback. Click Read response again.");
-          finishSpeaking();
+          browserSpeak("OpenAI audio was created, but the browser blocked playback.");
         });
         return;
       }
-      updateVoiceOutputStatus(`OpenAI voice returned no audio. Provider: ${result.voiceResult?.provider || "unknown"}.`);
-      finishSpeaking();
+      browserSpeak(`OpenAI voice returned no audio. Provider: ${result.voiceResult?.provider || "unknown"}.`);
     })
     .catch(error => {
       if (playbackToken !== voicePlaybackToken || interruptToken !== voiceInterruptToken) return;
       activeVoiceRequestController = null;
-      if (error.name === "AbortError") return;
+      if (error.name === "AbortError") {
+        updateVoiceOutputStatus("Voice playback interrupted.");
+        return;
+      }
       if (/sign in required/i.test(error.message || "")) {
         updateVoiceOutputStatus("Your session expired after redeploy. Sign in again, then press Read response.");
         toast("Please sign in again to use OpenAI voice.");
         finishSpeaking();
         return;
       }
-      updateVoiceOutputStatus(`OpenAI voice unavailable: ${error.message || "speech request failed"}. Robotic browser voice is off.`);
+      updateVoiceOutputStatus(`OpenAI voice unavailable: ${error.message || "speech request failed"}. Browser speech fallback is off by default.`);
       toast("OpenAI voice unavailable. Check Render environment values.");
-      finishSpeaking();
+      browserSpeak(`OpenAI voice unavailable: ${error.message || "speech request failed"}.`);
     });
 }
 
