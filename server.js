@@ -6163,11 +6163,18 @@ function stageBackendCallIntent(db, user, command = "", options = {}) {
   const pendingContactCall = db.profile.agentMemory.pendingContactCall || null;
   const phone = extractPhoneNumberFromText(command);
   const saveContactSignal = /\b(remember|save|store|add)\b/.test(normalizeSpeechForIntent(command)) && /\b(number|phone|contact|call)\b/.test(normalizeSpeechForIntent(command));
-  if ((pendingContactCall && phone) || saveContactSignal) return null;
+  const reminderSignal = /\b(remind|reminder|notify|notification)\b/.test(normalizeSpeechForIntent(command));
+  if ((pendingContactCall && phone) || saveContactSignal || reminderSignal) return null;
   if (!isCallIntentCommand(command)) return null;
   const provider = callIntentProvider(command);
   const language = callIntentLanguage(options);
   const target = extractCallIntentTarget(command);
+  const targetLookup = contactLookupKey(target?.displayName || target?.rawName || "");
+  const reminderContactMatch = targetLookup && (db.profile.assistantReminders || []).some(item => {
+    const reminderLookup = contactLookupKey(`${item.contactName || ""} ${item.task || ""}`);
+    return reminderLookup === targetLookup || reminderLookup.includes(targetLookup);
+  });
+  if (reminderContactMatch) return null;
   const resolution = callIntentResolution(db, { target, provider });
   if (resolution.status === "missing-target") {
     db.profile.agentMemory.lastStatus = "call-target-needed";
@@ -22380,6 +22387,9 @@ function dailyAdvisorKind(lower) {
 function isDailyAdvisorQuestion(lower) {
   const value = String(lower || "");
   if (/\b(start to finish|end to end|sell|buyer|payment|order|create order|contact buyer|apply for|submit application|run mission)\b/.test(value)) return false;
+  const utilityKind = utilityAssistantKind(value, value);
+  const weatherSafety = utilityKind === "weather" && /\b(grandma|grandmother|elder|older|senior|patient|too hot|safe to walk|walk today|walking today)\b/.test(value);
+  if (utilityKind && !weatherSafety) return false;
   return Boolean(dailyAdvisorKind(value)) && (
     /\b(should|can|could|is today|is it|good time|best time|too hot|safe|what should|how do|when should|curious|question|wonder)\b/.test(value)
     || /\?$/.test(value)
@@ -22988,8 +22998,34 @@ async function runAgentCommand(db, user, command, options = {}) {
   if (urgentHealth) return urgentHealth;
   const backendCallIntent = conversational ? stageBackendCallIntent(db, user, text, options) : null;
   if (backendCallIntent) return backendCallIntent;
+  const reminderContactCommand = /\b(remind|reminder|notify|notification)\b/.test(lower);
+  const prioritizedPhoneContactCommand = reminderContactCommand ? null : await phoneContactMemoryCommandResponse(db, user, text, lower, options);
+  if (prioritizedPhoneContactCommand) return prioritizedPhoneContactCommand;
+  if (/\b(new mission brain|mission brain|nexus mission brain|activate mission brain|build mission brain|all 10 mission brain|all ten mission brain|goal brain|mission intelligence)\b/.test(lower)) {
+    return missionBrainCommandResponse(db, user, text, options);
+  }
+  if (/\b(trusted operating system|trusted os|people can rely on|actually rely on|can we trust|trust review|dependable platform|reliable operating system|production trust|trust score)\b/.test(lower)) {
+    return trustedOperatingSystemCommandResponse(db, user, text, options);
+  }
   const phase4RiskyAction = conversational ? phase4RiskyActionForCommand(text) : null;
   if (phase4RiskyAction) return stageAgentAction(db, text, phase4RiskyAction);
+  const routePacketCommand = isBuyerSellerLocationRouteCommand(lower) || isTradeCountryRouteCommand(lower);
+  if (routePacketCommand) return tradeLocationRouteResponse(db, user, text, options);
+  const prioritizedUtilityCommand = routePacketCommand ? null : await utilityAssistantCommandResponse(db, user, text, lower, options);
+  if (prioritizedUtilityCommand) return prioritizedUtilityCommand;
+  if (conversational && isPersonalAssistantBriefingCommand(lower)) {
+    return nexusPersonalAssistantBriefing(db, user, text, runtimeProviders(db));
+  }
+  const prioritizedActionMemoryCommand = assistantActionMemoryCommandResponse(db, user, text, lower, options);
+  if (prioritizedActionMemoryCommand) return prioritizedActionMemoryCommand;
+  const prioritizedReminderCommand = assistantReminderCommandResponse(db, user, text, lower, options);
+  if (prioritizedReminderCommand) return prioritizedReminderCommand;
+  if (conversational && isEverydayEncyclopediaQuestion(text)) {
+    return everydayEncyclopediaResponse(db, user, text, options);
+  }
+  if (conversational && isCurrentKnowledgeQuestion(text)) {
+    return currentKnowledgeQuestionResponse(db, user, text, options);
+  }
   if (conversational && isInformationalBuyerConversation(lower)) {
     clearSimpleVoiceTurn(db);
     return informationalBuyerConversationResponse(db, user, text, options);
@@ -23102,7 +23138,9 @@ async function runAgentCommand(db, user, command, options = {}) {
   }
   const simpleTurn = conversational ? continueSimpleVoiceTurn(db, user, text) : null;
   if (simpleTurn) return simpleTurn;
-  if (conversational && utilityAssistantKind(text, lower) === "weather") {
+  const earlyWeatherKind = utilityAssistantKind(text, lower);
+  const earlyWeatherNeedsDailySafety = earlyWeatherKind === "weather" && /\b(grandma|grandmother|elder|older|senior|patient|too hot|safe to walk|walk today|walking today)\b/.test(lower);
+  if (conversational && earlyWeatherNeedsDailySafety) {
     return dailyLifeAdvisorResponse(db, user, text, lower, options);
   }
   if (conversational && db.profile.agentMemory.activeIntake) {
@@ -23957,13 +23995,13 @@ async function runAgentCommand(db, user, command, options = {}) {
   if (conversational && isRuralDistressConversation(text)) {
     return conversationalReasoningResponse(db, user, text, { ...options, openDialog: true });
   }
+  const earlyUtilityCommand = await utilityAssistantCommandResponse(db, user, text, lower, options);
+  if (earlyUtilityCommand) return earlyUtilityCommand;
   const resilienceRoute = conversationModuleSignal(text);
   const resilience = conversationResilienceModel(text, user, db.profile.agentMemory?.userModel || {});
   if (conversational && resilience.active && resilienceRoute.section) {
     return conversationalReasoningResponse(db, user, text, { ...options, openDialog: true });
   }
-  const earlyUtilityCommand = await utilityAssistantCommandResponse(db, user, text, lower, options);
-  if (earlyUtilityCommand) return earlyUtilityCommand;
   const networkIntelligenceCommand = networkIntelligenceCommandResponse(db, user, text, options);
   if (networkIntelligenceCommand) return networkIntelligenceCommand;
   const operationalIntelligenceCommand = operationalIntelligenceCommandResponse(db, user, text, options);
