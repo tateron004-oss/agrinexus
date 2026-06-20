@@ -6,6 +6,7 @@
   "scripts": {
     "start": "node server.js",
     "dev": "node server.js",
+    "dev:local": "node -e \"process.env.AGRINEXUS_DB_PATH='tmp-local-db.json'; require('./server.js')\"",
     "smoke": "node scripts/smoke.js",
     "learning:translation-smoke": "node scripts/learning-translation-smoke.js",
     "webhook:smoke": "node scripts/webhook-smoke.js",

@@ -34,6 +34,27 @@ demo@agrinexus.org
 Prototype2026!
 ```
 
+## Local Runtime Database
+
+The tracked `db.json` file is the canonical demo seed. Do not commit local runtime changes to it.
+
+For local development, run with an ignored runtime database:
+
+```powershell
+$env:AGRINEXUS_DB_PATH="tmp-local-db.json"
+npm start
+```
+
+You can also use:
+
+```powershell
+npm run dev:local
+```
+
+`tmp-local-db.json` is ignored by git. Delete it to reset local runtime state; the server will reseed it from tracked `db.json`.
+
+Render and production-style deployments should use PostgreSQL with `AGRINEXUS_STATE_STORE=postgres`.
+
 ## Real AI
 
 Set `OPENAI_API_KEY` before starting `node server.js`.
