@@ -1,13 +1,26 @@
-* text=auto
+* text=auto eol=lf
 
 *.js text eol=lf
 *.json text eol=lf
 *.md text eol=lf
 *.css text eol=lf
 *.html text eol=lf
+*.ts text eol=lf
+*.tsx text eol=lf
+*.jsx text eol=lf
+*.mjs text eol=lf
+*.cjs text eol=lf
 *.yml text eol=lf
 *.yaml text eol=lf
 *.webmanifest text eol=lf
+*.xml text eol=lf
+*.plist text eol=lf
+*.gradle text eol=lf
+*.kt text eol=lf
+*.swift text eol=lf
+*.sql text eol=lf
+*.csv text eol=lf
+*.svg text eol=lf
 
 *.cmd text eol=crlf
 *.bat text eol=crlf
@@ -19,4 +32,9 @@
 *.gif binary
 *.webp binary
 *.ico binary
+*.pdf binary
 *.zip binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
+*.otf binary
