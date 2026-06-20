@@ -5983,13 +5983,111 @@ function findPhoneContact(db, name = "") {
     || null;
 }
 
+const CALL_PROVIDER_REGISTRY = Object.freeze({
+  "twilio": Object.freeze({
+    label: "Phone",
+    handoffType: "server-call",
+    canDial: true,
+    canDeepLink: false,
+    requiresPhone: true,
+    requiresHandle: false,
+    requiresServerCredential: true,
+    confirmedOnly: true,
+    nativeEligible: false,
+    browserEligible: false,
+    directVoiceReliable: true,
+    fallbackMode: "server-config-needed"
+  }),
+  "native-phone": Object.freeze({
+    label: "Native phone dialer",
+    handoffType: "native-dialer",
+    canDial: false,
+    canDeepLink: true,
+    requiresPhone: true,
+    requiresHandle: false,
+    requiresServerCredential: false,
+    confirmedOnly: true,
+    nativeEligible: true,
+    browserEligible: true,
+    directVoiceReliable: true,
+    fallbackMode: "tel-link-or-instruction"
+  }),
+  "whatsapp": Object.freeze({
+    label: "WhatsApp",
+    handoffType: "contact-or-chat-instruction",
+    canDial: false,
+    canDeepLink: true,
+    requiresPhone: true,
+    requiresHandle: false,
+    requiresServerCredential: false,
+    confirmedOnly: true,
+    nativeEligible: false,
+    browserEligible: true,
+    directVoiceReliable: false,
+    fallbackMode: "chat-instruction"
+  }),
+  "telegram": Object.freeze({
+    label: "Telegram",
+    handoffType: "profile-instruction",
+    canDial: false,
+    canDeepLink: true,
+    requiresPhone: false,
+    requiresHandle: true,
+    requiresServerCredential: false,
+    confirmedOnly: true,
+    nativeEligible: false,
+    browserEligible: true,
+    directVoiceReliable: false,
+    fallbackMode: "known-handle-only"
+  }),
+  "browser-fallback": Object.freeze({
+    label: "Browser fallback",
+    handoffType: "instruction",
+    canDial: false,
+    canDeepLink: false,
+    requiresPhone: false,
+    requiresHandle: false,
+    requiresServerCredential: false,
+    confirmedOnly: true,
+    nativeEligible: false,
+    browserEligible: true,
+    directVoiceReliable: false,
+    fallbackMode: "instruction-only"
+  })
+});
+
+function normalizeCallProvider(provider = "") {
+  const value = String(provider || "").trim().toLowerCase();
+  return Object.hasOwn(CALL_PROVIDER_REGISTRY, value) ? value : "browser-fallback";
+}
+
+function isKnownCallProvider(provider = "") {
+  const value = String(provider || "").trim().toLowerCase();
+  return Object.hasOwn(CALL_PROVIDER_REGISTRY, value);
+}
+
+function callProviderConfig(provider = "") {
+  return CALL_PROVIDER_REGISTRY[normalizeCallProvider(provider)];
+}
+
+function callProviderLabel(provider = "", options = {}) {
+  const normalized = normalizeCallProvider(provider);
+  if (options.style === "stage") return normalized === "twilio" ? "phone" : normalized;
+  if (options.style === "response") return normalized === "native-phone" ? "native phone dialer" : normalized;
+  return callProviderConfig(normalized).label;
+}
+
+function callProviderFallbackMode(provider = "") {
+  return callProviderConfig(provider).fallbackMode;
+}
+
 function callIntentProvider(command = "") {
   const lower = normalizeSpeechForIntent(command);
-  if (/\bwhats\s*app\b|\bwhatsapp\b|\bواتساب\b|\bwasap\b|\bwatsap\b/.test(lower)) return "whatsapp";
-  if (/\btelegram\b|\bتلغرام\b|\bتيليجرام\b/.test(lower)) return "telegram";
-  if (/\btwilio\b|\bphone provider\b|\bplatform call\b/.test(lower)) return "twilio";
-  if (/\bnative phone\b|\bphone dialer\b|\bdialer\b|\bsystem phone\b/.test(lower)) return "native-phone";
-  return "twilio";
+  if (/\bwhats\s*app\b|\bwhatsapp\b|\bواتساب\b|\bwasap\b|\bwatsap\b/.test(lower)) return normalizeCallProvider("whatsapp");
+  if (/\btelegram\b|\bتلغرام\b|\bتيليجرام\b/.test(lower)) return normalizeCallProvider("telegram");
+  if (/\btwilio\b|\bphone provider\b|\bplatform call\b/.test(lower)) return normalizeCallProvider("twilio");
+  if (/\bnative phone\b|\bphone dialer\b|\bdialer\b|\bsystem phone\b/.test(lower)) return normalizeCallProvider("native-phone");
+  return normalizeCallProvider("twilio");
 }
 
 function callIntentLanguage(options = {}) {
@@ -6046,22 +6144,23 @@ function isCallIntentCommand(command = "") {
 }
 
 function callProviderHandoff(provider, target = {}) {
+  const normalizedProvider = normalizeCallProvider(provider);
   const phone = target.e164Phone || target.phone || "";
-  if (provider === "whatsapp") {
+  if (normalizedProvider === "whatsapp") {
     return {
       type: "instruction",
       url: phone ? `https://wa.me/${phone.replace(/^\+/, "")}` : "",
       fallbackText: "WhatsApp direct voice-call links are not reliable across devices. After confirmation, Nexus can open the WhatsApp contact/chat instruction instead."
     };
   }
-  if (provider === "telegram") {
+  if (normalizedProvider === "telegram") {
     return {
       type: "instruction",
       url: target.handle ? `https://t.me/${String(target.handle).replace(/^@/, "")}` : "",
       fallbackText: "Telegram direct voice calling needs a known Telegram account/handle and is not available from a plain phone number in this phase."
     };
   }
-  if (provider === "native-phone") {
+  if (normalizedProvider === "native-phone") {
     return {
       type: "instruction",
       url: phone ? `tel:${phone}` : "",
@@ -6069,7 +6168,7 @@ function callProviderHandoff(provider, target = {}) {
       fallbackText: "Native phone dialer handoff is planned for the mobile bridge, but Phase 1 stages only the confirmed backend action."
     };
   }
-  if (provider === "twilio") {
+  if (normalizedProvider === "twilio") {
     return {
       type: "twilio-call",
       endpoint: "/api/voice/phone/outbound-call",
@@ -6240,7 +6339,7 @@ function stageBackendCallIntent(db, user, command = "", options = {}) {
   const handoff = callProviderHandoff(provider, resolvedTarget);
   const section = callIntentSection(resolvedTarget, command);
   const targetLabel = resolvedTarget.displayName || resolvedTarget.redactedPhone || "this contact";
-  const providerLabel = provider === "twilio" ? "phone" : provider;
+  const providerLabel = callProviderLabel(provider, { style: "stage" });
   const nonTwilio = provider !== "twilio";
   const staged = stageAgentAction(db, command, {
     kind: "call",
@@ -19623,7 +19722,7 @@ async function executePendingAgentAction(db, user, pending) {
     const target = pending.target || {};
     const handoff = pending.handoff || callProviderHandoff(pending.provider, target);
     const targetLabel = target.displayName || pending.contactName || "the contact";
-    const providerLabel = pending.provider === "native-phone" ? "native phone dialer" : pending.provider;
+    const providerLabel = callProviderLabel(pending.provider, { style: "response" });
     return {
       intent: "call.handoff_instruction",
       response: `${providerLabel} call handoff is ready for ${targetLabel}. ${handoff.fallbackText || "Use the provider app or dialer to continue."}${handoff.url ? ` Link: ${handoff.url}` : ""}`,
