@@ -7,8 +7,9 @@ const path = require("path");
 const appPort = 4273;
 const webhookPort = 4274;
 const base = `http://localhost:${appPort}`;
-const dbPath = path.join(__dirname, "..", "db.json");
-const dbSnapshot = fs.readFileSync(dbPath, "utf8");
+const root = path.join(__dirname, "..");
+const dbPath = path.join(root, "db.json");
+const tempDbPath = path.join(root, "tmp-webhook-smoke-db.json");
 const deliveries = [];
 let cookie = "";
 
@@ -60,14 +61,16 @@ function createWebhookServer() {
 }
 
 (async () => {
+  fs.copyFileSync(dbPath, tempDbPath);
   const webhook = createWebhookServer();
   await new Promise(resolve => webhook.listen(webhookPort, resolve));
 
   const app = spawn(process.execPath, ["server.js"], {
-    cwd: path.join(__dirname, ".."),
+    cwd: root,
     env: {
       ...process.env,
       PORT: String(appPort),
+      AGRINEXUS_DB_PATH: tempDbPath,
       LEARNING_CERTIFICATE_PROVIDER: "webhook",
       LEARNING_CERTIFICATE_WEBHOOK_URL: `http://localhost:${webhookPort}/learning-certificates`,
       LEARNING_PROVIDER_API_KEY: "test-provider-key"
@@ -92,10 +95,10 @@ function createWebhookServer() {
   } finally {
     app.kill();
     webhook.close();
-    fs.writeFileSync(dbPath, dbSnapshot);
+    if (fs.existsSync(tempDbPath)) fs.unlinkSync(tempDbPath);
   }
 })().catch(error => {
-  fs.writeFileSync(dbPath, dbSnapshot);
+  if (fs.existsSync(tempDbPath)) fs.unlinkSync(tempDbPath);
   console.error(error.message);
   process.exit(1);
 });

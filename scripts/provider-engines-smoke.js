@@ -7,9 +7,10 @@ const providerPort = 4380;
 const appPort = 4381;
 const providerBase = `http://localhost:${providerPort}`;
 const appBase = `http://localhost:${appPort}`;
-const dbPath = path.join(__dirname, "..", "db.json");
-const eventsPath = path.join(__dirname, "..", "provider-events.json");
-const dbSnapshot = fs.readFileSync(dbPath, "utf8");
+const root = path.join(__dirname, "..");
+const dbPath = path.join(root, "db.json");
+const tempDbPath = path.join(root, "tmp-provider-engines-smoke-db.json");
+const eventsPath = path.join(root, "provider-events.json");
 const eventsSnapshot = fs.existsSync(eventsPath) ? fs.readFileSync(eventsPath, "utf8") : null;
 let cookie = "";
 
@@ -43,6 +44,7 @@ async function call(base, route, body) {
 }
 
 (async () => {
+  fs.copyFileSync(dbPath, tempDbPath);
   const env = {
     ...process.env,
     PROVIDER_ENGINE_PORT: String(providerPort),
@@ -57,16 +59,17 @@ async function call(base, route, body) {
     AUTH_PROVIDER_API_KEY: "auth-test-key"
   };
   const provider = spawn(process.execPath, ["scripts/provider-engines.js"], {
-    cwd: path.join(__dirname, ".."),
+    cwd: root,
     env,
     stdio: "ignore",
     windowsHide: true
   });
   const app = spawn(process.execPath, ["server.js"], {
-    cwd: path.join(__dirname, ".."),
+    cwd: root,
     env: {
       ...env,
       PORT: String(appPort),
+      AGRINEXUS_DB_PATH: tempDbPath,
       AI_PROVIDER: "webhook",
       AI_WEBHOOK_URL: `${providerBase}/ai/responses`,
       VOICE_STT_PROVIDER: "webhook",
@@ -158,7 +161,7 @@ async function call(base, route, body) {
   } finally {
     app.kill();
     provider.kill();
-    fs.writeFileSync(dbPath, dbSnapshot);
+    if (fs.existsSync(tempDbPath)) fs.unlinkSync(tempDbPath);
     if (eventsSnapshot === null) {
       if (fs.existsSync(eventsPath)) fs.unlinkSync(eventsPath);
     } else {
@@ -166,7 +169,7 @@ async function call(base, route, body) {
     }
   }
 })().catch(error => {
-  fs.writeFileSync(dbPath, dbSnapshot);
+  if (fs.existsSync(tempDbPath)) fs.unlinkSync(tempDbPath);
   if (eventsSnapshot === null) {
     if (fs.existsSync(eventsPath)) fs.unlinkSync(eventsPath);
   } else {
