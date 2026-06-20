@@ -17503,7 +17503,7 @@ function realtimeVoiceSupported() {
 }
 
 function realtimeVoiceEnabled() {
-  return localStorage.getItem("agrinexusRealtimeVoice") !== "off";
+  return localStorage.getItem("agrinexusRealtimeVoice") === "on";
 }
 
 function realtimeVoiceActive() {
@@ -17513,9 +17513,9 @@ function realtimeVoiceActive() {
 function realtimeVoiceStatusMessage() {
   if (!realtimeVoiceSupported()) return "Realtime voice needs HTTPS, localhost, or 127.0.0.1 with microphone permission.";
   const status = realtimeVoiceStatusCache?.realtimeVoice;
-  if (status?.configured) return `OpenAI Realtime voice ready: ${status.voice || "voice"} (${status.model || "realtime"}).`;
+  if (status?.configured) return `OpenAI Realtime conversation-only voice ready: ${status.voice || "voice"} (${status.model || "realtime"}). Use browser Mic or typed Ask Nexus for workflow actions.`;
   if (status && !status.configured) return status.note || "OpenAI Realtime voice needs OPENAI_API_KEY in hosting.";
-  return "OpenAI Realtime voice can start when the live provider is configured.";
+  return "OpenAI Realtime conversation-only voice can start when explicitly enabled and the live provider is configured.";
 }
 
 async function loadRealtimeVoiceStatus(options = {}) {
@@ -17618,9 +17618,9 @@ async function startRealtimeVoiceSession() {
     const dataChannel = peerConnection.createDataChannel("oai-events");
     dataChannel.onmessage = handleRealtimeVoiceEvent;
     dataChannel.onopen = () => {
-      updateNexusBehaviorLayer("realtime-listening", "OpenAI Realtime voice is live. Speak naturally to Nexus.");
+      updateNexusBehaviorLayer("realtime-listening", "OpenAI Realtime conversation is live. Workflow actions still use browser Mic or typed Ask Nexus.");
       const outputStatus = $("#globalVoiceOutputStatus");
-      if (outputStatus) outputStatus.textContent = translateText("OpenAI Realtime voice is live. Speak naturally to Nexus.");
+      if (outputStatus) outputStatus.textContent = translateText("OpenAI Realtime conversation is live. Workflow actions still use browser Mic or typed Ask Nexus.");
     };
     dataChannel.onerror = () => {
       updateNexusBehaviorLayer("recovering", "Realtime voice data channel had an issue. Nexus can fall back to browser voice.");
@@ -17763,7 +17763,7 @@ function refreshMicSupport() {
       : voiceDemoQuietMode
       ? "Demo quiet mode is on. Nexus voice and auto-listening are off."
       : realtimeVoiceActive()
-      ? `OpenAI Realtime voice is live in ${voiceLanguageName()} (${voiceLocale()}). Press Mic again to stop.`
+      ? `OpenAI Realtime conversation-only voice is live in ${voiceLanguageName()} (${voiceLocale()}). Press Mic again to stop. Use browser Mic or typed Ask Nexus for workflow actions.`
       : ready
       ? profile.isChrome
         ? chromeVoiceStatusMessage()

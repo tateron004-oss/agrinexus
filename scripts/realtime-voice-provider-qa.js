@@ -13,13 +13,14 @@ const requirements = [
   ["Server-side OpenAI key only", server.includes("Authorization: `Bearer ${process.env.OPENAI_API_KEY}`") && !app.includes("Authorization: `Bearer") && !app.includes("apiKey")],
   ["Safety identifier", server.includes("OpenAI-Safety-Identifier") && server.includes("createHash(\"sha256\")")],
   ["Realtime model and voice env", server.includes("OPENAI_REALTIME_MODEL") && server.includes("gpt-realtime-2") && server.includes("OPENAI_REALTIME_VOICE")],
-  ["Realtime natural instructions", server.includes("Listen patiently to imperfect speech") && server.includes("If the request is unclear, ask one simple question")],
+  ["Realtime conversation-only instructions", server.includes("Listen patiently to imperfect speech") && server.includes("This Realtime session is conversational only") && server.includes("Workflow actions must use /api/agent/command")],
   ["Browser WebRTC support", app.includes("function realtimeVoiceSupported") && app.includes("RTCPeerConnection") && app.includes("navigator.mediaDevices?.getUserMedia")],
   ["Browser realtime session", app.includes("async function startRealtimeVoiceSession") && app.includes("createDataChannel(\"oai-events\")") && app.includes("/api/voice/realtime/call")],
   ["Realtime event handling", app.includes("function handleRealtimeVoiceEvent") && app.includes("input_audio_buffer.speech_started") && app.includes("response.audio.done")],
-  ["Realtime fallback to browser voice", app.includes("Falling back to browser voice") && app.includes("const realtimeStarted = await startRealtimeVoiceSession();")],
+  ["Realtime explicit opt-in before browser voice fallback", app.includes('localStorage.getItem("agrinexusRealtimeVoice") === "on"') && app.includes("Falling back to browser voice") && app.includes("const realtimeStarted = await startRealtimeVoiceSession();")],
   ["Realtime stop path", app.includes("function stopRealtimeVoiceSession") && app.includes("Realtime voice stopped")],
-  ["Mic readiness includes realtime", app.includes("const realtimeReady = realtimeVoiceEnabled() && realtimeVoiceSupported()") && app.includes("OpenAI Realtime voice is live")]
+  ["Mic readiness labels realtime as conversation-only", app.includes("const realtimeReady = realtimeVoiceEnabled() && realtimeVoiceSupported()") && app.includes("OpenAI Realtime conversation-only voice is live")],
+  ["Realtime status does not claim workflow execution", server.includes('operationalMode: "conversation-only"') && server.includes("canExecuteWorkflows: false")]
 ];
 
 const missing = requirements.filter(([, passed]) => !passed).map(([name]) => name);

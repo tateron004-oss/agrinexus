@@ -13686,7 +13686,8 @@ function openAiRealtimeInstructions(user, language = "en") {
     "Answer like a calm human helper: short acknowledgement, simple guidance, then a clear next step.",
     "Support farmers, patients, learners, workers, administrators, investors, mobile clinics, pharmacies, crop trade, maps, logistics, and learning.",
     "For health, do not diagnose. Help with intake questions, safety guidance, clinic/pharmacy/mobile-clinic access, captions, and provider handoff.",
-    "When the user asks for a platform action, say what you are opening or preparing, then keep the response brief.",
+    "This Realtime session is conversational only. You cannot open screens, run tools, send messages, call providers, create records, or execute workflows from this channel.",
+    "When the user asks for a platform action, explain that the browser Mic or typed Ask Nexus command must route it through AgriNexus workflow confirmation first.",
     "If the request is unclear, ask one simple question instead of listing a menu.",
     "If the user says stop, pause immediately and wait."
   ].join(" ");
@@ -24672,6 +24673,64 @@ async function runAgentCommand(db, user, command, options = {}) {
   return { intent: "ai-question", response: `${run.text} If you want me to act, say a module and action, like "AgriTrade prepare buyer update" or "Telehealth start intake."`, metadata: { runId: run.id, provider: run.provider } };
 }
 
+async function runCompanionSafeAgentCommand(db, user, body = {}) {
+  const command = String(body.command || "").trim();
+  const inputMode = String(body.inputMode || "api").trim() || "api";
+  const outputMode = String(body.outputMode || "").trim();
+  const companionUnderstanding = companionUnderstandingClassification(command, {
+    source: inputMode,
+    mode: body.mode,
+    targetLanguage: body.targetLanguage || body.language || user.language
+  });
+  if (["voice", "phone", "native"].includes(inputMode)) {
+    const label = inputMode === "phone" ? "Phone voice" : inputMode === "native" ? "Native voice" : "Voice";
+    voiceRecord(db, user, "speech-to-text", `${label} command transcribed: ${command}`, {
+      command,
+      inputMode,
+      provider: inputMode === "phone" ? "twilio" : inputMode
+    });
+  }
+  const rawResult = await runAgentCommand(db, user, command, {
+    confirm: body.confirm === true,
+    stageOnly: body.stageOnly === true,
+    conversational: body.conversational === true,
+    mode: body.mode,
+    modeContext: body.modeContext,
+    note: body.note,
+    timeZone: body.timeZone,
+    location: body.location || body.currentLocation || null,
+    targetLanguage: body.targetLanguage || body.language
+  });
+  let result = applyHighestFunctionalityMode(db, user, humanizeAgentResult(db, user, rawResult, command), command);
+  result = await translateAgentCommandResult(db, user, result, { targetLanguage: body.targetLanguage || body.language || user.language });
+  const preliminaryRouteOutcome = companionRouteOutcomeMetadata(command, companionUnderstanding, result);
+  const workflowOffer = inputMode === "voice" || inputMode === "phone" || inputMode === "native" || body.conversational === true
+    ? companionWorkflowOfferResult(db, command, companionUnderstanding, result, preliminaryRouteOutcome)
+    : null;
+  if (workflowOffer) result = workflowOffer;
+  const companionRouteOutcome = companionRouteOutcomeMetadata(command, companionUnderstanding, result);
+  result.metadata = {
+    ...(result.metadata || {}),
+    inputMode,
+    outputMode: outputMode || undefined,
+    companionUnderstanding,
+    companionRouteOutcome
+  };
+  commandRecord(db, user, command, result);
+  if (outputMode === "voice") {
+    voiceRecord(db, user, "text-to-speech", `Voice response prepared: ${result.response}`, {
+      response: result.response,
+      inputMode
+    });
+  }
+  addWorkflowNote(db.profile, body.note, "Agent command note");
+  return {
+    result,
+    companionUnderstanding,
+    companionRouteOutcome
+  };
+}
+
 function aiModuleForType(type, fallback = "AI") {
   const moduleByType = {
     tutor: "Learning",
@@ -24970,6 +25029,7 @@ async function api(req, res, url) {
         endpoint: "/api/voice/realtime/call",
         statusEndpoint: "/api/voice/realtime/status",
         provider: "openai-realtime-webrtc",
+        operationalMode: "conversation-only",
         ready: Boolean(process.env.OPENAI_API_KEY),
         model: openAiRealtimeModel(),
         voice: openAiRealtimeVoice()
@@ -25304,8 +25364,16 @@ async function api(req, res, url) {
   </Gather>
 </Response>`);
     }
-    const result = await runAgentCommand(db, phoneUser, command, { confirm: true, conversational: true, note: "Phone call voice assistant command" });
-    commandRecord(db, phoneUser, command, result);
+    const { result } = await runCompanionSafeAgentCommand(db, phoneUser, {
+      command,
+      confirm: false,
+      conversational: true,
+      inputMode: "phone",
+      outputMode: "voice",
+      language: session.language || phoneUser.language || "en",
+      targetLanguage: session.language || phoneUser.language || "en",
+      note: "Phone call voice assistant command"
+    });
     session.commands.unshift({ command, response: result.response, createdAt: new Date().toISOString() });
     session.commands = session.commands.slice(0, 20);
     updatePhoneVoiceSession(db, session, { step: "command" });
@@ -28976,40 +29044,10 @@ async function api(req, res, url) {
   if (url.pathname === "/api/agent/command" && req.method === "POST") {
     if (!canUse(user, "ai")) return send(res, 403, { error: "Role does not allow agent commands" });
     const body = await readBody(req);
-    const command = String(body.command || "").trim();
-    const companionUnderstanding = companionUnderstandingClassification(command, {
-      source: body.inputMode === "voice" ? "voice" : body.inputMode || "api",
-      mode: body.mode,
-      targetLanguage: body.targetLanguage || body.language || user.language
+    const { result, companionUnderstanding, companionRouteOutcome } = await runCompanionSafeAgentCommand(db, user, {
+      ...body,
+      inputMode: body.inputMode || "api"
     });
-    if (body.inputMode === "voice") voiceRecord(db, user, "speech-to-text", `Voice command transcribed: ${command}`, { command });
-    const rawResult = await runAgentCommand(db, user, command, {
-      confirm: body.confirm === true,
-      stageOnly: body.stageOnly === true,
-      conversational: body.conversational === true,
-      mode: body.mode,
-      modeContext: body.modeContext,
-      note: body.note,
-      timeZone: body.timeZone,
-      location: body.location || body.currentLocation || null,
-      targetLanguage: body.targetLanguage || body.language
-    });
-    let result = applyHighestFunctionalityMode(db, user, humanizeAgentResult(db, user, rawResult, command), command);
-    result = await translateAgentCommandResult(db, user, result, { targetLanguage: body.targetLanguage || body.language || user.language });
-    const preliminaryRouteOutcome = companionRouteOutcomeMetadata(command, companionUnderstanding, result);
-    const workflowOffer = body.inputMode === "voice" || body.conversational === true
-      ? companionWorkflowOfferResult(db, command, companionUnderstanding, result, preliminaryRouteOutcome)
-      : null;
-    if (workflowOffer) result = workflowOffer;
-    const companionRouteOutcome = companionRouteOutcomeMetadata(command, companionUnderstanding, result);
-    result.metadata = {
-      ...(result.metadata || {}),
-      companionUnderstanding,
-      companionRouteOutcome
-    };
-    commandRecord(db, user, command, result);
-    if (body.outputMode === "voice") voiceRecord(db, user, "text-to-speech", `Voice response prepared: ${result.response}`, { response: result.response });
-    addWorkflowNote(db.profile, body.note, "Agent command note");
     await writeDb(db);
     const state = publicState(db, user);
     state.commandResult = result;
@@ -29051,9 +29089,11 @@ async function api(req, res, url) {
         voice: openAiRealtimeVoice(),
         endpoint: "/api/voice/realtime/call",
         transport: "webrtc",
+        operationalMode: "conversation-only",
+        canExecuteWorkflows: false,
         translationReady: Boolean(process.env.OPENAI_API_KEY),
         note: process.env.OPENAI_API_KEY
-          ? "OpenAI Realtime voice is configured for browser/mobile WebRTC."
+          ? "OpenAI Realtime voice is configured for browser/mobile WebRTC as conversation-only voice. Workflow actions must use /api/agent/command."
           : "Add OPENAI_API_KEY in hosting to enable OpenAI Realtime voice."
       }
     });

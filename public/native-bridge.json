@@ -115,7 +115,7 @@
   },
   "apiEndpoints": {
     "command": "/api/agent/command",
-    "voice": "/api/voice/respond",
+    "voice": "/api/voice/speak",
     "voiceTranscribe": "/api/voice/transcribe",
     "realtimeVoiceStatus": "/api/voice/realtime/status",
     "realtimeVoiceCall": "/api/voice/realtime/call",
