@@ -10,6 +10,12 @@ let shipmentPreviewMap = null;
 let healthHotspotPreviewMap = null;
 let ruralHealthAccessMap = null;
 let workflowLeafletMap = null;
+const MAP_ZOOM_CONFIG = Object.freeze({
+  minZoom: 1,
+  maxZoom: 19,
+  maxNativeZoom: 19,
+  wheelPxPerZoomLevel: 72
+});
 let selectedLearningTrack = "All";
 let selectedPersona = localStorage.getItem("agrinexusPersona") || "farmer";
 let experienceMode = localStorage.getItem("agrinexusExperienceMode") || "";
@@ -12654,7 +12660,7 @@ function renderMap() {
   const country = activeCountry();
   const route = activeRoute();
   if (!map) {
-    map = L.map("mapCanvas").setView([8, 20], 3);
+    map = L.map("mapCanvas", leafletMapOptions()).setView([8, 20], 3);
     addRealMapTiles(map);
     layers.routes = L.layerGroup().addTo(map);
     layers.markers = L.layerGroup().addTo(map);
@@ -12835,26 +12841,27 @@ function addRealMapTiles(targetMap) {
     targetMap.getPane("mapGrid").style.zIndex = 430;
     targetMap.getPane("mapGrid").style.pointerEvents = "none";
   }
+  const tileOptions = leafletTileOptions();
   const operationalLayer = L.tileLayer("https://services.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}", {
-    maxZoom: 19,
+    ...tileOptions,
     attribution: "Esri World Street Map"
   });
   const osmStandardLayer = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-    maxZoom: 19,
+    ...tileOptions,
     attribution: "OpenStreetMap contributors"
   });
   const satelliteLayer = L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", {
-    maxZoom: 19,
+    ...tileOptions,
     attribution: "Esri World Imagery"
   });
   const labelLayer = L.tileLayer("https://services.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}", {
-    maxZoom: 19,
+    ...tileOptions,
     attribution: "Esri boundaries and places",
     pane: "countryLabels",
     opacity: .95
   });
   const humanitarianLayer = L.tileLayer("https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png", {
-    maxZoom: 19,
+    ...tileOptions,
     attribution: "OpenStreetMap Humanitarian"
   });
   const gridLayer = createGlobalGridLayer();
@@ -12892,6 +12899,37 @@ function addRealMapTiles(targetMap) {
   L.control.scale({ metric: true, imperial: false }).addTo(targetMap);
   addGlobalMapControl(targetMap);
   return { operationalLayer, satelliteLayer, osmStandardLayer, humanitarianLayer, labelLayer, gridLayer };
+}
+
+function leafletMapOptions(options = {}) {
+  return {
+    zoomControl: true,
+    attributionControl: true,
+    scrollWheelZoom: true,
+    tap: true,
+    worldCopyJump: true,
+    preferCanvas: true,
+    zoomSnap: 1,
+    zoomDelta: 1,
+    wheelPxPerZoomLevel: MAP_ZOOM_CONFIG.wheelPxPerZoomLevel,
+    minZoom: MAP_ZOOM_CONFIG.minZoom,
+    maxZoom: MAP_ZOOM_CONFIG.maxZoom,
+    ...options
+  };
+}
+
+function leafletTileOptions(options = {}) {
+  return {
+    minZoom: MAP_ZOOM_CONFIG.minZoom,
+    maxZoom: MAP_ZOOM_CONFIG.maxZoom,
+    maxNativeZoom: MAP_ZOOM_CONFIG.maxNativeZoom,
+    detectRetina: true,
+    updateWhenZooming: true,
+    updateWhenIdle: false,
+    keepBuffer: 3,
+    crossOrigin: true,
+    ...options
+  };
 }
 
 function globalMapBounds() {
@@ -13149,15 +13187,7 @@ function renderUserRealMap() {
   const route = activeRoute();
   const target = freshLeafletCanvas("#userMapCanvas");
   if (!target) return;
-  userMap = L.map(target, {
-    zoomControl: true,
-    attributionControl: true,
-    scrollWheelZoom: true,
-    tap: true,
-    worldCopyJump: true,
-    preferCanvas: true,
-    minZoom: 1
-  }).setView([3.2, 20.5], 3);
+  userMap = L.map(target, leafletMapOptions()).setView([3.2, 20.5], 3);
   addRealMapTiles(userMap);
 
   userMapLayers.route = L.layerGroup().addTo(userMap);
@@ -13197,15 +13227,7 @@ function renderUserHealthMap() {
   const country = activeCountry();
   const target = freshLeafletCanvas("#userHealthMapCanvas");
   if (!target) return;
-  userHealthMap = L.map(target, {
-    zoomControl: true,
-    attributionControl: true,
-    scrollWheelZoom: true,
-    tap: true,
-    worldCopyJump: true,
-    preferCanvas: true,
-    minZoom: 1
-  }).setView([3.2, 20.5], 3);
+  userHealthMap = L.map(target, leafletMapOptions()).setView([3.2, 20.5], 3);
   addRealMapTiles(userHealthMap);
 
   userHealthMapLayers.region = L.layerGroup().addTo(userHealthMap);
@@ -13358,15 +13380,7 @@ function renderRuralHealthAccessMap() {
   if (!target) return;
   const country = activeCountry();
   const latestPoint = latestRuralHealthPoint(country);
-  ruralHealthAccessMap = L.map(target, {
-    zoomControl: true,
-    attributionControl: true,
-    scrollWheelZoom: true,
-    tap: true,
-    worldCopyJump: true,
-    preferCanvas: true,
-    minZoom: 1
-  }).setView([latestPoint.lat, latestPoint.lng], 7);
+  ruralHealthAccessMap = L.map(target, leafletMapOptions()).setView([latestPoint.lat, latestPoint.lng], 7);
   addRealMapTiles(ruralHealthAccessMap);
   addRuralHealthMapLegend(ruralHealthAccessMap);
   const layer = L.layerGroup().addTo(ruralHealthAccessMap);
@@ -13398,15 +13412,7 @@ function renderShipmentPreviewMap() {
   if (!target) return;
   const route = activeRoute();
   const country = activeCountry();
-  shipmentPreviewMap = L.map(target, {
-    zoomControl: true,
-    attributionControl: true,
-    scrollWheelZoom: true,
-    tap: true,
-    worldCopyJump: true,
-    preferCanvas: true,
-    minZoom: 1
-  }).setView([3.2, 20.5], 3);
+  shipmentPreviewMap = L.map(target, leafletMapOptions()).setView([3.2, 20.5], 3);
   addRealMapTiles(shipmentPreviewMap);
   const routeLayer = L.layerGroup().addTo(shipmentPreviewMap);
   const markerLayer = L.layerGroup().addTo(shipmentPreviewMap);
@@ -13440,15 +13446,7 @@ function renderHealthHotspotPreviewMap() {
   const target = freshLeafletCanvas("#healthHotspotMapCanvas");
   if (!target) return;
   const country = activeCountry();
-  healthHotspotPreviewMap = L.map(target, {
-    zoomControl: true,
-    attributionControl: true,
-    scrollWheelZoom: true,
-    tap: true,
-    worldCopyJump: true,
-    preferCanvas: true,
-    minZoom: 1
-  }).setView([3.2, 20.5], 3);
+  healthHotspotPreviewMap = L.map(target, leafletMapOptions()).setView([3.2, 20.5], 3);
   addRealMapTiles(healthHotspotPreviewMap);
   const regionLayer = L.layerGroup().addTo(healthHotspotPreviewMap);
   const markerLayer = L.layerGroup().addTo(healthHotspotPreviewMap);
@@ -13479,15 +13477,7 @@ function renderWorkflowLiveMap(config = pendingWorkflow || {}) {
   const mode = workflowMode(config);
   const country = config.healthPreview?.country || activeCountry();
   const route = config.routePreview?.route || activeRoute();
-  workflowLeafletMap = L.map(target, {
-    zoomControl: true,
-    attributionControl: true,
-    scrollWheelZoom: true,
-    tap: true,
-    worldCopyJump: true,
-    preferCanvas: true,
-    minZoom: 1
-  }).setView([country.lat, country.lng], Math.max(4, Number(country.zoom || 5)));
+  workflowLeafletMap = L.map(target, leafletMapOptions()).setView([country.lat, country.lng], Math.max(4, Number(country.zoom || 5)));
   addRealMapTiles(workflowLeafletMap);
 
   const routeLayer = L.layerGroup().addTo(workflowLeafletMap);
