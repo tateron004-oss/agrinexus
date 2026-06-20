@@ -13215,6 +13215,9 @@ function commandRecord(db, user, command, result) {
   };
   memory.rememberedContexts = [remembered, ...(memory.rememberedContexts || [])].slice(0, 12);
   learnFromAgentCommand(db, command, result);
+  if (result.intent === "conversation.open_reasoning" && Number(memory.conversationQuality.openEndedAnswers || 0) === 0) {
+    memory.conversationQuality.openEndedAnswers = 1;
+  }
   if (result.intent === "conversation.confirmed" || result.metadata?.mode === "autopilot" || result.status === "completed") {
     memory.conversationQuality.confirmedActions = Number(memory.conversationQuality.confirmedActions || 0) + (result.intent === "conversation.confirmed" ? 1 : 0);
   }
@@ -17372,6 +17375,25 @@ function guidedOutcomeLoopFromResult(db, user, command, result = {}, guidedMissi
     guidedMissionId: guided?.id || null,
     reasoningId: result.metadata?.offlineReasoningBrain?.id || null,
     createdAt: new Date().toISOString()
+  };
+  const voiceStep = memory.activeVoiceMission?.steps?.[Number(memory.activeVoiceMission?.currentStepIndex || 0)] || null;
+  const guidedStep = guided?.currentStep || null;
+  const recommendedStep = guidedStep?.workflow && guidedStep?.action
+    ? guidedStep
+    : voiceStep?.workflow && voiceStep?.action
+      ? voiceStep
+      : guidedStep || voiceStep || null;
+  memory.lastRecommendedAction = {
+    id: `conversation-guidance-${loop.id}`,
+    module: loop.workspace,
+    title: recommendedStep?.title || loop.nextVisibleAction,
+    detail: recommendedStep?.detail || loop.oneQuestion,
+    priority: needsConfirmation ? "high" : "medium",
+    confidence: 0.86,
+    reason: "Conversation guidance selected the next visible platform step.",
+    workflow: recommendedStep?.workflow || section,
+    action: recommendedStep?.action || result.metadata?.pendingAction?.action || loop.sayNext,
+    section: recommendedStep?.section || section
   };
   memory.activeOutcomeLoop = loop;
   memory.outcomeLoopHistory = [loop, ...(memory.outcomeLoopHistory || [])].slice(0, 24);
