@@ -83,6 +83,7 @@
     "voice.listen",
     "voice.realtime.start",
     "voice.realtime.stop",
+    "call.launch",
     "permissions.status",
     "permissions.request",
     "permissions.register",
@@ -104,6 +105,29 @@
     "location": { "label": "optional", "latitude": "optional", "longitude": "optional" },
     "attachments": [{ "type": "image|video|audio|document", "url": "native secure file URL or uploaded URL", "caption": "optional" }],
     "requiresConfirmation": "boolean for health, payment, buyer contact, provider contact, route change, or job application"
+  },
+  "confirmedCallHandoff": {
+    "command": "call.launch",
+    "mode": "confirmed-native-dialer-handoff-only",
+    "payload": {
+      "provider": "native-phone",
+      "url": "sanitized tel:+15551234567 URL",
+      "displayName": "user-visible contact or organization name",
+      "redactedPhone": "redacted phone for UI/audit display",
+      "confirmationId": "backend pending action or confirmed result identifier",
+      "executionConfirmed": true,
+      "source": "confirmed-call-handoff"
+    },
+    "requirements": [
+      "Only dispatch after backend confirmation completes.",
+      "executionConfirmed must be true.",
+      "source must be confirmed-call-handoff.",
+      "provider must be native-phone.",
+      "url must be a sanitized tel: URL.",
+      "Unsupported, unconfirmed, or malformed payloads must be ignored or fail safely.",
+      "Native shells must open a user-visible dialer handoff only, not place a direct call."
+    ],
+    "unsupportedNativeBehavior": "Return or emit a safe call.launch_failed-style result; never place a call or infer a number."
   },
   "webCallbacks": {
     "onWake": "window.AgriNexusNativeBridge.receive({ type: 'voice.wake', phrase, language })",

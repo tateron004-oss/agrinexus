@@ -9418,6 +9418,65 @@ function safeConfirmedCallHandoffUrl(result = {}) {
   return "";
 }
 
+function confirmedNativeCallHandoffPayload(result = {}) {
+  const metadata = result.metadata || {};
+  const handoff = metadata.handoff || {};
+  const target = metadata.target || {};
+  const provider = String(metadata.provider || metadata.requestedProvider || "").toLowerCase();
+  const safeUrl = safeConfirmedCallHandoffUrl(result);
+  if (!metadata.executionConfirmed) return null;
+  if (provider !== "native-phone") return null;
+  if (handoff.nativeCommand !== "call.launch") return null;
+  if (!safeUrl || !safeUrl.startsWith("tel:")) return null;
+  return {
+    provider: "native-phone",
+    url: safeUrl,
+    displayName: target.displayName || target.rawName || "the contact",
+    redactedPhone: target.redactedPhone || target.e164Phone || target.phone || metadata.redactedTo || "",
+    confirmationId: metadata.confirmationId || metadata.callId || `${provider}:${safeUrl}:${target.displayName || target.rawName || ""}`,
+    executionConfirmed: true,
+    source: "confirmed-call-handoff"
+  };
+}
+
+function nativeCallLaunchBridgeAvailable() {
+  return Boolean(
+    window.AgriNexusNativeVoice?.launchCall
+    || window.AndroidAgriNexus?.postMessage
+    || window.webkit?.messageHandlers?.agrinexusNative?.postMessage
+  );
+}
+
+function postNativeCallLaunch(payload) {
+  try {
+    if (typeof window.AgriNexusNativeVoice?.launchCall === "function") {
+      window.AgriNexusNativeVoice.launchCall(payload);
+      return true;
+    }
+    if (window.AndroidAgriNexus?.postMessage) {
+      window.AndroidAgriNexus.postMessage(JSON.stringify({ type: "agrinexus.native.command", command: "call.launch", payload }));
+      return true;
+    }
+    if (window.webkit?.messageHandlers?.agrinexusNative?.postMessage) {
+      window.webkit.messageHandlers.agrinexusNative.postMessage({ command: "call.launch", payload });
+      return true;
+    }
+  } catch {
+    return false;
+  }
+  return false;
+}
+
+function maybeDispatchConfirmedNativeCallHandoff(result = {}) {
+  const payload = confirmedNativeCallHandoffPayload(result);
+  if (!payload || !nativeCallLaunchBridgeAvailable()) return false;
+  const dispatchKey = `${payload.confirmationId}|${payload.url}`;
+  if (sessionStorage.getItem("agrinexusLastNativeCallDispatch") === dispatchKey) return false;
+  const sent = postNativeCallLaunch(payload);
+  if (sent) sessionStorage.setItem("agrinexusLastNativeCallDispatch", dispatchKey);
+  return sent;
+}
+
 function renderConfirmedCallHandoffCard(result = {}) {
   const metadata = result.metadata || {};
   const target = metadata.target || {};
@@ -22693,6 +22752,7 @@ async function runBackendAgentCommand(command, locationContext = null, options =
     clearAgentProgressTimers();
     render();
     const result = data.commandResult || {};
+    maybeDispatchConfirmedNativeCallHandoff(result);
     if (result.metadata?.companionRouteOutcome) {
       try {
         localStorage.setItem("agrinexusCompanionRouteOutcome", JSON.stringify(result.metadata.companionRouteOutcome));
@@ -22789,6 +22849,7 @@ async function runUtilityAgentCommand(command, fallbackAnswer = "", locationCont
     if (ignoreStaleNexusTurn(turnToken, "utility answer")) return null;
     render();
     const result = data.commandResult || {};
+    maybeDispatchConfirmedNativeCallHandoff(result);
     if (result.metadata?.companionRouteOutcome) {
       try {
         localStorage.setItem("agrinexusCompanionRouteOutcome", JSON.stringify(result.metadata.companionRouteOutcome));

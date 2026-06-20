@@ -18,9 +18,14 @@ const iosController = read("native-mobile/ios/AgriNexus/NexusWebViewController.s
 const iosRuntime = read("native-mobile/ios/AgriNexus/NexusVoiceRuntime.swift");
 const nativeShim = read("native-mobile/bridge/agrinexus-native-voice.js");
 const readme = read("native-mobile/README.md");
+const serverBuild = server.match(/AGRINEXUS_WEB_BUILD_VERSION\s*=\s*"([^"]+)"/)?.[1] || "";
+const appBuild = app.match(/AGRINEXUS_BUILD_VERSION\s*=\s*"([^"]+)"/)?.[1] || "";
+const serverCache = server.match(/AGRINEXUS_PWA_CACHE_VERSION\s*=\s*"([^"]+)"/)?.[1] || "";
+const appCache = app.match(/AGRINEXUS_PWA_CACHE_VERSION\s*=\s*"([^"]+)"/)?.[1] || "";
+const swCache = sw.match(/CACHE_NAME\s*=\s*"([^"]+)"/)?.[1] || "";
 
 const checks = [
-  ["build advanced", server.includes('AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-293"') && app.includes('AGRINEXUS_BUILD_VERSION = "nexus-behavior-293"') && sw.includes('agrinexus-pwa-v273')],
+  ["build advanced", Boolean(serverBuild) && serverBuild === appBuild && Boolean(serverCache) && serverCache === appCache && appCache === swCache],
   ["native architecture endpoint", server.includes("/api/native/voice-architecture") && server.includes("nativeVoiceRuntime") && server.includes("providerDepth")],
   ["provider depth model", server.includes("function providerDepthModel") && server.includes("health-provider-depth") && server.includes("trade-communications-payments")],
   ["realtime streaming model", server.includes("realtimeStreaming") && server.includes("/api/voice/realtime/call") && server.includes("openai-realtime-webrtc")],

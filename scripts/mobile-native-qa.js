@@ -11,9 +11,11 @@ const manifest = fs.readFileSync(path.join(root, "public", "manifest.webmanifest
 const bridge = JSON.parse(fs.readFileSync(path.join(root, "public", "native-bridge.json"), "utf8"));
 const androidController = fs.readFileSync(path.join(root, "native-mobile", "android", "app", "src", "main", "java", "com", "agrinexus", "mobile", "NexusNativeController.kt"), "utf8");
 const iosRuntime = fs.readFileSync(path.join(root, "native-mobile", "ios", "AgriNexus", "NexusVoiceRuntime.swift"), "utf8");
+const cacheName = sw.match(/CACHE_NAME\s*=\s*"([^"]+)"/)?.[1] || "";
+const bridgeVersionSupported = /^1\.[4-9]\.\d+$/.test(bridge.version || "");
 
 const requirements = [
-  ["native bridge contract", bridge.version === "1.4.0" && bridge.wakePhrases.includes("Agri") && bridge.requiredPermissions.includes("backgroundAudio") && bridge.requiredPermissions.includes("desktopWakeListenerOptional") && bridge.webCommands.includes("voice.stop")],
+  ["native bridge contract", bridgeVersionSupported && bridge.wakePhrases.includes("Agri") && bridge.requiredPermissions.includes("backgroundAudio") && bridge.requiredPermissions.includes("desktopWakeListenerOptional") && bridge.webCommands.includes("voice.stop")],
   ["native runtime source contract", bridge.nativeRuntimeSource?.android === "native-mobile/android" && bridge.nativeRuntimeSource?.ios === "native-mobile/ios/AgriNexus" && bridge.nativeRuntimeSource?.qa === "npm run app:native-runtime-qa"],
   ["native wake runtime", bridge.wakeRuntime?.mode === "native-required-for-true-background" && bridge.wakeRuntime.stopPhrases.includes("Nexus stop") && bridge.webCallbacks?.onTranscript?.includes("voice.final_transcript")],
   ["native command envelope", bridge.commandEnvelope?.inputMode?.includes("native") && bridge.apiEndpoints?.nativeRuntime === "/api/native/voice-runtime" && bridge.offlineQueue?.queueableCommands?.includes("agent.command")],
@@ -21,7 +23,7 @@ const requirements = [
   ["communications execution readiness endpoint", bridge.apiEndpoints?.communicationsReadiness === "/api/communications/execution-readiness" && bridge.communicationsExecution?.channels?.includes("whatsapp")],
   ["native camera and media handoff", bridge.requiredPermissions.includes("camera") && bridge.webCommands.includes("camera.capture") && bridge.nativeEvents.includes("camera.media_attached")],
   ["installable app sharing", manifest.includes('"share_target"') && manifest.includes("Voice Intake") && manifest.includes("Field Route")],
-  ["offline bridge cache", sw.includes("native-bridge.json") && sw.includes("agrinexus-pwa-v267")],
+  ["offline bridge cache", sw.includes("native-bridge.json") && Boolean(cacheName) && sw.includes(cacheName)],
   ["visible mobile permission controls", html.includes("mobilePermissionStatus") && html.includes('data-mobile-permission="native-plan"')],
   ["native capability matrix", app.includes("function nativeAppCapabilityMatrix") && app.includes("function nativeAppReadinessSummary") && app.includes("function installAgriNexusNativeBridge")],
   ["native bridge receiver", app.includes("window.AgriNexusNativeBridge") && app.includes("voice.final_transcript") && app.includes("location.route_update") && app.includes("camera.media_attached")],

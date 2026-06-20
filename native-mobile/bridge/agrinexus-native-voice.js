@@ -40,6 +40,9 @@
     },
     captureMedia() {
       return postNative({ command: "camera.capture" });
+    },
+    launchCall(payload) {
+      return postNative({ command: "call.launch", payload });
     }
   };
 })();
