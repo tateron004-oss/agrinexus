@@ -19,6 +19,7 @@ class NexusVoiceService : Service(), RecognitionListener {
     private var recognizer: SpeechRecognizer? = null
     private var waitingForCommand = false
     private var lastWakeAt = 0L
+    private var languageTag = "en-US"
     private val followUpWindowMs = 12_000L
     private val wakePhrases = listOf("hey agrinexus", "hey nexus", "good morning nexus", "agrinexus", "nexus", "agri")
 
@@ -32,6 +33,7 @@ class NexusVoiceService : Service(), RecognitionListener {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        languageTag = intent?.getStringExtra("languageTag") ?: languageTag
         listen()
         return START_STICKY
     }
@@ -39,8 +41,8 @@ class NexusVoiceService : Service(), RecognitionListener {
     private fun listen() {
         val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
             .putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
-            .putExtra(RecognizerIntent.EXTRA_LANGUAGE, java.util.Locale.getDefault().toLanguageTag())
-            .putExtra(RecognizerIntent.EXTRA_LANGUAGE_PREFERENCE, java.util.Locale.getDefault().toLanguageTag())
+            .putExtra(RecognizerIntent.EXTRA_LANGUAGE, languageTag)
+            .putExtra(RecognizerIntent.EXTRA_LANGUAGE_PREFERENCE, languageTag)
             .putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
             .putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 5)
         recognizer?.startListening(intent)
@@ -110,7 +112,7 @@ class NexusVoiceService : Service(), RecognitionListener {
     private fun broadcastTranscript(transcript: String, final: Boolean) {
         sendBroadcast(Intent(ACTION_TRANSCRIPT)
             .putExtra("transcript", transcript)
-            .putExtra("language", java.util.Locale.getDefault().language.ifBlank { "en" })
+            .putExtra("language", languageTag)
             .putExtra("confidence", if (final) 0.88 else 0.55)
             .putExtra("final", final))
     }

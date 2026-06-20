@@ -50,6 +50,7 @@
     "voice:browser-policy": "node scripts/voice-browser-policy-regression.js",
     "voice:realtime-qa": "node scripts/realtime-voice-provider-qa.js",
     "voice:phase1-qa": "node scripts/voice-phase1-alignment-qa.js",
+    "voice:phase2-language-qa": "node scripts/voice-phase2-language-qa.js",
     "app:cloud-agent-qa": "node scripts/cloud-agent-qa.js",
     "app:mobile-native-qa": "node scripts/mobile-native-qa.js",
     "app:native-runtime-qa": "node scripts/native-mobile-runtime-qa.js",

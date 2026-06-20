@@ -131,6 +131,8 @@ const voiceLanguageNames = {
   es: "Spanish",
   pt: "Portuguese"
 };
+const fullAppLanguageCodes = new Set(["en", "fr", "sw", "ar", "es"]);
+const partialAppLanguageCodes = new Set(["pt"]);
 let voiceTranslationToken = 0;
 
 const voiceStopTranslations = {
@@ -2902,16 +2904,24 @@ function learningText() {
   return learningCopy[data.user?.language] || learningCopy.en;
 }
 
+function canonicalLanguageCode(value, options = {}) {
+  const raw = String(value || "").trim().toLowerCase().replace("_", "-");
+  const code = raw.split("-")[0];
+  if (fullAppLanguageCodes.has(code)) return code;
+  if (options.allowPartial && partialAppLanguageCodes.has(code)) return code;
+  return "en";
+}
+
 function languageCode() {
-  return data?.user?.language || localStorage.getItem("agrinexusLoginLanguage") || "en";
+  return canonicalLanguageCode(data?.user?.language || localStorage.getItem("agrinexusLoginLanguage") || "en");
 }
 
 function voiceLocale() {
-  return voiceLocaleMap[languageCode()] || "en-US";
+  return voiceLocaleMap[canonicalLanguageCode(languageCode(), { allowPartial: true })] || "en-US";
 }
 
 function voiceLanguageName() {
-  return voiceLanguageNames[languageCode()] || "English";
+  return voiceLanguageNames[canonicalLanguageCode(languageCode(), { allowPartial: true })] || "English";
 }
 
 function speechRateForLanguage(language = languageCode()) {
@@ -4185,6 +4195,17 @@ async function applyAutoLanguageFromSpeech(rawCommand, options = {}) {
   if (options.skipLanguageAutoDetect || !data?.user) return null;
   const choice = appAutoLanguageChoice(rawCommand);
   if (!choice || choice.language === languageCode()) return null;
+  if (partialAppLanguageCodes.has(choice.language)) {
+    localStorage.setItem("agrinexusAutoLanguage", JSON.stringify({
+      language: choice.language,
+      label: choice.label,
+      partial: true,
+      evidence: choice.evidence || "spoken phrase",
+      mode: experienceMode || data?.user?.role || "platform",
+      createdAt: new Date().toISOString()
+    }));
+    return null;
+  }
   try {
     const previousLanguage = languageCode();
     data = await request("/api/user/language", { method: "POST", body: { language: choice.language } });
@@ -4225,8 +4246,7 @@ function userLanguageQuickSwitchHtml() {
     ["es", "Spanish"],
     ["fr", "French"],
     ["ar", "Arabic"],
-    ["sw", "Kiswahili"],
-    ["pt", "Portuguese"]
+    ["sw", "Kiswahili"]
   ];
   return `
     <div class="user-language-quickbar" aria-label="${translateText("Language switcher")}">
@@ -4898,7 +4918,11 @@ function moduleUseExplanation(moduleId) {
 async function changeLanguageByVoice(command) {
   const language = languageFromVoiceCommand(command);
   if (!language) {
-    setVoiceResponse("I can change language to English, French, Kiswahili, Arabic, Spanish, or Portuguese. Tell me which language you want.", true);
+    setVoiceResponse("I can change the full app language to English, French, Kiswahili, Arabic, or Spanish. Portuguese is available only in partial response paths for now.", true);
+    return;
+  }
+  if (partialAppLanguageCodes.has(language)) {
+    setVoiceResponse("Portuguese is partially supported for some response-quality and translation paths, but it is not a full app language yet. I can switch the full app language to English, French, Kiswahili, Arabic, or Spanish.", true);
     return;
   }
   try {
@@ -8324,23 +8348,32 @@ function installAgriNexusNativeBridge() {
       if (type === "voice.final_transcript") {
         const transcript = normalizeLocalizedVoiceCommand(event.transcript || event.command || "");
         if (!transcript) return { ok: false, error: "Missing transcript" };
-        void handleVoiceCommand(transcript);
-        return { ok: true, action: "command-submitted", transcript };
+        const language = canonicalLanguageCode(event.language || event.targetLanguage || languageCode(), { allowPartial: true });
+        void handleVoiceCommand(transcript, { source: "native", language, targetLanguage: language });
+        return { ok: true, action: "command-submitted", transcript, language };
       }
       if (type === "voice.partial_transcript") {
         const status = $("#globalAssistantStatus");
         if (status) status.textContent = translateText(event.transcript || "Listening...");
-        return { ok: true, action: "partial-rendered" };
+        return { ok: true, action: "partial-rendered", language: canonicalLanguageCode(event.language || languageCode(), { allowPartial: true }) };
       }
       if (type === "voice.interrupt" || type === "voice.stop") {
         stopNexusSpeaking("Stopped. I am ready when you are.");
         return { ok: true, action: "speech-stopped" };
       }
       if (type === "voice.language_changed") {
-        const lang = event.language || event.targetLanguage;
-        if (lang && voiceLocaleMap[lang]) {
-          setLanguage(lang);
-          refreshVoiceForLanguageChange();
+        const requestedLanguage = String(event.language || event.targetLanguage || "").trim();
+        const requestedCode = requestedLanguage.toLowerCase().replace("_", "-").split("-")[0];
+        const lang = canonicalLanguageCode(requestedLanguage);
+        if (requestedLanguage && fullAppLanguageCodes.has(requestedCode)) {
+          void request("/api/user/language", { method: "POST", body: { language: lang } })
+            .then(state => {
+              data = state;
+              render();
+              refreshLanguageEverywhere();
+              refreshVoiceForLanguageChange();
+            })
+            .catch(error => console.warn("Native language change failed", error));
           return { ok: true, action: "language-changed", language: lang };
         }
         return { ok: false, error: "Unsupported language" };
@@ -9842,13 +9875,12 @@ function renderUserWorkspace() {
           ["fr", "French"],
           ["sw", "Kiswahili"],
           ["ar", "Arabic"],
-          ["es", "Spanish"],
-          ["pt", "Portuguese"]
+          ["es", "Spanish"]
         ].map(([code, label]) => `<button type="button" class="${languageCode() === code ? "active" : ""}" data-user-language="${code}" aria-pressed="${languageCode() === code}">
           ${translateText(label)}
         </button>`).join("")}
       </div>
-      <span>${translateText("Say: change language to French, Arabic, Swahili, Spanish, Portuguese, or English.")}</span>
+      <span>${translateText("Say: change language to French, Arabic, Swahili, Spanish, or English. Portuguese is partial support only.")}</span>
     </section>
     <section class="user-service-buttons" aria-label="${translateText("Open a service")}">
       ${serviceButtons.map(item => `<button type="button" class="${escapeHtml(item.className)}" style="--service-photo: url('${escapeHtml(item.photo)}')" ${item.ask ? `data-mobile-ask="true"` : `data-simple-section="${item.section}"`}>
@@ -22347,6 +22379,7 @@ async function runBackendAgentCommand(command, locationContext = null, options =
   activeAgentCommandController = controller;
   try {
     const previousLanguage = languageCode();
+    const commandLanguage = canonicalLanguageCode(options.targetLanguage || options.language || languageCode(), { allowPartial: true });
     voiceConversationTurns += 1;
     localStorage.setItem("agrinexusVoiceTurns", String(voiceConversationTurns));
     setVoiceStatus("thinking");
@@ -22366,7 +22399,8 @@ async function runBackendAgentCommand(command, locationContext = null, options =
         modeContext: modeConversationContext(command),
         timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
         location: locationContext,
-        targetLanguage: languageCode(),
+        language: commandLanguage,
+        targetLanguage: commandLanguage,
         companionUnderstanding: companionUnderstandingState,
         note: "Command submitted from Nexus Voice Assistant"
       }
@@ -22443,6 +22477,7 @@ async function runUtilityAgentCommand(command, fallbackAnswer = "", locationCont
   activeAgentCommandController = controller;
   try {
     const previousLanguage = languageCode();
+    const commandLanguage = canonicalLanguageCode(options.targetLanguage || options.language || languageCode(), { allowPartial: true });
     voiceConversationTurns += 1;
     localStorage.setItem("agrinexusVoiceTurns", String(voiceConversationTurns));
     setVoiceStatus("thinking");
@@ -22461,7 +22496,8 @@ async function runUtilityAgentCommand(command, fallbackAnswer = "", locationCont
         modeContext: modeConversationContext(command),
         timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
         location: locationContext,
-        targetLanguage: languageCode(),
+        language: commandLanguage,
+        targetLanguage: commandLanguage,
         companionUnderstanding: companionUnderstandingState,
         note: "Ask Nexus daily utility assistant"
       }

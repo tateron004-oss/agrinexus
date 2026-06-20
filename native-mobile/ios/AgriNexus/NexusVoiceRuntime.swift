@@ -4,7 +4,8 @@ import WebKit
 
 final class NexusVoiceRuntime: NSObject, SFSpeechRecognizerDelegate {
     weak var webView: WKWebView?
-    private let recognizer = SFSpeechRecognizer(locale: Locale(identifier: "en-US"))
+    private var recognizer = SFSpeechRecognizer(locale: Locale(identifier: "en-US"))
+    private var localeIdentifier = "en-US"
     private let audioEngine = AVAudioEngine()
     private var request: SFSpeechAudioBufferRecognitionRequest?
     private var task: SFSpeechRecognitionTask?
@@ -16,6 +17,7 @@ final class NexusVoiceRuntime: NSObject, SFSpeechRecognizerDelegate {
 
     func start() {
         stop()
+        recognizer = SFSpeechRecognizer(locale: Locale(identifier: localeIdentifier))
         try? AVAudioSession.sharedInstance().setCategory(.playAndRecord, mode: .spokenAudio, options: [.duckOthers, .defaultToSpeaker])
         try? AVAudioSession.sharedInstance().setActive(true)
         let request = SFSpeechAudioBufferRecognitionRequest()
@@ -34,9 +36,9 @@ final class NexusVoiceRuntime: NSObject, SFSpeechRecognizerDelegate {
             if let text = result?.bestTranscription.formattedString, !text.isEmpty {
                 if let routed = self.routeTranscript(text, final: result?.isFinal == true) {
                     if result?.isFinal == true {
-                        self.send(type: "voice.final_transcript", data: ["transcript": routed, "language": Locale.current.languageCode ?? "en", "confidence": 0.9])
+                        self.send(type: "voice.final_transcript", data: ["transcript": routed, "language": self.localeIdentifier, "confidence": 0.9])
                     } else {
-                        self.send(type: "voice.partial_transcript", data: ["transcript": routed, "language": Locale.current.languageCode ?? "en"])
+                        self.send(type: "voice.partial_transcript", data: ["transcript": routed, "language": self.localeIdentifier])
                     }
                 } else {
                     self.send(type: "voice.clarify", data: ["reason": "waiting_for_wake_phrase"])
@@ -70,6 +72,10 @@ final class NexusVoiceRuntime: NSObject, SFSpeechRecognizerDelegate {
         synthesizer.speak(utterance)
     }
 
+    func updateLanguage(_ language: String) {
+        localeIdentifier = Self.nativeLocaleIdentifier(language)
+    }
+
     func send(type: String, data: [String: Any]) {
         var envelope = data
         envelope["type"] = type
@@ -100,5 +106,17 @@ final class NexusVoiceRuntime: NSObject, SFSpeechRecognizerDelegate {
     private func restartSoon() {
         stop()
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { self.start() }
+    }
+
+    private static func nativeLocaleIdentifier(_ language: String) -> String {
+        let code = language.replacingOccurrences(of: "_", with: "-").lowercased().split(separator: "-").first.map(String.init) ?? ""
+        switch code {
+        case "es": return "es-ES"
+        case "fr": return "fr-FR"
+        case "sw": return "sw-KE"
+        case "ar": return "ar-EG"
+        case "pt": return "pt-BR"
+        default: return "en-US"
+        }
     }
 }

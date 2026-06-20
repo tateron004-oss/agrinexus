@@ -15,6 +15,7 @@ import java.util.Locale
 class NexusNativeController(private val activity: Activity, private val webView: WebView) {
     private var tts: TextToSpeech? = null
     private val appUrl = "https://agrinexus-platform.onrender.com"
+    private var selectedLanguageTag = "en-US"
 
     fun load() {
         webView.settings.javaScriptEnabled = true
@@ -72,7 +73,8 @@ class NexusNativeController(private val activity: Activity, private val webView:
 
     fun startWakeRuntime() {
         requestNativePermissions()
-        ContextCompat.startForegroundService(activity, Intent(activity, NexusVoiceService::class.java))
+        ContextCompat.startForegroundService(activity, Intent(activity, NexusVoiceService::class.java)
+            .putExtra("languageTag", selectedLanguageTag))
         sendToWeb("voice.always_on_started", JSONObject().put("wakeMode", "foreground"))
     }
 
@@ -117,6 +119,8 @@ class NexusNativeController(private val activity: Activity, private val webView:
     }
 
     fun onWebVoiceState(payload: JSONObject) {
+        val language = payload.optString("locale", payload.optString("language", "")).trim()
+        if (language.isNotBlank()) selectedLanguageTag = nativeLocaleTag(language)
         if (payload.optString("state") == "speaking") sendToWeb("voice.playback_started", payload)
     }
 
@@ -131,6 +135,18 @@ class NexusNativeController(private val activity: Activity, private val webView:
         sendToWeb("voice.partial_transcript", JSONObject()
             .put("transcript", transcript)
             .put("language", language))
+    }
+
+    private fun nativeLocaleTag(language: String): String {
+        val code = language.replace("_", "-").lowercase().split("-").firstOrNull().orEmpty()
+        return when (code) {
+            "es" -> "es-ES"
+            "fr" -> "fr-FR"
+            "sw" -> "sw-KE"
+            "ar" -> "ar-EG"
+            "pt" -> "pt-BR"
+            else -> "en-US"
+        }
     }
 
     private fun fetchNativeRuntime(payload: JSONObject) {

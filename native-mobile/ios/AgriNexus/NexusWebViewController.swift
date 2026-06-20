@@ -44,6 +44,13 @@ final class NexusWebViewController: UIViewController, WKScriptMessageHandler {
             voiceRuntime.send(type: "voice.realtime_stopped", data: [
                 "provider": "openai-realtime-webrtc"
             ])
+        case "voice.state":
+            if let payload = body["payload"] as? [String: Any],
+               let language = (payload["locale"] as? String) ?? (payload["language"] as? String) {
+                voiceRuntime.updateLanguage(language)
+            } else if let language = (body["locale"] as? String) ?? (body["language"] as? String) {
+                voiceRuntime.updateLanguage(language)
+            }
         case "route.track":
             voiceRuntime.send(type: "location.route_update", data: [
                 "source": "native-location-permission",

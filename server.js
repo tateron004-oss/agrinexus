@@ -46,6 +46,40 @@ const COUNTRY_LANGUAGE = {
   egypt: "ar",
   drc: "fr"
 };
+// Voice language contract:
+// Full app profile languages are en, es, fr, sw, and ar. Portuguese (pt) is
+// partial: it is covered by response-quality/translation paths but is not a
+// persisted profile language until product scope promotes and tests it.
+const FULL_APP_LANGUAGE_CODES = new Set(["en", "es", "fr", "sw", "ar"]);
+const PARTIAL_LANGUAGE_CODES = new Set(["pt"]);
+const VOICE_LANGUAGE_LOCALES = {
+  en: "en-US",
+  es: "es-ES",
+  fr: "fr-FR",
+  sw: "sw-KE",
+  ar: "ar-EG",
+  pt: "pt-BR"
+};
+
+function canonicalLanguageCode(value, options = {}) {
+  const raw = String(value || "").trim().toLowerCase().replace("_", "-");
+  const code = raw.split("-")[0];
+  if (FULL_APP_LANGUAGE_CODES.has(code)) return code;
+  if (options.allowPartial && PARTIAL_LANGUAGE_CODES.has(code)) return code;
+  return "en";
+}
+
+function canonicalProfileLanguage(value) {
+  return canonicalLanguageCode(value);
+}
+
+function canonicalVoiceLanguage(value) {
+  return canonicalLanguageCode(value, { allowPartial: true });
+}
+
+function voiceLocaleForLanguage(language) {
+  return VOICE_LANGUAGE_LOCALES[canonicalVoiceLanguage(language)] || VOICE_LANGUAGE_LOCALES.en;
+}
 const DEFAULT_USERS = [
   { id: "u_admin", name: "Platform Admin", email: "admin@agrinexus.org", password: "Admin2026!", role: "Admin", country: "Nigeria", language: "en" },
   { id: "u_standard", name: "Standard User", email: "user@agrinexus.org", password: "User2026!", role: "Standard User", country: "Nigeria", language: "en" },
@@ -13481,8 +13515,7 @@ function twimlResponse(res, xml) {
 }
 
 function twilioLanguage(language) {
-  const map = { en: "en-US", fr: "fr-FR", sw: "sw-KE", ar: "ar-EG" };
-  return process.env.TWILIO_GATHER_LANGUAGE || map[language] || "en-US";
+  return process.env.TWILIO_GATHER_LANGUAGE || voiceLocaleForLanguage(language);
 }
 
 function twilioSay(text, language) {
@@ -13568,13 +13601,13 @@ function phoneLanguageChoice(text = "") {
     { code: "fr", locale: "fr-FR", label: "French", tests: ["french", "français", "francais", "française"] },
     { code: "sw", locale: "sw-KE", label: "Kiswahili", tests: ["swahili", "kiswahili", "swa hili"] },
     { code: "ar", locale: "ar-EG", label: "Arabic", tests: ["arabic", "arabe", "عربي", "العربية"] },
-    { code: "ha", locale: "en-US", label: "Hausa", tests: ["hausa"] },
-    { code: "yo", locale: "en-US", label: "Yoruba", tests: ["yoruba"] },
-    { code: "ig", locale: "en-US", label: "Igbo", tests: ["igbo", "ibo"] },
-    { code: "am", locale: "en-US", label: "Amharic", tests: ["amharic", "amhara"] },
-    { code: "om", locale: "en-US", label: "Oromo", tests: ["oromo"] },
-    { code: "rw", locale: "en-US", label: "Kinyarwanda", tests: ["kinyarwanda", "rwanda"] },
-    { code: "ln", locale: "fr-FR", label: "Lingala", tests: ["lingala"] }
+    { code: "en", locale: "en-US", label: "English with Hausa fallback", tests: ["hausa"] },
+    { code: "en", locale: "en-US", label: "English with Yoruba fallback", tests: ["yoruba"] },
+    { code: "en", locale: "en-US", label: "English with Igbo fallback", tests: ["igbo", "ibo"] },
+    { code: "en", locale: "en-US", label: "English with Amharic fallback", tests: ["amharic", "amhara"] },
+    { code: "en", locale: "en-US", label: "English with Oromo fallback", tests: ["oromo"] },
+    { code: "en", locale: "en-US", label: "English with Kinyarwanda fallback", tests: ["kinyarwanda", "rwanda"] },
+    { code: "fr", locale: "fr-FR", label: "French with Lingala fallback", tests: ["lingala"] }
   ];
   return choices.find(choice => choice.tests.some(test => lower.includes(test))) || null;
 }
@@ -13587,13 +13620,13 @@ function phoneAutoLanguageChoice(text = "") {
     { code: "fr", locale: "fr-FR", label: "French", tests: ["french", "francais", "bonjour", "bonsoir", "salut", "je m appelle", "je suis", "mon nom est", "j ai besoin"] },
     { code: "sw", locale: "sw-KE", label: "Kiswahili", tests: ["swahili", "kiswahili", "jambo", "habari", "mambo", "naitwa", "jina langu", "ninahitaji"] },
     { code: "ar", locale: "ar-EG", label: "Arabic", tests: ["arabic", "arabe", "salaam", "salam", "marhaba", "ana ismi", "ismi"] },
-    { code: "ha", locale: "en-US", label: "Hausa", tests: ["hausa", "sannu", "ina kwana", "sunana"] },
-    { code: "yo", locale: "en-US", label: "Yoruba", tests: ["yoruba", "bawo", "ekaro", "oruko mi"] },
-    { code: "ig", locale: "en-US", label: "Igbo", tests: ["igbo", "ibo", "ndewo", "ututu oma", "aha m"] },
-    { code: "am", locale: "en-US", label: "Amharic", tests: ["amharic", "amhara", "selam", "tena yistilign"] },
-    { code: "om", locale: "en-US", label: "Oromo", tests: ["oromo", "akkam", "maqaan koo"] },
-    { code: "rw", locale: "en-US", label: "Kinyarwanda", tests: ["kinyarwanda", "rwanda", "muraho", "amakuru"] },
-    { code: "ln", locale: "fr-FR", label: "Lingala", tests: ["lingala", "mbote"] }
+    { code: "en", locale: "en-US", label: "English with Hausa fallback", tests: ["hausa", "sannu", "ina kwana", "sunana"] },
+    { code: "en", locale: "en-US", label: "English with Yoruba fallback", tests: ["yoruba", "bawo", "ekaro", "oruko mi"] },
+    { code: "en", locale: "en-US", label: "English with Igbo fallback", tests: ["igbo", "ibo", "ndewo", "ututu oma", "aha m"] },
+    { code: "en", locale: "en-US", label: "English with Amharic fallback", tests: ["amharic", "amhara", "selam", "tena yistilign"] },
+    { code: "en", locale: "en-US", label: "English with Oromo fallback", tests: ["oromo", "akkam", "maqaan koo"] },
+    { code: "en", locale: "en-US", label: "English with Kinyarwanda fallback", tests: ["kinyarwanda", "rwanda", "muraho", "amakuru"] },
+    { code: "fr", locale: "fr-FR", label: "French with Lingala fallback", tests: ["lingala", "mbote"] }
   ];
   return choices.find(choice => choice.tests.some(test => lower.includes(test))) || phoneLanguageChoice(text);
 }
@@ -13605,7 +13638,7 @@ function phoneAutoLanguagePrompt(name = "", label = "English") {
 
 function phoneLanguagePrompt(name = "") {
   const prefix = name ? `Thank you, ${name}. ` : "";
-  return `${prefix}What language should I use? Say English, Spanish, French, Swahili, Arabic, Hausa, Yoruba, Igbo, Amharic, Oromo, Kinyarwanda, or Lingala.`;
+  return `${prefix}What language should I use? Say English, Spanish, French, Swahili, or Arabic. If you say Hausa, Yoruba, Igbo, Amharic, Oromo, Kinyarwanda, or Lingala, I will use the closest English or French phone fallback.`;
 }
 
 function phoneCommandPrompt(name = "", label = "English") {
@@ -24677,16 +24710,18 @@ async function runCompanionSafeAgentCommand(db, user, body = {}) {
   const command = String(body.command || "").trim();
   const inputMode = String(body.inputMode || "api").trim() || "api";
   const outputMode = String(body.outputMode || "").trim();
+  const commandLanguage = canonicalVoiceLanguage(body.targetLanguage || body.language || user.language);
   const companionUnderstanding = companionUnderstandingClassification(command, {
     source: inputMode,
     mode: body.mode,
-    targetLanguage: body.targetLanguage || body.language || user.language
+    targetLanguage: commandLanguage
   });
   if (["voice", "phone", "native"].includes(inputMode)) {
     const label = inputMode === "phone" ? "Phone voice" : inputMode === "native" ? "Native voice" : "Voice";
     voiceRecord(db, user, "speech-to-text", `${label} command transcribed: ${command}`, {
       command,
       inputMode,
+      language: commandLanguage,
       provider: inputMode === "phone" ? "twilio" : inputMode
     });
   }
@@ -24699,10 +24734,11 @@ async function runCompanionSafeAgentCommand(db, user, body = {}) {
     note: body.note,
     timeZone: body.timeZone,
     location: body.location || body.currentLocation || null,
-    targetLanguage: body.targetLanguage || body.language
+    language: commandLanguage,
+    targetLanguage: commandLanguage
   });
   let result = applyHighestFunctionalityMode(db, user, humanizeAgentResult(db, user, rawResult, command), command);
-  result = await translateAgentCommandResult(db, user, result, { targetLanguage: body.targetLanguage || body.language || user.language });
+  result = await translateAgentCommandResult(db, user, result, { targetLanguage: commandLanguage });
   const preliminaryRouteOutcome = companionRouteOutcomeMetadata(command, companionUnderstanding, result);
   const workflowOffer = inputMode === "voice" || inputMode === "phone" || inputMode === "native" || body.conversational === true
     ? companionWorkflowOfferResult(db, command, companionUnderstanding, result, preliminaryRouteOutcome)
@@ -24714,13 +24750,16 @@ async function runCompanionSafeAgentCommand(db, user, body = {}) {
     inputMode,
     outputMode: outputMode || undefined,
     companionUnderstanding,
-    companionRouteOutcome
+    companionRouteOutcome,
+    language: commandLanguage,
+    targetLanguage: commandLanguage
   };
   commandRecord(db, user, command, result);
   if (outputMode === "voice") {
     voiceRecord(db, user, "text-to-speech", `Voice response prepared: ${result.response}`, {
       response: result.response,
-      inputMode
+      inputMode,
+      language: commandLanguage
     });
   }
   addWorkflowNote(db.profile, body.note, "Agent command note");
@@ -25304,7 +25343,8 @@ async function api(req, res, url) {
     const body = await readBody(req);
     const session = getPhoneVoiceSession(db, phoneSessionKey(body, req.headers["x-forwarded-for"] || "twilio"));
     const step = String(url.searchParams.get("step") || session.step || "command");
-    const language = step === "name" ? "en-US" : (session.locale || twilioLanguage(session.language || phoneUser?.language || "en"));
+    const sessionLanguage = canonicalVoiceLanguage(session.language || phoneUser?.language || "en");
+    const language = step === "name" ? "en-US" : (session.locale || twilioLanguage(sessionLanguage));
     const command = String(body.SpeechResult || body.speechResult || body.Digits || body.digits || "").trim();
     const commandLower = command.toLowerCase();
     const skippedNameWithCommand = step === "name" && /\b(start|open|run|apply|track|contact|call|telehealth|intake|job|delivery|mission|buyer|provider|doctor|pharmacy|course|map)\b/.test(commandLower);
@@ -25327,8 +25367,9 @@ async function api(req, res, url) {
       const callerName = extractCallerName(command) || "friend";
       const autoChoice = phoneAutoLanguageChoice(command);
       if (autoChoice) {
-        updatePhoneVoiceSession(db, session, { callerName, language: autoChoice.code, locale: autoChoice.locale, step: "command" });
-        phoneUser.language = autoChoice.code;
+        const chosenLanguage = canonicalProfileLanguage(autoChoice.code);
+        updatePhoneVoiceSession(db, session, { callerName, language: chosenLanguage, locale: autoChoice.locale, step: "command" });
+        phoneUser.language = chosenLanguage;
         await writeDb(db);
         const prompt = await phoneVoicePrompt(phoneAutoLanguagePrompt(callerName, autoChoice.label), autoChoice.locale);
         return twimlResponse(res, `<?xml version="1.0" encoding="UTF-8"?>
@@ -25349,12 +25390,14 @@ async function api(req, res, url) {
 </Response>`);
     }
     if (skippedNameWithCommand) {
-      updatePhoneVoiceSession(db, session, { callerName: session.callerName || "caller", step: "command", language: session.language || phoneUser?.language || "en", locale: session.locale || twilioLanguage(session.language || phoneUser?.language || "en") });
+      const fallbackLanguage = canonicalProfileLanguage(session.language || phoneUser?.language || "en");
+      updatePhoneVoiceSession(db, session, { callerName: session.callerName || "caller", step: "command", language: fallbackLanguage, locale: session.locale || twilioLanguage(fallbackLanguage) });
     }
     if (step === "language") {
-      const choice = phoneLanguageChoice(command) || { code: phoneUser?.language || "en", locale: twilioLanguage(phoneUser?.language || "en"), label: voiceLanguageLabel(phoneUser?.language || "en") };
-      updatePhoneVoiceSession(db, session, { language: choice.code, locale: choice.locale, step: "command" });
-      phoneUser.language = choice.code;
+      const choice = phoneLanguageChoice(command) || { code: canonicalProfileLanguage(phoneUser?.language || "en"), locale: twilioLanguage(phoneUser?.language || "en"), label: voiceLanguageLabel(phoneUser?.language || "en") };
+      const chosenLanguage = canonicalProfileLanguage(choice.code);
+      updatePhoneVoiceSession(db, session, { language: chosenLanguage, locale: choice.locale, step: "command" });
+      phoneUser.language = chosenLanguage;
       await writeDb(db);
       const prompt = await phoneVoicePrompt(phoneCommandPrompt(session.callerName, choice.label), choice.locale);
       return twimlResponse(res, `<?xml version="1.0" encoding="UTF-8"?>
@@ -25370,8 +25413,8 @@ async function api(req, res, url) {
       conversational: true,
       inputMode: "phone",
       outputMode: "voice",
-      language: session.language || phoneUser.language || "en",
-      targetLanguage: session.language || phoneUser.language || "en",
+      language: canonicalVoiceLanguage(session.language || phoneUser.language || "en"),
+      targetLanguage: canonicalVoiceLanguage(session.language || phoneUser.language || "en"),
       note: "Phone call voice assistant command"
     });
     session.commands.unshift({ command, response: result.response, createdAt: new Date().toISOString() });
@@ -25384,7 +25427,8 @@ async function api(req, res, url) {
       from: body.From || body.from || null,
       provider: "twilio",
       callerName: session.callerName || "",
-      language: session.language || phoneUser.language || "en"
+      language: canonicalVoiceLanguage(session.language || phoneUser.language || "en"),
+      locale: session.locale || language
     });
     await writeDb(db);
     const response = String(result.response || "Command completed.").slice(0, 900);
@@ -26695,15 +26739,16 @@ async function api(req, res, url) {
 
   if (url.pathname === "/api/user/language" && req.method === "POST") {
     const body = await readBody(req);
-    const allowed = new Set(["en", "fr", "sw", "ar", "es"]);
-    if (!allowed.has(body.language)) return send(res, 400, { error: "Unsupported language" });
+    const requested = String(body.language || "").trim().toLowerCase().replace("_", "-").split("-")[0];
+    if (!FULL_APP_LANGUAGE_CODES.has(requested)) return send(res, 400, { error: "Unsupported language" });
+    const language = canonicalProfileLanguage(requested);
     const current = db.users.find(item => item.id === user.id);
-    current.language = body.language;
+    current.language = language;
     db.profile.accessibilityProfile = {
       ...(db.profile.accessibilityProfile || {}),
-      language: body.language
+      language
     };
-    addActivity(db.profile, `Learning language changed to ${body.language.toUpperCase()}.`);
+    addActivity(db.profile, `Learning language changed to ${language.toUpperCase()}.`);
     await writeDb(db);
     return send(res, 200, publicState(db, current));
   }
@@ -29154,6 +29199,7 @@ async function api(req, res, url) {
   if (url.pathname === "/api/voice/transcribe" && req.method === "POST") {
     if (!canUse(user, "ai")) return send(res, 403, { error: "Role does not allow voice commands" });
     const body = await readBody(req);
+    const language = canonicalVoiceLanguage(body.language || user.language || "en");
     let transcript = String(body.transcript || body.text || "").trim();
     let provider = process.env.VOICE_STT_PROVIDER || (process.env.OPENAI_API_KEY ? "openai" : "browser");
     let model = null;
@@ -29162,22 +29208,23 @@ async function api(req, res, url) {
         audioBase64: body.audioBase64,
         mimeType: body.mimeType || "audio/webm",
         filename: body.filename || "agrinexus-voice.webm",
-        language: body.language || user.language || "en"
+        language
       });
       transcript = result?.transcript || "";
       provider = result?.provider || provider;
       model = result?.model || null;
     }
-    const record = voiceRecord(db, user, "speech-to-text", transcript ? `Speech captured: ${transcript}` : "Speech capture session opened.", { language: body.language || user.language || "en", provider, model });
+    const record = voiceRecord(db, user, "speech-to-text", transcript ? `Speech captured: ${transcript}` : "Speech capture session opened.", { language, locale: body.locale || voiceLocaleForLanguage(language), provider, model });
     await writeDb(db);
     const state = publicState(db, user);
-    state.voiceResult = { transcript, sessionId: record.id, provider, model };
+    state.voiceResult = { transcript, sessionId: record.id, provider, model, language, locale: body.locale || voiceLocaleForLanguage(language) };
     return send(res, 200, state);
   }
 
   if (url.pathname === "/api/voice/speak" && req.method === "POST") {
     if (!canUse(user, "ai")) return send(res, 403, { error: "Role does not allow voice responses" });
     const body = await readBody(req);
+    const language = canonicalVoiceLanguage(body.language || body.targetLanguage || user.language || "en");
     const text = String(body.text || "").trim();
     if (!text) return send(res, 400, { error: "Voice response text is required" });
     let audio = null;
@@ -29197,10 +29244,10 @@ async function api(req, res, url) {
         provider = "openai-audio-error";
       }
     }
-    const record = voiceRecord(db, user, "text-to-speech", speechError ? `Speech response failed: ${speechError}` : `Speech response prepared: ${text}`, { language: body.language || user.language || "en", provider, model: audio?.model || null, voice: audio?.voice || null, error: speechError });
+    const record = voiceRecord(db, user, "text-to-speech", speechError ? `Speech response failed: ${speechError}` : `Speech response prepared: ${text}`, { language, locale: body.locale || voiceLocaleForLanguage(language), provider, model: audio?.model || null, voice: audio?.voice || null, error: speechError });
     await writeDb(db);
     const state = publicState(db, user);
-    state.voiceResult = { text, sessionId: record.id, provider, audioDataUrl: audio?.audioDataUrl || null, model: audio?.model || null, voice: audio?.voice || null, error: speechError, configuredProvider: process.env.VOICE_TTS_PROVIDER || null, hasOpenAiKey: Boolean(process.env.OPENAI_API_KEY) };
+    state.voiceResult = { text, sessionId: record.id, provider, audioDataUrl: audio?.audioDataUrl || null, model: audio?.model || null, voice: audio?.voice || null, error: speechError, configuredProvider: process.env.VOICE_TTS_PROVIDER || null, hasOpenAiKey: Boolean(process.env.OPENAI_API_KEY), language, locale: body.locale || voiceLocaleForLanguage(language) };
     return send(res, 200, state);
   }
 
