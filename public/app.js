@@ -9339,14 +9339,125 @@ function openCaptionBox(message = "") {
   $("#userCaptionInput")?.focus();
 }
 
+function redactCallPhoneDisplay(value = "") {
+  const clean = String(value || "").replace(/[^\d+]/g, "");
+  if (!clean) return "";
+  if (clean.includes("*")) return clean;
+  const prefix = clean.startsWith("+") ? "+" : "";
+  const digits = clean.replace(/[^\d]/g, "");
+  if (digits.length <= 4) return `${prefix}${"*".repeat(Math.max(0, digits.length - 2))}${digits.slice(-2)}`;
+  return `${prefix}${digits.slice(0, Math.min(3, digits.length))}${"*".repeat(Math.max(3, digits.length - 6))}${digits.slice(-3)}`;
+}
+
+function callProviderLabel(provider = "") {
+  const value = String(provider || "").toLowerCase();
+  if (value === "twilio") return "Phone";
+  if (value === "native-phone") return "Native phone dialer";
+  if (value === "whatsapp") return "WhatsApp";
+  if (value === "telegram") return "Telegram";
+  if (value === "browser-fallback") return "Browser fallback";
+  return value ? value.replace(/-/g, " ") : "Phone";
+}
+
+function pendingCallDetails(action = {}) {
+  const target = action.target || {};
+  const resolution = action.resolution || {};
+  const handoff = action.handoff || {};
+  const provider = action.provider || action.requestedProvider || "";
+  const phone = target.redactedPhone || redactCallPhoneDisplay(target.phone || target.e164Phone || action.recipientPhone || action.to);
+  const displayName = target.displayName || action.contactName || action.action || "Requested contact";
+  const resolutionStatus = resolution.status || (target.displayName || phone ? "resolved" : "needs-details");
+  const fallback = handoff.fallbackText || (provider === "native-phone"
+    ? "In the browser/PWA, Nexus can stage this only as a safe instruction. Native dialer launch is not part of this phase."
+    : "");
+  return {
+    actionLabel: action.action || `Call ${displayName}`,
+    displayName,
+    phone,
+    providerLabel: callProviderLabel(provider),
+    resolutionStatus,
+    confirmationPrompt: action.confirmationPrompt || "Before I call anyone, please confirm.",
+    fallback,
+    handoffUrl: handoff.url || ""
+  };
+}
+
+function pendingCallDetailRows(details) {
+  return [
+    ["Contact", details.displayName],
+    ["Number", details.phone || "Not shown"],
+    ["Provider", details.providerLabel],
+    ["Status", details.resolutionStatus],
+    details.fallback ? ["Fallback", details.fallback] : null
+  ].filter(Boolean).map(([label, value]) => `
+    <div>
+      <strong>${escapeHtml(translateText(label))}</strong>
+      <span>${escapeHtml(translateText(value))}</span>
+    </div>
+  `).join("");
+}
+
+function renderPendingCallActionCard(pending = {}) {
+  const details = pendingCallDetails(pending);
+  return `<div class="conversation-turn assistant agent-pending-confirm-card pending-call-card" data-pending-call-card="true">
+    <strong>${escapeHtml(translateText("Confirm call before launch"))}</strong>
+    <span>${escapeHtml(translateText(details.actionLabel))}</span>
+    <div class="pending-call-details">${pendingCallDetailRows(details)}</div>
+    <small>${escapeHtml(translateText(details.confirmationPrompt))}</small>
+    <small>${escapeHtml(translateText("Nexus will use the existing confirmation path. No call is launched from the first request."))}</small>
+    <div class="agent-pending-confirm-actions">
+      <button type="button" class="primary" data-agent-pending-confirm="yes">${translateText("Do this now")}</button>
+      <button type="button" data-agent-pending-confirm="no">${translateText("Cancel")}</button>
+    </div>
+  </div>`;
+}
+
+function renderCallStatusCard(result = {}) {
+  const metadata = result.metadata || {};
+  const target = metadata.target || {};
+  const resolution = metadata.resolution || {};
+  const matches = resolution.matches || metadata.pendingContactCall?.matches || [];
+  const provider = metadata.provider || metadata.requestedProvider || "";
+  const status = result.intent === "call.multiple_matches"
+    ? "Choose a contact"
+    : result.intent === "call.number_needed" || result.intent === "call.target_needed"
+      ? "Phone number needed"
+      : result.status || "Call request";
+  const rows = [
+    ["Requested", target.displayName || target.rawName || "Not specified"],
+    ["Provider", callProviderLabel(provider)],
+    ["Status", resolution.status || result.status || "needs input"]
+  ];
+  const matchHtml = matches.length
+    ? `<div class="pending-call-matches">${matches.slice(0, 4).map((match, index) => `
+      <span>${escapeHtml(`${index + 1}. ${match.displayName || match.name || "Contact"}${match.source ? ` (${match.source})` : ""}`)}</span>
+    `).join("")}</div>`
+    : "";
+  return `<div class="conversation-turn assistant call-status-card" data-call-status-card="true">
+    <strong>${escapeHtml(translateText(status))}</strong>
+    <span>${escapeHtml(translateText(result.response || "Nexus needs one more detail before it can stage a call."))}</span>
+    <div class="pending-call-details">${rows.map(([label, value]) => `
+      <div>
+        <strong>${escapeHtml(translateText(label))}</strong>
+        <span>${escapeHtml(translateText(value))}</span>
+      </div>
+    `).join("")}</div>
+    ${matchHtml}
+    <small>${escapeHtml(translateText("No executable call is available until Nexus has a resolved contact and asks for confirmation."))}</small>
+  </div>`;
+}
+
 function renderConversationPanel() {
   const panel = $("#globalConversationPanel");
   if (!panel || !data) return;
   const turns = data.profile.agentConversation || [];
   const pending = data.profile.agentPendingAction;
+  const latestResult = data.commandResult || {};
   const recentTurns = turns.slice(-8);
   const pendingHtml = pending
-    ? `<div class="conversation-turn assistant agent-pending-confirm-card">
+    ? pending.kind === "call" || pending.pendingActionType === "outbound_call" || pending.tool === "communications.outbound_call"
+      ? renderPendingCallActionCard(pending)
+      : `<div class="conversation-turn assistant agent-pending-confirm-card">
         <strong>${translateText("Ready to continue?")}</strong>
         <span>${escapeHtml(translateText(`Nexus is ready to ${String(pending.action || "run this workflow").toLowerCase()}. Press Do this now to continue, or Cancel to stop.`))}</span>
         <div class="agent-pending-confirm-actions">
@@ -9355,12 +9466,13 @@ function renderConversationPanel() {
         </div>
       </div>`
     : "";
+  const callStatusHtml = !pending && /^call\./.test(String(latestResult.intent || "")) ? renderCallStatusCard(latestResult) : "";
   panel.innerHTML = (recentTurns.length ? recentTurns.map(turn => `
     <div class="conversation-turn ${turn.role === "user" ? "user" : "assistant"}">
       <strong>${turn.role === "user" ? "You" : "AgriNexus"}</strong>
       <span>${escapeHtml(turn.text)}</span>
     </div>
-  `).join("") : `<div class="conversation-turn assistant"><strong>AgriNexus</strong><span>Ask me to open telehealth, apply for a job, start training, contact a buyer, run a drone scan, or check provider engines.</span></div>`) + pendingHtml;
+  `).join("") : `<div class="conversation-turn assistant"><strong>AgriNexus</strong><span>Ask me to open telehealth, apply for a job, start training, contact a buyer, run a drone scan, or check provider engines.</span></div>`) + callStatusHtml + pendingHtml;
 }
 
 function latestOnboardingRun() {

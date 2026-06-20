@@ -25,6 +25,7 @@
     "companion:confirmation-gate-smoke": "node scripts/companion-confirmation-gate-smoke.js",
     "companion:response-quality-smoke": "node scripts/companion-response-quality-smoke.js",
     "call:intent-smoke": "node scripts/call-intent-smoke.js",
+    "call:pending-ui-qa": "node scripts/pending-call-ui-qa.js",
     "phone:greeting-qa": "node scripts/phone-greeting-qa.js",
     "auth:login-gate-qa": "node scripts/auth-login-gate-qa.js",
     "auth:login-api-smoke": "node scripts/auth-login-api-smoke.js",
