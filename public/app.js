@@ -16,6 +16,45 @@ const MAP_ZOOM_CONFIG = Object.freeze({
   maxNativeZoom: 19,
   wheelPxPerZoomLevel: 72
 });
+const DEFAULT_MAP_TILE_CONFIG = Object.freeze({
+  engine: "leaflet",
+  provider: "built-in-defaults",
+  requiresNetwork: true,
+  offlineTileCaching: false,
+  layers: {
+    operational: {
+      name: "Operational map",
+      url: "https://services.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}",
+      attribution: "Esri World Street Map",
+      enabled: true
+    },
+    openStreetMap: {
+      name: "OpenStreetMap",
+      url: "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+      attribution: "OpenStreetMap contributors",
+      enabled: true
+    },
+    satellite: {
+      name: "Satellite imagery",
+      url: "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+      attribution: "Esri World Imagery",
+      enabled: true
+    },
+    labels: {
+      name: "Country names and borders",
+      url: "https://services.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}",
+      attribution: "Esri boundaries and places",
+      enabled: true
+    },
+    humanitarian: {
+      name: "Humanitarian street map",
+      url: "https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png",
+      attribution: "OpenStreetMap Humanitarian",
+      enabled: true
+    }
+  }
+});
+let mapTileConfig = DEFAULT_MAP_TILE_CONFIG;
 let selectedLearningTrack = "All";
 let selectedPersona = localStorage.getItem("agrinexusPersona") || "farmer";
 let experienceMode = localStorage.getItem("agrinexusExperienceMode") || "";
@@ -12842,36 +12881,37 @@ function addRealMapTiles(targetMap) {
     targetMap.getPane("mapGrid").style.pointerEvents = "none";
   }
   const tileOptions = leafletTileOptions();
-  const operationalLayer = L.tileLayer("https://services.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}", {
+  const mapLayers = normalizedMapTileLayers();
+  const operationalLayer = L.tileLayer(mapLayers.operational.url, {
     ...tileOptions,
-    attribution: "Esri World Street Map"
+    attribution: mapLayers.operational.attribution
   });
-  const osmStandardLayer = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+  const osmStandardLayer = L.tileLayer(mapLayers.openStreetMap.url, {
     ...tileOptions,
-    attribution: "OpenStreetMap contributors"
+    attribution: mapLayers.openStreetMap.attribution
   });
-  const satelliteLayer = L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", {
+  const satelliteLayer = L.tileLayer(mapLayers.satellite.url, {
     ...tileOptions,
-    attribution: "Esri World Imagery"
+    attribution: mapLayers.satellite.attribution
   });
-  const labelLayer = L.tileLayer("https://services.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}", {
+  const labelLayer = L.tileLayer(mapLayers.labels.url, {
     ...tileOptions,
-    attribution: "Esri boundaries and places",
+    attribution: mapLayers.labels.attribution,
     pane: "countryLabels",
     opacity: .95
   });
-  const humanitarianLayer = L.tileLayer("https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png", {
+  const humanitarianLayer = L.tileLayer(mapLayers.humanitarian.url, {
     ...tileOptions,
-    attribution: "OpenStreetMap Humanitarian"
+    attribution: mapLayers.humanitarian.attribution
   });
   const gridLayer = createGlobalGridLayer();
   const statusControl = addLiveMapStatusControl(targetMap);
   [
-    [operationalLayer, "Operational map"],
-    [satelliteLayer, "Satellite imagery"],
-    [labelLayer, "Country names and borders"],
-    [osmStandardLayer, "OpenStreetMap"],
-    [humanitarianLayer, "Humanitarian street map"]
+    [operationalLayer, mapLayers.operational.name],
+    [satelliteLayer, mapLayers.satellite.name],
+    [labelLayer, mapLayers.labels.name],
+    [osmStandardLayer, mapLayers.openStreetMap.name],
+    [humanitarianLayer, mapLayers.humanitarian.name]
   ].forEach(([layer, layerName]) => {
     layer.on("tileload", () => statusControl.tileLoad(layerName));
     layer.on("tileerror", () => statusControl.tileError(layerName));
@@ -12888,17 +12928,51 @@ function addRealMapTiles(targetMap) {
   labelLayer.addTo(targetMap);
   gridLayer.addTo(targetMap);
   L.control.layers({
-    "Operational map": operationalLayer,
-    "Satellite imagery": satelliteLayer,
-    "OpenStreetMap": osmStandardLayer,
-    "Humanitarian street map": humanitarianLayer
+    [mapLayers.operational.name]: operationalLayer,
+    [mapLayers.satellite.name]: satelliteLayer,
+    [mapLayers.openStreetMap.name]: osmStandardLayer,
+    [mapLayers.humanitarian.name]: humanitarianLayer
   }, {
-    "Country names and borders": labelLayer,
+    [mapLayers.labels.name]: labelLayer,
     "Latitude/longitude grid": gridLayer
   }, { collapsed: true }).addTo(targetMap);
   L.control.scale({ metric: true, imperial: false }).addTo(targetMap);
   addGlobalMapControl(targetMap);
   return { operationalLayer, satelliteLayer, osmStandardLayer, humanitarianLayer, labelLayer, gridLayer };
+}
+
+function normalizedMapTileLayers() {
+  const defaults = DEFAULT_MAP_TILE_CONFIG.layers;
+  const configured = mapTileConfig?.layers || {};
+  return Object.fromEntries(Object.entries(defaults).map(([key, fallback]) => {
+    const layer = configured[key] || {};
+    const url = typeof layer.url === "string" && layer.url.trim() ? layer.url.trim() : fallback.url;
+    const attribution = typeof layer.attribution === "string" && layer.attribution.trim() ? layer.attribution.trim() : fallback.attribution;
+    const name = typeof layer.name === "string" && layer.name.trim() ? layer.name.trim() : fallback.name;
+    return [key, { ...fallback, ...layer, name, url, attribution }];
+  }));
+}
+
+async function loadPublicMapConfig() {
+  try {
+    const response = await fetch("/api/config", { credentials: "same-origin" });
+    if (!response.ok) throw new Error("Map config unavailable");
+    const config = await response.json();
+    if (config?.map?.engine === "leaflet" && config.map.layers) {
+      mapTileConfig = {
+        ...DEFAULT_MAP_TILE_CONFIG,
+        ...config.map,
+        layers: {
+          ...DEFAULT_MAP_TILE_CONFIG.layers,
+          ...(config.map.layers || {})
+        }
+      };
+    }
+  } catch (error) {
+    mapTileConfig = DEFAULT_MAP_TILE_CONFIG;
+    console.warn("Using default map tile configuration", error?.message || error);
+  }
+  return mapTileConfig;
 }
 
 function leafletMapOptions(options = {}) {
@@ -23972,6 +24046,7 @@ function bindStatic() {
 async function boot() {
   registerWebApp();
   installAgriNexusNativeBridge();
+  await loadPublicMapConfig();
   bindStatic();
   captureOriginalText();
   setLoginLanguage(localStorage.getItem("agrinexusLoginLanguage") || "en");

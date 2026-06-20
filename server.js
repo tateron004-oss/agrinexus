@@ -5763,6 +5763,78 @@ function mapTileProbeUrl() {
     .replace("{s}", "a");
 }
 
+const DEFAULT_PUBLIC_MAP_TILE_LAYERS = {
+  operational: {
+    name: "Operational map",
+    url: "https://services.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}",
+    attribution: "Esri World Street Map",
+    enabled: true
+  },
+  openStreetMap: {
+    name: "OpenStreetMap",
+    url: "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+    attribution: "OpenStreetMap contributors",
+    enabled: true
+  },
+  satellite: {
+    name: "Satellite imagery",
+    url: "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+    attribution: "Esri World Imagery",
+    enabled: true
+  },
+  labels: {
+    name: "Country names and borders",
+    url: "https://services.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}",
+    attribution: "Esri boundaries and places",
+    enabled: true
+  },
+  humanitarian: {
+    name: "Humanitarian street map",
+    url: "https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png",
+    attribution: "OpenStreetMap Humanitarian",
+    enabled: true
+  }
+};
+
+function publicTileLayerConfig(key, env = process.env) {
+  const defaults = DEFAULT_PUBLIC_MAP_TILE_LAYERS[key];
+  if (!defaults) return null;
+  const envMap = {
+    operational: ["MAP_TILE_URL", "MAP_TILE_ATTRIBUTION"],
+    satellite: ["MAP_IMAGERY_TILE_URL", "MAP_IMAGERY_ATTRIBUTION"],
+    labels: ["MAP_LABEL_TILE_URL", "MAP_LABEL_ATTRIBUTION"],
+    humanitarian: ["MAP_HUMANITARIAN_TILE_URL", "MAP_HUMANITARIAN_ATTRIBUTION"],
+    openStreetMap: ["MAP_OSM_TILE_URL", "MAP_OSM_ATTRIBUTION"]
+  };
+  const [urlEnv, attributionEnv] = envMap[key] || [];
+  const configuredUrl = String(env[urlEnv] || "").trim();
+  const configuredAttribution = String(env[attributionEnv] || "").trim();
+  const safeUrl = /^(https?:)?\/\//i.test(configuredUrl) ? configuredUrl : "";
+  return {
+    ...defaults,
+    url: safeUrl || defaults.url,
+    attribution: configuredAttribution || defaults.attribution,
+    configured: Boolean(safeUrl)
+  };
+}
+
+function publicMapConfig(env = process.env) {
+  return {
+    engine: "leaflet",
+    provider: env.MAP_TILE_PROVIDER || "built-in-defaults",
+    requiresNetwork: true,
+    offlineTileCaching: false,
+    layerConfigSource: "server-public-config",
+    layers: {
+      operational: publicTileLayerConfig("operational", env),
+      openStreetMap: publicTileLayerConfig("openStreetMap", env),
+      satellite: publicTileLayerConfig("satellite", env),
+      labels: publicTileLayerConfig("labels", env),
+      humanitarian: publicTileLayerConfig("humanitarian", env)
+    }
+  };
+}
+
 async function fetchWithTimeout(url, options = {}, timeoutMs = 8000) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
@@ -25653,14 +25725,15 @@ async function api(req, res, url) {
   }
 
   if (url.pathname === "/api/config" && req.method === "GET") {
+    const publicMap = publicMapConfig();
     return send(res, 200, {
       ai: {
         provider: process.env.OPENAI_API_KEY ? "openai" : "offline-simulation",
         model: process.env.OPENAI_API_KEY ? AI_MODEL : null
       },
       map: {
-        provider: "leaflet-openstreetmap",
-        requiresNetwork: true
+        ...publicMap,
+        provider: `leaflet-${publicMap.provider || "built-in-defaults"}`
       },
       persistence: usingPostgresState() ? "postgresql" : "json-file"
     });

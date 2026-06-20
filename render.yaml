@@ -240,6 +240,20 @@ services:
         value: openstreetmap
       - key: MAP_TILE_URL
         value: https://tile.openstreetmap.org/{z}/{x}/{y}.png
+      - key: MAP_TILE_ATTRIBUTION
+        value: OpenStreetMap contributors
+      - key: MAP_IMAGERY_TILE_URL
+        value: https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}
+      - key: MAP_IMAGERY_ATTRIBUTION
+        value: Esri World Imagery
+      - key: MAP_LABEL_TILE_URL
+        value: https://services.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}
+      - key: MAP_LABEL_ATTRIBUTION
+        value: Esri boundaries and places
+      - key: MAP_HUMANITARIAN_TILE_URL
+        value: https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png
+      - key: MAP_HUMANITARIAN_ATTRIBUTION
+        value: OpenStreetMap Humanitarian
       - key: MAPBOX_ACCESS_TOKEN
         sync: false
       - key: OPENROUTESERVICE_API_KEY

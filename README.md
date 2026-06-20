@@ -73,12 +73,17 @@ Do not put API keys into frontend files. The browser talks only to this local ba
 
 Backend mode uses Leaflet with OpenStreetMap tiles. It requires network access for map tiles. Direct mode uses an embedded local schematic map so it can run without a server or network.
 
-To use a custom production tile provider, set:
+The backend exposes a safe public map configuration at `/api/config`; the browser uses that public tile URL and attribution contract instead of relying only on hardcoded frontend tile URLs. Do not put secret-bearing URLs or private API keys in tile URL variables because tile templates are delivered to the browser.
+
+To use a custom production street/operational tile provider, set:
 
 ```powershell
 $env:MAP_TILE_PROVIDER="custom-tile"
 $env:MAP_TILE_URL="https://your-tile-provider/{z}/{x}/{y}.png"
+$env:MAP_TILE_ATTRIBUTION="Your tile attribution"
 ```
+
+Optional public layer overrides are `MAP_IMAGERY_TILE_URL`, `MAP_IMAGERY_ATTRIBUTION`, `MAP_LABEL_TILE_URL`, `MAP_LABEL_ATTRIBUTION`, `MAP_HUMANITARIAN_TILE_URL`, and `MAP_HUMANITARIAN_ATTRIBUTION`. Offline tile caching is not implemented yet; the PWA caches the app shell, not third-party map tiles.
 
 ## Integration Activation
 

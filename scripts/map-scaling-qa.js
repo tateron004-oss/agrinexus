@@ -27,6 +27,8 @@ assert(html.includes("leaflet@1.9.4/dist/leaflet.js"), "Leaflet JS should be loa
 assert(count(/L\.map\(/g) >= 7, "Expected all real map canvases to initialize through Leaflet.");
 assert(count(/L\.map\([^)]*leafletMapOptions\(/g) >= 7, "Every Leaflet map should use the shared zoom contract.");
 assert(app.includes("const MAP_ZOOM_CONFIG"), "Map zoom config should be centralized.");
+assert(app.includes("const DEFAULT_MAP_TILE_CONFIG"), "Frontend should keep safe local map tile defaults.");
+assert(app.includes("loadPublicMapConfig"), "Frontend should consume public map config when available.");
 assert(app.includes("minZoom: MAP_ZOOM_CONFIG.minZoom"), "Leaflet maps/tiles should configure minZoom.");
 assert(app.includes("maxZoom: MAP_ZOOM_CONFIG.maxZoom"), "Leaflet maps/tiles should configure maxZoom.");
 assert(app.includes("maxNativeZoom: MAP_ZOOM_CONFIG.maxNativeZoom"), "Tile layers should cap native raster zoom to avoid blurry over-zoom.");
@@ -48,7 +50,7 @@ assert(sw.includes("app.js") && sw.includes("styles.css"), "PWA shell should sti
 assert(mobileBridge.includes("mapsAndLocation"), "Native/mobile map and location bridge metadata should still exist.");
 assert(foundationConfig.includes("MAP_TILE_PROVIDER"), "Foundation map provider config should remain available.");
 assert(mapsService.includes("tileProvider()"), "Foundation maps service should expose provider metadata.");
-assert(server.includes("/api/config") && server.includes("leaflet-openstreetmap"), "Server config should report map runtime metadata.");
+assert(server.includes("/api/config") && server.includes("publicMapConfig()") && server.includes("leaflet-"), "Server config should report public Leaflet map runtime metadata.");
 assert(pkg.scripts["map:scaling-qa"] === "node scripts/map-scaling-qa.js", "package script should expose map scaling QA.");
 
 const mapCss = css
