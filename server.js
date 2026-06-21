@@ -2769,6 +2769,10 @@ const INVESTOR_HEALTH_RECORD_FIELDS = new Set([
   "providerStatus",
   "providerRole",
   "liveProvider",
+  "videoMode",
+  "handoffOnly",
+  "realTimeVideo",
+  "liveProviderConnected",
   "simulation",
   "demoRecord",
   "source",
@@ -9599,10 +9603,16 @@ function createVideoSessionWorkflow(db, user, body = {}) {
     intakeId: intake?.id || null,
     encounterId: encounter?.encounterId || null,
     patientRef: intake?.patientRef || null,
-    videoNote: String(body.videoNote || body.mediaNote || (isHealth ? "Show injury, swelling, rash, fall, mobility, or visible concern to provider." : "Show crop quality, damage, quantity, packaging, field condition, and pickup readiness to buyer.")),
+    videoNote: String(body.videoNote || body.mediaNote || (isHealth ? "Use local camera preview to document injury, swelling, rash, fall, mobility, or visible concern for a provider handoff record." : "Show crop quality, damage, quantity, packaging, field condition, and pickup readiness to buyer.")),
     liveProvider: process.env.VIDEO_PROVIDER || process.env.TELEHEALTH_VIDEO_PROVIDER || "browser-camera",
-    providerStatus: process.env.VIDEO_WEBHOOK_URL || process.env.TELEHEALTH_VIDEO_WEBHOOK_URL ? "live-provider-ready" : "local-browser-video-ready",
+    providerStatus: isHealth ? "local-handoff-ready" : process.env.VIDEO_WEBHOOK_URL || process.env.TELEHEALTH_VIDEO_WEBHOOK_URL ? "live-provider-ready" : "local-browser-video-ready",
     joinUrl: process.env.VIDEO_WEBHOOK_URL || process.env.TELEHEALTH_VIDEO_WEBHOOK_URL || "/video/local-browser-session",
+    ...(isHealth ? {
+      videoMode: "local-handoff-demo",
+      handoffOnly: true,
+      realTimeVideo: false,
+      liveProviderConnected: false
+    } : {}),
     fallbackChannels: isHealth ? ["phone callback", "SMS", "WhatsApp", "caregiver handoff"] : ["buyer message", "SMS", "WhatsApp", "photo evidence"],
     consent: isHealth ? "Ask permission before showing injury or patient details." : "Ask permission before showing field, crop, buyer, or payment details.",
     createdBy: user.email,
@@ -9610,9 +9620,13 @@ function createVideoSessionWorkflow(db, user, body = {}) {
   }, body, isHealth ? {
     providerName: "Telehealth provider",
     subject: intake?.patientRef || "patient video review",
-    videoNote: "Show injury, swelling, rash, fall, mobility, or visible concern to provider.",
+    videoNote: "Use local camera preview to document injury, swelling, rash, fall, mobility, or visible concern for a provider handoff record.",
     liveProvider: process.env.VIDEO_PROVIDER || process.env.TELEHEALTH_VIDEO_PROVIDER || "browser-camera",
-    joinUrl: process.env.VIDEO_WEBHOOK_URL || process.env.TELEHEALTH_VIDEO_WEBHOOK_URL || "/video/local-browser-session"
+    joinUrl: process.env.VIDEO_WEBHOOK_URL || process.env.TELEHEALTH_VIDEO_WEBHOOK_URL || "/video/local-browser-session",
+    videoMode: "local-handoff-demo",
+    handoffOnly: true,
+    realTimeVideo: false,
+    liveProviderConnected: false
   } : {});
   db.profile.videoSessions.unshift(session);
   db.profile.videoSessions = db.profile.videoSessions.slice(0, 50);
@@ -9634,18 +9648,18 @@ function createVideoSessionWorkflow(db, user, body = {}) {
   addNotification(db.profile, {
     module: moduleName,
     channel: "video",
-    message: isHealth ? `Telehealth video ready for ${session.patientRef}.` : `Buyer crop video ready for ${subject}.`
+    message: isHealth ? `Telehealth video handoff record ready for ${session.patientRef}; no live provider room started.` : `Buyer crop video ready for ${subject}.`
   });
   logIntegration(db, {
     providerId: isHealth ? "health-telehealth" : "trade-market",
     module: moduleName,
     action: isHealth ? "telehealth.video_session_ready" : "trade.buyer_video_session_ready",
     status: "success",
-    detail: isHealth ? `${session.sessionNumber} video review prepared for ${session.patientRef}.` : `${session.sessionNumber} buyer crop video prepared for ${subject}.`,
-    metadata: { videoSessionId: session.id, sessionNumber: session.sessionNumber, providerStatus: session.providerStatus, joinUrl: session.joinUrl }
+    detail: isHealth ? `${session.sessionNumber} local video handoff record prepared for ${session.patientRef}; no real-time provider connection started.` : `${session.sessionNumber} buyer crop video prepared for ${subject}.`,
+    metadata: { videoSessionId: session.id, sessionNumber: session.sessionNumber, providerStatus: session.providerStatus, joinUrl: session.joinUrl, ...(isHealth ? { videoMode: session.videoMode, handoffOnly: session.handoffOnly, realTimeVideo: session.realTimeVideo, liveProviderConnected: session.liveProviderConnected } : {}) }
   });
-  rememberAgentMemory(db.profile, `${moduleName} video session prepared: ${session.sessionNumber} for ${subject}.`, { source: "video-session", category: "communications", module: moduleName, confidence: 0.92 });
-  addActivity(db.profile, `${session.sessionNumber} ${moduleName} video session ready for ${subject}.`);
+  rememberAgentMemory(db.profile, `${moduleName} ${isHealth ? "video handoff record" : "video session"} prepared: ${session.sessionNumber} for ${subject}.`, { source: "video-session", category: "communications", module: moduleName, confidence: 0.92 });
+  addActivity(db.profile, isHealth ? `${session.sessionNumber} Healthcare local video handoff record ready for ${subject}; not a live provider room.` : `${session.sessionNumber} ${moduleName} video session ready for ${subject}.`);
   return session;
 }
 
@@ -13768,7 +13782,7 @@ async function executeAgentTool(db, user, step) {
   if (step.tool === "health.careplan") return runHealthActionByAgent(db, user, "careplan");
   if (step.tool === "health.video_session") {
     const session = createVideoSessionWorkflow(db, user, { type: "health", videoNote: step.detail });
-    return `Prepared ${session.sessionNumber} so the patient can show the provider the injury or visible concern.`;
+    return `Prepared ${session.sessionNumber} as a local camera preview and video handoff record only; no live provider room or real-time video connection is started.`;
   }
 
   if (step.tool === "communications.outbound_call") {
@@ -24480,7 +24494,7 @@ async function runAgentCommand(db, user, command, options = {}) {
     const session = createVideoSessionWorkflow(db, user, { type: "telehealth-video", subject: "telehealth video support", note: text });
     return {
       intent: "health.video_session_ready",
-      response: `Telehealth video is ready. ${session.sessionNumber} can help the patient show visible concerns to a provider. Nexus is not diagnosing; it is preparing a clearer care handoff.`,
+      response: `Telehealth video handoff record is ready. ${session.sessionNumber} uses local camera preview for a handoff record only; it does not start a live provider visit or real-time video room. Nexus is not diagnosing.`,
       status: "completed",
       metadata: { conversationMode: true, redirectSection: "health", videoSessionId: session.id, sessionNumber: session.sessionNumber }
     };
@@ -24998,7 +25012,7 @@ async function runAgentCommand(db, user, command, options = {}) {
     const session = createVideoSessionWorkflow(db, user, { type: "health", videoNote: text });
     return {
       intent: "health.video_session_ready",
-      response: `Telehealth video is ready. ${session.sessionNumber} lets the patient show the provider the injury or visible concern, with phone, SMS, WhatsApp, and caregiver fallback if video is not strong.`,
+      response: `Local camera preview and telehealth video handoff record are ready. ${session.sessionNumber} does not connect a live provider or start a real telehealth visit; phone, SMS, WhatsApp, and caregiver fallback stay attached.`,
       status: "completed",
       metadata: { conversationMode: true, redirectSection: "health", videoSessionId: session.id, sessionNumber: session.sessionNumber, providerStatus: session.providerStatus }
     };

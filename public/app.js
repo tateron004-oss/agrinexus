@@ -11122,7 +11122,7 @@ function simpleUserCommandWorkflow(command = "") {
     return { workflow: "health", action: "intake", response: "Telehealth intake is open. I will collect the care request, access needs, language, callback, and safety details. This is not a diagnosis.", dataset: {} };
   }
   if (lower.includes("telehealth access") || lower.includes("talk to provider") || lower.includes("speak to provider")) return { workflow: "health", action: "provider", response: "Provider access is ready.", dataset: {} };
-  if (lower.includes("open video for provider") || lower.includes("show injury") || lower.includes("video for provider")) return { workflow: "health", action: "video", response: "Provider video is ready.", dataset: {} };
+  if (lower.includes("open video for provider") || lower.includes("show injury") || lower.includes("video for provider")) return { workflow: "health", action: "video", response: "Local camera preview and video handoff record are ready.", dataset: {} };
   if (lower.includes("contact the listed telehealth provider") || lower.includes("contact listed telehealth provider") || lower.includes("contact telehealth provider listed")) return { workflow: "health", action: "provider", response: "Listed telehealth provider contact is ready.", dataset: {} };
   if (lower.includes("service menu") || lower.includes("clinic prices")) return { workflow: "health", action: "clinic-service-menu", response: "Mobile clinic service menu is ready.", dataset: {} };
   if (lower.includes("mobile clinic payment") || lower.includes("request payment") || lower.includes("charge patient") || lower.includes("clinic billing")) return { workflow: "health", action: "clinic-payment-request", response: "Mobile clinic payment request is ready.", dataset: {} };
@@ -14201,6 +14201,7 @@ function videoSessionPreviewHtml(config) {
         <button type="button" class="btn primary" id="workflowStartCamera">${translateText("Open camera")}</button>
         <button type="button" class="btn ghost" id="workflowStopCamera">${translateText("Stop camera")}</button>
       </div>
+      <p>${translateText(config.videoPreview.boundary || "Local handoff demo only. Not a live provider room; no real-time video connection is started.")}</p>
       <p>${translateText(config.videoPreview.consent || "Ask permission before showing private health, crop, buyer, seller, route, or payment details.")}</p>
     </section>
   `;
@@ -14623,14 +14624,14 @@ function healthUserCopy(action, accessAction) {
     ]
   };
   if (action === "video") return {
-    title: "Show provider on video",
-    summary: "Open a camera-ready telehealth video workflow so the patient or caregiver can show an injury, rash, swelling, fall, movement issue, or visible concern.",
-    guide: "This prepares a video review record. It is not a diagnosis. The user should give permission before showing private health details, and AgriNexus keeps phone, SMS, WhatsApp, caregiver, and low-bandwidth fallback options attached.",
+    title: "Open local camera preview",
+    summary: "Open a local camera preview and create a telehealth video handoff record for an injury, rash, swelling, fall, movement issue, or visible concern.",
+    guide: "This is a handoff-only demo. It creates a video review record, not a live provider room or real telehealth visit. The user should give permission before showing private health details, and AgriNexus keeps phone, SMS, WhatsApp, caregiver, and low-bandwidth fallback options attached.",
     steps: [
       { title: "Confirm patient", detail: "Use the active intake or describe who needs care." },
       { title: "Ask permission", detail: "The patient or caregiver must agree before showing an injury or private detail." },
-      { title: "Open camera", detail: "Use video to show what the provider needs to see." },
-      { title: "Save handoff", detail: "Confirm to create the provider-ready video review record." }
+      { title: "Open local preview", detail: "Use the browser camera preview only after consent; no real-time provider connection starts." },
+      { title: "Save handoff", detail: "Confirm to create the local/demo video handoff record and provider workflow evidence." }
     ]
   };
   if (action === "safety" || action === "inspector") return {
@@ -15151,7 +15152,7 @@ function workflowConfig(workflow, action, element) {
     };
     const summaryMap = {
       intake: "Collect patient need, urgency, accessibility supports, language, caregiver, and callback details before opening the telehealth case.",
-      video: "Open a camera-ready telehealth video handoff so the patient can show an injury, swelling, rash, fall, movement issue, or visible concern to a provider.",
+      video: "Open a local camera preview and create a handoff-only telehealth video record for an injury, swelling, rash, fall, movement issue, or visible concern.",
       accessibility: "Create a telehealth access plan with captions, audio description, caregiver handoff, and low-bandwidth fallback.",
       caption: "Start a caption relay session and transcript workflow for a hearing-impaired patient.",
       caregiver: "Notify a caregiver or community accessibility aide for supported telehealth follow-up.",
@@ -15312,18 +15313,19 @@ function workflowConfig(workflow, action, element) {
       steps: userCopy.steps,
       healthPreview: { country: activeCountry(), title: mobileClinicRevenueActions.has(action) ? "Mobile clinic payment and route context" : ruralHealthActions.has(action) ? "Clinic, mobile clinic, and pharmacy access" : action === "provider" || action === "appointment" || action === "video" ? "Provider and hotspot context" : "Regional health hotspot" },
       videoPreview: action === "video" ? {
-        title: "Telehealth video",
-        detail: "Open camera so the patient or caregiver can show the provider the injury or visible concern.",
-        consent: "Ask permission before showing an injury, face, household, document, or private health detail."
+        title: "Local camera preview only",
+        detail: "Open camera to preview what should be attached to the handoff record. This is not connected to a live provider and no real telehealth visit is started.",
+        boundary: "Local handoff demo only. Not a live provider room; no real-time video connection is started. Join URL is a handoff/demo record unless a real provider integration is configured later.",
+        consent: "Ask permission before showing an injury, face, household, document, or private health detail. Provider workflow evidence is local/demo only."
       } : null,
-      userOutcome: mobileClinicRevenueActions.has(action) ? "AgriNexus prepares the mobile clinic payment path, receipt, payout evidence, and provider record." : supplyActions.has(action) ? "AgriNexus connects the mobile clinic to supply sources, route tracking, and delivery evidence." : ruralHealthActions.has(action) ? "AgriNexus prepares the rural care access path, map evidence, and handoff support." : action === "video" ? "AgriNexus prepares the provider video handoff and fallback contact path." : action === "provider" || action === "appointment" ? "AgriNexus prepares the provider contact path and saves the handoff." : action === "safety" || action === "inspector" ? "AgriNexus records the hotspot review and recommended next step." : "AgriNexus creates the care record and keeps provider support connected.",
+      userOutcome: mobileClinicRevenueActions.has(action) ? "AgriNexus prepares the mobile clinic payment path, receipt, payout evidence, and provider record." : supplyActions.has(action) ? "AgriNexus connects the mobile clinic to supply sources, route tracking, and delivery evidence." : ruralHealthActions.has(action) ? "AgriNexus prepares the rural care access path, map evidence, and handoff support." : action === "video" ? "AgriNexus prepares a local/demo video handoff record and fallback contact path; no live provider room is started." : action === "provider" || action === "appointment" ? "AgriNexus prepares the provider contact path and saves the handoff." : action === "safety" || action === "inspector" ? "AgriNexus records the hotspot review and recommended next step." : "AgriNexus creates the care record and keeps provider support connected.",
       userRecord: mobileClinicRevenueActions.has(action) ? "Provider, patient/sponsor, service, amount, receipt, payout status, and clinical boundary stay connected." : supplyActions.has(action) ? "The supply need, mobile clinic route, source, courier, compliance flags, and delivery proof stay connected." : ruralHealthActions.has(action) ? "The patient's words, language, location, clinic/pharmacy options, safety guidance, and handoff packet stay connected." : "The intake, provider contact, accessibility needs, hotspot context, and follow-up evidence stay connected for the care team.",
       checklist: [
         { title: "Country context", detail: `${activeCountry().name}: ${activeCountry().queue}`, status: "live", label: activeCountry().risk },
         { title: "Active case", detail: (data.profile.healthIntakes || [])[0]?.patientRef || "No intake yet", status: (data.profile.healthIntakes || []).length ? "ready" : "pending", label: "Case" },
         ...(mobileClinicRevenueActions.has(action) ? [{ title: "Revenue desk", detail: `${(data.profile.mobileClinicRevenueRecords || []).length} mobile clinic revenue record(s)`, status: "ready", label: "Billing" }] : []),
         ...(ruralHealthActions.has(action) ? [{ title: supplyActions.has(action) ? "Supply chain" : "Care access", detail: supplyActions.has(action) ? `${(data.profile.mobileClinicSupplyRequests || []).length} request, ${(data.profile.mobileClinicSupplyMatches || []).length} match, ${(data.profile.mobileClinicSupplyDispatches || []).length} dispatch, ${(data.profile.mobileClinicSupplyDeliveries || []).length} delivery` : `${(data.profile.ruralClinicMatches || []).length} clinic match, ${(data.profile.pharmacyRequests || []).length} pharmacy request, ${(data.profile.mobileClinicRequests || []).length} mobile clinic request`, status: "ready", label: supplyActions.has(action) ? "Supplies" : "Rural" }] : []),
-        ...(action === "video" ? [{ title: "Video handoff", detail: (data.profile.videoSessions || [])[0]?.sessionNumber || "No video session yet", status: (data.profile.videoSessions || []).length ? "ready" : "pending", label: "Video" }] : []),
+        ...(action === "video" ? [{ title: "Local handoff demo", detail: `${(data.profile.videoSessions || [])[0]?.sessionNumber || "No video session yet"} - not a live provider room; no real-time video connection`, status: (data.profile.videoSessions || []).length ? "ready" : "pending", label: "Video" }] : []),
         { title: accessAction ? "Assistive support" : "Governance", detail: accessAction ? "Captions, visual support, caregiver handoff, and rural fallback remain attached to the session." : `${activeCountry().quality}% data quality, ${activeCountry().safety}% safety override`, status: "ready", label: accessAction ? "Access" : "Safety" }
       ]
     });
@@ -22175,7 +22177,7 @@ async function handleVoiceCommandCore(rawCommand, options = {}) {
   }
   if (/\b(video|camera|show|see)\b.*\b(injury|wound|rash|swelling|fall|patient|doctor|provider|telehealth|health)\b/.test(lower) || /\b(show|open)\b.*\b(provider|doctor)\b.*\b(video|camera)\b/.test(lower)) {
     goSection("health");
-    return openWorkflowByVoice("health", "video", "I opened Health and prepared the telehealth video workflow. Press Open camera when the patient agrees.");
+    return openWorkflowByVoice("health", "video", "I opened Health and prepared the local camera preview and video handoff record. This does not start a live provider visit. Press Open camera when the patient agrees.");
   }
   if (/\b(video|camera|show|see)\b.*\b(buyer|seller|crop|crops|produce|harvest|quality|field|farm)\b/.test(lower) || /\b(show|open)\b.*\b(buyer|seller)\b.*\b(video|camera)\b/.test(lower)) {
     goSection("trade");
