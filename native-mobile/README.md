@@ -28,6 +28,8 @@ Change this value in:
 
 ## Android Build Path
 
+For the current static QA coverage, manual native build steps, and future wrapper/CI plan, see [BUILD_VALIDATION.md](BUILD_VALIDATION.md).
+
 1. Open `native-mobile/android` in Android Studio.
 2. Let Gradle sync.
 3. Build and run on a real device.
