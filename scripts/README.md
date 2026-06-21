@@ -40,6 +40,8 @@ node scripts\qa-suite.js all-safe
 
 The grouped suites intentionally exclude production/live/network checks, credential validation, database backup/restore, destructive commands, native Android/iOS compile commands, and `foundation/` scripts.
 
+Current local-safe QA posture, including the latest green `qa:all-safe` checkpoint and manual exclusion boundaries, is captured in [`QA_POSTURE.md`](QA_POSTURE.md).
+
 ## Inventory
 
 | Script | npm command | Category | Purpose | Safe to delete |
