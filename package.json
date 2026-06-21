@@ -24,6 +24,7 @@
     "companion:workflow-offer-smoke": "node scripts/companion-workflow-offer-smoke.js",
     "companion:confirmation-gate-smoke": "node scripts/companion-confirmation-gate-smoke.js",
     "companion:response-quality-smoke": "node scripts/companion-response-quality-smoke.js",
+    "call:provider-drift-qa": "node scripts/call-provider-drift-qa.js",
     "call:intent-smoke": "node scripts/call-intent-smoke.js",
     "call:pending-ui-qa": "node scripts/pending-call-ui-qa.js",
     "call:confirmed-handoff-qa": "node scripts/confirmed-call-handoff-qa.js",
