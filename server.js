@@ -2687,6 +2687,7 @@ async function runCrossPlatformFunction(db, user, body = {}) {
 }
 
 const HEALTH_PROFILE_ARRAY_KEYS = new Set([
+  "telehealthEncounters",
   "healthIntakes",
   "carePlans",
   "safetyReviews",
@@ -2745,6 +2746,22 @@ const INVESTOR_HEALTH_RECORD_FIELDS = new Set([
   "dispatchNumber",
   "deliveryNumber",
   "sessionNumber",
+  "encounterId",
+  "intakeId",
+  "appointmentId",
+  "providerAssignmentId",
+  "videoSessionId",
+  "lifecycleState",
+  "linkedRecordCounts",
+  "consentCount",
+  "vitalsCount",
+  "noteCount",
+  "referralCount",
+  "followUpCount",
+  "outcomeCount",
+  "emergencyEscalationCount",
+  "historyCount",
+  "prescriptionPacketCount",
   "providerStatus",
   "liveProvider",
   "simulation",
@@ -2787,6 +2804,138 @@ function withHealthProvenance(record = {}, body = {}, defaults = {}, options = {
     source: options.source || "default-workflow",
     defaultFields: fields
   };
+}
+
+function telehealthEncounterLinkedCounts(encounter = {}) {
+  return {
+    consent: (encounter.consentIds || []).length,
+    vitals: (encounter.vitalsIds || []).length,
+    notes: (encounter.noteIds || []).length,
+    referrals: (encounter.referralIds || []).length,
+    followUps: (encounter.followUpIds || []).length,
+    outcomes: (encounter.outcomeIds || []).length,
+    emergencyEscalations: (encounter.emergencyEscalationIds || []).length,
+    history: (encounter.historyIds || []).length,
+    prescriptionPackets: (encounter.prescriptionPacketIds || []).length
+  };
+}
+
+function syncTelehealthEncounterCounts(encounter = {}) {
+  const counts = telehealthEncounterLinkedCounts(encounter);
+  encounter.linkedRecordCounts = counts;
+  encounter.consentCount = counts.consent;
+  encounter.vitalsCount = counts.vitals;
+  encounter.noteCount = counts.notes;
+  encounter.referralCount = counts.referrals;
+  encounter.followUpCount = counts.followUps;
+  encounter.outcomeCount = counts.outcomes;
+  encounter.emergencyEscalationCount = counts.emergencyEscalations;
+  encounter.historyCount = counts.history;
+  encounter.prescriptionPacketCount = counts.prescriptionPackets;
+  return encounter;
+}
+
+function addUniqueEncounterId(list, id) {
+  if (!id) return list || [];
+  const next = Array.isArray(list) ? list : [];
+  if (!next.includes(id)) next.push(id);
+  return next;
+}
+
+function encounterStatusForLifecycle(lifecycleState, fallback = "active") {
+  if (lifecycleState === "completed") return "completed";
+  if (lifecycleState === "escalated") return "escalated";
+  if (lifecycleState === "follow-up-needed") return "follow-up-needed";
+  return fallback || "active";
+}
+
+function findTelehealthEncounter(profile, { encounterId, intakeId, patientRef } = {}) {
+  ensureHealthProfile(profile);
+  if (encounterId) return profile.telehealthEncounters.find(encounter => encounter.encounterId === encounterId) || null;
+  if (intakeId) return profile.telehealthEncounters.find(encounter => encounter.intakeId === intakeId) || null;
+  if (patientRef) return profile.telehealthEncounters.find(encounter => encounter.patientRef === patientRef) || null;
+  return null;
+}
+
+function createTelehealthEncounter(profile, intake = {}, options = {}) {
+  ensureHealthProfile(profile);
+  const now = new Date().toISOString();
+  const lifecycleState = options.lifecycleState || "intake-started";
+  const defaultFields = Array.from(new Set([...(intake.defaultFields || []), ...(options.defaultFields || [])]));
+  const encounter = syncTelehealthEncounterCounts({
+    encounterId: options.encounterId || crypto.randomUUID(),
+    patientRef: options.patientRef || intake.patientRef || null,
+    intakeId: options.intakeId || intake.id || null,
+    status: options.status || encounterStatusForLifecycle(lifecycleState, "active"),
+    lifecycleState,
+    createdAt: options.createdAt || now,
+    updatedAt: now,
+    appointmentId: options.appointmentId || null,
+    providerAssignmentId: options.providerAssignmentId || null,
+    videoSessionId: options.videoSessionId || null,
+    consentIds: [],
+    vitalsIds: [],
+    noteIds: [],
+    referralIds: [],
+    followUpIds: [],
+    outcomeIds: [],
+    emergencyEscalationIds: [],
+    historyIds: [],
+    prescriptionPacketIds: [],
+    demoRecord: Boolean(options.demoRecord || intake.demoRecord),
+    simulation: Boolean(options.simulation || intake.simulation),
+    source: options.source || intake.source || "telehealth-workflow",
+    defaultFields
+  });
+  profile.telehealthEncounters.unshift(encounter);
+  profile.telehealthEncounters = profile.telehealthEncounters.slice(0, 50);
+  if (intake && intake.id) intake.encounterId = encounter.encounterId;
+  return encounter;
+}
+
+function ensureTelehealthEncounterForIntake(profile, intake = {}, options = {}) {
+  ensureHealthProfile(profile);
+  const existing = findTelehealthEncounter(profile, {
+    encounterId: options.encounterId || intake.encounterId,
+    intakeId: options.intakeId || intake.id,
+    patientRef: options.patientRef || intake.patientRef
+  });
+  if (existing) {
+    if (intake && intake.id) intake.encounterId = existing.encounterId;
+    if (options.lifecycleState || options.status || options.defaultFields || options.source || options.demoRecord || options.simulation) {
+      return updateTelehealthEncounter(profile, existing, options);
+    }
+    return syncTelehealthEncounterCounts(existing);
+  }
+  return createTelehealthEncounter(profile, intake, options);
+}
+
+function updateTelehealthEncounter(profile, encounter, patch = {}) {
+  ensureHealthProfile(profile);
+  if (!encounter) return null;
+  const lifecycleState = patch.lifecycleState || encounter.lifecycleState || "intake-started";
+  if (patch.patientRef !== undefined) encounter.patientRef = patch.patientRef;
+  if (patch.intakeId !== undefined) encounter.intakeId = patch.intakeId;
+  if (patch.appointmentId) encounter.appointmentId = patch.appointmentId;
+  if (patch.providerAssignmentId) encounter.providerAssignmentId = patch.providerAssignmentId;
+  if (patch.videoSessionId) encounter.videoSessionId = patch.videoSessionId;
+  encounter.consentIds = addUniqueEncounterId(encounter.consentIds, patch.consentId);
+  encounter.vitalsIds = addUniqueEncounterId(encounter.vitalsIds, patch.vitalsId);
+  encounter.noteIds = addUniqueEncounterId(encounter.noteIds, patch.noteId);
+  encounter.referralIds = addUniqueEncounterId(encounter.referralIds, patch.referralId);
+  encounter.followUpIds = addUniqueEncounterId(encounter.followUpIds, patch.followUpId);
+  encounter.outcomeIds = addUniqueEncounterId(encounter.outcomeIds, patch.outcomeId);
+  encounter.emergencyEscalationIds = addUniqueEncounterId(encounter.emergencyEscalationIds, patch.emergencyEscalationId);
+  encounter.historyIds = addUniqueEncounterId(encounter.historyIds, patch.historyId);
+  encounter.prescriptionPacketIds = addUniqueEncounterId(encounter.prescriptionPacketIds, patch.prescriptionPacketId);
+  encounter.lifecycleState = lifecycleState;
+  encounter.status = patch.status || encounterStatusForLifecycle(lifecycleState, encounter.status);
+  encounter.demoRecord = Boolean(encounter.demoRecord || patch.demoRecord);
+  encounter.simulation = Boolean(encounter.simulation || patch.simulation);
+  if (patch.source) encounter.source = patch.source;
+  if (patch.defaultFields) encounter.defaultFields = Array.from(new Set([...(encounter.defaultFields || []), ...patch.defaultFields]));
+  encounter.updatedAt = new Date().toISOString();
+  return syncTelehealthEncounterCounts(encounter);
 }
 
 function isInvestorUser(user) {
@@ -8090,6 +8239,7 @@ function roleReadiness(profile, role) {
 }
 
 function ensureHealthProfile(profile) {
+  profile.telehealthEncounters = profile.telehealthEncounters || [];
   profile.healthIntakes = profile.healthIntakes || [];
   profile.carePlans = profile.carePlans || [];
   profile.safetyReviews = profile.safetyReviews || [];
@@ -9403,6 +9553,15 @@ function createVideoSessionWorkflow(db, user, body = {}) {
     }, { defaultFields: ["fallbackIntake"] });
     db.profile.healthIntakes.unshift(intake);
   }
+  const encounter = isHealth && intake
+    ? ensureTelehealthEncounterForIntake(db.profile, intake, {
+      lifecycleState: "intake-started",
+      demoRecord: intake.demoRecord,
+      simulation: intake.simulation,
+      source: intake.source,
+      defaultFields: intake.defaultFields
+    })
+    : null;
   const participant = isHealth
     ? String(body.providerName || "Telehealth provider")
     : String(body.buyerName || product?.buyerName || `${country.name} verified buyer desk`);
@@ -9423,6 +9582,7 @@ function createVideoSessionWorkflow(db, user, body = {}) {
     productId: product?.id || null,
     productName: product?.name || null,
     intakeId: intake?.id || null,
+    encounterId: encounter?.encounterId || null,
     patientRef: intake?.patientRef || null,
     videoNote: String(body.videoNote || body.mediaNote || (isHealth ? "Show injury, swelling, rash, fall, mobility, or visible concern to provider." : "Show crop quality, damage, quantity, packaging, field condition, and pickup readiness to buyer.")),
     liveProvider: process.env.VIDEO_PROVIDER || process.env.TELEHEALTH_VIDEO_PROVIDER || "browser-camera",
@@ -9444,6 +9604,14 @@ function createVideoSessionWorkflow(db, user, body = {}) {
   if (isHealth && intake) {
     intake.queueStatus = "Video review ready";
     intake.mediaNote = session.videoNote;
+    updateTelehealthEncounter(db.profile, encounter, {
+      lifecycleState: "video-ready",
+      videoSessionId: session.id,
+      demoRecord: session.demoRecord || intake.demoRecord,
+      simulation: session.simulation || intake.simulation,
+      source: session.source || intake.source,
+      defaultFields: session.defaultFields
+    });
   }
   if (!isHealth) {
     addTradeEvent(db.profile, { type: "buyer.video_session_ready", label: `${session.sessionNumber} prepared for ${participant} about ${subject}.` });
@@ -28298,6 +28466,13 @@ async function api(req, res, url) {
         caregiverName: "Community accessibility aide"
       });
       db.profile.healthIntakes.unshift(intake);
+      ensureTelehealthEncounterForIntake(db.profile, intake, {
+        lifecycleState: "intake-started",
+        demoRecord: intake.demoRecord,
+        simulation: intake.simulation,
+        source: intake.source,
+        defaultFields: intake.defaultFields
+      });
       logIntegration(db, {
         providerId: "health-telehealth",
         module: "Healthcare",
@@ -28370,6 +28545,7 @@ async function api(req, res, url) {
       const carePlan = withHealthProvenance({
         id: crypto.randomUUID(),
         intakeId: intake.id,
+        encounterId: intake.encounterId || null,
         patientRef: intake.patientRef,
         countryId: country.id,
         status: "active",
@@ -28377,6 +28553,13 @@ async function api(req, res, url) {
         provider: result.provider,
         createdAt: new Date().toISOString()
       }, body, {}, intake.demoRecord ? { defaultFields: ["fallbackIntake"] } : {});
+      const encounter = ensureTelehealthEncounterForIntake(db.profile, intake, {
+        demoRecord: carePlan.demoRecord || intake.demoRecord,
+        simulation: carePlan.simulation || intake.simulation,
+        source: carePlan.source || intake.source,
+        defaultFields: carePlan.defaultFields
+      });
+      carePlan.encounterId = encounter.encounterId;
       db.profile.carePlans.unshift(carePlan);
       logIntegration(db, {
         providerId: "health-ehr",
@@ -28403,9 +28586,17 @@ async function api(req, res, url) {
         needSummary: `${country.name} consent and privacy review`
       }, { defaultFields: ["fallbackIntake"] });
       if (!db.profile.healthIntakes.find(item => item.id === intake.id)) db.profile.healthIntakes.unshift(intake);
+      const encounter = ensureTelehealthEncounterForIntake(db.profile, intake, {
+        lifecycleState: "intake-started",
+        demoRecord: intake.demoRecord,
+        simulation: intake.simulation,
+        source: intake.source,
+        defaultFields: intake.defaultFields
+      });
       const consent = withHealthProvenance({
         id: crypto.randomUUID(),
         intakeId: intake.id,
+        encounterId: encounter.encounterId,
         patientRef: intake.patientRef,
         consentType: body.consentType || "telehealth, caregiver, translation, and assistive-format consent",
         language: body.language || intake.preferredLanguage || user.language || "en",
@@ -28415,9 +28606,18 @@ async function api(req, res, url) {
       }, body, {
         consentType: "telehealth, caregiver, translation, and assistive-format consent"
       }, intake.demoRecord ? { defaultFields: ["fallbackIntake"] } : {});
+      consent.encounterId = encounter.encounterId;
       db.profile.telehealthConsents.unshift(consent);
       db.profile.telehealthConsents = db.profile.telehealthConsents.slice(0, 20);
       intake.queueStatus = "Consent recorded";
+      updateTelehealthEncounter(db.profile, encounter, {
+        lifecycleState: "consent-recorded",
+        consentId: consent.id,
+        demoRecord: consent.demoRecord || intake.demoRecord,
+        simulation: consent.simulation || intake.simulation,
+        source: consent.source || intake.source,
+        defaultFields: consent.defaultFields
+      });
       logIntegration(db, {
         providerId: "health-ehr",
         module: "Healthcare",
@@ -28442,9 +28642,17 @@ async function api(req, res, url) {
         needSummary: `${country.name} vitals and triage review`
       }, { defaultFields: ["fallbackIntake"] });
       if (!db.profile.healthIntakes.find(item => item.id === intake.id)) db.profile.healthIntakes.unshift(intake);
+      const encounter = ensureTelehealthEncounterForIntake(db.profile, intake, {
+        lifecycleState: "intake-started",
+        demoRecord: intake.demoRecord,
+        simulation: intake.simulation,
+        source: intake.source,
+        defaultFields: intake.defaultFields
+      });
       const vitals = withHealthProvenance({
         id: crypto.randomUUID(),
         intakeId: intake.id,
+        encounterId: encounter.encounterId,
         patientRef: intake.patientRef,
         temperatureC: Number(body.temperatureC || (country.heat >= 38 ? 38.1 : 36.8)),
         pulse: Number(body.pulse || (country.risk === "High" ? 96 : 82)),
@@ -28457,9 +28665,18 @@ async function api(req, res, url) {
         pulse: country.risk === "High" ? 96 : 82,
         symptoms: "Heat exposure, dehydration check, accessibility-supported triage"
       }, intake.demoRecord ? { defaultFields: ["fallbackIntake"] } : {});
+      vitals.encounterId = encounter.encounterId;
       db.profile.telehealthVitals.unshift(vitals);
       db.profile.telehealthVitals = db.profile.telehealthVitals.slice(0, 20);
       intake.queueStatus = "Vitals captured";
+      updateTelehealthEncounter(db.profile, encounter, {
+        lifecycleState: "vitals-captured",
+        vitalsId: vitals.id,
+        demoRecord: vitals.demoRecord || intake.demoRecord,
+        simulation: vitals.simulation || intake.simulation,
+        source: vitals.source || intake.source,
+        defaultFields: vitals.defaultFields
+      });
       logIntegration(db, {
         providerId: "health-telehealth",
         module: "Healthcare",
@@ -28484,9 +28701,17 @@ async function api(req, res, url) {
         needSummary: `${country.name} referral review`
       }, { defaultFields: ["fallbackIntake"] });
       if (!db.profile.healthIntakes.find(item => item.id === intake.id)) db.profile.healthIntakes.unshift(intake);
+      const encounter = ensureTelehealthEncounterForIntake(db.profile, intake, {
+        lifecycleState: "intake-started",
+        demoRecord: intake.demoRecord,
+        simulation: intake.simulation,
+        source: intake.source,
+        defaultFields: intake.defaultFields
+      });
       const referral = withHealthProvenance({
         id: crypto.randomUUID(),
         intakeId: intake.id,
+        encounterId: encounter.encounterId,
         patientRef: intake.patientRef,
         destination: body.destination || `${country.name} partner clinic / community health worker`,
         reason: body.reason || "Escalation for accessible follow-up, heat exposure review, and care-plan verification",
@@ -28497,9 +28722,18 @@ async function api(req, res, url) {
         destination: `${country.name} partner clinic / community health worker`,
         reason: "Escalation for accessible follow-up, heat exposure review, and care-plan verification"
       }, intake.demoRecord ? { defaultFields: ["fallbackIntake"] } : {});
+      referral.encounterId = encounter.encounterId;
       db.profile.telehealthReferrals.unshift(referral);
       db.profile.telehealthReferrals = db.profile.telehealthReferrals.slice(0, 20);
       intake.queueStatus = "Referral sent";
+      updateTelehealthEncounter(db.profile, encounter, {
+        lifecycleState: "follow-up-needed",
+        referralId: referral.id,
+        demoRecord: referral.demoRecord || intake.demoRecord,
+        simulation: referral.simulation || intake.simulation,
+        source: referral.source || intake.source,
+        defaultFields: referral.defaultFields
+      });
       logIntegration(db, {
         providerId: "health-notifications",
         module: "Healthcare",
@@ -28524,9 +28758,17 @@ async function api(req, res, url) {
         needSummary: `${country.name} follow-up review`
       }, { defaultFields: ["fallbackIntake"] });
       if (!db.profile.healthIntakes.find(item => item.id === intake.id)) db.profile.healthIntakes.unshift(intake);
+      const encounter = ensureTelehealthEncounterForIntake(db.profile, intake, {
+        lifecycleState: "intake-started",
+        demoRecord: intake.demoRecord,
+        simulation: intake.simulation,
+        source: intake.source,
+        defaultFields: intake.defaultFields
+      });
       const followUp = withHealthProvenance({
         id: crypto.randomUUID(),
         intakeId: intake.id,
+        encounterId: encounter.encounterId,
         patientRef: intake.patientRef,
         scheduleWindow: body.scheduleWindow || "24-hour low-bandwidth callback",
         channels: ["voice callback", "SMS summary", "caregiver packet", "large-print/audio guide"],
@@ -28535,9 +28777,18 @@ async function api(req, res, url) {
       }, body, {
         scheduleWindow: "24-hour low-bandwidth callback"
       }, intake.demoRecord ? { defaultFields: ["fallbackIntake"] } : {});
+      followUp.encounterId = encounter.encounterId;
       db.profile.telehealthFollowUps.unshift(followUp);
       db.profile.telehealthFollowUps = db.profile.telehealthFollowUps.slice(0, 20);
       intake.queueStatus = "Follow-up scheduled";
+      updateTelehealthEncounter(db.profile, encounter, {
+        lifecycleState: "follow-up-needed",
+        followUpId: followUp.id,
+        demoRecord: followUp.demoRecord || intake.demoRecord,
+        simulation: followUp.simulation || intake.simulation,
+        source: followUp.source || intake.source,
+        defaultFields: followUp.defaultFields
+      });
       logIntegration(db, {
         providerId: "health-notifications",
         module: "Healthcare",
@@ -28560,6 +28811,13 @@ async function api(req, res, url) {
         needSummary: `${country.name} accessible telehealth review`
       }, { defaultFields: ["fallbackIntake"] });
       if (!db.profile.healthIntakes.find(item => item.id === intake.id)) db.profile.healthIntakes.unshift(intake);
+      const encounter = ensureTelehealthEncounterForIntake(db.profile, intake, {
+        lifecycleState: "intake-started",
+        demoRecord: intake.demoRecord,
+        simulation: intake.simulation,
+        source: intake.source,
+        defaultFields: intake.defaultFields
+      });
       const actions = {
         accessibility: {
           title: "Accessible telehealth plan",
@@ -28587,6 +28845,7 @@ async function api(req, res, url) {
       const record = withHealthProvenance({
         id: crypto.randomUUID(),
         intakeId: intake.id,
+        encounterId: encounter.encounterId,
         patientRef: intake.patientRef,
         countryId: country.id,
         title: selected.title,
@@ -28595,6 +28854,7 @@ async function api(req, res, url) {
         supports: selected.supports,
         createdAt: new Date().toISOString()
       }, body, {}, { defaultFields: ["supports"] });
+      record.encounterId = encounter.encounterId;
       db.profile.telehealthAccessibility.unshift(record);
       db.profile.telehealthAccessibility = db.profile.telehealthAccessibility.slice(0, 20);
       intake.queueStatus = selected.status;
@@ -29118,10 +29378,18 @@ async function api(req, res, url) {
       caregiverName: "Community accessibility aide"
     }, { simulation: true });
     db.profile.healthIntakes.unshift(intake);
+    const encounter = ensureTelehealthEncounterForIntake(db.profile, intake, {
+      lifecycleState: "intake-started",
+      demoRecord: true,
+      simulation: true,
+      source: intake.source || "demo-simulation",
+      defaultFields: intake.defaultFields
+    });
 
     const consent = withHealthProvenance({
       id: crypto.randomUUID(),
       intakeId: intake.id,
+      encounterId: encounter.encounterId,
       patientRef: intake.patientRef,
       consentType: "telehealth, translation, caregiver, transcript, and assistive-format consent",
       language: preferredLanguage,
@@ -29134,6 +29402,7 @@ async function api(req, res, url) {
     const vitals = withHealthProvenance({
       id: crypto.randomUUID(),
       intakeId: intake.id,
+      encounterId: encounter.encounterId,
       patientRef: intake.patientRef,
       temperatureC: Number(body.temperatureC || (country.heat >= 38 ? 38.2 : 36.9)),
       pulse: Number(body.pulse || (riskLevel.toLowerCase().includes("priority") ? 98 : 84)),
@@ -29149,6 +29418,7 @@ async function api(req, res, url) {
     const accessRecord = withHealthProvenance({
       id: crypto.randomUUID(),
       intakeId: intake.id,
+      encounterId: encounter.encounterId,
       patientRef: intake.patientRef,
       countryId: country.id,
       title: "Guided accessible intake packet",
@@ -29160,6 +29430,7 @@ async function api(req, res, url) {
     const referral = withHealthProvenance({
       id: crypto.randomUUID(),
       intakeId: intake.id,
+      encounterId: encounter.encounterId,
       patientRef: intake.patientRef,
       destination: body.destination || `${country.name} partner clinic / community health worker`,
       reason: body.reason || "Guided intake flagged accessible follow-up and provider verification",
@@ -29173,6 +29444,7 @@ async function api(req, res, url) {
     const followUp = withHealthProvenance({
       id: crypto.randomUUID(),
       intakeId: intake.id,
+      encounterId: encounter.encounterId,
       patientRef: intake.patientRef,
       scheduleWindow: body.scheduleWindow || "24-hour voice callback with SMS summary",
       channels: ["voice callback", "SMS summary", "caregiver packet", "large-print/audio guide"],
@@ -29192,6 +29464,23 @@ async function api(req, res, url) {
     db.profile.telehealthAccessibility = db.profile.telehealthAccessibility.slice(0, 20);
     db.profile.telehealthReferrals = db.profile.telehealthReferrals.slice(0, 20);
     db.profile.telehealthFollowUps = db.profile.telehealthFollowUps.slice(0, 20);
+    updateTelehealthEncounter(db.profile, encounter, {
+      lifecycleState: "follow-up-needed",
+      consentId: consent.id,
+      vitalsId: vitals.id,
+      referralId: referral.id,
+      followUpId: followUp.id,
+      demoRecord: true,
+      simulation: true,
+      source: "demo-simulation",
+      defaultFields: [
+        ...(intake.defaultFields || []),
+        ...(consent.defaultFields || []),
+        ...(vitals.defaultFields || []),
+        ...(referral.defaultFields || []),
+        ...(followUp.defaultFields || [])
+      ]
+    });
     db.profile.representativeConnections += 1;
     country.queue = "Guided intake complete";
     country.patients += 1;
@@ -29249,6 +29538,13 @@ async function api(req, res, url) {
       }, { defaultFields: ["fallbackIntake"] });
       db.profile.healthIntakes.unshift(intake);
     }
+    const encounter = ensureTelehealthEncounterForIntake(db.profile, intake, {
+      lifecycleState: "intake-started",
+      demoRecord: intake.demoRecord,
+      simulation: intake.simulation,
+      source: intake.source,
+      defaultFields: intake.defaultFields
+    });
     const type = body.type || "appointment";
     const now = new Date().toISOString();
     const makers = {
@@ -29257,6 +29553,7 @@ async function api(req, res, url) {
           id: crypto.randomUUID(),
           appointmentNumber: `AN-APT-${String(db.profile.telehealthAppointments.length + 1).padStart(3, "0")}`,
           intakeId: intake.id,
+          encounterId: encounter.encounterId,
           patientRef: intake.patientRef,
           scheduleWindow: body.scheduleWindow || "next available rural telehealth slot",
           modality: body.modality || "voice/video with SMS fallback",
@@ -29274,6 +29571,7 @@ async function api(req, res, url) {
           id: crypto.randomUUID(),
           assignmentNumber: `AN-PROV-${String(db.profile.telehealthProviderAssignments.length + 1).padStart(3, "0")}`,
           intakeId: intake.id,
+          encounterId: encounter.encounterId,
           patientRef: intake.patientRef,
           providerName: body.providerName || `${country.name} telehealth provider desk`,
           specialty: body.specialty || (intake.riskLevel === "High" ? "urgent rural care" : "primary care"),
@@ -29290,6 +29588,7 @@ async function api(req, res, url) {
           id: crypto.randomUUID(),
           historyNumber: `AN-HIST-${String(db.profile.patientHistoryRecords.length + 1).padStart(3, "0")}`,
           intakeId: intake.id,
+          encounterId: encounter.encounterId,
           patientRef: intake.patientRef,
           allergies: body.allergies || "none reported",
           conditions: body.conditions || "heat exposure risk, mobility/accessibility support, rural access barriers",
@@ -29306,6 +29605,7 @@ async function api(req, res, url) {
           id: crypto.randomUUID(),
           packetNumber: `AN-RX-${String(db.profile.telehealthPrescriptionPackets.length + 1).padStart(3, "0")}`,
           intakeId: intake.id,
+          encounterId: encounter.encounterId,
           patientRef: intake.patientRef,
           packetType: "clinician review packet",
           contents: ["care plan", "referral", "vitals", "patient history", "accessibility needs", "pharmacy/clinic handoff"],
@@ -29320,6 +29620,7 @@ async function api(req, res, url) {
           id: crypto.randomUUID(),
           escalationNumber: `AN-ESC-${String(db.profile.telehealthEmergencyEscalations.length + 1).padStart(3, "0")}`,
           intakeId: intake.id,
+          encounterId: encounter.encounterId,
           patientRef: intake.patientRef,
           reason: body.reason || "high-risk symptoms, heat exposure, or urgent access barrier",
           destination: `${country.name} emergency partner / community health worker`,
@@ -29335,6 +29636,7 @@ async function api(req, res, url) {
           id: crypto.randomUUID(),
           noteNumber: `AN-NOTE-${String(db.profile.careTeamNotes.length + 1).padStart(3, "0")}`,
           intakeId: intake.id,
+          encounterId: encounter.encounterId,
           patientRef: intake.patientRef,
           author: user.name,
           note: body.note || "Care team reviewed accessibility, language, caregiver, and rural follow-up needs.",
@@ -29349,6 +29651,7 @@ async function api(req, res, url) {
           id: crypto.randomUUID(),
           outcomeNumber: `AN-OUT-${String(db.profile.telehealthOutcomeReviews.length + 1).padStart(3, "0")}`,
           intakeId: intake.id,
+          encounterId: encounter.encounterId,
           patientRef: intake.patientRef,
           outcome: body.outcome || "follow-up complete; patient connected to accessible care path",
           nextStep: body.nextStep || "continue caregiver-supported callback and provider review",
@@ -29392,6 +29695,23 @@ async function api(req, res, url) {
       }
     };
     Object.assign(record, withHealthProvenance(record, body, advancedDefaults[type] || {}, intake.demoRecord || type === "prescription" ? { defaultFields: intake.demoRecord ? ["fallbackIntake"] : ["contents"] } : {}));
+    record.encounterId = encounter.encounterId;
+    const encounterUpdates = {
+      appointment: { lifecycleState: "appointment-scheduled", appointmentId: record.id },
+      provider: { lifecycleState: "provider-assigned", providerAssignmentId: record.id },
+      history: { lifecycleState: "note-recorded", historyId: record.id },
+      prescription: { lifecycleState: "note-recorded", prescriptionPacketId: record.id },
+      emergency: { lifecycleState: "escalated", emergencyEscalationId: record.id },
+      note: { lifecycleState: "note-recorded", noteId: record.id },
+      outcome: { lifecycleState: "outcome-recorded", outcomeId: record.id }
+    };
+    updateTelehealthEncounter(db.profile, encounter, {
+      ...(encounterUpdates[type] || {}),
+      demoRecord: record.demoRecord || intake.demoRecord,
+      simulation: record.simulation || intake.simulation,
+      source: record.source || intake.source,
+      defaultFields: record.defaultFields
+    });
     const storeLimit = key => { db.profile[key] = db.profile[key].slice(0, 20); };
     ["telehealthAppointments", "telehealthProviderAssignments", "patientHistoryRecords", "telehealthPrescriptionPackets", "telehealthEmergencyEscalations", "careTeamNotes", "telehealthOutcomeReviews"].forEach(key => storeLimit(key));
     country.queue = intake.queueStatus;
