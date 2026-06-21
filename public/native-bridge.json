@@ -150,7 +150,7 @@
     "communicationsReadiness": "/api/communications/execution-readiness",
     "liveServices": "/api/production/live-service-check",
     "memory": "/api/agent/memory-summary",
-    "telehealth": "/api/health/intake",
+    "telehealth": "/api/health/action",
     "workforce": "/api/workforce/apply",
     "trade": "/api/trade/action"
   },

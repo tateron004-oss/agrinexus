@@ -28012,6 +28012,8 @@ async function api(req, res, url) {
     const body = await readBody(req);
     const { country, route } = activeContext(db);
     ensureHealthProfile(db.profile);
+    const supportedHealthActionTypes = new Set(["intake", "representative", "safety", "inspector", "careplan", "consent", "vitals", "referral", "followup", "accessibility", "caption", "caregiver"]);
+    if (!supportedHealthActionTypes.has(body.type)) return send(res, 400, { error: "Unsupported health action" });
     if (body.type === "intake") {
       const urgency = String(body.urgency || "").trim();
       const accessibilityNeeds = String(body.accessibilityNeeds || "").trim();
