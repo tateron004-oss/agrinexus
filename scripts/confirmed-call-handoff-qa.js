@@ -78,6 +78,7 @@ function assertStagedOnly(state, label) {
   const styles = fs.readFileSync(path.join(root, "public", "styles.css"), "utf8");
   assertContains(app, "function renderConfirmedCallHandoffCard", "Confirmed handoff card should exist");
   assertContains(app, "function isConfirmedCallHandoffResult", "Confirmed handoff card should require confirmed metadata");
+  assertContains(app, "const providerLabel = callProviderDisplayLabel(result)", "Confirmed handoff card should prefer providerMetadata label for display");
   assertContains(app, "metadata.executionConfirmed", "Confirmed handoff must key off executionConfirmed");
   assertContains(app, "data-confirmed-call-handoff=\"true\"", "Confirmed handoff should expose a user-clicked link only");
   assertContains(app, "safeConfirmedCallHandoffUrl", "Confirmed handoff URLs should be sanitized");
@@ -85,6 +86,8 @@ function assertStagedOnly(state, label) {
   assertContains(styles, ".confirmed-call-handoff-card", "Confirmed handoff styles should exist");
   const confirmedBlock = app.slice(app.indexOf("function renderConfirmedCallHandoffCard"), app.indexOf("function renderPendingCallActionCard"));
   assert(!/window\.location\s*=|location\.href\s*=|\.click\(\)/.test(confirmedBlock), "Confirmed handoff UI must not auto-launch provider links");
+  const nativePayloadBlock = app.slice(app.indexOf("function confirmedNativeCallHandoffPayload"), app.indexOf("function nativeCallLaunchBridgeAvailable"));
+  assert(!nativePayloadBlock.includes("providerMetadata"), "Native call dispatch safety must not rely on providerMetadata");
 
   seedDb();
   const server = spawn(process.execPath, ["server.js"], {

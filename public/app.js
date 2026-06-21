@@ -9359,6 +9359,16 @@ function callProviderLabel(provider = "") {
   return value ? value.replace(/-/g, " ") : "Phone";
 }
 
+function callProviderDisplayLabel(callLike = {}) {
+  const metadata = callLike.providerMetadata
+    || callLike.metadata?.providerMetadata
+    || callLike.handoff?.providerMetadata
+    || {};
+  const label = typeof metadata.label === "string" ? metadata.label.trim() : "";
+  if (label) return label;
+  return callProviderLabel(callLike.provider || callLike.requestedProvider || callLike.metadata?.provider || callLike.metadata?.requestedProvider || callLike.handoff?.provider);
+}
+
 function pendingCallDetails(action = {}) {
   const target = action.target || {};
   const resolution = action.resolution || {};
@@ -9374,7 +9384,7 @@ function pendingCallDetails(action = {}) {
     actionLabel: action.action || `Call ${displayName}`,
     displayName,
     phone,
-    providerLabel: callProviderLabel(provider),
+    providerLabel: callProviderDisplayLabel(action),
     resolutionStatus,
     confirmationPrompt: action.confirmationPrompt || "Before I call anyone, please confirm.",
     fallback,
@@ -9482,7 +9492,7 @@ function renderConfirmedCallHandoffCard(result = {}) {
   const target = metadata.target || {};
   const handoff = metadata.handoff || {};
   const provider = metadata.provider || metadata.requestedProvider || "";
-  const providerLabel = callProviderLabel(provider);
+  const providerLabel = callProviderDisplayLabel(result);
   const targetLabel = target.displayName || target.rawName || "the contact";
   const redactedNumber = target.redactedPhone || target.e164Phone || target.phone || metadata.redactedTo || "";
   const safeUrl = safeConfirmedCallHandoffUrl(result);
@@ -9555,7 +9565,7 @@ function renderCallStatusCard(result = {}) {
       : result.status || "Call request";
   const rows = [
     ["Requested", target.displayName || target.rawName || "Not specified"],
-    ["Provider", callProviderLabel(provider)],
+    ["Provider", callProviderDisplayLabel(result)],
     ["Status", resolution.status || result.status || "needs input"]
   ];
   const matchHtml = matches.length

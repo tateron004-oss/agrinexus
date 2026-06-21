@@ -13,6 +13,9 @@ function contains(source, needle, message) {
 contains(app, "function renderPendingCallActionCard", "Pending call confirmation card renderer should exist");
 contains(app, "function renderCallStatusCard", "Call status card renderer should exist for missing-number and duplicate states");
 contains(app, "function redactCallPhoneDisplay", "Frontend should safely redact phone numbers before display");
+contains(app, "function callProviderDisplayLabel", "Call UI should prefer backend provider display metadata when available");
+contains(app, "metadata.label === \"string\" ? metadata.label.trim() : \"\"", "Provider display helper should ignore malformed metadata labels");
+contains(app, "return callProviderLabel(callLike.provider || callLike.requestedProvider", "Provider display helper should fall back to local provider labels");
 contains(app, "pending.kind === \"call\"", "Pending call rendering should key from backend pending action shape");
 contains(app, "pending.pendingActionType === \"outbound_call\"", "Pending call rendering should support outbound_call pending action type");
 contains(app, "data-agent-pending-confirm=\"yes\"", "Confirm button should reuse existing agent pending confirmation path");
@@ -21,7 +24,8 @@ contains(app, "No call is launched from the first request", "UI should state tha
 contains(app, "!pending && /^call\\./.test", "Missing-number and duplicate-match call states should render only without executable pending action");
 contains(app, "No executable call is available", "Missing-number or duplicate states should not imply executable confirmation");
 contains(app, "handoff.fallbackText", "Provider fallback instructions should be displayed from backend handoff metadata");
-contains(app, "callProviderLabel(provider)", "Provider label should be rendered for staged calls");
+contains(app, "providerLabel: callProviderDisplayLabel(action)", "Pending call cards should prefer providerMetadata label");
+contains(app, "[\"Provider\", callProviderDisplayLabel(result)]", "Call status cards should prefer providerMetadata label");
 contains(styles, ".pending-call-card", "Pending call card styles should exist");
 contains(styles, ".call-status-card", "Call status card styles should exist");
 contains(styles, ".pending-call-details", "Call detail grid styles should exist");
