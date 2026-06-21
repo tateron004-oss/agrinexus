@@ -2680,6 +2680,174 @@ async function runCrossPlatformFunction(db, user, body = {}) {
   return run;
 }
 
+const HEALTH_PROFILE_ARRAY_KEYS = new Set([
+  "healthIntakes",
+  "carePlans",
+  "safetyReviews",
+  "telehealthConsents",
+  "telehealthVitals",
+  "telehealthReferrals",
+  "telehealthFollowUps",
+  "telehealthAppointments",
+  "telehealthProviderAssignments",
+  "patientHistoryRecords",
+  "telehealthPrescriptionPackets",
+  "telehealthEmergencyEscalations",
+  "careTeamNotes",
+  "telehealthOutcomeReviews",
+  "publicHealthChecks",
+  "telehealthAccessibility",
+  "ruralSymptomGuides",
+  "ruralClinicMatches",
+  "mobileClinicRequests",
+  "pharmacyRequests",
+  "ruralHealthHandoffPackets",
+  "mobileClinicSupplyRequests",
+  "mobileClinicSupplyMatches",
+  "mobileClinicSupplyDispatches",
+  "mobileClinicSupplyDeliveries",
+  "mobileClinicRevenueRecords"
+]);
+
+const INVESTOR_HEALTH_RECORD_FIELDS = new Set([
+  "id",
+  "patientRef",
+  "countryId",
+  "region",
+  "type",
+  "category",
+  "module",
+  "action",
+  "status",
+  "queueStatus",
+  "representativeStatus",
+  "riskLevel",
+  "triageLevel",
+  "urgency",
+  "title",
+  "guideNumber",
+  "matchNumber",
+  "requestNumber",
+  "packetNumber",
+  "appointmentNumber",
+  "assignmentNumber",
+  "historyNumber",
+  "escalationNumber",
+  "noteNumber",
+  "outcomeNumber",
+  "revenueNumber",
+  "dispatchNumber",
+  "deliveryNumber",
+  "sessionNumber",
+  "providerStatus",
+  "liveProvider",
+  "simulation",
+  "demoRecord",
+  "createdAt",
+  "updatedAt"
+]);
+
+function isInvestorUser(user) {
+  return String(user?.role || "").toLowerCase() === "investor";
+}
+
+function projectHealthRecordForUser(record, user, key = "") {
+  if (!isInvestorUser(user) || !record || typeof record !== "object" || Array.isArray(record)) return record;
+  const projected = {};
+  for (const field of INVESTOR_HEALTH_RECORD_FIELDS) {
+    if (record[field] !== undefined) projected[field] = record[field];
+  }
+  if (record.nearestClinic?.name) projected.nearestClinic = { name: record.nearestClinic.name, type: record.nearestClinic.type, distanceKm: record.nearestClinic.distanceKm };
+  if (record.mobileClinic?.name) projected.mobileClinic = { name: record.mobileClinic.name, type: record.mobileClinic.type, distanceKm: record.mobileClinic.distanceKm };
+  if (record.pharmacy?.name) projected.pharmacy = { name: record.pharmacy.name, type: record.pharmacy.type, distanceKm: record.pharmacy.distanceKm };
+  if (record.selectedSource?.name) projected.selectedSource = { name: record.selectedSource.name, type: record.selectedSource.type, distanceKm: record.selectedSource.distanceKm };
+  if (key === "videoSessions") {
+    projected.module = record.module;
+    projected.type = record.type;
+    projected.status = record.status;
+    projected.providerStatus = record.providerStatus;
+  }
+  projected.redacted = true;
+  return projected;
+}
+
+function projectIntegrationEventForUser(event, user) {
+  if (!isInvestorUser(user) || !event || typeof event !== "object") return event;
+  const providerId = String(event.providerId || "");
+  const moduleName = String(event.module || "");
+  if (moduleName !== "Healthcare" && !providerId.startsWith("health-")) return event;
+  return {
+    id: event.id,
+    providerId: event.providerId,
+    module: event.module,
+    action: event.action,
+    status: event.status,
+    createdAt: event.createdAt,
+    detail: "Healthcare workflow evidence recorded. Patient-level details are redacted for investor view.",
+    redacted: true
+  };
+}
+
+function projectNotificationForUser(notification, user) {
+  if (!isInvestorUser(user) || !notification || typeof notification !== "object") return notification;
+  const moduleName = String(notification.module || "");
+  if (moduleName !== "Healthcare") return notification;
+  return {
+    id: notification.id,
+    module: notification.module,
+    channel: notification.channel,
+    status: notification.status,
+    createdAt: notification.createdAt,
+    message: "Healthcare notification recorded. Patient-level details are redacted for investor view.",
+    redacted: true
+  };
+}
+
+function projectActivityForUser(activity, user) {
+  if (!isInvestorUser(user) || typeof activity !== "string") return activity;
+  if (!/health|patient|telehealth|clinic|doctor|vitals|symptom|care|intake|caregiver|pharmacy|medicine/i.test(activity)) return activity;
+  const timestamp = activity.match(/^\S+/)?.[0];
+  return `${timestamp || new Date().toISOString()} Healthcare activity recorded. Patient-level details are redacted for investor view.`;
+}
+
+function profileForUser(profile, user) {
+  if (!profile || !isInvestorUser(user)) return profile;
+  const projected = { ...profile };
+  for (const key of HEALTH_PROFILE_ARRAY_KEYS) {
+    if (Array.isArray(profile[key])) projected[key] = profile[key].map(record => projectHealthRecordForUser(record, user, key));
+  }
+  if (Array.isArray(profile.videoSessions)) {
+    projected.videoSessions = profile.videoSessions.map(record => (
+      record?.module === "Healthcare" || record?.type === "telehealth-video"
+        ? projectHealthRecordForUser(record, user, "videoSessions")
+        : record
+    ));
+  }
+  if (Array.isArray(profile.integrationEvents)) {
+    projected.integrationEvents = profile.integrationEvents.map(event => projectIntegrationEventForUser(event, user));
+  }
+  if (Array.isArray(profile.notifications)) {
+    projected.notifications = profile.notifications.map(notification => projectNotificationForUser(notification, user));
+  }
+  if (Array.isArray(profile.activity)) {
+    projected.activity = profile.activity.map(activity => projectActivityForUser(activity, user));
+  }
+  if (profile.accessibilityProfile) {
+    projected.accessibilityProfile = {
+      hearingSupport: Boolean(profile.accessibilityProfile.hearingSupport),
+      visualSupport: Boolean(profile.accessibilityProfile.visualSupport),
+      preferredFormats: profile.accessibilityProfile.preferredFormats || [],
+      language: profile.accessibilityProfile.language,
+      bandwidth: profile.accessibilityProfile.bandwidth,
+      redacted: true
+    };
+  }
+  if (typeof profile.aiActivity === "string" && /health|patient|telehealth|clinic|doctor|vitals|symptom|care/i.test(profile.aiActivity)) {
+    projected.aiActivity = "Healthcare activity recorded. Patient-level details are redacted for investor view.";
+  }
+  return projected;
+}
+
 function publicState(db, user) {
   const providers = runtimeProviders(db);
   ensureOperationsProfile(db.profile);
@@ -2738,7 +2906,7 @@ function publicState(db, user) {
     production: productionCompleteness(db, providers),
     productionPlan: productionOperationsPlan(db, providers),
     admin: adminSnapshot(db, providers),
-    profile: db.profile
+    profile: profileForUser(db.profile, user)
   };
 }
 
@@ -3215,6 +3383,10 @@ function permissionsForRole(role) {
 
 function canUse(user, area) {
   return Boolean(permissionsForRole(user.role)[area]);
+}
+
+function canWriteHealth(user) {
+  return Boolean(user && (user.role === "Admin" || user.role === "Standard User"));
 }
 
 function assistantBehaviorModel(db, user) {
@@ -9150,13 +9322,17 @@ function createBuyerContactWorkflow(db, user, command = "") {
   return contact;
 }
 
+function videoSessionModuleForBody(body = {}) {
+  const requested = String(body.type || body.purpose || body.module || "").toLowerCase();
+  return /health|patient|injury|provider|telehealth|care/.test(requested) ? "Healthcare" : "AgriTrade";
+}
+
 function createVideoSessionWorkflow(db, user, body = {}) {
   ensureAiProfile(db.profile);
   ensureTradeProfile(db.profile);
   ensureHealthProfile(db.profile);
   const { country, route } = activeContext(db);
-  const requested = String(body.type || body.purpose || body.module || "").toLowerCase();
-  const moduleName = /health|patient|injury|provider|telehealth|care/.test(requested) ? "Healthcare" : "AgriTrade";
+  const moduleName = videoSessionModuleForBody(body);
   const isHealth = moduleName === "Healthcare";
   const order = db.profile.orders[db.profile.orders.length - 1] || null;
   const product = order
@@ -25877,6 +26053,9 @@ async function api(req, res, url) {
   if (url.pathname === "/api/video/session" && req.method === "POST") {
     if (!user) return send(res, 401, { error: "Sign in required" });
     const body = await readBody(req);
+    const moduleName = videoSessionModuleForBody(body);
+    if (moduleName === "Healthcare" && !canWriteHealth(user)) return send(res, 403, { error: "Role does not allow healthcare video sessions" });
+    if (moduleName === "AgriTrade" && !canUse(user, "trade")) return send(res, 403, { error: "Role does not allow trade video sessions" });
     const videoSessionResult = createVideoSessionWorkflow(db, user, body);
     await writeDb(db);
     const state = publicState(db, user);
@@ -28008,7 +28187,7 @@ async function api(req, res, url) {
   }
 
   if (url.pathname === "/api/health/action" && req.method === "POST") {
-    if (!canUse(user, "health")) return send(res, 403, { error: "Role does not allow healthcare workflows" });
+    if (!canWriteHealth(user)) return send(res, 403, { error: "Role does not allow healthcare workflows" });
     const body = await readBody(req);
     const { country, route } = activeContext(db);
     ensureHealthProfile(db.profile);
@@ -28339,7 +28518,7 @@ async function api(req, res, url) {
   }
 
   if (url.pathname === "/api/health/rural-network" && req.method === "POST") {
-    if (!canUse(user, "health")) return send(res, 403, { error: "Role does not allow rural health access workflows" });
+    if (!canWriteHealth(user)) return send(res, 403, { error: "Role does not allow rural health access workflows" });
     const body = await readBody(req);
     const { country, route } = activeContext(db);
     ensureHealthProfile(db.profile);
@@ -28640,7 +28819,7 @@ async function api(req, res, url) {
   }
 
   if (url.pathname === "/api/health/mobile-clinic-revenue" && req.method === "POST") {
-    if (!canUse(user, "health")) return send(res, 403, { error: "Role does not allow mobile clinic revenue workflows" });
+    if (!canWriteHealth(user)) return send(res, 403, { error: "Role does not allow mobile clinic revenue workflows" });
     const body = await readBody(req);
     const { country, route } = activeContext(db);
     ensureHealthProfile(db.profile);
@@ -28733,7 +28912,7 @@ async function api(req, res, url) {
   }
 
   if (url.pathname === "/api/health/intake-simulation" && req.method === "POST") {
-    if (!canUse(user, "health")) return send(res, 403, { error: "Role does not allow healthcare workflows" });
+    if (!canWriteHealth(user)) return send(res, 403, { error: "Role does not allow healthcare workflows" });
     const body = await readBody(req);
     const { country, route } = activeContext(db);
     ensureHealthProfile(db.profile);
@@ -28860,7 +29039,7 @@ async function api(req, res, url) {
   }
 
   if (url.pathname === "/api/health/advanced" && req.method === "POST") {
-    if (!canUse(user, "health")) return send(res, 403, { error: "Role does not allow advanced healthcare workflows" });
+    if (!canWriteHealth(user)) return send(res, 403, { error: "Role does not allow advanced healthcare workflows" });
     const body = await readBody(req);
     const { country, route } = activeContext(db);
     ensureHealthProfile(db.profile);
