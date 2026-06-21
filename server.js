@@ -2608,7 +2608,7 @@ async function runCrossPlatformFunction(db, user, body = {}) {
     const { scan } = createDroneScan(db, { productId: product?.id, source: user.email, scanType: "crop-health-and-risk" });
     created.push(`${mission.missionRef} drone mission`, `${scan.scanRef} field scan`);
   } else if (selected.id === "telehealth-navigation") {
-    const intake = {
+    const intake = withHealthProvenance({
       id: crypto.randomUUID(),
       patientRef: `AN-PAT-${country.id.toUpperCase()}-${String(db.profile.healthIntakes.length + 1).padStart(3, "0")}`,
       patientName: body.patientName || "Community patient",
@@ -2624,7 +2624,13 @@ async function runCrossPlatformFunction(db, user, body = {}) {
       routeContext: { routeId: route.id, routeName: route.name, checkpoint: db.profile.activeCheckpoint },
       clinicalBoundary: "Navigation and resource support only. AgriNexus does not diagnose or replace licensed care.",
       createdAt: now
-    };
+    }, body, {
+      patientName: "Community patient",
+      needSummary: "Safe telehealth navigation, accessibility support, and provider handoff request",
+      accessibilityNeeds: "Voice callback, captions, large-print/audio summary, caregiver support",
+      contactMethod: "Voice callback plus SMS/WhatsApp summary",
+      caregiverName: "Community health aide"
+    });
     db.profile.healthIntakes.unshift(intake);
     db.profile.healthIntakes = db.profile.healthIntakes.slice(0, 30);
     created.push(`${intake.patientRef} telehealth navigation intake`);
@@ -2743,9 +2749,45 @@ const INVESTOR_HEALTH_RECORD_FIELDS = new Set([
   "liveProvider",
   "simulation",
   "demoRecord",
+  "source",
+  "defaultFields",
   "createdAt",
   "updatedAt"
 ]);
+
+function normalizedHealthDefaultValue(value) {
+  return String(value ?? "").trim().replace(/\s+/g, " ").toLowerCase();
+}
+
+function defaultedHealthFields(body = {}, defaults = {}) {
+  return Object.entries(defaults)
+    .filter(([field, defaultValue]) => {
+      const provided = body[field];
+      if (provided === undefined || provided === null || String(provided).trim() === "") return true;
+      return normalizedHealthDefaultValue(provided) === normalizedHealthDefaultValue(defaultValue);
+    })
+    .map(([field]) => field);
+}
+
+function withHealthProvenance(record = {}, body = {}, defaults = {}, options = {}) {
+  const fields = Array.from(new Set([...(options.defaultFields || []), ...defaultedHealthFields(body, defaults)]));
+  if (options.simulation) {
+    return {
+      ...record,
+      simulation: true,
+      demoRecord: true,
+      source: options.source || "demo-simulation",
+      defaultFields: fields
+    };
+  }
+  if (!fields.length) return record;
+  return {
+    ...record,
+    demoRecord: true,
+    source: options.source || "default-workflow",
+    defaultFields: fields
+  };
+}
 
 function isInvestorUser(user) {
   return String(user?.role || "").toLowerCase() === "investor";
@@ -9340,7 +9382,7 @@ function createVideoSessionWorkflow(db, user, body = {}) {
     : (db.products || []).find(item => item.id === body.productId) || (db.products || []).find(item => item.countryId === country.id) || (db.products || [])[0];
   let intake = db.profile.healthIntakes[0] || null;
   if (isHealth && !intake) {
-    intake = {
+    intake = withHealthProvenance({
       id: crypto.randomUUID(),
       patientRef: `AN-PAT-${country.id.toUpperCase()}-VIDEO`,
       patientName: String(body.patientName || "Video-supported patient"),
@@ -9353,7 +9395,12 @@ function createVideoSessionWorkflow(db, user, body = {}) {
       accessibilityNeeds: "Captions, audio narration, caregiver handoff, low-bandwidth fallback",
       contactMethod: "Video plus fallback callback",
       createdAt: new Date().toISOString()
-    };
+    }, body, {
+      patientName: "Video-supported patient",
+      needSummary: body.videoNote || "Patient needs video-supported telehealth review",
+      accessibilityNeeds: "Captions, audio narration, caregiver handoff, low-bandwidth fallback",
+      contactMethod: "Video plus fallback callback"
+    }, { defaultFields: ["fallbackIntake"] });
     db.profile.healthIntakes.unshift(intake);
   }
   const participant = isHealth
@@ -9362,7 +9409,7 @@ function createVideoSessionWorkflow(db, user, body = {}) {
   const subject = isHealth
     ? String(body.subject || intake?.patientRef || "patient video review")
     : String(body.subject || product?.name || "crop video proof");
-  const session = {
+  const session = withHealthProvenance({
     id: crypto.randomUUID(),
     sessionNumber: `AN-VID-${String((db.profile.videoSessions || []).length + 1).padStart(3, "0")}`,
     module: moduleName,
@@ -9385,7 +9432,13 @@ function createVideoSessionWorkflow(db, user, body = {}) {
     consent: isHealth ? "Ask permission before showing injury or patient details." : "Ask permission before showing field, crop, buyer, or payment details.",
     createdBy: user.email,
     createdAt: new Date().toISOString()
-  };
+  }, body, isHealth ? {
+    providerName: "Telehealth provider",
+    subject: intake?.patientRef || "patient video review",
+    videoNote: "Show injury, swelling, rash, fall, mobility, or visible concern to provider.",
+    liveProvider: process.env.VIDEO_PROVIDER || process.env.TELEHEALTH_VIDEO_PROVIDER || "browser-camera",
+    joinUrl: process.env.VIDEO_WEBHOOK_URL || process.env.TELEHEALTH_VIDEO_WEBHOOK_URL || "/video/local-browser-session"
+  } : {});
   db.profile.videoSessions.unshift(session);
   db.profile.videoSessions = db.profile.videoSessions.slice(0, 50);
   if (isHealth && intake) {
@@ -13473,7 +13526,7 @@ async function executeAgentTool(db, user, step) {
     ensureHealthProfile(db.profile);
     let intake = db.profile.healthIntakes[0];
     if (!intake) {
-      intake = {
+      intake = withHealthProvenance({
         id: crypto.randomUUID(),
         patientRef: `AN-PAT-${country.id.toUpperCase()}-AGENT`,
         patientName: "Agent-prepared patient",
@@ -13488,7 +13541,13 @@ async function executeAgentTool(db, user, step) {
         caregiverName: "Community accessibility aide",
         assistiveSupports: ["caption relay", "audio narration", "large-print summary", "caregiver handoff", "low-bandwidth callback"],
         createdAt: new Date().toISOString()
-      };
+      }, {}, {
+        patientName: "Agent-prepared patient",
+        needSummary: `${country.name} agent intake for accessibility and care support`,
+        accessibilityNeeds: "Captions, audio narration, large print, caregiver handoff, low-bandwidth callback",
+        contactMethod: "Low-bandwidth callback",
+        caregiverName: "Community accessibility aide"
+      });
       db.profile.healthIntakes.unshift(intake);
     }
     const record = {
@@ -20603,7 +20662,7 @@ async function applyConversationalIntake(db, user, pending) {
   const { country, route } = activeContext(db);
   if (pending.domain === "health") {
     ensureHealthProfile(db.profile);
-    const intake = {
+    const intake = withHealthProvenance({
       id: crypto.randomUUID(),
       patientRef: `AN-PAT-${country.id.toUpperCase()}-${String(db.profile.healthIntakes.length + 1).padStart(3, "0")}`,
       patientName: answers.patientName || "Voice-supported patient",
@@ -20619,7 +20678,12 @@ async function applyConversationalIntake(db, user, pending) {
       assistiveSupports: String(answers.accessibilityNeeds || "voice support").split(",").map(item => item.trim()).filter(Boolean),
       routeContext: { routeId: route.id, routeName: route.name, checkpoint: db.profile.activeCheckpoint },
       createdAt: new Date().toISOString()
-    };
+    }, answers, {
+      patientName: "Voice-supported patient",
+      needSummary: `${country.name} telehealth intake`,
+      accessibilityNeeds: "Voice-first support",
+      contactMethod: "Voice callback"
+    });
     db.profile.healthIntakes.unshift(intake);
     logIntegration(db, { providerId: "health-telehealth", module: "Healthcare", action: "agent.conversational_intake_created", detail: `${intake.patientRef} created from conversational intake.`, metadata: { intakeId: intake.id, answers } });
     addActivity(db.profile, `${intake.patientRef} created from conversational intake.`);
@@ -27113,7 +27177,7 @@ async function api(req, res, url) {
       });
     }
 
-    const intake = {
+    const intake = withHealthProvenance({
       id: crypto.randomUUID(),
       patientRef: `AN-PAT-${country.id.toUpperCase()}-DEMO`,
       countryId: country.id,
@@ -27122,7 +27186,9 @@ async function api(req, res, url) {
       queueStatus: "Care plan generated",
       representativeStatus: "Connected",
       createdAt: new Date().toISOString()
-    };
+    }, {}, {
+      needSummary: `${country.name} executive demo intake for queue, heat, and representative workflow`
+    }, { simulation: true, defaultFields: ["executiveDemo"] });
     db.profile.healthIntakes.unshift(intake);
     db.profile.representativeConnections += 1;
     const careResult = await runAi("careplan", country, route, db.profile);
@@ -27386,7 +27452,7 @@ async function api(req, res, url) {
       db.profile.earnings = Math.max(db.profile.earnings || 0, shift.estimatedEarnings);
     }
 
-    const intake = {
+    const intake = withHealthProvenance({
       id: crypto.randomUUID(),
       patientRef: `AN-PAT-NGA-WOW`,
       countryId: country.id,
@@ -27395,7 +27461,9 @@ async function api(req, res, url) {
       queueStatus: "Accessible telehealth plan ready",
       representativeStatus: "Caregiver notified",
       createdAt: new Date().toISOString()
-    };
+    }, {}, {
+      needSummary: "Rural Nigeria accessible telehealth intake for hearing and visual impairment support"
+    }, { simulation: true, defaultFields: ["wowDemo"] });
     db.profile.healthIntakes.unshift(intake);
     db.profile.representativeConnections += 1;
     db.profile.telehealthAccessibility.unshift(
@@ -28201,7 +28269,7 @@ async function api(req, res, url) {
       const caregiverName = String(body.caregiverName || "Community accessibility aide").trim();
       const needSummary = String(body.needSummary || `${country.name} intake for heat, queue, and field access review`).trim();
       const patientName = String(body.patientName || "Community patient").trim();
-      const intake = {
+      const intake = withHealthProvenance({
         id: crypto.randomUUID(),
         patientRef: `AN-PAT-${country.id.toUpperCase()}-${String(db.profile.healthIntakes.length + 1).padStart(3, "0")}`,
         patientName,
@@ -28223,7 +28291,12 @@ async function api(req, res, url) {
           checkpoint: db.profile.activeCheckpoint
         },
         createdAt: new Date().toISOString()
-      };
+      }, body, {
+        patientName: "Community patient",
+        needSummary: `${country.name} intake for heat, queue, and field access review`,
+        contactMethod: "Low-bandwidth callback",
+        caregiverName: "Community accessibility aide"
+      });
       db.profile.healthIntakes.unshift(intake);
       logIntegration(db, {
         providerId: "health-telehealth",
@@ -28285,16 +28358,16 @@ async function api(req, res, url) {
       recordAiRun(db, { type: "inspector", country, route, result, module: "Healthcare" });
     } else if (body.type === "careplan") {
       const result = await runAi("careplan", country, route, db.profile);
-      const intake = db.profile.healthIntakes[0] || {
+      const intake = db.profile.healthIntakes[0] || withHealthProvenance({
         id: crypto.randomUUID(),
         patientRef: `AN-PAT-${country.id.toUpperCase()}-AUTO`,
         countryId: country.id,
         riskLevel: country.risk,
         needSummary: `${country.name} care plan review`,
         createdAt: new Date().toISOString()
-      };
+      }, body, { needSummary: `${country.name} care plan review` }, { defaultFields: ["fallbackIntake"] });
       if (!db.profile.healthIntakes.find(item => item.id === intake.id)) db.profile.healthIntakes.unshift(intake);
-      const carePlan = {
+      const carePlan = withHealthProvenance({
         id: crypto.randomUUID(),
         intakeId: intake.id,
         patientRef: intake.patientRef,
@@ -28303,7 +28376,7 @@ async function api(req, res, url) {
         text: result.text,
         provider: result.provider,
         createdAt: new Date().toISOString()
-      };
+      }, body, {}, intake.demoRecord ? { defaultFields: ["fallbackIntake"] } : {});
       db.profile.carePlans.unshift(carePlan);
       logIntegration(db, {
         providerId: "health-ehr",
@@ -28315,7 +28388,7 @@ async function api(req, res, url) {
       intake.queueStatus = "Care plan generated";
       recordAiRun(db, { type: "careplan", country, route, result, module: "Healthcare" });
     } else if (body.type === "consent") {
-      const intake = db.profile.healthIntakes[0] || {
+      const intake = db.profile.healthIntakes[0] || withHealthProvenance({
         id: crypto.randomUUID(),
         patientRef: `AN-PAT-${country.id.toUpperCase()}-CONSENT`,
         patientName: "Community patient",
@@ -28325,9 +28398,12 @@ async function api(req, res, url) {
         queueStatus: "Consent review",
         representativeStatus: "Accessibility aide pending",
         createdAt: new Date().toISOString()
-      };
+      }, body, {
+        patientName: "Community patient",
+        needSummary: `${country.name} consent and privacy review`
+      }, { defaultFields: ["fallbackIntake"] });
       if (!db.profile.healthIntakes.find(item => item.id === intake.id)) db.profile.healthIntakes.unshift(intake);
-      const consent = {
+      const consent = withHealthProvenance({
         id: crypto.randomUUID(),
         intakeId: intake.id,
         patientRef: intake.patientRef,
@@ -28336,7 +28412,9 @@ async function api(req, res, url) {
         privacySummary: "Patient receives plain-language explanation, caregiver permission, transcript handling, and low-bandwidth contact consent.",
         status: "recorded",
         createdAt: new Date().toISOString()
-      };
+      }, body, {
+        consentType: "telehealth, caregiver, translation, and assistive-format consent"
+      }, intake.demoRecord ? { defaultFields: ["fallbackIntake"] } : {});
       db.profile.telehealthConsents.unshift(consent);
       db.profile.telehealthConsents = db.profile.telehealthConsents.slice(0, 20);
       intake.queueStatus = "Consent recorded";
@@ -28349,7 +28427,7 @@ async function api(req, res, url) {
       });
       db.profile.aiActivity = `Consent and privacy record captured for ${consent.patientRef}.`;
     } else if (body.type === "vitals") {
-      const intake = db.profile.healthIntakes[0] || {
+      const intake = db.profile.healthIntakes[0] || withHealthProvenance({
         id: crypto.randomUUID(),
         patientRef: `AN-PAT-${country.id.toUpperCase()}-VITALS`,
         patientName: "Community patient",
@@ -28359,9 +28437,12 @@ async function api(req, res, url) {
         queueStatus: "Vitals review",
         representativeStatus: "Accessibility aide pending",
         createdAt: new Date().toISOString()
-      };
+      }, body, {
+        patientName: "Community patient",
+        needSummary: `${country.name} vitals and triage review`
+      }, { defaultFields: ["fallbackIntake"] });
       if (!db.profile.healthIntakes.find(item => item.id === intake.id)) db.profile.healthIntakes.unshift(intake);
-      const vitals = {
+      const vitals = withHealthProvenance({
         id: crypto.randomUUID(),
         intakeId: intake.id,
         patientRef: intake.patientRef,
@@ -28371,7 +28452,11 @@ async function api(req, res, url) {
         triageLevel: country.risk === "High" || country.heat >= 38 ? "priority" : "routine",
         status: "captured",
         createdAt: new Date().toISOString()
-      };
+      }, body, {
+        temperatureC: country.heat >= 38 ? 38.1 : 36.8,
+        pulse: country.risk === "High" ? 96 : 82,
+        symptoms: "Heat exposure, dehydration check, accessibility-supported triage"
+      }, intake.demoRecord ? { defaultFields: ["fallbackIntake"] } : {});
       db.profile.telehealthVitals.unshift(vitals);
       db.profile.telehealthVitals = db.profile.telehealthVitals.slice(0, 20);
       intake.queueStatus = "Vitals captured";
@@ -28384,7 +28469,7 @@ async function api(req, res, url) {
       });
       db.profile.aiActivity = `Vitals captured for ${vitals.patientRef}; triage level ${vitals.triageLevel}.`;
     } else if (body.type === "referral") {
-      const intake = db.profile.healthIntakes[0] || {
+      const intake = db.profile.healthIntakes[0] || withHealthProvenance({
         id: crypto.randomUUID(),
         patientRef: `AN-PAT-${country.id.toUpperCase()}-REFER`,
         patientName: "Community patient",
@@ -28394,9 +28479,12 @@ async function api(req, res, url) {
         queueStatus: "Referral review",
         representativeStatus: "Accessibility aide pending",
         createdAt: new Date().toISOString()
-      };
+      }, body, {
+        patientName: "Community patient",
+        needSummary: `${country.name} referral review`
+      }, { defaultFields: ["fallbackIntake"] });
       if (!db.profile.healthIntakes.find(item => item.id === intake.id)) db.profile.healthIntakes.unshift(intake);
-      const referral = {
+      const referral = withHealthProvenance({
         id: crypto.randomUUID(),
         intakeId: intake.id,
         patientRef: intake.patientRef,
@@ -28405,7 +28493,10 @@ async function api(req, res, url) {
         transportSupport: "community aide callback and low-bandwidth directions",
         status: "sent",
         createdAt: new Date().toISOString()
-      };
+      }, body, {
+        destination: `${country.name} partner clinic / community health worker`,
+        reason: "Escalation for accessible follow-up, heat exposure review, and care-plan verification"
+      }, intake.demoRecord ? { defaultFields: ["fallbackIntake"] } : {});
       db.profile.telehealthReferrals.unshift(referral);
       db.profile.telehealthReferrals = db.profile.telehealthReferrals.slice(0, 20);
       intake.queueStatus = "Referral sent";
@@ -28418,7 +28509,7 @@ async function api(req, res, url) {
       });
       db.profile.aiActivity = `Referral sent for ${referral.patientRef}.`;
     } else if (body.type === "followup") {
-      const intake = db.profile.healthIntakes[0] || {
+      const intake = db.profile.healthIntakes[0] || withHealthProvenance({
         id: crypto.randomUUID(),
         patientRef: `AN-PAT-${country.id.toUpperCase()}-FOLLOW`,
         patientName: "Community patient",
@@ -28428,9 +28519,12 @@ async function api(req, res, url) {
         queueStatus: "Follow-up review",
         representativeStatus: "Accessibility aide pending",
         createdAt: new Date().toISOString()
-      };
+      }, body, {
+        patientName: "Community patient",
+        needSummary: `${country.name} follow-up review`
+      }, { defaultFields: ["fallbackIntake"] });
       if (!db.profile.healthIntakes.find(item => item.id === intake.id)) db.profile.healthIntakes.unshift(intake);
-      const followUp = {
+      const followUp = withHealthProvenance({
         id: crypto.randomUUID(),
         intakeId: intake.id,
         patientRef: intake.patientRef,
@@ -28438,7 +28532,9 @@ async function api(req, res, url) {
         channels: ["voice callback", "SMS summary", "caregiver packet", "large-print/audio guide"],
         status: "scheduled",
         createdAt: new Date().toISOString()
-      };
+      }, body, {
+        scheduleWindow: "24-hour low-bandwidth callback"
+      }, intake.demoRecord ? { defaultFields: ["fallbackIntake"] } : {});
       db.profile.telehealthFollowUps.unshift(followUp);
       db.profile.telehealthFollowUps = db.profile.telehealthFollowUps.slice(0, 20);
       intake.queueStatus = "Follow-up scheduled";
@@ -28451,7 +28547,7 @@ async function api(req, res, url) {
       });
       db.profile.aiActivity = `Follow-up scheduled for ${followUp.patientRef}.`;
     } else if (["accessibility", "caption", "caregiver"].includes(body.type)) {
-      const intake = db.profile.healthIntakes[0] || {
+      const intake = db.profile.healthIntakes[0] || withHealthProvenance({
         id: crypto.randomUUID(),
         patientRef: `AN-PAT-${country.id.toUpperCase()}-ACCESS`,
         countryId: country.id,
@@ -28460,7 +28556,9 @@ async function api(req, res, url) {
         queueStatus: "Accessibility review",
         representativeStatus: "Accessibility aide pending",
         createdAt: new Date().toISOString()
-      };
+      }, body, {
+        needSummary: `${country.name} accessible telehealth review`
+      }, { defaultFields: ["fallbackIntake"] });
       if (!db.profile.healthIntakes.find(item => item.id === intake.id)) db.profile.healthIntakes.unshift(intake);
       const actions = {
         accessibility: {
@@ -28486,7 +28584,7 @@ async function api(req, res, url) {
         }
       };
       const selected = actions[body.type];
-      const record = {
+      const record = withHealthProvenance({
         id: crypto.randomUUID(),
         intakeId: intake.id,
         patientRef: intake.patientRef,
@@ -28496,7 +28594,7 @@ async function api(req, res, url) {
         language: db.profile.accessibilityProfile.language || user.language || "sw",
         supports: selected.supports,
         createdAt: new Date().toISOString()
-      };
+      }, body, {}, { defaultFields: ["supports"] });
       db.profile.telehealthAccessibility.unshift(record);
       db.profile.telehealthAccessibility = db.profile.telehealthAccessibility.slice(0, 20);
       intake.queueStatus = selected.status;
@@ -28534,7 +28632,7 @@ async function api(req, res, url) {
     const nearestPharmacy = nearestRuralHealthSites(db, patientPoint, "pharmacy", 3);
     const nearestSupplySources = nearestRuralHealthSites(db, patientPoint, "medical-supply", 3);
     const guidance = safeSymptomGuidance(symptoms, country);
-    const activeIntake = db.profile.healthIntakes[0] || {
+    const activeIntake = db.profile.healthIntakes[0] || withHealthProvenance({
       id: crypto.randomUUID(),
       patientRef: `AN-PAT-${country.id.toUpperCase()}-RURAL`,
       patientName,
@@ -28548,7 +28646,13 @@ async function api(req, res, url) {
       accessibilityNeeds: "voice-first, captions, large print, caregiver handoff",
       caregiverName: "Community health aide",
       createdAt: new Date().toISOString()
-    };
+    }, body, {
+      patientName: "Community patient",
+      symptoms: "fever, headache, stomach pain, injury, medicine, or access concern",
+      contactMethod: "voice callback, SMS, or WhatsApp",
+      patientLocation: country.name,
+      caregiverName: "Community health aide"
+    }, { defaultFields: ["fallbackIntake"] });
     if (!db.profile.healthIntakes.find(item => item.id === activeIntake.id)) db.profile.healthIntakes.unshift(activeIntake);
     activeIntake.patientName = patientName || activeIntake.patientName;
     activeIntake.preferredLanguage = preferredLanguage;
@@ -28795,6 +28899,57 @@ async function api(req, res, url) {
       activeIntake.queueStatus = guidance.urgency === "urgent-human-review" ? "Urgent human review recommended" : "Symptom guide ready";
     }
 
+    const ruralDefaults = {
+      "supply-request": {
+        patientName: "Community patient",
+        symptoms: "fever, headache, stomach pain, injury, medicine, or access concern",
+        contactMethod: "voice callback, SMS, or WhatsApp",
+        patientLocation: country.name,
+        supplyNeeds: "malaria tests, gloves, wound care, ORS, blood pressure cuff batteries, and PPE",
+        patientVolume: "40 patients expected",
+        deliveryWindow: "same day or next outreach window"
+      },
+      "supply-match": {
+        patientName: "Community patient",
+        symptoms: "fever, headache, stomach pain, injury, medicine, or access concern",
+        contactMethod: "voice callback, SMS, or WhatsApp",
+        patientLocation: country.name,
+        supplyNeeds: "clinic supplies and approved medicine support"
+      },
+      "supply-dispatch": {
+        patientName: "Community patient",
+        symptoms: "fever, headache, stomach pain, injury, medicine, or access concern",
+        contactMethod: "voice callback, SMS, or WhatsApp",
+        patientLocation: country.name,
+        driverOrCourier: "Community health logistics driver",
+        supplyNeeds: "clinic supply packet",
+        eta: "2-4 hours, route conditions permitting"
+      },
+      "supply-delivery": {
+        patientName: "Community patient",
+        symptoms: "fever, headache, stomach pain, injury, medicine, or access concern",
+        contactMethod: "voice callback, SMS, or WhatsApp",
+        patientLocation: country.name,
+        receivedBy: "Mobile clinic lead",
+        condition: "received and counted",
+        supplyNeeds: "clinic supply packet"
+      },
+      pharmacy: {
+        patientName: "Community patient",
+        symptoms: "fever, headache, stomach pain, injury, medicine, or access concern",
+        contactMethod: "voice callback, SMS, or WhatsApp",
+        patientLocation: country.name,
+        medicineConcern: "medicine availability, refill, or provider-reviewed pickup support"
+      }
+    };
+    const sharedRuralDefaults = {
+      patientName: "Community patient",
+      symptoms: "fever, headache, stomach pain, injury, medicine, or access concern",
+      contactMethod: "voice callback, SMS, or WhatsApp",
+      patientLocation: country.name
+    };
+    Object.assign(record, withHealthProvenance(record, body, ruralDefaults[type] || sharedRuralDefaults, activeIntake.demoRecord ? { defaultFields: ["fallbackIntake"] } : {}));
+
     db.profile.aiActivity = `${detail} Nexus is not diagnosing; it is preparing access, safety, and handoff support.`;
     logIntegration(db, {
       providerId,
@@ -28825,7 +28980,7 @@ async function api(req, res, url) {
     ensureHealthProfile(db.profile);
     const type = String(body.type || "clinic-payment-request").trim();
     const now = new Date().toISOString();
-    const intake = db.profile.healthIntakes[0] || {
+    const intake = db.profile.healthIntakes[0] || withHealthProvenance({
       id: crypto.randomUUID(),
       patientRef: `AN-PAT-${country.id.toUpperCase()}-REV`,
       patientName: String(body.patientName || "Community patient").trim(),
@@ -28838,7 +28993,11 @@ async function api(req, res, url) {
       contactMethod: "voice callback, SMS, or WhatsApp",
       accessibilityNeeds: "plain language, audio, captions, receipt summary",
       createdAt: now
-    };
+    }, body, {
+      patientName: "Community patient",
+      needSummary: "Mobile clinic revenue workflow",
+      contactMethod: "voice callback, SMS, or WhatsApp"
+    }, { defaultFields: ["fallbackIntake"] });
     if (!db.profile.healthIntakes.find(item => item.id === intake.id)) db.profile.healthIntakes.unshift(intake);
     const mobileClinic = (db.profile.mobileClinicRequests || [])[0]?.mobileClinic || nearestRuralHealthSites(db, { label: country.name, lat: country.lat, lng: country.lng, country: country.name }, "mobile-clinic", 1)[0];
     const providerName = String(body.providerName || mobileClinic?.name || `${country.name} Mobile Clinic Team`).trim();
@@ -28860,7 +29019,7 @@ async function api(req, res, url) {
       "clinic-receipt": "receipt issued",
       "clinic-payout": "provider payout prepared"
     };
-    const record = {
+    const record = withHealthProvenance({
       id: crypto.randomUUID(),
       revenueNumber: `MCR-${String(db.profile.mobileClinicRevenueRecords.length + 1).padStart(3, "0")}`,
       type,
@@ -28882,7 +29041,13 @@ async function api(req, res, url) {
       clinicalBoundary: "AgriNexus records billing, receipt, routing, and evidence only. Clinical judgment stays with licensed providers.",
       routeContext: { routeId: route.id, routeName: route.name, checkpoint: db.profile.activeCheckpoint },
       createdAt: now
-    };
+    }, body, {
+      patientName: intake.patientName || "Community patient",
+      providerName: mobileClinic?.name || `${country.name} Mobile Clinic Team`,
+      service: "mobile clinic visit, vitals collection, telehealth handoff, and follow-up support",
+      amount: type === "clinic-service-menu" ? 0 : 1500,
+      paymentMethod: "mobile money, cash receipt, card, or sponsor voucher"
+    }, intake.demoRecord ? { defaultFields: ["fallbackIntake"] } : {});
     db.profile.mobileClinicRevenueRecords.unshift(record);
     db.profile.mobileClinicRevenueRecords = db.profile.mobileClinicRevenueRecords.slice(0, 30);
     intake.patientName = patientName;
@@ -28924,7 +29089,7 @@ async function api(req, res, url) {
     const caregiverName = String(body.caregiverName || "Community accessibility aide").trim();
     const riskLevel = String(body.urgency || (country.risk === "High" || country.heat >= 38 ? "Priority" : "Routine")).trim();
     const createdAt = new Date().toISOString();
-    const intake = {
+    const intake = withHealthProvenance({
       id: crypto.randomUUID(),
       patientRef: `AN-PAT-${country.id.toUpperCase()}-${String(db.profile.healthIntakes.length + 1).padStart(3, "0")}`,
       patientName,
@@ -28945,10 +29110,16 @@ async function api(req, res, url) {
       },
       simulation: true,
       createdAt
-    };
+    }, body, {
+      patientName: "Amina Community Patient",
+      needSummary: "Accessible telehealth intake for rural patient support, language translation, and follow-up",
+      accessibilityNeeds: "Captions, audio narration, large-print summary, caregiver handoff",
+      contactMethod: "Voice callback plus SMS summary",
+      caregiverName: "Community accessibility aide"
+    }, { simulation: true });
     db.profile.healthIntakes.unshift(intake);
 
-    const consent = {
+    const consent = withHealthProvenance({
       id: crypto.randomUUID(),
       intakeId: intake.id,
       patientRef: intake.patientRef,
@@ -28957,8 +29128,10 @@ async function api(req, res, url) {
       privacySummary: "Plain-language consent captured for guided care, translation, caregiver support, and low-bandwidth communication.",
       status: "recorded",
       createdAt
-    };
-    const vitals = {
+    }, body, {
+      consentType: "telehealth, translation, caregiver, transcript, and assistive-format consent"
+    }, { simulation: true });
+    const vitals = withHealthProvenance({
       id: crypto.randomUUID(),
       intakeId: intake.id,
       patientRef: intake.patientRef,
@@ -28968,8 +29141,12 @@ async function api(req, res, url) {
       triageLevel: riskLevel.toLowerCase().includes("priority") || country.heat >= 38 ? "priority" : "routine",
       status: "captured",
       createdAt
-    };
-    const accessRecord = {
+    }, body, {
+      temperatureC: country.heat >= 38 ? 38.2 : 36.9,
+      pulse: riskLevel.toLowerCase().includes("priority") ? 98 : 84,
+      symptoms: "Heat exposure, mobility/accessibility check, rural follow-up request"
+    }, { simulation: true });
+    const accessRecord = withHealthProvenance({
       id: crypto.randomUUID(),
       intakeId: intake.id,
       patientRef: intake.patientRef,
@@ -28979,8 +29156,8 @@ async function api(req, res, url) {
       language: preferredLanguage,
       supports: ["caption relay", "audio description", "large-print summary", "caregiver handoff", "low-bandwidth callback"],
       createdAt
-    };
-    const referral = {
+    }, body, {}, { simulation: true, defaultFields: ["supports"] });
+    const referral = withHealthProvenance({
       id: crypto.randomUUID(),
       intakeId: intake.id,
       patientRef: intake.patientRef,
@@ -28989,8 +29166,11 @@ async function api(req, res, url) {
       transportSupport: "community aide callback and low-bandwidth directions",
       status: "sent",
       createdAt
-    };
-    const followUp = {
+    }, body, {
+      destination: `${country.name} partner clinic / community health worker`,
+      reason: "Guided intake flagged accessible follow-up and provider verification"
+    }, { simulation: true });
+    const followUp = withHealthProvenance({
       id: crypto.randomUUID(),
       intakeId: intake.id,
       patientRef: intake.patientRef,
@@ -28998,7 +29178,9 @@ async function api(req, res, url) {
       channels: ["voice callback", "SMS summary", "caregiver packet", "large-print/audio guide"],
       status: "scheduled",
       createdAt
-    };
+    }, body, {
+      scheduleWindow: "24-hour voice callback with SMS summary"
+    }, { simulation: true });
 
     db.profile.telehealthConsents.unshift(consent);
     db.profile.telehealthVitals.unshift(vitals);
@@ -29045,7 +29227,7 @@ async function api(req, res, url) {
     ensureHealthProfile(db.profile);
     let intake = db.profile.healthIntakes[0];
     if (!intake) {
-      intake = {
+      intake = withHealthProvenance({
         id: crypto.randomUUID(),
         patientRef: `AN-PAT-${country.id.toUpperCase()}-ADV`,
         patientName: "Community patient",
@@ -29059,7 +29241,12 @@ async function api(req, res, url) {
         contactMethod: "Low-bandwidth callback",
         routeContext: { routeId: route.id, routeName: route.name, checkpoint: db.profile.activeCheckpoint },
         createdAt: new Date().toISOString()
-      };
+      }, body, {
+        patientName: "Community patient",
+        needSummary: `${country.name} advanced telehealth care operations`,
+        accessibilityNeeds: "Captions, audio narration, caregiver handoff",
+        contactMethod: "Low-bandwidth callback"
+      }, { defaultFields: ["fallbackIntake"] });
       db.profile.healthIntakes.unshift(intake);
     }
     const type = body.type || "appointment";
@@ -29176,6 +29363,35 @@ async function api(req, res, url) {
     const maker = makers[type];
     if (!maker) return send(res, 400, { error: "Unsupported advanced health action" });
     const [providerId, action, detail, record] = maker();
+    const advancedDefaults = {
+      appointment: {
+        scheduleWindow: "next available rural telehealth slot",
+        modality: "voice/video with SMS fallback"
+      },
+      provider: {
+        providerName: `${country.name} telehealth provider desk`,
+        specialty: intake.riskLevel === "High" ? "urgent rural care" : "primary care"
+      },
+      history: {
+        allergies: "none reported",
+        conditions: "heat exposure risk, mobility/accessibility support, rural access barriers",
+        medications: "not recorded",
+        caregiverContext: intake.caregiverName || "community accessibility aide"
+      },
+      prescription: {},
+      emergency: {
+        reason: "high-risk symptoms, heat exposure, or urgent access barrier",
+        destination: `${country.name} emergency partner / community health worker`
+      },
+      note: {
+        note: "Care team reviewed accessibility, language, caregiver, and rural follow-up needs."
+      },
+      outcome: {
+        outcome: "follow-up complete; patient connected to accessible care path",
+        nextStep: "continue caregiver-supported callback and provider review"
+      }
+    };
+    Object.assign(record, withHealthProvenance(record, body, advancedDefaults[type] || {}, intake.demoRecord || type === "prescription" ? { defaultFields: intake.demoRecord ? ["fallbackIntake"] : ["contents"] } : {}));
     const storeLimit = key => { db.profile[key] = db.profile[key].slice(0, 20); };
     ["telehealthAppointments", "telehealthProviderAssignments", "patientHistoryRecords", "telehealthPrescriptionPackets", "telehealthEmergencyEscalations", "careTeamNotes", "telehealthOutcomeReviews"].forEach(key => storeLimit(key));
     country.queue = intake.queueStatus;
