@@ -12,6 +12,34 @@ This directory contains operational helpers, regression checks, provider test ha
 - Documentation / Demo / Investor: screenshot, presentation, video, and investor/demo asset helpers.
 - Manual / Review: useful scripts that are not currently exposed through `package.json` and should be reviewed before archiving.
 
+## Grouped QA Suites
+
+`scripts/qa-suite.js` runs curated local QA groups sequentially with Node. It avoids shell-specific command chaining, stops on the first failure, and prints every command before running it.
+
+Package aliases:
+
+- `qa:call`: call provider registry, call intent, pending confirmation UI, confirmed handoff, native dispatch, Android/iOS call launch, and companion confirmation gate checks.
+- `qa:provider`: backend/public call provider registry and drift checks.
+- `qa:native`: static native mobile/runtime/bridge checks plus call handoff safety checks. This does not compile Android or iOS source.
+- `qa:voice`: local voice policy, realtime-provider configuration, phase QA, language, browser runtime, and phone greeting checks.
+- `qa:core`: app behavior, utility assistant, conversation core architecture, and currently green Companion smoke checks.
+- `qa:app`: static app behavior, workflow, cross-platform, and auth login gate audits.
+- `qa:all-safe`: deduplicated sequential superset of the safe suites above.
+
+Direct Node usage is available when PowerShell blocks `npm run`:
+
+```powershell
+node scripts\qa-suite.js call
+node scripts\qa-suite.js provider
+node scripts\qa-suite.js native
+node scripts\qa-suite.js voice
+node scripts\qa-suite.js core
+node scripts\qa-suite.js app
+node scripts\qa-suite.js all-safe
+```
+
+The grouped suites intentionally exclude production/live/network checks, credential validation, database backup/restore, destructive commands, native Android/iOS compile commands, and `foundation/` scripts.
+
 ## Inventory
 
 | Script | npm command | Category | Purpose | Safe to delete |

@@ -18,6 +18,13 @@ node scripts\native-call-bridge-dispatch-qa.js
 node scripts\call-provider-drift-qa.js
 ```
 
+The same static native suite can also be run through the grouped QA runner:
+
+```powershell
+npm run qa:native
+node scripts\qa-suite.js native
+```
+
 These checks validate the native bridge contract, wake/runtime source expectations, Android and iOS voice hooks, Android call launch safety, iOS call launch safety, browser-to-native confirmed call dispatch, and call provider metadata drift.
 
 They also protect the important call safety invariants:
