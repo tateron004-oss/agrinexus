@@ -11851,6 +11851,8 @@ function render() {
   const telehealthVitals = data.profile.telehealthVitals || [];
   const telehealthReferrals = data.profile.telehealthReferrals || [];
   const telehealthFollowUps = data.profile.telehealthFollowUps || [];
+  const telehealthEncounters = data.profile.telehealthEncounters || [];
+  const telehealthProviderActions = data.profile.telehealthProviderActions || [];
   const ruralSymptomGuides = data.profile.ruralSymptomGuides || [];
   const ruralClinicMatches = data.profile.ruralClinicMatches || [];
   const mobileClinicRequests = data.profile.mobileClinicRequests || [];
@@ -11998,6 +12000,65 @@ function render() {
   $("#healthAdvancedList").innerHTML = advancedHealthOps.length
     ? advancedHealthOps.slice(0, 12).map(item => `<div><strong>${item.title}</strong><span>${item.detail}</span></div>`).join("")
     : "<div>No advanced telehealth operations have been run yet.</div>";
+
+  const encounterCounts = telehealthEncounters.reduce((summary, encounter) => {
+    const state = encounter.lifecycleState || "unknown";
+    summary[state] = (summary[state] || 0) + 1;
+    return summary;
+  }, {});
+  const waitingEncounterCount = telehealthEncounters.filter(encounter => !["completed", "provider-declined", "escalation-resolved"].includes(encounter.lifecycleState)).length;
+  const activeEncounter = telehealthEncounters[0] || null;
+  const canRunProviderWorkflow = can("health") && !String(data.user?.role || "").toLowerCase().includes("investor") && Boolean(activeEncounter?.encounterId);
+  const providerWorkflowLabels = {
+    accept: "Accept",
+    "start-visit": "Start Visit",
+    "complete-visit": "Complete",
+    "request-follow-up": "Follow-up",
+    escalate: "Escalate",
+    "resolve-escalation": "Resolve"
+  };
+  const safeProviderActionText = action => {
+    if (!action) return "No provider action yet.";
+    const role = action.providerRole || "Provider role unavailable";
+    const status = action.status || action.lifecycleState || "status unavailable";
+    const created = action.createdAt ? new Date(action.createdAt).toLocaleString() : "time unavailable";
+    const detail = action.redacted ? "Details redacted or unavailable." : (action.noteSummary || action.reason || "Details redacted or unavailable.");
+    return `${action.action || "action"} - ${status} - ${role} - ${created}. ${detail}`;
+  };
+  const latestProviderAction = telehealthProviderActions[0] || activeEncounter?.latestProviderAction || null;
+  if ($("#telehealthProviderQueuePanel")) {
+    $("#telehealthProviderQueuePanel").innerHTML = [
+      row("Mode", "Local demo workflow"),
+      row("Clinical dispatch", "Not a live clinical dispatch system"),
+      row("Action boundary", "Provider actions update local encounter status only"),
+      row("Total encounters", telehealthEncounters.length),
+      row("Waiting", waitingEncounterCount),
+      row("Accepted", encounterCounts["provider-accepted"] || 0),
+      row("Active visits", encounterCounts["visit-active"] || 0),
+      row("Completed", encounterCounts.completed || 0),
+      row("Escalated", encounterCounts.escalated || 0),
+      row("Latest action", safeProviderActionText(latestProviderAction))
+    ].join("");
+  }
+  if ($("#telehealthProviderActionButtons")) {
+    $("#telehealthProviderActionButtons").innerHTML = canRunProviderWorkflow
+      ? Object.entries(providerWorkflowLabels).map(([action, label], index) => `<button type="button" ${index === 0 ? 'class="primary"' : ""} data-provider-workflow="${action}" data-encounter-id="${escapeHtml(activeEncounter.encounterId)}">${translateText(label)}</button>`).join("")
+      : "<span>Provider workflow controls are hidden for this role or until an encounter exists.</span>";
+  }
+  if ($("#telehealthEncounterStatusList")) {
+    $("#telehealthEncounterStatusList").innerHTML = telehealthEncounters.length
+      ? telehealthEncounters.slice(0, 8).map(encounter => {
+        const markers = [encounter.demoRecord ? "demo" : "", encounter.simulation ? "simulation" : "", encounter.source || ""].filter(Boolean).join(" / ") || "standard";
+        const latest = encounter.latestProviderAction ? `${encounter.latestProviderAction.action || "action"} - ${encounter.latestProviderAction.lifecycleState || encounter.latestProviderAction.status || "status"}` : "No provider action yet";
+        return `<div><strong>${escapeHtml(encounter.encounterId || "Encounter")}</strong><span>${escapeHtml(encounter.lifecycleState || "unknown")} - ${escapeHtml(encounter.status || "status unavailable")} - ${escapeHtml(markers)}</span><small>${escapeHtml(latest)}</small></div>`;
+      }).join("")
+      : "<div>No telehealth encounters yet. Start an intake to create a local demo encounter.</div>";
+  }
+  if ($("#telehealthProviderActionList")) {
+    $("#telehealthProviderActionList").innerHTML = telehealthProviderActions.length
+      ? telehealthProviderActions.slice(0, 8).map(action => `<div><strong>${escapeHtml(action.actionId || action.action || "Provider action")}</strong><span>${escapeHtml(action.encounterId || "No encounter")} - ${escapeHtml(action.lifecycleState || action.status || "status unavailable")} - ${escapeHtml(action.providerRole || "Provider role unavailable")}</span><small>${escapeHtml(safeProviderActionText(action))}</small></div>`).join("")
+      : "<div>No provider workflow actions yet. Details redacted or unavailable until a local demo action is recorded.</div>";
+  }
 
   renderProviderEvidence("#healthIntegrationPanel", "Healthcare", "No telehealth provider evidence yet. Start intake, connect a representative, run safety review, generate care plan, or test healthcare engines.");
   renderCommunicationPanel("#healthCommunicationPanel", "Healthcare", "No telehealth communication thread yet. Message the care team to create two-way support evidence.");
@@ -16555,6 +16616,10 @@ function bindDynamic() {
     event.stopPropagation();
     openWorkflowModal(workflowConfig("integrations", "test-module", { dataset: { module: button.dataset.moduleTest } }));
   });
+  $$("[data-provider-workflow]").forEach(button => button.onclick = event => {
+    event.stopPropagation();
+    openTelehealthProviderWorkflow(button.dataset.providerWorkflow, button.dataset.encounterId);
+  });
   $$("[data-workflow]").forEach(element => element.onclick = event => {
     event.stopPropagation();
     runWorkflowAction(element.dataset.workflow, element.dataset.action, element);
@@ -16857,6 +16922,35 @@ function openHealthWorkflow(action, element = { dataset: {} }) {
   }
   if (status) status.textContent = `${title} opened. Review the details and confirm to run it.`;
   openWorkflowModal(config);
+}
+
+function openTelehealthProviderWorkflow(action, encounterId) {
+  if (!encounterId) return toast("Create a telehealth encounter before provider workflow actions.");
+  const labels = {
+    accept: ["Accept encounter", "Record a local demo provider acceptance for this encounter.", "Accept"],
+    "start-visit": ["Start visit", "Mark this local demo encounter as visit-active.", "Start visit"],
+    "complete-visit": ["Complete visit", "Mark this local demo encounter as completed.", "Complete"],
+    "request-follow-up": ["Request follow-up", "Record a local demo follow-up request for this encounter.", "Request follow-up"],
+    escalate: ["Escalate encounter", "Mark this local demo encounter as escalated.", "Escalate"],
+    "resolve-escalation": ["Resolve escalation", "Resolve the local demo escalation for this encounter.", "Resolve"]
+  };
+  const [title, summary, confirmLabel] = labels[action] || ["Provider workflow", "Update this local demo encounter status.", "Confirm"];
+  openWorkflowModal({
+    eyebrow: "Telehealth provider queue",
+    title,
+    summary: `${summary} Not a live clinical dispatch system. Provider actions update local encounter status only.`,
+    confirmLabel,
+    path: "/api/health/provider-workflow",
+    body: { action, encounterId },
+    success: "Provider workflow updated",
+    record: "Provider action record, encounter lifecycle status, local demo queue summary, and audit event",
+    provider: "Local demo workflow only. No real clinician, video provider, or live dispatch is contacted.",
+    checklist: [
+      { title: "Encounter", detail: encounterId, status: "live", label: "Local demo" },
+      { title: "Safety boundary", detail: "Not a live clinical dispatch system", status: "ready", label: "Non-live" },
+      { title: "Effect", detail: "Updates local encounter status only", status: "ready", label: "Status" }
+    ]
+  });
 }
 
 async function confirmPendingWorkflow() {
