@@ -136,6 +136,11 @@ function assertStagedCall(state, label, provider = "twilio") {
     assert.equal(duplicate.commandResult.status, "needs-choice", "duplicate contact should not guess");
     assert(!duplicate.profile.agentPendingAction, "duplicate contact should not stage executable call");
 
+    const aliasQuestion = await command("Nexus, what should I call you?");
+    assert.equal(aliasQuestion.commandResult.intent, "conversation.assistant_alias", "assistant alias question should not be misrouted as a call intent");
+    assert.equal(aliasQuestion.commandResult.metadata?.assistantAlias, "Nexus", "assistant alias question should preserve Nexus alias metadata");
+    assert(!aliasQuestion.profile.agentPendingAction, "assistant alias question should not stage a call");
+
     const whatsapp = await command("call Maria on WhatsApp");
     assertStagedCall(whatsapp, "WhatsApp call", "whatsapp");
     assert.equal(whatsapp.profile.agentPendingAction.providerMetadata.label, "WhatsApp", "WhatsApp metadata should expose stable label");

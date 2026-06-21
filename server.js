@@ -3541,15 +3541,15 @@ function adaptiveBehaviorNudge(behavior = {}, result = {}) {
 function suggestedRepliesForResult(result = {}, behavior = {}) {
   const intent = String(result.intent || "");
   const status = String(result.status || "");
-  if (result.metadata?.suggestedReplies) return result.metadata.suggestedReplies;
-  if (intent.includes("clarification_started")) return result.metadata?.suggestedReplies || ["contact buyer", "start intake", "apply for role"];
-  if (intent.includes("clarification_resolved")) return ["yes", "no", "explain that"];
-  if (intent.includes("voice_recovery") && result.metadata?.suggestions) return result.metadata.suggestions;
-  if (intent.includes("voice_recovery_resolved")) return ["yes", "no", "explain that"];
   if (status === "needs-confirmation") return ["yes", "no", "explain that"];
+  if (intent.includes("clarification_resolved")) return ["yes", "no", "explain that"];
+  if (intent.includes("voice_recovery_resolved")) return ["yes", "no", "explain that"];
+  if (intent.includes("clarification_started")) return result.metadata?.suggestedReplies || ["contact buyer", "start intake", "apply for role"];
+  if (intent.includes("voice_recovery") && result.metadata?.suggestions) return result.metadata.suggestions;
+  if (behavior.accessibilityMode && behavior.accessibilityMode !== "standard" && intent.includes("encyclopedia_answered")) return ["read it aloud", "make it simpler", "continue"];
+  if (result.metadata?.suggestedReplies) return result.metadata.suggestedReplies;
   if (status === "needs-input") return ["tell me more", "start intake", "take me there"];
   if (status === "paused") return ["continue", "repeat that", "take me there"];
-  if (behavior.accessibilityMode && behavior.accessibilityMode !== "standard") return ["read it aloud", "make it simpler", "continue"];
   if (intent.includes("open_reasoning")) return ["do the next step", "explain that", "take me there"];
   if (intent.includes("platform_explained")) return result.metadata?.suggestedReplies || ["open telehealth", "start a course", "sell my crop"];
   if (intent.includes("followup_explained")) return ["yes", "no", "tell me more"];
@@ -6151,9 +6151,14 @@ function extractCallIntentTarget(command = "") {
   return displayName ? { type: "person", rawName, displayName } : null;
 }
 
+function isAssistantAliasQuestion(lower = "") {
+  return /\b(what should i call you|what do i call you|what is your name|who are you|your name|nickname|short name|abbreviat)\b/.test(String(lower || ""));
+}
+
 function isCallIntentCommand(command = "") {
   const raw = String(command || "").trim();
   const lower = normalizeSpeechForIntent(raw);
+  if (isAssistantAliasQuestion(lower)) return false;
   return Boolean(extractPhoneNumberFromText(raw))
     || /\b(call|phone|dial|ring)\b/.test(lower)
     || /\bllama\s+a\b|\bappelle\b|\bmpigie\b|\bpiga\s+simu\s+kwa\b|\bligar\s+para\b|\bligue\s+para\b|\bligar\s+pelo\b|\bligue\s+pelo\b/.test(lower)
@@ -18339,6 +18344,14 @@ function continueClarification(db, user, command) {
   };
 }
 
+function shouldHandleActiveClarificationAnswer(db, command, lower) {
+  const clarification = db?.profile?.agentMemory?.activeClarification;
+  if (!clarification) return false;
+  return isNegativeCommand(lower)
+    || Boolean(clarificationRouteFromAnswer(clarification, command))
+    || shouldHoldClarificationForBetterAnswer(command);
+}
+
 function stageAgentAction(db, command, action) {
   ensureAiProfile(db.profile);
   const commandText = normalizeSpeechForIntent(command);
@@ -19612,6 +19625,7 @@ function stagePhoneContactCall(db, command, contact, purpose = "") {
 }
 
 async function phoneContactMemoryCommandResponse(db, user, text, lower, options = {}) {
+  if (isAssistantAliasQuestion(lower)) return null;
   ensurePhoneContactBook(db);
   const pendingContactCall = db.profile.agentMemory.pendingContactCall || null;
   const phone = extractPhoneNumberFromText(text);
@@ -23171,6 +23185,10 @@ async function runAgentCommand(db, user, command, options = {}) {
   }
   const phase4RiskyAction = conversational ? phase4RiskyActionForCommand(text) : null;
   if (phase4RiskyAction) return stageAgentAction(db, text, phase4RiskyAction);
+  if (conversational && shouldHandleActiveClarificationAnswer(db, text, lower)) {
+    const clarified = continueClarification(db, user, text);
+    if (clarified) return clarified;
+  }
   const routePacketCommand = isBuyerSellerLocationRouteCommand(lower) || isTradeCountryRouteCommand(lower);
   if (routePacketCommand) return tradeLocationRouteResponse(db, user, text, options);
   const prioritizedUtilityCommand = routePacketCommand ? null : await utilityAssistantCommandResponse(db, user, text, lower, options);
