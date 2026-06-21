@@ -7,6 +7,13 @@ const app = fs.readFileSync(path.join(root, "public", "app.js"), "utf8");
 const styles = fs.readFileSync(path.join(root, "public", "styles.css"), "utf8");
 const html = fs.readFileSync(path.join(root, "public", "index.html"), "utf8");
 const sw = fs.readFileSync(path.join(root, "public", "sw.js"), "utf8");
+const currentBuild = app.match(/AGRINEXUS_BUILD_VERSION\s*=\s*"([^"]+)"/)?.[1];
+const serviceWorkerCache = sw.match(/CACHE_NAME\s*=\s*"([^"]+)"/)?.[1];
+const serviceWorkerBuild = sw.match(/BUILD_VERSION\s*=\s*"([^"]+)"/)?.[1];
+
+assert(currentBuild, "App must expose AGRINEXUS_BUILD_VERSION for cache-buster checks");
+assert(serviceWorkerCache, "Service worker must expose CACHE_NAME for cache-buster checks");
+assert.strictEqual(serviceWorkerBuild, currentBuild, "Service worker build token must match the app build token");
 
 const expectedSections = {
   learning: [
@@ -280,8 +287,8 @@ for (const [section, buttons] of Object.entries(expectedSections)) {
   assert(styles.includes(marker), `User workflow containment style missing: ${marker}`);
 });
 
-assert(html.includes("/app.js?v=nexus-behavior-287"), "Index must force browsers to load current User-mode workflow JS");
-assert(html.includes("/styles.css?v=nexus-behavior-287"), "Index must force browsers to load current User-mode workflow CSS");
+assert(html.includes(`/app.js?v=${currentBuild}`), "Index must force browsers to load current User-mode workflow JS");
+assert(html.includes(`/styles.css?v=${currentBuild}`), "Index must force browsers to load current User-mode workflow CSS");
 assert(html.includes("topSettingsClose"), "User Settings menu needs a visible close button");
 assert(styles.includes("body.user-mode .top-settings-toggle") && styles.includes("display: none !important"), "User mode must hide the top Settings button after login");
 assert(styles.includes("body.user-mode .top-actions") && styles.includes("body.user-mode .top-actions.open") && styles.includes("display: none !important"), "User mode must not expose the old top Settings menu after login");
@@ -313,7 +320,7 @@ assert(app.includes("startAskNexusAfterLogin"), "User mode should start Ask Nexu
 assert(app.includes('label: "User", role: "Simple services"'), "Login profile should show User instead of technical Standard User copy");
 assert(app.includes("function friendlyRoleLabel") && app.includes("function userHeaderName"), "User topbar must hide technical role names like Standard User");
 assert(app.includes('if (defaultExperienceMode() !== "user")') && app.includes("closeAskNexus({ silent: true })"), "User login greeting must not force the full Ask Nexus panel open");
-assert(sw.includes('CACHE_NAME = "agrinexus-pwa-v267"'), "Service worker cache must be bumped after User-mode workflow fixes");
+assert(/^agrinexus-pwa-v\d+$/.test(serviceWorkerCache), "Service worker cache must use a versioned AgriNexus cache name");
 assert(styles.includes("body.user-mode .top-settings-close"), "User Settings close button needs visible app-mode styling");
 assert(app.includes('const guideCommand = "help me understand the platform"'), "Guide Me must map to a visible user workflow instead of a silent dynamic command");
 assert(app.includes("function renderUserAccessibilityPanel"), "User mode needs a contained accessibility panel with its own controls");

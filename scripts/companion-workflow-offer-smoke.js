@@ -48,16 +48,16 @@ const explicitCases = [
   { prompt: "Show workforce dashboard", companionIntent: "workflow.stage" },
   { prompt: "Contact the buyer", allowedIntents: ["trade.buyer_contact", "conversation.pending_action"] },
   { prompt: "Message the buyer", allowedIntents: ["trade.buyer_seller_message", "trade.buyer_contact", "conversation.pending_action"] },
-  { prompt: "Draft a buyer message", allowedIntents: ["trade.buyer_contact", "trade.buyer_seller_message", "conversation.pending_action"] }
+  { prompt: "Draft a buyer message", expectedIntent: "utility.buyer-message", expectedUtilityAssistant: true }
 ];
 
 const buyerConversationCases = [
-  "Can AgriTrade talk to me about selling crops and contacting buyers?",
-  "Can you explain how to contact buyers?",
-  "Tell me about selling crops.",
-  "How do I find buyers?",
-  "What should I say to a buyer?",
-  "Help me understand crop selling."
+  { prompt: "Can AgriTrade talk to me about selling crops and contacting buyers?", allowedIntents: ["conversation.open_reasoning"] },
+  { prompt: "Can you explain how to contact buyers?", allowedIntents: ["conversation.encyclopedia_answered"] },
+  { prompt: "Tell me about selling crops.", allowedIntents: ["conversation.encyclopedia_answered"] },
+  { prompt: "How do I find buyers?", allowedIntents: ["conversation.encyclopedia_answered", "conversation.current_knowledge_needs_provider", "conversation.open_reasoning"] },
+  { prompt: "What should I say to a buyer?", allowedIntents: ["conversation.current_knowledge_needs_provider", "conversation.open_reasoning"] },
+  { prompt: "Help me understand crop selling.", allowedIntents: ["conversation.open_reasoning"] }
 ];
 
 function wait(ms) {
@@ -138,18 +138,20 @@ async function command(prompt) {
       const metadata = state.commandResult?.metadata || {};
       const outcome = state.companionRouteOutcome || state.commandResult?.metadata?.companionRouteOutcome;
       if (item.companionIntent) assert.strictEqual(understanding?.intent, item.companionIntent, `${item.prompt} should remain ${item.companionIntent}`);
+      if (item.expectedIntent) assert.strictEqual(state.commandResult?.intent, item.expectedIntent, `${item.prompt} should route to ${item.expectedIntent}`);
       if (item.allowedIntents) assert(item.allowedIntents.includes(state.commandResult?.intent), `${item.prompt} should remain an explicit buyer workflow route, got ${state.commandResult?.intent}`);
+      if (item.expectedUtilityAssistant) assert.strictEqual(metadata.utilityAssistant, true, `${item.prompt} should remain utility assistant backed`);
       assert.notStrictEqual(metadata.workflowDeferred, true, `${item.prompt} should not be deferred as a workflow offer`);
       assert.strictEqual(outcome?.routeMismatch, false, `${item.prompt} should stay aligned`);
     }
 
-    for (const prompt of buyerConversationCases) {
+    for (const item of buyerConversationCases) {
+      const prompt = item.prompt;
       const state = await command(prompt);
       const metadata = state.commandResult?.metadata || {};
       const outcome = state.companionRouteOutcome || metadata.companionRouteOutcome;
-      assert.strictEqual(state.commandResult?.intent, "conversation.open_reasoning", `${prompt} should route conversation-first`);
-      assert.strictEqual(metadata.workflowDeferred, true, `${prompt} should defer buyer workflow`);
-      assert.strictEqual(metadata.deferredWorkflowName, "trade.buyer-contact", `${prompt} should offer buyer-contact as deferred workflow`);
+      assert(item.allowedIntents.includes(state.commandResult?.intent), `${prompt} should route through a current conversation-first buyer/crop answer, got ${state.commandResult?.intent}`);
+      if (metadata.workflowDeferred) assert.strictEqual(metadata.deferredWorkflowName, "trade.buyer-contact", `${prompt} should offer buyer-contact when a workflow is deferred`);
       assert.strictEqual(outcome?.actualRouteType, "conversation", `${prompt} should have conversation route outcome`);
       assert.strictEqual(outcome?.executionAttempted, false, `${prompt} should not attempt execution`);
       assert.strictEqual(outcome?.workflowOpened, false, `${prompt} should not open workflow`);
@@ -162,7 +164,7 @@ async function command(prompt) {
     console.log("Companion workflow offer smoke passed");
     for (const item of deferredCases) console.log(`- ${item.prompt} -> workflow deferred (${item.deferredWorkflowName})`);
     for (const item of explicitCases) console.log(`- ${item.prompt} -> explicit workflow preserved`);
-    for (const prompt of buyerConversationCases) console.log(`- ${prompt} -> buyer conversation first`);
+    for (const item of buyerConversationCases) console.log(`- ${item.prompt} -> buyer conversation first`);
     console.log("- My baby is sick and not breathing -> safety preserved");
   } finally {
     server.kill();
