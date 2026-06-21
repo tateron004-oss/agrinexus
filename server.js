@@ -2688,6 +2688,7 @@ async function runCrossPlatformFunction(db, user, body = {}) {
 
 const HEALTH_PROFILE_ARRAY_KEYS = new Set([
   "telehealthEncounters",
+  "telehealthProviderActions",
   "healthIntakes",
   "carePlans",
   "safetyReviews",
@@ -2746,6 +2747,7 @@ const INVESTOR_HEALTH_RECORD_FIELDS = new Set([
   "dispatchNumber",
   "deliveryNumber",
   "sessionNumber",
+  "actionId",
   "encounterId",
   "intakeId",
   "appointmentId",
@@ -2762,7 +2764,10 @@ const INVESTOR_HEALTH_RECORD_FIELDS = new Set([
   "emergencyEscalationCount",
   "historyCount",
   "prescriptionPacketCount",
+  "providerActionCount",
+  "latestProviderAction",
   "providerStatus",
+  "providerRole",
   "liveProvider",
   "simulation",
   "demoRecord",
@@ -2808,6 +2813,7 @@ function withHealthProvenance(record = {}, body = {}, defaults = {}, options = {
 
 function telehealthEncounterLinkedCounts(encounter = {}) {
   return {
+    providerActions: (encounter.providerActionIds || []).length,
     consent: (encounter.consentIds || []).length,
     vitals: (encounter.vitalsIds || []).length,
     notes: (encounter.noteIds || []).length,
@@ -2823,6 +2829,7 @@ function telehealthEncounterLinkedCounts(encounter = {}) {
 function syncTelehealthEncounterCounts(encounter = {}) {
   const counts = telehealthEncounterLinkedCounts(encounter);
   encounter.linkedRecordCounts = counts;
+  encounter.providerActionCount = counts.providerActions;
   encounter.consentCount = counts.consent;
   encounter.vitalsCount = counts.vitals;
   encounter.noteCount = counts.notes;
@@ -2845,6 +2852,10 @@ function addUniqueEncounterId(list, id) {
 function encounterStatusForLifecycle(lifecycleState, fallback = "active") {
   if (lifecycleState === "completed") return "completed";
   if (lifecycleState === "escalated") return "escalated";
+  if (lifecycleState === "escalation-resolved") return "resolved";
+  if (lifecycleState === "provider-declined") return "declined";
+  if (lifecycleState === "provider-accepted") return "accepted";
+  if (lifecycleState === "visit-active") return "visit-active";
   if (lifecycleState === "follow-up-needed") return "follow-up-needed";
   return fallback || "active";
 }
@@ -2873,6 +2884,7 @@ function createTelehealthEncounter(profile, intake = {}, options = {}) {
     appointmentId: options.appointmentId || null,
     providerAssignmentId: options.providerAssignmentId || null,
     videoSessionId: options.videoSessionId || null,
+    providerActionIds: [],
     consentIds: [],
     vitalsIds: [],
     noteIds: [],
@@ -2919,6 +2931,7 @@ function updateTelehealthEncounter(profile, encounter, patch = {}) {
   if (patch.appointmentId) encounter.appointmentId = patch.appointmentId;
   if (patch.providerAssignmentId) encounter.providerAssignmentId = patch.providerAssignmentId;
   if (patch.videoSessionId) encounter.videoSessionId = patch.videoSessionId;
+  encounter.providerActionIds = addUniqueEncounterId(encounter.providerActionIds, patch.providerActionId);
   encounter.consentIds = addUniqueEncounterId(encounter.consentIds, patch.consentId);
   encounter.vitalsIds = addUniqueEncounterId(encounter.vitalsIds, patch.vitalsId);
   encounter.noteIds = addUniqueEncounterId(encounter.noteIds, patch.noteId);
@@ -2933,6 +2946,7 @@ function updateTelehealthEncounter(profile, encounter, patch = {}) {
   encounter.demoRecord = Boolean(encounter.demoRecord || patch.demoRecord);
   encounter.simulation = Boolean(encounter.simulation || patch.simulation);
   if (patch.source) encounter.source = patch.source;
+  if (patch.latestProviderAction) encounter.latestProviderAction = patch.latestProviderAction;
   if (patch.defaultFields) encounter.defaultFields = Array.from(new Set([...(encounter.defaultFields || []), ...patch.defaultFields]));
   encounter.updatedAt = new Date().toISOString();
   return syncTelehealthEncounterCounts(encounter);
@@ -8240,6 +8254,7 @@ function roleReadiness(profile, role) {
 
 function ensureHealthProfile(profile) {
   profile.telehealthEncounters = profile.telehealthEncounters || [];
+  profile.telehealthProviderActions = profile.telehealthProviderActions || [];
   profile.healthIntakes = profile.healthIntakes || [];
   profile.carePlans = profile.carePlans || [];
   profile.safetyReviews = profile.safetyReviews || [];
@@ -29721,6 +29736,143 @@ async function api(req, res, url) {
     await writeDb(db);
     const state = publicState(db, user);
     state.healthAdvancedResult = { type, record };
+    return send(res, 200, state);
+  }
+
+  if (url.pathname === "/api/health/provider-workflow" && req.method === "POST") {
+    if (!canWriteHealth(user)) return send(res, 403, { error: "Role does not allow provider healthcare workflows" });
+    const body = await readBody(req);
+    const { country } = activeContext(db);
+    ensureHealthProfile(db.profile);
+    const action = String(body.action || "queue-summary").trim();
+    const supportedProviderActions = new Set(["queue-summary", "accept", "decline", "start-visit", "complete-visit", "request-follow-up", "escalate", "resolve-escalation"]);
+    if (!supportedProviderActions.has(action)) return send(res, 400, { error: "Unsupported provider workflow action" });
+    const queueSummary = () => {
+      const encounters = (db.profile.telehealthEncounters || []).map(encounter => ({
+        encounterId: encounter.encounterId,
+        patientRef: encounter.patientRef,
+        intakeId: encounter.intakeId,
+        status: encounter.status,
+        lifecycleState: encounter.lifecycleState,
+        updatedAt: encounter.updatedAt,
+        demoRecord: Boolean(encounter.demoRecord),
+        simulation: Boolean(encounter.simulation),
+        source: encounter.source,
+        providerActionCount: encounter.providerActionCount || 0,
+        linkedRecordCounts: encounter.linkedRecordCounts || telehealthEncounterLinkedCounts(encounter)
+      }));
+      const counts = encounters.reduce((summary, encounter) => {
+        const state = encounter.lifecycleState || "unknown";
+        summary[state] = (summary[state] || 0) + 1;
+        return summary;
+      }, {});
+      return {
+        mode: "local-demo-provider-queue",
+        total: encounters.length,
+        waiting: encounters.filter(encounter => !["completed", "provider-declined", "escalation-resolved"].includes(encounter.lifecycleState)).length,
+        counts,
+        encounters: encounters.slice(0, 25),
+        note: "Local/demo queue summary only. No live clinician dispatch is implied."
+      };
+    };
+    if (action === "queue-summary") {
+      const state = publicState(db, user);
+      state.providerWorkflowResult = { action, queue: queueSummary() };
+      return send(res, 200, state);
+    }
+
+    const encounter = findTelehealthEncounter(db.profile, {
+      encounterId: body.encounterId,
+      intakeId: body.intakeId,
+      patientRef: body.patientRef
+    }) || (db.profile.telehealthEncounters || [])[0] || null;
+    if (!encounter) return send(res, 409, { error: "Create a telehealth encounter before provider workflow actions" });
+
+    const lifecycleByAction = {
+      accept: "provider-accepted",
+      decline: "provider-declined",
+      "start-visit": "visit-active",
+      "complete-visit": "completed",
+      "request-follow-up": "follow-up-needed",
+      escalate: "escalated",
+      "resolve-escalation": "escalation-resolved"
+    };
+    const lifecycleState = lifecycleByAction[action];
+    const providerName = String(body.providerName || user.name || "Telehealth provider").trim();
+    const providerRole = String(body.providerRole || "local-demo-provider").trim();
+    const reason = String(body.reason || "").trim();
+    const noteSummary = String(body.noteSummary || body.note || "").trim();
+    const createdAt = new Date().toISOString();
+    const actionRecord = withHealthProvenance({
+      actionId: crypto.randomUUID(),
+      encounterId: encounter.encounterId,
+      action,
+      status: encounterStatusForLifecycle(lifecycleState, "active"),
+      lifecycleState,
+      providerName,
+      providerRole,
+      reason,
+      noteSummary,
+      createdAt,
+      demoRecord: Boolean(encounter.demoRecord),
+      simulation: Boolean(encounter.simulation),
+      source: encounter.source || "telehealth-provider-workflow",
+      defaultFields: encounter.defaultFields || []
+    }, body, {
+      providerName: user.name || "Telehealth provider",
+      providerRole: "local-demo-provider"
+    }, {
+      defaultFields: encounter.defaultFields || [],
+      simulation: encounter.simulation,
+      source: encounter.source || "telehealth-provider-workflow"
+    });
+    db.profile.telehealthProviderActions.unshift(actionRecord);
+    db.profile.telehealthProviderActions = db.profile.telehealthProviderActions.slice(0, 50);
+
+    if (action === "request-follow-up") {
+      const followUp = withHealthProvenance({
+        id: crypto.randomUUID(),
+        intakeId: encounter.intakeId,
+        encounterId: encounter.encounterId,
+        patientRef: encounter.patientRef,
+        scheduleWindow: body.scheduleWindow || "provider-requested follow-up window",
+        channels: ["voice callback", "SMS summary", "caregiver packet"],
+        status: "provider-requested",
+        createdAt
+      }, body, { scheduleWindow: "provider-requested follow-up window" }, {
+        defaultFields: encounter.defaultFields || [],
+        simulation: encounter.simulation,
+        source: encounter.source || "telehealth-provider-workflow"
+      });
+      db.profile.telehealthFollowUps.unshift(followUp);
+      db.profile.telehealthFollowUps = db.profile.telehealthFollowUps.slice(0, 20);
+      updateTelehealthEncounter(db.profile, encounter, { followUpId: followUp.id });
+    }
+
+    const updatedEncounter = updateTelehealthEncounter(db.profile, encounter, {
+      lifecycleState,
+      providerActionId: actionRecord.actionId,
+      demoRecord: actionRecord.demoRecord || encounter.demoRecord,
+      simulation: actionRecord.simulation || encounter.simulation,
+      source: actionRecord.source || encounter.source,
+      defaultFields: actionRecord.defaultFields,
+      latestProviderAction: { action, status: actionRecord.status, lifecycleState, createdAt }
+    });
+    country.queue = `Provider workflow ${action} recorded`;
+    db.profile.aiActivity = `Telehealth provider workflow ${action} recorded for ${encounter.patientRef || encounter.encounterId}.`;
+    logIntegration(db, {
+      providerId: "health-telehealth",
+      module: "Healthcare",
+      action: `telehealth.provider_workflow.${action}`,
+      status: "success",
+      detail: `Provider workflow ${action} recorded for ${encounter.patientRef || encounter.encounterId}.`,
+      metadata: { actionId: actionRecord.actionId, encounterId: encounter.encounterId, lifecycleState }
+    });
+    addActivity(db.profile, db.profile.aiActivity);
+    addWorkflowNote(db.profile, body.note, "Provider workflow note");
+    await writeDb(db);
+    const state = publicState(db, user);
+    state.providerWorkflowResult = { action, actionRecord, encounter: updatedEncounter, queue: queueSummary() };
     return send(res, 200, state);
   }
 
