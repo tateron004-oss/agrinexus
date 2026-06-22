@@ -16646,6 +16646,9 @@ function isCurrentKnowledgeQuestion(command = "") {
   const lower = String(command || "").toLowerCase().trim();
   if (!lower) return false;
   if (/\b(weather|temperature|temp|too hot|safe to walk|walk today|rain|raining|forecast)\b/.test(lower)) return false;
+  if (/\b(find|show|open|need|want)\b.*\b(clinic|pharmacy|hospital)\b/.test(lower)
+    || /\b(clinic|pharmacy|hospital)\b.*\b(near me|nearby|near|closest|map|route)\b/.test(lower)) return false;
+  if (/\b(track|show|open|follow|monitor)\b.*\b(route|shipment|delivery|farm to market|market route)\b/.test(lower)) return false;
   const questionStart = /^(what|what's|whats|how much|how many|where|when|which|compare|tell me|explain|is it|are there|can you find|look up|search)\b/.test(lower);
   const currentSignal = /\b(current|today|now|latest|live|real[-\s]?time|right now|this week|this month|price|cost|rate|market|outbreak|route delay|near me|nearby|available|availability)\b/.test(lower);
   const definitionShape = /^(what is|what's|whats|explain|define|tell me about|describe|teach me)\b/.test(lower) && !currentSignal;
@@ -17001,6 +17004,16 @@ function isEverydayEncyclopediaQuestion(command = "") {
   if (/\b(platform|agrinexus|nexus|dashboard|admin|investor|workflow|live service|provider engine|render|github|login|password)\b/.test(lower)
     && /\b(how do i use|where is|open|start|button|tab|screen|page|mode|setting)\b/.test(lower)) return false;
   const questionShape = /^(what|what's|whats|why|how|how does|how do|when|where|who|which|can you explain|explain|tell me about|teach me|describe|define)\b/.test(lower);
+  const roleCapabilityQuestion = /\b(what can (?:you )?(?:do )?(?:for )?(?:a |the )?(?:farmer|farm|farmers|smallholder|grower|patient|caregiver|sick person|person sick)|how can (?:you )?help (?:a |the )?(?:farmer|farm|farmers|smallholder|grower|patient|caregiver|sick person|person sick))\b/.test(lower);
+  if (roleCapabilityQuestion) return false;
+  if (/\b(mobile clinic|field clinic|outreach clinic|clinic outreach|rural clinic)\b/.test(lower)
+    && /\b(support|help|route|workflow|open|start|find|show|explain)\b/.test(lower)) return false;
+  if (/\b(healthcare|health care|medical|clinic|telehealth)\b.*\b(partner|provider|practitioner|ngo|government)\b/.test(lower)
+    || /\b(partner|provider|practitioner|ngo|government)\b.*\b(healthcare|health care|medical|clinic|telehealth)\b/.test(lower)) return false;
+  if (/\b(crop|field|drone)\s+evidence\b/.test(lower)
+    && /\b(simple|plain|explain|summarize|read|interpret)\b/.test(lower)) return false;
+  if (/\b(different from|difference between|what makes this different|normal app|ordinary app)\b/.test(lower)
+    && /\b(app|platform|agrinexus|nexus|this)\b/.test(lower)) return false;
   const everydayTopics = /\b(photosynthesis|soil|fertilizer|compost|irrigation|maize|cassava|rice|beans|crop|crops|plant|plants|harvest|rain|drought|pest|malaria|cholera|fever|cold|cough|medicine|nutrition|pregnancy|first aid|clean water|sanitation|saving|savings|budget|money|loan|interest|inflation|business|market|education|school|study|job|career|internet|phone|whatsapp|ai|drone|gps|weather|climate|safety|child|children|women|family)\b/.test(lower);
   const ruralQuestion = /\b(farmer|farm|grandma|mother|child|village|rural|clinic|pharmacy|school|market|buyer|seller)\b/.test(lower) && /\b(what|why|how|explain|tell|teach|mean|means|understand)\b/.test(lower);
   return questionShape && (everydayTopics || ruralQuestion || lower.split(/\s+/).length >= 5);
