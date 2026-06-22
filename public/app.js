@@ -9483,6 +9483,20 @@ function updateUserCaptionPanel(message, { open = true, expanded = false } = {})
   if (input && !input.value.trim()) input.placeholder = translateText("Type or speak your reply");
 }
 
+function renderTypedGlobalVoiceControlConfirmation(message = "") {
+  const translated = translateText(message);
+  const paint = () => {
+    lastVoiceResponse = translated;
+    ["#globalAssistantStatus", "#globalVoiceOutputStatus", "#voiceTranscript", "#jarvisSummary"].forEach(selector => {
+      const element = $(selector);
+      if (element) element.textContent = translated;
+    });
+    updateUserCaptionPanel(translated, { expanded: true });
+  };
+  paint();
+  [160, 800, 1800].forEach(delay => setTimeout(paint, delay));
+}
+
 function closeUserCaptionPanel() {
   const panel = $("#userCaptionPanel");
   if (!panel) return;
@@ -11213,6 +11227,35 @@ function openExplicitHealthVideoPreviewCommand(command = "") {
   goSection("health");
   const config = workflowConfig("health", "video", { dataset: {} });
   return openHealthVideoPreviewWorkflow(config, "I opened Health and prepared the local camera preview and video handoff record. This does not start a live provider visit. Press Open camera when the patient agrees.", "health");
+}
+
+async function runExplicitTypedGlobalControlPreflight(command = "", options = {}) {
+  const explicitCommand = String(command || "").trim();
+  if (!explicitCommand) return false;
+  if (localMusicControlIntent(explicitCommand)) {
+    pendingAgentClarification = null;
+    pendingNexusSpokenCommand = null;
+    return handleLocalMusicControlCommand(explicitCommand);
+  }
+  if (musicAssistantIntent(explicitCommand)) {
+    pendingAgentClarification = null;
+    pendingNexusSpokenCommand = null;
+    return runMusicAssistantCommand(explicitCommand, { turnToken: options.turnToken || null });
+  }
+  if (isExplicitNexusVoiceOnCommand(explicitCommand) || isNexusVoiceOnCommand(explicitCommand)) {
+    pendingAgentClarification = null;
+    pendingNexusSpokenCommand = null;
+    voiceConversationPaused = false;
+    enableNexusVoiceForDemo("Nexus voice is back on. Say Nexus, then tell me what you need.", { skipListeningStart: true });
+    return true;
+  }
+  if (isExplicitNexusVoiceOffCommand(explicitCommand) || isNexusVoiceOffCommand(explicitCommand)) {
+    pendingAgentClarification = null;
+    pendingNexusSpokenCommand = null;
+    disableNexusVoiceForDemo("Demo quiet mode is on. Nexus voice is off until you turn it back on.");
+    return true;
+  }
+  return false;
 }
 
 function openDefaultUserSectionAction(sectionId = currentSectionId()) {
@@ -17535,7 +17578,7 @@ function disableNexusVoiceForDemo(message = "Demo quiet mode is on. Nexus voice 
   if (!options.silent) toast(message);
 }
 
-function enableNexusVoiceForDemo(message = "Nexus voice is back on. Say Nexus, then tell me what you need.") {
+function enableNexusVoiceForDemo(message = "Nexus voice is back on. Say Nexus, then tell me what you need.", options = {}) {
   voiceDemoQuietMode = false;
   voiceConversationPaused = false;
   voiceFirstMode = true;
@@ -17546,7 +17589,17 @@ function enableNexusVoiceForDemo(message = "Nexus voice is back on. Say Nexus, t
   refreshMicSupport();
   setVoiceStatus("voice-first");
   setVoiceResponse(message, true);
-  startVoiceListening();
+  if (options.skipListeningStart) {
+    const translated = translateText(message);
+    lastVoiceResponse = translated;
+    ["#globalAssistantStatus", "#globalVoiceOutputStatus", "#voiceTranscript", "#jarvisSummary"].forEach(selector => {
+      const element = $(selector);
+      if (element) element.textContent = lastVoiceResponse;
+    });
+    updateUserCaptionPanel(lastVoiceResponse, { expanded: true });
+    renderTypedGlobalVoiceControlConfirmation(message);
+  }
+  if (!options.skipListeningStart) startVoiceListening();
 }
 
 function preferredOpenAiTtsVoice() {
@@ -19335,6 +19388,20 @@ function isNexusVoiceOnCommand(command) {
     || /\b(unmute|unsilence)\s+(nexus|agrinexus|voice|speech|audio)\b/.test(lower)
     || /\b(nexus|agrinexus)\s+(listen|start listening|talk again|speak again|voice on|turn back on|wake voice)\b/.test(lower)
     || /\b(end quiet mode|leave quiet mode|demo voice on|enable voice|enable speech|voice first|hands[-\s]?free)\b/.test(lower);
+}
+
+function isExplicitNexusVoiceOnCommand(command = "") {
+  const lower = normalizeToolText(command);
+  return /^(unmute nexus|unmute agrinexus|nexus unmute|agrinexus unmute|turn voice on|voice on|talk again|speak again|end quiet mode)$/.test(lower)
+    || /\b(unmute|unsilence)\s+(nexus|agrinexus|voice|speech|audio)\b/.test(lower)
+    || /\b(nexus|agrinexus)\s+(unmute|listen|talk again|speak again|voice on|turn back on)\b/.test(lower);
+}
+
+function isExplicitNexusVoiceOffCommand(command = "") {
+  const lower = normalizeToolText(command);
+  return /^(mute nexus|mute agrinexus|nexus mute|agrinexus mute|go quiet|demo quiet|quiet mode|stop talking)$/.test(lower)
+    || /\b(mute|silence|quiet)\s+(nexus|agrinexus|voice|speech|audio)\b/.test(lower)
+    || /\b(nexus|agrinexus)\s+(mute|silence|be quiet|go quiet|stop talking)\b/.test(lower);
 }
 
 function enableHeyAgriNexusMode() {
@@ -21805,6 +21872,7 @@ async function handleVoiceCommandCore(rawCommand, options = {}) {
   command = normalizeMultilingualBehaviorCommand(command);
   const spokenCommand = command || cleanWakeCommand(localizedCommand);
   if (openExplicitHealthVideoPreviewCommand(spokenCommand || command || localizedCommand || rawCommand)) return;
+  if (await runExplicitTypedGlobalControlPreflight(spokenCommand || command || localizedCommand || rawCommand, { ...options, turnToken })) return;
   if (autoLanguage) {
     agentPerformanceState.lastCommand = command || localizedCommand || rawCommand;
     recordNexusAutonomousLearning({ type: "auto-language-detected", command: rawCommand, language: autoLanguage.label, mode: experienceMode || data?.user?.role || "platform" });
@@ -23424,7 +23492,25 @@ async function runVoiceTextCommand() {
 async function runGlobalCommand() {
   const input = $("#globalCommandInput");
   setCommandInputs(input?.value || "");
-  await handleVoiceCommand(input?.value || "");
+  const command = input?.value || "";
+  const rawLowerCommand = String(command || "").toLowerCase().trim();
+  const lowerCommand = normalizeToolText(command);
+  const typedGlobalVoiceOn = ((rawLowerCommand.includes("unmute") || rawLowerCommand.includes("voice on")) && /\b(nexus|agrinexus|voice)\b/.test(rawLowerCommand))
+    || /^(unmute nexus|unmute agrinexus|nexus unmute|agrinexus unmute|voice on|turn voice on|talk again|speak again|end quiet mode)$/.test(lowerCommand);
+  const typedGlobalVoiceOff = ((rawLowerCommand.includes("mute") || rawLowerCommand.includes("quiet")) && !rawLowerCommand.includes("unmute") && /\b(nexus|agrinexus|voice|quiet)\b/.test(rawLowerCommand))
+    || /^(mute nexus|mute agrinexus|nexus mute|agrinexus mute|go quiet|demo quiet|quiet mode|stop talking)$/.test(lowerCommand);
+  if (typedGlobalVoiceOn || isExplicitNexusVoiceOnCommand(command) || isNexusVoiceOnCommand(command)) {
+    voiceConversationPaused = false;
+    enableNexusVoiceForDemo("Nexus voice is back on. Say Nexus, then tell me what you need.", { skipListeningStart: true });
+    renderTypedGlobalVoiceControlConfirmation("Nexus voice is back on. Say Nexus, then tell me what you need.");
+    return;
+  }
+  if (typedGlobalVoiceOff || isExplicitNexusVoiceOffCommand(command) || isNexusVoiceOffCommand(command)) {
+    disableNexusVoiceForDemo("Demo quiet mode is on. Nexus voice is off until you turn it back on.");
+    renderTypedGlobalVoiceControlConfirmation("Demo quiet mode is on. Nexus voice is off until you turn it back on.");
+    return;
+  }
+  await handleVoiceCommand(command);
 }
 
 async function runJarvisCommand() {
