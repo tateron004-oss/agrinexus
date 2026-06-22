@@ -14182,6 +14182,9 @@ function workflowStepHtml(steps = []) {
 }
 
 function workflowMode(config = {}) {
+  const path = String(config.path || "").toLowerCase();
+  if (path.startsWith("/api/health") || path === "/api/video/session") return "health";
+  if (path.startsWith("/api/workforce")) return "workforce";
   const haystack = `${config.eyebrow || ""} ${config.title || ""} ${config.userTitle || ""} ${config.summary || ""} ${config.confirmLabel || ""}`.toLowerCase();
   if (/course|lesson|learning|certificate|quiz|assignment|transcript/.test(haystack)) return "learning";
   if (/workforce|job|role|interview|mentor|shift|payroll|timesheet|document|worker/.test(haystack)) return "workforce";
@@ -14245,6 +14248,7 @@ function workflowComfortHtml(config) {
 }
 
 function workflowRealUseCoach(config = {}) {
+  const path = String(config.path || "").toLowerCase();
   const haystack = `${config.eyebrow || ""} ${config.title || ""} ${config.userTitle || ""} ${config.summary || ""} ${config.confirmLabel || ""}`.toLowerCase();
   const base = {
     title: "Nexus field coach",
@@ -14253,6 +14257,24 @@ function workflowRealUseCoach(config = {}) {
     watch: "Do not confirm if the crop, person, job, provider, or route looks wrong.",
     sayNext: "Nexus, explain this in simple words"
   };
+  if (path.startsWith("/api/health") || path === "/api/video/session") {
+    return {
+      ...base,
+      plain: "This helps the patient connect to care support without Nexus acting as a doctor.",
+      question: "What does the patient need help with, and how urgent is it?",
+      watch: "For chest pain, trouble breathing, severe bleeding, fainting, or danger, contact local emergency help immediately.",
+      sayNext: "Nexus, start telehealth intake"
+    };
+  }
+  if (path.startsWith("/api/workforce")) {
+    return {
+      ...base,
+      plain: "This helps the worker move toward a real job step.",
+      question: "Is the worker trying to apply, prepare, schedule, or get paid?",
+      watch: "Do not submit an application until the role, readiness, and missing certificates make sense.",
+      sayNext: "Nexus, help me apply for this job"
+    };
+  }
   if (/course|lesson|learning|certificate|quiz|assignment|transcript/.test(haystack)) {
     return {
       ...base,
