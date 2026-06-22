@@ -26,6 +26,7 @@ const checks = [
   { prompt: "Can you explain AgriNexus?", intent: "conversation.platform_explained", section: "agent", includes: "AgriNexus helps people" },
   { prompt: "Tell me what AgriNexus is.", intent: "conversation.platform_explained", section: "agent", includes: "AgriNexus helps people" },
   { prompt: "What is AgriNexus?", intent: "conversation.platform_explained", section: "agent", includes: "AgriNexus helps people" },
+  { prompt: "How is AgriNexus different?", intent: "conversation.platform_differentiator", section: "agent", includes: "risky actions behind confirmation" },
   { prompt: "What can you do for a farmer?", intent: "conversation.farmer_help", section: "trade", includes: "For a farmer" },
   { prompt: "What can you for the farmer?", intent: "conversation.farmer_help", section: "trade", includes: "For a farmer" },
   { prompt: "I need medicine.", intent: "conversation.medicine_help", section: "health", includes: "I heard you need medicine" },
@@ -56,7 +57,9 @@ const checks = [
   { prompt: "doctor please", intent: "conversation.doctor_help", section: "health", includes: "not a diagnosis" },
   { prompt: "daktari", intent: "conversation.doctor_help", section: "health", includes: "not a diagnosis" },
   { prompt: "Nexus, explain mobile clinic support.", intent: "conversation.mobile_clinic_help", section: "health", includes: "Mobile clinic" },
-  { prompt: "Nexus, no English, baby sick, help.", intent: "conversation.health_urgent_safety", section: "health", includes: "This may be urgent" },
+  { prompt: "Explain mobile clinics.", intent: "conversation.mobile_clinic_help", section: "health", includes: "does not dispatch" },
+  { prompt: "Nexus, no English, baby sick, help.", intent: "conversation.health_urgent_safety", section: "health", includes: "Call emergency services now" },
+  { prompt: "My baby is sick and not breathing.", intent: "conversation.health_urgent_safety", section: "health", includes: "Call emergency services now" },
   { prompt: "Nexus, I cannot read. Help me with health intake.", intent: "conversation.health_intake", section: "health", includes: "cannot make medical decisions" },
   { prompt: "Nexus, build captions for telehealth.", intent: "conversation.telehealth_captions", section: "health", includes: "captions" },
   { prompt: "Nexus, explain this to a healthcare partner.", intent: "conversation.healthcare_partner_explain", section: "health", includes: "healthcare partner" },
@@ -74,6 +77,7 @@ const checks = [
   { prompt: "trabajo", intent: "conversation.workforce_help", section: "workforce", includes: "help with work" },
   { prompt: "Work needed.", intent: "conversation.workforce_help", section: "workforce", includes: "I heard work" },
   { prompt: "Apply.", intent: "workforce.application_help", section: "workforce", includes: "I heard apply" },
+  { prompt: "Apply for this job.", intent: "workforce.application_help", section: "workforce", includes: "do not have a selected job" },
   { prompt: "Start a course.", intent: "conversation.learning_start", section: "learning", includes: "course support" },
   { prompt: "Course.", intent: "conversation.learning_start", section: "learning", includes: "I heard learning" },
   { prompt: "want learn", intent: "conversation.learning_start", section: "learning", includes: "help you learn" },
@@ -121,6 +125,7 @@ const checks = [
   { prompt: "Nexus, explain your brain.", intent: "agent.brain_explained", section: "agent", includes: "Nexus brain" },
   { prompt: "Nexus, show reasoning proof.", intent: "conversation.reasoning_governance_status", section: "agent", includes: "Reasoning proof" },
   { prompt: "Nexus, what makes this different from a normal app?", intent: "conversation.platform_differentiator", section: "agent", includes: "different" },
+  { prompt: "What is regenerative agriculture?", intent: "conversation.regenerative_agriculture_explained", section: "trade", includes: "rebuild soil health" },
   { prompt: "Nexus, send SMS to the buyer.", intent: "conversation.pending_action", section: "trade", includes: "Before I send anything" },
   { prompt: "Nexus, send WhatsApp to the seller.", intent: "conversation.pending_action", section: "trade", includes: "Before I send anything" },
   { prompt: "Nexus, use my location.", intent: "map.location_permission", section: "map", includes: "location" },
@@ -205,6 +210,12 @@ async function call(route, body) {
   assert(appSource.includes('const NEXUS_TTS_PROFILE_VERSION = "natural-assistant-v2"'), "Nexus should migrate browsers to the natural assistant voice profile");
   assert(appSource.includes("I caught part of that") && appSource.includes("Press the main button") && appSource.includes("Say it in your own words and I'll continue"), "Nexus spoken responses should use natural conversation wording instead of stiff workflow/menu language");
   assert(appSource.includes("function freshLeafletCanvas") && appSource.includes("Workflow map failed to render") && appSource.includes("Health map failed to render"), "Clinic/map voice flows need safe Leaflet crash guards");
+  assert(appSource.includes("function nexusPlatformDifferentiatorAnswer") && appSource.includes("risky actions behind confirmation"), "Typed/global platform differentiator prompts need a strong visible answer before clarification");
+  assert(appSource.includes("function nexusMobileClinicExplainAnswer") && appSource.includes("does not dispatch or book a live mobile clinic"), "Typed/global mobile clinic explanation prompts must not imply live dispatch");
+  assert(appSource.includes("function nexusRegenerativeAgricultureAnswer") && appSource.includes("rebuild soil health"), "Typed/global regenerative agriculture prompts need a visible educational answer");
+  assert(appSource.includes("function nexusApplyJobBoundaryAnswer") && appSource.includes("do not have a selected job"), "Typed/global apply-this-job prompts need a no-selected-job boundary");
+  assert(appSource.includes("function nexusUrgentChildBreathingAnswer") && appSource.includes("Call emergency services now"), "Typed/global urgent child breathing prompts need emergency-first wording");
+  assert(appSource.includes("farmer capability before the generic capability summary"), "Typed/global farmer capability prompts must route before generic capability answers");
   fs.copyFileSync(path.join(root, "db.json"), tempDb);
   const server = spawn(process.execPath, ["server.js"], {
     cwd: root,

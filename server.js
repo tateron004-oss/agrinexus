@@ -26,8 +26,8 @@ const AI_MODEL = process.env.OPENAI_MODEL || "gpt-5.4-mini";
 const AI_REASONING_MODEL = process.env.OPENAI_REASONING_MODEL || process.env.OPENAI_AGENT_MODEL || AI_MODEL;
 const AI_TRANSLATION_MODEL = process.env.OPENAI_TRANSLATION_MODEL || process.env.OPENAI_AGENT_MODEL || AI_MODEL;
 const AGRINEXUS_RELEASE = "2026-06-16-operational-readiness";
-const AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-295";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v275";
+const AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-296";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v276";
 const ROOT = __dirname;
 const DATA_DIR = process.env.AGRINEXUS_DATA_DIR || ROOT;
 const DB_PATH = process.env.AGRINEXUS_DB_PATH || path.join(DATA_DIR, "db.json");
@@ -19407,7 +19407,7 @@ function urgentHealthSafetyResponse(db, user, text = "") {
   rememberAgentMemory(db.profile, `Urgent health concern reported: ${text}`, { source: "urgent-health-safety", category: "safety", module: "Healthcare", confidence: 0.97 });
   return {
     intent: "conversation.health_urgent_safety",
-    response: "This may be urgent. If the person cannot breathe, is bleeding badly, not waking, or getting worse, seek emergency help now. I am not a doctor. Where are you, and is the person breathing normally?",
+    response: "Call emergency services now if available, such as 911 in the U.S. If the person cannot breathe, is bleeding badly, not waking, or getting worse, seek emergency help now. I am not a doctor and AgriNexus cannot replace emergency services. After you call, tell me where you are and whether the person is breathing normally.",
     status: "urgent-guidance",
     metadata: {
       conversationMode: true,
@@ -19415,7 +19415,7 @@ function urgentHealthSafetyResponse(db, user, text = "") {
       suppressBehaviorNudge: true,
       frontierCommunication: {
         urgency: "high",
-        nextQuestion: "Where are you, and is the person breathing normally?",
+        nextQuestion: "After emergency help is called, where are you, and is the person breathing normally?",
         confidence: 0.97
       },
       suggestedReplies: ["find clinic", "call provider", "start intake"]
@@ -19485,7 +19485,7 @@ function healthAccessVoiceAcceptanceResponse(db, user, text = "", lower = "", op
       "conversation.mobile_clinic_help",
       "completed",
       "health",
-      "Mobile clinic support helps a patient start intake, share location, prepare a provider handoff, find clinic or pharmacy resources, and organize outreach follow-up. Who needs help, and what village or area?",
+      "Mobile clinics bring basic care access closer to a community through outreach teams or local care points. AgriNexus can help prepare intake details, find clinic or pharmacy support, and create a safe handoff packet, but this local demo does not dispatch or book a live mobile clinic by itself.",
       ["start health intake", "find a clinic near me", "show pharmacy on the map"]
     );
   }
@@ -19961,6 +19961,9 @@ function platformWideVoiceAcceptanceResponse(db, user, text = "", lower = "", op
       ["farm work", "health assistant", "connect job provider"]
     );
   }
+  if (/\bapply\b.*\b(that job|this job|the job)\b/.test(value)) {
+    return response("workforce.application_help", "needs-details", "workforce", "I can help with a job application, but I do not have a selected job from this chat yet. Choose a job first, or tell me the role and country you want. I will help prepare the application and will not submit anything until you confirm.", ["show me jobs", "review my skills", "prepare application"]);
+  }
   if (/\b(apply|application)\b.*\b(job|role|work)\b|\bhelp me apply\b/.test(value)) {
     if (/\b(that job|this job|the job)\b/.test(value)) return null;
     return response("workforce.application_help", "needs-details", "workforce", "I opened job application support. Nexus can match a role, check missing skills, prepare the application, and save application evidence.", ["show me jobs", "prepare interview", "review gaps"]);
@@ -20005,8 +20008,11 @@ function platformWideVoiceAcceptanceResponse(db, user, text = "", lower = "", op
   if (/\b(show|explain|prove)\b.*\b(reasoning proof|decision trace|governance proof|reasoning)\b|\breasoning proof\b/.test(value)) {
     return response("conversation.reasoning_governance_status", "completed", "agent", "Reasoning proof is ready. Nexus records the command, module signal, confidence, safety boundary, provider truth, and next action so an admin or investor can inspect why it chose a route.", ["explain your brain", "show production readiness"]);
   }
-  if (/\bwhat makes this different\b|\bdifferent from a normal app\b|\bnormal app\b/.test(value)) {
-    return response("conversation.platform_differentiator", "completed", "agent", "AgriNexus is different because it is voice-first, workflow-centered, multilingual, provider-aware, map-enabled, and built to guide non-technical users through farming, health access, learning, work, trade, and operations.", ["explain your brain", "show production readiness"]);
+  if (/\b(how is|how are|what makes|why is|why are)\b.*\b(agrinexus|agri nexus|agri-nexus|nexus|this platform|the platform)\b.*\bdifferent\b|\bwhat makes this different\b|\bdifferent from a normal app\b|\bnormal app\b/.test(value)) {
+    return response("conversation.platform_differentiator", "completed", "agent", "AgriNexus is different because it connects rural and community work in one guided place: agriculture support, telehealth and mobile care access, learning and workforce training, marketplace and trade, logistics and maps, and Nexus assistant guidance. It answers first, opens workflows only when you ask, and keeps risky actions behind confirmation.", ["explain AgriNexus", "what can you do for a farmer", "show production readiness"]);
+  }
+  if (/\b(what is|what's|what are|explain|tell me about|describe|define)\b.*\bregenerative agriculture\b|\bregenerative agriculture\b.*\b(what is|explain|mean|means)\b/.test(value)) {
+    return response("conversation.regenerative_agriculture_explained", "completed", "trade", "Regenerative agriculture means farming in ways that rebuild soil health, protect water, increase biodiversity, and keep farms productive over time. Common practices include cover crops, compost, reduced tillage, crop rotation, agroforestry, managed grazing, and measuring soil or field recovery. AgriNexus can turn that into learning, field notes, crop guidance, and buyer evidence.", ["open learning", "teach me about farming", "field notes"]);
   }
 
   if (/\b(thing bad help me|bad help me|i am confused|do not know what button|dont know what button|no understand)\b/.test(value)) {
@@ -23650,6 +23656,38 @@ async function runAgentCommand(db, user, command, options = {}) {
   if (prioritizedActionMemoryCommand) return prioritizedActionMemoryCommand;
   const prioritizedReminderCommand = assistantReminderCommandResponse(db, user, text, lower, options);
   if (prioritizedReminderCommand) return prioritizedReminderCommand;
+  if (conversational && /\b(how is|how are|what makes|why is|why are)\b.*\b(agrinexus|agri nexus|agri-nexus|nexus|this platform|the platform)\b.*\bdifferent\b/.test(lower)) {
+    return {
+      intent: "conversation.platform_differentiator",
+      response: "AgriNexus is different because it connects rural and community work in one guided place: agriculture support, telehealth and mobile care access, learning and workforce training, marketplace and trade, logistics and maps, and Nexus assistant guidance. It answers first, opens workflows only when you ask, and keeps risky actions behind confirmation.",
+      status: "completed",
+      metadata: { conversationMode: true, redirectSection: "agent", suppressBehaviorNudge: true, suggestedReplies: ["explain AgriNexus", "what can you do for a farmer", "open learning"] }
+    };
+  }
+  if (conversational && /\b(explain|what is|what are|tell me about|describe)\b.*\b(mobile clinic|mobile clinics|field clinic|outreach clinic|rural clinic)\b/.test(lower)) {
+    return {
+      intent: "conversation.mobile_clinic_help",
+      response: "Mobile clinics bring basic care access closer to a community through outreach teams or local care points. AgriNexus can help prepare intake details, find clinic or pharmacy support, and create a safe handoff packet, but this local demo does not dispatch or book a live mobile clinic by itself.",
+      status: "completed",
+      metadata: { conversationMode: true, redirectSection: "health", suppressBehaviorNudge: true, suggestedReplies: ["start health intake", "find a clinic near me", "show pharmacy on the map"] }
+    };
+  }
+  if (conversational && /\b(what is|what's|what are|explain|tell me about|describe|define)\b.*\bregenerative agriculture\b|\bregenerative agriculture\b.*\b(what is|explain|mean|means)\b/.test(lower)) {
+    return {
+      intent: "conversation.regenerative_agriculture_explained",
+      response: "Regenerative agriculture means farming in ways that rebuild soil health, protect water, increase biodiversity, and keep farms productive over time. Common practices include cover crops, compost, reduced tillage, crop rotation, agroforestry, managed grazing, and measuring soil or field recovery. AgriNexus can turn that into learning, field notes, crop guidance, and buyer evidence.",
+      status: "completed",
+      metadata: { conversationMode: true, redirectSection: "trade", suppressBehaviorNudge: true, suggestedReplies: ["open learning", "teach me about farming", "field notes"] }
+    };
+  }
+  if (conversational && /\bapply\b.*\b(that job|this job|the job)\b/.test(lower)) {
+    return {
+      intent: "workforce.application_help",
+      response: "I can help with a job application, but I do not have a selected job from this chat yet. Choose a job first, or tell me the role and country you want. I will help prepare the application and will not submit anything until you confirm.",
+      status: "needs-details",
+      metadata: { conversationMode: true, redirectSection: "workforce", suppressBehaviorNudge: true, suggestedReplies: ["show me jobs", "review my skills", "prepare application"] }
+    };
+  }
   if (conversational && isEverydayEncyclopediaQuestion(text)) {
     return everydayEncyclopediaResponse(db, user, text, options);
   }
@@ -23884,9 +23922,9 @@ async function runAgentCommand(db, user, command, options = {}) {
   if (conversational && /\b(baby|child|infant)\b.*\b(sick|hot|fever|weak|pain|vomit|cough|not breathing|cannot breathe|can't breathe|cant breathe)\b/.test(lower)) {
     return {
       intent: "conversation.health_urgent_child",
-      response: "A sick baby can be urgent. If the baby has trouble breathing, is very weak, not waking, has seizures, blue lips, or a very high fever, seek emergency help now. Where are you, and is the baby breathing normally?",
+      response: "Call emergency services now if available, such as 911 in the U.S. A baby who is not breathing needs immediate emergency help. I am not a doctor and AgriNexus cannot replace emergency services or dispatch care. After you call, I can help find nearby emergency care or prepare a handoff with your location.",
       status: "urgent-guidance",
-      metadata: { conversationMode: true, redirectSection: "health", suppressBehaviorNudge: true, frontierCommunication: { urgency: "high", nextQuestion: "Where are you, and is the baby breathing normally?", confidence: 0.94 }, suggestedReplies: ["find clinic", "call provider", "start intake"] }
+      metadata: { conversationMode: true, redirectSection: "health", suppressBehaviorNudge: true, frontierCommunication: { urgency: "high", nextQuestion: "After emergency help is called, where are you, and is the baby breathing normally?", confidence: 0.94 }, suggestedReplies: ["find emergency care", "call provider", "start intake"] }
     };
   }
   if (conversational && /\b(caption|captions|transcript|subtitles?)\b.*\b(telehealth|health|patient|doctor|provider|clinic|care)\b|\b(telehealth|health|patient|doctor|provider|clinic|care)\b.*\b(caption|captions|transcript|subtitles?)\b/.test(lower)) {
@@ -24582,6 +24620,14 @@ async function runAgentCommand(db, user, command, options = {}) {
   }
   if (lower.includes("voice demo") || lower.includes("investor voice demo") || lower.includes("show investors") || lower.includes("demo mode")) {
     return voiceInvestorDemo(db, user);
+  }
+  if (/\bapply\b.*\b(that job|this job|the job)\b/.test(lower)) {
+    return {
+      intent: "workforce.application_help",
+      response: "I can help with a job application, but I do not have a selected job from this chat yet. Choose a job first, or tell me the role and country you want. I will help prepare the application and will not submit anything until you confirm.",
+      status: "needs-details",
+      metadata: { redirectSection: "workforce", roleId: null, applicationId: null, readiness: null }
+    };
   }
   if ((lower.includes("apply") || lower.includes("application")) && (lower.includes("job") || lower.includes("role") || lower.includes("workforce") || lower.includes("position"))) {
     if (conversational && !options.confirm) {
@@ -25562,6 +25608,14 @@ async function runAgentCommand(db, user, command, options = {}) {
     };
   }
 
+  if (/\bapply\b.*\b(that job|this job|the job)\b/.test(lower)) {
+    return {
+      intent: "workforce.application_help",
+      response: "I can help with a job application, but I do not have a selected job from this chat yet. Choose a job first, or tell me the role and country you want. I will help prepare the application and will not submit anything until you confirm.",
+      status: "needs-details",
+      metadata: { redirectSection: "workforce", roleId: null, applicationId: null, readiness: null }
+    };
+  }
   if ((lower.includes("apply") || lower.includes("application")) && (lower.includes("job") || lower.includes("role") || lower.includes("workforce") || lower.includes("position"))) {
     if (conversational && !wantsExecute) {
       return stageAgentAction(db, text, { kind: "workforce-application", module: "Workforce", action: "apply for the best matched role", section: "workforce" });
@@ -25697,6 +25751,14 @@ async function runAgentCommand(db, user, command, options = {}) {
     };
   }
 
+  if (/\bapply\b.*\b(that job|this job|the job)\b/.test(lower)) {
+    return {
+      intent: "workforce.application_help",
+      response: "I can help with a job application, but I do not have a selected job from this chat yet. Choose a job first, or tell me the role and country you want. I will help prepare the application and will not submit anything until you confirm.",
+      status: "needs-details",
+      metadata: { redirectSection: "workforce", roleId: null, applicationId: null, readiness: null }
+    };
+  }
   if ((lower.includes("apply") || lower.includes("application")) && (lower.includes("job") || lower.includes("role") || lower.includes("workforce") || lower.includes("position"))) {
     const result = submitBestWorkforceApplication(db, user, text);
     db.profile.agentMemory.lastStatus = result.status;

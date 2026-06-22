@@ -138,8 +138,8 @@ let routeTrackingWatchId = null;
 let routeTrackingPoints = [];
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-295";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v275";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-296";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v276";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
 const VOICE_ATTENTION_DELAY_MS = 900;
@@ -20423,11 +20423,30 @@ function nexusFastLaneIntent(command = "") {
   if (isPlatformExplainVoiceCommand(raw)) {
     return fastAnswer(nexusPlatformExplainAnswer(), ["help a farmer", "I need a doctor", "start a course", "open map"], "Nexus fast lane explained AgriNexus without opening a workflow.");
   }
+  if (/\b(how is|how are|what makes|why is|why are)\b.*\b(agrinexus|agri nexus|agri-nexus|nexus|this platform|the platform)\b.*\bdifferent\b|\b(agrinexus|agri nexus|agri-nexus|nexus|this platform|the platform)\b.*\bdifferent\b/.test(lower)) {
+    return fastAnswer(nexusPlatformDifferentiatorAnswer(), ["explain AgriNexus", "what can you do for a farmer", "open learning"], "Nexus answered a platform differentiator question without opening a workflow.");
+  }
+  if (/\b(explain|what is|what are|tell me about|describe)\b.*\b(mobile clinic|mobile clinics|field clinic|outreach clinic|rural clinic)\b/.test(lower)) {
+    return fastAnswer(nexusMobileClinicExplainAnswer(), ["start health intake", "find a clinic near me", "show pharmacy on the map"], "Nexus explained mobile clinic support without claiming live dispatch.");
+  }
+  if (/\b(what is|what's|what are|explain|tell me about|describe|define)\b.*\bregenerative agriculture\b|\bregenerative agriculture\b.*\b(what is|explain|mean|means)\b/.test(lower)) {
+    return fastAnswer(nexusRegenerativeAgricultureAnswer(), ["open learning", "teach me about farming", "field notes"], "Nexus answered a farming education question directly.");
+  }
+  if (/\bapply\b.*\b(this job|that job|the job)\b/.test(lower)) {
+    return fastAnswer(nexusApplyJobBoundaryAnswer(), ["show jobs", "review my skills", "prepare application"], "Nexus explained the job-selection boundary before any application action.");
+  }
+  if (/\b(baby|child|infant|my baby|my child)\b.*\b(not breathing|no breathing|cannot breathe|can't breathe|cant breathe|trouble breathing)\b/.test(lower)) {
+    return fastAnswer(nexusUrgentChildBreathingAnswer(), ["find emergency care", "start intake", "call provider"], "Nexus surfaced emergency breathing guidance before normal health routing.");
+  }
   if (isNexusHearingCheckCommand(raw)) {
     return fastAnswer(`Yes ${name}, I can hear you. Tell me what you need.`, ["I need medicine", "open map", "start a course"], "Nexus fast lane answered the hearing check.");
   }
   if (/\b(good morning|goodmorning|good afternoon|goodafternoon|good evening|goodevening|hello|hi nexus|hey nexus)\b/.test(lower)) {
     return fastAnswer(`Hello ${name}. How can I assist you?`, ["I need a doctor", "help me sell my crop", "start a course", "open map"], "Nexus fast lane greeted the user.");
+  }
+  if (/\b(what can (?:you )?do|how can you help|help)\b.*\b(farmer|farm|smallholder|grower)\b/.test(lower)
+    || /\bwhat can you\b.*\b(farmer|farm|smallholder|grower)\b/.test(lower)) {
+    return fastAnswer("For a farmer, I can explain crop problems in plain words, help sell a harvest, prepare buyer messages, show route support, open the map, guide field evidence, and suggest the next safe step.", ["my crop is bad", "sell my crop", "show route", "open map"], "Nexus fast lane answered farmer capability before the generic capability summary.");
   }
   if (/\b(what can you do|what can do|you can do what|how can you help|help me use this|what do you do)\b/.test(lower)) {
     return fastAnswer("I can answer simple questions, open health, medicine, learning, work, crop sale, maps, and guide one step at a time.", ["I need medicine", "find work", "sell my crop", "open map"], "Nexus fast lane summarized capabilities.");
@@ -20669,6 +20688,26 @@ function nexusConversationFirstResponse(response, suggestions = [], status = "an
 
 function nexusPlatformExplainAnswer() {
   return "AgriNexus helps people use farming, health access, learning, jobs, trade, maps, and local services by voice. Nexus is the assistant inside it: it listens, answers in simple words, opens the right service, and guides the next step.";
+}
+
+function nexusPlatformDifferentiatorAnswer() {
+  return "AgriNexus is different because it connects rural and community work in one guided place: agriculture support, telehealth and mobile care access, learning and workforce training, marketplace and trade, logistics and maps, and Nexus assistant guidance. It answers first, opens workflows only when you ask, and keeps risky actions behind confirmation.";
+}
+
+function nexusMobileClinicExplainAnswer() {
+  return "Mobile clinics are care teams or outreach points that bring basic health access closer to a community. In AgriNexus, I can help explain the steps, prepare intake details, find clinic or pharmacy support, and create a safe handoff packet. This local demo does not dispatch or book a live mobile clinic by itself.";
+}
+
+function nexusRegenerativeAgricultureAnswer() {
+  return "Regenerative agriculture means farming in ways that rebuild soil health, protect water, increase biodiversity, and keep farms productive over time. Common practices include cover crops, compost, reduced tillage, crop rotation, agroforestry, managed grazing, and measuring soil or field recovery. AgriNexus can turn that into learning, field notes, crop guidance, and buyer evidence.";
+}
+
+function nexusApplyJobBoundaryAnswer() {
+  return "I can help with a job application, but I do not have a selected job from this chat yet. Choose a job first, or tell me the role and country you want. I will help prepare the application and will not submit anything until you confirm.";
+}
+
+function nexusUrgentChildBreathingAnswer() {
+  return "Call emergency services now if available, such as 911 in the U.S. A baby who is not breathing needs immediate emergency help. I am not a doctor and this app cannot replace emergency services or dispatch care. After you call, I can help find nearby emergency care or prepare a handoff with your location.";
 }
 
 function nexusResilientConversationIntent(command = "") {
