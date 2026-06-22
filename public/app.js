@@ -21665,6 +21665,12 @@ async function handleVoiceCommandCore(rawCommand, options = {}) {
     if (runSimpleUserVoiceIntent(firstPriorityFallbackIntent, spokenCommand || command)) return;
   }
   if (await answerPendingNexusQuestion(command || localizedCommand || rawCommand)) return;
+  if (isHealthVideoPreviewCommand(spokenCommand || command || localizedCommand || rawCommand)) {
+    pendingAgentClarification = null;
+    pendingNexusSpokenCommand = null;
+    goSection("health");
+    return openWorkflowByVoice("health", "video", "I opened Health and prepared the local camera preview and video handoff record. This does not start a live provider visit. Press Open camera when the patient agrees.");
+  }
   if (!options.skipUnifiedBrain && await unifiedNexusConversationBrain(rawCommand, { ...options, turnToken, autoLanguage })) return;
   const visibleInlineWorkflow = $(".user-inline-workflow:not(.hidden)");
   if (pendingWorkflow && visibleInlineWorkflow && !isUniversalLanguageCommand(command || localizedCommand) && !isGlobalStopCommand(String(command || localizedCommand).toLowerCase())) {

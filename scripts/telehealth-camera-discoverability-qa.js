@@ -15,9 +15,14 @@ assertIncludes(app, 'command: "open video for provider to show injury"', "Simple
 assertIncludes(app, 'workflow: "health"', "Simple video command should map to the Health workflow");
 assertIncludes(app, 'action: "video"', "Simple video command should map to health:video");
 assertIncludes(app, "function isHealthVideoPreviewCommand(command = \"\")", "Camera routing should use a targeted health video predicate");
+assertIncludes(app, "if (isHealthVideoPreviewCommand(spokenCommand || command || localizedCommand || rawCommand))", "Explicit typed/global video commands should be caught before broad conversation routing");
+assertIncludes(app, "return openWorkflowByVoice(\"health\", \"video\", \"I opened Health and prepared the local camera preview and video handoff record.", "Explicit typed/global video commands should open the rich health video workflow");
 assertIncludes(app, "isHealthVideoPreviewCommand(button.dataset.simpleCommand)", "Standard User camera button should bypass broader provider-guide routing");
 assertIncludes(app, "workflowConfig(\"health\", \"video\"", "Standard User camera button should build the health:video workflow directly");
 assertIncludes(app, "openHealthVideoPreviewWorkflow(config, \"Local camera preview and video handoff record are ready.\", \"health\")", "Standard User camera button should open the rich camera preview modal");
+assertIncludes(app, 'directAction: "doctor-help"', "Ordinary doctor/provider help should remain on the guided provider-help route");
+assertIncludes(app, "return openWorkflowByVoice(\"health\", \"provider\", \"I opened Health and prepared the listed telehealth provider contact workflow.\")", "Listed provider contact commands should remain on the provider contact workflow");
+assertIncludes(app, "return openWorkflowByVoice(\"health\", \"intake\", \"I can help with care. I opened Health and prepared the intake workflow.\")", "Ordinary health help commands should remain on the guided intake workflow");
 
 assertIncludes(html, 'data-health="video"', "Full Health mode should expose a visible health video workflow button");
 assertIncludes(html, "Open local camera preview", "Full Health video button should use local-preview wording");
