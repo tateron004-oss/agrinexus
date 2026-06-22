@@ -342,6 +342,291 @@ Final recommendation:
 
 Camera coverage is partially complete; `E2E-001` remains open but narrowed. Treat the next implementation as a focused Phase 3F or Phase 3E follow-up for Standard User and typed-command modal routing, then rerun the allowed-camera manual path.
 
+## Phase 3F Camera Routing Retest
+
+Test run date/time: June 21, 2026 PDT
+
+Git commit tested: `0e4e63bf8946cfa3ccfa83cf84baac49d32ba9b8`
+
+Branch: `main`
+
+Local server: `http://127.0.0.1:4635/`
+
+Local server command pattern:
+
+```powershell
+$tempDb = Join-Path (Get-Location) 'tmp-telehealth-camera-phase3f-retest-db.json'
+Copy-Item -LiteralPath .\db.json -Destination $tempDb -Force
+$env:PORT='4635'
+$env:AGRINEXUS_DB_PATH=$tempDb
+node server.js
+```
+
+Temporary data store: `tmp-telehealth-camera-phase3f-retest-db.json`, copied from `db.json` for this local-safe pass.
+
+Browser: Codex in-app browser, local Chromium-backed tab.
+
+Operating system: Microsoft Windows 11 Home, version `10.0.26200`, build `26200`.
+
+Camera hardware detected:
+
+- `USB2.0 HD UVC WebCam`, status `OK`;
+- `Camera DFU Device`, status `OK`.
+
+Viewports checked:
+
+- desktop default: `1280x720`;
+- mobile-ish: `390x844`, attempted but not completed reliably for modal-open observation.
+
+Screenshots: not persisted. Notes, DOM observations, temp DB inspection, and QA output were captured.
+
+### Standard User Local Camera Preview Entry
+
+Status: Pass.
+
+Steps:
+
+1. Signed in as demo Standard User.
+2. Opened `Get Health Help`.
+3. Verified `Local Camera Preview` was visible in the Health shell.
+4. Clicked `Local Camera Preview`.
+
+Observed:
+
+- The rich workflow modal opened.
+- `.workflow-video-preview` was present.
+- `Open camera` and `Stop camera` controls were visible.
+- The path did not fall back to the guided provider workflow only.
+- Local/demo/non-live wording was visible, including:
+  - `Local camera preview only`;
+  - `This is not connected to a live provider and no real telehealth visit is started.`;
+  - `Local handoff demo only`;
+  - `Not a live provider room`;
+  - `no real-time video connection`;
+  - `Provider workflow evidence is local/demo only`.
+
+Result:
+
+- Phase 3F closed the Standard User `Local Camera Preview` routing gap.
+
+### Admin / Full Health Camera Entry
+
+Status: Pass.
+
+Steps:
+
+1. Signed in as Admin.
+2. Opened `AFAYAI Health` at `#health`.
+3. Clicked `Open local camera preview`.
+
+Observed:
+
+- The rich workflow modal still opened.
+- `.workflow-video-preview` remained present.
+- `Open camera` and `Stop camera` controls remained visible.
+- Non-live local handoff wording remained visible.
+
+Result:
+
+- Phase 3F did not regress the previously working full/admin Health camera path.
+
+### Typed / Global Video Command
+
+Status: Partial / still not visibly reaching the modal.
+
+Commands tested:
+
+```text
+open video for provider to show injury
+```
+
+Contexts tested:
+
+- Admin/full Ask AgriNexus command input.
+- Standard User/global command input.
+
+Observed:
+
+- Both command paths returned video-handoff wording, including:
+  - `local camera preview opened`;
+  - `video handoff record prepared`;
+  - `no real-time provider connection started`.
+- In both browser checks, `#workflowModal` remained hidden.
+- Hidden DOM still contained prior `.workflow-video-preview`, `#workflowStartCamera`, and `#workflowStopCamera` nodes, but the controls were not visibly reachable from the typed command result.
+- The command did not visibly fall back to the guided provider workflow, but it also did not open the rich modal.
+
+Result:
+
+- Phase 3F closed the Standard User button gap but did not close the typed/global command modal visibility gap.
+
+### Camera Permission Allowed Path
+
+Status: Not completed.
+
+Reason:
+
+- Camera hardware was detected, but the browser returned a permission-denied result during the local camera attempt.
+- No live camera stream attached to the preview video element.
+- The allow path still needs a follow-up manual run in a browser/profile where camera permission can be granted.
+
+### Camera Permission Denied Path
+
+Status: Pass.
+
+Steps:
+
+1. Opened the Standard User rich local camera-preview modal.
+2. Clicked `Open camera`.
+
+Observed:
+
+- The app did not crash.
+- The browser did not attach a stream to `#workflowVideoPreview`.
+- Nexus surfaced safe fallback language:
+  - `Camera could not open: Permission denied.`
+- No live provider room or real-time WebRTC session was implied.
+
+Result:
+
+- The permission-denied path remains safe after Phase 3F.
+
+### Handoff Record Confirmation
+
+Status: Pass.
+
+Observed before confirmation:
+
+- Opening the Standard User camera modal did not create a video session record.
+- Clicking `Open camera` and receiving permission denied did not create a video session record.
+- The temp DB still showed `videoSessions: []`.
+
+Observed after pressing the workflow confirmation button:
+
+- A single temp video session record was created.
+- The record kept expected non-live metadata:
+  - `videoMode: "local-handoff-demo"`;
+  - `handoffOnly: true`;
+  - `realTimeVideo: false`;
+  - `liveProviderConnected: false`;
+  - `providerStatus: "local-handoff-ready"`;
+  - `demoRecord: true`;
+  - `source: "default-workflow"`;
+  - `createdBy: "user@agrinexus.org"`.
+
+Result:
+
+- `/api/video/session` remains confirmation-gated.
+
+### Responsive / Focus Quick Check
+
+Status: Partial.
+
+Observed:
+
+- Desktop Standard User camera modal opened and controls were visible.
+- Desktop Admin/full camera modal opened and controls were visible.
+- Mobile-ish viewport testing was attempted at `390x844`, but the automated browser state did not produce a reliable modal-open observation during this pass.
+
+Not completed:
+
+- A clean mobile manual click-through with persisted screenshots.
+- Full keyboard-only traversal.
+- Camera allow/stream cleanup.
+
+### Browser Console / API Notes
+
+Observed:
+
+- No video-specific browser crash was observed.
+- Browser log capture still included prior map-related warnings/errors from earlier local tabs:
+  - `Using default map tile configuration Map config unavailable`;
+  - Leaflet `clearRect` errors.
+- These remain tracked separately from the camera routing work.
+
+### Phase 3F Issues Found
+
+#### VC-E2E-006: Typed Video Command Gives Handoff Copy But Does Not Show Modal
+
+Severity: Medium
+
+Area: Typed/global command routing
+
+How to verify:
+
+1. Sign in as Admin or Standard User.
+2. Open Ask AgriNexus or the global command input.
+3. Type `open video for provider to show injury`.
+
+Expected:
+
+- The visible rich local camera-preview modal opens.
+
+Actual:
+
+- The app returns video-handoff wording, but `#workflowModal` remains hidden and camera controls are not visibly reachable.
+
+Recommended fix:
+
+- Continue with a focused Phase 3G or Phase 3F follow-up that traces the typed/global command path after backend/assistant handling and ensures explicit health video commands call the same visible modal-opening route used by the Standard User button and full/admin Health button.
+
+#### VC-E2E-007: Camera Allowed Path Remains Untested
+
+Severity: Low
+
+Area: Manual camera permission coverage
+
+Observed:
+
+- The browser denied camera access during the retest.
+- Denial handling passed, but the allow/stream path was not completed.
+
+Recommended fix:
+
+- Rerun in a browser profile where camera permission can be granted, or add a controlled manual browser checklist for permission reset/allow behavior.
+
+#### VC-E2E-008: Mobile Camera Modal Retest Remains Incomplete
+
+Severity: Low
+
+Area: Responsive manual coverage
+
+Observed:
+
+- Desktop modal behavior passed.
+- Mobile-ish automated browser checks did not produce a reliable modal-open observation during this pass.
+
+Recommended fix:
+
+- Repeat mobile retest in a visible browser session with screenshots after the typed/global command route is fixed.
+
+### Phase 3F E2E-001 Status Update
+
+Previous status: camera coverage partially complete; `E2E-001` remained open but narrower.
+
+Updated status: camera coverage partially complete; `E2E-001` remains open but narrower.
+
+Now confirmed:
+
+- Standard User `Local Camera Preview` reaches the rich camera-preview modal.
+- Admin/full Health `Open local camera preview` still reaches the rich camera-preview modal.
+- The modal exposes `Open camera` / `Stop camera`.
+- Non-live handoff-only wording is visible.
+- Permission-denied camera behavior is safe and non-crashing.
+- The video handoff record is not created until explicit workflow confirmation.
+- Confirmed handoff records retain non-live metadata.
+
+Still open:
+
+- Typed/global video-provider command does not visibly open the modal.
+- Camera permission allowed path.
+- Camera unavailable hardware path.
+- Clean mobile screenshot-backed retest.
+- Full keyboard-only accessibility traversal.
+
+Final recommendation:
+
+Camera coverage is partially complete; `E2E-001` remains open but narrowed. Phase 3F successfully fixed the Standard User button route and preserved the admin route, but typed/global command modal visibility still needs a focused follow-up before camera coverage can be marked complete.
+
 ## Scope
 
 This was a focused browser/manual pass for the remaining video/camera portion of `E2E-001`.
