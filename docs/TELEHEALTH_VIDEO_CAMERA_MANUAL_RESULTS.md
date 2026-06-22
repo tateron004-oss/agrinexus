@@ -627,6 +627,218 @@ Final recommendation:
 
 Camera coverage is partially complete; `E2E-001` remains open but narrowed. Phase 3F successfully fixed the Standard User button route and preserved the admin route, but typed/global command modal visibility still needs a focused follow-up before camera coverage can be marked complete.
 
+## Typed / Global Video Command Modal Retest
+
+Test run date/time: June 21, 2026 PDT
+
+Git commit tested: `185545d3006a7cd46c3dc812fa6925ec04f08923`
+
+Branch: `main`
+
+Local server: `http://127.0.0.1:4636/`
+
+Local server command pattern:
+
+```powershell
+$tempDb = Join-Path (Get-Location) 'tmp-telehealth-typed-video-retest-db.json'
+Copy-Item -LiteralPath .\db.json -Destination $tempDb -Force
+$env:PORT='4636'
+$env:AGRINEXUS_DB_PATH=$tempDb
+node server.js
+```
+
+Temporary data store: `tmp-telehealth-typed-video-retest-db.json`, copied from `db.json` for this local-safe pass.
+
+Browser: Codex in-app browser, local Chromium-backed tab.
+
+Operating system: Microsoft Windows 11 Home, version `10.0.26200`, build `26200`.
+
+Camera hardware detected:
+
+- `USB2.0 HD UVC WebCam`, status `OK`.
+
+Viewport checked:
+
+- desktop default: `1280x720`.
+
+Screenshots: not persisted. Notes, DOM observations, temp DB inspection, and QA output were captured.
+
+### Typed / Global Video Command
+
+Status: Fail / still not visibly reaching the rich camera-preview modal.
+
+Command tested:
+
+```text
+open video for provider to show injury
+```
+
+Contexts tested:
+
+- Standard User visible caption input.
+- Visible `Ask AgriNexus` global command drawer using `#globalCommandInput`.
+
+Expected:
+
+- The rich workflow modal opens.
+- `.workflow-video-preview` is present and visible.
+- `Open camera` and `Stop camera` are visible.
+- Non-live wording is visible, including:
+  - local camera preview;
+  - handoff-only demo;
+  - not connected to a live provider;
+  - no real telehealth visit is started;
+  - no live provider room;
+  - no real-time WebRTC/signaling engine.
+- The command does not fall back to provider assignment or guided provider workflow only.
+
+Observed:
+
+- The typed/global command returned medical-provider help guidance:
+  - `I heard you need medical help. I can guide you step by step...`
+- `#workflowModal` retained the `hidden` class.
+- `.workflow-video-preview` was not present in the active modal state.
+- `Open camera` and `Stop camera` were not visible from the typed/global command result.
+- The result did not visibly open the provider assignment modal either; it remained an assistant guidance response.
+
+Result:
+
+- The typed/global command routing fix at `185545d` did not close the browser-visible modal gap.
+- The command still appears to be intercepted by a broader medical-help route before the visible rich camera-preview modal opens.
+
+### Standard User Local Camera Preview Entry
+
+Status: Pass.
+
+Steps:
+
+1. Signed in as the demo Standard/User flow.
+2. Opened `Get Health Help`.
+3. Clicked `Local Camera Preview`.
+
+Observed:
+
+- The rich workflow modal opened.
+- `.workflow-video-preview` was visible.
+- `Open camera` and `Stop camera` controls were visible.
+- Non-live local/demo wording was visible, including:
+  - `local camera preview`;
+  - `Local handoff demo only`;
+  - `not connected to a live provider`;
+  - `no real telehealth visit is started`;
+  - `Not a live provider room`;
+  - `no real-time video connection`.
+
+Result:
+
+- The Standard User visible button path remains fixed.
+
+### Admin / Full Health Camera Entry
+
+Status: Not repeated in this pass.
+
+Reason:
+
+- The current Standard/User session did not expose a reliable visible path to switch into the full Admin workspace without manipulating app state outside the normal visible UI.
+- Previous Phase 3F manual results already verified the Admin/full `Open local camera preview` path.
+
+Recommendation:
+
+- Repeat the Admin/full Health retest in a clean Admin login session during the next browser pass.
+
+### Handoff Record Confirmation Gate
+
+Status: Pass for pre-confirmation behavior.
+
+Observed:
+
+- Opening the Standard User camera-preview modal did not create a video session record.
+- Clicking `Open camera` and receiving a permission-denied fallback did not create a video session record.
+- The temp DB remained at `videoSessions: 0`.
+
+Result:
+
+- `/api/video/session` handoff creation remains confirmation-gated for the tested path.
+
+### Camera Permission Path
+
+Status: Denied path pass; allowed path still not completed.
+
+Steps:
+
+1. Opened the Standard User rich camera-preview modal.
+2. Clicked `Open camera`.
+
+Observed:
+
+- Browser camera access was denied.
+- The preview video element remained present but did not receive a stream.
+- Nexus surfaced safe fallback language:
+  - `Camera could not open: Permission denied.`
+- The app did not crash.
+- No live provider room or real-time WebRTC session was implied.
+
+Result:
+
+- Camera denied fallback remains safe.
+- Camera allowed/stream path remains untested in this browser profile.
+
+### Typed Command Issue Found
+
+#### VC-E2E-009: Typed / Global Video Command Still Routes To Medical-Help Guidance
+
+Severity: Medium
+
+Area: Typed/global command routing
+
+How to verify:
+
+1. Sign in through the normal demo user flow.
+2. Open Ask AgriNexus from the visible `Ask` control.
+3. Type `open video for provider to show injury`.
+4. Press `Run command`.
+
+Expected:
+
+- The visible rich local camera-preview modal opens with `Open camera` / `Stop camera`.
+
+Actual:
+
+- Nexus returns generic medical-provider guidance.
+- `#workflowModal` remains hidden.
+- The rich camera-preview controls are not visible.
+
+Recommended fix:
+
+- Trace the typed/global command path before the broad medical-help routing branch and route the explicit video-preview predicate to the same visible modal path used by the Standard User `Local Camera Preview` button.
+
+### Typed / Global Command E2E-001 Status Update
+
+Previous status: camera coverage partially complete; `E2E-001` remained open with typed/global modal visibility as the narrowest remaining routing gap.
+
+Updated status: still partial; `E2E-001` remains open.
+
+Now confirmed:
+
+- Standard User `Local Camera Preview` still opens the rich camera-preview modal.
+- The rich modal exposes `Open camera` / `Stop camera`.
+- Non-live handoff-only wording remains visible in the Standard User modal.
+- No video session record is created by opening the modal or by a denied camera attempt.
+- Camera denied fallback is safe and non-crashing.
+- Static QA still expects typed/global routing to the modal path.
+
+Still open:
+
+- Typed/global command `open video for provider to show injury` does not visibly open the rich modal.
+- Admin/full Health camera path needs a clean fresh Admin-session retest.
+- Camera permission allowed path.
+- Camera unavailable hardware path.
+- Full keyboard-only accessibility traversal.
+
+Final recommendation:
+
+Still partial; typed/global command routing remains the exact blocker. Keep `E2E-001` open. The next implementation should focus only on making explicit typed/global video commands reach the already-working rich camera-preview modal, then rerun the allowed-camera and Admin/full retest paths.
+
 ## Scope
 
 This was a focused browser/manual pass for the remaining video/camera portion of `E2E-001`.
