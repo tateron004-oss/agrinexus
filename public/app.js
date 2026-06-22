@@ -10261,6 +10261,7 @@ const simpleUserSections = {
     buttons: [
       { label: "Start Intake", command: "start telehealth intake" },
       { label: "Talk to Provider", command: "open telehealth access" },
+      { label: "Local Camera Preview", command: "open video for provider to show injury" },
       { label: "Show Injury", command: "open video for provider to show injury" },
       { label: "Call Provider", command: "call provider" },
       { label: "Clinic Payment", command: "request mobile clinic payment" },
@@ -11013,6 +11014,12 @@ function openMappedUserWorkflow(mapped, sectionId = currentSectionId()) {
   try {
     if (experienceMode === "user") {
       const label = mapped.label || simpleUserSections[sectionId]?.buttons?.find(button => button.command === mapped.command)?.label || config.userTitle || config.title || "Selected action";
+      if (config.videoPreview) {
+        openWorkflowModal(config);
+        $(`#${sectionId} .user-module-status`) && ($(`#${sectionId} .user-module-status`).textContent = translateText("Local camera preview opened. Ask permission before showing private health details, then confirm only when the handoff record is ready."));
+        setVoiceResponse(mapped.response || config.userSummary || config.summary || "Local camera preview is open. This is a handoff-only demo, not a live provider room.", true);
+        return true;
+      }
       return forceOpenUserProcessScreen(sectionId, config, mapped, label);
     }
     openWorkflowModal(config);
@@ -15118,7 +15125,7 @@ function workflowConfig(workflow, action, element) {
     const titleMap = {
       intake: "Start intake",
       representative: "Connect representative",
-      video: "Open provider video",
+      video: "Open local camera preview",
       safety: "Run safety review",
       inspector: "Inspect route",
       careplan: "Generate care plan",
