@@ -8,8 +8,15 @@ const app = fs.readFileSync(path.join(root, "public", "app.js"), "utf8");
 const server = fs.readFileSync(path.join(root, "server.js"), "utf8");
 const sw = fs.readFileSync(path.join(root, "public", "sw.js"), "utf8");
 
+const appBuildMatch = app.match(/AGRINEXUS_BUILD_VERSION = "([^"]+)"/);
+const appCacheMatch = app.match(/AGRINEXUS_PWA_CACHE_VERSION = "([^"]+)"/);
+assert(appBuildMatch, "App build marker missing");
+assert(appCacheMatch, "App cache marker missing");
+const currentBuild = appBuildMatch[1];
+const currentCache = appCacheMatch[1];
+
 const checks = [
-  ["build bumped", server.includes('AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-294"') && app.includes('AGRINEXUS_BUILD_VERSION = "nexus-behavior-294"') && sw.includes('agrinexus-pwa-v274')],
+  ["build bumped", server.includes(`AGRINEXUS_WEB_BUILD_VERSION = "${currentBuild}"`) && html.includes(`app.js?v=${currentBuild}`) && sw.includes(`BUILD_VERSION = "${currentBuild}"`) && sw.includes(currentCache)],
   ["password input is not prefilled", !html.includes('id="password" value=') && html.includes('placeholder="Type password"')],
   ["profile buttons do not store password dataset", app.includes('data-login-email="${profile.email}"') && !app.includes("data-login-password")],
   ["profile selection clears password", app.includes('$("#password").value = "";') && app.includes("Type the password to enter")],

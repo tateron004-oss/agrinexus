@@ -45,8 +45,41 @@ const server = fs.readFileSync("server.js", "utf8");
   "lessonWorkflowConfig(course",
   "learningAccessibilityWorkflowConfig",
   "courseSelectOptions()",
-  'event.target.closest("[data-course-action]")'
+  'event.target.closest("[data-course-action]")',
+  "function explicitLearningReadinessIntent",
+  "const explicitLearningIntent = explicitLearningReadinessIntent(command)",
+  "I opened Learning for farming support",
+  "I opened Learning quiz support"
 ].forEach(marker => assert(app.includes(marker), `Frontend learning workflow marker missing: ${marker}`));
+
+[
+  "teach me|help me learn|show me training|train me",
+  "farming|farm|agriculture|agri|crop|crops",
+  "ai|artificial intelligence",
+  "give|start|take|open|show|make|create",
+  "me|please|help|practice",
+  "Learning quiz support",
+  "Learning for farming support",
+  "Learning for AI training"
+].forEach(marker => assert(app.includes(marker), `Learning typed command readiness marker missing: ${marker}`));
+
+assert(
+  app.indexOf("const explicitLearningIntent = explicitLearningReadinessIntent(command)") < app.indexOf("if (shouldAskRepeatForUnclearVoiceCommand(command, options))"),
+  "Explicit learning typed commands must route before unclear-repeat fallback"
+);
+assert(
+  app.indexOf("const explicitLearningIntent = explicitLearningReadinessIntent(command)") < app.indexOf("const smartIntent = nexusSmartIntentRouter(command)"),
+  "Explicit learning typed commands must route before smart/general intent fallback"
+);
+
+[
+  "start training",
+  "start a course",
+  "complete my lesson",
+  "finish lesson",
+  "build captions",
+  "make captions"
+].forEach(marker => assert(app.includes(marker), `Existing learning command marker missing: ${marker}`));
 
 [
   "catalog-grid",
@@ -58,9 +91,19 @@ const server = fs.readFileSync("server.js", "utf8");
   assert(!styles.includes(`.${oldMarker}`), `Learning styles should not use old card marker: ${oldMarker}`);
 });
 
-assert(html.includes("nexus-behavior-287"), "Index must force latest learning functionality build");
-assert(app.includes("nexus-behavior-287"), "App must expose latest learning functionality build");
-assert(fs.readFileSync("public/sw.js", "utf8").includes("agrinexus-pwa-v267"), "Service worker cache must be bumped for learning functionality");
+const appBuildMatch = app.match(/const AGRINEXUS_BUILD_VERSION = "([^"]+)"/);
+const appCacheMatch = app.match(/const AGRINEXUS_PWA_CACHE_VERSION = "([^"]+)"/);
+assert(appBuildMatch, "App must expose a learning functionality build constant");
+assert(appCacheMatch, "App must expose a PWA cache constant for learning functionality");
+
+const currentBuild = appBuildMatch[1];
+const currentCache = appCacheMatch[1];
+const serviceWorker = fs.readFileSync("public/sw.js", "utf8");
+
+assert(html.includes(`styles.css?v=${currentBuild}`), "Index must force latest learning functionality style build");
+assert(html.includes(`app.js?v=${currentBuild}`), "Index must force latest learning functionality script build");
+assert(serviceWorker.includes(`BUILD_VERSION = "${currentBuild}"`), "Service worker build must match app learning functionality build");
+assert(serviceWorker.includes(`CACHE_NAME = "${currentCache}"`), "Service worker cache must match app learning functionality cache");
 
 console.log("Learning functionality QA passed");
 

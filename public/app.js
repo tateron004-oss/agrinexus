@@ -138,8 +138,8 @@ let routeTrackingWatchId = null;
 let routeTrackingPoints = [];
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-294";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v274";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-295";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v275";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
 const VOICE_ATTENTION_DELAY_MS = 900;
@@ -11335,6 +11335,8 @@ function simpleUserCommandWorkflow(command = "") {
   if ((lower.includes("credential") || lower.includes("provider") || lower.includes("engine")) && (lower.includes("live") || lower.includes("connect") || lower.includes("prepare"))) {
     return { workflow: "cross-platform", action: "live-credential-path", response: "Live engine credential path is ready.", dataset: {} };
   }
+  const explicitLearningIntent = explicitLearningReadinessIntent(command);
+  if (explicitLearningIntent) return { workflow: explicitLearningIntent.workflow, action: explicitLearningIntent.action, response: explicitLearningIntent.response, dataset: explicitLearningIntent.dataset || {} };
   if (lower.includes("start training") || lower.includes("start a course")) return { workflow: "learning", action: "start", response: "Course start is ready.", dataset: {} };
   if (lower.includes("complete my lesson") || lower.includes("finish lesson")) return { workflow: "learning", action: "lesson", response: "Lesson completion is ready.", dataset: {} };
   if (lower.includes("issue my certificate") || lower.includes("certificate")) return { section: "learning", config: learningCertificateWorkflowConfig(), response: "Certificate workflow is ready." };
@@ -19099,6 +19101,34 @@ function isSimpleCourseStartCommand(command = "") {
     || /\b(course|class|lesson|training)\b.*\b(start|begin|continue)\b/.test(lower);
 }
 
+function explicitLearningReadinessIntent(command = "") {
+  const lower = normalizeToolText(command);
+  if (!lower) return null;
+  if (/\b(give|start|take|open|show|make|create)\s+(me\s+)?(a\s+)?quiz\b/.test(lower) || /\bquiz\s+(me|please|help|practice)\b/.test(lower)) {
+    return {
+      workflow: "learning",
+      action: "quiz-attempt",
+      response: "I opened Learning quiz support. Nexus can help practice the active course and record quiz readiness."
+    };
+  }
+  const teachingRequest = /\b(teach me|help me learn|show me training|train me)\b/.test(lower);
+  if (teachingRequest && /\b(farming|farm|agriculture|agri|crop|crops)\b/.test(lower)) {
+    return {
+      workflow: "learning",
+      action: "start",
+      response: "I opened Learning for farming support. Choose a course, or tell Nexus the farm skill you want to practice."
+    };
+  }
+  if (teachingRequest && /\b(ai|artificial intelligence)\b/.test(lower)) {
+    return {
+      workflow: "learning",
+      action: "start",
+      response: "I opened Learning for AI training. Choose the AI Operator Review path or tell Nexus what AI skill you want to learn."
+    };
+  }
+  return null;
+}
+
 async function handleSimpleCourseStartCommand(command = "") {
   const course = activeCourse();
   if (!course) {
@@ -20234,6 +20264,16 @@ function simpleUserDirectVoiceIntent(command = "") {
       type: "direct",
       directAction: "learning-guided",
       response: "I heard learning. I can guide it step by step. First, what do you want to learn?"
+    };
+  }
+  const explicitLearningIntent = explicitLearningReadinessIntent(command);
+  if (explicitLearningIntent) {
+    return {
+      type: "workflow",
+      workflow: "learning",
+      action: explicitLearningIntent.action,
+      response: explicitLearningIntent.response,
+      dataset: explicitLearningIntent.dataset || {}
     };
   }
   if (/^(map|route|location|tracking|ramani|mapa|carte)$/.test(onePhrase)) {
@@ -22106,6 +22146,12 @@ async function handleVoiceCommandCore(rawCommand, options = {}) {
   if (isSimpleCourseStartCommand(command)) {
     await handleSimpleCourseStartCommand(command);
     return;
+  }
+  const explicitLearningIntent = explicitLearningReadinessIntent(command);
+  if (explicitLearningIntent) {
+    pendingAgentClarification = null;
+    pendingNexusSpokenCommand = null;
+    return openWorkflowByVoice("learning", explicitLearningIntent.action, explicitLearningIntent.response, explicitLearningIntent.dataset || {});
   }
   if (shouldAskRepeatForUnclearVoiceCommand(command, options)) {
     askUserToRepeatMisheardPhrase(command);
