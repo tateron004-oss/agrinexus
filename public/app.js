@@ -3258,17 +3258,106 @@ function nexusMusicTestCatalog(query = "") {
   return catalog.find(item => item.match.test(lower)) || catalog[0];
 }
 
+const nexusLocalMusicPlayback = {
+  context: null,
+  gain: null,
+  nodes: [],
+  timers: [],
+  state: "idle",
+  volume: 0.12,
+  muted: false,
+  track: null
+};
+
+function clearNexusLocalMusicTimers() {
+  nexusLocalMusicPlayback.timers.forEach(timer => clearTimeout(timer));
+  nexusLocalMusicPlayback.timers = [];
+}
+
+function setNexusLocalMusicGain(value = nexusLocalMusicPlayback.volume) {
+  const gain = nexusLocalMusicPlayback.gain;
+  if (!gain) return;
+  const target = nexusLocalMusicPlayback.muted ? 0.0001 : Math.max(0.0001, Math.min(0.3, value));
+  try {
+    gain.gain.cancelScheduledValues(gain.context.currentTime);
+    gain.gain.setTargetAtTime(target, gain.context.currentTime, 0.03);
+  } catch (error) {
+    gain.gain.value = target;
+  }
+}
+
+function resetNexusLocalMusicPlayback(state = "idle") {
+  clearNexusLocalMusicTimers();
+  nexusLocalMusicPlayback.context = null;
+  nexusLocalMusicPlayback.gain = null;
+  nexusLocalMusicPlayback.nodes = [];
+  nexusLocalMusicPlayback.state = state;
+  nexusLocalMusicPlayback.track = null;
+}
+
+function stopNexusLocalMusicPlayback(options = {}) {
+  const context = nexusLocalMusicPlayback.context;
+  const wasActive = Boolean(context && nexusLocalMusicPlayback.state !== "idle");
+  clearNexusLocalMusicTimers();
+  nexusLocalMusicPlayback.nodes.forEach(node => {
+    try {
+      node.stop?.(0);
+    } catch (error) {
+      // The oscillator may already have stopped.
+    }
+    try {
+      node.disconnect?.();
+    } catch (error) {
+      // The node may already be disconnected.
+    }
+  });
+  nexusLocalMusicPlayback.nodes = [];
+  if (context) {
+    try {
+      context.close?.().catch?.(() => {});
+    } catch (error) {
+      // Some browsers throw if the context is already closing.
+    }
+  }
+  resetNexusLocalMusicPlayback(options.state || "stopped");
+  if (options.toast && wasActive) toast("Local music demo stopped");
+  return wasActive;
+}
+
+function scheduleNexusLocalMusicCleanup(context) {
+  const timer = setTimeout(() => {
+    if (nexusLocalMusicPlayback.context !== context) return;
+    stopNexusLocalMusicPlayback({ state: "idle" });
+  }, 7000);
+  nexusLocalMusicPlayback.timers.push(timer);
+}
+
 async function playNexusMusicTestAudio(query = "music") {
   const AudioContextClass = window.AudioContext || window.webkitAudioContext;
-  if (!AudioContextClass) return false;
+  if (!AudioContextClass) {
+    toast("This browser cannot play the local Nexus music demo.");
+    return false;
+  }
+  stopNexusLocalMusicPlayback({ state: "stopped" });
   const track = nexusMusicTestCatalog(query);
   const context = new AudioContextClass();
-  await context.resume();
+  try {
+    await context.resume();
+  } catch (error) {
+    resetNexusLocalMusicPlayback("idle");
+    toast("Tap a music command again to allow browser audio playback.");
+    return false;
+  }
   const gain = context.createGain();
   gain.gain.setValueAtTime(0.0001, context.currentTime);
-  gain.gain.exponentialRampToValueAtTime(0.12, context.currentTime + 0.08);
+  gain.gain.exponentialRampToValueAtTime(nexusLocalMusicPlayback.muted ? 0.0001 : nexusLocalMusicPlayback.volume, context.currentTime + 0.08);
   gain.gain.exponentialRampToValueAtTime(0.0001, context.currentTime + 6.2);
   gain.connect(context.destination);
+  nexusLocalMusicPlayback.context = context;
+  nexusLocalMusicPlayback.gain = gain;
+  nexusLocalMusicPlayback.nodes = [];
+  nexusLocalMusicPlayback.state = "playing";
+  nexusLocalMusicPlayback.track = track;
   track.notes.forEach((frequency, index) => {
     const start = context.currentTime + index * track.tempo;
     const osc = context.createOscillator();
@@ -3282,6 +3371,7 @@ async function playNexusMusicTestAudio(query = "music") {
     noteGain.connect(gain);
     osc.start(start);
     osc.stop(start + Math.max(0.22, track.tempo - 0.02));
+    nexusLocalMusicPlayback.nodes.push(osc);
   });
   const bass = context.createOscillator();
   bass.type = "sine";
@@ -3289,13 +3379,76 @@ async function playNexusMusicTestAudio(query = "music") {
   bass.connect(gain);
   bass.start(context.currentTime);
   bass.stop(context.currentTime + 6.1);
-  setTimeout(() => context.close().catch(() => {}), 7000);
+  nexusLocalMusicPlayback.nodes.push(bass);
+  scheduleNexusLocalMusicCleanup(context);
   toast(`Playing ${track.label}`);
+  return true;
+}
+
+function localMusicControlIntent(command = "") {
+  const lower = normalizeToolText(command);
+  if (!/\bmusic\b|\bsong\b|\bsongs\b|\bplaylist\b/.test(lower)) return null;
+  if (/\b(stop|cancel|end|turn off|shut off)\b.*\b(music|song|songs|playlist)\b|\b(music|song|songs|playlist)\b.*\b(stop|cancel|end)\b/.test(lower)) return "stop";
+  if (/\b(pause|hold)\b.*\b(music|song|songs|playlist)\b|\b(music|song|songs|playlist)\b.*\bpause\b/.test(lower)) return "pause";
+  if (/\b(resume|continue|restart)\b.*\b(music|song|songs|playlist)\b|\b(music|song|songs|playlist)\b.*\b(resume|continue|restart)\b/.test(lower)) return "resume";
+  if (/\b(mute|silence)\b.*\b(music|song|songs|playlist)\b|\b(music|song|songs|playlist)\b.*\bmute\b/.test(lower)) return "mute";
+  if (/\b(unmute|unsilence)\b.*\b(music|song|songs|playlist)\b|\b(music|song|songs|playlist)\b.*\bunmute\b/.test(lower)) return "unmute";
+  if (/\b(volume|turn)\b.*\b(up|louder|higher)\b.*\b(music|song|songs|playlist)\b|\b(music|song|songs|playlist)\b.*\b(volume up|turn up|louder|higher)\b/.test(lower)) return "volume-up";
+  if (/\b(volume|turn)\b.*\b(down|lower|quieter|softer)\b.*\b(music|song|songs|playlist)\b|\b(music|song|songs|playlist)\b.*\b(volume down|turn down|lower|quieter|softer)\b/.test(lower)) return "volume-down";
+  return null;
+}
+
+function handleLocalMusicControlCommand(command = "") {
+  const action = localMusicControlIntent(command);
+  if (!action) return false;
+  const playback = nexusLocalMusicPlayback;
+  const active = Boolean(playback.context && playback.state !== "idle" && playback.state !== "stopped");
+  let message = "";
+  if (action === "stop") {
+    const stopped = stopNexusLocalMusicPlayback({ toast: true, state: "stopped" });
+    message = stopped ? "Local music demo stopped. Nexus is still listening when you call it again." : "No local music demo is playing right now.";
+  } else if (action === "pause") {
+    if (playback.context && playback.state === "playing") {
+      playback.context.suspend?.().catch?.(() => {});
+      clearNexusLocalMusicTimers();
+      playback.state = "paused";
+      message = "Local music demo paused. Say resume music to continue it.";
+    } else {
+      message = playback.state === "paused" ? "Local music demo is already paused." : "No local music demo is playing right now.";
+    }
+  } else if (action === "resume") {
+    if (playback.context && playback.state === "paused") {
+      playback.context.resume?.().catch?.(() => {});
+      playback.state = "playing";
+      scheduleNexusLocalMusicCleanup(playback.context);
+      message = "Local music demo resumed.";
+    } else {
+      message = active ? "Local music demo is already playing." : "Nothing is paused in the local music demo.";
+    }
+  } else if (action === "mute") {
+    playback.muted = true;
+    setNexusLocalMusicGain();
+    message = active ? "Local music demo muted." : "Local music demo will start muted next time.";
+  } else if (action === "unmute") {
+    playback.muted = false;
+    setNexusLocalMusicGain();
+    message = active ? "Local music demo unmuted." : "Local music demo will use sound next time.";
+  } else if (action === "volume-up" || action === "volume-down") {
+    const delta = action === "volume-up" ? 0.03 : -0.03;
+    playback.volume = Math.max(0.03, Math.min(0.24, Number((playback.volume + delta).toFixed(2))));
+    if (action === "volume-up") playback.muted = false;
+    setNexusLocalMusicGain(playback.volume);
+    message = `Local music demo volume is ${Math.round((playback.muted ? 0 : playback.volume) / 0.24 * 100)}%.`;
+  }
+  updateNexusBehaviorLayer("answering", "Nexus adjusted the local browser music demo playback.");
+  renderLiveVoiceSuggestions(["play relaxing music", "pause music", "resume music", "stop music"]);
+  if (message) setVoiceResponse(message, true);
   return true;
 }
 
 async function runMusicAssistantCommand(command = "", options = {}) {
   const turnToken = options.turnToken || null;
+  if (handleLocalMusicControlCommand(command)) return true;
   const intent = musicAssistantIntent(command);
   if (!intent) return false;
   updateNexusBehaviorLayer("answering", "Nexus understood this as an everyday music request and is checking the connected music provider.");
@@ -3303,7 +3456,10 @@ async function runMusicAssistantCommand(command = "", options = {}) {
   const result = await runUtilityAgentCommand(command, intent.response, null, { turnToken });
   if (ignoreStaleNexusTurn(turnToken, "music answer")) return true;
   const music = result?.metadata?.music;
-  if (music && music.status !== "playback-started") await playNexusMusicTestAudio(intent.query);
+  if (music && music.status !== "playback-started") {
+    const played = await playNexusMusicTestAudio(intent.query);
+    if (!played) setVoiceResponse("I understood the music request, but the browser did not allow local demo playback yet. Try again from a button or typed command.", true);
+  }
   return true;
 }
 
@@ -20698,10 +20854,16 @@ function nexusConversationFirstIntent(command = "") {
       response: "I opened map support so you can allow location and continue route, clinic, pharmacy, or shipment tracking."
     };
   }
+  if (localMusicControlIntent(command)) {
+    return {
+      type: "tool",
+      tool: "music-control"
+    };
+  }
   if (/\b(play|open|find|search|start|put on|listen to)\b.*\b(music|song|songs|playlist|soul|gospel|congolese|kenyan|relaxing|90s)\b/.test(lower)) {
     return {
-      type: "answer",
-      response: "Music request understood. I can use the connected music provider when authorized; for demo mode I can open a safe playback or search handoff and keep Nexus listening.",
+      type: "tool",
+      tool: "music",
       suggestions: ["stop the music", "play relaxing music", "pause"]
     };
   }
@@ -20910,6 +21072,7 @@ async function executeUnifiedNexusIntent(intent, command = "", options = {}) {
   if (intent.type === "tool") {
     pendingAgentClarification = null;
     pendingNexusSpokenCommand = null;
+    if (intent.tool === "music-control") return handleLocalMusicControlCommand(command);
     if (intent.tool === "music") return runMusicAssistantCommand(command, { turnToken });
     if (intent.tool === "dynamic") return runDynamicVoiceTool(command);
     if (intent.tool === "intelligence") return handleNexusIntelligenceRouter(command);
