@@ -15,8 +15,13 @@ assertIncludes(app, 'command: "open video for provider to show injury"', "Simple
 assertIncludes(app, 'workflow: "health"', "Simple video command should map to the Health workflow");
 assertIncludes(app, 'action: "video"', "Simple video command should map to health:video");
 assertIncludes(app, "function isHealthVideoPreviewCommand(command = \"\")", "Camera routing should use a targeted health video predicate");
-assertIncludes(app, "if (isHealthVideoPreviewCommand(spokenCommand || command || localizedCommand || rawCommand))", "Explicit typed/global video commands should be caught before broad conversation routing");
-assertIncludes(app, "return openWorkflowByVoice(\"health\", \"video\", \"I opened Health and prepared the local camera preview and video handoff record.", "Explicit typed/global video commands should open the rich health video workflow");
+assertIncludes(app, "function openExplicitHealthVideoPreviewCommand(command = \"\")", "Explicit health video commands should use a dedicated rich-modal route");
+assertIncludes(app, "if (!isHealthVideoPreviewCommand(command)) return false;", "Explicit video command route should stay narrow");
+assertIncludes(app, "openHealthVideoPreviewWorkflow(config, \"I opened Health and prepared the local camera preview and video handoff record.", "Explicit typed/global video commands should open the rich health video workflow");
+assertIncludes(app, "if (openExplicitHealthVideoPreviewCommand(spokenCommand || command || localizedCommand || rawCommand)) return;", "Explicit typed/global video commands should be caught before fast-lane and simple medical-help routing");
+assertIncludes(app, 'const command = input?.value.trim();', "Visible caption typed command path should read the typed caption command");
+assertIncludes(app, 'void handleVoiceCommand(command);', "Visible caption/global command paths should route through handleVoiceCommand");
+assertIncludes(app, 'const input = $("#globalCommandInput");', "Global command drawer should read the visible global command input");
 assertIncludes(app, "isHealthVideoPreviewCommand(button.dataset.simpleCommand)", "Standard User camera button should bypass broader provider-guide routing");
 assertIncludes(app, "workflowConfig(\"health\", \"video\"", "Standard User camera button should build the health:video workflow directly");
 assertIncludes(app, "openHealthVideoPreviewWorkflow(config, \"Local camera preview and video handoff record are ready.\", \"health\")", "Standard User camera button should open the rich camera preview modal");

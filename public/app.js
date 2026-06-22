@@ -11050,6 +11050,15 @@ function openHealthVideoPreviewWorkflow(config = workflowConfig("health", "video
   return true;
 }
 
+function openExplicitHealthVideoPreviewCommand(command = "") {
+  if (!isHealthVideoPreviewCommand(command)) return false;
+  pendingAgentClarification = null;
+  pendingNexusSpokenCommand = null;
+  goSection("health");
+  const config = workflowConfig("health", "video", { dataset: {} });
+  return openHealthVideoPreviewWorkflow(config, "I opened Health and prepared the local camera preview and video handoff record. This does not start a live provider visit. Press Open camera when the patient agrees.", "health");
+}
+
 function openDefaultUserSectionAction(sectionId = currentSectionId()) {
   if (experienceMode !== "user" || sectionId === "dashboard") return false;
   const command = simpleUserSections[sectionId]?.buttons?.[0]?.command;
@@ -21632,6 +21641,7 @@ async function handleVoiceCommandCore(rawCommand, options = {}) {
   let command = cleanWakeCommand(localizedCommand);
   command = normalizeMultilingualBehaviorCommand(command);
   const spokenCommand = command || cleanWakeCommand(localizedCommand);
+  if (openExplicitHealthVideoPreviewCommand(spokenCommand || command || localizedCommand || rawCommand)) return;
   if (autoLanguage) {
     agentPerformanceState.lastCommand = command || localizedCommand || rawCommand;
     recordNexusAutonomousLearning({ type: "auto-language-detected", command: rawCommand, language: autoLanguage.label, mode: experienceMode || data?.user?.role || "platform" });
@@ -21665,12 +21675,6 @@ async function handleVoiceCommandCore(rawCommand, options = {}) {
     if (runSimpleUserVoiceIntent(firstPriorityFallbackIntent, spokenCommand || command)) return;
   }
   if (await answerPendingNexusQuestion(command || localizedCommand || rawCommand)) return;
-  if (isHealthVideoPreviewCommand(spokenCommand || command || localizedCommand || rawCommand)) {
-    pendingAgentClarification = null;
-    pendingNexusSpokenCommand = null;
-    goSection("health");
-    return openWorkflowByVoice("health", "video", "I opened Health and prepared the local camera preview and video handoff record. This does not start a live provider visit. Press Open camera when the patient agrees.");
-  }
   if (!options.skipUnifiedBrain && await unifiedNexusConversationBrain(rawCommand, { ...options, turnToken, autoLanguage })) return;
   const visibleInlineWorkflow = $(".user-inline-workflow:not(.hidden)");
   if (pendingWorkflow && visibleInlineWorkflow && !isUniversalLanguageCommand(command || localizedCommand) && !isGlobalStopCommand(String(command || localizedCommand).toLowerCase())) {
