@@ -14,12 +14,20 @@ assertIncludes(app, 'label: "Local Camera Preview"', "Simple Health mode should 
 assertIncludes(app, 'command: "open video for provider to show injury"', "Simple camera entry should reuse the health video command");
 assertIncludes(app, 'workflow: "health"', "Simple video command should map to the Health workflow");
 assertIncludes(app, 'action: "video"', "Simple video command should map to health:video");
+assertIncludes(app, "function isHealthVideoPreviewCommand(command = \"\")", "Camera routing should use a targeted health video predicate");
+assertIncludes(app, "isHealthVideoPreviewCommand(button.dataset.simpleCommand)", "Standard User camera button should bypass broader provider-guide routing");
+assertIncludes(app, "workflowConfig(\"health\", \"video\"", "Standard User camera button should build the health:video workflow directly");
+assertIncludes(app, "openHealthVideoPreviewWorkflow(config, \"Local camera preview and video handoff record are ready.\", \"health\")", "Standard User camera button should open the rich camera preview modal");
 
 assertIncludes(html, 'data-health="video"', "Full Health mode should expose a visible health video workflow button");
 assertIncludes(html, "Open local camera preview", "Full Health video button should use local-preview wording");
 
 assertIncludes(app, "if (config.videoPreview)", "User-mode video workflows should be routed to a renderer that preserves video preview controls");
-assertIncludes(app, "openWorkflowModal(config)", "User-mode video workflows should reuse the existing workflow modal");
+assertIncludes(app, "function openHealthVideoPreviewWorkflow", "Health video preview should use a shared modal-opening helper");
+assertIncludes(app, "openHealthVideoPreviewWorkflow(config, mapped.response, sectionId)", "Mapped Standard User camera workflows should reuse the shared modal helper");
+assertIncludes(app, "workflow === \"health\" && action === \"video\" && config.videoPreview", "Typed/global health video commands should receive a narrow modal exception");
+assertIncludes(app, "openHealthVideoPreviewWorkflow(config, response, userSection)", "Typed/global health video commands should open the rich camera preview modal");
+assertIncludes(app, "openWorkflowModal(config)", "Video preview helper should reuse the existing workflow modal");
 assertIncludes(app, "videoSessionPreviewHtml(config)", "Workflow modal should render the shared video preview helper");
 assertIncludes(app, "workflow-video-preview", "Video preview section should exist");
 assertIncludes(app, "workflowStartCamera", "Video preview should expose Open camera control");

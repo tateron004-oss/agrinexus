@@ -11015,9 +11015,7 @@ function openMappedUserWorkflow(mapped, sectionId = currentSectionId()) {
     if (experienceMode === "user") {
       const label = mapped.label || simpleUserSections[sectionId]?.buttons?.find(button => button.command === mapped.command)?.label || config.userTitle || config.title || "Selected action";
       if (config.videoPreview) {
-        openWorkflowModal(config);
-        $(`#${sectionId} .user-module-status`) && ($(`#${sectionId} .user-module-status`).textContent = translateText("Local camera preview opened. Ask permission before showing private health details, then confirm only when the handoff record is ready."));
-        setVoiceResponse(mapped.response || config.userSummary || config.summary || "Local camera preview is open. This is a handoff-only demo, not a live provider room.", true);
+        openHealthVideoPreviewWorkflow(config, mapped.response, sectionId);
         return true;
       }
       return forceOpenUserProcessScreen(sectionId, config, mapped, label);
@@ -11035,6 +11033,20 @@ function openMappedUserWorkflow(mapped, sectionId = currentSectionId()) {
     $(`#${sectionId} .user-module-status`) && ($(`#${sectionId} .user-module-status`).textContent = translateText("Workflow window opened. Choose Yes or No."));
   }
   setVoiceResponse(mapped.response || "Workflow is ready.", true);
+  return true;
+}
+
+function isHealthVideoPreviewCommand(command = "") {
+  const lower = String(command || "").toLowerCase();
+  return lower.includes("open video for provider") || lower.includes("show injury") || lower.includes("video for provider");
+}
+
+function openHealthVideoPreviewWorkflow(config = workflowConfig("health", "video", { dataset: {} }), response = "", sectionId = currentSectionId()) {
+  if (!config) return false;
+  openWorkflowModal(config);
+  const status = $(`#${sectionId} .user-module-status`) || $("#healthActionStatus") || $("#simpleActionStatus");
+  if (status) status.textContent = translateText("Local camera preview opened. Ask permission before showing private health details, then confirm only when the handoff record is ready.");
+  setVoiceResponse(response || config.userSummary || config.summary || "Local camera preview is open. This is a handoff-only demo, not a live provider room.", true);
   return true;
 }
 
@@ -11129,7 +11141,7 @@ function simpleUserCommandWorkflow(command = "") {
     return { workflow: "health", action: "intake", response: "Telehealth intake is open. I will collect the care request, access needs, language, callback, and safety details. This is not a diagnosis.", dataset: {} };
   }
   if (lower.includes("telehealth access") || lower.includes("talk to provider") || lower.includes("speak to provider")) return { workflow: "health", action: "provider", response: "Provider access is ready.", dataset: {} };
-  if (lower.includes("open video for provider") || lower.includes("show injury") || lower.includes("video for provider")) return { workflow: "health", action: "video", response: "Local camera preview and video handoff record are ready.", dataset: {} };
+  if (isHealthVideoPreviewCommand(command)) return { workflow: "health", action: "video", response: "Local camera preview and video handoff record are ready.", dataset: {} };
   if (lower.includes("contact the listed telehealth provider") || lower.includes("contact listed telehealth provider") || lower.includes("contact telehealth provider listed")) return { workflow: "health", action: "provider", response: "Listed telehealth provider contact is ready.", dataset: {} };
   if (lower.includes("service menu") || lower.includes("clinic prices")) return { workflow: "health", action: "clinic-service-menu", response: "Mobile clinic service menu is ready.", dataset: {} };
   if (lower.includes("mobile clinic payment") || lower.includes("request payment") || lower.includes("charge patient") || lower.includes("clinic billing")) return { workflow: "health", action: "clinic-payment-request", response: "Mobile clinic payment request is ready.", dataset: {} };
@@ -19328,6 +19340,11 @@ function openWorkflowByVoice(workflow, action, response, dataset = {}) {
   }
   const userSection = workflow === "ai" ? "agent" : workflow === "map" ? "map" : workflow;
   if (experienceMode === "user" && simpleUserSections[userSection]) {
+    if (workflow === "health" && action === "video" && config.videoPreview) {
+      openHealthVideoPreviewWorkflow(config, response, userSection);
+      updateNexusBehaviorLayer("ready", "Nexus opened the local camera preview workflow and is waiting for confirmation.");
+      return;
+    }
     forceOpenUserProcessScreen(userSection, config, { response }, response || config.userTitle || config.title || "Selected action");
     updateNexusBehaviorLayer("ready", "Nexus opened the requested workflow and is waiting for the next command.");
     const shortResponse = response || config.userTitle || config.title || "I opened that action.";
@@ -23121,6 +23138,14 @@ async function runSimpleAction(eventOrButton) {
   if (status) status.textContent = `${label} is running...`;
   if (button.dataset.simpleCommand) {
     if (experienceMode === "user") {
+      if (isHealthVideoPreviewCommand(button.dataset.simpleCommand)) {
+        const config = workflowConfig("health", "video", { dataset: {} });
+        if (status) status.textContent = `${label} opened. Review the details and choose Yes or No.`;
+        const opened = openHealthVideoPreviewWorkflow(config, "Local camera preview and video handoff record are ready.", "health");
+        resumeVoiceAfterUiAction(shouldResumeVoice);
+        if (!opened && $("#simpleActionStatus")) $("#simpleActionStatus").textContent = `${label} needs attention. Ask Nexus in your own words or choose another action.`;
+        return;
+      }
       const mapped = simpleUserCommandWorkflow(button.dataset.simpleCommand);
       if (mapped) {
         mapped.command = button.dataset.simpleCommand;
