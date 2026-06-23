@@ -12,6 +12,7 @@ const server = fs.readFileSync(serverPath, "utf8");
 const registry = JSON.parse(fs.readFileSync(registryPath, "utf8"));
 
 assert.match(app, /function observeAgentActionMetadata\(response = \{\}, context = \{\}\)/, "frontend must define observeAgentActionMetadata helper");
+assert.match(app, /function buildLowRiskAgentActionSuggestion\(agentAction = \{\}\)/, "frontend may define hidden low-risk suggestion builder");
 assert.match(app, /agentAction is observation-only and non-authoritative/i, "helper must state agentAction is observation-only");
 assert.match(app, /Existing frontend routers remain authoritative/i, "helper must state existing routers remain authoritative");
 assert.match(app, /static registry is not[\s\S]{0,40}runtime-authoritative/i, "helper must state static registry is non-authoritative");
@@ -20,6 +21,7 @@ assert.match(app, /agentAction\.runtimeStatus !== "metadata-only"/, "helper must
 assert.match(app, /agentAction\.source !== "existing-router"/, "helper must require existing-router source");
 assert.match(app, /latestObservedAgentActionMetadata/, "helper must store only local observation metadata");
 assert.match(app, /observedAgentActionMetadataLog/, "helper must keep a bounded local observation log");
+assert.match(app, /lowRiskSuggestion:\s*buildLowRiskAgentActionSuggestion\(agentAction\)/, "observation may store hidden suggestion metadata");
 assert.match(app, /observeAgentActionMetadata\(result, \{ source: "runBackendAgentCommand", command \}\)/, "backend agent command response should be observed");
 assert.match(app, /observeAgentActionMetadata\(result, \{ source: "runUtilityAgentCommand", command \}\)/, "utility agent command response should be observed");
 

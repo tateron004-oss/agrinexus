@@ -94,10 +94,11 @@ Phase 8C: Audit/spec only.
 
 Phase 8D: Hidden/display-off suggestion builder helper.
 
-- Add a frontend helper that can build suggestion objects from the allowed low-risk IDs.
-- Keep the helper disabled or internal-only.
-- Do not render visible suggestions yet.
-- Do not call workflow openers from the helper.
+- Added a frontend helper that can build hidden suggestion objects from the allowed low-risk IDs.
+- Suggestions remain internal/debug-only inside the existing local `agentAction` observation record.
+- No visible suggestion UI was added.
+- The helper does not execute, route, open workflows, stage actions, confirm actions, or call command handlers.
+- Existing routers remain authoritative.
 
 Phase 8E: Debug-only suggestion observation QA.
 
