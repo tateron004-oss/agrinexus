@@ -506,6 +506,8 @@ Acceptance criteria:
 - Low-risk commands expose selected tool ID, execution mode, risk level, confirmation requirement, and next step.
 - No high-risk action executes sooner than before.
 
+Phase 7D added a metadata-only `agentAction` scaffold to backend agent command responses. Existing routers remain authoritative, `docs/nexus-tool-registry.v1.json` remains static/spec-only and is not imported at runtime, and the frontend does not consume this metadata yet. Future Phase 7E may begin safe frontend consumption only after additive response metadata is stable and covered by QA.
+
 ### Phase 7E: Frontend Metadata Awareness
 
 Allow frontend command paths to read additive metadata for display and workflow opening, while keeping current fallbacks.

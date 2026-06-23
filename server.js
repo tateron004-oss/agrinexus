@@ -51,6 +51,78 @@ function productIdentityMetadata() {
   return { ...PRODUCT_IDENTITY };
 }
 
+function buildAgentActionMetadata(input = {}) {
+  const result = input.result && typeof input.result === "object" ? input.result : {};
+  const metadata = result.metadata && typeof result.metadata === "object" ? result.metadata : {};
+  const userMessage = String(input.userMessage || "").trim();
+  const normalizedIntent = String(result.intent || input.normalizedIntent || "").trim() || null;
+  const metadataTool = typeof metadata.tool === "string" && /^[a-z][a-z0-9_]*\.[a-z][a-z0-9_]*$/.test(metadata.tool)
+    ? metadata.tool
+    : null;
+  const routeTool = typeof normalizedIntent === "string" && /^[a-z][a-z0-9_]*\.[a-z][a-z0-9_]*$/.test(normalizedIntent)
+    ? normalizedIntent
+    : null;
+  const confirmationRequired = Boolean(metadata.confirmationRequired || result.status === "needs-confirmation");
+  const executionMode = confirmationRequired || metadata.executionDeferred
+    ? "staged-confirmation"
+    : "existing-route";
+  const privacySignal = /health|telehealth|patient|video|camera|care|vitals|referral|medicine|doctor|clinic/i.test(`${normalizedIntent || ""} ${metadata.pendingActionType || ""} ${metadata.redirectSection || ""} ${metadata.moduleSignal?.module || ""}`);
+  const highRiskSignal = /call|message|payment|wallet|order|application|certificate|provider|drone|admin|share|export|dispatch/i.test(`${normalizedIntent || ""} ${metadata.pendingActionType || ""} ${metadata.pendingActionName || ""} ${metadata.tool || ""}`);
+  const riskLevel = privacySignal
+    ? "privacy-sensitive"
+    : highRiskSignal || confirmationRequired
+      ? "high"
+      : "unknown";
+  return {
+    schemaVersion: "agent-action.v1",
+    runtimeStatus: "metadata-only",
+    source: "existing-router",
+    userMessage,
+    normalizedIntent,
+    goal: metadata.pendingActionName || metadata.confirmationPrompt || result.response || null,
+    selectedToolId: metadataTool || routeTool || null,
+    confidence: "unknown",
+    requiredInputs: Array.isArray(input.requiredInputs) ? input.requiredInputs : [],
+    missingInputs: Array.isArray(input.missingInputs) ? input.missingInputs : [],
+    riskLevel,
+    confirmationRequired,
+    executionMode,
+    frontendAction: input.frontendAction || null,
+    backendAction: input.backendAction || null,
+    result: {
+      intent: result.intent || null,
+      status: result.status || null
+    },
+    nextStep: metadata.confirmationPrompt || metadata.frontierCommunication?.nextQuestion || null,
+    auditMetadata: {
+      ...productIdentityMetadata(),
+      inputMode: input.inputMode || metadata.inputMode || "api",
+      outputMode: input.outputMode || metadata.outputMode || undefined,
+      language: input.language || metadata.language || undefined
+    },
+    safetyNotes: [
+      "Metadata-only scaffold; existing router remains authoritative.",
+      "Static Nexus Tool Registry is not runtime-authoritative.",
+      confirmationRequired ? "Existing confirmation gate remains required before execution." : "No new execution path is introduced by this metadata."
+    ],
+    legacyCompatibility: {
+      legacyProductName: PRODUCT_IDENTITY.legacyProductName,
+      marketplaceModule: "AgriTrade",
+      agricultureCompatibility: true,
+      protectedInternals: [
+        "APIs",
+        "route IDs",
+        "workflow IDs",
+        "localStorage keys",
+        "PWA cache names",
+        "native bridge fields",
+        "backend contracts",
+        "package names"
+      ]
+    }
+  };
+}
+
 const COUNTRY_LANGUAGE = {
   nigeria: "en",
   kenya: "sw",
@@ -25968,12 +26040,20 @@ async function runCompanionSafeAgentCommand(db, user, body = {}) {
     : null;
   if (workflowOffer) result = workflowOffer;
   const companionRouteOutcome = companionRouteOutcomeMetadata(command, companionUnderstanding, result);
+  const agentAction = buildAgentActionMetadata({
+    userMessage: command,
+    result,
+    inputMode,
+    outputMode: outputMode || undefined,
+    language: commandLanguage
+  });
   result.metadata = {
     ...(result.metadata || {}),
     inputMode,
     outputMode: outputMode || undefined,
     companionUnderstanding,
     companionRouteOutcome,
+    agentAction,
     language: commandLanguage,
     targetLanguage: commandLanguage
   };
