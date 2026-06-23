@@ -18,31 +18,33 @@ const helperEnd = app.indexOf("function observeAgentActionMetadata", helperStart
 assert(helperStart >= 0 && helperEnd > helperStart, "frontend must define buildLowRiskAgentActionSuggestion before observation helper");
 const helperBody = app.slice(helperStart, helperEnd);
 
-assert.match(helperBody, /hidden observation only/i, "builder must be explicitly hidden observation only");
-assert.match(helperBody, /not visible to users/i, "builder must state suggestions are not visible to users");
+assert.match(helperBody, /visible Level 1 label only/i, "builder must be explicitly visible Level 1 label only");
+assert.match(helperBody, /display-only/i, "builder must state suggestions are display-only");
 assert.match(helperBody, /not authoritative/i, "builder must state suggestions are non-authoritative");
 assert.match(helperBody, /Existing routers remain authoritative/i, "builder must preserve router authority");
 assert.match(helperBody, /agentAction\.runtimeStatus !== "metadata-only"/, "builder must require metadata-only runtime status");
 assert.match(helperBody, /agentAction\.source !== "existing-router"/, "builder must require existing-router source");
-assert.match(helperBody, /visibility:\s*"hidden-observation-only"/, "builder suggestions must be hidden observation only");
-assert.match(helperBody, /level:\s*0/, "builder suggestions must remain level 0");
-assert.match(helperBody, /userClickRequired:\s*true/, "builder suggestions must require user click");
+assert.match(helperBody, /visibility:\s*"visible-level-1-label"/, "builder suggestions must remain visible Level 1 labels only");
+assert.match(helperBody, /level:\s*1/, "builder suggestions must remain level 1");
+assert.match(helperBody, /displayOnly:\s*true/, "builder suggestions must be display-only");
+assert.match(helperBody, /userClickRequired:\s*false/, "builder suggestions must not be clickable actions");
 assert.match(helperBody, /executionAllowed:\s*false/, "builder suggestions must not allow execution");
 assert.match(helperBody, /autoOpenAllowed:\s*false/, "builder suggestions must not allow auto-open");
 assert.match(helperBody, /source:\s*"agentAction\.metadata"/, "builder suggestions must identify metadata source");
 
 const lowRiskLabels = {
-  "workforce.training": "Open Training",
-  "workforce.job_pathways": "View Job Pathways",
-  "workforce.field_support": "View Field Support",
-  "learning.start": "Open Learning",
-  "marketplace.agritrade": "Browse AgriTrade",
-  "agriculture.help": "Get Agriculture Help"
+  "workforce.training": ["Open Training", "Training"],
+  "workforce.job_pathways": ["View Job Pathways", "Jobs"],
+  "workforce.field_support": ["View Field Support", "Field Support"],
+  "learning.start": ["Open Learning", "Learning"],
+  "marketplace.agritrade": ["Browse AgriTrade", "Marketplace"],
+  "agriculture.help": ["Get Agriculture Help", "Agriculture Help"]
 };
 
-for (const [toolId, label] of Object.entries(lowRiskLabels)) {
+for (const [toolId, [label, levelLabel]] of Object.entries(lowRiskLabels)) {
   assert(helperBody.includes(`"${toolId}"`), `builder allowlist must include ${toolId}`);
   assert(helperBody.includes(`"${label}"`), `builder must include label ${label}`);
+  assert(helperBody.includes(`"${levelLabel}"`), `builder must include Level 1 label ${levelLabel}`);
   assert(plan.includes(toolId), `plan must document ${toolId}`);
 }
 
@@ -87,9 +89,14 @@ const observeStart = app.indexOf("function observeAgentActionMetadata");
 const observeEnd = app.indexOf("const countryLanguageMap", observeStart);
 assert(observeStart >= 0 && observeEnd > observeStart, "observation helper body should be extractable");
 const observeBody = app.slice(observeStart, observeEnd);
-assert.match(observeBody, /lowRiskSuggestion:\s*buildLowRiskAgentActionSuggestion\(agentAction\)/, "observation record may store hidden low-risk suggestion");
+assert.match(observeBody, /lowRiskSuggestion:\s*buildLowRiskAgentActionSuggestion\(agentAction\)/, "observation record may store low-risk Level 1 suggestion label metadata");
 assert(!/lowRiskSuggestion[\s\S]{0,160}(openWorkflow|goSection|mutate|request|confirm|execute|stage|modal)/i.test(observeBody), "observation helper must not execute from lowRiskSuggestion");
 assert.match(observeBody, /Never execute, route, confirm, stage, open workflows,[\s\S]*or trigger modals from this metadata/i, "observation helper must retain no-execute/no-route guard");
+
+assert.match(app, /function renderLevelOneAgentActionSuggestionLabel/, "frontend must define a visible Level 1 label renderer");
+assert.match(app, /class="level-one-suggestion-label"/, "visible Level 1 label must use a non-button label element");
+assert.match(app, /renderLevelOneAgentActionSuggestionLabel\(\)\}\$\{phrases\.map\(voiceCommandButton\)/, "visible Level 1 label should render alongside existing suggestion chips");
+assert(!/level-one-suggestion-label[\s\S]{0,240}(addEventListener|onclick|openWorkflow|goSection|mutate|request|confirm|execute|stage|modal)/i.test(app), "visible Level 1 label must not be clickable or executable");
 
 assert.ok(!server.includes("nexus-tool-registry.v1.json"), "server.js must not reference static registry JSON at runtime");
 assert.ok(!app.includes("nexus-tool-registry.v1.json"), "public/app.js must not reference static registry JSON at runtime");

@@ -3467,6 +3467,21 @@ body.admin-mode .user-workspace {
 .voice-guide .sample-phrase {
   font-size: .88rem;
 }
+.level-one-suggestion-label {
+  align-self: center;
+  display: inline-flex;
+  align-items: center;
+  min-height: 30px;
+  padding: 6px 9px;
+  border: 1px solid #bddbd6;
+  border-radius: 999px;
+  background: #f8fbfa;
+  color: var(--muted);
+  font-size: .78rem;
+  font-weight: 700;
+  line-height: 1;
+  pointer-events: none;
+}
 .voice-suggestions button,
 .voice-guide button {
   padding: 8px 10px;

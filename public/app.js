@@ -168,38 +168,48 @@ const BROWSER_SPEECH_FALLBACK_STORAGE_KEY = "agrinexusBrowserSpeechFallback";
 // voice-first listening to resume safely; aborts/interruption are not failures.
 
 function buildLowRiskAgentActionSuggestion(agentAction = {}) {
-  // Phase 8D: hidden observation only. This helper is not visible to users,
+  // Phase 8F: visible Level 1 label only. This helper is display-only,
   // is not authoritative, and is not allowed to execute, route, open workflows,
   // stage actions, or confirm actions. Existing routers remain authoritative.
   if (!agentAction || typeof agentAction !== "object") return null;
   if (agentAction.runtimeStatus !== "metadata-only") return null;
   if (agentAction.source !== "existing-router") return null;
   const suggestionsByToolId = {
-    "workforce.training": "Open Training",
-    "workforce.job_pathways": "View Job Pathways",
-    "workforce.field_support": "View Field Support",
-    "learning.start": "Open Learning",
-    "marketplace.agritrade": "Browse AgriTrade",
-    "agriculture.help": "Get Agriculture Help"
+    "workforce.training": { label: "Open Training", levelLabel: "Training" },
+    "workforce.job_pathways": { label: "View Job Pathways", levelLabel: "Jobs" },
+    "workforce.field_support": { label: "View Field Support", levelLabel: "Field Support" },
+    "learning.start": { label: "Open Learning", levelLabel: "Learning" },
+    "marketplace.agritrade": { label: "Browse AgriTrade", levelLabel: "Marketplace" },
+    "agriculture.help": { label: "Get Agriculture Help", levelLabel: "Agriculture Help" }
   };
   const selectedToolId = String(agentAction.selectedToolId || "").trim();
-  const label = suggestionsByToolId[selectedToolId];
-  if (!label) return null;
+  const suggestion = suggestionsByToolId[selectedToolId];
+  if (!suggestion) return null;
   return {
-    level: 0,
-    visibility: "hidden-observation-only",
+    level: 1,
+    visibility: "visible-level-1-label",
     selectedToolId,
-    label,
-    userClickRequired: true,
+    label: suggestion.label,
+    levelLabel: suggestion.levelLabel,
+    displayOnly: true,
+    userClickRequired: false,
     executionAllowed: false,
     autoOpenAllowed: false,
     source: "agentAction.metadata",
     safetyNotes: [
-      "Hidden observation only; not visible to users yet.",
+      "Visible category label only; not an action button.",
       "Existing frontend routers remain authoritative.",
       "Metadata cannot execute, route, open workflows, stage actions, or confirm actions."
     ]
   };
+}
+
+function renderLevelOneAgentActionSuggestionLabel() {
+  const suggestion = latestObservedAgentActionMetadata?.lowRiskSuggestion;
+  if (!suggestion || suggestion.visibility !== "visible-level-1-label") return "";
+  const label = String(suggestion.levelLabel || "").trim();
+  if (!label) return "";
+  return `<span class="level-one-suggestion-label" aria-label="Nexus suggestion category">${htmlSafe(label)}</span>`;
 }
 
 function observeAgentActionMetadata(response = {}, context = {}) {
@@ -9443,7 +9453,7 @@ function renderLiveVoiceSuggestions(suggestions = liveVoiceSuggestions) {
     const container = $(selector);
     if (!container) continue;
     const phrases = liveVoiceSuggestions.length ? liveVoiceSuggestions : contextualVoiceSuggestions(currentSectionId()).slice(0, selector === "#globalVoiceGuide" ? 8 : 6);
-    container.innerHTML = phrases.map(voiceCommandButton).join("");
+    container.innerHTML = `${renderLevelOneAgentActionSuggestionLabel()}${phrases.map(voiceCommandButton).join("")}`;
   }
   $$("[data-voice-example]").forEach(button => {
     button.onclick = () => runVoiceExample(button);

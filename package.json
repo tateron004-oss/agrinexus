@@ -25,6 +25,7 @@
     "qa:nexus-low-risk-suggestion-display": "node scripts/nexus-low-risk-suggestion-display-plan-qa.js",
     "qa:nexus-low-risk-suggestion-builder": "node scripts/nexus-low-risk-suggestion-builder-qa.js",
     "qa:nexus-low-risk-suggestion-observation": "node scripts/nexus-low-risk-suggestion-observation-qa.js",
+    "qa:nexus-level-one-suggestion-label": "node scripts/nexus-level-one-suggestion-label-qa.js",
     "qa:all-safe": "node scripts/qa-suite.js all-safe",
     "smoke": "node scripts/smoke.js",
     "learning:translation-smoke": "node scripts/learning-translation-smoke.js",

@@ -106,13 +106,15 @@ Phase 8E: Debug-only suggestion observation QA.
 - The QA verifies low-risk backend `selectedToolId` values produce hidden observation suggestions.
 - The QA verifies high-risk, permission-sensitive, privacy-sensitive, and excluded prompts produce no suggestion.
 - No visible UI, buttons, click handlers, routing, execution, auto-open, staging, or confirmation from metadata was added.
-- Future Phase 8F may add visible Level 1 labels only after this hidden observation boundary remains green.
+- Phase 8F adds visible Level 1 labels only after this hidden observation boundary remained green.
 
 Phase 8F: Visible Level 1 display-only labels.
 
-- Show non-clickable labels for one or two low-risk IDs.
-- Labels are informational only.
-- Labels must not claim completion.
+- Added non-clickable labels such as "Training", "Jobs", "Field Support", "Learning", "Marketplace", and "Agriculture Help."
+- Labels render beside existing Nexus suggestion chips as category context only.
+- Labels are not buttons, do not carry click handlers, and cannot execute, route, open workflows, stage actions, or confirm actions.
+- High-risk, privacy-sensitive, permission-sensitive, null, and excluded `selectedToolId` values still produce no label.
+- Added `scripts/nexus-level-one-suggestion-label-qa.js` and `qa:nexus-level-one-suggestion-label` to protect the display-only boundary.
 
 Phase 8G: Level 2 user-click-required suggestions.
 

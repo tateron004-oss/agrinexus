@@ -96,8 +96,11 @@ function loadFrontendObservationHarness() {
   }
 
   const appSource = app;
-  assert(!/data-low-risk-suggestion|data-agent-action-suggestion|lowRiskSuggestionButton|agentActionSuggestionButton|renderLowRiskAgentActionSuggestion|renderAgentActionSuggestion/i.test(appSource), "frontend must not add visible suggestion container, button, or renderer");
-  assert(!/addEventListener\([^)]*lowRiskSuggestion|onclick\s*=\s*.*lowRiskSuggestion/i.test(appSource), "frontend must not attach click handlers to hidden suggestions");
+  assert.match(appSource, /function renderLevelOneAgentActionSuggestionLabel/, "frontend may add a display-only Level 1 label renderer");
+  assert.match(appSource, /class="level-one-suggestion-label"/, "frontend Level 1 label must be a plain label element");
+  assert(!/data-low-risk-suggestion|data-agent-action-suggestion|lowRiskSuggestionButton|agentActionSuggestionButton|renderLowRiskAgentActionSuggestion|renderAgentActionSuggestion/i.test(appSource), "frontend must not add actionable suggestion containers, buttons, or renderers");
+  assert(!/addEventListener\([^)]*lowRiskSuggestion|onclick\s*=\s*.*lowRiskSuggestion/i.test(appSource), "frontend must not attach click handlers to low-risk suggestion metadata");
+  assert(!/level-one-suggestion-label[\s\S]{0,240}(addEventListener|onclick|openWorkflow|goSection|mutate|request|confirm|execute|stage|modal)/i.test(appSource), "frontend Level 1 label must not be clickable or executable");
 
   return vm.runInNewContext(`
     ${helperBody}
@@ -117,26 +120,28 @@ function loadFrontendObservationHarness() {
   });
 }
 
-function assertHiddenSuggestion(prompt, observed, expectedToolId, expectedLabel) {
+function assertLevelOneSuggestionLabel(prompt, observed, expectedToolId, expectedLabel, expectedLevelLabel) {
   const suggestion = observed.lowRiskSuggestion;
-  assert(suggestion, `${prompt} should produce a hidden low-risk suggestion`);
+  assert(suggestion, `${prompt} should produce a display-only low-risk suggestion label`);
   assert.strictEqual(suggestion.selectedToolId, expectedToolId, `${prompt} selectedToolId should be ${expectedToolId}`);
   assert.strictEqual(suggestion.label, expectedLabel, `${prompt} label should be ${expectedLabel}`);
-  assert.strictEqual(suggestion.level, 0, `${prompt} suggestion must remain level 0`);
-  assert.strictEqual(suggestion.visibility, "hidden-observation-only", `${prompt} suggestion must remain hidden`);
-  assert.strictEqual(suggestion.userClickRequired, true, `${prompt} suggestion must require user click`);
+  assert.strictEqual(suggestion.levelLabel, expectedLevelLabel, `${prompt} Level 1 label should be ${expectedLevelLabel}`);
+  assert.strictEqual(suggestion.level, 1, `${prompt} suggestion must remain level 1`);
+  assert.strictEqual(suggestion.visibility, "visible-level-1-label", `${prompt} suggestion must remain label-only`);
+  assert.strictEqual(suggestion.displayOnly, true, `${prompt} suggestion must be display-only`);
+  assert.strictEqual(suggestion.userClickRequired, false, `${prompt} suggestion must not require or expose a click action`);
   assert.strictEqual(suggestion.executionAllowed, false, `${prompt} suggestion must not allow execution`);
   assert.strictEqual(suggestion.autoOpenAllowed, false, `${prompt} suggestion must not allow auto-open`);
   assert.strictEqual(suggestion.source, "agentAction.metadata", `${prompt} suggestion source must remain metadata`);
 }
 
 const lowRiskChecks = [
-  ["help me with training", "workforce.training", "Open Training"],
-  ["show job pathways", "workforce.job_pathways", "View Job Pathways"],
-  ["field support", "workforce.field_support", "View Field Support"],
-  ["help me learn", "learning.start", "Open Learning"],
-  ["open AgriTrade", "marketplace.agritrade", "Browse AgriTrade"],
-  ["agriculture help", "agriculture.help", "Get Agriculture Help"]
+  ["help me with training", "workforce.training", "Open Training", "Training"],
+  ["show job pathways", "workforce.job_pathways", "View Job Pathways", "Jobs"],
+  ["field support", "workforce.field_support", "View Field Support", "Field Support"],
+  ["help me learn", "learning.start", "Open Learning", "Learning"],
+  ["open AgriTrade", "marketplace.agritrade", "Browse AgriTrade", "Marketplace"],
+  ["agriculture help", "agriculture.help", "Get Agriculture Help", "Agriculture Help"]
 ];
 
 const highRiskChecks = [
@@ -176,7 +181,7 @@ const highRiskChecks = [
     await waitForServer();
     await call("/api/login", { email: "user@agrinexus.org", password: "User2026!" });
 
-    for (const [prompt, expectedToolId, expectedLabel] of lowRiskChecks) {
+    for (const [prompt, expectedToolId, expectedLabel, expectedLevelLabel] of lowRiskChecks) {
       const result = await command(prompt);
       const agentAction = result.metadata?.agentAction;
       assert(agentAction, `${prompt} should return agentAction metadata`);
@@ -187,7 +192,7 @@ const highRiskChecks = [
       assert.strictEqual(observedReturn, null, `${prompt} observation helper must not return UI action`);
       const observed = frontend.latest();
       assert(observed, `${prompt} should update local observation record`);
-      assertHiddenSuggestion(prompt, observed, expectedToolId, expectedLabel);
+      assertLevelOneSuggestionLabel(prompt, observed, expectedToolId, expectedLabel, expectedLevelLabel);
     }
 
     for (const prompt of highRiskChecks) {
@@ -200,7 +205,7 @@ const highRiskChecks = [
       frontend.observeAgentActionMetadata(result, { source: "qa", command: prompt });
       const observed = frontend.latest();
       assert(observed, `${prompt} should update local observation record`);
-      assert.strictEqual(observed.lowRiskSuggestion, null, `${prompt} must not produce a hidden low-risk suggestion`);
+      assert.strictEqual(observed.lowRiskSuggestion, null, `${prompt} must not produce a low-risk suggestion label`);
     }
 
     const app = fs.readFileSync(appPath, "utf8");
@@ -215,7 +220,7 @@ const highRiskChecks = [
     assert.match(`${serverSource} ${app}`, /agriculture|farmer|crop/i, "agriculture/farm/crop compatibility must remain present");
 
     console.log("Nexus low-risk suggestion observation QA passed");
-    lowRiskChecks.forEach(([prompt, toolId]) => console.log(`- ${prompt} -> hidden ${toolId}`));
+    lowRiskChecks.forEach(([prompt, toolId, , levelLabel]) => console.log(`- ${prompt} -> ${levelLabel} (${toolId})`));
     highRiskChecks.forEach(prompt => console.log(`- ${prompt} -> no suggestion`));
   } finally {
     server.kill();
