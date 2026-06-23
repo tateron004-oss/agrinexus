@@ -42,6 +42,7 @@ const previewRendererBody = extractFunction(app, "renderControlledActionPreview"
 const confirmationPrototypeGuardBody = extractFunction(app, "isVisibleControlledActionConfirmationPrototypeReadiness");
 const confirmationPrototypeRendererBody = extractFunction(app, "renderControlledActionConfirmationPrototype");
 const confirmationPrototypePainterBody = extractFunction(app, "paintControlledActionConfirmationPrototype");
+const navigationReadinessBuilderBody = extractFunction(app, "buildControlledActionNavigationReadinessFromConfirmation");
 const previewPainterBody = extractFunction(app, "paintControlledActionPreview");
 const clearPreviewBody = extractFunction(app, "clearControlledActionPreview");
 const labelPainterBody = extractFunction(app, "paintLevelOneAgentActionSuggestionLabel");
@@ -165,6 +166,7 @@ const sandbox = vm.runInNewContext(`
   let visibleLevelOneAgentActionSuggestion = null;
   let visibleControlledActionPreviewReadiness = null;
   let latestControlledActionConfirmationReadiness = null;
+  let latestControlledActionNavigationReadiness = null;
   let controlledActionConfirmationPrototypeStatus = "";
   let latestObservedAgentActionMetadata = null;
   let observedAgentActionMetadataLog = [];
@@ -177,6 +179,7 @@ const sandbox = vm.runInNewContext(`
   ${confirmationPrototypeGuardBody}
   ${confirmationPrototypeRendererBody}
   ${confirmationPrototypePainterBody}
+  ${navigationReadinessBuilderBody}
   ${previewPainterBody}
   ${clearPreviewBody}
   ${labelPainterBody}

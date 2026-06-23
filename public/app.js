@@ -136,6 +136,7 @@ let observedAgentActionMetadataLog = [];
 let visibleLevelOneAgentActionSuggestion = null;
 let visibleControlledActionPreviewReadiness = null;
 let latestControlledActionConfirmationReadiness = null;
+let latestControlledActionNavigationReadiness = null;
 let controlledActionConfirmationPrototypeStatus = "";
 let preserveControlledActionPreviewDuringCommandRoute = false;
 const accessibilityPrefs = JSON.parse(localStorage.getItem("agrinexusAccessibility") || "{}");
@@ -327,6 +328,7 @@ function clearControlledActionPreview(reason = "reset") {
   // unrelated commands, blocked metadata, module navigation, or assistant reset.
   visibleControlledActionPreviewReadiness = null;
   latestControlledActionConfirmationReadiness = null;
+  latestControlledActionNavigationReadiness = null;
   controlledActionConfirmationPrototypeStatus = "";
   paintControlledActionPreview();
   if (localStorage.getItem("agrinexusAgentActionDebug") === "on") {
@@ -442,6 +444,9 @@ function paintLocalLevelOneSuggestionForSimpleUserIntent(intent = {}, command = 
     : null;
   latestControlledActionConfirmationReadiness = visibleControlledActionPreviewReadiness
     ? buildControlledActionConfirmationReadinessFromPreview(visibleControlledActionPreviewReadiness)
+    : null;
+  latestControlledActionNavigationReadiness = latestControlledActionConfirmationReadiness
+    ? buildControlledActionNavigationReadinessFromConfirmation(latestControlledActionConfirmationReadiness)
     : null;
   paintLevelOneAgentActionSuggestionLabel();
   paintControlledActionPreview();
@@ -708,6 +713,139 @@ function buildControlledActionConfirmationReadinessFromPreview(controlledActionP
   };
 }
 
+function buildControlledActionNavigationReadinessFromConfirmation(controlledActionConfirmationReadiness = {}) {
+  // Phase 8V: navigation readiness is internal metadata only. It must stay
+  // downstream of safe confirmation readiness and must not navigate, route,
+  // open workflows, stage actions, request permissions, confirm, or execute.
+  if (!controlledActionConfirmationReadiness || typeof controlledActionConfirmationReadiness !== "object") return null;
+  if (controlledActionConfirmationReadiness.schemaVersion !== "controlled-action-confirmation-readiness.v1") return null;
+  const selectedToolId = String(controlledActionConfirmationReadiness.selectedToolId || "").trim();
+  const actionId = String(controlledActionConfirmationReadiness.actionId || "").trim();
+  const levelOneLabel = String(controlledActionConfirmationReadiness.levelOneLabel || "").trim();
+  const requiredPermissions = Array.isArray(controlledActionConfirmationReadiness.requiredPermissions)
+    ? controlledActionConfirmationReadiness.requiredPermissions.slice()
+    : [];
+  const missingInputs = Array.isArray(controlledActionConfirmationReadiness.missingInputs)
+    ? controlledActionConfirmationReadiness.missingInputs.slice()
+    : [];
+  const base = {
+    schemaVersion: "controlled-action-navigation-readiness.v1",
+    sourceConfirmationReadinessVersion: "controlled-action-confirmation-readiness.v1",
+    actionId,
+    selectedToolId,
+    levelOneLabel,
+    navigationEligible: false,
+    navigationBlockedReason: "Navigation readiness is not available for this confirmation readiness.",
+    navigationRiskLevel: controlledActionConfirmationReadiness.confirmationRiskLevel || "restricted",
+    navigationMode: "restrictedNavigationBlocked",
+    targetRoute: "none",
+    targetSurface: "none",
+    requiresConfirmationClick: true,
+    allowedAfterConfirmationOnly: true,
+    requiredPermissions,
+    missingInputs,
+    safeNavigationTitle: "",
+    safeNavigationSummary: "",
+    allowedNextStep: "blocked",
+    executionBoundary: "navigationReadinessOnly",
+    auditPolicy: "observeOnly",
+    userVisibleInThisPhase: false
+  };
+  const navigationMap = {
+    openTrainingResources: {
+      selectedToolId: "workforce.training",
+      targetRoute: "training",
+      targetSurface: "standardUserModule",
+      title: "Review training resources",
+      summary: "Nexus may prepare a future internal training-resource navigation review after an explicit confirmation click. No navigation has happened."
+    },
+    showFarmJobs: {
+      selectedToolId: "workforce.job_pathways",
+      targetRoute: "jobs",
+      targetSurface: "standardUserModule",
+      title: "Review job pathway resources",
+      summary: "Nexus may prepare a future internal job-pathway navigation review after an explicit confirmation click. No application, submission, or navigation has happened."
+    },
+    openFieldSupportGuidance: {
+      selectedToolId: "workforce.field_support",
+      targetRoute: "fieldSupportInfo",
+      targetSurface: "askNexus",
+      title: "Review field support guidance",
+      summary: "Nexus may prepare a future informational field-support navigation review. No service request or navigation has happened."
+    },
+    explainLearningTopic: {
+      selectedToolId: "learning.start",
+      targetRoute: "learning",
+      targetSurface: "standardUserModule",
+      title: "Review learning guidance",
+      summary: "Nexus may prepare a future internal learning navigation review after an explicit confirmation click. No lesson, record, or navigation has happened."
+    },
+    browseMarketplace: {
+      selectedToolId: "marketplace.agritrade",
+      targetRoute: "marketplaceBrowse",
+      targetSurface: "standardUserModule",
+      title: "Review AgriTrade browsing guidance",
+      summary: "Nexus may prepare a future internal browse-only AgriTrade navigation review. No transaction, account action, or navigation has happened."
+    },
+    explainAgricultureHelp: {
+      selectedToolId: "agriculture.help",
+      targetRoute: "agricultureHelp",
+      targetSurface: "askNexus",
+      title: "Review agriculture guidance",
+      summary: "Nexus may prepare a future informational agriculture guidance navigation review. No sensitive tool, record, or navigation has happened."
+    }
+  };
+  const riskLevel = String(controlledActionConfirmationReadiness.confirmationRiskLevel || "").trim();
+  const restrictedTerms = /\b(health|telehealth|video|camera|call|doctor|provider|nurse|clinic|hospital|location|locate|map|payment|pay|wallet|identity|account|login|verify|buy|sell|order|quote|message|dispatch|schedule|submit|checkout|permission|diagnose|external|file|communicat)/i;
+  const unsafeWording = /\b(opened|started|submitted|paid|called|verified|permission granted|execute|start now|open now|submit|pay|call|verify|use camera|use location|dispatch now|schedule now)\b/i;
+  if (controlledActionConfirmationReadiness.confirmationEligible !== true) {
+    return { ...base, navigationBlockedReason: controlledActionConfirmationReadiness.confirmationBlockedReason || "Source confirmation readiness is not eligible." };
+  }
+  if (!["info", "low"].includes(riskLevel)) {
+    return { ...base, navigationBlockedReason: "Risk level is not navigation-readiness eligible.", navigationRiskLevel: riskLevel || "restricted" };
+  }
+  if (requiredPermissions.length || missingInputs.length) {
+    return {
+      ...base,
+      navigationBlockedReason: requiredPermissions.length ? "Navigation readiness would require permissions." : "Navigation readiness would require missing inputs.",
+      navigationMode: requiredPermissions.length ? "permissionRequiredNavigationBlocked" : "restrictedNavigationBlocked"
+    };
+  }
+  if (controlledActionConfirmationReadiness.allowedNextStep !== "observeConfirmationReadinessOnly" || controlledActionConfirmationReadiness.executionBoundary !== "confirmationReadinessOnly") {
+    return { ...base, navigationBlockedReason: "Source confirmation boundary is not confirmation-readiness only." };
+  }
+  if (controlledActionConfirmationReadiness.confirmationBlockedReason) {
+    return { ...base, navigationBlockedReason: controlledActionConfirmationReadiness.confirmationBlockedReason };
+  }
+  const navigation = navigationMap[actionId];
+  if (!navigation || navigation.selectedToolId !== selectedToolId) return base;
+  if (restrictedTerms.test(`${selectedToolId} ${actionId} ${levelOneLabel} ${navigation.targetRoute}`)) {
+    return { ...base, navigationBlockedReason: "Sensitive or transactional action is not navigation-readiness eligible." };
+  }
+  if (unsafeWording.test(`${navigation.title} ${navigation.summary}`)) {
+    return { ...base, navigationBlockedReason: "Navigation readiness wording is not safe." };
+  }
+  return {
+    ...base,
+    navigationEligible: true,
+    navigationBlockedReason: null,
+    navigationRiskLevel: riskLevel,
+    navigationMode: "lowRiskInternalNavigationReadinessOnly",
+    targetRoute: navigation.targetRoute,
+    targetSurface: navigation.targetSurface,
+    requiresConfirmationClick: true,
+    allowedAfterConfirmationOnly: true,
+    requiredPermissions: [],
+    missingInputs: [],
+    safeNavigationTitle: navigation.title,
+    safeNavigationSummary: navigation.summary,
+    allowedNextStep: "observeNavigationReadinessOnly",
+    executionBoundary: "navigationReadinessOnly",
+    auditPolicy: "observeOnly",
+    userVisibleInThisPhase: false
+  };
+}
+
 function observeAgentActionMetadata(response = {}, context = {}) {
   // Phase 7F: agentAction is observation-only and non-authoritative.
   // Existing frontend routers remain authoritative. The static registry is not
@@ -730,6 +868,7 @@ function observeAgentActionMetadata(response = {}, context = {}) {
   const controlledActionMetadata = buildControlledActionMetadataFromSuggestion(lowRiskSuggestion, { agentAction });
   const controlledActionPreviewReadiness = buildControlledActionPreviewReadinessFromMetadata(controlledActionMetadata);
   const controlledActionConfirmationReadiness = buildControlledActionConfirmationReadinessFromPreview(controlledActionPreviewReadiness);
+  const controlledActionNavigationReadiness = buildControlledActionNavigationReadinessFromConfirmation(controlledActionConfirmationReadiness);
   visibleLevelOneAgentActionSuggestion = lowRiskSuggestion;
   clearControlledActionPreview("backend-preview-readiness-replaced");
   visibleControlledActionPreviewReadiness = isVisibleControlledActionPreviewReadiness(controlledActionPreviewReadiness)
@@ -737,6 +876,9 @@ function observeAgentActionMetadata(response = {}, context = {}) {
     : null;
   latestControlledActionConfirmationReadiness = visibleControlledActionPreviewReadiness
     ? controlledActionConfirmationReadiness
+    : null;
+  latestControlledActionNavigationReadiness = latestControlledActionConfirmationReadiness
+    ? controlledActionNavigationReadiness
     : null;
   const observed = {
     observedAt: new Date().toISOString(),
@@ -759,7 +901,8 @@ function observeAgentActionMetadata(response = {}, context = {}) {
     lowRiskSuggestion,
     controlledActionMetadata,
     controlledActionPreviewReadiness,
-    controlledActionConfirmationReadiness
+    controlledActionConfirmationReadiness,
+    controlledActionNavigationReadiness
   };
   latestObservedAgentActionMetadata = observed;
   observedAgentActionMetadataLog = [observed, ...observedAgentActionMetadataLog].slice(0, 10);

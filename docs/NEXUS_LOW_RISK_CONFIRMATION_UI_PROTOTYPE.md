@@ -134,6 +134,8 @@ Phase 8T is protected by:
 
 The QA verifies Ask-only placement, caption preview-only behavior, safe button labels, inert click behavior, high-risk exclusions, clearing behavior, and absence of raw metadata leaks.
 
+Phase 8V adds a downstream internal `controlled-action-navigation-readiness.v1` schema for future navigation planning. That layer is documented in `docs/NEXUS_CONTROLLED_ACTION_NAVIGATION_READINESS.md` and remains hidden, observe-only, and disconnected from the Phase 8T buttons.
+
 ## Recommended Phase 8U
 
 Recommended next phase: Phase 8U, Confirmation UI Browser Validation.
