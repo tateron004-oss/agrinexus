@@ -28,6 +28,12 @@ const AI_TRANSLATION_MODEL = process.env.OPENAI_TRANSLATION_MODEL || process.env
 const AGRINEXUS_RELEASE = "2026-06-16-operational-readiness";
 const AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-296";
 const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v276";
+const PRODUCT_IDENTITY = Object.freeze({
+  productName: "Nexus Workforce AI",
+  assistantName: "Nexus",
+  edition: "workforce",
+  legacyProductName: "AgriNexus"
+});
 const ROOT = __dirname;
 const DATA_DIR = process.env.AGRINEXUS_DATA_DIR || ROOT;
 const DB_PATH = process.env.AGRINEXUS_DB_PATH || path.join(DATA_DIR, "db.json");
@@ -40,6 +46,11 @@ const sessions = new Map();
 const rateBuckets = new Map();
 const phoneAudioCache = new Map();
 const spotifyOAuthStates = new Map();
+
+function productIdentityMetadata() {
+  return { ...PRODUCT_IDENTITY };
+}
+
 const COUNTRY_LANGUAGE = {
   nigeria: "en",
   kenya: "sw",
@@ -3068,6 +3079,7 @@ function publicState(db, user) {
   const agentCapabilities = agentCapabilityRegistryState(db, providers);
   const jarvisReadiness = jarvisReadinessModel(db, user, providers);
   return {
+    productIdentity: productIdentityMetadata(),
     user: user && { id: user.id, name: user.name, email: user.email, role: user.role, country: user.country, language: user.language },
     permissions: user ? permissionsForRole(user.role) : {},
     loginProfiles: DEFAULT_USERS.map(user => ({ name: user.name, email: user.email, password: user.password, role: user.role, country: user.country, language: user.language })),
@@ -17214,7 +17226,8 @@ function generalConversationKind(command = "") {
 }
 
 function nexusWorkforcePlatformExplanation() {
-  return "Nexus is the assistant inside Nexus Workforce AI. I can help with workforce development, training, job readiness, field support, health access, maps and location support, and marketplace or agriculture trade. AgriNexus remains a supported legacy/internal compatibility identity, and agriculture plus AgriTrade remain active domain modules. I can help you get started, guide the workflow, prepare the next step, and ask before taking any high-impact action.";
+  const { productName, assistantName, legacyProductName } = PRODUCT_IDENTITY;
+  return `${assistantName} is the assistant inside ${productName}. I can help with workforce development, training, job readiness, field support, health access, maps and location support, and marketplace or agriculture trade. ${legacyProductName} remains a supported legacy/internal compatibility identity, and agriculture plus AgriTrade remain active domain modules. I can help you get started, guide the workflow, prepare the next step, and ask before taking any high-impact action.`;
 }
 
 function nexusWorkforceCapabilitySummary() {
@@ -17222,7 +17235,8 @@ function nexusWorkforceCapabilitySummary() {
 }
 
 function nexusWorkforceDifferentiatorAnswer() {
-  return "Nexus Workforce AI is different because Nexus connects training, job readiness, health access, field support, marketplace and agriculture trade, maps, and local services in one guided place. AgriNexus remains supported for legacy compatibility, and AgriTrade remains the agriculture-trade marketplace module. Nexus answers first, opens workflows only when you ask, and keeps risky actions behind confirmation.";
+  const { productName, assistantName, legacyProductName } = PRODUCT_IDENTITY;
+  return `${productName} is different because ${assistantName} connects training, job readiness, health access, field support, marketplace and agriculture trade, maps, and local services in one guided place. ${legacyProductName} remains supported for legacy compatibility, and AgriTrade remains the agriculture-trade marketplace module. ${assistantName} answers first, opens workflows only when you ask, and keeps risky actions behind confirmation.`;
 }
 
 function localGeneralConversationAnswer(db, user, command = "", options = {}) {
@@ -26152,6 +26166,7 @@ async function api(req, res, url) {
     return send(res, 200, {
       ok: status.ok,
       service: "agrinexus",
+      productIdentity: productIdentityMetadata(),
       release: AGRINEXUS_RELEASE,
       webBuild: AGRINEXUS_WEB_BUILD_VERSION,
       pwaCache: AGRINEXUS_PWA_CACHE_VERSION,
@@ -26867,6 +26882,7 @@ async function api(req, res, url) {
   if (url.pathname === "/api/config" && req.method === "GET") {
     const publicMap = publicMapConfig();
     return send(res, 200, {
+      productIdentity: productIdentityMetadata(),
       ai: {
         provider: process.env.OPENAI_API_KEY ? "openai" : "offline-simulation",
         model: process.env.OPENAI_API_KEY ? AI_MODEL : null
