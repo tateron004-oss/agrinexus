@@ -27,11 +27,17 @@ const requiredToolFields = [
   "resultSchema",
   "auditEvent",
   "qaCoverage",
-  "protectedCompatibilityNotes"
+  "protectedCompatibilityNotes",
+  "mappingReadiness",
+  "earliestAllowedPhase",
+  "frontendConsumptionPolicy",
+  "mappingNotes"
 ];
 
 const approvedRiskLevels = new Set(["low", "medium", "high", "privacy-sensitive"]);
 const approvedLiveStatuses = new Set(["demo", "local-only", "dry-run", "requires-live-adapter", "not-live", "planned"]);
+const approvedMappingReadiness = new Set(["candidate-low-risk", "excluded-high-risk", "excluded-privacy-sensitive", "future-confirmation-gated"]);
+const approvedFrontendConsumptionPolicies = new Set(["observation-only", "display-only-suggestion", "user-click-required", "not-eligible-yet"]);
 const requiredDomains = [
   "workforce",
   "learning",
@@ -50,7 +56,8 @@ const requiredRegistryQaCoverage = [
   "scripts/nexus-workforce-branding-qa.js",
   "scripts/nexus-workforce-standard-user-qa.js",
   "scripts/nexus-workforce-alias-qa.js",
-  "scripts/nexus-workforce-metadata-qa.js"
+  "scripts/nexus-workforce-metadata-qa.js",
+  "scripts/nexus-low-risk-agent-mapping-qa.js"
 ];
 const riskyIntentPattern = /health|provider|video|camera|call|dispatch|outbound|share|export|application|apply|order|payment|wallet|settlement|certificate|transcript|drone|admin|document|report/i;
 const unsupportedLiveClaimPattern = /live (medical diagnosis|provider dispatch|payment execution|job application submission|external messaging|webrtc|ehr|fhir)/i;
@@ -100,6 +107,8 @@ for (const tool of registry.tools) {
 
   assert.ok(approvedRiskLevels.has(tool.riskLevel), `${tool.canonicalToolId} has unsupported riskLevel ${tool.riskLevel}`);
   assert.ok(approvedLiveStatuses.has(tool.liveStatus), `${tool.canonicalToolId} has unsupported liveStatus ${tool.liveStatus}`);
+  assert.ok(approvedMappingReadiness.has(tool.mappingReadiness), `${tool.canonicalToolId} has unsupported mappingReadiness ${tool.mappingReadiness}`);
+  assert.ok(approvedFrontendConsumptionPolicies.has(tool.frontendConsumptionPolicy), `${tool.canonicalToolId} has unsupported frontendConsumptionPolicy ${tool.frontendConsumptionPolicy}`);
   assert.strictEqual(typeof tool.confirmationRequired, "boolean", `${tool.canonicalToolId} confirmationRequired must be boolean`);
   assert.ok(Array.isArray(tool.exampleAliases), `${tool.canonicalToolId} exampleAliases must be an array`);
   assert.ok(Array.isArray(tool.legacyAliases), `${tool.canonicalToolId} legacyAliases must be an array`);
@@ -121,6 +130,7 @@ for (const tool of registry.tools) {
 
   if (tool.riskLevel === "high" || tool.riskLevel === "privacy-sensitive") {
     assert.strictEqual(tool.confirmationRequired, true, `${tool.canonicalToolId} high/privacy-sensitive tools must require confirmation`);
+    assert.notStrictEqual(tool.mappingReadiness, "candidate-low-risk", `${tool.canonicalToolId} high/privacy-sensitive tools must not be low-risk mapping candidates`);
   }
 
   const riskRelevantText = JSON.stringify({

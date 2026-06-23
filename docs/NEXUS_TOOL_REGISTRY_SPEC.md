@@ -532,7 +532,21 @@ Acceptance criteria:
 
 Before registry-driven routing begins, Phase 7F added frontend display-only observation of `metadata.agentAction`. The frontend may capture validated `metadata-only` agent-action summaries for developer/debug visibility, but it must not execute, route, open workflows, stage actions, confirm actions, or alter user-facing behavior from that metadata. Existing frontend routers remain authoritative, and the static registry remains spec-only and non-authoritative.
 
-### Phase 7G: Medium/High-Risk Registry Routing
+### Phase 7G: Low-Risk Agent Action Mapping Audit/Spec
+
+Document low-risk candidates and explicit exclusions before any registry-driven routing work begins.
+
+Acceptance criteria:
+
+- Low-risk candidates are limited to informational or browse-only tools.
+- High-risk, privacy-sensitive, transactional, permission-sensitive, and live integration tools are excluded from early metadata-driven behavior.
+- `metadata.agentAction` remains non-authoritative.
+- Existing routers remain authoritative.
+- Static registry remains spec-only and is not imported at runtime.
+
+Phase 7G added `docs/NEXUS_LOW_RISK_AGENT_ACTION_MAPPING.md` and static mapping annotations in `docs/nexus-tool-registry.v1.json`. These annotations are planning metadata only. Future implementation must begin with display-only or user-click-required suggestions, not workflow execution or automatic routing.
+
+### Phase 7H: Medium/High-Risk Registry Routing
 
 Migrate staged and confirmation-gated tools after low-risk coverage is stable.
 
@@ -542,7 +556,7 @@ Acceptance criteria:
 - `allowedConfirmations` and "okay does not execute high-risk actions" protections remain intact.
 - Privacy redaction and role checks remain intact.
 
-### Phase 7H: Live Adapter And Audit Log Integration
+### Phase 7I: Live Adapter And Audit Log Integration
 
 Connect registry metadata to live adapter availability, audit events, provider engine boundaries, and future production readiness checks.
 

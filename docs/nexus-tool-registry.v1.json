@@ -15,7 +15,12 @@
     "Do not rename native bridge fields.",
     "Do not rename package names or protected QA assumptions."
   ],
-  "approvedRiskLevels": ["low", "medium", "high", "privacy-sensitive"],
+  "approvedRiskLevels": [
+    "low",
+    "medium",
+    "high",
+    "privacy-sensitive"
+  ],
   "qaCoverage": [
     "scripts/nexus-tool-registry-qa.js",
     "scripts/nexus-workforce-branding-qa.js",
@@ -25,7 +30,8 @@
     "scripts/workflow-button-audit.js",
     "scripts/app-behavior-audit.js",
     "scripts/voice-response-regression.js",
-    "scripts/companion-confirmation-gate-smoke.js"
+    "scripts/companion-confirmation-gate-smoke.js",
+    "scripts/nexus-low-risk-agent-mapping-qa.js"
   ],
   "tools": [
     {
@@ -34,21 +40,56 @@
       "domain": "workforce",
       "category": "workflow",
       "description": "Opens worker-first training guidance and learning paths without changing legacy learning routes.",
-      "exampleAliases": ["open workforce training", "show training", "start training"],
-      "legacyAliases": ["data-simple-section=learning", "data-workflow=learning", "open learning"],
+      "exampleAliases": [
+        "open workforce training",
+        "show training",
+        "start training"
+      ],
+      "legacyAliases": [
+        "data-simple-section=learning",
+        "data-workflow=learning",
+        "open learning"
+      ],
       "requiredInputs": [],
-      "optionalInputs": ["topic", "role"],
+      "optionalInputs": [
+        "topic",
+        "role"
+      ],
       "riskLevel": "low",
       "confirmationRequired": false,
-      "rolePermissions": { "read": ["standard", "admin"], "write": [], "execute": ["standard", "admin"] },
+      "rolePermissions": {
+        "read": [
+          "standard",
+          "admin"
+        ],
+        "write": [],
+        "execute": [
+          "standard",
+          "admin"
+        ]
+      },
       "demoStatus": "local-only",
       "liveStatus": "not-live",
-      "frontendAction": { "type": "open-section", "sectionId": "learning", "status": "existing-route-to-be-mapped" },
-      "backendAction": { "status": "existing-route-to-be-mapped", "notes": "Learning workflow routes remain unchanged until Phase 7D/7E." },
+      "frontendAction": {
+        "type": "open-section",
+        "sectionId": "learning",
+        "status": "existing-route-to-be-mapped"
+      },
+      "backendAction": {
+        "status": "existing-route-to-be-mapped",
+        "notes": "Learning workflow routes remain unchanged until Phase 7D/7E."
+      },
       "resultSchema": "learningWorkflowView",
       "auditEvent": "workforce.training.opened",
-      "qaCoverage": ["scripts/learning-functionality-qa.js", "scripts/nexus-workforce-standard-user-qa.js"],
-      "protectedCompatibilityNotes": "Do not rename learning workflow IDs, Standard User section IDs, or existing learning command aliases."
+      "qaCoverage": [
+        "scripts/learning-functionality-qa.js",
+        "scripts/nexus-workforce-standard-user-qa.js"
+      ],
+      "protectedCompatibilityNotes": "Do not rename learning workflow IDs, Standard User section IDs, or existing learning command aliases.",
+      "mappingReadiness": "candidate-low-risk",
+      "earliestAllowedPhase": "7H",
+      "frontendConsumptionPolicy": "user-click-required",
+      "mappingNotes": "Training navigation is a low-risk candidate after display-only suggestion QA; existing learning opener stays authoritative."
     },
     {
       "canonicalToolId": "workforce.job_pathways",
@@ -56,21 +97,62 @@
       "domain": "workforce",
       "category": "workflow",
       "description": "Guides the user through job readiness, role matching, and career pathway exploration.",
-      "exampleAliases": ["explore job pathways", "find a job path", "help me get ready for work"],
-      "legacyAliases": ["data-workforce", "/api/workforce/action", "/api/workforce/advanced"],
+      "exampleAliases": [
+        "explore job pathways",
+        "find a job path",
+        "help me get ready for work"
+      ],
+      "legacyAliases": [
+        "data-workforce",
+        "/api/workforce/action",
+        "/api/workforce/advanced"
+      ],
       "requiredInputs": [],
-      "optionalInputs": ["roleId", "location", "skills"],
+      "optionalInputs": [
+        "roleId",
+        "location",
+        "skills"
+      ],
       "riskLevel": "medium",
       "confirmationRequired": false,
-      "rolePermissions": { "read": ["standard", "admin"], "write": ["standard", "admin"], "execute": ["standard", "admin"] },
+      "rolePermissions": {
+        "read": [
+          "standard",
+          "admin"
+        ],
+        "write": [
+          "standard",
+          "admin"
+        ],
+        "execute": [
+          "standard",
+          "admin"
+        ]
+      },
       "demoStatus": "local-only",
       "liveStatus": "requires-live-adapter",
-      "frontendAction": { "type": "workflow", "workflowId": "workforce", "actionId": "match-role", "status": "existing-route-to-be-mapped" },
-      "backendAction": { "endpoint": "/api/workforce/action", "method": "POST", "actionType": "match-role" },
+      "frontendAction": {
+        "type": "workflow",
+        "workflowId": "workforce",
+        "actionId": "match-role",
+        "status": "existing-route-to-be-mapped"
+      },
+      "backendAction": {
+        "endpoint": "/api/workforce/action",
+        "method": "POST",
+        "actionType": "match-role"
+      },
       "resultSchema": "workforceActionRecord",
       "auditEvent": "workforce.job_pathways.reviewed",
-      "qaCoverage": ["scripts/workflow-button-audit.js", "scripts/nexus-workforce-standard-user-qa.js"],
-      "protectedCompatibilityNotes": "Do not rename workforce endpoints, role IDs, or selected-job compatibility behavior."
+      "qaCoverage": [
+        "scripts/workflow-button-audit.js",
+        "scripts/nexus-workforce-standard-user-qa.js"
+      ],
+      "protectedCompatibilityNotes": "Do not rename workforce endpoints, role IDs, or selected-job compatibility behavior.",
+      "mappingReadiness": "future-confirmation-gated",
+      "earliestAllowedPhase": "7I",
+      "frontendConsumptionPolicy": "user-click-required",
+      "mappingNotes": "Career guidance can be suggested later, but role-matching/write paths must stay behind existing workflow controls and confirmation where applicable."
     },
     {
       "canonicalToolId": "workforce.field_support",
@@ -78,21 +160,59 @@
       "domain": "workforce",
       "category": "workflow",
       "description": "Provides field support guidance for worker, farmer, crop, and rural operations contexts.",
-      "exampleAliases": ["get field support", "help in the field", "field support"],
-      "legacyAliases": ["farmer help", "crop help", "field support", "data-workflow=trade"],
+      "exampleAliases": [
+        "get field support",
+        "help in the field",
+        "field support"
+      ],
+      "legacyAliases": [
+        "farmer help",
+        "crop help",
+        "field support",
+        "data-workflow=trade"
+      ],
       "requiredInputs": [],
-      "optionalInputs": ["issue", "crop", "location"],
+      "optionalInputs": [
+        "issue",
+        "crop",
+        "location"
+      ],
       "riskLevel": "low",
       "confirmationRequired": false,
-      "rolePermissions": { "read": ["standard", "admin"], "write": [], "execute": ["standard", "admin"] },
+      "rolePermissions": {
+        "read": [
+          "standard",
+          "admin"
+        ],
+        "write": [],
+        "execute": [
+          "standard",
+          "admin"
+        ]
+      },
       "demoStatus": "local-only",
       "liveStatus": "not-live",
-      "frontendAction": { "type": "workflow", "workflowId": "trade", "actionId": "field-support", "status": "existing-route-to-be-mapped" },
-      "backendAction": { "status": "existing-route-to-be-mapped", "notes": "Farmer/crop guidance remains routed through existing command logic." },
+      "frontendAction": {
+        "type": "workflow",
+        "workflowId": "trade",
+        "actionId": "field-support",
+        "status": "existing-route-to-be-mapped"
+      },
+      "backendAction": {
+        "status": "existing-route-to-be-mapped",
+        "notes": "Farmer/crop guidance remains routed through existing command logic."
+      },
       "resultSchema": "fieldSupportGuidance",
       "auditEvent": "workforce.field_support.opened",
-      "qaCoverage": ["scripts/voice-response-regression.js", "scripts/workflow-button-audit.js"],
-      "protectedCompatibilityNotes": "Do not remove farmer, crop, farm, field, drone, or agriculture aliases."
+      "qaCoverage": [
+        "scripts/voice-response-regression.js",
+        "scripts/workflow-button-audit.js"
+      ],
+      "protectedCompatibilityNotes": "Do not remove farmer, crop, farm, field, drone, or agriculture aliases.",
+      "mappingReadiness": "candidate-low-risk",
+      "earliestAllowedPhase": "7H",
+      "frontendConsumptionPolicy": "display-only-suggestion",
+      "mappingNotes": "Informational field support is a low-risk candidate; farm/crop/drone evidence or record creation remains excluded."
     },
     {
       "canonicalToolId": "learning.start",
@@ -100,21 +220,58 @@
       "domain": "learning",
       "category": "workflow",
       "description": "Starts or resumes a learning/course workflow.",
-      "exampleAliases": ["start a course", "open learning", "resume lesson"],
-      "legacyAliases": ["/api/learning/start", "data-workflow=learning", "learning.start_or_continue"],
+      "exampleAliases": [
+        "start a course",
+        "open learning",
+        "resume lesson"
+      ],
+      "legacyAliases": [
+        "/api/learning/start",
+        "data-workflow=learning",
+        "learning.start_or_continue"
+      ],
       "requiredInputs": [],
-      "optionalInputs": ["courseId", "lessonId"],
+      "optionalInputs": [
+        "courseId",
+        "lessonId"
+      ],
       "riskLevel": "low",
       "confirmationRequired": false,
-      "rolePermissions": { "read": ["standard", "admin"], "write": ["standard", "admin"], "execute": ["standard", "admin"] },
+      "rolePermissions": {
+        "read": [
+          "standard",
+          "admin"
+        ],
+        "write": [
+          "standard",
+          "admin"
+        ],
+        "execute": [
+          "standard",
+          "admin"
+        ]
+      },
       "demoStatus": "local-only",
       "liveStatus": "not-live",
-      "frontendAction": { "type": "workflow", "workflowId": "learning", "actionId": "start" },
-      "backendAction": { "endpoint": "/api/learning/start", "method": "POST" },
+      "frontendAction": {
+        "type": "workflow",
+        "workflowId": "learning",
+        "actionId": "start"
+      },
+      "backendAction": {
+        "endpoint": "/api/learning/start",
+        "method": "POST"
+      },
       "resultSchema": "learningSession",
       "auditEvent": "learning.start.requested",
-      "qaCoverage": ["scripts/learning-functionality-qa.js"],
-      "protectedCompatibilityNotes": "Do not rename learning endpoints, workflow IDs, or current learning typed command aliases."
+      "qaCoverage": [
+        "scripts/learning-functionality-qa.js"
+      ],
+      "protectedCompatibilityNotes": "Do not rename learning endpoints, workflow IDs, or current learning typed command aliases.",
+      "mappingReadiness": "candidate-low-risk",
+      "earliestAllowedPhase": "7H",
+      "frontendConsumptionPolicy": "user-click-required",
+      "mappingNotes": "Starting or resuming the existing learning UI is a low-risk candidate only through user-click navigation suggestions."
     },
     {
       "canonicalToolId": "learning.quiz",
@@ -122,21 +279,58 @@
       "domain": "learning",
       "category": "workflow",
       "description": "Opens or records a local learning quiz attempt.",
-      "exampleAliases": ["give me a quiz", "start quiz", "record quiz attempt"],
-      "legacyAliases": ["/api/learning/quiz", "data-action=quiz-attempt"],
+      "exampleAliases": [
+        "give me a quiz",
+        "start quiz",
+        "record quiz attempt"
+      ],
+      "legacyAliases": [
+        "/api/learning/quiz",
+        "data-action=quiz-attempt"
+      ],
       "requiredInputs": [],
-      "optionalInputs": ["courseId", "answers"],
+      "optionalInputs": [
+        "courseId",
+        "answers"
+      ],
       "riskLevel": "medium",
       "confirmationRequired": false,
-      "rolePermissions": { "read": ["standard", "admin"], "write": ["standard", "admin"], "execute": ["standard", "admin"] },
+      "rolePermissions": {
+        "read": [
+          "standard",
+          "admin"
+        ],
+        "write": [
+          "standard",
+          "admin"
+        ],
+        "execute": [
+          "standard",
+          "admin"
+        ]
+      },
       "demoStatus": "local-only",
       "liveStatus": "not-live",
-      "frontendAction": { "type": "workflow", "workflowId": "learning", "actionId": "quiz-attempt" },
-      "backendAction": { "endpoint": "/api/learning/quiz", "method": "POST" },
+      "frontendAction": {
+        "type": "workflow",
+        "workflowId": "learning",
+        "actionId": "quiz-attempt"
+      },
+      "backendAction": {
+        "endpoint": "/api/learning/quiz",
+        "method": "POST"
+      },
       "resultSchema": "quizAttemptRecord",
       "auditEvent": "learning.quiz.attempted",
-      "qaCoverage": ["scripts/learning-functionality-qa.js", "scripts/workflow-button-audit.js"],
-      "protectedCompatibilityNotes": "Do not rename quiz action IDs or learning record response contracts."
+      "qaCoverage": [
+        "scripts/learning-functionality-qa.js",
+        "scripts/workflow-button-audit.js"
+      ],
+      "protectedCompatibilityNotes": "Do not rename quiz action IDs or learning record response contracts.",
+      "mappingReadiness": "future-confirmation-gated",
+      "earliestAllowedPhase": "7I",
+      "frontendConsumptionPolicy": "user-click-required",
+      "mappingNotes": "Quiz preview/practice can be suggested later; scored attempts or record writes must remain existing-route controlled."
     },
     {
       "canonicalToolId": "health.intake",
@@ -144,21 +338,67 @@
       "domain": "health",
       "category": "workflow",
       "description": "Collects guided local/demo health intake details and creates or stages an intake record according to role and confirmation rules.",
-      "exampleAliases": ["start intake", "open health intake", "begin telehealth intake"],
-      "legacyAliases": ["data-health=intake", "/api/health/action:type=intake"],
-      "requiredInputs": ["patientName", "symptoms"],
-      "optionalInputs": ["callback", "caregiver", "location"],
+      "exampleAliases": [
+        "start intake",
+        "open health intake",
+        "begin telehealth intake"
+      ],
+      "legacyAliases": [
+        "data-health=intake",
+        "/api/health/action:type=intake"
+      ],
+      "requiredInputs": [
+        "patientName",
+        "symptoms"
+      ],
+      "optionalInputs": [
+        "callback",
+        "caregiver",
+        "location"
+      ],
       "riskLevel": "privacy-sensitive",
       "confirmationRequired": true,
-      "rolePermissions": { "read": ["standard", "admin", "health"], "write": ["admin", "health"], "execute": ["standard", "admin", "health"] },
+      "rolePermissions": {
+        "read": [
+          "standard",
+          "admin",
+          "health"
+        ],
+        "write": [
+          "admin",
+          "health"
+        ],
+        "execute": [
+          "standard",
+          "admin",
+          "health"
+        ]
+      },
       "demoStatus": "local-only",
       "liveStatus": "not-live",
-      "frontendAction": { "type": "workflow", "workflowId": "health", "actionId": "intake", "selector": "[data-health=\"intake\"]" },
-      "backendAction": { "endpoint": "/api/health/action", "method": "POST", "actionType": "intake" },
+      "frontendAction": {
+        "type": "workflow",
+        "workflowId": "health",
+        "actionId": "intake",
+        "selector": "[data-health=\"intake\"]"
+      },
+      "backendAction": {
+        "endpoint": "/api/health/action",
+        "method": "POST",
+        "actionType": "intake"
+      },
       "resultSchema": "healthIntakeRecord",
       "auditEvent": "health.intake.created",
-      "qaCoverage": ["scripts/telehealth-contract-qa.js", "scripts/telehealth-privacy-role-qa.js", "scripts/telehealth-demo-boundary-qa.js"],
-      "protectedCompatibilityNotes": "Do not rename data-health, endpoint, action type, health role checks, or stored record shape during registry phases."
+      "qaCoverage": [
+        "scripts/telehealth-contract-qa.js",
+        "scripts/telehealth-privacy-role-qa.js",
+        "scripts/telehealth-demo-boundary-qa.js"
+      ],
+      "protectedCompatibilityNotes": "Do not rename data-health, endpoint, action type, health role checks, or stored record shape during registry phases.",
+      "mappingReadiness": "excluded-privacy-sensitive",
+      "earliestAllowedPhase": "7J",
+      "frontendConsumptionPolicy": "not-eligible-yet",
+      "mappingNotes": "Health intake creates sensitive records and must not be metadata-driven in early routing phases."
     },
     {
       "canonicalToolId": "health.telehealth",
@@ -166,21 +406,63 @@
       "domain": "health",
       "category": "workflow",
       "description": "Opens the controlled local/demo telehealth workflow platform without claiming production clinical telehealth.",
-      "exampleAliases": ["open health access", "telehealth", "health support"],
-      "legacyAliases": ["AFAYAI Health", "data-health", "/api/health/advanced"],
+      "exampleAliases": [
+        "open health access",
+        "telehealth",
+        "health support"
+      ],
+      "legacyAliases": [
+        "AFAYAI Health",
+        "data-health",
+        "/api/health/advanced"
+      ],
       "requiredInputs": [],
-      "optionalInputs": ["need", "patientContext"],
+      "optionalInputs": [
+        "need",
+        "patientContext"
+      ],
       "riskLevel": "privacy-sensitive",
       "confirmationRequired": true,
-      "rolePermissions": { "read": ["standard", "admin", "health"], "write": ["admin", "health"], "execute": ["standard", "admin", "health"] },
+      "rolePermissions": {
+        "read": [
+          "standard",
+          "admin",
+          "health"
+        ],
+        "write": [
+          "admin",
+          "health"
+        ],
+        "execute": [
+          "standard",
+          "admin",
+          "health"
+        ]
+      },
       "demoStatus": "local-only",
       "liveStatus": "not-live",
-      "frontendAction": { "type": "open-section", "sectionId": "health", "status": "existing-route-to-be-mapped" },
-      "backendAction": { "endpoint": "/api/health/advanced", "method": "POST", "status": "existing-route-to-be-mapped" },
+      "frontendAction": {
+        "type": "open-section",
+        "sectionId": "health",
+        "status": "existing-route-to-be-mapped"
+      },
+      "backendAction": {
+        "endpoint": "/api/health/advanced",
+        "method": "POST",
+        "status": "existing-route-to-be-mapped"
+      },
       "resultSchema": "healthWorkflowRecord",
       "auditEvent": "health.telehealth.opened",
-      "qaCoverage": ["scripts/telehealth-contract-qa.js", "scripts/telehealth-privacy-role-qa.js", "scripts/telehealth-video-handoff-qa.js"],
-      "protectedCompatibilityNotes": "Do not imply live clinical care, live provider dispatch, HIPAA compliance, or production EHR integration."
+      "qaCoverage": [
+        "scripts/telehealth-contract-qa.js",
+        "scripts/telehealth-privacy-role-qa.js",
+        "scripts/telehealth-video-handoff-qa.js"
+      ],
+      "protectedCompatibilityNotes": "Do not imply live clinical care, live provider dispatch, HIPAA compliance, or production EHR integration.",
+      "mappingReadiness": "excluded-privacy-sensitive",
+      "earliestAllowedPhase": "7J",
+      "frontendConsumptionPolicy": "not-eligible-yet",
+      "mappingNotes": "Telehealth access has privacy and clinical-boundary implications and remains existing-router only."
     },
     {
       "canonicalToolId": "health.video_preview",
@@ -188,21 +470,62 @@
       "domain": "health",
       "category": "handoff",
       "description": "Opens the rich local camera preview workflow with handoff-only demo wording and no live provider room.",
-      "exampleAliases": ["open video for provider to show injury", "open local camera preview", "show injury video"],
-      "legacyAliases": ["data-health=video", "openHealthVideoPreviewWorkflow", "/api/video/session"],
+      "exampleAliases": [
+        "open video for provider to show injury",
+        "open local camera preview",
+        "show injury video"
+      ],
+      "legacyAliases": [
+        "data-health=video",
+        "openHealthVideoPreviewWorkflow",
+        "/api/video/session"
+      ],
       "requiredInputs": [],
-      "optionalInputs": ["handoffReason", "patientContext"],
+      "optionalInputs": [
+        "handoffReason",
+        "patientContext"
+      ],
       "riskLevel": "privacy-sensitive",
       "confirmationRequired": true,
-      "rolePermissions": { "read": ["standard", "admin", "health"], "write": ["admin", "health"], "execute": ["standard", "admin", "health"] },
+      "rolePermissions": {
+        "read": [
+          "standard",
+          "admin",
+          "health"
+        ],
+        "write": [
+          "admin",
+          "health"
+        ],
+        "execute": [
+          "standard",
+          "admin",
+          "health"
+        ]
+      },
       "demoStatus": "local-only",
       "liveStatus": "not-live",
-      "frontendAction": { "type": "workflow", "workflowId": "health", "actionId": "video", "selector": "[data-health=\"video\"]" },
-      "backendAction": { "endpoint": "/api/video/session", "method": "POST" },
+      "frontendAction": {
+        "type": "workflow",
+        "workflowId": "health",
+        "actionId": "video",
+        "selector": "[data-health=\"video\"]"
+      },
+      "backendAction": {
+        "endpoint": "/api/video/session",
+        "method": "POST"
+      },
       "resultSchema": "videoHandoffRecord",
       "auditEvent": "health.video_preview.opened",
-      "qaCoverage": ["scripts/telehealth-camera-discoverability-qa.js", "scripts/telehealth-video-handoff-qa.js"],
-      "protectedCompatibilityNotes": "Do not convert this to live WebRTC/signaling. Opening the modal creates no record; video session record creation remains confirmation-gated."
+      "qaCoverage": [
+        "scripts/telehealth-camera-discoverability-qa.js",
+        "scripts/telehealth-video-handoff-qa.js"
+      ],
+      "protectedCompatibilityNotes": "Do not convert this to live WebRTC/signaling. Opening the modal creates no record; video session record creation remains confirmation-gated.",
+      "mappingReadiness": "excluded-privacy-sensitive",
+      "earliestAllowedPhase": "7J",
+      "frontendConsumptionPolicy": "not-eligible-yet",
+      "mappingNotes": "Camera/video handoff is permission-sensitive and must not be opened from metadata."
     },
     {
       "canonicalToolId": "health.provider_call",
@@ -210,21 +533,65 @@
       "domain": "health",
       "category": "handoff",
       "description": "Stages or prepares a safe provider/caregiver communication path after explicit confirmation.",
-      "exampleAliases": ["call my doctor", "call provider", "call health worker"],
-      "legacyAliases": ["call intent", "agentPendingAction", "data-health=provider"],
-      "requiredInputs": ["contactOrNumber"],
-      "optionalInputs": ["providerType", "reason"],
+      "exampleAliases": [
+        "call my doctor",
+        "call provider",
+        "call health worker"
+      ],
+      "legacyAliases": [
+        "call intent",
+        "agentPendingAction",
+        "data-health=provider"
+      ],
+      "requiredInputs": [
+        "contactOrNumber"
+      ],
+      "optionalInputs": [
+        "providerType",
+        "reason"
+      ],
       "riskLevel": "high",
       "confirmationRequired": true,
-      "rolePermissions": { "read": ["standard", "admin", "health"], "write": ["standard", "admin", "health"], "execute": ["standard", "admin", "health"] },
+      "rolePermissions": {
+        "read": [
+          "standard",
+          "admin",
+          "health"
+        ],
+        "write": [
+          "standard",
+          "admin",
+          "health"
+        ],
+        "execute": [
+          "standard",
+          "admin",
+          "health"
+        ]
+      },
       "demoStatus": "dry-run",
       "liveStatus": "requires-live-adapter",
-      "frontendAction": { "type": "pending-action", "status": "existing-route-to-be-mapped" },
-      "backendAction": { "endpoint": "/api/agent/command", "method": "POST", "status": "existing-route-to-be-mapped" },
+      "frontendAction": {
+        "type": "pending-action",
+        "status": "existing-route-to-be-mapped"
+      },
+      "backendAction": {
+        "endpoint": "/api/agent/command",
+        "method": "POST",
+        "status": "existing-route-to-be-mapped"
+      },
       "resultSchema": "pendingCallAction",
       "auditEvent": "health.provider_call.staged",
-      "qaCoverage": ["scripts/call-intent-smoke.js", "scripts/companion-confirmation-gate-smoke.js", "scripts/confirmed-call-handoff-qa.js"],
-      "protectedCompatibilityNotes": "Do not allow first-utterance call execution or generic okay confirmations for high-risk outbound calls."
+      "qaCoverage": [
+        "scripts/call-intent-smoke.js",
+        "scripts/companion-confirmation-gate-smoke.js",
+        "scripts/confirmed-call-handoff-qa.js"
+      ],
+      "protectedCompatibilityNotes": "Do not allow first-utterance call execution or generic okay confirmations for high-risk outbound calls.",
+      "mappingReadiness": "excluded-high-risk",
+      "earliestAllowedPhase": "7J",
+      "frontendConsumptionPolicy": "not-eligible-yet",
+      "mappingNotes": "Provider calls are outbound high-risk actions and must remain confirmation-gated through existing pending-action paths."
     },
     {
       "canonicalToolId": "map.location",
@@ -232,21 +599,61 @@
       "domain": "map",
       "category": "workflow",
       "description": "Opens map/location support while preserving browser permission boundaries.",
-      "exampleAliases": ["use maps and location", "find clinic near me", "show route"],
-      "legacyAliases": ["data-workflow=map", "/api/map/advanced", "Leaflet"],
+      "exampleAliases": [
+        "use maps and location",
+        "find clinic near me",
+        "show route"
+      ],
+      "legacyAliases": [
+        "data-workflow=map",
+        "/api/map/advanced",
+        "Leaflet"
+      ],
       "requiredInputs": [],
-      "optionalInputs": ["location", "destination", "routeType"],
+      "optionalInputs": [
+        "location",
+        "destination",
+        "routeType"
+      ],
       "riskLevel": "privacy-sensitive",
       "confirmationRequired": true,
-      "rolePermissions": { "read": ["standard", "admin"], "write": ["standard", "admin"], "execute": ["standard", "admin"] },
+      "rolePermissions": {
+        "read": [
+          "standard",
+          "admin"
+        ],
+        "write": [
+          "standard",
+          "admin"
+        ],
+        "execute": [
+          "standard",
+          "admin"
+        ]
+      },
       "demoStatus": "local-only",
       "liveStatus": "requires-live-adapter",
-      "frontendAction": { "type": "workflow", "workflowId": "map", "actionId": "location", "status": "existing-route-to-be-mapped" },
-      "backendAction": { "endpoint": "/api/map/advanced", "method": "POST" },
+      "frontendAction": {
+        "type": "workflow",
+        "workflowId": "map",
+        "actionId": "location",
+        "status": "existing-route-to-be-mapped"
+      },
+      "backendAction": {
+        "endpoint": "/api/map/advanced",
+        "method": "POST"
+      },
       "resultSchema": "mapWorkflowRecord",
       "auditEvent": "map.location.requested",
-      "qaCoverage": ["scripts/workflow-button-audit.js", "scripts/app-behavior-audit.js"],
-      "protectedCompatibilityNotes": "Do not bypass browser location permission prompts or alter Leaflet/map behavior during registry migration."
+      "qaCoverage": [
+        "scripts/workflow-button-audit.js",
+        "scripts/app-behavior-audit.js"
+      ],
+      "protectedCompatibilityNotes": "Do not bypass browser location permission prompts or alter Leaflet/map behavior during registry migration.",
+      "mappingReadiness": "excluded-privacy-sensitive",
+      "earliestAllowedPhase": "7J",
+      "frontendConsumptionPolicy": "not-eligible-yet",
+      "mappingNotes": "Location permission and geolocation use must remain user-permission driven and existing-router controlled."
     },
     {
       "canonicalToolId": "agriculture.help",
@@ -254,21 +661,56 @@
       "domain": "agriculture",
       "category": "answer",
       "description": "Answers farmer, crop, and agriculture support questions as a retained Nexus Workforce AI domain.",
-      "exampleAliases": ["what can you do for a farmer", "help with crops", "farm support"],
-      "legacyAliases": ["conversation.farmer_help", "crop help", "AgriNexus compatibility"],
+      "exampleAliases": [
+        "what can you do for a farmer",
+        "help with crops",
+        "farm support"
+      ],
+      "legacyAliases": [
+        "conversation.farmer_help",
+        "crop help",
+        "AgriNexus compatibility"
+      ],
       "requiredInputs": [],
-      "optionalInputs": ["crop", "region", "problem"],
+      "optionalInputs": [
+        "crop",
+        "region",
+        "problem"
+      ],
       "riskLevel": "low",
       "confirmationRequired": false,
-      "rolePermissions": { "read": ["standard", "admin"], "write": [], "execute": ["standard", "admin"] },
+      "rolePermissions": {
+        "read": [
+          "standard",
+          "admin"
+        ],
+        "write": [],
+        "execute": [
+          "standard",
+          "admin"
+        ]
+      },
       "demoStatus": "local-only",
       "liveStatus": "not-live",
-      "frontendAction": { "type": "assistant-response", "status": "existing-route-to-be-mapped" },
-      "backendAction": { "endpoint": "/api/agent/command", "method": "POST", "status": "existing-route-to-be-mapped" },
+      "frontendAction": {
+        "type": "assistant-response",
+        "status": "existing-route-to-be-mapped"
+      },
+      "backendAction": {
+        "endpoint": "/api/agent/command",
+        "method": "POST",
+        "status": "existing-route-to-be-mapped"
+      },
       "resultSchema": "assistantGuidance",
       "auditEvent": "agriculture.help.answered",
-      "qaCoverage": ["scripts/voice-response-regression.js"],
-      "protectedCompatibilityNotes": "Do not remove AgriNexus, agriculture, farm, farmer, crop, or rural support aliases."
+      "qaCoverage": [
+        "scripts/voice-response-regression.js"
+      ],
+      "protectedCompatibilityNotes": "Do not remove AgriNexus, agriculture, farm, farmer, crop, or rural support aliases.",
+      "mappingReadiness": "candidate-low-risk",
+      "earliestAllowedPhase": "7H",
+      "frontendConsumptionPolicy": "display-only-suggestion",
+      "mappingNotes": "Informational agriculture help is a low-risk candidate while crop sale, scan, or transactional paths remain excluded."
     },
     {
       "canonicalToolId": "agriculture.field_scan",
@@ -276,21 +718,60 @@
       "domain": "agriculture",
       "category": "workflow",
       "description": "Prepares crop/field evidence or drone scan workflow records without implying live drone execution.",
-      "exampleAliases": ["scan field", "drone field scan", "field report"],
-      "legacyAliases": ["/api/trade/drone-scan", "data-workflow=trade:data-action=drone-report", "drone.field_scan"],
+      "exampleAliases": [
+        "scan field",
+        "drone field scan",
+        "field report"
+      ],
+      "legacyAliases": [
+        "/api/trade/drone-scan",
+        "data-workflow=trade:data-action=drone-report",
+        "drone.field_scan"
+      ],
       "requiredInputs": [],
-      "optionalInputs": ["field", "crop", "issue"],
+      "optionalInputs": [
+        "field",
+        "crop",
+        "issue"
+      ],
       "riskLevel": "high",
       "confirmationRequired": true,
-      "rolePermissions": { "read": ["standard", "admin"], "write": ["standard", "admin"], "execute": ["standard", "admin"] },
+      "rolePermissions": {
+        "read": [
+          "standard",
+          "admin"
+        ],
+        "write": [
+          "standard",
+          "admin"
+        ],
+        "execute": [
+          "standard",
+          "admin"
+        ]
+      },
       "demoStatus": "dry-run",
       "liveStatus": "requires-live-adapter",
-      "frontendAction": { "type": "workflow", "workflowId": "trade", "actionId": "drone-report" },
-      "backendAction": { "endpoint": "/api/trade/drone-scan", "method": "POST" },
+      "frontendAction": {
+        "type": "workflow",
+        "workflowId": "trade",
+        "actionId": "drone-report"
+      },
+      "backendAction": {
+        "endpoint": "/api/trade/drone-scan",
+        "method": "POST"
+      },
       "resultSchema": "droneScanRecord",
       "auditEvent": "agriculture.field_scan.staged",
-      "qaCoverage": ["scripts/workflow-button-audit.js", "scripts/companion-confirmation-gate-smoke.js"],
-      "protectedCompatibilityNotes": "Do not imply live drone operation or rename drone/trade compatibility action IDs."
+      "qaCoverage": [
+        "scripts/workflow-button-audit.js",
+        "scripts/companion-confirmation-gate-smoke.js"
+      ],
+      "protectedCompatibilityNotes": "Do not imply live drone operation or rename drone/trade compatibility action IDs.",
+      "mappingReadiness": "excluded-high-risk",
+      "earliestAllowedPhase": "7J",
+      "frontendConsumptionPolicy": "not-eligible-yet",
+      "mappingNotes": "Field scan/drone evidence flows are operational/high-risk and remain existing-router controlled."
     },
     {
       "canonicalToolId": "marketplace.agritrade",
@@ -298,21 +779,57 @@
       "domain": "marketplace",
       "category": "workflow",
       "description": "Opens the AgriTrade marketplace module as a retained agriculture-trade domain.",
-      "exampleAliases": ["open marketplace", "open AgriTrade", "show crop market"],
-      "legacyAliases": ["AgriTrade", "data-workflow=trade", "/api/trade/advanced"],
+      "exampleAliases": [
+        "open marketplace",
+        "open AgriTrade",
+        "show crop market"
+      ],
+      "legacyAliases": [
+        "AgriTrade",
+        "data-workflow=trade",
+        "/api/trade/advanced"
+      ],
       "requiredInputs": [],
-      "optionalInputs": ["productId", "market"],
+      "optionalInputs": [
+        "productId",
+        "market"
+      ],
       "riskLevel": "low",
       "confirmationRequired": false,
-      "rolePermissions": { "read": ["standard", "admin"], "write": [], "execute": ["standard", "admin"] },
+      "rolePermissions": {
+        "read": [
+          "standard",
+          "admin"
+        ],
+        "write": [],
+        "execute": [
+          "standard",
+          "admin"
+        ]
+      },
       "demoStatus": "local-only",
       "liveStatus": "requires-live-adapter",
-      "frontendAction": { "type": "open-section", "sectionId": "trade", "status": "existing-route-to-be-mapped" },
-      "backendAction": { "endpoint": "/api/trade/advanced", "method": "POST", "status": "existing-route-to-be-mapped" },
+      "frontendAction": {
+        "type": "open-section",
+        "sectionId": "trade",
+        "status": "existing-route-to-be-mapped"
+      },
+      "backendAction": {
+        "endpoint": "/api/trade/advanced",
+        "method": "POST",
+        "status": "existing-route-to-be-mapped"
+      },
       "resultSchema": "marketplaceView",
       "auditEvent": "marketplace.agritrade.opened",
-      "qaCoverage": ["scripts/nexus-workforce-branding-qa.js", "scripts/nexus-workforce-standard-user-qa.js"],
-      "protectedCompatibilityNotes": "Keep AgriTrade present and do not rename trade workflows during Nexus Workforce repurpose phases."
+      "qaCoverage": [
+        "scripts/nexus-workforce-branding-qa.js",
+        "scripts/nexus-workforce-standard-user-qa.js"
+      ],
+      "protectedCompatibilityNotes": "Keep AgriTrade present and do not rename trade workflows during Nexus Workforce repurpose phases.",
+      "mappingReadiness": "candidate-low-risk",
+      "earliestAllowedPhase": "7H",
+      "frontendConsumptionPolicy": "user-click-required",
+      "mappingNotes": "Browse-only AgriTrade marketplace opening is a low-risk candidate; order/payment/message actions remain excluded."
     },
     {
       "canonicalToolId": "marketplace.sell_crop",
@@ -320,21 +837,62 @@
       "domain": "marketplace",
       "category": "workflow",
       "description": "Prepares crop sale or buyer quote workflows in AgriTrade.",
-      "exampleAliases": ["sell crop", "sell crops", "send buyer quote"],
-      "legacyAliases": ["/api/trade/order", "/api/trade/advance", "data-workflow=trade:data-action=quote"],
-      "requiredInputs": ["crop"],
-      "optionalInputs": ["quantity", "price", "buyer"],
+      "exampleAliases": [
+        "sell crop",
+        "sell crops",
+        "send buyer quote"
+      ],
+      "legacyAliases": [
+        "/api/trade/order",
+        "/api/trade/advance",
+        "data-workflow=trade:data-action=quote"
+      ],
+      "requiredInputs": [
+        "crop"
+      ],
+      "optionalInputs": [
+        "quantity",
+        "price",
+        "buyer"
+      ],
       "riskLevel": "high",
       "confirmationRequired": true,
-      "rolePermissions": { "read": ["standard", "admin"], "write": ["standard", "admin"], "execute": ["standard", "admin"] },
+      "rolePermissions": {
+        "read": [
+          "standard",
+          "admin"
+        ],
+        "write": [
+          "standard",
+          "admin"
+        ],
+        "execute": [
+          "standard",
+          "admin"
+        ]
+      },
       "demoStatus": "dry-run",
       "liveStatus": "requires-live-adapter",
-      "frontendAction": { "type": "workflow", "workflowId": "trade", "actionId": "quote" },
-      "backendAction": { "endpoint": "/api/trade/order", "method": "POST" },
+      "frontendAction": {
+        "type": "workflow",
+        "workflowId": "trade",
+        "actionId": "quote"
+      },
+      "backendAction": {
+        "endpoint": "/api/trade/order",
+        "method": "POST"
+      },
       "resultSchema": "tradeOrderRecord",
       "auditEvent": "marketplace.sell_crop.staged",
-      "qaCoverage": ["scripts/workflow-button-audit.js", "scripts/companion-confirmation-gate-smoke.js"],
-      "protectedCompatibilityNotes": "Do not remove Sell Crops/crop sale compatibility or bypass trade/payment confirmation gates."
+      "qaCoverage": [
+        "scripts/workflow-button-audit.js",
+        "scripts/companion-confirmation-gate-smoke.js"
+      ],
+      "protectedCompatibilityNotes": "Do not remove Sell Crops/crop sale compatibility or bypass trade/payment confirmation gates.",
+      "mappingReadiness": "excluded-high-risk",
+      "earliestAllowedPhase": "7J",
+      "frontendConsumptionPolicy": "not-eligible-yet",
+      "mappingNotes": "Crop sale workflows can lead to transactional buyer contact/order/payment paths and must stay gated."
     },
     {
       "canonicalToolId": "logistics.shipment",
@@ -342,21 +900,61 @@
       "domain": "logistics",
       "category": "workflow",
       "description": "Prepares or reviews route, shipment, pickup, delivery, and logistics records.",
-      "exampleAliases": ["track shipment", "shipment ETA", "quote shipment"],
-      "legacyAliases": ["/api/trade/tracking", "/api/trade/logistics", "utility.shipment", "data-action=logistics-quote"],
+      "exampleAliases": [
+        "track shipment",
+        "shipment ETA",
+        "quote shipment"
+      ],
+      "legacyAliases": [
+        "/api/trade/tracking",
+        "/api/trade/logistics",
+        "utility.shipment",
+        "data-action=logistics-quote"
+      ],
       "requiredInputs": [],
-      "optionalInputs": ["shipmentId", "origin", "destination"],
+      "optionalInputs": [
+        "shipmentId",
+        "origin",
+        "destination"
+      ],
       "riskLevel": "medium",
       "confirmationRequired": false,
-      "rolePermissions": { "read": ["standard", "admin"], "write": ["standard", "admin"], "execute": ["standard", "admin"] },
+      "rolePermissions": {
+        "read": [
+          "standard",
+          "admin"
+        ],
+        "write": [
+          "standard",
+          "admin"
+        ],
+        "execute": [
+          "standard",
+          "admin"
+        ]
+      },
       "demoStatus": "local-only",
       "liveStatus": "requires-live-adapter",
-      "frontendAction": { "type": "workflow", "workflowId": "trade", "actionId": "logistics-quote" },
-      "backendAction": { "endpoint": "/api/trade/logistics", "method": "POST" },
+      "frontendAction": {
+        "type": "workflow",
+        "workflowId": "trade",
+        "actionId": "logistics-quote"
+      },
+      "backendAction": {
+        "endpoint": "/api/trade/logistics",
+        "method": "POST"
+      },
       "resultSchema": "logisticsRecord",
       "auditEvent": "logistics.shipment.reviewed",
-      "qaCoverage": ["scripts/voice-response-regression.js", "scripts/workflow-button-audit.js"],
-      "protectedCompatibilityNotes": "Do not rename shipment utility routing or trade logistics endpoints."
+      "qaCoverage": [
+        "scripts/voice-response-regression.js",
+        "scripts/workflow-button-audit.js"
+      ],
+      "protectedCompatibilityNotes": "Do not rename shipment utility routing or trade logistics endpoints.",
+      "mappingReadiness": "future-confirmation-gated",
+      "earliestAllowedPhase": "7I",
+      "frontendConsumptionPolicy": "display-only-suggestion",
+      "mappingNotes": "Shipment status display may be suggested later; dispatch/cancel/update operations are excluded from early metadata routing."
     },
     {
       "canonicalToolId": "voice.command",
@@ -364,21 +962,61 @@
       "domain": "voice",
       "category": "utility",
       "description": "Routes typed, browser voice, and native voice commands through safe Nexus command handling.",
-      "exampleAliases": ["ask nexus", "nexus help", "run command"],
-      "legacyAliases": ["/api/agent/command", "handleVoiceCommand", "runBackendAgentCommand"],
-      "requiredInputs": ["command"],
-      "optionalInputs": ["language", "locationContext"],
+      "exampleAliases": [
+        "ask nexus",
+        "nexus help",
+        "run command"
+      ],
+      "legacyAliases": [
+        "/api/agent/command",
+        "handleVoiceCommand",
+        "runBackendAgentCommand"
+      ],
+      "requiredInputs": [
+        "command"
+      ],
+      "optionalInputs": [
+        "language",
+        "locationContext"
+      ],
       "riskLevel": "medium",
       "confirmationRequired": false,
-      "rolePermissions": { "read": ["standard", "admin"], "write": ["standard", "admin"], "execute": ["standard", "admin"] },
+      "rolePermissions": {
+        "read": [
+          "standard",
+          "admin"
+        ],
+        "write": [
+          "standard",
+          "admin"
+        ],
+        "execute": [
+          "standard",
+          "admin"
+        ]
+      },
       "demoStatus": "local-only",
       "liveStatus": "requires-live-adapter",
-      "frontendAction": { "type": "command", "handler": "handleVoiceCommand", "status": "existing-route-to-be-mapped" },
-      "backendAction": { "endpoint": "/api/agent/command", "method": "POST" },
+      "frontendAction": {
+        "type": "command",
+        "handler": "handleVoiceCommand",
+        "status": "existing-route-to-be-mapped"
+      },
+      "backendAction": {
+        "endpoint": "/api/agent/command",
+        "method": "POST"
+      },
       "resultSchema": "agentCommandResponse",
       "auditEvent": "voice.command.routed",
-      "qaCoverage": ["scripts/voice-response-regression.js", "scripts/qa-suite.js"],
-      "protectedCompatibilityNotes": "Do not replace Companion-safe command routing or weaken confirmation gates."
+      "qaCoverage": [
+        "scripts/voice-response-regression.js",
+        "scripts/qa-suite.js"
+      ],
+      "protectedCompatibilityNotes": "Do not replace Companion-safe command routing or weaken confirmation gates.",
+      "mappingReadiness": "future-confirmation-gated",
+      "earliestAllowedPhase": "7I",
+      "frontendConsumptionPolicy": "observation-only",
+      "mappingNotes": "Core command routing remains authoritative; metadata can be observed but must not drive command execution."
     },
     {
       "canonicalToolId": "voice.tts_stt",
@@ -386,21 +1024,60 @@
       "domain": "voice",
       "category": "utility",
       "description": "Provides speech-to-text and text-to-speech paths while keeping realtime voice conversation-only.",
-      "exampleAliases": ["speak this", "transcribe voice", "read aloud"],
-      "legacyAliases": ["/api/voice/transcribe", "/api/voice/speak", "/api/voice/realtime/status"],
+      "exampleAliases": [
+        "speak this",
+        "transcribe voice",
+        "read aloud"
+      ],
+      "legacyAliases": [
+        "/api/voice/transcribe",
+        "/api/voice/speak",
+        "/api/voice/realtime/status"
+      ],
       "requiredInputs": [],
-      "optionalInputs": ["audio", "text", "language"],
+      "optionalInputs": [
+        "audio",
+        "text",
+        "language"
+      ],
       "riskLevel": "privacy-sensitive",
       "confirmationRequired": true,
-      "rolePermissions": { "read": ["standard", "admin"], "write": ["standard", "admin"], "execute": ["standard", "admin"] },
+      "rolePermissions": {
+        "read": [
+          "standard",
+          "admin"
+        ],
+        "write": [
+          "standard",
+          "admin"
+        ],
+        "execute": [
+          "standard",
+          "admin"
+        ]
+      },
       "demoStatus": "local-only",
       "liveStatus": "requires-live-adapter",
-      "frontendAction": { "type": "voice-runtime", "status": "existing-route-to-be-mapped" },
-      "backendAction": { "endpoint": "/api/voice/speak", "method": "POST", "notes": "STT uses /api/voice/transcribe." },
+      "frontendAction": {
+        "type": "voice-runtime",
+        "status": "existing-route-to-be-mapped"
+      },
+      "backendAction": {
+        "endpoint": "/api/voice/speak",
+        "method": "POST",
+        "notes": "STT uses /api/voice/transcribe."
+      },
       "resultSchema": "voiceRuntimeResponse",
       "auditEvent": "voice.tts_stt.requested",
-      "qaCoverage": ["scripts/voice-phase4-browser-runtime-qa.js", "scripts/realtime-voice-provider-qa.js"],
-      "protectedCompatibilityNotes": "Realtime voice remains opt-in, conversation-only, and non-operational for workflow execution."
+      "qaCoverage": [
+        "scripts/voice-phase4-browser-runtime-qa.js",
+        "scripts/realtime-voice-provider-qa.js"
+      ],
+      "protectedCompatibilityNotes": "Realtime voice remains opt-in, conversation-only, and non-operational for workflow execution.",
+      "mappingReadiness": "excluded-privacy-sensitive",
+      "earliestAllowedPhase": "7J",
+      "frontendConsumptionPolicy": "not-eligible-yet",
+      "mappingNotes": "Speech services involve microphone/audio privacy and provider boundaries; they remain explicit opt-in and existing-route controlled."
     },
     {
       "canonicalToolId": "music.local_playback",
@@ -408,21 +1085,55 @@
       "domain": "music",
       "category": "local-control",
       "description": "Controls local browser Web Audio demo playback without changing Spotify/provider behavior.",
-      "exampleAliases": ["play relaxing music", "stop music", "pause music", "volume down music"],
-      "legacyAliases": ["nexusLocalMusicPlayback", "localMusicControlIntent", "handleLocalMusicControlCommand"],
+      "exampleAliases": [
+        "play relaxing music",
+        "stop music",
+        "pause music",
+        "volume down music"
+      ],
+      "legacyAliases": [
+        "nexusLocalMusicPlayback",
+        "localMusicControlIntent",
+        "handleLocalMusicControlCommand"
+      ],
       "requiredInputs": [],
-      "optionalInputs": ["track", "volume"],
+      "optionalInputs": [
+        "track",
+        "volume"
+      ],
       "riskLevel": "low",
       "confirmationRequired": false,
-      "rolePermissions": { "read": ["standard", "admin"], "write": [], "execute": ["standard", "admin"] },
+      "rolePermissions": {
+        "read": [
+          "standard",
+          "admin"
+        ],
+        "write": [],
+        "execute": [
+          "standard",
+          "admin"
+        ]
+      },
       "demoStatus": "local-only",
       "liveStatus": "not-live",
-      "frontendAction": { "type": "local-control", "handler": "handleLocalMusicControlCommand" },
-      "backendAction": { "status": "existing-route-to-be-mapped", "notes": "Spotify/provider behavior remains separate and unchanged." },
+      "frontendAction": {
+        "type": "local-control",
+        "handler": "handleLocalMusicControlCommand"
+      },
+      "backendAction": {
+        "status": "existing-route-to-be-mapped",
+        "notes": "Spotify/provider behavior remains separate and unchanged."
+      },
       "resultSchema": "musicControlResult",
       "auditEvent": "music.local_playback.controlled",
-      "qaCoverage": ["scripts/music-playback-control-qa.js"],
-      "protectedCompatibilityNotes": "Music mute/unmute must stay separate from Nexus voice mute/unmute."
+      "qaCoverage": [
+        "scripts/music-playback-control-qa.js"
+      ],
+      "protectedCompatibilityNotes": "Music mute/unmute must stay separate from Nexus voice mute/unmute.",
+      "mappingReadiness": "candidate-low-risk",
+      "earliestAllowedPhase": "7H",
+      "frontendConsumptionPolicy": "display-only-suggestion",
+      "mappingNotes": "Local demo playback controls are low-risk only for display suggestions; provider playback remains separate."
     },
     {
       "canonicalToolId": "admin.dashboard",
@@ -430,21 +1141,57 @@
       "domain": "admin",
       "category": "admin",
       "description": "Provides admin/full mode operational views and local-safe validation controls.",
-      "exampleAliases": ["open admin", "admin dashboard", "full mode"],
-      "legacyAliases": ["Admin/full Health", "provider-test", "adminHealthCheck"],
-      "requiredInputs": ["adminRole"],
-      "optionalInputs": ["panel"],
+      "exampleAliases": [
+        "open admin",
+        "admin dashboard",
+        "full mode"
+      ],
+      "legacyAliases": [
+        "Admin/full Health",
+        "provider-test",
+        "adminHealthCheck"
+      ],
+      "requiredInputs": [
+        "adminRole"
+      ],
+      "optionalInputs": [
+        "panel"
+      ],
       "riskLevel": "high",
       "confirmationRequired": true,
-      "rolePermissions": { "read": ["admin"], "write": ["admin"], "execute": ["admin"] },
+      "rolePermissions": {
+        "read": [
+          "admin"
+        ],
+        "write": [
+          "admin"
+        ],
+        "execute": [
+          "admin"
+        ]
+      },
       "demoStatus": "local-only",
       "liveStatus": "requires-live-adapter",
-      "frontendAction": { "type": "admin-panel", "status": "existing-route-to-be-mapped" },
-      "backendAction": { "endpoint": "/api/cloud-agent/status", "method": "GET", "status": "existing-route-to-be-mapped" },
+      "frontendAction": {
+        "type": "admin-panel",
+        "status": "existing-route-to-be-mapped"
+      },
+      "backendAction": {
+        "endpoint": "/api/cloud-agent/status",
+        "method": "GET",
+        "status": "existing-route-to-be-mapped"
+      },
       "resultSchema": "adminDashboardState",
       "auditEvent": "admin.dashboard.opened",
-      "qaCoverage": ["scripts/app-behavior-audit.js", "scripts/provider-engines-smoke.js"],
-      "protectedCompatibilityNotes": "Do not broaden admin access or alter Admin/full Health modal classification."
+      "qaCoverage": [
+        "scripts/app-behavior-audit.js",
+        "scripts/provider-engines-smoke.js"
+      ],
+      "protectedCompatibilityNotes": "Do not broaden admin access or alter Admin/full Health modal classification.",
+      "mappingReadiness": "excluded-high-risk",
+      "earliestAllowedPhase": "7J",
+      "frontendConsumptionPolicy": "not-eligible-yet",
+      "mappingNotes": "Admin/full mode exposes operational controls and must not be opened from metadata in early phases."
     },
     {
       "canonicalToolId": "reports.document",
@@ -452,21 +1199,62 @@
       "domain": "reports",
       "category": "workflow",
       "description": "Prepares local demo reports, handoff packets, evidence packets, or documentation exports.",
-      "exampleAliases": ["create report", "build handoff", "export evidence"],
-      "legacyAliases": ["data-health=handoff", "data-workflow=map:data-action=evidence", "data-workflow=learning:data-action=report"],
+      "exampleAliases": [
+        "create report",
+        "build handoff",
+        "export evidence"
+      ],
+      "legacyAliases": [
+        "data-health=handoff",
+        "data-workflow=map:data-action=evidence",
+        "data-workflow=learning:data-action=report"
+      ],
       "requiredInputs": [],
-      "optionalInputs": ["reportType", "recordId", "recipient"],
+      "optionalInputs": [
+        "reportType",
+        "recordId",
+        "recipient"
+      ],
       "riskLevel": "high",
       "confirmationRequired": true,
-      "rolePermissions": { "read": ["standard", "admin", "health"], "write": ["standard", "admin", "health"], "execute": ["standard", "admin", "health"] },
+      "rolePermissions": {
+        "read": [
+          "standard",
+          "admin",
+          "health"
+        ],
+        "write": [
+          "standard",
+          "admin",
+          "health"
+        ],
+        "execute": [
+          "standard",
+          "admin",
+          "health"
+        ]
+      },
       "demoStatus": "local-only",
       "liveStatus": "requires-live-adapter",
-      "frontendAction": { "type": "workflow", "status": "existing-route-to-be-mapped" },
-      "backendAction": { "status": "existing-route-to-be-mapped", "notes": "Report-producing workflows are distributed across health, map, and learning endpoints." },
+      "frontendAction": {
+        "type": "workflow",
+        "status": "existing-route-to-be-mapped"
+      },
+      "backendAction": {
+        "status": "existing-route-to-be-mapped",
+        "notes": "Report-producing workflows are distributed across health, map, and learning endpoints."
+      },
       "resultSchema": "documentOrReportRecord",
       "auditEvent": "reports.document.prepared",
-      "qaCoverage": ["scripts/workflow-button-audit.js", "scripts/app-behavior-audit.js"],
-      "protectedCompatibilityNotes": "Do not expose sensitive health/profile/location data in exported reports without role checks and confirmation."
+      "qaCoverage": [
+        "scripts/workflow-button-audit.js",
+        "scripts/app-behavior-audit.js"
+      ],
+      "protectedCompatibilityNotes": "Do not expose sensitive health/profile/location data in exported reports without role checks and confirmation.",
+      "mappingReadiness": "future-confirmation-gated",
+      "earliestAllowedPhase": "7I",
+      "frontendConsumptionPolicy": "not-eligible-yet",
+      "mappingNotes": "Current report/document flows include export/share risk; a future draft-only tool must be split out before any user-click suggestion."
     }
   ]
 }
