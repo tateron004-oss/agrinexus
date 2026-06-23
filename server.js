@@ -51,21 +51,55 @@ function productIdentityMetadata() {
   return { ...PRODUCT_IDENTITY };
 }
 
+function inferMetadataOnlySelectedToolId(input = {}) {
+  const result = input.result && typeof input.result === "object" ? input.result : {};
+  const metadata = result.metadata && typeof result.metadata === "object" ? result.metadata : {};
+  const message = String(input.userMessage || "").toLowerCase();
+  const normalizedIntent = String(result.intent || input.normalizedIntent || "").toLowerCase();
+  const routeContext = `${message} ${normalizedIntent} ${metadata.pendingActionType || ""} ${metadata.pendingActionName || ""} ${metadata.redirectSection || ""} ${metadata.tool || ""}`.toLowerCase();
+  const confirmationRequired = Boolean(metadata.confirmationRequired || result.status === "needs-confirmation");
+
+  if (confirmationRequired) return null;
+  if (/\b(health|telehealth|doctor|clinic|medicine|patient|vitals|referral|emergency|baby|video|camera|provider|call|sms|whatsapp|telegram|message|payment|wallet|order|submit|apply|application|certificate|share|export|dispatch|cancel|admin|location|locate|map|route|shipment|drone|scan|sell|buyer|quote)\b/.test(routeContext)) {
+    return null;
+  }
+
+  if (/\b(open|start|show|workforce)?\s*(training|train me|trained|course support|skill gaps|job readiness|work readiness)\b/.test(message)) {
+    return "workforce.training";
+  }
+  if (/\b(job pathways?|career pathways?|job path|career path|role options)\b/.test(message)) {
+    return "workforce.job_pathways";
+  }
+  if (/\b(field support|help me in the field|help in the field|get field support|open field support)\b/.test(message)) {
+    return "workforce.field_support";
+  }
+  if (/\b(open learning|start learning|help me learn|resume lesson|start a course|show training)\b/.test(message)) {
+    return "learning.start";
+  }
+  if (/\b(open agritrade|open marketplace|browse marketplace|marketplace browse|view agritrade)\b/.test(message)) {
+    return "marketplace.agritrade";
+  }
+  if (/\b(agriculture help|crop help|farmer help|farm help|what can you do for a farmer)\b/.test(message) || normalizedIntent === "conversation.farmer_help") {
+    return "agriculture.help";
+  }
+
+  return null;
+}
+
 function buildAgentActionMetadata(input = {}) {
   const result = input.result && typeof input.result === "object" ? input.result : {};
   const metadata = result.metadata && typeof result.metadata === "object" ? result.metadata : {};
   const userMessage = String(input.userMessage || "").trim();
   const normalizedIntent = String(result.intent || input.normalizedIntent || "").trim() || null;
-  const metadataTool = typeof metadata.tool === "string" && /^[a-z][a-z0-9_]*\.[a-z][a-z0-9_]*$/.test(metadata.tool)
-    ? metadata.tool
-    : null;
-  const routeTool = typeof normalizedIntent === "string" && /^[a-z][a-z0-9_]*\.[a-z][a-z0-9_]*$/.test(normalizedIntent)
-    ? normalizedIntent
-    : null;
   const confirmationRequired = Boolean(metadata.confirmationRequired || result.status === "needs-confirmation");
   const executionMode = confirmationRequired || metadata.executionDeferred
     ? "staged-confirmation"
     : "existing-route";
+  const inferredSelectedToolId = inferMetadataOnlySelectedToolId({
+    ...input,
+    result,
+    normalizedIntent
+  });
   const privacySignal = /health|telehealth|patient|video|camera|care|vitals|referral|medicine|doctor|clinic/i.test(`${normalizedIntent || ""} ${metadata.pendingActionType || ""} ${metadata.redirectSection || ""} ${metadata.moduleSignal?.module || ""}`);
   const highRiskSignal = /call|message|payment|wallet|order|application|certificate|provider|drone|admin|share|export|dispatch/i.test(`${normalizedIntent || ""} ${metadata.pendingActionType || ""} ${metadata.pendingActionName || ""} ${metadata.tool || ""}`);
   const riskLevel = privacySignal
@@ -80,7 +114,7 @@ function buildAgentActionMetadata(input = {}) {
     userMessage,
     normalizedIntent,
     goal: metadata.pendingActionName || metadata.confirmationPrompt || result.response || null,
-    selectedToolId: metadataTool || routeTool || null,
+    selectedToolId: inferredSelectedToolId || null,
     confidence: "unknown",
     requiredInputs: Array.isArray(input.requiredInputs) ? input.requiredInputs : [],
     missingInputs: Array.isArray(input.missingInputs) ? input.missingInputs : [],

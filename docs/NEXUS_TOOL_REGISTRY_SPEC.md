@@ -6,6 +6,8 @@ Current checkpoint: `cc8227692dd5a3759b872b7ddda7f4edb0f62f6d`
 
 This document defines the next architecture boundary for Nexus Workforce AI. It does not change runtime behavior, endpoint contracts, workflow IDs, cache keys, local storage keys, native bridge fields, package names, or legacy AgriNexus compatibility.
 
+Phase 8B note: `metadata.agentAction.selectedToolId` may expose conservative canonical IDs for explicit low-risk prompts, but it remains metadata-only and non-authoritative. Runtime code must not import or read `docs/nexus-tool-registry.v1.json`; existing routers and confirmation gates remain authoritative. See `docs/NEXUS_SELECTED_TOOL_ID_ALIGNMENT.md` for the current alignment boundary.
+
 ## Product And Compatibility Boundary
 
 The public product identity remains:

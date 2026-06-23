@@ -304,6 +304,14 @@ Phase 8A: Conversation Quality Polish
 - Static registry remains spec-only and non-runtime.
 - Existing routers and high-risk confirmation gates remain authoritative.
 
+Phase 8B: Canonical Selected Tool ID Alignment
+
+- Added a metadata-only alignment spec for `agentAction.selectedToolId`.
+- Low-risk explicit prompts can now expose canonical IDs such as `workforce.training`, `learning.start`, `marketplace.agritrade`, and `agriculture.help`.
+- High-risk, privacy-sensitive, permission-sensitive, and ambiguous prompts remain `selectedToolId: null`.
+- `selectedToolId` remains non-authoritative and cannot route, execute, open workflows, or confirm actions.
+- Static registry remains spec-only and non-runtime.
+
 Phase A: Conversation Quality Polish
 
 - Add or refine direct responses for `How can you help me?`, `I don't know where to start`, `Can you guide me?`, `Can you act like Jarvis?`, and `Can you plan my next steps?`.
