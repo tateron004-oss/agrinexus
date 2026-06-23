@@ -39,6 +39,9 @@ const readinessBuilderBody = extractFunction(app, "buildControlledActionPreviewR
 const confirmationReadinessBuilderBody = extractFunction(app, "buildControlledActionConfirmationReadinessFromPreview");
 const visibleGuardBody = extractFunction(app, "isVisibleControlledActionPreviewReadiness");
 const previewRendererBody = extractFunction(app, "renderControlledActionPreview");
+const confirmationPrototypeGuardBody = extractFunction(app, "isVisibleControlledActionConfirmationPrototypeReadiness");
+const confirmationPrototypeRendererBody = extractFunction(app, "renderControlledActionConfirmationPrototype");
+const confirmationPrototypePainterBody = extractFunction(app, "paintControlledActionConfirmationPrototype");
 const previewPainterBody = extractFunction(app, "paintControlledActionPreview");
 const clearPreviewBody = extractFunction(app, "clearControlledActionPreview");
 const labelPainterBody = extractFunction(app, "paintLevelOneAgentActionSuggestionLabel");
@@ -121,8 +124,8 @@ const sandbox = vm.runInNewContext(`
   const debugLogs = [];
   const localStorage = { getItem: () => null };
   const previewHosts = [
-    { innerHTML: "", classList: { hidden: false, toggle(name, value) { this[name] = value; } } },
-    { innerHTML: "", classList: { hidden: false, toggle(name, value) { this[name] = value; } } }
+    { innerHTML: "", insertAdjacentElement() {}, classList: { hidden: false, toggle(name, value) { this[name] = value; } } },
+    { innerHTML: "", insertAdjacentElement() {}, classList: { hidden: false, toggle(name, value) { this[name] = value; } } }
   ];
   const labelHosts = [
     { textContent: "", classList: { hidden: false, toggle(name, value) { this[name] = value; } } },
@@ -162,6 +165,7 @@ const sandbox = vm.runInNewContext(`
   let visibleLevelOneAgentActionSuggestion = null;
   let visibleControlledActionPreviewReadiness = null;
   let latestControlledActionConfirmationReadiness = null;
+  let controlledActionConfirmationPrototypeStatus = "";
   let latestObservedAgentActionMetadata = null;
   let observedAgentActionMetadataLog = [];
   ${lowRiskBuilderBody}
@@ -170,6 +174,9 @@ const sandbox = vm.runInNewContext(`
   ${confirmationReadinessBuilderBody}
   ${visibleGuardBody}
   ${previewRendererBody}
+  ${confirmationPrototypeGuardBody}
+  ${confirmationPrototypeRendererBody}
+  ${confirmationPrototypePainterBody}
   ${previewPainterBody}
   ${clearPreviewBody}
   ${labelPainterBody}

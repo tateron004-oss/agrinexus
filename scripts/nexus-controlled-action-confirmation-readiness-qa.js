@@ -56,7 +56,7 @@ assert.match(confirmationBody, /executionBoundary !== "previewOnlyReadiness"/, "
 assert.match(confirmationBody, /previewBlockedReason/, "confirmation readiness must respect source blocked reason");
 assert.match(confirmationBody, /allowedNextStep:\s*"observeConfirmationReadinessOnly"/, "eligible readiness must remain observation-only");
 assert.match(confirmationBody, /executionBoundary:\s*"confirmationReadinessOnly"/, "eligible readiness must use confirmation-readiness boundary");
-assert.match(confirmationBody, /userVisibleInThisPhase:\s*false/, "confirmation readiness must stay hidden in this phase");
+assert.match(confirmationBody, /userVisibleInThisPhase:\s*true/, "eligible confirmation readiness may be visible to Phase 8T approved UI");
 
 const requiredFields = [
   "schemaVersion",
@@ -140,7 +140,7 @@ for (const [selectedToolId, [actionId, levelOneLabel, riskLevel, expectedTitle]]
   assert.strictEqual(readiness.allowedNextStep, "observeConfirmationReadinessOnly", `${selectedToolId} next step must not execute`);
   assert.strictEqual(readiness.executionBoundary, "confirmationReadinessOnly", `${selectedToolId} boundary must not execute`);
   assert.strictEqual(readiness.auditPolicy, "observeOnly", `${selectedToolId} audit must remain observation-only`);
-  assert.strictEqual(readiness.userVisibleInThisPhase, false, `${selectedToolId} must stay hidden`);
+  assert.strictEqual(readiness.userVisibleInThisPhase, true, `${selectedToolId} may be visible to the Phase 8T approved Ask-only prototype`);
 }
 
 const blockedPreviewReadiness = [
@@ -199,7 +199,9 @@ assert.match(observationBody, /controlledActionPreviewReadiness,\s*\n\s*controll
 assert(!/controlledActionConfirmationReadiness[\s\S]{0,260}(openWorkflow|goSection|mutate|request|confirmPending|execute|stage|permission|getUserMedia|geolocation|addEventListener|onclick)/i.test(observationBody), "observation helper must not execute from confirmation readiness");
 assert(!/controlledActionConfirmationReadiness|safeConfirmationTitle|confirmationQuestion|observeConfirmationReadinessOnly/i.test(renderPreviewBody), "visible preview renderer must not render confirmation readiness");
 assert(!/controlledActionConfirmationReadiness|safeConfirmationTitle|confirmationQuestion|observeConfirmationReadinessOnly/i.test(paintPreviewBody), "visible preview painter must not render confirmation readiness");
-assert(!/data-controlled-action-confirmation|nexus-controlled-action-confirmation|data-confirmation-readiness|confirmation-readiness-card/i.test(app), "Phase 8Q must not add visible confirmation UI markers");
+assert(!/data-confirmation-readiness|confirmation-readiness-card/i.test(app), "controlled action readiness must not leak raw confirmation metadata UI markers");
+assert.match(app, /data-controlled-action-confirmation-prototype="review"/, "Phase 8T may expose Review options only through the prototype marker");
+assert.match(app, /data-controlled-action-confirmation-prototype="dismiss"/, "Phase 8T may expose Not now only through the prototype marker");
 
 const forbiddenCalls = [
   "openWorkflowModal",
@@ -225,9 +227,9 @@ for (const call of forbiddenCalls) {
 }
 
 assert(!server.includes("controlled-action-confirmation-readiness.v1"), "server.js must not emit confirmation readiness in Phase 8Q");
-assert.match(confirmationDoc, /Phase 8Q/i, "confirmation readiness doc must state Phase 8Q scope");
-assert.match(confirmationDoc, /hidden[\s\S]*internal/i, "confirmation readiness doc must state hidden internal scope");
-assert.match(confirmationDoc, /no visible UI[\s\S]*no execution/i, "confirmation readiness doc must state no visible UI and no execution");
+assert.match(confirmationDoc, /Phase 8T/i, "confirmation readiness doc must state Phase 8T scope");
+assert.match(confirmationDoc, /Ask Nexus\/full assistant surface/i, "confirmation readiness doc must state Ask-only visible scope");
+assert.match(confirmationDoc, /non-executing/i, "confirmation readiness doc must state non-executing scope");
 assert.match(confirmationDoc, /controlled-action-confirmation-readiness\.v1/, "confirmation readiness doc must define the schema");
 assert.match(previewDoc, /controlled-action-confirmation-readiness\.v1/, "preview readiness doc should reference downstream confirmation readiness");
 

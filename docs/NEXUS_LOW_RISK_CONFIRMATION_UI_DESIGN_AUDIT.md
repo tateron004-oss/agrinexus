@@ -1,6 +1,6 @@
 # Nexus Low-Risk Confirmation UI Design Audit
 
-Status: Phase 8S design audit only. No runtime behavior, visible UI, routing, staging, permission, or execution changes are approved by this document.
+Status: Phase 8S design audit, followed by Phase 8T non-executing prototype.
 
 ## 1. Executive Summary
 
@@ -268,7 +268,7 @@ Suggested future QA scripts:
 
 ## 15. Recommended Phase 8T Scope
 
-Recommended next phase: Phase 8T, Non-Executing Low-Risk Confirmation UI Prototype.
+Recommended next phase from this audit: Phase 8T, Non-Executing Low-Risk Confirmation UI Prototype.
 
 Phase 8T should:
 
@@ -287,6 +287,8 @@ Phase 8T should not:
 - add production action execution;
 - add workflow launching from preview metadata;
 - make preview cards or labels clickable.
+
+Phase 8T implementation is documented in `docs/NEXUS_LOW_RISK_CONFIRMATION_UI_PROTOTYPE.md`.
 
 ## 16. Files Inspected
 

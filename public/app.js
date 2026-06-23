@@ -136,6 +136,7 @@ let observedAgentActionMetadataLog = [];
 let visibleLevelOneAgentActionSuggestion = null;
 let visibleControlledActionPreviewReadiness = null;
 let latestControlledActionConfirmationReadiness = null;
+let controlledActionConfirmationPrototypeStatus = "";
 let preserveControlledActionPreviewDuringCommandRoute = false;
 const accessibilityPrefs = JSON.parse(localStorage.getItem("agrinexusAccessibility") || "{}");
 const originalTextNodes = new WeakMap();
@@ -249,6 +250,57 @@ function renderControlledActionPreview(readiness = visibleControlledActionPrevie
   `;
 }
 
+function isVisibleControlledActionConfirmationPrototypeReadiness(readiness = {}) {
+  if (!readiness || typeof readiness !== "object") return false;
+  if (readiness.schemaVersion !== "controlled-action-confirmation-readiness.v1") return false;
+  if (readiness.confirmationEligible !== true || readiness.userVisibleInThisPhase !== true) return false;
+  if (!["info", "low"].includes(String(readiness.confirmationRiskLevel || ""))) return false;
+  if (readiness.allowedNextStep !== "observeConfirmationReadinessOnly") return false;
+  if (readiness.executionBoundary !== "confirmationReadinessOnly") return false;
+  if (readiness.confirmationBlockedReason) return false;
+  if (Array.isArray(readiness.requiredPermissions) && readiness.requiredPermissions.length) return false;
+  if (Array.isArray(readiness.missingInputs) && readiness.missingInputs.length) return false;
+  const combined = `${readiness.safeConfirmationTitle || ""} ${readiness.safeConfirmationSummary || ""} ${readiness.confirmationQuestion || ""} ${readiness.levelOneLabel || ""}`;
+  if (/\b(execute|start|open now|submit|buy|sell|pay|call|verify|use camera|use location|schedule|dispatch|checkout|identity|account|permission granted|opened|started|submitted|paid|called|verified)\b/i.test(combined)) return false;
+  return Boolean(String(readiness.safeConfirmationTitle || "").trim() && String(readiness.levelOneLabel || "").trim());
+}
+
+function renderControlledActionConfirmationPrototype(readiness = latestControlledActionConfirmationReadiness, surface = "") {
+  if (surface !== "ask-full-assistant") return "";
+  if (!isVisibleControlledActionConfirmationPrototypeReadiness(readiness)) return "";
+  const title = String(readiness.safeConfirmationTitle || "").trim();
+  const summary = String(readiness.safeConfirmationSummary || "").replace(/\s+/g, " ").trim();
+  const status = String(controlledActionConfirmationPrototypeStatus || "Prototype only - no action will be taken.").trim();
+  return `
+    <div class="nexus-confirmation-prototype" data-controlled-action-confirmation-prototype-panel="true" aria-label="Nexus review options prototype">
+      <strong class="nexus-confirmation-title">${htmlSafe(title)}</strong>
+      <span class="nexus-confirmation-copy">${htmlSafe(summary)}</span>
+      <span class="nexus-confirmation-copy">This is a low-risk informational step. No special permission is needed.</span>
+      <div class="nexus-confirmation-actions" aria-label="Nexus non-executing review controls">
+        <button class="nexus-confirmation-button" type="button" data-controlled-action-confirmation-prototype="review">Review options</button>
+        <button class="nexus-confirmation-button secondary" type="button" data-controlled-action-confirmation-prototype="dismiss">Not now</button>
+      </div>
+      <span class="nexus-confirmation-status" role="status">${htmlSafe(status)}</span>
+    </div>
+  `;
+}
+
+function paintControlledActionConfirmationPrototype() {
+  const root = $("#globalAssistantBar");
+  const anchor = $("#globalAssistantStatus");
+  if (!root || !anchor) return;
+  let element = root.querySelector("[data-controlled-action-confirmation-prototype-host]");
+  if (!element) {
+    element = document.createElement("div");
+    element.dataset.controlledActionConfirmationPrototypeHost = "true";
+    const previewElement = root.querySelector("[data-controlled-action-preview]");
+    (previewElement || anchor).insertAdjacentElement("afterend", element);
+  }
+  const html = renderControlledActionConfirmationPrototype(latestControlledActionConfirmationReadiness, "ask-full-assistant");
+  element.innerHTML = html;
+  element.classList.toggle("hidden", !html);
+}
+
 function paintControlledActionPreview() {
   const html = renderControlledActionPreview();
   [
@@ -267,6 +319,7 @@ function paintControlledActionPreview() {
     element.innerHTML = html;
     element.classList.toggle("hidden", !html);
   });
+  paintControlledActionConfirmationPrototype();
 }
 
 function clearControlledActionPreview(reason = "reset") {
@@ -274,10 +327,35 @@ function clearControlledActionPreview(reason = "reset") {
   // unrelated commands, blocked metadata, module navigation, or assistant reset.
   visibleControlledActionPreviewReadiness = null;
   latestControlledActionConfirmationReadiness = null;
+  controlledActionConfirmationPrototypeStatus = "";
   paintControlledActionPreview();
   if (localStorage.getItem("agrinexusAgentActionDebug") === "on") {
     console.debug("Nexus controlled action preview cleared", { reason });
   }
+}
+
+function handleControlledActionConfirmationPrototypeClick(event) {
+  const button = event.target.closest("[data-controlled-action-confirmation-prototype]");
+  if (!button) return false;
+  event.preventDefault();
+  event.stopPropagation();
+  if (!button.closest("#globalAssistantBar")) return true;
+  if (!isVisibleControlledActionConfirmationPrototypeReadiness(latestControlledActionConfirmationReadiness)) {
+    controlledActionConfirmationPrototypeStatus = "";
+    paintControlledActionConfirmationPrototype();
+    return true;
+  }
+  const action = button.dataset.controlledActionConfirmationPrototype;
+  if (action === "review") {
+    controlledActionConfirmationPrototypeStatus = "Selected for review - no action has been taken.";
+    paintControlledActionConfirmationPrototype();
+    return true;
+  }
+  if (action === "dismiss") {
+    clearControlledActionPreview("confirmation-prototype-dismissed");
+    return true;
+  }
+  return true;
 }
 
 function paintLevelOneAgentActionSuggestionLabel() {
@@ -626,7 +704,7 @@ function buildControlledActionConfirmationReadinessFromPreview(controlledActionP
     allowedNextStep: "observeConfirmationReadinessOnly",
     executionBoundary: "confirmationReadinessOnly",
     auditPolicy: "observeOnly",
-    userVisibleInThisPhase: false
+    userVisibleInThisPhase: true
   };
 }
 
@@ -24508,6 +24586,7 @@ async function runWowDemo() {
 function bindStatic() {
   renderLoginProfiles();
   document.addEventListener("click", async event => {
+    if (handleControlledActionConfirmationPrototypeClick(event)) return;
     if (event.target.closest("#adminHealthCheck")) {
       event.preventDefault();
       event.stopPropagation();

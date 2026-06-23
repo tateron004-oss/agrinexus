@@ -3519,6 +3519,46 @@ body.admin-mode .user-workspace {
 .nexus-controlled-action-preview-note {
   color: #61726f;
 }
+.nexus-confirmation-prototype {
+  display: grid;
+  gap: 7px;
+  width: min(100%, 420px);
+  margin: 7px 0 0;
+  padding: 10px 11px;
+  border: 1px solid #d7e2de;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #173240;
+  line-height: 1.25;
+}
+.nexus-confirmation-title {
+  color: #173240;
+  font-size: .9rem;
+  font-weight: 950;
+}
+.nexus-confirmation-copy,
+.nexus-confirmation-status {
+  color: #456b60;
+  font-size: .78rem;
+  font-weight: 800;
+}
+.nexus-confirmation-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.nexus-confirmation-button {
+  width: auto;
+  min-height: 0;
+  padding: 7px 10px;
+  border-radius: 8px;
+  font-size: .78rem;
+  font-weight: 900;
+}
+.nexus-confirmation-button.secondary {
+  background: #eef5f2;
+  color: #365867;
+}
 .voice-suggestions button,
 .voice-guide button {
   padding: 8px 10px;

@@ -1,8 +1,8 @@
 # Nexus Controlled Action Confirmation Readiness
 
-Status: Phase 8Q hidden internal readiness metadata only.
+Status: Phase 8T non-executing low-risk confirmation UI prototype readiness.
 
-This document defines the `controlled-action-confirmation-readiness.v1` object. It is a future-facing internal layer downstream of `controlled-action-preview-readiness.v1`. It does not add visible UI, confirmation controls, action buttons, staging, routing, permission prompts, workflow opening, or execution.
+This document defines the `controlled-action-confirmation-readiness.v1` object. It is a future-facing layer downstream of `controlled-action-preview-readiness.v1`. Phase 8T may use eligible readiness to show inert controls in the Ask Nexus/full assistant surface only. It does not authorize staging, routing, permission prompts, workflow opening, or execution.
 
 ## Purpose
 
@@ -12,9 +12,8 @@ The answer is yes, but only as observation-only metadata. Existing routers, work
 
 ## Current Phase Restrictions
 
-Phase 8Q intentionally does not:
+Phase 8T intentionally does not:
 
-- show a confirmation preview;
 - show `Do you want me to continue?`;
 - add Continue, Confirm, Execute, Open, Start, Call, Pay, Buy, Sell, Location, Camera, or Permission controls;
 - make Level 1 labels clickable;
@@ -26,6 +25,8 @@ Phase 8Q intentionally does not:
 - change `selectedToolId` inference;
 - execute tools or provider actions; or
 - change high-risk confirmation gates.
+
+Phase 8T may show only `Review options` and `Not now`, and only in the Ask Nexus/full assistant surface. Those controls are non-executing.
 
 ## Schema
 
@@ -48,7 +49,7 @@ Phase 8Q intentionally does not:
   "allowedNextStep": "observeConfirmationReadinessOnly",
   "executionBoundary": "confirmationReadinessOnly",
   "auditPolicy": "observeOnly",
-  "userVisibleInThisPhase": false
+  "userVisibleInThisPhase": true
 }
 ```
 
@@ -71,7 +72,7 @@ Required fields:
 - `allowedNextStep`
 - `executionBoundary`
 - `auditPolicy`
-- `userVisibleInThisPhase`
+- `userVisibleInThisPhase`: may be `true` only for Phase 8T-approved low-risk Ask/full assistant UI.
 
 ## Eligibility Rules
 
@@ -119,9 +120,9 @@ Blocked readiness uses `confirmationEligible: false`, `allowedNextStep: "blocked
 
 ## Visibility Boundary
 
-`controlled-action-confirmation-readiness.v1` is not visible in Phase 8Q. It may be stored with debug/observation metadata and reset with the controlled action preview lifecycle. It must not be rendered by the controlled action preview card, the Level 1 label, or any assistant surface.
+`controlled-action-confirmation-readiness.v1` may drive the Phase 8T non-executing prototype controls only in the Ask Nexus/full assistant surface. It must not be rendered in caption surfaces, inside Level 1 labels, or inside the passive preview card itself.
 
-Any future visible confirmation phase must be separately approved and must keep existing high-risk confirmation gates intact.
+Existing high-risk confirmation gates remain authoritative.
 
 ## Relationship To Preview Readiness
 
@@ -135,10 +136,12 @@ It is not a replacement for existing confirmation gates.
 
 ## QA Coverage
 
-Phase 8Q is protected by:
+Phase 8Q and Phase 8T are protected by:
 
 - `scripts/nexus-controlled-action-confirmation-readiness-qa.js`
+- `scripts/nexus-controlled-action-confirmation-ui-prototype-qa.js`
 - `npm run qa:nexus-controlled-action-confirmation-readiness`
+- `npm run qa:nexus-controlled-action-confirmation-ui-prototype`
 - `node scripts/qa-suite.js nexus-workforce`
 
-The QA verifies the schema, low-risk allowlist, blocked high-risk examples, no visible UI wiring, no execution calls, package alias coverage, and suite coverage.
+The QA verifies the schema, low-risk allowlist, blocked high-risk examples, Ask-only prototype controls, no caption controls, no execution calls, package alias coverage, and suite coverage.

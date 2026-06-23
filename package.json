@@ -31,6 +31,7 @@
     "qa:nexus-controlled-action-preview-ui": "node scripts/nexus-controlled-action-preview-ui-qa.js",
     "qa:nexus-controlled-action-preview-clear": "node scripts/nexus-controlled-action-preview-clear-qa.js",
     "qa:nexus-controlled-action-confirmation-readiness": "node scripts/nexus-controlled-action-confirmation-readiness-qa.js",
+    "qa:nexus-controlled-action-confirmation-ui-prototype": "node scripts/nexus-controlled-action-confirmation-ui-prototype-qa.js",
     "qa:all-safe": "node scripts/qa-suite.js all-safe",
     "smoke": "node scripts/smoke.js",
     "learning:translation-smoke": "node scripts/learning-translation-smoke.js",
