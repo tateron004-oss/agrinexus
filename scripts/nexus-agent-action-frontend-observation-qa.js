@@ -21,7 +21,9 @@ assert.match(app, /agentAction\.runtimeStatus !== "metadata-only"/, "helper must
 assert.match(app, /agentAction\.source !== "existing-router"/, "helper must require existing-router source");
 assert.match(app, /latestObservedAgentActionMetadata/, "helper must store only local observation metadata");
 assert.match(app, /observedAgentActionMetadataLog/, "helper must keep a bounded local observation log");
-assert.match(app, /lowRiskSuggestion:\s*buildLowRiskAgentActionSuggestion\(agentAction\)/, "observation may store hidden suggestion metadata");
+assert.match(app, /const lowRiskSuggestion = buildLowRiskAgentActionSuggestion\(agentAction\)/, "observation may build hidden suggestion metadata");
+assert.match(app, /const controlledActionMetadata = buildControlledActionMetadataFromSuggestion\(lowRiskSuggestion, \{ agentAction \}\)/, "observation may build controlled action metadata from hidden suggestion metadata only");
+assert.match(app, /controlledActionMetadata/, "observation may store controlled action metadata");
 assert.match(app, /observeAgentActionMetadata\(result, \{ source: "runBackendAgentCommand", command \}\)/, "backend agent command response should be observed");
 assert.match(app, /observeAgentActionMetadata\(result, \{ source: "runUtilityAgentCommand", command \}\)/, "utility agent command response should be observed");
 

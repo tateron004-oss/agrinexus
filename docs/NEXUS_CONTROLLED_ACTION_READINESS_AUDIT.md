@@ -330,6 +330,21 @@ Phase 8I should not:
 - change selectedToolId inference;
 - change high-risk confirmation behavior.
 
+## Phase 8I Implementation Note
+
+Phase 8I added `docs/NEXUS_CONTROLLED_ACTION_METADATA_SCHEMA.md`, a frontend-only `controlled-action-metadata.v1` observation helper, and `scripts/nexus-controlled-action-metadata-schema-qa.js`.
+
+The implementation remains intentionally non-executing:
+
+- controlled action metadata is derived only from already approved display-only low-risk Level 1 suggestion metadata;
+- metadata uses `executionBoundary: "metadataOnly"` and `auditPolicy: "observeOnly"`;
+- required permissions and missing inputs remain empty;
+- confirmation state is not created;
+- no visible action preview, click target, route, workflow open, permission prompt, staging, or execution behavior was added;
+- high-risk and permission-sensitive prompts remain excluded.
+
+Recommended next phase: **Phase 8J: Controlled Action Metadata Observation Hardening**, still without visible previews or execution.
+
 ## Files Inspected
 
 - `public/app.js`

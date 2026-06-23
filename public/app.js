@@ -274,6 +274,43 @@ function paintLocalLevelOneSuggestionForSimpleUserIntent(intent = {}, command = 
   paintLevelOneAgentActionSuggestionLabel();
 }
 
+function buildControlledActionMetadataFromSuggestion(lowRiskSuggestion = {}, context = {}) {
+  // Phase 8I: schema foundation only. This helper creates internal metadata for
+  // future action readiness work. It must not render UI, stage actions, request
+  // permissions, route, open workflows, confirm, or execute anything.
+  if (!lowRiskSuggestion || typeof lowRiskSuggestion !== "object") return null;
+  if (lowRiskSuggestion.visibility !== "visible-level-1-label") return null;
+  if (lowRiskSuggestion.displayOnly !== true) return null;
+  if (lowRiskSuggestion.executionAllowed !== false || lowRiskSuggestion.autoOpenAllowed !== false) return null;
+  const selectedToolId = String(lowRiskSuggestion.selectedToolId || context.agentAction?.selectedToolId || "").trim();
+  const levelOneLabel = String(lowRiskSuggestion.levelLabel || "").trim();
+  const actionMap = {
+    "workforce.training": { actionId: "openTrainingResources", riskLevel: "low", confirmationText: "Nexus recognized this as Training. This metadata does not open training or start an action." },
+    "workforce.job_pathways": { actionId: "showFarmJobs", riskLevel: "low", confirmationText: "Nexus recognized this as Jobs. This metadata does not open job pathways or submit anything." },
+    "workforce.field_support": { actionId: "openFieldSupportGuidance", riskLevel: "info", confirmationText: "Nexus recognized this as Field Support. This metadata does not open field tools or create evidence." },
+    "learning.start": { actionId: "explainLearningTopic", riskLevel: "low", confirmationText: "Nexus recognized this as Learning. This metadata does not open lessons or create records." },
+    "marketplace.agritrade": { actionId: "browseMarketplace", riskLevel: "low", confirmationText: "Nexus recognized this as Marketplace. This metadata does not buy, sell, message, or process payment." },
+    "agriculture.help": { actionId: "explainAgricultureHelp", riskLevel: "info", confirmationText: "Nexus recognized this as Agriculture Help. This metadata does not scan fields or create crop records." }
+  };
+  const action = actionMap[selectedToolId];
+  if (!action || !levelOneLabel) return null;
+  return {
+    schemaVersion: "controlled-action-metadata.v1",
+    actionId: action.actionId,
+    selectedToolId,
+    levelOneLabel,
+    riskLevel: action.riskLevel,
+    requiredPermissions: [],
+    missingInputs: [],
+    confirmationRequired: false,
+    confirmationText: action.confirmationText,
+    cancelPath: "User can ignore the suggestion or choose another request.",
+    executionBoundary: "metadataOnly",
+    auditPolicy: "observeOnly",
+    blockedReason: null
+  };
+}
+
 function observeAgentActionMetadata(response = {}, context = {}) {
   // Phase 7F: agentAction is observation-only and non-authoritative.
   // Existing frontend routers remain authoritative. The static registry is not
@@ -284,6 +321,7 @@ function observeAgentActionMetadata(response = {}, context = {}) {
   if (agentAction.runtimeStatus !== "metadata-only") return null;
   if (agentAction.source !== "existing-router") return null;
   const lowRiskSuggestion = buildLowRiskAgentActionSuggestion(agentAction);
+  const controlledActionMetadata = buildControlledActionMetadataFromSuggestion(lowRiskSuggestion, { agentAction });
   visibleLevelOneAgentActionSuggestion = lowRiskSuggestion;
   const observed = {
     observedAt: new Date().toISOString(),
@@ -303,7 +341,8 @@ function observeAgentActionMetadata(response = {}, context = {}) {
       executionMode: agentAction.executionMode || "existing-route",
       nextStep: agentAction.nextStep || null
     },
-    lowRiskSuggestion
+    lowRiskSuggestion,
+    controlledActionMetadata
   };
   latestObservedAgentActionMetadata = observed;
   observedAgentActionMetadataLog = [observed, ...observedAgentActionMetadataLog].slice(0, 10);

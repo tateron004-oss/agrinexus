@@ -144,6 +144,15 @@ function assertLevelOneSuggestionLabel(prompt, observed, expectedToolId, expecte
   assert.strictEqual(suggestion.executionAllowed, false, `${prompt} suggestion must not allow execution`);
   assert.strictEqual(suggestion.autoOpenAllowed, false, `${prompt} suggestion must not allow auto-open`);
   assert.strictEqual(suggestion.source, "agentAction.metadata", `${prompt} suggestion source must remain metadata`);
+  assert(observed.controlledActionMetadata, `${prompt} should produce controlled action metadata observation`);
+  assert.strictEqual(observed.controlledActionMetadata.schemaVersion, "controlled-action-metadata.v1", `${prompt} controlled metadata schema should remain v1`);
+  assert.strictEqual(observed.controlledActionMetadata.selectedToolId, expectedToolId, `${prompt} controlled metadata selectedToolId should match`);
+  assert.strictEqual(observed.controlledActionMetadata.levelOneLabel, expectedLevelLabel, `${prompt} controlled metadata Level 1 label should match`);
+  assert.strictEqual(observed.controlledActionMetadata.executionBoundary, "metadataOnly", `${prompt} controlled metadata must stay metadata-only`);
+  assert.strictEqual(observed.controlledActionMetadata.auditPolicy, "observeOnly", `${prompt} controlled metadata must stay observe-only`);
+  assert(Array.isArray(observed.controlledActionMetadata.requiredPermissions) && observed.controlledActionMetadata.requiredPermissions.length === 0, `${prompt} controlled metadata must not request permissions`);
+  assert(Array.isArray(observed.controlledActionMetadata.missingInputs) && observed.controlledActionMetadata.missingInputs.length === 0, `${prompt} controlled metadata must not ask for inputs yet`);
+  assert.strictEqual(observed.controlledActionMetadata.confirmationRequired, false, `${prompt} controlled metadata must not create confirmation state`);
 }
 
 const lowRiskChecks = [
@@ -217,6 +226,7 @@ const highRiskChecks = [
       const observed = frontend.latest();
       assert(observed, `${prompt} should update local observation record`);
       assert.strictEqual(observed.lowRiskSuggestion, null, `${prompt} must not produce a low-risk suggestion label`);
+      assert.strictEqual(observed.controlledActionMetadata, null, `${prompt} must not produce controlled action metadata`);
     }
 
     const app = fs.readFileSync(appPath, "utf8");
