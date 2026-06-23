@@ -134,6 +134,7 @@ let nexusAwarenessState = JSON.parse(localStorage.getItem("agrinexusAwarenessSta
 let latestObservedAgentActionMetadata = null;
 let observedAgentActionMetadataLog = [];
 let visibleLevelOneAgentActionSuggestion = null;
+let visibleControlledActionPreviewReadiness = null;
 const accessibilityPrefs = JSON.parse(localStorage.getItem("agrinexusAccessibility") || "{}");
 const originalTextNodes = new WeakMap();
 let deferredInstallPrompt = null;
@@ -213,6 +214,59 @@ function renderLevelOneAgentActionSuggestionLabel() {
   return `<span class="level-one-suggestion-label" aria-label="Nexus suggestion category">${htmlSafe(label)}</span>`;
 }
 
+function isVisibleControlledActionPreviewReadiness(readiness = {}) {
+  if (!readiness || typeof readiness !== "object") return false;
+  if (readiness.schemaVersion !== "controlled-action-preview-readiness.v1") return false;
+  if (readiness.previewEligible !== true || readiness.userVisibleInThisPhase !== true) return false;
+  if (!["info", "low"].includes(String(readiness.previewRiskLevel || ""))) return false;
+  if (readiness.allowedNextStep !== "preparePreviewOnly") return false;
+  if (readiness.executionBoundary !== "previewOnlyReadiness") return false;
+  if (readiness.requiresExplicitConfirmation === true) return false;
+  if (Array.isArray(readiness.requiredPermissions) && readiness.requiredPermissions.length) return false;
+  if (Array.isArray(readiness.missingInputs) && readiness.missingInputs.length) return false;
+  if (readiness.previewBlockedReason) return false;
+  const combined = `${readiness.safePreviewTitle || ""} ${readiness.safePreviewSummary || ""} ${readiness.levelOneLabel || ""}`;
+  if (/\b(opened|started|submitted|called|paid|verified|permission granted|diagnose|dispatch|schedule|buy|sell|checkout|login|identity|location|camera|telehealth)\b/i.test(combined)) return false;
+  return Boolean(String(readiness.safePreviewTitle || "").trim() && String(readiness.levelOneLabel || "").trim());
+}
+
+function renderControlledActionPreview(readiness = visibleControlledActionPreviewReadiness) {
+  if (!isVisibleControlledActionPreviewReadiness(readiness)) return "";
+  const title = String(readiness.safePreviewTitle || "").trim();
+  const category = String(readiness.levelOneLabel || "").trim();
+  const summary = String(readiness.safePreviewSummary || "").replace(/\s+/g, " ").trim();
+  const shortSummary = summary.length <= 180 ? summary : "";
+  return `
+    <div class="nexus-controlled-action-preview" aria-label="Nexus informational preview">
+      <strong class="nexus-controlled-action-preview-title">${htmlSafe(title)}</strong>
+      <span class="nexus-controlled-action-preview-meta">Category: ${htmlSafe(category)}</span>
+      <span class="nexus-controlled-action-preview-meta">Needs: No special permission</span>
+      ${shortSummary ? `<span class="nexus-controlled-action-preview-summary">${htmlSafe(shortSummary)}</span>` : ""}
+      <span class="nexus-controlled-action-preview-note">Preview only - no action has been taken.</span>
+    </div>
+  `;
+}
+
+function paintControlledActionPreview() {
+  const html = renderControlledActionPreview();
+  [
+    ["#userCaptionPanel", "#userCaptionText"],
+    ["#globalAssistantBar", "#globalAssistantStatus"]
+  ].forEach(([rootSelector, anchorSelector]) => {
+    const root = $(rootSelector);
+    const anchor = $(anchorSelector);
+    if (!root || !anchor) return;
+    let element = root.querySelector("[data-controlled-action-preview]");
+    if (!element) {
+      element = document.createElement("div");
+      element.dataset.controlledActionPreview = "true";
+      anchor.insertAdjacentElement("afterend", element);
+    }
+    element.innerHTML = html;
+    element.classList.toggle("hidden", !html);
+  });
+}
+
 function paintLevelOneAgentActionSuggestionLabel() {
   const suggestion = visibleLevelOneAgentActionSuggestion;
   const label = suggestion?.visibility === "visible-level-1-label" ? String(suggestion.levelLabel || "").trim() : "";
@@ -238,7 +292,9 @@ function paintLevelOneAgentActionSuggestionLabel() {
 
 function clearLevelOneAgentActionSuggestionLabel() {
   visibleLevelOneAgentActionSuggestion = null;
+  visibleControlledActionPreviewReadiness = null;
   paintLevelOneAgentActionSuggestionLabel();
+  paintControlledActionPreview();
 }
 
 function localLevelOneSuggestionForSimpleUserIntent(intent = {}, command = "") {
@@ -260,9 +316,23 @@ function localLevelOneSuggestionForSimpleUserIntent(intent = {}, command = "") {
     levelLabel = "Agriculture Help";
   }
   if (!levelLabel) return null;
+  const selectedToolIdsByLabel = {
+    "Training": "workforce.training",
+    "Learning": "learning.start",
+    "Jobs": "workforce.job_pathways",
+    "Marketplace": "marketplace.agritrade",
+    "Field Support": "workforce.field_support",
+    "Agriculture Help": "agriculture.help"
+  };
   return {
     visibility: "visible-level-1-label",
+    selectedToolId: selectedToolIdsByLabel[levelLabel] || "",
+    label: levelLabel,
     levelLabel,
+    displayOnly: true,
+    userClickRequired: false,
+    executionAllowed: false,
+    autoOpenAllowed: false,
     source: "local-simple-user-route"
   };
 }
@@ -271,7 +341,13 @@ function paintLocalLevelOneSuggestionForSimpleUserIntent(intent = {}, command = 
   const suggestion = localLevelOneSuggestionForSimpleUserIntent(intent, command);
   if (!suggestion) return;
   visibleLevelOneAgentActionSuggestion = suggestion;
+  const controlledActionMetadata = buildControlledActionMetadataFromSuggestion(suggestion);
+  const controlledActionPreviewReadiness = buildControlledActionPreviewReadinessFromMetadata(controlledActionMetadata);
+  visibleControlledActionPreviewReadiness = isVisibleControlledActionPreviewReadiness(controlledActionPreviewReadiness)
+    ? controlledActionPreviewReadiness
+    : null;
   paintLevelOneAgentActionSuggestionLabel();
+  paintControlledActionPreview();
 }
 
 function buildControlledActionMetadataFromSuggestion(lowRiskSuggestion = {}, context = {}) {
@@ -312,9 +388,9 @@ function buildControlledActionMetadataFromSuggestion(lowRiskSuggestion = {}, con
 }
 
 function buildControlledActionPreviewReadinessFromMetadata(controlledActionMetadata = {}) {
-  // Phase 8K: readiness metadata only. This helper may describe whether a future
-  // preview could be prepared, but it must not render UI, ask to continue,
-  // stage actions, request permissions, route, open workflows, confirm, or execute.
+  // Phase 8M: readiness remains non-executing. Eligible low-risk readiness may
+  // render a small informational preview, but it must not ask to continue, stage
+  // actions, request permissions, route, open workflows, confirm, or execute.
   if (!controlledActionMetadata || typeof controlledActionMetadata !== "object") return null;
   if (controlledActionMetadata.schemaVersion !== "controlled-action-metadata.v1") return null;
   const selectedToolId = String(controlledActionMetadata.selectedToolId || "").trim();
@@ -359,7 +435,7 @@ function buildControlledActionPreviewReadinessFromMetadata(controlledActionMetad
     },
     openFieldSupportGuidance: {
       title: "Review field support guidance",
-      summary: "Nexus can provide informational field support guidance without dispatching anyone, using location, scheduling, or creating a service request.",
+      summary: "Nexus can provide informational field support guidance for planning next questions and evidence notes.",
       mode: "informationalPreviewOnly"
     },
     explainLearningTopic: {
@@ -369,12 +445,12 @@ function buildControlledActionPreviewReadinessFromMetadata(controlledActionMetad
     },
     browseMarketplace: {
       title: "Review AgriTrade browsing help",
-      summary: "Nexus can describe marketplace browsing options without buying, selling, messaging, quoting, ordering, account access, or payment.",
+      summary: "Nexus can describe browse-only AgriTrade listings and general marketplace navigation as information only.",
       mode: "informationalPreviewOnly"
     },
     explainAgricultureHelp: {
       title: "Review agriculture help",
-      summary: "Nexus can offer informational crop and agriculture guidance without camera diagnosis, location use, dispatch, scheduling, or record creation.",
+      summary: "Nexus can offer informational crop and agriculture guidance for symptoms, likely causes, and safer next questions.",
       mode: "informationalPreviewOnly"
     }
   };
@@ -410,7 +486,7 @@ function buildControlledActionPreviewReadinessFromMetadata(controlledActionMetad
     allowedNextStep: "preparePreviewOnly",
     executionBoundary: "previewOnlyReadiness",
     auditPolicy: "observeOnly",
-    userVisibleInThisPhase: false
+    userVisibleInThisPhase: true
   };
 }
 
@@ -427,6 +503,9 @@ function observeAgentActionMetadata(response = {}, context = {}) {
   const controlledActionMetadata = buildControlledActionMetadataFromSuggestion(lowRiskSuggestion, { agentAction });
   const controlledActionPreviewReadiness = buildControlledActionPreviewReadinessFromMetadata(controlledActionMetadata);
   visibleLevelOneAgentActionSuggestion = lowRiskSuggestion;
+  visibleControlledActionPreviewReadiness = isVisibleControlledActionPreviewReadiness(controlledActionPreviewReadiness)
+    ? controlledActionPreviewReadiness
+    : null;
   const observed = {
     observedAt: new Date().toISOString(),
     context: {
@@ -452,6 +531,7 @@ function observeAgentActionMetadata(response = {}, context = {}) {
   latestObservedAgentActionMetadata = observed;
   observedAgentActionMetadataLog = [observed, ...observedAgentActionMetadataLog].slice(0, 10);
   paintLevelOneAgentActionSuggestionLabel();
+  paintControlledActionPreview();
   if (localStorage.getItem("agrinexusAgentActionDebug") === "on") {
     console.debug("Nexus agentAction metadata observed", observed);
   }

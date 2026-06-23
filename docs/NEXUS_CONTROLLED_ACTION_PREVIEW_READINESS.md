@@ -1,21 +1,21 @@
 # Nexus Controlled Action Preview Readiness
 
-Status: Phase 8K internal readiness contract only.
+Status: Phase 8M low-risk informational preview UI.
 
-This document defines when Nexus may prepare a future action-preview readiness object. It does not add visible preview UI and does not authorize action staging, confirmation, routing, workflow opening, permission prompts, or execution.
+This document defines when Nexus may prepare and, for a narrow allowlist, show a small visible informational preview from a `controlled-action-preview-readiness.v1` object. It does not authorize action staging, confirmation, routing, workflow opening, permission prompts, or execution.
 
 ## Purpose
 
-Phase 8K answers a narrow design question: given a valid `controlled-action-metadata.v1` object, can Nexus internally mark a future preview as safe to prepare later?
+Phase 8K answered a narrow design question: given a valid `controlled-action-metadata.v1` object, can Nexus internally mark a future preview as safe to prepare later?
 
-The answer is stored as `controlled-action-preview-readiness.v1`. It remains internal, metadata-only, and non-executing.
+Phase 8M adds the first visible version of that readiness layer: a compact, display-only preview card for approved low-risk informational actions. The readiness object remains non-executing and downstream of existing routing.
 
 ## Current Phase Restrictions
 
-Phase 8K intentionally does not:
+Phase 8M intentionally does not:
 
 - show `Action:`, `Risk:`, `Needs:`, or `Do you want me to continue?`;
-- render buttons, banners, cards, chips, modals, or preview panels;
+- render working action buttons, confirmation controls, modals, or executable preview panels;
 - make Level 1 labels clickable;
 - stage pending actions;
 - request permissions;
@@ -23,6 +23,8 @@ Phase 8K intentionally does not:
 - route commands;
 - change selectedToolId inference;
 - execute tools or provider actions.
+
+Phase 8M may show a small visible informational preview only when the readiness object is low-risk, permission-free, input-complete, and explicitly marked `userVisibleInThisPhase: true`.
 
 ## Preview Readiness Schema
 
@@ -45,7 +47,7 @@ Phase 8K intentionally does not:
   "allowedNextStep": "preparePreviewOnly",
   "executionBoundary": "previewOnlyReadiness",
   "auditPolicy": "observeOnly",
-  "userVisibleInThisPhase": false
+  "userVisibleInThisPhase": true
 }
 ```
 
@@ -66,9 +68,9 @@ Required fields:
 - `requiredPermissions`
 - `missingInputs`
 - `allowedNextStep`: one of `observeOnly`, `preparePreviewOnly`, or `blocked`.
-- `executionBoundary`: must remain `metadataOnly` or `previewOnlyReadiness` in Phase 8K.
+- `executionBoundary`: must remain `metadataOnly` or `previewOnlyReadiness` in Phase 8M.
 - `auditPolicy`: `observeOnly` or `logOnPreviewFuture`.
-- `userVisibleInThisPhase`: must be `false`.
+- `userVisibleInThisPhase`: may be `true` only for Phase 8M-approved low-risk informational previews; blocked, sensitive, permission-required, and transactional readiness must remain `false`.
 
 ## Eligibility Rules
 
@@ -83,6 +85,30 @@ A preview readiness object may be eligible only when all conditions are true:
 7. `blockedReason` is null.
 8. The action is not health, telehealth, camera, call, location, payment, identity, account, buying, selling, marketplace transaction, dispatch, scheduling, or another restricted/sensitive action.
 9. Preview text is informational and does not promise execution.
+10. Visible preview text does not include completion or action words such as opened, started, submitted, called, paid, verified, permission granted, or similar.
+
+## Visible Preview UI Rules
+
+When visible, the preview card may show:
+
+- `safePreviewTitle`
+- `Category: <levelOneLabel>`
+- `Needs: No special permission`
+- a short safe summary
+- `Preview only - no action has been taken.`
+
+The preview must not show:
+
+- raw `schemaVersion`
+- raw `selectedToolId`
+- raw `actionId`
+- `auditPolicy`
+- `executionBoundary`
+- internal blocked reasons
+- debug metadata
+- working Continue, Confirm, Execute, Open, Start, Call, Pay, Buy, Sell, Location, Camera, or Permission controls
+
+The preview is not a workflow. It is not a confirmation. It is not a route. It is not an action button. Existing routers remain authoritative.
 
 ## Blocked Rules
 
@@ -104,9 +130,9 @@ Blocked readiness uses `previewEligible: false`, `allowedNextStep: "blocked"`, `
 
 | Scenario | Preview status | Safety boundary |
 | --- | --- | --- |
-| Agriculture training | Eligible internally with `safePreviewTitle: "Review training resources"` | Does not open training or start an action. |
-| Farm jobs | Eligible internally with `safePreviewTitle: "Review farm job resources"` | Does not apply or submit anything. |
-| Irrigation learning | Eligible internally with `safePreviewTitle: "Review irrigation learning help"` | Does not open lessons or create records. |
+| Agriculture training | Eligible for visible informational preview with `safePreviewTitle: "Review training resources"` | Does not open training or start an action. |
+| Farm jobs | Eligible for visible informational preview with `safePreviewTitle: "Review farm job resources"` | Does not apply or submit anything. |
+| Irrigation learning | Eligible for visible informational preview with `safePreviewTitle: "Review irrigation learning help"` | Does not open lessons or create records. |
 | Field support | Eligible only as informational guidance | Does not dispatch, use location, schedule, call, or submit a service request. |
 | Crop issue help | Eligible only as informational agriculture help | Does not use camera diagnosis, location, dispatch, scheduling, or record creation. |
 
@@ -118,10 +144,23 @@ Marketplace buy, sell, payment, account, order, quote, and transaction behavior 
 
 ## Relationship To Metadata
 
-`controlled-action-preview-readiness.v1` is derived only from valid `controlled-action-metadata.v1`. It is downstream of Level 1 label metadata and upstream of any future visible preview. Existing routers remain authoritative.
+`controlled-action-preview-readiness.v1` is derived only from valid `controlled-action-metadata.v1`. It is downstream of Level 1 label metadata and upstream of the Phase 8M visible informational preview. Existing routers remain authoritative.
 
-## Recommended Phase 8L Scope
+## QA Coverage
 
-Recommended next phase: **Phase 8L: Preview Readiness Browser Validation and Observation QA**.
+Phase 8M is protected by:
 
-Phase 8L should validate that preview readiness remains internal, inspect debug-only behavior if needed, and continue proving that no user-visible preview, confirmation, staging, route, permission, or execution behavior exists.
+- `scripts/nexus-controlled-action-metadata-schema-qa.js`
+- `scripts/nexus-controlled-action-preview-readiness-qa.js`
+- `scripts/nexus-controlled-action-preview-ui-qa.js`
+- `scripts/nexus-level-one-suggestion-label-qa.js`
+- `scripts/nexus-low-risk-suggestion-builder-qa.js`
+- `scripts/nexus-low-risk-suggestion-observation-qa.js`
+- `scripts/nexus-selected-tool-id-alignment-qa.js`
+- `node scripts/qa-suite.js nexus-workforce`
+
+## Recommended Phase 8N Scope
+
+Recommended next phase: **Phase 8N: Controlled Action Preview Browser Validation**.
+
+Phase 8N should validate the Phase 8M preview in the standard user browser build across desktop and mobile widths, confirm low-risk previews appear, confirm high-risk prompts do not show previews, and continue proving that no confirmation, staging, route, permission, or execution behavior exists.

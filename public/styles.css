@@ -3486,6 +3486,39 @@ body.admin-mode .user-workspace {
   line-height: 1;
   pointer-events: none;
 }
+.nexus-controlled-action-preview {
+  display: grid;
+  gap: 5px;
+  width: min(100%, 420px);
+  margin: 6px 0 0;
+  padding: 10px 11px;
+  border: 1px solid #c9ddd8;
+  border-radius: 8px;
+  background: #f8fbfa;
+  color: #173240;
+  line-height: 1.25;
+  pointer-events: none;
+}
+.nexus-controlled-action-preview-title {
+  color: #173240;
+  font-size: .92rem;
+  font-weight: 950;
+}
+.nexus-controlled-action-preview-meta,
+.nexus-controlled-action-preview-summary,
+.nexus-controlled-action-preview-note {
+  font-size: .78rem;
+  font-weight: 800;
+}
+.nexus-controlled-action-preview-meta {
+  color: #365867;
+}
+.nexus-controlled-action-preview-summary {
+  color: #456b60;
+}
+.nexus-controlled-action-preview-note {
+  color: #61726f;
+}
 .voice-suggestions button,
 .voice-guide button {
   padding: 8px 10px;

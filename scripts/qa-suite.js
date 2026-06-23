@@ -59,7 +59,8 @@ const suites = {
     "scripts/nexus-workforce-alias-qa.js",
     "scripts/nexus-workforce-metadata-qa.js",
     "scripts/nexus-controlled-action-metadata-schema-qa.js",
-    "scripts/nexus-controlled-action-preview-readiness-qa.js"
+    "scripts/nexus-controlled-action-preview-readiness-qa.js",
+    "scripts/nexus-controlled-action-preview-ui-qa.js"
   ]
 };
 

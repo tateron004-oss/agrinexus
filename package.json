@@ -28,6 +28,7 @@
     "qa:nexus-level-one-suggestion-label": "node scripts/nexus-level-one-suggestion-label-qa.js",
     "qa:nexus-controlled-action-metadata-schema": "node scripts/nexus-controlled-action-metadata-schema-qa.js",
     "qa:nexus-controlled-action-preview-readiness": "node scripts/nexus-controlled-action-preview-readiness-qa.js",
+    "qa:nexus-controlled-action-preview-ui": "node scripts/nexus-controlled-action-preview-ui-qa.js",
     "qa:all-safe": "node scripts/qa-suite.js all-safe",
     "smoke": "node scripts/smoke.js",
     "learning:translation-smoke": "node scripts/learning-translation-smoke.js",

@@ -38,12 +38,13 @@ const metadataBuilderBody = extractFunction(app, "buildControlledActionMetadataF
 const previewReadinessBody = extractFunction(app, "buildControlledActionPreviewReadinessFromMetadata");
 const observationBody = extractFunction(app, "observeAgentActionMetadata");
 
-assert.match(previewReadinessBody, /readiness metadata only/i, "preview readiness helper must state metadata-only readiness scope");
-assert.match(previewReadinessBody, /must not render UI, ask to continue,[\s\S]*stage actions, request permissions, route, open workflows, confirm, or execute/i, "preview readiness helper must include no-execute boundary");
+assert.match(previewReadinessBody, /readiness remains non-executing/i, "preview readiness helper must state non-executing readiness scope");
+assert.match(previewReadinessBody, /must not ask to continue, stage[\s\S]*actions, request permissions, route, open workflows, confirm, or execute/i, "preview readiness helper must include no-execute boundary");
 assert.match(previewReadinessBody, /controlledActionMetadata\.schemaVersion !== "controlled-action-metadata\.v1"/, "preview readiness must derive only from metadata v1");
 assert.match(previewReadinessBody, /schemaVersion:\s*"controlled-action-preview-readiness\.v1"/, "preview readiness schema must be v1");
 assert.match(previewReadinessBody, /sourceMetadataVersion:\s*"controlled-action-metadata\.v1"/, "preview readiness must reference source metadata schema");
-assert.match(previewReadinessBody, /userVisibleInThisPhase:\s*false/, "preview readiness must stay hidden in Phase 8K");
+assert.match(previewReadinessBody, /userVisibleInThisPhase:\s*true/, "eligible low-risk preview readiness may become visible in Phase 8M");
+assert.match(previewReadinessBody, /userVisibleInThisPhase:\s*false/, "blocked preview readiness must stay hidden");
 assert.match(previewReadinessBody, /allowedNextStep:\s*"preparePreviewOnly"/, "eligible preview readiness may only prepare preview");
 assert.match(previewReadinessBody, /allowedNextStep:\s*"blocked"/, "blocked preview readiness must be represented");
 assert.match(previewReadinessBody, /executionBoundary:\s*"previewOnlyReadiness"/, "preview readiness boundary must not execute");
@@ -124,7 +125,7 @@ for (const [selectedToolId, [actionId, levelOneLabel, riskLevel, expectedTitle]]
   assert.strictEqual(readiness.allowedNextStep, "preparePreviewOnly", `${selectedToolId} next step must not execute`);
   assert.strictEqual(readiness.executionBoundary, "previewOnlyReadiness", `${selectedToolId} boundary must not execute`);
   assert.strictEqual(readiness.auditPolicy, "observeOnly", `${selectedToolId} audit must remain observation-only`);
-  assert.strictEqual(readiness.userVisibleInThisPhase, false, `${selectedToolId} must remain hidden`);
+  assert.strictEqual(readiness.userVisibleInThisPhase, true, `${selectedToolId} may render a Phase 8M informational preview`);
 }
 
 const blockedMetadata = [
@@ -201,7 +202,7 @@ assert(!/\b(camera diagnosis|location use|dispatch|scheduling|record creation)\b
 
 assert.match(observationBody, /const controlledActionPreviewReadiness = buildControlledActionPreviewReadinessFromMetadata\(controlledActionMetadata\)/, "observation helper should derive preview readiness from controlled metadata only");
 assert.match(observationBody, /controlledActionMetadata,\s*\n\s*controlledActionPreviewReadiness/, "observation record may store preview readiness beside controlled metadata");
-assert(!/controlledActionPreviewReadiness[\s\S]{0,260}(openWorkflow|goSection|mutate|request|confirm|execute|stage|modal|permission|getUserMedia|geolocation|addEventListener|onclick)/i.test(observationBody), "observation helper must not execute from preview readiness");
+assert(!/controlledActionPreviewReadiness[\s\S]{0,260}(openWorkflow|goSection|mutate|request|confirm|execute|stage|permission|getUserMedia|geolocation|addEventListener|onclick)/i.test(observationBody), "observation helper must not execute from preview readiness");
 
 const forbiddenCalls = [
   "openWorkflowModal",
@@ -226,15 +227,17 @@ for (const call of forbiddenCalls) {
   assert(!previewReadinessBody.includes(call), `preview readiness helper must not call ${call}`);
 }
 
-assert(!/renderControlledActionPreview|controlled-action-preview-card|data-controlled-action|controlledActionButton|Do you want me to continue\?/i.test(app), "Phase 8K must not insert visible preview UI hooks");
+assert.match(app, /function renderControlledActionPreview/, "Phase 8M should expose a controlled action preview renderer");
+assert.match(app, /nexus-controlled-action-preview/, "Phase 8M preview UI should use scoped Nexus preview classes");
+assert(!/controlled-action-preview-card|controlledActionButton|Do you want me to continue\?/i.test(app), "Phase 8M must not insert action buttons or continue prompts");
 assert(!/Action:\s|Risk:\s|Needs:\s|Do you want me to continue\?/i.test(previewReadinessBody), "preview readiness helper must not contain visible preview prompt language");
 assert.match(metadataBuilderBody, /schemaVersion:\s*"controlled-action-metadata\.v1"/, "metadata schema helper must remain present");
 assert.match(server, /runtimeStatus:\s*"metadata-only"/, "server agent action metadata must remain metadata-only");
 assert.match(server, /selectedToolId:\s*inferredSelectedToolId \|\| null/, "selectedToolId inference must remain additive");
-assert(!server.includes("controlled-action-preview-readiness.v1"), "server.js must not emit preview readiness in Phase 8K");
+assert(!server.includes("controlled-action-preview-readiness.v1"), "server.js must not emit preview readiness in Phase 8M");
 
-assert.match(readinessDoc, /Phase 8K internal readiness contract only/i, "readiness doc must state Phase 8K scope");
-assert.match(readinessDoc, /does not add visible preview UI/i, "readiness doc must forbid visible preview UI");
+assert.match(readinessDoc, /Phase 8M/i, "readiness doc must state Phase 8M scope");
+assert.match(readinessDoc, /small visible informational preview/i, "readiness doc must describe the Phase 8M preview");
 assert.match(readinessDoc, /Start a telehealth video call[\s\S]*Use my camera to diagnose this crop[\s\S]*Call the doctor[\s\S]*Find my location[\s\S]*Sell my produce[\s\S]*Buy fertilizer[\s\S]*Process my payment[\s\S]*Log into my account[\s\S]*Verify my identity/i, "readiness doc must list restricted examples");
 assert.match(readinessDoc, /Browse AgriTrade[\s\S]*browse\/informational/i, "readiness doc must document marketplace browse nuance");
 assert.match(readinessDoc, /buy, sell, payment, account, order, quote, and transaction behavior remains blocked/i, "readiness doc must block marketplace transactions");

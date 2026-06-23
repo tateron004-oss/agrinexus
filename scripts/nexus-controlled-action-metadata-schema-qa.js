@@ -176,7 +176,8 @@ assert(!/controlledActionMetadata[\s\S]{0,220}(openWorkflow|goSection|mutate|req
 
 assert.match(app, /class="level-one-suggestion-label"/, "visible suggestion labels must remain label elements");
 assert.match(styles, /\.level-one-suggestion-label[\s\S]*pointer-events:\s*none/, "visible suggestion labels must remain non-clickable");
-assert(!/data-controlled-action|controlledActionButton|renderControlledActionPreview|Do you want me to continue\?/i.test(app), "controlled action metadata must not add visible controlled action UI");
+assert(!/controlledActionButton|Do you want me to continue\?/i.test(app), "controlled action metadata must not add action buttons or continue prompts");
+assert.match(app, /function renderControlledActionPreview/, "Phase 8M may render a display-only preview downstream of metadata");
 
 assert.match(server, /runtimeStatus:\s*"metadata-only"/, "backend agent action metadata must remain metadata-only");
 assert.match(server, /selectedToolId:\s*inferredSelectedToolId \|\| null/, "backend selectedToolId inference should remain additive");

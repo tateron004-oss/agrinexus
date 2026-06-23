@@ -17,6 +17,24 @@ function wait(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
+function extractFunction(source, name) {
+  const start = source.indexOf(`function ${name}`);
+  assert(start >= 0, `${name} should exist`);
+  const signatureEnd = source.indexOf(")", start);
+  const bodyStart = source.indexOf("{", signatureEnd);
+  assert(signatureEnd > start && bodyStart > signatureEnd, `${name} body should start after its signature`);
+  let depth = 0;
+  for (let index = bodyStart; index < source.length; index += 1) {
+    const char = source[index];
+    if (char === "{") depth += 1;
+    if (char === "}") {
+      depth -= 1;
+      if (depth === 0) return source.slice(start, index + 1);
+    }
+  }
+  throw new Error(`${name} body should be extractable`);
+}
+
 function seedDb() {
   const db = JSON.parse(fs.readFileSync(path.join(root, "db.json"), "utf8"));
   db.profile = db.profile || {};
@@ -74,6 +92,7 @@ function loadFrontendObservationHarness() {
   assert(helperStart >= 0 && helperEnd > helperStart, "frontend builder helper must be extractable");
   assert(observeStart >= 0 && observeEnd > observeStart, "frontend observation helper must be extractable");
 
+  const htmlSafeBody = extractFunction(app, "htmlSafe");
   const helperBody = app.slice(helperStart, helperEnd);
   const observeBody = app.slice(observeStart, observeEnd);
   const forbiddenCalls = [
@@ -113,6 +132,7 @@ function loadFrontendObservationHarness() {
 
   return vm.runInNewContext(`
     function $() { return null; }
+    ${htmlSafeBody}
     let visibleLevelOneAgentActionSuggestion = null;
     ${helperBody}
     let latestObservedAgentActionMetadata = null;
@@ -157,7 +177,7 @@ function assertLevelOneSuggestionLabel(prompt, observed, expectedToolId, expecte
   assert.strictEqual(observed.controlledActionPreviewReadiness.schemaVersion, "controlled-action-preview-readiness.v1", `${prompt} preview readiness schema should remain v1`);
   assert.strictEqual(observed.controlledActionPreviewReadiness.sourceMetadataVersion, "controlled-action-metadata.v1", `${prompt} preview readiness should reference source metadata`);
   assert.strictEqual(observed.controlledActionPreviewReadiness.previewEligible, true, `${prompt} should be preview-ready internally`);
-  assert.strictEqual(observed.controlledActionPreviewReadiness.userVisibleInThisPhase, false, `${prompt} preview readiness must not be visible`);
+  assert.strictEqual(observed.controlledActionPreviewReadiness.userVisibleInThisPhase, true, `${prompt} preview readiness may render a Phase 8M informational preview`);
   assert.strictEqual(observed.controlledActionPreviewReadiness.allowedNextStep, "preparePreviewOnly", `${prompt} preview readiness must not allow execution`);
   assert.strictEqual(observed.controlledActionPreviewReadiness.executionBoundary, "previewOnlyReadiness", `${prompt} preview readiness boundary must not execute`);
 }
