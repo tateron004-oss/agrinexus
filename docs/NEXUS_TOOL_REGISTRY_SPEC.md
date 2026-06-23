@@ -481,6 +481,8 @@ Acceptance criteria:
 - No endpoint or workflow behavior changes.
 - New QA verifies schema validity and protected compatibility fields.
 
+Phase 7B introduced `docs/nexus-tool-registry.v1.json` as a machine-readable static artifact generated from this specification and `scripts/nexus-tool-registry-qa.js` as its validator. The artifact is explicitly marked `runtimeStatus: "static-spec-only"` and is not runtime-authoritative. `server.js`, `public/app.js`, command routing, workflow routing, native bridge behavior, endpoint contracts, and confirmation gates must not consume this registry until a later additive metadata phase.
+
 ### Phase 7C: Registry Drift QA
 
 Add static QA that compares registry entries against visible workflow buttons, backend endpoints, native bridge endpoints, and known command aliases.
