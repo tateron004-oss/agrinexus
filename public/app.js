@@ -136,6 +136,12 @@ const originalTextNodes = new WeakMap();
 let deferredInstallPrompt = null;
 let routeTrackingWatchId = null;
 let routeTrackingPoints = [];
+const nexusProductIdentity = Object.freeze({
+  productName: "Nexus Workforce AI",
+  assistantName: "Nexus",
+  edition: "workforce",
+  legacyProductName: "AgriNexus"
+});
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
 const AGRINEXUS_BUILD_VERSION = "nexus-behavior-296";
@@ -10194,8 +10200,8 @@ function renderWorkspace(selector, panels) {
 
 function simpleHomeActions() {
   const common = [
-    { label: "Ask AgriNexus", detail: "Tell the assistant what you need in plain language.", command: "help me", primary: true },
-    { label: "View my record", detail: "Open the unified profile with learning, work, care, farmer, and activity evidence.", section: "profile" }
+    { label: "Ask Nexus", detail: "Tell the assistant what you need in plain language.", command: "help me", primary: true },
+    { label: "View my record", detail: "Open the unified profile with learning, work, care, agriculture, and activity evidence.", section: "profile" }
   ];
   const byPersona = {
     farmer: [
@@ -10273,7 +10279,7 @@ function latestUserOutcome() {
   const action = data.smartActions?.items?.[0];
   return {
     happened: activity?.detail || command?.response || "No workflow has been run yet in this session.",
-    meaning: intelligence?.meaning || intelligence?.summary || thread?.lastMessage || "AgriNexus is ready to guide the user one step at a time.",
+    meaning: intelligence?.meaning || intelligence?.summary || thread?.lastMessage || `${nexusProductIdentity.productName} is ready to guide the user one step at a time.`,
     next: intelligence?.nextStep || action?.recommendedAction || "Choose one action below or ask Nexus in normal language."
   };
 }
@@ -10311,9 +10317,9 @@ function renderUserWorkspace() {
   ].filter(item => item.ask || canOpenSection(item.section));
   target.innerHTML = `
     <section class="user-workspace-hero user-simple-hero">
-      <span class="eyebrow">${translateText("AgriNexus")}</span>
+      <span class="eyebrow">${translateText(nexusProductIdentity.productName)}</span>
       <h3 id="userWorkspaceTitle">${translateText(`Hi ${userFirstName()}. What do you need today?`)}</h3>
-      <p>${translateText("Tap a photo button or say: Nexus, help me.")}</p>
+      <p>${translateText("Nexus can help with work, training, health access, maps, field support, and agriculture trade. Tap a photo button or say: Nexus, help me.")}</p>
       ${userLanguageQuickSwitchHtml()}
     </section>
     <section class="user-fast-actions" aria-label="${translateText("Quick actions")}">
@@ -10384,7 +10390,7 @@ function renderUserAccessibilityPanel() {
         <button type="button" class="user-module-close" data-close-user-accessibility aria-label="${translateText("Close")}">${translateText("Close")}</button>
       </div>
       <span class="eyebrow">${translateText("Accessibility")}</span>
-      <h2>${translateText("Make AgriNexus easier to use")}</h2>
+      <h2>${translateText("Make Nexus Workforce AI easier to use")}</h2>
       <p>${translateText("Choose what helps you see, hear, read, or move through the app. You can change this any time.")}</p>
       <div class="user-accessibility-buttons">
         ${toggles.map(item => `<button type="button" data-accessibility="${item.key}" aria-pressed="${Boolean(accessibilityPrefs[item.key])}">
