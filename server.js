@@ -17001,6 +17001,7 @@ function isEverydayEncyclopediaQuestion(command = "") {
   if (!lower) return false;
   if (utilityAssistantKind(command, lower) || isCurrentKnowledgeQuestion(command)) return false;
   if (/\b(open|start|run|create|submit|send|call|message|apply|pay|checkout|book|schedule|delete|change language|switch language)\b/.test(lower)) return false;
+  if (/\b(nexus workforce ai|nexus workforce)\b/.test(lower)) return false;
   if (/\b(platform|agrinexus|nexus|dashboard|admin|investor|workflow|live service|provider engine|render|github|login|password)\b/.test(lower)
     && /\b(how do i use|where is|open|start|button|tab|screen|page|mode|setting)\b/.test(lower)) return false;
   const questionShape = /^(what|what's|whats|why|how|how does|how do|when|where|who|which|can you explain|explain|tell me about|teach me|describe|define)\b/.test(lower);
@@ -17210,6 +17211,18 @@ function generalConversationKind(command = "") {
   if (/\bpatience|paciencia|patience|subira|paciência|صبر\b/.test(lower)) return "patience";
   if (/\bleadership|liderazgo|leadership|uongozi|liderança|قيادة\b/.test(lower)) return "leadership";
   return "default";
+}
+
+function nexusWorkforcePlatformExplanation() {
+  return "Nexus is the assistant inside Nexus Workforce AI. I can help with workforce development, training, job readiness, field support, health access, maps and location support, and marketplace or agriculture trade. AgriNexus remains a supported legacy/internal compatibility identity, and agriculture plus AgriTrade remain active domain modules. I can help you get started, guide the workflow, prepare the next step, and ask before taking any high-impact action.";
+}
+
+function nexusWorkforceCapabilitySummary() {
+  return "I can listen in normal words, answer questions, open the right workspace, and guide workforce development, training, job readiness, field support, health access, maps and location support, marketplace or agriculture trade, reminders, and provider handoffs. I can prepare the next step and I will ask before taking high-impact actions.";
+}
+
+function nexusWorkforceDifferentiatorAnswer() {
+  return "Nexus Workforce AI is different because Nexus connects training, job readiness, health access, field support, marketplace and agriculture trade, maps, and local services in one guided place. AgriNexus remains supported for legacy compatibility, and AgriTrade remains the agriculture-trade marketplace module. Nexus answers first, opens workflows only when you ask, and keeps risky actions behind confirmation.";
 }
 
 function localGeneralConversationAnswer(db, user, command = "", options = {}) {
@@ -17460,21 +17473,21 @@ function localNexusConversationCoreDecision(db, user, command = "", options = {}
       suggestions: ["I need medicine", "find a clinic near me", "my crop is bad"]
     });
   }
-  if (/\b(what is|what's|explain|describe|tell me about|who are you|what do you do)\b.*\b(agrinexus|agri nexus|nexus|platform)\b/.test(lower)
-    || /\b(agrinexus|agri nexus|nexus|platform)\b.*\b(what is|explain|describe|tell me about|what do you do|who are you)\b/.test(lower)) {
+  if (/\b(what is|what's|what are|explain|describe|tell me about|who are you|what do you do|are you)\b.*\b(nexus workforce ai|nexus workforce|agrinexus|agri nexus|nexus|platform)\b/.test(lower)
+    || /\b(nexus workforce ai|nexus workforce|agrinexus|agri nexus|nexus|platform)\b.*\b(what is|what are|explain|describe|tell me about|what do you do|who are you|are you)\b/.test(lower)) {
     return decision({
       type: "answer",
-      response: "AgriNexus helps people use farming, health access, learning, jobs, trade, maps, and local services by voice. Nexus is the assistant inside it: it listens, answers in simple words, opens the right service, and guides the next step.",
+      response: nexusWorkforcePlatformExplanation(),
       confidence: 0.98,
-      suggestions: ["help a farmer", "I need a doctor", "help me sell my crop", "open map"]
+      suggestions: ["start training", "show job pathways", "open health access", "open AgriTrade"]
     });
   }
-  if (/\b(what can you do|how can you help|what do you do|you can do what)\b/.test(lower)) {
+  if (/\b(what can you do|how can you help|help$|what do you do|what are you|you can do what)\b/.test(lower)) {
     return decision({
       type: "answer",
-      response: "I can answer questions, open health, medicine, learning, work, crop sale, maps, and guide one step at a time. I can also use live providers when they are connected.",
+      response: nexusWorkforceCapabilitySummary(),
       confidence: 0.97,
-      suggestions: ["I need medicine", "find work", "sell my crop", "open map"]
+      suggestions: ["start training", "show job pathways", "open health access", "open marketplace"]
     });
   }
   if (/\b(start|open|begin)?\s*(health )?(intake|patient intake|telehealth intake)\b/.test(lower)) {
@@ -17521,6 +17534,9 @@ function localNexusConversationCoreDecision(db, user, command = "", options = {}
   }
   if (/\b(help me sell|sell my crop|sell crop|sell maize|find buyer|talk to buyer|contact buyer|kuuza mazao|vender cosecha)\b/.test(lower)) {
     return decision({ type: "direct", directAction: "crop-sale-guided", response: "I can help sell the crop. First, what crop or product do you want to sell or move?", confidence: 0.96, suggestions: ["contact buyer", "track shipment", "show trade route"] });
+  }
+  if (/\b(use my location|use location|my location|gps)\b/.test(lower)) {
+    return decision({ type: "backend", response: "I am checking location permission support now.", confidence: 0.94, suggestions: ["allow location", "find clinic near me", "track shipment"] });
   }
   if (/\b(track|show|open|follow)\b.*\b(shipment|delivery|order|sale|product|route)\b/.test(lower) || /\b(open|show)\b.*\b(map|route)\b/.test(lower)) {
     return decision({ type: "direct", directAction: "full-map", response: "Full map is open. You can zoom, find facilities, check routes, or track shipments.", confidence: 0.93, suggestions: ["show clinic on map", "track shipment", "route from Kenya to Nigeria"] });
@@ -17950,6 +17966,15 @@ function continueSimpleVoiceTurn(db, user, text = "") {
   if (isGlobalVoiceStopIntent(lower)) {
     clearSimpleVoiceTurn(db);
     return null;
+  }
+  if (/\b(use my location|use location|my location|gps)\b/.test(lower)) {
+    clearSimpleVoiceTurn(db);
+    return {
+      intent: "map.location_permission",
+      response: "I can use your location after the browser gives permission. I opened map support so you can allow location and continue route, clinic, pharmacy, or shipment tracking.",
+      status: "needs-permission",
+      metadata: { conversationMode: true, redirectSection: "map", suppressBehaviorNudge: true, suggestedReplies: ["allow location", "find clinic near me", "track shipment"] }
+    };
   }
   const moduleSignal = conversationModuleSignal(lower);
   if (Number(moduleSignal.score || 0) >= 2 && moduleSignal.section && moduleSignal.section !== turn.section) {
@@ -19320,9 +19345,9 @@ function resilientConversationIntent(db, user, rawText = "") {
   if (has(capabilitySignals) && !/\b(agritrade|agri trade)\b/.test(text)) {
     return {
       intent: "conversation.capability_summary",
-      response: "I can listen in normal words, answer questions, open the right workspace, and guide health support, medicine access, crops, sales, jobs, learning, maps, reminders, and provider handoffs. What do you need first?",
+      response: `${nexusWorkforceCapabilitySummary()} What do you need first?`,
       status: "completed",
-      metadata: { ...metadataBase, redirectSection: "agent", suggestedReplies: ["I need a doctor", "my crop is bad", "start a course", "open the map"] }
+      metadata: { ...metadataBase, redirectSection: "agent", suggestedReplies: ["start training", "show job pathways", "open health access", "open AgriTrade"] }
     };
   }
   if (has(clinicSignals)) {
@@ -19380,6 +19405,14 @@ function resilientConversationIntent(db, user, rawText = "") {
       response: "I can help you learn by voice, captions, and slow lessons. I can start a recommended course and read it with support. What skill do you want to learn first?",
       status: "needs-topic",
       metadata: { ...guidedFrontier("Learning", "learning", "What skill do you want to learn first?"), redirectSection: "learning", suggestedReplies: ["start recommended course", "build captions", "read the lesson"] }
+    };
+  }
+  if (/\b(use my location|use location|my location|gps)\b/.test(text)) {
+    return {
+      intent: "map.location_permission",
+      response: "I can use your location after the browser gives permission. I opened map support so you can allow location and continue route, clinic, pharmacy, or shipment tracking.",
+      status: "needs-permission",
+      metadata: { ...guidedFrontier("Maps", "map", "Allow browser location when you are ready."), redirectSection: "map", suggestedReplies: ["allow location", "find clinic near me", "track shipment"] }
     };
   }
   if (has(mapSignals)) {
@@ -19740,6 +19773,9 @@ function platformWideVoiceAcceptanceResponse(db, user, text = "", lower = "", op
     .replace(/\b(nexus|agrinexus|agri nexus|please|help me|i need|need|needed|i want|want)\b/g, " ")
     .replace(/\s+/g, " ")
     .trim();
+  if (/\b(use my location|use location|my location|gps)\b/.test(value)) {
+    return response("map.location_permission", "needs-permission", "map", "I can use your location after the browser gives permission. I opened map support so you can allow location and continue route, clinic, pharmacy, or shipment tracking.", ["allow location", "find clinic near me", "track shipment"]);
+  }
   const simpleStandalone = [
     {
       pattern: /^(intake|health intake|telehealth intake|patient intake)$/,
@@ -19785,10 +19821,11 @@ function platformWideVoiceAcceptanceResponse(db, user, text = "", lower = "", op
   if (simpleStandalone) return simpleStandalone.result();
   const requestedMapCountry = africanMapCountryTarget(db, value);
 
-  if (!/\b(agritrade|agri trade)\b/.test(value) && (/\b(explain|describe|define|summarize)\s+(agrinexus|agri nexus|nexus|platform)\b/.test(value)
-    || /\b(tell me|tell us)\s+(what|about)\s+(agrinexus|agri nexus|nexus|platform)\b/.test(value)
-    || /\b(what|who)\s+(is|are)\s+(agrinexus|agri nexus|nexus|the platform)\b/.test(value)
-    || /\b(agrinexus|agri nexus|nexus|platform)\b.*\b(what is|explain|describe|tell me about|what do you do|who are you|means|mean)\b/.test(value))) {
+  if (!/\b(agritrade|agri trade)\b/.test(value) && (/\b(explain|describe|define|summarize)\s+(nexus workforce ai|nexus workforce|agrinexus|agri nexus|nexus|platform)\b/.test(value)
+    || /\b(tell me|tell us)\s+(what|about)\s+(nexus workforce ai|nexus workforce|agrinexus|agri nexus|nexus|platform)\b/.test(value)
+    || /\b(what|who)\s+(is|are)\s+(nexus workforce ai|nexus workforce|agrinexus|agri nexus|nexus|the platform)\b/.test(value)
+    || /\bare you\s+(agrinexus|agri nexus|nexus workforce ai|nexus workforce)\b/.test(value)
+    || /\b(nexus workforce ai|nexus workforce|agrinexus|agri nexus|nexus|platform)\b.*\b(what is|what are|explain|describe|tell me about|what do you do|who are you|are you|means|mean)\b/.test(value))) {
     db.profile.agentMemory.activeClarification = null;
     db.profile.agentMemory.activeRecovery = null;
     db.profile.agentMemory.lastStatus = "platform-explained";
@@ -19798,8 +19835,8 @@ function platformWideVoiceAcceptanceResponse(db, user, text = "", lower = "", op
       "conversation.platform_explained",
       "completed",
       "agent",
-      "AgriNexus helps people use farming, health access, learning, jobs, trade, maps, and local services by voice. Nexus is the assistant inside it: it listens, answers in simple words, opens the right service, and guides the next step.",
-      ["help a farmer", "I need a doctor", "help me sell my crop", "open map"]
+      nexusWorkforcePlatformExplanation(),
+      ["start training", "show job pathways", "open health access", "open AgriTrade"]
     );
   }
 
@@ -19909,7 +19946,7 @@ function platformWideVoiceAcceptanceResponse(db, user, text = "", lower = "", op
       { countryId: requestedMapCountry.id, countryName: requestedMapCountry.name, lat: requestedMapCountry.lat, lng: requestedMapCountry.lng }
     );
   }
-  if (/\b(open|show)\b.*\b(full scale|full-scale|global|real)?\s*map\b|\bfull scale map\b/.test(value)) {
+  if (/\b(open|show)\b.*\b(full scale|full-scale|global|real)?\s*maps?\b|\bfull scale map\b|\bopen maps\b/.test(value)) {
     return response("conversation.map_open", "completed", "map", "Full map is open. You can zoom, drag, find facilities, check routes, and track shipments.", ["show clinic and pharmacy", "track shipment", "show route"]);
   }
   if (/\b(show|find)\b.*\b(clinic|pharmacy)\b.*\bmap\b|\b(clinic|pharmacy)\b.*\bmap\b/.test(value)) {
@@ -19925,14 +19962,24 @@ function platformWideVoiceAcceptanceResponse(db, user, text = "", lower = "", op
       ["maize", "cassava", "run field scan"]
     );
   }
-  if (/\b(run|start|open)\b.*\b(drone|field)\b.*\b(scan|evidence)\b|\brun drone scan\b/.test(value)) {
+  if (/\b(run|start|open)\b.*\b(drone|field)\b.*\b(scan|evidence)\b|\brun drone scan\b|\bscan my field\b/.test(value)) {
     return response("drone.field_scan", "completed", "trade", "Drone scan is ready. Nexus can review crop health, pests, irrigation, field evidence, buyer proof, and the next farm action. Live drone footage connects when a drone provider is added.", ["explain crop evidence", "contact buyer", "track shipment"]);
   }
   if (/\b(explain|summarize|read)\b.*\b(crop evidence|field evidence|drone evidence)\b.*\b(simple|plain|easy)\b|\bcrop evidence\b/.test(value)) {
     return response("conversation.crop_evidence_simple", "completed", "trade", "In simple words: crop evidence helps show whether the crop looks healthy, damaged, dry, pest-affected, or ready for sale. Nexus can turn that into buyer proof and a next farm step.", ["run drone scan", "contact buyer", "track shipment"]);
   }
+  if (/\b(help me in the field|field support)\b/.test(value)) {
+    return response("conversation.crop_help", "needs-details", "trade", "I opened field support. Tell me the field, crop, route, or local work issue, and Nexus will guide the next safe step without claiming live dispatch.", ["run drone scan", "sell my crop", "check route risk"]);
+  }
+  if (/\b(open marketplace|open agritrade)\b/.test(value)) {
+    return response("conversation.crop_sale_help", "needs-details", "trade", "I opened marketplace and AgriTrade support. Agriculture trade is still supported. Tell me the crop, buyer, product, or route you want to work on.", ["sell my crop", "contact buyer", "track shipment"]);
+  }
+  if (/\b(open health access|telehealth support)\b/.test(value)) {
+    return response("conversation.health_intake", "needs-details", "health", "I opened health access. This is not a diagnosis. I can guide intake, captions, provider handoff, or local camera support one step at a time.", ["start intake", "find clinic", "open video for provider"]);
+  }
 
-  if (/\b(start|open|begin)\b.*\b(my )?(course|lesson|training)\b/.test(value) && !/\b(i am new|i'm new|how do i|where do i start|show me how|walk me through|guide me)\b/.test(value)) {
+  if (/\b(help me with training|start training|open training|help me learn)\b/.test(value)
+    || /\b(start|open|begin)\b.*\b(my )?(course|lesson|training)\b/.test(value) && !/\b(i am new|i'm new|how do i|where do i start|show me how|walk me through|guide me)\b/.test(value)) {
     return response("conversation.learning_start", "needs-topic", "learning", "I opened course support. Choose the course you want, or tell me the skill you want to learn.", ["read the lesson for me", "build captions", "complete my lesson"]);
   }
   if (/\b(read|speak|play)\b.*\b(lesson|course)\b.*\b(for me)?\b/.test(value)) {
@@ -19948,7 +19995,7 @@ function platformWideVoiceAcceptanceResponse(db, user, text = "", lower = "", op
     return response("learning.certificate", "needs-details", "learning", "I can help with your certificate. I will check the course, lesson progress, and quiz evidence, then prepare certificate proof when ready. Which course did you finish?", ["show my progress", "start next course", "read the lesson"]);
   }
 
-  if (/\b(i need work|need work|find work|find a job|job please|work please|need job|want job)\b/.test(value)) {
+  if (/\b(i need work|need work|find work|find a job|job please|work please|need job|want job|help me find a job pathway|show job pathways|career pathways|job readiness|help me prepare for work)\b/.test(value)) {
     if (/\bapply\b.*\b(that job|this job|the job)\b/.test(value)) return null;
     return response("conversation.workforce_help", "needs-details", "workforce", "I can help with work. Tell me the country and the kind of job, and I will show role options, skill gaps, training links, and the application step.", ["help me apply for a job", "prepare me for interview", "review my skills"]);
   }
@@ -20009,7 +20056,7 @@ function platformWideVoiceAcceptanceResponse(db, user, text = "", lower = "", op
     return response("conversation.reasoning_governance_status", "completed", "agent", "Reasoning proof is ready. Nexus records the command, module signal, confidence, safety boundary, provider truth, and next action so an admin or investor can inspect why it chose a route.", ["explain your brain", "show production readiness"]);
   }
   if (/\b(how is|how are|what makes|why is|why are)\b.*\b(agrinexus|agri nexus|agri-nexus|nexus|this platform|the platform)\b.*\bdifferent\b|\bwhat makes this different\b|\bdifferent from a normal app\b|\bnormal app\b/.test(value)) {
-    return response("conversation.platform_differentiator", "completed", "agent", "AgriNexus is different because it connects rural and community work in one guided place: agriculture support, telehealth and mobile care access, learning and workforce training, marketplace and trade, logistics and maps, and Nexus assistant guidance. It answers first, opens workflows only when you ask, and keeps risky actions behind confirmation.", ["explain AgriNexus", "what can you do for a farmer", "show production readiness"]);
+    return response("conversation.platform_differentiator", "completed", "agent", nexusWorkforceDifferentiatorAnswer(), ["explain Nexus Workforce AI", "what can you do for a farmer", "show production readiness"]);
   }
   if (/\b(what is|what's|what are|explain|tell me about|describe|define)\b.*\bregenerative agriculture\b|\bregenerative agriculture\b.*\b(what is|explain|mean|means)\b/.test(value)) {
     return response("conversation.regenerative_agriculture_explained", "completed", "trade", "Regenerative agriculture means farming in ways that rebuild soil health, protect water, increase biodiversity, and keep farms productive over time. Common practices include cover crops, compost, reduced tillage, crop rotation, agroforestry, managed grazing, and measuring soil or field recovery. AgriNexus can turn that into learning, field notes, crop guidance, and buyer evidence.", ["open learning", "teach me about farming", "field notes"]);
@@ -23659,9 +23706,9 @@ async function runAgentCommand(db, user, command, options = {}) {
   if (conversational && /\b(how is|how are|what makes|why is|why are)\b.*\b(agrinexus|agri nexus|agri-nexus|nexus|this platform|the platform)\b.*\bdifferent\b/.test(lower)) {
     return {
       intent: "conversation.platform_differentiator",
-      response: "AgriNexus is different because it connects rural and community work in one guided place: agriculture support, telehealth and mobile care access, learning and workforce training, marketplace and trade, logistics and maps, and Nexus assistant guidance. It answers first, opens workflows only when you ask, and keeps risky actions behind confirmation.",
+      response: nexusWorkforceDifferentiatorAnswer(),
       status: "completed",
-      metadata: { conversationMode: true, redirectSection: "agent", suppressBehaviorNudge: true, suggestedReplies: ["explain AgriNexus", "what can you do for a farmer", "open learning"] }
+      metadata: { conversationMode: true, redirectSection: "agent", suppressBehaviorNudge: true, suggestedReplies: ["explain Nexus Workforce AI", "what can you do for a farmer", "open learning"] }
     };
   }
   if (conversational && /\b(explain|what is|what are|tell me about|describe)\b.*\b(mobile clinic|mobile clinics|field clinic|outreach clinic|rural clinic)\b/.test(lower)) {
@@ -23707,7 +23754,7 @@ async function runAgentCommand(db, user, command, options = {}) {
     db.profile.agentMemory.updatedAt = new Date().toISOString();
     return {
       intent: "conversation.platform_explained",
-      response: "AgriNexus helps people use farming, health access, learning, jobs, trade, maps, and local services by voice. Nexus is the assistant inside it: it listens, answers in simple words, opens the right service, and guides the next step.",
+      response: nexusWorkforcePlatformExplanation(),
       status: "completed",
       metadata: { conversationMode: true, redirectSection: "agent", suppressBehaviorNudge: true, suggestedReplies: ["help a farmer", "I need a doctor", "help me sell my crop", "open map"] }
     };
@@ -23888,16 +23935,16 @@ async function runAgentCommand(db, user, command, options = {}) {
   if (platformVoiceAcceptance) return platformVoiceAcceptance;
   const resilientIntent = conversational ? resilientConversationIntent(db, user, text) : null;
   if (resilientIntent) return resilientIntent;
-  if (conversational && /\b(what can (?:you )?do|how can you help|what do you do)\b/.test(lower) && !/\b(agritrade|agri\s*trade|farmer|farm|smallholder|grower)\b/.test(lower)) {
+  if (conversational && /\b(what can (?:you )?do|how can you help|help$|what do you do|what are you)\b/.test(lower) && !/\b(agritrade|agri\s*trade|farmer|farm|smallholder|grower)\b/.test(lower)) {
     return {
       intent: "conversation.capability_summary",
-      response: "I can listen in normal words, answer questions, open the right workspace, and guide health support, medicine access, crops, sales, jobs, learning, maps, reminders, and provider handoffs.",
+      response: nexusWorkforceCapabilitySummary(),
       status: "completed",
-      metadata: { conversationMode: true, redirectSection: "agent", suppressBehaviorNudge: true, suggestedReplies: ["I need a doctor", "my crop is bad", "start a course", "open the map"] }
+      metadata: { conversationMode: true, redirectSection: "agent", suppressBehaviorNudge: true, suggestedReplies: ["start training", "show job pathways", "open health access", "open AgriTrade"] }
     };
   }
-  if (conversational && !/\b(agritrade|agri\s*trade)\b/.test(lower) && (/\b(what is|what's|explain|describe|tell me about|who are you|what do you do)\b.*\b(agrinexus|agri\s+nexus|nexus|platform)\b/.test(lower)
-    || /\b(agrinexus|agri\s+nexus|nexus|platform)\b.*\b(what is|explain|describe|tell me about|what do you do|who are you)\b/.test(lower))) {
+  if (conversational && !/\b(agritrade|agri\s*trade)\b/.test(lower) && (/\b(what is|what's|what are|explain|describe|tell me about|who are you|what do you do|are you)\b.*\b(nexus workforce ai|nexus workforce|agrinexus|agri\s+nexus|nexus|platform)\b/.test(lower)
+    || /\b(nexus workforce ai|nexus workforce|agrinexus|agri\s+nexus|nexus|platform)\b.*\b(what is|what are|explain|describe|tell me about|what do you do|who are you|are you)\b/.test(lower))) {
     db.profile.agentMemory.activeClarification = null;
     db.profile.agentMemory.activeRecovery = null;
     db.profile.agentMemory.lastStatus = "platform-explained";
@@ -23905,9 +23952,9 @@ async function runAgentCommand(db, user, command, options = {}) {
     db.profile.agentMemory.updatedAt = new Date().toISOString();
     return {
       intent: "conversation.platform_explained",
-      response: "AgriNexus helps people use farming, health access, learning, jobs, trade, maps, and local services by voice. Nexus is the assistant inside it: it listens, answers in simple words, opens the right service, and guides the next step.",
+      response: nexusWorkforcePlatformExplanation(),
       status: "completed",
-      metadata: { conversationMode: true, redirectSection: "agent", suppressBehaviorNudge: true, suggestedReplies: ["help a farmer", "I need a doctor", "help me sell my crop", "open map"] }
+      metadata: { conversationMode: true, redirectSection: "agent", suppressBehaviorNudge: true, suggestedReplies: ["start training", "show job pathways", "open health access", "open AgriTrade"] }
     };
   }
   if (conversational && !/\b(start to finish|end to end|safely|safe|auto\s*pilot|autopilot)\b/.test(lower) && (/\b(what can (?:you )?do|how can you help|help)\b.*\b(farmer|farm|smallholder|grower)\b/.test(lower)
@@ -24102,7 +24149,7 @@ async function runAgentCommand(db, user, command, options = {}) {
     const next = smartNextActions(db, user, runtimeProviders(db)).items[0];
     return {
       intent: "conversation.guided_menu",
-      response: `I can help with health, learning, work, crops, maps, or messages. Best next step: ${next?.title || "tell me the area you need"}. Say health, learning, work, trade, map, or AI help.`,
+      response: `Nexus is the assistant inside Nexus Workforce AI. I can help with training, job readiness, field support, health access, maps, marketplace or AgriTrade, and messages. Best next step: ${next?.title || "tell me the area you need"}. Say training, job pathways, health access, maps, marketplace, or AI help.`,
       status: "guiding",
       metadata: { conversationMode: true, redirectSection: next?.section || "dashboard", recommendedAction: next || null }
     };
@@ -24132,8 +24179,8 @@ async function runAgentCommand(db, user, command, options = {}) {
       metadata: { memories, longTermMemory: summary }
     };
   }
-  if (!/\b(agritrade|agri\s*trade)\b/.test(lower) && (/\b(what is|what's|explain|describe|tell me about|who are you|what do you do)\b.*\b(agrinexus|agri\s+nexus|nexus|platform)\b/.test(lower)
-    || /\b(agrinexus|agri\s+nexus|nexus)\b.*\b(what is|explain|describe|tell me about|what do you do|who are you)\b/.test(lower))) {
+  if (!/\b(agritrade|agri\s*trade)\b/.test(lower) && (/\b(what is|what's|what are|explain|describe|tell me about|who are you|what do you do|are you)\b.*\b(nexus workforce ai|nexus workforce|agrinexus|agri\s+nexus|nexus|platform)\b/.test(lower)
+    || /\b(nexus workforce ai|nexus workforce|agrinexus|agri\s+nexus|nexus)\b.*\b(what is|what are|explain|describe|tell me about|what do you do|who are you|are you)\b/.test(lower))) {
     db.profile.agentMemory.activeClarification = null;
     db.profile.agentMemory.activeRecovery = null;
     db.profile.agentMemory.lastStatus = "platform-explained";
@@ -24141,12 +24188,12 @@ async function runAgentCommand(db, user, command, options = {}) {
     db.profile.agentMemory.updatedAt = new Date().toISOString();
     return {
       intent: "conversation.platform_explained",
-      response: "AgriNexus is a voice-guided AI operating platform for rural agriculture, telehealth, learning, workforce, trade, maps, drone intelligence, translation, and provider workflows. Nexus is the assistant inside it: it listens, answers questions, opens the right service, asks before important actions, and guides people one safe step at a time.",
+      response: nexusWorkforcePlatformExplanation(),
       status: "completed",
       metadata: {
         conversationMode: true,
         redirectSection: "agent",
-        suggestedReplies: ["start telehealth intake", "sell my crop", "find work", "start a course", "open map"]
+        suggestedReplies: ["start training", "show job pathways", "open health access", "open AgriTrade"]
       }
     };
   }
@@ -24665,6 +24712,14 @@ async function runAgentCommand(db, user, command, options = {}) {
   }
   const earlyAddressedModuleGreeting = await moduleGreetingResponse(db, user, text, lower);
   if (earlyAddressedModuleGreeting) return earlyAddressedModuleGreeting;
+  if (/\b(use my location|use location|my location|gps)\b/.test(lower)) {
+    return {
+      intent: "map.location_permission",
+      response: "I can use your location after the browser gives permission. I opened map support so you can allow location and continue route, clinic, pharmacy, or shipment tracking.",
+      status: "needs-permission",
+      metadata: { conversationMode: conversational, redirectSection: "map", suggestedReplies: ["allow location", "find clinic near me", "track shipment"] }
+    };
+  }
   if (conversational && isGeneralConversationQuestion(text)) {
     return generalConversationResponse(db, user, text, options);
   }

@@ -8706,10 +8706,10 @@ function speechSignalMatches(value = "", signals = []) {
 function isPlatformExplainVoiceCommand(command = "") {
   const lower = normalizeToolText(command);
   if (!lower) return false;
-  const platformName = /\b(agrinexus|agri nexus|agri-nexus|nexus|the platform|this platform|your platform|app|system)\b/.test(lower);
+  const platformName = /\b(nexus workforce ai|nexus workforce|agrinexus|agri nexus|agri-nexus|nexus|the platform|this platform|your platform|app|system)\b/.test(lower);
   const explainVerb = /\b(explain|describe|tell me about|tell me what|what is|whats|what are|who are you|what do you do|what does it do|what does this do|summarize|define)\b/.test(lower);
   return (platformName && explainVerb)
-    || /\b(explain the platform|tell me about the platform|tell me what the platform is|what is the platform|what can agrinexus do|what can agri nexus do|define agrinexus|define agri nexus|explain agrinexus|explain agri nexus|what agrinexus is|what agri nexus is)\b/.test(lower);
+    || /\b(explain the platform|tell me about the platform|tell me what the platform is|what is the platform|what can nexus workforce ai do|what can nexus workforce do|what can agrinexus do|what can agri nexus do|define nexus workforce ai|define nexus workforce|define agrinexus|define agri nexus|explain nexus workforce ai|explain nexus workforce|explain agrinexus|explain agri nexus|what nexus workforce ai is|what nexus workforce is|what agrinexus is|what agri nexus is)\b/.test(lower);
 }
 
 function voiceToolTokens(value = "") {
@@ -8720,7 +8720,7 @@ function voiceToolTokens(value = "") {
 function workflowVoiceAliases(workflow, action) {
   const key = `${workflow}:${action}`;
   const aliases = {
-    "learning:start": ["start course", "take course", "begin training", "learn", "teach me", "school help", "class start", "i want learn", "learn please"],
+    "learning:start": ["start course", "take course", "begin training", "help me with training", "start training", "open training", "help me learn", "learn", "teach me", "school help", "class start", "i want learn", "learn please"],
     "learning:lesson": ["finish lesson", "complete lesson", "lesson done", "finish class"],
     "cross-platform:remote-country-focus": ["set rural market focus", "country focus", "focus my country", "prepare rural market", "start rural farmer launch"],
     "cross-platform:crop-sale-simulation": ["sell my crop and track delivery", "sell crop and track", "crop sale workflow", "buyer logistics workflow", "track my sale and product"],
@@ -8728,9 +8728,9 @@ function workflowVoiceAliases(workflow, action) {
     "cross-platform:telehealth-navigation": ["walk me through telehealth", "safe telehealth navigation", "mobile clinic navigation", "help patient reach clinic", "healthcare support workflow"],
     "cross-platform:learning-workforce": ["connect learning to income", "learning to income", "course to job", "training to workforce", "learn and find work"],
     "cross-platform:live-credential-path": ["prepare live engine credentials", "live credential path", "provider activation path", "connect live engines", "prepare provider credentials"],
-    "workforce:apply-role": ["apply for job", "apply for role", "get work", "job please", "i want work", "work help", "need money work", "job apply"],
+    "workforce:apply-role": ["apply for job", "apply for role", "get work", "help me find a job pathway", "show job pathways", "career pathways", "job readiness", "help me prepare for work", "job please", "i want work", "work help", "need money work", "job apply"],
     "workforce:shift": ["plan shift", "schedule shift", "work time", "job schedule"],
-    "health:intake": ["start intake", "open intake", "begin intake", "create intake", "patient intake", "need doctor", "health help", "doctor help", "i sick", "i am sick", "pain help", "clinic help", "medicine help"],
+    "health:intake": ["start intake", "open intake", "begin intake", "create intake", "patient intake", "open health access", "telehealth support", "need doctor", "health help", "doctor help", "i sick", "i am sick", "pain help", "clinic help", "medicine help"],
     "health:provider": ["contact provider", "talk to provider", "telehealth provider", "talk doctor", "speak doctor", "call doctor", "doctor now"],
     "health:clinic-service-menu": ["mobile clinic service menu", "clinic prices", "clinic services", "publish clinic prices"],
     "health:clinic-payment-request": ["mobile clinic payment", "request payment", "charge patient", "bill patient", "clinic billing", "collect payment", "monetize clinic"],
@@ -8738,8 +8738,8 @@ function workflowVoiceAliases(workflow, action) {
     "health:clinic-payout": ["provider payout", "pay clinic", "clinic payout", "settle provider"],
     "health:representative": ["connect representative", "connect provider", "reach doctor", "reach nurse"],
     "health:safety": ["check region", "hotspot", "health risk", "area safe", "sickness near me", "disease area"],
-    "trade:order": ["sell crop", "create order", "crop sale", "sell food", "sell maize", "sell produce", "market crop", "buy product", "sell product", "product order", "create transaction"],
-    "trade:buyer-contact": ["contact buyer", "talk to buyer", "buyer contact", "crop buyer", "maize buyer", "find buyer", "buyer for crop", "sell to buyer", "seller contact", "buyer seller", "buy from seller"],
+    "trade:order": ["open marketplace", "open agritrade", "sell crop", "create order", "crop sale", "sell food", "sell maize", "sell produce", "market crop", "buy product", "sell product", "product order", "create transaction"],
+    "trade:buyer-contact": ["open marketplace", "open agritrade", "contact buyer", "talk to buyer", "buyer contact", "crop buyer", "maize buyer", "find buyer", "buyer for crop", "sell to buyer", "seller contact", "buyer seller", "buy from seller"],
     "trade:buyer-message": ["message buyer", "chat buyer", "talk buyer", "buyer message"],
     "trade:buyer-whatsapp": ["whatsapp buyer", "call buyer"],
     "trade:buyer-sms": ["sms buyer", "text buyer"],
@@ -8751,11 +8751,11 @@ function workflowVoiceAliases(workflow, action) {
     "trade:delivery-confirm": ["confirm delivery", "delivery proof", "buyer received", "shipment arrived"],
     "trade:settlement": ["settle payment", "release settlement", "farmer payout", "seller payout"],
     "trade:payment-checkout": ["buyer checkout", "create checkout", "paystack checkout", "flutterwave checkout", "collect payment", "buyer pay"],
-    "trade:drone": ["run drone scan", "scan farm", "check field", "farm check", "drone farm", "check crop field"],
+    "trade:drone": ["help me in the field", "field support", "run drone scan", "scan farm", "scan my field", "check field", "farm check", "drone farm", "check crop field"],
     "trade:drone-plan": ["plan drone mission", "flight plan"],
     "map:facility-route": ["find facility", "clinic route", "health facility"],
     "map:risk-layer": ["risk layer", "map risk"],
-    "ai:route": ["route intelligence", "route risk", "track route", "track transaction location", "track product location", "sale location", "delivery location"],
+    "ai:route": ["open maps", "use location", "route intelligence", "route risk", "track route", "track transaction location", "track product location", "sale location", "delivery location"],
     "ai:orchestrate": ["what should i do next", "next move", "orchestrate"],
     "integrations:test-all": ["test engines", "run live service check", "provider check"],
     "admin:health-check": ["run health check", "admin health check", "production check"]
@@ -8774,8 +8774,8 @@ function dynamicVoiceToolRegistry() {
     ["learning", "Learning", "open learning training courses lessons"],
     ["workforce", "Workforce", "open workforce jobs roles shifts applications"],
     ["health", "Telehealth", "open telehealth health provider intake care"],
-    ["trade", "AgriTrade", "open agritrade trade crops buyers drones orders"],
-    ["map", "Map", "open map routes facilities risk geospatial"],
+    ["trade", "AgriTrade", "open marketplace open agritrade trade crops buyers drones orders field support"],
+    ["map", "Map", "open maps use location open map routes facilities risk geospatial"],
     ["agent", "AI Help", "open ai nexus assistant command center"],
     ["integrations", "Integrations", "open integrations providers engines"],
     ["admin", "Admin", "open admin readiness users health check"],
@@ -20547,7 +20547,7 @@ function nexusFastLaneIntent(command = "") {
       routeLabel: "fast-lane-trade"
     });
   }
-  if (/\b(i need work|need work|find work|find a job|job please|work please|need job|kazi|trabajo|emploi)\b/.test(lower)) {
+  if (/\b(i need work|need work|find work|find a job|job please|work please|need job|help me find a job pathway|show job pathways|career pathways|job readiness|help me prepare for work|kazi|trabajo|emploi)\b/.test(lower)) {
     return fast({
       type: "direct",
       directAction: "workforce-guided",
@@ -20555,7 +20555,7 @@ function nexusFastLaneIntent(command = "") {
       routeLabel: "fast-lane-workforce"
     });
   }
-  if (/\b(start a course|start course|take course|begin course|start learning|want learn|learn please|course|lesson|somo)\b/.test(lower)) {
+  if (/\b(help me with training|start training|open training|help me learn|start a course|start course|take course|begin course|start learning|want learn|learn please|course|lesson|somo)\b/.test(lower)) {
     return fast({
       type: "direct",
       directAction: "learning-guided",
@@ -20563,7 +20563,31 @@ function nexusFastLaneIntent(command = "") {
       routeLabel: "fast-lane-learning"
     });
   }
-  if (/\b(open map|show map|full map|global map|real map|map please|ramani|mapa|carte)\b/.test(lower)) {
+  if (/\b(help me in the field|field support)\b/.test(lower)) {
+    return fast({
+      type: "direct",
+      directAction: "crop-help",
+      response: "I opened field support. Tell me the field, crop, route, or local work issue, and Nexus will guide the next safe step.",
+      routeLabel: "fast-lane-field-support"
+    });
+  }
+  if (/\b(open health access|telehealth support)\b/.test(lower)) {
+    return fast({
+      type: "direct",
+      directAction: "health-intake",
+      response: "I opened health access. This is not a diagnosis. I can guide intake, captions, provider handoff, or local camera support one step at a time.",
+      routeLabel: "fast-lane-health-access"
+    });
+  }
+  if (/\b(open marketplace|open agritrade)\b/.test(lower)) {
+    return fast({
+      type: "direct",
+      directAction: "crop-sale-guided",
+      response: "I opened marketplace and AgriTrade support. Agriculture trade is still supported. Tell me the crop, buyer, product, or route you want to work on.",
+      routeLabel: "fast-lane-marketplace"
+    });
+  }
+  if (/\b(open map|open maps|show map|show maps|full map|global map|real map|map please|ramani|mapa|carte)\b/.test(lower)) {
     return fast({
       type: "direct",
       directAction: "full-map",
@@ -20715,11 +20739,15 @@ function nexusConversationFirstResponse(response, suggestions = [], status = "an
 }
 
 function nexusPlatformExplainAnswer() {
-  return "AgriNexus helps people use farming, health access, learning, jobs, trade, maps, and local services by voice. Nexus is the assistant inside it: it listens, answers in simple words, opens the right service, and guides the next step.";
+  return "Nexus is the assistant inside Nexus Workforce AI. I can help with workforce development, training, job readiness, field support, health access, maps and location support, and marketplace or agriculture trade. AgriNexus remains a supported legacy/internal compatibility identity, and agriculture plus AgriTrade remain active domain modules. I can help you get started, guide the workflow, prepare the next step, and ask before taking any high-impact action.";
 }
 
 function nexusPlatformDifferentiatorAnswer() {
-  return "AgriNexus is different because it connects rural and community work in one guided place: agriculture support, telehealth and mobile care access, learning and workforce training, marketplace and trade, logistics and maps, and Nexus assistant guidance. It answers first, opens workflows only when you ask, and keeps risky actions behind confirmation.";
+  return "Nexus Workforce AI is different because Nexus connects training, job readiness, health access, field support, marketplace and agriculture trade, maps, and local services in one guided place. AgriNexus remains supported for legacy compatibility, and AgriTrade remains the agriculture-trade marketplace module. Nexus answers first, opens workflows only when you ask, and keeps risky actions behind confirmation.";
+}
+
+function nexusWorkforceCapabilityAnswer() {
+  return "I can listen in normal words, answer questions, open the right workspace, and guide workforce development, training, job readiness, field support, health access, maps and location support, marketplace or agriculture trade, reminders, and provider handoffs. I can prepare the next step and I will ask before taking high-impact actions.";
 }
 
 function nexusMobileClinicExplainAnswer() {
@@ -20762,8 +20790,8 @@ function nexusResilientConversationIntent(command = "") {
   if (has(capability)) {
     return {
       type: "answer",
-      response: "I can listen in normal words, answer questions, open the right workspace, and guide health support, medicine access, crops, sales, jobs, learning, maps, reminders, and provider handoffs.",
-      suggestions: ["I need a doctor", "my crop is bad", "start a course", "open the map"]
+      response: nexusWorkforceCapabilityAnswer(),
+      suggestions: ["start training", "show job pathways", "open health access", "open AgriTrade"]
     };
   }
   if (has(clinicMap)) return { type: "direct", directAction: "clinic-map-help", response: "I opened the clinic and pharmacy map. Share your village, city, or nearest landmark, and I will guide the closest clinic, mobile clinic, or pharmacy route." };
@@ -21055,18 +21083,18 @@ function nexusConversationFirstIntent(command = "") {
       suggestions: ["Nexus"]
     };
   }
-  if (isPlatformExplainVoiceCommand(command) || /\b(explain agrinexus|explain agri nexus|what is agrinexus|what is agri nexus|tell me about agrinexus|tell me about agri nexus|who are you|what are you)\b/.test(lower)) {
+  if (isPlatformExplainVoiceCommand(command) || /\b(explain nexus workforce ai|explain nexus workforce|what is nexus workforce ai|what is nexus workforce|tell me about nexus workforce ai|tell me about nexus workforce|explain agrinexus|explain agri nexus|what is agrinexus|what is agri nexus|tell me about agrinexus|tell me about agri nexus|are you agrinexus|who are you|what are you)\b/.test(lower)) {
     return {
       type: "answer",
       response: nexusPlatformExplainAnswer(),
-      suggestions: ["help a farmer", "help a patient", "open learning", "open map"]
+      suggestions: ["start training", "show job pathways", "open health access", "open AgriTrade"]
     };
   }
   if (/\b(what can (?:you )?do|how can you help|what do you do|help me understand)\b/.test(lower)) {
     return {
       type: "answer",
-      response: "I can listen in normal words, answer questions, open the right workspace, and guide health support, medicine access, crops, sales, jobs, learning, maps, reminders, and provider handoffs.",
-      suggestions: ["I need a doctor", "my crop is bad", "help me sell maize", "start my course"]
+      response: nexusWorkforceCapabilityAnswer(),
+      suggestions: ["start training", "show job pathways", "open health access", "open AgriTrade"]
     };
   }
   if ((/\b(help.*farmer|farmer|farmers|farming|farm)\b/.test(lower) && /\b(help|support|what can|how can|tell|explain)\b/.test(lower))
