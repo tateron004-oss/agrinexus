@@ -1,6 +1,6 @@
 # Nexus Controlled Action Preview Readiness
 
-Status: Phase 8M low-risk informational preview UI.
+Status: Phase 8O low-risk informational preview UI with hardened clearing lifecycle.
 
 This document defines when Nexus may prepare and, for a narrow allowlist, show a small visible informational preview from a `controlled-action-preview-readiness.v1` object. It does not authorize action staging, confirmation, routing, workflow opening, permission prompts, or execution.
 
@@ -9,6 +9,8 @@ This document defines when Nexus may prepare and, for a narrow allowlist, show a
 Phase 8K answered a narrow design question: given a valid `controlled-action-metadata.v1` object, can Nexus internally mark a future preview as safe to prepare later?
 
 Phase 8M adds the first visible version of that readiness layer: a compact, display-only preview card for approved low-risk informational actions. The readiness object remains non-executing and downstream of existing routing.
+
+Phase 8O hardens the lifecycle of that card so preview content cannot become stale across unrelated commands, blocked prompts, assistant resets, or user-driven module navigation.
 
 ## Current Phase Restrictions
 
@@ -23,6 +25,8 @@ Phase 8M intentionally does not:
 - route commands;
 - change selectedToolId inference;
 - execute tools or provider actions.
+
+Phase 8O also intentionally does not add dismiss buttons, action buttons, staging, confirmation, routing, workflow opening, permission prompts, or any new preview eligibility. It only clears or replaces the existing display-only preview state.
 
 Phase 8M may show a small visible informational preview only when the readiness object is low-risk, permission-free, input-complete, and explicitly marked `userVisibleInThisPhase: true`.
 
@@ -110,6 +114,43 @@ The preview must not show:
 
 The preview is not a workflow. It is not a confirmation. It is not a route. It is not an action button. Existing routers remain authoritative.
 
+## Phase 8O Preview Lifecycle Rules
+
+Preview state is transient. Nexus may show a visible preview only for the current low-risk informational suggestion. Any later command, reset, or ineligible metadata path must either replace the preview with a newly eligible preview or clear it completely.
+
+### Clear Conditions
+
+The preview and Level 1 label are cleared when:
+
+- a new command starts processing;
+- a local simple-user command does not produce an approved low-risk suggestion;
+- a high-risk, privacy-sensitive, permission-sensitive, transaction, account, identity, call, camera, location, health, telehealth, buy, or sell prompt is entered;
+- backend observation has no `agentAction`, a non-metadata runtime status, a non-existing-router source, null metadata, blocked readiness, restricted readiness, missing permissions, missing inputs, or any other ineligible readiness;
+- the visible Level 1 suggestion state is cleared;
+- command inputs are reset to empty;
+- the Ask Nexus surface is closed;
+- the user returns home; or
+- the user changes modules through visible navigation.
+
+Repeating the same low-risk command replaces the existing preview content instead of stacking duplicate cards. Entering a different low-risk command replaces the old preview with the new safe preview.
+
+### Dismiss Behavior
+
+Phase 8O does not add a visible dismiss control. Clearing is automatic through the lifecycle rules above. A future dismiss affordance may only hide the preview and must not use labels such as Continue, Confirm, Go, Open, Start, or any action-like wording.
+
+### Clearing Boundary
+
+Clearing a preview:
+
+- does not execute tools;
+- does not stage pending actions;
+- does not confirm actions;
+- does not route commands;
+- does not open workflows;
+- does not request permissions;
+- does not change `selectedToolId` inference; and
+- does not remove unrelated legitimate UI.
+
 ## Blocked Rules
 
 The following must not be preview-eligible from metadata alone:
@@ -153,14 +194,15 @@ Phase 8M is protected by:
 - `scripts/nexus-controlled-action-metadata-schema-qa.js`
 - `scripts/nexus-controlled-action-preview-readiness-qa.js`
 - `scripts/nexus-controlled-action-preview-ui-qa.js`
+- `scripts/nexus-controlled-action-preview-clear-qa.js`
 - `scripts/nexus-level-one-suggestion-label-qa.js`
 - `scripts/nexus-low-risk-suggestion-builder-qa.js`
 - `scripts/nexus-low-risk-suggestion-observation-qa.js`
 - `scripts/nexus-selected-tool-id-alignment-qa.js`
 - `node scripts/qa-suite.js nexus-workforce`
 
-## Recommended Phase 8N Scope
+## Recommended Phase 8P Scope
 
-Recommended next phase: **Phase 8N: Controlled Action Preview Browser Validation**.
+Recommended next phase: **Phase 8P: Controlled Action Preview Follow-Up Browser Validation**.
 
-Phase 8N should validate the Phase 8M preview in the standard user browser build across desktop and mobile widths, confirm low-risk previews appear, confirm high-risk prompts do not show previews, and continue proving that no confirmation, staging, route, permission, or execution behavior exists.
+Phase 8P should validate the Phase 8O clearing lifecycle in the standard user browser build: low-risk previews replace cleanly, high-risk prompts clear old previews, module navigation clears stale cards, and no confirmation, staging, route, permission, or execution behavior is introduced.

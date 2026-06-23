@@ -267,6 +267,16 @@ function paintControlledActionPreview() {
   });
 }
 
+function clearControlledActionPreview(reason = "reset") {
+  // Phase 8O: visible previews are informational and must not persist across
+  // unrelated commands, blocked metadata, module navigation, or assistant reset.
+  visibleControlledActionPreviewReadiness = null;
+  paintControlledActionPreview();
+  if (localStorage.getItem("agrinexusAgentActionDebug") === "on") {
+    console.debug("Nexus controlled action preview cleared", { reason });
+  }
+}
+
 function paintLevelOneAgentActionSuggestionLabel() {
   const suggestion = visibleLevelOneAgentActionSuggestion;
   const label = suggestion?.visibility === "visible-level-1-label" ? String(suggestion.levelLabel || "").trim() : "";
@@ -292,9 +302,8 @@ function paintLevelOneAgentActionSuggestionLabel() {
 
 function clearLevelOneAgentActionSuggestionLabel() {
   visibleLevelOneAgentActionSuggestion = null;
-  visibleControlledActionPreviewReadiness = null;
+  clearControlledActionPreview("level-one-suggestion-cleared");
   paintLevelOneAgentActionSuggestionLabel();
-  paintControlledActionPreview();
 }
 
 function localLevelOneSuggestionForSimpleUserIntent(intent = {}, command = "") {
@@ -339,7 +348,11 @@ function localLevelOneSuggestionForSimpleUserIntent(intent = {}, command = "") {
 
 function paintLocalLevelOneSuggestionForSimpleUserIntent(intent = {}, command = "") {
   const suggestion = localLevelOneSuggestionForSimpleUserIntent(intent, command);
-  if (!suggestion) return;
+  if (!suggestion) {
+    clearLevelOneAgentActionSuggestionLabel();
+    return;
+  }
+  clearControlledActionPreview("low-risk-preview-replaced");
   visibleLevelOneAgentActionSuggestion = suggestion;
   const controlledActionMetadata = buildControlledActionMetadataFromSuggestion(suggestion);
   const controlledActionPreviewReadiness = buildControlledActionPreviewReadinessFromMetadata(controlledActionMetadata);
@@ -496,13 +509,23 @@ function observeAgentActionMetadata(response = {}, context = {}) {
   // runtime-authoritative. Never execute, route, confirm, stage, open workflows,
   // or trigger modals from this metadata.
   const agentAction = response?.metadata?.agentAction;
-  if (!agentAction || typeof agentAction !== "object") return null;
-  if (agentAction.runtimeStatus !== "metadata-only") return null;
-  if (agentAction.source !== "existing-router") return null;
+  if (!agentAction || typeof agentAction !== "object") {
+    clearLevelOneAgentActionSuggestionLabel();
+    return null;
+  }
+  if (agentAction.runtimeStatus !== "metadata-only") {
+    clearLevelOneAgentActionSuggestionLabel();
+    return null;
+  }
+  if (agentAction.source !== "existing-router") {
+    clearLevelOneAgentActionSuggestionLabel();
+    return null;
+  }
   const lowRiskSuggestion = buildLowRiskAgentActionSuggestion(agentAction);
   const controlledActionMetadata = buildControlledActionMetadataFromSuggestion(lowRiskSuggestion, { agentAction });
   const controlledActionPreviewReadiness = buildControlledActionPreviewReadinessFromMetadata(controlledActionMetadata);
   visibleLevelOneAgentActionSuggestion = lowRiskSuggestion;
+  clearControlledActionPreview("backend-preview-readiness-replaced");
   visibleControlledActionPreviewReadiness = isVisibleControlledActionPreviewReadiness(controlledActionPreviewReadiness)
     ? controlledActionPreviewReadiness
     : null;
@@ -5824,6 +5847,7 @@ function goSection(sectionId, options = {}) {
 function activateSectionFromButton(button, options = {}) {
   const sectionId = button?.dataset?.section || button?.dataset?.mobileSection || button?.dataset?.simpleSection;
   if (!sectionId) return false;
+  clearLevelOneAgentActionSuggestionLabel();
   if (experienceMode === "user" && sectionId === "map") {
     openFullScaleUserMap("Full map is open. You can zoom, drag, find facilities, check routes, and track shipments.");
     const status = $("#simpleActionStatus") || $("#map .user-module-status");
@@ -19868,6 +19892,7 @@ function resumeVoiceAfterUiAction(shouldResume, options = {}) {
 
 function setCommandInputs(command) {
   const value = command || "";
+  if (!value.trim()) clearLevelOneAgentActionSuggestionLabel();
   if ($("#globalCommandInput")) $("#globalCommandInput").value = value;
   if ($("#voiceTextCommand")) $("#voiceTextCommand").value = value;
   if ($("#jarvisCommandInput")) $("#jarvisCommandInput").value = value;
@@ -19914,6 +19939,7 @@ function closeAskNexus(options = {}) {
   if (panel) panel.classList.add("hidden");
   if (globalBar) globalBar.classList.add("hidden");
   if (toggle) toggle.setAttribute("aria-expanded", "false");
+  clearLevelOneAgentActionSuggestionLabel();
   stopVoicePlayback();
   if (!options.silent) {
     setVoiceResponse("Ask AgriNexus closed.", false, { allowVoiceFirst: false });
@@ -20132,6 +20158,7 @@ function openNexusHome(response = "Home is open. What do you need next?") {
   pendingAgentClarification = null;
   pendingNexusSpokenCommand = null;
   pendingWorkflow = null;
+  clearLevelOneAgentActionSuggestionLabel();
   document.body.classList.remove("user-map-full-open");
   closeAskNexus({ silent: true });
   $("#workflowModal")?.classList.add("hidden");
@@ -23593,6 +23620,7 @@ async function handleVoiceCommand(rawCommand, options = {}) {
     pendingAgentClarification = null;
     pendingNexusSpokenCommand = null;
     activeConversationIntake = null;
+    clearLevelOneAgentActionSuggestionLabel();
     setVoiceStatus(voiceFirstMode ? "voice-first" : "standby");
     updateNexusBehaviorLayer("ready", "Nexus recovered from a voice route error and is ready for a simpler retry.");
     setVoiceResponse(voiceCrashRecoveryMessage(rawCommand), true, { allowHandoff: false });

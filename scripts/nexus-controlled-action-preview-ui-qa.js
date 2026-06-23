@@ -39,6 +39,7 @@ const readinessBuilderBody = extractFunction(app, "buildControlledActionPreviewR
 const visibleGuardBody = extractFunction(app, "isVisibleControlledActionPreviewReadiness");
 const previewRendererBody = extractFunction(app, "renderControlledActionPreview");
 const previewPainterBody = extractFunction(app, "paintControlledActionPreview");
+const clearPreviewBody = extractFunction(app, "clearControlledActionPreview");
 const clearBody = extractFunction(app, "clearLevelOneAgentActionSuggestionLabel");
 const localSuggestionBody = extractFunction(app, "localLevelOneSuggestionForSimpleUserIntent");
 const paintLocalBody = extractFunction(app, "paintLocalLevelOneSuggestionForSimpleUserIntent");
@@ -55,8 +56,9 @@ assert.match(visibleGuardBody, /userVisibleInThisPhase !== true/, "visible guard
 assert.match(visibleGuardBody, /requiredPermissions[\s\S]*length/, "visible guard must block permission-required previews");
 assert.match(visibleGuardBody, /missingInputs[\s\S]*length/, "visible guard must block missing-input previews");
 assert.match(visibleGuardBody, /telehealth/, "visible guard must block sensitive terms");
-assert.match(clearBody, /visibleControlledActionPreviewReadiness\s*=\s*null/, "new commands must clear stale preview state");
-assert.match(clearBody, /paintControlledActionPreview\(\)/, "clear helper must repaint preview state");
+assert.match(clearPreviewBody, /visibleControlledActionPreviewReadiness\s*=\s*null/, "central clear helper must reset stale preview state");
+assert.match(clearPreviewBody, /paintControlledActionPreview\(\)/, "central clear helper must repaint preview state");
+assert.match(clearBody, /clearControlledActionPreview\(/, "label clear helper must clear stale preview state");
 assert.match(paintLocalBody, /buildControlledActionMetadataFromSuggestion\(suggestion\)/, "local labels should feed controlled metadata safely");
 assert.match(paintLocalBody, /buildControlledActionPreviewReadinessFromMetadata\(controlledActionMetadata\)/, "local labels should feed preview readiness safely");
 assert.match(observationBody, /visibleControlledActionPreviewReadiness = isVisibleControlledActionPreviewReadiness/, "backend observed metadata should render only visible-eligible previews");
