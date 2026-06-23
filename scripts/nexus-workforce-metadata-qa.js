@@ -90,12 +90,12 @@ function assertIdentity(identity, label) {
     'edition: "workforce"',
     'legacyProductName: "AgriNexus"',
     'const assistantFullName = "AgriNexus";',
-    'const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v276";',
     'localStorage.getItem("agrinexusPersona")',
     "AgriTrade",
     "Sell my crop",
     "Scan my field"
   ], "Frontend fallback identity and protected compatibility");
+  assert.match(appSource, /const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v\d+"/, "Protected AgriNexus PWA cache marker constant should remain");
 
   includesAll(nativeBridge, [
     '"name": "AgriNexus Native Voice Bridge"',

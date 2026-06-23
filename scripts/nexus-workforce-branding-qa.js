@@ -48,12 +48,12 @@ assert(html.includes('"Hey AgriNexus" remains a supported legacy wake phrase.'),
 
 includesAll(app, [
   'const assistantFullName = "AgriNexus";',
-  'const AGRINEXUS_BUILD_VERSION = "nexus-behavior-296";',
-  'const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v276";',
   'localStorage.getItem("agrinexusPersona")',
   'function installAgriNexusNativeBridge()',
   "window.AgriNexusNativeBridge"
 ], "Protected AgriNexus runtime compatibility identifiers");
+assert.match(app, /const AGRINEXUS_BUILD_VERSION = "nexus-behavior-\d+"/, "Protected AgriNexus build marker constant should remain");
+assert.match(app, /const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v\d+"/, "Protected AgriNexus PWA cache marker constant should remain");
 
 includesAll(server, [
   'AGRINEXUS_PWA_CACHE_VERSION',

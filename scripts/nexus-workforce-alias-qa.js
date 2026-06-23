@@ -77,9 +77,9 @@ const commandChecks = [
     "sell my crop",
     "scan my field",
     'const assistantFullName = "AgriNexus";',
-    'const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v276";',
     'localStorage.getItem("agrinexusPersona")'
   ], "Frontend assistant copy, aliases, and protected identifiers");
+  assert.match(app, /const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v\d+"/, "Protected AgriNexus PWA cache marker constant should remain");
 
   includesAll(serverSource, [
     "function nexusWorkforcePlatformExplanation",

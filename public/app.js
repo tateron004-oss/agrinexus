@@ -135,6 +135,7 @@ let latestObservedAgentActionMetadata = null;
 let observedAgentActionMetadataLog = [];
 let visibleLevelOneAgentActionSuggestion = null;
 let visibleControlledActionPreviewReadiness = null;
+let preserveControlledActionPreviewDuringCommandRoute = false;
 const accessibilityPrefs = JSON.parse(localStorage.getItem("agrinexusAccessibility") || "{}");
 const originalTextNodes = new WeakMap();
 let deferredInstallPrompt = null;
@@ -148,8 +149,8 @@ const nexusProductIdentity = Object.freeze({
 });
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-296";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v276";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-304";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v284";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
 const VOICE_ATTENTION_DELAY_MS = 900;
@@ -11568,6 +11569,13 @@ function forceOpenUserProcessScreen(sectionId, config, mapped = {}, label = "Sel
 
 function openMappedUserWorkflow(mapped, sectionId = currentSectionId()) {
   if (!mapped) return false;
+  if (experienceMode === "user" && mapped.command) {
+    paintLocalLevelOneSuggestionForSimpleUserIntent(mapped, mapped.command);
+    preserveControlledActionPreviewDuringCommandRoute = true;
+    queueMicrotask(() => {
+      preserveControlledActionPreviewDuringCommandRoute = false;
+    });
+  }
   if (mapped.directAction === "full-map") {
     return openFullScaleUserMap(mapped.response);
   }
@@ -11591,7 +11599,14 @@ function openMappedUserWorkflow(mapped, sectionId = currentSectionId()) {
         openHealthVideoPreviewWorkflow(config, mapped.response, sectionId);
         return true;
       }
-      return forceOpenUserProcessScreen(sectionId, config, mapped, label);
+      const opened = forceOpenUserProcessScreen(sectionId, config, mapped, label);
+      paintControlledActionPreview();
+      paintLevelOneAgentActionSuggestionLabel();
+      setTimeout(() => {
+        paintControlledActionPreview();
+        paintLevelOneAgentActionSuggestionLabel();
+      }, 180);
+      return opened;
     }
     openWorkflowModal(config);
   } catch (error) {
@@ -19939,7 +19954,9 @@ function closeAskNexus(options = {}) {
   if (panel) panel.classList.add("hidden");
   if (globalBar) globalBar.classList.add("hidden");
   if (toggle) toggle.setAttribute("aria-expanded", "false");
-  clearLevelOneAgentActionSuggestionLabel();
+  if (!options.keepPreview && !preserveControlledActionPreviewDuringCommandRoute) {
+    clearLevelOneAgentActionSuggestionLabel();
+  }
   stopVoicePlayback();
   if (!options.silent) {
     setVoiceResponse("Ask AgriNexus closed.", false, { allowVoiceFirst: false });
@@ -21022,6 +21039,10 @@ function runSimpleUserVoiceIntent(intent, command = "") {
   pendingNexusSpokenCommand = null;
   agentPerformanceState.lastCommand = command;
   paintLocalLevelOneSuggestionForSimpleUserIntent(intent, command);
+  preserveControlledActionPreviewDuringCommandRoute = true;
+  queueMicrotask(() => {
+    preserveControlledActionPreviewDuringCommandRoute = false;
+  });
   if (intent.type === "direct" && intent.directAction === "full-map") return openFullScaleUserMap(intent.response);
   if (intent.type === "direct" && intent.directAction === "country-map") return openCountryMapFromVoice(intent.country, intent.response);
   if (intent.type === "direct" && intent.directAction === "home") return openNexusHome(intent.response);
@@ -21033,10 +21054,24 @@ function runSimpleUserVoiceIntent(intent, command = "") {
   if (intent.type === "direct" && intent.directAction === "doctor-help") return openDoctorHelpNow(intent.response);
   if (intent.type === "direct" && intent.directAction === "crop-sale-guided") return openCropSaleGuidedNow(intent.response);
   if (intent.type === "direct" && intent.directAction === "workforce-guided") return openWorkforceGuidedNow(intent.response);
-  if (intent.type === "direct" && intent.directAction === "learning-guided") return openLearningGuidedNow(intent.response);
+  if (intent.type === "direct" && intent.directAction === "learning-guided") {
+    const opened = openLearningGuidedNow(intent.response);
+    paintLocalLevelOneSuggestionForSimpleUserIntent(intent, command);
+    setTimeout(() => {
+      paintLocalLevelOneSuggestionForSimpleUserIntent(intent, command);
+    }, 180);
+    return opened;
+  }
   if (intent.type === "direct" && intent.directAction === "route-guided") return openRouteGuidedNow(intent.response);
   if (intent.type === "workflow" && intent.workflow === "health" && intent.action === "caption") return openTelehealthCaptionsNow(intent.response);
-  if (intent.type === "workflow") return openWorkflowByVoice(intent.workflow, intent.action, intent.response, intent.dataset || {});
+  if (intent.type === "workflow") {
+    const opened = openWorkflowByVoice(intent.workflow, intent.action, intent.response, intent.dataset || {});
+    paintLocalLevelOneSuggestionForSimpleUserIntent(intent, command);
+    setTimeout(() => {
+      paintLocalLevelOneSuggestionForSimpleUserIntent(intent, command);
+    }, 180);
+    return opened;
+  }
   return false;
 }
 
@@ -21087,7 +21122,14 @@ function openAgentResultWorkflow(result = {}, command = "") {
   if (intent === "conversation.crop_help") return openCropProblemHelpNow(response);
   if (intent === "conversation.crop_sale_help") return openWorkflowByVoice("trade", "buyer-contact", response, { productId: firstProduct()?.id });
   if (intent === "conversation.workforce_help") return openWorkflowByVoice("workforce", "build-profile", response, { roleId: firstEligibleRole()?.id });
-  if (intent === "conversation.learning_start") return openWorkflowByVoice("learning", "start", response, {});
+  if (intent === "conversation.learning_start") {
+    const opened = openWorkflowByVoice("learning", "start", response, {});
+    paintLocalLevelOneSuggestionForSimpleUserIntent({ type: "workflow", workflow: "learning", action: "start" }, command);
+    setTimeout(() => {
+      paintLocalLevelOneSuggestionForSimpleUserIntent({ type: "workflow", workflow: "learning", action: "start" }, command);
+    }, 180);
+    return opened;
+  }
   if (intent === "conversation.map_open") return openFullScaleUserMap(response);
   if (intent === "conversation.location_captured" && result.metadata?.redirectSection === "health") return openMedicineHelpNow(response);
   return false;
@@ -22648,6 +22690,11 @@ async function handleVoiceCommandCore(rawCommand, options = {}) {
   if (explicitLearningIntent) {
     pendingAgentClarification = null;
     pendingNexusSpokenCommand = null;
+    paintLocalLevelOneSuggestionForSimpleUserIntent({ type: "workflow", workflow: "learning", action: explicitLearningIntent.action }, command);
+    preserveControlledActionPreviewDuringCommandRoute = true;
+    queueMicrotask(() => {
+      preserveControlledActionPreviewDuringCommandRoute = false;
+    });
     return openWorkflowByVoice("learning", explicitLearningIntent.action, explicitLearningIntent.response, explicitLearningIntent.dataset || {});
   }
   if (shouldAskRepeatForUnclearVoiceCommand(command, options)) {
@@ -23668,6 +23715,9 @@ async function runBackendAgentCommand(command, locationContext = null, options =
     render();
     const result = data.commandResult || {};
     observeAgentActionMetadata(result, { source: "runBackendAgentCommand", command });
+    if (!visibleControlledActionPreviewReadiness) {
+      paintLocalLevelOneSuggestionForSimpleUserIntent({ type: "direct" }, command);
+    }
     maybeDispatchConfirmedNativeCallHandoff(result);
     if (result.metadata?.companionRouteOutcome) {
       try {
@@ -23766,6 +23816,9 @@ async function runUtilityAgentCommand(command, fallbackAnswer = "", locationCont
     render();
     const result = data.commandResult || {};
     observeAgentActionMetadata(result, { source: "runUtilityAgentCommand", command });
+    if (!visibleControlledActionPreviewReadiness) {
+      paintLocalLevelOneSuggestionForSimpleUserIntent({ type: "direct" }, command);
+    }
     maybeDispatchConfirmedNativeCallHandoff(result);
     if (result.metadata?.companionRouteOutcome) {
       try {
@@ -24039,6 +24092,11 @@ async function runGlobalCommand() {
   const input = $("#globalCommandInput");
   setCommandInputs(input?.value || "");
   const command = input?.value || "";
+  if (!String(command || "").trim()) {
+    clearLevelOneAgentActionSuggestionLabel();
+    setVoiceResponse("Type a request for Nexus, then run the command.", false, { allowVoiceFirst: false });
+    return;
+  }
   const rawLowerCommand = String(command || "").toLowerCase().trim();
   const lowerCommand = normalizeToolText(command);
   const typedGlobalVoiceOn = ((rawLowerCommand.includes("unmute") || rawLowerCommand.includes("voice on")) && /\b(nexus|agrinexus|voice)\b/.test(rawLowerCommand))
@@ -25132,6 +25190,9 @@ function bindStatic() {
   $("#globalBackBtn").onclick = closeAskNexus;
   $("#globalCommandInput").addEventListener("keydown", event => {
     if (event.key === "Enter") runGlobalCommand();
+  });
+  $("#globalCommandInput").addEventListener("input", event => {
+    if (!String(event.target?.value || "").trim()) clearLevelOneAgentActionSuggestionLabel();
   });
   document.addEventListener("visibilitychange", () => {
     if (document.hidden) {

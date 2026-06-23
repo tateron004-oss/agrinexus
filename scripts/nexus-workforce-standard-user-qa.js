@@ -81,14 +81,14 @@ mustInclude(app, [
 
 mustInclude(app, [
   'const assistantFullName = "AgriNexus";',
-  'const AGRINEXUS_BUILD_VERSION = "nexus-behavior-296";',
-  'const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v276";',
   'localStorage.getItem("agrinexusPersona")',
   'data-simple-command="${escapeHtml(action.command)}"',
   'data-simple-section="${item.section}"',
   'farmer: [',
   'simpleUserSections'
 ], "Protected frontend identifiers and workflow wiring");
+assert.match(app, /const AGRINEXUS_BUILD_VERSION = "nexus-behavior-\d+"/, "Protected AgriNexus build marker constant should remain");
+assert.match(app, /const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v\d+"/, "Protected AgriNexus PWA cache marker constant should remain");
 
 mustInclude(server, [
   'AGRINEXUS_PWA_CACHE_VERSION',
