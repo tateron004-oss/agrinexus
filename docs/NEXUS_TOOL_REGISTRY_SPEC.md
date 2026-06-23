@@ -494,6 +494,8 @@ Acceptance criteria:
 - Protected internal rename attempts fail QA.
 - Existing app/core/voice/telehealth/music/call QA remains green.
 
+Phase 7C hardened `scripts/nexus-tool-registry-qa.js` so the static registry is checked for required field quality, domain coverage, alias compatibility, risk and confirmation policy, live-status honesty, QA ownership, protected compatibility notes, and the static-only runtime boundary. The registry remains `static-spec-only`; no runtime behavior, command routing, endpoint contract, native bridge behavior, workflow routing, or confirmation gate consumes it yet.
+
 ### Phase 7D: Additive Agent Action Metadata
 
 Add `agentAction` metadata to selected backend responses while preserving current response fields.

@@ -16,6 +16,17 @@
     "Do not rename package names or protected QA assumptions."
   ],
   "approvedRiskLevels": ["low", "medium", "high", "privacy-sensitive"],
+  "qaCoverage": [
+    "scripts/nexus-tool-registry-qa.js",
+    "scripts/nexus-workforce-branding-qa.js",
+    "scripts/nexus-workforce-standard-user-qa.js",
+    "scripts/nexus-workforce-alias-qa.js",
+    "scripts/nexus-workforce-metadata-qa.js",
+    "scripts/workflow-button-audit.js",
+    "scripts/app-behavior-audit.js",
+    "scripts/voice-response-regression.js",
+    "scripts/companion-confirmation-gate-smoke.js"
+  ],
   "tools": [
     {
       "canonicalToolId": "workforce.training",
