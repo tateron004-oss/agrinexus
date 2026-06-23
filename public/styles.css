@@ -3469,8 +3469,12 @@ body.admin-mode .user-workspace {
 }
 .level-one-suggestion-label {
   align-self: center;
+  justify-self: start;
+  flex: 0 0 auto;
   display: inline-flex;
   align-items: center;
+  width: fit-content;
+  max-width: 100%;
   min-height: 30px;
   padding: 6px 9px;
   border: 1px solid #bddbd6;

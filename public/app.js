@@ -133,6 +133,7 @@ let conversationModeMemories = JSON.parse(localStorage.getItem("agrinexusConvers
 let nexusAwarenessState = JSON.parse(localStorage.getItem("agrinexusAwarenessState") || "{}");
 let latestObservedAgentActionMetadata = null;
 let observedAgentActionMetadataLog = [];
+let visibleLevelOneAgentActionSuggestion = null;
 const accessibilityPrefs = JSON.parse(localStorage.getItem("agrinexusAccessibility") || "{}");
 const originalTextNodes = new WeakMap();
 let deferredInstallPrompt = null;
@@ -205,11 +206,72 @@ function buildLowRiskAgentActionSuggestion(agentAction = {}) {
 }
 
 function renderLevelOneAgentActionSuggestionLabel() {
-  const suggestion = latestObservedAgentActionMetadata?.lowRiskSuggestion;
+  const suggestion = visibleLevelOneAgentActionSuggestion;
   if (!suggestion || suggestion.visibility !== "visible-level-1-label") return "";
   const label = String(suggestion.levelLabel || "").trim();
   if (!label) return "";
   return `<span class="level-one-suggestion-label" aria-label="Nexus suggestion category">${htmlSafe(label)}</span>`;
+}
+
+function paintLevelOneAgentActionSuggestionLabel() {
+  const suggestion = visibleLevelOneAgentActionSuggestion;
+  const label = suggestion?.visibility === "visible-level-1-label" ? String(suggestion.levelLabel || "").trim() : "";
+  [
+    ["#userCaptionPanel", "#userCaptionText"],
+    ["#globalAssistantBar", "#globalAssistantStatus"]
+  ].forEach(([rootSelector, anchorSelector]) => {
+    const root = $(rootSelector);
+    const anchor = $(anchorSelector);
+    if (!root || !anchor) return;
+    let element = root.querySelector("[data-level-one-suggestion-label]");
+    if (!element) {
+      element = document.createElement("span");
+      element.className = "level-one-suggestion-label";
+      element.dataset.levelOneSuggestionLabel = "true";
+      element.setAttribute("aria-label", "Nexus suggestion category");
+      anchor.insertAdjacentElement("beforebegin", element);
+    }
+    element.textContent = label;
+    element.classList.toggle("hidden", !label);
+  });
+}
+
+function clearLevelOneAgentActionSuggestionLabel() {
+  visibleLevelOneAgentActionSuggestion = null;
+  paintLevelOneAgentActionSuggestionLabel();
+}
+
+function localLevelOneSuggestionForSimpleUserIntent(intent = {}, command = "") {
+  const lower = String(command || "").toLowerCase();
+  if (!intent || intent.type === "clarify") return null;
+  if (/\b(telehealth|video|camera|call|doctor|provider|nurse|clinic|hospital|medicine|medical|health|location|locate|where am i|sell|buy|payment|pay|checkout|fertilizer|login|account|verify|identity)\b/.test(lower)) return null;
+  let levelLabel = "";
+  if (/\b(agriculture training|workforce training|start training|show training|open training)\b/.test(lower)) {
+    levelLabel = "Training";
+  } else if (/\b(teach me|help me learn|start a course|show lesson|resume lesson|irrigation works|how .+ works)\b/.test(lower) || intent.workflow === "learning" || intent.directAction === "learning-guided") {
+    levelLabel = "Learning";
+  } else if (/\b(farm jobs|show jobs|job pathways|career pathways|find work|job readiness)\b/.test(lower) || intent.workflow === "workforce" || intent.directAction === "workforce-guided") {
+    levelLabel = "Jobs";
+  } else if (/\b(browse agritrade|open agritrade|open marketplace|browse marketplace|marketplace)\b/.test(lower)) {
+    levelLabel = "Marketplace";
+  } else if (/\b(field support|field help|field issue|farm support)\b/.test(lower)) {
+    levelLabel = "Field Support";
+  } else if (/\b(crop issue|crop issues|crop problem|crop problems|crop stress|pest issue|pest problem)\b/.test(lower)) {
+    levelLabel = "Agriculture Help";
+  }
+  if (!levelLabel) return null;
+  return {
+    visibility: "visible-level-1-label",
+    levelLabel,
+    source: "local-simple-user-route"
+  };
+}
+
+function paintLocalLevelOneSuggestionForSimpleUserIntent(intent = {}, command = "") {
+  const suggestion = localLevelOneSuggestionForSimpleUserIntent(intent, command);
+  if (!suggestion) return;
+  visibleLevelOneAgentActionSuggestion = suggestion;
+  paintLevelOneAgentActionSuggestionLabel();
 }
 
 function observeAgentActionMetadata(response = {}, context = {}) {
@@ -221,6 +283,8 @@ function observeAgentActionMetadata(response = {}, context = {}) {
   if (!agentAction || typeof agentAction !== "object") return null;
   if (agentAction.runtimeStatus !== "metadata-only") return null;
   if (agentAction.source !== "existing-router") return null;
+  const lowRiskSuggestion = buildLowRiskAgentActionSuggestion(agentAction);
+  visibleLevelOneAgentActionSuggestion = lowRiskSuggestion;
   const observed = {
     observedAt: new Date().toISOString(),
     context: {
@@ -239,10 +303,11 @@ function observeAgentActionMetadata(response = {}, context = {}) {
       executionMode: agentAction.executionMode || "existing-route",
       nextStep: agentAction.nextStep || null
     },
-    lowRiskSuggestion: buildLowRiskAgentActionSuggestion(agentAction)
+    lowRiskSuggestion
   };
   latestObservedAgentActionMetadata = observed;
   observedAgentActionMetadataLog = [observed, ...observedAgentActionMetadataLog].slice(0, 10);
+  paintLevelOneAgentActionSuggestionLabel();
   if (localStorage.getItem("agrinexusAgentActionDebug") === "on") {
     console.debug("Nexus agentAction metadata observed", observed);
   }
@@ -20705,6 +20770,7 @@ function runSimpleUserVoiceIntent(intent, command = "") {
   pendingAgentClarification = null;
   pendingNexusSpokenCommand = null;
   agentPerformanceState.lastCommand = command;
+  paintLocalLevelOneSuggestionForSimpleUserIntent(intent, command);
   if (intent.type === "direct" && intent.directAction === "full-map") return openFullScaleUserMap(intent.response);
   if (intent.type === "direct" && intent.directAction === "country-map") return openCountryMapFromVoice(intent.country, intent.response);
   if (intent.type === "direct" && intent.directAction === "home") return openNexusHome(intent.response);
@@ -22079,6 +22145,7 @@ function runCompanionWorkflowOfferIfNeeded(command = "", route = {}) {
 
 async function handleVoiceCommandCore(rawCommand, options = {}) {
   if (!data) return setVoiceResponse("Sign in first, then I can operate the platform.");
+  clearLevelOneAgentActionSuggestionLabel();
   const companionUnderstanding = rememberCompanionUnderstanding(rawCommand, { source: options.source || "voice", mode: conversationPlatformMode() });
   const turnToken = options.turnToken || null;
   const autoLanguage = await applyAutoLanguageFromSpeech(rawCommand, options);

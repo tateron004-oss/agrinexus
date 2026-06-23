@@ -97,12 +97,23 @@ function loadFrontendObservationHarness() {
 
   const appSource = app;
   assert.match(appSource, /function renderLevelOneAgentActionSuggestionLabel/, "frontend may add a display-only Level 1 label renderer");
+  assert.match(appSource, /function paintLevelOneAgentActionSuggestionLabel/, "frontend should paint Level 1 labels into visible assistant surfaces");
+  assert.match(appSource, /function clearLevelOneAgentActionSuggestionLabel/, "frontend must clear stale Level 1 labels before new commands");
+  assert.match(appSource, /function localLevelOneSuggestionForSimpleUserIntent/, "frontend may add display-only labels for safe local Standard User routes");
+  assert.match(appSource, /function paintLocalLevelOneSuggestionForSimpleUserIntent/, "frontend may paint local Standard User labels without metadata authority");
   assert.match(appSource, /class="level-one-suggestion-label"/, "frontend Level 1 label must be a plain label element");
+  assert.match(appSource, /#userCaptionPanel/, "frontend Level 1 labels should be available in the visible caption panel");
+  assert.match(appSource, /#globalAssistantBar/, "frontend Level 1 labels should be available in the visible global assistant bar");
+  assert.match(appSource, /clearLevelOneAgentActionSuggestionLabel\(\);\s*\n\s*const companionUnderstanding/, "new commands must clear stale Level 1 labels before routing");
+  assert.match(appSource, /paintLocalLevelOneSuggestionForSimpleUserIntent\(intent, command\);/, "local Standard User routes should paint display-only Level 1 labels");
+  assert.match(appSource, /telehealth\|video\|camera\|call\|doctor\|provider[\s\S]{0,220}sell\|buy\|payment/, "local display labels must exclude high-risk, privacy, permission, auth, and payment prompts");
   assert(!/data-low-risk-suggestion|data-agent-action-suggestion|lowRiskSuggestionButton|agentActionSuggestionButton|renderLowRiskAgentActionSuggestion|renderAgentActionSuggestion/i.test(appSource), "frontend must not add actionable suggestion containers, buttons, or renderers");
   assert(!/addEventListener\([^)]*lowRiskSuggestion|onclick\s*=\s*.*lowRiskSuggestion/i.test(appSource), "frontend must not attach click handlers to low-risk suggestion metadata");
   assert(!/level-one-suggestion-label[\s\S]{0,240}(addEventListener|onclick|openWorkflow|goSection|mutate|request|confirm|execute|stage|modal)/i.test(appSource), "frontend Level 1 label must not be clickable or executable");
 
   return vm.runInNewContext(`
+    function $() { return null; }
+    let visibleLevelOneAgentActionSuggestion = null;
     ${helperBody}
     let latestObservedAgentActionMetadata = null;
     let observedAgentActionMetadataLog = [];

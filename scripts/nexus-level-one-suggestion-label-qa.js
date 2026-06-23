@@ -25,10 +25,18 @@ function sliceFunction(source, name) {
 const htmlSafeBody = sliceFunction(app, "htmlSafe");
 const builderBody = sliceFunction(app, "buildLowRiskAgentActionSuggestion");
 const rendererBody = sliceFunction(app, "renderLevelOneAgentActionSuggestionLabel");
+const paintBody = sliceFunction(app, "paintLevelOneAgentActionSuggestionLabel");
+const clearBody = sliceFunction(app, "clearLevelOneAgentActionSuggestionLabel");
+const localSuggestionBody = sliceFunction(app, "localLevelOneSuggestionForSimpleUserIntent");
+const paintLocalBody = sliceFunction(app, "paintLocalLevelOneSuggestionForSimpleUserIntent");
 const renderLiveStart = app.indexOf("function renderLiveVoiceSuggestions");
 const renderLiveEnd = app.indexOf("function renderVoiceHelpPanel", renderLiveStart);
 assert(renderLiveStart >= 0 && renderLiveEnd > renderLiveStart, "renderLiveVoiceSuggestions must be extractable");
 const renderLiveBody = app.slice(renderLiveStart, renderLiveEnd);
+const runSimpleStart = app.indexOf("function runSimpleUserVoiceIntent");
+const runSimpleEnd = app.indexOf("function isPriorityServiceVoiceIntent", runSimpleStart);
+assert(runSimpleStart >= 0 && runSimpleEnd > runSimpleStart, "runSimpleUserVoiceIntent must be extractable");
+const runSimpleBody = app.slice(runSimpleStart, runSimpleEnd);
 
 assert.match(builderBody, /visible Level 1 label only/i, "builder must remain display-label only");
 assert.match(builderBody, /visibility:\s*"visible-level-1-label"/, "builder must expose Level 1 label visibility");
@@ -37,6 +45,16 @@ assert.match(builderBody, /executionAllowed:\s*false/, "builder must not allow e
 assert.match(builderBody, /autoOpenAllowed:\s*false/, "builder must not allow auto-open");
 assert.match(builderBody, /userClickRequired:\s*false/, "Level 1 labels must not be user-click actions");
 assert.match(rendererBody, /class="level-one-suggestion-label"/, "renderer must use the Level 1 label class");
+assert.match(paintBody, /data-level-one-suggestion-label/, "paint helper must mark visible Level 1 labels");
+assert.match(paintBody, /#userCaptionPanel/, "paint helper must target the visible caption panel");
+assert.match(paintBody, /#globalAssistantBar/, "paint helper must target the visible global assistant bar");
+assert.match(clearBody, /visibleLevelOneAgentActionSuggestion\s*=\s*null/, "clear helper must reset the visible suggestion state");
+assert.match(app, /clearLevelOneAgentActionSuggestionLabel\(\);\s*\n\s*const companionUnderstanding/, "new commands must clear stale visible labels before routing");
+assert.match(localSuggestionBody, /local-simple-user-route/, "local Standard User routes may add display-only labels without metadata authority");
+assert.match(localSuggestionBody, /telehealth\|video\|camera\|call\|doctor/, "local labels must exclude high-risk health/video/call prompts");
+assert.match(localSuggestionBody, /sell\|buy\|payment\|pay\|checkout\|fertilizer\|login\|account\|verify\|identity/, "local labels must exclude payment/auth/trade execution prompts");
+assert.match(paintLocalBody, /paintLevelOneAgentActionSuggestionLabel\(\)/, "local display helper must only paint the visible label");
+assert.match(runSimpleBody, /paintLocalLevelOneSuggestionForSimpleUserIntent\(intent, command\);/, "local simple routes must paint safe display-only labels before opening existing workflows");
 assert.match(renderLiveBody, /renderLevelOneAgentActionSuggestionLabel\(\)/, "live suggestions must include the display-only label renderer");
 assert.match(styles, /\.level-one-suggestion-label/, "Level 1 label must have compact styling");
 assert.match(styles, /pointer-events:\s*none/, "Level 1 label styling must not invite interaction");
@@ -59,6 +77,10 @@ const forbiddenCalls = [
 for (const call of forbiddenCalls) {
   assert(!builderBody.includes(call), `builder must not call ${call}`);
   assert(!rendererBody.includes(call), `renderer must not call ${call}`);
+  assert(!paintBody.includes(call), `paint helper must not call ${call}`);
+  assert(!clearBody.includes(call), `clear helper must not call ${call}`);
+  assert(!localSuggestionBody.includes(call), `local suggestion helper must not call ${call}`);
+  assert(!paintLocalBody.includes(call), `local suggestion paint helper must not call ${call}`);
 }
 
 assert(!/level-one-suggestion-label[\s\S]{0,240}(addEventListener|onclick|openWorkflow|goSection|mutate|request|confirm|execute|stage|modal)/i.test(app), "Level 1 label must not be clickable or executable");
@@ -66,14 +88,14 @@ assert(!/data-low-risk-suggestion|data-agent-action-suggestion|lowRiskSuggestion
 
 const harness = vm.runInNewContext(`
   ${htmlSafeBody}
-  let latestObservedAgentActionMetadata = null;
+  let visibleLevelOneAgentActionSuggestion = null;
   ${builderBody}
   ${rendererBody}
   ({
     buildLowRiskAgentActionSuggestion,
     renderLevelOneAgentActionSuggestionLabel,
     setLatestSuggestion: (lowRiskSuggestion) => {
-      latestObservedAgentActionMetadata = { lowRiskSuggestion };
+      visibleLevelOneAgentActionSuggestion = lowRiskSuggestion;
     }
   });
 `, {});

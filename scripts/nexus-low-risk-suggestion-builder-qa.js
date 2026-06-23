@@ -89,13 +89,23 @@ const observeStart = app.indexOf("function observeAgentActionMetadata");
 const observeEnd = app.indexOf("const countryLanguageMap", observeStart);
 assert(observeStart >= 0 && observeEnd > observeStart, "observation helper body should be extractable");
 const observeBody = app.slice(observeStart, observeEnd);
-assert.match(observeBody, /lowRiskSuggestion:\s*buildLowRiskAgentActionSuggestion\(agentAction\)/, "observation record may store low-risk Level 1 suggestion label metadata");
+assert.match(observeBody, /const lowRiskSuggestion = buildLowRiskAgentActionSuggestion\(agentAction\)/, "observation helper should build low-risk Level 1 suggestion label metadata");
+assert.match(observeBody, /lowRiskSuggestion\s*\n\s*}/, "observation record may store low-risk Level 1 suggestion label metadata");
 assert(!/lowRiskSuggestion[\s\S]{0,160}(openWorkflow|goSection|mutate|request|confirm|execute|stage|modal)/i.test(observeBody), "observation helper must not execute from lowRiskSuggestion");
 assert.match(observeBody, /Never execute, route, confirm, stage, open workflows,[\s\S]*or trigger modals from this metadata/i, "observation helper must retain no-execute/no-route guard");
 
 assert.match(app, /function renderLevelOneAgentActionSuggestionLabel/, "frontend must define a visible Level 1 label renderer");
+assert.match(app, /function paintLevelOneAgentActionSuggestionLabel/, "frontend must paint Level 1 labels into visible assistant surfaces");
+assert.match(app, /function clearLevelOneAgentActionSuggestionLabel/, "frontend must clear stale Level 1 labels on new commands");
+assert.match(app, /function localLevelOneSuggestionForSimpleUserIntent/, "frontend should label safe local Standard User routes without changing selectedToolId metadata");
+assert.match(app, /function paintLocalLevelOneSuggestionForSimpleUserIntent/, "frontend should paint safe local Standard User labels into visible assistant surfaces");
 assert.match(app, /class="level-one-suggestion-label"/, "visible Level 1 label must use a non-button label element");
+assert.match(app, /#userCaptionPanel/, "visible Level 1 label should be available in the Standard User caption panel");
+assert.match(app, /#globalAssistantBar/, "visible Level 1 label should be available in the global assistant bar");
 assert.match(app, /renderLevelOneAgentActionSuggestionLabel\(\)\}\$\{phrases\.map\(voiceCommandButton\)/, "visible Level 1 label should render alongside existing suggestion chips");
+assert.match(app, /clearLevelOneAgentActionSuggestionLabel\(\);\s*\n\s*const companionUnderstanding/, "new commands must clear stale Level 1 labels before routing");
+assert.match(app, /paintLocalLevelOneSuggestionForSimpleUserIntent\(intent, command\);/, "safe local Standard User routes must paint display-only Level 1 labels");
+assert.match(app, /telehealth\|video\|camera\|call\|doctor\|provider[\s\S]{0,220}sell\|buy\|payment/, "local labels must exclude high-risk, privacy, permission, auth, and payment prompts");
 assert(!/level-one-suggestion-label[\s\S]{0,240}(addEventListener|onclick|openWorkflow|goSection|mutate|request|confirm|execute|stage|modal)/i.test(app), "visible Level 1 label must not be clickable or executable");
 
 assert.ok(!server.includes("nexus-tool-registry.v1.json"), "server.js must not reference static registry JSON at runtime");
