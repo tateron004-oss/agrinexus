@@ -31,7 +31,8 @@
     "scripts/app-behavior-audit.js",
     "scripts/voice-response-regression.js",
     "scripts/companion-confirmation-gate-smoke.js",
-    "scripts/nexus-low-risk-agent-mapping-qa.js"
+    "scripts/nexus-low-risk-agent-mapping-qa.js",
+    "scripts/nexus-agent-action-suggestion-policy-qa.js"
   ],
   "tools": [
     {
@@ -89,7 +90,11 @@
       "mappingReadiness": "candidate-low-risk",
       "earliestAllowedPhase": "7H",
       "frontendConsumptionPolicy": "user-click-required",
-      "mappingNotes": "Training navigation is a low-risk candidate after display-only suggestion QA; existing learning opener stays authoritative."
+      "mappingNotes": "Training navigation is a low-risk candidate after display-only suggestion QA; existing learning opener stays authoritative.",
+      "suggestionEligibility": true,
+      "maxSuggestionLevel": 2,
+      "suggestionLabel": "Open Training",
+      "suggestionSafetyNotes": "User-click suggestion only; existing learning/training opener remains authoritative."
     },
     {
       "canonicalToolId": "workforce.job_pathways",
@@ -152,7 +157,11 @@
       "mappingReadiness": "future-confirmation-gated",
       "earliestAllowedPhase": "7I",
       "frontendConsumptionPolicy": "user-click-required",
-      "mappingNotes": "Career guidance can be suggested later, but role-matching/write paths must stay behind existing workflow controls and confirmation where applicable."
+      "mappingNotes": "Career guidance can be suggested later, but role-matching/write paths must stay behind existing workflow controls and confirmation where applicable.",
+      "suggestionEligibility": true,
+      "maxSuggestionLevel": 2,
+      "suggestionLabel": "Open Job Pathways",
+      "suggestionSafetyNotes": "User-click suggestion for guidance only; application submission and record writes remain excluded."
     },
     {
       "canonicalToolId": "workforce.field_support",
@@ -212,7 +221,11 @@
       "mappingReadiness": "candidate-low-risk",
       "earliestAllowedPhase": "7H",
       "frontendConsumptionPolicy": "display-only-suggestion",
-      "mappingNotes": "Informational field support is a low-risk candidate; farm/crop/drone evidence or record creation remains excluded."
+      "mappingNotes": "Informational field support is a low-risk candidate; farm/crop/drone evidence or record creation remains excluded.",
+      "suggestionEligibility": true,
+      "maxSuggestionLevel": 1,
+      "suggestionLabel": "Nexus recognized this as field support.",
+      "suggestionSafetyNotes": "Display-only informational suggestion; operational evidence/drone/record creation remains excluded."
     },
     {
       "canonicalToolId": "learning.start",
@@ -271,7 +284,11 @@
       "mappingReadiness": "candidate-low-risk",
       "earliestAllowedPhase": "7H",
       "frontendConsumptionPolicy": "user-click-required",
-      "mappingNotes": "Starting or resuming the existing learning UI is a low-risk candidate only through user-click navigation suggestions."
+      "mappingNotes": "Starting or resuming the existing learning UI is a low-risk candidate only through user-click navigation suggestions.",
+      "suggestionEligibility": true,
+      "maxSuggestionLevel": 2,
+      "suggestionLabel": "Open Learning",
+      "suggestionSafetyNotes": "User-click suggestion only; existing learning workflow remains authoritative."
     },
     {
       "canonicalToolId": "learning.quiz",
@@ -330,7 +347,11 @@
       "mappingReadiness": "future-confirmation-gated",
       "earliestAllowedPhase": "7I",
       "frontendConsumptionPolicy": "user-click-required",
-      "mappingNotes": "Quiz preview/practice can be suggested later; scored attempts or record writes must remain existing-route controlled."
+      "mappingNotes": "Quiz preview/practice can be suggested later; scored attempts or record writes must remain existing-route controlled.",
+      "suggestionEligibility": true,
+      "maxSuggestionLevel": 2,
+      "suggestionLabel": "Open Quiz Practice",
+      "suggestionSafetyNotes": "Practice/preview suggestion only; scored attempts or record writes remain existing-route controlled."
     },
     {
       "canonicalToolId": "health.intake",
@@ -398,7 +419,11 @@
       "mappingReadiness": "excluded-privacy-sensitive",
       "earliestAllowedPhase": "7J",
       "frontendConsumptionPolicy": "not-eligible-yet",
-      "mappingNotes": "Health intake creates sensitive records and must not be metadata-driven in early routing phases."
+      "mappingNotes": "Health intake creates sensitive records and must not be metadata-driven in early routing phases.",
+      "suggestionEligibility": false,
+      "maxSuggestionLevel": 0,
+      "suggestionLabel": "",
+      "suggestionSafetyNotes": "Health intake creates sensitive records and is not suggestion-eligible yet."
     },
     {
       "canonicalToolId": "health.telehealth",
@@ -462,7 +487,11 @@
       "mappingReadiness": "excluded-privacy-sensitive",
       "earliestAllowedPhase": "7J",
       "frontendConsumptionPolicy": "not-eligible-yet",
-      "mappingNotes": "Telehealth access has privacy and clinical-boundary implications and remains existing-router only."
+      "mappingNotes": "Telehealth access has privacy and clinical-boundary implications and remains existing-router only.",
+      "suggestionEligibility": false,
+      "maxSuggestionLevel": 0,
+      "suggestionLabel": "",
+      "suggestionSafetyNotes": "Telehealth workflows have clinical-boundary/privacy implications and are not suggestion-eligible yet."
     },
     {
       "canonicalToolId": "health.video_preview",
@@ -525,7 +554,11 @@
       "mappingReadiness": "excluded-privacy-sensitive",
       "earliestAllowedPhase": "7J",
       "frontendConsumptionPolicy": "not-eligible-yet",
-      "mappingNotes": "Camera/video handoff is permission-sensitive and must not be opened from metadata."
+      "mappingNotes": "Camera/video handoff is permission-sensitive and must not be opened from metadata.",
+      "suggestionEligibility": false,
+      "maxSuggestionLevel": 0,
+      "suggestionLabel": "",
+      "suggestionSafetyNotes": "Camera/video handoff is permission-sensitive and must not be suggested as navigation yet."
     },
     {
       "canonicalToolId": "health.provider_call",
@@ -591,7 +624,11 @@
       "mappingReadiness": "excluded-high-risk",
       "earliestAllowedPhase": "7J",
       "frontendConsumptionPolicy": "not-eligible-yet",
-      "mappingNotes": "Provider calls are outbound high-risk actions and must remain confirmation-gated through existing pending-action paths."
+      "mappingNotes": "Provider calls are outbound high-risk actions and must remain confirmation-gated through existing pending-action paths.",
+      "suggestionEligibility": false,
+      "maxSuggestionLevel": 0,
+      "suggestionLabel": "",
+      "suggestionSafetyNotes": "Provider calls are high-risk outbound actions and remain confirmation-gated only."
     },
     {
       "canonicalToolId": "map.location",
@@ -653,7 +690,11 @@
       "mappingReadiness": "excluded-privacy-sensitive",
       "earliestAllowedPhase": "7J",
       "frontendConsumptionPolicy": "not-eligible-yet",
-      "mappingNotes": "Location permission and geolocation use must remain user-permission driven and existing-router controlled."
+      "mappingNotes": "Location permission and geolocation use must remain user-permission driven and existing-router controlled.",
+      "suggestionEligibility": false,
+      "maxSuggestionLevel": 0,
+      "suggestionLabel": "",
+      "suggestionSafetyNotes": "Location permission and geolocation use must remain explicit user-permission flows."
     },
     {
       "canonicalToolId": "agriculture.help",
@@ -710,7 +751,11 @@
       "mappingReadiness": "candidate-low-risk",
       "earliestAllowedPhase": "7H",
       "frontendConsumptionPolicy": "display-only-suggestion",
-      "mappingNotes": "Informational agriculture help is a low-risk candidate while crop sale, scan, or transactional paths remain excluded."
+      "mappingNotes": "Informational agriculture help is a low-risk candidate while crop sale, scan, or transactional paths remain excluded.",
+      "suggestionEligibility": true,
+      "maxSuggestionLevel": 1,
+      "suggestionLabel": "Nexus recognized this as agriculture help.",
+      "suggestionSafetyNotes": "Display-only informational suggestion; crop sale, scan, and transaction paths remain excluded."
     },
     {
       "canonicalToolId": "agriculture.field_scan",
@@ -771,7 +816,11 @@
       "mappingReadiness": "excluded-high-risk",
       "earliestAllowedPhase": "7J",
       "frontendConsumptionPolicy": "not-eligible-yet",
-      "mappingNotes": "Field scan/drone evidence flows are operational/high-risk and remain existing-router controlled."
+      "mappingNotes": "Field scan/drone evidence flows are operational/high-risk and remain existing-router controlled.",
+      "suggestionEligibility": false,
+      "maxSuggestionLevel": 0,
+      "suggestionLabel": "",
+      "suggestionSafetyNotes": "Field scan/drone/evidence workflows are operational and not suggestion-eligible yet."
     },
     {
       "canonicalToolId": "marketplace.agritrade",
@@ -829,7 +878,11 @@
       "mappingReadiness": "candidate-low-risk",
       "earliestAllowedPhase": "7H",
       "frontendConsumptionPolicy": "user-click-required",
-      "mappingNotes": "Browse-only AgriTrade marketplace opening is a low-risk candidate; order/payment/message actions remain excluded."
+      "mappingNotes": "Browse-only AgriTrade marketplace opening is a low-risk candidate; order/payment/message actions remain excluded.",
+      "suggestionEligibility": true,
+      "maxSuggestionLevel": 2,
+      "suggestionLabel": "View AgriTrade Browse Options",
+      "suggestionSafetyNotes": "Browse-only user-click suggestion; orders, payments, and messages remain excluded."
     },
     {
       "canonicalToolId": "marketplace.sell_crop",
@@ -892,7 +945,11 @@
       "mappingReadiness": "excluded-high-risk",
       "earliestAllowedPhase": "7J",
       "frontendConsumptionPolicy": "not-eligible-yet",
-      "mappingNotes": "Crop sale workflows can lead to transactional buyer contact/order/payment paths and must stay gated."
+      "mappingNotes": "Crop sale workflows can lead to transactional buyer contact/order/payment paths and must stay gated.",
+      "suggestionEligibility": false,
+      "maxSuggestionLevel": 0,
+      "suggestionLabel": "",
+      "suggestionSafetyNotes": "Crop sale workflows can lead to buyer contact/order/payment actions and are excluded."
     },
     {
       "canonicalToolId": "logistics.shipment",
@@ -954,7 +1011,11 @@
       "mappingReadiness": "future-confirmation-gated",
       "earliestAllowedPhase": "7I",
       "frontendConsumptionPolicy": "display-only-suggestion",
-      "mappingNotes": "Shipment status display may be suggested later; dispatch/cancel/update operations are excluded from early metadata routing."
+      "mappingNotes": "Shipment status display may be suggested later; dispatch/cancel/update operations are excluded from early metadata routing.",
+      "suggestionEligibility": false,
+      "maxSuggestionLevel": 0,
+      "suggestionLabel": "",
+      "suggestionSafetyNotes": "Shipment workflows can imply tracking/dispatch status; future display-only status requires a separate adapter boundary."
     },
     {
       "canonicalToolId": "voice.command",
@@ -1016,7 +1077,11 @@
       "mappingReadiness": "future-confirmation-gated",
       "earliestAllowedPhase": "7I",
       "frontendConsumptionPolicy": "observation-only",
-      "mappingNotes": "Core command routing remains authoritative; metadata can be observed but must not drive command execution."
+      "mappingNotes": "Core command routing remains authoritative; metadata can be observed but must not drive command execution.",
+      "suggestionEligibility": false,
+      "maxSuggestionLevel": 0,
+      "suggestionLabel": "",
+      "suggestionSafetyNotes": "Core voice/typed command routing remains authoritative and not suggestion-driven."
     },
     {
       "canonicalToolId": "voice.tts_stt",
@@ -1077,7 +1142,11 @@
       "mappingReadiness": "excluded-privacy-sensitive",
       "earliestAllowedPhase": "7J",
       "frontendConsumptionPolicy": "not-eligible-yet",
-      "mappingNotes": "Speech services involve microphone/audio privacy and provider boundaries; they remain explicit opt-in and existing-route controlled."
+      "mappingNotes": "Speech services involve microphone/audio privacy and provider boundaries; they remain explicit opt-in and existing-route controlled.",
+      "suggestionEligibility": false,
+      "maxSuggestionLevel": 0,
+      "suggestionLabel": "",
+      "suggestionSafetyNotes": "Speech provider activation and microphone/audio flows are permission/privacy sensitive."
     },
     {
       "canonicalToolId": "music.local_playback",
@@ -1133,7 +1202,11 @@
       "mappingReadiness": "candidate-low-risk",
       "earliestAllowedPhase": "7H",
       "frontendConsumptionPolicy": "display-only-suggestion",
-      "mappingNotes": "Local demo playback controls are low-risk only for display suggestions; provider playback remains separate."
+      "mappingNotes": "Local demo playback controls are low-risk only for display suggestions; provider playback remains separate.",
+      "suggestionEligibility": true,
+      "maxSuggestionLevel": 1,
+      "suggestionLabel": "Nexus recognized this as music control.",
+      "suggestionSafetyNotes": "Display-only suggestion only; local music controller and provider playback remain separate."
     },
     {
       "canonicalToolId": "admin.dashboard",
@@ -1191,7 +1264,11 @@
       "mappingReadiness": "excluded-high-risk",
       "earliestAllowedPhase": "7J",
       "frontendConsumptionPolicy": "not-eligible-yet",
-      "mappingNotes": "Admin/full mode exposes operational controls and must not be opened from metadata in early phases."
+      "mappingNotes": "Admin/full mode exposes operational controls and must not be opened from metadata in early phases.",
+      "suggestionEligibility": false,
+      "maxSuggestionLevel": 0,
+      "suggestionLabel": "",
+      "suggestionSafetyNotes": "Admin/full operational controls are high-risk and not suggestion-eligible yet."
     },
     {
       "canonicalToolId": "reports.document",
@@ -1254,7 +1331,11 @@
       "mappingReadiness": "future-confirmation-gated",
       "earliestAllowedPhase": "7I",
       "frontendConsumptionPolicy": "not-eligible-yet",
-      "mappingNotes": "Current report/document flows include export/share risk; a future draft-only tool must be split out before any user-click suggestion."
+      "mappingNotes": "Current report/document flows include export/share risk; a future draft-only tool must be split out before any user-click suggestion.",
+      "suggestionEligibility": false,
+      "maxSuggestionLevel": 0,
+      "suggestionLabel": "",
+      "suggestionSafetyNotes": "Current document/report flows include export/share risk; draft-only suggestions require a split tool first."
     }
   ]
 }

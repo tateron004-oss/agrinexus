@@ -546,7 +546,21 @@ Acceptance criteria:
 
 Phase 7G added `docs/NEXUS_LOW_RISK_AGENT_ACTION_MAPPING.md` and static mapping annotations in `docs/nexus-tool-registry.v1.json`. These annotations are planning metadata only. Future implementation must begin with display-only or user-click-required suggestions, not workflow execution or automatic routing.
 
-### Phase 7H: Medium/High-Risk Registry Routing
+### Phase 7H: Display-Only Low-Risk Suggestion Audit/Spec
+
+Define future display-only and user-click-required suggestion rules before adding any visible suggestion UI.
+
+Acceptance criteria:
+
+- No runtime behavior changes.
+- Frontend still only observes `metadata.agentAction`.
+- `agentAction` remains non-authoritative.
+- Static registry remains spec-only and is not imported at runtime.
+- Future implementation starts with Level 1 display labels or Level 2 user-click suggestions only after QA approval.
+
+Phase 7H added `docs/NEXUS_AGENT_ACTION_SUGGESTION_POLICY.md` and static suggestion-policy annotations in `docs/nexus-tool-registry.v1.json`. These annotations define suggestion eligibility, maximum suggestion level, labels, and safety notes, but they are planning metadata only and do not drive runtime behavior.
+
+### Phase 7I: Medium/High-Risk Registry Routing
 
 Migrate staged and confirmation-gated tools after low-risk coverage is stable.
 
@@ -556,7 +570,7 @@ Acceptance criteria:
 - `allowedConfirmations` and "okay does not execute high-risk actions" protections remain intact.
 - Privacy redaction and role checks remain intact.
 
-### Phase 7I: Live Adapter And Audit Log Integration
+### Phase 7J: Live Adapter And Audit Log Integration
 
 Connect registry metadata to live adapter availability, audit events, provider engine boundaries, and future production readiness checks.
 

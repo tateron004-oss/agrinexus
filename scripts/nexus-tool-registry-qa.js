@@ -31,7 +31,11 @@ const requiredToolFields = [
   "mappingReadiness",
   "earliestAllowedPhase",
   "frontendConsumptionPolicy",
-  "mappingNotes"
+  "mappingNotes",
+  "suggestionEligibility",
+  "maxSuggestionLevel",
+  "suggestionLabel",
+  "suggestionSafetyNotes"
 ];
 
 const approvedRiskLevels = new Set(["low", "medium", "high", "privacy-sensitive"]);
@@ -57,7 +61,8 @@ const requiredRegistryQaCoverage = [
   "scripts/nexus-workforce-standard-user-qa.js",
   "scripts/nexus-workforce-alias-qa.js",
   "scripts/nexus-workforce-metadata-qa.js",
-  "scripts/nexus-low-risk-agent-mapping-qa.js"
+  "scripts/nexus-low-risk-agent-mapping-qa.js",
+  "scripts/nexus-agent-action-suggestion-policy-qa.js"
 ];
 const riskyIntentPattern = /health|provider|video|camera|call|dispatch|outbound|share|export|application|apply|order|payment|wallet|settlement|certificate|transcript|drone|admin|document|report/i;
 const unsupportedLiveClaimPattern = /live (medical diagnosis|provider dispatch|payment execution|job application submission|external messaging|webrtc|ehr|fhir)/i;
@@ -109,6 +114,8 @@ for (const tool of registry.tools) {
   assert.ok(approvedLiveStatuses.has(tool.liveStatus), `${tool.canonicalToolId} has unsupported liveStatus ${tool.liveStatus}`);
   assert.ok(approvedMappingReadiness.has(tool.mappingReadiness), `${tool.canonicalToolId} has unsupported mappingReadiness ${tool.mappingReadiness}`);
   assert.ok(approvedFrontendConsumptionPolicies.has(tool.frontendConsumptionPolicy), `${tool.canonicalToolId} has unsupported frontendConsumptionPolicy ${tool.frontendConsumptionPolicy}`);
+  assert.strictEqual(typeof tool.suggestionEligibility, "boolean", `${tool.canonicalToolId} suggestionEligibility must be boolean`);
+  assert.ok(Number.isInteger(tool.maxSuggestionLevel) && tool.maxSuggestionLevel >= 0 && tool.maxSuggestionLevel <= 4, `${tool.canonicalToolId} maxSuggestionLevel must be 0-4`);
   assert.strictEqual(typeof tool.confirmationRequired, "boolean", `${tool.canonicalToolId} confirmationRequired must be boolean`);
   assert.ok(Array.isArray(tool.exampleAliases), `${tool.canonicalToolId} exampleAliases must be an array`);
   assert.ok(Array.isArray(tool.legacyAliases), `${tool.canonicalToolId} legacyAliases must be an array`);
@@ -131,6 +138,8 @@ for (const tool of registry.tools) {
   if (tool.riskLevel === "high" || tool.riskLevel === "privacy-sensitive") {
     assert.strictEqual(tool.confirmationRequired, true, `${tool.canonicalToolId} high/privacy-sensitive tools must require confirmation`);
     assert.notStrictEqual(tool.mappingReadiness, "candidate-low-risk", `${tool.canonicalToolId} high/privacy-sensitive tools must not be low-risk mapping candidates`);
+    assert.strictEqual(tool.suggestionEligibility, false, `${tool.canonicalToolId} high/privacy-sensitive tools must not be suggestion-eligible`);
+    assert.strictEqual(tool.maxSuggestionLevel, 0, `${tool.canonicalToolId} high/privacy-sensitive tools must stay Level 0`);
   }
 
   const riskRelevantText = JSON.stringify({
