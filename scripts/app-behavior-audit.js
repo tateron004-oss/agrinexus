@@ -306,20 +306,20 @@ hasAll(styles, [
 ], "Color-coded app service buttons");
 
 hasAll(app, [
-  "label: \"Talk to Nexus\"",
-  "section: \"ask\"",
-  "label: \"Learn\"",
+  "label: \"Start Training\"",
   "section: \"learning\"",
-  "label: \"Find Work\"",
+  "label: \"Explore Job Pathways\"",
   "section: \"workforce\"",
-  "label: \"Get Health Help\"",
+  "label: \"Get Field Support\"",
+  "Open farm, crop, route, and field evidence support.",
+  "label: \"Open Health Access\"",
   "section: \"health\"",
-  "label: \"Sell Crops\"",
-  "section: \"trade\"",
-  "label: \"Map\"",
+  "label: \"Use Maps & Location\"",
   "section: \"map\"",
-  "label: \"AI Help\"",
-  "section: \"agent\"",
+  "label: \"Open Marketplace / AgriTrade\"",
+  "section: \"trade\"",
+  "label: \"Ask Nexus for Help\"",
+  "section: \"ask\"",
   "photo:"
 ], "Visible app home services");
 

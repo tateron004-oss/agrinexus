@@ -56,7 +56,7 @@ const DEFAULT_MAP_TILE_CONFIG = Object.freeze({
 });
 let mapTileConfig = DEFAULT_MAP_TILE_CONFIG;
 let selectedLearningTrack = "All";
-let selectedPersona = localStorage.getItem("agrinexusPersona") || "farmer";
+let selectedPersona = localStorage.getItem("agrinexusPersona") || "worker";
 let experienceMode = localStorage.getItem("agrinexusExperienceMode") || "";
 let pendingWorkflow = null;
 let pendingGrandmaAction = null;
@@ -10217,10 +10217,10 @@ function simpleHomeActions() {
       { label: "Accessibility help", detail: "Prepare captions, audio guide, or offline packet.", section: "learning" }
     ],
     worker: [
-      { label: "Apply for work", detail: "Apply for the best matched role and record the next step.", command: "apply for that job", primary: true },
-      { label: "Review gaps", detail: "Open workforce readiness and role matching.", command: "review readiness gaps" },
-      { label: "Schedule shift", detail: "Create a paid shift after workforce support is ready.", command: "schedule my shift" },
-      { label: "Find mentor", detail: "Assign mentor support for the candidate.", command: "assign mentor" }
+      { label: "Explore job pathways", detail: "Find matched roles and see the next application step.", command: "show me jobs", primary: true },
+      { label: "Build job readiness", detail: "Review workforce gaps, training needs, and role matching.", command: "review readiness gaps" },
+      { label: "Apply for work", detail: "Apply for the best matched role and record the next step.", command: "apply for that job" },
+      { label: "Plan shift or mentor", detail: "Schedule a shift or assign mentor support after workforce readiness.", command: "schedule my shift" }
     ],
     health: [
       { label: "Start telehealth", detail: "Open accessible intake with language and caregiver support.", command: "start telehealth intake", primary: true },
@@ -10307,13 +10307,13 @@ function renderUserWorkspace() {
   const intelligence = modeIntelligenceSnapshot("user");
   const guideCommand = "help me understand the platform";
   const serviceButtons = [
-    { label: "Talk to Nexus", detail: "Speak or type what you need.", section: "ask", className: "service-ask", ask: true, photo: "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=900&q=70" },
-    { label: "Learn", detail: "Start a course or finish a lesson.", section: "learning", className: "service-learning", photo: "https://images.unsplash.com/photo-1522202176988-66273c2fd55f?auto=format&fit=crop&w=900&q=70" },
-    { label: "Find Work", detail: "Find jobs, apply, and check skills.", section: "workforce", className: "service-workforce", photo: "https://images.unsplash.com/photo-1521737604893-d14cc237f11d?auto=format&fit=crop&w=900&q=70" },
-    { label: "Get Health Help", detail: "Start intake or contact a provider.", section: "health", className: "service-health", photo: "https://images.unsplash.com/photo-1584515933487-779824d29309?auto=format&fit=crop&w=900&q=70" },
-    { label: "Sell Crops", detail: "Contact buyers, create order, track route.", section: "trade", className: "service-trade", photo: "https://images.unsplash.com/photo-1500937386664-56d1dfef3854?auto=format&fit=crop&w=900&q=70" },
-    { label: "Map", detail: "Check route, facility, or farm area.", section: "map", className: "service-map", photo: "https://images.unsplash.com/photo-1524661135-423995f22d0b?auto=format&fit=crop&w=900&q=70" },
-    { label: "AI Help", detail: "Ask Nexus to guide the next step.", section: "agent", className: "service-agent", photo: "https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&w=900&q=70" }
+    { label: "Start Training", detail: "Begin courses, lessons, captions, and certificates.", section: "learning", className: "service-learning", photo: "https://images.unsplash.com/photo-1522202176988-66273c2fd55f?auto=format&fit=crop&w=900&q=70" },
+    { label: "Explore Job Pathways", detail: "Find jobs, apply, review readiness, and plan shifts.", section: "workforce", className: "service-workforce", photo: "https://images.unsplash.com/photo-1521737604893-d14cc237f11d?auto=format&fit=crop&w=900&q=70" },
+    { label: "Get Field Support", detail: "Open farm, crop, route, and field evidence support.", section: "trade", className: "service-trade", photo: "https://images.unsplash.com/photo-1500937386664-56d1dfef3854?auto=format&fit=crop&w=900&q=70" },
+    { label: "Open Health Access", detail: "Start intake, provider handoff, or local camera support.", section: "health", className: "service-health", photo: "https://images.unsplash.com/photo-1584515933487-779824d29309?auto=format&fit=crop&w=900&q=70" },
+    { label: "Use Maps & Location", detail: "Check routes, facilities, regions, and location support.", section: "map", className: "service-map", photo: "https://images.unsplash.com/photo-1524661135-423995f22d0b?auto=format&fit=crop&w=900&q=70" },
+    { label: "Open Marketplace / AgriTrade", detail: "Contact buyers, create crop orders, and track trade routes.", section: "trade", className: "service-trade", photo: "https://images.unsplash.com/photo-1500937386664-56d1dfef3854?auto=format&fit=crop&w=900&q=70" },
+    { label: "Ask Nexus for Help", detail: "Speak or type what you need.", section: "ask", className: "service-ask", ask: true, photo: "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=900&q=70" }
   ].filter(item => item.ask || canOpenSection(item.section));
   target.innerHTML = `
     <section class="user-workspace-hero user-simple-hero">
