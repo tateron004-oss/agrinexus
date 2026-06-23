@@ -12,6 +12,8 @@ Phase 8M adds the first visible version of that readiness layer: a compact, disp
 
 Phase 8O hardens the lifecycle of that card so preview content cannot become stale across unrelated commands, blocked prompts, assistant resets, or user-driven module navigation.
 
+Phase 8Q adds a hidden downstream `controlled-action-confirmation-readiness.v1` object for future confirmation planning. It is internal metadata only: no visible UI, no confirmation prompt, no routing, no staging, no permission prompt, and no execution.
+
 ## Current Phase Restrictions
 
 Phase 8M intentionally does not:
@@ -187,14 +189,17 @@ Marketplace buy, sell, payment, account, order, quote, and transaction behavior 
 
 `controlled-action-preview-readiness.v1` is derived only from valid `controlled-action-metadata.v1`. It is downstream of Level 1 label metadata and upstream of the Phase 8M visible informational preview. Existing routers remain authoritative.
 
+Phase 8Q may derive `controlled-action-confirmation-readiness.v1` only from preview readiness that is already low-risk, visible-preview eligible, permission-free, input-complete, and preview-only. That downstream object remains hidden and observation-only.
+
 ## QA Coverage
 
-Phase 8M is protected by:
+Phase 8M through Phase 8Q are protected by:
 
 - `scripts/nexus-controlled-action-metadata-schema-qa.js`
 - `scripts/nexus-controlled-action-preview-readiness-qa.js`
 - `scripts/nexus-controlled-action-preview-ui-qa.js`
 - `scripts/nexus-controlled-action-preview-clear-qa.js`
+- `scripts/nexus-controlled-action-confirmation-readiness-qa.js`
 - `scripts/nexus-level-one-suggestion-label-qa.js`
 - `scripts/nexus-low-risk-suggestion-builder-qa.js`
 - `scripts/nexus-low-risk-suggestion-observation-qa.js`

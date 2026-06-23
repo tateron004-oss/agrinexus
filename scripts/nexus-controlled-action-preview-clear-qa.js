@@ -36,6 +36,7 @@ const htmlSafeBody = extractFunction(app, "htmlSafe");
 const lowRiskBuilderBody = extractFunction(app, "buildLowRiskAgentActionSuggestion");
 const metadataBuilderBody = extractFunction(app, "buildControlledActionMetadataFromSuggestion");
 const readinessBuilderBody = extractFunction(app, "buildControlledActionPreviewReadinessFromMetadata");
+const confirmationReadinessBuilderBody = extractFunction(app, "buildControlledActionConfirmationReadinessFromPreview");
 const visibleGuardBody = extractFunction(app, "isVisibleControlledActionPreviewReadiness");
 const previewRendererBody = extractFunction(app, "renderControlledActionPreview");
 const previewPainterBody = extractFunction(app, "paintControlledActionPreview");
@@ -160,11 +161,13 @@ const sandbox = vm.runInNewContext(`
   ${htmlSafeBody}
   let visibleLevelOneAgentActionSuggestion = null;
   let visibleControlledActionPreviewReadiness = null;
+  let latestControlledActionConfirmationReadiness = null;
   let latestObservedAgentActionMetadata = null;
   let observedAgentActionMetadataLog = [];
   ${lowRiskBuilderBody}
   ${metadataBuilderBody}
   ${readinessBuilderBody}
+  ${confirmationReadinessBuilderBody}
   ${visibleGuardBody}
   ${previewRendererBody}
   ${previewPainterBody}

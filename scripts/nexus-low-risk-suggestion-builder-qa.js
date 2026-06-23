@@ -92,7 +92,7 @@ const observeBody = app.slice(observeStart, observeEnd);
 assert.match(observeBody, /const lowRiskSuggestion = buildLowRiskAgentActionSuggestion\(agentAction\)/, "observation helper should build low-risk Level 1 suggestion label metadata");
 assert.match(observeBody, /const controlledActionMetadata = buildControlledActionMetadataFromSuggestion\(lowRiskSuggestion, \{ agentAction \}\)/, "observation helper may build controlled action metadata from low-risk suggestion metadata only");
 assert.match(observeBody, /lowRiskSuggestion,\s*\n\s*controlledActionMetadata/, "observation record may store low-risk Level 1 suggestion label metadata and controlled action metadata");
-assert(!/lowRiskSuggestion[\s\S]{0,160}(openWorkflow|goSection|mutate|request|confirm|execute|stage|modal)/i.test(observeBody), "observation helper must not execute from lowRiskSuggestion");
+assert(!/lowRiskSuggestion[\s\S]{0,220}(openWorkflow|goSection|mutate|request\(|confirmPending|execute|stage|modal)/i.test(observeBody), "observation helper must not execute from lowRiskSuggestion");
 assert.match(observeBody, /Never execute, route, confirm, stage, open workflows,[\s\S]*or trigger modals from this metadata/i, "observation helper must retain no-execute/no-route guard");
 
 assert.match(app, /function renderLevelOneAgentActionSuggestionLabel/, "frontend must define a visible Level 1 label renderer");

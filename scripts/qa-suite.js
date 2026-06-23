@@ -61,7 +61,8 @@ const suites = {
     "scripts/nexus-controlled-action-metadata-schema-qa.js",
     "scripts/nexus-controlled-action-preview-readiness-qa.js",
     "scripts/nexus-controlled-action-preview-ui-qa.js",
-    "scripts/nexus-controlled-action-preview-clear-qa.js"
+    "scripts/nexus-controlled-action-preview-clear-qa.js",
+    "scripts/nexus-controlled-action-confirmation-readiness-qa.js"
   ]
 };
 

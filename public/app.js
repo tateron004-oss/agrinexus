@@ -135,6 +135,7 @@ let latestObservedAgentActionMetadata = null;
 let observedAgentActionMetadataLog = [];
 let visibleLevelOneAgentActionSuggestion = null;
 let visibleControlledActionPreviewReadiness = null;
+let latestControlledActionConfirmationReadiness = null;
 let preserveControlledActionPreviewDuringCommandRoute = false;
 const accessibilityPrefs = JSON.parse(localStorage.getItem("agrinexusAccessibility") || "{}");
 const originalTextNodes = new WeakMap();
@@ -272,6 +273,7 @@ function clearControlledActionPreview(reason = "reset") {
   // Phase 8O: visible previews are informational and must not persist across
   // unrelated commands, blocked metadata, module navigation, or assistant reset.
   visibleControlledActionPreviewReadiness = null;
+  latestControlledActionConfirmationReadiness = null;
   paintControlledActionPreview();
   if (localStorage.getItem("agrinexusAgentActionDebug") === "on") {
     console.debug("Nexus controlled action preview cleared", { reason });
@@ -359,6 +361,9 @@ function paintLocalLevelOneSuggestionForSimpleUserIntent(intent = {}, command = 
   const controlledActionPreviewReadiness = buildControlledActionPreviewReadinessFromMetadata(controlledActionMetadata);
   visibleControlledActionPreviewReadiness = isVisibleControlledActionPreviewReadiness(controlledActionPreviewReadiness)
     ? controlledActionPreviewReadiness
+    : null;
+  latestControlledActionConfirmationReadiness = visibleControlledActionPreviewReadiness
+    ? buildControlledActionConfirmationReadinessFromPreview(visibleControlledActionPreviewReadiness)
     : null;
   paintLevelOneAgentActionSuggestionLabel();
   paintControlledActionPreview();
@@ -504,6 +509,127 @@ function buildControlledActionPreviewReadinessFromMetadata(controlledActionMetad
   };
 }
 
+function buildControlledActionConfirmationReadinessFromPreview(controlledActionPreviewReadiness = {}) {
+  // Phase 8Q: confirmation readiness is internal metadata only. It must stay
+  // downstream of safe preview readiness and must not render UI, stage actions,
+  // ask to continue, request permissions, route, open workflows, confirm, or
+  // execute anything.
+  if (!controlledActionPreviewReadiness || typeof controlledActionPreviewReadiness !== "object") return null;
+  if (controlledActionPreviewReadiness.schemaVersion !== "controlled-action-preview-readiness.v1") return null;
+  const selectedToolId = String(controlledActionPreviewReadiness.selectedToolId || "").trim();
+  const actionId = String(controlledActionPreviewReadiness.actionId || "").trim();
+  const levelOneLabel = String(controlledActionPreviewReadiness.levelOneLabel || "").trim();
+  const requiredPermissions = Array.isArray(controlledActionPreviewReadiness.requiredPermissions)
+    ? controlledActionPreviewReadiness.requiredPermissions.slice()
+    : [];
+  const missingInputs = Array.isArray(controlledActionPreviewReadiness.missingInputs)
+    ? controlledActionPreviewReadiness.missingInputs.slice()
+    : [];
+  const base = {
+    schemaVersion: "controlled-action-confirmation-readiness.v1",
+    sourcePreviewReadinessVersion: "controlled-action-preview-readiness.v1",
+    actionId,
+    selectedToolId,
+    levelOneLabel,
+    confirmationEligible: false,
+    confirmationBlockedReason: "Confirmation readiness is not available for this preview.",
+    confirmationRiskLevel: controlledActionPreviewReadiness.previewRiskLevel || "restricted",
+    confirmationMode: "restrictedConfirmationBlocked",
+    safeConfirmationTitle: "",
+    safeConfirmationSummary: "",
+    confirmationQuestion: "",
+    requiredPermissions,
+    missingInputs,
+    allowedNextStep: "blocked",
+    executionBoundary: "confirmationReadinessOnly",
+    auditPolicy: "observeOnly",
+    userVisibleInThisPhase: false
+  };
+  const confirmationMap = {
+    openTrainingResources: {
+      selectedToolId: "workforce.training",
+      title: "Continue to training resources",
+      summary: "Nexus can keep a future training-resource review step ready for an explicit user-controlled flow.",
+      mode: "lowRiskConfirmationReadinessOnly"
+    },
+    showFarmJobs: {
+      selectedToolId: "workforce.job_pathways",
+      title: "Continue to job pathway resources",
+      summary: "Nexus can keep a future job-pathway review step ready without applying or submitting anything.",
+      mode: "lowRiskConfirmationReadinessOnly"
+    },
+    openFieldSupportGuidance: {
+      selectedToolId: "workforce.field_support",
+      title: "Continue to field support guidance",
+      summary: "Nexus can keep a future informational field-support guidance step ready for a user-controlled review flow.",
+      mode: "informationalConfirmationReadinessOnly"
+    },
+    explainLearningTopic: {
+      selectedToolId: "learning.start",
+      title: "Continue to learning guidance",
+      summary: "Nexus can keep a future learning-guidance review step ready without opening lessons or creating records.",
+      mode: "lowRiskConfirmationReadinessOnly"
+    },
+    browseMarketplace: {
+      selectedToolId: "marketplace.agritrade",
+      title: "Continue to AgriTrade browsing guidance",
+      summary: "Nexus can keep a future browse-only AgriTrade guidance step ready for general catalog review.",
+      mode: "informationalConfirmationReadinessOnly"
+    },
+    explainAgricultureHelp: {
+      selectedToolId: "agriculture.help",
+      title: "Continue to agriculture guidance",
+      summary: "Nexus can keep a future informational agriculture guidance step ready for a user-controlled review flow.",
+      mode: "informationalConfirmationReadinessOnly"
+    }
+  };
+  const restrictedTerms = /\b(health|telehealth|video|camera|call|doctor|provider|nurse|clinic|hospital|location|locate|map|payment|pay|wallet|identity|account|login|verify|buy|sell|order|quote|message|dispatch|schedule|submit|checkout|permission|diagnose)\b/i;
+  const unsafeWording = /\b(opened|started|submitted|paid|called|verified|permission granted|camera|location|checkout|dispatch|schedule|execute|submit|pay|call|verify|open camera|diagnose)\b/i;
+  const riskLevel = String(controlledActionPreviewReadiness.previewRiskLevel || "").trim();
+  if (controlledActionPreviewReadiness.previewEligible !== true || controlledActionPreviewReadiness.userVisibleInThisPhase !== true) {
+    return { ...base, confirmationBlockedReason: "Source preview is not eligible." };
+  }
+  if (!["info", "low"].includes(riskLevel)) {
+    return { ...base, confirmationBlockedReason: "Risk level is not confirmation-readiness eligible.", confirmationRiskLevel: riskLevel || "restricted" };
+  }
+  if (requiredPermissions.length || missingInputs.length) {
+    return {
+      ...base,
+      confirmationBlockedReason: requiredPermissions.length ? "Confirmation readiness would require permissions." : "Confirmation readiness would require missing inputs.",
+      confirmationMode: requiredPermissions.length ? "permissionRequiredConfirmationBlocked" : "restrictedConfirmationBlocked"
+    };
+  }
+  if (controlledActionPreviewReadiness.allowedNextStep !== "preparePreviewOnly" || controlledActionPreviewReadiness.executionBoundary !== "previewOnlyReadiness") {
+    return { ...base, confirmationBlockedReason: "Source preview boundary is not preview-only." };
+  }
+  if (controlledActionPreviewReadiness.previewBlockedReason) {
+    return { ...base, confirmationBlockedReason: controlledActionPreviewReadiness.previewBlockedReason };
+  }
+  const confirmation = confirmationMap[actionId];
+  if (!confirmation || confirmation.selectedToolId !== selectedToolId) return base;
+  if (restrictedTerms.test(`${selectedToolId} ${actionId} ${levelOneLabel}`)) {
+    return { ...base, confirmationBlockedReason: "Sensitive or transactional action is not confirmation-readiness eligible." };
+  }
+  const confirmationQuestion = "Would you like Nexus to keep this low-risk next step ready for a future review flow?";
+  if (unsafeWording.test(`${confirmation.title} ${confirmation.summary} ${confirmationQuestion}`)) {
+    return { ...base, confirmationBlockedReason: "Confirmation readiness wording is not safe." };
+  }
+  return {
+    ...base,
+    confirmationEligible: true,
+    confirmationBlockedReason: null,
+    confirmationRiskLevel: riskLevel,
+    confirmationMode: confirmation.mode,
+    safeConfirmationTitle: confirmation.title,
+    safeConfirmationSummary: confirmation.summary,
+    confirmationQuestion,
+    allowedNextStep: "observeConfirmationReadinessOnly",
+    executionBoundary: "confirmationReadinessOnly",
+    auditPolicy: "observeOnly",
+    userVisibleInThisPhase: false
+  };
+}
+
 function observeAgentActionMetadata(response = {}, context = {}) {
   // Phase 7F: agentAction is observation-only and non-authoritative.
   // Existing frontend routers remain authoritative. The static registry is not
@@ -525,10 +651,14 @@ function observeAgentActionMetadata(response = {}, context = {}) {
   const lowRiskSuggestion = buildLowRiskAgentActionSuggestion(agentAction);
   const controlledActionMetadata = buildControlledActionMetadataFromSuggestion(lowRiskSuggestion, { agentAction });
   const controlledActionPreviewReadiness = buildControlledActionPreviewReadinessFromMetadata(controlledActionMetadata);
+  const controlledActionConfirmationReadiness = buildControlledActionConfirmationReadinessFromPreview(controlledActionPreviewReadiness);
   visibleLevelOneAgentActionSuggestion = lowRiskSuggestion;
   clearControlledActionPreview("backend-preview-readiness-replaced");
   visibleControlledActionPreviewReadiness = isVisibleControlledActionPreviewReadiness(controlledActionPreviewReadiness)
     ? controlledActionPreviewReadiness
+    : null;
+  latestControlledActionConfirmationReadiness = visibleControlledActionPreviewReadiness
+    ? controlledActionConfirmationReadiness
     : null;
   const observed = {
     observedAt: new Date().toISOString(),
@@ -550,7 +680,8 @@ function observeAgentActionMetadata(response = {}, context = {}) {
     },
     lowRiskSuggestion,
     controlledActionMetadata,
-    controlledActionPreviewReadiness
+    controlledActionPreviewReadiness,
+    controlledActionConfirmationReadiness
   };
   latestObservedAgentActionMetadata = observed;
   observedAgentActionMetadataLog = [observed, ...observedAgentActionMetadataLog].slice(0, 10);

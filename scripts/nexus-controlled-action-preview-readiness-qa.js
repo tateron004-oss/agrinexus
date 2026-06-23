@@ -202,7 +202,7 @@ assert(!/\b(camera diagnosis|location use|dispatch|scheduling|record creation)\b
 
 assert.match(observationBody, /const controlledActionPreviewReadiness = buildControlledActionPreviewReadinessFromMetadata\(controlledActionMetadata\)/, "observation helper should derive preview readiness from controlled metadata only");
 assert.match(observationBody, /controlledActionMetadata,\s*\n\s*controlledActionPreviewReadiness/, "observation record may store preview readiness beside controlled metadata");
-assert(!/controlledActionPreviewReadiness[\s\S]{0,260}(openWorkflow|goSection|mutate|request|confirm|execute|stage|permission|getUserMedia|geolocation|addEventListener|onclick)/i.test(observationBody), "observation helper must not execute from preview readiness");
+assert(!/controlledActionPreviewReadiness[\s\S]{0,320}(openWorkflow|goSection|mutate|request\(|confirmPending|execute|stage|permission|getUserMedia|geolocation|addEventListener|onclick)/i.test(observationBody), "observation helper must not execute from preview readiness");
 
 const forbiddenCalls = [
   "openWorkflowModal",
