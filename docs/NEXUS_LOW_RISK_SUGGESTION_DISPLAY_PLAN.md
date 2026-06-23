@@ -102,9 +102,11 @@ Phase 8D: Hidden/display-off suggestion builder helper.
 
 Phase 8E: Debug-only suggestion observation QA.
 
-- Verify the helper produces safe suggestion objects for low-risk IDs.
-- Verify high-risk/null IDs produce no suggestion.
-- Verify no workflow opener, route mutation, confirmation, or staging is called from metadata.
+- Added debug-only observation QA for the real backend-to-frontend metadata chain.
+- The QA verifies low-risk backend `selectedToolId` values produce hidden observation suggestions.
+- The QA verifies high-risk, permission-sensitive, privacy-sensitive, and excluded prompts produce no suggestion.
+- No visible UI, buttons, click handlers, routing, execution, auto-open, staging, or confirmation from metadata was added.
+- Future Phase 8F may add visible Level 1 labels only after this hidden observation boundary remains green.
 
 Phase 8F: Visible Level 1 display-only labels.
 
