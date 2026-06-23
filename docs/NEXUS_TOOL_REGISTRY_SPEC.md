@@ -518,7 +518,7 @@ Acceptance criteria:
 - Health video, music controls, call confirmation, learning routing, and map behavior are unchanged.
 - Frontend can show safer "what will happen next" language from metadata.
 
-Phase 7E added observation QA for representative backend agent command responses. `scripts/nexus-agent-action-observation-qa.js` confirms `metadata.agentAction` is present, additive, metadata-only, and descriptive of existing router outcomes. The frontend still does not consume `agentAction`, the static registry remains spec-only and non-authoritative, and existing routers remain the only execution authority. A later phase may add display-only frontend observation after this response metadata remains stable.
+Phase 7E added observation QA for representative backend agent command responses. `scripts/nexus-agent-action-observation-qa.js` confirms `metadata.agentAction` is present, additive, metadata-only, and descriptive of existing router outcomes. At the Phase 7E checkpoint the frontend did not consume `agentAction`, the static registry remained spec-only and non-authoritative, and existing routers remained the only execution authority. Phase 7F adds display-only frontend observation after this response metadata remains stable.
 
 ### Phase 7F: Low-Risk Registry-Driven Routing
 
@@ -529,6 +529,8 @@ Acceptance criteria:
 - Learning open, map open, local camera modal open, and simple help paths are registry-addressable.
 - Existing aliases still work.
 - QA proves ordinary provider/doctor/help commands are not over-routed.
+
+Before registry-driven routing begins, Phase 7F added frontend display-only observation of `metadata.agentAction`. The frontend may capture validated `metadata-only` agent-action summaries for developer/debug visibility, but it must not execute, route, open workflows, stage actions, confirm actions, or alter user-facing behavior from that metadata. Existing frontend routers remain authoritative, and the static registry remains spec-only and non-authoritative.
 
 ### Phase 7G: Medium/High-Risk Registry Routing
 

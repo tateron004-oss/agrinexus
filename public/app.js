@@ -131,6 +131,8 @@ let voiceEventStream = [];
 let conversationModeState = JSON.parse(localStorage.getItem("agrinexusConversationModeState") || "{}");
 let conversationModeMemories = JSON.parse(localStorage.getItem("agrinexusConversationModeMemories") || "{}");
 let nexusAwarenessState = JSON.parse(localStorage.getItem("agrinexusAwarenessState") || "{}");
+let latestObservedAgentActionMetadata = null;
+let observedAgentActionMetadataLog = [];
 const accessibilityPrefs = JSON.parse(localStorage.getItem("agrinexusAccessibility") || "{}");
 const originalTextNodes = new WeakMap();
 let deferredInstallPrompt = null;
@@ -164,6 +166,42 @@ const BROWSER_SPEECH_FALLBACK_STORAGE_KEY = "agrinexusBrowserSpeechFallback";
 // developers/users may opt in with localStorage agrinexusBrowserSpeechFallback=on.
 // Provider failures must update visible status, clear speaking state, and allow
 // voice-first listening to resume safely; aborts/interruption are not failures.
+
+function observeAgentActionMetadata(response = {}, context = {}) {
+  // Phase 7F: agentAction is observation-only and non-authoritative.
+  // Existing frontend routers remain authoritative. The static registry is not
+  // runtime-authoritative. Never execute, route, confirm, stage, open workflows,
+  // or trigger modals from this metadata.
+  const agentAction = response?.metadata?.agentAction;
+  if (!agentAction || typeof agentAction !== "object") return null;
+  if (agentAction.runtimeStatus !== "metadata-only") return null;
+  if (agentAction.source !== "existing-router") return null;
+  const observed = {
+    observedAt: new Date().toISOString(),
+    context: {
+      source: context.source || "unknown",
+      command: context.command || "",
+      intent: response.intent || agentAction.result?.intent || null
+    },
+    agentAction: {
+      schemaVersion: agentAction.schemaVersion || null,
+      runtimeStatus: agentAction.runtimeStatus,
+      source: agentAction.source,
+      normalizedIntent: agentAction.normalizedIntent || null,
+      selectedToolId: agentAction.selectedToolId || null,
+      riskLevel: agentAction.riskLevel || "unknown",
+      confirmationRequired: agentAction.confirmationRequired === true,
+      executionMode: agentAction.executionMode || "existing-route",
+      nextStep: agentAction.nextStep || null
+    }
+  };
+  latestObservedAgentActionMetadata = observed;
+  observedAgentActionMetadataLog = [observed, ...observedAgentActionMetadataLog].slice(0, 10);
+  if (localStorage.getItem("agrinexusAgentActionDebug") === "on") {
+    console.debug("Nexus agentAction metadata observed", observed);
+  }
+  return null;
+}
 
 const countryLanguageMap = {
   nigeria: "en",
@@ -23264,6 +23302,7 @@ async function runBackendAgentCommand(command, locationContext = null, options =
     clearAgentProgressTimers();
     render();
     const result = data.commandResult || {};
+    observeAgentActionMetadata(result, { source: "runBackendAgentCommand", command });
     maybeDispatchConfirmedNativeCallHandoff(result);
     if (result.metadata?.companionRouteOutcome) {
       try {
@@ -23361,6 +23400,7 @@ async function runUtilityAgentCommand(command, fallbackAnswer = "", locationCont
     if (ignoreStaleNexusTurn(turnToken, "utility answer")) return null;
     render();
     const result = data.commandResult || {};
+    observeAgentActionMetadata(result, { source: "runUtilityAgentCommand", command });
     maybeDispatchConfirmedNativeCallHandoff(result);
     if (result.metadata?.companionRouteOutcome) {
       try {

@@ -150,7 +150,8 @@ function assertAgentAction(state, prompt) {
     const registry = JSON.parse(fs.readFileSync(path.join(root, "docs", "nexus-tool-registry.v1.json"), "utf8"));
     assert(!serverSource.includes("nexus-tool-registry.v1.json"), "server.js must not reference static registry JSON at runtime");
     assert(!appSource.includes("nexus-tool-registry.v1.json"), "public/app.js must not reference static registry JSON at runtime");
-    assert(!/metadata\s*\.\s*agentAction|commandResult\s*\.\s*metadata\s*\.\s*agentAction|\[\s*["']agentAction["']\s*\]/.test(appSource), "frontend must not consume metadata.agentAction in Phase 7E");
+    assert.match(appSource, /function observeAgentActionMetadata/, "frontend may observe metadata.agentAction in Phase 7F");
+    assert(!/agentAction\.(frontendAction|backendAction)[\s\S]{0,120}(openWorkflow|goSection|mutate|request|confirm|execute)/i.test(appSource), "frontend must not execute, route, or open workflows from metadata.agentAction");
     assert.match(registry.runtimeStatus || "", /static|spec/i, "static registry must remain static/spec-only");
     assert.match(registry.warning || "", /not runtime-authoritative/i, "static registry must remain non-authoritative");
 

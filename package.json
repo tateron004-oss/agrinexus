@@ -17,6 +17,7 @@
     "qa:nexus-tool-registry": "node scripts/nexus-tool-registry-qa.js",
     "qa:nexus-agent-action": "node scripts/nexus-agent-action-schema-qa.js",
     "qa:nexus-agent-action-observation": "node scripts/nexus-agent-action-observation-qa.js",
+    "qa:nexus-agent-action-frontend": "node scripts/nexus-agent-action-frontend-observation-qa.js",
     "qa:all-safe": "node scripts/qa-suite.js all-safe",
     "smoke": "node scripts/smoke.js",
     "learning:translation-smoke": "node scripts/learning-translation-smoke.js",
