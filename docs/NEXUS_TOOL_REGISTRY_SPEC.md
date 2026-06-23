@@ -518,6 +518,8 @@ Acceptance criteria:
 - Health video, music controls, call confirmation, learning routing, and map behavior are unchanged.
 - Frontend can show safer "what will happen next" language from metadata.
 
+Phase 7E added observation QA for representative backend agent command responses. `scripts/nexus-agent-action-observation-qa.js` confirms `metadata.agentAction` is present, additive, metadata-only, and descriptive of existing router outcomes. The frontend still does not consume `agentAction`, the static registry remains spec-only and non-authoritative, and existing routers remain the only execution authority. A later phase may add display-only frontend observation after this response metadata remains stable.
+
 ### Phase 7F: Low-Risk Registry-Driven Routing
 
 Move only low-risk answer/open-UI tools to registry-selected routing.
