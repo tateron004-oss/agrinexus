@@ -15,6 +15,7 @@ node scripts\qa-suite.js native
 node scripts\qa-suite.js voice
 node scripts\qa-suite.js core
 node scripts\qa-suite.js app
+node scripts\qa-suite.js nexus-workforce
 node scripts\qa-suite.js all-safe
 ```
 
@@ -27,6 +28,7 @@ npm run qa:native
 npm run qa:voice
 npm run qa:core
 npm run qa:app
+npm run qa:nexus-workforce
 npm run qa:all-safe
 ```
 
@@ -55,8 +57,32 @@ node scripts\jarvis-behavior-qa.js
   - `voice` for browser voice, realtime voice, TTS, language, or phone greeting changes.
   - `core` for companion, utility, conversation core, and route safety changes.
   - `app` for frontend workflow, auth gate, and cross-platform behavior changes.
+  - `nexus-workforce` for Nexus Workforce AI branding, Standard User repositioning, assistant aliases, product metadata, and repurpose boundary changes.
 - Keep live, production, destructive, credentialed, provider-engine, database backup/restore, and native compile checks separate from local-safe QA.
 - Do not treat static native QA as Android or iOS build validation.
+
+## Nexus Workforce Repurpose Boundary
+
+The `nexus-workforce` grouped suite is a focused local-safe guard for the AgriNexus-to-Nexus Workforce AI repurpose. It currently runs:
+
+```powershell
+node scripts\nexus-workforce-branding-qa.js
+node scripts\nexus-workforce-standard-user-qa.js
+node scripts\nexus-workforce-alias-qa.js
+node scripts\nexus-workforce-metadata-qa.js
+```
+
+Use it before and after repurpose work to confirm:
+
+- Nexus Workforce AI is the visible product frame.
+- Nexus is the assistant identity.
+- AgriNexus remains the legacy/internal compatibility name.
+- Agriculture remains a supported domain.
+- AgriTrade remains present.
+- Standard User remains worker-first.
+- Product identity metadata is additive.
+- Protected internals are not hard renamed.
+- High-risk workflows remain gated.
 
 ## Intentionally Excluded Or Manual
 

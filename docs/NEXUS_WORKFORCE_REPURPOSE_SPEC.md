@@ -32,6 +32,89 @@ The first implementation passes should add a visible product/edition layer, not 
 6. Phase 6: QA And Docs Alignment
 7. Phase 7: Tool Registry Centralization
 
+## Completed Phase Alignment
+
+### Phase 1: Repurpose Spec / Brand Boundary
+
+Changed:
+
+- Added this project-level boundary for repositioning AgriNexus into Nexus Workforce AI.
+- Defined the public product name, assistant identity, edition, and legacy/internal compatibility name.
+
+Intentionally not changed:
+
+- No runtime files, route contracts, workflow IDs, storage keys, native bridge fields, or package names were renamed.
+- Agriculture, farm, crop, trade, and AgriTrade behavior stayed active.
+
+Protection:
+
+- This document is the guardrail for later phases and is checked manually before broad repurpose work.
+
+### Phase 2: Visible Standard User Rebrand
+
+Changed:
+
+- Updated visible Standard User shell copy so the public experience presents as Nexus Workforce AI with Nexus as the assistant.
+- Kept AgriNexus compatibility framed instead of removed.
+
+Intentionally not changed:
+
+- Internal AgriNexus identifiers, backend contracts, PWA cache names, native bridge fields, and QA assumptions were not hard renamed.
+
+Protection:
+
+- `scripts/nexus-workforce-branding-qa.js` verifies visible Nexus Workforce AI branding, Ask Nexus copy, preserved AgriNexus compatibility identifiers, and AgriTrade presence.
+
+### Phase 3: Standard User Workflow Repositioning
+
+Changed:
+
+- Reordered and reframed Standard User actions to be workforce-first: training, job pathways, field support, health access, maps/location, marketplace/AgriTrade, and assistant help.
+- Kept agriculture visible as a supported domain instead of the dominant product frame.
+
+Intentionally not changed:
+
+- Existing button wiring, workflow IDs, APIs, and agriculture/farmer/crop/trade reachability were preserved.
+
+Protection:
+
+- `scripts/nexus-workforce-standard-user-qa.js` verifies worker-first order, domain coverage, retained AgriTrade and crop paths, and protected frontend/backend/native identifiers.
+
+### Phase 4: Assistant Copy And Aliases
+
+Changed:
+
+- Updated assistant-facing platform explanations and capability summaries to describe Nexus Workforce AI.
+- Added safe aliases such as `help me with training`, `help me find a job pathway`, `open health access`, `open marketplace`, `use location`, and field-support language.
+- Kept legacy prompts such as `Explain AgriNexus` and agriculture/farmer prompts working.
+
+Intentionally not changed:
+
+- High-risk action confirmation, call staging, telehealth/camera handoff, music controls, learning routing, map permission behavior, and workflow modal behavior were not weakened.
+
+Protection:
+
+- `scripts/nexus-workforce-alias-qa.js` verifies the new aliases, legacy AgriNexus prompts, agriculture/trade compatibility, and safe call behavior.
+
+### Phase 5: Backend Product Metadata
+
+Changed:
+
+- Added canonical backend product identity metadata:
+  - `productName: "Nexus Workforce AI"`
+  - `assistantName: "Nexus"`
+  - `edition: "workforce"`
+  - `legacyProductName: "AgriNexus"`
+- Exposed the metadata additively through public responses.
+
+Intentionally not changed:
+
+- Existing response fields, auth behavior, role behavior, endpoint paths, and contract names were not renamed or removed.
+
+Protection:
+
+- `scripts/nexus-workforce-metadata-qa.js` verifies canonical metadata, additive public exposure, preserved protected identifiers, and AgriTrade/agriculture compatibility.
+
 ## Runtime Protection Rules
 
 The Standard User build is the primary demo/testing build and must stay working throughout the repurpose.
@@ -71,17 +154,42 @@ node scripts\qa-suite.js voice
 node scripts\qa-suite.js all-safe
 ```
 
+### Nexus Workforce QA
+
+Run this focused repurpose QA after visible copy, alias, metadata, or Standard User workflow changes:
+
+```powershell
+node scripts\qa-suite.js nexus-workforce
+npm run qa:nexus-workforce
+```
+
+The focused suite runs:
+
+- `scripts/nexus-workforce-branding-qa.js`
+- `scripts/nexus-workforce-standard-user-qa.js`
+- `scripts/nexus-workforce-alias-qa.js`
+- `scripts/nexus-workforce-metadata-qa.js`
+
+Repurpose QA checklist:
+
+- Visible product is Nexus Workforce AI.
+- Assistant identity is Nexus.
+- Legacy/internal compatibility name remains AgriNexus.
+- Agriculture remains a supported domain.
+- AgriTrade remains present.
+- Standard User is worker-first.
+- Product identity metadata is exposed additively.
+- Protected internals were not hard renamed.
+- High-risk workflows remain gated.
+
 ## Future QA Scripts
 
 Recommended future repurpose-specific QA:
 
-- `scripts/nexus-workforce-branding-qa.js`
-- `scripts/nexus-workforce-standard-user-qa.js`
 - `scripts/nexus-workforce-routing-qa.js`
-- `scripts/nexus-workforce-alias-qa.js`
 - `scripts/nexus-workforce-copy-boundary-qa.js`
 
-These scripts should verify the visible Nexus Workforce AI framing, Standard User workflow reachability, preserved agriculture aliases, clear product boundaries, and no accidental removal of existing health, learning, map, telehealth, call, music, or trade behavior.
+These future scripts should verify deeper route/copy boundaries as Phase 7 centralizes the Nexus Tool Registry. They should not replace the focused suite above until they are implemented and green.
 
 ## Developer Warning
 

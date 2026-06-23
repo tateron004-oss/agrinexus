@@ -52,6 +52,12 @@ const suites = {
     "scripts/workflow-button-audit.js",
     "scripts/cross-platform-functions-qa.js",
     "scripts/auth-login-gate-qa.js"
+  ],
+  "nexus-workforce": [
+    "scripts/nexus-workforce-branding-qa.js",
+    "scripts/nexus-workforce-standard-user-qa.js",
+    "scripts/nexus-workforce-alias-qa.js",
+    "scripts/nexus-workforce-metadata-qa.js"
   ]
 };
 

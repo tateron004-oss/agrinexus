@@ -13,6 +13,7 @@
     "qa:voice": "node scripts/qa-suite.js voice",
     "qa:core": "node scripts/qa-suite.js core",
     "qa:app": "node scripts/qa-suite.js app",
+    "qa:nexus-workforce": "node scripts/qa-suite.js nexus-workforce",
     "qa:all-safe": "node scripts/qa-suite.js all-safe",
     "smoke": "node scripts/smoke.js",
     "learning:translation-smoke": "node scripts/learning-translation-smoke.js",
