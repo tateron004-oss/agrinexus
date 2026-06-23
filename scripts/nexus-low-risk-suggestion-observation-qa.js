@@ -153,6 +153,13 @@ function assertLevelOneSuggestionLabel(prompt, observed, expectedToolId, expecte
   assert(Array.isArray(observed.controlledActionMetadata.requiredPermissions) && observed.controlledActionMetadata.requiredPermissions.length === 0, `${prompt} controlled metadata must not request permissions`);
   assert(Array.isArray(observed.controlledActionMetadata.missingInputs) && observed.controlledActionMetadata.missingInputs.length === 0, `${prompt} controlled metadata must not ask for inputs yet`);
   assert.strictEqual(observed.controlledActionMetadata.confirmationRequired, false, `${prompt} controlled metadata must not create confirmation state`);
+  assert(observed.controlledActionPreviewReadiness, `${prompt} should produce preview readiness observation`);
+  assert.strictEqual(observed.controlledActionPreviewReadiness.schemaVersion, "controlled-action-preview-readiness.v1", `${prompt} preview readiness schema should remain v1`);
+  assert.strictEqual(observed.controlledActionPreviewReadiness.sourceMetadataVersion, "controlled-action-metadata.v1", `${prompt} preview readiness should reference source metadata`);
+  assert.strictEqual(observed.controlledActionPreviewReadiness.previewEligible, true, `${prompt} should be preview-ready internally`);
+  assert.strictEqual(observed.controlledActionPreviewReadiness.userVisibleInThisPhase, false, `${prompt} preview readiness must not be visible`);
+  assert.strictEqual(observed.controlledActionPreviewReadiness.allowedNextStep, "preparePreviewOnly", `${prompt} preview readiness must not allow execution`);
+  assert.strictEqual(observed.controlledActionPreviewReadiness.executionBoundary, "previewOnlyReadiness", `${prompt} preview readiness boundary must not execute`);
 }
 
 const lowRiskChecks = [
@@ -227,6 +234,7 @@ const highRiskChecks = [
       assert(observed, `${prompt} should update local observation record`);
       assert.strictEqual(observed.lowRiskSuggestion, null, `${prompt} must not produce a low-risk suggestion label`);
       assert.strictEqual(observed.controlledActionMetadata, null, `${prompt} must not produce controlled action metadata`);
+      assert.strictEqual(observed.controlledActionPreviewReadiness, null, `${prompt} must not produce preview readiness metadata`);
     }
 
     const app = fs.readFileSync(appPath, "utf8");

@@ -311,6 +311,109 @@ function buildControlledActionMetadataFromSuggestion(lowRiskSuggestion = {}, con
   };
 }
 
+function buildControlledActionPreviewReadinessFromMetadata(controlledActionMetadata = {}) {
+  // Phase 8K: readiness metadata only. This helper may describe whether a future
+  // preview could be prepared, but it must not render UI, ask to continue,
+  // stage actions, request permissions, route, open workflows, confirm, or execute.
+  if (!controlledActionMetadata || typeof controlledActionMetadata !== "object") return null;
+  if (controlledActionMetadata.schemaVersion !== "controlled-action-metadata.v1") return null;
+  const selectedToolId = String(controlledActionMetadata.selectedToolId || "").trim();
+  const actionId = String(controlledActionMetadata.actionId || "").trim();
+  const levelOneLabel = String(controlledActionMetadata.levelOneLabel || "").trim();
+  const requiredPermissions = Array.isArray(controlledActionMetadata.requiredPermissions)
+    ? controlledActionMetadata.requiredPermissions.slice()
+    : [];
+  const missingInputs = Array.isArray(controlledActionMetadata.missingInputs)
+    ? controlledActionMetadata.missingInputs.slice()
+    : [];
+  const base = {
+    schemaVersion: "controlled-action-preview-readiness.v1",
+    sourceMetadataVersion: "controlled-action-metadata.v1",
+    actionId,
+    selectedToolId,
+    levelOneLabel,
+    previewEligible: false,
+    previewBlockedReason: "Preview readiness is not available for this metadata.",
+    previewRiskLevel: controlledActionMetadata.riskLevel || "restricted",
+    previewMode: "restrictedPreviewBlocked",
+    safePreviewTitle: "",
+    safePreviewSummary: "",
+    requiresExplicitConfirmation: false,
+    requiredPermissions,
+    missingInputs,
+    allowedNextStep: "blocked",
+    executionBoundary: "previewOnlyReadiness",
+    auditPolicy: "observeOnly",
+    userVisibleInThisPhase: false
+  };
+  const previewMap = {
+    openTrainingResources: {
+      title: "Review training resources",
+      summary: "Nexus can explain training resources and next learning options without opening a workflow or starting an action.",
+      mode: "lowRiskPreviewOnly"
+    },
+    showFarmJobs: {
+      title: "Review farm job resources",
+      summary: "Nexus can summarize job-readiness resources and job pathway information without applying or submitting anything.",
+      mode: "lowRiskPreviewOnly"
+    },
+    openFieldSupportGuidance: {
+      title: "Review field support guidance",
+      summary: "Nexus can provide informational field support guidance without dispatching anyone, using location, scheduling, or creating a service request.",
+      mode: "informationalPreviewOnly"
+    },
+    explainLearningTopic: {
+      title: "Review irrigation learning help",
+      summary: "Nexus can explain the learning topic and suggest study resources without opening lessons or creating records.",
+      mode: "lowRiskPreviewOnly"
+    },
+    browseMarketplace: {
+      title: "Review AgriTrade browsing help",
+      summary: "Nexus can describe marketplace browsing options without buying, selling, messaging, quoting, ordering, account access, or payment.",
+      mode: "informationalPreviewOnly"
+    },
+    explainAgricultureHelp: {
+      title: "Review agriculture help",
+      summary: "Nexus can offer informational crop and agriculture guidance without camera diagnosis, location use, dispatch, scheduling, or record creation.",
+      mode: "informationalPreviewOnly"
+    }
+  };
+  const restrictedTerms = /\b(health|telehealth|video|camera|call|doctor|provider|clinic|hospital|location|locate|map|payment|pay|wallet|identity|account|login|verify|buy|sell|order|quote|message|dispatch|schedule)\b/i;
+  const riskLevel = String(controlledActionMetadata.riskLevel || "").trim();
+  if (!["info", "low"].includes(riskLevel)) {
+    return { ...base, previewBlockedReason: "Risk level is not preview-eligible.", previewRiskLevel: riskLevel || "restricted" };
+  }
+  if (requiredPermissions.length || missingInputs.length) {
+    return {
+      ...base,
+      previewBlockedReason: requiredPermissions.length ? "Preview would require permissions." : "Preview would require missing inputs.",
+      previewMode: requiredPermissions.length ? "permissionRequiredPreviewBlocked" : "restrictedPreviewBlocked"
+    };
+  }
+  if (controlledActionMetadata.executionBoundary !== "metadataOnly" || controlledActionMetadata.blockedReason) {
+    return { ...base, previewBlockedReason: controlledActionMetadata.blockedReason || "Execution boundary is not metadata-only." };
+  }
+  if (restrictedTerms.test(`${selectedToolId} ${actionId} ${levelOneLabel}`)) {
+    return { ...base, previewBlockedReason: "Sensitive or transactional action is not preview-eligible." };
+  }
+  const preview = previewMap[actionId];
+  if (!preview) return base;
+  return {
+    ...base,
+    previewEligible: true,
+    previewBlockedReason: null,
+    previewRiskLevel: riskLevel,
+    previewMode: preview.mode,
+    safePreviewTitle: preview.title,
+    safePreviewSummary: preview.summary,
+    requiresExplicitConfirmation: false,
+    allowedNextStep: "preparePreviewOnly",
+    executionBoundary: "previewOnlyReadiness",
+    auditPolicy: "observeOnly",
+    userVisibleInThisPhase: false
+  };
+}
+
 function observeAgentActionMetadata(response = {}, context = {}) {
   // Phase 7F: agentAction is observation-only and non-authoritative.
   // Existing frontend routers remain authoritative. The static registry is not
@@ -322,6 +425,7 @@ function observeAgentActionMetadata(response = {}, context = {}) {
   if (agentAction.source !== "existing-router") return null;
   const lowRiskSuggestion = buildLowRiskAgentActionSuggestion(agentAction);
   const controlledActionMetadata = buildControlledActionMetadataFromSuggestion(lowRiskSuggestion, { agentAction });
+  const controlledActionPreviewReadiness = buildControlledActionPreviewReadinessFromMetadata(controlledActionMetadata);
   visibleLevelOneAgentActionSuggestion = lowRiskSuggestion;
   const observed = {
     observedAt: new Date().toISOString(),
@@ -342,7 +446,8 @@ function observeAgentActionMetadata(response = {}, context = {}) {
       nextStep: agentAction.nextStep || null
     },
     lowRiskSuggestion,
-    controlledActionMetadata
+    controlledActionMetadata,
+    controlledActionPreviewReadiness
   };
   latestObservedAgentActionMetadata = observed;
   observedAgentActionMetadataLog = [observed, ...observedAgentActionMetadataLog].slice(0, 10);
