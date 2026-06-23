@@ -296,6 +296,14 @@ Recommended demo phrasing:
 
 ## Recommended Next Implementation Phases
 
+Phase 8A: Conversation Quality Polish
+
+- Added stronger, safer assistant-facing responses for broad help, guide, identity, Jarvis-style, training, job pathway, field support, and next-step prompts.
+- Autonomy level remains Level 4: Controlled agentic assistant.
+- `agentAction` remains metadata-only and non-authoritative.
+- Static registry remains spec-only and non-runtime.
+- Existing routers and high-risk confirmation gates remain authoritative.
+
 Phase A: Conversation Quality Polish
 
 - Add or refine direct responses for `How can you help me?`, `I don't know where to start`, `Can you guide me?`, `Can you act like Jarvis?`, and `Can you plan my next steps?`.

@@ -17303,7 +17303,32 @@ function nexusWorkforcePlatformExplanation() {
 }
 
 function nexusWorkforceCapabilitySummary() {
-  return "I can listen in normal words, answer questions, open the right workspace, and guide workforce development, training, job readiness, field support, health access, maps and location support, marketplace or agriculture trade, reminders, and provider handoffs. I can prepare the next step and I will ask before taking high-impact actions.";
+  return "I can listen in normal words, answer questions, open the right workspace, and guide workforce development, training, job readiness, field support, health access, maps and location support, marketplace and AgriTrade agriculture trade, reminders, and provider handoffs. I can prepare the next step and I will ask before taking high-impact actions.";
+}
+
+function nexusJarvisStyleBoundaryAnswer() {
+  const { productName, assistantName, legacyProductName } = PRODUCT_IDENTITY;
+  return `${assistantName} can operate like a guided workflow assistant inside ${productName}: I can understand your request, explain options, guide workflows, remember the current step, and help you take safe next actions. I am not fully autonomous yet. I will ask before any high-impact action, and I do not diagnose medical issues, submit applications, send messages, dispatch providers, process payments, or use location or camera without permission or confirmation. ${legacyProductName} is still supported as a legacy name, and agriculture plus AgriTrade remain supported domains.`;
+}
+
+function nexusStepByStepGuideAnswer() {
+  return "Yes. I can guide you step by step. Choose one starting point: Start training, explore job pathways, get field support, open health access, use maps and location, open AgriTrade, or ask Nexus for help. Tell me one choice, or describe the problem in your own words, and I will ask one simple question before any high-impact action.";
+}
+
+function nexusNextStepPlanAnswer() {
+  return "Here is a safe next-step plan: first choose the area, then I ask for the missing detail, then I open or guide the existing workflow, then I ask before any high-impact action. You can start with training, job pathways, field support, health access, maps, AgriTrade, or general help.";
+}
+
+function nexusTrainingReadinessAnswer() {
+  return "I can help you get trained for work. Tell me the job or skill you want, and I will guide training options, skill gaps, course support, and job-readiness steps. I can prepare the path, but I will not submit any application or send anything for you without confirmation.";
+}
+
+function nexusJobPathwayAnswer() {
+  return "I can help you explore job pathways and prepare for work. Tell me the country and the kind of role you want, and I will guide role options, skill gaps, training links, interview preparation, and application readiness. I will not submit an application unless you explicitly confirm through the existing gate.";
+}
+
+function nexusFieldSupportAnswer() {
+  return "I can help with field support for work, farms, crops, routes, local operations, and AgriTrade agriculture trade. Tell me the field, crop, route, or work issue, and I will guide one safe next step. Live dispatch, drone operation, buyer messages, and payments stay gated or unavailable unless the proper workflow and confirmation are in place.";
 }
 
 function nexusWorkforceDifferentiatorAnswer() {
@@ -23819,6 +23844,62 @@ async function runAgentCommand(db, user, command, options = {}) {
       response: "I can help with a job application, but I do not have a selected job from this chat yet. Choose a job first, or tell me the role and country you want. I will help prepare the application and will not submit anything until you confirm.",
       status: "needs-details",
       metadata: { conversationMode: true, redirectSection: "workforce", suppressBehaviorNudge: true, suggestedReplies: ["show me jobs", "review my skills", "prepare application"] }
+    };
+  }
+  if (conversational && /\b(jarvis|siri|alexa)\b/.test(lower) && /\b(can you|could you|act like|be my|be like|operate like|assistant|agent)\b/.test(lower)) {
+    return {
+      intent: "conversation.jarvis_boundary",
+      response: nexusJarvisStyleBoundaryAnswer(),
+      status: "completed",
+      metadata: { conversationMode: true, redirectSection: "agent", suppressBehaviorNudge: true, suggestedReplies: ["guide me step by step", "what can you do", "start training", "open AgriTrade"] }
+    };
+  }
+  if (conversational && /\b(how can you help me|how can nexus help|what can nexus help|help me understand what you do)\b/.test(lower)) {
+    return {
+      intent: "conversation.capability_summary",
+      response: `${nexusWorkforceCapabilitySummary()} I can guide and prepare work, learning, field, health, map, and AgriTrade steps, but I will ask before calls, applications, messages, payments, health records, location, or camera actions.`,
+      status: "completed",
+      metadata: { conversationMode: true, redirectSection: "agent", suppressBehaviorNudge: true, suggestedReplies: ["start training", "show job pathways", "guide me step by step", "open health access"] }
+    };
+  }
+  if (conversational && /\b(i don'?t know where to start|i do not know where to start|where do i start|guide me step by step|can you guide me|guide me|walk me through|help me step by step)\b/.test(lower)) {
+    return {
+      intent: "conversation.guided_menu",
+      response: nexusStepByStepGuideAnswer(),
+      status: "guiding",
+      metadata: { conversationMode: true, redirectSection: "agent", suppressBehaviorNudge: true, suggestedReplies: ["start training", "show job pathways", "open health access", "open AgriTrade"] }
+    };
+  }
+  if (conversational && /\b(what should i do next|what do i do next|what is next|next step|plan my next steps|can you plan my next steps)\b/.test(lower)) {
+    return {
+      intent: "conversation.next_step_plan",
+      response: nexusNextStepPlanAnswer(),
+      status: "completed",
+      metadata: { conversationMode: true, redirectSection: "agent", suppressBehaviorNudge: true, suggestedReplies: ["start training", "show job pathways", "get field support", "open health access"] }
+    };
+  }
+  if (conversational && /\b(help me get trained|help me getting trained|need help getting trained|get trained|prepare for work|job readiness|work readiness)\b/.test(lower)) {
+    return {
+      intent: "conversation.learning_start",
+      response: nexusTrainingReadinessAnswer(),
+      status: "needs-topic",
+      metadata: { conversationMode: true, redirectSection: "learning", suppressBehaviorNudge: true, suggestedReplies: ["start training", "show job pathways", "prepare for interview", "review my skills"] }
+    };
+  }
+  if (conversational && /\b(help me find a job pathway|find a job pathway|job path|job pathway|career pathway|career path)\b/.test(lower)) {
+    return {
+      intent: "conversation.workforce_help",
+      response: nexusJobPathwayAnswer(),
+      status: "needs-details",
+      metadata: { conversationMode: true, redirectSection: "workforce", suppressBehaviorNudge: true, suggestedReplies: ["show role options", "review my skills", "start training", "prepare application"] }
+    };
+  }
+  if (conversational && /\b(help me in the field|open field support|get field support|field support)\b/.test(lower)) {
+    return {
+      intent: "conversation.crop_help",
+      response: nexusFieldSupportAnswer(),
+      status: "needs-details",
+      metadata: { conversationMode: true, redirectSection: "trade", suppressBehaviorNudge: true, suggestedReplies: ["crop problem", "route support", "field scan", "sell my crop"] }
     };
   }
   if (conversational && isEverydayEncyclopediaQuestion(text)) {
