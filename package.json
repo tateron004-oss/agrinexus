@@ -22,6 +22,7 @@
     "qa:nexus-agent-suggestion-policy": "node scripts/nexus-agent-action-suggestion-policy-qa.js",
     "qa:nexus-conversation-quality": "node scripts/nexus-conversation-quality-qa.js",
     "qa:nexus-selected-tool-id": "node scripts/nexus-selected-tool-id-alignment-qa.js",
+    "qa:nexus-low-risk-suggestion-display": "node scripts/nexus-low-risk-suggestion-display-plan-qa.js",
     "qa:all-safe": "node scripts/qa-suite.js all-safe",
     "smoke": "node scripts/smoke.js",
     "learning:translation-smoke": "node scripts/learning-translation-smoke.js",
