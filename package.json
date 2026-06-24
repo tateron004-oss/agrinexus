@@ -57,6 +57,7 @@
     "qa:nexus-low-risk-renderer-controlled-runtime-flag-on-test-harness-plan": "node scripts/nexus-low-risk-renderer-controlled-runtime-flag-on-test-harness-plan-qa.js",
     "qa:nexus-low-risk-renderer-controlled-runtime-flag-on-static": "node scripts/nexus-low-risk-renderer-controlled-runtime-flag-on-static-qa.js",
     "qa:nexus-low-risk-renderer-controlled-runtime-flag-on-readiness-review": "node scripts/nexus-low-risk-renderer-controlled-runtime-flag-on-readiness-review-qa.js",
+    "qa:nexus-low-risk-renderer-controlled-runtime-flag-on-test-harness-implementation": "node scripts/nexus-low-risk-renderer-controlled-runtime-flag-on-test-harness-implementation-qa.js",
     "qa:nexus-intent-classifier": "node scripts/nexus-intent-classifier-qa.js",
     "qa:nexus-selected-tool-id": "node scripts/nexus-selected-tool-id-alignment-qa.js",
     "qa:nexus-low-risk-suggestion-display": "node scripts/nexus-low-risk-suggestion-display-plan-qa.js",

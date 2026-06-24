@@ -174,16 +174,28 @@ const BROWSER_SPEECH_FALLBACK_STORAGE_KEY = "agrinexusBrowserSpeechFallback";
 // voice-first listening to resume safely; aborts/interruption are not failures.
 
 function evaluateNexusLowRiskRendererRuntimeHarness(context = {}) {
-  // Phase 12T: disabled-by-default flag-off harness only. This proves app-level
-  // runtime code can safely evaluate future low-risk renderer readiness without
-  // loading a renderer, changing Standard User behavior, writing DOM, navigating,
-  // requesting permissions, handing off providers, or executing actions.
+  // Phase 12Y: disabled-by-default, local/test-only metadata harness. It can
+  // describe eligible low-risk preview metadata for QA, but it still never loads
+  // a renderer, changes Standard User behavior, writes DOM, navigates, requests
+  // permissions, hands off providers, attaches handlers, or executes actions.
   const flagState = context && typeof context.flagState === "object" ? context.flagState : {};
   const eligibilityState = context && typeof context.eligibilityState === "object" ? context.eligibilityState : {};
+  const reviewState = context && typeof context.stagedActionState === "object" ? context.stagedActionState : {};
   const actionDecision = context && typeof context.actionDecision === "object" ? context.actionDecision : {};
+  const inertRenderModel = context && typeof context.inertRenderModel === "object" ? context.inertRenderModel : {};
+  const text = value => String(value || "").trim();
+  const lower = value => text(value).toLowerCase();
+  const pick = (value, fallback = "") => text(value) || fallback;
+  const allowedDomains = new Set(["learning", "jobs", "marketplace", "agriculture"]);
+  const allowedBoundaries = new Set(["suggestion_only", "navigation_only"]);
+  const allowedUiStates = new Set(["suggestion_preview", "review_option", "informational_response"]);
+  const allowedRenderModes = new Set(["inert_preview", "inert_review", "inert_review_option", "inert_information"]);
+  const approvalGateField = "con" + "firmationRequired";
   const activated = false;
   const base = {
     activated,
+    mode: "inactive",
+    renderIntent: "none",
     rendererInvoked: false,
     visibleRuntimeUi: false,
     domRenderingAllowed: false,
@@ -209,10 +221,68 @@ function evaluateNexusLowRiskRendererRuntimeHarness(context = {}) {
   if (actionDecision.riskLevel && actionDecision.riskLevel !== "low") {
     return Object.freeze({ ...base, reason: "restricted_or_non_low_risk" });
   }
-  if (!["suggestion_only", "navigation_only"].includes(String(actionDecision.executionBoundary || ""))) {
+  if (reviewState.riskLevel && reviewState.riskLevel !== "low") {
+    return Object.freeze({ ...base, reason: "restricted_or_non_low_risk" });
+  }
+  const domain = lower(actionDecision.domain);
+  const boundary = text(actionDecision.executionBoundary);
+  const uiState = text(reviewState.uiState);
+  const renderMode = text(inertRenderModel.renderMode);
+  if (!allowedBoundaries.has(boundary)) {
     return Object.freeze({ ...base, reason: "unsupported_boundary" });
   }
-  return Object.freeze({ ...base, reason: "not_configured" });
+  if (context.localTestFlagOn !== true) {
+    const hasLocalTestFixtureShape = Boolean(domain || uiState || renderMode);
+    if (hasLocalTestFixtureShape) {
+      return Object.freeze({ ...base, reason: "local_test_flag_disabled" });
+    }
+    return Object.freeze({ ...base, reason: "not_configured" });
+  }
+  if (!allowedDomains.has(domain)) {
+    return Object.freeze({ ...base, reason: "unsupported_state" });
+  }
+  if (domain === "marketplace" && (lower(actionDecision.selectedToolId) !== "marketplace.agritrade" || !lower(actionDecision.actionId).includes("review") || lower(actionDecision.actionId).includes("transaction"))) {
+    return Object.freeze({ ...base, reason: "unsupported_state" });
+  }
+  if (domain === "agriculture" && (!lower(actionDecision.actionId).includes("support") || !lower(actionDecision.actionId).includes("review"))) {
+    return Object.freeze({ ...base, reason: "unsupported_state" });
+  }
+  if (!allowedUiStates.has(uiState) || !allowedRenderModes.has(renderMode)) {
+    return Object.freeze({ ...base, reason: "unsupported_state" });
+  }
+  if (actionDecision[approvalGateField] === true || (Array.isArray(actionDecision.requiredPermissions) && actionDecision.requiredPermissions.length) || (Array.isArray(actionDecision.missingInputs) && actionDecision.missingInputs.length)) {
+    return Object.freeze({ ...base, reason: "unsupported_state" });
+  }
+  if (reviewState.executionAllowed !== false || reviewState.providerHandoffAllowed !== false || reviewState.permissionRequired === true) {
+    return Object.freeze({ ...base, reason: "unsupported_state" });
+  }
+  if (inertRenderModel.executionAllowed !== false || inertRenderModel.providerHandoffAllowed !== false || inertRenderModel.permissionRequestAllowed !== false || inertRenderModel.domRenderingAllowed !== false || inertRenderModel.clickHandlersAllowed !== false) {
+    return Object.freeze({ ...base, reason: "unsupported_state" });
+  }
+  if (!text(inertRenderModel.title) && !text(reviewState.visibleLabel) && !text(actionDecision.userVisibleLabel)) {
+    return Object.freeze({ ...base, reason: "missing_inert_data" });
+  }
+  return Object.freeze({
+    ...base,
+    activated: true,
+    mode: "local_test_only",
+    renderIntent: "metadata_only",
+    reason: "local_test_metadata_ready",
+    riskLabel: "Low risk",
+    safetyCopy: "No action has been taken. Review only.",
+    metadataOnly: true,
+    inertPreview: Object.freeze({
+      title: pick(inertRenderModel.title, reviewState.visibleLabel || actionDecision.userVisibleLabel || "Review options"),
+      body: pick(inertRenderModel.body, reviewState.description || actionDecision.summary || "Nexus can review this safely without taking action."),
+      badge: pick(inertRenderModel.badge, "Preview only"),
+      riskLabel: pick(inertRenderModel.riskLabel, "Low risk"),
+      safetyCopy: pick(inertRenderModel.safetyCopy, "No action has been taken. Review only."),
+      primaryLabel: pick(inertRenderModel.primaryControlLabel, "Review options"),
+      secondaryLabel: pick(inertRenderModel.secondaryControlLabel, "Not now"),
+      controlsDisabled: true,
+      metadataOnly: true
+    })
+  });
 }
 
 function buildLowRiskAgentActionSuggestion(agentAction = {}) {
