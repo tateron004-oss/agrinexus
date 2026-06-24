@@ -66,6 +66,7 @@ const suites = {
     "scripts/nexus-plan-observation-qa.js",
     "scripts/nexus-planner-safety-hardening-qa.js",
     "scripts/nexus-session-memory-qa.js",
+    "scripts/nexus-session-memory-observation-qa.js",
     "scripts/nexus-controlled-action-metadata-schema-qa.js",
     "scripts/nexus-controlled-action-preview-readiness-qa.js",
     "scripts/nexus-controlled-action-preview-ui-qa.js",

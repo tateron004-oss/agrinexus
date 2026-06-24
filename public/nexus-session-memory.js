@@ -40,7 +40,7 @@
 
   const SENSITIVE_KEY_PATTERN = /(password|passcode|secret|token|credential|auth|phone|email|contact|address|location|lat|lng|lon|medical|health|diagnosis|symptom|payment|card|account|identity|emergency|buyer|seller|patient|caregiver)/i;
   const EXECUTABLE_KEY_PATTERN = /(handler|callback|executor|adapter|dispatch|deepLink|openUrl|providerUrl|telUrl|href|native(?:Bridge)?|paymentIntent|phoneNumberToDial|messageToSend|routeTo|modalId|permissionRequest)/i;
-  const EXECUTABLE_ACTION_PATTERN = /(provider_handoff|external_execution|call|message|payment|location|camera|marketplace|account|health|emergency)/i;
+  const EXECUTABLE_ACTION_PATTERN = /(provider|provider_handoff|external_execution|call|message|payment|location|camera|marketplace|account|profile|health|emergency)/i;
 
   function clone(value) {
     return value && typeof value === "object" ? JSON.parse(JSON.stringify(value)) : value;
@@ -95,6 +95,7 @@
   }
 
   function shouldExcludeKey(key = "") {
+    if (key === "executionAuthority") return false;
     return SENSITIVE_KEY_PATTERN.test(key) || EXECUTABLE_KEY_PATTERN.test(key);
   }
 
