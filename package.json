@@ -37,6 +37,7 @@
     "qa:nexus-autonomous-execution-architecture": "node scripts/nexus-autonomous-execution-architecture-qa.js",
     "qa:nexus-autonomous-action-schema": "node scripts/nexus-autonomous-action-schema-qa.js",
     "qa:nexus-planner-action-decision-mapper": "node scripts/nexus-planner-action-decision-mapper-qa.js",
+    "qa:nexus-action-decision-observation": "node scripts/nexus-action-decision-observation-qa.js",
     "qa:nexus-intent-classifier": "node scripts/nexus-intent-classifier-qa.js",
     "qa:nexus-selected-tool-id": "node scripts/nexus-selected-tool-id-alignment-qa.js",
     "qa:nexus-low-risk-suggestion-display": "node scripts/nexus-low-risk-suggestion-display-plan-qa.js",
