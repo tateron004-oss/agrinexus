@@ -42,6 +42,7 @@
     "qa:nexus-staged-action-state": "node scripts/nexus-staged-action-state-qa.js",
     "qa:nexus-staged-action-ui-observation": "node scripts/nexus-staged-action-ui-observation-qa.js",
     "qa:nexus-staged-action-inert-renderer": "node scripts/nexus-staged-action-inert-renderer-qa.js",
+    "qa:nexus-staged-action-inert-renderer-observation": "node scripts/nexus-staged-action-inert-renderer-observation-qa.js",
     "qa:nexus-intent-classifier": "node scripts/nexus-intent-classifier-qa.js",
     "qa:nexus-selected-tool-id": "node scripts/nexus-selected-tool-id-alignment-qa.js",
     "qa:nexus-low-risk-suggestion-display": "node scripts/nexus-low-risk-suggestion-display-plan-qa.js",

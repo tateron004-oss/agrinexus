@@ -67,6 +67,7 @@ const suites = {
     "scripts/nexus-staged-action-state-qa.js",
     "scripts/nexus-staged-action-ui-observation-qa.js",
     "scripts/nexus-staged-action-inert-renderer-qa.js",
+    "scripts/nexus-staged-action-inert-renderer-observation-qa.js",
     "scripts/nexus-tool-registry-runtime-qa.js",
     "scripts/nexus-intent-classifier-qa.js",
     "scripts/nexus-policy-engine-qa.js",
