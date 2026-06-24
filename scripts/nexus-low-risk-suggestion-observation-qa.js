@@ -85,16 +85,13 @@ async function command(prompt) {
 
 function loadFrontendObservationHarness() {
   const app = fs.readFileSync(appPath, "utf8");
-  const helperStart = app.indexOf("function buildLowRiskAgentActionSuggestion");
-  const helperEnd = app.indexOf("function observeAgentActionMetadata", helperStart);
-  const observeStart = helperEnd;
-  const observeEnd = app.indexOf("const countryLanguageMap", observeStart);
-  assert(helperStart >= 0 && helperEnd > helperStart, "frontend builder helper must be extractable");
-  assert(observeStart >= 0 && observeEnd > observeStart, "frontend observation helper must be extractable");
-
   const htmlSafeBody = extractFunction(app, "htmlSafe");
-  const helperBody = app.slice(helperStart, helperEnd);
-  const observeBody = app.slice(observeStart, observeEnd);
+  const helperBody = extractFunction(app, "buildLowRiskAgentActionSuggestion");
+  const controlledMetadataBody = extractFunction(app, "buildControlledActionMetadataFromSuggestion");
+  const previewReadinessBody = extractFunction(app, "buildControlledActionPreviewReadinessFromMetadata");
+  const confirmationReadinessBody = extractFunction(app, "buildControlledActionConfirmationReadinessFromPreview");
+  const navigationReadinessBody = extractFunction(app, "buildControlledActionNavigationReadinessFromConfirmation");
+  const observeBody = extractFunction(app, "observeAgentActionMetadata");
   const forbiddenCalls = [
     "openWorkflowModal",
     "openWorkflowByVoice",
@@ -135,8 +132,28 @@ function loadFrontendObservationHarness() {
     ${htmlSafeBody}
     let visibleLevelOneAgentActionSuggestion = null;
     ${helperBody}
+    ${controlledMetadataBody}
+    ${previewReadinessBody}
+    ${confirmationReadinessBody}
+    ${navigationReadinessBody}
     let latestObservedAgentActionMetadata = null;
     let observedAgentActionMetadataLog = [];
+    let visibleControlledActionPreviewReadiness = null;
+    let latestControlledActionConfirmationReadiness = null;
+    let latestControlledActionNavigationReadiness = null;
+    function clearControlledActionPreview() {
+      visibleControlledActionPreviewReadiness = null;
+      latestControlledActionConfirmationReadiness = null;
+      latestControlledActionNavigationReadiness = null;
+    }
+    function isVisibleControlledActionPreviewReadiness(readiness) {
+      return readiness && readiness.userVisibleInThisPhase === true;
+    }
+    function clearLevelOneAgentActionSuggestionLabel() {
+      visibleLevelOneAgentActionSuggestion = null;
+    }
+    function paintLevelOneAgentActionSuggestionLabel() {}
+    function paintControlledActionPreview() {}
     ${observeBody}
     ({
       buildLowRiskAgentActionSuggestion,

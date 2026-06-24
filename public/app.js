@@ -336,6 +336,83 @@ function clearControlledActionPreview(reason = "reset") {
   }
 }
 
+const controlledLowRiskNavigationTargets = {
+  training: {
+    sectionId: "learning",
+    title: "training resources",
+    status: "Showing safe training resources. No account, permission, or transaction action was taken."
+  },
+  jobs: {
+    sectionId: "workforce",
+    title: "job pathway resources",
+    status: "Showing safe job pathway resources. No application, account, or transaction action was taken."
+  },
+  fieldSupportInfo: {
+    sectionId: "trade",
+    title: "field support guidance",
+    status: "Showing safe field support guidance. No dispatch, schedule, call, or location action was taken."
+  },
+  learning: {
+    sectionId: "learning",
+    title: "learning resources",
+    status: "Showing safe learning resources. No lesson, record, or account action was taken."
+  },
+  marketplaceBrowse: {
+    sectionId: "trade",
+    title: "AgriTrade browsing guidance",
+    status: "Showing safe AgriTrade browsing guidance. No buy, sell, payment, or account action was taken."
+  },
+  agricultureHelp: {
+    sectionId: "trade",
+    title: "agriculture guidance",
+    status: "Showing safe agriculture guidance. No camera, location, dispatch, or record action was taken."
+  }
+};
+
+function getAllowedControlledNavigationTarget(readiness = latestControlledActionNavigationReadiness) {
+  if (!readiness || typeof readiness !== "object") return null;
+  if (readiness.schemaVersion !== "controlled-action-navigation-readiness.v1") return null;
+  if (readiness.navigationEligible !== true) return null;
+  if (readiness.navigationBlockedReason) return null;
+  if (!["info", "low"].includes(String(readiness.navigationRiskLevel || ""))) return null;
+  if (readiness.requiresConfirmationClick !== true || readiness.allowedAfterConfirmationOnly !== true) return null;
+  if (readiness.allowedNextStep !== "observeNavigationReadinessOnly") return null;
+  if (readiness.executionBoundary !== "navigationReadinessOnly") return null;
+  if (Array.isArray(readiness.requiredPermissions) && readiness.requiredPermissions.length) return null;
+  if (Array.isArray(readiness.missingInputs) && readiness.missingInputs.length) return null;
+  const targetRoute = String(readiness.targetRoute || "").trim();
+  const target = controlledLowRiskNavigationTargets[targetRoute];
+  if (!target || !target.sectionId) return null;
+  if (!["learning", "workforce", "trade"].includes(target.sectionId)) return null;
+  const combined = `${targetRoute} ${target.sectionId} ${readiness.selectedToolId || ""} ${readiness.actionId || ""} ${readiness.levelOneLabel || ""}`;
+  if (/\b(health|telehealth|video|camera|call|doctor|provider|nurse|clinic|hospital|location|locate|map|payment|pay|wallet|identity|account|login|verify|buy|sell|order|quote|message|dispatch|schedule|submit|checkout|permission|diagnose|external|file|communicat)\b/i.test(combined)) return null;
+  return { ...target, targetRoute };
+}
+
+function performControlledLowRiskNavigation(readiness = latestControlledActionNavigationReadiness) {
+  const target = getAllowedControlledNavigationTarget(readiness);
+  if (!target) {
+    return {
+      navigated: false,
+      status: "Review is not available for this request. No action has been taken."
+    };
+  }
+  goSection(target.sectionId, {
+    instant: true,
+    keepAssistant: true,
+    openDefaultAction: false,
+    scroll: false
+  });
+  const status = $("#simpleActionStatus") || $(`#${target.sectionId} .user-module-status`);
+  if (status) status.textContent = translateText(target.status);
+  return {
+    navigated: true,
+    sectionId: target.sectionId,
+    targetRoute: target.targetRoute,
+    status: target.status
+  };
+}
+
 function handleControlledActionConfirmationPrototypeClick(event) {
   const button = event.target.closest("[data-controlled-action-confirmation-prototype]");
   if (!button) return false;
@@ -349,7 +426,8 @@ function handleControlledActionConfirmationPrototypeClick(event) {
   }
   const action = button.dataset.controlledActionConfirmationPrototype;
   if (action === "review") {
-    controlledActionConfirmationPrototypeStatus = "Selected for review - no action has been taken.";
+    const result = performControlledLowRiskNavigation(latestControlledActionNavigationReadiness);
+    controlledActionConfirmationPrototypeStatus = result.status;
     paintControlledActionConfirmationPrototype();
     return true;
   }

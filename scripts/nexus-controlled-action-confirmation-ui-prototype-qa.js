@@ -96,7 +96,8 @@ for (const call of forbiddenCalls) {
 }
 
 assert.match(clickHandlerBody, /closest\("#globalAssistantBar"\)/, "click handler must accept clicks only from Ask/full assistant surface");
-assert.match(clickHandlerBody, /Selected for review - no action has been taken\./, "Review options must only set inert selected-for-review status");
+assert.match(clickHandlerBody, /performControlledLowRiskNavigation\(latestControlledActionNavigationReadiness\)/, "Review options must use controlled low-risk navigation helper");
+assert.match(clickHandlerBody, /controlledActionConfirmationPrototypeStatus\s*=\s*result\.status/, "Review options must render controlled navigation status");
 assert.match(clickHandlerBody, /clearControlledActionPreview\("confirmation-prototype-dismissed"\)/, "Not now must only clear preview/prototype state");
 assert(!/Confirm action|Yes, do it|Execute|Start|Open now|Submit|Buy|Sell|Pay|Call|Verify|Use camera|Use location|Schedule|Dispatch/.test(prototypeRendererBody), "prototype renderer must avoid unsafe labels");
 
@@ -149,9 +150,9 @@ assert.match(html, /Not now/, "Ask surface should render Not now");
 assert.match(html, /Prototype only - no action will be taken\./, "Ask surface should render inert prototype note");
 assert(!/selectedToolId|actionId|schemaVersion|executionBoundary|auditPolicy|confirmationBlockedReason/.test(html), "prototype HTML must not leak raw metadata");
 assert(!/Execute|Start|Open now|Submit|Buy|Sell|Pay|Call|Verify|Use camera|Use location|Schedule|Dispatch/.test(html), "prototype HTML must not include unsafe labels");
-sandbox.setStatus("Selected for review - no action has been taken.");
+sandbox.setStatus("Showing safe job pathway resources. No application, account, or transaction action was taken.");
 const selectedHtml = sandbox.renderControlledActionConfirmationPrototype(confirmation, "ask-full-assistant");
-assert.match(selectedHtml, /Selected for review - no action has been taken\./, "Review options status should be inert");
+assert.match(selectedHtml, /Showing safe job pathway resources\. No application, account, or transaction action was taken\./, "Review options status should remain non-executing");
 
 const blockedCases = [
   { ...eligiblePreview, selectedToolId: "health.telehealth", actionId: "openTelehealthVideo", levelOneLabel: "Health", previewRiskLevel: "restricted" },
@@ -179,7 +180,7 @@ assert.match(suite, /scripts\/nexus-controlled-action-confirmation-ui-prototype-
 assert.match(prototypeDoc, /Ask Nexus\/full assistant surface/i, "prototype doc should document Ask-only placement");
 assert.match(prototypeDoc, /Caption surfaces remain preview-only/i, "prototype doc should document caption preview-only rule");
 assert.match(prototypeDoc, /Review options[\s\S]*Not now/i, "prototype doc should document allowed labels");
-assert.match(prototypeDoc, /does not route[\s\S]*does not execute[\s\S]*does not open workflows[\s\S]*does not request permissions/i, "prototype doc should document inert behavior");
+assert.match(prototypeDoc, /Phase 8X[\s\S]*(safe|allowlisted) internal section navigation[\s\S]*does not execute[\s\S]*does not open workflows[\s\S]*does not request permissions/i, "prototype doc should document Phase 8X non-executing navigation behavior");
 assert.match(designDoc, /NEXUS_LOW_RISK_CONFIRMATION_UI_PROTOTYPE\.md/, "design audit should link to Phase 8T prototype doc");
 
 console.log("Nexus controlled action confirmation UI prototype QA passed");

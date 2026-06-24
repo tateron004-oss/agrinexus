@@ -1,8 +1,10 @@
 # Nexus Controlled Action Navigation Readiness
 
-Status: Phase 8V internal schema and QA only.
+Status: Phase 8V internal schema and QA, with Phase 8X allowlisted behavior documented separately.
 
-This document defines the `controlled-action-navigation-readiness.v1` object. It is a future-facing internal layer downstream of `controlled-action-confirmation-readiness.v1`. Phase 8V does not add navigation, routing, workflow opening, staging, permission prompts, execution, or new visible controls.
+This document defines the `controlled-action-navigation-readiness.v1` object. It is an internal layer downstream of `controlled-action-confirmation-readiness.v1`. Phase 8V does not add navigation, routing, workflow opening, staging, permission prompts, execution, or new visible controls.
+
+Phase 8X adds a separate behavior layer that may consume eligible readiness only after the user clicks `Review options` in the Ask Nexus/full-assistant surface. That behavior is documented in `docs/NEXUS_CONTROLLED_ACTION_NAVIGATION_BEHAVIOR.md` and is limited to allowlisted internal section navigation.
 
 ## Purpose
 
@@ -14,7 +16,7 @@ The answer is yes, but only as observe-only metadata. Existing routers, workflow
 
 ## Current Phase Restrictions
 
-Phase 8V intentionally does not:
+Phase 8V readiness intentionally does not:
 
 - navigate;
 - route commands;
@@ -29,6 +31,8 @@ Phase 8V intentionally does not:
 - make caption/global preview cards interactive;
 - change `selectedToolId` inference; or
 - weaken high-risk, privacy, permission, account, identity, transaction, call, camera, location, or telehealth guardrails.
+
+Phase 8X changes only one item: `Review options` may now perform safe internal section navigation when the readiness object passes every allowlist check. It still must not execute tools, open workflows, stage actions, request permissions, mutate records, or trigger high-risk flows.
 
 ## Schema
 
@@ -69,7 +73,7 @@ Required fields:
 - `navigationBlockedReason`: null only for eligible low-risk readiness.
 - `navigationRiskLevel`: one of `info`, `low`, `medium`, `high`, or `restricted`.
 - `navigationMode`: one of `none`, `lowRiskInternalNavigationReadinessOnly`, `externalNavigationBlocked`, `permissionRequiredNavigationBlocked`, or `restrictedNavigationBlocked`.
-- `targetRoute`: internal route key only, never used for navigation in Phase 8V.
+- `targetRoute`: internal route key. Phase 8V stores it only; Phase 8X may use it only through the behavior-layer allowlist.
 - `targetSurface`: `askNexus`, `standardUserModule`, `passiveCaptionOnly`, or `none`.
 - `requiresConfirmationClick`: true for eligible readiness.
 - `allowedAfterConfirmationOnly`: true for eligible readiness.

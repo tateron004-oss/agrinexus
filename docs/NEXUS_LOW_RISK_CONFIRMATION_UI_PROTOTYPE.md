@@ -1,8 +1,8 @@
 # Nexus Low-Risk Confirmation UI Prototype
 
-Status: Phase 8T non-executing low-risk confirmation UI prototype.
+Status: Phase 8T non-executing low-risk confirmation UI prototype, with Phase 8X allowlisted internal navigation layered on top.
 
-This document describes the first visible confirmation-control layer for Nexus controlled-action previews. It is intentionally inert. It does not execute actions, stage pending actions, route commands, open workflows, request permissions, or change `selectedToolId` inference.
+This document describes the first visible confirmation-control layer for Nexus controlled-action previews. The original Phase 8T prototype was intentionally inert. Phase 8X keeps it non-executing, but allows `Review options` to perform narrowly allowlisted internal section navigation after `controlled-action-navigation-readiness.v1` passes every low-risk guard.
 
 ## What Phase 8T Adds
 
@@ -59,17 +59,17 @@ Forbidden labels:
 - `Confirm action`
 - `Yes, do it`
 
-## Inert Button Behavior
+## Button Behavior
 
-`Review options`:
+`Review options` in Phase 8X:
 
-- does not route;
+- may navigate only to an allowlisted internal section documented in `docs/NEXUS_CONTROLLED_ACTION_NAVIGATION_BEHAVIOR.md`;
 - does not execute;
 - does not open workflows;
 - does not request permissions;
 - does not stage pending actions;
 - does not submit, buy, sell, pay, call, verify, schedule, dispatch, use camera, or use location;
-- only changes local prototype status to `Selected for review - no action has been taken.`
+- only reports a safe non-executing status such as `Showing safe job pathway resources. No application, account, or transaction action was taken.`
 
 `Not now`:
 
@@ -132,9 +132,9 @@ Phase 8T is protected by:
 - `scripts/nexus-level-one-suggestion-label-qa.js`
 - `node scripts/qa-suite.js nexus-workforce`
 
-The QA verifies Ask-only placement, caption preview-only behavior, safe button labels, inert click behavior, high-risk exclusions, clearing behavior, and absence of raw metadata leaks.
+The QA verifies Ask-only placement, caption preview-only behavior, safe button labels, non-executing Phase 8X navigation behavior, high-risk exclusions, clearing behavior, and absence of raw metadata leaks.
 
-Phase 8V adds a downstream internal `controlled-action-navigation-readiness.v1` schema for future navigation planning. That layer is documented in `docs/NEXUS_CONTROLLED_ACTION_NAVIGATION_READINESS.md` and remains hidden, observe-only, and disconnected from the Phase 8T buttons.
+Phase 8V added a downstream internal `controlled-action-navigation-readiness.v1` schema for navigation planning. Phase 8X consumes that hidden readiness only after `Review options`, only for allowlisted low-risk internal navigation, and still does not execute tools or open workflows. The behavior layer is documented in `docs/NEXUS_CONTROLLED_ACTION_NAVIGATION_BEHAVIOR.md`.
 
 ## Recommended Phase 8U
 
@@ -144,7 +144,7 @@ Phase 8U should validate the Standard User browser build across desktop, tablet,
 
 - low-risk prompts show controls only in Ask;
 - captions remain passive;
-- `Review options` only shows inert selected-for-review status;
+- `Review options` performs only allowlisted internal section navigation and shows a non-executing status;
 - `Not now` clears only preview/prototype UI;
 - high-risk prompts show no controls and clear stale controls;
 - no raw metadata leaks;

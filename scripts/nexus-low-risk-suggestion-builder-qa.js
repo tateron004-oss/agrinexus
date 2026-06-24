@@ -13,10 +13,25 @@ const server = fs.readFileSync(serverPath, "utf8");
 const registry = JSON.parse(fs.readFileSync(registryPath, "utf8"));
 const plan = fs.readFileSync(planPath, "utf8");
 
-const helperStart = app.indexOf("function buildLowRiskAgentActionSuggestion");
-const helperEnd = app.indexOf("function observeAgentActionMetadata", helperStart);
-assert(helperStart >= 0 && helperEnd > helperStart, "frontend must define buildLowRiskAgentActionSuggestion before observation helper");
-const helperBody = app.slice(helperStart, helperEnd);
+function extractFunction(source, name) {
+  const start = source.indexOf(`function ${name}`);
+  assert(start >= 0, `${name} should exist`);
+  const signatureEnd = source.indexOf(")", start);
+  const bodyStart = source.indexOf("{", signatureEnd);
+  assert(signatureEnd > start && bodyStart > signatureEnd, `${name} body should start after its signature`);
+  let depth = 0;
+  for (let index = bodyStart; index < source.length; index += 1) {
+    const char = source[index];
+    if (char === "{") depth += 1;
+    if (char === "}") {
+      depth -= 1;
+      if (depth === 0) return source.slice(start, index + 1);
+    }
+  }
+  throw new Error(`${name} body should be extractable`);
+}
+
+const helperBody = extractFunction(app, "buildLowRiskAgentActionSuggestion");
 
 assert.match(helperBody, /visible Level 1 label only/i, "builder must be explicitly visible Level 1 label only");
 assert.match(helperBody, /display-only/i, "builder must state suggestions are display-only");
@@ -85,10 +100,7 @@ for (const call of forbiddenCalls) {
   assert(!helperBody.includes(call), `builder must not call ${call}`);
 }
 
-const observeStart = app.indexOf("function observeAgentActionMetadata");
-const observeEnd = app.indexOf("const countryLanguageMap", observeStart);
-assert(observeStart >= 0 && observeEnd > observeStart, "observation helper body should be extractable");
-const observeBody = app.slice(observeStart, observeEnd);
+const observeBody = extractFunction(app, "observeAgentActionMetadata");
 assert.match(observeBody, /const lowRiskSuggestion = buildLowRiskAgentActionSuggestion\(agentAction\)/, "observation helper should build low-risk Level 1 suggestion label metadata");
 assert.match(observeBody, /const controlledActionMetadata = buildControlledActionMetadataFromSuggestion\(lowRiskSuggestion, \{ agentAction \}\)/, "observation helper may build controlled action metadata from low-risk suggestion metadata only");
 assert.match(observeBody, /lowRiskSuggestion,\s*\n\s*controlledActionMetadata/, "observation record may store low-risk Level 1 suggestion label metadata and controlled action metadata");

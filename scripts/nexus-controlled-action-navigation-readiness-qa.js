@@ -44,8 +44,8 @@ const prototypeClickBody = extractFunction(app, "handleControlledActionConfirmat
 const prototypeRendererBody = extractFunction(app, "renderControlledActionConfirmationPrototype");
 const previewRendererBody = extractFunction(app, "renderControlledActionPreview");
 
-assert.match(navigationBody, /internal metadata only/i, "navigation readiness helper must state internal-only scope");
-assert.match(navigationBody, /must not navigate, route,[\s\S]*open workflows,[\s\S]*request permissions,[\s\S]*confirm, or execute/i, "navigation readiness helper must include no-navigation/no-execution boundary");
+assert.match(navigationBody, /downstream of safe confirmation readiness/i, "navigation readiness helper must state downstream confirmation scope");
+assert.match(navigationBody, /must not[\s\S]*open workflows,[\s\S]*request permissions,[\s\S]*confirm, or execute/i, "navigation readiness helper must include no-workflow/no-execution boundary");
 assert.match(navigationBody, /controlledActionConfirmationReadiness\.schemaVersion !== "controlled-action-confirmation-readiness\.v1"/, "navigation readiness must derive only from confirmation readiness v1");
 assert.match(navigationBody, /schemaVersion:\s*"controlled-action-navigation-readiness\.v1"/, "navigation readiness schema must be v1");
 assert.match(navigationBody, /sourceConfirmationReadinessVersion:\s*"controlled-action-confirmation-readiness\.v1"/, "navigation readiness must reference source confirmation schema");
@@ -233,11 +233,12 @@ assert.match(localPaintBody, /latestControlledActionNavigationReadiness = latest
 assert.match(observationBody, /const controlledActionNavigationReadiness = buildControlledActionNavigationReadinessFromConfirmation\(controlledActionConfirmationReadiness\)/, "backend observation should derive navigation readiness from confirmation readiness");
 assert.match(observationBody, /controlledActionConfirmationReadiness,\s*\n\s*controlledActionNavigationReadiness/, "observation record should store navigation readiness beside confirmation readiness");
 assert(!/controlledActionNavigationReadiness[\s\S]{0,320}(goSection|openWorkflow|mutate|request|confirmPending|execute|stage|permission|getUserMedia|geolocation|addEventListener|onclick|click\()/i.test(observationBody), "observation helper must not navigate or execute from navigation readiness");
-assert(!/buildControlledActionNavigationReadinessFromConfirmation|controlledActionNavigationReadiness|targetRoute|observeNavigationReadinessOnly/i.test(prototypeClickBody), "Review options and Not now must not use navigation readiness");
+assert.match(prototypeClickBody, /performControlledLowRiskNavigation\(latestControlledActionNavigationReadiness\)/, "Review options should use the Phase 8X controlled navigation behavior helper");
+assert.match(prototypeClickBody, /clearControlledActionPreview\("confirmation-prototype-dismissed"\)/, "Not now must remain clear-only");
 assert(!/controlledActionNavigationReadiness|safeNavigationTitle|observeNavigationReadinessOnly/i.test(prototypeRendererBody), "confirmation prototype renderer must not render navigation readiness");
 assert(!/controlledActionNavigationReadiness|safeNavigationTitle|observeNavigationReadinessOnly/i.test(previewRendererBody), "preview renderer must not render navigation readiness");
 assert(!/data-controlled-action-navigation|nexus-navigation-readiness|navigation-readiness-card/i.test(app), "Phase 8V must not add visible navigation readiness UI markers");
-assert(!/Review options[\s\S]{0,240}(goSection|openWorkflow|mutate|request|execute|stage|permission|getUserMedia|geolocation)/i.test(app), "Review options must remain inert");
+assert(!/Review options[\s\S]{0,240}(openWorkflow|mutate|request|execute|stage|permission|getUserMedia|geolocation)/i.test(app), "Review options must not execute, stage, request permissions, or open workflows");
 
 const forbiddenCalls = [
   "openWorkflowModal",
