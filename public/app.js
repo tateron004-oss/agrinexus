@@ -654,32 +654,32 @@ function buildControlledActionPreviewReadinessFromMetadata(controlledActionMetad
   const previewMap = {
     openTrainingResources: {
       title: "Review training resources",
-      summary: "Nexus can explain training resources and next learning options without opening a workflow or starting an action.",
+      summary: "I found the best next step: review training options, compare learning paths, and choose what fits the worker or farmer. This stays guidance-only until you decide where to go.",
       mode: "lowRiskPreviewOnly"
     },
     showFarmJobs: {
       title: "Review farm job resources",
-      summary: "Nexus can summarize job-readiness resources and job pathway information without applying or submitting anything.",
+      summary: "I can safely help compare job pathways, readiness gaps, and next preparation steps. This does not apply, submit, message an employer, or change a profile.",
       mode: "lowRiskPreviewOnly"
     },
     openFieldSupportGuidance: {
       title: "Review field support guidance",
-      summary: "Nexus can provide informational field support guidance for planning next questions and evidence notes.",
+      summary: "I can guide the field-support questions to ask next and help organize observations. This is planning support only, with no task record or outside action.",
       mode: "informationalPreviewOnly"
     },
     explainLearningTopic: {
       title: "Review irrigation learning help",
-      summary: "Nexus can explain the learning topic and suggest study resources without opening lessons or creating records.",
+      summary: "I can teach this in plain steps, suggest what to study next, and connect it to practical field work. This preview keeps the lesson and records unchanged.",
       mode: "lowRiskPreviewOnly"
     },
     browseMarketplace: {
       title: "Review AgriTrade browsing help",
-      summary: "Nexus can describe browse-only AgriTrade listings and general marketplace navigation as information only.",
+      summary: "I can guide you through AgriTrade as a browse-only marketplace preview. This stays informational and does not start commerce, contact, or money movement.",
       mode: "informationalPreviewOnly"
     },
     explainAgricultureHelp: {
       title: "Review agriculture help",
-      summary: "Nexus can offer informational crop and agriculture guidance for symptoms, likely causes, and safer next questions.",
+      summary: "I can help reason through crop symptoms, likely causes, and safer next questions. This stays informational, with no field scan or crop record.",
       mode: "informationalPreviewOnly"
     }
   };
@@ -8413,6 +8413,117 @@ function safeAgentFallbackResponse(command) {
   if (/trade|buyer|crop|maize|route|logistics|drone/.test(text)) return "The live service is slow, but I can still help. I opened trade support so you can work on the buyer, order, route, or drone step.";
   if (/learn|course|lesson|training|certificate/.test(text)) return "The live service is slow, but I can still help. I opened learning support so you can start the course step.";
   return "The live service is slow, but you are not stuck. Tell me what you need and I will help you move forward.";
+}
+
+function nexusJarvisStyleStandardUserSafetyResponse(command = "") {
+  const raw = String(command || "");
+  const lower = normalizeToolText(cleanWakeCommand(raw) || raw);
+  if (!lower) return null;
+  const response = (message, suggestions = [], status = "Nexus is keeping this request controlled and safe.") => ({
+    message,
+    suggestions,
+    status
+  });
+  const lowRiskResponse = (message, suggestions = [], status = "Nexus is preparing a controlled preview.") => ({
+    message,
+    suggestions,
+    status,
+    lowRiskPreview: true
+  });
+  if (/\b(help me find agriculture training|find agriculture training|agriculture training)\b/.test(lower)) {
+    return lowRiskResponse(
+      "I can help you compare agriculture training options, choose the right learning path, and decide what to review next. I am showing this as a controlled preview; no course has been opened or enrollment changed.",
+      ["review training options", "compare learning paths", "ask what to study first", "not now"],
+      "Nexus prepared a preview-only training plan."
+    );
+  }
+  if (/\b(teach me how irrigation works|teach.*irrigation|how irrigation works)\b/.test(lower)) {
+    return lowRiskResponse(
+      "I can explain irrigation in practical steps, connect it to field work, and suggest what to learn next. This is lesson guidance only; no lesson record or workflow has been started.",
+      ["explain irrigation basics", "show next lesson", "ask a follow-up", "not now"],
+      "Nexus prepared a preview-only learning explanation."
+    );
+  }
+  if (/\b(show me farm jobs|farm jobs|find farm jobs)\b/.test(lower)) {
+    return lowRiskResponse(
+      "I can help review farm job pathways, readiness gaps, and next preparation steps. This preview does not apply, message an employer, submit a profile, or change your records.",
+      ["review job pathways", "check readiness", "compare training needs", "not now"],
+      "Nexus prepared a preview-only job pathway plan."
+    );
+  }
+  if (/\b(browse agritrade|open agritrade|agritrade marketplace)\b/.test(lower)) {
+    return lowRiskResponse(
+      "I can guide you through AgriTrade as a browse-only marketplace preview. I will not buy, sell, contact a buyer, create an order, or process payment.",
+      ["review marketplace", "compare trade options", "explain AgriTrade safety", "not now"],
+      "Nexus prepared browse-only marketplace guidance."
+    );
+  }
+  if (/\b(i need help with crop issues|crop issues|crop problem|crop symptoms)\b/.test(lower)) {
+    return lowRiskResponse(
+      "I can help reason through crop symptoms, likely causes, and safer questions to ask next. This stays informational; I am not scanning a field, creating a record, or diagnosing from a camera.",
+      ["describe symptoms", "review likely causes", "plan field questions", "not now"],
+      "Nexus prepared preview-only agriculture help."
+    );
+  }
+  if (/\b(call someone|call somebody|call a person|call contact|call john|call maria|call my doctor)\b/.test(lower)) {
+    return response(
+      "I can help prepare a call, but I will not call anyone from the first request. I need the person, the number or contact match, the provider choice, and your explicit confirmation before any handoff. No real-world action has been taken.",
+      ["choose contact", "enter phone number", "review call permissions", "not now"],
+      "Nexus identified a high-risk call request and kept it in review-only mode."
+    );
+  }
+  if (/\b(send a message|send message|message someone|text someone|text john|whatsapp someone|send whatsapp)\b/.test(lower)) {
+    return response(
+      "I can help draft or prepare a message later, but I will not send anything automatically. A real message needs a target, a provider, the exact text, and explicit confirmation. No real-world action has been taken.",
+      ["draft message later", "choose contact", "review messaging rules", "not now"],
+      "Nexus identified a high-risk messaging request and blocked automatic sending."
+    );
+  }
+  if (/\b(use my camera|open my camera|turn on camera|camera diagnose|diagnose.*camera)\b/.test(lower)) {
+    return response(
+      "I can guide a local camera preview only after you choose that path and your browser asks permission. I will not activate the camera from this prompt, and I do not diagnose from images. No real-world action has been taken.",
+      ["open local camera preview", "explain camera safety", "describe the issue instead", "not now"],
+      "Nexus kept camera access permission-gated and preview-only."
+    );
+  }
+  if (/\b(find my location|use my location|locate me|where am i|share my location)\b/.test(lower)) {
+    return response(
+      "I can guide maps and location support, but precise location requires a browser permission prompt and your consent. I will not read or share your location automatically. No real-world action has been taken.",
+      ["open map support", "explain location permission", "type a nearby place", "not now"],
+      "Nexus kept location access permission-gated."
+    );
+  }
+  if (/\b(buy this item|buy item|buy fertilizer|purchase this|process my payment|pay for this|checkout)\b/.test(lower)) {
+    return response(
+      "I can help review marketplace information, but I will not buy, sell, check out, create an account, or process payment. Marketplace actions need a separate confirmed workflow and trusted provider setup. No real-world action has been taken.",
+      ["browse AgriTrade", "review marketplace safety", "compare options", "not now"],
+      "Nexus blocked transaction execution and offered browse-only marketplace guidance."
+    );
+  }
+  if (/\b(i have an emergency|emergency|urgent danger|danger now|need emergency help)\b/.test(lower)) {
+    return response(
+      "If anyone is in immediate danger, call local emergency services now. I can help organize information after that, but Nexus cannot dispatch emergency help or replace human responders. No real-world action has been taken.",
+      ["find emergency care info", "start intake later", "describe what happened", "not now"],
+      "Nexus surfaced emergency guidance without dispatching or opening a provider."
+    );
+  }
+  return null;
+}
+
+function handleJarvisStyleStandardUserSafetyResponse(command = "") {
+  const briefing = nexusJarvisStyleStandardUserSafetyResponse(command);
+  if (!briefing) return false;
+  pendingAgentClarification = null;
+  pendingNexusSpokenCommand = null;
+  if (briefing.lowRiskPreview === true) {
+    paintLocalLevelOneSuggestionForSimpleUserIntent({ type: "direct" }, command);
+  } else {
+    clearLevelOneAgentActionSuggestionLabel();
+  }
+  renderLiveVoiceSuggestions(briefing.suggestions || []);
+  updateNexusBehaviorLayer("listening", briefing.status);
+  setVoiceResponse(briefing.message, true, { allowHandoff: false, command });
+  return true;
 }
 
 function isConversationRepairCommand(lower) {
@@ -22944,6 +23055,7 @@ async function handleVoiceCommandCore(rawCommand, options = {}) {
   const spokenCommand = command || cleanWakeCommand(localizedCommand);
   if (openExplicitHealthVideoPreviewCommand(spokenCommand || command || localizedCommand || rawCommand)) return;
   if (await runExplicitTypedGlobalControlPreflight(spokenCommand || command || localizedCommand || rawCommand, { ...options, turnToken })) return;
+  if (handleJarvisStyleStandardUserSafetyResponse(spokenCommand || command || localizedCommand || rawCommand)) return;
   if (autoLanguage) {
     agentPerformanceState.lastCommand = command || localizedCommand || rawCommand;
     recordNexusAutonomousLearning({ type: "auto-language-detected", command: rawCommand, language: autoLanguage.label, mode: experienceMode || data?.user?.role || "platform" });
@@ -24606,6 +24718,7 @@ async function runGlobalCommand() {
     renderTypedGlobalVoiceControlConfirmation("Demo quiet mode is on. Nexus voice is off until you turn it back on.");
     return;
   }
+  if (handleJarvisStyleStandardUserSafetyResponse(command)) return;
   await handleVoiceCommand(command);
 }
 
@@ -25193,6 +25306,7 @@ function bindStatic() {
         }
         if (input) input.value = "";
         setCommandInputs(command);
+        if (handleJarvisStyleStandardUserSafetyResponse(command)) return;
         void handleVoiceCommand(command);
       } else if (action === "confirm") {
         void confirmPendingWorkflow();
@@ -25754,6 +25868,7 @@ function bindStatic() {
       if (!command) return updateUserCaptionPanel("Type a request or press Mic to speak.");
       event.target.value = "";
       setCommandInputs(command);
+      if (handleJarvisStyleStandardUserSafetyResponse(command)) return;
       void handleVoiceCommand(command);
       return;
     }
