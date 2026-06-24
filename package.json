@@ -16,6 +16,7 @@
     "qa:nexus-workforce": "node scripts/qa-suite.js nexus-workforce",
     "qa:nexus-tool-registry": "node scripts/nexus-tool-registry-qa.js",
     "qa:nexus-tool-registry-runtime": "node scripts/nexus-tool-registry-runtime-qa.js",
+    "qa:nexus-policy-engine": "node scripts/nexus-policy-engine-qa.js",
     "qa:nexus-agent-action": "node scripts/nexus-agent-action-schema-qa.js",
     "qa:nexus-agent-action-observation": "node scripts/nexus-agent-action-observation-qa.js",
     "qa:nexus-agent-action-frontend": "node scripts/nexus-agent-action-frontend-observation-qa.js",
