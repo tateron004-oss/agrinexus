@@ -206,7 +206,11 @@ for (const [label, model, expectedReason] of [
 
 assert(packageJson.includes("\"qa:nexus-low-risk-inert-renderer-eligibility-guard\""), "package.json must expose qa:nexus-low-risk-inert-renderer-eligibility-guard");
 assert(suite.includes("scripts/nexus-low-risk-inert-renderer-eligibility-guard-qa.js"), "nexus-workforce suite should include eligibility guard QA");
-assert(!exists("public", "nexus-low-risk-inert-renderer.js"), "runtime low-risk inert renderer file must not be added in Phase 12M");
+if (exists("public", "nexus-low-risk-inert-renderer.js")) {
+  const runtimeRenderer = read("public", "nexus-low-risk-inert-renderer.js");
+  assert(runtimeRenderer.includes("metadataOnly"), "dormant low-risk renderer, if present, must remain metadata-only");
+  assert(runtimeRenderer.includes("domRenderingAllowed: false"), "dormant low-risk renderer, if present, must not allow DOM rendering");
+}
 assert(!index.includes("nexus-low-risk-inert-renderer-eligibility.js"), "public/index.html must not load eligibility helper");
 assert(!app.includes("nexus-low-risk-inert-renderer-eligibility"), "public/app.js must not load eligibility helper");
 assert(!app.includes("renderNexusLowRiskInertPreview"), "public/app.js must not implement low-risk inert renderer");
@@ -230,4 +234,3 @@ console.log("Nexus low-risk inert renderer eligibility guard QA passed");
 console.log("- eligibility defaults false and flag enabled alone is not enough");
 console.log("- only low-risk safe learning/jobs/marketplace review/agriculture support fixtures can become eligible");
 console.log("- high-risk, permissions, provider handoff, DOM, click handler, and execution paths remain blocked");
-

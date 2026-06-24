@@ -129,7 +129,11 @@ for (const gate of [
 assert(packageJson.includes("\"qa:nexus-low-risk-inert-renderer-prototype-plan\""), "package.json must expose qa:nexus-low-risk-inert-renderer-prototype-plan");
 assert(suite.includes("scripts/nexus-low-risk-inert-renderer-prototype-plan-qa.js"), "nexus-workforce suite should include prototype plan QA");
 
-assert(!fs.existsSync(path.join(root, "public", "nexus-low-risk-inert-renderer.js")), "runtime low-risk inert renderer file must not be added in Phase 12K");
+if (fs.existsSync(path.join(root, "public", "nexus-low-risk-inert-renderer.js"))) {
+  const runtimeRenderer = read("public", "nexus-low-risk-inert-renderer.js");
+  assert(runtimeRenderer.includes("metadataOnly"), "Phase 12O dormant renderer, if present, must remain metadata-only");
+  assert(runtimeRenderer.includes("domRenderingAllowed: false"), "Phase 12O dormant renderer, if present, must not allow DOM rendering");
+}
 assert(!index.includes("nexus-low-risk-inert-renderer.js"), "Standard User page must not load low-risk inert renderer");
 assert(!index.includes("NEXUS_LOW_RISK_INERT_RENDERER_ENABLED"), "Standard User page must not include low-risk inert renderer flag yet");
 assert(!app.includes("renderNexusLowRiskInertPreview"), "public/app.js must not implement low-risk inert renderer");
@@ -142,5 +146,5 @@ assert.match(server, /runtimeStatus:\s*"metadata-only"/, "backend metadata-only 
 
 console.log("Nexus low-risk inert renderer prototype plan QA passed");
 console.log("- plan sections, eligible/excluded scope, flag requirement, QA gates, and safety terms are present");
-console.log("- no runtime low-risk inert renderer file, loader, or app attachment was added");
+console.log("- no Standard User loader or app attachment was added");
 console.log("- Standard User visible behavior remains unchanged");

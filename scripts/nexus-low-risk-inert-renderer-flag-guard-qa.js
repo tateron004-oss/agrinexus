@@ -106,7 +106,11 @@ assert.equal(flag.getNexusLowRiskInertRendererFlag({ enabled: "true", testOnly: 
 assert(packageJson.includes("\"qa:nexus-low-risk-inert-renderer-flag-guard\""), "package.json must expose qa:nexus-low-risk-inert-renderer-flag-guard");
 assert(suite.includes("scripts/nexus-low-risk-inert-renderer-flag-guard-qa.js"), "nexus-workforce suite should include flag guard QA");
 
-assert(!exists("public", "nexus-low-risk-inert-renderer.js"), "visible runtime low-risk inert renderer file must not exist in Phase 12L");
+if (exists("public", "nexus-low-risk-inert-renderer.js")) {
+  const runtimeRenderer = read("public", "nexus-low-risk-inert-renderer.js");
+  assert(runtimeRenderer.includes("metadataOnly"), "dormant low-risk renderer, if present, must remain metadata-only");
+  assert(runtimeRenderer.includes("domRenderingAllowed: false"), "dormant low-risk renderer, if present, must not allow DOM rendering");
+}
 assert(!index.includes("nexus-low-risk-inert-renderer.js"), "Standard User page must not load low-risk inert renderer");
 assert(!index.includes("nexus-low-risk-inert-renderer-flag.js"), "Standard User page must not load flag guard in this phase");
 assert(!app.includes("nexus-low-risk-inert-renderer-flag"), "public/app.js must not load low-risk inert renderer flag");
@@ -151,4 +155,3 @@ console.log("Nexus low-risk inert renderer flag guard QA passed");
 console.log("- flag defaults false and requires explicit future local/test-safe context");
 console.log("- flag grants no execution, rendering, provider, permission, navigation, or click-handler authority");
 console.log("- Standard User UI remains unwired to any low-risk inert renderer");
-

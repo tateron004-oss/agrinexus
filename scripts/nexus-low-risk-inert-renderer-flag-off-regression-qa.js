@@ -155,7 +155,11 @@ assert.equal(
   "eligibility defaults false for otherwise safe low-risk fixture"
 );
 
-assert(!exists("public", "nexus-low-risk-inert-renderer.js"), "no visible renderer exists in this phase");
+if (exists("public", "nexus-low-risk-inert-renderer.js")) {
+  const runtimeRenderer = read("public", "nexus-low-risk-inert-renderer.js");
+  assert(runtimeRenderer.includes("metadataOnly"), "dormant low-risk renderer, if present, must remain metadata-only");
+  assert(runtimeRenderer.includes("domRenderingAllowed: false"), "dormant low-risk renderer, if present, must not allow DOM rendering");
+}
 for (const runtimeSource of [app, index]) {
   for (const forbidden of [
     "nexus-low-risk-inert-renderer-flag.js",
@@ -196,4 +200,3 @@ console.log("Nexus low-risk inert renderer flag-off regression QA passed");
 console.log("- flag and eligibility default off/false");
 console.log("- representative low-risk and excluded prompt chains authorize no visible rendering while flag is disabled");
 console.log("- Standard User runtime does not load low-risk inert renderer flag, eligibility, or renderer modules");
-
