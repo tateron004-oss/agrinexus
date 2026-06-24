@@ -80,7 +80,7 @@
       });
     }
 
-    if (/\b(payment|pay the buyer|pay buyer|pay the seller|pay seller|buyer payment|marketplace payment|wallet|checkout|process payment)\b/.test(combined)) {
+    if (/\b(payment|pay the buyer|pay buyer|buyer pay|pay the seller|pay seller|seller pay|buyer payment|marketplace payment|wallet|checkout|process payment)\b/.test(combined)) {
       return baseIntent(text, {
         id: "marketplace.payment.controlled",
         domain: "marketplace",
