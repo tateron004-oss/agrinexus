@@ -3,6 +3,7 @@ const fs = require("fs");
 const path = require("path");
 const crypto = require("crypto");
 const { classifyNexusIntent } = require("./public/nexus-intent-classifier.js");
+const { buildNexusPolicyDecision, validateNexusPolicyDecision } = require("./public/nexus-policy-engine.js");
 
 function loadEnvFile(filePath) {
   if (!fs.existsSync(filePath)) return;
@@ -114,6 +115,16 @@ function buildAgentActionMetadata(input = {}) {
     normalizedIntent,
     routeContext: `${metadata.pendingActionType || ""} ${metadata.pendingActionName || ""} ${metadata.redirectSection || ""} ${metadata.tool || ""}`
   });
+  const policyDecision = buildNexusPolicyDecision(intentClassification, null, {
+    text: userMessage,
+    command: userMessage,
+    source: "agent-action-observation",
+    contactResolved: Boolean(metadata.contactResolved || metadata.contactId || metadata.outboundCall?.target),
+    phoneNumberResolved: Boolean(metadata.phoneNumberResolved || metadata.phoneNumber || metadata.outboundCall?.phone),
+    pendingActionType: metadata.pendingActionType || null,
+    pendingActionName: metadata.pendingActionName || null
+  });
+  const policyValidation = validateNexusPolicyDecision(policyDecision);
   const privacySignal = /health|telehealth|patient|video|camera|care|vitals|referral|medicine|doctor|clinic/i.test(`${normalizedIntent || ""} ${metadata.pendingActionType || ""} ${metadata.redirectSection || ""} ${metadata.moduleSignal?.module || ""}`);
   const highRiskSignal = /call|message|payment|wallet|order|application|certificate|provider|drone|admin|share|export|dispatch/i.test(`${normalizedIntent || ""} ${metadata.pendingActionType || ""} ${metadata.pendingActionName || ""} ${metadata.tool || ""}`);
   const riskLevel = privacySignal
@@ -142,6 +153,14 @@ function buildAgentActionMetadata(input = {}) {
       status: result.status || null
     },
     intentClassification,
+    policyDecision,
+    policyObservation: {
+      schemaVersion: "policy-observation.v1",
+      observationOnly: true,
+      runtimeAuthority: "existing-router",
+      policyValidation,
+      safetyBoundary: "Policy metadata is not execution, routing, permission, staging, or confirmation authority."
+    },
     nextStep: metadata.confirmationPrompt || metadata.frontierCommunication?.nextQuestion || null,
     auditMetadata: {
       ...productIdentityMetadata(),
@@ -26180,6 +26199,7 @@ async function runCompanionSafeAgentCommand(db, user, body = {}) {
     outputMode: outputMode || undefined,
     language: commandLanguage
   });
+  const policyDecision = agentAction.policyDecision || null;
   result.metadata = {
     ...(result.metadata || {}),
     inputMode,
@@ -26187,6 +26207,7 @@ async function runCompanionSafeAgentCommand(db, user, body = {}) {
     companionUnderstanding,
     companionRouteOutcome,
     agentAction,
+    policyDecision,
     language: commandLanguage,
     targetLanguage: commandLanguage
   };

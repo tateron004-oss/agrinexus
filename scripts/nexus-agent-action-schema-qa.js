@@ -48,7 +48,7 @@ for (const field of requiredFields) {
 }
 
 assert.match(server, /const agentAction = buildAgentActionMetadata\(\{[\s\S]*userMessage: command/, "agent command path must build agentAction from existing result");
-assert.match(server, /agentAction,\s*\n\s*language: commandLanguage/, "agentAction must be attached additively to result.metadata");
+assert.match(server, /agentAction,\s*\n\s*(policyDecision,\s*\n\s*)?language: commandLanguage/, "agentAction must be attached additively to result.metadata");
 assert.match(server, /state\.commandResult = result;/, "/api/agent/command must still return existing commandResult");
 assert.match(server, /companionUnderstanding,\s*\n\s*companionRouteOutcome,\s*\n\s*agentAction/, "companion metadata must remain and agentAction must be additive");
 

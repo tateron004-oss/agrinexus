@@ -975,6 +975,8 @@ function buildControlledActionNavigationReadinessFromConfirmation(controlledActi
 
 function observeAgentActionMetadata(response = {}, context = {}) {
   // Phase 7F: agentAction is observation-only and non-authoritative.
+  // Phase 11E: policyDecision metadata is also observation-only and cannot
+  // execute, route, stage, confirm, request permissions, or open providers.
   // Existing frontend routers remain authoritative. The static registry is not
   // runtime-authoritative. Never execute, route, confirm, stage, open workflows,
   // or trigger modals from this metadata.
@@ -996,6 +998,7 @@ function observeAgentActionMetadata(response = {}, context = {}) {
   const controlledActionPreviewReadiness = buildControlledActionPreviewReadinessFromMetadata(controlledActionMetadata);
   const controlledActionConfirmationReadiness = buildControlledActionConfirmationReadinessFromPreview(controlledActionPreviewReadiness);
   const controlledActionNavigationReadiness = buildControlledActionNavigationReadinessFromConfirmation(controlledActionConfirmationReadiness);
+  const policyDecision = response?.metadata?.policyDecision || agentAction.policyDecision || null;
   visibleLevelOneAgentActionSuggestion = lowRiskSuggestion;
   clearControlledActionPreview("backend-preview-readiness-replaced");
   visibleControlledActionPreviewReadiness = isVisibleControlledActionPreviewReadiness(controlledActionPreviewReadiness)
@@ -1026,6 +1029,7 @@ function observeAgentActionMetadata(response = {}, context = {}) {
       nextStep: agentAction.nextStep || null
     },
     lowRiskSuggestion,
+    policyDecision,
     controlledActionMetadata,
     controlledActionPreviewReadiness,
     controlledActionConfirmationReadiness,

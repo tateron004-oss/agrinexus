@@ -171,7 +171,7 @@ for (const call of forbiddenCalls) {
 
 assert.match(observationBody, /const lowRiskSuggestion = buildLowRiskAgentActionSuggestion\(agentAction\)/, "observation helper should build low-risk suggestion first");
 assert.match(observationBody, /const controlledActionMetadata = buildControlledActionMetadataFromSuggestion\(lowRiskSuggestion, \{ agentAction \}\)/, "observation helper should derive controlled metadata from low-risk suggestion only");
-assert.match(observationBody, /lowRiskSuggestion,\s*\n\s*controlledActionMetadata/, "observation record should store controlled metadata beside low-risk suggestion");
+assert.match(observationBody, /lowRiskSuggestion,\s*\n\s*(policyDecision,\s*\n\s*)?controlledActionMetadata/, "observation record should store controlled metadata beside low-risk suggestion");
 assert(!/controlledActionMetadata[\s\S]{0,260}(openWorkflow|goSection|mutate|request\(|confirmPending|execute|stage|modal|permission|getUserMedia|geolocation)/i.test(observationBody), "observation helper must not execute from controlled metadata");
 
 assert.match(app, /class="level-one-suggestion-label"/, "visible suggestion labels must remain label elements");
