@@ -47,6 +47,7 @@
     "qa:nexus-low-risk-inert-renderer-prototype-plan": "node scripts/nexus-low-risk-inert-renderer-prototype-plan-qa.js",
     "qa:nexus-low-risk-inert-renderer-flag-guard": "node scripts/nexus-low-risk-inert-renderer-flag-guard-qa.js",
     "qa:nexus-low-risk-inert-renderer-eligibility-guard": "node scripts/nexus-low-risk-inert-renderer-eligibility-guard-qa.js",
+    "qa:nexus-low-risk-inert-renderer-flag-off-regression": "node scripts/nexus-low-risk-inert-renderer-flag-off-regression-qa.js",
     "qa:nexus-intent-classifier": "node scripts/nexus-intent-classifier-qa.js",
     "qa:nexus-selected-tool-id": "node scripts/nexus-selected-tool-id-alignment-qa.js",
     "qa:nexus-low-risk-suggestion-display": "node scripts/nexus-low-risk-suggestion-display-plan-qa.js",
