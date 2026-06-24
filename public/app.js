@@ -285,6 +285,42 @@ function evaluateNexusLowRiskRendererRuntimeHarness(context = {}) {
   });
 }
 
+function createNexusControlledLowRiskInertCardForTest(model = {}, options = {}) {
+  // Phase 13B: test-fixture-only inert DOM prototype. This helper is not wired
+  // into Standard User startup and cannot execute, route, request permissions,
+  // hand off providers, write storage, or attach event handlers.
+  const doc = options && typeof options.documentRef === "object" ? options.documentRef : null;
+  if (!doc || typeof doc.createElement !== "function") return null;
+  const safeText = value => String(value || "").replace(/\s+/g, " ").trim();
+  const allowedLabels = new Set(["Learning", "Training", "Jobs", "Marketplace Review", "Agriculture Help"]);
+  const category = safeText(model.category);
+  if (!allowedLabels.has(category)) return null;
+  if (model.executionAllowed !== false || model.providerHandoffAllowed !== false || model.permissionRequestAllowed !== false) return null;
+  const card = doc.createElement("section");
+  card.setAttribute("data-nexus-renderer-mode", "inert");
+  card.setAttribute("data-execution-allowed", "false");
+  card.setAttribute("data-provider-handoff", "false");
+  card.setAttribute("data-permission-request", "false");
+  card.setAttribute("aria-label", `${category} review-only preview`);
+  const label = doc.createElement("span");
+  label.setAttribute("data-nexus-card-field", "category");
+  label.textContent = category;
+  const title = doc.createElement("strong");
+  title.setAttribute("data-nexus-card-field", "displayTitle");
+  title.textContent = safeText(model.displayTitle) || category;
+  const summary = doc.createElement("p");
+  summary.setAttribute("data-nexus-card-field", "summary");
+  summary.textContent = safeText(model.summary) || "Nexus can help you review options without taking action.";
+  const safety = doc.createElement("p");
+  safety.setAttribute("data-nexus-card-field", "safety");
+  safety.textContent = "Review only. No action has been taken. Any future action must be separate, explicit, confirmed, and gated.";
+  card.appendChild(label);
+  card.appendChild(title);
+  card.appendChild(summary);
+  card.appendChild(safety);
+  return card;
+}
+
 function buildLowRiskAgentActionSuggestion(agentAction = {}) {
   // Phase 8F: visible Level 1 label only. This helper is display-only,
   // is not authoritative, and is not allowed to execute, route, open workflows,
