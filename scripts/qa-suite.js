@@ -61,6 +61,7 @@ const suites = {
     "scripts/nexus-jarvis-style-standard-user-experience-qa.js",
     "scripts/nexus-autonomous-execution-architecture-qa.js",
     "scripts/nexus-autonomous-action-schema-qa.js",
+    "scripts/nexus-planner-action-decision-mapper-qa.js",
     "scripts/nexus-tool-registry-runtime-qa.js",
     "scripts/nexus-intent-classifier-qa.js",
     "scripts/nexus-policy-engine-qa.js",
