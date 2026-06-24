@@ -6612,7 +6612,7 @@ function callIntentLanguage(options = {}) {
 
 function cleanCallTarget(value = "") {
   return contactDisplayName(String(value || "")
-    .replace(/\b(on|at|about|for|because|please|now|today|with|to|from|por|sur|kwa|pelo|pela|whatsapp|telegram|twilio)\b.*$/i, "")
+    .replace(/\b(on|at|about|for|because|please|now|today|with|using|to|from|por|sur|kwa|pelo|pela|whatsapp|telegram|twilio)\b.*$/i, "")
     .replace(/\b(my|the|a|an|mi|mon|ma|meu|minha)\b/gi, " ")
     .replace(/\s+/g, " ")
     .trim());
@@ -6638,11 +6638,13 @@ function extractCallIntentTarget(command = "") {
     .replace(/\s+(?:on|por|sur|kwa|pelo|pela|على)\s+.*$/iu, "")
     .trim();
   const lowerName = normalizeSpeechForIntent(rawName);
+  if (/^(them|someone|somebody|anyone|anybody|person|people|contact|that person|this person)$/i.test(lowerName)) return null;
   const roleMap = [
     { pattern: /^(doctor|medico|medica|m[eé]dico|m[eé]decin|daktari|طبيب|الطبيب)$/i, label: "doctor", relationship: "health provider contact" },
     { pattern: /^(provider|proveedor|fournisseur|mtoa huduma|مزود|المزود)$/i, label: "provider", relationship: "health provider contact" },
     { pattern: /^(buyer|comprador|acheteur|mnunuzi|مشتري|المشتري)$/i, label: "buyer", relationship: "buyer or trade contact" },
-    { pattern: /^(recruiter|employer|reclutador|employeur|mwajiri)$/i, label: "recruiter", relationship: "workforce contact" }
+    { pattern: /^(recruiter|employer|reclutador|employeur|mwajiri)$/i, label: "recruiter", relationship: "workforce contact" },
+    { pattern: /^(emergency contact|emergency)$/i, label: "emergency contact", relationship: "emergency contact" }
   ];
   const role = roleMap.find(item => item.pattern.test(lowerName));
   if (role) return { type: "role", rawName, displayName: role.label, relationship: role.relationship };
@@ -6756,6 +6758,7 @@ function callIntentResolution(db, parsed = {}) {
   const matches = callContactCandidates(db, target);
   if (target.type === "role") {
     const callable = matches.find(item => item.e164Phone || item.handle);
+    if (!callable && !["provider", "buyer"].includes(target.displayName)) return { status: "missing-number", matches };
     return {
       status: "resolved",
       matches: [{
