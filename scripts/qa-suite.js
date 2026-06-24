@@ -69,6 +69,7 @@ const suites = {
     "scripts/nexus-session-memory-observation-qa.js",
     "scripts/nexus-session-memory-ui-readiness-qa.js",
     "scripts/nexus-session-memory-reset-consent-qa.js",
+    "scripts/nexus-session-memory-standard-user-demo-qa.js",
     "scripts/nexus-controlled-action-metadata-schema-qa.js",
     "scripts/nexus-controlled-action-preview-readiness-qa.js",
     "scripts/nexus-controlled-action-preview-ui-qa.js",

@@ -25,6 +25,7 @@
     "qa:nexus-session-memory-observation": "node scripts/nexus-session-memory-observation-qa.js",
     "qa:nexus-session-memory-ui-readiness": "node scripts/nexus-session-memory-ui-readiness-qa.js",
     "qa:nexus-session-memory-reset-consent": "node scripts/nexus-session-memory-reset-consent-qa.js",
+    "qa:nexus-session-memory-standard-user-demo": "node scripts/nexus-session-memory-standard-user-demo-qa.js",
     "qa:nexus-agent-action": "node scripts/nexus-agent-action-schema-qa.js",
     "qa:nexus-agent-action-observation": "node scripts/nexus-agent-action-observation-qa.js",
     "qa:nexus-agent-action-frontend": "node scripts/nexus-agent-action-frontend-observation-qa.js",
