@@ -467,10 +467,59 @@ function clearLevelOneAgentActionSuggestionLabel() {
   paintLevelOneAgentActionSuggestionLabel();
 }
 
+function classifyNexusIntentForMetadata(command = "", context = {}) {
+  const classifier = globalThis.NexusIntentClassifier?.classifyNexusIntent;
+  if (typeof classifier !== "function") return null;
+  try {
+    return classifier({ text: command, ...context });
+  } catch (error) {
+    console.warn("Nexus intent classifier unavailable for metadata", error);
+    return null;
+  }
+}
+
 function localLevelOneSuggestionForSimpleUserIntent(intent = {}, command = "") {
   const lower = String(command || "").toLowerCase();
   if (!intent || intent.type === "clarify") return null;
   if (/\b(telehealth|video|camera|call|doctor|provider|nurse|clinic|hospital|medicine|medical|health|location|locate|where am i|sell|buy|payment|pay|checkout|fertilizer|login|account|verify|identity)\b/.test(lower)) return null;
+  let classification = null;
+  const classifier = globalThis.NexusIntentClassifier?.classifyNexusIntent;
+  if (typeof classifier === "function") {
+    try {
+      classification = classifier({
+        text: command,
+        normalizedIntent: intent.intent || intent.type || "",
+        routeContext: `${intent.workflow || ""} ${intent.directAction || ""}`
+      });
+    } catch (error) {
+      console.warn("Nexus intent classifier unavailable for metadata", error);
+    }
+  }
+  if (classification?.risk === "low" && classification.actionType === "preview_or_route" && classification.selectedToolId) {
+    const levelLabelsByToolId = {
+      "workforce.training": "Training",
+      "learning.start": "Learning",
+      "workforce.job_pathways": "Jobs",
+      "marketplace.agritrade": "Marketplace",
+      "workforce.field_support": "Field Support",
+      "agriculture.help": "Agriculture Help"
+    };
+    const levelLabel = levelLabelsByToolId[classification.selectedToolId] || "";
+    if (levelLabel) {
+      return {
+        visibility: "visible-level-1-label",
+        selectedToolId: classification.selectedToolId,
+        label: levelLabel,
+        levelLabel,
+        displayOnly: true,
+        userClickRequired: false,
+        executionAllowed: false,
+        autoOpenAllowed: false,
+        source: "nexus-intent-classifier",
+        intentClassification: classification
+      };
+    }
+  }
   let levelLabel = "";
   if (/\b(agriculture training|workforce training|start training|show training|open training)\b/.test(lower)) {
     levelLabel = "Training";

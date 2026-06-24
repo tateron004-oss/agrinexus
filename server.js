@@ -2,6 +2,7 @@ const http = require("http");
 const fs = require("fs");
 const path = require("path");
 const crypto = require("crypto");
+const { classifyNexusIntent } = require("./public/nexus-intent-classifier.js");
 
 function loadEnvFile(filePath) {
   if (!fs.existsSync(filePath)) return;
@@ -58,10 +59,18 @@ function inferMetadataOnlySelectedToolId(input = {}) {
   const normalizedIntent = String(result.intent || input.normalizedIntent || "").toLowerCase();
   const routeContext = `${message} ${normalizedIntent} ${metadata.pendingActionType || ""} ${metadata.pendingActionName || ""} ${metadata.redirectSection || ""} ${metadata.tool || ""}`.toLowerCase();
   const confirmationRequired = Boolean(metadata.confirmationRequired || result.status === "needs-confirmation");
+  const classification = classifyNexusIntent({
+    text: input.userMessage || "",
+    normalizedIntent,
+    routeContext
+  });
 
   if (confirmationRequired) return null;
   if (/\b(health|telehealth|doctor|clinic|medicine|patient|vitals|referral|emergency|baby|video|camera|provider|call|sms|whatsapp|telegram|message|payment|wallet|order|submit|apply|application|certificate|share|export|dispatch|cancel|admin|location|locate|map|route|shipment|drone|scan|sell|buyer|quote)\b/.test(routeContext)) {
     return null;
+  }
+  if (classification.risk === "low" && classification.actionType === "preview_or_route" && classification.selectedToolId) {
+    return classification.selectedToolId;
   }
 
   if (/\b(open|start|show|workforce)?\s*(training|train me|trained|course support|skill gaps|job readiness|work readiness)\b/.test(message)) {
@@ -100,6 +109,11 @@ function buildAgentActionMetadata(input = {}) {
     result,
     normalizedIntent
   });
+  const intentClassification = classifyNexusIntent({
+    text: userMessage,
+    normalizedIntent,
+    routeContext: `${metadata.pendingActionType || ""} ${metadata.pendingActionName || ""} ${metadata.redirectSection || ""} ${metadata.tool || ""}`
+  });
   const privacySignal = /health|telehealth|patient|video|camera|care|vitals|referral|medicine|doctor|clinic/i.test(`${normalizedIntent || ""} ${metadata.pendingActionType || ""} ${metadata.redirectSection || ""} ${metadata.moduleSignal?.module || ""}`);
   const highRiskSignal = /call|message|payment|wallet|order|application|certificate|provider|drone|admin|share|export|dispatch/i.test(`${normalizedIntent || ""} ${metadata.pendingActionType || ""} ${metadata.pendingActionName || ""} ${metadata.tool || ""}`);
   const riskLevel = privacySignal
@@ -127,6 +141,7 @@ function buildAgentActionMetadata(input = {}) {
       intent: result.intent || null,
       status: result.status || null
     },
+    intentClassification,
     nextStep: metadata.confirmationPrompt || metadata.frontierCommunication?.nextQuestion || null,
     auditMetadata: {
       ...productIdentityMetadata(),
