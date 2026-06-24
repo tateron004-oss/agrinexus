@@ -125,11 +125,11 @@ function assertStaticGuards() {
   const doc = fs.readFileSync(docPath, "utf8");
 
   assert.match(server, /const \{ buildNexusPolicyDecision, validateNexusPolicyDecision \} = require\("\.\/public\/nexus-policy-engine\.js"\)/, "server should load policy engine for observation metadata");
-  assert.match(server, /policyDecision,\s*\n\s*policyObservation:/, "agentAction should include policyDecision and policyObservation");
-  assert.match(server, /policyDecision,\s*\n\s*language: commandLanguage/, "response metadata should expose additive policyDecision");
+  assert.match(server, /policyDecision,[\s\S]{0,240}policyObservation:/, "agentAction should include policyDecision and policyObservation");
+  assert.match(server, /policyDecision,[\s\S]{0,240}language: commandLanguage/, "response metadata should expose additive policyDecision");
   assert.match(app, /policyDecision metadata is also observation-only/i, "frontend should document policy observation as observation-only");
   assert.match(app, /const policyDecision = response\?\.metadata\?\.policyDecision \|\| agentAction\.policyDecision \|\| null/, "frontend should observe policyDecision metadata");
-  assert.match(app, /policyDecision,\s*\n\s*controlledActionMetadata/, "frontend observation log should include policyDecision");
+  assert.match(app, /policyDecision,[\s\S]{0,240}controlledActionMetadata/, "frontend observation log should include policyDecision");
 
   const helperStart = app.indexOf("function observeAgentActionMetadata");
   const helperEnd = app.indexOf("const countryLanguageMap", helperStart);

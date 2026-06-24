@@ -4,6 +4,7 @@ const path = require("path");
 const crypto = require("crypto");
 const { classifyNexusIntent } = require("./public/nexus-intent-classifier.js");
 const { buildNexusPolicyDecision, validateNexusPolicyDecision } = require("./public/nexus-policy-engine.js");
+const { createNexusPlan, validateNexusPlan } = require("./public/nexus-planner.js");
 
 function loadEnvFile(filePath) {
   if (!fs.existsSync(filePath)) return;
@@ -125,6 +126,30 @@ function buildAgentActionMetadata(input = {}) {
     pendingActionName: metadata.pendingActionName || null
   });
   const policyValidation = validateNexusPolicyDecision(policyDecision);
+  const nexusPlan = createNexusPlan({
+    text: userMessage,
+    command: userMessage,
+    intentClassification,
+    policyDecision,
+    context: {
+      source: "agent-action-observation",
+      inputMode: input.inputMode || metadata.inputMode || "api",
+      outputMode: input.outputMode || metadata.outputMode || undefined,
+      language: input.language || metadata.language || undefined
+    }
+  });
+  const planValidation = validateNexusPlan(nexusPlan);
+  const plannerObservation = {
+    schemaVersion: "planner-observation.v1",
+    observationOnly: true,
+    routerAuthority: "existing-routers",
+    executionAuthority: "none",
+    plannerSource: "nexus-planner",
+    validationStatus: planValidation.ok ? "valid" : "invalid",
+    planValidation,
+    canExecute: false,
+    safetyBoundary: "Planner metadata is not execution, routing, permission, staging, or confirmation authority."
+  };
   const privacySignal = /health|telehealth|patient|video|camera|care|vitals|referral|medicine|doctor|clinic/i.test(`${normalizedIntent || ""} ${metadata.pendingActionType || ""} ${metadata.redirectSection || ""} ${metadata.moduleSignal?.module || ""}`);
   const highRiskSignal = /call|message|payment|wallet|order|application|certificate|provider|drone|admin|share|export|dispatch/i.test(`${normalizedIntent || ""} ${metadata.pendingActionType || ""} ${metadata.pendingActionName || ""} ${metadata.tool || ""}`);
   const riskLevel = privacySignal
@@ -154,6 +179,8 @@ function buildAgentActionMetadata(input = {}) {
     },
     intentClassification,
     policyDecision,
+    nexusPlan,
+    plannerObservation,
     policyObservation: {
       schemaVersion: "policy-observation.v1",
       observationOnly: true,
@@ -26200,6 +26227,8 @@ async function runCompanionSafeAgentCommand(db, user, body = {}) {
     language: commandLanguage
   });
   const policyDecision = agentAction.policyDecision || null;
+  const nexusPlan = agentAction.nexusPlan || null;
+  const plannerObservation = agentAction.plannerObservation || null;
   result.metadata = {
     ...(result.metadata || {}),
     inputMode,
@@ -26208,6 +26237,8 @@ async function runCompanionSafeAgentCommand(db, user, body = {}) {
     companionRouteOutcome,
     agentAction,
     policyDecision,
+    nexusPlan,
+    plannerObservation,
     language: commandLanguage,
     targetLanguage: commandLanguage
   };
