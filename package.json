@@ -34,6 +34,7 @@
     "qa:nexus-agent-suggestion-policy": "node scripts/nexus-agent-action-suggestion-policy-qa.js",
     "qa:nexus-conversation-quality": "node scripts/nexus-conversation-quality-qa.js",
     "qa:nexus-jarvis-style-standard-user-experience": "node scripts/nexus-jarvis-style-standard-user-experience-qa.js",
+    "qa:nexus-autonomous-execution-architecture": "node scripts/nexus-autonomous-execution-architecture-qa.js",
     "qa:nexus-intent-classifier": "node scripts/nexus-intent-classifier-qa.js",
     "qa:nexus-selected-tool-id": "node scripts/nexus-selected-tool-id-alignment-qa.js",
     "qa:nexus-low-risk-suggestion-display": "node scripts/nexus-low-risk-suggestion-display-plan-qa.js",
