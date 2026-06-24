@@ -14361,7 +14361,9 @@ async function loadPublicMapConfig() {
     }
   } catch (error) {
     mapTileConfig = DEFAULT_MAP_TILE_CONFIG;
-    console.warn("Using default map tile configuration", error?.message || error);
+    if (localStorage.getItem("agrinexusMapDebug") === "on") {
+      console.warn("Using default map tile configuration", error?.message || error);
+    }
   }
   return mapTileConfig;
 }
@@ -14373,7 +14375,9 @@ function leafletMapOptions(options = {}) {
     scrollWheelZoom: true,
     tap: true,
     worldCopyJump: true,
-    preferCanvas: true,
+    // SVG is Leaflet's default renderer and avoids noisy canvas teardown errors
+    // when demo maps are opened, closed, and recreated during guided flows.
+    preferCanvas: false,
     zoomSnap: 1,
     zoomDelta: 1,
     wheelPxPerZoomLevel: MAP_ZOOM_CONFIG.wheelPxPerZoomLevel,

@@ -34,6 +34,8 @@ assert(app.includes("maxZoom: MAP_ZOOM_CONFIG.maxZoom"), "Leaflet maps/tiles sho
 assert(app.includes("maxNativeZoom: MAP_ZOOM_CONFIG.maxNativeZoom"), "Tile layers should cap native raster zoom to avoid blurry over-zoom.");
 assert(app.includes("detectRetina: true"), "Tile layers should request high-DPI tiles when Leaflet can do so.");
 assert(app.includes("zoomControl: true"), "User-facing Leaflet zoom controls should remain enabled.");
+assert(app.includes("preferCanvas: false"), "Leaflet maps should use the stable SVG renderer for demo reopen flows.");
+assert(app.includes('localStorage.getItem("agrinexusMapDebug") === "on"'), "Map config fallback warning should stay behind a debug flag.");
 assert(app.includes("L.control.layers"), "Layer picker should remain available.");
 assert(app.includes("L.control.scale"), "Scale control should remain available.");
 assert(app.includes("tileerror"), "Tile failure fallback should remain wired.");
