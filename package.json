@@ -21,6 +21,7 @@
     "qa:nexus-planner": "node scripts/nexus-planner-qa.js",
     "qa:nexus-plan-observation": "node scripts/nexus-plan-observation-qa.js",
     "qa:nexus-planner-safety-hardening": "node scripts/nexus-planner-safety-hardening-qa.js",
+    "qa:nexus-session-memory": "node scripts/nexus-session-memory-qa.js",
     "qa:nexus-agent-action": "node scripts/nexus-agent-action-schema-qa.js",
     "qa:nexus-agent-action-observation": "node scripts/nexus-agent-action-observation-qa.js",
     "qa:nexus-agent-action-frontend": "node scripts/nexus-agent-action-frontend-observation-qa.js",
