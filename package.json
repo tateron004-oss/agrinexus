@@ -50,6 +50,7 @@
     "qa:nexus-low-risk-inert-renderer-flag-off-regression": "node scripts/nexus-low-risk-inert-renderer-flag-off-regression-qa.js",
     "qa:nexus-low-risk-inert-renderer-prototype-implementation": "node scripts/nexus-low-risk-inert-renderer-prototype-implementation-qa.js",
     "qa:nexus-low-risk-renderer-controlled-runtime-wiring-plan": "node scripts/nexus-low-risk-renderer-controlled-runtime-wiring-plan-qa.js",
+    "qa:nexus-low-risk-renderer-controlled-runtime-wiring-static": "node scripts/nexus-low-risk-renderer-controlled-runtime-wiring-static-qa.js",
     "qa:nexus-intent-classifier": "node scripts/nexus-intent-classifier-qa.js",
     "qa:nexus-selected-tool-id": "node scripts/nexus-selected-tool-id-alignment-qa.js",
     "qa:nexus-low-risk-suggestion-display": "node scripts/nexus-low-risk-suggestion-display-plan-qa.js",
