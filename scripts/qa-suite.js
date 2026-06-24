@@ -71,6 +71,7 @@ const suites = {
     "scripts/nexus-staged-action-renderer-readiness-audit-qa.js",
     "scripts/nexus-low-risk-inert-renderer-prototype-plan-qa.js",
     "scripts/nexus-low-risk-inert-renderer-flag-guard-qa.js",
+    "scripts/nexus-low-risk-inert-renderer-eligibility-guard-qa.js",
     "scripts/nexus-tool-registry-runtime-qa.js",
     "scripts/nexus-intent-classifier-qa.js",
     "scripts/nexus-policy-engine-qa.js",
