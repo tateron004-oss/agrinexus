@@ -81,6 +81,7 @@ const suites = {
     "scripts/nexus-low-risk-renderer-flag-off-harness-browser-regression-qa.js",
     "scripts/nexus-low-risk-renderer-controlled-runtime-flag-on-test-harness-plan-qa.js",
     "scripts/nexus-low-risk-renderer-controlled-runtime-flag-on-static-qa.js",
+    "scripts/nexus-low-risk-renderer-controlled-runtime-flag-on-readiness-review-qa.js",
     "scripts/nexus-tool-registry-runtime-qa.js",
     "scripts/nexus-intent-classifier-qa.js",
     "scripts/nexus-policy-engine-qa.js",
