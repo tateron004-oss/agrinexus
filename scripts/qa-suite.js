@@ -90,6 +90,7 @@ const suites = {
     "scripts/nexus-controlled-low-risk-renderer-test-only-visual-snapshot-fixture-qa.js",
     "scripts/nexus-controlled-low-risk-renderer-standard-user-readiness-review-before-visible-activation-qa.js",
     "scripts/nexus-controlled-low-risk-renderer-default-off-visible-feature-flag-design-qa.js",
+    "scripts/nexus-controlled-low-risk-renderer-hidden-standard-user-mount-point-contract-qa.js",
     "scripts/nexus-tool-registry-runtime-qa.js",
     "scripts/nexus-intent-classifier-qa.js",
     "scripts/nexus-policy-engine-qa.js",
