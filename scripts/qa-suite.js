@@ -77,6 +77,7 @@ const suites = {
     "scripts/nexus-low-risk-renderer-controlled-runtime-wiring-plan-qa.js",
     "scripts/nexus-low-risk-renderer-controlled-runtime-wiring-static-qa.js",
     "scripts/nexus-low-risk-renderer-controlled-runtime-wiring-readiness-review-qa.js",
+    "scripts/nexus-low-risk-renderer-controlled-runtime-flag-off-harness-qa.js",
     "scripts/nexus-tool-registry-runtime-qa.js",
     "scripts/nexus-intent-classifier-qa.js",
     "scripts/nexus-policy-engine-qa.js",

@@ -173,6 +173,48 @@ const BROWSER_SPEECH_FALLBACK_STORAGE_KEY = "agrinexusBrowserSpeechFallback";
 // Provider failures must update visible status, clear speaking state, and allow
 // voice-first listening to resume safely; aborts/interruption are not failures.
 
+function evaluateNexusLowRiskRendererRuntimeHarness(context = {}) {
+  // Phase 12T: disabled-by-default flag-off harness only. This proves app-level
+  // runtime code can safely evaluate future low-risk renderer readiness without
+  // loading a renderer, changing Standard User behavior, writing DOM, navigating,
+  // requesting permissions, handing off providers, or executing actions.
+  const flagState = context && typeof context.flagState === "object" ? context.flagState : {};
+  const eligibilityState = context && typeof context.eligibilityState === "object" ? context.eligibilityState : {};
+  const actionDecision = context && typeof context.actionDecision === "object" ? context.actionDecision : {};
+  const activated = false;
+  const base = {
+    activated,
+    rendererInvoked: false,
+    visibleRuntimeUi: false,
+    domRenderingAllowed: false,
+    clickHandlersAllowed: false,
+    executionAllowed: false,
+    providerHandoffAllowed: false,
+    permissionRequestAllowed: false,
+    navigationAllowed: false,
+    standardUserBehaviorChange: false,
+    executionAuthority: "none",
+    renderingAuthority: "none",
+    providerHandoffAuthority: "none",
+    browserPermissionAuthority: "none",
+    navigationAuthority: "none",
+    source: "nexus-low-risk-runtime-harness.v1"
+  };
+  if (flagState.enabled !== true) {
+    return Object.freeze({ ...base, reason: "flag_disabled" });
+  }
+  if (eligibilityState.eligible !== true) {
+    return Object.freeze({ ...base, reason: "eligibility_false" });
+  }
+  if (actionDecision.riskLevel && actionDecision.riskLevel !== "low") {
+    return Object.freeze({ ...base, reason: "restricted_or_non_low_risk" });
+  }
+  if (!["suggestion_only", "navigation_only"].includes(String(actionDecision.executionBoundary || ""))) {
+    return Object.freeze({ ...base, reason: "unsupported_boundary" });
+  }
+  return Object.freeze({ ...base, reason: "not_configured" });
+}
+
 function buildLowRiskAgentActionSuggestion(agentAction = {}) {
   // Phase 8F: visible Level 1 label only. This helper is display-only,
   // is not authoritative, and is not allowed to execute, route, open workflows,
