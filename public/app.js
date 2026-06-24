@@ -296,6 +296,7 @@ function createNexusControlledLowRiskInertCardForTest(model = {}, options = {}) 
   const category = safeText(model.category);
   if (!allowedLabels.has(category)) return null;
   if (model.executionAllowed !== false || model.providerHandoffAllowed !== false || model.permissionRequestAllowed !== false) return null;
+  if (model.providerHandoff === true || model.permissionRequest === true) return null;
   const card = doc.createElement("section");
   card.setAttribute("data-nexus-renderer-mode", "inert");
   card.setAttribute("data-execution-allowed", "false");

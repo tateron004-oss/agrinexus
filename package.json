@@ -61,6 +61,7 @@
     "qa:nexus-low-risk-renderer-controlled-runtime-flag-on-browser-regression-validation": "node scripts/nexus-low-risk-renderer-controlled-runtime-flag-on-browser-regression-validation-qa.js",
     "qa:nexus-controlled-low-risk-renderer-visible-ui-design-contract": "node scripts/nexus-controlled-low-risk-renderer-visible-ui-design-contract-qa.js",
     "qa:nexus-controlled-low-risk-renderer-inert-dom-prototype-test-fixture-only": "node scripts/nexus-controlled-low-risk-renderer-inert-dom-prototype-test-fixture-only-qa.js",
+    "qa:nexus-controlled-low-risk-renderer-inert-dom-browser-regression-contract-enforcement": "node scripts/nexus-controlled-low-risk-renderer-inert-dom-browser-regression-contract-enforcement-qa.js",
     "qa:nexus-intent-classifier": "node scripts/nexus-intent-classifier-qa.js",
     "qa:nexus-selected-tool-id": "node scripts/nexus-selected-tool-id-alignment-qa.js",
     "qa:nexus-low-risk-suggestion-display": "node scripts/nexus-low-risk-suggestion-display-plan-qa.js",
