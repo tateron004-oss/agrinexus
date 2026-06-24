@@ -18,6 +18,26 @@ function assertIncludes(source, terms, label) {
   }
 }
 
+function assertHiddenMountPointOnly(source) {
+  const mountId = "nexus-controlled-low-risk-renderer-root";
+  assert.equal((source.match(new RegExp(`id="${mountId}"`, "g")) || []).length, 1, "public/index.html must include exactly one hidden renderer mount point after Phase 13L");
+  const match = source.match(/<div\s+[^>]*id="nexus-controlled-low-risk-renderer-root"[^>]*>\s*<\/div>/);
+  assert(match, "hidden renderer mount point must be a single empty div");
+  const mount = match[0];
+  for (const term of [
+    "hidden",
+    "aria-hidden=\"true\"",
+    "data-nexus-renderer-mode=\"hidden\"",
+    "data-visible-renderer-enabled=\"false\"",
+    "data-execution-allowed=\"false\"",
+    "data-provider-handoff=\"false\"",
+    "data-permission-request=\"false\"",
+    "data-navigation-allowed=\"false\""
+  ]) {
+    assert(mount.includes(term), `hidden renderer mount point must include ${term}`);
+  }
+}
+
 const docName = "NEXUS_CONTROLLED_LOW_RISK_RENDERER_DEFAULT_OFF_VISIBLE_FEATURE_FLAG_DESIGN.md";
 const scriptName = "nexus-controlled-low-risk-renderer-default-off-visible-feature-flag-design-qa.js";
 
@@ -157,13 +177,12 @@ assert(!index.includes("enableControlledLowRiskRendererVisibleUi"), "public/inde
 
 assert(!index.match(/<script[^>]+nexus-low-risk/i), "public/index.html must not include low-risk renderer script tags");
 assert(!index.includes("nexus-controlled-low-risk-renderer-inert-card.snapshot.html"), "public/index.html must not reference the Phase 13D fixture");
-assert(!index.includes("data-nexus-renderer-mode"), "public/index.html must not include renderer mode markers");
-assert(!index.includes("controlled-low-risk-renderer"), "public/index.html must not include controlled renderer roots");
+assertHiddenMountPointOnly(index);
+assert(!index.includes("data-nexus-renderer-mode=\"inert\""), "public/index.html must not include rendered inert card output");
 
 for (const forbidden of [
   "data-standard-user-low-risk-renderer",
   "data-low-risk-renderer-root",
-  "low-risk-renderer-root",
   "nexus-visible-low-risk-renderer",
   "data-controlled-low-risk-renderer-visible-ui",
   "controlled-low-risk-renderer-visible-ui"

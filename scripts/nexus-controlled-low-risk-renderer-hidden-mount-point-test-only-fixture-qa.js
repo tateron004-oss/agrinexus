@@ -18,6 +18,25 @@ function assertIncludes(source, terms, label) {
   }
 }
 
+function assertHiddenMountPointOnly(source) {
+  assert.equal((source.match(new RegExp(`id="${mountId}"`, "g")) || []).length, 1, "public/index.html must include exactly one hidden renderer mount point after Phase 13L");
+  const match = source.match(/<div\s+[^>]*id="nexus-controlled-low-risk-renderer-root"[^>]*>\s*<\/div>/);
+  assert(match, "hidden renderer mount point must be a single empty div");
+  const mount = match[0];
+  for (const term of [
+    "hidden",
+    "aria-hidden=\"true\"",
+    "data-nexus-renderer-mode=\"hidden\"",
+    "data-visible-renderer-enabled=\"false\"",
+    "data-execution-allowed=\"false\"",
+    "data-provider-handoff=\"false\"",
+    "data-permission-request=\"false\"",
+    "data-navigation-allowed=\"false\""
+  ]) {
+    assert(mount.includes(term), `hidden renderer mount point must include ${term}`);
+  }
+}
+
 const docName = "NEXUS_CONTROLLED_LOW_RISK_RENDERER_HIDDEN_MOUNT_POINT_TEST_ONLY_FIXTURE.md";
 const fixtureName = "nexus-controlled-low-risk-renderer-hidden-mount-point.fixture.html";
 const scriptName = "nexus-controlled-low-risk-renderer-hidden-mount-point-test-only-fixture-qa.js";
@@ -190,12 +209,12 @@ for (const forbiddenTerm of [
   assert(!fixture.toLowerCase().includes(forbiddenTerm), `hidden mount fixture must not include unsafe affordance text: ${forbiddenTerm}`);
 }
 
-assert(!index.includes(mountId), `public/index.html must not include actual future mount point ${mountId}`);
+assertHiddenMountPointOnly(index);
 assert(!index.includes(fixtureName), "public/index.html must not reference the Phase 13I fixture");
 assert(!app.includes(fixtureName), "public/app.js must not reference the Phase 13I fixture");
 assert(!server.includes(fixtureName), "server.js must not reference the Phase 13I fixture");
 assert(!index.match(/<script[^>]+nexus-low-risk/i), "public/index.html must not include low-risk renderer scripts");
-assert(!index.includes("data-nexus-renderer-mode"), "public/index.html must not include renderer mode markers");
+assert(!index.includes("data-nexus-renderer-mode=\"inert\""), "public/index.html must not include rendered inert card output");
 assert(!app.includes(`getElementById("${mountId}")`), "public/app.js must not query the future mount point by id");
 assert(!app.includes(`getElementById('${mountId}')`), "public/app.js must not query the future mount point by id");
 assert(!app.includes(`querySelector("#${mountId}")`), "public/app.js must not query the future mount point by selector");

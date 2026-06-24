@@ -18,6 +18,26 @@ function assertIncludes(source, terms, label) {
   }
 }
 
+function assertHiddenMountPointOnly(source) {
+  const mountId = "nexus-controlled-low-risk-renderer-root";
+  assert.equal((source.match(new RegExp(`id="${mountId}"`, "g")) || []).length, 1, "public/index.html must include exactly one hidden renderer mount point after Phase 13L");
+  const match = source.match(/<div\s+[^>]*id="nexus-controlled-low-risk-renderer-root"[^>]*>\s*<\/div>/);
+  assert(match, "hidden renderer mount point must be a single empty div");
+  const mount = match[0];
+  for (const term of [
+    "hidden",
+    "aria-hidden=\"true\"",
+    "data-nexus-renderer-mode=\"hidden\"",
+    "data-visible-renderer-enabled=\"false\"",
+    "data-execution-allowed=\"false\"",
+    "data-provider-handoff=\"false\"",
+    "data-permission-request=\"false\"",
+    "data-navigation-allowed=\"false\""
+  ]) {
+    assert(mount.includes(term), `hidden renderer mount point must include ${term}`);
+  }
+}
+
 const docPath = path.join(root, "docs", "NEXUS_CONTROLLED_LOW_RISK_RENDERER_TEST_ONLY_VISUAL_SNAPSHOT_FIXTURE.md");
 const fixturePath = path.join(root, "test-fixtures", "nexus-controlled-low-risk-renderer-inert-card.snapshot.html");
 assert(fs.existsSync(docPath), "Phase 13D documentation must exist");
@@ -130,7 +150,8 @@ for (const forbiddenTerm of [
 
 assert(!index.includes("nexus-controlled-low-risk-renderer-inert-card.snapshot.html"), "public/index.html must not reference the Phase 13D fixture");
 assert(!app.includes("nexus-controlled-low-risk-renderer-inert-card.snapshot.html"), "public/app.js must not reference the Phase 13D fixture");
-assert(!index.includes("data-nexus-renderer-mode"), "public/index.html must not include inert renderer output");
+assertHiddenMountPointOnly(index);
+assert(!index.includes("data-nexus-renderer-mode=\"inert\""), "public/index.html must not include rendered inert card output");
 assert(!index.match(/<script[^>]+nexus-low-risk/i), "public/index.html must not include low-risk renderer scripts");
 assert(app.includes("function createNexusControlledLowRiskInertCardForTest"), "Phase 13B inert helper must remain present");
 assert(!app.includes("renderNexusLowRiskInertPreview"), "public/app.js must not invoke active renderer preview");

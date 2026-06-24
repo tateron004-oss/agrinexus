@@ -94,6 +94,7 @@ const suites = {
     "scripts/nexus-controlled-low-risk-renderer-hidden-mount-point-test-only-fixture-qa.js",
     "scripts/nexus-controlled-low-risk-renderer-hidden-mount-point-browser-regression-standard-user-absence-enforcement-qa.js",
     "scripts/nexus-controlled-low-risk-renderer-mount-point-readiness-review-before-runtime-wiring-qa.js",
+    "scripts/nexus-controlled-low-risk-renderer-actual-hidden-mount-point-default-empty-implementation-qa.js",
     "scripts/nexus-tool-registry-runtime-qa.js",
     "scripts/nexus-intent-classifier-qa.js",
     "scripts/nexus-policy-engine-qa.js",

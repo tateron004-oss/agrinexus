@@ -18,6 +18,26 @@ function assertIncludes(source, terms, label) {
   }
 }
 
+function assertHiddenMountPointOnly(source) {
+  const mountId = "nexus-controlled-low-risk-renderer-root";
+  assert.equal((source.match(new RegExp(`id="${mountId}"`, "g")) || []).length, 1, "public/index.html must include exactly one hidden renderer mount point after Phase 13L");
+  const match = source.match(/<div\s+[^>]*id="nexus-controlled-low-risk-renderer-root"[^>]*>\s*<\/div>/);
+  assert(match, "hidden renderer mount point must be a single empty div");
+  const mount = match[0];
+  for (const term of [
+    "hidden",
+    "aria-hidden=\"true\"",
+    "data-nexus-renderer-mode=\"hidden\"",
+    "data-visible-renderer-enabled=\"false\"",
+    "data-execution-allowed=\"false\"",
+    "data-provider-handoff=\"false\"",
+    "data-permission-request=\"false\"",
+    "data-navigation-allowed=\"false\""
+  ]) {
+    assert(mount.includes(term), `hidden renderer mount point must include ${term}`);
+  }
+}
+
 function extractFunction(source, name) {
   const start = source.indexOf(`function ${name}`);
   assert(start >= 0, `${name} must exist`);
@@ -158,8 +178,8 @@ assertIncludes(doc, [
 
 assert(!index.includes("nexus-low-risk-inert-renderer"), "public/index.html must not load low-risk inert renderer modules");
 assert(!index.match(/<script[^>]+nexus-low-risk/i), "public/index.html must not include a low-risk renderer script tag");
-assert(!index.includes("data-nexus-renderer-mode"), "public/index.html must not include inert renderer output");
-assert(!index.includes("data-execution-allowed"), "public/index.html must not include inert renderer output");
+assertHiddenMountPointOnly(index);
+assert(!index.includes("data-nexus-renderer-mode=\"inert\""), "public/index.html must not include rendered inert card output");
 assert(!app.includes("renderNexusLowRiskInertPreview"), "public/app.js must not invoke renderer preview");
 assert(!app.includes("buildNexusLowRiskInertRendererPrototype"), "public/app.js must not invoke renderer prototype builder");
 assert(!app.includes("import(\"/nexus-low-risk"), "public/app.js must not dynamically import low-risk renderer modules");
