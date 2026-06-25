@@ -102,6 +102,7 @@ const suites = {
     "scripts/nexus-controlled-low-risk-renderer-non-runtime-adapter-fixture-qa.js",
     "scripts/nexus-controlled-low-risk-renderer-adapter-to-shell-fixture-integration-qa.js",
     "scripts/nexus-controlled-low-risk-renderer-runtime-adjacent-adapter-stub-qa.js",
+    "scripts/nexus-controlled-low-risk-renderer-default-off-runtime-flag-plumbing-audit-qa.js",
     "scripts/nexus-tool-registry-runtime-qa.js",
     "scripts/nexus-intent-classifier-qa.js",
     "scripts/nexus-policy-engine-qa.js",
