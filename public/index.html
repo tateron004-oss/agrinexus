@@ -13,7 +13,7 @@
   <link rel="icon" href="/icons/agri-nexus-192.png" type="image/png">
   <link rel="apple-touch-icon" href="/icons/agri-nexus-192.png">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-  <link rel="stylesheet" href="/styles.css?v=nexus-behavior-304">
+  <link rel="stylesheet" href="/styles.css?v=nexus-behavior-305">
 </head>
 <body>
   <a class="skip-link" href="#mainContent">Skip to main content</a>
@@ -117,9 +117,24 @@
 
       <button id="userBackHomeBtn" class="user-back-home hidden" type="button">Back to Home</button>
       <div id="userVoiceDock" class="user-voice-dock" aria-label="Nexus voice controls">
+        <div class="nexus-voice-demo-label" data-nexus-voice-demo-label>
+          <strong>Nexus Voice Demo</strong>
+          <span>Push-to-talk access assistant. Demo-safe. No provider contact, calls, prescriptions, payments, or location sharing.</span>
+        </div>
+        <button id="nexusVoiceDemoTalkBtn" type="button" data-nexus-voice-demo-action="talk">Talk to Nexus</button>
+        <button id="nexusVoiceDemoIntroBtn" type="button" data-nexus-voice-demo-action="introduce">Introduce Nexus</button>
         <button type="button" data-user-voice-action="listen">Speak</button>
         <button type="button" data-user-voice-action="type">Ask</button>
         <button type="button" data-user-voice-action="read">Read</button>
+        <div class="nexus-voice-demo-prompts" aria-label="Meeting-safe Nexus demo prompts">
+          <button type="button" data-nexus-voice-demo-prompt="Nexus, I need telehealth">I need telehealth</button>
+          <button type="button" data-nexus-voice-demo-prompt="Nexus, help me find a mobile clinic">Find a mobile clinic</button>
+          <button type="button" data-nexus-voice-demo-prompt="Nexus, I need pharmacy support">I need pharmacy support</button>
+          <button type="button" data-nexus-voice-demo-prompt="Nexus, I need transportation to care">I need transportation to care</button>
+          <button type="button" data-nexus-voice-demo-prompt="Nexus, call my doctor">Call my doctor</button>
+        </div>
+        <span id="nexusVoiceDemoStatus" data-nexus-voice-demo-status>Voice ready</span>
+        <span id="nexusVoiceDemoTranscript" data-nexus-voice-demo-transcript>Click Talk to Nexus for one safe voice command. Browser speech recognition support varies. You can type the same Nexus command, and the safety behavior remains the same.</span>
         <span id="nexusBehaviorStatus">Nexus ready</span>
       </div>
       <section id="userCaptionPanel" class="user-caption-panel hidden" aria-label="Nexus captions" aria-live="polite">
@@ -1802,7 +1817,8 @@
   <script src="/nexus-intent-classifier.js?v=nexus-behavior-304"></script>
   <script src="/nexus-policy-engine.js?v=nexus-behavior-304"></script>
   <script src="/nexus-planner.js?v=nexus-behavior-304"></script>
-  <script src="/app.js?v=nexus-behavior-304"></script>
+  <script src="/app.js?v=nexus-behavior-305"></script>
+  <script src="/nexus-voice-demo-shell.js?v=nexus-behavior-305"></script>
 </body>
 </html>
 
