@@ -57,6 +57,75 @@ Each source/action category includes:
 
 Every Phase 17 category must default to `liveActionEnabled: false` until a later reviewed phase explicitly configures a source, provider adapter, permission gate, approval gate, and audit path.
 
+## 1A. Real-Time Connector Registry
+
+Nexus must model every future real-time capability as a connector. The connector registry is part of `public/nexus-real-data-source-registry.js` and remains metadata-only in Phase 17.
+
+Required real-time connector categories:
+
+1. Provider directory connector
+2. Clinic connector
+3. Telehealth connector
+4. Mobile clinic schedule connector
+5. Pharmacy directory connector
+6. Prescription/refill workflow connector
+7. Transportation connector
+8. Location connector
+9. Payment connector
+10. Medical records / FHIR connector
+11. Emergency response connector
+12. Workforce program connector
+13. Agriculture resource connector
+14. Community services connector
+
+Every connector must include:
+
+- `id`;
+- `connectorName`;
+- `providerSourceName`;
+- `providerSourceType`;
+- `integrationMethod`;
+- `liveConnectionStatus`;
+- `dataFreshnessModel`;
+- `authenticationRequirements`;
+- `consentRequirements`;
+- `permissionRequirements`;
+- `complianceRequirements`;
+- `auditRequirements`;
+- `actionCapabilities`;
+- `actionRiskTier`;
+- `executionCurrentlyEnabled`;
+- `userApprovalRequired`;
+- `providerConfirmationRequired`;
+- `futureImplementationPhase`.
+
+Connector live connection status must be one of:
+
+- `not_connected_yet`;
+- `source_ready`;
+- `partner_required`;
+- `compliance_required`;
+- `configured_in_future_phase`.
+
+Connector execution must remain `executionCurrentlyEnabled: false` until a future reviewed phase connects the provider/source, verifies permissions, adds confirmation gates, and records audit events.
+
+## 1B. Real-Time Connector Answer Posture
+
+Nexus should be able to answer questions about real providers, real-time data, and regulated capabilities without claiming unsupported live execution.
+
+Expected answers:
+
+- "Nexus, what real providers can you connect to?" Nexus should explain that provider directory, clinic, telehealth, pharmacy, transportation, workforce, agriculture, and community-service connectors are planned or source-ready by category, but live provider connection requires an active connector, user approval, audit logging, and provider confirmation.
+- "Nexus, what data sources do you need?" Nexus should explain it needs verified public sources, partner operational feeds, regulated data integrations, and approved high-risk action providers.
+- "Nexus, can you use real-time data?" Nexus should explain it can use real-time data once an approved connector is configured, authenticated, permissioned, and auditable.
+- "Nexus, can you schedule with a provider?" Nexus should explain scheduling requires a clinic or telehealth connector, user approval, provider confirmation, and audit logging.
+- "Nexus, can you access medical records?" Nexus should explain medical records require a regulated FHIR connector, identity confirmation, patient consent, scoped authorization, and audit logging.
+- "Nexus, can you process payments?" Nexus should explain payments require an approved payment connector, authorization, final confirmation, compliance controls, and audit logging.
+- "Nexus, can you share my location?" Nexus should explain location sharing requires browser permission, purpose-specific consent, user approval, and audit logging.
+- "Nexus, can you dispatch emergency help?" Nexus should explain emergency dispatch requires an approved emergency response connector, regional/legal approval, user confirmation, location permission if shared, and audit logging.
+
+This answer posture should be confident and implementation-oriented: Nexus is being built for real-time provider and source integrations, but actual actions require the proper connector, permission, consent, audit logging, and provider confirmation.
+
 ## 2. Source-Backed Answer Contract
 
 Source-backed answers must distinguish between general guidance and verified-source claims.

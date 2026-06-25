@@ -39,6 +39,7 @@ const packageJson = read(paths.packageJson);
 const qaSuite = read(paths.qaSuite);
 
 const registry = registryModule.getRealDataSourceRegistry();
+const connectors = registryModule.getRealTimeConnectorRegistry();
 const requiredIds = [
   "provider.directory",
   "telehealth.provider",
@@ -52,8 +53,27 @@ const requiredIds = [
   "emergency.dispatch"
 ];
 
+const requiredConnectorIds = [
+  "connector.provider_directory",
+  "connector.clinic",
+  "connector.telehealth",
+  "connector.mobile_clinic_schedule",
+  "connector.pharmacy_directory",
+  "connector.prescription_refill",
+  "connector.transportation",
+  "connector.location",
+  "connector.payment",
+  "connector.medical_records_fhir",
+  "connector.emergency_response",
+  "connector.workforce_program",
+  "connector.agriculture_resource",
+  "connector.community_services"
+];
+
 assert(Array.isArray(registry), "Registry must export an array.");
 assert(registry.length === requiredIds.length, "Registry must include every required source/action category exactly once.");
+assert(Array.isArray(connectors), "Connector registry must export an array.");
+assert(connectors.length === requiredConnectorIds.length, "Connector registry must include every required real-time connector category exactly once.");
 
 const allowedPrototypeReadiness = new Set([
   "available-now",
@@ -82,6 +102,27 @@ const requiredFields = [
   "futureImplementationPhase"
 ];
 
+const requiredConnectorFields = [
+  "id",
+  "connectorName",
+  "providerSourceName",
+  "providerSourceType",
+  "integrationMethod",
+  "liveConnectionStatus",
+  "dataFreshnessModel",
+  "authenticationRequirements",
+  "consentRequirements",
+  "permissionRequirements",
+  "complianceRequirements",
+  "auditRequirements",
+  "actionCapabilities",
+  "actionRiskTier",
+  "executionCurrentlyEnabled",
+  "userApprovalRequired",
+  "providerConfirmationRequired",
+  "futureImplementationPhase"
+];
+
 requiredIds.forEach(id => {
   const entry = registry.find(item => item.id === id);
   assert(entry, `Registry must include ${id}.`);
@@ -101,6 +142,30 @@ requiredIds.forEach(id => {
   assert(/^17[A-K]-/.test(entry.futureImplementationPhase), `${id} must map to a future Phase 17 implementation phase.`);
   ["expectedUpdateCadence", "freshnessField", "staleAfter", "displayRequirement"].forEach(field => {
     assert(entry.dataFreshness && entry.dataFreshness[field], `${id} must include dataFreshness.${field}.`);
+  });
+});
+
+requiredConnectorIds.forEach(id => {
+  const connector = connectors.find(item => item.id === id);
+  assert(connector, `Connector registry must include ${id}.`);
+  requiredConnectorFields.forEach(field => {
+    assert(Object.prototype.hasOwnProperty.call(connector, field), `${id} must include ${field}.`);
+  });
+  assert(registryModule.CONNECTOR_TYPES.includes(connector.providerSourceType), `${id} must use a known providerSourceType.`);
+  assert(registryModule.LIVE_CONNECTION_STATUSES.includes(connector.liveConnectionStatus), `${id} must use a known liveConnectionStatus.`);
+  assert(registryModule.RISK_LEVELS.includes(connector.actionRiskTier), `${id} must use a known actionRiskTier.`);
+  assert(connector.executionCurrentlyEnabled === false, `${id} must not enable execution in Phase 17.`);
+  assert(connector.userApprovalRequired === true, `${id} must require user approval.`);
+  assert(typeof connector.providerConfirmationRequired === "boolean", `${id} must state whether provider confirmation is required.`);
+  assert(Array.isArray(connector.authenticationRequirements) && connector.authenticationRequirements.length > 0, `${id} must document authentication requirements.`);
+  assert(Array.isArray(connector.consentRequirements) && connector.consentRequirements.length > 0, `${id} must document consent requirements.`);
+  assert(Array.isArray(connector.permissionRequirements) && connector.permissionRequirements.length > 0, `${id} must document permission requirements.`);
+  assert(Array.isArray(connector.complianceRequirements) && connector.complianceRequirements.length > 0, `${id} must document compliance requirements.`);
+  assert(Array.isArray(connector.auditRequirements) && connector.auditRequirements.length > 0, `${id} must document audit requirements.`);
+  assert(Array.isArray(connector.actionCapabilities) && connector.actionCapabilities.length > 0, `${id} must document action capabilities.`);
+  assert(/^17[A-O]-/.test(connector.futureImplementationPhase), `${id} must map to a future Phase 17 connector implementation phase.`);
+  ["freshnessField", "staleAfter", "displayRequirement"].forEach(field => {
+    assert(connector.dataFreshnessModel && connector.dataFreshnessModel[field], `${id} must include dataFreshnessModel.${field}.`);
   });
 });
 
@@ -150,6 +215,30 @@ requiredIds.forEach(id => {
   "Prescription/Pharmacy Path",
   "Medical Records/FHIR Path",
   "Emergency Dispatch Path",
+  "Real-Time Connector Registry",
+  "Real-Time Connector Answer Posture",
+  "Provider directory connector",
+  "Clinic connector",
+  "Telehealth connector",
+  "Mobile clinic schedule connector",
+  "Pharmacy directory connector",
+  "Prescription/refill workflow connector",
+  "Transportation connector",
+  "Location connector",
+  "Payment connector",
+  "Medical records / FHIR connector",
+  "Emergency response connector",
+  "Workforce program connector",
+  "Agriculture resource connector",
+  "Community services connector",
+  "Nexus, what real providers can you connect to?",
+  "Nexus, what data sources do you need?",
+  "Nexus, can you use real-time data?",
+  "Nexus, can you schedule with a provider?",
+  "Nexus, can you access medical records?",
+  "Nexus, can you process payments?",
+  "Nexus, can you share my location?",
+  "Nexus, can you dispatch emergency help?",
   "available-now",
   "source-ready",
   "partner-required",
@@ -170,12 +259,19 @@ requiredFields.forEach(field => {
   assert(doc.includes(field), `Roadmap doc must document field ${field}.`);
 });
 
+requiredConnectorFields.forEach(field => {
+  assert(foundationDoc.includes(field) || foundationDoc.toLowerCase().includes(field.toLowerCase()), `Prototype foundation doc must document connector field ${field}.`);
+});
+
 [
   "liveActionEnabled: false",
   "userApprovalRequired: true",
   "metadata-only",
   "real prototype foundation",
-  "getRealDataSourceRegistry"
+  "getRealDataSourceRegistry",
+  "REAL_TIME_CONNECTOR_REGISTRY",
+  "getRealTimeConnectorRegistry",
+  "PROTOTYPE_ANSWER_CONTRACT"
 ].forEach(phrase => {
   assert(registrySource.includes(phrase), `Registry source must include ${phrase}.`);
 });
@@ -200,6 +296,7 @@ requiredFields.forEach(field => {
 
 [
   "liveActionEnabled: true",
+  "executionCurrentlyEnabled: true",
   "executePayment",
   "dispatchEmergency",
   "submitRefill",
