@@ -108,6 +108,7 @@ const suites = {
     "scripts/nexus-controlled-low-risk-renderer-phase-13-closeout-readiness-qa.js",
     "scripts/nexus-controlled-low-risk-text-only-renderer-phase-14a-qa.js",
     "scripts/nexus-controlled-low-risk-text-only-renderer-phase-14b-load-boundary-qa.js",
+    "scripts/nexus-controlled-low-risk-text-only-renderer-phase-14c-test-harness-qa.js",
     "scripts/nexus-tool-registry-runtime-qa.js",
     "scripts/nexus-intent-classifier-qa.js",
     "scripts/nexus-policy-engine-qa.js",
