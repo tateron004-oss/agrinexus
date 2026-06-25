@@ -115,6 +115,7 @@ const suites = {
     "scripts/nexus-controlled-low-risk-renderer-phase-14g-eligibility-adapter-stub-qa.js",
     "scripts/nexus-controlled-low-risk-renderer-phase-14h-adapter-chain-test-harness-qa.js",
     "scripts/nexus-controlled-low-risk-renderer-phase-14i-eligibility-candidate-source-audit-qa.js",
+    "scripts/nexus-controlled-low-risk-renderer-phase-14j-candidate-payload-contract-qa.js",
     "scripts/nexus-tool-registry-runtime-qa.js",
     "scripts/nexus-intent-classifier-qa.js",
     "scripts/nexus-policy-engine-qa.js",
