@@ -32,7 +32,9 @@
     "title",
     "summary",
     "previewLines",
-    "safetyLabel"
+    "safetyLabel",
+    "previewOnly",
+    "riskTier"
   ]);
 
   const FORBIDDEN_MODEL_FIELDS = new Set([
@@ -161,6 +163,8 @@
     if (!normalizeText(model.title, 120)) return false;
     if (!normalizeText(model.summary, 360)) return false;
     if (model.safetyLabel !== undefined && !normalizeText(model.safetyLabel, 120)) return false;
+    if (model.previewOnly !== undefined && model.previewOnly !== true) return false;
+    if (model.riskTier !== undefined && normalizeText(model.riskTier, 20).toLowerCase() !== "low") return false;
 
     if (model.previewLines !== undefined) {
       if (!Array.isArray(model.previewLines)) return false;
