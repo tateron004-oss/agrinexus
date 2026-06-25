@@ -108,6 +108,42 @@ The voice demo shell uses only browser-native `speechSynthesis`. It may choose a
 
 Speech settings stay conservative for a calm assistant style: rate `0.92`, pitch `0.9`, and volume `1`. The voice style is generic and does not copy, name, or reference any copyrighted character, film assistant, or actor.
 
+### Voice Language Switch Demo Layer
+
+The Standard User voice shell includes a local demo language selector and explicit language-switch commands. This is demo language support only. It is not a clinical interpretation service, not certified medical translation, and not a provider communication tool.
+
+Supported demo languages:
+
+- English
+- Spanish
+- French
+- Arabic
+- Portuguese
+- Swahili
+
+Supported meeting-safe commands include:
+
+- `Nexus, switch to Spanish.`
+- `Nexus, speak English.`
+- `Nexus, change language to French.`
+- `Nexus, switch to Arabic.`
+- `Nexus, switch to Portuguese.`
+- `Nexus, switch to Swahili.`
+
+Language selection stays in local UI state only. The shell uses browser-native speech recognition language settings where supported and browser-native speech synthesis voices where supported. If a matching spoken voice is unavailable, Nexus falls back safely to the available browser voice or text-only behavior. No backend translation service, third-party translation API, or dependency is added.
+
+Translated demo responses are limited to safe access guidance for telehealth, pharmacy support, mobile clinic access, transportation-to-care, provider contact boundaries, and emergency boundaries. The language layer does not translate or transmit medical records, contact providers, call, message, schedule, refill prescriptions, request location, dispatch services, process payments, or navigate externally.
+
+The language switch layer does not contact providers and does not create, send, or share healthcare information.
+
+Meeting demo script:
+
+1. Select `Spanish` in the demo language selector, or say `Nexus, switch to Spanish.`
+2. Confirm Nexus says: `Idioma cambiado a español. ¿Cómo puedo ayudarle?`
+3. Say or click a safe health-access prompt such as `Nexus, I need pharmacy support`.
+4. Explain that Nexus is demonstrating local language support for safe guidance only.
+5. Say `Nexus, speak English.` before returning to the main English demo flow.
+
 ### Pharmacy Demo Behavior
 
 For prompts such as `Nexus, I need pharmacy support` or `Nexus, I need help getting my medication`, Nexus should say:

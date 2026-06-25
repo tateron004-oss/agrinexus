@@ -7,9 +7,103 @@
   const STATUS_SPEAKING = "Speaking...";
   const STATUS_UNSUPPORTED = "Voice not supported in this browser";
   const COMMAND_SOURCE = "phase-16a-push-to-talk";
+  const DEFAULT_LANGUAGE = "en";
+  const DEMO_LANGUAGES = {
+    en: {
+      label: "English",
+      speechLang: "en-US",
+      changeResponse: "Language changed to English. How can I help you?",
+      intro: "Good morning. I am Nexus, your voice-operated access assistant. I'm ready to help with telehealth, pharmacy support, mobile clinic access, transportation-to-care, workforce resources, and agriculture services. How can I assist you today?",
+      health: {
+        emergency: "If this may be an emergency, call local emergency services now. I cannot dispatch emergency help in this demo.",
+        execution: "For safety, I cannot complete that healthcare action automatically. I can help you review what would be needed before anything is shared, scheduled, sent, submitted, or contacted.",
+        telehealth: "Nexus can help with telehealth access. I can guide you through the information usually needed for a visit and prepare a safe next-step review. I have not scheduled an appointment or contacted a provider.",
+        mobileClinic: "I can help you review mobile clinic and rural health access options. In this demo, I can prepare next steps, but I will not request your location, contact a clinic, or dispatch services.",
+        pharmacy: "I can help you review pharmacy access steps, refill questions, or transportation needs. I have not submitted a refill, and I cannot request, change, or submit medication orders in this demo.",
+        transportation: "I can help you think through care access and transportation options. I have not shared your location, contacted anyone, scheduled an appointment, or scheduled a ride.",
+        default: "I can help with health access navigation. This demo prepares safe review-only next steps and does not contact providers, share information, schedule care, request location, or complete healthcare actions."
+      }
+    },
+    es: {
+      label: "Spanish",
+      speechLang: "es-ES",
+      changeResponse: "Idioma cambiado a español. ¿Cómo puedo ayudarle?",
+      intro: "Buenos días. Soy Nexus, su asistente de acceso operado por voz. Puedo orientar sobre telesalud, apoyo de farmacia, acceso a clínicas móviles, transporte para recibir atención, recursos laborales y servicios agrícolas. ¿Cómo puedo ayudarle?",
+      health: {
+        emergency: "Si esto puede ser una emergencia, llame ahora a los servicios locales de emergencia. No puedo enviar ayuda de emergencia en esta demostración.",
+        execution: "Por seguridad, no puedo completar automáticamente esa acción de salud. Puedo ayudarle a revisar lo necesario antes de compartir, programar, enviar, solicitar o contactar a alguien.",
+        telehealth: "Nexus puede ayudar con el acceso a telesalud. Puedo guiarle por la información que suele necesitarse para una visita y preparar una revisión segura del siguiente paso. No he programado una cita ni contactado a un proveedor.",
+        mobileClinic: "Puedo ayudarle a revisar opciones de clínica móvil y acceso de salud rural. En esta demostración puedo preparar próximos pasos, pero no solicitaré su ubicación, no contactaré a una clínica ni enviaré servicios.",
+        pharmacy: "Puedo ayudarle a revisar pasos de acceso a farmacia, preguntas de resurtido o necesidades de transporte. No he enviado un resurtido y no puedo solicitar, cambiar ni enviar órdenes de medicamentos en esta demostración.",
+        transportation: "Puedo ayudarle a pensar en opciones de acceso a la atención y transporte. No he compartido su ubicación, contactado a nadie, programado una cita ni programado transporte.",
+        default: "Puedo ayudar con navegación de acceso a salud. Esta demostración prepara próximos pasos solo para revisión y no contacta proveedores, comparte información, programa atención, solicita ubicación ni completa acciones de salud."
+      }
+    },
+    fr: {
+      label: "French",
+      speechLang: "fr-FR",
+      changeResponse: "Langue changée en français. Comment puis-je vous aider?",
+      intro: "Bonjour. Je suis Nexus, votre assistant d'accès à commande vocale. Je peux vous orienter pour la télésanté, le soutien en pharmacie, l'accès aux cliniques mobiles, le transport vers les soins, les ressources professionnelles et les services agricoles. Comment puis-je vous aider?",
+      health: {
+        emergency: "Si cela peut être une urgence, appelez maintenant les services d'urgence locaux. Je ne peux pas envoyer d'aide d'urgence dans cette démonstration.",
+        execution: "Par sécurité, je ne peux pas effectuer automatiquement cette action de santé. Je peux vous aider à vérifier ce qui serait nécessaire avant tout partage, rendez-vous, envoi, demande ou contact.",
+        telehealth: "Nexus peut aider à l'accès à la télésanté. Je peux vous guider dans les informations habituellement nécessaires pour une visite et préparer une revue sûre de la prochaine étape. Je n'ai pas pris de rendez-vous ni contacté de fournisseur.",
+        mobileClinic: "Je peux vous aider à examiner les options de clinique mobile et d'accès aux soins ruraux. Dans cette démonstration, je peux préparer les prochaines étapes, mais je ne demanderai pas votre position, ne contacterai pas de clinique et n'enverrai pas de services.",
+        pharmacy: "Je peux vous aider à examiner les étapes d'accès à la pharmacie, les questions de renouvellement ou les besoins de transport. Je n'ai pas soumis de renouvellement et je ne peux pas demander, modifier ou envoyer d'ordonnances dans cette démonstration.",
+        transportation: "Je peux vous aider à réfléchir aux options d'accès aux soins et de transport. Je n'ai pas partagé votre position, contacté quelqu'un, pris de rendez-vous ni programmé de trajet.",
+        default: "Je peux aider à la navigation d'accès aux soins. Cette démonstration prépare uniquement des prochaines étapes à examiner et ne contacte pas de fournisseurs, ne partage pas d'informations, ne programme pas de soins, ne demande pas la position et n'effectue pas d'actions de santé."
+      }
+    },
+    ar: {
+      label: "Arabic",
+      speechLang: "ar",
+      changeResponse: "تم تغيير اللغة إلى العربية. كيف يمكنني مساعدتك؟",
+      intro: "صباح الخير. أنا Nexus، مساعدك الصوتي للوصول إلى الخدمات. يمكنني إرشادك في الرعاية عن بعد، ودعم الصيدلية، والوصول إلى العيادات المتنقلة، والنقل إلى الرعاية، وموارد العمل، والخدمات الزراعية. كيف يمكنني مساعدتك اليوم؟",
+      health: {
+        emergency: "إذا كان هذا قد يكون حالة طارئة، فاتصل بخدمات الطوارئ المحلية الآن. لا يمكنني إرسال مساعدة طارئة في هذا العرض التجريبي.",
+        execution: "للسلامة، لا يمكنني إكمال هذا الإجراء الصحي تلقائياً. يمكنني مساعدتك في مراجعة ما يلزم قبل مشاركة أي معلومات أو تحديد موعد أو إرسال طلب أو التواصل مع أي جهة.",
+        telehealth: "يمكن لـ Nexus المساعدة في الوصول إلى الرعاية عن بعد. يمكنني إرشادك إلى المعلومات المطلوبة عادة للزيارة وإعداد مراجعة آمنة للخطوة التالية. لم أحدد موعداً ولم أتواصل مع مقدم رعاية.",
+        mobileClinic: "يمكنني مساعدتك في مراجعة خيارات العيادة المتنقلة والوصول إلى الرعاية الريفية. في هذا العرض، يمكنني إعداد الخطوات التالية، لكنني لن أطلب موقعك أو أتواصل مع عيادة أو أرسل خدمات.",
+        pharmacy: "يمكنني مساعدتك في مراجعة خطوات الوصول إلى الصيدلية أو أسئلة إعادة الصرف أو احتياجات النقل. لم أرسل طلب إعادة صرف ولا يمكنني طلب أو تغيير أو إرسال أوامر دواء في هذا العرض.",
+        transportation: "يمكنني مساعدتك في التفكير في خيارات الوصول إلى الرعاية والنقل. لم أشارك موقعك أو أتواصل مع أحد أو أحدد موعداً أو أرتب رحلة.",
+        default: "يمكنني المساعدة في توجيه الوصول إلى الرعاية الصحية. هذا العرض يجهز خطوات مراجعة آمنة فقط ولا يتواصل مع مقدمي الرعاية أو يشارك معلومات أو يحدد رعاية أو يطلب الموقع أو يكمل إجراءات صحية."
+      }
+    },
+    pt: {
+      label: "Portuguese",
+      speechLang: "pt-PT",
+      changeResponse: "Idioma alterado para português. Como posso ajudar?",
+      intro: "Bom dia. Eu sou Nexus, seu assistente de acesso operado por voz. Posso orientar sobre telessaúde, apoio de farmácia, acesso a clínica móvel, transporte para cuidados, recursos de trabalho e serviços agrícolas. Como posso ajudar hoje?",
+      health: {
+        emergency: "Se isto puder ser uma emergência, ligue agora para os serviços locais de emergência. Não posso enviar ajuda de emergência nesta demonstração.",
+        execution: "Por segurança, não posso concluir automaticamente essa ação de saúde. Posso ajudar a rever o que seria necessário antes de qualquer informação ser partilhada, marcada, enviada, solicitada ou contactada.",
+        telehealth: "Nexus pode ajudar com acesso à telessaúde. Posso orientar pelas informações normalmente necessárias para uma consulta e preparar uma revisão segura do próximo passo. Não marquei consulta nem contactei um prestador.",
+        mobileClinic: "Posso ajudar a rever opções de clínica móvel e acesso rural à saúde. Nesta demonstração, posso preparar próximos passos, mas não pedirei a sua localização, não contactarei uma clínica e não enviarei serviços.",
+        pharmacy: "Posso ajudar a rever passos de acesso à farmácia, perguntas de renovação ou necessidades de transporte. Não enviei renovação e não posso solicitar, alterar ou enviar pedidos de medicação nesta demonstração.",
+        transportation: "Posso ajudar a pensar em opções de acesso a cuidados e transporte. Não partilhei a sua localização, não contactei ninguém, não marquei consulta e não agendei transporte.",
+        default: "Posso ajudar na navegação de acesso à saúde. Esta demonstração prepara próximos passos apenas para revisão e não contacta prestadores, partilha informações, agenda cuidados, pede localização ou conclui ações de saúde."
+      }
+    },
+    sw: {
+      label: "Swahili",
+      speechLang: "sw",
+      changeResponse: "Lugha imebadilishwa kuwa Kiswahili. Ninawezaje kukusaidia?",
+      intro: "Habari za asubuhi. Mimi ni Nexus, msaidizi wako wa ufikiaji kwa sauti. Ninaweza kukuongoza kuhusu huduma ya afya kwa mbali, msaada wa duka la dawa, kliniki tembezi, usafiri wa kwenda kupata huduma, rasilimali za kazi, na huduma za kilimo. Ninawezaje kukusaidia leo?",
+      health: {
+        emergency: "Ikiwa hili linaweza kuwa dharura, piga huduma za dharura za eneo lako sasa. Siwezi kutuma msaada wa dharura katika onyesho hili.",
+        execution: "Kwa usalama, siwezi kukamilisha kitendo hicho cha afya kiotomatiki. Ninaweza kukusaidia kukagua kinachohitajika kabla taarifa yoyote haijashirikiwa, kupangwa, kutumwa, kuombwa, au mtu kuwasiliana.",
+        telehealth: "Nexus inaweza kusaidia kufikia huduma ya afya kwa mbali. Ninaweza kukuongoza kuhusu taarifa zinazohitajika kwa ziara na kuandaa mapitio salama ya hatua inayofuata. Sijapanga miadi wala kuwasiliana na mtoa huduma.",
+        mobileClinic: "Ninaweza kukusaidia kukagua chaguo za kliniki tembezi na huduma za afya vijijini. Katika onyesho hili, ninaweza kuandaa hatua zinazofuata, lakini sitaomba eneo lako, sitawasiliana na kliniki, wala kutuma huduma.",
+        pharmacy: "Ninaweza kukusaidia kukagua hatua za kupata msaada wa duka la dawa, maswali ya kujaza upya dawa, au mahitaji ya usafiri. Sijatuma ombi la kujaza dawa na siwezi kuomba, kubadilisha, au kutuma maagizo ya dawa katika onyesho hili.",
+        transportation: "Ninaweza kukusaidia kufikiria kuhusu chaguo za kupata huduma na usafiri. Sijashiriki eneo lako, sijawasiliana na mtu yeyote, sijapanga miadi, wala kupanga safari.",
+        default: "Ninaweza kusaidia kuelekeza ufikiaji wa huduma ya afya. Onyesho hili huandaa hatua za kukagua tu na haliwasiliani na watoa huduma, halishiriki taarifa, halipangi huduma, haliombi eneo, wala kukamilisha vitendo vya afya."
+      }
+    }
+  };
 
   let activeRecognition = null;
   let isSpeaking = false;
+  let selectedLanguage = DEFAULT_LANGUAGE;
 
   function $(selector) {
     return document.querySelector(selector);
@@ -21,6 +115,10 @@
 
   function introButton() {
     return $("#nexusVoiceDemoIntroBtn");
+  }
+
+  function languageSelector() {
+    return $("#nexusVoiceDemoLanguageSelect");
   }
 
   function statusNode() {
@@ -53,15 +151,31 @@
     return Boolean(window.speechSynthesis && window.SpeechSynthesisUtterance);
   }
 
-  function choosePolishedEnglishVoice() {
+  function currentLanguageConfig() {
+    return DEMO_LANGUAGES[selectedLanguage] || DEMO_LANGUAGES[DEFAULT_LANGUAGE];
+  }
+
+  function voiceMatchesLanguage(voice, speechLang) {
+    const language = String(voice?.lang || "").toLowerCase();
+    const target = String(speechLang || "").toLowerCase();
+    const base = target.split("-")[0];
+    return Boolean(language && (language === target || language.startsWith(`${base}-`) || language === base));
+  }
+
+  function choosePolishedVoice(languageKey = selectedLanguage) {
     if (!speechSynthesisSupported() || typeof window.speechSynthesis.getVoices !== "function") return null;
+    const config = DEMO_LANGUAGES[languageKey] || DEMO_LANGUAGES[DEFAULT_LANGUAGE];
     const voices = window.speechSynthesis.getVoices() || [];
-    const englishVoices = voices.filter(voice => /^en\b/i.test(String(voice.lang || "")));
-    const preferred = englishVoices.find(voice => /\b(natural|neural|enhanced|premium|system)\b/i.test(String(voice.name || "")))
-      || englishVoices.find(voice => /\b(microsoft|google|apple)\b/i.test(String(voice.name || "")))
-      || englishVoices.find(voice => voice.default)
-      || englishVoices[0];
+    const languageVoices = voices.filter(voice => voiceMatchesLanguage(voice, config.speechLang));
+    const preferred = languageVoices.find(voice => /\b(natural|neural|enhanced|premium|system)\b/i.test(String(voice.name || "")))
+      || languageVoices.find(voice => /\b(microsoft|google|apple)\b/i.test(String(voice.name || "")))
+      || languageVoices.find(voice => voice.default)
+      || languageVoices[0];
     return preferred || null;
+  }
+
+  function choosePolishedEnglishVoice() {
+    return choosePolishedVoice("en");
   }
 
   function normalizeCommand(command) {
@@ -72,21 +186,51 @@
       .trim();
   }
 
+  function languageKeyFromText(text) {
+    const normalized = normalizeCommand(text).toLowerCase();
+    if (/\b(english|ingles|inglés|anglais|ingl[eê]s|kiingereza|الانجليزية|الإنجليزية)\b/.test(normalized)) return "en";
+    if (/\b(spanish|espanol|español|espagnol|espanhol|kihispania|الاسبانية|الإسبانية)\b/.test(normalized)) return "es";
+    if (/\b(french|francais|français|frances|francês|kifaransa|الفرنسية)\b/.test(normalized)) return "fr";
+    if (/\b(arabic|arabe|arabe|ar[áa]bigo|kiarabu|العربية)\b/.test(normalized)) return "ar";
+    if (/\b(portuguese|portugues|português|portugais|kireno|البرتغالية)\b/.test(normalized)) return "pt";
+    if (/\b(swahili|kiswahili|السواحيلية)\b/.test(normalized)) return "sw";
+    return "";
+  }
+
+  function isLanguageSwitchCommand(command) {
+    const text = normalizeCommand(command).toLowerCase();
+    if (!languageKeyFromText(text)) return false;
+    return /\b(switch|speak|change|set|use)\b.*\b(language|english|spanish|french|arabic|portuguese|swahili|espanol|español|francais|français|portugues|português|kiswahili)\b/.test(text)
+      || /\b(language)\b.*\b(english|spanish|french|arabic|portuguese|swahili|espanol|español|francais|français|portugues|português|kiswahili)\b/.test(text);
+  }
+
+  function setDemoLanguage(languageKey, options = {}) {
+    if (!DEMO_LANGUAGES[languageKey]) return "";
+    selectedLanguage = languageKey;
+    const selector = languageSelector();
+    if (selector && selector.value !== languageKey) selector.value = languageKey;
+    const response = DEMO_LANGUAGES[languageKey].changeResponse;
+    setTranscript(response);
+    setStatus(STATUS_READY);
+    if (options.speak !== false) speak(response);
+    return response;
+  }
+
   function isHighRiskPrompt(command) {
     const text = normalizeCommand(command).toLowerCase();
     if (isEmergencyPrompt(text)) return true;
     if (isHealthAccessPrompt(text)) return false;
-    return /\b(call|phone|dial|text|message|whatsapp|telegram|sms|email|contact|send|camera|video|microphone|location|locate|gps|buy|sell|purchase|payment|pay|checkout|account|login|identity|verify|appointment|schedule|doctor|provider|telehealth|emergency|dispatch|ambulance|diagnose)\b/.test(text);
+    return /\b(call|phone|dial|text|message|whatsapp|telegram|sms|email|contact|send|camera|video|microphone|location|locate|gps|buy|sell|purchase|payment|pay|checkout|account|login|identity|verify|appointment|schedule|doctor|provider|telehealth|emergency|dispatch|ambulance|diagnose|llamar|llamada|mensaje|ubicaci[oó]n|c[aá]mara|comprar|vender|pago|emergencia|appeler|message|localisation|cam[eé]ra|paiement|urgence|اتصل|رسالة|موقع|كاميرا|دفع|طوارئ|ligar|mensagem|localiza[cç][aã]o|pagamento|emerg[eê]ncia|piga|ujumbe|eneo|kamera|malipo|dharura)\b/.test(text);
   }
 
   function isEmergencyPrompt(command) {
     const text = normalizeCommand(command).toLowerCase();
-    return /\b(emergency|ambulance|cannot breathe|can't breathe|cant breathe|chest pain|not breathing|stroke|heart attack)\b/.test(text);
+    return /\b(emergency|ambulance|cannot breathe|can't breathe|cant breathe|chest pain|not breathing|stroke|heart attack|emergencia|ambulancia|no puede respirar|urgence|ambulance|ne respire pas|طوارئ|إسعاف|لا يتنفس|emerg[eê]ncia|ambul[aâ]ncia|n[aã]o respira|dharura|gari la wagonjwa|hapumui)\b/.test(text);
   }
 
   function isHealthExecutionPrompt(command) {
     const text = normalizeCommand(command).toLowerCase();
-    return /\b(call my doctor|call the doctor|contact (a )?(doctor|provider|clinic|pharmacy)|send my medical|send medical|medical records?|health records?|refill my prescription|refill prescription|submit (a )?refill|request (a )?refill|tell the pharmacy|change medication|schedule (my )?(appointment|visit)|book (an )?appointment|send my location|share my location|telehealth video|video call|provider video|open video|show injury|camera preview|use (my )?camera|open (the )?camera|dispatch (a )?mobile clinic|diagnose|diagnosis)\b/.test(text);
+    return /\b(call my doctor|call the doctor|contact (a )?(doctor|provider|clinic|pharmacy)|send my medical|send medical|medical records?|health records?|refill my prescription|refill prescription|submit (a )?refill|request (a )?refill|tell the pharmacy|change medication|schedule (my )?(appointment|visit)|book (an )?appointment|send my location|share my location|telehealth video|video call|provider video|open video|show injury|camera preview|use (my )?camera|open (the )?camera|dispatch (a )?mobile clinic|diagnose|diagnosis|llamar.*(doctor|m[eé]dico)|contactar.*(doctor|m[eé]dico|cl[ií]nica|farmacia)|programar.*cita|enviar.*ubicaci[oó]n|usar.*c[aá]mara|diagn[oó]stic|appeler.*(docteur|m[eé]decin)|contacter.*(clinique|pharmacie)|prendre.*rendez-vous|envoyer.*localisation|utiliser.*cam[eé]ra|تشخيص|موعد|طبيب|كاميرا|موقع|ligar.*(doutor|m[eé]dico)|marcar.*consulta|enviar.*localiza[cç][aã]o|usar.*c[aâ]mera|piga.*daktari|ratibu.*miadi|tuma.*eneo|tumia.*kamera)\b/.test(text);
   }
 
   function isHealthAccessPrompt(command) {
@@ -97,29 +241,30 @@
 
   function healthAccessResponse(command) {
     const text = normalizeCommand(command).toLowerCase();
+    const health = currentLanguageConfig().health;
     if (isEmergencyPrompt(text)) {
-      return "If this may be an emergency, call local emergency services now. I cannot dispatch emergency help in this demo.";
+      return health.emergency;
     }
     if (isHealthExecutionPrompt(text)) {
-      return "For safety, I cannot complete that healthcare action automatically. I can help you review what would be needed before anything is shared, scheduled, sent, submitted, or contacted.";
+      return health.execution;
     }
     if (/\b(telehealth|prepare.*telehealth)\b/.test(text)) {
-      return "Nexus can help with telehealth access. I can guide you through the information usually needed for a visit and prepare a safe next-step review. I have not scheduled an appointment or contacted a provider.";
+      return health.telehealth;
     }
     if (/\b(mobile clinic|rural health|community health)\b/.test(text)) {
-      return "I can help you review mobile clinic and rural health access options. In this demo, I can prepare next steps, but I will not request your location, contact a clinic, or dispatch services.";
+      return health.mobileClinic;
     }
     if (/\b(pharmacy|medication|medicine|refill request)\b/.test(text)) {
-      return "I can help you review pharmacy access steps, refill questions, or transportation needs. I have not submitted a refill, and I cannot request, change, or submit medication orders in this demo.";
+      return health.pharmacy;
     }
     if (/\b(transportation|ride|access care|care access|care navigation|doctor)\b/.test(text)) {
-      return "I can help you think through care access and transportation options. I have not shared your location, contacted anyone, scheduled an appointment, or scheduled a ride.";
+      return health.transportation;
     }
-    return "I can help with health access navigation. This demo prepares safe review-only next steps and does not contact providers, share information, schedule care, request location, or complete healthcare actions.";
+    return health.default;
   }
 
   function introResponse() {
-    return "Good morning. I am Nexus, your voice-operated access assistant. I'm ready to help with telehealth, pharmacy support, mobile clinic access, transportation-to-care, workforce resources, and agriculture services. How can I assist you today?";
+    return currentLanguageConfig().intro;
   }
 
   function safeFallbackResponse(command) {
@@ -149,12 +294,13 @@
     try {
       window.speechSynthesis.cancel();
       const utterance = new window.SpeechSynthesisUtterance(message);
-      const polishedVoice = choosePolishedEnglishVoice();
+      const config = currentLanguageConfig();
+      const polishedVoice = choosePolishedVoice(selectedLanguage) || choosePolishedEnglishVoice();
       if (polishedVoice) {
         utterance.voice = polishedVoice;
-        utterance.lang = polishedVoice.lang || "en-US";
+        utterance.lang = polishedVoice.lang || config.speechLang;
       } else {
-        utterance.lang = "en-US";
+        utterance.lang = config.speechLang;
       }
       utterance.rate = 0.92;
       utterance.pitch = 0.9;
@@ -187,6 +333,21 @@
     setStatus(STATUS_PROCESSING);
     setTranscript(`Heard: ${transcript}`);
     const bridge = window.NexusVoiceDemoShellBridge;
+    if (isLanguageSwitchCommand(transcript)) {
+      const languageKey = languageKeyFromText(transcript);
+      const response = setDemoLanguage(languageKey, { speak: false });
+      bridge?.showResponse?.(response, { source: COMMAND_SOURCE, languageSwitch: true, blocked: false });
+      speak(response);
+      return;
+    }
+    if (isEmergencyPrompt(transcript) || isHealthExecutionPrompt(transcript) || isHealthAccessPrompt(transcript)) {
+      const blocked = isEmergencyPrompt(transcript) || isHealthExecutionPrompt(transcript);
+      const response = healthAccessResponse(transcript);
+      bridge?.showResponse?.(response, { source: COMMAND_SOURCE, blocked, healthAccess: true, language: selectedLanguage });
+      setTranscript(`Heard: ${transcript}`);
+      speak(response);
+      return;
+    }
     const highRisk = isHighRiskPrompt(transcript) || Boolean(bridge?.isHighRiskPrompt?.(transcript));
     if (highRisk) {
       const response = safeFallbackResponse(transcript);
@@ -228,6 +389,13 @@
     if (speechSynthesisSupported()) speak(response);
   }
 
+  function changeLanguageFromSelector(event) {
+    const languageKey = event?.currentTarget?.value;
+    const response = setDemoLanguage(languageKey);
+    const bridge = window.NexusVoiceDemoShellBridge;
+    if (response) bridge?.showResponse?.(response, { source: COMMAND_SOURCE, languageSwitch: true, blocked: false });
+  }
+
   function startPushToTalk() {
     if (activeRecognition) {
       try {
@@ -255,7 +423,7 @@
     recognition.continuous = false;
     recognition.interimResults = false;
     recognition.maxAlternatives = 1;
-    recognition.lang = document.documentElement.lang || navigator.language || "en-US";
+    recognition.lang = currentLanguageConfig().speechLang || document.documentElement.lang || navigator.language || "en-US";
     recognition.onstart = () => {
       setStatus(STATUS_LISTENING);
       setTranscript("Listening for one Nexus command.");
@@ -288,10 +456,12 @@
   function init() {
     const talkButton = button();
     const intro = introButton();
+    const selector = languageSelector();
     if (!talkButton) return;
     setStatus(recognitionCtor() ? STATUS_READY : STATUS_UNSUPPORTED);
     talkButton.addEventListener("click", startPushToTalk);
     intro?.addEventListener("click", introduceNexus);
+    selector?.addEventListener("change", changeLanguageFromSelector);
     quickPromptButtons().forEach(promptButton => {
       promptButton.addEventListener("click", runQuickPrompt);
     });
@@ -300,6 +470,7 @@
   window.NexusVoiceDemoShell = {
     startPushToTalk,
     introduceNexus,
+    setDemoLanguage,
     routeTranscript,
     runQuickPrompt,
     isHighRiskPrompt,

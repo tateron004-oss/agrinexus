@@ -42,6 +42,8 @@ assert(index.includes("id=\"nexusVoiceDemoTalkBtn\""), "Standard User UI must in
 assert(index.includes("Talk to Nexus"), "Voice control must use the Talk to Nexus label.");
 assert(index.includes("id=\"nexusVoiceDemoIntroBtn\""), "Standard User UI must include Introduce Nexus control.");
 assert(index.includes("Introduce Nexus"), "Voice dock must include the Introduce Nexus label.");
+assert(index.includes("id=\"nexusVoiceDemoLanguageSelect\""), "Standard User UI must include the demo language selector.");
+assert(index.includes("data-nexus-voice-demo-language"), "Demo language selector must be scoped to the voice demo shell.");
 assert(index.includes("id=\"nexusVoiceDemoStatus\""), "Voice demo status must be present.");
 assert(index.includes("id=\"nexusVoiceDemoTranscript\""), "Voice demo transcript preview must be present.");
 assert(index.includes("/nexus-voice-demo-shell.js"), "Voice demo shell module must be loaded by index.html.");
@@ -74,6 +76,10 @@ assert(app.includes("permissionRequested: false"), "Voice demo bridge must expli
 assert(shell.includes("window.SpeechRecognition || window.webkitSpeechRecognition"), "Shell must use browser-native speech recognition feature detection.");
 assert(shell.includes("window.speechSynthesis"), "Shell must feature-detect browser speech synthesis.");
 assert(shell.includes("SpeechSynthesisUtterance"), "Shell must use browser-native SpeechSynthesisUtterance.");
+assert(shell.includes("DEMO_LANGUAGES"), "Shell must define local demo language metadata.");
+assert(shell.includes("isLanguageSwitchCommand"), "Shell must parse explicit language-switch commands.");
+assert(shell.includes("setDemoLanguage"), "Shell must keep language changes in local UI state.");
+assert(shell.includes("changeLanguageFromSelector"), "Shell must support user-initiated selector changes.");
 assert(shell.includes("choosePolishedEnglishVoice"), "Shell must include safe polished English voice selection.");
 assert(shell.includes("window.speechSynthesis.getVoices"), "Voice selection must use browser-native getVoices only.");
 assert(shell.includes("return preferred || null"), "Voice selection must fall back safely when no preferred voice exists.");
@@ -81,6 +87,7 @@ assert(shell.includes("utterance.rate = 0.92"), "Speech synthesis rate must stay
 assert(shell.includes("utterance.pitch = 0.9"), "Speech synthesis pitch must stay conservative.");
 assert(shell.includes("utterance.volume = 1"), "Speech synthesis volume must be explicit and safe.");
 assert(shell.includes("addEventListener(\"click\", startPushToTalk)"), "Speech recognition must start only from explicit user click.");
+assert(shell.includes("selector?.addEventListener(\"change\", changeLanguageFromSelector)"), "Language selector must be user-initiated.");
 assert(shell.includes("continuous = false"), "Speech recognition must be one-shot, not continuous.");
 assert(shell.includes("interimResults = false"), "Shell must avoid continuous/interim background transcription.");
 assert(shell.includes("isHighRiskPrompt"), "Shell must classify high-risk prompts before routing.");
