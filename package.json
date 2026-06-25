@@ -84,6 +84,7 @@
     "qa:nexus-controlled-low-risk-text-only-renderer-phase-14a": "node scripts/nexus-controlled-low-risk-text-only-renderer-phase-14a-qa.js",
     "qa:nexus-controlled-low-risk-text-only-renderer-phase-14b-load-boundary": "node scripts/nexus-controlled-low-risk-text-only-renderer-phase-14b-load-boundary-qa.js",
     "qa:nexus-controlled-low-risk-text-only-renderer-phase-14c-test-harness": "node scripts/nexus-controlled-low-risk-text-only-renderer-phase-14c-test-harness-qa.js",
+    "qa:nexus-controlled-low-risk-text-only-renderer-phase-14d-runtime-loader-stub": "node scripts/nexus-controlled-low-risk-text-only-renderer-phase-14d-runtime-loader-stub-qa.js",
     "qa:nexus-intent-classifier": "node scripts/nexus-intent-classifier-qa.js",
     "qa:nexus-selected-tool-id": "node scripts/nexus-selected-tool-id-alignment-qa.js",
     "qa:nexus-low-risk-suggestion-display": "node scripts/nexus-low-risk-suggestion-display-plan-qa.js",
