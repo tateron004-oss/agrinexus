@@ -119,6 +119,7 @@ const suites = {
     "scripts/nexus-controlled-low-risk-renderer-phase-14k-candidate-contract-chain-harness-qa.js",
     "scripts/nexus-voice-demo-shell-phase-16a-qa.js",
     "scripts/nexus-voice-language-switch-phase-16a-hotfix-qa.js",
+    "scripts/nexus-cultural-music-demo-shell-qa.js",
     "scripts/nexus-tool-registry-runtime-qa.js",
     "scripts/nexus-intent-classifier-qa.js",
     "scripts/nexus-policy-engine-qa.js",

@@ -44,6 +44,8 @@ assert(index.includes("id=\"nexusVoiceDemoIntroBtn\""), "Standard User UI must i
 assert(index.includes("Introduce Nexus"), "Voice dock must include the Introduce Nexus label.");
 assert(index.includes("id=\"nexusVoiceDemoLanguageSelect\""), "Standard User UI must include the demo language selector.");
 assert(index.includes("data-nexus-voice-demo-language"), "Demo language selector must be scoped to the voice demo shell.");
+assert(index.includes("id=\"nexusVoiceDemoStopMusicBtn\""), "Standard User UI must include Stop Music control for local demo audio.");
+assert(index.includes("Stop Music"), "Voice dock must include the Stop Music label.");
 assert(index.includes("id=\"nexusVoiceDemoStatus\""), "Voice demo status must be present.");
 assert(index.includes("id=\"nexusVoiceDemoTranscript\""), "Voice demo transcript preview must be present.");
 assert(index.includes("/nexus-voice-demo-shell.js"), "Voice demo shell module must be loaded by index.html.");
@@ -80,6 +82,9 @@ assert(shell.includes("DEMO_LANGUAGES"), "Shell must define local demo language 
 assert(shell.includes("isLanguageSwitchCommand"), "Shell must parse explicit language-switch commands.");
 assert(shell.includes("setDemoLanguage"), "Shell must keep language changes in local UI state.");
 assert(shell.includes("changeLanguageFromSelector"), "Shell must support user-initiated selector changes.");
+assert(shell.includes("isKenyaMusicCommand"), "Shell must recognize safe Kenya music demo commands.");
+assert(shell.includes("startKenyaDemoMusic"), "Shell must include guarded local Kenya-inspired demo music playback.");
+assert(shell.includes("stopDemoMusic"), "Shell must include a safe stop path for local demo music.");
 assert(shell.includes("choosePolishedEnglishVoice"), "Shell must include safe polished English voice selection.");
 assert(shell.includes("window.speechSynthesis.getVoices"), "Voice selection must use browser-native getVoices only.");
 assert(shell.includes("return preferred || null"), "Voice selection must fall back safely when no preferred voice exists.");

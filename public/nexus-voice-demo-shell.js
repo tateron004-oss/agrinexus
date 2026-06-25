@@ -8,6 +8,10 @@
   const STATUS_UNSUPPORTED = "Voice not supported in this browser";
   const COMMAND_SOURCE = "phase-16a-push-to-talk";
   const DEFAULT_LANGUAGE = "en";
+  const KENYA_DEMO_MUSIC_RESPONSE = "Absolutely. I'll play a Kenya-inspired demo rhythm. This is local demo audio, and I'm not opening an outside music service.";
+  const MUSIC_USER_INTERACTION_REQUIRED = "Music playback needs a user interaction in this browser. Please click the play control.";
+  const MUSIC_STOPPED_RESPONSE = "Music stopped.";
+  const DEMO_MUSIC_DURATION_MS = 24000;
   const DEMO_LANGUAGES = {
     en: {
       label: "English",
@@ -104,6 +108,11 @@
   let activeRecognition = null;
   let isSpeaking = false;
   let selectedLanguage = DEFAULT_LANGUAGE;
+  let isDemoMusicPlaying = false;
+  let demoMusicContext = null;
+  let demoMusicGain = null;
+  let demoMusicNodes = [];
+  let demoMusicTimers = [];
 
   function $(selector) {
     return document.querySelector(selector);
@@ -115,6 +124,10 @@
 
   function introButton() {
     return $("#nexusVoiceDemoIntroBtn");
+  }
+
+  function stopMusicButton() {
+    return $("#nexusVoiceDemoStopMusicBtn");
   }
 
   function languageSelector() {
@@ -184,6 +197,121 @@
       .replace(/[’]/g, "'")
       .replace(/\s+/g, " ")
       .trim();
+  }
+
+  function stopActiveRecognition() {
+    if (!activeRecognition) return;
+    try {
+      activeRecognition.stop();
+    } catch (error) {
+      // Recognition stop is best-effort in browser implementations.
+    }
+    activeRecognition = null;
+  }
+
+  function isKenyaMusicCommand(command) {
+    const text = normalizeCommand(command).toLowerCase();
+    return /\b(play|start)\b.*\b(music|rhythm|song|audio)\b.*\b(kenya|kenyan)\b/.test(text)
+      || /\b(play|start)\b.*\b(kenyan)\b.*\b(music|rhythm|song|audio)\b/.test(text);
+  }
+
+  function isStopMusicCommand(command) {
+    const text = normalizeCommand(command).toLowerCase();
+    return /\b(stop|pause|end)\b.*\b(music|rhythm|song|audio)\b/.test(text);
+  }
+
+  function stopDemoMusic(options = {}) {
+    demoMusicTimers.forEach(timer => window.clearTimeout(timer));
+    demoMusicTimers = [];
+    demoMusicNodes.forEach(node => {
+      try {
+        node.stop();
+      } catch (error) {
+        // Stopping already-ended oscillators is harmless.
+      }
+      try {
+        node.disconnect();
+      } catch (error) {
+        // Disconnect is best-effort for browser audio nodes.
+      }
+    });
+    demoMusicNodes = [];
+    if (demoMusicGain) {
+      try {
+        demoMusicGain.disconnect();
+      } catch (error) {
+        // Disconnect is best-effort.
+      }
+    }
+    demoMusicGain = null;
+    const context = demoMusicContext;
+    demoMusicContext = null;
+    isDemoMusicPlaying = false;
+    if (context && context.state !== "closed") {
+      try {
+        void context.close();
+      } catch (error) {
+        // Closing Web Audio is best-effort across browsers.
+      }
+    }
+    if (options.announce) {
+      setStatus(STATUS_READY);
+      setTranscript(MUSIC_STOPPED_RESPONSE);
+      speak(MUSIC_STOPPED_RESPONSE);
+    }
+  }
+
+  function startKenyaDemoMusic() {
+    stopActiveRecognition();
+    stopDemoMusic({ announce: false });
+    const AudioContextCtor = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContextCtor) {
+      setTranscript(MUSIC_USER_INTERACTION_REQUIRED);
+      setStatus(STATUS_READY);
+      return false;
+    }
+    try {
+      const context = new AudioContextCtor();
+      demoMusicContext = context;
+      demoMusicGain = context.createGain();
+      demoMusicGain.gain.setValueAtTime(0.0001, context.currentTime);
+      demoMusicGain.gain.exponentialRampToValueAtTime(0.12, context.currentTime + 0.08);
+      demoMusicGain.gain.exponentialRampToValueAtTime(0.0001, context.currentTime + (DEMO_MUSIC_DURATION_MS / 1000));
+      demoMusicGain.connect(context.destination);
+      const pattern = [196, 247, 294, 247, 220, 262, 330, 262];
+      const startAt = context.currentTime + 0.05;
+      const beat = 0.28;
+      const cycles = Math.floor((DEMO_MUSIC_DURATION_MS / 1000) / (pattern.length * beat));
+      for (let cycle = 0; cycle < cycles; cycle += 1) {
+        pattern.forEach((frequency, index) => {
+          const oscillator = context.createOscillator();
+          const noteGain = context.createGain();
+          const noteStart = startAt + ((cycle * pattern.length) + index) * beat;
+          oscillator.type = index % 2 === 0 ? "sine" : "triangle";
+          oscillator.frequency.setValueAtTime(frequency, noteStart);
+          noteGain.gain.setValueAtTime(0.0001, noteStart);
+          noteGain.gain.exponentialRampToValueAtTime(index % 2 === 0 ? 0.18 : 0.1, noteStart + 0.025);
+          noteGain.gain.exponentialRampToValueAtTime(0.0001, noteStart + beat * 0.82);
+          oscillator.connect(noteGain);
+          noteGain.connect(demoMusicGain);
+          oscillator.start(noteStart);
+          oscillator.stop(noteStart + beat * 0.9);
+          demoMusicNodes.push(oscillator);
+        });
+      }
+      const stopTimer = window.setTimeout(() => stopDemoMusic({ announce: false }), DEMO_MUSIC_DURATION_MS);
+      demoMusicTimers.push(stopTimer);
+      isDemoMusicPlaying = true;
+      if (typeof context.resume === "function" && context.state === "suspended") {
+        void context.resume();
+      }
+      return true;
+    } catch (error) {
+      stopDemoMusic({ announce: false });
+      setTranscript(MUSIC_USER_INTERACTION_REQUIRED);
+      setStatus(STATUS_READY);
+      return false;
+    }
   }
 
   function languageKeyFromText(text) {
@@ -333,6 +461,19 @@
     setStatus(STATUS_PROCESSING);
     setTranscript(`Heard: ${transcript}`);
     const bridge = window.NexusVoiceDemoShellBridge;
+    if (isStopMusicCommand(transcript)) {
+      stopDemoMusic({ announce: true });
+      bridge?.showResponse?.(MUSIC_STOPPED_RESPONSE, { source: COMMAND_SOURCE, musicDemo: true, blocked: false });
+      return;
+    }
+    if (isKenyaMusicCommand(transcript)) {
+      const started = startKenyaDemoMusic();
+      const response = started ? KENYA_DEMO_MUSIC_RESPONSE : MUSIC_USER_INTERACTION_REQUIRED;
+      bridge?.showResponse?.(response, { source: COMMAND_SOURCE, musicDemo: true, blocked: false });
+      setTranscript(response);
+      speak(response);
+      return;
+    }
     if (isLanguageSwitchCommand(transcript)) {
       const languageKey = languageKeyFromText(transcript);
       const response = setDemoLanguage(languageKey, { speak: false });
@@ -396,6 +537,12 @@
     if (response) bridge?.showResponse?.(response, { source: COMMAND_SOURCE, languageSwitch: true, blocked: false });
   }
 
+  function stopMusicFromButton() {
+    stopDemoMusic({ announce: true });
+    const bridge = window.NexusVoiceDemoShellBridge;
+    bridge?.showResponse?.(MUSIC_STOPPED_RESPONSE, { source: COMMAND_SOURCE, musicDemo: true, blocked: false });
+  }
+
   function startPushToTalk() {
     if (activeRecognition) {
       try {
@@ -457,11 +604,13 @@
     const talkButton = button();
     const intro = introButton();
     const selector = languageSelector();
+    const stopMusic = stopMusicButton();
     if (!talkButton) return;
     setStatus(recognitionCtor() ? STATUS_READY : STATUS_UNSUPPORTED);
     talkButton.addEventListener("click", startPushToTalk);
     intro?.addEventListener("click", introduceNexus);
     selector?.addEventListener("change", changeLanguageFromSelector);
+    stopMusic?.addEventListener("click", stopMusicFromButton);
     quickPromptButtons().forEach(promptButton => {
       promptButton.addEventListener("click", runQuickPrompt);
     });
@@ -471,6 +620,8 @@
     startPushToTalk,
     introduceNexus,
     setDemoLanguage,
+    startKenyaDemoMusic,
+    stopDemoMusic,
     routeTranscript,
     runQuickPrompt,
     isHighRiskPrompt,

@@ -94,6 +94,7 @@
     "qa:nexus-controlled-low-risk-renderer-phase-14k-candidate-contract-chain-harness": "node scripts/nexus-controlled-low-risk-renderer-phase-14k-candidate-contract-chain-harness-qa.js",
     "qa:nexus-voice-demo-shell-phase-16a": "node scripts/nexus-voice-demo-shell-phase-16a-qa.js",
     "qa:nexus-voice-language-switch-phase-16a-hotfix": "node scripts/nexus-voice-language-switch-phase-16a-hotfix-qa.js",
+    "qa:nexus-cultural-music-demo-shell": "node scripts/nexus-cultural-music-demo-shell-qa.js",
     "qa:nexus-intent-classifier": "node scripts/nexus-intent-classifier-qa.js",
     "qa:nexus-selected-tool-id": "node scripts/nexus-selected-tool-id-alignment-qa.js",
     "qa:nexus-low-risk-suggestion-display": "node scripts/nexus-low-risk-suggestion-display-plan-qa.js",

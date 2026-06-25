@@ -144,6 +144,28 @@ Meeting demo script:
 4. Explain that Nexus is demonstrating local language support for safe guidance only.
 5. Say `Nexus, speak English.` before returning to the main English demo flow.
 
+### Cultural Music Demo Shell
+
+The Standard User voice shell can respond to the safe entertainment-style command `Nexus, play music from Kenya.`
+
+Supported demo commands include:
+
+- `Nexus, play music from Kenya`
+- `Play music from Kenya`
+- `Nexus, play Kenyan music`
+
+Expected response:
+
+> Absolutely. I'll play a Kenya-inspired demo rhythm. This is local demo audio, and I'm not opening an outside music service.
+
+This feature uses a short browser-generated Web Audio pattern. It does not stream music, open Spotify, YouTube, Apple Music, SoundCloud, or any outside service, call a third-party audio API, use backend audio services, or add copyrighted commercial music. The rhythm is described only as a `Kenya-inspired demo rhythm`; it does not claim cultural authenticity or live music from Kenya.
+
+Playback starts only from a user action or a user voice command routed through the push-to-talk flow. The demo rhythm stops automatically after a short duration and can also be stopped with the `Stop Music` control. If browser audio playback is blocked, Nexus should show:
+
+> Music playback needs a user interaction in this browser. Please click the play control.
+
+The music demo does not request microphone permission outside the existing `Talk to Nexus` flow, does not keep listening while music plays, and does not change health access, introduction, language switch, high-risk prompt, provider, payment, location, camera, or call behavior.
+
 ### Pharmacy Demo Behavior
 
 For prompts such as `Nexus, I need pharmacy support` or `Nexus, I need help getting my medication`, Nexus should say:
