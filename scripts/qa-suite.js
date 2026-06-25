@@ -99,6 +99,7 @@ const suites = {
     "scripts/nexus-controlled-low-risk-renderer-static-harness-qa.js",
     "scripts/nexus-controlled-low-risk-renderer-non-runtime-shell-qa.js",
     "scripts/nexus-controlled-low-risk-renderer-runtime-adapter-contract-qa.js",
+    "scripts/nexus-controlled-low-risk-renderer-non-runtime-adapter-fixture-qa.js",
     "scripts/nexus-tool-registry-runtime-qa.js",
     "scripts/nexus-intent-classifier-qa.js",
     "scripts/nexus-policy-engine-qa.js",
