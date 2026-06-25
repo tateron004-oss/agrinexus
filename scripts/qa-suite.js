@@ -105,6 +105,7 @@ const suites = {
     "scripts/nexus-controlled-low-risk-renderer-default-off-runtime-flag-plumbing-audit-qa.js",
     "scripts/nexus-controlled-low-risk-renderer-hidden-mount-preflight-guard-contract-qa.js",
     "scripts/nexus-controlled-low-risk-renderer-final-standard-user-browser-validation-default-off-qa.js",
+    "scripts/nexus-controlled-low-risk-renderer-phase-13-closeout-readiness-qa.js",
     "scripts/nexus-tool-registry-runtime-qa.js",
     "scripts/nexus-intent-classifier-qa.js",
     "scripts/nexus-policy-engine-qa.js",

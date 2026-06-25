@@ -80,6 +80,7 @@
     "qa:nexus-controlled-low-risk-renderer-default-off-runtime-flag-plumbing-audit": "node scripts/nexus-controlled-low-risk-renderer-default-off-runtime-flag-plumbing-audit-qa.js",
     "qa:nexus-controlled-low-risk-renderer-hidden-mount-preflight-guard-contract": "node scripts/nexus-controlled-low-risk-renderer-hidden-mount-preflight-guard-contract-qa.js",
     "qa:nexus-controlled-low-risk-renderer-final-standard-user-browser-validation-default-off": "node scripts/nexus-controlled-low-risk-renderer-final-standard-user-browser-validation-default-off-qa.js",
+    "qa:nexus-controlled-low-risk-renderer-phase-13-closeout-readiness": "node scripts/nexus-controlled-low-risk-renderer-phase-13-closeout-readiness-qa.js",
     "qa:nexus-intent-classifier": "node scripts/nexus-intent-classifier-qa.js",
     "qa:nexus-selected-tool-id": "node scripts/nexus-selected-tool-id-alignment-qa.js",
     "qa:nexus-low-risk-suggestion-display": "node scripts/nexus-low-risk-suggestion-display-plan-qa.js",
