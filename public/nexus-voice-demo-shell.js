@@ -53,6 +53,17 @@
     return Boolean(window.speechSynthesis && window.SpeechSynthesisUtterance);
   }
 
+  function choosePolishedEnglishVoice() {
+    if (!speechSynthesisSupported() || typeof window.speechSynthesis.getVoices !== "function") return null;
+    const voices = window.speechSynthesis.getVoices() || [];
+    const englishVoices = voices.filter(voice => /^en\b/i.test(String(voice.lang || "")));
+    const preferred = englishVoices.find(voice => /\b(natural|neural|enhanced|premium|system)\b/i.test(String(voice.name || "")))
+      || englishVoices.find(voice => /\b(microsoft|google|apple)\b/i.test(String(voice.name || "")))
+      || englishVoices.find(voice => voice.default)
+      || englishVoices[0];
+    return preferred || null;
+  }
+
   function normalizeCommand(command) {
     return String(command || "")
       .replace(/[“”]/g, "\"")
@@ -108,7 +119,7 @@
   }
 
   function introResponse() {
-    return "Hello, I am Nexus, your voice-operated access assistant. I can help guide you through telehealth, pharmacy support, mobile clinic access, transportation-to-care, workforce resources, and agriculture services. How can I help you today?";
+    return "Good morning. I am Nexus, your voice-operated access assistant. I'm ready to help with telehealth, pharmacy support, mobile clinic access, transportation-to-care, workforce resources, and agriculture services. How can I assist you today?";
   }
 
   function safeFallbackResponse(command) {
@@ -138,8 +149,16 @@
     try {
       window.speechSynthesis.cancel();
       const utterance = new window.SpeechSynthesisUtterance(message);
-      utterance.rate = 0.98;
-      utterance.pitch = 1;
+      const polishedVoice = choosePolishedEnglishVoice();
+      if (polishedVoice) {
+        utterance.voice = polishedVoice;
+        utterance.lang = polishedVoice.lang || "en-US";
+      } else {
+        utterance.lang = "en-US";
+      }
+      utterance.rate = 0.92;
+      utterance.pitch = 0.9;
+      utterance.volume = 1;
       utterance.onstart = () => {
         isSpeaking = true;
         setStatus(STATUS_SPEAKING);

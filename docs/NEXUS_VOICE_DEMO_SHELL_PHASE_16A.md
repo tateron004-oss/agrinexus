@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Phase 16A adds a meeting-safe, browser-native voice shell for the Standard User demo. The goal is to make Nexus feel conversational, similar to a Jarvis/Siri/Alexa-style assistant, while preserving the current controlled-action safety posture.
+Phase 16A adds a meeting-safe, browser-native voice shell for the Standard User demo. The goal is to make Nexus feel conversational and assistant-like while preserving the current controlled-action safety posture.
 
 This phase is not a full autonomous voice agent. It is a push-to-talk demo shell for one command at a time.
 
@@ -94,13 +94,19 @@ The Standard User voice dock includes an optional `Introduce Nexus` control. It 
 
 When selected, Nexus may speak or display:
 
-> Hello, I am Nexus, your voice-operated access assistant. I can help guide you through telehealth, pharmacy support, mobile clinic access, transportation-to-care, workforce resources, and agriculture services. How can I help you today?
+> Good morning. I am Nexus, your voice-operated access assistant. I'm ready to help with telehealth, pharmacy support, mobile clinic access, transportation-to-care, workforce resources, and agriculture services. How can I assist you today?
 
 If browser speech synthesis is unsupported, the same introduction remains available as visible text. This introduction does not start listening, does not request microphone permission, and does not store the spoken introduction as a user transcript.
 
 The introduction does not claim that Nexus has called, messaged, scheduled, refilled, dispatched, shared location, processed payment, sent medical information, connected to a live provider, or completed any action.
 
 Meeting use: click `Introduce Nexus` first, let Nexus speak or display the introduction, then click `Talk to Nexus` for the live prompt flow.
+
+### Polished Voice Style
+
+The voice demo shell uses only browser-native `speechSynthesis`. It may choose a natural, neural, enhanced, premium, system, or common English browser voice when one is available, and otherwise falls back to the browser default voice.
+
+Speech settings stay conservative for a calm assistant style: rate `0.92`, pitch `0.9`, and volume `1`. The voice style is generic and does not copy, name, or reference any copyrighted character, film assistant, or actor.
 
 ### Pharmacy Demo Behavior
 

@@ -24929,7 +24929,7 @@ function nexusVoiceDemoHealthAccessResponse(command = "") {
 }
 
 function nexusVoiceDemoIntroResponse() {
-  return "Hello, I am Nexus, your voice-operated access assistant. I can help guide you through telehealth, pharmacy support, mobile clinic access, transportation-to-care, workforce resources, and agriculture services. How can I help you today?";
+  return "Good morning. I am Nexus, your voice-operated access assistant. I'm ready to help with telehealth, pharmacy support, mobile clinic access, transportation-to-care, workforce resources, and agriculture services. How can I assist you today?";
 }
 
 function nexusVoiceDemoShellResponse(command = "") {

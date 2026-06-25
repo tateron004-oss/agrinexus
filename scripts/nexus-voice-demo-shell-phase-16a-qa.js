@@ -74,6 +74,12 @@ assert(app.includes("permissionRequested: false"), "Voice demo bridge must expli
 assert(shell.includes("window.SpeechRecognition || window.webkitSpeechRecognition"), "Shell must use browser-native speech recognition feature detection.");
 assert(shell.includes("window.speechSynthesis"), "Shell must feature-detect browser speech synthesis.");
 assert(shell.includes("SpeechSynthesisUtterance"), "Shell must use browser-native SpeechSynthesisUtterance.");
+assert(shell.includes("choosePolishedEnglishVoice"), "Shell must include safe polished English voice selection.");
+assert(shell.includes("window.speechSynthesis.getVoices"), "Voice selection must use browser-native getVoices only.");
+assert(shell.includes("return preferred || null"), "Voice selection must fall back safely when no preferred voice exists.");
+assert(shell.includes("utterance.rate = 0.92"), "Speech synthesis rate must stay conservative.");
+assert(shell.includes("utterance.pitch = 0.9"), "Speech synthesis pitch must stay conservative.");
+assert(shell.includes("utterance.volume = 1"), "Speech synthesis volume must be explicit and safe.");
 assert(shell.includes("addEventListener(\"click\", startPushToTalk)"), "Speech recognition must start only from explicit user click.");
 assert(shell.includes("continuous = false"), "Speech recognition must be one-shot, not continuous.");
 assert(shell.includes("interimResults = false"), "Shell must avoid continuous/interim background transcription.");
@@ -91,10 +97,10 @@ assert(shell.includes("bridge?.submitSafeTranscript"), "Low-risk prompts must ro
 assert(shell.includes("bridge?.showResponse"), "High-risk prompts must render safe response without execution.");
 
 const introCorpus = `${app}\n${shell}\n${doc}`;
-const introductionText = "Hello, I am Nexus, your voice-operated access assistant. I can help guide you through telehealth, pharmacy support, mobile clinic access, transportation-to-care, workforce resources, and agriculture services. How can I help you today?";
+const introductionText = "Good morning. I am Nexus, your voice-operated access assistant. I'm ready to help with telehealth, pharmacy support, mobile clinic access, transportation-to-care, workforce resources, and agriculture services. How can I assist you today?";
 assert(introCorpus.includes(introductionText), "Preferred Nexus spoken introduction text must exist.");
 [
-  "Hello, I am Nexus",
+  "Good morning. I am Nexus",
   "voice-operated access assistant",
   "telehealth",
   "pharmacy support",
@@ -102,7 +108,7 @@ assert(introCorpus.includes(introductionText), "Preferred Nexus spoken introduct
   "transportation-to-care",
   "workforce resources",
   "agriculture services",
-  "How can I help you today?"
+  "How can I assist you today?"
 ].forEach(phrase => {
   assert(introCorpus.includes(phrase), `Healthcare Demo Mode intro must mention: ${phrase}`);
 });
@@ -119,6 +125,32 @@ assert(introCorpus.includes(introductionText), "Preferred Nexus spoken introduct
   "live provider connection"
 ].forEach(claim => {
   assert(!introductionText.toLowerCase().includes(claim.toLowerCase()), `Introduction must not contain unsafe execution claim: ${claim}`);
+});
+
+[
+  "Jarvis",
+  "JARVIS",
+  "Iron Man",
+  "Tony Stark",
+  "Robert Downey",
+  "Paul Bettany"
+].forEach(reference => {
+  const visibleIndex = index
+    .replace(/\s(?:id|class|aria-controls|aria-labelledby|for)="[^"]*"/gi, "")
+    .replace(/<script[\s\S]*?<\/script>/gi, "");
+  assert(!`${visibleIndex}\n${shell}\n${doc}`.includes(reference), `Voice demo UI/docs/shell must not reference ${reference}.`);
+});
+[
+  "ElevenLabs",
+  "OpenAI TTS",
+  "Google Cloud Text-to-Speech",
+  "Amazon Polly",
+  "Azure Cognitive Services",
+  "fetch(\"/api/tts",
+  "fetch('/api/tts",
+  "third-party voice"
+].forEach(reference => {
+  assert(!shell.includes(reference), `Voice shell must not introduce third-party/backend voice service: ${reference}`);
 });
 
 const introMatch = shell.match(/function introduceNexus[\s\S]*?\n  }\n(?=\n  function startPushToTalk)/);
