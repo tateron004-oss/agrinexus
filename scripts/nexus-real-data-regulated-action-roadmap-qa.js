@@ -5,6 +5,7 @@ const root = path.resolve(__dirname, "..");
 const paths = {
   registry: path.join(root, "public", "nexus-real-data-source-registry.js"),
   doc: path.join(root, "docs", "NEXUS_REAL_DATA_REGULATED_ACTION_ROADMAP.md"),
+  foundationDoc: path.join(root, "docs", "NEXUS_REAL_PROTOTYPE_FOUNDATION_PHASE_17.md"),
   index: path.join(root, "public", "index.html"),
   app: path.join(root, "public", "app.js"),
   server: path.join(root, "server.js"),
@@ -30,6 +31,7 @@ Object.values(paths).forEach(filePath => {
 const registryModule = require(paths.registry);
 const registrySource = read(paths.registry);
 const doc = read(paths.doc);
+const foundationDoc = read(paths.foundationDoc);
 const index = read(paths.index);
 const app = read(paths.app);
 const server = read(paths.server);
@@ -53,12 +55,21 @@ const requiredIds = [
 assert(Array.isArray(registry), "Registry must export an array.");
 assert(registry.length === requiredIds.length, "Registry must include every required source/action category exactly once.");
 
+const allowedPrototypeReadiness = new Set([
+  "available-now",
+  "source-ready",
+  "partner-required",
+  "compliance-required",
+  "future-execution"
+]);
+
 const requiredFields = [
   "id",
   "label",
   "dataOwner",
   "sourceType",
   "publicPartnerRegulatedStatus",
+  "prototypeReadiness",
   "integrationMethod",
   "dataFreshness",
   "permissionRequirements",
@@ -79,6 +90,7 @@ requiredIds.forEach(id => {
   });
   assert(registryModule.SOURCE_TYPES.includes(entry.sourceType), `${id} must use a known sourceType.`);
   assert(registryModule.STATUS_TYPES.includes(entry.publicPartnerRegulatedStatus), `${id} must use a known public/partner/regulated status.`);
+  assert(allowedPrototypeReadiness.has(entry.prototypeReadiness), `${id} must use a known prototype readiness status.`);
   assert(registryModule.RISK_LEVELS.includes(entry.actionRiskLevel), `${id} must use a known action risk level.`);
   assert(entry.liveActionEnabled === false, `${id} must not enable live action in Phase 17.`);
   assert(entry.userApprovalRequired === true, `${id} must require user approval before future action.`);
@@ -115,6 +127,45 @@ requiredIds.forEach(id => {
   assert(doc.toLowerCase().includes(phrase.toLowerCase()), `Roadmap doc must include: ${phrase}`);
 });
 
+[
+  "Nexus Real Prototype Foundation Sprint",
+  "real prototype foundation",
+  "source-backed answers",
+  "provider-ready workflows",
+  "permission-gated actions",
+  "audit-controlled future execution",
+  "Real Source Registry",
+  "Source-Backed Answer Contract",
+  "Provider/Action Readiness Model",
+  "Permission And Consent Model",
+  "Audit-Controlled Action Model",
+  "Real Data Acquisition Roadmap",
+  "Public Data Source Path",
+  "Partner Data Source Path",
+  "Regulated Data Path",
+  "Future Provider Integrations",
+  "Healthcare Access Prototype Workflows",
+  "Location-Sharing Path",
+  "Payment Path",
+  "Prescription/Pharmacy Path",
+  "Medical Records/FHIR Path",
+  "Emergency Dispatch Path",
+  "available-now",
+  "source-ready",
+  "partner-required",
+  "compliance-required",
+  "future-execution",
+  "not connected yet",
+  "requires a verified source",
+  "requires a provider integration",
+  "requires your approval",
+  "requires consent and audit logging",
+  "I can prepare the next step",
+  "I cannot execute that action until the required connection is active"
+].forEach(phrase => {
+  assert(foundationDoc.toLowerCase().includes(phrase.toLowerCase()), `Prototype foundation doc must include: ${phrase}`);
+});
+
 requiredFields.forEach(field => {
   assert(doc.includes(field), `Roadmap doc must document field ${field}.`);
 });
@@ -123,9 +174,18 @@ requiredFields.forEach(field => {
   "liveActionEnabled: false",
   "userApprovalRequired: true",
   "metadata-only",
+  "real prototype foundation",
   "getRealDataSourceRegistry"
 ].forEach(phrase => {
   assert(registrySource.includes(phrase), `Registry source must include ${phrase}.`);
+});
+
+[
+  "toy system",
+  "preview toy",
+  "fake workflow"
+].forEach(unsupportedTone => {
+  assert(!foundationDoc.toLowerCase().includes(unsupportedTone), `Prototype foundation doc must avoid unsupported toy/demo posture: ${unsupportedTone}`);
 });
 
 [

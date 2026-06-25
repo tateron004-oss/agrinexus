@@ -1,13 +1,15 @@
-# Nexus Real Data And Regulated Action Roadmap
+# Nexus Real Prototype Foundation: Real Data And Regulated Action Roadmap
 
-Phase: 17 architecture contracts and source registry
-Status: planning, metadata, QA, and safety contracts only
+Phase: 17 - Nexus Real Prototype Foundation Sprint
+Status: prototype foundation, source registry, permission gates, audit contracts, and regulated-action readiness
 
 ## Purpose
 
 Nexus Workforce AI must clearly distinguish data that can be safely shown as general guidance from data and actions that require contracts, permissions, compliance review, confirmation, and audit logging.
 
-Phase 17 does not implement live regulated actions. It does not add live provider lookup, provider contact, telehealth execution, pharmacy refill submission, mobile clinic dispatch, ride booking, location sharing, payment processing, FHIR record access, medical record sharing, or emergency dispatch.
+Phase 17 converts Nexus from meeting-ready presentation posture into the real prototype foundation for source-backed answers, provider-ready workflows, permission-gated actions, and audit-controlled future execution.
+
+Phase 17 does not implement live regulated actions. It does not add live provider lookup, provider contact, telehealth execution, pharmacy refill submission, mobile clinic dispatch, ride booking, location sharing, payment processing, FHIR record access, medical record sharing, or emergency dispatch. Those capabilities are not blocked forever; they require verified sources, provider integrations, consent, approval gates, and audit controls before they can be enabled.
 
 Phase 17 adds the architecture contract for future real-data and regulated-action work:
 
@@ -18,6 +20,33 @@ Phase 17 adds the architecture contract for future real-data and regulated-actio
 - approved high-risk actions.
 
 The source registry is `public/nexus-real-data-source-registry.js`. It is metadata-only and must remain unimported by `public/index.html`, `public/app.js`, and `server.js` until a future reviewed phase explicitly wires it through policy, permission, confirmation, and audit controls.
+
+## Prototype Foundation Language
+
+New Phase 17 work should frame Nexus as:
+
+- a real prototype;
+- source-ready;
+- provider-ready;
+- permission-gated;
+- audit-controlled;
+- multilingual;
+- voice-operated;
+- health-access capable;
+- agriculture/workforce capable;
+- not connected yet to live regulated systems unless explicitly configured.
+
+Preferred user-facing language:
+
+- "requires a verified source";
+- "requires a provider integration";
+- "requires your approval";
+- "requires consent and audit logging";
+- "I can prepare the next step";
+- "I cannot execute that action until the required connection is active";
+- "not connected yet".
+
+Avoid new Phase 17 language that describes Nexus as a toy, fake, or merely simulated system. Historical docs may retain older meeting and local-safety wording where they describe previous phases.
 
 ## Source And Action Classes
 
@@ -137,6 +166,7 @@ Every source/action category in Phase 17 uses the following fields:
 - `dataOwner`
 - `sourceType`
 - `publicPartnerRegulatedStatus`
+- `prototypeReadiness`
 - `integrationMethod`
 - `dataFreshness`
 - `permissionRequirements`
@@ -149,6 +179,8 @@ Every source/action category in Phase 17 uses the following fields:
 - `futureImplementationPhase`
 
 `liveActionEnabled` must remain `false` for every Phase 17 entry.
+
+`prototypeReadiness` must clearly distinguish whether the category is `available-now`, `source-ready`, `partner-required`, `compliance-required`, or `future-execution`.
 
 ## Source Registry Matrix
 

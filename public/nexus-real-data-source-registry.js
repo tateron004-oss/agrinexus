@@ -5,7 +5,7 @@
     root.NexusRealDataSourceRegistry = factory();
   }
 })(typeof globalThis !== "undefined" ? globalThis : this, function nexusRealDataSourceRegistryModule() {
-  // Phase 17A: metadata-only source/action contracts. This registry must not enable live actions.
+  // Phase 17: real prototype foundation contracts. This registry is source-ready metadata-only and must not enable live actions.
   const SOURCE_TYPES = Object.freeze([
     "public_source_backed",
     "partner_operational",
@@ -32,6 +32,7 @@
       dataOwner: "Public health directories, licensed provider networks, or approved Nexus partners",
       sourceType: "public_source_backed",
       publicPartnerRegulatedStatus: "public_partner",
+      prototypeReadiness: "source-ready",
       integrationMethod: "Future public-directory ingestion plus partner directory feed; no live lookup in Phase 17.",
       dataFreshness: {
         expectedUpdateCadence: "daily-to-weekly",
@@ -55,6 +56,7 @@
       dataOwner: "Telehealth provider organization or contracted care partner",
       sourceType: "partner_operational",
       publicPartnerRegulatedStatus: "partner_regulated",
+      prototypeReadiness: "partner-required",
       integrationMethod: "Future partner API or secure operational feed for provider availability and handoff metadata.",
       dataFreshness: {
         expectedUpdateCadence: "near-real-time only after partner contract",
@@ -78,6 +80,7 @@
       dataOwner: "Licensed pharmacy, prescribing provider, payer, or patient-authorized record source",
       sourceType: "regulated_patient_medical",
       publicPartnerRegulatedStatus: "regulated",
+      prototypeReadiness: "compliance-required",
       integrationMethod: "Future pharmacy partner API, FHIR MedicationRequest/MedicationStatement where authorized, or manual review packet.",
       dataFreshness: {
         expectedUpdateCadence: "per authorized pharmacy/provider source",
@@ -101,6 +104,7 @@
       dataOwner: "Mobile clinic operator, health system partner, NGO partner, or public outreach program",
       sourceType: "partner_operational",
       publicPartnerRegulatedStatus: "partner",
+      prototypeReadiness: "partner-required",
       integrationMethod: "Future partner schedule feed or approved public outreach schedule import.",
       dataFreshness: {
         expectedUpdateCadence: "daily or event-driven",
@@ -124,6 +128,7 @@
       dataOwner: "Public transit source, community transport partner, care partner, or user-provided resource",
       sourceType: "public_source_backed",
       publicPartnerRegulatedStatus: "public_partner",
+      prototypeReadiness: "source-ready",
       integrationMethod: "Future public route import, partner transport feed, or manual resource directory.",
       dataFreshness: {
         expectedUpdateCadence: "daily-to-weekly; real-time only after approved API",
@@ -147,6 +152,7 @@
       dataOwner: "User/browser device; optional approved map or partner service after consent",
       sourceType: "live_api_integration",
       publicPartnerRegulatedStatus: "regulated",
+      prototypeReadiness: "compliance-required",
       integrationMethod: "Browser geolocation permission and future approved map/provider adapter only after explicit consent.",
       dataFreshness: {
         expectedUpdateCadence: "per user request only",
@@ -170,6 +176,7 @@
       dataOwner: "Payment processor, marketplace partner, payer, payee, or sponsor",
       sourceType: "approved_high_risk_action",
       publicPartnerRegulatedStatus: "approved_high_risk",
+      prototypeReadiness: "future-execution",
       integrationMethod: "Future credential-gated payment provider adapter; no browser-side payment execution in Phase 17.",
       dataFreshness: {
         expectedUpdateCadence: "real-time only through approved payment provider",
@@ -193,6 +200,7 @@
       dataOwner: "Patient, provider organization, health system, or authorized FHIR server",
       sourceType: "regulated_patient_medical",
       publicPartnerRegulatedStatus: "regulated",
+      prototypeReadiness: "compliance-required",
       integrationMethod: "Future SMART-on-FHIR/OAuth or approved provider export after identity and consent.",
       dataFreshness: {
         expectedUpdateCadence: "source-specific",
@@ -216,6 +224,7 @@
       dataOwner: "User, provider directory owner, care partner, or communication provider",
       sourceType: "approved_high_risk_action",
       publicPartnerRegulatedStatus: "approved_high_risk",
+      prototypeReadiness: "partner-required",
       integrationMethod: "Future confirmed communication provider handoff through native phone, browser tel, WhatsApp, Telegram, SMS, email, or partner API.",
       dataFreshness: {
         expectedUpdateCadence: "per contact source",
@@ -239,6 +248,7 @@
       dataOwner: "Local emergency services, public safety source, user, or approved emergency partner",
       sourceType: "approved_high_risk_action",
       publicPartnerRegulatedStatus: "approved_high_risk",
+      prototypeReadiness: "future-execution",
       integrationMethod: "Future emergency guidance and handoff planning only after legal, operational, and regional emergency-service review.",
       dataFreshness: {
         expectedUpdateCadence: "jurisdiction-specific",
