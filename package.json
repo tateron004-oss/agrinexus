@@ -297,7 +297,8 @@
     "qa:nexus-offline-low-bandwidth-mode-readiness-contract": "node scripts/nexus-offline-low-bandwidth-mode-readiness-contract-qa.js",
     "qa:nexus-africa-regional-deployment-mode-readiness-contract": "node scripts/nexus-africa-regional-deployment-mode-readiness-contract-qa.js",
     "qa:nexus-local-language-pack-mode-readiness-contract": "node scripts/nexus-local-language-pack-mode-readiness-contract-qa.js",
-    "qa:nexus-observability-monitoring-readiness-contract": "node scripts/nexus-observability-monitoring-readiness-contract-qa.js"
+    "qa:nexus-observability-monitoring-readiness-contract": "node scripts/nexus-observability-monitoring-readiness-contract-qa.js",
+    "qa:nexus-connector-reliability-readiness-contract": "node scripts/nexus-connector-reliability-readiness-contract-qa.js"
   },
   "dependencies": {
     "pg": "^8.13.1"
