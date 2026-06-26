@@ -152,8 +152,8 @@ const nexusProductIdentity = Object.freeze({
 });
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-305";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v284";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-306";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v285";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
 const VOICE_ATTENTION_DELAY_MS = 900;
@@ -10269,7 +10269,9 @@ function nexusAutonomousRuntimeHelpers() {
   return {
     router: window.NexusVoiceTextIntentRouter || null,
     actionContract: window.NexusPermissionGatedActionContract || null,
-    plannerPreview: window.NexusPlannerPreviewContract || null
+    plannerPreview: window.NexusPlannerPreviewContract || null,
+    permissionReview: window.NexusPermissionReviewContract || null,
+    auditEvent: window.NexusAuditEventContract || null
   };
 }
 
@@ -10284,6 +10286,19 @@ function nexusAutonomousActionTypeForRoute(route = {}, actionTypes = {}) {
   if (domain === "health-medical-request") return actionTypes.HEALTH_MEDICAL || "health-medical";
   if (domain === "emergency-request") return actionTypes.EMERGENCY || "emergency";
   return actionTypes.INFORMATION || "information";
+}
+
+function nexusPermissionDataNeededForRoute(route = {}) {
+  const domain = String(route.intentDomain || "");
+  if (domain === "communication-request") return ["resolved recipient", "visible provider", "message or call purpose", "explicit user approval"];
+  if (domain === "appointment-request") return ["verified provider", "appointment purpose", "available time window", "explicit user approval"];
+  if (domain === "marketplace-request") return ["verified item or listing", "transaction terms", "counterparty review", "explicit user approval"];
+  if (domain === "payment-request") return ["verified payment provider", "amount preview", "recipient review", "explicit user approval"];
+  if (domain === "location-request") return ["location purpose", "permission prompt", "sharing boundary", "explicit user approval"];
+  if (domain === "camera-media-request") return ["media purpose", "camera or upload permission", "sharing boundary", "explicit user approval"];
+  if (domain === "health-medical-request") return ["verified health provider", "consent boundary", "medical safety review", "explicit user approval"];
+  if (domain === "emergency-request") return ["local emergency service boundary", "safety escalation notice", "explicit user action outside Nexus"];
+  return ["clear action target", "verified integration readiness", "explicit user approval"];
 }
 
 function nexusAutonomousPreviewSteps(route = {}) {
@@ -10333,7 +10348,40 @@ function renderNexusAutonomousRuntimePreview(prompt = "", options = {}) {
       steps: nexusAutonomousPreviewSteps(route)
     })
     : null;
-  const target = $("#jarvisInsightPanel") || $("#userWorkspace") || $("#globalAssistantBar") || document.body;
+  const needsTrustPreview = route.permissionRequired === true || route.blocked === true;
+  const permissionReview = needsTrustPreview && typeof helpers.permissionReview?.buildPermissionReview === "function"
+    ? helpers.permissionReview.buildPermissionReview({
+      actionType: route.intentDomain || actionContract?.actionType || "review-only-action",
+      domain: route.intentDomain || "general",
+      riskLevel: route.riskLevel || actionContract?.riskLevel || "high",
+      summary: route.userVisibleDisclosure || actionContract?.summary || "Nexus can explain what would be required, but cannot execute this now.",
+      dataNeeded: nexusPermissionDataNeededForRoute(route),
+      blocked: route.blocked === true
+    })
+    : null;
+  const auditEvent = needsTrustPreview && typeof helpers.auditEvent?.buildAuditEventPreview === "function"
+    ? helpers.auditEvent.buildAuditEventPreview({
+      eventType: "permission-review-preview",
+      riskLevel: route.riskLevel || actionContract?.riskLevel || "high",
+      domain: route.intentDomain || "general",
+      actionType: route.intentDomain || actionContract?.actionType || "review-only-action",
+      summary: "Previewed future permission and audit requirements.",
+      sourceStatus: route.intentDomain === "agriculture-support" ? "general guidance" : "not source-backed",
+      permissionStatus: permissionReview?.status || "preview-only"
+    })
+    : null;
+  const visiblePreviewTarget = selector => {
+    const element = $(selector);
+    if (!element || element.classList?.contains("hidden")) return null;
+    const box = element.getBoundingClientRect?.();
+    return box && (box.width > 0 || box.height > 0) ? element : null;
+  };
+  const target = visiblePreviewTarget("#globalAssistantBar")
+    || visiblePreviewTarget("#jarvisInsightPanel")
+    || visiblePreviewTarget("#userWorkspace")
+    || $("#globalAssistantBar")
+    || $("#userWorkspace")
+    || document.body;
   if (!target) return null;
   target.querySelectorAll("[data-nexus-autonomous-runtime-preview]").forEach(existing => existing.remove());
 
@@ -10350,6 +10398,31 @@ function renderNexusAutonomousRuntimePreview(prompt = "", options = {}) {
   const statusLabel = route.blocked ? "Blocked" : route.permissionRequired ? "Permission required" : "Preview only";
   const steps = Array.isArray(planPreview?.steps) ? planPreview.steps : nexusAutonomousPreviewSteps(route);
   const noExecution = actionContract?.userVisibleDisclosure || route.userVisibleDisclosure || "No action has been taken.";
+  const permissionMarkup = permissionReview ? `
+    <section class="nexus-preview-review-block" data-nexus-permission-review-preview="true">
+      <h4>Permission Review Preview</h4>
+      <p>${htmlSafe(permissionReview.disclosure)}</p>
+      <p>${htmlSafe(permissionReview.summary)}</p>
+      <dl>
+        <div><dt>Confirmation</dt><dd>Required before any future execution</dd></div>
+        <div><dt>Confirm control</dt><dd>Disabled</dd></div>
+        <div><dt>Cancel path</dt><dd>Available</dd></div>
+      </dl>
+      <ul>${permissionReview.dataNeeded.map(item => `<li>${htmlSafe(item)}</li>`).join("")}</ul>
+    </section>
+  ` : "";
+  const auditMarkup = auditEvent ? `
+    <section class="nexus-preview-review-block" data-nexus-audit-event-preview="true">
+      <h4>Audit Event Preview</h4>
+      <p>${htmlSafe(auditEvent.disclosure)}</p>
+      <dl>
+        <div><dt>Event type</dt><dd>${htmlSafe(auditEvent.eventType)}</dd></div>
+        <div><dt>Permission status</dt><dd>${htmlSafe(auditEvent.permissionStatus)}</dd></div>
+        <div><dt>Redaction</dt><dd>${htmlSafe(auditEvent.redactionPolicy)}</dd></div>
+      </dl>
+      <p>No backend write, storage write, network call, or execution has occurred.</p>
+    </section>
+  ` : "";
   article.innerHTML = `
     <div class="tag-row">
       <span>${htmlSafe(route.intentDomain || "general-assistant")}</span>
@@ -10358,11 +10431,35 @@ function renderNexusAutonomousRuntimePreview(prompt = "", options = {}) {
     </div>
     <h3>Nexus Plan Preview</h3>
     <p>${htmlSafe(noExecution)}</p>
-    <ul>${steps.map(step => `<li><strong>${htmlSafe(step.title)}</strong>: ${htmlSafe(step.description)}</li>`).join("")}</ul>
     <p><strong>No action has been taken.</strong></p>
-    <button type="button" disabled aria-disabled="true" data-nexus-preview-control="review-only">Review only</button>
+    <div class="nexus-autonomous-preview-controls">
+      <button type="button" disabled aria-disabled="true" data-nexus-preview-control="confirm-disabled">Confirm disabled</button>
+      <button type="button" data-nexus-preview-control="cancel" onclick="this.closest('[data-nexus-autonomous-runtime-preview]')?.remove()">Cancel preview</button>
+    </div>
+    <ul>${steps.map(step => `<li><strong>${htmlSafe(step.title)}</strong>: ${htmlSafe(step.description)}</li>`).join("")}</ul>
+    ${permissionMarkup}
+    ${auditMarkup}
   `;
-  target.appendChild(article);
+  const cancelButton = article.querySelector('[data-nexus-preview-control="cancel"]');
+  if (cancelButton) {
+    cancelButton.setAttribute("data-cancel-listener", "true");
+    const removePreview = event => {
+      event.preventDefault();
+      event.stopPropagation();
+      article.remove();
+    };
+    cancelButton.addEventListener("pointerdown", removePreview);
+    cancelButton.addEventListener("mousedown", removePreview);
+    cancelButton.addEventListener("click", removePreview);
+  }
+  const globalPreviewAnchor = target.id === "globalAssistantBar"
+    ? target.querySelector(".mobile-permission-strip, #mobilePermissionStatus, #globalAssistantStatus")
+    : null;
+  if (globalPreviewAnchor) {
+    target.insertBefore(article, globalPreviewAnchor);
+  } else {
+    target.appendChild(article);
+  }
   if (options.updateStatus !== false) {
     const status = $("#globalAssistantStatus");
     if (status) status.textContent = translateText("Nexus prepared a preview-only plan. No action has been taken.");
@@ -10386,10 +10483,15 @@ function installNexusAutonomousRuntimePreview() {
     if (!value) return;
     setTimeout(() => renderNexusAutonomousRuntimePreview(value, { source }), 140);
     setTimeout(() => renderNexusAutonomousRuntimePreview(value, { source, updateStatus: false }), 620);
+    setTimeout(() => renderNexusAutonomousRuntimePreview(value, { source, updateStatus: false }), 1400);
   };
   document.addEventListener("click", event => {
     const target = event.target;
     if (!target || !target.closest) return;
+    if (target.closest('[data-nexus-preview-control="cancel"]')) {
+      target.closest("[data-nexus-autonomous-runtime-preview]")?.remove();
+      return;
+    }
     if (target.closest("#jarvisRunBtn")) schedulePreview(readPrompt("jarvis"), "jarvis");
     if (target.closest("#globalRunBtn")) schedulePreview(readPrompt("global"), "global");
     if (target.closest('[data-caption-action="send"]')) schedulePreview(readPrompt("caption"), "caption");

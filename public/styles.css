@@ -2450,6 +2450,9 @@ body.user-mode .global-assistant * {
   overflow-wrap: break-word;
   word-break: normal;
 }
+body.user-mode .content:has(#globalAssistantBar:not(.hidden)) {
+  z-index: 2600;
+}
 body.user-mode .global-assistant-head {
   display: grid;
   grid-template-columns: 1fr auto;
@@ -3589,6 +3592,40 @@ body.admin-mode .user-workspace {
 .nexus-autonomous-runtime-preview button[disabled] {
   opacity: .72;
   cursor: not-allowed;
+}
+.nexus-preview-review-block {
+  margin: 10px 0;
+  padding: 10px 12px;
+  border: 1px solid rgba(23, 50, 64, 0.18);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.72);
+}
+.nexus-preview-review-block h4 {
+  margin: 0 0 6px;
+  font-size: .86rem;
+}
+.nexus-preview-review-block dl {
+  display: grid;
+  gap: 6px;
+  margin: 8px 0;
+}
+.nexus-preview-review-block dl div {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+.nexus-preview-review-block dt {
+  font-weight: 700;
+}
+.nexus-preview-review-block dd {
+  margin: 0;
+  text-align: right;
+}
+.nexus-autonomous-preview-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
 }
 .nexus-confirmation-prototype {
   display: grid;
