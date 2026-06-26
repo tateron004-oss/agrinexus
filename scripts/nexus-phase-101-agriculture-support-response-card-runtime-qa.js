@@ -94,7 +94,8 @@ assert(verifiedCard.sourceStatus.label === "source-backed guidance", "source-bac
   "No purchase has been made",
   "No location has been shared",
   "local agriculture extension worker",
-  "no backend behavior change"
+  "no backend behavior change",
+  "normal-build browser activation still requires a safe local checkout patch"
 ].forEach(required => assert(doc.includes(required) || moduleSource.includes(required), `Phase 101 docs/module must include: ${required}`));
 
 console.log("[nexus-phase-101-agriculture-support-response-card-runtime-qa] passed");
