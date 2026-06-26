@@ -173,6 +173,7 @@ const suites = {
     "scripts/nexus-long-term-memory-readiness-contract-qa.js",
     "scripts/nexus-user-profile-readiness-contract-qa.js",
     "scripts/nexus-personalization-readiness-contract-qa.js",
+    "scripts/nexus-advanced-intent-understanding-readiness-contract-qa.js",
     "scripts/nexus-tool-registry-runtime-qa.js",
     "scripts/nexus-intent-classifier-qa.js",
     "scripts/nexus-policy-engine-qa.js",
@@ -255,7 +256,8 @@ suites["all-safe"] = unique([
   "scripts/nexus-action-reversal-followup-readiness-contract-qa.js",
   "scripts/nexus-long-term-memory-readiness-contract-qa.js",
   "scripts/nexus-user-profile-readiness-contract-qa.js",
-  "scripts/nexus-personalization-readiness-contract-qa.js"
+  "scripts/nexus-personalization-readiness-contract-qa.js",
+  "scripts/nexus-advanced-intent-understanding-readiness-contract-qa.js"
 ]);
 
 function unique(items) {
