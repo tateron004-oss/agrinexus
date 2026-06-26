@@ -3565,6 +3565,31 @@ body.admin-mode .user-workspace {
 .nexus-controlled-action-preview-note {
   color: #61726f;
 }
+.nexus-autonomous-runtime-preview {
+  display: grid;
+  gap: 8px;
+  width: min(100%, 560px);
+  margin: 10px 0 0;
+  padding: 12px;
+  border: 1px solid #bfd6f8;
+  border-radius: 8px;
+  background: #f8fbff;
+  color: #173240;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, .08);
+}
+.nexus-autonomous-runtime-preview h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+.nexus-autonomous-runtime-preview p,
+.nexus-autonomous-runtime-preview li {
+  font-size: .9rem;
+  line-height: 1.45;
+}
+.nexus-autonomous-runtime-preview button[disabled] {
+  opacity: .72;
+  cursor: not-allowed;
+}
 .nexus-confirmation-prototype {
   display: grid;
   gap: 7px;

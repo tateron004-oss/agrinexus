@@ -315,6 +315,7 @@
     "qa:nexus-phase-103-agriculture-source-selection-contract": "node scripts/nexus-phase-103-agriculture-source-selection-contract-qa.js",
     "qa:nexus-phase-104-agriculture-intent-router-local": "node scripts/nexus-phase-104-agriculture-intent-router-local-qa.js",
     "qa:nexus-phase-104-voice-text-intent-router": "node scripts/nexus-phase-104-voice-text-intent-router-qa.js",
+    "qa:nexus-autonomous-runtime-preview-integration": "node scripts/nexus-autonomous-runtime-preview-integration-qa.js",
     "qa:nexus-phase-105-preview-only-autonomous-runtime-integration-plan": "node scripts/nexus-phase-105-preview-only-autonomous-runtime-integration-plan-qa.js"
   },
   "dependencies": {

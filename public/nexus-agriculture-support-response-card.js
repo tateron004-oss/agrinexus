@@ -64,6 +64,11 @@
     if (source && source.name && source.contractId && source.freshnessLabel) {
       return Object.freeze({ label: "source-backed guidance", sourceBacked: true, sourceName: String(source.name), freshness: String(source.freshnessLabel), confidence: source.confidenceLabel ? String(source.confidenceLabel) : "source-labeled confidence unavailable", disclosure: "A verified source contract was provided. No provider action has been taken." });
     }
+    const registry = typeof globalThis !== "undefined" ? globalThis.NexusAgricultureSourceRegistry : null;
+    if (registry && typeof registry.normalizeAgricultureSourceRecord === "function") {
+      const normalized = registry.normalizeAgricultureSourceRecord(null);
+      return Object.freeze({ label: normalized.status, sourceBacked: false, sourceName: normalized.sourceName, freshness: normalized.freshnessLabel, confidence: normalized.confidenceLabel, disclosure: normalized.disclosure });
+    }
     return Object.freeze({ label: "general guidance", sourceBacked: false, sourceName: "No verified live source connected", freshness: "Unavailable — no live source lookup was performed", confidence: "Limited — general agriculture guidance only", disclosure: "This response is not source-backed because no verified source contract or live source data is connected." });
   }
 

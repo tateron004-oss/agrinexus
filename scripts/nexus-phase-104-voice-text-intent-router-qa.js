@@ -45,6 +45,8 @@ const runtimeSource = [indexPath, appPath, serverPath].map(filePath => fs.readFi
   "emergency-request"
 ].forEach(domain => assert(routerSource.includes(domain), `router must include ${domain}.`));
 
+assert(typeof router.routeNexusIntent === "function", "router must expose routeNexusIntent.");
+
 const expectedRoutes = [
   ["Help me with crop issues", "agriculture-support", "review-only", "low"],
   ["Explain the source freshness", "source-review", "review-only", "low"],
@@ -61,7 +63,7 @@ const expectedRoutes = [
 ];
 
 expectedRoutes.forEach(([prompt, domain, status, riskLevel]) => {
-  const result = router.classifyVoiceTextIntent(prompt);
+  const result = router.routeNexusIntent(prompt);
   assert(result.intentDomain === domain, `${prompt} must route to ${domain}.`);
   assert(result.routeStatus === status, `${prompt} must be ${status}.`);
   assert(result.riskLevel === riskLevel, `${prompt} must be ${riskLevel}.`);
@@ -117,10 +119,9 @@ assert(summary.some(line => /No call has been placed/.test(line)), "summary must
   "require('https"
 ].forEach(forbidden => assert(!routerSource.includes(forbidden), `router must not include side effect token: ${forbidden}`));
 
-[
-  "nexus-voice-text-intent-router.js",
-  "NexusVoiceTextIntentRouter"
-].forEach(hook => assert(!runtimeSource.includes(hook), `active runtime must not load ${hook}.`));
+assert(runtimeSource.includes("nexus-voice-text-intent-router.js?v=nexus-phase-104"), "active runtime must load the router for Sprint B preview integration.");
+assert(runtimeSource.includes("NexusVoiceTextIntentRouter"), "app runtime must reference the router API.");
+assert(runtimeSource.indexOf("nexus-voice-text-intent-router.js?v=nexus-phase-104") < runtimeSource.indexOf("/app.js?v="), "router must load before app.js.");
 
 assert(packageData.scripts["qa:nexus-phase-104-voice-text-intent-router"] === "node scripts/nexus-phase-104-voice-text-intent-router-qa.js", "package alias must exist.");
 assert(qaSuite.includes("scripts/nexus-phase-104-voice-text-intent-router-qa.js"), "qa-suite must include router QA.");

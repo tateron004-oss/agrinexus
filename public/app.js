@@ -10264,6 +10264,143 @@ function htmlSafe(value) {
   return String(value ?? "").replace(/[&<>"']/g, char => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;", "'": "&#39;" }[char]));
 }
 
+// Sprint B autonomous preview integration: visible planning only, never execution.
+function nexusAutonomousRuntimeHelpers() {
+  return {
+    router: window.NexusVoiceTextIntentRouter || null,
+    actionContract: window.NexusPermissionGatedActionContract || null,
+    plannerPreview: window.NexusPlannerPreviewContract || null
+  };
+}
+
+function nexusAutonomousActionTypeForRoute(route = {}, actionTypes = {}) {
+  const domain = String(route.intentDomain || "");
+  if (domain === "communication-request") return actionTypes.CALL || "call";
+  if (domain === "appointment-request") return actionTypes.APPOINTMENT || "appointment";
+  if (domain === "marketplace-request") return actionTypes.MARKETPLACE || "marketplace";
+  if (domain === "payment-request") return actionTypes.PAYMENT || "payment";
+  if (domain === "location-request") return actionTypes.LOCATION || "location";
+  if (domain === "camera-media-request") return actionTypes.CAMERA_MEDIA || "camera-media";
+  if (domain === "health-medical-request") return actionTypes.HEALTH_MEDICAL || "health-medical";
+  if (domain === "emergency-request") return actionTypes.EMERGENCY || "emergency";
+  return actionTypes.INFORMATION || "information";
+}
+
+function nexusAutonomousPreviewSteps(route = {}) {
+  const domain = String(route.intentDomain || "general-assistant");
+  if (domain === "agriculture-support") {
+    return [
+      { title: "Review agriculture request", description: "Nexus checks the prompt for safe agriculture support.", riskLevel: "low" },
+      { title: "Show agriculture support card", description: "Nexus keeps guidance general unless a verified source is connected.", riskLevel: "low" },
+      { title: "Stop before action", description: "No provider, marketplace, location, camera, or payment action is started.", riskLevel: "low" }
+    ];
+  }
+  if (domain === "source-review") {
+    return [
+      { title: "Review source status", description: "Nexus explains whether guidance is source-backed or general.", riskLevel: "low" },
+      { title: "Show confidence and freshness", description: "Nexus does not invent a verified source, freshness, or confidence.", riskLevel: "low" }
+    ];
+  }
+  if (route.permissionRequired || route.blocked) {
+    return [
+      { title: "Identify requested action", description: "Nexus recognizes this request needs permission, verified integrations, or a safety block.", riskLevel: route.riskLevel || "high" },
+      { title: "Show safety boundary", description: "Nexus explains what would be required before any future action.", riskLevel: route.riskLevel || "high" },
+      { title: "Stop before execution", description: "No provider, message, call, appointment, transaction, permission, media, medical, or emergency action has started.", riskLevel: route.riskLevel || "high" }
+    ];
+  }
+  return [
+    { title: "Understand request", description: "Nexus classifies the prompt and prepares review-only next steps.", riskLevel: "low" },
+    { title: "Answer safely", description: "Nexus can provide information without triggering real-world actions.", riskLevel: "low" }
+  ];
+}
+
+function renderNexusAutonomousRuntimePreview(prompt = "", options = {}) {
+  const text = String(prompt || "").replace(/\s+/g, " ").trim();
+  const helpers = nexusAutonomousRuntimeHelpers();
+  if (!text || !helpers.router || typeof helpers.router.routeNexusIntent !== "function") return null;
+  const route = helpers.router.routeNexusIntent(text);
+  if (!route || typeof route !== "object") return null;
+  const actionTypes = helpers.actionContract?.ACTION_TYPES || {};
+  const actionContract = typeof helpers.actionContract?.buildActionContract === "function"
+    ? helpers.actionContract.buildActionContract({
+      actionType: nexusAutonomousActionTypeForRoute(route, actionTypes),
+      summary: route.userVisibleDisclosure || "Nexus can prepare a review-only preview."
+    })
+    : null;
+  const planPreview = typeof helpers.plannerPreview?.buildPlannerPreview === "function"
+    ? helpers.plannerPreview.buildPlannerPreview({
+      title: "Nexus Plan Preview",
+      steps: nexusAutonomousPreviewSteps(route)
+    })
+    : null;
+  const target = $("#jarvisInsightPanel") || $("#userWorkspace") || $("#globalAssistantBar") || document.body;
+  if (!target) return null;
+  target.querySelectorAll("[data-nexus-autonomous-runtime-preview]").forEach(existing => existing.remove());
+
+  const article = document.createElement("article");
+  article.className = "nexus-autonomous-runtime-preview";
+  article.setAttribute("data-nexus-autonomous-runtime-preview", "true");
+  article.setAttribute("data-intent-domain", route.intentDomain || "general-assistant");
+  article.setAttribute("data-route-status", route.routeStatus || "informational");
+  article.setAttribute("data-risk-level", route.riskLevel || "low");
+  article.setAttribute("data-execution-allowed", "false");
+  article.setAttribute("data-side-effects-allowed", "false");
+  article.setAttribute("aria-label", "Nexus preview-only plan");
+
+  const statusLabel = route.blocked ? "Blocked" : route.permissionRequired ? "Permission required" : "Preview only";
+  const steps = Array.isArray(planPreview?.steps) ? planPreview.steps : nexusAutonomousPreviewSteps(route);
+  const noExecution = actionContract?.userVisibleDisclosure || route.userVisibleDisclosure || "No action has been taken.";
+  article.innerHTML = `
+    <div class="tag-row">
+      <span>${htmlSafe(route.intentDomain || "general-assistant")}</span>
+      <span>Status: ${htmlSafe(statusLabel)}</span>
+      <span>Risk: ${htmlSafe(route.riskLevel || "low")}</span>
+    </div>
+    <h3>Nexus Plan Preview</h3>
+    <p>${htmlSafe(noExecution)}</p>
+    <ul>${steps.map(step => `<li><strong>${htmlSafe(step.title)}</strong>: ${htmlSafe(step.description)}</li>`).join("")}</ul>
+    <p><strong>No action has been taken.</strong></p>
+    <button type="button" disabled aria-disabled="true" data-nexus-preview-control="review-only">Review only</button>
+  `;
+  target.appendChild(article);
+  if (options.updateStatus !== false) {
+    const status = $("#globalAssistantStatus");
+    if (status) status.textContent = translateText("Nexus prepared a preview-only plan. No action has been taken.");
+  }
+  return Object.freeze({ route, actionContract, planPreview, element: article });
+}
+
+function installNexusAutonomousRuntimePreview() {
+  if (document.documentElement.getAttribute("data-nexus-autonomous-runtime-preview-installed") === "true") return;
+  document.documentElement.setAttribute("data-nexus-autonomous-runtime-preview-installed", "true");
+  const readPrompt = source => {
+    const input = source === "caption"
+      ? $("#userCaptionInput")
+      : source === "global"
+        ? $("#globalCommandInput")
+        : $("#jarvisCommandInput");
+    return input ? input.value : "";
+  };
+  const schedulePreview = (prompt, source) => {
+    const value = String(prompt || "").trim();
+    if (!value) return;
+    setTimeout(() => renderNexusAutonomousRuntimePreview(value, { source }), 140);
+    setTimeout(() => renderNexusAutonomousRuntimePreview(value, { source, updateStatus: false }), 620);
+  };
+  document.addEventListener("click", event => {
+    const target = event.target;
+    if (!target || !target.closest) return;
+    if (target.closest("#jarvisRunBtn")) schedulePreview(readPrompt("jarvis"), "jarvis");
+    if (target.closest("#globalRunBtn")) schedulePreview(readPrompt("global"), "global");
+    if (target.closest('[data-caption-action="send"]')) schedulePreview(readPrompt("caption"), "caption");
+  }, true);
+  document.addEventListener("keydown", event => {
+    if (event.key === "Enter" && event.target?.id === "jarvisCommandInput") schedulePreview(readPrompt("jarvis"), "jarvis");
+    if (event.key === "Enter" && event.target?.id === "globalCommandInput") schedulePreview(readPrompt("global"), "global");
+    if (event.key === "Enter" && event.target?.id === "userCaptionInput") schedulePreview(readPrompt("caption"), "caption");
+  }, true);
+}
+
 function localizedVoiceSuggestionItems(result = {}, fallback = []) {
   const raw = Array.isArray(result.metadata?.suggestedReplies) && result.metadata.suggestedReplies.length ? result.metadata.suggestedReplies : fallback;
   const translated = result.metadata?.localized?.suggestedReplies || [];
@@ -25272,6 +25409,7 @@ function processFinalVoiceCommand(command = "", options = {}) {
     pauseNexusForSideConversation(cleanedCommand || localizedCommand || finalCommand);
     return;
   }
+  renderNexusAutonomousRuntimePreview(cleanedCommand || localizedCommand || finalCommand, { source: "voice" });
   const turnToken = beginNexusVoiceTurn(cleanedCommand || localizedCommand || finalCommand);
   setVoiceStatus("thinking");
   updateNativeVoiceBridgeState("thinking", { transcript: cleanedCommand || localizedCommand || finalCommand, turnToken });
@@ -26351,6 +26489,7 @@ async function boot() {
   installAgriNexusNativeBridge();
   await loadPublicMapConfig();
   bindStatic();
+  installNexusAutonomousRuntimePreview();
   captureOriginalText();
   setLoginLanguage(localStorage.getItem("agrinexusLoginLanguage") || "en");
   $("#loginView").classList.remove("hidden");

@@ -67,6 +67,9 @@
         /\bmedical record\b/i,
         /\bFHIR\b/i,
         /\bdoctor\b/i,
+        /\bmedical help\b/i,
+        /\bhealthcare\b/i,
+        /\bhealth care\b/i,
         /\btelehealth\b/i,
         /\bpharmacy\b/i,
         /\bclinic\b/i
@@ -160,6 +163,12 @@
       riskLevel: RISK_LEVEL.LOW,
       patterns: [
         /\bcrop(s)?\b/i,
+        /\bmaize\b/i,
+        /\bcorn\b/i,
+        /\bleaf\b/i,
+        /\bleaves\b/i,
+        /\byellow\b/i,
+        /\bspots?\b/i,
         /\bfarm(ing|er)?\b/i,
         /\bagriculture\b/i,
         /\birrigation\b/i,
@@ -230,6 +239,10 @@
     return buildBaseRoute(prompt, firstMatchingRule(prompt));
   }
 
+  function routeNexusIntent(prompt) {
+    return classifyVoiceTextIntent(prompt);
+  }
+
   function summarizeIntentRoute(route) {
     const safeRoute = route && typeof route === "object" ? route : classifyVoiceTextIntent("");
     return [
@@ -248,6 +261,7 @@
     INTENT_DOMAIN,
     ROUTE_STATUS,
     RISK_LEVEL,
+    routeNexusIntent,
     classifyVoiceTextIntent,
     summarizeIntentRoute
   });
