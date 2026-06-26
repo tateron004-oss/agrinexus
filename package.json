@@ -341,6 +341,7 @@
     "qa:nexus-sprint-c19-source-backed-agriculture-static-visual-snapshot-contract": "node scripts/nexus-sprint-c19-source-backed-agriculture-static-visual-snapshot-contract-qa.js",
     "qa:nexus-sprint-c20-source-backed-agriculture-static-snapshot-browser-validation-plan": "node scripts/nexus-sprint-c20-source-backed-agriculture-static-snapshot-browser-validation-plan-qa.js",
     "qa:nexus-sprint-c21-source-backed-agriculture-static-snapshot-browser-validation-evidence-template": "node scripts/nexus-sprint-c21-source-backed-agriculture-static-snapshot-browser-validation-evidence-template-qa.js",
+    "qa:nexus-sprint-c22-source-backed-agriculture-standard-user-runtime-absence-contract": "node scripts/nexus-sprint-c22-source-backed-agriculture-standard-user-runtime-absence-contract-qa.js",
     "qa:nexus-phase-105-preview-only-autonomous-runtime-integration-plan": "node scripts/nexus-phase-105-preview-only-autonomous-runtime-integration-plan-qa.js"
   },
   "dependencies": {
