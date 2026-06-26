@@ -31,8 +31,10 @@ assert(phase101.buildAgricultureSupportCard("Call an agronomist") === null, "cal
 
 [
   "public/index.html",
+  "public/nexus-voice-demo-shell.js",
   "nexus-agriculture-support-response-card.js",
   "normal Standard User build",
+  "GitHub connector exposes whole-file replacement and not patch insertion",
   "No provider contacted",
   "No message sent",
   "No purchase made",
