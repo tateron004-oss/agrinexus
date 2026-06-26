@@ -121,6 +121,7 @@
     "qa:nexus-pharmacy-provider-connector-contract": "node scripts/nexus-pharmacy-provider-connector-contract-qa.js",
     "qa:nexus-transportation-provider-connector-contract": "node scripts/nexus-transportation-provider-connector-contract-qa.js",
     "qa:nexus-workforce-training-provider-connector-contract": "node scripts/nexus-workforce-training-provider-connector-contract-qa.js",
+    "qa:nexus-certification-provider-connector-contract": "node scripts/nexus-certification-provider-connector-contract-qa.js",
     "qa:nexus-intent-classifier": "node scripts/nexus-intent-classifier-qa.js",
     "qa:nexus-selected-tool-id": "node scripts/nexus-selected-tool-id-alignment-qa.js",
     "qa:nexus-low-risk-suggestion-display": "node scripts/nexus-low-risk-suggestion-display-plan-qa.js",
