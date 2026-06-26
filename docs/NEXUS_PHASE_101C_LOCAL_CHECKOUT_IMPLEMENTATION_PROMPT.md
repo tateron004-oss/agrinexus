@@ -15,6 +15,7 @@ Current remote work through Phase 101B/101C readiness has added:
 - `scripts/phase-101c-local-wiring-patcher-qa.js`
 - `scripts/phase-101c-local-wiring-patcher-fixture-qa.js`
 - `scripts/phase-101c-post-wiring-validation-qa.js`
+- `docs/NEXUS_PHASE_101C_STANDARD_USER_BROWSER_VALIDATION_TEMPLATE.md`
 
 The Phase 101 card module is present and runtime-capable, but the normal Standard User build still needs a safe local loader patch.
 
@@ -117,6 +118,8 @@ Use the normal standard user build:
 ```bash
 node server.js
 ```
+
+Use `docs/NEXUS_PHASE_101C_STANDARD_USER_BROWSER_VALIDATION_TEMPLATE.md` as the validation record.
 
 Open the normal local URL and validate:
 
