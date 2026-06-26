@@ -121,6 +121,7 @@ const suites = {
     "scripts/nexus-voice-language-switch-phase-16a-hotfix-qa.js",
     "scripts/nexus-cultural-music-demo-shell-qa.js",
     "scripts/nexus-real-data-regulated-action-roadmap-qa.js",
+    "scripts/nexus-100-full-platform-roadmap-qa.js",
     "scripts/nexus-tool-registry-runtime-qa.js",
     "scripts/nexus-intent-classifier-qa.js",
     "scripts/nexus-policy-engine-qa.js",
@@ -151,7 +152,8 @@ suites["all-safe"] = unique([
   ...suites.native,
   ...suites.voice,
   ...suites.core,
-  ...suites.app
+  ...suites.app,
+  "scripts/nexus-100-full-platform-roadmap-qa.js"
 ]);
 
 function unique(items) {

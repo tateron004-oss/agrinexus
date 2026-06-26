@@ -17397,11 +17397,68 @@ function generalConversationKind(command = "") {
 
 function nexusWorkforcePlatformExplanation() {
   const { productName, assistantName, legacyProductName } = PRODUCT_IDENTITY;
-  return `${assistantName} is the assistant inside ${productName}. I can help with workforce development, training, job readiness, field support, health access, maps and location support, and marketplace or agriculture trade. ${legacyProductName} remains a supported legacy/internal compatibility identity, and agriculture plus AgriTrade remain active domain modules. I can help you get started, guide the workflow, prepare the next step, and ask before taking any high-impact action.`;
+  return `${assistantName} is the assistant inside ${productName}, a full multilingual access platform and voice-operated assistant foundation for farmers, workers, patients, providers, and underserved communities. I can help with agriculture, workforce training, health access, pharmacy support, mobile clinics, transportation-to-care, maps, community services, and marketplace support. ${legacyProductName} remains a supported legacy/internal compatibility identity, and agriculture plus AgriTrade remain active domain modules. Live regulated actions require verified connectors, consent, user approval, provider confirmation where needed, and audit logging before they can be enabled.`;
 }
 
 function nexusWorkforceCapabilitySummary() {
-  return "I can listen in normal words, answer questions, open the right workspace, and guide workforce development, training, job readiness, field support, health access, maps and location support, marketplace and AgriTrade agriculture trade, reminders, and provider handoffs. I can prepare the next step and I will ask before taking high-impact actions.";
+  return "I can listen in normal words, answer questions, open the right workspace, and guide workforce development, training, job readiness, field support, health access, maps and location support, marketplace and AgriTrade agriculture trade, reminders, and provider-ready handoffs. I can prepare the next step now. Real-world execution such as calls, messages, scheduling, payments, prescriptions, medical records, location sharing, or emergency dispatch requires a verified connector, consent, explicit approval, and audit controls.";
+}
+
+function nexusRealPrototypeFoundationAnswer(command = "") {
+  const lower = String(command || "").toLowerCase();
+  if (/\b(real providers|providers can you connect|provider connections|connect to providers)\b/.test(lower)) {
+    return "Nexus is built to connect with provider directories, clinics, telehealth partners, mobile clinics, pharmacies, transportation resources, workforce programs, agriculture resources, community services, and regulated partners when those connectors are verified and approved. In this build, live provider execution is disabled by default; I can explain what connector is needed and prepare the next step.";
+  }
+  if (/\b(data sources|source data|sources do you need|verified sources|real data)\b/.test(lower)) {
+    return "Nexus needs source-backed data from public sources, partner-provided operational data, live API integrations, and regulated systems such as FHIR only when the proper agreement, consent, compliance, and audit controls exist. Answers should say the source owner, freshness, connector status, and whether a live action is currently enabled.";
+  }
+  if (/\b(real[- ]?time|live data|work in real time|use real time data)\b/.test(lower)) {
+    return "Nexus is being built for real-time source and provider integrations, but live data is used only when a verified connector is active. If a connector is not active, I should say that clearly and avoid claiming real-time facts.";
+  }
+  if (/\b(schedule|appointment|book)\b.*\b(provider|doctor|clinic|telehealth|visit)\b/.test(lower)) {
+    return "I can prepare a provider scheduling step, but I cannot book or schedule with a provider until a verified scheduling connector is active, you approve the action, and any provider confirmation and audit logging requirements are satisfied.";
+  }
+  if (/\b(medical records|fhir|health record|patient record)\b/.test(lower)) {
+    return "Medical records and FHIR access are regulated capabilities. Nexus cannot access or share records unless a verified regulated connector, identity and consent checks, permission controls, and audit logging are active.";
+  }
+  if (/\b(payment|payments|pay|process money|process a payment|process payment|charge)\b/.test(lower)) {
+    return "Payments are high-risk regulated actions. Nexus cannot process a payment until an approved payment connector, user approval, compliance checks, and audit logging are active.";
+  }
+  if (/\b(location|share my location|use my location|gps)\b/.test(lower)) {
+    return "Location sharing requires browser permission and user approval. Nexus can prepare a location-supported step, but it cannot share or use precise location for a live action unless the permission, connector, consent, and audit requirements are satisfied.";
+  }
+  if (/\b(emergency|dispatch|ambulance|emergency help)\b/.test(lower)) {
+    return "If this is an emergency, contact local emergency services now. Nexus cannot dispatch emergency help in this build. Future emergency partner workflows require verified emergency connectors, consent or legal authority, provider confirmation where applicable, and audit logging.";
+  }
+  return "Nexus is the actual prototype foundation for a full multilingual access platform. It is source-ready and provider-ready by design, but live regulated actions remain disabled until verified connectors, consent, user approval, provider confirmation where needed, and audit logging are in place.";
+}
+
+function nexusPhase17StandardUserSafeAnswer(command = "") {
+  const lower = normalizeSpeechForIntent(command);
+  if (!lower) return null;
+  if (/\b(explain yourself|introduce yourself|what are you|who are you|what is nexus|explain nexus|what do you do)\b/.test(lower)) {
+    return nexusWorkforcePlatformExplanation();
+  }
+  if (/\b(how can you help|how can help)\b.*\b(farmers?|farms?|smallholders?|growers?)\b.*\bafrica\b/.test(lower)
+    || /\b(help farmers? in africa|farmers? in africa|farmers? across africa|african farmers?)\b/.test(lower)) {
+    return "For farmers and rural communities, Nexus can guide crop and field support, irrigation learning, market and AgriTrade review, workforce training, transportation-to-care, pharmacy and mobile clinic access, and source-backed next steps. Live buyer contact, payments, provider contact, location sharing, or regulated health actions require verified connectors, consent, approval, and audit controls.";
+  }
+  if (/\b(real providers|providers can you connect|data sources|sources do you need|real[- ]?time|live data|schedule with a provider|access medical records|medical records|process a payment|process payment|process payments?|share my location|dispatch emergency help|emergency dispatch)\b/.test(lower)) {
+    return nexusRealPrototypeFoundationAnswer(command);
+  }
+  if (/\b(i need telehealth|need telehealth|telehealth help|telehealth access|prepare telehealth)\b/.test(lower)) {
+    return "Nexus can help prepare a telehealth access step, collect the information usually needed for care review, and explain the handoff boundary. It is not connected to a live provider unless a verified telehealth connector is active, and it will not schedule, call, diagnose, or share information without approval and audit controls.";
+  }
+  if (/\b(pharmacy support|need pharmacy|medicine support|refill my prescription|prescription refill|request refill)\b/.test(lower)) {
+    return "Nexus can help prepare pharmacy support and explain what information a pharmacist or clinician may need. It cannot refill, change, or submit a prescription unless an approved pharmacy connector, consent, provider review, user approval, and audit controls are active.";
+  }
+  if (/\b(call my doctor|call a doctor|contact my doctor|contact provider|call provider)\b/.test(lower)) {
+    return "I can help prepare provider contact, but I will not call, message, or open a provider from the first request. Provider contact requires a resolved contact, explicit confirmation, an approved connector, and audit logging.";
+  }
+  if (/\b(play music from kenya|play kenyan music|kenya music|kenya-inspired music)\b/.test(lower)) {
+    return "Absolutely. I'll play a Kenya-inspired demo rhythm. This is local browser-generated audio, and I'm not opening an outside music service.";
+  }
+  return null;
 }
 
 function nexusJarvisStyleBoundaryAnswer() {
@@ -20028,7 +20085,27 @@ function platformWideVoiceAcceptanceResponse(db, user, text = "", lower = "", op
     }
   ].find(item => item.pattern.test(simplePhrase));
   if (simpleStandalone) return simpleStandalone.result();
+  const phase17SafeAnswer = nexusPhase17StandardUserSafeAnswer(text);
+  if (phase17SafeAnswer) {
+    return response(
+      "conversation.phase17_prototype_foundation",
+      "completed",
+      "agent",
+      phase17SafeAnswer,
+      ["what data sources do you need", "what providers can you connect to", "what needs approval"]
+    );
+  }
   const requestedMapCountry = africanMapCountryTarget(db, value);
+
+  if (/\b(real providers|providers can you connect|data sources|sources do you need|real[- ]?time|live data|schedule with a provider|access medical records|medical records|process payments?|share my location|dispatch emergency help|emergency dispatch)\b/.test(value)) {
+    return response(
+      "conversation.real_prototype_foundation",
+      "completed",
+      "agent",
+      nexusRealPrototypeFoundationAnswer(text),
+      ["what data sources do you need", "what providers can you connect to", "what needs approval"]
+    );
+  }
 
   if (!/\b(agritrade|agri trade)\b/.test(value) && (/\b(explain|describe|define|summarize)\s+(nexus workforce ai|nexus workforce|agrinexus|agri nexus|nexus|platform)\b/.test(value)
     || /\b(tell me|tell us)\s+(what|about)\s+(nexus workforce ai|nexus workforce|agrinexus|agri nexus|nexus|platform)\b/.test(value)

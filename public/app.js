@@ -21645,8 +21645,11 @@ function nexusFastLaneIntent(command = "") {
     || /\bwhat can you\b.*\b(farmer|farm|smallholder|grower)\b/.test(lower)) {
     return fastAnswer("For a farmer, I can explain crop problems in plain words, help sell a harvest, prepare buyer messages, show route support, open the map, guide field evidence, and suggest the next safe step.", ["my crop is bad", "sell my crop", "show route", "open map"], "Nexus fast lane answered farmer capability before the generic capability summary.");
   }
+  if (/\b(real providers|providers can you connect|data sources|sources do you need|real[- ]?time|live data|schedule with a provider|access medical records|medical records|process a payment|process payment|process payments?|share my location|dispatch emergency help|emergency dispatch)\b/.test(lower)) {
+    return fastAnswer(nexusRealPrototypeFoundationAnswer(raw), ["what data sources do you need", "what providers can you connect to", "what needs approval"], "Nexus explained real connector readiness without executing a regulated action.");
+  }
   if (/\b(what can you do|what can do|you can do what|how can you help|help me use this|what do you do)\b/.test(lower)) {
-    return fastAnswer("I can answer simple questions, open health, medicine, learning, work, crop sale, maps, and guide one step at a time.", ["I need medicine", "find work", "sell my crop", "open map"], "Nexus fast lane summarized capabilities.");
+    return fastAnswer(nexusWorkforceCapabilityAnswer(), ["I need medicine", "find work", "sell my crop", "open map"], "Nexus fast lane summarized capabilities.");
   }
   if (isWeatherLocationQuestion(lower) || /\b(what'?s|whats|what is|how is|how's|hows)\b.*\b(weather|temperature|temp|hot|rain|forecast|outside)\b/.test(lower)) {
     return fast({
@@ -21934,15 +21937,88 @@ function nexusConversationFirstResponse(response, suggestions = [], status = "an
 }
 
 function nexusPlatformExplainAnswer() {
-  return "Nexus is the assistant inside Nexus Workforce AI. I can help with workforce development, training, job readiness, field support, health access, maps and location support, and marketplace or agriculture trade. AgriNexus remains a supported legacy/internal compatibility identity, and agriculture plus AgriTrade remain active domain modules. I can help you get started, guide the workflow, prepare the next step, and ask before taking any high-impact action.";
+  return "Nexus is the assistant inside Nexus Workforce AI, a full multilingual access platform and voice-operated assistant foundation for farmers, workers, patients, providers, and underserved communities. I can help with agriculture, workforce training, health access, pharmacy support, mobile clinics, transportation-to-care, maps, community services, and marketplace support. AgriNexus remains a supported legacy/internal compatibility identity, and agriculture plus AgriTrade remain active domain modules. Live regulated actions require verified connectors, consent, user approval, provider confirmation where needed, and audit logging before they can be enabled.";
 }
 
 function nexusPlatformDifferentiatorAnswer() {
-  return "Nexus Workforce AI is different because Nexus connects training, job readiness, health access, field support, marketplace and agriculture trade, maps, and local services in one guided place. AgriNexus remains supported for legacy compatibility, and AgriTrade remains the agriculture-trade marketplace module. Nexus answers first, opens workflows only when you ask, and keeps risky actions behind confirmation.";
+  return "Nexus Workforce AI is different because Nexus is being built as a source-ready, provider-ready, permission-gated access platform: one assistant layer for training, job readiness, health access, field support, marketplace and agriculture trade, maps, and local services. AgriNexus remains supported for legacy compatibility, and AgriTrade remains the agriculture-trade marketplace module. Nexus can prepare the next step now, but live calls, provider contact, payments, prescriptions, medical records, location sharing, or emergency dispatch stay disabled until the required connector, consent, approval, and audit controls are active.";
 }
 
 function nexusWorkforceCapabilityAnswer() {
-  return "I can listen in normal words, answer questions, open the right workspace, and guide workforce development, training, job readiness, field support, health access, maps and location support, marketplace or agriculture trade, reminders, and provider handoffs. I can prepare the next step and I will ask before taking high-impact actions.";
+  return "I can listen in normal words, answer questions, open the right workspace, and guide workforce development, training, job readiness, field support, health access, maps and location support, marketplace or agriculture trade, reminders, and provider-ready handoffs. I can prepare the next step now. Real-world execution such as calls, messages, scheduling, payments, prescriptions, medical records, location sharing, or emergency dispatch requires a verified connector, consent, explicit approval, and audit controls.";
+}
+
+function nexusRealPrototypeFoundationAnswer(command = "") {
+  const lower = String(command || "").toLowerCase();
+  if (/\b(real providers|providers can you connect|provider connections|connect to providers)\b/.test(lower)) {
+    return "Nexus is built to connect with provider directories, clinics, telehealth partners, mobile clinics, pharmacies, transportation resources, workforce programs, agriculture resources, community services, and regulated partners when those connectors are verified and approved. In this build, live provider execution is disabled by default; I can explain what connector is needed and prepare the next step.";
+  }
+  if (/\b(data sources|source data|sources do you need|verified sources|real data)\b/.test(lower)) {
+    return "Nexus needs source-backed data from public sources, partner-provided operational data, live API integrations, and regulated systems such as FHIR only when the proper agreement, consent, compliance, and audit controls exist. Answers should say the source owner, freshness, connector status, and whether a live action is currently enabled.";
+  }
+  if (/\b(real[- ]?time|live data|work in real time|use real time data)\b/.test(lower)) {
+    return "Nexus is being built for real-time source and provider integrations, but live data is used only when a verified connector is active. If a connector is not active, I should say that clearly and avoid claiming real-time facts.";
+  }
+  if (/\b(schedule|appointment|book)\b.*\b(provider|doctor|clinic|telehealth|visit)\b/.test(lower)) {
+    return "I can prepare a provider scheduling step, but I cannot book or schedule with a provider until a verified scheduling connector is active, you approve the action, and any provider confirmation and audit logging requirements are satisfied.";
+  }
+  if (/\b(medical records|fhir|health record|patient record)\b/.test(lower)) {
+    return "Medical records and FHIR access are regulated capabilities. Nexus cannot access or share records unless a verified regulated connector, identity and consent checks, permission controls, and audit logging are active.";
+  }
+  if (/\b(payment|payments|pay|process money|process a payment|process payment|charge)\b/.test(lower)) {
+    return "Payments are high-risk regulated actions. Nexus cannot process a payment until an approved payment connector, user approval, compliance checks, and audit logging are active.";
+  }
+  if (/\b(location|share my location|use my location|gps)\b/.test(lower)) {
+    return "Location sharing requires browser permission and user approval. Nexus can prepare a location-supported step, but it cannot share or use precise location for a live action unless the permission, connector, consent, and audit requirements are satisfied.";
+  }
+  if (/\b(emergency|dispatch|ambulance|emergency help)\b/.test(lower)) {
+    return "If this is an emergency, contact local emergency services now. Nexus cannot dispatch emergency help in this build. Future emergency partner workflows require verified emergency connectors, consent or legal authority, provider confirmation where applicable, and audit logging.";
+  }
+  return "Nexus is the actual prototype foundation for a full multilingual access platform. It is source-ready and provider-ready by design, but live regulated actions remain disabled until verified connectors, consent, user approval, provider confirmation where needed, and audit logging are in place.";
+}
+
+function nexusPhase17StandardUserSafeAnswer(command = "") {
+  const lower = normalizeToolText(command);
+  if (!lower) return null;
+  if (/\b(explain yourself|introduce yourself|what are you|who are you|what is nexus|explain nexus|what do you do)\b/.test(lower)) {
+    return { response: nexusPlatformExplainAnswer(), suggestions: ["what providers can you connect to", "what data sources do you need", "help farmers in Africa"] };
+  }
+  if (/\b(what can you do|how can you help|how can help)\b.*\b(farmers?|farms?|smallholders?|growers?|africa|agriculture)\b/.test(lower)
+    || /\b(help farmers?|farmers? in africa|farmers? across africa|african farmers?)\b/.test(lower)) {
+    return {
+      response: "For farmers and rural communities, Nexus can guide crop and field support, irrigation learning, market and AgriTrade review, workforce training, transportation-to-care, pharmacy and mobile clinic access, and source-backed next steps. Live buyer contact, payments, provider contact, location sharing, or regulated health actions require verified connectors, consent, approval, and audit controls.",
+      suggestions: ["help me find agriculture training", "I need help with crop issues", "Browse AgriTrade"]
+    };
+  }
+  if (/\b(real providers|providers can you connect|data sources|sources do you need|real[- ]?time|live data|schedule with a provider|access medical records|medical records|process payments?|share my location|dispatch emergency help|emergency dispatch)\b/.test(lower)) {
+    return { response: nexusRealPrototypeFoundationAnswer(command), suggestions: ["what data sources do you need", "what providers can you connect to", "what needs approval"] };
+  }
+  if (/\b(i need telehealth|need telehealth|telehealth help|telehealth access|prepare telehealth)\b/.test(lower)) {
+    return {
+      response: "Nexus can help prepare a telehealth access step, collect the information usually needed for care review, and explain the handoff boundary. It is not connected to a live provider unless a verified telehealth connector is active, and it will not schedule, call, diagnose, or share information without approval and audit controls.",
+      suggestions: ["start intake", "find a mobile clinic", "pharmacy support"]
+    };
+  }
+  if (/\b(pharmacy support|need pharmacy|medicine support|refill my prescription|prescription refill|request refill)\b/.test(lower)) {
+    return {
+      response: "Nexus can help prepare pharmacy support and explain what information a pharmacist or clinician may need. It cannot refill, change, or submit a prescription unless an approved pharmacy connector, consent, provider review, user approval, and audit controls are active.",
+      suggestions: ["find pharmacy support", "start intake", "mobile clinic access"]
+    };
+  }
+  if (/\b(call my doctor|call a doctor|contact my doctor|contact provider|call provider)\b/.test(lower)) {
+    return {
+      response: "I can help prepare provider contact, but I will not call, message, or open a provider from the first request. Provider contact requires a resolved contact, explicit confirmation, an approved connector, and audit logging.",
+      suggestions: ["prepare provider contact", "start intake", "find clinic support"]
+    };
+  }
+  if (/\b(play music from kenya|play kenyan music|kenya music|kenya-inspired music)\b/.test(lower)) {
+    return {
+      response: "Absolutely. I'll play a Kenya-inspired demo rhythm. This is local browser-generated audio, and I'm not opening an outside music service.",
+      suggestions: ["stop music", "open learning", "what can you do"],
+      localMusic: true
+    };
+  }
+  return null;
 }
 
 function nexusMobileClinicExplainAnswer() {
@@ -22561,6 +22637,21 @@ async function unifiedNexusConversationBrain(rawCommand = "", context = {}) {
   const turnToken = context.turnToken || null;
   const stopRedirect = postStopRedirectCommand(command);
 
+  const topLevelPhase17SafeAnswer = nexusPhase17StandardUserSafeAnswer(spoken || command || localized || rawCommand);
+  if (topLevelPhase17SafeAnswer) {
+    pendingAgentClarification = null;
+    pendingNexusSpokenCommand = null;
+    openAskNexus();
+    enableHeyAgriNexusMode();
+    renderLiveVoiceSuggestions(topLevelPhase17SafeAnswer.suggestions || ["what providers can you connect to", "what data sources do you need", "what needs approval"]);
+    updateNexusBehaviorLayer("answering", "Nexus answered a Phase 17 prototype-foundation prompt without executing an action.");
+    setVoiceResponse(topLevelPhase17SafeAnswer.response, true, { allowHandoff: false, command: spoken || command || rawCommand, source: "phase-17-standard-user-safe-answer" });
+    if (topLevelPhase17SafeAnswer.localMusic) {
+      void playNexusMusicTestAudio("Kenya-inspired demo rhythm");
+    }
+    return true;
+  }
+
   if (await answerPendingNexusQuestion(command || localized || rawCommand)) return true;
 
   if (isGlobalStopCommand(String(command || localized || rawCommand).toLowerCase())) {
@@ -22583,6 +22674,21 @@ async function unifiedNexusConversationBrain(rawCommand = "", context = {}) {
     pendingNexusSpokenCommand = null;
     pendingAgentClarification = null;
     await changeLanguageByVoice(command || localized);
+    return true;
+  }
+
+  const phase17SafeAnswer = nexusPhase17StandardUserSafeAnswer(spoken || command || localized || rawCommand);
+  if (phase17SafeAnswer) {
+    pendingAgentClarification = null;
+    pendingNexusSpokenCommand = null;
+    openAskNexus();
+    enableHeyAgriNexusMode();
+    renderLiveVoiceSuggestions(phase17SafeAnswer.suggestions || ["what providers can you connect to", "what data sources do you need", "what needs approval"]);
+    updateNexusBehaviorLayer("answering", "Nexus answered a Phase 17 prototype-foundation prompt without executing an action.");
+    setVoiceResponse(phase17SafeAnswer.response, true, { allowHandoff: false, command: spoken || command || rawCommand, source: "phase-17-standard-user-safe-answer" });
+    if (phase17SafeAnswer.localMusic) {
+      void playNexusMusicTestAudio("Kenya-inspired demo rhythm");
+    }
     return true;
   }
 
@@ -23203,8 +23309,36 @@ async function handleVoiceCommandCore(rawCommand, options = {}) {
   command = normalizeMultilingualBehaviorCommand(command);
   const spokenCommand = command || cleanWakeCommand(localizedCommand);
   if (openExplicitHealthVideoPreviewCommand(spokenCommand || command || localizedCommand || rawCommand)) return;
+  const earlyPhase17SafeAnswer = nexusPhase17StandardUserSafeAnswer(spokenCommand || command || localizedCommand || rawCommand);
+  if (earlyPhase17SafeAnswer) {
+    pendingAgentClarification = null;
+    pendingNexusSpokenCommand = null;
+    openAskNexus();
+    enableHeyAgriNexusMode();
+    renderLiveVoiceSuggestions(earlyPhase17SafeAnswer.suggestions || ["what providers can you connect to", "what data sources do you need", "what needs approval"]);
+    updateNexusBehaviorLayer("answering", "Nexus answered a Phase 17 prototype-foundation prompt without executing an action.");
+    setVoiceResponse(earlyPhase17SafeAnswer.response, true, { allowHandoff: false, command: spokenCommand || command || rawCommand, source: "phase-17-standard-user-safe-answer" });
+    if (earlyPhase17SafeAnswer.localMusic) {
+      void playNexusMusicTestAudio("Kenya-inspired demo rhythm");
+    }
+    return;
+  }
   if (await runExplicitTypedGlobalControlPreflight(spokenCommand || command || localizedCommand || rawCommand, { ...options, turnToken })) return;
   if (handleJarvisStyleStandardUserSafetyResponse(spokenCommand || command || localizedCommand || rawCommand)) return;
+  const phase17SafeAnswer = nexusPhase17StandardUserSafeAnswer(spokenCommand || command || localizedCommand || rawCommand);
+  if (phase17SafeAnswer) {
+    pendingAgentClarification = null;
+    pendingNexusSpokenCommand = null;
+    openAskNexus();
+    enableHeyAgriNexusMode();
+    renderLiveVoiceSuggestions(phase17SafeAnswer.suggestions || ["what providers can you connect to", "what data sources do you need", "what needs approval"]);
+    updateNexusBehaviorLayer("answering", "Nexus answered a Phase 17 prototype-foundation prompt without executing an action.");
+    setVoiceResponse(phase17SafeAnswer.response, true, { allowHandoff: false, command: spokenCommand || command || rawCommand, source: "phase-17-standard-user-safe-answer" });
+    if (phase17SafeAnswer.localMusic) {
+      void playNexusMusicTestAudio("Kenya-inspired demo rhythm");
+    }
+    return;
+  }
   if (autoLanguage) {
     agentPerformanceState.lastCommand = command || localizedCommand || rawCommand;
     recordNexusAutonomousLearning({ type: "auto-language-detected", command: rawCommand, language: autoLanguage.label, mode: experienceMode || data?.user?.role || "platform" });
@@ -24865,6 +24999,38 @@ async function runGlobalCommand() {
   if (typedGlobalVoiceOff || isExplicitNexusVoiceOffCommand(command) || isNexusVoiceOffCommand(command)) {
     disableNexusVoiceForDemo("Demo quiet mode is on. Nexus voice is off until you turn it back on.");
     renderTypedGlobalVoiceControlConfirmation("Demo quiet mode is on. Nexus voice is off until you turn it back on.");
+    return;
+  }
+  if (/\b(play music from kenya|play kenyan music|kenya music|kenya-inspired music)\b/.test(`${rawLowerCommand} ${lowerCommand}`)) {
+    const kenyaMusicResponse = "Absolutely. I'll play a Kenya-inspired demo rhythm. This is local browser-generated audio, and I'm not opening an outside music service.";
+    pendingAgentClarification = null;
+    pendingNexusSpokenCommand = null;
+    renderLiveVoiceSuggestions(["stop music", "open learning", "what can you do"]);
+    updateNexusBehaviorLayer("answering", "Nexus started a local browser-generated Kenya-inspired rhythm without opening an outside service.");
+    setVoiceResponse(kenyaMusicResponse, true, { allowHandoff: false, command, source: "phase-17-global-kenya-music" });
+    setTimeout(() => {
+      setVoiceResponse(kenyaMusicResponse, true, { allowHandoff: false, command, source: "phase-17-global-kenya-music" });
+    }, 150);
+    void playNexusMusicTestAudio("Kenya-inspired demo rhythm").finally(() => {
+      setVoiceResponse(kenyaMusicResponse, true, { allowHandoff: false, command, source: "phase-17-global-kenya-music" });
+    });
+    return;
+  }
+  const phase17SafeAnswer = nexusPhase17StandardUserSafeAnswer(command);
+  if (phase17SafeAnswer) {
+    pendingAgentClarification = null;
+    pendingNexusSpokenCommand = null;
+    renderLiveVoiceSuggestions(phase17SafeAnswer.suggestions || ["what providers can you connect to", "what data sources do you need", "what needs approval"]);
+    updateNexusBehaviorLayer("answering", "Nexus answered a Phase 17 prototype-foundation prompt without executing an action.");
+    setVoiceResponse(phase17SafeAnswer.response, true, { allowHandoff: false, command, source: "phase-17-global-command" });
+    if (phase17SafeAnswer.localMusic) {
+      setTimeout(() => {
+        setVoiceResponse(phase17SafeAnswer.response, true, { allowHandoff: false, command, source: "phase-17-global-command" });
+      }, 150);
+      void playNexusMusicTestAudio("Kenya-inspired demo rhythm").finally(() => {
+        setVoiceResponse(phase17SafeAnswer.response, true, { allowHandoff: false, command, source: "phase-17-global-command" });
+      });
+    }
     return;
   }
   if (handleJarvisStyleStandardUserSafetyResponse(command)) return;
