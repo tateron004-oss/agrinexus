@@ -159,6 +159,7 @@
     "qa:nexus-telehealth-session-readiness-contract": "node scripts/nexus-telehealth-session-readiness-contract-qa.js",
     "qa:nexus-pharmacy-refill-handoff-readiness-contract": "node scripts/nexus-pharmacy-refill-handoff-readiness-contract-qa.js",
     "qa:nexus-transportation-request-readiness-contract": "node scripts/nexus-transportation-request-readiness-contract-qa.js",
+    "qa:nexus-location-sharing-readiness-contract": "node scripts/nexus-location-sharing-readiness-contract-qa.js",
     "qa:all-safe": "node scripts/qa-suite.js all-safe",
     "smoke": "node scripts/smoke.js",
     "learning:translation-smoke": "node scripts/learning-translation-smoke.js",
