@@ -192,6 +192,7 @@ const suites = {
     "scripts/nexus-mobile-clinic-mode-readiness-contract-qa.js",
     "scripts/nexus-transportation-mode-readiness-contract-qa.js",
     "scripts/nexus-workforce-mode-readiness-contract-qa.js",
+    "scripts/nexus-education-mode-readiness-contract-qa.js",
     "scripts/nexus-tool-registry-runtime-qa.js",
     "scripts/nexus-intent-classifier-qa.js",
     "scripts/nexus-policy-engine-qa.js",
