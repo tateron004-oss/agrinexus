@@ -139,6 +139,7 @@ const suites = {
     "scripts/nexus-farmer-advisory-connector-contract-qa.js",
     "scripts/nexus-crop-pest-disease-source-connector-contract-qa.js",
     "scripts/nexus-market-price-source-connector-contract-qa.js",
+    "scripts/nexus-agritrade-partner-connector-contract-qa.js",
     "scripts/nexus-tool-registry-runtime-qa.js",
     "scripts/nexus-intent-classifier-qa.js",
     "scripts/nexus-policy-engine-qa.js",
@@ -187,7 +188,8 @@ suites["all-safe"] = unique([
   "scripts/nexus-agriculture-extension-connector-contract-qa.js",
   "scripts/nexus-farmer-advisory-connector-contract-qa.js",
   "scripts/nexus-crop-pest-disease-source-connector-contract-qa.js",
-  "scripts/nexus-market-price-source-connector-contract-qa.js"
+  "scripts/nexus-market-price-source-connector-contract-qa.js",
+  "scripts/nexus-agritrade-partner-connector-contract-qa.js"
 ]);
 
 function unique(items) {
