@@ -276,7 +276,8 @@
     "foundation:ai-routes-smoke": "node foundation/scripts/ai-routes-smoke.js",
     "foundation:maps-routes-smoke": "node foundation/scripts/maps-routes-smoke.js",
     "foundation:system-routes-smoke": "node foundation/scripts/system-routes-smoke.js",
-    "foundation:admin-routes-smoke": "node foundation/scripts/admin-routes-smoke.js"
+    "foundation:admin-routes-smoke": "node foundation/scripts/admin-routes-smoke.js",
+    "qa:nexus-farmer-agriculture-intelligence-readiness-contract": "node scripts/nexus-farmer-agriculture-intelligence-readiness-contract-qa.js"
   },
   "dependencies": {
     "pg": "^8.13.1"
