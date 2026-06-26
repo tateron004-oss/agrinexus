@@ -1,0 +1,75 @@
+# Nexus Farmer Mode Readiness Contract - Phase 76
+
+Phase: 76
+Status: inert readiness contract
+Risk tier: controlled
+Roadmap component: farmer mode runtime
+Roadmap source/dependency: agriculture sources
+Safety gate: contact/payment gated
+Acceptance target: farmer mode ready
+
+## Purpose
+Deploy farmer experience.
+
+This phase is an inert architecture and QA checkpoint. It does not activate live connectors, provider execution, regulated actions, or Standard User runtime behavior.
+
+## Safe User-Facing Posture
+
+Farmer Mode is source-ready only until verified sources, permissions, approvals, audit logging, and required partner or compliance gates are active.
+
+## Inactive Boundaries
+
+- live connector activation
+- provider execution
+- clinic or telehealth action execution
+- medical advice diagnosis prescription behavior
+- calls messages WhatsApp Telegram SMS email native phone execution
+- payments or marketplace transactions
+- transportation or emergency dispatch
+- location camera microphone activation
+- identity account or profile execution
+- storage or network side effects
+- backend behavior changes
+- Standard User runtime behavior changes
+
+## Required Preconditions
+
+- verifiedSourceOrPartner
+- sourceAttribution
+- freshnessLabel
+- confidenceLabel
+- userConsentBoundary
+- roleAndPermissionCheck
+- explicitUserApprovalForHighRisk
+- cancellationPath
+- auditDecisionRecord
+- fallbackPath
+- noUnsupportedLiveClaim
+- noCompletedActionClaim
+- regressionSuiteCoverage
+- farmermodeSpecificReadiness
+- farmermodeHumanReviewPath
+
+## Restricted Domains
+
+- healthcare
+- medical_records
+- pharmacy
+- payments
+- location
+- communications
+- provider_contact
+- marketplace_transactions
+- emergency
+- transportation_dispatch
+- identity
+- account_profile
+- role_authorization
+- regulated_execution
+
+## QA Expectations
+
+- The contract module remains inert and is not loaded by public/index.html, public/app.js, or server.js.
+- All live connector, provider execution, regulated action, and execution defaults remain false.
+- Farmer Mode cannot authorize high-risk actions without source, consent, permission, approval, audit, and fallback gates.
+- Standard User behavior remains unchanged.
