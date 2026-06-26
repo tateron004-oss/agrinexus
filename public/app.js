@@ -10271,7 +10271,9 @@ function nexusAutonomousRuntimeHelpers() {
     actionContract: window.NexusPermissionGatedActionContract || null,
     plannerPreview: window.NexusPlannerPreviewContract || null,
     permissionReview: window.NexusPermissionReviewContract || null,
-    auditEvent: window.NexusAuditEventContract || null
+    auditEvent: window.NexusAuditEventContract || null,
+    modeEvidenceRequirements: window.NexusModeEvidenceRequirements || null,
+    evidencePacket: window.NexusProfessionalEvidencePacket || null
   };
 }
 
@@ -10329,6 +10331,129 @@ function nexusAutonomousPreviewSteps(route = {}) {
   ];
 }
 
+function nexusEvidenceModeForRoute(route = {}, helpers = nexusAutonomousRuntimeHelpers()) {
+  if (helpers.modeEvidenceRequirements && typeof helpers.modeEvidenceRequirements.modeForIntentDomain === "function") {
+    return helpers.modeEvidenceRequirements.modeForIntentDomain(route.intentDomain);
+  }
+  const domain = String(route.intentDomain || "");
+  if (domain === "agriculture-support") return "agriculture";
+  if (domain === "health-medical-request" || domain === "appointment-request" || domain === "emergency-request" || domain === "camera-media-request") return "telehealth";
+  if (domain === "marketplace-request" || domain === "payment-request") return "marketplace";
+  if (domain === "location-request") return "maps";
+  return "general";
+}
+
+function nexusEvidenceSourcesForRoute(route = {}) {
+  if (route.intentDomain === "agriculture-support" && window.NexusAgricultureSourceRegistry?.normalizeAgricultureSourceRecord) {
+    const normalized = window.NexusAgricultureSourceRegistry.normalizeAgricultureSourceRecord(null);
+    return {
+      sourceSupportedClaims: [],
+      nexusInferences: [
+        "Nexus inferred this is an agriculture support request from the prompt.",
+        "No verified agriculture source contract or live source lookup was used for this preview."
+      ],
+      limitations: [
+        normalized.disclosure,
+        normalized.escalation
+      ]
+    };
+  }
+  if (route.intentDomain === "source-review") {
+    return {
+      sourceSupportedClaims: [],
+      nexusInferences: [
+        "Nexus inferred the user is asking about source, freshness, confidence, or verification status.",
+        "No live source lookup was performed for this preview."
+      ],
+      limitations: ["Nexus must not invent a source, citation, freshness label, or confidence level."]
+    };
+  }
+  if (route.permissionRequired || route.blocked) {
+    return {
+      sourceSupportedClaims: [],
+      nexusInferences: [
+        `Nexus inferred this request belongs to ${route.intentDomain || "a restricted"} domain.`,
+        "The request requires permission, a verified integration, an audit path, or a safety block before any future action."
+      ],
+      limitations: [route.userVisibleDisclosure || "No action has been taken."]
+    };
+  }
+  return {
+    sourceSupportedClaims: [],
+    nexusInferences: [
+      "Nexus inferred a general assistant request from the prompt.",
+      "No verified source contract or live source lookup was used for this preview."
+    ],
+    limitations: ["This preview is general guidance only."]
+  };
+}
+
+function buildNexusEvidencePacketForPreview(route = {}, helpers = nexusAutonomousRuntimeHelpers()) {
+  if (!helpers.evidencePacket || typeof helpers.evidencePacket.buildEvidencePacket !== "function") return null;
+  const mode = nexusEvidenceModeForRoute(route, helpers);
+  const modeRequirements = helpers.modeEvidenceRequirements && typeof helpers.modeEvidenceRequirements.getModeEvidenceRequirements === "function"
+    ? helpers.modeEvidenceRequirements.getModeEvidenceRequirements(mode)
+    : null;
+  const evidenceInputs = nexusEvidenceSourcesForRoute(route);
+  const packet = helpers.evidencePacket.buildEvidencePacket({
+    mode,
+    modeLabel: modeRequirements?.label,
+    modeRequirements,
+    sourceSupportedClaims: evidenceInputs.sourceSupportedClaims,
+    nexusInferences: evidenceInputs.nexusInferences,
+    limitations: [
+      ...(Array.isArray(evidenceInputs.limitations) ? evidenceInputs.limitations : []),
+      ...(Array.isArray(modeRequirements?.limitations) ? modeRequirements.limitations : [])
+    ],
+    blockedClaims: Array.isArray(modeRequirements?.blockedClaims) ? modeRequirements.blockedClaims : []
+  });
+  if (typeof helpers.evidencePacket.assertEvidencePacketSafe === "function" && !helpers.evidencePacket.assertEvidencePacketSafe(packet)) return null;
+  return packet;
+}
+
+function nexusEvidenceMarkup(packet) {
+  if (!packet) return "";
+  const sources = Array.isArray(packet.sources) && packet.sources.length
+    ? packet.sources.map(source => `<li>${htmlSafe(source.name)} (${htmlSafe(source.sourceType)}): ${htmlSafe(source.freshnessLabel)}; ${htmlSafe(source.confidenceLabel)}</li>`).join("")
+    : "<li>No verified source connected for this preview.</li>";
+  const claims = Array.isArray(packet.sourceSupportedClaims) && packet.sourceSupportedClaims.length
+    ? packet.sourceSupportedClaims.map(item => `<li>${htmlSafe(item)}</li>`).join("")
+    : "<li>No source-supported claims are asserted in this preview.</li>";
+  const inferences = Array.isArray(packet.nexusInferences) && packet.nexusInferences.length
+    ? packet.nexusInferences.map(item => `<li>${htmlSafe(item)}</li>`).join("")
+    : "<li>Nexus did not add extra inference details.</li>";
+  const limitations = Array.isArray(packet.limitations) && packet.limitations.length
+    ? packet.limitations.map(item => `<li>${htmlSafe(item)}</li>`).join("")
+    : "<li>Use this as general guidance only.</li>";
+  const blockedClaims = Array.isArray(packet.blockedClaims) && packet.blockedClaims.length
+    ? packet.blockedClaims.map(item => `<li>${htmlSafe(item)}</li>`).join("")
+    : "<li>No completed action, live source, provider contact, or permission grant is claimed.</li>";
+
+  return `
+    <section class="nexus-preview-review-block" data-nexus-evidence-verification="true">
+      <h4>Evidence & Verification</h4>
+      <p>${htmlSafe(packet.disclosure)}</p>
+      <dl>
+        <div><dt>Mode</dt><dd>${htmlSafe(packet.modeLabel)}</dd></div>
+        <div><dt>Source status</dt><dd>${htmlSafe(packet.sourceStatus)}</dd></div>
+        <div><dt>Freshness</dt><dd>${htmlSafe(packet.freshnessLabel)}</dd></div>
+        <div><dt>Confidence</dt><dd>${htmlSafe(packet.confidenceLabel)}</dd></div>
+      </dl>
+      <strong>Verified sources</strong>
+      <ul>${sources}</ul>
+      <strong>Source-supported claims</strong>
+      <ul>${claims}</ul>
+      <strong>Nexus inferences</strong>
+      <ul>${inferences}</ul>
+      <strong>Limits and required verification</strong>
+      <ul>${limitations}</ul>
+      <strong>Claims Nexus is not making</strong>
+      <ul>${blockedClaims}</ul>
+      <p>No provider contact, call, message, appointment, payment, marketplace transaction, location share, camera action, medical action, pharmacy action, emergency dispatch, backend write, storage write, network lookup, or external handoff has occurred.</p>
+    </section>
+  `;
+}
+
 function renderNexusAutonomousRuntimePreview(prompt = "", options = {}) {
   const text = String(prompt || "").replace(/\s+/g, " ").trim();
   const helpers = nexusAutonomousRuntimeHelpers();
@@ -10370,6 +10495,7 @@ function renderNexusAutonomousRuntimePreview(prompt = "", options = {}) {
       permissionStatus: permissionReview?.status || "preview-only"
     })
     : null;
+  const evidencePacket = buildNexusEvidencePacketForPreview(route, helpers);
   const visiblePreviewTarget = selector => {
     const element = $(selector);
     if (!element || element.classList?.contains("hidden")) return null;
@@ -10423,6 +10549,7 @@ function renderNexusAutonomousRuntimePreview(prompt = "", options = {}) {
       <p>No backend write, storage write, network call, or execution has occurred.</p>
     </section>
   ` : "";
+  const evidenceMarkup = nexusEvidenceMarkup(evidencePacket);
   article.innerHTML = `
     <div class="tag-row">
       <span>${htmlSafe(route.intentDomain || "general-assistant")}</span>
@@ -10437,6 +10564,7 @@ function renderNexusAutonomousRuntimePreview(prompt = "", options = {}) {
       <button type="button" data-nexus-preview-control="cancel" onclick="this.closest('[data-nexus-autonomous-runtime-preview]')?.remove()">Cancel preview</button>
     </div>
     <ul>${steps.map(step => `<li><strong>${htmlSafe(step.title)}</strong>: ${htmlSafe(step.description)}</li>`).join("")}</ul>
+    ${evidenceMarkup}
     ${permissionMarkup}
     ${auditMarkup}
   `;
