@@ -143,6 +143,7 @@ const suites = {
     "scripts/nexus-clinic-provider-connector-contract-qa.js",
     "scripts/nexus-telehealth-provider-connector-contract-qa.js",
     "scripts/nexus-mobile-clinic-operator-connector-contract-qa.js",
+    "scripts/nexus-pharmacy-provider-connector-contract-qa.js",
     "scripts/nexus-tool-registry-runtime-qa.js",
     "scripts/nexus-intent-classifier-qa.js",
     "scripts/nexus-policy-engine-qa.js",
@@ -195,7 +196,8 @@ suites["all-safe"] = unique([
   "scripts/nexus-agritrade-partner-connector-contract-qa.js",
   "scripts/nexus-clinic-provider-connector-contract-qa.js",
   "scripts/nexus-telehealth-provider-connector-contract-qa.js",
-  "scripts/nexus-mobile-clinic-operator-connector-contract-qa.js"
+  "scripts/nexus-mobile-clinic-operator-connector-contract-qa.js",
+  "scripts/nexus-pharmacy-provider-connector-contract-qa.js"
 ]);
 
 function unique(items) {
