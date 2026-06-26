@@ -168,6 +168,7 @@
     "qa:nexus-user-profile-readiness-contract": "node scripts/nexus-user-profile-readiness-contract-qa.js",
     "qa:nexus-personalization-readiness-contract": "node scripts/nexus-personalization-readiness-contract-qa.js",
     "qa:nexus-advanced-intent-understanding-readiness-contract": "node scripts/nexus-advanced-intent-understanding-readiness-contract-qa.js",
+    "qa:nexus-multi-turn-reasoning-readiness-contract": "node scripts/nexus-multi-turn-reasoning-readiness-contract-qa.js",
     "qa:all-safe": "node scripts/qa-suite.js all-safe",
     "smoke": "node scripts/smoke.js",
     "learning:translation-smoke": "node scripts/learning-translation-smoke.js",
