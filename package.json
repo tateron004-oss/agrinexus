@@ -173,6 +173,7 @@
     "qa:nexus-tool-provider-selection-readiness-contract": "node scripts/nexus-tool-provider-selection-readiness-contract-qa.js",
     "qa:nexus-orchestration-engine-readiness-contract": "node scripts/nexus-orchestration-engine-readiness-contract-qa.js",
     "qa:nexus-natural-response-generation-readiness-contract": "node scripts/nexus-natural-response-generation-readiness-contract-qa.js",
+    "qa:nexus-multilingual-intelligence-readiness-contract": "node scripts/nexus-multilingual-intelligence-readiness-contract-qa.js",
     "qa:all-safe": "node scripts/qa-suite.js all-safe",
     "smoke": "node scripts/smoke.js",
     "learning:translation-smoke": "node scripts/learning-translation-smoke.js",
