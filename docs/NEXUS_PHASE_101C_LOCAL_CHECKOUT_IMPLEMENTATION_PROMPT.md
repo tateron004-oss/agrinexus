@@ -14,6 +14,7 @@ Current remote work through Phase 101B/101C readiness has added:
 - `scripts/apply-phase-101c-local-wiring.js`
 - `scripts/phase-101c-local-wiring-patcher-qa.js`
 - `scripts/phase-101c-local-wiring-patcher-fixture-qa.js`
+- `scripts/phase-101c-post-wiring-validation-qa.js`
 
 The Phase 101 card module is present and runtime-capable, but the normal Standard User build still needs a safe local loader patch.
 
@@ -29,9 +30,11 @@ From a complete local checkout, run:
 node --check scripts/apply-phase-101c-local-wiring.js
 node --check scripts/phase-101c-local-wiring-patcher-qa.js
 node --check scripts/phase-101c-local-wiring-patcher-fixture-qa.js
+node --check scripts/phase-101c-post-wiring-validation-qa.js
 node scripts/phase-101c-local-wiring-patcher-qa.js
 node scripts/phase-101c-local-wiring-patcher-fixture-qa.js
 node scripts/apply-phase-101c-local-wiring.js
+node scripts/phase-101c-post-wiring-validation-qa.js
 ```
 
 Then inspect the diff carefully before running the full QA list below.
@@ -92,11 +95,13 @@ node --check public/nexus-agriculture-support-response-card.js
 node --check scripts/apply-phase-101c-local-wiring.js
 node --check scripts/phase-101c-local-wiring-patcher-qa.js
 node --check scripts/phase-101c-local-wiring-patcher-fixture-qa.js
+node --check scripts/phase-101c-post-wiring-validation-qa.js
 node --check scripts/qa-suite.js
 node --check scripts/nexus-phase-101-agriculture-support-response-card-runtime-qa.js
 node --check scripts/nexus-phase-101b-standard-user-runtime-wiring-readiness-qa.js
 node scripts/phase-101c-local-wiring-patcher-qa.js
 node scripts/phase-101c-local-wiring-patcher-fixture-qa.js
+node scripts/phase-101c-post-wiring-validation-qa.js
 node scripts/nexus-phase-101-agriculture-support-response-card-runtime-qa.js
 node scripts/nexus-phase-101b-standard-user-runtime-wiring-readiness-qa.js
 npm run qa:nexus-phase-101-agriculture-support-response-card-runtime
