@@ -6,6 +6,7 @@ const files = {
   batchDoc: path.join(root, "docs", "NEXUS_PHASE_102_TO_105_AUTONOMOUS_ASSISTANT_FOUNDATION_BATCH.md"),
   sourceRegistry: path.join(root, "public", "nexus-agriculture-source-registry.js"),
   actionContract: path.join(root, "public", "nexus-permission-gated-action-contract.js"),
+  intentRouter: path.join(root, "public", "nexus-voice-text-intent-router.js"),
   plannerPreview: path.join(root, "public", "nexus-planner-preview-contract.js"),
   phase102Qa: path.join(root, "scripts", "nexus-phase-102-agriculture-source-registry-hardening-qa.js")
 };
@@ -23,6 +24,7 @@ Object.entries(files).forEach(([name, filePath]) => {
 
 const sourceRegistry = require(files.sourceRegistry);
 const actionContract = require(files.actionContract);
+const intentRouter = require(files.intentRouter);
 const plannerPreview = require(files.plannerPreview);
 
 const generalSource = sourceRegistry.normalizeAgricultureSourceRecord(null);
@@ -42,6 +44,24 @@ const excludedType = actionContract.ACTION_TYPES.BACKGROUND_TASK;
 const blockedAction = actionContract.buildActionContract({ actionType: excludedType, summary: "Excluded background request" });
 assert(blockedAction.status === actionContract.ACTION_STATUS.BLOCKED, "Excluded action must be blocked.");
 assert(blockedAction.executionAllowed === false, "Blocked action must never execute.");
+
+const agricultureIntent = intentRouter.classifyVoiceTextIntent("Nexus, help me with crop issues");
+assert(agricultureIntent.intentDomain === "agriculture-support", "Agriculture prompt must route to agriculture-support.");
+assert(agricultureIntent.routeStatus === "review-only", "Agriculture prompt must remain review-only.");
+assert(agricultureIntent.executionAllowed === false, "Agriculture intent route must not execute.");
+
+const communicationIntent = intentRouter.classifyVoiceTextIntent("Call the provider on WhatsApp");
+assert(communicationIntent.intentDomain === "communication-request", "Communication prompt must route to communication-request.");
+assert(communicationIntent.routeStatus === "permission-required", "Communication prompt must require permission.");
+assert(communicationIntent.executionAllowed === false, "Communication intent route must not execute.");
+assert(communicationIntent.providerContactAllowed === false, "Communication route must not contact providers.");
+assert(communicationIntent.callAllowed === false, "Communication route must not allow calls.");
+assert(communicationIntent.messageAllowed === false, "Communication route must not allow messages.");
+
+const emergencyIntent = intentRouter.classifyVoiceTextIntent("Emergency dispatch");
+assert(emergencyIntent.intentDomain === "emergency-request", "Emergency prompt must route to emergency-request.");
+assert(emergencyIntent.routeStatus === "blocked", "Emergency prompt must be blocked.");
+assert(emergencyIntent.emergencyDispatchAllowed === false, "Emergency route must not dispatch.");
 
 const safePlan = plannerPreview.buildPlannerPreview({
   title: "Review agriculture support request",
@@ -63,6 +83,7 @@ assert(hiddenPlan.executionAllowed === false, "Blocked hidden plan must not exec
 const combinedSource = [
   fs.readFileSync(files.sourceRegistry, "utf8"),
   fs.readFileSync(files.actionContract, "utf8"),
+  fs.readFileSync(files.intentRouter, "utf8"),
   fs.readFileSync(files.plannerPreview, "utf8")
 ].join("\n");
 
