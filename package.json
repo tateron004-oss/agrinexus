@@ -278,7 +278,8 @@
     "foundation:system-routes-smoke": "node foundation/scripts/system-routes-smoke.js",
     "foundation:admin-routes-smoke": "node foundation/scripts/admin-routes-smoke.js",
     "qa:nexus-farmer-agriculture-intelligence-readiness-contract": "node scripts/nexus-farmer-agriculture-intelligence-readiness-contract-qa.js",
-    "qa:nexus-healthcare-access-intelligence-readiness-contract": "node scripts/nexus-healthcare-access-intelligence-readiness-contract-qa.js"
+    "qa:nexus-healthcare-access-intelligence-readiness-contract": "node scripts/nexus-healthcare-access-intelligence-readiness-contract-qa.js",
+    "qa:nexus-workforce-intelligence-readiness-contract": "node scripts/nexus-workforce-intelligence-readiness-contract-qa.js"
   },
   "dependencies": {
     "pg": "^8.13.1"
