@@ -161,6 +161,7 @@
     "qa:nexus-transportation-request-readiness-contract": "node scripts/nexus-transportation-request-readiness-contract-qa.js",
     "qa:nexus-location-sharing-readiness-contract": "node scripts/nexus-location-sharing-readiness-contract-qa.js",
     "qa:nexus-payment-workflow-readiness-contract": "node scripts/nexus-payment-workflow-readiness-contract-qa.js",
+    "qa:nexus-medical-record-fhir-readiness-contract": "node scripts/nexus-medical-record-fhir-readiness-contract-qa.js",
     "qa:all-safe": "node scripts/qa-suite.js all-safe",
     "smoke": "node scripts/smoke.js",
     "learning:translation-smoke": "node scripts/learning-translation-smoke.js",
