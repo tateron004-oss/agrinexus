@@ -209,6 +209,7 @@ const suites = {
     "scripts/nexus-deployment-automation-readiness-contract-qa.js",
     "scripts/nexus-regional-country-launch-kits-readiness-contract-qa.js",
     "scripts/nexus-partner-onboarding-operations-readiness-contract-qa.js",
+    "scripts/nexus-production-readiness-go-live-readiness-contract-qa.js",
     "scripts/nexus-tool-registry-runtime-qa.js",
     "scripts/nexus-intent-classifier-qa.js",
     "scripts/nexus-policy-engine-qa.js",
