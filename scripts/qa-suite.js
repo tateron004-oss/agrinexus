@@ -204,6 +204,7 @@ const suites = {
     "scripts/nexus-connector-reliability-readiness-contract-qa.js",
     "scripts/nexus-stale-data-alerts-readiness-contract-qa.js",
     "scripts/nexus-admin-review-queues-readiness-contract-qa.js",
+    "scripts/nexus-security-hardening-readiness-contract-qa.js",
     "scripts/nexus-tool-registry-runtime-qa.js",
     "scripts/nexus-intent-classifier-qa.js",
     "scripts/nexus-policy-engine-qa.js",
