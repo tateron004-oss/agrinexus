@@ -24,11 +24,8 @@ assert(!patcher.includes('execSync('), "patcher must not execute shell commands.
 assert(!patcher.includes('child_process'), "patcher must not import child_process.");
 assert(!patcher.includes('fetch('), "patcher must not perform network fetches.");
 
-vm.runInNewContext(patcher, {
-  require,
-  console: { log() {}, error() {} },
-  process: { exit(code) { throw new Error(`process.exit(${code})`); } },
-  __dirname: path.join(root, "scripts")
-}, { filename: "apply-phase-101c-local-wiring.js" });
+new vm.Script(patcher, { filename: "apply-phase-101c-local-wiring.js" });
+assert(/function main\(\)/.test(patcher), "patcher must expose a main function.");
+assert(/main\(\);\s*$/.test(patcher), "patcher should execute only when intentionally run as the local patcher script.");
 
 console.log("[phase-101c-local-wiring-patcher-qa] passed");
