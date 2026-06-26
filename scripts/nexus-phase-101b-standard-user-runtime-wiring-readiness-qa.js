@@ -5,7 +5,8 @@ const root = path.resolve(__dirname, "..");
 const paths = {
   doc: path.join(root, "docs", "NEXUS_PHASE_101B_STANDARD_USER_RUNTIME_WIRING_READINESS.md"),
   module: path.join(root, "public", "nexus-agriculture-support-response-card.js"),
-  index: path.join(root, "public", "index.html")
+  index: path.join(root, "public", "index.html"),
+  phase101cPrompt: path.join(root, "docs", "NEXUS_PHASE_101C_LOCAL_CHECKOUT_IMPLEMENTATION_PROMPT.md")
 };
 
 function assert(condition, message) {
@@ -22,6 +23,7 @@ Object.values(paths).forEach(filePath => {
 const doc = fs.readFileSync(paths.doc, "utf8");
 const moduleSource = fs.readFileSync(paths.module, "utf8");
 const index = fs.readFileSync(paths.index, "utf8");
+const phase101cPrompt = fs.readFileSync(paths.phase101cPrompt, "utf8");
 const phase101 = require(paths.module);
 
 assert(typeof phase101.buildAgricultureSupportCard === "function", "Phase 101 module must export buildAgricultureSupportCard.");
@@ -35,6 +37,7 @@ assert(phase101.buildAgricultureSupportCard("Call an agronomist") === null, "cal
   "nexus-agriculture-support-response-card.js",
   "normal Standard User build",
   "GitHub connector exposes whole-file replacement and not patch insertion",
+  "NEXUS_PHASE_101C_LOCAL_CHECKOUT_IMPLEMENTATION_PROMPT.md",
   "No provider contacted",
   "No message sent",
   "No purchase made",
@@ -42,6 +45,13 @@ assert(phase101.buildAgricultureSupportCard("Call an agronomist") === null, "cal
   "No permission prompt",
   "Phase 101C"
 ].forEach(required => assert(doc.includes(required), `readiness doc must include ${required}.`));
+
+[
+  "Wire `public/nexus-agriculture-support-response-card.js` into the normal Standard User build",
+  "<script src=\"/nexus-agriculture-support-response-card.js?v=nexus-phase-101\"></script>",
+  "npm run qa:nexus-phase-101-agriculture-support-response-card-runtime",
+  "Standard User browser validation"
+].forEach(required => assert(phase101cPrompt.includes(required), `Phase 101C prompt must include ${required}.`));
 
 [
   "fetch(",
