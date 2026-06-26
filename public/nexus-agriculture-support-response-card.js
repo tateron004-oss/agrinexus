@@ -2,6 +2,7 @@
   "use strict";
 
   const FEATURE_FLAG_NAME = "NEXUS_PHASE_101_AGRICULTURE_SUPPORT_RESPONSE_CARD_ENABLED";
+  const SPRINT_C_FEATURE_FLAG_NAME = "NEXUS_CONTROLLED_AGRICULTURE_RESPONSE_CARDS_ENABLED";
   const MODULE_VERSION = "phase-101-agriculture-support-response-card.v1";
   const NO_EXECUTION_DISCLOSURE = Object.freeze([
     "No provider has been contacted.",
@@ -28,7 +29,7 @@
     networkLookupAllowed: false,
     storageSideEffectAllowed: false
   });
-  const AGRICULTURE = /\b(maize|corn|crop|crops|plant|plants|leaf|leaves|yellow|spots?|pests?|insects?|irrigation|water|drought|soil|farm|farmer|field|planting|beans?|tomatoes?|cassava|sorghum|millet|rice|wheat|banana|plantain|harvest|fertili[sz]er|pesticide|herbicide|fungicide|insecticide|chemical|crop issues?|crop stress|agriculture help|farm help|farmer help)\b/i;
+  const AGRICULTURE = /\b(maize|corn|crop|crops|plant|plants|leaf|leaves|yellow|spots?|pests?|insects?|irrigation|water|drought|soil|farm|farmer|field|planting|beans?|tomatoes?|cassava|sorghum|millet|rice|wheat|banana|plantain|harvest|fertili[sz]er|pesticide|herbicide|fungicide|insecticide|chemical|crop issues?|crop stress|agriculture help|agriculture training|agriculture course|farm training|farm course|farmer training|farmer course|farm help|farmer help)\b/i;
   const FORBIDDEN = /\b(call|phone|dial|message|text|sms|whatsapp|telegram|email|contact|book|booking|appointment|schedule|pay|payment|wallet|checkout|purchase|buy|sell|buyer|seller|order|ship|deliver|dispatch|share location|location|near me|map|gps|camera|photo|upload|image|picture|microphone|record|medical|pharmacy|prescription|doctor|clinic|hospital|telehealth|emergency|poisoning|poisoned|unconscious|seizure|guarantee|guaranteed)\b/i;
   const UNSAFE_CHEMICAL = /(?:\b(apply|spray|mix|dose|dosage|rate|how much|restricted)\b[^.?!]*\b(pesticide|herbicide|fungicide|insecticide|chemical)\b|\b(pesticide|herbicide|fungicide|insecticide|chemical)\b[^.?!]*\b(apply|spray|mix|dose|dosage|rate|how much|restricted)\b)/i;
   const MARKETPLACE_EXECUTION = /\b(buy|sell|pay|payment|checkout|order|contact buyer|contact seller|message buyer|message seller|ship|deliver)\b/i;
@@ -42,6 +43,7 @@
     if (/\b(pesticide|herbicide|fungicide|insecticide|chemical|fertili[sz]er)\b/.test(value)) return "Chemical and fertilizer safety boundary";
     if (/\b(pest|pests|insect|insects|eating|spots?|disease|yellow|leaf|leaves|maize|crop issues?|crop stress)\b/.test(value)) return "Crop stress observation";
     if (/\b(irrigation|water|dry|watering)\b/.test(value)) return "Irrigation review";
+    if (/\b(training|course|learn|teach)\b/.test(value) && /\b(agriculture|farm|farmer|crop|field)\b/.test(value)) return "Agriculture training review";
     if (/\b(drought|heat|rainfall|climate)\b/.test(value)) return "Drought preparedness";
     if (/\b(soil|compost|mulch|planting)\b/.test(value)) return "Soil and planting review";
     if (/\b(market|marketplace|price|agritrade)\b/.test(value)) return "Marketplace review-only guidance";
@@ -109,6 +111,59 @@
     });
   }
 
+  function isSprintCFeatureEnabled(globalRef) {
+    const root = globalRef || (typeof window !== "undefined" ? window : {});
+    if (root && root[SPRINT_C_FEATURE_FLAG_NAME] === true) return true;
+    try {
+      const search = root && root.location ? String(root.location.search || "") : "";
+      if (/(?:[?&])nexusSprintCAgricultureCards=1(?:&|$)/.test(search)) return true;
+    } catch (error) {
+      return false;
+    }
+    return false;
+  }
+
+  function buildSprintCAgricultureResponseCard(prompt, options = {}) {
+    if (!isSprintCFeatureEnabled(options.globalRef)) return null;
+    const baseCard = buildAgricultureSupportCard(prompt, options);
+    if (!baseCard) return null;
+    return Object.freeze({
+      id: "sprint-c-controlled-agriculture-response-card",
+      schemaVersion: "nexus.sprintC.agricultureResponseCard.v1",
+      moduleVersion: MODULE_VERSION,
+      riskTier: "low",
+      category: "agriculture-support",
+      title: baseCard.title,
+      summary: baseCard.summary,
+      guidance: [...baseCard.safeFirstChecks],
+      reviewOnlyActions: [
+        { label: "Review safe next checks", type: "review_only", disabled: true, executionAllowed: false }
+      ],
+      blockedActions: [
+        "provider handoff",
+        "calls and messages",
+        "WhatsApp, Telegram, SMS, email, and phone-provider behavior",
+        "payment, purchase, buy, sell, checkout, and marketplace transactions",
+        "location sharing, maps, GPS, and near-me behavior",
+        "camera, photo upload, microphone, and media capture",
+        "appointments, scheduling, account, identity, medical, pharmacy, telehealth, and emergency actions",
+        "external navigation and external service opening"
+      ],
+      sourceStatus: baseCard.sourceStatus,
+      localExpertEscalation: baseCard.localExpertEscalation,
+      noExecutionDisclosure: [...baseCard.noExecutionDisclosure],
+      executionAuthority: false,
+      providerHandoffAllowed: false,
+      pendingActionCreationAllowed: false,
+      storageSideEffectAllowed: false,
+      networkSideEffectAllowed: false,
+      routeAutoOpenAllowed: false,
+      modalAutoOpenAllowed: false,
+      confirmationPromptForExecutionAllowed: false,
+      ...EXECUTION_BOUNDARY
+    });
+  }
+
   function isFeatureEnabled(globalRef) {
     const root = globalRef || (typeof window !== "undefined" ? window : {});
     if (root && root[FEATURE_FLAG_NAME] === false) return false;
@@ -152,6 +207,28 @@
     return Object.freeze({ card, element: article });
   }
 
+  function renderSprintCAgricultureResponseCard(prompt, target, options = {}) {
+    const doc = target && target.ownerDocument ? target.ownerDocument : (typeof document !== "undefined" ? document : null);
+    if (!doc || !target || !isSprintCFeatureEnabled(options.globalRef)) return null;
+    const card = buildSprintCAgricultureResponseCard(prompt, options);
+    if (!card) return null;
+    target.querySelectorAll("[data-nexus-sprint-c-agriculture-card]").forEach(existing => existing.remove());
+    const article = doc.createElement("article");
+    article.className = "nexus-sprint-c-agriculture-card";
+    article.setAttribute("data-nexus-sprint-c-agriculture-card", "true");
+    article.setAttribute("data-risk-tier", card.riskTier);
+    article.setAttribute("data-execution-authority", "false");
+    article.setAttribute("data-provider-handoff", "false");
+    article.setAttribute("data-pending-action-creation", "false");
+    article.setAttribute("data-storage-side-effect", "false");
+    article.setAttribute("data-network-side-effect", "false");
+    article.setAttribute("data-route-auto-open", "false");
+    article.setAttribute("data-modal-auto-open", "false");
+    article.innerHTML = `<div class="tag-row"><span>${escapeHtml(card.category)}</span><span>${escapeHtml(card.riskTier)}</span><span>${escapeHtml(card.sourceStatus.label)}</span><span>Review-only</span></div><h3>${escapeHtml(card.title)}</h3><p>${escapeHtml(card.summary)}</p><strong>Safe guidance</strong><ul>${list(card.guidance)}</ul><p><strong>Local expert guidance:</strong> ${escapeHtml(card.localExpertEscalation)}</p><p><strong>No action has been taken.</strong></p><ul>${list(card.noExecutionDisclosure)}</ul><button type="button" disabled aria-disabled="true" data-sprint-c-action="review-only">${escapeHtml(card.reviewOnlyActions[0].label)}</button>`;
+    target.appendChild(article);
+    return Object.freeze({ card, element: article });
+  }
+
   function installRuntime(doc) {
     const runtimeDoc = doc || (typeof document !== "undefined" ? document : null);
     if (!runtimeDoc) return Object.freeze({ installed: false, reason: "document_unavailable" });
@@ -168,11 +245,14 @@
     };
     const clearExistingCards = () => {
       runtimeDoc.querySelectorAll("[data-nexus-phase-101-agriculture-card]").forEach(existing => existing.remove());
+      runtimeDoc.querySelectorAll("[data-nexus-sprint-c-agriculture-card]").forEach(existing => existing.remove());
     };
     const renderPrompt = prompt => {
       clearExistingCards();
       const target = runtimeDoc.getElementById("jarvisInsightPanel") || runtimeDoc.getElementById("userWorkspace") || runtimeDoc.getElementById("mainContent");
-      const result = renderAgricultureSupportCard(prompt, target);
+      const result = isSprintCFeatureEnabled(runtimeDoc.defaultView || {})
+        ? renderSprintCAgricultureResponseCard(prompt, target, { globalRef: runtimeDoc.defaultView || {} })
+        : renderAgricultureSupportCard(prompt, target);
       if (result) {
         const status = runtimeDoc.getElementById("nexusBehaviorStatus");
         if (status) status.textContent = "Agriculture support review prepared. No action has been taken.";
@@ -199,7 +279,7 @@
     return Object.freeze({ installed: true, reason: "runtime_listener_installed" });
   }
 
-  const api = Object.freeze({ FEATURE_FLAG_NAME, MODULE_VERSION, EXECUTION_BOUNDARY, NO_EXECUTION_DISCLOSURE, classifyAgricultureSupportPrompt, buildAgricultureSupportCard, renderAgricultureSupportCard, installRuntime, isFeatureEnabled });
+  const api = Object.freeze({ FEATURE_FLAG_NAME, SPRINT_C_FEATURE_FLAG_NAME, MODULE_VERSION, EXECUTION_BOUNDARY, NO_EXECUTION_DISCLOSURE, classifyAgricultureSupportPrompt, buildAgricultureSupportCard, buildSprintCAgricultureResponseCard, renderAgricultureSupportCard, renderSprintCAgricultureResponseCard, installRuntime, isFeatureEnabled, isSprintCFeatureEnabled });
   if (typeof module === "object" && module.exports) module.exports = api;
   if (typeof window !== "undefined") {
     window.NEXUS_PHASE_101_AGRICULTURE_SUPPORT_RESPONSE_CARD = api;
