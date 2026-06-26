@@ -75,6 +75,10 @@ The deterministic QA script `scripts/nexus-phase-101-agriculture-support-respons
 
 Standard User browser validation should use the normal standard user build. Validate Start as User, safe agriculture prompts rendering the Phase 101 agriculture card, excluded/high-risk prompts not rendering the card, and no provider handoff, permission prompt, navigation side effect, storage/network side effect, console warn/error, call, message, payment, location, camera, health, pharmacy, or emergency execution.
 
+## Phase 101C local implementation
+
+A Codex/local checkout implementation prompt is available at `docs/NEXUS_PHASE_101C_LOCAL_CHECKOUT_IMPLEMENTATION_PROMPT.md`. Use it to perform the final normal-build loader insertion, package alias wiring, QA-suite wiring, full local QA, and Standard User browser validation from a complete repo checkout.
+
 ## Known limitations
 
 This phase does not connect a live source registry, live extension provider, live local expert directory, marketplace provider, payment provider, location provider, camera flow, or backend action path.
