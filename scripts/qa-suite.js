@@ -197,6 +197,7 @@ const suites = {
     "scripts/nexus-field-agent-mode-readiness-contract-qa.js",
     "scripts/nexus-provider-mode-readiness-contract-qa.js",
     "scripts/nexus-admin-mode-readiness-contract-qa.js",
+    "scripts/nexus-offline-low-bandwidth-mode-readiness-contract-qa.js",
     "scripts/nexus-tool-registry-runtime-qa.js",
     "scripts/nexus-intent-classifier-qa.js",
     "scripts/nexus-policy-engine-qa.js",

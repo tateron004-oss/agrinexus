@@ -293,7 +293,8 @@
     "qa:nexus-agritrade-marketplace-mode-readiness-contract": "node scripts/nexus-agritrade-marketplace-mode-readiness-contract-qa.js",
     "qa:nexus-field-agent-mode-readiness-contract": "node scripts/nexus-field-agent-mode-readiness-contract-qa.js",
     "qa:nexus-provider-mode-readiness-contract": "node scripts/nexus-provider-mode-readiness-contract-qa.js",
-    "qa:nexus-admin-mode-readiness-contract": "node scripts/nexus-admin-mode-readiness-contract-qa.js"
+    "qa:nexus-admin-mode-readiness-contract": "node scripts/nexus-admin-mode-readiness-contract-qa.js",
+    "qa:nexus-offline-low-bandwidth-mode-readiness-contract": "node scripts/nexus-offline-low-bandwidth-mode-readiness-contract-qa.js"
   },
   "dependencies": {
     "pg": "^8.13.1"
