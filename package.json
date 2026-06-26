@@ -343,6 +343,7 @@
     "qa:nexus-sprint-c21-source-backed-agriculture-static-snapshot-browser-validation-evidence-template": "node scripts/nexus-sprint-c21-source-backed-agriculture-static-snapshot-browser-validation-evidence-template-qa.js",
     "qa:nexus-sprint-c22-source-backed-agriculture-standard-user-runtime-absence-contract": "node scripts/nexus-sprint-c22-source-backed-agriculture-standard-user-runtime-absence-contract-qa.js",
     "qa:nexus-sprint-c23-source-backed-agriculture-runtime-wiring-preflight-checklist": "node scripts/nexus-sprint-c23-source-backed-agriculture-runtime-wiring-preflight-checklist-qa.js",
+    "qa:nexus-sprint-c24-source-backed-agriculture-runtime-wiring-approval-record-template": "node scripts/nexus-sprint-c24-source-backed-agriculture-runtime-wiring-approval-record-template-qa.js",
     "qa:nexus-phase-105-preview-only-autonomous-runtime-integration-plan": "node scripts/nexus-phase-105-preview-only-autonomous-runtime-integration-plan-qa.js"
   },
   "dependencies": {
