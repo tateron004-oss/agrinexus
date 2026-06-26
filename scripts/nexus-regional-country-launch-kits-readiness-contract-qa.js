@@ -1,0 +1,160 @@
+const fs = require("node:fs");
+const path = require("node:path");
+
+const root = path.resolve(__dirname, "..");
+const paths = {
+  doc: path.join(root, "docs", "NEXUS_REGIONAL_COUNTRY_LAUNCH_KITS_READINESS_CONTRACT_PHASE_98.md"),
+  contract: path.join(root, "public", "nexus-regional-country-launch-kits-readiness-contract.js"),
+  index: path.join(root, "public", "index.html"),
+  app: path.join(root, "public", "app.js"),
+  server: path.join(root, "server.js"),
+  packageJson: path.join(root, "package.json"),
+  qaSuite: path.join(root, "scripts", "qa-suite.js")
+};
+
+function read(filePath) {
+  return fs.readFileSync(filePath, "utf8");
+}
+
+function assert(condition, message) {
+  if (!condition) {
+    console.error("[nexus-regional-country-launch-kits-readiness-contract-qa] " + message);
+    process.exit(1);
+  }
+}
+
+Object.values(paths).forEach(filePath => assert(fs.existsSync(filePath), path.relative(root, filePath) + " must exist."));
+
+const doc = read(paths.doc);
+const contractSource = read(paths.contract);
+const contract = require(paths.contract);
+const index = read(paths.index);
+const app = read(paths.app);
+const server = read(paths.server);
+const packageData = JSON.parse(read(paths.packageJson));
+const qaSuite = read(paths.qaSuite);
+
+assert(doc.includes("Phase: 98"), "doc must identify Phase 98.");
+assert(doc.includes("inert readiness contract"), "doc must state this phase is inert.");
+assert(doc.includes("Regional Country Launch Kits is source-ready only until verified sources, permissions, approvals, audit logging, and required partner or compliance gates are active."), "doc must include safe user-facing posture.");
+assert(doc.includes("live connector activation"), "doc must document inactive boundary live connector activation.");
+assert(doc.includes("provider execution"), "doc must document inactive boundary provider execution.");
+assert(doc.includes("clinic or telehealth action execution"), "doc must document inactive boundary clinic or telehealth action execution.");
+assert(doc.includes("medical advice diagnosis prescription behavior"), "doc must document inactive boundary medical advice diagnosis prescription behavior.");
+assert(doc.includes("calls messages WhatsApp Telegram SMS email native phone execution"), "doc must document inactive boundary calls messages WhatsApp Telegram SMS email native phone execution.");
+assert(doc.includes("payments or marketplace transactions"), "doc must document inactive boundary payments or marketplace transactions.");
+assert(doc.includes("transportation or emergency dispatch"), "doc must document inactive boundary transportation or emergency dispatch.");
+assert(doc.includes("location camera microphone activation"), "doc must document inactive boundary location camera microphone activation.");
+assert(doc.includes("identity account or profile execution"), "doc must document inactive boundary identity account or profile execution.");
+assert(doc.includes("storage or network side effects"), "doc must document inactive boundary storage or network side effects.");
+assert(doc.includes("backend behavior changes"), "doc must document inactive boundary backend behavior changes.");
+assert(doc.includes("Standard User runtime behavior changes"), "doc must document inactive boundary Standard User runtime behavior changes.");
+assert(contract.REGIONAL_COUNTRY_LAUNCH_KITS_REQUIRED_PRECONDITIONS.includes("verifiedSourceOrPartner"), "contract must include precondition verifiedSourceOrPartner.");
+assert(doc.includes("verifiedSourceOrPartner"), "doc must include precondition verifiedSourceOrPartner.");
+assert(contract.REGIONAL_COUNTRY_LAUNCH_KITS_REQUIRED_PRECONDITIONS.includes("sourceAttribution"), "contract must include precondition sourceAttribution.");
+assert(doc.includes("sourceAttribution"), "doc must include precondition sourceAttribution.");
+assert(contract.REGIONAL_COUNTRY_LAUNCH_KITS_REQUIRED_PRECONDITIONS.includes("freshnessLabel"), "contract must include precondition freshnessLabel.");
+assert(doc.includes("freshnessLabel"), "doc must include precondition freshnessLabel.");
+assert(contract.REGIONAL_COUNTRY_LAUNCH_KITS_REQUIRED_PRECONDITIONS.includes("confidenceLabel"), "contract must include precondition confidenceLabel.");
+assert(doc.includes("confidenceLabel"), "doc must include precondition confidenceLabel.");
+assert(contract.REGIONAL_COUNTRY_LAUNCH_KITS_REQUIRED_PRECONDITIONS.includes("userConsentBoundary"), "contract must include precondition userConsentBoundary.");
+assert(doc.includes("userConsentBoundary"), "doc must include precondition userConsentBoundary.");
+assert(contract.REGIONAL_COUNTRY_LAUNCH_KITS_REQUIRED_PRECONDITIONS.includes("roleAndPermissionCheck"), "contract must include precondition roleAndPermissionCheck.");
+assert(doc.includes("roleAndPermissionCheck"), "doc must include precondition roleAndPermissionCheck.");
+assert(contract.REGIONAL_COUNTRY_LAUNCH_KITS_REQUIRED_PRECONDITIONS.includes("explicitUserApprovalForHighRisk"), "contract must include precondition explicitUserApprovalForHighRisk.");
+assert(doc.includes("explicitUserApprovalForHighRisk"), "doc must include precondition explicitUserApprovalForHighRisk.");
+assert(contract.REGIONAL_COUNTRY_LAUNCH_KITS_REQUIRED_PRECONDITIONS.includes("cancellationPath"), "contract must include precondition cancellationPath.");
+assert(doc.includes("cancellationPath"), "doc must include precondition cancellationPath.");
+assert(contract.REGIONAL_COUNTRY_LAUNCH_KITS_REQUIRED_PRECONDITIONS.includes("auditDecisionRecord"), "contract must include precondition auditDecisionRecord.");
+assert(doc.includes("auditDecisionRecord"), "doc must include precondition auditDecisionRecord.");
+assert(contract.REGIONAL_COUNTRY_LAUNCH_KITS_REQUIRED_PRECONDITIONS.includes("fallbackPath"), "contract must include precondition fallbackPath.");
+assert(doc.includes("fallbackPath"), "doc must include precondition fallbackPath.");
+assert(contract.REGIONAL_COUNTRY_LAUNCH_KITS_REQUIRED_PRECONDITIONS.includes("noUnsupportedLiveClaim"), "contract must include precondition noUnsupportedLiveClaim.");
+assert(doc.includes("noUnsupportedLiveClaim"), "doc must include precondition noUnsupportedLiveClaim.");
+assert(contract.REGIONAL_COUNTRY_LAUNCH_KITS_REQUIRED_PRECONDITIONS.includes("noCompletedActionClaim"), "contract must include precondition noCompletedActionClaim.");
+assert(doc.includes("noCompletedActionClaim"), "doc must include precondition noCompletedActionClaim.");
+assert(contract.REGIONAL_COUNTRY_LAUNCH_KITS_REQUIRED_PRECONDITIONS.includes("regressionSuiteCoverage"), "contract must include precondition regressionSuiteCoverage.");
+assert(doc.includes("regressionSuiteCoverage"), "doc must include precondition regressionSuiteCoverage.");
+assert(contract.REGIONAL_COUNTRY_LAUNCH_KITS_REQUIRED_PRECONDITIONS.includes("regionalcountrylaunchkitsSpecificReadiness"), "contract must include precondition regionalcountrylaunchkitsSpecificReadiness.");
+assert(doc.includes("regionalcountrylaunchkitsSpecificReadiness"), "doc must include precondition regionalcountrylaunchkitsSpecificReadiness.");
+assert(contract.REGIONAL_COUNTRY_LAUNCH_KITS_REQUIRED_PRECONDITIONS.includes("regionalcountrylaunchkitsHumanReviewPath"), "contract must include precondition regionalcountrylaunchkitsHumanReviewPath.");
+assert(doc.includes("regionalcountrylaunchkitsHumanReviewPath"), "doc must include precondition regionalcountrylaunchkitsHumanReviewPath.");
+assert(contract.REGIONAL_COUNTRY_LAUNCH_KITS_RESTRICTED_DOMAINS.includes("healthcare"), "contract must include restricted domain healthcare.");
+assert(doc.includes("healthcare"), "doc must include restricted domain healthcare.");
+assert(contract.REGIONAL_COUNTRY_LAUNCH_KITS_RESTRICTED_DOMAINS.includes("medical_records"), "contract must include restricted domain medical_records.");
+assert(doc.includes("medical_records"), "doc must include restricted domain medical_records.");
+assert(contract.REGIONAL_COUNTRY_LAUNCH_KITS_RESTRICTED_DOMAINS.includes("pharmacy"), "contract must include restricted domain pharmacy.");
+assert(doc.includes("pharmacy"), "doc must include restricted domain pharmacy.");
+assert(contract.REGIONAL_COUNTRY_LAUNCH_KITS_RESTRICTED_DOMAINS.includes("payments"), "contract must include restricted domain payments.");
+assert(doc.includes("payments"), "doc must include restricted domain payments.");
+assert(contract.REGIONAL_COUNTRY_LAUNCH_KITS_RESTRICTED_DOMAINS.includes("location"), "contract must include restricted domain location.");
+assert(doc.includes("location"), "doc must include restricted domain location.");
+assert(contract.REGIONAL_COUNTRY_LAUNCH_KITS_RESTRICTED_DOMAINS.includes("communications"), "contract must include restricted domain communications.");
+assert(doc.includes("communications"), "doc must include restricted domain communications.");
+assert(contract.REGIONAL_COUNTRY_LAUNCH_KITS_RESTRICTED_DOMAINS.includes("provider_contact"), "contract must include restricted domain provider_contact.");
+assert(doc.includes("provider_contact"), "doc must include restricted domain provider_contact.");
+assert(contract.REGIONAL_COUNTRY_LAUNCH_KITS_RESTRICTED_DOMAINS.includes("marketplace_transactions"), "contract must include restricted domain marketplace_transactions.");
+assert(doc.includes("marketplace_transactions"), "doc must include restricted domain marketplace_transactions.");
+assert(contract.REGIONAL_COUNTRY_LAUNCH_KITS_RESTRICTED_DOMAINS.includes("emergency"), "contract must include restricted domain emergency.");
+assert(doc.includes("emergency"), "doc must include restricted domain emergency.");
+assert(contract.REGIONAL_COUNTRY_LAUNCH_KITS_RESTRICTED_DOMAINS.includes("transportation_dispatch"), "contract must include restricted domain transportation_dispatch.");
+assert(doc.includes("transportation_dispatch"), "doc must include restricted domain transportation_dispatch.");
+assert(contract.REGIONAL_COUNTRY_LAUNCH_KITS_RESTRICTED_DOMAINS.includes("identity"), "contract must include restricted domain identity.");
+assert(doc.includes("identity"), "doc must include restricted domain identity.");
+assert(contract.REGIONAL_COUNTRY_LAUNCH_KITS_RESTRICTED_DOMAINS.includes("account_profile"), "contract must include restricted domain account_profile.");
+assert(doc.includes("account_profile"), "doc must include restricted domain account_profile.");
+assert(contract.REGIONAL_COUNTRY_LAUNCH_KITS_RESTRICTED_DOMAINS.includes("role_authorization"), "contract must include restricted domain role_authorization.");
+assert(doc.includes("role_authorization"), "doc must include restricted domain role_authorization.");
+assert(contract.REGIONAL_COUNTRY_LAUNCH_KITS_RESTRICTED_DOMAINS.includes("regulated_execution"), "contract must include restricted domain regulated_execution.");
+assert(doc.includes("regulated_execution"), "doc must include restricted domain regulated_execution.");
+assert(contract.REGIONAL_COUNTRY_LAUNCH_KITS_NO_EXECUTION_DEFAULTS.liveConnectorEnabled === false, "liveConnectorEnabled must default false.");
+assert(contract.REGIONAL_COUNTRY_LAUNCH_KITS_READINESS_CONTRACT.liveConnectorEnabled === false, "liveConnectorEnabled must be false on default contract.");
+assert(contract.REGIONAL_COUNTRY_LAUNCH_KITS_NO_EXECUTION_DEFAULTS.providerExecutionEnabled === false, "providerExecutionEnabled must default false.");
+assert(contract.REGIONAL_COUNTRY_LAUNCH_KITS_READINESS_CONTRACT.providerExecutionEnabled === false, "providerExecutionEnabled must be false on default contract.");
+assert(contract.REGIONAL_COUNTRY_LAUNCH_KITS_NO_EXECUTION_DEFAULTS.regulatedActionEnabled === false, "regulatedActionEnabled must default false.");
+assert(contract.REGIONAL_COUNTRY_LAUNCH_KITS_READINESS_CONTRACT.regulatedActionEnabled === false, "regulatedActionEnabled must be false on default contract.");
+assert(contract.REGIONAL_COUNTRY_LAUNCH_KITS_NO_EXECUTION_DEFAULTS.silentActionAllowed === false, "silentActionAllowed must default false.");
+assert(contract.REGIONAL_COUNTRY_LAUNCH_KITS_READINESS_CONTRACT.silentActionAllowed === false, "silentActionAllowed must be false on default contract.");
+assert(contract.REGIONAL_COUNTRY_LAUNCH_KITS_NO_EXECUTION_DEFAULTS.backgroundExecutionAllowed === false, "backgroundExecutionAllowed must default false.");
+assert(contract.REGIONAL_COUNTRY_LAUNCH_KITS_READINESS_CONTRACT.backgroundExecutionAllowed === false, "backgroundExecutionAllowed must be false on default contract.");
+assert(contract.REGIONAL_COUNTRY_LAUNCH_KITS_NO_EXECUTION_DEFAULTS.standardUserRuntimeMutationAllowed === false, "standardUserRuntimeMutationAllowed must default false.");
+assert(contract.REGIONAL_COUNTRY_LAUNCH_KITS_READINESS_CONTRACT.standardUserRuntimeMutationAllowed === false, "standardUserRuntimeMutationAllowed must be false on default contract.");
+assert(contract.REGIONAL_COUNTRY_LAUNCH_KITS_NO_EXECUTION_DEFAULTS.storageSideEffectAllowed === false, "storageSideEffectAllowed must default false.");
+assert(contract.REGIONAL_COUNTRY_LAUNCH_KITS_READINESS_CONTRACT.storageSideEffectAllowed === false, "storageSideEffectAllowed must be false on default contract.");
+assert(contract.REGIONAL_COUNTRY_LAUNCH_KITS_NO_EXECUTION_DEFAULTS.networkSideEffectAllowed === false, "networkSideEffectAllowed must default false.");
+assert(contract.REGIONAL_COUNTRY_LAUNCH_KITS_READINESS_CONTRACT.networkSideEffectAllowed === false, "networkSideEffectAllowed must be false on default contract.");
+assert(contract.REGIONAL_COUNTRY_LAUNCH_KITS_NO_EXECUTION_DEFAULTS.executionAllowed === false, "executionAllowed must default false.");
+assert(contract.REGIONAL_COUNTRY_LAUNCH_KITS_READINESS_CONTRACT.executionAllowed === false, "executionAllowed must be false on default contract.");
+assert(contract.REGIONAL_COUNTRY_LAUNCH_KITS_NO_EXECUTION_DEFAULTS.liveActionEnabled === false, "liveActionEnabled must default false.");
+assert(contract.REGIONAL_COUNTRY_LAUNCH_KITS_READINESS_CONTRACT.liveActionEnabled === false, "liveActionEnabled must be false on default contract.");
+
+const sample = contract.createRegionalCountryLaunchKitsReadinessContract({
+  actionType: "prepare_regional_country_launch_kits_summary",
+  liveConnectorEnabled: true,
+  providerExecutionEnabled: true,
+  regulatedActionEnabled: true,
+  executionAllowed: true,
+  liveActionEnabled: true
+});
+
+assert(sample.actionType === "prepare_regional_country_launch_kits_summary", "recognized action type may be represented.");
+assert(sample.phase === "98", "sample phase must remain 98.");
+assert(sample.readinessStatus === "blocked", "sample readiness remains blocked.");
+assert(sample.liveConnectorEnabled === false, "factory must force live connector disabled.");
+assert(sample.providerExecutionEnabled === false, "factory must force provider execution disabled.");
+assert(sample.regulatedActionEnabled === false, "factory must force regulated action disabled.");
+assert(sample.executionAllowed === false, "factory must force execution disabled.");
+assert(sample.liveActionEnabled === false, "factory must force live action disabled.");
+
+["fetch(","XMLHttpRequest","axios","EventSource","WebSocket","localStorage","sessionStorage","indexedDB","window.location","document.location","addEventListener","onclick","execute(","dispatch(","openProvider(","sendMessage(","makeCall(","processPayment(","requestPermission("].forEach(forbidden => assert(!contractSource.includes(forbidden), "contract module must not include runtime behavior: " + forbidden));
+
+["nexus-regional-country-launch-kits-readiness-contract.js", "NexusRegionalCountryLaunchKitsReadinessContract", "regional-country-launch-kits.readiness.phase_98", "REGIONAL_COUNTRY_LAUNCH_KITS_READINESS_CONTRACT"].forEach(runtimeHook => {
+  assert(!index.includes(runtimeHook), "index.html must not load " + runtimeHook + ".");
+  assert(!app.includes(runtimeHook), "app.js must not consume " + runtimeHook + ".");
+  assert(!server.includes(runtimeHook), "server.js must not consume " + runtimeHook + ".");
+});
+
+assert(packageData.scripts["qa:nexus-regional-country-launch-kits-readiness-contract"] === "node scripts/nexus-regional-country-launch-kits-readiness-contract-qa.js", "package.json must expose qa alias.");
+assert(qaSuite.includes("scripts/nexus-regional-country-launch-kits-readiness-contract-qa.js"), "qa-suite.js must include Phase 98 QA.");
+
+console.log("[nexus-regional-country-launch-kits-readiness-contract-qa] passed");
