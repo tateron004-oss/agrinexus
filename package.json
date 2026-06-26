@@ -106,6 +106,7 @@
     "qa:nexus-source-backed-answer-engine-contract": "node scripts/nexus-source-backed-answer-engine-contract-qa.js",
     "qa:nexus-citation-freshness-confidence-contract": "node scripts/nexus-citation-freshness-confidence-contract-qa.js",
     "qa:nexus-data-quality-monitoring-contract": "node scripts/nexus-data-quality-monitoring-contract-qa.js",
+    "qa:nexus-partner-data-intake-contract": "node scripts/nexus-partner-data-intake-contract-qa.js",
     "qa:nexus-intent-classifier": "node scripts/nexus-intent-classifier-qa.js",
     "qa:nexus-selected-tool-id": "node scripts/nexus-selected-tool-id-alignment-qa.js",
     "qa:nexus-low-risk-suggestion-display": "node scripts/nexus-low-risk-suggestion-display-plan-qa.js",
