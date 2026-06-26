@@ -196,6 +196,7 @@ const suites = {
     "scripts/nexus-agritrade-marketplace-mode-readiness-contract-qa.js",
     "scripts/nexus-field-agent-mode-readiness-contract-qa.js",
     "scripts/nexus-provider-mode-readiness-contract-qa.js",
+    "scripts/nexus-admin-mode-readiness-contract-qa.js",
     "scripts/nexus-tool-registry-runtime-qa.js",
     "scripts/nexus-intent-classifier-qa.js",
     "scripts/nexus-policy-engine-qa.js",
