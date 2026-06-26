@@ -97,6 +97,7 @@
     "qa:nexus-cultural-music-demo-shell": "node scripts/nexus-cultural-music-demo-shell-qa.js",
     "qa:nexus-real-data-regulated-action-roadmap": "node scripts/nexus-real-data-regulated-action-roadmap-qa.js",
     "qa:nexus-100-full-platform-roadmap": "node scripts/nexus-100-full-platform-roadmap-qa.js",
+    "qa:nexus-source-backed-response-runtime-contract": "node scripts/nexus-source-backed-response-runtime-contract-qa.js",
     "qa:nexus-intent-classifier": "node scripts/nexus-intent-classifier-qa.js",
     "qa:nexus-selected-tool-id": "node scripts/nexus-selected-tool-id-alignment-qa.js",
     "qa:nexus-low-risk-suggestion-display": "node scripts/nexus-low-risk-suggestion-display-plan-qa.js",
