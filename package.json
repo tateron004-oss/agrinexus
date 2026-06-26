@@ -103,6 +103,7 @@
     "qa:nexus-provider-clinic-public-directory-contracts": "node scripts/nexus-provider-clinic-public-directory-contracts-qa.js",
     "qa:nexus-workforce-public-source-contracts": "node scripts/nexus-workforce-public-source-contracts-qa.js",
     "qa:nexus-community-service-public-source-contracts": "node scripts/nexus-community-service-public-source-contracts-qa.js",
+    "qa:nexus-source-backed-answer-engine-contract": "node scripts/nexus-source-backed-answer-engine-contract-qa.js",
     "qa:nexus-intent-classifier": "node scripts/nexus-intent-classifier-qa.js",
     "qa:nexus-selected-tool-id": "node scripts/nexus-selected-tool-id-alignment-qa.js",
     "qa:nexus-low-risk-suggestion-display": "node scripts/nexus-low-risk-suggestion-display-plan-qa.js",
