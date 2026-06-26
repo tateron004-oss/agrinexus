@@ -16,6 +16,8 @@ The module is intentionally narrow. It does not call live sources, providers, ma
 
 The Phase 101 module installs a browser listener when loaded. It listens to existing typed assistant surfaces and renders only when the prompt qualifies as low-risk agriculture support. It only appends an informational card to an existing UI target.
 
+As of Phase 101B/101C readiness, the module is present and runtime-capable, but normal-build browser activation still requires a safe local checkout patch that loads the module from `public/index.html` or another already-loaded shell file.
+
 ## Feature flag
 
 Flag name: `NEXUS_PHASE_101_AGRICULTURE_SUPPORT_RESPONSE_CARD_ENABLED`
@@ -76,6 +78,8 @@ Standard User browser validation should use the normal standard user build. Vali
 ## Known limitations
 
 This phase does not connect a live source registry, live extension provider, live local expert directory, marketplace provider, payment provider, location provider, camera flow, or backend action path.
+
+Normal-build browser activation is intentionally deferred until a complete local checkout can safely insert the loader line and run full local QA/browser validation.
 
 ## Recommended Phase 102
 
