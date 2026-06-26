@@ -100,6 +100,7 @@
     "qa:nexus-source-backed-response-runtime-contract": "node scripts/nexus-source-backed-response-runtime-contract-qa.js",
     "qa:nexus-public-data-connector-baseline": "node scripts/nexus-public-data-connector-baseline-qa.js",
     "qa:nexus-agriculture-public-source-contracts": "node scripts/nexus-agriculture-public-source-contracts-qa.js",
+    "qa:nexus-provider-clinic-public-directory-contracts": "node scripts/nexus-provider-clinic-public-directory-contracts-qa.js",
     "qa:nexus-intent-classifier": "node scripts/nexus-intent-classifier-qa.js",
     "qa:nexus-selected-tool-id": "node scripts/nexus-selected-tool-id-alignment-qa.js",
     "qa:nexus-low-risk-suggestion-display": "node scripts/nexus-low-risk-suggestion-display-plan-qa.js",
