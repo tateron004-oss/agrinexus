@@ -11,12 +11,27 @@ Current remote work through Phase 101B/101C readiness has added:
 - `scripts/nexus-phase-101-agriculture-support-response-card-runtime-qa.js`
 - `docs/NEXUS_PHASE_101B_STANDARD_USER_RUNTIME_WIRING_READINESS.md`
 - `scripts/nexus-phase-101b-standard-user-runtime-wiring-readiness-qa.js`
+- `scripts/apply-phase-101c-local-wiring.js`
+- `scripts/phase-101c-local-wiring-patcher-qa.js`
 
 The Phase 101 card module is present and runtime-capable, but the normal Standard User build still needs a safe local loader patch.
 
 ## Objective
 
 Wire `public/nexus-agriculture-support-response-card.js` into the normal Standard User build with the smallest safe change, add npm/QA-suite wiring, run full local-safe QA, and perform Standard User browser validation.
+
+## Fast safe path
+
+From a complete local checkout, run:
+
+```bash
+node --check scripts/apply-phase-101c-local-wiring.js
+node --check scripts/phase-101c-local-wiring-patcher-qa.js
+node scripts/phase-101c-local-wiring-patcher-qa.js
+node scripts/apply-phase-101c-local-wiring.js
+```
+
+Then inspect the diff carefully before running the full QA list below.
 
 ## Required implementation
 
@@ -71,9 +86,12 @@ node --check server.js
 node --check public/app.js
 node --check public/nexus-voice-demo-shell.js
 node --check public/nexus-agriculture-support-response-card.js
+node --check scripts/apply-phase-101c-local-wiring.js
+node --check scripts/phase-101c-local-wiring-patcher-qa.js
 node --check scripts/qa-suite.js
 node --check scripts/nexus-phase-101-agriculture-support-response-card-runtime-qa.js
 node --check scripts/nexus-phase-101b-standard-user-runtime-wiring-readiness-qa.js
+node scripts/phase-101c-local-wiring-patcher-qa.js
 node scripts/nexus-phase-101-agriculture-support-response-card-runtime-qa.js
 node scripts/nexus-phase-101b-standard-user-runtime-wiring-readiness-qa.js
 npm run qa:nexus-phase-101-agriculture-support-response-card-runtime
