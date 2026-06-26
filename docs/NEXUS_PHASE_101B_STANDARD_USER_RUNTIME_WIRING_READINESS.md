@@ -9,6 +9,7 @@ Phase 101 added the agriculture support response-card runtime module. Phase 101B
 - The module can build and render a non-executing agriculture support card when loaded.
 - The module exports a Node-compatible API for deterministic QA.
 - The module installs browser listeners only after it is loaded.
+- A Codex/local checkout continuation prompt now exists at `docs/NEXUS_PHASE_101C_LOCAL_CHECKOUT_IMPLEMENTATION_PROMPT.md`.
 
 ## Important boundary
 
@@ -70,7 +71,7 @@ This repository was being updated through the GitHub contents/tree connector rat
 
 ## Recommended next step
 
-Phase 101C should perform the local normal-build loader insertion and package/QA-suite wiring, then run:
+Use `docs/NEXUS_PHASE_101C_LOCAL_CHECKOUT_IMPLEMENTATION_PROMPT.md` in Codex/local checkout to perform the normal-build loader insertion and package/QA-suite wiring, then run:
 
 ```bash
 git diff --check
