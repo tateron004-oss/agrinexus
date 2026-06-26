@@ -330,6 +330,7 @@
     "qa:nexus-sprint-c8-source-backed-agriculture-visible-preview-mapper": "node scripts/nexus-sprint-c8-source-backed-agriculture-visible-preview-mapper-qa.js",
     "qa:nexus-sprint-c9-source-backed-agriculture-runtime-mapping-browser-validation-plan": "node scripts/nexus-sprint-c9-source-backed-agriculture-runtime-mapping-browser-validation-plan-qa.js",
     "qa:nexus-sprint-c10-source-backed-agriculture-default-off-wiring-readiness-audit": "node scripts/nexus-sprint-c10-source-backed-agriculture-default-off-wiring-readiness-audit-qa.js",
+    "qa:nexus-sprint-c11-source-backed-agriculture-default-off-runtime-wiring-contract": "node scripts/nexus-sprint-c11-source-backed-agriculture-default-off-runtime-wiring-contract-qa.js",
     "qa:nexus-phase-105-preview-only-autonomous-runtime-integration-plan": "node scripts/nexus-phase-105-preview-only-autonomous-runtime-integration-plan-qa.js"
   },
   "dependencies": {
