@@ -285,7 +285,8 @@
     "qa:nexus-farmer-mode-readiness-contract": "node scripts/nexus-farmer-mode-readiness-contract-qa.js",
     "qa:nexus-rural-health-mode-readiness-contract": "node scripts/nexus-rural-health-mode-readiness-contract-qa.js",
     "qa:nexus-telehealth-mode-readiness-contract": "node scripts/nexus-telehealth-mode-readiness-contract-qa.js",
-    "qa:nexus-pharmacy-mode-readiness-contract": "node scripts/nexus-pharmacy-mode-readiness-contract-qa.js"
+    "qa:nexus-pharmacy-mode-readiness-contract": "node scripts/nexus-pharmacy-mode-readiness-contract-qa.js",
+    "qa:nexus-mobile-clinic-mode-readiness-contract": "node scripts/nexus-mobile-clinic-mode-readiness-contract-qa.js"
   },
   "dependencies": {
     "pg": "^8.13.1"
