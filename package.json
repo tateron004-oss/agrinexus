@@ -165,6 +165,7 @@
     "qa:nexus-emergency-handoff-readiness-contract": "node scripts/nexus-emergency-handoff-readiness-contract-qa.js",
     "qa:nexus-action-reversal-followup-readiness-contract": "node scripts/nexus-action-reversal-followup-readiness-contract-qa.js",
     "qa:nexus-long-term-memory-readiness-contract": "node scripts/nexus-long-term-memory-readiness-contract-qa.js",
+    "qa:nexus-user-profile-readiness-contract": "node scripts/nexus-user-profile-readiness-contract-qa.js",
     "qa:all-safe": "node scripts/qa-suite.js all-safe",
     "smoke": "node scripts/smoke.js",
     "learning:translation-smoke": "node scripts/learning-translation-smoke.js",
