@@ -126,6 +126,7 @@
     "qa:nexus-community-service-org-connector-contract": "node scripts/nexus-community-service-org-connector-contract-qa.js",
     "qa:nexus-high-risk-provider-boundary-contract": "node scripts/nexus-high-risk-provider-boundary-contract-qa.js",
     "qa:nexus-identity-foundation-contract": "node scripts/nexus-identity-foundation-contract-qa.js",
+    "qa:nexus-consent-center-contract": "node scripts/nexus-consent-center-contract-qa.js",
     "qa:nexus-intent-classifier": "node scripts/nexus-intent-classifier-qa.js",
     "qa:nexus-selected-tool-id": "node scripts/nexus-selected-tool-id-alignment-qa.js",
     "qa:nexus-low-risk-suggestion-display": "node scripts/nexus-low-risk-suggestion-display-plan-qa.js",
