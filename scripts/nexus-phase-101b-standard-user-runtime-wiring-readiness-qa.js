@@ -66,6 +66,7 @@ assert(phase101.buildAgricultureSupportCard("Call an agronomist") === null, "cal
 ].forEach(forbidden => assert(!moduleSource.includes(forbidden), `Phase 101 module must still avoid ${forbidden}.`));
 
 const loaderPresent = index.includes("nexus-agriculture-support-response-card.js");
-assert(!loaderPresent, "This readiness guard expects Phase 101C to perform the actual index.html loader insertion, not Phase 101B.");
+assert(loaderPresent, "Phase 101C must insert the agriculture support card loader into public/index.html.");
+assert(index.indexOf("nexus-agriculture-support-response-card.js") < index.indexOf("/app.js?v=nexus-behavior-305"), "Phase 101 loader must appear before app.js.");
 
 console.log("[nexus-phase-101b-standard-user-runtime-wiring-readiness-qa] passed");

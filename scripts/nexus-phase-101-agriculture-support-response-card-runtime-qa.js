@@ -84,6 +84,17 @@ assert(verifiedCard.sourceStatus.label === "source-backed guidance", "source-bac
   "navigator.sendBeacon"
 ].forEach(forbidden => assert(!moduleSource.includes(forbidden), `module must not include forbidden runtime side effect: ${forbidden}`));
 
+assert(moduleSource.includes("runtimeDoc.addEventListener(\"click\", event =>")
+  && moduleSource.includes("if (target.closest('[data-caption-action=\"send\"]')) run(readPrompt(\"caption\"));")
+  && moduleSource.includes("}, true);"), "runtime listener must capture caption Send before existing app handlers clear the prompt.");
+assert(moduleSource.includes("runtimeDoc.getElementById(\"globalCommandInput\")")
+  && moduleSource.includes("if (target.closest(\"#globalRunBtn\")) run(readPrompt(\"global\"));")
+  && moduleSource.includes("event.target.id === \"globalCommandInput\""), "runtime listener must support the visible Standard User Ask Nexus global command path.");
+assert(moduleSource.includes("clearExistingCards")
+  && moduleSource.includes("[data-nexus-phase-101-agriculture-card]")
+  && moduleSource.includes("setTimeout(() => renderPrompt(prompt), 120)")
+  && moduleSource.includes("setTimeout(() => renderPrompt(prompt), 600)"), "runtime listener must clear stale cards and repaint after normal app UI routing.");
+
 [
   "general guidance",
   "source-backed guidance",

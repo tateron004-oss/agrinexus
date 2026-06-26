@@ -154,10 +154,18 @@
     if (runtimeDoc.documentElement.getAttribute("data-nexus-phase-101-agriculture-installed") === "true") return Object.freeze({ installed: true, reason: "already_installed" });
     runtimeDoc.documentElement.setAttribute("data-nexus-phase-101-agriculture-installed", "true");
     const readPrompt = source => {
-      const input = source === "caption" ? runtimeDoc.getElementById("userCaptionInput") : runtimeDoc.getElementById("jarvisCommandInput");
+      const input = source === "caption"
+        ? runtimeDoc.getElementById("userCaptionInput")
+        : source === "global"
+          ? runtimeDoc.getElementById("globalCommandInput")
+          : runtimeDoc.getElementById("jarvisCommandInput");
       return input ? input.value : "";
     };
-    const run = prompt => {
+    const clearExistingCards = () => {
+      runtimeDoc.querySelectorAll("[data-nexus-phase-101-agriculture-card]").forEach(existing => existing.remove());
+    };
+    const renderPrompt = prompt => {
+      clearExistingCards();
       const target = runtimeDoc.getElementById("jarvisInsightPanel") || runtimeDoc.getElementById("userWorkspace") || runtimeDoc.getElementById("mainContent");
       const result = renderAgricultureSupportCard(prompt, target);
       if (result) {
@@ -165,15 +173,24 @@
         if (status) status.textContent = "Agriculture support review prepared. No action has been taken.";
       }
     };
+    const run = prompt => {
+      renderPrompt(prompt);
+      if (typeof setTimeout === "function") {
+        setTimeout(() => renderPrompt(prompt), 120);
+        setTimeout(() => renderPrompt(prompt), 600);
+      }
+    };
     runtimeDoc.addEventListener("click", event => {
       const target = event.target;
       if (!target || !target.closest) return;
       if (target.closest("#jarvisRunBtn")) run(readPrompt("jarvis"));
+      if (target.closest("#globalRunBtn")) run(readPrompt("global"));
       if (target.closest('[data-caption-action="send"]')) run(readPrompt("caption"));
-    });
+    }, true);
     runtimeDoc.addEventListener("keydown", event => {
       if (event.key === "Enter" && event.target && event.target.id === "jarvisCommandInput") run(readPrompt("jarvis"));
-    });
+      if (event.key === "Enter" && event.target && event.target.id === "globalCommandInput") run(readPrompt("global"));
+    }, true);
     return Object.freeze({ installed: true, reason: "runtime_listener_installed" });
   }
 

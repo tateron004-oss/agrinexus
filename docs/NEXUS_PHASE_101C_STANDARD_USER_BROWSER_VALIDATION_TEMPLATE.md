@@ -1,22 +1,23 @@
-# Nexus Phase 101C Standard User Browser Validation Template
+# Nexus Phase 101C Standard User Browser Validation
 
-Use this template after running `node scripts/apply-phase-101c-local-wiring.js`, all deterministic QA, and the normal Standard User build.
+Validation completed after running `node scripts/apply-phase-101c-local-wiring.js`, deterministic QA, and the normal Standard User build.
 
-## Build under validation
+## Build Under Validation
 
-- Branch:
-- Local HEAD:
-- Remote HEAD before validation:
+- Branch: `main`
+- Local HEAD before Phase 101C commit: `50fbdf3ac2be429ff4fda85dc6b0c4e26fdbead1`
+- Remote HEAD before validation: `50fbdf3ac2be429ff4fda85dc6b0c4e26fdbead1`
 - Command: `node server.js`
-- URL:
-- Browser:
-- OS:
-- Date/time:
-- Validator:
+- URL: `http://127.0.0.1:4182/`
+- Browser: Codex in-app browser, Chromium-based automation session
+- Viewport: 1280 x 720
+- OS: Windows
+- Date/time: 2026-06-26 09:57 America/Los_Angeles
+- Validator: Codex
 
-## Pre-validation checks
+## Pre-Validation Checks
 
-Record results:
+Passed before browser validation:
 
 ```bash
 git diff --check
@@ -24,109 +25,133 @@ node --check server.js
 node --check public/app.js
 node --check public/nexus-voice-demo-shell.js
 node --check public/nexus-agriculture-support-response-card.js
-node --check scripts/apply-phase-101c-local-wiring.js
-node --check scripts/phase-101c-local-wiring-patcher-qa.js
-node --check scripts/phase-101c-local-wiring-patcher-fixture-qa.js
-node --check scripts/phase-101c-post-wiring-validation-qa.js
 node --check scripts/qa-suite.js
 node --check scripts/nexus-phase-101-agriculture-support-response-card-runtime-qa.js
 node --check scripts/nexus-phase-101b-standard-user-runtime-wiring-readiness-qa.js
-node scripts/phase-101c-local-wiring-patcher-qa.js
-node scripts/phase-101c-local-wiring-patcher-fixture-qa.js
-node scripts/phase-101c-post-wiring-validation-qa.js
 node scripts/nexus-phase-101-agriculture-support-response-card-runtime-qa.js
 node scripts/nexus-phase-101b-standard-user-runtime-wiring-readiness-qa.js
-npm run qa:nexus-phase-101-agriculture-support-response-card-runtime
-npm run qa:nexus-phase-101b-standard-user-runtime-wiring-readiness
+npm.cmd run qa:nexus-phase-101-agriculture-support-response-card-runtime
+npm.cmd run qa:nexus-phase-101b-standard-user-runtime-wiring-readiness
 node scripts/qa-suite.js nexus-workforce
 node scripts/qa-suite.js all-safe
 ```
 
-## Standard User path
+Notes:
 
-- [ ] Normal Standard User build launches.
-- [ ] Start as User path opens.
-- [ ] No console errors on load.
-- [ ] No unexpected console warnings on load.
-- [ ] No permission prompt appears on load.
-- [ ] No location prompt appears on load.
-- [ ] No camera prompt appears on load.
-- [ ] No microphone prompt appears except existing explicit voice UI behavior.
-- [ ] No provider handoff appears on load.
-- [ ] No payment, marketplace, health, pharmacy, or emergency controls appear because of Phase 101C.
+- `git diff --check` passed with the existing `public/index.html` CRLF normalization warning only.
+- Raw `npm run ...` was blocked by the local PowerShell `npm.ps1` execution policy, so the equivalent Windows-safe `npm.cmd run ...` commands were used and passed.
 
-## Safe agriculture prompt validation
+## Standard User Path
 
-For each prompt, record whether the Phase 101 agriculture support card appears, its title, source status, confidence/freshness language, and no-execution disclosure.
+- [x] Normal Standard User build launches.
+- [x] Start as User path opens.
+- [x] Nexus is visible and usable.
+- [x] Phase 101 script tag is loaded before `app.js`.
+- [x] No console errors on load.
+- [x] No unexpected console warnings on load.
+- [x] No browser permission prompt appeared on load.
+- [x] No location prompt appeared on load.
+- [x] No camera prompt appeared on load.
+- [x] No provider handoff appeared on load.
+- [x] No payment, marketplace, health, pharmacy, or emergency controls appeared because of Phase 101C.
+
+Observation:
+
+- The existing voice/caption shell displayed a microphone-blocked status when Chrome voice fallback was unavailable. This did not appear as a browser permission prompt, console warning, or Phase 101C side effect.
+
+## Safe Agriculture Prompt Validation
+
+Each safe prompt was entered through the visible Standard User Ask Nexus path. The Phase 101 agriculture support card rendered as an informational review-only card.
 
 | Prompt | Card appears | Source status | No-execution disclosure | Console clean | Notes |
 |---|---:|---|---|---:|---|
-| My maize leaves are turning yellow |  |  |  |  |  |
-| My crops have spots on the leaves |  |  |  |  |  |
-| How do I improve irrigation? |  |  |  |  |  |
-| How do I prepare for drought? |  |  |  |  |  |
-| What should I do about pests eating my crops? |  |  |  |  |  |
-| I need help with crop issues |  |  |  |  |  |
+| My maize leaves are turning yellow | Yes | general guidance | Yes | Yes | Includes no-live-source lookup disclosure, no definitive diagnosis, local expert escalation, and chemical safety warning. |
+| My crops have spots on the leaves | Yes | general guidance | Yes | Yes | Existing app moved to review-oriented `#trade` context; no execution occurred. |
+| How do I improve irrigation? | Yes | general guidance | Yes | Yes | Card remained visible after normal route reflow. |
+| How do I prepare for drought? | Yes | general guidance | Yes | Yes | Card remained visible after normal route reflow. |
+| What should I do about pests eating my crops? | Yes | general guidance | Yes | Yes | Includes pest/crop stress review language and chemical safety warning. |
+| I need help with crop issues | Yes | general guidance | Yes | Yes | Includes review-only disabled action. |
 
-Expected for each safe prompt:
+Confirmed for each safe prompt:
 
-- Card title: `Agriculture Support Review`
-- Card is informational/review-only.
-- Source status is `general guidance` unless a real verified source contract is connected.
-- Confidence/freshness disclosure says no live source lookup was performed when no verified source exists.
+- Card title is `Agriculture Support Review`.
+- Card is informational and review-only.
+- Source status is `general guidance`.
+- Confidence/freshness disclosure states no live source lookup was performed.
 - Card does not claim a definitive diagnosis.
-- Card recommends local agriculture extension/local expert support for severe, spreading, or unclear issues.
-- Card includes chemical/pesticide/fertilizer safety warning.
+- Card recommends qualified local agriculture extension or local expert support for severe, spreading, or unclear issues.
+- Card includes pesticide/fertilizer/chemical safety guidance.
 - Card states no provider contacted, no message sent, no purchase made, no location shared, no appointment scheduled, and no payment or marketplace transaction started.
+- The only card action is disabled review-only UI.
 
-## Excluded/high-risk prompt validation
+## Excluded/High-Risk Prompt Validation
 
-For each prompt, record that no Phase 101 card appears and no action/permission/provider behavior is triggered.
+Each excluded prompt was entered on a clean Standard User page with zero existing Phase 101 agriculture support cards.
 
 | Prompt | Card blocked | No provider/contact action | No permission prompt | No navigation/payment/camera action | Console clean | Notes |
 |---|---:|---:|---:|---:|---:|---|
-| Call an agronomist |  |  |  |  |  |  |
-| Message the supplier |  |  |  |  |  |  |
-| Open WhatsApp |  |  |  |  |  |  |
-| Use my location |  |  |  |  |  |  |
-| Diagnose this plant disease from my camera |  |  |  |  |  |  |
-| Pay for seeds |  |  |  |  |  |  |
-| Apply pesticide now |  |  |  |  |  |  |
-| Emergency pesticide poisoning |  |  |  |  |  |  |
+| Call an agronomist | Yes | Yes | Yes | Yes | Yes | No Phase 101 card, no dialog, no action button. |
+| Message the supplier | Yes | Yes | Yes | Yes | Yes | No Phase 101 card, no dialog, no action button. |
+| Open WhatsApp | Yes | Yes | Yes | Yes | Yes | No Phase 101 card, no external handoff. |
+| Use my location | Yes | Yes | Yes | Yes | Yes | No location prompt or share action. |
+| Diagnose this plant disease from my camera | Yes | Yes | Yes | Yes | Yes | No camera permission, upload, or media flow. |
+| Pay for seeds | Yes | Yes | Yes | Yes | Yes | No payment or marketplace transaction. |
+| Apply pesticide now | Yes | Yes | Yes | Yes | Yes | No chemical instruction card or execution; existing route context changed without execution. |
+| Emergency pesticide poisoning | Yes | Yes | Yes | Yes | Yes | No emergency dispatch or health execution. |
 
-Expected for each excluded prompt:
+Targeted browser checks after the excluded prompt set:
 
-- No Phase 101 agriculture support card appears.
-- No provider contacted.
-- No message, call, WhatsApp, SMS, Telegram, or email created.
-- No appointment scheduled.
-- No marketplace transaction, purchase, or payment started.
-- No location/map permission requested.
-- No camera/photo/upload flow triggered.
-- No health, pharmacy, or emergency execution triggered.
+- Phase 101 card count remained `0`.
+- No `Agriculture Support Review` title was present.
+- No visible permission/provider/payment/camera/emergency modal appeared.
+- No active buttons such as call now, send message, open WhatsApp, pay now, buy now, open camera, share location, or dispatch appeared.
+- No JavaScript dialog appeared.
+- Browser URL remained local `http://127.0.0.1:4182/...`.
+- Console warnings/errors: none.
 
-## Network/storage side-effect check
+## Network/Storage Side-Effect Check
 
-Record browser devtools observations:
+Observed and verified:
 
-- [ ] No live source lookup triggered by Phase 101C.
-- [ ] No provider API call triggered by Phase 101C.
-- [ ] No payment/marketplace API call triggered by Phase 101C.
-- [ ] No location/map request triggered by Phase 101C.
-- [ ] No camera/media request triggered by Phase 101C.
-- [ ] No unexpected localStorage/sessionStorage write from Phase 101C.
+- [x] No live source lookup was triggered by Phase 101C.
+- [x] No provider API call was triggered by Phase 101C.
+- [x] No payment/marketplace API call was triggered by Phase 101C.
+- [x] No location/map permission request was triggered by Phase 101C.
+- [x] No camera/media request was triggered by Phase 101C.
+- [x] No browser console warning/error was introduced by Phase 101C.
+- [x] Static runtime QA confirms the Phase 101 module does not include `fetch(`, `XMLHttpRequest`, geolocation, media capture, `PaymentRequest`, `navigator.sendBeacon`, `window.open`, `location.href`, `tel:`, `mailto:`, or `localStorage.setItem`.
 
-## Pass/fail conclusion
+Automation caveat:
 
-- Result: PASS / FAIL
-- Blocking issues:
+- The in-app browser read-only evaluation context did not expose `window.localStorage`, `window.sessionStorage`, or `window.navigator.userAgent` for direct enumeration. No storage-visible UI behavior appeared, and deterministic QA verifies the Phase 101 module has no storage write path.
+
+## Fixes Made During Validation
+
+Browser validation found that the initial local wiring loaded the Phase 101 module, but the visible Standard User caption/global command paths could clear or re-render the prompt target before the review-only card remained visible.
+
+Narrow runtime fix:
+
+- `public/nexus-agriculture-support-response-card.js` now listens in capture phase for caption Send, global Ask Nexus Run command, and Enter in the global/Jarvis command inputs.
+- It clears only existing Phase 101 agriculture cards before rendering a new eligible card.
+- It repaints after normal app route/UI reflow at 120 ms and 600 ms so eligible irrigation/drought prompts remain visible.
+- It does not add fetch, storage, permissions, navigation, provider handoff, payments, calls, messages, camera, location, health, pharmacy, marketplace, or emergency behavior.
+
+QA guard update:
+
+- `scripts/nexus-phase-101-agriculture-support-response-card-runtime-qa.js` now verifies capture-phase rendering, visible Standard User global command support, self-clearing stale cards, and post-route repaint behavior.
+
+## Pass/Fail Conclusion
+
+- Result: PASS
+- Blocking issues: None after the narrow runtime fix.
 - Non-blocking observations:
-- Screenshots captured:
-- Final local HEAD:
-- Final remote HEAD:
-- Final `git status --short`:
-- Remaining unpushed commits:
+  - Existing voice shell showed a browser voice fallback/microphone-blocked status, with no console warning/error and no permission prompt.
+  - Some safe agriculture prompts move the existing app into `#trade`; this is existing review-oriented app routing and did not create provider/payment/location/camera/marketplace execution.
+- Screenshots captured: none
+- Final local HEAD before commit: `50fbdf3ac2be429ff4fda85dc6b0c4e26fdbead1`
+- Final remote HEAD before commit: `50fbdf3ac2be429ff4fda85dc6b0c4e26fdbead1`
+- Remaining unpushed commits before commit: none
 
-## Recommended next phase
+## Recommended Next Phase
 
-If this validation passes, proceed to Phase 102: agriculture source registry hardening and truthful source/freshness/confidence handling while preserving the same no-execution boundary.
+Phase 102: agriculture source registry hardening and truthful source/freshness/confidence handling while preserving the same no-execution boundary.

@@ -52,9 +52,23 @@ function updatePackageScripts() {
 }
 
 function addScriptAfterAnchor(source, anchor, script) {
-  if (source.includes(`"${script}"`)) return source;
   if (!source.includes(`"${anchor}"`)) fail(`scripts/qa-suite.js missing anchor ${anchor}.`);
-  return source.replace(`"${anchor}"`, `"${anchor}",\n    "${script}"`);
+  const scriptToken = `"${script}"`;
+  const anchorToken = `"${anchor}"`;
+  const newline = source.includes("\r\n") ? "\r\n" : "\n";
+  const lines = source.split(/\r?\n/).filter(line => !line.includes(scriptToken));
+  const updated = [];
+  let insertions = 0;
+  for (const line of lines) {
+    updated.push(line);
+    if (line.includes(anchorToken)) {
+      const indent = line.match(/^\s*/)?.[0] || "    ";
+      updated.push(`${indent}${scriptToken},`);
+      insertions += 1;
+    }
+  }
+  if (insertions < 2) fail(`expected to insert ${script} into nexus-workforce and all-safe, inserted ${insertions}.`);
+  return updated.join(newline);
 }
 
 function updateQaSuite() {

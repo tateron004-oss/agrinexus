@@ -307,7 +307,9 @@
     "qa:nexus-regional-country-launch-kits-readiness-contract": "node scripts/nexus-regional-country-launch-kits-readiness-contract-qa.js",
     "qa:nexus-partner-onboarding-operations-readiness-contract": "node scripts/nexus-partner-onboarding-operations-readiness-contract-qa.js",
     "qa:nexus-production-readiness-go-live-readiness-contract": "node scripts/nexus-production-readiness-go-live-readiness-contract-qa.js",
-    "qa:nexus-100-completion-system-audit-readiness": "node scripts/nexus-100-completion-system-audit-readiness-qa.js"
+    "qa:nexus-100-completion-system-audit-readiness": "node scripts/nexus-100-completion-system-audit-readiness-qa.js",
+    "qa:nexus-phase-101-agriculture-support-response-card-runtime": "node scripts/nexus-phase-101-agriculture-support-response-card-runtime-qa.js",
+    "qa:nexus-phase-101b-standard-user-runtime-wiring-readiness": "node scripts/nexus-phase-101b-standard-user-runtime-wiring-readiness-qa.js"
   },
   "dependencies": {
     "pg": "^8.13.1"
