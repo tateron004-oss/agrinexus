@@ -16,6 +16,12 @@ The normal Standard User build must not be considered fully browser-active until
 
 The safe wiring target is the normal `public/index.html` script stack, or an already-loaded shell file if edited from a full local checkout. Do not replace `public/app.js`, `server.js`, or other large runtime files from partial fetched chunks.
 
+## Phase 101C connector constraint
+
+The continuation attempt inspected the loaded voice shell as a possible smaller wiring point. The safest implementation still requires editing a currently loaded file or `public/index.html` from a complete local checkout. Because the GitHub connector exposes whole-file replacement and not patch insertion, replacing a large loaded runtime file from partial chunks would create more risk than value.
+
+Therefore Phase 101C is intentionally held as a local-checkout implementation step rather than a blind remote replacement.
+
 ## Required normal-build loader insertion
 
 Preferred `public/index.html` insertion point:
@@ -60,7 +66,7 @@ Run the normal standard user build and validate:
 
 ## Why this phase is separate
 
-This repository was being updated through the GitHub contents/tree connector rather than a local checkout. Because the normal runtime files are large and safety-critical, this phase avoids replacing `public/index.html`, `public/app.js`, or `server.js` from partial content. The correct next implementation step is a local checkout patch that inserts the loader line, wires the package alias, wires the QA suite, and then runs full local QA plus browser validation.
+This repository was being updated through the GitHub contents/tree connector rather than a local checkout. Because the normal runtime files are large and safety-critical, this phase avoids replacing `public/index.html`, `public/app.js`, `public/nexus-voice-demo-shell.js`, or `server.js` from partial content. The correct next implementation step is a local checkout patch that inserts the loader line, wires the package alias, wires the QA suite, and then runs full local QA plus browser validation.
 
 ## Recommended next step
 
