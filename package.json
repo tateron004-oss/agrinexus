@@ -113,6 +113,7 @@
     "qa:nexus-agriculture-extension-connector-contract": "node scripts/nexus-agriculture-extension-connector-contract-qa.js",
     "qa:nexus-farmer-advisory-connector-contract": "node scripts/nexus-farmer-advisory-connector-contract-qa.js",
     "qa:nexus-crop-pest-disease-source-connector-contract": "node scripts/nexus-crop-pest-disease-source-connector-contract-qa.js",
+    "qa:nexus-market-price-source-connector-contract": "node scripts/nexus-market-price-source-connector-contract-qa.js",
     "qa:nexus-intent-classifier": "node scripts/nexus-intent-classifier-qa.js",
     "qa:nexus-selected-tool-id": "node scripts/nexus-selected-tool-id-alignment-qa.js",
     "qa:nexus-low-risk-suggestion-display": "node scripts/nexus-low-risk-suggestion-display-plan-qa.js",
