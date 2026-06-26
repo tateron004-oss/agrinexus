@@ -158,6 +158,7 @@ const suites = {
     "scripts/nexus-communications-provider-execution-readiness-gate-qa.js",
     "scripts/nexus-communications-prepared-action-preview-contract-qa.js",
     "scripts/nexus-communications-no-execution-regression-contract-qa.js",
+    "scripts/nexus-communications-approval-audit-handoff-contract-qa.js",
     "scripts/nexus-tool-registry-runtime-qa.js",
     "scripts/nexus-intent-classifier-qa.js",
     "scripts/nexus-policy-engine-qa.js",
@@ -225,7 +226,8 @@ suites["all-safe"] = unique([
   "scripts/nexus-provider-contact-preparation-contract-qa.js",
   "scripts/nexus-communications-provider-execution-readiness-gate-qa.js",
   "scripts/nexus-communications-prepared-action-preview-contract-qa.js",
-  "scripts/nexus-communications-no-execution-regression-contract-qa.js"
+  "scripts/nexus-communications-no-execution-regression-contract-qa.js",
+  "scripts/nexus-communications-approval-audit-handoff-contract-qa.js"
 ]);
 
 function unique(items) {
