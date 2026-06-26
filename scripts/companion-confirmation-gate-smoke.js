@@ -96,6 +96,7 @@ async function command(prompt) {
 
   try {
     await waitForServer();
+    await wait(250);
     await call("/api/login", { email: "user@agrinexus.org", password: "User2026!" });
 
     for (const [prompt, type] of gatedCases) {

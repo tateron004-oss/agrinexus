@@ -60,6 +60,7 @@ async function call(route, body) {
 
   try {
     await waitForServer();
+    await wait(250);
     await call("/api/login", { email: "demo@agrinexus.org", password: "Prototype2026!" });
     const communicationsReadiness = await call("/api/communications/execution-readiness");
     assert.strictEqual(communicationsReadiness.total, 3, "Communications readiness should cover phone, SMS, and WhatsApp");
