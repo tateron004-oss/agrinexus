@@ -117,6 +117,7 @@
     "qa:nexus-agritrade-partner-connector-contract": "node scripts/nexus-agritrade-partner-connector-contract-qa.js",
     "qa:nexus-clinic-provider-connector-contract": "node scripts/nexus-clinic-provider-connector-contract-qa.js",
     "qa:nexus-telehealth-provider-connector-contract": "node scripts/nexus-telehealth-provider-connector-contract-qa.js",
+    "qa:nexus-mobile-clinic-operator-connector-contract": "node scripts/nexus-mobile-clinic-operator-connector-contract-qa.js",
     "qa:nexus-intent-classifier": "node scripts/nexus-intent-classifier-qa.js",
     "qa:nexus-selected-tool-id": "node scripts/nexus-selected-tool-id-alignment-qa.js",
     "qa:nexus-low-risk-suggestion-display": "node scripts/nexus-low-risk-suggestion-display-plan-qa.js",
