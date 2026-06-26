@@ -50,7 +50,7 @@ assert(phase101.buildAgricultureSupportCard("Call an agronomist") === null, "cal
   "Wire `public/nexus-agriculture-support-response-card.js` into the normal Standard User build",
   "<script src=\"/nexus-agriculture-support-response-card.js?v=nexus-phase-101\"></script>",
   "npm run qa:nexus-phase-101-agriculture-support-response-card-runtime",
-  "Standard User browser validation"
+  "Browser validation"
 ].forEach(required => assert(phase101cPrompt.includes(required), `Phase 101C prompt must include ${required}.`));
 
 [
