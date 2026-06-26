@@ -109,6 +109,7 @@
     "qa:nexus-partner-data-intake-contract": "node scripts/nexus-partner-data-intake-contract-qa.js",
     "qa:nexus-provider-onboarding-portal-contract": "node scripts/nexus-provider-onboarding-portal-contract-qa.js",
     "qa:nexus-source-verification-contract": "node scripts/nexus-source-verification-contract-qa.js",
+    "qa:nexus-multilingual-data-labeling-contract": "node scripts/nexus-multilingual-data-labeling-contract-qa.js",
     "qa:nexus-intent-classifier": "node scripts/nexus-intent-classifier-qa.js",
     "qa:nexus-selected-tool-id": "node scripts/nexus-selected-tool-id-alignment-qa.js",
     "qa:nexus-low-risk-suggestion-display": "node scripts/nexus-low-risk-suggestion-display-plan-qa.js",
