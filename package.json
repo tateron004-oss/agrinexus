@@ -478,6 +478,7 @@
     "qa:nexus-sprint-y2-rural-health-mode-feature-flag-contract": "node scripts/nexus-sprint-y2-rural-health-mode-feature-flag-contract-qa.js",
     "qa:nexus-sprint-y3-rural-health-mode-flag-contract-harness": "node scripts/nexus-sprint-y3-rural-health-mode-flag-contract-harness-qa.js",
     "qa:nexus-sprint-y4-rural-health-mode-runtime-absence-regression-guard": "node scripts/nexus-sprint-y4-rural-health-mode-runtime-absence-regression-guard-qa.js",
+    "qa:nexus-sprint-y5-rural-health-mode-lane-closeout": "node scripts/nexus-sprint-y5-rural-health-mode-lane-closeout-qa.js",
     "qa:nexus-phase-105-preview-only-autonomous-runtime-integration-plan": "node scripts/nexus-phase-105-preview-only-autonomous-runtime-integration-plan-qa.js"
   },
   "dependencies": {
