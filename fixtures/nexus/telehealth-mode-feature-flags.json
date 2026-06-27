@@ -1,0 +1,98 @@
+[
+  {
+    "fixtureId": "telehealth-mode-default-off",
+    "input": {},
+    "expected": {
+      "enabled": false,
+      "visibleUiAllowed": false,
+      "isVisible": false,
+      "noExecution": true
+    }
+  },
+  {
+    "fixtureId": "telehealth-mode-flag-on-visible-only",
+    "input": {
+      "enabled": true,
+      "visibleUiAllowed": true
+    },
+    "expected": {
+      "enabled": true,
+      "visibleUiAllowed": true,
+      "isVisible": true,
+      "noExecution": true
+    }
+  },
+  {
+    "fixtureId": "telehealth-mode-unsafe-authority-attempt",
+    "input": {
+      "enabled": true,
+      "visibleUiAllowed": true,
+      "telehealthModeReviewAllowed": true,
+      "telehealthAccessGuidancePreviewAllowed": true,
+      "providerDirectoryPreviewAllowed": true,
+      "clinicAccessPreviewAllowed": true,
+      "clinicianAvailabilityPreviewAllowed": true,
+      "pharmacySupportPreviewAllowed": true,
+      "mobileClinicSchedulePreviewAllowed": true,
+      "transportationToCarePreviewAllowed": true,
+      "telehealthModeRuntimeAllowed": true,
+      "liveTelehealthModeRuntimeAllowed": true,
+      "healthConnectorRuntimeAllowed": true,
+      "clinicConnectorRuntimeAllowed": true,
+      "telehealthConnectorRuntimeAllowed": true,
+      "providerConnectorRuntimeAllowed": true,
+      "clinicianConnectorRuntimeAllowed": true,
+      "pharmacyConnectorRuntimeAllowed": true,
+      "prescriptionRefillRuntimeAllowed": true,
+      "appointmentSchedulingAllowed": true,
+      "mobileClinicScheduleRuntimeAllowed": true,
+      "transportationDispatchAllowed": true,
+      "emergencyDispatchAllowed": true,
+      "medicalRecordsFhirRuntimeAllowed": true,
+      "medicalAdviceAllowed": true,
+      "diagnosisClaimAllowed": true,
+      "prescriptionInstructionAllowed": true,
+      "refillExecutionAllowed": true,
+      "providerContactAllowed": true,
+      "clinicianContactAllowed": true,
+      "locationSharingAllowed": true,
+      "cameraActivationAllowed": true,
+      "microphoneActivationAllowed": true,
+      "paymentExecutionAllowed": true,
+      "marketplaceTransactionAllowed": true,
+      "identityAccountProfileActionAllowed": true,
+      "communicationsExecutionAllowed": true,
+      "policyBypassAllowed": true,
+      "confirmationBypassAllowed": true,
+      "permissionBypassAllowed": true,
+      "firstTurnExecutionAllowed": true,
+      "laterTurnExecutionAllowed": true,
+      "standardUserTelehealthModeMutationAllowed": true,
+      "backendWriteAllowed": true,
+      "storageWriteAllowed": true,
+      "networkAllowed": true,
+      "auditWriteAllowed": true,
+      "executionAuthority": true,
+      "noExecution": false
+    },
+    "expected": {
+      "enabled": true,
+      "visibleUiAllowed": true,
+      "isVisible": true,
+      "noExecution": true
+    }
+  },
+  {
+    "fixtureId": "telehealth-mode-flag-on-without-visible-permission",
+    "input": {
+      "enabled": true,
+      "visibleUiAllowed": false
+    },
+    "expected": {
+      "enabled": true,
+      "visibleUiAllowed": false,
+      "isVisible": false,
+      "noExecution": true
+    }
+  }
+]
