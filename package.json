@@ -475,6 +475,7 @@
     "qa:nexus-sprint-x4-farmer-mode-runtime-absence-regression-guard": "node scripts/nexus-sprint-x4-farmer-mode-runtime-absence-regression-guard-qa.js",
     "qa:nexus-sprint-x5-farmer-mode-lane-closeout": "node scripts/nexus-sprint-x5-farmer-mode-lane-closeout-qa.js",
     "qa:nexus-sprint-y1-rural-health-mode-runtime-activation-readiness-gate": "node scripts/nexus-sprint-y1-rural-health-mode-runtime-activation-readiness-gate-qa.js",
+    "qa:nexus-sprint-y2-rural-health-mode-feature-flag-contract": "node scripts/nexus-sprint-y2-rural-health-mode-feature-flag-contract-qa.js",
     "qa:nexus-phase-105-preview-only-autonomous-runtime-integration-plan": "node scripts/nexus-phase-105-preview-only-autonomous-runtime-integration-plan-qa.js"
   },
   "dependencies": {
