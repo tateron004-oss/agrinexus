@@ -89,16 +89,21 @@ assert(!index.includes("data-nexus-renderer-mode=\"inert\""), "public/index.html
 assert(!index.includes("controlled-low-risk-renderer-card"), "public/index.html must not include visible renderer cards");
 assert(!index.includes("data-standard-user-low-risk-renderer"), "public/index.html must not include active Standard User renderer markers");
 
-for (const runtimeSource of [
-  ["public/app.js", app],
-  ["server.js", server]
-]) {
-  const [label, source] = runtimeSource;
-  assert(!source.includes(mountId), `${label} must not query or wire the hidden mount point in Phase 13L`);
-  assert(!source.includes("data-visible-renderer-enabled"), `${label} must not consume hidden renderer metadata in Phase 13L`);
-  assert(!source.includes("renderNexusLowRiskInertPreview"), `${label} must not invoke active renderer preview in Phase 13L`);
-  assert(!source.includes("buildNexusLowRiskInertRendererPrototype"), `${label} must not invoke renderer prototype builder in Phase 13L`);
-}
+assert(server.includes(mountId) === false, "server.js must not query or wire the hidden mount point");
+assert(server.includes("data-visible-renderer-enabled") === false, "server.js must not consume hidden renderer metadata");
+assert(server.includes("renderNexusLowRiskInertPreview") === false, "server.js must not invoke active renderer preview");
+assert(server.includes("buildNexusLowRiskInertRendererPrototype") === false, "server.js must not invoke renderer prototype builder");
+
+assert(app.includes("function paintControlledStagedActionPreview"), "public/app.js may only query the hidden mount through the Sprint D6 flag-gated staged preview painter");
+assert(app.includes(`$("#${mountId}")`), "public/app.js hidden mount query must remain scoped to the controlled staged preview painter");
+assert(app.includes('root.hidden = !html'), "public/app.js must keep the hidden mount hidden when staged preview html is empty");
+assert(app.includes('root.setAttribute("aria-hidden", html ? "false" : "true")'), "public/app.js must preserve aria-hidden control");
+assert(app.includes('root.dataset.visibleRendererEnabled = html ? "true" : "false"'), "public/app.js may update hidden renderer metadata only for flag-gated visibility state");
+assert(app.includes('root.dataset.executionAllowed = "false"'), "public/app.js must preserve no-execution mount metadata");
+assert(app.includes('root.dataset.providerHandoff = "false"'), "public/app.js must preserve no-provider-handoff mount metadata");
+assert(app.includes('root.dataset.permissionRequest = "false"'), "public/app.js must preserve no-permission-request mount metadata");
+assert(!app.includes("renderNexusLowRiskInertPreview"), "public/app.js must not invoke active renderer preview");
+assert(!app.includes("buildNexusLowRiskInertRendererPrototype"), "public/app.js must not invoke renderer prototype builder");
 
 assert(app.includes("function createNexusControlledLowRiskInertCardForTest"), "existing inert test helper must remain present");
 const helperDeclaration = app.indexOf("function createNexusControlledLowRiskInertCardForTest");

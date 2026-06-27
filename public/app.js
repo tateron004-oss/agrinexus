@@ -135,6 +135,7 @@ let latestObservedAgentActionMetadata = null;
 let observedAgentActionMetadataLog = [];
 let visibleLevelOneAgentActionSuggestion = null;
 let visibleControlledActionPreviewReadiness = null;
+let visibleControlledStagedActionPreview = null;
 let latestControlledActionConfirmationReadiness = null;
 let latestControlledActionNavigationReadiness = null;
 let controlledActionConfirmationPrototypeStatus = "";
@@ -400,6 +401,163 @@ function renderControlledActionPreview(readiness = visibleControlledActionPrevie
   `;
 }
 
+function isControlledStagedActionPreviewFlagEnabled(globalRef) {
+  // Sprint D6: explicit local/runtime test flag only. Default Standard User
+  // behavior remains off, and this flag never grants execution authority.
+  const root = globalRef || (typeof window !== "undefined" ? window : {});
+  const flagName = ["NEXUS", "CONTROLLED", "STAGED", "ACTIONS", "ENABLED"].join("_");
+  return Boolean(root && root[flagName] === true);
+}
+
+function buildControlledStagedActionPreviewFromReadiness(readiness = visibleControlledActionPreviewReadiness, options = {}) {
+  if (!isControlledStagedActionPreviewFlagEnabled(options.globalRef)) return null;
+  if (!isVisibleControlledActionPreviewReadiness(readiness)) return null;
+  const stagedActionMap = {
+    openTrainingResources: {
+      stagedActionId: "runtime-stage-agriculture-training-review",
+      stagedActionType: "agriculture.training.review",
+      title: "Review agriculture training options",
+      evidenceRequirement: "Use a verified training source packet before any source-backed training claim.",
+      sourcePacketRequirement: "Source packet required before presenting provider, enrollment, or course availability claims.",
+      createdFromPromptFamily: "agriculture-training",
+      safeUseNotes: "No enrollment, provider contact, message, payment, record change, or backend action has been taken.",
+      limitations: "Review-only staged preview. It does not register the user for training."
+    },
+    explainLearningTopic: {
+      stagedActionId: "runtime-stage-irrigation-learning-review",
+      stagedActionType: "agriculture.irrigation.learning.review",
+      title: "Review irrigation learning guidance",
+      evidenceRequirement: "Use a verified irrigation education packet before any source-backed claim.",
+      sourcePacketRequirement: "Source packet required before presenting localized irrigation guidance.",
+      createdFromPromptFamily: "irrigation-learning",
+      safeUseNotes: "No lesson record, farm operation, equipment purchase, provider contact, or backend action has been taken.",
+      limitations: "Review-only staged preview. It is educational and not site-specific engineering advice."
+    },
+    showFarmJobs: {
+      stagedActionId: "runtime-stage-farm-jobs-review",
+      stagedActionType: "workforce.farm_jobs.review",
+      title: "Review farm job pathway options",
+      evidenceRequirement: "Use verified workforce or training source packets before any opportunity claim.",
+      sourcePacketRequirement: "Source packet required before presenting provider, employer, or availability claims.",
+      createdFromPromptFamily: "farm-jobs",
+      safeUseNotes: "No application, employer contact, account change, message, or backend action has been taken.",
+      limitations: "Review-only staged preview. It does not apply for a job."
+    },
+    browseMarketplace: {
+      stagedActionId: "runtime-stage-agritrade-browse-review",
+      stagedActionType: "marketplace.agritrade.browse.review",
+      title: "Review AgriTrade browse options",
+      evidenceRequirement: "Use local marketplace context only; do not make live buyer, seller, price, or availability claims.",
+      sourcePacketRequirement: "Source packet required before source-backed marketplace guidance.",
+      createdFromPromptFamily: "agritrade-browse",
+      safeUseNotes: "No buy, sell, payment, message, order, shipping, listing, or account action has been taken.",
+      limitations: "Review-only staged preview. It does not create a listing or contact a buyer."
+    },
+    explainAgricultureHelp: {
+      stagedActionId: "runtime-stage-crop-issue-observation-review",
+      stagedActionType: "agriculture.crop_issue.observation_review",
+      title: "Review crop issue observations",
+      evidenceRequirement: "Use a verified agriculture support packet before any source-backed crop guidance.",
+      sourcePacketRequirement: "Source packet required before presenting localized crop support claims.",
+      createdFromPromptFamily: "crop-issue-observation",
+      safeUseNotes: "No camera, location, provider contact, diagnosis, crop record, or backend action has been taken.",
+      limitations: "Review-only staged preview. It cannot diagnose crop disease or prescribe treatments."
+    },
+    openFieldSupportGuidance: {
+      stagedActionId: "runtime-stage-field-support-review",
+      stagedActionType: "agriculture.field_support.review",
+      title: "Review field support guidance",
+      evidenceRequirement: "Use a verified field support packet before any source-backed service guidance.",
+      sourcePacketRequirement: "Source packet required before presenting localized field support claims.",
+      createdFromPromptFamily: "field-support",
+      safeUseNotes: "No dispatch, schedule, call, location request, provider contact, or backend action has been taken.",
+      limitations: "Review-only staged preview. It does not request field service."
+    }
+  };
+  const staged = stagedActionMap[String(readiness.actionId || "").trim()];
+  if (!staged) return null;
+  const summary = String(readiness.safePreviewSummary || "").replace(/\s+/g, " ").trim();
+  const blockedExecutionChannels = [
+    "call",
+    "message",
+    "payment",
+    "location",
+    "camera",
+    "provider",
+    "emergency",
+    "medical",
+    "pharmacy",
+    "backend-write",
+    "pending-action"
+  ];
+  const combined = `${staged.title} ${summary} ${staged.safeUseNotes} ${staged.limitations}`;
+  if (/\b(opened|started|submitted|called|paid|verified|permission granted|diagnose|dispatch|schedule|buy|sell|checkout|login|identity|location shared|camera activated|telehealth started|message sent)\b/i.test(combined)) return null;
+  return Object.freeze({
+    schemaVersion: "nexus.sprintD6.controlledStagedActionPreview.v1",
+    sourcePreviewReadinessVersion: readiness.schemaVersion,
+    ...staged,
+    summary,
+    reviewOnly: true,
+    requiresUserApproval: true,
+    executionAuthority: false,
+    riskTier: readiness.previewRiskLevel || "low",
+    blockedExecutionChannels,
+    providerHandoffAllowed: false,
+    pendingActionCreationAllowed: false,
+    backendWriteAllowed: false,
+    networkSideEffectAllowed: false,
+    storageSideEffectAllowed: false,
+    permissionRequestAllowed: false,
+    externalNavigationAllowed: false,
+    visibleWhenFlagOnOnly: true
+  });
+}
+
+function isVisibleControlledStagedActionPreview(preview = visibleControlledStagedActionPreview) {
+  if (!preview || typeof preview !== "object") return false;
+  if (preview.schemaVersion !== "nexus.sprintD6.controlledStagedActionPreview.v1") return false;
+  if (preview.reviewOnly !== true || preview.requiresUserApproval !== true) return false;
+  if (preview.executionAuthority !== false) return false;
+  if (preview.providerHandoffAllowed !== false || preview.pendingActionCreationAllowed !== false || preview.backendWriteAllowed !== false) return false;
+  if (preview.networkSideEffectAllowed !== false || preview.storageSideEffectAllowed !== false || preview.permissionRequestAllowed !== false || preview.externalNavigationAllowed !== false) return false;
+  if (!["info", "low"].includes(String(preview.riskTier || ""))) return false;
+  if (!Array.isArray(preview.blockedExecutionChannels)) return false;
+  const requiredBlocked = ["call", "message", "payment", "location", "camera", "provider", "emergency", "medical", "pharmacy", "backend-write", "pending-action"];
+  if (!requiredBlocked.every(channel => preview.blockedExecutionChannels.includes(channel))) return false;
+  const text = `${preview.title || ""} ${preview.summary || ""} ${preview.safeUseNotes || ""} ${preview.limitations || ""}`;
+  if (/\b(opened|started|submitted|called|paid|verified|permission granted|diagnose|dispatch|schedule|buy|sell|checkout|login|identity|location shared|camera activated|telehealth started|message sent)\b/i.test(text)) return false;
+  return Boolean(String(preview.title || "").trim() && String(preview.summary || "").trim());
+}
+
+function renderControlledStagedActionPreview(preview = visibleControlledStagedActionPreview) {
+  if (!isVisibleControlledStagedActionPreview(preview)) return "";
+  return `
+    <section class="nexus-controlled-staged-action-preview" data-nexus-controlled-staged-action-preview="true" data-execution-authority="false" data-provider-handoff="false" data-pending-action-creation="false" data-network-side-effect="false" aria-label="Nexus staged action review-only preview">
+      <span class="nexus-controlled-staged-action-label">Staged review</span>
+      <strong class="nexus-controlled-staged-action-title">${htmlSafe(preview.title)}</strong>
+      <span class="nexus-controlled-staged-action-copy">${htmlSafe(preview.summary)}</span>
+      <span class="nexus-controlled-staged-action-copy"><strong>Evidence &amp; Verification:</strong> ${htmlSafe(preview.evidenceRequirement)}</span>
+      <span class="nexus-controlled-staged-action-copy"><strong>Source packet:</strong> ${htmlSafe(preview.sourcePacketRequirement)}</span>
+      <span class="nexus-controlled-staged-action-note">${htmlSafe(preview.safeUseNotes)}</span>
+      <span class="nexus-controlled-staged-action-note">${htmlSafe(preview.limitations)}</span>
+      <span class="nexus-controlled-staged-action-note">Review only - no action has been taken.</span>
+    </section>
+  `;
+}
+
+function paintControlledStagedActionPreview() {
+  const root = $("#nexus-controlled-low-risk-renderer-root");
+  if (!root) return;
+  const html = renderControlledStagedActionPreview();
+  root.innerHTML = html;
+  root.hidden = !html;
+  root.setAttribute("aria-hidden", html ? "false" : "true");
+  root.dataset.visibleRendererEnabled = html ? "true" : "false";
+  root.dataset.executionAllowed = "false";
+  root.dataset.providerHandoff = "false";
+  root.dataset.permissionRequest = "false";
+}
+
 function isVisibleControlledActionConfirmationPrototypeReadiness(readiness = {}) {
   if (!readiness || typeof readiness !== "object") return false;
   if (readiness.schemaVersion !== "controlled-action-confirmation-readiness.v1") return false;
@@ -469,6 +627,7 @@ function paintControlledActionPreview() {
     element.innerHTML = html;
     element.classList.toggle("hidden", !html);
   });
+  paintControlledStagedActionPreview();
   paintControlledActionConfirmationPrototype();
 }
 
@@ -476,6 +635,7 @@ function clearControlledActionPreview(reason = "reset") {
   // Phase 8O: visible previews are informational and must not persist across
   // unrelated commands, blocked metadata, module navigation, or assistant reset.
   visibleControlledActionPreviewReadiness = null;
+  visibleControlledStagedActionPreview = null;
   latestControlledActionConfirmationReadiness = null;
   latestControlledActionNavigationReadiness = null;
   controlledActionConfirmationPrototypeStatus = "";
@@ -717,6 +877,9 @@ function paintLocalLevelOneSuggestionForSimpleUserIntent(intent = {}, command = 
   const controlledActionPreviewReadiness = buildControlledActionPreviewReadinessFromMetadata(controlledActionMetadata);
   visibleControlledActionPreviewReadiness = isVisibleControlledActionPreviewReadiness(controlledActionPreviewReadiness)
     ? controlledActionPreviewReadiness
+    : null;
+  visibleControlledStagedActionPreview = visibleControlledActionPreviewReadiness
+    ? buildControlledStagedActionPreviewFromReadiness(visibleControlledActionPreviewReadiness)
     : null;
   latestControlledActionConfirmationReadiness = visibleControlledActionPreviewReadiness
     ? buildControlledActionConfirmationReadinessFromPreview(visibleControlledActionPreviewReadiness)
@@ -1155,6 +1318,9 @@ function observeAgentActionMetadata(response = {}, context = {}) {
   clearControlledActionPreview("backend-preview-readiness-replaced");
   visibleControlledActionPreviewReadiness = isVisibleControlledActionPreviewReadiness(controlledActionPreviewReadiness)
     ? controlledActionPreviewReadiness
+    : null;
+  visibleControlledStagedActionPreview = visibleControlledActionPreviewReadiness
+    ? buildControlledStagedActionPreviewFromReadiness(visibleControlledActionPreviewReadiness)
     : null;
   latestControlledActionConfirmationReadiness = visibleControlledActionPreviewReadiness
     ? controlledActionConfirmationReadiness

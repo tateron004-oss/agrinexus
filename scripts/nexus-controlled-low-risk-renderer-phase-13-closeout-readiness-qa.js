@@ -183,7 +183,12 @@ assert(!index.match(/<script[^>]+nexus-controlled-low-risk-renderer/i), "public/
 assert(!server.match(new RegExp(`${flagName}\\s*:\\s*true`)), "server.js must not expose enableControlledLowRiskRendererVisibleUi: true");
 assert(!app.includes(flagName), "public/app.js must not consume the future renderer flag");
 assert(!server.includes(flagName), "server.js must not expose the future renderer flag");
-assert(!app.includes(mountId), "public/app.js must not query the hidden mount point");
+assert(app.includes("function paintControlledStagedActionPreview"), "public/app.js may only query the hidden mount through the Sprint D6 flag-gated staged preview painter");
+assert(app.includes(`$("#${mountId}")`), "public/app.js hidden mount query must remain scoped to controlled staged preview painting");
+assert(app.includes('root.hidden = !html'), "public/app.js must keep the hidden mount hidden when no flag-gated preview exists");
+assert(app.includes('root.dataset.executionAllowed = "false"'), "public/app.js must preserve no-execution mount metadata");
+assert(app.includes('root.dataset.providerHandoff = "false"'), "public/app.js must preserve no-provider-handoff mount metadata");
+assert(app.includes('root.dataset.permissionRequest = "false"'), "public/app.js must preserve no-permission-request mount metadata");
 assert(!server.includes(mountId), "server.js must not reference the hidden mount point");
 
 assert(packageJson.includes(`"qa:nexus-controlled-low-risk-renderer-phase-13-closeout-readiness": "node scripts/${scriptName}"`), "package.json must expose Phase 13X QA alias");

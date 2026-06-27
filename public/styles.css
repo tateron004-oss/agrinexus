@@ -3568,6 +3568,44 @@ body.admin-mode .user-workspace {
 .nexus-controlled-action-preview-note {
   color: #61726f;
 }
+.nexus-controlled-staged-action-preview {
+  display: grid;
+  gap: 7px;
+  width: min(100%, 540px);
+  margin: 10px 0 0;
+  padding: 12px;
+  border: 1px solid #c8dcd3;
+  border-radius: 8px;
+  background: #fbfdf9;
+  color: #173240;
+  line-height: 1.35;
+}
+.nexus-controlled-staged-action-label {
+  width: fit-content;
+  padding: 3px 8px;
+  border: 1px solid #cbded4;
+  border-radius: 999px;
+  background: #eef8f2;
+  color: #236247;
+  font-size: .72rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+.nexus-controlled-staged-action-title {
+  font-size: .96rem;
+  font-weight: 950;
+}
+.nexus-controlled-staged-action-copy,
+.nexus-controlled-staged-action-note {
+  font-size: .82rem;
+  font-weight: 760;
+}
+.nexus-controlled-staged-action-copy {
+  color: #365867;
+}
+.nexus-controlled-staged-action-note {
+  color: #61726f;
+}
 .nexus-autonomous-runtime-preview {
   display: grid;
   gap: 8px;

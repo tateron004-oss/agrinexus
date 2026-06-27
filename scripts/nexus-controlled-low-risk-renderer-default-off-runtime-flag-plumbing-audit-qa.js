@@ -117,7 +117,12 @@ assert(!app.includes(flagName), "public/app.js must not consume the future rende
 assert(!server.includes(flagName), "server.js must not expose the future renderer flag");
 assert(!server.match(new RegExp(`${flagName}\\s*:\\s*true`)), "server.js must not expose enableControlledLowRiskRendererVisibleUi: true");
 assert(!server.match(new RegExp(`${flagName}\\s*:\\s*["'](?:true|1|yes|on)["']`, "i")), "server.js must not expose truthy string renderer flag values");
-assert(!app.includes(mountId), "public/app.js must not query the hidden mount point during startup");
+assert(app.includes("function paintControlledStagedActionPreview"), "public/app.js may only query the hidden mount through the Sprint D6 flag-gated staged preview painter");
+assert(app.includes(`$("#${mountId}")`), "public/app.js hidden mount query must remain scoped to controlled staged preview painting");
+assert(app.includes('root.hidden = !html'), "public/app.js must keep the hidden mount hidden when no flag-gated preview exists");
+assert(app.includes('root.dataset.executionAllowed = "false"'), "public/app.js must preserve no-execution mount metadata");
+assert(app.includes('root.dataset.providerHandoff = "false"'), "public/app.js must preserve no-provider-handoff mount metadata");
+assert(app.includes('root.dataset.permissionRequest = "false"'), "public/app.js must preserve no-permission-request mount metadata");
 assert(!server.includes(mountId), "server.js must not reference the hidden mount point");
 
 for (const [label, source] of [
@@ -145,7 +150,7 @@ const runtimeDangerCombinations = [
   /enableControlledLowRiskRendererVisibleUi[\s\S]{0,240}(innerHTML|insertAdjacentHTML|createElement)/i,
   /enableControlledLowRiskRendererVisibleUi[\s\S]{0,240}(button|link|onclick|addEventListener|handler)/i,
   /enableControlledLowRiskRendererVisibleUi[\s\S]{0,240}(providerHandoff|permissionRequest|confirmation|navigationAllowed|execute|dispatch)/i,
-  /nexus-controlled-low-risk-renderer-root[\s\S]{0,240}(innerHTML|insertAdjacentHTML|createElement|addEventListener|classList\.remove|removeAttribute)/i
+  /nexus-controlled-low-risk-renderer-root[\s\S]{0,240}(insertAdjacentHTML|createElement|addEventListener|classList\.remove|removeAttribute|onclick|providerHandoff|permissionRequest|execute|dispatch)/i
 ];
 
 for (const [label, source] of [

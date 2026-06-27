@@ -49,7 +49,7 @@ function assertNoUnsafeRendererWiring(source, label) {
     { pattern: new RegExp(`require\\([\\s\\S]{0,120}${rendererFileName.replace(/\./g, "\\.")}`, "i"), message: "CommonJS require" },
     { pattern: new RegExp(`${flagName}[\\s\\S]{0,240}(hidden\\s*=\\s*false|removeAttribute\\([\"']hidden|classList\\.remove|appendChild|replaceChildren|innerHTML|insertAdjacentHTML)`, "i"), message: "flag-driven DOM activation" },
     { pattern: new RegExp(`${mountId}[\\s\\S]{0,240}(addEventListener|onclick|href|button|form|input|fetch\\s*\\(|localStorage|sessionStorage|window\\.open|location\\.)`, "i"), message: "mount-driven interactive/external behavior" },
-    { pattern: new RegExp(`${mountId}[\\s\\S]{0,240}(providerHandoff|permissionRequest|navigationAllowed|executionAllowed|confirmation|execute|dispatch)`, "i"), message: "mount-driven authority wiring" }
+    { pattern: new RegExp(`${mountId}[\\s\\S]{0,240}(providerHandoffAllowed|permissionRequestAllowed|navigationAllowed\\s*=\\s*true|executionAllowed\\s*=\\s*true|confirmation|execute\\(|dispatch)`, "i"), message: "mount-driven authority wiring" }
   ];
 
   unsafePatterns.forEach(({ pattern, message }) => {
@@ -143,7 +143,10 @@ assert(qaSuite.includes("scripts/nexus-controlled-low-risk-text-only-renderer-ph
 });
 
 assert(countMatches(index, /nexus-controlled-low-risk-renderer-root/g) === 1, "Mount ID should appear once in public/index.html.");
-assert(countMatches(app, /nexus-controlled-low-risk-renderer-root/g) === 0, "public/app.js must not query the dormant renderer mount.");
+assert(app.includes("function paintControlledStagedActionPreview"), "public/app.js may only query the shared hidden mount through the Sprint D6 flag-gated staged preview painter.");
+assert(app.includes('root.dataset.executionAllowed = "false"'), "public/app.js must keep the shared hidden mount execution metadata false.");
+assert(app.includes('root.dataset.providerHandoff = "false"'), "public/app.js must keep the shared hidden mount provider metadata false.");
+assert(app.includes('root.dataset.permissionRequest = "false"'), "public/app.js must keep the shared hidden mount permission metadata false.");
 assert(countMatches(server, /nexus-controlled-low-risk-renderer-root/g) === 0, "server.js must not reference the dormant renderer mount.");
 
 console.log("[nexus-controlled-low-risk-text-only-renderer-phase-14b-load-boundary-qa] passed");

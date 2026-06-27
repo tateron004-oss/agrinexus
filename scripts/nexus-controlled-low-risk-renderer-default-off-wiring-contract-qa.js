@@ -189,7 +189,13 @@ assert(!index.includes("data-standard-user-low-risk-renderer"), "public/index.ht
 
 assert(!app.includes(flagName), "public/app.js must not activate or consume the future visible renderer feature flag in Phase 13N");
 assert(!server.includes(flagName), "server.js must not expose the future visible renderer feature flag in Phase 13N");
-assert(!app.includes(mountId), "public/app.js must not query the hidden mount point during startup");
+assert(app.includes("function paintControlledStagedActionPreview"), "public/app.js may only query the hidden mount through the Sprint D6 flag-gated staged preview painter");
+assert(app.includes(`$("#${mountId}")`), "public/app.js hidden mount query must remain scoped to controlled staged preview painting");
+assert(app.includes('root.hidden = !html'), "public/app.js must keep the hidden mount hidden when no flag-gated preview exists");
+assert(app.includes('root.dataset.visibleRendererEnabled = html ? "true" : "false"'), "public/app.js must preserve default-off hidden mount visibility metadata");
+assert(app.includes('root.dataset.executionAllowed = "false"'), "public/app.js must preserve no-execution mount metadata");
+assert(app.includes('root.dataset.providerHandoff = "false"'), "public/app.js must preserve no-provider-handoff mount metadata");
+assert(app.includes('root.dataset.permissionRequest = "false"'), "public/app.js must preserve no-permission-request mount metadata");
 assert(!server.includes(mountId), "server.js must not reference the hidden mount point");
 assert(app.includes("function createNexusControlledLowRiskInertCardForTest"), "existing inert test helper must remain declared");
 const helperDeclaration = app.indexOf("function createNexusControlledLowRiskInertCardForTest");
