@@ -95,9 +95,15 @@ assert(cards.isSprintCFeatureEnabled({ location: { search: "?nexusSprintCAgricul
 
 assert(!source.includes("installSprintC"), "Sprint C renderer must not add a live Standard User auto-installer in this phase.");
 assert(source.includes("renderSprintCAgricultureResponseCard"), "Sprint C flag-on render helper must exist.");
-assert(source.includes("isSprintCFeatureEnabled(runtimeDoc.defaultView || {})")
+const legacySprintCRuntimeBranch = source.includes("isSprintCFeatureEnabled(runtimeDoc.defaultView || {})")
   && source.includes("renderSprintCAgricultureResponseCard(prompt, target, { globalRef: runtimeDoc.defaultView || {} })")
-  && source.includes(": renderAgricultureSupportCard(prompt, target);"), "runtime listener must render Sprint C cards only when the explicit Sprint C flag is enabled.");
+  && source.includes(": renderAgricultureSupportCard(prompt, target);");
+const sourceBackedAwareRuntimeBranch = source.includes("isSourceBackedAgriculturePreviewEnabled(globalRef)")
+  && source.includes("renderSourceBackedAgriculturePreviewCard(prompt, target, { globalRef })")
+  && source.includes("isSprintCFeatureEnabled(globalRef)")
+  && source.includes("renderSprintCAgricultureResponseCard(prompt, target, { globalRef: runtimeDoc.defaultView || {} })")
+  && source.includes(": renderAgricultureSupportCard(prompt, target);");
+assert(legacySprintCRuntimeBranch || sourceBackedAwareRuntimeBranch, "runtime listener must render Sprint C cards only when the explicit Sprint C flag is enabled.");
 assert(source.includes('runtimeDoc.querySelectorAll("[data-nexus-sprint-c-agriculture-card]")'), "runtime clear path must remove stale Sprint C cards before excluded prompts.");
 assert(source.includes("data-nexus-sprint-c-agriculture-card"), "Sprint C renderer must mark its own card element.");
 assert(source.includes("disabled aria-disabled=\"true\""), "Sprint C review control must be disabled.");

@@ -3,6 +3,8 @@
 
   const FEATURE_FLAG_NAME = "NEXUS_PHASE_101_AGRICULTURE_SUPPORT_RESPONSE_CARD_ENABLED";
   const SPRINT_C_FEATURE_FLAG_NAME = "NEXUS_CONTROLLED_AGRICULTURE_RESPONSE_CARDS_ENABLED";
+  const SOURCE_BACKED_AGRICULTURE_PREVIEW_FLAG_NAME = "NEXUS_SOURCE_BACKED_AGRICULTURE_PREVIEW_ENABLED";
+  let sourceBackedAgriculturePreviewValidationEnabled = false;
   const MODULE_VERSION = "phase-101-agriculture-support-response-card.v1";
   const NO_EXECUTION_DISCLOSURE = Object.freeze([
     "No provider has been contacted.",
@@ -29,10 +31,72 @@
     networkLookupAllowed: false,
     storageSideEffectAllowed: false
   });
-  const AGRICULTURE = /\b(maize|corn|crop|crops|plant|plants|leaf|leaves|yellow|spots?|pests?|insects?|irrigation|water|drought|soil|farm|farmer|field|planting|beans?|tomatoes?|cassava|sorghum|millet|rice|wheat|banana|plantain|harvest|fertili[sz]er|pesticide|herbicide|fungicide|insecticide|chemical|crop issues?|crop stress|agriculture help|agriculture training|agriculture course|farm training|farm course|farmer training|farmer course|farm help|farmer help)\b/i;
+  const AGRICULTURE = /\b(maize|corn|crop|crops|plant|plants|leaf|leaves|yellow|spots?|pests?|insects?|irrigation|water|drought|soil|farm|farmer|field|planting|beans?|tomatoes?|cassava|sorghum|millet|rice|wheat|banana|plantain|harvest|fertili[sz]er|pesticide|herbicide|fungicide|insecticide|chemical|crop issues?|crop stress|agritrade|marketplace|agriculture help|agriculture training|agriculture course|farm training|farm course|farmer training|farmer course|farm help|farmer help)\b/i;
   const FORBIDDEN = /\b(call|phone|dial|message|text|sms|whatsapp|telegram|email|contact|book|booking|appointment|schedule|pay|payment|wallet|checkout|purchase|buy|sell|buyer|seller|order|ship|deliver|dispatch|share location|location|near me|map|gps|camera|photo|upload|image|picture|microphone|record|medical|pharmacy|prescription|doctor|clinic|hospital|telehealth|emergency|poisoning|poisoned|unconscious|seizure|guarantee|guaranteed)\b/i;
   const UNSAFE_CHEMICAL = /(?:\b(apply|spray|mix|dose|dosage|rate|how much|restricted)\b[^.?!]*\b(pesticide|herbicide|fungicide|insecticide|chemical)\b|\b(pesticide|herbicide|fungicide|insecticide|chemical)\b[^.?!]*\b(apply|spray|mix|dose|dosage|rate|how much|restricted)\b)/i;
   const MARKETPLACE_EXECUTION = /\b(buy|sell|pay|payment|checkout|order|contact buyer|contact seller|message buyer|message seller|ship|deliver)\b/i;
+  const LOCAL_SOURCE_PACKETS = Object.freeze({
+    agriculture_training: Object.freeze({
+      packetId: "local-agriculture-training-readiness-v1",
+      title: "Agriculture Training Readiness Packet",
+      owner: "Nexus local source packet",
+      sourceType: "deterministic local education packet",
+      reviewedAt: "2026-06-26",
+      freshness: "local packet; no live lookup",
+      confidence: "medium - source packet reviewed for demo-safe guidance",
+      verification: "local deterministic QA reviewed",
+      summary: "Training guidance should compare learning options, basic readiness, and safe next review steps without enrolling the user or changing records.",
+      limitations: "This packet is not a live course catalog and does not enroll, apply, message, pay, or contact a provider."
+    }),
+    irrigation: Object.freeze({
+      packetId: "local-irrigation-education-v1",
+      title: "Irrigation Education Packet",
+      owner: "Nexus local source packet",
+      sourceType: "deterministic local education packet",
+      reviewedAt: "2026-06-26",
+      freshness: "local packet; no live lookup",
+      confidence: "medium - general irrigation education only",
+      verification: "local deterministic QA reviewed",
+      summary: "Irrigation support should explain observation-first water checks, soil moisture review, drainage, and learning next steps.",
+      limitations: "This packet is not field-specific advice and does not request location, open maps, control devices, or diagnose field conditions."
+    }),
+    crop_support: Object.freeze({
+      packetId: "local-crop-support-observation-v1",
+      title: "Crop Support Observation Packet",
+      owner: "Nexus local source packet",
+      sourceType: "deterministic local agriculture support packet",
+      reviewedAt: "2026-06-26",
+      freshness: "local packet; no live lookup",
+      confidence: "medium - observation guidance only",
+      verification: "local deterministic QA reviewed",
+      summary: "Crop issue support should separate symptoms from actions, collect observations, and recommend qualified local expert review when unclear or severe.",
+      limitations: "This packet is not a diagnosis and does not use camera, image upload, location, provider contact, chemicals, or marketplace actions."
+    }),
+    field_support: Object.freeze({
+      packetId: "local-field-support-review-v1",
+      title: "Field Support Review Packet",
+      owner: "Nexus local source packet",
+      sourceType: "deterministic local agriculture support packet",
+      reviewedAt: "2026-06-26",
+      freshness: "local packet; no live lookup",
+      confidence: "medium - general field support review",
+      verification: "local deterministic QA reviewed",
+      summary: "Field support should organize the user's observations and suggest safe next review questions without opening workflows or requesting permissions.",
+      limitations: "This packet does not dispatch field agents, request location, use camera, contact providers, or create pending actions."
+    }),
+    agritrade_review: Object.freeze({
+      packetId: "local-agritrade-review-only-v1",
+      title: "AgriTrade Review-Only Packet",
+      owner: "Nexus local source packet",
+      sourceType: "deterministic local marketplace education packet",
+      reviewedAt: "2026-06-26",
+      freshness: "local packet; no live lookup",
+      confidence: "medium - marketplace education only",
+      verification: "local deterministic QA reviewed",
+      summary: "AgriTrade guidance should explain browse/review options and safety boundaries without buying, selling, listing, contacting, ordering, or paying.",
+      limitations: "This packet is not a live listing source and does not perform marketplace transactions."
+    })
+  });
 
   function text(value) {
     return String(value || "").replace(/\s+/g, " ").trim();
@@ -121,6 +185,71 @@
       return false;
     }
     return false;
+  }
+
+  function isSourceBackedAgriculturePreviewEnabled(globalRef) {
+    const root = globalRef || (typeof window !== "undefined" ? window : {});
+    return Boolean(sourceBackedAgriculturePreviewValidationEnabled === true || (root && root[SOURCE_BACKED_AGRICULTURE_PREVIEW_FLAG_NAME] === true));
+  }
+
+  function setSourceBackedAgriculturePreviewValidationEnabled(value) {
+    sourceBackedAgriculturePreviewValidationEnabled = value === true;
+    return sourceBackedAgriculturePreviewValidationEnabled;
+  }
+
+  function sourcePacketForPrompt(prompt) {
+    const value = text(prompt).toLowerCase();
+    if (/\b(training|course|learn|teach)\b/.test(value) && /\b(agriculture|farm|farmer|crop|field)\b/.test(value)) return LOCAL_SOURCE_PACKETS.agriculture_training;
+    if (/\b(irrigation|water|watering)\b/.test(value)) return LOCAL_SOURCE_PACKETS.irrigation;
+    if (/\b(agritrade|marketplace|market)\b/.test(value)) return LOCAL_SOURCE_PACKETS.agritrade_review;
+    if (/\b(field support|field help|field issue|farm support)\b/.test(value)) return LOCAL_SOURCE_PACKETS.field_support;
+    return LOCAL_SOURCE_PACKETS.crop_support;
+  }
+
+  function buildSourceBackedAgriculturePreviewCard(prompt, options = {}) {
+    if (!isSourceBackedAgriculturePreviewEnabled(options.globalRef)) return null;
+    const classification = classifyAgricultureSupportPrompt(prompt);
+    if (!classification.eligible) return null;
+    const packet = sourcePacketForPrompt(prompt);
+    return Object.freeze({
+      id: "sprint-c42-source-backed-agriculture-preview-card",
+      schemaVersion: "nexus.sprintC42.sourceBackedAgriculturePreviewCard.v1",
+      moduleVersion: MODULE_VERSION,
+      flagName: SOURCE_BACKED_AGRICULTURE_PREVIEW_FLAG_NAME,
+      riskTier: "low",
+      category: "source-backed-agriculture-preview",
+      title: "Source-Backed Agriculture Preview",
+      detectedCategory: classification.category,
+      summary: packet.summary,
+      evidenceAndVerification: Object.freeze({
+        packetId: packet.packetId,
+        sourceTitle: packet.title,
+        dataOwner: packet.owner,
+        sourceType: packet.sourceType,
+        reviewedAt: packet.reviewedAt,
+        freshness: packet.freshness,
+        confidence: packet.confidence,
+        verification: packet.verification,
+        limitation: packet.limitations,
+        noLiveLookup: "No live lookup, network request, provider contact, or backend write was performed."
+      }),
+      reviewOnlyGuidance: Object.freeze([
+        "Review the source packet summary and limitations first.",
+        "Use the guidance as a starting point for questions, not as a completed action.",
+        "Ask a qualified local agriculture expert when the situation is severe, spreading, regulated, or unclear."
+      ]),
+      noExecutionDisclosure: [...NO_EXECUTION_DISCLOSURE],
+      noActionDisclosure: "No action has been taken.",
+      reviewOnly: true,
+      ...EXECUTION_BOUNDARY,
+      executionAuthority: false,
+      providerHandoffAllowed: false,
+      pendingActionCreationAllowed: false,
+      storageSideEffectAllowed: false,
+      networkSideEffectAllowed: false,
+      liveLookupAllowed: false,
+      externalNavigationAllowed: false
+    });
   }
 
   function buildSprintCAgricultureResponseCard(prompt, options = {}) {
@@ -229,6 +358,28 @@
     return Object.freeze({ card, element: article });
   }
 
+  function renderSourceBackedAgriculturePreviewCard(prompt, target, options = {}) {
+    const doc = target && target.ownerDocument ? target.ownerDocument : (typeof document !== "undefined" ? document : null);
+    if (!doc || !target || !isSourceBackedAgriculturePreviewEnabled(options.globalRef)) return null;
+    const card = buildSourceBackedAgriculturePreviewCard(prompt, options);
+    if (!card) return null;
+    target.querySelectorAll("[data-nexus-source-backed-agriculture-preview-card]").forEach(existing => existing.remove());
+    const evidence = card.evidenceAndVerification;
+    const article = doc.createElement("article");
+    article.className = "nexus-source-backed-agriculture-preview-card";
+    article.setAttribute("data-nexus-source-backed-agriculture-preview-card", "true");
+    article.setAttribute("data-flag-name", SOURCE_BACKED_AGRICULTURE_PREVIEW_FLAG_NAME);
+    article.setAttribute("data-execution-authority", "false");
+    article.setAttribute("data-provider-handoff", "false");
+    article.setAttribute("data-pending-action-creation", "false");
+    article.setAttribute("data-network-side-effect", "false");
+    article.setAttribute("data-storage-side-effect", "false");
+    article.setAttribute("data-external-navigation", "false");
+    article.innerHTML = `<div class="tag-row"><span>${escapeHtml(card.category)}</span><span>${escapeHtml(card.riskTier)}</span><span>Review-only</span><span>Source packet</span></div><h3>${escapeHtml(card.title)}</h3><p>${escapeHtml(card.summary)}</p><strong>Review-only guidance</strong><ul>${list(card.reviewOnlyGuidance)}</ul><section aria-label="Evidence and Verification"><strong>Evidence &amp; Verification</strong><ul><li>Source: ${escapeHtml(evidence.sourceTitle)}</li><li>Owner: ${escapeHtml(evidence.dataOwner)}</li><li>Type: ${escapeHtml(evidence.sourceType)}</li><li>Reviewed: ${escapeHtml(evidence.reviewedAt)}</li><li>Freshness: ${escapeHtml(evidence.freshness)}</li><li>Confidence: ${escapeHtml(evidence.confidence)}</li><li>Verification: ${escapeHtml(evidence.verification)}</li><li>Limitation: ${escapeHtml(evidence.limitation)}</li><li>${escapeHtml(evidence.noLiveLookup)}</li></ul></section><p><strong>${escapeHtml(card.noActionDisclosure)}</strong></p><ul>${list(card.noExecutionDisclosure)}</ul>`;
+    target.appendChild(article);
+    return Object.freeze({ card, element: article });
+  }
+
   function installRuntime(doc) {
     const runtimeDoc = doc || (typeof document !== "undefined" ? document : null);
     if (!runtimeDoc) return Object.freeze({ installed: false, reason: "document_unavailable" });
@@ -250,7 +401,10 @@
     const renderPrompt = prompt => {
       clearExistingCards();
       const target = runtimeDoc.getElementById("jarvisInsightPanel") || runtimeDoc.getElementById("userWorkspace") || runtimeDoc.getElementById("mainContent");
-      const result = isSprintCFeatureEnabled(runtimeDoc.defaultView || {})
+      const globalRef = runtimeDoc.defaultView || {};
+      const result = isSourceBackedAgriculturePreviewEnabled(globalRef)
+        ? renderSourceBackedAgriculturePreviewCard(prompt, target, { globalRef })
+        : isSprintCFeatureEnabled(globalRef)
         ? renderSprintCAgricultureResponseCard(prompt, target, { globalRef: runtimeDoc.defaultView || {} })
         : renderAgricultureSupportCard(prompt, target);
       if (result) {
@@ -279,7 +433,7 @@
     return Object.freeze({ installed: true, reason: "runtime_listener_installed" });
   }
 
-  const api = Object.freeze({ FEATURE_FLAG_NAME, SPRINT_C_FEATURE_FLAG_NAME, MODULE_VERSION, EXECUTION_BOUNDARY, NO_EXECUTION_DISCLOSURE, classifyAgricultureSupportPrompt, buildAgricultureSupportCard, buildSprintCAgricultureResponseCard, renderAgricultureSupportCard, renderSprintCAgricultureResponseCard, installRuntime, isFeatureEnabled, isSprintCFeatureEnabled });
+  const api = Object.freeze({ FEATURE_FLAG_NAME, SPRINT_C_FEATURE_FLAG_NAME, SOURCE_BACKED_AGRICULTURE_PREVIEW_FLAG_NAME, MODULE_VERSION, EXECUTION_BOUNDARY, NO_EXECUTION_DISCLOSURE, LOCAL_SOURCE_PACKETS, classifyAgricultureSupportPrompt, buildAgricultureSupportCard, buildSprintCAgricultureResponseCard, buildSourceBackedAgriculturePreviewCard, renderAgricultureSupportCard, renderSprintCAgricultureResponseCard, renderSourceBackedAgriculturePreviewCard, installRuntime, isFeatureEnabled, isSprintCFeatureEnabled, isSourceBackedAgriculturePreviewEnabled, setSourceBackedAgriculturePreviewValidationEnabled });
   if (typeof module === "object" && module.exports) module.exports = api;
   if (typeof window !== "undefined") {
     window.NEXUS_PHASE_101_AGRICULTURE_SUPPORT_RESPONSE_CARD = api;
