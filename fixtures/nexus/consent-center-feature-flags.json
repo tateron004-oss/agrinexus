@@ -1,0 +1,100 @@
+[
+  {
+    "fixtureId": "consent-center-default-off",
+    "description": "Default input keeps Consent Center disabled and non-authoritative.",
+    "input": {},
+    "expected": {
+      "enabled": false,
+      "visibleUiAllowed": false,
+      "consentPersistenceAllowed": false,
+      "consentRevocationAllowed": false,
+      "auditWriteAllowed": false,
+      "providerHandoffAllowed": false,
+      "permissionPromptAllowed": false,
+      "backendWriteAllowed": false,
+      "storageWriteAllowed": false,
+      "networkAllowed": false,
+      "executionAuthority": false,
+      "noExecution": true,
+      "isVisible": false
+    }
+  },
+  {
+    "fixtureId": "consent-center-flag-on-review-only",
+    "description": "Flag-on local/test input can indicate visibility only, not persistence or execution.",
+    "input": {
+      "enabled": true,
+      "visibleUiAllowed": true
+    },
+    "expected": {
+      "enabled": true,
+      "visibleUiAllowed": true,
+      "consentPersistenceAllowed": false,
+      "consentRevocationAllowed": false,
+      "auditWriteAllowed": false,
+      "providerHandoffAllowed": false,
+      "permissionPromptAllowed": false,
+      "backendWriteAllowed": false,
+      "storageWriteAllowed": false,
+      "networkAllowed": false,
+      "executionAuthority": false,
+      "noExecution": true,
+      "isVisible": true
+    }
+  },
+  {
+    "fixtureId": "consent-center-unsafe-authority-attempt",
+    "description": "Unsafe attempted authority fields are ignored by the contract.",
+    "input": {
+      "enabled": true,
+      "visibleUiAllowed": true,
+      "consentPersistenceAllowed": true,
+      "consentRevocationAllowed": true,
+      "auditWriteAllowed": true,
+      "providerHandoffAllowed": true,
+      "permissionPromptAllowed": true,
+      "backendWriteAllowed": true,
+      "storageWriteAllowed": true,
+      "networkAllowed": true,
+      "executionAuthority": true,
+      "noExecution": false
+    },
+    "expected": {
+      "enabled": true,
+      "visibleUiAllowed": true,
+      "consentPersistenceAllowed": false,
+      "consentRevocationAllowed": false,
+      "auditWriteAllowed": false,
+      "providerHandoffAllowed": false,
+      "permissionPromptAllowed": false,
+      "backendWriteAllowed": false,
+      "storageWriteAllowed": false,
+      "networkAllowed": false,
+      "executionAuthority": false,
+      "noExecution": true,
+      "isVisible": true
+    }
+  },
+  {
+    "fixtureId": "consent-center-flag-on-without-visible-ui",
+    "description": "Enabled without explicit visible UI permission remains not visible and non-authoritative.",
+    "input": {
+      "enabled": true
+    },
+    "expected": {
+      "enabled": true,
+      "visibleUiAllowed": false,
+      "consentPersistenceAllowed": false,
+      "consentRevocationAllowed": false,
+      "auditWriteAllowed": false,
+      "providerHandoffAllowed": false,
+      "permissionPromptAllowed": false,
+      "backendWriteAllowed": false,
+      "storageWriteAllowed": false,
+      "networkAllowed": false,
+      "executionAuthority": false,
+      "noExecution": true,
+      "isVisible": false
+    }
+  }
+]
