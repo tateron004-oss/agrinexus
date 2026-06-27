@@ -384,6 +384,7 @@
     "qa:nexus-sprint-f3-approval-center-flag-contract-harness": "node scripts/nexus-sprint-f3-approval-center-flag-contract-harness-qa.js",
     "qa:nexus-sprint-f4-approval-center-runtime-absence-regression-guard": "node scripts/nexus-sprint-f4-approval-center-runtime-absence-regression-guard-qa.js",
     "qa:nexus-sprint-f5-approval-center-lane-closeout": "node scripts/nexus-sprint-f5-approval-center-lane-closeout-qa.js",
+    "qa:nexus-sprint-g1-approval-audit-persistence-readiness-gate": "node scripts/nexus-sprint-g1-approval-audit-persistence-readiness-gate-qa.js",
     "qa:nexus-phase-105-preview-only-autonomous-runtime-integration-plan": "node scripts/nexus-phase-105-preview-only-autonomous-runtime-integration-plan-qa.js"
   },
   "dependencies": {
