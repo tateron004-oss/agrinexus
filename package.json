@@ -354,6 +354,7 @@
     "qa:nexus-sprint-c32-source-backed-agriculture-runtime-activation-merge-freeze-rollback-drill-plan": "node scripts/nexus-sprint-c32-source-backed-agriculture-runtime-activation-merge-freeze-rollback-drill-plan-qa.js",
     "qa:nexus-sprint-c33-source-backed-agriculture-runtime-activation-final-go-no-go-decision-log": "node scripts/nexus-sprint-c33-source-backed-agriculture-runtime-activation-final-go-no-go-decision-log-qa.js",
     "qa:nexus-sprint-c34-source-backed-agriculture-runtime-activation-post-decision-implementation-ticket-template": "node scripts/nexus-sprint-c34-source-backed-agriculture-runtime-activation-post-decision-implementation-ticket-template-qa.js",
+    "qa:nexus-sprint-c35-source-backed-agriculture-runtime-activation-implementation-handoff-packet": "node scripts/nexus-sprint-c35-source-backed-agriculture-runtime-activation-implementation-handoff-packet-qa.js",
     "qa:nexus-phase-105-preview-only-autonomous-runtime-integration-plan": "node scripts/nexus-phase-105-preview-only-autonomous-runtime-integration-plan-qa.js"
   },
   "dependencies": {
