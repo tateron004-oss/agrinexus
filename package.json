@@ -482,6 +482,7 @@
     "qa:nexus-sprint-z1-telehealth-mode-runtime-activation-readiness-gate": "node scripts/nexus-sprint-z1-telehealth-mode-runtime-activation-readiness-gate-qa.js",
     "qa:nexus-sprint-z2-telehealth-mode-feature-flag-contract": "node scripts/nexus-sprint-z2-telehealth-mode-feature-flag-contract-qa.js",
     "qa:nexus-sprint-z3-telehealth-mode-flag-contract-harness": "node scripts/nexus-sprint-z3-telehealth-mode-flag-contract-harness-qa.js",
+    "qa:nexus-sprint-z4-telehealth-mode-runtime-absence-regression-guard": "node scripts/nexus-sprint-z4-telehealth-mode-runtime-absence-regression-guard-qa.js",
     "qa:nexus-phase-105-preview-only-autonomous-runtime-integration-plan": "node scripts/nexus-phase-105-preview-only-autonomous-runtime-integration-plan-qa.js"
   },
   "dependencies": {
