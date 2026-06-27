@@ -433,6 +433,7 @@
     "qa:nexus-sprint-p2-orchestration-engine-feature-flag-contract": "node scripts/nexus-sprint-p2-orchestration-engine-feature-flag-contract-qa.js",
     "qa:nexus-sprint-p3-orchestration-engine-flag-contract-harness": "node scripts/nexus-sprint-p3-orchestration-engine-flag-contract-harness-qa.js",
     "qa:nexus-sprint-p4-orchestration-engine-runtime-absence-regression-guard": "node scripts/nexus-sprint-p4-orchestration-engine-runtime-absence-regression-guard-qa.js",
+    "qa:nexus-sprint-p5-orchestration-engine-lane-closeout": "node scripts/nexus-sprint-p5-orchestration-engine-lane-closeout-qa.js",
     "qa:nexus-phase-105-preview-only-autonomous-runtime-integration-plan": "node scripts/nexus-phase-105-preview-only-autonomous-runtime-integration-plan-qa.js"
   },
   "dependencies": {
