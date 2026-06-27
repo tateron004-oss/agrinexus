@@ -351,6 +351,7 @@
     "qa:nexus-sprint-c29-source-backed-agriculture-runtime-wiring-issue-template": "node scripts/nexus-sprint-c29-source-backed-agriculture-runtime-wiring-issue-template-qa.js",
     "qa:nexus-sprint-c30-source-backed-agriculture-runtime-activation-branch-policy": "node scripts/nexus-sprint-c30-source-backed-agriculture-runtime-activation-branch-policy-qa.js",
     "qa:nexus-sprint-c31-source-backed-agriculture-runtime-activation-pull-request-checklist": "node scripts/nexus-sprint-c31-source-backed-agriculture-runtime-activation-pull-request-checklist-qa.js",
+    "qa:nexus-sprint-c32-source-backed-agriculture-runtime-activation-merge-freeze-rollback-drill-plan": "node scripts/nexus-sprint-c32-source-backed-agriculture-runtime-activation-merge-freeze-rollback-drill-plan-qa.js",
     "qa:nexus-phase-105-preview-only-autonomous-runtime-integration-plan": "node scripts/nexus-phase-105-preview-only-autonomous-runtime-integration-plan-qa.js"
   },
   "dependencies": {
