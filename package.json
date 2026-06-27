@@ -446,6 +446,7 @@
     "qa:nexus-sprint-r5-multilingual-intelligence-lane-closeout": "node scripts/nexus-sprint-r5-multilingual-intelligence-lane-closeout-qa.js",
     "qa:nexus-sprint-s1-farmer-agriculture-intelligence-runtime-activation-readiness-gate": "node scripts/nexus-sprint-s1-farmer-agriculture-intelligence-runtime-activation-readiness-gate-qa.js",
     "qa:nexus-sprint-s2-farmer-agriculture-intelligence-feature-flag-contract": "node scripts/nexus-sprint-s2-farmer-agriculture-intelligence-feature-flag-contract-qa.js",
+    "qa:nexus-sprint-s3-farmer-agriculture-intelligence-flag-contract-harness": "node scripts/nexus-sprint-s3-farmer-agriculture-intelligence-flag-contract-harness-qa.js",
     "qa:nexus-phase-105-preview-only-autonomous-runtime-integration-plan": "node scripts/nexus-phase-105-preview-only-autonomous-runtime-integration-plan-qa.js"
   },
   "dependencies": {
