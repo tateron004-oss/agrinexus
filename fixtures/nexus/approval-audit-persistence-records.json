@@ -1,0 +1,90 @@
+[
+  {
+    "name": "default-not-configured",
+    "input": {},
+    "expected": {
+      "recordType": "audit_persistence_unavailable",
+      "persistenceStatus": "not_configured",
+      "readinessGateStatus": "readiness_gate_required",
+      "noExecution": true,
+      "persistenceEnabled": false,
+      "storageWriteAllowed": false,
+      "backendWriteAllowed": false,
+      "networkAllowed": false,
+      "executionAuthority": false,
+      "eventStored": false
+    }
+  },
+  {
+    "name": "accepted-without-execution",
+    "input": {
+      "recordType": "approval_accepted_without_execution",
+      "approvalId": "approval.fixture.accepted",
+      "pendingActionId": "pending.fixture.review",
+      "actionType": "low_risk_review",
+      "riskTier": "low",
+      "sourceSurface": "qa-fixture",
+      "targetSummary": "Review agriculture support sources",
+      "providerSummary": "No provider handoff",
+      "confirmationState": "accepted",
+      "permissionState": "not_required",
+      "consentState": "not_required",
+      "resultStatus": "accepted_without_execution",
+      "redactedPayload": {
+        "summary": "source-backed agriculture preview"
+      },
+      "persistenceStatus": "approved_not_live",
+      "persistenceEnabled": true,
+      "storageWriteAllowed": true,
+      "backendWriteAllowed": true,
+      "networkAllowed": true,
+      "executionAuthority": true,
+      "eventStored": true
+    },
+    "expected": {
+      "recordType": "approval_accepted_without_execution",
+      "persistenceStatus": "approved_not_live",
+      "readinessGateStatus": "readiness_gate_required",
+      "noExecution": true,
+      "persistenceEnabled": false,
+      "storageWriteAllowed": false,
+      "backendWriteAllowed": false,
+      "networkAllowed": false,
+      "executionAuthority": false,
+      "eventStored": false,
+      "actionExecuted": false
+    }
+  },
+  {
+    "name": "blocked-high-risk-communication",
+    "input": {
+      "recordType": "approval_blocked",
+      "approvalId": "approval.fixture.blocked",
+      "pendingActionId": "pending.fixture.call",
+      "actionType": "outbound_call",
+      "riskTier": "high",
+      "targetSummary": "Call recipient withheld",
+      "providerSummary": "Native phone unavailable",
+      "confirmationState": "blocked",
+      "permissionState": "required",
+      "consentState": "required",
+      "resultStatus": "blocked_no_execution",
+      "redactedPayload": {
+        "recipient": "[redacted]"
+      },
+      "persistenceStatus": "audit_backend_required",
+      "providerHandoffAllowed": true,
+      "callPlaced": true,
+      "messageSent": true
+    },
+    "expected": {
+      "recordType": "approval_blocked",
+      "persistenceStatus": "audit_backend_required",
+      "noExecution": true,
+      "providerHandoffAllowed": false,
+      "callPlaced": false,
+      "messageSent": false,
+      "eventStored": false
+    }
+  }
+]
