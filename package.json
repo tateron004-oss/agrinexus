@@ -408,6 +408,7 @@
     "qa:nexus-sprint-k2-personalization-feature-flag-contract": "node scripts/nexus-sprint-k2-personalization-feature-flag-contract-qa.js",
     "qa:nexus-sprint-k3-personalization-flag-contract-harness": "node scripts/nexus-sprint-k3-personalization-flag-contract-harness-qa.js",
     "qa:nexus-sprint-k4-personalization-runtime-absence-regression-guard": "node scripts/nexus-sprint-k4-personalization-runtime-absence-regression-guard-qa.js",
+    "qa:nexus-sprint-k5-personalization-lane-closeout": "node scripts/nexus-sprint-k5-personalization-lane-closeout-qa.js",
     "qa:nexus-phase-105-preview-only-autonomous-runtime-integration-plan": "node scripts/nexus-phase-105-preview-only-autonomous-runtime-integration-plan-qa.js"
   },
   "dependencies": {
