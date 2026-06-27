@@ -1,0 +1,90 @@
+[
+  {
+    "fixtureId": "approval-center-default-off",
+    "description": "Default input keeps Approval Center disabled and non-authoritative.",
+    "input": {},
+    "expected": {
+      "enabled": false,
+      "visibleUiAllowed": false,
+      "approvalPersistenceAllowed": false,
+      "auditWriteAllowed": false,
+      "providerHandoffAllowed": false,
+      "backendWriteAllowed": false,
+      "storageWriteAllowed": false,
+      "networkAllowed": false,
+      "executionAuthority": false,
+      "noExecution": true,
+      "isVisible": false
+    }
+  },
+  {
+    "fixtureId": "approval-center-flag-on-review-only",
+    "description": "Flag-on local/test input can indicate visibility only, not persistence or execution.",
+    "input": {
+      "enabled": true,
+      "visibleUiAllowed": true
+    },
+    "expected": {
+      "enabled": true,
+      "visibleUiAllowed": true,
+      "approvalPersistenceAllowed": false,
+      "auditWriteAllowed": false,
+      "providerHandoffAllowed": false,
+      "backendWriteAllowed": false,
+      "storageWriteAllowed": false,
+      "networkAllowed": false,
+      "executionAuthority": false,
+      "noExecution": true,
+      "isVisible": true
+    }
+  },
+  {
+    "fixtureId": "approval-center-unsafe-authority-attempt",
+    "description": "Unsafe attempted authority fields are ignored by the contract.",
+    "input": {
+      "enabled": true,
+      "visibleUiAllowed": true,
+      "approvalPersistenceAllowed": true,
+      "auditWriteAllowed": true,
+      "providerHandoffAllowed": true,
+      "backendWriteAllowed": true,
+      "storageWriteAllowed": true,
+      "networkAllowed": true,
+      "executionAuthority": true,
+      "noExecution": false
+    },
+    "expected": {
+      "enabled": true,
+      "visibleUiAllowed": true,
+      "approvalPersistenceAllowed": false,
+      "auditWriteAllowed": false,
+      "providerHandoffAllowed": false,
+      "backendWriteAllowed": false,
+      "storageWriteAllowed": false,
+      "networkAllowed": false,
+      "executionAuthority": false,
+      "noExecution": true,
+      "isVisible": true
+    }
+  },
+  {
+    "fixtureId": "approval-center-flag-on-without-visible-ui",
+    "description": "Enabled without explicit visible UI permission remains not visible and non-authoritative.",
+    "input": {
+      "enabled": true
+    },
+    "expected": {
+      "enabled": true,
+      "visibleUiAllowed": false,
+      "approvalPersistenceAllowed": false,
+      "auditWriteAllowed": false,
+      "providerHandoffAllowed": false,
+      "backendWriteAllowed": false,
+      "storageWriteAllowed": false,
+      "networkAllowed": false,
+      "executionAuthority": false,
+      "noExecution": true,
+      "isVisible": false
+    }
+  }
+]
