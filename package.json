@@ -379,6 +379,7 @@
     "qa:nexus-sprint-e5-staged-action-approval-lifecycle-harness": "node scripts/nexus-sprint-e5-staged-action-approval-lifecycle-harness-qa.js",
     "qa:nexus-sprint-e6-staged-action-approval-no-execution-regression-guard": "node scripts/nexus-sprint-e6-staged-action-approval-no-execution-regression-guard-qa.js",
     "qa:nexus-sprint-e7-staged-action-approval-lane-closeout": "node scripts/nexus-sprint-e7-staged-action-approval-lane-closeout-qa.js",
+    "qa:nexus-sprint-f1-approval-center-runtime-activation-readiness-gate": "node scripts/nexus-sprint-f1-approval-center-runtime-activation-readiness-gate-qa.js",
     "qa:nexus-phase-105-preview-only-autonomous-runtime-integration-plan": "node scripts/nexus-phase-105-preview-only-autonomous-runtime-integration-plan-qa.js"
   },
   "dependencies": {
