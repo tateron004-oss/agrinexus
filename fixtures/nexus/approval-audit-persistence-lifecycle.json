@@ -1,0 +1,90 @@
+[
+  {
+    "name": "review-opened-to-cancelled",
+    "steps": [
+      {
+        "recordType": "approval_review_opened",
+        "approvalId": "approval.lifecycle.cancelled",
+        "pendingActionId": "pending.lifecycle.review",
+        "actionType": "low_risk_review",
+        "riskTier": "low",
+        "resultStatus": "review_opened"
+      },
+      {
+        "recordType": "approval_cancelled",
+        "approvalId": "approval.lifecycle.cancelled",
+        "pendingActionId": "pending.lifecycle.review",
+        "actionType": "low_risk_review",
+        "riskTier": "low",
+        "resultStatus": "cancelled_without_execution"
+      }
+    ],
+    "expectedFinal": {
+      "recordType": "approval_cancelled",
+      "noExecution": true,
+      "eventStored": false,
+      "actionExecuted": false
+    }
+  },
+  {
+    "name": "high-risk-blocked",
+    "steps": [
+      {
+        "recordType": "approval_review_opened",
+        "approvalId": "approval.lifecycle.blocked",
+        "pendingActionId": "pending.lifecycle.provider",
+        "actionType": "provider_contact",
+        "riskTier": "high",
+        "resultStatus": "review_opened"
+      },
+      {
+        "recordType": "approval_blocked",
+        "approvalId": "approval.lifecycle.blocked",
+        "pendingActionId": "pending.lifecycle.provider",
+        "actionType": "provider_contact",
+        "riskTier": "high",
+        "resultStatus": "blocked_no_execution",
+        "providerHandoffAllowed": true,
+        "providerContacted": true
+      }
+    ],
+    "expectedFinal": {
+      "recordType": "approval_blocked",
+      "noExecution": true,
+      "providerHandoffAllowed": false,
+      "providerContacted": false,
+      "eventStored": false,
+      "actionExecuted": false
+    }
+  },
+  {
+    "name": "accepted-remains-without-execution",
+    "steps": [
+      {
+        "recordType": "approval_review_opened",
+        "approvalId": "approval.lifecycle.accepted",
+        "pendingActionId": "pending.lifecycle.preview",
+        "actionType": "source_backed_preview",
+        "riskTier": "low",
+        "resultStatus": "review_opened"
+      },
+      {
+        "recordType": "approval_accepted_without_execution",
+        "approvalId": "approval.lifecycle.accepted",
+        "pendingActionId": "pending.lifecycle.preview",
+        "actionType": "source_backed_preview",
+        "riskTier": "low",
+        "resultStatus": "accepted_without_execution",
+        "persistenceEnabled": true,
+        "eventStored": true
+      }
+    ],
+    "expectedFinal": {
+      "recordType": "approval_accepted_without_execution",
+      "noExecution": true,
+      "persistenceEnabled": false,
+      "eventStored": false,
+      "actionExecuted": false
+    }
+  }
+]
