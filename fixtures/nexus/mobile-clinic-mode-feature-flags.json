@@ -1,0 +1,82 @@
+[
+  {
+    "fixtureId": "mobile-clinic-mode-default-off",
+    "input": {},
+    "expected": {
+      "enabled": false,
+      "visibleUiAllowed": false,
+      "isVisible": false,
+      "noExecution": true
+    }
+  },
+  {
+    "fixtureId": "mobile-clinic-mode-flag-on-visible-only",
+    "input": {
+      "enabled": true,
+      "visibleUiAllowed": true
+    },
+    "expected": {
+      "enabled": true,
+      "visibleUiAllowed": true,
+      "isVisible": true,
+      "noExecution": true
+    }
+  },
+  {
+    "fixtureId": "mobile-clinic-mode-unsafe-authority-attempt",
+    "input": {
+      "enabled": true,
+      "visibleUiAllowed": true,
+      "mobileClinicModeRuntimeAllowed": true,
+      "liveMobileClinicModeRuntimeAllowed": true,
+      "mobileClinicConnectorRuntimeAllowed": true,
+      "mobileClinicScheduleConnectorRuntimeAllowed": true,
+      "appointmentSchedulingAllowed": true,
+      "transportationDispatchAllowed": true,
+      "emergencyDispatchAllowed": true,
+      "providerContactAllowed": true,
+      "clinicianContactAllowed": true,
+      "locationSharingAllowed": true,
+      "cameraActivationAllowed": true,
+      "microphoneActivationAllowed": true,
+      "paymentExecutionAllowed": true,
+      "communicationsExecutionAllowed": true,
+      "executionAuthority": true,
+      "noExecution": false
+    },
+    "expected": {
+      "enabled": true,
+      "visibleUiAllowed": true,
+      "isVisible": true,
+      "mobileClinicModeRuntimeAllowed": false,
+      "liveMobileClinicModeRuntimeAllowed": false,
+      "mobileClinicConnectorRuntimeAllowed": false,
+      "mobileClinicScheduleConnectorRuntimeAllowed": false,
+      "appointmentSchedulingAllowed": false,
+      "transportationDispatchAllowed": false,
+      "emergencyDispatchAllowed": false,
+      "providerContactAllowed": false,
+      "clinicianContactAllowed": false,
+      "locationSharingAllowed": false,
+      "cameraActivationAllowed": false,
+      "microphoneActivationAllowed": false,
+      "paymentExecutionAllowed": false,
+      "communicationsExecutionAllowed": false,
+      "executionAuthority": false,
+      "noExecution": true
+    }
+  },
+  {
+    "fixtureId": "mobile-clinic-mode-flag-on-without-visible-permission",
+    "input": {
+      "enabled": true,
+      "visibleUiAllowed": false
+    },
+    "expected": {
+      "enabled": true,
+      "visibleUiAllowed": false,
+      "isVisible": false,
+      "noExecution": true
+    }
+  }
+]
