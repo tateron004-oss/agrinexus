@@ -1,0 +1,101 @@
+[
+  {
+    "fixtureId": "pharmacy-mode-default-off",
+    "input": {},
+    "expected": {
+      "enabled": false,
+      "visibleUiAllowed": false,
+      "isVisible": false,
+      "noExecution": true
+    }
+  },
+  {
+    "fixtureId": "pharmacy-mode-flag-on-visible-only",
+    "input": {
+      "enabled": true,
+      "visibleUiAllowed": true
+    },
+    "expected": {
+      "enabled": true,
+      "visibleUiAllowed": true,
+      "isVisible": true,
+      "noExecution": true
+    }
+  },
+  {
+    "fixtureId": "pharmacy-mode-unsafe-authority-attempt",
+    "input": {
+      "enabled": true,
+      "visibleUiAllowed": true,
+      "pharmacyModeReviewAllowed": true,
+      "pharmacySupportPreviewAllowed": true,
+      "prescriptionReadinessPreviewAllowed": true,
+      "refillReadinessPreviewAllowed": true,
+      "pharmacyProviderDirectoryPreviewAllowed": true,
+      "medicationSafetyBoundaryPreviewAllowed": true,
+      "paymentInsuranceBoundaryPreviewAllowed": true,
+      "pharmacyModeRuntimeAllowed": true,
+      "livePharmacyModeRuntimeAllowed": true,
+      "healthConnectorRuntimeAllowed": true,
+      "clinicConnectorRuntimeAllowed": true,
+      "telehealthConnectorRuntimeAllowed": true,
+      "pharmacyConnectorRuntimeAllowed": true,
+      "pharmacyProviderConnectorRuntimeAllowed": true,
+      "prescriptionConnectorRuntimeAllowed": true,
+      "refillConnectorRuntimeAllowed": true,
+      "medicationSafetyConnectorRuntimeAllowed": true,
+      "paymentInsuranceConnectorRuntimeAllowed": true,
+      "prescriptionRefillRuntimeAllowed": true,
+      "appointmentSchedulingAllowed": true,
+      "transportationDispatchAllowed": true,
+      "emergencyDispatchAllowed": true,
+      "medicalRecordsFhirRuntimeAllowed": true,
+      "medicalAdviceAllowed": true,
+      "diagnosisClaimAllowed": true,
+      "prescriptionInstructionAllowed": true,
+      "dosageInstructionAllowed": true,
+      "refillExecutionAllowed": true,
+      "providerContactAllowed": true,
+      "pharmacistContactAllowed": true,
+      "locationSharingAllowed": true,
+      "cameraActivationAllowed": true,
+      "microphoneActivationAllowed": true,
+      "paymentExecutionAllowed": true,
+      "insuranceProcessingAllowed": true,
+      "marketplaceTransactionAllowed": true,
+      "identityAccountProfileActionAllowed": true,
+      "communicationsExecutionAllowed": true,
+      "policyBypassAllowed": true,
+      "confirmationBypassAllowed": true,
+      "permissionBypassAllowed": true,
+      "firstTurnExecutionAllowed": true,
+      "laterTurnExecutionAllowed": true,
+      "standardUserPharmacyModeMutationAllowed": true,
+      "backendWriteAllowed": true,
+      "storageWriteAllowed": true,
+      "networkAllowed": true,
+      "auditWriteAllowed": true,
+      "executionAuthority": true,
+      "noExecution": false
+    },
+    "expected": {
+      "enabled": true,
+      "visibleUiAllowed": true,
+      "isVisible": true,
+      "noExecution": true
+    }
+  },
+  {
+    "fixtureId": "pharmacy-mode-flag-on-without-visible-permission",
+    "input": {
+      "enabled": true,
+      "visibleUiAllowed": false
+    },
+    "expected": {
+      "enabled": true,
+      "visibleUiAllowed": false,
+      "isVisible": false,
+      "noExecution": true
+    }
+  }
+]
