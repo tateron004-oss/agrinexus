@@ -388,6 +388,7 @@
     "qa:nexus-sprint-g2-approval-audit-persistence-contract": "node scripts/nexus-sprint-g2-approval-audit-persistence-contract-qa.js",
     "qa:nexus-sprint-g3-approval-audit-persistence-fixture-harness": "node scripts/nexus-sprint-g3-approval-audit-persistence-fixture-harness-qa.js",
     "qa:nexus-sprint-g4-approval-audit-persistence-no-write-regression-guard": "node scripts/nexus-sprint-g4-approval-audit-persistence-no-write-regression-guard-qa.js",
+    "qa:nexus-sprint-g5-approval-audit-persistence-lane-closeout": "node scripts/nexus-sprint-g5-approval-audit-persistence-lane-closeout-qa.js",
     "qa:nexus-phase-105-preview-only-autonomous-runtime-integration-plan": "node scripts/nexus-phase-105-preview-only-autonomous-runtime-integration-plan-qa.js"
   },
   "dependencies": {
