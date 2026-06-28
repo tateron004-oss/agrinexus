@@ -401,6 +401,7 @@
     "qa:nexus-sprint-g4-approval-audit-persistence-no-write-regression-guard": "node scripts/nexus-sprint-g4-approval-audit-persistence-no-write-regression-guard-qa.js",
     "qa:nexus-sprint-g5-approval-audit-persistence-lane-closeout": "node scripts/nexus-sprint-g5-approval-audit-persistence-lane-closeout-qa.js",
     "qa:nexus-sprint-g6-provider-dispatch-dry-run-contract": "node scripts/nexus-sprint-g6-provider-dispatch-dry-run-contract-qa.js",
+    "qa:nexus-sprint-g7-provider-dispatch-dry-run-harness": "node scripts/nexus-sprint-g7-provider-dispatch-dry-run-harness-qa.js",
     "qa:nexus-sprint-h1-consent-center-runtime-activation-readiness-gate": "node scripts/nexus-sprint-h1-consent-center-runtime-activation-readiness-gate-qa.js",
     "qa:nexus-sprint-h2-consent-center-feature-flag-contract": "node scripts/nexus-sprint-h2-consent-center-feature-flag-contract-qa.js",
     "qa:nexus-sprint-h3-consent-center-flag-contract-harness": "node scripts/nexus-sprint-h3-consent-center-flag-contract-harness-qa.js",
