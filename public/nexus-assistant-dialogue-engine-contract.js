@@ -102,6 +102,10 @@
     return terms.some(term => text.includes(term));
   }
 
+  function includesWeatherTerm(text) {
+    return /\b(weather|rain|forecast|temperature)\b/.test(text);
+  }
+
   function stableId(prefix, value) {
     return `${prefix}-${String(value || "dialogue").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 54) || "dialogue"}`;
   }
@@ -157,15 +161,15 @@
     if (!hasText(text)) intentType = "clarification-required";
     else if (followUp.isFollowUp && followUp.resolvedIntentType === "clarification-required") intentType = "clarification-required";
     else if (!(followUp.isFollowUp && followUp.resolvedIntentType !== "clarification-required")) {
-      if (includesAny(lower, ["weather", "rain", "forecast", "temperature"])) intentType = "weather";
+      if (includesWeatherTerm(lower)) intentType = "weather";
       else if (includesAny(lower, ["fighting", "conflict", "security", "safe to travel", "war", "goma", "congo", "sudan"])) intentType = "conflict-security";
       else if (includesAny(lower, ["current events", "news"])) intentType = "current-events-news";
       else if (includesAny(lower, ["track", "shipment", "delivery", "parcel", "in transit"])) intentType = "shipment-tracking";
       else if (includesAny(lower, ["apply for this job", "help me apply", "submit the application"])) intentType = "job-application-preparation";
       else if (includesAny(lower, ["resume", "cover letter", "cv"])) intentType = "resume-cover-letter-preparation";
       else if (includesAny(lower, ["jobs", "job", "career", "employment", "hiring"])) intentType = "job-search";
+      else if (includesAny(lower, ["music", "spotify", "radio", "playlist", "song", "training video", "training videos", "agriculture video", "agriculture videos"])) intentType = "music-media";
       else if (includesAny(lower, ["crop", "farm", "soil", "irrigation", "agriculture", "market price"])) intentType = "agriculture-context";
-      else if (includesAny(lower, ["music", "spotify", "radio", "playlist", "song"])) intentType = "music-media";
       else if (includesAny(lower, ["provider status", "connected provider", "available provider"])) intentType = "provider-status";
       else if (includesAny(lower, ["emergency", "ambulance", "police"])) intentType = "emergency-intent";
       else if (includesAny(lower, ["message", "call", "whatsapp", "telegram", "text "])) intentType = "calls-messaging-intent";
