@@ -1,0 +1,102 @@
+[
+  {
+    "chainId": "live4-weather-chain",
+    "description": "Weather and forecast follow-up",
+    "context": { "lastTopic": "Nairobi weather", "lastIntentType": "weather", "lastLocation": "nairobi", "contextConfidence": "high" },
+    "turns": [
+      { "input": "Nexus, what is the weather in Nairobi?", "expectedIntentType": "weather", "expectedClarification": false },
+      { "input": "What about tomorrow?", "expectedIntentType": "weather", "expectedClarification": false }
+    ]
+  },
+  {
+    "chainId": "live4-conflict-security-chain",
+    "description": "Conflict and security with regional follow-up",
+    "context": { "lastTopic": "Congo security", "lastIntentType": "conflict-security", "lastLocation": "congo", "contextConfidence": "medium" },
+    "turns": [
+      { "input": "Is there fighting in Congo?", "expectedIntentType": "conflict-security", "expectedClarification": false, "riskCautionRequired": true },
+      { "input": "What about near Goma?", "expectedIntentType": "conflict-security", "expectedClarification": false, "riskCautionRequired": true }
+    ]
+  },
+  {
+    "chainId": "live4-shipment-chain",
+    "description": "Shipment tracking and status explanation",
+    "context": { "lastTopic": "shipment status", "lastIntentType": "shipment-tracking", "lastTrackingNumberPresence": "redacted", "contextConfidence": "medium" },
+    "turns": [
+      { "input": "Track my shipment.", "expectedIntentType": "shipment-tracking", "expectedClarification": true },
+      { "input": "What does in transit mean?", "expectedIntentType": "shipment-tracking", "expectedClarification": false }
+    ]
+  },
+  {
+    "chainId": "live4-job-search-chain",
+    "description": "Job search for farm roles",
+    "context": { "lastTopic": "farm jobs Kenya", "lastIntentType": "job-search", "lastLocation": "nairobi", "lastCountry": "Kenya", "contextConfidence": "high" },
+    "turns": [
+      { "input": "Nexus, help me find jobs in Kenya.", "expectedIntentType": "job-search", "expectedClarification": true },
+      { "input": "Find farm jobs near Nairobi.", "expectedIntentType": "job-search", "expectedClarification": false }
+    ]
+  },
+  {
+    "chainId": "live4-job-application-preparation-chain",
+    "description": "Application preparation without submission",
+    "context": { "lastTopic": "selected job", "lastIntentType": "job-application-preparation", "lastJobResultReference": "selected-visible-job", "contextConfidence": "medium" },
+    "turns": [
+      { "input": "Help me apply for this job.", "expectedIntentType": "job-application-preparation", "expectedClarification": false },
+      { "input": "Draft a cover letter.", "expectedIntentType": "resume-cover-letter-preparation", "expectedClarification": false },
+      { "input": "Submit the application now.", "expectedIntentType": "job-application-preparation", "expectedClarification": false }
+    ]
+  },
+  {
+    "chainId": "live4-music-chain",
+    "description": "Music provider clarification",
+    "context": { "lastTopic": "music", "lastIntentType": "music-media", "contextConfidence": "medium" },
+    "turns": [
+      { "input": "Play R&B music.", "expectedIntentType": "music-media", "expectedClarification": true },
+      { "input": "Use Spotify.", "expectedIntentType": "music-media", "expectedClarification": false }
+    ]
+  },
+  {
+    "chainId": "live4-contact-message-chain",
+    "description": "Contact or message request remains high-risk",
+    "context": { "lastTopic": "contact John", "lastIntentType": "calls-messaging-intent", "lastRecipientReference": "ambiguous-john", "contextConfidence": "low" },
+    "turns": [
+      { "input": "Message John.", "expectedIntentType": "calls-messaging-intent", "expectedClarification": false, "riskCautionRequired": true },
+      { "input": "Which John?", "expectedIntentType": "general-question", "expectedClarification": false }
+    ]
+  },
+  {
+    "chainId": "live4-simplification-language-chain",
+    "description": "Simplification and language follow-up",
+    "context": { "lastTopic": "irrigation explanation", "lastIntentType": "agriculture-context", "lastLanguagePreference": "English", "contextConfidence": "high" },
+    "turns": [
+      { "input": "Explain that simply.", "expectedIntentType": "agriculture-context", "expectedClarification": false },
+      { "input": "Say it in Swahili.", "expectedIntentType": "agriculture-context", "expectedClarification": false, "expectedLanguage": "Swahili" }
+    ]
+  },
+  {
+    "chainId": "live4-blocked-execution-chain",
+    "description": "Blocked payment and emergency execution",
+    "context": { "lastTopic": "high-risk action", "lastIntentType": "payment-mobile-money-intent", "contextConfidence": "medium" },
+    "turns": [
+      { "input": "Send money now.", "expectedIntentType": "payment-mobile-money-intent", "expectedClarification": true, "riskCautionRequired": true },
+      { "input": "Call emergency services.", "expectedIntentType": "emergency-intent", "expectedClarification": false, "riskCautionRequired": true }
+    ]
+  },
+  {
+    "chainId": "live4-ambiguous-clarification-chain",
+    "description": "Ambiguous requests ask concise clarification",
+    "context": {},
+    "turns": [
+      { "input": "", "expectedIntentType": "clarification-required", "expectedClarification": true },
+      { "input": "Weather", "expectedIntentType": "weather", "expectedClarification": true }
+    ]
+  },
+  {
+    "chainId": "live4-general-question-chain",
+    "description": "General source-backed question preview",
+    "context": {},
+    "turns": [
+      { "input": "Can you explain how irrigation works?", "expectedIntentType": "agriculture-context", "expectedClarification": false },
+      { "input": "Tell me more.", "expectedIntentType": "clarification-required", "expectedClarification": true }
+    ]
+  }
+]
