@@ -507,6 +507,7 @@
     "qa:nexus-sprint-ae1-education-mode-runtime-activation-readiness-gate": "node scripts/nexus-sprint-ae1-education-mode-runtime-activation-readiness-gate-qa.js",
     "qa:nexus-sprint-ae2-education-mode-feature-flag-contract": "node scripts/nexus-sprint-ae2-education-mode-feature-flag-contract-qa.js",
     "qa:nexus-sprint-ae3-education-mode-flag-contract-harness": "node scripts/nexus-sprint-ae3-education-mode-flag-contract-harness-qa.js",
+    "qa:nexus-sprint-ae4-education-mode-runtime-absence-regression-guard": "node scripts/nexus-sprint-ae4-education-mode-runtime-absence-regression-guard-qa.js",
     "qa:nexus-phase-105-preview-only-autonomous-runtime-integration-plan": "node scripts/nexus-phase-105-preview-only-autonomous-runtime-integration-plan-qa.js"
   },
   "dependencies": {
