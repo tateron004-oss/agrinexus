@@ -502,6 +502,7 @@
     "qa:nexus-sprint-ad1-workforce-mode-runtime-activation-readiness-gate": "node scripts/nexus-sprint-ad1-workforce-mode-runtime-activation-readiness-gate-qa.js",
     "qa:nexus-sprint-ad2-workforce-mode-feature-flag-contract": "node scripts/nexus-sprint-ad2-workforce-mode-feature-flag-contract-qa.js",
     "qa:nexus-sprint-ad3-workforce-mode-flag-contract-harness": "node scripts/nexus-sprint-ad3-workforce-mode-flag-contract-harness-qa.js",
+    "qa:nexus-sprint-ad4-workforce-mode-runtime-absence-regression-guard": "node scripts/nexus-sprint-ad4-workforce-mode-runtime-absence-regression-guard-qa.js",
     "qa:nexus-phase-105-preview-only-autonomous-runtime-integration-plan": "node scripts/nexus-phase-105-preview-only-autonomous-runtime-integration-plan-qa.js"
   },
   "dependencies": {
