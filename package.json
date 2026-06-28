@@ -544,6 +544,7 @@
     "qa:nexus-sprint-al3-local-language-pack-mode-flag-contract-harness": "node scripts/nexus-sprint-al3-local-language-pack-mode-flag-contract-harness-qa.js",
     "qa:nexus-sprint-al4-local-language-pack-mode-runtime-absence-regression-guard": "node scripts/nexus-sprint-al4-local-language-pack-mode-runtime-absence-regression-guard-qa.js",
     "qa:nexus-sprint-al5-local-language-pack-mode-lane-closeout": "node scripts/nexus-sprint-al5-local-language-pack-mode-lane-closeout-qa.js",
+    "qa:nexus-sprint-am1-observability-monitoring-runtime-activation-readiness-gate": "node scripts/nexus-sprint-am1-observability-monitoring-runtime-activation-readiness-gate-qa.js",
     "qa:nexus-phase-105-preview-only-autonomous-runtime-integration-plan": "node scripts/nexus-phase-105-preview-only-autonomous-runtime-integration-plan-qa.js"
   },
   "dependencies": {
