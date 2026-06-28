@@ -4,6 +4,10 @@
 
 Sprint D3 adds fixture-only staged action examples and a deterministic local harness that validates them against the Sprint D2 inert staged action contract.
 
+Current base after D2: `44af59242afcc917224085047d93f82527f4fb2d`.
+
+Sprint D3 continues the post-AO3 Sprint D train. The audit train ended at AO3, and D3 remains fixture-only rather than reopening AO4, AO5, or any additional audit phase.
+
 D3 remains non-runtime and non-executing. It does not import staged actions into `public/app.js`, `public/index.html`, or `server.js`. It does not mutate files, write storage, touch `db.json`, use the DOM, perform network requests, create backend state, open providers, or execute any staged action.
 
 ## Files

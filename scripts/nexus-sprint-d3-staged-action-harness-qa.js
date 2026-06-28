@@ -45,6 +45,8 @@ const fixtures = loadStagedActionFixtures();
 
 assertIncludes(doc, [
   "Sprint D3",
+  "44af59242afcc917224085047d93f82527f4fb2d",
+  "audit train ended at AO3",
   "Fixture-Only Staged Action Harness",
   fixtureName.replace(/\\/g, "/"),
   "scripts/nexus-sprint-d3-staged-action-harness.js",
