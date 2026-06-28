@@ -1,6 +1,7 @@
 const crypto = require("node:crypto");
 const orchestrator = require("./nexus-live-source-orchestrator.js");
 const answerComposer = require("./nexus-assistant-answer-composer.js");
+const followUpContext = require("./nexus-assistant-follow-up-context.js");
 
 const DEFAULT_SAFE_FOLLOW_UPS = Object.freeze([
   "Ask for more detail",
@@ -104,6 +105,66 @@ function buildAssistantRuntimeResponseFromOrchestration(userPrompt, orchestratio
   });
 }
 
+function buildAssistantRuntimeFollowUpResponse(userPrompt, sessionContext, env = process.env, now = new Date()) {
+  const followUp = followUpContext.classifyAssistantFollowUp(userPrompt, sessionContext, now);
+  if (followUp.isFollowUp !== true) {
+    return buildAssistantRuntimeResponse(userPrompt, {
+      lastIntentType: sessionContext && sessionContext.lastIntent,
+      lastTopic: sessionContext && sessionContext.lastQuery,
+      lastLocation: sessionContext && sessionContext.lastLocation
+    }, env);
+  }
+
+  const blocked = followUp.blocked === true;
+  const answer = followUpContext.buildFollowUpAnswer(userPrompt, sessionContext, followUp);
+  const citations = normalizeCitations(sessionContext && sessionContext.lastCitations);
+  const sourceLabels = uniqueTextList(citations.map(citation => citation.sourceName));
+  const retrievedAt = new Date().toISOString();
+
+  return Object.freeze({
+    responseId: stableResponseId(`${sessionContext && sessionContext.contextId}:${userPrompt}`),
+    userPrompt: String(userPrompt || ""),
+    intent: blocked ? "blocked-follow-up-action" : sessionContext.lastIntent,
+    selectedProvider: blocked ? null : sessionContext.lastProvider,
+    providerStatus: blocked ? "blocked_by_policy" : "context_refinement",
+    answer,
+    summary: answer,
+    citations,
+    sourceLabels,
+    retrievedAt,
+    freshnessStatus: citations[0] && citations[0].freshnessStatus ? citations[0].freshnessStatus : "unknown",
+    confidence: blocked ? "low" : "medium",
+    trustTier: blocked ? "unavailable" : "contextual",
+    safeFollowUps: blocked ? ["Ask for information only", "Cancel"] : sessionContext.allowedRefinements,
+    blockedActions: sessionContext.blockedActions && sessionContext.blockedActions.length > 0 ? sessionContext.blockedActions : BLOCKED_ACTIONS,
+    safetyPosture: Object.freeze({
+      readOnly: true,
+      previewOnly: true,
+      noExecutionAuthorized: true,
+      noLocationPermissionRequested: true,
+      noProviderContactAuthorized: true,
+      noBackendWritePerformed: true,
+      noDispatchAuthorized: true,
+      standardUserRuntimeActivated: false
+    }),
+    sourceResultCount: 0,
+    auditEvent: Object.freeze({
+      eventType: "assistant-follow-up-context-response",
+      redactionStatus: "no-secrets-or-sensitive-payloads",
+      riskTier: blocked ? "high" : "low",
+      allowed: blocked !== true,
+      blockedReason: blocked ? followUp.reason : "",
+      createdAt: retrievedAt
+    }),
+    allowed: blocked !== true,
+    blockedReason: blocked ? followUp.reason : "",
+    noExecutionAuthorized: true,
+    noLocationPermissionRequested: true,
+    noProviderContactAuthorized: true,
+    noBackendWritePerformed: true
+  });
+}
+
 function isSafeAssistantRuntimeResponse(response) {
   if (!response || typeof response !== "object" || Array.isArray(response)) return false;
   if (!hasText(response.responseId) || !hasText(response.userPrompt) || !hasText(response.intent)) return false;
@@ -125,5 +186,6 @@ module.exports = Object.freeze({
   buildAssistantRuntimeResponse,
   buildAssistantRuntimeResponseAsync,
   buildAssistantRuntimeResponseFromOrchestration,
+  buildAssistantRuntimeFollowUpResponse,
   isSafeAssistantRuntimeResponse
 });
