@@ -455,6 +455,7 @@
     "qa:nexus-sprint-n2-inert-marketplace-request-contract": "node scripts/nexus-sprint-n2-inert-marketplace-request-contract-qa.js",
     "qa:nexus-sprint-n3-marketplace-request-harness": "node scripts/nexus-sprint-n3-marketplace-request-harness-qa.js",
     "qa:nexus-sprint-n4-product-seller-risk-evidence-mapping": "node scripts/nexus-sprint-n4-product-seller-risk-evidence-mapping-qa.js",
+    "qa:nexus-sprint-n5-flag-off-marketplace-request-regression": "node scripts/nexus-sprint-n5-flag-off-marketplace-request-regression-qa.js",
     "qa:nexus-sprint-k1-personalization-runtime-activation-readiness-gate": "node scripts/nexus-sprint-k1-personalization-runtime-activation-readiness-gate-qa.js",
     "qa:nexus-sprint-k2-personalization-feature-flag-contract": "node scripts/nexus-sprint-k2-personalization-feature-flag-contract-qa.js",
     "qa:nexus-sprint-k3-personalization-flag-contract-harness": "node scripts/nexus-sprint-k3-personalization-flag-contract-harness-qa.js",
