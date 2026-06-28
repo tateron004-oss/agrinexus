@@ -548,6 +548,7 @@
     "qa:nexus-sprint-am2-observability-monitoring-feature-flag-contract": "node scripts/nexus-sprint-am2-observability-monitoring-feature-flag-contract-qa.js",
     "qa:nexus-sprint-am3-observability-monitoring-flag-contract-harness": "node scripts/nexus-sprint-am3-observability-monitoring-flag-contract-harness-qa.js",
     "qa:nexus-sprint-am4-observability-monitoring-runtime-absence-regression-guard": "node scripts/nexus-sprint-am4-observability-monitoring-runtime-absence-regression-guard-qa.js",
+    "qa:nexus-sprint-am5-observability-monitoring-lane-closeout": "node scripts/nexus-sprint-am5-observability-monitoring-lane-closeout-qa.js",
     "qa:nexus-phase-105-preview-only-autonomous-runtime-integration-plan": "node scripts/nexus-phase-105-preview-only-autonomous-runtime-integration-plan-qa.js"
   },
   "dependencies": {
