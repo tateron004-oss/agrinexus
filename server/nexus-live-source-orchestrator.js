@@ -242,9 +242,20 @@ function getProviderSourceResult(providerId, request, env) {
 }
 
 async function getProviderSourceResultAsync(providerId, request, env) {
-  const providerPromise = providerId === "weather" && typeof weather.getWeatherSourceResultAsync === "function"
-    ? weather.getWeatherSourceResultAsync(request, env)
-    : Promise.resolve(getProviderSourceResult(providerId, request, env));
+  let providerPromise = null;
+  if (providerId === "weather" && typeof weather.getWeatherSourceResultAsync === "function") {
+    providerPromise = weather.getWeatherSourceResultAsync(request, env);
+  } else if (providerId === "agriculture-context" && typeof agriculture.getAgricultureContextSourceResultAsync === "function") {
+    providerPromise = agriculture.getAgricultureContextSourceResultAsync(request, env);
+  } else if (providerId === "news-security" && typeof newsSecurity.getNewsSecuritySourceResultAsync === "function") {
+    providerPromise = newsSecurity.getNewsSecuritySourceResultAsync(request, env);
+  } else if (providerId === "job-search" && typeof jobs.getJobSearchSourceResultAsync === "function") {
+    providerPromise = jobs.getJobSearchSourceResultAsync(request, env);
+  } else if (providerId === "music-media" && typeof musicMedia.getMusicMediaSourceResultAsync === "function") {
+    providerPromise = musicMedia.getMusicMediaSourceResultAsync(request, env);
+  } else {
+    providerPromise = Promise.resolve(getProviderSourceResult(providerId, request, env));
+  }
   return withProviderTimeout(providerPromise, providerId, env);
 }
 

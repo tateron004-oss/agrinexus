@@ -14,6 +14,8 @@ const NEWS_SECURITY_PROVIDER_CANDIDATES = Object.freeze([
   "government travel/security advisory"
 ]);
 
+const RELIEFWEB_REPORTS_URL = "https://api.reliefweb.int/v1/reports";
+
 function hasText(value) {
   return typeof value === "string" && value.trim().length > 0;
 }
@@ -46,10 +48,17 @@ function resolveNewsSecurityProviderConfig(env = process.env) {
     providerMode,
     liveSourceEnabled: env.NEXUS_LIVE_SOURCE_RETRIEVAL_ENABLED === "true",
     newsSecurityProviderEnabled: env.NEXUS_NEWS_SECURITY_PROVIDER_ENABLED === "true",
+    publicProviderEnabled: env.NEXUS_NEWS_SECURITY_PUBLIC_PROVIDER_ENABLED === "true",
     hasProviderKey: hasText(env.NEXUS_NEWS_SECURITY_PROVIDER_API_KEY),
     hasPublicSourceEndpoint: hasText(env.NEXUS_NEWS_SECURITY_PUBLIC_SOURCE_ENDPOINT),
     providerCandidates: NEWS_SECURITY_PROVIDER_CANDIDATES
   });
+}
+
+function isReliefWebPublicProviderConfigured(env = process.env) {
+  return env.NEXUS_LIVE_SOURCE_RETRIEVAL_ENABLED === "true"
+    && env.NEXUS_NEWS_SECURITY_PROVIDER_ENABLED === "true"
+    && env.NEXUS_NEWS_SECURITY_PUBLIC_PROVIDER_ENABLED === "true";
 }
 
 function buildMockNewsSecurityResult(request = {}) {
@@ -98,6 +107,89 @@ function buildConflictingNewsSecurityResult(request = {}) {
 
 function buildNewsSecurityProviderUnavailableResult(reason) {
   return buildProviderUnavailableResult("news-security", reason || "news/security provider flags or config are missing");
+}
+
+function buildReliefWebProviderErrorResult(query, errorType) {
+  return normalizeSourceResult({
+    sourceResultId: `news-security-reliefweb-error-${String(query.regionOrTopic || "topic").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "topic"}`,
+    requestType: "news-security",
+    providerName: NEWS_SECURITY_PROVIDER_NAME,
+    providerMode: "live",
+    sourceName: "ReliefWeb",
+    sourceCategory: "news-security",
+    sourceUrl: "https://reliefweb.int/",
+    query: `${query.queryType} for ${query.regionOrTopic || "requested topic"}`,
+    resultSummary: "ReliefWeb public news/security lookup failed safely. Nexus did not dispatch help or certify safety.",
+    rawResultAvailable: false,
+    freshnessStatus: "unavailable",
+    confidenceLevel: "low",
+    limitationNotes: `${errorType || "source-error"}; verify directly with official sources before travel, safety, or emergency decisions.`,
+    evidenceStatus: "source-unavailable",
+    sourceStatus: "source-error"
+  });
+}
+
+function normalizeReliefWebPayload(query, payload) {
+  const first = payload && Array.isArray(payload.data) ? payload.data[0] : null;
+  const fields = first && first.fields ? first.fields : null;
+  if (!fields || !hasText(fields.title)) return buildReliefWebProviderErrorResult(query, "source-result-empty");
+  const title = normalizeTopicText(fields.title);
+  const sourceUrl = hasText(fields.url) ? fields.url : "https://reliefweb.int/";
+  const created = fields.date && hasText(fields.date.created) ? fields.date.created : new Date().toISOString();
+  return normalizeSourceResult({
+    sourceResultId: `news-security-reliefweb-${title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 48) || "report"}`,
+    requestType: "news-security",
+    providerName: NEWS_SECURITY_PROVIDER_NAME,
+    providerMode: "live",
+    sourceName: "ReliefWeb",
+    sourceCategory: "news-security",
+    sourceUrl,
+    query: `${query.queryType} for ${query.regionOrTopic}`,
+    resultSummary: `Latest public ReliefWeb item for ${query.regionOrTopic}: ${title}.`,
+    rawResultAvailable: true,
+    lastUpdated: created,
+    freshnessStatus: "fresh",
+    confidenceLevel: "medium",
+    limitationNotes: "Read-only public ReliefWeb result. It is not travel clearance, emergency guidance, or a dispatch action.",
+    evidenceStatus: "source-backed",
+    sourceStatus: "source-result-available"
+  });
+}
+
+async function fetchJson(fetchImpl, url) {
+  const response = await fetchImpl(url, { method: "GET", signal: AbortSignal.timeout(8000) });
+  if (!response || response.ok !== true) {
+    const status = response && typeof response.status !== "undefined" ? `http-${response.status}` : "http-error";
+    throw new Error(status);
+  }
+  return response.json();
+}
+
+async function runReliefWebReadOnlyLookup(request = {}, env = process.env) {
+  const query = buildNewsSecuritySourceQuery(request);
+  if (!hasText(query.regionOrTopic)) return getNewsSecuritySourceResult(request, env);
+  if (!isReliefWebPublicProviderConfigured(env)) return getNewsSecuritySourceResult(request, env);
+  const fetchImpl = typeof env.NEXUS_NEWS_SECURITY_FETCH_IMPL === "function" ? env.NEXUS_NEWS_SECURITY_FETCH_IMPL : globalThis.fetch;
+  if (typeof fetchImpl !== "function") return buildReliefWebProviderErrorResult(query, "fetch-unavailable");
+  try {
+    const url = new URL(RELIEFWEB_REPORTS_URL);
+    url.searchParams.set("appname", "nexus-workforce-ai");
+    url.searchParams.set("query[value]", query.regionOrTopic);
+    url.searchParams.set("limit", "1");
+    url.searchParams.set("preset", "latest");
+    url.searchParams.set("fields[include][]", "title");
+    url.searchParams.set("fields[include][]", "url");
+    url.searchParams.set("fields[include][]", "date");
+    const payload = await fetchJson(fetchImpl, url);
+    return normalizeReliefWebPayload(query, payload);
+  } catch (error) {
+    return buildReliefWebProviderErrorResult(query, error && error.message ? error.message : "source-error");
+  }
+}
+
+async function getNewsSecuritySourceResultAsync(request = {}, env = process.env) {
+  if (isReliefWebPublicProviderConfigured(env)) return runReliefWebReadOnlyLookup(request, env);
+  return getNewsSecuritySourceResult(request, env);
 }
 
 function getNewsSecuritySourceResult(request = {}, env = process.env) {
@@ -157,10 +249,16 @@ function getNewsSecuritySourceResult(request = {}, env = process.env) {
 module.exports = Object.freeze({
   NEWS_SECURITY_PROVIDER_NAME,
   NEWS_SECURITY_PROVIDER_CANDIDATES,
+  RELIEFWEB_REPORTS_URL,
   buildNewsSecuritySourceQuery,
   resolveNewsSecurityProviderConfig,
+  isReliefWebPublicProviderConfigured,
   buildMockNewsSecurityResult,
   buildConflictingNewsSecurityResult,
   buildNewsSecurityProviderUnavailableResult,
-  getNewsSecuritySourceResult
+  buildReliefWebProviderErrorResult,
+  normalizeReliefWebPayload,
+  runReliefWebReadOnlyLookup,
+  getNewsSecuritySourceResult,
+  getNewsSecuritySourceResultAsync
 });

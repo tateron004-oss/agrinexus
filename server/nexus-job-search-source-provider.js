@@ -6,6 +6,7 @@ const {
 
 const JOB_PROVIDER_NAME = "job-search";
 const JOB_PROVIDER_CANDIDATES = Object.freeze([
+  "Remotive public jobs API",
   "job board provider adapter",
   "employer career page adapter",
   "public job feed adapter",
@@ -14,6 +15,8 @@ const JOB_PROVIDER_CANDIDATES = Object.freeze([
   "agriculture employment/training opportunity source",
   "mock/fixture job provider"
 ]);
+
+const REMOTIVE_JOBS_URL = "https://remotive.com/api/remote-jobs";
 
 const JOB_RESULT_FIELDS = Object.freeze([
   "jobResultId",
@@ -76,10 +79,17 @@ function resolveJobSearchProviderConfig(env = process.env) {
     providerMode,
     liveSourceEnabled: env.NEXUS_LIVE_SOURCE_RETRIEVAL_ENABLED === "true",
     jobSearchProviderEnabled: env.NEXUS_JOB_SEARCH_PROVIDER_ENABLED === "true",
+    publicProviderEnabled: env.NEXUS_JOB_SEARCH_PUBLIC_PROVIDER_ENABLED === "true",
     hasProviderKey: hasText(env.NEXUS_JOB_SEARCH_PROVIDER_API_KEY),
     hasPublicSourceEndpoint: hasText(env.NEXUS_JOB_SEARCH_PUBLIC_SOURCE_ENDPOINT),
     providerCandidates: JOB_PROVIDER_CANDIDATES
   });
+}
+
+function isRemotivePublicProviderConfigured(env = process.env) {
+  return env.NEXUS_LIVE_SOURCE_RETRIEVAL_ENABLED === "true"
+    && env.NEXUS_JOB_SEARCH_PROVIDER_ENABLED === "true"
+    && env.NEXUS_JOB_SEARCH_PUBLIC_PROVIDER_ENABLED === "true";
 }
 
 function attachJobFields(sourceResult, fields) {
@@ -167,6 +177,97 @@ function buildJobProviderUnavailableResult(reason) {
   return buildProviderUnavailableResult("job-search", reason || "job search provider flags or config are missing");
 }
 
+function buildRemotiveProviderErrorResult(query, errorType) {
+  return normalizeSourceResult({
+    sourceResultId: `job-search-remotive-error-${String(query.queryText || "job").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "job"}`,
+    requestType: "job-search",
+    providerName: JOB_PROVIDER_NAME,
+    providerMode: "live",
+    sourceName: "Remotive public jobs API",
+    sourceCategory: "job-search",
+    sourceUrl: "https://remotive.com/",
+    query: `${query.queryText || "job"} ${query.locationText || ""}`,
+    resultSummary: "Remotive public job lookup failed safely. No application, account creation, resume upload, or employer contact occurred.",
+    rawResultAvailable: false,
+    freshnessStatus: "unavailable",
+    confidenceLevel: "low",
+    limitationNotes: `${errorType || "source-error"}; verify job details directly before taking action.`,
+    evidenceStatus: "source-unavailable",
+    sourceStatus: "source-error"
+  });
+}
+
+function normalizeRemotivePayload(query, payload) {
+  const first = payload && Array.isArray(payload.jobs) ? payload.jobs[0] : null;
+  if (!first || !hasText(first.title)) return buildRemotiveProviderErrorResult(query, "source-result-empty");
+  const title = normalizeText(first.title);
+  const company = hasText(first.company_name) ? normalizeText(first.company_name) : "employer not listed";
+  const location = hasText(first.candidate_required_location) ? normalizeText(first.candidate_required_location) : "remote/unspecified";
+  const sourceUrl = hasText(first.url) ? first.url : "https://remotive.com/";
+  return attachJobFields(normalizeSourceResult({
+    sourceResultId: `job-search-remotive-${String(first.id || title).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "job"}`,
+    requestType: "job-search",
+    providerName: JOB_PROVIDER_NAME,
+    providerMode: "live",
+    sourceName: "Remotive public jobs API",
+    sourceCategory: "job-search",
+    sourceUrl,
+    query: `${query.queryText} ${query.locationText}`,
+    resultSummary: `Public job listing found: ${title} at ${company}. Candidate location: ${location}.`,
+    rawResultAvailable: true,
+    lastUpdated: hasText(first.publication_date) ? first.publication_date : new Date().toISOString(),
+    freshnessStatus: "fresh",
+    confidenceLevel: "medium",
+    limitationNotes: "Read-only public job listing. Nexus cannot apply, upload a resume, create an account, or contact the employer.",
+    evidenceStatus: "source-backed",
+    sourceStatus: "source-result-available"
+  }), {
+    jobResultId: String(first.id || "remotive-job"),
+    jobTitle: title,
+    employerName: company,
+    employerType: "public-job-board",
+    jobLocation: location,
+    country: query.locationText || location,
+    cityOrRegion: query.locationText || location,
+    remoteOrOnsite: "remote-or-unspecified",
+    employmentType: hasText(first.job_type) ? first.job_type : "not listed",
+    salaryOrCompensation: hasText(first.salary) ? first.salary : "not listed",
+    postedDate: hasText(first.publication_date) ? first.publication_date : "not listed",
+    applicationDeadline: "not listed",
+    applicationUrl: sourceUrl
+  });
+}
+
+async function fetchJson(fetchImpl, url) {
+  const response = await fetchImpl(url, { method: "GET", signal: AbortSignal.timeout(8000) });
+  if (!response || response.ok !== true) {
+    const status = response && typeof response.status !== "undefined" ? `http-${response.status}` : "http-error";
+    throw new Error(status);
+  }
+  return response.json();
+}
+
+async function runRemotiveReadOnlyLookup(request = {}, env = process.env) {
+  const query = buildJobSearchQuery(request);
+  if (!hasText(query.queryText) || !hasText(query.locationText)) return getJobSearchSourceResult(request, env);
+  if (!isRemotivePublicProviderConfigured(env)) return getJobSearchSourceResult(request, env);
+  const fetchImpl = typeof env.NEXUS_JOB_SEARCH_FETCH_IMPL === "function" ? env.NEXUS_JOB_SEARCH_FETCH_IMPL : globalThis.fetch;
+  if (typeof fetchImpl !== "function") return buildRemotiveProviderErrorResult(query, "fetch-unavailable");
+  try {
+    const url = new URL(REMOTIVE_JOBS_URL);
+    url.searchParams.set("search", query.queryText);
+    const payload = await fetchJson(fetchImpl, url);
+    return normalizeRemotivePayload(query, payload);
+  } catch (error) {
+    return buildRemotiveProviderErrorResult(query, error && error.message ? error.message : "source-error");
+  }
+}
+
+async function getJobSearchSourceResultAsync(request = {}, env = process.env) {
+  if (isRemotivePublicProviderConfigured(env)) return runRemotiveReadOnlyLookup(request, env);
+  return getJobSearchSourceResult(request, env);
+}
+
 function getJobSearchSourceResult(request = {}, env = process.env) {
   const query = buildJobSearchQuery(request);
   if (!hasText(query.queryText) || !hasText(query.locationText)) {
@@ -221,11 +322,17 @@ module.exports = Object.freeze({
   JOB_PROVIDER_NAME,
   JOB_PROVIDER_CANDIDATES,
   JOB_RESULT_FIELDS,
+  REMOTIVE_JOBS_URL,
   classifyJobAssistantIntent,
   buildJobSearchQuery,
   resolveJobSearchProviderConfig,
+  isRemotivePublicProviderConfigured,
   buildMockJobSearchResult,
   buildApplicationPreparationPreview,
   buildJobProviderUnavailableResult,
-  getJobSearchSourceResult
+  buildRemotiveProviderErrorResult,
+  normalizeRemotivePayload,
+  runRemotiveReadOnlyLookup,
+  getJobSearchSourceResult,
+  getJobSearchSourceResultAsync
 });
