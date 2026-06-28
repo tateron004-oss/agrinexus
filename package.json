@@ -473,6 +473,7 @@
     "qa:nexus-sprint-live2-provider-adapter-interface-source-result-contract": "node scripts/nexus-sprint-live2-provider-adapter-interface-source-result-contract-qa.js",
     "qa:nexus-sprint-live3-mock-source-provider-harness": "node scripts/nexus-sprint-live3-mock-source-provider-harness-qa.js",
     "qa:nexus-sprint-live4-assistant-dialogue-engine-contract": "node scripts/nexus-sprint-live4-assistant-dialogue-engine-contract-qa.js",
+    "qa:nexus-sprint-live5-weather-provider-readiness": "node scripts/nexus-sprint-live5-weather-provider-readiness-qa.js",
     "qa:nexus-sprint-k1-personalization-runtime-activation-readiness-gate": "node scripts/nexus-sprint-k1-personalization-runtime-activation-readiness-gate-qa.js",
     "qa:nexus-sprint-k2-personalization-feature-flag-contract": "node scripts/nexus-sprint-k2-personalization-feature-flag-contract-qa.js",
     "qa:nexus-sprint-k3-personalization-flag-contract-harness": "node scripts/nexus-sprint-k3-personalization-flag-contract-harness-qa.js",
