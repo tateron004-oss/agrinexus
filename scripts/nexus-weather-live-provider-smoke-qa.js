@@ -47,6 +47,8 @@ function buildPublicSmokeResult(result, env = process.env) {
     noExecutionAuthorized: result.noExecutionAuthorized,
     noLocationPermissionRequested: result.noLocationPermissionRequested,
     noDispatchAuthorized: result.noDispatchAuthorized,
+    noProviderContactAuthorized: true,
+    noBackendWritePerformed: true,
     providerError: result.status === "provider-error",
     skippedMissingConfig: result.status === "skipped-missing-config",
     liveAttempted: result.liveAttempted,
@@ -85,7 +87,9 @@ function runStaticWeatherSmokeAssertions() {
     "provider-error",
     "noExecutionAuthorized",
     "noLocationPermissionRequested",
-    "noDispatchAuthorized"
+    "noDispatchAuthorized",
+    "noProviderContactAuthorized",
+    "noBackendWritePerformed"
   ].forEach(term => assert(doc.includes(term), `WEATHER2 doc must include: ${term}`));
 
   [
@@ -103,7 +107,9 @@ function runStaticWeatherSmokeAssertions() {
     "apiKey: redactPotentialSecret",
     "noExecutionAuthorized",
     "noLocationPermissionRequested",
-    "noDispatchAuthorized"
+    "noDispatchAuthorized",
+    "noProviderContactAuthorized",
+    "noBackendWritePerformed"
   ].forEach(term => assert(scriptSource.includes(term), `WEATHER2 script must include: ${term}`));
 
   [app, index, server].forEach((source, indexNumber) => {
@@ -172,6 +178,8 @@ async function runWeatherLiveProviderSmokeQa(env = process.env) {
   assert.equal(publicResult.noExecutionAuthorized, true, "WEATHER2 must not authorize execution.");
   assert.equal(publicResult.noLocationPermissionRequested, true, "WEATHER2 must not request location permission.");
   assert.equal(publicResult.noDispatchAuthorized, true, "WEATHER2 must not authorize dispatch.");
+  assert.equal(publicResult.noProviderContactAuthorized, true, "WEATHER2 must not authorize provider contact.");
+  assert.equal(publicResult.noBackendWritePerformed, true, "WEATHER2 must not perform backend writes.");
   assert.equal(publicResult.safetyPosture.readOnly, true, "WEATHER2 safety posture must be read-only.");
   assert.equal(publicResult.safetyPosture.executionAuthority, false, "WEATHER2 must not grant execution authority.");
   assert.equal(isSafeReadOnlySourceResult(liveOrSkipped.sourceResult), true, "WEATHER2 source result must be safe/read-only.");

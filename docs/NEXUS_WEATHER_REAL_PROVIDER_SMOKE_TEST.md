@@ -57,6 +57,8 @@ The smoke result includes:
 - `noExecutionAuthorized`
 - `noLocationPermissionRequested`
 - `noDispatchAuthorized`
+- `noProviderContactAuthorized`
+- `noBackendWritePerformed`
 - `providerError` when the provider fails safely
 - `skippedMissingConfig` when config is absent
 
@@ -79,6 +81,7 @@ WEATHER2 must not introduce:
 - inferred or stored user location
 - Standard User visible behavior
 - provider handoff
+- provider contact
 - dispatch
 - calls or messages
 - scheduling or booking
@@ -95,4 +98,3 @@ WEATHER2 must not introduce:
 If the live provider call fails after configuration is present, the harness returns a safe provider-error object and still validates that no fallback execution occurred.
 
 Provider failures must not become routing, dispatch, provider contact, location permission, or other real-world behavior.
-
