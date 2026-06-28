@@ -448,6 +448,7 @@
     "qa:nexus-sprint-m3-appointment-service-request-harness": "node scripts/nexus-sprint-m3-appointment-service-request-harness-qa.js",
     "qa:nexus-sprint-m4-provider-time-risk-evidence-mapping": "node scripts/nexus-sprint-m4-provider-time-risk-evidence-mapping-qa.js",
     "qa:nexus-sprint-m5-flag-off-appointment-service-regression": "node scripts/nexus-sprint-m5-flag-off-appointment-service-regression-qa.js",
+    "qa:nexus-sprint-m6-flag-gated-appointment-service-request-preview": "node scripts/nexus-sprint-m6-flag-gated-appointment-service-request-preview-qa.js",
     "qa:nexus-sprint-k1-personalization-runtime-activation-readiness-gate": "node scripts/nexus-sprint-k1-personalization-runtime-activation-readiness-gate-qa.js",
     "qa:nexus-sprint-k2-personalization-feature-flag-contract": "node scripts/nexus-sprint-k2-personalization-feature-flag-contract-qa.js",
     "qa:nexus-sprint-k3-personalization-flag-contract-harness": "node scripts/nexus-sprint-k3-personalization-flag-contract-harness-qa.js",
