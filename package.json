@@ -514,6 +514,7 @@
     "qa:nexus-ar7-assistant-preview-card": "node scripts/nexus-ar7-assistant-preview-card-qa.js",
     "qa:nexus-ar8-reliability-controls": "node scripts/nexus-ar8-reliability-controls-qa.js",
     "qa:nexus-ar9-assistant-runtime-browser-validation": "node scripts/nexus-ar9-assistant-runtime-browser-validation-qa.js",
+    "qa:nexus-ar10-working-assistant-closeout": "node scripts/nexus-ar10-working-assistant-closeout-qa.js",
     "qa:nexus-sprint-k1-personalization-runtime-activation-readiness-gate": "node scripts/nexus-sprint-k1-personalization-runtime-activation-readiness-gate-qa.js",
     "qa:nexus-sprint-k2-personalization-feature-flag-contract": "node scripts/nexus-sprint-k2-personalization-feature-flag-contract-qa.js",
     "qa:nexus-sprint-k3-personalization-flag-contract-harness": "node scripts/nexus-sprint-k3-personalization-flag-contract-harness-qa.js",
