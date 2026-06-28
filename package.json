@@ -490,6 +490,7 @@
     "qa:nexus-rt5-assistant-dialogue-live-source-orchestrator-preview": "node scripts/nexus-rt5-assistant-dialogue-live-source-orchestrator-preview-qa.js",
     "qa:nexus-rt6-standard-user-controlled-read-only-preview-gate": "node scripts/nexus-rt6-standard-user-controlled-read-only-preview-gate-qa.js",
     "qa:nexus-rt7-source-trust-citation-freshness-policy": "node scripts/nexus-rt7-source-trust-citation-freshness-policy-qa.js",
+    "qa:nexus-rt8-live-source-retrieval-audit-logging-contract": "node scripts/nexus-rt8-live-source-retrieval-audit-logging-contract-qa.js",
     "qa:nexus-sprint-k1-personalization-runtime-activation-readiness-gate": "node scripts/nexus-sprint-k1-personalization-runtime-activation-readiness-gate-qa.js",
     "qa:nexus-sprint-k2-personalization-feature-flag-contract": "node scripts/nexus-sprint-k2-personalization-feature-flag-contract-qa.js",
     "qa:nexus-sprint-k3-personalization-flag-contract-harness": "node scripts/nexus-sprint-k3-personalization-flag-contract-harness-qa.js",

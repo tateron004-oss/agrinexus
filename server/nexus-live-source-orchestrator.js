@@ -2,6 +2,7 @@ const crypto = require("node:crypto");
 const dialogue = require("../public/nexus-assistant-dialogue-engine-contract.js");
 const { isSafeReadOnlySourceResult } = require("../public/nexus-live-source-result-contract.js");
 const registry = require("../public/nexus-live-provider-capability-registry.js");
+const liveSourceAudit = require("../public/nexus-live-source-audit-logging-contract.js");
 const trustPolicy = require("../public/nexus-live-source-trust-freshness-policy.js");
 const weather = require("./nexus-weather-source-provider.js");
 const agriculture = require("./nexus-agriculture-context-source-provider.js");
@@ -73,8 +74,7 @@ function buildSafetyPosture() {
 }
 
 function buildAuditEvent({ requestId, intent, providerId, providerStatus, allowed, blockedReason, riskTier, confidence, sourceCount, citationCount }) {
-  return Object.freeze({
-    eventType: "live-source-orchestration",
+  return liveSourceAudit.buildLiveSourceRetrievalAuditEvent({
     requestId,
     providerId,
     intent,
@@ -85,12 +85,7 @@ function buildAuditEvent({ requestId, intent, providerId, providerStatus, allowe
     retrievedAt: new Date().toISOString(),
     sourceCount,
     citationCount,
-    confidence,
-    noExecutionAuthorized: true,
-    noLocationPermissionRequested: true,
-    noProviderContactAuthorized: true,
-    noBackendWritePerformed: true,
-    redactionStatus: "no-secrets-or-sensitive-payloads"
+    confidence
   });
 }
 
