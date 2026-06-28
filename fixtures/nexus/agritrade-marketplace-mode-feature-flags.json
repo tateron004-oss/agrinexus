@@ -1,0 +1,130 @@
+[
+  {
+    "fixtureId": "agritrade-marketplace-mode-default-off",
+    "input": {},
+    "expected": {
+      "enabled": false,
+      "visibleUiAllowed": false,
+      "isVisible": false,
+      "noExecution": true
+    }
+  },
+  {
+    "fixtureId": "agritrade-marketplace-mode-flag-on-visible-only",
+    "input": {
+      "enabled": true,
+      "visibleUiAllowed": true
+    },
+    "expected": {
+      "enabled": true,
+      "visibleUiAllowed": true,
+      "isVisible": true,
+      "noExecution": true
+    }
+  },
+  {
+    "fixtureId": "agritrade-marketplace-mode-unsafe-authority-attempt",
+    "input": {
+      "enabled": true,
+      "visibleUiAllowed": true,
+      "agritradeMarketplaceModeReviewAllowed": true,
+      "marketplaceReviewPreviewAllowed": true,
+      "marketplaceListingPreviewAllowed": true,
+      "marketplacePricePreviewAllowed": true,
+      "marketplaceInventoryPreviewAllowed": true,
+      "buyerDirectoryPreviewAllowed": true,
+      "sellerDirectoryPreviewAllowed": true,
+      "quoteReadinessPreviewAllowed": true,
+      "orderReadinessPreviewAllowed": true,
+      "paymentBoundaryPreviewAllowed": true,
+      "escrowBoundaryPreviewAllowed": true,
+      "logisticsBoundaryPreviewAllowed": true,
+      "identityBoundaryPreviewAllowed": true,
+      "communicationsBoundaryPreviewAllowed": true,
+      "transportationBoundaryPreviewAllowed": true,
+      "emergencyBoundaryPreviewAllowed": true,
+      "agritradeMarketplaceModeRuntimeAllowed": true,
+      "liveAgritradeMarketplaceModeRuntimeAllowed": true,
+      "marketplaceConnectorRuntimeAllowed": true,
+      "buyerConnectorRuntimeAllowed": true,
+      "sellerConnectorRuntimeAllowed": true,
+      "listingConnectorRuntimeAllowed": true,
+      "quoteConnectorRuntimeAllowed": true,
+      "orderConnectorRuntimeAllowed": true,
+      "inventoryConnectorRuntimeAllowed": true,
+      "paymentConnectorRuntimeAllowed": true,
+      "escrowConnectorRuntimeAllowed": true,
+      "logisticsConnectorRuntimeAllowed": true,
+      "identityConnectorRuntimeAllowed": true,
+      "communicationsConnectorRuntimeAllowed": true,
+      "transportationConnectorRuntimeAllowed": true,
+      "healthConnectorRuntimeAllowed": true,
+      "marketplaceTransactionAllowed": true,
+      "buyExecutionAllowed": true,
+      "sellExecutionAllowed": true,
+      "orderCreationAllowed": true,
+      "quoteAcceptanceAllowed": true,
+      "listingPublicationAllowed": true,
+      "buyerContactAllowed": true,
+      "sellerContactAllowed": true,
+      "marketplacePartnerContactAllowed": true,
+      "paymentExecutionAllowed": true,
+      "escrowExecutionAllowed": true,
+      "shipmentDispatchAllowed": true,
+      "locationSharingAllowed": true,
+      "cameraActivationAllowed": true,
+      "microphoneActivationAllowed": true,
+      "identityAccountProfileActionAllowed": true,
+      "communicationsExecutionAllowed": true,
+      "transportationDispatchAllowed": true,
+      "emergencyDispatchAllowed": true,
+      "medicalRecordsFhirRuntimeAllowed": true,
+      "medicalAdviceAllowed": true,
+      "diagnosisClaimAllowed": true,
+      "prescriptionInstructionAllowed": true,
+      "policyBypassAllowed": true,
+      "confirmationBypassAllowed": true,
+      "permissionBypassAllowed": true,
+      "firstTurnExecutionAllowed": true,
+      "laterTurnExecutionAllowed": true,
+      "standardUserAgritradeMarketplaceModeMutationAllowed": true,
+      "backendWriteAllowed": true,
+      "storageWriteAllowed": true,
+      "networkAllowed": true,
+      "auditWriteAllowed": true,
+      "executionAuthority": true,
+      "noExecution": false
+    },
+    "expected": {
+      "enabled": true,
+      "visibleUiAllowed": true,
+      "isVisible": true,
+      "marketplaceTransactionAllowed": false,
+      "buyExecutionAllowed": false,
+      "sellExecutionAllowed": false,
+      "orderCreationAllowed": false,
+      "quoteAcceptanceAllowed": false,
+      "listingPublicationAllowed": false,
+      "buyerContactAllowed": false,
+      "sellerContactAllowed": false,
+      "paymentExecutionAllowed": false,
+      "escrowExecutionAllowed": false,
+      "shipmentDispatchAllowed": false,
+      "executionAuthority": false,
+      "noExecution": true
+    }
+  },
+  {
+    "fixtureId": "agritrade-marketplace-mode-flag-on-without-visible-permission",
+    "input": {
+      "enabled": true,
+      "visibleUiAllowed": false
+    },
+    "expected": {
+      "enabled": true,
+      "visibleUiAllowed": false,
+      "isVisible": false,
+      "noExecution": true
+    }
+  }
+]

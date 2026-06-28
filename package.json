@@ -511,6 +511,7 @@
     "qa:nexus-sprint-ae5-education-mode-lane-closeout": "node scripts/nexus-sprint-ae5-education-mode-lane-closeout-qa.js",
     "qa:nexus-sprint-af1-agritrade-marketplace-mode-runtime-activation-readiness-gate": "node scripts/nexus-sprint-af1-agritrade-marketplace-mode-runtime-activation-readiness-gate-qa.js",
     "qa:nexus-sprint-af2-agritrade-marketplace-mode-feature-flag-contract": "node scripts/nexus-sprint-af2-agritrade-marketplace-mode-feature-flag-contract-qa.js",
+    "qa:nexus-sprint-af3-agritrade-marketplace-mode-flag-contract-harness": "node scripts/nexus-sprint-af3-agritrade-marketplace-mode-flag-contract-harness-qa.js",
     "qa:nexus-phase-105-preview-only-autonomous-runtime-integration-plan": "node scripts/nexus-phase-105-preview-only-autonomous-runtime-integration-plan-qa.js"
   },
   "dependencies": {
