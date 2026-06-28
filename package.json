@@ -478,6 +478,7 @@
     "qa:nexus-sprint-live7-shipment-tracking-provider-readiness": "node scripts/nexus-sprint-live7-shipment-tracking-provider-readiness-qa.js",
     "qa:nexus-sprint-live8-job-search-application-provider-readiness": "node scripts/nexus-sprint-live8-job-search-application-provider-readiness-qa.js",
     "qa:nexus-sprint-live9-agriculture-context-provider-readiness": "node scripts/nexus-sprint-live9-agriculture-context-provider-readiness-qa.js",
+    "qa:nexus-sprint-live10-music-media-provider-readiness": "node scripts/nexus-sprint-live10-music-media-provider-readiness-qa.js",
     "qa:nexus-sprint-k1-personalization-runtime-activation-readiness-gate": "node scripts/nexus-sprint-k1-personalization-runtime-activation-readiness-gate-qa.js",
     "qa:nexus-sprint-k2-personalization-feature-flag-contract": "node scripts/nexus-sprint-k2-personalization-feature-flag-contract-qa.js",
     "qa:nexus-sprint-k3-personalization-flag-contract-harness": "node scripts/nexus-sprint-k3-personalization-flag-contract-harness-qa.js",
