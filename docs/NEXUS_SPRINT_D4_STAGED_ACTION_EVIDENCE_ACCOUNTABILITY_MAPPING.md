@@ -4,6 +4,10 @@
 
 Sprint D4 defines how review-only staged actions must carry evidence and accountability metadata before any future visible staged action preview can be considered.
 
+Current base after D3: `1046d43b45c0a419b2fd0d872752539a7e1c298f`.
+
+Sprint D4 continues the post-AO3 Sprint D train. The audit train ended at AO3, and D4 remains an inert evidence/accountability mapping phase rather than reopening AO4, AO5, or any additional audit phase.
+
 This phase remains inert. It does not render staged actions in Standard User runtime, does not create pending actions, does not call providers, does not write backend state, and does not execute anything.
 
 ## Evidence Accountability Requirements

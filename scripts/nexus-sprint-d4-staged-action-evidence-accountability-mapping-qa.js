@@ -41,6 +41,8 @@ const fixtures = loadStagedActionFixtures();
 
 assertIncludes(doc, [
   "Sprint D4",
+  "1046d43b45c0a419b2fd0d872752539a7e1c298f",
+  "audit train ended at AO3",
   "Evidence Accountability Requirements",
   "Source-Backed Actions",
   "Not-Source-Backed Actions",
