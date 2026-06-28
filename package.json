@@ -438,6 +438,7 @@
     "qa:nexus-sprint-l1-calls-messaging-product-boundary": "node scripts/nexus-sprint-l1-calls-messaging-product-boundary-qa.js",
     "qa:nexus-sprint-l2-inert-call-message-intent-contract": "node scripts/nexus-sprint-l2-inert-call-message-intent-contract-qa.js",
     "qa:nexus-sprint-l3-call-message-intent-harness": "node scripts/nexus-sprint-l3-call-message-intent-harness-qa.js",
+    "qa:nexus-sprint-l4-recipient-channel-risk-evidence-mapping": "node scripts/nexus-sprint-l4-recipient-channel-risk-evidence-mapping-qa.js",
     "qa:nexus-sprint-k1-personalization-runtime-activation-readiness-gate": "node scripts/nexus-sprint-k1-personalization-runtime-activation-readiness-gate-qa.js",
     "qa:nexus-sprint-k2-personalization-feature-flag-contract": "node scripts/nexus-sprint-k2-personalization-feature-flag-contract-qa.js",
     "qa:nexus-sprint-k3-personalization-flag-contract-harness": "node scripts/nexus-sprint-k3-personalization-flag-contract-harness-qa.js",
