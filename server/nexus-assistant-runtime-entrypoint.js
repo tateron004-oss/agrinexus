@@ -2,6 +2,7 @@ const crypto = require("node:crypto");
 const orchestrator = require("./nexus-live-source-orchestrator.js");
 const answerComposer = require("./nexus-assistant-answer-composer.js");
 const followUpContext = require("./nexus-assistant-follow-up-context.js");
+const nextStepPlanner = require("./nexus-assistant-next-step-planner.js");
 
 const DEFAULT_SAFE_FOLLOW_UPS = Object.freeze([
   "Ask for more detail",
@@ -74,6 +75,7 @@ function buildAssistantRuntimeResponseFromOrchestration(userPrompt, orchestratio
   const citations = normalizeCitations(orchestrationResult.citations);
   const sourceLabels = uniqueTextList(citations.map(citation => citation.sourceName));
   const answer = answerComposer.composeAssistantAnswer(orchestrationResult);
+  const safeNextSteps = nextStepPlanner.buildSafeNextSteps(orchestrationResult);
 
   return Object.freeze({
     responseId: stableResponseId(userPrompt),
@@ -89,9 +91,8 @@ function buildAssistantRuntimeResponseFromOrchestration(userPrompt, orchestratio
     freshnessStatus: inferFreshnessStatus(orchestrationResult, citations),
     confidence: orchestrationResult.confidence || "low",
     trustTier: orchestrationResult.trustAssessment ? orchestrationResult.trustAssessment.sourceTrustTier : "unavailable",
-    safeFollowUps: uniqueTextList(orchestrationResult.suggestedFollowUps && orchestrationResult.suggestedFollowUps.length > 0
-      ? orchestrationResult.suggestedFollowUps
-      : DEFAULT_SAFE_FOLLOW_UPS),
+    safeFollowUps: uniqueTextList(safeNextSteps.length > 0 ? safeNextSteps : DEFAULT_SAFE_FOLLOW_UPS),
+    safeNextSteps,
     blockedActions: BLOCKED_ACTIONS,
     safetyPosture: orchestrationResult.safetyPosture,
     sourceResultCount: Array.isArray(orchestrationResult.results) ? orchestrationResult.results.length : 0,
@@ -120,6 +121,11 @@ function buildAssistantRuntimeFollowUpResponse(userPrompt, sessionContext, env =
   const citations = normalizeCitations(sessionContext && sessionContext.lastCitations);
   const sourceLabels = uniqueTextList(citations.map(citation => citation.sourceName));
   const retrievedAt = new Date().toISOString();
+  const safeNextSteps = nextStepPlanner.buildSafeNextSteps({
+    allowed: blocked !== true,
+    intent: blocked ? "blocked-follow-up-action" : sessionContext.lastIntent,
+    selectedProvider: blocked ? null : sessionContext.lastProvider
+  });
 
   return Object.freeze({
     responseId: stableResponseId(`${sessionContext && sessionContext.contextId}:${userPrompt}`),
@@ -135,7 +141,8 @@ function buildAssistantRuntimeFollowUpResponse(userPrompt, sessionContext, env =
     freshnessStatus: citations[0] && citations[0].freshnessStatus ? citations[0].freshnessStatus : "unknown",
     confidence: blocked ? "low" : "medium",
     trustTier: blocked ? "unavailable" : "contextual",
-    safeFollowUps: blocked ? ["Ask for information only", "Cancel"] : sessionContext.allowedRefinements,
+    safeFollowUps: blocked ? ["Ask for information only", "Cancel"] : safeNextSteps,
+    safeNextSteps,
     blockedActions: sessionContext.blockedActions && sessionContext.blockedActions.length > 0 ? sessionContext.blockedActions : BLOCKED_ACTIONS,
     safetyPosture: Object.freeze({
       readOnly: true,
