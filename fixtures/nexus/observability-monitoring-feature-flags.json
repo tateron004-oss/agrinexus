@@ -1,0 +1,92 @@
+[
+  {
+    "fixtureId": "observability-monitoring-default-off",
+    "input": {},
+    "expected": {
+      "enabled": false,
+      "visibleUiAllowed": false,
+      "isVisible": false,
+      "noExecution": true
+    }
+  },
+  {
+    "fixtureId": "observability-monitoring-flag-on-visible-only",
+    "input": {
+      "enabled": true,
+      "visibleUiAllowed": true
+    },
+    "expected": {
+      "enabled": true,
+      "visibleUiAllowed": true,
+      "isVisible": true,
+      "noExecution": true
+    }
+  },
+  {
+    "fixtureId": "observability-monitoring-unsafe-authority-attempt",
+    "input": {
+      "enabled": true,
+      "visibleUiAllowed": true,
+      "unsafeAuthorityAttempt": true,
+      "noExecution": false
+    },
+    "expected": {
+      "enabled": true,
+      "visibleUiAllowed": true,
+      "isVisible": true,
+      "observabilityMonitoringRuntimeAllowed": false,
+      "liveObservabilityMonitoringRuntimeAllowed": false,
+      "telemetryCollectionRuntimeAllowed": false,
+      "dashboardRuntimeAllowed": false,
+      "alertRuntimeAllowed": false,
+      "connectorPollingRuntimeAllowed": false,
+      "sourceFreshnessMonitorRuntimeAllowed": false,
+      "partnerHealthMonitorRuntimeAllowed": false,
+      "adminMonitoringQueueRuntimeAllowed": false,
+      "providerConnectorRuntimeAllowed": false,
+      "clinicConnectorRuntimeAllowed": false,
+      "telehealthConnectorRuntimeAllowed": false,
+      "pharmacyConnectorRuntimeAllowed": false,
+      "medicalRecordConnectorRuntimeAllowed": false,
+      "fhirConnectorRuntimeAllowed": false,
+      "locationConnectorRuntimeAllowed": false,
+      "communicationsConnectorRuntimeAllowed": false,
+      "emergencyConnectorRuntimeAllowed": false,
+      "telemetryCollectionAllowed": false,
+      "dashboardRenderingAllowed": false,
+      "alertCreationAllowed": false,
+      "connectorPollingAllowed": false,
+      "sourceFreshnessMonitoringAllowed": false,
+      "partnerHealthMonitoringAllowed": false,
+      "adminMonitoringQueueAllowed": false,
+      "monitoringDrivenActionAllowed": false,
+      "providerContactAllowed": false,
+      "telehealthSessionCreationAllowed": false,
+      "appointmentSchedulingAllowed": false,
+      "prescriptionRefillAllowed": false,
+      "medicalRecordAccessAllowed": false,
+      "locationSharingAllowed": false,
+      "communicationsExecutionAllowed": false,
+      "transportationDispatchAllowed": false,
+      "emergencyDispatchAllowed": false,
+      "unsupportedLiveMonitoringClaimAllowed": false,
+      "unsupportedConnectorHealthClaimAllowed": false,
+      "networkAllowed": false,
+      "executionAuthority": false,
+      "noExecution": true
+    }
+  },
+  {
+    "fixtureId": "observability-monitoring-flag-on-without-visible-permission",
+    "input": {
+      "enabled": true,
+      "visibleUiAllowed": false
+    },
+    "expected": {
+      "enabled": true,
+      "visibleUiAllowed": false,
+      "isVisible": false,
+      "noExecution": true
+    }
+  }
+]
