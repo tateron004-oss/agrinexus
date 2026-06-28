@@ -1,0 +1,75 @@
+[
+  {
+    "fixtureId": "offline-low-bandwidth-mode-default-off",
+    "input": {},
+    "expected": {
+      "enabled": false,
+      "visibleUiAllowed": false,
+      "isVisible": false,
+      "noExecution": true
+    }
+  },
+  {
+    "fixtureId": "offline-low-bandwidth-mode-flag-on-visible-only",
+    "input": {
+      "enabled": true,
+      "visibleUiAllowed": true
+    },
+    "expected": {
+      "enabled": true,
+      "visibleUiAllowed": true,
+      "isVisible": true,
+      "noExecution": true
+    }
+  },
+  {
+    "fixtureId": "offline-low-bandwidth-mode-unsafe-authority-attempt",
+    "input": {
+      "enabled": true,
+      "visibleUiAllowed": true,
+      "unsafeAuthorityAttempt": true,
+      "noExecution": false
+    },
+    "expected": {
+      "enabled": true,
+      "visibleUiAllowed": true,
+      "isVisible": true,
+      "offlineModeRuntimeAllowed": false,
+      "offlineCacheRuntimeAllowed": false,
+      "serviceWorkerCacheMutationAllowed": false,
+      "backgroundSyncAllowed": false,
+      "sourceSyncAllowed": false,
+      "connectorSyncAllowed": false,
+      "offlineQueueAllowed": false,
+      "queuedActionAllowed": false,
+      "providerConnectorRuntimeAllowed": false,
+      "telehealthSessionCreationAllowed": false,
+      "appointmentSchedulingAllowed": false,
+      "prescriptionRefillAllowed": false,
+      "medicalRecordAccessAllowed": false,
+      "locationSharingAllowed": false,
+      "cameraActivationAllowed": false,
+      "microphoneActivationAllowed": false,
+      "communicationsExecutionAllowed": false,
+      "transportationDispatchAllowed": false,
+      "emergencyDispatchAllowed": false,
+      "cacheWriteAllowed": false,
+      "networkAllowed": false,
+      "executionAuthority": false,
+      "noExecution": true
+    }
+  },
+  {
+    "fixtureId": "offline-low-bandwidth-mode-flag-on-without-visible-permission",
+    "input": {
+      "enabled": true,
+      "visibleUiAllowed": false
+    },
+    "expected": {
+      "enabled": true,
+      "visibleUiAllowed": false,
+      "isVisible": false,
+      "noExecution": true
+    }
+  }
+]
