@@ -441,6 +441,7 @@
     "qa:nexus-sprint-l4-recipient-channel-risk-evidence-mapping": "node scripts/nexus-sprint-l4-recipient-channel-risk-evidence-mapping-qa.js",
     "qa:nexus-sprint-l5-flag-off-calls-messaging-regression-guard": "node scripts/nexus-sprint-l5-flag-off-calls-messaging-regression-guard-qa.js",
     "qa:nexus-sprint-l6-flag-gated-call-message-preview": "node scripts/nexus-sprint-l6-flag-gated-call-message-preview-qa.js",
+    "qa:nexus-sprint-l7-standard-user-browser-validation-for-call-message-preview": "node scripts/nexus-sprint-l7-standard-user-browser-validation-for-call-message-preview-qa.js",
     "qa:nexus-sprint-k1-personalization-runtime-activation-readiness-gate": "node scripts/nexus-sprint-k1-personalization-runtime-activation-readiness-gate-qa.js",
     "qa:nexus-sprint-k2-personalization-feature-flag-contract": "node scripts/nexus-sprint-k2-personalization-feature-flag-contract-qa.js",
     "qa:nexus-sprint-k3-personalization-flag-contract-harness": "node scripts/nexus-sprint-k3-personalization-flag-contract-harness-qa.js",
