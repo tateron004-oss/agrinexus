@@ -93,7 +93,13 @@ function assertNoUnsafeRuntimeActivation() {
     assert(!app.includes(term), `public/app.js must not expose ${term} in Standard User runtime.`);
     assert(!index.includes(term), `public/index.html must not expose ${term} in Standard User runtime.`);
   });
-  assert(!server.includes("nexus-assistant-runtime-entrypoint"), "server.js must not expose the AR2 assistant runtime.");
+  if (server.includes("nexus-assistant-runtime-entrypoint")) {
+    assert(server.includes("assistantRuntimePreviewFlags"), "server.js runtime exposure must be protected by preview flags.");
+    assert(server.includes("NEXUS_LIVE_SOURCE_RETRIEVAL_ENABLED"), "server.js runtime exposure must require live source retrieval.");
+    assert(server.includes("NEXUS_ASSISTANT_DIALOGUE_LIVE_PREVIEW_ENABLED"), "server.js runtime exposure must require assistant dialogue live preview.");
+    assert(server.includes("NEXUS_STANDARD_USER_LIVE_SOURCE_PREVIEW_ENABLED"), "server.js runtime exposure must require Standard User live preview.");
+    assert(server.includes("if (!flags.enabled)"), "server.js runtime exposure must reject disabled flags before provider lookup.");
+  }
 
   [
     "navigator.geolocation",

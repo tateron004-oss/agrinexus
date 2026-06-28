@@ -76,7 +76,11 @@ function assertStaticContract() {
     assert(!app.includes(term), `public/app.js must not load ${term} in AR1.`);
     assert(!index.includes(term), `public/index.html must not load ${term} in AR1.`);
   });
-  assert(!server.includes("nexus-assistant-runtime-entrypoint"), "server.js must not expose AR1 runtime yet.");
+  if (server.includes("nexus-assistant-runtime-entrypoint")) {
+    assert(server.includes("assistantRuntimePreviewFlags"), "server.js runtime exposure must be protected by AR6 preview flags.");
+    assert(server.includes("NEXUS_STANDARD_USER_LIVE_SOURCE_PREVIEW_ENABLED"), "server.js runtime exposure must require the Standard User live preview flag.");
+    assert(server.includes("if (!flags.enabled)"), "server.js runtime exposure must reject disabled flags before runtime preview.");
+  }
 
   assert.equal(
     pkg.scripts["qa:nexus-ar1-assistant-runtime-entrypoint"],
@@ -91,6 +95,7 @@ function assertSafeRuntimeResponse(response, label) {
   assert.match(response.responseId, /^assistant-runtime-[a-f0-9]{16}$/, `${label} responseId must be stable-shaped.`);
   assert.equal(response.noExecutionAuthorized, true, `${label} must authorize no execution.`);
   assert.equal(response.noLocationPermissionRequested, true, `${label} must request no location permission.`);
+  assert.equal(response.providerHandoffAllowed, false, `${label} must authorize no provider handoff.`);
   assert.equal(response.noProviderContactAuthorized, true, `${label} must authorize no provider contact.`);
   assert.equal(response.noBackendWritePerformed, true, `${label} must perform no backend write.`);
   assert(response.safeFollowUps.length > 0, `${label} must include safe follow-ups.`);

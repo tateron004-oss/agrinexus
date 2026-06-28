@@ -101,6 +101,7 @@ function buildAssistantRuntimeResponseFromOrchestration(userPrompt, orchestratio
     blockedReason: orchestrationResult.blockedReason || "",
     noExecutionAuthorized: true,
     noLocationPermissionRequested: true,
+    providerHandoffAllowed: false,
     noProviderContactAuthorized: true,
     noBackendWritePerformed: true
   });
@@ -149,6 +150,7 @@ function buildAssistantRuntimeFollowUpResponse(userPrompt, sessionContext, env =
       previewOnly: true,
       noExecutionAuthorized: true,
       noLocationPermissionRequested: true,
+      providerHandoffAllowed: false,
       noProviderContactAuthorized: true,
       noBackendWritePerformed: true,
       noDispatchAuthorized: true,
@@ -167,6 +169,7 @@ function buildAssistantRuntimeFollowUpResponse(userPrompt, sessionContext, env =
     blockedReason: blocked ? followUp.reason : "",
     noExecutionAuthorized: true,
     noLocationPermissionRequested: true,
+    providerHandoffAllowed: false,
     noProviderContactAuthorized: true,
     noBackendWritePerformed: true
   });
@@ -180,6 +183,7 @@ function isSafeAssistantRuntimeResponse(response) {
   if (!Array.isArray(response.blockedActions) || response.blockedActions.length < 6) return false;
   if (response.noExecutionAuthorized !== true) return false;
   if (response.noLocationPermissionRequested !== true) return false;
+  if (response.providerHandoffAllowed !== false) return false;
   if (response.noProviderContactAuthorized !== true) return false;
   if (response.noBackendWritePerformed !== true) return false;
   if (!response.safetyPosture || response.safetyPosture.readOnly !== true || response.safetyPosture.previewOnly !== true) return false;

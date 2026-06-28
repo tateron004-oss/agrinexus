@@ -5,6 +5,7 @@ const crypto = require("crypto");
 const { classifyNexusIntent } = require("./public/nexus-intent-classifier.js");
 const { buildNexusPolicyDecision, validateNexusPolicyDecision } = require("./public/nexus-policy-engine.js");
 const { createNexusPlan, validateNexusPlan } = require("./public/nexus-planner.js");
+const nexusAssistantRuntime = require("./server/nexus-assistant-runtime-entrypoint.js");
 
 function loadEnvFile(filePath) {
   if (!fs.existsSync(filePath)) return;
@@ -52,6 +53,21 @@ const spotifyOAuthStates = new Map();
 
 function productIdentityMetadata() {
   return { ...PRODUCT_IDENTITY };
+}
+
+function assistantRuntimePreviewFlags(env = process.env) {
+  const liveSourceRetrievalEnabled = env.NEXUS_LIVE_SOURCE_RETRIEVAL_ENABLED === "true";
+  const assistantDialogueLivePreviewEnabled = env.NEXUS_ASSISTANT_DIALOGUE_LIVE_PREVIEW_ENABLED === "true";
+  const standardUserLiveSourcePreviewEnabled = env.NEXUS_STANDARD_USER_LIVE_SOURCE_PREVIEW_ENABLED === "true";
+  return Object.freeze({
+    liveSourceRetrievalEnabled,
+    assistantDialogueLivePreviewEnabled,
+    standardUserLiveSourcePreviewEnabled,
+    enabled: liveSourceRetrievalEnabled && assistantDialogueLivePreviewEnabled && standardUserLiveSourcePreviewEnabled,
+    defaultOff: true,
+    standardUserRuntimeBehavior: "disabled-unless-all-flags-enabled",
+    executionAuthority: false
+  });
 }
 
 function inferMetadataOnlySelectedToolId(input = {}) {
@@ -27020,6 +27036,45 @@ async function api(req, res, url) {
     return send(res, 200, publicState(db, user));
   }
 
+  if (url.pathname === "/api/nexus/assistant-runtime-preview" && req.method === "POST") {
+    const flags = assistantRuntimePreviewFlags();
+    if (!flags.enabled) {
+      return send(res, 403, {
+        error: "Assistant runtime preview is disabled.",
+        assistantRuntimePreview: flags,
+        noExecutionAuthorized: true,
+        noProviderHandoff: true,
+        noLocationPermissionRequested: true
+      });
+    }
+    const body = await readBody(req);
+    const prompt = String(body.prompt || body.command || "").trim();
+    if (!prompt) {
+      return send(res, 400, {
+        error: "Prompt is required.",
+        assistantRuntimePreview: flags,
+        noExecutionAuthorized: true
+      });
+    }
+    const runtimeResponse = await nexusAssistantRuntime.buildAssistantRuntimeResponseAsync(prompt, {
+      surface: "standard-user",
+      inputMode: body.inputMode || "typed",
+      previewOnly: true
+    }, process.env);
+    return send(res, 200, {
+      assistantRuntimePreview: {
+        ...flags,
+        surface: "standard-user",
+        previewOnly: true,
+        noExecutionAuthorized: true,
+        noProviderHandoff: true,
+        noLocationPermissionRequested: true,
+        noNavigationAuthorized: true
+      },
+      response: runtimeResponse
+    });
+  }
+
   if (url.pathname === "/api/onboarding/start" && req.method === "POST") {
     const body = await readBody(req);
     ensureOperationsProfile(db.profile);
@@ -27233,6 +27288,7 @@ async function api(req, res, url) {
         ...publicMap,
         provider: `leaflet-${publicMap.provider || "built-in-defaults"}`
       },
+      assistantRuntimePreview: assistantRuntimePreviewFlags(),
       persistence: usingPostgresState() ? "postgresql" : "json-file"
     });
   }

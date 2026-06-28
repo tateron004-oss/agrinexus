@@ -70,8 +70,23 @@ function assertRuntimeAbsence() {
 
   runtimeFiles.forEach(parts => {
     const source = read(...parts);
+    const label = path.join(...parts);
+    if (label === "server.js" && source.includes("NEXUS_STANDARD_USER_LIVE_SOURCE_PREVIEW_ENABLED")) {
+      [
+        "assistantRuntimePreviewFlags",
+        "NEXUS_LIVE_SOURCE_RETRIEVAL_ENABLED",
+        "NEXUS_ASSISTANT_DIALOGUE_LIVE_PREVIEW_ENABLED",
+        "NEXUS_STANDARD_USER_LIVE_SOURCE_PREVIEW_ENABLED",
+        "if (!flags.enabled)",
+        "/api/nexus/assistant-runtime-preview",
+        "noExecutionAuthorized",
+        "noProviderHandoff",
+        "noLocationPermissionRequested"
+      ].forEach(term => assert(source.includes(term), `server.js live preview exposure must be AR6 flag-gated and safe: ${term}.`));
+      return;
+    }
     forbidden.forEach(term => {
-      assert(!source.includes(term), `${path.join(...parts)} must not load or expose ${term}.`);
+      assert(!source.includes(term), `${label} must not load or expose ${term}.`);
     });
   });
 }

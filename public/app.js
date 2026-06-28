@@ -55,6 +55,14 @@ const DEFAULT_MAP_TILE_CONFIG = Object.freeze({
   }
 });
 let mapTileConfig = DEFAULT_MAP_TILE_CONFIG;
+let nexusAssistantRuntimePreviewConfig = Object.freeze({
+  enabled: false,
+  liveSourceRetrievalEnabled: false,
+  assistantDialogueLivePreviewEnabled: false,
+  standardUserLiveSourcePreviewEnabled: false,
+  defaultOff: true,
+  executionAuthority: false
+});
 let selectedLearningTrack = "All";
 let selectedPersona = localStorage.getItem("agrinexusPersona") || "worker";
 let experienceMode = localStorage.getItem("agrinexusExperienceMode") || "";
@@ -15347,6 +15355,16 @@ async function loadPublicMapConfig() {
         }
       };
     }
+    if (config?.assistantRuntimePreview && typeof config.assistantRuntimePreview === "object") {
+      nexusAssistantRuntimePreviewConfig = Object.freeze({
+        enabled: config.assistantRuntimePreview.enabled === true,
+        liveSourceRetrievalEnabled: config.assistantRuntimePreview.liveSourceRetrievalEnabled === true,
+        assistantDialogueLivePreviewEnabled: config.assistantRuntimePreview.assistantDialogueLivePreviewEnabled === true,
+        standardUserLiveSourcePreviewEnabled: config.assistantRuntimePreview.standardUserLiveSourcePreviewEnabled === true,
+        defaultOff: config.assistantRuntimePreview.defaultOff !== false,
+        executionAuthority: false
+      });
+    }
   } catch (error) {
     mapTileConfig = DEFAULT_MAP_TILE_CONFIG;
     if (localStorage.getItem("agrinexusMapDebug") === "on") {
@@ -15354,6 +15372,70 @@ async function loadPublicMapConfig() {
     }
   }
   return mapTileConfig;
+}
+
+function isNexusAssistantRuntimePreviewEnabled() {
+  return Boolean(
+    nexusAssistantRuntimePreviewConfig?.enabled === true
+    && nexusAssistantRuntimePreviewConfig?.liveSourceRetrievalEnabled === true
+    && nexusAssistantRuntimePreviewConfig?.assistantDialogueLivePreviewEnabled === true
+    && nexusAssistantRuntimePreviewConfig?.standardUserLiveSourcePreviewEnabled === true
+    && nexusAssistantRuntimePreviewConfig?.executionAuthority === false
+  );
+}
+
+function assistantRuntimePreviewText(result = {}) {
+  const response = result && typeof result === "object" ? result.response || result : {};
+  return String(response.answer || response.message || "").trim();
+}
+
+function assistantRuntimePreviewSuggestions(result = {}) {
+  const response = result && typeof result === "object" ? result.response || result : {};
+  const suggestions = Array.isArray(response.safeFollowUps) ? response.safeFollowUps
+    : Array.isArray(response.safeNextSteps) ? response.safeNextSteps
+      : [];
+  return suggestions
+    .map(item => typeof item === "string" ? item.trim() : "")
+    .filter(Boolean)
+    .slice(0, 4);
+}
+
+async function runStandardUserAssistantRuntimePreview(command = "", options = {}) {
+  const prompt = String(command || "").trim();
+  if (!prompt || !isNexusAssistantRuntimePreviewEnabled()) return false;
+  pendingAgentClarification = null;
+  pendingNexusSpokenCommand = null;
+  openAskNexus();
+  enableHeyAgriNexusMode();
+  updateNexusBehaviorLayer("thinking", "Nexus is preparing a source-backed preview. No action will be taken.");
+  try {
+    const result = await requestWithTimeout("/api/nexus/assistant-runtime-preview", {
+      method: "POST",
+      body: {
+        prompt,
+        inputMode: options.source || "typed",
+        previewOnly: true
+      }
+    }, 12000);
+    const previewFlags = result.assistantRuntimePreview || {};
+    const response = result.response || {};
+    if (previewFlags.noExecutionAuthorized !== true || previewFlags.noProviderHandoff !== true || response.noExecutionAuthorized !== true) {
+      setVoiceResponse("Nexus kept this request informational. No action was taken.", true, { allowHandoff: false, command: prompt });
+      renderLiveVoiceSuggestions(["ask for information only", "cancel"]);
+      return true;
+    }
+    const text = assistantRuntimePreviewText(response) || "Nexus prepared a safe informational preview. No action has been taken.";
+    const suggestions = assistantRuntimePreviewSuggestions(response);
+    renderLiveVoiceSuggestions(suggestions.length ? suggestions : ["ask a follow-up", "compare sources", "explain simply", "cancel"]);
+    updateNexusBehaviorLayer("answering", "Nexus showed a source-backed preview without execution, navigation, or provider handoff.");
+    setVoiceResponse(text, true, { allowHandoff: false, command: prompt, source: "standard-user-assistant-runtime-preview" });
+    return true;
+  } catch (error) {
+    updateNexusBehaviorLayer("ready", "Nexus kept the preview path safe because the source-backed preview was unavailable.");
+    setVoiceResponse("I could not load the source-backed preview right now, so I kept this informational and took no action.", true, { allowHandoff: false, command: prompt });
+    renderLiveVoiceSuggestions(["try again", "ask a follow-up", "cancel"]);
+    return true;
+  }
 }
 
 function leafletMapOptions(options = {}) {
@@ -23995,6 +24077,7 @@ async function handleVoiceCommandCore(rawCommand, options = {}) {
   }
   if (await runExplicitTypedGlobalControlPreflight(spokenCommand || command || localizedCommand || rawCommand, { ...options, turnToken })) return;
   if (handleJarvisStyleStandardUserSafetyResponse(spokenCommand || command || localizedCommand || rawCommand)) return;
+  if (await runStandardUserAssistantRuntimePreview(spokenCommand || command || localizedCommand || rawCommand, { ...options, turnToken })) return;
   const phase17SafeAnswer = nexusPhase17StandardUserSafeAnswer(spokenCommand || command || localizedCommand || rawCommand);
   if (phase17SafeAnswer) {
     pendingAgentClarification = null;
