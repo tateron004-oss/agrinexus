@@ -1,0 +1,88 @@
+[
+  {
+    "fixtureId": "local-language-pack-mode-default-off",
+    "input": {},
+    "expected": {
+      "enabled": false,
+      "visibleUiAllowed": false,
+      "isVisible": false,
+      "noExecution": true
+    }
+  },
+  {
+    "fixtureId": "local-language-pack-mode-flag-on-visible-only",
+    "input": {
+      "enabled": true,
+      "visibleUiAllowed": true
+    },
+    "expected": {
+      "enabled": true,
+      "visibleUiAllowed": true,
+      "isVisible": true,
+      "noExecution": true
+    }
+  },
+  {
+    "fixtureId": "local-language-pack-mode-unsafe-authority-attempt",
+    "input": {
+      "enabled": true,
+      "visibleUiAllowed": true,
+      "unsafeAuthorityAttempt": true,
+      "noExecution": false
+    },
+    "expected": {
+      "enabled": true,
+      "visibleUiAllowed": true,
+      "isVisible": true,
+      "localLanguagePackModeRuntimeAllowed": false,
+      "languagePackInstallRuntimeAllowed": false,
+      "translationRuntimeAllowed": false,
+      "localLanguageRoutingRuntimeAllowed": false,
+      "clinicalInterpretationRuntimeAllowed": false,
+      "speechRecognitionLocaleRuntimeAllowed": false,
+      "speechSynthesisVoiceRuntimeAllowed": false,
+      "partnerTranslationConnectorRuntimeAllowed": false,
+      "providerConnectorRuntimeAllowed": false,
+      "clinicConnectorRuntimeAllowed": false,
+      "telehealthConnectorRuntimeAllowed": false,
+      "pharmacyConnectorRuntimeAllowed": false,
+      "medicalRecordConnectorRuntimeAllowed": false,
+      "fhirConnectorRuntimeAllowed": false,
+      "locationConnectorRuntimeAllowed": false,
+      "communicationsConnectorRuntimeAllowed": false,
+      "emergencyConnectorRuntimeAllowed": false,
+      "languagePackInstallAllowed": false,
+      "languagePreferenceMutationAllowed": false,
+      "translationReviewBypassAllowed": false,
+      "clinicalInterpretationClaimAllowed": false,
+      "medicalInterpretationComplianceClaimAllowed": false,
+      "providerContactAllowed": false,
+      "telehealthSessionCreationAllowed": false,
+      "appointmentSchedulingAllowed": false,
+      "prescriptionRefillAllowed": false,
+      "medicalRecordAccessAllowed": false,
+      "locationSharingAllowed": false,
+      "communicationsExecutionAllowed": false,
+      "transportationDispatchAllowed": false,
+      "emergencyDispatchAllowed": false,
+      "unsupportedLanguageCoverageClaimAllowed": false,
+      "unsupportedClinicalInterpretationClaimAllowed": false,
+      "networkAllowed": false,
+      "executionAuthority": false,
+      "noExecution": true
+    }
+  },
+  {
+    "fixtureId": "local-language-pack-mode-flag-on-without-visible-permission",
+    "input": {
+      "enabled": true,
+      "visibleUiAllowed": false
+    },
+    "expected": {
+      "enabled": true,
+      "visibleUiAllowed": false,
+      "isVisible": false,
+      "noExecution": true
+    }
+  }
+]
