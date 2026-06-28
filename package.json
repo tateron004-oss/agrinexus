@@ -417,6 +417,7 @@
     "qa:nexus-sprint-i4-identity-foundation-runtime-absence-regression-guard": "node scripts/nexus-sprint-i4-identity-foundation-runtime-absence-regression-guard-qa.js",
     "qa:nexus-sprint-i5-identity-foundation-lane-closeout": "node scripts/nexus-sprint-i5-identity-foundation-lane-closeout-qa.js",
     "qa:nexus-sprint-i6-first-real-world-action-pilot-readiness-contract": "node scripts/nexus-sprint-i6-first-real-world-action-pilot-readiness-contract-qa.js",
+    "qa:nexus-sprint-i7-first-real-world-action-pilot-readiness-harness": "node scripts/nexus-sprint-i7-first-real-world-action-pilot-readiness-harness-qa.js",
     "qa:nexus-sprint-j1-user-profile-runtime-activation-readiness-gate": "node scripts/nexus-sprint-j1-user-profile-runtime-activation-readiness-gate-qa.js",
     "qa:nexus-sprint-j2-user-profile-feature-flag-contract": "node scripts/nexus-sprint-j2-user-profile-feature-flag-contract-qa.js",
     "qa:nexus-sprint-j3-user-profile-flag-contract-harness": "node scripts/nexus-sprint-j3-user-profile-flag-contract-harness-qa.js",
