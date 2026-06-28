@@ -2,44 +2,47 @@
 
 ## Current Checkpoint
 
-Current HEAD at Sprint D1 start: `380b85895be41fd573c64d45945b39e115f35bcd`.
+Current HEAD after AO4 cleanup: `ab9ea33f250e7e9f6b42ec3d12f7b95ed2ae83d7`.
 
-Sprint D begins after Sprint C44 closed the controlled agriculture preview activation lane. The repository was clean, `main` was aligned with `origin/main`, and the Standard User build remained protected by default-off controlled preview behavior.
+The final approved audit checkpoint is Sprint AO3:
 
-## Continuity Audit: C39-C44
+- Commit: `ab9ea33f250e7e9f6b42ec3d12f7b95ed2ae83d7`
+- Message: `Add Stale Data Alerts flag contract harness`
+- Posture: documentation, fixtures, deterministic QA, package alias, and safe-suite wiring only.
 
-| Sprint | Commit | Continuity result |
-| --- | --- | --- |
-| C39 | `8673f09aa22651dc5cf2fb44d612fce208198729` | Product-owner approval record for controlled agriculture runtime activation was documented. |
-| C40 | `6372c83c2c72f0b42290f410f8f30022c08f98d9` | Flag-gated source-backed agriculture runtime activation plan was documented. |
-| C41 | `283ac7e4d67bf6b6dd6454c561bd23da0ec3ce01` | Flag-off regression guard protected Standard User behavior. |
-| C42 | `7371d200a798421a0a17b085d6c918d6b9b5e6b5` | Flag-on controlled agriculture preview implementation was added behind explicit validation-only enablement. |
-| C43 | `b4dbc475a191fc7c9b173fc168d4ffbe27740f92` | Standard User browser validation confirmed flag-off safety and documented the main-world flag-on validation limitation. |
-| C44 | `380b85895be41fd573c64d45945b39e115f35bcd` | Controlled agriculture preview lane was closed and Sprint D readiness was recorded. |
-
-Continuity result: C39-C44 preserved Standard User default behavior, kept source-backed agriculture preview review-only, and did not add execution authority, provider handoff, storage writes, backend writes, permissions, external navigation, or live lookups.
+Ron/product owner explicitly ended the audit train at AO3. The audit train ended at AO3. AO4, AO5, and additional audit phases are not approved in this lane. Sprint D now begins controlled user-approved action staging.
 
 ## Sprint D Purpose
 
-Sprint D defines and progressively validates controlled action staging. The lane prepares review-only action metadata and, in later phases, may allow safe visible preview surfaces. Sprint D does not authorize execution.
+Sprint D is the first controlled-action staging lane. It prepares Nexus to describe proposed next steps as structured, review-only objects while preserving the Standard User build and keeping the user in control.
 
-The product goal is to let Nexus describe a possible next step in a structured, auditable way while keeping the user in control and making clear that no real-world action has happened.
+Sprint D does not authorize autonomous execution. It does not create provider handoff, call, message, payment, location, camera, medical, pharmacy, emergency, marketplace, account, backend-write, storage-write, or real pending-action behavior.
 
 ## Controlled Action Staging Definition
 
-A controlled staged action is a structured, review-only representation of a possible next step. It may summarize what Nexus could prepare, what evidence is needed, what sources support the suggestion, and which execution channels are blocked.
+Controlled action staging means Nexus may prepare an inert review object that describes a possible action the user could review later. A staged action may include a title, summary, evidence needs, source packet needs, blocked channels, safe-use notes, and limitations.
 
-A staged action is not an executed action. It is not a pending real-world action. It does not contact a provider, send a message, place a call, start a payment, request location, activate camera, open a marketplace transaction, schedule care, refill medication, dispatch services, or write backend state.
+A controlled staged action is:
+
+- review-only;
+- approval-required;
+- non-executing;
+- non-authoritative;
+- local and reversible unless a later approved phase says otherwise;
+- unable to contact providers, open external services, or create real-world side effects.
 
 ## Staged Action vs Executed Action
 
 | Staged action | Executed action |
 | --- | --- |
 | Review-only metadata. | Real-world side effect. |
-| Requires user approval before any future execution path. | Has already performed or initiated a task. |
-| `executionAuthority: false`. | Execution authority granted through a completed future gate. |
-| No provider handoff. | May open or call a provider adapter after approval in a future phase. |
-| No backend write or pending real-world action. | May create backend state, records, orders, calls, messages, appointments, or payments. |
+| `reviewOnly: true`. | An action has been performed or initiated. |
+| `requiresUserApproval: true`. | Approval gate has already been completed. |
+| `executionAuthority: false`. | Execution authority has been granted by a future safety gate. |
+| No provider handoff. | May hand off to a provider adapter in a future approved lane. |
+| No backend write or real pending action. | May create records, orders, messages, calls, appointments, payments, or dispatch events. |
+
+Sprint D1 only permits the staged-action side of this table.
 
 ## Allowed Staged Action Categories
 
@@ -52,9 +55,11 @@ Sprint D may define review-only staged actions for:
 - crop issue observation support review;
 - field support review;
 - source-backed agriculture guidance review;
+- workforce resource review;
+- learning or education review;
 - blocked high-risk request review notes that explain why execution is not available.
 
-These categories must remain review-only and must not become live execution paths during D1.
+These categories must remain review-only and must not become live execution paths during Sprint D1.
 
 ## Disallowed Execution Categories
 
@@ -66,20 +71,35 @@ Sprint D1 explicitly disallows execution for:
 - WhatsApp;
 - Telegram;
 - SMS;
-- email;
+- email sending;
 - payments;
 - purchases;
 - marketplace transactions;
+- checkout behavior;
+- money movement;
 - location or geolocation;
-- camera, image upload, microphone, or media capture;
+- location sharing;
+- geolocation execution;
+- camera activation;
+- microphone activation;
+- image capture;
+- image diagnosis execution;
 - appointment booking;
 - emergency routing or dispatch;
-- medical diagnosis, treatment, prescription, pharmacy refill, or clinical action;
+- emergency routing;
+- emergency dispatch;
+- medical diagnosis;
+- treatment decisions;
+- clinical triage;
+- pharmacy workflow execution;
+- pharmacy refill;
+- prescription or refill execution;
 - backend writes;
 - real pending actions;
 - storage side effects;
 - live lookup;
-- external navigation.
+- external navigation;
+- autonomous execution.
 
 ## Required Staged Action Fields
 
@@ -114,7 +134,8 @@ The Standard User build must remain stable and understandable:
 - staged action metadata must never claim provider connection is live;
 - staged action metadata must never show hidden debug-only metadata;
 - staged action metadata must never bypass existing low-risk preview, confirmation, permission, telehealth, call, music, learning, map, marketplace, health, or Admin/full modal protections;
-- staged action metadata must clearly distinguish review from execution.
+- staged action metadata must clearly distinguish review from execution;
+- high-risk prompts must remain blocked, permission-gated, or confirmation-gated by the existing safety posture.
 
 ## No-Execution Authority
 
@@ -124,7 +145,7 @@ Required invariant: `executionAuthority: false`.
 
 ## No-Provider-Handoff Boundary
 
-Sprint D1 does not allow provider handoff. A staged action must not open WhatsApp, Telegram, phone, SMS, email, telehealth, provider directory, transportation, pharmacy, payment, clinic, emergency, or marketplace provider channels.
+Sprint D1 does not allow provider handoff. A staged action must not open WhatsApp, Telegram, phone, SMS, email, telehealth, provider directory, transportation, pharmacy, payment, clinic, emergency, marketplace, or native bridge provider channels.
 
 Provider-related staged actions may only describe that a verified provider integration would be required later.
 
@@ -135,10 +156,11 @@ Sprint D1 forbids:
 - silent calls;
 - visible call launch;
 - message sending;
-- WhatsApp, Telegram, SMS, or email launch;
-- payment or checkout;
-- location sharing or geolocation request;
-- camera, microphone, image, or file capture.
+- WhatsApp, Telegram, SMS, or email sending;
+- payment, purchase, checkout, or money movement;
+- location sharing or geolocation execution;
+- camera, microphone, image, or file capture;
+- image diagnosis execution.
 
 These channels must appear in `blockedExecutionChannels` for any staged action that might otherwise be confused with execution.
 
@@ -151,6 +173,7 @@ Sprint D1 forbids:
 - clinical triage;
 - prescription or refill execution;
 - pharmacy order or pickup execution;
+- emergency routing;
 - emergency dispatch;
 - provider contact for urgent care.
 
@@ -158,7 +181,7 @@ Health, pharmacy, and emergency prompts must remain blocked, permission-gated, o
 
 ## No-Backend-Write / No-Real-Pending-Action Boundary
 
-Sprint D1 does not create backend state. It does not create a durable pending action, order, appointment, communication, provider handoff, payment, marketplace transaction, location share, or medical/pharmacy/emergency event.
+Sprint D1 does not create backend state. It does not create a durable pending action, order, appointment, communication, provider handoff, payment, marketplace transaction, location share, medical event, pharmacy event, emergency event, or account/profile mutation.
 
 Any future staged action preview must be local, review-only, and reversible by clearing the preview.
 
@@ -171,10 +194,12 @@ Required browser checks for runtime-visible changes:
 - Standard User path loads normally;
 - low-risk prompts preserve review-only behavior;
 - high-risk prompts do not execute;
-- no provider, call, message, payment, location, camera, health, pharmacy, emergency, or marketplace action fires;
+- no provider, call, message, WhatsApp, Telegram, SMS, email, payment, purchase, marketplace, location, camera, image, medical, pharmacy, emergency, or account action fires;
+- no backend write or real pending action is created;
 - no hidden debug-only metadata becomes visible;
 - no console warning or error is introduced;
-- any feature flag defaults off and can be safely reset.
+- any feature flag defaults off and can be safely reset;
+- `db.json` and runtime artifacts are restored if mutated.
 
 ## Rollback Strategy
 
@@ -183,9 +208,10 @@ If a Sprint D phase introduces unsafe behavior:
 1. Disable or remove the staged action feature flag.
 2. Restore the previous Standard User behavior.
 3. Remove any runtime wiring that renders staged action previews.
-4. Restore `db.json` or runtime artifacts if mutated.
-5. Re-run focused QA and `all-safe`.
-6. Commit only the rollback or fix needed to re-establish safety.
+4. Remove any provider, call, message, payment, location, camera, health, pharmacy, emergency, or marketplace integration path introduced by mistake.
+5. Restore `db.json` or runtime artifacts if mutated.
+6. Re-run focused QA, `nexus-workforce`, and `all-safe`.
+7. Commit only the rollback or fix needed to re-establish safety.
 
 ## Sprint D2 Readiness Recommendation
 
@@ -203,7 +229,7 @@ Sprint D2 may add an inert staged action contract module if it remains:
 - no pending real-world actions;
 - no execution path.
 
-Sprint D2 should define the allowed types, blocked channels, required fields, and a validator such as `isSafeReviewOnlyStagedAction(action)`.
+Sprint D2 should define the allowed staged action types, blocked execution channels, required fields, and a validator such as `isSafeReviewOnlyStagedAction(action)`.
 
 ## D1 Conclusion
 

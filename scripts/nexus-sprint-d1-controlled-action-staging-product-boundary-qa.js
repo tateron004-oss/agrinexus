@@ -30,12 +30,9 @@ const qaSuite = read("scripts", "qa-suite.js");
 
 assertIncludes(doc, [
   "Sprint D1",
-  "380b85895be41fd573c64d45945b39e115f35bcd",
-  "8673f09aa22651dc5cf2fb44d612fce208198729",
-  "6372c83c2c72f0b42290f410f8f30022c08f98d9",
-  "283ac7e4d67bf6b6dd6454c561bd23da0ec3ce01",
-  "7371d200a798421a0a17b085d6c918d6b9b5e6b5",
-  "b4dbc475a191fc7c9b173fc168d4ffbe27740f92",
+  "ab9ea33f250e7e9f6b42ec3d12f7b95ed2ae83d7",
+  "Add Stale Data Alerts flag contract harness",
+  "audit train ended at AO3",
   "Controlled Action Staging Definition",
   "Staged Action vs Executed Action",
   "Allowed Staged Action Categories",
@@ -99,6 +96,29 @@ assertIncludes(doc, [
   "live lookup",
   "external navigation"
 ].forEach(term => assert(doc.includes(term), `D1 disallowed execution category must be documented: ${term}`));
+
+[
+  "autonomous execution",
+  "provider handoff",
+  "calls",
+  "messages",
+  "WhatsApp",
+  "SMS",
+  "Telegram",
+  "email sending",
+  "payments",
+  "purchases",
+  "marketplace transactions",
+  "location sharing",
+  "geolocation execution",
+  "camera activation",
+  "image capture",
+  "medical diagnosis",
+  "pharmacy workflow execution",
+  "emergency dispatch",
+  "backend writes",
+  "real pending actions"
+].forEach(term => assert(doc.includes(term), `D1 must clearly block: ${term}`));
 
 [
   "agriculture training review",
