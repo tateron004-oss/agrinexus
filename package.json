@@ -499,6 +499,7 @@
     "qa:nexus-sprint-ac3-transportation-mode-flag-contract-harness": "node scripts/nexus-sprint-ac3-transportation-mode-flag-contract-harness-qa.js",
     "qa:nexus-sprint-ac4-transportation-mode-runtime-absence-regression-guard": "node scripts/nexus-sprint-ac4-transportation-mode-runtime-absence-regression-guard-qa.js",
     "qa:nexus-sprint-ac5-transportation-mode-lane-closeout": "node scripts/nexus-sprint-ac5-transportation-mode-lane-closeout-qa.js",
+    "qa:nexus-sprint-ad1-workforce-mode-runtime-activation-readiness-gate": "node scripts/nexus-sprint-ad1-workforce-mode-runtime-activation-readiness-gate-qa.js",
     "qa:nexus-phase-105-preview-only-autonomous-runtime-integration-plan": "node scripts/nexus-phase-105-preview-only-autonomous-runtime-integration-plan-qa.js"
   },
   "dependencies": {
