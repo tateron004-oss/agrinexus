@@ -466,6 +466,7 @@
     "qa:nexus-sprint-o5-flag-off-payment-regression": "node scripts/nexus-sprint-o5-flag-off-payment-regression-qa.js",
     "qa:nexus-sprint-o6-flag-gated-payment-preview": "node scripts/nexus-sprint-o6-flag-gated-payment-preview-qa.js",
     "qa:nexus-sprint-o7-standard-user-browser-validation-for-payment-preview": "node scripts/nexus-sprint-o7-standard-user-browser-validation-for-payment-preview-qa.js",
+    "qa:nexus-sprint-o8-payment-safety-closeout-and-sprint-p-readiness": "node scripts/nexus-sprint-o8-payment-safety-closeout-qa.js",
     "qa:nexus-sprint-k1-personalization-runtime-activation-readiness-gate": "node scripts/nexus-sprint-k1-personalization-runtime-activation-readiness-gate-qa.js",
     "qa:nexus-sprint-k2-personalization-feature-flag-contract": "node scripts/nexus-sprint-k2-personalization-feature-flag-contract-qa.js",
     "qa:nexus-sprint-k3-personalization-flag-contract-harness": "node scripts/nexus-sprint-k3-personalization-flag-contract-harness-qa.js",
