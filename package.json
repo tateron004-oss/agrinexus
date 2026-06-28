@@ -424,6 +424,7 @@
     "qa:nexus-sprint-j3-user-profile-flag-contract-harness": "node scripts/nexus-sprint-j3-user-profile-flag-contract-harness-qa.js",
     "qa:nexus-sprint-j4-user-profile-runtime-absence-regression-guard": "node scripts/nexus-sprint-j4-user-profile-runtime-absence-regression-guard-qa.js",
     "qa:nexus-sprint-j5-user-profile-lane-closeout": "node scripts/nexus-sprint-j5-user-profile-lane-closeout-qa.js",
+    "qa:nexus-sprint-j6-multi-lane-assistant-router-readiness-contract": "node scripts/nexus-sprint-j6-multi-lane-assistant-router-readiness-contract-qa.js",
     "qa:nexus-sprint-k1-personalization-runtime-activation-readiness-gate": "node scripts/nexus-sprint-k1-personalization-runtime-activation-readiness-gate-qa.js",
     "qa:nexus-sprint-k2-personalization-feature-flag-contract": "node scripts/nexus-sprint-k2-personalization-feature-flag-contract-qa.js",
     "qa:nexus-sprint-k3-personalization-flag-contract-harness": "node scripts/nexus-sprint-k3-personalization-flag-contract-harness-qa.js",
