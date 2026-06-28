@@ -376,6 +376,7 @@
     "qa:nexus-sprint-e2-inert-confirmation-contract": "node scripts/nexus-sprint-e2-inert-confirmation-contract-qa.js",
     "qa:nexus-sprint-e3-confirmation-harness": "node scripts/nexus-sprint-e3-confirmation-harness-qa.js",
     "qa:nexus-sprint-e4-confirmation-evidence-risk-mapping": "node scripts/nexus-sprint-e4-confirmation-evidence-risk-mapping-qa.js",
+    "qa:nexus-sprint-e5-confirmation-flag-off-regression-guard": "node scripts/nexus-sprint-e5-confirmation-flag-off-regression-guard-qa.js",
     "qa:nexus-sprint-e1-staged-action-approval-audit-product-boundary": "node scripts/nexus-sprint-e1-staged-action-approval-audit-product-boundary-qa.js",
     "qa:nexus-sprint-e2-staged-action-approval-record-contract": "node scripts/nexus-sprint-e2-staged-action-approval-record-contract-qa.js",
     "qa:nexus-sprint-e3-staged-action-approval-record-harness": "node scripts/nexus-sprint-e3-staged-action-approval-record-harness-qa.js",
