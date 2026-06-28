@@ -451,6 +451,7 @@
     "qa:nexus-sprint-m6-flag-gated-appointment-service-request-preview": "node scripts/nexus-sprint-m6-flag-gated-appointment-service-request-preview-qa.js",
     "qa:nexus-sprint-m7-standard-user-browser-validation-for-appointment-service-preview": "node scripts/nexus-sprint-m7-standard-user-browser-validation-for-appointment-service-preview-qa.js",
     "qa:nexus-sprint-m8-appointment-service-request-closeout-and-sprint-n-readiness": "node scripts/nexus-sprint-m8-appointment-service-request-closeout-qa.js",
+    "qa:nexus-sprint-n1-marketplace-request-product-boundary": "node scripts/nexus-sprint-n1-marketplace-request-product-boundary-qa.js",
     "qa:nexus-sprint-k1-personalization-runtime-activation-readiness-gate": "node scripts/nexus-sprint-k1-personalization-runtime-activation-readiness-gate-qa.js",
     "qa:nexus-sprint-k2-personalization-feature-flag-contract": "node scripts/nexus-sprint-k2-personalization-feature-flag-contract-qa.js",
     "qa:nexus-sprint-k3-personalization-flag-contract-harness": "node scripts/nexus-sprint-k3-personalization-flag-contract-harness-qa.js",
