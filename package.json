@@ -463,6 +463,7 @@
     "qa:nexus-sprint-o2-inert-payment-intent-contract": "node scripts/nexus-sprint-o2-inert-payment-intent-contract-qa.js",
     "qa:nexus-sprint-o3-payment-harness": "node scripts/nexus-sprint-o3-payment-harness-qa.js",
     "qa:nexus-sprint-o4-payee-amount-risk-evidence-mapping": "node scripts/nexus-sprint-o4-payee-amount-risk-evidence-mapping-qa.js",
+    "qa:nexus-sprint-o5-flag-off-payment-regression": "node scripts/nexus-sprint-o5-flag-off-payment-regression-qa.js",
     "qa:nexus-sprint-k1-personalization-runtime-activation-readiness-gate": "node scripts/nexus-sprint-k1-personalization-runtime-activation-readiness-gate-qa.js",
     "qa:nexus-sprint-k2-personalization-feature-flag-contract": "node scripts/nexus-sprint-k2-personalization-feature-flag-contract-qa.js",
     "qa:nexus-sprint-k3-personalization-flag-contract-harness": "node scripts/nexus-sprint-k3-personalization-flag-contract-harness-qa.js",
