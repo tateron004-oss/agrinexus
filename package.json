@@ -374,6 +374,7 @@
     "qa:nexus-sprint-d8-controlled-staged-action-preview-closeout": "node scripts/nexus-sprint-d8-controlled-staged-action-preview-closeout-qa.js",
     "qa:nexus-sprint-e1-user-confirmation-product-boundary": "node scripts/nexus-sprint-e1-user-confirmation-product-boundary-qa.js",
     "qa:nexus-sprint-e2-inert-confirmation-contract": "node scripts/nexus-sprint-e2-inert-confirmation-contract-qa.js",
+    "qa:nexus-sprint-e3-confirmation-harness": "node scripts/nexus-sprint-e3-confirmation-harness-qa.js",
     "qa:nexus-sprint-e1-staged-action-approval-audit-product-boundary": "node scripts/nexus-sprint-e1-staged-action-approval-audit-product-boundary-qa.js",
     "qa:nexus-sprint-e2-staged-action-approval-record-contract": "node scripts/nexus-sprint-e2-staged-action-approval-record-contract-qa.js",
     "qa:nexus-sprint-e3-staged-action-approval-record-harness": "node scripts/nexus-sprint-e3-staged-action-approval-record-harness-qa.js",
