@@ -503,6 +503,7 @@
     "qa:nexus-rp7-music-media-real-provider-activation": "node scripts/nexus-rp7-music-media-real-provider-activation-qa.js",
     "qa:nexus-rp8-unified-provider-live-mock-skip-matrix": "node scripts/nexus-rp8-unified-provider-live-mock-skip-matrix-qa.js",
     "qa:nexus-rp9-controlled-assistant-preview-live-provider-sweep": "node scripts/nexus-rp9-controlled-assistant-preview-live-provider-sweep-qa.js",
+    "qa:nexus-rp10-standard-user-live-preview-readiness-validation": "node scripts/nexus-rp10-standard-user-live-preview-readiness-validation-qa.js",
     "qa:nexus-sprint-k1-personalization-runtime-activation-readiness-gate": "node scripts/nexus-sprint-k1-personalization-runtime-activation-readiness-gate-qa.js",
     "qa:nexus-sprint-k2-personalization-feature-flag-contract": "node scripts/nexus-sprint-k2-personalization-feature-flag-contract-qa.js",
     "qa:nexus-sprint-k3-personalization-flag-contract-harness": "node scripts/nexus-sprint-k3-personalization-flag-contract-harness-qa.js",
