@@ -1,6 +1,8 @@
 # Nexus Sprint D8 - Controlled Staged Action Preview Closeout
 
-Current base: `b66c59f82aef925a19928ed98d2e1a02310aa1ef`
+Current base after D7: `a2b304dc072175d0ef437bba7417a4921ade9b14`
+
+Sprint D8 continues the post-AO3 Sprint D train. The audit train ended at AO3, and D8 closes the controlled staged action preview lane rather than reopening AO4, AO5, or any additional audit phase.
 
 Sprint D8 closes the controlled staged-action preview lane that began after Sprint C44. It is documentation and deterministic QA only. No runtime behavior, UI behavior, backend behavior, storage behavior, provider handoff, permissions, or execution path changed in this phase.
 

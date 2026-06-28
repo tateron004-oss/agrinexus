@@ -31,7 +31,8 @@ const qaSuite = read("scripts", "qa-suite.js");
 
 assertIncludes(doc, [
   "Sprint D8",
-  "b66c59f82aef925a19928ed98d2e1a02310aa1ef",
+  "a2b304dc072175d0ef437bba7417a4921ade9b14",
+  "audit train ended at AO3",
   "D1",
   "D2",
   "D3",
