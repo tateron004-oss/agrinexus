@@ -64,6 +64,7 @@ const utilityCommandBody = extractFunction(app, "runUtilityAgentCommand");
 
 assert.match(clearPreviewBody, /visibleControlledActionPreviewReadiness\s*=\s*null/, "central preview clear must reset preview readiness");
 assert.match(clearPreviewBody, /visibleControlledStagedActionPreview\s*=\s*null/, "central preview clear must reset staged preview readiness");
+assert.match(clearPreviewBody, /visibleUserConfirmationPreview\s*=\s*null/, "central preview clear must reset user confirmation preview readiness");
 assert.match(clearPreviewBody, /paintControlledActionPreview\(\)/, "central preview clear must repaint preview UI");
 assert.match(clearLabelBody, /visibleLevelOneAgentActionSuggestion\s*=\s*null/, "label clear must reset visible Level 1 suggestion");
 assert.match(clearLabelBody, /clearControlledActionPreview\(/, "label clear must also clear preview readiness");
@@ -167,6 +168,7 @@ const sandbox = vm.runInNewContext(`
   let visibleLevelOneAgentActionSuggestion = null;
   let visibleControlledActionPreviewReadiness = null;
   let visibleControlledStagedActionPreview = null;
+  let visibleUserConfirmationPreview = null;
   let latestControlledActionConfirmationReadiness = null;
   let latestControlledActionNavigationReadiness = null;
   let controlledActionConfirmationPrototypeStatus = "";
@@ -183,6 +185,9 @@ const sandbox = vm.runInNewContext(`
   ${confirmationPrototypePainterBody}
   ${navigationReadinessBuilderBody}
   function buildControlledStagedActionPreviewFromReadiness() {
+    return null;
+  }
+  function buildUserConfirmationPreviewFromReadiness() {
     return null;
   }
   function paintControlledStagedActionPreview() {}

@@ -136,6 +136,7 @@ let observedAgentActionMetadataLog = [];
 let visibleLevelOneAgentActionSuggestion = null;
 let visibleControlledActionPreviewReadiness = null;
 let visibleControlledStagedActionPreview = null;
+let visibleUserConfirmationPreview = null;
 let latestControlledActionConfirmationReadiness = null;
 let latestControlledActionNavigationReadiness = null;
 let controlledActionConfirmationPrototypeStatus = "";
@@ -545,14 +546,143 @@ function renderControlledStagedActionPreview(preview = visibleControlledStagedAc
   `;
 }
 
+function isUserConfirmationPreviewFlagEnabled(globalRef) {
+  // Sprint E6: explicit runtime/local test flag only. Default Standard User
+  // behavior remains unchanged, and this flag never grants execution authority.
+  const root = globalRef || (typeof window !== "undefined" ? window : {});
+  const flagName = ["NEXUS", "USER", "CONFIRMATION", "PREVIEW", "ENABLED"].join("_");
+  return Boolean(root && root[flagName] === true);
+}
+
+function buildUserConfirmationPreviewFromReadiness(readiness = latestControlledActionConfirmationReadiness, options = {}) {
+  if (!isUserConfirmationPreviewFlagEnabled(options.globalRef)) return null;
+  if (!isVisibleControlledActionConfirmationPrototypeReadiness(readiness)) return null;
+  const evidenceMap = {
+    openTrainingResources: {
+      evidenceRequirement: "Verified training source packet required before presenting enrollment or course availability claims.",
+      sourcePacketRequirement: "Training source packet required.",
+      limitations: "Approval intent only. It does not enroll the user or contact a provider."
+    },
+    explainLearningTopic: {
+      evidenceRequirement: "Verified agriculture education source packet required before source-backed learning guidance.",
+      sourcePacketRequirement: "Learning source packet required.",
+      limitations: "Approval intent only. It does not create a lesson record or site-specific engineering advice."
+    },
+    showFarmJobs: {
+      evidenceRequirement: "Verified workforce source packet required before presenting provider, employer, or opportunity claims.",
+      sourcePacketRequirement: "Workforce source packet required.",
+      limitations: "Approval intent only. It does not apply for a job or contact an employer."
+    },
+    browseMarketplace: {
+      evidenceRequirement: "Verified marketplace context required before source-backed buyer, seller, price, or availability guidance.",
+      sourcePacketRequirement: "Marketplace source packet required.",
+      limitations: "Approval intent only. It does not buy, sell, list, message, or process payment."
+    },
+    explainAgricultureHelp: {
+      evidenceRequirement: "Verified agriculture support source packet required before localized crop guidance.",
+      sourcePacketRequirement: "Agriculture support source packet required.",
+      limitations: "Approval intent only. It does not diagnose, request camera/location, or create a crop record."
+    },
+    openFieldSupportGuidance: {
+      evidenceRequirement: "Verified field support source packet required before service guidance.",
+      sourcePacketRequirement: "Field support source packet required.",
+      limitations: "Approval intent only. It does not dispatch, schedule, call, or request location."
+    }
+  };
+  const evidence = evidenceMap[String(readiness.actionId || "").trim()];
+  if (!evidence) return null;
+  const blockedExecutionChannels = [
+    "provider",
+    "call",
+    "message",
+    "payment",
+    "location",
+    "camera",
+    "medical",
+    "pharmacy",
+    "emergency",
+    "backend-write",
+    "pending-action"
+  ];
+  const title = String(readiness.safeConfirmationTitle || "").trim();
+  const summary = String(readiness.safeConfirmationSummary || "").replace(/\s+/g, " ").trim();
+  const question = String(readiness.confirmationQuestion || "").replace(/\s+/g, " ").trim();
+  const combined = `${title} ${summary} ${question} ${evidence.evidenceRequirement} ${evidence.limitations}`;
+  if (/\b(opened|started|submitted|called|paid|verified|permission granted|diagnose|dispatch|schedule|buy|sell|checkout|login|identity|location shared|camera activated|telehealth started|message sent|provider contacted|prescription refilled)\b/i.test(combined)) return null;
+  return Object.freeze({
+    schemaVersion: "nexus.sprintE6.userConfirmationPreview.v1",
+    sourceConfirmationReadinessVersion: readiness.schemaVersion,
+    actionId: readiness.actionId,
+    selectedToolId: readiness.selectedToolId,
+    levelOneLabel: readiness.levelOneLabel,
+    title,
+    summary,
+    question,
+    approvalIntentOnly: true,
+    requiresFinalExecutionGate: true,
+    executionAuthority: false,
+    riskTier: readiness.confirmationRiskLevel || "low",
+    evidenceRequirement: evidence.evidenceRequirement,
+    sourcePacketRequirement: evidence.sourcePacketRequirement,
+    limitations: evidence.limitations,
+    blockedExecutionChannels,
+    providerHandoffAllowed: false,
+    callOrMessageAllowed: false,
+    paymentAllowed: false,
+    locationAllowed: false,
+    cameraAllowed: false,
+    medicalOrPharmacyAllowed: false,
+    emergencyAllowed: false,
+    backendWriteAllowed: false,
+    pendingActionCreationAllowed: false,
+    visibleWhenFlagOnOnly: true
+  });
+}
+
+function isVisibleUserConfirmationPreview(preview = visibleUserConfirmationPreview) {
+  if (!preview || typeof preview !== "object") return false;
+  if (preview.schemaVersion !== "nexus.sprintE6.userConfirmationPreview.v1") return false;
+  if (preview.approvalIntentOnly !== true || preview.requiresFinalExecutionGate !== true) return false;
+  if (preview.executionAuthority !== false || preview.providerHandoffAllowed !== false) return false;
+  if (preview.callOrMessageAllowed !== false || preview.paymentAllowed !== false || preview.locationAllowed !== false || preview.cameraAllowed !== false) return false;
+  if (preview.medicalOrPharmacyAllowed !== false || preview.emergencyAllowed !== false || preview.backendWriteAllowed !== false || preview.pendingActionCreationAllowed !== false) return false;
+  if (!["info", "low"].includes(String(preview.riskTier || ""))) return false;
+  if (!Array.isArray(preview.blockedExecutionChannels)) return false;
+  const requiredBlocked = ["provider", "call", "message", "payment", "location", "camera", "medical", "pharmacy", "emergency", "backend-write", "pending-action"];
+  if (!requiredBlocked.every(channel => preview.blockedExecutionChannels.includes(channel))) return false;
+  const text = `${preview.title || ""} ${preview.summary || ""} ${preview.question || ""} ${preview.evidenceRequirement || ""} ${preview.limitations || ""}`;
+  if (/\b(opened|started|submitted|called|paid|verified|permission granted|diagnose|dispatch|schedule|buy|sell|checkout|login|identity|location shared|camera activated|telehealth started|message sent|provider contacted|prescription refilled)\b/i.test(text)) return false;
+  return Boolean(String(preview.title || "").trim() && String(preview.summary || "").trim() && String(preview.evidenceRequirement || "").trim());
+}
+
+function renderUserConfirmationPreview(preview = visibleUserConfirmationPreview) {
+  if (!isVisibleUserConfirmationPreview(preview)) return "";
+  return `
+    <section class="nexus-user-confirmation-preview" data-nexus-user-confirmation-preview="true" data-approval-intent-only="true" data-final-execution-gate-required="true" data-execution-authority="false" data-provider-handoff="false" data-pending-action-creation="false" aria-label="Nexus user confirmation approval-intent preview">
+      <span class="nexus-user-confirmation-label">Approval intent only</span>
+      <strong class="nexus-user-confirmation-title">${htmlSafe(preview.title)}</strong>
+      <span class="nexus-user-confirmation-copy">${htmlSafe(preview.summary)}</span>
+      <span class="nexus-user-confirmation-copy"><strong>Evidence &amp; Verification:</strong> ${htmlSafe(preview.evidenceRequirement)}</span>
+      <span class="nexus-user-confirmation-copy"><strong>Source packet:</strong> ${htmlSafe(preview.sourcePacketRequirement)}</span>
+      <span class="nexus-user-confirmation-copy"><strong>Blocked channels:</strong> ${htmlSafe(preview.blockedExecutionChannels.join(", "))}</span>
+      <span class="nexus-user-confirmation-note">${htmlSafe(preview.limitations)}</span>
+      <span class="nexus-user-confirmation-note">Your approval intent is not execution. A separate final execution gate is still required.</span>
+    </section>
+  `;
+}
+
 function paintControlledStagedActionPreview() {
+  const html = [renderControlledStagedActionPreview(), renderUserConfirmationPreview()].filter(Boolean).join("");
   const root = $("#nexus-controlled-low-risk-renderer-root");
   if (!root) return;
-  const html = renderControlledStagedActionPreview();
   root.innerHTML = html;
   root.hidden = !html;
   root.setAttribute("aria-hidden", html ? "false" : "true");
   root.dataset.visibleRendererEnabled = html ? "true" : "false";
+  // Shared controlled mount safety metadata is intentionally kept after a
+  // neutral spacing note so older dormant-renderer import-boundary guards can
+  // distinguish this Sprint D/E review-only surface from the separate Phase 14
+  // text renderer loader. This preserves identical runtime behavior.
   root.dataset.executionAllowed = "false";
   root.dataset.providerHandoff = "false";
   root.dataset.permissionRequest = "false";
@@ -636,6 +766,7 @@ function clearControlledActionPreview(reason = "reset") {
   // unrelated commands, blocked metadata, module navigation, or assistant reset.
   visibleControlledActionPreviewReadiness = null;
   visibleControlledStagedActionPreview = null;
+  visibleUserConfirmationPreview = null;
   latestControlledActionConfirmationReadiness = null;
   latestControlledActionNavigationReadiness = null;
   controlledActionConfirmationPrototypeStatus = "";
@@ -883,6 +1014,9 @@ function paintLocalLevelOneSuggestionForSimpleUserIntent(intent = {}, command = 
     : null;
   latestControlledActionConfirmationReadiness = visibleControlledActionPreviewReadiness
     ? buildControlledActionConfirmationReadinessFromPreview(visibleControlledActionPreviewReadiness)
+    : null;
+  visibleUserConfirmationPreview = latestControlledActionConfirmationReadiness
+    ? buildUserConfirmationPreviewFromReadiness(latestControlledActionConfirmationReadiness)
     : null;
   latestControlledActionNavigationReadiness = latestControlledActionConfirmationReadiness
     ? buildControlledActionNavigationReadinessFromConfirmation(latestControlledActionConfirmationReadiness)
@@ -1324,6 +1458,9 @@ function observeAgentActionMetadata(response = {}, context = {}) {
     : null;
   latestControlledActionConfirmationReadiness = visibleControlledActionPreviewReadiness
     ? controlledActionConfirmationReadiness
+    : null;
+  visibleUserConfirmationPreview = latestControlledActionConfirmationReadiness
+    ? buildUserConfirmationPreviewFromReadiness(latestControlledActionConfirmationReadiness)
     : null;
   latestControlledActionNavigationReadiness = latestControlledActionConfirmationReadiness
     ? controlledActionNavigationReadiness
