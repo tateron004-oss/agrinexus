@@ -34,6 +34,8 @@ const contract = require(path.join(root, "public", moduleName));
 
 assertIncludes(doc, [
   "Sprint D2",
+  "9190b1687a50f169390cee7336dc6a9c0462f2a7",
+  "audit train ended at AO3",
   "public/nexus-staged-action-contract.js",
   "Allowed Staged Action Types",
   "Required Fields",

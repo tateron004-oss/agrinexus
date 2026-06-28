@@ -4,6 +4,10 @@
 
 Sprint D2 adds a deterministic, inert contract for controlled staged actions. It follows the Sprint D1 product boundary and gives future stages a single local validator for review-only staged action metadata.
 
+Current base after D1: `9190b1687a50f169390cee7336dc6a9c0462f2a7`.
+
+Sprint D2 continues the post-AO3 Sprint D train. The audit train ended at AO3, and D2 does not reopen AO4, AO5, or any additional audit phase.
+
 This phase does not wire staged actions into Standard User runtime. It does not render UI, mutate the DOM, attach event listeners, fetch data, write storage, call providers, create backend records, or execute actions.
 
 ## Contract Module
