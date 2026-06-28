@@ -97,6 +97,7 @@ function buildAssistantRuntimeResponseFromOrchestration(userPrompt, orchestratio
     safetyPosture: orchestrationResult.safetyPosture,
     sourceResultCount: Array.isArray(orchestrationResult.results) ? orchestrationResult.results.length : 0,
     auditEvent: orchestrationResult.auditEvent,
+    reliability: orchestrationResult.reliability || null,
     allowed: orchestrationResult.allowed === true,
     blockedReason: orchestrationResult.blockedReason || "",
     noExecutionAuthorized: true,

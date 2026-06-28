@@ -1,6 +1,6 @@
 const crypto = require("node:crypto");
 const dialogue = require("../public/nexus-assistant-dialogue-engine-contract.js");
-const { isSafeReadOnlySourceResult } = require("../public/nexus-live-source-result-contract.js");
+const sourceResultContract = require("../public/nexus-live-source-result-contract.js");
 const registry = require("../public/nexus-live-provider-capability-registry.js");
 const liveSourceAudit = require("../public/nexus-live-source-audit-logging-contract.js");
 const trustPolicy = require("../public/nexus-live-source-trust-freshness-policy.js");
@@ -48,6 +48,15 @@ const EXECUTION_PHRASE_PATTERNS = Object.freeze([
   /\bdispatch\b/i
 ]);
 
+const DEFAULT_PROVIDER_TIMEOUT_MS = 7000;
+const MIN_PROVIDER_TIMEOUT_MS = 250;
+const MAX_PROVIDER_TIMEOUT_MS = 12000;
+const RELIABILITY_CACHE_POLICY = Object.freeze({
+  enabled: false,
+  mode: "no-cache",
+  reason: "Assistant runtime must not cache secrets, sensitive user-private data, or provider payloads in AR8."
+});
+
 function hasText(value) {
   return typeof value === "string" && value.trim().length > 0;
 }
@@ -58,6 +67,64 @@ function normalizeQuery(value) {
 
 function stableRequestId(input) {
   return `live-source-${crypto.createHash("sha256").update(String(input || "")).digest("hex").slice(0, 16)}`;
+}
+
+function resolveProviderTimeoutMs(env = process.env) {
+  const parsed = Number(env.NEXUS_ASSISTANT_PROVIDER_TIMEOUT_MS || DEFAULT_PROVIDER_TIMEOUT_MS);
+  if (!Number.isFinite(parsed)) return DEFAULT_PROVIDER_TIMEOUT_MS;
+  return Math.min(MAX_PROVIDER_TIMEOUT_MS, Math.max(MIN_PROVIDER_TIMEOUT_MS, Math.round(parsed)));
+}
+
+function reliabilityPosture(overrides = {}) {
+  return Object.freeze({
+    providerTimeoutMs: Number.isFinite(overrides.providerTimeoutMs) ? overrides.providerTimeoutMs : DEFAULT_PROVIDER_TIMEOUT_MS,
+    providerTimedOut: overrides.providerTimedOut === true,
+    providerErrorNormalized: overrides.providerErrorNormalized === true,
+    safeUnavailableState: overrides.safeUnavailableState === true,
+    retryAllowed: false,
+    rateLimitSafe: true,
+    cachePolicy: RELIABILITY_CACHE_POLICY,
+    noSecretsCached: true,
+    noSensitiveUserDataCached: true,
+    noExecutionFallback: true
+  });
+}
+
+function normalizeProviderFailure(providerId, failureType, env = process.env) {
+  const timeoutMs = resolveProviderTimeoutMs(env);
+  const errorType = failureType === "provider-timeout" ? "source-error" : failureType || "source-error";
+  const sourceResult = failureType === "provider-timeout"
+    ? sourceResultContract.buildProviderErrorResult(providerId, "provider-timeout")
+    : sourceResultContract.buildProviderErrorResult(providerId, errorType);
+  return Object.freeze({
+    sourceResult,
+    reliability: reliabilityPosture({
+      providerTimeoutMs: timeoutMs,
+      providerTimedOut: failureType === "provider-timeout",
+      providerErrorNormalized: true,
+      safeUnavailableState: true
+    })
+  });
+}
+
+async function withProviderTimeout(providerPromise, providerId, env = process.env) {
+  const timeoutMs = resolveProviderTimeoutMs(env);
+  let timeoutId = null;
+  try {
+    return await Promise.race([
+      Promise.resolve(providerPromise).then(sourceResult => Object.freeze({
+        sourceResult,
+        reliability: reliabilityPosture({ providerTimeoutMs: timeoutMs })
+      })),
+      new Promise(resolve => {
+        timeoutId = setTimeout(() => resolve(normalizeProviderFailure(providerId, "provider-timeout", env)), timeoutMs);
+      })
+    ]);
+  } catch (error) {
+    return normalizeProviderFailure(providerId, "source-error", env);
+  } finally {
+    if (timeoutId) clearTimeout(timeoutId);
+  }
 }
 
 function buildSafetyPosture() {
@@ -161,20 +228,24 @@ function buildProviderRequest(providerId, input, classification, context) {
 }
 
 function getProviderSourceResult(providerId, request, env) {
-  if (providerId === "weather") return weather.getWeatherSourceResult(request, env);
-  if (providerId === "agriculture-context") return agriculture.getAgricultureContextSourceResult(request, env);
-  if (providerId === "news-security") return newsSecurity.getNewsSecuritySourceResult(request, env);
-  if (providerId === "job-search") return jobs.getJobSearchSourceResult(request, env);
-  if (providerId === "shipment-tracking") return shipment.getShipmentTrackingSourceResult(request, env);
-  if (providerId === "music-media") return musicMedia.getMusicMediaSourceResult(request, env);
-  return null;
+  try {
+    if (providerId === "weather") return weather.getWeatherSourceResult(request, env);
+    if (providerId === "agriculture-context") return agriculture.getAgricultureContextSourceResult(request, env);
+    if (providerId === "news-security") return newsSecurity.getNewsSecuritySourceResult(request, env);
+    if (providerId === "job-search") return jobs.getJobSearchSourceResult(request, env);
+    if (providerId === "shipment-tracking") return shipment.getShipmentTrackingSourceResult(request, env);
+    if (providerId === "music-media") return musicMedia.getMusicMediaSourceResult(request, env);
+    return sourceResultContract.buildProviderUnavailableResult(providerId, "provider not registered for read-only retrieval");
+  } catch (error) {
+    return normalizeProviderFailure(providerId, "source-error", env).sourceResult;
+  }
 }
 
 async function getProviderSourceResultAsync(providerId, request, env) {
-  if (providerId === "weather" && typeof weather.getWeatherSourceResultAsync === "function") {
-    return weather.getWeatherSourceResultAsync(request, env);
-  }
-  return getProviderSourceResult(providerId, request, env);
+  const providerPromise = providerId === "weather" && typeof weather.getWeatherSourceResultAsync === "function"
+    ? weather.getWeatherSourceResultAsync(request, env)
+    : Promise.resolve(getProviderSourceResult(providerId, request, env));
+  return withProviderTimeout(providerPromise, providerId, env);
 }
 
 function inferProviderStatus(sourceResult, provider) {
@@ -187,9 +258,9 @@ function inferProviderStatus(sourceResult, provider) {
   return provider ? provider.providerStatus : "disabled";
 }
 
-function buildProviderOrchestrationResult({ input, normalizedQuery, classification, providerId, provider, providerRequest, sourceResult }) {
+function buildProviderOrchestrationResult({ input, normalizedQuery, classification, providerId, provider, providerRequest, sourceResult, reliability }) {
   const requestId = stableRequestId(normalizedQuery);
-  const safeSource = isSafeReadOnlySourceResult(sourceResult);
+  const safeSource = sourceResultContract.isSafeReadOnlySourceResult(sourceResult);
   const providerStatus = inferProviderStatus(sourceResult, provider);
   const allowed = safeSource && provider.forbidsExecution && provider.forbidsProviderContact && provider.forbidsBackendWrites;
   const blockedReason = allowed ? "" : "source_result_failed_safety_contract";
@@ -244,7 +315,8 @@ function buildProviderOrchestrationResult({ input, normalizedQuery, classificati
     noLocationPermissionRequested: true,
     noProviderContactAuthorized: true,
     noBackendWritePerformed: true,
-    providerRequest
+    providerRequest,
+    reliability: reliability || reliabilityPosture({ providerTimeoutMs: DEFAULT_PROVIDER_TIMEOUT_MS, safeUnavailableState: allowed !== true })
   });
 }
 
@@ -269,7 +341,16 @@ function buildLiveSourceOrchestrationResult(input, context = {}, env = process.e
   const providerRequest = buildProviderRequest(providerId, normalizedQuery, classification, context);
   const sourceResult = getProviderSourceResult(providerId, providerRequest, env);
 
-  return buildProviderOrchestrationResult({ input, normalizedQuery, classification, providerId, provider, providerRequest, sourceResult });
+  return buildProviderOrchestrationResult({
+    input,
+    normalizedQuery,
+    classification,
+    providerId,
+    provider,
+    providerRequest,
+    sourceResult,
+    reliability: reliabilityPosture({ providerTimeoutMs: resolveProviderTimeoutMs(env), safeUnavailableState: sourceResult?.sourceStatus !== "source-result-available" })
+  });
 }
 
 async function buildLiveSourceOrchestrationResultAsync(input, context = {}, env = process.env) {
@@ -291,9 +372,11 @@ async function buildLiveSourceOrchestrationResultAsync(input, context = {}, env 
   if (!provider) return buildBlockedResult(input, classification, "provider_not_registered");
 
   const providerRequest = buildProviderRequest(providerId, normalizedQuery, classification, context);
-  const sourceResult = await getProviderSourceResultAsync(providerId, providerRequest, env);
+  const providerResponse = await getProviderSourceResultAsync(providerId, providerRequest, env);
+  const sourceResult = providerResponse && providerResponse.sourceResult ? providerResponse.sourceResult : providerResponse;
+  const reliability = providerResponse && providerResponse.reliability ? providerResponse.reliability : reliabilityPosture({ providerTimeoutMs: resolveProviderTimeoutMs(env) });
 
-  return buildProviderOrchestrationResult({ input, normalizedQuery, classification, providerId, provider, providerRequest, sourceResult });
+  return buildProviderOrchestrationResult({ input, normalizedQuery, classification, providerId, provider, providerRequest, sourceResult, reliability });
 }
 
 function isSafeLiveSourceOrchestrationResult(result) {
@@ -311,6 +394,12 @@ module.exports = Object.freeze({
   HIGH_RISK_BLOCKED_INTENTS,
   INTENT_TO_PROVIDER,
   EXECUTION_PHRASE_PATTERNS,
+  DEFAULT_PROVIDER_TIMEOUT_MS,
+  RELIABILITY_CACHE_POLICY,
+  resolveProviderTimeoutMs,
+  reliabilityPosture,
+  normalizeProviderFailure,
+  withProviderTimeout,
   buildLiveSourceOrchestrationResult,
   buildLiveSourceOrchestrationResultAsync,
   getProviderSourceResultAsync,

@@ -512,6 +512,7 @@
     "qa:nexus-ar5-safe-next-step-planner": "node scripts/nexus-ar5-safe-next-step-planner-qa.js",
     "qa:nexus-ar6-standard-user-preview-wiring": "node scripts/nexus-ar6-standard-user-preview-wiring-qa.js",
     "qa:nexus-ar7-assistant-preview-card": "node scripts/nexus-ar7-assistant-preview-card-qa.js",
+    "qa:nexus-ar8-reliability-controls": "node scripts/nexus-ar8-reliability-controls-qa.js",
     "qa:nexus-sprint-k1-personalization-runtime-activation-readiness-gate": "node scripts/nexus-sprint-k1-personalization-runtime-activation-readiness-gate-qa.js",
     "qa:nexus-sprint-k2-personalization-feature-flag-contract": "node scripts/nexus-sprint-k2-personalization-feature-flag-contract-qa.js",
     "qa:nexus-sprint-k3-personalization-flag-contract-harness": "node scripts/nexus-sprint-k3-personalization-flag-contract-harness-qa.js",
