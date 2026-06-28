@@ -29,13 +29,19 @@ function hasTrackingNumber(value) {
   return /\b[A-Z]{2,}[- ]?\d{4,}\b/i.test(text) || /\b\d{8,}\b/.test(text);
 }
 
+function redactShipmentTrackingReference(value) {
+  return redactSensitiveProviderInput(String(value || ""))
+    .replace(/\b[A-Z]{2,}[- ]?\d{4,}\b/gi, "[redacted-tracking]")
+    .replace(/\b\d{8,}\b/g, "[redacted-tracking]");
+}
+
 function buildShipmentTrackingQuery(request = {}) {
   const trackingInput = String(request.trackingNumber || request.query || "").trim();
   const carrierHint = normalizeCarrierText(request.carrierHint);
   return Object.freeze({
     requestType: "shipment-tracking",
     trackingNumberPresent: hasTrackingNumber(trackingInput),
-    redactedTrackingReference: trackingInput ? redactSensitiveProviderInput(trackingInput) : "",
+    redactedTrackingReference: trackingInput ? redactShipmentTrackingReference(trackingInput) : "",
     carrierHint,
     providerCandidates: SHIPMENT_PROVIDER_CANDIDATES,
     canChangeDelivery: false,
@@ -137,6 +143,7 @@ module.exports = Object.freeze({
   SHIPMENT_PROVIDER_NAME,
   SHIPMENT_PROVIDER_CANDIDATES,
   buildShipmentTrackingQuery,
+  redactShipmentTrackingReference,
   resolveShipmentTrackingProviderConfig,
   buildMockShipmentTrackingResult,
   buildShipmentProviderUnavailableResult,
