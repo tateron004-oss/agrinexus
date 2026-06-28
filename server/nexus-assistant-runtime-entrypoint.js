@@ -1,5 +1,6 @@
 const crypto = require("node:crypto");
 const orchestrator = require("./nexus-live-source-orchestrator.js");
+const answerComposer = require("./nexus-assistant-answer-composer.js");
 
 const DEFAULT_SAFE_FOLLOW_UPS = Object.freeze([
   "Ask for more detail",
@@ -58,19 +59,6 @@ function inferFreshnessStatus(orchestrationResult, citations) {
   return orchestrationResult.trustAssessment && orchestrationResult.trustAssessment.staleResultWarning ? "stale" : "unknown";
 }
 
-function buildAnswer(orchestrationResult) {
-  if (orchestrationResult.allowed !== true) {
-    return "I can help with information and safe next steps, but I cannot execute that request or contact anyone.";
-  }
-  if (orchestrationResult.providerStatus === "missing_config") {
-    return `I found the right read-only provider lane (${orchestrationResult.selectedProvider}), but it is not connected yet. I can still explain what source would be needed.`;
-  }
-  if (hasText(orchestrationResult.userFacingSummary)) {
-    return `Here is what I found: ${orchestrationResult.userFacingSummary}`;
-  }
-  return "I could not find a safe source-backed result for that request yet.";
-}
-
 function buildAssistantRuntimeResponse(userPrompt, context = {}, env = process.env) {
   const orchestrationResult = orchestrator.buildLiveSourceOrchestrationResult(userPrompt, context, env);
   return buildAssistantRuntimeResponseFromOrchestration(userPrompt, orchestrationResult);
@@ -84,7 +72,7 @@ async function buildAssistantRuntimeResponseAsync(userPrompt, context = {}, env 
 function buildAssistantRuntimeResponseFromOrchestration(userPrompt, orchestrationResult) {
   const citations = normalizeCitations(orchestrationResult.citations);
   const sourceLabels = uniqueTextList(citations.map(citation => citation.sourceName));
-  const answer = buildAnswer(orchestrationResult);
+  const answer = answerComposer.composeAssistantAnswer(orchestrationResult);
 
   return Object.freeze({
     responseId: stableResponseId(userPrompt),

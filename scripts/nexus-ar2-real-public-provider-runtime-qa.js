@@ -147,7 +147,7 @@ async function assertAsyncRuntimePath() {
   assert.equal(response.providerStatus, "ready", "Async runtime must mark source-backed Open-Meteo result ready.");
   assert.equal(response.allowed, true, "Async runtime must allow only read-only source-backed response.");
   assert(response.sourceLabels.includes("Open-Meteo"), "Async runtime must surface Open-Meteo source label.");
-  assert.match(response.answer, /Here is what I found/i, "Async runtime must produce a natural answer prefix.");
+  assert.match(response.answer, /Here(?:'| i)s what I found/i, "Async runtime must produce a natural answer prefix.");
   assert.match(response.answer, /Current weather for Stockton/i, "Async runtime answer must include normalized weather summary.");
   assert.equal(response.noExecutionAuthorized, true, "Async runtime must authorize no execution.");
   assert.equal(response.noLocationPermissionRequested, true, "Async runtime must request no location permission.");
