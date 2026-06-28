@@ -1,0 +1,71 @@
+[
+  {
+    "fixtureId": "africa-regional-deployment-mode-default-off",
+    "input": {},
+    "expected": {
+      "enabled": false,
+      "visibleUiAllowed": false,
+      "isVisible": false,
+      "noExecution": true
+    }
+  },
+  {
+    "fixtureId": "africa-regional-deployment-mode-flag-on-visible-only",
+    "input": {
+      "enabled": true,
+      "visibleUiAllowed": true
+    },
+    "expected": {
+      "enabled": true,
+      "visibleUiAllowed": true,
+      "isVisible": true,
+      "noExecution": true
+    }
+  },
+  {
+    "fixtureId": "africa-regional-deployment-mode-unsafe-authority-attempt",
+    "input": {
+      "enabled": true,
+      "visibleUiAllowed": true,
+      "unsafeAuthorityAttempt": true,
+      "noExecution": false
+    },
+    "expected": {
+      "enabled": true,
+      "visibleUiAllowed": true,
+      "isVisible": true,
+      "africaRegionalDeploymentModeRuntimeAllowed": false,
+      "regionalCountryKitRuntimeAllowed": false,
+      "jurisdictionRoutingRuntimeAllowed": false,
+      "localLanguageRuntimeAllowed": false,
+      "providerConnectorRuntimeAllowed": false,
+      "clinicConnectorRuntimeAllowed": false,
+      "telehealthSessionCreationAllowed": false,
+      "appointmentSchedulingAllowed": false,
+      "prescriptionRefillAllowed": false,
+      "medicalRecordAccessAllowed": false,
+      "locationSharingAllowed": false,
+      "communicationsExecutionAllowed": false,
+      "transportationDispatchAllowed": false,
+      "emergencyDispatchAllowed": false,
+      "unsupportedCountryCoverageClaimAllowed": false,
+      "unsupportedLocalProviderClaimAllowed": false,
+      "networkAllowed": false,
+      "executionAuthority": false,
+      "noExecution": true
+    }
+  },
+  {
+    "fixtureId": "africa-regional-deployment-mode-flag-on-without-visible-permission",
+    "input": {
+      "enabled": true,
+      "visibleUiAllowed": false
+    },
+    "expected": {
+      "enabled": true,
+      "visibleUiAllowed": false,
+      "isVisible": false,
+      "noExecution": true
+    }
+  }
+]
