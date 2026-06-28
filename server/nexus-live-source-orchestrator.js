@@ -2,6 +2,7 @@ const crypto = require("node:crypto");
 const dialogue = require("../public/nexus-assistant-dialogue-engine-contract.js");
 const { isSafeReadOnlySourceResult } = require("../public/nexus-live-source-result-contract.js");
 const registry = require("../public/nexus-live-provider-capability-registry.js");
+const trustPolicy = require("../public/nexus-live-source-trust-freshness-policy.js");
 const weather = require("./nexus-weather-source-provider.js");
 const agriculture = require("./nexus-agriculture-context-source-provider.js");
 const newsSecurity = require("./nexus-news-security-source-provider.js");
@@ -110,6 +111,13 @@ function buildBlockedResult(input, classification, reason) {
     sourceCount: 0,
     citationCount: 0
   });
+  const trustAssessment = trustPolicy.assessLiveSourceTrust({
+    domain: intent,
+    sourceResult: null,
+    citations: [],
+    confidence: "low",
+    retrievedAt: auditEvent.retrievedAt
+  });
   return Object.freeze({
     requestId,
     intent,
@@ -124,6 +132,7 @@ function buildBlockedResult(input, classification, reason) {
     citations: [],
     confidence: "low",
     auditEvent,
+    trustAssessment,
     safetyPosture,
     userFacingSummary: "I can explain safe next steps, but I cannot execute that action or contact anyone.",
     suggestedFollowUps: ["Ask a follow-up question", "Explain this result"],
@@ -222,6 +231,13 @@ function buildLiveSourceOrchestrationResult(input, context = {}, env = process.e
     sourceCount: results.length,
     citationCount: citations.length
   });
+  const trustAssessment = trustPolicy.assessLiveSourceTrust({
+    domain: providerId,
+    sourceResult,
+    citations,
+    confidence,
+    retrievedAt: auditEvent.retrievedAt
+  });
 
   return Object.freeze({
     requestId,
@@ -237,6 +253,7 @@ function buildLiveSourceOrchestrationResult(input, context = {}, env = process.e
     citations,
     confidence,
     auditEvent,
+    trustAssessment,
     safetyPosture,
     userFacingSummary: sourceResult ? sourceResult.resultSummary : "No read-only source result is available.",
     suggestedFollowUps: ["Ask a follow-up question", "Compare sources", "Explain this result", "Review source details"],
