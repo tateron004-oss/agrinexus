@@ -429,6 +429,7 @@
     "qa:nexus-sprint-j8-multi-lane-assistant-router-lane-closeout": "node scripts/nexus-sprint-j8-multi-lane-assistant-router-lane-closeout-qa.js",
     "qa:nexus-sprint-k1-contact-provider-identity-product-boundary": "node scripts/nexus-sprint-k1-contact-provider-identity-product-boundary-qa.js",
     "qa:nexus-sprint-k2-inert-contact-provider-identity-contract": "node scripts/nexus-sprint-k2-inert-contact-provider-identity-contract-qa.js",
+    "qa:nexus-sprint-k3-contact-provider-identity-harness": "node scripts/nexus-sprint-k3-contact-provider-identity-harness-qa.js",
     "qa:nexus-sprint-k1-personalization-runtime-activation-readiness-gate": "node scripts/nexus-sprint-k1-personalization-runtime-activation-readiness-gate-qa.js",
     "qa:nexus-sprint-k2-personalization-feature-flag-contract": "node scripts/nexus-sprint-k2-personalization-feature-flag-contract-qa.js",
     "qa:nexus-sprint-k3-personalization-flag-contract-harness": "node scripts/nexus-sprint-k3-personalization-flag-contract-harness-qa.js",
