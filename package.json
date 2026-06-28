@@ -372,6 +372,7 @@
     "qa:nexus-sprint-d6-flag-gated-staged-action-preview": "node scripts/nexus-sprint-d6-flag-gated-staged-action-preview-qa.js",
     "qa:nexus-sprint-d7-flag-gated-staged-action-preview-browser-validation": "node scripts/nexus-sprint-d7-flag-gated-staged-action-preview-browser-validation-qa.js",
     "qa:nexus-sprint-d8-controlled-staged-action-preview-closeout": "node scripts/nexus-sprint-d8-controlled-staged-action-preview-closeout-qa.js",
+    "qa:nexus-sprint-e1-user-confirmation-product-boundary": "node scripts/nexus-sprint-e1-user-confirmation-product-boundary-qa.js",
     "qa:nexus-sprint-e1-staged-action-approval-audit-product-boundary": "node scripts/nexus-sprint-e1-staged-action-approval-audit-product-boundary-qa.js",
     "qa:nexus-sprint-e2-staged-action-approval-record-contract": "node scripts/nexus-sprint-e2-staged-action-approval-record-contract-qa.js",
     "qa:nexus-sprint-e3-staged-action-approval-record-harness": "node scripts/nexus-sprint-e3-staged-action-approval-record-harness-qa.js",
