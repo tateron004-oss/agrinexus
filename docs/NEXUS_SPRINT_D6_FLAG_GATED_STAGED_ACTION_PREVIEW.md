@@ -1,6 +1,8 @@
 # Nexus Sprint D6 - Flag-Gated Staged Action Preview
 
-Current base: `516d37d45fd89d2ffcecea62d0e907d3fbabcfe9`
+Current base after D5: `5b4be8b8247138f218124b9757c74bcaf3c59c56`
+
+Sprint D6 continues the post-AO3 Sprint D train. The audit train ended at AO3, and D6 is the controlled, flag-gated staged action preview phase rather than reopening AO4, AO5, or any additional audit phase.
 
 Sprint D6 adds the first runtime-adjacent controlled staged action preview for low-risk Standard User guidance. It is guarded by the explicit default-off flag:
 

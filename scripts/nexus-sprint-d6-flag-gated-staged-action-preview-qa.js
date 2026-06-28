@@ -61,6 +61,8 @@ assert.equal(isControlledStagedActionsEnabled({ [CONTROLLED_STAGED_ACTIONS_FLAG_
 
 assertIncludes(doc, [
   "Sprint D6",
+  "5b4be8b8247138f218124b9757c74bcaf3c59c56",
+  "audit train ended at AO3",
   "NEXUS_CONTROLLED_STAGED_ACTIONS_ENABLED",
   "default-off",
   "Flag-Off Behavior",
