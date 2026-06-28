@@ -100,6 +100,7 @@ let nexusVoiceTurnToken = 0;
 let activeAgentCommandController = null;
 let voiceConversationTurns = Number(localStorage.getItem("agrinexusVoiceTurns") || 0);
 let liveVoiceSuggestions = [];
+let assistantRuntimePreviewCard = null;
 let agentReasoningVisible = localStorage.getItem("agrinexusReasoningVisible") === "true";
 let pendingNexusSpokenCommand = null;
 let confirmedVoiceActionActive = false;
@@ -15400,9 +15401,91 @@ function assistantRuntimePreviewSuggestions(result = {}) {
     .slice(0, 4);
 }
 
+function normalizeAssistantRuntimePreviewCard(response = {}) {
+  const safeResponse = response && typeof response === "object" ? response : {};
+  const text = assistantRuntimePreviewText(safeResponse) || "Nexus prepared a safe informational preview. No action has been taken.";
+  const citations = Array.isArray(safeResponse.citations) ? safeResponse.citations.slice(0, 4) : [];
+  const sourceLabels = Array.isArray(safeResponse.sourceLabels) ? safeResponse.sourceLabels.slice(0, 4) : [];
+  return {
+    answer: text,
+    sourceLabels: sourceLabels.map(item => String(item || "").trim()).filter(Boolean),
+    citations: citations.map(citation => ({
+      sourceName: String(citation?.sourceName || "Source unavailable").trim(),
+      sourceUrl: String(citation?.sourceUrl || "source-url-unavailable").trim(),
+      evidenceStatus: String(citation?.evidenceStatus || "source-unavailable").trim(),
+      freshnessStatus: String(citation?.freshnessStatus || "unknown").trim()
+    })),
+    retrievedAt: String(safeResponse.retrievedAt || "retrieval time unavailable").trim(),
+    confidence: String(safeResponse.confidence || "low").trim(),
+    freshnessStatus: String(safeResponse.freshnessStatus || "unknown").trim(),
+    safeFollowUps: assistantRuntimePreviewSuggestions(safeResponse),
+    safetyNote: "Read-only preview. No action has been taken."
+  };
+}
+
+function renderAssistantRuntimePreviewCardMarkup(card = {}) {
+  const sourceLabels = Array.isArray(card.sourceLabels) && card.sourceLabels.length
+    ? card.sourceLabels.map(label => `<span>${htmlSafe(label)}</span>`).join("")
+    : "<span>Source label unavailable</span>";
+  const citations = Array.isArray(card.citations) && card.citations.length
+    ? card.citations.map(citation => `
+      <li>
+        <strong>${htmlSafe(citation.sourceName)}</strong>
+        <span>${htmlSafe(citation.sourceUrl)}</span>
+        <span>Evidence: ${htmlSafe(citation.evidenceStatus)}; Freshness: ${htmlSafe(citation.freshnessStatus)}</span>
+      </li>
+    `).join("")
+    : "<li><strong>Source unavailable</strong><span>No citation details were returned.</span></li>";
+  const followUps = Array.isArray(card.safeFollowUps) && card.safeFollowUps.length
+    ? card.safeFollowUps.map(item => `<span>${htmlSafe(item)}</span>`).join("")
+    : "<span>Ask a follow-up</span>";
+  return `
+    <section
+      class="nexus-assistant-runtime-preview-card"
+      data-nexus-assistant-runtime-preview-card="true"
+      data-read-only="true"
+      data-execution-authority="false"
+      data-provider-handoff="false"
+      aria-label="Nexus source-backed read-only preview"
+    >
+      <div class="nexus-assistant-runtime-preview-head">
+        <strong>Source-backed preview</strong>
+        <span>${htmlSafe(card.safetyNote || "Read-only preview. No action has been taken.")}</span>
+      </div>
+      <p>${htmlSafe(card.answer)}</p>
+      <div class="nexus-assistant-runtime-preview-meta" aria-label="Preview source labels">${sourceLabels}</div>
+      <dl class="nexus-assistant-runtime-preview-facts">
+        <div><dt>Retrieved</dt><dd>${htmlSafe(card.retrievedAt)}</dd></div>
+        <div><dt>Confidence</dt><dd>${htmlSafe(card.confidence)}</dd></div>
+        <div><dt>Freshness</dt><dd>${htmlSafe(card.freshnessStatus)}</dd></div>
+      </dl>
+      <ul class="nexus-assistant-runtime-preview-citations" aria-label="Preview citation details">${citations}</ul>
+      <div class="nexus-assistant-runtime-preview-followups" aria-label="Safe follow-up prompts">${followUps}</div>
+    </section>
+  `;
+}
+
+function clearAssistantRuntimePreviewCard() {
+  assistantRuntimePreviewCard = null;
+  $$("[data-nexus-assistant-runtime-preview-card]").forEach(card => card.remove());
+}
+
+function renderAssistantRuntimePreviewCard(response = {}) {
+  if (!isNexusAssistantRuntimePreviewEnabled()) {
+    clearAssistantRuntimePreviewCard();
+    return;
+  }
+  const container = $("#globalConversationPanel") || $("#jarvisInsightPanel") || $("#globalAssistantBar");
+  if (!container) return;
+  clearAssistantRuntimePreviewCard();
+  assistantRuntimePreviewCard = normalizeAssistantRuntimePreviewCard(response);
+  container.insertAdjacentHTML("afterbegin", renderAssistantRuntimePreviewCardMarkup(assistantRuntimePreviewCard));
+}
+
 async function runStandardUserAssistantRuntimePreview(command = "", options = {}) {
   const prompt = String(command || "").trim();
   if (!prompt || !isNexusAssistantRuntimePreviewEnabled()) return false;
+  clearAssistantRuntimePreviewCard();
   pendingAgentClarification = null;
   pendingNexusSpokenCommand = null;
   openAskNexus();
@@ -15429,8 +15512,10 @@ async function runStandardUserAssistantRuntimePreview(command = "", options = {}
     renderLiveVoiceSuggestions(suggestions.length ? suggestions : ["ask a follow-up", "compare sources", "explain simply", "cancel"]);
     updateNexusBehaviorLayer("answering", "Nexus showed a source-backed preview without execution, navigation, or provider handoff.");
     setVoiceResponse(text, true, { allowHandoff: false, command: prompt, source: "standard-user-assistant-runtime-preview" });
+    renderAssistantRuntimePreviewCard(response);
     return true;
   } catch (error) {
+    clearAssistantRuntimePreviewCard();
     updateNexusBehaviorLayer("ready", "Nexus kept the preview path safe because the source-backed preview was unavailable.");
     setVoiceResponse("I could not load the source-backed preview right now, so I kept this informational and took no action.", true, { allowHandoff: false, command: prompt });
     renderLiveVoiceSuggestions(["try again", "ask a follow-up", "cancel"]);

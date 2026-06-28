@@ -3568,6 +3568,100 @@ body.admin-mode .user-workspace {
 .nexus-controlled-action-preview-note {
   color: #61726f;
 }
+.nexus-assistant-runtime-preview-card {
+  display: grid;
+  gap: 10px;
+  margin: 10px 0 0;
+  padding: 12px;
+  border: 1px solid #c9ddd8;
+  border-radius: 8px;
+  background: #f8fbfa;
+  color: #173240;
+  line-height: 1.35;
+}
+.nexus-assistant-runtime-preview-head {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.nexus-assistant-runtime-preview-head strong {
+  font-size: .95rem;
+  font-weight: 950;
+}
+.nexus-assistant-runtime-preview-head span,
+.nexus-assistant-runtime-preview-card p,
+.nexus-assistant-runtime-preview-citations span {
+  color: #365867;
+  font-size: .84rem;
+}
+.nexus-assistant-runtime-preview-card p {
+  margin: 0;
+}
+.nexus-assistant-runtime-preview-meta,
+.nexus-assistant-runtime-preview-followups {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.nexus-assistant-runtime-preview-meta span,
+.nexus-assistant-runtime-preview-followups span {
+  display: inline-flex;
+  align-items: center;
+  max-width: 100%;
+  min-height: 28px;
+  padding: 5px 8px;
+  border: 1px solid #bddbd6;
+  border-radius: 999px;
+  background: #fff;
+  color: #173240;
+  font-size: .78rem;
+  font-weight: 800;
+}
+.nexus-assistant-runtime-preview-facts {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0;
+}
+.nexus-assistant-runtime-preview-facts div {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+.nexus-assistant-runtime-preview-facts dt {
+  color: #456b60;
+  font-size: .72rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+.nexus-assistant-runtime-preview-facts dd {
+  margin: 0;
+  color: #173240;
+  font-size: .8rem;
+  font-weight: 850;
+  overflow-wrap: anywhere;
+}
+.nexus-assistant-runtime-preview-citations {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding-left: 18px;
+}
+.nexus-assistant-runtime-preview-citations li {
+  padding-left: 2px;
+}
+.nexus-assistant-runtime-preview-citations strong,
+.nexus-assistant-runtime-preview-citations span {
+  display: block;
+  overflow-wrap: anywhere;
+}
+@media (max-width: 640px) {
+  .nexus-assistant-runtime-preview-facts {
+    grid-template-columns: 1fr;
+  }
+}
 .nexus-controlled-staged-action-preview {
   display: grid;
   gap: 7px;
