@@ -556,6 +556,7 @@
     "qa:nexus-sprint-an5-connector-reliability-lane-closeout": "node scripts/nexus-sprint-an5-connector-reliability-lane-closeout-qa.js",
     "qa:nexus-sprint-ao1-stale-data-alerts-runtime-activation-readiness-gate": "node scripts/nexus-sprint-ao1-stale-data-alerts-runtime-activation-readiness-gate-qa.js",
     "qa:nexus-sprint-ao2-stale-data-alerts-feature-flag-contract": "node scripts/nexus-sprint-ao2-stale-data-alerts-feature-flag-contract-qa.js",
+    "qa:nexus-sprint-ao3-stale-data-alerts-flag-contract-harness": "node scripts/nexus-sprint-ao3-stale-data-alerts-flag-contract-harness-qa.js",
     "qa:nexus-phase-105-preview-only-autonomous-runtime-integration-plan": "node scripts/nexus-phase-105-preview-only-autonomous-runtime-integration-plan-qa.js"
   },
   "dependencies": {

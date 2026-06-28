@@ -1,0 +1,93 @@
+[
+  {
+    "fixtureId": "stale-data-alerts-default-off",
+    "input": {},
+    "expected": {
+      "enabled": false,
+      "visibleUiAllowed": false,
+      "isVisible": false,
+      "noExecution": true
+    }
+  },
+  {
+    "fixtureId": "stale-data-alerts-flag-on-visible-only",
+    "input": {
+      "enabled": true,
+      "visibleUiAllowed": true
+    },
+    "expected": {
+      "enabled": true,
+      "visibleUiAllowed": true,
+      "isVisible": true,
+      "noExecution": true
+    }
+  },
+  {
+    "fixtureId": "stale-data-alerts-unsafe-authority-attempt",
+    "input": {
+      "enabled": true,
+      "visibleUiAllowed": true,
+      "unsafeAuthorityAttempt": true,
+      "noExecution": false
+    },
+    "expected": {
+      "enabled": true,
+      "visibleUiAllowed": true,
+      "isVisible": true,
+      "staleDataAlertsRuntimeAllowed": false,
+      "liveStaleDataAlertsRuntimeAllowed": false,
+      "staleSourceDetectionRuntimeAllowed": false,
+      "sourceFreshnessMonitoringRuntimeAllowed": false,
+      "staleConnectorWarningRuntimeAllowed": false,
+      "staleDataDashboardRuntimeAllowed": false,
+      "sourceConfidenceWarningRuntimeAllowed": false,
+      "providerAvailabilityRuntimeAllowed": false,
+      "partnerDataWarningRuntimeAllowed": false,
+      "adminStaleDataQueueRuntimeAllowed": false,
+      "providerConnectorRuntimeAllowed": false,
+      "clinicConnectorRuntimeAllowed": false,
+      "telehealthConnectorRuntimeAllowed": false,
+      "pharmacyConnectorRuntimeAllowed": false,
+      "medicalRecordConnectorRuntimeAllowed": false,
+      "fhirConnectorRuntimeAllowed": false,
+      "locationConnectorRuntimeAllowed": false,
+      "communicationsConnectorRuntimeAllowed": false,
+      "emergencyConnectorRuntimeAllowed": false,
+      "sourcePollingAllowed": false,
+      "sourceSyncAllowed": false,
+      "staleWarningRoutingAllowed": false,
+      "providerSyncAllowed": false,
+      "partnerDataMonitoringAllowed": false,
+      "adminStaleDataQueueAllowed": false,
+      "staleDataDrivenActionAllowed": false,
+      "providerContactAllowed": false,
+      "telehealthSessionCreationAllowed": false,
+      "appointmentSchedulingAllowed": false,
+      "prescriptionRefillAllowed": false,
+      "medicalRecordAccessAllowed": false,
+      "locationSharingAllowed": false,
+      "communicationsExecutionAllowed": false,
+      "transportationDispatchAllowed": false,
+      "emergencyDispatchAllowed": false,
+      "unsupportedLiveClaimAllowed": false,
+      "unsupportedCurrentDataClaimAllowed": false,
+      "unsupportedFreshnessClaimAllowed": false,
+      "networkAllowed": false,
+      "executionAuthority": false,
+      "noExecution": true
+    }
+  },
+  {
+    "fixtureId": "stale-data-alerts-flag-on-without-visible-permission",
+    "input": {
+      "enabled": true,
+      "visibleUiAllowed": false
+    },
+    "expected": {
+      "enabled": true,
+      "visibleUiAllowed": false,
+      "isVisible": false,
+      "noExecution": true
+    }
+  }
+]
