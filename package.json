@@ -484,6 +484,7 @@
     "qa:nexus-weather-live-provider-validation": "node scripts/nexus-weather-live-provider-validation-qa.js",
     "qa:nexus-weather-live-provider-smoke": "node scripts/nexus-weather-live-provider-smoke-qa.js",
     "qa:nexus-rt1-weather-provider-credential-completion": "node scripts/nexus-rt1-weather-provider-credential-completion-qa.js",
+    "qa:nexus-rt2-live-provider-capability-registry": "node scripts/nexus-rt2-live-provider-capability-registry-qa.js",
     "qa:nexus-sprint-k1-personalization-runtime-activation-readiness-gate": "node scripts/nexus-sprint-k1-personalization-runtime-activation-readiness-gate-qa.js",
     "qa:nexus-sprint-k2-personalization-feature-flag-contract": "node scripts/nexus-sprint-k2-personalization-feature-flag-contract-qa.js",
     "qa:nexus-sprint-k3-personalization-flag-contract-harness": "node scripts/nexus-sprint-k3-personalization-flag-contract-harness-qa.js",
