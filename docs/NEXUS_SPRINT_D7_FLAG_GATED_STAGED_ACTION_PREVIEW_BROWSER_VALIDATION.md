@@ -1,6 +1,8 @@
 # Nexus Sprint D7 - Flag-Gated Staged Action Preview Browser Validation
 
-Current base: `fba47416171fa8404de96ae329315842b2659177`
+Current base after D6: `0fbbb8c09fdf6921220f119e70778ec8d38fb415`
+
+Sprint D7 continues the post-AO3 Sprint D train. The audit train ended at AO3, and D7 remains a browser-validation checkpoint for the controlled D6 staged action preview rather than reopening AO4, AO5, or any additional audit phase.
 
 Sprint D7 records the Standard User browser validation for the Sprint D6 controlled staged action preview. It is documentation and QA only. No runtime behavior, route behavior, backend behavior, storage behavior, provider handoff, permissions, or execution path changed in this phase.
 

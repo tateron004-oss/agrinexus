@@ -31,7 +31,8 @@ const qaSuite = read("scripts", "qa-suite.js");
 
 assertIncludes(doc, [
   "Sprint D7",
-  "fba47416171fa8404de96ae329315842b2659177",
+  "0fbbb8c09fdf6921220f119e70778ec8d38fb415",
+  "audit train ended at AO3",
   "node server.js",
   "http://127.0.0.1:4182/",
   "Start as User",
