@@ -4,6 +4,10 @@
 
 Sprint D5 defines and guards the default-off runtime boundary for controlled staged actions.
 
+Current base after D4: `0372c48800716ff6609bd9d8287032b71348ae73`.
+
+Sprint D5 continues the post-AO3 Sprint D train. The audit train ended at AO3, and D5 remains an inert flag-off runtime regression phase rather than reopening AO4, AO5, or any additional audit phase.
+
 The controlling flag is:
 
 `NEXUS_CONTROLLED_STAGED_ACTIONS_ENABLED`

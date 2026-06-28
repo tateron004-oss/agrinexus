@@ -43,6 +43,8 @@ assert.equal(CONTROLLED_STAGED_ACTIONS_FLAG_NAME, "NEXUS_CONTROLLED_STAGED_ACTIO
 
 assertIncludes(doc, [
   "Sprint D5",
+  "0372c48800716ff6609bd9d8287032b71348ae73",
+  "audit train ended at AO3",
   "NEXUS_CONTROLLED_STAGED_ACTIONS_ENABLED",
   "defaults to false",
   "only when an explicit test-safe input",
