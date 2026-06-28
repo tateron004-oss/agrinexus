@@ -408,6 +408,7 @@
     "qa:nexus-sprint-h3-consent-center-flag-contract-harness": "node scripts/nexus-sprint-h3-consent-center-flag-contract-harness-qa.js",
     "qa:nexus-sprint-h4-consent-center-runtime-absence-regression-guard": "node scripts/nexus-sprint-h4-consent-center-runtime-absence-regression-guard-qa.js",
     "qa:nexus-sprint-h5-consent-center-lane-closeout": "node scripts/nexus-sprint-h5-consent-center-lane-closeout-qa.js",
+    "qa:nexus-sprint-h6-first-narrow-provider-handoff-readiness-contract": "node scripts/nexus-sprint-h6-first-narrow-provider-handoff-readiness-contract-qa.js",
     "qa:nexus-sprint-i1-identity-foundation-runtime-activation-readiness-gate": "node scripts/nexus-sprint-i1-identity-foundation-runtime-activation-readiness-gate-qa.js",
     "qa:nexus-sprint-i2-identity-foundation-feature-flag-contract": "node scripts/nexus-sprint-i2-identity-foundation-feature-flag-contract-qa.js",
     "qa:nexus-sprint-i3-identity-foundation-flag-contract-harness": "node scripts/nexus-sprint-i3-identity-foundation-flag-contract-harness-qa.js",
