@@ -73,6 +73,15 @@ function buildAnswer(orchestrationResult) {
 
 function buildAssistantRuntimeResponse(userPrompt, context = {}, env = process.env) {
   const orchestrationResult = orchestrator.buildLiveSourceOrchestrationResult(userPrompt, context, env);
+  return buildAssistantRuntimeResponseFromOrchestration(userPrompt, orchestrationResult);
+}
+
+async function buildAssistantRuntimeResponseAsync(userPrompt, context = {}, env = process.env) {
+  const orchestrationResult = await orchestrator.buildLiveSourceOrchestrationResultAsync(userPrompt, context, env);
+  return buildAssistantRuntimeResponseFromOrchestration(userPrompt, orchestrationResult);
+}
+
+function buildAssistantRuntimeResponseFromOrchestration(userPrompt, orchestrationResult) {
   const citations = normalizeCitations(orchestrationResult.citations);
   const sourceLabels = uniqueTextList(citations.map(citation => citation.sourceName));
   const answer = buildAnswer(orchestrationResult);
@@ -126,5 +135,7 @@ module.exports = Object.freeze({
   DEFAULT_SAFE_FOLLOW_UPS,
   BLOCKED_ACTIONS,
   buildAssistantRuntimeResponse,
+  buildAssistantRuntimeResponseAsync,
+  buildAssistantRuntimeResponseFromOrchestration,
   isSafeAssistantRuntimeResponse
 });

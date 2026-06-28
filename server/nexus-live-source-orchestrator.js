@@ -170,6 +170,13 @@ function getProviderSourceResult(providerId, request, env) {
   return null;
 }
 
+async function getProviderSourceResultAsync(providerId, request, env) {
+  if (providerId === "weather" && typeof weather.getWeatherSourceResultAsync === "function") {
+    return weather.getWeatherSourceResultAsync(request, env);
+  }
+  return getProviderSourceResult(providerId, request, env);
+}
+
 function inferProviderStatus(sourceResult, provider) {
   if (!sourceResult) return "blocked_by_policy";
   if (sourceResult.sourceStatus === "provider-not-configured") return "missing_config";
@@ -180,27 +187,8 @@ function inferProviderStatus(sourceResult, provider) {
   return provider ? provider.providerStatus : "disabled";
 }
 
-function buildLiveSourceOrchestrationResult(input, context = {}, env = process.env) {
-  const normalizedQuery = normalizeQuery(input);
-  const classification = dialogue.classifyAssistantDialogueIntent(normalizedQuery, context);
-
-  if (!hasText(normalizedQuery)) return buildBlockedResult(input, classification, "empty_query");
-  if (EXECUTION_PHRASE_PATTERNS.some(pattern => pattern.test(normalizedQuery))) {
-    return buildBlockedResult(input, classification, "execution_phrase_blocked");
-  }
-  if (HIGH_RISK_BLOCKED_INTENTS.includes(classification.intentType)) {
-    return buildBlockedResult(input, classification, "execution_or_high_risk_intent_blocked");
-  }
-
-  const providerId = INTENT_TO_PROVIDER[classification.intentType] || null;
-  if (!providerId) return buildBlockedResult(input, classification, "no_read_only_provider_for_intent");
-
-  const provider = registry.getLiveProviderCapability(providerId);
-  if (!provider) return buildBlockedResult(input, classification, "provider_not_registered");
-
+function buildProviderOrchestrationResult({ input, normalizedQuery, classification, providerId, provider, providerRequest, sourceResult }) {
   const requestId = stableRequestId(normalizedQuery);
-  const providerRequest = buildProviderRequest(providerId, normalizedQuery, classification, context);
-  const sourceResult = getProviderSourceResult(providerId, providerRequest, env);
   const safeSource = isSafeReadOnlySourceResult(sourceResult);
   const providerStatus = inferProviderStatus(sourceResult, provider);
   const allowed = safeSource && provider.forbidsExecution && provider.forbidsProviderContact && provider.forbidsBackendWrites;
@@ -255,8 +243,57 @@ function buildLiveSourceOrchestrationResult(input, context = {}, env = process.e
     noExecutionAuthorized: true,
     noLocationPermissionRequested: true,
     noProviderContactAuthorized: true,
-    noBackendWritePerformed: true
+    noBackendWritePerformed: true,
+    providerRequest
   });
+}
+
+function buildLiveSourceOrchestrationResult(input, context = {}, env = process.env) {
+  const normalizedQuery = normalizeQuery(input);
+  const classification = dialogue.classifyAssistantDialogueIntent(normalizedQuery, context);
+
+  if (!hasText(normalizedQuery)) return buildBlockedResult(input, classification, "empty_query");
+  if (EXECUTION_PHRASE_PATTERNS.some(pattern => pattern.test(normalizedQuery))) {
+    return buildBlockedResult(input, classification, "execution_phrase_blocked");
+  }
+  if (HIGH_RISK_BLOCKED_INTENTS.includes(classification.intentType)) {
+    return buildBlockedResult(input, classification, "execution_or_high_risk_intent_blocked");
+  }
+
+  const providerId = INTENT_TO_PROVIDER[classification.intentType] || null;
+  if (!providerId) return buildBlockedResult(input, classification, "no_read_only_provider_for_intent");
+
+  const provider = registry.getLiveProviderCapability(providerId);
+  if (!provider) return buildBlockedResult(input, classification, "provider_not_registered");
+
+  const providerRequest = buildProviderRequest(providerId, normalizedQuery, classification, context);
+  const sourceResult = getProviderSourceResult(providerId, providerRequest, env);
+
+  return buildProviderOrchestrationResult({ input, normalizedQuery, classification, providerId, provider, providerRequest, sourceResult });
+}
+
+async function buildLiveSourceOrchestrationResultAsync(input, context = {}, env = process.env) {
+  const normalizedQuery = normalizeQuery(input);
+  const classification = dialogue.classifyAssistantDialogueIntent(normalizedQuery, context);
+
+  if (!hasText(normalizedQuery)) return buildBlockedResult(input, classification, "empty_query");
+  if (EXECUTION_PHRASE_PATTERNS.some(pattern => pattern.test(normalizedQuery))) {
+    return buildBlockedResult(input, classification, "execution_phrase_blocked");
+  }
+  if (HIGH_RISK_BLOCKED_INTENTS.includes(classification.intentType)) {
+    return buildBlockedResult(input, classification, "execution_or_high_risk_intent_blocked");
+  }
+
+  const providerId = INTENT_TO_PROVIDER[classification.intentType] || null;
+  if (!providerId) return buildBlockedResult(input, classification, "no_read_only_provider_for_intent");
+
+  const provider = registry.getLiveProviderCapability(providerId);
+  if (!provider) return buildBlockedResult(input, classification, "provider_not_registered");
+
+  const providerRequest = buildProviderRequest(providerId, normalizedQuery, classification, context);
+  const sourceResult = await getProviderSourceResultAsync(providerId, providerRequest, env);
+
+  return buildProviderOrchestrationResult({ input, normalizedQuery, classification, providerId, provider, providerRequest, sourceResult });
 }
 
 function isSafeLiveSourceOrchestrationResult(result) {
@@ -275,5 +312,7 @@ module.exports = Object.freeze({
   INTENT_TO_PROVIDER,
   EXECUTION_PHRASE_PATTERNS,
   buildLiveSourceOrchestrationResult,
+  buildLiveSourceOrchestrationResultAsync,
+  getProviderSourceResultAsync,
   isSafeLiveSourceOrchestrationResult
 });

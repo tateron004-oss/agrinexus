@@ -506,6 +506,7 @@
     "qa:nexus-rp10-standard-user-live-preview-readiness-validation": "node scripts/nexus-rp10-standard-user-live-preview-readiness-validation-qa.js",
     "qa:nexus-rp11-provider-rollout-closeout-next-credential-plan": "node scripts/nexus-rp11-provider-rollout-closeout-next-credential-plan-qa.js",
     "qa:nexus-ar1-assistant-runtime-entrypoint": "node scripts/nexus-ar1-assistant-runtime-entrypoint-qa.js",
+    "qa:nexus-ar2-real-public-provider-runtime": "node scripts/nexus-ar2-real-public-provider-runtime-qa.js",
     "qa:nexus-sprint-k1-personalization-runtime-activation-readiness-gate": "node scripts/nexus-sprint-k1-personalization-runtime-activation-readiness-gate-qa.js",
     "qa:nexus-sprint-k2-personalization-feature-flag-contract": "node scripts/nexus-sprint-k2-personalization-feature-flag-contract-qa.js",
     "qa:nexus-sprint-k3-personalization-flag-contract-harness": "node scripts/nexus-sprint-k3-personalization-flag-contract-harness-qa.js",

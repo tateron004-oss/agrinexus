@@ -129,7 +129,7 @@
 
   function extractLocation(input, context) {
     const lower = input.toLowerCase();
-    const knownLocations = ["nairobi", "kinshasa", "goma", "congo", "sudan", "kenya", "ghana", "uganda"];
+    const knownLocations = ["stockton, ca", "stockton", "nairobi", "kinshasa", "goma", "congo", "sudan", "kenya", "ghana", "uganda"];
     const found = knownLocations.find(location => lower.includes(location));
     if (found) return found;
     if (resolveAssistantFollowUp(input, context).isFollowUp && context && hasText(context.lastLocation)) return context.lastLocation;
