@@ -495,6 +495,7 @@
     "qa:nexus-rt10-real-provider-adoption-runbook": "node scripts/nexus-rt10-real-provider-adoption-runbook-qa.js",
     "qa:nexus-rt11-real-time-lane-closeout": "node scripts/nexus-rt11-real-time-lane-closeout-qa.js",
     "qa:nexus-rp1-provider-credential-inventory-safe-config": "node scripts/nexus-rp1-provider-credential-inventory-safe-config-qa.js",
+    "qa:nexus-rp2-weather-real-provider-activation": "node scripts/nexus-rp2-weather-real-provider-activation-qa.js",
     "qa:nexus-sprint-k1-personalization-runtime-activation-readiness-gate": "node scripts/nexus-sprint-k1-personalization-runtime-activation-readiness-gate-qa.js",
     "qa:nexus-sprint-k2-personalization-feature-flag-contract": "node scripts/nexus-sprint-k2-personalization-feature-flag-contract-qa.js",
     "qa:nexus-sprint-k3-personalization-flag-contract-harness": "node scripts/nexus-sprint-k3-personalization-flag-contract-harness-qa.js",
