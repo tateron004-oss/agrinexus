@@ -459,6 +459,7 @@
     "qa:nexus-sprint-n6-flag-gated-marketplace-request-preview": "node scripts/nexus-sprint-n6-flag-gated-marketplace-request-preview-qa.js",
     "qa:nexus-sprint-n7-standard-user-browser-validation-for-marketplace-request-preview": "node scripts/nexus-sprint-n7-standard-user-browser-validation-for-marketplace-request-preview-qa.js",
     "qa:nexus-sprint-n8-marketplace-request-closeout-and-sprint-o-readiness": "node scripts/nexus-sprint-n8-marketplace-request-closeout-qa.js",
+    "qa:nexus-sprint-o1-payment-safety-product-boundary": "node scripts/nexus-sprint-o1-payment-safety-product-boundary-qa.js",
     "qa:nexus-sprint-k1-personalization-runtime-activation-readiness-gate": "node scripts/nexus-sprint-k1-personalization-runtime-activation-readiness-gate-qa.js",
     "qa:nexus-sprint-k2-personalization-feature-flag-contract": "node scripts/nexus-sprint-k2-personalization-feature-flag-contract-qa.js",
     "qa:nexus-sprint-k3-personalization-flag-contract-harness": "node scripts/nexus-sprint-k3-personalization-flag-contract-harness-qa.js",
