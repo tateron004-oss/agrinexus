@@ -500,6 +500,7 @@
     "qa:nexus-rp4-news-security-conflict-real-provider-activation": "node scripts/nexus-rp4-news-security-conflict-real-provider-activation-qa.js",
     "qa:nexus-rp5-job-search-real-provider-activation": "node scripts/nexus-rp5-job-search-real-provider-activation-qa.js",
     "qa:nexus-rp6-shipment-tracking-real-provider-activation": "node scripts/nexus-rp6-shipment-tracking-real-provider-activation-qa.js",
+    "qa:nexus-rp7-music-media-real-provider-activation": "node scripts/nexus-rp7-music-media-real-provider-activation-qa.js",
     "qa:nexus-sprint-k1-personalization-runtime-activation-readiness-gate": "node scripts/nexus-sprint-k1-personalization-runtime-activation-readiness-gate-qa.js",
     "qa:nexus-sprint-k2-personalization-feature-flag-contract": "node scripts/nexus-sprint-k2-personalization-feature-flag-contract-qa.js",
     "qa:nexus-sprint-k3-personalization-flag-contract-harness": "node scripts/nexus-sprint-k3-personalization-flag-contract-harness-qa.js",
