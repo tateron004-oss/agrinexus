@@ -1,0 +1,95 @@
+[
+  {
+    "fixtureId": "connector-reliability-default-off",
+    "input": {},
+    "expected": {
+      "enabled": false,
+      "visibleUiAllowed": false,
+      "isVisible": false,
+      "noExecution": true
+    }
+  },
+  {
+    "fixtureId": "connector-reliability-flag-on-visible-only",
+    "input": {
+      "enabled": true,
+      "visibleUiAllowed": true
+    },
+    "expected": {
+      "enabled": true,
+      "visibleUiAllowed": true,
+      "isVisible": true,
+      "noExecution": true
+    }
+  },
+  {
+    "fixtureId": "connector-reliability-unsafe-authority-attempt",
+    "input": {
+      "enabled": true,
+      "visibleUiAllowed": true,
+      "unsafeAuthorityAttempt": true,
+      "noExecution": false
+    },
+    "expected": {
+      "enabled": true,
+      "visibleUiAllowed": true,
+      "isVisible": true,
+      "connectorReliabilityRuntimeAllowed": false,
+      "liveConnectorReliabilityRuntimeAllowed": false,
+      "connectorPollingRuntimeAllowed": false,
+      "connectorRetryRuntimeAllowed": false,
+      "connectorFallbackRuntimeAllowed": false,
+      "connectorHealthDashboardRuntimeAllowed": false,
+      "sourceAvailabilityRuntimeAllowed": false,
+      "providerAvailabilityRuntimeAllowed": false,
+      "partnerAvailabilityRuntimeAllowed": false,
+      "staleDataAlertRuntimeAllowed": false,
+      "adminConnectorQueueRuntimeAllowed": false,
+      "providerConnectorRuntimeAllowed": false,
+      "clinicConnectorRuntimeAllowed": false,
+      "telehealthConnectorRuntimeAllowed": false,
+      "pharmacyConnectorRuntimeAllowed": false,
+      "medicalRecordConnectorRuntimeAllowed": false,
+      "fhirConnectorRuntimeAllowed": false,
+      "locationConnectorRuntimeAllowed": false,
+      "communicationsConnectorRuntimeAllowed": false,
+      "emergencyConnectorRuntimeAllowed": false,
+      "connectorPollingAllowed": false,
+      "retryExecutionAllowed": false,
+      "fallbackExecutionAllowed": false,
+      "sourceSyncAllowed": false,
+      "providerSyncAllowed": false,
+      "partnerHealthMonitoringAllowed": false,
+      "adminConnectorQueueAllowed": false,
+      "connectorDrivenActionAllowed": false,
+      "providerContactAllowed": false,
+      "telehealthSessionCreationAllowed": false,
+      "appointmentSchedulingAllowed": false,
+      "prescriptionRefillAllowed": false,
+      "medicalRecordAccessAllowed": false,
+      "locationSharingAllowed": false,
+      "communicationsExecutionAllowed": false,
+      "transportationDispatchAllowed": false,
+      "emergencyDispatchAllowed": false,
+      "unsupportedLiveConnectorClaimAllowed": false,
+      "unsupportedProviderAvailabilityClaimAllowed": false,
+      "unsupportedConnectorHealthClaimAllowed": false,
+      "networkAllowed": false,
+      "executionAuthority": false,
+      "noExecution": true
+    }
+  },
+  {
+    "fixtureId": "connector-reliability-flag-on-without-visible-permission",
+    "input": {
+      "enabled": true,
+      "visibleUiAllowed": false
+    },
+    "expected": {
+      "enabled": true,
+      "visibleUiAllowed": false,
+      "isVisible": false,
+      "noExecution": true
+    }
+  }
+]
