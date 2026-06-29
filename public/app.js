@@ -186,6 +186,7 @@ let nexusSessionActionAuditLog = [];
 let nexusSimulatedProviderResults = [];
 let nexusInternalNavigationExecutionResults = [];
 let nexusLocalDraftMessageResults = [];
+let nexusCallPreparationResults = [];
 let visibleControlledStagedActionPreview = null;
 let visibleUserConfirmationPreview = null;
 let latestControlledActionConfirmationReadiness = null;
@@ -610,6 +611,22 @@ function handleNexusLocalDraftMessageCaptionCommand(command = "") {
   return true;
 }
 
+function isNexusCallPreparationCommand(command = "") {
+  const text = String(command || "").toLowerCase();
+  return /\b(prepare|plan|outline|create)\b[\s\S]*\b(call|phone)\b/.test(text)
+    && !/\b(call now|dial|place call|start call|make the call|open phone)\b/.test(text);
+}
+
+function handleNexusCallPreparationCaptionCommand(command = "") {
+  if (!isNexusCallPreparationCommand(command)) return false;
+  clearControlledActionPreview("call-preparation-caption-command");
+  const plan = buildNexusAutonomousTaskPlan(command, { category: "message-call-preparation" });
+  startNexusAutonomousWorkflowFromTaskPlan(plan, { command });
+  updateUserCaptionPanel("Call preparation review is ready. Confirming will only create a local call-prep card. Nexus will not call, open the phone, request phone permission, or contact a provider.", { expanded: true });
+  setVoiceResponse("Call preparation review is ready. Confirming will only create a local call-prep card. Nexus will not call, open the phone, request phone permission, or contact a provider.", false, { allowVoiceFirst: false });
+  return true;
+}
+
 function createNexusSimulatedProviderExecutionResult(gate = nexusUserConfirmationGateState) {
   if (!gate || gate.actionType !== "simulated_provider_action" || gate.locallyConfirmable !== true) {
     return null;
@@ -782,6 +799,59 @@ function renderNexusLocalDraftMessageResults(results = nexusLocalDraftMessageRes
   return `
     <div class="nexus-local-draft-message-results" data-nexus-local-draft-message-results="true" data-message-sent="false" data-provider-contacted="false" data-external-action-occurred="false" data-backend-write-occurred="false" aria-label="Nexus local draft message results">
       <span class="nexus-local-draft-message-label">Drafts for review</span>
+      <ul>${items}</ul>
+    </div>
+  `;
+}
+
+function createNexusCallPreparationResult(gate = nexusUserConfirmationGateState) {
+  if (!gate || gate.actionType !== "call_preparation" || gate.locallyConfirmable !== true) {
+    return null;
+  }
+  const description = sanitizeNexusSessionAuditText(gate.description || "Prepare a call workflow for review.");
+  const required = Array.isArray(gate.requiredData) ? gate.requiredData : [];
+  const result = {
+    schemaVersion: "nexus-call-preparation.v1",
+    callPrepId: `nexus-call-prep-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+    label: "CALL PREPARATION ONLY",
+    target: required.find(item => /\b(who|recipient|contact|provider|person)\b/i.test(String(item || ""))) || "Recipient or provider to be confirmed by the user.",
+    reason: description,
+    talkingPoints: [
+      "Confirm the correct person, organization, or provider before any future handoff.",
+      "Review the purpose of the call and what information should be discussed.",
+      "Keep notes local until a configured provider, explicit approval, and final execution gate exist."
+    ],
+    providerStatus: sanitizeNexusSessionAuditText(gate.providerStatus || "phone provider not connected"),
+    confirmationRequired: true,
+    safetyNote: "No call was placed. Nexus did not open the phone, request phone permission, contact a provider, send a message, or write backend data.",
+    callPlaced: false,
+    phonePermissionRequested: false,
+    providerContacted: false,
+    messageSent: false,
+    externalActionOccurred: false,
+    backendWriteOccurred: false,
+    executionAuthority: false,
+    createdAt: new Date().toISOString()
+  };
+  nexusCallPreparationResults = [result, ...nexusCallPreparationResults].slice(0, 10);
+  return result;
+}
+
+function renderNexusCallPreparationResults(results = nexusCallPreparationResults) {
+  if (!Array.isArray(results) || !results.length) return "";
+  const items = results.slice(0, 3).map(result => `
+    <li data-nexus-call-preparation-result="${htmlSafe(result.callPrepId)}">
+      <strong>${htmlSafe(result.label)}</strong>
+      <span><strong>Who:</strong> ${htmlSafe(result.target)}</span>
+      <span><strong>Reason:</strong> ${htmlSafe(result.reason)}</span>
+      <span><strong>Provider:</strong> ${htmlSafe(result.providerStatus)}</span>
+      <small>${htmlSafe(result.talkingPoints.join(" "))}</small>
+      <small>${htmlSafe(result.safetyNote)}</small>
+    </li>
+  `).join("");
+  return `
+    <div class="nexus-call-preparation-results" data-nexus-call-preparation-results="true" data-call-placed="false" data-phone-permission-requested="false" data-provider-contacted="false" data-message-sent="false" data-external-action-occurred="false" data-backend-write-occurred="false" aria-label="Nexus call preparation results">
+      <span class="nexus-call-preparation-label">Call preparation</span>
       <ul>${items}</ul>
     </div>
   `;
@@ -965,10 +1035,14 @@ function nexusControlledActionQueueTypeForPlan(taskPlan = {}) {
   const summary = String(taskPlan.summary || taskPlan.goal || "").toLowerCase();
   const combined = `${category} ${intent} ${summary}`;
   const userFacingText = `${intent} ${summary}`;
+  const safeCallPreparationIntent = /\b(prepare|plan|outline|create)\b/.test(userFacingText)
+    && /\b(call|phone)\b/.test(userFacingText)
+    && !/\b(call now|dial|place call|start call|make the call|open phone)\b/.test(userFacingText);
   const safeDraftIntent = /\b(draft|prepare|compose|write)\b/.test(combined)
     && /\b(message|email|note|question|outreach|inquiry)\b/.test(combined)
     && !/\b(send|submit|deliver|call|dial|place call|contact now)\b/.test(userFacingText);
   if (/\b(simulated|simulation|dry[- ]?run)\b/.test(category) || /\b(simulated|simulation|dry[- ]?run)\b/.test(intent) || /\b(simulated|simulation|dry[- ]?run)\b/.test(summary)) return "simulated_provider_action";
+  if (safeCallPreparationIntent) return "call_preparation";
   if (safeDraftIntent) return "draft_generation";
   if (/\b(call|phone|whatsapp|telegram|sms|email|message)\b/.test(category) || /\b(call|phone|whatsapp|telegram|sms|email|message)\b/.test(intent)) return "blocked_high_risk_action";
   if (/\b(report|physician|care[- ]?team|chw|rpm|rtm|chronic|health)\b/.test(category)) return "report_generation";
@@ -1069,6 +1143,7 @@ function isNexusControlledQueueActionLocallyConfirmable(action = {}) {
     "internal_navigation",
     "draft_generation",
     "report_generation",
+    "call_preparation",
     "simulated_provider_action"
   ].includes(String(action.actionType || ""));
 }
@@ -1148,6 +1223,12 @@ function performNexusConfirmedLocalQueueAction(gate = nexusUserConfirmationGateS
     return result
       ? `Local ${result.draftType} draft prepared for review. Nexus did not send, submit, message, contact a provider, buy, sell, pay, or write backend data.`
       : "Local draft was not available. No external action occurred.";
+  }
+  if (gate.actionType === "call_preparation") {
+    const result = createNexusCallPreparationResult(gate);
+    return result
+      ? "Local call preparation card created for review. Nexus did not place a call, open the phone, request phone permission, contact a provider, send a message, or write backend data."
+      : "Local call preparation was not available. No external action occurred.";
   }
   const outcomes = {
     report_generation: "Local report outline prepared for review. Nexus did not write records or contact a provider."
@@ -1231,6 +1312,7 @@ function renderNexusControlledActionQueueCard(queue = nexusControlledActionQueue
   const simulatedHtml = renderNexusSimulatedProviderExecutionResults();
   const internalNavigationHtml = renderNexusInternalNavigationExecutionResults();
   const localDraftHtml = renderNexusLocalDraftMessageResults();
+  const callPreparationHtml = renderNexusCallPreparationResults();
   const items = queue.slice(0, 4).map((action, index) => `
     <li data-nexus-controlled-action-queue-item="${htmlSafe(action.queueStatus)}" data-action-type="${htmlSafe(action.actionType)}" data-risk-level="${htmlSafe(action.riskLevel)}">
       <strong>${htmlSafe(action.actionType.replace(/_/g, " "))}</strong>
@@ -1249,6 +1331,7 @@ function renderNexusControlledActionQueueCard(queue = nexusControlledActionQueue
       <ul>${items}</ul>
       ${gateHtml}
       ${localDraftHtml}
+      ${callPreparationHtml}
       ${internalNavigationHtml}
       ${simulatedHtml}
       ${auditHtml}
@@ -29308,6 +29391,7 @@ function bindStatic() {
         if (handleNexusSimulationCaptionCommand(command)) return;
         if (handleNexusInternalNavigationCaptionCommand(command)) return;
         if (handleNexusLocalDraftMessageCaptionCommand(command)) return;
+        if (handleNexusCallPreparationCaptionCommand(command)) return;
         void handleVoiceCommand(command);
       } else if (action === "confirm") {
         void confirmPendingWorkflow();
@@ -29874,6 +29958,7 @@ function bindStatic() {
       if (handleNexusSimulationCaptionCommand(command)) return;
       if (handleNexusInternalNavigationCaptionCommand(command)) return;
       if (handleNexusLocalDraftMessageCaptionCommand(command)) return;
+      if (handleNexusCallPreparationCaptionCommand(command)) return;
       void handleVoiceCommand(command);
       return;
     }

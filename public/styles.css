@@ -4422,6 +4422,46 @@ body.admin-mode .user-workspace {
   font-size: .78rem;
   line-height: 1.35;
 }
+.nexus-call-preparation-results {
+  display: grid;
+  gap: 5px;
+  padding: 8px;
+  border: 1px dashed rgba(14, 116, 144, .3);
+  border-radius: 8px;
+  background: rgba(236, 254, 255, .72);
+}
+.nexus-call-preparation-label {
+  width: fit-content;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: #cffafe;
+  color: #0e7490 !important;
+  font-size: .7rem !important;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+.nexus-call-preparation-results ul {
+  display: grid;
+  gap: 5px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.nexus-call-preparation-results [data-nexus-call-preparation-result] {
+  display: grid;
+  gap: 3px;
+  padding: 5px 0;
+  border-top: 1px solid rgba(14, 116, 144, .14);
+}
+.nexus-call-preparation-results [data-nexus-call-preparation-result]:first-child {
+  border-top: 0;
+}
+.nexus-call-preparation-results span,
+.nexus-call-preparation-results small {
+  color: #164e63;
+  font-size: .74rem;
+  line-height: 1.25;
+}
 .nexus-assistant-runtime-preview-card {
   display: grid;
   gap: 10px;
