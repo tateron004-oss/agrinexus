@@ -536,6 +536,7 @@
     "qa:nexus-fap8-reliability-usability-polish": "node scripts/nexus-fap8-reliability-usability-polish-qa.js",
     "qa:nexus-fap9-standard-user-browser-validation": "node scripts/nexus-fap9-standard-user-browser-validation-qa.js",
     "qa:nexus-fap10-full-assistant-power-closeout": "node scripts/nexus-fap10-full-assistant-power-closeout-qa.js",
+    "qa:nexus-aut1-workflow-goal-classifier": "node scripts/nexus-aut1-workflow-goal-classifier-qa.js",
     "qa:nexus-sprint-k1-personalization-runtime-activation-readiness-gate": "node scripts/nexus-sprint-k1-personalization-runtime-activation-readiness-gate-qa.js",
     "qa:nexus-sprint-k2-personalization-feature-flag-contract": "node scripts/nexus-sprint-k2-personalization-feature-flag-contract-qa.js",
     "qa:nexus-sprint-k3-personalization-flag-contract-harness": "node scripts/nexus-sprint-k3-personalization-flag-contract-harness-qa.js",
