@@ -25885,6 +25885,7 @@ async function startGuestUserSession() {
       data = await request("/api/user/language", { method: "POST", body: { language: loginLanguage } });
       if (data?.user) data.user.name = guestName.slice(0, 80);
     }
+    await loadPublicMapConfig();
     render();
     startAskNexusAfterLogin();
     toast(`Hello ${userFirstName()}`);
@@ -26944,6 +26945,7 @@ function bindStatic() {
       if (loginLanguage && loginLanguage !== data?.user?.language) {
         data = await request("/api/user/language", { method: "POST", body: { language: loginLanguage } });
       }
+      await loadPublicMapConfig();
       render();
       startAskNexusAfterLogin();
       toast("Signed in");
