@@ -571,6 +571,7 @@
     "qa:nexus-a100-3-agriculture-support": "node scripts/nexus-a100-3-agriculture-support-qa.js",
     "qa:nexus-a100-4-learning-training-support": "node scripts/nexus-a100-4-learning-training-support-qa.js",
     "qa:nexus-a100-5-workforce-jobs-support": "node scripts/nexus-a100-5-workforce-jobs-support-qa.js",
+    "qa:nexus-a100-6-marketplace-browsing-support": "node scripts/nexus-a100-6-marketplace-browsing-support-qa.js",
     "qa:nexus-sprint-k1-personalization-runtime-activation-readiness-gate": "node scripts/nexus-sprint-k1-personalization-runtime-activation-readiness-gate-qa.js",
     "qa:nexus-sprint-k2-personalization-feature-flag-contract": "node scripts/nexus-sprint-k2-personalization-feature-flag-contract-qa.js",
     "qa:nexus-sprint-k3-personalization-flag-contract-harness": "node scripts/nexus-sprint-k3-personalization-flag-contract-harness-qa.js",
