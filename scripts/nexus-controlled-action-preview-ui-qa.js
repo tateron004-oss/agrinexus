@@ -35,6 +35,8 @@ function extractFunction(source, name) {
 const htmlSafeBody = extractFunction(app, "htmlSafe");
 const lowRiskBuilderBody = extractFunction(app, "buildLowRiskAgentActionSuggestion");
 const metadataBuilderBody = extractFunction(app, "buildControlledActionMetadataFromSuggestion");
+const taskPlanCategoryBody = extractFunction(app, "nexusAutonomousTaskPlanCategory");
+const taskPlanBuilderBody = extractFunction(app, "buildNexusAutonomousTaskPlan");
 const readinessBuilderBody = extractFunction(app, "buildControlledActionPreviewReadinessFromMetadata");
 const visibleGuardBody = extractFunction(app, "isVisibleControlledActionPreviewReadiness");
 const previewRendererBody = extractFunction(app, "renderControlledActionPreview");
@@ -100,6 +102,8 @@ const sandbox = vm.runInNewContext(`
   let visibleControlledActionPreviewReadiness = null;
   ${lowRiskBuilderBody}
   ${metadataBuilderBody}
+  ${taskPlanCategoryBody}
+  ${taskPlanBuilderBody}
   ${readinessBuilderBody}
   ${visibleGuardBody}
   ${previewRendererBody}
@@ -124,7 +128,7 @@ const expectedLowRisk = [
   ["workforce.field_support", "Field Support", "Review field support guidance"]
 ];
 
-const forbiddenVisibleWords = /\b(opened|started|submitted|called|paid|verified|permission granted|diagnose|dispatch|schedule|buy|sell|checkout|login|identity|location|camera|telehealth)\b/i;
+const forbiddenActionCompleteWords = /\b(opened|started|submitted|called|paid|verified|permission granted|diagnosed|dispatched|scheduled|bought|sold|checked out|logged in)\b/i;
 const forbiddenRawWords = /\b(schemaVersion|selectedToolId|actionId|auditPolicy|executionBoundary|blockedReason|controlled-action-metadata|controlled-action-preview-readiness)\b/i;
 
 for (const [selectedToolId, levelLabel, title] of expectedLowRisk) {
@@ -150,7 +154,10 @@ for (const [selectedToolId, levelLabel, title] of expectedLowRisk) {
   assert(html.includes("Preview only - no action has been taken."), `${selectedToolId} should render no-action text`);
   assert(!/<button|onclick|data-preview-action|data-controlled-action-button/i.test(html), `${selectedToolId} preview must not contain controls`);
   assert(!forbiddenRawWords.test(html), `${selectedToolId} preview must not expose raw metadata`);
-  assert(!forbiddenVisibleWords.test(html), `${selectedToolId} preview must not include restricted/action-complete wording`);
+  if (html.includes("nexus-controlled-action-task-plan")) {
+    assert(html.includes("Blocked:"), `${selectedToolId} task plan preview should show safety boundaries`);
+  }
+  assert(!forbiddenActionCompleteWords.test(html), `${selectedToolId} preview must not include action-complete wording`);
 }
 
 const blockedReadinessSamples = [

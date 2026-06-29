@@ -1501,6 +1501,10 @@ body.user-mode .a100-review-preparation {
   display: grid;
   gap: 7px;
 }
+body.user-mode .a100-autonomous-task-plan {
+  display: grid;
+  gap: 7px;
+}
 body.user-mode .a100-provider-readiness {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1529,6 +1533,15 @@ body.user-mode .a100-runtime-card-meta div {
 body.user-mode .a100-review-preparation div {
   display: grid;
   gap: 3px;
+  padding: 8px;
+  border: 1px solid #d7e8e3;
+  border-radius: 8px;
+  background: #ffffff;
+}
+body.user-mode .a100-autonomous-task-plan div {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
   padding: 8px;
   border: 1px solid #d7e8e3;
   border-radius: 8px;
@@ -1574,6 +1587,8 @@ body.user-mode .a100-runtime-card-meta strong,
 body.user-mode .a100-runtime-card-meta span,
 body.user-mode .a100-review-preparation strong,
 body.user-mode .a100-review-preparation span,
+body.user-mode .a100-autonomous-task-plan strong,
+body.user-mode .a100-autonomous-task-plan span,
 body.user-mode .a100-provider-readiness strong,
 body.user-mode .a100-provider-readiness span,
 body.user-mode .a100-provider-readiness small,
@@ -1590,6 +1605,7 @@ body.user-mode .a100-clinician-report span {
 }
 body.user-mode .a100-runtime-card-meta span,
 body.user-mode .a100-review-preparation span,
+body.user-mode .a100-autonomous-task-plan span,
 body.user-mode .a100-provider-readiness small,
 body.user-mode .a100-route-preview span,
 body.user-mode .a100-domain-guidance span,
@@ -4025,6 +4041,25 @@ body.admin-mode .user-workspace {
 }
 .nexus-controlled-action-preview-summary {
   color: #456b60;
+}
+.nexus-controlled-action-task-plan {
+  display: grid;
+  gap: 4px;
+  padding: 8px;
+  border: 1px solid #d7e8e3;
+  border-radius: 8px;
+  background: #ffffff;
+  pointer-events: none;
+}
+.nexus-controlled-action-task-plan span {
+  color: #426257;
+  font-size: .76rem;
+  font-weight: 800;
+  line-height: 1.25;
+}
+.nexus-controlled-action-task-plan strong {
+  color: #173240;
+  font-weight: 950;
 }
 .nexus-controlled-action-preview-note {
   color: #61726f;

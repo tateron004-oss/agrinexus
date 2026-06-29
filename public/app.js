@@ -435,12 +435,22 @@ function renderControlledActionPreview(readiness = visibleControlledActionPrevie
   const category = String(readiness.levelOneLabel || "").trim();
   const summary = String(readiness.safePreviewSummary || "").replace(/\s+/g, " ").trim();
   const shortSummary = summary.length <= 180 ? summary : "";
+  const taskPlan = readiness.taskPlan && typeof readiness.taskPlan === "object" ? readiness.taskPlan : null;
+  const taskPlanHtml = taskPlan ? `
+      <div class="nexus-controlled-action-task-plan" data-nexus-task-plan-source="${htmlSafe(taskPlan.source || "nexus-autonomous-task-planner.v1")}" data-nexus-task-plan-execution-authority="${taskPlan.executionAuthority === false ? "false" : "blocked"}">
+        <span><strong>Task plan:</strong> ${htmlSafe(taskPlan.goal || "Prepare a safe task plan for review.")}</span>
+        <span><strong>Missing:</strong> ${htmlSafe((taskPlan.missingInformation || []).join(" "))}</span>
+        <span><strong>Allowed:</strong> ${htmlSafe((taskPlan.allowedSafeActions || []).join(" "))}</span>
+        <span><strong>Blocked:</strong> ${htmlSafe((taskPlan.blockedHighRiskActions || []).join(" "))}</span>
+        <span><strong>Next:</strong> ${htmlSafe(taskPlan.nextSuggestedAction || "Choose a safe next step.")}</span>
+      </div>` : "";
   return `
     <div class="nexus-controlled-action-preview" aria-label="Nexus informational preview">
       <strong class="nexus-controlled-action-preview-title">${htmlSafe(title)}</strong>
       <span class="nexus-controlled-action-preview-meta">Category: ${htmlSafe(category)}</span>
       <span class="nexus-controlled-action-preview-meta">Needs: No special permission</span>
       ${shortSummary ? `<span class="nexus-controlled-action-preview-summary">${htmlSafe(shortSummary)}</span>` : ""}
+      ${taskPlanHtml}
       <span class="nexus-controlled-action-preview-note">Preview only - no action has been taken.</span>
     </div>
   `;
@@ -1139,6 +1149,7 @@ function buildControlledActionPreviewReadinessFromMetadata(controlledActionMetad
     allowedNextStep: "blocked",
     executionBoundary: "previewOnlyReadiness",
     auditPolicy: "observeOnly",
+    taskPlan: null,
     userVisibleInThisPhase: false
   };
   const previewMap = {
@@ -1193,6 +1204,18 @@ function buildControlledActionPreviewReadinessFromMetadata(controlledActionMetad
   }
   const preview = previewMap[actionId];
   if (!preview) return base;
+  const taskPlanCategoryMap = {
+    openTrainingResources: "training-learning",
+    showFarmJobs: "workforce-jobs",
+    openFieldSupportGuidance: "agriculture-help",
+    explainLearningTopic: "training-learning",
+    browseMarketplace: "marketplace-browsing",
+    explainAgricultureHelp: "agriculture-help"
+  };
+  const taskPlan = buildNexusAutonomousTaskPlan(`${selectedToolId} ${levelOneLabel} ${preview.summary}`, {
+    category: taskPlanCategoryMap[actionId] || selectedToolId,
+    userIntent: preview.summary
+  });
   return {
     ...base,
     previewEligible: true,
@@ -1205,6 +1228,7 @@ function buildControlledActionPreviewReadinessFromMetadata(controlledActionMetad
     allowedNextStep: "preparePreviewOnly",
     executionBoundary: "previewOnlyReadiness",
     auditPolicy: "observeOnly",
+    taskPlan,
     userVisibleInThisPhase: true
   };
 }
@@ -12225,15 +12249,162 @@ function a100SafeTaskControlsHtml(section = "dashboard") {
   `;
 }
 
+function nexusAutonomousTaskPlanCategory(command = "", fallback = "general") {
+  const text = String(command || "").toLowerCase();
+  const explicitFallback = String(fallback || "").toLowerCase();
+  if ([
+    "agriculture-help",
+    "training-learning",
+    "workforce-jobs",
+    "marketplace-browsing",
+    "route-planning",
+    "provider-status",
+    "chronic-care-support",
+    "care-team-reporting",
+    "message-call-preparation",
+    "general"
+  ].includes(explicitFallback)) return explicitFallback;
+  if (/\b(physician report|doctor report|care team report|clinical summary|summarize for my doctor|nurse|community health worker)\b/.test(text)) return "care-team-reporting";
+  if (/\b(chronic|diabetes|blood pressure|hypertension|asthma|kidney|heart|maternal|pregnan|medicine reminder|medication reminder|rpm|rtm)\b/.test(text)) return "chronic-care-support";
+  if (/\b(call|message|sms|whatsapp|telegram|email|contact)\b/.test(text)) return "message-call-preparation";
+  if (/\b(provider|clinic|telehealth|pharmacy|connected|connection|status)\b/.test(text)) return "provider-status";
+  if (/\b(route|map|location|directions|transport|facility)\b/.test(text)) return "route-planning";
+  if (/\b(agritrade|marketplace|buyer|seller|market|browse|price)\b/.test(text)) return "marketplace-browsing";
+  if (/\b(job|jobs|workforce|role|interview|shift|readiness|apply)\b/.test(text)) return "workforce-jobs";
+  if (/\b(training|course|lesson|learning|certificate|teach|irrigation)\b/.test(text)) return "training-learning";
+  if (/\b(agriculture|crop|farm|field|soil|pest|harvest|irrigation)\b/.test(text)) return "agriculture-help";
+  return fallback || "general";
+}
+
+function buildNexusAutonomousTaskPlan(command = "", context = {}) {
+  const category = nexusAutonomousTaskPlanCategory(command, context.category || "general");
+  const planTemplates = {
+    "agriculture-help": {
+      goal: "Prepare safe agriculture help for review.",
+      requiredInformation: ["Crop or field concern.", "Visible symptoms.", "Timing.", "Local context without live tracking."],
+      allowedSafeActions: ["Explain general agriculture guidance.", "Prepare a checklist.", "Open internal agriculture or AgriTrade review surfaces."],
+      nextSuggestedAction: "Describe the crop, symptom, and timing."
+    },
+    "training-learning": {
+      goal: "Build a safe training or learning path.",
+      requiredInformation: ["Topic.", "Preferred language.", "Skill level.", "Time available."],
+      allowedSafeActions: ["Explain lessons.", "Review course options.", "Prepare certificate-readiness questions."],
+      nextSuggestedAction: "Choose a topic and skill level."
+    },
+    "workforce-jobs": {
+      goal: "Prepare a workforce readiness or job pathway plan.",
+      requiredInformation: ["Target role.", "Skills.", "Availability.", "Work location preference without live tracking."],
+      allowedSafeActions: ["Review readiness.", "Compare internal roles.", "Prepare interview or shift questions."],
+      nextSuggestedAction: "Share the role or job type you want to review."
+    },
+    "marketplace-browsing": {
+      goal: "Prepare safe marketplace browsing or inquiry notes.",
+      requiredInformation: ["Crop or item.", "Quantity range.", "Region.", "Price or quality questions."],
+      allowedSafeActions: ["Browse AgriTrade internally.", "Prepare buyer or seller questions.", "Compare review-only options."],
+      nextSuggestedAction: "Name the crop, item, buyer, or seller question."
+    },
+    "route-planning": {
+      goal: "Prepare a route or map review plan.",
+      requiredInformation: ["Manual origin.", "Manual destination.", "Reason for route review.", "Timing constraints."],
+      allowedSafeActions: ["Open internal map review.", "Explain route factors.", "Prepare facility or transport questions."],
+      nextSuggestedAction: "Provide origin and destination text if you want route context."
+    },
+    "provider-status": {
+      goal: "Review provider connection readiness.",
+      requiredInformation: ["Provider type.", "Service category.", "Known organization if any."],
+      allowedSafeActions: ["Show provider readiness status.", "Explain inactive connectors.", "Prepare integration questions."],
+      nextSuggestedAction: "Choose the provider type you want to check."
+    },
+    "chronic-care-support": {
+      goal: "Prepare chronic care support notes for review.",
+      requiredInformation: ["Condition or concern.", "Symptoms.", "Known readings entered manually.", "Care-team questions."],
+      allowedSafeActions: ["Prepare education.", "Build a visit checklist.", "Summarize questions for care-team review."],
+      nextSuggestedAction: "Share the condition and what you want to prepare for review."
+    },
+    "care-team-reporting": {
+      goal: "Prepare a physician or care-team report draft.",
+      requiredInformation: ["Report audience.", "Condition or topic.", "Known data entered manually.", "Missing data to flag."],
+      allowedSafeActions: ["Draft a session-only summary.", "List missing information.", "Prepare review questions."],
+      nextSuggestedAction: "Choose the care-team audience and what should be summarized."
+    },
+    "message-call-preparation": {
+      goal: "Prepare a communication request without sending it.",
+      requiredInformation: ["Recipient.", "Channel preference.", "Purpose.", "Exact message or call topic."],
+      allowedSafeActions: ["Draft wording.", "Ask for missing recipient details.", "Prepare final confirmation requirements."],
+      nextSuggestedAction: "Identify the recipient and purpose before any future confirmation."
+    },
+    general: {
+      goal: "Prepare a safe Nexus task plan for review.",
+      requiredInformation: ["Goal.", "Relevant domain.", "Missing details.", "Preferred next step."],
+      allowedSafeActions: ["Explain options.", "Ask a clarifying question.", "Prepare review-only next steps."],
+      nextSuggestedAction: "Tell Nexus the goal you want to prepare."
+    }
+  };
+  const template = planTemplates[category] || planTemplates.general;
+  const blockedHighRiskActions = [
+    "No provider handoff.",
+    "No calls, messages, WhatsApp, Telegram, SMS, or email sending.",
+    "No payments, purchases, marketplace transactions, or account changes.",
+    "No location sharing, camera, microphone, medical, pharmacy, emergency, or backend-write execution."
+  ];
+  const requiredInformation = template.requiredInformation.slice();
+  const missingInformation = requiredInformation.slice(0, Math.min(3, requiredInformation.length));
+  const riskLevel = ["message-call-preparation", "chronic-care-support", "care-team-reporting"].includes(category)
+    ? "high-review-required"
+    : category === "provider-status"
+      ? "medium-review-required"
+      : "low-preview-only";
+  return {
+    goal: template.goal,
+    category,
+    userIntent: String(command || context.userIntent || "Not provided.").trim(),
+    steps: [
+      "Classify the goal and category.",
+      "Collect missing information before any next step.",
+      "Show review-only guidance in the Standard User card.",
+      "Keep high-risk actions blocked until a separate final execution gate exists."
+    ],
+    currentStep: "Collect missing information and review safe options.",
+    requiredInformation,
+    missingInformation,
+    allowedSafeActions: template.allowedSafeActions.slice(),
+    blockedHighRiskActions,
+    riskLevel,
+    confirmationRequirement: "Approval intent may be discussed, but final execution confirmation is not available from this planner.",
+    providerRequirement: category === "provider-status" || category === "message-call-preparation" || category === "care-team-reporting"
+      ? "Provider availability may be reviewed, but provider handoff remains disabled."
+      : "No provider required for preview-only guidance.",
+    nextSuggestedAction: template.nextSuggestedAction,
+    executionAuthority: false,
+    canExecute: false,
+    noExecutionAuthorized: true,
+    source: "nexus-autonomous-task-planner.v1"
+  };
+}
+
 function a100SafeAutonomyCardHtml(intent = {}) {
   const section = String(intent.section || "dashboard").trim();
   const title = String(intent.title || "Safe Nexus preview").trim();
   const response = String(intent.response || "Nexus prepared a safe review-only preview.").trim();
   const preparation = intent.preparation && typeof intent.preparation === "object" ? intent.preparation : null;
+  const taskPlan = intent.taskPlan && typeof intent.taskPlan === "object" ? intent.taskPlan : null;
   const providerReadiness = Array.isArray(intent.providerReadiness) ? intent.providerReadiness : [];
   const routePreview = intent.routePreview && typeof intent.routePreview === "object" ? intent.routePreview : null;
   const guidance = intent.guidance && typeof intent.guidance === "object" ? intent.guidance : null;
   const report = intent.report && typeof intent.report === "object" ? intent.report : null;
+  const taskPlanHtml = taskPlan ? `
+      <div class="a100-autonomous-task-plan" data-nexus-task-plan-source="${escapeHtml(taskPlan.source || "nexus-autonomous-task-planner.v1")}" data-nexus-task-plan-execution-authority="${taskPlan.executionAuthority === false ? "false" : "blocked"}">
+        <div><strong>${translateText("Task plan")}</strong><span>${translateText(taskPlan.goal || "Prepare a safe task plan for review.")}</span></div>
+        <div><strong>${translateText("Category")}</strong><span>${translateText(taskPlan.category || "general")}</span></div>
+        <div><strong>${translateText("Current step")}</strong><span>${translateText(taskPlan.currentStep || "Review safe options.")}</span></div>
+        <div><strong>${translateText("Missing information")}</strong><span>${translateText((taskPlan.missingInformation || []).join(" "))}</span></div>
+        <div><strong>${translateText("Allowed safe actions")}</strong><span>${translateText((taskPlan.allowedSafeActions || []).join(" "))}</span></div>
+        <div><strong>${translateText("Blocked high-risk actions")}</strong><span>${translateText((taskPlan.blockedHighRiskActions || []).join(" "))}</span></div>
+        <div><strong>${translateText("Risk")}</strong><span>${translateText(taskPlan.riskLevel || "preview-only")}</span></div>
+        <div><strong>${translateText("Confirmation")}</strong><span>${translateText(taskPlan.confirmationRequirement || "Final execution gate required before any real-world action.")}</span></div>
+        <div><strong>${translateText("Provider")}</strong><span>${translateText(taskPlan.providerRequirement || "No provider handoff from this card.")}</span></div>
+        <div><strong>${translateText("Next")}</strong><span>${translateText(taskPlan.nextSuggestedAction || "Choose a safe next step.")}</span></div>
+      </div>` : "";
   const preparationHtml = preparation ? `
       <div class="a100-review-preparation" data-a100-preparation-category="${escapeHtml(preparation.category || "general")}">
         <div><strong>${translateText("Task goal")}</strong><span>${translateText(preparation.goal || "Prepare a safe task plan for review.")}</span></div>
@@ -12284,6 +12455,7 @@ function a100SafeAutonomyCardHtml(intent = {}) {
         <div><strong>${translateText("Blocked")}</strong><span>${translateText("Nexus will not call, send messages, pay, buy, contact providers, turn on location, use camera or microphone, dispatch help, or change records.")}</span></div>
       </div>
       ${preparationHtml}
+      ${taskPlanHtml}
       ${providerHtml}
       ${routeHtml}
       ${guidanceHtml}
@@ -23205,6 +23377,7 @@ function a100SafeAutonomyIntent(command = "") {
       action: "high-risk-gated",
       section: "dashboard",
       response: `${highRisk.label}: This requires review first. ${highRisk.reason} Nexus can prepare a checklist or questions for review, but it will not diagnose, change medicine, call, send, pay, buy, contact providers, turn on location, use camera or microphone, dispatch help, connect devices, transmit health data, or change records.`,
+      taskPlan: buildNexusAutonomousTaskPlan(command, { category: "general" }),
       report: a100ChronicCareReport("safety", command),
       suggestions: ["what can Nexus do", "prepare a review checklist", "what providers are connected", "what should I do next"]
     };
@@ -23278,6 +23451,7 @@ function a100SafeAutonomyIntent(command = "") {
       title: titleMap[chronicMatched.id],
       response: responseMap[chronicMatched.id],
       preparation: a100ReviewOnlyPreparation(category),
+      taskPlan: buildNexusAutonomousTaskPlan(command, { category }),
       providerReadiness: a100ChronicCareReadinessCards(),
       guidance: a100ChronicCareGuidanceCard(chronicMatched.id),
       report: a100ChronicCareReport(reportKind, command),
@@ -23314,6 +23488,7 @@ function a100SafeAutonomyIntent(command = "") {
     title: capability.label,
     response: responseMap[capability.id] || responseMap.next,
     preparation: /\b(prepare|draft|checklist|questions|plan|setup guidance)\b/.test(text) ? a100ReviewOnlyPreparation(preparationCategory) : null,
+    taskPlan: buildNexusAutonomousTaskPlan(command, { category: preparationCategory }),
     providerReadiness: capability.id === "providers" ? a100ProviderReadinessCards() : null,
     routePreview: capability.id === "map" ? a100RoutePlanningPreview() : null,
     guidance: capability.id === "agriculture" ? a100AgricultureHelpCard() : capability.id === "learning" ? a100TrainingLearningCard() : capability.id === "workforce" ? a100WorkforceJobsCard() : capability.id === "marketplace" ? a100MarketplaceBrowsingCard() : null,
@@ -27670,8 +27845,9 @@ function installNexusVoiceDemoShellBridge() {
         permissionRequested: false
       };
     },
-    showResponse(message = "") {
+    showResponse(message = "", options = {}) {
       const response = String(message || "").trim() || "Nexus is ready.";
+      if (options.blocked === true) clearControlledActionPreview("voice-demo-shell-blocked-response");
       setVoiceResponse(response, false, { allowVoiceFirst: false, allowHandoff: false, source: "voice-demo-shell" });
       updateNexusBehaviorLayer("ready", response);
       return { response, executionAllowed: false };

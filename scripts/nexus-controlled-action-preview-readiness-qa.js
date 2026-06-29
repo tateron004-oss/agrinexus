@@ -35,6 +35,8 @@ function extractFunction(source, name) {
 }
 
 const metadataBuilderBody = extractFunction(app, "buildControlledActionMetadataFromSuggestion");
+const taskPlanCategoryBody = extractFunction(app, "nexusAutonomousTaskPlanCategory");
+const taskPlanBuilderBody = extractFunction(app, "buildNexusAutonomousTaskPlan");
 const previewReadinessBody = extractFunction(app, "buildControlledActionPreviewReadinessFromMetadata");
 const observationBody = extractFunction(app, "observeAgentActionMetadata");
 
@@ -76,6 +78,8 @@ for (const field of requiredFields) {
 }
 
 const sandbox = vm.runInNewContext(`
+  ${taskPlanCategoryBody}
+  ${taskPlanBuilderBody}
   ${previewReadinessBody}
   ({ buildControlledActionPreviewReadinessFromMetadata });
 `, {});

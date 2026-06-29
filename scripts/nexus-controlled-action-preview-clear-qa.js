@@ -35,6 +35,8 @@ function extractFunction(source, name) {
 const htmlSafeBody = extractFunction(app, "htmlSafe");
 const lowRiskBuilderBody = extractFunction(app, "buildLowRiskAgentActionSuggestion");
 const metadataBuilderBody = extractFunction(app, "buildControlledActionMetadataFromSuggestion");
+const taskPlanCategoryBody = extractFunction(app, "nexusAutonomousTaskPlanCategory");
+const taskPlanBuilderBody = extractFunction(app, "buildNexusAutonomousTaskPlan");
 const readinessBuilderBody = extractFunction(app, "buildControlledActionPreviewReadinessFromMetadata");
 const confirmationReadinessBuilderBody = extractFunction(app, "buildControlledActionConfirmationReadinessFromPreview");
 const visibleGuardBody = extractFunction(app, "isVisibleControlledActionPreviewReadiness");
@@ -176,6 +178,8 @@ const sandbox = vm.runInNewContext(`
   let observedAgentActionMetadataLog = [];
   ${lowRiskBuilderBody}
   ${metadataBuilderBody}
+  ${taskPlanCategoryBody}
+  ${taskPlanBuilderBody}
   ${readinessBuilderBody}
   ${confirmationReadinessBuilderBody}
   ${visibleGuardBody}
