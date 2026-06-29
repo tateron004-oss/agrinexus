@@ -12582,7 +12582,7 @@ function a100MarketplaceBrowsingCard() {
 function a100HighRiskActionGates() {
   return [
     { pattern: /\b(stop|pause|skip|change|increase|decrease|double|adjust|reduce|raise)\b.*\b(medication|medicine|meds|insulin|dose|dosage|pill|prescription|metformin|blood pressure medicine|bp medicine)\b|\bchange my insulin dose\b|\bstop my medication\b/, label: "Medication safety boundary", reason: "Medication changes need a qualified clinician, pharmacist, nurse, or approved care team review. Nexus will not recommend stopping, starting, or changing a dose." },
-    { pattern: /\b(chest pain|pressure in my chest|heart attack|stroke|face droop|one side weak|slurred speech|cannot breathe|shortness of breath|fainting|seizure|confused|severe headache|vision loss)\b/, label: "Urgent symptom boundary", reason: "These can be urgent warning signs. Seek local emergency or urgent professional care now if symptoms are severe, sudden, or worsening." },
+    { pattern: /\b(chest pain|pressure in my chest|heart attack|stroke|face droop|one side weak|slurred speech|cannot breathe|shortness of breath|fainting|pass out|passing out|may pass out|seizure|confused|severe headache|vision loss)\b/, label: "Urgent symptom boundary", reason: "These can be urgent warning signs. Seek local emergency or urgent professional care now if symptoms are severe, sudden, or worsening." },
     { pattern: /\b(2\d{2}|[3-9]\d{2})\s*\/\s*(1[2-9]\d|[2-9]\d{2})\b|\bblood pressure\b.*\b(200\/120|very high|extremely high|dangerously high)\b/, label: "Very high blood pressure boundary", reason: "Very high blood pressure or severe symptoms need urgent professional review. Nexus can help prepare notes, but it will not make a treatment decision." },
     { pattern: /\b(glucose|blood sugar)\b.*\b(extremely low|very low|dangerously low|severe low|passing out|confused|seizure|cannot stay awake)\b|\b(hypoglycemia|hyperglycemia)\b.*\b(severe|emergency|urgent)\b/, label: "Severe glucose boundary", reason: "Severe glucose symptoms can be urgent. Follow your clinician's emergency plan if you have one and seek local urgent help when symptoms are serious." },
     { pattern: /\b(call|phone|dial|ring)\b.*\b(emergency|doctor|provider|buyer|seller|someone|contact|person|family|clinic|employer)\b|\bcall emergency\b/, label: "Call readiness", reason: "Nexus can prepare call notes, but it will not place a call." },
@@ -22947,6 +22947,7 @@ function a100SafeAutonomyIntent(command = "") {
       action: "high-risk-gated",
       section: "dashboard",
       response: `${highRisk.label}: This requires review first. ${highRisk.reason} Nexus can prepare a checklist or questions for review, but it will not diagnose, change medicine, call, send, pay, buy, contact providers, turn on location, use camera or microphone, dispatch help, connect devices, transmit health data, or change records.`,
+      report: a100ChronicCareReport("safety", command),
       suggestions: ["what can Nexus do", "prepare a review checklist", "what providers are connected", "what should I do next"]
     };
   }

@@ -107,10 +107,17 @@ const intentSource = sourceBetween(app, "function a100SafeAutonomyIntent", "func
   "Urgent symptom boundary",
   "Very high blood pressure boundary",
   "Severe glucose boundary",
+  "may pass out",
   "will not recommend stopping, starting, or changing a dose",
   "Seek local emergency or urgent professional care now",
   "will not make a treatment decision"
 ].forEach(copy => assert(gateSource.includes(copy), `Healthcare high-risk gate should include: ${copy}`));
+
+[
+  "report: a100ChronicCareReport(\"safety\", command)",
+  "will not diagnose, change medicine, call, send, pay, buy",
+  "dispatch help, connect devices, transmit health data, or change records"
+].forEach(copy => assert(intentSource.includes(copy), `High-risk report safety should include: ${copy}`));
 
 [
   "will not diagnose",
