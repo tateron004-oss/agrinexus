@@ -207,8 +207,8 @@ const nexusProductIdentity = Object.freeze({
 });
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-309";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v288";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-310";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v289";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
 const VOICE_ATTENTION_DELAY_MS = 900;
@@ -13536,7 +13536,7 @@ function a100SafeAutonomyCardHtml(intent = {}) {
         <div><strong>${translateText("Boundary")}</strong><span>${translateText(guidance.boundary || "Review-first. No external execution.")}</span></div>
       </div>` : "";
   const reportHtml = report ? `
-      <div class="a100-clinician-report" data-a100-report-type="${escapeHtml(report.type || "session-only")}">
+      <div class="a100-clinician-report" data-a100-report-type="${escapeHtml(report.type || "session-only")}" data-a100-report-capability="${escapeHtml(report.capability || "physician-report-builder")}" data-copy-ready="${report.copyReady === false ? "false" : "true"}" data-local-only="${report.localOnly === false ? "false" : "true"}" data-review-only="${report.reviewOnly === false ? "false" : "true"}" data-external-transmission="${report.externalTransmission ? "true" : "false"}" data-provider-review-required="${report.providerReviewRequired === false ? "false" : "true"}" data-diagnosis="${report.noDiagnosis === false ? "unknown" : "false"}" data-prescribing="${report.noPrescribing === false ? "unknown" : "false"}" data-medication-adjustment="${report.noMedicationAdjustment === false ? "unknown" : "false"}" data-provider-contact="${report.noProviderContact === false ? "unknown" : "false"}">
         <div><strong>${translateText(report.title || "Physician report")}</strong><span>${translateText(report.summary || "Session-only summary prepared for review.")}</span></div>
         ${(report.fields || []).map(field => `<div><strong>${translateText(field.label)}</strong><span>${translateText(field.value)}</span></div>`).join("")}
         <div><strong>${translateText("Safety boundary")}</strong><span>${translateText(report.safety || "Nexus did not diagnose, prescribe, adjust medication, dispatch emergency services, call, message, connect devices, transmit data, or change records.")}</span></div>
@@ -14077,6 +14077,17 @@ function a100ChronicCareReport(kind = "general", command = "") {
     type: "session-only",
     title: titleMap[kind] || titleMap.general,
     summary: "Prepare a report for review. Session-only summary; Nexus does not diagnose or prescribe.",
+    capability: "physician-report-builder",
+    copyReady: true,
+    localOnly: true,
+    reviewOnly: true,
+    externalTransmission: false,
+    providerReviewRequired: true,
+    noDiagnosis: true,
+    noPrescribing: true,
+    noMedicationAdjustment: true,
+    noProviderContact: true,
+    noExternalShare: true,
     fields: [
       { label: "Report Type", value: reportType },
       { label: "Condition Area", value: conditionAreaMap[kind] || conditionAreaMap.general },
