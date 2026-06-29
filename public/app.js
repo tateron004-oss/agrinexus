@@ -12217,6 +12217,7 @@ function a100SafeAutonomyCardHtml(intent = {}) {
   const preparation = intent.preparation && typeof intent.preparation === "object" ? intent.preparation : null;
   const providerReadiness = Array.isArray(intent.providerReadiness) ? intent.providerReadiness : [];
   const routePreview = intent.routePreview && typeof intent.routePreview === "object" ? intent.routePreview : null;
+  const guidance = intent.guidance && typeof intent.guidance === "object" ? intent.guidance : null;
   const preparationHtml = preparation ? `
       <div class="a100-review-preparation" data-a100-preparation-category="${escapeHtml(preparation.category || "general")}">
         <div><strong>${translateText("Task goal")}</strong><span>${translateText(preparation.goal || "Prepare a safe task plan for review.")}</span></div>
@@ -12241,6 +12242,14 @@ function a100SafeAutonomyCardHtml(intent = {}) {
         <div><strong>${translateText("Map section")}</strong><span>${translateText(routePreview.mapLink || "Open the internal map section to review tiles, satellite imagery, facilities, and route context.")}</span></div>
         <div><strong>${translateText("Blocked")}</strong><span>${translateText(routePreview.blocked || "No automatic location request, external navigation, live tracking, or routing provider call.")}</span></div>
       </div>` : "";
+  const guidanceHtml = guidance ? `
+      <div class="a100-domain-guidance" data-a100-guidance-domain="${escapeHtml(guidance.domain || "general")}">
+        <div><strong>${translateText("Focus")}</strong><span>${translateText(guidance.focus || "Safe review-first guidance.")}</span></div>
+        <div><strong>${translateText("Useful prompts")}</strong><span>${translateText((guidance.prompts || []).join(" "))}</span></div>
+        <div><strong>${translateText("Collect")}</strong><span>${translateText((guidance.collect || []).join(" "))}</span></div>
+        <div><strong>${translateText("Safe next steps")}</strong><span>${translateText((guidance.nextSteps || []).join(" "))}</span></div>
+        <div><strong>${translateText("Boundary")}</strong><span>${translateText(guidance.boundary || "Review-first. No external execution.")}</span></div>
+      </div>` : "";
   return `
     <article class="a100-runtime-card" data-a100-action="${escapeHtml(intent.action || "safe-preview")}" data-a100-section="${escapeHtml(section)}">
       <div class="a100-runtime-card-head">
@@ -12255,6 +12264,7 @@ function a100SafeAutonomyCardHtml(intent = {}) {
       ${preparationHtml}
       ${providerHtml}
       ${routeHtml}
+      ${guidanceHtml}
       ${a100SafeTaskControlsHtml(section)}
     </article>
   `;
@@ -12348,6 +12358,17 @@ function a100RoutePlanningPreview() {
     readiness: "Leaflet map preview can open internally; external routing/navigation provider handoff remains gated.",
     mapLink: "Use Open section to review the internal map, street layer, satellite imagery, labels, route previews, facilities, and readiness.",
     blocked: "No geolocation API call, no live tracking, no external maps/navigation launch, no provider routing call, and no browser permission prompt."
+  };
+}
+
+function a100AgricultureHelpCard() {
+  return {
+    domain: "agriculture",
+    focus: "Crop issues, irrigation learning, soil help, pest/disease triage, and farmer-safe next steps.",
+    prompts: ["Describe crop symptoms.", "Ask what irrigation pattern changed.", "Review soil, pest, disease, harvest, or buyer-prep questions."],
+    collect: ["Crop and growth stage.", "Symptoms and timing.", "Field conditions.", "Irrigation and rainfall.", "Pest observations.", "Local expert/source to verify."],
+    nextSteps: ["Compare symptoms against general guidance.", "Collect clear notes before any media or provider flow.", "Check a local expert/source before acting.", "Use the trade or map section only for internal review."],
+    boundary: "General guidance only. Nexus does not diagnose with certainty, prescribe treatment, buy supplies, contact buyers, mutate records, or execute provider actions."
   };
 }
 
@@ -22708,6 +22729,7 @@ function a100SafeAutonomyIntent(command = "") {
     preparation: /\b(prepare|draft|checklist|questions|plan|setup guidance)\b/.test(text) ? a100ReviewOnlyPreparation(preparationCategory) : null,
     providerReadiness: capability.id === "providers" ? a100ProviderReadinessCards() : null,
     routePreview: capability.id === "map" ? a100RoutePlanningPreview() : null,
+    guidance: capability.id === "agriculture" ? a100AgricultureHelpCard() : null,
     suggestions: ["help me with agriculture", "find agriculture training", "show me farm jobs", "browse AgriTrade", "help me plan a route", "what providers are connected"].slice(0, 5)
   };
 }

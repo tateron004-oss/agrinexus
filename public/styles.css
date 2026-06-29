@@ -1443,6 +1443,10 @@ body.user-mode .a100-route-preview {
   display: grid;
   gap: 7px;
 }
+body.user-mode .a100-domain-guidance {
+  display: grid;
+  gap: 7px;
+}
 body.user-mode .a100-runtime-card-meta div {
   display: grid;
   gap: 3px;
@@ -1477,6 +1481,15 @@ body.user-mode .a100-route-preview div {
   border-radius: 8px;
   background: #ffffff;
 }
+body.user-mode .a100-domain-guidance div {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+  padding: 8px;
+  border: 1px solid #d7e8e3;
+  border-radius: 8px;
+  background: #ffffff;
+}
 body.user-mode .a100-runtime-card-meta strong,
 body.user-mode .a100-runtime-card-meta span,
 body.user-mode .a100-review-preparation strong,
@@ -1485,7 +1498,9 @@ body.user-mode .a100-provider-readiness strong,
 body.user-mode .a100-provider-readiness span,
 body.user-mode .a100-provider-readiness small,
 body.user-mode .a100-route-preview strong,
-body.user-mode .a100-route-preview span {
+body.user-mode .a100-route-preview span,
+body.user-mode .a100-domain-guidance strong,
+body.user-mode .a100-domain-guidance span {
   color: #173240;
   font-size: .76rem;
   font-weight: 950;
@@ -1494,7 +1509,8 @@ body.user-mode .a100-route-preview span {
 body.user-mode .a100-runtime-card-meta span,
 body.user-mode .a100-review-preparation span,
 body.user-mode .a100-provider-readiness small,
-body.user-mode .a100-route-preview span {
+body.user-mode .a100-route-preview span,
+body.user-mode .a100-domain-guidance span {
   color: #426257;
   font-weight: 800;
 }
