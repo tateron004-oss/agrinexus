@@ -578,6 +578,7 @@
     "qa:nexus-a100-10-voice-typed-command-parity": "node scripts/nexus-a100-10-voice-typed-command-parity-qa.js",
     "qa:nexus-a100-11-session-context-lite": "node scripts/nexus-a100-11-session-context-lite-qa.js",
     "qa:nexus-a100-12-review-first-action-preparation": "node scripts/nexus-a100-12-review-first-action-preparation-qa.js",
+    "qa:nexus-a100-13-high-risk-gating": "node scripts/nexus-a100-13-high-risk-gating-qa.js",
     "qa:nexus-sprint-k1-personalization-runtime-activation-readiness-gate": "node scripts/nexus-sprint-k1-personalization-runtime-activation-readiness-gate-qa.js",
     "qa:nexus-sprint-k2-personalization-feature-flag-contract": "node scripts/nexus-sprint-k2-personalization-feature-flag-contract-qa.js",
     "qa:nexus-sprint-k3-personalization-flag-contract-harness": "node scripts/nexus-sprint-k3-personalization-flag-contract-harness-qa.js",
