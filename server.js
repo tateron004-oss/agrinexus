@@ -6,6 +6,7 @@ const { classifyNexusIntent } = require("./public/nexus-intent-classifier.js");
 const { buildNexusPolicyDecision, validateNexusPolicyDecision } = require("./public/nexus-policy-engine.js");
 const { createNexusPlan, validateNexusPlan } = require("./public/nexus-planner.js");
 const nexusAssistantRuntime = require("./server/nexus-assistant-runtime-entrypoint.js");
+const nexusStandardUserAgentExperience = require("./server/nexus-standard-user-agent-experience.js");
 
 function loadEnvFile(filePath) {
   if (!fs.existsSync(filePath)) return;
@@ -27061,6 +27062,7 @@ async function api(req, res, url) {
       inputMode: body.inputMode || "typed",
       previewOnly: true
     }, process.env);
+    const standardUserAgentExperience = nexusStandardUserAgentExperience.buildStandardUserAgentExperience(prompt, runtimeResponse, { flags });
     return send(res, 200, {
       assistantRuntimePreview: {
         ...flags,
@@ -27071,7 +27073,10 @@ async function api(req, res, url) {
         noLocationPermissionRequested: true,
         noNavigationAuthorized: true
       },
-      response: runtimeResponse
+      response: {
+        ...runtimeResponse,
+        standardUserAgentExperience
+      }
     });
   }
 

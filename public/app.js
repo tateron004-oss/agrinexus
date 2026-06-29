@@ -15406,6 +15406,9 @@ function normalizeAssistantRuntimePreviewCard(response = {}) {
   const text = assistantRuntimePreviewText(safeResponse) || "Nexus prepared a safe informational preview. No action has been taken.";
   const citations = Array.isArray(safeResponse.citations) ? safeResponse.citations.slice(0, 4) : [];
   const sourceLabels = Array.isArray(safeResponse.sourceLabels) ? safeResponse.sourceLabels.slice(0, 4) : [];
+  const agentExperience = safeResponse.standardUserAgentExperience && typeof safeResponse.standardUserAgentExperience === "object"
+    ? safeResponse.standardUserAgentExperience
+    : null;
   return {
     answer: text,
     sourceLabels: sourceLabels.map(item => String(item || "").trim()).filter(Boolean),
@@ -15419,6 +15422,33 @@ function normalizeAssistantRuntimePreviewCard(response = {}) {
     confidence: String(safeResponse.confidence || "low").trim(),
     freshnessStatus: String(safeResponse.freshnessStatus || "unknown").trim(),
     safeFollowUps: assistantRuntimePreviewSuggestions(safeResponse),
+    standardUserAgentExperience: agentExperience && agentExperience.schemaVersion === "nexus.nap6.standardUserAgentExperience.v1" ? {
+      answerMode: String(agentExperience.answerMode || "informational").trim(),
+      displayMode: String(agentExperience.displayMode || "flag-gated-agent-preview").trim(),
+      safeNextSteps: Array.isArray(agentExperience.safeNextSteps) ? agentExperience.safeNextSteps.slice(0, 5).map(item => String(item || "").trim()).filter(Boolean) : [],
+      followUpPrompts: Array.isArray(agentExperience.followUpPrompts) ? agentExperience.followUpPrompts.slice(0, 5).map(item => String(item || "").trim()).filter(Boolean) : [],
+      taskPlanPreview: agentExperience.taskPlanPreview && typeof agentExperience.taskPlanPreview === "object" ? {
+        nextBestStep: String(agentExperience.taskPlanPreview.nextBestStep || "").trim(),
+        steps: Array.isArray(agentExperience.taskPlanPreview.steps) ? agentExperience.taskPlanPreview.steps.slice(0, 5).map(item => String(item || "").trim()).filter(Boolean) : []
+      } : null,
+      preparationPreview: agentExperience.preparationPreview && typeof agentExperience.preparationPreview === "object" ? {
+        title: String(agentExperience.preparationPreview.title || "").trim(),
+        content: Array.isArray(agentExperience.preparationPreview.content) ? agentExperience.preparationPreview.content.slice(0, 5).map(item => String(item || "").trim()).filter(Boolean) : []
+      } : null,
+      sourceReview: agentExperience.sourceReview && typeof agentExperience.sourceReview === "object" ? {
+        sourceCount: Number(agentExperience.sourceReview.sourceCount || 0),
+        citationSummaries: Array.isArray(agentExperience.sourceReview.citationSummaries) ? agentExperience.sourceReview.citationSummaries.slice(0, 3).map(item => ({
+          sourceName: String(item.sourceName || "Source unavailable").trim(),
+          evidenceStatus: String(item.evidenceStatus || "source-unavailable").trim(),
+          freshnessStatus: String(item.freshnessStatus || "unknown").trim()
+        })) : []
+      } : null,
+      blockedUnsafeActionExplanation: String(agentExperience.blockedUnsafeActionExplanation || "").trim(),
+      noExecutionAuthorized: agentExperience.noExecutionAuthorized === true,
+      noProviderHandoff: agentExperience.noProviderHandoff === true,
+      noPermissionPromptAuthorized: agentExperience.noPermissionPromptAuthorized === true,
+      noHiddenActionMetadata: agentExperience.noHiddenActionMetadata === true
+    } : null,
     safetyNote: "Read-only preview. No action has been taken."
   };
 }
@@ -15439,6 +15469,14 @@ function renderAssistantRuntimePreviewCardMarkup(card = {}) {
   const followUps = Array.isArray(card.safeFollowUps) && card.safeFollowUps.length
     ? card.safeFollowUps.map(item => `<span>${htmlSafe(item)}</span>`).join("")
     : "<span>Ask a follow-up</span>";
+  const experience = card.standardUserAgentExperience;
+  const experienceMarkup = experience
+    && experience.noExecutionAuthorized === true
+    && experience.noProviderHandoff === true
+    && experience.noPermissionPromptAuthorized === true
+    && experience.noHiddenActionMetadata === true
+    ? renderStandardUserAgentExperienceMarkup(experience)
+    : "";
   return `
     <section
       class="nexus-assistant-runtime-preview-card"
@@ -15461,7 +15499,54 @@ function renderAssistantRuntimePreviewCardMarkup(card = {}) {
       </dl>
       <ul class="nexus-assistant-runtime-preview-citations" aria-label="Preview citation details">${citations}</ul>
       <div class="nexus-assistant-runtime-preview-followups" aria-label="Safe follow-up prompts">${followUps}</div>
+      ${experienceMarkup}
     </section>
+  `;
+}
+
+function renderStandardUserAgentExperienceMarkup(experience = {}) {
+  const list = items => Array.isArray(items) && items.length
+    ? items.map(item => `<li>${htmlSafe(item)}</li>`).join("")
+    : "<li>Review the answer and ask a safe follow-up.</li>";
+  const plan = experience.taskPlanPreview || {};
+  const prep = experience.preparationPreview || {};
+  const sourceReview = experience.sourceReview || {};
+  const sourceItems = Array.isArray(sourceReview.citationSummaries) && sourceReview.citationSummaries.length
+    ? sourceReview.citationSummaries.map(item => `<li>${htmlSafe(item.sourceName)} - evidence ${htmlSafe(item.evidenceStatus)}; freshness ${htmlSafe(item.freshnessStatus)}</li>`).join("")
+    : "<li>No additional citation summary is available.</li>";
+  const blocked = experience.blockedUnsafeActionExplanation
+    ? `<p>${htmlSafe(experience.blockedUnsafeActionExplanation)}</p>`
+    : "";
+  return `
+    <div class="nexus-assistant-runtime-agent-experience" data-nexus-nap6-agent-experience="true" data-execution-authority="false" data-provider-handoff="false" data-permission-prompt="false">
+      <div>
+        <strong>Agent preview</strong>
+        <span>${htmlSafe(experience.answerMode || "informational")} - ${htmlSafe(experience.displayMode || "flag-gated-agent-preview")}</span>
+      </div>
+      <section aria-label="Safe next steps">
+        <strong>Safe next steps</strong>
+        <ul>${list(experience.safeNextSteps)}</ul>
+      </section>
+      <section aria-label="Task plan preview">
+        <strong>Plan preview</strong>
+        <p>${htmlSafe(plan.nextBestStep || "Review the source-backed answer before choosing a manual next step.")}</p>
+        <ul>${list(plan.steps)}</ul>
+      </section>
+      <section aria-label="Preparation preview">
+        <strong>${htmlSafe(prep.title || "Preparation preview")}</strong>
+        <ul>${list(prep.content)}</ul>
+      </section>
+      <section aria-label="Source review">
+        <strong>Source review</strong>
+        <ul>${sourceItems}</ul>
+      </section>
+      <section aria-label="Safe follow-up prompts">
+        <strong>Follow-up prompts</strong>
+        <ul>${list(experience.followUpPrompts)}</ul>
+      </section>
+      ${blocked}
+      <p>Preview only - no call, message, provider contact, permission request, navigation, payment, booking, dispatch, or submission has been started.</p>
+    </div>
   `;
 }
 

@@ -521,6 +521,7 @@
     "qa:nexus-nap3-agent-task-planner": "node scripts/nexus-nap3-agent-task-planner-qa.js",
     "qa:nexus-nap4-safe-action-preparation": "node scripts/nexus-nap4-safe-action-preparation-qa.js",
     "qa:nexus-nap5-strong-follow-up-memory": "node scripts/nexus-nap5-strong-follow-up-memory-qa.js",
+    "qa:nexus-nap6-standard-user-agent-experience": "node scripts/nexus-nap6-standard-user-agent-experience-qa.js",
     "qa:nexus-sprint-k1-personalization-runtime-activation-readiness-gate": "node scripts/nexus-sprint-k1-personalization-runtime-activation-readiness-gate-qa.js",
     "qa:nexus-sprint-k2-personalization-feature-flag-contract": "node scripts/nexus-sprint-k2-personalization-feature-flag-contract-qa.js",
     "qa:nexus-sprint-k3-personalization-flag-contract-harness": "node scripts/nexus-sprint-k3-personalization-flag-contract-harness-qa.js",

@@ -3657,6 +3657,36 @@ body.admin-mode .user-workspace {
   display: block;
   overflow-wrap: anywhere;
 }
+.nexus-assistant-runtime-agent-experience {
+  display: grid;
+  gap: 8px;
+  padding-top: 8px;
+  border-top: 1px solid #d7e5df;
+}
+.nexus-assistant-runtime-agent-experience > div,
+.nexus-assistant-runtime-agent-experience section {
+  display: grid;
+  gap: 4px;
+}
+.nexus-assistant-runtime-agent-experience strong {
+  color: #173240;
+  font-size: .82rem;
+  font-weight: 900;
+}
+.nexus-assistant-runtime-agent-experience span,
+.nexus-assistant-runtime-agent-experience p,
+.nexus-assistant-runtime-agent-experience li {
+  color: #365867;
+  font-size: .8rem;
+  line-height: 1.42;
+  overflow-wrap: anywhere;
+}
+.nexus-assistant-runtime-agent-experience ul {
+  display: grid;
+  gap: 3px;
+  margin: 0;
+  padding-left: 18px;
+}
 @media (max-width: 640px) {
   .nexus-assistant-runtime-preview-facts {
     grid-template-columns: 1fr;
