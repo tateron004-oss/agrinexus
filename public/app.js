@@ -181,6 +181,7 @@ let visibleLevelOneAgentActionSuggestion = null;
 let visibleControlledActionPreviewReadiness = null;
 let nexusAutonomousWorkflowState = null;
 let nexusControlledActionQueue = [];
+let nexusUserConfirmationGateState = null;
 let visibleControlledStagedActionPreview = null;
 let visibleUserConfirmationPreview = null;
 let latestControlledActionConfirmationReadiness = null;
@@ -578,6 +579,7 @@ function handleNexusAutonomousWorkflowControl(action = "") {
   if (normalized === "cancel") {
     nexusAutonomousWorkflowState = null;
     nexusControlledActionQueue = [];
+    nexusUserConfirmationGateState = null;
     paintNexusAutonomousWorkflow();
     if (typeof paintNexusControlledActionQueue === "function") {
       paintNexusControlledActionQueue();
@@ -709,6 +711,7 @@ function buildNexusControlledActionQueueFromTaskPlan(taskPlan = {}, context = {}
 }
 
 function syncNexusControlledActionQueueFromWorkflow(state = nexusAutonomousWorkflowState, context = {}) {
+  nexusUserConfirmationGateState = null;
   if (!state?.activePlan) {
     nexusControlledActionQueue = [];
     return nexusControlledActionQueue;
@@ -721,9 +724,126 @@ function syncNexusControlledActionQueueFromWorkflow(state = nexusAutonomousWorkf
   return nexusControlledActionQueue;
 }
 
+function isNexusControlledQueueActionLocallyConfirmable(action = {}) {
+  return [
+    "internal_navigation",
+    "draft_generation",
+    "report_generation",
+    "simulated_provider_action"
+  ].includes(String(action.actionType || ""));
+}
+
+function buildNexusUserConfirmationGateFromQueueAction(action = {}, index = 0) {
+  if (!action || typeof action !== "object") return null;
+  const actionType = String(action.actionType || "local_explanation").trim();
+  const riskLevel = String(action.riskLevel || "low").trim();
+  const blocked = action.queueStatus === "blocked"
+    || actionType === "blocked_high_risk_action"
+    || actionType === "provider_ready_action"
+    || riskLevel === "high";
+  const locallyConfirmable = isNexusControlledQueueActionLocallyConfirmable(action) && !blocked;
+  return {
+    schemaVersion: "nexus-user-confirmation-gate.v1",
+    source: "nexus-controlled-action-queue.v1",
+    queueIndex: Number.isFinite(index) ? index : 0,
+    actionType,
+    description: String(action.description || "Review this Nexus action.").trim(),
+    requiredData: Array.isArray(action.requiredData) ? action.requiredData.slice(0, 6) : [],
+    riskLevel,
+    confirmationRequired: action.confirmationRequired !== false,
+    providerStatus: String(action.providerStatus || "not connected / not required").trim(),
+    safetyReason: String(action.safetyReason || "No external execution is authorized.").trim(),
+    locallyConfirmable,
+    confirmDisabledReason: locallyConfirmable ? "" : "A final execution gate or provider readiness is required before this action can run.",
+    executionAuthority: false,
+    externalExecutionAllowed: false,
+    providerHandoffAuthorized: false,
+    status: "awaiting_user_review"
+  };
+}
+
+function renderNexusUserConfirmationGate(gate = nexusUserConfirmationGateState) {
+  if (!gate || gate.schemaVersion !== "nexus-user-confirmation-gate.v1") return "";
+  const requiredData = Array.isArray(gate.requiredData) && gate.requiredData.length
+    ? gate.requiredData.join("; ")
+    : "No extra data listed yet.";
+  const confirmDisabled = gate.locallyConfirmable !== true ? "disabled aria-disabled=\"true\"" : "";
+  return `
+    <div class="nexus-user-confirmation-gate" data-nexus-user-confirmation-gate="true" data-execution-authority="false" data-provider-handoff="false" data-action-type="${htmlSafe(gate.actionType)}" data-risk-level="${htmlSafe(gate.riskLevel)}">
+      <span class="nexus-user-confirmation-gate-label">User confirmation gate</span>
+      <strong>Review before any local step</strong>
+      <span><strong>What Nexus will do:</strong> ${htmlSafe(gate.description)}</span>
+      <span><strong>Data used:</strong> ${htmlSafe(requiredData)}</span>
+      <span><strong>Risk:</strong> ${htmlSafe(gate.riskLevel)}</span>
+      <span><strong>Provider status:</strong> ${htmlSafe(gate.providerStatus)}</span>
+      <span><strong>Safety note:</strong> ${htmlSafe(gate.safetyReason)}</span>
+      ${gate.locallyConfirmable ? "" : `<span class="nexus-user-confirmation-gate-note">${htmlSafe(gate.confirmDisabledReason)}</span>`}
+      <div class="nexus-user-confirmation-gate-actions" aria-label="Nexus user confirmation controls">
+        <button type="button" data-nexus-user-confirmation-gate-control="confirm" ${confirmDisabled}>Confirm local step</button>
+        <button type="button" data-nexus-user-confirmation-gate-control="cancel">Cancel</button>
+      </div>
+      <small role="status">${htmlSafe(gate.status || "awaiting_user_review")}</small>
+    </div>
+  `;
+}
+
+function performNexusConfirmedLocalQueueAction(gate = nexusUserConfirmationGateState) {
+  if (!gate || gate.schemaVersion !== "nexus-user-confirmation-gate.v1") {
+    return "No reviewed action is available.";
+  }
+  if (gate.locallyConfirmable !== true) {
+    return "Confirmation blocked. This action still requires a final execution gate.";
+  }
+  const outcomes = {
+    internal_navigation: "Local navigation review confirmed. Nexus did not open an external route or request location.",
+    draft_generation: "Local draft prepared for review. Nexus did not send, submit, message, buy, sell, or pay.",
+    report_generation: "Local report outline prepared for review. Nexus did not write records or contact a provider.",
+    simulated_provider_action: "Simulated provider result prepared locally. Nexus did not contact a real provider."
+  };
+  return outcomes[gate.actionType] || "Local review confirmed. No external action was taken.";
+}
+
+function handleNexusUserConfirmationGateControl(action = "") {
+  if (!nexusUserConfirmationGateState) return false;
+  if (action === "cancel") {
+    nexusUserConfirmationGateState = {
+      ...nexusUserConfirmationGateState,
+      status: "Cancelled. No local or external action was taken."
+    };
+    paintNexusControlledActionQueue();
+    return true;
+  }
+  if (action === "confirm") {
+    nexusUserConfirmationGateState = {
+      ...nexusUserConfirmationGateState,
+      status: performNexusConfirmedLocalQueueAction(nexusUserConfirmationGateState)
+    };
+    paintNexusControlledActionQueue();
+    return true;
+  }
+  return false;
+}
+
+function handleNexusControlledActionQueueClick(event) {
+  const reviewButton = event.target.closest("[data-nexus-controlled-action-queue-review]");
+  const gateButton = event.target.closest("[data-nexus-user-confirmation-gate-control]");
+  if (!reviewButton && !gateButton) return false;
+  event.preventDefault();
+  event.stopPropagation();
+  if (gateButton) {
+    return handleNexusUserConfirmationGateControl(gateButton.dataset.nexusUserConfirmationGateControl);
+  }
+  const index = Number(reviewButton.dataset.nexusControlledActionQueueReview || "0");
+  const action = nexusControlledActionQueue[index];
+  nexusUserConfirmationGateState = buildNexusUserConfirmationGateFromQueueAction(action, index);
+  paintNexusControlledActionQueue();
+  return true;
+}
+
 function renderNexusControlledActionQueueCard(queue = nexusControlledActionQueue) {
   if (!Array.isArray(queue) || !queue.length) return "";
-  const items = queue.slice(0, 4).map(action => `
+  const gateHtml = renderNexusUserConfirmationGate();
+  const items = queue.slice(0, 4).map((action, index) => `
     <li data-nexus-controlled-action-queue-item="${htmlSafe(action.queueStatus)}" data-action-type="${htmlSafe(action.actionType)}" data-risk-level="${htmlSafe(action.riskLevel)}">
       <strong>${htmlSafe(action.actionType.replace(/_/g, " "))}</strong>
       <span>${htmlSafe(action.description)}</span>
@@ -731,6 +851,7 @@ function renderNexusControlledActionQueueCard(queue = nexusControlledActionQueue
       <small>Risk: ${htmlSafe(action.riskLevel)}. Confirmation: ${htmlSafe(action.confirmationRequired ? "required before any allowed local step" : "not required for explanation only")}.</small>
       <small>Provider: ${htmlSafe(action.providerStatus)}.</small>
       <small>Safety: ${htmlSafe(action.safetyReason)}</small>
+      <button type="button" data-nexus-controlled-action-queue-review="${index}">Review action</button>
     </li>
   `).join("");
   return `
@@ -738,6 +859,7 @@ function renderNexusControlledActionQueueCard(queue = nexusControlledActionQueue
       <span class="nexus-controlled-action-queue-label">Action queue</span>
       <strong>Nexus is preparing these reviewed steps.</strong>
       <ul>${items}</ul>
+      ${gateHtml}
       <small>No provider API, phone call, message, payment, location, camera, medical, pharmacy, emergency, backend write, or external action can run from this queue.</small>
     </section>
   `;
@@ -1136,6 +1258,7 @@ function clearControlledActionPreview(reason = "reset") {
   visibleControlledActionPreviewReadiness = null;
   nexusAutonomousWorkflowState = null;
   nexusControlledActionQueue = [];
+  nexusUserConfirmationGateState = null;
   visibleControlledStagedActionPreview = null;
   visibleUserConfirmationPreview = null;
   latestControlledActionConfirmationReadiness = null;
@@ -28449,6 +28572,7 @@ function bindStatic() {
     if (await handleAssistantRuntimeLocalToolClick(event)) return;
     if (handleAssistantRuntimeFollowUpClick(event)) return;
     if (handleNexusAutonomousWorkflowClick(event)) return;
+    if (handleNexusControlledActionQueueClick(event)) return;
     if (handleControlledActionConfirmationPrototypeClick(event)) return;
     const nexusVoiceDemoButton = event.target.closest("[data-nexus-voice-demo-action]");
     if (nexusVoiceDemoButton) {

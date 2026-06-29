@@ -4200,6 +4200,56 @@ body.admin-mode .user-workspace {
   border-radius: 7px;
   background: #ffffff;
 }
+.nexus-controlled-action-queue-card [data-nexus-controlled-action-queue-review],
+.nexus-user-confirmation-gate-actions button {
+  width: fit-content;
+  min-height: 30px;
+  padding: 5px 10px;
+  border: 1px solid #b9903a;
+  border-radius: 7px;
+  background: #fff8dd;
+  color: #3d2c0f;
+  font-size: .76rem;
+  font-weight: 900;
+  cursor: pointer;
+}
+.nexus-user-confirmation-gate-actions button:disabled {
+  opacity: .62;
+  cursor: not-allowed;
+}
+.nexus-user-confirmation-gate {
+  display: grid;
+  gap: 5px;
+  padding: 8px;
+  border: 1px solid rgba(45, 33, 16, .18);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, .76);
+}
+.nexus-user-confirmation-gate-label {
+  width: fit-content;
+  padding: 3px 8px;
+  border: 1px solid #c7af60;
+  border-radius: 999px;
+  background: #fffdf1;
+  color: #5f4917 !important;
+  font-size: .7rem !important;
+  font-weight: 950 !important;
+}
+.nexus-user-confirmation-gate span,
+.nexus-user-confirmation-gate small {
+  color: #2d2110;
+  font-size: .76rem;
+  line-height: 1.28;
+}
+.nexus-user-confirmation-gate-note {
+  color: #755922 !important;
+  font-weight: 850 !important;
+}
+.nexus-user-confirmation-gate-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
 .nexus-assistant-runtime-preview-card {
   display: grid;
   gap: 10px;
