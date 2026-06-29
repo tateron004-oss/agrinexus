@@ -42,8 +42,21 @@ const intentSource = sourceBetween(app, "function a100SafeAutonomyIntent", "func
   "RPM/RTM Readiness",
   "Prepare Telehealth Visit",
   "Care Team Summary",
+  "Physician Report",
   "Emergency Warning Info"
 ].forEach(label => assert(chronicSource.includes(label), `Chronic quick action should render: ${label}`));
+
+[
+  "function a100ChronicCareReport",
+  "Prepare a report for review",
+  "Session-only summary",
+  "Nexus does not diagnose or prescribe",
+  "Data source",
+  "Trend or risk signal",
+  "Evidence basis",
+  "Recommended review",
+  "Nexus did not diagnose, prescribe, adjust medication, dispatch emergency services"
+].forEach(copy => assert(app.includes(copy), `Reporting foundation should include: ${copy}`));
 
 [
   "help with diabetes",
@@ -115,7 +128,8 @@ const intentSource = sourceBetween(app, "function a100SafeAutonomyIntent", "func
 
 [
   ".a100-chronic-care-preview",
-  ".a100-chronic-care-actions"
+  ".a100-chronic-care-actions",
+  ".a100-clinician-report"
 ].forEach(selector => assert(styles.includes(selector), `Chronic care styles should include ${selector}.`));
 
 assert.equal(pkg.scripts["qa:nexus-chronic-care-assistant-preview"], "node scripts/nexus-chronic-care-assistant-preview-qa.js", "Package script should expose chronic care QA.");

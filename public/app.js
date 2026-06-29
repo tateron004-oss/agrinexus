@@ -12233,6 +12233,7 @@ function a100SafeAutonomyCardHtml(intent = {}) {
   const providerReadiness = Array.isArray(intent.providerReadiness) ? intent.providerReadiness : [];
   const routePreview = intent.routePreview && typeof intent.routePreview === "object" ? intent.routePreview : null;
   const guidance = intent.guidance && typeof intent.guidance === "object" ? intent.guidance : null;
+  const report = intent.report && typeof intent.report === "object" ? intent.report : null;
   const preparationHtml = preparation ? `
       <div class="a100-review-preparation" data-a100-preparation-category="${escapeHtml(preparation.category || "general")}">
         <div><strong>${translateText("Task goal")}</strong><span>${translateText(preparation.goal || "Prepare a safe task plan for review.")}</span></div>
@@ -12265,6 +12266,12 @@ function a100SafeAutonomyCardHtml(intent = {}) {
         <div><strong>${translateText("Safe next steps")}</strong><span>${translateText((guidance.nextSteps || []).join(" "))}</span></div>
         <div><strong>${translateText("Boundary")}</strong><span>${translateText(guidance.boundary || "Review-first. No external execution.")}</span></div>
       </div>` : "";
+  const reportHtml = report ? `
+      <div class="a100-clinician-report" data-a100-report-type="${escapeHtml(report.type || "session-only")}">
+        <div><strong>${translateText(report.title || "Physician report")}</strong><span>${translateText(report.summary || "Session-only summary prepared for review.")}</span></div>
+        ${(report.fields || []).map(field => `<div><strong>${translateText(field.label)}</strong><span>${translateText(field.value)}</span></div>`).join("")}
+        <div><strong>${translateText("Safety boundary")}</strong><span>${translateText(report.safety || "Nexus did not diagnose, prescribe, adjust medication, dispatch emergency services, call, message, connect devices, transmit data, or change records.")}</span></div>
+      </div>` : "";
   return `
     <article class="a100-runtime-card" data-a100-action="${escapeHtml(intent.action || "safe-preview")}" data-a100-section="${escapeHtml(section)}">
       <div class="a100-runtime-card-head">
@@ -12280,6 +12287,7 @@ function a100SafeAutonomyCardHtml(intent = {}) {
       ${providerHtml}
       ${routeHtml}
       ${guidanceHtml}
+      ${reportHtml}
       ${a100SafeTaskControlsHtml(section)}
     </article>
   `;
@@ -12406,8 +12414,58 @@ function a100ChronicCareQuickActions() {
     { label: "RPM/RTM Readiness", detail: "Check manual entry, device, and review-only readiness.", command: "Nexus, what is RPM?" },
     { label: "Prepare Telehealth Visit", detail: "Build a review-only visit checklist.", command: "Nexus, prepare for my telehealth visit" },
     { label: "Care Team Summary", detail: "Prepare notes for nurse, coach, clinician, or CHW review.", command: "Nexus, summarize this for my care team" },
+    { label: "Physician Report", detail: "Prepare a session-only report for review.", command: "Nexus, prepare a physician report" },
     { label: "Emergency Warning Info", detail: "Learn when to seek urgent professional help.", command: "Nexus, emergency warning info" }
   ];
+}
+
+function a100ChronicCareReport(kind = "general", command = "") {
+  const text = normalizeA100RuntimeCommand(command);
+  const reading = (text.match(/\b\d{2,3}\s*\/\s*\d{2,3}\b/) || text.match(/\b\d{2,3}\s*(mg\/dl|mmol|percent|%)?\b/gi) || ["not provided"])[0];
+  const symptoms = [
+    ["chest pain", "chest pain"],
+    ["stroke", "stroke-like symptoms"],
+    ["dizzy", "dizziness"],
+    ["headache", "headache"],
+    ["shortness of breath", "shortness of breath"],
+    ["fatigue", "fatigue"],
+    ["nausea", "nausea"]
+  ].filter(([term]) => text.includes(term)).map(([, label]) => label);
+  const medicationQuestion = /\b(medication|medicine|insulin|dose|dosage|pill|prescription|metformin)\b/.test(text) ? "mentioned; provider review required" : "not mentioned";
+  const lifestyleBarrier = /\b(food|diet|salt|activity|exercise|sleep|stress|transport|cost|access)\b/.test(text) ? "mentioned in session text" : "not provided";
+  const titleMap = {
+    diabetes: "Diabetes physician report",
+    hypertension: "Blood pressure physician report",
+    wellness: "Weight and wellness physician report",
+    rpm: "RPM/RTM physician report",
+    telehealth: "Telehealth visit report",
+    "care-team-summary": "Care team summary report",
+    general: "Chronic care physician report"
+  };
+  const riskSignal = /chest pain|stroke|200\s*\/\s*120|extremely low|severe|pass out|cannot breathe/.test(text)
+    ? "urgent review signal mentioned"
+    : reading !== "not provided"
+      ? "reading mentioned; pattern not established"
+      : "insufficient data";
+  const reviewType = riskSignal === "urgent review signal mentioned" ? "urgent professional review" : kind === "rpm" ? "program/provider readiness review" : "clinician, nurse, coach, or CHW review";
+  return {
+    type: "session-only",
+    title: titleMap[kind] || titleMap.general,
+    summary: "Prepare a report for review. Session-only summary; Nexus does not diagnose or prescribe.",
+    fields: [
+      { label: "Patient concern", value: text || "not provided" },
+      { label: "Readings mentioned", value: reading },
+      { label: "Data source", value: "session-only user text; manual entry or RPM/RTM data needed for trends" },
+      { label: "Symptoms mentioned", value: symptoms.length ? symptoms.join(", ") : "not provided" },
+      { label: "Medication questions", value: medicationQuestion },
+      { label: "Lifestyle barriers", value: lifestyleBarrier },
+      { label: "Trend or risk signal", value: riskSignal },
+      { label: "Evidence basis", value: "guideline-backed education; provider review required; insufficient data for diagnosis" },
+      { label: "Missing data", value: "confirmed readings, timing, duration, full symptoms, medication list, history, and clinician context" },
+      { label: "Recommended review", value: reviewType }
+    ],
+    safety: "Nexus did not diagnose, prescribe, adjust medication, dispatch emergency services, call, message, connect devices, transmit data, store a medical record, or change external systems."
+  };
 }
 
 function a100ChronicCareReadinessCards() {

@@ -1514,6 +1514,10 @@ body.user-mode .a100-domain-guidance {
   display: grid;
   gap: 7px;
 }
+body.user-mode .a100-clinician-report {
+  display: grid;
+  gap: 7px;
+}
 body.user-mode .a100-runtime-card-meta div {
   display: grid;
   gap: 3px;
@@ -1557,6 +1561,15 @@ body.user-mode .a100-domain-guidance div {
   border-radius: 8px;
   background: #ffffff;
 }
+body.user-mode .a100-clinician-report div {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+  padding: 8px;
+  border: 1px solid #d4e8f1;
+  border-radius: 8px;
+  background: #ffffff;
+}
 body.user-mode .a100-runtime-card-meta strong,
 body.user-mode .a100-runtime-card-meta span,
 body.user-mode .a100-review-preparation strong,
@@ -1567,7 +1580,9 @@ body.user-mode .a100-provider-readiness small,
 body.user-mode .a100-route-preview strong,
 body.user-mode .a100-route-preview span,
 body.user-mode .a100-domain-guidance strong,
-body.user-mode .a100-domain-guidance span {
+body.user-mode .a100-domain-guidance span,
+body.user-mode .a100-clinician-report strong,
+body.user-mode .a100-clinician-report span {
   color: #173240;
   font-size: .76rem;
   font-weight: 950;
@@ -1577,7 +1592,8 @@ body.user-mode .a100-runtime-card-meta span,
 body.user-mode .a100-review-preparation span,
 body.user-mode .a100-provider-readiness small,
 body.user-mode .a100-route-preview span,
-body.user-mode .a100-domain-guidance span {
+body.user-mode .a100-domain-guidance span,
+body.user-mode .a100-clinician-report span {
   color: #426257;
   font-weight: 800;
 }
