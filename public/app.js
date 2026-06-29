@@ -185,6 +185,7 @@ let nexusUserConfirmationGateState = null;
 let nexusSessionActionAuditLog = [];
 let nexusSimulatedProviderResults = [];
 let nexusInternalNavigationExecutionResults = [];
+let nexusLocalDraftMessageResults = [];
 let visibleControlledStagedActionPreview = null;
 let visibleUserConfirmationPreview = null;
 let latestControlledActionConfirmationReadiness = null;
@@ -593,6 +594,22 @@ function handleNexusInternalNavigationCaptionCommand(command = "") {
   return true;
 }
 
+function isNexusLocalDraftMessageCommand(command = "") {
+  const text = String(command || "").toLowerCase();
+  return /\b(draft|prepare|compose|write)\b[\s\S]*\b(message|email|note|question|outreach|inquiry)\b/.test(text)
+    && !/\b(send|submit|deliver|call|dial|place call|contact now)\b/.test(text);
+}
+
+function handleNexusLocalDraftMessageCaptionCommand(command = "") {
+  if (!isNexusLocalDraftMessageCommand(command)) return false;
+  clearControlledActionPreview("local-draft-message-caption-command");
+  const plan = buildNexusAutonomousTaskPlan(command, { category: "message-call-preparation" });
+  startNexusAutonomousWorkflowFromTaskPlan(plan, { command });
+  updateUserCaptionPanel("Draft review prepared. Confirming will only create a local editable draft. Nexus will not send, contact a provider, buy, sell, pay, or write backend data.", { expanded: true });
+  setVoiceResponse("Draft review prepared. Confirming will only create a local editable draft. Nexus will not send, contact a provider, buy, sell, pay, or write backend data.", false, { allowVoiceFirst: false });
+  return true;
+}
+
 function createNexusSimulatedProviderExecutionResult(gate = nexusUserConfirmationGateState) {
   if (!gate || gate.actionType !== "simulated_provider_action" || gate.locallyConfirmable !== true) {
     return null;
@@ -703,6 +720,68 @@ function renderNexusInternalNavigationExecutionResults(results = nexusInternalNa
   return `
     <div class="nexus-internal-navigation-results" data-nexus-internal-navigation-results="true" data-external-action-occurred="false" data-location-permission-requested="false" data-route-launched="false" aria-label="Nexus internal navigation results">
       <span class="nexus-internal-navigation-label">Internal navigation</span>
+      <ul>${items}</ul>
+    </div>
+  `;
+}
+
+function classifyNexusLocalDraftMessageType(gate = {}) {
+  const text = `${gate.actionType || ""} ${gate.description || ""} ${gate.requiredData || ""}`.toLowerCase();
+  if (/\b(care[- ]?team|physician|provider|doctor|clinic|chw|health)\b/.test(text)) return "care-team note";
+  if (/\b(market|agritrade|buyer|seller|listing|produce|crop sale)\b/.test(text)) return "marketplace inquiry";
+  if (/\b(job|career|workforce|employer|interview)\b/.test(text)) return "job/workforce inquiry";
+  if (/\b(training|learning|course|certificate|class)\b/.test(text)) return "training inquiry";
+  if (/\b(farmer|farm|field|crop|irrigation|soil|pest)\b/.test(text)) return "farmer outreach";
+  return "provider question";
+}
+
+function createNexusLocalDraftMessageResult(gate = nexusUserConfirmationGateState) {
+  if (!gate || gate.actionType !== "draft_generation" || gate.locallyConfirmable !== true) {
+    return null;
+  }
+  const draftType = classifyNexusLocalDraftMessageType(gate);
+  const baseTopic = sanitizeNexusSessionAuditText(gate.description || "Nexus local draft");
+  const draftByType = {
+    "farmer outreach": `Hello, I am preparing a local review note about ${baseTopic}. I would like to share the crop, field condition, timing, and support needed after I review the details.`,
+    "training inquiry": `Hello, I am interested in training support related to ${baseTopic}. Please share the program requirements, schedule, cost if any, and next review steps.`,
+    "job/workforce inquiry": `Hello, I am reviewing workforce options related to ${baseTopic}. Please share role requirements, training needs, application steps, and any documents I should prepare.`,
+    "marketplace inquiry": `Hello, I am reviewing an AgriTrade marketplace inquiry related to ${baseTopic}. Please confirm product details, quantity, quality, timing, price expectations, and safe next steps before any transaction.`,
+    "care-team note": `Care team review note: I am preparing a local summary about ${baseTopic}. Please review symptoms, readings, medication questions, barriers, and missing information before any care decision.`,
+    "provider question": `Hello, I am preparing a question related to ${baseTopic}. Please review the context, missing information, and safe next step before any provider contact.`
+  };
+  const result = {
+    schemaVersion: "nexus-local-draft-message.v1",
+    draftId: `nexus-draft-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+    label: "LOCAL DRAFT ONLY",
+    draftType,
+    subject: `Nexus ${draftType} draft`,
+    content: draftByType[draftType] || draftByType["provider question"],
+    safetyNote: "Review-only local draft. Nexus did not send, submit, message, contact a provider, buy, sell, pay, or write backend data.",
+    editableLocally: true,
+    messageSent: false,
+    providerContacted: false,
+    externalActionOccurred: false,
+    backendWriteOccurred: false,
+    executionAuthority: false,
+    createdAt: new Date().toISOString()
+  };
+  nexusLocalDraftMessageResults = [result, ...nexusLocalDraftMessageResults].slice(0, 10);
+  return result;
+}
+
+function renderNexusLocalDraftMessageResults(results = nexusLocalDraftMessageResults) {
+  if (!Array.isArray(results) || !results.length) return "";
+  const items = results.slice(0, 3).map(result => `
+    <li data-nexus-local-draft-message-result="${htmlSafe(result.draftType)}">
+      <strong>${htmlSafe(result.label)} - ${htmlSafe(result.draftType)}</strong>
+      <span>${htmlSafe(result.subject)}</span>
+      <textarea data-nexus-local-draft-message-text="true" rows="4" aria-label="Review-only Nexus local draft">${htmlSafe(result.content)}</textarea>
+      <small>${htmlSafe(result.safetyNote)}</small>
+    </li>
+  `).join("");
+  return `
+    <div class="nexus-local-draft-message-results" data-nexus-local-draft-message-results="true" data-message-sent="false" data-provider-contacted="false" data-external-action-occurred="false" data-backend-write-occurred="false" aria-label="Nexus local draft message results">
+      <span class="nexus-local-draft-message-label">Drafts for review</span>
       <ul>${items}</ul>
     </div>
   `;
@@ -884,7 +963,13 @@ function nexusControlledActionQueueTypeForPlan(taskPlan = {}) {
   const category = String(taskPlan.category || taskPlan.selectedToolId || "").toLowerCase();
   const intent = String(taskPlan.userIntent || "").toLowerCase();
   const summary = String(taskPlan.summary || taskPlan.goal || "").toLowerCase();
+  const combined = `${category} ${intent} ${summary}`;
+  const userFacingText = `${intent} ${summary}`;
+  const safeDraftIntent = /\b(draft|prepare|compose|write)\b/.test(combined)
+    && /\b(message|email|note|question|outreach|inquiry)\b/.test(combined)
+    && !/\b(send|submit|deliver|call|dial|place call|contact now)\b/.test(userFacingText);
   if (/\b(simulated|simulation|dry[- ]?run)\b/.test(category) || /\b(simulated|simulation|dry[- ]?run)\b/.test(intent) || /\b(simulated|simulation|dry[- ]?run)\b/.test(summary)) return "simulated_provider_action";
+  if (safeDraftIntent) return "draft_generation";
   if (/\b(call|phone|whatsapp|telegram|sms|email|message)\b/.test(category) || /\b(call|phone|whatsapp|telegram|sms|email|message)\b/.test(intent)) return "blocked_high_risk_action";
   if (/\b(report|physician|care[- ]?team|chw|rpm|rtm|chronic|health)\b/.test(category)) return "report_generation";
   if (/\b(market|agritrade|buyer|seller|listing|inquiry)\b/.test(category)) return "draft_generation";
@@ -941,7 +1026,9 @@ function buildNexusControlledActionQueueFromTaskPlan(taskPlan = {}, context = {}
     }),
     buildNexusControlledActionQueueItem({
       actionType,
-      description: `Prepare next step: ${taskPlan.nextSuggestedAction || taskPlan.goal || "review next step"}`,
+      description: actionType === "draft_generation"
+        ? `Prepare local draft for review: ${taskPlan.userIntent || taskPlan.goal || taskPlan.nextSuggestedAction || "review next step"}`
+        : `Prepare next step: ${taskPlan.nextSuggestedAction || taskPlan.goal || "review next step"}`,
       requiredData,
       riskLevel,
       confirmationRequired,
@@ -1056,8 +1143,13 @@ function performNexusConfirmedLocalQueueAction(gate = nexusUserConfirmationGateS
     const result = executeNexusConfirmedInternalNavigation(gate);
     return result?.status || "Internal navigation was not available. No external action occurred.";
   }
+  if (gate.actionType === "draft_generation") {
+    const result = createNexusLocalDraftMessageResult(gate);
+    return result
+      ? `Local ${result.draftType} draft prepared for review. Nexus did not send, submit, message, contact a provider, buy, sell, pay, or write backend data.`
+      : "Local draft was not available. No external action occurred.";
+  }
   const outcomes = {
-    draft_generation: "Local draft prepared for review. Nexus did not send, submit, message, buy, sell, or pay.",
     report_generation: "Local report outline prepared for review. Nexus did not write records or contact a provider."
   };
   return outcomes[gate.actionType] || "Local review confirmed. No external action was taken.";
@@ -1138,6 +1230,7 @@ function renderNexusControlledActionQueueCard(queue = nexusControlledActionQueue
   const auditHtml = renderNexusSessionActionAuditLog();
   const simulatedHtml = renderNexusSimulatedProviderExecutionResults();
   const internalNavigationHtml = renderNexusInternalNavigationExecutionResults();
+  const localDraftHtml = renderNexusLocalDraftMessageResults();
   const items = queue.slice(0, 4).map((action, index) => `
     <li data-nexus-controlled-action-queue-item="${htmlSafe(action.queueStatus)}" data-action-type="${htmlSafe(action.actionType)}" data-risk-level="${htmlSafe(action.riskLevel)}">
       <strong>${htmlSafe(action.actionType.replace(/_/g, " "))}</strong>
@@ -1155,6 +1248,7 @@ function renderNexusControlledActionQueueCard(queue = nexusControlledActionQueue
       <strong>Nexus is preparing these reviewed steps.</strong>
       <ul>${items}</ul>
       ${gateHtml}
+      ${localDraftHtml}
       ${internalNavigationHtml}
       ${simulatedHtml}
       ${auditHtml}
@@ -29213,6 +29307,7 @@ function bindStatic() {
         if (handleJarvisStyleStandardUserSafetyResponse(command)) return;
         if (handleNexusSimulationCaptionCommand(command)) return;
         if (handleNexusInternalNavigationCaptionCommand(command)) return;
+        if (handleNexusLocalDraftMessageCaptionCommand(command)) return;
         void handleVoiceCommand(command);
       } else if (action === "confirm") {
         void confirmPendingWorkflow();
@@ -29778,6 +29873,7 @@ function bindStatic() {
       if (handleJarvisStyleStandardUserSafetyResponse(command)) return;
       if (handleNexusSimulationCaptionCommand(command)) return;
       if (handleNexusInternalNavigationCaptionCommand(command)) return;
+      if (handleNexusLocalDraftMessageCaptionCommand(command)) return;
       void handleVoiceCommand(command);
       return;
     }

@@ -86,8 +86,11 @@ assert(
     && internalNavigationBody.includes("No external route"),
   "Local confirmation outcome must route internal navigation through the safe executor and state no external route."
 );
+assert(localActionBody.includes("createNexusLocalDraftMessageResult"), "Local confirmation outcome must route draft generation through the safe local draft generator.");
 [
-  "did not send, submit, message, buy, sell, or pay",
+  "did not send",
+  "contact a provider",
+  "write backend data",
   "did not write records or contact a provider",
   "did not contact a real provider"
 ].forEach(term => assert(localActionBody.includes(term), `Local confirmation outcome must include ${term}`));
@@ -132,6 +135,15 @@ const sandbox = vm.runInNewContext(`
   let nexusControlledActionQueue = [];
   function paintNexusControlledActionQueue() {}
   function recordNexusSessionActionAuditEvent() { return null; }
+  function createNexusLocalDraftMessageResult() {
+    return {
+      draftType: "marketplace inquiry",
+      messageSent: false,
+      providerContacted: false,
+      backendWriteOccurred: false,
+      executionAuthority: false
+    };
+  }
   ${localCheckBody}
   ${gateBuilderBody}
   ${gateRendererBody}
@@ -180,7 +192,7 @@ assert(sandbox.performNexusConfirmedLocalQueueAction(blockedGate).includes("requ
 
 sandbox.setGate(draftGate);
 assert.equal(sandbox.handleNexusUserConfirmationGateControl("confirm"), true, "Confirm control should be handled.");
-assert(sandbox.getGate().status.includes("Local draft prepared"), "Confirming draft should create local-only status.");
+assert(sandbox.getGate().status.includes("draft prepared for review"), "Confirming draft should create local-only status.");
 sandbox.setGate(draftGate);
 assert.equal(sandbox.handleNexusUserConfirmationGateControl("cancel"), true, "Cancel control should be handled.");
 assert(sandbox.getGate().status.includes("Cancelled"), "Cancel should record no-action status.");

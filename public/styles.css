@@ -4369,6 +4369,59 @@ body.admin-mode .user-workspace {
   font-size: .74rem;
   line-height: 1.25;
 }
+.nexus-local-draft-message-results {
+  display: grid;
+  gap: 5px;
+  padding: 8px;
+  border: 1px dashed rgba(124, 58, 237, .28);
+  border-radius: 8px;
+  background: rgba(245, 243, 255, .72);
+}
+.nexus-local-draft-message-label {
+  width: fit-content;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: #ede9fe;
+  color: #5b21b6 !important;
+  font-size: .7rem !important;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+.nexus-local-draft-message-results ul {
+  display: grid;
+  gap: 5px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.nexus-local-draft-message-results [data-nexus-local-draft-message-result] {
+  display: grid;
+  gap: 4px;
+  padding: 5px 0;
+  border-top: 1px solid rgba(124, 58, 237, .14);
+}
+.nexus-local-draft-message-results [data-nexus-local-draft-message-result]:first-child {
+  border-top: 0;
+}
+.nexus-local-draft-message-results span,
+.nexus-local-draft-message-results small {
+  color: #3b0764;
+  font-size: .74rem;
+  line-height: 1.25;
+}
+.nexus-local-draft-message-results textarea {
+  width: 100%;
+  min-height: 92px;
+  resize: vertical;
+  padding: 8px;
+  border: 1px solid rgba(124, 58, 237, .22);
+  border-radius: 8px;
+  background: #ffffff;
+  color: #2e1065;
+  font: inherit;
+  font-size: .78rem;
+  line-height: 1.35;
+}
 .nexus-assistant-runtime-preview-card {
   display: grid;
   gap: 10px;

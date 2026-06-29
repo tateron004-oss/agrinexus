@@ -574,6 +574,7 @@
     "qa:nexus-capability-sprint-6-provider-adapter-contracts": "node scripts/nexus-capability-sprint-6-provider-adapter-contracts-qa.js",
     "qa:nexus-capability-sprint-7-simulated-provider-execution-mode": "node scripts/nexus-capability-sprint-7-simulated-provider-execution-mode-qa.js",
     "qa:nexus-capability-sprint-8-internal-navigation-execution": "node scripts/nexus-capability-sprint-8-internal-navigation-execution-qa.js",
+    "qa:nexus-capability-sprint-9-draft-message-generation": "node scripts/nexus-capability-sprint-9-draft-message-generation-qa.js",
     "qa:nexus-a100-1-standard-user-capability-routing": "node scripts/nexus-a100-1-standard-user-capability-routing-qa.js",
     "qa:nexus-a100-2-low-risk-task-cards": "node scripts/nexus-a100-2-low-risk-task-cards-qa.js",
     "qa:nexus-a100-3-agriculture-support": "node scripts/nexus-a100-3-agriculture-support-qa.js",
