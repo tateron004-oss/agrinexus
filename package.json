@@ -575,6 +575,7 @@
     "qa:nexus-a100-7-map-provider-readiness": "node scripts/nexus-a100-7-map-provider-readiness-qa.js",
     "qa:nexus-a100-8-route-planning-preview": "node scripts/nexus-a100-8-route-planning-preview-qa.js",
     "qa:nexus-a100-9-provider-status-surfaces": "node scripts/nexus-a100-9-provider-status-surfaces-qa.js",
+    "qa:nexus-a100-10-voice-typed-command-parity": "node scripts/nexus-a100-10-voice-typed-command-parity-qa.js",
     "qa:nexus-sprint-k1-personalization-runtime-activation-readiness-gate": "node scripts/nexus-sprint-k1-personalization-runtime-activation-readiness-gate-qa.js",
     "qa:nexus-sprint-k2-personalization-feature-flag-contract": "node scripts/nexus-sprint-k2-personalization-feature-flag-contract-qa.js",
     "qa:nexus-sprint-k3-personalization-flag-contract-harness": "node scripts/nexus-sprint-k3-personalization-flag-contract-harness-qa.js",

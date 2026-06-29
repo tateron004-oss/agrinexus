@@ -388,6 +388,7 @@ const suites = {
     "scripts/nexus-a100-7-map-provider-readiness-qa.js",
     "scripts/nexus-a100-8-route-planning-preview-qa.js",
     "scripts/nexus-a100-9-provider-status-surfaces-qa.js",
+    "scripts/nexus-a100-10-voice-typed-command-parity-qa.js",
     "scripts/nexus-sprint-k1-personalization-runtime-activation-readiness-gate-qa.js",
     "scripts/nexus-sprint-k2-personalization-feature-flag-contract-qa.js",
     "scripts/nexus-sprint-k3-personalization-flag-contract-harness-qa.js",
