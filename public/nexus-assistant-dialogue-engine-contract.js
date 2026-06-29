@@ -106,6 +106,17 @@
     return /\b(weather|rain|forecast|temperature)\b/.test(text);
   }
 
+  function isMarketplaceReviewOnlyRequest(text) {
+    return /\b(agritrade|marketplace|market options|market prices?|crop prices?)\b/.test(text)
+      && /\b(browse|review|compare|explain|show|look at|options|information|info|prices?)\b/.test(text)
+      && !/\b(buy|sell|purchase|pay|checkout|order|reserve|offer|contact|message|call|list|post|submit)\b/.test(text);
+  }
+
+  function isMarketplaceExecutionRequest(text) {
+    return /\b(buy|sell|purchase|pay|checkout|order|reserve|offer|contact|message|call|list|post|submit)\b/.test(text)
+      && /\b(agritrade|marketplace|market|crop|fertili[sz]er|buyer|seller|produce)\b/.test(text);
+  }
+
   function stableId(prefix, value) {
     return `${prefix}-${String(value || "dialogue").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 54) || "dialogue"}`;
   }
@@ -169,12 +180,13 @@
       else if (includesAny(lower, ["resume", "cover letter", "cv"])) intentType = "resume-cover-letter-preparation";
       else if (includesAny(lower, ["jobs", "job", "career", "employment", "hiring"])) intentType = "job-search";
       else if (includesAny(lower, ["music", "spotify", "radio", "playlist", "song", "training video", "training videos", "agriculture video", "agriculture videos"])) intentType = "music-media";
+      else if (isMarketplaceReviewOnlyRequest(lower)) intentType = "agriculture-context";
       else if (includesAny(lower, ["crop", "farm", "soil", "irrigation", "agriculture", "market price"])) intentType = "agriculture-context";
       else if (includesAny(lower, ["provider status", "connected provider", "available provider"])) intentType = "provider-status";
       else if (includesAny(lower, ["emergency", "ambulance", "police"])) intentType = "emergency-intent";
       else if (includesAny(lower, ["message", "call", "whatsapp", "telegram", "text "])) intentType = "calls-messaging-intent";
       else if (includesAny(lower, ["book appointment", "schedule appointment", "appointment"])) intentType = "appointment-service-request";
-      else if (includesAny(lower, ["buy", "sell", "marketplace", "agritrade"])) intentType = "marketplace-request";
+      else if (isMarketplaceExecutionRequest(lower) || includesAny(lower, ["buy", "sell", "marketplace", "agritrade"])) intentType = "marketplace-request";
       else if (includesAny(lower, ["pay", "payment", "mobile money", "send money"])) intentType = "payment-mobile-money-intent";
       else if (includesAny(lower, ["share my location", "find my location", "dispatch", "transportation"])) intentType = "location-dispatch-intent";
       else if (includesAny(lower, ["camera", "photo", "image", "picture"])) intentType = "camera-image-intent";
