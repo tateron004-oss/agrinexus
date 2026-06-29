@@ -76,6 +76,16 @@ const intentSource = sourceBetween(app, "function a100SafeAutonomyIntent", "func
 ].forEach(prompt => assert(intentSource.toLowerCase().includes(prompt.toLowerCase()) || chronicSource.toLowerCase().includes(prompt.toLowerCase()), `Chronic prompt should route: ${prompt}`));
 
 [
+  "What is A1c?",
+  "A1c education",
+  "hypo/hyperglycemia safety",
+  "Diabetes focus",
+  "Diabetes evidence label",
+  "RPM glucose data needed for trend",
+  "food/activity context"
+].forEach(copy => assert(app.includes(copy), `Diabetes support/reporting should include: ${copy}`));
+
+[
   "id: \"report\"",
   "action: `low-risk-chronic-${chronicMatched.id}`",
   "Care Team Report",

@@ -12442,6 +12442,20 @@ function a100ChronicCareReport(kind = "general", command = "") {
     "care-team-summary": "Care team summary report",
     general: "Chronic care physician report"
   };
+  const conditionFields = {
+    diabetes: [
+      { label: "Diabetes focus", value: "blood sugar concern, glucose reading collection, A1c education, hypo/hyperglycemia safety, food/activity context, and diabetes telehealth prep" },
+      { label: "Diabetes evidence label", value: "guideline-backed education; RPM glucose data needed for trend; provider review required" }
+    ],
+    hypertension: [
+      { label: "Blood pressure focus", value: "home BP reading checklist, measurement context, warning signs, sodium/activity education, and provider-review prep" },
+      { label: "Blood pressure evidence label", value: "guideline-backed education; repeated BP data needed for trend; provider review required" }
+    ],
+    wellness: [
+      { label: "Wellness focus", value: "weight goal, nutrition, activity, sleep, stress, behavior barriers, and coach/provider review prep" },
+      { label: "Wellness evidence label", value: "education and RTM behavior check-in; no medication or product recommendation" }
+    ]
+  };
   const riskSignal = /chest pain|stroke|200\s*\/\s*120|extremely low|severe|pass out|cannot breathe/.test(text)
     ? "urgent review signal mentioned"
     : reading !== "not provided"
@@ -12460,6 +12474,7 @@ function a100ChronicCareReport(kind = "general", command = "") {
       { label: "Medication questions", value: medicationQuestion },
       { label: "Lifestyle barriers", value: lifestyleBarrier },
       { label: "Trend or risk signal", value: riskSignal },
+      ...(conditionFields[kind] || []),
       { label: "Evidence basis", value: "guideline-backed education; provider review required; insufficient data for diagnosis" },
       { label: "Missing data", value: "confirmed readings, timing, duration, full symptoms, medication list, history, and clinician context" },
       { label: "Recommended review", value: reviewType }
@@ -12484,9 +12499,9 @@ function a100ChronicCareGuidanceCard(kind = "general") {
     diabetes: {
       domain: "chronic-care-diabetes",
       focus: "Diabetes education, blood sugar questions, telehealth visit preparation, and safe care navigation.",
-      prompts: ["Help with diabetes.", "My blood sugar is high.", "Prepare diabetes visit questions.", "What should I tell my care team?"],
+      prompts: ["Help with diabetes.", "My blood sugar is high.", "My glucose is low.", "What is A1c?", "Prepare diabetes visit questions.", "What should I tell my care team?"],
       collect: ["Recent blood sugar readings if already known.", "Symptoms and timing.", "Meals, activity, sleep, illness, and hydration context.", "Medicines taken as prescribed.", "Questions for a clinician, nurse, coach, or community health worker."],
-      nextSteps: ["Write down readings and symptoms.", "Prepare questions for telehealth review.", "Ask a qualified care professional about medication or treatment decisions.", "Use urgent care or local emergency help for severe symptoms."],
+      nextSteps: ["Write down readings and symptoms.", "Ask about A1c, high and low glucose patterns, food, activity, and sick-day questions.", "Prepare questions for telehealth review.", "Ask a qualified care professional about medication or treatment decisions.", "Use urgent care or local emergency help for severe symptoms."],
       boundary: "Education only. Nexus does not diagnose diabetes problems, adjust insulin or medicine, connect devices, send data, or replace professional care."
     },
     hypertension: {
@@ -22952,7 +22967,7 @@ function a100SafeAutonomyIntent(command = "") {
     };
   }
   const chronicMatched = [
-    { id: "diabetes", pattern: /\b(diabetes|diabetic|blood sugar|glucose|a1c)\b.*\b(help|support|high|low|question|prepare|review|visit)\b|\bhelp with diabetes\b|\bmy blood sugar is high\b/ },
+    { id: "diabetes", pattern: /\b(diabetes|diabetic|blood sugar|glucose|a1c)\b.*\b(help|support|high|low|question|prepare|review|visit|education|mean|means)\b|\bhelp with diabetes\b|\bmy blood sugar is high\b|\bwhat is a1c\b|\bmy glucose is low\b/ },
     { id: "hypertension", pattern: /\b(blood pressure|hypertension|bp)\b.*\b(help|support|high|question|prepare|review|visit)\b|\bhelp me with blood pressure\b|\bmy blood pressure is high\b/ },
     { id: "wellness", pattern: /\b(obesity|weight|wellness|lose weight|nutrition|diet|activity)\b.*\b(help|support|safe|safely|question|prepare|review)\b|\bhelp me lose weight safely\b|\bhelp with obesity\b/ },
     { id: "rpm", pattern: /\b(what is rpm|what is rtm|rpm|rtm|remote patient monitoring|remote therapeutic monitoring|device connected|monitoring readiness)\b/ },
@@ -22970,7 +22985,7 @@ function a100SafeAutonomyIntent(command = "") {
       report: /care team/.test(text) ? "Care Team Report" : "Physician Report"
     };
     const responseMap = {
-      diabetes: "I can help prepare diabetes questions for a telehealth visit in review-only mode. This is plain-language education and care navigation for African chronic care settings; Nexus does not diagnose, change insulin or medicine, connect devices, send data, or replace a clinician.",
+      diabetes: "I can help prepare diabetes questions for a telehealth visit in review-only mode, including blood sugar concerns, A1c education, high/low glucose warning questions, food/activity context, and what to collect for review. Nexus does not diagnose, change insulin or medicine, connect devices, send data, or replace a clinician.",
       hypertension: "I can help prepare blood pressure questions and warning-sign education in review-only mode. Nexus does not diagnose, change medicine, dispatch help, connect devices, send data, or replace urgent professional care.",
       wellness: "I can help prepare weight and wellness questions safely for a provider, coach, nurse, or community health worker. Nexus gives general education only and will not prescribe a diet, medicine, purchase, or paid plan.",
       rpm: "RPM means remote patient monitoring, and RTM means remote therapeutic monitoring. Nexus can explain readiness and prepare questions, but no device is connected, no readings are transmitted, and provider review is required.",
