@@ -405,6 +405,7 @@ const suites = {
     "scripts/nexus-a100-24-location-permission-readiness-qa.js",
     "scripts/nexus-a100-25-communications-draft-readiness-qa.js",
     "scripts/nexus-a100-26-payment-purchase-boundaries-qa.js",
+    "scripts/nexus-a100-27-health-access-preparation-qa.js",
     "scripts/nexus-sprint-k1-personalization-runtime-activation-readiness-gate-qa.js",
     "scripts/nexus-sprint-k2-personalization-feature-flag-contract-qa.js",
     "scripts/nexus-sprint-k3-personalization-flag-contract-harness-qa.js",
