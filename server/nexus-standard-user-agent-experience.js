@@ -2,6 +2,8 @@ const capabilityRouter = require("./nexus-assistant-capability-router.js");
 const taskPlanner = require("./nexus-agent-task-planner.js");
 const safePreparation = require("./nexus-safe-action-preparation.js");
 const followUpMemory = require("./nexus-strong-follow-up-memory.js");
+const autonomyPlanner = require("./nexus-autonomy-workflow-planner.js");
+const autonomyArtifacts = require("./nexus-autonomy-workflow-artifacts.js");
 
 const BLOCKED_UNSAFE_ACTIONS = Object.freeze([
   "provider contact",
@@ -173,6 +175,67 @@ function buildArtifactPreviews(prompt, routerDecision = {}, runtimeResponse = {}
   return Object.freeze(artifacts.slice(0, 3));
 }
 
+function buildStandardUserWorkflowCard(prompt, enabled) {
+  if (enabled !== true) return null;
+  const plan = autonomyPlanner.buildAutonomyWorkflowPlan(prompt);
+  if (!autonomyPlanner.isSafeAutonomyWorkflowPlan(plan) || plan.status !== "planned") return null;
+  const artifacts = autonomyArtifacts.createAutonomyWorkflowArtifacts(plan).slice(0, 4);
+  const currentStep = plan.steps[plan.currentStepIndex] || plan.steps[0];
+  return Object.freeze({
+    schemaVersion: "nexus.aut6.standardUserWorkflowCard.v1",
+    enabled: true,
+    workflowId: plan.workflowId,
+    workflowType: plan.workflowType,
+    goal: plan.userGoal,
+    status: "preview-only",
+    currentStep: Object.freeze({
+      stepId: currentStep.stepId,
+      stepType: currentStep.stepType,
+      title: currentStep.title,
+      description: currentStep.description,
+      index: plan.currentStepIndex
+    }),
+    steps: Object.freeze(plan.steps.slice(0, 7).map(step => Object.freeze({
+      stepId: step.stepId,
+      stepType: step.stepType,
+      title: step.title,
+      description: step.description,
+      status: step.status,
+      readOnly: step.readOnly === true,
+      executionProhibited: step.executionProhibited === true
+    }))),
+    safeArtifacts: Object.freeze(artifacts.map(artifact => Object.freeze({
+      artifactId: artifact.artifactId,
+      artifactType: artifact.artifactType,
+      title: artifact.title,
+      sourceRefs: artifact.sourceRefs,
+      noExecutionAuthorized: artifact.noExecutionAuthorized === true
+    }))),
+    safeNextSteps: Object.freeze(plan.safeUserActions.slice(0, 5)),
+    sourceDetails: Object.freeze(plan.providerQueries.slice(0, 5).map(query => Object.freeze({
+      sourceId: query,
+      mode: "read-only",
+      providerContactAuthorized: false
+    }))),
+    safeControls: Object.freeze(["continue", "next step", "back", "restart", "cancel", "make checklist", "compare", "draft questions", "explain"]),
+    blockedControls: Object.freeze(["call", "message", "apply", "buy", "pay", "book", "dispatch", "send location", "submit"]),
+    blockedActionsNote: "Nexus can guide this workflow, prepare artifacts, and explain next steps, but it cannot call, message, apply, buy, pay, book, dispatch, submit, share location, or contact a provider.",
+    safetyNote: "Read-only workflow preview. No action has been taken.",
+    dataAttributes: Object.freeze({
+      "data-read-only": "true",
+      "data-execution-authority": "false",
+      "data-provider-handoff": "false"
+    }),
+    noExecutionAuthorized: true,
+    noProviderContactAuthorized: true,
+    noProviderHandoff: true,
+    noLocationPermissionRequested: true,
+    noPermissionPromptAuthorized: true,
+    noBackendActionWritePerformed: true,
+    noNavigationAuthorized: true
+  });
+}
+
 function buildStandardUserAgentExperience(prompt, runtimeResponse = {}, options = {}) {
   const normalizedPrompt = text(prompt);
   const flags = options.flags && typeof options.flags === "object" ? options.flags : {};
@@ -238,6 +301,7 @@ function buildStandardUserAgentExperience(prompt, runtimeResponse = {}, options 
     }),
     sourceReview: sourceReviewFromRuntime(runtimeResponse),
     artifactPreviews: buildArtifactPreviews(normalizedPrompt, routerDecision, runtimeResponse, plan, preparation),
+    standardUserWorkflowCard: buildStandardUserWorkflowCard(normalizedPrompt, enabled),
     blockedUnsafeActionExplanation: routerDecision.allowed === false
       ? "Nexus can explain and prepare safe review material, but it cannot execute this request or contact anyone."
       : "",
@@ -274,6 +338,15 @@ function isSafeStandardUserAgentExperience(experience) {
   if (!experience.sourceReview || experience.sourceReview.reviewOnly !== true || experience.sourceReview.noExternalNavigation !== true) return false;
   if (!Array.isArray(experience.artifactPreviews) || experience.artifactPreviews.length < 1) return false;
   if (!experience.artifactPreviews.every(artifact => artifact && artifact.executionAuthority === false && artifact.providerHandoffAllowed === false && artifact.sendAllowed === false && artifact.submitAllowed === false)) return false;
+  if (experience.standardUserWorkflowCard && (
+    experience.standardUserWorkflowCard.schemaVersion !== "nexus.aut6.standardUserWorkflowCard.v1" ||
+    experience.standardUserWorkflowCard.noExecutionAuthorized !== true ||
+    experience.standardUserWorkflowCard.noProviderHandoff !== true ||
+    experience.standardUserWorkflowCard.noPermissionPromptAuthorized !== true ||
+    experience.standardUserWorkflowCard.dataAttributes?.["data-read-only"] !== "true" ||
+    experience.standardUserWorkflowCard.dataAttributes?.["data-execution-authority"] !== "false" ||
+    experience.standardUserWorkflowCard.dataAttributes?.["data-provider-handoff"] !== "false"
+  )) return false;
   if (!Array.isArray(experience.blockedActions) || experience.blockedActions.length < 8) return false;
   if (!experience.sessionMemoryPreview || experience.sessionMemoryPreview.sessionOnly !== true || experience.sessionMemoryPreview.noPersistence !== true) return false;
   if (experience.noExecutionAuthorized !== true) return false;
@@ -287,6 +360,7 @@ function isSafeStandardUserAgentExperience(experience) {
 module.exports = Object.freeze({
   BLOCKED_UNSAFE_ACTIONS,
   buildArtifactPreviews,
+  buildStandardUserWorkflowCard,
   buildStandardUserAgentExperience,
   isSafeStandardUserAgentExperience
 });

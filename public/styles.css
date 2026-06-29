@@ -3775,8 +3775,78 @@ body.admin-mode .user-workspace {
   background: #f2f8f6;
   font-weight: 900;
 }
+.nexus-aut-workflow-card {
+  display: grid;
+  gap: 8px;
+  padding: 9px;
+  border: 1px solid #d4e2dd;
+  border-radius: 8px;
+  background: #fff;
+}
+.nexus-aut-workflow-card-head,
+.nexus-aut-workflow-card-meta {
+  display: grid;
+  gap: 5px;
+}
+.nexus-aut-workflow-card-head span {
+  color: #456b60;
+  font-size: .78rem;
+}
+.nexus-aut-workflow-card-meta {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin: 0;
+}
+.nexus-aut-workflow-card-meta div {
+  min-width: 0;
+}
+.nexus-aut-workflow-card-meta dt {
+  color: #49625f;
+  font-size: .7rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+.nexus-aut-workflow-card-meta dd {
+  margin: 0;
+  color: #173240;
+  font-size: .8rem;
+  font-weight: 850;
+  overflow-wrap: anywhere;
+}
+.nexus-aut-workflow-card ol,
+.nexus-aut-workflow-card ul {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding-left: 18px;
+}
+.nexus-aut-workflow-card li em,
+.nexus-aut-workflow-card li span {
+  display: block;
+  color: #49625f;
+  font-size: .76rem;
+}
+.nexus-aut-workflow-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.nexus-aut-workflow-controls button[disabled] {
+  min-height: 28px;
+  padding: 5px 8px;
+  border: 1px solid #d7e5df;
+  border-radius: 8px;
+  background: #f5f8f7;
+  color: #647773;
+  font: inherit;
+  font-size: .76rem;
+  font-weight: 850;
+  cursor: not-allowed;
+}
 @media (max-width: 640px) {
   .nexus-assistant-runtime-preview-facts {
+    grid-template-columns: 1fr;
+  }
+  .nexus-aut-workflow-card-meta {
     grid-template-columns: 1fr;
   }
 }

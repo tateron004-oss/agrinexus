@@ -15556,6 +15556,47 @@ function normalizeAssistantRuntimePreviewCard(response = {}) {
         bookingAllowed: artifact?.bookingAllowed === true,
         paymentAllowed: artifact?.paymentAllowed === true
       })).filter(artifact => artifact.executionAuthority !== true && artifact.providerHandoffAllowed !== true && artifact.sendAllowed !== true && artifact.submitAllowed !== true && artifact.bookingAllowed !== true && artifact.paymentAllowed !== true) : [],
+      standardUserWorkflowCard: agentExperience.standardUserWorkflowCard
+        && agentExperience.standardUserWorkflowCard.schemaVersion === "nexus.aut6.standardUserWorkflowCard.v1"
+        && agentExperience.standardUserWorkflowCard.noExecutionAuthorized === true
+        && agentExperience.standardUserWorkflowCard.noProviderHandoff === true
+        && agentExperience.standardUserWorkflowCard.noPermissionPromptAuthorized === true
+        && agentExperience.standardUserWorkflowCard.dataAttributes?.["data-read-only"] === "true"
+        && agentExperience.standardUserWorkflowCard.dataAttributes?.["data-execution-authority"] === "false"
+        && agentExperience.standardUserWorkflowCard.dataAttributes?.["data-provider-handoff"] === "false"
+        ? {
+          workflowId: String(agentExperience.standardUserWorkflowCard.workflowId || "").trim(),
+          workflowType: String(agentExperience.standardUserWorkflowCard.workflowType || "").trim(),
+          goal: String(agentExperience.standardUserWorkflowCard.goal || "").trim(),
+          status: String(agentExperience.standardUserWorkflowCard.status || "preview-only").trim(),
+          currentStep: agentExperience.standardUserWorkflowCard.currentStep && typeof agentExperience.standardUserWorkflowCard.currentStep === "object" ? {
+            title: String(agentExperience.standardUserWorkflowCard.currentStep.title || "").trim(),
+            description: String(agentExperience.standardUserWorkflowCard.currentStep.description || "").trim(),
+            index: Number(agentExperience.standardUserWorkflowCard.currentStep.index || 0)
+          } : null,
+          steps: Array.isArray(agentExperience.standardUserWorkflowCard.steps) ? agentExperience.standardUserWorkflowCard.steps.slice(0, 7).map(step => ({
+            title: String(step?.title || "").trim(),
+            description: String(step?.description || "").trim(),
+            status: String(step?.status || "pending").trim(),
+            readOnly: step?.readOnly === true,
+            executionProhibited: step?.executionProhibited === true
+          })).filter(step => step.title) : [],
+          safeArtifacts: Array.isArray(agentExperience.standardUserWorkflowCard.safeArtifacts) ? agentExperience.standardUserWorkflowCard.safeArtifacts.slice(0, 4).map(artifact => ({
+            artifactType: String(artifact?.artifactType || "checklist").trim(),
+            title: String(artifact?.title || "Safe artifact").trim(),
+            noExecutionAuthorized: artifact?.noExecutionAuthorized === true
+          })).filter(artifact => artifact.noExecutionAuthorized === true) : [],
+          safeNextSteps: Array.isArray(agentExperience.standardUserWorkflowCard.safeNextSteps) ? agentExperience.standardUserWorkflowCard.safeNextSteps.slice(0, 5).map(item => String(item || "").trim()).filter(Boolean) : [],
+          sourceDetails: Array.isArray(agentExperience.standardUserWorkflowCard.sourceDetails) ? agentExperience.standardUserWorkflowCard.sourceDetails.slice(0, 5).map(item => ({
+            sourceId: String(item?.sourceId || "read-only-source").trim(),
+            mode: String(item?.mode || "read-only").trim()
+          })) : [],
+          safeControls: Array.isArray(agentExperience.standardUserWorkflowCard.safeControls) ? agentExperience.standardUserWorkflowCard.safeControls.slice(0, 9).map(item => String(item || "").trim()).filter(Boolean) : [],
+          blockedControls: Array.isArray(agentExperience.standardUserWorkflowCard.blockedControls) ? agentExperience.standardUserWorkflowCard.blockedControls.slice(0, 10).map(item => String(item || "").trim()).filter(Boolean) : [],
+          blockedActionsNote: String(agentExperience.standardUserWorkflowCard.blockedActionsNote || "").trim(),
+          safetyNote: String(agentExperience.standardUserWorkflowCard.safetyNote || "Read-only workflow preview. No action has been taken.").trim()
+        }
+        : null,
       blockedUnsafeActionExplanation: String(agentExperience.blockedUnsafeActionExplanation || "").trim(),
       noExecutionAuthorized: agentExperience.noExecutionAuthorized === true,
       noProviderHandoff: agentExperience.noProviderHandoff === true,
@@ -15644,6 +15685,78 @@ function renderAssistantRuntimePreviewCardMarkup(card = {}) {
   `;
 }
 
+function renderStandardUserWorkflowCardMarkup(card = {}) {
+  if (!card || typeof card !== "object") return "";
+  const list = items => Array.isArray(items) && items.length
+    ? items.map(item => `<li>${htmlSafe(item)}</li>`).join("")
+    : "<li>Review the workflow preview before choosing a manual next step.</li>";
+  const steps = Array.isArray(card.steps) && card.steps.length
+    ? card.steps.map((step, index) => `
+      <li data-workflow-step-index="${htmlSafe(String(index))}" data-read-only="true" data-execution-authority="false" data-provider-handoff="false">
+        <strong>${htmlSafe(step.title)}</strong>
+        <span>${htmlSafe(step.description || "Read-only step")}</span>
+        <em>${htmlSafe(step.status || "pending")}</em>
+      </li>
+    `).join("")
+    : "<li data-read-only=\"true\" data-execution-authority=\"false\" data-provider-handoff=\"false\">No workflow steps are available.</li>";
+  const artifacts = Array.isArray(card.safeArtifacts) && card.safeArtifacts.length
+    ? card.safeArtifacts.map(artifact => `<li>${htmlSafe(artifact.title)} <span>${htmlSafe(artifact.artifactType)}</span></li>`).join("")
+    : "<li>No safe artifacts prepared yet.</li>";
+  const sources = Array.isArray(card.sourceDetails) && card.sourceDetails.length
+    ? card.sourceDetails.map(source => `<li>${htmlSafe(source.sourceId)} <span>${htmlSafe(source.mode || "read-only")}</span></li>`).join("")
+    : "<li>No provider/source query is required yet.</li>";
+  const safeControls = Array.isArray(card.safeControls) && card.safeControls.length
+    ? card.safeControls.map(control => `<button type="button" disabled aria-disabled="true" data-nexus-aut-workflow-control="${htmlSafe(control)}">${htmlSafe(control)}</button>`).join("")
+    : "";
+  return `
+    <section
+      class="nexus-aut-workflow-card"
+      data-nexus-aut-workflow-card="true"
+      data-read-only="true"
+      data-execution-authority="false"
+      data-provider-handoff="false"
+      aria-label="Nexus controlled workflow preview"
+    >
+      <div class="nexus-aut-workflow-card-head">
+        <strong>Controlled workflow</strong>
+        <span>${htmlSafe(card.safetyNote || "Read-only workflow preview. No action has been taken.")}</span>
+      </div>
+      <dl class="nexus-aut-workflow-card-meta">
+        <div><dt>Goal</dt><dd>${htmlSafe(card.goal || "Safe workflow")}</dd></div>
+        <div><dt>Type</dt><dd>${htmlSafe(card.workflowType || "general_assistant_plan_workflow")}</dd></div>
+        <div><dt>Status</dt><dd>${htmlSafe(card.status || "preview-only")}</dd></div>
+        <div><dt>Current step</dt><dd>${htmlSafe(card.currentStep?.title || "Review the plan")}</dd></div>
+      </dl>
+      <section aria-label="Workflow progress">
+        <strong>Progress</strong>
+        <ol>${steps}</ol>
+      </section>
+      <section aria-label="Safe workflow artifacts">
+        <strong>Safe artifacts</strong>
+        <ul>${artifacts}</ul>
+      </section>
+      <section aria-label="Read-only source details">
+        <strong>Source details</strong>
+        <ul>${sources}</ul>
+      </section>
+      <section aria-label="Safe workflow controls">
+        <strong>Safe controls</strong>
+        <div class="nexus-aut-workflow-controls">${safeControls}</div>
+        <p>Controls are review-only in this phase. They do not call providers, write backend state, request permissions, navigate, or execute actions.</p>
+      </section>
+      <section aria-label="Safe next steps">
+        <strong>Safe next steps</strong>
+        <ul>${list(card.safeNextSteps)}</ul>
+      </section>
+      <section aria-label="Blocked workflow actions">
+        <strong>Blocked actions</strong>
+        <p>${htmlSafe(card.blockedActionsNote || "Unsafe actions remain blocked.")}</p>
+        <ul>${list(card.blockedControls)}</ul>
+      </section>
+    </section>
+  `;
+}
+
 function renderStandardUserAgentExperienceMarkup(experience = {}) {
   const list = items => Array.isArray(items) && items.length
     ? items.map(item => `<li>${htmlSafe(item)}</li>`).join("")
@@ -15673,6 +15786,7 @@ function renderStandardUserAgentExperienceMarkup(experience = {}) {
       return `<article data-nexus-safe-artifact-preview="true" data-artifact-type="${htmlSafe(type)}" data-execution-authority="false" data-provider-handoff="false"><strong>${title}</strong><ul>${list(content)}</ul></article>`;
     }).join("")
     : `<article data-nexus-safe-artifact-preview="true" data-artifact-type="checklist" data-execution-authority="false" data-provider-handoff="false"><strong>Safe artifact preview</strong><ul>${list([])}</ul></article>`;
+  const workflowCardMarkup = experience.standardUserWorkflowCard ? renderStandardUserWorkflowCardMarkup(experience.standardUserWorkflowCard) : "";
   return `
     <div class="nexus-assistant-runtime-agent-experience" data-nexus-nap6-agent-experience="true" data-execution-authority="false" data-provider-handoff="false" data-permission-prompt="false">
       <div>
@@ -15712,6 +15826,7 @@ function renderStandardUserAgentExperienceMarkup(experience = {}) {
         <strong>Safe artifact previews</strong>
         ${artifactRows}
       </section>
+      ${workflowCardMarkup}
       <section aria-label="Safe follow-up prompts">
         <strong>Follow-up prompts</strong>
         <ul>${list(experience.followUpPrompts)}</ul>

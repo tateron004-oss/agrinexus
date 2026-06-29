@@ -541,6 +541,7 @@
     "qa:nexus-aut3-workflow-step-runner": "node scripts/nexus-aut3-workflow-step-runner-qa.js",
     "qa:nexus-aut4-workflow-session-state": "node scripts/nexus-aut4-workflow-session-state-qa.js",
     "qa:nexus-aut5-workflow-artifacts": "node scripts/nexus-aut5-workflow-artifacts-qa.js",
+    "qa:nexus-aut6-standard-user-workflow-card": "node scripts/nexus-aut6-standard-user-workflow-card-qa.js",
     "qa:nexus-sprint-k1-personalization-runtime-activation-readiness-gate": "node scripts/nexus-sprint-k1-personalization-runtime-activation-readiness-gate-qa.js",
     "qa:nexus-sprint-k2-personalization-feature-flag-contract": "node scripts/nexus-sprint-k2-personalization-feature-flag-contract-qa.js",
     "qa:nexus-sprint-k3-personalization-flag-contract-harness": "node scripts/nexus-sprint-k3-personalization-flag-contract-harness-qa.js",
