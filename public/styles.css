@@ -4772,6 +4772,46 @@ body.admin-mode .user-workspace {
   font-size: .74rem;
   line-height: 1.25;
 }
+.nexus-marketplace-inquiry-preparation-results {
+  display: grid;
+  gap: 5px;
+  padding: 8px;
+  border: 1px dashed rgba(180, 83, 9, .3);
+  border-radius: 8px;
+  background: rgba(255, 251, 235, .78);
+}
+.nexus-marketplace-inquiry-preparation-label {
+  width: fit-content;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: #fef3c7;
+  color: #92400e !important;
+  font-size: .7rem !important;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+.nexus-marketplace-inquiry-preparation-results ul {
+  display: grid;
+  gap: 5px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.nexus-marketplace-inquiry-preparation-results [data-nexus-marketplace-inquiry-preparation-result] {
+  display: grid;
+  gap: 3px;
+  padding: 5px 0;
+  border-top: 1px solid rgba(180, 83, 9, .14);
+}
+.nexus-marketplace-inquiry-preparation-results [data-nexus-marketplace-inquiry-preparation-result]:first-child {
+  border-top: 0;
+}
+.nexus-marketplace-inquiry-preparation-results span,
+.nexus-marketplace-inquiry-preparation-results small {
+  color: #78350f;
+  font-size: .74rem;
+  line-height: 1.25;
+}
 .nexus-assistant-runtime-preview-card {
   display: grid;
   gap: 10px;

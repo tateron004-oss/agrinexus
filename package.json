@@ -577,6 +577,7 @@
     "qa:nexus-capability-sprint-9-draft-message-generation": "node scripts/nexus-capability-sprint-9-draft-message-generation-qa.js",
     "qa:nexus-capability-sprint-10-call-preparation-workflow": "node scripts/nexus-capability-sprint-10-call-preparation-workflow-qa.js",
     "qa:nexus-capability-sprint-11-map-navigation-handoff-preparation": "node scripts/nexus-capability-sprint-11-map-navigation-handoff-preparation-qa.js",
+    "qa:nexus-capability-sprint-12-marketplace-inquiry-preparation": "node scripts/nexus-capability-sprint-12-marketplace-inquiry-preparation-qa.js",
     "qa:nexus-provider-account-api-access-capability": "node scripts/nexus-provider-account-api-access-capability-qa.js",
     "qa:nexus-production-provider-readiness-capability": "node scripts/nexus-production-provider-readiness-capability-qa.js",
     "qa:nexus-health-privacy-runtime-guardrails": "node scripts/nexus-health-privacy-runtime-guardrails-qa.js",

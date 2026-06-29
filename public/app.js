@@ -188,6 +188,7 @@ let nexusInternalNavigationExecutionResults = [];
 let nexusLocalDraftMessageResults = [];
 let nexusCallPreparationResults = [];
 let nexusMapNavigationHandoffResults = [];
+let nexusMarketplaceInquiryPreparationResults = [];
 let visibleControlledStagedActionPreview = null;
 let visibleUserConfirmationPreview = null;
 let latestControlledActionConfirmationReadiness = null;
@@ -207,8 +208,8 @@ const nexusProductIdentity = Object.freeze({
 });
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-318";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v297";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-319";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v298";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
 const VOICE_ATTENTION_DELAY_MS = 900;
@@ -614,6 +615,24 @@ function handleNexusMapNavigationHandoffCaptionCommand(command = "") {
   return true;
 }
 
+function isNexusMarketplaceInquiryPreparationCommand(command = "") {
+  const text = String(command || "").toLowerCase();
+  const marketplaceIntent = /\b(marketplace|agritrade|buyer|seller|listing|inquiry|produce|crop sale|market)\b/.test(text);
+  const prepareIntent = /\b(prepare|plan|review|create|build|outline|questions|checklist)\b/.test(text);
+  const unsafeExecutionIntent = /\b(contact now|message seller|message buyer|send|submit|buy now|sell now|purchase|checkout|order|pay|payment|refund|ship|deliver|dispatch|call|dial|location|camera|emergency)\b/.test(text);
+  return marketplaceIntent && prepareIntent && !unsafeExecutionIntent;
+}
+
+function handleNexusMarketplaceInquiryPreparationCaptionCommand(command = "") {
+  if (!isNexusMarketplaceInquiryPreparationCommand(command)) return false;
+  clearControlledActionPreview("marketplace-inquiry-preparation-caption-command");
+  const plan = buildNexusAutonomousTaskPlan(command, { category: "marketplace-inquiry-preparation" });
+  startNexusAutonomousWorkflowFromTaskPlan(plan, { command });
+  updateUserCaptionPanel("Marketplace inquiry preparation is ready. Confirming will only create a local AgriTrade review card. Nexus will not contact buyers or sellers, create an order, buy, sell, process payment, open an external marketplace, or write backend data.", { expanded: true });
+  setVoiceResponse("Marketplace inquiry preparation is ready. Confirming will only create a local AgriTrade review card. Nexus will not contact buyers or sellers, create an order, buy, sell, process payment, open an external marketplace, or write backend data.", false, { allowVoiceFirst: false });
+  return true;
+}
+
 function isNexusLocalDraftMessageCommand(command = "") {
   const text = String(command || "").toLowerCase();
   return /\b(draft|prepare|compose|write)\b[\s\S]*\b(message|email|note|question|outreach|inquiry)\b/.test(text)
@@ -823,6 +842,67 @@ function renderNexusMapNavigationHandoffResults(results = nexusMapNavigationHand
   return `
     <div class="nexus-map-navigation-handoff-results" data-nexus-map-navigation-handoff-results="true" data-geolocation-used="false" data-location-permission-requested="false" data-external-navigation-launched="false" data-route-launched="false" data-provider-contacted="false" data-dispatch-requested="false" data-backend-write-occurred="false" data-external-action-occurred="false" aria-label="Nexus route handoff preparation results">
       <span class="nexus-map-navigation-handoff-label">Route handoff preparation</span>
+      <ul>${items}</ul>
+    </div>
+  `;
+}
+
+function createNexusMarketplaceInquiryPreparationResult(gate = nexusUserConfirmationGateState) {
+  if (!gate || gate.actionType !== "marketplace_inquiry_preparation" || gate.locallyConfirmable !== true) {
+    return null;
+  }
+  const description = sanitizeNexusSessionAuditText(gate.description || "Prepare an AgriTrade marketplace inquiry for review.");
+  const required = Array.isArray(gate.requiredData) ? gate.requiredData : [];
+  const result = {
+    schemaVersion: "nexus-marketplace-inquiry-preparation.v1",
+    inquiryPrepId: `nexus-marketplace-inquiry-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+    label: "MARKETPLACE INQUIRY PREPARATION ONLY",
+    marketplaceModule: "AgriTrade",
+    topic: description,
+    productOrListing: required.find(item => /\b(product|crop|listing|item|produce|commodity)\b/i.test(String(item || ""))) || "Product, crop, or listing must be confirmed by the user.",
+    counterparty: required.find(item => /\b(buyer|seller|counterparty|contact|market)\b/i.test(String(item || ""))) || "Buyer or seller identity must remain uncontacted until a future approved handoff exists.",
+    reviewChecklist: [
+      "Confirm product, crop, or listing details before any future inquiry.",
+      "Review quantity, quality, timing, price expectations, and delivery terms.",
+      "Keep buyer/seller contact, order creation, payment, and fulfillment blocked until configured marketplace gates exist."
+    ],
+    providerStatus: sanitizeNexusSessionAuditText(gate.providerStatus || "marketplace provider not connected"),
+    confirmationRequired: true,
+    safetyNote: "No buyer or seller was contacted. Nexus did not create an order, buy, sell, process payment, open an external marketplace, change inventory, or write backend data.",
+    inquirySent: false,
+    buyerContacted: false,
+    sellerContacted: false,
+    orderCreated: false,
+    paymentProcessed: false,
+    inventoryChanged: false,
+    externalMarketplaceOpened: false,
+    providerContacted: false,
+    externalActionOccurred: false,
+    backendWriteOccurred: false,
+    executionAuthority: false,
+    createdAt: new Date().toISOString()
+  };
+  nexusMarketplaceInquiryPreparationResults = [result, ...nexusMarketplaceInquiryPreparationResults].slice(0, 10);
+  return result;
+}
+
+function renderNexusMarketplaceInquiryPreparationResults(results = nexusMarketplaceInquiryPreparationResults) {
+  if (!Array.isArray(results) || !results.length) return "";
+  const items = results.slice(0, 3).map(result => `
+    <li data-nexus-marketplace-inquiry-preparation-result="${htmlSafe(result.inquiryPrepId)}">
+      <strong>${htmlSafe(result.label)}</strong>
+      <span><strong>Module:</strong> ${htmlSafe(result.marketplaceModule)}</span>
+      <span><strong>Topic:</strong> ${htmlSafe(result.topic)}</span>
+      <span><strong>Product/listing:</strong> ${htmlSafe(result.productOrListing)}</span>
+      <span><strong>Buyer/seller:</strong> ${htmlSafe(result.counterparty)}</span>
+      <span><strong>Provider:</strong> ${htmlSafe(result.providerStatus)}</span>
+      <small>${htmlSafe(result.reviewChecklist.join(" "))}</small>
+      <small>${htmlSafe(result.safetyNote)}</small>
+    </li>
+  `).join("");
+  return `
+    <div class="nexus-marketplace-inquiry-preparation-results" data-nexus-marketplace-inquiry-preparation-results="true" data-inquiry-sent="false" data-buyer-contacted="false" data-seller-contacted="false" data-order-created="false" data-payment-processed="false" data-inventory-changed="false" data-external-marketplace-opened="false" data-provider-contacted="false" data-external-action-occurred="false" data-backend-write-occurred="false" aria-label="Nexus marketplace inquiry preparation results">
+      <span class="nexus-marketplace-inquiry-preparation-label">Marketplace inquiry preparation</span>
       <ul>${items}</ul>
     </div>
   `;
@@ -1127,12 +1207,16 @@ function nexusControlledActionQueueTypeForPlan(taskPlan = {}) {
   const safeCallPreparationIntent = /\b(prepare|plan|outline|create)\b/.test(userFacingText)
     && /\b(call|phone)\b/.test(userFacingText)
     && !/\b(call now|dial|place call|start call|make the call|open phone)\b/.test(userFacingText);
+  const safeMarketplaceInquiryPreparationIntent = /\b(prepare|plan|review|create|build|outline|questions|checklist)\b/.test(combined)
+    && /\b(marketplace|agritrade|buyer|seller|listing|inquiry|produce|crop sale|market)\b/.test(combined)
+    && !/\b(contact now|message seller|message buyer|send|submit|buy now|sell now|purchase|checkout|order|pay|payment|refund|ship|deliver|dispatch|call|dial|location|camera|emergency)\b/.test(userFacingText);
   const safeDraftIntent = /\b(draft|prepare|compose|write)\b/.test(combined)
     && /\b(message|email|note|question|outreach|inquiry)\b/.test(combined)
     && !/\b(send|submit|deliver|call|dial|place call|contact now)\b/.test(userFacingText);
   if (/\b(simulated|simulation|dry[- ]?run)\b/.test(category) || /\b(simulated|simulation|dry[- ]?run)\b/.test(intent) || /\b(simulated|simulation|dry[- ]?run)\b/.test(summary)) return "simulated_provider_action";
   if (safeMapNavigationHandoffIntent) return "map_navigation_handoff";
   if (safeCallPreparationIntent) return "call_preparation";
+  if (safeMarketplaceInquiryPreparationIntent) return "marketplace_inquiry_preparation";
   if (safeDraftIntent) return "draft_generation";
   if (/\b(call|phone|whatsapp|telegram|sms|email|message)\b/.test(category) || /\b(call|phone|whatsapp|telegram|sms|email|message)\b/.test(intent)) return "blocked_high_risk_action";
   if (/\b(report|physician|care[- ]?team|chw|rpm|rtm|chronic|health)\b/.test(category)) return "report_generation";
@@ -1232,6 +1316,7 @@ function isNexusControlledQueueActionLocallyConfirmable(action = {}) {
   return [
     "internal_navigation",
     "map_navigation_handoff",
+    "marketplace_inquiry_preparation",
     "draft_generation",
     "report_generation",
     "call_preparation",
@@ -1320,6 +1405,12 @@ function performNexusConfirmedLocalQueueAction(gate = nexusUserConfirmationGateS
     return result
       ? `Local ${result.draftType} draft prepared for review. Nexus did not send, submit, message, contact a provider, buy, sell, pay, or write backend data.`
       : "Local draft was not available. No external action occurred.";
+  }
+  if (gate.actionType === "marketplace_inquiry_preparation") {
+    const result = createNexusMarketplaceInquiryPreparationResult(gate);
+    return result
+      ? "Local marketplace inquiry preparation card created for review. Nexus did not contact buyers or sellers, create an order, buy, sell, process payment, open an external marketplace, change inventory, or write backend data."
+      : "Local marketplace inquiry preparation was not available. No external action occurred.";
   }
   if (gate.actionType === "call_preparation") {
     const result = createNexusCallPreparationResult(gate);
@@ -1411,6 +1502,7 @@ function renderNexusControlledActionQueueCard(queue = nexusControlledActionQueue
   const localDraftHtml = renderNexusLocalDraftMessageResults();
   const callPreparationHtml = renderNexusCallPreparationResults();
   const mapNavigationHandoffHtml = renderNexusMapNavigationHandoffResults();
+  const marketplaceInquiryPreparationHtml = renderNexusMarketplaceInquiryPreparationResults();
   const items = queue.slice(0, 4).map((action, index) => `
     <li data-nexus-controlled-action-queue-item="${htmlSafe(action.queueStatus)}" data-action-type="${htmlSafe(action.actionType)}" data-risk-level="${htmlSafe(action.riskLevel)}">
       <strong>${htmlSafe(action.actionType.replace(/_/g, " "))}</strong>
@@ -1428,6 +1520,7 @@ function renderNexusControlledActionQueueCard(queue = nexusControlledActionQueue
       <strong>Nexus is preparing these reviewed steps.</strong>
       <ul>${items}</ul>
       ${gateHtml}
+      ${marketplaceInquiryPreparationHtml}
       ${localDraftHtml}
       ${callPreparationHtml}
       ${mapNavigationHandoffHtml}
@@ -30191,6 +30284,7 @@ function bindStatic() {
         if (handleNexusSimulationCaptionCommand(command)) return;
         if (handleNexusMapNavigationHandoffCaptionCommand(command)) return;
         if (handleNexusInternalNavigationCaptionCommand(command)) return;
+        if (handleNexusMarketplaceInquiryPreparationCaptionCommand(command)) return;
         if (handleNexusLocalDraftMessageCaptionCommand(command)) return;
         if (handleNexusCallPreparationCaptionCommand(command)) return;
         void handleVoiceCommand(command);
@@ -30771,6 +30865,7 @@ function bindStatic() {
       if (handleNexusSimulationCaptionCommand(command)) return;
       if (handleNexusMapNavigationHandoffCaptionCommand(command)) return;
       if (handleNexusInternalNavigationCaptionCommand(command)) return;
+      if (handleNexusMarketplaceInquiryPreparationCaptionCommand(command)) return;
       if (handleNexusLocalDraftMessageCaptionCommand(command)) return;
       if (handleNexusCallPreparationCaptionCommand(command)) return;
       void handleVoiceCommand(command);
