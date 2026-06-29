@@ -12215,6 +12215,7 @@ function a100SafeAutonomyCardHtml(intent = {}) {
   const title = String(intent.title || "Safe Nexus preview").trim();
   const response = String(intent.response || "Nexus prepared a safe review-only preview.").trim();
   const preparation = intent.preparation && typeof intent.preparation === "object" ? intent.preparation : null;
+  const providerReadiness = Array.isArray(intent.providerReadiness) ? intent.providerReadiness : [];
   const preparationHtml = preparation ? `
       <div class="a100-review-preparation" data-a100-preparation-category="${escapeHtml(preparation.category || "general")}">
         <div><strong>${translateText("Task goal")}</strong><span>${translateText(preparation.goal || "Prepare a safe task plan for review.")}</span></div>
@@ -12222,6 +12223,14 @@ function a100SafeAutonomyCardHtml(intent = {}) {
         <div><strong>${translateText("Information needed")}</strong><span>${translateText((preparation.infoNeeded || []).join(" "))}</span></div>
         <div><strong>${translateText("Review status")}</strong><span>${translateText(preparation.status || "Review-only. Nothing has been submitted or sent.")}</span></div>
         <div><strong>${translateText("Blocked execution")}</strong><span>${translateText(preparation.blocked || "No message, call, purchase, payment, routing execution, provider handoff, location tracking, external mutation, or browser permission prompt.")}</span></div>
+      </div>` : "";
+  const providerHtml = providerReadiness.length ? `
+      <div class="a100-provider-readiness" aria-label="${translateText("Provider readiness")}">
+        ${providerReadiness.map(item => `<div data-a100-provider="${escapeHtml(item.id)}" data-a100-provider-status="${escapeHtml(item.status)}">
+          <strong>${translateText(item.label)}</strong>
+          <span>${translateText(item.status)}</span>
+          <small>${translateText(item.detail)}</small>
+        </div>`).join("")}
       </div>` : "";
   return `
     <article class="a100-runtime-card" data-a100-action="${escapeHtml(intent.action || "safe-preview")}" data-a100-section="${escapeHtml(section)}">
@@ -12235,6 +12244,7 @@ function a100SafeAutonomyCardHtml(intent = {}) {
         <div><strong>${translateText("Blocked")}</strong><span>${translateText("Provider handoff, permission prompts, geolocation, external APIs, backend mutation, camera, microphone, calls, messages, payments, purchases, emergency, and dispatch.")}</span></div>
       </div>
       ${preparationHtml}
+      ${providerHtml}
       ${a100SafeTaskControlsHtml(section)}
     </article>
   `;
@@ -12308,6 +12318,17 @@ function a100ReviewOnlyPreparation(category = "general") {
     }
   };
   return plans[key] || plans.general;
+}
+
+function a100ProviderReadinessCards() {
+  return [
+    { id: "maps-location", label: "Maps / location", status: "preview-only", detail: "Map views can open internally, but Nexus will not request live location from this assistant card." },
+    { id: "routing-navigation", label: "Routing / navigation", status: "review required", detail: "Route planning remains a preview until origin, destination, provider readiness, permission, and confirmation are reviewed." },
+    { id: "whatsapp-message", label: "WhatsApp / message", status: "not connected", detail: "Nexus can prepare drafts for review, but it will not send messages or hand off to a messaging provider." },
+    { id: "phone-call", label: "Phone / call", status: "not connected", detail: "Calling requires explicit review, a ready contact/provider path, and confirmation outside this preview." },
+    { id: "marketplace-payment", label: "Marketplace / payment", status: "review required", detail: "Browsing is internal and safe. Buying, selling, checkout, orders, payments, and inventory changes are gated." },
+    { id: "camera-microphone", label: "Camera / microphone", status: "permission required", detail: "Media capture can only start from a user-controlled media flow; this card never prompts for browser permission." }
+  ];
 }
 
 function rememberA100SafeFollowUpContext(intent = {}) {
@@ -22665,6 +22686,7 @@ function a100SafeAutonomyIntent(command = "") {
     title: capability.label,
     response: responseMap[capability.id] || responseMap.next,
     preparation: /\b(prepare|draft|checklist|questions|plan|setup guidance)\b/.test(text) ? a100ReviewOnlyPreparation(preparationCategory) : null,
+    providerReadiness: capability.id === "providers" ? a100ProviderReadinessCards() : null,
     suggestions: ["help me with agriculture", "find agriculture training", "show me farm jobs", "browse AgriTrade", "help me plan a route", "what providers are connected"].slice(0, 5)
   };
 }
