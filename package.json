@@ -547,6 +547,7 @@
     "qa:nexus-aut9-autonomy-reliability-recovery": "node scripts/nexus-aut9-autonomy-reliability-recovery-qa.js",
     "qa:nexus-aut10-controlled-multi-step-workflow-closeout": "node scripts/nexus-aut10-controlled-multi-step-workflow-closeout-qa.js",
     "qa:nexus-n100-1-real-provider-data-core": "node scripts/nexus-n100-1-real-provider-data-core-qa.js",
+    "qa:nexus-n100-2-internal-knowledge-brain": "node scripts/nexus-n100-2-internal-knowledge-brain-qa.js",
     "qa:nexus-sprint-k1-personalization-runtime-activation-readiness-gate": "node scripts/nexus-sprint-k1-personalization-runtime-activation-readiness-gate-qa.js",
     "qa:nexus-sprint-k2-personalization-feature-flag-contract": "node scripts/nexus-sprint-k2-personalization-feature-flag-contract-qa.js",
     "qa:nexus-sprint-k3-personalization-flag-contract-harness": "node scripts/nexus-sprint-k3-personalization-flag-contract-harness-qa.js",
