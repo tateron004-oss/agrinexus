@@ -1,0 +1,29 @@
+# Nexus A100-7 Map Provider Readiness
+
+Sprint A100-7 adds a safe-autonomy review contract for Map Provider Readiness.
+
+Objective: Summarizes map layer, tile, routing, location, offline, and vector-readiness state.
+
+## Runtime Boundary
+
+This sprint is implemented as a server-side, QA-covered contract. It is not loaded by public/app.js, public/index.html, or server.js. Standard User runtime behavior remains unchanged unless a later approved activation sprint explicitly wires it through existing safety gates.
+
+## Supported Lanes
+
+- tiles
+- layers
+- routing
+- location
+- offline
+
+## Safety Boundary
+
+The artifact is review-only and has no execution authority. No automatic calls, messages, payments, purchases, emergency actions, provider handoffs, location tracking, camera, microphone, or browser permission prompts. No secrets are exposed to the browser, and no backend mutation is performed.
+
+## QA
+
+Run:
+
+```text
+npm run qa:nexus-a100-7-map-provider-readiness
+```
