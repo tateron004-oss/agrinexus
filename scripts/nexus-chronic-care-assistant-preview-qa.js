@@ -51,10 +51,20 @@ const intentSource = sourceBetween(app, "function a100SafeAutonomyIntent", "func
   "Prepare a report for review",
   "Session-only summary",
   "Nexus does not diagnose or prescribe",
+  "Report audience",
   "Data source",
+  "source of data is user-provided/manual",
+  "Adherence concerns",
   "Trend or risk signal",
+  "Data sufficiency label",
   "Evidence basis",
+  "Escalation reason",
+  "Safety boundary applied",
   "Recommended review",
+  "physician/provider, nurse, coach, or community health worker",
+  "RPM nurse",
+  "RTM coach",
+  "partial session data only; insufficient for diagnosis or treatment",
   "Nexus did not diagnose, prescribe, adjust medication, dispatch emergency services"
 ].forEach(copy => assert(app.includes(copy), `Reporting foundation should include: ${copy}`));
 

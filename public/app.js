@@ -12432,7 +12432,9 @@ function a100ChronicCareReport(kind = "general", command = "") {
     ["nausea", "nausea"]
   ].filter(([term]) => text.includes(term)).map(([, label]) => label);
   const medicationQuestion = /\b(medication|medicine|insulin|dose|dosage|pill|prescription|metformin)\b/.test(text) ? "mentioned; provider review required" : "not mentioned";
+  const adherenceConcern = /\b(missed|forgot|adherence|not taking|ran out|side effect|side effects|cost|afford|access)\b/.test(text) ? "possible adherence concern mentioned; provider review required" : "not provided";
   const lifestyleBarrier = /\b(food|diet|salt|activity|exercise|sleep|stress|transport|cost|access)\b/.test(text) ? "mentioned in session text" : "not provided";
+  const reportAudience = kind === "wellness" ? "coach, nurse, physician/provider, or community health worker" : kind === "rpm" ? "physician/provider, RPM nurse, RTM coach, or care coordinator" : kind === "telehealth" || kind === "care-team-summary" ? "physician/provider, nurse, coach, or community health worker" : "physician/provider or qualified clinical reviewer";
   const titleMap = {
     diabetes: "Diabetes physician report",
     hypertension: "Blood pressure physician report",
@@ -12475,22 +12477,33 @@ function a100ChronicCareReport(kind = "general", command = "") {
     : reading !== "not provided"
       ? "reading mentioned; pattern not established"
       : "insufficient data";
+  const dataSufficiency = reading !== "not provided" || symptoms.length || lifestyleBarrier !== "not provided" || adherenceConcern !== "not provided"
+    ? "partial session data only; insufficient for diagnosis or treatment"
+    : "insufficient data; user-provided inputs needed";
+  const escalationReason = riskSignal === "urgent review signal mentioned"
+    ? "urgent symptom or extreme reading language mentioned"
+    : "routine review unless symptoms, very abnormal readings, or clinician instructions indicate urgent care";
   const reviewType = riskSignal === "urgent review signal mentioned" ? "urgent professional review" : kind === "rpm" ? "program/provider readiness review" : "clinician, nurse, coach, or CHW review";
   return {
     type: "session-only",
     title: titleMap[kind] || titleMap.general,
     summary: "Prepare a report for review. Session-only summary; Nexus does not diagnose or prescribe.",
     fields: [
+      { label: "Report audience", value: reportAudience },
       { label: "Patient concern", value: text || "not provided" },
       { label: "Readings mentioned", value: reading },
-      { label: "Data source", value: "session-only user text; manual entry or RPM/RTM data needed for trends" },
+      { label: "Data source", value: "session-only user text; source of data is user-provided/manual unless a reviewed RPM/RTM program exists outside Nexus" },
       { label: "Symptoms mentioned", value: symptoms.length ? symptoms.join(", ") : "not provided" },
       { label: "Medication questions", value: medicationQuestion },
+      { label: "Adherence concerns", value: adherenceConcern },
       { label: "Lifestyle barriers", value: lifestyleBarrier },
       { label: "Trend or risk signal", value: riskSignal },
+      { label: "Data sufficiency label", value: dataSufficiency },
       ...(conditionFields[kind] || []),
       { label: "Evidence basis", value: "guideline-backed education; provider review required; insufficient data for diagnosis" },
       { label: "Missing data", value: "confirmed readings, timing, duration, full symptoms, medication list, history, and clinician context" },
+      { label: "Escalation reason", value: escalationReason },
+      { label: "Safety boundary applied", value: "review-only; Nexus did not diagnose, prescribe, adjust medication, connect devices, transmit data, or contact providers" },
       { label: "Recommended review", value: reviewType }
     ],
     safety: "Nexus did not diagnose, prescribe, adjust medication, dispatch emergency services, call, message, connect devices, transmit data, store a medical record, or change external systems."
