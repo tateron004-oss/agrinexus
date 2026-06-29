@@ -1376,6 +1376,71 @@ body.user-mode .a100-safe-autonomy-grid span {
   color: #426257;
   font-weight: 850;
 }
+body.user-mode .a100-chronic-care-preview {
+  display: grid;
+  gap: 9px;
+  min-width: 0;
+  padding: 10px;
+  border: 1px solid #d7e8e3;
+  border-radius: 8px;
+  background: #fbfdfc;
+}
+body.user-mode .a100-chronic-care-preview > div:first-child {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+body.user-mode .a100-chronic-care-preview strong,
+body.user-mode .a100-chronic-care-preview span,
+body.user-mode .a100-chronic-care-preview small {
+  min-width: 0;
+  overflow-wrap: break-word;
+}
+body.user-mode .a100-chronic-care-preview > div:first-child strong {
+  color: #173240;
+  font-size: .94rem;
+  font-weight: 950;
+}
+body.user-mode .a100-chronic-care-preview > div:first-child span,
+body.user-mode .a100-chronic-care-preview > div:first-child small {
+  color: #426257;
+  font-size: .78rem;
+  font-weight: 850;
+  line-height: 1.25;
+}
+body.user-mode .a100-chronic-care-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 7px;
+}
+body.user-mode .a100-chronic-care-actions button {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  min-height: 72px;
+  padding: 9px;
+  border: 1px solid #c9dde6;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #173240;
+  text-align: left;
+  align-content: start;
+}
+body.user-mode .a100-chronic-care-actions button:first-child {
+  background: #eef8f6;
+  border-color: #9fcfca;
+}
+body.user-mode .a100-chronic-care-actions strong,
+body.user-mode .a100-chronic-care-actions span {
+  color: #173240;
+  font-size: .78rem;
+  font-weight: 950;
+  line-height: 1.16;
+}
+body.user-mode .a100-chronic-care-actions span {
+  color: #426257;
+  font-weight: 800;
+}
 body.user-mode .a100-runtime-card-slot {
   display: grid;
   gap: 8px;

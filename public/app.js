@@ -12173,6 +12173,7 @@ function a100StandardUserCapabilities() {
 function a100CapabilitySurfaceHtml() {
   if (!isA100SafeAutonomyEnabled()) return "";
   const capabilities = a100StandardUserCapabilities();
+  const chronicCareActions = a100ChronicCareQuickActions();
   return `
     <section id="a100SafeAutonomySurface" class="a100-safe-autonomy-surface" aria-label="${translateText("Nexus safe assistant capabilities")}">
       <div class="a100-safe-autonomy-head">
@@ -12187,6 +12188,19 @@ function a100CapabilitySurfaceHtml() {
           <strong>${translateText(item.label)}</strong>
           <span>${translateText(item.detail)}</span>
         </button>`).join("")}
+      </div>
+      <div class="a100-chronic-care-preview" aria-label="${translateText("Chronic care assistant preview")}">
+        <div>
+          <strong>${translateText("Chronic Care Assistant")}</strong>
+          <span>${translateText("Review-only telehealth support for diabetes, blood pressure, weight, RPM, and RTM.")}</span>
+          <small>${translateText("Built for multilingual, low-bandwidth, rural telehealth and community health worker review.")}</small>
+        </div>
+        <div class="a100-chronic-care-actions">
+          ${chronicCareActions.map(item => `<button type="button" data-simple-command="${escapeHtml(item.command)}">
+            <strong>${translateText(item.label)}</strong>
+            <span>${translateText(item.detail)}</span>
+          </button>`).join("")}
+        </div>
       </div>
       <div id="a100RuntimeCardSlot" class="a100-runtime-card-slot" aria-live="polite"></div>
     </section>
@@ -12313,6 +12327,38 @@ function a100ReviewOnlyPreparation(category = "general") {
       status: "Review-only marketplace preparation. No buy, sell, order, payment, or inventory change.",
       blocked: "No buy, sell, payment, order, inventory mutation, message send, or provider handoff."
     },
+    diabetes: {
+      category: "diabetes",
+      goal: "Prepare diabetes telehealth visit notes for review.",
+      steps: ["Write down recent blood sugar readings if already known.", "Note symptoms, meals, activity, medicines taken as prescribed, and questions.", "Review with a nurse, coach, clinician, or community health worker before any care decision."],
+      infoNeeded: ["Recent readings entered manually by the user.", "Symptoms and timing.", "Medication list for review only.", "Food, activity, sleep, and illness context.", "Local care contact to review."],
+      status: "Review-only diabetes visit prep. Nexus gives education and care navigation only.",
+      blocked: "No diagnosis, insulin or medication change, emergency dispatch, device connection, provider handoff, message, call, or external health record update."
+    },
+    hypertension: {
+      category: "hypertension",
+      goal: "Prepare blood pressure telehealth visit notes for review.",
+      steps: ["Write down recent blood pressure readings if already known.", "Collect symptoms, timing, medicines taken as prescribed, salt/food context, and stress or activity notes.", "Review with a clinician, nurse, coach, or community health worker."],
+      infoNeeded: ["Recent readings entered manually by the user.", "Symptoms such as chest pain, severe headache, weakness, or shortness of breath.", "Medication list for review only.", "Home cuff or clinic source if known."],
+      status: "Review-only hypertension visit prep. Nexus does not make urgent clinical decisions.",
+      blocked: "No diagnosis, medication change, emergency dispatch, device connection, provider handoff, message, call, or external health record update."
+    },
+    wellness: {
+      category: "wellness",
+      goal: "Prepare weight and wellness questions for review.",
+      steps: ["Choose a safe wellness goal.", "Collect food, activity, sleep, stress, access, and mobility context.", "Review changes with a provider, coach, or community health worker before starting a plan."],
+      infoNeeded: ["Current goal.", "Food access and culture context.", "Activity limits.", "Chronic conditions.", "Provider or coach questions."],
+      status: "Review-only weight and wellness preparation. Nexus gives general education only.",
+      blocked: "No diagnosis, prescription, medication change, paid plan, purchase, provider handoff, or external record update."
+    },
+    "care-team-summary": {
+      category: "care-team-summary",
+      goal: "Prepare a care team summary for human review.",
+      steps: ["Summarize the concern in plain language.", "List readings already known, symptoms, questions, and support needs.", "Review before sharing with a clinician, nurse, coach, or community health worker."],
+      infoNeeded: ["Main concern.", "Recent manual readings if known.", "Symptoms and timing.", "Medicines taken as prescribed.", "Questions for the visit.", "Preferred language or low-bandwidth needs."],
+      status: "Review-only care team summary. Nothing is sent or stored as a medical record from this card.",
+      blocked: "No message send, call, provider handoff, device connection, medical record mutation, diagnosis, or medication instruction."
+    },
     route: {
       category: "route",
       goal: "Prepare a route-planning preview without navigation execution.",
@@ -12350,6 +12396,75 @@ function a100ProviderReadinessCards() {
     { id: "marketplace-payment", label: "Marketplace / payment", status: "review required", detail: "Browsing is internal and safe. Buying, selling, checkout, orders, payments, and inventory changes are gated." },
     { id: "camera-microphone", label: "Camera / microphone", status: "permission required", detail: "Media capture can only start from a user-controlled media flow; this card never prompts for browser permission." }
   ];
+}
+
+function a100ChronicCareQuickActions() {
+  return [
+    { label: "Diabetes Support", detail: "Review blood sugar education and visit questions.", command: "Nexus, help with diabetes" },
+    { label: "Blood Pressure Support", detail: "Review blood pressure education and warning signs.", command: "Nexus, help me with blood pressure" },
+    { label: "Weight & Wellness", detail: "Prepare safe wellness questions for a coach or clinician.", command: "Nexus, help me lose weight safely" },
+    { label: "RPM/RTM Readiness", detail: "Check manual entry, device, and review-only readiness.", command: "Nexus, what is RPM?" },
+    { label: "Prepare Telehealth Visit", detail: "Build a review-only visit checklist.", command: "Nexus, prepare for my telehealth visit" },
+    { label: "Care Team Summary", detail: "Prepare notes for nurse, coach, clinician, or CHW review.", command: "Nexus, summarize this for my care team" },
+    { label: "Emergency Warning Info", detail: "Learn when to seek urgent professional help.", command: "Nexus, emergency warning info" }
+  ];
+}
+
+function a100ChronicCareReadinessCards() {
+  return [
+    { id: "rpm-device", label: "RPM device", status: "device not connected", detail: "No automatic glucose, blood pressure, weight, or wearable device connection starts from this card." },
+    { id: "manual-entry", label: "Manual entry", status: "manual entry available if supported", detail: "Users can prepare readings they already know for review; Nexus does not verify device accuracy." },
+    { id: "rtm-coaching", label: "RTM coaching", status: "provider review needed", detail: "Therapeutic monitoring notes stay education-first until a coach, nurse, or clinician reviews them." },
+    { id: "clinical-review", label: "Clinical review", status: "review required", detail: "Medication, diagnosis, treatment, and urgent decisions require qualified professional review." },
+    { id: "data-sharing", label: "Data sharing", status: "no external data transmission", detail: "No readings, summaries, messages, or health records are sent externally from this preview." },
+    { id: "africa-deployment", label: "Rural support", status: "low-bandwidth friendly", detail: "Designed for multilingual education, rural telehealth, and community health worker or coach support." }
+  ];
+}
+
+function a100ChronicCareGuidanceCard(kind = "general") {
+  const cards = {
+    diabetes: {
+      domain: "chronic-care-diabetes",
+      focus: "Diabetes education, blood sugar questions, telehealth visit preparation, and safe care navigation.",
+      prompts: ["Help with diabetes.", "My blood sugar is high.", "Prepare diabetes visit questions.", "What should I tell my care team?"],
+      collect: ["Recent blood sugar readings if already known.", "Symptoms and timing.", "Meals, activity, sleep, illness, and hydration context.", "Medicines taken as prescribed.", "Questions for a clinician, nurse, coach, or community health worker."],
+      nextSteps: ["Write down readings and symptoms.", "Prepare questions for telehealth review.", "Ask a qualified care professional about medication or treatment decisions.", "Use urgent care or local emergency help for severe symptoms."],
+      boundary: "Education only. Nexus does not diagnose diabetes problems, adjust insulin or medicine, connect devices, send data, or replace professional care."
+    },
+    hypertension: {
+      domain: "chronic-care-hypertension",
+      focus: "Blood pressure education, home-reading questions, warning-sign awareness, and telehealth preparation.",
+      prompts: ["Help me with blood pressure.", "My blood pressure is high.", "Prepare hypertension visit questions.", "What should I track?"],
+      collect: ["Recent blood pressure readings if already known.", "Symptoms and timing.", "Medication list for review only.", "Food, salt, stress, activity, and sleep context.", "Questions for a clinician, nurse, coach, or CHW."],
+      nextSteps: ["Recheck readings only if safe and normally instructed by a care professional.", "Prepare readings and symptoms for review.", "Ask a qualified professional before changing medicine.", "Seek urgent care for severe symptoms or very high readings."],
+      boundary: "Education only. Nexus does not diagnose, change blood pressure medicine, dispatch help, connect devices, or transmit health data."
+    },
+    wellness: {
+      domain: "chronic-care-wellness",
+      focus: "Weight, obesity, nutrition, activity, sleep, and wellness questions for safe review.",
+      prompts: ["Help with obesity.", "Help me lose weight safely.", "Prepare wellness questions.", "What should I ask my coach?"],
+      collect: ["Wellness goal.", "Food access and cultural preferences.", "Activity and mobility limits.", "Sleep, stress, and support needs.", "Chronic conditions and medicines for clinician review."],
+      nextSteps: ["Choose a small review-only goal.", "Prepare questions for a provider, coach, or community health worker.", "Avoid extreme diets or medicine changes without professional review.", "Use low-bandwidth education and local support where available."],
+      boundary: "General education only. Nexus does not diagnose obesity, prescribe diet or medication, sell plans, collect payment, or replace clinical review."
+    },
+    rpm: {
+      domain: "chronic-care-rpm-rtm",
+      focus: "RPM and RTM readiness for review-only chronic care monitoring conversations.",
+      prompts: ["What is RPM?", "What is RTM?", "Is my device connected?", "Prepare monitoring questions."],
+      collect: ["Which condition is being monitored.", "Whether readings are manual or from a device.", "Who reviews the information.", "Language, data access, and low-bandwidth needs."],
+      nextSteps: ["Confirm whether a clinic or program supports monitoring.", "Prepare manual readings for review if supported.", "Ask who sees the data and how urgent issues are handled.", "Keep device setup and transmission off until approved."],
+      boundary: "Readiness only. Nexus does not connect devices, receive automatic readings, transmit data, bill RPM/RTM, or alert providers from this preview."
+    },
+    telehealth: {
+      domain: "chronic-care-telehealth",
+      focus: "Telehealth visit preparation for diabetes, hypertension, weight, and wellness support.",
+      prompts: ["Prepare for my telehealth visit.", "Summarize this for my care team.", "What questions should I ask?", "Help me prepare notes."],
+      collect: ["Main concern.", "Recent manual readings if known.", "Symptoms and timing.", "Current medicines taken as prescribed.", "Questions and access needs.", "Preferred language or community health worker support."],
+      nextSteps: ["Prepare a short visit agenda.", "List readings and symptoms.", "Ask about next steps, warning signs, and follow-up.", "Review before sharing with any care team."],
+      boundary: "Review-only preparation. Nexus does not send the summary, call a provider, change records, or make clinical decisions."
+    }
+  };
+  return cards[kind] || cards.telehealth;
 }
 
 function a100RoutePlanningPreview() {
@@ -12408,6 +12523,10 @@ function a100MarketplaceBrowsingCard() {
 
 function a100HighRiskActionGates() {
   return [
+    { pattern: /\b(stop|pause|skip|change|increase|decrease|double|adjust|reduce|raise)\b.*\b(medication|medicine|meds|insulin|dose|dosage|pill|prescription|metformin|blood pressure medicine|bp medicine)\b|\bchange my insulin dose\b|\bstop my medication\b/, label: "Medication safety boundary", reason: "Medication changes need a qualified clinician, pharmacist, nurse, or approved care team review. Nexus will not recommend stopping, starting, or changing a dose." },
+    { pattern: /\b(chest pain|pressure in my chest|heart attack|stroke|face droop|one side weak|slurred speech|cannot breathe|shortness of breath|fainting|seizure|confused|severe headache|vision loss)\b/, label: "Urgent symptom boundary", reason: "These can be urgent warning signs. Seek local emergency or urgent professional care now if symptoms are severe, sudden, or worsening." },
+    { pattern: /\b(2\d{2}|[3-9]\d{2})\s*\/\s*(1[2-9]\d|[2-9]\d{2})\b|\bblood pressure\b.*\b(200\/120|very high|extremely high|dangerously high)\b/, label: "Very high blood pressure boundary", reason: "Very high blood pressure or severe symptoms need urgent professional review. Nexus can help prepare notes, but it will not make a treatment decision." },
+    { pattern: /\b(glucose|blood sugar)\b.*\b(extremely low|very low|dangerously low|severe low|passing out|confused|seizure|cannot stay awake)\b|\b(hypoglycemia|hyperglycemia)\b.*\b(severe|emergency|urgent)\b/, label: "Severe glucose boundary", reason: "Severe glucose symptoms can be urgent. Follow your clinician's emergency plan if you have one and seek local urgent help when symptoms are serious." },
     { pattern: /\b(call|phone|dial|ring)\b.*\b(emergency|doctor|provider|buyer|seller|someone|contact|person|family|clinic|employer)\b|\bcall emergency\b/, label: "Call readiness", reason: "Nexus can prepare call notes, but it will not place a call." },
     { pattern: /\b(send|message|sms|whatsapp|text|email|notify|contact)\b.*\b(buyer|seller|provider|doctor|someone|contact|family|patient|employer|driver)\b|\bsend it\b|\bprepare a message\b/, label: "Message preparation", reason: "Nexus can prepare a message for review, but it will not send it or contact a provider." },
     { pattern: /\b(buy|purchase|pay|checkout|wallet|settle|settlement|subscribe|place order|create order|sell now|complete sale|update inventory|refund|transfer money)\b/, label: "Payment and purchase boundary", reason: "Nexus can help compare options, but buying, paying, ordering, refunds, transfers, settlement, or inventory changes need review first." },
@@ -22769,8 +22888,42 @@ function a100SafeAutonomyIntent(command = "") {
     return {
       action: "high-risk-gated",
       section: "dashboard",
-      response: `${highRisk.label}: This requires review first. ${highRisk.reason} Nexus can prepare a checklist or questions, but it will not call, send, pay, buy, contact providers, turn on location, use camera or microphone, dispatch help, or change records.`,
+      response: `${highRisk.label}: This requires review first. ${highRisk.reason} Nexus can prepare a checklist or questions for review, but it will not diagnose, change medicine, call, send, pay, buy, contact providers, turn on location, use camera or microphone, dispatch help, connect devices, transmit health data, or change records.`,
       suggestions: ["what can Nexus do", "prepare a review checklist", "what providers are connected", "what should I do next"]
+    };
+  }
+  const chronicMatched = [
+    { id: "diabetes", pattern: /\b(diabetes|diabetic|blood sugar|glucose|a1c)\b.*\b(help|support|high|low|question|prepare|review|visit)\b|\bhelp with diabetes\b|\bmy blood sugar is high\b/ },
+    { id: "hypertension", pattern: /\b(blood pressure|hypertension|bp)\b.*\b(help|support|high|question|prepare|review|visit)\b|\bhelp me with blood pressure\b|\bmy blood pressure is high\b/ },
+    { id: "wellness", pattern: /\b(obesity|weight|wellness|lose weight|nutrition|diet|activity)\b.*\b(help|support|safe|safely|question|prepare|review)\b|\bhelp me lose weight safely\b|\bhelp with obesity\b/ },
+    { id: "rpm", pattern: /\b(what is rpm|what is rtm|rpm|rtm|remote patient monitoring|remote therapeutic monitoring|device connected|monitoring readiness)\b/ },
+    { id: "telehealth", pattern: /\b(prepare|prep|plan|summarize|summary)\b.*\b(telehealth|visit|care team|doctor|nurse|coach|clinician|chw|community health worker)\b|\bprepare for my telehealth visit\b|\bsummarize this for my care team\b/ }
+  ].find(item => item.pattern.test(text));
+  if (chronicMatched) {
+    const category = chronicMatched.id === "hypertension" ? "hypertension" : chronicMatched.id === "wellness" ? "wellness" : chronicMatched.id === "telehealth" ? "care-team-summary" : chronicMatched.id === "rpm" ? "care-team-summary" : "diabetes";
+    const titleMap = {
+      diabetes: "Diabetes Support",
+      hypertension: "Blood Pressure Support",
+      wellness: "Weight & Wellness",
+      rpm: "RPM/RTM Readiness",
+      telehealth: /summarize|summary|care team/.test(text) ? "Care Team Summary" : "Prepare Telehealth Visit"
+    };
+    const responseMap = {
+      diabetes: "I can help prepare diabetes questions for a telehealth visit in review-only mode. This is plain-language education and care navigation for African chronic care settings; Nexus does not diagnose, change insulin or medicine, connect devices, send data, or replace a clinician.",
+      hypertension: "I can help prepare blood pressure questions and warning-sign education in review-only mode. Nexus does not diagnose, change medicine, dispatch help, connect devices, send data, or replace urgent professional care.",
+      wellness: "I can help prepare weight and wellness questions safely for a provider, coach, nurse, or community health worker. Nexus gives general education only and will not prescribe a diet, medicine, purchase, or paid plan.",
+      rpm: "RPM means remote patient monitoring, and RTM means remote therapeutic monitoring. Nexus can explain readiness and prepare questions, but no device is connected, no readings are transmitted, and provider review is required.",
+      telehealth: "I can prepare a review-only telehealth visit checklist or care team summary. Nothing is sent, stored as a medical record, or handed off to a provider from this card."
+    };
+    return {
+      action: `low-risk-chronic-${chronicMatched.id}`,
+      section: "dashboard",
+      title: titleMap[chronicMatched.id],
+      response: responseMap[chronicMatched.id],
+      preparation: a100ReviewOnlyPreparation(category),
+      providerReadiness: a100ChronicCareReadinessCards(),
+      guidance: a100ChronicCareGuidanceCard(chronicMatched.id),
+      suggestions: ["help with diabetes", "help me with blood pressure", "help me lose weight safely", "what is RPM", "prepare for my telehealth visit"]
     };
   }
   const capabilities = a100StandardUserCapabilities();
