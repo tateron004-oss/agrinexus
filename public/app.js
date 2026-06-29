@@ -12507,9 +12507,9 @@ function a100ChronicCareGuidanceCard(kind = "general") {
     hypertension: {
       domain: "chronic-care-hypertension",
       focus: "Blood pressure education, home-reading questions, warning-sign awareness, and telehealth preparation.",
-      prompts: ["Help me with blood pressure.", "My blood pressure is high.", "Prepare hypertension visit questions.", "What should I track?"],
-      collect: ["Recent blood pressure readings if already known.", "Symptoms and timing.", "Medication list for review only.", "Food, salt, stress, activity, and sleep context.", "Questions for a clinician, nurse, coach, or CHW."],
-      nextSteps: ["Recheck readings only if safe and normally instructed by a care professional.", "Prepare readings and symptoms for review.", "Ask a qualified professional before changing medicine.", "Seek urgent care for severe symptoms or very high readings."],
+      prompts: ["Help me with blood pressure.", "My blood pressure is high.", "How should I measure BP?", "Prepare hypertension visit questions.", "What should I track?"],
+      collect: ["Recent blood pressure readings if already known.", "Measurement context such as seated/rested, cuff size, arm, time, and repeat reading if already taken.", "Symptoms and timing.", "Medication list for review only.", "Food, salt, stress, activity, and sleep context.", "Questions for a clinician, nurse, coach, or CHW."],
+      nextSteps: ["Prepare home BP readings with time and context.", "Ask about measurement technique, warning signs, sodium, activity, and medication adherence questions.", "Ask a qualified professional before changing medicine.", "Seek urgent care for severe symptoms or very high readings."],
       boundary: "Education only. Nexus does not diagnose, change blood pressure medicine, dispatch help, connect devices, or transmit health data."
     },
     wellness: {
@@ -22968,7 +22968,7 @@ function a100SafeAutonomyIntent(command = "") {
   }
   const chronicMatched = [
     { id: "diabetes", pattern: /\b(diabetes|diabetic|blood sugar|glucose|a1c)\b.*\b(help|support|high|low|question|prepare|review|visit|education|mean|means)\b|\bhelp with diabetes\b|\bmy blood sugar is high\b|\bwhat is a1c\b|\bmy glucose is low\b/ },
-    { id: "hypertension", pattern: /\b(blood pressure|hypertension|bp)\b.*\b(help|support|high|question|prepare|review|visit)\b|\bhelp me with blood pressure\b|\bmy blood pressure is high\b/ },
+    { id: "hypertension", pattern: /\b(blood pressure|hypertension|bp)\b.*\b(help|support|high|question|prepare|review|visit|measure|measurement|technique|track|sodium|salt|activity|adherence)\b|\bhelp me with blood pressure\b|\bmy blood pressure is high\b|\bhow should i measure bp\b/ },
     { id: "wellness", pattern: /\b(obesity|weight|wellness|lose weight|nutrition|diet|activity)\b.*\b(help|support|safe|safely|question|prepare|review)\b|\bhelp me lose weight safely\b|\bhelp with obesity\b/ },
     { id: "rpm", pattern: /\b(what is rpm|what is rtm|rpm|rtm|remote patient monitoring|remote therapeutic monitoring|device connected|monitoring readiness)\b/ },
     { id: "telehealth", pattern: /\b(prepare|prep|plan|summarize|summary)\b.*\b(telehealth|visit|care team|doctor|nurse|coach|clinician|chw|community health worker)\b|\bprepare for my telehealth visit\b|\bsummarize this for my care team\b/ },
@@ -22986,7 +22986,7 @@ function a100SafeAutonomyIntent(command = "") {
     };
     const responseMap = {
       diabetes: "I can help prepare diabetes questions for a telehealth visit in review-only mode, including blood sugar concerns, A1c education, high/low glucose warning questions, food/activity context, and what to collect for review. Nexus does not diagnose, change insulin or medicine, connect devices, send data, or replace a clinician.",
-      hypertension: "I can help prepare blood pressure questions and warning-sign education in review-only mode. Nexus does not diagnose, change medicine, dispatch help, connect devices, send data, or replace urgent professional care.",
+      hypertension: "I can help prepare blood pressure questions and warning-sign education in review-only mode, including home BP reading context, measurement technique questions, sodium/activity education, and medication-adherence discussion prep. Nexus does not diagnose, change medicine, dispatch help, connect devices, send data, or replace urgent professional care.",
       wellness: "I can help prepare weight and wellness questions safely for a provider, coach, nurse, or community health worker. Nexus gives general education only and will not prescribe a diet, medicine, purchase, or paid plan.",
       rpm: "RPM means remote patient monitoring, and RTM means remote therapeutic monitoring. Nexus can explain readiness and prepare questions, but no device is connected, no readings are transmitted, and provider review is required.",
       telehealth: "I can prepare a review-only telehealth visit checklist or care team summary. Nothing is sent, stored as a medical record, or handed off to a provider from this card.",

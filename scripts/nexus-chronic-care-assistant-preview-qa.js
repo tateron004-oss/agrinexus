@@ -86,6 +86,18 @@ const intentSource = sourceBetween(app, "function a100SafeAutonomyIntent", "func
 ].forEach(copy => assert(app.includes(copy), `Diabetes support/reporting should include: ${copy}`));
 
 [
+  "How should I measure BP?",
+  "Measurement context",
+  "cuff size",
+  "measurement technique",
+  "sodium/activity education",
+  "medication-adherence discussion prep",
+  "Blood pressure focus",
+  "Blood pressure evidence label",
+  "repeated BP data needed for trend"
+].forEach(copy => assert(app.includes(copy), `Hypertension support/reporting should include: ${copy}`));
+
+[
   "id: \"report\"",
   "action: `low-risk-chronic-${chronicMatched.id}`",
   "Care Team Report",
