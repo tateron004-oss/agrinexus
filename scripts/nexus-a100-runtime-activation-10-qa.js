@@ -21,6 +21,7 @@ const pkg = JSON.parse(read("package.json"));
 const qaSuite = read("scripts", "qa-suite.js");
 
 const marketplaceSource = sourceBetween(app, "function a100MarketplaceBrowsingCard", "function rememberA100SafeFollowUpContext");
+const gateSource = sourceBetween(app, "function a100HighRiskActionGates", "function rememberA100SafeFollowUpContext");
 const intentSource = sourceBetween(app, "function a100SafeAutonomyIntent", "function openA100SafeAutonomyPreview");
 
 assert(intentSource.includes("capability.id === \"marketplace\" ? a100MarketplaceBrowsingCard()"), "Marketplace prompts should attach marketplace guidance.");
@@ -60,7 +61,7 @@ assert(intentSource.includes("capability.id === \"marketplace\" ? a100Marketplac
   "sell now",
   "complete sale",
   "update inventory"
-].forEach(term => assert(intentSource.includes(term), `Transaction-like prompt should be gated: ${term}`));
+].forEach(term => assert(gateSource.includes(term), `Transaction-like prompt should be gated: ${term}`));
 
 [
   "browse",
@@ -72,6 +73,7 @@ assert(intentSource.includes("capability.id === \"marketplace\" ? a100Marketplac
 
 [
   marketplaceSource,
+  gateSource,
   intentSource
 ].forEach((source, index) => {
   assert(!source.includes("localStorage"), `Sprint 10 source ${index} must not persist to localStorage.`);
