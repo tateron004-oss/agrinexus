@@ -12418,6 +12418,15 @@ function a100HighRiskActionGates() {
   ];
 }
 
+function normalizeA100RuntimeCommand(command = "") {
+  return normalizeToolText(command)
+    .replace(/^(hey\s+)?nexus[,\s]+/, "")
+    .replace(/^(can|could|would)\s+you\s+/, "")
+    .replace(/^please\s+/, "")
+    .replace(/^show\s+me\s+/, "show ")
+    .trim();
+}
+
 function rememberA100SafeFollowUpContext(intent = {}) {
   if (!intent || typeof intent !== "object") return;
   a100SafeFollowUpContext = Object.freeze({
@@ -12431,7 +12440,7 @@ function rememberA100SafeFollowUpContext(intent = {}) {
 
 function a100SafeFollowUpIntent(command = "") {
   if (!isA100SafeAutonomyEnabled() || experienceMode !== "user" || !a100SafeFollowUpContext) return null;
-  const text = normalizeToolText(command);
+  const text = normalizeA100RuntimeCommand(command);
   if (!text) return null;
   const expired = Date.now() - Number(a100SafeFollowUpContext.createdAt || 0) > 20 * 60 * 1000;
   if (expired) {
@@ -22723,7 +22732,7 @@ function openSafeMapCapabilityPreview(intent) {
 
 function a100SafeAutonomyIntent(command = "") {
   if (!isA100SafeAutonomyEnabled() || experienceMode !== "user") return null;
-  const text = normalizeToolText(command);
+  const text = normalizeA100RuntimeCommand(command);
   if (!text) return null;
   const followUp = a100SafeFollowUpIntent(command);
   if (followUp) return followUp;
