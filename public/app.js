@@ -15495,6 +15495,22 @@ function normalizeAssistantRuntimePreviewCard(response = {}) {
           freshnessStatus: String(item.freshnessStatus || "unknown").trim()
         })) : []
       } : null,
+      artifactPreviews: Array.isArray(agentExperience.artifactPreviews) ? agentExperience.artifactPreviews.slice(0, 3).map(artifact => ({
+        type: String(artifact?.type || "checklist").trim(),
+        title: String(artifact?.title || "Safe artifact preview").trim(),
+        items: Array.isArray(artifact?.items) ? artifact.items.slice(0, 5).map(item => String(item || "").trim()).filter(Boolean) : [],
+        columns: Array.isArray(artifact?.columns) ? artifact.columns.slice(0, 4).map(item => String(item || "").trim()).filter(Boolean) : [],
+        rows: Array.isArray(artifact?.rows) ? artifact.rows.slice(0, 4).map(row => Array.isArray(row) ? row.slice(0, 4).map(cell => String(cell || "").trim()).filter(Boolean) : []).filter(row => row.length > 0) : [],
+        content: Array.isArray(artifact?.content) ? artifact.content.slice(0, 5).map(item => String(item || "").trim()).filter(Boolean) : [],
+        copyOnly: artifact?.copyOnly === true,
+        userMustReview: artifact?.userMustReview === true,
+        executionAuthority: artifact?.executionAuthority === true,
+        providerHandoffAllowed: artifact?.providerHandoffAllowed === true,
+        sendAllowed: artifact?.sendAllowed === true,
+        submitAllowed: artifact?.submitAllowed === true,
+        bookingAllowed: artifact?.bookingAllowed === true,
+        paymentAllowed: artifact?.paymentAllowed === true
+      })).filter(artifact => artifact.executionAuthority !== true && artifact.providerHandoffAllowed !== true && artifact.sendAllowed !== true && artifact.submitAllowed !== true && artifact.bookingAllowed !== true && artifact.paymentAllowed !== true) : [],
       blockedUnsafeActionExplanation: String(agentExperience.blockedUnsafeActionExplanation || "").trim(),
       noExecutionAuthorized: agentExperience.noExecutionAuthorized === true,
       noProviderHandoff: agentExperience.noProviderHandoff === true,
@@ -15574,6 +15590,22 @@ function renderStandardUserAgentExperienceMarkup(experience = {}) {
   const blocked = experience.blockedUnsafeActionExplanation
     ? `<p>${htmlSafe(experience.blockedUnsafeActionExplanation)}</p>`
     : "";
+  const artifactRows = Array.isArray(experience.artifactPreviews) && experience.artifactPreviews.length
+    ? experience.artifactPreviews.map(artifact => {
+      const type = String(artifact.type || "checklist");
+      const title = htmlSafe(artifact.title || "Safe artifact preview");
+      if (type === "comparison" && Array.isArray(artifact.rows) && artifact.rows.length) {
+        const columns = Array.isArray(artifact.columns) && artifact.columns.length
+          ? artifact.columns
+          : ["Option", "What to compare", "Manual review"];
+        const header = columns.map(column => `<th scope="col">${htmlSafe(column)}</th>`).join("");
+        const rows = artifact.rows.map(row => `<tr>${row.map(cell => `<td>${htmlSafe(cell)}</td>`).join("")}</tr>`).join("");
+        return `<article data-nexus-safe-artifact-preview="true" data-artifact-type="comparison" data-execution-authority="false" data-provider-handoff="false"><strong>${title}</strong><table><thead><tr>${header}</tr></thead><tbody>${rows}</tbody></table></article>`;
+      }
+      const content = type === "draft-text" ? artifact.content : artifact.items;
+      return `<article data-nexus-safe-artifact-preview="true" data-artifact-type="${htmlSafe(type)}" data-execution-authority="false" data-provider-handoff="false"><strong>${title}</strong><ul>${list(content)}</ul></article>`;
+    }).join("")
+    : `<article data-nexus-safe-artifact-preview="true" data-artifact-type="checklist" data-execution-authority="false" data-provider-handoff="false"><strong>Safe artifact preview</strong><ul>${list([])}</ul></article>`;
   return `
     <div class="nexus-assistant-runtime-agent-experience" data-nexus-nap6-agent-experience="true" data-execution-authority="false" data-provider-handoff="false" data-permission-prompt="false">
       <div>
@@ -15596,6 +15628,10 @@ function renderStandardUserAgentExperienceMarkup(experience = {}) {
       <section aria-label="Source review">
         <strong>Source review</strong>
         <ul>${sourceItems}</ul>
+      </section>
+      <section class="nexus-assistant-runtime-artifacts" aria-label="Safe artifact previews">
+        <strong>Safe artifact previews</strong>
+        ${artifactRows}
       </section>
       <section aria-label="Safe follow-up prompts">
         <strong>Follow-up prompts</strong>

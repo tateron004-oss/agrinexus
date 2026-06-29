@@ -3698,6 +3698,36 @@ body.admin-mode .user-workspace {
   margin: 0;
   padding-left: 18px;
 }
+.nexus-assistant-runtime-artifacts {
+  gap: 7px;
+}
+.nexus-assistant-runtime-artifacts article {
+  display: grid;
+  gap: 5px;
+  padding: 8px;
+  border: 1px solid #d7e5df;
+  border-radius: 8px;
+  background: #fff;
+}
+.nexus-assistant-runtime-artifacts table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: .78rem;
+}
+.nexus-assistant-runtime-artifacts th,
+.nexus-assistant-runtime-artifacts td {
+  padding: 5px;
+  border: 1px solid #d7e5df;
+  color: #365867;
+  text-align: left;
+  vertical-align: top;
+  overflow-wrap: anywhere;
+}
+.nexus-assistant-runtime-artifacts th {
+  color: #173240;
+  background: #f2f8f6;
+  font-weight: 900;
+}
 @media (max-width: 640px) {
   .nexus-assistant-runtime-preview-facts {
     grid-template-columns: 1fr;
