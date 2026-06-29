@@ -412,6 +412,7 @@ const suites = {
     "scripts/nexus-a100-31-personalization-boundaries-qa.js",
     "scripts/nexus-a100-32-follow-up-planning-qa.js",
     "scripts/nexus-a100-33-risk-confidence-labels-qa.js",
+    "scripts/nexus-a100-34-accessibility-support-qa.js",
     "scripts/nexus-sprint-k1-personalization-runtime-activation-readiness-gate-qa.js",
     "scripts/nexus-sprint-k2-personalization-feature-flag-contract-qa.js",
     "scripts/nexus-sprint-k3-personalization-flag-contract-harness-qa.js",

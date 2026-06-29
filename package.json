@@ -599,6 +599,7 @@
     "qa:nexus-a100-31-personalization-boundaries": "node scripts/nexus-a100-31-personalization-boundaries-qa.js",
     "qa:nexus-a100-32-follow-up-planning": "node scripts/nexus-a100-32-follow-up-planning-qa.js",
     "qa:nexus-a100-33-risk-confidence-labels": "node scripts/nexus-a100-33-risk-confidence-labels-qa.js",
+    "qa:nexus-a100-34-accessibility-support": "node scripts/nexus-a100-34-accessibility-support-qa.js",
     "qa:nexus-sprint-k1-personalization-runtime-activation-readiness-gate": "node scripts/nexus-sprint-k1-personalization-runtime-activation-readiness-gate-qa.js",
     "qa:nexus-sprint-k2-personalization-feature-flag-contract": "node scripts/nexus-sprint-k2-personalization-feature-flag-contract-qa.js",
     "qa:nexus-sprint-k3-personalization-flag-contract-harness": "node scripts/nexus-sprint-k3-personalization-flag-contract-harness-qa.js",
