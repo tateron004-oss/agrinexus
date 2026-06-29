@@ -532,6 +532,7 @@
     "qa:nexus-fap4-safe-artifact-outputs": "node scripts/nexus-fap4-safe-artifact-outputs-qa.js",
     "qa:nexus-fap5-assistant-task-planner": "node scripts/nexus-fap5-assistant-task-planner-qa.js",
     "qa:nexus-fap6-safe-local-tool-layer": "node scripts/nexus-fap6-safe-local-tool-layer-qa.js",
+    "qa:nexus-fap7-voice-command-assistant-routing": "node scripts/nexus-fap7-voice-command-assistant-routing-qa.js",
     "qa:nexus-sprint-k1-personalization-runtime-activation-readiness-gate": "node scripts/nexus-sprint-k1-personalization-runtime-activation-readiness-gate-qa.js",
     "qa:nexus-sprint-k2-personalization-feature-flag-contract": "node scripts/nexus-sprint-k2-personalization-feature-flag-contract-qa.js",
     "qa:nexus-sprint-k3-personalization-flag-contract-harness": "node scripts/nexus-sprint-k3-personalization-flag-contract-harness-qa.js",

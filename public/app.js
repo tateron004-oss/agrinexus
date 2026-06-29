@@ -26260,26 +26260,53 @@ function nexusVoiceDemoShellResponse(command = "") {
 function installNexusVoiceDemoShellBridge() {
   // public/nexus-voice-demo-shell.js binds [data-nexus-voice-demo-prompt] controls to safe response-only demo handling.
   window.NexusVoiceDemoShellBridge = {
-    submitSafeTranscript(command = "") {
+    async submitSafeTranscript(command = "", options = {}) {
       const transcript = String(command || "").trim();
       setCommandInputs(transcript);
       const response = nexusVoiceDemoShellResponse(transcript);
       const blocked = isNexusVoiceDemoHighRiskPrompt(transcript);
-      const section = blocked ? "" : nexusVoiceDemoSafeSection(transcript);
-      if (section && experienceMode === "user" && canOpenSection(section)) {
-        goSection(section, { instant: true, openDefaultAction: false, keepAssistant: true });
-        renderUserSimpleActiveSection(section);
+      const route = window.NexusVoiceTextIntentRouter?.routeNexusIntent?.(transcript) || null;
+      const lowRiskAssistantRoute = route
+        && route.executionAllowed === false
+        && route.sideEffectsAllowed === false
+        && route.providerContactAllowed === false
+        && route.messageAllowed === false
+        && route.callAllowed === false
+        && route.locationAllowed === false
+        && route.cameraMediaAllowed === false
+        && route.paymentAllowed === false
+        && route.medicalActionAllowed === false
+        && route.emergencyDispatchAllowed === false
+        && route.riskLevel === "low"
+        && (route.reviewOnlyAllowed === true || route.informationalAllowed === true);
+      if (!blocked && lowRiskAssistantRoute && await runStandardUserAssistantRuntimePreview(transcript, {
+        source: options.source || "voice-demo-shell"
+      })) {
+        return {
+          response: assistantRuntimePreviewText(assistantRuntimePreviewCard) || response,
+          blocked: false,
+          section: "",
+          intentDomain: route.intentDomain,
+          routeStatus: route.routeStatus,
+          assistantRuntimePreview: true,
+          executionAllowed: false,
+          providerHandoff: false,
+          permissionRequested: false
+        };
       }
       setVoiceResponse(response, false, { allowVoiceFirst: false, allowHandoff: false, source: "voice-demo-shell", command: transcript });
       updateNexusBehaviorLayer(blocked ? "guarded" : "ready", response);
-      return Promise.resolve({
+      return {
         response,
         blocked,
-        section,
+        section: "",
+        intentDomain: route?.intentDomain || "",
+        routeStatus: route?.routeStatus || "",
+        assistantRuntimePreview: false,
         executionAllowed: false,
         providerHandoff: false,
         permissionRequested: false
-      });
+      };
     },
     showResponse(message = "") {
       const response = String(message || "").trim() || "Nexus is ready.";
