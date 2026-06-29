@@ -12460,6 +12460,14 @@ function a100ChronicCareReport(kind = "general", command = "") {
       { label: "RPM data inputs", value: "blood pressure cuff, glucose meter/CGM, weight scale, activity tracker, and manual entry can be listed for review if already available" },
       { label: "RTM self-report", value: "activity, adherence, symptoms, sleep, stress, and therapy barriers require human review before any care action" },
       { label: "Monitoring readiness label", value: "device-ready, not connected; no automatic data capture, alerting, billing, or external transmission" }
+    ],
+    telehealth: [
+      { label: "Clinician Visit Summary", value: "recent readings, symptoms/concerns, medication questions to ask provider, food/activity barriers, and goals since last visit" },
+      { label: "Telehealth Report basis", value: "session-only visit preparation; no provider handoff, message, call, medical record write, or external sharing" }
+    ],
+    "care-team-summary": [
+      { label: "Clinician Visit Summary", value: "recent readings, symptoms/concerns, medication questions to ask provider, food/activity barriers, and goals since last visit" },
+      { label: "Telehealth Report basis", value: "session-only care team summary; no provider handoff, message, call, medical record write, or external sharing" }
     ]
   };
   const riskSignal = /chest pain|stroke|200\s*\/\s*120|extremely low|severe|pass out|cannot breathe/.test(text)
@@ -12537,6 +12545,14 @@ function a100ChronicCareGuidanceCard(kind = "general") {
       collect: ["Which condition is being monitored.", "Whether readings are manual or from a blood pressure cuff, glucose meter/CGM, weight scale, or activity tracker.", "RTM self-report notes such as therapy use, symptoms, activity, sleep, stress, or barriers.", "Who reviews the information.", "Language, data access, and low-bandwidth needs."],
       nextSteps: ["Confirm whether a clinic or program supports monitoring.", "Prepare manual readings for review if supported.", "Ask who sees the data, how stale or missing data is handled, and how urgent issues are escalated.", "Keep device setup and transmission off until approved."],
       boundary: "Readiness only. Nexus does not connect devices, receive automatic readings, transmit data, bill RPM/RTM, or alert providers from this preview."
+    },
+    telehealth: {
+      domain: "chronic-care-telehealth",
+      focus: "Telehealth visit preparation and clinician-facing summary assembly.",
+      prompts: ["Prepare for my telehealth visit.", "Summarize this for my care team.", "Build a Clinician Visit Summary.", "What should I ask my doctor?", "What changed since my last visit?"],
+      collect: ["Recent readings if already known.", "Symptoms/concerns and timing.", "Medication questions to ask provider.", "Food/activity barriers.", "Goals since last visit.", "Preferred language, access, and low-bandwidth needs."],
+      nextSteps: ["Organize recent readings and symptoms/concerns.", "List medication questions to ask provider without changing medicines.", "Name food/activity barriers and goals since last visit.", "Review the Telehealth Report before any human shares it."],
+      boundary: "Visit preparation only. Nexus does not diagnose, prescribe, change medicine, call, message, schedule, update records, or hand off to a provider."
     },
     telehealth: {
       domain: "chronic-care-telehealth",
@@ -22986,6 +23002,7 @@ function a100SafeAutonomyIntent(command = "") {
   ].find(item => item.pattern.test(text));
   if (chronicMatched) {
     const category = chronicMatched.id === "hypertension" ? "hypertension" : chronicMatched.id === "wellness" ? "wellness" : chronicMatched.id === "telehealth" || chronicMatched.id === "report" ? "care-team-summary" : chronicMatched.id === "rpm" ? "care-team-summary" : "diabetes";
+    const reportKind = chronicMatched.id === "report" ? (/care team/.test(text) ? "care-team-summary" : "general") : chronicMatched.id;
     const titleMap = {
       diabetes: "Diabetes Support",
       hypertension: "Blood Pressure Support",
@@ -23010,7 +23027,7 @@ function a100SafeAutonomyIntent(command = "") {
       preparation: a100ReviewOnlyPreparation(category),
       providerReadiness: a100ChronicCareReadinessCards(),
       guidance: a100ChronicCareGuidanceCard(chronicMatched.id),
-      report: a100ChronicCareReport(chronicMatched.id === "report" ? "general" : chronicMatched.id, command),
+      report: a100ChronicCareReport(reportKind, command),
       suggestions: ["help with diabetes", "help me with blood pressure", "help me lose weight safely", "what is RPM", "prepare for my telehealth visit"]
     };
   }

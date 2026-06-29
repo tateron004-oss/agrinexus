@@ -112,12 +112,26 @@ const intentSource = sourceBetween(app, "function a100SafeAutonomyIntent", "func
 
 [
   "id: \"report\"",
+  "const reportKind = chronicMatched.id === \"report\"",
   "action: `low-risk-chronic-${chronicMatched.id}`",
   "Care Team Report",
   "Physician Report",
   "session-only physician/care-team report",
   "report: a100ChronicCareReport"
 ].forEach(copy => assert(intentSource.includes(copy), `Report routing should include: ${copy}`));
+
+[
+  "Build a Clinician Visit Summary.",
+  "Clinician Visit Summary",
+  "Telehealth Report basis",
+  "recent readings",
+  "symptoms/concerns",
+  "Medication questions to ask provider",
+  "food/activity barriers",
+  "goals since last visit",
+  "no provider handoff, message, call, medical record write, or external sharing",
+  "Visit preparation only. Nexus does not diagnose, prescribe, change medicine, call, message, schedule, update records, or hand off to a provider."
+].forEach(copy => assert(app.includes(copy), `Telehealth visit prep/reporting should include: ${copy}`));
 
 [
   "Blood pressure cuff",
