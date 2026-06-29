@@ -113,6 +113,7 @@ let activeAgentCommandController = null;
 let voiceConversationTurns = Number(localStorage.getItem("agrinexusVoiceTurns") || 0);
 let liveVoiceSuggestions = [];
 let a100SafeFollowUpContext = null;
+let a100SafeFollowUpBackStack = [];
 let assistantRuntimePreviewCard = null;
 const NEXUS_ASSISTANT_SAFE_FOLLOW_UP_CHIPS = Object.freeze([
   "Explain this",
@@ -12429,11 +12430,25 @@ function normalizeA100RuntimeCommand(command = "") {
 
 function rememberA100SafeFollowUpContext(intent = {}) {
   if (!intent || typeof intent !== "object") return;
+  if (a100SafeFollowUpContext) {
+    a100SafeFollowUpBackStack = [a100SafeFollowUpContext, ...a100SafeFollowUpBackStack].slice(0, 5);
+  }
+  const action = String(intent.action || "safe-preview").trim();
+  const section = String(intent.section || "dashboard").trim();
   a100SafeFollowUpContext = Object.freeze({
-    action: String(intent.action || "safe-preview").trim(),
-    section: String(intent.section || "dashboard").trim(),
+    action,
+    section,
+    category: action.replace(/^low-risk-/, "").replace(/^follow-up-/, "").replace(/-gated$/, "") || section,
+    lastSafeAction: action,
+    lastRenderedCard: String(intent.title || action || "Safe Nexus preview").trim(),
     response: String(intent.response || "").trim(),
     suggestions: Array.isArray(intent.suggestions) ? intent.suggestions.slice(0, 5).map(item => String(item || "").trim()).filter(Boolean) : [],
+    nextSteps: Array.isArray(intent.suggestions) ? intent.suggestions.slice(0, 3).map(item => String(item || "").trim()).filter(Boolean) : ["what should I do next"],
+    currentPreparation: intent.preparation && typeof intent.preparation === "object" ? Object.freeze({
+      category: String(intent.preparation.category || "general").trim(),
+      goal: String(intent.preparation.goal || "Review-only preparation").trim(),
+      status: String(intent.preparation.status || "Review-only").trim()
+    }) : null,
     createdAt: Date.now()
   });
 }
@@ -12445,11 +12460,12 @@ function a100SafeFollowUpIntent(command = "") {
   const expired = Date.now() - Number(a100SafeFollowUpContext.createdAt || 0) > 20 * 60 * 1000;
   if (expired) {
     a100SafeFollowUpContext = null;
+    a100SafeFollowUpBackStack = [];
     return null;
   }
   const label = a100SafeFollowUpContext.action.replace(/^low-risk-/, "").replace(/-/g, " ");
   const section = a100SafeFollowUpContext.section || "dashboard";
-  if (/^(show me more|more|tell me more|show more|details|more details)$/.test(text)) {
+  if (/^(show me more|more|tell me more|show more|details|more details|show me another option|another option)$/.test(text)) {
     return {
       action: "follow-up-more",
       section,
@@ -12457,7 +12473,7 @@ function a100SafeFollowUpIntent(command = "") {
       suggestions: ["open that", "explain it", "what should I do next", "go back"]
     };
   }
-  if (/^(open that|show that|go there|open it|show it)$/.test(text)) {
+  if (/^(open that|show that|go there|open it|show it|open the related section)$/.test(text)) {
     return {
       action: "follow-up-open-that",
       section,
@@ -12465,7 +12481,7 @@ function a100SafeFollowUpIntent(command = "") {
       suggestions: ["explain it", "show me more", "what should I do next", "go back"]
     };
   }
-  if (/^(explain it|explain that|explain this|what does that mean)$/.test(text)) {
+  if (/^(explain it|explain that|explain this|what does that mean|explain the last one)$/.test(text)) {
     return {
       action: "follow-up-explain",
       section: "dashboard",
@@ -12473,19 +12489,31 @@ function a100SafeFollowUpIntent(command = "") {
       suggestions: ["show me more", "open that", "what should I do next", "go back"]
     };
   }
+  if (/^(prepare that|prepare it|make a checklist for that)$/.test(text)) {
+    return {
+      action: "follow-up-prepare-that",
+      section,
+      title: "Review-only preparation",
+      response: `I prepared the last ${a100SafeFollowUpContext.category || "task"} context for review only. Nothing was sent, submitted, purchased, paid, tracked, or handed off.`,
+      preparation: a100ReviewOnlyPreparation(a100SafeFollowUpContext.category || "general"),
+      suggestions: ["open the related section", "explain the last one", "what is next?", "go back"]
+    };
+  }
   if (/^(go back|back|return|home|go home)$/.test(text)) {
+    const previous = a100SafeFollowUpBackStack.shift();
+    const previousSection = previous?.section || "dashboard";
     return {
       action: "follow-up-go-back",
-      section: "dashboard",
-      response: "I went back to the safe assistant capability menu. You can choose another low-risk preview or ask what Nexus can do.",
+      section: previousSection,
+      response: previous ? `I went back to the previous ${previous.category || "safe"} context for review. No real-world action was executed.` : "I went back to the safe assistant capability menu. You can choose another low-risk preview or ask what Nexus can do.",
       suggestions: ["what can Nexus do", "help me with agriculture", "show me farm jobs", "help me plan a route"]
     };
   }
-  if (/^(what should i do next|next|next step|what next)$/.test(text)) {
+  if (/^(what should i do next|next|next step|what next|what is next)$/.test(text)) {
     return {
       action: "follow-up-next-step",
       section,
-      response: `Next safe step for ${label}: review the visible guidance, choose a low-risk section, or ask Nexus to prepare questions/checklists. Nexus will not execute high-risk actions from this follow-up.`,
+      response: `Next safe step for ${label}: ${(a100SafeFollowUpContext.nextSteps || []).join(" ") || "review the visible guidance, choose a low-risk section, or ask Nexus to prepare questions/checklists."} Nexus will not execute high-risk actions from this follow-up.`,
       suggestions: ["open that", "show me more", "prepare a review checklist", "go back"]
     };
   }
