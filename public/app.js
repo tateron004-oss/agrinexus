@@ -12216,6 +12216,7 @@ function a100SafeAutonomyCardHtml(intent = {}) {
   const response = String(intent.response || "Nexus prepared a safe review-only preview.").trim();
   const preparation = intent.preparation && typeof intent.preparation === "object" ? intent.preparation : null;
   const providerReadiness = Array.isArray(intent.providerReadiness) ? intent.providerReadiness : [];
+  const routePreview = intent.routePreview && typeof intent.routePreview === "object" ? intent.routePreview : null;
   const preparationHtml = preparation ? `
       <div class="a100-review-preparation" data-a100-preparation-category="${escapeHtml(preparation.category || "general")}">
         <div><strong>${translateText("Task goal")}</strong><span>${translateText(preparation.goal || "Prepare a safe task plan for review.")}</span></div>
@@ -12232,6 +12233,14 @@ function a100SafeAutonomyCardHtml(intent = {}) {
           <small>${translateText(item.detail)}</small>
         </div>`).join("")}
       </div>` : "";
+  const routeHtml = routePreview ? `
+      <div class="a100-route-preview" data-a100-route-preview="review-only">
+        <div><strong>${translateText("Origin")}</strong><span>${translateText(routePreview.origin || "Add origin manually. Nexus will not use live location automatically.")}</span></div>
+        <div><strong>${translateText("Destination")}</strong><span>${translateText(routePreview.destination || "Add destination manually before reviewing route options.")}</span></div>
+        <div><strong>${translateText("Provider readiness")}</strong><span>${translateText(routePreview.readiness || "Map preview available. Routing/navigation provider handoff is not started.")}</span></div>
+        <div><strong>${translateText("Map section")}</strong><span>${translateText(routePreview.mapLink || "Open the internal map section to review tiles, satellite imagery, facilities, and route context.")}</span></div>
+        <div><strong>${translateText("Blocked")}</strong><span>${translateText(routePreview.blocked || "No automatic location request, external navigation, live tracking, or routing provider call.")}</span></div>
+      </div>` : "";
   return `
     <article class="a100-runtime-card" data-a100-action="${escapeHtml(intent.action || "safe-preview")}" data-a100-section="${escapeHtml(section)}">
       <div class="a100-runtime-card-head">
@@ -12245,6 +12254,7 @@ function a100SafeAutonomyCardHtml(intent = {}) {
       </div>
       ${preparationHtml}
       ${providerHtml}
+      ${routeHtml}
       ${a100SafeTaskControlsHtml(section)}
     </article>
   `;
@@ -12329,6 +12339,16 @@ function a100ProviderReadinessCards() {
     { id: "marketplace-payment", label: "Marketplace / payment", status: "review required", detail: "Browsing is internal and safe. Buying, selling, checkout, orders, payments, and inventory changes are gated." },
     { id: "camera-microphone", label: "Camera / microphone", status: "permission required", detail: "Media capture can only start from a user-controlled media flow; this card never prompts for browser permission." }
   ];
+}
+
+function a100RoutePlanningPreview() {
+  return {
+    origin: "Add origin manually. Nexus will not use GPS or request browser location from this prompt.",
+    destination: "Add destination manually so the route can stay review-only.",
+    readiness: "Leaflet map preview can open internally; external routing/navigation provider handoff remains gated.",
+    mapLink: "Use Open section to review the internal map, street layer, satellite imagery, labels, route previews, facilities, and readiness.",
+    blocked: "No geolocation API call, no live tracking, no external maps/navigation launch, no provider routing call, and no browser permission prompt."
+  };
 }
 
 function rememberA100SafeFollowUpContext(intent = {}) {
@@ -22687,6 +22707,7 @@ function a100SafeAutonomyIntent(command = "") {
     response: responseMap[capability.id] || responseMap.next,
     preparation: /\b(prepare|draft|checklist|questions|plan|setup guidance)\b/.test(text) ? a100ReviewOnlyPreparation(preparationCategory) : null,
     providerReadiness: capability.id === "providers" ? a100ProviderReadinessCards() : null,
+    routePreview: capability.id === "map" ? a100RoutePlanningPreview() : null,
     suggestions: ["help me with agriculture", "find agriculture training", "show me farm jobs", "browse AgriTrade", "help me plan a route", "what providers are connected"].slice(0, 5)
   };
 }

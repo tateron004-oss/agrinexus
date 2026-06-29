@@ -426,6 +426,7 @@ const suites = {
     "scripts/nexus-a100-runtime-activation-3-qa.js",
     "scripts/nexus-a100-runtime-activation-4-qa.js",
     "scripts/nexus-a100-runtime-activation-5-qa.js",
+    "scripts/nexus-a100-runtime-activation-6-qa.js",
     "scripts/nexus-sprint-k1-personalization-runtime-activation-readiness-gate-qa.js",
     "scripts/nexus-sprint-k2-personalization-feature-flag-contract-qa.js",
     "scripts/nexus-sprint-k3-personalization-flag-contract-harness-qa.js",
