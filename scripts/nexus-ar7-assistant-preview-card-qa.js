@@ -61,8 +61,12 @@ function assertCardStaticContract() {
     "Safe follow-up prompts"
   ].forEach(term => assert(renderMarkup.includes(term), `AR7 card markup must include: ${term}`));
 
+  assert(renderMarkup.includes('data-nexus-assistant-runtime-follow-up'), "AR7/NLU3 card may include safe follow-up chip buttons only.");
+  const buttonCount = (renderMarkup.match(/<button/g) || []).length;
+  const safeFollowUpButtonCount = (renderMarkup.match(/data-nexus-assistant-runtime-follow-up/g) || []).length;
+  assert.equal(buttonCount, safeFollowUpButtonCount, "AR7 card buttons must be limited to safe follow-up chips.");
+
   [
-    "<button",
     "<a ",
     "onclick",
     "data-voice-example",

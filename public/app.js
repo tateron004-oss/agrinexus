@@ -101,6 +101,27 @@ let activeAgentCommandController = null;
 let voiceConversationTurns = Number(localStorage.getItem("agrinexusVoiceTurns") || 0);
 let liveVoiceSuggestions = [];
 let assistantRuntimePreviewCard = null;
+const NEXUS_ASSISTANT_SAFE_FOLLOW_UP_CHIPS = Object.freeze([
+  "Explain this",
+  "Compare sources",
+  "Make a checklist",
+  "Show training options",
+  "Narrow results",
+  "Show entry-level options",
+  "Draft questions I should ask",
+  "What should I do next?"
+]);
+const NEXUS_ASSISTANT_BLOCKED_FOLLOW_UP_CHIP_PATTERNS = Object.freeze([
+  /\bcall\b/i,
+  /\bmessage\b/i,
+  /\bapply\b/i,
+  /\bbuy\b/i,
+  /\bbook\b/i,
+  /\bpay\b/i,
+  /\bdispatch\b/i,
+  /\bsend\s+(my\s+)?location\b/i,
+  /\bsubmit\b/i
+]);
 let agentReasoningVisible = localStorage.getItem("agrinexusReasoningVisible") === "true";
 let pendingNexusSpokenCommand = null;
 let confirmedVoiceActionActive = false;
@@ -15390,15 +15411,40 @@ function assistantRuntimePreviewText(result = {}) {
   return String(response.answer || response.message || "").trim();
 }
 
+function isSafeAssistantRuntimeFollowUpChip(value = "") {
+  const text = String(value || "").trim();
+  return Boolean(text) && NEXUS_ASSISTANT_BLOCKED_FOLLOW_UP_CHIP_PATTERNS.every(pattern => !pattern.test(text));
+}
+
+function defaultAssistantRuntimeFollowUps(response = {}) {
+  const provider = String(response.selectedProvider || "").trim();
+  const intent = String(response.intent || "").trim();
+  if (provider === "job-search" || intent === "job-search") {
+    return ["Show entry-level options", "Compare sources", "Make a checklist", "Draft questions I should ask"];
+  }
+  if (provider === "music-media") {
+    return ["Show training options", "Compare sources", "Explain this", "Narrow results"];
+  }
+  if (provider === "agriculture-context") {
+    return ["Explain this", "Make a checklist", "Show training options", "What should I do next?"];
+  }
+  if (provider === "weather") {
+    return ["Explain this", "Make a checklist", "Narrow results", "What should I do next?"];
+  }
+  return NEXUS_ASSISTANT_SAFE_FOLLOW_UP_CHIPS;
+}
+
 function assistantRuntimePreviewSuggestions(result = {}) {
   const response = result && typeof result === "object" ? result.response || result : {};
   const suggestions = Array.isArray(response.safeFollowUps) ? response.safeFollowUps
     : Array.isArray(response.safeNextSteps) ? response.safeNextSteps
       : [];
-  return suggestions
+  return [...suggestions, ...defaultAssistantRuntimeFollowUps(response)]
     .map(item => typeof item === "string" ? item.trim() : "")
     .filter(Boolean)
-    .slice(0, 4);
+    .filter(isSafeAssistantRuntimeFollowUpChip)
+    .filter((item, index, all) => all.indexOf(item) === index)
+    .slice(0, 6);
 }
 
 function normalizeAssistantRuntimePreviewCard(response = {}) {
@@ -15410,6 +15456,7 @@ function normalizeAssistantRuntimePreviewCard(response = {}) {
     ? safeResponse.standardUserAgentExperience
     : null;
   return {
+    userPrompt: String(safeResponse.userPrompt || "").trim(),
     answer: text,
     intent: String(safeResponse.intent || "general-question").trim(),
     selectedProvider: String(safeResponse.selectedProvider || "provider unavailable").trim(),
@@ -15472,7 +15519,7 @@ function renderAssistantRuntimePreviewCardMarkup(card = {}) {
     `).join("")
     : "<li><strong>Source unavailable</strong><span>No citation details were returned.</span></li>";
   const followUps = Array.isArray(card.safeFollowUps) && card.safeFollowUps.length
-    ? card.safeFollowUps.map(item => `<span>${htmlSafe(item)}</span>`).join("")
+    ? card.safeFollowUps.map(item => `<button type="button" data-nexus-assistant-runtime-follow-up="${htmlSafe(item)}">${htmlSafe(item)}</button>`).join("")
     : "<span>Ask a follow-up</span>";
   const experience = card.standardUserAgentExperience;
   const experienceMarkup = experience
@@ -15616,6 +15663,24 @@ async function runStandardUserAssistantRuntimePreview(command = "", options = {}
     renderLiveVoiceSuggestions(["try again", "ask a follow-up", "cancel"]);
     return true;
   }
+}
+
+function handleAssistantRuntimeFollowUpClick(event) {
+  const button = event.target.closest("[data-nexus-assistant-runtime-follow-up]");
+  if (!button) return false;
+  event.preventDefault();
+  event.stopPropagation();
+  const followUp = String(button.dataset.nexusAssistantRuntimeFollowUp || button.textContent || "").trim();
+  if (!isSafeAssistantRuntimeFollowUpChip(followUp)) {
+    setVoiceResponse("Nexus kept that follow-up informational. No action was taken.", true, { allowHandoff: false });
+    return true;
+  }
+  const previous = assistantRuntimePreviewCard?.userPrompt
+    || assistantRuntimePreviewCard?.answer
+    || "the previous source-backed preview";
+  const refinementPrompt = `${followUp}. Use the previous source-backed preview context: ${previous}`;
+  runStandardUserAssistantRuntimePreview(refinementPrompt, { source: "safe-follow-up-chip" });
+  return true;
 }
 
 function leafletMapOptions(options = {}) {
@@ -26358,6 +26423,7 @@ async function runWowDemo() {
 function bindStatic() {
   renderLoginProfiles();
   document.addEventListener("click", async event => {
+    if (handleAssistantRuntimeFollowUpClick(event)) return;
     if (handleControlledActionConfirmationPrototypeClick(event)) return;
     const nexusVoiceDemoButton = event.target.closest("[data-nexus-voice-demo-action]");
     if (nexusVoiceDemoButton) {

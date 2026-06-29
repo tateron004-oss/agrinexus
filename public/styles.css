@@ -3606,7 +3606,8 @@ body.admin-mode .user-workspace {
   gap: 6px;
 }
 .nexus-assistant-runtime-preview-meta span,
-.nexus-assistant-runtime-preview-followups span {
+.nexus-assistant-runtime-preview-followups span,
+.nexus-assistant-runtime-preview-followups button {
   display: inline-flex;
   align-items: center;
   max-width: 100%;
@@ -3618,6 +3619,16 @@ body.admin-mode .user-workspace {
   color: #173240;
   font-size: .78rem;
   font-weight: 800;
+}
+.nexus-assistant-runtime-preview-followups button {
+  cursor: pointer;
+  font-family: inherit;
+}
+.nexus-assistant-runtime-preview-followups button:hover,
+.nexus-assistant-runtime-preview-followups button:focus-visible {
+  border-color: #8dbfb5;
+  background: #eef8f5;
+  outline: 2px solid transparent;
 }
 .nexus-assistant-runtime-preview-facts {
   display: grid;
