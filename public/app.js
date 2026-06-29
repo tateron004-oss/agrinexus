@@ -22955,23 +22955,26 @@ function a100SafeAutonomyIntent(command = "") {
     { id: "hypertension", pattern: /\b(blood pressure|hypertension|bp)\b.*\b(help|support|high|question|prepare|review|visit)\b|\bhelp me with blood pressure\b|\bmy blood pressure is high\b/ },
     { id: "wellness", pattern: /\b(obesity|weight|wellness|lose weight|nutrition|diet|activity)\b.*\b(help|support|safe|safely|question|prepare|review)\b|\bhelp me lose weight safely\b|\bhelp with obesity\b/ },
     { id: "rpm", pattern: /\b(what is rpm|what is rtm|rpm|rtm|remote patient monitoring|remote therapeutic monitoring|device connected|monitoring readiness)\b/ },
-    { id: "telehealth", pattern: /\b(prepare|prep|plan|summarize|summary)\b.*\b(telehealth|visit|care team|doctor|nurse|coach|clinician|chw|community health worker)\b|\bprepare for my telehealth visit\b|\bsummarize this for my care team\b/ }
+    { id: "telehealth", pattern: /\b(prepare|prep|plan|summarize|summary)\b.*\b(telehealth|visit|care team|doctor|nurse|coach|clinician|chw|community health worker)\b|\bprepare for my telehealth visit\b|\bsummarize this for my care team\b/ },
+    { id: "report", pattern: /\b(prepare|show|build|create|summarize)\b.*\b(physician report|doctor report|care team report|clinical report|provider report)\b|\bprepare a physician report\b|\bshow physician report\b|\bsummarize for my doctor\b|\bprepare care team report\b/ }
   ].find(item => item.pattern.test(text));
   if (chronicMatched) {
-    const category = chronicMatched.id === "hypertension" ? "hypertension" : chronicMatched.id === "wellness" ? "wellness" : chronicMatched.id === "telehealth" ? "care-team-summary" : chronicMatched.id === "rpm" ? "care-team-summary" : "diabetes";
+    const category = chronicMatched.id === "hypertension" ? "hypertension" : chronicMatched.id === "wellness" ? "wellness" : chronicMatched.id === "telehealth" || chronicMatched.id === "report" ? "care-team-summary" : chronicMatched.id === "rpm" ? "care-team-summary" : "diabetes";
     const titleMap = {
       diabetes: "Diabetes Support",
       hypertension: "Blood Pressure Support",
       wellness: "Weight & Wellness",
       rpm: "RPM/RTM Readiness",
-      telehealth: /summarize|summary|care team/.test(text) ? "Care Team Summary" : "Prepare Telehealth Visit"
+      telehealth: /summarize|summary|care team/.test(text) ? "Care Team Summary" : "Prepare Telehealth Visit",
+      report: /care team/.test(text) ? "Care Team Report" : "Physician Report"
     };
     const responseMap = {
       diabetes: "I can help prepare diabetes questions for a telehealth visit in review-only mode. This is plain-language education and care navigation for African chronic care settings; Nexus does not diagnose, change insulin or medicine, connect devices, send data, or replace a clinician.",
       hypertension: "I can help prepare blood pressure questions and warning-sign education in review-only mode. Nexus does not diagnose, change medicine, dispatch help, connect devices, send data, or replace urgent professional care.",
       wellness: "I can help prepare weight and wellness questions safely for a provider, coach, nurse, or community health worker. Nexus gives general education only and will not prescribe a diet, medicine, purchase, or paid plan.",
       rpm: "RPM means remote patient monitoring, and RTM means remote therapeutic monitoring. Nexus can explain readiness and prepare questions, but no device is connected, no readings are transmitted, and provider review is required.",
-      telehealth: "I can prepare a review-only telehealth visit checklist or care team summary. Nothing is sent, stored as a medical record, or handed off to a provider from this card."
+      telehealth: "I can prepare a review-only telehealth visit checklist or care team summary. Nothing is sent, stored as a medical record, or handed off to a provider from this card.",
+      report: "I prepared a session-only physician/care-team report for review. It shows data inputs, missing data, source labels, review level, and safety boundaries, but it is not a diagnosis or treatment plan."
     };
     return {
       action: `low-risk-chronic-${chronicMatched.id}`,
@@ -22981,6 +22984,7 @@ function a100SafeAutonomyIntent(command = "") {
       preparation: a100ReviewOnlyPreparation(category),
       providerReadiness: a100ChronicCareReadinessCards(),
       guidance: a100ChronicCareGuidanceCard(chronicMatched.id),
+      report: a100ChronicCareReport(chronicMatched.id === "report" ? "general" : chronicMatched.id, command),
       suggestions: ["help with diabetes", "help me with blood pressure", "help me lose weight safely", "what is RPM", "prepare for my telehealth visit"]
     };
   }

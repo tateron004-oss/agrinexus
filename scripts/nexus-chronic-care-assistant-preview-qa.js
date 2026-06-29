@@ -68,8 +68,21 @@ const intentSource = sourceBetween(app, "function a100SafeAutonomyIntent", "func
   "what is RPM",
   "what is RTM",
   "prepare for my telehealth visit",
-  "summarize this for my care team"
+  "summarize this for my care team",
+  "prepare a physician report",
+  "show physician report",
+  "summarize for my doctor",
+  "prepare care team report"
 ].forEach(prompt => assert(intentSource.toLowerCase().includes(prompt.toLowerCase()) || chronicSource.toLowerCase().includes(prompt.toLowerCase()), `Chronic prompt should route: ${prompt}`));
+
+[
+  "id: \"report\"",
+  "action: `low-risk-chronic-${chronicMatched.id}`",
+  "Care Team Report",
+  "Physician Report",
+  "session-only physician/care-team report",
+  "report: a100ChronicCareReport"
+].forEach(copy => assert(intentSource.includes(copy), `Report routing should include: ${copy}`));
 
 [
   "device not connected",
