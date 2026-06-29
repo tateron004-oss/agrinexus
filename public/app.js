@@ -207,8 +207,8 @@ const nexusProductIdentity = Object.freeze({
 });
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-311";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v290";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-312";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v291";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
 const VOICE_ATTENTION_DELAY_MS = 900;
@@ -13251,6 +13251,7 @@ function a100CapabilitySurfaceHtml() {
       ${a100ProductionProviderReadinessPanelHtml(a100ProductionProviderReadinessPanel())}
       ${a100HealthPrivacyComplianceGuardrailsPanelHtml(a100HealthPrivacyComplianceGuardrails())}
       ${a100RpmRtmManualIntakePanelHtml()}
+      ${a100AfricaDeploymentRuntimePanelHtml()}
       <div class="a100-chronic-care-preview" aria-label="${translateText("Chronic care assistant preview")}">
         <div>
           <strong>${translateText("Chronic Care Navigator")}</strong>
@@ -13987,6 +13988,108 @@ document.addEventListener("input", event => {
   const root = field.closest("[data-nexus-rpm-rtm-manual-intake='true']") || document;
   updateA100RpmRtmManualSessionPreview(root);
 });
+
+function a100AfricaDeploymentRuntimeCapability() {
+  const workflows = [
+    {
+      id: "rural-telehealth",
+      label: "Rural telehealth workflow",
+      detail: "Prepare intake, language, caregiver, accessibility, and low-bandwidth fallback notes for review."
+    },
+    {
+      id: "community-health-worker",
+      label: "Community health worker workflow",
+      detail: "Guide CHW intake, readings checklist, patient education, referral question, and handoff summary prep."
+    },
+    {
+      id: "chronic-care-navigation",
+      label: "Chronic care navigation",
+      detail: "Support diabetes, blood pressure, asthma, maternal risk, reminders, RPM/RTM, and red-flag guidance."
+    },
+    {
+      id: "agriculture-support",
+      label: "Agriculture support",
+      detail: "Keep crop, pest, soil, irrigation, training, market-readiness, and field-support help available."
+    },
+    {
+      id: "care-team-review",
+      label: "Care-team / physician review preparation",
+      detail: "Prepare session-only summaries for nurse, CHW, clinician, or physician review without sending."
+    }
+  ];
+  const chwChecklist = [
+    "Patient concern and preferred language",
+    "Manual BP, glucose, weight, activity, and symptom notes if known",
+    "Medication questions for clinician or pharmacist review",
+    "Food, transport, cost, literacy, and follow-up barriers",
+    "Patient education prompt in simple language",
+    "Referral or review recommendation for a qualified human"
+  ];
+  const lowBandwidthSupports = [
+    "Short plain-language summary",
+    "SMS-friendly checklist copy",
+    "Offline packet-ready notes",
+    "Caregiver or CHW review prompt",
+    "No live video requirement",
+    "No automatic location lookup"
+  ];
+  const safety = [
+    "Review-only Africa deployment mode",
+    "No provider handoff",
+    "No device connection",
+    "No diagnosis or medication change",
+    "No emergency dispatch",
+    "No persistent sensitive health storage"
+  ];
+  return Object.freeze({
+    regionFocus: "Africa-ready rural health, agriculture, and workforce support",
+    status: "runtime-capability-ready",
+    lowBandwidthMode: "summary-first",
+    multilingualReady: true,
+    reviewOnly: true,
+    executionAuthority: false,
+    providerHandoff: false,
+    geolocationRequested: false,
+    deviceConnection: false,
+    externalTransmission: false,
+    persistentSensitiveStorage: false,
+    workflows,
+    chwChecklist,
+    lowBandwidthSupports,
+    safety
+  });
+}
+
+function a100AfricaDeploymentRuntimePanelHtml(capability = a100AfricaDeploymentRuntimeCapability()) {
+  return `
+      <div class="a100-africa-deployment-runtime" data-nexus-africa-deployment-runtime="true" data-review-only="true" data-execution-authority="false" data-provider-handoff="false" data-geolocation-requested="false" data-device-connection="false" data-external-transmission="false" data-persistent-sensitive-storage="false" aria-label="${translateText("Africa Deployment Runtime Capability")}">
+        <div class="a100-africa-deployment-head">
+          <strong>${translateText("Africa Deployment Runtime")}</strong>
+          <span>${translateText(capability.regionFocus)}</span>
+          <small>${translateText("Summary-first, multilingual-ready, low-bandwidth support for rural health, workforce, and agriculture. Review-only; no provider execution.")}</small>
+        </div>
+        <div class="a100-africa-deployment-summary">
+          <section><strong>${translateText("Mode")}</strong><span>${translateText(capability.lowBandwidthMode)}</span></section>
+          <section><strong>${translateText("Status")}</strong><span>${translateText(capability.status)}</span></section>
+          <section><strong>${translateText("Multilingual")}</strong><span>${translateText(capability.multilingualReady ? "Ready for existing language labels" : "Not configured")}</span></section>
+          <section><strong>${translateText("Execution")}</strong><span>${translateText("Disabled; final human/provider review required")}</span></section>
+        </div>
+        <div class="a100-africa-deployment-grid">
+          ${capability.workflows.map(item => `<section data-africa-workflow="${escapeHtml(item.id)}"><strong>${translateText(item.label)}</strong><span>${translateText(item.detail)}</span></section>`).join("")}
+        </div>
+        <div class="a100-africa-chw-flow" data-africa-chw-flow="review-only">
+          <strong>${translateText("CHW intake and handoff checklist")}</strong>
+          <ul>${capability.chwChecklist.map(item => `<li>${translateText(item)}</li>`).join("")}</ul>
+        </div>
+        <div class="a100-africa-low-bandwidth" data-africa-low-bandwidth="summary-first">
+          <strong>${translateText("Low-bandwidth summary mode")}</strong>
+          <ul>${capability.lowBandwidthSupports.map(item => `<li>${translateText(item)}</li>`).join("")}</ul>
+        </div>
+        <div class="a100-africa-safety-boundary" data-africa-safety-boundary="no-execution">
+          ${capability.safety.map(item => `<span>${translateText(item)}</span>`).join("")}
+        </div>
+      </div>`;
+}
 
 function a100ChronicCareQuickActions() {
   return [
