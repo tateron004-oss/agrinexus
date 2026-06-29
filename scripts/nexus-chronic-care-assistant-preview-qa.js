@@ -120,14 +120,24 @@ const intentSource = sourceBetween(app, "function a100SafeAutonomyIntent", "func
 ].forEach(copy => assert(intentSource.includes(copy), `Report routing should include: ${copy}`));
 
 [
+  "Blood pressure cuff",
+  "Glucose meter/CGM",
+  "Weight scale",
+  "Activity tracker",
+  "device-ready, not connected",
   "device not connected",
   "manual entry available if supported",
   "review required",
   "provider review needed",
   "no external data transmission",
+  "RPM data inputs",
+  "RTM self-report",
+  "Monitoring readiness label",
+  "insufficient data",
+  "stale or missing data",
   "No automatic glucose, blood pressure, weight, or wearable device connection starts from this card.",
   "No readings, summaries, messages, or health records are sent externally from this preview."
-].forEach(copy => assert(chronicSource.includes(copy), `RPM/RTM readiness should include: ${copy}`));
+].forEach(copy => assert(app.includes(copy), `RPM/RTM readiness should include: ${copy}`));
 
 [
   "Prepare diabetes telehealth visit notes for review.",

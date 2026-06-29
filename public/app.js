@@ -12455,6 +12455,11 @@ function a100ChronicCareReport(kind = "general", command = "") {
       { label: "Wellness focus", value: "weight goal, nutrition, physical activity, sleep, stress, behavior barriers, and coach/provider review prep" },
       { label: "RTM behavior signal", value: "self-reported barrier, activity, sleep, stress, and nutrition context; human review required before care changes" },
       { label: "Wellness evidence label", value: "education and RTM behavior check-in; no medication, supplement, purchase, or product recommendation" }
+    ],
+    rpm: [
+      { label: "RPM data inputs", value: "blood pressure cuff, glucose meter/CGM, weight scale, activity tracker, and manual entry can be listed for review if already available" },
+      { label: "RTM self-report", value: "activity, adherence, symptoms, sleep, stress, and therapy barriers require human review before any care action" },
+      { label: "Monitoring readiness label", value: "device-ready, not connected; no automatic data capture, alerting, billing, or external transmission" }
     ]
   };
   const riskSignal = /chest pain|stroke|200\s*\/\s*120|extremely low|severe|pass out|cannot breathe/.test(text)
@@ -12486,7 +12491,11 @@ function a100ChronicCareReport(kind = "general", command = "") {
 
 function a100ChronicCareReadinessCards() {
   return [
-    { id: "rpm-device", label: "RPM device", status: "device not connected", detail: "No automatic glucose, blood pressure, weight, or wearable device connection starts from this card." },
+    { id: "bp-cuff", label: "Blood pressure cuff", status: "device-ready, not connected", detail: "Home cuff readings may be manually listed for review; Nexus does not pair, verify, or transmit cuff data." },
+    { id: "glucose-device", label: "Glucose meter/CGM", status: "device-ready, not connected", detail: "Glucose meter or CGM values may be prepared as user-provided notes only; no automatic device connection starts here." },
+    { id: "weight-scale", label: "Weight scale", status: "device-ready, not connected", detail: "Weight scale values can be discussed if the user already knows them; Nexus does not collect or sync scale data." },
+    { id: "activity-tracker", label: "Activity tracker", status: "device-ready, not connected", detail: "Activity tracker context stays self-reported unless a clinician-approved RTM program exists outside this preview." },
+    { id: "rpm-device", label: "RPM device", status: "device-ready, not connected", detail: "Current state remains device not connected. No automatic glucose, blood pressure, weight, or wearable device connection starts from this card." },
     { id: "manual-entry", label: "Manual entry", status: "manual entry available if supported", detail: "Users can prepare readings they already know for review; Nexus does not verify device accuracy." },
     { id: "rtm-coaching", label: "RTM coaching", status: "provider review needed", detail: "Therapeutic monitoring notes stay education-first until a coach, nurse, or clinician reviews them." },
     { id: "clinical-review", label: "Clinical review", status: "review required", detail: "Medication, diagnosis, treatment, and urgent decisions require qualified professional review." },
@@ -12524,9 +12533,9 @@ function a100ChronicCareGuidanceCard(kind = "general") {
     rpm: {
       domain: "chronic-care-rpm-rtm",
       focus: "RPM and RTM readiness for review-only chronic care monitoring conversations.",
-      prompts: ["What is RPM?", "What is RTM?", "Is my device connected?", "Prepare monitoring questions."],
-      collect: ["Which condition is being monitored.", "Whether readings are manual or from a device.", "Who reviews the information.", "Language, data access, and low-bandwidth needs."],
-      nextSteps: ["Confirm whether a clinic or program supports monitoring.", "Prepare manual readings for review if supported.", "Ask who sees the data and how urgent issues are handled.", "Keep device setup and transmission off until approved."],
+      prompts: ["What is RPM?", "What is RTM?", "Is my device connected?", "Prepare monitoring questions.", "What readings should I list?"],
+      collect: ["Which condition is being monitored.", "Whether readings are manual or from a blood pressure cuff, glucose meter/CGM, weight scale, or activity tracker.", "RTM self-report notes such as therapy use, symptoms, activity, sleep, stress, or barriers.", "Who reviews the information.", "Language, data access, and low-bandwidth needs."],
+      nextSteps: ["Confirm whether a clinic or program supports monitoring.", "Prepare manual readings for review if supported.", "Ask who sees the data, how stale or missing data is handled, and how urgent issues are escalated.", "Keep device setup and transmission off until approved."],
       boundary: "Readiness only. Nexus does not connect devices, receive automatic readings, transmit data, bill RPM/RTM, or alert providers from this preview."
     },
     telehealth: {
