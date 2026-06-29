@@ -187,6 +187,7 @@ let nexusSimulatedProviderResults = [];
 let nexusInternalNavigationExecutionResults = [];
 let nexusLocalDraftMessageResults = [];
 let nexusCallPreparationResults = [];
+let nexusMapNavigationHandoffResults = [];
 let visibleControlledStagedActionPreview = null;
 let visibleUserConfirmationPreview = null;
 let latestControlledActionConfirmationReadiness = null;
@@ -595,6 +596,24 @@ function handleNexusInternalNavigationCaptionCommand(command = "") {
   return true;
 }
 
+function isNexusMapNavigationHandoffCommand(command = "") {
+  const text = String(command || "").toLowerCase();
+  const prepareIntent = /\b(prepare|plan|review|create|build|outline)\b/.test(text);
+  const routeIntent = /\b(route|map|navigation|directions|transport|destination|origin|handoff)\b/.test(text);
+  const unsafeExecutionIntent = /\b(navigate now|start navigation|launch route|open external|use my location|share my location|gps|turn on location)\b/.test(text);
+  return prepareIntent && routeIntent && !unsafeExecutionIntent;
+}
+
+function handleNexusMapNavigationHandoffCaptionCommand(command = "") {
+  if (!isNexusMapNavigationHandoffCommand(command)) return false;
+  clearControlledActionPreview("map-navigation-handoff-caption-command");
+  const plan = buildNexusAutonomousTaskPlan(command, { category: "map-navigation-handoff" });
+  startNexusAutonomousWorkflowFromTaskPlan(plan, { command });
+  updateUserCaptionPanel("Route handoff review is ready. Confirming will only prepare a local map handoff card and may open the internal map section. Nexus will not request location, launch directions, or contact a provider.", { expanded: true });
+  setVoiceResponse("Route handoff review is ready. Confirming will only prepare a local map handoff card and may open the internal map section. Nexus will not request location, launch directions, or contact a provider.", false, { allowVoiceFirst: false });
+  return true;
+}
+
 function isNexusLocalDraftMessageCommand(command = "") {
   const text = String(command || "").toLowerCase();
   return /\b(draft|prepare|compose|write)\b[\s\S]*\b(message|email|note|question|outreach|inquiry)\b/.test(text)
@@ -737,6 +756,73 @@ function renderNexusInternalNavigationExecutionResults(results = nexusInternalNa
   return `
     <div class="nexus-internal-navigation-results" data-nexus-internal-navigation-results="true" data-external-action-occurred="false" data-location-permission-requested="false" data-route-launched="false" aria-label="Nexus internal navigation results">
       <span class="nexus-internal-navigation-label">Internal navigation</span>
+      <ul>${items}</ul>
+    </div>
+  `;
+}
+
+function createNexusMapNavigationHandoffResult(gate = nexusUserConfirmationGateState) {
+  if (!gate || gate.actionType !== "map_navigation_handoff" || gate.locallyConfirmable !== true) {
+    return null;
+  }
+  const required = Array.isArray(gate.requiredData) ? gate.requiredData : [];
+  if (typeof goSection === "function" && (typeof canOpenSection !== "function" || canOpenSection("map"))) {
+    goSection("map", {
+      instant: true,
+      keepAssistant: true,
+      openDefaultAction: false,
+      scroll: false
+    });
+  }
+  const result = {
+    schemaVersion: "nexus-map-navigation-handoff.v1",
+    handoffId: `nexus-map-handoff-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+    label: "ROUTE HANDOFF PREPARATION ONLY",
+    origin: required.find(item => /\b(origin|start|pickup|from)\b/i.test(String(item || ""))) || "Origin must be confirmed by the user.",
+    destination: required.find(item => /\b(destination|dropoff|to|facility|clinic|market)\b/i.test(String(item || ""))) || "Destination must be confirmed by the user.",
+    purpose: sanitizeNexusSessionAuditText(gate.description || "Prepare route handoff notes for review."),
+    routeNotes: [
+      "Confirm origin and destination with the user before any future route handoff.",
+      "Review route purpose, accessibility needs, timing, and safety notes.",
+      "Keep this as an internal Nexus map review until explicit approval and provider integration exist."
+    ],
+    providerStatus: sanitizeNexusSessionAuditText(gate.providerStatus || "map provider handoff not connected"),
+    locationPermissionStatus: "not requested",
+    confirmationRequired: true,
+    internalMapSectionOpened: true,
+    geolocationUsed: false,
+    locationPermissionRequested: false,
+    externalNavigationLaunched: false,
+    routeLaunched: false,
+    providerContacted: false,
+    dispatchRequested: false,
+    backendWriteOccurred: false,
+    externalActionOccurred: false,
+    executionAuthority: false,
+    safetyNote: "No browser geolocation, location permission, external directions, provider handoff, dispatch, payment, call, message, medical, pharmacy, emergency, or backend write occurred.",
+    createdAt: new Date().toISOString()
+  };
+  nexusMapNavigationHandoffResults = [result, ...nexusMapNavigationHandoffResults].slice(0, 10);
+  return result;
+}
+
+function renderNexusMapNavigationHandoffResults(results = nexusMapNavigationHandoffResults) {
+  if (!Array.isArray(results) || !results.length) return "";
+  const items = results.slice(0, 3).map(result => `
+    <li data-nexus-map-navigation-handoff-result="${htmlSafe(result.handoffId)}">
+      <strong>${htmlSafe(result.label)}</strong>
+      <span><strong>Origin:</strong> ${htmlSafe(result.origin)}</span>
+      <span><strong>Destination:</strong> ${htmlSafe(result.destination)}</span>
+      <span><strong>Purpose:</strong> ${htmlSafe(result.purpose)}</span>
+      <span><strong>Provider:</strong> ${htmlSafe(result.providerStatus)}</span>
+      <span><strong>Location permission:</strong> ${htmlSafe(result.locationPermissionStatus)}</span>
+      <small>${htmlSafe(result.routeNotes.join(" "))}</small>
+      <small>${htmlSafe(result.safetyNote)}</small>
+    </li>
+  `).join("");
+  return `
+    <div class="nexus-map-navigation-handoff-results" data-nexus-map-navigation-handoff-results="true" data-geolocation-used="false" data-location-permission-requested="false" data-external-navigation-launched="false" data-route-launched="false" data-provider-contacted="false" data-dispatch-requested="false" data-backend-write-occurred="false" data-external-action-occurred="false" aria-label="Nexus route handoff preparation results">
+      <span class="nexus-map-navigation-handoff-label">Route handoff preparation</span>
       <ul>${items}</ul>
     </div>
   `;
@@ -1035,6 +1121,9 @@ function nexusControlledActionQueueTypeForPlan(taskPlan = {}) {
   const summary = String(taskPlan.summary || taskPlan.goal || "").toLowerCase();
   const combined = `${category} ${intent} ${summary}`;
   const userFacingText = `${intent} ${summary}`;
+  const safeMapNavigationHandoffIntent = /\b(prepare|plan|review|create|build|outline)\b/.test(userFacingText)
+    && /\b(route|map|navigation|directions|transport|destination|origin|handoff)\b/.test(userFacingText)
+    && !/\b(navigate now|start navigation|launch route|open external|use my location|share my location|gps|turn on location)\b/.test(userFacingText);
   const safeCallPreparationIntent = /\b(prepare|plan|outline|create)\b/.test(userFacingText)
     && /\b(call|phone)\b/.test(userFacingText)
     && !/\b(call now|dial|place call|start call|make the call|open phone)\b/.test(userFacingText);
@@ -1042,6 +1131,7 @@ function nexusControlledActionQueueTypeForPlan(taskPlan = {}) {
     && /\b(message|email|note|question|outreach|inquiry)\b/.test(combined)
     && !/\b(send|submit|deliver|call|dial|place call|contact now)\b/.test(userFacingText);
   if (/\b(simulated|simulation|dry[- ]?run)\b/.test(category) || /\b(simulated|simulation|dry[- ]?run)\b/.test(intent) || /\b(simulated|simulation|dry[- ]?run)\b/.test(summary)) return "simulated_provider_action";
+  if (safeMapNavigationHandoffIntent) return "map_navigation_handoff";
   if (safeCallPreparationIntent) return "call_preparation";
   if (safeDraftIntent) return "draft_generation";
   if (/\b(call|phone|whatsapp|telegram|sms|email|message)\b/.test(category) || /\b(call|phone|whatsapp|telegram|sms|email|message)\b/.test(intent)) return "blocked_high_risk_action";
@@ -1141,6 +1231,7 @@ function syncNexusControlledActionQueueFromWorkflow(state = nexusAutonomousWorkf
 function isNexusControlledQueueActionLocallyConfirmable(action = {}) {
   return [
     "internal_navigation",
+    "map_navigation_handoff",
     "draft_generation",
     "report_generation",
     "call_preparation",
@@ -1217,6 +1308,12 @@ function performNexusConfirmedLocalQueueAction(gate = nexusUserConfirmationGateS
   if (gate.actionType === "internal_navigation") {
     const result = executeNexusConfirmedInternalNavigation(gate);
     return result?.status || "Internal navigation was not available. No external action occurred.";
+  }
+  if (gate.actionType === "map_navigation_handoff") {
+    const result = createNexusMapNavigationHandoffResult(gate);
+    return result
+      ? "Local route handoff card created for review and the internal map section was prepared. Nexus did not request location, launch directions, contact a provider, dispatch, call, message, or write backend data."
+      : "Local route handoff preparation was not available. No external action occurred.";
   }
   if (gate.actionType === "draft_generation") {
     const result = createNexusLocalDraftMessageResult(gate);
@@ -1313,6 +1410,7 @@ function renderNexusControlledActionQueueCard(queue = nexusControlledActionQueue
   const internalNavigationHtml = renderNexusInternalNavigationExecutionResults();
   const localDraftHtml = renderNexusLocalDraftMessageResults();
   const callPreparationHtml = renderNexusCallPreparationResults();
+  const mapNavigationHandoffHtml = renderNexusMapNavigationHandoffResults();
   const items = queue.slice(0, 4).map((action, index) => `
     <li data-nexus-controlled-action-queue-item="${htmlSafe(action.queueStatus)}" data-action-type="${htmlSafe(action.actionType)}" data-risk-level="${htmlSafe(action.riskLevel)}">
       <strong>${htmlSafe(action.actionType.replace(/_/g, " "))}</strong>
@@ -1332,6 +1430,7 @@ function renderNexusControlledActionQueueCard(queue = nexusControlledActionQueue
       ${gateHtml}
       ${localDraftHtml}
       ${callPreparationHtml}
+      ${mapNavigationHandoffHtml}
       ${internalNavigationHtml}
       ${simulatedHtml}
       ${auditHtml}
@@ -29389,6 +29488,7 @@ function bindStatic() {
         setCommandInputs(command);
         if (handleJarvisStyleStandardUserSafetyResponse(command)) return;
         if (handleNexusSimulationCaptionCommand(command)) return;
+        if (handleNexusMapNavigationHandoffCaptionCommand(command)) return;
         if (handleNexusInternalNavigationCaptionCommand(command)) return;
         if (handleNexusLocalDraftMessageCaptionCommand(command)) return;
         if (handleNexusCallPreparationCaptionCommand(command)) return;
@@ -29956,6 +30056,7 @@ function bindStatic() {
       setCommandInputs(command);
       if (handleJarvisStyleStandardUserSafetyResponse(command)) return;
       if (handleNexusSimulationCaptionCommand(command)) return;
+      if (handleNexusMapNavigationHandoffCaptionCommand(command)) return;
       if (handleNexusInternalNavigationCaptionCommand(command)) return;
       if (handleNexusLocalDraftMessageCaptionCommand(command)) return;
       if (handleNexusCallPreparationCaptionCommand(command)) return;
