@@ -1294,6 +1294,87 @@ body.user-mode .user-module-preview {
   gap: 8px;
   min-width: 0;
 }
+body.user-mode .a100-safe-autonomy-surface {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid #c8d6dd;
+  border-radius: 12px;
+  background: #ffffff;
+  color: #173240;
+  box-shadow: 0 12px 28px rgba(23, 50, 64, .1);
+}
+body.user-mode .a100-safe-autonomy-head {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+}
+body.user-mode .a100-safe-autonomy-head div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-width: 0;
+}
+body.user-mode .a100-safe-autonomy-head strong {
+  color: #173240;
+  font-size: 1.04rem;
+  font-weight: 950;
+  line-height: 1.14;
+}
+body.user-mode .a100-safe-autonomy-head span {
+  flex: 0 0 auto;
+  max-width: 128px;
+  padding: 7px 9px;
+  border-radius: 999px;
+  background: #173240;
+  color: #ffffff;
+  font-size: .72rem;
+  font-weight: 950;
+  line-height: 1.08;
+  text-align: center;
+}
+body.user-mode .a100-safe-autonomy-head small {
+  color: #426257;
+  font-size: .84rem;
+  font-weight: 850;
+  line-height: 1.24;
+}
+body.user-mode .a100-safe-autonomy-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+body.user-mode .a100-safe-autonomy-grid button {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  min-height: 78px;
+  padding: 10px;
+  border: 1px solid #d4e8f1;
+  border-radius: 8px;
+  background: #f8fafc;
+  color: #173240;
+  text-align: left;
+}
+body.user-mode .a100-safe-autonomy-grid button:first-child {
+  background: #eef8f6;
+  border-color: #9fcfca;
+}
+body.user-mode .a100-safe-autonomy-grid strong,
+body.user-mode .a100-safe-autonomy-grid span {
+  min-width: 0;
+  overflow-wrap: break-word;
+  color: #173240;
+  font-size: .84rem;
+  font-weight: 950;
+  line-height: 1.16;
+}
+body.user-mode .a100-safe-autonomy-grid span {
+  color: #426257;
+  font-weight: 850;
+}
 body.user-mode .user-scene-visual {
   display: grid;
   gap: 4px;
@@ -1648,6 +1729,9 @@ body.user-mode .user-preview-summary.compact {
     grid-template-columns: 1fr;
   }
   body.user-mode .user-route-planning-grid {
+    grid-template-columns: 1fr;
+  }
+  body.user-mode .a100-safe-autonomy-grid {
     grid-template-columns: 1fr;
   }
   .shipment-tracker-strip {

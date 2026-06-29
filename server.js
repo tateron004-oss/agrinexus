@@ -71,6 +71,22 @@ function assistantRuntimePreviewFlags(env = process.env) {
   });
 }
 
+function a100SafeAutonomyRuntimeFlags(env = process.env) {
+  const enabled = env.NEXUS_A100_STANDARD_USER_SAFE_AUTONOMY_ENABLED !== "false";
+  return Object.freeze({
+    enabled,
+    surface: "standard-user",
+    previewOnly: true,
+    defaultSafe: true,
+    executionAuthority: false,
+    noProviderHandoff: true,
+    noLocationPermissionRequested: true,
+    noBrowserPermissionPrompt: true,
+    noExternalActionAuthorized: true,
+    highRiskActionsGated: true
+  });
+}
+
 function inferMetadataOnlySelectedToolId(input = {}) {
   const result = input.result && typeof input.result === "object" ? input.result : {};
   const metadata = result.metadata && typeof result.metadata === "object" ? result.metadata : {};
@@ -27294,6 +27310,7 @@ async function api(req, res, url) {
         provider: `leaflet-${publicMap.provider || "built-in-defaults"}`
       },
       assistantRuntimePreview: assistantRuntimePreviewFlags(),
+      a100SafeAutonomy: a100SafeAutonomyRuntimeFlags(),
       persistence: usingPostgresState() ? "postgresql" : "json-file"
     });
   }
