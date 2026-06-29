@@ -590,6 +590,7 @@
     "qa:nexus-a100-22-workflow-preflight-checklists": "node scripts/nexus-a100-22-workflow-preflight-checklists-qa.js",
     "qa:nexus-a100-23-provider-handoff-readiness": "node scripts/nexus-a100-23-provider-handoff-readiness-qa.js",
     "qa:nexus-a100-24-location-permission-readiness": "node scripts/nexus-a100-24-location-permission-readiness-qa.js",
+    "qa:nexus-a100-25-communications-draft-readiness": "node scripts/nexus-a100-25-communications-draft-readiness-qa.js",
     "qa:nexus-sprint-k1-personalization-runtime-activation-readiness-gate": "node scripts/nexus-sprint-k1-personalization-runtime-activation-readiness-gate-qa.js",
     "qa:nexus-sprint-k2-personalization-feature-flag-contract": "node scripts/nexus-sprint-k2-personalization-feature-flag-contract-qa.js",
     "qa:nexus-sprint-k3-personalization-flag-contract-harness": "node scripts/nexus-sprint-k3-personalization-flag-contract-harness-qa.js",
