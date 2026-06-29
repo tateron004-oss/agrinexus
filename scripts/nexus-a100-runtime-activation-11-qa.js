@@ -58,15 +58,14 @@ assert(intentSource.indexOf("a100HighRiskActionGates().find") < intentSource.ind
 ].forEach(term => assert(gateSource.includes(term), `High-risk matrix should recognize ${term}.`));
 
 [
-  "explicit review",
-  "provider/contact readiness",
-  "confirmation",
-  "will not send",
+  "will not place a call",
+  "will not send it",
+  "buying, paying, ordering",
   "will not request geolocation",
   "will not start media capture",
   "cannot dispatch emergency services",
-  "before leaving Nexus",
-  "provider webhooks require readiness review"
+  "will not open another navigation app",
+  "review is required before any provider handoff"
 ].forEach(copy => assert(gateSource.includes(copy), `High-risk gate should preserve safe copy: ${copy}`));
 
 [

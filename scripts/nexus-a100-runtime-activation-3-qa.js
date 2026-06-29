@@ -31,13 +31,13 @@ assert(controlsSource.includes("simpleUserSections"), "Open section controls sho
 assert(controlsSource.includes("data-simple-command"), "Task controls should route through existing local command handling.");
 
 [
-  "Open section",
+  "Open",
   "Explain",
-  "Show more",
+  "Show More",
   "Prepare",
-  "Provider status",
+  "Provider Status",
   "Back",
-  "Next"
+  "Next Step"
 ].forEach(label => assert(controlsSource.includes(label), `Task control should render: ${label}`));
 
 [
@@ -49,9 +49,9 @@ assert(controlsSource.includes("data-simple-command"), "Task controls should rou
   "Nexus, what should I do next"
 ].forEach(command => assert(controlsSource.includes(command), `Task control should use safe command: ${command}`));
 
-assert(cardSource.includes("Review only"), "A100 runtime cards should be explicitly review-only.");
-assert(cardSource.includes("Internal navigation, local explanation, local expansion, review-only preparation, provider readiness display."), "Allowed actions should remain local/review-only.");
-assert(cardSource.includes("Provider handoff, permission prompts, geolocation, external APIs, backend mutation, camera, microphone, calls, messages, payments, purchases, emergency, and dispatch."), "Blocked actions should be visible.");
+assert(cardSource.includes("Review-only"), "A100 runtime cards should be explicitly review-only.");
+assert(cardSource.includes("Open pages, explain, show more, prepare a checklist, or show provider status."), "Allowed actions should remain local/review-only.");
+assert(cardSource.includes("Nexus will not call, send messages, pay, buy, contact providers, turn on location, use camera or microphone, dispatch help, or change records."), "Blocked actions should be visible.");
 assert(cardSource.includes("a100SafeTaskControlsHtml(section)"), "A100 runtime cards should include safe task controls.");
 assert(renderSource.includes("isA100SafeAutonomyEnabled()"), "Runtime card rendering should respect the A100 safe-autonomy gate.");
 assert(previewSource.includes("renderA100SafeAutonomyCard(intent);"), "A100 dashboard previews should render the safe runtime card.");

@@ -41,7 +41,7 @@ assert(previewSource.includes("rememberA100SafeFollowUpContext(intent);"), "A100
 ].forEach(term => assert(followUpSource.includes(term), `Follow-up command should be supported: ${term}`));
 
 [
-  "will not call, send, pay, buy, request location, open camera, use microphone, or hand off to a provider",
+  "will not call, send, pay, buy, request location, open camera, use microphone, or contact a provider",
   "No workflow was submitted and no provider handoff was started",
   "guidance only",
   "safe assistant capability menu",

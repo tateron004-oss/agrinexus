@@ -27,7 +27,7 @@ const intentSource = sourceBetween(app, "function a100SafeAutonomyIntent", "func
 const gateSource = sourceBetween(app, "function a100HighRiskActionGates", "function normalizeA100RuntimeCommand");
 
 assert(surfaceSource.includes("Nexus can help with..."), "Visible capability surface should remain.");
-assert(cardSource.includes("Review only"), "Runtime cards should remain review-only.");
+assert(cardSource.includes("Review-only"), "Runtime cards should remain review-only.");
 assert(cardSource.includes("a100SafeTaskControlsHtml(section)"), "Safe controls should remain present.");
 
 [

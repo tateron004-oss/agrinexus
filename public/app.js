@@ -12159,13 +12159,13 @@ function isA100SafeAutonomyEnabled() {
 
 function a100StandardUserCapabilities() {
   return [
-    { id: "agriculture", label: "Agriculture help", detail: "Explain crop, pest, soil, buyer, and field support steps.", command: "Nexus, help me with agriculture", section: "trade" },
-    { id: "learning", label: "Learning / training", detail: "Find courses, captions, lessons, and certificate readiness.", command: "Nexus, find agriculture training", section: "learning" },
-    { id: "workforce", label: "Workforce / jobs", detail: "Review jobs, skills, readiness gaps, and interview preparation.", command: "Nexus, show me farm jobs", section: "workforce" },
-    { id: "marketplace", label: "Marketplace browsing", detail: "Browse AgriTrade safely without buying, paying, or messaging.", command: "Nexus, browse AgriTrade", section: "trade" },
-    { id: "map", label: "Maps and routes", detail: "Open map readiness and route planning previews without live location.", command: "Nexus, help me plan a route", section: "map" },
-    { id: "providers", label: "Provider readiness", detail: "Show what is connected, not connected, preview-only, or review-required.", command: "Nexus, what providers are connected?", section: "agent" },
-    { id: "task", label: "Safe task preparation", detail: "Prepare checklists, drafts, next steps, and questions for review.", command: "Nexus, prepare a message", section: "agent" },
+    { id: "agriculture", label: "Agriculture Help", detail: "Explain crop, soil, pest, buyer, or field questions.", command: "Nexus, help me with agriculture", section: "trade" },
+    { id: "learning", label: "Find Training", detail: "Find lessons, captions, courses, and certificate steps.", command: "Nexus, find agriculture training", section: "learning" },
+    { id: "workforce", label: "Show Jobs", detail: "Review jobs, skills, readiness gaps, and interview steps.", command: "Nexus, show me farm jobs", section: "workforce" },
+    { id: "marketplace", label: "Browse AgriTrade", detail: "Browse marketplace options without buying or messaging.", command: "Nexus, browse AgriTrade", section: "trade" },
+    { id: "map", label: "Plan Route", detail: "Preview routes and maps without using live location.", command: "Nexus, help me plan a route", section: "map" },
+    { id: "providers", label: "Provider Status", detail: "Show connected, not connected, preview-only, and review-required status.", command: "Nexus, what providers are connected?", section: "agent" },
+    { id: "task", label: "Prepare", detail: "Prepare a checklist, draft, next step, or question for review.", command: "Nexus, prepare a message", section: "agent" },
     { id: "next", label: "What can Nexus do?", detail: "Get a practical menu of safe assistant help and next steps.", command: "Nexus, what can you do?", section: "dashboard" }
   ];
 }
@@ -12180,7 +12180,7 @@ function a100CapabilitySurfaceHtml() {
           <strong>${translateText("Nexus can help with...")}</strong>
           <span>${translateText("Safe preview mode")}</span>
         </div>
-        <small>${translateText("High-risk actions still require review, permission, provider readiness, and confirmation.")}</small>
+        <small>${translateText("Some actions need review first. Nexus will not send, pay, call, contact providers, or turn on location by itself.")}</small>
       </div>
       <div class="a100-safe-autonomy-grid">
         ${capabilities.map(item => `<button type="button" data-simple-command="${escapeHtml(item.command)}">
@@ -12196,13 +12196,13 @@ function a100CapabilitySurfaceHtml() {
 function a100SafeTaskControlsHtml(section = "dashboard") {
   const safeSection = (simpleUserSections[section] || section === "dashboard") ? section : "dashboard";
   const controls = [
-    { label: "Open section", command: `Nexus, open ${safeSection} section` },
+    { label: "Open", command: `Nexus, open ${safeSection} section` },
     { label: "Explain", command: "Nexus, explain it" },
-    { label: "Show more", command: "Nexus, show me more" },
+    { label: "Show More", command: "Nexus, show me more" },
     { label: "Prepare", command: "Nexus, prepare a review checklist" },
-    { label: "Provider status", command: "Nexus, what providers are connected?" },
+    { label: "Provider Status", command: "Nexus, what providers are connected?" },
     { label: "Back", command: "Nexus, go back" },
-    { label: "Next", command: "Nexus, what should I do next" }
+    { label: "Next Step", command: "Nexus, what should I do next" }
   ];
   return `
     <div class="a100-safe-task-controls" aria-label="${translateText("Safe task controls")}">
@@ -12255,12 +12255,12 @@ function a100SafeAutonomyCardHtml(intent = {}) {
     <article class="a100-runtime-card" data-a100-action="${escapeHtml(intent.action || "safe-preview")}" data-a100-section="${escapeHtml(section)}">
       <div class="a100-runtime-card-head">
         <strong>${translateText(title)}</strong>
-        <span>${translateText("Review only")}</span>
+        <span>${translateText("Review-only")}</span>
       </div>
       <p>${translateText(response)}</p>
       <div class="a100-runtime-card-meta">
-        <div><strong>${translateText("Allowed")}</strong><span>${translateText("Internal navigation, local explanation, local expansion, review-only preparation, provider readiness display.")}</span></div>
-        <div><strong>${translateText("Blocked")}</strong><span>${translateText("Provider handoff, permission prompts, geolocation, external APIs, backend mutation, camera, microphone, calls, messages, payments, purchases, emergency, and dispatch.")}</span></div>
+        <div><strong>${translateText("Allowed")}</strong><span>${translateText("Open pages, explain, show more, prepare a checklist, or show provider status.")}</span></div>
+        <div><strong>${translateText("Blocked")}</strong><span>${translateText("Nexus will not call, send messages, pay, buy, contact providers, turn on location, use camera or microphone, dispatch help, or change records.")}</span></div>
       </div>
       ${preparationHtml}
       ${providerHtml}
@@ -12357,7 +12357,7 @@ function a100RoutePlanningPreview() {
     origin: "Add origin manually. Nexus will not use GPS or request browser location from this prompt.",
     destination: "Add destination manually so the route can stay review-only.",
     readiness: "Leaflet map preview can open internally; external routing/navigation provider handoff remains gated.",
-    mapLink: "Use Open section to review the internal map, street layer, satellite imagery, labels, route previews, facilities, and readiness.",
+    mapLink: "Use Open to review the internal map, street layer, satellite imagery, labels, route previews, facilities, and readiness.",
     blocked: "No geolocation API call, no live tracking, no external maps/navigation launch, no provider routing call, and no browser permission prompt."
   };
 }
@@ -12408,14 +12408,14 @@ function a100MarketplaceBrowsingCard() {
 
 function a100HighRiskActionGates() {
   return [
-    { pattern: /\b(call|phone|dial|ring)\b.*\b(emergency|doctor|provider|buyer|seller|someone|contact|person|family|clinic|employer)\b|\bcall emergency\b/, label: "Call readiness", reason: "Calls require explicit review, provider/contact readiness, and confirmation before any call path can open." },
-    { pattern: /\b(send|message|sms|whatsapp|text|email|notify|contact)\b.*\b(buyer|seller|provider|doctor|someone|contact|family|patient|employer|driver)\b|\bsend it\b|\bprepare a message\b/, label: "Message preparation", reason: "Nexus can prepare a message draft for review, but it will not send or hand off to a messaging provider." },
-    { pattern: /\b(buy|purchase|pay|checkout|wallet|settle|settlement|subscribe|place order|create order|sell now|complete sale|update inventory|refund|transfer money)\b/, label: "Payment and purchase boundary", reason: "Payments, purchases, checkout, wallet, orders, inventory mutation, refunds, transfers, and settlement actions require provider readiness, confirmation, and audit gates." },
-    { pattern: /\b(track my location|share my location|live location|where am i|gps|locate me|follow me|start tracking|turn on location)\b/, label: "Location permission boundary", reason: "Live location needs an explicit location action and browser permission. Nexus will not request geolocation from this prompt." },
-    { pattern: /\b(open|start|turn on|use|enable)\b.*\b(camera|microphone|mic|video)\b|\bshow injury\b|\brecord audio\b|\btake photo\b/, label: "Camera and microphone boundary", reason: "Camera, microphone, photo, audio, and video capture require an explicit user-controlled preview and permission. Nexus will not start media capture here." },
+    { pattern: /\b(call|phone|dial|ring)\b.*\b(emergency|doctor|provider|buyer|seller|someone|contact|person|family|clinic|employer)\b|\bcall emergency\b/, label: "Call readiness", reason: "Nexus can prepare call notes, but it will not place a call." },
+    { pattern: /\b(send|message|sms|whatsapp|text|email|notify|contact)\b.*\b(buyer|seller|provider|doctor|someone|contact|family|patient|employer|driver)\b|\bsend it\b|\bprepare a message\b/, label: "Message preparation", reason: "Nexus can prepare a message for review, but it will not send it or contact a provider." },
+    { pattern: /\b(buy|purchase|pay|checkout|wallet|settle|settlement|subscribe|place order|create order|sell now|complete sale|update inventory|refund|transfer money)\b/, label: "Payment and purchase boundary", reason: "Nexus can help compare options, but buying, paying, ordering, refunds, transfers, settlement, or inventory changes need review first." },
+    { pattern: /\b(track my location|share my location|live location|where am i|gps|locate me|follow me|start tracking|turn on location)\b/, label: "Location permission boundary", reason: "Location is not turned on automatically. Nexus will not request geolocation from this prompt." },
+    { pattern: /\b(open|start|turn on|use|enable)\b.*\b(camera|microphone|mic|video)\b|\bshow injury\b|\brecord audio\b|\btake photo\b/, label: "Camera and microphone boundary", reason: "Camera and microphone are not turned on automatically. Nexus will not start media capture here." },
     { pattern: /\b(emergency|dispatch|ambulance|police|rescue|urgent help now)\b/, label: "Emergency boundary", reason: "Nexus cannot dispatch emergency services. If there is immediate danger, contact local emergency help now." },
-    { pattern: /\b(open|start|launch)\b.*\b(google maps|apple maps|waze|external navigation|navigation app)\b|\bnavigate me\b|\bstart navigation\b/, label: "External navigation boundary", reason: "External navigation requires route review, provider readiness, explicit permission, and confirmation before leaving Nexus." },
-    { pattern: /\b(hand off|handoff|connect me|transfer me|run provider|test provider|provider webhook|submit to provider)\b/, label: "Provider handoff boundary", reason: "Provider handoff, provider tests, and provider webhooks require readiness review, explicit permission, and confirmation." }
+    { pattern: /\b(open|start|launch)\b.*\b(google maps|apple maps|waze|external navigation|navigation app)\b|\bnavigate me\b|\bstart navigation\b/, label: "External navigation boundary", reason: "Nexus can prepare route details, but it will not open another navigation app from this prompt." },
+    { pattern: /\b(hand off|handoff|connect me|transfer me|run provider|test provider|provider webhook|submit to provider)\b/, label: "Provider handoff boundary", reason: "This provider is not connected from this card; review is required before any provider handoff, test, webhook, or submission." }
   ];
 }
 
@@ -12469,7 +12469,7 @@ function a100SafeFollowUpIntent(command = "") {
     return {
       action: "follow-up-more",
       section,
-      response: `More on ${label}: Nexus can keep this review-first, show practical next steps, and route you to the right Standard User section. It still will not call, send, pay, buy, request location, open camera, use microphone, or hand off to a provider.`,
+      response: `More on ${label}: Nexus can keep this review-first, show practical next steps, and route you to the right Standard User section. It still will not call, send, pay, buy, request location, open camera, use microphone, or contact a provider.`,
       suggestions: ["open that", "explain it", "what should I do next", "go back"]
     };
   }
@@ -12543,19 +12543,19 @@ function renderUserWorkspace() {
   const intelligence = modeIntelligenceSnapshot("user");
   const guideCommand = "help me understand the platform";
   const serviceButtons = [
-    { label: "Start Training", detail: "Begin courses, lessons, captions, and certificates.", section: "learning", className: "service-learning", photo: "https://images.unsplash.com/photo-1522202176988-66273c2fd55f?auto=format&fit=crop&w=900&q=70" },
-    { label: "Explore Job Pathways", detail: "Find jobs, apply, review readiness, and plan shifts.", section: "workforce", className: "service-workforce", photo: "https://images.unsplash.com/photo-1521737604893-d14cc237f11d?auto=format&fit=crop&w=900&q=70" },
-    { label: "Get Field Support", detail: "Open farm, crop, route, and field evidence support.", section: "trade", className: "service-trade", photo: "https://images.unsplash.com/photo-1500937386664-56d1dfef3854?auto=format&fit=crop&w=900&q=70" },
-    { label: "Open Health Access", detail: "Start intake, provider handoff, or local camera support.", section: "health", className: "service-health", photo: "https://images.unsplash.com/photo-1584515933487-779824d29309?auto=format&fit=crop&w=900&q=70" },
-    { label: "Use Maps & Location", detail: "Check routes, facilities, regions, and location support.", section: "map", className: "service-map", photo: "https://images.unsplash.com/photo-1524661135-423995f22d0b?auto=format&fit=crop&w=900&q=70" },
-    { label: "Open Marketplace / AgriTrade", detail: "Contact buyers, create crop orders, and track trade routes.", section: "trade", className: "service-trade", photo: "https://images.unsplash.com/photo-1500937386664-56d1dfef3854?auto=format&fit=crop&w=900&q=70" },
+    { label: "Start Training", detail: "Review courses, lessons, captions, and certificate steps.", section: "learning", className: "service-learning", photo: "https://images.unsplash.com/photo-1522202176988-66273c2fd55f?auto=format&fit=crop&w=900&q=70" },
+    { label: "Explore Job Pathways", detail: "Review jobs, skills, readiness, and interview steps.", section: "workforce", className: "service-workforce", photo: "https://images.unsplash.com/photo-1521737604893-d14cc237f11d?auto=format&fit=crop&w=900&q=70" },
+    { label: "Get Field Support", detail: "Review farm, crop, route, and field support options.", section: "trade", className: "service-trade", photo: "https://images.unsplash.com/photo-1500937386664-56d1dfef3854?auto=format&fit=crop&w=900&q=70" },
+    { label: "Open Health Access", detail: "Review health access options and preparation steps.", section: "health", className: "service-health", photo: "https://images.unsplash.com/photo-1584515933487-779824d29309?auto=format&fit=crop&w=900&q=70" },
+    { label: "Use Maps & Location", detail: "Preview routes, facilities, regions, and map readiness.", section: "map", className: "service-map", photo: "https://images.unsplash.com/photo-1524661135-423995f22d0b?auto=format&fit=crop&w=900&q=70" },
+    { label: "Open Marketplace / AgriTrade", detail: "Browse options and prepare questions before any transaction.", section: "trade", className: "service-trade", photo: "https://images.unsplash.com/photo-1500937386664-56d1dfef3854?auto=format&fit=crop&w=900&q=70" },
     { label: "Ask Nexus for Help", detail: "Speak or type what you need.", section: "ask", className: "service-ask", ask: true, photo: "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=900&q=70" }
   ].filter(item => item.ask || canOpenSection(item.section));
   target.innerHTML = `
     <section class="user-workspace-hero user-simple-hero">
       <span class="eyebrow">${translateText(nexusProductIdentity.productName)}</span>
       <h3 id="userWorkspaceTitle">${translateText(`Hi ${userFirstName()}. What do you need today?`)}</h3>
-      <p>${translateText("Nexus can help with work, training, health access, maps, field support, and agriculture trade. Tap a photo button or say: Nexus, help me.")}</p>
+      <p>${translateText("Choose a button below or ask Nexus what it can do. Nexus can help with agriculture, training, jobs, AgriTrade, maps, and provider status.")}</p>
       ${userLanguageQuickSwitchHtml()}
     </section>
     ${a100CapabilitySurfaceHtml()}
@@ -22769,7 +22769,7 @@ function a100SafeAutonomyIntent(command = "") {
     return {
       action: "high-risk-gated",
       section: "dashboard",
-      response: `${highRisk.label}: ${highRisk.reason} I can help prepare a review checklist or questions, but no call, message, payment, purchase, emergency, provider handoff, location tracking, camera, or microphone action has been started.`,
+      response: `${highRisk.label}: This requires review first. ${highRisk.reason} Nexus can prepare a checklist or questions, but it will not call, send, pay, buy, contact providers, turn on location, use camera or microphone, dispatch help, or change records.`,
       suggestions: ["what can Nexus do", "prepare a review checklist", "what providers are connected", "what should I do next"]
     };
   }

@@ -52,13 +52,13 @@ assert(!serverFlagSource.includes("OPENAI_API_KEY"), "A100 public flag must not 
   "a100SafeAutonomySurface",
   "Nexus can help with...",
   "Safe preview mode",
-  "Agriculture help",
-  "Learning / training",
-  "Workforce / jobs",
-  "Marketplace browsing",
-  "Maps and routes",
-  "Provider readiness",
-  "Safe task preparation",
+  "Agriculture Help",
+  "Find Training",
+  "Show Jobs",
+  "Browse AgriTrade",
+  "Plan Route",
+  "Provider Status",
+  "Prepare",
   "What can Nexus do?"
 ].forEach(term => assert(surfaceSource.includes(term), `A100 surface must include ${term}.`));
 assert(css.includes(".a100-safe-autonomy-surface"), "A100 surface CSS should exist.");
@@ -78,13 +78,13 @@ assert(css.includes(".a100-safe-autonomy-grid"), "A100 capability grid CSS shoul
 ].forEach(term => assert(intentSource.toLowerCase().includes(term.toLowerCase()) || surfaceSource.toLowerCase().includes(term.toLowerCase()), `A100 prompt support should include ${term}.`));
 
 [
-  "Calls require explicit review",
-  "will not send",
-  "Payments, purchases, checkout",
+  "will not place a call",
+  "will not send it",
+  "buying, paying, ordering",
   "will not request geolocation",
   "will not start media capture",
   "cannot dispatch emergency services"
-].forEach(term => assert(intentSource.includes(term), `High-risk gate should explain ${term}.`));
+].forEach(term => assert(intentSource.includes(term) || surfaceSource.includes(term), `High-risk gate should explain ${term}.`));
 
 assert(voiceCoreSource.includes("a100SafeAutonomyIntent"), "Voice/typed command core should invoke A100 intent routing.");
 assert(voiceCoreSource.indexOf("a100SafeAutonomyIntent") < voiceCoreSource.indexOf("openExplicitHealthVideoPreviewCommand"), "A100 high-risk gate should run before camera/video preview routing.");
