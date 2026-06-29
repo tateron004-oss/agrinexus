@@ -381,6 +381,7 @@ const suites = {
     "scripts/nexus-n100-18-source-trust-citation-assistant-qa.js",
     "scripts/nexus-a100-1-standard-user-capability-routing-qa.js",
     "scripts/nexus-a100-2-low-risk-task-cards-qa.js",
+    "scripts/nexus-a100-3-agriculture-support-qa.js",
     "scripts/nexus-sprint-k1-personalization-runtime-activation-readiness-gate-qa.js",
     "scripts/nexus-sprint-k2-personalization-feature-flag-contract-qa.js",
     "scripts/nexus-sprint-k3-personalization-flag-contract-harness-qa.js",
