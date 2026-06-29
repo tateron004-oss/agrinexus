@@ -48,7 +48,7 @@ const bindStaticBody = extractFunction(app, "bindStatic");
 [
   "PROVIDER_ACCOUNT_API_ACCESS_REGISTRY",
   "providerAccountApiAccessStatus",
-  "providerAccountApiAccess: providerAccountApiAccessStatus()",
+  "const providerAccountApiAccess = providerAccountApiAccessStatus()",
   "providerAccountApiAccess,",
   "Provider Accounts & API Access",
   "Simulation only",

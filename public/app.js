@@ -207,8 +207,8 @@ const nexusProductIdentity = Object.freeze({
 });
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-307";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v286";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-308";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v287";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
 const VOICE_ATTENTION_DELAY_MS = 900;
@@ -13248,6 +13248,7 @@ function a100CapabilitySurfaceHtml() {
         </button>`).join("")}
       </div>
       ${a100ProviderAccountApiAccessPanelHtml(a100ProviderAccountApiAccessPanel())}
+      ${a100ProductionProviderReadinessPanelHtml(a100ProductionProviderReadinessPanel())}
       <div class="a100-chronic-care-preview" aria-label="${translateText("Chronic care assistant preview")}">
         <div>
           <strong>${translateText("Chronic Care Navigator")}</strong>
@@ -13442,6 +13443,36 @@ function a100ProviderAccountApiAccessPanelHtml(providerAccountApiAccess = {}) {
       </div>`;
 }
 
+function a100ProductionProviderReadinessPanelHtml(productionProviderReadiness = {}) {
+  return `
+      <div class="a100-production-provider-readiness" data-nexus-production-provider-readiness-panel="true" data-secret-values-exposed="false" data-real-execution-enabled="false" aria-label="${translateText("Production Provider Readiness")}">
+        <div class="a100-production-provider-readiness-head">
+          <strong>${translateText(productionProviderReadiness.title || "Production Provider Readiness")}</strong>
+          <span>${translateText(productionProviderReadiness.defaultPosture || "Provider adapters are visible for readiness review only. Real provider execution is disabled.")}</span>
+        </div>
+        <div class="a100-production-provider-readiness-summary">
+          <span>${translateText(`Total: ${productionProviderReadiness.summary?.total || 0}`)}</span>
+          <span>${translateText(`Configured: ${productionProviderReadiness.summary?.configured || 0}`)}</span>
+          <span>${translateText(`Connected: ${productionProviderReadiness.summary?.connected || 0}`)}</span>
+          <span>${translateText(`Simulation: ${productionProviderReadiness.summary?.simulationSupported || 0}`)}</span>
+          <span>${translateText(`Real execution disabled: ${productionProviderReadiness.summary?.realExecutionDisabled || 0}`)}</span>
+        </div>
+        <div class="a100-production-provider-readiness-grid">
+          ${(productionProviderReadiness.items || []).map(item => `<section data-production-provider-readiness-id="${escapeHtml(item.id)}" data-production-provider-category="${escapeHtml(item.providerCategory)}" data-production-provider-configured="${item.configured ? "true" : "false"}" data-production-provider-connected="${item.connected ? "true" : "false"}" data-production-provider-real-execution="false">
+            <strong>${translateText(item.label || item.id)}</strong>
+            <span>${translateText(item.providerCategory || "provider")}</span>
+            <small>${translateText(`Adapter: ${item.adapterContract || "review-only adapter contract"}`)}</small>
+            <small>${translateText(`Permission: ${item.permissionRequired ? "required" : "not required"} | Confirmation: ${item.confirmationRequired ? "required" : "not required"}`)}</small>
+            <small>${translateText(item.unavailableReason || "Real execution disabled until final review.")}</small>
+            <small>${translateText(item.safeNextStep || "Review provider setup, permission, final gate, and audit before real use.")}</small>
+            <div class="a100-production-provider-status-list">
+              ${(item.statusLabels || ["simulation supported", "real execution disabled"]).map(label => `<span>${translateText(label)}</span>`).join("")}
+            </div>
+          </section>`).join("")}
+        </div>
+      </div>`;
+}
+
 function a100SafeAutonomyCardHtml(intent = {}) {
   const section = String(intent.section || "dashboard").trim();
   const title = String(intent.title || "Safe Nexus preview").trim();
@@ -13450,6 +13481,7 @@ function a100SafeAutonomyCardHtml(intent = {}) {
   const taskPlan = intent.taskPlan && typeof intent.taskPlan === "object" ? intent.taskPlan : null;
   const providerReadiness = Array.isArray(intent.providerReadiness) ? intent.providerReadiness : [];
   const providerAccountApiAccess = intent.providerAccountApiAccess && typeof intent.providerAccountApiAccess === "object" ? intent.providerAccountApiAccess : null;
+  const productionProviderReadiness = intent.productionProviderReadiness && typeof intent.productionProviderReadiness === "object" ? intent.productionProviderReadiness : null;
   const routePreview = intent.routePreview && typeof intent.routePreview === "object" ? intent.routePreview : null;
   const guidance = intent.guidance && typeof intent.guidance === "object" ? intent.guidance : null;
   const report = intent.report && typeof intent.report === "object" ? intent.report : null;
@@ -13483,6 +13515,7 @@ function a100SafeAutonomyCardHtml(intent = {}) {
         </div>`).join("")}
       </div>` : "";
   const providerAccountHtml = providerAccountApiAccess ? a100ProviderAccountApiAccessPanelHtml(providerAccountApiAccess) : "";
+  const productionProviderHtml = productionProviderReadiness ? a100ProductionProviderReadinessPanelHtml(productionProviderReadiness) : "";
   const routeHtml = routePreview ? `
       <div class="a100-route-preview" data-a100-route-preview="review-only">
         <div><strong>${translateText("Origin")}</strong><span>${translateText(routePreview.origin || "Add origin manually. Nexus will not use live location automatically.")}</span></div>
@@ -13520,6 +13553,7 @@ function a100SafeAutonomyCardHtml(intent = {}) {
       ${taskPlanHtml}
       ${providerHtml}
       ${providerAccountHtml}
+      ${productionProviderHtml}
       ${routeHtml}
       ${guidanceHtml}
       ${reportHtml}
@@ -13753,6 +13787,57 @@ function a100ProviderAccountApiAccessPanel() {
       connected: items.filter(item => item.connected).length,
       realExecutionEnabled: items.filter(item => item.realExecutionEnabled).length,
       simulationAvailable: items.filter(item => item.simulationAvailable).length
+    },
+    items
+  };
+}
+
+function a100ProductionProviderReadinessPanel() {
+  const fallbackItems = [
+    ["phone-call", "Phone / call provider", "communications", "confirmed call handoff adapter"],
+    ["whatsapp-message", "WhatsApp / message provider", "communications", "confirmed WhatsApp/message handoff adapter"],
+    ["sms-email", "SMS / email provider", "communications", "confirmed notification delivery adapter"],
+    ["maps-navigation", "Maps / navigation provider", "maps-routing", "reviewed route/navigation handoff adapter"],
+    ["telehealth", "Telehealth provider", "health-access", "confirmed telehealth/video handoff adapter"],
+    ["rpm-rtm-devices", "RPM / RTM device provider", "health-access", "consented RPM/RTM device data adapter"],
+    ["marketplace-payment", "Marketplace / payment provider", "marketplace-payments", "confirmed payment/checkout adapter"],
+    ["care-team-report-delivery", "Care-team / physician report delivery", "health-access", "approved care-team report delivery adapter"]
+  ].map(([id, label, providerCategory, adapterContract]) => ({
+    id,
+    label,
+    providerCategory,
+    adapterContract,
+    configured: false,
+    connected: false,
+    simulationSupported: true,
+    confirmationRequired: true,
+    permissionRequired: true,
+    realExecutionDisabled: true,
+    actionQueueCompatible: true,
+    unavailableReason: "Provider account or credential is not connected.",
+    safeNextStep: "Connect provider account/API credentials, then validate permission, final gate, audit, and provider policy before real use.",
+    statusLabels: ["not configured", "simulation supported", "permission required", "confirmation required", "real execution disabled"],
+    secretValuesExposed: false,
+    noExternalApiCall: true,
+    noExecutionAuthorized: true
+  }));
+  const source = data?.productionProviderReadiness && typeof data.productionProviderReadiness === "object"
+    ? data.productionProviderReadiness
+    : null;
+  const items = Array.isArray(source?.items) && source.items.length ? source.items : fallbackItems;
+  return {
+    id: "production-provider-readiness",
+    title: source?.title || "Production Provider Readiness",
+    defaultPosture: source?.defaultPosture || "Provider adapters are visible for readiness review only. Real provider execution is disabled.",
+    noSecretsExposed: source?.noSecretsExposed !== false,
+    noExternalApiCalls: source?.noExternalApiCalls !== false,
+    noExecutionAuthorized: source?.noExecutionAuthorized !== false,
+    summary: source?.summary || {
+      total: items.length,
+      configured: items.filter(item => item.configured).length,
+      connected: items.filter(item => item.connected).length,
+      simulationSupported: items.filter(item => item.simulationSupported).length,
+      realExecutionDisabled: items.filter(item => item.realExecutionDisabled !== false).length
     },
     items
   };
@@ -24615,6 +24700,7 @@ function a100SafeAutonomyIntent(command = "") {
     taskPlan: buildNexusAutonomousTaskPlan(command, { category: preparationCategory }),
     providerReadiness: capability.id === "providers" ? a100ProviderReadinessCards() : null,
     providerAccountApiAccess: capability.id === "providers" ? a100ProviderAccountApiAccessPanel() : null,
+    productionProviderReadiness: capability.id === "providers" ? a100ProductionProviderReadinessPanel() : null,
     routePreview: capability.id === "map" ? a100RoutePlanningPreview() : null,
     guidance: capability.id === "agriculture" ? a100AgricultureHelpCard() : capability.id === "learning" ? a100TrainingLearningCard() : capability.id === "workforce" ? a100WorkforceJobsCard() : capability.id === "marketplace" ? a100MarketplaceBrowsingCard() : null,
     suggestions: ["help me with agriculture", "find agriculture training", "show me farm jobs", "browse AgriTrade", "help me plan a route", "what providers are connected"].slice(0, 5)

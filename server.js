@@ -31,8 +31,8 @@ const AI_MODEL = process.env.OPENAI_MODEL || "gpt-5.4-mini";
 const AI_REASONING_MODEL = process.env.OPENAI_REASONING_MODEL || process.env.OPENAI_AGENT_MODEL || AI_MODEL;
 const AI_TRANSLATION_MODEL = process.env.OPENAI_TRANSLATION_MODEL || process.env.OPENAI_AGENT_MODEL || AI_MODEL;
 const AGRINEXUS_RELEASE = "2026-06-16-operational-readiness";
-const AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-307";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v286";
+const AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-308";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v287";
 const PRODUCT_IDENTITY = Object.freeze({
   productName: "Nexus Workforce AI",
   assistantName: "Nexus",
@@ -3277,6 +3277,7 @@ function publicState(db, user) {
   ensureNetworkedIntelligenceProfile(db.profile);
   const providerCandidates = providerCandidateCatalog(db, providers);
   const providerAccountApiAccess = providerAccountApiAccessStatus();
+  const productionProviderReadiness = productionProviderReadinessStatus(providers, providerAccountApiAccess);
   const agentCapabilities = agentCapabilityRegistryState(db, providers);
   const jarvisReadiness = jarvisReadinessModel(db, user, providers);
   return {
@@ -3293,6 +3294,7 @@ function publicState(db, user) {
     providers,
     providerCandidates,
     providerAccountApiAccess,
+    productionProviderReadiness,
     capabilities: capabilityMatrix(db, providers),
     womenChildrenLearningHub: womenChildrenLearningHubModel(db, providers),
     intelligentAssistant: intelligentAssistantModel(db, user, providers),
@@ -5303,6 +5305,146 @@ function providerAccountApiAccessStatus(env = process.env) {
       connected: items.filter(item => item.connected).length,
       realExecutionEnabled: items.filter(item => item.realExecutionEnabled).length,
       simulationAvailable: items.filter(item => item.simulationAvailable).length
+    },
+    items
+  };
+}
+
+const PRODUCTION_PROVIDER_READINESS_REGISTRY = [
+  {
+    id: "phone-call",
+    label: "Phone / call provider",
+    providerCategory: "communications",
+    accountApiAccessId: "voice-phone-provider",
+    providerIds: ["phone-voice"],
+    adapterContract: "confirmed call handoff adapter",
+    permissionRequired: true,
+    confirmationRequired: true
+  },
+  {
+    id: "whatsapp-message",
+    label: "WhatsApp / message provider",
+    providerCategory: "communications",
+    accountApiAccessId: "whatsapp-messaging",
+    providerIds: ["whatsapp-delivery"],
+    adapterContract: "confirmed WhatsApp/message handoff adapter",
+    permissionRequired: true,
+    confirmationRequired: true
+  },
+  {
+    id: "sms-email",
+    label: "SMS / email provider",
+    providerCategory: "communications",
+    accountApiAccessId: "sms-provider",
+    providerIds: ["sms-delivery", "email-delivery"],
+    adapterContract: "confirmed notification delivery adapter",
+    permissionRequired: true,
+    confirmationRequired: true
+  },
+  {
+    id: "maps-navigation",
+    label: "Maps / navigation provider",
+    providerCategory: "maps-routing",
+    accountApiAccessId: "maps-routing-provider",
+    providerIds: ["maps", "routing-geocoding", "public-osm-geocoding"],
+    adapterContract: "reviewed route/navigation handoff adapter",
+    permissionRequired: true,
+    confirmationRequired: true
+  },
+  {
+    id: "telehealth",
+    label: "Telehealth provider",
+    providerCategory: "health-access",
+    accountApiAccessId: "telehealth-video-provider",
+    providerIds: ["health-telehealth"],
+    adapterContract: "confirmed telehealth/video handoff adapter",
+    permissionRequired: true,
+    confirmationRequired: true
+  },
+  {
+    id: "rpm-rtm-devices",
+    label: "RPM / RTM device provider",
+    providerCategory: "health-access",
+    accountApiAccessId: "rpm-rtm-device-vendor",
+    providerIds: ["rpm-rtm-device-vendor"],
+    adapterContract: "consented RPM/RTM device data adapter",
+    permissionRequired: true,
+    confirmationRequired: true
+  },
+  {
+    id: "marketplace-payment",
+    label: "Marketplace / payment provider",
+    providerCategory: "marketplace-payments",
+    accountApiAccessId: "marketplace-payment-provider",
+    providerIds: ["trade-payments", "billing-subscriptions"],
+    adapterContract: "confirmed payment/checkout adapter",
+    permissionRequired: true,
+    confirmationRequired: true
+  },
+  {
+    id: "care-team-report-delivery",
+    label: "Care-team / physician report delivery",
+    providerCategory: "health-access",
+    accountApiAccessId: "care-team-report-delivery-provider",
+    providerIds: ["health-notifications", "health-ehr", "email-delivery"],
+    adapterContract: "approved care-team report delivery adapter",
+    permissionRequired: true,
+    confirmationRequired: true
+  }
+];
+
+function productionProviderReadinessStatus(providers = [], providerAccountApiAccess = providerAccountApiAccessStatus()) {
+  const providerById = new Map((providers || []).map(provider => [provider.id, provider]));
+  const accountById = new Map((providerAccountApiAccess.items || []).map(item => [item.id, item]));
+  const connectedStatuses = new Set(["connected", "ready", "needs-recipient", "needs-user-auth"]);
+  const items = PRODUCTION_PROVIDER_READINESS_REGISTRY.map(item => {
+    const account = accountById.get(item.accountApiAccessId) || {};
+    const matchingProviders = item.providerIds.map(id => providerById.get(id)).filter(Boolean);
+    const configured = Boolean(account.configured || matchingProviders.some(provider => !["needs-credentials", "not-configured", "missing"].includes(String(provider.status || "").toLowerCase())));
+    const connected = Boolean(account.connected || matchingProviders.some(provider => connectedStatuses.has(String(provider.status || "").toLowerCase())));
+    const realExecutionDisabled = !Boolean(account.realExecutionEnabled);
+    return {
+      id: item.id,
+      label: item.label,
+      providerCategory: item.providerCategory,
+      providerIds: item.providerIds,
+      adapterContract: item.adapterContract,
+      configured,
+      connected,
+      simulationSupported: true,
+      confirmationRequired: item.confirmationRequired,
+      permissionRequired: item.permissionRequired,
+      realExecutionDisabled,
+      actionQueueCompatible: true,
+      unavailableReason: connected ? "Real execution disabled until final gate, audit, consent, and provider approval are active." : "Provider account or credential is not connected.",
+      safeNextStep: connected
+        ? "Review permission, final confirmation, audit, and provider policy before enabling any real handoff."
+        : "Connect the provider account/API credential and validate webhook/callback policy before real use.",
+      statusLabels: [
+        connected ? "connected" : configured ? "configured-not-connected" : "not configured",
+        "simulation supported",
+        item.permissionRequired ? "permission required" : "permission not required",
+        item.confirmationRequired ? "confirmation required" : "confirmation not required",
+        "real execution disabled"
+      ],
+      secretValuesExposed: false,
+      noExternalApiCall: true,
+      noExecutionAuthorized: true
+    };
+  });
+  return {
+    id: "production-provider-readiness",
+    title: "Production Provider Readiness",
+    defaultPosture: "Provider adapters are visible for readiness review only. Real provider execution is disabled.",
+    noSecretsExposed: true,
+    noExternalApiCalls: true,
+    noExecutionAuthorized: true,
+    summary: {
+      total: items.length,
+      configured: items.filter(item => item.configured).length,
+      connected: items.filter(item => item.connected).length,
+      simulationSupported: items.filter(item => item.simulationSupported).length,
+      realExecutionDisabled: items.filter(item => item.realExecutionDisabled).length
     },
     items
   };
@@ -27527,9 +27669,12 @@ async function api(req, res, url) {
 
   if (url.pathname === "/api/config" && req.method === "GET") {
     const publicMap = publicMapConfig();
+    const providerAccountApiAccess = providerAccountApiAccessStatus();
+    const productionProviderReadiness = productionProviderReadinessStatus(runtimeProviders(db), providerAccountApiAccess);
     return send(res, 200, {
       productIdentity: productIdentityMetadata(),
-      providerAccountApiAccess: providerAccountApiAccessStatus(),
+      providerAccountApiAccess,
+      productionProviderReadiness,
       ai: {
         provider: process.env.OPENAI_API_KEY ? "openai" : "offline-simulation",
         model: process.env.OPENAI_API_KEY ? AI_MODEL : null
