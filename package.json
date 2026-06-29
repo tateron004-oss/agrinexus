@@ -603,6 +603,7 @@
     "qa:nexus-a100-35-admin-provider-review": "node scripts/nexus-a100-35-admin-provider-review-qa.js",
     "qa:nexus-a100-36-partner-data-intake": "node scripts/nexus-a100-36-partner-data-intake-qa.js",
     "qa:nexus-a100-37-market-trust-readiness": "node scripts/nexus-a100-37-market-trust-readiness-qa.js",
+    "qa:nexus-a100-38-regional-deployment-readiness": "node scripts/nexus-a100-38-regional-deployment-readiness-qa.js",
     "qa:nexus-sprint-k1-personalization-runtime-activation-readiness-gate": "node scripts/nexus-sprint-k1-personalization-runtime-activation-readiness-gate-qa.js",
     "qa:nexus-sprint-k2-personalization-feature-flag-contract": "node scripts/nexus-sprint-k2-personalization-feature-flag-contract-qa.js",
     "qa:nexus-sprint-k3-personalization-flag-contract-harness": "node scripts/nexus-sprint-k3-personalization-flag-contract-harness-qa.js",
