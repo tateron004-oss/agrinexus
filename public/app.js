@@ -12191,8 +12191,8 @@ function a100CapabilitySurfaceHtml() {
       </div>
       <div class="a100-chronic-care-preview" aria-label="${translateText("Chronic care assistant preview")}">
         <div>
-          <strong>${translateText("Chronic Care Assistant")}</strong>
-          <span>${translateText("Review-only telehealth support for diabetes, blood pressure, weight, RPM, and RTM.")}</span>
+          <strong>${translateText("Chronic Care Navigator")}</strong>
+          <span>${translateText("Review-only chronic care navigation for diabetes, blood pressure, asthma, heart risk, kidney risk, maternal risk, reminders, RPM, and RTM.")}</span>
           <small>${translateText("Built for multilingual, low-bandwidth, rural telehealth and community health worker review.")}</small>
         </div>
         <div class="a100-chronic-care-actions">
@@ -12351,6 +12351,46 @@ function a100ReviewOnlyPreparation(category = "general") {
       status: "Review-only hypertension visit prep. Nexus does not make urgent clinical decisions.",
       blocked: "No diagnosis, medication change, emergency dispatch, device connection, provider handoff, message, call, or external health record update."
     },
+    asthma: {
+      category: "asthma",
+      goal: "Prepare asthma or chronic respiratory clinic visit notes for review.",
+      steps: ["Describe breathing symptoms, triggers, inhaler or medicine schedule as prescribed, and recent flare-ups.", "Prepare clinic questions about warning signs, inhaler technique, and follow-up.", "Use urgent-care guidance for severe shortness of breath, blue lips, fainting, confusion, or worsening breathing."],
+      infoNeeded: ["Age range.", "Country or region.", "Preferred language.", "Known breathing condition.", "Current symptoms.", "Medicine schedule for review only.", "Clinic access.", "Red-flag symptoms."],
+      status: "Review-only asthma and chronic respiratory support. Nexus explains, prepares, and routes warning signs only.",
+      blocked: "No diagnosis, medication change, emergency dispatch, device connection, provider handoff, message, call, pharmacy order, or external health record update."
+    },
+    "heart-risk": {
+      category: "heart-risk",
+      goal: "Prepare heart disease risk questions and warning-sign education for review.",
+      steps: ["Collect known concerns such as chest pain history, blood pressure, diabetes, smoking, activity limits, family history, and clinic access.", "Prepare questions for a clinician about risk, lifestyle, medication adherence, and follow-up.", "Use urgent-care guidance for chest pain, severe shortness of breath, fainting, confusion, or stroke signs."],
+      infoNeeded: ["Known conditions.", "Symptoms and timing.", "Recent BP or glucose if known.", "Medication schedule for review only.", "Food, activity, stress, transport, and cost barriers."],
+      status: "Review-only heart disease risk navigation. Nexus does not estimate diagnosis or decide treatment.",
+      blocked: "No diagnosis, medication change, emergency dispatch, device connection, provider handoff, message, call, payment, purchase, or external mutation."
+    },
+    "kidney-risk": {
+      category: "kidney-risk",
+      goal: "Prepare kidney disease risk questions and lab-follow-up notes for review.",
+      steps: ["List known diabetes, blood pressure, swelling, urine, lab, or medication concerns.", "Prepare questions about kidney screening, hydration, BP/glucose control, and medication safety for a clinician or pharmacist.", "Avoid interpreting complex lab results as final medical advice."],
+      infoNeeded: ["Known diabetes or hypertension.", "Recent readings if known.", "Lab names without final interpretation.", "Medicine list for clinician/pharmacist review.", "Clinic and transport access."],
+      status: "Review-only kidney risk navigation. Nexus prepares questions and missing data only.",
+      blocked: "No diagnosis, lab interpretation as final advice, medication change, provider handoff, message, call, or external health record update."
+    },
+    "maternal-risk": {
+      category: "maternal-risk",
+      goal: "Prepare maternal chronic risk and pregnancy danger-sign questions for review.",
+      steps: ["Collect pregnancy status, known high blood pressure or diabetes, swelling, headache, vision changes, bleeding, severe abdominal pain, and clinic access if volunteered.", "Prepare urgent warning guidance for danger signs.", "Prepare questions for antenatal clinic, nurse, midwife, CHW, or physician review."],
+      infoNeeded: ["Pregnancy stage if known.", "BP or glucose if known.", "Symptoms and timing.", "Clinic access.", "Support person or CHW review needs."],
+      status: "Review-only maternal chronic risk support. Danger signs route to urgent professional care guidance.",
+      blocked: "No diagnosis, medication change, emergency dispatch, provider handoff, message, call, location lookup, or external health record update."
+    },
+    "medication-reminder": {
+      category: "medication-reminder",
+      goal: "Prepare a medication and appointment reminder plan based on the user's existing prescription or clinic instructions.",
+      steps: ["Confirm medicine names and times from the prescription or clinician instructions.", "Prepare daily medication times, refill dates, BP/glucose check reminders, lab dates, and clinic follow-up questions.", "Review missed doses, side effects, or schedule changes with a clinician, nurse, pharmacist, or CHW."],
+      infoNeeded: ["Medication name from the label or prescription.", "Dose timing from clinician instructions.", "Refill date.", "Clinic follow-up date.", "Preferred low-bandwidth reminder format."],
+      status: "Review-only reminder planning. Nexus can prepare reminder text but does not auto-notify or change medicine.",
+      blocked: "No medication instruction, prescription change, automatic notification, pharmacy order, payment, provider message, call, or external calendar mutation."
+    },
     wellness: {
       category: "wellness",
       goal: "Prepare weight and wellness questions for review.",
@@ -12374,6 +12414,14 @@ function a100ReviewOnlyPreparation(category = "general") {
       infoNeeded: ["Manual BP/glucose/weight notes.", "Symptoms and timing.", "Medication questions for clinician review.", "Food, transport, cost, language, and access barriers.", "Follow-up preparation needs."],
       status: "Review-only CHW support. Nexus prepares education and summary notes only.",
       blocked: "No diagnosis, medication instruction, referral submission, message, call, provider handoff, device connection, or external health record update."
+    },
+    navigator: {
+      category: "navigator",
+      goal: "Prepare a safe Chronic Care Navigator support plan for Africa-focused health navigation.",
+      steps: ["Collect age range, country or region, preferred language, known condition, symptoms, medication schedule, clinic access, last BP/glucose reading if known, and red-flag symptoms.", "Provide education, clinic questions, tracking checklist, reminder planning, and low-bandwidth next steps.", "Stop normal coaching and use urgent-care guidance for red flags."],
+      infoNeeded: ["Age range.", "Country or region.", "Preferred language.", "Known condition.", "Current symptoms.", "Medication schedule.", "Clinic access.", "Last BP/glucose reading if known.", "Red-flag symptoms."],
+      status: "Review-only chronic care navigation. Nexus helps prepare, understand, track, and navigate care.",
+      blocked: "No diagnosis, prescribing, medication change, booking, message, call, payment, pharmacy order, location lookup, provider handoff, device connection, external transmission, or persistent sensitive storage."
     },
     route: {
       category: "route",
@@ -12416,8 +12464,12 @@ function a100ProviderReadinessCards() {
 
 function a100ChronicCareQuickActions() {
   return [
+    { label: "Chronic Care Navigator", detail: "Text-first Africa-ready support for education, tracking, reminders, clinic prep, and red-flag guidance.", command: "Nexus, chronic care navigator" },
     { label: "Diabetes Support", detail: "Review blood sugar education and visit questions.", command: "Nexus, help with diabetes" },
     { label: "Blood Pressure Support", detail: "Review blood pressure education and warning signs.", command: "Nexus, help me with blood pressure" },
+    { label: "Asthma / Breathing Support", detail: "Prepare respiratory questions, trigger notes, and urgent warning signs.", command: "Nexus, my mother has asthma" },
+    { label: "Heart / Kidney Risk", detail: "Prepare heart and kidney risk questions without diagnosis.", command: "Nexus, help with heart disease risk" },
+    { label: "Medication Reminder Plan", detail: "Build a review-only medicine and appointment reminder plan.", command: "Nexus, remind me to take my medicine" },
     { label: "Weight & Wellness", detail: "Prepare safe wellness questions for a coach or clinician.", command: "Nexus, help me lose weight safely" },
     { label: "RPM/RTM Readiness", detail: "Check manual entry, device, and review-only readiness.", command: "Nexus, what is RPM?" },
     { label: "Prepare Telehealth Visit", detail: "Build a review-only visit checklist.", command: "Nexus, prepare for my telehealth visit" },
@@ -12448,6 +12500,12 @@ function a100ChronicCareReport(kind = "general", command = "") {
   const conditionAreaMap = {
     diabetes: "Diabetes",
     hypertension: "Hypertension / blood pressure",
+    asthma: "Asthma / chronic respiratory disease",
+    "heart-risk": "Heart disease risk",
+    "kidney-risk": "Kidney disease risk",
+    "maternal-risk": "Maternal chronic risk support",
+    "medication-reminder": "Medication adherence and appointment follow-up",
+    navigator: "Chronic Care AI Navigator for Africa",
     wellness: "Obesity / weight wellness",
     rpm: "RPM/RTM monitoring readiness",
     telehealth: "Telehealth chronic-care visit preparation",
@@ -12458,6 +12516,12 @@ function a100ChronicCareReport(kind = "general", command = "") {
   const titleMap = {
     diabetes: "Diabetes physician report",
     hypertension: "Blood pressure physician report",
+    asthma: "Asthma and respiratory review report",
+    "heart-risk": "Heart disease risk review report",
+    "kidney-risk": "Kidney disease risk review report",
+    "maternal-risk": "Maternal chronic risk review report",
+    "medication-reminder": "Medication reminder planner report",
+    navigator: "Chronic Care Navigator report",
     wellness: "Weight and wellness physician report",
     rpm: "RPM/RTM physician report",
     telehealth: "Telehealth visit report",
@@ -12475,6 +12539,31 @@ function a100ChronicCareReport(kind = "general", command = "") {
       { label: "Blood pressure focus", value: "home BP reading checklist, measurement context, warning signs, sodium/activity education, and provider-review prep" },
       { label: "Hypertension report detail", value: "blood pressure concern; BP reading if mentioned; symptoms if mentioned; home BP technique/checklist; severe BP, chest pain, or stroke symptoms routed to urgent guidance" },
       { label: "Blood pressure evidence label", value: "guideline-backed education; repeated BP data needed for trend; provider review required" }
+    ],
+    asthma: [
+      { label: "Respiratory focus", value: "asthma/chronic respiratory education, symptom and trigger tracking, inhaler-technique questions, clinic visit preparation, and urgent breathing warning signs" },
+      { label: "Respiratory evidence label", value: "general chronic-care education; manual/session-only information; provider review required for treatment or medication questions" }
+    ],
+    "heart-risk": [
+      { label: "Heart risk focus", value: "heart disease risk questions, chest-pain warning signs, blood pressure/diabetes context, medication adherence questions, and clinic follow-up prep" },
+      { label: "Heart risk evidence label", value: "general chronic-care education; urgent warning guidance for chest pain, stroke signs, severe shortness of breath, or fainting" }
+    ],
+    "kidney-risk": [
+      { label: "Kidney risk focus", value: "kidney screening questions, diabetes/BP context, swelling or urine concerns, lab follow-up questions, and medication-safety review prompts" },
+      { label: "Kidney risk evidence label", value: "manual/session-only information; complex labs need clinician interpretation; provider review required" }
+    ],
+    "maternal-risk": [
+      { label: "Maternal chronic risk focus", value: "pregnancy with hypertension/diabetes concerns, headache, swelling, vision changes, bleeding, severe pain, and antenatal clinic review prep" },
+      { label: "Maternal risk evidence label", value: "urgent warning guidance for pregnancy danger signs; clinician, nurse, or midwife review required" }
+    ],
+    "medication-reminder": [
+      { label: "Reminder planner focus", value: "daily medication times from existing instructions, refill dates, clinic follow-ups, BP/glucose checks, lab appointments, and CHW visit reminders" },
+      { label: "Reminder safety label", value: "adherence support as prescribed; no medication change, automatic notification, pharmacy order, or external calendar mutation" }
+    ],
+    navigator: [
+      { label: "Navigator intake", value: "age range, country/region, preferred language, known condition, current symptoms, medication schedule, clinic access, last BP/glucose reading if known, and red-flag symptoms" },
+      { label: "Navigator output", value: "condition support summary, safety notice, questions to ask, tracking checklist, urgent red-flag guidance, and next safe action" },
+      { label: "Africa-ready delivery", value: "text-first, low-bandwidth, simple language, community health worker support, and rural telehealth review readiness" }
     ],
     wellness: [
       { label: "Wellness focus", value: "weight goal, nutrition, physical activity, sleep, stress, behavior barriers, and coach/provider review prep" },
@@ -12604,6 +12693,46 @@ function a100ChronicCareGuidanceCard(kind = "general") {
       nextSteps: ["Prepare home BP readings with time and context.", "Ask about measurement technique, warning signs, sodium, activity, and medication adherence questions.", "Ask a qualified professional before changing medicine.", "Seek urgent care for severe symptoms or very high readings."],
       boundary: "Education only. Nexus does not diagnose, change blood pressure medicine, dispatch help, connect devices, or transmit health data."
     },
+    asthma: {
+      domain: "chronic-care-asthma-respiratory",
+      focus: "Asthma and chronic respiratory education, trigger tracking, inhaler-technique questions, clinic visit prep, and urgent breathing warning signs.",
+      prompts: ["My mother has asthma.", "I have asthma and want to prepare for my clinic visit.", "Help with breathing condition.", "Prepare asthma clinic questions.", "Explain asthma warning signs."],
+      collect: ["Age range.", "Country or region.", "Preferred language.", "Known breathing condition.", "Current symptoms and triggers.", "Medication or inhaler schedule as prescribed.", "Clinic access and red-flag symptoms."],
+      nextSteps: ["Prepare symptom and trigger notes.", "Ask about inhaler-technique questions, warning signs, and follow-up timing.", "Use urgent-care guidance for severe shortness of breath, blue lips, fainting, confusion, or worsening breathing.", "Review all medicine questions with a clinician, nurse, pharmacist, or CHW."],
+      boundary: "Education and visit preparation only. Nexus does not diagnose asthma, change inhalers or medicine, dispatch help, call providers, connect devices, or transmit data."
+    },
+    "heart-risk": {
+      domain: "chronic-care-heart-risk",
+      focus: "Heart disease risk education, warning signs, adherence questions, lifestyle context, and clinic review preparation.",
+      prompts: ["Help with heart disease risk.", "Prepare heart risk questions.", "What should I ask about chest pain history?", "Help with cardiovascular risk."],
+      collect: ["Known conditions such as hypertension or diabetes.", "Symptoms and timing.", "Recent BP or glucose if known.", "Medication schedule as prescribed.", "Food, activity, stress, transport, and cost barriers."],
+      nextSteps: ["Prepare clinician questions about risk, warning signs, medication adherence, and follow-up.", "Track BP/glucose if already available.", "Use urgent-care guidance for chest pain, stroke signs, severe shortness of breath, fainting, or confusion."],
+      boundary: "Review-only risk navigation. Nexus does not diagnose heart disease, interpret symptoms as final advice, change medicine, dispatch emergency services, or contact providers."
+    },
+    "kidney-risk": {
+      domain: "chronic-care-kidney-risk",
+      focus: "Kidney disease risk questions, diabetes/BP context, screening prep, lab follow-up questions, and medication-safety review prompts.",
+      prompts: ["Help with kidney disease risk.", "Prepare kidney screening questions.", "What should I ask about kidney labs?", "Kidney risk and blood pressure."],
+      collect: ["Known diabetes or hypertension.", "Recent readings if known.", "Swelling, urine, fatigue, or lab concerns.", "Medicine list for clinician/pharmacist review.", "Clinic and transport access."],
+      nextSteps: ["Prepare questions about kidney screening, BP/glucose control, hydration, and medication safety.", "Bring lab names and dates to a clinician without treating them as final advice.", "Ask a clinician or pharmacist before changing medicine."],
+      boundary: "Review-only kidney risk navigation. Nexus does not diagnose kidney disease, provide final lab interpretation, change medicine, or update records."
+    },
+    "maternal-risk": {
+      domain: "chronic-care-maternal-risk",
+      focus: "Maternal chronic risk support for pregnancy with hypertension, diabetes, warning signs, and antenatal clinic preparation.",
+      prompts: ["Pregnancy danger signs.", "Hypertension during pregnancy.", "Prepare antenatal clinic questions.", "Maternal chronic risk support."],
+      collect: ["Pregnancy stage if known.", "BP or glucose if known.", "Headache, swelling, vision changes, bleeding, severe abdominal pain, or reduced movement if volunteered.", "Clinic access.", "Support person or CHW needs."],
+      nextSteps: ["Prepare questions for an antenatal clinic, nurse, midwife, CHW, or physician.", "Use urgent-care guidance for pregnancy danger signs.", "Do not change medicines without qualified maternity care review."],
+      boundary: "Review-only maternal risk support. Nexus does not diagnose pregnancy complications, prescribe, change medicine, dispatch help, call providers, or replace urgent care."
+    },
+    "medication-reminder": {
+      domain: "chronic-care-medication-reminder",
+      focus: "Medication adherence and appointment reminder planning from existing prescriptions or clinic instructions.",
+      prompts: ["Remind me to take my medicine.", "Create reminder plan.", "Medication schedule reminder.", "Clinic follow-up reminder.", "Refill date reminder."],
+      collect: ["Medication name from the label or prescription.", "Time schedule from clinician instructions.", "Refill date.", "Clinic follow-up or lab date.", "Preferred low-bandwidth reminder format."],
+      nextSteps: ["Prepare daily reminder times from the existing prescription.", "Prepare refill, BP/glucose check, lab, clinic, and CHW visit reminder notes.", "Review missed doses, side effects, or schedule changes with a clinician, nurse, pharmacist, or CHW."],
+      boundary: "Reminder planning only. Nexus does not prescribe, change medicine, auto-notify, place pharmacy orders, buy medicine, mutate calendars, message providers, or call anyone."
+    },
     wellness: {
       domain: "chronic-care-wellness",
       focus: "Weight, obesity, nutrition, activity, sleep, and wellness questions for safe review.",
@@ -12636,16 +12765,16 @@ function a100ChronicCareGuidanceCard(kind = "general") {
       nextSteps: ["Prepare a CHW intake checklist.", "Draft low-literacy patient education scripts for review.", "Prepare referral guidance without submitting a referral.", "Prepare follow-up preparation notes for a clinician, nurse, or supervisor."],
       boundary: "CHW review support only. Nexus does not diagnose, prescribe, change medication, submit referrals, contact providers, send messages, place calls, connect devices, or update records."
     },
-    telehealth: {
-      domain: "chronic-care-telehealth",
-      focus: "Telehealth visit preparation for diabetes, hypertension, weight, and wellness support.",
-      prompts: ["Prepare for my telehealth visit.", "Summarize this for my care team.", "What questions should I ask?", "Help me prepare notes."],
-      collect: ["Main concern.", "Recent manual readings if known.", "Symptoms and timing.", "Current medicines taken as prescribed.", "Questions and access needs.", "Preferred language or community health worker support."],
-      nextSteps: ["Prepare a short visit agenda.", "List readings and symptoms.", "Ask about next steps, warning signs, and follow-up.", "Review before sharing with any care team."],
-      boundary: "Review-only preparation. Nexus does not send the summary, call a provider, change records, or make clinical decisions."
+    navigator: {
+      domain: "chronic-care-navigator-africa",
+      focus: "Chronic Care Navigator for Africa: education, tracking, reminders, clinic preparation, red-flag routing, and CHW support.",
+      prompts: ["Chronic care navigator.", "I need help with chronic illness support.", "Help me prepare for a clinic visit.", "What should I ask my doctor?", "Generate family care checklist."],
+      collect: ["Age range.", "Country/region.", "Preferred language.", "Known condition.", "Current symptoms.", "Medication schedule.", "Clinic access.", "Last blood pressure or glucose reading if known.", "Red-flag symptoms."],
+      nextSteps: ["Prepare a condition support summary.", "Explain common terms in simple language.", "Create a tracking checklist and clinic questions.", "Prepare reminder planning text.", "Route red flags to urgent-care guidance and stop normal coaching."],
+      boundary: "I can help you prepare, understand, track, and navigate care. I do not replace a doctor, nurse, pharmacist, community health worker, or emergency service."
     }
   };
-  return cards[kind] || cards.telehealth;
+  return cards[kind] || cards.navigator || cards.telehealth;
 }
 
 function a100RoutePlanningPreview() {
@@ -12705,12 +12834,13 @@ function a100MarketplaceBrowsingCard() {
 function a100HighRiskActionGates() {
   return [
     { pattern: /\b(stop|pause|skip|change|increase|decrease|double|adjust|reduce|raise)\b.*\b(medication|medicine|meds|insulin|dose|dosage|pill|prescription|metformin|blood pressure medicine|bp medicine)\b|\bchange my insulin dose\b|\bstop my medication\b/, label: "Medication safety boundary", reason: "Medication changes need a qualified clinician, pharmacist, nurse, or approved care team review. Nexus will not recommend stopping, starting, or changing a dose." },
-    { pattern: /\b(chest pain|pressure in my chest|heart attack|stroke|face droop|one side weak|slurred speech|cannot breathe|shortness of breath|fainting|pass out|passing out|may pass out|seizure|confused|severe headache|vision loss|emergency|urgent help|call ambulance)\b/, label: "Urgent symptom boundary", reason: "These can be urgent warning signs. Seek local emergency or urgent professional care now if symptoms are severe, sudden, or worsening." },
+    { pattern: /\b(chest pain|pressure in my chest|heart attack|stroke|face droop|one side weak|severe weakness|slurred speech|cannot breathe|severe shortness of breath|shortness of breath|fainting|loss of consciousness|pass out|passing out|may pass out|seizure|confused|severe confusion|severe headache|vision loss|pregnancy danger signs|severe dehydration|emergency|urgent help|call ambulance)\b/, label: "Urgent symptom boundary", reason: "These can be urgent warning signs. Seek local emergency or urgent professional care now if symptoms are severe, sudden, or worsening." },
     { pattern: /\b(2\d{2}|[3-9]\d{2})\s*\/\s*(1[2-9]\d|[2-9]\d{2})\b|\bblood pressure\b.*\b(200\/120|very high|extremely high|dangerously high)\b/, label: "Very high blood pressure boundary", reason: "Very high blood pressure or severe symptoms need urgent professional review. Nexus can help prepare notes, but it will not make a treatment decision." },
     { pattern: /\b(glucose|blood sugar)\b.*\b(extremely low|very low|dangerously low|severe low|passing out|confused|seizure|cannot stay awake)\b|\b(hypoglycemia|hyperglycemia)\b.*\b(severe|emergency|urgent)\b/, label: "Severe glucose boundary", reason: "Severe glucose symptoms can be urgent. Follow your clinician's emergency plan if you have one and seek local urgent help when symptoms are serious." },
     { pattern: /\b(call|phone|dial|ring)\b.*\b(emergency|doctor|provider|buyer|seller|someone|contact|person|family|clinic|employer)\b|\bcall emergency\b/, label: "Call readiness", reason: "Nexus can prepare call notes, but it will not place a call." },
     { pattern: /\b(send|message|sms|whatsapp|text|email|notify|contact)\b.*\b(buyer|seller|provider|doctor|someone|contact|family|patient|employer|driver)\b|\bsend it\b|\bprepare a message\b/, label: "Message preparation", reason: "Nexus can prepare a message for review, but it will not send it or contact a provider." },
     { pattern: /\b(buy|purchase|pay|checkout|wallet|settle|settlement|subscribe|place order|create order|sell now|complete sale|update inventory|refund|transfer money)\b/, label: "Payment and purchase boundary", reason: "Nexus can help compare options, but buying, paying, ordering, refunds, transfers, settlement, or inventory changes need review first." },
+    { pattern: /\b(book|schedule|reserve|make)\b.*\b(doctor|clinic|appointment|telehealth|visit|provider|nurse)\b|\bbook me a doctor appointment now\b/, label: "Appointment booking boundary", reason: "Nexus can prepare clinic visit questions and reminder notes, but it will not book, schedule, or contact a provider from this prompt." },
     { pattern: /\b(track my location|share my location|live location|where am i|gps|locate me|follow me|start tracking|turn on location)\b/, label: "Location permission boundary", reason: "Location is not turned on automatically. Nexus will not request geolocation from this prompt." },
     { pattern: /\b(open|start|turn on|use|enable)\b.*\b(camera|microphone|mic|video)\b|\bshow injury\b|\brecord audio\b|\btake photo\b/, label: "Camera and microphone boundary", reason: "Camera and microphone are not turned on automatically. Nexus will not start media capture here." },
     { pattern: /\b(emergency|dispatch|ambulance|police|rescue|urgent help now)\b/, label: "Emergency boundary", reason: "Nexus cannot dispatch emergency services. If there is immediate danger, contact local emergency help now." },
@@ -12843,19 +12973,19 @@ function renderUserWorkspace() {
   const intelligence = modeIntelligenceSnapshot("user");
   const guideCommand = "help me understand the platform";
   const serviceButtons = [
-    { label: "Start Training", detail: "Review courses, lessons, captions, and certificate steps.", section: "learning", className: "service-learning", photo: "https://images.unsplash.com/photo-1522202176988-66273c2fd55f?auto=format&fit=crop&w=900&q=70" },
-    { label: "Explore Job Pathways", detail: "Review jobs, skills, readiness, and interview steps.", section: "workforce", className: "service-workforce", photo: "https://images.unsplash.com/photo-1521737604893-d14cc237f11d?auto=format&fit=crop&w=900&q=70" },
-    { label: "Get Field Support", detail: "Review farm, crop, route, and field support options.", section: "trade", className: "service-trade", photo: "https://images.unsplash.com/photo-1500937386664-56d1dfef3854?auto=format&fit=crop&w=900&q=70" },
-    { label: "Open Health Access", detail: "Review health access options and preparation steps.", section: "health", className: "service-health", photo: "https://images.unsplash.com/photo-1584515933487-779824d29309?auto=format&fit=crop&w=900&q=70" },
-    { label: "Use Maps & Location", detail: "Preview routes, facilities, regions, and map readiness.", section: "map", className: "service-map", photo: "https://images.unsplash.com/photo-1524661135-423995f22d0b?auto=format&fit=crop&w=900&q=70" },
-    { label: "Open Marketplace / AgriTrade", detail: "Browse options and prepare questions before any transaction.", section: "trade", className: "service-trade", photo: "https://images.unsplash.com/photo-1500937386664-56d1dfef3854?auto=format&fit=crop&w=900&q=70" },
+    { label: "Start Training", detail: "Begin courses, lessons, captions, and certificates.", section: "learning", className: "service-learning", photo: "https://images.unsplash.com/photo-1522202176988-66273c2fd55f?auto=format&fit=crop&w=900&q=70" },
+    { label: "Explore Job Pathways", detail: "Find jobs, apply, review readiness, and plan shifts.", section: "workforce", className: "service-workforce", photo: "https://images.unsplash.com/photo-1521737604893-d14cc237f11d?auto=format&fit=crop&w=900&q=70" },
+    { label: "Get Field Support", detail: "Open farm, crop, route, and field evidence support.", section: "trade", className: "service-trade", photo: "https://images.unsplash.com/photo-1500937386664-56d1dfef3854?auto=format&fit=crop&w=900&q=70" },
+    { label: "Open Health Access", detail: "Start intake, provider handoff, or local camera support.", section: "health", className: "service-health", photo: "https://images.unsplash.com/photo-1584515933487-779824d29309?auto=format&fit=crop&w=900&q=70" },
+    { label: "Use Maps & Location", detail: "Check routes, facilities, regions, and location support.", section: "map", className: "service-map", photo: "https://images.unsplash.com/photo-1524661135-423995f22d0b?auto=format&fit=crop&w=900&q=70" },
+    { label: "Open Marketplace / AgriTrade", detail: "Contact buyers, create crop orders, and track trade routes.", section: "trade", className: "service-trade", photo: "https://images.unsplash.com/photo-1500937386664-56d1dfef3854?auto=format&fit=crop&w=900&q=70" },
     { label: "Ask Nexus for Help", detail: "Speak or type what you need.", section: "ask", className: "service-ask", ask: true, photo: "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=900&q=70" }
   ].filter(item => item.ask || canOpenSection(item.section));
   target.innerHTML = `
     <section class="user-workspace-hero user-simple-hero">
       <span class="eyebrow">${translateText(nexusProductIdentity.productName)}</span>
       <h3 id="userWorkspaceTitle">${translateText(`Hi ${userFirstName()}. What do you need today?`)}</h3>
-      <p>${translateText("Choose a button below or ask Nexus what it can do. Nexus can help with agriculture, training, jobs, AgriTrade, maps, and provider status.")}</p>
+      <p>${translateText("Choose a button below or ask Nexus what it can do. Nexus can help with work, training, health access, maps, field support, and agriculture trade.")}</p>
       ${userLanguageQuickSwitchHtml()}
     </section>
     ${a100CapabilitySurfaceHtml()}
@@ -23075,8 +23205,14 @@ function a100SafeAutonomyIntent(command = "") {
     };
   }
   const chronicMatched = [
-    { id: "diabetes", pattern: /\b(diabetes|diabetic|blood sugar|glucose|a1c)\b.*\b(help|support|high|low|question|prepare|review|visit|education|mean|means)\b|\bhelp with diabetes\b|\bmy blood sugar is high\b|\bwhat is a1c\b|\bmy glucose is low\b/ },
+    { id: "navigator", pattern: /\b(chronic care navigator|chronic illness support|chronic care support|family care checklist|condition support summary)\b|\bhelp me prepare for a clinic visit\b/ },
+    { id: "diabetes", pattern: /\b(diabetes|diabetic|blood sugar|glucose|a1c)\b.*\b(help|support|manage|high|low|question|prepare|review|visit|education|mean|means|track)\b|\bi have diabetes\b|\bhelp with diabetes\b|\bmy blood sugar is high\b|\bwhat is a1c\b|\bmy glucose is low\b/ },
     { id: "hypertension", pattern: /\b(blood pressure|hypertension|bp)\b.*\b(help|support|high|question|prepare|review|visit|measure|measurement|technique|track|sodium|salt|activity|adherence)\b|\bhelp me with blood pressure\b|\bmy blood pressure is high\b|\bhow should i measure bp\b/ },
+    { id: "asthma", pattern: /\b(asthma|breathing condition|respiratory|chronic respiratory|inhaler)\b.*\b(help|support|prepare|clinic|visit|question|track|warning|manage)\b|\bmy mother has asthma\b|\bi have asthma and want to prepare for my clinic visit\b/ },
+    { id: "heart-risk", pattern: /\b(heart disease|heart risk|cardiovascular|chest pain history)\b.*\b(help|support|prepare|question|risk|review|clinic)\b|\bhelp with heart disease risk\b/ },
+    { id: "kidney-risk", pattern: /\b(kidney disease|kidney risk|kidney screening|kidney labs|renal)\b.*\b(help|support|prepare|question|risk|review|clinic|lab)\b|\bhelp with kidney disease risk\b/ },
+    { id: "maternal-risk", pattern: /\b(pregnancy|pregnant|maternal|antenatal|midwife)\b.*\b(hypertension|diabetes|danger|risk|support|prepare|clinic|warning)\b|\bpregnancy danger signs\b|\bhypertension during pregnancy\b/ },
+    { id: "medication-reminder", pattern: /\b(remind|reminder|remember|forget|forgets|forgot|adherence|refill|follow-up|appointment)\b.*\b(medicine|medication|meds|pill|clinic|blood pressure check|blood sugar check|lab|chw visit)\b|\bremind me to take my medicine\b|\bmy father has high blood pressure and forgets his medicine\b/ },
     { id: "wellness", pattern: /\b(obesity|weight|wellness|lose weight|nutrition|diet|activity|physical activity|sleep|stress|barrier|progress)\b.*\b(help|support|safe|safely|question|prepare|review|goal|track)\b|\bhelp me lose weight safely\b|\bhelp with obesity\b|\btrack my weight safely\b|\bhelp with nutrition goals\b|\bactivity goal\b|\bsleep and stress support\b|\bprogress barriers\b/ },
     { id: "rpm", pattern: /\b(what is rpm|what is rtm|rpm|rtm|remote patient monitoring|remote therapeutic monitoring|device connected|monitoring readiness)\b/ },
     { id: "telehealth", pattern: /\b(prepare|prep|plan|summarize|summary)\b.*\b(telehealth|visit|care team|doctor|nurse|coach|clinician|chw|community health worker)\b|\bprepare for my telehealth visit\b|\bsummarize this for my care team\b/ },
@@ -23084,24 +23220,51 @@ function a100SafeAutonomyIntent(command = "") {
     { id: "report", pattern: /\b(prepare|show|build|create|summarize)\b.*\b(physician report|doctor report|care team report|clinical report|clinical summary|provider report|nurse|community health worker)\b|\bprepare a physician report\b|\bshow physician report\b|\bsummarize for my doctor\b|\bprepare care team report\b|\bcreate a clinical summary\b|\bsummarize this for the nurse\b|\bsummarize this for the community health worker\b|\bwhat data supports this\b|\bwhat is missing\b|\bwhat should the doctor review\b/ }
   ].find(item => item.pattern.test(text));
   if (chronicMatched) {
-    const category = chronicMatched.id === "hypertension" ? "hypertension" : chronicMatched.id === "wellness" ? "wellness" : chronicMatched.id === "chw" ? "chw" : chronicMatched.id === "telehealth" || chronicMatched.id === "report" ? "care-team-summary" : chronicMatched.id === "rpm" ? "care-team-summary" : "diabetes";
+    const chronicCategoryMap = {
+      diabetes: "diabetes",
+      hypertension: "hypertension",
+      asthma: "asthma",
+      "heart-risk": "heart-risk",
+      "kidney-risk": "kidney-risk",
+      "maternal-risk": "maternal-risk",
+      "medication-reminder": "medication-reminder",
+      wellness: "wellness",
+      chw: "chw",
+      navigator: "navigator",
+      telehealth: "care-team-summary",
+      report: "care-team-summary",
+      rpm: "care-team-summary"
+    };
+    const category = chronicCategoryMap[chronicMatched.id] || "navigator";
     const reportKind = chronicMatched.id === "report" ? (/care team/.test(text) ? "care-team-summary" : "general") : chronicMatched.id;
     const titleMap = {
       diabetes: "Diabetes Support",
       hypertension: "Blood Pressure Support",
+      asthma: "Asthma / Breathing Support",
+      "heart-risk": "Heart Disease Risk Support",
+      "kidney-risk": "Kidney Risk Support",
+      "maternal-risk": "Maternal Chronic Risk Support",
+      "medication-reminder": "Medication Reminder Plan",
       wellness: "Weight & Wellness",
       rpm: "RPM/RTM Readiness",
       telehealth: /summarize|summary|care team/.test(text) ? "Care Team Summary" : "Prepare Telehealth Visit",
       chw: "CHW Support",
+      navigator: "Chronic Care Navigator",
       report: /care team/.test(text) ? "Care Team Report" : "Physician Report"
     };
     const responseMap = {
       diabetes: "I can help prepare diabetes questions for a telehealth visit in review-only mode, including blood sugar concerns, A1c education, high/low glucose warning questions, food/activity context, and what to collect for review. Nexus does not diagnose, change insulin or medicine, connect devices, send data, or replace a clinician.",
       hypertension: "I can help prepare blood pressure questions and warning-sign education in review-only mode, including home BP reading context, measurement technique questions, sodium/activity education, and medication-adherence discussion prep. Nexus does not diagnose, change medicine, dispatch help, connect devices, send data, or replace urgent professional care.",
+      asthma: "I can help prepare asthma or chronic respiratory clinic questions in review-only mode, including symptom and trigger notes, inhaler-technique questions, warning signs, and low-bandwidth visit prep. Nexus does not diagnose, change inhalers or medicine, dispatch help, call providers, connect devices, or transmit data.",
+      "heart-risk": "I can help prepare heart disease risk questions, warning-sign education, medication-adherence discussion points, and clinic follow-up notes. Nexus does not diagnose heart disease, interpret urgent symptoms as final advice, change medicine, call providers, or dispatch help.",
+      "kidney-risk": "I can help prepare kidney disease risk questions, screening and lab-follow-up notes, diabetes/BP context, and medication-safety questions for clinician or pharmacist review. Nexus does not diagnose kidney disease, give final lab interpretation, change medicine, or update records.",
+      "maternal-risk": "I can help prepare maternal chronic risk questions for antenatal clinic, nurse, midwife, CHW, or physician review, and route pregnancy danger signs to urgent professional care guidance. Nexus does not diagnose pregnancy complications, change medicine, call providers, or dispatch help.",
+      "medication-reminder": "I can help prepare a medication and appointment reminder plan from an existing prescription or clinic instructions, including refill dates, BP/glucose checks, labs, and CHW visits. Nexus will not change medicine, auto-notify, order pharmacy items, buy medicine, mutate calendars, message providers, or call anyone.",
       wellness: "I can help prepare supportive weight and wellness questions safely for a provider, coach, nurse, or community health worker, including nutrition goals, physical activity, sleep, stress, self-reported barriers, and RTM behavior signal notes. Nexus gives general education only with no shame/blame language and will not prescribe a diet, medicine, supplement, product, purchase, or paid plan.",
       rpm: "RPM means remote patient monitoring, and RTM means remote therapeutic monitoring. Nexus can explain readiness and prepare questions, but no device is connected, no readings are transmitted, and provider review is required.",
       telehealth: "I can prepare a review-only telehealth visit checklist or care team summary. Nothing is sent, stored as a medical record, or handed off to a provider from this card.",
       chw: "I can help prepare CHW intake checklist notes, low-literacy explanation prompts, patient education scripts, referral guidance questions, follow-up preparation, and a clinician handoff summary. Nexus does not diagnose, change medicines, submit referrals, send messages, call providers, connect devices, or update records.",
+      navigator: "I can help you prepare, understand, track, and navigate chronic care with education, reminders, clinic questions, tracking checklists, red-flag guidance, and community health worker support. I do not replace a doctor, nurse, pharmacist, CHW, or emergency service, and I will not diagnose, prescribe, book care, call, message, buy medicine, request location, connect devices, transmit data, or store sensitive health data persistently.",
       report: "I prepared a session-only physician/care-team report for review. It shows data inputs, missing data, source labels, review level, and safety boundaries, but it is not a diagnosis or treatment plan."
     };
     return {

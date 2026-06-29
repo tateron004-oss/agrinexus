@@ -28,16 +28,20 @@ const gateSource = sourceBetween(app, "function a100HighRiskActionGates", "funct
 const intentSource = sourceBetween(app, "function a100SafeAutonomyIntent", "function openA100SafeAutonomyPreview");
 
 [
-  "Chronic Care Assistant",
-  "Review-only telehealth support for diabetes, blood pressure, weight, RPM, and RTM.",
+  "Chronic Care Navigator",
+  "Review-only chronic care navigation for diabetes, blood pressure, asthma, heart risk, kidney risk, maternal risk, reminders, RPM, and RTM.",
   "multilingual, low-bandwidth, rural telehealth and community health worker review",
   "a100-chronic-care-preview",
   "a100ChronicCareQuickActions"
 ].forEach(copy => assert(surfaceSource.includes(copy), `Chronic care surface should include: ${copy}`));
 
 [
+  "Chronic Care Navigator",
   "Diabetes Support",
   "Blood Pressure Support",
+  "Asthma / Breathing Support",
+  "Heart / Kidney Risk",
+  "Medication Reminder Plan",
   "Weight & Wellness",
   "RPM/RTM Readiness",
   "Prepare Telehealth Visit",
@@ -74,6 +78,9 @@ const intentSource = sourceBetween(app, "function a100SafeAutonomyIntent", "func
   "My blood sugar is high",
   "help me with blood pressure",
   "My blood pressure is high",
+  "my mother has asthma",
+  "help with heart disease risk",
+  "remind me to take my medicine",
   "help with obesity",
   "help me lose weight safely",
   "what is RPM",
@@ -87,6 +94,18 @@ const intentSource = sourceBetween(app, "function a100SafeAutonomyIntent", "func
   "summarize for my doctor",
   "prepare care team report"
 ].forEach(prompt => assert(intentSource.toLowerCase().includes(prompt.toLowerCase()) || chronicSource.toLowerCase().includes(prompt.toLowerCase()), `Chronic prompt should route: ${prompt}`));
+
+[
+  "Chronic Care AI Navigator for Africa",
+  "Asthma / chronic respiratory disease",
+  "Heart disease risk",
+  "Kidney disease risk",
+  "Maternal chronic risk support",
+  "Medication adherence and appointment follow-up",
+  "condition support summary",
+  "tracking checklist",
+  "red-flag symptoms"
+].forEach(copy => assert(app.includes(copy), `Chronic care navigator foundation should include: ${copy}`));
 
 [
   "What is A1c?",

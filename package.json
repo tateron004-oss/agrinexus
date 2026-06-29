@@ -625,6 +625,7 @@
     "qa:nexus-a100-runtime-activation-15": "node scripts/nexus-a100-runtime-activation-15-qa.js",
     "qa:nexus-chronic-care-assistant-preview": "node scripts/nexus-chronic-care-assistant-preview-qa.js",
     "qa:nexus-chronic-care-physician-report": "node scripts/nexus-chronic-care-physician-report-qa.js",
+    "qa:nexus-chronic-care-navigator-foundation": "node scripts/nexus-chronic-care-navigator-foundation-qa.js",
     "qa:nexus-sprint-k1-personalization-runtime-activation-readiness-gate": "node scripts/nexus-sprint-k1-personalization-runtime-activation-readiness-gate-qa.js",
     "qa:nexus-sprint-k2-personalization-feature-flag-contract": "node scripts/nexus-sprint-k2-personalization-feature-flag-contract-qa.js",
     "qa:nexus-sprint-k3-personalization-flag-contract-harness": "node scripts/nexus-sprint-k3-personalization-flag-contract-harness-qa.js",
