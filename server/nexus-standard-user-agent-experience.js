@@ -217,10 +217,17 @@ function buildStandardUserAgentExperience(prompt, runtimeResponse = {}, options 
       : routerDecision.safeNextSteps || []).slice(0, 5)),
     followUpPrompts: Object.freeze((Array.isArray(memory.supportedFollowUps) ? memory.supportedFollowUps : []).slice(0, 5)),
     taskPlanPreview: Object.freeze({
+      goal: plan.goal,
       goalType: plan.goalType,
       steps: Object.freeze(plan.steps.slice(0, 5)),
       neededInformation: Object.freeze(plan.neededInformation.slice(0, 5)),
-      nextBestStep: plan.nextBestStep
+      providerQueries: Object.freeze(plan.providerQueries.slice(0, 5)),
+      safeUserActions: Object.freeze(plan.safeUserActions.slice(0, 5)),
+      blockedActions: Object.freeze(plan.blockedActions.slice(0, 8)),
+      nextBestStep: plan.nextBestStep,
+      confidence: plan.confidence,
+      providerQueryMode: plan.providerQueryMode,
+      noExecutionAuthorized: plan.noExecutionAuthorized === true
     }),
     preparationPreview: Object.freeze({
       preparationType: preparation.preparationType,
@@ -262,6 +269,7 @@ function isSafeStandardUserAgentExperience(experience) {
   if (!["flag-gated-agent-preview", "disabled-default-off"].includes(experience.displayMode)) return false;
   if (!Array.isArray(experience.safeNextSteps) || !Array.isArray(experience.followUpPrompts)) return false;
   if (!experience.taskPlanPreview || !Array.isArray(experience.taskPlanPreview.steps)) return false;
+  if (experience.taskPlanPreview.providerQueryMode !== "read-only" || experience.taskPlanPreview.noExecutionAuthorized !== true) return false;
   if (!experience.preparationPreview || experience.preparationPreview.copyOnly !== true || experience.preparationPreview.userMustReview !== true) return false;
   if (!experience.sourceReview || experience.sourceReview.reviewOnly !== true || experience.sourceReview.noExternalNavigation !== true) return false;
   if (!Array.isArray(experience.artifactPreviews) || experience.artifactPreviews.length < 1) return false;

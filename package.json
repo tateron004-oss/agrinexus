@@ -530,6 +530,7 @@
     "qa:nexus-nlu2-provider-backed-prompt-expansion": "node scripts/nexus-nlu2-provider-backed-prompt-expansion-qa.js",
     "qa:nexus-nlu3-follow-up-chip-refinement": "node scripts/nexus-nlu3-follow-up-chip-refinement-qa.js",
     "qa:nexus-fap4-safe-artifact-outputs": "node scripts/nexus-fap4-safe-artifact-outputs-qa.js",
+    "qa:nexus-fap5-assistant-task-planner": "node scripts/nexus-fap5-assistant-task-planner-qa.js",
     "qa:nexus-sprint-k1-personalization-runtime-activation-readiness-gate": "node scripts/nexus-sprint-k1-personalization-runtime-activation-readiness-gate-qa.js",
     "qa:nexus-sprint-k2-personalization-feature-flag-contract": "node scripts/nexus-sprint-k2-personalization-feature-flag-contract-qa.js",
     "qa:nexus-sprint-k3-personalization-flag-contract-harness": "node scripts/nexus-sprint-k3-personalization-flag-contract-harness-qa.js",

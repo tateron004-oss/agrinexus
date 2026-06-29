@@ -15480,8 +15480,17 @@ function normalizeAssistantRuntimePreviewCard(response = {}) {
       safeNextSteps: Array.isArray(agentExperience.safeNextSteps) ? agentExperience.safeNextSteps.slice(0, 5).map(item => String(item || "").trim()).filter(Boolean) : [],
       followUpPrompts: Array.isArray(agentExperience.followUpPrompts) ? agentExperience.followUpPrompts.slice(0, 5).map(item => String(item || "").trim()).filter(Boolean) : [],
       taskPlanPreview: agentExperience.taskPlanPreview && typeof agentExperience.taskPlanPreview === "object" ? {
+        goal: String(agentExperience.taskPlanPreview.goal || "").trim(),
+        goalType: String(agentExperience.taskPlanPreview.goalType || "informational").trim(),
         nextBestStep: String(agentExperience.taskPlanPreview.nextBestStep || "").trim(),
-        steps: Array.isArray(agentExperience.taskPlanPreview.steps) ? agentExperience.taskPlanPreview.steps.slice(0, 5).map(item => String(item || "").trim()).filter(Boolean) : []
+        confidence: String(agentExperience.taskPlanPreview.confidence || "low").trim(),
+        providerQueryMode: String(agentExperience.taskPlanPreview.providerQueryMode || "read-only").trim(),
+        steps: Array.isArray(agentExperience.taskPlanPreview.steps) ? agentExperience.taskPlanPreview.steps.slice(0, 5).map(item => String(item || "").trim()).filter(Boolean) : [],
+        neededInformation: Array.isArray(agentExperience.taskPlanPreview.neededInformation) ? agentExperience.taskPlanPreview.neededInformation.slice(0, 5).map(item => String(item || "").trim()).filter(Boolean) : [],
+        providerQueries: Array.isArray(agentExperience.taskPlanPreview.providerQueries) ? agentExperience.taskPlanPreview.providerQueries.slice(0, 5).map(item => String(item || "").trim()).filter(Boolean) : [],
+        safeUserActions: Array.isArray(agentExperience.taskPlanPreview.safeUserActions) ? agentExperience.taskPlanPreview.safeUserActions.slice(0, 5).map(item => String(item || "").trim()).filter(Boolean) : [],
+        blockedActions: Array.isArray(agentExperience.taskPlanPreview.blockedActions) ? agentExperience.taskPlanPreview.blockedActions.slice(0, 8).map(item => String(item || "").trim()).filter(Boolean) : [],
+        noExecutionAuthorized: agentExperience.taskPlanPreview.noExecutionAuthorized === true
       } : null,
       preparationPreview: agentExperience.preparationPreview && typeof agentExperience.preparationPreview === "object" ? {
         title: String(agentExperience.preparationPreview.title || "").trim(),
@@ -15618,8 +15627,20 @@ function renderStandardUserAgentExperienceMarkup(experience = {}) {
       </section>
       <section aria-label="Task plan preview">
         <strong>Plan preview</strong>
+        <p>${htmlSafe(plan.goal || "Goal: safe informational support")} - ${htmlSafe(plan.goalType || "informational")} - ${htmlSafe(plan.confidence || "low")} confidence - ${htmlSafe(plan.providerQueryMode || "read-only")} provider queries</p>
         <p>${htmlSafe(plan.nextBestStep || "Review the source-backed answer before choosing a manual next step.")}</p>
         <ul>${list(plan.steps)}</ul>
+      </section>
+      <section aria-label="Planner inputs and safe actions">
+        <strong>Planner inputs and safe actions</strong>
+        <p>Needed information</p>
+        <ul>${list(plan.neededInformation)}</ul>
+        <p>Read-only provider queries</p>
+        <ul>${list(plan.providerQueries)}</ul>
+        <p>Safe user actions</p>
+        <ul>${list(plan.safeUserActions)}</ul>
+        <p>Blocked execution actions</p>
+        <ul>${list(plan.blockedActions)}</ul>
       </section>
       <section aria-label="Preparation preview">
         <strong>${htmlSafe(prep.title || "Preparation preview")}</strong>

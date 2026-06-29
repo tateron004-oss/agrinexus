@@ -91,6 +91,21 @@ const PLAN_TEMPLATES = Object.freeze([
     providerQueries: ["job-search", "music-media", "agriculture-context"],
     safeUserActions: ["review training resources", "prepare skill checklist", "compare job requirements", "copy outreach questions manually"],
     nextBestStep: "Ask whether the user wants EV, solar, irrigation, or farm equipment technician work."
+  },
+  {
+    goalType: "farm-plan",
+    pattern: /\b(create a plan for my farm|farm plan|plan my farm|farm operating plan|farm business plan|farm next steps)\b/i,
+    steps: [
+      "Clarify the farm goal, crop or livestock focus, season, resources, and constraints.",
+      "Run read-only agriculture context and weather/source queries where available.",
+      "Separate observation, learning, budgeting, and manual field-work decisions.",
+      "Create a practical checklist for the user to review and adapt.",
+      "Prepare questions the user can ask local extension, training, or market experts manually."
+    ],
+    neededInformation: ["farm goal", "crop or livestock focus", "season", "resources available", "constraints or risks"],
+    providerQueries: ["agriculture-context", "weather", "job-search"],
+    safeUserActions: ["review source-backed guidance", "write down farm constraints", "compare manual options", "prepare expert questions"],
+    nextBestStep: "Ask what farm goal the user wants to plan for first."
   }
 ]);
 
@@ -176,6 +191,7 @@ function buildPlan({ goal, goalType, steps, neededInformation, providerQueries, 
     blockedActions: Object.freeze(blockedActions.slice()),
     nextBestStep,
     confidence,
+    providerQueryMode: "read-only",
     routerDecision,
     noExecutionAuthorized: true,
     noProviderContactAuthorized: true,
@@ -191,6 +207,7 @@ function isSafeAgentTaskPlan(plan) {
   if (!Array.isArray(plan.steps) || plan.steps.length < 1) return false;
   if (!Array.isArray(plan.neededInformation) || !Array.isArray(plan.providerQueries)) return false;
   if (!Array.isArray(plan.safeUserActions) || !Array.isArray(plan.blockedActions)) return false;
+  if (plan.providerQueryMode !== "read-only") return false;
   if (plan.noExecutionAuthorized !== true) return false;
   if (plan.noProviderContactAuthorized !== true) return false;
   if (plan.noLocationPermissionRequested !== true) return false;
