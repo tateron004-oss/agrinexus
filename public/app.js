@@ -15411,6 +15411,9 @@ function normalizeAssistantRuntimePreviewCard(response = {}) {
     : null;
   return {
     answer: text,
+    intent: String(safeResponse.intent || "general-question").trim(),
+    selectedProvider: String(safeResponse.selectedProvider || "provider unavailable").trim(),
+    providerStatus: String(safeResponse.providerStatus || "unknown").trim(),
     sourceLabels: sourceLabels.map(item => String(item || "").trim()).filter(Boolean),
     citations: citations.map(citation => ({
       sourceName: String(citation?.sourceName || "Source unavailable").trim(),
@@ -15421,6 +15424,8 @@ function normalizeAssistantRuntimePreviewCard(response = {}) {
     retrievedAt: String(safeResponse.retrievedAt || "retrieval time unavailable").trim(),
     confidence: String(safeResponse.confidence || "low").trim(),
     freshnessStatus: String(safeResponse.freshnessStatus || "unknown").trim(),
+    trustTier: String(safeResponse.trustTier || "unavailable").trim(),
+    sourceResultCount: Number(safeResponse.sourceResultCount || 0),
     safeFollowUps: assistantRuntimePreviewSuggestions(safeResponse),
     standardUserAgentExperience: agentExperience && agentExperience.schemaVersion === "nexus.nap6.standardUserAgentExperience.v1" ? {
       answerMode: String(agentExperience.answerMode || "informational").trim(),
@@ -15493,9 +15498,14 @@ function renderAssistantRuntimePreviewCardMarkup(card = {}) {
       <p>${htmlSafe(card.answer)}</p>
       <div class="nexus-assistant-runtime-preview-meta" aria-label="Preview source labels">${sourceLabels}</div>
       <dl class="nexus-assistant-runtime-preview-facts">
+        <div><dt>Intent</dt><dd>${htmlSafe(card.intent || "general-question")}</dd></div>
+        <div><dt>Provider</dt><dd>${htmlSafe(card.selectedProvider || "provider unavailable")}</dd></div>
+        <div><dt>Status</dt><dd>${htmlSafe(card.providerStatus || "unknown")}</dd></div>
         <div><dt>Retrieved</dt><dd>${htmlSafe(card.retrievedAt)}</dd></div>
         <div><dt>Confidence</dt><dd>${htmlSafe(card.confidence)}</dd></div>
         <div><dt>Freshness</dt><dd>${htmlSafe(card.freshnessStatus)}</dd></div>
+        <div><dt>Trust</dt><dd>${htmlSafe(card.trustTier || "unavailable")}</dd></div>
+        <div><dt>Sources</dt><dd>${htmlSafe(String(Number.isFinite(card.sourceResultCount) ? card.sourceResultCount : 0))}</dd></div>
       </dl>
       <ul class="nexus-assistant-runtime-preview-citations" aria-label="Preview citation details">${citations}</ul>
       <div class="nexus-assistant-runtime-preview-followups" aria-label="Safe follow-up prompts">${followUps}</div>
