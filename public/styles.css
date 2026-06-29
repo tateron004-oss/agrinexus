@@ -4329,6 +4329,46 @@ body.admin-mode .user-workspace {
   font-size: .74rem;
   line-height: 1.25;
 }
+.nexus-internal-navigation-results {
+  display: grid;
+  gap: 5px;
+  padding: 8px;
+  border: 1px dashed rgba(16, 185, 129, .32);
+  border-radius: 8px;
+  background: rgba(236, 253, 245, .72);
+}
+.nexus-internal-navigation-label {
+  width: fit-content;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: #d1fae5;
+  color: #047857 !important;
+  font-size: .7rem !important;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+.nexus-internal-navigation-results ul {
+  display: grid;
+  gap: 5px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.nexus-internal-navigation-results [data-nexus-internal-navigation-result] {
+  display: grid;
+  gap: 2px;
+  padding: 5px 0;
+  border-top: 1px solid rgba(16, 185, 129, .14);
+}
+.nexus-internal-navigation-results [data-nexus-internal-navigation-result]:first-child {
+  border-top: 0;
+}
+.nexus-internal-navigation-results span,
+.nexus-internal-navigation-results small {
+  color: #064e3b;
+  font-size: .74rem;
+  line-height: 1.25;
+}
 .nexus-assistant-runtime-preview-card {
   display: grid;
   gap: 10px;

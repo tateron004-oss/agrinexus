@@ -30,6 +30,7 @@ const localCheckBody = extractFunction(app, "isNexusControlledQueueActionLocally
 const gateBuilderBody = extractFunction(app, "buildNexusUserConfirmationGateFromQueueAction");
 const gateRendererBody = extractFunction(app, "renderNexusUserConfirmationGate");
 const localActionBody = extractFunction(app, "performNexusConfirmedLocalQueueAction");
+const internalNavigationBody = extractFunction(app, "executeNexusConfirmedInternalNavigation");
 const gateControlBody = extractFunction(app, "handleNexusUserConfirmationGateControl");
 const clickBody = extractFunction(app, "handleNexusControlledActionQueueClick");
 const queueRendererBody = extractFunction(app, "renderNexusControlledActionQueueCard");
@@ -80,8 +81,12 @@ const bindBody = extractFunction(app, "bindStatic");
   "data-provider-handoff=\"false\""
 ].forEach(term => assert(gateRendererBody.includes(term), `Gate renderer must include ${term}`));
 
+assert(
+  localActionBody.includes("executeNexusConfirmedInternalNavigation")
+    && internalNavigationBody.includes("No external route"),
+  "Local confirmation outcome must route internal navigation through the safe executor and state no external route."
+);
 [
-  "did not open an external route",
   "did not send, submit, message, buy, sell, or pay",
   "did not write records or contact a provider",
   "did not contact a real provider"

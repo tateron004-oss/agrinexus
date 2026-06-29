@@ -184,6 +184,7 @@ let nexusControlledActionQueue = [];
 let nexusUserConfirmationGateState = null;
 let nexusSessionActionAuditLog = [];
 let nexusSimulatedProviderResults = [];
+let nexusInternalNavigationExecutionResults = [];
 let visibleControlledStagedActionPreview = null;
 let visibleUserConfirmationPreview = null;
 let latestControlledActionConfirmationReadiness = null;
@@ -576,6 +577,22 @@ function handleNexusSimulationCaptionCommand(command = "") {
   return true;
 }
 
+function isNexusInternalNavigationCommand(command = "") {
+  const text = String(command || "").toLowerCase();
+  return /\b(internal|local|in-app)\b[\s\S]*\b(map|route|navigation|section)\b/.test(text)
+    || /\b(plan route|route review|map review|open map review)\b/.test(text);
+}
+
+function handleNexusInternalNavigationCaptionCommand(command = "") {
+  if (!isNexusInternalNavigationCommand(command)) return false;
+  clearControlledActionPreview("internal-navigation-caption-command");
+  const plan = buildNexusAutonomousTaskPlan(command, { category: "route-planning" });
+  startNexusAutonomousWorkflowFromTaskPlan(plan, { command });
+  updateUserCaptionPanel("Internal navigation review prepared. Confirming will only move inside Nexus. No route is launched and no location permission is requested.", { expanded: true });
+  setVoiceResponse("Internal navigation review prepared. Confirming will only move inside Nexus. No route is launched and no location permission is requested.", false, { allowVoiceFirst: false });
+  return true;
+}
+
 function createNexusSimulatedProviderExecutionResult(gate = nexusUserConfirmationGateState) {
   if (!gate || gate.actionType !== "simulated_provider_action" || gate.locallyConfirmable !== true) {
     return null;
@@ -613,6 +630,79 @@ function renderNexusSimulatedProviderExecutionResults(results = nexusSimulatedPr
   return `
     <div class="nexus-simulated-provider-results" data-nexus-simulated-provider-results="true" data-external-action-occurred="false" data-provider-contacted="false" aria-label="Nexus simulated provider results">
       <span class="nexus-simulated-provider-label">Simulated provider mode</span>
+      <ul>${items}</ul>
+    </div>
+  `;
+}
+
+function resolveNexusInternalNavigationTarget(gate = {}) {
+  const text = `${gate.actionType || ""} ${gate.description || ""} ${gate.providerStatus || ""}`.toLowerCase();
+  const targets = [
+    { sectionId: "learning", label: "Training / Learning", pattern: /\b(training|learning|course|lesson|teach)\b/ },
+    { sectionId: "workforce", label: "Job Readiness / Workforce", pattern: /\b(job|jobs|career|workforce|interview|role)\b/ },
+    { sectionId: "trade", label: "Marketplace / AgriTrade", pattern: /\b(marketplace|agritrade|trade|crop|buyer|seller|listing)\b/ },
+    { sectionId: "map", label: "Maps / Location Review", pattern: /\b(map|route|navigation|transport|facility|clinic access)\b/ },
+    { sectionId: "dashboard", label: "Nexus Home", pattern: /\b(home|dashboard|overview)\b/ }
+  ];
+  const target = targets.find(item => item.pattern.test(text)) || targets[4];
+  if (typeof canOpenSection === "function" && !canOpenSection(target.sectionId)) return null;
+  return target;
+}
+
+function executeNexusConfirmedInternalNavigation(gate = nexusUserConfirmationGateState) {
+  if (!gate || gate.actionType !== "internal_navigation" || gate.locallyConfirmable !== true) {
+    return null;
+  }
+  const target = resolveNexusInternalNavigationTarget(gate);
+  if (!target) {
+    return {
+      schemaVersion: "nexus-internal-navigation-execution.v1",
+      label: "LOCAL NAVIGATION ONLY",
+      targetSection: "",
+      targetLabel: "Unavailable",
+      status: "Internal navigation blocked because the section is unavailable. No external action occurred.",
+      externalActionOccurred: false,
+      locationPermissionRequested: false,
+      routeLaunched: false,
+      providerContacted: false,
+      executionAuthority: false,
+      createdAt: new Date().toISOString()
+    };
+  }
+  goSection(target.sectionId, {
+    instant: true,
+    keepAssistant: true,
+    openDefaultAction: false,
+    scroll: false
+  });
+  const result = {
+    schemaVersion: "nexus-internal-navigation-execution.v1",
+    label: "LOCAL NAVIGATION ONLY",
+    targetSection: target.sectionId,
+    targetLabel: target.label,
+    status: `Local navigation completed to ${target.label}. No external route, location permission, provider handoff, call, message, payment, camera, medical, pharmacy, emergency, or backend write occurred.`,
+    externalActionOccurred: false,
+    locationPermissionRequested: false,
+    routeLaunched: false,
+    providerContacted: false,
+    executionAuthority: false,
+    createdAt: new Date().toISOString()
+  };
+  nexusInternalNavigationExecutionResults = [result, ...nexusInternalNavigationExecutionResults].slice(0, 10);
+  return result;
+}
+
+function renderNexusInternalNavigationExecutionResults(results = nexusInternalNavigationExecutionResults) {
+  if (!Array.isArray(results) || !results.length) return "";
+  const items = results.slice(0, 3).map(result => `
+    <li data-nexus-internal-navigation-result="${htmlSafe(result.targetSection)}">
+      <strong>${htmlSafe(result.label)} - ${htmlSafe(result.targetLabel)}</strong>
+      <span>${htmlSafe(result.status)}</span>
+    </li>
+  `).join("");
+  return `
+    <div class="nexus-internal-navigation-results" data-nexus-internal-navigation-results="true" data-external-action-occurred="false" data-location-permission-requested="false" data-route-launched="false" aria-label="Nexus internal navigation results">
+      <span class="nexus-internal-navigation-label">Internal navigation</span>
       <ul>${items}</ul>
     </div>
   `;
@@ -962,8 +1052,11 @@ function performNexusConfirmedLocalQueueAction(gate = nexusUserConfirmationGateS
     const type = result?.simulationType || "simulated provider result";
     return `Simulated provider result prepared locally: ${type}. SIMULATED ONLY - no real external action occurred, and Nexus did not contact a real provider.`;
   }
+  if (gate.actionType === "internal_navigation") {
+    const result = executeNexusConfirmedInternalNavigation(gate);
+    return result?.status || "Internal navigation was not available. No external action occurred.";
+  }
   const outcomes = {
-    internal_navigation: "Local navigation review confirmed. Nexus did not open an external route or request location.",
     draft_generation: "Local draft prepared for review. Nexus did not send, submit, message, buy, sell, or pay.",
     report_generation: "Local report outline prepared for review. Nexus did not write records or contact a provider."
   };
@@ -1044,6 +1137,7 @@ function renderNexusControlledActionQueueCard(queue = nexusControlledActionQueue
   const gateHtml = renderNexusUserConfirmationGate();
   const auditHtml = renderNexusSessionActionAuditLog();
   const simulatedHtml = renderNexusSimulatedProviderExecutionResults();
+  const internalNavigationHtml = renderNexusInternalNavigationExecutionResults();
   const items = queue.slice(0, 4).map((action, index) => `
     <li data-nexus-controlled-action-queue-item="${htmlSafe(action.queueStatus)}" data-action-type="${htmlSafe(action.actionType)}" data-risk-level="${htmlSafe(action.riskLevel)}">
       <strong>${htmlSafe(action.actionType.replace(/_/g, " "))}</strong>
@@ -1061,6 +1155,7 @@ function renderNexusControlledActionQueueCard(queue = nexusControlledActionQueue
       <strong>Nexus is preparing these reviewed steps.</strong>
       <ul>${items}</ul>
       ${gateHtml}
+      ${internalNavigationHtml}
       ${simulatedHtml}
       ${auditHtml}
       <small>No provider API, phone call, message, payment, location, camera, medical, pharmacy, emergency, backend write, or external action can run from this queue.</small>
@@ -29117,6 +29212,7 @@ function bindStatic() {
         setCommandInputs(command);
         if (handleJarvisStyleStandardUserSafetyResponse(command)) return;
         if (handleNexusSimulationCaptionCommand(command)) return;
+        if (handleNexusInternalNavigationCaptionCommand(command)) return;
         void handleVoiceCommand(command);
       } else if (action === "confirm") {
         void confirmPendingWorkflow();
@@ -29681,6 +29777,7 @@ function bindStatic() {
       setCommandInputs(command);
       if (handleJarvisStyleStandardUserSafetyResponse(command)) return;
       if (handleNexusSimulationCaptionCommand(command)) return;
+      if (handleNexusInternalNavigationCaptionCommand(command)) return;
       void handleVoiceCommand(command);
       return;
     }
