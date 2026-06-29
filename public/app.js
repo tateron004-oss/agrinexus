@@ -112,6 +112,7 @@ let nexusVoiceTurnToken = 0;
 let activeAgentCommandController = null;
 let voiceConversationTurns = Number(localStorage.getItem("agrinexusVoiceTurns") || 0);
 let liveVoiceSuggestions = [];
+let a100SafeFollowUpContext = null;
 let assistantRuntimePreviewCard = null;
 const NEXUS_ASSISTANT_SAFE_FOLLOW_UP_CHIPS = Object.freeze([
   "Explain this",
@@ -12190,6 +12191,71 @@ function a100CapabilitySurfaceHtml() {
   `;
 }
 
+function rememberA100SafeFollowUpContext(intent = {}) {
+  if (!intent || typeof intent !== "object") return;
+  a100SafeFollowUpContext = Object.freeze({
+    action: String(intent.action || "safe-preview").trim(),
+    section: String(intent.section || "dashboard").trim(),
+    response: String(intent.response || "").trim(),
+    suggestions: Array.isArray(intent.suggestions) ? intent.suggestions.slice(0, 5).map(item => String(item || "").trim()).filter(Boolean) : [],
+    createdAt: Date.now()
+  });
+}
+
+function a100SafeFollowUpIntent(command = "") {
+  if (!isA100SafeAutonomyEnabled() || experienceMode !== "user" || !a100SafeFollowUpContext) return null;
+  const text = normalizeToolText(command);
+  if (!text) return null;
+  const expired = Date.now() - Number(a100SafeFollowUpContext.createdAt || 0) > 20 * 60 * 1000;
+  if (expired) {
+    a100SafeFollowUpContext = null;
+    return null;
+  }
+  const label = a100SafeFollowUpContext.action.replace(/^low-risk-/, "").replace(/-/g, " ");
+  const section = a100SafeFollowUpContext.section || "dashboard";
+  if (/^(show me more|more|tell me more|show more|details|more details)$/.test(text)) {
+    return {
+      action: "follow-up-more",
+      section,
+      response: `More on ${label}: Nexus can keep this review-first, show practical next steps, and route you to the right Standard User section. It still will not call, send, pay, buy, request location, open camera, use microphone, or hand off to a provider.`,
+      suggestions: ["open that", "explain it", "what should I do next", "go back"]
+    };
+  }
+  if (/^(open that|show that|go there|open it|show it)$/.test(text)) {
+    return {
+      action: "follow-up-open-that",
+      section,
+      response: `I opened the ${section === "dashboard" ? "safe assistant capability menu" : section} view for review. No workflow was submitted and no provider handoff was started.`,
+      suggestions: ["explain it", "show me more", "what should I do next", "go back"]
+    };
+  }
+  if (/^(explain it|explain that|explain this|what does that mean)$/.test(text)) {
+    return {
+      action: "follow-up-explain",
+      section: "dashboard",
+      response: `Explanation: ${a100SafeFollowUpContext.response || "Nexus prepared a safe preview."} This is guidance only. Any real-world action still needs review, confirmation, provider readiness, consent, and audit gates.`,
+      suggestions: ["show me more", "open that", "what should I do next", "go back"]
+    };
+  }
+  if (/^(go back|back|return|home|go home)$/.test(text)) {
+    return {
+      action: "follow-up-go-back",
+      section: "dashboard",
+      response: "I went back to the safe assistant capability menu. You can choose another low-risk preview or ask what Nexus can do.",
+      suggestions: ["what can Nexus do", "help me with agriculture", "show me farm jobs", "help me plan a route"]
+    };
+  }
+  if (/^(what should i do next|next|next step|what next)$/.test(text)) {
+    return {
+      action: "follow-up-next-step",
+      section,
+      response: `Next safe step for ${label}: review the visible guidance, choose a low-risk section, or ask Nexus to prepare questions/checklists. Nexus will not execute high-risk actions from this follow-up.`,
+      suggestions: ["open that", "show me more", "prepare a review checklist", "go back"]
+    };
+  }
+  return null;
+}
+
 function userVisualIconHtml(type = "agent") {
   const icons = {
     ask: `<path d="M18 9.5a6 6 0 0 0-12 0v2.2a6 6 0 0 0 12 0V9.5Z"></path><path d="M9 18h6"></path><path d="M12 18v3"></path><path d="M7 10h10"></path>`,
@@ -22432,6 +22498,8 @@ function a100SafeAutonomyIntent(command = "") {
   if (!isA100SafeAutonomyEnabled() || experienceMode !== "user") return null;
   const text = normalizeToolText(command);
   if (!text) return null;
+  const followUp = a100SafeFollowUpIntent(command);
+  if (followUp) return followUp;
   const highRisk = [
     { pattern: /\b(call|phone|dial)\b.*\b(emergency|doctor|provider|buyer|seller|someone|contact|person|family|clinic)\b|\bcall emergency\b/, label: "Call readiness", reason: "Calls require explicit review, provider/contact readiness, and confirmation before any call path can open." },
     { pattern: /\b(send|message|sms|whatsapp|text|email)\b.*\b(buyer|seller|provider|doctor|someone|contact|family|patient)\b|\bprepare a message\b/, label: "Message preparation", reason: "Nexus can prepare a message draft for review, but it will not send or hand off to a messaging provider." },
@@ -22495,6 +22563,7 @@ function openA100SafeAutonomyPreview(intent) {
   renderLiveVoiceSuggestions(intent.suggestions || ["what can Nexus do", "what should I do next"]);
   recordVoiceEvent(`A100 safe autonomy preview: ${intent.action}`, "done");
   updateNexusBehaviorLayer("answering", "Nexus showed A100 safe autonomy guidance without execution or provider handoff.");
+  rememberA100SafeFollowUpContext(intent);
   setVoiceResponse(intent.response, true, { allowHandoff: false, command: intent.action, source: "a100-standard-user-safe-autonomy" });
   return true;
 }
