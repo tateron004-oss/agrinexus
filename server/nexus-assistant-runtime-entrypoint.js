@@ -3,6 +3,7 @@ const orchestrator = require("./nexus-live-source-orchestrator.js");
 const answerComposer = require("./nexus-assistant-answer-composer.js");
 const followUpContext = require("./nexus-assistant-follow-up-context.js");
 const nextStepPlanner = require("./nexus-assistant-next-step-planner.js");
+const providerReliabilityHealth = require("./nexus-provider-reliability-health.js");
 
 const DEFAULT_SAFE_FOLLOW_UPS = Object.freeze([
   "Ask for more detail",
@@ -76,6 +77,7 @@ function buildAssistantRuntimeResponseFromOrchestration(userPrompt, orchestratio
   const sourceLabels = uniqueTextList(citations.map(citation => citation.sourceName));
   const answer = answerComposer.composeAssistantAnswer(orchestrationResult);
   const safeNextSteps = nextStepPlanner.buildSafeNextSteps(orchestrationResult);
+  const providerHealth = providerReliabilityHealth.buildProviderHealthStatus(orchestrationResult);
 
   return Object.freeze({
     responseId: stableResponseId(userPrompt),
@@ -98,6 +100,10 @@ function buildAssistantRuntimeResponseFromOrchestration(userPrompt, orchestratio
     sourceResultCount: Array.isArray(orchestrationResult.results) ? orchestrationResult.results.length : 0,
     auditEvent: orchestrationResult.auditEvent,
     reliability: orchestrationResult.reliability || null,
+    providerHealth,
+    staleResultWarning: providerHealth.staleResultWarning,
+    safeRetryPolicy: providerHealth.safeRetryPolicy,
+    cachePolicy: providerHealth.cachePolicy,
     allowed: orchestrationResult.allowed === true,
     blockedReason: orchestrationResult.blockedReason || "",
     noExecutionAuthorized: true,
@@ -188,6 +194,7 @@ function isSafeAssistantRuntimeResponse(response) {
   if (response.noProviderContactAuthorized !== true) return false;
   if (response.noBackendWritePerformed !== true) return false;
   if (!response.safetyPosture || response.safetyPosture.readOnly !== true || response.safetyPosture.previewOnly !== true) return false;
+  if (response.providerHealth && providerReliabilityHealth.isSafeProviderReliabilityHealth(response.providerHealth) !== true) return false;
   if (UNSAFE_ANSWER_PATTERNS.some(pattern => pattern.test(response.answer))) return false;
   return true;
 }
