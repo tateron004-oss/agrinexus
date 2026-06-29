@@ -577,6 +577,7 @@
     "qa:nexus-capability-sprint-9-draft-message-generation": "node scripts/nexus-capability-sprint-9-draft-message-generation-qa.js",
     "qa:nexus-capability-sprint-10-call-preparation-workflow": "node scripts/nexus-capability-sprint-10-call-preparation-workflow-qa.js",
     "qa:nexus-capability-sprint-11-map-navigation-handoff-preparation": "node scripts/nexus-capability-sprint-11-map-navigation-handoff-preparation-qa.js",
+    "qa:nexus-provider-account-api-access-capability": "node scripts/nexus-provider-account-api-access-capability-qa.js",
     "qa:nexus-a100-1-standard-user-capability-routing": "node scripts/nexus-a100-1-standard-user-capability-routing-qa.js",
     "qa:nexus-a100-2-low-risk-task-cards": "node scripts/nexus-a100-2-low-risk-task-cards-qa.js",
     "qa:nexus-a100-3-agriculture-support": "node scripts/nexus-a100-3-agriculture-support-qa.js",

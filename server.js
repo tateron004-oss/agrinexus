@@ -31,8 +31,8 @@ const AI_MODEL = process.env.OPENAI_MODEL || "gpt-5.4-mini";
 const AI_REASONING_MODEL = process.env.OPENAI_REASONING_MODEL || process.env.OPENAI_AGENT_MODEL || AI_MODEL;
 const AI_TRANSLATION_MODEL = process.env.OPENAI_TRANSLATION_MODEL || process.env.OPENAI_AGENT_MODEL || AI_MODEL;
 const AGRINEXUS_RELEASE = "2026-06-16-operational-readiness";
-const AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-306";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v285";
+const AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-307";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v286";
 const PRODUCT_IDENTITY = Object.freeze({
   productName: "Nexus Workforce AI",
   assistantName: "Nexus",
@@ -3276,6 +3276,7 @@ function publicState(db, user) {
   ensureAdaptiveAutonomyProfile(db.profile);
   ensureNetworkedIntelligenceProfile(db.profile);
   const providerCandidates = providerCandidateCatalog(db, providers);
+  const providerAccountApiAccess = providerAccountApiAccessStatus();
   const agentCapabilities = agentCapabilityRegistryState(db, providers);
   const jarvisReadiness = jarvisReadinessModel(db, user, providers);
   return {
@@ -3291,6 +3292,7 @@ function publicState(db, user) {
     products: db.products || [],
     providers,
     providerCandidates,
+    providerAccountApiAccess,
     capabilities: capabilityMatrix(db, providers),
     womenChildrenLearningHub: womenChildrenLearningHubModel(db, providers),
     intelligentAssistant: intelligentAssistantModel(db, user, providers),
@@ -5078,6 +5080,232 @@ function directVendorProviderStatus(provider, { ready, mode, readyDetail, missin
     };
   }
   return null;
+}
+
+const PROVIDER_ACCOUNT_API_ACCESS_REGISTRY = [
+  {
+    id: "whatsapp-messaging",
+    label: "WhatsApp / messaging account",
+    providerCategory: "communications",
+    providerOptionsExamples: ["Twilio WhatsApp", "Meta WhatsApp Cloud API", "approved communications webhook"],
+    accountRequired: true,
+    apiKeyOrTokenRequired: true,
+    webhookRequired: true,
+    callbackUrlRequired: true,
+    businessVerificationRequired: true,
+    complianceAgreementRequired: true,
+    environmentVariablesRequired: ["WHATSAPP_PROVIDER", "WHATSAPP_WEBHOOK_URL", "COMMUNICATION_PROVIDER_API_KEY", "TWILIO_ACCOUNT_SID", "TWILIO_AUTH_TOKEN", "TWILIO_WHATSAPP_FROM", "PUBLIC_BASE_URL"],
+    configuredWhenAnyPresent: [["WHATSAPP_WEBHOOK_URL", "COMMUNICATION_PROVIDER_API_KEY"], ["TWILIO_ACCOUNT_SID", "TWILIO_AUTH_TOKEN", "TWILIO_WHATSAPP_FROM"]]
+  },
+  {
+    id: "sms-provider",
+    label: "SMS provider account",
+    providerCategory: "communications",
+    providerOptionsExamples: ["Twilio SMS", "Africa's Talking", "approved SMS webhook"],
+    accountRequired: true,
+    apiKeyOrTokenRequired: true,
+    webhookRequired: true,
+    callbackUrlRequired: true,
+    businessVerificationRequired: true,
+    complianceAgreementRequired: true,
+    environmentVariablesRequired: ["SMS_PROVIDER", "SMS_WEBHOOK_URL", "COMMUNICATION_PROVIDER_API_KEY", "TWILIO_ACCOUNT_SID", "TWILIO_AUTH_TOKEN", "TWILIO_SMS_FROM", "PUBLIC_BASE_URL"],
+    configuredWhenAnyPresent: [["SMS_WEBHOOK_URL", "COMMUNICATION_PROVIDER_API_KEY"], ["TWILIO_ACCOUNT_SID", "TWILIO_AUTH_TOKEN", "TWILIO_SMS_FROM"]]
+  },
+  {
+    id: "voice-phone-provider",
+    label: "Voice / phone provider account",
+    providerCategory: "communications",
+    providerOptionsExamples: ["Twilio Voice", "native dial handoff", "approved phone provider"],
+    accountRequired: true,
+    apiKeyOrTokenRequired: true,
+    webhookRequired: true,
+    callbackUrlRequired: true,
+    businessVerificationRequired: true,
+    complianceAgreementRequired: true,
+    environmentVariablesRequired: ["PHONE_PROVIDER", "TWILIO_ACCOUNT_SID", "TWILIO_AUTH_TOKEN", "TWILIO_PHONE_NUMBER", "PUBLIC_BASE_URL"],
+    configuredWhenAnyPresent: [["TWILIO_ACCOUNT_SID", "TWILIO_AUTH_TOKEN", "TWILIO_PHONE_NUMBER", "PUBLIC_BASE_URL"]]
+  },
+  {
+    id: "maps-routing-provider",
+    label: "Maps / routing provider account",
+    providerCategory: "maps-routing",
+    providerOptionsExamples: ["OpenRouteService", "Mapbox", "Google Maps Platform"],
+    accountRequired: true,
+    apiKeyOrTokenRequired: true,
+    webhookRequired: false,
+    callbackUrlRequired: false,
+    businessVerificationRequired: false,
+    complianceAgreementRequired: true,
+    environmentVariablesRequired: ["MAPBOX_ACCESS_TOKEN", "OPENROUTESERVICE_API_KEY", "GOOGLE_MAPS_API_KEY", "ROUTING_PROVIDER", "ROUTING_WEBHOOK_URL"],
+    configuredWhenAnyPresent: [["MAPBOX_ACCESS_TOKEN"], ["OPENROUTESERVICE_API_KEY"], ["GOOGLE_MAPS_API_KEY"], ["ROUTING_WEBHOOK_URL"]]
+  },
+  {
+    id: "telehealth-video-provider",
+    label: "Telehealth / video provider account",
+    providerCategory: "health-access",
+    providerOptionsExamples: ["Twilio Video", "Daily", "Zoom healthcare-approved workflow", "approved telehealth webhook"],
+    accountRequired: true,
+    apiKeyOrTokenRequired: true,
+    webhookRequired: true,
+    callbackUrlRequired: true,
+    businessVerificationRequired: true,
+    complianceAgreementRequired: true,
+    environmentVariablesRequired: ["HEALTH_TELEHEALTH_PROVIDER", "HEALTH_TELEHEALTH_WEBHOOK_URL", "HEALTH_PROVIDER_API_KEY", "PUBLIC_BASE_URL"],
+    configuredWhenAnyPresent: [["HEALTH_TELEHEALTH_WEBHOOK_URL", "HEALTH_PROVIDER_API_KEY"]]
+  },
+  {
+    id: "rpm-rtm-device-vendor",
+    label: "RPM / RTM device vendor account",
+    providerCategory: "health-access",
+    providerOptionsExamples: ["device vendor API", "RPM platform", "RTM platform"],
+    accountRequired: true,
+    apiKeyOrTokenRequired: true,
+    webhookRequired: true,
+    callbackUrlRequired: true,
+    businessVerificationRequired: true,
+    complianceAgreementRequired: true,
+    environmentVariablesRequired: ["RPM_RTM_VENDOR_PROVIDER", "RPM_RTM_VENDOR_API_KEY", "RPM_RTM_WEBHOOK_URL", "PUBLIC_BASE_URL"],
+    configuredWhenAnyPresent: [["RPM_RTM_VENDOR_PROVIDER", "RPM_RTM_VENDOR_API_KEY", "RPM_RTM_WEBHOOK_URL"]]
+  },
+  {
+    id: "email-provider",
+    label: "Email provider account",
+    providerCategory: "communications",
+    providerOptionsExamples: ["Resend", "SendGrid", "Mailgun", "approved email webhook"],
+    accountRequired: true,
+    apiKeyOrTokenRequired: true,
+    webhookRequired: true,
+    callbackUrlRequired: false,
+    businessVerificationRequired: true,
+    complianceAgreementRequired: true,
+    environmentVariablesRequired: ["EMAIL_PROVIDER", "EMAIL_WEBHOOK_URL", "EMAIL_FROM", "RESEND_API_KEY", "SENDGRID_API_KEY", "MAILGUN_API_KEY"],
+    configuredWhenAnyPresent: [["RESEND_API_KEY", "EMAIL_FROM"], ["SENDGRID_API_KEY", "EMAIL_FROM"], ["MAILGUN_API_KEY", "EMAIL_FROM"], ["EMAIL_WEBHOOK_URL", "EMAIL_FROM"]]
+  },
+  {
+    id: "marketplace-payment-provider",
+    label: "Marketplace / payment provider account",
+    providerCategory: "marketplace-payments",
+    providerOptionsExamples: ["Stripe", "Paystack", "Flutterwave", "approved billing webhook"],
+    accountRequired: true,
+    apiKeyOrTokenRequired: true,
+    webhookRequired: true,
+    callbackUrlRequired: true,
+    businessVerificationRequired: true,
+    complianceAgreementRequired: true,
+    environmentVariablesRequired: ["BILLING_PROVIDER", "BILLING_WEBHOOK_URL", "BILLING_PROVIDER_API_KEY", "STRIPE_SECRET_KEY", "PAYSTACK_SECRET_KEY", "FLUTTERWAVE_SECRET_KEY", "TRADE_PAYMENT_WEBHOOK_URL"],
+    configuredWhenAnyPresent: [["STRIPE_SECRET_KEY"], ["PAYSTACK_SECRET_KEY"], ["FLUTTERWAVE_SECRET_KEY"], ["BILLING_WEBHOOK_URL", "BILLING_PROVIDER_API_KEY"], ["TRADE_PAYMENT_WEBHOOK_URL", "TRADE_PROVIDER_API_KEY"]]
+  },
+  {
+    id: "hosting-deployment-provider",
+    label: "Hosting / deployment provider",
+    providerCategory: "platform-operations",
+    providerOptionsExamples: ["Render", "Railway", "Fly.io", "AWS", "Azure"],
+    accountRequired: true,
+    apiKeyOrTokenRequired: false,
+    webhookRequired: false,
+    callbackUrlRequired: true,
+    businessVerificationRequired: false,
+    complianceAgreementRequired: true,
+    environmentVariablesRequired: ["PUBLIC_BASE_URL", "DATABASE_URL", "SESSION_SECRET"],
+    configuredWhenAnyPresent: [["PUBLIC_BASE_URL", "DATABASE_URL", "SESSION_SECRET"]]
+  },
+  {
+    id: "analytics-reporting-provider",
+    label: "Analytics / reporting provider",
+    providerCategory: "platform-operations",
+    providerOptionsExamples: ["PostHog", "Plausible", "Metabase", "approved reporting webhook"],
+    accountRequired: true,
+    apiKeyOrTokenRequired: true,
+    webhookRequired: true,
+    callbackUrlRequired: false,
+    businessVerificationRequired: false,
+    complianceAgreementRequired: true,
+    environmentVariablesRequired: ["ANALYTICS_PROVIDER", "ANALYTICS_API_KEY", "REPORTING_WEBHOOK_URL"],
+    configuredWhenAnyPresent: [["ANALYTICS_PROVIDER", "ANALYTICS_API_KEY"], ["REPORTING_WEBHOOK_URL"]]
+  },
+  {
+    id: "care-team-report-delivery-provider",
+    label: "Care-team / physician report delivery provider",
+    providerCategory: "health-access",
+    providerOptionsExamples: ["secure email", "clinic webhook", "EHR handoff", "approved care-team inbox"],
+    accountRequired: true,
+    apiKeyOrTokenRequired: true,
+    webhookRequired: true,
+    callbackUrlRequired: true,
+    businessVerificationRequired: true,
+    complianceAgreementRequired: true,
+    environmentVariablesRequired: ["HEALTH_NOTIFICATION_PROVIDER", "HEALTH_NOTIFICATION_WEBHOOK_URL", "HEALTH_EHR_WEBHOOK_URL", "HEALTH_PROVIDER_API_KEY", "EMAIL_WEBHOOK_URL", "EMAIL_FROM"],
+    configuredWhenAnyPresent: [["HEALTH_NOTIFICATION_WEBHOOK_URL", "HEALTH_PROVIDER_API_KEY"], ["HEALTH_EHR_WEBHOOK_URL", "HEALTH_PROVIDER_API_KEY"], ["EMAIL_WEBHOOK_URL", "EMAIL_FROM"]]
+  }
+];
+
+function envGroupConfigured(group = [], env = process.env) {
+  return group.filter(Boolean).every(name => Boolean(env[name]));
+}
+
+function providerAccountApiAccessStatus(env = process.env) {
+  const globalExecutionEnabled = env.NEXUS_REAL_PROVIDER_EXECUTION_ENABLED === "true";
+  const items = PROVIDER_ACCOUNT_API_ACCESS_REGISTRY.map(item => {
+    const configured = (item.configuredWhenAnyPresent || []).some(group => envGroupConfigured(group, env));
+    const connected = configured && env.NEXUS_PROVIDER_ACCOUNT_CONNECTIONS_ENABLED === "true";
+    const realExecutionEnabled = connected && globalExecutionEnabled && env[`NEXUS_${item.id.toUpperCase().replace(/[^A-Z0-9]+/g, "_")}_EXECUTION_ENABLED`] === "true";
+    const missingCredential = item.apiKeyOrTokenRequired && !configured;
+    const statuses = [
+      realExecutionEnabled ? "Real execution enabled" : "Real execution disabled",
+      connected ? "Account connected" : "Account not connected",
+      configured ? "Credential configured" : "API credential missing",
+      item.businessVerificationRequired ? "Provider review required" : "Provider review optional",
+      "Simulation only"
+    ];
+    return {
+      id: item.id,
+      label: item.label,
+      providerCategory: item.providerCategory,
+      providerOptionsExamples: item.providerOptionsExamples,
+      accountRequired: item.accountRequired,
+      apiKeyOrTokenRequired: item.apiKeyOrTokenRequired,
+      webhookRequired: item.webhookRequired,
+      callbackUrlRequired: item.callbackUrlRequired,
+      businessVerificationRequired: item.businessVerificationRequired,
+      complianceAgreementRequired: item.complianceAgreementRequired,
+      environmentVariablesRequired: item.environmentVariablesRequired,
+      configured,
+      connected,
+      simulationAvailable: true,
+      realExecutionEnabled,
+      safeNextSetupStep: configured
+        ? "Complete provider review, callback validation, consent, audit, and final execution gate before enabling real actions."
+        : `Configure a provider account and set required environment placeholders such as ${item.environmentVariablesRequired.slice(0, 3).join(", ")}.`,
+      unavailableReason: realExecutionEnabled
+        ? ""
+        : missingCredential
+        ? "API credential missing"
+        : connected
+        ? "Real execution disabled"
+        : "Account not connected",
+      statuses,
+      secretValuesExposed: false,
+      noExternalApiCall: true,
+      noExecutionAuthorized: true
+    };
+  });
+  return {
+    id: "provider-account-api-access",
+    title: "Provider Accounts & API Access",
+    generatedAt: new Date().toISOString(),
+    defaultPosture: "Simulation only. Account/API status is visible, but real execution is disabled.",
+    noSecretsExposed: true,
+    noExternalApiCalls: true,
+    noExecutionAuthorized: true,
+    summary: {
+      total: items.length,
+      configured: items.filter(item => item.configured).length,
+      connected: items.filter(item => item.connected).length,
+      realExecutionEnabled: items.filter(item => item.realExecutionEnabled).length,
+      simulationAvailable: items.filter(item => item.simulationAvailable).length
+    },
+    items
+  };
 }
 
 function runtimeProviders(db) {
@@ -27301,6 +27529,7 @@ async function api(req, res, url) {
     const publicMap = publicMapConfig();
     return send(res, 200, {
       productIdentity: productIdentityMetadata(),
+      providerAccountApiAccess: providerAccountApiAccessStatus(),
       ai: {
         provider: process.env.OPENAI_API_KEY ? "openai" : "offline-simulation",
         model: process.env.OPENAI_API_KEY ? AI_MODEL : null

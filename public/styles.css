@@ -1510,6 +1510,28 @@ body.user-mode .a100-provider-readiness {
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 7px;
 }
+body.user-mode .a100-provider-account-api-access {
+  display: grid;
+  gap: 8px;
+  padding: 9px;
+  border: 1px solid #c9dde7;
+  border-radius: 8px;
+  background: #f8fbfc;
+}
+body.user-mode .a100-provider-account-api-access-head {
+  display: grid;
+  gap: 3px;
+}
+body.user-mode .a100-provider-account-api-access-summary {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
+}
+body.user-mode .a100-provider-account-api-access-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 7px;
+}
 body.user-mode .a100-route-preview {
   display: grid;
   gap: 7px;
@@ -1556,6 +1578,27 @@ body.user-mode .a100-provider-readiness div {
   border-radius: 8px;
   background: #ffffff;
 }
+body.user-mode .a100-provider-account-api-access section {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  padding: 8px;
+  border: 1px solid #d4e8f1;
+  border-radius: 8px;
+  background: #ffffff;
+}
+body.user-mode .a100-provider-account-api-access-summary span {
+  min-width: 0;
+  padding: 6px 7px;
+  border: 1px solid #d7e8e3;
+  border-radius: 7px;
+  background: #ffffff;
+  color: #173240;
+  font-size: .72rem;
+  font-weight: 950;
+  line-height: 1.15;
+  overflow-wrap: break-word;
+}
 body.user-mode .a100-route-preview div {
   display: grid;
   gap: 3px;
@@ -1592,6 +1635,9 @@ body.user-mode .a100-autonomous-task-plan span,
 body.user-mode .a100-provider-readiness strong,
 body.user-mode .a100-provider-readiness span,
 body.user-mode .a100-provider-readiness small,
+body.user-mode .a100-provider-account-api-access strong,
+body.user-mode .a100-provider-account-api-access span,
+body.user-mode .a100-provider-account-api-access small,
 body.user-mode .a100-route-preview strong,
 body.user-mode .a100-route-preview span,
 body.user-mode .a100-domain-guidance strong,
@@ -1607,6 +1653,7 @@ body.user-mode .a100-runtime-card-meta span,
 body.user-mode .a100-review-preparation span,
 body.user-mode .a100-autonomous-task-plan span,
 body.user-mode .a100-provider-readiness small,
+body.user-mode .a100-provider-account-api-access small,
 body.user-mode .a100-route-preview span,
 body.user-mode .a100-domain-guidance span,
 body.user-mode .a100-clinician-report span {
@@ -1619,6 +1666,15 @@ body.user-mode .a100-provider-readiness span {
   border-radius: 999px;
   background: #eef8f6;
   color: #214c43;
+}
+body.user-mode .a100-provider-account-api-access section > span {
+  width: fit-content;
+  max-width: 100%;
+  padding: 4px 6px;
+  border-radius: 999px;
+  background: #eef8f6;
+  color: #214c43;
+  overflow-wrap: break-word;
 }
 body.user-mode .a100-safe-task-controls {
   display: grid;
@@ -5959,6 +6015,11 @@ body.user-mode #workflowClose {
   white-space: nowrap;
 }
 @media (max-width: 720px) {
+  body.user-mode .a100-provider-readiness,
+  body.user-mode .a100-provider-account-api-access-summary,
+  body.user-mode .a100-provider-account-api-access-grid {
+    grid-template-columns: 1fr;
+  }
   .workflow-real-use-grid {
     grid-template-columns: 1fr;
   }

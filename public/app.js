@@ -207,8 +207,8 @@ const nexusProductIdentity = Object.freeze({
 });
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-306";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v285";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-307";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v286";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
 const VOICE_ATTENTION_DELAY_MS = 900;
@@ -13222,7 +13222,7 @@ function a100StandardUserCapabilities() {
     { id: "workforce", label: "Show Jobs", detail: "Review jobs, skills, readiness gaps, and interview steps.", command: "Nexus, show me farm jobs", section: "workforce" },
     { id: "marketplace", label: "Browse AgriTrade", detail: "Browse marketplace options without buying or messaging.", command: "Nexus, browse AgriTrade", section: "trade" },
     { id: "map", label: "Plan Route", detail: "Preview routes and maps without using live location.", command: "Nexus, help me plan a route", section: "map" },
-    { id: "providers", label: "Provider Status", detail: "Show connected, not connected, preview-only, and review-required status.", command: "Nexus, what providers are connected?", section: "agent" },
+    { id: "providers", label: "Provider Status", detail: "Show connected, not connected, preview-only, and review-required status.", command: "Nexus, what providers are connected?", section: "dashboard" },
     { id: "task", label: "Prepare", detail: "Prepare a checklist, draft, next step, or question for review.", command: "Nexus, prepare a message", section: "agent" },
     { id: "next", label: "What can Nexus do?", detail: "Get a practical menu of safe assistant help and next steps.", command: "Nexus, what can you do?", section: "dashboard" }
   ];
@@ -13242,11 +13242,12 @@ function a100CapabilitySurfaceHtml() {
         <small>${translateText("Some actions need review first. Nexus will not send, pay, call, contact providers, or turn on location by itself.")}</small>
       </div>
       <div class="a100-safe-autonomy-grid">
-        ${capabilities.map(item => `<button type="button" data-simple-command="${escapeHtml(item.command)}">
+        ${capabilities.map(item => `<button type="button" data-simple-command="${escapeHtml(item.command)}" data-a100-capability="${escapeHtml(item.id)}" onclick="return handleA100CapabilityButtonClick(event, this)">
           <strong>${translateText(item.label)}</strong>
           <span>${translateText(item.detail)}</span>
         </button>`).join("")}
       </div>
+      ${a100ProviderAccountApiAccessPanelHtml(a100ProviderAccountApiAccessPanel())}
       <div class="a100-chronic-care-preview" aria-label="${translateText("Chronic care assistant preview")}">
         <div>
           <strong>${translateText("Chronic Care Navigator")}</strong>
@@ -13416,6 +13417,31 @@ function buildNexusAutonomousTaskPlan(command = "", context = {}) {
   };
 }
 
+function a100ProviderAccountApiAccessPanelHtml(providerAccountApiAccess = {}) {
+  return `
+      <div class="a100-provider-account-api-access" data-nexus-provider-account-api-access-panel="true" data-secret-values-exposed="false" data-real-execution-enabled="${providerAccountApiAccess.summary?.realExecutionEnabled ? "true" : "false"}" aria-label="${translateText("Provider Accounts & API Access")}">
+        <div class="a100-provider-account-api-access-head">
+          <strong>${translateText(providerAccountApiAccess.title || "Provider Accounts & API Access")}</strong>
+          <span>${translateText(providerAccountApiAccess.defaultPosture || "Simulation only. Real execution is disabled.")}</span>
+        </div>
+        <div class="a100-provider-account-api-access-summary">
+          <span>${translateText(`Total: ${providerAccountApiAccess.summary?.total || 0}`)}</span>
+          <span>${translateText(`Configured: ${providerAccountApiAccess.summary?.configured || 0}`)}</span>
+          <span>${translateText(`Connected: ${providerAccountApiAccess.summary?.connected || 0}`)}</span>
+          <span>${translateText(`Real execution: ${providerAccountApiAccess.summary?.realExecutionEnabled || 0}`)}</span>
+        </div>
+        <div class="a100-provider-account-api-access-grid">
+          ${(providerAccountApiAccess.items || []).map(item => `<section data-provider-account-api-access-id="${escapeHtml(item.id)}" data-provider-account-api-access-category="${escapeHtml(item.providerCategory)}" data-provider-account-configured="${item.configured ? "true" : "false"}" data-provider-account-connected="${item.connected ? "true" : "false"}" data-provider-account-real-execution="${item.realExecutionEnabled ? "true" : "false"}">
+            <strong>${translateText(item.label)}</strong>
+            <span>${translateText(item.statuses?.join(" / ") || "Simulation only / Account not connected / Real execution disabled")}</span>
+            <small>${translateText(`Options: ${(item.providerOptionsExamples || []).join(", ")}`)}</small>
+            <small>${translateText(`Env names: ${(item.environmentVariablesRequired || []).join(", ")}`)}</small>
+            <small>${translateText(item.safeNextSetupStep || "Configure account, approval, callback, consent, audit, and final execution gate before real actions.")}</small>
+          </section>`).join("")}
+        </div>
+      </div>`;
+}
+
 function a100SafeAutonomyCardHtml(intent = {}) {
   const section = String(intent.section || "dashboard").trim();
   const title = String(intent.title || "Safe Nexus preview").trim();
@@ -13423,6 +13449,7 @@ function a100SafeAutonomyCardHtml(intent = {}) {
   const preparation = intent.preparation && typeof intent.preparation === "object" ? intent.preparation : null;
   const taskPlan = intent.taskPlan && typeof intent.taskPlan === "object" ? intent.taskPlan : null;
   const providerReadiness = Array.isArray(intent.providerReadiness) ? intent.providerReadiness : [];
+  const providerAccountApiAccess = intent.providerAccountApiAccess && typeof intent.providerAccountApiAccess === "object" ? intent.providerAccountApiAccess : null;
   const routePreview = intent.routePreview && typeof intent.routePreview === "object" ? intent.routePreview : null;
   const guidance = intent.guidance && typeof intent.guidance === "object" ? intent.guidance : null;
   const report = intent.report && typeof intent.report === "object" ? intent.report : null;
@@ -13455,6 +13482,7 @@ function a100SafeAutonomyCardHtml(intent = {}) {
           <small>${translateText(item.detail)}</small>
         </div>`).join("")}
       </div>` : "";
+  const providerAccountHtml = providerAccountApiAccess ? a100ProviderAccountApiAccessPanelHtml(providerAccountApiAccess) : "";
   const routeHtml = routePreview ? `
       <div class="a100-route-preview" data-a100-route-preview="review-only">
         <div><strong>${translateText("Origin")}</strong><span>${translateText(routePreview.origin || "Add origin manually. Nexus will not use live location automatically.")}</span></div>
@@ -13491,6 +13519,7 @@ function a100SafeAutonomyCardHtml(intent = {}) {
       ${preparationHtml}
       ${taskPlanHtml}
       ${providerHtml}
+      ${providerAccountHtml}
       ${routeHtml}
       ${guidanceHtml}
       ${reportHtml}
@@ -13500,11 +13529,21 @@ function a100SafeAutonomyCardHtml(intent = {}) {
 }
 
 function renderA100SafeAutonomyCard(intent = {}) {
-  if (!isA100SafeAutonomyEnabled() || experienceMode !== "user") return;
+  if (!isA100SafeAutonomyEnabled() || (experienceMode !== "user" && !document.body.classList.contains("user-mode"))) return;
   const slot = $("#a100RuntimeCardSlot");
   if (!slot) return;
   slot.innerHTML = a100SafeAutonomyCardHtml(intent);
 }
+
+function handleA100CapabilityButtonClick(event, button) {
+  event?.preventDefault?.();
+  event?.stopPropagation?.();
+  if (!button?.dataset?.simpleCommand) return false;
+  const intent = a100SafeAutonomyIntent(button.dataset.simpleCommand);
+  openA100SafeAutonomyPreview(intent);
+  return false;
+}
+window.handleA100CapabilityButtonClick = handleA100CapabilityButtonClick;
 
 function a100ReviewOnlyPreparation(category = "general") {
   const key = String(category || "general").toLowerCase().replace(/[^a-z0-9-]+/g, "-");
@@ -13666,6 +13705,57 @@ function a100ProviderReadinessCards() {
     { id: "marketplace-payment", label: "Marketplace / payment", status: "review required", detail: "Browsing is internal and safe. Buying, selling, checkout, orders, payments, and inventory changes are gated." },
     { id: "camera-microphone", label: "Camera / microphone", status: "permission required", detail: "Media capture can only start from a user-controlled media flow; this card never prompts for browser permission." }
   ];
+}
+
+function a100ProviderAccountApiAccessPanel() {
+  const fallbackItems = [
+    ["whatsapp-messaging", "WhatsApp / messaging account", "communications"],
+    ["sms-provider", "SMS provider account", "communications"],
+    ["voice-phone-provider", "Voice / phone provider account", "communications"],
+    ["maps-routing-provider", "Maps / routing provider account", "maps-routing"],
+    ["telehealth-video-provider", "Telehealth / video provider account", "health-access"],
+    ["rpm-rtm-device-vendor", "RPM / RTM device vendor account", "health-access"],
+    ["email-provider", "Email provider account", "communications"],
+    ["marketplace-payment-provider", "Marketplace / payment provider account", "marketplace-payments"],
+    ["hosting-deployment-provider", "Hosting / deployment provider", "platform-operations"],
+    ["analytics-reporting-provider", "Analytics / reporting provider", "platform-operations"],
+    ["care-team-report-delivery-provider", "Care-team / physician report delivery provider", "health-access"]
+  ].map(([id, label, providerCategory]) => ({
+    id,
+    label,
+    providerCategory,
+    providerOptionsExamples: ["provider account", "approved API", "approved webhook"],
+    environmentVariablesRequired: ["provider-specific env vars"],
+    configured: false,
+    connected: false,
+    simulationAvailable: true,
+    realExecutionEnabled: false,
+    safeNextSetupStep: "Connect provider account, credential, callback, consent, audit, and final execution gate before any real action.",
+    statuses: ["Real execution disabled", "Account not connected", "API credential missing", "Provider review required", "Simulation only"],
+    secretValuesExposed: false,
+    noExternalApiCall: true,
+    noExecutionAuthorized: true
+  }));
+  const source = data?.providerAccountApiAccess && typeof data.providerAccountApiAccess === "object"
+    ? data.providerAccountApiAccess
+    : null;
+  const items = Array.isArray(source?.items) && source.items.length ? source.items : fallbackItems;
+  return {
+    id: "provider-account-api-access",
+    title: source?.title || "Provider Accounts & API Access",
+    defaultPosture: source?.defaultPosture || "Simulation only. Account/API status is visible, but real execution is disabled.",
+    noSecretsExposed: source?.noSecretsExposed !== false,
+    noExternalApiCalls: source?.noExternalApiCalls !== false,
+    noExecutionAuthorized: source?.noExecutionAuthorized !== false,
+    summary: source?.summary || {
+      total: items.length,
+      configured: items.filter(item => item.configured).length,
+      connected: items.filter(item => item.connected).length,
+      realExecutionEnabled: items.filter(item => item.realExecutionEnabled).length,
+      simulationAvailable: items.filter(item => item.simulationAvailable).length
+    },
+    items
+  };
 }
 
 function a100ChronicCareQuickActions() {
@@ -17166,7 +17256,6 @@ function render() {
   ].map(([title, text]) => `<article><h3>${title}</h3><p>${text}</p></article>`).join("");
 
   applyContentTranslations();
-  bindDynamic();
   applyPermissions();
   applyAccessibilityPrefs();
   applyAccessibilityAttributes();
@@ -17174,6 +17263,7 @@ function render() {
   renderShipmentPreviewMap();
   renderHealthHotspotPreviewMap();
   renderUserSimpleActiveSection(currentSectionId());
+  bindDynamic();
   const hashSection = sectionFromHash();
   if (hashSection !== currentSectionId()) goSection(hashSection, { updateHash: false, scroll: false });
 }
@@ -24524,6 +24614,7 @@ function a100SafeAutonomyIntent(command = "") {
     preparation: /\b(prepare|draft|checklist|questions|plan|setup guidance)\b/.test(text) ? a100ReviewOnlyPreparation(preparationCategory) : null,
     taskPlan: buildNexusAutonomousTaskPlan(command, { category: preparationCategory }),
     providerReadiness: capability.id === "providers" ? a100ProviderReadinessCards() : null,
+    providerAccountApiAccess: capability.id === "providers" ? a100ProviderAccountApiAccessPanel() : null,
     routePreview: capability.id === "map" ? a100RoutePlanningPreview() : null,
     guidance: capability.id === "agriculture" ? a100AgricultureHelpCard() : capability.id === "learning" ? a100TrainingLearningCard() : capability.id === "workforce" ? a100WorkforceJobsCard() : capability.id === "marketplace" ? a100MarketplaceBrowsingCard() : null,
     suggestions: ["help me with agriculture", "find agriculture training", "show me farm jobs", "browse AgriTrade", "help me plan a route", "what providers are connected"].slice(0, 5)
@@ -24535,7 +24626,7 @@ function openA100SafeAutonomyPreview(intent) {
   pendingAgentClarification = null;
   pendingNexusSpokenCommand = null;
   const section = intent.section || "dashboard";
-  if (section === "dashboard") {
+  if (section === "dashboard" || section === "agent") {
     goSection("dashboard", { instant: true, openDefaultAction: false, keepAssistant: false });
     if (experienceMode === "user") renderUserWorkspace();
     renderA100SafeAutonomyCard(intent);
@@ -28565,6 +28656,15 @@ async function runSimpleAction(eventOrButton) {
   if (status) status.textContent = `${label} is running...`;
   if (button.dataset.simpleCommand) {
     if (experienceMode === "user") {
+      if (button.dataset.a100Capability) {
+        const intent = a100SafeAutonomyIntent(button.dataset.simpleCommand);
+        const opened = openA100SafeAutonomyPreview(intent);
+        resumeVoiceAfterUiAction(shouldResumeVoice);
+        if (status) status.textContent = opened
+          ? `${label} opened a safe review-only Nexus preview.`
+          : `${label} needs attention. Ask Nexus in your own words or choose another action.`;
+        return;
+      }
       if (isHealthVideoPreviewCommand(button.dataset.simpleCommand)) {
         const config = workflowConfig("health", "video", { dataset: {} });
         if (status) status.textContent = `${label} opened. Review the details and choose Yes or No.`;
@@ -29158,6 +29258,14 @@ function bindStatic() {
     if (handleNexusAutonomousWorkflowClick(event)) return;
     if (handleNexusControlledActionQueueClick(event)) return;
     if (handleControlledActionConfirmationPrototypeClick(event)) return;
+    const a100CapabilityButton = event.target.closest("[data-a100-capability][data-simple-command]");
+    if (a100CapabilityButton && (experienceMode === "user" || document.body.classList.contains("user-mode"))) {
+      event.preventDefault();
+      event.stopPropagation();
+      const intent = a100SafeAutonomyIntent(a100CapabilityButton.dataset.simpleCommand);
+      openA100SafeAutonomyPreview(intent);
+      return;
+    }
     const nexusVoiceDemoButton = event.target.closest("[data-nexus-voice-demo-action]");
     if (nexusVoiceDemoButton) {
       event.preventDefault();
