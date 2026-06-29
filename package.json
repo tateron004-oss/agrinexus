@@ -549,6 +549,7 @@
     "qa:nexus-n100-1-real-provider-data-core": "node scripts/nexus-n100-1-real-provider-data-core-qa.js",
     "qa:nexus-n100-2-internal-knowledge-brain": "node scripts/nexus-n100-2-internal-knowledge-brain-qa.js",
     "qa:nexus-n100-3-memory-personalization-stack": "node scripts/nexus-n100-3-memory-personalization-stack-qa.js",
+    "qa:nexus-n100-4-deep-workflow-engine": "node scripts/nexus-n100-4-deep-workflow-engine-qa.js",
     "qa:nexus-sprint-k1-personalization-runtime-activation-readiness-gate": "node scripts/nexus-sprint-k1-personalization-runtime-activation-readiness-gate-qa.js",
     "qa:nexus-sprint-k2-personalization-feature-flag-contract": "node scripts/nexus-sprint-k2-personalization-feature-flag-contract-qa.js",
     "qa:nexus-sprint-k3-personalization-flag-contract-harness": "node scripts/nexus-sprint-k3-personalization-flag-contract-harness-qa.js",
