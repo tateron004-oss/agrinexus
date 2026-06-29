@@ -3630,6 +3630,29 @@ body.admin-mode .user-workspace {
   background: #eef8f5;
   outline: 2px solid transparent;
 }
+.nexus-assistant-runtime-local-tools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.nexus-assistant-runtime-local-tools button {
+  min-height: 28px;
+  padding: 5px 8px;
+  border: 1px solid #c9ddd8;
+  border-radius: 8px;
+  background: #f2f8f6;
+  color: #173240;
+  font: inherit;
+  font-size: .78rem;
+  font-weight: 850;
+  cursor: pointer;
+}
+.nexus-assistant-runtime-local-tools button:hover,
+.nexus-assistant-runtime-local-tools button:focus-visible {
+  border-color: #8dbfb5;
+  background: #e8f4f1;
+  outline: 2px solid transparent;
+}
 .nexus-assistant-runtime-preview-facts {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));

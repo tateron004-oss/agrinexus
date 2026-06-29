@@ -15546,6 +15546,15 @@ function renderAssistantRuntimePreviewCardMarkup(card = {}) {
   const followUps = Array.isArray(card.safeFollowUps) && card.safeFollowUps.length
     ? card.safeFollowUps.map(item => `<button type="button" data-nexus-assistant-runtime-follow-up="${htmlSafe(item)}">${htmlSafe(item)}</button>`).join("")
     : "<span>Ask a follow-up</span>";
+  const localTools = card.standardUserAgentExperience && Array.isArray(card.standardUserAgentExperience.artifactPreviews) && card.standardUserAgentExperience.artifactPreviews.length
+    ? `
+      <div class="nexus-assistant-runtime-local-tools" aria-label="Safe local assistant tools" data-nexus-assistant-runtime-local-tools="true">
+        <button type="button" data-nexus-assistant-runtime-local-tool="copy-preview">Copy preview text</button>
+        <button type="button" data-nexus-assistant-runtime-local-tool="clear-context">Clear preview</button>
+        <button type="button" data-nexus-assistant-runtime-local-tool="restart-task">Restart task</button>
+      </div>
+    `
+    : "";
   const experience = card.standardUserAgentExperience;
   const experienceMarkup = experience
     && experience.noExecutionAuthorized === true
@@ -15581,6 +15590,7 @@ function renderAssistantRuntimePreviewCardMarkup(card = {}) {
       </dl>
       <ul class="nexus-assistant-runtime-preview-citations" aria-label="Preview citation details">${citations}</ul>
       <div class="nexus-assistant-runtime-preview-followups" aria-label="Safe follow-up prompts">${followUps}</div>
+      ${localTools}
       ${experienceMarkup}
     </section>
   `;
@@ -15737,6 +15747,70 @@ function handleAssistantRuntimeFollowUpClick(event) {
     || "the previous source-backed preview";
   const refinementPrompt = `${followUp}. Use the previous source-backed preview context: ${previous}`;
   runStandardUserAssistantRuntimePreview(refinementPrompt, { source: "safe-follow-up-chip" });
+  return true;
+}
+
+function assistantRuntimeLocalToolText(card = assistantRuntimePreviewCard) {
+  if (!card || typeof card !== "object") return "";
+  const lines = [
+    `Nexus preview: ${card.answer || "No answer text available."}`,
+    `Intent: ${card.intent || "unknown"}`,
+    `Provider: ${card.selectedProvider || "provider unavailable"}`,
+    `Confidence: ${card.confidence || "unknown"}`,
+    `Freshness: ${card.freshnessStatus || "unknown"}`,
+    "Safety: read-only preview; no action has been taken."
+  ];
+  const experience = card.standardUserAgentExperience || {};
+  const plan = experience.taskPlanPreview || {};
+  if (Array.isArray(plan.steps) && plan.steps.length) {
+    lines.push("Plan steps:");
+    plan.steps.forEach((step, index) => lines.push(`${index + 1}. ${step}`));
+  }
+  if (Array.isArray(experience.artifactPreviews) && experience.artifactPreviews.length) {
+    lines.push("Safe artifact previews:");
+    experience.artifactPreviews.forEach(artifact => {
+      lines.push(`- ${artifact.title || artifact.type || "Artifact"}`);
+    });
+  }
+  return lines.join("\n");
+}
+
+async function handleAssistantRuntimeLocalToolClick(event) {
+  const button = event.target.closest("[data-nexus-assistant-runtime-local-tool]");
+  if (!button) return false;
+  event.preventDefault();
+  event.stopPropagation();
+  const tool = String(button.dataset.nexusAssistantRuntimeLocalTool || "").trim();
+  if (!assistantRuntimePreviewCard || assistantRuntimePreviewCard.standardUserAgentExperience?.noExecutionAuthorized !== true) {
+    setVoiceResponse("Nexus kept the local tool unavailable because there is no safe preview to use.", true, { allowHandoff: false });
+    return true;
+  }
+  if (tool === "copy-preview") {
+    const textToCopy = assistantRuntimeLocalToolText();
+    if (navigator.clipboard && typeof navigator.clipboard.writeText === "function") {
+      await navigator.clipboard.writeText(textToCopy);
+      setVoiceResponse("Copied the read-only Nexus preview text. No action was taken.", true, { allowHandoff: false });
+    } else {
+      setVoiceResponse("Copy is not available in this browser. The preview remains read-only and no action was taken.", true, { allowHandoff: false });
+    }
+    return true;
+  }
+  if (tool === "clear-context") {
+    clearAssistantRuntimePreviewCard();
+    renderLiveVoiceSuggestions(["ask a new question", "find training", "find farm jobs"]);
+    setVoiceResponse("Cleared the local preview. No provider, message, call, payment, booking, or location action was started.", true, { allowHandoff: false });
+    return true;
+  }
+  if (tool === "restart-task") {
+    const prompt = String(assistantRuntimePreviewCard.userPrompt || "").trim();
+    if (!prompt) {
+      setVoiceResponse("Nexus needs a previous safe prompt before it can restart this task.", true, { allowHandoff: false });
+      return true;
+    }
+    runStandardUserAssistantRuntimePreview(prompt, { source: "safe-local-tool-restart" });
+    return true;
+  }
+  setVoiceResponse("Nexus ignored that local tool because it is not supported. No action was taken.", true, { allowHandoff: false });
   return true;
 }
 
@@ -26480,6 +26554,7 @@ async function runWowDemo() {
 function bindStatic() {
   renderLoginProfiles();
   document.addEventListener("click", async event => {
+    if (await handleAssistantRuntimeLocalToolClick(event)) return;
     if (handleAssistantRuntimeFollowUpClick(event)) return;
     if (handleControlledActionConfirmationPrototypeClick(event)) return;
     const nexusVoiceDemoButton = event.target.closest("[data-nexus-voice-demo-action]");
