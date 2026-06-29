@@ -15847,7 +15847,9 @@ function renderAssistantRuntimePreviewCard(response = {}) {
     clearAssistantRuntimePreviewCard();
     return;
   }
-  const container = $("#globalConversationPanel") || $("#jarvisInsightPanel") || $("#globalAssistantBar");
+  const container = [$("#globalConversationPanel"), $("#jarvisInsightPanel"), $("#globalAssistantBar")]
+    .find(panel => panel && getComputedStyle(panel).display !== "none" && panel.getClientRects().length > 0)
+    || $("#globalAssistantBar");
   if (!container) return;
   clearAssistantRuntimePreviewCard();
   assistantRuntimePreviewCard = normalizeAssistantRuntimePreviewCard(response);
