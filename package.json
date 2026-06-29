@@ -570,6 +570,7 @@
     "qa:nexus-capability-sprint-2-multi-step-workflow-engine": "node scripts/nexus-capability-sprint-2-multi-step-workflow-engine-qa.js",
     "qa:nexus-capability-sprint-3-controlled-action-queue": "node scripts/nexus-capability-sprint-3-controlled-action-queue-qa.js",
     "qa:nexus-capability-sprint-4-user-confirmation-gates": "node scripts/nexus-capability-sprint-4-user-confirmation-gates-qa.js",
+    "qa:nexus-capability-sprint-5-session-action-audit-log": "node scripts/nexus-capability-sprint-5-session-action-audit-log-qa.js",
     "qa:nexus-a100-1-standard-user-capability-routing": "node scripts/nexus-a100-1-standard-user-capability-routing-qa.js",
     "qa:nexus-a100-2-low-risk-task-cards": "node scripts/nexus-a100-2-low-risk-task-cards-qa.js",
     "qa:nexus-a100-3-agriculture-support": "node scripts/nexus-a100-3-agriculture-support-qa.js",

@@ -182,6 +182,7 @@ let visibleControlledActionPreviewReadiness = null;
 let nexusAutonomousWorkflowState = null;
 let nexusControlledActionQueue = [];
 let nexusUserConfirmationGateState = null;
+let nexusSessionActionAuditLog = [];
 let visibleControlledStagedActionPreview = null;
 let visibleUserConfirmationPreview = null;
 let latestControlledActionConfirmationReadiness = null;
@@ -503,14 +504,95 @@ function updateNexusAutonomousWorkflowDerivedState() {
   return state;
 }
 
+function sanitizeNexusSessionAuditText(value = "") {
+  return String(value || "")
+    .replace(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi, "[email]")
+    .replace(/\+?\d[\d\s().-]{6,}\d/g, "[phone]")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 180);
+}
+
+function recordNexusSessionActionAuditEvent(eventType = "", details = {}) {
+  const type = String(eventType || "").trim();
+  if (!type) return null;
+  const entry = {
+    schemaVersion: "nexus-session-action-audit.v1",
+    auditId: `nexus-audit-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+    eventType: type,
+    userRequest: sanitizeNexusSessionAuditText(details.userRequest || details.command || ""),
+    actionType: sanitizeNexusSessionAuditText(details.actionType || ""),
+    riskLevel: sanitizeNexusSessionAuditText(details.riskLevel || ""),
+    providerStatus: sanitizeNexusSessionAuditText(details.providerStatus || ""),
+    safetyReason: sanitizeNexusSessionAuditText(details.safetyReason || details.reason || ""),
+    resultStatus: sanitizeNexusSessionAuditText(details.resultStatus || ""),
+    storageMode: "volatile-ui-only",
+    externalTransmissionAllowed: false,
+    backendWriteAllowed: false,
+    createdAt: new Date().toISOString()
+  };
+  nexusSessionActionAuditLog = [entry, ...nexusSessionActionAuditLog].slice(0, 25);
+  return entry;
+}
+
+function renderNexusSessionActionAuditLog(log = nexusSessionActionAuditLog) {
+  if (!Array.isArray(log) || !log.length) return "";
+  const items = log.slice(0, 5).map(entry => `
+    <li data-nexus-session-action-audit-entry="${htmlSafe(entry.eventType)}">
+      <strong>${htmlSafe(entry.eventType.replace(/_/g, " "))}</strong>
+      <span>${htmlSafe(entry.resultStatus || entry.safetyReason || entry.actionType || "Recorded locally.")}</span>
+      <small>${htmlSafe(entry.storageMode)} - no backend write or external transmission.</small>
+    </li>
+  `).join("");
+  return `
+    <div class="nexus-session-action-audit-log" data-nexus-session-action-audit-log="true" data-storage-mode="volatile-ui-only" data-external-transmission="false" aria-label="Nexus session action audit log">
+      <span class="nexus-session-action-audit-label">Session audit</span>
+      <ul>${items}</ul>
+    </div>
+  `;
+}
+
 function startNexusAutonomousWorkflowFromTaskPlan(taskPlan = {}, context = {}) {
   const state = createNexusAutonomousWorkflowState(taskPlan, context);
   if (!state) return null;
+  recordNexusSessionActionAuditEvent("user_request", {
+    userRequest: context.command || taskPlan.userIntent || state.userIntent,
+    resultStatus: "User request accepted for local planning."
+  });
+  recordNexusSessionActionAuditEvent("plan_created", {
+    userRequest: context.command || taskPlan.userIntent || state.userIntent,
+    actionType: taskPlan.category,
+    riskLevel: taskPlan.riskLevel,
+    safetyReason: Array.isArray(taskPlan.blockedHighRiskActions) ? taskPlan.blockedHighRiskActions.join(" ") : "",
+    resultStatus: "Plan created locally with no external execution."
+  });
   nexusAutonomousWorkflowState = state;
   updateNexusAutonomousWorkflowDerivedState();
   if (typeof syncNexusControlledActionQueueFromWorkflow === "function") {
     syncNexusControlledActionQueueFromWorkflow(nexusAutonomousWorkflowState, context);
+    recordNexusSessionActionAuditEvent("action_queued", {
+      userRequest: context.command || state.userIntent,
+      actionType: nexusControlledActionQueue.map(action => action.actionType).join(", "),
+      riskLevel: nexusControlledActionQueue.map(action => action.riskLevel).join(", "),
+      safetyReason: nexusControlledActionQueue.some(action => action.queueStatus === "blocked") ? "One or more queued actions are blocked or gated." : "Queued local review actions.",
+      resultStatus: `${nexusControlledActionQueue.length} action(s) queued for review.`
+    });
+    if (nexusControlledActionQueue.some(action => action.queueStatus === "blocked")) {
+      recordNexusSessionActionAuditEvent("action_blocked", {
+        userRequest: context.command || state.userIntent,
+        actionType: "blocked_high_risk_action",
+        riskLevel: "high",
+        safetyReason: "High-risk or provider-dependent action remained blocked.",
+        resultStatus: "Blocked action recorded locally."
+      });
+    }
   }
+  recordNexusSessionActionAuditEvent("workflow_started", {
+    userRequest: context.command || state.userIntent,
+    actionType: state.category,
+    riskLevel: taskPlan.riskLevel,
+    resultStatus: "Workflow started in volatile UI state only."
+  });
   if (typeof paintNexusAutonomousWorkflow === "function") {
     paintNexusAutonomousWorkflow();
   }
@@ -577,6 +659,13 @@ function handleNexusAutonomousWorkflowControl(action = "") {
   const state = nexusAutonomousWorkflowState;
   const normalized = String(action || "").trim();
   if (normalized === "cancel") {
+    recordNexusSessionActionAuditEvent("action_canceled", {
+      userRequest: state.userIntent,
+      actionType: state.category,
+      riskLevel: state.activePlan?.riskLevel || "",
+      safetyReason: "User canceled the guided workflow.",
+      resultStatus: "Workflow canceled locally. No action was executed."
+    });
     nexusAutonomousWorkflowState = null;
     nexusControlledActionQueue = [];
     nexusUserConfirmationGateState = null;
@@ -607,6 +696,13 @@ function handleNexusAutonomousWorkflowControl(action = "") {
   } else {
     return false;
   }
+  recordNexusSessionActionAuditEvent(normalized === "finish" ? "action_confirmed" : "workflow_updated", {
+    userRequest: state.userIntent,
+    actionType: state.category,
+    riskLevel: state.activePlan?.riskLevel || "",
+    safetyReason: normalized === "finish" ? "Finished local workflow only." : "Workflow control updated session state only.",
+    resultStatus: `Workflow ${normalized} handled locally.`
+  });
   updateNexusAutonomousWorkflowDerivedState();
   if (typeof syncNexusControlledActionQueueFromWorkflow === "function") {
     syncNexusControlledActionQueueFromWorkflow(state, { action: normalized });
@@ -806,6 +902,13 @@ function performNexusConfirmedLocalQueueAction(gate = nexusUserConfirmationGateS
 function handleNexusUserConfirmationGateControl(action = "") {
   if (!nexusUserConfirmationGateState) return false;
   if (action === "cancel") {
+    recordNexusSessionActionAuditEvent("action_canceled", {
+      actionType: nexusUserConfirmationGateState.actionType,
+      riskLevel: nexusUserConfirmationGateState.riskLevel,
+      providerStatus: nexusUserConfirmationGateState.providerStatus,
+      safetyReason: nexusUserConfirmationGateState.safetyReason,
+      resultStatus: "User canceled the confirmation gate. No action was taken."
+    });
     nexusUserConfirmationGateState = {
       ...nexusUserConfirmationGateState,
       status: "Cancelled. No local or external action was taken."
@@ -814,9 +917,22 @@ function handleNexusUserConfirmationGateControl(action = "") {
     return true;
   }
   if (action === "confirm") {
+    const resultStatus = performNexusConfirmedLocalQueueAction(nexusUserConfirmationGateState);
+    recordNexusSessionActionAuditEvent(
+      nexusUserConfirmationGateState.locallyConfirmable === true
+        ? nexusUserConfirmationGateState.actionType === "simulated_provider_action" ? "action_simulated" : "action_confirmed"
+        : "action_blocked",
+      {
+        actionType: nexusUserConfirmationGateState.actionType,
+        riskLevel: nexusUserConfirmationGateState.riskLevel,
+        providerStatus: nexusUserConfirmationGateState.providerStatus,
+        safetyReason: nexusUserConfirmationGateState.safetyReason,
+        resultStatus
+      }
+    );
     nexusUserConfirmationGateState = {
       ...nexusUserConfirmationGateState,
-      status: performNexusConfirmedLocalQueueAction(nexusUserConfirmationGateState)
+      status: resultStatus
     };
     paintNexusControlledActionQueue();
     return true;
@@ -836,6 +952,18 @@ function handleNexusControlledActionQueueClick(event) {
   const index = Number(reviewButton.dataset.nexusControlledActionQueueReview || "0");
   const action = nexusControlledActionQueue[index];
   nexusUserConfirmationGateState = buildNexusUserConfirmationGateFromQueueAction(action, index);
+  if (nexusUserConfirmationGateState) {
+    recordNexusSessionActionAuditEvent(
+      nexusUserConfirmationGateState.locallyConfirmable ? "confirmation_shown" : "action_blocked",
+      {
+        actionType: nexusUserConfirmationGateState.actionType,
+        riskLevel: nexusUserConfirmationGateState.riskLevel,
+        providerStatus: nexusUserConfirmationGateState.providerStatus,
+        safetyReason: nexusUserConfirmationGateState.safetyReason,
+        resultStatus: nexusUserConfirmationGateState.locallyConfirmable ? "Confirmation gate shown for local-only action." : "Confirmation gate shown with final execution gate required."
+      }
+    );
+  }
   paintNexusControlledActionQueue();
   return true;
 }
@@ -843,6 +971,7 @@ function handleNexusControlledActionQueueClick(event) {
 function renderNexusControlledActionQueueCard(queue = nexusControlledActionQueue) {
   if (!Array.isArray(queue) || !queue.length) return "";
   const gateHtml = renderNexusUserConfirmationGate();
+  const auditHtml = renderNexusSessionActionAuditLog();
   const items = queue.slice(0, 4).map((action, index) => `
     <li data-nexus-controlled-action-queue-item="${htmlSafe(action.queueStatus)}" data-action-type="${htmlSafe(action.actionType)}" data-risk-level="${htmlSafe(action.riskLevel)}">
       <strong>${htmlSafe(action.actionType.replace(/_/g, " "))}</strong>
@@ -860,6 +989,7 @@ function renderNexusControlledActionQueueCard(queue = nexusControlledActionQueue
       <strong>Nexus is preparing these reviewed steps.</strong>
       <ul>${items}</ul>
       ${gateHtml}
+      ${auditHtml}
       <small>No provider API, phone call, message, payment, location, camera, medical, pharmacy, emergency, backend write, or external action can run from this queue.</small>
     </section>
   `;

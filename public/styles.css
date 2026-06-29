@@ -4250,6 +4250,45 @@ body.admin-mode .user-workspace {
   flex-wrap: wrap;
   gap: 6px;
 }
+.nexus-session-action-audit-log {
+  display: grid;
+  gap: 5px;
+  padding: 8px;
+  border: 1px dashed rgba(95, 73, 23, .32);
+  border-radius: 8px;
+  background: rgba(255, 253, 242, .72);
+}
+.nexus-session-action-audit-label {
+  width: fit-content;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: #f4efd7;
+  color: #5f4917 !important;
+  font-size: .7rem !important;
+  font-weight: 950 !important;
+}
+.nexus-session-action-audit-log ul {
+  display: grid;
+  gap: 5px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.nexus-session-action-audit-log [data-nexus-session-action-audit-entry] {
+  display: grid;
+  gap: 2px;
+  padding: 5px 0;
+  border-top: 1px solid rgba(95, 73, 23, .12);
+}
+.nexus-session-action-audit-log [data-nexus-session-action-audit-entry]:first-child {
+  border-top: 0;
+}
+.nexus-session-action-audit-log span,
+.nexus-session-action-audit-log small {
+  color: #3d2c0f;
+  font-size: .74rem;
+  line-height: 1.25;
+}
 .nexus-assistant-runtime-preview-card {
   display: grid;
   gap: 10px;

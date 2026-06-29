@@ -126,6 +126,7 @@ const sandbox = vm.runInNewContext(`
   let nexusUserConfirmationGateState = null;
   let nexusControlledActionQueue = [];
   function paintNexusControlledActionQueue() {}
+  function recordNexusSessionActionAuditEvent() { return null; }
   ${localCheckBody}
   ${gateBuilderBody}
   ${gateRendererBody}
