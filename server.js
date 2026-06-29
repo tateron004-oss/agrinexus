@@ -31,8 +31,8 @@ const AI_MODEL = process.env.OPENAI_MODEL || "gpt-5.4-mini";
 const AI_REASONING_MODEL = process.env.OPENAI_REASONING_MODEL || process.env.OPENAI_AGENT_MODEL || AI_MODEL;
 const AI_TRANSLATION_MODEL = process.env.OPENAI_TRANSLATION_MODEL || process.env.OPENAI_AGENT_MODEL || AI_MODEL;
 const AGRINEXUS_RELEASE = "2026-06-16-operational-readiness";
-const AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-308";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v287";
+const AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-309";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v288";
 const PRODUCT_IDENTITY = Object.freeze({
   productName: "Nexus Workforce AI",
   assistantName: "Nexus",
@@ -3278,6 +3278,7 @@ function publicState(db, user) {
   const providerCandidates = providerCandidateCatalog(db, providers);
   const providerAccountApiAccess = providerAccountApiAccessStatus();
   const productionProviderReadiness = productionProviderReadinessStatus(providers, providerAccountApiAccess);
+  const healthPrivacyComplianceGuardrails = healthPrivacyComplianceGuardrailsStatus();
   const agentCapabilities = agentCapabilityRegistryState(db, providers);
   const jarvisReadiness = jarvisReadinessModel(db, user, providers);
   return {
@@ -3295,6 +3296,7 @@ function publicState(db, user) {
     providerCandidates,
     providerAccountApiAccess,
     productionProviderReadiness,
+    healthPrivacyComplianceGuardrails,
     capabilities: capabilityMatrix(db, providers),
     womenChildrenLearningHub: womenChildrenLearningHubModel(db, providers),
     intelligentAssistant: intelligentAssistantModel(db, user, providers),
@@ -5447,6 +5449,41 @@ function productionProviderReadinessStatus(providers = [], providerAccountApiAcc
       realExecutionDisabled: items.filter(item => item.realExecutionDisabled).length
     },
     items
+  };
+}
+
+function healthPrivacyComplianceGuardrailsStatus() {
+  return {
+    id: "health-privacy-compliance-guardrails",
+    title: "Health Privacy & Compliance Guardrails",
+    defaultPosture: "Review-only health support. Nexus prepares education, intake notes, and reports without diagnosing, prescribing, dispatching, contacting providers, or storing sensitive health data persistently.",
+    dataSensitivityTags: ["health-data:sensitive", "session-only", "review-only", "provider-review-required"],
+    guardrails: [
+      { id: "review-only-health-support", label: "Review-only health support", status: "active", detail: "Nexus can prepare education, intake checklists, care-team summaries, and questions for qualified review." },
+      { id: "no-diagnosis", label: "No diagnosis", status: "active", detail: "Nexus does not diagnose symptoms, interpret readings as final advice, or replace qualified clinical review." },
+      { id: "no-medication-changes", label: "No medication changes", status: "active", detail: "Medication, insulin, prescription, refill, dose, and pharmacy questions require clinician or pharmacist review." },
+      { id: "no-emergency-dispatch", label: "No emergency dispatch", status: "active", detail: "Emergency or severe symptom prompts receive safety guidance to contact local emergency services; Nexus does not dispatch help." },
+      { id: "session-only-data", label: "Session-only data", status: "active", detail: "Chronic-care notes and reports are session-only/review-only unless a separately approved compliant storage path exists." },
+      { id: "provider-review-required", label: "Provider review required", status: "active", detail: "Reports, medication questions, severe readings, and urgent symptoms are marked for qualified human review." }
+    ],
+    blockedSafetyReasons: [
+      "diagnosis-disabled",
+      "prescribing-disabled",
+      "medication-adjustment-disabled",
+      "emergency-dispatch-disabled",
+      "provider-contact-disabled",
+      "external-transmission-disabled",
+      "persistent-sensitive-storage-disabled"
+    ],
+    noDiagnosis: true,
+    noPrescribing: true,
+    noMedicationAdjustment: true,
+    noEmergencyDispatch: true,
+    noProviderContact: true,
+    noExternalTransmission: true,
+    sessionOnly: true,
+    providerReviewRequired: true,
+    noExecutionAuthorized: true
   };
 }
 
@@ -27675,6 +27712,7 @@ async function api(req, res, url) {
       productIdentity: productIdentityMetadata(),
       providerAccountApiAccess,
       productionProviderReadiness,
+      healthPrivacyComplianceGuardrails: healthPrivacyComplianceGuardrailsStatus(),
       ai: {
         provider: process.env.OPENAI_API_KEY ? "openai" : "offline-simulation",
         model: process.env.OPENAI_API_KEY ? AI_MODEL : null

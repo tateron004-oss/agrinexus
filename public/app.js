@@ -207,8 +207,8 @@ const nexusProductIdentity = Object.freeze({
 });
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-308";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v287";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-309";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v288";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
 const VOICE_ATTENTION_DELAY_MS = 900;
@@ -13249,6 +13249,7 @@ function a100CapabilitySurfaceHtml() {
       </div>
       ${a100ProviderAccountApiAccessPanelHtml(a100ProviderAccountApiAccessPanel())}
       ${a100ProductionProviderReadinessPanelHtml(a100ProductionProviderReadinessPanel())}
+      ${a100HealthPrivacyComplianceGuardrailsPanelHtml(a100HealthPrivacyComplianceGuardrails())}
       <div class="a100-chronic-care-preview" aria-label="${translateText("Chronic care assistant preview")}">
         <div>
           <strong>${translateText("Chronic Care Navigator")}</strong>
@@ -13482,6 +13483,7 @@ function a100SafeAutonomyCardHtml(intent = {}) {
   const providerReadiness = Array.isArray(intent.providerReadiness) ? intent.providerReadiness : [];
   const providerAccountApiAccess = intent.providerAccountApiAccess && typeof intent.providerAccountApiAccess === "object" ? intent.providerAccountApiAccess : null;
   const productionProviderReadiness = intent.productionProviderReadiness && typeof intent.productionProviderReadiness === "object" ? intent.productionProviderReadiness : null;
+  const healthPrivacyComplianceGuardrails = intent.healthPrivacyComplianceGuardrails && typeof intent.healthPrivacyComplianceGuardrails === "object" ? intent.healthPrivacyComplianceGuardrails : null;
   const routePreview = intent.routePreview && typeof intent.routePreview === "object" ? intent.routePreview : null;
   const guidance = intent.guidance && typeof intent.guidance === "object" ? intent.guidance : null;
   const report = intent.report && typeof intent.report === "object" ? intent.report : null;
@@ -13516,6 +13518,7 @@ function a100SafeAutonomyCardHtml(intent = {}) {
       </div>` : "";
   const providerAccountHtml = providerAccountApiAccess ? a100ProviderAccountApiAccessPanelHtml(providerAccountApiAccess) : "";
   const productionProviderHtml = productionProviderReadiness ? a100ProductionProviderReadinessPanelHtml(productionProviderReadiness) : "";
+  const healthGuardrailHtml = healthPrivacyComplianceGuardrails ? a100HealthPrivacyComplianceGuardrailsPanelHtml(healthPrivacyComplianceGuardrails) : "";
   const routeHtml = routePreview ? `
       <div class="a100-route-preview" data-a100-route-preview="review-only">
         <div><strong>${translateText("Origin")}</strong><span>${translateText(routePreview.origin || "Add origin manually. Nexus will not use live location automatically.")}</span></div>
@@ -13554,6 +13557,7 @@ function a100SafeAutonomyCardHtml(intent = {}) {
       ${providerHtml}
       ${providerAccountHtml}
       ${productionProviderHtml}
+      ${healthGuardrailHtml}
       ${routeHtml}
       ${guidanceHtml}
       ${reportHtml}
@@ -13841,6 +13845,74 @@ function a100ProductionProviderReadinessPanel() {
     },
     items
   };
+}
+
+function a100HealthPrivacyComplianceGuardrails(command = "") {
+  const source = data?.healthPrivacyComplianceGuardrails && typeof data.healthPrivacyComplianceGuardrails === "object"
+    ? data.healthPrivacyComplianceGuardrails
+    : null;
+  const text = normalizeA100RuntimeCommand(command);
+  const triggeredFlags = [
+    /\b(medicine|medication|insulin|dose|dosage|prescription|refill|pharmacy|pill|metformin)\b/.test(text) && "medication question - provider review required",
+    /\b(emergency|urgent|danger|unconscious|cannot breathe|can't breathe|chest pain|stroke|seizure|severe|bleeding)\b/.test(text) && "severe or emergency symptom - local emergency services guidance",
+    /\b\d{2,3}\s*\/\s*\d{2,3}\b|\b(glucose|blood sugar|bp|blood pressure|reading|readings|a1c)\b/.test(text) && "manual/session reading - insufficient for diagnosis",
+    /\b(report|summary|doctor|physician|care team|nurse|provider|chw|community health worker)\b/.test(text) && "report request - review-only care-team summary",
+    /\b(device|rpm|rtm|monitor|cgm|bp cuff|scale)\b/.test(text) && "device/RPM readiness - no device connection"
+  ].filter(Boolean);
+  const guardrails = Array.isArray(source?.guardrails) && source.guardrails.length ? source.guardrails : [
+    { id: "review-only-health-support", label: "Review-only health support", status: "active", detail: "Nexus can prepare education, intake checklists, care-team summaries, and questions for qualified review." },
+    { id: "no-diagnosis", label: "No diagnosis", status: "active", detail: "Nexus does not diagnose symptoms, interpret readings as final advice, or replace qualified clinical review." },
+    { id: "no-medication-changes", label: "No medication changes", status: "active", detail: "Medication, insulin, prescription, refill, dose, and pharmacy questions require clinician or pharmacist review." },
+    { id: "no-emergency-dispatch", label: "No emergency dispatch", status: "active", detail: "Emergency or severe symptom prompts receive safety guidance to contact local emergency services; Nexus does not dispatch help." },
+    { id: "session-only-data", label: "Session-only data", status: "active", detail: "Chronic-care notes and reports are session-only/review-only unless a separately approved compliant storage path exists." },
+    { id: "provider-review-required", label: "Provider review required", status: "active", detail: "Reports, medication questions, severe readings, and urgent symptoms are marked for qualified human review." }
+  ];
+  return {
+    id: "health-privacy-compliance-guardrails",
+    title: source?.title || "Health Privacy & Compliance Guardrails",
+    defaultPosture: source?.defaultPosture || "Review-only health support. Nexus prepares education, intake notes, and reports without diagnosing, prescribing, dispatching, contacting providers, or storing sensitive health data persistently.",
+    dataSensitivityTags: source?.dataSensitivityTags || ["health-data:sensitive", "session-only", "review-only", "provider-review-required"],
+    guardrails,
+    triggeredFlags,
+    blockedSafetyReasons: source?.blockedSafetyReasons || ["diagnosis-disabled", "prescribing-disabled", "medication-adjustment-disabled", "emergency-dispatch-disabled", "provider-contact-disabled", "external-transmission-disabled", "persistent-sensitive-storage-disabled"],
+    noDiagnosis: true,
+    noPrescribing: true,
+    noMedicationAdjustment: true,
+    noEmergencyDispatch: true,
+    noProviderContact: true,
+    noExternalTransmission: true,
+    sessionOnly: true,
+    providerReviewRequired: true,
+    noExecutionAuthorized: true
+  };
+}
+
+function a100HealthPrivacyComplianceGuardrailsPanelHtml(healthPrivacyComplianceGuardrails = {}) {
+  return `
+      <div class="a100-health-privacy-guardrails" data-nexus-health-privacy-guardrails-panel="true" data-health-data-sensitive="true" data-sensitive-health-persistence="false" data-provider-contacted="false" data-emergency-dispatch="false" data-medication-change="false" data-diagnosis="false" data-real-execution-enabled="false" aria-label="${translateText("Health Privacy & Compliance Guardrails")}">
+        <div class="a100-health-privacy-guardrails-head">
+          <strong>${translateText(healthPrivacyComplianceGuardrails.title || "Health Privacy & Compliance Guardrails")}</strong>
+          <span>${translateText(healthPrivacyComplianceGuardrails.defaultPosture || "Review-only health support. No diagnosis, prescribing, medication changes, dispatch, provider contact, or persistent sensitive storage.")}</span>
+        </div>
+        <div class="a100-health-privacy-tag-list">
+          ${(healthPrivacyComplianceGuardrails.dataSensitivityTags || ["health-data:sensitive", "session-only", "review-only", "provider-review-required"]).map(tag => `<span>${translateText(tag)}</span>`).join("")}
+        </div>
+        <div class="a100-health-privacy-grid">
+          ${(healthPrivacyComplianceGuardrails.guardrails || []).map(item => `<section data-health-privacy-guardrail-id="${escapeHtml(item.id)}" data-health-privacy-guardrail-status="${escapeHtml(item.status || "active")}">
+            <strong>${translateText(item.label || item.id)}</strong>
+            <span>${translateText(item.status || "active")}</span>
+            <small>${translateText(item.detail || "Review-only guardrail active.")}</small>
+          </section>`).join("")}
+        </div>
+        <div class="a100-health-privacy-flags">
+          <strong>${translateText("Prompt safety flags")}</strong>
+          <span>${translateText((healthPrivacyComplianceGuardrails.triggeredFlags || []).length ? healthPrivacyComplianceGuardrails.triggeredFlags.join(" / ") : "No high-risk health flag detected in this prompt. Health support remains review-only.")}</span>
+        </div>
+        <div class="a100-health-privacy-blocked">
+          <strong>${translateText("Blocked execution")}</strong>
+          <span>${translateText((healthPrivacyComplianceGuardrails.blockedSafetyReasons || []).join(" / "))}</span>
+        </div>
+      </div>`;
 }
 
 function a100ChronicCareQuickActions() {
@@ -24588,6 +24660,7 @@ function a100SafeAutonomyIntent(command = "") {
       response: `${highRisk.label}: This requires review first. ${highRisk.reason} Nexus can prepare a checklist or questions for review, but it will not diagnose, change medicine, call, send, pay, buy, contact providers, turn on location, use camera or microphone, dispatch help, connect devices, transmit health data, or change records.`,
       taskPlan: buildNexusAutonomousTaskPlan(command, { category: "general" }),
       report: a100ChronicCareReport("safety", command),
+      healthPrivacyComplianceGuardrails: a100HealthPrivacyComplianceGuardrails(command),
       suggestions: ["what can Nexus do", "prepare a review checklist", "what providers are connected", "what should I do next"]
     };
   }
@@ -24662,6 +24735,7 @@ function a100SafeAutonomyIntent(command = "") {
       preparation: a100ReviewOnlyPreparation(category),
       taskPlan: buildNexusAutonomousTaskPlan(command, { category }),
       providerReadiness: a100ChronicCareReadinessCards(),
+      healthPrivacyComplianceGuardrails: a100HealthPrivacyComplianceGuardrails(command),
       guidance: a100ChronicCareGuidanceCard(chronicMatched.id),
       report: a100ChronicCareReport(reportKind, command),
       suggestions: ["help with diabetes", "help me with blood pressure", "help me lose weight safely", "what is RPM", "prepare for my telehealth visit"]
