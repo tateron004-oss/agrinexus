@@ -42,6 +42,7 @@ const intentSource = sourceBetween(app, "function a100SafeAutonomyIntent", "func
   "RPM/RTM Readiness",
   "Prepare Telehealth Visit",
   "Care Team Summary",
+  "CHW Support",
   "Physician Report",
   "Emergency Warning Info"
 ].forEach(label => assert(chronicSource.includes(label), `Chronic quick action should render: ${label}`));
@@ -79,6 +80,8 @@ const intentSource = sourceBetween(app, "function a100SafeAutonomyIntent", "func
   "what is RTM",
   "prepare for my telehealth visit",
   "summarize this for my care team",
+  "community health worker support",
+  "prepare CHW intake checklist",
   "prepare a physician report",
   "show physician report",
   "summarize for my doctor",
@@ -142,6 +145,24 @@ const intentSource = sourceBetween(app, "function a100SafeAutonomyIntent", "func
   "no provider handoff, message, call, medical record write, or external sharing",
   "Visit preparation only. Nexus does not diagnose, prescribe, change medicine, call, message, schedule, update records, or hand off to a provider."
 ].forEach(copy => assert(app.includes(copy), `Telehealth visit prep/reporting should include: ${copy}`));
+
+[
+  "category: \"chw\"",
+  "Community health worker support.",
+  "Prepare CHW intake checklist.",
+  "Explain this in simple language.",
+  "Prepare referral guidance.",
+  "Prepare follow-up notes.",
+  "CHW intake checklist",
+  "BP/glucose/weight collection",
+  "low-literacy explanation prompts",
+  "patient education scripts",
+  "referral guidance",
+  "follow-up preparation",
+  "Clinician handoff summary",
+  "Community health worker review report",
+  "Nexus does not diagnose, change medicines, submit referrals, send messages, call providers, connect devices, or update records."
+].forEach(copy => assert(app.includes(copy), `CHW support/reporting should include: ${copy}`));
 
 [
   "Blood pressure cuff",

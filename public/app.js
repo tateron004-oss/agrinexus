@@ -12367,6 +12367,14 @@ function a100ReviewOnlyPreparation(category = "general") {
       status: "Review-only care team summary. Nothing is sent or stored as a medical record from this card.",
       blocked: "No message send, call, provider handoff, device connection, medical record mutation, diagnosis, or medication instruction."
     },
+    chw: {
+      category: "chw",
+      goal: "Prepare a community health worker intake and clinician handoff summary for review.",
+      steps: ["Collect BP, glucose, weight, symptoms, barriers, and patient education needs if already known.", "Use low-literacy explanation prompts and patient education scripts.", "Prepare referral guidance and follow-up preparation for clinician review."],
+      infoNeeded: ["Manual BP/glucose/weight notes.", "Symptoms and timing.", "Medication questions for clinician review.", "Food, transport, cost, language, and access barriers.", "Follow-up preparation needs."],
+      status: "Review-only CHW support. Nexus prepares education and summary notes only.",
+      blocked: "No diagnosis, medication instruction, referral submission, message, call, provider handoff, device connection, or external health record update."
+    },
     route: {
       category: "route",
       goal: "Prepare a route-planning preview without navigation execution.",
@@ -12414,6 +12422,7 @@ function a100ChronicCareQuickActions() {
     { label: "RPM/RTM Readiness", detail: "Check manual entry, device, and review-only readiness.", command: "Nexus, what is RPM?" },
     { label: "Prepare Telehealth Visit", detail: "Build a review-only visit checklist.", command: "Nexus, prepare for my telehealth visit" },
     { label: "Care Team Summary", detail: "Prepare notes for nurse, coach, clinician, or CHW review.", command: "Nexus, summarize this for my care team" },
+    { label: "CHW Support", detail: "Prepare intake, education, and follow-up notes for review.", command: "Nexus, community health worker support" },
     { label: "Physician Report", detail: "Prepare a session-only report for review.", command: "Nexus, prepare a physician report" },
     { label: "Emergency Warning Info", detail: "Learn when to seek urgent professional help.", command: "Nexus, emergency warning info" }
   ];
@@ -12434,27 +12443,42 @@ function a100ChronicCareReport(kind = "general", command = "") {
   const medicationQuestion = /\b(medication|medicine|insulin|dose|dosage|pill|prescription|metformin)\b/.test(text) ? "mentioned; provider review required" : "not mentioned";
   const adherenceConcern = /\b(missed|forgot|adherence|not taking|ran out|side effect|side effects|cost|afford|access)\b/.test(text) ? "possible adherence concern mentioned; provider review required" : "not provided";
   const lifestyleBarrier = /\b(food|diet|salt|activity|exercise|sleep|stress|transport|cost|access)\b/.test(text) ? "mentioned in session text" : "not provided";
-  const reportAudience = kind === "wellness" ? "coach, nurse, physician/provider, or community health worker" : kind === "rpm" ? "physician/provider, RPM nurse, RTM coach, or care coordinator" : kind === "telehealth" || kind === "care-team-summary" ? "physician/provider, nurse, coach, or community health worker" : "physician/provider or qualified clinical reviewer";
+  const reportAudience = kind === "chw" ? "community health worker, nurse supervisor, physician/provider, or care coordinator" : kind === "wellness" ? "coach, nurse, physician/provider, or community health worker" : kind === "rpm" ? "physician/provider, RPM nurse, RTM coach, or care coordinator" : kind === "telehealth" || kind === "care-team-summary" ? "physician/provider, nurse, coach, or community health worker" : "physician/provider or qualified clinical reviewer";
+  const reportType = kind === "chw" ? "Community health worker report" : kind === "care-team-summary" ? "Care team report" : kind === "telehealth" ? "Telehealth report" : "Physician Report";
+  const conditionAreaMap = {
+    diabetes: "Diabetes",
+    hypertension: "Hypertension / blood pressure",
+    wellness: "Obesity / weight wellness",
+    rpm: "RPM/RTM monitoring readiness",
+    telehealth: "Telehealth chronic-care visit preparation",
+    chw: "Community health worker chronic-care support",
+    "care-team-summary": "Care team chronic-care summary",
+    general: "General chronic care"
+  };
   const titleMap = {
     diabetes: "Diabetes physician report",
     hypertension: "Blood pressure physician report",
     wellness: "Weight and wellness physician report",
     rpm: "RPM/RTM physician report",
     telehealth: "Telehealth visit report",
+    chw: "Community health worker review report",
     "care-team-summary": "Care team summary report",
     general: "Chronic care physician report"
   };
   const conditionFields = {
     diabetes: [
       { label: "Diabetes focus", value: "blood sugar concern, glucose reading collection, A1c education, hypo/hyperglycemia safety, food/activity context, and diabetes telehealth prep" },
+      { label: "Diabetes report detail", value: "blood sugar concern; glucose reading if mentioned; hypoglycemia/hyperglycemia warning language; A1c discussion prompt; medication/insulin questions routed to provider review" },
       { label: "Diabetes evidence label", value: "guideline-backed education; RPM glucose data needed for trend; provider review required" }
     ],
     hypertension: [
       { label: "Blood pressure focus", value: "home BP reading checklist, measurement context, warning signs, sodium/activity education, and provider-review prep" },
+      { label: "Hypertension report detail", value: "blood pressure concern; BP reading if mentioned; symptoms if mentioned; home BP technique/checklist; severe BP, chest pain, or stroke symptoms routed to urgent guidance" },
       { label: "Blood pressure evidence label", value: "guideline-backed education; repeated BP data needed for trend; provider review required" }
     ],
     wellness: [
       { label: "Wellness focus", value: "weight goal, nutrition, physical activity, sleep, stress, behavior barriers, and coach/provider review prep" },
+      { label: "Weight wellness report detail", value: "weight or wellness concern; nutrition/activity/sleep/stress barriers; behavior coaching support; medication/supplement requests gated to provider review" },
       { label: "RTM behavior signal", value: "self-reported barrier, activity, sleep, stress, and nutrition context; human review required before care changes" },
       { label: "Wellness evidence label", value: "education and RTM behavior check-in; no medication, supplement, purchase, or product recommendation" }
     ],
@@ -12470,9 +12494,13 @@ function a100ChronicCareReport(kind = "general", command = "") {
     "care-team-summary": [
       { label: "Clinician Visit Summary", value: "recent readings, symptoms/concerns, medication questions to ask provider, food/activity barriers, and goals since last visit" },
       { label: "Telehealth Report basis", value: "session-only care team summary; no provider handoff, message, call, medical record write, or external sharing" }
+    ],
+    chw: [
+      { label: "CHW intake checklist", value: "BP/glucose/weight collection, symptoms, barriers, patient education needs, referral guidance, and follow-up preparation" },
+      { label: "Clinician handoff summary", value: "low-literacy explanation prompts and patient education scripts prepared for human review only" }
     ]
   };
-  const riskSignal = /chest pain|stroke|200\s*\/\s*120|extremely low|severe|pass out|cannot breathe/.test(text)
+  const riskSignal = /chest pain|stroke|200\s*\/\s*120|extremely high|extremely low|severe|fainting|pass out|cannot breathe|emergency/.test(text)
     ? "urgent review signal mentioned"
     : reading !== "not provided"
       ? "reading mentioned; pattern not established"
@@ -12483,30 +12511,63 @@ function a100ChronicCareReport(kind = "general", command = "") {
   const escalationReason = riskSignal === "urgent review signal mentioned"
     ? "urgent symptom or extreme reading language mentioned"
     : "routine review unless symptoms, very abnormal readings, or clinician instructions indicate urgent care";
-  const reviewType = riskSignal === "urgent review signal mentioned" ? "urgent professional review" : kind === "rpm" ? "program/provider readiness review" : "clinician, nurse, coach, or CHW review";
+  const reviewType = riskSignal === "urgent review signal mentioned"
+    ? "Urgent/emergency care guidance"
+    : medicationQuestion !== "not mentioned" || kind === "diabetes" || kind === "hypertension"
+      ? "Physician/provider review"
+      : kind === "rpm"
+        ? "Nurse review"
+        : kind === "wellness" || kind === "chw"
+          ? "Coach or community health worker review"
+          : "Education / self-management support";
+  const evidenceLabel = [
+    "General chronic-care education",
+    kind === "rpm" ? "RPM data needed" : "",
+    kind === "wellness" || kind === "chw" ? "RTM behavior data needed" : "",
+    "Manual/session-only information",
+    reading === "not provided" ? "Insufficient data" : "",
+    "Provider review required",
+    riskSignal === "urgent review signal mentioned" ? "Urgent warning guidance" : ""
+  ].filter(Boolean).join("; ");
+  const rpmReadiness = "not connected; manual entry only; review required; no automatic data transmission";
+  const safetyBoundary = "Nexus prepared this summary for review only. Nexus did not diagnose, prescribe, adjust medication, dispatch emergency services, contact a provider, connect a device, transmit data, or store sensitive health data persistently.";
   return {
     type: "session-only",
     title: titleMap[kind] || titleMap.general,
     summary: "Prepare a report for review. Session-only summary; Nexus does not diagnose or prescribe.",
     fields: [
+      { label: "Report Type", value: reportType },
+      { label: "Condition Area", value: conditionAreaMap[kind] || conditionAreaMap.general },
       { label: "Report audience", value: reportAudience },
       { label: "Patient concern", value: text || "not provided" },
+      { label: "Patient Concern", value: text || "not provided" },
+      { label: "Current Session Data", value: "manual/session-only user information from the current Nexus prompt; low-bandwidth summary ready for physician/care-team review" },
       { label: "Readings mentioned", value: reading },
+      { label: "Readings Mentioned", value: reading },
       { label: "Data source", value: "session-only user text; source of data is user-provided/manual unless a reviewed RPM/RTM program exists outside Nexus" },
       { label: "Symptoms mentioned", value: symptoms.length ? symptoms.join(", ") : "not provided" },
+      { label: "Symptoms Mentioned", value: symptoms.length ? symptoms.join(", ") : "not provided" },
       { label: "Medication questions", value: medicationQuestion },
+      { label: "Medication Questions", value: medicationQuestion },
+      { label: "RPM/RTM Readiness", value: rpmReadiness },
       { label: "Adherence concerns", value: adherenceConcern },
       { label: "Lifestyle barriers", value: lifestyleBarrier },
+      { label: "Lifestyle / Adherence Barriers", value: `${lifestyleBarrier}; adherence: ${adherenceConcern}` },
       { label: "Trend or risk signal", value: riskSignal },
+      { label: "Risk / Safety Flags", value: riskSignal },
       { label: "Data sufficiency label", value: dataSufficiency },
       ...(conditionFields[kind] || []),
       { label: "Evidence basis", value: "guideline-backed education; provider review required; insufficient data for diagnosis" },
+      { label: "Evidence / Source Label", value: evidenceLabel },
       { label: "Missing data", value: "confirmed readings, timing, duration, full symptoms, medication list, history, and clinician context" },
+      { label: "Missing Information", value: "confirmed readings, timing, duration, full symptoms, medication list, history, clinician context, and RPM/RTM source verification" },
       { label: "Escalation reason", value: escalationReason },
       { label: "Safety boundary applied", value: "review-only; Nexus did not diagnose, prescribe, adjust medication, connect devices, transmit data, or contact providers" },
-      { label: "Recommended review", value: reviewType }
+      { label: "Recommended review", value: reviewType },
+      { label: "Recommended Review Level", value: reviewType },
+      { label: "Nexus Safety Boundary", value: safetyBoundary }
     ],
-    safety: "Nexus did not diagnose, prescribe, adjust medication, dispatch emergency services, call, message, connect devices, transmit data, store a medical record, or change external systems."
+    safety: safetyBoundary
   };
 }
 
@@ -12566,6 +12627,14 @@ function a100ChronicCareGuidanceCard(kind = "general") {
       collect: ["Recent readings if already known.", "Symptoms/concerns and timing.", "Medication questions to ask provider.", "Food/activity barriers.", "Goals since last visit.", "Preferred language, access, and low-bandwidth needs."],
       nextSteps: ["Organize recent readings and symptoms/concerns.", "List medication questions to ask provider without changing medicines.", "Name food/activity barriers and goals since last visit.", "Review the Telehealth Report before any human shares it."],
       boundary: "Visit preparation only. Nexus does not diagnose, prescribe, change medicine, call, message, schedule, update records, or hand off to a provider."
+    },
+    chw: {
+      domain: "chronic-care-chw",
+      focus: "Community health worker intake, patient education scripts, referral guidance, and follow-up preparation for review.",
+      prompts: ["Community health worker support.", "Prepare CHW intake checklist.", "Explain this in simple language.", "Prepare referral guidance.", "Prepare follow-up notes."],
+      collect: ["BP/glucose/weight collection if already known.", "Symptoms, timing, and warning-sign questions.", "Food, transport, cost, language, and access barriers.", "Low-literacy explanation prompts.", "Patient education scripts.", "Clinician handoff summary needs."],
+      nextSteps: ["Prepare a CHW intake checklist.", "Draft low-literacy patient education scripts for review.", "Prepare referral guidance without submitting a referral.", "Prepare follow-up preparation notes for a clinician, nurse, or supervisor."],
+      boundary: "CHW review support only. Nexus does not diagnose, prescribe, change medication, submit referrals, contact providers, send messages, place calls, connect devices, or update records."
     },
     telehealth: {
       domain: "chronic-care-telehealth",
@@ -12636,7 +12705,7 @@ function a100MarketplaceBrowsingCard() {
 function a100HighRiskActionGates() {
   return [
     { pattern: /\b(stop|pause|skip|change|increase|decrease|double|adjust|reduce|raise)\b.*\b(medication|medicine|meds|insulin|dose|dosage|pill|prescription|metformin|blood pressure medicine|bp medicine)\b|\bchange my insulin dose\b|\bstop my medication\b/, label: "Medication safety boundary", reason: "Medication changes need a qualified clinician, pharmacist, nurse, or approved care team review. Nexus will not recommend stopping, starting, or changing a dose." },
-    { pattern: /\b(chest pain|pressure in my chest|heart attack|stroke|face droop|one side weak|slurred speech|cannot breathe|shortness of breath|fainting|pass out|passing out|may pass out|seizure|confused|severe headache|vision loss)\b/, label: "Urgent symptom boundary", reason: "These can be urgent warning signs. Seek local emergency or urgent professional care now if symptoms are severe, sudden, or worsening." },
+    { pattern: /\b(chest pain|pressure in my chest|heart attack|stroke|face droop|one side weak|slurred speech|cannot breathe|shortness of breath|fainting|pass out|passing out|may pass out|seizure|confused|severe headache|vision loss|emergency|urgent help|call ambulance)\b/, label: "Urgent symptom boundary", reason: "These can be urgent warning signs. Seek local emergency or urgent professional care now if symptoms are severe, sudden, or worsening." },
     { pattern: /\b(2\d{2}|[3-9]\d{2})\s*\/\s*(1[2-9]\d|[2-9]\d{2})\b|\bblood pressure\b.*\b(200\/120|very high|extremely high|dangerously high)\b/, label: "Very high blood pressure boundary", reason: "Very high blood pressure or severe symptoms need urgent professional review. Nexus can help prepare notes, but it will not make a treatment decision." },
     { pattern: /\b(glucose|blood sugar)\b.*\b(extremely low|very low|dangerously low|severe low|passing out|confused|seizure|cannot stay awake)\b|\b(hypoglycemia|hyperglycemia)\b.*\b(severe|emergency|urgent)\b/, label: "Severe glucose boundary", reason: "Severe glucose symptoms can be urgent. Follow your clinician's emergency plan if you have one and seek local urgent help when symptoms are serious." },
     { pattern: /\b(call|phone|dial|ring)\b.*\b(emergency|doctor|provider|buyer|seller|someone|contact|person|family|clinic|employer)\b|\bcall emergency\b/, label: "Call readiness", reason: "Nexus can prepare call notes, but it will not place a call." },
@@ -23011,10 +23080,11 @@ function a100SafeAutonomyIntent(command = "") {
     { id: "wellness", pattern: /\b(obesity|weight|wellness|lose weight|nutrition|diet|activity|physical activity|sleep|stress|barrier|progress)\b.*\b(help|support|safe|safely|question|prepare|review|goal|track)\b|\bhelp me lose weight safely\b|\bhelp with obesity\b|\btrack my weight safely\b|\bhelp with nutrition goals\b|\bactivity goal\b|\bsleep and stress support\b|\bprogress barriers\b/ },
     { id: "rpm", pattern: /\b(what is rpm|what is rtm|rpm|rtm|remote patient monitoring|remote therapeutic monitoring|device connected|monitoring readiness)\b/ },
     { id: "telehealth", pattern: /\b(prepare|prep|plan|summarize|summary)\b.*\b(telehealth|visit|care team|doctor|nurse|coach|clinician|chw|community health worker)\b|\bprepare for my telehealth visit\b|\bsummarize this for my care team\b/ },
-    { id: "report", pattern: /\b(prepare|show|build|create|summarize)\b.*\b(physician report|doctor report|care team report|clinical report|provider report)\b|\bprepare a physician report\b|\bshow physician report\b|\bsummarize for my doctor\b|\bprepare care team report\b/ }
+    { id: "chw", pattern: /\b(chw|community health worker|health worker)\b.*\b(support|intake|checklist|education|script|referral|follow-up|handoff|summary)\b|\bcommunity health worker support\b|\bprepare chw intake checklist\b|\bprepare referral guidance\b|\bprepare follow-up notes\b/ },
+    { id: "report", pattern: /\b(prepare|show|build|create|summarize)\b.*\b(physician report|doctor report|care team report|clinical report|clinical summary|provider report|nurse|community health worker)\b|\bprepare a physician report\b|\bshow physician report\b|\bsummarize for my doctor\b|\bprepare care team report\b|\bcreate a clinical summary\b|\bsummarize this for the nurse\b|\bsummarize this for the community health worker\b|\bwhat data supports this\b|\bwhat is missing\b|\bwhat should the doctor review\b/ }
   ].find(item => item.pattern.test(text));
   if (chronicMatched) {
-    const category = chronicMatched.id === "hypertension" ? "hypertension" : chronicMatched.id === "wellness" ? "wellness" : chronicMatched.id === "telehealth" || chronicMatched.id === "report" ? "care-team-summary" : chronicMatched.id === "rpm" ? "care-team-summary" : "diabetes";
+    const category = chronicMatched.id === "hypertension" ? "hypertension" : chronicMatched.id === "wellness" ? "wellness" : chronicMatched.id === "chw" ? "chw" : chronicMatched.id === "telehealth" || chronicMatched.id === "report" ? "care-team-summary" : chronicMatched.id === "rpm" ? "care-team-summary" : "diabetes";
     const reportKind = chronicMatched.id === "report" ? (/care team/.test(text) ? "care-team-summary" : "general") : chronicMatched.id;
     const titleMap = {
       diabetes: "Diabetes Support",
@@ -23022,6 +23092,7 @@ function a100SafeAutonomyIntent(command = "") {
       wellness: "Weight & Wellness",
       rpm: "RPM/RTM Readiness",
       telehealth: /summarize|summary|care team/.test(text) ? "Care Team Summary" : "Prepare Telehealth Visit",
+      chw: "CHW Support",
       report: /care team/.test(text) ? "Care Team Report" : "Physician Report"
     };
     const responseMap = {
@@ -23030,6 +23101,7 @@ function a100SafeAutonomyIntent(command = "") {
       wellness: "I can help prepare supportive weight and wellness questions safely for a provider, coach, nurse, or community health worker, including nutrition goals, physical activity, sleep, stress, self-reported barriers, and RTM behavior signal notes. Nexus gives general education only with no shame/blame language and will not prescribe a diet, medicine, supplement, product, purchase, or paid plan.",
       rpm: "RPM means remote patient monitoring, and RTM means remote therapeutic monitoring. Nexus can explain readiness and prepare questions, but no device is connected, no readings are transmitted, and provider review is required.",
       telehealth: "I can prepare a review-only telehealth visit checklist or care team summary. Nothing is sent, stored as a medical record, or handed off to a provider from this card.",
+      chw: "I can help prepare CHW intake checklist notes, low-literacy explanation prompts, patient education scripts, referral guidance questions, follow-up preparation, and a clinician handoff summary. Nexus does not diagnose, change medicines, submit referrals, send messages, call providers, connect devices, or update records.",
       report: "I prepared a session-only physician/care-team report for review. It shows data inputs, missing data, source labels, review level, and safety boundaries, but it is not a diagnosis or treatment plan."
     };
     return {
