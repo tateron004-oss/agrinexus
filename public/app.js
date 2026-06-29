@@ -12214,6 +12214,15 @@ function a100SafeAutonomyCardHtml(intent = {}) {
   const section = String(intent.section || "dashboard").trim();
   const title = String(intent.title || "Safe Nexus preview").trim();
   const response = String(intent.response || "Nexus prepared a safe review-only preview.").trim();
+  const preparation = intent.preparation && typeof intent.preparation === "object" ? intent.preparation : null;
+  const preparationHtml = preparation ? `
+      <div class="a100-review-preparation" data-a100-preparation-category="${escapeHtml(preparation.category || "general")}">
+        <div><strong>${translateText("Task goal")}</strong><span>${translateText(preparation.goal || "Prepare a safe task plan for review.")}</span></div>
+        <div><strong>${translateText("Safe next steps")}</strong><span>${translateText((preparation.steps || []).join(" "))}</span></div>
+        <div><strong>${translateText("Information needed")}</strong><span>${translateText((preparation.infoNeeded || []).join(" "))}</span></div>
+        <div><strong>${translateText("Review status")}</strong><span>${translateText(preparation.status || "Review-only. Nothing has been submitted or sent.")}</span></div>
+        <div><strong>${translateText("Blocked execution")}</strong><span>${translateText(preparation.blocked || "No message, call, purchase, payment, routing execution, provider handoff, location tracking, external mutation, or browser permission prompt.")}</span></div>
+      </div>` : "";
   return `
     <article class="a100-runtime-card" data-a100-action="${escapeHtml(intent.action || "safe-preview")}" data-a100-section="${escapeHtml(section)}">
       <div class="a100-runtime-card-head">
@@ -12225,6 +12234,7 @@ function a100SafeAutonomyCardHtml(intent = {}) {
         <div><strong>${translateText("Allowed")}</strong><span>${translateText("Internal navigation, local explanation, local expansion, review-only preparation, provider readiness display.")}</span></div>
         <div><strong>${translateText("Blocked")}</strong><span>${translateText("Provider handoff, permission prompts, geolocation, external APIs, backend mutation, camera, microphone, calls, messages, payments, purchases, emergency, and dispatch.")}</span></div>
       </div>
+      ${preparationHtml}
       ${a100SafeTaskControlsHtml(section)}
     </article>
   `;
@@ -12235,6 +12245,69 @@ function renderA100SafeAutonomyCard(intent = {}) {
   const slot = $("#a100RuntimeCardSlot");
   if (!slot) return;
   slot.innerHTML = a100SafeAutonomyCardHtml(intent);
+}
+
+function a100ReviewOnlyPreparation(category = "general") {
+  const key = String(category || "general").toLowerCase().replace(/[^a-z0-9-]+/g, "-");
+  const plans = {
+    agriculture: {
+      category: "agriculture",
+      goal: "Prepare agriculture help for review.",
+      steps: ["List the crop or field concern.", "Collect visible symptoms, timing, soil or water context, and local conditions.", "Review safe general guidance before contacting a local expert."],
+      infoNeeded: ["Crop name.", "Location context without live tracking.", "Photos only if the user opens a controlled media flow.", "Recent weather, irrigation, and pest observations."],
+      status: "Review-only agriculture support. No diagnosis is final and no farm record is changed.",
+      blocked: "No purchase, buyer contact, provider execution, field scan, or external mutation."
+    },
+    learning: {
+      category: "learning",
+      goal: "Prepare a training search or learning path for review.",
+      steps: ["Choose a topic.", "Pick beginner, intermediate, or certificate-readiness level.", "Open the internal learning section to review available courses."],
+      infoNeeded: ["Learning topic.", "Preferred language.", "Time available.", "Current skill level."],
+      status: "Review-only learning preparation. No enrollment, certificate issuance, payment, or provider execution.",
+      blocked: "No enrollment, payment, certificate mutation, provider handoff, or external course submission."
+    },
+    workforce: {
+      category: "workforce",
+      goal: "Prepare a safe jobs or workforce readiness plan.",
+      steps: ["Review target role.", "Collect skills, availability, and transport constraints.", "Open the workforce section to compare options."],
+      infoNeeded: ["Job type.", "Skills.", "Availability.", "Work location preference without live tracking."],
+      status: "Review-only job search preparation. No application is submitted and no employer is messaged.",
+      blocked: "No job application submission, employer message, scheduling, provider handoff, or external mutation."
+    },
+    marketplace: {
+      category: "marketplace",
+      goal: "Prepare safe AgriTrade browsing, listing, or inquiry notes.",
+      steps: ["Define crop, supply, buyer, or seller need.", "Prepare questions for review.", "Open marketplace browsing internally."],
+      infoNeeded: ["Item or crop.", "Quantity range.", "Region.", "Price or quality questions."],
+      status: "Review-only marketplace preparation. No buy, sell, order, payment, or inventory change.",
+      blocked: "No buy, sell, payment, order, inventory mutation, message send, or provider handoff."
+    },
+    route: {
+      category: "route",
+      goal: "Prepare a route-planning preview without navigation execution.",
+      steps: ["Name origin and destination manually.", "Review route readiness.", "Open the map section if helpful."],
+      infoNeeded: ["Origin.", "Destination.", "Transport mode.", "Timing or constraints."],
+      status: "Review-only route preparation. No live location, navigation launch, tracking, or provider call.",
+      blocked: "No geolocation request, external navigation, live tracking, provider routing call, or browser permission prompt."
+    },
+    providers: {
+      category: "providers",
+      goal: "Prepare provider setup guidance and readiness review.",
+      steps: ["Review provider category.", "Check connected/not connected/preview-only state.", "Prepare questions for admin or provider review."],
+      infoNeeded: ["Provider type.", "Intended action.", "Required permission.", "Confirmation owner."],
+      status: "Review-only provider setup guidance. No provider is tested or called.",
+      blocked: "No provider handoff, webhook dispatch, credential exposure, backend mutation, or external system call."
+    },
+    general: {
+      category: "general",
+      goal: "Prepare a safe task checklist for review.",
+      steps: ["Clarify the task.", "Collect missing information.", "Choose a safe internal section.", "Review before any high-risk handoff."],
+      infoNeeded: ["Task type.", "User goal.", "Missing details.", "Whether a provider, payment, location, media, call, or message would be required later."],
+      status: "Review-only preparation. Nothing has been submitted, sent, purchased, paid, tracked, or handed off.",
+      blocked: "No messages, calls, purchases, payments, routing execution, provider handoff, location tracking, external mutation, or browser permission prompt."
+    }
+  };
+  return plans[key] || plans.general;
 }
 
 function rememberA100SafeFollowUpContext(intent = {}) {
@@ -22575,6 +22648,7 @@ function a100SafeAutonomyIntent(command = "") {
   ].find(item => item.pattern.test(text));
   if (!matched) return null;
   const capability = capabilities.find(item => item.id === matched.id) || capabilities[0];
+  const preparationCategory = capability.id === "map" ? "route" : capability.id === "task" ? "general" : capability.id;
   const responseMap = {
     agriculture: "I can help with agriculture in safe preview mode: crop symptoms, pest questions, soil or weather context, buyer prep, and field-support next steps. I will not scan fields, contact buyers, or create records from this prompt.",
     learning: "I can help find agriculture training, explain lessons, prepare captions, and review certificate readiness. I will not issue a certificate or change records from this prompt.",
@@ -22590,6 +22664,7 @@ function a100SafeAutonomyIntent(command = "") {
     section: capability.section,
     title: capability.label,
     response: responseMap[capability.id] || responseMap.next,
+    preparation: /\b(prepare|draft|checklist|questions|plan|setup guidance)\b/.test(text) ? a100ReviewOnlyPreparation(preparationCategory) : null,
     suggestions: ["help me with agriculture", "find agriculture training", "show me farm jobs", "browse AgriTrade", "help me plan a route", "what providers are connected"].slice(0, 5)
   };
 }
