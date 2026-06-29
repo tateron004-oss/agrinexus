@@ -22,12 +22,12 @@ const pkg = JSON.parse(read("package.json"));
 const qaSuite = read("scripts", "qa-suite.js");
 
 const cardSource = sourceBetween(app, "function a100SafeAutonomyCardHtml", "function renderA100SafeAutonomyCard");
-const agricultureSource = sourceBetween(app, "function a100AgricultureHelpCard", "function rememberA100SafeFollowUpContext");
+const agricultureSource = sourceBetween(app, "function a100AgricultureHelpCard", "function a100TrainingLearningCard");
 const intentSource = sourceBetween(app, "function a100SafeAutonomyIntent", "function openA100SafeAutonomyPreview");
 
 assert(cardSource.includes("a100-domain-guidance"), "Runtime card should render domain guidance cards.");
 assert(cardSource.includes("data-a100-guidance-domain"), "Guidance cards should expose a safe domain marker.");
-assert(intentSource.includes("guidance: capability.id === \"agriculture\" ? a100AgricultureHelpCard() : null"), "Agriculture prompts should attach agriculture guidance.");
+assert(intentSource.includes("capability.id === \"agriculture\" ? a100AgricultureHelpCard()"), "Agriculture prompts should attach agriculture guidance.");
 
 [
   "Crop issues",

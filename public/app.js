@@ -12372,6 +12372,17 @@ function a100AgricultureHelpCard() {
   };
 }
 
+function a100TrainingLearningCard() {
+  return {
+    domain: "learning",
+    focus: "Agriculture training, irrigation lessons, available courses, beginner paths, and certificate-readiness review.",
+    prompts: ["Find agriculture training.", "Teach me irrigation basics.", "Show available courses.", "What should I learn next?"],
+    collect: ["Topic.", "Preferred language.", "Current skill level.", "Time available.", "Whether certificate readiness is only being reviewed."],
+    nextSteps: ["Start with a beginner topic.", "Open the internal learning section.", "Review course options and captions.", "Prepare questions before enrollment with any external provider."],
+    boundary: "Internal learning guidance only. Nexus does not enroll the user, issue certificates, take payment, mutate learning records, or hand off to a provider."
+  };
+}
+
 function rememberA100SafeFollowUpContext(intent = {}) {
   if (!intent || typeof intent !== "object") return;
   a100SafeFollowUpContext = Object.freeze({
@@ -22729,7 +22740,7 @@ function a100SafeAutonomyIntent(command = "") {
     preparation: /\b(prepare|draft|checklist|questions|plan|setup guidance)\b/.test(text) ? a100ReviewOnlyPreparation(preparationCategory) : null,
     providerReadiness: capability.id === "providers" ? a100ProviderReadinessCards() : null,
     routePreview: capability.id === "map" ? a100RoutePlanningPreview() : null,
-    guidance: capability.id === "agriculture" ? a100AgricultureHelpCard() : null,
+    guidance: capability.id === "agriculture" ? a100AgricultureHelpCard() : capability.id === "learning" ? a100TrainingLearningCard() : null,
     suggestions: ["help me with agriculture", "find agriculture training", "show me farm jobs", "browse AgriTrade", "help me plan a route", "what providers are connected"].slice(0, 5)
   };
 }
