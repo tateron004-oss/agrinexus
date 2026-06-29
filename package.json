@@ -544,6 +544,7 @@
     "qa:nexus-aut6-standard-user-workflow-card": "node scripts/nexus-aut6-standard-user-workflow-card-qa.js",
     "qa:nexus-aut7-workflow-follow-up-commands": "node scripts/nexus-aut7-workflow-follow-up-commands-qa.js",
     "qa:nexus-aut8-multi-step-workflow-browser-validation": "node scripts/nexus-aut8-multi-step-workflow-browser-validation-qa.js",
+    "qa:nexus-aut9-autonomy-reliability-recovery": "node scripts/nexus-aut9-autonomy-reliability-recovery-qa.js",
     "qa:nexus-sprint-k1-personalization-runtime-activation-readiness-gate": "node scripts/nexus-sprint-k1-personalization-runtime-activation-readiness-gate-qa.js",
     "qa:nexus-sprint-k2-personalization-feature-flag-contract": "node scripts/nexus-sprint-k2-personalization-feature-flag-contract-qa.js",
     "qa:nexus-sprint-k3-personalization-flag-contract-harness": "node scripts/nexus-sprint-k3-personalization-flag-contract-harness-qa.js",
