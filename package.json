@@ -518,6 +518,7 @@
     "qa:nexus-bna-public-provider-expansion": "node scripts/nexus-bna-public-provider-expansion-qa.js",
     "qa:nexus-nap1-assistant-capability-router": "node scripts/nexus-nap1-assistant-capability-router-qa.js",
     "qa:nexus-nap2-multi-provider-assistant-expansion": "node scripts/nexus-nap2-multi-provider-assistant-expansion-qa.js",
+    "qa:nexus-nap3-agent-task-planner": "node scripts/nexus-nap3-agent-task-planner-qa.js",
     "qa:nexus-sprint-k1-personalization-runtime-activation-readiness-gate": "node scripts/nexus-sprint-k1-personalization-runtime-activation-readiness-gate-qa.js",
     "qa:nexus-sprint-k2-personalization-feature-flag-contract": "node scripts/nexus-sprint-k2-personalization-feature-flag-contract-qa.js",
     "qa:nexus-sprint-k3-personalization-flag-contract-harness": "node scripts/nexus-sprint-k3-personalization-flag-contract-harness-qa.js",
