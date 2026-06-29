@@ -409,6 +409,7 @@ const suites = {
     "scripts/nexus-a100-28-offline-low-bandwidth-readiness-qa.js",
     "scripts/nexus-a100-29-mobile-native-boundary-qa.js",
     "scripts/nexus-a100-30-audit-trail-preparation-qa.js",
+    "scripts/nexus-a100-31-personalization-boundaries-qa.js",
     "scripts/nexus-sprint-k1-personalization-runtime-activation-readiness-gate-qa.js",
     "scripts/nexus-sprint-k2-personalization-feature-flag-contract-qa.js",
     "scripts/nexus-sprint-k3-personalization-flag-contract-harness-qa.js",
