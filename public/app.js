@@ -12593,6 +12593,84 @@ function userRealMapHtml(title = "Live route map") {
   `;
 }
 
+function providerStatusById(id) {
+  return (data?.providers || []).find(provider => provider.id === id) || null;
+}
+
+function isProviderConnected(id) {
+  const status = String(providerStatusById(id)?.status || "").toLowerCase();
+  return status === "connected" || status === "ready";
+}
+
+function mapLayerAvailability() {
+  const layers = normalizedMapTileLayers();
+  return [
+    layers.operational?.name || "Operational map",
+    layers.satellite?.name || "Satellite imagery",
+    layers.labels?.name || "Country names and borders",
+    layers.openStreetMap?.name || "OpenStreetMap",
+    layers.humanitarian?.name || "Humanitarian street map"
+  ].filter(Boolean);
+}
+
+function mapProviderReadinessModel() {
+  const mapsProvider = providerStatusById("maps");
+  const routingProvider = providerStatusById("routing-geocoding") || providerStatusById("trade-logistics");
+  const hasConfiguredTile = Object.values(mapTileConfig?.layers || {}).some(layer => layer?.configured);
+  const layerNames = mapLayerAvailability();
+  return {
+    layerNames,
+    tileConfigLabel: hasConfiguredTile ? "Public map tiles configured" : "Using local/default public tile templates",
+    tileConfigDetail: hasConfiguredTile
+      ? "Map tile URLs and attribution are coming from the server public config."
+      : "The map is using built-in public tile templates until production tiles are selected.",
+    routingLabel: isProviderConnected("routing-geocoding") || isProviderConnected("trade-logistics") ? "Routing provider connected" : "Routing provider not connected",
+    routingDetail: isProviderConnected("routing-geocoding") || isProviderConnected("trade-logistics")
+      ? (routingProvider?.detail || "Provider status says routing or logistics support is connected.")
+      : "Nexus can preview route context, but it will not call navigation or routing providers yet.",
+    locationLabel: "Live location requires explicit permission",
+    locationDetail: "Nexus will not ask for browser location or start tracking unless you choose an explicit tracking action.",
+    offlineLabel: "Offline map cache not enabled",
+    offlineDetail: "The app shell can work offline, but third-party map tiles still require network access.",
+    vectorLabel: "Vector map engine not enabled",
+    vectorDetail: "Leaflet raster tiles remain active. MapLibre/vector migration is a future decision.",
+    providerDetail: mapsProvider?.detail || "Map provider status is read from current app readiness."
+  };
+}
+
+function userMapProviderReadinessHtml() {
+  const model = mapProviderReadinessModel();
+  const items = [
+    { label: "Layers", value: model.layerNames.join(", ") },
+    { label: "Tiles", value: `${model.tileConfigLabel}. ${model.tileConfigDetail}` },
+    { label: "Routing", value: `${model.routingLabel}. ${model.routingDetail}` },
+    { label: "Location", value: model.locationDetail },
+    { label: "Offline", value: model.offlineDetail },
+    { label: "Engine", value: model.vectorDetail }
+  ];
+  return `
+    <div id="userMapProviderReadiness" class="user-map-provider-readiness" aria-label="${translateText("Map provider readiness")}">
+      <div class="user-map-provider-head">
+        <strong>${translateText("Map readiness")}</strong>
+        <span>${translateText("Preview only")}</span>
+      </div>
+      <p>${translateText("These map tools can show public tile layers, saved routes, checkpoints, facilities, and shipment context. Live routing, navigation, location sharing, and offline map tiles need future provider setup or explicit permission.")}</p>
+      <div class="user-map-provider-grid">
+        ${items.map(item => `<div><strong>${translateText(item.label)}</strong><span>${translateText(item.value)}</span></div>`).join("")}
+      </div>
+      ${userPreviewActionsHtml([
+        { label: "Available Features", command: "Nexus, what map features are available?" },
+        { label: "Show Satellite", command: "Nexus, show satellite imagery" },
+        { label: "Plan Route", command: "Nexus, help me plan a route" }
+      ])}
+    </div>
+  `;
+}
+
+function userMapPreviewHtml() {
+  return userRealMapHtml("Map preview");
+}
+
 function userHealthRegionalMapHtml(title = "Regional health risk") {
   const country = activeCountry();
   const regions = (data.countries || []).map(item => item.name).slice(0, 5).join(", ");
@@ -12704,6 +12782,14 @@ function userModulePreviewHtml(sectionId) {
       { label: "Plan Mission", command: "create an agent plan" },
       { label: "Read to Me", command: "read the current response" }
     ])}</div></div>`;
+  }
+  if (sectionId === "map") {
+    return `
+      <div class="user-module-preview user-map-readiness-preview">
+        ${userMapProviderReadinessHtml()}
+        ${userMapPreviewHtml()}
+      </div>
+    `;
   }
   if (sectionId === "profile") {
     return `<div class="user-module-preview">${userServicePhotoHtml("profile", "Your record")}<div class="user-preview-summary"><strong>${translateText("Your record")}</strong><span>${translateText("Review progress, messages, certificates, and saved activity without seeing admin controls.")}</span>${userPreviewActionsHtml([
@@ -22150,6 +22236,88 @@ function isCountryMapCommand(command = "") {
     && /\b(open|show|display|take me to|bring up|launch|find|where|zoom|map)\b/.test(text);
 }
 
+const SAFE_MAP_CAPABILITY_PROMPTS = Object.freeze([
+  "what map features are available",
+  "can you show routes",
+  "is location enabled",
+  "show satellite imagery",
+  "help me plan a route"
+]);
+
+function safeMapCapabilityIntent(command = "") {
+  const text = normalizeToolText(command);
+  if (!/\b(map|maps|route|routes|routing|location|satellite|imagery|tiles|layers|navigation|navigate)\b/.test(text)) return null;
+  const asksCapability = /\b(what|which|available|features|can you|show routes|show route|layers|status|ready|enabled|configured|provider|providers)\b/.test(text);
+  const asksLocation = /\b(location|gps|where am i|my position|enabled)\b/.test(text);
+  const asksSatellite = /\b(satellite|imagery|image layer|aerial)\b/.test(text);
+  const asksRoutePlan = /\b(plan a route|help me plan a route|route plan|directions|navigation|navigate|routing)\b/.test(text);
+  const opensMap = /\b(open|show|display|bring up|launch)\b.*\b(map|maps)\b/.test(text);
+  if (!asksCapability && !asksLocation && !asksSatellite && !asksRoutePlan && !opensMap) return null;
+  const model = mapProviderReadinessModel();
+  const layerSummary = model.layerNames.join(", ");
+  if (asksRoutePlan) {
+    return {
+      action: "route-preview",
+      openMap: true,
+      response: `I can help structure a route-planning preview, but I will not call navigation, request live location, or hand off to an external provider. Current layers are ${layerSummary}. ${model.routingLabel}. Tell me the starting place, destination, crop or care purpose, and any safety concern, and I will keep it review-only.`
+    };
+  }
+  if (asksLocation) {
+    return {
+      action: "location-readiness",
+      openMap: true,
+      response: `${model.locationLabel}. Nexus will not request browser location automatically. Saved country, route, checkpoint, facility, and shipment context can be shown now; live location needs an explicit user action and permission.`
+    };
+  }
+  if (asksSatellite) {
+    return {
+      action: "satellite-readiness",
+      openMap: true,
+      response: `Satellite imagery is available as a Leaflet layer when network tiles load. Use the map layer control to choose ${model.layerNames.find(name => /satellite/i.test(name)) || "Satellite imagery"}. This is a visual preview, not drone dispatch or external navigation.`
+    };
+  }
+  if (asksCapability) {
+    return {
+      action: "capability-readiness",
+      openMap: true,
+      response: `Map features available now: public tile layers, saved routes, checkpoints, facilities, shipment context, scale, global view, and safe map readiness. ${model.tileConfigLabel}. ${model.routingLabel}. ${model.offlineLabel}. ${model.vectorLabel}.`
+    };
+  }
+  if (opensMap) {
+    return {
+      action: "open-map",
+      openMap: true,
+      response: "Map is open in preview mode. You can zoom, drag, view public layers, inspect saved routes, see facilities, and check readiness. Nexus will not request live location or call routing providers from this prompt."
+    };
+  }
+  return null;
+}
+
+function openSafeMapCapabilityPreview(intent) {
+  if (!intent) return false;
+  pendingAgentClarification = null;
+  pendingNexusSpokenCommand = null;
+  if (intent.openMap) {
+    closeAskNexus({ silent: true });
+    goSection("map", { instant: true, openDefaultAction: false, keepAssistant: false });
+    if (experienceMode === "user") renderUserSimpleActiveSection("map");
+    setTimeout(() => {
+      renderMap();
+      renderUserRealMap();
+      safeInvalidateLeafletMap(map);
+      safeInvalidateLeafletMap(userMap);
+      $("#userMapProviderReadiness")?.scrollIntoView?.({ behavior: "smooth", block: "start" });
+    }, 120);
+  } else {
+    openAskNexus();
+  }
+  renderLiveVoiceSuggestions(["what map features are available", "is location enabled", "show satellite imagery", "help me plan a route"]);
+  recordVoiceEvent(`Map readiness preview: ${intent.action}`, "done");
+  updateNexusBehaviorLayer("answering", "Nexus showed safe map provider readiness without requesting location or calling routing providers.");
+  setVoiceResponse(intent.response, true, { allowHandoff: false, command: intent.action, source: "safe-map-provider-readiness" });
+  return true;
+}
+
 function openFullScaleUserMap(response = "Full map is open. You can zoom, drag, check route risk, find facilities, or track shipment movement.", options = {}) {
   const actionLead = "";
   if (!options.keepCountryOverride) voiceMapCountryOverride = null;
@@ -22162,7 +22330,7 @@ function openFullScaleUserMap(response = "Full map is open. You can zoom, drag, 
     renderUserSimpleActiveSection("map");
     $(`#map .user-inline-workflow`)?.classList.add("hidden");
   }
-  renderLiveVoiceSuggestions(["check route risk", "find nearest health facility", "track my route", "explain the map"]);
+  renderLiveVoiceSuggestions(["what map features are available", "show satellite imagery", "is location enabled", "help me plan a route"]);
   setTimeout(() => {
     renderMap();
     renderUserRealMap();
@@ -24618,6 +24786,8 @@ async function handleVoiceCommandCore(rawCommand, options = {}) {
   }
   if (await runExplicitTypedGlobalControlPreflight(spokenCommand || command || localizedCommand || rawCommand, { ...options, turnToken })) return;
   if (handleJarvisStyleStandardUserSafetyResponse(spokenCommand || command || localizedCommand || rawCommand)) return;
+  const safeMapIntent = safeMapCapabilityIntent(spokenCommand || command || localizedCommand || rawCommand);
+  if (openSafeMapCapabilityPreview(safeMapIntent)) return;
   if (await runStandardUserAssistantRuntimePreview(spokenCommand || command || localizedCommand || rawCommand, { ...options, turnToken })) return;
   const phase17SafeAnswer = nexusPhase17StandardUserSafeAnswer(spokenCommand || command || localizedCommand || rawCommand);
   if (phase17SafeAnswer) {
