@@ -98,6 +98,19 @@ const intentSource = sourceBetween(app, "function a100SafeAutonomyIntent", "func
 ].forEach(copy => assert(app.includes(copy), `Hypertension support/reporting should include: ${copy}`));
 
 [
+  "Track my weight safely.",
+  "Help with nutrition goals.",
+  "Activity goal.",
+  "Sleep and stress support.",
+  "Progress barriers.",
+  "Self-reported barrier",
+  "RTM behavior signal",
+  "supportive, no shame/blame questions",
+  "no medication, supplement, purchase, or product recommendation",
+  "will not prescribe a diet, medicine, supplement, product, purchase, or paid plan"
+].forEach(copy => assert(app.includes(copy), `Weight wellness support/reporting should include: ${copy}`));
+
+[
   "id: \"report\"",
   "action: `low-risk-chronic-${chronicMatched.id}`",
   "Care Team Report",

@@ -12354,8 +12354,8 @@ function a100ReviewOnlyPreparation(category = "general") {
     wellness: {
       category: "wellness",
       goal: "Prepare weight and wellness questions for review.",
-      steps: ["Choose a safe wellness goal.", "Collect food, activity, sleep, stress, access, and mobility context.", "Review changes with a provider, coach, or community health worker before starting a plan."],
-      infoNeeded: ["Current goal.", "Food access and culture context.", "Activity limits.", "Chronic conditions.", "Provider or coach questions."],
+      steps: ["Choose a safe wellness goal.", "Collect food, activity, sleep, stress, access, mobility context, and a self-reported barrier.", "Review changes with a provider, coach, nurse, or community health worker before starting a plan."],
+      infoNeeded: ["Current goal.", "Food access and culture context.", "Activity limits.", "Sleep and stress context.", "Self-reported barrier.", "Chronic conditions.", "Provider or coach questions."],
       status: "Review-only weight and wellness preparation. Nexus gives general education only.",
       blocked: "No diagnosis, prescription, medication change, paid plan, purchase, provider handoff, or external record update."
     },
@@ -12452,8 +12452,9 @@ function a100ChronicCareReport(kind = "general", command = "") {
       { label: "Blood pressure evidence label", value: "guideline-backed education; repeated BP data needed for trend; provider review required" }
     ],
     wellness: [
-      { label: "Wellness focus", value: "weight goal, nutrition, activity, sleep, stress, behavior barriers, and coach/provider review prep" },
-      { label: "Wellness evidence label", value: "education and RTM behavior check-in; no medication or product recommendation" }
+      { label: "Wellness focus", value: "weight goal, nutrition, physical activity, sleep, stress, behavior barriers, and coach/provider review prep" },
+      { label: "RTM behavior signal", value: "self-reported barrier, activity, sleep, stress, and nutrition context; human review required before care changes" },
+      { label: "Wellness evidence label", value: "education and RTM behavior check-in; no medication, supplement, purchase, or product recommendation" }
     ]
   };
   const riskSignal = /chest pain|stroke|200\s*\/\s*120|extremely low|severe|pass out|cannot breathe/.test(text)
@@ -12515,10 +12516,10 @@ function a100ChronicCareGuidanceCard(kind = "general") {
     wellness: {
       domain: "chronic-care-wellness",
       focus: "Weight, obesity, nutrition, activity, sleep, and wellness questions for safe review.",
-      prompts: ["Help with obesity.", "Help me lose weight safely.", "Prepare wellness questions.", "What should I ask my coach?"],
-      collect: ["Wellness goal.", "Food access and cultural preferences.", "Activity and mobility limits.", "Sleep, stress, and support needs.", "Chronic conditions and medicines for clinician review."],
-      nextSteps: ["Choose a small review-only goal.", "Prepare questions for a provider, coach, or community health worker.", "Avoid extreme diets or medicine changes without professional review.", "Use low-bandwidth education and local support where available."],
-      boundary: "General education only. Nexus does not diagnose obesity, prescribe diet or medication, sell plans, collect payment, or replace clinical review."
+      prompts: ["Help with obesity.", "Help me lose weight safely.", "Track my weight safely.", "Help with nutrition goals.", "Activity goal.", "Sleep and stress support.", "Progress barriers.", "Prepare wellness questions.", "What should I ask my coach?"],
+      collect: ["Wellness goal.", "Food access and cultural preferences.", "Activity and mobility limits.", "Sleep, stress, and support needs.", "Self-reported barrier or progress blocker.", "Chronic conditions and medicines for clinician review."],
+      nextSteps: ["Choose a small review-only goal.", "Prepare supportive, no shame/blame questions for a provider, coach, nurse, or community health worker.", "Track progress barriers and RTM behavior signals for review if a program supports it.", "Avoid extreme diets, supplements, products, or medicine changes without professional review.", "Use low-bandwidth education and local support where available."],
+      boundary: "General education only. Nexus does not diagnose obesity, prescribe diet or medication, recommend supplements or products, sell plans, collect payment, or replace clinical review."
     },
     rpm: {
       domain: "chronic-care-rpm-rtm",
@@ -22969,7 +22970,7 @@ function a100SafeAutonomyIntent(command = "") {
   const chronicMatched = [
     { id: "diabetes", pattern: /\b(diabetes|diabetic|blood sugar|glucose|a1c)\b.*\b(help|support|high|low|question|prepare|review|visit|education|mean|means)\b|\bhelp with diabetes\b|\bmy blood sugar is high\b|\bwhat is a1c\b|\bmy glucose is low\b/ },
     { id: "hypertension", pattern: /\b(blood pressure|hypertension|bp)\b.*\b(help|support|high|question|prepare|review|visit|measure|measurement|technique|track|sodium|salt|activity|adherence)\b|\bhelp me with blood pressure\b|\bmy blood pressure is high\b|\bhow should i measure bp\b/ },
-    { id: "wellness", pattern: /\b(obesity|weight|wellness|lose weight|nutrition|diet|activity)\b.*\b(help|support|safe|safely|question|prepare|review)\b|\bhelp me lose weight safely\b|\bhelp with obesity\b/ },
+    { id: "wellness", pattern: /\b(obesity|weight|wellness|lose weight|nutrition|diet|activity|physical activity|sleep|stress|barrier|progress)\b.*\b(help|support|safe|safely|question|prepare|review|goal|track)\b|\bhelp me lose weight safely\b|\bhelp with obesity\b|\btrack my weight safely\b|\bhelp with nutrition goals\b|\bactivity goal\b|\bsleep and stress support\b|\bprogress barriers\b/ },
     { id: "rpm", pattern: /\b(what is rpm|what is rtm|rpm|rtm|remote patient monitoring|remote therapeutic monitoring|device connected|monitoring readiness)\b/ },
     { id: "telehealth", pattern: /\b(prepare|prep|plan|summarize|summary)\b.*\b(telehealth|visit|care team|doctor|nurse|coach|clinician|chw|community health worker)\b|\bprepare for my telehealth visit\b|\bsummarize this for my care team\b/ },
     { id: "report", pattern: /\b(prepare|show|build|create|summarize)\b.*\b(physician report|doctor report|care team report|clinical report|provider report)\b|\bprepare a physician report\b|\bshow physician report\b|\bsummarize for my doctor\b|\bprepare care team report\b/ }
@@ -22987,7 +22988,7 @@ function a100SafeAutonomyIntent(command = "") {
     const responseMap = {
       diabetes: "I can help prepare diabetes questions for a telehealth visit in review-only mode, including blood sugar concerns, A1c education, high/low glucose warning questions, food/activity context, and what to collect for review. Nexus does not diagnose, change insulin or medicine, connect devices, send data, or replace a clinician.",
       hypertension: "I can help prepare blood pressure questions and warning-sign education in review-only mode, including home BP reading context, measurement technique questions, sodium/activity education, and medication-adherence discussion prep. Nexus does not diagnose, change medicine, dispatch help, connect devices, send data, or replace urgent professional care.",
-      wellness: "I can help prepare weight and wellness questions safely for a provider, coach, nurse, or community health worker. Nexus gives general education only and will not prescribe a diet, medicine, purchase, or paid plan.",
+      wellness: "I can help prepare supportive weight and wellness questions safely for a provider, coach, nurse, or community health worker, including nutrition goals, physical activity, sleep, stress, self-reported barriers, and RTM behavior signal notes. Nexus gives general education only with no shame/blame language and will not prescribe a diet, medicine, supplement, product, purchase, or paid plan.",
       rpm: "RPM means remote patient monitoring, and RTM means remote therapeutic monitoring. Nexus can explain readiness and prepare questions, but no device is connected, no readings are transmitted, and provider review is required.",
       telehealth: "I can prepare a review-only telehealth visit checklist or care team summary. Nothing is sent, stored as a medical record, or handed off to a provider from this card.",
       report: "I prepared a session-only physician/care-team report for review. It shows data inputs, missing data, source labels, review level, and safety boundaries, but it is not a diagnosis or treatment plan."
