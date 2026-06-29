@@ -1,0 +1,151 @@
+const assert = require("node:assert/strict");
+const fs = require("node:fs");
+const path = require("node:path");
+
+const sprint = require("../server/nexus-a100-39-connector-reliability-readiness.js");
+
+const root = path.resolve(__dirname, "..");
+
+function read(...parts) {
+  return fs.readFileSync(path.join(root, ...parts), "utf8");
+}
+
+function exists(...parts) {
+  return fs.existsSync(path.join(root, ...parts));
+}
+
+function assertStaticSafety() {
+  const source = read("server", "nexus-a100-39-connector-reliability-readiness.js");
+  const doc = read("docs", "NEXUS_A100_39_CONNECTOR_RELIABILITY_READINESS.md");
+  const pkg = JSON.parse(read("package.json"));
+  const qaSuite = read("scripts", "qa-suite.js");
+  const app = read("public", "app.js");
+  const indexHtml = read("public", "index.html");
+  const server = read("server.js");
+
+  assert(exists("server", "nexus-a100-39-connector-reliability-readiness.js"), "A100-39 module must exist.");
+  assert(exists("docs", "NEXUS_A100_39_CONNECTOR_RELIABILITY_READINESS.md"), "A100-39 documentation must exist.");
+  assert(exists("scripts", "nexus-a100-39-connector-reliability-readiness-qa.js"), "A100-39 QA must exist.");
+  if (39 === 1) {
+    assert(exists("docs", "NEXUS_A100_SPRINT_LEDGER.md"), "A100 sprint ledger must exist.");
+    const ledger = read("docs", "NEXUS_A100_SPRINT_LEDGER.md");
+    assert((ledger.match(/A100-\d+/g) || []).length >= 42, "A100 ledger must define the full 42-sprint train.");
+  }
+
+  [
+    "createA100Sprint39Artifact",
+    "isSafeA100Sprint39Artifact",
+    "BLOCKED_A100_ACTIONS",
+    "reviewOnly",
+    "noAutomaticExternalAction",
+    "noBrowserPermissionPrompt"
+  ].forEach(term => assert(source.includes(term), `A100-39 source must include ${term}.`));
+
+  [
+    "Connector Reliability Readiness",
+    "review-only",
+    "No automatic calls, messages, payments, purchases, emergency actions, provider handoffs, location tracking, camera, microphone, or browser permission prompts.",
+    "not loaded by public/app.js, public/index.html, or server.js"
+  ].forEach(term => assert(doc.includes(term), `A100-39 documentation must include ${term}.`));
+
+  [
+    "nexus-a100-39-connector-reliability-readiness",
+    "createA100Sprint39Artifact"
+  ].forEach(term => {
+    assert(!app.includes(term), `public/app.js must not load A100-39 runtime term: ${term}.`);
+    assert(!indexHtml.includes(term), `public/index.html must not load A100-39 runtime term: ${term}.`);
+    assert(!server.includes(term), `server.js must not load A100-39 runtime term: ${term}.`);
+  });
+
+  [
+    "fetch(",
+    "httpRequest(",
+    "writeFileSync",
+    "localStorage.setItem",
+    "sessionStorage.setItem",
+    "navigator.geolocation",
+    "getCurrentPosition",
+    "watchPosition",
+    "window.open",
+    "providerHandoffAllowed: true",
+    "canExecute: true",
+    "executionAuthority: \"provider\""
+  ].forEach(term => assert(!source.includes(term), `A100-39 module must not introduce unsafe behavior: ${term}.`));
+
+  assert.equal(pkg.scripts["qa:nexus-a100-39-connector-reliability-readiness"], "node scripts/nexus-a100-39-connector-reliability-readiness-qa.js", "A100-39 package QA alias must exist.");
+  assert(qaSuite.includes("scripts/nexus-a100-39-connector-reliability-readiness-qa.js"), "A100-39 QA must be wired into local-safe suites.");
+}
+
+function assertArtifacts() {
+  {
+    const artifact = sprint.createA100Sprint39Artifact({ prompt: "Prepare connector support.", lane: "connector" });
+    assert.equal(sprint.isSafeA100Sprint39Artifact(artifact), true, "connector artifact must be safe.");
+    assert.equal(artifact.lane, "connector", "connector lane mismatch.");
+    assert.equal(artifact.safetyPosture.canExecute, false, "connector must not execute.");
+    assert.equal(artifact.safetyPosture.executionAuthority, "none", "connector must have no execution authority.");
+    assert.equal(artifact.safetyPosture.noSecretsExposed, true, "connector must not expose secrets.");
+    assert.equal(artifact.safetyPosture.noBrowserPermissionPrompt, true, "connector must not prompt browser permissions.");
+  }
+  {
+    const artifact = sprint.createA100Sprint39Artifact({ prompt: "Prepare uptime support.", lane: "uptime" });
+    assert.equal(sprint.isSafeA100Sprint39Artifact(artifact), true, "uptime artifact must be safe.");
+    assert.equal(artifact.lane, "uptime", "uptime lane mismatch.");
+    assert.equal(artifact.safetyPosture.canExecute, false, "uptime must not execute.");
+    assert.equal(artifact.safetyPosture.executionAuthority, "none", "uptime must have no execution authority.");
+    assert.equal(artifact.safetyPosture.noSecretsExposed, true, "uptime must not expose secrets.");
+    assert.equal(artifact.safetyPosture.noBrowserPermissionPrompt, true, "uptime must not prompt browser permissions.");
+  }
+  {
+    const artifact = sprint.createA100Sprint39Artifact({ prompt: "Prepare fallback support.", lane: "fallback" });
+    assert.equal(sprint.isSafeA100Sprint39Artifact(artifact), true, "fallback artifact must be safe.");
+    assert.equal(artifact.lane, "fallback", "fallback lane mismatch.");
+    assert.equal(artifact.safetyPosture.canExecute, false, "fallback must not execute.");
+    assert.equal(artifact.safetyPosture.executionAuthority, "none", "fallback must have no execution authority.");
+    assert.equal(artifact.safetyPosture.noSecretsExposed, true, "fallback must not expose secrets.");
+    assert.equal(artifact.safetyPosture.noBrowserPermissionPrompt, true, "fallback must not prompt browser permissions.");
+  }
+  {
+    const artifact = sprint.createA100Sprint39Artifact({ prompt: "Prepare health support.", lane: "health" });
+    assert.equal(sprint.isSafeA100Sprint39Artifact(artifact), true, "health artifact must be safe.");
+    assert.equal(artifact.lane, "health", "health lane mismatch.");
+    assert.equal(artifact.safetyPosture.canExecute, false, "health must not execute.");
+    assert.equal(artifact.safetyPosture.executionAuthority, "none", "health must have no execution authority.");
+    assert.equal(artifact.safetyPosture.noSecretsExposed, true, "health must not expose secrets.");
+    assert.equal(artifact.safetyPosture.noBrowserPermissionPrompt, true, "health must not prompt browser permissions.");
+  }
+  {
+    const artifact = sprint.createA100Sprint39Artifact({ prompt: "Prepare status support.", lane: "status" });
+    assert.equal(sprint.isSafeA100Sprint39Artifact(artifact), true, "status artifact must be safe.");
+    assert.equal(artifact.lane, "status", "status lane mismatch.");
+    assert.equal(artifact.safetyPosture.canExecute, false, "status must not execute.");
+    assert.equal(artifact.safetyPosture.executionAuthority, "none", "status must have no execution authority.");
+    assert.equal(artifact.safetyPosture.noSecretsExposed, true, "status must not expose secrets.");
+    assert.equal(artifact.safetyPosture.noBrowserPermissionPrompt, true, "status must not prompt browser permissions.");
+  }
+}
+
+function runA100Sprint39Qa() {
+  assertStaticSafety();
+  assertArtifacts();
+  console.log(JSON.stringify({
+    phase: "A100-39",
+    title: sprint.SPRINT_TITLE,
+    supportedLanes: sprint.SUPPORTED_LANES,
+    noExecutionAuthorized: true,
+    standardUserRuntimeActivated: false
+  }, null, 2));
+  console.log("[nexus-a100-39-connector-reliability-readiness-qa] passed");
+}
+
+if (require.main === module) {
+  try {
+    runA100Sprint39Qa();
+  } catch (error) {
+    console.error(error && error.stack ? error.stack : error);
+    process.exitCode = 1;
+  }
+}
+
+module.exports = Object.freeze({
+  runA100Sprint39Qa
+});
