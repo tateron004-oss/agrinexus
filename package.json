@@ -557,6 +557,7 @@
     "qa:nexus-n100-9-confirmed-external-adjacent-actions": "node scripts/nexus-n100-9-confirmed-external-adjacent-actions-qa.js",
     "qa:nexus-n100-10-communications-assistant": "node scripts/nexus-n100-10-communications-assistant-qa.js",
     "qa:nexus-n100-11-calendar-reminder-assistant": "node scripts/nexus-n100-11-calendar-reminder-assistant-qa.js",
+    "qa:nexus-n100-12-voice-command-assistant-mode": "node scripts/nexus-n100-12-voice-command-assistant-mode-qa.js",
     "qa:nexus-sprint-k1-personalization-runtime-activation-readiness-gate": "node scripts/nexus-sprint-k1-personalization-runtime-activation-readiness-gate-qa.js",
     "qa:nexus-sprint-k2-personalization-feature-flag-contract": "node scripts/nexus-sprint-k2-personalization-feature-flag-contract-qa.js",
     "qa:nexus-sprint-k3-personalization-flag-contract-harness": "node scripts/nexus-sprint-k3-personalization-flag-contract-harness-qa.js",
