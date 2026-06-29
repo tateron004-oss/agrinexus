@@ -581,6 +581,7 @@
     "qa:nexus-a100-13-high-risk-gating": "node scripts/nexus-a100-13-high-risk-gating-qa.js",
     "qa:nexus-a100-14-multilingual-prompt-handling": "node scripts/nexus-a100-14-multilingual-prompt-handling-qa.js",
     "qa:nexus-a100-15-qa-hardening": "node scripts/nexus-a100-15-qa-hardening-qa.js",
+    "qa:nexus-a100-16-runtime-readiness-closeout": "node scripts/nexus-a100-16-runtime-readiness-closeout-qa.js",
     "qa:nexus-sprint-k1-personalization-runtime-activation-readiness-gate": "node scripts/nexus-sprint-k1-personalization-runtime-activation-readiness-gate-qa.js",
     "qa:nexus-sprint-k2-personalization-feature-flag-contract": "node scripts/nexus-sprint-k2-personalization-feature-flag-contract-qa.js",
     "qa:nexus-sprint-k3-personalization-flag-contract-harness": "node scripts/nexus-sprint-k3-personalization-flag-contract-harness-qa.js",
