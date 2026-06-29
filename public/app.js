@@ -180,6 +180,7 @@ let observedAgentActionMetadataLog = [];
 let visibleLevelOneAgentActionSuggestion = null;
 let visibleControlledActionPreviewReadiness = null;
 let nexusAutonomousWorkflowState = null;
+let nexusControlledActionQueue = [];
 let visibleControlledStagedActionPreview = null;
 let visibleUserConfirmationPreview = null;
 let latestControlledActionConfirmationReadiness = null;
@@ -506,8 +507,14 @@ function startNexusAutonomousWorkflowFromTaskPlan(taskPlan = {}, context = {}) {
   if (!state) return null;
   nexusAutonomousWorkflowState = state;
   updateNexusAutonomousWorkflowDerivedState();
+  if (typeof syncNexusControlledActionQueueFromWorkflow === "function") {
+    syncNexusControlledActionQueueFromWorkflow(nexusAutonomousWorkflowState, context);
+  }
   if (typeof paintNexusAutonomousWorkflow === "function") {
     paintNexusAutonomousWorkflow();
+  }
+  if (typeof paintNexusControlledActionQueue === "function") {
+    paintNexusControlledActionQueue();
   }
   return nexusAutonomousWorkflowState;
 }
@@ -570,7 +577,11 @@ function handleNexusAutonomousWorkflowControl(action = "") {
   const normalized = String(action || "").trim();
   if (normalized === "cancel") {
     nexusAutonomousWorkflowState = null;
+    nexusControlledActionQueue = [];
     paintNexusAutonomousWorkflow();
+    if (typeof paintNexusControlledActionQueue === "function") {
+      paintNexusControlledActionQueue();
+    }
     setVoiceResponse("Nexus canceled this guided workflow. No action was executed.", false, { allowVoiceFirst: false });
     return true;
   }
@@ -595,8 +606,14 @@ function handleNexusAutonomousWorkflowControl(action = "") {
     return false;
   }
   updateNexusAutonomousWorkflowDerivedState();
+  if (typeof syncNexusControlledActionQueueFromWorkflow === "function") {
+    syncNexusControlledActionQueueFromWorkflow(state, { action: normalized });
+  }
   if (typeof paintNexusAutonomousWorkflow === "function") {
     paintNexusAutonomousWorkflow();
+  }
+  if (typeof paintNexusControlledActionQueue === "function") {
+    paintNexusControlledActionQueue();
   }
   return true;
 }
@@ -607,6 +624,145 @@ function handleNexusAutonomousWorkflowClick(event) {
   event.preventDefault();
   event.stopPropagation();
   return handleNexusAutonomousWorkflowControl(button.dataset.nexusWorkflowControl);
+}
+
+function nexusControlledActionQueueTypeForPlan(taskPlan = {}) {
+  const category = String(taskPlan.category || taskPlan.selectedToolId || "").toLowerCase();
+  const intent = String(taskPlan.userIntent || "").toLowerCase();
+  if (/\b(simulated|simulation|dry[- ]?run)\b/.test(category) || /\b(simulated|simulation|dry[- ]?run)\b/.test(intent)) return "simulated_provider_action";
+  if (/\b(call|phone|whatsapp|telegram|sms|email|message)\b/.test(category) || /\b(call|phone|whatsapp|telegram|sms|email|message)\b/.test(intent)) return "blocked_high_risk_action";
+  if (/\b(report|physician|care[- ]?team|chw|rpm|rtm|chronic|health)\b/.test(category)) return "report_generation";
+  if (/\b(market|agritrade|buyer|seller|listing|inquiry)\b/.test(category)) return "draft_generation";
+  if (/\b(map|route|navigation|location)\b/.test(category)) return "internal_navigation";
+  if (/\b(provider|telehealth|pharmacy|clinic)\b/.test(category)) return "provider_ready_action";
+  if (/\b(learning|training|job|workforce|agriculture|crop|field|irrigation)\b/.test(category)) return "local_preparation";
+  return "local_explanation";
+}
+
+function buildNexusControlledActionQueueItem(action = {}) {
+  const actionType = String(action.actionType || "local_explanation").trim();
+  const riskLevel = String(action.riskLevel || "low").trim();
+  const confirmationRequired = action.confirmationRequired !== false || riskLevel !== "low";
+  const blocked = actionType === "blocked_high_risk_action" || riskLevel === "high";
+  return {
+    schemaVersion: "nexus-controlled-action-queue-item.v1",
+    queueId: action.queueId || `nexus-queue-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    source: action.source || "nexus-controlled-action-queue.v1",
+    actionType,
+    description: String(action.description || "Review the next safe Nexus action.").trim(),
+    requiredData: Array.isArray(action.requiredData) ? action.requiredData.map(item => String(item || "").trim()).filter(Boolean) : [],
+    riskLevel,
+    confirmationRequired,
+    providerStatus: String(action.providerStatus || "not required for local review").trim(),
+    safetyReason: String(action.safetyReason || "Queued for review only. No external action is authorized.").trim(),
+    queueStatus: blocked ? "blocked" : "queued_for_review",
+    executionAuthority: false,
+    canExecute: false,
+    externalExecutionAllowed: false,
+    providerHandoffAuthorized: false,
+    createdAt: new Date().toISOString()
+  };
+}
+
+function buildNexusControlledActionQueueFromTaskPlan(taskPlan = {}, context = {}) {
+  if (!taskPlan || typeof taskPlan !== "object") return [];
+  const missing = Array.isArray(taskPlan.missingInformation) ? taskPlan.missingInformation : [];
+  const required = Array.isArray(taskPlan.requiredInformation) ? taskPlan.requiredInformation : [];
+  const blocked = Array.isArray(taskPlan.blockedHighRiskActions) ? taskPlan.blockedHighRiskActions : [];
+  const requiredData = [...required, ...missing].map(item => String(item || "").trim()).filter(Boolean).slice(0, 6);
+  const riskLevel = String(taskPlan.riskLevel || "low").trim();
+  const providerStatus = taskPlan.providerRequirement ? `provider requirement: ${taskPlan.providerRequirement}` : "not connected / not required";
+  const actionType = nexusControlledActionQueueTypeForPlan(taskPlan);
+  const confirmationRequired = riskLevel !== "low" || actionType !== "local_explanation";
+  const queue = [
+    buildNexusControlledActionQueueItem({
+      actionType: "local_explanation",
+      description: `Explain the plan: ${taskPlan.goal || context.command || "Nexus safe plan"}`,
+      requiredData,
+      riskLevel: "low",
+      confirmationRequired: false,
+      providerStatus: "not required for local explanation",
+      safetyReason: "Explanation is local and review-only."
+    }),
+    buildNexusControlledActionQueueItem({
+      actionType,
+      description: `Prepare next step: ${taskPlan.nextSuggestedAction || taskPlan.goal || "review next step"}`,
+      requiredData,
+      riskLevel,
+      confirmationRequired,
+      providerStatus,
+      safetyReason: blocked.length ? blocked.join(" ") : "No real external execution is authorized from the queue."
+    })
+  ];
+  if (riskLevel === "high" || blocked.some(item => /\b(call|message|payment|emergency|location|camera|provider|medical|pharmacy)\b/i.test(String(item || "")))) {
+    queue.push(buildNexusControlledActionQueueItem({
+      actionType: "blocked_high_risk_action",
+      description: "Block unsafe or provider-dependent execution until the required gate exists.",
+      requiredData,
+      riskLevel: "high",
+      confirmationRequired: true,
+      providerStatus: "not connected / blocked",
+      safetyReason: blocked.join(" ") || "High-risk action requires explicit confirmation, provider readiness, and audit controls."
+    }));
+  }
+  return queue;
+}
+
+function syncNexusControlledActionQueueFromWorkflow(state = nexusAutonomousWorkflowState, context = {}) {
+  if (!state?.activePlan) {
+    nexusControlledActionQueue = [];
+    return nexusControlledActionQueue;
+  }
+  nexusControlledActionQueue = buildNexusControlledActionQueueFromTaskPlan(state.activePlan, {
+    command: context.command || state.userIntent || "",
+    currentStep: state.currentStep || state.steps?.[state.currentStepIndex] || "",
+    action: context.action || state.lastUserAction || ""
+  });
+  return nexusControlledActionQueue;
+}
+
+function renderNexusControlledActionQueueCard(queue = nexusControlledActionQueue) {
+  if (!Array.isArray(queue) || !queue.length) return "";
+  const items = queue.slice(0, 4).map(action => `
+    <li data-nexus-controlled-action-queue-item="${htmlSafe(action.queueStatus)}" data-action-type="${htmlSafe(action.actionType)}" data-risk-level="${htmlSafe(action.riskLevel)}">
+      <strong>${htmlSafe(action.actionType.replace(/_/g, " "))}</strong>
+      <span>${htmlSafe(action.description)}</span>
+      <small>Required: ${htmlSafe(action.requiredData.length ? action.requiredData.join("; ") : "No extra data listed yet.")}</small>
+      <small>Risk: ${htmlSafe(action.riskLevel)}. Confirmation: ${htmlSafe(action.confirmationRequired ? "required before any allowed local step" : "not required for explanation only")}.</small>
+      <small>Provider: ${htmlSafe(action.providerStatus)}.</small>
+      <small>Safety: ${htmlSafe(action.safetyReason)}</small>
+    </li>
+  `).join("");
+  return `
+    <section class="nexus-controlled-action-queue-card" aria-label="Nexus controlled action queue" data-nexus-controlled-action-queue="true" data-execution-authority="false">
+      <span class="nexus-controlled-action-queue-label">Action queue</span>
+      <strong>Nexus is preparing these reviewed steps.</strong>
+      <ul>${items}</ul>
+      <small>No provider API, phone call, message, payment, location, camera, medical, pharmacy, emergency, backend write, or external action can run from this queue.</small>
+    </section>
+  `;
+}
+
+function paintNexusControlledActionQueue() {
+  const html = renderNexusControlledActionQueueCard();
+  [
+    ["#userCaptionPanel", "#userCaptionText"],
+    ["#globalAssistantBar", "#globalAssistantStatus"]
+  ].forEach(([rootSelector, anchorSelector]) => {
+    const root = $(rootSelector);
+    const anchor = root?.querySelector("[data-nexus-autonomous-workflow-host]")
+      || root?.querySelector("[data-controlled-action-preview]")
+      || $(anchorSelector);
+    if (!root || !anchor) return;
+    let element = root.querySelector("[data-nexus-controlled-action-queue-host]");
+    if (!element) {
+      element = document.createElement("div");
+      element.dataset.nexusControlledActionQueueHost = "true";
+      anchor.insertAdjacentElement("afterend", element);
+    }
+    element.innerHTML = html;
+    element.classList.toggle("hidden", !html);
+  });
 }
 
 function isControlledStagedActionPreviewFlagEnabled(globalRef) {
@@ -967,6 +1123,9 @@ function paintControlledActionPreview() {
   if (typeof paintNexusAutonomousWorkflow === "function") {
     paintNexusAutonomousWorkflow();
   }
+  if (typeof paintNexusControlledActionQueue === "function") {
+    paintNexusControlledActionQueue();
+  }
   paintControlledStagedActionPreview();
   paintControlledActionConfirmationPrototype();
 }
@@ -976,6 +1135,7 @@ function clearControlledActionPreview(reason = "reset") {
   // unrelated commands, blocked metadata, module navigation, or assistant reset.
   visibleControlledActionPreviewReadiness = null;
   nexusAutonomousWorkflowState = null;
+  nexusControlledActionQueue = [];
   visibleControlledStagedActionPreview = null;
   visibleUserConfirmationPreview = null;
   latestControlledActionConfirmationReadiness = null;

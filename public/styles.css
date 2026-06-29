@@ -4148,6 +4148,58 @@ body.admin-mode .user-workspace {
   opacity: .55;
   cursor: not-allowed;
 }
+.nexus-controlled-action-queue-card {
+  display: grid;
+  gap: 6px;
+  width: min(100%, 460px);
+  margin-top: 8px;
+  padding: 10px 11px;
+  border: 1px solid #d7c38f;
+  border-radius: 8px;
+  background: #fffaf0;
+  box-shadow: 0 8px 18px rgba(83, 58, 17, .08);
+}
+#userCaptionPanel .nexus-controlled-action-queue-card,
+#globalAssistantBar .nexus-controlled-action-queue-card {
+  max-height: min(30vh, 250px);
+  overflow-y: auto;
+}
+.nexus-controlled-action-queue-card strong,
+.nexus-controlled-action-queue-card span,
+.nexus-controlled-action-queue-card small {
+  color: #2d2110;
+  font-size: .78rem;
+  font-weight: 820;
+  line-height: 1.28;
+}
+.nexus-controlled-action-queue-card small {
+  color: #6e5b32;
+  font-weight: 760;
+}
+.nexus-controlled-action-queue-label {
+  width: fit-content;
+  padding: 3px 8px;
+  border: 1px solid #dfc87f;
+  border-radius: 999px;
+  background: #fff3cf;
+  color: #6d4c00 !important;
+  font-weight: 950 !important;
+}
+.nexus-controlled-action-queue-card ul {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.nexus-controlled-action-queue-card [data-nexus-controlled-action-queue-item] {
+  display: grid;
+  gap: 3px;
+  padding: 7px;
+  border: 1px solid #ead8a2;
+  border-radius: 7px;
+  background: #ffffff;
+}
 .nexus-assistant-runtime-preview-card {
   display: grid;
   gap: 10px;
