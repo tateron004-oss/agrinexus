@@ -610,6 +610,7 @@
     "qa:nexus-a100-42-a100-closeout": "node scripts/nexus-a100-42-a100-closeout-qa.js",
     "qa:nexus-a100-runtime-activation-1": "node scripts/nexus-a100-runtime-activation-1-qa.js",
     "qa:nexus-a100-runtime-activation-2": "node scripts/nexus-a100-runtime-activation-2-qa.js",
+    "qa:nexus-a100-runtime-activation-3": "node scripts/nexus-a100-runtime-activation-3-qa.js",
     "qa:nexus-sprint-k1-personalization-runtime-activation-readiness-gate": "node scripts/nexus-sprint-k1-personalization-runtime-activation-readiness-gate-qa.js",
     "qa:nexus-sprint-k2-personalization-feature-flag-contract": "node scripts/nexus-sprint-k2-personalization-feature-flag-contract-qa.js",
     "qa:nexus-sprint-k3-personalization-flag-contract-harness": "node scripts/nexus-sprint-k3-personalization-flag-contract-harness-qa.js",

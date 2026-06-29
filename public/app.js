@@ -12187,8 +12187,54 @@ function a100CapabilitySurfaceHtml() {
           <span>${translateText(item.detail)}</span>
         </button>`).join("")}
       </div>
+      <div id="a100RuntimeCardSlot" class="a100-runtime-card-slot" aria-live="polite"></div>
     </section>
   `;
+}
+
+function a100SafeTaskControlsHtml(section = "dashboard") {
+  const safeSection = (simpleUserSections[section] || section === "dashboard") ? section : "dashboard";
+  const controls = [
+    { label: "Open section", command: `Nexus, open ${safeSection} section` },
+    { label: "Explain", command: "Nexus, explain it" },
+    { label: "Show more", command: "Nexus, show me more" },
+    { label: "Prepare", command: "Nexus, prepare a review checklist" },
+    { label: "Provider status", command: "Nexus, what providers are connected?" },
+    { label: "Back", command: "Nexus, go back" },
+    { label: "Next", command: "Nexus, what should I do next" }
+  ];
+  return `
+    <div class="a100-safe-task-controls" aria-label="${translateText("Safe task controls")}">
+      ${controls.map(control => `<button type="button" data-simple-command="${escapeHtml(control.command)}">${translateText(control.label)}</button>`).join("")}
+    </div>
+  `;
+}
+
+function a100SafeAutonomyCardHtml(intent = {}) {
+  const section = String(intent.section || "dashboard").trim();
+  const title = String(intent.title || "Safe Nexus preview").trim();
+  const response = String(intent.response || "Nexus prepared a safe review-only preview.").trim();
+  return `
+    <article class="a100-runtime-card" data-a100-action="${escapeHtml(intent.action || "safe-preview")}" data-a100-section="${escapeHtml(section)}">
+      <div class="a100-runtime-card-head">
+        <strong>${translateText(title)}</strong>
+        <span>${translateText("Review only")}</span>
+      </div>
+      <p>${translateText(response)}</p>
+      <div class="a100-runtime-card-meta">
+        <div><strong>${translateText("Allowed")}</strong><span>${translateText("Internal navigation, local explanation, local expansion, review-only preparation, provider readiness display.")}</span></div>
+        <div><strong>${translateText("Blocked")}</strong><span>${translateText("Provider handoff, permission prompts, geolocation, external APIs, backend mutation, camera, microphone, calls, messages, payments, purchases, emergency, and dispatch.")}</span></div>
+      </div>
+      ${a100SafeTaskControlsHtml(section)}
+    </article>
+  `;
+}
+
+function renderA100SafeAutonomyCard(intent = {}) {
+  if (!isA100SafeAutonomyEnabled() || experienceMode !== "user") return;
+  const slot = $("#a100RuntimeCardSlot");
+  if (!slot) return;
+  slot.innerHTML = a100SafeAutonomyCardHtml(intent);
 }
 
 function rememberA100SafeFollowUpContext(intent = {}) {
@@ -22542,6 +22588,7 @@ function a100SafeAutonomyIntent(command = "") {
   return {
     action: `low-risk-${capability.id}`,
     section: capability.section,
+    title: capability.label,
     response: responseMap[capability.id] || responseMap.next,
     suggestions: ["help me with agriculture", "find agriculture training", "show me farm jobs", "browse AgriTrade", "help me plan a route", "what providers are connected"].slice(0, 5)
   };
@@ -22555,6 +22602,7 @@ function openA100SafeAutonomyPreview(intent) {
   if (section === "dashboard") {
     goSection("dashboard", { instant: true, openDefaultAction: false, keepAssistant: false });
     if (experienceMode === "user") renderUserWorkspace();
+    renderA100SafeAutonomyCard(intent);
     setTimeout(() => $("#a100SafeAutonomySurface")?.scrollIntoView?.({ behavior: "smooth", block: "start" }), 80);
   } else {
     goSection(section, { instant: true, openDefaultAction: false, keepAssistant: false });
