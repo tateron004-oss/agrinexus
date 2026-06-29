@@ -12667,6 +12667,53 @@ function userMapProviderReadinessHtml() {
   `;
 }
 
+function safeRoutePlanningPreviewModel(command = "") {
+  const route = activeRoute();
+  const country = activeCountry();
+  const rawCommand = String(command || "").trim();
+  const reviewFields = [
+    { label: "Starting place", value: route?.origin || data.profile.activeCheckpoint || country.name },
+    { label: "Destination", value: route?.destination || route?.checkpoint || "Add destination before provider routing" },
+    { label: "Purpose", value: /care|clinic|health|facility/i.test(rawCommand) ? "Care or facility access" : /crop|buyer|shipment|trade|delivery/i.test(rawCommand) ? "Crop shipment or trade" : "Route review" },
+    { label: "Safety concern", value: /rain|flood|risk|delay|security|road|clinic|urgent/i.test(rawCommand) ? "Review stated risk before travel" : `${route?.risk || country.risk || "Monitored"} route risk` }
+  ];
+  return {
+    routeName: route?.name || "Saved route",
+    countryName: country.name,
+    status: "Review-only route plan",
+    summary: "Nexus can organize the route request for review, but it will not request live location, call routing providers, open external navigation, or start travel actions from this preview.",
+    providerRequirement: "Provider routing requires a connected browser-safe routing/geocoding provider and user confirmation.",
+    locationRequirement: "Live start position requires an explicit location action and browser permission.",
+    reviewFields
+  };
+}
+
+function userSafeRoutePlanningPreviewHtml(command = "") {
+  const model = safeRoutePlanningPreviewModel(command);
+  return `
+    <div id="userRoutePlanningPreview" class="user-route-planning-preview" aria-label="${translateText("Safe route planning preview")}">
+      <div class="user-map-provider-head">
+        <strong>${translateText("Route planning preview")}</strong>
+        <span>${translateText(model.status)}</span>
+      </div>
+      <p>${translateText(model.summary)}</p>
+      <div class="user-map-provider-grid user-route-planning-grid">
+        ${model.reviewFields.map(item => `<div><strong>${translateText(item.label)}</strong><span>${translateText(item.value)}</span></div>`).join("")}
+      </div>
+      <div class="user-route-planning-guardrails">
+        <div><strong>${translateText("Provider")}</strong><span>${translateText(model.providerRequirement)}</span></div>
+        <div><strong>${translateText("Location")}</strong><span>${translateText(model.locationRequirement)}</span></div>
+        <div><strong>${translateText("Next review")}</strong><span>${translateText(`Confirm start, destination, purpose, timing, and safety concern for ${model.routeName} in ${model.countryName}.`)}</span></div>
+      </div>
+      ${userPreviewActionsHtml([
+        { label: "Add Start", command: "Nexus, my route starts at the pickup point" },
+        { label: "Add Destination", command: "Nexus, my route destination is the buyer or clinic" },
+        { label: "Review Safety", command: "Nexus, review route safety before travel" }
+      ])}
+    </div>
+  `;
+}
+
 function userMapPreviewHtml() {
   return userRealMapHtml("Map preview");
 }
@@ -12717,17 +12764,10 @@ function userModulePreviewHtml(sectionId) {
   }
   if (sectionId === "map") {
     return `
-      <div class="user-module-preview">
-        ${userRealMapHtml("Live route map")}
-        <div class="user-preview-summary">
-          <strong>${translateText("Map made simple")}</strong>
-          <span>${translateText(`Nexus is watching ${activeRoute().name}. Choose Check Route, Find Facility, or Explain Map.`)}</span>
-          ${userPreviewActionsHtml([
-            { label: "Check Route", command: "check route risk" },
-            { label: "Find Facility", command: "find nearest health facility" },
-            { label: "Explain Map", command: "explain the map" }
-          ])}
-        </div>
+      <div class="user-module-preview user-map-readiness-preview">
+        ${userMapProviderReadinessHtml()}
+        ${userSafeRoutePlanningPreviewHtml()}
+        ${userMapPreviewHtml()}
       </div>
     `;
   }
@@ -12782,14 +12822,6 @@ function userModulePreviewHtml(sectionId) {
       { label: "Plan Mission", command: "create an agent plan" },
       { label: "Read to Me", command: "read the current response" }
     ])}</div></div>`;
-  }
-  if (sectionId === "map") {
-    return `
-      <div class="user-module-preview user-map-readiness-preview">
-        ${userMapProviderReadinessHtml()}
-        ${userMapPreviewHtml()}
-      </div>
-    `;
   }
   if (sectionId === "profile") {
     return `<div class="user-module-preview">${userServicePhotoHtml("profile", "Your record")}<div class="user-preview-summary"><strong>${translateText("Your record")}</strong><span>${translateText("Review progress, messages, certificates, and saved activity without seeing admin controls.")}</span>${userPreviewActionsHtml([
@@ -22256,10 +22288,12 @@ function safeMapCapabilityIntent(command = "") {
   const model = mapProviderReadinessModel();
   const layerSummary = model.layerNames.join(", ");
   if (asksRoutePlan) {
+    const routePreview = safeRoutePlanningPreviewModel(command);
+    const routeFields = routePreview.reviewFields.map(field => `${field.label}: ${field.value}`).join("; ");
     return {
       action: "route-preview",
       openMap: true,
-      response: `I can help structure a route-planning preview, but I will not call navigation, request live location, or hand off to an external provider. Current layers are ${layerSummary}. ${model.routingLabel}. Tell me the starting place, destination, crop or care purpose, and any safety concern, and I will keep it review-only.`
+      response: `I prepared a review-only route planning preview for ${routePreview.routeName}. ${routeFields}. I will not call navigation, request live location, open external maps, or hand off to a routing provider. Current layers are ${layerSummary}. ${model.routingLabel}.`
     };
   }
   if (asksLocation) {
@@ -22306,7 +22340,8 @@ function openSafeMapCapabilityPreview(intent) {
       renderUserRealMap();
       safeInvalidateLeafletMap(map);
       safeInvalidateLeafletMap(userMap);
-      $("#userMapProviderReadiness")?.scrollIntoView?.({ behavior: "smooth", block: "start" });
+      const target = intent.action === "route-preview" ? $("#userRoutePlanningPreview") : $("#userMapProviderReadiness");
+      target?.scrollIntoView?.({ behavior: "smooth", block: "start" });
     }, 120);
   } else {
     openAskNexus();

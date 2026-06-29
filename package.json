@@ -223,6 +223,7 @@
     "map:scaling-qa": "node scripts/map-scaling-qa.js",
     "map:tile-config-qa": "node scripts/map-tile-config-qa.js",
     "map:provider-readiness-qa": "node scripts/map-provider-readiness-qa.js",
+    "map:route-preview-qa": "node scripts/map-route-planning-preview-qa.js",
     "app:jarvis-qa": "node scripts/jarvis-behavior-qa.js",
     "voice:response-check": "node scripts/voice-response-regression.js",
     "voice:browser-policy": "node scripts/voice-browser-policy-regression.js",

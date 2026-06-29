@@ -1478,6 +1478,17 @@ body.user-mode .user-map-provider-readiness {
   color: #173240;
   box-shadow: 0 10px 24px rgba(15, 35, 44, .1);
 }
+body.user-mode .user-route-planning-preview {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid #c8d6dd;
+  border-radius: 12px;
+  background: #ffffff;
+  color: #173240;
+  box-shadow: 0 10px 24px rgba(15, 35, 44, .1);
+}
 body.user-mode .user-map-provider-head {
   display: flex;
   align-items: center;
@@ -1510,10 +1521,20 @@ body.user-mode .user-map-provider-readiness p {
   font-weight: 850;
   line-height: 1.3;
 }
+body.user-mode .user-route-planning-preview p {
+  margin: 0;
+  color: #365867;
+  font-size: .92rem;
+  font-weight: 850;
+  line-height: 1.3;
+}
 body.user-mode .user-map-provider-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
+}
+body.user-mode .user-route-planning-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 body.user-mode .user-map-provider-grid div {
   display: grid;
@@ -1534,6 +1555,32 @@ body.user-mode .user-map-provider-grid span {
   line-height: 1.2;
 }
 body.user-mode .user-map-provider-grid span {
+  color: #426257;
+  font-weight: 850;
+}
+body.user-mode .user-route-planning-guardrails {
+  display: grid;
+  gap: 7px;
+}
+body.user-mode .user-route-planning-guardrails div {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+  padding: 9px;
+  border-left: 4px solid #0f766e;
+  border-radius: 8px;
+  background: #eef8f6;
+}
+body.user-mode .user-route-planning-guardrails strong,
+body.user-mode .user-route-planning-guardrails span {
+  min-width: 0;
+  overflow-wrap: break-word;
+  color: #173240;
+  font-size: .82rem;
+  font-weight: 950;
+  line-height: 1.2;
+}
+body.user-mode .user-route-planning-guardrails span {
   color: #426257;
   font-weight: 850;
 }
@@ -1598,6 +1645,9 @@ body.user-mode .user-preview-summary.compact {
     grid-template-columns: 1fr;
   }
   body.user-mode .user-map-provider-grid {
+    grid-template-columns: 1fr;
+  }
+  body.user-mode .user-route-planning-grid {
     grid-template-columns: 1fr;
   }
   .shipment-tracker-strip {
