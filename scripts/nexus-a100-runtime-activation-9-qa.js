@@ -20,7 +20,7 @@ const app = read("public", "app.js");
 const pkg = JSON.parse(read("package.json"));
 const qaSuite = read("scripts", "qa-suite.js");
 
-const workforceSource = sourceBetween(app, "function a100WorkforceJobsCard", "function rememberA100SafeFollowUpContext");
+const workforceSource = sourceBetween(app, "function a100WorkforceJobsCard", "function a100MarketplaceBrowsingCard");
 const intentSource = sourceBetween(app, "function a100SafeAutonomyIntent", "function openA100SafeAutonomyPreview");
 
 assert(intentSource.includes("capability.id === \"workforce\" ? a100WorkforceJobsCard()"), "Workforce prompts should attach workforce guidance.");

@@ -12394,6 +12394,17 @@ function a100WorkforceJobsCard() {
   };
 }
 
+function a100MarketplaceBrowsingCard() {
+  return {
+    domain: "marketplace",
+    focus: "AgriTrade browsing, crop-selling preparation, supply search, listing notes, and inquiry questions.",
+    prompts: ["Browse AgriTrade.", "Show marketplace options.", "Help me sell crops.", "Help me find supplies."],
+    collect: ["Crop, supply, buyer, or seller need.", "Quantity range.", "Region.", "Quality details.", "Questions to review before any inquiry."],
+    nextSteps: ["Open the internal marketplace/trade section.", "Compare options safely.", "Prepare listing or inquiry notes for review.", "Gate any transaction-like step."],
+    boundary: "Safe browsing and review-only preparation. Nexus does not buy, sell, pay, order, mutate inventory, send inquiries, or hand off to a provider."
+  };
+}
+
 function rememberA100SafeFollowUpContext(intent = {}) {
   if (!intent || typeof intent !== "object") return;
   a100SafeFollowUpContext = Object.freeze({
@@ -22706,7 +22717,7 @@ function a100SafeAutonomyIntent(command = "") {
   const highRisk = [
     { pattern: /\b(call|phone|dial)\b.*\b(emergency|doctor|provider|buyer|seller|someone|contact|person|family|clinic)\b|\bcall emergency\b/, label: "Call readiness", reason: "Calls require explicit review, provider/contact readiness, and confirmation before any call path can open." },
     { pattern: /\b(send|message|sms|whatsapp|text|email)\b.*\b(buyer|seller|provider|doctor|someone|contact|family|patient)\b|\bprepare a message\b/, label: "Message preparation", reason: "Nexus can prepare a message draft for review, but it will not send or hand off to a messaging provider." },
-    { pattern: /\b(buy|purchase|pay|checkout|wallet|settle|settlement|subscribe)\b/, label: "Payment and purchase boundary", reason: "Payments, purchases, checkout, wallet, and settlement actions require provider readiness, confirmation, and audit gates." },
+    { pattern: /\b(buy|purchase|pay|checkout|wallet|settle|settlement|subscribe|place order|create order|sell now|complete sale|update inventory)\b/, label: "Payment and purchase boundary", reason: "Payments, purchases, checkout, wallet, orders, inventory mutation, and settlement actions require provider readiness, confirmation, and audit gates." },
     { pattern: /\b(track my location|share my location|live location|where am i|gps|locate me)\b/, label: "Location permission boundary", reason: "Live location needs an explicit location action and browser permission. Nexus will not request geolocation from this prompt." },
     { pattern: /\b(open|start|turn on|use)\b.*\b(camera|microphone|mic|video)\b|\bshow injury\b/, label: "Camera and microphone boundary", reason: "Camera, microphone, and video capture require an explicit user-controlled preview and permission. Nexus will not start media capture here." },
     { pattern: /\b(emergency|dispatch|ambulance|police|rescue)\b/, label: "Emergency boundary", reason: "Nexus cannot dispatch emergency services. If there is immediate danger, contact local emergency help now." }
@@ -22751,7 +22762,7 @@ function a100SafeAutonomyIntent(command = "") {
     preparation: /\b(prepare|draft|checklist|questions|plan|setup guidance)\b/.test(text) ? a100ReviewOnlyPreparation(preparationCategory) : null,
     providerReadiness: capability.id === "providers" ? a100ProviderReadinessCards() : null,
     routePreview: capability.id === "map" ? a100RoutePlanningPreview() : null,
-    guidance: capability.id === "agriculture" ? a100AgricultureHelpCard() : capability.id === "learning" ? a100TrainingLearningCard() : capability.id === "workforce" ? a100WorkforceJobsCard() : null,
+    guidance: capability.id === "agriculture" ? a100AgricultureHelpCard() : capability.id === "learning" ? a100TrainingLearningCard() : capability.id === "workforce" ? a100WorkforceJobsCard() : capability.id === "marketplace" ? a100MarketplaceBrowsingCard() : null,
     suggestions: ["help me with agriculture", "find agriculture training", "show me farm jobs", "browse AgriTrade", "help me plan a route", "what providers are connected"].slice(0, 5)
   };
 }
