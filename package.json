@@ -584,6 +584,7 @@
     "qa:nexus-rpm-rtm-runtime-data-capability": "node scripts/nexus-rpm-rtm-runtime-data-capability-qa.js",
     "qa:nexus-africa-deployment-runtime-capability": "node scripts/nexus-africa-deployment-runtime-capability-qa.js",
     "qa:nexus-security-infrastructure-runtime-capability": "node scripts/nexus-security-infrastructure-runtime-capability-qa.js",
+    "qa:nexus-pilot-mode-runtime-capability": "node scripts/nexus-pilot-mode-runtime-capability-qa.js",
     "qa:nexus-a100-1-standard-user-capability-routing": "node scripts/nexus-a100-1-standard-user-capability-routing-qa.js",
     "qa:nexus-a100-2-low-risk-task-cards": "node scripts/nexus-a100-2-low-risk-task-cards-qa.js",
     "qa:nexus-a100-3-agriculture-support": "node scripts/nexus-a100-3-agriculture-support-qa.js",

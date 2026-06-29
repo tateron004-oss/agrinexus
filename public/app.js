@@ -207,8 +207,8 @@ const nexusProductIdentity = Object.freeze({
 });
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-313";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v292";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-318";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v297";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
 const VOICE_ATTENTION_DELAY_MS = 900;
@@ -13253,6 +13253,7 @@ function a100CapabilitySurfaceHtml() {
       ${a100RpmRtmManualIntakePanelHtml()}
       ${a100AfricaDeploymentRuntimePanelHtml()}
       ${a100SecurityInfrastructureRuntimePanelHtml()}
+      ${a100PilotModeRuntimePanelHtml()}
       <div class="a100-chronic-care-preview" aria-label="${translateText("Chronic care assistant preview")}">
         <div>
           <strong>${translateText("Chronic Care Navigator")}</strong>
@@ -14186,6 +14187,143 @@ function a100SecurityInfrastructureRuntimePanelHtml(capability = a100SecurityInf
         </div>
       </div>`;
 }
+
+function a100PilotModeRuntimeCapability() {
+  const scenarios = [
+    { id: "farmer-crop-issue", label: "Farmer crop issue", command: "Nexus, help me with crop issues", capability: "agriculture help workflow" },
+    { id: "diabetes-support", label: "Diabetes support", command: "Nexus, help with diabetes", capability: "chronic care support workflow" },
+    { id: "blood-pressure-support", label: "High blood pressure support", command: "Nexus, help me with blood pressure", capability: "chronic care support workflow" },
+    { id: "physician-report", label: "Prepare physician report", command: "Nexus, prepare a physician report", capability: "physician/care-team report" },
+    { id: "plan-route", label: "Plan route", command: "Nexus, help me plan a route", capability: "route preview workflow" },
+    { id: "marketplace-inquiry", label: "Prepare marketplace inquiry", command: "Nexus, prepare marketplace inquiry", capability: "marketplace review workflow" },
+    { id: "provider-account-status", label: "Provider account status", command: "Nexus, what provider accounts are connected?", capability: "provider account/API access status" },
+    { id: "provider-readiness", label: "Provider readiness", command: "Nexus, what providers are connected?", capability: "provider readiness" },
+    { id: "safety-review", label: "Safety review", command: "Nexus, show safety review", capability: "audit/review visibility" }
+  ];
+  const demonstrationCapabilities = [
+    "Agriculture help workflow",
+    "Chronic care support workflow",
+    "RPM/RTM manual intake",
+    "Physician/care-team report",
+    "Provider readiness",
+    "Provider account/API access status",
+    "Simulated provider action",
+    "Safety blocked action",
+    "Audit/review visibility"
+  ];
+  const safetyStates = [
+    "All pilot actions stay safe, local, review-only, or simulated.",
+    "No real provider execution, external mutation, call, message, payment, location, device, medical, pharmacy, or emergency action is authorized.",
+    "High-risk prompts remain blocked or confirmation-gated by existing Nexus safety layers.",
+    "Pilot evidence is visible for Standard User testing and Africa solution demonstrations."
+  ];
+  return Object.freeze({
+    id: "standard-user-pilot-mode-runtime",
+    title: "Standard User Pilot Mode",
+    status: "runtime-capability-ready",
+    surface: "standard-user",
+    safeLocalOnly: true,
+    simulationOnly: true,
+    realProviderExecution: false,
+    externalMutation: false,
+    noExecutionAuthorized: true,
+    auditReviewVisible: true,
+    providerAccountStatusVisible: true,
+    blockedActionsVisible: true,
+    scenarios,
+    demonstrationCapabilities,
+    safetyStates
+  });
+}
+
+function a100PilotModeRuntimePanelHtml(capability = a100PilotModeRuntimeCapability()) {
+  return `
+      <div class="a100-pilot-mode-runtime" data-nexus-pilot-mode-runtime="true" data-surface="${escapeHtml(capability.surface)}" data-safe-local-only="${capability.safeLocalOnly ? "true" : "false"}" data-simulation-only="${capability.simulationOnly ? "true" : "false"}" data-real-provider-execution="${capability.realProviderExecution ? "true" : "false"}" data-external-mutation="${capability.externalMutation ? "true" : "false"}" data-no-execution-authorized="${capability.noExecutionAuthorized ? "true" : "false"}" data-audit-review-visible="${capability.auditReviewVisible ? "true" : "false"}" aria-label="${translateText("Standard User Pilot Mode Runtime Capability")}">
+        <div class="a100-pilot-mode-head">
+          <strong>${translateText(capability.title)}</strong>
+          <span>${translateText("Pilot flow for Standard User testing and Africa solution demonstrations.")}</span>
+          <small>${translateText("Uses safe local workflows, simulated provider labels, and blocked-action review only. No external action is performed.")}</small>
+        </div>
+        <div class="a100-pilot-mode-summary">
+          <section><strong>${translateText("Status")}</strong><span>${translateText(capability.status)}</span></section>
+          <section><strong>${translateText("Provider")}</strong><span>${translateText(capability.realProviderExecution ? "Connected separately" : "Real execution disabled")}</span></section>
+          <section><strong>${translateText("Simulation")}</strong><span>${translateText(capability.simulationOnly ? "Simulation only" : "Needs review")}</span></section>
+          <section><strong>${translateText("Mutation")}</strong><span>${translateText(capability.externalMutation ? "Blocked: review needed" : "Disabled")}</span></section>
+          <section><strong>${translateText("Audit")}</strong><span>${translateText(capability.auditReviewVisible ? "Review visible" : "Needs review")}</span></section>
+        </div>
+        <div class="a100-pilot-scenario-grid" data-pilot-scenarios="safe-local">
+          ${capability.scenarios.map(item => `<button type="button" data-simple-command="${escapeHtml(item.command)}" data-pilot-scenario="${escapeHtml(item.id)}" data-pilot-capability="${escapeHtml(item.capability)}" onclick="return runA100PilotScenarioPreviewClick(event, this)">
+            <strong>${translateText(item.label)}</strong>
+            <span>${translateText(item.capability)}</span>
+          </button>`).join("")}
+        </div>
+        <div class="a100-pilot-scenario-card-list" data-pilot-scenario-cards="review-only">
+          ${capability.scenarios.map(item => `<article data-pilot-scenario-card="${escapeHtml(item.id)}" data-real-provider-execution="false" data-external-mutation="false" data-provider-handoff="false" data-no-execution-authorized="true">
+            <strong>${translateText(item.label)}</strong>
+            <span>${translateText(item.capability)}</span>
+            <small>${translateText("Review-only pilot card. Nexus can prepare this pathway locally; no real-world action is authorized.")}</small>
+          </article>`).join("")}
+        </div>
+        <div class="a100-pilot-capability-list" data-pilot-capabilities="visible">
+          ${capability.demonstrationCapabilities.map(item => `<span>${translateText(item)}</span>`).join("")}
+        </div>
+        <div class="a100-pilot-safety-review" data-pilot-safety-review="no-execution">
+          <strong>${translateText("Pilot safety review")}</strong>
+          <ul>${capability.safetyStates.map(item => `<li>${translateText(item)}</li>`).join("")}</ul>
+        </div>
+      </div>`;
+}
+
+function renderA100PilotScenarioPreviewCard(details = {}) {
+  const label = String(details.label || "Pilot scenario").trim();
+  const command = String(details.command || "Nexus pilot scenario").trim();
+  const capability = String(details.capability || "safe pilot workflow").trim();
+  goSection("dashboard", { instant: true, openDefaultAction: false, keepAssistant: false });
+  if (experienceMode === "user") renderUserWorkspace();
+  const slot = $("#a100RuntimeCardSlot");
+  if (!slot) return false;
+  const response = `Pilot preview prepared for ${label}. Nexus is showing the safe ${capability} path for review only. No real provider execution, external mutation, call, message, payment, location sharing, device connection, medical action, pharmacy action, or emergency action has been authorized.`;
+  slot.innerHTML = `
+    <article class="a100-runtime-card a100-pilot-scenario-preview" data-a100-action="pilot-scenario-preview" data-a100-section="dashboard" data-pilot-preview="review-only" data-real-provider-execution="false" data-external-mutation="false" data-provider-handoff="false" data-no-execution-authorized="true">
+      <div class="a100-runtime-card-head">
+        <strong>${translateText("Pilot scenario preview")}</strong>
+        <span>${translateText("Review-only")}</span>
+      </div>
+      <p>${translateText(response)}</p>
+      <div class="a100-runtime-card-meta">
+        <div><strong>${translateText("Scenario")}</strong><span>${translateText(label)}</span></div>
+        <div><strong>${translateText("Safe command")}</strong><span>${translateText(command)}</span></div>
+        <div><strong>${translateText("Capability")}</strong><span>${translateText(capability)}</span></div>
+      </div>
+      <div class="a100-pilot-safety-review" data-pilot-preview-safety="no-execution">
+        <strong>${translateText("Pilot safety boundary")}</strong>
+        <ul>
+          <li>${translateText("Simulation and review only.")}</li>
+          <li>${translateText("No provider handoff or external system mutation.")}</li>
+          <li>${translateText("No call, message, payment, device connection, medical, pharmacy, or emergency action.")}</li>
+          <li>${translateText("A final execution gate is still required before any real-world action.")}</li>
+        </ul>
+      </div>
+    </article>
+  `;
+  renderLiveVoiceSuggestions(["what can Nexus do", "show safety review", "what providers are connected", "prepare a review checklist"]);
+  recordVoiceEvent(`Pilot scenario preview: ${label}`, "done");
+  updateNexusBehaviorLayer("answering", "Nexus showed a safe Pilot Mode preview without execution or provider handoff.");
+  setVoiceResponse(response, true, { allowHandoff: false, command: "pilot-scenario-preview", source: "a100-pilot-mode-runtime" });
+  setTimeout(() => $("#a100RuntimeCardSlot")?.scrollIntoView?.({ behavior: "smooth", block: "start" }), 80);
+  return false;
+}
+
+function runA100PilotScenarioPreviewClick(event, button) {
+  event?.preventDefault?.();
+  event?.stopPropagation?.();
+  return renderA100PilotScenarioPreviewCard({
+    label: button?.textContent || "Pilot scenario",
+    command: button?.dataset?.simpleCommand,
+    capability: button?.dataset?.pilotCapability
+  });
+}
+window.runA100PilotScenarioPreviewClick = runA100PilotScenarioPreviewClick;
 
 function a100ChronicCareQuickActions() {
   return [
@@ -29004,6 +29142,16 @@ async function runPresetCommand(event) {
 }
 
 async function runLocalPilotScenario(event) {
+  if (event?.currentTarget?.dataset?.simpleCommand) {
+    event?.preventDefault?.();
+    event?.stopPropagation?.();
+    const button = event.currentTarget;
+    return renderA100PilotScenarioPreviewCard({
+      label: button.textContent || "Pilot scenario",
+      command: button.dataset.simpleCommand,
+      capability: button.dataset.pilotCapability
+    });
+  }
   const scenario = event.currentTarget.dataset.pilotScenario || "rural-access";
   await mutate("/api/pilot/run", { scenario }, "Local pilot evidence report created");
   goSection("dashboard");
@@ -30572,6 +30720,18 @@ function bindStatic() {
   $$("[data-command-preset]").forEach(button => {
     button.onclick = runPresetCommand;
   });
+  document.addEventListener("click", event => {
+    const target = event.target?.nodeType === 1 ? event.target : event.target?.parentElement;
+    const pilotButton = target?.closest?.("[data-pilot-scenario][data-simple-command]");
+    if (!pilotButton) return;
+    event.preventDefault();
+    event.stopPropagation();
+    renderA100PilotScenarioPreviewCard({
+      label: pilotButton.textContent || "Pilot scenario",
+      command: pilotButton.dataset.simpleCommand,
+      capability: pilotButton.dataset.pilotCapability
+    });
+  }, true);
   $$("[data-pilot-scenario]").forEach(button => {
     button.onclick = runLocalPilotScenario;
   });
