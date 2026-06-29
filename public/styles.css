@@ -4289,6 +4289,46 @@ body.admin-mode .user-workspace {
   font-size: .74rem;
   line-height: 1.25;
 }
+.nexus-simulated-provider-results {
+  display: grid;
+  gap: 5px;
+  padding: 8px;
+  border: 1px dashed rgba(39, 106, 245, .32);
+  border-radius: 8px;
+  background: rgba(239, 246, 255, .72);
+}
+.nexus-simulated-provider-label {
+  width: fit-content;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: #dbeafe;
+  color: #1d4ed8 !important;
+  font-size: .7rem !important;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+.nexus-simulated-provider-results ul {
+  display: grid;
+  gap: 5px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.nexus-simulated-provider-results [data-nexus-simulated-provider-result] {
+  display: grid;
+  gap: 2px;
+  padding: 5px 0;
+  border-top: 1px solid rgba(39, 106, 245, .14);
+}
+.nexus-simulated-provider-results [data-nexus-simulated-provider-result]:first-child {
+  border-top: 0;
+}
+.nexus-simulated-provider-results span,
+.nexus-simulated-provider-results small {
+  color: #173b74;
+  font-size: .74rem;
+  line-height: 1.25;
+}
 .nexus-assistant-runtime-preview-card {
   display: grid;
   gap: 10px;

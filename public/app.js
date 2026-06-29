@@ -183,6 +183,7 @@ let nexusAutonomousWorkflowState = null;
 let nexusControlledActionQueue = [];
 let nexusUserConfirmationGateState = null;
 let nexusSessionActionAuditLog = [];
+let nexusSimulatedProviderResults = [];
 let visibleControlledStagedActionPreview = null;
 let visibleUserConfirmationPreview = null;
 let latestControlledActionConfirmationReadiness = null;
@@ -552,6 +553,71 @@ function renderNexusSessionActionAuditLog(log = nexusSessionActionAuditLog) {
   `;
 }
 
+function classifyNexusSimulatedProviderAction(gate = {}) {
+  const text = `${gate.actionType || ""} ${gate.description || ""} ${gate.providerStatus || ""} ${gate.safetyReason || ""}`.toLowerCase();
+  if (/\b(call|phone)\b/.test(text)) return "call request prepared";
+  if (/\b(route|map|navigation|handoff)\b/.test(text)) return "route handoff prepared";
+  if (/\bmarket|agritrade|buyer|seller|inquiry|listing\b/.test(text)) return "marketplace inquiry prepared";
+  if (/\bphysician|care[- ]?team|chw|report|rpm|rtm|telehealth|health\b/.test(text)) return "physician report prepared";
+  if (/\bunavailable|not connected|blocked\b/.test(text)) return "provider unavailable";
+  return "message prepared / simulated send";
+}
+
+function isNexusSimulationCommand(command = "") {
+  return /\b(simulated|simulation|dry[- ]?run)\b/i.test(String(command || ""));
+}
+
+function handleNexusSimulationCaptionCommand(command = "") {
+  if (!isNexusSimulationCommand(command)) return false;
+  clearControlledActionPreview("simulation-caption-command");
+  paintLocalLevelOneSuggestionForSimpleUserIntent({ type: "direct" }, command);
+  updateUserCaptionPanel("Simulation review prepared. Confirming will only create a local simulated result. No provider will be contacted.", { expanded: true });
+  setVoiceResponse("Simulation review prepared. Confirming will only create a local simulated result. No provider will be contacted.", false, { allowVoiceFirst: false });
+  return true;
+}
+
+function createNexusSimulatedProviderExecutionResult(gate = nexusUserConfirmationGateState) {
+  if (!gate || gate.actionType !== "simulated_provider_action" || gate.locallyConfirmable !== true) {
+    return null;
+  }
+  const result = {
+    schemaVersion: "nexus-simulated-provider-execution.v1",
+    simulationId: `nexus-sim-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+    simulationType: classifyNexusSimulatedProviderAction(gate),
+    label: "SIMULATED ONLY",
+    description: sanitizeNexusSessionAuditText(gate.description || "Simulated provider result prepared locally."),
+    providerStatus: sanitizeNexusSessionAuditText(gate.providerStatus || "simulation-only / no live provider connected"),
+    safetyNote: "No real external action occurred. No provider was contacted.",
+    providerContacted: false,
+    messageSent: false,
+    callPlaced: false,
+    routeLaunched: false,
+    paymentProcessed: false,
+    externalActionOccurred: false,
+    executionAuthority: false,
+    createdAt: new Date().toISOString()
+  };
+  nexusSimulatedProviderResults = [result, ...nexusSimulatedProviderResults].slice(0, 10);
+  return result;
+}
+
+function renderNexusSimulatedProviderExecutionResults(results = nexusSimulatedProviderResults) {
+  if (!Array.isArray(results) || !results.length) return "";
+  const items = results.slice(0, 3).map(result => `
+    <li data-nexus-simulated-provider-result="${htmlSafe(result.simulationType)}">
+      <strong>${htmlSafe(result.label)} - ${htmlSafe(result.simulationType)}</strong>
+      <span>${htmlSafe(result.description)}</span>
+      <small>${htmlSafe(result.safetyNote)}</small>
+    </li>
+  `).join("");
+  return `
+    <div class="nexus-simulated-provider-results" data-nexus-simulated-provider-results="true" data-external-action-occurred="false" data-provider-contacted="false" aria-label="Nexus simulated provider results">
+      <span class="nexus-simulated-provider-label">Simulated provider mode</span>
+      <ul>${items}</ul>
+    </div>
+  `;
+}
+
 function startNexusAutonomousWorkflowFromTaskPlan(taskPlan = {}, context = {}) {
   const state = createNexusAutonomousWorkflowState(taskPlan, context);
   if (!state) return null;
@@ -727,7 +793,8 @@ function handleNexusAutonomousWorkflowClick(event) {
 function nexusControlledActionQueueTypeForPlan(taskPlan = {}) {
   const category = String(taskPlan.category || taskPlan.selectedToolId || "").toLowerCase();
   const intent = String(taskPlan.userIntent || "").toLowerCase();
-  if (/\b(simulated|simulation|dry[- ]?run)\b/.test(category) || /\b(simulated|simulation|dry[- ]?run)\b/.test(intent)) return "simulated_provider_action";
+  const summary = String(taskPlan.summary || taskPlan.goal || "").toLowerCase();
+  if (/\b(simulated|simulation|dry[- ]?run)\b/.test(category) || /\b(simulated|simulation|dry[- ]?run)\b/.test(intent) || /\b(simulated|simulation|dry[- ]?run)\b/.test(summary)) return "simulated_provider_action";
   if (/\b(call|phone|whatsapp|telegram|sms|email|message)\b/.test(category) || /\b(call|phone|whatsapp|telegram|sms|email|message)\b/.test(intent)) return "blocked_high_risk_action";
   if (/\b(report|physician|care[- ]?team|chw|rpm|rtm|chronic|health)\b/.test(category)) return "report_generation";
   if (/\b(market|agritrade|buyer|seller|listing|inquiry)\b/.test(category)) return "draft_generation";
@@ -890,11 +957,15 @@ function performNexusConfirmedLocalQueueAction(gate = nexusUserConfirmationGateS
   if (gate.locallyConfirmable !== true) {
     return "Confirmation blocked. This action still requires a final execution gate.";
   }
+  if (gate.actionType === "simulated_provider_action") {
+    const result = createNexusSimulatedProviderExecutionResult(gate);
+    const type = result?.simulationType || "simulated provider result";
+    return `Simulated provider result prepared locally: ${type}. SIMULATED ONLY - no real external action occurred, and Nexus did not contact a real provider.`;
+  }
   const outcomes = {
     internal_navigation: "Local navigation review confirmed. Nexus did not open an external route or request location.",
     draft_generation: "Local draft prepared for review. Nexus did not send, submit, message, buy, sell, or pay.",
-    report_generation: "Local report outline prepared for review. Nexus did not write records or contact a provider.",
-    simulated_provider_action: "Simulated provider result prepared locally. Nexus did not contact a real provider."
+    report_generation: "Local report outline prepared for review. Nexus did not write records or contact a provider."
   };
   return outcomes[gate.actionType] || "Local review confirmed. No external action was taken.";
 }
@@ -972,6 +1043,7 @@ function renderNexusControlledActionQueueCard(queue = nexusControlledActionQueue
   if (!Array.isArray(queue) || !queue.length) return "";
   const gateHtml = renderNexusUserConfirmationGate();
   const auditHtml = renderNexusSessionActionAuditLog();
+  const simulatedHtml = renderNexusSimulatedProviderExecutionResults();
   const items = queue.slice(0, 4).map((action, index) => `
     <li data-nexus-controlled-action-queue-item="${htmlSafe(action.queueStatus)}" data-action-type="${htmlSafe(action.actionType)}" data-risk-level="${htmlSafe(action.riskLevel)}">
       <strong>${htmlSafe(action.actionType.replace(/_/g, " "))}</strong>
@@ -989,6 +1061,7 @@ function renderNexusControlledActionQueueCard(queue = nexusControlledActionQueue
       <strong>Nexus is preparing these reviewed steps.</strong>
       <ul>${items}</ul>
       ${gateHtml}
+      ${simulatedHtml}
       ${auditHtml}
       <small>No provider API, phone call, message, payment, location, camera, medical, pharmacy, emergency, backend write, or external action can run from this queue.</small>
     </section>
@@ -1597,6 +1670,8 @@ function localLevelOneSuggestionForSimpleUserIntent(intent = {}, command = "") {
     levelLabel = "Field Support";
   } else if (/\b(crop issue|crop issues|crop problem|crop problems|crop stress|pest issue|pest problem)\b/.test(lower)) {
     levelLabel = "Agriculture Help";
+  } else if (/\b(simulated|simulation|dry[- ]?run)\b/.test(lower)) {
+    levelLabel = "Simulation";
   }
   if (!levelLabel) return null;
   const selectedToolIdsByLabel = {
@@ -1605,7 +1680,8 @@ function localLevelOneSuggestionForSimpleUserIntent(intent = {}, command = "") {
     "Jobs": "workforce.job_pathways",
     "Marketplace": "marketplace.agritrade",
     "Field Support": "workforce.field_support",
-    "Agriculture Help": "agriculture.help"
+    "Agriculture Help": "agriculture.help",
+    "Simulation": "simulation.local"
   };
   return {
     visibility: "visible-level-1-label",
@@ -1670,7 +1746,8 @@ function buildControlledActionMetadataFromSuggestion(lowRiskSuggestion = {}, con
     "workforce.field_support": { actionId: "openFieldSupportGuidance", riskLevel: "info", confirmationText: "Nexus recognized this as Field Support. This metadata does not open field tools or create evidence." },
     "learning.start": { actionId: "explainLearningTopic", riskLevel: "low", confirmationText: "Nexus recognized this as Learning. This metadata does not open lessons or create records." },
     "marketplace.agritrade": { actionId: "browseMarketplace", riskLevel: "low", confirmationText: "Nexus recognized this as Marketplace. This metadata does not buy, sell, message, or process payment." },
-    "agriculture.help": { actionId: "explainAgricultureHelp", riskLevel: "info", confirmationText: "Nexus recognized this as Agriculture Help. This metadata does not scan fields or create crop records." }
+    "agriculture.help": { actionId: "explainAgricultureHelp", riskLevel: "info", confirmationText: "Nexus recognized this as Agriculture Help. This metadata does not scan fields or create crop records." },
+    "simulation.local": { actionId: "prepareLocalSimulationResult", riskLevel: "low", confirmationText: "Nexus recognized this as Simulation. This metadata prepares a local-only simulated result without contacting providers." }
   };
   const action = actionMap[selectedToolId];
   if (!action || !levelOneLabel) return null;
@@ -1757,6 +1834,11 @@ function buildControlledActionPreviewReadinessFromMetadata(controlledActionMetad
       title: "Review agriculture help",
       summary: "I can help reason through crop symptoms, likely causes, and safer next questions. This stays informational, with no field scan or crop record.",
       mode: "informationalPreviewOnly"
+    },
+    prepareLocalSimulationResult: {
+      title: "Review simulated provider result",
+      summary: "I can prepare a local-only simulated provider result for review. This stays simulation-only and does not contact a provider, send a message, place a call, open a route, process payment, or start any external action.",
+      mode: "lowRiskPreviewOnly"
     }
   };
   const restrictedTerms = /\b(health|telehealth|video|camera|call|doctor|provider|clinic|hospital|location|locate|map|payment|pay|wallet|identity|account|login|verify|buy|sell|order|quote|message|dispatch|schedule)\b/i;
@@ -1785,7 +1867,8 @@ function buildControlledActionPreviewReadinessFromMetadata(controlledActionMetad
     openFieldSupportGuidance: "agriculture-help",
     explainLearningTopic: "training-learning",
     browseMarketplace: "marketplace-browsing",
-    explainAgricultureHelp: "agriculture-help"
+    explainAgricultureHelp: "agriculture-help",
+    prepareLocalSimulationResult: "simulation-local"
   };
   const taskPlan = buildNexusAutonomousTaskPlan(`${selectedToolId} ${levelOneLabel} ${preview.summary}`, {
     category: taskPlanCategoryMap[actionId] || selectedToolId,
@@ -27848,7 +27931,7 @@ async function runBackendAgentCommand(command, locationContext = null, options =
     render();
     const result = data.commandResult || {};
     observeAgentActionMetadata(result, { source: "runBackendAgentCommand", command });
-    if (!visibleControlledActionPreviewReadiness) {
+    if (!visibleControlledActionPreviewReadiness || isNexusSimulationCommand(command)) {
       paintLocalLevelOneSuggestionForSimpleUserIntent({ type: "direct" }, command);
     }
     maybeDispatchConfirmedNativeCallHandoff(result);
@@ -27949,7 +28032,7 @@ async function runUtilityAgentCommand(command, fallbackAnswer = "", locationCont
     render();
     const result = data.commandResult || {};
     observeAgentActionMetadata(result, { source: "runUtilityAgentCommand", command });
-    if (!visibleControlledActionPreviewReadiness) {
+    if (!visibleControlledActionPreviewReadiness || isNexusSimulationCommand(command)) {
       paintLocalLevelOneSuggestionForSimpleUserIntent({ type: "direct" }, command);
     }
     maybeDispatchConfirmedNativeCallHandoff(result);
@@ -29033,6 +29116,7 @@ function bindStatic() {
         if (input) input.value = "";
         setCommandInputs(command);
         if (handleJarvisStyleStandardUserSafetyResponse(command)) return;
+        if (handleNexusSimulationCaptionCommand(command)) return;
         void handleVoiceCommand(command);
       } else if (action === "confirm") {
         void confirmPendingWorkflow();
@@ -29596,6 +29680,7 @@ function bindStatic() {
       event.target.value = "";
       setCommandInputs(command);
       if (handleJarvisStyleStandardUserSafetyResponse(command)) return;
+      if (handleNexusSimulationCaptionCommand(command)) return;
       void handleVoiceCommand(command);
       return;
     }
