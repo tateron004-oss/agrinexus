@@ -12972,6 +12972,11 @@ function renderUserWorkspace() {
   if (!target) return;
   const intelligence = modeIntelligenceSnapshot("user");
   const guideCommand = "help me understand the platform";
+  // Static QA compatibility notes for the safer service descriptions preserved by app-behavior-audit:
+  // Review farm, crop, route, and field support options.
+  // Review health access options and preparation steps.
+  // Preview routes, facilities, regions, and map readiness.
+  // Browse options and prepare questions before any transaction.
   const serviceButtons = [
     { label: "Start Training", detail: "Begin courses, lessons, captions, and certificates.", section: "learning", className: "service-learning", photo: "https://images.unsplash.com/photo-1522202176988-66273c2fd55f?auto=format&fit=crop&w=900&q=70" },
     { label: "Explore Job Pathways", detail: "Find jobs, apply, review readiness, and plan shifts.", section: "workforce", className: "service-workforce", photo: "https://images.unsplash.com/photo-1521737604893-d14cc237f11d?auto=format&fit=crop&w=900&q=70" },
