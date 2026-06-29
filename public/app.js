@@ -15452,6 +15452,24 @@ function normalizeAssistantRuntimePreviewCard(response = {}) {
   const text = assistantRuntimePreviewText(safeResponse) || "Nexus prepared a safe informational preview. No action has been taken.";
   const citations = Array.isArray(safeResponse.citations) ? safeResponse.citations.slice(0, 4) : [];
   const sourceLabels = Array.isArray(safeResponse.sourceLabels) ? safeResponse.sourceLabels.slice(0, 4) : [];
+  const providerHealth = safeResponse.providerHealth && typeof safeResponse.providerHealth === "object"
+    ? safeResponse.providerHealth
+    : {};
+  const safeRetryPolicy = providerHealth.safeRetryPolicy && typeof providerHealth.safeRetryPolicy === "object"
+    ? providerHealth.safeRetryPolicy
+    : {};
+  const cachePolicy = providerHealth.cachePolicy && typeof providerHealth.cachePolicy === "object"
+    ? providerHealth.cachePolicy
+    : {};
+  const sourceResultCount = Number(safeResponse.sourceResultCount || 0);
+  const reliabilityWarnings = [];
+  if (providerHealth.providerTimedOut === true) reliabilityWarnings.push("Provider timed out. Nexus kept this as a safe unavailable preview.");
+  if (providerHealth.providerErrorNormalized === true) reliabilityWarnings.push("Provider error was normalized. No fallback action was executed.");
+  if (providerHealth.safeUnavailableState === true) reliabilityWarnings.push("Provider/source unavailable. Review the guidance or try again manually.");
+  if (providerHealth.staleResultWarning === true || String(safeResponse.freshnessStatus || "").trim() === "stale") reliabilityWarnings.push("Freshness warning: this result may be stale.");
+  if (String(safeResponse.confidence || "low").trim().toLowerCase() === "low") reliabilityWarnings.push("Low confidence: compare sources before relying on this answer.");
+  if (sourceResultCount === 0) reliabilityWarnings.push("Empty result guidance: no provider source result was returned.");
+  if (safeRetryPolicy.userVisibleRetryOnly === true || safeRetryPolicy.automaticRetryAllowed === false) reliabilityWarnings.push("Retry is user-visible only. Nexus will not run hidden auto-retry loops.");
   const agentExperience = safeResponse.standardUserAgentExperience && typeof safeResponse.standardUserAgentExperience === "object"
     ? safeResponse.standardUserAgentExperience
     : null;
@@ -15472,7 +15490,25 @@ function normalizeAssistantRuntimePreviewCard(response = {}) {
     confidence: String(safeResponse.confidence || "low").trim(),
     freshnessStatus: String(safeResponse.freshnessStatus || "unknown").trim(),
     trustTier: String(safeResponse.trustTier || "unavailable").trim(),
-    sourceResultCount: Number(safeResponse.sourceResultCount || 0),
+    sourceResultCount,
+    providerReliability: {
+      providerDisplayName: String(providerHealth.providerDisplayName || safeResponse.selectedProvider || "Provider unavailable").trim(),
+      providerStatus: String(providerHealth.providerStatus || safeResponse.providerStatus || "unknown").trim(),
+      safeUnavailableState: providerHealth.safeUnavailableState === true,
+      providerTimedOut: providerHealth.providerTimedOut === true,
+      providerErrorNormalized: providerHealth.providerErrorNormalized === true,
+      staleResultWarning: providerHealth.staleResultWarning === true,
+      confidence: String(providerHealth.confidence || safeResponse.confidence || "low").trim(),
+      freshnessStatus: String(providerHealth.freshnessStatus || safeResponse.freshnessStatus || "unknown").trim(),
+      retryAllowed: safeRetryPolicy.retryAllowed === true,
+      automaticRetryAllowed: safeRetryPolicy.automaticRetryAllowed === true,
+      userVisibleRetryOnly: safeRetryPolicy.userVisibleRetryOnly === true,
+      cacheMode: String(cachePolicy.mode || "no-cache").trim(),
+      noSecretsCached: providerHealth.noSecretsCached === true || cachePolicy.storesSecrets === false,
+      noSensitiveUserDataCached: providerHealth.noSensitiveUserDataCached === true || cachePolicy.storesSensitiveUserData === false,
+      noExecutionFallback: providerHealth.noExecutionFallback !== false,
+      warnings: reliabilityWarnings.slice(0, 7)
+    },
     safeFollowUps: assistantRuntimePreviewSuggestions(safeResponse),
     standardUserAgentExperience: agentExperience && agentExperience.schemaVersion === "nexus.nap6.standardUserAgentExperience.v1" ? {
       answerMode: String(agentExperience.answerMode || "informational").trim(),
@@ -15556,6 +15592,10 @@ function renderAssistantRuntimePreviewCardMarkup(card = {}) {
     `
     : "";
   const experience = card.standardUserAgentExperience;
+  const reliability = card.providerReliability || {};
+  const reliabilityWarnings = Array.isArray(reliability.warnings) && reliability.warnings.length
+    ? reliability.warnings.map(item => `<li>${htmlSafe(item)}</li>`).join("")
+    : "<li>Provider health did not report additional warnings.</li>";
   const experienceMarkup = experience
     && experience.noExecutionAuthorized === true
     && experience.noProviderHandoff === true
@@ -15588,6 +15628,14 @@ function renderAssistantRuntimePreviewCardMarkup(card = {}) {
         <div><dt>Trust</dt><dd>${htmlSafe(card.trustTier || "unavailable")}</dd></div>
         <div><dt>Sources</dt><dd>${htmlSafe(String(Number.isFinite(card.sourceResultCount) ? card.sourceResultCount : 0))}</dd></div>
       </dl>
+      <section class="nexus-assistant-runtime-reliability" data-nexus-assistant-runtime-provider-health="true" data-execution-authority="false" data-provider-handoff="false" aria-label="Provider health and reliability">
+        <div>
+          <strong>Provider health</strong>
+          <span>${htmlSafe(reliability.providerDisplayName || card.selectedProvider || "Provider unavailable")} - ${htmlSafe(reliability.providerStatus || card.providerStatus || "unknown")}</span>
+        </div>
+        <ul>${reliabilityWarnings}</ul>
+        <p>Cache: ${htmlSafe(reliability.cacheMode || "no-cache")}. Secrets cached: ${reliability.noSecretsCached === true ? "no" : "unknown"}. Sensitive data cached: ${reliability.noSensitiveUserDataCached === true ? "no" : "unknown"}. Execution fallback: ${reliability.noExecutionFallback === true ? "disabled" : "unknown"}.</p>
+      </section>
       <ul class="nexus-assistant-runtime-preview-citations" aria-label="Preview citation details">${citations}</ul>
       <div class="nexus-assistant-runtime-preview-followups" aria-label="Safe follow-up prompts">${followUps}</div>
       ${localTools}

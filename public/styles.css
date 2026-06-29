@@ -3677,6 +3677,30 @@ body.admin-mode .user-workspace {
   font-weight: 850;
   overflow-wrap: anywhere;
 }
+.nexus-assistant-runtime-reliability {
+  display: grid;
+  gap: 7px;
+  padding: 9px;
+  border: 1px solid #d5e5df;
+  border-radius: 8px;
+  background: #f8fbf9;
+  color: #173240;
+}
+.nexus-assistant-runtime-reliability div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  justify-content: space-between;
+}
+.nexus-assistant-runtime-reliability ul {
+  margin: 0;
+  padding-left: 18px;
+}
+.nexus-assistant-runtime-reliability p {
+  margin: 0;
+  font-size: .78rem;
+  color: #49625f;
+}
 .nexus-assistant-runtime-preview-citations {
   display: grid;
   gap: 6px;
