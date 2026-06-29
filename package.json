@@ -616,6 +616,7 @@
     "qa:nexus-a100-runtime-activation-6": "node scripts/nexus-a100-runtime-activation-6-qa.js",
     "qa:nexus-a100-runtime-activation-7": "node scripts/nexus-a100-runtime-activation-7-qa.js",
     "qa:nexus-a100-runtime-activation-8": "node scripts/nexus-a100-runtime-activation-8-qa.js",
+    "qa:nexus-a100-runtime-activation-9": "node scripts/nexus-a100-runtime-activation-9-qa.js",
     "qa:nexus-sprint-k1-personalization-runtime-activation-readiness-gate": "node scripts/nexus-sprint-k1-personalization-runtime-activation-readiness-gate-qa.js",
     "qa:nexus-sprint-k2-personalization-feature-flag-contract": "node scripts/nexus-sprint-k2-personalization-feature-flag-contract-qa.js",
     "qa:nexus-sprint-k3-personalization-flag-contract-harness": "node scripts/nexus-sprint-k3-personalization-flag-contract-harness-qa.js",

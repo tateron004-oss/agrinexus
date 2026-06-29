@@ -12383,6 +12383,17 @@ function a100TrainingLearningCard() {
   };
 }
 
+function a100WorkforceJobsCard() {
+  return {
+    domain: "workforce",
+    focus: "Farm jobs, work preparation, job search plans, skills review, and interview readiness.",
+    prompts: ["Show me farm jobs.", "Help me prepare for work.", "Create a job search plan.", "What skills do I need?"],
+    collect: ["Target role.", "Current skills.", "Availability.", "Transport constraints.", "Preferred work area without live tracking."],
+    nextSteps: ["Open the internal workforce section.", "Review skills and readiness gaps.", "Prepare interview questions.", "Draft an application checklist for human review."],
+    boundary: "Review-only workforce guidance. Nexus does not submit applications, message employers, schedule shifts, mutate records, or hand off to a provider."
+  };
+}
+
 function rememberA100SafeFollowUpContext(intent = {}) {
   if (!intent || typeof intent !== "object") return;
   a100SafeFollowUpContext = Object.freeze({
@@ -22740,7 +22751,7 @@ function a100SafeAutonomyIntent(command = "") {
     preparation: /\b(prepare|draft|checklist|questions|plan|setup guidance)\b/.test(text) ? a100ReviewOnlyPreparation(preparationCategory) : null,
     providerReadiness: capability.id === "providers" ? a100ProviderReadinessCards() : null,
     routePreview: capability.id === "map" ? a100RoutePlanningPreview() : null,
-    guidance: capability.id === "agriculture" ? a100AgricultureHelpCard() : capability.id === "learning" ? a100TrainingLearningCard() : null,
+    guidance: capability.id === "agriculture" ? a100AgricultureHelpCard() : capability.id === "learning" ? a100TrainingLearningCard() : capability.id === "workforce" ? a100WorkforceJobsCard() : null,
     suggestions: ["help me with agriculture", "find agriculture training", "show me farm jobs", "browse AgriTrade", "help me plan a route", "what providers are connected"].slice(0, 5)
   };
 }

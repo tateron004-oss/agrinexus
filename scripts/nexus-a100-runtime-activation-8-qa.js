@@ -20,7 +20,7 @@ const app = read("public", "app.js");
 const pkg = JSON.parse(read("package.json"));
 const qaSuite = read("scripts", "qa-suite.js");
 
-const learningSource = sourceBetween(app, "function a100TrainingLearningCard", "function rememberA100SafeFollowUpContext");
+const learningSource = sourceBetween(app, "function a100TrainingLearningCard", "function a100WorkforceJobsCard");
 const intentSource = sourceBetween(app, "function a100SafeAutonomyIntent", "function openA100SafeAutonomyPreview");
 
 assert(intentSource.includes("capability.id === \"learning\" ? a100TrainingLearningCard()"), "Learning prompts should attach learning guidance.");
