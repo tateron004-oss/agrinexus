@@ -553,6 +553,7 @@
     "qa:nexus-n100-5-workflow-approval-checkpoint-runner": "node scripts/nexus-n100-5-workflow-approval-checkpoint-runner-qa.js",
     "qa:nexus-n100-6-proactive-suggestion-engine": "node scripts/nexus-n100-6-proactive-suggestion-engine-qa.js",
     "qa:nexus-n100-7-safe-local-tools": "node scripts/nexus-n100-7-safe-local-tools-qa.js",
+    "qa:nexus-n100-8-permission-consent-manager": "node scripts/nexus-n100-8-permission-consent-manager-qa.js",
     "qa:nexus-sprint-k1-personalization-runtime-activation-readiness-gate": "node scripts/nexus-sprint-k1-personalization-runtime-activation-readiness-gate-qa.js",
     "qa:nexus-sprint-k2-personalization-feature-flag-contract": "node scripts/nexus-sprint-k2-personalization-feature-flag-contract-qa.js",
     "qa:nexus-sprint-k3-personalization-flag-contract-harness": "node scripts/nexus-sprint-k3-personalization-flag-contract-harness-qa.js",
