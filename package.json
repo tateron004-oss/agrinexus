@@ -563,6 +563,7 @@
     "qa:nexus-n100-15-map-route-planning-assistant": "node scripts/nexus-n100-15-map-route-planning-assistant-qa.js",
     "qa:nexus-n100-16-marketplace-review-assistant": "node scripts/nexus-n100-16-marketplace-review-assistant-qa.js",
     "qa:nexus-n100-17-health-access-preparation-assistant": "node scripts/nexus-n100-17-health-access-preparation-assistant-qa.js",
+    "qa:nexus-n100-18-source-trust-citation-assistant": "node scripts/nexus-n100-18-source-trust-citation-assistant-qa.js",
     "qa:nexus-sprint-k1-personalization-runtime-activation-readiness-gate": "node scripts/nexus-sprint-k1-personalization-runtime-activation-readiness-gate-qa.js",
     "qa:nexus-sprint-k2-personalization-feature-flag-contract": "node scripts/nexus-sprint-k2-personalization-feature-flag-contract-qa.js",
     "qa:nexus-sprint-k3-personalization-flag-contract-harness": "node scripts/nexus-sprint-k3-personalization-flag-contract-harness-qa.js",
