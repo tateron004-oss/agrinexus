@@ -583,6 +583,7 @@
     "qa:nexus-a100-15-qa-hardening": "node scripts/nexus-a100-15-qa-hardening-qa.js",
     "qa:nexus-a100-16-runtime-readiness-closeout": "node scripts/nexus-a100-16-runtime-readiness-closeout-qa.js",
     "qa:nexus-a100-17-source-backed-answer-previews": "node scripts/nexus-a100-17-source-backed-answer-previews-qa.js",
+    "qa:nexus-a100-18-provider-availability-fallbacks": "node scripts/nexus-a100-18-provider-availability-fallbacks-qa.js",
     "qa:nexus-sprint-k1-personalization-runtime-activation-readiness-gate": "node scripts/nexus-sprint-k1-personalization-runtime-activation-readiness-gate-qa.js",
     "qa:nexus-sprint-k2-personalization-feature-flag-contract": "node scripts/nexus-sprint-k2-personalization-feature-flag-contract-qa.js",
     "qa:nexus-sprint-k3-personalization-flag-contract-harness": "node scripts/nexus-sprint-k3-personalization-flag-contract-harness-qa.js",
