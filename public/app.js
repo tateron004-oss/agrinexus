@@ -207,8 +207,8 @@ const nexusProductIdentity = Object.freeze({
 });
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-312";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v291";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-313";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v292";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
 const VOICE_ATTENTION_DELAY_MS = 900;
@@ -13252,6 +13252,7 @@ function a100CapabilitySurfaceHtml() {
       ${a100HealthPrivacyComplianceGuardrailsPanelHtml(a100HealthPrivacyComplianceGuardrails())}
       ${a100RpmRtmManualIntakePanelHtml()}
       ${a100AfricaDeploymentRuntimePanelHtml()}
+      ${a100SecurityInfrastructureRuntimePanelHtml()}
       <div class="a100-chronic-care-preview" aria-label="${translateText("Chronic care assistant preview")}">
         <div>
           <strong>${translateText("Chronic Care Navigator")}</strong>
@@ -14087,6 +14088,101 @@ function a100AfricaDeploymentRuntimePanelHtml(capability = a100AfricaDeploymentR
         </div>
         <div class="a100-africa-safety-boundary" data-africa-safety-boundary="no-execution">
           ${capability.safety.map(item => `<span>${translateText(item)}</span>`).join("")}
+        </div>
+      </div>`;
+}
+
+function a100SecurityInfrastructureRuntimeCapability() {
+  const checks = [
+    {
+      id: "public-config-only",
+      label: "Public config only",
+      status: "active",
+      detail: "Standard User runtime shows product, build, and safety status only; secret values stay server-side."
+    },
+    {
+      id: "no-browser-secrets",
+      label: "No browser-exposed secrets",
+      status: "active",
+      detail: "Provider credentials, API keys, tokens, passwords, and private keys are not rendered in this card."
+    },
+    {
+      id: "provider-execution-disabled",
+      label: "Provider execution disabled",
+      status: "active",
+      detail: "Calls, messages, payments, provider handoff, device connections, and external writes remain off unless separately configured and approved."
+    },
+    {
+      id: "simulation-mode-labeled",
+      label: "Simulation mode labeled",
+      status: "active",
+      detail: "Provider/account surfaces identify simulation or not-connected status before any future real action."
+    },
+    {
+      id: "health-data-session-only",
+      label: "Health data session-only",
+      status: "active",
+      detail: "Manual health/RPM notes remain current-session review data, not persistent medical records."
+    },
+    {
+      id: "external-mutation-disabled",
+      label: "External mutation disabled",
+      status: "active",
+      detail: "No backend write, order, payment, call, message, provider dispatch, or external system mutation is authorized from this surface."
+    }
+  ];
+  const environmentReadiness = [
+    "Browser sees safe product identity and build status only",
+    "Provider status is review-only and execution-disabled by default",
+    "Health/RPM/RTM data is session-only and review-first",
+    "Africa deployment support remains low-bandwidth and no-execution",
+    "High-risk actions require a separate confirmation/final execution gate"
+  ];
+  return Object.freeze({
+    id: "security-infrastructure-runtime-capability",
+    title: "Security & Infrastructure Runtime",
+    status: "runtime-checks-active",
+    publicConfigOnly: true,
+    browserSecretsExposed: false,
+    providerExecutionEnabled: false,
+    simulationModeLabeled: true,
+    healthDataSessionOnly: true,
+    externalMutationEnabled: false,
+    environmentReadinessSafeToExpose: true,
+    noSecretsExposed: true,
+    noExternalApiCall: true,
+    noExecutionAuthorized: true,
+    noBackendMutation: true,
+    checks,
+    environmentReadiness
+  });
+}
+
+function a100SecurityInfrastructureRuntimePanelHtml(capability = a100SecurityInfrastructureRuntimeCapability()) {
+  return `
+      <div class="a100-security-infrastructure-runtime" data-nexus-security-infrastructure-runtime="true" data-public-config-only="${capability.publicConfigOnly ? "true" : "false"}" data-browser-secrets-exposed="${capability.browserSecretsExposed ? "true" : "false"}" data-provider-execution-enabled="${capability.providerExecutionEnabled ? "true" : "false"}" data-simulation-mode-labeled="${capability.simulationModeLabeled ? "true" : "false"}" data-health-data-session-only="${capability.healthDataSessionOnly ? "true" : "false"}" data-external-mutation-enabled="${capability.externalMutationEnabled ? "true" : "false"}" data-backend-mutation="false" aria-label="${translateText("Security and Infrastructure Runtime Capability")}">
+        <div class="a100-security-infrastructure-head">
+          <strong>${translateText(capability.title)}</strong>
+          <span>${translateText("Runtime safety checks for public config, provider status, health data posture, and external mutation boundaries.")}</span>
+          <small>${translateText("No secret values are displayed. Real provider execution remains disabled unless a future approved configuration, permission, audit, and final gate are active.")}</small>
+        </div>
+        <div class="a100-security-infrastructure-summary">
+          <section><strong>${translateText("Public config")}</strong><span>${translateText(capability.publicConfigOnly ? "Only safe public status" : "Needs review")}</span></section>
+          <section><strong>${translateText("Secrets")}</strong><span>${translateText(capability.browserSecretsExposed ? "Blocked: review needed" : "Not exposed")}</span></section>
+          <section><strong>${translateText("Providers")}</strong><span>${translateText(capability.providerExecutionEnabled ? "Configured separately" : "Execution disabled")}</span></section>
+          <section><strong>${translateText("Simulation")}</strong><span>${translateText(capability.simulationModeLabeled ? "Labeled" : "Needs label")}</span></section>
+          <section><strong>${translateText("Mutation")}</strong><span>${translateText(capability.externalMutationEnabled ? "Blocked: review needed" : "Disabled")}</span></section>
+        </div>
+        <div class="a100-security-infrastructure-grid">
+          ${capability.checks.map(item => `<section data-security-infrastructure-check="${escapeHtml(item.id)}" data-security-infrastructure-status="${escapeHtml(item.status)}">
+            <strong>${translateText(item.label)}</strong>
+            <span>${translateText(item.status)}</span>
+            <small>${translateText(item.detail)}</small>
+          </section>`).join("")}
+        </div>
+        <div class="a100-security-infrastructure-readiness" data-security-infrastructure-readiness="safe-to-expose">
+          <strong>${translateText("Safe environment readiness")}</strong>
+          <ul>${capability.environmentReadiness.map(item => `<li>${translateText(item)}</li>`).join("")}</ul>
         </div>
       </div>`;
 }

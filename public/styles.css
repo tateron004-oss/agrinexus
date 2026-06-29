@@ -1514,7 +1514,8 @@ body.user-mode .a100-provider-account-api-access,
 body.user-mode .a100-production-provider-readiness,
 body.user-mode .a100-health-privacy-guardrails,
 body.user-mode .a100-rpm-rtm-manual-intake,
-body.user-mode .a100-africa-deployment-runtime {
+body.user-mode .a100-africa-deployment-runtime,
+body.user-mode .a100-security-infrastructure-runtime {
   display: grid;
   gap: 8px;
   padding: 9px;
@@ -1526,13 +1527,15 @@ body.user-mode .a100-provider-account-api-access-head,
 body.user-mode .a100-production-provider-readiness-head,
 body.user-mode .a100-health-privacy-guardrails-head,
 body.user-mode .a100-rpm-rtm-manual-intake-head,
-body.user-mode .a100-africa-deployment-head {
+body.user-mode .a100-africa-deployment-head,
+body.user-mode .a100-security-infrastructure-head {
   display: grid;
   gap: 3px;
 }
 body.user-mode .a100-provider-account-api-access-summary,
 body.user-mode .a100-production-provider-readiness-summary,
-body.user-mode .a100-africa-deployment-summary {
+body.user-mode .a100-africa-deployment-summary,
+body.user-mode .a100-security-infrastructure-summary {
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 6px;
@@ -1541,7 +1544,8 @@ body.user-mode .a100-provider-account-api-access-grid,
 body.user-mode .a100-production-provider-readiness-grid,
 body.user-mode .a100-health-privacy-grid,
 body.user-mode .a100-rpm-rtm-manual-intake-grid,
-body.user-mode .a100-africa-deployment-grid {
+body.user-mode .a100-africa-deployment-grid,
+body.user-mode .a100-security-infrastructure-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 7px;
@@ -1596,6 +1600,8 @@ body.user-mode .a100-provider-account-api-access section,
 body.user-mode .a100-production-provider-readiness section,
 body.user-mode .a100-africa-deployment-summary section,
 body.user-mode .a100-africa-deployment-grid section,
+body.user-mode .a100-security-infrastructure-summary section,
+body.user-mode .a100-security-infrastructure-grid section,
 body.user-mode .a100-health-privacy-grid section,
 body.user-mode .a100-health-privacy-flags,
 body.user-mode .a100-health-privacy-blocked {
@@ -1673,6 +1679,10 @@ body.user-mode .a100-africa-deployment-runtime strong,
 body.user-mode .a100-africa-deployment-runtime span,
 body.user-mode .a100-africa-deployment-runtime small,
 body.user-mode .a100-africa-deployment-runtime li,
+body.user-mode .a100-security-infrastructure-runtime strong,
+body.user-mode .a100-security-infrastructure-runtime span,
+body.user-mode .a100-security-infrastructure-runtime small,
+body.user-mode .a100-security-infrastructure-runtime li,
 body.user-mode .a100-route-preview strong,
 body.user-mode .a100-route-preview span,
 body.user-mode .a100-domain-guidance strong,
@@ -1696,6 +1706,8 @@ body.user-mode .a100-health-privacy-blocked span,
 body.user-mode .a100-rpm-rtm-summary,
 body.user-mode .a100-africa-deployment-runtime span,
 body.user-mode .a100-africa-deployment-runtime li,
+body.user-mode .a100-security-infrastructure-runtime span,
+body.user-mode .a100-security-infrastructure-runtime li,
 body.user-mode .a100-route-preview span,
 body.user-mode .a100-domain-guidance span,
 body.user-mode .a100-clinician-report span {
@@ -1715,7 +1727,9 @@ body.user-mode .a100-production-provider-status-list span,
 body.user-mode .a100-health-privacy-grid section > span,
 body.user-mode .a100-health-privacy-tag-list span,
 body.user-mode .a100-africa-deployment-summary section > span,
-body.user-mode .a100-africa-deployment-grid section > span {
+body.user-mode .a100-africa-deployment-grid section > span,
+body.user-mode .a100-security-infrastructure-summary section > span,
+body.user-mode .a100-security-infrastructure-grid section > span {
   width: fit-content;
   max-width: 100%;
   padding: 4px 6px;
@@ -1795,6 +1809,20 @@ body.user-mode .a100-africa-safety-boundary span {
   color: #17443b;
   font-size: .75rem;
   font-weight: 800;
+}
+body.user-mode .a100-security-infrastructure-readiness {
+  display: grid;
+  gap: 6px;
+  padding: 8px;
+  border: 1px dashed #bdddd5;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, .74);
+}
+body.user-mode .a100-security-infrastructure-readiness ul {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding-left: 18px;
 }
 body.user-mode .a100-safe-task-controls {
   display: grid;
@@ -6143,7 +6171,9 @@ body.user-mode #workflowClose {
   body.user-mode .a100-health-privacy-grid,
   body.user-mode .a100-rpm-rtm-manual-intake-grid,
   body.user-mode .a100-africa-deployment-summary,
-  body.user-mode .a100-africa-deployment-grid {
+  body.user-mode .a100-africa-deployment-grid,
+  body.user-mode .a100-security-infrastructure-summary,
+  body.user-mode .a100-security-infrastructure-grid {
     grid-template-columns: 1fr;
   }
   .workflow-real-use-grid {
