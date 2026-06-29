@@ -525,6 +525,7 @@
     "qa:nexus-nap7-voice-command-layer-integration": "node scripts/nexus-nap7-voice-command-layer-integration-qa.js",
     "qa:nexus-nap8-reliability-provider-health": "node scripts/nexus-nap8-reliability-provider-health-qa.js",
     "qa:nexus-nap9-browser-validation": "node scripts/nexus-nap9-browser-validation-qa.js",
+    "qa:nexus-nap10-agent-power-closeout": "node scripts/nexus-nap10-agent-power-closeout-qa.js",
     "qa:nexus-sprint-k1-personalization-runtime-activation-readiness-gate": "node scripts/nexus-sprint-k1-personalization-runtime-activation-readiness-gate-qa.js",
     "qa:nexus-sprint-k2-personalization-feature-flag-contract": "node scripts/nexus-sprint-k2-personalization-feature-flag-contract-qa.js",
     "qa:nexus-sprint-k3-personalization-flag-contract-harness": "node scripts/nexus-sprint-k3-personalization-flag-contract-harness-qa.js",
