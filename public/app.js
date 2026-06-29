@@ -207,8 +207,8 @@ const nexusProductIdentity = Object.freeze({
 });
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-310";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v289";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-311";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v290";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
 const VOICE_ATTENTION_DELAY_MS = 900;
@@ -13250,6 +13250,7 @@ function a100CapabilitySurfaceHtml() {
       ${a100ProviderAccountApiAccessPanelHtml(a100ProviderAccountApiAccessPanel())}
       ${a100ProductionProviderReadinessPanelHtml(a100ProductionProviderReadinessPanel())}
       ${a100HealthPrivacyComplianceGuardrailsPanelHtml(a100HealthPrivacyComplianceGuardrails())}
+      ${a100RpmRtmManualIntakePanelHtml()}
       <div class="a100-chronic-care-preview" aria-label="${translateText("Chronic care assistant preview")}">
         <div>
           <strong>${translateText("Chronic Care Navigator")}</strong>
@@ -13915,6 +13916,78 @@ function a100HealthPrivacyComplianceGuardrailsPanelHtml(healthPrivacyComplianceG
       </div>`;
 }
 
+let a100RpmRtmSessionData = {};
+
+function a100RpmRtmSessionDataSummary() {
+  const entries = [
+    ["Blood pressure", a100RpmRtmSessionData.bloodPressure],
+    ["Glucose", a100RpmRtmSessionData.glucose],
+    ["Weight", a100RpmRtmSessionData.weight],
+    ["Activity / adherence", a100RpmRtmSessionData.activityAdherence],
+    ["Symptoms / concerns", a100RpmRtmSessionData.symptomsConcerns]
+  ].filter(([, value]) => String(value || "").trim());
+  return entries.length
+    ? entries.map(([label, value]) => `${label}: ${value}`).join(" | ")
+    : "No manual RPM/RTM session data entered yet.";
+}
+
+function a100RpmRtmManualIntakePanelHtml() {
+  return `
+      <div class="a100-rpm-rtm-manual-intake" data-nexus-rpm-rtm-manual-intake="true" data-session-only="true" data-device-connected="false" data-external-transmission="false" data-persistent-storage="false" data-clinical-decision="false" aria-label="${translateText("RPM/RTM Manual Session Intake")}">
+        <div class="a100-rpm-rtm-manual-intake-head">
+          <strong>${translateText("RPM/RTM Manual Session Intake")}</strong>
+          <span>${translateText("Session-only manual notes for review. Nexus does not connect devices, transmit readings, bill RPM/RTM, diagnose, or change care.")}</span>
+        </div>
+        <button type="button" class="a100-rpm-rtm-update" data-a100-rpm-update="true" onclick="return handleA100RpmRtmManualIntake(event)">${translateText("Update session preview")}</button>
+        <div class="a100-rpm-rtm-manual-intake-grid">
+          <label>${translateText("Blood pressure")}<input type="text" data-a100-rpm-field="bloodPressure" placeholder="${translateText("Example: 128/82, if already known")}" autocomplete="off"></label>
+          <label>${translateText("Glucose")}<input type="text" data-a100-rpm-field="glucose" placeholder="${translateText("Example: 140 mg/dL, if already known")}" autocomplete="off"></label>
+          <label>${translateText("Weight")}<input type="text" data-a100-rpm-field="weight" placeholder="${translateText("Example: 180 lb, if already known")}" autocomplete="off"></label>
+          <label>${translateText("Activity / adherence")}<input type="text" data-a100-rpm-field="activityAdherence" placeholder="${translateText("Example: walked 20 min; missed evening dose")}" autocomplete="off"></label>
+          <label>${translateText("Symptoms / concerns")}<textarea data-a100-rpm-field="symptomsConcerns" rows="2" placeholder="${translateText("Example: dizziness, fatigue, cough, swelling, or concern to ask a clinician")}"></textarea></label>
+        </div>
+        <div id="a100RpmRtmManualSessionSummary" class="a100-rpm-rtm-summary" data-a100-rpm-summary="session-only">${translateText(a100RpmRtmSessionDataSummary())}</div>
+        <small>${translateText("Manual entry only. Device-ready, not connected. Provider review required before care decisions.")}</small>
+      </div>`;
+}
+
+function updateA100RpmRtmManualSessionPreview(root = document) {
+  const nextData = {};
+  root.querySelectorAll("[data-a100-rpm-field]").forEach(field => {
+    nextData[field.dataset.a100RpmField] = String(field.value || "").trim().slice(0, 160);
+  });
+  a100RpmRtmSessionData = nextData;
+  const summary = root.querySelector?.("[data-a100-rpm-summary]") || $("#a100RpmRtmManualSessionSummary");
+  if (summary) summary.textContent = translateText(a100RpmRtmSessionDataSummary());
+}
+
+function handleA100RpmRtmManualIntake(event) {
+  event?.preventDefault?.();
+  event?.stopPropagation?.();
+  const target = event?.target?.nodeType === 1 ? event.target : event?.target?.parentElement;
+  const root = target?.closest?.("[data-nexus-rpm-rtm-manual-intake='true']") || document;
+  updateA100RpmRtmManualSessionPreview(root);
+  recordVoiceEvent("RPM/RTM manual session preview updated", "done");
+  updateNexusBehaviorLayer("answering", "Nexus updated session-only RPM/RTM manual notes without device connection, transmission, storage, or clinical execution.");
+  return false;
+}
+window.handleA100RpmRtmManualIntake = handleA100RpmRtmManualIntake;
+
+document.addEventListener("click", event => {
+  const target = event.target?.nodeType === 1 ? event.target : event.target?.parentElement;
+  const button = target?.closest?.("[data-a100-rpm-update='true']");
+  if (!button) return;
+  handleA100RpmRtmManualIntake(event);
+});
+
+document.addEventListener("input", event => {
+  const target = event.target?.nodeType === 1 ? event.target : event.target?.parentElement;
+  const field = target?.closest?.("[data-a100-rpm-field]");
+  if (!field) return;
+  const root = field.closest("[data-nexus-rpm-rtm-manual-intake='true']") || document;
+  updateA100RpmRtmManualSessionPreview(root);
+});
+
 function a100ChronicCareQuickActions() {
   return [
     { label: "Chronic Care Navigator", detail: "Text-first Africa-ready support for education, tracking, reminders, clinic prep, and red-flag guidance.", command: "Nexus, chronic care navigator" },
@@ -14072,6 +14145,7 @@ function a100ChronicCareReport(kind = "general", command = "") {
     riskSignal === "urgent review signal mentioned" ? "Urgent warning guidance" : ""
   ].filter(Boolean).join("; ");
   const rpmReadiness = "not connected; manual entry only; review required; no automatic data transmission";
+  const manualRpmRtmSessionSummary = a100RpmRtmSessionDataSummary();
   const safetyBoundary = "Nexus prepared this summary for review only. Nexus did not diagnose, prescribe, adjust medication, dispatch emergency services, contact a provider, connect a device, transmit data, or store sensitive health data persistently.";
   return {
     type: "session-only",
@@ -14094,7 +14168,7 @@ function a100ChronicCareReport(kind = "general", command = "") {
       { label: "Report audience", value: reportAudience },
       { label: "Patient concern", value: text || "not provided" },
       { label: "Patient Concern", value: text || "not provided" },
-      { label: "Current Session Data", value: "manual/session-only user information from the current Nexus prompt; low-bandwidth summary ready for physician/care-team review" },
+      { label: "Current Session Data", value: `manual/session-only user information from the current Nexus prompt; low-bandwidth summary ready for physician/care-team review; RPM/RTM manual notes: ${manualRpmRtmSessionSummary}` },
       { label: "Readings mentioned", value: reading },
       { label: "Readings Mentioned", value: reading },
       { label: "Data source", value: "session-only user text; source of data is user-provided/manual unless a reviewed RPM/RTM program exists outside Nexus" },
@@ -14103,6 +14177,7 @@ function a100ChronicCareReport(kind = "general", command = "") {
       { label: "Medication questions", value: medicationQuestion },
       { label: "Medication Questions", value: medicationQuestion },
       { label: "RPM/RTM Readiness", value: rpmReadiness },
+      { label: "RPM/RTM Manual Session Data", value: manualRpmRtmSessionSummary },
       { label: "Adherence concerns", value: adherenceConcern },
       { label: "Lifestyle barriers", value: lifestyleBarrier },
       { label: "Lifestyle / Adherence Barriers", value: `${lifestyleBarrier}; adherence: ${adherenceConcern}` },

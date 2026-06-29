@@ -1512,7 +1512,8 @@ body.user-mode .a100-provider-readiness {
 }
 body.user-mode .a100-provider-account-api-access,
 body.user-mode .a100-production-provider-readiness,
-body.user-mode .a100-health-privacy-guardrails {
+body.user-mode .a100-health-privacy-guardrails,
+body.user-mode .a100-rpm-rtm-manual-intake {
   display: grid;
   gap: 8px;
   padding: 9px;
@@ -1522,7 +1523,8 @@ body.user-mode .a100-health-privacy-guardrails {
 }
 body.user-mode .a100-provider-account-api-access-head,
 body.user-mode .a100-production-provider-readiness-head,
-body.user-mode .a100-health-privacy-guardrails-head {
+body.user-mode .a100-health-privacy-guardrails-head,
+body.user-mode .a100-rpm-rtm-manual-intake-head {
   display: grid;
   gap: 3px;
 }
@@ -1534,7 +1536,8 @@ body.user-mode .a100-production-provider-readiness-summary {
 }
 body.user-mode .a100-provider-account-api-access-grid,
 body.user-mode .a100-production-provider-readiness-grid,
-body.user-mode .a100-health-privacy-grid {
+body.user-mode .a100-health-privacy-grid,
+body.user-mode .a100-rpm-rtm-manual-intake-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 7px;
@@ -1656,6 +1659,10 @@ body.user-mode .a100-production-provider-readiness small,
 body.user-mode .a100-health-privacy-guardrails strong,
 body.user-mode .a100-health-privacy-guardrails span,
 body.user-mode .a100-health-privacy-guardrails small,
+body.user-mode .a100-rpm-rtm-manual-intake strong,
+body.user-mode .a100-rpm-rtm-manual-intake span,
+body.user-mode .a100-rpm-rtm-manual-intake small,
+body.user-mode .a100-rpm-rtm-manual-intake label,
 body.user-mode .a100-route-preview strong,
 body.user-mode .a100-route-preview span,
 body.user-mode .a100-domain-guidance strong,
@@ -1676,6 +1683,7 @@ body.user-mode .a100-production-provider-readiness small,
 body.user-mode .a100-health-privacy-guardrails small,
 body.user-mode .a100-health-privacy-flags span,
 body.user-mode .a100-health-privacy-blocked span,
+body.user-mode .a100-rpm-rtm-summary,
 body.user-mode .a100-route-preview span,
 body.user-mode .a100-domain-guidance span,
 body.user-mode .a100-clinician-report span {
@@ -1711,6 +1719,38 @@ body.user-mode .a100-health-privacy-tag-list {
   display: flex;
   flex-wrap: wrap;
   gap: 5px;
+}
+body.user-mode .a100-rpm-rtm-manual-intake-grid label {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+body.user-mode .a100-rpm-rtm-manual-intake input,
+body.user-mode .a100-rpm-rtm-manual-intake textarea {
+  width: 100%;
+  min-width: 0;
+  padding: 8px;
+  border: 1px solid #cfe4df;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #173240;
+  font: inherit;
+}
+body.user-mode .a100-rpm-rtm-update {
+  justify-self: start;
+  min-height: 36px;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: 8px;
+  background: #215c69;
+  color: #ffffff;
+  font-weight: 950;
+}
+body.user-mode .a100-rpm-rtm-summary {
+  padding: 8px;
+  border: 1px dashed #bdddd5;
+  border-radius: 8px;
+  background: #ffffff;
 }
 body.user-mode .a100-safe-task-controls {
   display: grid;
@@ -6056,7 +6096,8 @@ body.user-mode #workflowClose {
   body.user-mode .a100-provider-account-api-access-grid,
   body.user-mode .a100-production-provider-readiness-summary,
   body.user-mode .a100-production-provider-readiness-grid,
-  body.user-mode .a100-health-privacy-grid {
+  body.user-mode .a100-health-privacy-grid,
+  body.user-mode .a100-rpm-rtm-manual-intake-grid {
     grid-template-columns: 1fr;
   }
   .workflow-real-use-grid {
