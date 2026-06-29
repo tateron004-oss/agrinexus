@@ -567,6 +567,7 @@
     "qa:nexus-n100-17-health-access-preparation-assistant": "node scripts/nexus-n100-17-health-access-preparation-assistant-qa.js",
     "qa:nexus-n100-18-source-trust-citation-assistant": "node scripts/nexus-n100-18-source-trust-citation-assistant-qa.js",
     "qa:nexus-capability-sprint-1-autonomous-task-planner": "node scripts/nexus-capability-sprint-1-autonomous-task-planner-qa.js",
+    "qa:nexus-capability-sprint-2-multi-step-workflow-engine": "node scripts/nexus-capability-sprint-2-multi-step-workflow-engine-qa.js",
     "qa:nexus-a100-1-standard-user-capability-routing": "node scripts/nexus-a100-1-standard-user-capability-routing-qa.js",
     "qa:nexus-a100-2-low-risk-task-cards": "node scripts/nexus-a100-2-low-risk-task-cards-qa.js",
     "qa:nexus-a100-3-agriculture-support": "node scripts/nexus-a100-3-agriculture-support-qa.js",

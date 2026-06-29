@@ -179,6 +179,7 @@ let latestObservedAgentActionMetadata = null;
 let observedAgentActionMetadataLog = [];
 let visibleLevelOneAgentActionSuggestion = null;
 let visibleControlledActionPreviewReadiness = null;
+let nexusAutonomousWorkflowState = null;
 let visibleControlledStagedActionPreview = null;
 let visibleUserConfirmationPreview = null;
 let latestControlledActionConfirmationReadiness = null;
@@ -454,6 +455,158 @@ function renderControlledActionPreview(readiness = visibleControlledActionPrevie
       <span class="nexus-controlled-action-preview-note">Preview only - no action has been taken.</span>
     </div>
   `;
+}
+
+function createNexusAutonomousWorkflowState(taskPlan = {}, context = {}) {
+  if (!taskPlan || typeof taskPlan !== "object") return null;
+  const steps = Array.isArray(taskPlan.steps) && taskPlan.steps.length
+    ? taskPlan.steps.map(step => String(step || "").trim()).filter(Boolean)
+    : ["Review the plan.", "Choose the next safe step.", "Finish or revise the workflow."];
+  if (!steps.length) return null;
+  return {
+    schemaVersion: "nexus-autonomous-workflow.v1",
+    source: "nexus-multi-step-workflow-engine.v1",
+    planSource: taskPlan.source || "nexus-autonomous-task-planner.v1",
+    startedAt: new Date().toISOString(),
+    goal: String(taskPlan.goal || "Work through a safe Nexus plan.").trim(),
+    category: String(taskPlan.category || "general").trim(),
+    userIntent: String(taskPlan.userIntent || context.command || "").trim(),
+    activePlan: taskPlan,
+    steps,
+    currentStepIndex: 0,
+    completedSteps: [],
+    status: "active",
+    lastUserAction: "started",
+    nextStep: steps[0],
+    explanation: "Nexus is guiding this plan step by step. It is not executing provider actions, permissions, payments, calls, messages, or external handoffs.",
+    revisionNote: "",
+    executionAuthority: false,
+    canExecute: false,
+    externalExecutionAllowed: false,
+    storageMode: "volatile-ui-only"
+  };
+}
+
+function updateNexusAutonomousWorkflowDerivedState() {
+  const state = nexusAutonomousWorkflowState;
+  if (!state) return null;
+  const currentStep = state.steps[state.currentStepIndex] || "";
+  state.currentStep = currentStep;
+  state.nextStep = state.steps[state.currentStepIndex + 1] || "";
+  state.completedSteps = state.steps.slice(0, state.currentStepIndex);
+  state.executionAuthority = false;
+  state.canExecute = false;
+  state.externalExecutionAllowed = false;
+  state.storageMode = "volatile-ui-only";
+  return state;
+}
+
+function startNexusAutonomousWorkflowFromTaskPlan(taskPlan = {}, context = {}) {
+  const state = createNexusAutonomousWorkflowState(taskPlan, context);
+  if (!state) return null;
+  nexusAutonomousWorkflowState = state;
+  updateNexusAutonomousWorkflowDerivedState();
+  if (typeof paintNexusAutonomousWorkflow === "function") {
+    paintNexusAutonomousWorkflow();
+  }
+  return nexusAutonomousWorkflowState;
+}
+
+function renderNexusAutonomousWorkflowCard(state = nexusAutonomousWorkflowState) {
+  if (!state || state.schemaVersion !== "nexus-autonomous-workflow.v1") return "";
+  updateNexusAutonomousWorkflowDerivedState();
+  const total = state.steps.length || 1;
+  const currentNumber = Math.min(total, state.currentStepIndex + 1);
+  const missing = Array.isArray(state.activePlan?.missingInformation) ? state.activePlan.missingInformation.join(" ") : "";
+  const blocked = Array.isArray(state.activePlan?.blockedHighRiskActions) ? state.activePlan.blockedHighRiskActions.join(" ") : "";
+  return `
+    <section class="nexus-autonomous-workflow-card" aria-label="Nexus guided workflow" data-nexus-autonomous-workflow="true" data-execution-authority="false">
+      <span class="nexus-autonomous-workflow-label">Guided workflow</span>
+      <strong>${htmlSafe(state.goal)}</strong>
+      <span>Step ${htmlSafe(currentNumber)} of ${htmlSafe(total)}: ${htmlSafe(state.currentStep || "Review the current step.")}</span>
+      <span>Next: ${htmlSafe(state.nextStep || "Finish or revise the workflow.")}</span>
+      <span>Missing: ${htmlSafe(missing || "No required information listed yet.")}</span>
+      <span>Blocked: ${htmlSafe(blocked || "External execution remains blocked.")}</span>
+      <span>${htmlSafe(state.explanation)}</span>
+      ${state.revisionNote ? `<span>${htmlSafe(state.revisionNote)}</span>` : ""}
+      <div class="nexus-autonomous-workflow-actions" aria-label="Workflow controls">
+        <button type="button" data-nexus-workflow-control="back" ${state.currentStepIndex <= 0 ? "disabled aria-disabled=\"true\"" : ""}>Back</button>
+        <button type="button" data-nexus-workflow-control="next" ${state.currentStepIndex >= total - 1 ? "disabled aria-disabled=\"true\"" : ""}>Next step</button>
+        <button type="button" data-nexus-workflow-control="explain">Explain plan</button>
+        <button type="button" data-nexus-workflow-control="revise">Revise</button>
+        <button type="button" data-nexus-workflow-control="finish">Finish</button>
+        <button type="button" data-nexus-workflow-control="cancel">Cancel</button>
+      </div>
+      <small>Session-only. No provider handoff, browser permission, payment, call, message, location, camera, medical, pharmacy, emergency, backend write, or external action occurs from these controls.</small>
+    </section>
+  `;
+}
+
+function paintNexusAutonomousWorkflow() {
+  const html = renderNexusAutonomousWorkflowCard();
+  [
+    ["#userCaptionPanel", "#userCaptionText"],
+    ["#globalAssistantBar", "#globalAssistantStatus"]
+  ].forEach(([rootSelector, anchorSelector]) => {
+    const root = $(rootSelector);
+    const anchor = rootSelector === "#userCaptionPanel"
+      ? $(anchorSelector)
+      : root?.querySelector("[data-controlled-action-preview]") || $(anchorSelector);
+    if (!root || !anchor) return;
+    let element = root.querySelector("[data-nexus-autonomous-workflow-host]");
+    if (!element) {
+      element = document.createElement("div");
+      element.dataset.nexusAutonomousWorkflowHost = "true";
+      anchor.insertAdjacentElement("afterend", element);
+    }
+    element.innerHTML = html;
+    element.classList.toggle("hidden", !html);
+  });
+}
+
+function handleNexusAutonomousWorkflowControl(action = "") {
+  if (!nexusAutonomousWorkflowState) return false;
+  const state = nexusAutonomousWorkflowState;
+  const normalized = String(action || "").trim();
+  if (normalized === "cancel") {
+    nexusAutonomousWorkflowState = null;
+    paintNexusAutonomousWorkflow();
+    setVoiceResponse("Nexus canceled this guided workflow. No action was executed.", false, { allowVoiceFirst: false });
+    return true;
+  }
+  if (normalized === "next") {
+    state.currentStepIndex = Math.min(state.steps.length - 1, state.currentStepIndex + 1);
+    state.lastUserAction = "next";
+  } else if (normalized === "back") {
+    state.currentStepIndex = Math.max(0, state.currentStepIndex - 1);
+    state.lastUserAction = "back";
+  } else if (normalized === "revise") {
+    state.revisionNote = "Revision mode: tell Nexus what to change. This updates the plan only after review and does not execute actions.";
+    state.lastUserAction = "revise";
+  } else if (normalized === "explain") {
+    state.explanation = "This workflow breaks the goal into safe review steps. Nexus can guide, explain, prepare, or revise locally, but external execution remains blocked.";
+    state.lastUserAction = "explain";
+  } else if (normalized === "finish") {
+    state.currentStepIndex = state.steps.length - 1;
+    state.status = "finished";
+    state.lastUserAction = "finish";
+    state.revisionNote = "Workflow marked finished locally. No external action was executed.";
+  } else {
+    return false;
+  }
+  updateNexusAutonomousWorkflowDerivedState();
+  if (typeof paintNexusAutonomousWorkflow === "function") {
+    paintNexusAutonomousWorkflow();
+  }
+  return true;
+}
+
+function handleNexusAutonomousWorkflowClick(event) {
+  const button = event.target.closest("[data-nexus-workflow-control]");
+  if (!button) return false;
+  event.preventDefault();
+  event.stopPropagation();
+  return handleNexusAutonomousWorkflowControl(button.dataset.nexusWorkflowControl);
 }
 
 function isControlledStagedActionPreviewFlagEnabled(globalRef) {
@@ -811,6 +964,9 @@ function paintControlledActionPreview() {
     element.innerHTML = html;
     element.classList.toggle("hidden", !html);
   });
+  if (typeof paintNexusAutonomousWorkflow === "function") {
+    paintNexusAutonomousWorkflow();
+  }
   paintControlledStagedActionPreview();
   paintControlledActionConfirmationPrototype();
 }
@@ -819,6 +975,7 @@ function clearControlledActionPreview(reason = "reset") {
   // Phase 8O: visible previews are informational and must not persist across
   // unrelated commands, blocked metadata, module navigation, or assistant reset.
   visibleControlledActionPreviewReadiness = null;
+  nexusAutonomousWorkflowState = null;
   visibleControlledStagedActionPreview = null;
   visibleUserConfirmationPreview = null;
   latestControlledActionConfirmationReadiness = null;
@@ -1063,6 +1220,11 @@ function paintLocalLevelOneSuggestionForSimpleUserIntent(intent = {}, command = 
   visibleControlledActionPreviewReadiness = isVisibleControlledActionPreviewReadiness(controlledActionPreviewReadiness)
     ? controlledActionPreviewReadiness
     : null;
+  if (visibleControlledActionPreviewReadiness?.taskPlan) {
+    if (typeof startNexusAutonomousWorkflowFromTaskPlan === "function") {
+      startNexusAutonomousWorkflowFromTaskPlan(visibleControlledActionPreviewReadiness.taskPlan, { command });
+    }
+  }
   visibleControlledStagedActionPreview = visibleControlledActionPreviewReadiness
     ? buildControlledStagedActionPreviewFromReadiness(visibleControlledActionPreviewReadiness)
     : null;
@@ -1521,6 +1683,11 @@ function observeAgentActionMetadata(response = {}, context = {}) {
   visibleControlledActionPreviewReadiness = isVisibleControlledActionPreviewReadiness(controlledActionPreviewReadiness)
     ? controlledActionPreviewReadiness
     : null;
+  if (visibleControlledActionPreviewReadiness?.taskPlan) {
+    if (typeof startNexusAutonomousWorkflowFromTaskPlan === "function") {
+      startNexusAutonomousWorkflowFromTaskPlan(visibleControlledActionPreviewReadiness.taskPlan, { command: context.command || "" });
+    }
+  }
   visibleControlledStagedActionPreview = visibleControlledActionPreviewReadiness
     ? buildControlledStagedActionPreviewFromReadiness(visibleControlledActionPreviewReadiness)
     : null;
@@ -28121,6 +28288,7 @@ function bindStatic() {
   document.addEventListener("click", async event => {
     if (await handleAssistantRuntimeLocalToolClick(event)) return;
     if (handleAssistantRuntimeFollowUpClick(event)) return;
+    if (handleNexusAutonomousWorkflowClick(event)) return;
     if (handleControlledActionConfirmationPrototypeClick(event)) return;
     const nexusVoiceDemoButton = event.target.closest("[data-nexus-voice-demo-action]");
     if (nexusVoiceDemoButton) {
