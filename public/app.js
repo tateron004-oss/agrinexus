@@ -781,6 +781,7 @@ function handleNexusCareTeamReportCopyViewCaptionCommand(command = "") {
 
 function handleNexusStandardUserSafeTypedCommand(command = "") {
   if (experienceMode !== "user") return false;
+  if (handleNexusOpenDialogueAgentCommand(command)) return true;
   if (handleJarvisStyleStandardUserSafetyResponse(command)) return true;
   if (handleNexusSimulationCaptionCommand(command)) return true;
   if (handleNexusMapNavigationHandoffCaptionCommand(command)) return true;
@@ -790,7 +791,6 @@ function handleNexusStandardUserSafeTypedCommand(command = "") {
   if (handleNexusChronicCarePhysicianReportCaptionCommand(command)) return true;
   if (handleNexusLocalDraftMessageCaptionCommand(command)) return true;
   if (handleNexusCallPreparationCaptionCommand(command)) return true;
-  if (handleNexusOpenDialogueAgentCommand(command)) return true;
   const safeIntent = a100SafeAutonomyIntent(command);
   return openA100SafeAutonomyPreview(safeIntent);
 }
@@ -1916,7 +1916,9 @@ function nexusOpenDialogueUpdateScorecard() {
     ["outcomeVerification", true],
     ["standardUserUiContract", true],
     ["falseExecutionPrevention", true],
-    ["openDialogueFallback", true]
+    ["openDialogueFallback", true],
+    ["domainSpecificAgentBehavior", true],
+    ["completionSummary", true]
   ];
   const passed = checks.filter(([, ok]) => ok).length;
   nexusOpenDialogueAgentState.scorecard = {
@@ -28843,8 +28845,8 @@ async function handleVoiceCommandCore(rawCommand, options = {}) {
     return;
   }
   if (await runExplicitTypedGlobalControlPreflight(spokenCommand || command || localizedCommand || rawCommand, { ...options, turnToken })) return;
-  if (handleJarvisStyleStandardUserSafetyResponse(spokenCommand || command || localizedCommand || rawCommand)) return;
   if (handleNexusOpenDialogueAgentCommand(spokenCommand || command || localizedCommand || rawCommand)) return;
+  if (handleJarvisStyleStandardUserSafetyResponse(spokenCommand || command || localizedCommand || rawCommand)) return;
   const safeMapIntent = safeMapCapabilityIntent(spokenCommand || command || localizedCommand || rawCommand);
   if (openSafeMapCapabilityPreview(safeMapIntent)) return;
   if (await runStandardUserAssistantRuntimePreview(spokenCommand || command || localizedCommand || rawCommand, { ...options, turnToken })) return;
