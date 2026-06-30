@@ -52,6 +52,12 @@ const functionNames = [
   "nexusHigherIntelligenceSelfCheck",
   "nexusHigherIntelligenceReason",
   "nexusHigherIntelligenceRecordLearning",
+  "nexusPersistentTaskMemoryLoad",
+  "nexusPersistentTaskMemoryCanPersist",
+  "nexusPersistentTaskMemorySnapshot",
+  "nexusPersistentTaskMemorySave",
+  "nexusPersistentTaskMemoryRecord",
+  "nexusPersistentTaskMemoryRecall",
   "nexusOpenDialogueCreateTask",
   "nexusOpenDialogueAgentQuestion",
   "nexusOpenDialogueUpdateScorecard",
@@ -106,6 +112,11 @@ assert(qaSuite.includes("scripts/nexus-open-dialogue-agentic-brain-qa.js"), "qa-
 
 const sandbox = vm.runInNewContext(`
   let experienceMode = "user";
+  const storage = {};
+  const sessionStorage = {
+    getItem: key => Object.prototype.hasOwnProperty.call(storage, key) ? storage[key] : null,
+    setItem: (key, value) => { storage[key] = String(value); }
+  };
   let nexusOpenDialogueAgentState = {
     schemaVersion: "nexus-open-dialogue-agent-state.v1",
     activeTaskId: null,
@@ -113,6 +124,7 @@ const sandbox = vm.runInNewContext(`
     taskHistory: [],
     lastOutcome: "",
     lastDraft: "",
+    persistentTaskMemory: nexusPersistentTaskMemoryLoad(),
     lastHigherReasoning: null,
     learningSignals: [],
     scorecard: null
@@ -142,6 +154,12 @@ const sandbox = vm.runInNewContext(`
   ${extracted.nexusHigherIntelligenceSelfCheck}
   ${extracted.nexusHigherIntelligenceReason}
   ${extracted.nexusHigherIntelligenceRecordLearning}
+  ${extracted.nexusPersistentTaskMemoryLoad}
+  ${extracted.nexusPersistentTaskMemoryCanPersist}
+  ${extracted.nexusPersistentTaskMemorySnapshot}
+  ${extracted.nexusPersistentTaskMemorySave}
+  ${extracted.nexusPersistentTaskMemoryRecord}
+  ${extracted.nexusPersistentTaskMemoryRecall}
   ${extracted.nexusOpenDialogueCreateTask}
   ${extracted.nexusOpenDialogueAgentQuestion}
   ${extracted.nexusOpenDialogueUpdateScorecard}
@@ -165,6 +183,7 @@ const sandbox = vm.runInNewContext(`
         taskHistory: [],
         lastOutcome: "",
         lastDraft: "",
+        persistentTaskMemory: nexusPersistentTaskMemoryLoad(),
         lastHigherReasoning: null,
         learningSignals: [],
         scorecard: null

@@ -52,6 +52,12 @@ const functionNames = [
   "nexusHigherIntelligenceSelfCheck",
   "nexusHigherIntelligenceReason",
   "nexusHigherIntelligenceRecordLearning",
+  "nexusPersistentTaskMemoryLoad",
+  "nexusPersistentTaskMemoryCanPersist",
+  "nexusPersistentTaskMemorySnapshot",
+  "nexusPersistentTaskMemorySave",
+  "nexusPersistentTaskMemoryRecord",
+  "nexusPersistentTaskMemoryRecall",
   "nexusOpenDialogueCreateTask",
   "nexusOpenDialogueAgentQuestion",
   "nexusOpenDialogueUpdateScorecard",
@@ -106,6 +112,11 @@ assert(
 
 const sandbox = vm.runInNewContext(`
   let experienceMode = "user";
+  const storage = {};
+  const sessionStorage = {
+    getItem: key => Object.prototype.hasOwnProperty.call(storage, key) ? storage[key] : null,
+    setItem: (key, value) => { storage[key] = String(value); }
+  };
   let nexusOpenDialogueAgentState = {
     schemaVersion: "nexus-open-dialogue-agent-state.v1",
     activeTaskId: null,
@@ -113,6 +124,9 @@ const sandbox = vm.runInNewContext(`
     taskHistory: [],
     lastOutcome: "",
     lastDraft: "",
+    persistentTaskMemory: nexusPersistentTaskMemoryLoad(),
+    lastHigherReasoning: null,
+    learningSignals: [],
     scorecard: null
   };
   const htmlSafe = value => String(value == null ? "" : value)
@@ -136,6 +150,9 @@ const sandbox = vm.runInNewContext(`
         taskHistory: [],
         lastOutcome: "",
         lastDraft: "",
+        persistentTaskMemory: nexusPersistentTaskMemoryLoad(),
+        lastHigherReasoning: null,
+        learningSignals: [],
         scorecard: null
       };
       return nexusOpenDialogueAgentState;

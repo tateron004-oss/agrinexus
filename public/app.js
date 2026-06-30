@@ -187,6 +187,7 @@ let nexusOpenDialogueAgentState = {
   taskHistory: [],
   lastOutcome: "",
   lastDraft: "",
+  persistentTaskMemory: nexusPersistentTaskMemoryLoad(),
   lastHigherReasoning: null,
   learningSignals: [],
   scorecard: null
@@ -2217,6 +2218,133 @@ function nexusHigherIntelligenceRecordLearning(reasoning = {}, task = {}) {
   return signal;
 }
 
+function nexusPersistentTaskMemoryLoad() {
+  return {
+    schemaVersion: "nexus-persistent-task-memory.v1",
+    activeWorkflowId: null,
+    recentWorkflows: [],
+    lastDraft: null,
+    lastChecklist: null,
+    lastPlan: null,
+    lastQuestionSet: null,
+    lastPendingConfirmation: null,
+    lastBlockedAction: null,
+    collectedFacts: [],
+    completedTasks: [],
+    canceledTasks: [],
+    modifiedOutputs: [],
+    outcomeHistory: [],
+    nextRecommendedAction: ""
+  };
+}
+
+function nexusPersistentTaskMemoryCanPersist(task = {}) {
+  const domains = [task.activeDomain, ...(task.secondaryDomains || [])].filter(Boolean);
+  if (["high", "emergency"].includes(task.riskLevel)) return false;
+  return !domains.some(domain => ["health", "chronic-care", "maps-location", "communication"].includes(domain));
+}
+
+function nexusPersistentTaskMemorySnapshot(task = {}) {
+  const latestArtifact = task.localArtifacts?.[0] || null;
+  return {
+    taskId: task.taskId,
+    updatedAt: task.updatedAt || new Date().toISOString(),
+    status: task.status,
+    goal: task.goal || "",
+    goalCategory: task.goalCategory || "prepare",
+    activeDomain: task.activeDomain || "general-assistant",
+    secondaryDomains: task.secondaryDomains || [],
+    riskLevel: task.riskLevel || "low",
+    currentStepId: task.currentStepId || "",
+    completedSteps: (task.completedSteps || []).slice(0, 8),
+    nextRecommendedAction: task.higherReasoning?.nextBestMove || task.finalSummary || "",
+    latestArtifactType: latestArtifact?.actionType || "",
+    latestArtifactTitle: latestArtifact?.title || "",
+    noExecutionAuthorized: true,
+    executionAuthority: false,
+    providerHandoffAuthorized: false
+  };
+}
+
+function nexusPersistentTaskMemorySave() {
+  const memory = nexusOpenDialogueAgentState.persistentTaskMemory || nexusPersistentTaskMemoryLoad();
+  nexusOpenDialogueAgentState.persistentTaskMemory = memory;
+  return false;
+}
+
+function nexusPersistentTaskMemoryRecord(task = {}) {
+  if (!task?.taskId) return nexusOpenDialogueAgentState.persistentTaskMemory || nexusPersistentTaskMemoryLoad();
+  const memory = nexusOpenDialogueAgentState.persistentTaskMemory || nexusPersistentTaskMemoryLoad();
+  const snapshot = nexusPersistentTaskMemorySnapshot(task);
+  memory.activeWorkflowId = task.status === "completed" || task.status === "canceled" || task.status === "emergency_stopped" ? null : task.taskId;
+  memory.recentWorkflows = [snapshot, ...(memory.recentWorkflows || []).filter(item => item.taskId !== task.taskId)].slice(0, 8);
+  memory.nextRecommendedAction = snapshot.nextRecommendedAction;
+  if (!memory.lastPlan || ["plan", "prepare", "find resources", "navigate", "contact someone"].includes(task.goalCategory)) {
+    memory.lastPlan = {
+      taskId: task.taskId,
+      actionType: "workflow_plan",
+      title: task.goal || "Nexus local workflow plan",
+      summary: task.finalSummary || snapshot.nextRecommendedAction || "Local workflow plan ready for review.",
+      updatedAt: task.updatedAt,
+      noExecutionAuthorized: true
+    };
+  }
+  if (task.localArtifacts?.length) {
+    const artifact = task.localArtifacts[0];
+    const artifactSnapshot = {
+      taskId: task.taskId,
+      actionType: artifact.actionType,
+      title: artifact.title,
+      summary: artifact.outcomeMessage,
+      updatedAt: task.updatedAt,
+      noExecutionAuthorized: true
+    };
+    if (artifact.actionType === "draft_message" || artifact.actionType === "revise_draft") memory.lastDraft = artifactSnapshot;
+    if (artifact.actionType === "create_checklist") memory.lastChecklist = artifactSnapshot;
+    if (artifact.actionType === "create_plan" || artifact.actionType === "create_farm_task_plan") memory.lastPlan = artifactSnapshot;
+    if (artifact.actionType === "prepare_questions") memory.lastQuestionSet = artifactSnapshot;
+    if (artifact.actionType === "revise_draft") memory.modifiedOutputs = [artifactSnapshot, ...(memory.modifiedOutputs || [])].slice(0, 8);
+  }
+  if (task.waitingForConfirmation) memory.lastPendingConfirmation = snapshot;
+  if (task.blockedActions?.length) memory.lastBlockedAction = { ...snapshot, blockedActions: task.blockedActions.slice(-3) };
+  if (task.collectedInputs?.length && nexusPersistentTaskMemoryCanPersist(task)) {
+    const facts = task.collectedInputs.map(input => ({
+      taskId: task.taskId,
+      value: input.value,
+      collectedAt: input.at,
+      noExecutionAuthorized: true
+    }));
+    memory.collectedFacts = [...facts, ...(memory.collectedFacts || [])].slice(0, 20);
+  }
+  if (task.status === "completed") memory.completedTasks = [snapshot, ...(memory.completedTasks || [])].slice(0, 8);
+  if (task.status === "canceled") memory.canceledTasks = [snapshot, ...(memory.canceledTasks || [])].slice(0, 8);
+  memory.outcomeHistory = [{
+    taskId: task.taskId,
+    status: task.status,
+    summary: task.finalSummary || "",
+    at: task.updatedAt,
+    persistedSensitiveDetails: false,
+    noExecutionAuthorized: true
+  }, ...(memory.outcomeHistory || [])].slice(0, 20);
+  if (!nexusPersistentTaskMemoryCanPersist(task)) {
+    memory.collectedFacts = (memory.collectedFacts || []).filter(item => item.taskId !== task.taskId);
+  }
+  nexusOpenDialogueAgentState.persistentTaskMemory = memory;
+  nexusPersistentTaskMemorySave();
+  return memory;
+}
+
+function nexusPersistentTaskMemoryRecall(kind = "active") {
+  const memory = nexusOpenDialogueAgentState.persistentTaskMemory || nexusPersistentTaskMemoryLoad();
+  if (kind === "active") return memory.recentWorkflows?.find(item => item.taskId === memory.activeWorkflowId) || memory.recentWorkflows?.[0] || null;
+  if (kind === "plan") return memory.lastPlan;
+  if (kind === "draft") return memory.lastDraft;
+  if (kind === "checklist") return memory.lastChecklist;
+  if (kind === "questions") return memory.lastQuestionSet;
+  if (kind === "recent") return memory.recentWorkflows || [];
+  return null;
+}
+
 function nexusOpenDialogueCreateTask(interpretation = {}, previousTask = null) {
   const now = new Date().toISOString();
   const task = {
@@ -2351,6 +2479,7 @@ function nexusOpenDialogueSetActiveTask(task) {
   nexusOpenDialogueAgentState.lastOutcome = task.finalSummary || "";
   if (task.goalCategory === "draft" || /draft/i.test(task.finalSummary || "")) nexusOpenDialogueAgentState.lastDraft = task.finalSummary;
   if (task.higherReasoning) nexusHigherIntelligenceRecordLearning(task.higherReasoning, task);
+  nexusPersistentTaskMemoryRecord(task);
   nexusOpenDialogueUpdateScorecard();
   return task;
 }
@@ -2361,6 +2490,32 @@ function nexusOpenDialogueActiveTask() {
 
 function nexusOpenDialogueHandleFollowUp(interpretation = {}) {
   const activeTask = nexusOpenDialogueActiveTask();
+  if (/\b(list recent workflows|recent workflows|what were we working on|show recent tasks)\b/.test(interpretation.normalizedText)) {
+    const recent = nexusPersistentTaskMemoryRecall("recent");
+    const summary = recent.length
+      ? `Recent Nexus workflows: ${recent.slice(0, 5).map((item, index) => `${index + 1}. ${item.goal || item.activeDomain} (${item.status})`).join("; ")}. No external action was executed.`
+      : "There are no recent Nexus workflows in this session yet.";
+    return { handled: true, response: summary, task: activeTask || null };
+  }
+  if (/\b(use the last plan|recall the last plan|show the last plan)\b/.test(interpretation.normalizedText)) {
+    const lastPlan = nexusPersistentTaskMemoryRecall("plan");
+    const summary = lastPlan
+      ? `Last plan recalled: ${lastPlan.title || "local plan"} - ${lastPlan.summary || "ready for review"}. No external action was executed.`
+      : "I do not have a recent local plan to recall yet.";
+    return { handled: true, response: summary, task: activeTask || null };
+  }
+  if (/^(finish|finish\.|complete this|close workflow)\b/.test(interpretation.normalizedText)) {
+    if (!activeTask) return { handled: true, response: "There is no active Nexus Agent workflow to finish yet.", task: null };
+    activeTask.status = "completed";
+    activeTask.waitingForInput = false;
+    activeTask.waitingForConfirmation = false;
+    activeTask.updatedAt = new Date().toISOString();
+    activeTask.finalSummary = `Workflow finished locally: ${activeTask.goal}. No external action was executed.`;
+    activeTask.outcomeLog.push({ at: activeTask.updatedAt, status: "completed", summary: activeTask.finalSummary, noExternalAction: true });
+    activeTask.actionHistory.push({ at: activeTask.updatedAt, command: interpretation.rawText, action: "workflow_finished_locally" });
+    nexusOpenDialogueSetActiveTask(activeTask);
+    return { handled: true, response: activeTask.finalSummary, task: activeTask };
+  }
   if (interpretation.cancellationSignal) {
     if (!activeTask) return {
       handled: true,
@@ -2377,11 +2532,16 @@ function nexusOpenDialogueHandleFollowUp(interpretation = {}) {
     return { handled: true, response: activeTask.finalSummary, task: activeTask };
   }
   if (interpretation.continuationSignal) {
-    if (!activeTask) return {
-      handled: true,
-      response: "I can continue, but there is no active task yet. What would you like to work on?",
-      task: null
-    };
+    if (!activeTask) {
+      const remembered = nexusPersistentTaskMemoryRecall("active");
+      return {
+        handled: true,
+        response: remembered
+          ? `I can continue from the remembered workflow: ${remembered.goal}. Next safe move: ${remembered.nextRecommendedAction || "prepare the next local step"}. No external action was executed.`
+          : "I can continue, but there is no active task yet. What would you like to work on?",
+        task: null
+      };
+    }
     activeTask.updatedAt = new Date().toISOString();
     activeTask.waitingForInput = false;
     activeTask.status = "active";
@@ -2527,6 +2687,11 @@ function renderNexusOpenDialogueAgentCard(state = nexusOpenDialogueAgentState) {
           <small>Capability: ${htmlSafe(task.higherReasoning.capabilityChoice?.selectedCapability || "review")} - Self-check: ${htmlSafe(task.higherReasoning.selfCheck?.decision || "safe local review")}</small>
         </div>
       ` : ""}
+      <div class="nexus-persistent-task-memory-status" data-nexus-persistent-task-memory-status="true" data-execution-authority="false">
+        <strong>Task memory:</strong>
+        <span>${htmlSafe(state.persistentTaskMemory?.recentWorkflows?.length ? `${state.persistentTaskMemory.recentWorkflows.length} recent local workflow(s), session-safe.` : "No remembered workflow yet.")}</span>
+        <small>No provider handoff, calls, messages, payments, location use, medical action, or backend write is authorized from memory.</small>
+      </div>
       ${task?.localArtifacts?.length ? `
         <div class="nexus-agent-artifact-stack" aria-label="Nexus local artifacts">
           ${task.localArtifacts.map(artifact => `

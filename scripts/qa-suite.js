@@ -63,6 +63,7 @@ const suites = {
     "scripts/nexus-open-dialogue-agentic-brain-qa.js",
     "scripts/nexus-agentic-capability-execution-qa.js",
     "scripts/nexus-higher-intelligence-layer-qa.js",
+    "scripts/nexus-persistent-task-memory-qa.js",
     "scripts/nexus-fully-agentic-assistant-qa.js",
     "scripts/nexus-agentic-continuation-qa.js",
     "scripts/nexus-autonomous-execution-architecture-qa.js",
