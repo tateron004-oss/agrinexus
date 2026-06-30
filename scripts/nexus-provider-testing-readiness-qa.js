@@ -5,11 +5,21 @@ const assert = require("node:assert/strict");
 const root = path.resolve(__dirname, "..");
 const appPath = path.join(root, "public", "app.js");
 const planPath = path.join(root, "docs", "NEXUS_PROVIDER_TESTING_READINESS_PLAN.md");
+const reviewPackagePath = path.join(root, "docs", "NEXUS_PROVIDER_REVIEW_PACKAGE.md");
+const physicianNotePath = path.join(root, "docs", "NEXUS_PHYSICIAN_REVIEW_CONCEPT_NOTE.md");
+const agricultureGuidePath = path.join(root, "docs", "NEXUS_AGRICULTURE_EXPERT_REVIEW_GUIDE.md");
+const workforceGuidePath = path.join(root, "docs", "NEXUS_WORKFORCE_PARTNER_REVIEW_GUIDE.md");
+const feedbackRubricPath = path.join(root, "docs", "NEXUS_PROVIDER_FEEDBACK_RUBRIC.md");
 const packagePath = path.join(root, "package.json");
 const qaSuitePath = path.join(root, "scripts", "qa-suite.js");
 
 const app = fs.readFileSync(appPath, "utf8");
 const plan = fs.readFileSync(planPath, "utf8");
+const reviewPackage = fs.readFileSync(reviewPackagePath, "utf8");
+const physicianNote = fs.readFileSync(physicianNotePath, "utf8");
+const agricultureGuide = fs.readFileSync(agricultureGuidePath, "utf8");
+const workforceGuide = fs.readFileSync(workforceGuidePath, "utf8");
+const feedbackRubric = fs.readFileSync(feedbackRubricPath, "utf8");
 const packageData = JSON.parse(fs.readFileSync(packagePath, "utf8"));
 const qaSuite = fs.readFileSync(qaSuitePath, "utf8");
 
@@ -62,6 +72,111 @@ includesAll(plan, [
   "backend writes that create real pending actions",
   "autonomous real-world execution"
 ], "Provider testing excluded actions");
+
+includesAll(reviewPackage, [
+  "# Nexus Provider Review Package",
+  "## Purpose Of Provider Review",
+  "## What AgriNexus / Nexus Is",
+  "## What Providers Are Being Asked To Evaluate",
+  "## What Nexus Can Safely Do",
+  "## What Nexus Cannot Do",
+  "## Provider Categories",
+  "## Review Process",
+  "## Recommended Demo Flow",
+  "## Feedback Collection Process",
+  "## Safety And Privacy Reminders"
+], "Provider review package");
+
+includesAll(physicianNote, [
+  "# Nexus Physician Review Concept Note",
+  "## Health Access Preparation Overview",
+  "## Chronic Care Preparation Overview",
+  "## Provider Report Builder Overview",
+  "## Physician Review Goals",
+  "## Synthetic Test Scenarios",
+  "## Clinical Safety Boundaries",
+  "## Questions For Physician Reviewers",
+  "Nexus does not diagnose, prescribe, change treatment, book appointments, contact providers, start calls, send messages, or handle emergencies."
+], "Physician review concept note");
+
+includesAll(agricultureGuide, [
+  "# Nexus Agriculture Expert Review Guide",
+  "## Agriculture Support Overview",
+  "## Crop Issue Guidance Review",
+  "## Source-Backed Guidance Review",
+  "## Local Expert Confirmation Expectations",
+  "## Synthetic Farmer Scenarios",
+  "## Questions For Agriculture Reviewers",
+  "Agriculture support is guidance and preparation only."
+], "Agriculture expert review guide");
+
+includesAll(workforceGuide, [
+  "# Nexus Workforce Partner Review Guide",
+  "## Jobs And Workforce Overview",
+  "## Training And Literacy Support Overview",
+  "## Youth And Rural Workforce Pathway Review",
+  "## Skills Checklist Review",
+  "## Questions For Workforce And Training Partners",
+  "Nexus does not submit applications, contact employers, guarantee jobs, issue credentials, or replace partner review."
+], "Workforce partner review guide");
+
+includesAll(feedbackRubric, [
+  "# Nexus Provider Feedback Rubric",
+  "## Core Review Rubric",
+  "## Health-Specific Rubric",
+  "## Safety Flag Checklist",
+  "## Pilot Readiness Recommendation",
+  "Usefulness",
+  "Clarity",
+  "Safety",
+  "Accuracy",
+  "Local relevance",
+  "Provider workflow fit",
+  "Risk of misunderstanding",
+  "Readiness for pilot users",
+  "Avoids diagnosis",
+  "Avoids prescribing",
+  "Encourages provider review",
+  "Handles emergency language safely",
+  "Protects sensitive information"
+], "Provider feedback rubric");
+
+const providerDocs = [
+  ["provider review package", reviewPackage],
+  ["physician review concept note", physicianNote],
+  ["agriculture expert review guide", agricultureGuide],
+  ["workforce partner review guide", workforceGuide],
+  ["provider feedback rubric", feedbackRubric]
+];
+
+for (const [label, source] of providerDocs) {
+  includesAll(source, [
+    "preparation",
+    "review",
+    "Nexus"
+  ], label);
+  assertAbsent(source, [
+    /\bNexus diagnoses\b/i,
+    /\bNexus prescribes\b/i,
+    /\bNexus treats\b/i,
+    /\bNexus books appointments\b/i,
+    /\bNexus contacts providers\b/i,
+    /\bNexus sends messages\b/i,
+    /\bNexus starts calls\b/i,
+    /\bNexus processes payments\b/i,
+    /\bNexus shares location\b/i,
+    /\bNexus handles emergencies\b/i,
+    /\bdiagnosis completed\b/i,
+    /\bprescription sent\b/i,
+    /\bappointment booked\b/i,
+    /\bprovider contacted\b/i,
+    /\bmessage sent\b/i,
+    /\bcall placed\b/i,
+    /\bpayment completed\b/i,
+    /\blocation shared\b/i,
+    /\bemergency dispatched\b/i
+  ], label);
+}
 
 includesAll(app, [
   "Agriculture Support",
