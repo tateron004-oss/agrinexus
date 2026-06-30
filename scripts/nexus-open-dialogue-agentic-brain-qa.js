@@ -41,6 +41,12 @@ const functionNames = [
   "nexusOpenDialoguePlanSteps",
   "nexusOpenDialogueActionLabel",
   "nexusOpenDialogueLocalOutput",
+  "nexusOpenDialogueActionAllowed",
+  "nexusOpenDialogueInferLocalActionType",
+  "nexusOpenDialogueArtifactContent",
+  "nexusOpenDialogueLocalActionTitle",
+  "nexusOpenDialogueOutcomeForAction",
+  "nexusOpenDialogueExecuteLocalAction",
   "nexusOpenDialogueCreateTask",
   "nexusOpenDialogueAgentQuestion",
   "nexusOpenDialogueUpdateScorecard",
@@ -118,6 +124,12 @@ const sandbox = vm.runInNewContext(`
   ${extracted.nexusOpenDialoguePlanSteps}
   ${extracted.nexusOpenDialogueActionLabel}
   ${extracted.nexusOpenDialogueLocalOutput}
+  ${extracted.nexusOpenDialogueActionAllowed}
+  ${extracted.nexusOpenDialogueInferLocalActionType}
+  ${extracted.nexusOpenDialogueArtifactContent}
+  ${extracted.nexusOpenDialogueLocalActionTitle}
+  ${extracted.nexusOpenDialogueOutcomeForAction}
+  ${extracted.nexusOpenDialogueExecuteLocalAction}
   ${extracted.nexusOpenDialogueCreateTask}
   ${extracted.nexusOpenDialogueAgentQuestion}
   ${extracted.nexusOpenDialogueUpdateScorecard}
@@ -203,7 +215,7 @@ const meeting = sandbox.response("Nexus, help me prepare for a meeting.", { forc
 assert.equal(meeting.task.waitingForInput, true, "meeting prep should ask one useful missing-context question");
 const meetingFollowUp = sandbox.response("The meeting is with a doctor about my mother.", { force: true });
 assert.equal(meetingFollowUp.task.waitingForInput, false, "meeting follow-up should satisfy missing context");
-assert.match(meetingFollowUp.response, /Plan created|prepared|Checklist|Questions|safe local/i, "meeting follow-up should produce a local outcome");
+assert.match(meetingFollowUp.response, /Plan created|prepared|summary created|Checklist|Questions|safe local/i, "meeting follow-up should produce a local outcome");
 
 const multi = sandbox.response("Nexus, I have a problem with my farm and my health.", { force: true });
 assert(multi.task.secondaryDomains.includes("health") || multi.task.secondaryDomains.includes("agriculture"), "multi-domain request should preserve secondary domains");

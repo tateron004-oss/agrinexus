@@ -1807,6 +1807,8 @@ function nexusOpenDialogueLocalOutput(task = {}) {
   const category = task.goalCategory || "prepare";
   const domainText = [task.activeDomain, ...(task.secondaryDomains || [])].filter(Boolean).join(" + ") || "general";
   const missing = Array.isArray(task.missingInputs) ? task.missingInputs : [];
+  if (task.status === "blocked") return task.finalSummary || `Unsafe action blocked for ${domainText}. Nexus did not execute an external action.`;
+  if (task.localArtifacts?.length) return task.localArtifacts[0].outcomeMessage;
   if (task.riskLevel === "emergency") return nexusOpenDialogueEmergencyResponse();
   if (task.riskLevel === "high" && /contact someone|navigate/.test(category)) {
     return `Preparation created for ${domainText}. Nexus has not called, messaged, sent, shared location, booked, paid, or contacted anyone. A final execution gate and approved provider connection would be required before any real-world action.`;
@@ -1819,6 +1821,224 @@ function nexusOpenDialogueLocalOutput(task = {}) {
   if (category === "find resources") return `Resource pathway prepared for ${domainText}. Nexus did not claim live provider availability unless a verified source is connected.`;
   if (missing.length) return `I need one detail to continue: ${missing[0]}. I created the task and will keep the workflow ready.`;
   return `Plan created for ${domainText}. Nexus prepared safe local next steps and did not execute external actions.`;
+}
+
+function nexusOpenDialogueActionAllowed(actionType = "", task = {}) {
+  const localActions = [
+    "create_checklist",
+    "create_plan",
+    "prepare_questions",
+    "draft_message",
+    "create_call_prep",
+    "create_reminder_proposal",
+    "create_clinic_visit_summary",
+    "create_marketplace_listing_prep",
+    "create_job_pathway",
+    "create_farm_task_plan",
+    "create_completion_summary",
+    "revise_draft"
+  ];
+  if (task.riskLevel === "emergency") return "blocked";
+  if (task.status === "blocked") return "blocked";
+  if (localActions.includes(actionType)) return "available_local";
+  return "blocked";
+}
+
+function nexusOpenDialogueInferLocalActionType(task = {}, commandText = "") {
+  const text = nexusOpenAgentNormalizeText(commandText || task.sourceCommand || task.goal || "");
+  const taskContextText = nexusOpenAgentNormalizeText([
+    task.sourceCommand,
+    task.goal,
+    ...(task.collectedInputs || []).map(item => item.value)
+  ].filter(Boolean).join(" "));
+  if (task.riskLevel === "emergency") return "emergency_stop";
+  if (/\b(buy|purchase|pay|payment|checkout|medicine purchase|buy my medication)\b/.test(text)) return "blocked_external_action";
+  if (/\b(call|dial)\b/.test(text) || task.goalCategory === "contact someone") return "create_call_prep";
+  if (/\b(message|draft|email|write|buyer)\b/.test(text) || task.goalCategory === "draft") return "draft_message";
+  if (/\b(remind|reminder|every morning|daily|8)\b/.test(text) || task.goalCategory === "remind") return "create_reminder_proposal";
+  if (/\b(question|questions|doctor|clinic visit)\b/.test(text) || task.goalCategory === "prepare questions") return task.activeDomain === "health" || task.activeDomain === "chronic-care" || /\b(doctor|clinic|medicine|medication|patient|mother|health|care)\b/.test(taskContextText) ? "create_clinic_visit_summary" : "prepare_questions";
+  if (/\b(checklist|list)\b/.test(text) || task.goalCategory === "checklist") return "create_checklist";
+  if (/\b(job|workforce|resume|interview|career)\b/.test(text) || task.activeDomain === "workforce") return "create_job_pathway";
+  if (/\b(sell|maize|bags|listing|seller|buyer|agritrade|marketplace)\b/.test(text) || task.activeDomain === "marketplace") return "create_marketplace_listing_prep";
+  if (/\b(farm|crop|irrigation|field|agriculture|harvest|soil)\b/.test(text) || task.activeDomain === "agriculture") return "create_farm_task_plan";
+  if (/\b(finish|complete|summary)\b/.test(text)) return "create_completion_summary";
+  return "create_plan";
+}
+
+function nexusOpenDialogueArtifactContent(actionType = "", task = {}) {
+  const context = [task.sourceCommand, ...(task.collectedInputs || []).map(item => item.value)].filter(Boolean).join(" | ");
+  const domain = [task.activeDomain, ...(task.secondaryDomains || [])].filter(Boolean).join(" + ") || "general";
+  const templates = {
+    create_checklist: [
+      "Confirm the goal and desired outcome.",
+      "List the facts the user already provided.",
+      "Identify one safe next step.",
+      "Mark blocked external actions before taking action.",
+      "Ask one follow-up question if anything important is missing."
+    ],
+    create_plan: [
+      `Goal: ${task.goal || "support the user"}.`,
+      `Domain: ${domain}.`,
+      "Step 1: clarify missing details if needed.",
+      "Step 2: create the safest local artifact.",
+      "Step 3: pause before any sensitive or external action.",
+      "Step 4: verify the outcome."
+    ],
+    prepare_questions: [
+      "What outcome do we need from this conversation?",
+      "What facts should the other person know first?",
+      "What decision or next step should be agreed on?",
+      "What should not happen without approval?"
+    ],
+    draft_message: [
+      "Hello, I need help with this request.",
+      `Context: ${context || task.goal || "I need support."}`,
+      "Can you review and tell me the safest next step?",
+      "This draft has not been sent."
+    ],
+    create_call_prep: [
+      `Call purpose: ${task.goal || "prepare a call"}.`,
+      "Recipient must be confirmed before any call.",
+      "Phone/provider connection must be available.",
+      "Final user approval is required.",
+      "No call has been placed."
+    ],
+    create_reminder_proposal: [
+      `Reminder topic: ${task.goal || "medicine reminder"}.`,
+      `Requested timing/details: ${context || "not fully provided"}.`,
+      "Confirm the schedule before creating any real reminder.",
+      "No reminder has been scheduled."
+    ],
+    create_clinic_visit_summary: [
+      "Reason for visit: user-provided health concern or care planning.",
+      `Context to mention: ${context || "not yet provided"}.`,
+      "Questions: symptoms, timing, current medicines, red flags, and next care step.",
+      "Nexus did not diagnose, change medication, contact a provider, or book an appointment."
+    ],
+    create_marketplace_listing_prep: [
+      `Product/crop context: ${context || task.goal || "crop sale preparation"}.`,
+      "Confirm quantity, location, grade/quality, target buyer, and logistics.",
+      "Prepare a buyer message draft before contact.",
+      "No sale, payment, purchase, or transaction occurred."
+    ],
+    create_job_pathway: [
+      "Choose a job target or training track.",
+      "List current skills and missing requirements.",
+      "Prepare resume/interview checklist.",
+      "Identify safe training or support resources.",
+      "No job application was submitted."
+    ],
+    create_farm_task_plan: [
+      "Check crop/field status.",
+      "Prioritize water, pest, soil, harvest, and market tasks.",
+      "Write today’s top three farm actions.",
+      "Record questions for an extension worker or trusted source.",
+      "No purchase or diagnosis occurred."
+    ],
+    create_completion_summary: [
+      `Task: ${task.goal || "Nexus Agent task"}.`,
+      `Outcome: ${task.finalSummary || "local preparation completed"}.`,
+      "External execution: none.",
+      "Next step: user review or future gated action."
+    ],
+    revise_draft: [
+      "Revised draft: Thank you for reviewing this request. I need support with the details above. Please let me know the safest next step.",
+      "Tone: professional, clear, and concise.",
+      "This revised draft has not been sent."
+    ]
+  };
+  return templates[actionType] || templates.create_plan;
+}
+
+function nexusOpenDialogueLocalActionTitle(actionType = "", task = {}) {
+  const titles = {
+    create_checklist: "Checklist",
+    create_plan: "Plan",
+    prepare_questions: "Questions",
+    draft_message: task.activeDomain === "marketplace" ? "Buyer message draft" : "Message draft",
+    create_call_prep: "Call prep card",
+    create_reminder_proposal: "Reminder proposal",
+    create_clinic_visit_summary: task.activeDomain === "chronic-care" ? "Chronic care prep summary" : "Clinic visit prep summary",
+    create_marketplace_listing_prep: "Marketplace listing prep",
+    create_job_pathway: "Workforce pathway",
+    create_farm_task_plan: "Farm task plan",
+    create_completion_summary: "Completion summary",
+    revise_draft: "Revised draft"
+  };
+  return titles[actionType] || "Local preparation";
+}
+
+function nexusOpenDialogueOutcomeForAction(actionType = "", task = {}) {
+  const outcomes = {
+    create_checklist: "Checklist created.",
+    create_plan: "Plan created.",
+    prepare_questions: "Questions prepared.",
+    draft_message: "Message draft created. It was not sent.",
+    create_call_prep: "Call prep created. No call was placed.",
+    create_reminder_proposal: "Reminder proposal created. No reminder was scheduled.",
+    create_clinic_visit_summary: "Clinic visit prep summary created. Nexus did not diagnose, change medication, contact a provider, or book an appointment.",
+    create_marketplace_listing_prep: "Marketplace listing prep created. No transaction, payment, purchase, or buyer contact occurred.",
+    create_job_pathway: "Workforce pathway created. No job application was submitted.",
+    create_farm_task_plan: "Farm task plan created. No purchase or diagnosis occurred.",
+    create_completion_summary: "Task completed locally.",
+    revise_draft: "Revision prepared locally. It was not sent."
+  };
+  if (actionType === "blocked_external_action") return "Unsafe external action blocked. Nexus did not purchase, pay, submit, contact, or execute anything.";
+  if (task.riskLevel === "emergency") return nexusOpenDialogueEmergencyResponse();
+  return outcomes[actionType] || "Local preparation created. No external action occurred.";
+}
+
+function nexusOpenDialogueExecuteLocalAction(task = {}, actionType = "", options = {}) {
+  const now = new Date().toISOString();
+  const resolvedActionType = actionType || nexusOpenDialogueInferLocalActionType(task, options.command || "");
+  const capabilityStatus = nexusOpenDialogueActionAllowed(resolvedActionType, task);
+  if (resolvedActionType === "blocked_external_action" || capabilityStatus === "blocked") {
+    task.status = task.riskLevel === "emergency" ? "emergency_stopped" : "blocked";
+    task.waitingForInput = false;
+    task.waitingForConfirmation = false;
+    const blockedMessage = nexusOpenDialogueOutcomeForAction(resolvedActionType, task);
+    task.finalSummary = blockedMessage;
+    task.blockedActions = Array.from(new Set([...(task.blockedActions || []), blockedMessage]));
+    task.outcomeLog.push({ at: now, status: task.status, summary: blockedMessage, noExternalAction: true });
+    task.actionHistory.push({ at: now, command: options.command || task.sourceCommand || "", action: resolvedActionType, capabilityStatus: "blocked" });
+    return {
+      actionType: resolvedActionType,
+      status: "blocked",
+      title: "Blocked external action",
+      content: [blockedMessage, "I can prepare safe questions, a checklist, or a provider discussion summary instead."],
+      outcomeMessage: blockedMessage,
+      externalExecutionOccurred: false
+    };
+  }
+  const artifact = {
+    actionId: nexusOpenAgentCreateId("local-action"),
+    actionType: resolvedActionType,
+    status: "created",
+    title: nexusOpenDialogueLocalActionTitle(resolvedActionType, task),
+    content: nexusOpenDialogueArtifactContent(resolvedActionType, task),
+    outcomeMessage: nexusOpenDialogueOutcomeForAction(resolvedActionType, task),
+    externalExecutionOccurred: false,
+    createdAt: now,
+    capabilityStatus
+  };
+  task.localArtifacts = [artifact, ...(task.localArtifacts || [])].slice(0, 5);
+  task.finalSummary = artifact.outcomeMessage;
+  task.currentStepId = resolvedActionType === "create_completion_summary" ? "verify-outcome" : "create-local-output";
+  task.completedSteps = Array.from(new Set([...(task.completedSteps || []), "collect-context", "create-local-output"]));
+  if (resolvedActionType === "create_completion_summary") {
+    task.status = "completed";
+    task.waitingForConfirmation = false;
+  } else if (task.riskLevel === "high") {
+    task.status = "waiting_for_confirmation";
+    task.waitingForConfirmation = true;
+  } else {
+    task.status = "active";
+  }
+  task.waitingForInput = false;
+  task.updatedAt = now;
+  task.outcomeLog.push({ at: now, status: task.status, summary: artifact.outcomeMessage, actionType: resolvedActionType, noExternalAction: true });
+  task.actionHistory.push({ at: now, command: options.command || task.sourceCommand || "", action: resolvedActionType, capabilityStatus });
+  return artifact;
 }
 
 function nexusOpenDialogueCreateTask(interpretation = {}, previousTask = null) {
@@ -1853,6 +2073,7 @@ function nexusOpenDialogueCreateTask(interpretation = {}, previousTask = null) {
     missingInputs: interpretation.missingContext || [],
     actionHistory: previousTask?.actionHistory ? previousTask.actionHistory.slice(-10) : [],
     outcomeLog: previousTask?.outcomeLog ? previousTask.outcomeLog.slice(-10) : [],
+    localArtifacts: previousTask?.localArtifacts ? previousTask.localArtifacts.slice(0, 5) : [],
     blockedActions: [],
     finalSummary: "",
     interpretation,
@@ -1868,6 +2089,8 @@ function nexusOpenDialogueCreateTask(interpretation = {}, previousTask = null) {
   if (task.riskLevel === "emergency") {
     task.blockedActions.push("Normal workflow stopped because emergency/crisis language was detected.");
   }
+  const initialActionType = nexusOpenDialogueInferLocalActionType(task, interpretation.rawText);
+  if (!task.waitingForInput) nexusOpenDialogueExecuteLocalAction(task, initialActionType, { command: interpretation.rawText });
   const output = nexusOpenDialogueLocalOutput(task);
   task.outcomeLog.push({
     at: now,
@@ -1878,7 +2101,7 @@ function nexusOpenDialogueCreateTask(interpretation = {}, previousTask = null) {
   task.actionHistory.push({
     at: now,
     command: interpretation.rawText,
-    action: task.waitingForInput ? "clarification_requested" : task.riskLevel === "emergency" ? "emergency_stopped" : "local_preparation_created"
+    action: task.waitingForInput ? "clarification_requested" : task.riskLevel === "emergency" ? "emergency_stopped" : initialActionType
   });
   task.finalSummary = output;
   return task;
@@ -1985,7 +2208,8 @@ function nexusOpenDialogueHandleFollowUp(interpretation = {}) {
     const nextStep = activeTask.planSteps.find(step => step.status === "ready" || step.status === "pending") || activeTask.planSteps[activeTask.planSteps.length - 1];
     activeTask.currentStepId = nextStep?.stepId || activeTask.currentStepId;
     activeTask.completedSteps = Array.from(new Set([...(activeTask.completedSteps || []), "collect-context"]));
-    activeTask.finalSummary = nexusOpenDialogueLocalOutput(activeTask);
+    const actionType = nexusOpenDialogueInferLocalActionType(activeTask, interpretation.rawText);
+    nexusOpenDialogueExecuteLocalAction(activeTask, actionType, { command: interpretation.rawText });
     activeTask.outcomeLog.push({ at: activeTask.updatedAt, status: activeTask.status, summary: activeTask.finalSummary, noExternalAction: true });
     nexusOpenDialogueSetActiveTask(activeTask);
     return { handled: true, response: activeTask.finalSummary, task: activeTask };
@@ -1999,7 +2223,8 @@ function nexusOpenDialogueHandleFollowUp(interpretation = {}) {
     const task = activeTask || nexusOpenDialogueAgentState.tasks[0];
     task.updatedAt = new Date().toISOString();
     task.status = "active";
-    task.finalSummary = "Revision prepared locally. Nexus made the wording more professional and did not send anything.";
+    const artifact = nexusOpenDialogueExecuteLocalAction(task, "revise_draft", { command: interpretation.rawText });
+    task.finalSummary = artifact.outcomeMessage;
     task.outcomeLog.push({ at: task.updatedAt, status: "active", summary: task.finalSummary, noExternalAction: true });
     task.actionHistory.push({ at: task.updatedAt, command: interpretation.rawText, action: "local_revision_created" });
     nexusOpenDialogueSetActiveTask(task);
@@ -2022,7 +2247,8 @@ function nexusOpenDialogueHandleFollowUp(interpretation = {}) {
     activeTask.status = activeTask.waitingForInput ? "waiting_for_input" : "active";
     activeTask.updatedAt = new Date().toISOString();
     if (!activeTask.waitingForInput) {
-      activeTask.finalSummary = nexusOpenDialogueLocalOutput(activeTask);
+      const actionType = nexusOpenDialogueInferLocalActionType(activeTask, interpretation.rawText);
+      nexusOpenDialogueExecuteLocalAction(activeTask, actionType, { command: interpretation.rawText });
       activeTask.completedSteps = Array.from(new Set([...(activeTask.completedSteps || []), "collect-context", "create-local-output"]));
     } else {
       activeTask.finalSummary = nexusOpenDialogueAgentQuestion(activeTask);
@@ -2030,6 +2256,22 @@ function nexusOpenDialogueHandleFollowUp(interpretation = {}) {
     activeTask.outcomeLog.push({ at: activeTask.updatedAt, status: activeTask.status, summary: activeTask.finalSummary, noExternalAction: true });
     nexusOpenDialogueSetActiveTask(activeTask);
     return { handled: true, response: activeTask.finalSummary, task: activeTask };
+  }
+  if (activeTask && interpretation.normalizedText) {
+    const followUpActionType = nexusOpenDialogueInferLocalActionType(activeTask, interpretation.rawText);
+    const looksLikeActiveTaskFollowUp = !interpretation.explicitAssistantInvocation && (
+      /^(draft|create|prepare|make|use|finish|complete|every|i have|here is|the meeting|answer)\b/.test(interpretation.normalizedText)
+      || ["draft", "prepare questions", "checklist", "remind", "plan", "summarize"].includes(interpretation.goalCategory)
+      || followUpActionType !== "create_plan"
+    );
+    if (looksLikeActiveTaskFollowUp) {
+      activeTask.collectedInputs.push({ at: new Date().toISOString(), value: interpretation.rawText });
+      activeTask.updatedAt = new Date().toISOString();
+      const artifact = nexusOpenDialogueExecuteLocalAction(activeTask, followUpActionType, { command: interpretation.rawText });
+      activeTask.outcomeLog.push({ at: activeTask.updatedAt, status: activeTask.status, summary: artifact.outcomeMessage, noExternalAction: true });
+      nexusOpenDialogueSetActiveTask(activeTask);
+      return { handled: true, response: activeTask.finalSummary, task: activeTask };
+    }
   }
   return { handled: false };
 }
@@ -2071,6 +2313,7 @@ function renderNexusOpenDialogueAgentCard(state = nexusOpenDialogueAgentState) {
     ["start", "Start"],
     ["continue", "Continue"],
     ["answer", "Answer question"],
+    ["plan", "Create plan"],
     ["checklist", "Create checklist"],
     ["questions", "Prepare questions"],
     ["draft", "Draft message"],
@@ -2097,6 +2340,19 @@ function renderNexusOpenDialogueAgentCard(state = nexusOpenDialogueAgentState) {
       <div class="nexus-agent-card-output" role="status">
         ${htmlSafe(task?.finalSummary || state.lastOutcome || "Nexus can create plans, checklists, questions, drafts, summaries, reminder proposals, and review-only preparation cards.")}
       </div>
+      ${task?.localArtifacts?.length ? `
+        <div class="nexus-agent-artifact-stack" aria-label="Nexus local artifacts">
+          ${task.localArtifacts.map(artifact => `
+            <article class="nexus-agent-artifact" data-nexus-local-action-type="${htmlSafe(artifact.actionType)}" data-external-execution-occurred="false">
+              <strong>${htmlSafe(artifact.title)}</strong>
+              <small>${htmlSafe(artifact.outcomeMessage)}</small>
+              <ul>
+                ${(artifact.content || []).slice(0, 6).map(item => `<li>${htmlSafe(item)}</li>`).join("")}
+              </ul>
+            </article>
+          `).join("")}
+        </div>
+      ` : ""}
       <div class="nexus-agent-card-actions" aria-label="Nexus Agent controls">
         ${actions.map(([action, label]) => `<button type="button" data-nexus-open-agent-action="${action}" ${action === "confirm" && !task?.waitingForConfirmation ? "disabled aria-disabled=\"true\"" : ""}>${htmlSafe(label)}</button>`).join("")}
       </div>
@@ -2142,6 +2398,7 @@ function handleNexusOpenDialogueAgentControl(action = "") {
     start: "Nexus, I don't know what to do next.",
     continue: "Continue.",
     answer: activeTask?.missingInputs?.length ? `Here is the missing detail for ${activeTask.missingInputs[0]}.` : "Answer the next question.",
+    plan: "Create plan.",
     checklist: "Create checklist.",
     questions: "Prepare questions.",
     draft: "Draft a message.",

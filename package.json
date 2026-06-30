@@ -36,6 +36,7 @@
     "qa:nexus-jarvis-style-standard-user-experience": "node scripts/nexus-jarvis-style-standard-user-experience-qa.js",
     "qa:nexus-intelligence-brain-v1": "node scripts/nexus-intelligence-brain-v1-qa.js",
     "qa:nexus-open-dialogue-agentic-brain": "node scripts/nexus-open-dialogue-agentic-brain-qa.js",
+    "qa:nexus-agentic-capability-execution": "node scripts/nexus-agentic-capability-execution-qa.js",
     "qa:nexus-fully-agentic-assistant": "node scripts/nexus-fully-agentic-assistant-qa.js",
     "qa:nexus-agentic-continuation": "node scripts/nexus-agentic-continuation-qa.js",
     "qa:nexus-autonomous-execution-architecture": "node scripts/nexus-autonomous-execution-architecture-qa.js",

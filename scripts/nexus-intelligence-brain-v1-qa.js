@@ -41,6 +41,12 @@ const functionNames = [
   "nexusOpenDialoguePlanSteps",
   "nexusOpenDialogueActionLabel",
   "nexusOpenDialogueLocalOutput",
+  "nexusOpenDialogueActionAllowed",
+  "nexusOpenDialogueInferLocalActionType",
+  "nexusOpenDialogueArtifactContent",
+  "nexusOpenDialogueLocalActionTitle",
+  "nexusOpenDialogueOutcomeForAction",
+  "nexusOpenDialogueExecuteLocalAction",
   "nexusOpenDialogueCreateTask",
   "nexusOpenDialogueAgentQuestion",
   "nexusOpenDialogueUpdateScorecard",
@@ -150,7 +156,7 @@ const requiredKnownPrompts = [
   ["Nexus, help me manage my diabetes.", "chronic-care", "prepare", "medium"],
   ["Nexus, prepare questions for my doctor.", "health", "prepare questions", "medium"],
   ["Nexus, remind me to take my medicine.", "health", "remind", "medium"],
-  ["Every morning at 8.", "reminders", "prepare", "low"],
+  ["Every morning at 8.", "reminders", "prepare", "medium"],
   ["Nexus, help me find a job.", "workforce", "find resources", "low"],
   ["Nexus, call John.", "communication", "contact someone", "high"],
   ["Nexus, message Mary that I need help.", "communication", "draft", "high"],
@@ -201,7 +207,7 @@ assert.equal(meeting.task.status, "waiting_for_input", "meeting prep should ask 
 assert.equal(meeting.task.missingInputs[0], "meeting topic or audience", "meeting prep should ask one useful question");
 const meetingFollowUp = sandbox.response("The meeting is with a doctor about my mother.", { force: true });
 assert.equal(meetingFollowUp.task.status, "active", "meeting follow-up should continue active task");
-assert.match(meetingFollowUp.response, /Plan created|prepared|safe local/i, "meeting follow-up should produce safe local outcome");
+assert.match(meetingFollowUp.response, /Plan created|prepared|summary created|safe local/i, "meeting follow-up should produce safe local outcome");
 
 sandbox.reset();
 const multi = sandbox.response("Nexus, I have a problem with my farm and my health.", { force: true });

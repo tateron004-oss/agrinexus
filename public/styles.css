@@ -4498,8 +4498,32 @@ body.admin-mode .user-workspace {
   font-weight: 850;
   line-height: 1.36;
 }
+.nexus-agent-artifact-stack {
+  display: grid;
+  gap: 8px;
+}
+.nexus-agent-artifact {
+  display: grid;
+  gap: 6px;
+  padding: 9px 10px;
+  border: 1px solid #d7e6e2;
+  border-radius: 8px;
+  background: #ffffff;
+}
+.nexus-agent-artifact ul {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding-left: 18px;
+}
+.nexus-agent-artifact li {
+  color: #173240;
+  font-size: .8rem;
+  line-height: 1.32;
+  overflow-wrap: anywhere;
+}
 .nexus-agent-card-actions {
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(104px, 1fr));
 }
 #userCaptionPanel .nexus-agent-card-actions,
 #globalAssistantBar .nexus-agent-card-actions {
