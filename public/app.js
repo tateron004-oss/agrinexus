@@ -211,8 +211,8 @@ const nexusProductIdentity = Object.freeze({
 });
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-324";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v303";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-325";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v304";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
 const VOICE_ATTENTION_DELAY_MS = 900;
@@ -588,6 +588,53 @@ function renderNexusSafeTaskHistory(history = nexusSafeTaskHistory) {
     <div class="nexus-safe-task-history" data-nexus-safe-task-history="true" data-storage-mode="volatile-ui-only" data-execution-authority="false" data-external-transmission="false" aria-label="Nexus safe task history">
       <span class="nexus-safe-task-history-label">Safe task history</span>
       <ul>${items}</ul>
+    </div>
+  `;
+}
+
+function buildNexusSafetyReviewDashboardState(context = {}) {
+  const queue = Array.isArray(context.queue) ? context.queue : nexusControlledActionQueue;
+  const history = Array.isArray(context.history) ? context.history : nexusSafeTaskHistory;
+  const audit = Array.isArray(context.audit) ? context.audit : nexusSessionActionAuditLog;
+  const blockedCount = queue.filter(action => action.queueStatus === "blocked" || action.actionType === "blocked_high_risk_action" || action.riskLevel === "high").length;
+  const reviewCount = queue.filter(action => action.queueStatus === "queued_for_review").length;
+  const localOnlyCount = history.filter(entry => entry.storageMode === "volatile-ui-only").length;
+  const auditCount = audit.length;
+  const providerHandoffDetected = queue.some(action => action.providerHandoffAuthorized === true || action.externalExecutionAllowed === true);
+  return {
+    schemaVersion: "nexus-safety-review-dashboard.v1",
+    source: "nexus-safety-review-dashboard.v1",
+    blockedCount,
+    reviewCount,
+    localOnlyCount,
+    auditCount,
+    executionAuthority: false,
+    externalExecutionAllowed: false,
+    providerHandoffAuthorized: false,
+    permissionRequestAuthorized: false,
+    backendWriteAllowed: false,
+    providerHandoffDetected,
+    status: providerHandoffDetected ? "review required" : "safe review mode",
+    safetySummary: providerHandoffDetected
+      ? "Review required: a queue item claimed provider or external authority and must remain blocked."
+      : "Safe review mode: Nexus is only preparing local review steps. No external action is authorized."
+  };
+}
+
+function renderNexusSafetyReviewDashboard(state = buildNexusSafetyReviewDashboardState()) {
+  if (!state || state.schemaVersion !== "nexus-safety-review-dashboard.v1") return "";
+  return `
+    <div class="nexus-safety-review-dashboard" data-nexus-safety-review-dashboard="true" data-execution-authority="false" data-provider-handoff="false" data-permission-request="false" data-backend-write="false" aria-label="Nexus safety review dashboard">
+      <span class="nexus-safety-review-dashboard-label">Safety review</span>
+      <strong>${htmlSafe(state.status)}</strong>
+      <span>${htmlSafe(state.safetySummary)}</span>
+      <div class="nexus-safety-review-dashboard-grid" aria-label="Safety review counts">
+        <span><strong>${htmlSafe(state.reviewCount)}</strong> review step(s)</span>
+        <span><strong>${htmlSafe(state.blockedCount)}</strong> blocked step(s)</span>
+        <span><strong>${htmlSafe(state.auditCount)}</strong> audit event(s)</span>
+        <span><strong>${htmlSafe(state.localOnlyCount)}</strong> local history item(s)</span>
+      </div>
+      <small>No provider handoff, call, message, payment, location, camera, medical, pharmacy, emergency, backend write, or external action is authorized from this dashboard.</small>
     </div>
   `;
 }
@@ -1772,6 +1819,7 @@ function handleNexusControlledActionQueueClick(event) {
 function renderNexusControlledActionQueueCard(queue = nexusControlledActionQueue) {
   if (!Array.isArray(queue) || !queue.length) return "";
   const gateHtml = renderNexusUserConfirmationGate();
+  const safetyDashboardHtml = renderNexusSafetyReviewDashboard();
   const taskHistoryHtml = renderNexusSafeTaskHistory();
   const auditHtml = renderNexusSessionActionAuditLog();
   const simulatedHtml = renderNexusSimulatedProviderExecutionResults();
@@ -1807,6 +1855,7 @@ function renderNexusControlledActionQueueCard(queue = nexusControlledActionQueue
       ${mapNavigationHandoffHtml}
       ${internalNavigationHtml}
       ${simulatedHtml}
+      ${safetyDashboardHtml}
       ${taskHistoryHtml}
       ${auditHtml}
       <small>No provider API, phone call, message, payment, location, camera, medical, pharmacy, emergency, backend write, or external action can run from this queue.</small>

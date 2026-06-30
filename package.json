@@ -583,6 +583,7 @@
     "qa:nexus-capability-sprint-15-care-team-report-copy-view": "node scripts/nexus-capability-sprint-15-care-team-report-copy-view-qa.js",
     "qa:nexus-capability-sprint-16-voice-workflow-routing": "node scripts/nexus-capability-sprint-16-voice-workflow-routing-qa.js",
     "qa:nexus-capability-sprint-17-safe-task-history": "node scripts/nexus-capability-sprint-17-safe-task-history-qa.js",
+    "qa:nexus-capability-sprint-18-safety-review-dashboard": "node scripts/nexus-capability-sprint-18-safety-review-dashboard-qa.js",
     "qa:nexus-provider-account-api-access-capability": "node scripts/nexus-provider-account-api-access-capability-qa.js",
     "qa:nexus-production-provider-readiness-capability": "node scripts/nexus-production-provider-readiness-capability-qa.js",
     "qa:nexus-health-privacy-runtime-guardrails": "node scripts/nexus-health-privacy-runtime-guardrails-qa.js",
