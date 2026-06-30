@@ -2345,6 +2345,67 @@ function nexusPersistentTaskMemoryRecall(kind = "active") {
   return null;
 }
 
+function nexusRealActionAdaptersRegistry() {
+  return [
+    { adapterId: "messaging.adapter", domain: "communication", actionPattern: /\b(message|sms|whatsapp|telegram|email|send)\b/, implemented: false, requiresConfirmation: true, requiresPermission: true, falseClaimGuard: "No message was sent." },
+    { adapterId: "call.adapter", domain: "communication", actionPattern: /\b(call|dial)\b/, implemented: false, requiresConfirmation: true, requiresPermission: true, falseClaimGuard: "No call was placed." },
+    { adapterId: "reminder-calendar.adapter", domain: "reminders", actionPattern: /\b(remind|reminder|calendar|every morning|tomorrow|friday)\b/, implemented: false, requiresConfirmation: true, requiresPermission: false, falseClaimGuard: "No reminder was scheduled." },
+    { adapterId: "map-location.adapter", domain: "maps-location", actionPattern: /\b(map|route|near me|location|directions|transport)\b/, implemented: false, requiresConfirmation: true, requiresPermission: true, falseClaimGuard: "No live location was used." },
+    { adapterId: "appointment-request.adapter", domain: "health", actionPattern: /\b(appointment|schedule|book)\b/, implemented: false, requiresConfirmation: true, requiresPermission: true, falseClaimGuard: "No appointment was booked." },
+    { adapterId: "provider-directory.adapter", domain: "health", actionPattern: /\b(provider|doctor|clinic|care team|pharmacy)\b/, implemented: false, requiresConfirmation: true, requiresPermission: true, falseClaimGuard: "No provider was contacted." },
+    { adapterId: "marketplace-listing.adapter", domain: "marketplace", actionPattern: /\b(sell|listing|buyer|seller|marketplace|agritrade|maize|bags)\b/, implemented: false, requiresConfirmation: true, requiresPermission: false, falseClaimGuard: "No marketplace transaction occurred." },
+    { adapterId: "payment.adapter", domain: "marketplace", actionPattern: /\b(pay|payment|purchase|buy|checkout)\b/, implemented: false, requiresConfirmation: true, requiresPermission: true, falseClaimGuard: "No payment was made." },
+    { adapterId: "offline-sync.adapter", domain: "general-assistant", actionPattern: /\b(offline|sync|low bandwidth|no internet)\b/, implemented: false, requiresConfirmation: true, requiresPermission: false, falseClaimGuard: "No sync was performed." },
+    { adapterId: "health-summary.adapter", domain: "health", actionPattern: /\b(summary|doctor visit|physician report|mother|medicine|medication)\b/, implemented: true, requiresConfirmation: false, requiresPermission: false, falseClaimGuard: "A local health summary can be prepared; no diagnosis or provider contact occurred." },
+    { adapterId: "workforce-job-matching.adapter", domain: "workforce", actionPattern: /\b(job|work|career|training|interview)\b/, implemented: true, requiresConfirmation: false, requiresPermission: false, falseClaimGuard: "Local job-pathway prep can run; no application was submitted." }
+  ];
+}
+
+function nexusRealActionAdapterSelect(interpretation = {}) {
+  const text = interpretation.normalizedText || "";
+  const adapters = nexusRealActionAdaptersRegistry();
+  return adapters.find(adapter => adapter.actionPattern.test(text))
+    || adapters.find(adapter => adapter.domain === interpretation.inferredDomain)
+    || { adapterId: "local-preparation.adapter", domain: interpretation.inferredDomain || "general-assistant", implemented: true, requiresConfirmation: false, requiresPermission: false, falseClaimGuard: "Only local preparation occurred." };
+}
+
+function nexusRealActionAdapterPrepare(interpretation = {}, task = {}) {
+  const adapter = nexusRealActionAdapterSelect(interpretation);
+  const externalRisk = adapter.requiresConfirmation || adapter.requiresPermission || task.riskLevel === "high" || task.riskLevel === "emergency";
+  const canExecuteNow = Boolean(adapter.implemented && !externalRisk && task.riskLevel !== "emergency");
+  return {
+    adapterId: adapter.adapterId,
+    domain: adapter.domain,
+    implemented: Boolean(adapter.implemented),
+    requiresConfirmation: Boolean(adapter.requiresConfirmation),
+    requiresPermission: Boolean(adapter.requiresPermission),
+    selectedFor: interpretation.goalCategory || task.goalCategory || "prepare",
+    canExecuteNow,
+    executed: false,
+    fallbackOnly: !canExecuteNow,
+    prepareFallback: canExecuteNow ? "Safe local capability is available." : "Prepare a local review card, draft, checklist, or summary instead.",
+    falseClaimGuard: adapter.falseClaimGuard,
+    outcomeMessage: canExecuteNow
+      ? "Adapter capability is local-only and safe; no external action occurred."
+      : `${adapter.falseClaimGuard} Nexus prepared review-only fallback guidance.`,
+    noExecutionAuthorized: true,
+    executionAuthority: false,
+    providerHandoffAuthorized: false
+  };
+}
+
+function nexusRealActionAdapterExecute(decision = {}) {
+  return {
+    adapterId: decision.adapterId || "unknown.adapter",
+    attempted: false,
+    executed: false,
+    outcomeMessage: decision.outcomeMessage || "No adapter execution occurred.",
+    noExecutionAuthorized: true,
+    executionAuthority: false,
+    providerHandoffAuthorized: false
+  };
+}
+
 function nexusOpenDialogueCreateTask(interpretation = {}, previousTask = null) {
   const now = new Date().toISOString();
   const task = {
@@ -2382,6 +2443,7 @@ function nexusOpenDialogueCreateTask(interpretation = {}, previousTask = null) {
     finalSummary: "",
     interpretation,
     higherReasoning: null,
+    actionAdapterDecision: null,
     capabilityMatrix: nexusOpenDialogueCapabilityMatrix(),
     noExecutionAuthorized: true,
     executionAuthority: false,
@@ -2398,6 +2460,7 @@ function nexusOpenDialogueCreateTask(interpretation = {}, previousTask = null) {
   if (!task.waitingForInput) nexusOpenDialogueExecuteLocalAction(task, initialActionType, { command: interpretation.rawText });
   task.higherReasoning = nexusHigherIntelligenceReason(interpretation.rawText, interpretation);
   task.higherReasoning.immediateActions = task.waitingForInput || task.riskLevel === "high" || task.riskLevel === "emergency" ? [] : [initialActionType];
+  task.actionAdapterDecision = nexusRealActionAdapterPrepare(interpretation, task);
   const output = nexusOpenDialogueLocalOutput(task);
   task.outcomeLog.push({
     at: now,
@@ -2692,6 +2755,13 @@ function renderNexusOpenDialogueAgentCard(state = nexusOpenDialogueAgentState) {
         <span>${htmlSafe(state.persistentTaskMemory?.recentWorkflows?.length ? `${state.persistentTaskMemory.recentWorkflows.length} recent local workflow(s), session-safe.` : "No remembered workflow yet.")}</span>
         <small>No provider handoff, calls, messages, payments, location use, medical action, or backend write is authorized from memory.</small>
       </div>
+      ${task?.actionAdapterDecision ? `
+        <div class="nexus-real-action-adapter-status" data-nexus-real-action-adapter-status="true" data-execution-authority="false">
+          <strong>Adapter:</strong>
+          <span>${htmlSafe(task.actionAdapterDecision.adapterId)} - ${htmlSafe(task.actionAdapterDecision.implemented ? "local capability available" : "integration not connected")}</span>
+          <small>${htmlSafe(task.actionAdapterDecision.outcomeMessage)}</small>
+        </div>
+      ` : ""}
       ${task?.localArtifacts?.length ? `
         <div class="nexus-agent-artifact-stack" aria-label="Nexus local artifacts">
           ${task.localArtifacts.map(artifact => `

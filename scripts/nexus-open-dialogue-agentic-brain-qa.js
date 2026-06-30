@@ -58,6 +58,10 @@ const functionNames = [
   "nexusPersistentTaskMemorySave",
   "nexusPersistentTaskMemoryRecord",
   "nexusPersistentTaskMemoryRecall",
+  "nexusRealActionAdaptersRegistry",
+  "nexusRealActionAdapterSelect",
+  "nexusRealActionAdapterPrepare",
+  "nexusRealActionAdapterExecute",
   "nexusOpenDialogueCreateTask",
   "nexusOpenDialogueAgentQuestion",
   "nexusOpenDialogueUpdateScorecard",
@@ -160,6 +164,10 @@ const sandbox = vm.runInNewContext(`
   ${extracted.nexusPersistentTaskMemorySave}
   ${extracted.nexusPersistentTaskMemoryRecord}
   ${extracted.nexusPersistentTaskMemoryRecall}
+  ${extracted.nexusRealActionAdaptersRegistry}
+  ${extracted.nexusRealActionAdapterSelect}
+  ${extracted.nexusRealActionAdapterPrepare}
+  ${extracted.nexusRealActionAdapterExecute}
   ${extracted.nexusOpenDialogueCreateTask}
   ${extracted.nexusOpenDialogueAgentQuestion}
   ${extracted.nexusOpenDialogueUpdateScorecard}
