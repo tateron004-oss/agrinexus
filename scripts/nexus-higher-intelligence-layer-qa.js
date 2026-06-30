@@ -69,6 +69,8 @@ const functionNames = [
   "nexusVoiceCommandLoopComplete",
   "nexusReminderCalendarParseSchedule",
   "nexusReminderCalendarPrepare",
+  "nexusMapLocationExtractFallback",
+  "nexusMapLocationPermissionPrepare",
   "nexusOpenDialogueCreateTask",
   "nexusOpenDialogueAgentQuestion",
   "nexusOpenDialogueUpdateScorecard",

@@ -84,33 +84,33 @@ const functionNames = [
 const runtimeSource = functionNames.map(name => extractFunction(app, name)).join("\n");
 
 [
-  "function nexusReminderCalendarParseSchedule",
-  "function nexusReminderCalendarPrepare",
-  "reminderCalendarProposal",
-  "data-nexus-reminder-calendar-status=\"true\"",
-  "data-scheduled=\"false\"",
-  "No reminder was scheduled."
-].forEach(term => assert(app.includes(term), `reminder/calendar integration should include ${term}`));
+  "function nexusMapLocationExtractFallback",
+  "function nexusMapLocationPermissionPrepare",
+  "mapLocationRequest",
+  "data-nexus-map-location-permission-status=\"true\"",
+  "data-permission-granted=\"false\"",
+  "data-location-permission-requested=\"false\"",
+  "No live location was used."
+].forEach(term => assert(app.includes(term), `map/location permission layer should include ${term}`));
 
-assert(pkg.scripts["qa:nexus-reminder-calendar-integration"], "package alias should run reminder/calendar QA");
-assert(qaSuite.includes("scripts/nexus-reminder-calendar-integration-qa.js"), "qa-suite should include reminder/calendar QA");
+assert(pkg.scripts["qa:nexus-map-location-permission-execution"], "package alias should run map/location QA");
+assert(qaSuite.includes("scripts/nexus-map-location-permission-execution-qa.js"), "qa-suite should include map/location QA");
 
 [
-  "Notification.requestPermission",
-  "showNotification",
-  "calendar.events.insert",
+  "navigator.geolocation",
+  "getCurrentPosition",
+  "watchPosition",
   "window.open",
   "location.href",
   "fetch(",
   "localStorage.setItem",
   "sessionStorage.setItem",
   "ACTION_CALL",
-  "Reminder scheduled",
-  "Appointment booked",
-  "Provider contacted",
-  "Message sent",
-  "Call placed"
-].forEach(term => assert(!runtimeSource.includes(term), `reminder/calendar runtime must not introduce ${term}`));
+  "Live location used",
+  "Route launched",
+  "Navigation started",
+  "Provider contacted"
+].forEach(term => assert(!runtimeSource.includes(term), `map/location permission runtime must not introduce ${term}`));
 
 const sandbox = vm.runInNewContext(`
   let experienceMode = "user";
@@ -139,10 +139,9 @@ const sandbox = vm.runInNewContext(`
     .replace(/"/g, "&quot;");
   ${runtimeSource}
   ({
-    parse: nexusReminderCalendarParseSchedule,
+    fallback: nexusMapLocationExtractFallback,
     response: nexusOpenDialogueAgentResponse,
     card: renderNexusOpenDialogueAgentCard,
-    state: () => nexusOpenDialogueAgentState,
     reset: () => {
       nexusOpenDialogueAgentState = {
         schemaVersion: "nexus-open-dialogue-agent-state.v1",
@@ -160,37 +159,38 @@ const sandbox = vm.runInNewContext(`
   });
 `);
 
-assert.equal(sandbox.parse("Every morning at 8.").parsedTime, "recurring:morning:08:00", "morning schedule should parse");
-assert.equal(sandbox.parse("Friday morning").parsedTime, "weekly:friday:morning", "Friday morning should parse");
-assert.equal(sandbox.parse("tomorrow").parsedTime, "relative:tomorrow", "tomorrow should parse");
+assert.equal(sandbox.fallback("Find clinic in Stockton, CA"), "Stockton, CA", "explicit city should be extracted");
+assert.equal(sandbox.fallback("Find agriculture training in Kenya"), "Kenya", "country fallback should be extracted");
 
 const cases = [
-  ["Nexus, remind me to take my medicine.", "Medicine reminder proposal", "health", "Schedule detail needed"],
-  ["Every morning at 8.", "Reminder proposal", "reminders", "Every morning at 8"],
-  ["Nexus, remind me about my clinic visit tomorrow.", "Clinic visit reminder proposal", "health", "Tomorrow"],
-  ["Nexus, remind me to check irrigation Friday morning.", "Farm task reminder proposal", "agriculture", "Friday morning"],
-  ["Nexus, create a meeting reminder.", "Meeting reminder proposal", "workforce", "Schedule detail needed"]
+  ["Nexus, find a clinic near me.", "clinic/provider", true, "city or region needed", false],
+  ["Nexus, find agriculture training near me.", "training/resource", true, "city or region needed", false],
+  ["Nexus, help me get transport to a clinic in Stockton, CA.", "clinic/provider", false, "Stockton, CA", true],
+  ["Nexus, route me to a market in Kenya.", "marketplace/market", false, "Kenya", true],
+  ["Nexus, use my location.", "map/location support", true, "city or region needed", false]
 ];
 
-cases.forEach(([prompt, expectedTitle, expectedDomain, expectedSchedule]) => {
+cases.forEach(([prompt, requestedResource, permissionRequired, fallbackLocation, routePrepared]) => {
   sandbox.reset();
   const result = sandbox.response(prompt, { force: true });
   assert(result?.handled, `${prompt} should be handled`);
-  const proposal = result.task?.reminderCalendarProposal;
-  assert(proposal, `${prompt} should produce reminder proposal`);
-  assert.equal(proposal.title, expectedTitle, `${prompt} title should match`);
-  assert.equal(proposal.domain, expectedDomain, `${prompt} domain should match`);
-  assert.equal(proposal.scheduleText, expectedSchedule, `${prompt} schedule should match`);
-  assert.equal(proposal.confirmationRequired, true, `${prompt} should require confirmation`);
-  assert.equal(proposal.scheduled, false, `${prompt} must not be scheduled`);
-  assert.equal(proposal.fallbackOnly, true, `${prompt} should be fallback-only`);
-  assert.equal(proposal.executionAuthority, false, `${prompt} must not grant execution authority`);
-  assert.equal(proposal.providerHandoffAuthorized, false, `${prompt} must not authorize provider handoff`);
-  assert(!/scheduled successfully|appointment booked|calendar updated|notification sent/i.test(proposal.outcomeMessage), `${prompt} must not claim scheduling`);
+  const request = result.task?.mapLocationRequest;
+  assert(request, `${prompt} should produce map/location request`);
+  assert.equal(request.requestedResource, requestedResource, `${prompt} resource should match`);
+  assert.equal(request.permissionRequired, permissionRequired, `${prompt} permission requirement should match`);
+  assert.equal(request.permissionGranted, false, `${prompt} must not grant permission`);
+  assert.equal(request.fallbackLocation, fallbackLocation, `${prompt} fallback location should match`);
+  assert.equal(request.mapActionAvailable, false, `${prompt} must not expose live map action`);
+  assert.equal(request.routePrepared, routePrepared, `${prompt} routePrepared should reflect text fallback only`);
+  assert.equal(request.noLocationPermissionRequested, true, `${prompt} must not request live location`);
+  assert.equal(request.executionAuthority, false, `${prompt} must not grant execution authority`);
+  assert.equal(request.providerHandoffAuthorized, false, `${prompt} must not authorize provider handoff`);
+  assert(!/live location used|route launched|navigation started|provider contacted/i.test(request.outcomeMessage), `${prompt} must not make false location/route claims`);
   const card = sandbox.card();
-  assert(card.includes("data-nexus-reminder-calendar-status=\"true\""), `${prompt} should render reminder status`);
-  assert(card.includes("data-scheduled=\"false\""), `${prompt} card should state unscheduled`);
+  assert(card.includes("data-nexus-map-location-permission-status=\"true\""), `${prompt} should render map/location status`);
+  assert(card.includes("data-permission-granted=\"false\""), `${prompt} card should state permission not granted`);
+  assert(card.includes("data-location-permission-requested=\"false\""), `${prompt} card should state no permission request`);
 });
 
-console.log("Nexus reminder/calendar integration QA passed");
-console.log("- reminder proposal parsing, confirmation requirement, fallback-only state, unscheduled honesty, and no-execution guarantees verified");
+console.log("Nexus map/location permission execution QA passed");
+console.log("- explicit text fallback, permission-required state, no geolocation request, no live route, and no-execution guarantees verified");

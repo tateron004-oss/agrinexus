@@ -70,6 +70,8 @@ const functionNames = [
   "nexusVoiceCommandLoopComplete",
   "nexusReminderCalendarParseSchedule",
   "nexusReminderCalendarPrepare",
+  "nexusMapLocationExtractFallback",
+  "nexusMapLocationPermissionPrepare",
   "nexusOpenDialogueCreateTask",
   "nexusOpenDialogueAgentQuestion",
   "nexusOpenDialogueUpdateScorecard",
@@ -185,6 +187,8 @@ const sandbox = vm.runInNewContext(`
   ${extracted.nexusVoiceCommandLoopComplete}
   ${extracted.nexusReminderCalendarParseSchedule}
   ${extracted.nexusReminderCalendarPrepare}
+  ${extracted.nexusMapLocationExtractFallback}
+  ${extracted.nexusMapLocationPermissionPrepare}
   ${extracted.nexusOpenDialogueCreateTask}
   ${extracted.nexusOpenDialogueAgentQuestion}
   ${extracted.nexusOpenDialogueUpdateScorecard}

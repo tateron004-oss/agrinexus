@@ -2557,6 +2557,51 @@ function nexusReminderCalendarPrepare(interpretation = {}, task = {}) {
   };
 }
 
+function nexusMapLocationExtractFallback(command = "") {
+  const raw = String(command || "");
+  const explicit = raw.match(/\b(?:in|near|around|for)\s+([A-Z][A-Za-z .'-]{2,}(?:,\s*[A-Z]{2})?)/);
+  if (explicit?.[1]) return explicit[1].trim().replace(/[?.!,]+$/, "");
+  const lower = raw.toLowerCase();
+  if (/\bstockton\b/.test(lower)) return "Stockton, CA";
+  if (/\bkenya\b/.test(lower)) return "Kenya";
+  if (/\buganda\b/.test(lower)) return "Uganda";
+  if (/\bghana\b/.test(lower)) return "Ghana";
+  if (/\bnigeria\b/.test(lower)) return "Nigeria";
+  return "";
+}
+
+function nexusMapLocationPermissionPrepare(interpretation = {}, task = {}) {
+  const text = String(interpretation.normalizedText || interpretation.rawText || task.sourceCommand || "").toLowerCase();
+  const isLocationRequest = /\b(map|route|near me|location|directions|transport|clinic near|training near|market near|use my location)\b/.test(text)
+    || task.activeDomain === "maps-location"
+    || task.actionAdapterDecision?.adapterId === "map-location.adapter";
+  if (!isLocationRequest) return null;
+  const requestedResource = /\bclinic|doctor|provider\b/.test(text) ? "clinic/provider"
+    : /\btraining|course|school|learning\b/.test(text) ? "training/resource"
+      : /\bmarket|buyer|seller|agritrade\b/.test(text) ? "marketplace/market"
+        : /\btransport|ride|bus|route\b/.test(text) ? "transport route"
+          : "map/location support";
+  const permissionRequired = /\b(near me|my location|use my location|current location|gps)\b/.test(text);
+  const fallbackLocation = nexusMapLocationExtractFallback(interpretation.rawText || text);
+  return {
+    locationRequestId: nexusOpenAgentCreateId("location-plan"),
+    requestedResource,
+    permissionRequired,
+    permissionGranted: false,
+    locationSource: fallbackLocation ? "explicit-text" : "not-collected",
+    fallbackLocation: fallbackLocation || "city or region needed",
+    mapActionAvailable: false,
+    routePrepared: Boolean(fallbackLocation),
+    outcomeMessage: permissionRequired
+      ? "Location planning prepared. Live location was not used and permission was not requested."
+      : "Location planning prepared from text only. No live route was launched.",
+    executionAuthority: false,
+    providerHandoffAuthorized: false,
+    noLocationPermissionRequested: true,
+    noExecutionAuthorized: true
+  };
+}
+
 function nexusOpenDialogueCreateTask(interpretation = {}, previousTask = null) {
   const now = new Date().toISOString();
   const task = {
@@ -2596,6 +2641,7 @@ function nexusOpenDialogueCreateTask(interpretation = {}, previousTask = null) {
     higherReasoning: null,
     actionAdapterDecision: null,
     reminderCalendarProposal: null,
+    mapLocationRequest: null,
     capabilityMatrix: nexusOpenDialogueCapabilityMatrix(),
     noExecutionAuthorized: true,
     executionAuthority: false,
@@ -2614,6 +2660,7 @@ function nexusOpenDialogueCreateTask(interpretation = {}, previousTask = null) {
   task.higherReasoning.immediateActions = task.waitingForInput || task.riskLevel === "high" || task.riskLevel === "emergency" ? [] : [initialActionType];
   task.actionAdapterDecision = nexusRealActionAdapterPrepare(interpretation, task);
   task.reminderCalendarProposal = nexusReminderCalendarPrepare(interpretation, task);
+  task.mapLocationRequest = nexusMapLocationPermissionPrepare(interpretation, task);
   const output = nexusOpenDialogueLocalOutput(task);
   task.outcomeLog.push({
     at: now,
@@ -2925,6 +2972,13 @@ function renderNexusOpenDialogueAgentCard(state = nexusOpenDialogueAgentState) {
           <strong>${htmlSafe(task.reminderCalendarProposal.title)}</strong>
           <span>${htmlSafe(task.reminderCalendarProposal.scheduleText)} - ${htmlSafe(task.reminderCalendarProposal.domain)}</span>
           <small>${htmlSafe(task.reminderCalendarProposal.outcomeMessage)}</small>
+        </div>
+      ` : ""}
+      ${task?.mapLocationRequest ? `
+        <div class="nexus-map-location-permission-status" data-nexus-map-location-permission-status="true" data-permission-granted="false" data-location-permission-requested="false" data-execution-authority="false">
+          <strong>Map/location planning</strong>
+          <span>${htmlSafe(task.mapLocationRequest.requestedResource)} - ${htmlSafe(task.mapLocationRequest.fallbackLocation)}</span>
+          <small>${htmlSafe(task.mapLocationRequest.outcomeMessage)}</small>
         </div>
       ` : ""}
       ${task?.localArtifacts?.length ? `
