@@ -14,6 +14,7 @@
     "qa:core": "node scripts/qa-suite.js core",
     "qa:app": "node scripts/qa-suite.js app",
     "qa:nexus-workforce": "node scripts/qa-suite.js nexus-workforce",
+    "qa:nexus-platform-dashboard": "node scripts/nexus-platform-dashboard-qa.js",
     "qa:nexus-tool-registry": "node scripts/nexus-tool-registry-qa.js",
     "qa:nexus-tool-registry-runtime": "node scripts/nexus-tool-registry-runtime-qa.js",
     "qa:nexus-policy-engine": "node scripts/nexus-policy-engine-qa.js",

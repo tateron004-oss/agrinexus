@@ -77,6 +77,7 @@ let nexusA100SafeAutonomyConfig = Object.freeze({
 });
 let selectedLearningTrack = "All";
 let selectedPersona = localStorage.getItem("agrinexusPersona") || "worker";
+let selectedNexusDashboardModeId = "agriculture-support";
 let experienceMode = localStorage.getItem("agrinexusExperienceMode") || "";
 let pendingWorkflow = null;
 let pendingGrandmaAction = null;
@@ -16966,6 +16967,346 @@ function userVisualIconHtml(type = "agent") {
   return `<span class="user-visual-icon" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false">${icons[type] || icons.agent}</svg></span>`;
 }
 
+const NEXUS_PLATFORM_DASHBOARD_MODES = Object.freeze([
+  {
+    id: "agriculture-support",
+    title: "Agriculture Support",
+    category: "Agriculture",
+    description: "Review crop, soil, pest, irrigation, weather, and field support questions with source-aware guidance.",
+    status: "Active / Review",
+    safetyLabel: "Guidance only; no diagnosis, spraying, purchase, or provider dispatch.",
+    actionLabel: "Open Agriculture Support",
+    section: "trade",
+    icon: "trade",
+    prompts: [
+      "Help me understand what may be affecting my crop.",
+      "Prepare questions for an agriculture extension officer.",
+      "Find training steps for irrigation."
+    ]
+  },
+  {
+    id: "crop-issue-guidance",
+    title: "Crop Issue Guidance",
+    category: "Field Support",
+    description: "Organize crop symptoms, local context, and follow-up questions before human review.",
+    status: "Preview / Human Review",
+    safetyLabel: "Does not diagnose crop disease, activate camera, or prescribe treatment.",
+    actionLabel: "Review Crop Help",
+    section: "trade",
+    icon: "trade",
+    prompts: [
+      "I need help with crop issues.",
+      "Prepare crop issue notes for review.",
+      "What details should I collect before asking an expert?"
+    ]
+  },
+  {
+    id: "marketplace-agritrade",
+    title: "Marketplace / AgriTrade",
+    category: "Marketplace",
+    description: "Browse AgriTrade context, prepare inquiry notes, and review trade readiness.",
+    status: "Review Only",
+    safetyLabel: "No buying, selling, buyer contact, checkout, or payment from this dashboard.",
+    actionLabel: "Open AgriTrade Review",
+    section: "trade",
+    icon: "trade",
+    prompts: [
+      "Browse AgriTrade.",
+      "Prepare a marketplace inquiry without sending it.",
+      "Help me review buyer questions safely."
+    ]
+  },
+  {
+    id: "jobs-workforce",
+    title: "Jobs & Workforce",
+    category: "Workforce",
+    description: "Explore job pathways, role readiness, skill gaps, and workforce preparation steps.",
+    status: "Active / Preparation",
+    safetyLabel: "Does not submit applications or contact employers automatically.",
+    actionLabel: "Explore Job Pathways",
+    section: "workforce",
+    icon: "workforce",
+    prompts: [
+      "Show me farm jobs or training pathways.",
+      "Help me prepare for an agriculture technology role.",
+      "Create a skills checklist."
+    ]
+  },
+  {
+    id: "training-literacy",
+    title: "Training & Literacy",
+    category: "Learning",
+    description: "Start lessons, captions, language support, certificates, and literacy-friendly learning steps.",
+    status: "Active",
+    safetyLabel: "Learning support only; credential workflows still require review where configured.",
+    actionLabel: "Start Training",
+    section: "learning",
+    icon: "learning",
+    prompts: [
+      "Help me find agriculture training.",
+      "Teach me how irrigation works.",
+      "Build a simple learning checklist."
+    ]
+  },
+  {
+    id: "health-access-prep",
+    title: "Health Access Preparation",
+    category: "Health",
+    description: "Prepare questions, organize symptoms, review telehealth access, and build provider-ready notes.",
+    status: "Preparation / Provider Review Required",
+    safetyLabel: "No medical diagnosis, prescription, scheduling, provider contact, or emergency dispatch.",
+    actionLabel: "Open Health Preparation",
+    section: "health",
+    icon: "health",
+    prompts: [
+      "Help me prepare a physician review summary.",
+      "Organize symptoms for provider review.",
+      "What should I ask before telehealth?"
+    ]
+  },
+  {
+    id: "chronic-care-prep",
+    title: "Chronic Care Preparation",
+    category: "Health",
+    description: "Organize chronic care questions, reminders, care-team notes, and review-only follow-up plans.",
+    status: "Preparation / Provider Review Required",
+    safetyLabel: "Does not change treatment, refill medicine, or contact a provider.",
+    actionLabel: "Prepare Chronic Care Notes",
+    section: "health",
+    icon: "health",
+    prompts: [
+      "Create chronic care questions for a doctor.",
+      "Help me prepare blood pressure follow-up notes.",
+      "Organize medication questions for provider review."
+    ]
+  },
+  {
+    id: "provider-report-builder",
+    title: "Provider Report Builder",
+    category: "Health",
+    description: "Build review-only provider summaries for care access, chronic care, and community health support.",
+    status: "Preparation / Provider Required",
+    safetyLabel: "No records are sent and no provider is contacted from the dashboard.",
+    actionLabel: "Build Report Draft",
+    section: "health",
+    icon: "health",
+    prompts: [
+      "Prepare a provider-ready report.",
+      "Summarize symptoms for review.",
+      "Create a safe care access checklist."
+    ]
+  },
+  {
+    id: "offline-intelligence",
+    title: "Offline Intelligence Mode",
+    category: "Resilience",
+    description: "Prepare local guidance and review-only drafts for low-bandwidth or offline work.",
+    status: "Preview / Local Prep",
+    safetyLabel: "No sync, send, call, payment, or provider handoff occurs automatically.",
+    actionLabel: "Review Offline Mode",
+    section: "agent",
+    icon: "agent",
+    prompts: [
+      "Nexus, offline agriculture help for crop pests.",
+      "Prepare an offline message draft without sending it.",
+      "What can Nexus do without internet?"
+    ]
+  },
+  {
+    id: "source-trust",
+    title: "Source Trust / Citation Support",
+    category: "Trust",
+    description: "Review source-backed answers, citation freshness, confidence, and evidence status.",
+    status: "Active / Review",
+    safetyLabel: "Citations inform review; they do not authorize execution.",
+    actionLabel: "Review Source Trust",
+    section: "agent",
+    icon: "agent",
+    prompts: [
+      "Compare sources for this answer.",
+      "Explain the source confidence.",
+      "What evidence supports this guidance?"
+    ]
+  },
+  {
+    id: "maps-location-prep",
+    title: "Maps / Location Preparation",
+    category: "Maps",
+    description: "Preview route planning, facility context, and map readiness with explicit text only.",
+    status: "Preparation / Permission Required",
+    safetyLabel: "No browser location permission, live sharing, dispatch, or navigation handoff starts here.",
+    actionLabel: "Open Map Preparation",
+    section: "map",
+    icon: "map",
+    prompts: [
+      "Help me plan a route without using my location.",
+      "Prepare a route review checklist.",
+      "What map details should I confirm?"
+    ]
+  },
+  {
+    id: "communications-prep",
+    title: "Communications Preparation",
+    category: "Communications",
+    description: "Draft message, call, WhatsApp, Telegram, or contact steps for review before any handoff.",
+    status: "Preparation / Approval Required",
+    safetyLabel: "No calls, messages, provider handoff, or external app opens automatically.",
+    actionLabel: "Prepare Communication",
+    section: "agent",
+    icon: "agent",
+    prompts: [
+      "Prepare a message draft without sending it.",
+      "Help me plan what to ask a provider.",
+      "What confirmation is needed before contacting someone?"
+    ]
+  },
+  {
+    id: "community-services",
+    title: "Community Services",
+    category: "Community",
+    description: "Review community support, rural access, caregiver, transportation-to-care, and local service preparation.",
+    status: "Preparation / Source Required",
+    safetyLabel: "No transportation dispatch, emergency routing, or service request is submitted.",
+    actionLabel: "Review Community Services",
+    section: "health",
+    icon: "health",
+    prompts: [
+      "Help me review community health access options.",
+      "Prepare transportation-to-care questions.",
+      "What local support details should I collect?"
+    ]
+  },
+  {
+    id: "testing-readiness",
+    title: "Admin / Testing Tools",
+    category: "Testing",
+    description: "Review provider status, readiness, safety posture, and QA-protected platform capabilities.",
+    status: "Workspace/Admin Review",
+    safetyLabel: "Standard User can review status only; admin workflows remain gated by role and mode.",
+    actionLabel: "Review Readiness",
+    section: "dashboard",
+    icon: "agent",
+    prompts: [
+      "What providers are connected?",
+      "What is the readiness status?",
+      "What can Nexus do safely today?"
+    ]
+  }
+]);
+
+function nexusPlatformDashboardModeById(modeId = selectedNexusDashboardModeId) {
+  return NEXUS_PLATFORM_DASHBOARD_MODES.find(mode => mode.id === modeId) || NEXUS_PLATFORM_DASHBOARD_MODES[0];
+}
+
+function renderNexusDashboardPromptChips(mode = nexusPlatformDashboardModeById()) {
+  return (mode.prompts || []).map(prompt => `<button type="button" data-simple-command="${escapeHtml(prompt)}">${translateText(prompt)}</button>`).join("");
+}
+
+function renderNexusPlatformDashboard() {
+  const selected = nexusPlatformDashboardModeById();
+  const categoryCount = new Set(NEXUS_PLATFORM_DASHBOARD_MODES.map(mode => mode.category)).size;
+  return `
+    <section class="nexus-platform-dashboard" data-nexus-platform-dashboard="true" aria-label="${translateText("Nexus platform dashboard")}">
+      <div class="nexus-platform-overview">
+        <div>
+          <span class="eyebrow">${translateText("Platform Overview")}</span>
+          <h3>${translateText("Nexus command center")}</h3>
+          <p>${translateText("A full AI-powered services platform for agriculture, workforce, literacy, marketplace review, health access preparation, maps, communications preparation, source trust, and offline support.")}</p>
+        </div>
+        <div class="nexus-platform-status-strip" aria-label="${translateText("Safety and status")}">
+          <span>${translateText(`${NEXUS_PLATFORM_DASHBOARD_MODES.length} modes`)}</span>
+          <span>${translateText(`${categoryCount} service areas`)}</span>
+          <span>${translateText("Review-first")}</span>
+          <span>${translateText("No autonomous high-risk execution")}</span>
+        </div>
+      </div>
+      <div class="nexus-platform-dashboard-layout">
+        <section class="nexus-mode-selector" aria-label="${translateText("Select a mode")}">
+          <div class="nexus-dashboard-section-head">
+            <span class="eyebrow">${translateText("Select a Mode")}</span>
+            <strong>${translateText("Choose a platform area")}</strong>
+          </div>
+          <div class="nexus-mode-grid">
+            ${NEXUS_PLATFORM_DASHBOARD_MODES.map(mode => `<article class="nexus-mode-card ${mode.id === selected.id ? "selected" : ""}" data-platform-mode-card="${escapeHtml(mode.id)}">
+              <div class="nexus-mode-card-head">
+                ${userVisualIconHtml(mode.icon)}
+                <span>${translateText(mode.category)}</span>
+              </div>
+              <h4>${translateText(mode.title)}</h4>
+              <p>${translateText(mode.description)}</p>
+              <div class="nexus-mode-meta">
+                <span>${translateText(mode.status)}</span>
+                <small>${translateText(mode.safetyLabel)}</small>
+              </div>
+              <button type="button" data-platform-mode-action="${escapeHtml(mode.id)}">${translateText(mode.actionLabel)}</button>
+            </article>`).join("")}
+          </div>
+        </section>
+        <aside class="nexus-assistant-dashboard-panel" aria-label="${translateText("Nexus Assistant")}">
+          <div class="nexus-dashboard-section-head">
+            <span class="eyebrow">${translateText("Nexus Assistant")}</span>
+            <strong>${translateText("Mode-aware help")}</strong>
+          </div>
+          <div class="nexus-current-mode" data-current-platform-mode="${escapeHtml(selected.id)}">
+            <span>${translateText("Current Mode")}</span>
+            <h4>${translateText(selected.title)}</h4>
+            <p>${translateText(selected.description)}</p>
+            <div class="nexus-current-mode-safety">
+              <strong>${translateText(selected.status)}</strong>
+              <small>${translateText(selected.safetyLabel)}</small>
+            </div>
+          </div>
+          <label class="nexus-dashboard-prompt-entry">
+            <span>${translateText("Ask Nexus what you need")}</span>
+            <input id="nexusDashboardPromptInput" placeholder="${escapeHtml(translateText("Type a request, then use Ask Nexus"))}">
+          </label>
+          <div class="nexus-dashboard-prompt-actions">
+            <button type="button" data-dashboard-ask-current>${translateText("Ask Nexus")}</button>
+            <button type="button" data-simple-section="${escapeHtml(selected.section || "dashboard")}">${translateText("Open current mode")}</button>
+          </div>
+          <div class="nexus-dashboard-suggestions" aria-label="${translateText("Suggested prompts")}">
+            ${renderNexusDashboardPromptChips(selected)}
+          </div>
+          <div class="nexus-safety-status" aria-label="${translateText("Safety and Status")}">
+            <strong>${translateText("Safety & Status")}</strong>
+            <span>${translateText("Nexus may prepare, summarize, guide, organize, and suggest next steps.")}</span>
+            <span>${translateText("Nexus will not diagnose, prescribe, contact providers, send messages, make calls, complete payments, share location, or trigger emergency services from this dashboard.")}</span>
+          </div>
+        </aside>
+      </div>
+    </section>
+  `;
+}
+
+function handleNexusPlatformDashboardClick(event) {
+  const actionButton = event.target.closest("[data-platform-mode-action]");
+  const modeCard = event.target.closest("[data-platform-mode-card]");
+  const modeId = actionButton?.dataset.platformModeAction || modeCard?.dataset.platformModeCard;
+  if (!modeId) return false;
+  const mode = nexusPlatformDashboardModeById(modeId);
+  selectedNexusDashboardModeId = mode.id;
+  if (!actionButton) {
+    renderUserWorkspace();
+    const status = $("#simpleActionStatus");
+    if (status) status.textContent = `${mode.title} selected. Nexus suggestions are updated for review-first help.`;
+    return true;
+  }
+  if (mode.section === "ask") {
+    openAskNexus();
+    return true;
+  }
+  if (mode.section && canOpenSection(mode.section)) {
+    goSection(mode.section, { instant: true });
+    const status = $("#simpleActionStatus") || $(`#${mode.section} .user-module-status`);
+    if (status) status.textContent = `${mode.title} opened in ${mode.status}. ${mode.safetyLabel}`;
+    return true;
+  }
+  renderUserWorkspace();
+  const status = $("#simpleActionStatus");
+  if (status) status.textContent = `${mode.title} is available for review. ${mode.safetyLabel}`;
+  return true;
+}
+
 function renderUserWorkspace() {
   const target = $("#userWorkspace");
   if (!target) return;
@@ -16992,6 +17333,7 @@ function renderUserWorkspace() {
       <p>${translateText("Choose a button below or ask Nexus what it can do. Nexus can help with work, training, health access, maps, field support, and agriculture trade.")}</p>
       ${userLanguageQuickSwitchHtml()}
     </section>
+    ${renderNexusPlatformDashboard()}
     <div data-nexus-open-dialogue-agent-host="true">${renderNexusOpenDialogueAgentCard()}</div>
     ${a100CapabilitySurfaceHtml()}
     <section class="user-fast-actions" aria-label="${translateText("Quick actions")}">
@@ -17087,7 +17429,7 @@ const simpleUserSections = {
     buttons: [
       { label: "Start a Course", command: "start training path" },
       { label: "Finish Lesson", command: "complete my lesson" },
-      { label: "Get Certificate", command: "issue my certificate" },
+      { label: "Review Certificate", command: "issue my certificate" },
       { label: "Make Captions", command: "build captions" }
     ]
   },
@@ -17097,7 +17439,7 @@ const simpleUserSections = {
     className: "service-workforce",
     buttons: [
       { label: "Find Jobs", command: "show me jobs" },
-      { label: "Apply for Job", command: "apply for that job" },
+      { label: "Prepare Job Application", command: "apply for that job" },
       { label: "Check Skills", command: "review my workforce gaps" },
       { label: "Plan Shift", command: "schedule my shift" }
     ]
@@ -17108,11 +17450,11 @@ const simpleUserSections = {
     className: "service-health",
     buttons: [
       { label: "Start Intake", command: "start telehealth intake" },
-      { label: "Talk to Provider", command: "open telehealth access" },
+      { label: "Prepare Provider Access", command: "open telehealth access" },
       { label: "Local Camera Preview", command: "open video for provider to show injury" },
       { label: "Show Injury", command: "open video for provider to show injury" },
-      { label: "Call Provider", command: "call provider" },
-      { label: "Clinic Payment", command: "request mobile clinic payment" },
+      { label: "Prepare Provider Call", command: "call provider" },
+      { label: "Review Clinic Payment", command: "request mobile clinic payment" },
       { label: "Check Region", command: "check health risk in my region" },
       { label: "Accessibility Help", command: "create audio guide and captions" }
     ]
@@ -17122,11 +17464,11 @@ const simpleUserSections = {
     prompt: "Choose what you need for crops or buyers.",
     className: "service-trade",
     buttons: [
-      { label: "Contact Buyer", command: "contact my buyer" },
+      { label: "Contact Buyer Review", command: "contact my buyer" },
       { label: "Show Crop", command: "open video for buyer to show crops" },
-      { label: "Create Order", command: "create a crop order" },
-      { label: "Ship Crop", command: "book shipment for my crop" },
-      { label: "Buyer Pay", command: "create buyer checkout" },
+      { label: "Create Order Review", command: "create a crop order" },
+      { label: "Ship Crop Review", command: "book shipment for my crop" },
+      { label: "Review Buyer Payment", command: "create buyer checkout" },
       { label: "Track Route", command: "track my route" },
       { label: "Scan Farm", command: "run drone scan" }
     ]
@@ -32258,6 +32600,25 @@ function bindStatic() {
       event.preventDefault();
       event.stopPropagation();
       openAskNexus();
+      return;
+    }
+    if (handleNexusPlatformDashboardClick(event)) {
+      event.preventDefault();
+      event.stopPropagation();
+      return;
+    }
+    const dashboardAskButton = event.target.closest("[data-dashboard-ask-current]");
+    if (dashboardAskButton) {
+      event.preventDefault();
+      event.stopPropagation();
+      const input = $("#nexusDashboardPromptInput");
+      const selectedMode = nexusPlatformDashboardModeById();
+      const prompt = (input?.value || selectedMode.prompts?.[0] || "What can Nexus do?").trim();
+      setCommandInputs(prompt);
+      openAskNexus();
+      await handleVoiceCommand(prompt);
+      const status = $("#simpleActionStatus");
+      if (status) status.textContent = `${selectedMode.title} request sent to Nexus for review-first guidance.`;
       return;
     }
     if (handleNexusOpenDialogueAgentClick(event)) return;
