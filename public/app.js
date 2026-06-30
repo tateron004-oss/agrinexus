@@ -210,8 +210,8 @@ const nexusProductIdentity = Object.freeze({
 });
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-322";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v301";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-323";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v302";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
 const VOICE_ATTENTION_DELAY_MS = 900;
@@ -24334,6 +24334,38 @@ function cleanWakeCommand(command) {
     .trim();
 }
 
+function normalizeNexusVoiceWorkflowCommand(command = "") {
+  const cleaned = cleanWakeCommand(command);
+  let normalized = normalizeMultilingualBehaviorCommand(cleaned || command);
+  normalized = String(normalized || "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .replace(/^[,.:;\-!?]+/, "")
+    .trim();
+  const requestPrefixes = [
+    /^\s*(please\s+)?can\s+you\s+/i,
+    /^\s*(please\s+)?could\s+you\s+/i,
+    /^\s*(please\s+)?would\s+you\s+/i,
+    /^\s*(please\s+)?will\s+you\s+/i,
+    /^\s*(please\s+)?i\s+need\s+you\s+to\s+/i,
+    /^\s*(please\s+)?i\s+want\s+you\s+to\s+/i,
+    /^\s*(please\s+)?help\s+me\s+to\s+/i,
+    /^\s*(please\s+)?help\s+me\s+/i,
+    /^\s*(please\s+)?help\s+with\s+/i,
+    /^\s*(please\s+)?go\s+ahead\s+and\s+/i,
+    /^\s*(please\s+)/i
+  ];
+  requestPrefixes.forEach(pattern => {
+    normalized = normalized.replace(pattern, "");
+  });
+  normalized = normalized
+    .replace(/\s+/g, " ")
+    .trim()
+    .replace(/^[,.:;\-!?]+/, "")
+    .trim();
+  return normalizeImperfectSpeech(normalized || cleaned || command);
+}
+
 function hasBehaviorActionVerb(command = "") {
   const normalized = normalizeMultilingualBehaviorCommand(command);
   return /\b(open|start|show|apply|sell|buy|contact|call|message|run|create|track|find|change|switch|translate|help|guide|explain)\b/i.test(normalized)
@@ -28013,7 +28045,7 @@ async function handleVoiceCommandCore(rawCommand, options = {}) {
   const greetingPrefix = isNexusGreetingPrefix(localizedCommand);
   const wakeOnly = isWakePhraseOnly(localizedCommand);
   let command = cleanWakeCommand(localizedCommand);
-  command = normalizeMultilingualBehaviorCommand(command);
+  command = normalizeNexusVoiceWorkflowCommand(command || localizedCommand);
   const spokenCommand = command || cleanWakeCommand(localizedCommand);
   const a100SafeIntent = a100SafeAutonomyIntent(spokenCommand || command || localizedCommand || rawCommand);
   if (openA100SafeAutonomyPreview(a100SafeIntent)) return;
