@@ -85,33 +85,31 @@ const functionNames = [
 const runtimeSource = functionNames.map(name => extractFunction(app, name)).join("\n");
 
 [
-  "function nexusReminderCalendarParseSchedule",
-  "function nexusReminderCalendarPrepare",
-  "reminderCalendarProposal",
-  "data-nexus-reminder-calendar-status=\"true\"",
-  "data-scheduled=\"false\"",
-  "No reminder was scheduled."
-].forEach(term => assert(app.includes(term), `reminder/calendar integration should include ${term}`));
+  "function nexusMessagingCallHandoffPrepare",
+  "communicationHandoff",
+  "data-nexus-messaging-call-handoff-status=\"true\"",
+  "data-executed=\"false\"",
+  "No message was sent.",
+  "No call was placed."
+].forEach(term => assert(app.includes(term), `messaging/call handoff should include ${term}`));
 
-assert(pkg.scripts["qa:nexus-reminder-calendar-integration"], "package alias should run reminder/calendar QA");
-assert(qaSuite.includes("scripts/nexus-reminder-calendar-integration-qa.js"), "qa-suite should include reminder/calendar QA");
+assert(pkg.scripts["qa:nexus-messaging-call-handoff"], "package alias should run messaging/call QA");
+assert(qaSuite.includes("scripts/nexus-messaging-call-handoff-qa.js"), "qa-suite should include messaging/call QA");
 
 [
-  "Notification.requestPermission",
-  "showNotification",
-  "calendar.events.insert",
   "window.open",
   "location.href",
   "fetch(",
+  "navigator.geolocation",
+  "getUserMedia",
   "localStorage.setItem",
   "sessionStorage.setItem",
   "ACTION_CALL",
-  "Reminder scheduled",
-  "Appointment booked",
-  "Provider contacted",
   "Message sent",
-  "Call placed"
-].forEach(term => assert(!runtimeSource.includes(term), `reminder/calendar runtime must not introduce ${term}`));
+  "Call placed",
+  "Provider contacted",
+  "Emergency dispatched"
+].forEach(term => assert(!runtimeSource.includes(term), `messaging/call runtime must not introduce ${term}`));
 
 const sandbox = vm.runInNewContext(`
   let experienceMode = "user";
@@ -140,10 +138,8 @@ const sandbox = vm.runInNewContext(`
     .replace(/"/g, "&quot;");
   ${runtimeSource}
   ({
-    parse: nexusReminderCalendarParseSchedule,
     response: nexusOpenDialogueAgentResponse,
     card: renderNexusOpenDialogueAgentCard,
-    state: () => nexusOpenDialogueAgentState,
     reset: () => {
       nexusOpenDialogueAgentState = {
         schemaVersion: "nexus-open-dialogue-agent-state.v1",
@@ -161,37 +157,44 @@ const sandbox = vm.runInNewContext(`
   });
 `);
 
-assert.equal(sandbox.parse("Every morning at 8.").parsedTime, "recurring:morning:08:00", "morning schedule should parse");
-assert.equal(sandbox.parse("Friday morning").parsedTime, "weekly:friday:morning", "Friday morning should parse");
-assert.equal(sandbox.parse("tomorrow").parsedTime, "relative:tomorrow", "tomorrow should parse");
-
 const cases = [
-  ["Nexus, remind me to take my medicine.", "Medicine reminder proposal", "health", "Schedule detail needed"],
-  ["Every morning at 8.", "Reminder proposal", "reminders", "Every morning at 8"],
-  ["Nexus, remind me about my clinic visit tomorrow.", "Clinic visit reminder proposal", "health", "Tomorrow"],
-  ["Nexus, remind me to check irrigation Friday morning.", "Farm task reminder proposal", "agriculture", "Friday morning"],
-  ["Nexus, create a meeting reminder.", "Meeting reminder proposal", "workforce", "Schedule detail needed"]
+  ["Nexus, message Mary that I need help.", "message", "Mary that I need help", "messaging.adapter", "Message draft prepared. No message was sent."],
+  ["Make it more professional.", null, null, null, null],
+  ["Nexus, call John.", "call", "John", "call.adapter", "Call preparation created. No call was placed."],
+  ["Nexus, contact a buyer about my maize.", "message", "buyer/seller", "messaging.adapter", "Message draft prepared. No message was sent."],
+  ["Nexus, message the doctor about my mother.", "message", "provider/clinic", "messaging.adapter", "Message draft prepared. No message was sent."]
 ];
 
-cases.forEach(([prompt, expectedTitle, expectedDomain, expectedSchedule]) => {
+cases.forEach(([prompt, type, recipient, adapterId, outcome]) => {
   sandbox.reset();
   const result = sandbox.response(prompt, { force: true });
   assert(result?.handled, `${prompt} should be handled`);
-  const proposal = result.task?.reminderCalendarProposal;
-  assert(proposal, `${prompt} should produce reminder proposal`);
-  assert.equal(proposal.title, expectedTitle, `${prompt} title should match`);
-  assert.equal(proposal.domain, expectedDomain, `${prompt} domain should match`);
-  assert.equal(proposal.scheduleText, expectedSchedule, `${prompt} schedule should match`);
-  assert.equal(proposal.confirmationRequired, true, `${prompt} should require confirmation`);
-  assert.equal(proposal.scheduled, false, `${prompt} must not be scheduled`);
-  assert.equal(proposal.fallbackOnly, true, `${prompt} should be fallback-only`);
-  assert.equal(proposal.executionAuthority, false, `${prompt} must not grant execution authority`);
-  assert.equal(proposal.providerHandoffAuthorized, false, `${prompt} must not authorize provider handoff`);
-  assert(!/scheduled successfully|appointment booked|calendar updated|notification sent/i.test(proposal.outcomeMessage), `${prompt} must not claim scheduling`);
+  if (!type) {
+    assert(!result.task?.communicationHandoff, `${prompt} should not create orphan communication handoff without a communication intent`);
+    return;
+  }
+  const handoff = result.task?.communicationHandoff;
+  assert(handoff, `${prompt} should produce communication handoff`);
+  assert.equal(handoff.type, type, `${prompt} type should match`);
+  assert.equal(handoff.recipient, recipient, `${prompt} recipient should match`);
+  assert.equal(result.task.actionAdapterDecision?.adapterId, adapterId, `${prompt} should select ${adapterId}`);
+  assert.equal(handoff.confirmationRequired, true, `${prompt} should require confirmation`);
+  assert.equal(handoff.adapterImplemented, false, `${prompt} adapter should be unavailable in this phase`);
+  assert.equal(handoff.executed, false, `${prompt} must not execute`);
+  assert.equal(handoff.fallbackOnly, true, `${prompt} must remain fallback-only`);
+  assert.equal(handoff.outcomeMessage, outcome, `${prompt} outcome should be honest`);
+  assert.equal(handoff.executionAuthority, false, `${prompt} must not grant execution authority`);
+  assert.equal(handoff.providerHandoffAuthorized, false, `${prompt} must not authorize provider handoff`);
   const card = sandbox.card();
-  assert(card.includes("data-nexus-reminder-calendar-status=\"true\""), `${prompt} should render reminder status`);
-  assert(card.includes("data-scheduled=\"false\""), `${prompt} card should state unscheduled`);
+  assert(card.includes("data-nexus-messaging-call-handoff-status=\"true\""), `${prompt} should render communication status`);
+  assert(card.includes("data-executed=\"false\""), `${prompt} card should state executed false`);
 });
 
-console.log("Nexus reminder/calendar integration QA passed");
-console.log("- reminder proposal parsing, confirmation requirement, fallback-only state, unscheduled honesty, and no-execution guarantees verified");
+sandbox.reset();
+const emergency = sandbox.response("Nexus, I have chest pain and trouble breathing.", { force: true });
+assert(emergency?.handled, "emergency prompt should be handled");
+assert.equal(emergency.task?.communicationHandoff, null, "emergency prompt should not create communication handoff");
+assert.equal(emergency.task?.status, "emergency_stopped", "emergency prompt should stop normal workflow");
+
+console.log("Nexus messaging/call handoff QA passed");
+console.log("- message drafts, call prep, confirmation requirement, fallback-only adapters, emergency stop, and no-execution guarantees verified");

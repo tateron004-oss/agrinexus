@@ -2347,7 +2347,7 @@ function nexusPersistentTaskMemoryRecall(kind = "active") {
 
 function nexusRealActionAdaptersRegistry() {
   return [
-    { adapterId: "messaging.adapter", domain: "communication", actionPattern: /\b(message|sms|whatsapp|telegram|email|send)\b/, implemented: false, requiresConfirmation: true, requiresPermission: true, falseClaimGuard: "No message was sent." },
+    { adapterId: "messaging.adapter", domain: "communication", actionPattern: /\b(message|sms|whatsapp|telegram|email|send|contact)\b/, implemented: false, requiresConfirmation: true, requiresPermission: true, falseClaimGuard: "No message was sent." },
     { adapterId: "call.adapter", domain: "communication", actionPattern: /\b(call|dial)\b/, implemented: false, requiresConfirmation: true, requiresPermission: true, falseClaimGuard: "No call was placed." },
     { adapterId: "reminder-calendar.adapter", domain: "reminders", actionPattern: /\b(remind|reminder|calendar|every morning|tomorrow|friday)\b/, implemented: false, requiresConfirmation: true, requiresPermission: false, falseClaimGuard: "No reminder was scheduled." },
     { adapterId: "map-location.adapter", domain: "maps-location", actionPattern: /\b(map|route|near me|location|directions|transport)\b/, implemented: false, requiresConfirmation: true, requiresPermission: true, falseClaimGuard: "No live location was used." },
@@ -2602,6 +2602,35 @@ function nexusMapLocationPermissionPrepare(interpretation = {}, task = {}) {
   };
 }
 
+function nexusMessagingCallHandoffPrepare(interpretation = {}, task = {}) {
+  const text = String(interpretation.normalizedText || interpretation.rawText || task.sourceCommand || "").toLowerCase();
+  const adapterId = task.actionAdapterDecision?.adapterId || "";
+  const isCommunication = /\b(message|sms|whatsapp|telegram|email|send|call|dial|contact)\b/.test(text)
+    || adapterId === "messaging.adapter"
+    || adapterId === "call.adapter";
+  if (!isCommunication) return null;
+  const type = /\b(call|dial)\b/.test(text) || adapterId === "call.adapter" ? "call" : "message";
+  const recipientMatch = String(interpretation.rawText || "").match(/\b(?:message|call|contact|send(?:\s+\w+)?\s+to)\s+([A-Z][A-Za-z .'-]{1,40})/);
+  const recipient = recipientMatch?.[1]?.trim().replace(/[?.!,]+$/, "") || (/\bdoctor|provider|clinic\b/.test(text) ? "provider/clinic" : /\bbuyer|seller\b/.test(text) ? "buyer/seller" : "recipient needed");
+  const draftText = type === "call"
+    ? `Call preparation note for ${recipient}. Review purpose, recipient, and permission before any real call.`
+    : `Draft message for ${recipient}. Review and confirm before any real send.`;
+  return {
+    communicationId: nexusOpenAgentCreateId("communication-prep"),
+    type,
+    recipient,
+    draftText,
+    confirmationRequired: true,
+    adapterImplemented: Boolean(task.actionAdapterDecision?.implemented),
+    executed: false,
+    fallbackOnly: !task.actionAdapterDecision?.implemented,
+    outcomeMessage: type === "call" ? "Call preparation created. No call was placed." : "Message draft prepared. No message was sent.",
+    executionAuthority: false,
+    providerHandoffAuthorized: false,
+    noExecutionAuthorized: true
+  };
+}
+
 function nexusOpenDialogueCreateTask(interpretation = {}, previousTask = null) {
   const now = new Date().toISOString();
   const task = {
@@ -2642,6 +2671,7 @@ function nexusOpenDialogueCreateTask(interpretation = {}, previousTask = null) {
     actionAdapterDecision: null,
     reminderCalendarProposal: null,
     mapLocationRequest: null,
+    communicationHandoff: null,
     capabilityMatrix: nexusOpenDialogueCapabilityMatrix(),
     noExecutionAuthorized: true,
     executionAuthority: false,
@@ -2661,6 +2691,7 @@ function nexusOpenDialogueCreateTask(interpretation = {}, previousTask = null) {
   task.actionAdapterDecision = nexusRealActionAdapterPrepare(interpretation, task);
   task.reminderCalendarProposal = nexusReminderCalendarPrepare(interpretation, task);
   task.mapLocationRequest = nexusMapLocationPermissionPrepare(interpretation, task);
+  task.communicationHandoff = nexusMessagingCallHandoffPrepare(interpretation, task);
   const output = nexusOpenDialogueLocalOutput(task);
   task.outcomeLog.push({
     at: now,
@@ -2979,6 +3010,13 @@ function renderNexusOpenDialogueAgentCard(state = nexusOpenDialogueAgentState) {
           <strong>Map/location planning</strong>
           <span>${htmlSafe(task.mapLocationRequest.requestedResource)} - ${htmlSafe(task.mapLocationRequest.fallbackLocation)}</span>
           <small>${htmlSafe(task.mapLocationRequest.outcomeMessage)}</small>
+        </div>
+      ` : ""}
+      ${task?.communicationHandoff ? `
+        <div class="nexus-messaging-call-handoff-status" data-nexus-messaging-call-handoff-status="true" data-executed="false" data-execution-authority="false" data-provider-handoff-authorized="false">
+          <strong>${htmlSafe(task.communicationHandoff.type === "call" ? "Call preparation" : "Message draft")}</strong>
+          <span>${htmlSafe(task.communicationHandoff.recipient)} - ${htmlSafe(task.communicationHandoff.adapterImplemented ? "adapter connected" : "adapter not connected")}</span>
+          <small>${htmlSafe(task.communicationHandoff.outcomeMessage)}</small>
         </div>
       ` : ""}
       ${task?.localArtifacts?.length ? `
