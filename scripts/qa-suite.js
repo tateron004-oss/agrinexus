@@ -66,6 +66,7 @@ const suites = {
     "scripts/nexus-persistent-task-memory-qa.js",
     "scripts/nexus-real-action-adapters-qa.js",
     "scripts/nexus-voice-command-loop-qa.js",
+    "scripts/nexus-reminder-calendar-integration-qa.js",
     "scripts/nexus-fully-agentic-assistant-qa.js",
     "scripts/nexus-agentic-continuation-qa.js",
     "scripts/nexus-autonomous-execution-architecture-qa.js",

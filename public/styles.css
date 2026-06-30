@@ -4564,6 +4564,23 @@ body.admin-mode .user-workspace {
   color: rgba(30, 58, 138, 0.78);
   line-height: 1.3;
 }
+
+.nexus-reminder-calendar-status {
+  display: grid;
+  gap: 4px;
+  padding: 8px 10px;
+  border: 1px solid rgba(14, 116, 144, 0.2);
+  border-radius: 8px;
+  background: rgba(14, 116, 144, 0.08);
+  color: #155e75;
+  font-size: .82rem;
+  line-height: 1.32;
+}
+
+.nexus-reminder-calendar-status small {
+  color: rgba(21, 94, 117, 0.78);
+  line-height: 1.3;
+}
 .nexus-agent-artifact-stack {
   display: grid;
   gap: 8px;

@@ -2512,6 +2512,51 @@ function nexusVoiceCommandLoopComplete(loop = nexusVoiceCommandLoopState, result
   return nexusVoiceCommandLoopState;
 }
 
+function nexusReminderCalendarParseSchedule(command = "") {
+  const text = String(command || "").toLowerCase();
+  if (/\bevery morning\b/.test(text) && /\b8\b|\beight\b/.test(text)) return { scheduleText: "Every morning at 8", parsedTime: "recurring:morning:08:00" };
+  if (/\bevery morning\b/.test(text)) return { scheduleText: "Every morning", parsedTime: "recurring:morning" };
+  if (/\btomorrow\b/.test(text)) return { scheduleText: "Tomorrow", parsedTime: "relative:tomorrow" };
+  if (/\bfriday morning\b/.test(text)) return { scheduleText: "Friday morning", parsedTime: "weekly:friday:morning" };
+  if (/\bfriday\b/.test(text)) return { scheduleText: "Friday", parsedTime: "weekly:friday" };
+  if (/\b8\b|\beight\b/.test(text)) return { scheduleText: "8:00", parsedTime: "time:08:00" };
+  return { scheduleText: "", parsedTime: "" };
+}
+
+function nexusReminderCalendarPrepare(interpretation = {}, task = {}) {
+  const text = String(interpretation.normalizedText || interpretation.rawText || task.sourceCommand || "").toLowerCase();
+  const isReminder = /\b(remind|reminder|remember|calendar|every morning|tomorrow|friday|appointment|clinic visit|meeting|follow-up)\b/.test(text)
+    || task.goalCategory === "remind"
+    || task.actionAdapterDecision?.adapterId === "reminder-calendar.adapter";
+  if (!isReminder) return null;
+  const schedule = nexusReminderCalendarParseSchedule(text);
+  const domain = /\b(medicine|medication|clinic|doctor|appointment)\b/.test(text) ? "health"
+    : /\b(irrigation|farm|crop|field)\b/.test(text) ? "agriculture"
+      : /\b(meeting|interview|job|work)\b/.test(text) ? "workforce"
+        : task.activeDomain || interpretation.inferredDomain || "general-assistant";
+  const riskLevel = domain === "health" ? "medium" : "low";
+  const title = /\bmedicine|medication\b/.test(text) ? "Medicine reminder proposal"
+    : /\bclinic|doctor|appointment\b/.test(text) ? "Clinic visit reminder proposal"
+      : /\birrigation|farm|crop|field\b/.test(text) ? "Farm task reminder proposal"
+        : /\bmeeting|interview\b/.test(text) ? "Meeting reminder proposal"
+          : "Reminder proposal";
+  return {
+    reminderId: nexusOpenAgentCreateId("reminder-proposal"),
+    title,
+    scheduleText: schedule.scheduleText || "Schedule detail needed",
+    parsedTime: schedule.parsedTime || "missing",
+    domain,
+    riskLevel,
+    confirmationRequired: true,
+    scheduled: false,
+    fallbackOnly: true,
+    outcomeMessage: "Reminder proposal prepared locally. No reminder was scheduled.",
+    executionAuthority: false,
+    providerHandoffAuthorized: false,
+    noExecutionAuthorized: true
+  };
+}
+
 function nexusOpenDialogueCreateTask(interpretation = {}, previousTask = null) {
   const now = new Date().toISOString();
   const task = {
@@ -2550,6 +2595,7 @@ function nexusOpenDialogueCreateTask(interpretation = {}, previousTask = null) {
     interpretation,
     higherReasoning: null,
     actionAdapterDecision: null,
+    reminderCalendarProposal: null,
     capabilityMatrix: nexusOpenDialogueCapabilityMatrix(),
     noExecutionAuthorized: true,
     executionAuthority: false,
@@ -2567,6 +2613,7 @@ function nexusOpenDialogueCreateTask(interpretation = {}, previousTask = null) {
   task.higherReasoning = nexusHigherIntelligenceReason(interpretation.rawText, interpretation);
   task.higherReasoning.immediateActions = task.waitingForInput || task.riskLevel === "high" || task.riskLevel === "emergency" ? [] : [initialActionType];
   task.actionAdapterDecision = nexusRealActionAdapterPrepare(interpretation, task);
+  task.reminderCalendarProposal = nexusReminderCalendarPrepare(interpretation, task);
   const output = nexusOpenDialogueLocalOutput(task);
   task.outcomeLog.push({
     at: now,
@@ -2873,6 +2920,13 @@ function renderNexusOpenDialogueAgentCard(state = nexusOpenDialogueAgentState) {
         <span>${htmlSafe(nexusVoiceCommandLoopState.voiceModeReady ? "ready" : "not ready")} - ${htmlSafe(nexusVoiceCommandLoopState.routedToBrain ? "routed to brain" : "waiting")}</span>
         <small>${htmlSafe(nexusVoiceCommandLoopState.spokenStyleResponse)} Next: ${htmlSafe(nexusVoiceCommandLoopState.nextPrompt)}</small>
       </div>
+      ${task?.reminderCalendarProposal ? `
+        <div class="nexus-reminder-calendar-status" data-nexus-reminder-calendar-status="true" data-scheduled="false" data-execution-authority="false">
+          <strong>${htmlSafe(task.reminderCalendarProposal.title)}</strong>
+          <span>${htmlSafe(task.reminderCalendarProposal.scheduleText)} - ${htmlSafe(task.reminderCalendarProposal.domain)}</span>
+          <small>${htmlSafe(task.reminderCalendarProposal.outcomeMessage)}</small>
+        </div>
+      ` : ""}
       ${task?.localArtifacts?.length ? `
         <div class="nexus-agent-artifact-stack" aria-label="Nexus local artifacts">
           ${task.localArtifacts.map(artifact => `

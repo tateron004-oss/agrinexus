@@ -68,6 +68,8 @@ const functionNames = [
   "nexusVoiceCommandLoopSpokenStyleResponse",
   "nexusVoiceCommandLoopUpdate",
   "nexusVoiceCommandLoopComplete",
+  "nexusReminderCalendarParseSchedule",
+  "nexusReminderCalendarPrepare",
   "nexusOpenDialogueCreateTask",
   "nexusOpenDialogueAgentQuestion",
   "nexusOpenDialogueUpdateScorecard",
@@ -181,6 +183,8 @@ const sandbox = vm.runInNewContext(`
   ${extracted.nexusVoiceCommandLoopSpokenStyleResponse}
   ${extracted.nexusVoiceCommandLoopUpdate}
   ${extracted.nexusVoiceCommandLoopComplete}
+  ${extracted.nexusReminderCalendarParseSchedule}
+  ${extracted.nexusReminderCalendarPrepare}
   ${extracted.nexusOpenDialogueCreateTask}
   ${extracted.nexusOpenDialogueAgentQuestion}
   ${extracted.nexusOpenDialogueUpdateScorecard}
