@@ -4435,6 +4435,99 @@ body.admin-mode .user-workspace {
   opacity: .55;
   cursor: not-allowed;
 }
+.nexus-open-dialogue-agent-card {
+  display: grid;
+  gap: 8px;
+  width: min(100%, 620px);
+  margin: 10px 0;
+  padding: 12px;
+  border: 2px solid #173240;
+  border-left: 6px solid #6d55d7;
+  border-radius: 12px;
+  background: #fbfbff;
+  box-shadow: 0 10px 22px rgba(23, 50, 64, .08);
+}
+#userCaptionPanel .nexus-open-dialogue-agent-card,
+#globalAssistantBar .nexus-open-dialogue-agent-card {
+  max-height: min(44vh, 360px);
+  overflow-y: auto;
+}
+.nexus-agent-card-header,
+.nexus-agent-card-grid,
+.nexus-agent-card-actions {
+  display: grid;
+  gap: 6px;
+}
+.nexus-agent-card-header .eyebrow {
+  width: fit-content;
+  padding: 3px 8px;
+  border: 1px solid #c9c1f0;
+  border-radius: 999px;
+  background: #f4f0ff;
+  color: #5b49b5;
+  font-size: .72rem;
+  font-weight: 950;
+  text-transform: uppercase;
+}
+.nexus-open-dialogue-agent-card strong,
+.nexus-open-dialogue-agent-card span,
+.nexus-open-dialogue-agent-card small {
+  color: #173240;
+  font-size: .82rem;
+  line-height: 1.32;
+  overflow-wrap: anywhere;
+}
+.nexus-open-dialogue-agent-card small {
+  color: #5b6f76;
+  font-weight: 760;
+}
+.nexus-agent-card-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  padding: 8px;
+  border: 1px solid #d9d2f4;
+  border-radius: 10px;
+  background: #ffffff;
+}
+.nexus-agent-card-output {
+  padding: 9px 10px;
+  border: 1px solid #bddbd6;
+  border-radius: 10px;
+  background: #f8fffb;
+  color: #173240;
+  font-size: .86rem;
+  font-weight: 850;
+  line-height: 1.36;
+}
+.nexus-agent-card-actions {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+#userCaptionPanel .nexus-agent-card-actions,
+#globalAssistantBar .nexus-agent-card-actions {
+  position: sticky;
+  bottom: -1px;
+  padding-top: 4px;
+  background: #fbfbff;
+}
+.nexus-agent-card-actions button {
+  min-height: 34px;
+  padding: 7px 8px;
+  border: 1px solid #173240;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #173240;
+  font-size: .76rem;
+  font-weight: 900;
+}
+.nexus-agent-card-actions button:disabled {
+  opacity: .55;
+  cursor: not-allowed;
+}
+@media (max-width: 720px) {
+  .nexus-agent-card-grid,
+  .nexus-agent-card-actions {
+    grid-template-columns: 1fr;
+  }
+}
 .nexus-controlled-action-queue-card {
   display: grid;
   gap: 6px;

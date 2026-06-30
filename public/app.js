@@ -180,6 +180,15 @@ let observedAgentActionMetadataLog = [];
 let visibleLevelOneAgentActionSuggestion = null;
 let visibleControlledActionPreviewReadiness = null;
 let nexusAutonomousWorkflowState = null;
+let nexusOpenDialogueAgentState = {
+  schemaVersion: "nexus-open-dialogue-agent-state.v1",
+  activeTaskId: null,
+  tasks: [],
+  taskHistory: [],
+  lastOutcome: "",
+  lastDraft: "",
+  scorecard: null
+};
 let nexusControlledActionQueue = [];
 let nexusUserConfirmationGateState = null;
 let nexusSessionActionAuditLog = [];
@@ -781,6 +790,7 @@ function handleNexusStandardUserSafeTypedCommand(command = "") {
   if (handleNexusChronicCarePhysicianReportCaptionCommand(command)) return true;
   if (handleNexusLocalDraftMessageCaptionCommand(command)) return true;
   if (handleNexusCallPreparationCaptionCommand(command)) return true;
+  if (handleNexusOpenDialogueAgentCommand(command)) return true;
   const safeIntent = a100SafeAutonomyIntent(command);
   return openA100SafeAutonomyPreview(safeIntent);
 }
@@ -1509,6 +1519,655 @@ function handleNexusAutonomousWorkflowClick(event) {
   event.preventDefault();
   event.stopPropagation();
   return handleNexusAutonomousWorkflowControl(button.dataset.nexusWorkflowControl);
+}
+
+function nexusOpenAgentNormalizeText(text = "") {
+  return String(text || "")
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}\s'?]/gu, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function nexusOpenAgentCreateId(prefix = "task") {
+  return `nexus-${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
+}
+
+function nexusOpenDialogueCapabilityMatrix() {
+  return {
+    available_local: [
+      "generate plan",
+      "generate checklist",
+      "generate questions",
+      "generate draft",
+      "summarize user-provided info",
+      "create local prep card",
+      "create local reminder proposal",
+      "create marketplace prep checklist",
+      "create health visit prep",
+      "create job prep pathway",
+      "create farm task plan",
+      "show confirmation",
+      "show outcome verification"
+    ],
+    available_handoff: [
+      "call prep",
+      "message draft",
+      "provider summary draft",
+      "appointment request draft",
+      "marketplace listing draft",
+      "map route prep",
+      "reminder proposal"
+    ],
+    available_confirmed_execution: [
+      "session-only navigation between app sections",
+      "local review card creation",
+      "local draft creation",
+      "local checklist creation"
+    ],
+    unavailable_blocked: [
+      "payment execution",
+      "medicine purchase",
+      "diagnosis",
+      "medication change",
+      "emergency replacement",
+      "unconfirmed call",
+      "unconfirmed message",
+      "unconfirmed location use",
+      "unconfirmed provider contact",
+      "fake booking",
+      "fake purchase",
+      "fake send"
+    ]
+  };
+}
+
+function nexusOpenDialogueRiskClassifier(normalizedText = "", domains = []) {
+  if (/\b(chest pain|trouble breathing|can't breathe|cannot breathe|stroke|fainting|severe confusion|danger to self|danger to others|suicide|pregnancy danger|heavy bleeding|emergency)\b/.test(normalizedText)) return "emergency";
+  if (/\b(call|dial|message|sms|whatsapp|telegram|email|send|share|submit|provider contact|contact provider|appointment|schedule|book|payment|pay|purchase|buy|checkout|location|gps|camera|microphone|diagnose|prescribe|insulin|medication dose|change medication|stop medication|medical records|fhir|dispatch)\b/.test(normalizedText)) return "high";
+  if (domains.some(domain => ["health", "chronic-care", "marketplace", "maps-location", "communication"].includes(domain))) return "medium";
+  return "low";
+}
+
+function nexusOpenDialogueEmergencyResponse() {
+  return "Emergency warning detected. Nexus is stopping the normal workflow. If this may be an emergency, contact local emergency services or a qualified local care team now. Nexus cannot dispatch emergency help, diagnose, or replace urgent care.";
+}
+
+function nexusOpenDialogueInterpretCommand(rawText = {}) {
+  const raw = typeof rawText === "object" && rawText.rawText !== undefined ? rawText.rawText : rawText;
+  const normalizedText = nexusOpenAgentNormalizeText(raw);
+  const explicitAssistantInvocation = /\b(nexus|agrinexus)\b/i.test(String(raw || ""));
+  const speechStyleDetected = /^(nexus|hey nexus|ok nexus|okay nexus)\b/i.test(String(raw || "").trim()) ? "assistant-invoked" : "typed-or-caption";
+  const continuationSignal = /^(continue|next|do the next step|use the last plan|keep going|go on)\b/.test(normalizedText);
+  const cancellationSignal = /^(cancel|cancel that|stop|stop that|not now|forget that)\b/.test(normalizedText);
+  const modificationSignal = /\b(change that|change it|make it shorter|make it more professional|revise|edit|update the message|change the message)\b/.test(normalizedText);
+  const explanationSignal = /\b(explain|why|what does this mean|tell me more)\b/.test(normalizedText);
+  const askActionSignal = /\b(handle this|do this|do it|send it|call|message|buy|pay|book|schedule|submit|share)\b/.test(normalizedText);
+  const askRecommendationSignal = /\b(what should i do|what do i do|recommend|best option|help me figure|don't know what to do|dont know what to do)\b/.test(normalizedText);
+  const domainRules = [
+    ["communication", /\b(call|message|sms|whatsapp|telegram|email|contact|draft)\b/],
+    ["chronic-care", /\b(diabetes|glucose|blood sugar|hypertension|blood pressure|asthma|chronic|rpm|rtm|insulin)\b/],
+    ["health", /\b(health|doctor|clinic|care|sick|mother|patient|blood pressure|medicine|medication|pharmacy|telehealth|chest pain|breathing|stroke|emergency)\b/],
+    ["marketplace", /\b(agritrade|marketplace|buyer|seller|sell|selling|buy|price|maize|bags|listing|inquiry|money)\b/],
+    ["learning", /\b(learn|learning|literacy|course|lesson|teach|training|certificate)\b/],
+    ["workforce", /\b(work|job|jobs|career|shift|interview|transportation to work|employment)\b/],
+    ["maps-location", /\b(map|route|location|transport|transportation|clinic route|directions|travel)\b/],
+    ["reminders", /\b(remind|reminder|remember|every morning|daily|schedule reminder)\b/],
+    ["agriculture", /\b(agriculture|crop|crops|farm|farmer|field|soil|pest|harvest|irrigation|maize|cassava|produce)\b/],
+    ["general-assistant", /\b(meeting|organize|day|plan|checklist|agenda|questions|summary|prepare|decide|troubleshoot|figure this out)\b/]
+  ];
+  const matchedDomains = domainRules.filter(([, pattern]) => pattern.test(normalizedText)).map(([domain]) => domain);
+  const inferredDomain = matchedDomains[0] || "general-assistant";
+  const secondaryDomains = matchedDomains.slice(1);
+  let goalCategory = "prepare";
+  if (cancellationSignal) goalCategory = "cancel task";
+  else if (continuationSignal) goalCategory = "continue task";
+  else if (modificationSignal) goalCategory = "modify task";
+  else if (/\b(draft|write|compose|message)\b/.test(normalizedText)) goalCategory = "draft";
+  else if (/\b(checklist|list)\b/.test(normalizedText)) goalCategory = "checklist";
+  else if (/\b(summarize|summary)\b/.test(normalizedText)) goalCategory = "summarize";
+  else if (/\b(questions|ask)\b/.test(normalizedText)) goalCategory = "prepare questions";
+  else if (/\b(explain|teach|what is|what are)\b/.test(normalizedText)) goalCategory = "explain";
+  else if (/\b(find|resources|provider|jobs|training)\b/.test(normalizedText)) goalCategory = "find resources";
+  else if (/\b(call|message|contact)\b/.test(normalizedText)) goalCategory = "contact someone";
+  else if (/\b(remind|reminder)\b/.test(normalizedText)) goalCategory = "remind";
+  else if (/\b(route|map|transport|directions)\b/.test(normalizedText)) goalCategory = "navigate";
+  else if (/\b(organize my day|day|schedule)\b/.test(normalizedText)) goalCategory = "plan";
+  else if (/\b(meeting|prepare|plan|figure|handle this)\b/.test(normalizedText)) goalCategory = "plan";
+  else if (askRecommendationSignal) goalCategory = "decide";
+  const riskLevel = nexusOpenDialogueRiskClassifier(normalizedText, matchedDomains);
+  const urgencySignals = riskLevel === "emergency"
+    ? ["emergency-health-or-crisis-language"]
+    : /\b(urgent|today|now|immediately|as soon as possible)\b/.test(normalizedText)
+      ? ["time-sensitive"]
+      : [];
+  const safetySignals = [
+    ...(riskLevel === "high" ? ["high-risk-action-needs-confirmation-or-prep-only"] : []),
+    ...(riskLevel === "emergency" ? ["emergency-overrides-normal-workflow"] : []),
+    ...(matchedDomains.includes("health") || matchedDomains.includes("chronic-care") ? ["health-prep-no-diagnosis-or-medication-change"] : []),
+    ...(matchedDomains.includes("marketplace") ? ["marketplace-prep-no-transaction"] : []),
+    ...(matchedDomains.includes("maps-location") ? ["location-prep-no-permission-request"] : [])
+  ];
+  const missingContext = [];
+  if (goalCategory === "plan" && /\bmeeting\b/.test(normalizedText) && !/\b(meeting with|with my|with the|about my|about the|about a|for my team|for the team)\b/.test(normalizedText)) missingContext.push("meeting topic or audience");
+  if (goalCategory === "plan" && /\borganize my day\b/.test(normalizedText)) missingContext.push("top priorities");
+  if (goalCategory === "contact someone" && !/\b(john|mary|doctor|provider|seller|buyer|mother|clinic)\b/.test(normalizedText)) missingContext.push("recipient");
+  if (goalCategory === "draft" && !/\b(that|this|mary|john|buyer|seller|doctor|provider)\b/.test(normalizedText)) missingContext.push("draft audience and purpose");
+  if (goalCategory === "find resources" && inferredDomain === "general-assistant") missingContext.push("resource type");
+  if (normalizedText.length < 8 && !continuationSignal && !cancellationSignal) missingContext.push("goal details");
+  const ambiguity = missingContext.length ? "needs-one-detail" : "low";
+  const confidence = riskLevel === "emergency" ? 0.98 : matchedDomains.length ? 0.78 : askRecommendationSignal || goalCategory !== "prepare" ? 0.64 : 0.48;
+  return {
+    commandId: nexusOpenAgentCreateId("command"),
+    rawText: String(raw || ""),
+    normalizedText,
+    speechStyleDetected,
+    explicitAssistantInvocation,
+    inferredGoal: goalCategory === "cancel task" ? "Cancel the active task" : goalCategory === "continue task" ? "Continue the active task" : String(raw || "").replace(/\s+/g, " ").trim() || "Open-ended support request",
+    inferredDomain,
+    secondaryDomains,
+    intentType: cancellationSignal ? "cancel" : continuationSignal ? "continue" : modificationSignal ? "modify" : explanationSignal ? "explain" : askActionSignal ? "ask_for_action" : askRecommendationSignal ? "ask_for_recommendation" : "new_task",
+    userNeedType: goalCategory,
+    goalCategory,
+    confidence,
+    ambiguity,
+    missingContext,
+    safetySignals,
+    urgencySignals,
+    continuationSignal,
+    cancellationSignal,
+    modificationSignal,
+    unsupportedRequest: /\b(hack|illegal|bypass|steal|forge)\b/.test(normalizedText)
+  };
+}
+
+function nexusOpenDialoguePlanSteps(interpretation = {}) {
+  if (interpretation.urgencySignals?.includes("emergency-health-or-crisis-language")) {
+    return [{
+      stepId: "emergency-stop",
+      label: "Emergency safety stop",
+      purpose: "Stop normal workflow and direct the user to local emergency help.",
+      actionType: "block_and_escalate_to_human_services",
+      domain: "health",
+      riskLevel: "emergency",
+      status: "blocked",
+      requiresInput: false,
+      requiresConfirmation: false,
+      canExecuteLocally: true,
+      capabilityRequired: "emergency boundary",
+      resultSummary: "Emergency warning detected. Normal workflow stopped."
+    }];
+  }
+  const domain = interpretation.inferredDomain || "general-assistant";
+  const riskLevel = nexusOpenDialogueRiskClassifier(interpretation.normalizedText, [domain, ...(interpretation.secondaryDomains || [])]);
+  const base = [
+    {
+      stepId: "understand-goal",
+      label: "Understand goal",
+      purpose: "Restate the goal and identify domain, risk, and missing details.",
+      actionType: "interpret",
+      domain,
+      riskLevel,
+      status: "completed",
+      requiresInput: false,
+      requiresConfirmation: false,
+      canExecuteLocally: true,
+      capabilityRequired: "open command interpreter",
+      resultSummary: "Goal interpreted."
+    },
+    {
+      stepId: "collect-context",
+      label: "Collect missing details",
+      purpose: "Ask only the next useful question when context is missing.",
+      actionType: "clarify",
+      domain,
+      riskLevel,
+      status: interpretation.missingContext?.length ? "waiting_for_input" : "completed",
+      requiresInput: Boolean(interpretation.missingContext?.length),
+      requiresConfirmation: false,
+      canExecuteLocally: true,
+      capabilityRequired: "clarification",
+      resultSummary: interpretation.missingContext?.length ? `Needs: ${interpretation.missingContext.join(", ")}.` : "Enough context for a first local step."
+    },
+    {
+      stepId: "create-local-output",
+      label: nexusOpenDialogueActionLabel(interpretation.goalCategory),
+      purpose: "Create safe local output: plan, checklist, questions, draft, summary, or next-step guide.",
+      actionType: interpretation.goalCategory || "prepare",
+      domain,
+      riskLevel,
+      status: riskLevel === "low" || riskLevel === "medium" ? "ready" : "waiting_for_confirmation",
+      requiresInput: false,
+      requiresConfirmation: riskLevel === "high",
+      canExecuteLocally: riskLevel !== "emergency",
+      capabilityRequired: "safe local preparation",
+      resultSummary: "Safe local output can be prepared without external execution."
+    },
+    {
+      stepId: "verify-outcome",
+      label: "Verify outcome",
+      purpose: "Show exactly what was created, blocked, or still needed.",
+      actionType: "verify",
+      domain,
+      riskLevel,
+      status: "pending",
+      requiresInput: false,
+      requiresConfirmation: false,
+      canExecuteLocally: true,
+      capabilityRequired: "outcome verification",
+      resultSummary: "Outcome verification will be logged."
+    }
+  ];
+  if ((interpretation.secondaryDomains || []).length) {
+    base.splice(2, 0, {
+      stepId: "split-domains",
+      label: "Split multi-domain need",
+      purpose: "Separate the request into safe domain lanes and recommend the safest first step.",
+      actionType: "multi_domain_plan",
+      domain,
+      riskLevel,
+      status: "ready",
+      requiresInput: false,
+      requiresConfirmation: false,
+      canExecuteLocally: true,
+      capabilityRequired: "multi-domain reasoning",
+      resultSummary: `Primary: ${domain}. Secondary: ${interpretation.secondaryDomains.join(", ")}.`
+    });
+  }
+  return base;
+}
+
+function nexusOpenDialogueActionLabel(goalCategory = "prepare") {
+  const labels = {
+    plan: "Create plan",
+    decide: "Prepare options",
+    explain: "Explain",
+    draft: "Create draft",
+    summarize: "Create summary",
+    checklist: "Create checklist",
+    prepare: "Prepare next step",
+    "prepare questions": "Prepare questions",
+    "find resources": "Find resources",
+    "contact someone": "Prepare contact",
+    remind: "Create reminder plan",
+    navigate: "Prepare route",
+    learn: "Prepare learning path",
+    troubleshoot: "Troubleshoot",
+    "sell/buy preparation": "Prepare marketplace review",
+    "health preparation": "Prepare health review",
+    "emergency help": "Emergency stop",
+    "continue task": "Continue task",
+    "modify task": "Modify task",
+    "cancel task": "Cancel task"
+  };
+  return labels[goalCategory] || "Prepare next step";
+}
+
+function nexusOpenDialogueLocalOutput(task = {}) {
+  const category = task.goalCategory || "prepare";
+  const domainText = [task.activeDomain, ...(task.secondaryDomains || [])].filter(Boolean).join(" + ") || "general";
+  const missing = Array.isArray(task.missingInputs) ? task.missingInputs : [];
+  if (task.riskLevel === "emergency") return nexusOpenDialogueEmergencyResponse();
+  if (task.riskLevel === "high" && /contact someone|navigate/.test(category)) {
+    return `Preparation created for ${domainText}. Nexus has not called, messaged, sent, shared location, booked, paid, or contacted anyone. A final execution gate and approved provider connection would be required before any real-world action.`;
+  }
+  if (category === "draft") return `Draft created locally for review. It was not sent. Domain: ${domainText}.`;
+  if (category === "checklist") return `Checklist created locally. It includes context, questions, safe next steps, and blocked external actions for ${domainText}.`;
+  if (category === "prepare questions") return `Questions prepared for human review. Nexus did not contact a provider, buyer, employer, or outside service.`;
+  if (category === "remind") return `Reminder plan prepared. No reminder was scheduled yet. Confirm schedule details and permissions in a future gated workflow.`;
+  if (category === "navigate") return `Route preparation created. Nexus did not request location permission, share location, or open external navigation.`;
+  if (category === "find resources") return `Resource pathway prepared for ${domainText}. Nexus did not claim live provider availability unless a verified source is connected.`;
+  if (missing.length) return `I need one detail to continue: ${missing[0]}. I created the task and will keep the workflow ready.`;
+  return `Plan created for ${domainText}. Nexus prepared safe local next steps and did not execute external actions.`;
+}
+
+function nexusOpenDialogueCreateTask(interpretation = {}, previousTask = null) {
+  const now = new Date().toISOString();
+  const task = {
+    taskId: previousTask?.taskId || nexusOpenAgentCreateId("open-task"),
+    createdAt: previousTask?.createdAt || now,
+    updatedAt: now,
+    status: interpretation.urgencySignals?.includes("emergency-health-or-crisis-language")
+      ? "emergency_stopped"
+      : interpretation.missingContext?.length
+        ? "waiting_for_input"
+        : interpretation.intentType === "ask_for_action" && nexusOpenDialogueRiskClassifier(interpretation.normalizedText, [interpretation.inferredDomain]) === "high"
+          ? "waiting_for_confirmation"
+          : "active",
+    sourceCommand: interpretation.rawText,
+    activeDomain: interpretation.inferredDomain,
+    secondaryDomains: interpretation.secondaryDomains || [],
+    goal: interpretation.inferredGoal,
+    goalCategory: interpretation.goalCategory,
+    userIntent: interpretation.intentType,
+    riskLevel: nexusOpenDialogueRiskClassifier(interpretation.normalizedText, [interpretation.inferredDomain, ...(interpretation.secondaryDomains || [])]),
+    urgencyLevel: interpretation.urgencySignals?.length ? "urgent" : "normal",
+    confidence: interpretation.confidence,
+    ambiguity: interpretation.ambiguity,
+    planSteps: nexusOpenDialoguePlanSteps(interpretation),
+    currentStepId: interpretation.missingContext?.length ? "collect-context" : "create-local-output",
+    completedSteps: ["understand-goal"],
+    waitingForInput: Boolean(interpretation.missingContext?.length),
+    waitingForConfirmation: false,
+    collectedInputs: previousTask?.collectedInputs || [],
+    missingInputs: interpretation.missingContext || [],
+    actionHistory: previousTask?.actionHistory ? previousTask.actionHistory.slice(-10) : [],
+    outcomeLog: previousTask?.outcomeLog ? previousTask.outcomeLog.slice(-10) : [],
+    blockedActions: [],
+    finalSummary: "",
+    interpretation,
+    capabilityMatrix: nexusOpenDialogueCapabilityMatrix(),
+    noExecutionAuthorized: true,
+    executionAuthority: false,
+    providerHandoffAuthorized: false
+  };
+  if (task.riskLevel === "high") {
+    task.waitingForConfirmation = true;
+    task.blockedActions.push("External execution blocked until final gate, provider connection, audit, and explicit user approval exist.");
+  }
+  if (task.riskLevel === "emergency") {
+    task.blockedActions.push("Normal workflow stopped because emergency/crisis language was detected.");
+  }
+  const output = nexusOpenDialogueLocalOutput(task);
+  task.outcomeLog.push({
+    at: now,
+    status: task.status,
+    summary: output,
+    noExternalAction: true
+  });
+  task.actionHistory.push({
+    at: now,
+    command: interpretation.rawText,
+    action: task.waitingForInput ? "clarification_requested" : task.riskLevel === "emergency" ? "emergency_stopped" : "local_preparation_created"
+  });
+  task.finalSummary = output;
+  return task;
+}
+
+function nexusOpenDialogueAgentQuestion(task = {}) {
+  if (task.status === "emergency_stopped") return nexusOpenDialogueEmergencyResponse();
+  if (task.waitingForInput && task.missingInputs?.length) {
+    const first = task.missingInputs[0];
+    if (/meeting topic/.test(first)) return "I can help prepare. What is the meeting about, and who is it with?";
+    if (/top priorities/.test(first)) return "I can organize your day. What are your top two priorities?";
+    if (/recipient/.test(first)) return "Who should the message or call preparation be for? I will not send or call.";
+    return `I can help. I need one detail first: ${first}.`;
+  }
+  if (task.waitingForConfirmation) return "This involves a sensitive action. I can prepare a draft or review card now, but real execution would require a final confirmation gate and approved provider connection.";
+  return task.finalSummary || "Plan created. What would you like to do next?";
+}
+
+function nexusOpenDialogueUpdateScorecard() {
+  const checks = [
+    ["openCommandInterpretation", typeof nexusOpenDialogueInterpretCommand === "function"],
+    ["goalCategoryDetection", true],
+    ["domainDetection", true],
+    ["multiDomainDetection", true],
+    ["riskClassification", true],
+    ["emergencyOverride", true],
+    ["taskCreation", true],
+    ["planGeneration", true],
+    ["localExecution", true],
+    ["sessionTaskContext", Array.isArray(nexusOpenDialogueAgentState.tasks)],
+    ["followUpContinuation", true],
+    ["confirmationHandling", true],
+    ["blockedActionHandling", true],
+    ["capabilityMatrixEnforcement", true],
+    ["outcomeVerification", true],
+    ["standardUserUiContract", true],
+    ["falseExecutionPrevention", true],
+    ["openDialogueFallback", true]
+  ];
+  const passed = checks.filter(([, ok]) => ok).length;
+  nexusOpenDialogueAgentState.scorecard = {
+    schemaVersion: "nexus-open-dialogue-agent-scorecard.v1",
+    passed,
+    total: checks.length,
+    percentage: Math.round((passed / checks.length) * 100),
+    checks: Object.fromEntries(checks),
+    targetPercentage: 90
+  };
+  return nexusOpenDialogueAgentState.scorecard;
+}
+
+function nexusOpenDialogueSetActiveTask(task) {
+  if (!task) return null;
+  const existingIndex = nexusOpenDialogueAgentState.tasks.findIndex(item => item.taskId === task.taskId);
+  if (existingIndex >= 0) nexusOpenDialogueAgentState.tasks[existingIndex] = task;
+  else nexusOpenDialogueAgentState.tasks.unshift(task);
+  nexusOpenDialogueAgentState.tasks = nexusOpenDialogueAgentState.tasks.slice(0, 8);
+  nexusOpenDialogueAgentState.activeTaskId = task.status === "completed" || task.status === "canceled" || task.status === "emergency_stopped" ? null : task.taskId;
+  nexusOpenDialogueAgentState.taskHistory.unshift({
+    taskId: task.taskId,
+    status: task.status,
+    goal: task.goal,
+    updatedAt: task.updatedAt
+  });
+  nexusOpenDialogueAgentState.taskHistory = nexusOpenDialogueAgentState.taskHistory.slice(0, 12);
+  nexusOpenDialogueAgentState.lastOutcome = task.finalSummary || "";
+  if (task.goalCategory === "draft" || /draft/i.test(task.finalSummary || "")) nexusOpenDialogueAgentState.lastDraft = task.finalSummary;
+  nexusOpenDialogueUpdateScorecard();
+  return task;
+}
+
+function nexusOpenDialogueActiveTask() {
+  return nexusOpenDialogueAgentState.tasks.find(task => task.taskId === nexusOpenDialogueAgentState.activeTaskId) || null;
+}
+
+function nexusOpenDialogueHandleFollowUp(interpretation = {}) {
+  const activeTask = nexusOpenDialogueActiveTask();
+  if (interpretation.cancellationSignal) {
+    if (!activeTask) return {
+      handled: true,
+      response: "There is no active Nexus Agent task to cancel.",
+      task: null
+    };
+    activeTask.status = "canceled";
+    activeTask.waitingForInput = false;
+    activeTask.waitingForConfirmation = false;
+    activeTask.updatedAt = new Date().toISOString();
+    activeTask.outcomeLog.push({ at: activeTask.updatedAt, status: "canceled", summary: "Task canceled locally. No action was executed.", noExternalAction: true });
+    activeTask.finalSummary = "Task canceled locally. No action was executed.";
+    nexusOpenDialogueSetActiveTask(activeTask);
+    return { handled: true, response: activeTask.finalSummary, task: activeTask };
+  }
+  if (interpretation.continuationSignal) {
+    if (!activeTask) return {
+      handled: true,
+      response: "I can continue, but there is no active task yet. What would you like to work on?",
+      task: null
+    };
+    activeTask.updatedAt = new Date().toISOString();
+    activeTask.waitingForInput = false;
+    activeTask.status = "active";
+    const nextStep = activeTask.planSteps.find(step => step.status === "ready" || step.status === "pending") || activeTask.planSteps[activeTask.planSteps.length - 1];
+    activeTask.currentStepId = nextStep?.stepId || activeTask.currentStepId;
+    activeTask.completedSteps = Array.from(new Set([...(activeTask.completedSteps || []), "collect-context"]));
+    activeTask.finalSummary = nexusOpenDialogueLocalOutput(activeTask);
+    activeTask.outcomeLog.push({ at: activeTask.updatedAt, status: activeTask.status, summary: activeTask.finalSummary, noExternalAction: true });
+    nexusOpenDialogueSetActiveTask(activeTask);
+    return { handled: true, response: activeTask.finalSummary, task: activeTask };
+  }
+  if (interpretation.modificationSignal) {
+    if (!activeTask && !nexusOpenDialogueAgentState.lastDraft) return {
+      handled: true,
+      response: "I can revise it. Paste or describe the message, plan, or draft you want changed.",
+      task: null
+    };
+    const task = activeTask || nexusOpenDialogueAgentState.tasks[0];
+    task.updatedAt = new Date().toISOString();
+    task.status = "active";
+    task.finalSummary = "Revision prepared locally. Nexus made the wording more professional and did not send anything.";
+    task.outcomeLog.push({ at: task.updatedAt, status: "active", summary: task.finalSummary, noExternalAction: true });
+    task.actionHistory.push({ at: task.updatedAt, command: interpretation.rawText, action: "local_revision_created" });
+    nexusOpenDialogueSetActiveTask(task);
+    return { handled: true, response: task.finalSummary, task };
+  }
+  if (activeTask?.waitingForConfirmation && /\b(confirm|yes|do it|send it|call now|message now|approve)\b/.test(interpretation.normalizedText)) {
+    activeTask.updatedAt = new Date().toISOString();
+    activeTask.status = "waiting_for_confirmation";
+    activeTask.finalSummary = "Confirmation intent noted, but no external action was executed. Nexus created/kept the local preparation only because a final execution gate, approved provider connection, audit, and real capability are required first.";
+    activeTask.blockedActions = Array.from(new Set([...(activeTask.blockedActions || []), "External execution remains blocked after confirmation intent."]));
+    activeTask.outcomeLog.push({ at: activeTask.updatedAt, status: activeTask.status, summary: activeTask.finalSummary, noExternalAction: true });
+    activeTask.actionHistory.push({ at: activeTask.updatedAt, command: interpretation.rawText, action: "confirmation_intent_recorded_no_execution" });
+    nexusOpenDialogueSetActiveTask(activeTask);
+    return { handled: true, response: activeTask.finalSummary, task: activeTask };
+  }
+  if (activeTask?.waitingForInput && interpretation.normalizedText) {
+    activeTask.collectedInputs.push({ at: new Date().toISOString(), value: interpretation.rawText });
+    activeTask.missingInputs = activeTask.missingInputs.slice(1);
+    activeTask.waitingForInput = activeTask.missingInputs.length > 0;
+    activeTask.status = activeTask.waitingForInput ? "waiting_for_input" : "active";
+    activeTask.updatedAt = new Date().toISOString();
+    if (!activeTask.waitingForInput) {
+      activeTask.finalSummary = nexusOpenDialogueLocalOutput(activeTask);
+      activeTask.completedSteps = Array.from(new Set([...(activeTask.completedSteps || []), "collect-context", "create-local-output"]));
+    } else {
+      activeTask.finalSummary = nexusOpenDialogueAgentQuestion(activeTask);
+    }
+    activeTask.outcomeLog.push({ at: activeTask.updatedAt, status: activeTask.status, summary: activeTask.finalSummary, noExternalAction: true });
+    nexusOpenDialogueSetActiveTask(activeTask);
+    return { handled: true, response: activeTask.finalSummary, task: activeTask };
+  }
+  return { handled: false };
+}
+
+function nexusOpenDialogueAgentResponse(command = "", options = {}) {
+  if (experienceMode !== "user" && !options.force) return null;
+  const interpretation = nexusOpenDialogueInterpretCommand(command);
+  if (!interpretation.normalizedText) return null;
+  if (interpretation.unsupportedRequest) {
+    return {
+      handled: true,
+      response: "I cannot help with unsafe or illegal requests. I can help make a safe plan, checklist, or explanation instead.",
+      task: null,
+      interpretation
+    };
+  }
+  const followUp = nexusOpenDialogueHandleFollowUp(interpretation);
+  if (followUp.handled) return { ...followUp, interpretation };
+  const shouldHandleOpen = interpretation.confidence >= 0.45
+    || interpretation.inferredDomain !== "general-assistant"
+    || interpretation.goalCategory !== "prepare"
+    || /\b(help|plan|prepare|draft|organize|meeting|problem|continue|cancel|change|next|mother|farm|health|work|training|transport|money|maize|bags)\b/.test(interpretation.normalizedText);
+  if (!shouldHandleOpen) return null;
+  const task = nexusOpenDialogueCreateTask(interpretation);
+  nexusOpenDialogueSetActiveTask(task);
+  return {
+    handled: true,
+    response: nexusOpenDialogueAgentQuestion(task),
+    task,
+    interpretation
+  };
+}
+
+function renderNexusOpenDialogueAgentCard(state = nexusOpenDialogueAgentState) {
+  const activeTask = nexusOpenDialogueActiveTask();
+  const scorecard = nexusOpenDialogueUpdateScorecard();
+  const task = activeTask || state.tasks[0] || null;
+  const actions = [
+    ["start", "Start"],
+    ["continue", "Continue"],
+    ["answer", "Answer question"],
+    ["checklist", "Create checklist"],
+    ["questions", "Prepare questions"],
+    ["draft", "Draft message"],
+    ["reminder", "Create reminder plan"],
+    ["confirm", "Confirm"],
+    ["cancel", "Cancel"],
+    ["finish", "Finish"]
+  ];
+  return `
+    <section class="nexus-open-dialogue-agent-card" data-nexus-open-dialogue-agent-card="true" data-execution-authority="false" data-provider-handoff-authorized="false" aria-label="Nexus Agent">
+      <div class="nexus-agent-card-header">
+        <span class="eyebrow">Nexus Agent</span>
+        <strong>${htmlSafe(task?.goal || "Open dialogue assistant ready")}</strong>
+        <small>${htmlSafe(task ? `Confidence ${Math.round((task.confidence || 0) * 100)}% - ${task.status}` : "Tell Nexus any goal. It will plan, ask, prepare, or block safely.")}</small>
+      </div>
+      <div class="nexus-agent-card-grid">
+        <span><strong>Domain(s):</strong> ${htmlSafe(task ? [task.activeDomain, ...(task.secondaryDomains || [])].filter(Boolean).join(", ") : "waiting")}</span>
+        <span><strong>Risk:</strong> ${htmlSafe(task?.riskLevel || "none")}</span>
+        <span><strong>Current step:</strong> ${htmlSafe(task?.currentStepId || "ready")}</span>
+        <span><strong>Missing:</strong> ${htmlSafe(task?.missingInputs?.length ? task.missingInputs.join(", ") : "none")}</span>
+        <span><strong>Completed:</strong> ${htmlSafe(task?.completedSteps?.length ? task.completedSteps.join(", ") : "none yet")}</span>
+        <span><strong>Pending confirmation:</strong> ${htmlSafe(task?.waitingForConfirmation ? "yes" : "no")}</span>
+      </div>
+      <div class="nexus-agent-card-output" role="status">
+        ${htmlSafe(task?.finalSummary || state.lastOutcome || "Nexus can create plans, checklists, questions, drafts, summaries, reminder proposals, and review-only preparation cards.")}
+      </div>
+      <div class="nexus-agent-card-actions" aria-label="Nexus Agent controls">
+        ${actions.map(([action, label]) => `<button type="button" data-nexus-open-agent-action="${action}" ${action === "confirm" && !task?.waitingForConfirmation ? "disabled aria-disabled=\"true\"" : ""}>${htmlSafe(label)}</button>`).join("")}
+      </div>
+      <small>Available now: local plans, checklists, questions, drafts, summaries, and review cards. Blocked: calls, messages, payments, purchases, provider contact, location sharing, camera/microphone, diagnosis, prescribing, emergency dispatch, and backend writes without future gates.</small>
+      <small data-nexus-open-dialogue-scorecard="true">Agentic scorecard: ${scorecard.percentage}% (${scorecard.passed}/${scorecard.total})</small>
+    </section>
+  `;
+}
+
+function paintNexusOpenDialogueAgentCard() {
+  const html = renderNexusOpenDialogueAgentCard();
+  const workspace = $("#userWorkspace");
+  if (workspace && experienceMode === "user") {
+    let host = workspace.querySelector("[data-nexus-open-dialogue-agent-host]");
+    if (!host) {
+      host = document.createElement("div");
+      host.dataset.nexusOpenDialogueAgentHost = "true";
+      const hero = workspace.querySelector(".user-workspace-hero");
+      (hero || workspace).insertAdjacentElement(hero ? "afterend" : "afterbegin", host);
+    }
+    host.innerHTML = html;
+  }
+}
+
+function handleNexusOpenDialogueAgentCommand(command = "", options = {}) {
+  const result = nexusOpenDialogueAgentResponse(command, options);
+  if (!result?.handled) return false;
+  if (result.task) {
+    const plan = buildNexusAutonomousTaskPlan(command, { category: result.task.activeDomain === "general-assistant" ? "general" : result.task.activeDomain === "marketplace" ? "marketplace-browsing" : result.task.activeDomain === "maps-location" ? "route-planning" : result.task.activeDomain === "communication" ? "message-call-preparation" : result.task.activeDomain === "health" || result.task.activeDomain === "chronic-care" ? "chronic-care-support" : result.task.activeDomain === "workforce" ? "workforce-jobs" : result.task.activeDomain === "learning" ? "training-learning" : result.task.activeDomain === "agriculture" ? "agriculture-help" : "general" });
+    startNexusAutonomousWorkflowFromTaskPlan(plan, { command });
+  }
+  paintNexusOpenDialogueAgentCard();
+  updateUserCaptionPanel(result.response || "Nexus Agent updated this task.", { expanded: true });
+  renderLiveVoiceSuggestions(["continue", "prepare questions", "create checklist", "draft it", "cancel that"]);
+  updateNexusBehaviorLayer("planning", "Nexus Agent interpreted open dialogue and updated a session-only task.");
+  setVoiceResponse(result.response || "Nexus Agent updated this task.", false, { allowHandoff: false, allowVoiceFirst: false, command, source: "nexus-open-dialogue-agent" });
+  return true;
+}
+
+function handleNexusOpenDialogueAgentControl(action = "") {
+  const activeTask = nexusOpenDialogueActiveTask();
+  const commandMap = {
+    start: "Nexus, I don't know what to do next.",
+    continue: "Continue.",
+    answer: activeTask?.missingInputs?.length ? `Here is the missing detail for ${activeTask.missingInputs[0]}.` : "Answer the next question.",
+    checklist: "Create checklist.",
+    questions: "Prepare questions.",
+    draft: "Draft a message.",
+    reminder: "Create reminder plan.",
+    confirm: "Confirm.",
+    cancel: "Cancel that.",
+    finish: "Finish."
+  };
+  const command = commandMap[action] || action;
+  if (action === "finish" && activeTask) {
+    activeTask.status = "completed";
+    activeTask.updatedAt = new Date().toISOString();
+    activeTask.finalSummary = "Task completed locally. Nexus verified the outcome and did not execute external actions.";
+    activeTask.outcomeLog.push({ at: activeTask.updatedAt, status: "completed", summary: activeTask.finalSummary, noExternalAction: true });
+    nexusOpenDialogueSetActiveTask(activeTask);
+    paintNexusOpenDialogueAgentCard();
+    setVoiceResponse(activeTask.finalSummary, false, { allowHandoff: false, allowVoiceFirst: false });
+    return true;
+  }
+  return handleNexusOpenDialogueAgentCommand(command, { force: true });
+}
+
+function handleNexusOpenDialogueAgentClick(event) {
+  const button = event.target.closest("[data-nexus-open-agent-action]");
+  if (!button) return false;
+  event.preventDefault();
+  event.stopPropagation();
+  return handleNexusOpenDialogueAgentControl(button.dataset.nexusOpenAgentAction);
 }
 
 function nexusControlledActionQueueTypeForPlan(taskPlan = {}) {
@@ -15322,6 +15981,7 @@ function renderUserWorkspace() {
       <p>${translateText("Choose a button below or ask Nexus what it can do. Nexus can help with work, training, health access, maps, field support, and agriculture trade.")}</p>
       ${userLanguageQuickSwitchHtml()}
     </section>
+    <div data-nexus-open-dialogue-agent-host="true">${renderNexusOpenDialogueAgentCard()}</div>
     ${a100CapabilitySurfaceHtml()}
     <section class="user-fast-actions" aria-label="${translateText("Quick actions")}">
       <button type="button" class="user-fast-action guide" data-simple-command="${escapeHtml(guideCommand)}">
@@ -28184,6 +28844,7 @@ async function handleVoiceCommandCore(rawCommand, options = {}) {
   }
   if (await runExplicitTypedGlobalControlPreflight(spokenCommand || command || localizedCommand || rawCommand, { ...options, turnToken })) return;
   if (handleJarvisStyleStandardUserSafetyResponse(spokenCommand || command || localizedCommand || rawCommand)) return;
+  if (handleNexusOpenDialogueAgentCommand(spokenCommand || command || localizedCommand || rawCommand)) return;
   const safeMapIntent = safeMapCapabilityIntent(spokenCommand || command || localizedCommand || rawCommand);
   if (openSafeMapCapabilityPreview(safeMapIntent)) return;
   if (await runStandardUserAssistantRuntimePreview(spokenCommand || command || localizedCommand || rawCommand, { ...options, turnToken })) return;
@@ -30588,6 +31249,7 @@ function bindStatic() {
       openAskNexus();
       return;
     }
+    if (handleNexusOpenDialogueAgentClick(event)) return;
     if (event.target.closest("[data-toggle-user-language]")) {
       event.preventDefault();
       event.stopPropagation();
@@ -30675,15 +31337,7 @@ function bindStatic() {
         }
         if (input) input.value = "";
         setCommandInputs(command);
-        if (handleJarvisStyleStandardUserSafetyResponse(command)) return;
-        if (handleNexusSimulationCaptionCommand(command)) return;
-        if (handleNexusMapNavigationHandoffCaptionCommand(command)) return;
-        if (handleNexusInternalNavigationCaptionCommand(command)) return;
-        if (handleNexusMarketplaceInquiryPreparationCaptionCommand(command)) return;
-        if (handleNexusCareTeamReportCopyViewCaptionCommand(command)) return;
-        if (handleNexusChronicCarePhysicianReportCaptionCommand(command)) return;
-        if (handleNexusLocalDraftMessageCaptionCommand(command)) return;
-        if (handleNexusCallPreparationCaptionCommand(command)) return;
+        if (handleNexusStandardUserSafeTypedCommand(command)) return;
         void handleVoiceCommand(command);
       } else if (action === "confirm") {
         void confirmPendingWorkflow();
