@@ -73,6 +73,7 @@ const functionNames = [
   "nexusMapLocationPermissionPrepare",
   "nexusMessagingCallHandoffPrepare",
   "nexusProviderDirectoryIntegrationPrepare",
+  "nexusOfflineIntelligenceModePrepare",
   "nexusOpenDialogueCreateTask",
   "nexusOpenDialogueAgentQuestion",
   "nexusOpenDialogueUpdateScorecard",

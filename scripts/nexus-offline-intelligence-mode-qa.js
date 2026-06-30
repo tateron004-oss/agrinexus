@@ -87,31 +87,34 @@ const functionNames = [
 const runtimeSource = functionNames.map(name => extractFunction(app, name)).join("\n");
 
 [
-  "function nexusMessagingCallHandoffPrepare",
-  "communicationHandoff",
-  "data-nexus-messaging-call-handoff-status=\"true\"",
-  "data-executed=\"false\"",
-  "No message was sent.",
-  "No call was placed."
-].forEach(term => assert(app.includes(term), `messaging/call handoff should include ${term}`));
+  "function nexusOfflineIntelligenceModePrepare",
+  "offlineIntelligenceMode",
+  "offlineModeActive: true",
+  "syncAvailable: false",
+  "externalExecutionBlocked: true",
+  "data-nexus-offline-intelligence-status=\"true\"",
+  "data-sync-available=\"false\"",
+  "data-external-execution-blocked=\"true\""
+].forEach(term => assert(app.includes(term), `offline intelligence mode should include ${term}`));
 
-assert(pkg.scripts["qa:nexus-messaging-call-handoff"], "package alias should run messaging/call QA");
-assert(qaSuite.includes("scripts/nexus-messaging-call-handoff-qa.js"), "qa-suite should include messaging/call QA");
+assert(pkg.scripts["qa:nexus-offline-intelligence-mode"], "package alias should run offline intelligence QA");
+assert(qaSuite.includes("scripts/nexus-offline-intelligence-mode-qa.js"), "qa-suite should include offline intelligence QA");
 
 [
-  "window.open",
-  "location.href",
   "fetch(",
-  "navigator.geolocation",
-  "getUserMedia",
+  "navigator.onLine",
+  "serviceWorker.register",
   "localStorage.setItem",
   "sessionStorage.setItem",
-  "ACTION_CALL",
+  "indexedDB",
+  "window.open",
+  "location.href",
+  "Sync completed",
   "Message sent",
   "Call placed",
   "Provider contacted",
-  "Emergency dispatched"
-].forEach(term => assert(!runtimeSource.includes(term), `messaging/call runtime must not introduce ${term}`));
+  "Payment completed"
+].forEach(term => assert(!runtimeSource.includes(term), `offline intelligence runtime must not introduce ${term}`));
 
 const sandbox = vm.runInNewContext(`
   let experienceMode = "user";
@@ -160,43 +163,35 @@ const sandbox = vm.runInNewContext(`
 `);
 
 const cases = [
-  ["Nexus, message Mary that I need help.", "message", "Mary that I need help", "messaging.adapter", "Message draft prepared. No message was sent."],
-  ["Make it more professional.", null, null, null, null],
-  ["Nexus, call John.", "call", "John", "call.adapter", "Call preparation created. No call was placed."],
-  ["Nexus, contact a buyer about my maize.", "message", "buyer/seller", "messaging.adapter", "Message draft prepared. No message was sent."],
-  ["Nexus, message the doctor about my mother.", "message", "provider/clinic", "messaging.adapter", "Message draft prepared. No message was sent."]
+  ["Nexus, offline agriculture help for crop pests.", true, []],
+  ["Nexus, offline chronic care help.", true, []],
+  ["Nexus, offline clinic prep.", true, []],
+  ["Nexus, offline marketplace listing draft for maize.", true, ["Marketplace listing draft"]],
+  ["Nexus, offline message draft to buyer.", true, ["Review-only handoff draft"]],
+  ["Nexus, offline reminder proposal for medicine.", true, ["Reminder proposal"]],
+  ["Nexus, send this message while offline and sync later.", true, ["Review-only handoff draft"]]
 ];
 
-cases.forEach(([prompt, type, recipient, adapterId, outcome]) => {
+cases.forEach(([prompt, localGuidanceAvailable, queuedDrafts]) => {
   sandbox.reset();
   const result = sandbox.response(prompt, { force: true });
   assert(result?.handled, `${prompt} should be handled`);
-  if (!type) {
-    assert(!result.task?.communicationHandoff, `${prompt} should not create orphan communication handoff without a communication intent`);
-    return;
-  }
-  const handoff = result.task?.communicationHandoff;
-  assert(handoff, `${prompt} should produce communication handoff`);
-  assert.equal(handoff.type, type, `${prompt} type should match`);
-  assert.equal(handoff.recipient, recipient, `${prompt} recipient should match`);
-  assert.equal(result.task.actionAdapterDecision?.adapterId, adapterId, `${prompt} should select ${adapterId}`);
-  assert.equal(handoff.confirmationRequired, true, `${prompt} should require confirmation`);
-  assert.equal(handoff.adapterImplemented, false, `${prompt} adapter should be unavailable in this phase`);
-  assert.equal(handoff.executed, false, `${prompt} must not execute`);
-  assert.equal(handoff.fallbackOnly, true, `${prompt} must remain fallback-only`);
-  assert.equal(handoff.outcomeMessage, outcome, `${prompt} outcome should be honest`);
-  assert.equal(handoff.executionAuthority, false, `${prompt} must not grant execution authority`);
-  assert.equal(handoff.providerHandoffAuthorized, false, `${prompt} must not authorize provider handoff`);
+  const offline = result.task?.offlineIntelligenceMode;
+  assert(offline, `${prompt} should produce offline mode object`);
+  assert.equal(offline.offlineModeActive, true, `${prompt} should activate offline mode object`);
+  assert.equal(offline.networkRequired, false, `${prompt} should not require network`);
+  assert.equal(offline.localGuidanceAvailable, localGuidanceAvailable, `${prompt} local guidance availability should match`);
+  assert.equal(offline.syncAvailable, false, `${prompt} must not claim sync availability`);
+  assert.equal(offline.externalExecutionBlocked, true, `${prompt} must block external execution`);
+  assert.equal(offline.executionAuthority, false, `${prompt} must not grant execution authority`);
+  assert.equal(offline.providerHandoffAuthorized, false, `${prompt} must not authorize provider handoff`);
+  queuedDrafts.forEach(draft => assert(offline.queuedDrafts.includes(draft), `${prompt} should include ${draft}`));
+  assert(!/sync completed|message sent|call placed|provider contacted|payment completed/i.test(offline.outcomeMessage), `${prompt} must not make false offline execution claim`);
   const card = sandbox.card();
-  assert(card.includes("data-nexus-messaging-call-handoff-status=\"true\""), `${prompt} should render communication status`);
-  assert(card.includes("data-executed=\"false\""), `${prompt} card should state executed false`);
+  assert(card.includes("data-nexus-offline-intelligence-status=\"true\""), `${prompt} should render offline status`);
+  assert(card.includes("data-sync-available=\"false\""), `${prompt} should state sync unavailable`);
+  assert(card.includes("data-external-execution-blocked=\"true\""), `${prompt} should state external execution blocked`);
 });
 
-sandbox.reset();
-const emergency = sandbox.response("Nexus, I have chest pain and trouble breathing.", { force: true });
-assert(emergency?.handled, "emergency prompt should be handled");
-assert.equal(emergency.task?.communicationHandoff, null, "emergency prompt should not create communication handoff");
-assert.equal(emergency.task?.status, "emergency_stopped", "emergency prompt should stop normal workflow");
-
-console.log("Nexus messaging/call handoff QA passed");
-console.log("- message drafts, call prep, confirmation requirement, fallback-only adapters, emergency stop, and no-execution guarantees verified");
+console.log("Nexus offline intelligence mode QA passed");
+console.log("- offline guidance, queued drafts, sync-unavailable posture, external execution block, and no false offline claims verified");

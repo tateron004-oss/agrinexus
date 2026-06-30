@@ -74,6 +74,7 @@ const functionNames = [
   "nexusMapLocationPermissionPrepare",
   "nexusMessagingCallHandoffPrepare",
   "nexusProviderDirectoryIntegrationPrepare",
+  "nexusOfflineIntelligenceModePrepare",
   "nexusOpenDialogueCreateTask",
   "nexusOpenDialogueAgentQuestion",
   "nexusOpenDialogueUpdateScorecard",
@@ -193,6 +194,7 @@ const sandbox = vm.runInNewContext(`
   ${extracted.nexusMapLocationPermissionPrepare}
   ${extracted.nexusMessagingCallHandoffPrepare}
   ${extracted.nexusProviderDirectoryIntegrationPrepare}
+  ${extracted.nexusOfflineIntelligenceModePrepare}
   ${extracted.nexusOpenDialogueCreateTask}
   ${extracted.nexusOpenDialogueAgentQuestion}
   ${extracted.nexusOpenDialogueUpdateScorecard}

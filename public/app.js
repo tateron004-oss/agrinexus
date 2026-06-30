@@ -2659,6 +2659,30 @@ function nexusProviderDirectoryIntegrationPrepare(interpretation = {}, task = {}
   };
 }
 
+function nexusOfflineIntelligenceModePrepare(interpretation = {}, task = {}) {
+  const text = String(interpretation.normalizedText || interpretation.rawText || task.sourceCommand || "").toLowerCase();
+  const isOfflineRequest = /\b(offline|no internet|low bandwidth|without internet|sync later|send packet|offline packet)\b/.test(text)
+    || task.actionAdapterDecision?.adapterId === "offline-sync.adapter";
+  if (!isOfflineRequest) return null;
+  const queuedDrafts = [];
+  if (/\b(message|send|call|provider|buyer|seller|handoff|sync)\b/.test(text)) queuedDrafts.push("Review-only handoff draft");
+  if (/\b(remind|reminder|medicine|clinic|appointment)\b/.test(text)) queuedDrafts.push("Reminder proposal");
+  if (/\bmarket|sell|maize|crop|listing\b/.test(text)) queuedDrafts.push("Marketplace listing draft");
+  const localGuidanceAvailable = /\b(agriculture|crop|farm|chronic|care|clinic|market|marketplace|listing|maize|job|workforce|lesson|learning|message|call|remind|reminder)\b/.test(text);
+  return {
+    offlineModeActive: true,
+    networkRequired: false,
+    localGuidanceAvailable,
+    queuedDrafts,
+    syncAvailable: false,
+    externalExecutionBlocked: true,
+    outcomeMessage: "Offline guidance prepared locally. No sync, send, call, provider contact, payment, route, or external action occurred.",
+    executionAuthority: false,
+    providerHandoffAuthorized: false,
+    noExecutionAuthorized: true
+  };
+}
+
 function nexusOpenDialogueCreateTask(interpretation = {}, previousTask = null) {
   const now = new Date().toISOString();
   const task = {
@@ -2701,6 +2725,7 @@ function nexusOpenDialogueCreateTask(interpretation = {}, previousTask = null) {
     mapLocationRequest: null,
     communicationHandoff: null,
     providerDirectoryRequest: null,
+    offlineIntelligenceMode: null,
     capabilityMatrix: nexusOpenDialogueCapabilityMatrix(),
     noExecutionAuthorized: true,
     executionAuthority: false,
@@ -2722,6 +2747,7 @@ function nexusOpenDialogueCreateTask(interpretation = {}, previousTask = null) {
   task.mapLocationRequest = nexusMapLocationPermissionPrepare(interpretation, task);
   task.communicationHandoff = nexusMessagingCallHandoffPrepare(interpretation, task);
   task.providerDirectoryRequest = nexusProviderDirectoryIntegrationPrepare(interpretation, task);
+  task.offlineIntelligenceMode = nexusOfflineIntelligenceModePrepare(interpretation, task);
   const output = nexusOpenDialogueLocalOutput(task);
   task.outcomeLog.push({
     at: now,
@@ -3054,6 +3080,13 @@ function renderNexusOpenDialogueAgentCard(state = nexusOpenDialogueAgentState) {
           <strong>Provider directory prep</strong>
           <span>${htmlSafe(task.providerDirectoryRequest.careNeed)} - ${htmlSafe(task.providerDirectoryRequest.locationInput)}</span>
           <small>${htmlSafe(task.providerDirectoryRequest.outcomeMessage)}</small>
+        </div>
+      ` : ""}
+      ${task?.offlineIntelligenceMode ? `
+        <div class="nexus-offline-intelligence-status" data-nexus-offline-intelligence-status="true" data-sync-available="false" data-external-execution-blocked="true" data-execution-authority="false">
+          <strong>Offline intelligence mode</strong>
+          <span>${htmlSafe(task.offlineIntelligenceMode.localGuidanceAvailable ? "local guidance available" : "local prep only")} - ${htmlSafe(task.offlineIntelligenceMode.queuedDrafts.length ? `${task.offlineIntelligenceMode.queuedDrafts.length} queued draft(s)` : "no queued external action")}</span>
+          <small>${htmlSafe(task.offlineIntelligenceMode.outcomeMessage)}</small>
         </div>
       ` : ""}
       ${task?.localArtifacts?.length ? `
