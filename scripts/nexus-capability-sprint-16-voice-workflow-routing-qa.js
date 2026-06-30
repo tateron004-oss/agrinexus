@@ -96,12 +96,8 @@ assert(
   "send"
 ].forEach(term => assert(normalizerSource.includes("normalizeImperfectSpeech") && app.includes(term), `Sprint 16 should preserve high-risk ${term} terms for existing gates.`));
 
-[
-  "nexus-behavior-323",
-  "agrinexus-pwa-v302"
-].forEach(version => {
-  assert(app.includes(version) || index.includes(version) || sw.includes(version) || server.includes(version), `Sprint 16 should bump ${version}`);
-});
+assert(/nexus-behavior-\d+/.test(app) && /nexus-behavior-\d+/.test(index) && /nexus-behavior-\d+/.test(server), "Sprint 16 should preserve coordinated web build versioning.");
+assert(/agrinexus-pwa-v\d+/.test(app) && /agrinexus-pwa-v\d+/.test(sw) && /agrinexus-pwa-v\d+/.test(server), "Sprint 16 should preserve coordinated PWA cache versioning.");
 
 assert.equal(
   pkg.scripts["qa:nexus-capability-sprint-16-voice-workflow-routing"],

@@ -183,6 +183,7 @@ let nexusAutonomousWorkflowState = null;
 let nexusControlledActionQueue = [];
 let nexusUserConfirmationGateState = null;
 let nexusSessionActionAuditLog = [];
+let nexusSafeTaskHistory = [];
 let nexusSimulatedProviderResults = [];
 let nexusInternalNavigationExecutionResults = [];
 let nexusLocalDraftMessageResults = [];
@@ -210,8 +211,8 @@ const nexusProductIdentity = Object.freeze({
 });
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-323";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v302";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-324";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v303";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
 const VOICE_ATTENTION_DELAY_MS = 900;
@@ -540,7 +541,55 @@ function recordNexusSessionActionAuditEvent(eventType = "", details = {}) {
     createdAt: new Date().toISOString()
   };
   nexusSessionActionAuditLog = [entry, ...nexusSessionActionAuditLog].slice(0, 25);
+  const taskHistoryEntry = typeof createNexusSafeTaskHistoryEntry === "function"
+    ? createNexusSafeTaskHistoryEntry(type, details, entry)
+    : null;
+  if (taskHistoryEntry) {
+    nexusSafeTaskHistory = [taskHistoryEntry, ...nexusSafeTaskHistory].slice(0, 12);
+  }
   return entry;
+}
+
+function createNexusSafeTaskHistoryEntry(eventType = "", details = {}, auditEntry = {}) {
+  const type = sanitizeNexusSessionAuditText(eventType || auditEntry.eventType || "");
+  if (!type) return null;
+  const taskLabel = sanitizeNexusSessionAuditText(details.taskLabel || details.actionType || auditEntry.actionType || type.replace(/_/g, " "));
+  const status = sanitizeNexusSessionAuditText(details.resultStatus || auditEntry.resultStatus || "Recorded locally.");
+  const risk = sanitizeNexusSessionAuditText(details.riskLevel || auditEntry.riskLevel || "review");
+  return {
+    schemaVersion: "nexus-safe-task-history.v1",
+    taskHistoryId: `nexus-task-history-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+    sourceAuditId: auditEntry.auditId || "",
+    eventType: type,
+    taskLabel: taskLabel || "Nexus local task",
+    riskLevel: risk || "review",
+    status,
+    safetyScope: "session-only review history",
+    storageMode: "volatile-ui-only",
+    externalTransmissionAllowed: false,
+    backendWriteAllowed: false,
+    executionAuthority: false,
+    providerHandoffAuthorized: false,
+    createdAt: auditEntry.createdAt || new Date().toISOString()
+  };
+}
+
+function renderNexusSafeTaskHistory(history = nexusSafeTaskHistory) {
+  if (!Array.isArray(history) || !history.length) return "";
+  const items = history.slice(0, 6).map(entry => `
+    <li data-nexus-safe-task-history-entry="${htmlSafe(entry.eventType)}" data-execution-authority="false" data-storage-mode="volatile-ui-only">
+      <strong>${htmlSafe(entry.taskLabel || entry.eventType.replace(/_/g, " "))}</strong>
+      <span>${htmlSafe(entry.status || "Recorded locally.")}</span>
+      <small>Risk: ${htmlSafe(entry.riskLevel || "review")}.</small>
+      <small>${htmlSafe(entry.safetyScope)} - no backend write, provider handoff, permission request, or external action.</small>
+    </li>
+  `).join("");
+  return `
+    <div class="nexus-safe-task-history" data-nexus-safe-task-history="true" data-storage-mode="volatile-ui-only" data-execution-authority="false" data-external-transmission="false" aria-label="Nexus safe task history">
+      <span class="nexus-safe-task-history-label">Safe task history</span>
+      <ul>${items}</ul>
+    </div>
+  `;
 }
 
 function renderNexusSessionActionAuditLog(log = nexusSessionActionAuditLog) {
@@ -1723,6 +1772,7 @@ function handleNexusControlledActionQueueClick(event) {
 function renderNexusControlledActionQueueCard(queue = nexusControlledActionQueue) {
   if (!Array.isArray(queue) || !queue.length) return "";
   const gateHtml = renderNexusUserConfirmationGate();
+  const taskHistoryHtml = renderNexusSafeTaskHistory();
   const auditHtml = renderNexusSessionActionAuditLog();
   const simulatedHtml = renderNexusSimulatedProviderExecutionResults();
   const internalNavigationHtml = renderNexusInternalNavigationExecutionResults();
@@ -1757,6 +1807,7 @@ function renderNexusControlledActionQueueCard(queue = nexusControlledActionQueue
       ${mapNavigationHandoffHtml}
       ${internalNavigationHtml}
       ${simulatedHtml}
+      ${taskHistoryHtml}
       ${auditHtml}
       <small>No provider API, phone call, message, payment, location, camera, medical, pharmacy, emergency, backend write, or external action can run from this queue.</small>
     </section>
