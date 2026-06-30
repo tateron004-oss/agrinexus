@@ -16972,9 +16972,9 @@ const NEXUS_PLATFORM_DASHBOARD_MODES = Object.freeze([
     id: "agriculture-support",
     title: "Agriculture Support",
     category: "Agriculture",
-    description: "Review crop, soil, pest, irrigation, weather, and field support questions with source-aware guidance.",
-    status: "Active / Review",
-    safetyLabel: "Guidance only; no diagnosis, spraying, purchase, or provider dispatch.",
+    description: "Review crop, soil, pest, irrigation, weather, and field support questions with source-backed education for expert review.",
+    status: "Source-Backed Guidance",
+    safetyLabel: "Guidance only; confirm local decisions with agriculture experts where needed. No spraying, purchase, or dispatch.",
     actionLabel: "Open Agriculture Support",
     section: "trade",
     icon: "trade",
@@ -16989,8 +16989,8 @@ const NEXUS_PLATFORM_DASHBOARD_MODES = Object.freeze([
     title: "Crop Issue Guidance",
     category: "Field Support",
     description: "Organize crop symptoms, local context, and follow-up questions before human review.",
-    status: "Preview / Human Review",
-    safetyLabel: "Does not diagnose crop disease, activate camera, or prescribe treatment.",
+    status: "Provider Review Required",
+    safetyLabel: "Does not diagnose crop disease, activate camera, prescribe treatment, or replace local expert review.",
     actionLabel: "Review Crop Help",
     section: "trade",
     icon: "trade",
@@ -17021,7 +17021,7 @@ const NEXUS_PLATFORM_DASHBOARD_MODES = Object.freeze([
     title: "Jobs & Workforce",
     category: "Workforce",
     description: "Explore job pathways, role readiness, skill gaps, and workforce preparation steps.",
-    status: "Active / Preparation",
+    status: "Preparation Only",
     safetyLabel: "Does not submit applications or contact employers automatically.",
     actionLabel: "Explore Job Pathways",
     section: "workforce",
@@ -17036,8 +17036,8 @@ const NEXUS_PLATFORM_DASHBOARD_MODES = Object.freeze([
     id: "training-literacy",
     title: "Training & Literacy",
     category: "Learning",
-    description: "Start lessons, captions, language support, certificates, and literacy-friendly learning steps.",
-    status: "Active",
+    description: "Review lessons, captions, language support, certificates, and literacy-friendly learning steps.",
+    status: "Source-Backed Guidance",
     safetyLabel: "Learning support only; credential workflows still require review where configured.",
     actionLabel: "Start Training",
     section: "learning",
@@ -17053,7 +17053,7 @@ const NEXUS_PLATFORM_DASHBOARD_MODES = Object.freeze([
     title: "Health Access Preparation",
     category: "Health",
     description: "Prepare questions, organize symptoms, review telehealth access, and build provider-ready notes.",
-    status: "Preparation / Provider Review Required",
+    status: "Provider Review Required",
     safetyLabel: "No medical diagnosis, prescription, scheduling, provider contact, or emergency dispatch.",
     actionLabel: "Open Health Preparation",
     section: "health",
@@ -17069,8 +17069,8 @@ const NEXUS_PLATFORM_DASHBOARD_MODES = Object.freeze([
     title: "Chronic Care Preparation",
     category: "Health",
     description: "Organize chronic care questions, reminders, care-team notes, and review-only follow-up plans.",
-    status: "Preparation / Provider Review Required",
-    safetyLabel: "Does not change treatment, refill medicine, or contact a provider.",
+    status: "Provider Review Required",
+    safetyLabel: "Does not diagnose, prescribe, change treatment, refill medicine, schedule care, or contact a provider.",
     actionLabel: "Prepare Chronic Care Notes",
     section: "health",
     icon: "health",
@@ -17085,8 +17085,8 @@ const NEXUS_PLATFORM_DASHBOARD_MODES = Object.freeze([
     title: "Provider Report Builder",
     category: "Health",
     description: "Build review-only provider summaries for care access, chronic care, and community health support.",
-    status: "Preparation / Provider Required",
-    safetyLabel: "No records are sent and no provider is contacted from the dashboard.",
+    status: "Provider Review Required",
+    safetyLabel: "Review-only report draft. No records are sent, no diagnosis is made, and no provider is contacted from the dashboard.",
     actionLabel: "Build Report Draft",
     section: "health",
     icon: "health",
@@ -17101,7 +17101,7 @@ const NEXUS_PLATFORM_DASHBOARD_MODES = Object.freeze([
     title: "Offline Intelligence Mode",
     category: "Resilience",
     description: "Prepare local guidance and review-only drafts for low-bandwidth or offline work.",
-    status: "Preview / Local Prep",
+    status: "Preview",
     safetyLabel: "No sync, send, call, payment, or provider handoff occurs automatically.",
     actionLabel: "Review Offline Mode",
     section: "agent",
@@ -17117,7 +17117,7 @@ const NEXUS_PLATFORM_DASHBOARD_MODES = Object.freeze([
     title: "Source Trust / Citation Support",
     category: "Trust",
     description: "Review source-backed answers, citation freshness, confidence, and evidence status.",
-    status: "Active / Review",
+    status: "Source-Backed Guidance",
     safetyLabel: "Citations inform review; they do not authorize execution.",
     actionLabel: "Review Source Trust",
     section: "agent",
@@ -17133,7 +17133,7 @@ const NEXUS_PLATFORM_DASHBOARD_MODES = Object.freeze([
     title: "Maps / Location Preparation",
     category: "Maps",
     description: "Preview route planning, facility context, and map readiness with explicit text only.",
-    status: "Preparation / Permission Required",
+    status: "Preparation Only",
     safetyLabel: "No browser location permission, live sharing, dispatch, or navigation handoff starts here.",
     actionLabel: "Open Map Preparation",
     section: "map",
@@ -17149,7 +17149,7 @@ const NEXUS_PLATFORM_DASHBOARD_MODES = Object.freeze([
     title: "Communications Preparation",
     category: "Communications",
     description: "Draft message, call, WhatsApp, Telegram, or contact steps for review before any handoff.",
-    status: "Preparation / Approval Required",
+    status: "Preparation Only",
     safetyLabel: "No calls, messages, provider handoff, or external app opens automatically.",
     actionLabel: "Prepare Communication",
     section: "agent",
@@ -17165,7 +17165,7 @@ const NEXUS_PLATFORM_DASHBOARD_MODES = Object.freeze([
     title: "Community Services",
     category: "Community",
     description: "Review community support, rural access, caregiver, transportation-to-care, and local service preparation.",
-    status: "Preparation / Source Required",
+    status: "Preparation Only",
     safetyLabel: "No transportation dispatch, emergency routing, or service request is submitted.",
     actionLabel: "Review Community Services",
     section: "health",
@@ -17181,7 +17181,7 @@ const NEXUS_PLATFORM_DASHBOARD_MODES = Object.freeze([
     title: "Admin / Testing Tools",
     category: "Testing",
     description: "Review provider status, readiness, safety posture, and QA-protected platform capabilities.",
-    status: "Workspace/Admin Review",
+    status: "Review Only",
     safetyLabel: "Standard User can review status only; admin workflows remain gated by role and mode.",
     actionLabel: "Review Readiness",
     section: "dashboard",
@@ -17211,7 +17211,7 @@ function renderNexusPlatformDashboard() {
         <div>
           <span class="eyebrow">${translateText("Platform Overview")}</span>
           <h3>${translateText("Nexus command center")}</h3>
-          <p>${translateText("A full AI-powered services platform for agriculture, workforce, literacy, marketplace review, health access preparation, maps, communications preparation, source trust, and offline support.")}</p>
+          <p>${translateText("A full AI-powered services platform for agriculture, workforce, literacy, marketplace review, health access preparation, provider-ready reports, maps, communications preparation, source trust, and offline support.")}</p>
         </div>
         <div class="nexus-platform-status-strip" aria-label="${translateText("Safety and status")}">
           <span>${translateText(`${NEXUS_PLATFORM_DASHBOARD_MODES.length} modes`)}</span>
@@ -17270,7 +17270,8 @@ function renderNexusPlatformDashboard() {
           <div class="nexus-safety-status" aria-label="${translateText("Safety and Status")}">
             <strong>${translateText("Safety & Status")}</strong>
             <span>${translateText("Nexus may prepare, summarize, guide, organize, and suggest next steps.")}</span>
-            <span>${translateText("Nexus will not diagnose, prescribe, contact providers, send messages, make calls, complete payments, share location, or trigger emergency services from this dashboard.")}</span>
+            <span>${translateText("Nexus will not diagnose, prescribe, replace physicians, contact providers, book appointments, send messages, make calls, complete payments, share location, or trigger emergency services from this dashboard.")}</span>
+            <span>${translateText("Health and chronic care outputs are for provider review. Agriculture guidance should be confirmed with local experts where needed.")}</span>
           </div>
         </aside>
       </div>

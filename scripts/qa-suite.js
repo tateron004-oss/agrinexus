@@ -55,6 +55,7 @@ const suites = {
   ],
   "nexus-workforce": [
     "scripts/nexus-platform-dashboard-qa.js",
+    "scripts/nexus-provider-testing-readiness-qa.js",
     "scripts/nexus-workforce-branding-qa.js",
     "scripts/nexus-workforce-standard-user-qa.js",
     "scripts/nexus-workforce-alias-qa.js",

@@ -49,17 +49,18 @@ includesAll(app, [
 ], "Dashboard modes");
 
 includesAll(app, [
-  "Preparation / Provider Review Required",
+  "Preparation Only",
+  "Provider Review Required",
+  "Source-Backed Guidance",
+  "Preview",
   "Review Only",
-  "Preparation / Approval Required",
-  "Preparation / Permission Required",
-  "Workspace/Admin Review",
   "No buying, selling, buyer contact, checkout, or payment from this dashboard.",
   "No medical diagnosis, prescription, scheduling, provider contact, or emergency dispatch.",
   "No calls, messages, provider handoff, or external app opens automatically.",
   "No browser location permission, live sharing, dispatch, or navigation handoff starts here.",
   "No sync, send, call, payment, or provider handoff occurs automatically.",
-  "Nexus will not diagnose, prescribe, contact providers, send messages, make calls, complete payments, share location, or trigger emergency services from this dashboard."
+  "Nexus will not diagnose, prescribe, replace physicians, contact providers, book appointments, send messages, make calls, complete payments, share location, or trigger emergency services from this dashboard.",
+  "Health and chronic care outputs are for provider review. Agriculture guidance should be confirmed with local experts where needed."
 ], "Dashboard safety labels");
 
 includesAll(app, [
