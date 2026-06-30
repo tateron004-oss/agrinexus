@@ -44,6 +44,7 @@
     "qa:nexus-reminder-calendar-integration": "node scripts/nexus-reminder-calendar-integration-qa.js",
     "qa:nexus-map-location-permission-execution": "node scripts/nexus-map-location-permission-execution-qa.js",
     "qa:nexus-messaging-call-handoff": "node scripts/nexus-messaging-call-handoff-qa.js",
+    "qa:nexus-provider-directory-integration": "node scripts/nexus-provider-directory-integration-qa.js",
     "qa:nexus-fully-agentic-assistant": "node scripts/nexus-fully-agentic-assistant-qa.js",
     "qa:nexus-agentic-continuation": "node scripts/nexus-agentic-continuation-qa.js",
     "qa:nexus-autonomous-execution-architecture": "node scripts/nexus-autonomous-execution-architecture-qa.js",

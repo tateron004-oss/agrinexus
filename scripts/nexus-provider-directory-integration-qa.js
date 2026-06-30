@@ -86,33 +86,32 @@ const functionNames = [
 const runtimeSource = functionNames.map(name => extractFunction(app, name)).join("\n");
 
 [
-  "function nexusMapLocationExtractFallback",
-  "function nexusMapLocationPermissionPrepare",
-  "mapLocationRequest",
-  "data-nexus-map-location-permission-status=\"true\"",
-  "data-permission-granted=\"false\"",
-  "data-location-permission-requested=\"false\"",
-  "No live location was used."
-].forEach(term => assert(app.includes(term), `map/location permission layer should include ${term}`));
+  "function nexusProviderDirectoryIntegrationPrepare",
+  "providerDirectoryRequest",
+  "verifiedProviderDataAvailable: false",
+  "providerOptions: []",
+  "data-nexus-provider-directory-status=\"true\"",
+  "data-provider-data-verified=\"false\"",
+  "data-provider-contacted=\"false\"",
+  "No provider was contacted."
+].forEach(term => assert(app.includes(term), `provider directory integration should include ${term}`));
 
-assert(pkg.scripts["qa:nexus-map-location-permission-execution"], "package alias should run map/location QA");
-assert(qaSuite.includes("scripts/nexus-map-location-permission-execution-qa.js"), "qa-suite should include map/location QA");
+assert(pkg.scripts["qa:nexus-provider-directory-integration"], "package alias should run provider directory QA");
+assert(qaSuite.includes("scripts/nexus-provider-directory-integration-qa.js"), "qa-suite should include provider directory QA");
 
 [
-  "navigator.geolocation",
-  "getCurrentPosition",
-  "watchPosition",
+  "fetch(",
   "window.open",
   "location.href",
-  "fetch(",
+  "navigator.geolocation",
+  "getUserMedia",
   "localStorage.setItem",
   "sessionStorage.setItem",
-  "ACTION_CALL",
-  "Live location used",
-  "Route launched",
-  "Navigation started",
-  "Provider contacted"
-].forEach(term => assert(!runtimeSource.includes(term), `map/location permission runtime must not introduce ${term}`));
+  "Provider contacted",
+  "Appointment booked",
+  "Medication purchased",
+  "Payment completed"
+].forEach(term => assert(!runtimeSource.includes(term), `provider directory runtime must not introduce ${term}`));
 
 const sandbox = vm.runInNewContext(`
   let experienceMode = "user";
@@ -141,7 +140,6 @@ const sandbox = vm.runInNewContext(`
     .replace(/"/g, "&quot;");
   ${runtimeSource}
   ({
-    fallback: nexusMapLocationExtractFallback,
     response: nexusOpenDialogueAgentResponse,
     card: renderNexusOpenDialogueAgentCard,
     reset: () => {
@@ -161,38 +159,40 @@ const sandbox = vm.runInNewContext(`
   });
 `);
 
-assert.equal(sandbox.fallback("Find clinic in Stockton, CA"), "Stockton, CA", "explicit city should be extracted");
-assert.equal(sandbox.fallback("Find agriculture training in Kenya"), "Kenya", "country fallback should be extracted");
-
 const cases = [
-  ["Nexus, find a clinic near me.", "clinic/provider", true, "city or region needed", false],
-  ["Nexus, find agriculture training near me.", "training/resource", true, "city or region needed", false],
-  ["Nexus, help me get transport to a clinic in Stockton, CA.", "clinic/provider", false, "Stockton, CA", true],
-  ["Nexus, route me to a market in Kenya.", "marketplace/market", false, "Kenya", true],
-  ["Nexus, use my location.", "map/location support", true, "city or region needed", false]
+  ["Nexus, find a clinic for my mother in Kenya.", "family care support", "Kenya"],
+  ["Nexus, prepare a doctor appointment request.", "appointment request preparation", "city or region needed"],
+  ["Nexus, help me find diabetes care.", "diabetes care", "city or region needed"],
+  ["Nexus, send my summary to a provider.", "provider/clinic support", "city or region needed"],
+  ["Nexus, buy my medication.", "pharmacy questions", "city or region needed"]
 ];
 
-cases.forEach(([prompt, requestedResource, permissionRequired, fallbackLocation, routePrepared]) => {
+cases.forEach(([prompt, careNeed, locationInput]) => {
   sandbox.reset();
   const result = sandbox.response(prompt, { force: true });
   assert(result?.handled, `${prompt} should be handled`);
-  const request = result.task?.mapLocationRequest;
-  assert(request, `${prompt} should produce map/location request`);
-  assert.equal(request.requestedResource, requestedResource, `${prompt} resource should match`);
-  assert.equal(request.permissionRequired, permissionRequired, `${prompt} permission requirement should match`);
-  assert.equal(request.permissionGranted, false, `${prompt} must not grant permission`);
-  assert.equal(request.fallbackLocation, fallbackLocation, `${prompt} fallback location should match`);
-  assert.equal(request.mapActionAvailable, false, `${prompt} must not expose live map action`);
-  assert.equal(request.routePrepared, routePrepared, `${prompt} routePrepared should reflect text fallback only`);
-  assert.equal(request.noLocationPermissionRequested, true, `${prompt} must not request live location`);
+  const request = result.task?.providerDirectoryRequest;
+  assert(request, `${prompt} should produce provider directory request`);
+  assert.equal(request.careNeed, careNeed, `${prompt} care need should match`);
+  assert.equal(request.locationInput, locationInput, `${prompt} location input should match`);
+  assert.equal(request.verifiedProviderDataAvailable, false, `${prompt} must not claim verified provider data`);
+  assert(Array.isArray(request.providerOptions) && request.providerOptions.length === 0, `${prompt} must not invent provider options`);
+  assert.equal(request.confirmationRequired, true, `${prompt} should require confirmation before contact/share`);
+  assert.equal(request.contacted, false, `${prompt} must not contact provider`);
   assert.equal(request.executionAuthority, false, `${prompt} must not grant execution authority`);
   assert.equal(request.providerHandoffAuthorized, false, `${prompt} must not authorize provider handoff`);
-  assert(!/live location used|route launched|navigation started|provider contacted/i.test(request.outcomeMessage), `${prompt} must not make false location/route claims`);
+  assert(!/provider contacted|appointment booked|medication purchased|payment completed/i.test(request.outcomeMessage), `${prompt} must not make false provider/action claims`);
   const card = sandbox.card();
-  assert(card.includes("data-nexus-map-location-permission-status=\"true\""), `${prompt} should render map/location status`);
-  assert(card.includes("data-permission-granted=\"false\""), `${prompt} card should state permission not granted`);
-  assert(card.includes("data-location-permission-requested=\"false\""), `${prompt} card should state no permission request`);
+  assert(card.includes("data-nexus-provider-directory-status=\"true\""), `${prompt} should render provider directory status`);
+  assert(card.includes("data-provider-data-verified=\"false\""), `${prompt} card should state provider data unverified`);
+  assert(card.includes("data-provider-contacted=\"false\""), `${prompt} card should state no provider contacted`);
 });
 
-console.log("Nexus map/location permission execution QA passed");
-console.log("- explicit text fallback, permission-required state, no geolocation request, no live route, and no-execution guarantees verified");
+sandbox.reset();
+const emergency = sandbox.response("Nexus, I have chest pain and trouble breathing.", { force: true });
+assert(emergency?.handled, "emergency prompt should be handled");
+assert.equal(emergency.task?.providerDirectoryRequest, null, "emergency prompt should not create provider directory request");
+assert.equal(emergency.task?.status, "emergency_stopped", "emergency prompt should stop normal workflow");
+
+console.log("Nexus provider directory integration QA passed");
+console.log("- provider prep, unverified-data posture, no invented providers, confirmation requirement, emergency stop, and no-contact guarantees verified");

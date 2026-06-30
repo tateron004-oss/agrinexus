@@ -2631,6 +2631,34 @@ function nexusMessagingCallHandoffPrepare(interpretation = {}, task = {}) {
   };
 }
 
+function nexusProviderDirectoryIntegrationPrepare(interpretation = {}, task = {}) {
+  const text = String(interpretation.normalizedText || interpretation.rawText || task.sourceCommand || "").toLowerCase();
+  const isProviderRequest = /\b(provider|doctor|clinic|care team|pharmacy|medication|medicine|diabetes care|appointment request|telehealth|community health worker|chw)\b/.test(text)
+    || task.actionAdapterDecision?.adapterId === "provider-directory.adapter";
+  if (!isProviderRequest) return null;
+  const careNeed = /\bdiabetes\b/.test(text) ? "diabetes care"
+    : /\bpharmacy|medication|medicine\b/.test(text) ? "pharmacy questions"
+      : /\bmother|parent|family\b/.test(text) ? "family care support"
+        : /\bappointment\b/.test(text) ? "appointment request preparation"
+          : "provider/clinic support";
+  const locationInput = nexusMapLocationExtractFallback(interpretation.rawText || text) || "city or region needed";
+  const handoffDraft = `Prepare provider questions for ${careNeed}. Review location, consent, and recipient before any contact.`;
+  return {
+    providerRequestId: nexusOpenAgentCreateId("provider-request"),
+    careNeed,
+    locationInput,
+    verifiedProviderDataAvailable: false,
+    providerOptions: [],
+    handoffDraft,
+    confirmationRequired: true,
+    contacted: false,
+    outcomeMessage: "Provider search checklist prepared. No provider was contacted.",
+    executionAuthority: false,
+    providerHandoffAuthorized: false,
+    noExecutionAuthorized: true
+  };
+}
+
 function nexusOpenDialogueCreateTask(interpretation = {}, previousTask = null) {
   const now = new Date().toISOString();
   const task = {
@@ -2672,6 +2700,7 @@ function nexusOpenDialogueCreateTask(interpretation = {}, previousTask = null) {
     reminderCalendarProposal: null,
     mapLocationRequest: null,
     communicationHandoff: null,
+    providerDirectoryRequest: null,
     capabilityMatrix: nexusOpenDialogueCapabilityMatrix(),
     noExecutionAuthorized: true,
     executionAuthority: false,
@@ -2692,6 +2721,7 @@ function nexusOpenDialogueCreateTask(interpretation = {}, previousTask = null) {
   task.reminderCalendarProposal = nexusReminderCalendarPrepare(interpretation, task);
   task.mapLocationRequest = nexusMapLocationPermissionPrepare(interpretation, task);
   task.communicationHandoff = nexusMessagingCallHandoffPrepare(interpretation, task);
+  task.providerDirectoryRequest = nexusProviderDirectoryIntegrationPrepare(interpretation, task);
   const output = nexusOpenDialogueLocalOutput(task);
   task.outcomeLog.push({
     at: now,
@@ -3017,6 +3047,13 @@ function renderNexusOpenDialogueAgentCard(state = nexusOpenDialogueAgentState) {
           <strong>${htmlSafe(task.communicationHandoff.type === "call" ? "Call preparation" : "Message draft")}</strong>
           <span>${htmlSafe(task.communicationHandoff.recipient)} - ${htmlSafe(task.communicationHandoff.adapterImplemented ? "adapter connected" : "adapter not connected")}</span>
           <small>${htmlSafe(task.communicationHandoff.outcomeMessage)}</small>
+        </div>
+      ` : ""}
+      ${task?.providerDirectoryRequest ? `
+        <div class="nexus-provider-directory-status" data-nexus-provider-directory-status="true" data-provider-data-verified="false" data-provider-contacted="false" data-execution-authority="false">
+          <strong>Provider directory prep</strong>
+          <span>${htmlSafe(task.providerDirectoryRequest.careNeed)} - ${htmlSafe(task.providerDirectoryRequest.locationInput)}</span>
+          <small>${htmlSafe(task.providerDirectoryRequest.outcomeMessage)}</small>
         </div>
       ` : ""}
       ${task?.localArtifacts?.length ? `
