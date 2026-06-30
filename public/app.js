@@ -83,7 +83,7 @@ let pendingGrandmaAction = null;
 let lastFocusedElement = null;
 let voiceRecognition = null;
 let lastVoiceResponse = "Ready for a command.";
-let voiceFirstMode = localStorage.getItem("agrinexusVoiceFirst") !== "off";
+let voiceFirstMode = localStorage.getItem("agrinexusVoiceFirst") === "on";
 let voiceDemoQuietMode = localStorage.getItem("agrinexusDemoQuiet") === "on";
 let voiceStreamingMode = localStorage.getItem("agrinexusStreamingVoice") !== "off";
 let voiceAutoRestart = voiceFirstMode;
@@ -737,7 +737,7 @@ function isNexusChronicCarePhysicianReportCommand(command = "") {
     && /\b(physician report|doctor report|provider report|care team report|clinical summary|clinical report|nurse|community health worker|chw|doctor|care team)\b/.test(text);
   const chronicIntent = /\b(diabetes|blood sugar|glucose|a1c|blood pressure|hypertension|bp|obesity|weight|wellness|rpm|rtm|telehealth|chronic|symptom|medication|medicine)\b/.test(text)
     && /\b(report|summary|summarize|doctor|physician|provider|nurse|care team|community health worker|chw|review)\b/.test(text);
-  const dataQuestionIntent = /\b(what data supports this|what is missing|what should the doctor review)\b/.test(text);
+  const dataQuestionIntent = /\b(what data supports this|what is missing|what data is missing|data is missing|missing data|what should the doctor review)\b/.test(text);
   const unsafeExecutionIntent = /\b(send|submit|transmit|upload|share with provider|contact provider|message|call|dial|prescribe|diagnose|adjust medication|change medication|change insulin|dispatch|emergency dispatch|connect device|sync device|store record)\b/.test(text);
   return (reportIntent || chronicIntent || dataQuestionIntent) && !unsafeExecutionIntent;
 }
@@ -768,6 +768,21 @@ function handleNexusCareTeamReportCopyViewCaptionCommand(command = "") {
   updateUserCaptionPanel("Care-team copy view is ready. Confirming will only create local copy-ready report text for human review. Nexus will not send, share, contact a provider, diagnose, change medication, store sensitive health data, or write backend data.", { expanded: true });
   setVoiceResponse("Care-team copy view is ready. Confirming will only create local copy-ready report text for human review. Nexus will not send, share, contact a provider, diagnose, change medication, store sensitive health data, or write backend data.", false, { allowVoiceFirst: false });
   return true;
+}
+
+function handleNexusStandardUserSafeTypedCommand(command = "") {
+  if (experienceMode !== "user") return false;
+  if (handleJarvisStyleStandardUserSafetyResponse(command)) return true;
+  if (handleNexusSimulationCaptionCommand(command)) return true;
+  if (handleNexusMapNavigationHandoffCaptionCommand(command)) return true;
+  if (handleNexusInternalNavigationCaptionCommand(command)) return true;
+  if (handleNexusMarketplaceInquiryPreparationCaptionCommand(command)) return true;
+  if (handleNexusCareTeamReportCopyViewCaptionCommand(command)) return true;
+  if (handleNexusChronicCarePhysicianReportCaptionCommand(command)) return true;
+  if (handleNexusLocalDraftMessageCaptionCommand(command)) return true;
+  if (handleNexusCallPreparationCaptionCommand(command)) return true;
+  const safeIntent = a100SafeAutonomyIntent(command);
+  return openA100SafeAutonomyPreview(safeIntent);
 }
 
 function isNexusLocalDraftMessageCommand(command = "") {
@@ -15295,9 +15310,9 @@ function renderUserWorkspace() {
     { label: "Start Training", detail: "Begin courses, lessons, captions, and certificates.", section: "learning", className: "service-learning", photo: "https://images.unsplash.com/photo-1522202176988-66273c2fd55f?auto=format&fit=crop&w=900&q=70" },
     { label: "Explore Job Pathways", detail: "Find jobs, apply, review readiness, and plan shifts.", section: "workforce", className: "service-workforce", photo: "https://images.unsplash.com/photo-1521737604893-d14cc237f11d?auto=format&fit=crop&w=900&q=70" },
     { label: "Get Field Support", detail: "Open farm, crop, route, and field evidence support.", section: "trade", className: "service-trade", photo: "https://images.unsplash.com/photo-1500937386664-56d1dfef3854?auto=format&fit=crop&w=900&q=70" },
-    { label: "Open Health Access", detail: "Start intake, provider handoff, or local camera support.", section: "health", className: "service-health", photo: "https://images.unsplash.com/photo-1584515933487-779824d29309?auto=format&fit=crop&w=900&q=70" },
+    { label: "Open Health Access", detail: "Review intake, telehealth, mobile clinic, and care-team prep without sending.", section: "health", className: "service-health", photo: "https://images.unsplash.com/photo-1584515933487-779824d29309?auto=format&fit=crop&w=900&q=70" },
     { label: "Use Maps & Location", detail: "Check routes, facilities, regions, and location support.", section: "map", className: "service-map", photo: "https://images.unsplash.com/photo-1524661135-423995f22d0b?auto=format&fit=crop&w=900&q=70" },
-    { label: "Open Marketplace / AgriTrade", detail: "Contact buyers, create crop orders, and track trade routes.", section: "trade", className: "service-trade", photo: "https://images.unsplash.com/photo-1500937386664-56d1dfef3854?auto=format&fit=crop&w=900&q=70" },
+    { label: "Open Marketplace / AgriTrade", detail: "Browse options and prepare inquiry notes without buyer contact, orders, or payment.", section: "trade", className: "service-trade", photo: "https://images.unsplash.com/photo-1500937386664-56d1dfef3854?auto=format&fit=crop&w=900&q=70" },
     { label: "Ask Nexus for Help", detail: "Speak or type what you need.", section: "ask", className: "service-ask", ask: true, photo: "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=900&q=70" }
   ].filter(item => item.ask || canOpenSection(item.section));
   target.innerHTML = `
@@ -19354,11 +19369,13 @@ function startAskNexusAfterLogin() {
     disableNexusVoiceForDemo("Demo quiet mode is on. Nexus voice will stay off until you turn it back on.", { silent: true });
     return;
   }
-  voiceAutoRestart = voiceFirstMode;
-  voiceStopRequested = !voiceFirstMode;
+  voiceFirstMode = false;
+  voiceAutoRestart = false;
+  voiceStopRequested = true;
+  localStorage.setItem("agrinexusVoiceFirst", "off");
   nexusAwaitingCommand = true;
-  setVoiceStatus(voiceFirstMode ? "voice-first" : "standby");
-  const message = `Welcome ${userFirstName()}. Nexus is ready. Say Nexus, then tell me what you need. I will repeat it first and wait for yes.`;
+  setVoiceStatus("standby");
+  const message = `Welcome ${userFirstName()}. Nexus is ready. Click Talk to Nexus or type a request. I will keep important actions review-only.`;
   recordNexusAutonomousLearning({ type: "login-greeting", command: "Nexus ready after login" });
   if (defaultExperienceMode() !== "user") {
     openAskNexus();
@@ -24213,6 +24230,7 @@ async function refreshChromeVoicePermissionHint() {
   if (!profile.isChrome) return;
   const status = $("#globalMicStatus");
   if (!status || voiceRecognition || voiceDemoQuietMode || voiceConversationPaused) return;
+  if (!voiceFirstMode && !realtimeVoiceActive()) return;
   const permissionState = await chromeMicrophonePermissionState();
   if (permissionState === "denied") {
     status.classList.add("blocked");
@@ -25559,7 +25577,7 @@ function a100SafeAutonomyIntent(command = "") {
   }
   const chronicMatched = [
     { id: "navigator", pattern: /\b(chronic care navigator|chronic illness support|chronic care support|family care checklist|condition support summary)\b|\bhelp me prepare for a clinic visit\b/ },
-    { id: "diabetes", pattern: /\b(diabetes|diabetic|blood sugar|glucose|a1c)\b.*\b(help|support|manage|high|low|question|prepare|review|visit|education|mean|means|track)\b|\bi have diabetes\b|\bhelp with diabetes\b|\bmy blood sugar is high\b|\bwhat is a1c\b|\bmy glucose is low\b/ },
+    { id: "diabetes", pattern: /\b(diabetes|diabetic|blood sugar|glucose|a1c)\b.*\b(help|support|manage|high|low|question|prepare|review|visit|education|mean|means|track|enter|reading|summarize)\b|\bi have diabetes\b|\bhelp with diabetes\b|\bmy blood sugar is high\b|\bwhat is a1c\b|\bmy glucose is low\b|\benter a glucose reading\b/ },
     { id: "hypertension", pattern: /\b(blood pressure|hypertension|bp)\b.*\b(help|support|high|question|prepare|review|visit|measure|measurement|technique|track|sodium|salt|activity|adherence)\b|\bhelp me with blood pressure\b|\bmy blood pressure is high\b|\bhow should i measure bp\b/ },
     { id: "asthma", pattern: /\b(asthma|breathing condition|respiratory|chronic respiratory|inhaler)\b.*\b(help|support|prepare|clinic|visit|question|track|warning|manage)\b|\bmy mother has asthma\b|\bi have asthma and want to prepare for my clinic visit\b/ },
     { id: "heart-risk", pattern: /\b(heart disease|heart risk|cardiovascular|chest pain history)\b.*\b(help|support|prepare|question|risk|review|clinic)\b|\bhelp with heart disease risk\b/ },
@@ -25637,7 +25655,7 @@ function a100SafeAutonomyIntent(command = "") {
   const capabilities = a100StandardUserCapabilities();
   const matched = [
     { id: "next", pattern: /\b(what can you do|how can you help|what can nexus do|what do you do|help me$|what should i do next)\b/ },
-    { id: "agriculture", pattern: /\b(agriculture|crop|farm|farmer|field|pest|soil|harvest)\b.*\b(help|support|what|explain|next|guide)\b|\bhelp me with agriculture\b/ },
+    { id: "agriculture", pattern: /\b(agriculture|crop|farm|farmer|field|pest|soil|harvest)\b.*\b(help|support|what|explain|next|guide|issue|problem)\b|\bhelp me with agriculture\b|\bi have a crop issue\b|\bcrop issue\b/ },
     { id: "learning", pattern: /\b(find|show|start|help|open)\b.*\b(training|course|learning|lesson|certificate|agriculture training)\b/ },
     { id: "workforce", pattern: /\b(show|find|help|open|prepare)\b.*\b(job|jobs|workforce|work|role|interview|farm jobs)\b/ },
     { id: "marketplace", pattern: /\b(browse|open|show|compare|view)\b.*\b(agritrade|agri trade|marketplace|market|buyer|seller)\b/ },
@@ -29880,6 +29898,7 @@ async function runGlobalCommand() {
     });
     return;
   }
+  if (handleNexusStandardUserSafeTypedCommand(command)) return;
   const phase17SafeAnswer = nexusPhase17StandardUserSafeAnswer(command);
   if (phase17SafeAnswer) {
     pendingAgentClarification = null;
@@ -29897,7 +29916,6 @@ async function runGlobalCommand() {
     }
     return;
   }
-  if (handleJarvisStyleStandardUserSafetyResponse(command)) return;
   await handleVoiceCommand(command);
 }
 

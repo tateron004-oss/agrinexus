@@ -37,6 +37,7 @@ const safetyHandler = extractFunction(app, "handleJarvisStyleStandardUserSafetyR
 const previewBuilder = extractFunction(app, "buildControlledActionPreviewReadinessFromMetadata");
 const commandCore = extractFunction(app, "handleVoiceCommandCore");
 const globalCommand = extractFunction(app, "runGlobalCommand");
+const standardUserSafeTypedCommand = extractFunction(app, "handleNexusStandardUserSafeTypedCommand");
 
 const safetyHandlerIndex = commandCore.indexOf("handleJarvisStyleStandardUserSafetyResponse");
 const explicitPreflightIndex = commandCore.indexOf("runExplicitTypedGlobalControlPreflight");
@@ -110,8 +111,10 @@ assert.match(safetyHandler, /setVoiceResponse/, "safety handler should render a 
 assert.match(safetyHandler, /allowHandoff:\s*false/, "safety handler must not allow native/provider handoff");
 assert.match(safetyHandler, /paintLocalLevelOneSuggestionForSimpleUserIntent/, "low-risk Jarvis-style prompts should render existing preview metadata");
 assert.match(safetyHandler, /lowRiskPreview\s*===\s*true/, "low-risk preview handling should be explicit");
-assert(globalCommand.indexOf("handleJarvisStyleStandardUserSafetyResponse") >= 0, "global typed commands should use Jarvis-style preview/safety handling before legacy routing");
-assert(globalCommand.indexOf("handleJarvisStyleStandardUserSafetyResponse") < globalCommand.indexOf("handleVoiceCommand"), "global typed Jarvis-style handling should run before handleVoiceCommand");
+assert(globalCommand.indexOf("handleNexusStandardUserSafeTypedCommand") >= 0, "global typed commands should use the shared Standard User safe typed-command dispatcher before legacy routing");
+assert(globalCommand.indexOf("handleNexusStandardUserSafeTypedCommand") < globalCommand.indexOf("handleVoiceCommand"), "global typed Standard User safe handling should run before handleVoiceCommand");
+assert(standardUserSafeTypedCommand.indexOf("handleJarvisStyleStandardUserSafetyResponse") >= 0, "shared Standard User safe typed-command dispatcher should include Jarvis-style preview/safety handling");
+assert(standardUserSafeTypedCommand.indexOf("handleJarvisStyleStandardUserSafetyResponse") < standardUserSafeTypedCommand.indexOf("handleNexusSimulationCaptionCommand"), "shared Standard User safe typed-command dispatcher should run Jarvis-style handling before later workflow routing");
 assert(/if \(handleJarvisStyleStandardUserSafetyResponse\(command\)\) return;\s+(?:if \(handleNexusSimulationCaptionCommand\(command\)\) return;\s+)?(?:if \(handleNexusMapNavigationHandoffCaptionCommand\(command\)\) return;\s+)?(?:if \(handleNexusInternalNavigationCaptionCommand\(command\)\) return;\s+)?(?:if \(handleNexusMarketplaceInquiryPreparationCaptionCommand\(command\)\) return;\s+)?(?:if \(handleNexusCareTeamReportCopyViewCaptionCommand\(command\)\) return;\s+)?(?:if \(handleNexusChronicCarePhysicianReportCaptionCommand\(command\)\) return;\s+)?(?:if \(handleNexusLocalDraftMessageCaptionCommand\(command\)\) return;\s+)?(?:if \(handleNexusCallPreparationCaptionCommand\(command\)\) return;\s+)?void handleVoiceCommand\(command\);/.test(app), "caption Send should use Jarvis-style handling before handleVoiceCommand");
 assert(/if \(handleJarvisStyleStandardUserSafetyResponse\(command\)\) return;\s+(?:if \(handleNexusSimulationCaptionCommand\(command\)\) return;\s+)?(?:if \(handleNexusMapNavigationHandoffCaptionCommand\(command\)\) return;\s+)?(?:if \(handleNexusInternalNavigationCaptionCommand\(command\)\) return;\s+)?(?:if \(handleNexusMarketplaceInquiryPreparationCaptionCommand\(command\)\) return;\s+)?(?:if \(handleNexusCareTeamReportCopyViewCaptionCommand\(command\)\) return;\s+)?(?:if \(handleNexusChronicCarePhysicianReportCaptionCommand\(command\)\) return;\s+)?(?:if \(handleNexusLocalDraftMessageCaptionCommand\(command\)\) return;\s+)?(?:if \(handleNexusCallPreparationCaptionCommand\(command\)\) return;\s+)?void handleVoiceCommand\(command\);/.test(app), "caption Enter should use Jarvis-style handling before handleVoiceCommand");
 assert.match(safetyHandler, /clearLevelOneAgentActionSuggestionLabel/, "safety handler should clear stale low-risk labels");

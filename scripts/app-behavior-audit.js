@@ -538,7 +538,7 @@ assert(server.includes("public-weather-openmeteo") && server.includes("public-wh
 assert(server.includes("function publicProviderProbePack") && server.includes("/api/providers/public-intelligence-check"), "Backend must provide a public intelligence provider check endpoint");
 assert(html.includes('data-action="public-intelligence"') && app.includes("/api/providers/public-intelligence-check"), "Integrations UI must expose a public intelligence provider workflow");
 assert(app.includes("World_Boundaries_and_Places/MapServer/tile"), "Satellite maps must show country names and borders");
-assert(app.includes("startAskNexusAfterLogin") && app.includes("Welcome ${userFirstName()}"), "Ask Nexus should wake into voice-first mode after login");
+assert(app.includes("startAskNexusAfterLogin") && app.includes("Welcome ${userFirstName()}"), "Ask Nexus should wake safely after login without requiring automatic microphone startup");
 assert(html.includes("Rural Health Access Network"), "Health module needs the rural health access network workspace");
 assert(html.includes("guestName") && html.includes("guestStartBtn") && app.includes("function startGuestUserSession"), "Login must support name-first User entry for people without credentials");
 assert(app.includes("agrinexusGuestDisplayName") && app.includes('translateText("Hello")') && app.includes('translateText("Nexus is opening your workspace.")'), "Guest User mode must greet the person by name before entering the workspace");
