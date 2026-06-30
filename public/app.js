@@ -190,6 +190,7 @@ let nexusCallPreparationResults = [];
 let nexusMapNavigationHandoffResults = [];
 let nexusMarketplaceInquiryPreparationResults = [];
 let nexusChronicCarePhysicianReportResults = [];
+let nexusCareTeamReportCopyViewResults = [];
 let visibleControlledStagedActionPreview = null;
 let visibleUserConfirmationPreview = null;
 let latestControlledActionConfirmationReadiness = null;
@@ -209,8 +210,8 @@ const nexusProductIdentity = Object.freeze({
 });
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-321";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v300";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-322";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v301";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
 const VOICE_ATTENTION_DELAY_MS = 900;
@@ -655,6 +656,24 @@ function handleNexusChronicCarePhysicianReportCaptionCommand(command = "") {
   return true;
 }
 
+function isNexusCareTeamReportCopyViewCommand(command = "") {
+  const text = String(command || "").toLowerCase();
+  const copyIntent = /\b(copy|copy-ready|prepare copy|prepare report copy|create|show|view|draft)\b/.test(text);
+  const audienceIntent = /\b(doctor|physician|provider|nurse|coach|care team|community health worker|chw|handoff note|report copy|care team summary)\b/.test(text);
+  const unsafeExecutionIntent = /\b(send|submit|share|transmit|upload|message|email|whatsapp|telegram|sms|call|dial|contact provider|contact doctor|contact nurse|contact chw|prescribe|diagnose|adjust medication|change medication|dispatch|emergency|store record|save record)\b/.test(text);
+  return copyIntent && audienceIntent && !unsafeExecutionIntent;
+}
+
+function handleNexusCareTeamReportCopyViewCaptionCommand(command = "") {
+  if (!isNexusCareTeamReportCopyViewCommand(command)) return false;
+  clearControlledActionPreview("care-team-report-copy-view-caption-command");
+  const plan = buildNexusAutonomousTaskPlan(command, { category: "care-team-report-copy-view" });
+  startNexusAutonomousWorkflowFromTaskPlan(plan, { command });
+  updateUserCaptionPanel("Care-team copy view is ready. Confirming will only create local copy-ready report text for human review. Nexus will not send, share, contact a provider, diagnose, change medication, store sensitive health data, or write backend data.", { expanded: true });
+  setVoiceResponse("Care-team copy view is ready. Confirming will only create local copy-ready report text for human review. Nexus will not send, share, contact a provider, diagnose, change medication, store sensitive health data, or write backend data.", false, { allowVoiceFirst: false });
+  return true;
+}
+
 function isNexusLocalDraftMessageCommand(command = "") {
   const text = String(command || "").toLowerCase();
   return /\b(draft|prepare|compose|write)\b[\s\S]*\b(message|email|note|question|outreach|inquiry)\b/.test(text)
@@ -1024,6 +1043,76 @@ function renderNexusChronicCarePhysicianReportResults(results = nexusChronicCare
   `;
 }
 
+function resolveNexusCareTeamReportCopyAudience(text = "") {
+  const value = String(text || "").toLowerCase();
+  if (/\b(community health worker|chw|handoff note)\b/.test(value)) return "community health worker";
+  if (/\bnurse\b/.test(value)) return "nurse";
+  if (/\bcoach\b/.test(value)) return "coach";
+  if (/\b(care team|team summary)\b/.test(value)) return "care team";
+  if (/\bprovider\b/.test(value)) return "provider";
+  return "physician";
+}
+
+function createNexusCareTeamReportCopyViewResult(gate = nexusUserConfirmationGateState) {
+  if (!gate || gate.actionType !== "care_team_report_copy_view" || gate.locallyConfirmable !== true) {
+    return null;
+  }
+  const audience = resolveNexusCareTeamReportCopyAudience(`${gate.description || ""} ${gate.requiredData || ""}`);
+  const reportKind = audience === "coach" ? "wellness" : audience === "community health worker" ? "chw" : audience === "nurse" ? "care-team-summary" : "general";
+  const report = a100ChronicCareReport(reportKind, gate.description || gate.safetyReason || "");
+  const copyLines = [
+    `Audience: ${audience}`,
+    "Purpose: local copy-ready chronic-care summary for human review.",
+    `Current session data: ${a100RpmRtmSessionDataSummary()}`,
+    `Report basis: ${report.title || "Chronic care report"}; manual/session-only information; provider review required.`,
+    "Review-only boundary: no diagnosis, no medication changes, no external send, no persistent storage, and no provider handoff.",
+    "Safety: Nexus did not send, share, call, message, transmit, store sensitive health data, write backend data, or contact a provider."
+  ];
+  const result = {
+    schemaVersion: "nexus-care-team-report-copy-view.v1",
+    copyViewId: `nexus-care-team-copy-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+    label: "COPY-READY CARE-TEAM REPORT VIEW",
+    audience,
+    reportType: report.title || "Chronic care report",
+    copyText: copyLines.join("\n"),
+    reviewOnly: true,
+    localOnly: true,
+    copyReady: true,
+    diagnosisMade: false,
+    medicationChanged: false,
+    externalSend: false,
+    externalShare: false,
+    providerHandoff: false,
+    providerContacted: false,
+    persistentStorage: false,
+    backendWriteOccurred: false,
+    externalActionOccurred: false,
+    executionAuthority: false,
+    createdAt: new Date().toISOString()
+  };
+  nexusCareTeamReportCopyViewResults = [result, ...nexusCareTeamReportCopyViewResults].slice(0, 10);
+  return result;
+}
+
+function renderNexusCareTeamReportCopyViewResults(results = nexusCareTeamReportCopyViewResults) {
+  if (!Array.isArray(results) || !results.length) return "";
+  const items = results.slice(0, 3).map(result => `
+    <li data-nexus-care-team-report-copy-view-result="${htmlSafe(result.copyViewId)}">
+      <strong>${htmlSafe(result.label)}</strong>
+      <span><strong>Audience:</strong> ${htmlSafe(result.audience)}</span>
+      <span><strong>Report Type:</strong> ${htmlSafe(result.reportType)}</span>
+      <pre>${htmlSafe(result.copyText)}</pre>
+    </li>
+  `).join("");
+  return `
+    <div class="nexus-care-team-report-copy-view-results" data-nexus-care-team-report-copy-view-results="true" data-review-only="true" data-local-only="true" data-copy-ready="true" data-diagnosis-made="false" data-medication-changed="false" data-external-send="false" data-external-share="false" data-provider-handoff="false" data-provider-contacted="false" data-persistent-storage="false" data-backend-write-occurred="false" data-external-action-occurred="false" data-execution-authority="false" aria-label="Nexus care team report copy view results">
+      <span class="nexus-care-team-report-copy-view-label">Care-team copy view</span>
+      <ul>${items}</ul>
+      <small>Local copy-ready view only. Nexus did not send, share, contact providers, store sensitive health data, or write backend data.</small>
+    </div>
+  `;
+}
+
 function classifyNexusLocalDraftMessageType(gate = {}) {
   const text = `${gate.actionType || ""} ${gate.description || ""} ${gate.requiredData || ""}`.toLowerCase();
   if (/\b(care[- ]?team|physician|provider|doctor|clinic|chw|health)\b/.test(text)) return "care-team note";
@@ -1329,6 +1418,9 @@ function nexusControlledActionQueueTypeForPlan(taskPlan = {}) {
   const safeChronicCareReportIntent = /\b(prepare|build|create|summarize|copy|show|review)\b/.test(combined)
     && /\b(physician report|doctor report|provider report|care team report|clinical summary|clinical report|nurse|community health worker|chw|doctor|care team|diabetes|blood sugar|glucose|blood pressure|hypertension|obesity|weight|rpm|rtm|telehealth)\b/.test(combined)
     && !/\b(send|submit|transmit|upload|share with provider|contact provider|message|call|dial|prescribe|diagnose|adjust medication|change medication|change insulin|dispatch|emergency dispatch|connect device|sync device|store record)\b/.test(userFacingText);
+  const safeCareTeamCopyViewIntent = /\b(copy|copy-ready|prepare copy|prepare report copy|create|show|view|draft)\b/.test(combined)
+    && /\b(doctor|physician|provider|nurse|coach|care team|community health worker|chw|handoff note|report copy|care team summary)\b/.test(combined)
+    && !/\b(send|submit|share|transmit|upload|message|email|whatsapp|telegram|sms|call|dial|contact provider|contact doctor|contact nurse|contact chw|prescribe|diagnose|adjust medication|change medication|dispatch|emergency|store record|save record)\b/.test(userFacingText);
   const safeDraftIntent = /\b(draft|prepare|compose|write)\b/.test(combined)
     && /\b(message|email|note|question|outreach|inquiry)\b/.test(combined)
     && !/\b(send|submit|deliver|call|dial|place call|contact now)\b/.test(userFacingText);
@@ -1336,6 +1428,7 @@ function nexusControlledActionQueueTypeForPlan(taskPlan = {}) {
   if (safeMapNavigationHandoffIntent) return "map_navigation_handoff";
   if (safeCallPreparationIntent) return "call_preparation";
   if (safeMarketplaceInquiryPreparationIntent) return "marketplace_inquiry_preparation";
+  if (safeCareTeamCopyViewIntent) return "care_team_report_copy_view";
   if (safeChronicCareReportIntent) return "chronic_care_report_generation";
   if (safeDraftIntent) return "draft_generation";
   if (/\b(call|phone|whatsapp|telegram|sms|email|message)\b/.test(category) || /\b(call|phone|whatsapp|telegram|sms|email|message)\b/.test(intent)) return "blocked_high_risk_action";
@@ -1438,6 +1531,7 @@ function isNexusControlledQueueActionLocallyConfirmable(action = {}) {
     "map_navigation_handoff",
     "marketplace_inquiry_preparation",
     "chronic_care_report_generation",
+    "care_team_report_copy_view",
     "draft_generation",
     "report_generation",
     "call_preparation",
@@ -1539,6 +1633,12 @@ function performNexusConfirmedLocalQueueAction(gate = nexusUserConfirmationGateS
       ? "Local chronic-care physician/care-team report created for review. Nexus did not diagnose, prescribe, adjust medication, dispatch emergency services, contact a provider, connect a device, transmit data, persist sensitive health data, or write backend data."
       : "Local chronic-care physician report was not available. No external action occurred.";
   }
+  if (gate.actionType === "care_team_report_copy_view") {
+    const result = createNexusCareTeamReportCopyViewResult(gate);
+    return result
+      ? "Local care-team copy view created for human review. Nexus did not send, share, contact providers, diagnose, change medication, store sensitive health data, or write backend data."
+      : "Local care-team copy view was not available. No external action occurred.";
+  }
   if (gate.actionType === "call_preparation") {
     const result = createNexusCallPreparationResult(gate);
     return result
@@ -1631,6 +1731,7 @@ function renderNexusControlledActionQueueCard(queue = nexusControlledActionQueue
   const mapNavigationHandoffHtml = renderNexusMapNavigationHandoffResults();
   const marketplaceInquiryPreparationHtml = renderNexusMarketplaceInquiryPreparationResults();
   const chronicCarePhysicianReportHtml = renderNexusChronicCarePhysicianReportResults();
+  const careTeamReportCopyViewHtml = renderNexusCareTeamReportCopyViewResults();
   const items = queue.slice(0, 4).map((action, index) => `
     <li data-nexus-controlled-action-queue-item="${htmlSafe(action.queueStatus)}" data-action-type="${htmlSafe(action.actionType)}" data-risk-level="${htmlSafe(action.riskLevel)}">
       <strong>${htmlSafe(action.actionType.replace(/_/g, " "))}</strong>
@@ -1650,6 +1751,7 @@ function renderNexusControlledActionQueueCard(queue = nexusControlledActionQueue
       ${gateHtml}
       ${marketplaceInquiryPreparationHtml}
       ${chronicCarePhysicianReportHtml}
+      ${careTeamReportCopyViewHtml}
       ${localDraftHtml}
       ${callPreparationHtml}
       ${mapNavigationHandoffHtml}
@@ -30428,6 +30530,7 @@ function bindStatic() {
         if (handleNexusMapNavigationHandoffCaptionCommand(command)) return;
         if (handleNexusInternalNavigationCaptionCommand(command)) return;
         if (handleNexusMarketplaceInquiryPreparationCaptionCommand(command)) return;
+        if (handleNexusCareTeamReportCopyViewCaptionCommand(command)) return;
         if (handleNexusChronicCarePhysicianReportCaptionCommand(command)) return;
         if (handleNexusLocalDraftMessageCaptionCommand(command)) return;
         if (handleNexusCallPreparationCaptionCommand(command)) return;
@@ -31010,6 +31113,7 @@ function bindStatic() {
       if (handleNexusMapNavigationHandoffCaptionCommand(command)) return;
       if (handleNexusInternalNavigationCaptionCommand(command)) return;
       if (handleNexusMarketplaceInquiryPreparationCaptionCommand(command)) return;
+      if (handleNexusCareTeamReportCopyViewCaptionCommand(command)) return;
       if (handleNexusChronicCarePhysicianReportCaptionCommand(command)) return;
       if (handleNexusLocalDraftMessageCaptionCommand(command)) return;
       if (handleNexusCallPreparationCaptionCommand(command)) return;
