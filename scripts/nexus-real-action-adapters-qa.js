@@ -61,6 +61,12 @@ const functionNames = [
   "nexusRealActionAdapterSelect",
   "nexusRealActionAdapterPrepare",
   "nexusRealActionAdapterExecute",
+  "nexusVoiceCommandLoopInitialState",
+  "nexusVoiceCommandLoopNormalizeCommand",
+  "nexusVoiceCommandLoopNextPrompt",
+  "nexusVoiceCommandLoopSpokenStyleResponse",
+  "nexusVoiceCommandLoopUpdate",
+  "nexusVoiceCommandLoopComplete",
   "nexusOpenDialogueCreateTask",
   "nexusOpenDialogueAgentQuestion",
   "nexusOpenDialogueUpdateScorecard",
@@ -112,6 +118,7 @@ assert(qaSuite.includes("scripts/nexus-real-action-adapters-qa.js"), "qa-suite s
 
 const sandbox = vm.runInNewContext(`
   let experienceMode = "user";
+  let nexusVoiceCommandLoopState = nexusVoiceCommandLoopInitialState();
   let nexusOpenDialogueAgentState = {
     schemaVersion: "nexus-open-dialogue-agent-state.v1",
     activeTaskId: null,

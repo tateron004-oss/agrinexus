@@ -61,6 +61,12 @@ const functionNames = [
   "nexusRealActionAdapterSelect",
   "nexusRealActionAdapterPrepare",
   "nexusRealActionAdapterExecute",
+  "nexusVoiceCommandLoopInitialState",
+  "nexusVoiceCommandLoopNormalizeCommand",
+  "nexusVoiceCommandLoopNextPrompt",
+  "nexusVoiceCommandLoopSpokenStyleResponse",
+  "nexusVoiceCommandLoopUpdate",
+  "nexusVoiceCommandLoopComplete",
   "nexusOpenDialogueCreateTask",
   "nexusOpenDialogueAgentQuestion",
   "nexusOpenDialogueUpdateScorecard",
@@ -114,6 +120,7 @@ const sandbox = vm.runInNewContext(`
     getItem: key => Object.prototype.hasOwnProperty.call(storage, key) ? storage[key] : null,
     setItem: (key, value) => { storage[key] = String(value); }
   };
+  let nexusVoiceCommandLoopState = nexusVoiceCommandLoopInitialState();
   let nexusOpenDialogueAgentState = {
     schemaVersion: "nexus-open-dialogue-agent-state.v1",
     activeTaskId: null,

@@ -40,6 +40,7 @@
     "qa:nexus-higher-intelligence-layer": "node scripts/nexus-higher-intelligence-layer-qa.js",
     "qa:nexus-persistent-task-memory": "node scripts/nexus-persistent-task-memory-qa.js",
     "qa:nexus-real-action-adapters": "node scripts/nexus-real-action-adapters-qa.js",
+    "qa:nexus-voice-command-loop": "node scripts/nexus-voice-command-loop-qa.js",
     "qa:nexus-fully-agentic-assistant": "node scripts/nexus-fully-agentic-assistant-qa.js",
     "qa:nexus-agentic-continuation": "node scripts/nexus-agentic-continuation-qa.js",
     "qa:nexus-autonomous-execution-architecture": "node scripts/nexus-autonomous-execution-architecture-qa.js",

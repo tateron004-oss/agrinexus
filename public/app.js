@@ -2406,6 +2406,112 @@ function nexusRealActionAdapterExecute(decision = {}) {
   };
 }
 
+function nexusVoiceCommandLoopInitialState() {
+  return {
+    voiceModeReady: true,
+    lastHeardCommand: "",
+    normalizedCommand: "",
+    commandConfidence: 0,
+    routedToBrain: false,
+    pendingConfirmation: false,
+    spokenStyleResponse: "Nexus is ready for a voice-style command.",
+    nextPrompt: "Say or type what you need next.",
+    lastIntent: "idle",
+    executionAuthority: false,
+    providerHandoffAuthorized: false
+  };
+}
+
+let nexusVoiceCommandLoopState = nexusVoiceCommandLoopInitialState();
+
+function nexusVoiceCommandLoopNormalizeCommand(command = "") {
+  const raw = String(command || "").trim();
+  const lowered = raw.toLowerCase();
+  const wakeMatched = /^(hey\s+)?nexus[,\s]+/i.test(raw);
+  let normalized = raw
+    .replace(/^(hey\s+)?nexus[,\s]+/i, "")
+    .replace(/^can\s+you\s+/i, "")
+    .replace(/^could\s+you\s+/i, "")
+    .replace(/^please\s+/i, "")
+    .replace(/^do\s+this[,\s:]*/i, "")
+    .trim();
+  if (!normalized && raw) normalized = raw;
+  const commandIntent = /\b(continue|next|resume)\b/.test(lowered) ? "continue"
+    : /\b(cancel|stop|nevermind|never mind)\b/.test(lowered) ? "cancel"
+      : /\b(confirm|yes|do it|send it)\b/.test(lowered) ? "confirm"
+        : /\b(shorter|professional|rewrite|change|modify)\b/.test(lowered) ? "modify"
+          : /\b(call|message|send|whatsapp|telegram|sms|email)\b/.test(lowered) ? "communication-boundary"
+            : /\b(chest pain|cannot breathe|trouble breathing|emergency)\b/.test(lowered) ? "emergency"
+              : raw ? "task-request" : "idle";
+  const confidence = raw ? Math.min(0.98, (wakeMatched ? 0.34 : 0.16) + (normalized.length > 5 ? 0.42 : 0.2) + (commandIntent !== "task-request" ? 0.16 : 0.08)) : 0;
+  return {
+    rawCommand: raw,
+    normalizedCommand: normalized,
+    wakeMatched,
+    commandIntent,
+    commandConfidence: Number(confidence.toFixed(2)),
+    voiceModeReady: true,
+    executionAuthority: false,
+    providerHandoffAuthorized: false
+  };
+}
+
+function nexusVoiceCommandLoopNextPrompt(intent = "task-request", result = {}) {
+  if (intent === "emergency") return "Get local emergency help now. I can stay in review-only support mode.";
+  if (intent === "confirm") return result?.task?.waitingForConfirmation ? "Review the confirmation details first." : "Tell me what action you want to confirm.";
+  if (intent === "cancel") return "Tell me what you want to do next.";
+  if (intent === "communication-boundary") return "I can prepare the communication, but I will not send or call without the required gate.";
+  if (intent === "modify") return "Tell me what tone, length, or detail to change.";
+  if (intent === "continue") return "I can continue the current local workflow.";
+  return "Tell me the goal, missing detail, or next step.";
+}
+
+function nexusVoiceCommandLoopSpokenStyleResponse(result = {}, loop = {}) {
+  const response = String(result?.response || "").trim();
+  if (loop.commandIntent === "emergency") {
+    return "This sounds urgent. Please contact local emergency services now. I will not dispatch or contact anyone automatically.";
+  }
+  if (loop.commandIntent === "communication-boundary") {
+    return "I can prepare that safely for review. I will not send, call, or contact anyone automatically.";
+  }
+  if (loop.commandIntent === "confirm" && !result?.task?.waitingForConfirmation) {
+    return "I heard a confirmation-style command, but there is no approved final execution gate active.";
+  }
+  if (response) return response;
+  return "I heard you. I can help prepare the next safe step.";
+}
+
+function nexusVoiceCommandLoopUpdate(command = "", options = {}) {
+  const parsed = nexusVoiceCommandLoopNormalizeCommand(command);
+  nexusVoiceCommandLoopState = {
+    ...nexusVoiceCommandLoopState,
+    ...parsed,
+    routedToBrain: Boolean(options.routedToBrain),
+    pendingConfirmation: false,
+    spokenStyleResponse: "Routing through Nexus intelligence.",
+    nextPrompt: nexusVoiceCommandLoopNextPrompt(parsed.commandIntent),
+    lastHeardCommand: parsed.rawCommand,
+    lastIntent: parsed.commandIntent,
+    executionAuthority: false,
+    providerHandoffAuthorized: false
+  };
+  return nexusVoiceCommandLoopState;
+}
+
+function nexusVoiceCommandLoopComplete(loop = nexusVoiceCommandLoopState, result = {}) {
+  const pendingConfirmation = Boolean(result?.task?.waitingForConfirmation);
+  nexusVoiceCommandLoopState = {
+    ...nexusVoiceCommandLoopState,
+    routedToBrain: Boolean(result?.handled),
+    pendingConfirmation,
+    spokenStyleResponse: nexusVoiceCommandLoopSpokenStyleResponse(result, loop),
+    nextPrompt: nexusVoiceCommandLoopNextPrompt(loop.lastIntent || loop.commandIntent, result),
+    executionAuthority: false,
+    providerHandoffAuthorized: false
+  };
+  return nexusVoiceCommandLoopState;
+}
+
 function nexusOpenDialogueCreateTask(interpretation = {}, previousTask = null) {
   const now = new Date().toISOString();
   const task = {
@@ -2762,6 +2868,11 @@ function renderNexusOpenDialogueAgentCard(state = nexusOpenDialogueAgentState) {
           <small>${htmlSafe(task.actionAdapterDecision.outcomeMessage)}</small>
         </div>
       ` : ""}
+      <div class="nexus-voice-command-loop-status" data-nexus-voice-command-loop-status="true" data-execution-authority="false" data-provider-handoff-authorized="false">
+        <strong>Voice loop:</strong>
+        <span>${htmlSafe(nexusVoiceCommandLoopState.voiceModeReady ? "ready" : "not ready")} - ${htmlSafe(nexusVoiceCommandLoopState.routedToBrain ? "routed to brain" : "waiting")}</span>
+        <small>${htmlSafe(nexusVoiceCommandLoopState.spokenStyleResponse)} Next: ${htmlSafe(nexusVoiceCommandLoopState.nextPrompt)}</small>
+      </div>
       ${task?.localArtifacts?.length ? `
         <div class="nexus-agent-artifact-stack" aria-label="Nexus local artifacts">
           ${task.localArtifacts.map(artifact => `
@@ -2800,17 +2911,20 @@ function paintNexusOpenDialogueAgentCard() {
 }
 
 function handleNexusOpenDialogueAgentCommand(command = "", options = {}) {
-  const result = nexusOpenDialogueAgentResponse(command, options);
+  const voiceLoop = nexusVoiceCommandLoopUpdate(command, { routedToBrain: true });
+  const routedCommand = voiceLoop.normalizedCommand || command;
+  const result = nexusOpenDialogueAgentResponse(routedCommand, options);
+  nexusVoiceCommandLoopComplete(voiceLoop, result);
   if (!result?.handled) return false;
   if (result.task) {
-    const plan = buildNexusAutonomousTaskPlan(command, { category: result.task.activeDomain === "general-assistant" ? "general" : result.task.activeDomain === "marketplace" ? "marketplace-browsing" : result.task.activeDomain === "maps-location" ? "route-planning" : result.task.activeDomain === "communication" ? "message-call-preparation" : result.task.activeDomain === "health" || result.task.activeDomain === "chronic-care" ? "chronic-care-support" : result.task.activeDomain === "workforce" ? "workforce-jobs" : result.task.activeDomain === "learning" ? "training-learning" : result.task.activeDomain === "agriculture" ? "agriculture-help" : "general" });
-    startNexusAutonomousWorkflowFromTaskPlan(plan, { command });
+    const plan = buildNexusAutonomousTaskPlan(routedCommand, { category: result.task.activeDomain === "general-assistant" ? "general" : result.task.activeDomain === "marketplace" ? "marketplace-browsing" : result.task.activeDomain === "maps-location" ? "route-planning" : result.task.activeDomain === "communication" ? "message-call-preparation" : result.task.activeDomain === "health" || result.task.activeDomain === "chronic-care" ? "chronic-care-support" : result.task.activeDomain === "workforce" ? "workforce-jobs" : result.task.activeDomain === "learning" ? "training-learning" : result.task.activeDomain === "agriculture" ? "agriculture-help" : "general" });
+    startNexusAutonomousWorkflowFromTaskPlan(plan, { command: routedCommand });
   }
   paintNexusOpenDialogueAgentCard();
   updateUserCaptionPanel(result.response || "Nexus Agent updated this task.", { expanded: true });
   renderLiveVoiceSuggestions(["continue", "prepare questions", "create checklist", "draft it", "cancel that"]);
   updateNexusBehaviorLayer("planning", "Nexus Agent interpreted open dialogue and updated a session-only task.");
-  setVoiceResponse(result.response || "Nexus Agent updated this task.", false, { allowHandoff: false, allowVoiceFirst: false, command, source: "nexus-open-dialogue-agent" });
+  setVoiceResponse(nexusVoiceCommandLoopState.spokenStyleResponse || result.response || "Nexus Agent updated this task.", false, { allowHandoff: false, allowVoiceFirst: false, command: routedCommand, source: "nexus-open-dialogue-agent" });
   return true;
 }
 
