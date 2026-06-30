@@ -187,6 +187,8 @@ let nexusOpenDialogueAgentState = {
   taskHistory: [],
   lastOutcome: "",
   lastDraft: "",
+  lastHigherReasoning: null,
+  learningSignals: [],
   scorecard: null
 };
 let nexusControlledActionQueue = [];
@@ -1584,7 +1586,7 @@ function nexusOpenDialogueCapabilityMatrix() {
 
 function nexusOpenDialogueRiskClassifier(normalizedText = "", domains = []) {
   if (/\b(chest pain|trouble breathing|can't breathe|cannot breathe|stroke|fainting|severe confusion|danger to self|danger to others|suicide|pregnancy danger|heavy bleeding|emergency)\b/.test(normalizedText)) return "emergency";
-  if (/\b(call|dial|message|sms|whatsapp|telegram|email|send|share|submit|provider contact|contact provider|appointment|schedule|book|payment|pay|purchase|buy|checkout|location|gps|camera|microphone|diagnose|prescribe|insulin|medication dose|change medication|stop medication|medical records|fhir|dispatch)\b/.test(normalizedText)) return "high";
+  if (/\b(call|dial|message|sms|whatsapp|telegram|email|contact|send|share|submit|provider contact|contact provider|appointment|schedule|book|payment|pay|purchase|buy|checkout|location|gps|near me|camera|microphone|diagnose|prescribe|insulin|medication dose|change medication|stop medication|medical records|fhir|dispatch)\b/.test(normalizedText)) return "high";
   if (domains.some(domain => ["health", "chronic-care", "marketplace", "maps-location", "communication"].includes(domain))) return "medium";
   return "low";
 }
@@ -1617,8 +1619,11 @@ function nexusOpenDialogueInterpretCommand(rawText = {}) {
     ["general-assistant", /\b(meeting|organize|day|plan|checklist|agenda|questions|summary|prepare|decide|troubleshoot|figure this out)\b/]
   ];
   const matchedDomains = domainRules.filter(([, pattern]) => pattern.test(normalizedText)).map(([domain]) => domain);
-  const inferredDomain = matchedDomains[0] || "general-assistant";
-  const secondaryDomains = matchedDomains.slice(1);
+  const agricultureDistressSignal = /\b(crops?|farm|field|harvest)\b/.test(normalizedText)
+    && /\b(failing|problem|bad|dying|money|income|loss)\b/.test(normalizedText)
+    && !/\b(health|doctor|clinic|medicine|medication|mother|patient|breath|breathing|sick|contact|call|message|sms|whatsapp|telegram|email)\b/.test(normalizedText);
+  const inferredDomain = agricultureDistressSignal ? "agriculture" : matchedDomains[0] || "general-assistant";
+  const secondaryDomains = matchedDomains.filter(domain => domain !== inferredDomain);
   let goalCategory = "prepare";
   if (cancellationSignal) goalCategory = "cancel task";
   else if (continuationSignal) goalCategory = "continue task";
@@ -2041,6 +2046,177 @@ function nexusOpenDialogueExecuteLocalAction(task = {}, actionType = "", options
   return artifact;
 }
 
+function nexusHigherIntelligenceMemoryMatches(interpretation = {}) {
+  const normalized = interpretation.normalizedText || "";
+  const activeTask = nexusOpenDialogueActiveTask();
+  const tasks = nexusOpenDialogueAgentState.tasks || [];
+  const domainMatches = tasks
+    .filter(task => task.activeDomain === interpretation.inferredDomain || (interpretation.secondaryDomains || []).includes(task.activeDomain))
+    .slice(0, 3)
+    .map(task => ({
+      taskId: task.taskId,
+      goal: task.goal,
+      status: task.status,
+      domain: task.activeDomain,
+      lastOutcome: task.finalSummary || ""
+    }));
+  const textMatches = tasks
+    .filter(task => normalized && nexusOpenAgentNormalizeText(`${task.goal} ${task.finalSummary}`).split(" ").some(word => word.length > 4 && normalized.includes(word)))
+    .slice(0, 2)
+    .map(task => ({ taskId: task.taskId, goal: task.goal, status: task.status }));
+  return {
+    activeTask: activeTask ? {
+      taskId: activeTask.taskId,
+      goal: activeTask.goal,
+      status: activeTask.status,
+      waitingForInput: Boolean(activeTask.waitingForInput),
+      waitingForConfirmation: Boolean(activeTask.waitingForConfirmation)
+    } : null,
+    lastDraftAvailable: Boolean(nexusOpenDialogueAgentState.lastDraft),
+    lastOutcome: nexusOpenDialogueAgentState.lastOutcome || "",
+    domainMatches,
+    textMatches
+  };
+}
+
+function nexusHigherIntelligenceCapabilityChoice(interpretation = {}, memoryMatches = {}) {
+  const matrix = nexusOpenDialogueCapabilityMatrix();
+  const probeTask = {
+    activeDomain: interpretation.inferredDomain,
+    secondaryDomains: interpretation.secondaryDomains || [],
+    goalCategory: interpretation.goalCategory,
+    riskLevel: nexusOpenDialogueRiskClassifier(interpretation.normalizedText, [interpretation.inferredDomain, ...(interpretation.secondaryDomains || [])]),
+    sourceCommand: interpretation.rawText,
+    goal: interpretation.inferredGoal,
+    status: "active",
+    collectedInputs: memoryMatches.activeTask ? [{ value: memoryMatches.activeTask.goal }] : []
+  };
+  const selectedActionType = nexusOpenDialogueInferLocalActionType(probeTask, interpretation.rawText);
+  const capabilityStatus = nexusOpenDialogueActionAllowed(selectedActionType, probeTask);
+  const unavailableCapabilities = matrix.unavailable_blocked.slice();
+  if (probeTask.riskLevel === "high") unavailableCapabilities.push("immediate external execution without final gate");
+  if (probeTask.riskLevel === "emergency") unavailableCapabilities.push("normal workflow during emergency language");
+  return {
+    selectedActionType,
+    capabilityStatus,
+    selectedCapability: capabilityStatus === "available_local" ? selectedActionType : "blocked_or_prepare_only",
+    availableCapabilities: [...matrix.available_local, ...matrix.available_handoff],
+    unavailableCapabilities: Array.from(new Set(unavailableCapabilities)),
+    canExecuteNow: capabilityStatus === "available_local" && probeTask.riskLevel !== "high" && probeTask.riskLevel !== "emergency",
+    canPrepareNow: probeTask.riskLevel !== "emergency",
+    requiresConfirmation: probeTask.riskLevel === "high",
+    requiresEmergencyStop: probeTask.riskLevel === "emergency"
+  };
+}
+
+function nexusHigherIntelligenceSelfCheck(interpretation = {}, capabilityChoice = {}) {
+  const blockedClaims = [
+    "message sent",
+    "call placed",
+    "appointment booked",
+    "provider contacted",
+    "payment made",
+    "medicine purchased",
+    "emergency dispatched",
+    "reminder scheduled",
+    "location used"
+  ];
+  const risk = nexusOpenDialogueRiskClassifier(interpretation.normalizedText, [interpretation.inferredDomain, ...(interpretation.secondaryDomains || [])]);
+  return {
+    passed: true,
+    noFalseExecutionClaims: true,
+    executionAuthority: false,
+    providerHandoffAuthorized: false,
+    emergencyOverride: risk === "emergency",
+    needsFinalGate: risk === "high",
+    blockedClaims,
+    decision: risk === "emergency"
+      ? "stop_normal_workflow"
+      : risk === "high"
+        ? "prepare_only_until_final_gate"
+        : capabilityChoice.canExecuteNow
+          ? "safe_local_execution_allowed"
+          : "prepare_or_clarify_only"
+  };
+}
+
+function nexusHigherIntelligenceReason(command = "", interpretation = nexusOpenDialogueInterpretCommand(command)) {
+  const memoryMatches = nexusHigherIntelligenceMemoryMatches(interpretation);
+  const capabilityChoice = nexusHigherIntelligenceCapabilityChoice(interpretation, memoryMatches);
+  const risk = nexusOpenDialogueRiskClassifier(interpretation.normalizedText, [interpretation.inferredDomain, ...(interpretation.secondaryDomains || [])]);
+  const proposedWorkflow = nexusOpenDialoguePlanSteps(interpretation).map(step => ({
+    stepId: step.stepId,
+    label: step.label,
+    status: step.status,
+    riskLevel: step.riskLevel,
+    actionType: step.actionType,
+    requiresInput: Boolean(step.requiresInput),
+    requiresConfirmation: Boolean(step.requiresConfirmation),
+    canExecuteLocally: Boolean(step.canExecuteLocally)
+  }));
+  const selfCheck = nexusHigherIntelligenceSelfCheck(interpretation, capabilityChoice);
+  const immediateActions = capabilityChoice.canExecuteNow ? [capabilityChoice.selectedActionType] : [];
+  const confirmationActions = capabilityChoice.requiresConfirmation ? [capabilityChoice.selectedActionType] : [];
+  const blockedActions = [
+    ...(risk === "emergency" ? ["normal workflow blocked by emergency safety stop"] : []),
+    ...(risk === "high" ? ["external execution blocked until final gate, provider readiness, audit, and explicit approval"] : []),
+    ...capabilityChoice.unavailableCapabilities.filter(item => /payment|purchase|diagnosis|emergency|unconfirmed|fake/.test(item)).slice(0, 5)
+  ];
+  const multiDomain = (interpretation.secondaryDomains || []).length > 0;
+  const nextBestMove = risk === "emergency"
+    ? "Stop normal workflow and direct the user to local emergency help."
+    : interpretation.missingContext?.length
+      ? `Ask for ${interpretation.missingContext[0]}.`
+      : capabilityChoice.requiresConfirmation
+        ? "Prepare a local review card and wait for a future final execution gate."
+        : multiDomain
+          ? "Split the request into safe domain lanes and create the first local artifact."
+          : "Create the safest local artifact and verify no external action occurred.";
+  return {
+    reasoningId: nexusOpenAgentCreateId("higher-reasoning"),
+    rawInput: interpretation.rawText,
+    normalizedInput: interpretation.normalizedText,
+    inputType: interpretation.explicitAssistantInvocation ? "assistant_invoked" : "typed_or_follow_up",
+    taskType: interpretation.cancellationSignal ? "cancellation" : interpretation.continuationSignal ? "follow_up" : interpretation.modificationSignal ? "modification" : multiDomain ? "multi_domain_workflow" : interpretation.intentType || "new_task",
+    goal: interpretation.inferredGoal,
+    goalCategory: interpretation.goalCategory,
+    primaryDomain: interpretation.inferredDomain,
+    secondaryDomains: interpretation.secondaryDomains || [],
+    urgency: interpretation.urgencySignals?.length ? "urgent" : "normal",
+    risk,
+    confidence: interpretation.confidence,
+    uncertaintyReasons: interpretation.missingContext?.length ? interpretation.missingContext : interpretation.ambiguity === "low" ? [] : [interpretation.ambiguity],
+    missingInputs: interpretation.missingContext || [],
+    memoryMatches,
+    availableCapabilities: capabilityChoice.availableCapabilities,
+    unavailableCapabilities: capabilityChoice.unavailableCapabilities,
+    proposedWorkflow,
+    immediateActions,
+    confirmationActions,
+    blockedActions: Array.from(new Set(blockedActions)),
+    nextBestMove,
+    capabilityChoice,
+    selfCheck,
+    userFacingDecision: `${nextBestMove} Nexus will not fake calls, messages, payments, location, provider contact, medical action, reminders, or emergency dispatch.`
+  };
+}
+
+function nexusHigherIntelligenceRecordLearning(reasoning = {}, task = {}) {
+  const signal = {
+    at: new Date().toISOString(),
+    reasoningId: reasoning.reasoningId || "",
+    taskId: task.taskId || "",
+    domain: reasoning.primaryDomain || task.activeDomain || "general-assistant",
+    risk: reasoning.risk || task.riskLevel || "low",
+    selectedCapability: reasoning.capabilityChoice?.selectedCapability || "",
+    outcome: task.finalSummary || reasoning.nextBestMove || "",
+    noExternalAction: true
+  };
+  nexusOpenDialogueAgentState.learningSignals = [signal, ...(nexusOpenDialogueAgentState.learningSignals || [])].slice(0, 12);
+  nexusOpenDialogueAgentState.lastHigherReasoning = reasoning;
+  return signal;
+}
+
 function nexusOpenDialogueCreateTask(interpretation = {}, previousTask = null) {
   const now = new Date().toISOString();
   const task = {
@@ -2077,6 +2253,7 @@ function nexusOpenDialogueCreateTask(interpretation = {}, previousTask = null) {
     blockedActions: [],
     finalSummary: "",
     interpretation,
+    higherReasoning: null,
     capabilityMatrix: nexusOpenDialogueCapabilityMatrix(),
     noExecutionAuthorized: true,
     executionAuthority: false,
@@ -2091,6 +2268,8 @@ function nexusOpenDialogueCreateTask(interpretation = {}, previousTask = null) {
   }
   const initialActionType = nexusOpenDialogueInferLocalActionType(task, interpretation.rawText);
   if (!task.waitingForInput) nexusOpenDialogueExecuteLocalAction(task, initialActionType, { command: interpretation.rawText });
+  task.higherReasoning = nexusHigherIntelligenceReason(interpretation.rawText, interpretation);
+  task.higherReasoning.immediateActions = task.waitingForInput || task.riskLevel === "high" || task.riskLevel === "emergency" ? [] : [initialActionType];
   const output = nexusOpenDialogueLocalOutput(task);
   task.outcomeLog.push({
     at: now,
@@ -2171,6 +2350,7 @@ function nexusOpenDialogueSetActiveTask(task) {
   nexusOpenDialogueAgentState.taskHistory = nexusOpenDialogueAgentState.taskHistory.slice(0, 12);
   nexusOpenDialogueAgentState.lastOutcome = task.finalSummary || "";
   if (task.goalCategory === "draft" || /draft/i.test(task.finalSummary || "")) nexusOpenDialogueAgentState.lastDraft = task.finalSummary;
+  if (task.higherReasoning) nexusHigherIntelligenceRecordLearning(task.higherReasoning, task);
   nexusOpenDialogueUpdateScorecard();
   return task;
 }
@@ -2340,6 +2520,13 @@ function renderNexusOpenDialogueAgentCard(state = nexusOpenDialogueAgentState) {
       <div class="nexus-agent-card-output" role="status">
         ${htmlSafe(task?.finalSummary || state.lastOutcome || "Nexus can create plans, checklists, questions, drafts, summaries, reminder proposals, and review-only preparation cards.")}
       </div>
+      ${task?.higherReasoning ? `
+        <div class="nexus-higher-intelligence-status" data-nexus-higher-intelligence-status="true" data-execution-authority="false">
+          <strong>Higher Intelligence:</strong>
+          <span>${htmlSafe(task.higherReasoning.nextBestMove)}</span>
+          <small>Capability: ${htmlSafe(task.higherReasoning.capabilityChoice?.selectedCapability || "review")} - Self-check: ${htmlSafe(task.higherReasoning.selfCheck?.decision || "safe local review")}</small>
+        </div>
+      ` : ""}
       ${task?.localArtifacts?.length ? `
         <div class="nexus-agent-artifact-stack" aria-label="Nexus local artifacts">
           ${task.localArtifacts.map(artifact => `

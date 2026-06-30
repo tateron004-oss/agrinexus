@@ -47,6 +47,11 @@ const functionNames = [
   "nexusOpenDialogueLocalActionTitle",
   "nexusOpenDialogueOutcomeForAction",
   "nexusOpenDialogueExecuteLocalAction",
+  "nexusHigherIntelligenceMemoryMatches",
+  "nexusHigherIntelligenceCapabilityChoice",
+  "nexusHigherIntelligenceSelfCheck",
+  "nexusHigherIntelligenceReason",
+  "nexusHigherIntelligenceRecordLearning",
   "nexusOpenDialogueCreateTask",
   "nexusOpenDialogueAgentQuestion",
   "nexusOpenDialogueUpdateScorecard",
@@ -108,6 +113,8 @@ const sandbox = vm.runInNewContext(`
     taskHistory: [],
     lastOutcome: "",
     lastDraft: "",
+    lastHigherReasoning: null,
+    learningSignals: [],
     scorecard: null
   };
   const htmlSafe = value => String(value == null ? "" : value)
@@ -130,6 +137,11 @@ const sandbox = vm.runInNewContext(`
   ${extracted.nexusOpenDialogueLocalActionTitle}
   ${extracted.nexusOpenDialogueOutcomeForAction}
   ${extracted.nexusOpenDialogueExecuteLocalAction}
+  ${extracted.nexusHigherIntelligenceMemoryMatches}
+  ${extracted.nexusHigherIntelligenceCapabilityChoice}
+  ${extracted.nexusHigherIntelligenceSelfCheck}
+  ${extracted.nexusHigherIntelligenceReason}
+  ${extracted.nexusHigherIntelligenceRecordLearning}
   ${extracted.nexusOpenDialogueCreateTask}
   ${extracted.nexusOpenDialogueAgentQuestion}
   ${extracted.nexusOpenDialogueUpdateScorecard}
@@ -153,6 +165,8 @@ const sandbox = vm.runInNewContext(`
         taskHistory: [],
         lastOutcome: "",
         lastDraft: "",
+        lastHigherReasoning: null,
+        learningSignals: [],
         scorecard: null
       };
       return nexusOpenDialogueAgentState;
