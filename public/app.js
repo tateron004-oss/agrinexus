@@ -209,8 +209,8 @@ const nexusProductIdentity = Object.freeze({
 });
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-320";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v299";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-321";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v300";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
 const VOICE_ATTENTION_DELAY_MS = 900;
@@ -966,6 +966,7 @@ function createNexusChronicCarePhysicianReportResult(gate = nexusUserConfirmatio
     symptomsMentioned: fieldMap["Symptoms Mentioned"] || "not provided",
     medicationQuestions: fieldMap["Medication Questions"] || "not mentioned",
     rpmRtmReadiness: fieldMap["RPM/RTM Readiness"] || "not connected; manual entry only; review required",
+    rpmRtmManualSessionData: fieldMap["RPM/RTM Manual Session Data"] || a100RpmRtmSessionDataSummary(),
     lifestyleAdherenceBarriers: fieldMap["Lifestyle / Adherence Barriers"] || "not provided",
     missingInformation: fieldMap["Missing Information"] || "confirmed readings, symptoms, medication list, timing, and clinician context",
     riskSafetyFlags: fieldMap["Risk / Safety Flags"] || "insufficient data",
@@ -1006,6 +1007,7 @@ function renderNexusChronicCarePhysicianReportResults(results = nexusChronicCare
       <span><strong>Symptoms Mentioned:</strong> ${htmlSafe(result.symptomsMentioned)}</span>
       <span><strong>Medication Questions:</strong> ${htmlSafe(result.medicationQuestions)}</span>
       <span><strong>RPM/RTM Readiness:</strong> ${htmlSafe(result.rpmRtmReadiness)}</span>
+      <span><strong>RPM/RTM Manual Session Data:</strong> ${htmlSafe(result.rpmRtmManualSessionData || "No manual RPM/RTM session data entered yet.")}</span>
       <span><strong>Lifestyle / Adherence Barriers:</strong> ${htmlSafe(result.lifestyleAdherenceBarriers)}</span>
       <span><strong>Missing Information:</strong> ${htmlSafe(result.missingInformation)}</span>
       <span><strong>Risk / Safety Flags:</strong> ${htmlSafe(result.riskSafetyFlags)}</span>
@@ -14154,12 +14156,23 @@ function a100RpmRtmSessionDataSummary() {
     : "No manual RPM/RTM session data entered yet.";
 }
 
+function a100RpmRtmManualDataSourceLabels() {
+  return [
+    "manual entry",
+    "RTM self-report",
+    "missing data",
+    "insufficient data",
+    "device-ready not connected"
+  ];
+}
+
 function a100RpmRtmManualIntakePanelHtml() {
+  const sourceLabels = a100RpmRtmManualDataSourceLabels();
   return `
-      <div class="a100-rpm-rtm-manual-intake" data-nexus-rpm-rtm-manual-intake="true" data-session-only="true" data-device-connected="false" data-external-transmission="false" data-persistent-storage="false" data-clinical-decision="false" aria-label="${translateText("RPM/RTM Manual Session Intake")}">
+      <div class="a100-rpm-rtm-manual-intake" data-nexus-rpm-rtm-manual-intake="true" data-session-only="true" data-current-session-source-labels="${escapeHtml(sourceLabels.join("|"))}" data-device-connected="false" data-external-transmission="false" data-persistent-storage="false" data-clinical-decision="false" aria-label="${translateText("RPM/RTM Manual Session Intake")}">
         <div class="a100-rpm-rtm-manual-intake-head">
           <strong>${translateText("RPM/RTM Manual Session Intake")}</strong>
-          <span>${translateText("Session-only manual notes for review. Nexus does not connect devices, transmit readings, bill RPM/RTM, diagnose, or change care.")}</span>
+          <span>${translateText("Session-only manual notes for review. Manual/session-only information. Device not connected. Nexus does not diagnose or adjust medication.")}</span>
         </div>
         <button type="button" class="a100-rpm-rtm-update" data-a100-rpm-update="true" onclick="return handleA100RpmRtmManualIntake(event)">${translateText("Update session preview")}</button>
         <div class="a100-rpm-rtm-manual-intake-grid">
@@ -14170,6 +14183,9 @@ function a100RpmRtmManualIntakePanelHtml() {
           <label>${translateText("Symptoms / concerns")}<textarea data-a100-rpm-field="symptomsConcerns" rows="2" placeholder="${translateText("Example: dizziness, fatigue, cough, swelling, or concern to ask a clinician")}"></textarea></label>
         </div>
         <div id="a100RpmRtmManualSessionSummary" class="a100-rpm-rtm-summary" data-a100-rpm-summary="session-only">${translateText(a100RpmRtmSessionDataSummary())}</div>
+        <div class="a100-rpm-rtm-source-labels" data-a100-rpm-source-labels="current-session">
+          ${sourceLabels.map(label => `<span>${translateText(label)}</span>`).join("")}
+        </div>
         <small>${translateText("Manual entry only. Device-ready, not connected. Provider review required before care decisions.")}</small>
       </div>`;
 }

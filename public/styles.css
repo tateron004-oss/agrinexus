@@ -1793,6 +1793,23 @@ body.user-mode .a100-rpm-rtm-summary {
   border-radius: 8px;
   background: #ffffff;
 }
+body.user-mode .a100-rpm-rtm-source-labels {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+body.user-mode .a100-rpm-rtm-source-labels span {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  padding: 3px 8px;
+  border: 1px solid #cfe4df;
+  border-radius: 999px;
+  background: #ffffff;
+  color: #44636a;
+  font-size: .78rem;
+  font-weight: 850;
+}
 body.user-mode .a100-africa-chw-flow,
 body.user-mode .a100-africa-low-bandwidth {
   display: grid;
