@@ -189,6 +189,7 @@ let nexusLocalDraftMessageResults = [];
 let nexusCallPreparationResults = [];
 let nexusMapNavigationHandoffResults = [];
 let nexusMarketplaceInquiryPreparationResults = [];
+let nexusChronicCarePhysicianReportResults = [];
 let visibleControlledStagedActionPreview = null;
 let visibleUserConfirmationPreview = null;
 let latestControlledActionConfirmationReadiness = null;
@@ -208,8 +209,8 @@ const nexusProductIdentity = Object.freeze({
 });
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-319";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v298";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-320";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v299";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
 const VOICE_ATTENTION_DELAY_MS = 900;
@@ -633,6 +634,27 @@ function handleNexusMarketplaceInquiryPreparationCaptionCommand(command = "") {
   return true;
 }
 
+function isNexusChronicCarePhysicianReportCommand(command = "") {
+  const text = String(command || "").toLowerCase();
+  const reportIntent = /\b(prepare|build|create|summarize|copy|show|review)\b/.test(text)
+    && /\b(physician report|doctor report|provider report|care team report|clinical summary|clinical report|nurse|community health worker|chw|doctor|care team)\b/.test(text);
+  const chronicIntent = /\b(diabetes|blood sugar|glucose|a1c|blood pressure|hypertension|bp|obesity|weight|wellness|rpm|rtm|telehealth|chronic|symptom|medication|medicine)\b/.test(text)
+    && /\b(report|summary|summarize|doctor|physician|provider|nurse|care team|community health worker|chw|review)\b/.test(text);
+  const dataQuestionIntent = /\b(what data supports this|what is missing|what should the doctor review)\b/.test(text);
+  const unsafeExecutionIntent = /\b(send|submit|transmit|upload|share with provider|contact provider|message|call|dial|prescribe|diagnose|adjust medication|change medication|change insulin|dispatch|emergency dispatch|connect device|sync device|store record)\b/.test(text);
+  return (reportIntent || chronicIntent || dataQuestionIntent) && !unsafeExecutionIntent;
+}
+
+function handleNexusChronicCarePhysicianReportCaptionCommand(command = "") {
+  if (!isNexusChronicCarePhysicianReportCommand(command)) return false;
+  clearControlledActionPreview("chronic-care-physician-report-caption-command");
+  const plan = buildNexusAutonomousTaskPlan(command, { category: "chronic-care-reporting" });
+  startNexusAutonomousWorkflowFromTaskPlan(plan, { command });
+  updateUserCaptionPanel("Chronic-care report preparation is ready. Confirming will only create a local physician/care-team review card. Nexus will not diagnose, prescribe, adjust medication, dispatch emergency services, contact a provider, connect a device, transmit data, or store sensitive health data persistently.", { expanded: true });
+  setVoiceResponse("Chronic-care report preparation is ready. Confirming will only create a local physician or care-team review card. Nexus will not diagnose, prescribe, adjust medication, dispatch emergency services, contact a provider, connect a device, transmit data, or store sensitive health data persistently.", false, { allowVoiceFirst: false });
+  return true;
+}
+
 function isNexusLocalDraftMessageCommand(command = "") {
   const text = String(command || "").toLowerCase();
   return /\b(draft|prepare|compose|write)\b[\s\S]*\b(message|email|note|question|outreach|inquiry)\b/.test(text)
@@ -903,6 +925,98 @@ function renderNexusMarketplaceInquiryPreparationResults(results = nexusMarketpl
   return `
     <div class="nexus-marketplace-inquiry-preparation-results" data-nexus-marketplace-inquiry-preparation-results="true" data-inquiry-sent="false" data-buyer-contacted="false" data-seller-contacted="false" data-order-created="false" data-payment-processed="false" data-inventory-changed="false" data-external-marketplace-opened="false" data-provider-contacted="false" data-external-action-occurred="false" data-backend-write-occurred="false" aria-label="Nexus marketplace inquiry preparation results">
       <span class="nexus-marketplace-inquiry-preparation-label">Marketplace inquiry preparation</span>
+      <ul>${items}</ul>
+    </div>
+  `;
+}
+
+function resolveNexusChronicCareReportKind(gate = {}) {
+  const text = `${gate.description || ""} ${gate.requiredData || ""}`.toLowerCase();
+  if (/\b(diabetes|blood sugar|glucose|a1c)\b/.test(text)) return "diabetes";
+  if (/\b(hypertension|blood pressure|bp)\b/.test(text)) return "hypertension";
+  if (/\b(obesity|weight|wellness)\b/.test(text)) return "wellness";
+  if (/\b(rpm|rtm|remote patient monitoring|remote therapeutic monitoring)\b/.test(text)) return "rpm";
+  if (/\b(telehealth|visit)\b/.test(text)) return "telehealth";
+  if (/\b(community health worker|chw)\b/.test(text)) return "chw";
+  if (/\b(care team|nurse|coach)\b/.test(text)) return "care-team-summary";
+  return "general";
+}
+
+function createNexusChronicCarePhysicianReportResult(gate = nexusUserConfirmationGateState) {
+  if (!gate || gate.actionType !== "chronic_care_report_generation" || gate.locallyConfirmable !== true) {
+    return null;
+  }
+  const reportKind = resolveNexusChronicCareReportKind(gate);
+  const report = a100ChronicCareReport(reportKind, gate.description || gate.safetyReason || "");
+  const fieldMap = {};
+  (report.fields || []).forEach(field => {
+    if (field?.label && fieldMap[field.label] == null) fieldMap[field.label] = field.value || "";
+  });
+  const result = {
+    schemaVersion: "nexus-chronic-care-physician-report.v1",
+    reportId: `nexus-chronic-report-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+    label: "PHYSICIAN / CARE-TEAM REPORT FOR REVIEW ONLY",
+    reportKind,
+    title: report.title || "Chronic care physician report",
+    reportType: fieldMap["Report Type"] || "Physician Report",
+    conditionArea: fieldMap["Condition Area"] || "General chronic care",
+    patientConcern: fieldMap["Patient Concern"] || "not provided",
+    currentSessionData: fieldMap["Current Session Data"] || "Manual/session-only information",
+    readingsMentioned: fieldMap["Readings Mentioned"] || "not provided",
+    symptomsMentioned: fieldMap["Symptoms Mentioned"] || "not provided",
+    medicationQuestions: fieldMap["Medication Questions"] || "not mentioned",
+    rpmRtmReadiness: fieldMap["RPM/RTM Readiness"] || "not connected; manual entry only; review required",
+    lifestyleAdherenceBarriers: fieldMap["Lifestyle / Adherence Barriers"] || "not provided",
+    missingInformation: fieldMap["Missing Information"] || "confirmed readings, symptoms, medication list, timing, and clinician context",
+    riskSafetyFlags: fieldMap["Risk / Safety Flags"] || "insufficient data",
+    recommendedReviewLevel: fieldMap["Recommended Review Level"] || "Provider review required",
+    evidenceSourceLabel: fieldMap["Evidence / Source Label"] || "Manual/session-only information; Provider review required",
+    nexusSafetyBoundary: fieldMap["Nexus Safety Boundary"] || report.safety,
+    copyReady: true,
+    localOnly: true,
+    reviewOnly: true,
+    providerHandoff: false,
+    providerContacted: false,
+    externalTransmission: false,
+    diagnosisMade: false,
+    prescribedMedication: false,
+    medicationAdjusted: false,
+    emergencyDispatched: false,
+    deviceConnected: false,
+    sensitiveHealthDataPersisted: false,
+    backendWriteOccurred: false,
+    externalActionOccurred: false,
+    executionAuthority: false,
+    createdAt: new Date().toISOString()
+  };
+  nexusChronicCarePhysicianReportResults = [result, ...nexusChronicCarePhysicianReportResults].slice(0, 10);
+  return result;
+}
+
+function renderNexusChronicCarePhysicianReportResults(results = nexusChronicCarePhysicianReportResults) {
+  if (!Array.isArray(results) || !results.length) return "";
+  const items = results.slice(0, 3).map(result => `
+    <li data-nexus-chronic-care-physician-report-result="${htmlSafe(result.reportId)}">
+      <strong>${htmlSafe(result.label)}</strong>
+      <span><strong>Report Type:</strong> ${htmlSafe(result.reportType)}</span>
+      <span><strong>Condition Area:</strong> ${htmlSafe(result.conditionArea)}</span>
+      <span><strong>Patient Concern:</strong> ${htmlSafe(result.patientConcern)}</span>
+      <span><strong>Current Session Data:</strong> ${htmlSafe(result.currentSessionData)}</span>
+      <span><strong>Readings Mentioned:</strong> ${htmlSafe(result.readingsMentioned)}</span>
+      <span><strong>Symptoms Mentioned:</strong> ${htmlSafe(result.symptomsMentioned)}</span>
+      <span><strong>Medication Questions:</strong> ${htmlSafe(result.medicationQuestions)}</span>
+      <span><strong>RPM/RTM Readiness:</strong> ${htmlSafe(result.rpmRtmReadiness)}</span>
+      <span><strong>Lifestyle / Adherence Barriers:</strong> ${htmlSafe(result.lifestyleAdherenceBarriers)}</span>
+      <span><strong>Missing Information:</strong> ${htmlSafe(result.missingInformation)}</span>
+      <span><strong>Risk / Safety Flags:</strong> ${htmlSafe(result.riskSafetyFlags)}</span>
+      <span><strong>Recommended Review Level:</strong> ${htmlSafe(result.recommendedReviewLevel)}</span>
+      <span><strong>Evidence / Source Label:</strong> ${htmlSafe(result.evidenceSourceLabel)}</span>
+      <small><strong>Nexus Safety Boundary:</strong> ${htmlSafe(result.nexusSafetyBoundary)}</small>
+    </li>
+  `).join("");
+  return `
+    <div class="nexus-chronic-care-physician-report-results" data-nexus-chronic-care-physician-report-results="true" data-review-only="true" data-local-only="true" data-provider-handoff="false" data-provider-contacted="false" data-external-transmission="false" data-diagnosis-made="false" data-prescribed-medication="false" data-medication-adjusted="false" data-emergency-dispatched="false" data-device-connected="false" data-sensitive-health-data-persisted="false" data-backend-write-occurred="false" data-external-action-occurred="false" aria-label="Nexus chronic care physician report results">
+      <span class="nexus-chronic-care-physician-report-label">Physician/care-team report</span>
       <ul>${items}</ul>
     </div>
   `;
@@ -1210,6 +1324,9 @@ function nexusControlledActionQueueTypeForPlan(taskPlan = {}) {
   const safeMarketplaceInquiryPreparationIntent = /\b(prepare|plan|review|create|build|outline|questions|checklist)\b/.test(combined)
     && /\b(marketplace|agritrade|buyer|seller|listing|inquiry|produce|crop sale|market)\b/.test(combined)
     && !/\b(contact now|message seller|message buyer|send|submit|buy now|sell now|purchase|checkout|order|pay|payment|refund|ship|deliver|dispatch|call|dial|location|camera|emergency)\b/.test(userFacingText);
+  const safeChronicCareReportIntent = /\b(prepare|build|create|summarize|copy|show|review)\b/.test(combined)
+    && /\b(physician report|doctor report|provider report|care team report|clinical summary|clinical report|nurse|community health worker|chw|doctor|care team|diabetes|blood sugar|glucose|blood pressure|hypertension|obesity|weight|rpm|rtm|telehealth)\b/.test(combined)
+    && !/\b(send|submit|transmit|upload|share with provider|contact provider|message|call|dial|prescribe|diagnose|adjust medication|change medication|change insulin|dispatch|emergency dispatch|connect device|sync device|store record)\b/.test(userFacingText);
   const safeDraftIntent = /\b(draft|prepare|compose|write)\b/.test(combined)
     && /\b(message|email|note|question|outreach|inquiry)\b/.test(combined)
     && !/\b(send|submit|deliver|call|dial|place call|contact now)\b/.test(userFacingText);
@@ -1217,6 +1334,7 @@ function nexusControlledActionQueueTypeForPlan(taskPlan = {}) {
   if (safeMapNavigationHandoffIntent) return "map_navigation_handoff";
   if (safeCallPreparationIntent) return "call_preparation";
   if (safeMarketplaceInquiryPreparationIntent) return "marketplace_inquiry_preparation";
+  if (safeChronicCareReportIntent) return "chronic_care_report_generation";
   if (safeDraftIntent) return "draft_generation";
   if (/\b(call|phone|whatsapp|telegram|sms|email|message)\b/.test(category) || /\b(call|phone|whatsapp|telegram|sms|email|message)\b/.test(intent)) return "blocked_high_risk_action";
   if (/\b(report|physician|care[- ]?team|chw|rpm|rtm|chronic|health)\b/.test(category)) return "report_generation";
@@ -1317,6 +1435,7 @@ function isNexusControlledQueueActionLocallyConfirmable(action = {}) {
     "internal_navigation",
     "map_navigation_handoff",
     "marketplace_inquiry_preparation",
+    "chronic_care_report_generation",
     "draft_generation",
     "report_generation",
     "call_preparation",
@@ -1412,6 +1531,12 @@ function performNexusConfirmedLocalQueueAction(gate = nexusUserConfirmationGateS
       ? "Local marketplace inquiry preparation card created for review. Nexus did not contact buyers or sellers, create an order, buy, sell, process payment, open an external marketplace, change inventory, or write backend data."
       : "Local marketplace inquiry preparation was not available. No external action occurred.";
   }
+  if (gate.actionType === "chronic_care_report_generation") {
+    const result = createNexusChronicCarePhysicianReportResult(gate);
+    return result
+      ? "Local chronic-care physician/care-team report created for review. Nexus did not diagnose, prescribe, adjust medication, dispatch emergency services, contact a provider, connect a device, transmit data, persist sensitive health data, or write backend data."
+      : "Local chronic-care physician report was not available. No external action occurred.";
+  }
   if (gate.actionType === "call_preparation") {
     const result = createNexusCallPreparationResult(gate);
     return result
@@ -1503,6 +1628,7 @@ function renderNexusControlledActionQueueCard(queue = nexusControlledActionQueue
   const callPreparationHtml = renderNexusCallPreparationResults();
   const mapNavigationHandoffHtml = renderNexusMapNavigationHandoffResults();
   const marketplaceInquiryPreparationHtml = renderNexusMarketplaceInquiryPreparationResults();
+  const chronicCarePhysicianReportHtml = renderNexusChronicCarePhysicianReportResults();
   const items = queue.slice(0, 4).map((action, index) => `
     <li data-nexus-controlled-action-queue-item="${htmlSafe(action.queueStatus)}" data-action-type="${htmlSafe(action.actionType)}" data-risk-level="${htmlSafe(action.riskLevel)}">
       <strong>${htmlSafe(action.actionType.replace(/_/g, " "))}</strong>
@@ -1521,6 +1647,7 @@ function renderNexusControlledActionQueueCard(queue = nexusControlledActionQueue
       <ul>${items}</ul>
       ${gateHtml}
       ${marketplaceInquiryPreparationHtml}
+      ${chronicCarePhysicianReportHtml}
       ${localDraftHtml}
       ${callPreparationHtml}
       ${mapNavigationHandoffHtml}
@@ -14576,7 +14703,7 @@ function a100ChronicCareReport(kind = "general", command = "") {
   ].filter(Boolean).join("; ");
   const rpmReadiness = "not connected; manual entry only; review required; no automatic data transmission";
   const manualRpmRtmSessionSummary = a100RpmRtmSessionDataSummary();
-  const safetyBoundary = "Nexus prepared this summary for review only. Nexus did not diagnose, prescribe, adjust medication, dispatch emergency services, contact a provider, connect a device, transmit data, or store sensitive health data persistently.";
+  const safetyBoundary = "Nexus prepared this report for review only. Nexus did not diagnose, prescribe, adjust medication, dispatch emergency services, contact a provider, connect a device, transmit data, or store sensitive health data persistently.";
   return {
     type: "session-only",
     title: titleMap[kind] || titleMap.general,
@@ -30285,6 +30412,7 @@ function bindStatic() {
         if (handleNexusMapNavigationHandoffCaptionCommand(command)) return;
         if (handleNexusInternalNavigationCaptionCommand(command)) return;
         if (handleNexusMarketplaceInquiryPreparationCaptionCommand(command)) return;
+        if (handleNexusChronicCarePhysicianReportCaptionCommand(command)) return;
         if (handleNexusLocalDraftMessageCaptionCommand(command)) return;
         if (handleNexusCallPreparationCaptionCommand(command)) return;
         void handleVoiceCommand(command);
@@ -30866,6 +30994,7 @@ function bindStatic() {
       if (handleNexusMapNavigationHandoffCaptionCommand(command)) return;
       if (handleNexusInternalNavigationCaptionCommand(command)) return;
       if (handleNexusMarketplaceInquiryPreparationCaptionCommand(command)) return;
+      if (handleNexusChronicCarePhysicianReportCaptionCommand(command)) return;
       if (handleNexusLocalDraftMessageCaptionCommand(command)) return;
       if (handleNexusCallPreparationCaptionCommand(command)) return;
       void handleVoiceCommand(command);

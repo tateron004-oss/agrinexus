@@ -4812,6 +4812,46 @@ body.admin-mode .user-workspace {
   font-size: .74rem;
   line-height: 1.25;
 }
+.nexus-chronic-care-physician-report-results {
+  display: grid;
+  gap: 5px;
+  padding: 8px;
+  border: 1px dashed rgba(190, 24, 93, .26);
+  border-radius: 8px;
+  background: rgba(253, 242, 248, .78);
+}
+.nexus-chronic-care-physician-report-label {
+  width: fit-content;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: #fce7f3;
+  color: #be185d !important;
+  font-size: .7rem !important;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+.nexus-chronic-care-physician-report-results ul {
+  display: grid;
+  gap: 5px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.nexus-chronic-care-physician-report-results [data-nexus-chronic-care-physician-report-result] {
+  display: grid;
+  gap: 3px;
+  padding: 5px 0;
+  border-top: 1px solid rgba(190, 24, 93, .14);
+}
+.nexus-chronic-care-physician-report-results [data-nexus-chronic-care-physician-report-result]:first-child {
+  border-top: 0;
+}
+.nexus-chronic-care-physician-report-results span,
+.nexus-chronic-care-physician-report-results small {
+  color: #831843;
+  font-size: .74rem;
+  line-height: 1.25;
+}
 .nexus-assistant-runtime-preview-card {
   display: grid;
   gap: 10px;

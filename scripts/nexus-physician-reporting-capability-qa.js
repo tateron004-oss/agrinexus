@@ -83,7 +83,7 @@ const intentSource = extractFunction(app, "a100SafeAutonomyIntent");
 ].forEach(attr => assert(cardSource.includes(attr), `report card should render inert runtime attribute ${attr}`));
 
 [
-  "Nexus prepared this summary for review only",
+  "Nexus prepared this report for review only",
   "Nexus did not diagnose",
   "prescribe",
   "adjust medication",

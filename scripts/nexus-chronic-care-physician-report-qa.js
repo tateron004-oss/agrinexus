@@ -120,7 +120,7 @@ const gateSource = sourceBetween(app, "function a100HighRiskActionGates", "funct
   "community health worker, nurse supervisor, physician/provider, or care coordinator"
 ].forEach(copy => assert(reportSource.includes(copy), `RPM/RTM and Africa-ready report detail should include: ${copy}`));
 
-assert(reportSource.includes("Nexus prepared this summary for review only. Nexus did not diagnose, prescribe, adjust medication, dispatch emergency services, contact a provider, connect a device, transmit data, or store sensitive health data persistently."), "Physician report should include required Nexus safety disclaimer.");
+assert(reportSource.includes("Nexus prepared this report for review only. Nexus did not diagnose, prescribe, adjust medication, dispatch emergency services, contact a provider, connect a device, transmit data, or store sensitive health data persistently."), "Physician report should include required Nexus safety disclaimer.");
 
 [
   "Medication safety boundary",
