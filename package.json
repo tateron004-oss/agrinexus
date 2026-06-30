@@ -17,6 +17,7 @@
     "qa:nexus-platform-dashboard": "node scripts/nexus-platform-dashboard-qa.js",
     "qa:nexus-provider-testing-readiness": "node scripts/nexus-provider-testing-readiness-qa.js",
     "qa:nexus-controlled-testing-readiness": "node scripts/nexus-controlled-testing-readiness-qa.js",
+    "qa:nexus-real-provider-integrations": "node scripts/nexus-real-provider-integrations-qa.js",
     "qa:nexus-tool-registry": "node scripts/nexus-tool-registry-qa.js",
     "qa:nexus-tool-registry-runtime": "node scripts/nexus-tool-registry-runtime-qa.js",
     "qa:nexus-policy-engine": "node scripts/nexus-policy-engine-qa.js",

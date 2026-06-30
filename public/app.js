@@ -78,6 +78,8 @@ let nexusA100SafeAutonomyConfig = Object.freeze({
 let selectedLearningTrack = "All";
 let selectedPersona = localStorage.getItem("agrinexusPersona") || "worker";
 let selectedNexusDashboardModeId = "agriculture-support";
+let nexusRealProviderTestingStatus = null;
+let nexusRealProviderTestingLastResult = null;
 let experienceMode = localStorage.getItem("agrinexusExperienceMode") || "";
 let pendingWorkflow = null;
 let pendingGrandmaAction = null;
@@ -17279,6 +17281,131 @@ function renderNexusPlatformDashboard() {
   `;
 }
 
+const NEXUS_REAL_PROVIDER_TEST_CONTROLS = Object.freeze([
+  { id: "provider-search", label: "Search medical providers", detail: "CMS NPPES lookup only; no booking or health data sharing.", endpoint: "/api/nexus/tools/providers/search", method: "GET", fields: ["city", "state", "taxonomy"] },
+  { id: "map-route", label: "Generate route", detail: "Uses typed origin/destination only; no browser location permission.", endpoint: "/api/nexus/tools/maps/route", method: "POST", fields: ["origin", "destination"] },
+  { id: "reminder-create", label: "Create in-app reminder", detail: "Local reminder record only; no OS notification permission.", endpoint: "/api/nexus/tools/reminders/create", method: "POST", fields: ["title", "dueAt"] },
+  { id: "marketplace-listing", label: "Create marketplace test listing", detail: "Local AgriTrade listing only; no buyer contact or payment.", endpoint: "/api/nexus/tools/marketplace/listing", method: "POST", fields: ["title", "crop", "quantity"] },
+  { id: "offline-queue", label: "Queue offline item", detail: "Safe local queue only; sensitive/high-risk records are blocked.", endpoint: "/api/nexus/tools/offline/queue", method: "POST", fields: ["type", "content"] },
+  { id: "learning-courses", label: "Search learning courses", detail: "LMS course lookup when configured.", endpoint: "/api/nexus/tools/learning/courses", method: "GET", fields: [] },
+  { id: "zoom-meeting", label: "Create Zoom test meeting", detail: "Only when configured and confirmed.", endpoint: "/api/nexus/tools/zoom/meeting", method: "POST", fields: ["topic"] },
+  { id: "sms-send", label: "Send test SMS", detail: "Twilio SMS only when configured, enabled, and confirmed.", endpoint: "/api/nexus/tools/sms/send", method: "POST", fields: ["to", "message"] },
+  { id: "whatsapp-send", label: "Send WhatsApp test", detail: "Twilio WhatsApp only when configured, enabled, and confirmed.", endpoint: "/api/nexus/tools/whatsapp/send", method: "POST", fields: ["to", "message"] },
+  { id: "call-start", label: "Start test call", detail: "Twilio call only when configured, enabled, and confirmed.", endpoint: "/api/nexus/tools/call/start", method: "POST", fields: ["to", "message"] },
+  { id: "drone-status", label: "Check drone status", detail: "DJI status/intake only; no flight control.", endpoint: "/api/nexus/tools/drones/status", method: "GET", fields: [] },
+  { id: "drone-mission", label: "Submit drone mission request", detail: "Mission intake only; no launch or aircraft control.", endpoint: "/api/nexus/tools/drones/mission-request", method: "POST", fields: ["title", "area", "purpose"] },
+  { id: "offline-sync", label: "Sync safe offline queue", detail: "Safe queued records only; high-risk items stay skipped.", endpoint: "/api/nexus/tools/offline/sync", method: "POST", fields: [] },
+  { id: "payment-intent", label: "Review Stripe payment status", detail: "Payment endpoint remains disabled/blocked unless future compliance gates are met.", endpoint: "/api/nexus/tools/marketplace/payment-intent", method: "POST", fields: ["amount"] }
+]);
+
+function renderNexusRealProviderStatusCards() {
+  const cards = nexusRealProviderTestingStatus?.cards || [
+    "Reminders", "SMS", "WhatsApp", "Calls", "Maps", "Medical Provider Search", "Learning / LMS", "Zoom Sessions", "Drones", "Marketplace", "Offline Sync", "Stripe Payments"
+  ].map(title => ({ title, status: "Checking", detail: "Click Refresh provider status." }));
+  return cards.map(card => `
+    <article class="nexus-real-provider-card">
+      <strong>${translateText(card.title)}</strong>
+      <span>${translateText(card.status)}</span>
+      <small>${translateText(card.detail || "Controlled testing status.")}</small>
+    </article>
+  `).join("");
+}
+
+function renderNexusRealProviderTestControls() {
+  return NEXUS_REAL_PROVIDER_TEST_CONTROLS.map(control => `
+    <article class="nexus-real-provider-control" data-real-provider-control="${escapeHtml(control.id)}">
+      <div>
+        <strong>${translateText(control.label)}</strong>
+        <small>${translateText(control.detail)}</small>
+      </div>
+      ${control.fields.map(field => `<input data-real-provider-field="${escapeHtml(field)}" placeholder="${escapeHtml(translateText(field.replace(/([A-Z])/g, " $1").replace(/^./, char => char.toUpperCase())))}">`).join("")}
+      <button type="button" data-real-provider-test="${escapeHtml(control.id)}">${translateText("Run controlled test")}</button>
+    </article>
+  `).join("");
+}
+
+function renderNexusRealProviderTestingPanel() {
+  return `
+    <section class="nexus-real-provider-testing" data-nexus-real-provider-testing="true" aria-label="${translateText("Real Provider Testing")}">
+      <div class="nexus-dashboard-section-head">
+        <span class="eyebrow">${translateText("Controlled Testing")}</span>
+        <strong>${translateText("Real provider testing")}</strong>
+      </div>
+      <p>${translateText("These controls are for explicit controlled testing only. Nexus will not secretly call, message, pay, share location, book, diagnose, dispatch, fly drones, or contact providers.")}</p>
+      <div class="nexus-real-provider-status-actions">
+        <button type="button" data-real-provider-refresh>${translateText("Refresh provider status")}</button>
+        <span id="nexusRealProviderTestingStatus">${translateText(nexusRealProviderTestingStatus ? "Provider status loaded." : "Provider status not loaded yet.")}</span>
+      </div>
+      <div class="nexus-real-provider-card-grid" aria-label="${translateText("Provider status cards")}">
+        ${renderNexusRealProviderStatusCards()}
+      </div>
+      <div class="nexus-real-provider-control-grid" aria-label="${translateText("Provider test controls")}">
+        ${renderNexusRealProviderTestControls()}
+      </div>
+      <pre id="nexusRealProviderTestingResult" class="nexus-real-provider-result" aria-live="polite">${escapeHtml(nexusRealProviderTestingLastResult || translateText("No provider test result yet."))}</pre>
+    </section>
+  `;
+}
+
+async function refreshNexusRealProviderTestingStatus() {
+  const status = $("#nexusRealProviderTestingStatus");
+  if (status) status.textContent = "Checking provider status...";
+  try {
+    nexusRealProviderTestingStatus = await request("/api/nexus/tools/status");
+    renderUserWorkspace();
+    const refreshed = $("#nexusRealProviderTestingStatus");
+    if (refreshed) refreshed.textContent = "Provider status loaded.";
+  } catch (error) {
+    if (status) status.textContent = error.message || "Provider status failed safely.";
+  }
+}
+
+function realProviderControlPayload(controlId) {
+  const control = NEXUS_REAL_PROVIDER_TEST_CONTROLS.find(item => item.id === controlId);
+  const container = document.querySelector(`[data-real-provider-control="${controlId}"]`);
+  const body = { confirmed: true };
+  if (!control || !container) return { control, body };
+  control.fields.forEach(field => {
+    body[field] = container.querySelector(`[data-real-provider-field="${field}"]`)?.value?.trim() || "";
+  });
+  if (controlId === "provider-search") {
+    const params = new URLSearchParams();
+    Object.entries(body).forEach(([key, value]) => {
+      if (key !== "confirmed" && value) params.set(key, value);
+    });
+    return { control: { ...control, endpoint: `${control.endpoint}?${params.toString()}` }, body: null };
+  }
+  return { control, body };
+}
+
+async function runNexusRealProviderTest(controlId) {
+  const output = $("#nexusRealProviderTestingResult");
+  const status = $("#nexusRealProviderTestingStatus");
+  const { control, body } = realProviderControlPayload(controlId);
+  if (!control) return;
+  if (output) output.textContent = "Running controlled provider test...";
+  if (status) status.textContent = `${control.label}: request sent from visible testing control.`;
+  try {
+    const result = await request(control.endpoint, control.method === "GET" ? { method: "GET" } : { method: "POST", body });
+    nexusRealProviderTestingLastResult = JSON.stringify({
+      provider: result.provider,
+      action: result.action,
+      status: result.status,
+      message: result.message,
+      missingConfig: result.missingConfig || [],
+      disabled: result.disabled || false,
+      data: result.data || {}
+    }, null, 2);
+    if (output) output.textContent = nexusRealProviderTestingLastResult;
+    if (status) status.textContent = `${control.label}: ${result.status || "completed"}.`;
+    await refreshNexusRealProviderTestingStatus();
+  } catch (error) {
+    nexusRealProviderTestingLastResult = JSON.stringify({ status: "failed_safely", message: error.message }, null, 2);
+    if (output) output.textContent = nexusRealProviderTestingLastResult;
+    if (status) status.textContent = `${control.label}: failed safely.`;
+  }
+}
+
 function handleNexusPlatformDashboardClick(event) {
   const actionButton = event.target.closest("[data-platform-mode-action]");
   const modeCard = event.target.closest("[data-platform-mode-card]");
@@ -17335,6 +17462,7 @@ function renderUserWorkspace() {
       ${userLanguageQuickSwitchHtml()}
     </section>
     ${renderNexusPlatformDashboard()}
+    ${renderNexusRealProviderTestingPanel()}
     <div data-nexus-open-dialogue-agent-host="true">${renderNexusOpenDialogueAgentCard()}</div>
     ${a100CapabilitySurfaceHtml()}
     <section class="user-fast-actions" aria-label="${translateText("Quick actions")}">
@@ -17385,6 +17513,13 @@ function renderUserWorkspace() {
       </button>`).join("")}
     </section>
   `;
+  if (!nexusRealProviderTestingStatus) {
+    setTimeout(() => {
+      if (experienceMode === "user" && document.querySelector("[data-nexus-real-provider-testing='true']")) {
+        refreshNexusRealProviderTestingStatus().catch(() => {});
+      }
+    }, 0);
+  }
 }
 
 function renderUserAccessibilityPanel() {
@@ -32365,6 +32500,20 @@ function bindStatic() {
     const nexusVoiceDemoButton = event.target.closest("[data-nexus-voice-demo-action]");
     if (nexusVoiceDemoButton) {
       event.preventDefault();
+      return;
+    }
+    const providerRefreshButton = event.target.closest("[data-real-provider-refresh]");
+    if (providerRefreshButton) {
+      event.preventDefault();
+      event.stopPropagation();
+      await refreshNexusRealProviderTestingStatus();
+      return;
+    }
+    const realProviderTestButton = event.target.closest("[data-real-provider-test]");
+    if (realProviderTestButton) {
+      event.preventDefault();
+      event.stopPropagation();
+      await runNexusRealProviderTest(realProviderTestButton.dataset.realProviderTest);
       return;
     }
     if (event.target.closest("#adminHealthCheck")) {

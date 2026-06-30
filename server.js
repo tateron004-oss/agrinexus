@@ -7,6 +7,7 @@ const { buildNexusPolicyDecision, validateNexusPolicyDecision } = require("./pub
 const { createNexusPlan, validateNexusPlan } = require("./public/nexus-planner.js");
 const nexusAssistantRuntime = require("./server/nexus-assistant-runtime-entrypoint.js");
 const nexusStandardUserAgentExperience = require("./server/nexus-standard-user-agent-experience.js");
+const nexusRealProviders = require("./server/providers");
 
 function loadEnvFile(filePath) {
   if (!fs.existsSync(filePath)) return;
@@ -54,6 +55,107 @@ const spotifyOAuthStates = new Map();
 
 function productIdentityMetadata() {
   return { ...PRODUCT_IDENTITY };
+}
+
+function sendProviderResult(res, result) {
+  return send(res, result.httpStatus || 200, result.body || result);
+}
+
+function nexusRealProviderStatus(db, env = process.env) {
+  const twilio = nexusRealProviders.twilio.status(env);
+  const cards = [
+    {
+      id: "reminders",
+      title: "Reminders",
+      status: nexusRealProviders.reminders.status(env).enabled ? "Connected" : "Disabled",
+      detail: "In-app reminders only; no OS notification permission requested."
+    },
+    {
+      id: "sms",
+      title: "SMS",
+      status: twilio.sms.enabled ? (twilio.sms.missingConfig.length ? "Missing configuration" : "Confirmation required") : "Disabled",
+      detail: "Twilio SMS requires credentials, feature flag, visible recipient/message, and confirmed: true."
+    },
+    {
+      id: "whatsapp",
+      title: "WhatsApp",
+      status: twilio.whatsapp.enabled ? (twilio.whatsapp.missingConfig.length ? "Missing configuration" : "Confirmation required") : "Disabled",
+      detail: "Twilio WhatsApp requires sender setup, credentials, feature flag, and confirmed: true."
+    },
+    {
+      id: "calls",
+      title: "Calls",
+      status: twilio.calls.enabled ? (twilio.calls.missingConfig.length ? "Missing configuration" : "Confirmation required") : "Disabled",
+      detail: "Twilio calls require explicit confirmation and never start from hidden assistant chains."
+    },
+    {
+      id: "maps",
+      title: "Maps",
+      status: nexusRealProviders.googleMaps.status(env).enabled ? "Confirmation required" : "Disabled",
+      detail: "Routes use user-provided origin/destination only; no browser geolocation."
+    },
+    {
+      id: "medical-provider-search",
+      title: "Medical Provider Search",
+      status: nexusRealProviders.npi.status(env).enabled ? "Search/read-only" : "Disabled",
+      detail: "CMS NPPES public lookup only; no booking, diagnosis, or health data sharing."
+    },
+    {
+      id: "learning-lms",
+      title: "Learning / LMS",
+      status: nexusRealProviders.moodle.status(env).enabled ? (nexusRealProviders.moodle.status(env).missingConfig.length ? "Missing configuration" : "Connected") : "Disabled",
+      detail: "Moodle-compatible course lookup; enrollment remains separately gated."
+    },
+    {
+      id: "zoom",
+      title: "Zoom Sessions",
+      status: nexusRealProviders.zoom.status(env).enabled ? (nexusRealProviders.zoom.status(env).missingConfig.length ? "Missing configuration" : "Confirmation required") : "Disabled",
+      detail: "Meeting creation requires Zoom server credentials and confirmed: true."
+    },
+    {
+      id: "drones",
+      title: "Drones",
+      status: nexusRealProviders.dji.status(env).enabled ? (nexusRealProviders.dji.status(env).missingConfig.length ? "Missing configuration" : "Request intake only") : "Disabled",
+      detail: "DJI Cloud API shell supports status and mission intake only; no flight control."
+    },
+    {
+      id: "marketplace",
+      title: "Marketplace",
+      status: nexusRealProviders.marketplace.status(env).enabled ? "Confirmation required" : "Disabled",
+      detail: "Local AgriTrade listing creation only; no buyer contact, checkout, or payment."
+    },
+    {
+      id: "offline-sync",
+      title: "Offline Sync",
+      status: nexusRealProviders.offlineSync.status(env).enabled ? "Confirmation required" : "Disabled",
+      detail: "Safe local queue/sync only; sensitive or high-risk actions are skipped."
+    },
+    {
+      id: "stripe-payments",
+      title: "Stripe Payments",
+      status: nexusRealProviders.stripe.status(env).enabled ? (nexusRealProviders.stripe.status(env).missingConfig.length ? "Missing configuration" : "Blocked for now") : "Disabled",
+      detail: "Stripe payment intent route remains blocked until marketplace compliance and Connect setup are approved."
+    }
+  ];
+  return {
+    ok: true,
+    provider: "nexus-real-provider-testing",
+    action: "providers.status",
+    status: "completed",
+    cards,
+    generatedAt: new Date().toISOString(),
+    safety: {
+      noHiddenExecution: true,
+      standardUserRuntimeTestingOnly: true,
+      noSecretsExposed: true,
+      storedLocalCounts: {
+        reminders: (db.profile?.nexusReminders || []).length,
+        marketplaceListings: (db.profile?.marketplaceListings || []).length,
+        offlineQueue: (db.profile?.offlineQueue || []).length,
+        droneMissionRequests: (db.profile?.droneMissionRequests || []).length
+      }
+    }
+  };
 }
 
 function assistantRuntimePreviewFlags(env = process.env) {
@@ -26969,6 +27071,124 @@ async function api(req, res, url) {
 
   if ((url.pathname === "/api/integrations" || url.pathname === "/api/readiness") && req.method === "GET") {
     return send(res, 200, integrationStatus(db));
+  }
+
+  if (url.pathname === "/api/nexus/tools/status" && req.method === "GET") {
+    return send(res, 200, nexusRealProviderStatus(db));
+  }
+
+  if (url.pathname === "/api/nexus/tools/sms/send" && req.method === "POST") {
+    return sendProviderResult(res, await nexusRealProviders.twilio.sendSms(await readBody(req)));
+  }
+
+  if (url.pathname === "/api/nexus/tools/whatsapp/send" && req.method === "POST") {
+    return sendProviderResult(res, await nexusRealProviders.twilio.sendWhatsapp(await readBody(req)));
+  }
+
+  if (url.pathname === "/api/nexus/tools/call/start" && req.method === "POST") {
+    return sendProviderResult(res, await nexusRealProviders.twilio.startCall(await readBody(req)));
+  }
+
+  if (url.pathname === "/api/nexus/tools/maps/status" && req.method === "GET") {
+    return send(res, 200, { ok: true, ...nexusRealProviders.googleMaps.status() });
+  }
+
+  if (url.pathname === "/api/nexus/tools/maps/route" && req.method === "POST") {
+    return sendProviderResult(res, await nexusRealProviders.googleMaps.route(await readBody(req)));
+  }
+
+  if (url.pathname === "/api/nexus/tools/providers/status" && req.method === "GET") {
+    return send(res, 200, { ok: true, ...nexusRealProviders.npi.status() });
+  }
+
+  if (url.pathname === "/api/nexus/tools/providers/search" && req.method === "GET") {
+    return sendProviderResult(res, await nexusRealProviders.npi.search({
+      name: url.searchParams.get("name"),
+      organization: url.searchParams.get("organization"),
+      taxonomy: url.searchParams.get("taxonomy") || url.searchParams.get("specialty"),
+      city: url.searchParams.get("city"),
+      state: url.searchParams.get("state"),
+      postalCode: url.searchParams.get("postalCode") || url.searchParams.get("postal_code"),
+      limit: url.searchParams.get("limit")
+    }));
+  }
+
+  if (url.pathname === "/api/nexus/tools/learning/status" && req.method === "GET") {
+    return send(res, 200, { ok: true, ...nexusRealProviders.moodle.status() });
+  }
+
+  if (url.pathname === "/api/nexus/tools/learning/courses" && req.method === "GET") {
+    return sendProviderResult(res, await nexusRealProviders.moodle.courses());
+  }
+
+  if (url.pathname === "/api/nexus/tools/learning/enroll" && req.method === "POST") {
+    return sendProviderResult(res, await nexusRealProviders.moodle.enroll(await readBody(req)));
+  }
+
+  if (url.pathname === "/api/nexus/tools/zoom/status" && req.method === "GET") {
+    return send(res, 200, { ok: true, ...nexusRealProviders.zoom.status() });
+  }
+
+  if (url.pathname === "/api/nexus/tools/zoom/meeting" && req.method === "POST") {
+    return sendProviderResult(res, await nexusRealProviders.zoom.createMeeting(await readBody(req)));
+  }
+
+  if (url.pathname === "/api/nexus/tools/drones/status" && req.method === "GET") {
+    return sendProviderResult(res, nexusRealProviders.dji.providerStatus());
+  }
+
+  if (url.pathname === "/api/nexus/tools/drones/mission-request" && req.method === "POST") {
+    const result = nexusRealProviders.dji.missionRequest(await readBody(req), db);
+    if (result.body?.status === "completed") await writeDb(db);
+    return sendProviderResult(res, result);
+  }
+
+  if (url.pathname === "/api/nexus/tools/marketplace/status" && req.method === "GET") {
+    return send(res, 200, { ok: true, ...nexusRealProviders.marketplace.status(), stripe: nexusRealProviders.stripe.status() });
+  }
+
+  if (url.pathname === "/api/nexus/tools/marketplace/listings" && req.method === "GET") {
+    return sendProviderResult(res, nexusRealProviders.marketplace.listListings(db));
+  }
+
+  if (url.pathname === "/api/nexus/tools/marketplace/listing" && req.method === "POST") {
+    const result = nexusRealProviders.marketplace.createListing(await readBody(req), db);
+    if (result.body?.status === "completed") await writeDb(db);
+    return sendProviderResult(res, result);
+  }
+
+  if (url.pathname === "/api/nexus/tools/marketplace/payment-intent" && req.method === "POST") {
+    return sendProviderResult(res, nexusRealProviders.stripe.paymentIntent(await readBody(req)));
+  }
+
+  if (url.pathname === "/api/nexus/tools/offline/status" && req.method === "GET") {
+    return send(res, 200, { ok: true, ...nexusRealProviders.offlineSync.status(), queueCount: (db.profile?.offlineQueue || []).length });
+  }
+
+  if (url.pathname === "/api/nexus/tools/offline/queue" && req.method === "POST") {
+    const result = nexusRealProviders.offlineSync.queueItem(await readBody(req), db);
+    if (result.body?.status === "completed") await writeDb(db);
+    return sendProviderResult(res, result);
+  }
+
+  if (url.pathname === "/api/nexus/tools/offline/sync" && req.method === "POST") {
+    const result = nexusRealProviders.offlineSync.sync(await readBody(req), db);
+    if (result.body?.status === "completed") await writeDb(db);
+    return sendProviderResult(res, result);
+  }
+
+  if (url.pathname === "/api/nexus/tools/reminders/status" && req.method === "GET") {
+    return send(res, 200, { ok: true, ...nexusRealProviders.reminders.status(), count: (db.profile?.nexusReminders || []).length });
+  }
+
+  if (url.pathname === "/api/nexus/tools/reminders" && req.method === "GET") {
+    return sendProviderResult(res, nexusRealProviders.reminders.list(db));
+  }
+
+  if (url.pathname === "/api/nexus/tools/reminders/create" && req.method === "POST") {
+    const result = nexusRealProviders.reminders.create(await readBody(req), db);
+    if (result.body?.status === "completed") await writeDb(db);
+    return sendProviderResult(res, result);
   }
 
   if (url.pathname === "/api/engines/manifest" && req.method === "GET") {
