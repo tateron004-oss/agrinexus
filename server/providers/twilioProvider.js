@@ -13,18 +13,33 @@ const {
 } = require("./providerUtils");
 
 const TWILIO_BASE = "https://api.twilio.com/2010-04-01";
+const TWILIO_FROM_ENV_NAMES = ["TWILIO_FROM_NUMBER", "TWILIO_PHONE_NUMBER", "TWILIO_NUMBER"];
 
 function twilioConfigured(env = process.env) {
   return missingEnv(["TWILIO_ACCOUNT_SID", "TWILIO_AUTH_TOKEN"], env);
 }
 
+function firstConfiguredEnv(names = [], env = process.env) {
+  return names.find(name => clean(env[name]) && !clean(env[name]).includes("replace-with")) || "";
+}
+
+function missingPreferredEnv(names = [], preferredName, env = process.env) {
+  return firstConfiguredEnv(names, env) ? [] : [preferredName];
+}
+
+function twilioFromNumber(env = process.env) {
+  const name = firstConfiguredEnv(TWILIO_FROM_ENV_NAMES, env);
+  return name ? clean(env[name]) : "";
+}
+
 function status(env = process.env) {
   const baseMissing = twilioConfigured(env);
+  const fromMissing = missingPreferredEnv(TWILIO_FROM_ENV_NAMES, "TWILIO_FROM_NUMBER", env);
   return {
     provider: "twilio",
     sms: {
       enabled: envEnabled("NEXUS_MESSAGES_ENABLED", env),
-      missingConfig: [...baseMissing, ...missingEnv(["TWILIO_FROM_NUMBER"], env)]
+      missingConfig: [...baseMissing, ...fromMissing]
     },
     whatsapp: {
       enabled: envEnabled("NEXUS_WHATSAPP_ENABLED", env),
@@ -32,7 +47,7 @@ function status(env = process.env) {
     },
     calls: {
       enabled: envEnabled("NEXUS_CALLS_ENABLED", env),
-      missingConfig: [...baseMissing, ...missingEnv(["TWILIO_FROM_NUMBER"], env)]
+      missingConfig: [...baseMissing, ...fromMissing]
     }
   };
 }
@@ -56,7 +71,7 @@ async function sendSms(body = {}, env = process.env) {
   const provider = "twilio";
   const action = "sms.send";
   if (!envEnabled("NEXUS_MESSAGES_ENABLED", env)) return disabledResponse(provider, action, "NEXUS_MESSAGES_ENABLED");
-  const missing = [...twilioConfigured(env), ...missingEnv(["TWILIO_FROM_NUMBER"], env)];
+  const missing = [...twilioConfigured(env), ...missingPreferredEnv(TWILIO_FROM_ENV_NAMES, "TWILIO_FROM_NUMBER", env)];
   if (missing.length) return missingConfigResponse(provider, action, missing);
   const confirmation = requireConfirmation(body, provider, action);
   if (confirmation) return confirmation;
@@ -64,7 +79,7 @@ async function sendSms(body = {}, env = process.env) {
   const messageError = validateText(body.message, "SMS message", { max: 1200 });
   if (toError || messageError) return blockedResponse(provider, action, toError || messageError);
   try {
-    const result = await twilioPost("/Messages.json", { To: clean(body.to), From: env.TWILIO_FROM_NUMBER, Body: clean(body.message) }, env);
+    const result = await twilioPost("/Messages.json", { To: clean(body.to), From: twilioFromNumber(env), Body: clean(body.message) }, env);
     return providerResponse({
       provider,
       action,
@@ -108,7 +123,7 @@ async function startCall(body = {}, env = process.env) {
   const provider = "twilio";
   const action = "call.start";
   if (!envEnabled("NEXUS_CALLS_ENABLED", env)) return disabledResponse(provider, action, "NEXUS_CALLS_ENABLED");
-  const missing = [...twilioConfigured(env), ...missingEnv(["TWILIO_FROM_NUMBER"], env)];
+  const missing = [...twilioConfigured(env), ...missingPreferredEnv(TWILIO_FROM_ENV_NAMES, "TWILIO_FROM_NUMBER", env)];
   if (missing.length) return missingConfigResponse(provider, action, missing);
   const confirmation = requireConfirmation(body, provider, action);
   if (confirmation) return confirmation;
@@ -116,7 +131,7 @@ async function startCall(body = {}, env = process.env) {
   if (toError) return blockedResponse(provider, action, toError);
   const twiml = `<Response><Say voice="alice">${clean(body.message || "This is a confirmed Nexus provider testing call.")}</Say></Response>`;
   try {
-    const result = await twilioPost("/Calls.json", { To: clean(body.to), From: env.TWILIO_FROM_NUMBER, Twiml: twiml }, env);
+    const result = await twilioPost("/Calls.json", { To: clean(body.to), From: twilioFromNumber(env), Twiml: twiml }, env);
     return providerResponse({
       provider,
       action,
@@ -129,4 +144,4 @@ async function startCall(body = {}, env = process.env) {
   }
 }
 
-module.exports = { status, sendSms, sendWhatsapp, startCall };
+module.exports = { status, sendSms, sendWhatsapp, startCall, twilioFromNumber };

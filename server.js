@@ -66,6 +66,11 @@ function envValuePresent(env, name) {
   return Boolean(value && !value.includes("replace-with"));
 }
 
+function firstPresentEnvValue(env, names) {
+  const name = names.find(candidate => envValuePresent(env, candidate));
+  return name ? String(env[name] || "").trim() : "";
+}
+
 function missingEnvNames(env, names) {
   return names.filter(name => !envValuePresent(env, name));
 }
@@ -134,11 +139,12 @@ function nexusRealProviderStatus(db, env = process.env) {
   const offlineSync = nexusRealProviders.offlineSync.status(env);
   const reminders = nexusRealProviders.reminders.status(env);
   const stripe = nexusRealProviders.stripe.status(env);
-  const ownerRecipientConfigured = envValuePresent(env, "OWNER_TEST_RECIPIENT_NUMBER");
+  const ownerRecipientValue = firstPresentEnvValue(env, ["OWNER_TEST_RECIPIENT_NUMBER", "TEST_RECIPIENT_NUMBER"]);
+  const ownerRecipientConfigured = Boolean(ownerRecipientValue);
   const ownerRecipient = {
     envName: "OWNER_TEST_RECIPIENT_NUMBER",
     configured: ownerRecipientConfigured,
-    masked: ownerRecipientConfigured ? maskPhoneNumber(env.OWNER_TEST_RECIPIENT_NUMBER) : "",
+    masked: ownerRecipientConfigured ? maskPhoneNumber(ownerRecipientValue) : "",
     missingConfig: ownerRecipientConfigured ? [] : ["OWNER_TEST_RECIPIENT_NUMBER"]
   };
   const smsMissing = [...twilio.sms.missingConfig, ...ownerRecipient.missingConfig];

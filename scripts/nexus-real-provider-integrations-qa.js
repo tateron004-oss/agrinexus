@@ -27,6 +27,7 @@ const envExample = read(".env.example");
 const packageJson = read("package.json");
 const qaSuite = read("scripts/qa-suite.js");
 const providerUtils = read("server/providers/providerUtils.js");
+const twilioProvider = read("server/providers/twilioProvider.js");
 const auditDoc = read("docs/NEXUS_REAL_PROVIDER_INTEGRATION_AUDIT.md");
 
 const providerFiles = [
@@ -99,7 +100,10 @@ check(exists("docs/NEXUS_REAL_PROVIDER_INTEGRATION_AUDIT.md"), "real provider in
   "TWILIO_ACCOUNT_SID",
   "TWILIO_AUTH_TOKEN",
   "TWILIO_FROM_NUMBER",
+  "TWILIO_PHONE_NUMBER",
+  "TWILIO_NUMBER",
   "OWNER_TEST_RECIPIENT_NUMBER",
+  "TEST_RECIPIENT_NUMBER",
   "TWILIO_WHATSAPP_FROM",
   "GOOGLE_MAPS_API_KEY",
   "MOODLE_BASE_URL",
@@ -130,6 +134,19 @@ confirmationGatedFiles.forEach(file => {
   const source = read(file);
   includes(source, "requireConfirmation", `${file} controlled action gate`);
 });
+
+[
+  "TWILIO_FROM_ENV_NAMES",
+  "TWILIO_FROM_NUMBER",
+  "TWILIO_PHONE_NUMBER",
+  "TWILIO_NUMBER",
+  "firstConfiguredEnv",
+  "missingPreferredEnv",
+  "twilioFromNumber",
+  "From: twilioFromNumber(env)",
+  "requireConfirmation",
+  "missingConfigResponse"
+].forEach(text => includes(twilioProvider, text, "Twilio provider compatibility"));
 
 const npiProvider = read("server/providers/npiProvider.js");
 includes(npiProvider, "CMS NPPES NPI Registry", "NPI provider");
@@ -172,9 +189,11 @@ const realProviderUi = realProviderUiStart >= 0 && realProviderUiEnd > realProvi
 [
   "providerReadinessCard",
   "maskPhoneNumber",
+  "firstPresentEnvValue",
   '"*".repeat(6)',
-  "maskPhoneNumber(env.OWNER_TEST_RECIPIENT_NUMBER)",
+  "maskPhoneNumber(ownerRecipientValue)",
   "OWNER_TEST_RECIPIENT_NUMBER",
+  "TEST_RECIPIENT_NUMBER",
   "ownerTestRecipient",
   "testability",
   "canTestNow",
