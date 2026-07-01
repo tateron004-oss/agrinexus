@@ -12,5 +12,13 @@ module.exports = {
   offlineSync: require("./offlineSyncProvider"),
   reminders: require("./reminderProvider"),
   providerContactBridge: require("./providerContactBridgeProvider"),
-  learningBridge: require("./learningBridgeProvider")
+  learningBridge: require("./learningBridgeProvider"),
+  mapsFieldVisitBridge: require("./mapsFieldVisitBridgeProvider"),
+  communicationsBridge: require("./communicationsBridgeProvider"),
+  droneMissionBridge: require("./droneMissionBridgeProvider"),
+  offlineExpansionBridge: require("./offlineExpansionBridgeProvider"),
+  sessionBridge: require("./sessionBridgeProvider"),
+  lmsLiveBridge: require("./lmsLiveBridgeProvider"),
+  paymentReadinessBridge: require("./paymentReadinessBridgeProvider"),
+  workflowOrchestratorBridge: require("./workflowOrchestratorBridgeProvider")
 };

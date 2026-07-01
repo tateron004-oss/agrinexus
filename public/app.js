@@ -83,6 +83,7 @@ let nexusRealProviderTestingLastResult = null;
 let nexusProviderContactBridgeCards = [];
 let nexusLearningProviderBridgeCards = [];
 let nexusMarketplaceBridgeCards = [];
+let nexusMapsFieldVisitPlan = null;
 let experienceMode = localStorage.getItem("agrinexusExperienceMode") || "";
 let pendingWorkflow = null;
 let pendingGrandmaAction = null;
@@ -17644,6 +17645,332 @@ function renderNexusMarketplaceBridgePanel() {
   `;
 }
 
+function mapsFieldVisitStatusCard() {
+  return (nexusRealProviderTestingStatus?.cards || []).find(card => card.id === "maps-field-visit-bridge") || null;
+}
+
+function mapsFieldVisitMapsStatusCard() {
+  return (nexusRealProviderTestingStatus?.cards || []).find(card => card.id === "maps") || null;
+}
+
+function mapsFieldVisitField(name) {
+  return document.querySelector(`[data-maps-field-visit-field="${name}"]`)?.value?.trim() || "";
+}
+
+function mapsFieldVisitConfirmed() {
+  return document.querySelector("[data-maps-field-visit-confirm]")?.checked === true;
+}
+
+function mapsFieldVisitPayload() {
+  const destination = {
+    destinationType: mapsFieldVisitField("destinationType") || "custom",
+    label: mapsFieldVisitField("destinationLabel") || mapsFieldVisitField("destinationAddress") || "Field visit destination",
+    addressText: mapsFieldVisitField("destinationAddress"),
+    source: "Standard User typed field visit panel"
+  };
+  return {
+    confirmed: mapsFieldVisitConfirmed(),
+    title: mapsFieldVisitField("title") || "Field visit plan",
+    origin: mapsFieldVisitField("origin"),
+    destinations: [destination],
+    destinationType: destination.destinationType,
+    destinationLabel: destination.label,
+    destinationAddress: destination.addressText,
+    reminderType: mapsFieldVisitField("reminderType") || "Field visit",
+    dueAt: mapsFieldVisitField("dueAt")
+  };
+}
+
+function setNexusMapsFieldVisitResult(result, label = "Maps Field Visit Bridge") {
+  nexusRealProviderTestingLastResult = typeof result === "string" ? result : JSON.stringify(result, null, 2);
+  const output = $("#nexusRealProviderTestingResult");
+  const status = $("#nexusRealProviderTestingStatus");
+  if (output) output.textContent = nexusRealProviderTestingLastResult;
+  if (status) status.textContent = `${label}: ${typeof result === "object" && result.status ? result.status : "prepared"}.`;
+}
+
+async function runNexusMapsFieldVisitAction(action) {
+  const payload = mapsFieldVisitPayload();
+  const endpoints = {
+    plan: "/api/nexus/tools/maps/field-visit/plan",
+    route: "/api/nexus/tools/maps/field-visit/route",
+    save: "/api/nexus/tools/maps/field-visit/save",
+    reminder: "/api/nexus/tools/maps/field-visit/reminder",
+    offline: "/api/nexus/tools/maps/field-visit/offline"
+  };
+  const endpoint = endpoints[action];
+  if (!endpoint) return;
+  try {
+    const result = await request(endpoint, { method: "POST", body: payload });
+    if (result.data?.plan) nexusMapsFieldVisitPlan = result.data.plan;
+    setNexusMapsFieldVisitResult({
+      provider: result.provider,
+      action: result.action,
+      status: result.status,
+      message: result.message,
+      missingConfig: result.missingConfig || [],
+      data: sanitizeNexusProviderTestingDisplayData(result.data || {})
+    });
+    await refreshNexusRealProviderTestingStatus();
+  } catch (error) {
+    setNexusMapsFieldVisitResult({ status: "failed_safely", message: error.message });
+  }
+}
+
+function renderNexusMapsFieldVisitPanel() {
+  const bridgeStatus = mapsFieldVisitStatusCard();
+  const mapsStatus = mapsFieldVisitMapsStatusCard();
+  const plan = nexusMapsFieldVisitPlan;
+  return `
+    <section class="nexus-maps-field-visit-bridge" data-nexus-maps-field-visit-bridge="true" data-geolocation-enabled="false" aria-label="${translateText("Maps Field Visit Bridge")}">
+      <div class="nexus-dashboard-section-head">
+        <span class="eyebrow">${translateText("Maps Field Visit Bridge")}</span>
+        <strong>${translateText("Plan safe field visits from typed locations")}</strong>
+      </div>
+      <p>${translateText("Maps Field Visit Bridge prepares typed-location visit plans, route fallback links, reminders, and offline metadata. Nexus does not use browser geolocation, share live location, contact providers or sellers, book transport, dispatch help, or process payments.")}</p>
+      <div class="nexus-maps-field-visit-status">
+        <small>${translateText("Bridge")}: ${escapeHtml(bridgeStatus?.status || "Checking")}</small>
+        <small>${translateText("Google Maps")}: ${escapeHtml(mapsStatus?.status || "Checking")} ${Array.isArray(mapsStatus?.missingConfig) && mapsStatus.missingConfig.length ? `(${translateText("fallback URL available; missing")} ${mapsStatus.missingConfig.map(name => escapeHtml(name)).join(", ")})` : ""}</small>
+        <small>${translateText("No geolocation")}: ${translateText("enforced")}</small>
+      </div>
+      <div class="nexus-maps-field-visit-form">
+        <input data-maps-field-visit-field="title" placeholder="${escapeHtml(translateText("Visit plan title"))}" value="${escapeHtml(plan?.title || "Field visit plan")}">
+        <input data-maps-field-visit-field="origin" placeholder="${escapeHtml(translateText("Typed origin, e.g. Stockton, CA"))}" value="${escapeHtml(plan?.origin || "")}">
+        <select data-maps-field-visit-field="destinationType" aria-label="${escapeHtml(translateText("Destination type"))}">
+          ${["custom", "provider", "marketplace", "learning", "farm", "community"].map(type => `<option value="${escapeHtml(type)}" ${plan?.destinations?.[0]?.destinationType === type ? "selected" : ""}>${escapeHtml(type)}</option>`).join("")}
+        </select>
+        <input data-maps-field-visit-field="destinationLabel" placeholder="${escapeHtml(translateText("Destination label"))}" value="${escapeHtml(plan?.destinations?.[0]?.label || "")}">
+        <input data-maps-field-visit-field="destinationAddress" placeholder="${escapeHtml(translateText("Typed destination, e.g. Sacramento, CA"))}" value="${escapeHtml(plan?.destinations?.[0]?.addressText || "")}">
+        <input data-maps-field-visit-field="reminderType" placeholder="${escapeHtml(translateText("Reminder type"))}" value="${escapeHtml("Field visit")}">
+        <input data-maps-field-visit-field="dueAt" placeholder="${escapeHtml(translateText("Reminder time/text"))}">
+        <label class="nexus-maps-field-visit-confirm">
+          <input type="checkbox" data-maps-field-visit-confirm>
+          <span>${translateText("I confirm this visible field visit action. No live location, contact, booking, dispatch, or payment.")}</span>
+        </label>
+      </div>
+      <div class="nexus-maps-field-visit-actions">
+        <button type="button" data-maps-field-visit-action="plan">${translateText("Build visit plan")}</button>
+        <button type="button" data-maps-field-visit-action="route">${translateText("Generate route")}</button>
+        <button type="button" data-maps-field-visit-action="save">${translateText("Save visit plan")}</button>
+        <button type="button" data-maps-field-visit-action="reminder">${translateText("Add visit reminder")}</button>
+        <button type="button" data-maps-field-visit-action="offline">${translateText("Queue offline")}</button>
+      </div>
+      <p class="nexus-maps-field-visit-crosslink-note">${translateText("Provider, marketplace, and learning records can be copied into this central panel when they have safe address text. Future cross-link buttons should keep this same confirmation gate.")}</p>
+      ${plan ? `
+        <div class="nexus-maps-field-visit-plan" data-route-fallback-url="${escapeHtml(plan.routeFallbackUrl || "")}">
+          <strong>${escapeHtml(plan.title || "Field visit plan")}</strong>
+          <small>${translateText("Origin")}: ${escapeHtml(plan.origin || "")}</small>
+          <small>${translateText("Destination")}: ${escapeHtml(plan.destinations?.[0]?.label || "")} - ${escapeHtml(plan.destinations?.[0]?.addressText || "")}</small>
+          <small>${translateText("Route status")}: ${escapeHtml(plan.routeProviderStatus || "fallback_available")}</small>
+          <small>${translateText("Fallback URL")}: ${escapeHtml(plan.routeFallbackUrl || "")}</small>
+          ${plan.distanceMeters ? `<small>${translateText("Distance meters")}: ${escapeHtml(String(plan.distanceMeters))}</small>` : ""}
+          ${plan.duration ? `<small>${translateText("Duration")}: ${escapeHtml(String(plan.duration))}</small>` : ""}
+        </div>
+      ` : `<p>${translateText("Enter typed origin and destination, then build or route a field visit plan.")}</p>`}
+    </section>
+  `;
+}
+
+const NEXUS_EXTENDED_BRIDGE_CONTROLS = Object.freeze([
+  {
+    id: "communications",
+    title: "Communications Live Bridge",
+    statusCardId: "communications-bridge",
+    description: "Prepare SMS, WhatsApp, and call drafts. Live send/call stays Twilio-gated, configured, and confirmation-required.",
+    fields: [
+      ["channel", "Channel: sms, whatsapp, or call", "sms"],
+      ["to", "Owner-approved recipient or leave blank for configured test recipient", ""],
+      ["message", "Draft message", "Nexus controlled communications bridge test draft."]
+    ],
+    actions: [
+      ["draft", "Prepare draft", "/api/nexus/tools/communications/draft"],
+      ["sms", "Send SMS after confirmation", "/api/nexus/tools/communications/sms/send"],
+      ["call", "Prepare call", "/api/nexus/tools/communications/call/prepare"]
+    ]
+  },
+  {
+    id: "drone",
+    title: "Drone Mission Request Bridge",
+    statusCardId: "drone-mission-bridge",
+    description: "Create intake-only crop monitoring, field mapping, training, or demonstration requests. No flight control.",
+    fields: [
+      ["title", "Mission request title", "Field crop monitoring intake"],
+      ["missionType", "Mission type", "crop monitoring"],
+      ["area", "Field area text", "North field review area"],
+      ["purpose", "Purpose", "Prepare an intake request for qualified review."]
+    ],
+    actions: [
+      ["mission", "Create request after confirmation", "/api/nexus/tools/drones/bridge/mission-request"],
+      ["reminder", "Add reminder", "/api/nexus/tools/drones/bridge/reminder"],
+      ["offline", "Queue offline", "/api/nexus/tools/drones/bridge/offline"]
+    ]
+  },
+  {
+    id: "offline-expansion",
+    title: "Offline Sync Expansion Bridge",
+    statusCardId: "offline-expansion-bridge",
+    description: "Queue, sync, and clear safe metadata. Executable or sensitive items are skipped.",
+    fields: [
+      ["type", "Safe type", "workflow_plan"],
+      ["title", "Offline item title", "Safe workflow metadata"],
+      ["summary", "Safe summary", "Local metadata for offline review only."]
+    ],
+    actions: [
+      ["queue", "Queue safe item", "/api/nexus/tools/offline/bridge/queue"],
+      ["sync", "Sync safe items", "/api/nexus/tools/offline/bridge/sync"],
+      ["items", "List items", "/api/nexus/tools/offline/bridge/items", "GET"]
+    ]
+  },
+  {
+    id: "session",
+    title: "Session / Zoom Bridge",
+    statusCardId: "session-bridge",
+    description: "Prepare sessions locally. Zoom creation is configured, enabled, and confirmation-gated.",
+    fields: [
+      ["title", "Session title", "Agriculture support session"],
+      ["sessionType", "Session type", "agriculture support"],
+      ["topic", "Session topic", "Field support planning"],
+      ["dueAt", "Reminder time/text", "Tomorrow at 10 AM"]
+    ],
+    actions: [
+      ["prepare", "Prepare session", "/api/nexus/tools/sessions/prepare"],
+      ["zoom", "Create Zoom after confirmation", "/api/nexus/tools/sessions/zoom/create"],
+      ["reminder", "Add reminder", "/api/nexus/tools/sessions/reminder"],
+      ["offline", "Queue offline", "/api/nexus/tools/sessions/offline"]
+    ]
+  },
+  {
+    id: "lms-live",
+    title: "LMS / Koachlearn Live Bridge",
+    statusCardId: "lms-live-bridge",
+    description: "Use live Moodle courses when configured or local learning fallback otherwise. Enrollment remains gated.",
+    fields: [
+      ["query", "Course query", "irrigation"],
+      ["title", "Course title", "Irrigation basics"],
+      ["courseId", "Course ID for enrollment prep", "local-irrigation"]
+    ],
+    actions: [
+      ["courses", "Load courses", "/api/nexus/tools/lms/bridge/courses", "GET"],
+      ["save", "Save course after confirmation", "/api/nexus/tools/lms/bridge/save-course"],
+      ["prepare", "Prepare enrollment", "/api/nexus/tools/lms/bridge/enroll-prepare"]
+    ]
+  },
+  {
+    id: "payment-readiness",
+    title: "Marketplace Payment Readiness Bridge",
+    statusCardId: "payment-readiness-bridge",
+    description: "Stripe sandbox readiness only. Checkout, escrow, production payments, and money movement remain disabled by default.",
+    fields: [
+      ["listingId", "Listing ID", "local-listing"],
+      ["amount", "Sandbox amount in cents", "500"],
+      ["currency", "Currency", "usd"]
+    ],
+    actions: [
+      ["readiness", "Check readiness", "/api/nexus/tools/payments/readiness-check"],
+      ["payment", "Sandbox payment intent after confirmation", "/api/nexus/tools/payments/stripe/payment-intent"]
+    ]
+  },
+  {
+    id: "workflow",
+    title: "Unified Workflow Orchestrator Bridge",
+    statusCardId: "workflow-orchestrator-bridge",
+    description: "Plan multi-step workflows across bridges without silently executing high-risk actions.",
+    fields: [
+      ["workflowType", "Workflow type", "provider-visit"],
+      ["title", "Workflow title", "Provider visit workflow"],
+      ["context", "Context", "Prepare provider visit steps for review."],
+      ["dueAt", "Reminder time/text", "Next workflow review"]
+    ],
+    actions: [
+      ["plan", "Generate plan", "/api/nexus/tools/workflows/plan"],
+      ["save", "Save plan after confirmation", "/api/nexus/tools/workflows/save"],
+      ["reminder", "Add reminder", "/api/nexus/tools/workflows/reminder"],
+      ["offline", "Queue offline", "/api/nexus/tools/workflows/offline"]
+    ]
+  }
+]);
+
+function extendedBridgeStatusCard(id) {
+  return (nexusRealProviderTestingStatus?.cards || []).find(card => card.id === id) || null;
+}
+
+function renderNexusExtendedBridgeLayerPanel() {
+  return `
+    <section class="nexus-extended-bridge-layer" data-nexus-extended-bridge-layer="true" aria-label="${translateText("Nexus Extended Bridge Layer")}">
+      <div class="nexus-dashboard-section-head">
+        <span class="eyebrow">${translateText("Nexus Bridge Layer")}</span>
+        <strong>${translateText("Safe provider-ready bridge controls")}</strong>
+      </div>
+      <p>${translateText("These bridge controls prepare, save, remind, or queue safe metadata. Nexus does not silently message, call, pay, book, dispatch, fly drones, share location, or contact providers.")}</p>
+      <div class="nexus-extended-bridge-grid">
+        ${NEXUS_EXTENDED_BRIDGE_CONTROLS.map(control => {
+          const card = extendedBridgeStatusCard(control.statusCardId);
+          return `
+            <article class="nexus-extended-bridge-card" data-extended-bridge="${escapeHtml(control.id)}" data-execution-authority="false">
+              <strong>${translateText(control.title)}</strong>
+              <small>${escapeHtml(card?.status || "Checking")} ${Array.isArray(card?.missingConfig) && card.missingConfig.length ? `- ${translateText("missing")} ${card.missingConfig.map(name => escapeHtml(name)).join(", ")}` : ""}</small>
+              <p>${translateText(control.description)}</p>
+              <div class="nexus-extended-bridge-fields">
+                ${control.fields.map(([name, label, value]) => `<input data-extended-bridge-field="${escapeHtml(name)}" placeholder="${escapeHtml(translateText(label))}" value="${escapeHtml(value)}">`).join("")}
+              </div>
+              <label class="nexus-extended-bridge-confirm">
+                <input type="checkbox" data-extended-bridge-confirm>
+                <span>${translateText("I confirm this visible bridge action. No hidden real-world execution.")}</span>
+              </label>
+              <div class="nexus-extended-bridge-actions">
+                ${control.actions.map(([action, label]) => `<button type="button" data-extended-bridge-action="${escapeHtml(action)}" data-extended-bridge-id="${escapeHtml(control.id)}">${translateText(label)}</button>`).join("")}
+              </div>
+            </article>
+          `;
+        }).join("")}
+      </div>
+    </section>
+  `;
+}
+
+function extendedBridgePayload(id) {
+  const card = document.querySelector(`[data-extended-bridge="${id}"]`);
+  const payload = { confirmed: card?.querySelector("[data-extended-bridge-confirm]")?.checked === true };
+  card?.querySelectorAll("[data-extended-bridge-field]").forEach(input => {
+    payload[input.dataset.extendedBridgeField] = input.value.trim();
+  });
+  if (payload.channel === "call") payload.message = payload.message || "Nexus confirmed bridge call test.";
+  return payload;
+}
+
+async function runNexusExtendedBridgeAction(id, action) {
+  const control = NEXUS_EXTENDED_BRIDGE_CONTROLS.find(item => item.id === id);
+  const actionConfig = control?.actions.find(item => item[0] === action);
+  if (!control || !actionConfig) return;
+  const [, , endpoint, method = "POST"] = actionConfig;
+  try {
+    let requestEndpoint = endpoint;
+    const payload = extendedBridgePayload(id);
+    const options = { method };
+    if (method === "GET") {
+      const params = new URLSearchParams();
+      Object.entries(payload).forEach(([key, value]) => {
+        if (key !== "confirmed" && value) params.set(key, value);
+      });
+      requestEndpoint = `${endpoint}?${params.toString()}`;
+    } else {
+      options.body = payload;
+    }
+    const result = await request(requestEndpoint, options);
+    setNexusProviderBridgeResult({
+      provider: result.provider,
+      action: result.action,
+      status: result.status,
+      message: result.message,
+      missingConfig: result.missingConfig || [],
+      data: sanitizeNexusProviderTestingDisplayData(result.data || {})
+    }, control.title);
+    await refreshNexusRealProviderTestingStatus();
+  } catch (error) {
+    setNexusProviderBridgeResult({ status: "failed_safely", message: error.message }, control.title);
+  }
+}
+
 function renderNexusRealProviderTestingPanel() {
   return `
     <section class="nexus-real-provider-testing" data-nexus-real-provider-testing="true" aria-label="${translateText("Real Provider Testing")}">
@@ -17662,6 +17989,8 @@ function renderNexusRealProviderTestingPanel() {
       <div class="nexus-real-provider-control-grid" aria-label="${translateText("Provider test controls")}">
         ${renderNexusRealProviderTestControls()}
       </div>
+      ${renderNexusMapsFieldVisitPanel()}
+      ${renderNexusExtendedBridgeLayerPanel()}
       ${renderNexusMarketplaceBridgePanel()}
       ${renderNexusLearningProviderBridgePanel()}
       ${renderNexusProviderContactBridgeCards()}
@@ -33186,6 +33515,20 @@ function bindStatic() {
       event.preventDefault();
       event.stopPropagation();
       await runNexusRealProviderTest(realProviderTestButton.dataset.realProviderTest);
+      return;
+    }
+    const mapsFieldVisitButton = event.target.closest("[data-maps-field-visit-action]");
+    if (mapsFieldVisitButton) {
+      event.preventDefault();
+      event.stopPropagation();
+      await runNexusMapsFieldVisitAction(mapsFieldVisitButton.dataset.mapsFieldVisitAction);
+      return;
+    }
+    const extendedBridgeButton = event.target.closest("[data-extended-bridge-action]");
+    if (extendedBridgeButton) {
+      event.preventDefault();
+      event.stopPropagation();
+      await runNexusExtendedBridgeAction(extendedBridgeButton.dataset.extendedBridgeId, extendedBridgeButton.dataset.extendedBridgeAction);
       return;
     }
     const marketplaceBridgeCreateButton = event.target.closest("[data-marketplace-bridge-create]");

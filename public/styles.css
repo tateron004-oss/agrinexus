@@ -8246,7 +8246,8 @@ body.user-mode .grandma-workflow:not(.hidden) .modal-actions button {
 .nexus-real-provider-control strong,
 .nexus-provider-contact-card strong,
 .nexus-learning-bridge-card strong,
-.nexus-marketplace-bridge-card strong {
+.nexus-marketplace-bridge-card strong,
+.nexus-maps-field-visit-plan strong {
   font-size: .95rem;
 }
 
@@ -8259,7 +8260,8 @@ body.user-mode .grandma-workflow:not(.hidden) .modal-actions button {
 .nexus-real-provider-control small,
 .nexus-provider-contact-card small,
 .nexus-learning-bridge-card small,
-.nexus-marketplace-bridge-card small {
+.nexus-marketplace-bridge-card small,
+.nexus-maps-field-visit-plan small {
   color: #475569;
   line-height: 1.35;
 }
@@ -8271,7 +8273,9 @@ body.user-mode .grandma-workflow:not(.hidden) .modal-actions button {
 .nexus-learning-provider-bridge select,
 .nexus-marketplace-provider-bridge input,
 .nexus-marketplace-provider-bridge select,
-.nexus-marketplace-provider-bridge textarea {
+.nexus-marketplace-provider-bridge textarea,
+.nexus-maps-field-visit-bridge input,
+.nexus-maps-field-visit-bridge select {
   width: 100%;
   min-height: 42px;
   padding: 8px 10px;
@@ -8308,13 +8312,58 @@ body.user-mode .grandma-workflow:not(.hidden) .modal-actions button {
   background: rgba(255, 251, 235, .78);
 }
 
+.nexus-maps-field-visit-bridge {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border: 1px dashed rgba(14, 116, 144, .24);
+  border-radius: 8px;
+  background: rgba(236, 254, 255, .72);
+}
+
+.nexus-extended-bridge-layer {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border: 1px dashed rgba(79, 70, 229, .22);
+  border-radius: 8px;
+  background: rgba(238, 242, 255, .68);
+}
+
+.nexus-extended-bridge-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 10px;
+}
+
+.nexus-extended-bridge-card {
+  display: grid;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid rgba(79, 70, 229, .16);
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.nexus-extended-bridge-card p {
+  margin: 0;
+  color: #334155;
+  font-size: .9rem;
+}
+
 .nexus-learning-bridge-status,
 .nexus-learning-bridge-search,
 .nexus-learning-bridge-suggestions,
 .nexus-marketplace-bridge-status,
 .nexus-marketplace-bridge-search,
 .nexus-marketplace-bridge-suggestions,
-.nexus-marketplace-bridge-create {
+.nexus-marketplace-bridge-create,
+.nexus-maps-field-visit-status,
+.nexus-maps-field-visit-form,
+.nexus-maps-field-visit-actions,
+.nexus-maps-field-visit-plan,
+.nexus-extended-bridge-fields,
+.nexus-extended-bridge-actions {
   display: grid;
   gap: 8px;
 }
@@ -8329,6 +8378,18 @@ body.user-mode .grandma-workflow:not(.hidden) .modal-actions button {
 
 .nexus-marketplace-bridge-create {
   grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+}
+
+.nexus-maps-field-visit-form {
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+}
+
+.nexus-maps-field-visit-actions {
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+}
+
+.nexus-extended-bridge-actions {
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
 }
 
 .nexus-learning-bridge-suggestions {
@@ -8351,7 +8412,9 @@ body.user-mode .grandma-workflow:not(.hidden) .modal-actions button {
 
 .nexus-provider-contact-confirm,
 .nexus-learning-bridge-confirm,
-.nexus-marketplace-bridge-confirm {
+.nexus-marketplace-bridge-confirm,
+.nexus-maps-field-visit-confirm,
+.nexus-extended-bridge-confirm {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -8361,9 +8424,27 @@ body.user-mode .grandma-workflow:not(.hidden) .modal-actions button {
 
 .nexus-provider-contact-confirm input,
 .nexus-learning-bridge-confirm input,
-.nexus-marketplace-bridge-confirm input {
+.nexus-marketplace-bridge-confirm input,
+.nexus-maps-field-visit-confirm input,
+.nexus-extended-bridge-confirm input {
   width: auto;
   min-height: auto;
+}
+
+.nexus-extended-bridge-fields input {
+  width: 100%;
+  min-height: 40px;
+  padding: 8px 10px;
+  border: 1px solid rgba(15, 23, 42, .18);
+  border-radius: 6px;
+  background: #ffffff;
+  color: #0f172a;
+}
+
+.nexus-maps-field-visit-crosslink-note {
+  margin: 0;
+  color: #475569;
+  font-size: .9rem;
 }
 
 .nexus-provider-contact-actions,

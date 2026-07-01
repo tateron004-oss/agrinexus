@@ -137,11 +137,19 @@ function nexusRealProviderStatus(db, env = process.env) {
   const dji = nexusRealProviders.dji.status(env);
   const marketplace = nexusRealProviders.marketplace.status(env);
   const marketplaceBridge = nexusRealProviders.marketplaceBridge.status(env);
+  const mapsFieldVisitBridge = nexusRealProviders.mapsFieldVisitBridge.status(env);
   const offlineSync = nexusRealProviders.offlineSync.status(env);
   const reminders = nexusRealProviders.reminders.status(env);
   const stripe = nexusRealProviders.stripe.status(env);
   const providerContactBridge = nexusRealProviders.providerContactBridge.status(env);
   const learningBridge = nexusRealProviders.learningBridge.status(env);
+  const communicationsBridge = nexusRealProviders.communicationsBridge.status(env);
+  const droneMissionBridge = nexusRealProviders.droneMissionBridge.status(env);
+  const offlineExpansionBridge = nexusRealProviders.offlineExpansionBridge.status(env);
+  const sessionBridge = nexusRealProviders.sessionBridge.status(env);
+  const lmsLiveBridge = nexusRealProviders.lmsLiveBridge.status(env);
+  const paymentReadinessBridge = nexusRealProviders.paymentReadinessBridge.status(env);
+  const workflowOrchestratorBridge = nexusRealProviders.workflowOrchestratorBridge.status(env);
   const ownerRecipientValue = firstPresentEnvValue(env, ["OWNER_TEST_RECIPIENT_NUMBER", "TEST_RECIPIENT_NUMBER"]);
   const ownerRecipientConfigured = Boolean(ownerRecipientValue);
   const ownerRecipient = {
@@ -223,6 +231,103 @@ function nexusRealProviderStatus(db, env = process.env) {
         ...maps.missingConfig.map(name => `Add ${name}`),
         ...(maps.enabled ? [] : ["Enable NEXUS_MAPS_ENABLED=true"])
       ],
+      requiresConfirmation: true
+    }),
+    providerReadinessCard({
+      id: "maps-field-visit-bridge",
+      title: "Maps Field Visit Bridge",
+      providerName: "Nexus local maps field visit bridge",
+      enabled: mapsFieldVisitBridge.enabled,
+      testability: mapsFieldVisitBridge.enabled ? "local_only" : "disabled",
+      detail: "Prepares field visit plans from typed origin/destination and selected safe records. No geolocation, provider contact, booking, dispatch, transport booking, or payment.",
+      canTestNow: mapsFieldVisitBridge.enabled ? "Create a field visit plan, generate a route fallback, save, remind, or queue safe metadata after confirmation." : "Maps Field Visit Bridge disabled.",
+      stillNeeded: [
+        ...(mapsFieldVisitBridge.enabled ? [] : ["Enable NEXUS_MAPS_FIELD_VISIT_BRIDGE_ENABLED=true"]),
+        ...(maps.missingConfig.length ? ["Add GOOGLE_MAPS_API_KEY for live distance/duration; fallback URL works without it."] : [])
+      ],
+      requiresConfirmation: true
+    }),
+    providerReadinessCard({
+      id: "communications-bridge",
+      title: "Communications Live Bridge",
+      providerName: "Nexus communications bridge",
+      enabled: communicationsBridge.enabled,
+      missingConfig: communicationsBridge.ownerRecipient?.missingConfig || [],
+      testability: communicationsBridge.enabled ? "confirmation_required" : "disabled",
+      detail: "Drafts communications locally and delegates SMS, WhatsApp, and calls only through existing Twilio gates after explicit confirmation.",
+      canTestNow: communicationsBridge.enabled ? "Prepare a draft now; live SMS/call/WhatsApp requires provider flags, credentials, recipient, and confirmation." : "Communications Bridge disabled.",
+      stillNeeded: communicationsBridge.enabled ? (communicationsBridge.ownerRecipient?.missingConfig || []).map(name => `Add ${name}`) : ["Enable NEXUS_COMMUNICATIONS_BRIDGE_ENABLED=true"],
+      requiresConfirmation: true,
+      recipient: communicationsBridge.ownerRecipient
+    }),
+    providerReadinessCard({
+      id: "drone-mission-bridge",
+      title: "Drone Mission Request Bridge",
+      providerName: "Nexus drone mission bridge",
+      enabled: droneMissionBridge.enabled,
+      testability: droneMissionBridge.enabled ? "local_only" : "disabled",
+      detail: "Captures drone service intake requests only. No flight launch, aircraft control, mission dispatch, or emergency response.",
+      canTestNow: droneMissionBridge.enabled ? "Create an intake-only drone mission request, reminder, or offline item after confirmation." : "Drone Mission Bridge disabled.",
+      stillNeeded: droneMissionBridge.enabled ? [] : ["Enable NEXUS_DRONE_MISSION_BRIDGE_ENABLED=true"],
+      requiresConfirmation: true
+    }),
+    providerReadinessCard({
+      id: "offline-expansion-bridge",
+      title: "Offline Sync Expansion Bridge",
+      providerName: "Nexus offline expansion bridge",
+      enabled: offlineExpansionBridge.enabled,
+      testability: offlineExpansionBridge.enabled ? "local_only" : "disabled",
+      detail: "Queues and syncs safe metadata only; executable or sensitive items are skipped.",
+      canTestNow: offlineExpansionBridge.enabled ? "Queue a safe metadata item, list items, sync, or clear safe items after confirmation." : "Offline Expansion Bridge disabled.",
+      stillNeeded: offlineExpansionBridge.enabled ? [] : ["Enable NEXUS_OFFLINE_EXPANSION_BRIDGE_ENABLED=true"],
+      requiresConfirmation: true
+    }),
+    providerReadinessCard({
+      id: "session-bridge",
+      title: "Session / Zoom Bridge",
+      providerName: "Nexus session bridge",
+      enabled: sessionBridge.enabled,
+      missingConfig: sessionBridge.zoom?.missingConfig || [],
+      testability: sessionBridge.enabled ? "confirmation_required" : "disabled",
+      detail: "Prepares sessions locally. Zoom creation remains configured/enabled/confirmed only, with no hidden invites or bookings.",
+      canTestNow: sessionBridge.enabled ? "Prepare a session plan, reminder, or offline item; Zoom creation needs credentials and confirmation." : "Session Bridge disabled.",
+      stillNeeded: sessionBridge.enabled ? (sessionBridge.zoom?.missingConfig || []).map(name => `Add ${name} for Zoom creation`) : ["Enable NEXUS_SESSION_BRIDGE_ENABLED=true"],
+      requiresConfirmation: true
+    }),
+    providerReadinessCard({
+      id: "lms-live-bridge",
+      title: "LMS / Koachlearn Live Bridge",
+      providerName: "Nexus LMS live bridge",
+      enabled: lmsLiveBridge.enabled,
+      missingConfig: lmsLiveBridge.moodle?.missingConfig || [],
+      testability: lmsLiveBridge.enabled ? "read_only" : "disabled",
+      detail: "Uses Moodle courses when configured and local learning fallback otherwise. Enrollment remains separately gated.",
+      canTestNow: lmsLiveBridge.enabled ? "Load local learning fallback or live LMS courses if configured; prepare enrollment without enrolling." : "LMS Live Bridge disabled.",
+      stillNeeded: lmsLiveBridge.enabled ? (lmsLiveBridge.moodle?.missingConfig || []).map(name => `Add ${name} for LMS lookup`) : ["Enable NEXUS_LMS_LIVE_BRIDGE_ENABLED=true"],
+      requiresConfirmation: true
+    }),
+    providerReadinessCard({
+      id: "payment-readiness-bridge",
+      title: "Marketplace Payment Readiness Bridge",
+      providerName: "Nexus payment readiness bridge",
+      enabled: paymentReadinessBridge.enabled,
+      missingConfig: paymentReadinessBridge.stripe?.missingConfig || [],
+      testability: paymentReadinessBridge.enabled ? "sandbox_only" : "disabled",
+      detail: "Shows Stripe sandbox readiness only. Checkout, escrow, production payments, and money movement remain disabled by default.",
+      canTestNow: paymentReadinessBridge.enabled ? "Run a readiness check; payment intent remains sandbox-gated, configured, confirmed, and blocked by existing Stripe compliance posture." : "Payment Readiness Bridge disabled.",
+      stillNeeded: paymentReadinessBridge.enabled ? (paymentReadinessBridge.stripe?.missingConfig || []).map(name => `Add ${name} for sandbox readiness`) : ["Enable NEXUS_PAYMENT_READINESS_BRIDGE_ENABLED=true"],
+      requiresConfirmation: true,
+      requiresSandboxAccount: true
+    }),
+    providerReadinessCard({
+      id: "workflow-orchestrator-bridge",
+      title: "Unified Workflow Orchestrator Bridge",
+      providerName: "Nexus workflow orchestrator bridge",
+      enabled: workflowOrchestratorBridge.enabled,
+      testability: workflowOrchestratorBridge.enabled ? "local_only" : "disabled",
+      detail: "Creates multi-step bridge plans and coordinates readiness. It does not silently execute messages, calls, payments, bookings, drone actions, or location sharing.",
+      canTestNow: workflowOrchestratorBridge.enabled ? "Create, save, remind, or queue a workflow plan after confirmation." : "Workflow Orchestrator Bridge disabled.",
+      stillNeeded: workflowOrchestratorBridge.enabled ? [] : ["Enable NEXUS_WORKFLOW_ORCHESTRATOR_ENABLED=true"],
       requiresConfirmation: true
     }),
     providerReadinessCard({
@@ -27322,6 +27427,60 @@ async function api(req, res, url) {
     return sendProviderResult(res, await nexusRealProviders.googleMaps.route(await readBody(req)));
   }
 
+  if (url.pathname === "/api/nexus/tools/maps/field-visit/plan" && req.method === "POST") {
+    return sendProviderResult(res, nexusRealProviders.mapsFieldVisitBridge.createVisitPlan(await readBody(req), db));
+  }
+
+  if (url.pathname === "/api/nexus/tools/maps/field-visit/route" && req.method === "POST") {
+    return sendProviderResult(res, await nexusRealProviders.mapsFieldVisitBridge.routeVisitPlan(await readBody(req), db));
+  }
+
+  if (url.pathname === "/api/nexus/tools/maps/field-visit/save" && req.method === "POST") {
+    const result = nexusRealProviders.mapsFieldVisitBridge.saveVisitPlan(await readBody(req), db);
+    if (result.body?.status === "completed") await writeDb(db);
+    return sendProviderResult(res, result);
+  }
+
+  if (url.pathname === "/api/nexus/tools/maps/field-visit/reminder" && req.method === "POST") {
+    const result = nexusRealProviders.mapsFieldVisitBridge.createVisitReminder(await readBody(req), db);
+    if (result.body?.status === "completed") await writeDb(db);
+    return sendProviderResult(res, result);
+  }
+
+  if (url.pathname === "/api/nexus/tools/maps/field-visit/offline" && req.method === "POST") {
+    const result = nexusRealProviders.mapsFieldVisitBridge.queueVisitOffline(await readBody(req), db);
+    if (result.body?.status === "completed") await writeDb(db);
+    return sendProviderResult(res, result);
+  }
+
+  if (url.pathname === "/api/nexus/tools/maps/field-visit/saved" && req.method === "GET") {
+    return sendProviderResult(res, nexusRealProviders.mapsFieldVisitBridge.savedVisitPlans(db));
+  }
+
+  if (url.pathname === "/api/nexus/tools/communications/status" && req.method === "GET") {
+    return send(res, 200, { ok: true, ...nexusRealProviders.communicationsBridge.status() });
+  }
+
+  if (url.pathname === "/api/nexus/tools/communications/draft" && req.method === "POST") {
+    return sendProviderResult(res, nexusRealProviders.communicationsBridge.draft(await readBody(req)));
+  }
+
+  if (url.pathname === "/api/nexus/tools/communications/sms/send" && req.method === "POST") {
+    return sendProviderResult(res, await nexusRealProviders.communicationsBridge.sendSms(await readBody(req)));
+  }
+
+  if (url.pathname === "/api/nexus/tools/communications/whatsapp/send" && req.method === "POST") {
+    return sendProviderResult(res, await nexusRealProviders.communicationsBridge.sendWhatsapp(await readBody(req)));
+  }
+
+  if (url.pathname === "/api/nexus/tools/communications/call/prepare" && req.method === "POST") {
+    return sendProviderResult(res, nexusRealProviders.communicationsBridge.prepareCall(await readBody(req)));
+  }
+
+  if (url.pathname === "/api/nexus/tools/communications/call/start" && req.method === "POST") {
+    return sendProviderResult(res, await nexusRealProviders.communicationsBridge.startCall(await readBody(req)));
+  }
+
   if (url.pathname === "/api/nexus/tools/providers/status" && req.method === "GET") {
     return send(res, 200, { ok: true, ...nexusRealProviders.npi.status() });
   }
@@ -27392,6 +27551,31 @@ async function api(req, res, url) {
     return sendProviderResult(res, result);
   }
 
+  if (url.pathname === "/api/nexus/tools/lms/bridge/status" && req.method === "GET") {
+    return send(res, 200, { ok: true, ...nexusRealProviders.lmsLiveBridge.status() });
+  }
+
+  if (url.pathname === "/api/nexus/tools/lms/bridge/courses" && req.method === "GET") {
+    return sendProviderResult(res, await nexusRealProviders.lmsLiveBridge.courses({
+      query: url.searchParams.get("q") || url.searchParams.get("query") || "",
+      category: url.searchParams.get("category") || ""
+    }));
+  }
+
+  if (url.pathname === "/api/nexus/tools/lms/bridge/save-course" && req.method === "POST") {
+    const result = nexusRealProviders.lmsLiveBridge.saveCourse(await readBody(req), db);
+    if (result.body?.status === "completed") await writeDb(db);
+    return sendProviderResult(res, result);
+  }
+
+  if (url.pathname === "/api/nexus/tools/lms/bridge/enroll-prepare" && req.method === "POST") {
+    return sendProviderResult(res, nexusRealProviders.lmsLiveBridge.enrollPrepare(await readBody(req)));
+  }
+
+  if (url.pathname === "/api/nexus/tools/lms/bridge/enroll" && req.method === "POST") {
+    return sendProviderResult(res, await nexusRealProviders.lmsLiveBridge.enroll(await readBody(req)));
+  }
+
   if (url.pathname === "/api/nexus/tools/zoom/status" && req.method === "GET") {
     return send(res, 200, { ok: true, ...nexusRealProviders.zoom.status() });
   }
@@ -27400,12 +27584,62 @@ async function api(req, res, url) {
     return sendProviderResult(res, await nexusRealProviders.zoom.createMeeting(await readBody(req)));
   }
 
+  if (url.pathname === "/api/nexus/tools/sessions/status" && req.method === "GET") {
+    return send(res, 200, { ok: true, ...nexusRealProviders.sessionBridge.status() });
+  }
+
+  if (url.pathname === "/api/nexus/tools/sessions/prepare" && req.method === "POST") {
+    return sendProviderResult(res, nexusRealProviders.sessionBridge.prepare(await readBody(req), db));
+  }
+
+  if (url.pathname === "/api/nexus/tools/sessions/zoom/create" && req.method === "POST") {
+    return sendProviderResult(res, await nexusRealProviders.sessionBridge.createZoom(await readBody(req), db));
+  }
+
+  if (url.pathname === "/api/nexus/tools/sessions/reminder" && req.method === "POST") {
+    const result = nexusRealProviders.sessionBridge.reminder(await readBody(req), db);
+    if (result.body?.status === "completed") await writeDb(db);
+    return sendProviderResult(res, result);
+  }
+
+  if (url.pathname === "/api/nexus/tools/sessions/offline" && req.method === "POST") {
+    const result = nexusRealProviders.sessionBridge.offline(await readBody(req), db);
+    if (result.body?.status === "completed") await writeDb(db);
+    return sendProviderResult(res, result);
+  }
+
   if (url.pathname === "/api/nexus/tools/drones/status" && req.method === "GET") {
     return sendProviderResult(res, nexusRealProviders.dji.providerStatus());
   }
 
   if (url.pathname === "/api/nexus/tools/drones/mission-request" && req.method === "POST") {
     const result = nexusRealProviders.dji.missionRequest(await readBody(req), db);
+    if (result.body?.status === "completed") await writeDb(db);
+    return sendProviderResult(res, result);
+  }
+
+  if (url.pathname === "/api/nexus/tools/drones/bridge/status" && req.method === "GET") {
+    return send(res, 200, { ok: true, ...nexusRealProviders.droneMissionBridge.status() });
+  }
+
+  if (url.pathname === "/api/nexus/tools/drones/bridge/mission-request" && req.method === "POST") {
+    const result = nexusRealProviders.droneMissionBridge.missionRequest(await readBody(req), db);
+    if (result.body?.status === "completed") await writeDb(db);
+    return sendProviderResult(res, result);
+  }
+
+  if (url.pathname === "/api/nexus/tools/drones/bridge/mission-requests" && req.method === "GET") {
+    return sendProviderResult(res, nexusRealProviders.droneMissionBridge.missionRequests(db));
+  }
+
+  if (url.pathname === "/api/nexus/tools/drones/bridge/reminder" && req.method === "POST") {
+    const result = nexusRealProviders.droneMissionBridge.reminder(await readBody(req), db);
+    if (result.body?.status === "completed") await writeDb(db);
+    return sendProviderResult(res, result);
+  }
+
+  if (url.pathname === "/api/nexus/tools/drones/bridge/offline" && req.method === "POST") {
+    const result = nexusRealProviders.droneMissionBridge.offline(await readBody(req), db);
     if (result.body?.status === "completed") await writeDb(db);
     return sendProviderResult(res, result);
   }
@@ -27462,6 +27696,18 @@ async function api(req, res, url) {
     return sendProviderResult(res, nexusRealProviders.stripe.paymentIntent(await readBody(req)));
   }
 
+  if (url.pathname === "/api/nexus/tools/payments/status" && req.method === "GET") {
+    return send(res, 200, { ok: true, ...nexusRealProviders.paymentReadinessBridge.status() });
+  }
+
+  if (url.pathname === "/api/nexus/tools/payments/readiness-check" && req.method === "POST") {
+    return sendProviderResult(res, nexusRealProviders.paymentReadinessBridge.readinessCheck(await readBody(req)));
+  }
+
+  if (url.pathname === "/api/nexus/tools/payments/stripe/payment-intent" && req.method === "POST") {
+    return sendProviderResult(res, nexusRealProviders.paymentReadinessBridge.paymentIntent(await readBody(req)));
+  }
+
   if (url.pathname === "/api/nexus/tools/offline/status" && req.method === "GET") {
     return send(res, 200, { ok: true, ...nexusRealProviders.offlineSync.status(), queueCount: (db.profile?.offlineQueue || []).length });
   }
@@ -27474,6 +27720,58 @@ async function api(req, res, url) {
 
   if (url.pathname === "/api/nexus/tools/offline/sync" && req.method === "POST") {
     const result = nexusRealProviders.offlineSync.sync(await readBody(req), db);
+    if (result.body?.status === "completed") await writeDb(db);
+    return sendProviderResult(res, result);
+  }
+
+  if (url.pathname === "/api/nexus/tools/offline/bridge/status" && req.method === "GET") {
+    return send(res, 200, { ok: true, ...nexusRealProviders.offlineExpansionBridge.status() });
+  }
+
+  if (url.pathname === "/api/nexus/tools/offline/bridge/items" && req.method === "GET") {
+    return sendProviderResult(res, nexusRealProviders.offlineExpansionBridge.items(db));
+  }
+
+  if (url.pathname === "/api/nexus/tools/offline/bridge/queue" && req.method === "POST") {
+    const result = nexusRealProviders.offlineExpansionBridge.queue(await readBody(req), db);
+    if (result.body?.status === "completed") await writeDb(db);
+    return sendProviderResult(res, result);
+  }
+
+  if (url.pathname === "/api/nexus/tools/offline/bridge/sync" && req.method === "POST") {
+    const result = nexusRealProviders.offlineExpansionBridge.sync(await readBody(req), db);
+    if (result.body?.status === "completed") await writeDb(db);
+    return sendProviderResult(res, result);
+  }
+
+  if (url.pathname === "/api/nexus/tools/offline/bridge/clear-safe" && req.method === "POST") {
+    const result = nexusRealProviders.offlineExpansionBridge.clearSafe(await readBody(req), db);
+    if (result.body?.status === "completed") await writeDb(db);
+    return sendProviderResult(res, result);
+  }
+
+  if (url.pathname === "/api/nexus/tools/workflows/status" && req.method === "GET") {
+    return send(res, 200, { ok: true, ...nexusRealProviders.workflowOrchestratorBridge.status() });
+  }
+
+  if (url.pathname === "/api/nexus/tools/workflows/plan" && req.method === "POST") {
+    return sendProviderResult(res, nexusRealProviders.workflowOrchestratorBridge.plan(await readBody(req), db));
+  }
+
+  if (url.pathname === "/api/nexus/tools/workflows/save" && req.method === "POST") {
+    const result = nexusRealProviders.workflowOrchestratorBridge.save(await readBody(req), db);
+    if (result.body?.status === "completed") await writeDb(db);
+    return sendProviderResult(res, result);
+  }
+
+  if (url.pathname === "/api/nexus/tools/workflows/reminder" && req.method === "POST") {
+    const result = nexusRealProviders.workflowOrchestratorBridge.reminder(await readBody(req), db);
+    if (result.body?.status === "completed") await writeDb(db);
+    return sendProviderResult(res, result);
+  }
+
+  if (url.pathname === "/api/nexus/tools/workflows/offline" && req.method === "POST") {
+    const result = nexusRealProviders.workflowOrchestratorBridge.offline(await readBody(req), db);
     if (result.body?.status === "completed") await writeDb(db);
     return sendProviderResult(res, result);
   }
