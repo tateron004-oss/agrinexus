@@ -328,6 +328,7 @@
   function isLanguageSwitchCommand(command) {
     const text = normalizeCommand(command).toLowerCase();
     if (!languageKeyFromText(text)) return false;
+    if (/^\s*(english|spanish|french|arabic|portuguese|swahili|kiswahili)\s*(please)?\s*$/i.test(text)) return true;
     return /\b(switch|speak|change|set|use)\b.*\b(language|english|spanish|french|arabic|portuguese|swahili|espanol|español|francais|français|portugues|português|kiswahili)\b/.test(text)
       || /\b(language)\b.*\b(english|spanish|french|arabic|portuguese|swahili|espanol|español|francais|français|portugues|português|kiswahili)\b/.test(text);
   }
@@ -335,6 +336,8 @@
   function setDemoLanguage(languageKey, options = {}) {
     if (!DEMO_LANGUAGES[languageKey]) return "";
     selectedLanguage = languageKey;
+    document.documentElement.lang = DEMO_LANGUAGES[languageKey].speechLang || languageKey;
+    document.documentElement.dir = languageKey === "ar" ? "rtl" : "ltr";
     const selector = languageSelector();
     if (selector && selector.value !== languageKey) selector.value = languageKey;
     const response = DEMO_LANGUAGES[languageKey].changeResponse;

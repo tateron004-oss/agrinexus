@@ -121,6 +121,31 @@ function extractReading(goal = "") {
   };
 }
 
+function extractReminderRequest(goal = "") {
+  const text = String(goal || "");
+  const lower = text.toLowerCase();
+  const inHours = lower.match(/\bin\s+(\d{1,2})\s+hours?\b/);
+  const inDays = lower.match(/\bin\s+(\d{1,2})\s+days?\b/);
+  let timing = "";
+  if (/\btomorrow morning\b/.test(lower)) timing = "tomorrow morning";
+  else if (/\btomorrow afternoon\b/.test(lower)) timing = "tomorrow afternoon";
+  else if (/\btomorrow evening\b/.test(lower)) timing = "tomorrow evening";
+  else if (/\btomorrow\b/.test(lower)) timing = "tomorrow";
+  else if (/\btonight\b/.test(lower)) timing = "tonight";
+  else if (/\bnext week\b/.test(lower)) timing = "next week";
+  else if (inHours) timing = `in ${inHours[1]} hours`;
+  else if (inDays) timing = `in ${inDays[1]} days`;
+  else if (/\bfollow up after\b|\bcheck again\b|\brepeat\b/.test(lower)) timing = "follow-up interval";
+  if (!timing && !/\bremind|reminder|follow up|check again|repeat\b/.test(lower)) return null;
+  return {
+    timing: timing || "requested time",
+    localOnly: true,
+    noCalendarProvider: true,
+    noExternalNotification: true,
+    purpose: safeText(text, 220)
+  };
+}
+
 function detectChronicPrograms(goal = "") {
   const text = String(goal || "").toLowerCase();
   const detected = Object.values(CHRONIC_DISEASE_PROGRAMS).filter(program =>
@@ -147,7 +172,7 @@ function extractClinicalMeasurement(goal = "") {
   const bloodPressure = extractReading(goal);
   if (bloodPressure) return bloodPressure;
   const text = String(goal || "");
-  const glucose = text.match(/\b(?:glucose|blood sugar)\s*(?:is|was|=|:)?\s*(\d{2,3})\b/i);
+  const glucose = text.match(/\b(?:(?:glucose|blood sugar)\s*(?:is|was|=|:)?|fasting sugar\s*(?:is|was|=|:)?)\s*(\d{2,3})\b/i);
   if (glucose) {
     return {
       type: "glucose",
@@ -173,7 +198,7 @@ function extractClinicalMeasurement(goal = "") {
       capturedAt: now()
     };
   }
-  if (/\b(activity|walking|exercise|nutrition|meal|diet|sleep|stress|adherence|therapy|participation|barrier)\b/i.test(text)) {
+  if (/\b(activity|walking|exercise|nutrition|meal|diet|sleep|stress|adherence|therapy|participation|barrier|pain|functional limitation|mobility limitation|movement|range of motion|rtm)\b/i.test(text)) {
     return {
       type: "rtm_context",
       summary: safeText(text, 220),
@@ -189,9 +214,13 @@ function extractClinicalMeasurement(goal = "") {
 function inferGoalParts(goal = "") {
   const text = goal.toLowerCase();
   const parts = [];
-  if (/blood pressure|bp\b|hypertension|htn\b|diabetes|diabetic|dm\b|glucose|a1c|obesity|weight|bmi|rpm|rtm|remote patient|remote therapeutic|reading|provider|doctor|telehealth|follow-up|follow up/.test(text)) parts.push("medical");
-  if (/remind|tonight|tomorrow|later/.test(text)) parts.push("reminder");
-  if (/respond|response|check if|verify/.test(text)) parts.push("follow_up");
+  if (/blood pressure|bp\b|hypertension|htn\b|diabetes|diabetic|dm\b|glucose|blood sugar|fasting sugar|a1c|obesity|weight|bmi|rpm|rtm|remote patient|remote therapeutic|reading|provider|doctor|care team|provider report|care summary|clinical summary|telehealth|pharmacy|medication|mobile clinic|follow-up|follow up|pain|therapy|mobility/.test(text)) parts.push("medical");
+  if (/provider report|care team report|care summary|clinical summary|provider summary|provider-ready|report/.test(text)) parts.push("provider_report");
+  if (/telehealth|video visit|virtual visit/.test(text)) parts.push("telehealth");
+  if (/pharmacy|medication|medicine|refill/.test(text)) parts.push("pharmacy");
+  if (/mobile clinic|clinic visit|clinic request/.test(text)) parts.push("mobile_clinic");
+  if (/remind|reminder|tonight|tomorrow|later|next week|in \d{1,2} (hours|days)|check again|repeat/.test(text)) parts.push("reminder");
+  if (/respond|response|check if|verify|follow-up questions|follow up questions/.test(text)) parts.push("follow_up");
   if (/agriculture|training|irrigation|crop|farmer/.test(text)) parts.push("agriculture");
   if (/marketplace|agritrade|buyer|seller|inquiry/.test(text)) parts.push("marketplace");
   if (/jobs|workforce/.test(text)) parts.push("workforce");
@@ -205,6 +234,35 @@ function inferGoalParts(goal = "") {
   if (/continue|resume/.test(text)) parts.push("continue");
   if (/verify result|verify|provider responded/.test(text)) parts.push("verify");
   return [...new Set(parts)];
+}
+
+function buildProviderReport(goal = "", taskType = "medical_follow_up") {
+  const measurement = extractClinicalMeasurement(goal);
+  const reminder = extractReminderRequest(goal);
+  const parts = inferGoalParts(goal);
+  const programs = chronicProgramSummary(detectChronicPrograms(goal));
+  const text = String(goal || "");
+  const followUpQuestions = [];
+  if (parts.includes("pharmacy")) followUpQuestions.push("What medication or refill question should a licensed provider or pharmacist review?");
+  if (parts.includes("telehealth")) followUpQuestions.push("What should be reviewed before a telehealth visit is scheduled by a real provider system?");
+  if (parts.includes("mobile_clinic")) followUpQuestions.push("What location/access details are needed before a mobile clinic request can be reviewed?");
+  if (measurement?.type === "blood_pressure") followUpQuestions.push("Should the blood pressure pattern be reviewed by the care team?");
+  if (measurement?.type === "glucose") followUpQuestions.push("Should the glucose reading be compared with the user's care plan by a licensed provider?");
+  if (!followUpQuestions.length) followUpQuestions.push("What additional symptoms, readings, medications, or access barriers should the provider review?");
+  return {
+    reportId: id("nexus-provider-report"),
+    status: "local_preparation_only",
+    conditionOrConcern: safeText(programs.programs.map(program => program.label).join(", ") || (taskType === "medical_follow_up" ? "Health access or chronic-care concern" : "User-requested follow-up"), 180),
+    userReportedReadings: measurement ? [measurement] : [],
+    dateTimeContext: safeText(measurement?.context || reminder?.timing || "not provided", 120),
+    pharmacyQuestions: parts.includes("pharmacy") ? ["Medication/refill concern captured for provider/pharmacist review only."] : [],
+    mobilityAccessBarriers: /mobility|transport|ride|access|barrier|clinic/i.test(text) ? [safeText(text, 160)] : [],
+    telehealthRequest: parts.includes("telehealth"),
+    mobileClinicRequest: parts.includes("mobile_clinic"),
+    followUpQuestions,
+    redFlagSafetyLanguage: "If symptoms may be urgent or severe, seek local emergency help now. Nexus cannot dispatch emergency services.",
+    providerReviewStatement: "Nexus is not diagnosing, prescribing, changing medication, or sending this externally. This local summary is for licensed provider review when the user chooses an approved pathway."
+  };
 }
 
 function emergencyDetected(goal = "") {
@@ -257,6 +315,9 @@ function createTask(profile, goal, plan, options = {}) {
     chronicPrograms: taskType === "medical_follow_up" ? chronicProgramSummary(detectChronicPrograms(goal)) : chronicProgramSummary([]),
     readings: [],
     rtmNotes: [],
+    providerReport: null,
+    reminderRequest: extractReminderRequest(goal),
+    compositeIntents: parts.filter(part => !["confirm", "cancel", "continue", "verify"].includes(part)),
     providerQueueId: "",
     reminderId: "",
     followUpId: "",
@@ -279,6 +340,11 @@ function createTask(profile, goal, plan, options = {}) {
   if (measurement?.rtm) {
     task.rtmNotes.push(measurement);
     task.status = task.requiresConfirmation ? "waiting_for_confirmation" : "active";
+  }
+  if (parts.includes("provider_report") || /care team|provider|pharmacy|telehealth|mobile clinic/i.test(goal)) {
+    task.providerReport = buildProviderReport(goal, taskType);
+    task.missingInformation = task.missingInformation.filter(item => !/clearer goal|target capability/i.test(item));
+    if (!task.missingInformation.length && task.status === "needs_information") task.status = "active";
   }
   profile.nexusAgenticTasks.unshift(task);
   profile.nexusAgenticTasks = profile.nexusAgenticTasks.slice(0, 75);
@@ -374,6 +440,7 @@ async function handleCommand(body = {}, db = {}, env = process.env) {
   task.readings = Array.isArray(task.readings) ? task.readings : [];
   task.rtmNotes = Array.isArray(task.rtmNotes) ? task.rtmNotes : [];
   task.chronicPrograms = task.chronicPrograms || chronicProgramSummary([]);
+  task.compositeIntents = [...new Set([...(Array.isArray(task.compositeIntents) ? task.compositeIntents : []), ...parts.filter(part => !["confirm", "cancel", "continue", "verify"].includes(part))])];
 
   if (task.type === "medical_follow_up") {
     const currentPrograms = new Set(task.chronicPrograms?.programs?.map(program => program.id) || []);
@@ -391,17 +458,38 @@ async function handleCommand(body = {}, db = {}, env = process.env) {
     task.rtmNotes.push(reading);
     addTaskHistory(task, "rtm_context_added", "RTM participation or behavior context added for provider review.");
   }
+  if (task.providerReport && reading) {
+    const reportReadings = Array.isArray(task.providerReport.userReportedReadings) ? task.providerReport.userReportedReadings : [];
+    const alreadyInReport = reportReadings.some(item =>
+      item.type === reading.type
+      && item.value === reading.value
+      && item.systolic === reading.systolic
+      && item.diastolic === reading.diastolic
+      && item.context === reading.context
+    );
+    if (!alreadyInReport) task.providerReport.userReportedReadings = [...reportReadings, reading];
+    task.providerReport.dateTimeContext = safeText(reading.context || task.providerReport.dateTimeContext || "not provided", 120);
+    task.providerReport.telehealthRequest = Boolean(task.providerReport.telehealthRequest || parts.includes("telehealth"));
+    task.providerReport.mobileClinicRequest = Boolean(task.providerReport.mobileClinicRequest || parts.includes("mobile_clinic"));
+  }
 
   let execution = null;
   let providerQueue = null;
   let followUp = null;
-  const needsProvider = task.type === "medical_follow_up" || parts.includes("provider") || /provider|pharmacy|clinic|marketplace|expert|partner/i.test(goal);
+  const reminderRequest = extractReminderRequest(goal);
+  if (reminderRequest) task.reminderRequest = reminderRequest;
+  if ((parts.includes("provider_report") || /care team report|provider summary|provider report|care summary/i.test(goal)) && !task.providerReport) {
+    task.providerReport = buildProviderReport(goal, task.type);
+    task.missingInformation = task.missingInformation.filter(item => !/clearer goal|target capability/i.test(item));
+  }
+  const needsProvider = task.type === "medical_follow_up" || parts.includes("provider_report") || /provider|pharmacy|clinic|marketplace|expert|partner|care team/i.test(goal);
   if (needsProvider) providerQueue = createProviderQueueItem(profile, task, plan, env);
   if (parts.includes("follow_up") || /respond|response|check/i.test(goal)) followUp = createFollowUp(profile, task);
   if (parts.includes("reminder")) {
-    execution = await productionRuntime.execute({ userGoal: "Remind me tonight.", confirmed: true }, db, env);
+    const reminderGoal = reminderRequest?.timing ? `Remind me ${reminderRequest.timing}.` : "Remind me to follow up.";
+    execution = await productionRuntime.execute({ userGoal: reminderGoal, confirmed: true }, db, env);
     task.reminderId = execution.executionResult?.referenceId || "";
-    addTaskHistory(task, "reminder_created", "Local in-app reminder created after user command.");
+    addTaskHistory(task, "reminder_created", `Local in-app reminder created for ${reminderRequest?.timing || "the requested follow-up time"}.`);
   }
   if (parts.includes("offline")) {
     execution = await productionRuntime.execute({ userGoal: "Queue this offline.", confirmed: true }, db, env);
@@ -428,6 +516,9 @@ async function handleCommand(body = {}, db = {}, env = process.env) {
 
 function buildBrainMessage(task, plan, execution, providerQueue) {
   if (task.missingInformation?.length) return `I created the task and need ${task.missingInformation.join(", ")} before final execution.`;
+  if (task.providerReport && task.reminderRequest && providerQueue?.status === "queued_local_review") return `I prepared a local provider-ready summary and a local reminder for ${task.reminderRequest.timing}. The provider connector is not configured, so Nexus did not contact anyone.`;
+  if (task.providerReport && providerQueue?.status === "queued_local_review") return "I prepared a local provider-ready summary for review. The provider connector is not configured, so Nexus did not contact a provider.";
+  if (task.reminderRequest && execution?.executionResult?.message) return `Local reminder prepared for ${task.reminderRequest.timing}. ${execution.executionResult.message}`;
   if (providerQueue?.status === "queued_local_review") return "I prepared a provider/admin queue item locally. The connector is not configured, so Nexus did not contact a provider.";
   if (execution?.executionResult?.message) return execution.executionResult.message;
   return `Task is active: ${task.title}. Nexus can continue, verify, complete, or cancel it.`;

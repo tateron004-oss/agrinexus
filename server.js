@@ -803,11 +803,9 @@ const COUNTRY_LANGUAGE = {
   drc: "fr"
 };
 // Voice language contract:
-// Full app profile languages are en, es, fr, sw, and ar. Portuguese (pt) is
-// partial: it is covered by response-quality/translation paths but is not a
-// persisted profile language until product scope promotes and tests it.
-const FULL_APP_LANGUAGE_CODES = new Set(["en", "es", "fr", "sw", "ar"]);
-const PARTIAL_LANGUAGE_CODES = new Set(["pt"]);
+// Full app profile languages are en, es, fr, sw, ar, and pt.
+const FULL_APP_LANGUAGE_CODES = new Set(["en", "es", "fr", "sw", "ar", "pt"]);
+const PARTIAL_LANGUAGE_CODES = new Set([]);
 const VOICE_LANGUAGE_LOCALES = {
   en: "en-US",
   es: "es-ES",

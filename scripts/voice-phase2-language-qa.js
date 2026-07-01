@@ -61,7 +61,7 @@ async function twilioPost(route, body) {
   assert(appSource.includes("const partialAppLanguageCodes = new Set"), "browser app should define partial language codes");
   assert(appSource.includes("function canonicalLanguageCode"), "browser app should canonicalize language codes");
   assert(appSource.includes("handleVoiceCommand(transcript, { source: \"native\", language, targetLanguage: language })"), "native transcript language should reach web command handling");
-  assert(appSource.includes("Portuguese is partially supported"), "browser UI/voice copy should mark Portuguese partial");
+  assert(appSource.includes('"pt": {') || appSource.includes("pt: {"), "browser UI/voice copy should include Portuguese as a supported app language");
 
   assert(serverSource.includes("const FULL_APP_LANGUAGE_CODES = new Set"), "server should define full app language codes");
   assert(serverSource.includes("const PARTIAL_LANGUAGE_CODES = new Set"), "server should define partial language codes");
@@ -69,8 +69,8 @@ async function twilioPost(route, body) {
   assert(serverSource.includes("language: commandLanguage") && serverSource.includes("targetLanguage: commandLanguage"), "Companion-safe command metadata should carry canonical language");
   assert(serverSource.includes("English with Hausa fallback") && serverSource.includes("French with Lingala fallback"), "phone/Twilio fallback languages should be explicit");
 
-  assert.deepStrictEqual(bridge.languageContract.fullAppLanguages, ["en", "es", "fr", "sw", "ar"], "native bridge should document full app languages");
-  assert.deepStrictEqual(bridge.languageContract.partialLanguages, ["pt"], "native bridge should document Portuguese as partial");
+  assert.deepStrictEqual(bridge.languageContract.fullAppLanguages, ["en", "es", "fr", "sw", "ar", "pt"], "native bridge should document Portuguese as a full app language");
+  assert.deepStrictEqual(bridge.languageContract.partialLanguages, [], "native bridge should not document partial app languages for the current supported set");
   assert.equal(bridge.languageContract.fallback, "Missing, unsupported, or unknown language values fall back to English.");
 
   assert(androidController.includes("selectedLanguageTag") && androidController.includes("nativeLocaleTag"), "Android controller should remember selected app language");
@@ -96,8 +96,9 @@ async function twilioPost(route, body) {
     await waitForServer();
     await jsonCall("/api/login", { email: "admin@agrinexus.org", password: "Admin2026!" });
 
-    const unsupported = await jsonCall("/api/user/language", { language: "pt" }, { allowError: true });
-    assert.equal(unsupported.status, 400, "Portuguese should not be accepted as a full profile language");
+    const portuguese = await jsonCall("/api/user/language", { language: "pt" }, { allowError: true });
+    assert.equal(portuguese.status, 200, "Portuguese should be accepted as a full profile language");
+    assert.equal(portuguese.json.user.language, "pt", "profile language should store Portuguese as a canonical full language code");
 
     const languageChange = await jsonCall("/api/user/language", { language: "es-MX" }, { allowError: true });
     assert.equal(languageChange.status, 200, "profile language should accept supported locale aliases");

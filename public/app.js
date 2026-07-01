@@ -802,6 +802,10 @@ function handleNexusCareTeamReportCopyViewCaptionCommand(command = "") {
 
 function handleNexusStandardUserSafeTypedCommand(command = "") {
   if (experienceMode !== "user") return false;
+  if (isUniversalLanguageCommand(command)) {
+    void changeLanguageByVoice(command);
+    return true;
+  }
   if (handleNexusAgenticBrainTypedCommand(command)) return true;
   if (handleNexusProductionRuntimeTypedCommand(command)) return true;
   if (handleNexusOpenDialogueAgentCommand(command)) return true;
@@ -4756,8 +4760,8 @@ const voiceLanguageNames = {
   es: "Spanish",
   pt: "Portuguese"
 };
-const fullAppLanguageCodes = new Set(["en", "fr", "sw", "ar", "es"]);
-const partialAppLanguageCodes = new Set(["pt"]);
+const fullAppLanguageCodes = new Set(["en", "fr", "sw", "ar", "es", "pt"]);
+const partialAppLanguageCodes = new Set([]);
 let voiceTranslationToken = 0;
 
 const voiceStopTranslations = {
@@ -5173,6 +5177,29 @@ const platformCopy = {
     profileTitle: "Perfil unificado",
     profileIntro: "El perfil refleja el estado guardado en todos los dominios de la plataforma.",
     languageToast: "Idioma de la plataforma actualizado"
+  },
+  pt: {
+    nav: ["Painel", "Aprendizagem", "Trabalho", "Saude AFAYAI", "Agritrade", "Mapa e IA", "Agente IA", "Integracoes", "Admin", "Perfil"],
+    logout: "Sair",
+    dashboardTitle: "Painel de comando",
+    dashboardIntro: "Inicie fluxos de aprendizagem, trabalho, saude, comercio, IA e integracoes a partir de uma fila operacional.",
+    learningTitle: "Aprendizagem e desenvolvimento",
+    learningIntro: "Construa preparacao com cursos guiados, testes, certificados e competencias para o trabalho.",
+    workforceTitle: "Caminho de trabalho",
+    workforceIntro: "Passe da preparacao para candidaturas, entrevistas, mentores, turnos e oportunidades pagas.",
+    healthTitle: "Saude AFAYAI",
+    healthIntro: "Prepare acesso a cuidados, telehealth, farmacia, clinica movel e revisao de seguranca sem substituir profissionais.",
+    tradeTitle: "Agritech + Agritrade",
+    tradeIntro: "Revise produtos, compradores, rotas e perguntas antes de qualquer transacao.",
+    mapTitle: "Mapa global e IA",
+    mapIntro: "Revise paises, rotas, provedores e recomendacoes de IA em uma vista operacional.",
+    integrationsTitle: "Integracoes",
+    integrationsIntro: "Revise motores, provedores, APIs e configuracao de producao.",
+    adminTitle: "Sala de controle admin",
+    adminIntro: "Revise usuarios, saude dos modulos, atividade de provedores e eventos de auditoria.",
+    profileTitle: "Perfil unificado",
+    profileIntro: "O perfil reflete o estado salvo em todos os dominios da plataforma.",
+    languageToast: "Idioma da plataforma atualizado"
   },
   ar: {
     nav: ["\u0644\u0648\u062d\u0629 \u0627\u0644\u062a\u062d\u0643\u0645", "\u0627\u0644\u062a\u0639\u0644\u0645", "\u0627\u0644\u0642\u0648\u0649 \u0627\u0644\u0639\u0627\u0645\u0644\u0629", "\u0635\u062d\u0629 AFAYAI", "\u0627\u0644\u062a\u062c\u0627\u0631\u0629", "\u0627\u0644\u062e\u0631\u064a\u0637\u0629 \u0648\u0627\u0644\u0630\u0643\u0627\u0621", "\u0648\u0643\u064a\u0644 AI", "\u0627\u0644\u062a\u0643\u0627\u0645\u0644\u0627\u062a", "\u0627\u0644\u0625\u062f\u0627\u0631\u0629", "\u0627\u0644\u0645\u0644\u0641"],
@@ -9027,6 +9054,7 @@ function userLanguageQuickSwitchHtml() {
     ["es", "Spanish"],
     ["fr", "French"],
     ["ar", "Arabic"],
+    ["pt", "Portuguese"],
     ["sw", "Kiswahili"]
   ];
   return `
@@ -9699,11 +9727,7 @@ function moduleUseExplanation(moduleId) {
 async function changeLanguageByVoice(command) {
   const language = languageFromVoiceCommand(command);
   if (!language) {
-    setVoiceResponse("I can change the full app language to English, French, Kiswahili, Arabic, or Spanish. Portuguese is available only in partial response paths for now.", true);
-    return;
-  }
-  if (partialAppLanguageCodes.has(language)) {
-    setVoiceResponse("Portuguese is partially supported for some response-quality and translation paths, but it is not a full app language yet. I can switch the full app language to English, French, Kiswahili, Arabic, or Spanish.", true);
+    setVoiceResponse("I can change the app language to English, French, Kiswahili, Arabic, Portuguese, or Spanish.", true);
     return;
   }
   try {
@@ -9714,6 +9738,7 @@ async function changeLanguageByVoice(command) {
     if (previousLanguage !== languageCode()) refreshVoiceForLanguageChange();
     const label = voiceLanguageName();
     updateNexusBehaviorLayer("ready", `Nexus will keep listening and responding in ${label}.`);
+    document.documentElement.dir = language === "ar" ? "rtl" : "ltr";
     setVoiceResponse(`Language changed to ${label}. The platform text and voice responses will use ${label} where translation is available.`, true);
     toast(`Language changed to ${label}`);
   } catch (error) {
@@ -18444,7 +18469,7 @@ function handleNexusAgenticBrainTypedCommand(command = "") {
   const normalized = String(command || "").trim();
   if (!normalized) return false;
   if (!/^nexus,/i.test(normalized) && !/^(continue|confirm|cancel|verify result)$/i.test(normalized)) return false;
-  if (!/(blood pressure|provider|remind|agriculture|training|marketplace|inquiry|farm jobs|drone|field visit|course|clinic|pharmacy|offline|continue|confirm|cancel|verify)/i.test(normalized)) return false;
+  if (!/(blood pressure|bp\b|glucose|blood sugar|diabetes|obesity|hypertension|provider|care team|report|summary|remind|rpm|rtm|telehealth|mobile clinic|agriculture|training|marketplace|inquiry|farm jobs|drone|field visit|course|clinic|pharmacy|offline|continue|confirm|cancel|verify)/i.test(normalized)) return false;
   void runNexusAgenticBrainAction("command", { command: normalized });
   return true;
 }
@@ -18942,9 +18967,7 @@ function renderUserWorkspace() {
       ${userLanguageQuickSwitchHtml()}
     </section>
     ${renderNexusPlatformDashboard()}
-    ${renderNexusProductionActionAssistantPanel()}
     ${renderNexusAgenticBrainPanel()}
-    ${renderNexusRealProviderTestingPanel()}
     <div data-nexus-open-dialogue-agent-host="true">${renderNexusOpenDialogueAgentCard()}</div>
     ${a100CapabilitySurfaceHtml()}
     <section class="user-fast-actions" aria-label="${translateText("Quick actions")}">
@@ -18980,12 +19003,13 @@ function renderUserWorkspace() {
           ["fr", "French"],
           ["sw", "Kiswahili"],
           ["ar", "Arabic"],
+          ["pt", "Portuguese"],
           ["es", "Spanish"]
         ].map(([code, label]) => `<button type="button" class="${languageCode() === code ? "active" : ""}" data-user-language="${code}" aria-pressed="${languageCode() === code}">
           ${translateText(label)}
         </button>`).join("")}
       </div>
-      <span>${translateText("Say: change language to French, Arabic, Swahili, Spanish, or English. Portuguese is partial support only.")}</span>
+      <span>${translateText("Say: change language to French, Arabic, Swahili, Portuguese, Spanish, or English.")}</span>
     </section>
     <section class="user-service-buttons" aria-label="${translateText("Open a service")}">
       ${serviceButtons.map(item => `<button type="button" class="${escapeHtml(item.className)}" style="--service-photo: url('${escapeHtml(item.photo)}')" ${item.ask ? `data-mobile-ask="true"` : `data-simple-section="${item.section}"`}>
@@ -18995,17 +19019,10 @@ function renderUserWorkspace() {
       </button>`).join("")}
     </section>
   `;
-  if (!nexusRealProviderTestingStatus) {
-    setTimeout(() => {
-      if (experienceMode === "user" && document.querySelector("[data-nexus-real-provider-testing='true']")) {
-        refreshNexusRealProviderTestingStatus().catch(() => {});
-      }
-    }, 0);
-  }
   if (!nexusProductionRuntimeStatus || !nexusAgenticBrainStatus) {
     setTimeout(() => {
       if (experienceMode === "user" && document.querySelector("[data-nexus-agentic-brain-panel='true']")) {
-        refreshNexusProductionRuntimeStatus().then(() => refreshNexusAgenticBrainState()).then(() => {
+        refreshNexusAgenticBrainState().then(() => {
           if (experienceMode === "user") renderUserWorkspace();
         }).catch(() => {});
       }

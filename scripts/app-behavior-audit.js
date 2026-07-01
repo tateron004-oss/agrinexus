@@ -219,15 +219,14 @@ hasAll(app, [
 
 const fullAppLanguageCodesMatch = app.match(/const fullAppLanguageCodes = new Set\(\[([^\]]+)\]\);/);
 assert(fullAppLanguageCodesMatch, "App should define full app language codes");
-assert(!fullAppLanguageCodesMatch[1].includes("\"pt\""), "Portuguese should not be listed as a full app/profile language");
+assert(fullAppLanguageCodesMatch[1].includes("\"pt\""), "Portuguese should be listed as a full app/profile language");
 hasAll(app, [
-  "const partialAppLanguageCodes = new Set([\"pt\"])",
+  "const partialAppLanguageCodes = new Set([])",
   "pt: \"pt-BR\"",
-  "pt: \"Portuguese\"",
-  "Portuguese is partially supported"
-], "Portuguese partial language support");
-assert.deepStrictEqual(nativeBridge.languageContract.fullAppLanguages, ["en", "es", "fr", "sw", "ar"], "Native bridge should list only full app languages");
-assert.deepStrictEqual(nativeBridge.languageContract.partialLanguages, ["pt"], "Native bridge should list Portuguese as partial language support");
+  "pt: \"Portuguese\""
+], "Portuguese full language support");
+assert.deepStrictEqual(nativeBridge.languageContract.fullAppLanguages, ["en", "es", "fr", "sw", "ar", "pt"], "Native bridge should list Portuguese as a full app language");
+assert.deepStrictEqual(nativeBridge.languageContract.partialLanguages, [], "Native bridge should not list partial language support for the current supported set");
 
 hasAll(styles, [
   "body.user-mode #dashboard > :not(#userWorkspace)",

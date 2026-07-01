@@ -155,8 +155,8 @@
     "trade": "/api/trade/action"
   },
   "languageContract": {
-    "fullAppLanguages": ["en", "es", "fr", "sw", "ar"],
-    "partialLanguages": ["pt"],
+    "fullAppLanguages": ["en", "es", "fr", "sw", "ar", "pt"],
+    "partialLanguages": [],
     "browserRecognition": "Use the selected app language mapped to a speech locale; unsupported values fall back to en-US.",
     "nativeRecognition": "Native shells should use the selected app language from web voice.state and include canonical language metadata on final transcripts.",
     "phoneRecognition": "Twilio Gather uses canonical app languages where supported. Twilio-only requests such as Hausa, Yoruba, Igbo, Amharic, Oromo, or Kinyarwanda fall back to English; Lingala falls back to French.",
