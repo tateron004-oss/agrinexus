@@ -82,6 +82,7 @@ let nexusRealProviderTestingStatus = null;
 let nexusRealProviderTestingLastResult = null;
 let nexusProviderContactBridgeCards = [];
 let nexusLearningProviderBridgeCards = [];
+let nexusMarketplaceBridgeCards = [];
 let experienceMode = localStorage.getItem("agrinexusExperienceMode") || "";
 let pendingWorkflow = null;
 let pendingGrandmaAction = null;
@@ -17288,6 +17289,7 @@ const NEXUS_REAL_PROVIDER_TEST_CONTROLS = Object.freeze([
   { id: "map-route", label: "Generate route", detail: "Uses typed origin/destination only; no browser location permission.", endpoint: "/api/nexus/tools/maps/route", method: "POST", fields: ["origin", "destination"] },
   { id: "reminder-create", label: "Create in-app reminder", detail: "Local reminder record only; no OS notification permission.", endpoint: "/api/nexus/tools/reminders/create", method: "POST", fields: ["title", "dueAt"] },
   { id: "marketplace-listing", label: "Create marketplace test listing", detail: "Local AgriTrade listing only; no buyer contact or payment.", endpoint: "/api/nexus/tools/marketplace/listing", method: "POST", fields: ["title", "crop", "quantity"] },
+  { id: "marketplace-search", label: "Search Marketplace Bridge", detail: "Local AgriTrade starter listings and saved listings; no checkout or payment.", endpoint: "/api/nexus/tools/marketplace/search", method: "GET", fields: ["query", "category"] },
   { id: "offline-queue", label: "Queue offline item", detail: "Safe local queue only; sensitive/high-risk records are blocked.", endpoint: "/api/nexus/tools/offline/queue", method: "POST", fields: ["type", "content"] },
   { id: "learning-search", label: "Search Learning Bridge", detail: "Local learning catalog works without LMS credentials.", endpoint: "/api/nexus/tools/learning/search", method: "GET", fields: ["query", "category"] },
   { id: "learning-courses", label: "Search learning courses", detail: "LMS course lookup when configured.", endpoint: "/api/nexus/tools/learning/courses", method: "GET", fields: [] },
@@ -17526,6 +17528,122 @@ function renderNexusLearningProviderBridgePanel() {
   `;
 }
 
+const NEXUS_MARKETPLACE_BRIDGE_CATEGORIES = Object.freeze([
+  ["", "All categories"],
+  ["Seeds", "Seeds"],
+  ["Fertilizer", "Fertilizer"],
+  ["Tools", "Tools"],
+  ["Equipment", "Equipment"],
+  ["Produce", "Produce"],
+  ["Transport/logistics", "Transport/logistics"],
+  ["Training services", "Training services"],
+  ["Drone/agritech services", "Drone/agritech services"]
+]);
+
+const NEXUS_MARKETPLACE_BRIDGE_DEFAULT_INQUIRY = "Hello, I am interested in this AgriTrade listing. Please share availability, location, and safe next steps.";
+
+function marketplaceBridgeStatusCard() {
+  return (nexusRealProviderTestingStatus?.cards || []).find(card => card.id === "marketplace-bridge") || null;
+}
+
+function marketplaceBridgePaymentStatusCard() {
+  return (nexusRealProviderTestingStatus?.cards || []).find(card => card.id === "stripe-payments") || null;
+}
+
+function renderNexusMarketplaceBridgeCards() {
+  if (!Array.isArray(nexusMarketplaceBridgeCards) || !nexusMarketplaceBridgeCards.length) {
+    return `<p>${translateText("Search seeds, tools, fertilizer, produce, transport, training, or drone/agritech services to load local AgriTrade listing cards.")}</p>`;
+  }
+  return `
+    <div class="nexus-marketplace-bridge-card-grid">
+      ${nexusMarketplaceBridgeCards.map((card, index) => `
+        <article class="nexus-marketplace-bridge-card" data-marketplace-bridge-card="${index}" data-payment-enabled="false">
+          <div class="nexus-marketplace-bridge-summary">
+            <strong>${escapeHtml(card.title || "AgriTrade listing")}</strong>
+            <small>${translateText("Category")}: ${escapeHtml(card.category || "Produce")}</small>
+            <small>${translateText("Location")}: ${escapeHtml(card.location || "To verify")}</small>
+            <small>${translateText("Quantity")}: ${escapeHtml(card.quantity || "To verify")}</small>
+            <small>${translateText("Price text")}: ${escapeHtml(card.priceText || "Quote required; no checkout")}</small>
+            <small>${translateText("Source")}: ${escapeHtml(card.source || "AgriTrade local marketplace")}</small>
+            <small>${escapeHtml(card.description || "Local marketplace review listing.")}</small>
+          </div>
+          <label>
+            <span>${translateText("Local inquiry draft")}</span>
+            <textarea data-marketplace-bridge-field="draft" rows="3">${escapeHtml(NEXUS_MARKETPLACE_BRIDGE_DEFAULT_INQUIRY)}</textarea>
+          </label>
+          <label>
+            <span>${translateText("Non-sensitive marketplace note")}</span>
+            <textarea data-marketplace-bridge-field="note" rows="2" placeholder="${escapeHtml(translateText("Example: verify pickup window and quality details"))}"></textarea>
+          </label>
+          <label>
+            <span>${translateText("Follow-up reminder time/text")}</span>
+            <input data-marketplace-bridge-field="dueAt" placeholder="${escapeHtml(translateText("Tomorrow at 9 AM"))}">
+          </label>
+          <label class="nexus-marketplace-bridge-confirm">
+            <input type="checkbox" data-marketplace-bridge-confirm>
+            <span>${translateText("I confirm this visible local marketplace action.")}</span>
+          </label>
+          <div class="nexus-marketplace-bridge-actions">
+            <button type="button" data-marketplace-bridge-action="view" data-marketplace-bridge-index="${index}">${translateText("View details")}</button>
+            <button type="button" data-marketplace-bridge-action="inquiry" data-marketplace-bridge-index="${index}">${translateText("Prepare inquiry draft")}</button>
+            <button type="button" data-marketplace-bridge-action="note" data-marketplace-bridge-index="${index}">${translateText("Save note")}</button>
+            <button type="button" data-marketplace-bridge-action="reminder" data-marketplace-bridge-index="${index}">${translateText("Add follow-up reminder")}</button>
+            <button type="button" data-marketplace-bridge-action="offline" data-marketplace-bridge-index="${index}">${translateText("Queue offline")}</button>
+          </div>
+        </article>
+      `).join("")}
+    </div>
+  `;
+}
+
+function renderNexusMarketplaceBridgePanel() {
+  const bridgeStatus = marketplaceBridgeStatusCard();
+  const paymentStatus = marketplaceBridgePaymentStatusCard();
+  return `
+    <section class="nexus-marketplace-provider-bridge" data-nexus-marketplace-bridge="true" aria-label="${translateText("AgriTrade Marketplace Bridge")}">
+      <div class="nexus-dashboard-section-head">
+        <span class="eyebrow">${translateText("AgriTrade Marketplace Bridge")}</span>
+        <strong>${translateText("Browse and prepare marketplace next steps")}</strong>
+      </div>
+      <p>${translateText("Marketplace Bridge supports local listing review, inquiry drafts, notes, reminders, and offline metadata. Nexus does not buy, sell, send messages, contact buyers or sellers, create orders, ship, checkout, escrow, or process payments from this bridge.")}</p>
+      <div class="nexus-marketplace-bridge-status">
+        <small>${translateText("Bridge")}: ${escapeHtml(bridgeStatus?.status || "Checking")}</small>
+        <small>${translateText("Payments")}: ${escapeHtml(paymentStatus?.status || "Disabled")} - ${translateText("No checkout available")}</small>
+      </div>
+      <div class="nexus-marketplace-bridge-create">
+        <input data-marketplace-create-field="title" placeholder="${escapeHtml(translateText("Listing title"))}">
+        <select data-marketplace-create-field="category" aria-label="${escapeHtml(translateText("Marketplace category"))}">
+          ${NEXUS_MARKETPLACE_BRIDGE_CATEGORIES.filter(([value]) => value).map(([value, label]) => `<option value="${escapeHtml(value)}">${translateText(label)}</option>`).join("")}
+        </select>
+        <input data-marketplace-create-field="description" placeholder="${escapeHtml(translateText("Description"))}">
+        <input data-marketplace-create-field="location" placeholder="${escapeHtml(translateText("Location"))}">
+        <input data-marketplace-create-field="quantity" placeholder="${escapeHtml(translateText("Quantity"))}">
+        <input data-marketplace-create-field="priceText" placeholder="${escapeHtml(translateText("Price text, not payment"))}">
+        <label class="nexus-marketplace-bridge-confirm">
+          <input type="checkbox" data-marketplace-create-confirm>
+          <span>${translateText("I confirm local listing creation only.")}</span>
+        </label>
+        <button type="button" data-marketplace-bridge-create>${translateText("Create local test listing")}</button>
+      </div>
+      <div class="nexus-marketplace-bridge-search">
+        <input data-marketplace-bridge-query placeholder="${escapeHtml(translateText("Search seeds, tools, produce..."))}">
+        <select data-marketplace-bridge-category aria-label="${escapeHtml(translateText("Marketplace filter"))}">
+          ${NEXUS_MARKETPLACE_BRIDGE_CATEGORIES.map(([value, label]) => `<option value="${escapeHtml(value)}">${translateText(label)}</option>`).join("")}
+        </select>
+        <button type="button" data-marketplace-bridge-search>${translateText("Search marketplace")}</button>
+      </div>
+      <div class="nexus-marketplace-bridge-suggestions" aria-label="${translateText("Marketplace Bridge mode suggestions")}">
+        <button type="button" data-marketplace-bridge-suggestion="seeds">Seeds</button>
+        <button type="button" data-marketplace-bridge-suggestion="tools">Tools</button>
+        <button type="button" data-marketplace-bridge-suggestion="fertilizer">Fertilizer</button>
+        <button type="button" data-marketplace-bridge-suggestion="training">Training services</button>
+        <button type="button" data-marketplace-bridge-suggestion="drone">Drone/agritech services</button>
+      </div>
+      ${renderNexusMarketplaceBridgeCards()}
+    </section>
+  `;
+}
+
 function renderNexusRealProviderTestingPanel() {
   return `
     <section class="nexus-real-provider-testing" data-nexus-real-provider-testing="true" aria-label="${translateText("Real Provider Testing")}">
@@ -17544,6 +17662,7 @@ function renderNexusRealProviderTestingPanel() {
       <div class="nexus-real-provider-control-grid" aria-label="${translateText("Provider test controls")}">
         ${renderNexusRealProviderTestControls()}
       </div>
+      ${renderNexusMarketplaceBridgePanel()}
       ${renderNexusLearningProviderBridgePanel()}
       ${renderNexusProviderContactBridgeCards()}
       <pre id="nexusRealProviderTestingResult" class="nexus-real-provider-result" aria-live="polite">${escapeHtml(nexusRealProviderTestingLastResult || translateText("No provider test result yet."))}</pre>
@@ -17585,6 +17704,12 @@ function realProviderControlPayload(controlId) {
     if (body.category) params.set("category", body.category);
     return { control: { ...control, endpoint: `${control.endpoint}?${params.toString()}` }, body: null };
   }
+  if (controlId === "marketplace-search") {
+    const params = new URLSearchParams();
+    if (body.query) params.set("q", body.query);
+    if (body.category) params.set("category", body.category);
+    return { control: { ...control, endpoint: `${control.endpoint}?${params.toString()}` }, body: null };
+  }
   return { control, body };
 }
 
@@ -17602,6 +17727,9 @@ async function runNexusRealProviderTest(controlId) {
     }
     if (controlId === "learning-search") {
       nexusLearningProviderBridgeCards = Array.isArray(result.data?.cards) ? result.data.cards : [];
+    }
+    if (controlId === "marketplace-search") {
+      nexusMarketplaceBridgeCards = Array.isArray(result.data?.cards) ? result.data.cards : [];
     }
     const displayData = sanitizeNexusProviderTestingDisplayData(result.data || {});
     nexusRealProviderTestingLastResult = JSON.stringify({
@@ -17810,6 +17938,129 @@ async function runNexusLearningProviderBridgeAction(action, index) {
       result = await request("/api/nexus/tools/learning/reminder", { method: "POST", body: payload });
     } else if (action === "offline") {
       result = await request("/api/nexus/tools/learning/offline", { method: "POST", body: payload });
+    }
+    if (result) {
+      setNexusProviderBridgeResult({
+        provider: result.provider,
+        action: result.action,
+        status: result.status,
+        message: result.message,
+        requiresConfirmation: result.requiresConfirmation || false,
+        data: sanitizeNexusProviderTestingDisplayData(result.data || {})
+      }, label);
+      await refreshNexusRealProviderTestingStatus();
+    }
+  } catch (error) {
+    setNexusProviderBridgeResult({ status: "failed_safely", message: error.message }, label);
+  }
+}
+
+function marketplaceBridgeCard(index) {
+  return Array.isArray(nexusMarketplaceBridgeCards) ? nexusMarketplaceBridgeCards[Number(index)] : null;
+}
+
+function marketplaceBridgeContainer(index) {
+  return document.querySelector(`[data-marketplace-bridge-card="${index}"]`);
+}
+
+function marketplaceBridgeConfirmed(index) {
+  return marketplaceBridgeContainer(index)?.querySelector("[data-marketplace-bridge-confirm]")?.checked === true;
+}
+
+function marketplaceBridgeField(index, name) {
+  return marketplaceBridgeContainer(index)?.querySelector(`[data-marketplace-bridge-field="${name}"]`)?.value?.trim() || "";
+}
+
+function marketplaceBridgePayload(card, index) {
+  return {
+    ...card,
+    listingId: card.id,
+    draft: marketplaceBridgeField(index, "draft") || NEXUS_MARKETPLACE_BRIDGE_DEFAULT_INQUIRY,
+    note: marketplaceBridgeField(index, "note"),
+    dueAt: marketplaceBridgeField(index, "dueAt"),
+    confirmed: marketplaceBridgeConfirmed(index)
+  };
+}
+
+async function searchNexusMarketplaceBridge(queryOverride = "") {
+  const queryInput = document.querySelector("[data-marketplace-bridge-query]");
+  const categoryInput = document.querySelector("[data-marketplace-bridge-category]");
+  const query = queryOverride || queryInput?.value?.trim() || "";
+  if (queryInput && queryOverride) queryInput.value = queryOverride;
+  const params = new URLSearchParams();
+  if (query) params.set("q", query);
+  if (categoryInput?.value) params.set("category", categoryInput.value);
+  const output = $("#nexusRealProviderTestingResult");
+  if (output) output.textContent = "Searching AgriTrade Marketplace Bridge...";
+  try {
+    const result = await request(`/api/nexus/tools/marketplace/search?${params.toString()}`, { method: "GET" });
+    nexusMarketplaceBridgeCards = Array.isArray(result.data?.cards) ? result.data.cards : [];
+    nexusRealProviderTestingLastResult = JSON.stringify({
+      provider: result.provider,
+      action: result.action,
+      status: result.status,
+      message: result.message,
+      paymentStatus: result.data?.paymentStatus || {},
+      cards: nexusMarketplaceBridgeCards.map(card => ({
+        title: card.title,
+        category: card.category,
+        location: card.location,
+        source: card.source
+      }))
+    }, null, 2);
+    renderUserWorkspace();
+  } catch (error) {
+    setNexusProviderBridgeResult({ status: "failed_safely", message: error.message }, "AgriTrade Marketplace Bridge");
+  }
+}
+
+function marketplaceCreateField(name) {
+  return document.querySelector(`[data-marketplace-create-field="${name}"]`)?.value?.trim() || "";
+}
+
+async function createNexusMarketplaceBridgeListing() {
+  const body = {
+    title: marketplaceCreateField("title"),
+    category: marketplaceCreateField("category"),
+    description: marketplaceCreateField("description"),
+    location: marketplaceCreateField("location"),
+    quantity: marketplaceCreateField("quantity"),
+    priceText: marketplaceCreateField("priceText"),
+    confirmed: document.querySelector("[data-marketplace-create-confirm]")?.checked === true
+  };
+  try {
+    const result = await request("/api/nexus/tools/marketplace/listing", { method: "POST", body });
+    setNexusProviderBridgeResult({
+      provider: result.provider,
+      action: result.action,
+      status: result.status,
+      message: result.message,
+      requiresConfirmation: result.requiresConfirmation || false,
+      data: sanitizeNexusProviderTestingDisplayData(result.data || {})
+    }, "AgriTrade Marketplace Bridge");
+    await searchNexusMarketplaceBridge(body.title || "");
+  } catch (error) {
+    setNexusProviderBridgeResult({ status: "failed_safely", message: error.message }, "AgriTrade Marketplace Bridge");
+  }
+}
+
+async function runNexusMarketplaceBridgeAction(action, index) {
+  const card = marketplaceBridgeCard(index);
+  if (!card) return;
+  const payload = marketplaceBridgePayload(card, index);
+  const label = "AgriTrade Marketplace Bridge";
+  try {
+    let result;
+    if (action === "view") {
+      result = await request(`/api/nexus/tools/marketplace/listing/${encodeURIComponent(card.id)}`, { method: "GET" });
+    } else if (action === "inquiry") {
+      result = await request("/api/nexus/tools/marketplace/inquiry/prepare", { method: "POST", body: payload });
+    } else if (action === "note") {
+      result = await request("/api/nexus/tools/marketplace/note", { method: "POST", body: payload });
+    } else if (action === "reminder") {
+      result = await request("/api/nexus/tools/marketplace/reminder", { method: "POST", body: payload });
+    } else if (action === "offline") {
+      result = await request("/api/nexus/tools/marketplace/offline", { method: "POST", body: payload });
     }
     if (result) {
       setNexusProviderBridgeResult({
@@ -32935,6 +33186,34 @@ function bindStatic() {
       event.preventDefault();
       event.stopPropagation();
       await runNexusRealProviderTest(realProviderTestButton.dataset.realProviderTest);
+      return;
+    }
+    const marketplaceBridgeCreateButton = event.target.closest("[data-marketplace-bridge-create]");
+    if (marketplaceBridgeCreateButton) {
+      event.preventDefault();
+      event.stopPropagation();
+      await createNexusMarketplaceBridgeListing();
+      return;
+    }
+    const marketplaceBridgeSearchButton = event.target.closest("[data-marketplace-bridge-search]");
+    if (marketplaceBridgeSearchButton) {
+      event.preventDefault();
+      event.stopPropagation();
+      await searchNexusMarketplaceBridge();
+      return;
+    }
+    const marketplaceBridgeSuggestionButton = event.target.closest("[data-marketplace-bridge-suggestion]");
+    if (marketplaceBridgeSuggestionButton) {
+      event.preventDefault();
+      event.stopPropagation();
+      await searchNexusMarketplaceBridge(marketplaceBridgeSuggestionButton.dataset.marketplaceBridgeSuggestion || "");
+      return;
+    }
+    const marketplaceBridgeButton = event.target.closest("[data-marketplace-bridge-action]");
+    if (marketplaceBridgeButton) {
+      event.preventDefault();
+      event.stopPropagation();
+      await runNexusMarketplaceBridgeAction(marketplaceBridgeButton.dataset.marketplaceBridgeAction, marketplaceBridgeButton.dataset.marketplaceBridgeIndex);
       return;
     }
     const learningBridgeSearchButton = event.target.closest("[data-learning-bridge-search]");

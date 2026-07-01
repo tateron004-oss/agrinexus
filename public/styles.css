@@ -8221,7 +8221,8 @@ body.user-mode .grandma-workflow:not(.hidden) .modal-actions button {
 .nexus-real-provider-card-grid,
 .nexus-real-provider-control-grid,
 .nexus-provider-contact-card-grid,
-.nexus-learning-bridge-card-grid {
+.nexus-learning-bridge-card-grid,
+.nexus-marketplace-bridge-card-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 10px;
@@ -8230,7 +8231,8 @@ body.user-mode .grandma-workflow:not(.hidden) .modal-actions button {
 .nexus-real-provider-card,
 .nexus-real-provider-control,
 .nexus-provider-contact-card,
-.nexus-learning-bridge-card {
+.nexus-learning-bridge-card,
+.nexus-marketplace-bridge-card {
   display: grid;
   gap: 8px;
   min-width: 0;
@@ -8243,7 +8245,8 @@ body.user-mode .grandma-workflow:not(.hidden) .modal-actions button {
 .nexus-real-provider-card strong,
 .nexus-real-provider-control strong,
 .nexus-provider-contact-card strong,
-.nexus-learning-bridge-card strong {
+.nexus-learning-bridge-card strong,
+.nexus-marketplace-bridge-card strong {
   font-size: .95rem;
 }
 
@@ -8255,7 +8258,8 @@ body.user-mode .grandma-workflow:not(.hidden) .modal-actions button {
 .nexus-real-provider-card small,
 .nexus-real-provider-control small,
 .nexus-provider-contact-card small,
-.nexus-learning-bridge-card small {
+.nexus-learning-bridge-card small,
+.nexus-marketplace-bridge-card small {
   color: #475569;
   line-height: 1.35;
 }
@@ -8264,7 +8268,10 @@ body.user-mode .grandma-workflow:not(.hidden) .modal-actions button {
 .nexus-provider-contact-card input,
 .nexus-provider-contact-card textarea,
 .nexus-learning-provider-bridge input,
-.nexus-learning-provider-bridge select {
+.nexus-learning-provider-bridge select,
+.nexus-marketplace-provider-bridge input,
+.nexus-marketplace-provider-bridge select,
+.nexus-marketplace-provider-bridge textarea {
   width: 100%;
   min-height: 42px;
   padding: 8px 10px;
@@ -8292,9 +8299,22 @@ body.user-mode .grandma-workflow:not(.hidden) .modal-actions button {
   background: rgba(240, 253, 244, .74);
 }
 
+.nexus-marketplace-provider-bridge {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border: 1px dashed rgba(180, 83, 9, .26);
+  border-radius: 8px;
+  background: rgba(255, 251, 235, .78);
+}
+
 .nexus-learning-bridge-status,
 .nexus-learning-bridge-search,
-.nexus-learning-bridge-suggestions {
+.nexus-learning-bridge-suggestions,
+.nexus-marketplace-bridge-status,
+.nexus-marketplace-bridge-search,
+.nexus-marketplace-bridge-suggestions,
+.nexus-marketplace-bridge-create {
   display: grid;
   gap: 8px;
 }
@@ -8303,20 +8323,35 @@ body.user-mode .grandma-workflow:not(.hidden) .modal-actions button {
   grid-template-columns: minmax(160px, 1.2fr) minmax(150px, .8fr) auto;
 }
 
+.nexus-marketplace-bridge-search {
+  grid-template-columns: minmax(160px, 1.2fr) minmax(150px, .8fr) auto;
+}
+
+.nexus-marketplace-bridge-create {
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+}
+
 .nexus-learning-bridge-suggestions {
   grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+}
+
+.nexus-marketplace-bridge-suggestions {
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
 }
 
 .nexus-provider-contact-summary,
 .nexus-provider-contact-actions,
 .nexus-learning-bridge-summary,
-.nexus-learning-bridge-actions {
+.nexus-learning-bridge-actions,
+.nexus-marketplace-bridge-summary,
+.nexus-marketplace-bridge-actions {
   display: grid;
   gap: 7px;
 }
 
 .nexus-provider-contact-confirm,
-.nexus-learning-bridge-confirm {
+.nexus-learning-bridge-confirm,
+.nexus-marketplace-bridge-confirm {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -8325,13 +8360,15 @@ body.user-mode .grandma-workflow:not(.hidden) .modal-actions button {
 }
 
 .nexus-provider-contact-confirm input,
-.nexus-learning-bridge-confirm input {
+.nexus-learning-bridge-confirm input,
+.nexus-marketplace-bridge-confirm input {
   width: auto;
   min-height: auto;
 }
 
 .nexus-provider-contact-actions,
-.nexus-learning-bridge-actions {
+.nexus-learning-bridge-actions,
+.nexus-marketplace-bridge-actions {
   grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
 }
 
@@ -8371,7 +8408,10 @@ body.user-mode .user-voice-dock textarea {
   .nexus-real-provider-control-grid,
   .nexus-provider-contact-card-grid,
   .nexus-learning-bridge-card-grid,
+  .nexus-marketplace-bridge-card-grid,
   .nexus-learning-bridge-search,
+  .nexus-marketplace-bridge-search,
+  .nexus-marketplace-bridge-create,
   .nexus-provider-contact-actions {
     grid-template-columns: 1fr;
   }

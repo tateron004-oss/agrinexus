@@ -7,6 +7,7 @@ module.exports = {
   zoom: require("./zoomProvider"),
   dji: require("./djiProvider"),
   marketplace: require("./marketplaceProvider"),
+  marketplaceBridge: require("./marketplaceBridgeProvider"),
   stripe: require("./stripeProvider"),
   offlineSync: require("./offlineSyncProvider"),
   reminders: require("./reminderProvider"),

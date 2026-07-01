@@ -136,6 +136,7 @@ function nexusRealProviderStatus(db, env = process.env) {
   const zoom = nexusRealProviders.zoom.status(env);
   const dji = nexusRealProviders.dji.status(env);
   const marketplace = nexusRealProviders.marketplace.status(env);
+  const marketplaceBridge = nexusRealProviders.marketplaceBridge.status(env);
   const offlineSync = nexusRealProviders.offlineSync.status(env);
   const reminders = nexusRealProviders.reminders.status(env);
   const stripe = nexusRealProviders.stripe.status(env);
@@ -315,6 +316,17 @@ function nexusRealProviderStatus(db, env = process.env) {
       requiresConfirmation: true
     }),
     providerReadinessCard({
+      id: "marketplace-bridge",
+      title: "AgriTrade Marketplace Bridge",
+      providerName: "Nexus local marketplace bridge",
+      enabled: marketplaceBridge.enabled,
+      testability: marketplaceBridge.enabled ? "local_only" : "disabled",
+      detail: "Browse local starter listings, create local test listings, prepare inquiry drafts, save notes, reminders, and offline metadata without payments.",
+      canTestNow: marketplaceBridge.enabled ? "Search listings, create a local listing, prepare inquiry drafts, save notes, add reminders, and queue safe metadata." : "Marketplace Bridge disabled.",
+      stillNeeded: marketplaceBridge.enabled ? [] : ["Enable NEXUS_MARKETPLACE_BRIDGE_ENABLED=true"],
+      requiresConfirmation: true
+    }),
+    providerReadinessCard({
       id: "offline-sync",
       title: "Offline Sync",
       providerName: "Local offline sync",
@@ -362,6 +374,7 @@ function nexusRealProviderStatus(db, env = process.env) {
         savedProviders: (db.profile?.nexusSavedProviders || []).length,
         providerNotes: (db.profile?.nexusProviderNotes || []).length,
         savedLearningResources: (db.profile?.nexusSavedLearningResources || []).length,
+        marketplaceNotes: (db.profile?.nexusMarketplaceNotes || []).length,
         marketplaceListings: (db.profile?.marketplaceListings || []).length,
         offlineQueue: (db.profile?.offlineQueue || []).length,
         droneMissionRequests: (db.profile?.droneMissionRequests || []).length
@@ -27398,7 +27411,19 @@ async function api(req, res, url) {
   }
 
   if (url.pathname === "/api/nexus/tools/marketplace/status" && req.method === "GET") {
-    return send(res, 200, { ok: true, ...nexusRealProviders.marketplace.status(), stripe: nexusRealProviders.stripe.status() });
+    return send(res, 200, { ok: true, ...nexusRealProviders.marketplaceBridge.status() });
+  }
+
+  if (url.pathname === "/api/nexus/tools/marketplace/search" && req.method === "GET") {
+    return sendProviderResult(res, nexusRealProviders.marketplaceBridge.search({
+      query: url.searchParams.get("q") || url.searchParams.get("query") || "",
+      category: url.searchParams.get("category") || ""
+    }, db));
+  }
+
+  if (url.pathname.startsWith("/api/nexus/tools/marketplace/listing/") && req.method === "GET") {
+    const listingId = decodeURIComponent(url.pathname.replace("/api/nexus/tools/marketplace/listing/", ""));
+    return sendProviderResult(res, nexusRealProviders.marketplaceBridge.listing(listingId, db));
   }
 
   if (url.pathname === "/api/nexus/tools/marketplace/listings" && req.method === "GET") {
@@ -27406,7 +27431,29 @@ async function api(req, res, url) {
   }
 
   if (url.pathname === "/api/nexus/tools/marketplace/listing" && req.method === "POST") {
-    const result = nexusRealProviders.marketplace.createListing(await readBody(req), db);
+    const result = nexusRealProviders.marketplaceBridge.createListing(await readBody(req), db);
+    if (result.body?.status === "completed") await writeDb(db);
+    return sendProviderResult(res, result);
+  }
+
+  if (url.pathname === "/api/nexus/tools/marketplace/inquiry/prepare" && req.method === "POST") {
+    return sendProviderResult(res, nexusRealProviders.marketplaceBridge.prepareInquiry(await readBody(req), db));
+  }
+
+  if (url.pathname === "/api/nexus/tools/marketplace/note" && req.method === "POST") {
+    const result = nexusRealProviders.marketplaceBridge.saveNote(await readBody(req), db);
+    if (result.body?.status === "completed") await writeDb(db);
+    return sendProviderResult(res, result);
+  }
+
+  if (url.pathname === "/api/nexus/tools/marketplace/reminder" && req.method === "POST") {
+    const result = nexusRealProviders.marketplaceBridge.createReminder(await readBody(req), db);
+    if (result.body?.status === "completed") await writeDb(db);
+    return sendProviderResult(res, result);
+  }
+
+  if (url.pathname === "/api/nexus/tools/marketplace/offline" && req.method === "POST") {
+    const result = nexusRealProviders.marketplaceBridge.queueOffline(await readBody(req), db);
     if (result.body?.status === "completed") await writeDb(db);
     return sendProviderResult(res, result);
   }

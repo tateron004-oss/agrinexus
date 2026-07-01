@@ -20,6 +20,7 @@
     "qa:nexus-real-provider-integrations": "node scripts/nexus-real-provider-integrations-qa.js",
     "qa:nexus-provider-contact-bridge": "node scripts/nexus-provider-contact-bridge-qa.js",
     "qa:nexus-learning-provider-bridge": "node scripts/nexus-learning-provider-bridge-qa.js",
+    "qa:nexus-marketplace-bridge": "node scripts/nexus-marketplace-bridge-qa.js",
     "qa:nexus-tool-registry": "node scripts/nexus-tool-registry-qa.js",
     "qa:nexus-tool-registry-runtime": "node scripts/nexus-tool-registry-runtime-qa.js",
     "qa:nexus-policy-engine": "node scripts/nexus-policy-engine-qa.js",
