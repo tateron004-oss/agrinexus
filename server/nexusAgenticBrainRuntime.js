@@ -295,7 +295,7 @@ function extractClinicalMeasurement(goal = "") {
 function inferGoalParts(goal = "") {
   const text = goal.toLowerCase();
   const parts = [];
-  if (/what can nexus do|help me figure out|i need support|what is open|what did you prepare|what still needs a real provider|active cases|current tasks|summarize my current tasks/.test(text)) parts.push("general_assistant");
+  if (/what can nexus do|what nexus can help|help me figure out|i need support|what is open|what did you prepare|what still needs a real provider|active cases|current tasks|summarize my current tasks|show what nexus can help/.test(text)) parts.push("general_assistant");
   if (/blood pressure|bp\b|hypertension|htn\b|diabetes|diabetic|dm\b|glucose|blood sugar|fasting sugar|a1c|obesity|weight|bmi|rpm|rtm|remote patient|remote therapeutic|reading|provider|doctor|care team|provider report|care summary|clinical summary|telehealth|pharmacy|medication|mobile clinic|follow-up|follow up|pain|therapy|mobility/.test(text)) parts.push("medical");
   if (/provider report|care team report|care summary|clinical summary|provider summary|provider-ready|report/.test(text)) parts.push("provider_report");
   if (/telehealth|video visit|virtual visit/.test(text)) parts.push("telehealth");
@@ -500,7 +500,7 @@ function buildSafetyGate(goal = "", parts = []) {
     ["appointment_booking", /book .*appointment|schedule .*appointment/],
     ["location_sharing", /send my location|share my location|use my location/],
     ["camera", /use my camera|open camera|take a photo/],
-    ["drone_dispatch", /send a drone|dispatch a drone|fly a drone/],
+    ["drone_dispatch", /send a drone|dispatch a drone|fly a drone|drone mission|drone request/],
     ["mobile_clinic_dispatch", /dispatch a mobile clinic|send a mobile clinic now/],
     ["lab_order", /order labs|lab order/],
     ["prescription_refill", /refill my prescription|request refill/]
@@ -669,7 +669,24 @@ function buildCapabilityResponse(profile) {
   return {
     ok: true,
     status: "capability_summary",
-    message: "Nexus can organize chronic-care, RPM/RTM, provider summaries, telehealth prep, pharmacy questions, mobile clinic requests, agriculture support, workforce/training pathways, reminders, offline prep, and provider-onboarding packages. Live provider contact, diagnosis, prescribing, payment, emergency dispatch, calls, messages, location, camera, and drone dispatch remain gated until configured and approved.",
+    message: "Nexus can organize agriculture, healthcare/chronic-care, provider/care-team prep, marketplace/AgriTrade prep, workforce/jobs, learning/literacy, maps/field visit planning, communications drafts, multilingual commands, offline prep, reminders/continuity, safety gates, production capability status, RPM/RTM, telehealth prep, pharmacy questions, mobile clinic requests, and provider-onboarding packages. Live provider contact, diagnosis, prescribing, payment, emergency dispatch, calls, messages, location, camera, and drone dispatch remain gated until configured and approved.",
+    modesCovered: [
+      "healthcare_chronic_care",
+      "provider_care_team",
+      "agriculture",
+      "marketplace_agritrade",
+      "workforce_jobs",
+      "learning_literacy",
+      "maps_location_planning",
+      "communications",
+      "voice_natural_command",
+      "multilingual",
+      "offline",
+      "reminder_continuity",
+      "safety_confirmation",
+      "admin_developer_testing",
+      "production_capability_status"
+    ],
     activeTaskCount: openTasks.length,
     activeCases: openTasks.slice(0, 8).map(task => ({
       taskId: task.taskId,
@@ -692,7 +709,7 @@ async function handleCommand(body = {}, db = {}, env = process.env) {
   const suppliedMeasurement = extractClinicalMeasurement(goal);
   if (!goal) return { ok: false, status: "missing_goal", message: "Tell Nexus what task or result you want." };
 
-  if (parts.includes("general_assistant") && !/(blood pressure|bp\b|glucose|diabetes|obesity|hypertension|crop|training|job|pharmacy|telehealth|mobile clinic|provider summary|remind)/i.test(goal)) {
+  if (parts.includes("general_assistant") && /what can nexus do|what nexus can help|what still needs a real provider|show my active cases|active cases|current tasks|what is open|show what nexus can help/i.test(goal)) {
     const summary = buildCapabilityResponse(profile);
     addActivity(profile, { eventType: "capability_summary", status: "local_only", summary: goal });
     return summary;

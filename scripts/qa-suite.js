@@ -88,6 +88,7 @@ const suites = {
     "scripts/nexus-agriculture-workforce-depth-qa.js",
     "scripts/nexus-multilingual-performance-hardening-qa.js",
     "scripts/nexus-safety-trust-boundary-hardening-qa.js",
+    "scripts/nexus-full-agentic-workflow-all-modes-qa.js",
     "scripts/nexus-workforce-branding-qa.js",
     "scripts/nexus-workforce-standard-user-qa.js",
     "scripts/nexus-workforce-alias-qa.js",

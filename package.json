@@ -48,6 +48,7 @@
     "qa:nexus-agriculture-workforce-depth": "node scripts/nexus-agriculture-workforce-depth-qa.js",
     "qa:nexus-multilingual-performance-hardening": "node scripts/nexus-multilingual-performance-hardening-qa.js",
     "qa:nexus-safety-trust-boundary-hardening": "node scripts/nexus-safety-trust-boundary-hardening-qa.js",
+    "qa:nexus-full-agentic-workflow-all-modes": "node scripts/nexus-full-agentic-workflow-all-modes-qa.js",
     "qa:nexus-tool-registry": "node scripts/nexus-tool-registry-qa.js",
     "qa:nexus-tool-registry-runtime": "node scripts/nexus-tool-registry-runtime-qa.js",
     "qa:nexus-policy-engine": "node scripts/nexus-policy-engine-qa.js",
