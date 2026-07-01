@@ -80,6 +80,11 @@ let selectedPersona = localStorage.getItem("agrinexusPersona") || "worker";
 let selectedNexusDashboardModeId = "agriculture-support";
 let nexusRealProviderTestingStatus = null;
 let nexusRealProviderTestingLastResult = null;
+let nexusProductionRuntimeStatus = null;
+let nexusProductionRuntimeCapabilities = [];
+let nexusProductionRuntimeLastPlan = null;
+let nexusProductionRuntimeLastResult = null;
+let nexusProductionRuntimeLastVerification = null;
 let nexusProviderContactBridgeCards = [];
 let nexusLearningProviderBridgeCards = [];
 let nexusMarketplaceBridgeCards = [];
@@ -791,6 +796,7 @@ function handleNexusCareTeamReportCopyViewCaptionCommand(command = "") {
 
 function handleNexusStandardUserSafeTypedCommand(command = "") {
   if (experienceMode !== "user") return false;
+  if (handleNexusProductionRuntimeTypedCommand(command)) return true;
   if (handleNexusOpenDialogueAgentCommand(command)) return true;
   if (handleJarvisStyleStandardUserSafetyResponse(command)) return true;
   if (handleNexusSimulationCaptionCommand(command)) return true;
@@ -18104,6 +18110,168 @@ async function runNexusMedicalBridgeAction(id, action) {
   }
 }
 
+function nexusProductionRuntimeDefaultGoal() {
+  return "Nexus, send my blood pressure readings to a provider.";
+}
+
+function renderNexusProductionRuntimeSummaryList(items = []) {
+  if (!Array.isArray(items) || !items.length) return `<span>${translateText("None yet.")}</span>`;
+  return `<ul>${items.slice(0, 8).map(item => `<li>${escapeHtml(translateText(String(item)))}</li>`).join("")}</ul>`;
+}
+
+function renderNexusProductionRuntimeCapabilities() {
+  const capabilities = Array.isArray(nexusProductionRuntimeCapabilities) ? nexusProductionRuntimeCapabilities : [];
+  if (!capabilities.length) return `<p>${translateText("Capabilities have not been loaded yet.")}</p>`;
+  return `
+    <div class="nexus-real-provider-card-grid" data-nexus-production-runtime-capability-list="true">
+      ${capabilities.slice(0, 12).map(capability => `
+        <article class="nexus-real-provider-card">
+          <strong>${escapeHtml(capability.id)}</strong>
+          <span>${escapeHtml(translateText(capability.domain || "domain"))} · ${escapeHtml(translateText(capability.riskLevel || "risk"))}</span>
+          <p>${escapeHtml(translateText(capability.description || ""))}</p>
+          <small>${escapeHtml(translateText(capability.connectorStatus || "unknown"))}${capability.missingConfig?.length ? ` · ${translateText("Missing")}: ${capability.missingConfig.map(escapeHtml).join(", ")}` : ""}</small>
+        </article>
+      `).join("")}
+    </div>
+  `;
+}
+
+function renderNexusProductionRuntimePlan(plan = nexusProductionRuntimeLastPlan) {
+  if (!plan) return `<p>${translateText("No action plan yet.")}</p>`;
+  return `
+    <div class="nexus-real-provider-result" data-nexus-production-runtime-plan-output="true">
+      <strong>${escapeHtml(translateText("Selected capabilities"))}</strong>
+      ${renderNexusProductionRuntimeSummaryList(plan.capabilities || [])}
+      <strong>${escapeHtml(translateText("Missing information"))}</strong>
+      ${renderNexusProductionRuntimeSummaryList(plan.missingInformation || [])}
+      <strong>${escapeHtml(translateText("Action plan"))}</strong>
+      ${renderNexusProductionRuntimeSummaryList((plan.actionPlan || []).map(step => `${step.step}. ${step.capability} - ${step.status}`))}
+      <p>${escapeHtml(translateText(plan.userMessage || ""))}</p>
+    </div>
+  `;
+}
+
+function renderNexusProductionRuntimeResult() {
+  return `
+    <pre id="nexusProductionRuntimeResult" class="nexus-real-provider-result" aria-live="polite" data-nexus-production-runtime-result-display="true">${escapeHtml(nexusProductionRuntimeLastResult ? JSON.stringify(nexusProductionRuntimeLastResult, null, 2) : translateText("No runtime execution result yet."))}</pre>
+    <pre id="nexusProductionRuntimeVerification" class="nexus-real-provider-result" aria-live="polite" data-nexus-production-runtime-verification-display="true">${escapeHtml(nexusProductionRuntimeLastVerification ? JSON.stringify(nexusProductionRuntimeLastVerification, null, 2) : translateText("No verification result yet."))}</pre>
+  `;
+}
+
+function renderNexusProductionActionAssistantPanel() {
+  const status = nexusProductionRuntimeStatus || {};
+  const goal = nexusProductionRuntimeLastPlan?.userGoal || nexusProductionRuntimeDefaultGoal();
+  return `
+    <section class="nexus-real-provider-testing nexus-production-action-assistant" data-nexus-production-action-assistant="true" aria-label="${translateText("Nexus Production Action Assistant")}">
+      <div class="nexus-dashboard-section-head">
+        <span class="eyebrow">${translateText("Production Runtime")}</span>
+        <strong>${translateText("Nexus Production Action Assistant")}</strong>
+      </div>
+      <p>${translateText("Type a goal. Nexus will plan the correct capability, show missing information, require confirmation when needed, execute approved local actions now, and use configured live connectors only when provider gates are active.")}</p>
+      <p>${translateText("Nexus does not diagnose, prescribe, replace licensed professionals, dispatch emergencies, start camera or microphone, send messages, book, pay, or contact providers without the required connector, approval, and audit controls.")}</p>
+      <div class="nexus-real-provider-status-actions">
+        <button type="button" data-nexus-runtime-action="capabilities">${translateText("Show available capabilities")}</button>
+        <span>${translateText("Runtime")}: ${escapeHtml(String(status.enabled ?? "unknown"))} · ${translateText("Live execution")}: ${escapeHtml(String(status.liveExecutionEnabled ?? false))}</span>
+      </div>
+      <label class="nexus-extended-bridge-field">
+        <span>${translateText("User goal")}</span>
+        <textarea id="nexusProductionRuntimeGoal" rows="3" data-nexus-production-runtime-goal>${escapeHtml(goal)}</textarea>
+      </label>
+      <label class="nexus-extended-bridge-confirm">
+        <input type="checkbox" data-nexus-production-runtime-confirm>
+        <span>${translateText("Confirm action. I understand Nexus will execute only approved local actions or configured provider actions, and emergency, medical, payment, contact, location, camera, and microphone boundaries remain gated.")}</span>
+      </label>
+      <div class="nexus-extended-bridge-actions">
+        <button type="button" data-nexus-runtime-action="plan">${translateText("Plan action")}</button>
+        <button type="button" data-nexus-runtime-action="execute">${translateText("Execute approved action")}</button>
+        <button type="button" data-nexus-runtime-action="verify">${translateText("Verify result")}</button>
+        <button type="button" data-nexus-runtime-action="offline">${translateText("Queue for offline follow-up")}</button>
+        <button type="button" data-nexus-runtime-action="reminder">${translateText("Create reminder")}</button>
+        <button type="button" data-nexus-runtime-action="cancel">${translateText("Cancel")}</button>
+      </div>
+      ${renderNexusProductionRuntimePlan()}
+      ${renderNexusProductionRuntimeCapabilities()}
+      ${renderNexusProductionRuntimeResult()}
+    </section>
+  `;
+}
+
+function nexusProductionRuntimeGoalValue() {
+  return $("#nexusProductionRuntimeGoal")?.value?.trim() || nexusProductionRuntimeDefaultGoal();
+}
+
+async function refreshNexusProductionRuntimeStatus() {
+  try {
+    nexusProductionRuntimeStatus = await request("/api/nexus/runtime/status");
+    const caps = await request("/api/nexus/runtime/capabilities");
+    nexusProductionRuntimeCapabilities = Array.isArray(caps.capabilities) ? caps.capabilities : [];
+  } catch (error) {
+    nexusProductionRuntimeLastResult = { status: "failed_safely", message: error.message };
+  }
+}
+
+async function runNexusProductionRuntimeAction(action = "plan", goalOverride = "") {
+  try {
+    const goal = goalOverride || nexusProductionRuntimeGoalValue();
+    const confirmed = document.querySelector("[data-nexus-production-runtime-confirm]")?.checked === true;
+    if (action === "capabilities") {
+      await refreshNexusProductionRuntimeStatus();
+      renderUserWorkspace();
+      return true;
+    }
+    if (action === "cancel") {
+      nexusProductionRuntimeLastPlan = null;
+      nexusProductionRuntimeLastResult = { status: "cancelled", message: "Runtime action cancelled locally. No action was executed." };
+      nexusProductionRuntimeLastVerification = null;
+      renderUserWorkspace();
+      return true;
+    }
+    if (action === "offline" || action === "reminder") {
+      const localGoal = action === "offline" ? "Nexus, queue this offline." : "Nexus, remind me to follow up on this.";
+      nexusProductionRuntimeLastPlan = await request("/api/nexus/runtime/plan", { method: "POST", body: { userGoal: localGoal, context: { originalGoal: goal } } });
+      nexusProductionRuntimeLastResult = await request("/api/nexus/runtime/execute", { method: "POST", body: { plan: nexusProductionRuntimeLastPlan, confirmed: true } });
+      renderUserWorkspace();
+      return true;
+    }
+    if (action === "verify") {
+      nexusProductionRuntimeLastVerification = await request("/api/nexus/runtime/verify", {
+        method: "POST",
+        body: {
+          runtimeResult: nexusProductionRuntimeLastResult,
+          referenceId: nexusProductionRuntimeLastResult?.executionResult?.referenceId || ""
+        }
+      });
+      renderUserWorkspace();
+      return true;
+    }
+    if (action === "execute") {
+      nexusProductionRuntimeLastResult = await request("/api/nexus/runtime/execute", {
+        method: "POST",
+        body: { plan: nexusProductionRuntimeLastPlan, userGoal: goal, confirmed }
+      });
+      renderUserWorkspace();
+      return true;
+    }
+    nexusProductionRuntimeLastPlan = await request("/api/nexus/runtime/plan", { method: "POST", body: { userGoal: goal, confirmed } });
+    nexusProductionRuntimeLastResult = null;
+    nexusProductionRuntimeLastVerification = null;
+    renderUserWorkspace();
+    return true;
+  } catch (error) {
+    nexusProductionRuntimeLastResult = { status: "failed_safely", message: error.message };
+    renderUserWorkspace();
+    return false;
+  }
+}
+
+function handleNexusProductionRuntimeTypedCommand(command = "") {
+  const normalized = String(command || "").trim();
+  if (!normalized) return false;
+  if (!/^nexus,/i.test(normalized) && !/(verify the result|available actions|queue this offline|remind me|provider|pharmacy|mobile clinic|video doctor|blood pressure|agriculture training|farm jobs|marketplace inquiry|drone service)/i.test(normalized)) return false;
+  void runNexusProductionRuntimeAction("plan", normalized);
+  return true;
+}
+
 function renderNexusRealProviderTestingPanel() {
   return `
     <section class="nexus-real-provider-testing" data-nexus-real-provider-testing="true" aria-label="${translateText("Real Provider Testing")}">
@@ -18597,6 +18765,7 @@ function renderUserWorkspace() {
       ${userLanguageQuickSwitchHtml()}
     </section>
     ${renderNexusPlatformDashboard()}
+    ${renderNexusProductionActionAssistantPanel()}
     ${renderNexusRealProviderTestingPanel()}
     <div data-nexus-open-dialogue-agent-host="true">${renderNexusOpenDialogueAgentCard()}</div>
     ${a100CapabilitySurfaceHtml()}
@@ -33649,6 +33818,13 @@ function bindStatic() {
       event.preventDefault();
       event.stopPropagation();
       await runNexusRealProviderTest(realProviderTestButton.dataset.realProviderTest);
+      return;
+    }
+    const productionRuntimeButton = event.target.closest("[data-nexus-runtime-action]");
+    if (productionRuntimeButton) {
+      event.preventDefault();
+      event.stopPropagation();
+      await runNexusProductionRuntimeAction(productionRuntimeButton.dataset.nexusRuntimeAction);
       return;
     }
     const mapsFieldVisitButton = event.target.closest("[data-maps-field-visit-action]");

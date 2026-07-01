@@ -7,6 +7,7 @@ const { buildNexusPolicyDecision, validateNexusPolicyDecision } = require("./pub
 const { createNexusPlan, validateNexusPlan } = require("./public/nexus-planner.js");
 const nexusAssistantRuntime = require("./server/nexus-assistant-runtime-entrypoint.js");
 const nexusStandardUserAgentExperience = require("./server/nexus-standard-user-agent-experience.js");
+const nexusProductionRuntime = require("./server/nexusProductionRuntime.js");
 const nexusRealProviders = require("./server/providers");
 
 function loadEnvFile(filePath) {
@@ -27516,6 +27517,32 @@ async function api(req, res, url) {
 
   if (url.pathname === "/api/nexus/tools/status" && req.method === "GET") {
     return send(res, 200, nexusRealProviderStatus(db));
+  }
+
+  if (url.pathname === "/api/nexus/runtime/capabilities" && req.method === "GET") {
+    return send(res, 200, nexusProductionRuntime.capabilities(process.env));
+  }
+
+  if (url.pathname === "/api/nexus/runtime/status" && req.method === "GET") {
+    return send(res, 200, nexusProductionRuntime.status(db, process.env));
+  }
+
+  if (url.pathname === "/api/nexus/runtime/plan" && req.method === "POST") {
+    const result = nexusProductionRuntime.plan(await readBody(req), db, process.env);
+    await writeDb(db);
+    return send(res, 200, result);
+  }
+
+  if (url.pathname === "/api/nexus/runtime/execute" && req.method === "POST") {
+    const result = await nexusProductionRuntime.execute(await readBody(req), db, process.env);
+    await writeDb(db);
+    return send(res, 200, result);
+  }
+
+  if (url.pathname === "/api/nexus/runtime/verify" && req.method === "POST") {
+    const result = nexusProductionRuntime.verify(await readBody(req), db, process.env);
+    await writeDb(db);
+    return send(res, 200, result);
   }
 
   if (url.pathname === "/api/nexus/tools/sms/send" && req.method === "POST") {

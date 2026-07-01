@@ -37,6 +37,7 @@
     "qa:nexus-mobile-clinic-bridge": "node scripts/nexus-mobile-clinic-bridge-qa.js",
     "qa:nexus-pharmacy-bridge": "node scripts/nexus-pharmacy-bridge-qa.js",
     "qa:nexus-patient-support-bridge": "node scripts/nexus-patient-support-bridge-qa.js",
+    "qa:nexus-production-capability-runtime": "node scripts/nexus-production-capability-runtime-qa.js",
     "qa:nexus-tool-registry": "node scripts/nexus-tool-registry-qa.js",
     "qa:nexus-tool-registry-runtime": "node scripts/nexus-tool-registry-runtime-qa.js",
     "qa:nexus-policy-engine": "node scripts/nexus-policy-engine-qa.js",
