@@ -18293,6 +18293,8 @@ function renderNexusAgenticBrainTasks() {
           <strong>${escapeHtml(task.title || task.type || "Nexus task")}</strong>
           <span>${escapeHtml(task.type || "task")} Â· ${escapeHtml(task.status || "unknown")}</span>
           <small>${translateText("Capabilities")}: ${(task.capabilities || []).slice(0, 4).map(escapeHtml).join(", ") || escapeHtml(translateText("pending"))}</small>
+          ${task.chronicPrograms?.programs?.length ? `<small>${translateText("Chronic programs")}: ${task.chronicPrograms.programs.map(program => escapeHtml(program.label || program.id)).join(", ")}</small>` : ""}
+          ${task.chronicPrograms?.rpmEnabled || task.chronicPrograms?.rtmEnabled ? `<small>${translateText("RPM/RTM")}: ${translateText("equipped for manual RPM readings and RTM participation context; no device connection or provider transmission without configured gates.")}</small>` : ""}
           ${task.missingInformation?.length ? `<small>${translateText("Needs")}: ${task.missingInformation.map(escapeHtml).join(", ")}</small>` : ""}
           ${task.providerQueueId ? `<small>${translateText("Provider queue")}: ${escapeHtml(task.providerQueueId)}</small>` : ""}
           <div class="nexus-extended-bridge-actions">

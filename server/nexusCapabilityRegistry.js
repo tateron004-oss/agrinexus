@@ -44,7 +44,7 @@ const CAPABILITIES = [
   {
     id: "medical.chronicCare",
     domain: "medical",
-    description: "Organize chronic care context for provider review.",
+    description: "Organize chronic disease context for DM/diabetes, obesity, and HTN/hypertension provider review with RPM/RTM support.",
     supportedIntents: ["chronic_care_provider_review", "symptom_review"],
     riskLevel: "moderate",
     requiresConfirmation: true,
@@ -52,12 +52,12 @@ const CAPABILITIES = [
     connectorKey: "medical_provider_api",
     fallbackBehavior: "local_chronic_care_report",
     verifyBehavior: "provider_reference_or_local_only",
-    safetyNotes: "Provider review only. Nexus does not diagnose, prescribe, or change medication."
+    safetyNotes: "Provider review only. Nexus does not diagnose, prescribe, change medication, connect devices, or transmit RPM/RTM data without configured connector, consent, approval, and audit."
   },
   {
     id: "medical.rpm",
     domain: "medical",
-    description: "Collect manual RPM readings and prepare provider-review summaries.",
+    description: "Collect manual RPM readings for DM, obesity, and HTN programs and prepare provider-review summaries.",
     supportedIntents: ["rpm_reading_review", "blood_pressure_review"],
     riskLevel: "moderate",
     requiresConfirmation: true,
@@ -70,7 +70,7 @@ const CAPABILITIES = [
   {
     id: "medical.rtm",
     domain: "medical",
-    description: "Collect RTM participation or activity context for review.",
+    description: "Collect RTM participation, therapy adherence, activity, nutrition, and behavior context for DM, obesity, and HTN programs.",
     supportedIntents: ["rtm_activity_review"],
     riskLevel: "moderate",
     requiresConfirmation: true,

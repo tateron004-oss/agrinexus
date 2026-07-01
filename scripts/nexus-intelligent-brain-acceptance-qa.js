@@ -61,7 +61,11 @@ function activeOfType(db, type) {
   assert.equal(result.task.type, "medical_follow_up", "medical command must create medical follow-up task");
   assert(result.task.capabilities.includes("medical.chronicCare"), "medical task must include chronic care capability");
   assert(result.task.capabilities.includes("medical.rpm"), "medical task must include RPM capability");
+  assert(result.task.capabilities.includes("medical.rtm"), "medical task must include RTM capability");
   assert(result.task.capabilities.includes("medical.telehealthProvider"), "medical task must include telehealth provider capability");
+  assert(result.task.chronicPrograms.rpmEnabled, "medical task must be RPM-equipped");
+  assert(result.task.chronicPrograms.rtmEnabled, "medical task must be RTM-equipped");
+  assert(result.task.chronicPrograms.programs.some(program => program.id === "htn"), "blood pressure task must map to HTN");
   assert(result.task.missingInformation.some(item => /reading/i.test(item)), "medical flow must ask for readings when missing");
   assert(result.providerQueue, "medical flow must prepare provider/admin queue");
   assert.equal(result.providerQueue.submittedLive, false, "missing provider config must not fake live submission");
@@ -73,6 +77,19 @@ function activeOfType(db, type) {
   assert.equal(medicalTask.readings.length, 1, "reading must be added to active medical task");
   assert.equal(medicalTask.readings[0].systolic, 140, "systolic reading must be captured");
   assert.equal(medicalTask.readings[0].diastolic, 90, "diastolic reading must be captured");
+  assert.equal(medicalTask.readings[0].type, "blood_pressure", "BP reading must be tagged as blood pressure RPM");
+
+  result = await brain.handleCommand({ command: "My glucose is 160 after breakfast and I need DM support." }, db, env);
+  assert(medicalTask.chronicPrograms.programs.some(program => program.id === "dm"), "DM program must be retained on medical task");
+  assert(medicalTask.readings.some(reading => reading.type === "glucose" && reading.value === 160), "glucose RPM reading must be captured");
+
+  result = await brain.handleCommand({ command: "My weight is 225 pounds and I need obesity support with activity goals." }, db, env);
+  assert(medicalTask.chronicPrograms.programs.some(program => program.id === "obesity"), "obesity program must be retained on medical task");
+  assert(medicalTask.readings.some(reading => reading.type === "weight" && reading.value === 225), "weight RPM reading must be captured");
+
+  result = await brain.handleCommand({ command: "Activity participation: walking plan was hard this week because of stress." }, db, env);
+  assert(medicalTask.rtmNotes.some(note => note.type === "rtm_context"), "RTM participation context must be captured");
+  assert.equal(medicalTask.chronicPrograms.providerTransmissionEnabled, false, "RPM/RTM provider transmission must remain disabled without gates");
 
   const verifiedMedical = brain.verifyTask({ taskId: medicalTask.taskId }, db, env);
   assert(["verified_local_record", "provider_response_available"].includes(verifiedMedical.status), "medical task must verify local result truthfully");
@@ -134,6 +151,9 @@ function activeOfType(db, type) {
     "voice command runtime",
     "task manager",
     "case memory",
+    "chronic disease DM/obesity/HTN support",
+    "RPM manual readings",
+    "RTM participation context",
     "provider registry",
     "provider/admin queue",
     "telehealth connector",

@@ -18,6 +18,9 @@ const MATRIX = [
   ["voice command runtime", "Complete and locally executable"],
   ["task manager", "Complete and locally executable"],
   ["case memory", "Complete and locally executable"],
+  ["chronic disease DM/obesity/HTN support", "Complete and locally executable"],
+  ["RPM manual readings", "Complete and locally executable"],
+  ["RTM participation context", "Complete and locally executable"],
   ["provider registry", "Complete and live-executable when configured"],
   ["provider/admin queue", "Complete and locally executable"],
   ["telehealth connector", "Complete but waiting for credentials/provider"],
@@ -41,6 +44,30 @@ const MATRIX = [
   ["compliance gates", "Complete and locally executable"],
   ["deployment readiness", "Complete but waiting for credentials/provider"]
 ].map(([capability, status]) => ({ capability, status }));
+
+const CHRONIC_DISEASE_PROGRAMS = Object.freeze({
+  dm: {
+    id: "dm",
+    label: "Diabetes Mellitus (DM)",
+    commonTerms: ["diabetes", "diabetic", "dm", "glucose", "blood sugar", "a1c"],
+    rpmSignals: ["glucose", "A1c context", "weight", "blood pressure when relevant"],
+    rtmSignals: ["nutrition pattern", "activity participation", "medication adherence discussion prep", "symptom/barrier notes"]
+  },
+  obesity: {
+    id: "obesity",
+    label: "Obesity / weight-management support",
+    commonTerms: ["obesity", "weight", "bmi", "nutrition", "activity", "physical activity"],
+    rpmSignals: ["weight", "BMI context if user-provided", "blood pressure when relevant", "glucose when relevant"],
+    rtmSignals: ["nutrition goals", "activity participation", "sleep/stress/barrier notes", "therapy or coaching participation"]
+  },
+  htn: {
+    id: "htn",
+    label: "Hypertension (HTN)",
+    commonTerms: ["hypertension", "htn", "blood pressure", "bp"],
+    rpmSignals: ["blood pressure", "pulse if user-provided", "weight when relevant"],
+    rtmSignals: ["sodium/activity context", "medication adherence discussion prep", "symptom/barrier notes"]
+  }
+});
 
 function ensureBrain(db = {}) {
   db.profile = db.profile || {};
@@ -83,18 +110,86 @@ function extractReading(goal = "") {
   const match = String(goal).match(/(\d{2,3})\s*(?:over|\/)\s*(\d{2,3})(?:\s+([^.,;]+))?/i);
   if (!match) return null;
   return {
+    type: "blood_pressure",
     systolic: Number(match[1]),
     diastolic: Number(match[2]),
     context: safeText(match[3] || "user supplied reading", 120),
+    rpm: true,
+    rtm: false,
     source: "user_text",
     capturedAt: now()
   };
 }
 
+function detectChronicPrograms(goal = "") {
+  const text = String(goal || "").toLowerCase();
+  const detected = Object.values(CHRONIC_DISEASE_PROGRAMS).filter(program =>
+    program.commonTerms.some(term => new RegExp(`\\b${term.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`, "i").test(text))
+  );
+  return detected.length ? detected.map(program => program.id) : [];
+}
+
+function chronicProgramSummary(programIds = []) {
+  const programs = programIds.map(id => CHRONIC_DISEASE_PROGRAMS[id]).filter(Boolean);
+  return {
+    programs: programs.map(program => ({ id: program.id, label: program.label })),
+    rpmEnabled: programs.length > 0,
+    rtmEnabled: programs.length > 0,
+    rpmSignals: [...new Set(programs.flatMap(program => program.rpmSignals))],
+    rtmSignals: [...new Set(programs.flatMap(program => program.rtmSignals))],
+    deviceConnected: false,
+    providerTransmissionEnabled: false,
+    providerReviewRequired: true
+  };
+}
+
+function extractClinicalMeasurement(goal = "") {
+  const bloodPressure = extractReading(goal);
+  if (bloodPressure) return bloodPressure;
+  const text = String(goal || "");
+  const glucose = text.match(/\b(?:glucose|blood sugar)\s*(?:is|was|=|:)?\s*(\d{2,3})\b/i);
+  if (glucose) {
+    return {
+      type: "glucose",
+      value: Number(glucose[1]),
+      unit: "mg/dL",
+      context: safeText(text.replace(glucose[0], "").trim() || "user supplied glucose reading", 120),
+      rpm: true,
+      rtm: false,
+      source: "user_text",
+      capturedAt: now()
+    };
+  }
+  const weight = text.match(/\b(?:weight|weigh)\s*(?:is|was|=|:)?\s*(\d{2,3}(?:\.\d+)?)\s*(lb|lbs|pounds|kg|kilograms)?\b/i);
+  if (weight) {
+    return {
+      type: "weight",
+      value: Number(weight[1]),
+      unit: weight[2] || "user_provided_unit",
+      context: safeText(text.replace(weight[0], "").trim() || "user supplied weight reading", 120),
+      rpm: true,
+      rtm: false,
+      source: "user_text",
+      capturedAt: now()
+    };
+  }
+  if (/\b(activity|walking|exercise|nutrition|meal|diet|sleep|stress|adherence|therapy|participation|barrier)\b/i.test(text)) {
+    return {
+      type: "rtm_context",
+      summary: safeText(text, 220),
+      rpm: false,
+      rtm: true,
+      source: "user_text",
+      capturedAt: now()
+    };
+  }
+  return null;
+}
+
 function inferGoalParts(goal = "") {
   const text = goal.toLowerCase();
   const parts = [];
-  if (/blood pressure|bp\b|hypertension|reading|provider|doctor|telehealth|follow-up|follow up/.test(text)) parts.push("medical");
+  if (/blood pressure|bp\b|hypertension|htn\b|diabetes|diabetic|dm\b|glucose|a1c|obesity|weight|bmi|rpm|rtm|remote patient|remote therapeutic|reading|provider|doctor|telehealth|follow-up|follow up/.test(text)) parts.push("medical");
   if (/remind|tonight|tomorrow|later/.test(text)) parts.push("reminder");
   if (/respond|response|check if|verify/.test(text)) parts.push("follow_up");
   if (/agriculture|training|irrigation|crop|farmer/.test(text)) parts.push("agriculture");
@@ -159,7 +254,9 @@ function createTask(profile, goal, plan, options = {}) {
     intent: plan.intent,
     capabilities: plan.capabilities || [],
     missingInformation: plan.missingInformation || [],
+    chronicPrograms: taskType === "medical_follow_up" ? chronicProgramSummary(detectChronicPrograms(goal)) : chronicProgramSummary([]),
     readings: [],
+    rtmNotes: [],
     providerQueueId: "",
     reminderId: "",
     followUpId: "",
@@ -173,10 +270,14 @@ function createTask(profile, goal, plan, options = {}) {
     createdAt: now(),
     updatedAt: now()
   };
-  const reading = extractReading(goal);
-  if (reading) {
-    task.readings.push(reading);
+  const measurement = extractClinicalMeasurement(goal);
+  if (measurement?.rpm) {
+    task.readings.push(measurement);
     task.missingInformation = task.missingInformation.filter(item => !/reading/i.test(item));
+    task.status = task.requiresConfirmation ? "waiting_for_confirmation" : "active";
+  }
+  if (measurement?.rtm) {
+    task.rtmNotes.push(measurement);
     task.status = task.requiresConfirmation ? "waiting_for_confirmation" : "active";
   }
   profile.nexusAgenticTasks.unshift(task);
@@ -203,6 +304,9 @@ function createProviderQueueItem(profile, task, plan, env = process.env) {
     submittedLive: false,
     blockedReason: configured ? "" : "provider_connector_missing_or_disabled",
     visiblePurpose: safeText(task.userGoal, 220),
+    chronicPrograms: task.chronicPrograms || chronicProgramSummary([]),
+    rpmReadingCount: Array.isArray(task.readings) ? task.readings.length : 0,
+    rtmNoteCount: Array.isArray(task.rtmNotes) ? task.rtmNotes.length : 0,
     response: "",
     reviewedBy: "",
     createdAt: now(),
@@ -231,7 +335,7 @@ async function handleCommand(body = {}, db = {}, env = process.env) {
   const goal = cleanGoal(body.command || body.userGoal || body.goal || "");
   const taskId = body.taskId || "";
   const parts = inferGoalParts(goal);
-  const suppliedReading = extractReading(goal);
+  const suppliedMeasurement = extractClinicalMeasurement(goal);
   if (!goal) return { ok: false, status: "missing_goal", message: "Tell Nexus what task or result you want." };
 
   if (emergencyDetected(goal)) {
@@ -246,7 +350,7 @@ async function handleCommand(body = {}, db = {}, env = process.env) {
   }
 
   let task = activeTask(profile, taskId);
-  if (suppliedReading && (!task || task.type !== "medical_follow_up")) {
+  if (suppliedMeasurement && (!task || task.type !== "medical_follow_up")) {
     task = profile.nexusAgenticTasks.find(item => item.type === "medical_follow_up" && !["completed", "cancelled"].includes(item.status)) || task;
   }
   if (parts.includes("cancel") && task) {
@@ -262,17 +366,30 @@ async function handleCommand(body = {}, db = {}, env = process.env) {
   }
 
   const plan = productionRuntime.plan({ userGoal: goal, confirmed: body.confirmed === true }, db, env);
-  const shouldCreateNew = !suppliedReading && (!task || !parts.includes("confirm") || parts.some(part => ["medical", "agriculture", "marketplace", "workforce", "drone", "maps", "learning", "communications", "offline", "reminder"].includes(part)));
+  const shouldCreateNew = !suppliedMeasurement && (!task || !parts.includes("confirm") || parts.some(part => ["medical", "agriculture", "marketplace", "workforce", "drone", "maps", "learning", "communications", "offline", "reminder"].includes(part)));
   if (shouldCreateNew && !parts.includes("confirm")) {
     task = createTask(profile, goal, plan);
   }
   if (!task) task = createTask(profile, goal, plan);
+  task.readings = Array.isArray(task.readings) ? task.readings : [];
+  task.rtmNotes = Array.isArray(task.rtmNotes) ? task.rtmNotes : [];
+  task.chronicPrograms = task.chronicPrograms || chronicProgramSummary([]);
 
-  const reading = suppliedReading;
-  if (reading && !task.readings.some(item => item.systolic === reading.systolic && item.diastolic === reading.diastolic && item.context === reading.context)) {
+  if (task.type === "medical_follow_up") {
+    const currentPrograms = new Set(task.chronicPrograms?.programs?.map(program => program.id) || []);
+    for (const programId of detectChronicPrograms(goal)) currentPrograms.add(programId);
+    task.chronicPrograms = chronicProgramSummary([...currentPrograms]);
+  }
+
+  const reading = suppliedMeasurement;
+  if (reading?.rpm && !task.readings.some(item => item.type === reading.type && item.value === reading.value && item.systolic === reading.systolic && item.diastolic === reading.diastolic && item.context === reading.context)) {
     task.readings.push(reading);
     task.missingInformation = task.missingInformation.filter(item => !/reading/i.test(item));
-    addTaskHistory(task, "reading_added", `Blood pressure reading ${reading.systolic}/${reading.diastolic} added for provider review.`);
+    addTaskHistory(task, "rpm_reading_added", `${reading.type || "RPM"} reading added for provider review.`);
+  }
+  if (reading?.rtm && !task.rtmNotes.some(item => item.summary === reading.summary)) {
+    task.rtmNotes.push(reading);
+    addTaskHistory(task, "rtm_context_added", "RTM participation or behavior context added for provider review.");
   }
 
   let execution = null;
