@@ -20,5 +20,13 @@ module.exports = {
   sessionBridge: require("./sessionBridgeProvider"),
   lmsLiveBridge: require("./lmsLiveBridgeProvider"),
   paymentReadinessBridge: require("./paymentReadinessBridgeProvider"),
-  workflowOrchestratorBridge: require("./workflowOrchestratorBridgeProvider")
+  workflowOrchestratorBridge: require("./workflowOrchestratorBridgeProvider"),
+  medicalSupportBridge: require("./medicalSupportBridgeProvider"),
+  chronicDiseaseBridge: require("./chronicDiseaseBridgeProvider"),
+  rpmBridge: require("./rpmBridgeProvider"),
+  rtmBridge: require("./rtmBridgeProvider"),
+  telehealthBridge: require("./telehealthBridgeProvider"),
+  mobileClinicBridge: require("./mobileClinicBridgeProvider"),
+  pharmacyBridge: require("./pharmacyBridgeProvider"),
+  patientSupportBridge: require("./patientSupportBridgeProvider")
 };

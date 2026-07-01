@@ -7,7 +7,16 @@ const TEMPLATES = {
   "agriculture-support": ["crop observation", "learning resource", "marketplace input search", "field visit plan", "offline queue", "optional drone request"],
   "workforce-learning": ["learning resource", "save course", "reminder", "session preparation", "offline queue"],
   "marketplace-inquiry": ["listing search", "inquiry draft", "reminder", "route or field visit if safe location text exists", "offline queue"],
-  "drone-service-request": ["mission request", "field visit plan", "reminder", "offline queue"]
+  "drone-service-request": ["mission request", "field visit plan", "reminder", "offline queue"],
+  "health-access": ["medical support intake", "provider search", "telehealth session prep", "mobile clinic option", "pharmacy question draft", "patient support resource", "reminder", "offline queue"],
+  "chronic-care-preparation": ["chronic disease intake", "DM/HTN/obesity focus", "RPM/RTM data capture option", "provider review report", "telehealth session prep", "mobile clinic screening option", "pharmacy question draft", "patient support resource", "reminder", "offline queue"],
+  "telehealth-visit": ["telehealth intake", "select video provider", "prepare session", "create video session only if configured and confirmed", "prepare invite draft only", "reminder", "offline queue"],
+  "mobile-clinic-visit": ["mobile clinic intake", "search mobile clinic", "prepare visit plan", "route by typed origin", "reminder", "offline queue"],
+  "pharmacy-question": ["pharmacy intake", "search pharmacy", "prepare pharmacist question draft", "route by typed origin", "reminder", "offline queue"],
+  "patient-navigation": ["patient support intake", "resource selection", "provider/clinic/pharmacy suggestions", "route by typed origin", "reminder", "offline queue"],
+  "rpm-monitoring-preparation": ["RPM intake", "manual reading entry", "trend summary", "provider report", "reminder", "offline queue"],
+  "rtm-participation": ["RTM intake", "activity/adherence entry", "participation summary", "provider report", "learning resource", "reminder", "offline queue"],
+  "africa-rural-chronic-care": ["community health worker intake", "DM/HTN/obesity screening preparation", "manual RPM/RTM entry", "mobile clinic option", "telehealth provider review", "pharmacy question draft", "offline queue", "reminder"]
 };
 
 const BLOCKED_WORKFLOW_TEXT = /\b(send now|call now|pay now|book now|dispatch|use my location|camera|diagnos|prescri|medical record|secret|token|password)\b/i;

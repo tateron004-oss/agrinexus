@@ -17971,6 +17971,139 @@ async function runNexusExtendedBridgeAction(id, action) {
   }
 }
 
+const NEXUS_MEDICAL_SUPPORT_BRIDGE_CONTROLS = Object.freeze([
+  {
+    id: "medical-support",
+    title: "Medical Support Intake",
+    description: "Health access, provider review, telehealth, mobile clinic, pharmacy, and navigation preparation only.",
+    fields: [["supportType", "Support type", "health_access"], ["concern", "Non-sensitive reason", "Prepare care access questions"], ["questions", "Questions to ask", "What should I ask before a visit?"], ["typedLocation", "Typed city/country", "Nairobi, Kenya"], ["preferredSupportChannel", "Support channel", "community health worker"]],
+    actions: [["intake", "Save intake", "/api/nexus/tools/medical-support/intake"], ["summary", "Prepare summary", "/api/nexus/tools/medical-support/summary"], ["report", "Provider report", "/api/nexus/tools/medical-support/provider-report"], ["reminder", "Reminder", "/api/nexus/tools/medical-support/reminder"], ["offline", "Queue offline", "/api/nexus/tools/medical-support/offline"]]
+  },
+  {
+    id: "chronic-disease",
+    title: "Chronic Disease Support",
+    description: "Diabetes Mellitus, hypertension, obesity, and cardiometabolic reading organization for provider review.",
+    fields: [["conditionFocus", "diabetes, hypertension, obesity, cardiometabolic", "diabetes"], ["questionsForProvider", "Provider questions", "What patterns should I discuss?"], ["glucose", "Glucose value", "110"], ["systolic", "Systolic", "130"], ["diastolic", "Diastolic", "82"], ["weight", "Weight", "80"], ["weightUnit", "kg/lb", "kg"], ["height", "Height", "170"], ["heightUnit", "cm/ft_in", "cm"]],
+    actions: [["intake", "Save intake", "/api/nexus/tools/chronic-disease/intake"], ["reading", "Save reading", "/api/nexus/tools/chronic-disease/reading"], ["trend", "Trend summary", "/api/nexus/tools/chronic-disease/trend-summary"], ["report", "Provider report", "/api/nexus/tools/chronic-disease/provider-report"], ["reminder", "Reminder", "/api/nexus/tools/chronic-disease/reminder"], ["offline", "Queue offline", "/api/nexus/tools/chronic-disease/offline"]]
+  },
+  {
+    id: "rpm",
+    title: "RPM Remote Patient Monitoring",
+    description: "Manual BP, glucose, pulse, weight, oxygen saturation, and temperature organization. No live device connection.",
+    fields: [["monitoringFocus", "Monitoring focus", "blood_pressure,blood_glucose,pulse,weight"], ["metric", "Metric", "blood_pressure"], ["value", "Reading value", "130/82"], ["unit", "Unit", "mmHg"], ["systolic", "Systolic", "130"], ["diastolic", "Diastolic", "82"], ["pulse", "Pulse", "72"], ["dataSource", "manual/home device/CHW", "manual"]],
+    actions: [["intake", "Save intake", "/api/nexus/tools/rpm/intake"], ["reading", "Save manual reading", "/api/nexus/tools/rpm/device-reading"], ["trend", "Trend summary", "/api/nexus/tools/rpm/trend-summary"], ["report", "Provider report", "/api/nexus/tools/rpm/provider-report"], ["reminder", "Reminder", "/api/nexus/tools/rpm/reminder"], ["offline", "Queue offline", "/api/nexus/tools/rpm/offline"]]
+  },
+  {
+    id: "rtm",
+    title: "RTM Remote Therapeutic Monitoring",
+    description: "Activity, education, adherence-discussion, and participation tracking without treatment plans.",
+    fields: [["participationGoal", "Participation goal", "organize activity for review"], ["activityType", "Activity type", "education_module"], ["activityDescription", "Activity description", "Completed health literacy module"], ["completed", "Completed true/false", "true"], ["participationMinutes", "Minutes", "20"]],
+    actions: [["intake", "Save intake", "/api/nexus/tools/rtm/intake"], ["entry", "Save activity entry", "/api/nexus/tools/rtm/activity-entry"], ["summary", "Participation summary", "/api/nexus/tools/rtm/adherence-summary"], ["report", "Provider report", "/api/nexus/tools/rtm/provider-report"], ["reminder", "Reminder", "/api/nexus/tools/rtm/reminder"], ["offline", "Queue offline", "/api/nexus/tools/rtm/offline"]]
+  },
+  {
+    id: "telehealth",
+    title: "Telehealth Provider Bridge",
+    description: "Local telehealth prep works now; Zoom/Twilio Video/Daily/Doxy remain config, flag, and confirmation gated.",
+    fields: [["sessionType", "Session type", "chronic_care_review"], ["videoProvider", "local, zoom, twilio, daily, doxy", "local"], ["title", "Session title", "Chronic care review prep"], ["reason", "Non-sensitive reason", "Prepare questions for provider review"], ["questions", "Questions", "What should I ask during telehealth?"], ["preferredDateTime", "Preferred date/time text", "Next week"]],
+    actions: [["intake", "Save intake", "/api/nexus/tools/telehealth/intake"], ["prepare", "Prepare session", "/api/nexus/tools/telehealth/prepare"], ["create", "Create video if configured", "/api/nexus/tools/telehealth/session/create"], ["save", "Save session", "/api/nexus/tools/telehealth/session/save"], ["reminder", "Reminder", "/api/nexus/tools/telehealth/reminder"], ["offline", "Queue offline", "/api/nexus/tools/telehealth/offline"]]
+  },
+  {
+    id: "mobile-clinic",
+    title: "Mobile Clinic Bridge",
+    description: "Search local rural/mobile clinic options and prepare typed-location visit plans. No booking or dispatch.",
+    fields: [["query", "Search keyword", "hypertension screening"], ["serviceType", "Service type", "rural health outreach"], ["city", "City/country", "Nakuru"], ["origin", "Typed origin", "Nakuru, Kenya"], ["clinicLocation", "Clinic location text", "Community health fair site"]],
+    actions: [["search", "Search clinics", "/api/nexus/tools/mobile-clinics/search", "GET"], ["intake", "Save intake", "/api/nexus/tools/mobile-clinics/intake"], ["save", "Save clinic", "/api/nexus/tools/mobile-clinics/save"], ["visit", "Visit plan", "/api/nexus/tools/mobile-clinics/visit-plan"], ["reminder", "Reminder", "/api/nexus/tools/mobile-clinics/reminder"], ["offline", "Queue offline", "/api/nexus/tools/mobile-clinics/offline"]]
+  },
+  {
+    id: "pharmacy",
+    title: "Pharmacy Bridge",
+    description: "Search pharmacy options and prepare pharmacist questions. No refills, transfers, dispensing, dosage, or payments.",
+    fields: [["query", "Search keyword", "medication counseling"], ["questionTopic", "Question topic", "medication safety"], ["question", "Question", "What should I ask before changing a medicine?"], ["city", "City/country", "Stockton"]],
+    actions: [["search", "Search pharmacies", "/api/nexus/tools/pharmacy/search", "GET"], ["intake", "Save intake", "/api/nexus/tools/pharmacy/intake"], ["save", "Save pharmacy", "/api/nexus/tools/pharmacy/save"], ["draft", "Question draft", "/api/nexus/tools/pharmacy/question-draft"], ["reminder", "Reminder", "/api/nexus/tools/pharmacy/reminder"], ["offline", "Queue offline", "/api/nexus/tools/pharmacy/offline"]]
+  },
+  {
+    id: "patient-support",
+    title: "Patient Support Resources",
+    description: "Health literacy, CHW, rural support, RPM/RTM participation, language/accessibility, and navigation resources.",
+    fields: [["query", "Search keyword", "community health worker"], ["supportNeed", "Support need", "patient navigation"], ["cityCountry", "City/country", "Kenya"], ["reason", "Non-sensitive reason", "Find support resources"]],
+    actions: [["resources", "Search resources", "/api/nexus/tools/patient-support/resources", "GET"], ["intake", "Save intake", "/api/nexus/tools/patient-support/intake"], ["save", "Save resource", "/api/nexus/tools/patient-support/save"], ["reminder", "Reminder", "/api/nexus/tools/patient-support/reminder"], ["offline", "Queue offline", "/api/nexus/tools/patient-support/offline"]]
+  }
+]);
+
+function renderNexusMedicalSupportBridgePanel() {
+  return `
+    <section class="nexus-extended-bridge-layer nexus-medical-support-layer" data-nexus-medical-support-provider-layer="true" aria-label="${translateText("Nexus Medical Support Provider Layer")}">
+      <div class="nexus-dashboard-section-head">
+        <span class="eyebrow">${translateText("Medical Support Provider Layer")}</span>
+        <strong>${translateText("Chronic care, RPM/RTM, telehealth, mobile clinic, pharmacy, and navigation preparation")}</strong>
+      </div>
+      <p>${translateText("Nexus organizes healthcare access support for provider review only. It does not diagnose, prescribe, book, contact, dispatch, process payments, exchange records, request geolocation, or start camera/microphone.")}</p>
+      <div class="nexus-extended-bridge-grid">
+        ${NEXUS_MEDICAL_SUPPORT_BRIDGE_CONTROLS.map(control => `
+          <article class="nexus-extended-bridge-card" data-medical-bridge="${escapeHtml(control.id)}" data-medical-execution-authority="false">
+            <strong>${translateText(control.title)}</strong>
+            <small>${translateText("Local/preparation-only; provider-review required.")}</small>
+            <p>${translateText(control.description)}</p>
+            <div class="nexus-extended-bridge-fields">
+              ${control.fields.map(([name, label, value]) => `<input data-medical-bridge-field="${escapeHtml(name)}" placeholder="${escapeHtml(translateText(label))}" value="${escapeHtml(value)}">`).join("")}
+            </div>
+            <label class="nexus-extended-bridge-confirm">
+              <input type="checkbox" data-medical-bridge-confirm>
+              <span>${translateText("I confirm this visible local/preparation action. No diagnosis, prescription, booking, payment, provider contact, dispatch, camera, microphone, or location sharing.")}</span>
+            </label>
+            <div class="nexus-extended-bridge-actions">
+              ${control.actions.map(([action, label]) => `<button type="button" data-medical-bridge-action="${escapeHtml(action)}" data-medical-bridge-id="${escapeHtml(control.id)}">${translateText(label)}</button>`).join("")}
+            </div>
+          </article>
+        `).join("")}
+      </div>
+    </section>
+  `;
+}
+
+function medicalBridgePayload(id) {
+  const card = document.querySelector(`[data-medical-bridge="${id}"]`);
+  const payload = { confirmed: card?.querySelector("[data-medical-bridge-confirm]")?.checked === true };
+  card?.querySelectorAll("[data-medical-bridge-field]").forEach(input => {
+    payload[input.dataset.medicalBridgeField] = input.value.trim();
+  });
+  payload.noEmergencyAcknowledgement = true;
+  return payload;
+}
+
+async function runNexusMedicalBridgeAction(id, action) {
+  const control = NEXUS_MEDICAL_SUPPORT_BRIDGE_CONTROLS.find(item => item.id === id);
+  const actionConfig = control?.actions.find(item => item[0] === action);
+  if (!control || !actionConfig) return;
+  const [, , endpoint, method = "POST"] = actionConfig;
+  try {
+    let requestEndpoint = endpoint;
+    const payload = medicalBridgePayload(id);
+    const options = { method };
+    if (method === "GET") {
+      const params = new URLSearchParams();
+      Object.entries(payload).forEach(([key, value]) => {
+        if (key !== "confirmed" && value) params.set(key, value);
+      });
+      requestEndpoint = `${endpoint}?${params.toString()}`;
+    } else {
+      options.body = payload;
+    }
+    const result = await request(requestEndpoint, options);
+    setNexusProviderBridgeResult({
+      provider: result.provider,
+      action: result.action,
+      status: result.status,
+      message: result.message,
+      missingConfig: result.missingConfig || [],
+      data: sanitizeNexusProviderTestingDisplayData(result.data || {})
+    }, control.title);
+    await refreshNexusRealProviderTestingStatus();
+  } catch (error) {
+    setNexusProviderBridgeResult({ status: "failed_safely", message: error.message }, control.title);
+  }
+}
+
 function renderNexusRealProviderTestingPanel() {
   return `
     <section class="nexus-real-provider-testing" data-nexus-real-provider-testing="true" aria-label="${translateText("Real Provider Testing")}">
@@ -17991,6 +18124,7 @@ function renderNexusRealProviderTestingPanel() {
       </div>
       ${renderNexusMapsFieldVisitPanel()}
       ${renderNexusExtendedBridgeLayerPanel()}
+      ${renderNexusMedicalSupportBridgePanel()}
       ${renderNexusMarketplaceBridgePanel()}
       ${renderNexusLearningProviderBridgePanel()}
       ${renderNexusProviderContactBridgeCards()}
@@ -33529,6 +33663,13 @@ function bindStatic() {
       event.preventDefault();
       event.stopPropagation();
       await runNexusExtendedBridgeAction(extendedBridgeButton.dataset.extendedBridgeId, extendedBridgeButton.dataset.extendedBridgeAction);
+      return;
+    }
+    const medicalBridgeButton = event.target.closest("[data-medical-bridge-action]");
+    if (medicalBridgeButton) {
+      event.preventDefault();
+      event.stopPropagation();
+      await runNexusMedicalBridgeAction(medicalBridgeButton.dataset.medicalBridgeId, medicalBridgeButton.dataset.medicalBridgeAction);
       return;
     }
     const marketplaceBridgeCreateButton = event.target.closest("[data-marketplace-bridge-create]");

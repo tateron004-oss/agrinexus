@@ -150,6 +150,14 @@ function nexusRealProviderStatus(db, env = process.env) {
   const lmsLiveBridge = nexusRealProviders.lmsLiveBridge.status(env);
   const paymentReadinessBridge = nexusRealProviders.paymentReadinessBridge.status(env);
   const workflowOrchestratorBridge = nexusRealProviders.workflowOrchestratorBridge.status(env);
+  const medicalSupportBridge = nexusRealProviders.medicalSupportBridge.status(env);
+  const chronicDiseaseBridge = nexusRealProviders.chronicDiseaseBridge.status(env);
+  const rpmBridge = nexusRealProviders.rpmBridge.status(env);
+  const rtmBridge = nexusRealProviders.rtmBridge.status(env);
+  const telehealthBridge = nexusRealProviders.telehealthBridge.status(env);
+  const mobileClinicBridge = nexusRealProviders.mobileClinicBridge.status(env);
+  const pharmacyBridge = nexusRealProviders.pharmacyBridge.status(env);
+  const patientSupportBridge = nexusRealProviders.patientSupportBridge.status(env);
   const ownerRecipientValue = firstPresentEnvValue(env, ["OWNER_TEST_RECIPIENT_NUMBER", "TEST_RECIPIENT_NUMBER"]);
   const ownerRecipientConfigured = Boolean(ownerRecipientValue);
   const ownerRecipient = {
@@ -331,6 +339,101 @@ function nexusRealProviderStatus(db, env = process.env) {
       requiresConfirmation: true
     }),
     providerReadinessCard({
+      id: "medical-support-bridge",
+      title: "Medical Support Bridge",
+      providerName: "Nexus medical support provider layer",
+      enabled: medicalSupportBridge.enabled,
+      testability: medicalSupportBridge.enabled ? "preparation_only" : "disabled",
+      detail: "Health access, provider-review, telehealth, mobile clinic, pharmacy, and patient navigation preparation only. No diagnosis, prescribing, booking, contact, payment, or emergency dispatch.",
+      canTestNow: medicalSupportBridge.enabled ? "Create local intakes, summaries, provider-review reports, reminders, and safe offline metadata after confirmation." : "Medical Support Bridge disabled.",
+      stillNeeded: medicalSupportBridge.enabled ? [] : ["Enable NEXUS_MEDICAL_SUPPORT_BRIDGE_ENABLED=true"],
+      requiresConfirmation: true
+    }),
+    providerReadinessCard({
+      id: "chronic-disease-bridge",
+      title: "Chronic Disease Bridge",
+      providerName: "Nexus DM/HTN/obesity support",
+      enabled: chronicDiseaseBridge.enabled,
+      testability: chronicDiseaseBridge.enabled ? "preparation_only" : "disabled",
+      detail: "Diabetes Mellitus, hypertension, obesity, and cardiometabolic reading organization for provider review only.",
+      canTestNow: chronicDiseaseBridge.enabled ? "Create chronic intakes, manual readings, trend summaries, and provider-review reports." : "Chronic Disease Bridge disabled.",
+      stillNeeded: chronicDiseaseBridge.enabled ? [] : ["Enable NEXUS_CHRONIC_DISEASE_BRIDGE_ENABLED=true"],
+      requiresConfirmation: true
+    }),
+    providerReadinessCard({
+      id: "rpm-bridge",
+      title: "RPM Remote Patient Monitoring",
+      providerName: "Nexus RPM bridge",
+      enabled: rpmBridge.enabled,
+      testability: rpmBridge.enabled ? "local_only" : "disabled",
+      detail: "Manual blood pressure, glucose, pulse, weight, oxygen saturation, and temperature organization. No device connection or automated alert.",
+      canTestNow: rpmBridge.enabled ? "Save manual RPM readings, trend summaries, provider reports, reminders, and offline metadata." : "RPM Bridge disabled.",
+      stillNeeded: rpmBridge.enabled ? [] : ["Enable NEXUS_RPM_BRIDGE_ENABLED=true"],
+      requiresConfirmation: true
+    }),
+    providerReadinessCard({
+      id: "rtm-bridge",
+      title: "RTM Remote Therapeutic Monitoring",
+      providerName: "Nexus RTM bridge",
+      enabled: rtmBridge.enabled,
+      testability: rtmBridge.enabled ? "local_only" : "disabled",
+      detail: "Activity, education, participation, and adherence-discussion organization only. No therapeutic prescription or medication change.",
+      canTestNow: rtmBridge.enabled ? "Save RTM entries, participation summaries, provider reports, reminders, and offline metadata." : "RTM Bridge disabled.",
+      stillNeeded: rtmBridge.enabled ? [] : ["Enable NEXUS_RTM_BRIDGE_ENABLED=true"],
+      requiresConfirmation: true
+    }),
+    providerReadinessCard({
+      id: "telehealth-provider-bridge",
+      title: "Telehealth Provider Bridge",
+      providerName: "Nexus telehealth/video readiness bridge",
+      enabled: telehealthBridge.enabled,
+      missingConfig: [
+        ...(telehealthBridge.videoProviders?.zoom?.missingConfig || []),
+        ...(telehealthBridge.videoProviders?.twilioVideo?.enabled ? (telehealthBridge.videoProviders?.twilioVideo?.missingConfig || []) : []),
+        ...(telehealthBridge.videoProviders?.daily?.enabled ? (telehealthBridge.videoProviders?.daily?.missingConfig || []) : []),
+        ...(telehealthBridge.videoProviders?.doxy?.enabled ? (telehealthBridge.videoProviders?.doxy?.missingConfig || []) : [])
+      ],
+      testability: telehealthBridge.enabled ? "confirmation_required" : "disabled",
+      detail: "Local telehealth preparation works without credentials. Zoom/Twilio Video/Daily/Doxy require provider config, feature flags, and explicit confirmation.",
+      canTestNow: telehealthBridge.enabled ? "Prepare and save local telehealth sessions; live video providers stay missing-config/disabled unless configured." : "Telehealth Bridge disabled.",
+      stillNeeded: telehealthBridge.enabled ? ["Add video provider credentials only for approved testing"] : ["Enable NEXUS_TELEHEALTH_BRIDGE_ENABLED=true"],
+      requiresConfirmation: true,
+      requiresSandboxAccount: true
+    }),
+    providerReadinessCard({
+      id: "mobile-clinic-bridge",
+      title: "Mobile Clinic Bridge",
+      providerName: "Nexus local mobile clinic catalog",
+      enabled: mobileClinicBridge.enabled,
+      testability: mobileClinicBridge.enabled ? "local_only" : "disabled",
+      detail: "Local rural/mobile clinic search, intake, visit plans, reminders, and offline metadata. No appointment, triage, geolocation, clinic contact, or dispatch.",
+      canTestNow: mobileClinicBridge.enabled ? "Search local mobile clinic options and prepare visit plans from typed locations." : "Mobile Clinic Bridge disabled.",
+      stillNeeded: mobileClinicBridge.enabled ? [] : ["Enable NEXUS_MOBILE_CLINIC_BRIDGE_ENABLED=true"],
+      requiresConfirmation: true
+    }),
+    providerReadinessCard({
+      id: "pharmacy-bridge",
+      title: "Pharmacy Bridge",
+      providerName: "Nexus pharmacy question bridge",
+      enabled: pharmacyBridge.enabled,
+      testability: pharmacyBridge.enabled ? "local_only" : "disabled",
+      detail: "Local pharmacy search and pharmacist question drafting only. No refills, transfers, dispensing, dosage advice, payment, or pharmacy contact.",
+      canTestNow: pharmacyBridge.enabled ? "Search pharmacy options, draft safe pharmacist questions, save, remind, and queue offline metadata." : "Pharmacy Bridge disabled.",
+      stillNeeded: pharmacyBridge.enabled ? [] : ["Enable NEXUS_PHARMACY_BRIDGE_ENABLED=true"],
+      requiresConfirmation: true
+    }),
+    providerReadinessCard({
+      id: "patient-support-bridge",
+      title: "Patient Support Bridge",
+      providerName: "Nexus patient navigation resources",
+      enabled: patientSupportBridge.enabled,
+      testability: patientSupportBridge.enabled ? "local_only" : "disabled",
+      detail: "Health literacy, CHW, rural support, RPM/RTM participation, and navigation resources. No eligibility, claims, referrals, or automatic contact.",
+      canTestNow: patientSupportBridge.enabled ? "Search local patient support resources, save, remind, and queue offline metadata." : "Patient Support Bridge disabled.",
+      stillNeeded: patientSupportBridge.enabled ? [] : ["Enable NEXUS_PATIENT_SUPPORT_BRIDGE_ENABLED=true"],
+      requiresConfirmation: true
+    }),
+    providerReadinessCard({
       id: "medical-provider-search",
       title: "CMS/NPI Provider Search",
       providerName: "CMS NPPES NPI Registry",
@@ -482,7 +585,15 @@ function nexusRealProviderStatus(db, env = process.env) {
         marketplaceNotes: (db.profile?.nexusMarketplaceNotes || []).length,
         marketplaceListings: (db.profile?.marketplaceListings || []).length,
         offlineQueue: (db.profile?.offlineQueue || []).length,
-        droneMissionRequests: (db.profile?.droneMissionRequests || []).length
+        droneMissionRequests: (db.profile?.droneMissionRequests || []).length,
+        medicalSupportIntakes: (db.profile?.nexusMedicalSupportIntakes || []).length,
+        chronicDiseaseReadings: (db.profile?.nexusChronicDiseaseReadings || []).length,
+        rpmReadings: (db.profile?.nexusRpmDeviceReadings || []).length,
+        rtmEntries: (db.profile?.nexusRtmActivityEntries || []).length,
+        telehealthSessions: (db.profile?.nexusTelehealthBridgeSessions || []).length,
+        mobileClinicIntakes: (db.profile?.nexusMobileClinicIntakes || []).length,
+        pharmacyIntakes: (db.profile?.nexusPharmacyIntakes || []).length,
+        patientSupportIntakes: (db.profile?.nexusPatientSupportIntakes || []).length
       }
     }
   };
@@ -27773,6 +27884,90 @@ async function api(req, res, url) {
   if (url.pathname === "/api/nexus/tools/workflows/offline" && req.method === "POST") {
     const result = nexusRealProviders.workflowOrchestratorBridge.offline(await readBody(req), db);
     if (result.body?.status === "completed") await writeDb(db);
+    return sendProviderResult(res, result);
+  }
+
+  const medicalGetRoutes = {
+    "/api/nexus/tools/medical-support/status": () => ({ ok: true, ...nexusRealProviders.medicalSupportBridge.status() }),
+    "/api/nexus/tools/medical-support/intakes": () => nexusRealProviders.medicalSupportBridge.intakes(db),
+    "/api/nexus/tools/chronic-disease/status": () => ({ ok: true, ...nexusRealProviders.chronicDiseaseBridge.status() }),
+    "/api/nexus/tools/chronic-disease/intakes": () => nexusRealProviders.chronicDiseaseBridge.intakes(db),
+    "/api/nexus/tools/chronic-disease/readings": () => nexusRealProviders.chronicDiseaseBridge.readings(db),
+    "/api/nexus/tools/rpm/status": () => ({ ok: true, ...nexusRealProviders.rpmBridge.status() }),
+    "/api/nexus/tools/rpm/device-readings": () => nexusRealProviders.rpmBridge.deviceReadings(db),
+    "/api/nexus/tools/rtm/status": () => ({ ok: true, ...nexusRealProviders.rtmBridge.status() }),
+    "/api/nexus/tools/rtm/activity-entries": () => nexusRealProviders.rtmBridge.activityEntries(db),
+    "/api/nexus/tools/telehealth/status": () => ({ ok: true, ...nexusRealProviders.telehealthBridge.status() }),
+    "/api/nexus/tools/telehealth/intakes": () => nexusRealProviders.telehealthBridge.intakes(db),
+    "/api/nexus/tools/telehealth/sessions": () => nexusRealProviders.telehealthBridge.sessions(db),
+    "/api/nexus/tools/mobile-clinics/status": () => ({ ok: true, ...nexusRealProviders.mobileClinicBridge.status() }),
+    "/api/nexus/tools/mobile-clinics/search": () => nexusRealProviders.mobileClinicBridge.search(Object.fromEntries(url.searchParams.entries())),
+    "/api/nexus/tools/mobile-clinics/intakes": () => nexusRealProviders.mobileClinicBridge.intakes(db),
+    "/api/nexus/tools/pharmacy/status": () => ({ ok: true, ...nexusRealProviders.pharmacyBridge.status() }),
+    "/api/nexus/tools/pharmacy/search": () => nexusRealProviders.pharmacyBridge.search(Object.fromEntries(url.searchParams.entries())),
+    "/api/nexus/tools/pharmacy/intakes": () => nexusRealProviders.pharmacyBridge.intakes(db),
+    "/api/nexus/tools/patient-support/status": () => ({ ok: true, ...nexusRealProviders.patientSupportBridge.status() }),
+    "/api/nexus/tools/patient-support/resources": () => nexusRealProviders.patientSupportBridge.resources(Object.fromEntries(url.searchParams.entries())),
+    "/api/nexus/tools/patient-support/intakes": () => nexusRealProviders.patientSupportBridge.intakes(db)
+  };
+
+  if (req.method === "GET" && medicalGetRoutes[url.pathname]) {
+    const result = medicalGetRoutes[url.pathname]();
+    if (result.body) return sendProviderResult(res, result);
+    return send(res, 200, result);
+  }
+
+  const medicalPostRoutes = {
+    "/api/nexus/tools/medical-support/intake": ["medicalSupportBridge", "intake", true],
+    "/api/nexus/tools/medical-support/summary": ["medicalSupportBridge", "summary", false],
+    "/api/nexus/tools/medical-support/provider-report": ["medicalSupportBridge", "providerReport", false],
+    "/api/nexus/tools/medical-support/save": ["medicalSupportBridge", "save", true],
+    "/api/nexus/tools/medical-support/reminder": ["medicalSupportBridge", "reminder", true],
+    "/api/nexus/tools/medical-support/offline": ["medicalSupportBridge", "offline", true],
+    "/api/nexus/tools/chronic-disease/intake": ["chronicDiseaseBridge", "intake", true],
+    "/api/nexus/tools/chronic-disease/reading": ["chronicDiseaseBridge", "reading", true],
+    "/api/nexus/tools/chronic-disease/trend-summary": ["chronicDiseaseBridge", "trendSummary", false],
+    "/api/nexus/tools/chronic-disease/provider-report": ["chronicDiseaseBridge", "providerReport", false],
+    "/api/nexus/tools/chronic-disease/reminder": ["chronicDiseaseBridge", "reminder", true],
+    "/api/nexus/tools/chronic-disease/offline": ["chronicDiseaseBridge", "offline", true],
+    "/api/nexus/tools/rpm/intake": ["rpmBridge", "intake", true],
+    "/api/nexus/tools/rpm/device-reading": ["rpmBridge", "deviceReading", true],
+    "/api/nexus/tools/rpm/trend-summary": ["rpmBridge", "trendSummary", false],
+    "/api/nexus/tools/rpm/provider-report": ["rpmBridge", "providerReport", false],
+    "/api/nexus/tools/rpm/reminder": ["rpmBridge", "reminder", true],
+    "/api/nexus/tools/rpm/offline": ["rpmBridge", "offline", true],
+    "/api/nexus/tools/rtm/intake": ["rtmBridge", "intake", true],
+    "/api/nexus/tools/rtm/activity-entry": ["rtmBridge", "activityEntry", true],
+    "/api/nexus/tools/rtm/adherence-summary": ["rtmBridge", "adherenceSummary", false],
+    "/api/nexus/tools/rtm/provider-report": ["rtmBridge", "providerReport", false],
+    "/api/nexus/tools/rtm/reminder": ["rtmBridge", "reminder", true],
+    "/api/nexus/tools/rtm/offline": ["rtmBridge", "offline", true],
+    "/api/nexus/tools/telehealth/intake": ["telehealthBridge", "intake", true],
+    "/api/nexus/tools/telehealth/prepare": ["telehealthBridge", "prepare", false],
+    "/api/nexus/tools/telehealth/session/create": ["telehealthBridge", "createSession", false],
+    "/api/nexus/tools/telehealth/session/save": ["telehealthBridge", "saveSession", true],
+    "/api/nexus/tools/telehealth/reminder": ["telehealthBridge", "reminder", true],
+    "/api/nexus/tools/telehealth/offline": ["telehealthBridge", "offline", true],
+    "/api/nexus/tools/mobile-clinics/intake": ["mobileClinicBridge", "intake", true],
+    "/api/nexus/tools/mobile-clinics/save": ["mobileClinicBridge", "save", true],
+    "/api/nexus/tools/mobile-clinics/visit-plan": ["mobileClinicBridge", "visitPlan", false],
+    "/api/nexus/tools/mobile-clinics/reminder": ["mobileClinicBridge", "reminder", true],
+    "/api/nexus/tools/mobile-clinics/offline": ["mobileClinicBridge", "offline", true],
+    "/api/nexus/tools/pharmacy/intake": ["pharmacyBridge", "intake", true],
+    "/api/nexus/tools/pharmacy/save": ["pharmacyBridge", "save", true],
+    "/api/nexus/tools/pharmacy/question-draft": ["pharmacyBridge", "questionDraft", false],
+    "/api/nexus/tools/pharmacy/reminder": ["pharmacyBridge", "reminder", true],
+    "/api/nexus/tools/pharmacy/offline": ["pharmacyBridge", "offline", true],
+    "/api/nexus/tools/patient-support/intake": ["patientSupportBridge", "intake", true],
+    "/api/nexus/tools/patient-support/save": ["patientSupportBridge", "save", true],
+    "/api/nexus/tools/patient-support/reminder": ["patientSupportBridge", "reminder", true],
+    "/api/nexus/tools/patient-support/offline": ["patientSupportBridge", "offline", true]
+  };
+
+  if (req.method === "POST" && medicalPostRoutes[url.pathname]) {
+    const [providerKey, methodName, shouldPersist] = medicalPostRoutes[url.pathname];
+    const result = await nexusRealProviders[providerKey][methodName](await readBody(req), db);
+    if (shouldPersist && result.body?.status === "completed") await writeDb(db);
     return sendProviderResult(res, result);
   }
 
