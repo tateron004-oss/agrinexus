@@ -18352,6 +18352,31 @@ function renderNexusAgenticBrainProviderQueue() {
   `;
 }
 
+function renderNexusAgenticBrainResultCards() {
+  const result = nexusAgenticBrainLastResult || null;
+  const cards = Array.isArray(result?.preparedCards) ? result.preparedCards : [];
+  const message = result?.message || result?.message === "" ? String(result.message) : "";
+  if (!result) return `<p>${translateText("No Nexus brain result yet.")}</p>`;
+  return `
+    <div class="nexus-real-provider-card-grid" data-nexus-agentic-result-cards="true">
+      <article class="nexus-real-provider-card">
+        <strong>${escapeHtml(translateText("Nexus response"))}</strong>
+        <span>${escapeHtml(message || translateText("Nexus prepared a local result."))}</span>
+        <small>${escapeHtml(translateText("Local preparation only. No provider, pharmacy, call, message, payment, location, camera, drone, appointment, or emergency action was executed."))}</small>
+      </article>
+      ${cards.slice(0, 10).map(card => `
+        <article class="nexus-real-provider-card" data-nexus-agentic-result-card="${escapeHtml(card.type || "prepared")}">
+          <strong>${escapeHtml(card.title || "Prepared item")}</strong>
+          <span>${escapeHtml(card.status || "prepared locally")}</span>
+          ${card.localOnly ? `<small>${escapeHtml(translateText("Local-only"))}</small>` : ""}
+          ${card.needsRealProvider ? `<small>${escapeHtml(translateText("Needs verified provider/partner integration before external action."))}</small>` : ""}
+          ${card.blockedCategories?.length ? `<small>${escapeHtml(translateText("Blocked/gated"))}: ${card.blockedCategories.map(escapeHtml).join(", ")}</small>` : ""}
+        </article>
+      `).join("")}
+    </div>
+  `;
+}
+
 function renderNexusAgenticBrainMatrix() {
   const matrix = Array.isArray(nexusAgenticBrainMatrix) ? nexusAgenticBrainMatrix : [];
   if (!matrix.length) return "";
@@ -18395,7 +18420,11 @@ function renderNexusAgenticBrainPanel() {
         <button type="button" data-nexus-brain-action="verify">${translateText("Verify result")}</button>
         <button type="button" data-nexus-brain-action="cancel">${translateText("Cancel active task")}</button>
       </div>
-      <pre class="nexus-real-provider-result" data-nexus-agentic-brain-result="true">${escapeHtml(nexusAgenticBrainLastResult ? JSON.stringify(nexusAgenticBrainLastResult, null, 2) : translateText("No Nexus brain result yet."))}</pre>
+      ${renderNexusAgenticBrainResultCards()}
+      <details class="nexus-real-provider-result" data-nexus-agentic-brain-result="true">
+        <summary>${translateText("Technical result details")}</summary>
+        <pre>${escapeHtml(nexusAgenticBrainLastResult ? JSON.stringify(nexusAgenticBrainLastResult, null, 2) : translateText("No Nexus brain result yet."))}</pre>
+      </details>
       <h4>${translateText("Active tasks")}</h4>
       ${renderNexusAgenticBrainTasks()}
       <h4>${translateText("Provider/Admin local queue")}</h4>
@@ -18468,8 +18497,8 @@ async function runNexusAgenticBrainAction(action = "command", options = {}) {
 function handleNexusAgenticBrainTypedCommand(command = "") {
   const normalized = String(command || "").trim();
   if (!normalized) return false;
-  if (!/^nexus,/i.test(normalized) && !/^(continue|confirm|cancel|verify result)$/i.test(normalized)) return false;
-  if (!/(blood pressure|bp\b|glucose|blood sugar|diabetes|obesity|hypertension|provider|care team|report|summary|remind|rpm|rtm|telehealth|mobile clinic|agriculture|training|marketplace|inquiry|farm jobs|drone|field visit|course|clinic|pharmacy|offline|continue|confirm|cancel|verify)/i.test(normalized)) return false;
+  if (!/^nexus,/i.test(normalized) && !/^(continue|confirm|cancel|verify result|what can nexus do|i need support|show my active cases|what did you prepare|what still needs a real provider)/i.test(normalized)) return false;
+  if (!/(what can nexus do|i need support|active cases|what did you prepare|what still needs a real provider|blood pressure|bp\b|glucose|blood sugar|fasting sugar|diabetes|obesity|hypertension|provider|care team|report|summary|remind|rpm|rtm|telehealth|mobile clinic|agriculture|training|marketplace|inquiry|farm jobs|digital literacy|ai literacy|drone|field visit|crop|course|clinic|pharmacy|offline|continue|confirm|cancel|verify)/i.test(normalized)) return false;
   void runNexusAgenticBrainAction("command", { command: normalized });
   return true;
 }
