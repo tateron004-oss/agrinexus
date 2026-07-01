@@ -10,5 +10,6 @@ module.exports = {
   stripe: require("./stripeProvider"),
   offlineSync: require("./offlineSyncProvider"),
   reminders: require("./reminderProvider"),
-  providerContactBridge: require("./providerContactBridgeProvider")
+  providerContactBridge: require("./providerContactBridgeProvider"),
+  learningBridge: require("./learningBridgeProvider")
 };

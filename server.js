@@ -140,6 +140,7 @@ function nexusRealProviderStatus(db, env = process.env) {
   const reminders = nexusRealProviders.reminders.status(env);
   const stripe = nexusRealProviders.stripe.status(env);
   const providerContactBridge = nexusRealProviders.providerContactBridge.status(env);
+  const learningBridge = nexusRealProviders.learningBridge.status(env);
   const ownerRecipientValue = firstPresentEnvValue(env, ["OWNER_TEST_RECIPIENT_NUMBER", "TEST_RECIPIENT_NUMBER"]);
   const ownerRecipientConfigured = Boolean(ownerRecipientValue);
   const ownerRecipient = {
@@ -260,6 +261,18 @@ function nexusRealProviderStatus(db, env = process.env) {
       ]
     }),
     providerReadinessCard({
+      id: "learning-provider-bridge",
+      title: "Learning Provider Bridge",
+      providerName: "Nexus local learning bridge",
+      enabled: learningBridge.enabled,
+      missingConfig: [],
+      testability: learningBridge.enabled ? "local_only" : "disabled",
+      detail: "Searches the local learning catalog now and can merge Moodle courses when LMS credentials are configured.",
+      canTestNow: learningBridge.enabled ? "Search local learning resources, view details, save, add a reminder, or queue safe metadata for offline review." : "Learning Provider Bridge disabled.",
+      stillNeeded: learningBridge.enabled ? [] : ["Enable NEXUS_LEARNING_BRIDGE_ENABLED=true"],
+      requiresConfirmation: true
+    }),
+    providerReadinessCard({
       id: "zoom",
       title: "Zoom Sessions",
       providerName: "Zoom server-to-server OAuth",
@@ -348,6 +361,7 @@ function nexusRealProviderStatus(db, env = process.env) {
         reminders: (db.profile?.nexusReminders || []).length,
         savedProviders: (db.profile?.nexusSavedProviders || []).length,
         providerNotes: (db.profile?.nexusProviderNotes || []).length,
+        savedLearningResources: (db.profile?.nexusSavedLearningResources || []).length,
         marketplaceListings: (db.profile?.marketplaceListings || []).length,
         offlineQueue: (db.profile?.offlineQueue || []).length,
         droneMissionRequests: (db.profile?.droneMissionRequests || []).length
@@ -27324,7 +27338,19 @@ async function api(req, res, url) {
   }
 
   if (url.pathname === "/api/nexus/tools/learning/status" && req.method === "GET") {
-    return send(res, 200, { ok: true, ...nexusRealProviders.moodle.status() });
+    return send(res, 200, { ok: true, ...nexusRealProviders.learningBridge.status() });
+  }
+
+  if (url.pathname === "/api/nexus/tools/learning/search" && req.method === "GET") {
+    return sendProviderResult(res, await nexusRealProviders.learningBridge.search({
+      query: url.searchParams.get("q") || url.searchParams.get("query") || "",
+      category: url.searchParams.get("category") || ""
+    }));
+  }
+
+  if (url.pathname.startsWith("/api/nexus/tools/learning/resource/") && req.method === "GET") {
+    const resourceId = decodeURIComponent(url.pathname.replace("/api/nexus/tools/learning/resource/", ""));
+    return sendProviderResult(res, nexusRealProviders.learningBridge.resource(resourceId));
   }
 
   if (url.pathname === "/api/nexus/tools/learning/courses" && req.method === "GET") {
@@ -27333,6 +27359,24 @@ async function api(req, res, url) {
 
   if (url.pathname === "/api/nexus/tools/learning/enroll" && req.method === "POST") {
     return sendProviderResult(res, await nexusRealProviders.moodle.enroll(await readBody(req)));
+  }
+
+  if (url.pathname === "/api/nexus/tools/learning/save" && req.method === "POST") {
+    const result = nexusRealProviders.learningBridge.saveResource(await readBody(req), db);
+    if (result.body?.status === "completed") await writeDb(db);
+    return sendProviderResult(res, result);
+  }
+
+  if (url.pathname === "/api/nexus/tools/learning/reminder" && req.method === "POST") {
+    const result = nexusRealProviders.learningBridge.createLearningReminder(await readBody(req), db);
+    if (result.body?.status === "completed") await writeDb(db);
+    return sendProviderResult(res, result);
+  }
+
+  if (url.pathname === "/api/nexus/tools/learning/offline" && req.method === "POST") {
+    const result = nexusRealProviders.learningBridge.queueOffline(await readBody(req), db);
+    if (result.body?.status === "completed") await writeDb(db);
+    return sendProviderResult(res, result);
   }
 
   if (url.pathname === "/api/nexus/tools/zoom/status" && req.method === "GET") {

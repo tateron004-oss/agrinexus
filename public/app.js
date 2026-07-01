@@ -81,6 +81,7 @@ let selectedNexusDashboardModeId = "agriculture-support";
 let nexusRealProviderTestingStatus = null;
 let nexusRealProviderTestingLastResult = null;
 let nexusProviderContactBridgeCards = [];
+let nexusLearningProviderBridgeCards = [];
 let experienceMode = localStorage.getItem("agrinexusExperienceMode") || "";
 let pendingWorkflow = null;
 let pendingGrandmaAction = null;
@@ -17288,6 +17289,7 @@ const NEXUS_REAL_PROVIDER_TEST_CONTROLS = Object.freeze([
   { id: "reminder-create", label: "Create in-app reminder", detail: "Local reminder record only; no OS notification permission.", endpoint: "/api/nexus/tools/reminders/create", method: "POST", fields: ["title", "dueAt"] },
   { id: "marketplace-listing", label: "Create marketplace test listing", detail: "Local AgriTrade listing only; no buyer contact or payment.", endpoint: "/api/nexus/tools/marketplace/listing", method: "POST", fields: ["title", "crop", "quantity"] },
   { id: "offline-queue", label: "Queue offline item", detail: "Safe local queue only; sensitive/high-risk records are blocked.", endpoint: "/api/nexus/tools/offline/queue", method: "POST", fields: ["type", "content"] },
+  { id: "learning-search", label: "Search Learning Bridge", detail: "Local learning catalog works without LMS credentials.", endpoint: "/api/nexus/tools/learning/search", method: "GET", fields: ["query", "category"] },
   { id: "learning-courses", label: "Search learning courses", detail: "LMS course lookup when configured.", endpoint: "/api/nexus/tools/learning/courses", method: "GET", fields: [] },
   { id: "zoom-meeting", label: "Create Zoom test meeting", detail: "Only when configured and confirmed.", endpoint: "/api/nexus/tools/zoom/meeting", method: "POST", fields: ["topic"] },
   { id: "sms-send", label: "Send test SMS", detail: "Twilio SMS only when configured, enabled, and confirmed.", endpoint: "/api/nexus/tools/sms/send", method: "POST", fields: ["to", "message"] },
@@ -17434,6 +17436,96 @@ function renderNexusProviderContactBridgeCards() {
   `;
 }
 
+const NEXUS_LEARNING_BRIDGE_CATEGORIES = Object.freeze([
+  ["", "All categories"],
+  ["agriculture-training", "Agriculture training"],
+  ["crop-issue-education", "Crop issue education"],
+  ["workforce-skills", "Jobs & Workforce"],
+  ["digital-literacy", "Training & Literacy"],
+  ["health-access-education", "Health Access Preparation"],
+  ["marketplace-training", "Marketplace / AgriTrade"],
+  ["drone-agritech-learning", "Drones / AgriTech"],
+  ["farm-business", "Farm business"]
+]);
+
+function learningBridgeStatusCard() {
+  return (nexusRealProviderTestingStatus?.cards || []).find(card => card.id === "learning-provider-bridge") || null;
+}
+
+function learningBridgeLmsStatusCard() {
+  return (nexusRealProviderTestingStatus?.cards || []).find(card => card.id === "learning-lms") || null;
+}
+
+function renderNexusLearningProviderBridgeCards() {
+  if (!Array.isArray(nexusLearningProviderBridgeCards) || !nexusLearningProviderBridgeCards.length) {
+    return `<p>${translateText("Search irrigation, job readiness, health visit, crop issue, seller basics, digital literacy, or drone/agritech to load safe learning resource cards.")}</p>`;
+  }
+  return `
+    <div class="nexus-learning-bridge-card-grid">
+      ${nexusLearningProviderBridgeCards.map((card, index) => `
+        <article class="nexus-learning-bridge-card" data-learning-bridge-card="${index}" data-learning-source="${escapeHtml(card.sourceType || card.source || "local_catalog")}">
+          <div class="nexus-learning-bridge-summary">
+            <strong>${escapeHtml(card.title || "Learning resource")}</strong>
+            <small>${translateText("Category")}: ${escapeHtml(card.category || "learning")}</small>
+            <small>${translateText("Level")}: ${escapeHtml(card.level || "Starter")} - ${translateText("Duration")}: ${escapeHtml(card.duration || "Self-paced")}</small>
+            <small>${translateText("Source")}: ${escapeHtml(card.source || "Nexus local starter catalog")}</small>
+            <small>${escapeHtml(card.summary || "Preparation-first learning resource.")}</small>
+          </div>
+          <label>
+            <span>${translateText("Learning reminder time/text")}</span>
+            <input data-learning-bridge-field="dueAt" placeholder="${escapeHtml(translateText("Tomorrow at 9 AM"))}">
+          </label>
+          <label class="nexus-learning-bridge-confirm">
+            <input type="checkbox" data-learning-bridge-confirm>
+            <span>${translateText("I confirm this visible learning action.")}</span>
+          </label>
+          <div class="nexus-learning-bridge-actions">
+            <button type="button" data-learning-bridge-action="view" data-learning-bridge-index="${index}">${translateText("View details")}</button>
+            <button type="button" data-learning-bridge-action="save" data-learning-bridge-index="${index}">${translateText("Save resource")}</button>
+            <button type="button" data-learning-bridge-action="reminder" data-learning-bridge-index="${index}">${translateText("Add learning reminder")}</button>
+            <button type="button" data-learning-bridge-action="offline" data-learning-bridge-index="${index}" ${card.sourceType === "lms" ? "disabled" : ""}>${translateText(card.sourceType === "lms" ? "Offline unavailable" : "Queue for offline")}</button>
+          </div>
+        </article>
+      `).join("")}
+    </div>
+  `;
+}
+
+function renderNexusLearningProviderBridgePanel() {
+  const bridgeStatus = learningBridgeStatusCard();
+  const lmsStatus = learningBridgeLmsStatusCard();
+  return `
+    <section class="nexus-learning-provider-bridge" data-nexus-learning-provider-bridge="true" aria-label="${translateText("Learning Provider Bridge")}">
+      <div class="nexus-dashboard-section-head">
+        <span class="eyebrow">${translateText("Learning Provider Bridge")}</span>
+        <strong>${translateText("Find safe learning resources")}</strong>
+      </div>
+      <p>${translateText("Local learning resources work without LMS credentials. Moodle/Koachlearn courses can appear separately when configured. Nexus does not enroll, issue credentials, store private learner records, diagnose, prescribe, contact providers, or process payments from this bridge.")}</p>
+      <div class="nexus-learning-bridge-status">
+        <small>${translateText("Bridge")}: ${escapeHtml(bridgeStatus?.status || "Checking")}</small>
+        <small>${translateText("LMS")}: ${escapeHtml(lmsStatus?.status || "Checking")} ${Array.isArray(lmsStatus?.missingConfig) && lmsStatus.missingConfig.length ? `(${translateText("missing")} ${lmsStatus.missingConfig.map(name => escapeHtml(name)).join(", ")})` : ""}</small>
+      </div>
+      <div class="nexus-learning-bridge-search">
+        <input data-learning-bridge-query placeholder="${escapeHtml(translateText("Search irrigation, job readiness, health visit..."))}">
+        <select data-learning-bridge-category aria-label="${escapeHtml(translateText("Learning category"))}">
+          ${NEXUS_LEARNING_BRIDGE_CATEGORIES.map(([value, label]) => `<option value="${escapeHtml(value)}">${translateText(label)}</option>`).join("")}
+        </select>
+        <button type="button" data-learning-bridge-search>${translateText("Search learning resources")}</button>
+      </div>
+      <div class="nexus-learning-bridge-suggestions" aria-label="${translateText("Learning Bridge mode suggestions")}">
+        <button type="button" data-learning-bridge-suggestion="irrigation">Agriculture Support</button>
+        <button type="button" data-learning-bridge-suggestion="job readiness">Jobs & Workforce</button>
+        <button type="button" data-learning-bridge-suggestion="digital literacy">Training & Literacy</button>
+        <button type="button" data-learning-bridge-suggestion="health visit">Health Access Preparation</button>
+        <button type="button" data-learning-bridge-suggestion="chronic care questions">Chronic Care Preparation</button>
+        <button type="button" data-learning-bridge-suggestion="AgriTrade seller basics">Marketplace / AgriTrade</button>
+        <button type="button" data-learning-bridge-suggestion="drone agritech">Drones / AgriTech</button>
+      </div>
+      ${renderNexusLearningProviderBridgeCards()}
+    </section>
+  `;
+}
+
 function renderNexusRealProviderTestingPanel() {
   return `
     <section class="nexus-real-provider-testing" data-nexus-real-provider-testing="true" aria-label="${translateText("Real Provider Testing")}">
@@ -17452,6 +17544,7 @@ function renderNexusRealProviderTestingPanel() {
       <div class="nexus-real-provider-control-grid" aria-label="${translateText("Provider test controls")}">
         ${renderNexusRealProviderTestControls()}
       </div>
+      ${renderNexusLearningProviderBridgePanel()}
       ${renderNexusProviderContactBridgeCards()}
       <pre id="nexusRealProviderTestingResult" class="nexus-real-provider-result" aria-live="polite">${escapeHtml(nexusRealProviderTestingLastResult || translateText("No provider test result yet."))}</pre>
     </section>
@@ -17486,6 +17579,12 @@ function realProviderControlPayload(controlId) {
     });
     return { control: { ...control, endpoint: `${control.endpoint}?${params.toString()}` }, body: null };
   }
+  if (controlId === "learning-search") {
+    const params = new URLSearchParams();
+    if (body.query) params.set("q", body.query);
+    if (body.category) params.set("category", body.category);
+    return { control: { ...control, endpoint: `${control.endpoint}?${params.toString()}` }, body: null };
+  }
   return { control, body };
 }
 
@@ -17500,6 +17599,9 @@ async function runNexusRealProviderTest(controlId) {
     const result = await request(control.endpoint, control.method === "GET" ? { method: "GET" } : { method: "POST", body });
     if (controlId === "provider-search") {
       nexusProviderContactBridgeCards = Array.isArray(result.data?.cards) ? result.data.cards : [];
+    }
+    if (controlId === "learning-search") {
+      nexusLearningProviderBridgeCards = Array.isArray(result.data?.cards) ? result.data.cards : [];
     }
     const displayData = sanitizeNexusProviderTestingDisplayData(result.data || {});
     nexusRealProviderTestingLastResult = JSON.stringify({
@@ -17624,6 +17726,99 @@ async function runNexusProviderContactBridgeAction(action, index) {
         missingConfig: result.missingConfig || [],
         requiresConfirmation: result.requiresConfirmation || false,
         data: displayData
+      }, label);
+      await refreshNexusRealProviderTestingStatus();
+    }
+  } catch (error) {
+    setNexusProviderBridgeResult({ status: "failed_safely", message: error.message }, label);
+  }
+}
+
+function learningBridgeCard(index) {
+  return Array.isArray(nexusLearningProviderBridgeCards) ? nexusLearningProviderBridgeCards[Number(index)] : null;
+}
+
+function learningBridgeContainer(index) {
+  return document.querySelector(`[data-learning-bridge-card="${index}"]`);
+}
+
+function learningBridgeConfirmed(index) {
+  return learningBridgeContainer(index)?.querySelector("[data-learning-bridge-confirm]")?.checked === true;
+}
+
+function learningBridgeField(index, name) {
+  return learningBridgeContainer(index)?.querySelector(`[data-learning-bridge-field="${name}"]`)?.value?.trim() || "";
+}
+
+function learningBridgePayload(card, index) {
+  return {
+    resourceId: card.id,
+    id: card.id,
+    title: card.title,
+    category: card.category,
+    level: card.level,
+    source: card.source,
+    dueAt: learningBridgeField(index, "dueAt"),
+    confirmed: learningBridgeConfirmed(index)
+  };
+}
+
+async function searchNexusLearningProviderBridge(queryOverride = "") {
+  const queryInput = document.querySelector("[data-learning-bridge-query]");
+  const categoryInput = document.querySelector("[data-learning-bridge-category]");
+  const query = queryOverride || queryInput?.value?.trim() || "";
+  if (queryInput && queryOverride) queryInput.value = queryOverride;
+  const params = new URLSearchParams();
+  if (query) params.set("q", query);
+  if (categoryInput?.value) params.set("category", categoryInput.value);
+  const output = $("#nexusRealProviderTestingResult");
+  if (output) output.textContent = "Searching Learning Provider Bridge...";
+  try {
+    const result = await request(`/api/nexus/tools/learning/search?${params.toString()}`, { method: "GET" });
+    nexusLearningProviderBridgeCards = Array.isArray(result.data?.cards) ? result.data.cards : [];
+    nexusRealProviderTestingLastResult = JSON.stringify({
+      provider: result.provider,
+      action: result.action,
+      status: result.status,
+      message: result.message,
+      lmsStatus: result.data?.lmsStatus || {},
+      cards: nexusLearningProviderBridgeCards.map(card => ({
+        title: card.title,
+        category: card.category,
+        level: card.level,
+        source: card.source
+      }))
+    }, null, 2);
+    renderUserWorkspace();
+  } catch (error) {
+    setNexusProviderBridgeResult({ status: "failed_safely", message: error.message }, "Learning Provider Bridge");
+  }
+}
+
+async function runNexusLearningProviderBridgeAction(action, index) {
+  const card = learningBridgeCard(index);
+  if (!card) return;
+  const payload = learningBridgePayload(card, index);
+  const label = "Learning Provider Bridge";
+  try {
+    let result;
+    if (action === "view") {
+      result = await request(`/api/nexus/tools/learning/resource/${encodeURIComponent(card.id)}`, { method: "GET" });
+    } else if (action === "save") {
+      result = await request("/api/nexus/tools/learning/save", { method: "POST", body: payload });
+    } else if (action === "reminder") {
+      result = await request("/api/nexus/tools/learning/reminder", { method: "POST", body: payload });
+    } else if (action === "offline") {
+      result = await request("/api/nexus/tools/learning/offline", { method: "POST", body: payload });
+    }
+    if (result) {
+      setNexusProviderBridgeResult({
+        provider: result.provider,
+        action: result.action,
+        status: result.status,
+        message: result.message,
+        requiresConfirmation: result.requiresConfirmation || false,
+        data: sanitizeNexusProviderTestingDisplayData(result.data || {})
       }, label);
       await refreshNexusRealProviderTestingStatus();
     }
@@ -32740,6 +32935,27 @@ function bindStatic() {
       event.preventDefault();
       event.stopPropagation();
       await runNexusRealProviderTest(realProviderTestButton.dataset.realProviderTest);
+      return;
+    }
+    const learningBridgeSearchButton = event.target.closest("[data-learning-bridge-search]");
+    if (learningBridgeSearchButton) {
+      event.preventDefault();
+      event.stopPropagation();
+      await searchNexusLearningProviderBridge();
+      return;
+    }
+    const learningBridgeSuggestionButton = event.target.closest("[data-learning-bridge-suggestion]");
+    if (learningBridgeSuggestionButton) {
+      event.preventDefault();
+      event.stopPropagation();
+      await searchNexusLearningProviderBridge(learningBridgeSuggestionButton.dataset.learningBridgeSuggestion || "");
+      return;
+    }
+    const learningBridgeButton = event.target.closest("[data-learning-bridge-action]");
+    if (learningBridgeButton) {
+      event.preventDefault();
+      event.stopPropagation();
+      await runNexusLearningProviderBridgeAction(learningBridgeButton.dataset.learningBridgeAction, learningBridgeButton.dataset.learningBridgeIndex);
       return;
     }
     const providerBridgeButton = event.target.closest("[data-provider-contact-action]");
