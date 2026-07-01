@@ -8,6 +8,7 @@ const { createNexusPlan, validateNexusPlan } = require("./public/nexus-planner.j
 const nexusAssistantRuntime = require("./server/nexus-assistant-runtime-entrypoint.js");
 const nexusStandardUserAgentExperience = require("./server/nexus-standard-user-agent-experience.js");
 const nexusProductionRuntime = require("./server/nexusProductionRuntime.js");
+const nexusAgenticBrainRuntime = require("./server/nexusAgenticBrainRuntime.js");
 const nexusRealProviders = require("./server/providers");
 
 function loadEnvFile(filePath) {
@@ -27541,6 +27542,38 @@ async function api(req, res, url) {
 
   if (url.pathname === "/api/nexus/runtime/verify" && req.method === "POST") {
     const result = nexusProductionRuntime.verify(await readBody(req), db, process.env);
+    await writeDb(db);
+    return send(res, 200, result);
+  }
+
+  if (url.pathname === "/api/nexus/brain/status" && req.method === "GET") {
+    return send(res, 200, nexusAgenticBrainRuntime.status(db, process.env));
+  }
+
+  if (url.pathname === "/api/nexus/brain/tasks" && req.method === "GET") {
+    return send(res, 200, nexusAgenticBrainRuntime.listTasks(db));
+  }
+
+  if (url.pathname === "/api/nexus/brain/command" && req.method === "POST") {
+    const result = await nexusAgenticBrainRuntime.handleCommand(await readBody(req), db, process.env);
+    await writeDb(db);
+    return send(res, 200, result);
+  }
+
+  if (url.pathname === "/api/nexus/brain/task" && req.method === "POST") {
+    const result = nexusAgenticBrainRuntime.updateTask(await readBody(req), db);
+    await writeDb(db);
+    return send(res, 200, result);
+  }
+
+  if (url.pathname === "/api/nexus/brain/provider/respond" && req.method === "POST") {
+    const result = nexusAgenticBrainRuntime.providerRespond(await readBody(req), db);
+    await writeDb(db);
+    return send(res, 200, result);
+  }
+
+  if (url.pathname === "/api/nexus/brain/verify" && req.method === "POST") {
+    const result = nexusAgenticBrainRuntime.verifyTask(await readBody(req), db, process.env);
     await writeDb(db);
     return send(res, 200, result);
   }

@@ -85,6 +85,12 @@ let nexusProductionRuntimeCapabilities = [];
 let nexusProductionRuntimeLastPlan = null;
 let nexusProductionRuntimeLastResult = null;
 let nexusProductionRuntimeLastVerification = null;
+let nexusAgenticBrainStatus = null;
+let nexusAgenticBrainTasks = [];
+let nexusAgenticBrainProviderQueue = [];
+let nexusAgenticBrainActivity = [];
+let nexusAgenticBrainMatrix = [];
+let nexusAgenticBrainLastResult = null;
 let nexusProviderContactBridgeCards = [];
 let nexusLearningProviderBridgeCards = [];
 let nexusMarketplaceBridgeCards = [];
@@ -796,6 +802,7 @@ function handleNexusCareTeamReportCopyViewCaptionCommand(command = "") {
 
 function handleNexusStandardUserSafeTypedCommand(command = "") {
   if (experienceMode !== "user") return false;
+  if (handleNexusAgenticBrainTypedCommand(command)) return true;
   if (handleNexusProductionRuntimeTypedCommand(command)) return true;
   if (handleNexusOpenDialogueAgentCommand(command)) return true;
   if (handleJarvisStyleStandardUserSafetyResponse(command)) return true;
@@ -18168,7 +18175,7 @@ function renderNexusProductionActionAssistantPanel() {
         <strong>${translateText("Nexus Production Action Assistant")}</strong>
       </div>
       <p>${translateText("Type a goal. Nexus will plan the correct capability, show missing information, require confirmation when needed, execute approved local actions now, and use configured live connectors only when provider gates are active.")}</p>
-      <p>${translateText("Nexus does not diagnose, prescribe, replace licensed professionals, dispatch emergencies, start camera or microphone, send messages, book, pay, or contact providers without the required connector, approval, and audit controls.")}</p>
+      <p>${translateText("Nexus does not diagnose, prescribe, replace licensed professionals, route emergency services, start camera or microphone, send messages, book, pay, or contact providers without the required connector, approval, and audit controls.")}</p>
       <div class="nexus-real-provider-status-actions">
         <button type="button" data-nexus-runtime-action="capabilities">${translateText("Show available capabilities")}</button>
         <span>${translateText("Runtime")}: ${escapeHtml(String(status.enabled ?? "unknown"))} · ${translateText("Live execution")}: ${escapeHtml(String(status.liveExecutionEnabled ?? false))}</span>
@@ -18269,6 +18276,174 @@ function handleNexusProductionRuntimeTypedCommand(command = "") {
   if (!normalized) return false;
   if (!/^nexus,/i.test(normalized) && !/(verify the result|available actions|queue this offline|remind me|provider|pharmacy|mobile clinic|video doctor|blood pressure|agriculture training|farm jobs|marketplace inquiry|drone service)/i.test(normalized)) return false;
   void runNexusProductionRuntimeAction("plan", normalized);
+  return true;
+}
+
+function nexusAgenticBrainDefaultCommand() {
+  return "Nexus, help me manage my blood pressure follow-up, send my readings to a provider, remind me tonight, and check if the provider responds.";
+}
+
+function renderNexusAgenticBrainTasks() {
+  const tasks = Array.isArray(nexusAgenticBrainTasks) ? nexusAgenticBrainTasks : [];
+  if (!tasks.length) return `<p>${translateText("No active Nexus brain tasks yet.")}</p>`;
+  return `
+    <div class="nexus-real-provider-card-grid" data-nexus-agentic-brain-task-list="true">
+      ${tasks.slice(0, 8).map(task => `
+        <article class="nexus-real-provider-card" data-nexus-agentic-task-id="${escapeHtml(task.taskId || "")}">
+          <strong>${escapeHtml(task.title || task.type || "Nexus task")}</strong>
+          <span>${escapeHtml(task.type || "task")} Â· ${escapeHtml(task.status || "unknown")}</span>
+          <small>${translateText("Capabilities")}: ${(task.capabilities || []).slice(0, 4).map(escapeHtml).join(", ") || escapeHtml(translateText("pending"))}</small>
+          ${task.missingInformation?.length ? `<small>${translateText("Needs")}: ${task.missingInformation.map(escapeHtml).join(", ")}</small>` : ""}
+          ${task.providerQueueId ? `<small>${translateText("Provider queue")}: ${escapeHtml(task.providerQueueId)}</small>` : ""}
+          <div class="nexus-extended-bridge-actions">
+            <button type="button" data-nexus-brain-action="resume" data-task-id="${escapeHtml(task.taskId)}">${translateText("Resume")}</button>
+            <button type="button" data-nexus-brain-action="verify" data-task-id="${escapeHtml(task.taskId)}">${translateText("Verify status")}</button>
+            <button type="button" data-nexus-brain-action="complete" data-task-id="${escapeHtml(task.taskId)}">${translateText("Complete")}</button>
+            <button type="button" data-nexus-brain-action="cancel" data-task-id="${escapeHtml(task.taskId)}">${translateText("Cancel")}</button>
+          </div>
+        </article>
+      `).join("")}
+    </div>
+  `;
+}
+
+function renderNexusAgenticBrainProviderQueue() {
+  const items = Array.isArray(nexusAgenticBrainProviderQueue) ? nexusAgenticBrainProviderQueue : [];
+  if (!items.length) return `<p>${translateText("No local provider/admin queue items yet.")}</p>`;
+  return `
+    <div class="nexus-real-provider-card-grid" data-nexus-agentic-provider-queue="true">
+      ${items.slice(0, 6).map(item => `
+        <article class="nexus-real-provider-card">
+          <strong>${escapeHtml(item.providerCategory || "Provider/admin queue")}</strong>
+          <span>${escapeHtml(item.status || "queued")}</span>
+          <small>${escapeHtml(item.visiblePurpose || "")}</small>
+          <small>${translateText("Live submitted")}: ${escapeHtml(String(item.submittedLive === true))}</small>
+          <button type="button" data-nexus-brain-action="provider-response" data-queue-id="${escapeHtml(item.queueId)}">${translateText("Record local provider/admin response")}</button>
+        </article>
+      `).join("")}
+    </div>
+  `;
+}
+
+function renderNexusAgenticBrainMatrix() {
+  const matrix = Array.isArray(nexusAgenticBrainMatrix) ? nexusAgenticBrainMatrix : [];
+  if (!matrix.length) return "";
+  return `
+    <details class="nexus-real-provider-result">
+      <summary>${translateText("Final capability matrix")}</summary>
+      <ul>
+        ${matrix.map(item => `<li><strong>${escapeHtml(item.capability)}</strong>: ${escapeHtml(item.status)}</li>`).join("")}
+      </ul>
+    </details>
+  `;
+}
+
+function renderNexusAgenticBrainPanel() {
+  const status = nexusAgenticBrainStatus || {};
+  const command = nexusAgenticBrainLastResult?.task?.userGoal || nexusAgenticBrainDefaultCommand();
+  return `
+    <section class="nexus-real-provider-testing nexus-agentic-brain-panel" data-nexus-agentic-brain-panel="true" aria-label="${translateText("Nexus Intelligent Brain")}">
+      <div class="nexus-dashboard-section-head">
+        <span class="eyebrow">${translateText("Unified Assistant Runtime")}</span>
+        <strong>${translateText("Nexus Intelligent Brain")}</strong>
+      </div>
+      <p>${translateText("Nexus can manage multiple active tasks, remember local case state, select capabilities, prepare provider/admin queue items, require confirmation, verify outcomes, and continue workflows through one assistant runtime.")}</p>
+      <p>${translateText("Nexus does not diagnose, prescribe, fake provider contact, fake booking, silently send messages, process payments, route emergency services, use camera, use microphone, or share location.")}</p>
+      <div class="nexus-real-provider-status-actions">
+        <button type="button" data-nexus-brain-action="refresh">${translateText("Refresh brain state")}</button>
+        <span>${translateText("Active tasks")}: ${escapeHtml(String(status.activeTaskCount ?? nexusAgenticBrainTasks.length))} Â· ${translateText("Provider queue")}: ${escapeHtml(String(status.providerQueueCount ?? nexusAgenticBrainProviderQueue.length))}</span>
+      </div>
+      <label class="nexus-extended-bridge-field">
+        <span>${translateText("Natural command")}</span>
+        <textarea id="nexusAgenticBrainCommand" rows="3" data-nexus-agentic-brain-command>${escapeHtml(command)}</textarea>
+      </label>
+      <label class="nexus-extended-bridge-confirm">
+        <input type="checkbox" data-nexus-agentic-brain-confirm>
+        <span>${translateText("Confirm when needed. External execution still requires configured connectors, valid payload, user approval, safety gate, audit, and verification.")}</span>
+      </label>
+      <div class="nexus-extended-bridge-actions">
+        <button type="button" data-nexus-brain-action="command">${translateText("Run brain command")}</button>
+        <button type="button" data-nexus-brain-action="continue">${translateText("Continue")}</button>
+        <button type="button" data-nexus-brain-action="confirm">${translateText("Confirm")}</button>
+        <button type="button" data-nexus-brain-action="verify">${translateText("Verify result")}</button>
+        <button type="button" data-nexus-brain-action="cancel">${translateText("Cancel active task")}</button>
+      </div>
+      <pre class="nexus-real-provider-result" data-nexus-agentic-brain-result="true">${escapeHtml(nexusAgenticBrainLastResult ? JSON.stringify(nexusAgenticBrainLastResult, null, 2) : translateText("No Nexus brain result yet."))}</pre>
+      <h4>${translateText("Active tasks")}</h4>
+      ${renderNexusAgenticBrainTasks()}
+      <h4>${translateText("Provider/Admin local queue")}</h4>
+      ${renderNexusAgenticBrainProviderQueue()}
+      ${renderNexusAgenticBrainMatrix()}
+    </section>
+  `;
+}
+
+function nexusAgenticBrainCommandValue() {
+  return $("#nexusAgenticBrainCommand")?.value?.trim() || nexusAgenticBrainDefaultCommand();
+}
+
+async function refreshNexusAgenticBrainState() {
+  try {
+    nexusAgenticBrainStatus = await request("/api/nexus/brain/status");
+    const state = await request("/api/nexus/brain/tasks");
+    nexusAgenticBrainTasks = Array.isArray(state.tasks) ? state.tasks : [];
+    nexusAgenticBrainProviderQueue = Array.isArray(state.providerQueue) ? state.providerQueue : [];
+    nexusAgenticBrainActivity = Array.isArray(state.activity) ? state.activity : [];
+    nexusAgenticBrainMatrix = Array.isArray(state.matrix) ? state.matrix : [];
+  } catch (error) {
+    nexusAgenticBrainLastResult = { status: "failed_safely", message: error.message };
+  }
+}
+
+async function runNexusAgenticBrainAction(action = "command", options = {}) {
+  try {
+    const taskId = options.taskId || "";
+    const queueId = options.queueId || "";
+    const confirmed = document.querySelector("[data-nexus-agentic-brain-confirm]")?.checked === true || action === "confirm";
+    let result = null;
+    if (action === "refresh") {
+      await refreshNexusAgenticBrainState();
+      renderUserWorkspace();
+      return true;
+    }
+    if (action === "resume" || action === "continue") {
+      result = await request("/api/nexus/brain/command", { method: "POST", body: { command: "Continue.", taskId } });
+    } else if (action === "verify") {
+      result = await request("/api/nexus/brain/verify", { method: "POST", body: { taskId } });
+    } else if (action === "complete" || action === "cancel") {
+      result = await request("/api/nexus/brain/task", { method: "POST", body: { taskId, status: action === "complete" ? "completed" : "cancelled" } });
+    } else if (action === "provider-response") {
+      result = await request("/api/nexus/brain/provider/respond", {
+        method: "POST",
+        body: {
+          queueId,
+          status: "local_response_recorded",
+          reviewedBy: "local provider/admin reviewer",
+          response: "Reviewed locally for testing. No diagnosis, prescription, booking, call, message, payment, or emergency services routing was performed by Nexus."
+        }
+      });
+    } else {
+      const baseCommand = options.command || nexusAgenticBrainCommandValue();
+      const command = action === "confirm" ? `Confirm. ${baseCommand}` : baseCommand;
+      result = await request("/api/nexus/brain/command", { method: "POST", body: { command, confirmed } });
+    }
+    nexusAgenticBrainLastResult = result;
+    await refreshNexusAgenticBrainState();
+    renderUserWorkspace();
+    return true;
+  } catch (error) {
+    nexusAgenticBrainLastResult = { status: "failed_safely", message: error.message };
+    renderUserWorkspace();
+    return false;
+  }
+}
+
+function handleNexusAgenticBrainTypedCommand(command = "") {
+  const normalized = String(command || "").trim();
+  if (!normalized) return false;
+  if (!/^nexus,/i.test(normalized) && !/^(continue|confirm|cancel|verify result)$/i.test(normalized)) return false;
+  if (!/(blood pressure|provider|remind|agriculture|training|marketplace|inquiry|farm jobs|drone|field visit|course|clinic|pharmacy|offline|continue|confirm|cancel|verify)/i.test(normalized)) return false;
+  void runNexusAgenticBrainAction("command", { command: normalized });
   return true;
 }
 
@@ -18766,6 +18941,7 @@ function renderUserWorkspace() {
     </section>
     ${renderNexusPlatformDashboard()}
     ${renderNexusProductionActionAssistantPanel()}
+    ${renderNexusAgenticBrainPanel()}
     ${renderNexusRealProviderTestingPanel()}
     <div data-nexus-open-dialogue-agent-host="true">${renderNexusOpenDialogueAgentCard()}</div>
     ${a100CapabilitySurfaceHtml()}
@@ -18821,6 +18997,15 @@ function renderUserWorkspace() {
     setTimeout(() => {
       if (experienceMode === "user" && document.querySelector("[data-nexus-real-provider-testing='true']")) {
         refreshNexusRealProviderTestingStatus().catch(() => {});
+      }
+    }, 0);
+  }
+  if (!nexusProductionRuntimeStatus || !nexusAgenticBrainStatus) {
+    setTimeout(() => {
+      if (experienceMode === "user" && document.querySelector("[data-nexus-agentic-brain-panel='true']")) {
+        refreshNexusProductionRuntimeStatus().then(() => refreshNexusAgenticBrainState()).then(() => {
+          if (experienceMode === "user") renderUserWorkspace();
+        }).catch(() => {});
       }
     }, 0);
   }
@@ -33825,6 +34010,16 @@ function bindStatic() {
       event.preventDefault();
       event.stopPropagation();
       await runNexusProductionRuntimeAction(productionRuntimeButton.dataset.nexusRuntimeAction);
+      return;
+    }
+    const agenticBrainButton = event.target.closest("[data-nexus-brain-action]");
+    if (agenticBrainButton) {
+      event.preventDefault();
+      event.stopPropagation();
+      await runNexusAgenticBrainAction(agenticBrainButton.dataset.nexusBrainAction, {
+        taskId: agenticBrainButton.dataset.taskId || "",
+        queueId: agenticBrainButton.dataset.queueId || ""
+      });
       return;
     }
     const mapsFieldVisitButton = event.target.closest("[data-maps-field-visit-action]");
