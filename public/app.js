@@ -17302,13 +17302,29 @@ function renderNexusRealProviderStatusCards() {
   const cards = nexusRealProviderTestingStatus?.cards || [
     "Reminders", "SMS", "WhatsApp", "Calls", "Maps", "Medical Provider Search", "Learning / LMS", "Zoom Sessions", "Drones", "Marketplace", "Offline Sync", "Stripe Payments"
   ].map(title => ({ title, status: "Checking", detail: "Click Refresh provider status." }));
-  return cards.map(card => `
-    <article class="nexus-real-provider-card">
+  return cards.map(card => {
+    const missingConfig = Array.isArray(card.missingConfig) ? card.missingConfig : [];
+    const stillNeeded = Array.isArray(card.stillNeeded) ? card.stillNeeded : [];
+    const testability = card.testability ? String(card.testability).replace(/_/g, " ") : "";
+    const recipient = card.recipient || null;
+    return `
+    <article class="nexus-real-provider-card" data-provider-readiness="${escapeHtml(card.testability || "checking")}">
       <strong>${translateText(card.title)}</strong>
       <span>${translateText(card.status)}</span>
+      ${card.providerName ? `<small>${translateText("Provider")}: ${escapeHtml(card.providerName)}</small>` : ""}
+      ${testability ? `<small>${translateText("Testability")}: ${escapeHtml(testability)}</small>` : ""}
       <small>${translateText(card.detail || "Controlled testing status.")}</small>
+      ${card.canTestNow ? `<small>${translateText("Can test now")}: ${escapeHtml(card.canTestNow)}</small>` : ""}
+      ${recipient ? `<small>${translateText("Owner test recipient")}: ${recipient.configured ? escapeHtml(recipient.masked || "configured") : translateText("Missing OWNER_TEST_RECIPIENT_NUMBER")}</small>` : ""}
+      ${missingConfig.length ? `<small>${translateText("Missing")}: ${missingConfig.map(name => `<code>${escapeHtml(name)}</code>`).join(" ")}</small>` : ""}
+      ${stillNeeded.length ? `<small>${translateText("Next")}: ${stillNeeded.map(item => escapeHtml(item)).join("; ")}</small>` : ""}
+      <small>${[
+        card.requiresConfirmation ? translateText("Requires confirmation") : "",
+        card.requiresSandboxAccount ? translateText("Requires sandbox account") : ""
+      ].filter(Boolean).join(" · ")}</small>
     </article>
-  `).join("");
+  `;
+  }).join("");
 }
 
 function renderNexusRealProviderTestControls() {

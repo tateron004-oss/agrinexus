@@ -99,6 +99,7 @@ check(exists("docs/NEXUS_REAL_PROVIDER_INTEGRATION_AUDIT.md"), "real provider in
   "TWILIO_ACCOUNT_SID",
   "TWILIO_AUTH_TOKEN",
   "TWILIO_FROM_NUMBER",
+  "OWNER_TEST_RECIPIENT_NUMBER",
   "TWILIO_WHATSAPP_FROM",
   "GOOGLE_MAPS_API_KEY",
   "MOODLE_BASE_URL",
@@ -152,6 +153,12 @@ const offlineProvider = read("server/providers/offlineSyncProvider.js");
   "nexusRealProviderTestingLastResult",
   "NEXUS_REAL_PROVIDER_TEST_CONTROLS",
   "Refresh provider status",
+  "data-provider-readiness",
+  "recipient.masked",
+  "Owner test recipient",
+  "Missing OWNER_TEST_RECIPIENT_NUMBER",
+  "Requires confirmation",
+  "Requires sandbox account",
   "Run controlled test",
   "Nexus will not secretly call, message, pay, share location, book, diagnose, dispatch, fly drones, or contact providers"
 ].forEach(text => includes(app, text, "public/app.js provider testing UI"));
@@ -163,6 +170,34 @@ const realProviderUi = realProviderUiStart >= 0 && realProviderUiEnd > realProvi
   : "";
 
 [
+  "providerReadinessCard",
+  "maskPhoneNumber",
+  '"*".repeat(6)',
+  "maskPhoneNumber(env.OWNER_TEST_RECIPIENT_NUMBER)",
+  "OWNER_TEST_RECIPIENT_NUMBER",
+  "ownerTestRecipient",
+  "testability",
+  "canTestNow",
+  "stillNeeded",
+  "requiresConfirmation",
+  "requiresSandboxAccount",
+  "missingConfig",
+  "ready",
+  "disabled",
+  "missing_config",
+  "read_only",
+  "local_only",
+  "blocked",
+  "Twilio SMS",
+  "Google Maps Routes API",
+  "CMS NPPES NPI Registry",
+  "Moodle-compatible LMS",
+  "Zoom server-to-server OAuth",
+  "DJI Cloud API",
+  "Stripe sandbox"
+].forEach(text => includes(server, text, "server.js provider readiness endpoint"));
+
+[
   "TWILIO_AUTH_TOKEN",
   "STRIPE_SECRET_KEY",
   "ZOOM_CLIENT_SECRET",
@@ -171,6 +206,18 @@ const realProviderUi = realProviderUiStart >= 0 && realProviderUiEnd > realProvi
   "GOOGLE_MAPS_API_KEY"
 ].forEach(secretName => {
   check(!realProviderUi.includes(secretName), `real provider testing UI must not expose ${secretName}`);
+});
+
+[
+  "sk_live_",
+  "sk_test_",
+  "AC00000000000000000000000000000000",
+  "AIzaSy",
+  "xoxb-",
+  "-----BEGIN PRIVATE KEY-----"
+].forEach(secretPattern => {
+  check(!server.includes(secretPattern), `server readiness endpoint must not include hardcoded secret pattern ${secretPattern}`);
+  check(!app.includes(secretPattern), `real provider testing UI must not include hardcoded secret pattern ${secretPattern}`);
 });
 
 [

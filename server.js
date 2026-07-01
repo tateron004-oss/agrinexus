@@ -61,81 +61,257 @@ function sendProviderResult(res, result) {
   return send(res, result.httpStatus || 200, result.body || result);
 }
 
+function envValuePresent(env, name) {
+  const value = String(env[name] || "").trim();
+  return Boolean(value && !value.includes("replace-with"));
+}
+
+function missingEnvNames(env, names) {
+  return names.filter(name => !envValuePresent(env, name));
+}
+
+function maskPhoneNumber(value = "") {
+  const text = String(value || "").trim();
+  const digits = text.replace(/\D/g, "");
+  if (digits.length < 4) return "";
+  const suffix = digits.slice(-4);
+  const prefix = text.startsWith("+") ? "+" : "";
+  const country = digits.length > 10 ? digits.slice(0, Math.max(1, digits.length - 10)) : "";
+  return `${prefix}${country}${"*".repeat(6)}${suffix}`;
+}
+
+function readinessStatus({ enabled = true, missingConfig = [], defaultState = "ready", disabledState = "disabled" }) {
+  if (!enabled) return disabledState;
+  if (missingConfig.length) return "missing_config";
+  return defaultState;
+}
+
+function providerReadinessCard({
+  id,
+  title,
+  providerName,
+  enabled,
+  missingConfig = [],
+  testability,
+  detail,
+  canTestNow,
+  stillNeeded = [],
+  requiresConfirmation = false,
+  requiresSandboxAccount = false,
+  recipient = null
+}) {
+  return {
+    id,
+    title,
+    providerName,
+    enabled,
+    configured: missingConfig.length === 0,
+    missingConfig,
+    testability,
+    status: testability === "ready" ? "Ready" :
+      testability === "missing_config" ? "Missing configuration" :
+      testability === "read_only" ? "Read-only" :
+      testability === "local_only" ? "Local-only" :
+      testability === "blocked" ? "Blocked" :
+      testability === "disabled" ? "Disabled" : "Requires review",
+    detail,
+    canTestNow,
+    stillNeeded,
+    requiresConfirmation,
+    requiresSandboxAccount,
+    recipient
+  };
+}
+
 function nexusRealProviderStatus(db, env = process.env) {
   const twilio = nexusRealProviders.twilio.status(env);
+  const maps = nexusRealProviders.googleMaps.status(env);
+  const npi = nexusRealProviders.npi.status(env);
+  const moodle = nexusRealProviders.moodle.status(env);
+  const zoom = nexusRealProviders.zoom.status(env);
+  const dji = nexusRealProviders.dji.status(env);
+  const marketplace = nexusRealProviders.marketplace.status(env);
+  const offlineSync = nexusRealProviders.offlineSync.status(env);
+  const reminders = nexusRealProviders.reminders.status(env);
+  const stripe = nexusRealProviders.stripe.status(env);
+  const ownerRecipientConfigured = envValuePresent(env, "OWNER_TEST_RECIPIENT_NUMBER");
+  const ownerRecipient = {
+    envName: "OWNER_TEST_RECIPIENT_NUMBER",
+    configured: ownerRecipientConfigured,
+    masked: ownerRecipientConfigured ? maskPhoneNumber(env.OWNER_TEST_RECIPIENT_NUMBER) : "",
+    missingConfig: ownerRecipientConfigured ? [] : ["OWNER_TEST_RECIPIENT_NUMBER"]
+  };
+  const smsMissing = [...twilio.sms.missingConfig, ...ownerRecipient.missingConfig];
   const cards = [
-    {
+    providerReadinessCard({
       id: "reminders",
       title: "Reminders",
-      status: nexusRealProviders.reminders.status(env).enabled ? "Connected" : "Disabled",
-      detail: "In-app reminders only; no OS notification permission requested."
-    },
-    {
+      providerName: "Local reminders",
+      enabled: reminders.enabled,
+      testability: readinessStatus({ enabled: reminders.enabled, defaultState: "local_only" }),
+      detail: "In-app reminders only; no OS notification permission requested.",
+      canTestNow: reminders.enabled ? "Create a local in-app reminder from the visible testing control." : "Not available while reminders are disabled.",
+      stillNeeded: reminders.enabled ? [] : ["Enable NEXUS_REMINDERS_ENABLED=true"],
+      requiresConfirmation: true
+    }),
+    providerReadinessCard({
       id: "sms",
-      title: "SMS",
-      status: twilio.sms.enabled ? (twilio.sms.missingConfig.length ? "Missing configuration" : "Confirmation required") : "Disabled",
-      detail: "Twilio SMS requires credentials, feature flag, visible recipient/message, and confirmed: true."
-    },
-    {
+      title: "SMS / Twilio",
+      providerName: "Twilio SMS",
+      enabled: twilio.sms.enabled,
+      missingConfig: smsMissing,
+      testability: readinessStatus({ enabled: twilio.sms.enabled, missingConfig: smsMissing }),
+      detail: "Twilio SMS requires credentials, feature flag, visible recipient/message, owner test recipient, and confirmed: true.",
+      canTestNow: twilio.sms.enabled && smsMissing.length === 0 ? "Send one owner-approved controlled SMS after explicit confirmation." : "Blocked until SMS flag, credentials, and owner test recipient are ready.",
+      stillNeeded: [
+        ...smsMissing.map(name => `Add ${name}`),
+        ...(twilio.sms.enabled ? [] : ["Enable NEXUS_MESSAGES_ENABLED=true"])
+      ],
+      requiresConfirmation: true,
+      recipient: ownerRecipient
+    }),
+    providerReadinessCard({
       id: "whatsapp",
-      title: "WhatsApp",
-      status: twilio.whatsapp.enabled ? (twilio.whatsapp.missingConfig.length ? "Missing configuration" : "Confirmation required") : "Disabled",
-      detail: "Twilio WhatsApp requires sender setup, credentials, feature flag, and confirmed: true."
-    },
-    {
+      title: "WhatsApp / Twilio",
+      providerName: "Twilio WhatsApp",
+      enabled: twilio.whatsapp.enabled,
+      missingConfig: twilio.whatsapp.missingConfig,
+      testability: readinessStatus({ enabled: twilio.whatsapp.enabled, missingConfig: twilio.whatsapp.missingConfig }),
+      detail: "Twilio WhatsApp requires sender setup, credentials, feature flag, and confirmed: true.",
+      canTestNow: twilio.whatsapp.enabled && !twilio.whatsapp.missingConfig.length ? "Run a controlled WhatsApp sandbox test after explicit confirmation." : "Not ready for WhatsApp testing.",
+      stillNeeded: [
+        ...twilio.whatsapp.missingConfig.map(name => `Add ${name}`),
+        ...(twilio.whatsapp.enabled ? [] : ["Enable NEXUS_WHATSAPP_ENABLED=true"])
+      ],
+      requiresConfirmation: true,
+      requiresSandboxAccount: true
+    }),
+    providerReadinessCard({
       id: "calls",
-      title: "Calls",
-      status: twilio.calls.enabled ? (twilio.calls.missingConfig.length ? "Missing configuration" : "Confirmation required") : "Disabled",
-      detail: "Twilio calls require explicit confirmation and never start from hidden assistant chains."
-    },
-    {
+      title: "Calls / Twilio Voice",
+      providerName: "Twilio Voice",
+      enabled: twilio.calls.enabled,
+      missingConfig: twilio.calls.missingConfig,
+      testability: readinessStatus({ enabled: twilio.calls.enabled, missingConfig: twilio.calls.missingConfig }),
+      detail: "Twilio calls require explicit confirmation and never start from hidden assistant chains.",
+      canTestNow: twilio.calls.enabled && !twilio.calls.missingConfig.length ? "Run one controlled owner-approved call after explicit confirmation." : "Not ready for live call testing.",
+      stillNeeded: [
+        ...twilio.calls.missingConfig.map(name => `Add ${name}`),
+        ...(twilio.calls.enabled ? [] : ["Enable NEXUS_CALLS_ENABLED=true"])
+      ],
+      requiresConfirmation: true
+    }),
+    providerReadinessCard({
       id: "maps",
-      title: "Maps",
-      status: nexusRealProviders.googleMaps.status(env).enabled ? "Confirmation required" : "Disabled",
-      detail: "Routes use user-provided origin/destination only; no browser geolocation."
-    },
-    {
+      title: "Google Maps",
+      providerName: "Google Maps Routes API",
+      enabled: maps.enabled,
+      missingConfig: maps.missingConfig,
+      testability: maps.enabled ? (maps.missingConfig.length ? "missing_config" : "ready") : "disabled",
+      detail: "Routes use user-provided origin/destination only; no browser geolocation.",
+      canTestNow: maps.missingConfig.length ? "Fallback URL can be tested now; live route computation needs a key." : "Compute a route from typed origin/destination after confirmation.",
+      stillNeeded: [
+        ...maps.missingConfig.map(name => `Add ${name}`),
+        ...(maps.enabled ? [] : ["Enable NEXUS_MAPS_ENABLED=true"])
+      ],
+      requiresConfirmation: true
+    }),
+    providerReadinessCard({
       id: "medical-provider-search",
-      title: "Medical Provider Search",
-      status: nexusRealProviders.npi.status(env).enabled ? "Search/read-only" : "Disabled",
-      detail: "CMS NPPES public lookup only; no booking, diagnosis, or health data sharing."
-    },
-    {
+      title: "CMS/NPI Provider Search",
+      providerName: "CMS NPPES NPI Registry",
+      enabled: npi.enabled,
+      missingConfig: [],
+      testability: npi.enabled ? "read_only" : "disabled",
+      detail: "CMS NPPES public lookup only; no booking, diagnosis, or health data sharing.",
+      canTestNow: npi.enabled ? "Search public provider directory records with city/state/specialty." : "Provider search disabled.",
+      stillNeeded: npi.enabled ? [] : ["Enable NEXUS_PROVIDER_SEARCH_ENABLED=true"]
+    }),
+    providerReadinessCard({
       id: "learning-lms",
-      title: "Learning / LMS",
-      status: nexusRealProviders.moodle.status(env).enabled ? (nexusRealProviders.moodle.status(env).missingConfig.length ? "Missing configuration" : "Connected") : "Disabled",
-      detail: "Moodle-compatible course lookup; enrollment remains separately gated."
-    },
-    {
+      title: "Moodle/Koachlearn LMS",
+      providerName: "Moodle-compatible LMS",
+      enabled: moodle.enabled,
+      missingConfig: moodle.missingConfig,
+      testability: readinessStatus({ enabled: moodle.enabled, missingConfig: moodle.missingConfig }),
+      detail: "Moodle-compatible course lookup; enrollment remains separately gated.",
+      canTestNow: moodle.enabled && !moodle.missingConfig.length ? "Lookup LMS courses." : "Not ready for LMS lookup.",
+      stillNeeded: [
+        ...moodle.missingConfig.map(name => `Add ${name}`),
+        ...(moodle.enabled ? [] : ["Enable NEXUS_LMS_ENABLED=true"])
+      ]
+    }),
+    providerReadinessCard({
       id: "zoom",
       title: "Zoom Sessions",
-      status: nexusRealProviders.zoom.status(env).enabled ? (nexusRealProviders.zoom.status(env).missingConfig.length ? "Missing configuration" : "Confirmation required") : "Disabled",
-      detail: "Meeting creation requires Zoom server credentials and confirmed: true."
-    },
-    {
+      providerName: "Zoom server-to-server OAuth",
+      enabled: zoom.enabled,
+      missingConfig: zoom.missingConfig,
+      testability: readinessStatus({ enabled: zoom.enabled, missingConfig: zoom.missingConfig }),
+      detail: "Meeting creation requires Zoom server credentials and confirmed: true.",
+      canTestNow: zoom.enabled && !zoom.missingConfig.length ? "Create a controlled Zoom test meeting after explicit confirmation." : "Not ready for Zoom meeting testing.",
+      stillNeeded: [
+        ...zoom.missingConfig.map(name => `Add ${name}`),
+        ...(zoom.enabled ? [] : ["Enable NEXUS_ZOOM_ENABLED=true"])
+      ],
+      requiresConfirmation: true,
+      requiresSandboxAccount: true
+    }),
+    providerReadinessCard({
       id: "drones",
-      title: "Drones",
-      status: nexusRealProviders.dji.status(env).enabled ? (nexusRealProviders.dji.status(env).missingConfig.length ? "Missing configuration" : "Request intake only") : "Disabled",
-      detail: "DJI Cloud API shell supports status and mission intake only; no flight control."
-    },
-    {
+      title: "DJI",
+      providerName: "DJI Cloud API",
+      enabled: dji.enabled,
+      missingConfig: dji.missingConfig,
+      testability: readinessStatus({ enabled: dji.enabled, missingConfig: dji.missingConfig }),
+      detail: "DJI Cloud API shell supports status and mission intake only; no flight control.",
+      canTestNow: dji.enabled && !dji.missingConfig.length ? "Check status and submit intake-only mission requests; no flight execution." : "Not ready for DJI status testing.",
+      stillNeeded: [
+        ...dji.missingConfig.map(name => `Add ${name}`),
+        ...(dji.enabled ? [] : ["Enable NEXUS_DRONES_ENABLED=true"])
+      ],
+      requiresConfirmation: true
+    }),
+    providerReadinessCard({
       id: "marketplace",
-      title: "Marketplace",
-      status: nexusRealProviders.marketplace.status(env).enabled ? "Confirmation required" : "Disabled",
-      detail: "Local AgriTrade listing creation only; no buyer contact, checkout, or payment."
-    },
-    {
+      title: "AgriTrade Marketplace",
+      providerName: "AgriTrade local marketplace",
+      enabled: marketplace.enabled,
+      testability: marketplace.enabled ? "local_only" : "disabled",
+      detail: "Local AgriTrade listing creation only; no buyer contact, checkout, or payment.",
+      canTestNow: marketplace.enabled ? "Create a local review listing after explicit confirmation." : "Marketplace testing disabled.",
+      stillNeeded: marketplace.enabled ? [] : ["Enable NEXUS_MARKETPLACE_ENABLED=true"],
+      requiresConfirmation: true
+    }),
+    providerReadinessCard({
       id: "offline-sync",
       title: "Offline Sync",
-      status: nexusRealProviders.offlineSync.status(env).enabled ? "Confirmation required" : "Disabled",
-      detail: "Safe local queue/sync only; sensitive or high-risk actions are skipped."
-    },
-    {
+      providerName: "Local offline sync",
+      enabled: offlineSync.enabled,
+      testability: offlineSync.enabled ? "local_only" : "disabled",
+      detail: "Safe local queue/sync only; sensitive or high-risk actions are skipped.",
+      canTestNow: offlineSync.enabled ? "Queue and sync safe local-only records." : "Offline sync testing disabled.",
+      stillNeeded: offlineSync.enabled ? [] : ["Enable NEXUS_OFFLINE_SYNC_ENABLED=true"],
+      requiresConfirmation: true
+    }),
+    providerReadinessCard({
       id: "stripe-payments",
       title: "Stripe Payments",
-      status: nexusRealProviders.stripe.status(env).enabled ? (nexusRealProviders.stripe.status(env).missingConfig.length ? "Missing configuration" : "Blocked for now") : "Disabled",
-      detail: "Stripe payment intent route remains blocked until marketplace compliance and Connect setup are approved."
-    }
+      providerName: "Stripe sandbox",
+      enabled: stripe.enabled,
+      missingConfig: stripe.missingConfig,
+      testability: stripe.enabled ? (stripe.missingConfig.length ? "missing_config" : "blocked") : "disabled",
+      detail: "Stripe payment intent route remains blocked until marketplace compliance and Connect setup are approved.",
+      canTestNow: "Review disabled/blocked payment posture only; do not process payments.",
+      stillNeeded: [
+        ...stripe.missingConfig.map(name => `Add ${name}`),
+        ...(stripe.enabled ? [] : ["Keep payments disabled until sandbox test is intentionally approved"]),
+        "Use Stripe sandbox only",
+        "Complete marketplace compliance and Connect setup approval"
+      ],
+      requiresConfirmation: true,
+      requiresSandboxAccount: true
+    })
   ];
   return {
     ok: true,
@@ -143,6 +319,8 @@ function nexusRealProviderStatus(db, env = process.env) {
     action: "providers.status",
     status: "completed",
     cards,
+    readiness: cards,
+    ownerTestRecipient: ownerRecipient,
     generatedAt: new Date().toISOString(),
     safety: {
       noHiddenExecution: true,
