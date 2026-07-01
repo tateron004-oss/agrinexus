@@ -139,6 +139,7 @@ function nexusRealProviderStatus(db, env = process.env) {
   const offlineSync = nexusRealProviders.offlineSync.status(env);
   const reminders = nexusRealProviders.reminders.status(env);
   const stripe = nexusRealProviders.stripe.status(env);
+  const providerContactBridge = nexusRealProviders.providerContactBridge.status(env);
   const ownerRecipientValue = firstPresentEnvValue(env, ["OWNER_TEST_RECIPIENT_NUMBER", "TEST_RECIPIENT_NUMBER"]);
   const ownerRecipientConfigured = Boolean(ownerRecipientValue);
   const ownerRecipient = {
@@ -232,6 +233,17 @@ function nexusRealProviderStatus(db, env = process.env) {
       detail: "CMS NPPES public lookup only; no booking, diagnosis, or health data sharing.",
       canTestNow: npi.enabled ? "Search public provider directory records with city/state/specialty." : "Provider search disabled.",
       stillNeeded: npi.enabled ? [] : ["Enable NEXUS_PROVIDER_SEARCH_ENABLED=true"]
+    }),
+    providerReadinessCard({
+      id: "provider-contact-bridge",
+      title: "Provider Contact Bridge",
+      providerName: "Nexus local provider bridge",
+      enabled: providerContactBridge.enabled,
+      testability: providerContactBridge.enabled ? "local_only" : "disabled",
+      detail: "Connects public provider cards to route preview, local save, non-sensitive notes, reminders, and confirmed SMS/call preparation.",
+      canTestNow: providerContactBridge.enabled ? "Use a provider search result card to prepare route, SMS, call, save, note, or reminder actions." : "Provider Contact Bridge disabled.",
+      stillNeeded: providerContactBridge.enabled ? [] : ["Enable NEXUS_PROVIDER_CONTACT_BRIDGE_ENABLED=true"],
+      requiresConfirmation: true
     }),
     providerReadinessCard({
       id: "learning-lms",
@@ -334,6 +346,8 @@ function nexusRealProviderStatus(db, env = process.env) {
       noSecretsExposed: true,
       storedLocalCounts: {
         reminders: (db.profile?.nexusReminders || []).length,
+        savedProviders: (db.profile?.nexusSavedProviders || []).length,
+        providerNotes: (db.profile?.nexusProviderNotes || []).length,
         marketplaceListings: (db.profile?.marketplaceListings || []).length,
         offlineQueue: (db.profile?.offlineQueue || []).length,
         droneMissionRequests: (db.profile?.droneMissionRequests || []).length
@@ -27295,6 +27309,18 @@ async function api(req, res, url) {
       postalCode: url.searchParams.get("postalCode") || url.searchParams.get("postal_code"),
       limit: url.searchParams.get("limit")
     }));
+  }
+
+  if (url.pathname === "/api/nexus/tools/providers/save" && req.method === "POST") {
+    const result = nexusRealProviders.providerContactBridge.saveProvider(await readBody(req), db);
+    if (result.body?.status === "completed") await writeDb(db);
+    return sendProviderResult(res, result);
+  }
+
+  if (url.pathname === "/api/nexus/tools/providers/note" && req.method === "POST") {
+    const result = nexusRealProviders.providerContactBridge.saveProviderNote(await readBody(req), db);
+    if (result.body?.status === "completed") await writeDb(db);
+    return sendProviderResult(res, result);
   }
 
   if (url.pathname === "/api/nexus/tools/learning/status" && req.method === "GET") {

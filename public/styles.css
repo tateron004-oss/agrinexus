@@ -8219,14 +8219,16 @@ body.user-mode .grandma-workflow:not(.hidden) .modal-actions button {
 }
 
 .nexus-real-provider-card-grid,
-.nexus-real-provider-control-grid {
+.nexus-real-provider-control-grid,
+.nexus-provider-contact-card-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 10px;
 }
 
 .nexus-real-provider-card,
-.nexus-real-provider-control {
+.nexus-real-provider-control,
+.nexus-provider-contact-card {
   display: grid;
   gap: 8px;
   min-width: 0;
@@ -8237,7 +8239,8 @@ body.user-mode .grandma-workflow:not(.hidden) .modal-actions button {
 }
 
 .nexus-real-provider-card strong,
-.nexus-real-provider-control strong {
+.nexus-real-provider-control strong,
+.nexus-provider-contact-card strong {
   font-size: .95rem;
 }
 
@@ -8247,12 +8250,15 @@ body.user-mode .grandma-workflow:not(.hidden) .modal-actions button {
 }
 
 .nexus-real-provider-card small,
-.nexus-real-provider-control small {
+.nexus-real-provider-control small,
+.nexus-provider-contact-card small {
   color: #475569;
   line-height: 1.35;
 }
 
-.nexus-real-provider-control input {
+.nexus-real-provider-control input,
+.nexus-provider-contact-card input,
+.nexus-provider-contact-card textarea {
   width: 100%;
   min-height: 42px;
   padding: 8px 10px;
@@ -8260,6 +8266,38 @@ body.user-mode .grandma-workflow:not(.hidden) .modal-actions button {
   border-radius: 6px;
   background: #ffffff;
   color: #0f172a;
+}
+
+.nexus-provider-contact-bridge {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border: 1px dashed rgba(15, 23, 42, .18);
+  border-radius: 8px;
+  background: rgba(248, 250, 252, .86);
+}
+
+.nexus-provider-contact-summary,
+.nexus-provider-contact-actions {
+  display: grid;
+  gap: 7px;
+}
+
+.nexus-provider-contact-confirm {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #334155;
+  font-size: .9rem;
+}
+
+.nexus-provider-contact-confirm input {
+  width: auto;
+  min-height: auto;
+}
+
+.nexus-provider-contact-actions {
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
 }
 
 .nexus-real-provider-result {
@@ -8295,7 +8333,9 @@ body.user-mode .user-voice-dock textarea {
   }
 
   .nexus-real-provider-card-grid,
-  .nexus-real-provider-control-grid {
+  .nexus-real-provider-control-grid,
+  .nexus-provider-contact-card-grid,
+  .nexus-provider-contact-actions {
     grid-template-columns: 1fr;
   }
 

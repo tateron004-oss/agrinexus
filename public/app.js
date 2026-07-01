@@ -80,6 +80,7 @@ let selectedPersona = localStorage.getItem("agrinexusPersona") || "worker";
 let selectedNexusDashboardModeId = "agriculture-support";
 let nexusRealProviderTestingStatus = null;
 let nexusRealProviderTestingLastResult = null;
+let nexusProviderContactBridgeCards = [];
 let experienceMode = localStorage.getItem("agrinexusExperienceMode") || "";
 let pendingWorkflow = null;
 let pendingGrandmaAction = null;
@@ -17340,6 +17341,99 @@ function renderNexusRealProviderTestControls() {
   `).join("");
 }
 
+function nexusProviderContactBridgeDefaultSmsDraft() {
+  return "Hello, I am testing AgriNexus/Nexus provider contact workflow. Please disregard if received unexpectedly.";
+}
+
+function maskNexusProviderVisiblePhone(value = "") {
+  const text = String(value || "").trim();
+  const digits = text.replace(/\D/g, "");
+  if (digits.length < 4) return text;
+  return `${text.startsWith("+") ? "+" : ""}${"*".repeat(6)}${digits.slice(-4)}`;
+}
+
+function sanitizeNexusProviderTestingDisplayData(value) {
+  if (Array.isArray(value)) return value.map(item => sanitizeNexusProviderTestingDisplayData(item));
+  if (!value || typeof value !== "object") return value;
+  return Object.fromEntries(Object.entries(value).map(([key, item]) => {
+    if (/phone|to|from|recipient/i.test(key) && typeof item === "string") return [key, maskNexusProviderVisiblePhone(item)];
+    return [key, sanitizeNexusProviderTestingDisplayData(item)];
+  }));
+}
+
+function renderNexusProviderContactBridgeCards() {
+  if (!Array.isArray(nexusProviderContactBridgeCards) || !nexusProviderContactBridgeCards.length) {
+    return `
+      <section class="nexus-provider-contact-bridge" data-nexus-provider-contact-bridge="empty" aria-label="${translateText("Provider Contact Bridge")}">
+        <div class="nexus-dashboard-section-head">
+          <span class="eyebrow">${translateText("Provider Contact Bridge")}</span>
+          <strong>${translateText("Search providers to prepare safe next steps")}</strong>
+        </div>
+        <p>${translateText("Provider action cards appear after CMS/NPI lookup. Nexus will not contact, call, message, book, diagnose, prescribe, dispatch, pay, or share location without explicit confirmation and configured providers.")}</p>
+      </section>
+    `;
+  }
+  return `
+    <section class="nexus-provider-contact-bridge" data-nexus-provider-contact-bridge="ready" aria-label="${translateText("Provider Contact Bridge")}">
+      <div class="nexus-dashboard-section-head">
+        <span class="eyebrow">${translateText("Provider Contact Bridge")}</span>
+        <strong>${translateText("Prepare safe provider next steps")}</strong>
+      </div>
+      <p>${translateText("These cards use public CMS/NPI search results. Actions are preparation-first, local/confirmed, and never include health details by default.")}</p>
+      <div class="nexus-provider-contact-card-grid">
+        ${nexusProviderContactBridgeCards.map((card, index) => {
+          const name = card.providerName || card.organizationName || "Provider";
+          const address = card.address || "";
+          const phone = card.phone || "";
+          return `
+            <article class="nexus-provider-contact-card" data-provider-contact-card="${index}" data-has-address="${address ? "true" : "false"}" data-has-phone="${phone ? "true" : "false"}">
+              <div class="nexus-provider-contact-summary">
+                <strong>${escapeHtml(name)}</strong>
+                <small>${escapeHtml(card.organizationName || card.providerType || "CMS/NPI public provider record")}</small>
+                <small>${translateText("Source")}: ${escapeHtml(card.source || "CMS NPPES NPI Registry")}${card.npi ? `; NPI ${escapeHtml(card.npi)}` : ""}</small>
+                <small>${translateText("Address")}: ${address ? escapeHtml(address) : translateText("Unavailable for routing")}</small>
+                <small>${translateText("Phone")}: ${phone ? translateText("Available for confirmed preparation") : translateText("Unavailable for call/SMS")}</small>
+                <small>${escapeHtml(card.credentialingNote || "Public directory data; verify with the provider before relying on it.")}</small>
+              </div>
+              <label>
+                <span>${translateText("Typed route origin")}</span>
+                <input data-provider-contact-field="origin" placeholder="${escapeHtml(translateText("Stockton, CA"))}" ${address ? "" : "disabled"}>
+              </label>
+              <label>
+                <span>${translateText("Non-sensitive SMS draft")}</span>
+                <textarea data-provider-contact-field="message" rows="3" ${phone ? "" : "disabled"}>${escapeHtml(nexusProviderContactBridgeDefaultSmsDraft())}</textarea>
+              </label>
+              <label>
+                <span>${translateText("Follow-up reminder time/text")}</span>
+                <input data-provider-contact-field="dueAt" placeholder="${escapeHtml(translateText("Tomorrow at 9 AM"))}">
+              </label>
+              <label>
+                <span>${translateText("Non-sensitive provider note")}</span>
+                <textarea data-provider-contact-field="note" rows="2" placeholder="${escapeHtml(translateText("Example: verify office hours before visit"))}"></textarea>
+              </label>
+              <label class="nexus-provider-contact-confirm">
+                <input type="checkbox" data-provider-contact-confirm>
+                <span>${translateText("I confirm this visible provider bridge action.")}</span>
+              </label>
+              <div class="nexus-provider-contact-actions">
+                <button type="button" data-provider-contact-action="view" data-provider-contact-index="${index}">${translateText("View details")}</button>
+                <button type="button" data-provider-contact-action="map" data-provider-contact-index="${index}" ${address ? "" : "disabled"}>${translateText(address ? "Map route" : "Route unavailable")}</button>
+                <button type="button" data-provider-contact-action="prepare-call" data-provider-contact-index="${index}" ${phone ? "" : "disabled"}>${translateText(phone ? "Prepare call" : "Call unavailable")}</button>
+                <button type="button" data-provider-contact-action="start-call" data-provider-contact-index="${index}" ${phone ? "" : "disabled"}>${translateText("Call after confirmation")}</button>
+                <button type="button" data-provider-contact-action="prepare-sms" data-provider-contact-index="${index}" ${phone ? "" : "disabled"}>${translateText(phone ? "Prepare SMS" : "SMS unavailable")}</button>
+                <button type="button" data-provider-contact-action="send-sms" data-provider-contact-index="${index}" ${phone ? "" : "disabled"}>${translateText("Send SMS after confirmation")}</button>
+                <button type="button" data-provider-contact-action="save" data-provider-contact-index="${index}">${translateText("Save provider")}</button>
+                <button type="button" data-provider-contact-action="reminder" data-provider-contact-index="${index}">${translateText("Add follow-up reminder")}</button>
+                <button type="button" data-provider-contact-action="note" data-provider-contact-index="${index}">${translateText("Save provider note")}</button>
+              </div>
+            </article>
+          `;
+        }).join("")}
+      </div>
+    </section>
+  `;
+}
+
 function renderNexusRealProviderTestingPanel() {
   return `
     <section class="nexus-real-provider-testing" data-nexus-real-provider-testing="true" aria-label="${translateText("Real Provider Testing")}">
@@ -17358,6 +17452,7 @@ function renderNexusRealProviderTestingPanel() {
       <div class="nexus-real-provider-control-grid" aria-label="${translateText("Provider test controls")}">
         ${renderNexusRealProviderTestControls()}
       </div>
+      ${renderNexusProviderContactBridgeCards()}
       <pre id="nexusRealProviderTestingResult" class="nexus-real-provider-result" aria-live="polite">${escapeHtml(nexusRealProviderTestingLastResult || translateText("No provider test result yet."))}</pre>
     </section>
   `;
@@ -17403,6 +17498,10 @@ async function runNexusRealProviderTest(controlId) {
   if (status) status.textContent = `${control.label}: request sent from visible testing control.`;
   try {
     const result = await request(control.endpoint, control.method === "GET" ? { method: "GET" } : { method: "POST", body });
+    if (controlId === "provider-search") {
+      nexusProviderContactBridgeCards = Array.isArray(result.data?.cards) ? result.data.cards : [];
+    }
+    const displayData = sanitizeNexusProviderTestingDisplayData(result.data || {});
     nexusRealProviderTestingLastResult = JSON.stringify({
       provider: result.provider,
       action: result.action,
@@ -17410,7 +17509,7 @@ async function runNexusRealProviderTest(controlId) {
       message: result.message,
       missingConfig: result.missingConfig || [],
       disabled: result.disabled || false,
-      data: result.data || {}
+      data: displayData
     }, null, 2);
     if (output) output.textContent = nexusRealProviderTestingLastResult;
     if (status) status.textContent = `${control.label}: ${result.status || "completed"}.`;
@@ -17419,6 +17518,117 @@ async function runNexusRealProviderTest(controlId) {
     nexusRealProviderTestingLastResult = JSON.stringify({ status: "failed_safely", message: error.message }, null, 2);
     if (output) output.textContent = nexusRealProviderTestingLastResult;
     if (status) status.textContent = `${control.label}: failed safely.`;
+  }
+}
+
+function providerContactBridgeCard(index) {
+  return Array.isArray(nexusProviderContactBridgeCards) ? nexusProviderContactBridgeCards[Number(index)] : null;
+}
+
+function providerContactBridgeContainer(index) {
+  return document.querySelector(`[data-provider-contact-card="${index}"]`);
+}
+
+function providerContactBridgeField(index, name) {
+  return providerContactBridgeContainer(index)?.querySelector(`[data-provider-contact-field="${name}"]`)?.value?.trim() || "";
+}
+
+function providerContactBridgeConfirmed(index) {
+  return providerContactBridgeContainer(index)?.querySelector("[data-provider-contact-confirm]")?.checked === true;
+}
+
+function providerContactBridgePayload(card, index) {
+  return {
+    ...card,
+    confirmed: providerContactBridgeConfirmed(index),
+    message: providerContactBridgeField(index, "message") || nexusProviderContactBridgeDefaultSmsDraft(),
+    note: providerContactBridgeField(index, "note"),
+    dueAt: providerContactBridgeField(index, "dueAt")
+  };
+}
+
+function setNexusProviderBridgeResult(result, label = "Provider Contact Bridge") {
+  nexusRealProviderTestingLastResult = typeof result === "string" ? result : JSON.stringify(result, null, 2);
+  const output = $("#nexusRealProviderTestingResult");
+  const status = $("#nexusRealProviderTestingStatus");
+  if (output) output.textContent = nexusRealProviderTestingLastResult;
+  if (status) status.textContent = `${label}: ${typeof result === "object" && result.status ? result.status : "prepared"}.`;
+}
+
+async function runNexusProviderContactBridgeAction(action, index) {
+  const card = providerContactBridgeCard(index);
+  if (!card) return;
+  const payload = providerContactBridgePayload(card, index);
+  const label = "Provider Contact Bridge";
+  const routeOrigin = providerContactBridgeField(index, "origin");
+  try {
+    if (action === "view") {
+      setNexusProviderBridgeResult({ status: "details", provider: card, safety: "Public CMS/NPI details only; no provider was contacted." }, label);
+      return;
+    }
+    if (action === "prepare-sms") {
+      setNexusProviderBridgeResult({
+        status: "prepared",
+        action: "sms.prepare",
+        message: payload.message,
+        safety: "Draft only. No SMS was sent. Health details are not included by default."
+      }, label);
+      return;
+    }
+    if (action === "prepare-call") {
+      setNexusProviderBridgeResult({
+        status: "prepared",
+        action: "call.prepare",
+        safety: "Call preparation only. No call was started. Twilio calls require config and explicit confirmation."
+      }, label);
+      return;
+    }
+    let result;
+    if (action === "map") {
+      result = await request("/api/nexus/tools/maps/route", {
+        method: "POST",
+        body: { origin: routeOrigin, destination: card.address || "", confirmed: payload.confirmed }
+      });
+    } else if (action === "send-sms") {
+      result = await request("/api/nexus/tools/sms/send", {
+        method: "POST",
+        body: { to: card.phone || "", message: payload.message, confirmed: payload.confirmed }
+      });
+    } else if (action === "start-call") {
+      result = await request("/api/nexus/tools/call/start", {
+        method: "POST",
+        body: { to: card.phone || "", message: "This is a confirmed Nexus provider contact bridge call test.", confirmed: payload.confirmed }
+      });
+    } else if (action === "save") {
+      result = await request("/api/nexus/tools/providers/save", { method: "POST", body: payload });
+    } else if (action === "reminder") {
+      result = await request("/api/nexus/tools/reminders/create", {
+        method: "POST",
+        body: {
+          title: `Follow up with ${card.providerName || card.organizationName || "provider"}`,
+          dueAt: payload.dueAt,
+          note: "Provider follow-up reminder from public CMS/NPI lookup. No OS notification permission requested.",
+          confirmed: payload.confirmed
+        }
+      });
+    } else if (action === "note") {
+      result = await request("/api/nexus/tools/providers/note", { method: "POST", body: payload });
+    }
+    if (result) {
+      const displayData = sanitizeNexusProviderTestingDisplayData(result.data || {});
+      setNexusProviderBridgeResult({
+        provider: result.provider,
+        action: result.action,
+        status: result.status,
+        message: result.message,
+        missingConfig: result.missingConfig || [],
+        requiresConfirmation: result.requiresConfirmation || false,
+        data: displayData
+      }, label);
+      await refreshNexusRealProviderTestingStatus();
+    }
+  } catch (error) {
+    setNexusProviderBridgeResult({ status: "failed_safely", message: error.message }, label);
   }
 }
 
@@ -32530,6 +32740,13 @@ function bindStatic() {
       event.preventDefault();
       event.stopPropagation();
       await runNexusRealProviderTest(realProviderTestButton.dataset.realProviderTest);
+      return;
+    }
+    const providerBridgeButton = event.target.closest("[data-provider-contact-action]");
+    if (providerBridgeButton) {
+      event.preventDefault();
+      event.stopPropagation();
+      await runNexusProviderContactBridgeAction(providerBridgeButton.dataset.providerContactAction, providerBridgeButton.dataset.providerContactIndex);
       return;
     }
     if (event.target.closest("#adminHealthCheck")) {

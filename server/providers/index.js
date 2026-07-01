@@ -9,5 +9,6 @@ module.exports = {
   marketplace: require("./marketplaceProvider"),
   stripe: require("./stripeProvider"),
   offlineSync: require("./offlineSyncProvider"),
-  reminders: require("./reminderProvider")
+  reminders: require("./reminderProvider"),
+  providerContactBridge: require("./providerContactBridgeProvider")
 };
