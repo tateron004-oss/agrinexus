@@ -34,8 +34,8 @@ const AI_MODEL = process.env.OPENAI_MODEL || "gpt-5.4-mini";
 const AI_REASONING_MODEL = process.env.OPENAI_REASONING_MODEL || process.env.OPENAI_AGENT_MODEL || AI_MODEL;
 const AI_TRANSLATION_MODEL = process.env.OPENAI_TRANSLATION_MODEL || process.env.OPENAI_AGENT_MODEL || AI_MODEL;
 const AGRINEXUS_RELEASE = "2026-06-16-operational-readiness";
-const AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-342";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v321";
+const AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-343";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v322";
 const PRODUCT_IDENTITY = Object.freeze({
   productName: "Nexus Workforce AI",
   assistantName: "Nexus",
@@ -27908,12 +27908,31 @@ function ensureNexusProductionRailsState(db) {
   if (!Array.isArray(db.nexusKnowledgeQueries)) db.nexusKnowledgeQueries = [];
   if (!Array.isArray(db.nexusKnowledgeSavedResults)) db.nexusKnowledgeSavedResults = [];
   if (!Array.isArray(db.nexusKnowledgeReviewSummaries)) db.nexusKnowledgeReviewSummaries = [];
+  if (!Array.isArray(db.nexusProviderOrganizations)) db.nexusProviderOrganizations = [];
+  if (!Array.isArray(db.nexusProviderReviewers)) db.nexusProviderReviewers = [];
+  if (!Array.isArray(db.nexusRoutingRules)) db.nexusRoutingRules = [];
+  if (!Array.isArray(db.nexusRoutingLogs)) db.nexusRoutingLogs = [];
+  if (!Array.isArray(db.nexusProviderResponses)) db.nexusProviderResponses = [];
+  if (!Array.isArray(db.nexusCases)) db.nexusCases = [];
+  if (!Array.isArray(db.nexusCaseTimeline)) db.nexusCaseTimeline = [];
+  if (!Array.isArray(db.nexusCommunications)) db.nexusCommunications = [];
+  if (!Array.isArray(db.nexusNotifications)) db.nexusNotifications = [];
+  if (!Array.isArray(db.nexusOutcomes)) db.nexusOutcomes = [];
+  if (!Array.isArray(db.nexusLaunchBlockers)) db.nexusLaunchBlockers = [];
+  if (!Array.isArray(db.nexusLegalSafetyPages)) db.nexusLegalSafetyPages = [];
+  if (!Array.isArray(db.nexusAttachmentReadinessEvents)) db.nexusAttachmentReadinessEvents = [];
+  if (!Array.isArray(db.nexusMarketplaceExecutionAttempts)) db.nexusMarketplaceExecutionAttempts = [];
+  if (!Array.isArray(db.nexusHighRiskBlockedAttempts)) db.nexusHighRiskBlockedAttempts = [];
+  if (!Array.isArray(db.nexusAiAnswerReports)) db.nexusAiAnswerReports = [];
+  ensureNexusEndgameSeeds(db);
   const profile = db.nexusPilotProfiles[0];
   if (profile) {
     profile.accountId = profile.accountId || "standard-user-local";
     profile.authMode = profile.authMode || "local prototype account";
     profile.role = NEXUS_PRODUCTION_ROLES.includes(profile.role) ? profile.role : "Standard User";
     profile.productionRailReady = true;
+    profile.preferredLanguage = profile.preferredLanguage || "English";
+    profile.languageCode = profile.languageCode || "en";
   }
 }
 
@@ -28699,6 +28718,7 @@ function nexusProductionReadiness(db, env = process.env) {
     ],
     integrations,
     liveKnowledgeReadiness: nexusKnowledgeReadiness(db, env),
+    endgameProductionPlatform: nexusEndgameStatus(db, env),
     standardUserSafety: [
       "Standard User can prepare, review, queue, export-request, and delete-request local records",
       "High-risk provider, pharmacy, payment, emergency, communication, location, and marketplace actions stay gated",
@@ -28734,9 +28754,9 @@ function nexusCreateExportDeleteRequest(db, body = {}, user = null, requestType 
 
 function nexusPrepareIntegrationAttempt(db, type = "", body = {}, user = null) {
   ensureNexusProductionRailsState(db);
-  const integration = NEXUS_PRODUCTION_INTEGRATIONS.find(item => item.id === type);
+  const integration = NEXUS_PRODUCTION_INTEGRATIONS.find(item => item.id === type || item.type === type);
   if (!integration) return { ok: false, error: "unsupported_integration" };
-  const status = nexusProductionIntegrationStatus(db).find(item => item.id === type);
+  const status = nexusProductionIntegrationStatus(db).find(item => item.id === integration.id);
   const now = new Date().toISOString();
   const attempt = {
     id: crypto.randomUUID(),
@@ -28763,6 +28783,691 @@ function nexusPrepareIntegrationAttempt(db, type = "", body = {}, user = null) {
     description: `${integration.name} integration attempt prepared locally. No provider request was sent.`
   });
   return { ok: true, attempt };
+}
+
+const NEXUS_PROVIDER_ORGANIZATION_TYPES = Object.freeze([
+  "telehealth",
+  "clinic",
+  "mobile_clinic",
+  "pharmacy",
+  "agriculture_advisor",
+  "agronomist",
+  "workforce_partner",
+  "learning_partner",
+  "marketplace_partner",
+  "logistics_partner",
+  "maps_partner",
+  "community_support",
+  "admin_internal"
+]);
+
+const NEXUS_PROVIDER_STATUSES = Object.freeze([
+  "draft",
+  "sandbox",
+  "active",
+  "inactive",
+  "blocked",
+  "requires_credentials",
+  "requires_agreement",
+  "requires_legal_review"
+]);
+
+const NEXUS_PROVIDER_REVIEWER_ROLES = Object.freeze([
+  "provider_reviewer",
+  "provider_admin",
+  "pharmacist_reviewer",
+  "agriculture_reviewer",
+  "workforce_reviewer",
+  "mobile_clinic_reviewer",
+  "platform_admin"
+]);
+
+const NEXUS_CASE_STATUSES = Object.freeze([
+  "open",
+  "draft",
+  "prepared",
+  "awaiting_consent",
+  "queued_locally",
+  "routed",
+  "in_review",
+  "needs_user_info",
+  "provider_responded",
+  "follow_up_scheduled",
+  "closed",
+  "archived",
+  "blocked"
+]);
+
+const NEXUS_PROVIDER_RESPONSE_TYPES = Object.freeze([
+  "note",
+  "request_more_info",
+  "recommendation",
+  "referral",
+  "status_update",
+  "education",
+  "follow_up",
+  "declined",
+  "closed"
+]);
+
+const NEXUS_COMMUNICATION_CHANNELS = Object.freeze([
+  "in_app_notification",
+  "prepared_email",
+  "prepared_sms",
+  "prepared_whatsapp",
+  "prepared_telegram",
+  "prepared_phone_call_handoff",
+  "prepared_provider_export",
+  "prepared_user_download"
+]);
+
+const NEXUS_INTEGRATION_ADAPTER_TYPES = Object.freeze([
+  "internet_retrieval",
+  "telehealth_provider",
+  "pharmacy_partner",
+  "mobile_clinic_partner",
+  "agriculture_advisor",
+  "workforce_partner",
+  "learning_partner",
+  "marketplace_partner",
+  "logistics_partner",
+  "maps_provider",
+  "email",
+  "sms",
+  "whatsapp",
+  "telegram",
+  "phone_call_handoff",
+  "video_visit",
+  "payment_provider",
+  "emergency_service"
+]);
+
+const NEXUS_LANGUAGE_REGISTRY = Object.freeze([
+  { code: "en", label: "English", localSupport: "active", productionTranslation: "partial/local" },
+  { code: "fr", label: "French", localSupport: "partial", productionTranslation: "requires_provider_or_review" },
+  { code: "sw", label: "Swahili", localSupport: "partial", productionTranslation: "requires_provider_or_review" },
+  { code: "ar", label: "Arabic", localSupport: "partial", productionTranslation: "requires_provider_or_review" },
+  { code: "pt", label: "Portuguese", localSupport: "partial", productionTranslation: "requires_provider_or_review" },
+  { code: "es", label: "Spanish", localSupport: "partial", productionTranslation: "requires_provider_or_review" }
+]);
+
+const NEXUS_LEGAL_SAFETY_PAGES = Object.freeze([
+  ["about", "About Nexus", "Nexus is a real prototype foundation for guided agriculture, health access, workforce, learning, marketplace, maps, media, reminders, and offline support."],
+  ["safety-limitations", "Safety & Limitations", "Nexus prepares information, records, summaries, and review workflows. High-risk actions require configuration, consent, approval, and audit."],
+  ["privacy", "Privacy", "Privacy operations are draft/pilot-ready. Export and delete requests are recorded locally for review until production privacy operations are finalized."],
+  ["terms", "Terms", "Terms are draft placeholders pending legal review before public production launch."],
+  ["consent", "Consent", "Sensitive routing requires explicit consent before review or partner handoff."],
+  ["data-export-delete", "Data Export/Delete", "Export and delete requests are available as local review rails and do not silently transmit or erase data."],
+  ["provider-partner-status", "Provider/Partner Status", "Provider and partner connections are shown as configured, sandbox, missing credentials, agreement-required, or inactive."],
+  ["emergency-disclaimer", "Emergency Disclaimer", "Nexus does not dispatch emergency services. Contact local emergency services for urgent or life-threatening situations."],
+  ["healthcare-disclaimer", "Healthcare Disclaimer", "Nexus does not diagnose, prescribe, replace clinicians, or provide emergency care."],
+  ["pharmacy-disclaimer", "Pharmacy Disclaimer", "Nexus does not fulfill prescriptions or change medication. Pharmacy workflows require partner configuration and professional review."],
+  ["marketplace-disclaimer", "Marketplace Disclaimer", "Nexus does not complete payments, escrow, shipping, buyer matching, or purchases unless configured through approved providers."],
+  ["ai-internet-information-disclaimer", "AI/Internet Information Disclaimer", "AI and internet answers must show source-backed or built-in guidance labels. Retrieved answers require citations and timestamps."]
+]);
+
+function ensureNexusEndgameSeeds(db) {
+  const now = new Date().toISOString();
+  if (!db.nexusProviderOrganizations.length) {
+    db.nexusProviderOrganizations.push(
+      {
+        id: "provider-org-internal-review",
+        organizationName: "Nexus Internal Review Desk",
+        organizationType: "admin_internal",
+        countriesServed: ["local prototype"],
+        regionsServed: ["local/sandbox"],
+        serviceCategoriesAccepted: ["all_preparation_records", "case_review", "source_review"],
+        contactMethodsConfigured: ["in_app_review_only"],
+        status: "sandbox",
+        configuredCapabilities: ["local_review", "notes", "status_updates", "response_loop"],
+        acceptedRecordTypes: ["health_note", "chronic_care_reading", "agriculture_question", "marketplace_listing", "workforce_plan", "learning_plan", "route_plan", "knowledge_answer"],
+        routingRules: ["route consented local records to internal review when no active partner is configured"],
+        safetyLimitations: ["No live provider contact", "No diagnosis", "No prescribing", "No payment", "No emergency dispatch"],
+        createdAt: now,
+        updatedAt: now
+      },
+      {
+        id: "provider-org-agriculture-sandbox",
+        organizationName: "Sandbox Agriculture Expert Network",
+        organizationType: "agriculture_advisor",
+        countriesServed: ["Kenya", "Nigeria", "Ghana", "South Africa", "United States"],
+        regionsServed: ["sandbox"],
+        serviceCategoriesAccepted: ["crop_guidance", "training_review", "field_visit_preparation"],
+        contactMethodsConfigured: ["in_app_review_only"],
+        status: "requires_agreement",
+        configuredCapabilities: ["review_queue", "education_response"],
+        acceptedRecordTypes: ["agriculture_question", "field_visit_plan", "knowledge_answer"],
+        routingRules: ["eligible only after partner agreement and active status"],
+        safetyLimitations: ["Educational review only until agreement and credentialing are complete"],
+        createdAt: now,
+        updatedAt: now
+      },
+      {
+        id: "provider-org-health-sandbox",
+        organizationName: "Sandbox Health Access Review Network",
+        organizationType: "clinic",
+        countriesServed: ["local prototype"],
+        regionsServed: ["sandbox"],
+        serviceCategoriesAccepted: ["health_access_preparation", "chronic_care_summary", "telehealth_intake"],
+        contactMethodsConfigured: ["in_app_review_only"],
+        status: "requires_legal_review",
+        configuredCapabilities: ["intake_review_ready", "provider_response_loop"],
+        acceptedRecordTypes: ["health_note", "chronic_care_reading", "telehealth_intake", "pharmacy_question"],
+        routingRules: ["blocked until legal/compliance review and partner agreement are complete"],
+        safetyLimitations: ["No clinical diagnosis", "No prescribing", "No live clinician review claim", "No emergency handling"],
+        createdAt: now,
+        updatedAt: now
+      }
+    );
+  }
+  if (!db.nexusProviderReviewers.length) {
+    db.nexusProviderReviewers.push({
+      id: "provider-reviewer-internal-admin",
+      providerOrganizationId: "provider-org-internal-review",
+      displayName: "Nexus Internal Reviewer",
+      role: "platform_admin",
+      contactPlaceholder: "local-review-only",
+      status: "sandbox",
+      permissions: ["review_records", "add_notes", "prepare_user_visible_response", "update_case_status"],
+      createdAt: now,
+      updatedAt: now
+    });
+  }
+  if (!db.nexusRoutingRules.length) {
+    db.nexusRoutingRules.push({
+      id: "routing-rule-default-local-review",
+      name: "Default local review fallback",
+      recordTypes: ["*"],
+      sourceModes: ["*"],
+      requiredConsent: true,
+      providerStatusesAllowed: ["active"],
+      fallbackOutcome: "queued_for_internal_review",
+      safetyGate: "No external provider send unless provider is active, integration is configured, consent exists, and final approval is present.",
+      createdAt: now,
+      updatedAt: now
+    });
+  }
+  if (!db.nexusLegalSafetyPages.length) {
+    db.nexusLegalSafetyPages.push(...NEXUS_LEGAL_SAFETY_PAGES.map(([id, title, body]) => ({
+      id,
+      title,
+      body,
+      status: "draft_pending_legal_review",
+      visibleToUsers: true,
+      updatedAt: now
+    })));
+  }
+  ensureNexusLaunchBlockers(db);
+}
+
+function ensureNexusLaunchBlockers(db, env = process.env) {
+  const now = new Date().toISOString();
+  const existing = new Set(db.nexusLaunchBlockers.map(item => item.id));
+  const add = (id, blockerType, severity, title, description, requiredAction, relatedIntegration = "") => {
+    if (existing.has(id)) return;
+    db.nexusLaunchBlockers.push({
+      id,
+      blockerType,
+      severity,
+      title,
+      description,
+      status: "open",
+      requiredAction,
+      relatedIntegration,
+      createdAt: now,
+      updatedAt: now
+    });
+  };
+  if (!nexusFlagEnabled(env, "NEXUS_PRODUCTION_AUTH_ENABLED")) add("launch-blocker-auth", "auth", "critical", "Real authentication not configured", "Current auth posture is local/prototype, not production identity.", "Configure production authentication, roles, sessions, and access review.");
+  if (!env.NEXUS_EXTERNAL_DATABASE_URL) add("launch-blocker-db", "storage", "critical", "External database not configured", "Local JSON storage is not sufficient for public production.", "Configure external database, backup, migration, and retention operations.");
+  if (!db.nexusProviderOrganizations.some(org => org.status === "active")) add("launch-blocker-provider-agreements", "provider_network", "critical", "Provider agreements missing", "No provider/partner organization is active for production routing.", "Complete partner agreements, legal review, credentialing, and activation.");
+  add("launch-blocker-healthcare-compliance", "compliance", "critical", "Healthcare compliance review required", "Healthcare workflows are gated until compliance and clinical governance are reviewed.", "Complete healthcare legal/compliance review before public health execution.");
+  if (!nexusFlagEnabled(env, "NEXUS_MARKETPLACE_PAYMENTS_ENABLED")) add("launch-blocker-payments", "payments", "high", "Payment provider disabled", "Marketplace payments are gated and not live.", "Configure sandbox first, then production payment review.");
+  if (!nexusFlagEnabled(env, "NEXUS_MESSAGES_ENABLED")) add("launch-blocker-messaging", "communications", "high", "Messaging provider disabled", "SMS/WhatsApp/email/call execution is not enabled by default.", "Configure communication providers and final confirmation/audit gates.");
+  if (!nexusFlagEnabled(env, "NEXUS_LIVE_KNOWLEDGE_ENABLED")) add("launch-blocker-live-knowledge", "internet_retrieval", "medium", "Live retrieval disabled", "Internet retrieval remains disabled until a retrieval provider is configured.", "Set a live knowledge provider, API key, safe mode, and citation policy.");
+  add("launch-blocker-legal-terms", "legal", "high", "Legal terms not finalized", "Legal, privacy, consent, healthcare, pharmacy, marketplace, AI, and emergency pages are draft placeholders.", "Complete legal review and publish final policy pages.");
+}
+
+function sanitizeList(value, maxItems = 20, maxLength = 160) {
+  return (Array.isArray(value) ? value : String(value || "").split(","))
+    .map(item => sanitizePilotText(item, maxLength))
+    .filter(Boolean)
+    .slice(0, maxItems);
+}
+
+function normalizeProviderOrganization(body = {}, existing = {}) {
+  const now = new Date().toISOString();
+  const organizationType = NEXUS_PROVIDER_ORGANIZATION_TYPES.includes(body.organizationType) ? body.organizationType : existing.organizationType || "community_support";
+  const status = NEXUS_PROVIDER_STATUSES.includes(body.status) ? body.status : existing.status || "draft";
+  return {
+    id: existing.id || body.id || crypto.randomUUID(),
+    organizationName: sanitizePilotText(body.organizationName || existing.organizationName || "New Nexus Partner", 180),
+    organizationType,
+    countriesServed: sanitizeList(body.countriesServed || body.countries || existing.countriesServed || []),
+    regionsServed: sanitizeList(body.regionsServed || body.regions || existing.regionsServed || []),
+    serviceCategoriesAccepted: sanitizeList(body.serviceCategoriesAccepted || body.serviceCategories || existing.serviceCategoriesAccepted || []),
+    contactMethodsConfigured: sanitizeList(body.contactMethodsConfigured || existing.contactMethodsConfigured || []),
+    status,
+    configuredCapabilities: sanitizeList(body.configuredCapabilities || existing.configuredCapabilities || []),
+    acceptedRecordTypes: sanitizeList(body.acceptedRecordTypes || existing.acceptedRecordTypes || []),
+    routingRules: sanitizeList(body.routingRules || existing.routingRules || []),
+    safetyLimitations: sanitizeList(body.safetyLimitations || existing.safetyLimitations || ["No live action until configured and approved"]),
+    createdAt: existing.createdAt || now,
+    updatedAt: now
+  };
+}
+
+function normalizeProviderReviewer(providerOrganizationId, body = {}, existing = {}) {
+  const now = new Date().toISOString();
+  const role = NEXUS_PROVIDER_REVIEWER_ROLES.includes(body.role) ? body.role : existing.role || "provider_reviewer";
+  return {
+    id: existing.id || body.id || crypto.randomUUID(),
+    providerOrganizationId,
+    displayName: sanitizePilotText(body.displayName || existing.displayName || "Provider Reviewer", 160),
+    role,
+    contactPlaceholder: sanitizePilotText(body.contactPlaceholder || body.email || existing.contactPlaceholder || "not-configured", 180),
+    status: sanitizePilotText(body.status || existing.status || "sandbox", 80),
+    permissions: sanitizeList(body.permissions || existing.permissions || ["review_records", "add_notes"]),
+    createdAt: existing.createdAt || now,
+    updatedAt: now
+  };
+}
+
+function getRecordById(db, recordId) {
+  ensureNexusPilotState(db);
+  return db.nexusPilotRecords.find(record => record.id === recordId);
+}
+
+function activeProviderForRecord(db, record = {}, body = {}) {
+  const recordType = body.recordType || record.type || "";
+  const sourceMode = body.sourceMode || record.sourceMode || "";
+  const country = String(body.country || record.payload?.country || record.payload?.region || "").toLowerCase();
+  return db.nexusProviderOrganizations.find(org => {
+    if (org.status !== "active") return false;
+    const acceptsType = org.acceptedRecordTypes.includes(recordType) || org.acceptedRecordTypes.includes("*");
+    const acceptsMode = org.serviceCategoriesAccepted.includes(sourceMode) || org.serviceCategoriesAccepted.includes("*") || org.configuredCapabilities.includes(sourceMode);
+    const acceptsRegion = !country || org.countriesServed.map(item => item.toLowerCase()).includes(country) || org.countriesServed.includes("*");
+    return (acceptsType || acceptsMode) && acceptsRegion;
+  });
+}
+
+function nexusEvaluateRouting(db, body = {}, user = null) {
+  ensureNexusProductionRailsState(db);
+  const record = body.recordId ? getRecordById(db, body.recordId) : null;
+  const consentConfirmed = body.consentConfirmed === true || record?.consentStatus === "confirmed";
+  const highRisk = /\b(health|pharmacy|telehealth|emergency|payment|call|message|marketplace)\b/i.test(`${body.recordType || record?.type || ""} ${body.sourceMode || record?.sourceMode || ""} ${body.urgency || ""}`);
+  const provider = activeProviderForRecord(db, record || {}, body);
+  const integrationReady = provider && nexusProductionIntegrationStatus(db).some(item => item.enabled && item.configured && item.executionEnabled === false);
+  let outcome = "queued_locally";
+  let reason = "Prepared locally. No provider route has been executed.";
+  if (highRisk && body.safetyOverride !== true) {
+    outcome = "requires_manual_review";
+    reason = "High-risk or regulated workflow requires manual review, consent, active provider, integration readiness, and audit.";
+  }
+  if (!consentConfirmed) {
+    outcome = "blocked_missing_consent";
+    reason = "Consent is required before sensitive routing.";
+  } else if (!provider) {
+    outcome = "blocked_missing_provider";
+    reason = "No active provider/partner organization is configured for this record.";
+  } else if (!integrationReady) {
+    outcome = "blocked_missing_integration";
+    reason = "Provider organization exists, but live integration remains disabled or not execution-approved.";
+  } else {
+    outcome = "routed_to_provider";
+    reason = "Record is eligible for provider routing, subject to final configured integration send.";
+  }
+  return {
+    ok: true,
+    outcome,
+    reason,
+    recordId: record?.id || body.recordId || "",
+    providerOrganizationId: provider?.id || "",
+    providerName: provider?.organizationName || "",
+    consentConfirmed,
+    integrationReady: Boolean(integrationReady),
+    noSilentExecution: true,
+    auditRequired: true,
+    finalApprovalRequired: true,
+    evaluatedAt: new Date().toISOString(),
+    actor: sanitizePilotText(user?.name || body.actor || "Standard User", 120)
+  };
+}
+
+function nexusRouteRecord(db, body = {}, user = null) {
+  const evaluation = nexusEvaluateRouting(db, body, user);
+  const now = new Date().toISOString();
+  const log = {
+    id: crypto.randomUUID(),
+    ...evaluation,
+    createdAt: now,
+    updatedAt: now
+  };
+  db.nexusRoutingLogs.unshift(log);
+  const record = evaluation.recordId ? getRecordById(db, evaluation.recordId) : null;
+  if (record) {
+    record.routingStatus = evaluation.outcome;
+    record.providerOrganizationId = evaluation.providerOrganizationId || record.providerOrganizationId || "";
+    record.updatedAt = now;
+  }
+  addNexusPilotAuditEvent(db, "routing_evaluated", {
+    relatedRecordId: evaluation.recordId,
+    actor: evaluation.actor,
+    role: user?.role || "Standard User",
+    description: `Routing outcome: ${evaluation.outcome}. ${evaluation.reason}`
+  });
+  return { ok: true, routing: log, record: record || null };
+}
+
+function normalizeRoutingRule(body = {}, existing = {}) {
+  const now = new Date().toISOString();
+  return {
+    id: existing.id || body.id || crypto.randomUUID(),
+    name: sanitizePilotText(body.name || existing.name || "Nexus routing rule", 160),
+    recordTypes: sanitizeList(body.recordTypes || existing.recordTypes || ["*"]),
+    sourceModes: sanitizeList(body.sourceModes || existing.sourceModes || ["*"]),
+    requiredConsent: body.requiredConsent !== false,
+    providerStatusesAllowed: sanitizeList(body.providerStatusesAllowed || existing.providerStatusesAllowed || ["active"]),
+    fallbackOutcome: sanitizePilotText(body.fallbackOutcome || existing.fallbackOutcome || "queued_for_internal_review", 80),
+    safetyGate: sanitizePilotText(body.safetyGate || existing.safetyGate || "Final execution requires provider, consent, audit, and approval.", 500),
+    createdAt: existing.createdAt || now,
+    updatedAt: now
+  };
+}
+
+function normalizeProviderResponse(db, recordId, body = {}, existing = {}) {
+  const now = new Date().toISOString();
+  const responseType = NEXUS_PROVIDER_RESPONSE_TYPES.includes(body.responseType) ? body.responseType : existing.responseType || "note";
+  const providerOrganizationId = sanitizePilotText(body.providerOrganizationId || existing.providerOrganizationId || "provider-org-internal-review", 120);
+  return {
+    id: existing.id || body.id || crypto.randomUUID(),
+    recordId: sanitizePilotText(recordId || body.recordId || existing.recordId || "", 120),
+    providerOrganizationId,
+    reviewerId: sanitizePilotText(body.reviewerId || existing.reviewerId || "provider-reviewer-internal-admin", 120),
+    reviewerLabel: sanitizePilotText(body.reviewerLabel || existing.reviewerLabel || "Nexus reviewer", 160),
+    responseType,
+    responseText: sanitizePilotText(body.responseText || existing.responseText || "Provider/admin review note prepared locally.", 1200),
+    safeLimitations: sanitizeList(body.safeLimitations || existing.safeLimitations || ["Review-only response. No diagnosis, prescription, payment, emergency dispatch, call, message, or live provider action is implied."], 8, 240),
+    visibleToUser: body.visibleToUser === true || existing.visibleToUser === true,
+    configurationLabel: db.nexusProviderOrganizations.find(org => org.id === providerOrganizationId)?.status || "sandbox",
+    auditReferences: sanitizeList(body.auditReferences || existing.auditReferences || []),
+    createdAt: existing.createdAt || now,
+    updatedAt: now
+  };
+}
+
+function caseTimelineEvent(db, caseId, eventType, description, refs = {}) {
+  const event = {
+    id: crypto.randomUUID(),
+    caseId,
+    eventType: sanitizePilotText(eventType, 100),
+    description: sanitizePilotText(description, 700),
+    refs,
+    createdAt: new Date().toISOString()
+  };
+  db.nexusCaseTimeline.unshift(event);
+  return event;
+}
+
+function normalizeCase(db, body = {}, existing = {}, user = null) {
+  const now = new Date().toISOString();
+  const status = NEXUS_CASE_STATUSES.includes(body.status) ? body.status : existing.status || "open";
+  return {
+    id: existing.id || body.id || crypto.randomUUID(),
+    profileId: sanitizePilotText(body.profileId || existing.profileId || db.nexusPilotProfiles[0]?.id || "standard-user-local", 120),
+    title: sanitizePilotText(body.title || existing.title || "Nexus case", 180),
+    summary: sanitizePilotText(body.summary || existing.summary || "Case groups Nexus records, consent, review, responses, reminders, and audit history.", 1200),
+    status,
+    recordIds: sanitizeList(body.recordIds || existing.recordIds || [], 50, 120),
+    knowledgeQueryIds: sanitizeList(body.knowledgeQueryIds || existing.knowledgeQueryIds || [], 50, 120),
+    consentEventIds: sanitizeList(body.consentEventIds || existing.consentEventIds || [], 50, 120),
+    routingLogIds: sanitizeList(body.routingLogIds || existing.routingLogIds || [], 50, 120),
+    responseIds: sanitizeList(body.responseIds || existing.responseIds || [], 50, 120),
+    reminderIds: sanitizeList(body.reminderIds || existing.reminderIds || [], 50, 120),
+    offlineQueueIds: sanitizeList(body.offlineQueueIds || existing.offlineQueueIds || [], 50, 120),
+    auditRefs: sanitizeList(body.auditRefs || existing.auditRefs || [], 50, 120),
+    nextSteps: sanitizeList(body.nextSteps || existing.nextSteps || ["Review prepared records", "Confirm consent before sensitive routing", "Wait for configured provider/admin response"], 8, 240),
+    createdBy: sanitizePilotText(user?.name || body.createdBy || existing.createdBy || "Standard User", 120),
+    createdAt: existing.createdAt || now,
+    updatedAt: now
+  };
+}
+
+function nexusIntegrationAdapterStatus(db, type, env = process.env) {
+  ensureNexusProductionRailsState(db);
+  const integration = NEXUS_PRODUCTION_INTEGRATIONS.find(item => item.type === type || item.id === type);
+  const base = integration
+    ? nexusProductionIntegrationStatus(db, env).find(item => item.id === integration.id)
+    : null;
+  const known = NEXUS_INTEGRATION_ADAPTER_TYPES.includes(type) || Boolean(base);
+  const status = base || {
+    id: type,
+    name: type.replace(/_/g, " "),
+    type,
+    enabled: false,
+    configured: false,
+    missingEnv: ["provider-specific credentials"],
+    testability: "disabled",
+    actionRiskTier: ["sms", "whatsapp", "telegram", "email", "phone_call_handoff", "payment_provider", "emergency_service"].includes(type) ? "high" : "medium"
+  };
+  return {
+    ok: known,
+    adapterType: type,
+    providerName: status.name,
+    enabled: Boolean(status.enabled),
+    configured: Boolean(status.configured),
+    sandboxOrLocalState: status.enabled && status.configured ? "sandbox_ready" : "disabled_or_missing_config",
+    missingEnv: status.missingEnv || [],
+    requestPayloadBuilderReady: true,
+    validateBeforeSendReady: true,
+    consentCheckRequired: true,
+    routeCheckRequired: true,
+    sendAttemptMethod: "blocked_until_configured_and_approved",
+    disabledResponse: "prepared_not_sent",
+    auditEventRequired: true,
+    integrationAttemptLogReady: true,
+    noExternalRequestUnlessConfigured: true,
+    noSilentExecution: true,
+    status
+  };
+}
+
+function normalizeCommunication(body = {}, existing = {}) {
+  const now = new Date().toISOString();
+  const channel = NEXUS_COMMUNICATION_CHANNELS.includes(body.channel) ? body.channel : existing.channel || "in_app_notification";
+  const consent = body.consentConfirmed === true || existing.consentConfirmed === true;
+  const configured = body.providerConfigured === true || existing.providerConfigured === true;
+  const status = body.status || existing.status || (channel === "in_app_notification" ? "prepared" : !consent ? "blocked_missing_consent" : !configured ? "blocked_missing_config" : "prepared");
+  return {
+    id: existing.id || body.id || crypto.randomUUID(),
+    channel,
+    recipientType: sanitizePilotText(body.recipientType || existing.recipientType || "user_or_provider_pending", 100),
+    linkedRecordId: sanitizePilotText(body.linkedRecordId || existing.linkedRecordId || body.recordId || "", 120),
+    caseId: sanitizePilotText(body.caseId || existing.caseId || "", 120),
+    messagePreview: sanitizePilotText(body.messagePreview || existing.messagePreview || "Prepared Nexus communication draft. Not sent.", 1000),
+    status,
+    consentConfirmed: consent,
+    providerConfigured: configured,
+    noSilentSend: true,
+    createdAt: existing.createdAt || now,
+    updatedAt: now
+  };
+}
+
+function normalizeNotification(body = {}, existing = {}) {
+  const now = new Date().toISOString();
+  return {
+    id: existing.id || body.id || crypto.randomUUID(),
+    title: sanitizePilotText(body.title || existing.title || "Nexus update", 160),
+    message: sanitizePilotText(body.message || existing.message || "A Nexus preparation item has an update.", 600),
+    caseId: sanitizePilotText(body.caseId || existing.caseId || "", 120),
+    recordId: sanitizePilotText(body.recordId || existing.recordId || "", 120),
+    read: body.read === true || existing.read === true,
+    createdAt: existing.createdAt || now,
+    updatedAt: now
+  };
+}
+
+function normalizeOutcome(body = {}, existing = {}) {
+  const now = new Date().toISOString();
+  const allowed = ["resolved", "improved", "referred", "no_response", "needs_follow_up", "user_cancelled", "provider_declined", "unavailable", "unknown"];
+  const outcomeType = allowed.includes(body.outcomeType) ? body.outcomeType : existing.outcomeType || "unknown";
+  return {
+    id: existing.id || body.id || crypto.randomUUID(),
+    caseId: sanitizePilotText(body.caseId || existing.caseId || "", 120),
+    recordId: sanitizePilotText(body.recordId || existing.recordId || "", 120),
+    outcomeType,
+    userFeedback: sanitizePilotText(body.userFeedback || existing.userFeedback || "", 900),
+    providerAdminFeedback: sanitizePilotText(body.providerAdminFeedback || existing.providerAdminFeedback || "", 900),
+    createdAt: existing.createdAt || now,
+    updatedAt: now
+  };
+}
+
+function nexusAnalyticsSummary(db) {
+  ensureNexusProductionRailsState(db);
+  const countBy = (items, key) => items.reduce((acc, item) => {
+    const value = item[key] || "unknown";
+    acc[value] = (acc[value] || 0) + 1;
+    return acc;
+  }, {});
+  return {
+    ok: true,
+    generatedAt: new Date().toISOString(),
+    cases: { total: db.nexusCases.length, byStatus: countBy(db.nexusCases, "status") },
+    records: { total: db.nexusPilotRecords.length, byType: countBy(db.nexusPilotRecords, "type") },
+    routing: { total: db.nexusRoutingLogs.length, byOutcome: countBy(db.nexusRoutingLogs, "outcome") },
+    consentCount: db.nexusPilotConsentEvents.length,
+    reviewQueue: { total: db.nexusPilotReviewQueue.length, byStatus: countBy(db.nexusPilotReviewQueue, "status") },
+    providerResponses: { total: db.nexusProviderResponses.length, visibleToUser: db.nexusProviderResponses.filter(item => item.visibleToUser).length },
+    outcomes: { total: db.nexusOutcomes.length, byType: countBy(db.nexusOutcomes, "outcomeType") },
+    integrationAttempts: { total: db.nexusIntegrationAttempts.length, byStatus: countBy(db.nexusIntegrationAttempts, "status") },
+    offlineQueueCount: db.nexusPilotOfflineQueue.length,
+    remindersCount: db.nexusPilotReminders.length,
+    knowledgeQueries: { total: db.nexusKnowledgeQueries.length, byCategory: countBy(db.nexusKnowledgeQueries, "category") },
+    sensitiveDetailsExcluded: true
+  };
+}
+
+function nexusLaunchReadiness(db, env = process.env) {
+  ensureNexusProductionRailsState(db);
+  ensureNexusLaunchBlockers(db, env);
+  const integrations = nexusProductionIntegrationStatus(db, env);
+  const blockers = db.nexusLaunchBlockers.filter(item => item.status !== "resolved");
+  return {
+    ok: true,
+    readyForLocalDemoPilot: true,
+    readyForControlledPartnerPilot: db.nexusProviderOrganizations.some(org => ["sandbox", "active"].includes(org.status)),
+    blockedForPublicProduction: blockers.length > 0,
+    categories: {
+      authMode: nexusFlagEnabled(env, "NEXUS_PRODUCTION_AUTH_ENABLED") ? "configured" : "local_prototype_auth",
+      storageMode: env.NEXUS_EXTERNAL_DATABASE_URL ? "external_database_configured" : "local_json_only",
+      liveKnowledge: nexusKnowledgeProviderStatus(env).testability,
+      providerNetwork: db.nexusProviderOrganizations.some(org => org.status === "active") ? "active_provider_exists" : "no_active_provider",
+      communicationChannels: integrations.filter(item => ["communications", "email"].includes(item.type) && item.enabled && item.configured).length ? "configured" : "disabled_or_missing_config",
+      payment: "disabled/gated",
+      emergency: "disabled/gated",
+      complianceLegalStatus: "draft_pending_legal_review",
+      privacyPagesPresent: db.nexusLegalSafetyPages.some(page => page.id === "privacy"),
+      exportDeleteRailPresent: true,
+      auditEnabled: true,
+      consentEnabled: true,
+      safetyGatesEnabled: true
+    },
+    publicLaunchBlockers: blockers,
+    environmentWarnings: blockers.map(item => item.title),
+    generatedAt: new Date().toISOString()
+  };
+}
+
+function nexusLanguageStatus(db, env = process.env) {
+  ensureNexusProductionRailsState(db);
+  return {
+    ok: true,
+    profileLanguage: db.nexusPilotProfiles[0]?.preferredLanguage || "English",
+    profileLanguageCode: db.nexusPilotProfiles[0]?.languageCode || "en",
+    languageRegistry: NEXUS_LANGUAGE_REGISTRY,
+    translationProviderConfigured: Boolean(env.NEXUS_TRANSLATION_PROVIDER_API_KEY || env.OPENAI_API_KEY),
+    productionClaim: "partial/local language support; full multilingual production readiness requires reviewed translations and provider configuration",
+    noFullCertificationClaim: true
+  };
+}
+
+function nexusUploadReadiness(db, env = process.env) {
+  return {
+    ok: true,
+    uploadEnabled: nexusFlagEnabled(env, "NEXUS_FILE_UPLOAD_ENABLED"),
+    acceptedFileTypes: ["image/jpeg", "image/png", "image/webp", "application/pdf"],
+    maxFileSizeMb: Number(env.NEXUS_FILE_UPLOAD_MAX_MB || 10),
+    disabledUploadUiState: !nexusFlagEnabled(env, "NEXUS_FILE_UPLOAD_ENABLED"),
+    recordAttachmentModelReady: true,
+    safetyWarning: "Images/files are for future configured review. Nexus does not diagnose images, identify disease, or upload externally without consent and provider configuration.",
+    noUnsafeArbitraryUpload: true
+  };
+}
+
+function nexusMarketplacePaymentGates(db, env = process.env) {
+  return {
+    ok: true,
+    paymentProviderStatus: nexusProductionIntegrationStatus(db, env).find(item => item.id === "stripe-payments") || null,
+    marketplaceTransactionStatus: "blocked_until_marketplace_provider_and_payment_review",
+    listingDraftLifecycle: ["draft", "review_ready", "blocked_publish_missing_provider", "archived"],
+    buyerSellerDisclaimer: "Nexus can prepare marketplace records and inquiries; it does not complete buyer matching, escrow, shipping, payment, checkout, or purchase without configured providers.",
+    paymentDisabledBlocker: !nexusFlagEnabled(env, "NEXUS_MARKETPLACE_PAYMENTS_ENABLED"),
+    noLiveTransactionClaim: true
+  };
+}
+
+function nexusEmergencyHighRiskGates(db) {
+  return {
+    ok: true,
+    emergencySymptomWarning: "If this may be an emergency, contact local emergency services immediately.",
+    emergencyServiceState: "disabled/gated",
+    blockedActions: ["emergency_dispatch", "diagnosis", "prescribing", "medication_dose_change", "payment", "live_provider_send", "live_pharmacy_fulfillment", "live_calls_messages", "camera_location", "marketplace_transaction", "external_sync"],
+    auditHighRiskBlockedAttemptReady: true,
+    noEmergencyDispatchClaim: true
+  };
+}
+
+function nexusAiAnswerGovernance(db) {
+  return {
+    ok: true,
+    sourceBackedVsBuiltInLabelReady: true,
+    retrievalTimestampRequired: true,
+    citationRequirementForRetrievedAnswers: true,
+    verifyWithProfessionalOrSourceGuidance: true,
+    providerAdminReviewOption: true,
+    userFeedbackControls: ["helpful", "not_helpful", "report_issue"],
+    auditEvents: ["answer_saved", "answer_reported", "answer_sent_for_review"],
+    noFakeCitations: true
+  };
+}
+
+function nexusEndgameStatus(db, env = process.env) {
+  ensureNexusProductionRailsState(db);
+  return {
+    ok: true,
+    platform: "Nexus endgame production platform structure",
+    providerNetwork: {
+      organizations: db.nexusProviderOrganizations.length,
+      reviewers: db.nexusProviderReviewers.length,
+      activeOrganizations: db.nexusProviderOrganizations.filter(org => org.status === "active").length
+    },
+    routingEngine: { rules: db.nexusRoutingRules.length, logs: db.nexusRoutingLogs.length, outcomes: ["routed_to_provider", "queued_for_internal_review", "queued_locally", "blocked_missing_provider", "blocked_missing_consent", "blocked_missing_integration", "blocked_safety", "requires_manual_review"] },
+    responseLoop: { responses: db.nexusProviderResponses.length, visibleToUser: db.nexusProviderResponses.filter(item => item.visibleToUser).length },
+    caseLifecycle: { cases: db.nexusCases.length, statuses: NEXUS_CASE_STATUSES },
+    communications: { records: db.nexusCommunications.length, notifications: db.nexusNotifications.length, channels: NEXUS_COMMUNICATION_CHANNELS },
+    outcomes: { count: db.nexusOutcomes.length },
+    analytics: nexusAnalyticsSummary(db),
+    launchReadiness: nexusLaunchReadiness(db, env),
+    languages: nexusLanguageStatus(db, env),
+    uploadReadiness: nexusUploadReadiness(db, env),
+    marketplacePaymentGates: nexusMarketplacePaymentGates(db, env),
+    emergencyHighRiskGates: nexusEmergencyHighRiskGates(db),
+    aiAnswerGovernance: nexusAiAnswerGovernance(db),
+    stillGated: ["live providers", "external database/auth", "regulated healthcare/pharmacy", "payments", "emergency dispatch", "calls/messages/email", "marketplace transactions", "location/camera", "full multilingual certification", "legal/compliance approval"],
+    noFalseLiveClaims: true
+  };
 }
 
 async function api(req, res, url) {
@@ -28812,6 +29517,461 @@ async function api(req, res, url) {
 
   if (url.pathname === "/api/nexus/integrations/status" && req.method === "GET") {
     return send(res, 200, { ok: true, integrations: nexusProductionIntegrationStatus(db, process.env) });
+  }
+
+  if (url.pathname === "/api/nexus/providers" && req.method === "GET") {
+    ensureNexusProductionRailsState(db);
+    return send(res, 200, { ok: true, providers: db.nexusProviderOrganizations, organizationTypes: NEXUS_PROVIDER_ORGANIZATION_TYPES, statuses: NEXUS_PROVIDER_STATUSES });
+  }
+
+  if (url.pathname === "/api/nexus/providers" && req.method === "POST") {
+    ensureNexusProductionRailsState(db);
+    const provider = normalizeProviderOrganization(await readBody(req));
+    db.nexusProviderOrganizations.unshift(provider);
+    addNexusPilotAuditEvent(db, "provider_organization_created", {
+      actor: user?.name || "Provider/Admin",
+      role: user?.role || "Admin",
+      description: `${provider.organizationName} provider organization created with status ${provider.status}. No live provider action was enabled.`
+    });
+    await writeDb(db);
+    return send(res, 200, { ok: true, provider, audit: db.nexusPilotAuditEvents[0] });
+  }
+
+  if (url.pathname === "/api/nexus/providers/status" && req.method === "GET") {
+    ensureNexusProductionRailsState(db);
+    return send(res, 200, {
+      ok: true,
+      total: db.nexusProviderOrganizations.length,
+      active: db.nexusProviderOrganizations.filter(provider => provider.status === "active").length,
+      sandbox: db.nexusProviderOrganizations.filter(provider => provider.status === "sandbox").length,
+      requiresAgreement: db.nexusProviderOrganizations.filter(provider => provider.status === "requires_agreement").length,
+      requiresLegalReview: db.nexusProviderOrganizations.filter(provider => provider.status === "requires_legal_review").length,
+      liveRoutingEnabled: db.nexusProviderOrganizations.some(provider => provider.status === "active"),
+      honestStatus: "No live provider is claimed unless an organization is active and integration gates pass."
+    });
+  }
+
+  const nexusProviderMatch = url.pathname.match(/^\/api\/nexus\/providers\/([^/]+)$/);
+  if (nexusProviderMatch && req.method === "GET") {
+    ensureNexusProductionRailsState(db);
+    const provider = db.nexusProviderOrganizations.find(item => item.id === nexusProviderMatch[1]);
+    if (!provider) return send(res, 404, { ok: false, error: "provider_not_found" });
+    return send(res, 200, { ok: true, provider });
+  }
+
+  if (nexusProviderMatch && req.method === "PATCH") {
+    ensureNexusProductionRailsState(db);
+    const index = db.nexusProviderOrganizations.findIndex(item => item.id === nexusProviderMatch[1]);
+    if (index < 0) return send(res, 404, { ok: false, error: "provider_not_found" });
+    db.nexusProviderOrganizations[index] = normalizeProviderOrganization(await readBody(req), db.nexusProviderOrganizations[index]);
+    addNexusPilotAuditEvent(db, "provider_organization_updated", {
+      actor: user?.name || "Provider/Admin",
+      role: user?.role || "Admin",
+      description: `${db.nexusProviderOrganizations[index].organizationName} provider organization updated. Live execution remains gated.`
+    });
+    await writeDb(db);
+    return send(res, 200, { ok: true, provider: db.nexusProviderOrganizations[index], audit: db.nexusPilotAuditEvents[0] });
+  }
+
+  const nexusProviderReviewersMatch = url.pathname.match(/^\/api\/nexus\/providers\/([^/]+)\/reviewers$/);
+  if (nexusProviderReviewersMatch && req.method === "GET") {
+    ensureNexusProductionRailsState(db);
+    return send(res, 200, { ok: true, reviewers: db.nexusProviderReviewers.filter(item => item.providerOrganizationId === nexusProviderReviewersMatch[1]), roles: NEXUS_PROVIDER_REVIEWER_ROLES });
+  }
+
+  if (nexusProviderReviewersMatch && req.method === "POST") {
+    ensureNexusProductionRailsState(db);
+    const provider = db.nexusProviderOrganizations.find(item => item.id === nexusProviderReviewersMatch[1]);
+    if (!provider) return send(res, 404, { ok: false, error: "provider_not_found" });
+    const reviewer = normalizeProviderReviewer(provider.id, await readBody(req));
+    db.nexusProviderReviewers.unshift(reviewer);
+    addNexusPilotAuditEvent(db, "provider_reviewer_created", {
+      actor: user?.name || "Provider/Admin",
+      role: user?.role || "Admin",
+      description: `${reviewer.displayName} reviewer added to ${provider.organizationName}.`
+    });
+    await writeDb(db);
+    return send(res, 200, { ok: true, reviewer, audit: db.nexusPilotAuditEvents[0] });
+  }
+
+  const nexusProviderReviewerMatch = url.pathname.match(/^\/api\/nexus\/providers\/([^/]+)\/reviewers\/([^/]+)$/);
+  if (nexusProviderReviewerMatch && req.method === "PATCH") {
+    ensureNexusProductionRailsState(db);
+    const index = db.nexusProviderReviewers.findIndex(item => item.providerOrganizationId === nexusProviderReviewerMatch[1] && item.id === nexusProviderReviewerMatch[2]);
+    if (index < 0) return send(res, 404, { ok: false, error: "reviewer_not_found" });
+    db.nexusProviderReviewers[index] = normalizeProviderReviewer(nexusProviderReviewerMatch[1], await readBody(req), db.nexusProviderReviewers[index]);
+    await writeDb(db);
+    return send(res, 200, { ok: true, reviewer: db.nexusProviderReviewers[index] });
+  }
+
+  if (url.pathname === "/api/nexus/routing/evaluate" && req.method === "POST") {
+    return send(res, 200, nexusEvaluateRouting(db, await readBody(req), user));
+  }
+
+  if (url.pathname === "/api/nexus/routing/route-record" && req.method === "POST") {
+    const result = nexusRouteRecord(db, await readBody(req), user);
+    await writeDb(db);
+    return send(res, 200, result);
+  }
+
+  if (url.pathname === "/api/nexus/routing/rules" && req.method === "GET") {
+    ensureNexusProductionRailsState(db);
+    return send(res, 200, { ok: true, rules: db.nexusRoutingRules });
+  }
+
+  if (url.pathname === "/api/nexus/routing/rules" && req.method === "POST") {
+    ensureNexusProductionRailsState(db);
+    const rule = normalizeRoutingRule(await readBody(req));
+    db.nexusRoutingRules.unshift(rule);
+    await writeDb(db);
+    return send(res, 200, { ok: true, rule });
+  }
+
+  const nexusRoutingRuleMatch = url.pathname.match(/^\/api\/nexus\/routing\/rules\/([^/]+)$/);
+  if (nexusRoutingRuleMatch && req.method === "PATCH") {
+    ensureNexusProductionRailsState(db);
+    const index = db.nexusRoutingRules.findIndex(item => item.id === nexusRoutingRuleMatch[1]);
+    if (index < 0) return send(res, 404, { ok: false, error: "routing_rule_not_found" });
+    db.nexusRoutingRules[index] = normalizeRoutingRule(await readBody(req), db.nexusRoutingRules[index]);
+    await writeDb(db);
+    return send(res, 200, { ok: true, rule: db.nexusRoutingRules[index] });
+  }
+
+  if (url.pathname === "/api/nexus/routing/logs" && req.method === "GET") {
+    ensureNexusProductionRailsState(db);
+    return send(res, 200, { ok: true, logs: db.nexusRoutingLogs });
+  }
+
+  if (url.pathname === "/api/nexus/cases" && req.method === "GET") {
+    ensureNexusProductionRailsState(db);
+    return send(res, 200, { ok: true, cases: db.nexusCases, statuses: NEXUS_CASE_STATUSES });
+  }
+
+  if (url.pathname === "/api/nexus/cases" && req.method === "POST") {
+    ensureNexusProductionRailsState(db);
+    const caseItem = normalizeCase(db, await readBody(req), {}, user);
+    db.nexusCases.unshift(caseItem);
+    caseTimelineEvent(db, caseItem.id, "case_created", "Case created locally with no external provider action.", { actor: user?.name || "Standard User" });
+    await writeDb(db);
+    return send(res, 200, { ok: true, case: caseItem, timeline: db.nexusCaseTimeline.filter(item => item.caseId === caseItem.id) });
+  }
+
+  const nexusCaseMatch = url.pathname.match(/^\/api\/nexus\/cases\/([^/]+)$/);
+  if (nexusCaseMatch && req.method === "GET") {
+    ensureNexusProductionRailsState(db);
+    const caseItem = db.nexusCases.find(item => item.id === nexusCaseMatch[1]);
+    if (!caseItem) return send(res, 404, { ok: false, error: "case_not_found" });
+    return send(res, 200, {
+      ok: true,
+      case: caseItem,
+      records: db.nexusPilotRecords.filter(record => caseItem.recordIds.includes(record.id)),
+      responses: db.nexusProviderResponses.filter(response => caseItem.responseIds.includes(response.id) || caseItem.recordIds.includes(response.recordId)),
+      reminders: db.nexusPilotReminders.filter(reminder => caseItem.reminderIds.includes(reminder.id)),
+      nextSteps: caseItem.nextSteps
+    });
+  }
+
+  if (nexusCaseMatch && req.method === "PATCH") {
+    ensureNexusProductionRailsState(db);
+    const index = db.nexusCases.findIndex(item => item.id === nexusCaseMatch[1]);
+    if (index < 0) return send(res, 404, { ok: false, error: "case_not_found" });
+    db.nexusCases[index] = normalizeCase(db, await readBody(req), db.nexusCases[index], user);
+    caseTimelineEvent(db, db.nexusCases[index].id, "case_updated", `Case updated to ${db.nexusCases[index].status}.`, { actor: user?.name || "Standard User" });
+    await writeDb(db);
+    return send(res, 200, { ok: true, case: db.nexusCases[index] });
+  }
+
+  const nexusCaseLinkRecordMatch = url.pathname.match(/^\/api\/nexus\/cases\/([^/]+)\/link-record$/);
+  if (nexusCaseLinkRecordMatch && req.method === "POST") {
+    ensureNexusProductionRailsState(db);
+    const body = await readBody(req);
+    const caseItem = db.nexusCases.find(item => item.id === nexusCaseLinkRecordMatch[1]);
+    if (!caseItem) return send(res, 404, { ok: false, error: "case_not_found" });
+    const record = getRecordById(db, body.recordId);
+    if (!record) return send(res, 404, { ok: false, error: "record_not_found" });
+    if (!caseItem.recordIds.includes(record.id)) caseItem.recordIds.unshift(record.id);
+    caseItem.updatedAt = new Date().toISOString();
+    caseTimelineEvent(db, caseItem.id, "record_linked", `Record ${record.id} linked to case.`, { recordId: record.id });
+    await writeDb(db);
+    return send(res, 200, { ok: true, case: caseItem, record });
+  }
+
+  const nexusCaseStatusMatch = url.pathname.match(/^\/api\/nexus\/cases\/([^/]+)\/status$/);
+  if (nexusCaseStatusMatch && req.method === "POST") {
+    ensureNexusProductionRailsState(db);
+    const body = await readBody(req);
+    const caseItem = db.nexusCases.find(item => item.id === nexusCaseStatusMatch[1]);
+    if (!caseItem) return send(res, 404, { ok: false, error: "case_not_found" });
+    caseItem.status = NEXUS_CASE_STATUSES.includes(body.status) ? body.status : caseItem.status;
+    caseItem.updatedAt = new Date().toISOString();
+    caseTimelineEvent(db, caseItem.id, "status_changed", `Case status changed to ${caseItem.status}.`, { actor: user?.name || "Standard User" });
+    await writeDb(db);
+    return send(res, 200, { ok: true, case: caseItem });
+  }
+
+  const nexusCaseTimelineMatch = url.pathname.match(/^\/api\/nexus\/cases\/([^/]+)\/timeline$/);
+  if (nexusCaseTimelineMatch && req.method === "GET") {
+    ensureNexusProductionRailsState(db);
+    return send(res, 200, { ok: true, timeline: db.nexusCaseTimeline.filter(item => item.caseId === nexusCaseTimelineMatch[1]) });
+  }
+
+  const nexusRecordResponsesMatch = url.pathname.match(/^\/api\/nexus\/records\/([^/]+)\/responses$/);
+  if (nexusRecordResponsesMatch && req.method === "GET") {
+    ensureNexusProductionRailsState(db);
+    return send(res, 200, { ok: true, responses: db.nexusProviderResponses.filter(item => item.recordId === nexusRecordResponsesMatch[1]) });
+  }
+
+  if (nexusRecordResponsesMatch && req.method === "POST") {
+    ensureNexusProductionRailsState(db);
+    const record = getRecordById(db, nexusRecordResponsesMatch[1]);
+    if (!record) return send(res, 404, { ok: false, error: "record_not_found" });
+    const response = normalizeProviderResponse(db, record.id, await readBody(req));
+    db.nexusProviderResponses.unshift(response);
+    record.providerResponseIds = [response.id, ...(record.providerResponseIds || [])];
+    record.updatedAt = response.updatedAt;
+    addNexusPilotAuditEvent(db, "provider_response_created", {
+      relatedRecordId: record.id,
+      actor: response.reviewerLabel,
+      role: "Provider/Admin",
+      description: `Provider/admin response prepared with visibility ${response.visibleToUser ? "on" : "off"}.`
+    });
+    await writeDb(db);
+    return send(res, 200, { ok: true, response, audit: db.nexusPilotAuditEvents[0] });
+  }
+
+  const nexusResponseMatch = url.pathname.match(/^\/api\/nexus\/responses\/([^/]+)$/);
+  if (nexusResponseMatch && req.method === "PATCH") {
+    ensureNexusProductionRailsState(db);
+    const index = db.nexusProviderResponses.findIndex(item => item.id === nexusResponseMatch[1]);
+    if (index < 0) return send(res, 404, { ok: false, error: "response_not_found" });
+    db.nexusProviderResponses[index] = normalizeProviderResponse(db, db.nexusProviderResponses[index].recordId, await readBody(req), db.nexusProviderResponses[index]);
+    await writeDb(db);
+    return send(res, 200, { ok: true, response: db.nexusProviderResponses[index] });
+  }
+
+  const nexusResponsePublishMatch = url.pathname.match(/^\/api\/nexus\/responses\/([^/]+)\/publish$/);
+  if (nexusResponsePublishMatch && req.method === "POST") {
+    ensureNexusProductionRailsState(db);
+    const response = db.nexusProviderResponses.find(item => item.id === nexusResponsePublishMatch[1]);
+    if (!response) return send(res, 404, { ok: false, error: "response_not_found" });
+    response.visibleToUser = true;
+    response.updatedAt = new Date().toISOString();
+    db.nexusNotifications.unshift(normalizeNotification({ title: "Nexus review response ready", message: "A provider/admin response is ready for review.", recordId: response.recordId }));
+    addNexusPilotAuditEvent(db, "provider_response_published", {
+      relatedRecordId: response.recordId,
+      actor: user?.name || response.reviewerLabel,
+      role: user?.role || "Provider/Admin",
+      description: "Provider/admin response made visible to user. No live clinical, pharmacy, payment, or emergency action occurred."
+    });
+    await writeDb(db);
+    return send(res, 200, { ok: true, response, notification: db.nexusNotifications[0], audit: db.nexusPilotAuditEvents[0] });
+  }
+
+  if (url.pathname === "/api/nexus/my-responses" && req.method === "GET") {
+    ensureNexusProductionRailsState(db);
+    return send(res, 200, { ok: true, responses: db.nexusProviderResponses.filter(item => item.visibleToUser), label: "My Nexus Activity responses" });
+  }
+
+  if (url.pathname === "/api/nexus/integrations" && req.method === "GET") {
+    ensureNexusProductionRailsState(db);
+    return send(res, 200, { ok: true, adapters: NEXUS_INTEGRATION_ADAPTER_TYPES.map(type => nexusIntegrationAdapterStatus(db, type, process.env)) });
+  }
+
+  const nexusIntegrationStatusMatch = url.pathname.match(/^\/api\/nexus\/integrations\/([^/]+)\/status$/);
+  if (nexusIntegrationStatusMatch && req.method === "GET") {
+    return send(res, 200, nexusIntegrationAdapterStatus(db, nexusIntegrationStatusMatch[1], process.env));
+  }
+
+  const nexusIntegrationLogsMatch = url.pathname.match(/^\/api\/nexus\/integrations\/([^/]+)\/logs$/);
+  if (nexusIntegrationLogsMatch && req.method === "GET") {
+    ensureNexusProductionRailsState(db);
+    return send(res, 200, { ok: true, logs: db.nexusIntegrationAttempts.filter(item => item.integrationId === nexusIntegrationLogsMatch[1] || item.type === nexusIntegrationLogsMatch[1]) });
+  }
+
+  if (url.pathname === "/api/nexus/communications" && req.method === "GET") {
+    ensureNexusProductionRailsState(db);
+    return send(res, 200, { ok: true, communications: db.nexusCommunications, channels: NEXUS_COMMUNICATION_CHANNELS });
+  }
+
+  if (url.pathname === "/api/nexus/communications/prepare" && req.method === "POST") {
+    ensureNexusProductionRailsState(db);
+    const communication = normalizeCommunication(await readBody(req));
+    db.nexusCommunications.unshift(communication);
+    addNexusPilotAuditEvent(db, "communication_prepared", {
+      actor: user?.name || "Standard User",
+      role: user?.role || "Standard User",
+      description: `${communication.channel} prepared with status ${communication.status}. No silent send occurred.`
+    });
+    await writeDb(db);
+    return send(res, 200, { ok: true, communication, audit: db.nexusPilotAuditEvents[0] });
+  }
+
+  const nexusCommunicationMatch = url.pathname.match(/^\/api\/nexus\/communications\/([^/]+)$/);
+  if (nexusCommunicationMatch && req.method === "PATCH") {
+    ensureNexusProductionRailsState(db);
+    const index = db.nexusCommunications.findIndex(item => item.id === nexusCommunicationMatch[1]);
+    if (index < 0) return send(res, 404, { ok: false, error: "communication_not_found" });
+    db.nexusCommunications[index] = normalizeCommunication(await readBody(req), db.nexusCommunications[index]);
+    await writeDb(db);
+    return send(res, 200, { ok: true, communication: db.nexusCommunications[index] });
+  }
+
+  const nexusCommunicationAttemptMatch = url.pathname.match(/^\/api\/nexus\/communications\/([^/]+)\/attempt$/);
+  if (nexusCommunicationAttemptMatch && req.method === "POST") {
+    ensureNexusProductionRailsState(db);
+    const communication = db.nexusCommunications.find(item => item.id === nexusCommunicationAttemptMatch[1]);
+    if (!communication) return send(res, 404, { ok: false, error: "communication_not_found" });
+    communication.status = communication.channel === "in_app_notification" ? "prepared" : communication.consentConfirmed ? "blocked_missing_config" : "blocked_missing_consent";
+    communication.updatedAt = new Date().toISOString();
+    addNexusPilotAuditEvent(db, "communication_attempt_blocked", {
+      actor: user?.name || "Standard User",
+      role: user?.role || "Standard User",
+      description: `${communication.channel} attempt stayed ${communication.status}. No sent claim was made.`
+    });
+    await writeDb(db);
+    return send(res, 200, { ok: true, communication, sent: false, status: communication.status, audit: db.nexusPilotAuditEvents[0] });
+  }
+
+  if (url.pathname === "/api/nexus/notifications" && req.method === "GET") {
+    ensureNexusProductionRailsState(db);
+    return send(res, 200, { ok: true, notifications: db.nexusNotifications });
+  }
+
+  if (url.pathname === "/api/nexus/notifications" && req.method === "POST") {
+    ensureNexusProductionRailsState(db);
+    const notification = normalizeNotification(await readBody(req));
+    db.nexusNotifications.unshift(notification);
+    await writeDb(db);
+    return send(res, 200, { ok: true, notification });
+  }
+
+  const nexusNotificationReadMatch = url.pathname.match(/^\/api\/nexus\/notifications\/([^/]+)\/read$/);
+  if (nexusNotificationReadMatch && req.method === "PATCH") {
+    ensureNexusProductionRailsState(db);
+    const notification = db.nexusNotifications.find(item => item.id === nexusNotificationReadMatch[1]);
+    if (!notification) return send(res, 404, { ok: false, error: "notification_not_found" });
+    notification.read = true;
+    notification.updatedAt = new Date().toISOString();
+    await writeDb(db);
+    return send(res, 200, { ok: true, notification });
+  }
+
+  if (url.pathname === "/api/nexus/outcomes" && req.method === "GET") {
+    ensureNexusProductionRailsState(db);
+    return send(res, 200, { ok: true, outcomes: db.nexusOutcomes });
+  }
+
+  if (url.pathname === "/api/nexus/outcomes" && req.method === "POST") {
+    ensureNexusProductionRailsState(db);
+    const outcome = normalizeOutcome(await readBody(req));
+    db.nexusOutcomes.unshift(outcome);
+    addNexusPilotAuditEvent(db, "outcome_recorded", {
+      actor: user?.name || "Standard User",
+      role: user?.role || "Standard User",
+      description: `Outcome recorded as ${outcome.outcomeType}.`
+    });
+    await writeDb(db);
+    return send(res, 200, { ok: true, outcome, audit: db.nexusPilotAuditEvents[0] });
+  }
+
+  const nexusCaseOutcomesMatch = url.pathname.match(/^\/api\/nexus\/cases\/([^/]+)\/outcomes$/);
+  if (nexusCaseOutcomesMatch && req.method === "GET") {
+    ensureNexusProductionRailsState(db);
+    return send(res, 200, { ok: true, outcomes: db.nexusOutcomes.filter(item => item.caseId === nexusCaseOutcomesMatch[1]) });
+  }
+
+  if (url.pathname === "/api/nexus/analytics/summary" && req.method === "GET") {
+    return send(res, 200, nexusAnalyticsSummary(db));
+  }
+
+  if (url.pathname === "/api/nexus/launch-readiness" && req.method === "GET") {
+    return send(res, 200, nexusLaunchReadiness(db, process.env));
+  }
+
+  if (url.pathname === "/api/nexus/launch-blockers" && req.method === "GET") {
+    ensureNexusProductionRailsState(db);
+    ensureNexusLaunchBlockers(db, process.env);
+    return send(res, 200, { ok: true, blockers: db.nexusLaunchBlockers });
+  }
+
+  if (url.pathname === "/api/nexus/launch-blockers" && req.method === "POST") {
+    ensureNexusProductionRailsState(db);
+    const body = await readBody(req);
+    const now = new Date().toISOString();
+    const blocker = {
+      id: body.id || crypto.randomUUID(),
+      blockerType: sanitizePilotText(body.blockerType || "production_readiness", 100),
+      severity: sanitizePilotText(body.severity || "medium", 60),
+      title: sanitizePilotText(body.title || "Nexus launch blocker", 180),
+      description: sanitizePilotText(body.description || "A production condition is not complete.", 700),
+      status: sanitizePilotText(body.status || "open", 80),
+      requiredAction: sanitizePilotText(body.requiredAction || "Resolve before public launch.", 500),
+      relatedIntegration: sanitizePilotText(body.relatedIntegration || "", 120),
+      createdAt: now,
+      updatedAt: now
+    };
+    db.nexusLaunchBlockers.unshift(blocker);
+    await writeDb(db);
+    return send(res, 200, { ok: true, blocker });
+  }
+
+  const nexusLaunchBlockerMatch = url.pathname.match(/^\/api\/nexus\/launch-blockers\/([^/]+)$/);
+  if (nexusLaunchBlockerMatch && req.method === "PATCH") {
+    ensureNexusProductionRailsState(db);
+    const blocker = db.nexusLaunchBlockers.find(item => item.id === nexusLaunchBlockerMatch[1]);
+    if (!blocker) return send(res, 404, { ok: false, error: "blocker_not_found" });
+    const body = await readBody(req);
+    blocker.status = sanitizePilotText(body.status || blocker.status, 80);
+    blocker.requiredAction = sanitizePilotText(body.requiredAction || blocker.requiredAction, 500);
+    blocker.updatedAt = new Date().toISOString();
+    await writeDb(db);
+    return send(res, 200, { ok: true, blocker });
+  }
+
+  if (url.pathname === "/api/nexus/legal-safety-pages" && req.method === "GET") {
+    ensureNexusProductionRailsState(db);
+    return send(res, 200, { ok: true, pages: db.nexusLegalSafetyPages });
+  }
+
+  if (url.pathname === "/api/nexus/languages/status" && req.method === "GET") {
+    return send(res, 200, nexusLanguageStatus(db, process.env));
+  }
+
+  if (url.pathname === "/api/nexus/profile/language" && req.method === "POST") {
+    ensureNexusProductionRailsState(db);
+    const body = await readBody(req);
+    const language = NEXUS_LANGUAGE_REGISTRY.find(item => item.code === body.languageCode || item.label.toLowerCase() === String(body.language || "").toLowerCase()) || NEXUS_LANGUAGE_REGISTRY[0];
+    const profile = db.nexusPilotProfiles[0];
+    profile.preferredLanguage = language.label;
+    profile.languageCode = language.code;
+    profile.updatedAt = new Date().toISOString();
+    addNexusPilotAuditEvent(db, "language_preference_updated", {
+      actor: user?.name || profile.displayName || "Standard User",
+      role: user?.role || "Standard User",
+      description: `Language preference set to ${language.label}. Full production translation remains readiness-gated.`
+    });
+    await writeDb(db);
+    return send(res, 200, { ok: true, language, profile, audit: db.nexusPilotAuditEvents[0] });
+  }
+
+  if (url.pathname === "/api/nexus/upload/readiness" && req.method === "GET") {
+    return send(res, 200, nexusUploadReadiness(db, process.env));
+  }
+
+  if (url.pathname === "/api/nexus/marketplace/payment-gates" && req.method === "GET") {
+    return send(res, 200, nexusMarketplacePaymentGates(db, process.env));
+  }
+
+  if (url.pathname === "/api/nexus/emergency/high-risk-gates" && req.method === "GET") {
+    return send(res, 200, nexusEmergencyHighRiskGates(db));
+  }
+
+  if (url.pathname === "/api/nexus/ai-answer-governance" && req.method === "GET") {
+    return send(res, 200, nexusAiAnswerGovernance(db));
+  }
+
+  if (url.pathname === "/api/nexus/endgame/status" && req.method === "GET") {
+    return send(res, 200, nexusEndgameStatus(db, process.env));
   }
 
   if (url.pathname === "/api/nexus/knowledge/status" && req.method === "GET") {

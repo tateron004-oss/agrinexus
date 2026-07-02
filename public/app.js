@@ -254,8 +254,8 @@ const nexusProductIdentity = Object.freeze({
 });
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-342";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v321";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-343";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v322";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
 const VOICE_ATTENTION_DELAY_MS = 900;
@@ -18746,6 +18746,16 @@ function renderNexusProductionPlatformRailsPanel() {
   const admin = nexusProductionAdminOperations || {};
   const privacy = nexusProductionPrivacySummary || {};
   const knowledge = readiness.liveKnowledgeReadiness || {};
+  const endgame = readiness.endgameProductionPlatform || {};
+  const launch = endgame.launchReadiness || {};
+  const blockers = Array.isArray(launch.publicLaunchBlockers) ? launch.publicLaunchBlockers : [];
+  const providerNetwork = endgame.providerNetwork || {};
+  const routing = endgame.routingEngine || {};
+  const responseLoop = endgame.responseLoop || {};
+  const cases = endgame.caseLifecycle || {};
+  const communications = endgame.communications || {};
+  const languages = endgame.languages || {};
+  const highRisk = endgame.emergencyHighRiskGates || {};
   const readyCount = integrations.filter(item => item.configured && item.enabled).length;
   return `
     <section class="nexus-production-rails" data-nexus-production-rails="true" data-testid="nexus-production-readiness" aria-label="${escapeHtml(translateText("Nexus production platform rails"))}">
@@ -18787,7 +18797,65 @@ function renderNexusProductionPlatformRailsPanel() {
           <strong>${escapeHtml(translateText(knowledge.liveKnowledge?.testability ? nexusProductionStatusLabel(knowledge.liveKnowledge.testability) : "Disabled"))}</strong>
           <small>${escapeHtml(translateText("Classification, citations, save/attach, review summaries, and audit are ready. Live retrieval needs provider configuration."))}</small>
         </article>
+        <article data-testid="nexus-provider-network-status">
+          <span>${escapeHtml(translateText("Provider network"))}</span>
+          <strong>${escapeHtml(String(providerNetwork.activeOrganizations || 0))} ${escapeHtml(translateText("active"))}</strong>
+          <small>${escapeHtml(String(providerNetwork.organizations || 0))} ${escapeHtml(translateText("organizations"))} / ${escapeHtml(String(providerNetwork.reviewers || 0))} ${escapeHtml(translateText("reviewers"))}. ${escapeHtml(translateText("Routing remains blocked unless an active provider and integration gates exist."))}</small>
+        </article>
+        <article data-testid="nexus-routing-engine-status">
+          <span>${escapeHtml(translateText("Routing engine"))}</span>
+          <strong>${escapeHtml(String(routing.rules || 0))} ${escapeHtml(translateText("rules"))}</strong>
+          <small>${escapeHtml(String(routing.logs || 0))} ${escapeHtml(translateText("routing decisions logged"))}. ${escapeHtml(translateText("Consent, safety, provider, and integration gates are required."))}</small>
+        </article>
+        <article data-testid="nexus-case-lifecycle-status">
+          <span>${escapeHtml(translateText("My Nexus Activity / cases"))}</span>
+          <strong>${escapeHtml(String(cases.cases || 0))} ${escapeHtml(translateText("cases"))}</strong>
+          <small>${escapeHtml(translateText("Cases group records, citations, consent, responses, reminders, offline work, and status history."))}</small>
+        </article>
+        <article data-testid="nexus-provider-response-loop-status">
+          <span>${escapeHtml(translateText("Provider/Admin responses"))}</span>
+          <strong>${escapeHtml(String(responseLoop.visibleToUser || 0))} ${escapeHtml(translateText("visible"))}</strong>
+          <small>${escapeHtml(String(responseLoop.responses || 0))} ${escapeHtml(translateText("responses prepared"))}. ${escapeHtml(translateText("Response labels show local/sandbox/provider status honestly."))}</small>
+        </article>
+        <article data-testid="nexus-communications-center-status">
+          <span>${escapeHtml(translateText("Communications center"))}</span>
+          <strong>${escapeHtml(String(communications.records || 0))} ${escapeHtml(translateText("records"))}</strong>
+          <small>${escapeHtml(translateText("In-app updates and prepared messages are tracked as prepared/not sent unless a provider is actually configured and approved."))}</small>
+        </article>
+        <article data-testid="nexus-launch-readiness-status">
+          <span>${escapeHtml(translateText("Launch readiness"))}</span>
+          <strong>${escapeHtml(translateText(launch.blockedForPublicProduction ? "Blocked for public production" : "Pilot ready"))}</strong>
+          <small>${escapeHtml(String(blockers.length))} ${escapeHtml(translateText("open blockers"))}. ${escapeHtml(translateText("Local/demo pilot can run; public launch requires auth, DB, providers, legal/compliance, credentials, and monitoring."))}</small>
+        </article>
+        <article data-testid="nexus-language-accessibility-status">
+          <span>${escapeHtml(translateText("Language & accessibility"))}</span>
+          <strong>${escapeHtml(translateText(languages.profileLanguage || "English"))}</strong>
+          <small>${escapeHtml(translateText(languages.productionClaim || "Partial/local language support. Full production translation requires review."))}</small>
+        </article>
+        <article data-testid="nexus-high-risk-gates-status">
+          <span>${escapeHtml(translateText("High-risk gates"))}</span>
+          <strong>${escapeHtml(translateText(highRisk.emergencyServiceState || "disabled/gated"))}</strong>
+          <small>${escapeHtml(translateText("Emergency, diagnosis, prescribing, payment, pharmacy, calls/messages, camera/location, marketplace transaction, and external sync remain gated."))}</small>
+        </article>
       </div>
+      <details class="nexus-production-integration-details" data-testid="nexus-launch-blockers">
+        <summary>
+          <span>${escapeHtml(translateText("Public launch blockers"))}</span>
+          <strong>${escapeHtml(String(blockers.length))} ${escapeHtml(translateText("open"))}</strong>
+        </summary>
+        <div class="nexus-production-integration-list">
+          ${blockers.slice(0, 8).map(item => `
+            <article class="nexus-production-integration-card" data-nexus-launch-blocker="${escapeHtml(item.id || "")}">
+              <div>
+                <strong>${escapeHtml(translateText(item.title || "Launch blocker"))}</strong>
+                <span>${escapeHtml(translateText(nexusProductionStatusLabel(item.severity || "medium")))}</span>
+              </div>
+              <small>${escapeHtml(translateText(item.description || "Production requirement is not complete."))}</small>
+              <small>${escapeHtml(translateText("Required"))}: ${escapeHtml(translateText(item.requiredAction || "Resolve before public launch."))}</small>
+            </article>
+          `).join("") || `<small>${escapeHtml(translateText("No blockers reported."))}</small>`}
+        </div>
+      </details>
       <details class="nexus-production-integration-details" data-testid="nexus-integration-status">
         <summary>
           <span>${escapeHtml(translateText("Provider and partner readiness"))}</span>
