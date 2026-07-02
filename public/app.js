@@ -94,6 +94,12 @@ let nexusAgenticBrainLastResult = null;
 let nexusPilotPlatformLastRecord = null;
 let nexusPilotPlatformStatus = null;
 let nexusPilotReviewQueue = [];
+let nexusProductionReadinessStatus = null;
+let nexusProductionStorageStatus = null;
+let nexusProductionIntegrationStatus = [];
+let nexusProductionAdminOperations = null;
+let nexusProductionPrivacySummary = null;
+let nexusProductionRailActionStatus = "";
 let nexusProviderContactBridgeCards = [];
 let nexusLearningProviderBridgeCards = [];
 let nexusMarketplaceBridgeCards = [];
@@ -244,8 +250,8 @@ const nexusProductIdentity = Object.freeze({
 });
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-339";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v318";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-340";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v319";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
 const VOICE_ATTENTION_DELAY_MS = 900;
@@ -18715,6 +18721,148 @@ async function handleNexusPilotReviewQueueClick(event) {
   }
 }
 
+function nexusProductionStatusLabel(value = "") {
+  const text = String(value || "unknown").replace(/_/g, " ");
+  return text.charAt(0).toUpperCase() + text.slice(1);
+}
+
+function renderNexusProductionPlatformRailsPanel() {
+  const readiness = nexusProductionReadinessStatus || {};
+  const storage = nexusProductionStorageStatus || {};
+  const integrations = Array.isArray(nexusProductionIntegrationStatus) ? nexusProductionIntegrationStatus : [];
+  const admin = nexusProductionAdminOperations || {};
+  const privacy = nexusProductionPrivacySummary || {};
+  const readyCount = integrations.filter(item => item.configured && item.enabled).length;
+  return `
+    <section class="nexus-production-rails" data-nexus-production-rails="true" data-testid="nexus-production-readiness" aria-label="${escapeHtml(translateText("Nexus production platform rails"))}">
+      <div class="nexus-production-rails-header">
+        <div>
+          <span class="eyebrow">${escapeHtml(translateText("Production prototype rails"))}</span>
+          <strong>${escapeHtml(translateText("Accounts, records, provider readiness, privacy, and operations"))}</strong>
+          <small>${escapeHtml(translateText(readiness.runtimePosture || "Local/sandbox rails are available. Live execution remains gated by provider configuration, approval, and audit."))}</small>
+        </div>
+        <button type="button" data-nexus-production-rail-action="refresh" data-testid="nexus-production-rails-refresh">${escapeHtml(translateText("Refresh rails"))}</button>
+      </div>
+      <div class="nexus-production-rails-grid">
+        <article data-testid="nexus-account-settings">
+          <span>${escapeHtml(translateText("Account & roles"))}</span>
+          <strong>${escapeHtml(translateText(readiness.accountReady ? "Account-ready" : "Needs setup"))}</strong>
+          <small>${escapeHtml(translateText("Local prototype account with role-aware readiness. Production authentication is not claimed."))}</small>
+        </article>
+        <article data-testid="nexus-storage-status">
+          <span>${escapeHtml(translateText("Storage"))}</span>
+          <strong>${escapeHtml(translateText(nexusProductionStatusLabel(storage.mode || "local_json")))}</strong>
+          <small>${escapeHtml(translateText(storage.safety || "Local JSON storage active. External database requires configuration and deployment review."))}</small>
+        </article>
+        <article data-testid="nexus-privacy-operations">
+          <span>${escapeHtml(translateText("Privacy requests"))}</span>
+          <strong>${escapeHtml(String(privacy.exportDeleteRequests ?? 0))} ${escapeHtml(translateText("requests"))}</strong>
+          <small>${escapeHtml(translateText("Export and delete requests are local review items. Nothing is removed or transmitted silently."))}</small>
+          <div class="nexus-production-rail-actions">
+            <button type="button" data-nexus-production-rail-action="export-request" data-testid="nexus-export-request">${escapeHtml(translateText("Request export"))}</button>
+            <button type="button" data-nexus-production-rail-action="delete-request" data-testid="nexus-delete-request">${escapeHtml(translateText("Request delete review"))}</button>
+          </div>
+        </article>
+        <article data-testid="nexus-admin-operations">
+          <span>${escapeHtml(translateText("Admin operations"))}</span>
+          <strong>${escapeHtml(translateText(admin.appHealth || "ok"))}</strong>
+          <small>${escapeHtml(translateText("Review queues, audit history, reminders, offline work, and provider readiness without hidden execution."))}</small>
+        </article>
+      </div>
+      <details class="nexus-production-integration-details" data-testid="nexus-integration-status">
+        <summary>
+          <span>${escapeHtml(translateText("Provider and partner readiness"))}</span>
+          <strong>${escapeHtml(String(readyCount))}/${escapeHtml(String(integrations.length))} ${escapeHtml(translateText("configured and enabled"))}</strong>
+        </summary>
+        <div class="nexus-production-integration-list">
+          ${integrations.map(item => `
+            <article class="nexus-production-integration-card" data-nexus-integration-card="${escapeHtml(item.id || "")}">
+              <div>
+                <strong>${escapeHtml(translateText(item.name || item.id || "Integration"))}</strong>
+                <span>${escapeHtml(translateText(nexusProductionStatusLabel(item.testability || "disabled")))}</span>
+              </div>
+              <small>${escapeHtml(translateText(item.capability || "Connector readiness only."))}</small>
+              <small>${escapeHtml(translateText("Missing config"))}: ${escapeHtml((item.missingEnv || []).join(", ") || translateText("None"))}</small>
+              <small>${escapeHtml(translateText("Next"))}: ${escapeHtml(translateText(item.whatStillNeeded || "Provider configuration, explicit approval, audit, and production review."))}</small>
+              <button type="button" data-nexus-production-rail-action="prepare-integration" data-nexus-integration-type="${escapeHtml(item.id || "")}" data-testid="nexus-prepare-integration">${escapeHtml(translateText("Prepare readiness attempt"))}</button>
+            </article>
+          `).join("")}
+        </div>
+      </details>
+      <p class="nexus-production-rails-status" data-nexus-production-rails-action-status>${escapeHtml(translateText(nexusProductionRailActionStatus || "No live provider, payment, pharmacy, emergency, message, call, location, or marketplace execution occurs from this panel."))}</p>
+    </section>
+  `;
+}
+
+async function refreshNexusProductionPlatformRails(options = {}) {
+  try {
+    const [readiness, storage, integrations, admin, privacy] = await Promise.all([
+      request("/api/nexus/production-readiness", { method: "GET" }),
+      request("/api/nexus/storage/status", { method: "GET" }),
+      request("/api/nexus/integrations/status", { method: "GET" }),
+      request("/api/nexus/admin/operations", { method: "GET" }),
+      request("/api/nexus/privacy/summary", { method: "GET" })
+    ]);
+    nexusProductionReadinessStatus = readiness || null;
+    nexusProductionStorageStatus = storage || null;
+    nexusProductionIntegrationStatus = Array.isArray(integrations?.integrations) ? integrations.integrations : [];
+    nexusProductionAdminOperations = admin || null;
+    nexusProductionPrivacySummary = privacy || null;
+    if (options.rerender !== false && experienceMode === "user") renderUserWorkspace();
+    return nexusProductionReadinessStatus;
+  } catch {
+    return null;
+  }
+}
+
+async function handleNexusProductionRailsClick(event) {
+  const button = event.target?.closest?.("[data-nexus-production-rail-action]");
+  if (!button) return false;
+  event.preventDefault();
+  event.stopPropagation();
+  const action = button.dataset.nexusProductionRailAction || "";
+  button.disabled = true;
+  try {
+    if (action === "refresh") {
+      nexusProductionRailActionStatus = "Production prototype rails refreshed. Live execution remains gated.";
+      await refreshNexusProductionPlatformRails({ rerender: true });
+      return true;
+    }
+    if (action === "export-request" || action === "delete-request") {
+      const requestPath = action === "export-request" ? "/api/nexus/privacy/export-request" : "/api/nexus/privacy/delete-request";
+      const result = await request(requestPath, {
+        method: "POST",
+        body: { reason: `${action.replace("-", " ")} prepared from Standard User privacy controls.` }
+      });
+      nexusProductionRailActionStatus = result?.request
+        ? `${nexusProductionStatusLabel(result.request.requestType)} request recorded for local review. No data was transmitted or removed silently.`
+        : "Privacy request recorded for local review.";
+      await refreshNexusProductionPlatformRails({ rerender: true });
+      return true;
+    }
+    if (action === "prepare-integration") {
+      const integrationType = button.dataset.nexusIntegrationType || "";
+      const result = await request(`/api/nexus/integrations/${encodeURIComponent(integrationType)}/prepare`, {
+        method: "POST",
+        body: { purpose: "Standard User provider readiness preparation" }
+      });
+      nexusProductionRailActionStatus = result?.attempt
+        ? `${result.attempt.providerName} readiness attempt prepared locally. No provider request was sent.`
+        : "Provider readiness attempt prepared locally.";
+      await refreshNexusProductionPlatformRails({ rerender: true });
+      return true;
+    }
+    return true;
+  } catch (error) {
+    nexusProductionRailActionStatus = error.message || "Production rails action needs attention.";
+    toast(nexusProductionRailActionStatus);
+    if (experienceMode === "user") renderUserWorkspace();
+    return true;
+  } finally {
+    button.disabled = false;
+  }
+}
+
 function renderNexusMediaProviderOptions(card = {}) {
   const media = card.mediaMode || null;
   const options = Array.isArray(media?.providerOptions) ? media.providerOptions : [];
@@ -19502,8 +19650,15 @@ function renderNexusModeLauncher() {
       ${homeItems.map(item => {
         const presentation = NEXUS_HOME_MODE_PRESENTATION[item.id] || {};
         const accent = presentation.accent || "green";
+        const testAliases = {
+          "chronic-care": ["nexus-mode-card-health"],
+          "telehealth-intake": ["nexus-mode-card-telehealth"],
+          "pharmacy-support": ["nexus-mode-card-pharmacy"],
+          media: ["nexus-mode-card-music"]
+        }[item.id] || [];
         return `
         <button type="button" class="nexus-mode-card nexus-mode-card-${escapeHtml(accent)}" data-nexus-mode-shortcut="${escapeHtml(item.id)}" data-nexus-command="${escapeHtml(item.command)}" data-testid="nexus-mode-card-${escapeHtml(item.id)}" onclick="return window.nexusHandleStandardUserHomeShortcut ? !window.nexusHandleStandardUserHomeShortcut(event) : true">
+          ${testAliases.map(alias => `<span hidden data-testid="${escapeHtml(alias)}"></span>`).join("")}
           <span class="nexus-mode-icon" aria-hidden="true">${escapeHtml(presentation.icon || item.icon)}</span>
           <strong>${translateText(presentation.title || item.label)}</strong>
           <small>${translateText(presentation.description || item.description)}</small>
@@ -20231,6 +20386,7 @@ function renderUserWorkspace() {
     ${renderNexusActiveWorkSummary()}
     ${renderNexusPilotPlatformStatusPanel()}
     ${renderNexusPilotReviewQueuePanel()}
+    ${renderNexusProductionPlatformRailsPanel()}
     </div>
     <div class="nexus-command-hidden-agent-host" data-nexus-open-dialogue-agent-host="true" hidden>${renderNexusOpenDialogueAgentCard()}</div>
     <section id="userLanguagePanel" class="user-language-panel hidden" aria-label="${translateText("Choose language")}">
@@ -20265,6 +20421,13 @@ function renderUserWorkspace() {
     setTimeout(() => {
       if (experienceMode === "user" && document.querySelector("[data-nexus-review-queue='true']")) {
         refreshNexusPilotReviewQueue({ rerender: false }).catch(() => {});
+      }
+    }, 0);
+  }
+  if (!nexusProductionReadinessStatus) {
+    setTimeout(() => {
+      if (experienceMode === "user" && document.querySelector("[data-nexus-production-rails='true']")) {
+        refreshNexusProductionPlatformRails({ rerender: false }).catch(() => {});
       }
     }, 0);
   }
@@ -35319,6 +35482,7 @@ function bindStatic() {
   document.addEventListener("click", async event => {
     if (await handleAssistantRuntimeLocalToolClick(event)) return;
     if (handleAssistantRuntimeFollowUpClick(event)) return;
+    if (await handleNexusProductionRailsClick(event)) return;
     if (await handleNexusPilotReviewQueueClick(event)) return;
     if (await handleNexusPilotPlatformActionClick(event)) return;
     if (handleNexusHomeModeSummaryClick(event)) return;

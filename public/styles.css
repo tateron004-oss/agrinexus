@@ -9285,6 +9285,109 @@ body.user-mode .nexus-pilot-status-panel dd {
     gap: 8px;
   }
 
+body.user-mode .nexus-production-rails {
+  display: grid;
+  gap: 14px;
+  margin-top: 16px;
+  padding: 16px;
+  border: 1px solid rgba(42, 121, 182, .18);
+  border-radius: 18px;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, .96), rgba(255, 248, 231, .86)),
+    radial-gradient(circle at top right, rgba(27, 127, 75, .12), transparent 42%);
+  box-shadow: 0 14px 34px rgba(18, 58, 76, .09);
+}
+
+body.user-mode .nexus-production-rails-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+body.user-mode .nexus-production-rails-header strong,
+body.user-mode .nexus-production-rails-header small,
+body.user-mode .nexus-production-rails article small,
+body.user-mode .nexus-production-rails article span,
+body.user-mode .nexus-production-rails-status {
+  display: block;
+  color: #34545e;
+  line-height: 1.35;
+}
+
+body.user-mode .nexus-production-rails-header strong,
+body.user-mode .nexus-production-rails article strong {
+  color: #173240;
+  font-weight: 950;
+}
+
+body.user-mode .nexus-production-rails-grid,
+body.user-mode .nexus-production-integration-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  gap: 10px;
+}
+
+body.user-mode .nexus-production-rails article,
+body.user-mode .nexus-production-integration-details {
+  padding: 12px;
+  border: 1px solid rgba(23, 50, 64, .1);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, .88);
+  box-shadow: 0 8px 18px rgba(23, 50, 64, .06);
+}
+
+body.user-mode .nexus-production-integration-details summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  cursor: pointer;
+  color: #173240;
+  font-weight: 900;
+}
+
+body.user-mode .nexus-production-integration-list {
+  margin-top: 12px;
+}
+
+body.user-mode .nexus-production-integration-card {
+  display: grid;
+  gap: 8px;
+}
+
+body.user-mode .nexus-production-integration-card div,
+body.user-mode .nexus-production-rail-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  justify-content: space-between;
+}
+
+body.user-mode .nexus-production-rails button {
+  min-height: 36px;
+  border: 1px solid rgba(27, 127, 75, .26);
+  border-radius: 999px;
+  background: #ffffff;
+  color: #174436;
+  font-weight: 850;
+  box-shadow: 0 8px 18px rgba(23, 68, 54, .07);
+}
+
+body.user-mode .nexus-production-rails button:hover,
+body.user-mode .nexus-production-rails button:focus-visible {
+  background: #eaf8f0;
+  border-color: #1b7f4b;
+}
+
+body.user-mode .nexus-production-rails-status {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: rgba(239, 248, 252, .82);
+}
+
   body.user-mode .nexus-pilot-review-item button {
     width: auto;
     min-height: 34px;

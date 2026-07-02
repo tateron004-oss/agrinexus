@@ -45,6 +45,7 @@
     "qa:nexus-standard-user-home-screen-redesign": "node scripts/nexus-standard-user-home-screen-redesign-qa.js",
     "qa:nexus-pilot-platform-foundation": "node scripts/nexus-pilot-platform-foundation-qa.js",
     "qa:nexus-pilot-browser-readiness": "node scripts/nexus-pilot-browser-readiness-qa.js",
+    "qa:nexus-production-platform-rails": "node scripts/nexus-production-platform-rails-qa.js",
     "qa:nexus-media-mode-music-provider": "node scripts/nexus-media-mode-music-provider-qa.js",
     "qa:nexus-music-icon-media-mode": "node scripts/nexus-music-icon-media-mode-qa.js",
     "qa:nexus-onboarding-video-entrypoint": "node scripts/nexus-onboarding-video-entrypoint-qa.js",

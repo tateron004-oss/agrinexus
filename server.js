@@ -34,8 +34,8 @@ const AI_MODEL = process.env.OPENAI_MODEL || "gpt-5.4-mini";
 const AI_REASONING_MODEL = process.env.OPENAI_REASONING_MODEL || process.env.OPENAI_AGENT_MODEL || AI_MODEL;
 const AI_TRANSLATION_MODEL = process.env.OPENAI_TRANSLATION_MODEL || process.env.OPENAI_AGENT_MODEL || AI_MODEL;
 const AGRINEXUS_RELEASE = "2026-06-16-operational-readiness";
-const AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-339";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v318";
+const AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-340";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v319";
 const PRODUCT_IDENTITY = Object.freeze({
   productName: "Nexus Workforce AI",
   assistantName: "Nexus",
@@ -27505,7 +27505,10 @@ const NEXUS_PILOT_RECORD_STATUSES = Object.freeze([
   "queued_locally",
   "reviewed",
   "needs_follow_up",
-  "closed"
+  "closed",
+  "archived",
+  "blocked",
+  "failed"
 ]);
 
 const NEXUS_PILOT_SENSITIVE_TYPES = new Set([
@@ -27718,6 +27721,308 @@ function nexusPilotStatus(db) {
   };
 }
 
+const NEXUS_PRODUCTION_ROLES = Object.freeze([
+  "Standard User",
+  "Care Partner",
+  "Provider Reviewer",
+  "Agriculture Expert",
+  "Workforce Partner",
+  "Marketplace Partner",
+  "Administrator"
+]);
+
+const NEXUS_PRODUCTION_STORAGE_MODES = Object.freeze(["local_json", "memory", "external_db_placeholder"]);
+
+const NEXUS_PRODUCTION_INTEGRATIONS = Object.freeze([
+  {
+    id: "telehealth-provider",
+    name: "Telehealth provider",
+    type: "healthcare",
+    enabledFlag: "NEXUS_TELEHEALTH_PROVIDER_ENABLED",
+    requiredEnv: ["NEXUS_TELEHEALTH_PROVIDER_BASE_URL", "NEXUS_TELEHEALTH_PROVIDER_API_KEY"],
+    riskTier: "high",
+    capability: "Prepare and, when approved later, launch a configured telehealth workflow."
+  },
+  {
+    id: "pharmacy",
+    name: "Pharmacy workflow",
+    type: "pharmacy",
+    enabledFlag: "NEXUS_PHARMACY_PROVIDER_ENABLED",
+    requiredEnv: ["NEXUS_PHARMACY_PROVIDER_BASE_URL", "NEXUS_PHARMACY_PROVIDER_API_KEY"],
+    riskTier: "high",
+    capability: "Prepare medication questions and future verified pharmacy handoffs."
+  },
+  {
+    id: "communications",
+    name: "SMS / WhatsApp / call communications",
+    type: "communications",
+    enabledFlag: "NEXUS_MESSAGES_ENABLED",
+    requiredEnv: ["TWILIO_ACCOUNT_SID", "TWILIO_AUTH_TOKEN", "TWILIO_FROM_NUMBER"],
+    optionalEnvAliases: { TWILIO_FROM_NUMBER: ["TWILIO_PHONE_NUMBER", "TWILIO_NUMBER"] },
+    riskTier: "high",
+    capability: "Send or call only after configured provider status, explicit confirmation, and audit."
+  },
+  {
+    id: "maps-routing",
+    name: "Maps and route planning",
+    type: "maps",
+    enabledFlag: "NEXUS_MAPS_ENABLED",
+    requiredEnv: ["GOOGLE_MAPS_API_KEY"],
+    riskTier: "medium",
+    capability: "Compute routes from typed locations without browser geolocation."
+  },
+  {
+    id: "payments",
+    name: "Sandbox payments",
+    type: "payments",
+    enabledFlag: "NEXUS_MARKETPLACE_PAYMENTS_ENABLED",
+    requiredEnv: ["STRIPE_SECRET_KEY"],
+    riskTier: "high",
+    capability: "Sandbox-only payment readiness. Live money movement stays disabled."
+  },
+  {
+    id: "learning-provider",
+    name: "Learning provider / LMS",
+    type: "learning",
+    enabledFlag: "NEXUS_LMS_ENABLED",
+    requiredEnv: ["MOODLE_BASE_URL", "MOODLE_TOKEN"],
+    riskTier: "medium",
+    capability: "Look up configured learning resources and future enrollment readiness."
+  },
+  {
+    id: "drone-services",
+    name: "Drone services",
+    type: "field-services",
+    enabledFlag: "NEXUS_DRONES_ENABLED",
+    requiredEnv: ["DJI_CLIENT_ID", "DJI_CLIENT_SECRET"],
+    riskTier: "high",
+    capability: "Status and preparation only. No flight execution in this rail."
+  }
+]);
+
+function nexusEnvValue(env, name, aliases = []) {
+  const candidates = [name, ...aliases];
+  for (const candidate of candidates) {
+    const value = String(env[candidate] || "").trim();
+    if (value) return { name: candidate, present: true };
+  }
+  return { name, present: false };
+}
+
+function nexusFlagEnabled(env, name) {
+  return String(env[name] || "").trim().toLowerCase() === "true";
+}
+
+function ensureNexusProductionRailsState(db) {
+  ensureNexusPilotState(db);
+  if (!Array.isArray(db.nexusIntegrationAttempts)) db.nexusIntegrationAttempts = [];
+  if (!Array.isArray(db.nexusExportDeleteRequests)) db.nexusExportDeleteRequests = [];
+  if (!Array.isArray(db.nexusProductionReadinessEvents)) db.nexusProductionReadinessEvents = [];
+  const profile = db.nexusPilotProfiles[0];
+  if (profile) {
+    profile.accountId = profile.accountId || "standard-user-local";
+    profile.authMode = profile.authMode || "local prototype account";
+    profile.role = NEXUS_PRODUCTION_ROLES.includes(profile.role) ? profile.role : "Standard User";
+    profile.productionRailReady = true;
+  }
+}
+
+function nexusProductionStorageStatus(db, env = process.env) {
+  ensureNexusProductionRailsState(db);
+  const requestedMode = String(env.NEXUS_STORAGE_MODE || "local_json").trim();
+  const mode = NEXUS_PRODUCTION_STORAGE_MODES.includes(requestedMode) ? requestedMode : "local_json";
+  return {
+    ok: true,
+    mode,
+    configured: mode === "local_json" || mode === "memory" || Boolean(env.NEXUS_EXTERNAL_DATABASE_URL),
+    externalDatabaseConfigured: Boolean(env.NEXUS_EXTERNAL_DATABASE_URL),
+    adapter: "nexusProductionStorageAdapter",
+    lifecycle: {
+      create: true,
+      update: true,
+      archive: true,
+      exportRequest: true,
+      deleteRequest: true,
+      hardDelete: false
+    },
+    collections: {
+      profiles: db.nexusPilotProfiles.length,
+      records: db.nexusPilotRecords.length,
+      reviewQueue: db.nexusPilotReviewQueue.length,
+      consentEvents: db.nexusPilotConsentEvents.length,
+      auditEvents: db.nexusPilotAuditEvents.length,
+      reminders: db.nexusPilotReminders.length,
+      offlineQueue: db.nexusPilotOfflineQueue.length,
+      integrationAttempts: db.nexusIntegrationAttempts.length,
+      exportDeleteRequests: db.nexusExportDeleteRequests.length
+    },
+    safety: "Local JSON storage is active for this prototype. External database production deployment requires explicit configuration and migration review."
+  };
+}
+
+function nexusProductionIntegrationStatus(db, env = process.env) {
+  ensureNexusProductionRailsState(db);
+  return NEXUS_PRODUCTION_INTEGRATIONS.map(integration => {
+    const enabled = nexusFlagEnabled(env, integration.enabledFlag);
+    const missing = [];
+    const configuredEnv = [];
+    for (const envName of integration.requiredEnv) {
+      const found = nexusEnvValue(env, envName, integration.optionalEnvAliases?.[envName] || []);
+      if (found.present) configuredEnv.push(found.name);
+      else missing.push(envName);
+    }
+    const configured = missing.length === 0;
+    return {
+      id: integration.id,
+      name: integration.name,
+      type: integration.type,
+      enabledFlag: integration.enabledFlag,
+      enabled,
+      configured,
+      missingEnv: missing,
+      configuredEnvNamesOnly: configuredEnv,
+      testability: !enabled ? "disabled" : configured ? "sandbox_ready" : "missing_config",
+      actionRiskTier: integration.riskTier,
+      whatCanBeTestedNow: !enabled
+        ? "Readiness display and missing configuration guidance only."
+        : configured
+          ? "Provider-specific sandbox or read-only test path after explicit confirmation."
+          : "Configuration readiness only; execution remains blocked.",
+      whatStillNeeded: configured
+        ? "Explicit user approval, audit event, provider response validation, and production approval before live use."
+        : `Add missing environment variable names: ${missing.join(", ") || "none"}.`,
+      executionEnabled: false,
+      userApprovalRequired: true,
+      auditRequired: true,
+      noSilentExecution: true,
+      noSecretValuesReturned: true,
+      capability: integration.capability
+    };
+  });
+}
+
+function nexusProductionAdminOperations(db, env = process.env) {
+  ensureNexusProductionRailsState(db);
+  return {
+    ok: true,
+    appHealth: "ok",
+    authMode: "local prototype account; production authentication not claimed",
+    roleModel: NEXUS_PRODUCTION_ROLES,
+    storage: nexusProductionStorageStatus(db, env),
+    operations: [
+      "Review local records",
+      "Review consent and audit history",
+      "Inspect provider readiness",
+      "Prepare export/delete requests",
+      "Monitor offline queue and reminders"
+    ],
+    limitations: [
+      "No live provider dispatch without configured connector and approval",
+      "No live payment, pharmacy, emergency, call, message, or location action by default",
+      "Production security/compliance review is required before regulated deployment"
+    ]
+  };
+}
+
+function nexusProductionPrivacySummary(db) {
+  ensureNexusProductionRailsState(db);
+  return {
+    ok: true,
+    records: db.nexusPilotRecords.length,
+    consentEvents: db.nexusPilotConsentEvents.length,
+    auditEvents: db.nexusPilotAuditEvents.length,
+    exportDeleteRequests: db.nexusExportDeleteRequests.length,
+    availableRequests: ["export", "delete"],
+    safety: "Export/delete requests are recorded locally for review. They do not remove records silently or transmit data externally."
+  };
+}
+
+function nexusProductionReadiness(db, env = process.env) {
+  ensureNexusProductionRailsState(db);
+  const integrations = nexusProductionIntegrationStatus(db, env);
+  return {
+    ok: true,
+    product: "AgriNexus / Nexus production prototype rails",
+    runtimePosture: "local/sandbox rails active; live execution disabled unless a configured provider path and explicit approval gate allow it",
+    accountReady: true,
+    rolesReady: true,
+    storageReady: true,
+    privacyRequestsReady: true,
+    providerConnectorReady: true,
+    auditReady: true,
+    deploymentReady: false,
+    deploymentLimitations: [
+      "Production authentication provider not configured",
+      "External database migration not configured",
+      "Regulated healthcare, pharmacy, payment, emergency, and communications production approvals not complete"
+    ],
+    integrations,
+    standardUserSafety: [
+      "Standard User can prepare, review, queue, export-request, and delete-request local records",
+      "High-risk provider, pharmacy, payment, emergency, communication, location, and marketplace actions stay gated",
+      "No false live provider, fulfillment, emergency, or payment claim is made"
+    ],
+    generatedAt: new Date().toISOString()
+  };
+}
+
+function nexusCreateExportDeleteRequest(db, body = {}, user = null, requestType = "export") {
+  ensureNexusProductionRailsState(db);
+  const now = new Date().toISOString();
+  const requestItem = {
+    id: crypto.randomUUID(),
+    requestType,
+    status: "ready_for_review",
+    actor: sanitizePilotText(user?.name || body.actor || "Standard User", 120),
+    reason: sanitizePilotText(body.reason || `${requestType} request prepared from Nexus privacy controls.`, 360),
+    createdAt: now,
+    updatedAt: now,
+    localReviewOnly: true,
+    noExternalTransmission: true,
+    noSilentDeletion: requestType === "delete"
+  };
+  db.nexusExportDeleteRequests.unshift(requestItem);
+  addNexusPilotAuditEvent(db, `privacy_${requestType}_request_created`, {
+    actor: requestItem.actor,
+    role: "Standard User",
+    description: `Local ${requestType} request created. No external transmission, live provider action, or silent deletion occurred.`
+  });
+  return requestItem;
+}
+
+function nexusPrepareIntegrationAttempt(db, type = "", body = {}, user = null) {
+  ensureNexusProductionRailsState(db);
+  const integration = NEXUS_PRODUCTION_INTEGRATIONS.find(item => item.id === type);
+  if (!integration) return { ok: false, error: "unsupported_integration" };
+  const status = nexusProductionIntegrationStatus(db).find(item => item.id === type);
+  const now = new Date().toISOString();
+  const attempt = {
+    id: crypto.randomUUID(),
+    integrationId: integration.id,
+    providerName: integration.name,
+    type: integration.type,
+    status: "prepared_not_sent",
+    testability: status?.testability || "blocked",
+    actor: sanitizePilotText(user?.name || body.actor || "Standard User", 120),
+    purpose: sanitizePilotText(body.purpose || "Provider connector readiness check", 360),
+    createdAt: now,
+    updatedAt: now,
+    explicitApprovalRequired: true,
+    executionEnabled: false,
+    auditRequired: true,
+    noExternalRequest: true,
+    noSilentExecution: true,
+    missingEnv: status?.missingEnv || []
+  };
+  db.nexusIntegrationAttempts.unshift(attempt);
+  addNexusPilotAuditEvent(db, "integration_attempt_prepared", {
+    actor: attempt.actor,
+    role: user?.role || "Standard User",
+    description: `${integration.name} integration attempt prepared locally. No provider request was sent.`
+  });
+  return { ok: true, attempt };
+}
+
 async function api(req, res, url) {
   const db = await readDb();
   const usersChanged = ensureDefaultUsers(db);
@@ -27753,6 +28058,69 @@ async function api(req, res, url) {
 
   if (url.pathname === "/api/nexus/tools/status" && req.method === "GET") {
     return send(res, 200, nexusRealProviderStatus(db));
+  }
+
+  if ((url.pathname === "/api/nexus/health" || url.pathname === "/api/nexus/readiness" || url.pathname === "/api/nexus/production-readiness") && req.method === "GET") {
+    return send(res, 200, nexusProductionReadiness(db, process.env));
+  }
+
+  if (url.pathname === "/api/nexus/storage/status" && req.method === "GET") {
+    return send(res, 200, nexusProductionStorageStatus(db, process.env));
+  }
+
+  if (url.pathname === "/api/nexus/integrations/status" && req.method === "GET") {
+    return send(res, 200, { ok: true, integrations: nexusProductionIntegrationStatus(db, process.env) });
+  }
+
+  if (url.pathname === "/api/nexus/integrations/logs" && req.method === "GET") {
+    ensureNexusProductionRailsState(db);
+    return send(res, 200, { ok: true, attempts: db.nexusIntegrationAttempts });
+  }
+
+  const nexusIntegrationPrepareMatch = url.pathname.match(/^\/api\/nexus\/integrations\/([^/]+)\/prepare$/);
+  if (nexusIntegrationPrepareMatch && req.method === "POST") {
+    const result = nexusPrepareIntegrationAttempt(db, nexusIntegrationPrepareMatch[1], await readBody(req), user);
+    if (!result.ok) return send(res, 404, result);
+    await writeDb(db);
+    return send(res, 200, result);
+  }
+
+  const nexusIntegrationAttemptMatch = url.pathname.match(/^\/api\/nexus\/integrations\/([^/]+)\/attempt$/);
+  if (nexusIntegrationAttemptMatch && req.method === "POST") {
+    const result = nexusPrepareIntegrationAttempt(db, nexusIntegrationAttemptMatch[1], await readBody(req), user);
+    if (!result.ok) return send(res, 404, result);
+    await writeDb(db);
+    return send(res, 200, { ...result, sent: false, status: "prepared_not_sent" });
+  }
+
+  if (url.pathname === "/api/nexus/admin/operations" && req.method === "GET") {
+    return send(res, 200, nexusProductionAdminOperations(db, process.env));
+  }
+
+  if (url.pathname === "/api/nexus/privacy/summary" && req.method === "GET") {
+    return send(res, 200, nexusProductionPrivacySummary(db));
+  }
+
+  if (url.pathname === "/api/nexus/privacy/export-request" && req.method === "POST") {
+    const requestItem = nexusCreateExportDeleteRequest(db, await readBody(req), user, "export");
+    await writeDb(db);
+    return send(res, 200, { ok: true, request: requestItem, audit: db.nexusPilotAuditEvents[0] });
+  }
+
+  if (url.pathname === "/api/nexus/privacy/delete-request" && req.method === "POST") {
+    const requestItem = nexusCreateExportDeleteRequest(db, await readBody(req), user, "delete");
+    await writeDb(db);
+    return send(res, 200, { ok: true, request: requestItem, audit: db.nexusPilotAuditEvents[0] });
+  }
+
+  if (url.pathname === "/api/nexus/consent-history" && req.method === "GET") {
+    ensureNexusProductionRailsState(db);
+    return send(res, 200, { ok: true, consentEvents: db.nexusPilotConsentEvents, auditEvents: db.nexusPilotAuditEvents });
+  }
+
+  if (url.pathname === "/api/nexus/account" && req.method === "GET") {
+    ensureNexusProductionRailsState(db);
+    return send(res, 200, { ok: true, account: db.nexusPilotProfiles[0], roles: NEXUS_PRODUCTION_ROLES, authMode: "local prototype account" });
   }
 
   if (url.pathname === "/api/nexus/profile" && req.method === "GET") {
@@ -27876,6 +28244,53 @@ async function api(req, res, url) {
     if (result.error === "consent_required") return send(res, 409, { ok: false, error: result.error, consentCopy: result.consentCopy });
     await writeDb(db);
     return send(res, 200, { ok: true, record, queueItem: result.queueItem, audit: result.audit, noExternalAction: true });
+  }
+
+  const nexusRecordArchiveMatch = url.pathname.match(/^\/api\/nexus\/records\/([^/]+)\/archive$/);
+  if (nexusRecordArchiveMatch && req.method === "POST") {
+    ensureNexusProductionRailsState(db);
+    const record = findNexusPilotRecord(db, nexusRecordArchiveMatch[1]);
+    if (!record) return send(res, 404, { ok: false, error: "record_not_found" });
+    record.status = "archived";
+    record.updatedAt = new Date().toISOString();
+    const audit = addNexusPilotAuditEvent(db, "record_archived", {
+      relatedRecordId: record.id,
+      mode: record.sourceMode,
+      actor: user?.name || record.profileLabel,
+      description: "Record archived locally. No live provider, pharmacy, payment, message, call, location, marketplace, or emergency action occurred."
+    });
+    record.auditRefs = [...(record.auditRefs || []), audit.id];
+    await writeDb(db);
+    return send(res, 200, { ok: true, record, audit, localOnly: true });
+  }
+
+  const nexusRecordExportMatch = url.pathname.match(/^\/api\/nexus\/records\/([^/]+)\/export$/);
+  if (nexusRecordExportMatch && req.method === "GET") {
+    ensureNexusProductionRailsState(db);
+    const record = findNexusPilotRecord(db, nexusRecordExportMatch[1]);
+    if (!record) return send(res, 404, { ok: false, error: "record_not_found" });
+    return send(res, 200, {
+      ok: true,
+      export: {
+        record,
+        exportedAt: new Date().toISOString(),
+        localExportOnly: true,
+        noExternalTransmission: true
+      }
+    });
+  }
+
+  const nexusRecordDeleteRequestMatch = url.pathname.match(/^\/api\/nexus\/records\/([^/]+)\/delete-request$/);
+  if (nexusRecordDeleteRequestMatch && req.method === "POST") {
+    ensureNexusProductionRailsState(db);
+    const record = findNexusPilotRecord(db, nexusRecordDeleteRequestMatch[1]);
+    if (!record) return send(res, 404, { ok: false, error: "record_not_found" });
+    const requestItem = nexusCreateExportDeleteRequest(db, { reason: `Delete request for record ${record.id}` }, user, "delete");
+    requestItem.recordId = record.id;
+    record.deleteRequestStatus = "ready_for_review";
+    record.updatedAt = new Date().toISOString();
+    await writeDb(db);
+    return send(res, 200, { ok: true, record, request: requestItem, localReviewOnly: true, noSilentDeletion: true });
   }
 
   if (url.pathname === "/api/nexus/review-queue" && req.method === "GET") {
