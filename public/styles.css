@@ -8274,6 +8274,26 @@ body.user-mode .grandma-workflow:not(.hidden) .modal-actions button {
   border-top: 1px solid rgba(20, 49, 58, .12);
 }
 
+.nexus-health-access-card {
+  display: grid;
+  gap: 8px;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(20, 49, 58, .12);
+}
+
+.nexus-health-access-card ul {
+  margin: 6px 0 0;
+  padding-left: 18px;
+}
+
+.nexus-health-access-card li {
+  margin: 3px 0;
+  color: #475569;
+  font-size: .82rem;
+  line-height: 1.35;
+}
+
 .nexus-media-provider-actions {
   display: flex;
   flex-wrap: wrap;

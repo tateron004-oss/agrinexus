@@ -241,8 +241,8 @@ const nexusProductIdentity = Object.freeze({
 });
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-326";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v305";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-327";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v306";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
 const VOICE_ATTENTION_DELAY_MS = 900;
@@ -18369,6 +18369,7 @@ function renderNexusAgenticBrainResultCards() {
           <strong>${escapeHtml(card.title || "Prepared item")}</strong>
           <span>${escapeHtml(card.status || "prepared locally")}</span>
           ${renderNexusMediaProviderOptions(card)}
+          ${renderNexusHealthAccessPreparationOptions(card)}
           ${card.localOnly ? `<small>${escapeHtml(translateText("Local-only"))}</small>` : ""}
           ${card.needsRealProvider ? `<small>${escapeHtml(translateText("Needs verified provider/partner integration before external action."))}</small>` : ""}
           ${card.blockedCategories?.length ? `<small>${escapeHtml(translateText("Blocked/gated"))}: ${card.blockedCategories.map(escapeHtml).join(", ")}</small>` : ""}
@@ -18400,6 +18401,31 @@ function renderNexusMediaProviderOptions(card = {}) {
           `).join("")}
         </div>
       ` : ""}
+    </div>
+  `;
+}
+
+function renderNexusHealthAccessPreparationOptions(card = {}) {
+  const access = card.healthAccess || null;
+  if (!access) return "";
+  const collect = Array.isArray(access.collect) ? access.collect : [];
+  const nextSteps = Array.isArray(access.nextSteps) ? access.nextSteps : [];
+  return `
+    <div class="nexus-health-access-card" data-nexus-health-access-card="true">
+      <small>${escapeHtml(translateText("Support type"))}: ${escapeHtml(translateText(access.supportType || "Health access preparation"))}</small>
+      ${collect.length ? `
+        <div>
+          <strong>${escapeHtml(translateText("Information to collect"))}</strong>
+          <ul>${collect.slice(0, 6).map(item => `<li>${escapeHtml(translateText(item))}</li>`).join("")}</ul>
+        </div>
+      ` : ""}
+      ${nextSteps.length ? `
+        <div>
+          <strong>${escapeHtml(translateText("Next safe steps"))}</strong>
+          <ul>${nextSteps.slice(0, 5).map(item => `<li>${escapeHtml(translateText(item))}</li>`).join("")}</ul>
+        </div>
+      ` : ""}
+      <small>${escapeHtml(translateText(access.safetyNote || "Preparation only. Nexus does not diagnose, prescribe, book, call, message, dispatch, share records, or contact a provider."))}</small>
     </div>
   `;
 }
@@ -18490,6 +18516,125 @@ function buildNexusMediaMusicLocalResult(command = "") {
   };
 }
 
+const NEXUS_HEALTH_ACCESS_PREPARATION_MODES = Object.freeze([
+  {
+    id: "chronic-care",
+    title: "Chronic Care Support",
+    supportType: "Diabetes, obesity, hypertension, RPM/RTM manual tracking",
+    patterns: [/\b(chronic care|diabetes|blood sugar|glucose|a1c|obesity|weight|hypertension|blood pressure|bp\b|rpm|rtm|vitals|record my blood pressure)\b/i],
+    collect: [
+      "Condition focus: diabetes mellitus, obesity, hypertension, or cardiometabolic support.",
+      "Manual blood pressure, blood glucose, weight, symptoms, medication adherence, and activity or therapy updates if already known.",
+      "Current concern, timing, language, clinic access, and red-flag symptoms.",
+      "Medication list for provider review only."
+    ],
+    nextSteps: [
+      "Organize readings into a provider-ready summary.",
+      "Prepare questions for a clinician, nurse, pharmacist, coach, or community health worker.",
+      "Use local urgent care or emergency services for severe symptoms."
+    ]
+  },
+  {
+    id: "telehealth-intake",
+    title: "Telehealth Intake",
+    supportType: "Telehealth preparation and access intake",
+    patterns: [/\b(telehealth intake|start.*telehealth|doctor video|video doctor|virtual visit|clinic intake)\b/i],
+    collect: [
+      "Main concern and preferred language.",
+      "Known condition, symptoms, current medicines, and access barriers.",
+      "Manual vitals if already known: blood pressure, glucose, weight, temperature, pulse, or oxygen saturation.",
+      "Preferred support type and best callback instructions for a future connected provider workflow."
+    ],
+    nextSteps: [
+      "Prepare a review-only telehealth intake summary.",
+      "List questions for a clinician before any visit is scheduled.",
+      "Do not assume a live provider has reviewed the information."
+    ]
+  },
+  {
+    id: "provider-video",
+    title: "Video Visit / Provider Bridge",
+    supportType: "Provider bridge preparation, no live video launch",
+    patterns: [/\b(video visit|provider bridge|video provider|provider video|launch.*provider|open.*provider)\b/i],
+    collect: [
+      "Visit purpose and non-sensitive summary.",
+      "Questions for provider review.",
+      "Preferred time window if a future scheduling connector is configured.",
+      "Device, bandwidth, caption, caregiver, or accessibility needs."
+    ],
+    nextSteps: [
+      "Prepare the bridge checklist.",
+      "Wait for configured provider integration and explicit user approval before launch.",
+      "Keep medical decisions with licensed clinicians."
+    ]
+  },
+  {
+    id: "pharmacy-support",
+    title: "Pharmacy Support",
+    supportType: "Pharmacy preparation, medication-list review, refill questions",
+    patterns: [/\b(pharmacy|medicine|medication|prescription|refill|pill|drugstore)\b/i],
+    collect: [
+      "Medication names as written on the prescription or package.",
+      "Refill question, pickup barrier, side-effect concern, or adherence issue.",
+      "Pharmacy preference if already known.",
+      "Provider questions for medication review."
+    ],
+    nextSteps: [
+      "Prepare a pharmacy review checklist.",
+      "Ask a clinician or pharmacist before changing medication.",
+      "Do not request refills or contact a pharmacy until a verified connector is configured and approved."
+    ]
+  },
+  {
+    id: "mobile-clinic",
+    title: "Mobile Clinic Support",
+    supportType: "Mobile clinic and community resource preparation",
+    patterns: [/\b(mobile clinic|clinic outreach|community clinic|field clinic|clinic route|clinic support)\b/i],
+    collect: [
+      "Area or community name if the user chooses to provide it.",
+      "Main support need: chronic care, pharmacy, vitals, education, transport-to-care, or community resource.",
+      "Preferred language, accessibility needs, and low-bandwidth/offline constraints."
+    ],
+    nextSteps: [
+      "Prepare a local support request summary.",
+      "Use configured community/provider data when available.",
+      "Do not dispatch a clinic, share location, or contact anyone without a future approved connector and explicit consent."
+    ]
+  }
+]);
+
+function detectNexusHealthAccessPreparationMode(command = "") {
+  const text = String(command || "");
+  return NEXUS_HEALTH_ACCESS_PREPARATION_MODES.find(mode => mode.patterns.some(pattern => pattern.test(text))) || null;
+}
+
+function buildNexusHealthAccessPreparationResult(command = "") {
+  const mode = detectNexusHealthAccessPreparationMode(command);
+  if (!mode) return null;
+  return {
+    ok: true,
+    status: "health_access_preparation_ready",
+    mode: "Health Access",
+    message: `${mode.title} is ready as preparation-only support. Nexus can organize information and next steps for human review, but it will not diagnose, prescribe, book, call, message, dispatch, share records, or contact providers.`,
+    preparedCards: [{
+      type: "health_access_preparation",
+      title: mode.title,
+      status: "preparation ready",
+      localOnly: true,
+      needsRealProvider: /telehealth|provider|pharmacy|clinic/i.test(mode.id),
+      healthAccess: {
+        modeId: mode.id,
+        supportType: mode.supportType,
+        collect: mode.collect,
+        nextSteps: mode.nextSteps,
+        safetyNote: "Preparation only. Nexus does not diagnose, prescribe, book, call, message, dispatch, share medical records, request location, or contact a provider."
+      }
+    }],
+    noExecutionAuthorized: true,
+    localOnly: true
+  };
+}
+
 function renderNexusAgenticBrainMatrix() {
   const matrix = Array.isArray(nexusAgenticBrainMatrix) ? nexusAgenticBrainMatrix : [];
   if (!matrix.length) return "";
@@ -18505,6 +18650,11 @@ function renderNexusAgenticBrainMatrix() {
 
 const NEXUS_COMMAND_CENTER_SHORTCUTS = Object.freeze([
   { id: "health", icon: "H", label: "Health", description: "Chronic care, RPM/RTM, telehealth prep.", command: "I need health support." },
+  { id: "chronic-care", icon: "CC", label: "Chronic Care", description: "Diabetes, obesity, BP, RPM/RTM.", command: "Nexus, help me record my blood pressure." },
+  { id: "telehealth-intake", icon: "TH", label: "Telehealth", description: "Start a review-only intake.", command: "Nexus, start a telehealth intake." },
+  { id: "provider-video", icon: "V", label: "Video Visit", description: "Prepare provider bridge details.", command: "Nexus, prepare a video visit provider bridge." },
+  { id: "pharmacy-support", icon: "Rx", label: "Pharmacy", description: "Medication list and refill questions.", command: "Nexus, prepare pharmacy support." },
+  { id: "mobile-clinic", icon: "MC", label: "Mobile Clinic", description: "Clinic outreach and community support.", command: "Nexus, prepare mobile clinic support." },
   { id: "providers", icon: "P", label: "Providers", description: "Prepare provider summaries and review packages.", command: "Prepare a provider summary." },
   { id: "agriculture", icon: "A", label: "Agriculture", description: "Crop issues, training, field support.", command: "I need agriculture support." },
   { id: "agritrade", icon: "T", label: "AgriTrade", description: "Buyer, seller, logistics prep.", command: "Help me with AgriTrade, but do not take payment." },
@@ -18522,6 +18672,7 @@ const NEXUS_COMMAND_CENTER_SHORTCUTS = Object.freeze([
 function nexusCommandCenterExamples() {
   return [
     "Help me with my blood pressure.",
+    "Start a telehealth intake.",
     "Prepare a provider summary.",
     "Help me with crop disease.",
     "Play Afrobeats.",
@@ -18705,6 +18856,12 @@ async function runNexusAgenticBrainAction(action = "command", options = {}) {
         renderUserWorkspace();
         return true;
       }
+      const localHealthAccessResult = buildNexusHealthAccessPreparationResult(localMediaCommand);
+      if (localHealthAccessResult) {
+        nexusAgenticBrainLastResult = localHealthAccessResult;
+        renderUserWorkspace();
+        return true;
+      }
     }
     let result = null;
     if (action === "refresh") {
@@ -18749,6 +18906,12 @@ function handleNexusAgenticBrainTypedCommand(command = "") {
   if (!normalized) return false;
   if (isNexusMediaMusicCommand(normalized)) {
     nexusAgenticBrainLastResult = buildNexusMediaMusicLocalResult(normalized);
+    renderUserWorkspace();
+    return true;
+  }
+  const localHealthAccessResult = buildNexusHealthAccessPreparationResult(normalized);
+  if (localHealthAccessResult) {
+    nexusAgenticBrainLastResult = localHealthAccessResult;
     renderUserWorkspace();
     return true;
   }
@@ -34248,6 +34411,16 @@ function bindStatic() {
         renderUserWorkspace();
         return;
       }
+      const localHealthAccessResult = buildNexusHealthAccessPreparationResult(command);
+      if (localHealthAccessResult) {
+        event.preventDefault();
+        event.stopPropagation();
+        if (input) input.value = command;
+        setCommandInputs(command);
+        nexusAgenticBrainLastResult = localHealthAccessResult;
+        renderUserWorkspace();
+        return;
+      }
     }
     const earlyModeShortcut = event.target.closest("[data-nexus-mode-shortcut]");
     if (earlyModeShortcut) {
@@ -34259,6 +34432,17 @@ function bindStatic() {
         if (input) input.value = command;
         setCommandInputs(command);
         nexusAgenticBrainLastResult = buildNexusMediaMusicLocalResult(command);
+        renderUserWorkspace();
+        return;
+      }
+      const localHealthAccessResult = buildNexusHealthAccessPreparationResult(command);
+      if (localHealthAccessResult) {
+        event.preventDefault();
+        event.stopPropagation();
+        const input = $("#nexusCommandCenterInput");
+        if (input) input.value = command;
+        setCommandInputs(command);
+        nexusAgenticBrainLastResult = localHealthAccessResult;
         renderUserWorkspace();
         return;
       }
