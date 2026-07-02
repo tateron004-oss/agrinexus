@@ -29,29 +29,35 @@ function excludes(source, token, label) {
   "function buildNexusCapabilityOverviewResult",
   "function runNexusStandardUserHomeLocalCommand",
   "function handleNexusStandardUserHomeClick",
+  "function nexusHandleStandardUserHomeShortcut",
+  "window.nexusHandleStandardUserHomeShortcut",
   "function bindNexusStandardUserHomeControls",
   "nexus-agentic-brain-panel-empty",
   "data-nexus-mode-launcher",
   "data-nexus-suggested-actions",
   "data-nexus-mode-shortcut",
+  "onclick=\"return window.nexusHandleStandardUserHomeShortcut",
   "nexus-mode-card",
   "nexus-suggested-action"
 ].forEach(token => includes(app, token, `home screen implementation token ${token}`));
 
 [
-  "Agriculture Help",
-  "Health & Chronic Care",
-  "Telehealth Intake",
-  "Mobile Clinic",
-  "Pharmacy Support",
-  "Learning & Literacy",
-  "Jobs & Workforce",
-  "AgriTrade Marketplace",
-  "Maps / Field Visit",
-  "Music / Media",
-  "Reminders",
-  "Offline Queue"
-].forEach(label => includes(app, label, `Standard User home mode ${label}`));
+  ["🌱", "Agriculture Help"],
+  ["🩺", "Health & Chronic Care"],
+  ["🧑🏾‍⚕️", "Telehealth Intake"],
+  ["🚐", "Mobile Clinic"],
+  ["💊", "Pharmacy Support"],
+  ["🎓", "Learning & Literacy"],
+  ["💼", "Jobs & Workforce"],
+  ["🛒", "AgriTrade Marketplace"],
+  ["🗺️", "Maps / Field Visit"],
+  ["🎵", "Music / Media"],
+  ["🔔", "Reminders"],
+  ["📶", "Offline Queue"]
+].forEach(([icon, label]) => {
+  includes(app, `icon: "${icon}"`, `Standard User home mode icon ${icon} for ${label}`);
+  includes(app, `title: "${label}"`, `Standard User home mode label ${label}`);
+});
 
 [
   "Record blood pressure",
@@ -68,23 +74,36 @@ function excludes(source, token, label) {
   "Nexus, open agriculture help.",
   "Nexus, start a telehealth intake.",
   "Nexus, record my blood pressure.",
+  "Nexus, open mobile clinic.",
+  "Nexus, open pharmacy support.",
+  "Nexus, find agriculture training.",
   "Nexus, open AgriTrade.",
   "Nexus, find farm jobs.",
-  "Nexus, play music."
+  "Nexus, open maps.",
+  "Nexus, play music.",
+  "Nexus, show reminders.",
+  "Nexus, open offline queue."
 ].forEach(command => {
   const normalized = command
     .replace("Nexus, open agriculture help.", "I need agriculture support.")
+    .replace("Nexus, open mobile clinic.", "Nexus, prepare mobile clinic support.")
+    .replace("Nexus, open pharmacy support.", "Nexus, prepare pharmacy support.")
+    .replace("Nexus, find agriculture training.", "Help me find agriculture training.")
     .replace("Nexus, open AgriTrade.", "Help me with AgriTrade, but do not take payment.")
     .replace("Nexus, find farm jobs.", "Help me find jobs or training.")
-    .replace("Nexus, play music.", "Play Afrobeats.");
+    .replace("Nexus, open maps.", "Help me plan a field visit route.")
+    .replace("Nexus, play music.", "Play Afrobeats.")
+    .replace("Nexus, show reminders.", "Create a reminder.")
+    .replace("Nexus, open offline queue.", "Show offline queue status.");
   includes(app, normalized, `typed command routing support for ${command}`);
 });
 
 [
-  "Ask Nexus for agriculture, health, learning, jobs, marketplace, music, or provider support",
+  "Hi, I’m Nexus. What do you need help with today?",
+  "Ask Nexus or choose a support area below",
   "Playback depends on supported providers or accounts",
   "Nexus does not host, download, rip, cache, or redistribute copyrighted music",
-  "keep high-risk actions gated",
+  "keeping high-risk actions gated",
   "No provider, pharmacy, call, message, payment, location, camera, drone, appointment, or emergency action was executed"
 ].forEach(token => includes(app, token, `safe assistant copy ${token}`));
 
@@ -114,14 +133,14 @@ function excludes(source, token, label) {
 ].forEach(token => excludes(app, token, "Standard User home screen"));
 
 [
-  [app, 'AGRINEXUS_BUILD_VERSION = "nexus-behavior-334"', "app build version"],
-  [app, 'AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v313"', "app cache version"],
-  [server, 'AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-334"', "server build version"],
-  [server, 'AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v313"', "server cache version"],
-  [sw, 'CACHE_NAME = "agrinexus-pwa-v313"', "service worker cache"],
-  [sw, 'BUILD_VERSION = "nexus-behavior-334"', "service worker build"],
-  [index, "/styles.css?v=nexus-behavior-334", "stylesheet cache bust"],
-  [index, "/app.js?v=nexus-behavior-334", "app script cache bust"]
+  [app, 'AGRINEXUS_BUILD_VERSION = "nexus-behavior-335"', "app build version"],
+  [app, 'AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v314"', "app cache version"],
+  [server, 'AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-335"', "server build version"],
+  [server, 'AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v314"', "server cache version"],
+  [sw, 'CACHE_NAME = "agrinexus-pwa-v314"', "service worker cache"],
+  [sw, 'BUILD_VERSION = "nexus-behavior-335"', "service worker build"],
+  [index, "/styles.css?v=nexus-behavior-335", "stylesheet cache bust"],
+  [index, "/app.js?v=nexus-behavior-335", "app script cache bust"]
 ].forEach(([source, token, label]) => includes(source, token, label));
 
 assert.strictEqual(

@@ -241,8 +241,8 @@ const nexusProductIdentity = Object.freeze({
 });
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-334";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v313";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-335";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v314";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
 const VOICE_ATTENTION_DELAY_MS = 900;
@@ -18686,18 +18686,18 @@ const NEXUS_HOME_MODE_IDS = Object.freeze([
 ]);
 
 const NEXUS_HOME_MODE_PRESENTATION = Object.freeze({
-  agriculture: { title: "Agriculture Help", description: "Crop questions, training, and field guidance.", accent: "green" },
-  "chronic-care": { title: "Health & Chronic Care", description: "Blood pressure, glucose, weight, and RPM/RTM prep.", accent: "blue" },
-  "telehealth-intake": { title: "Telehealth Intake", description: "Prepare symptoms and questions before care.", accent: "sky" },
-  "mobile-clinic": { title: "Mobile Clinic", description: "Prepare mobile clinic access needs.", accent: "gold" },
-  "pharmacy-support": { title: "Pharmacy Support", description: "Organize medication questions for review.", accent: "teal" },
-  learning: { title: "Learning & Literacy", description: "Build literacy, AI, and job skills.", accent: "purple" },
-  jobs: { title: "Jobs & Workforce", description: "Find roles, training, and readiness steps.", accent: "orange" },
-  agritrade: { title: "AgriTrade Marketplace", description: "Review listings and prepare safe inquiries.", accent: "earth" },
-  maps: { title: "Maps / Field Visit", description: "Prepare routes without sharing location.", accent: "green" },
-  media: { title: "Music / Media", description: "Open safe provider music searches.", accent: "magenta", icon: "Music" },
-  reminders: { title: "Reminders", description: "Prepare local reminders and follow-ups.", accent: "gold" },
-  offline: { title: "Offline Queue", description: "Review offline readiness and queued work.", accent: "earth" }
+  agriculture: { title: "Agriculture Help", description: "Crop questions, training, and field guidance.", accent: "green", icon: "🌱" },
+  "chronic-care": { title: "Health & Chronic Care", description: "Blood pressure, glucose, weight, and RPM/RTM prep.", accent: "blue", icon: "🩺" },
+  "telehealth-intake": { title: "Telehealth Intake", description: "Prepare symptoms and questions before care.", accent: "sky", icon: "🧑🏾‍⚕️" },
+  "mobile-clinic": { title: "Mobile Clinic", description: "Prepare mobile clinic access needs.", accent: "gold", icon: "🚐" },
+  "pharmacy-support": { title: "Pharmacy Support", description: "Organize medication questions for review.", accent: "teal", icon: "💊" },
+  learning: { title: "Learning & Literacy", description: "Build literacy, AI, and job skills.", accent: "purple", icon: "🎓" },
+  jobs: { title: "Jobs & Workforce", description: "Find roles, training, and readiness steps.", accent: "orange", icon: "💼" },
+  agritrade: { title: "AgriTrade Marketplace", description: "Review listings and prepare safe inquiries.", accent: "earth", icon: "🛒" },
+  maps: { title: "Maps / Field Visit", description: "Prepare routes without sharing location.", accent: "green", icon: "🗺️" },
+  media: { title: "Music / Media", description: "Open safe provider music searches.", accent: "magenta", icon: "🎵" },
+  reminders: { title: "Reminders", description: "Prepare local reminders and follow-ups.", accent: "gold", icon: "🔔" },
+  offline: { title: "Offline Queue", description: "Review offline readiness and queued work.", accent: "earth", icon: "📶" }
 });
 
 const NEXUS_HOME_SUGGESTED_ACTIONS = Object.freeze([
@@ -18770,8 +18770,8 @@ function renderNexusCommandCenterHero() {
     <section class="nexus-command-center-hero" data-nexus-command-center="true" aria-labelledby="userWorkspaceTitle">
       <div class="nexus-command-center-copy">
         <span class="eyebrow">${translateText("AI assistant home")}</span>
-        <h3 id="userWorkspaceTitle">${translateText("Good morning. I am Nexus.")}</h3>
-        <p>${translateText("Ask Nexus for agriculture, health, learning, jobs, marketplace, music, or provider support. I can prepare the right next step and keep high-risk actions gated.")}</p>
+        <h3 id="userWorkspaceTitle">${translateText("Hi, I’m Nexus. What do you need help with today?")}</h3>
+        <p>${translateText("Ask Nexus or choose a support area below. I can help with agriculture, health, learning, jobs, marketplace, music, and provider preparation while keeping high-risk actions gated.")}</p>
       </div>
       <div class="nexus-command-composer" data-nexus-command-composer="true">
         <label for="nexusCommandCenterInput">${translateText("Ask Nexus")}</label>
@@ -18802,7 +18802,7 @@ function renderNexusModeLauncher() {
         const presentation = NEXUS_HOME_MODE_PRESENTATION[item.id] || {};
         const accent = presentation.accent || "green";
         return `
-        <button type="button" class="nexus-mode-card nexus-mode-card-${escapeHtml(accent)}" data-nexus-mode-shortcut="${escapeHtml(item.id)}" data-nexus-command="${escapeHtml(item.command)}">
+        <button type="button" class="nexus-mode-card nexus-mode-card-${escapeHtml(accent)}" data-nexus-mode-shortcut="${escapeHtml(item.id)}" data-nexus-command="${escapeHtml(item.command)}" onclick="return window.nexusHandleStandardUserHomeShortcut ? !window.nexusHandleStandardUserHomeShortcut(event) : true">
           <span class="nexus-mode-icon" aria-hidden="true">${escapeHtml(presentation.icon || item.icon)}</span>
           <strong>${translateText(presentation.title || item.label)}</strong>
           <small>${translateText(presentation.description || item.description)}</small>
@@ -18822,7 +18822,7 @@ function renderNexusSuggestedActions() {
       </div>
       <div class="nexus-suggested-action-grid">
         ${NEXUS_HOME_SUGGESTED_ACTIONS.map((item, index) => `
-          <button type="button" class="nexus-suggested-action nexus-suggested-action-${escapeHtml(item.accent || "green")}" data-nexus-mode-shortcut="suggested-${index}" data-nexus-command="${escapeHtml(item.command)}">
+          <button type="button" class="nexus-suggested-action nexus-suggested-action-${escapeHtml(item.accent || "green")}" data-nexus-mode-shortcut="suggested-${index}" data-nexus-command="${escapeHtml(item.command)}" onclick="return window.nexusHandleStandardUserHomeShortcut ? !window.nexusHandleStandardUserHomeShortcut(event) : true">
             ${translateText(item.label)}
           </button>
         `).join("")}
@@ -34545,6 +34545,14 @@ function handleNexusStandardUserHomeClick(event) {
   if (input) input.value = command;
   setCommandInputs(command);
   return true;
+}
+
+function nexusHandleStandardUserHomeShortcut(event) {
+  return handleNexusStandardUserHomeClick(event);
+}
+
+if (typeof window !== "undefined") {
+  window.nexusHandleStandardUserHomeShortcut = nexusHandleStandardUserHomeShortcut;
 }
 
 function bindNexusStandardUserHomeControls() {
