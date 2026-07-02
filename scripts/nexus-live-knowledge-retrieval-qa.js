@@ -134,15 +134,15 @@ function excludes(source, token, label) {
 ].forEach(token => includes(envExample, token, `env example ${token}`));
 
 [
-  "nexus-behavior-341",
-  "agrinexus-pwa-v320"
+  "nexus-behavior-342",
+  "agrinexus-pwa-v321"
 ].forEach(token => {
   includes(app, token, `app build ${token}`);
   includes(server, token, `server build ${token}`);
   includes(sw, token, `service worker build ${token}`);
 });
-includes(index, "/styles.css?v=nexus-behavior-341", "stylesheet cache bust");
-includes(index, "/app.js?v=nexus-behavior-341", "app cache bust");
+includes(index, "/styles.css?v=nexus-behavior-342", "stylesheet cache bust");
+includes(index, "/app.js?v=nexus-behavior-342", "app cache bust");
 
 assert.strictEqual(
   packageJson.scripts["qa:nexus-live-knowledge-retrieval"],
@@ -152,7 +152,7 @@ assert.strictEqual(
 includes(qaSuite, "scripts/nexus-live-knowledge-retrieval-qa.js", "qa-suite safe wiring");
 
 [
-  "fabricated source",
+  "fabricated source was used",
   "sources were invented",
   "Nexus diagnosed",
   "Nexus prescribed",

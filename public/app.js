@@ -254,8 +254,8 @@ const nexusProductIdentity = Object.freeze({
 });
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-341";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v320";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-342";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v321";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
 const VOICE_ATTENTION_DELAY_MS = 900;
@@ -18439,6 +18439,14 @@ function renderNexusHomeModePanel(card = {}) {
         </div>
       ` : ""}
       <p>${escapeHtml(translateText(panel.nextPrompt || "Tell Nexus what you want to do next."))}</p>
+      ${["agriculture", "chronic-care", "telehealth-intake", "mobile-clinic", "pharmacy-support", "learning", "jobs", "agritrade", "maps"].includes(panel.id || "") ? `
+        <div class="nexus-mode-knowledge-prompt" data-testid="nexus-mode-knowledge-prompt" data-nexus-mode-knowledge="${escapeHtml(panel.id || "mode")}">
+          <strong>${escapeHtml(translateText("Ask with sources"))}</strong>
+          <input type="text" data-nexus-mode-knowledge-input="${escapeHtml(panel.id || "mode")}" placeholder="${escapeHtml(translateText("Ask a current or source-backed question"))}">
+          <button type="button" data-nexus-knowledge-action="ask-mode" data-nexus-mode-id="${escapeHtml(panel.id || "mode")}" data-testid="nexus-mode-ask-with-sources">${escapeHtml(translateText("Ask with sources"))}</button>
+          <small>${escapeHtml(translateText("Nexus uses built-in guidance or live retrieval if configured. No fake citations."))}</small>
+        </div>
+      ` : ""}
       <small>${escapeHtml(translateText(panel.limitation || "Preparation only. High-risk actions remain gated."))}</small>
     </div>
   `;
@@ -18737,6 +18745,7 @@ function renderNexusProductionPlatformRailsPanel() {
   const integrations = Array.isArray(nexusProductionIntegrationStatus) ? nexusProductionIntegrationStatus : [];
   const admin = nexusProductionAdminOperations || {};
   const privacy = nexusProductionPrivacySummary || {};
+  const knowledge = readiness.liveKnowledgeReadiness || {};
   const readyCount = integrations.filter(item => item.configured && item.enabled).length;
   return `
     <section class="nexus-production-rails" data-nexus-production-rails="true" data-testid="nexus-production-readiness" aria-label="${escapeHtml(translateText("Nexus production platform rails"))}">
@@ -18772,6 +18781,11 @@ function renderNexusProductionPlatformRailsPanel() {
           <span>${escapeHtml(translateText("Admin operations"))}</span>
           <strong>${escapeHtml(translateText(admin.appHealth || "ok"))}</strong>
           <small>${escapeHtml(translateText("Review queues, audit history, reminders, offline work, and provider readiness without hidden execution."))}</small>
+        </article>
+        <article data-testid="nexus-live-knowledge-readiness">
+          <span>${escapeHtml(translateText("Internet intelligence"))}</span>
+          <strong>${escapeHtml(translateText(knowledge.liveKnowledge?.testability ? nexusProductionStatusLabel(knowledge.liveKnowledge.testability) : "Disabled"))}</strong>
+          <small>${escapeHtml(translateText("Classification, citations, save/attach, review summaries, and audit are ready. Live retrieval needs provider configuration."))}</small>
         </article>
       </div>
       <details class="nexus-production-integration-details" data-testid="nexus-integration-status">
@@ -18885,12 +18899,14 @@ function nexusKnowledgeCategoryForCommand(command = "") {
   if (/\b(telehealth|virtual visit|video visit|doctor visit|provider visit|intake)\b/.test(lower)) return "telehealth";
   if (/\b(pharmacy|medicine|medication|drug|prescription|refill|insulin storage|safe storage)\b/.test(lower)) return "pharmacy";
   if (/\b(mobile clinic|community health|outreach clinic|clinic van)\b/.test(lower)) return "mobileClinic";
+  if (/\b(blood pressure|bp|hypertension|diabetes|glucose|obesity|weight|chronic|rpm|rtm)\b/.test(lower)) return "chronicCare";
   if (/\b(blood pressure|hypertension|diabetes|obesity|chronic|health|symptom|doctor|clinic|medical|patient)\b/.test(lower)) return "health";
   if (/\b(crop|maize|tomato|tomatoes|cassava|soil|pest|farm|farmer|agriculture|irrigation|fertilizer|yellow leaves)\b/.test(lower)) return "agriculture";
   if (/\b(job|jobs|workforce|career|training|solar installation|skills|employment)\b/.test(lower)) return "jobs";
   if (/\b(lesson|learning|literacy|course|study|school|training)\b/.test(lower)) return "learning";
   if (/\b(price|market|buyer|seller|sell|agritrade|commodity)\b/.test(lower)) return "marketplace";
   if (/\b(route|map|field visit|distance|travel|directions)\b/.test(lower)) return "maps";
+  if (/\b(provider|admin|administrator|review queue|operations|partner account)\b/.test(lower)) return "providerAdmin";
   return "general";
 }
 
@@ -18912,28 +18928,68 @@ function buildNexusKnowledgePreparedResult(result = {}) {
 function renderNexusKnowledgeAnswerCard(answer = nexusKnowledgeLastResult) {
   if (!answer) return `<p>${escapeHtml(translateText("Ask a source-sensitive question to use the knowledge rail."))}</p>`;
   const citations = Array.isArray(answer.citations) ? answer.citations : [];
+  const keyPoints = Array.isArray(answer.keyPoints) ? answer.keyPoints : [];
+  const limitations = Array.isArray(answer.limitations) ? answer.limitations : [];
+  const followUps = Array.isArray(answer.followUpActions) ? answer.followUpActions : [];
+  const saveTargets = Array.isArray(answer.saveTargets) ? answer.saveTargets : [];
+  const modeLabel = answer.answerMode || answer.retrievalStatus || "disabled";
   return `
-    <article class="nexus-knowledge-answer-card" data-testid="nexus-knowledge-answer-card" data-source-backed="${answer.sourceBacked ? "true" : "false"}" data-retrieval-status="${escapeHtml(answer.retrievalStatus || "unknown")}">
+    <article class="nexus-knowledge-answer-card" data-testid="nexus-knowledge-answer-card" data-source-backed="${answer.sourceBacked ? "true" : "false"}" data-retrieval-status="${escapeHtml(answer.retrievalStatus || "unknown")}" data-answer-mode="${escapeHtml(modeLabel)}">
       <div>
         <span>${escapeHtml(translateText(answer.categoryLabel || "Knowledge"))}</span>
         <strong>${escapeHtml(translateText(answer.sourceBacked ? "Source-backed answer" : "Retrieval not active"))}</strong>
+        <small data-testid="nexus-knowledge-answer-mode">${escapeHtml(translateText("Answer mode"))}: ${escapeHtml(translateText(nexusKnowledgeStatusLabel(modeLabel)))}</small>
         <small>${escapeHtml(translateText("Retrieved/checked"))}: ${escapeHtml(answer.retrievalCheckedAt || "not checked")}</small>
       </div>
       <p>${escapeHtml(translateText(answer.answer || "Nexus checked the knowledge rail."))}</p>
       <small>${escapeHtml(translateText(answer.safetyNote || "Review sources and local context before acting."))}</small>
+      ${keyPoints.length ? `
+        <div class="nexus-knowledge-keypoints" data-testid="nexus-knowledge-keypoints">
+          <strong>${escapeHtml(translateText("Key points"))}</strong>
+          <ul>${keyPoints.slice(0, 5).map(item => `<li>${escapeHtml(translateText(item))}</li>`).join("")}</ul>
+        </div>
+      ` : ""}
       ${citations.length ? `
         <div class="nexus-knowledge-citations" data-testid="nexus-knowledge-citations">
           <strong>${escapeHtml(translateText("Sources"))}</strong>
           ${citations.map(source => `
             <a href="${escapeHtml(source.url)}" target="_blank" rel="noopener noreferrer" data-testid="nexus-knowledge-citation">
               ${escapeHtml(source.title || source.source || source.url)}
+              <small>${escapeHtml(source.domain || source.publisher || "")}</small>
             </a>
           `).join("")}
         </div>
       ` : `<small data-testid="nexus-knowledge-no-fake-citations">${escapeHtml(translateText("No citations are shown because live retrieval is not configured or did not return citable sources."))}</small>`}
+      <div class="nexus-knowledge-limitations" data-testid="nexus-knowledge-limitations">
+        <strong>${escapeHtml(translateText("Confidence and limitations"))}</strong>
+        <small>${escapeHtml(translateText("Confidence"))}: ${escapeHtml(translateText(answer.confidence || "not_source_backed"))}</small>
+        ${limitations.slice(0, 4).map(item => `<small>${escapeHtml(translateText(item))}</small>`).join("")}
+      </div>
+      ${followUps.length ? `
+        <div class="nexus-knowledge-followups" data-testid="nexus-knowledge-followups">
+          <strong>${escapeHtml(translateText("What Nexus can do next"))}</strong>
+          ${followUps.slice(0, 6).map(action => `
+            <button type="button" data-nexus-knowledge-followup="${escapeHtml(action.id || action.action || "follow-up")}" data-nexus-command-prefill="${escapeHtml(action.prompt || "")}" data-nexus-knowledge-action-ref="${escapeHtml(action.action || "")}">
+              ${escapeHtml(translateText(action.label || "Next step"))}
+            </button>
+          `).join("")}
+        </div>
+      ` : ""}
+      <label class="nexus-knowledge-save-target">
+        <span>${escapeHtml(translateText("Save or attach as"))}</span>
+        <select data-nexus-knowledge-save-target data-testid="nexus-knowledge-save-target">
+          ${saveTargets.length ? saveTargets.map(target => `<option value="${escapeHtml(target.recordType || target.id)}">${escapeHtml(translateText(target.label || target.id || "Record"))}</option>`).join("") : `<option value="">${escapeHtml(translateText("Default record"))}</option>`}
+        </select>
+      </label>
+      <label class="nexus-knowledge-user-notes">
+        <span>${escapeHtml(translateText("Review notes"))}</span>
+        <input type="text" data-nexus-knowledge-user-notes data-testid="nexus-knowledge-user-notes" placeholder="${escapeHtml(translateText("Optional note for provider/admin review"))}">
+      </label>
       <div class="nexus-knowledge-actions">
         <button type="button" data-nexus-knowledge-action="save-result" data-testid="nexus-knowledge-save-result">${escapeHtml(translateText("Save to record"))}</button>
+        <button type="button" data-nexus-knowledge-action="prepare-review-summary" data-testid="nexus-knowledge-prepare-review-summary">${escapeHtml(translateText("Prepare review summary"))}</button>
         <button type="button" data-nexus-knowledge-action="queue-result" data-testid="nexus-knowledge-queue-result">${escapeHtml(translateText("Queue for review"))}</button>
+        <button type="button" data-nexus-knowledge-action="save-offline" data-testid="nexus-knowledge-save-offline">${escapeHtml(translateText("Save offline"))}</button>
       </div>
       <small>${escapeHtml(translateText(answer.nextStep || "Nexus can save this locally or prepare a reviewed next step."))}</small>
     </article>
@@ -19027,8 +19083,22 @@ async function handleNexusKnowledgeRailClick(event) {
       await runNexusKnowledgeQuery(input?.value?.trim() || "What causes yellow leaves on maize?");
       return true;
     }
-    if (action === "save-result" || action === "queue-result") {
+    if (action === "ask-mode") {
+      const modeId = button.dataset.nexusModeId || "";
+      const input = document.querySelector(`[data-nexus-mode-knowledge-input="${CSS.escape(modeId)}"]`);
+      const fallback = modeId === "chronic-care"
+        ? "What is the latest advice for high blood pressure?"
+        : modeId === "agritrade"
+          ? "What is the current market price for tomatoes?"
+          : "What causes yellow leaves on maize?";
+      await runNexusKnowledgeQuery(input?.value?.trim() || fallback);
+      return true;
+    }
+    if (action === "save-result" || action === "queue-result" || action === "save-offline") {
       const answer = nexusKnowledgeLastResult || {};
+      const targetType = action === "save-offline"
+        ? "offline_queue_item"
+        : document.querySelector("[data-nexus-knowledge-save-target]")?.value || "";
       const result = await request("/api/nexus/knowledge/save-result", {
         method: "POST",
         body: {
@@ -19038,8 +19108,13 @@ async function handleNexusKnowledgeRailClick(event) {
           summary: `${answer.categoryLabel || "Knowledge"}: ${answer.answer || "Knowledge answer saved locally."}`,
           category: answer.category || "general",
           provider: answer.provider || "",
+          answerMode: answer.answerMode || answer.retrievalStatus || "",
           retrievalStatus: answer.retrievalStatus || "",
+          retrievedAt: answer.retrievedAt || answer.retrievalCheckedAt || "",
+          keyPoints: answer.keyPoints || [],
+          limitations: answer.limitations || [],
           citations: answer.citations || [],
+          targetType,
           queueForReview: action === "queue-result"
         }
       });
@@ -19047,12 +19122,37 @@ async function handleNexusKnowledgeRailClick(event) {
         ? "Saved locally. Consent is required before this sensitive answer can enter the local review queue."
         : result.queueStatus === "queued_for_local_review"
           ? "Saved and queued for local review. No external provider was contacted."
-          : "Saved to a local Nexus record. No external action occurred.";
+          : action === "save-offline"
+            ? "Saved to the local offline queue record path. No external sync occurred."
+            : "Saved to a local Nexus record. No external action occurred.";
       await Promise.all([
         refreshNexusPilotPlatformStatus({ rerender: false }),
         refreshNexusPilotReviewQueue({ rerender: false })
       ]);
       renderUserWorkspace();
+      return true;
+    }
+    if (action === "prepare-review-summary") {
+      const answer = nexusKnowledgeLastResult || {};
+      const note = document.querySelector("[data-nexus-knowledge-user-notes]")?.value || "";
+      const result = await request("/api/nexus/knowledge/prepare-review-summary", {
+        method: "POST",
+        body: {
+          queryId: answer.queryId || "",
+          question: answer.question || "",
+          answer: answer.answer || "",
+          category: answer.category || "general",
+          answerMode: answer.answerMode || answer.retrievalStatus || "",
+          retrievalStatus: answer.retrievalStatus || "",
+          citations: answer.citations || [],
+          limitations: answer.limitations || [],
+          userNotes: note
+        }
+      });
+      nexusKnowledgeActionStatus = result?.summary
+        ? "Review-ready research summary prepared locally. No provider was contacted."
+        : "Review summary prepared locally.";
+      if (experienceMode === "user") renderUserWorkspace();
       return true;
     }
     return true;
