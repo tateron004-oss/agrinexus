@@ -43,6 +43,7 @@ function excludes(source, token, label) {
   "data-nexus-command-sidebar",
   "data-nexus-command-topbar",
   "data-nexus-core-feature-grid",
+  "data-nexus-core-feature",
   "data-nexus-voice-interaction-bar",
   "data-nexus-command-right-rail",
   "data-nexus-operations-shelf",
@@ -102,6 +103,14 @@ function excludes(source, token, label) {
   "Prepare provider summary",
   "Open music/media"
 ].forEach(label => includes(app, label, `suggested action ${label}`));
+
+[
+  "data-nexus-core-feature=\"${escapeHtml(id)}\"",
+  "[\"agriculture\", \"Agriculture Help\"",
+  "[\"chronic-care\", \"Chronic Care Support\"",
+  "[\"agritrade\", \"Marketplace\"",
+  "[\"learning\", \"Learning & Jobs\""
+].forEach(token => includes(app, token, `core feature card contract ${token}`));
 
 [
   "Describe a crop issue",

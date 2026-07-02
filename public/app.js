@@ -20280,7 +20280,7 @@ function renderNexusCoreFeatureCards() {
   return `
     <section class="nexus-core-feature-grid" data-nexus-core-feature-grid="true" aria-label="${escapeHtml(translateText("Core Nexus support areas"))}">
       ${cards.map(([id, title, description, command, accent]) => `
-        <article class="nexus-core-feature-card nexus-core-feature-${escapeHtml(accent)}">
+        <article class="nexus-core-feature-card nexus-core-feature-${escapeHtml(accent)}" data-nexus-core-feature="${escapeHtml(id)}">
           <span aria-hidden="true"></span>
           <strong>${escapeHtml(translateText(title))}</strong>
           <p>${escapeHtml(translateText(description))}</p>
