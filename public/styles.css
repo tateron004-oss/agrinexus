@@ -9488,6 +9488,7 @@ body.user-mode .nexus-knowledge-citations a {
 body.user-mode .nexus-knowledge-keypoints,
 body.user-mode .nexus-knowledge-limitations,
 body.user-mode .nexus-knowledge-followups,
+body.user-mode .nexus-provider-support-offer,
 body.user-mode .nexus-mode-knowledge-prompt {
   display: grid;
   gap: 8px;
@@ -9508,6 +9509,22 @@ body.user-mode .nexus-knowledge-followups {
 
 body.user-mode .nexus-knowledge-followups strong {
   grid-column: 1 / -1;
+}
+
+body.user-mode .nexus-provider-support-offer {
+  border-color: rgba(24, 119, 242, .18);
+  background: linear-gradient(135deg, rgba(238, 247, 255, .92), rgba(247, 252, 245, .86));
+}
+
+body.user-mode .nexus-provider-support-offer span {
+  color: #0f5d87;
+  font-weight: 900;
+}
+
+body.user-mode .nexus-provider-support-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 
 body.user-mode .nexus-knowledge-save-target,

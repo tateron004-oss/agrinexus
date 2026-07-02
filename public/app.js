@@ -104,6 +104,7 @@ let nexusKnowledgeStatus = null;
 let nexusKnowledgeTrustedSources = [];
 let nexusKnowledgeLastResult = null;
 let nexusKnowledgeActionStatus = "";
+let nexusProviderPathwayLastRequest = null;
 let nexusProviderContactBridgeCards = [];
 let nexusLearningProviderBridgeCards = [];
 let nexusMarketplaceBridgeCards = [];
@@ -254,8 +255,8 @@ const nexusProductIdentity = Object.freeze({
 });
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-343";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v322";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-344";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v323";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
 const VOICE_ATTENTION_DELAY_MS = 900;
@@ -18655,6 +18656,16 @@ function renderNexusPilotReviewQueuePanel() {
               <strong>${escapeHtml(translateText(item.visibleTitle || item.type || "Review item"))}</strong>
               <span>${escapeHtml(translateText("Status"))}: ${escapeHtml(item.status || "queued")} · ${escapeHtml(translateText("Consent"))}: ${escapeHtml(item.consentConfirmed ? translateText("confirmed") : translateText("needed"))}</span>
               <small>${escapeHtml(item.visibleSummary || item.summary || translateText("Prepared locally for human review."))}</small>
+              ${item.originalQuestion || item.knowledgeResearch ? `
+                <div class="nexus-review-internet-fields" data-testid="nexus-review-internet-fields">
+                  <small><strong>${escapeHtml(translateText("Original question"))}:</strong> ${escapeHtml(item.originalQuestion || item.knowledgeResearch?.question || "")}</small>
+                  <small><strong>${escapeHtml(translateText("Answer mode"))}:</strong> ${escapeHtml(item.answerMode || item.retrievalStatus || item.knowledgeResearch?.answerMode || "not_source_backed")}</small>
+                  <small><strong>${escapeHtml(translateText("Source category"))}:</strong> ${escapeHtml(item.sourceCategory || item.knowledgeResearch?.category || item.sourceMode || "")}</small>
+                  <small><strong>${escapeHtml(translateText("Provider pathway"))}:</strong> ${escapeHtml(nexusProductionStatusLabel(item.providerTypeRequested || item.providerPathwayOffer?.providerTypeRequested || "local_review"))}</small>
+                  <small><strong>${escapeHtml(translateText("Routing status"))}:</strong> ${escapeHtml(nexusProductionStatusLabel(item.routingStatus || "queued_locally"))}</small>
+                  ${(item.citations || item.knowledgeResearch?.citations || []).length ? `<small><strong>${escapeHtml(translateText("Citations"))}:</strong> ${escapeHtml((item.citations || item.knowledgeResearch?.citations || []).map(source => source.domain || source.publisher || source.title || "source").slice(0, 3).join(", "))}</small>` : `<small>${escapeHtml(translateText("No citations are attached unless live retrieval returned citable sources."))}</small>`}
+                </div>
+              ` : ""}
               <label>
                 <span>${escapeHtml(translateText("Provider/Admin note"))}</span>
                 <input type="text" data-nexus-review-note="${escapeHtml(item.id || "")}" data-testid="nexus-review-note-input" placeholder="${escapeHtml(translateText("Add a local review note"))}">
@@ -19001,6 +19012,7 @@ function renderNexusKnowledgeAnswerCard(answer = nexusKnowledgeLastResult) {
   const followUps = Array.isArray(answer.followUpActions) ? answer.followUpActions : [];
   const saveTargets = Array.isArray(answer.saveTargets) ? answer.saveTargets : [];
   const modeLabel = answer.answerMode || answer.retrievalStatus || "disabled";
+  const providerOffer = answer.providerOffer || {};
   return `
     <article class="nexus-knowledge-answer-card" data-testid="nexus-knowledge-answer-card" data-source-backed="${answer.sourceBacked ? "true" : "false"}" data-retrieval-status="${escapeHtml(answer.retrievalStatus || "unknown")}" data-answer-mode="${escapeHtml(modeLabel)}">
       <div>
@@ -19041,6 +19053,19 @@ function renderNexusKnowledgeAnswerCard(answer = nexusKnowledgeLastResult) {
               ${escapeHtml(translateText(action.label || "Next step"))}
             </button>
           `).join("")}
+        </div>
+      ` : ""}
+      ${providerOffer.ok ? `
+        <div class="nexus-provider-support-offer" data-testid="nexus-provider-support-offer" data-provider-pathway-status="${escapeHtml(providerOffer.status || "provider_pathway_not_configured")}" data-provider-type-requested="${escapeHtml(providerOffer.providerTypeRequested || "")}">
+          <strong>${escapeHtml(translateText(providerOffer.headline || "Need provider support?"))}</strong>
+          <span>${escapeHtml(translateText(providerOffer.label || "Provider/Partner Support"))}</span>
+          <p>${escapeHtml(translateText(providerOffer.copy || "Nexus can prepare this for provider/advisor review. If a live provider is configured, it can be routed after your consent. If not, it will be saved locally for review."))}</p>
+          <small data-testid="nexus-provider-support-configured">${escapeHtml(translateText(providerOffer.configured ? "Provider pathway available" : "Provider pathway not configured yet; Nexus can save this locally."))}</small>
+          <div class="nexus-provider-support-actions">
+            <button type="button" data-nexus-knowledge-action="request-provider-support" data-testid="nexus-request-provider-support">${escapeHtml(translateText(providerOffer.providerTypeRequested === "agriculture_advisor" ? "Request agriculture advisor support" : providerOffer.providerTypeRequested === "pharmacy" ? "Prepare pharmacy note" : providerOffer.providerTypeRequested === "telehealth" ? "Start telehealth intake" : "Request provider/advisor review"))}</button>
+            ${nexusProviderPathwayLastRequest ? `<button type="button" data-nexus-knowledge-action="consent-provider-pathway" data-testid="nexus-provider-pathway-consent">${escapeHtml(translateText("Consent and check route"))}</button>` : ""}
+          </div>
+          <small>${escapeHtml(translateText("No live provider is contacted unless a configured provider pathway, consent, final approval, and audit gates pass."))}</small>
         </div>
       ` : ""}
       <label class="nexus-knowledge-save-target">
@@ -19095,6 +19120,36 @@ function renderNexusKnowledgeRailPanel() {
       </div>
       ${renderNexusKnowledgeAnswerCard(nexusKnowledgeLastResult)}
       <p class="nexus-knowledge-action-status" data-nexus-knowledge-action-status>${escapeHtml(translateText(nexusKnowledgeActionStatus || "No provider handoff, payment, message, call, location sharing, pharmacy action, diagnosis, or emergency action occurs from this rail."))}</p>
+    </section>
+  `;
+}
+
+function renderNexusInternetResourceHistoryPanel() {
+  const answer = nexusKnowledgeLastResult || null;
+  const requestItem = nexusProviderPathwayLastRequest || null;
+  return `
+    <section class="nexus-internet-resource-history" data-testid="nexus-internet-resource-history" aria-label="${escapeHtml(translateText("My Nexus Questions"))}">
+      <div>
+        <span class="eyebrow">${escapeHtml(translateText("My Nexus Questions"))}</span>
+        <strong>${escapeHtml(translateText("Internet resource history"))}</strong>
+        <small>${escapeHtml(translateText("Saved answers, citations, provider pathway requests, and local review status stay available without claiming live service."))}</small>
+      </div>
+      ${answer ? `
+        <article data-testid="nexus-internet-history-latest">
+          <strong>${escapeHtml(answer.question || translateText("Latest Nexus question"))}</strong>
+          <small>${escapeHtml(translateText("Answer mode"))}: ${escapeHtml(nexusProductionStatusLabel(answer.answerMode || answer.retrievalStatus || "disabled"))}</small>
+          <small>${escapeHtml(translateText("Citations"))}: ${escapeHtml(String((answer.citations || []).length || 0))}</small>
+          <small>${escapeHtml(translateText("Status"))}: ${escapeHtml(answer.sourceBacked ? translateText("source-backed") : translateText("built-in or disabled retrieval"))}</small>
+        </article>
+      ` : `<p>${escapeHtml(translateText("Ask a source-sensitive question to start your Nexus question history."))}</p>`}
+      ${requestItem ? `
+        <article data-testid="nexus-provider-pathway-history">
+          <strong>${escapeHtml(translateText("Provider support request"))}</strong>
+          <small>${escapeHtml(translateText(requestItem.providerPathwayLabel || "Provider/Partner Support"))}</small>
+          <small>${escapeHtml(translateText("Status"))}: ${escapeHtml(nexusProductionStatusLabel(requestItem.status || "awaiting_consent"))}</small>
+          <small>${escapeHtml(translateText("Routing"))}: ${escapeHtml(nexusProductionStatusLabel(requestItem.routingStatus || "not_routed"))}</small>
+        </article>
+      ` : `<small>${escapeHtml(translateText("Provider support requests will appear here after you prepare one from an answer."))}</small>`}
     </section>
   `;
 }
@@ -19220,6 +19275,52 @@ async function handleNexusKnowledgeRailClick(event) {
       nexusKnowledgeActionStatus = result?.summary
         ? "Review-ready research summary prepared locally. No provider was contacted."
         : "Review summary prepared locally.";
+      if (experienceMode === "user") renderUserWorkspace();
+      return true;
+    }
+    if (action === "request-provider-support") {
+      const answer = nexusKnowledgeLastResult || {};
+      const note = document.querySelector("[data-nexus-knowledge-user-notes]")?.value || "";
+      const result = await request("/api/nexus/provider-pathways/request", {
+        method: "POST",
+        body: {
+          userQuestion: answer.question || "",
+          category: answer.category || "general",
+          answerSummary: answer.answer || "",
+          answerMode: answer.answerMode || answer.retrievalStatus || "",
+          citations: answer.citations || [],
+          limitations: answer.limitations || [],
+          userNotes: note,
+          providerTypeRequested: answer.providerOffer?.providerTypeRequested || "",
+          structuredRecordId: answer.recordId || ""
+        }
+      });
+      nexusProviderPathwayLastRequest = result?.providerPathwayRequest || null;
+      nexusKnowledgeActionStatus = nexusProviderPathwayLastRequest?.providerConfigured
+        ? "Provider pathway prepared. Consent is required before routing."
+        : "Provider pathway not configured yet. Nexus saved this locally and did not contact a provider.";
+      if (experienceMode === "user") renderUserWorkspace();
+      return true;
+    }
+    if (action === "consent-provider-pathway") {
+      const requestItem = nexusProviderPathwayLastRequest;
+      if (!requestItem?.id) {
+        nexusKnowledgeActionStatus = "Prepare a provider pathway request first.";
+        if (experienceMode === "user") renderUserWorkspace();
+        return true;
+      }
+      const consent = await request(`/api/nexus/provider-pathways/${encodeURIComponent(requestItem.id)}/consent`, {
+        method: "POST",
+        body: { consentConfirmed: true }
+      });
+      const route = await request(`/api/nexus/provider-pathways/${encodeURIComponent(requestItem.id)}/route`, {
+        method: "POST",
+        body: { finalApproval: true }
+      });
+      nexusProviderPathwayLastRequest = route?.providerPathwayRequest || consent?.providerPathwayRequest || requestItem;
+      nexusKnowledgeActionStatus = route?.providerPathwayRequest?.status === "routed_to_configured_provider"
+        ? "Provider pathway routed to a configured provider queue after consent."
+        : "Consent recorded. No configured live provider is available, so this remains local and not sent.";
       if (experienceMode === "user") renderUserWorkspace();
       return true;
     }
@@ -20755,6 +20856,7 @@ function renderUserWorkspace() {
     ${renderNexusSuggestedActions()}
     ${renderNexusAgenticBrainPanel()}
     ${renderNexusKnowledgeRailPanel()}
+    ${renderNexusInternetResourceHistoryPanel()}
     ${renderNexusActiveWorkSummary()}
     ${renderNexusPilotPlatformStatusPanel()}
     ${renderNexusPilotReviewQueuePanel()}

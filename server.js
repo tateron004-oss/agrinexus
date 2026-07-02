@@ -34,8 +34,8 @@ const AI_MODEL = process.env.OPENAI_MODEL || "gpt-5.4-mini";
 const AI_REASONING_MODEL = process.env.OPENAI_REASONING_MODEL || process.env.OPENAI_AGENT_MODEL || AI_MODEL;
 const AI_TRANSLATION_MODEL = process.env.OPENAI_TRANSLATION_MODEL || process.env.OPENAI_AGENT_MODEL || AI_MODEL;
 const AGRINEXUS_RELEASE = "2026-06-16-operational-readiness";
-const AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-343";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v322";
+const AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-344";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v323";
 const PRODUCT_IDENTITY = Object.freeze({
   productName: "Nexus Workforce AI",
   assistantName: "Nexus",
@@ -27908,6 +27908,7 @@ function ensureNexusProductionRailsState(db) {
   if (!Array.isArray(db.nexusKnowledgeQueries)) db.nexusKnowledgeQueries = [];
   if (!Array.isArray(db.nexusKnowledgeSavedResults)) db.nexusKnowledgeSavedResults = [];
   if (!Array.isArray(db.nexusKnowledgeReviewSummaries)) db.nexusKnowledgeReviewSummaries = [];
+  if (!Array.isArray(db.nexusProviderPathwayRequests)) db.nexusProviderPathwayRequests = [];
   if (!Array.isArray(db.nexusProviderOrganizations)) db.nexusProviderOrganizations = [];
   if (!Array.isArray(db.nexusProviderReviewers)) db.nexusProviderReviewers = [];
   if (!Array.isArray(db.nexusRoutingRules)) db.nexusRoutingRules = [];
@@ -28136,6 +28137,67 @@ function nexusKnowledgeSafetyFlags(category = "general", question = "") {
     noCurrentPriceClaimUnlessRetrieved: category === "marketplace",
     urgentLanguageDetected: /\b(chest pain|cannot breathe|not breathing|stroke|severe|bleeding|emergency)\b/.test(lower),
     noFakeCitations: true
+  };
+}
+
+function nexusProviderPathwayTypeForCategory(category = "general") {
+  if (["health", "chronicCare", "telehealth"].includes(category)) return "telehealth";
+  if (category === "pharmacy") return "pharmacy";
+  if (category === "mobileClinic") return "mobile_clinic";
+  if (category === "agriculture") return "agriculture_advisor";
+  if (category === "jobs") return "workforce_partner";
+  if (category === "learning") return "learning_partner";
+  if (category === "marketplace") return "marketplace_partner";
+  if (category === "maps") return "logistics_partner";
+  return "community_support";
+}
+
+function nexusProviderPathwayLabel(providerType = "community_support") {
+  return ({
+    telehealth: "Health / Telehealth Provider",
+    pharmacy: "Pharmacy Review",
+    mobile_clinic: "Mobile Clinic / Community Health",
+    agriculture_advisor: "Agriculture Advisor / Agronomist",
+    agronomist: "Agriculture Advisor / Agronomist",
+    workforce_partner: "Workforce / Learning Partner",
+    learning_partner: "Workforce / Learning Partner",
+    marketplace_partner: "Marketplace / Logistics Partner",
+    logistics_partner: "Marketplace / Logistics Partner",
+    community_support: "Community Support"
+  })[providerType] || "Provider/Partner Support";
+}
+
+function nexusProviderPathwayOffer(db, category = "general", question = "") {
+  ensureNexusProductionRailsState(db);
+  const providerType = nexusProviderPathwayTypeForCategory(category);
+  const matchingProviders = db.nexusProviderOrganizations.filter(org => {
+    if (![providerType, "admin_internal"].includes(org.organizationType)) return false;
+    return org.status === "active";
+  });
+  const configured = matchingProviders.length > 0;
+  const label = nexusProviderPathwayLabel(providerType);
+  return {
+    ok: true,
+    providerTypeRequested: providerType,
+    label,
+    configured,
+    configuredProviderCount: matchingProviders.length,
+    status: configured ? "provider_pathway_available" : "provider_pathway_not_configured",
+    headline: "Need provider support?",
+    copy: "Nexus can prepare this for provider/advisor review. If a live provider is configured, it can be routed after your consent. If not, it will be saved locally for review.",
+    availableActions: [
+      "save_to_workflow",
+      "prepare_provider_summary",
+      "request_provider_advisor_review",
+      ...(providerType === "telehealth" ? ["start_telehealth_intake"] : []),
+      ...(providerType === "pharmacy" ? ["prepare_pharmacy_note"] : []),
+      ...(providerType === "agriculture_advisor" ? ["request_agriculture_advisor_support", "prepare_field_visit_note"] : []),
+      ...(providerType === "mobile_clinic" ? ["request_mobile_clinic_community_support"] : [])
+    ],
+    configuredCopy: configured ? "Provider pathway available after consent and final review." : "Provider pathway not configured yet; Nexus can save this locally.",
+    noSentClaim: true,
+    noLiveProviderClaimUnlessConfigured: true,
+    question: sanitizePilotText(question, 400)
   };
 }
 
@@ -28485,6 +28547,7 @@ async function nexusKnowledgeQuery(db, body = {}, user = null, env = process.env
     noExecutionAuthorized: true,
     noSensitiveDetailLogged: true
   };
+  result.providerOffer = nexusProviderPathwayOffer(db, category, question);
   db.nexusKnowledgeQueries.unshift(queryRecord);
   addNexusPilotAuditEvent(db, "knowledge_query_checked", {
     actor: user?.name || "Standard User",
@@ -28559,6 +28622,13 @@ function nexusKnowledgeSaveResult(db, body = {}, user = null) {
       queueResult.queueItem.retrievalStatus = record.knowledgeResearch.answerMode;
       queueResult.queueItem.citations = record.knowledgeResearch.citations;
       queueResult.queueItem.limitations = record.knowledgeResearch.limitations;
+      queueResult.queueItem.providerTypeRequested = body.providerTypeRequested || nexusProviderPathwayTypeForCategory(category);
+      queueResult.queueItem.providerPathwayOffer = nexusProviderPathwayOffer(db, category, body.question || "");
+      queueResult.queueItem.nexusAnswer = record.knowledgeResearch.answer;
+      queueResult.queueItem.answerMode = record.knowledgeResearch.answerMode;
+      queueResult.queueItem.sourceCategory = category;
+      queueResult.queueItem.userNotes = sanitizePilotText(body.userNotes || "", 700);
+      queueResult.queueItem.routingStatus = "queued_locally";
     }
   }
   return {
@@ -29272,6 +29342,145 @@ function nexusIntegrationAdapterStatus(db, type, env = process.env) {
   };
 }
 
+function normalizeProviderPathwayRequest(db, body = {}, user = null, existing = {}) {
+  ensureNexusProductionRailsState(db);
+  const now = new Date().toISOString();
+  const category = NEXUS_KNOWLEDGE_TRUSTED_SOURCES[body.category] ? body.category : existing.category || "general";
+  const providerTypeRequested = body.providerTypeRequested || existing.providerTypeRequested || nexusProviderPathwayTypeForCategory(category);
+  const citations = Array.isArray(body.citations) ? body.citations.slice(0, 5) : existing.citations || [];
+  const consentStatus = body.consentConfirmed === true || existing.consentStatus === "confirmed" ? "confirmed" : existing.consentStatus || "not_requested";
+  const providerConfigured = db.nexusProviderOrganizations.some(org => org.organizationType === providerTypeRequested && org.status === "active");
+  const status = existing.status || (consentStatus !== "confirmed" ? "awaiting_consent" : providerConfigured ? "draft" : "queued_locally");
+  return {
+    id: existing.id || body.id || crypto.randomUUID(),
+    userQuestion: sanitizePilotText(body.userQuestion || body.question || existing.userQuestion || "", 500),
+    category,
+    answerSummary: sanitizePilotText(body.answerSummary || body.answer || existing.answerSummary || "", 1200),
+    answerMode: sanitizePilotText(body.answerMode || body.retrievalStatus || existing.answerMode || "disabled", 80),
+    citations,
+    structuredRecordId: sanitizePilotText(body.structuredRecordId || body.recordId || existing.structuredRecordId || "", 120),
+    userNotes: sanitizePilotText(body.userNotes || existing.userNotes || "", 700),
+    consentStatus,
+    providerTypeRequested,
+    providerPathwayLabel: nexusProviderPathwayLabel(providerTypeRequested),
+    providerConfigured,
+    status,
+    routingStatus: existing.routingStatus || "not_routed",
+    limitations: sanitizeList(body.limitations || existing.limitations || ["Prepared locally. No live provider was contacted unless a configured provider route succeeds after consent."], 8, 260),
+    createdBy: sanitizePilotText(user?.name || body.createdBy || existing.createdBy || "Standard User", 120),
+    createdAt: existing.createdAt || now,
+    updatedAt: now,
+    noSentClaim: true,
+    noLiveProviderClaimUnlessConfigured: true
+  };
+}
+
+function nexusProviderPathwayStatus(db) {
+  ensureNexusProductionRailsState(db);
+  const requests = db.nexusProviderPathwayRequests;
+  return {
+    ok: true,
+    requests: requests.length,
+    awaitingConsent: requests.filter(item => item.status === "awaiting_consent").length,
+    queuedLocally: requests.filter(item => item.status === "queued_locally").length,
+    routedToConfiguredProvider: requests.filter(item => item.status === "routed_to_configured_provider").length,
+    configuredProviderTypes: [...new Set(db.nexusProviderOrganizations.filter(org => org.status === "active").map(org => org.organizationType))],
+    honestStatus: "Provider pathways can be prepared today. Routing requires consent and an active configured provider.",
+    noFalseLiveProviderClaim: true
+  };
+}
+
+function nexusProviderPathwayRequest(db, body = {}, user = null) {
+  const requestItem = normalizeProviderPathwayRequest(db, body, user);
+  db.nexusProviderPathwayRequests.unshift(requestItem);
+  addNexusPilotAuditEvent(db, "provider_pathway_request_prepared", {
+    relatedRecordId: requestItem.structuredRecordId,
+    actor: requestItem.createdBy,
+    role: user?.role || "Standard User",
+    mode: requestItem.category,
+    description: `${requestItem.providerPathwayLabel} request prepared with status ${requestItem.status}. No live provider was contacted.`
+  });
+  if (requestItem.structuredRecordId) {
+    const record = getRecordById(db, requestItem.structuredRecordId);
+    if (record) {
+      record.providerPathwayRequestId = requestItem.id;
+      record.providerPathwayStatus = requestItem.status;
+      record.updatedAt = requestItem.updatedAt;
+    }
+  }
+  return { ok: true, providerPathwayRequest: requestItem, audit: db.nexusPilotAuditEvents[0] };
+}
+
+function nexusProviderPathwayConsent(db, requestId, body = {}, user = null) {
+  ensureNexusProductionRailsState(db);
+  const requestItem = db.nexusProviderPathwayRequests.find(item => item.id === requestId);
+  if (!requestItem) return { ok: false, error: "provider_pathway_request_not_found" };
+  requestItem.consentStatus = "confirmed";
+  requestItem.status = requestItem.providerConfigured ? "draft" : "queued_locally";
+  requestItem.updatedAt = new Date().toISOString();
+  const consent = {
+    id: crypto.randomUUID(),
+    recordId: requestItem.structuredRecordId,
+    providerPathwayRequestId: requestItem.id,
+    consentType: "provider_pathway_review",
+    timestamp: requestItem.updatedAt,
+    profileId: db.nexusPilotProfiles[0]?.id || "standard-user-local",
+    profileLabel: sanitizePilotText(user?.name || body.actor || "Standard User", 120),
+    mode: requestItem.category,
+    summary: "User consented to prepare the provider/advisor pathway. Routing still requires configured provider and final safety gates.",
+    localDemoLimitation: !requestItem.providerConfigured
+  };
+  db.nexusPilotConsentEvents.unshift(consent);
+  addNexusPilotAuditEvent(db, "provider_pathway_consent_confirmed", {
+    relatedRecordId: requestItem.structuredRecordId,
+    actor: consent.profileLabel,
+    role: user?.role || "Standard User",
+    mode: requestItem.category,
+    description: `${requestItem.providerPathwayLabel} consent recorded. Status: ${requestItem.status}.`
+  });
+  return { ok: true, providerPathwayRequest: requestItem, consent, audit: db.nexusPilotAuditEvents[0] };
+}
+
+function nexusProviderPathwayRoute(db, requestId, body = {}, user = null) {
+  ensureNexusProductionRailsState(db);
+  const requestItem = db.nexusProviderPathwayRequests.find(item => item.id === requestId);
+  if (!requestItem) return { ok: false, error: "provider_pathway_request_not_found" };
+  if (requestItem.consentStatus !== "confirmed") {
+    requestItem.status = "blocked_missing_consent";
+    requestItem.routingStatus = "blocked_missing_consent";
+  } else if (!requestItem.providerConfigured) {
+    requestItem.status = "blocked_no_provider";
+    requestItem.routingStatus = "blocked_no_provider";
+  } else {
+    requestItem.status = "routed_to_configured_provider";
+    requestItem.routingStatus = "routed_to_configured_provider";
+  }
+  requestItem.updatedAt = new Date().toISOString();
+  const routing = {
+    id: crypto.randomUUID(),
+    providerPathwayRequestId: requestItem.id,
+    recordId: requestItem.structuredRecordId,
+    outcome: requestItem.routingStatus,
+    providerTypeRequested: requestItem.providerTypeRequested,
+    reason: requestItem.status === "routed_to_configured_provider"
+      ? "Provider pathway routed to configured provider queue after consent."
+      : requestItem.status === "blocked_missing_consent"
+        ? "Consent required before routing."
+        : "No active configured provider exists; request remains local.",
+    createdAt: requestItem.updatedAt,
+    noSentClaim: requestItem.status !== "routed_to_configured_provider" ? true : false
+  };
+  db.nexusRoutingLogs.unshift(routing);
+  addNexusPilotAuditEvent(db, "provider_pathway_route_attempted", {
+    relatedRecordId: requestItem.structuredRecordId,
+    actor: user?.name || "Standard User",
+    role: user?.role || "Standard User",
+    mode: requestItem.category,
+    description: `${requestItem.providerPathwayLabel} route outcome: ${routing.outcome}. ${routing.reason}`
+  });
+  return { ok: true, providerPathwayRequest: requestItem, routing, audit: db.nexusPilotAuditEvents[0] };
+}
+
 function normalizeCommunication(body = {}, existing = {}) {
   const now = new Date().toISOString();
   const channel = NEXUS_COMMUNICATION_CHANNELS.includes(body.channel) ? body.channel : existing.channel || "in_app_notification";
@@ -29548,6 +29757,46 @@ async function api(req, res, url) {
       requiresLegalReview: db.nexusProviderOrganizations.filter(provider => provider.status === "requires_legal_review").length,
       liveRoutingEnabled: db.nexusProviderOrganizations.some(provider => provider.status === "active"),
       honestStatus: "No live provider is claimed unless an organization is active and integration gates pass."
+    });
+  }
+
+  if (url.pathname === "/api/nexus/provider-pathways" && req.method === "GET") {
+    ensureNexusProductionRailsState(db);
+    return send(res, 200, { ok: true, providerPathwayRequests: db.nexusProviderPathwayRequests });
+  }
+
+  if (url.pathname === "/api/nexus/provider-pathways/status" && req.method === "GET") {
+    return send(res, 200, nexusProviderPathwayStatus(db));
+  }
+
+  if (url.pathname === "/api/nexus/provider-pathways/request" && req.method === "POST") {
+    const result = nexusProviderPathwayRequest(db, await readBody(req), user);
+    await writeDb(db);
+    return send(res, 200, result);
+  }
+
+  const nexusProviderPathwayConsentMatch = url.pathname.match(/^\/api\/nexus\/provider-pathways\/([^/]+)\/consent$/);
+  if (nexusProviderPathwayConsentMatch && req.method === "POST") {
+    const result = nexusProviderPathwayConsent(db, nexusProviderPathwayConsentMatch[1], await readBody(req), user);
+    if (!result.ok) return send(res, 404, result);
+    await writeDb(db);
+    return send(res, 200, result);
+  }
+
+  const nexusProviderPathwayRouteMatch = url.pathname.match(/^\/api\/nexus\/provider-pathways\/([^/]+)\/route$/);
+  if (nexusProviderPathwayRouteMatch && req.method === "POST") {
+    const result = nexusProviderPathwayRoute(db, nexusProviderPathwayRouteMatch[1], await readBody(req), user);
+    if (!result.ok) return send(res, 404, result);
+    await writeDb(db);
+    return send(res, 200, result);
+  }
+
+  if (url.pathname === "/api/nexus/provider-pathways/logs" && req.method === "GET") {
+    ensureNexusProductionRailsState(db);
+    return send(res, 200, {
+      ok: true,
+      providerPathwayRequests: db.nexusProviderPathwayRequests,
+      routingLogs: db.nexusRoutingLogs.filter(item => item.providerPathwayRequestId)
     });
   }
 
