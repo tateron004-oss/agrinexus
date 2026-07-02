@@ -20174,6 +20174,13 @@ function renderNexusCommandCenterHero() {
   return `
     <section class="nexus-command-center-hero" data-nexus-command-center="true" aria-labelledby="userWorkspaceTitle">
       <div class="nexus-command-center-copy">
+        <span class="eyebrow nexus-command-center-label">${translateText("Nexus Command Center")}</span>
+        <div class="nexus-command-neural-wave" aria-hidden="true">
+          <span></span>
+          <i></i>
+        </div>
+        <strong class="nexus-premium-hero-title">${translateText("Ask Nexus. Plan smarter. Act safely.")}</strong>
+        <small class="nexus-premium-hero-subtitle">${translateText("Your intelligent assistant for agriculture, health access, learning, jobs, marketplace, maps, provider preparation, saved questions, and source-backed insight.")}</small>
         <span class="eyebrow">${translateText("AI assistant home")}</span>
         <h3 id="userWorkspaceTitle">${translateText("Hi, I’m Nexus. What do you need help with today?")}</h3>
         <p>${translateText("Ask Nexus or choose a support area below. I can help with agriculture, health, learning, jobs, marketplace, music, and provider preparation while keeping high-risk actions gated.")}</p>
@@ -20195,6 +20202,199 @@ function renderNexusCommandCenterHero() {
         </div>
       </div>
     </section>
+  `;
+}
+
+function renderNexusCommandCenterSidebar() {
+  const items = [
+    ["home", "Home", "Home", "nexus"],
+    ["ask", "Ask Nexus", "help me", "spark"],
+    ["agriculture", "Agriculture", "I need agriculture support.", "leaf"],
+    ["chronic-care", "Health", "Nexus, record my blood pressure.", "pulse"],
+    ["agritrade", "Marketplace", "Help me with AgriTrade, but do not take payment.", "market"],
+    ["learning", "Learning", "Help me find agriculture training.", "learn"],
+    ["jobs", "Jobs", "Help me find jobs or training.", "work"],
+    ["maps", "Maps", "Help me plan a field visit route.", "map"],
+    ["settings", "Settings", "Nexus, show language and safety settings.", "gear"]
+  ];
+  return `
+    <aside class="nexus-command-sidebar" data-nexus-command-sidebar="true" aria-label="${escapeHtml(translateText("Nexus navigation"))}">
+      <div class="nexus-sidebar-brand">
+        <span class="nexus-sidebar-logo" aria-hidden="true">NX</span>
+        <div>
+          <strong>${escapeHtml(translateText("Nexus"))}</strong>
+          <small>${escapeHtml(translateText("AgriNexus AI Platform"))}</small>
+        </div>
+      </div>
+      <nav class="nexus-sidebar-nav" aria-label="${escapeHtml(translateText("Standard User sections"))}">
+        ${items.map((item, index) => {
+          const [id, label, command, icon] = item;
+          return `
+            <button type="button" class="${index === 0 ? "active" : ""}" data-nexus-mode-shortcut="sidebar-${escapeHtml(id)}" data-nexus-command="${escapeHtml(command)}" onclick="return window.nexusHandleStandardUserHomeShortcut ? !window.nexusHandleStandardUserHomeShortcut(event) : true">
+              <span class="nexus-sidebar-icon nexus-sidebar-icon-${escapeHtml(icon)}" aria-hidden="true"></span>
+              <span>${escapeHtml(translateText(label))}</span>
+            </button>
+          `;
+        }).join("")}
+      </nav>
+      <div class="nexus-sidebar-status" data-testid="nexus-sidebar-platform-status">
+        <span></span>
+        <strong>${escapeHtml(translateText("Platform Active"))}</strong>
+        <small>${escapeHtml(translateText("All systems operational"))}</small>
+      </div>
+    </aside>
+  `;
+}
+
+function renderNexusTopWelcomeArea() {
+  const profile = data?.profile || {};
+  const displayName = profile.name || profile.displayName || translateText("Standard User");
+  return `
+    <header class="nexus-command-topbar" data-nexus-command-topbar="true">
+      <div>
+        <span class="eyebrow">${escapeHtml(translateText("Welcome"))}</span>
+        <h2>${escapeHtml(translateText("Good to see you"))}, ${escapeHtml(displayName)}</h2>
+        <p>${escapeHtml(translateText("Nexus brings your support areas into one focused, source-aware assistant workspace."))}</p>
+      </div>
+      <div class="nexus-topbar-actions">
+        <button
+          type="button"
+          class="nexus-onboarding-entry"
+          data-nexus-onboarding-open
+          aria-label="${escapeHtml(translateText("Learn what Nexus can do"))}"
+          title="${escapeHtml(translateText("Learn what Nexus can do"))}"
+        >${escapeHtml(translateText("Start here"))}</button>
+        <button type="button" data-toggle-user-language aria-label="${escapeHtml(translateText("Change language"))}">${escapeHtml(languageCode().toUpperCase())}</button>
+      </div>
+    </header>
+  `;
+}
+
+function renderNexusCoreFeatureCards() {
+  const cards = [
+    ["agriculture", "Agriculture Help", "Source-aware crop, soil, pest, field, and advisor preparation.", "I need agriculture support.", "agri"],
+    ["chronic-care", "Chronic Care Support", "Organize readings, questions, RPM/RTM context, and provider-ready summaries.", "Nexus, record my blood pressure.", "health"],
+    ["agritrade", "Marketplace", "Prepare product, buyer, price, logistics, and review notes without transactions.", "Help me with AgriTrade, but do not take payment.", "market"],
+    ["learning", "Learning & Jobs", "Build training, literacy, skills, and workforce next-step plans.", "Help me find agriculture training.", "learn"]
+  ];
+  return `
+    <section class="nexus-core-feature-grid" data-nexus-core-feature-grid="true" aria-label="${escapeHtml(translateText("Core Nexus support areas"))}">
+      ${cards.map(([id, title, description, command, accent]) => `
+        <article class="nexus-core-feature-card nexus-core-feature-${escapeHtml(accent)}">
+          <span aria-hidden="true"></span>
+          <strong>${escapeHtml(translateText(title))}</strong>
+          <p>${escapeHtml(translateText(description))}</p>
+          <button type="button" data-nexus-mode-shortcut="core-${escapeHtml(id)}" data-nexus-command="${escapeHtml(command)}" onclick="return window.nexusHandleStandardUserHomeShortcut ? !window.nexusHandleStandardUserHomeShortcut(event) : true">
+            ${escapeHtml(translateText("Open workflow"))}
+          </button>
+        </article>
+      `).join("")}
+    </section>
+  `;
+}
+
+function renderNexusVoiceInteractionBar() {
+  return `
+    <section class="nexus-voice-interaction-bar" data-nexus-voice-interaction-bar="true" aria-label="${escapeHtml(translateText("Voice interaction"))}">
+      <button type="button" class="nexus-voice-pulse" data-nexus-command-center-voice aria-label="${escapeHtml(translateText("Talk to Nexus"))}"></button>
+      <div>
+        <strong>${escapeHtml(translateText("Tap to speak with Nexus"))}</strong>
+        <small>${escapeHtml(translateText("Voice stays user-initiated. You can also type any request above."))}</small>
+      </div>
+      <div class="nexus-waveform" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span></div>
+    </section>
+  `;
+}
+
+function renderNexusSavedQuestionsUtilityPanel() {
+  const history = nexusKnowledgeHistory || {};
+  const queries = Array.isArray(history.queries) ? history.queries : [];
+  return `
+    <section class="nexus-utility-card nexus-utility-saved" data-nexus-utility-saved-questions="true">
+      <div class="nexus-utility-card-head">
+        <span class="eyebrow">${escapeHtml(translateText("Saved Questions"))}</span>
+        <button type="button" data-nexus-knowledge-action="refresh-history">${escapeHtml(translateText("View all"))}</button>
+      </div>
+      ${queries.length ? queries.slice(0, 3).map(item => `
+        <article>
+          <strong>${escapeHtml(item.questionSummary || translateText("Saved Nexus question"))}</strong>
+          <small>${escapeHtml(translateText(item.categoryLabel || item.category || "General"))} - ${escapeHtml(nexusProductionStatusLabel(item.answerMode || item.retrievalStatus || "saved"))}</small>
+        </article>
+      `).join("") : `<p>${escapeHtml(translateText("Ask or save a Nexus answer to build your question history."))}</p>`}
+    </section>
+  `;
+}
+
+function renderNexusProviderSupportUtilityPanel() {
+  const requestItem = nexusProviderPathwayLastRequest || null;
+  const configured = nexusKnowledgeLastResult?.providerOffer?.configured || requestItem?.providerConfigured;
+  return `
+    <section class="nexus-utility-card nexus-utility-provider" data-nexus-utility-provider-support="true">
+      <span class="eyebrow">${escapeHtml(translateText("Provider Support"))}</span>
+      <strong>${escapeHtml(translateText(configured ? "Provider pathway available" : "Live when configured"))}</strong>
+      <p>${escapeHtml(translateText(requestItem ? "A provider/advisor request is prepared for consent and review." : "Nexus can prepare support requests locally. Live routing needs configuration, consent, final approval, and audit."))}</p>
+      <small>${escapeHtml(translateText(configured ? "Connect when available after consent." : "Provider pending - Review / request support"))}</small>
+    </section>
+  `;
+}
+
+function renderNexusPlatformStatusUtilityPanel() {
+  const knowledgeReady = Boolean(nexusKnowledgeStatus?.enabled && nexusKnowledgeStatus?.configured);
+  const rows = [
+    ["AI Assistant", "Active"],
+    ["Data & Insights", knowledgeReady ? "Live retrieval ready" : "Built-in / configured when ready"],
+    ["Marketplace", "Review only"],
+    ["Network Services", "Live when configured"]
+  ];
+  return `
+    <section class="nexus-utility-card nexus-utility-status" data-nexus-utility-platform-status="true">
+      <span class="eyebrow">${escapeHtml(translateText("Platform Status"))}</span>
+      ${rows.map(([label, value]) => `
+        <div>
+          <span>${escapeHtml(translateText(label))}</span>
+          <strong>${escapeHtml(translateText(value))}</strong>
+        </div>
+      `).join("")}
+    </section>
+  `;
+}
+
+function renderNexusProfileUtilityPanel() {
+  const profile = data?.profile || {};
+  const country = typeof currentCountry === "function" ? currentCountry()?.name : profile.country || "Global";
+  return `
+    <section class="nexus-utility-card nexus-utility-profile" data-nexus-utility-profile="true">
+      <div class="nexus-profile-avatar" aria-hidden="true">NX</div>
+      <strong>${escapeHtml(profile.name || profile.displayName || translateText("Standard User"))}</strong>
+      <small>${escapeHtml(translateText("Standard User"))} - ${escapeHtml(translateText(country || "Global"))}</small>
+      <p>${escapeHtml(translateText("Your workspace keeps questions, summaries, and review steps organized without hidden execution."))}</p>
+    </section>
+  `;
+}
+
+function renderNexusRightUtilityColumn() {
+  return `
+    <aside class="nexus-command-right-rail" data-nexus-command-right-rail="true" aria-label="${escapeHtml(translateText("Nexus utilities"))}">
+      ${renderNexusProfileUtilityPanel()}
+      ${renderNexusSavedQuestionsUtilityPanel()}
+      ${renderNexusProviderSupportUtilityPanel()}
+      ${renderNexusPlatformStatusUtilityPanel()}
+      ${renderNexusInternetResourceHistoryPanel()}
+    </aside>
+  `;
+}
+
+function renderNexusOperationsShelf() {
+  return `
+    <details class="nexus-operations-shelf" data-nexus-operations-shelf="true">
+      <summary>${escapeHtml(translateText("Review workspace details"))}</summary>
+      <div class="nexus-operations-shelf-grid">
+        ${renderNexusActiveWorkSummary()}
+        ${renderNexusPilotPlatformStatusPanel()}
+        ${renderNexusPilotReviewQueuePanel()}
+        ${renderNexusProductionPlatformRailsPanel()}
+      </div>
+    </details>
   `;
 }
 
@@ -20933,18 +21133,20 @@ function renderUserWorkspace() {
   // Browse options and prepare questions before any transaction.
   // Standard User copy preserved: without sending; without buyer contact, orders, or payment; Change screen and voice language.
   target.innerHTML = `
-    <div data-testid="nexus-standard-user-home">
-    ${renderNexusCommandCenterHeader()}
-    ${renderNexusCommandCenterHero()}
-    ${renderNexusModeLauncher()}
-    ${renderNexusSuggestedActions()}
-    ${renderNexusAgenticBrainPanel()}
-    ${renderNexusKnowledgeRailPanel()}
-    ${renderNexusInternetResourceHistoryPanel()}
-    ${renderNexusActiveWorkSummary()}
-    ${renderNexusPilotPlatformStatusPanel()}
-    ${renderNexusPilotReviewQueuePanel()}
-    ${renderNexusProductionPlatformRailsPanel()}
+    <div class="nexus-command-center-shell" data-testid="nexus-standard-user-home">
+      ${renderNexusCommandCenterSidebar()}
+      <main class="nexus-command-main" aria-label="${escapeHtml(translateText("Nexus command center"))}">
+        ${renderNexusTopWelcomeArea()}
+        ${renderNexusCommandCenterHero()}
+        ${renderNexusCoreFeatureCards()}
+        ${renderNexusModeLauncher()}
+        ${renderNexusSuggestedActions()}
+        ${renderNexusVoiceInteractionBar()}
+        ${renderNexusAgenticBrainPanel()}
+        ${renderNexusKnowledgeRailPanel()}
+        ${renderNexusOperationsShelf()}
+      </main>
+      ${renderNexusRightUtilityColumn()}
     </div>
     <div class="nexus-command-hidden-agent-host" data-nexus-open-dialogue-agent-host="true" hidden>${renderNexusOpenDialogueAgentCard()}</div>
     <section id="userLanguagePanel" class="user-language-panel hidden" aria-label="${translateText("Choose language")}">

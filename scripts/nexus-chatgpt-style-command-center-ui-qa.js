@@ -47,11 +47,15 @@ const brainPanel = sectionBetween(app, "function renderNexusAgenticBrainPanel()"
 ].forEach(label => assert(app.includes(`label: "${label}"`), `launcher label missing: ${label}`));
 
 [
-  "renderNexusCommandCenterHeader()",
+  "renderNexusCommandCenterSidebar()",
+  "renderNexusTopWelcomeArea()",
   "renderNexusCommandCenterHero()",
+  "renderNexusCoreFeatureCards()",
   "renderNexusModeLauncher()",
+  "renderNexusVoiceInteractionBar()",
   "renderNexusAgenticBrainPanel()",
-  "renderNexusActiveWorkSummary()"
+  "renderNexusOperationsShelf()",
+  "renderNexusRightUtilityColumn()"
 ].forEach(call => assert(workspace.includes(call), `Standard User workspace must render ${call}`));
 
 [
@@ -76,9 +80,16 @@ assert(app.includes("const modeShortcut = event.target.closest(\"[data-nexus-mod
 assert(app.includes("const commandCenterVoice = event.target.closest(\"[data-nexus-command-center-voice]\")"), "voice launcher handler must exist");
 
 [
+  "body.user-mode .nexus-command-center-shell",
+  "body.user-mode .nexus-command-sidebar",
+  "body.user-mode .nexus-command-topbar",
   "body.user-mode .nexus-command-center-header",
   "body.user-mode .nexus-command-center-hero",
   "body.user-mode .nexus-command-composer",
+  "body.user-mode .nexus-core-feature-grid",
+  "body.user-mode .nexus-voice-interaction-bar",
+  "body.user-mode .nexus-command-right-rail",
+  "body.user-mode .nexus-operations-shelf",
   "body.user-mode .nexus-mode-launcher",
   "body.user-mode .nexus-agentic-brain-panel",
   "body.user-mode .nexus-active-work-summary",

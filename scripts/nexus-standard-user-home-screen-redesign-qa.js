@@ -34,6 +34,18 @@ function excludes(source, token, label) {
   "function renderNexusHomeModeSummary",
   "function handleNexusHomeModeSummaryClick",
   "function renderNexusSuggestedActions",
+  "function renderNexusCommandCenterSidebar",
+  "function renderNexusTopWelcomeArea",
+  "function renderNexusCoreFeatureCards",
+  "function renderNexusVoiceInteractionBar",
+  "function renderNexusRightUtilityColumn",
+  "function renderNexusOperationsShelf",
+  "data-nexus-command-sidebar",
+  "data-nexus-command-topbar",
+  "data-nexus-core-feature-grid",
+  "data-nexus-voice-interaction-bar",
+  "data-nexus-command-right-rail",
+  "data-nexus-operations-shelf",
   "function buildNexusCapabilityOverviewResult",
   "function runNexusStandardUserHomeLocalCommand",
   "function handleNexusStandardUserHomeClick",
@@ -43,6 +55,11 @@ function excludes(source, token, label) {
   "nexus-agentic-brain-panel-empty",
   "data-nexus-mode-launcher",
   "data-nexus-suggested-actions",
+  "nexus-command-center-shell",
+  "nexus-command-main",
+  "nexus-command-neural-wave",
+  "nexus-utility-card",
+  "nexus-command-right-rail",
   "data-nexus-mode-shortcut",
   "onclick=\"return window.nexusHandleStandardUserHomeShortcut",
   "nexus-mode-card",
@@ -100,6 +117,35 @@ function excludes(source, token, label) {
   "Create reminder",
   "Show offline queue"
 ].forEach(label => includes(app, label, `mode panel quick action ${label}`));
+
+[
+  "Nexus Command Center",
+  "AgriNexus AI Platform",
+  "Platform Active",
+  "All systems operational",
+  "Ask Nexus. Plan smarter. Act safely.",
+  "Your intelligent assistant for agriculture, health access, learning, jobs, marketplace, maps, provider preparation, saved questions, and source-backed insight.",
+  "Saved Questions",
+  "Provider Support",
+  "Platform Status",
+  "Tap to speak with Nexus",
+  "Voice stays user-initiated",
+  "Review workspace details",
+  "AI Assistant",
+  "Data & Insights",
+  "Network Services"
+].forEach(token => includes(app, token, `premium command center copy ${token}`));
+
+[
+  "Agriculture Help",
+  "Chronic Care Support",
+  "Marketplace",
+  "Learning & Jobs",
+  "Source-aware crop, soil, pest, field, and advisor preparation.",
+  "Organize readings, questions, RPM/RTM context, and provider-ready summaries.",
+  "Prepare product, buyer, price, logistics, and review notes without transactions.",
+  "Build training, literacy, skills, and workforce next-step plans."
+].forEach(token => includes(app, token, `core feature card ${token}`));
 
 [
   "Crop",
@@ -179,6 +225,19 @@ function excludes(source, token, label) {
 
 [
   "body.user-mode .nexus-command-center-hero",
+  "body.user-mode .nexus-command-center-shell",
+  "body.user-mode .nexus-command-sidebar",
+  "body.user-mode .nexus-command-topbar",
+  "body.user-mode .nexus-command-main",
+  "body.user-mode .nexus-command-right-rail",
+  "body.user-mode .nexus-sidebar-nav",
+  "body.user-mode .nexus-sidebar-status",
+  "body.user-mode .nexus-command-neural-wave",
+  "body.user-mode .nexus-core-feature-grid",
+  "body.user-mode .nexus-core-feature-card",
+  "body.user-mode .nexus-voice-interaction-bar",
+  "body.user-mode .nexus-utility-card",
+  "body.user-mode .nexus-operations-shelf",
   "body.user-mode .nexus-mode-launcher",
   "body.user-mode .nexus-mode-card-green .nexus-mode-icon",
   "body.user-mode .nexus-mode-card-blue .nexus-mode-icon",
@@ -195,9 +254,10 @@ function excludes(source, token, label) {
   "body.user-mode .nexus-home-mode-summary",
   "body.user-mode .nexus-home-mode-summary-button",
   "linear-gradient(135deg",
-  "#1b7f4b",
-  "#f4aa48",
-  "#2a79b6"
+  "#050816",
+  "#22d3ee",
+  "#8b5cf6",
+  "#ec4899"
 ].forEach(token => includes(css, token, `visual redesign CSS ${token}`));
 
 [
