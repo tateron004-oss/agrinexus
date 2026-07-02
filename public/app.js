@@ -18455,11 +18455,36 @@ function renderNexusCommandCenterHeader() {
         <small>${translateText("AgriNexus assistant")}</small>
       </div>
       <div class="nexus-command-header-actions">
+        <button
+          type="button"
+          class="nexus-onboarding-entry"
+          data-nexus-onboarding-open
+          aria-label="${escapeHtml(translateText("Learn what Nexus can do"))}"
+          title="${escapeHtml(translateText("Learn what Nexus can do"))}"
+        >${escapeHtml(translateText("▶️ Start here"))}</button>
         <button type="button" data-toggle-user-language aria-label="${escapeHtml(translateText("Change language"))}">${escapeHtml(languageCode().toUpperCase())}</button>
         <button type="button" data-nexus-command-center-voice aria-label="${escapeHtml(translateText("Talk to Nexus"))}">Mic</button>
       </div>
     </header>
   `;
+}
+
+function openNexusOnboardingModal() {
+  const modal = $("#nexusOnboardingModal");
+  if (!modal) return;
+  modal.classList.remove("hidden");
+  modal.setAttribute("aria-hidden", "false");
+  $("#nexusOnboardingClose")?.focus?.();
+}
+
+function closeNexusOnboardingModal() {
+  const modal = $("#nexusOnboardingModal");
+  if (!modal) return;
+  modal.classList.add("hidden");
+  modal.setAttribute("aria-hidden", "true");
+  const commandInput = $("#nexusCommandCenterInput");
+  commandInput?.scrollIntoView?.({ block: "center", behavior: "smooth" });
+  setTimeout(() => commandInput?.focus?.(), 0);
 }
 
 function renderNexusCommandCenterHero() {
@@ -34127,6 +34152,26 @@ function bindStatic() {
       event.preventDefault();
       return;
     }
+    const nexusOnboardingOpen = event.target.closest("[data-nexus-onboarding-open]");
+    if (nexusOnboardingOpen) {
+      event.preventDefault();
+      event.stopPropagation();
+      openNexusOnboardingModal();
+      return;
+    }
+    const nexusOnboardingClose = event.target.closest("[data-nexus-onboarding-close]");
+    if (nexusOnboardingClose) {
+      event.preventDefault();
+      event.stopPropagation();
+      closeNexusOnboardingModal();
+      return;
+    }
+    if (event.target?.id === "nexusOnboardingModal") {
+      event.preventDefault();
+      event.stopPropagation();
+      closeNexusOnboardingModal();
+      return;
+    }
     const commandCenterSubmit = event.target.closest("[data-nexus-command-center-submit]");
     if (commandCenterSubmit) {
       event.preventDefault();
@@ -35224,6 +35269,10 @@ function bindStatic() {
     }
     if (event.key === "Escape" && !$("#workflowModal").classList.contains("hidden")) {
       closeWorkflowModal();
+      return;
+    }
+    if (event.key === "Escape" && !$("#nexusOnboardingModal")?.classList.contains("hidden")) {
+      closeNexusOnboardingModal();
       return;
     }
     if (event.key === "Escape" && (!$("#jarvisPanel")?.classList.contains("hidden") || !$("#globalAssistantBar")?.classList.contains("hidden"))) {

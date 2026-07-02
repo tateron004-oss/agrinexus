@@ -1821,6 +1821,38 @@
     </div>
   </div>
 
+  <div id="nexusOnboardingModal" class="modal nexus-onboarding-modal hidden" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="nexusOnboardingTitle" aria-describedby="nexusOnboardingSummary">
+    <div class="modal-panel nexus-onboarding-panel">
+      <div class="modal-head">
+        <div>
+          <span class="modal-eyebrow">Nexus onboarding</span>
+          <h2 id="nexusOnboardingTitle">What Nexus can do</h2>
+        </div>
+        <button id="nexusOnboardingClose" class="ghost modal-close" type="button" data-nexus-onboarding-close aria-label="Close Nexus onboarding">Close</button>
+      </div>
+      <p id="nexusOnboardingSummary" class="modal-summary">A quick multilingual guide to the voice-operated Nexus prototype. Nothing plays automatically, and no workflow is required before asking Nexus for help.</p>
+      <div class="nexus-onboarding-frame" aria-label="HD multilingual Nexus onboarding explainer">
+        <div>
+          <span class="nexus-onboarding-play" aria-hidden="true">▶</span>
+          <strong>Nexus access assistant</strong>
+          <p>Ask for health access preparation, agriculture support, workforce help, learning, maps, messages, reminders, language support, safety boundaries, and safe music/media provider options.</p>
+        </div>
+      </div>
+      <div class="nexus-onboarding-language-row" aria-label="Onboarding languages">
+        <span>English</span>
+        <span>Spanish</span>
+        <span>French</span>
+        <span>Arabic</span>
+        <span>Portuguese</span>
+        <span>Swahili</span>
+      </div>
+      <p class="nexus-onboarding-note">Nexus prepares, explains, routes, and asks for approval where needed. It does not diagnose, prescribe, send messages, place calls, process payments, share location, open camera, or dispatch emergency help without the required configured systems and approvals.</p>
+      <div class="action-row modal-actions">
+        <button class="primary" type="button" data-nexus-onboarding-close>Return to Ask Nexus</button>
+      </div>
+    </div>
+  </div>
+
   <div id="toast" class="toast hidden" role="status" aria-live="polite" aria-atomic="true"></div>
   <div id="screenReaderStatus" class="sr-only" role="status" aria-live="polite" aria-atomic="true"></div>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>

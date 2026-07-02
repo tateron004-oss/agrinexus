@@ -8575,6 +8575,17 @@ body.user-mode .nexus-command-send {
   font-weight: 950;
 }
 
+body.user-mode .nexus-command-header-actions .nexus-onboarding-entry {
+  min-height: 34px;
+  padding: 0 10px;
+  border-radius: 999px;
+  background: #eef8f1;
+  color: #20503e;
+  font-size: .78rem;
+  white-space: nowrap;
+  box-shadow: none;
+}
+
 body.user-mode .nexus-command-center-hero {
   display: grid;
   gap: 18px;
@@ -8684,6 +8695,70 @@ body.user-mode .nexus-command-examples button {
   background: #ffffff;
   color: #314e58;
   font-size: .78rem;
+  font-weight: 900;
+}
+
+.nexus-onboarding-modal .nexus-onboarding-panel {
+  width: min(920px, 100%);
+}
+
+.nexus-onboarding-frame {
+  display: grid;
+  place-items: center;
+  aspect-ratio: 16 / 9;
+  min-height: 220px;
+  margin: 4px 0 14px;
+  padding: 24px;
+  border-radius: 12px;
+  background:
+    linear-gradient(135deg, rgba(16, 43, 54, .94), rgba(31, 89, 74, .88)),
+    #14313a;
+  color: #ffffff;
+  text-align: center;
+}
+
+.nexus-onboarding-frame > div {
+  max-width: 640px;
+}
+
+.nexus-onboarding-play {
+  display: inline-grid;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  margin-bottom: 12px;
+  border: 2px solid rgba(255, 255, 255, .72);
+  border-radius: 50%;
+  background: rgba(255, 255, 255, .16);
+  font-size: 1.15rem;
+}
+
+.nexus-onboarding-frame strong {
+  display: block;
+  margin-bottom: 8px;
+  font-size: clamp(1.35rem, 3vw, 2.1rem);
+  line-height: 1.1;
+}
+
+.nexus-onboarding-frame p,
+.nexus-onboarding-note {
+  margin: 0;
+  line-height: 1.5;
+}
+
+.nexus-onboarding-language-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.nexus-onboarding-language-row span {
+  padding: 6px 9px;
+  border-radius: 999px;
+  background: #eef8f1;
+  color: #20503e;
+  font-size: .76rem;
   font-weight: 900;
 }
 
