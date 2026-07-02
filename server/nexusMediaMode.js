@@ -12,8 +12,10 @@ const MEDIA_INTENT_PATTERNS = Object.freeze([
   { id: "amapiano", label: "Amapiano", query: "Amapiano", patterns: [/\bamapiano\b/i] },
   { id: "highlife", label: "Highlife", query: "Highlife music", patterns: [/\bhighlife\b/i] },
   { id: "gospel", label: "Gospel", query: "Gospel music", patterns: [/\bgospel\b/i] },
+  { id: "jazz", label: "Jazz", query: "jazz music", patterns: [/\bjazz\b/i] },
   { id: "relaxing", label: "Relaxing music", query: "relaxing music", patterns: [/\brelaxing music\b/i, /\bcalm music\b/i] },
   { id: "study", label: "Study music", query: "study background music", patterns: [/\bstudy\b/i, /\bbackground music\b/i, /\bfocus music\b/i] },
+  { id: "workout", label: "Workout music", query: "workout music", patterns: [/\bworkout music\b/i, /\bexercise music\b/i, /\bfitness music\b/i] },
   { id: "kenya", label: "Kenya-inspired music", query: "Kenyan music", patterns: [/\bkenya\b/i, /\bkenyan\b/i] }
 ]);
 
@@ -49,14 +51,20 @@ function detectPreferredProvider(command = "") {
 
 function isPauseOrStopMusicCommand(command = "") {
   const text = normalizeText(command).toLowerCase();
-  return /\b(pause|stop|end)\b.*\b(music|song|audio|playback)\b/.test(text);
+  return /\b(pause|stop|end|resume)\b.*\b(music|song|audio|playback)\b/.test(text);
+}
+
+function isBlockedMusicDownloadCommand(command = "") {
+  const text = normalizeText(command).toLowerCase();
+  return /\b(download|rip|cache|save|copy)\b.*\b(music|song|track|audio)\b/.test(text);
 }
 
 function isMediaCommand(command = "") {
   const text = normalizeText(command).toLowerCase();
   if (!text) return false;
   if (isPauseOrStopMusicCommand(text)) return true;
-  return /\b(play|open|use|start)\b.*\b(music|r\s*&\s*b|rnb|afrobeats?|afro beats?|nigerian|naija|amapiano|highlife|gospel|youtube|spotify|apple music|study|background)\b/.test(text)
+  if (isBlockedMusicDownloadCommand(text)) return true;
+  return /\b(play|open|use|start)\b.*\b(music|r\s*&\s*b|rnb|african|afrobeats?|afro beats?|nigerian|naija|amapiano|highlife|gospel|jazz|youtube|spotify|apple music|study|background|relaxing|workout|exercise|fitness)\b/.test(text)
     || /\b(music while i study|background music)\b/.test(text);
 }
 
@@ -97,6 +105,7 @@ function buildMediaResponse(command = "") {
   const preferredProvider = detectPreferredProvider(normalized);
   const providerOptions = buildProviderOptions(requested.query, preferredProvider);
   const stopRequested = isPauseOrStopMusicCommand(normalized);
+  const blockedDownload = isBlockedMusicDownloadCommand(normalized);
   const actionId = `nexus-media-${requested.id}`;
   const mediaMode = {
     actionId,
@@ -104,8 +113,12 @@ function buildMediaResponse(command = "") {
     request: normalized,
     requestedMusicType: requested.label,
     providerPreference: preferredProvider || "none",
-    providerOptions: stopRequested ? [] : providerOptions,
-    playbackStatus: stopRequested ? "no_active_nexus_provider_playback" : "provider_search_handoff_ready",
+    providerOptions: stopRequested || blockedDownload ? [] : providerOptions,
+    playbackStatus: stopRequested
+      ? "no_active_nexus_provider_playback"
+      : blockedDownload
+        ? "download_blocked"
+        : "provider_search_handoff_ready",
     safeProviderHandoffOnly: true,
     noHostedMusic: true,
     noDownloadedMusic: true,
@@ -124,10 +137,12 @@ function buildMediaResponse(command = "") {
   };
   return {
     ok: true,
-    status: stopRequested ? "media_no_active_playback" : "media_provider_handoff_prepared",
+    status: stopRequested ? "media_no_active_playback" : blockedDownload ? "media_download_blocked" : "media_provider_handoff_prepared",
     mode: "Media / Music",
     message: stopRequested
-      ? "Nexus does not have active provider playback to pause or stop. If music opened in another app, control playback there."
+      ? "Nexus does not have active provider playback to pause, stop, or resume. If music opened in another app, control playback there."
+      : blockedDownload
+        ? "Nexus cannot download, rip, cache, host, or redistribute copyrighted music. I can prepare safe provider search options instead."
       : `I prepared safe provider search options for ${requested.label}. Nexus is not hosting, downloading, scraping, caching, or streaming copyrighted music.`,
     task: {
       taskId: actionId,
@@ -162,6 +177,7 @@ module.exports = {
   MEDIA_PROVIDER_HOSTS,
   isMediaCommand,
   isPauseOrStopMusicCommand,
+  isBlockedMusicDownloadCommand,
   detectRequestedMedia,
   detectPreferredProvider,
   buildProviderOptions,

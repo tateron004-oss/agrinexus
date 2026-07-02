@@ -11,6 +11,7 @@
   const KENYA_DEMO_MUSIC_RESPONSE = "Absolutely. I'll play a Kenya-inspired demo rhythm. This is local demo audio, and I'm not opening an outside music service.";
   const MUSIC_USER_INTERACTION_REQUIRED = "Music playback needs a user interaction in this browser. Please click the play control.";
   const MUSIC_STOPPED_RESPONSE = "Music stopped.";
+  const MUSIC_NO_ACTIVE_PROVIDER_PLAYBACK = "I do not have active local playback to pause. If the music opened in another app or provider, pause it there.";
   const DEMO_MUSIC_DURATION_MS = 24000;
   const DEMO_LANGUAGES = {
     en: {
@@ -217,13 +218,13 @@
 
   function isStopMusicCommand(command) {
     const text = normalizeCommand(command).toLowerCase();
-    return /\b(stop|pause|end)\b.*\b(music|rhythm|song|audio)\b/.test(text);
+    return /\b(stop|pause|end|resume)\b.*\b(music|rhythm|song|audio|playback)\b/.test(text);
   }
 
   function isMediaProviderHandoffCommand(command) {
     const text = normalizeCommand(command).toLowerCase();
     if (isKenyaMusicCommand(text) || isStopMusicCommand(text)) return false;
-    return /\b(play|open|use|start)\b.*\b(music|r\s*&\s*b|rnb|afrobeats?|afro beats?|african|nigerian|naija|amapiano|highlife|gospel|youtube|spotify|apple music|study|background)\b/.test(text)
+    return /\b(play|open|use|start)\b.*\b(music|r\s*&\s*b|rnb|afrobeats?|afro beats?|african|nigerian|naija|amapiano|highlife|gospel|jazz|youtube|spotify|apple music|study|background|relaxing|workout|exercise|fitness)\b/.test(text)
       || /\b(open this in|use)\b.*\b(youtube|spotify|apple music)\b/.test(text)
       || /\b(music while i study|background music)\b/.test(text);
   }
@@ -473,8 +474,11 @@
     setTranscript(`Heard: ${transcript}`);
     const bridge = window.NexusVoiceDemoShellBridge;
     if (isStopMusicCommand(transcript)) {
-      stopDemoMusic({ announce: true });
-      bridge?.showResponse?.(MUSIC_STOPPED_RESPONSE, { source: COMMAND_SOURCE, musicDemo: true, blocked: false });
+      const response = isDemoMusicPlaying ? MUSIC_STOPPED_RESPONSE : MUSIC_NO_ACTIVE_PROVIDER_PLAYBACK;
+      stopDemoMusic({ announce: isDemoMusicPlaying });
+      bridge?.showResponse?.(response, { source: COMMAND_SOURCE, musicDemo: true, blocked: false });
+      setTranscript(response);
+      speak(response);
       return;
     }
     if (isKenyaMusicCommand(transcript)) {

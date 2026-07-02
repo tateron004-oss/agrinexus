@@ -241,8 +241,8 @@ const nexusProductIdentity = Object.freeze({
 });
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-325";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v304";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-326";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v305";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
 const VOICE_ATTENTION_DELAY_MS = 900;
@@ -18404,6 +18404,92 @@ function renderNexusMediaProviderOptions(card = {}) {
   `;
 }
 
+const NEXUS_MEDIA_MUSIC_INTENTS = Object.freeze([
+  { id: "rnb", label: "R&B", query: "R&B music", patterns: [/\br&b\b/i, /\brnb\b/i, /\brhythm and blues\b/i] },
+  { id: "afrobeats", label: "Afrobeats", query: "Afrobeats music", patterns: [/\bafrobeats?\b/i] },
+  { id: "african", label: "African music", query: "African music", patterns: [/\bafrican music\b/i] },
+  { id: "amapiano", label: "Amapiano", query: "Amapiano music", patterns: [/\bamapiano\b/i] },
+  { id: "gospel", label: "Gospel", query: "gospel music", patterns: [/\bgospel\b/i] },
+  { id: "study", label: "Study music", query: "study music", patterns: [/\bstudy music\b/i, /\bfocus music\b/i] },
+  { id: "relaxing", label: "Relaxing music", query: "relaxing music", patterns: [/\brelaxing music\b/i, /\bcalm music\b/i] },
+  { id: "jazz", label: "Jazz", query: "jazz music", patterns: [/\bjazz\b/i] },
+  { id: "workout", label: "Workout music", query: "workout music", patterns: [/\bworkout music\b/i, /\bexercise music\b/i, /\bfitness music\b/i] },
+  { id: "kenyan", label: "Kenyan music", query: "Kenyan music", patterns: [/\bkenyan music\b/i, /\bmusic from kenya\b/i] },
+  { id: "nigerian", label: "Nigerian music", query: "Nigerian music", patterns: [/\bnigerian music\b/i] },
+  { id: "highlife", label: "Highlife", query: "highlife music", patterns: [/\bhighlife\b/i] }
+]);
+
+function isNexusMediaMusicCommand(command = "") {
+  const text = String(command || "");
+  return /\b(play|open|music|song|track|playlist|youtube|spotify|apple music|pause|stop|resume|download|rip|cache)\b/i.test(text)
+    && /\b(music|song|track|playlist|r&b|rnb|rhythm and blues|afrobeats?|african|amapiano|gospel|study|relaxing|jazz|workout|exercise|fitness|kenya|kenyan|nigerian|highlife|youtube|spotify|apple music)\b/i.test(text);
+}
+
+function detectNexusMediaMusicIntent(command = "") {
+  const text = String(command || "");
+  return NEXUS_MEDIA_MUSIC_INTENTS.find(intent => intent.patterns.some(pattern => pattern.test(text))) || NEXUS_MEDIA_MUSIC_INTENTS[0];
+}
+
+function detectNexusMediaProviderPreference(command = "") {
+  const text = String(command || "").toLowerCase();
+  if (text.includes("youtube")) return "YouTube";
+  if (text.includes("spotify")) return "Spotify";
+  if (text.includes("apple music")) return "Apple Music";
+  return "none";
+}
+
+function buildNexusMediaProviderOptions(intent, preferredProvider = "none") {
+  const query = encodeURIComponent(intent.query || `${intent.label} music`);
+  return [
+    { id: "youtube", label: "Open in YouTube", provider: "YouTube", url: `https://www.youtube.com/results?search_query=${query}`, preferred: preferredProvider === "YouTube" },
+    { id: "spotify", label: "Open in Spotify", provider: "Spotify", url: `https://open.spotify.com/search/${query}`, preferred: preferredProvider === "Spotify" },
+    { id: "apple-music", label: "Open in Apple Music", provider: "Apple Music", url: `https://music.apple.com/us/search?term=${query}`, preferred: preferredProvider === "Apple Music", futureGated: true }
+  ];
+}
+
+function buildNexusMediaMusicLocalResult(command = "") {
+  const text = String(command || "").trim();
+  const stopRequested = /\b(pause|stop|resume)\b.*\b(music|song|track|playback)\b/i.test(text);
+  const blockedDownload = /\b(download|rip|cache|save|copy)\b.*\b(music|song|track|audio)\b/i.test(text);
+  const intent = detectNexusMediaMusicIntent(text);
+  const providerPreference = detectNexusMediaProviderPreference(text);
+  const playbackStatus = stopRequested
+    ? "no_active_nexus_provider_playback"
+    : blockedDownload
+      ? "download_blocked"
+      : "provider handoff";
+  const message = stopRequested
+    ? "Nexus does not have active provider playback to pause, stop, or resume. If music opened in another app, control playback there."
+    : blockedDownload
+      ? "Nexus cannot download, rip, cache, host, or redistribute copyrighted music. I can prepare safe provider search options instead."
+      : `I prepared safe provider search options for ${intent.label}. Nexus is not hosting, downloading, scraping, caching, or streaming copyrighted music.`;
+  return {
+    ok: true,
+    status: stopRequested ? "media_no_active_playback" : blockedDownload ? "media_download_blocked" : "media_provider_handoff_prepared",
+    mode: "Media / Music",
+    message,
+    preparedCards: [{
+      type: "media_provider_handoff",
+      title: intent.label,
+      status: playbackStatus,
+      localOnly: true,
+      needsRealProvider: false,
+      mediaMode: {
+        actionId: `nexus-media-${intent.id}`,
+        mode: "Media / Music",
+        request: text,
+        requestedMusicType: intent.label,
+        providerPreference,
+        providerOptions: stopRequested || blockedDownload ? [] : buildNexusMediaProviderOptions(intent, providerPreference),
+        playbackStatus,
+        safetyNote: "Nexus does not download, rip, cache, host, or redistribute copyrighted music."
+      }
+    }],
+    noExecutionAuthorized: true,
+    localOnly: true
+  };
+}
+
 function renderNexusAgenticBrainMatrix() {
   const matrix = Array.isArray(nexusAgenticBrainMatrix) ? nexusAgenticBrainMatrix : [];
   if (!matrix.length) return "";
@@ -18612,6 +18698,14 @@ async function runNexusAgenticBrainAction(action = "command", options = {}) {
     const taskId = options.taskId || "";
     const queueId = options.queueId || "";
     const confirmed = document.querySelector("[data-nexus-agentic-brain-confirm]")?.checked === true || action === "confirm";
+    if (action === "command") {
+      const localMediaCommand = String(options.command || nexusAgenticBrainCommandValue() || "").trim();
+      if (isNexusMediaMusicCommand(localMediaCommand)) {
+        nexusAgenticBrainLastResult = buildNexusMediaMusicLocalResult(localMediaCommand);
+        renderUserWorkspace();
+        return true;
+      }
+    }
     let result = null;
     if (action === "refresh") {
       await refreshNexusAgenticBrainState();
@@ -18653,6 +18747,11 @@ async function runNexusAgenticBrainAction(action = "command", options = {}) {
 function handleNexusAgenticBrainTypedCommand(command = "") {
   const normalized = String(command || "").trim();
   if (!normalized) return false;
+  if (isNexusMediaMusicCommand(normalized)) {
+    nexusAgenticBrainLastResult = buildNexusMediaMusicLocalResult(normalized);
+    renderUserWorkspace();
+    return true;
+  }
   if (!/^nexus,/i.test(normalized) && !/^(continue|confirm|cancel|verify result|what can nexus do|i need support|show my active cases|what did you prepare|what still needs a real provider)/i.test(normalized)) return false;
   if (!/(what can nexus do|i need support|active cases|what did you prepare|what still needs a real provider|blood pressure|bp\b|glucose|blood sugar|fasting sugar|diabetes|obesity|hypertension|provider|care team|report|summary|remind|rpm|rtm|telehealth|mobile clinic|agriculture|training|marketplace|inquiry|farm jobs|digital literacy|ai literacy|drone|field visit|crop|course|clinic|pharmacy|offline|continue|confirm|cancel|verify)/i.test(normalized)) return false;
   void runNexusAgenticBrainAction("command", { command: normalized });
@@ -34136,6 +34235,34 @@ function bindStatic() {
   document.addEventListener("click", async event => {
     if (await handleAssistantRuntimeLocalToolClick(event)) return;
     if (handleAssistantRuntimeFollowUpClick(event)) return;
+    const earlyCommandCenterSubmit = event.target.closest("[data-nexus-command-center-submit]");
+    if (earlyCommandCenterSubmit) {
+      const input = $("#nexusCommandCenterInput");
+      const command = input?.value?.trim() || "What can Nexus do?";
+      if (isNexusMediaMusicCommand(command)) {
+        event.preventDefault();
+        event.stopPropagation();
+        if (input) input.value = command;
+        setCommandInputs(command);
+        nexusAgenticBrainLastResult = buildNexusMediaMusicLocalResult(command);
+        renderUserWorkspace();
+        return;
+      }
+    }
+    const earlyModeShortcut = event.target.closest("[data-nexus-mode-shortcut]");
+    if (earlyModeShortcut) {
+      const command = earlyModeShortcut.dataset.nexusCommand || "";
+      if (isNexusMediaMusicCommand(command)) {
+        event.preventDefault();
+        event.stopPropagation();
+        const input = $("#nexusCommandCenterInput");
+        if (input) input.value = command;
+        setCommandInputs(command);
+        nexusAgenticBrainLastResult = buildNexusMediaMusicLocalResult(command);
+        renderUserWorkspace();
+        return;
+      }
+    }
     if (handleNexusAutonomousWorkflowClick(event)) return;
     if (handleNexusControlledActionQueueClick(event)) return;
     if (handleControlledActionConfirmationPrototypeClick(event)) return;
@@ -34180,6 +34307,7 @@ function bindStatic() {
       const command = input?.value?.trim() || "What can Nexus do?";
       if (input) input.value = command;
       setCommandInputs(command);
+      if (handleNexusAgenticBrainTypedCommand(command)) return;
       await runNexusAgenticBrainAction("command", { command });
       return;
     }
@@ -34222,6 +34350,7 @@ function bindStatic() {
       const input = $("#nexusCommandCenterInput");
       if (input) input.value = command;
       setCommandInputs(command);
+      if (handleNexusAgenticBrainTypedCommand(command)) return;
       await runNexusAgenticBrainAction("command", { command });
       return;
     }
