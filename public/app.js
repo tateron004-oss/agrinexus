@@ -100,6 +100,10 @@ let nexusProductionIntegrationStatus = [];
 let nexusProductionAdminOperations = null;
 let nexusProductionPrivacySummary = null;
 let nexusProductionRailActionStatus = "";
+let nexusKnowledgeStatus = null;
+let nexusKnowledgeTrustedSources = [];
+let nexusKnowledgeLastResult = null;
+let nexusKnowledgeActionStatus = "";
 let nexusProviderContactBridgeCards = [];
 let nexusLearningProviderBridgeCards = [];
 let nexusMarketplaceBridgeCards = [];
@@ -250,8 +254,8 @@ const nexusProductIdentity = Object.freeze({
 });
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-340";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v319";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-341";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v320";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
 const VOICE_ATTENTION_DELAY_MS = 900;
@@ -18380,6 +18384,7 @@ function renderNexusAgenticBrainResultCards() {
           <span>${escapeHtml(card.status || "prepared locally")}</span>
           ${renderNexusHomeModePanel(card)}
           ${renderNexusHomeModeSummary(card)}
+          ${renderNexusKnowledgeAnswerOptions(card)}
           ${renderNexusMediaProviderOptions(card)}
           ${renderNexusHealthAccessPreparationOptions(card)}
           ${card.localOnly ? `<small>${escapeHtml(translateText("Local-only"))}</small>` : ""}
@@ -18856,6 +18861,204 @@ async function handleNexusProductionRailsClick(event) {
   } catch (error) {
     nexusProductionRailActionStatus = error.message || "Production rails action needs attention.";
     toast(nexusProductionRailActionStatus);
+    if (experienceMode === "user") renderUserWorkspace();
+    return true;
+  } finally {
+    button.disabled = false;
+  }
+}
+
+function nexusKnowledgeStatusLabel(value = "") {
+  const text = String(value || "disabled").replace(/_/g, " ");
+  return text.charAt(0).toUpperCase() + text.slice(1);
+}
+
+function isNexusLiveKnowledgeQuestion(command = "") {
+  const lower = String(command || "").toLowerCase().trim();
+  if (!lower) return false;
+  if (/\b(open|start|send|call|message|pay|checkout|book|schedule|delete|upload|camera|share my location)\b/.test(lower)) return false;
+  return /\b(current|latest|today|now|recent|source|sources|cite|citation|internet|web|search|what causes|what should|safe storage|market price|price for|farm jobs|training do i need|advice for|doctor about|yellow leaves|maize|tomatoes|blood pressure|diabetes|insulin|solar installation)\b/.test(lower);
+}
+
+function nexusKnowledgeCategoryForCommand(command = "") {
+  const lower = String(command || "").toLowerCase();
+  if (/\b(telehealth|virtual visit|video visit|doctor visit|provider visit|intake)\b/.test(lower)) return "telehealth";
+  if (/\b(pharmacy|medicine|medication|drug|prescription|refill|insulin storage|safe storage)\b/.test(lower)) return "pharmacy";
+  if (/\b(mobile clinic|community health|outreach clinic|clinic van)\b/.test(lower)) return "mobileClinic";
+  if (/\b(blood pressure|hypertension|diabetes|obesity|chronic|health|symptom|doctor|clinic|medical|patient)\b/.test(lower)) return "health";
+  if (/\b(crop|maize|tomato|tomatoes|cassava|soil|pest|farm|farmer|agriculture|irrigation|fertilizer|yellow leaves)\b/.test(lower)) return "agriculture";
+  if (/\b(job|jobs|workforce|career|training|solar installation|skills|employment)\b/.test(lower)) return "jobs";
+  if (/\b(lesson|learning|literacy|course|study|school|training)\b/.test(lower)) return "learning";
+  if (/\b(price|market|buyer|seller|sell|agritrade|commodity)\b/.test(lower)) return "marketplace";
+  if (/\b(route|map|field visit|distance|travel|directions)\b/.test(lower)) return "maps";
+  return "general";
+}
+
+function buildNexusKnowledgePreparedResult(result = {}) {
+  const answer = result?.result || result || {};
+  return {
+    status: answer.retrievalStatus || "prepared",
+    message: answer.answer || "Nexus checked the live knowledge rail.",
+    preparedCards: [{
+      type: "nexus_knowledge_answer",
+      title: answer.sourceBacked ? "Source-backed knowledge answer" : "Knowledge answer needs live retrieval",
+      status: answer.sourceBacked ? "source-backed" : answer.retrievalStatus || "disabled",
+      localOnly: true,
+      knowledgeAnswer: answer
+    }]
+  };
+}
+
+function renderNexusKnowledgeAnswerCard(answer = nexusKnowledgeLastResult) {
+  if (!answer) return `<p>${escapeHtml(translateText("Ask a source-sensitive question to use the knowledge rail."))}</p>`;
+  const citations = Array.isArray(answer.citations) ? answer.citations : [];
+  return `
+    <article class="nexus-knowledge-answer-card" data-testid="nexus-knowledge-answer-card" data-source-backed="${answer.sourceBacked ? "true" : "false"}" data-retrieval-status="${escapeHtml(answer.retrievalStatus || "unknown")}">
+      <div>
+        <span>${escapeHtml(translateText(answer.categoryLabel || "Knowledge"))}</span>
+        <strong>${escapeHtml(translateText(answer.sourceBacked ? "Source-backed answer" : "Retrieval not active"))}</strong>
+        <small>${escapeHtml(translateText("Retrieved/checked"))}: ${escapeHtml(answer.retrievalCheckedAt || "not checked")}</small>
+      </div>
+      <p>${escapeHtml(translateText(answer.answer || "Nexus checked the knowledge rail."))}</p>
+      <small>${escapeHtml(translateText(answer.safetyNote || "Review sources and local context before acting."))}</small>
+      ${citations.length ? `
+        <div class="nexus-knowledge-citations" data-testid="nexus-knowledge-citations">
+          <strong>${escapeHtml(translateText("Sources"))}</strong>
+          ${citations.map(source => `
+            <a href="${escapeHtml(source.url)}" target="_blank" rel="noopener noreferrer" data-testid="nexus-knowledge-citation">
+              ${escapeHtml(source.title || source.source || source.url)}
+            </a>
+          `).join("")}
+        </div>
+      ` : `<small data-testid="nexus-knowledge-no-fake-citations">${escapeHtml(translateText("No citations are shown because live retrieval is not configured or did not return citable sources."))}</small>`}
+      <div class="nexus-knowledge-actions">
+        <button type="button" data-nexus-knowledge-action="save-result" data-testid="nexus-knowledge-save-result">${escapeHtml(translateText("Save to record"))}</button>
+        <button type="button" data-nexus-knowledge-action="queue-result" data-testid="nexus-knowledge-queue-result">${escapeHtml(translateText("Queue for review"))}</button>
+      </div>
+      <small>${escapeHtml(translateText(answer.nextStep || "Nexus can save this locally or prepare a reviewed next step."))}</small>
+    </article>
+  `;
+}
+
+function renderNexusKnowledgeAnswerOptions(card = {}) {
+  if (!card.knowledgeAnswer) return "";
+  return renderNexusKnowledgeAnswerCard(card.knowledgeAnswer);
+}
+
+function renderNexusKnowledgeRailPanel() {
+  const status = nexusKnowledgeStatus || {};
+  const sources = Array.isArray(nexusKnowledgeTrustedSources) ? nexusKnowledgeTrustedSources : [];
+  const enabled = Boolean(status.enabled && status.configured);
+  return `
+    <section class="nexus-knowledge-rail" data-nexus-knowledge-rail="true" data-testid="nexus-knowledge-rail" aria-label="${escapeHtml(translateText("Nexus live knowledge retrieval"))}">
+      <div class="nexus-knowledge-rail-header">
+        <div>
+          <span class="eyebrow">${escapeHtml(translateText("Live knowledge rail"))}</span>
+          <strong>${escapeHtml(translateText("Ask Nexus for current, source-backed information"))}</strong>
+          <small data-testid="nexus-knowledge-status">${escapeHtml(translateText(enabled ? `Configured: ${status.provider || "provider"}` : status.disabledMessage || "Live internet retrieval is not configured yet. Nexus can still use built-in guidance and prepare a question for review."))}</small>
+        </div>
+        <button type="button" data-nexus-knowledge-action="refresh-status" data-testid="nexus-knowledge-refresh">${escapeHtml(translateText("Refresh"))}</button>
+      </div>
+      <div class="nexus-knowledge-query-row">
+        <label>
+          <span>${escapeHtml(translateText("Knowledge question"))}</span>
+          <input id="nexusKnowledgeQuestionInput" data-testid="nexus-knowledge-question-input" type="text" placeholder="${escapeHtml(translateText("Example: What causes yellow leaves on maize?"))}">
+        </label>
+        <button type="button" data-nexus-knowledge-action="ask" data-testid="nexus-knowledge-ask">${escapeHtml(translateText("Ask with sources"))}</button>
+      </div>
+      <div class="nexus-knowledge-source-row" data-testid="nexus-knowledge-trusted-sources">
+        ${sources.slice(0, 6).map(source => `<span>${escapeHtml(translateText(source.label || source.id))}</span>`).join("")}
+      </div>
+      ${renderNexusKnowledgeAnswerCard(nexusKnowledgeLastResult)}
+      <p class="nexus-knowledge-action-status" data-nexus-knowledge-action-status>${escapeHtml(translateText(nexusKnowledgeActionStatus || "No provider handoff, payment, message, call, location sharing, pharmacy action, diagnosis, or emergency action occurs from this rail."))}</p>
+    </section>
+  `;
+}
+
+async function refreshNexusKnowledgeRail(options = {}) {
+  try {
+    const [status, sources] = await Promise.all([
+      request("/api/nexus/knowledge/status", { method: "GET" }),
+      request("/api/nexus/knowledge/trusted-sources", { method: "GET" })
+    ]);
+    nexusKnowledgeStatus = status || null;
+    nexusKnowledgeTrustedSources = Array.isArray(sources?.categories) ? sources.categories : [];
+    if (options.rerender !== false && experienceMode === "user") renderUserWorkspace();
+    return nexusKnowledgeStatus;
+  } catch {
+    return null;
+  }
+}
+
+async function runNexusKnowledgeQuery(command = "", options = {}) {
+  const question = String(command || "").trim();
+  if (!question) return null;
+  nexusKnowledgeActionStatus = "Checking the knowledge rail. Nexus will cite sources only if retrieval is configured and returns citable results.";
+  if (options.rerender !== false && experienceMode === "user") renderUserWorkspace();
+  const response = await request("/api/nexus/knowledge/query", {
+    method: "POST",
+    body: { question, category: nexusKnowledgeCategoryForCommand(question) }
+  });
+  nexusKnowledgeLastResult = response.result || null;
+  nexusKnowledgeStatus = response.status || nexusKnowledgeStatus;
+  nexusKnowledgeActionStatus = nexusKnowledgeLastResult?.sourceBacked
+    ? "Source-backed answer prepared. Review citations before acting."
+    : (nexusKnowledgeLastResult?.answer || "Knowledge rail checked safely.");
+  nexusAgenticBrainLastResult = buildNexusKnowledgePreparedResult(response);
+  if (options.rerender !== false && experienceMode === "user") renderUserWorkspace();
+  return response;
+}
+
+async function handleNexusKnowledgeRailClick(event) {
+  const button = event.target?.closest?.("[data-nexus-knowledge-action]");
+  if (!button) return false;
+  event.preventDefault();
+  event.stopPropagation();
+  const action = button.dataset.nexusKnowledgeAction || "";
+  button.disabled = true;
+  try {
+    if (action === "refresh-status") {
+      nexusKnowledgeActionStatus = "Knowledge rail status refreshed.";
+      await refreshNexusKnowledgeRail({ rerender: true });
+      return true;
+    }
+    if (action === "ask") {
+      const input = $("#nexusKnowledgeQuestionInput");
+      await runNexusKnowledgeQuery(input?.value?.trim() || "What causes yellow leaves on maize?");
+      return true;
+    }
+    if (action === "save-result" || action === "queue-result") {
+      const answer = nexusKnowledgeLastResult || {};
+      const result = await request("/api/nexus/knowledge/save-result", {
+        method: "POST",
+        body: {
+          queryId: answer.queryId || "",
+          question: answer.question || "",
+          answer: answer.answer || "",
+          summary: `${answer.categoryLabel || "Knowledge"}: ${answer.answer || "Knowledge answer saved locally."}`,
+          category: answer.category || "general",
+          provider: answer.provider || "",
+          retrievalStatus: answer.retrievalStatus || "",
+          citations: answer.citations || [],
+          queueForReview: action === "queue-result"
+        }
+      });
+      nexusKnowledgeActionStatus = result.queueStatus === "consent_required"
+        ? "Saved locally. Consent is required before this sensitive answer can enter the local review queue."
+        : result.queueStatus === "queued_for_local_review"
+          ? "Saved and queued for local review. No external provider was contacted."
+          : "Saved to a local Nexus record. No external action occurred.";
+      await Promise.all([
+        refreshNexusPilotPlatformStatus({ rerender: false }),
+        refreshNexusPilotReviewQueue({ rerender: false })
+      ]);
+      renderUserWorkspace();
+      return true;
+    }
+    return true;
+  } catch (error) {
+    nexusKnowledgeActionStatus = error.message || "Knowledge rail action needs attention.";
+    toast(nexusKnowledgeActionStatus);
     if (experienceMode === "user") renderUserWorkspace();
     return true;
   } finally {
@@ -20383,6 +20586,7 @@ function renderUserWorkspace() {
     ${renderNexusModeLauncher()}
     ${renderNexusSuggestedActions()}
     ${renderNexusAgenticBrainPanel()}
+    ${renderNexusKnowledgeRailPanel()}
     ${renderNexusActiveWorkSummary()}
     ${renderNexusPilotPlatformStatusPanel()}
     ${renderNexusPilotReviewQueuePanel()}
@@ -20421,6 +20625,13 @@ function renderUserWorkspace() {
     setTimeout(() => {
       if (experienceMode === "user" && document.querySelector("[data-nexus-review-queue='true']")) {
         refreshNexusPilotReviewQueue({ rerender: false }).catch(() => {});
+      }
+    }, 0);
+  }
+  if (!nexusKnowledgeStatus) {
+    setTimeout(() => {
+      if (experienceMode === "user" && document.querySelector("[data-nexus-knowledge-rail='true']")) {
+        refreshNexusKnowledgeRail({ rerender: false }).catch(() => {});
       }
     }, 0);
   }
@@ -35406,6 +35617,18 @@ function handleNexusStandardUserHomeClick(event) {
   if (submit) {
     const input = $("#nexusCommandCenterInput");
     const command = input?.value?.trim() || "What can Nexus do?";
+    if (isNexusLiveKnowledgeQuestion(command)) {
+      event.preventDefault();
+      event.stopPropagation();
+      event.stopImmediatePropagation?.();
+      if (input) input.value = command;
+      setCommandInputs(command);
+      runNexusKnowledgeQuery(command).catch(error => {
+        nexusKnowledgeActionStatus = error.message || "Knowledge rail action needs attention.";
+        if (experienceMode === "user") renderUserWorkspace();
+      });
+      return true;
+    }
     if (!runNexusStandardUserHomeLocalCommand(command)) return false;
     event.preventDefault();
     event.stopPropagation();
@@ -35482,6 +35705,7 @@ function bindStatic() {
   document.addEventListener("click", async event => {
     if (await handleAssistantRuntimeLocalToolClick(event)) return;
     if (handleAssistantRuntimeFollowUpClick(event)) return;
+    if (await handleNexusKnowledgeRailClick(event)) return;
     if (await handleNexusProductionRailsClick(event)) return;
     if (await handleNexusPilotReviewQueueClick(event)) return;
     if (await handleNexusPilotPlatformActionClick(event)) return;
@@ -35490,6 +35714,14 @@ function bindStatic() {
     if (earlyCommandCenterSubmit) {
       const input = $("#nexusCommandCenterInput");
       const command = input?.value?.trim() || "What can Nexus do?";
+      if (isNexusLiveKnowledgeQuestion(command)) {
+        event.preventDefault();
+        event.stopPropagation();
+        if (input) input.value = command;
+        setCommandInputs(command);
+        await runNexusKnowledgeQuery(command);
+        return;
+      }
       const panelModeId = detectNexusHomeModePanelId(command);
       if (panelModeId) {
         const panelResult = buildNexusHomeModePanelResult(panelModeId, command);
@@ -35635,6 +35867,10 @@ function bindStatic() {
       const command = input?.value?.trim() || "What can Nexus do?";
       if (input) input.value = command;
       setCommandInputs(command);
+      if (isNexusLiveKnowledgeQuestion(command)) {
+        await runNexusKnowledgeQuery(command);
+        return;
+      }
       const panelModeId = detectNexusHomeModePanelId(command);
       if (panelModeId) {
         const panelResult = buildNexusHomeModePanelResult(panelModeId, command);

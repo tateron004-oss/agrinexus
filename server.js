@@ -34,8 +34,8 @@ const AI_MODEL = process.env.OPENAI_MODEL || "gpt-5.4-mini";
 const AI_REASONING_MODEL = process.env.OPENAI_REASONING_MODEL || process.env.OPENAI_AGENT_MODEL || AI_MODEL;
 const AI_TRANSLATION_MODEL = process.env.OPENAI_TRANSLATION_MODEL || process.env.OPENAI_AGENT_MODEL || AI_MODEL;
 const AGRINEXUS_RELEASE = "2026-06-16-operational-readiness";
-const AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-340";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v319";
+const AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-341";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v320";
 const PRODUCT_IDENTITY = Object.freeze({
   productName: "Nexus Workforce AI",
   assistantName: "Nexus",
@@ -27733,7 +27733,82 @@ const NEXUS_PRODUCTION_ROLES = Object.freeze([
 
 const NEXUS_PRODUCTION_STORAGE_MODES = Object.freeze(["local_json", "memory", "external_db_placeholder"]);
 
+const NEXUS_KNOWLEDGE_DISABLED_MESSAGE = "Live internet retrieval is not configured yet. Nexus can still use built-in guidance and prepare a question for review.";
+
+const NEXUS_KNOWLEDGE_TRUSTED_SOURCES = Object.freeze({
+  agriculture: {
+    label: "Agriculture",
+    preferredSources: ["FAO", "agricultural extension services", "land-grant universities", "government agriculture ministries", "reputable NGOs", "research institutions"],
+    safetyNote: "General guidance must be checked against local crop, soil, weather, and field conditions. Nexus does not perform a local field diagnosis.",
+    recordType: "agriculture_request"
+  },
+  health: {
+    label: "Health/chronic care education",
+    preferredSources: ["WHO", "CDC", "NIH", "Mayo Clinic", "MedlinePlus", "national health ministries", "peer-reviewed sources"],
+    safetyNote: "Education only. Nexus does not diagnose, prescribe, change medication, replace clinician advice, or handle emergencies.",
+    recordType: "chronic_care_reading"
+  },
+  telehealth: {
+    label: "Telehealth preparation",
+    preferredSources: ["WHO", "CDC", "NIH", "MedlinePlus", "national health ministries", "verified telehealth program guidance"],
+    safetyNote: "Preparation only. Nexus does not book visits or connect a clinician unless a verified provider integration is configured and approved.",
+    recordType: "telehealth_intake"
+  },
+  pharmacy: {
+    label: "Pharmacy education",
+    preferredSources: ["MedlinePlus", "NIH", "FDA", "WHO", "national pharmacy or medicine regulators", "verified pharmacy education sources"],
+    safetyNote: "Education only. Nexus does not refill prescriptions, prescribe, change dosage, or contact a pharmacy.",
+    recordType: "pharmacy_note"
+  },
+  mobileClinic: {
+    label: "Mobile clinic/community health information",
+    preferredSources: ["national health ministries", "local public health agencies", "verified mobile clinic operators", "WHO", "NGOs"],
+    safetyNote: "Information and preparation only. Nexus does not dispatch mobile clinics or request transportation.",
+    recordType: "mobile_clinic_request"
+  },
+  learning: {
+    label: "Learning/literacy",
+    preferredSources: ["official training providers", "universities", "government education programs", "recognized NGOs", "reputable literacy resources"],
+    safetyNote: "Nexus can prepare learning steps and questions; enrollment or credentialing requires a connected provider.",
+    recordType: "learning_plan"
+  },
+  jobs: {
+    label: "Jobs/workforce",
+    preferredSources: ["official labor data", "government workforce sources", "training providers", "reputable job and career sources"],
+    safetyNote: "Nexus must not claim a job is available unless retrieved from a current source.",
+    recordType: "jobs_workforce_plan"
+  },
+  marketplace: {
+    label: "AgriTrade/marketplace research",
+    preferredSources: ["official market information services", "commodity exchanges", "agriculture ministries", "reputable trade data", "buyer/seller documentation"],
+    safetyNote: "Nexus distinguishes general commerce guidance from current market data and does not claim current prices unless retrieved.",
+    recordType: "agritrade_marketplace_draft"
+  },
+  maps: {
+    label: "Maps/field visit research",
+    preferredSources: ["official maps", "public infrastructure sources", "verified local program pages", "weather and route providers when configured"],
+    safetyNote: "Nexus uses typed locations only unless a separate location permission path is approved.",
+    recordType: "field_visit_plan"
+  },
+  general: {
+    label: "General Nexus questions",
+    preferredSources: ["official sources", "reputable public references", "source-backed organization pages"],
+    safetyNote: "Nexus should identify uncertainty and avoid unsupported claims.",
+    recordType: "offline_queue_item"
+  }
+});
+
 const NEXUS_PRODUCTION_INTEGRATIONS = Object.freeze([
+  {
+    id: "internet-retrieval",
+    name: "Live knowledge / internet retrieval",
+    type: "knowledge",
+    enabledFlag: "NEXUS_LIVE_KNOWLEDGE_ENABLED",
+    requiredEnv: [],
+    oneOfEnv: ["TAVILY_API_KEY", "BRAVE_SEARCH_API_KEY", "EXA_API_KEY", "OPENAI_API_KEY"],
+    riskTier: "low",
+    capability: "Retrieve current source-backed public information when a configured search provider is available; disabled state remains honest."
+  },
   {
     id: "telehealth-provider",
     name: "Telehealth provider",
@@ -27818,6 +27893,8 @@ function ensureNexusProductionRailsState(db) {
   if (!Array.isArray(db.nexusIntegrationAttempts)) db.nexusIntegrationAttempts = [];
   if (!Array.isArray(db.nexusExportDeleteRequests)) db.nexusExportDeleteRequests = [];
   if (!Array.isArray(db.nexusProductionReadinessEvents)) db.nexusProductionReadinessEvents = [];
+  if (!Array.isArray(db.nexusKnowledgeQueries)) db.nexusKnowledgeQueries = [];
+  if (!Array.isArray(db.nexusKnowledgeSavedResults)) db.nexusKnowledgeSavedResults = [];
   const profile = db.nexusPilotProfiles[0];
   if (profile) {
     profile.accountId = profile.accountId || "standard-user-local";
@@ -27871,6 +27948,17 @@ function nexusProductionIntegrationStatus(db, env = process.env) {
       if (found.present) configuredEnv.push(found.name);
       else missing.push(envName);
     }
+    if (Array.isArray(integration.oneOfEnv) && integration.oneOfEnv.length) {
+      const oneOfConfigured = integration.oneOfEnv.some(envName => {
+        if (envName === "OPENAI_API_KEY") {
+          return nexusFlagEnabled(env, "OPENAI_WEB_SEARCH_ENABLED") && nexusEnvValue(env, "OPENAI_API_KEY").present;
+        }
+        const found = nexusEnvValue(env, envName);
+        if (found.present) configuredEnv.push(found.name);
+        return found.present;
+      });
+      if (!oneOfConfigured) missing.push(integration.oneOfEnv.join(" or "));
+    }
     const configured = missing.length === 0;
     return {
       id: integration.id,
@@ -27899,6 +27987,261 @@ function nexusProductionIntegrationStatus(db, env = process.env) {
       capability: integration.capability
     };
   });
+}
+
+function nexusKnowledgeSourceList() {
+  return Object.entries(NEXUS_KNOWLEDGE_TRUSTED_SOURCES).map(([id, item]) => ({
+    id,
+    label: item.label,
+    preferredSources: item.preferredSources,
+    safetyNote: item.safetyNote,
+    recordType: item.recordType
+  }));
+}
+
+function nexusKnowledgeProviderStatus(env = process.env) {
+  const providerPreference = String(env.WEB_SEARCH_PROVIDER || "").trim().toLowerCase();
+  const openAiReady = nexusFlagEnabled(env, "OPENAI_WEB_SEARCH_ENABLED") && Boolean(String(env.OPENAI_API_KEY || "").trim());
+  const providerOrder = [
+    ["tavily", "TAVILY_API_KEY"],
+    ["brave", "BRAVE_SEARCH_API_KEY"],
+    ["exa", "EXA_API_KEY"],
+    ["openai-web-search", "OPENAI_API_KEY"]
+  ];
+  const preferred = providerOrder.find(([provider]) => provider === providerPreference);
+  const selected = preferred && (preferred[1] === "OPENAI_API_KEY" ? openAiReady : Boolean(String(env[preferred[1]] || "").trim()))
+    ? preferred
+    : providerOrder.find(([, envName]) => envName === "OPENAI_API_KEY" ? openAiReady : Boolean(String(env[envName] || "").trim()));
+  const enabled = nexusFlagEnabled(env, "NEXUS_LIVE_KNOWLEDGE_ENABLED");
+  const configured = Boolean(selected);
+  const missingEnv = configured ? [] : ["TAVILY_API_KEY or BRAVE_SEARCH_API_KEY or EXA_API_KEY or OPENAI_WEB_SEARCH_ENABLED + OPENAI_API_KEY"];
+  return {
+    ok: true,
+    enabled,
+    configured,
+    provider: configured ? selected[0] : "not-configured",
+    providerEnvName: configured ? selected[1] : "",
+    testability: !enabled ? "disabled" : configured ? "ready" : "missing_config",
+    missingEnv,
+    categories: nexusKnowledgeSourceList().map(item => item.id),
+    disabledMessage: NEXUS_KNOWLEDGE_DISABLED_MESSAGE,
+    noFakeCitations: true,
+    noExecutionAuthorized: true,
+    noLocationPermissionRequested: true,
+    noDispatchAuthorized: true
+  };
+}
+
+function nexusKnowledgeCategoryForQuestion(question = "") {
+  const lower = String(question || "").toLowerCase();
+  if (/\b(telehealth|virtual visit|video visit|doctor visit|provider visit|intake)\b/.test(lower)) return "telehealth";
+  if (/\b(pharmacy|medicine|medication|drug|prescription|refill|insulin storage|safe storage practices for insulin)\b/.test(lower)) return "pharmacy";
+  if (/\b(mobile clinic|community health|outreach clinic|clinic schedule|clinic van)\b/.test(lower)) return "mobileClinic";
+  if (/\b(blood pressure|hypertension|diabetes|obesity|chronic|health|symptom|doctor|clinic|medical|patient)\b/.test(lower)) return "health";
+  if (/\b(crop|maize|tomato|tomatoes|cassava|soil|pest|farm|farmer|agriculture|irrigation|fertilizer|yellow leaves)\b/.test(lower)) return "agriculture";
+  if (/\b(job|jobs|workforce|career|training|solar installation|skills|employment)\b/.test(lower)) return "jobs";
+  if (/\b(lesson|learning|literacy|course|study|school|training)\b/.test(lower)) return "learning";
+  if (/\b(price|market|buyer|seller|sell|agritrade|commodity|current market price)\b/.test(lower)) return "marketplace";
+  if (/\b(route|map|field visit|distance|travel|directions)\b/.test(lower)) return "maps";
+  return "general";
+}
+
+function nexusKnowledgeNeedsRetrieval(question = "") {
+  const lower = String(question || "").toLowerCase();
+  return /\b(current|latest|today|now|recent|source|sources|cite|citation|price|market|available|growing|what causes|what should|safe storage|advice|guidance|training|jobs|weather)\b/.test(lower);
+}
+
+function normalizeNexusKnowledgeCitations(results = []) {
+  return (Array.isArray(results) ? results : [])
+    .filter(item => item && item.url)
+    .slice(0, 5)
+    .map(item => ({
+      title: sanitizePilotText(item.title || item.url || "Source", 180),
+      url: sanitizePilotText(item.url || "", 500),
+      source: sanitizePilotText(item.source || item.title || item.url || "Source", 180),
+      snippet: sanitizePilotText(item.snippet || "", 280)
+    }));
+}
+
+function nexusKnowledgeSafetyCopy(category = "general") {
+  const source = NEXUS_KNOWLEDGE_TRUSTED_SOURCES[category] || NEXUS_KNOWLEDGE_TRUSTED_SOURCES.general;
+  if (category === "health" || category === "telehealth" || category === "pharmacy" || category === "mobileClinic") {
+    return `${source.safetyNote} If symptoms may be urgent, contact local emergency services or a qualified clinician immediately.`;
+  }
+  return source.safetyNote;
+}
+
+function buildNexusKnowledgeDisabledResult(question = "", category = "general") {
+  const source = NEXUS_KNOWLEDGE_TRUSTED_SOURCES[category] || NEXUS_KNOWLEDGE_TRUSTED_SOURCES.general;
+  return {
+    ok: true,
+    retrievalStatus: "disabled",
+    sourceBacked: false,
+    provider: "not-configured",
+    question: sanitizePilotText(question, 260),
+    category,
+    categoryLabel: source.label,
+    answer: NEXUS_KNOWLEDGE_DISABLED_MESSAGE,
+    citations: [],
+    retrievalCheckedAt: new Date().toISOString(),
+    safetyNote: nexusKnowledgeSafetyCopy(category),
+    nextStep: "Nexus can save this question locally or prepare it for human review.",
+    noExecutionAuthorized: true,
+    noLocationPermissionRequested: true,
+    noDispatchAuthorized: true,
+    noFakeCitations: true
+  };
+}
+
+async function runNexusKnowledgeProviderQuery(question = "", category = "general") {
+  const query = extractKnowledgeSearchQuery(question);
+  const attempts = [
+    () => fetchProviderBridgeKnowledge(query, question),
+    () => fetchTavilyKnowledge(query),
+    () => fetchBraveKnowledge(query)
+  ];
+  const errors = [];
+  for (const attempt of attempts) {
+    try {
+      const result = await attempt();
+      const citations = normalizeNexusKnowledgeCitations(result?.results || []);
+      if (result && citations.length) {
+        return {
+          ok: true,
+          provider: result.provider || "web-search",
+          query,
+          answer: sanitizePilotText(result.answer || citations.map(item => item.snippet).filter(Boolean).slice(0, 2).join(" "), 1400),
+          citations,
+          retrievalCheckedAt: new Date().toISOString()
+        };
+      }
+      if (result && !citations.length) errors.push(`${result.provider || "provider"} returned no citable sources`);
+    } catch (error) {
+      errors.push(error.message || String(error));
+    }
+  }
+  return {
+    ok: false,
+    provider: "web-search",
+    query,
+    errors: errors.slice(0, 3),
+    providerError: errors[0] || "No configured provider returned citable sources.",
+    retrievalCheckedAt: new Date().toISOString()
+  };
+}
+
+async function nexusKnowledgeQuery(db, body = {}, user = null, env = process.env) {
+  ensureNexusProductionRailsState(db);
+  const question = sanitizePilotText(body.question || body.command || body.query || "", 500);
+  if (!question) return { ok: false, error: "question_required" };
+  const category = NEXUS_KNOWLEDGE_TRUSTED_SOURCES[body.category] ? body.category : nexusKnowledgeCategoryForQuestion(question);
+  const status = nexusKnowledgeProviderStatus(env);
+  const source = NEXUS_KNOWLEDGE_TRUSTED_SOURCES[category] || NEXUS_KNOWLEDGE_TRUSTED_SOURCES.general;
+  let result;
+  if (!status.enabled || !status.configured) {
+    result = buildNexusKnowledgeDisabledResult(question, category);
+  } else {
+    const providerResult = await runNexusKnowledgeProviderQuery(question, category);
+    if (providerResult.ok) {
+      result = {
+        ok: true,
+        retrievalStatus: "retrieved",
+        sourceBacked: true,
+        provider: providerResult.provider,
+        query: providerResult.query,
+        question,
+        category,
+        categoryLabel: source.label,
+        answer: providerResult.answer || "Nexus retrieved source-backed information. Review the citations before acting.",
+        citations: providerResult.citations,
+        retrievalCheckedAt: providerResult.retrievalCheckedAt,
+        safetyNote: nexusKnowledgeSafetyCopy(category),
+        nextStep: category === "health" || category === "telehealth" || category === "pharmacy"
+          ? "Review this education with a qualified provider before making care decisions."
+          : "Save this answer locally or use it to prepare your next Nexus workflow.",
+        confidence: providerResult.citations.length >= 2 ? "medium" : "limited",
+        noExecutionAuthorized: true,
+        noLocationPermissionRequested: true,
+        noDispatchAuthorized: true
+      };
+    } else {
+      result = {
+        ...buildNexusKnowledgeDisabledResult(question, category),
+        retrievalStatus: "failed_safely",
+        provider: providerResult.provider || status.provider,
+        providerError: providerResult.providerError,
+        errors: providerResult.errors || [],
+        answer: "Live retrieval was configured but failed safely. Nexus did not fabricate sources and can still prepare the question for review."
+      };
+    }
+  }
+  const queryRecord = {
+    id: crypto.randomUUID(),
+    questionSummary: sanitizePilotText(question, 180),
+    category,
+    categoryLabel: source.label,
+    retrievalStatus: result.retrievalStatus,
+    sourceBacked: Boolean(result.sourceBacked),
+    provider: result.provider || status.provider,
+    citationCount: result.citations?.length || 0,
+    createdAt: new Date().toISOString(),
+    noExecutionAuthorized: true,
+    noSensitiveDetailLogged: true
+  };
+  db.nexusKnowledgeQueries.unshift(queryRecord);
+  addNexusPilotAuditEvent(db, "knowledge_query_checked", {
+    actor: user?.name || "Standard User",
+    role: user?.role || "Standard User",
+    mode: category,
+    description: `Knowledge query checked for ${source.label}. Retrieval status: ${result.retrievalStatus}. No execution occurred.`
+  });
+  return { ok: true, status, result: { ...result, queryId: queryRecord.id }, audit: db.nexusPilotAuditEvents[0] };
+}
+
+function nexusKnowledgeSaveResult(db, body = {}, user = null) {
+  ensureNexusProductionRailsState(db);
+  const queryId = sanitizePilotText(body.queryId || "", 120);
+  const category = NEXUS_KNOWLEDGE_TRUSTED_SOURCES[body.category] ? body.category : "general";
+  const source = NEXUS_KNOWLEDGE_TRUSTED_SOURCES[category] || NEXUS_KNOWLEDGE_TRUSTED_SOURCES.general;
+  const record = buildNexusPilotRecord(db, {
+    type: source.recordType,
+    sourceMode: category,
+    summary: sanitizePilotText(body.summary || body.answer || "Source-backed answer saved locally for review.", 900),
+    payload: {
+      question: sanitizePilotText(body.question || "", 400),
+      category: source.label,
+      retrievalStatus: sanitizePilotText(body.retrievalStatus || "", 80),
+      provider: sanitizePilotText(body.provider || "", 80),
+      citationCount: String(Array.isArray(body.citations) ? body.citations.length : 0),
+      queryId
+    },
+    status: "draft"
+  }, user);
+  const saved = {
+    id: crypto.randomUUID(),
+    queryId,
+    recordId: record.id,
+    category,
+    recordType: record.type,
+    createdAt: new Date().toISOString(),
+    queueRequested: Boolean(body.queueForReview),
+    noExternalAction: true
+  };
+  db.nexusKnowledgeSavedResults.unshift(saved);
+  let queueResult = null;
+  if (body.queueForReview) {
+    queueResult = nexusPilotQueueRecordForReview(db, record, user);
+  }
+  return {
+    ok: true,
+    record,
+    saved,
+    queueStatus: queueResult?.error || (queueResult?.queueItem ? "queued_for_local_review" : "not_requested"),
+    queueItem: queueResult?.queueItem || null,
+    consentCopy: queueResult?.consentCopy || "",
+    audit: db.nexusPilotAuditEvents[0],
+    noExternalAction: true
+  };
 }
 
 function nexusProductionAdminOperations(db, env = process.env) {
@@ -28070,6 +28413,27 @@ async function api(req, res, url) {
 
   if (url.pathname === "/api/nexus/integrations/status" && req.method === "GET") {
     return send(res, 200, { ok: true, integrations: nexusProductionIntegrationStatus(db, process.env) });
+  }
+
+  if (url.pathname === "/api/nexus/knowledge/status" && req.method === "GET") {
+    return send(res, 200, nexusKnowledgeProviderStatus(process.env));
+  }
+
+  if (url.pathname === "/api/nexus/knowledge/trusted-sources" && req.method === "GET") {
+    return send(res, 200, { ok: true, categories: nexusKnowledgeSourceList(), safety: "Trusted source preferences guide retrieval. Nexus still shows citations and safety limits for user review." });
+  }
+
+  if (url.pathname === "/api/nexus/knowledge/query" && req.method === "POST") {
+    const result = await nexusKnowledgeQuery(db, await readBody(req), user, process.env);
+    if (!result.ok) return send(res, 400, result);
+    await writeDb(db);
+    return send(res, 200, result);
+  }
+
+  if (url.pathname === "/api/nexus/knowledge/save-result" && req.method === "POST") {
+    const result = nexusKnowledgeSaveResult(db, await readBody(req), user);
+    await writeDb(db);
+    return send(res, 200, result);
   }
 
   if (url.pathname === "/api/nexus/integrations/logs" && req.method === "GET") {

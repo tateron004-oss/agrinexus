@@ -9388,6 +9388,117 @@ body.user-mode .nexus-production-rails-status {
   background: rgba(239, 248, 252, .82);
 }
 
+body.user-mode .nexus-knowledge-rail {
+  display: grid;
+  gap: 14px;
+  margin-top: 16px;
+  padding: 16px;
+  border: 1px solid rgba(27, 127, 75, .2);
+  border-radius: 18px;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, .97), rgba(239, 248, 242, .9)),
+    radial-gradient(circle at top right, rgba(247, 173, 55, .18), transparent 38%);
+  box-shadow: 0 14px 34px rgba(18, 58, 76, .08);
+}
+
+body.user-mode .nexus-knowledge-rail-header,
+body.user-mode .nexus-knowledge-query-row,
+body.user-mode .nexus-knowledge-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+body.user-mode .nexus-knowledge-rail-header strong,
+body.user-mode .nexus-knowledge-answer-card strong {
+  display: block;
+  color: #153b32;
+  font-weight: 950;
+}
+
+body.user-mode .nexus-knowledge-rail-header small,
+body.user-mode .nexus-knowledge-answer-card small,
+body.user-mode .nexus-knowledge-answer-card span,
+body.user-mode .nexus-knowledge-action-status {
+  display: block;
+  color: #365760;
+  line-height: 1.35;
+}
+
+body.user-mode .nexus-knowledge-query-row label {
+  display: grid;
+  flex: 1 1 280px;
+  gap: 5px;
+  color: #173240;
+  font-weight: 850;
+}
+
+body.user-mode .nexus-knowledge-query-row input {
+  min-height: 42px;
+  border: 1px solid rgba(23, 50, 64, .16);
+  border-radius: 14px;
+  padding: 0 12px;
+  background: #ffffff;
+}
+
+body.user-mode .nexus-knowledge-source-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+body.user-mode .nexus-knowledge-source-row span {
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(27, 127, 75, .1);
+  color: #174436;
+  font-weight: 800;
+}
+
+body.user-mode .nexus-knowledge-answer-card {
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid rgba(42, 121, 182, .14);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, .9);
+  box-shadow: 0 8px 20px rgba(23, 50, 64, .06);
+}
+
+body.user-mode .nexus-knowledge-answer-card p,
+body.user-mode .nexus-knowledge-action-status {
+  margin: 0;
+}
+
+body.user-mode .nexus-knowledge-citations {
+  display: grid;
+  gap: 7px;
+}
+
+body.user-mode .nexus-knowledge-citations a {
+  color: #0f5d87;
+  font-weight: 850;
+  text-decoration: none;
+}
+
+body.user-mode .nexus-knowledge-rail button {
+  min-height: 36px;
+  border: 1px solid rgba(27, 127, 75, .26);
+  border-radius: 999px;
+  background: #ffffff;
+  color: #174436;
+  font-weight: 850;
+  box-shadow: 0 8px 18px rgba(23, 68, 54, .07);
+}
+
+body.user-mode .nexus-knowledge-rail button:hover,
+body.user-mode .nexus-knowledge-rail button:focus-visible {
+  background: #eaf8f0;
+  border-color: #1b7f4b;
+}
+
   body.user-mode .nexus-pilot-review-item button {
     width: auto;
     min-height: 34px;

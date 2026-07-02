@@ -25,12 +25,15 @@ function excludes(source, token, label) {
   "NEXUS_PRODUCTION_ROLES",
   "NEXUS_PRODUCTION_STORAGE_MODES",
   "NEXUS_PRODUCTION_INTEGRATIONS",
+  "NEXUS_KNOWLEDGE_TRUSTED_SOURCES",
+  "NEXUS_LIVE_KNOWLEDGE_ENABLED",
   "function ensureNexusProductionRailsState",
   "function nexusProductionStorageStatus",
   "function nexusProductionIntegrationStatus",
   "function nexusProductionAdminOperations",
   "function nexusProductionPrivacySummary",
   "function nexusProductionReadiness",
+  "function nexusKnowledgeProviderStatus",
   "function nexusCreateExportDeleteRequest",
   "function nexusPrepareIntegrationAttempt"
 ].forEach(token => includes(server, token, `server production rail contract ${token}`));
@@ -41,6 +44,7 @@ function excludes(source, token, label) {
   "/api/nexus/production-readiness",
   "/api/nexus/storage/status",
   "/api/nexus/integrations/status",
+  "/api/nexus/knowledge/status",
   "/api/nexus/integrations/logs",
   "\\/api\\/nexus\\/integrations\\/([^/]+)\\/attempt",
   "/api/nexus/admin/operations",
@@ -70,6 +74,9 @@ function excludes(source, token, label) {
   "TWILIO_AUTH_TOKEN",
   "TWILIO_FROM_NUMBER",
   "TWILIO_PHONE_NUMBER",
+  "TAVILY_API_KEY",
+  "BRAVE_SEARCH_API_KEY",
+  "EXA_API_KEY",
   "GOOGLE_MAPS_API_KEY",
   "STRIPE_SECRET_KEY",
   "MOODLE_BASE_URL",
@@ -80,6 +87,7 @@ function excludes(source, token, label) {
   "NEXUS_STORAGE_MODE=local_json",
   "NEXUS_EXTERNAL_DATABASE_URL=",
   "NEXUS_PUBLIC_APP_URL=",
+  "NEXUS_LIVE_KNOWLEDGE_ENABLED=false",
   "NEXUS_COMPLIANCE_REVIEW_STATUS=requires_legal_review",
   "NEXUS_TELEHEALTH_PROVIDER_ENABLED=false",
   "NEXUS_PHARMACY_PROVIDER_ENABLED=false",
@@ -91,6 +99,8 @@ function excludes(source, token, label) {
   "let nexusProductionReadinessStatus",
   "function renderNexusProductionPlatformRailsPanel",
   "function refreshNexusProductionPlatformRails",
+  "function renderNexusKnowledgeRailPanel",
+  'data-testid="nexus-knowledge-rail"',
   "async function handleNexusProductionRailsClick",
   'data-testid="nexus-production-readiness"',
   'data-testid="nexus-account-settings"',
@@ -104,6 +114,7 @@ function excludes(source, token, label) {
   "/api/nexus/production-readiness",
   "/api/nexus/storage/status",
   "/api/nexus/integrations/status",
+  "/api/nexus/knowledge/status",
   "/api/nexus/admin/operations",
   "/api/nexus/privacy/summary",
   "No live provider, payment, pharmacy, emergency, message, call, location, or marketplace execution occurs from this panel"
@@ -124,8 +135,8 @@ function excludes(source, token, label) {
 ].forEach(token => includes(css, token, `production rail CSS ${token}`));
 
 [
-  "nexus-behavior-340",
-  "agrinexus-pwa-v319"
+  "nexus-behavior-341",
+  "agrinexus-pwa-v320"
 ].forEach(token => {
   includes(app, token, `app build ${token}`);
   includes(server, token, `server build ${token}`);
