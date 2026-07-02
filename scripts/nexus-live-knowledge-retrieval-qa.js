@@ -74,8 +74,41 @@ function excludes(source, token, label) {
   "OPENAI_WEB_SEARCH_ENABLED",
   "OPENAI_API_KEY",
   "WEB_SEARCH_PROVIDER",
-  "NEXUS_LIVE_KNOWLEDGE_ENABLED"
+  "NEXUS_LIVE_KNOWLEDGE_ENABLED",
+  "NEXUS_LIVE_KNOWLEDGE_PROVIDER",
+  "NEXUS_LIVE_KNOWLEDGE_PROVIDER_ENDPOINT",
+  "NEXUS_LIVE_KNOWLEDGE_MAX_RESULTS",
+  "NEXUS_LIVE_KNOWLEDGE_TIMEOUT_MS",
+  "NEXUS_LIVE_KNOWLEDGE_SAFE_MODE"
 ].forEach(token => includes(server, token, `knowledge provider env ${token}`));
+
+[
+  'provider: "tavily"',
+  'provider: "brave"',
+  'provider: "exa"',
+  'provider: "openai-web-search"',
+  'provider: "provider-endpoint"',
+  'requiredEnv: ["TAVILY_API_KEY"]',
+  'requiredEnv: ["BRAVE_SEARCH_API_KEY"]',
+  'requiredEnv: ["EXA_API_KEY"]',
+  'requiredEnv: ["OPENAI_WEB_SEARCH_ENABLED", "OPENAI_API_KEY"]',
+  'requiredEnv: ["NEXUS_LIVE_KNOWLEDGE_PROVIDER_ENDPOINT"]',
+  "supportedProviders",
+  "selectedProvider",
+  "unsupportedProvider",
+  "missingEnv"
+].forEach(token => includes(server, token, `provider readiness contract ${token}`));
+
+[
+  "function fetchExaKnowledge",
+  "https://api.exa.ai/search",
+  "function fetchConfiguredLiveKnowledgeEndpoint",
+  "NEXUS_LIVE_KNOWLEDGE_PROVIDER_ENDPOINT",
+  "function fetchOpenAiWebKnowledge",
+  "fetchTavilyKnowledge",
+  "fetchBraveKnowledge",
+  "normalizeNexusKnowledgeCitations"
+].forEach(token => includes(server, token, `provider retrieval path ${token}`));
 
 [
   "internet-retrieval",
@@ -126,12 +159,47 @@ function excludes(source, token, label) {
 
 [
   "NEXUS_LIVE_KNOWLEDGE_ENABLED=false",
+  "Supported NEXUS_LIVE_KNOWLEDGE_PROVIDER values:",
+  "tavily                 requires TAVILY_API_KEY",
+  "brave                  requires BRAVE_SEARCH_API_KEY",
+  "exa                    requires EXA_API_KEY",
+  "openai-web-search      requires OPENAI_WEB_SEARCH_ENABLED=true and OPENAI_API_KEY",
+  "provider-endpoint      requires NEXUS_LIVE_KNOWLEDGE_PROVIDER_ENDPOINT",
+  "NEXUS_LIVE_KNOWLEDGE_PROVIDER=",
+  "NEXUS_LIVE_KNOWLEDGE_PROVIDER_ENDPOINT=",
+  "NEXUS_LIVE_KNOWLEDGE_MAX_RESULTS=5",
+  "NEXUS_LIVE_KNOWLEDGE_TIMEOUT_MS=9000",
+  "NEXUS_LIVE_KNOWLEDGE_SAFE_MODE=true",
   "OPENAI_WEB_SEARCH_ENABLED=false",
   "WEB_SEARCH_PROVIDER=",
   "TAVILY_API_KEY=",
   "BRAVE_SEARCH_API_KEY=",
   "EXA_API_KEY="
 ].forEach(token => includes(envExample, token, `env example ${token}`));
+
+const setupDoc = read("docs/NEXUS_LIVE_KNOWLEDGE_PROVIDER_CONFIGURATION.md");
+[
+  "Nexus Live Knowledge Provider Configuration",
+  "`tavily`",
+  "`brave`",
+  "`exa`",
+  "`openai-web-search`",
+  "`provider-endpoint`",
+  "Do not commit `.env` or real keys.",
+  "Never paste API keys into tracked files",
+  "Disabled retrieval must remain useful and citation-free.",
+  "Nexus must not fabricate source names, URLs, freshness, providers, or citations."
+].forEach(token => includes(setupDoc, token, `setup documentation ${token}`));
+
+[
+  "replace-with-local-key"
+].forEach(token => includes(setupDoc, token, `setup documentation placeholder ${token}`));
+
+[
+  "sk-",
+  "tvly-",
+  "Bearer "
+].forEach(token => excludes(setupDoc, token, `setup documentation secret pattern ${token}`));
 
 [
   "nexus-behavior-345",
