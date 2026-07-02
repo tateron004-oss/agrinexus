@@ -18368,11 +18368,36 @@ function renderNexusAgenticBrainResultCards() {
         <article class="nexus-real-provider-card" data-nexus-agentic-result-card="${escapeHtml(card.type || "prepared")}">
           <strong>${escapeHtml(card.title || "Prepared item")}</strong>
           <span>${escapeHtml(card.status || "prepared locally")}</span>
+          ${renderNexusMediaProviderOptions(card)}
           ${card.localOnly ? `<small>${escapeHtml(translateText("Local-only"))}</small>` : ""}
           ${card.needsRealProvider ? `<small>${escapeHtml(translateText("Needs verified provider/partner integration before external action."))}</small>` : ""}
           ${card.blockedCategories?.length ? `<small>${escapeHtml(translateText("Blocked/gated"))}: ${card.blockedCategories.map(escapeHtml).join(", ")}</small>` : ""}
         </article>
       `).join("")}
+    </div>
+  `;
+}
+
+function renderNexusMediaProviderOptions(card = {}) {
+  const media = card.mediaMode || null;
+  const options = Array.isArray(media?.providerOptions) ? media.providerOptions : [];
+  if (!media) return "";
+  const safetyCopy = media.playbackStatus === "no_active_nexus_provider_playback"
+    ? "No active Nexus provider playback is running. Control music in the provider app if you opened it there."
+    : "Provider search links only. Nexus does not host, download, scrape, cache, or stream copyrighted music.";
+  return `
+    <div class="nexus-media-provider-card" data-nexus-media-provider-card="true">
+      <small>${escapeHtml(translateText("Requested"))}: ${escapeHtml(media.requestedMusicType || "Music")}</small>
+      <small>${escapeHtml(translateText(safetyCopy))}</small>
+      ${options.length ? `
+        <div class="nexus-media-provider-actions">
+          ${options.map(option => `
+            <a href="${escapeHtml(option.url)}" target="_blank" rel="noopener noreferrer" data-nexus-media-provider-link="${escapeHtml(option.id)}">
+              ${escapeHtml(translateText(option.label || "Open provider"))}${option.preferred ? ` ${escapeHtml(translateText("(preferred)"))}` : ""}
+            </a>
+          `).join("")}
+        </div>
+      ` : ""}
     </div>
   `;
 }
@@ -18398,6 +18423,7 @@ const NEXUS_COMMAND_CENTER_SHORTCUTS = Object.freeze([
   { id: "jobs", icon: "J", label: "Jobs", description: "Jobs, readiness, workforce pathways.", command: "Help me find jobs or training." },
   { id: "learning", icon: "L", label: "Learning", description: "Digital skills, AI literacy, certifications.", command: "Help me learn a new skill." },
   { id: "maps", icon: "M", label: "Maps", description: "Field visit route planning.", command: "Help me plan a field visit route." },
+  { id: "media", icon: "♪", label: "Media", description: "Music provider search links.", command: "Play Afrobeats." },
   { id: "messages", icon: "@", label: "Messages", description: "Draft only; no sending.", command: "Prepare a message, but do not send it." },
   { id: "reminders", icon: "R", label: "Reminders", description: "Local reminders and continuity.", command: "Create a reminder." },
   { id: "language", icon: "EN", label: "Language", description: "Switch language safely.", command: "Change language." },
@@ -18410,6 +18436,7 @@ function nexusCommandCenterExamples() {
     "Help me with my blood pressure.",
     "Prepare a provider summary.",
     "Help me with crop disease.",
+    "Play Afrobeats.",
     "Find farm jobs.",
     "Switch to Swahili.",
     "Prepare a WhatsApp message, but do not send it."

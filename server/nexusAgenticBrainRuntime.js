@@ -1,5 +1,6 @@
 const crypto = require("node:crypto");
 const productionRuntime = require("./nexusProductionRuntime");
+const mediaMode = require("./nexusMediaMode");
 const { safeText } = require("./nexusRuntimeAudit");
 
 const PROVIDER_CONNECTORS = [
@@ -40,6 +41,7 @@ const MATRIX = [
   ["reminders", "Complete and locally executable"],
   ["follow-ups", "Complete and locally executable"],
   ["verification", "Complete and locally executable"],
+  ["media/music provider handoff", "Complete as safe search handoff; playback requires user/provider action"],
   ["security", "Complete and locally executable"],
   ["compliance gates", "Complete and locally executable"],
   ["deployment readiness", "Complete but waiting for credentials/provider"]
@@ -296,6 +298,7 @@ function inferGoalParts(goal = "") {
   const text = goal.toLowerCase();
   const parts = [];
   if (/what can nexus do|what nexus can help|help me figure out|i need support|what is open|what did you prepare|what still needs a real provider|active cases|current tasks|summarize my current tasks|show what nexus can help/.test(text)) parts.push("general_assistant");
+  if (mediaMode.isMediaCommand(text)) parts.push("media");
   if (/blood pressure|bp\b|hypertension|htn\b|diabetes|diabetic|dm\b|glucose|blood sugar|fasting sugar|a1c|obesity|weight|bmi|rpm|rtm|remote patient|remote therapeutic|reading|provider|doctor|care team|provider report|care summary|clinical summary|telehealth|pharmacy|medication|mobile clinic|follow-up|follow up|pain|therapy|mobility/.test(text)) parts.push("medical");
   if (/provider report|care team report|care summary|clinical summary|provider summary|provider-ready|report/.test(text)) parts.push("provider_report");
   if (/telehealth|video visit|virtual visit/.test(text)) parts.push("telehealth");
@@ -669,7 +672,7 @@ function buildCapabilityResponse(profile) {
   return {
     ok: true,
     status: "capability_summary",
-    message: "Nexus can organize agriculture, healthcare/chronic-care, provider/care-team prep, marketplace/AgriTrade prep, workforce/jobs, learning/literacy, maps/field visit planning, communications drafts, multilingual commands, offline prep, reminders/continuity, safety gates, production capability status, RPM/RTM, telehealth prep, pharmacy questions, mobile clinic requests, and provider-onboarding packages. Live provider contact, diagnosis, prescribing, payment, emergency dispatch, calls, messages, location, camera, and drone dispatch remain gated until configured and approved.",
+    message: "Nexus can organize agriculture, healthcare/chronic-care, provider/care-team prep, marketplace/AgriTrade prep, workforce/jobs, learning/literacy, maps/field visit planning, communications drafts, Media/Music provider search handoffs, multilingual commands, offline prep, reminders/continuity, safety gates, production capability status, RPM/RTM, telehealth prep, pharmacy questions, mobile clinic requests, and provider-onboarding packages. Live provider contact, diagnosis, prescribing, payment, emergency dispatch, calls, messages, location, camera, drone dispatch, and credentialed media playback remain gated until configured and approved.",
     modesCovered: [
       "healthcare_chronic_care",
       "provider_care_team",
@@ -679,6 +682,7 @@ function buildCapabilityResponse(profile) {
       "learning_literacy",
       "maps_location_planning",
       "communications",
+      "media_music",
       "voice_natural_command",
       "multilingual",
       "offline",
@@ -708,6 +712,12 @@ async function handleCommand(body = {}, db = {}, env = process.env) {
   const parts = inferGoalParts(goal);
   const suppliedMeasurement = extractClinicalMeasurement(goal);
   if (!goal) return { ok: false, status: "missing_goal", message: "Tell Nexus what task or result you want." };
+
+  if (parts.includes("media")) {
+    const result = mediaMode.buildMediaResponse(goal);
+    addActivity(profile, { eventType: result.auditEvent.eventType, status: result.status, summary: goal });
+    return result;
+  }
 
   if (parts.includes("general_assistant") && /what can nexus do|what nexus can help|what still needs a real provider|show my active cases|active cases|current tasks|what is open|show what nexus can help/i.test(goal)) {
     const summary = buildCapabilityResponse(profile);

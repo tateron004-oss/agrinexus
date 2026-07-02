@@ -220,6 +220,14 @@
     return /\b(stop|pause|end)\b.*\b(music|rhythm|song|audio)\b/.test(text);
   }
 
+  function isMediaProviderHandoffCommand(command) {
+    const text = normalizeCommand(command).toLowerCase();
+    if (isKenyaMusicCommand(text) || isStopMusicCommand(text)) return false;
+    return /\b(play|open|use|start)\b.*\b(music|r\s*&\s*b|rnb|afrobeats?|afro beats?|african|nigerian|naija|amapiano|highlife|gospel|youtube|spotify|apple music|study|background)\b/.test(text)
+      || /\b(open this in|use)\b.*\b(youtube|spotify|apple music)\b/.test(text)
+      || /\b(music while i study|background music)\b/.test(text);
+  }
+
   function stopDemoMusic(options = {}) {
     demoMusicTimers.forEach(timer => window.clearTimeout(timer));
     demoMusicTimers = [];
@@ -500,6 +508,21 @@
       speak(response);
       return;
     }
+    if (isMediaProviderHandoffCommand(transcript)) {
+      try {
+        const result = await bridge?.submitSafeTranscript?.(transcript, { source: COMMAND_SOURCE, mediaProviderHandoff: true });
+        const response = normalizeCommand(result?.response) || "I prepared safe music provider options. Nexus is not hosting, downloading, or playing copyrighted music directly.";
+        bridge?.showResponse?.(response, { source: COMMAND_SOURCE, mediaProviderHandoff: true, blocked: false });
+        setTranscript(`Heard: ${transcript}`);
+        speak(response);
+      } catch (error) {
+        const response = "I can prepare safe music provider options, but I cannot host, download, or play copyrighted music directly.";
+        bridge?.showResponse?.(response, { source: COMMAND_SOURCE, mediaProviderHandoff: true, blocked: false });
+        setTranscript(`Heard: ${transcript}`);
+        speak(response);
+      }
+      return;
+    }
     try {
       const result = await bridge?.submitSafeTranscript?.(transcript, { source: COMMAND_SOURCE });
       const response = normalizeCommand(result?.response) || safeFallbackResponse(transcript);
@@ -628,6 +651,7 @@
     routeTranscript,
     runQuickPrompt,
     isHighRiskPrompt,
+    isMediaProviderHandoffCommand,
     speechSynthesisSupported,
     recognitionSupported: () => Boolean(recognitionCtor())
   };

@@ -8266,6 +8266,35 @@ body.user-mode .grandma-workflow:not(.hidden) .modal-actions button {
   line-height: 1.35;
 }
 
+.nexus-media-provider-card {
+  display: grid;
+  gap: 8px;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(20, 49, 58, .12);
+}
+
+.nexus-media-provider-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.nexus-media-provider-actions a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 34px;
+  padding: 7px 10px;
+  border: 1px solid rgba(20, 49, 58, .16);
+  border-radius: 8px;
+  background: #ffffff;
+  color: #14313a;
+  font-size: .78rem;
+  font-weight: 900;
+  text-decoration: none;
+}
+
 .nexus-real-provider-control input,
 .nexus-provider-contact-card input,
 .nexus-provider-contact-card textarea,
