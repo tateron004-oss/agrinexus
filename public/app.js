@@ -93,6 +93,7 @@ let nexusAgenticBrainMatrix = [];
 let nexusAgenticBrainLastResult = null;
 let nexusPilotPlatformLastRecord = null;
 let nexusPilotPlatformStatus = null;
+let nexusPilotReviewQueue = [];
 let nexusProviderContactBridgeCards = [];
 let nexusLearningProviderBridgeCards = [];
 let nexusMarketplaceBridgeCards = [];
@@ -18416,12 +18417,12 @@ function renderNexusHomeModePanel(card = {}) {
               return `
                 <label>
                   <span>${escapeHtml(translateText(label || name || "Field"))}</span>
-                  <input type="text" data-nexus-mode-field="${escapeHtml(name || label || "field")}" placeholder="${escapeHtml(translateText(placeholder || ""))}">
+                  <input type="text" data-nexus-mode-field="${escapeHtml(name || label || "field")}" data-testid="nexus-mode-field-${escapeHtml(panel.id || "mode")}-${escapeHtml(name || label || "field")}" placeholder="${escapeHtml(translateText(placeholder || ""))}">
                 </label>
               `;
             }).join("")}
           </div>
-          <button type="button" class="nexus-home-mode-summary-button" data-nexus-mode-summary="${escapeHtml(panel.id || "mode")}">
+          <button type="button" class="nexus-home-mode-summary-button" data-nexus-mode-summary="${escapeHtml(panel.id || "mode")}" data-testid="nexus-mode-prepare-summary-${escapeHtml(panel.id || "mode")}">
             ${escapeHtml(translateText("Prepare local summary"))}
           </button>
         </div>
@@ -18466,16 +18467,16 @@ function renderNexusPilotPlatformActions(card = {}) {
   const sensitive = NEXUS_PILOT_SENSITIVE_MODES.includes(modeId);
   const canQueueReview = modeId && modeId !== "media" && modeId !== "offline" && modeId !== "reminders";
   return `
-    <div class="nexus-pilot-platform-actions" data-nexus-pilot-platform-actions="${escapeHtml(modeId || "mode")}">
+    <div class="nexus-pilot-platform-actions" data-nexus-pilot-platform-actions="${escapeHtml(modeId || "mode")}" data-testid="nexus-pilot-platform-actions">
       <strong>${escapeHtml(translateText("Pilot workflow actions"))}</strong>
       <small>${escapeHtml(translateText("Local pilot records, review queue, reminders, and offline items only. No live provider, payment, pharmacy, emergency, message, call, location, camera, or dispatch action is executed."))}</small>
       <div>
-        <button type="button" data-nexus-pilot-action="save-draft" data-nexus-pilot-mode="${escapeHtml(modeId)}">${escapeHtml(translateText("Save draft"))}</button>
-        <button type="button" data-nexus-pilot-action="prepare-summary" data-nexus-pilot-mode="${escapeHtml(modeId)}">${escapeHtml(translateText("Prepare summary"))}</button>
-        ${sensitive ? `<button type="button" data-nexus-pilot-action="confirm-consent" data-nexus-pilot-mode="${escapeHtml(modeId)}">${escapeHtml(translateText("Confirm review consent"))}</button>` : ""}
-        ${canQueueReview ? `<button type="button" data-nexus-pilot-action="queue-review" data-nexus-pilot-mode="${escapeHtml(modeId)}">${escapeHtml(translateText("Queue for review"))}</button>` : ""}
-        <button type="button" data-nexus-pilot-action="queue-offline" data-nexus-pilot-mode="${escapeHtml(modeId)}">${escapeHtml(translateText("Queue offline"))}</button>
-        <button type="button" data-nexus-pilot-action="create-reminder" data-nexus-pilot-mode="${escapeHtml(modeId)}">${escapeHtml(translateText("Create reminder"))}</button>
+        <button type="button" data-nexus-pilot-action="save-draft" data-nexus-pilot-mode="${escapeHtml(modeId)}" data-testid="nexus-pilot-save-draft">${escapeHtml(translateText("Save draft"))}</button>
+        <button type="button" data-nexus-pilot-action="prepare-summary" data-nexus-pilot-mode="${escapeHtml(modeId)}" data-testid="nexus-pilot-prepare-summary">${escapeHtml(translateText("Prepare summary"))}</button>
+        ${sensitive ? `<button type="button" data-nexus-pilot-action="confirm-consent" data-nexus-pilot-mode="${escapeHtml(modeId)}" data-testid="nexus-pilot-confirm-consent">${escapeHtml(translateText("Confirm review consent"))}</button>` : ""}
+        ${canQueueReview ? `<button type="button" data-nexus-pilot-action="queue-review" data-nexus-pilot-mode="${escapeHtml(modeId)}" data-testid="nexus-pilot-queue-review">${escapeHtml(translateText("Queue for review"))}</button>` : ""}
+        <button type="button" data-nexus-pilot-action="queue-offline" data-nexus-pilot-mode="${escapeHtml(modeId)}" data-testid="nexus-pilot-queue-offline">${escapeHtml(translateText("Queue offline"))}</button>
+        <button type="button" data-nexus-pilot-action="create-reminder" data-nexus-pilot-mode="${escapeHtml(modeId)}" data-testid="nexus-pilot-create-reminder">${escapeHtml(translateText("Create reminder"))}</button>
       </div>
       <p data-nexus-pilot-action-status>${escapeHtml(translateText("Review this summary before saving or queueing it."))}</p>
     </div>
@@ -18525,7 +18526,11 @@ async function handleNexusPilotPlatformActionClick(event) {
   button.disabled = true;
   try {
     if (action === "refresh-status") {
-      await refreshNexusPilotPlatformStatus({ rerender: true });
+      await Promise.all([
+        refreshNexusPilotPlatformStatus({ rerender: false }),
+        refreshNexusPilotReviewQueue({ rerender: false })
+      ]);
+      if (experienceMode === "user") renderUserWorkspace();
       toast("Pilot status refreshed");
       return true;
     }
@@ -18578,7 +18583,11 @@ async function handleNexusPilotPlatformActionClick(event) {
       nexusPilotSetActionStatus(button, "Local reminder created. No SMS, push, or external calendar action occurred.");
       toast("Local reminder created");
     }
-    await refreshNexusPilotPlatformStatus({ rerender: false });
+    await Promise.all([
+      refreshNexusPilotPlatformStatus({ rerender: false }),
+      refreshNexusPilotReviewQueue({ rerender: false })
+    ]);
+    if (experienceMode === "user") renderUserWorkspace();
     return true;
   } catch (error) {
     nexusPilotSetActionStatus(button, error.message || "Pilot action needs attention.");
@@ -18592,7 +18601,7 @@ async function handleNexusPilotPlatformActionClick(event) {
 function renderNexusPilotPlatformStatusPanel() {
   const status = nexusPilotPlatformStatus || {};
   return `
-    <section class="nexus-pilot-status-panel" data-nexus-pilot-status-panel="true" aria-label="${escapeHtml(translateText("Nexus pilot status"))}">
+    <section class="nexus-pilot-status-panel" data-nexus-pilot-status-panel="true" data-testid="nexus-pilot-status" aria-label="${escapeHtml(translateText("Nexus pilot status"))}">
       <div>
         <span class="eyebrow">${escapeHtml(translateText("Local pilot platform"))}</span>
         <strong>${escapeHtml(translateText("Records, consent, review queue, reminders, and offline work"))}</strong>
@@ -18606,7 +18615,43 @@ function renderNexusPilotPlatformStatusPanel() {
         <div><dt>${escapeHtml(translateText("Reminders"))}</dt><dd>${escapeHtml(String(status.reminders ?? "0"))}</dd></div>
         <div><dt>${escapeHtml(translateText("Offline"))}</dt><dd>${escapeHtml(String(status.offlineQueueItems ?? "0"))}</dd></div>
       </dl>
-      <button type="button" data-nexus-pilot-action="refresh-status" data-nexus-pilot-mode="status">${escapeHtml(translateText("Refresh pilot status"))}</button>
+      <button type="button" data-nexus-pilot-action="refresh-status" data-nexus-pilot-mode="status" data-testid="nexus-pilot-refresh-status">${escapeHtml(translateText("Refresh pilot status"))}</button>
+    </section>
+  `;
+}
+
+function renderNexusPilotReviewQueuePanel() {
+  const queue = Array.isArray(nexusPilotReviewQueue) ? nexusPilotReviewQueue : [];
+  return `
+    <section class="nexus-pilot-review-queue" data-nexus-review-queue="true" data-testid="nexus-review-queue" aria-label="${escapeHtml(translateText("Provider/Admin local review queue"))}">
+      <div>
+        <span class="eyebrow">${escapeHtml(translateText("Provider/Admin local queue"))}</span>
+        <strong>${escapeHtml(translateText("Review-ready pilot items"))}</strong>
+        <small>${escapeHtml(translateText("Local review only. Notes and statuses do not contact providers, book visits, send messages, process payments, share location, fulfill pharmacy requests, or dispatch emergency help."))}</small>
+      </div>
+      ${queue.length ? `
+        <div class="nexus-pilot-review-list">
+          ${queue.slice(0, 6).map(item => `
+            <article class="nexus-pilot-review-item" data-nexus-review-item="${escapeHtml(item.id || "")}" data-testid="nexus-review-queue-item">
+              <strong>${escapeHtml(translateText(item.visibleTitle || item.type || "Review item"))}</strong>
+              <span>${escapeHtml(translateText("Status"))}: ${escapeHtml(item.status || "queued")} · ${escapeHtml(translateText("Consent"))}: ${escapeHtml(item.consentConfirmed ? translateText("confirmed") : translateText("needed"))}</span>
+              <small>${escapeHtml(item.visibleSummary || item.summary || translateText("Prepared locally for human review."))}</small>
+              <label>
+                <span>${escapeHtml(translateText("Provider/Admin note"))}</span>
+                <input type="text" data-nexus-review-note="${escapeHtml(item.id || "")}" data-testid="nexus-review-note-input" placeholder="${escapeHtml(translateText("Add a local review note"))}">
+              </label>
+              <div>
+                <button type="button" data-nexus-review-action="note" data-nexus-review-id="${escapeHtml(item.id || "")}" data-testid="nexus-review-add-note">${escapeHtml(translateText("Add note"))}</button>
+                <button type="button" data-nexus-review-action="status" data-nexus-review-status="reviewed" data-nexus-review-id="${escapeHtml(item.id || "")}" data-testid="nexus-review-mark-reviewed">${escapeHtml(translateText("Mark reviewed"))}</button>
+                <button type="button" data-nexus-review-action="status" data-nexus-review-status="needs_follow_up" data-nexus-review-id="${escapeHtml(item.id || "")}" data-testid="nexus-review-needs-follow-up">${escapeHtml(translateText("Needs follow-up"))}</button>
+              </div>
+              ${(item.providerAdminNotes || []).length ? `<small>${escapeHtml(translateText("Latest note"))}: ${escapeHtml(item.providerAdminNotes[0].note || "")}</small>` : ""}
+            </article>
+          `).join("")}
+        </div>
+      ` : `
+        <p>${escapeHtml(translateText("No local review queue items yet. Prepare a summary, record consent when required, then queue for review."))}</p>
+      `}
     </section>
   `;
 }
@@ -18619,6 +18664,54 @@ async function refreshNexusPilotPlatformStatus(options = {}) {
     return nexusPilotPlatformStatus;
   } catch {
     return null;
+  }
+}
+
+async function refreshNexusPilotReviewQueue(options = {}) {
+  try {
+    const result = await request("/api/nexus/review-queue", { method: "GET" });
+    nexusPilotReviewQueue = Array.isArray(result.queue) ? result.queue : [];
+    if (options.rerender !== false && experienceMode === "user") renderUserWorkspace();
+    return nexusPilotReviewQueue;
+  } catch {
+    return [];
+  }
+}
+
+async function handleNexusPilotReviewQueueClick(event) {
+  const button = event.target?.closest?.("[data-nexus-review-action]");
+  if (!button) return false;
+  event.preventDefault();
+  event.stopPropagation();
+  const queueId = button.dataset.nexusReviewId || "";
+  const action = button.dataset.nexusReviewAction || "";
+  if (!queueId) return true;
+  button.disabled = true;
+  try {
+    if (action === "note") {
+      const input = document.querySelector(`[data-nexus-review-note="${CSS.escape(queueId)}"]`);
+      await request(`/api/nexus/review-queue/${encodeURIComponent(queueId)}/note`, {
+        method: "POST",
+        body: { note: input?.value?.trim() || "Provider/Admin reviewed this local pilot item." }
+      });
+      toast("Local review note added");
+    } else if (action === "status") {
+      await request(`/api/nexus/review-queue/${encodeURIComponent(queueId)}/status`, {
+        method: "PATCH",
+        body: { status: button.dataset.nexusReviewStatus || "reviewed" }
+      });
+      toast("Local review status updated");
+    }
+    await Promise.all([
+      refreshNexusPilotPlatformStatus({ rerender: false }),
+      refreshNexusPilotReviewQueue({ rerender: true })
+    ]);
+    return true;
+  } catch (error) {
+    toast(error.message || "Local review update needs attention.");
+    return true;
+  } finally {
+    button.disabled = false;
   }
 }
 
@@ -19410,7 +19503,7 @@ function renderNexusModeLauncher() {
         const presentation = NEXUS_HOME_MODE_PRESENTATION[item.id] || {};
         const accent = presentation.accent || "green";
         return `
-        <button type="button" class="nexus-mode-card nexus-mode-card-${escapeHtml(accent)}" data-nexus-mode-shortcut="${escapeHtml(item.id)}" data-nexus-command="${escapeHtml(item.command)}" onclick="return window.nexusHandleStandardUserHomeShortcut ? !window.nexusHandleStandardUserHomeShortcut(event) : true">
+        <button type="button" class="nexus-mode-card nexus-mode-card-${escapeHtml(accent)}" data-nexus-mode-shortcut="${escapeHtml(item.id)}" data-nexus-command="${escapeHtml(item.command)}" data-testid="nexus-mode-card-${escapeHtml(item.id)}" onclick="return window.nexusHandleStandardUserHomeShortcut ? !window.nexusHandleStandardUserHomeShortcut(event) : true">
           <span class="nexus-mode-icon" aria-hidden="true">${escapeHtml(presentation.icon || item.icon)}</span>
           <strong>${translateText(presentation.title || item.label)}</strong>
           <small>${translateText(presentation.description || item.description)}</small>
@@ -19583,7 +19676,11 @@ async function refreshNexusAgenticBrainState() {
     nexusAgenticBrainActivity = Array.isArray(state.activity) ? state.activity : [];
     nexusAgenticBrainMatrix = Array.isArray(state.matrix) ? state.matrix : [];
   } catch (error) {
-    nexusAgenticBrainLastResult = { status: "failed_safely", message: error.message };
+    nexusAgenticBrainStatus = {
+      ...(nexusAgenticBrainStatus || {}),
+      status: "refresh_failed_safely",
+      lastRefreshError: error.message || "Nexus brain state refresh failed safely."
+    };
   }
 }
 
@@ -20125,6 +20222,7 @@ function renderUserWorkspace() {
   // Browse options and prepare questions before any transaction.
   // Standard User copy preserved: without sending; without buyer contact, orders, or payment; Change screen and voice language.
   target.innerHTML = `
+    <div data-testid="nexus-standard-user-home">
     ${renderNexusCommandCenterHeader()}
     ${renderNexusCommandCenterHero()}
     ${renderNexusModeLauncher()}
@@ -20132,6 +20230,8 @@ function renderUserWorkspace() {
     ${renderNexusAgenticBrainPanel()}
     ${renderNexusActiveWorkSummary()}
     ${renderNexusPilotPlatformStatusPanel()}
+    ${renderNexusPilotReviewQueuePanel()}
+    </div>
     <div class="nexus-command-hidden-agent-host" data-nexus-open-dialogue-agent-host="true" hidden>${renderNexusOpenDialogueAgentCard()}</div>
     <section id="userLanguagePanel" class="user-language-panel hidden" aria-label="${translateText("Choose language")}">
       <div class="user-language-header">
@@ -20157,16 +20257,21 @@ function renderUserWorkspace() {
   if (!nexusPilotPlatformStatus) {
     setTimeout(() => {
       if (experienceMode === "user" && document.querySelector("[data-nexus-pilot-status-panel='true']")) {
-        refreshNexusPilotPlatformStatus({ rerender: true }).catch(() => {});
+        refreshNexusPilotPlatformStatus({ rerender: false }).catch(() => {});
+      }
+    }, 0);
+  }
+  if (!nexusPilotReviewQueue.length) {
+    setTimeout(() => {
+      if (experienceMode === "user" && document.querySelector("[data-nexus-review-queue='true']")) {
+        refreshNexusPilotReviewQueue({ rerender: false }).catch(() => {});
       }
     }, 0);
   }
   if (!nexusProductionRuntimeStatus || !nexusAgenticBrainStatus) {
     setTimeout(() => {
       if (experienceMode === "user" && document.querySelector("[data-nexus-agentic-brain-panel='true']")) {
-        refreshNexusAgenticBrainState().then(() => {
-          if (experienceMode === "user") renderUserWorkspace();
-        }).catch(() => {});
+        refreshNexusAgenticBrainState().catch(() => {});
       }
     }, 0);
   }
@@ -35151,6 +35256,17 @@ function handleNexusStandardUserHomeClick(event) {
   const modeId = shortcut.dataset.nexusModeShortcut || "";
   const command = shortcut.dataset.nexusCommand || "";
   if (modeId === "language") return false;
+  if (modeId === "media") {
+    event.preventDefault();
+    event.stopPropagation();
+    event.stopImmediatePropagation?.();
+    const input = $("#nexusCommandCenterInput");
+    if (input) input.value = command || "Play music.";
+    setCommandInputs(command || "Play music.");
+    nexusAgenticBrainLastResult = buildNexusMediaMusicLocalResult(command || "Play music.");
+    renderUserWorkspace();
+    return true;
+  }
   if (NEXUS_HOME_MODE_IDS.includes(modeId)) {
     event.preventDefault();
     event.stopPropagation();
@@ -35164,17 +35280,6 @@ function handleNexusStandardUserHomeClick(event) {
       renderUserWorkspace();
       return true;
     }
-  }
-  if (modeId === "media") {
-    event.preventDefault();
-    event.stopPropagation();
-    event.stopImmediatePropagation?.();
-    const input = $("#nexusCommandCenterInput");
-    if (input) input.value = command || "Play music.";
-    setCommandInputs(command || "Play music.");
-    nexusAgenticBrainLastResult = buildNexusMediaMusicLocalResult(command || "Play music.");
-    renderUserWorkspace();
-    return true;
   }
   if (!runNexusStandardUserHomeLocalCommand(command)) return false;
   event.preventDefault();
@@ -35214,6 +35319,7 @@ function bindStatic() {
   document.addEventListener("click", async event => {
     if (await handleAssistantRuntimeLocalToolClick(event)) return;
     if (handleAssistantRuntimeFollowUpClick(event)) return;
+    if (await handleNexusPilotReviewQueueClick(event)) return;
     if (await handleNexusPilotPlatformActionClick(event)) return;
     if (handleNexusHomeModeSummaryClick(event)) return;
     const earlyCommandCenterSubmit = event.target.closest("[data-nexus-command-center-submit]");
