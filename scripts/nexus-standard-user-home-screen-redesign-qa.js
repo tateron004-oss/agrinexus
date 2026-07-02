@@ -25,6 +25,10 @@ function excludes(source, token, label) {
   "const NEXUS_HOME_MODE_IDS",
   "const NEXUS_HOME_MODE_PRESENTATION",
   "const NEXUS_HOME_SUGGESTED_ACTIONS",
+  "const NEXUS_HOME_MODE_PANEL_CONTENT",
+  "function buildNexusHomeModePanelResult",
+  "function detectNexusHomeModePanelId",
+  "function renderNexusHomeModePanel",
   "function renderNexusSuggestedActions",
   "function buildNexusCapabilityOverviewResult",
   "function runNexusStandardUserHomeLocalCommand",
@@ -38,6 +42,8 @@ function excludes(source, token, label) {
   "data-nexus-mode-shortcut",
   "onclick=\"return window.nexusHandleStandardUserHomeShortcut",
   "nexus-mode-card",
+  "data-nexus-home-mode-panel",
+  "nexus-home-mode-panel-actions",
   "nexus-suggested-action"
 ].forEach(token => includes(app, token, `home screen implementation token ${token}`));
 
@@ -69,6 +75,34 @@ function excludes(source, token, label) {
   "Prepare provider summary",
   "Open music/media"
 ].forEach(label => includes(app, label, `suggested action ${label}`));
+
+[
+  "Describe a crop issue",
+  "Record blood pressure",
+  "Start intake",
+  "Prepare clinic request",
+  "Prepare pharmacy checklist",
+  "Build literacy plan",
+  "Build skills checklist",
+  "Prepare seller question",
+  "Plan field visit",
+  "Play Afrobeats",
+  "Create reminder",
+  "Show offline queue"
+].forEach(label => includes(app, label, `mode panel quick action ${label}`));
+
+[
+  "Educational and planning support only",
+  "Nexus does not diagnose, prescribe, or replace clinical judgment",
+  "No live clinician is connected here",
+  "Nexus does not prescribe, change medication, request refills",
+  "Nexus does not dispatch a clinic, share your location",
+  "It does not apply, contact employers, or submit personal information",
+  "Nexus does not place orders, process payments, contact sellers",
+  "Nexus does not request browser location, share your location",
+  "Nexus does not host, download, rip, cache, or redistribute copyrighted music",
+  "High-risk actions remain skipped"
+].forEach(token => includes(app, token, `mode panel safety boundary ${token}`));
 
 [
   "Nexus, open agriculture help.",
@@ -117,6 +151,9 @@ function excludes(source, token, label) {
   "body.user-mode .nexus-suggested-actions",
   "body.user-mode .nexus-suggested-action-grid",
   "body.user-mode .nexus-agentic-brain-panel-empty",
+  "body.user-mode .nexus-home-mode-panel",
+  "body.user-mode .nexus-home-mode-panel-actions",
+  "body.user-mode .nexus-home-mode-panel-icon",
   "linear-gradient(135deg",
   "#1b7f4b",
   "#f4aa48",
@@ -133,14 +170,14 @@ function excludes(source, token, label) {
 ].forEach(token => excludes(app, token, "Standard User home screen"));
 
 [
-  [app, 'AGRINEXUS_BUILD_VERSION = "nexus-behavior-335"', "app build version"],
-  [app, 'AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v314"', "app cache version"],
-  [server, 'AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-335"', "server build version"],
-  [server, 'AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v314"', "server cache version"],
-  [sw, 'CACHE_NAME = "agrinexus-pwa-v314"', "service worker cache"],
-  [sw, 'BUILD_VERSION = "nexus-behavior-335"', "service worker build"],
-  [index, "/styles.css?v=nexus-behavior-335", "stylesheet cache bust"],
-  [index, "/app.js?v=nexus-behavior-335", "app script cache bust"]
+  [app, 'AGRINEXUS_BUILD_VERSION = "nexus-behavior-338"', "app build version"],
+  [app, 'AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v317"', "app cache version"],
+  [server, 'AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-338"', "server build version"],
+  [server, 'AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v317"', "server cache version"],
+  [sw, 'CACHE_NAME = "agrinexus-pwa-v317"', "service worker cache"],
+  [sw, 'BUILD_VERSION = "nexus-behavior-338"', "service worker build"],
+  [index, "/styles.css?v=nexus-behavior-338", "stylesheet cache bust"],
+  [index, "/app.js?v=nexus-behavior-338", "app script cache bust"]
 ].forEach(([source, token, label]) => includes(source, token, label));
 
 assert.strictEqual(

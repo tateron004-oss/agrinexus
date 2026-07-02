@@ -241,8 +241,8 @@ const nexusProductIdentity = Object.freeze({
 });
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-335";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v314";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-338";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v317";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
 const VOICE_ATTENTION_DELAY_MS = 900;
@@ -18369,6 +18369,7 @@ function renderNexusAgenticBrainResultCards() {
         <article class="nexus-real-provider-card" data-nexus-agentic-result-card="${escapeHtml(card.type || "prepared")}">
           <strong>${escapeHtml(card.title || "Prepared item")}</strong>
           <span>${escapeHtml(card.status || "prepared locally")}</span>
+          ${renderNexusHomeModePanel(card)}
           ${renderNexusMediaProviderOptions(card)}
           ${renderNexusHealthAccessPreparationOptions(card)}
           ${card.localOnly ? `<small>${escapeHtml(translateText("Local-only"))}</small>` : ""}
@@ -18376,6 +18377,34 @@ function renderNexusAgenticBrainResultCards() {
           ${card.blockedCategories?.length ? `<small>${escapeHtml(translateText("Blocked/gated"))}: ${card.blockedCategories.map(escapeHtml).join(", ")}</small>` : ""}
         </article>
       `).join("")}
+    </div>
+  `;
+}
+
+function renderNexusHomeModePanel(card = {}) {
+  const panel = card.modePanel || null;
+  if (!panel) return "";
+  const actions = Array.isArray(panel.quickActions) ? panel.quickActions : [];
+  return `
+    <div class="nexus-home-mode-panel" data-nexus-home-mode-panel="${escapeHtml(panel.id || "mode")}">
+      <div class="nexus-home-mode-panel-head">
+        <span class="nexus-home-mode-panel-icon" aria-hidden="true">${escapeHtml(panel.icon || "")}</span>
+        <div>
+          <strong>${escapeHtml(translateText(panel.title || "Nexus mode"))}</strong>
+          <small>${escapeHtml(translateText(panel.explanation || "Nexus prepared this mode."))}</small>
+        </div>
+      </div>
+      ${actions.length ? `
+        <div class="nexus-home-mode-panel-actions" aria-label="${escapeHtml(translateText("Mode quick actions"))}">
+          ${actions.slice(0, 6).map(action => `
+            <button type="button" data-nexus-mode-shortcut="mode-panel-${escapeHtml(panel.id || "mode")}" data-nexus-command="${escapeHtml(action.command || action.label || "")}" onclick="return window.nexusHandleStandardUserHomeShortcut ? !window.nexusHandleStandardUserHomeShortcut(event) : true">
+              ${escapeHtml(translateText(action.label || "Open action"))}
+            </button>
+          `).join("")}
+        </div>
+      ` : ""}
+      <p>${escapeHtml(translateText(panel.nextPrompt || "Tell Nexus what you want to do next."))}</p>
+      <small>${escapeHtml(translateText(panel.limitation || "Preparation only. High-risk actions remain gated."))}</small>
     </div>
   `;
 }
@@ -18711,6 +18740,199 @@ const NEXUS_HOME_SUGGESTED_ACTIONS = Object.freeze([
   { label: "Open music/media", command: "Play Afrobeats.", accent: "magenta" }
 ]);
 
+const NEXUS_HOME_MODE_PANEL_CONTENT = Object.freeze({
+  agriculture: {
+    explanation: "Get plain-language crop, soil, pest, irrigation, training, and field planning help.",
+    nextPrompt: "Tell Nexus your crop, location context if you want to share it, and what problem you are seeing.",
+    limitation: "Educational and planning support only. Nexus does not dispatch a field agent or guarantee a diagnosis of crop disease.",
+    quickActions: [
+      { label: "Describe a crop issue", command: "I need help with crop issues." },
+      { label: "Find agriculture training", command: "Help me find agriculture training." },
+      { label: "Learn irrigation basics", command: "Teach me how irrigation works." },
+      { label: "Prepare a field visit", command: "Help me plan a field visit route." },
+      { label: "Review market options", command: "Browse AgriTrade." }
+    ]
+  },
+  "chronic-care": {
+    explanation: "Track chronic-care information for diabetes, obesity, hypertension, RPM, and RTM preparation.",
+    nextPrompt: "Share the reading or concern you want to organize, such as blood pressure, glucose, weight, symptoms, or therapy progress.",
+    limitation: "Nexus does not diagnose, prescribe, or replace clinical judgment. It prepares information for your clinician or care team.",
+    quickActions: [
+      { label: "Record blood pressure", command: "Nexus, record my blood pressure." },
+      { label: "Record glucose", command: "Nexus, help me organize a glucose reading." },
+      { label: "Track weight", command: "Nexus, help me track my weight for chronic care." },
+      { label: "Prepare provider summary", command: "Prepare a provider summary." },
+      { label: "Review urgent warning signs", command: "Nexus, explain urgent warning signs for chronic care." }
+    ]
+  },
+  "telehealth-intake": {
+    explanation: "Prepare a review-only intake before a future telehealth or clinic conversation.",
+    nextPrompt: "Tell Nexus who needs care, the main concern, preferred language, and any vitals you already know.",
+    limitation: "No live clinician is connected here. Nexus does not book, launch video, diagnose, prescribe, or send records.",
+    quickActions: [
+      { label: "Start intake", command: "Nexus, start a telehealth intake." },
+      { label: "List symptoms", command: "Nexus, help me organize symptoms for telehealth." },
+      { label: "Prepare questions", command: "Nexus, prepare questions for my provider." },
+      { label: "Review access needs", command: "Nexus, prepare telehealth accessibility needs." },
+      { label: "Make a provider summary", command: "Prepare a provider summary." }
+    ]
+  },
+  "mobile-clinic": {
+    explanation: "Organize mobile clinic or community health access needs for future partner review.",
+    nextPrompt: "Tell Nexus the community, support need, preferred language, and any access barriers you want included.",
+    limitation: "Nexus does not dispatch a clinic, share your location, or contact a provider without a future approved connector and consent.",
+    quickActions: [
+      { label: "Prepare clinic request", command: "Nexus, prepare mobile clinic support." },
+      { label: "Start health intake", command: "Nexus, start a telehealth intake." },
+      { label: "List access barriers", command: "Nexus, help me organize transportation-to-care barriers." },
+      { label: "Prepare pharmacy need", command: "Nexus, prepare pharmacy support." },
+      { label: "Review offline support", command: "Show offline queue status." }
+    ]
+  },
+  "pharmacy-support": {
+    explanation: "Organize medication questions, refill barriers, and pharmacy review notes.",
+    nextPrompt: "Share the medication name as written, the question or barrier, and whether this is for review by a pharmacist or clinician.",
+    limitation: "Nexus does not prescribe, change medication, request refills, contact pharmacies, or fulfill medication.",
+    quickActions: [
+      { label: "Prepare pharmacy checklist", command: "Nexus, prepare pharmacy support." },
+      { label: "Organize medication list", command: "Nexus, help me organize my medication list." },
+      { label: "Prepare refill question", command: "Nexus, prepare a refill question for review." },
+      { label: "Review side-effect question", command: "Nexus, help me write a medication side-effect question." },
+      { label: "Make provider summary", command: "Prepare a provider summary." }
+    ]
+  },
+  learning: {
+    explanation: "Find learning, literacy, AI skills, and agriculture training pathways.",
+    nextPrompt: "Tell Nexus what you want to learn, your current level, preferred language, and whether you need low-bandwidth options.",
+    limitation: "Nexus can prepare learning paths and open safe resources, but enrollment depends on configured learning providers.",
+    quickActions: [
+      { label: "Find agriculture training", command: "Help me find agriculture training." },
+      { label: "Build literacy plan", command: "Nexus, help me build a literacy learning plan." },
+      { label: "Learn AI basics", command: "Nexus, teach me AI basics." },
+      { label: "Prepare course options", command: "Nexus, find course options for me." },
+      { label: "Use offline learning", command: "Show offline queue status." }
+    ]
+  },
+  jobs: {
+    explanation: "Explore jobs, workforce readiness, training, and practical next steps.",
+    nextPrompt: "Tell Nexus the kind of work you want, your skills, location preference if you choose, and training needs.",
+    limitation: "Nexus can prepare job pathways and readiness steps. It does not apply, contact employers, or submit personal information.",
+    quickActions: [
+      { label: "Find farm jobs", command: "Show me farm jobs." },
+      { label: "Build skills checklist", command: "Nexus, build a job skills checklist." },
+      { label: "Find training", command: "Help me find agriculture training." },
+      { label: "Prepare work summary", command: "Nexus, prepare a workforce readiness summary." },
+      { label: "Practice interview", command: "Nexus, help me practice a job interview." }
+    ]
+  },
+  agritrade: {
+    explanation: "Review marketplace listings, buyer/seller questions, and safe inquiry preparation.",
+    nextPrompt: "Tell Nexus what you want to buy, sell, compare, or ask about in AgriTrade.",
+    limitation: "Browse and prepare only. Nexus does not place orders, process payments, contact sellers, or move goods automatically.",
+    quickActions: [
+      { label: "Browse AgriTrade", command: "Browse AgriTrade." },
+      { label: "Prepare seller question", command: "Prepare a message to the seller, but do not send it." },
+      { label: "Compare listing details", command: "Nexus, help me compare AgriTrade listing details." },
+      { label: "Review safety checklist", command: "Nexus, show marketplace safety checklist." },
+      { label: "Plan delivery questions", command: "Nexus, prepare logistics questions for AgriTrade." }
+    ]
+  },
+  maps: {
+    explanation: "Prepare routes, field visits, clinic/resource visits, and map questions using typed locations.",
+    nextPrompt: "Tell Nexus the origin and destination you want to compare. Do not share precise location unless you choose to.",
+    limitation: "Nexus does not request browser location, share your location, dispatch transport, or navigate externally without approval.",
+    quickActions: [
+      { label: "Plan field visit", command: "Help me plan a field visit route." },
+      { label: "Prepare clinic route", command: "Nexus, prepare a clinic route with typed locations." },
+      { label: "Review transport need", command: "Nexus, organize transportation-to-care needs." },
+      { label: "Compare route questions", command: "Nexus, help me compare route questions." }
+    ]
+  },
+  media: {
+    explanation: "Prepare safe music and media provider search options for supported services.",
+    nextPrompt: "Tell Nexus the music style and provider you prefer, such as Afrobeats on YouTube or R&B in Spotify.",
+    limitation: "Nexus does not host, download, rip, cache, or redistribute copyrighted music. Playback depends on provider accounts.",
+    quickActions: [
+      { label: "Play Afrobeats", command: "Play Afrobeats." },
+      { label: "Open R&B in Spotify", command: "Open R&B in Spotify." },
+      { label: "Open gospel on YouTube", command: "Open gospel music on YouTube." },
+      { label: "Find relaxing music", command: "Play relaxing music." },
+      { label: "Study music", command: "Play study music." }
+    ]
+  },
+  reminders: {
+    explanation: "Prepare local reminders and follow-up prompts for tasks you want to remember.",
+    nextPrompt: "Tell Nexus what to remember and when. Keep private or sensitive details minimal.",
+    limitation: "Reminder behavior is local/preparation-oriented unless a configured reminder provider is active.",
+    quickActions: [
+      { label: "Create reminder", command: "Create a reminder." },
+      { label: "Medication question reminder", command: "Nexus, remind me to ask a pharmacist a question." },
+      { label: "Crop check reminder", command: "Nexus, remind me to check crops tomorrow." },
+      { label: "Training follow-up", command: "Nexus, remind me to continue training." }
+    ]
+  },
+  offline: {
+    explanation: "Review offline readiness and local queued work for low-bandwidth situations.",
+    nextPrompt: "Tell Nexus what you want prepared for offline use or what queue status you want to review.",
+    limitation: "Offline queue stays local/safe. High-risk actions remain skipped until connectivity, confirmation, and approved connectors exist.",
+    quickActions: [
+      { label: "Show offline queue", command: "Show offline queue status." },
+      { label: "Prepare offline learning", command: "Nexus, prepare offline learning support." },
+      { label: "Review queued work", command: "Nexus, review safe queued work." },
+      { label: "Explain offline mode", command: "Nexus, explain offline queue." }
+    ]
+  }
+});
+
+function buildNexusHomeModePanelResult(modeId = "", command = "") {
+  const presentation = NEXUS_HOME_MODE_PRESENTATION[modeId] || {};
+  const content = NEXUS_HOME_MODE_PANEL_CONTENT[modeId] || null;
+  if (!presentation.title || !content) return null;
+  return {
+    ok: true,
+    status: "standard_user_mode_panel_ready",
+    mode: presentation.title,
+    message: `${presentation.title} is ready. Choose a quick action or tell Nexus what you want to do next.`,
+    preparedCards: [{
+      type: "standard_user_mode_panel",
+      title: `${presentation.icon || ""} ${presentation.title}`.trim(),
+      status: "guided mode ready",
+      localOnly: true,
+      needsRealProvider: ["chronic-care", "telehealth-intake", "mobile-clinic", "pharmacy-support"].includes(modeId),
+      modePanel: {
+        id: modeId,
+        icon: presentation.icon || "",
+        title: presentation.title,
+        explanation: content.explanation,
+        quickActions: content.quickActions,
+        nextPrompt: content.nextPrompt,
+        limitation: content.limitation,
+        command
+      }
+    }],
+    noExecutionAuthorized: true,
+    localOnly: true,
+    source: "standard_user_home_mode_panel"
+  };
+}
+
+function detectNexusHomeModePanelId(command = "") {
+  const text = String(command || "").toLowerCase();
+  if (/\b(agriculture help|agriculture support|crop issue|crop issues|irrigation|field guidance)\b/.test(text)) return "agriculture";
+  if (/\b(chronic care|blood pressure|glucose|blood sugar|diabetes|obesity|hypertension|rpm|rtm|vitals)\b/.test(text)) return "chronic-care";
+  if (/\b(telehealth intake|start.*telehealth|virtual visit intake|clinic intake)\b/.test(text)) return "telehealth-intake";
+  if (/\b(mobile clinic|clinic outreach|community clinic|field clinic)\b/.test(text)) return "mobile-clinic";
+  if (/\b(pharmacy support|prepare pharmacy|medication list|refill question|medicine question)\b/.test(text)) return "pharmacy-support";
+  if (/\b(learning|literacy|training|course|learn a new skill|ai basics)\b/.test(text)) return "learning";
+  if (/\b(jobs|workforce|farm jobs|job skills|interview|work readiness)\b/.test(text)) return "jobs";
+  if (/\b(agritrade|marketplace|buyer|seller|listing|listings)\b/.test(text)) return "agritrade";
+  if (/\b(open maps|open map|field visit route|map|maps|route|routes)\b/.test(text)) return "maps";
+  if (/\b(play music|open music|music media|music\/media|open media|media mode)\b/.test(text)) return "media";
+  if (/\b(reminder|reminders|remind me|follow-up|follow up)\b/.test(text)) return "reminders";
+  if (/\b(offline queue|offline mode|queued work|low bandwidth|low-bandwidth)\b/.test(text)) return "offline";
+  return null;
+}
+
 function nexusCommandCenterExamples() {
   return [
     "Nexus, open agriculture help.",
@@ -18861,6 +19083,15 @@ function buildNexusCapabilityOverviewResult(command = "") {
 function runNexusStandardUserHomeLocalCommand(command = "") {
   const normalized = String(command || "").trim();
   if (!normalized) return false;
+  const panelModeId = detectNexusHomeModePanelId(normalized);
+  if (panelModeId) {
+    const panelResult = buildNexusHomeModePanelResult(panelModeId, normalized);
+    if (panelResult) {
+      nexusAgenticBrainLastResult = panelResult;
+      renderUserWorkspace();
+      return true;
+    }
+  }
   if (isNexusCapabilityOverviewCommand(normalized) || /\b(what can nexus do|what can you do|show me nexus modes|nexus modes)\b/i.test(normalized)) {
     nexusAgenticBrainLastResult = buildNexusCapabilityOverviewResult(normalized);
     renderUserWorkspace();
@@ -34526,6 +34757,20 @@ function handleNexusStandardUserHomeClick(event) {
   const modeId = shortcut.dataset.nexusModeShortcut || "";
   const command = shortcut.dataset.nexusCommand || "";
   if (modeId === "language") return false;
+  if (NEXUS_HOME_MODE_IDS.includes(modeId)) {
+    event.preventDefault();
+    event.stopPropagation();
+    event.stopImmediatePropagation?.();
+    const input = $("#nexusCommandCenterInput");
+    if (input) input.value = command;
+    setCommandInputs(command);
+    const panelResult = buildNexusHomeModePanelResult(modeId, command);
+    if (panelResult) {
+      nexusAgenticBrainLastResult = panelResult;
+      renderUserWorkspace();
+      return true;
+    }
+  }
   if (modeId === "media") {
     event.preventDefault();
     event.stopPropagation();
@@ -34551,8 +34796,8 @@ function nexusHandleStandardUserHomeShortcut(event) {
   return handleNexusStandardUserHomeClick(event);
 }
 
-if (typeof window !== "undefined") {
-  window.nexusHandleStandardUserHomeShortcut = nexusHandleStandardUserHomeShortcut;
+if (typeof globalThis !== "undefined") {
+  globalThis.nexusHandleStandardUserHomeShortcut = nexusHandleStandardUserHomeShortcut;
 }
 
 function bindNexusStandardUserHomeControls() {
@@ -34568,6 +34813,9 @@ function bindNexusStandardUserHomeControls() {
 
 function bindStatic() {
   renderLoginProfiles();
+  if (typeof globalThis !== "undefined") {
+    globalThis.nexusHandleStandardUserHomeShortcut = nexusHandleStandardUserHomeShortcut;
+  }
   document.addEventListener("click", handleNexusStandardUserHomeClick, true);
   document.addEventListener("click", async event => {
     if (await handleAssistantRuntimeLocalToolClick(event)) return;
@@ -34576,6 +34824,19 @@ function bindStatic() {
     if (earlyCommandCenterSubmit) {
       const input = $("#nexusCommandCenterInput");
       const command = input?.value?.trim() || "What can Nexus do?";
+      const panelModeId = detectNexusHomeModePanelId(command);
+      if (panelModeId) {
+        const panelResult = buildNexusHomeModePanelResult(panelModeId, command);
+        if (panelResult) {
+          event.preventDefault();
+          event.stopPropagation();
+          if (input) input.value = command;
+          setCommandInputs(command);
+          nexusAgenticBrainLastResult = panelResult;
+          renderUserWorkspace();
+          return;
+        }
+      }
       if (isNexusCapabilityOverviewCommand(command)) {
         event.preventDefault();
         event.stopPropagation();
@@ -34609,6 +34870,19 @@ function bindStatic() {
     if (earlyModeShortcut) {
       const command = earlyModeShortcut.dataset.nexusCommand || "";
       const modeId = earlyModeShortcut.dataset.nexusModeShortcut || "";
+      if (NEXUS_HOME_MODE_IDS.includes(modeId)) {
+        const panelResult = buildNexusHomeModePanelResult(modeId, command);
+        if (panelResult) {
+          event.preventDefault();
+          event.stopPropagation();
+          const input = $("#nexusCommandCenterInput");
+          if (input) input.value = command;
+          setCommandInputs(command);
+          nexusAgenticBrainLastResult = panelResult;
+          renderUserWorkspace();
+          return;
+        }
+      }
       if (modeId === "media") {
         event.preventDefault();
         event.stopPropagation();
@@ -34695,6 +34969,15 @@ function bindStatic() {
       const command = input?.value?.trim() || "What can Nexus do?";
       if (input) input.value = command;
       setCommandInputs(command);
+      const panelModeId = detectNexusHomeModePanelId(command);
+      if (panelModeId) {
+        const panelResult = buildNexusHomeModePanelResult(panelModeId, command);
+        if (panelResult) {
+          nexusAgenticBrainLastResult = panelResult;
+          renderUserWorkspace();
+          return;
+        }
+      }
       if (handleNexusAgenticBrainTypedCommand(command)) return;
       await runNexusAgenticBrainAction("command", { command });
       return;
@@ -34738,6 +35021,14 @@ function bindStatic() {
       const input = $("#nexusCommandCenterInput");
       if (input) input.value = command;
       setCommandInputs(command);
+      if (NEXUS_HOME_MODE_IDS.includes(modeId)) {
+        const panelResult = buildNexusHomeModePanelResult(modeId, command);
+        if (panelResult) {
+          nexusAgenticBrainLastResult = panelResult;
+          renderUserWorkspace();
+          return;
+        }
+      }
       if (modeId === "media") {
         nexusAgenticBrainLastResult = buildNexusMediaMusicLocalResult(command || "Play music.");
         renderUserWorkspace();

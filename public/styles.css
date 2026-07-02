@@ -8973,6 +8973,86 @@ body.user-mode .nexus-agentic-brain-panel h4 {
   font-size: .92rem;
 }
 
+body.user-mode .nexus-home-mode-panel {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid rgba(27, 127, 75, .18);
+  border-radius: 8px;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, .96), rgba(246, 252, 247, .92)),
+    #fff;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .8);
+}
+
+body.user-mode .nexus-home-mode-panel-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+body.user-mode .nexus-home-mode-panel-icon {
+  display: inline-grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 48px;
+  height: 48px;
+  border-radius: 8px;
+  background: #fff4dc;
+  box-shadow: 0 8px 18px rgba(18, 43, 52, .08);
+  font-size: 1.35rem;
+  line-height: 1;
+}
+
+body.user-mode .nexus-home-mode-panel-head strong {
+  display: block;
+  color: #102b36;
+  font-size: 1rem;
+  line-height: 1.2;
+}
+
+body.user-mode .nexus-home-mode-panel-head small,
+body.user-mode .nexus-home-mode-panel > small {
+  display: block;
+  color: #55707a;
+  font-size: .78rem;
+  font-weight: 850;
+  line-height: 1.35;
+}
+
+body.user-mode .nexus-home-mode-panel p {
+  margin: 0;
+  color: #244650;
+  font-size: .88rem;
+  font-weight: 850;
+  line-height: 1.45;
+}
+
+body.user-mode .nexus-home-mode-panel-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+body.user-mode .nexus-home-mode-panel-actions button {
+  width: auto;
+  min-height: 34px;
+  padding: 8px 10px;
+  border: 1px solid rgba(42, 121, 182, .18);
+  border-radius: 8px;
+  background: #f3f9fd;
+  color: #1c5d99;
+  box-shadow: none;
+  font-size: .78rem;
+  font-weight: 950;
+}
+
+body.user-mode .nexus-home-mode-panel-actions button:hover,
+body.user-mode .nexus-home-mode-panel-actions button:focus-visible {
+  background: #e9f3fb;
+  border-color: rgba(42, 121, 182, .32);
+}
+
 body.user-mode .nexus-agentic-brain-panel details {
   max-height: 180px;
   overflow: auto;
