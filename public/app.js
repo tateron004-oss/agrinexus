@@ -91,6 +91,8 @@ let nexusAgenticBrainProviderQueue = [];
 let nexusAgenticBrainActivity = [];
 let nexusAgenticBrainMatrix = [];
 let nexusAgenticBrainLastResult = null;
+let nexusPilotPlatformLastRecord = null;
+let nexusPilotPlatformStatus = null;
 let nexusProviderContactBridgeCards = [];
 let nexusLearningProviderBridgeCards = [];
 let nexusMarketplaceBridgeCards = [];
@@ -18434,6 +18436,7 @@ function renderNexusHomeModeSummary(card = {}) {
   const summary = card.modeSummary || null;
   if (!summary) return "";
   const entries = Object.entries(summary.values || {}).filter(([, value]) => String(value || "").trim());
+  const pilotActions = renderNexusPilotPlatformActions(card);
   return `
     <div class="nexus-home-mode-summary" data-nexus-home-mode-summary="${escapeHtml(summary.id || "mode")}">
       <strong>${escapeHtml(translateText(summary.title || "Prepared summary"))}</strong>
@@ -18449,8 +18452,174 @@ function renderNexusHomeModeSummary(card = {}) {
       ` : `<p>${escapeHtml(translateText("No details were entered yet. Nexus can still guide the next step."))}</p>`}
       <p>${escapeHtml(translateText(summary.nextStep || "Review this local summary, then choose a safe next step."))}</p>
       <small>${escapeHtml(translateText(summary.safetyNote || "Local summary only. No live provider, payment, dispatch, message, call, location sharing, prescribing, diagnosis, or emergency action was executed."))}</small>
+      ${pilotActions}
     </div>
   `;
+}
+
+const NEXUS_PILOT_SENSITIVE_MODES = Object.freeze(["chronic-care", "telehealth-intake", "mobile-clinic", "pharmacy-support"]);
+
+function renderNexusPilotPlatformActions(card = {}) {
+  const summary = card.modeSummary || null;
+  if (!summary) return "";
+  const modeId = summary.id || "";
+  const sensitive = NEXUS_PILOT_SENSITIVE_MODES.includes(modeId);
+  const canQueueReview = modeId && modeId !== "media" && modeId !== "offline" && modeId !== "reminders";
+  return `
+    <div class="nexus-pilot-platform-actions" data-nexus-pilot-platform-actions="${escapeHtml(modeId || "mode")}">
+      <strong>${escapeHtml(translateText("Pilot workflow actions"))}</strong>
+      <small>${escapeHtml(translateText("Local pilot records, review queue, reminders, and offline items only. No live provider, payment, pharmacy, emergency, message, call, location, camera, or dispatch action is executed."))}</small>
+      <div>
+        <button type="button" data-nexus-pilot-action="save-draft" data-nexus-pilot-mode="${escapeHtml(modeId)}">${escapeHtml(translateText("Save draft"))}</button>
+        <button type="button" data-nexus-pilot-action="prepare-summary" data-nexus-pilot-mode="${escapeHtml(modeId)}">${escapeHtml(translateText("Prepare summary"))}</button>
+        ${sensitive ? `<button type="button" data-nexus-pilot-action="confirm-consent" data-nexus-pilot-mode="${escapeHtml(modeId)}">${escapeHtml(translateText("Confirm review consent"))}</button>` : ""}
+        ${canQueueReview ? `<button type="button" data-nexus-pilot-action="queue-review" data-nexus-pilot-mode="${escapeHtml(modeId)}">${escapeHtml(translateText("Queue for review"))}</button>` : ""}
+        <button type="button" data-nexus-pilot-action="queue-offline" data-nexus-pilot-mode="${escapeHtml(modeId)}">${escapeHtml(translateText("Queue offline"))}</button>
+        <button type="button" data-nexus-pilot-action="create-reminder" data-nexus-pilot-mode="${escapeHtml(modeId)}">${escapeHtml(translateText("Create reminder"))}</button>
+      </div>
+      <p data-nexus-pilot-action-status>${escapeHtml(translateText("Review this summary before saving or queueing it."))}</p>
+    </div>
+  `;
+}
+
+function nexusPilotCurrentSummaryPayload(modeId = "") {
+  const card = (nexusAgenticBrainLastResult?.preparedCards || []).find(item => item.modeSummary?.id === modeId) || (nexusAgenticBrainLastResult?.preparedCards || [])[0] || {};
+  const summary = card.modeSummary || {};
+  return {
+    sourceMode: summary.id || modeId || "",
+    mode: summary.id || modeId || "",
+    summary: summary.title ? `${summary.title}: ${summary.nextStep || ""}` : "Nexus pilot summary prepared locally.",
+    payload: summary.values || {},
+    urgency: summary.values?.urgency || "",
+    profileLabel: data?.user?.name || localStorage.getItem("agrinexusGuestDisplayName") || "Standard User"
+  };
+}
+
+function nexusPilotSetActionStatus(button, message = "") {
+  const panel = button?.closest?.("[data-nexus-pilot-platform-actions]");
+  const status = panel?.querySelector?.("[data-nexus-pilot-action-status]");
+  if (status) status.textContent = translateText(message || "Pilot action completed locally.");
+}
+
+async function ensureNexusPilotRecordForAction(modeId = "", action = "save-draft") {
+  if (nexusPilotPlatformLastRecord?.sourceMode === modeId && nexusPilotPlatformLastRecord?.id) return nexusPilotPlatformLastRecord;
+  const body = nexusPilotCurrentSummaryPayload(modeId);
+  const result = await request("/api/nexus/records", {
+    method: "POST",
+    body: {
+      ...body,
+      status: action === "queue-offline" ? "queued_locally" : "draft"
+    }
+  });
+  nexusPilotPlatformLastRecord = result.record;
+  return result.record;
+}
+
+async function handleNexusPilotPlatformActionClick(event) {
+  const button = event.target?.closest?.("[data-nexus-pilot-action]");
+  if (!button) return false;
+  event.preventDefault();
+  event.stopPropagation();
+  const action = button.dataset.nexusPilotAction || "";
+  const modeId = button.dataset.nexusPilotMode || "";
+  button.disabled = true;
+  try {
+    if (action === "refresh-status") {
+      await refreshNexusPilotPlatformStatus({ rerender: true });
+      toast("Pilot status refreshed");
+      return true;
+    }
+    let record = await ensureNexusPilotRecordForAction(modeId, action);
+    if (action === "save-draft") {
+      nexusPilotSetActionStatus(button, `Draft saved locally as ${record.type}.`);
+      toast("Pilot draft saved");
+    } else if (action === "prepare-summary") {
+      const result = await request(`/api/nexus/records/${encodeURIComponent(record.id)}/summary`, { method: "POST", body: {} });
+      nexusPilotPlatformLastRecord = result.record;
+      nexusPilotSetActionStatus(button, "Provider-ready summary prepared locally. Nothing was sent.");
+      toast("Pilot summary prepared");
+    } else if (action === "confirm-consent") {
+      const result = await request(`/api/nexus/records/${encodeURIComponent(record.id)}/consent`, { method: "POST", body: {} });
+      nexusPilotPlatformLastRecord = result.record;
+      nexusPilotSetActionStatus(button, "Consent recorded for the local review queue. No live provider was contacted.");
+      toast("Review consent recorded");
+    } else if (action === "queue-review") {
+      try {
+        const result = await request(`/api/nexus/records/${encodeURIComponent(record.id)}/queue-review`, { method: "POST", body: {} });
+        nexusPilotPlatformLastRecord = result.record;
+        nexusPilotSetActionStatus(button, "Queued for local Provider/Admin review. No external handoff occurred.");
+        toast("Queued for local review");
+      } catch (error) {
+        nexusPilotSetActionStatus(button, error.message === "consent_required"
+          ? "Consent is required before this sensitive summary can enter the local review queue."
+          : error.message);
+        toast(error.message);
+      }
+    } else if (action === "queue-offline") {
+      const body = nexusPilotCurrentSummaryPayload(modeId);
+      await request("/api/nexus/offline-queue", {
+        method: "POST",
+        body: { recordId: record.id, type: record.type, title: body.summary, summary: body.summary }
+      });
+      nexusPilotSetActionStatus(button, "Saved to the local offline queue. No live sync was claimed.");
+      toast("Queued locally");
+    } else if (action === "create-reminder") {
+      const body = nexusPilotCurrentSummaryPayload(modeId);
+      await request("/api/nexus/reminders", {
+        method: "POST",
+        body: {
+          recordId: record.id,
+          type: modeId,
+          title: `${body.sourceMode || "Nexus"} follow-up`,
+          time: body.payload?.time || body.payload?.readingTime || "User-selected follow-up time needed",
+          notes: "Local reminder only. No SMS, push notification, or external calendar action occurred."
+        }
+      });
+      nexusPilotSetActionStatus(button, "Local reminder created. No SMS, push, or external calendar action occurred.");
+      toast("Local reminder created");
+    }
+    await refreshNexusPilotPlatformStatus({ rerender: false });
+    return true;
+  } catch (error) {
+    nexusPilotSetActionStatus(button, error.message || "Pilot action needs attention.");
+    toast(error.message || "Pilot action needs attention.");
+    return true;
+  } finally {
+    button.disabled = false;
+  }
+}
+
+function renderNexusPilotPlatformStatusPanel() {
+  const status = nexusPilotPlatformStatus || {};
+  return `
+    <section class="nexus-pilot-status-panel" data-nexus-pilot-status-panel="true" aria-label="${escapeHtml(translateText("Nexus pilot status"))}">
+      <div>
+        <span class="eyebrow">${escapeHtml(translateText("Local pilot platform"))}</span>
+        <strong>${escapeHtml(translateText("Records, consent, review queue, reminders, and offline work"))}</strong>
+        <small>${escapeHtml(translateText(status.safetyStatus || "Local pilot only. Live provider, pharmacy, payment, emergency, location, call, and message actions remain gated."))}</small>
+      </div>
+      <dl>
+        <div><dt>${escapeHtml(translateText("Records"))}</dt><dd>${escapeHtml(String(status.savedRecords ?? "0"))}</dd></div>
+        <div><dt>${escapeHtml(translateText("Review queue"))}</dt><dd>${escapeHtml(String(status.reviewQueueItems ?? "0"))}</dd></div>
+        <div><dt>${escapeHtml(translateText("Consent"))}</dt><dd>${escapeHtml(String(status.consentEvents ?? "0"))}</dd></div>
+        <div><dt>${escapeHtml(translateText("Audit"))}</dt><dd>${escapeHtml(String(status.auditEvents ?? "0"))}</dd></div>
+        <div><dt>${escapeHtml(translateText("Reminders"))}</dt><dd>${escapeHtml(String(status.reminders ?? "0"))}</dd></div>
+        <div><dt>${escapeHtml(translateText("Offline"))}</dt><dd>${escapeHtml(String(status.offlineQueueItems ?? "0"))}</dd></div>
+      </dl>
+      <button type="button" data-nexus-pilot-action="refresh-status" data-nexus-pilot-mode="status">${escapeHtml(translateText("Refresh pilot status"))}</button>
+    </section>
+  `;
+}
+
+async function refreshNexusPilotPlatformStatus(options = {}) {
+  try {
+    const result = await request("/api/nexus/pilot-status", { method: "GET" });
+    nexusPilotPlatformStatus = result.pilotStatus || null;
+    if (options.rerender !== false && experienceMode === "user") renderUserWorkspace();
+    return nexusPilotPlatformStatus;
+  } catch {
+    return null;
+  }
 }
 
 function renderNexusMediaProviderOptions(card = {}) {
@@ -19962,6 +20131,7 @@ function renderUserWorkspace() {
     ${renderNexusSuggestedActions()}
     ${renderNexusAgenticBrainPanel()}
     ${renderNexusActiveWorkSummary()}
+    ${renderNexusPilotPlatformStatusPanel()}
     <div class="nexus-command-hidden-agent-host" data-nexus-open-dialogue-agent-host="true" hidden>${renderNexusOpenDialogueAgentCard()}</div>
     <section id="userLanguagePanel" class="user-language-panel hidden" aria-label="${translateText("Choose language")}">
       <div class="user-language-header">
@@ -19984,6 +20154,13 @@ function renderUserWorkspace() {
     </section>
   `;
   bindNexusStandardUserHomeControls();
+  if (!nexusPilotPlatformStatus) {
+    setTimeout(() => {
+      if (experienceMode === "user" && document.querySelector("[data-nexus-pilot-status-panel='true']")) {
+        refreshNexusPilotPlatformStatus({ rerender: true }).catch(() => {});
+      }
+    }, 0);
+  }
   if (!nexusProductionRuntimeStatus || !nexusAgenticBrainStatus) {
     setTimeout(() => {
       if (experienceMode === "user" && document.querySelector("[data-nexus-agentic-brain-panel='true']")) {
@@ -35037,6 +35214,7 @@ function bindStatic() {
   document.addEventListener("click", async event => {
     if (await handleAssistantRuntimeLocalToolClick(event)) return;
     if (handleAssistantRuntimeFollowUpClick(event)) return;
+    if (await handleNexusPilotPlatformActionClick(event)) return;
     if (handleNexusHomeModeSummaryClick(event)) return;
     const earlyCommandCenterSubmit = event.target.closest("[data-nexus-command-center-submit]");
     if (earlyCommandCenterSubmit) {

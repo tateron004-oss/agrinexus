@@ -9143,6 +9143,98 @@ body.user-mode .nexus-home-mode-summary p {
   margin: 0;
 }
 
+body.user-mode .nexus-pilot-platform-actions {
+  display: grid;
+  gap: 10px;
+  margin-top: 12px;
+  padding: 12px;
+  border: 1px solid rgba(27, 127, 75, .22);
+  border-radius: 14px;
+  background: linear-gradient(135deg, rgba(255, 255, 255, .96), rgba(237, 248, 242, .92));
+}
+
+body.user-mode .nexus-pilot-platform-actions > strong {
+  color: #174436;
+  font-size: .98rem;
+}
+
+body.user-mode .nexus-pilot-platform-actions small,
+body.user-mode .nexus-pilot-platform-actions p {
+  margin: 0;
+  color: #3d5c62;
+  line-height: 1.4;
+}
+
+body.user-mode .nexus-pilot-platform-actions > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+body.user-mode .nexus-pilot-platform-actions button {
+  min-height: 38px;
+  border-color: rgba(27, 127, 75, .32);
+  border-radius: 999px;
+  background: #ffffff;
+  color: #174436;
+  font-weight: 850;
+  box-shadow: 0 8px 18px rgba(23, 68, 54, .08);
+}
+
+body.user-mode .nexus-pilot-platform-actions button:hover {
+  background: #eaf8f0;
+  border-color: #1b7f4b;
+}
+
+body.user-mode .nexus-pilot-status-panel {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(260px, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  margin-top: 18px;
+  padding: 14px;
+  border: 1px solid rgba(42, 121, 182, .18);
+  border-radius: 16px;
+  background: linear-gradient(135deg, rgba(255, 255, 255, .94), rgba(239, 248, 252, .9));
+  box-shadow: 0 12px 28px rgba(22, 73, 94, .08);
+}
+
+body.user-mode .nexus-pilot-status-panel strong,
+body.user-mode .nexus-pilot-status-panel small {
+  display: block;
+}
+
+body.user-mode .nexus-pilot-status-panel small {
+  color: #3d5c62;
+  line-height: 1.35;
+}
+
+body.user-mode .nexus-pilot-status-panel dl {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0;
+}
+
+body.user-mode .nexus-pilot-status-panel dl div {
+  padding: 8px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, .88);
+}
+
+body.user-mode .nexus-pilot-status-panel dt {
+  color: #55707a;
+  font-size: .7rem;
+  font-weight: 900;
+}
+
+body.user-mode .nexus-pilot-status-panel dd {
+  margin: 2px 0 0;
+  color: #102b36;
+  font-size: 1rem;
+  font-weight: 950;
+}
+
 body.user-mode .nexus-agentic-brain-panel details {
   max-height: 180px;
   overflow: auto;

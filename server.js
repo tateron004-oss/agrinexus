@@ -27481,6 +27481,243 @@ async function runAi(type, country, route, profile) {
   };
 }
 
+const NEXUS_PILOT_RECORD_TYPES = Object.freeze([
+  "chronic_care_reading",
+  "telehealth_intake",
+  "pharmacy_note",
+  "mobile_clinic_request",
+  "agriculture_request",
+  "agritrade_marketplace_draft",
+  "jobs_workforce_plan",
+  "learning_plan",
+  "field_visit_plan",
+  "reminder",
+  "offline_queue_item",
+  "provider_ready_summary",
+  "consent_event",
+  "audit_event"
+]);
+
+const NEXUS_PILOT_RECORD_STATUSES = Object.freeze([
+  "draft",
+  "ready_for_review",
+  "queued",
+  "queued_locally",
+  "reviewed",
+  "needs_follow_up",
+  "closed"
+]);
+
+const NEXUS_PILOT_SENSITIVE_TYPES = new Set([
+  "chronic_care_reading",
+  "telehealth_intake",
+  "pharmacy_note",
+  "mobile_clinic_request",
+  "provider_ready_summary"
+]);
+
+const NEXUS_PILOT_MODE_RECORD_TYPES = Object.freeze({
+  agriculture: "agriculture_request",
+  "chronic-care": "chronic_care_reading",
+  "telehealth-intake": "telehealth_intake",
+  "mobile-clinic": "mobile_clinic_request",
+  "pharmacy-support": "pharmacy_note",
+  learning: "learning_plan",
+  jobs: "jobs_workforce_plan",
+  agritrade: "agritrade_marketplace_draft",
+  maps: "field_visit_plan",
+  reminders: "reminder",
+  offline: "offline_queue_item",
+  media: "offline_queue_item"
+});
+
+function sanitizePilotText(value = "", maxLength = 480) {
+  return String(value || "")
+    .replace(/[<>]/g, "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, maxLength);
+}
+
+function sanitizePilotPayload(payload = {}) {
+  const clean = {};
+  for (const [key, value] of Object.entries(payload || {})) {
+    const safeKey = sanitizePilotText(key, 64).replace(/[^a-zA-Z0-9_. -]/g, "") || "field";
+    clean[safeKey] = sanitizePilotText(value, 600);
+  }
+  return clean;
+}
+
+function ensureNexusPilotState(db) {
+  if (!db.nexusPilotProfiles) db.nexusPilotProfiles = [];
+  if (!db.nexusPilotRecords) db.nexusPilotRecords = [];
+  if (!db.nexusPilotConsentEvents) db.nexusPilotConsentEvents = [];
+  if (!db.nexusPilotAuditEvents) db.nexusPilotAuditEvents = [];
+  if (!db.nexusPilotReviewQueue) db.nexusPilotReviewQueue = [];
+  if (!db.nexusPilotReminders) db.nexusPilotReminders = [];
+  if (!db.nexusPilotOfflineQueue) db.nexusPilotOfflineQueue = [];
+  if (!db.nexusPilotAdminNotes) db.nexusPilotAdminNotes = [];
+  if (!db.nexusPilotProfiles.find(profile => profile.id === "standard-user-local")) {
+    const now = new Date().toISOString();
+    db.nexusPilotProfiles.push({
+      id: "standard-user-local",
+      displayName: "Standard User",
+      role: "Standard User",
+      preferredLanguage: "English",
+      region: "",
+      contactPreferencePlaceholder: "Not connected",
+      consentPreferencePlaceholder: "Ask before review queue",
+      createdAt: now,
+      updatedAt: now,
+      localDemoProfile: true
+    });
+  }
+  return db;
+}
+
+function nexusPilotRecordTypeFromMode(mode = "", requestedType = "") {
+  const normalizedType = sanitizePilotText(requestedType, 80);
+  if (NEXUS_PILOT_RECORD_TYPES.includes(normalizedType)) return normalizedType;
+  return NEXUS_PILOT_MODE_RECORD_TYPES[String(mode || "").trim()] || "offline_queue_item";
+}
+
+function nexusPilotSafeSummary(body = {}, fallback = "Nexus pilot record prepared for local review.") {
+  const explicit = sanitizePilotText(body.summary, 900);
+  if (explicit) return explicit;
+  const payload = sanitizePilotPayload(body.payload || body.values || {});
+  const parts = Object.entries(payload)
+    .filter(([, value]) => value)
+    .slice(0, 6)
+    .map(([key, value]) => `${key}: ${value}`);
+  return parts.length ? parts.join("; ") : fallback;
+}
+
+function addNexusPilotAuditEvent(db, eventType, options = {}) {
+  ensureNexusPilotState(db);
+  const event = {
+    id: crypto.randomUUID(),
+    eventType: sanitizePilotText(eventType, 120),
+    timestamp: new Date().toISOString(),
+    actor: sanitizePilotText(options.actor || "Standard User", 120),
+    role: sanitizePilotText(options.role || "Standard User", 80),
+    relatedRecordId: sanitizePilotText(options.relatedRecordId || "", 120),
+    mode: sanitizePilotText(options.mode || "", 80),
+    description: sanitizePilotText(options.description || "Local pilot event recorded.", 420),
+    noExternalAction: true,
+    noProviderContact: true,
+    noPayment: true,
+    noEmergencyDispatch: true
+  };
+  db.nexusPilotAuditEvents.unshift(event);
+  return event;
+}
+
+function buildNexusPilotRecord(db, body = {}, user = null) {
+  ensureNexusPilotState(db);
+  const now = new Date().toISOString();
+  const mode = sanitizePilotText(body.sourceMode || body.mode || "", 80);
+  const type = nexusPilotRecordTypeFromMode(mode, body.type);
+  const payload = sanitizePilotPayload(body.payload || body.values || {});
+  const summary = nexusPilotSafeSummary({ ...body, payload }, "Nexus pilot record prepared locally.");
+  const record = {
+    id: crypto.randomUUID(),
+    type,
+    profileId: sanitizePilotText(body.profileId || "standard-user-local", 120),
+    profileLabel: sanitizePilotText(body.profileLabel || user?.name || "Standard User", 120),
+    sourceMode: mode,
+    status: NEXUS_PILOT_RECORD_STATUSES.includes(body.status) ? body.status : "draft",
+    urgency: sanitizePilotText(body.urgency || payload.urgency || "", 80),
+    createdAt: now,
+    updatedAt: now,
+    summary,
+    payload,
+    consentStatus: NEXUS_PILOT_SENSITIVE_TYPES.has(type) ? "not_confirmed" : "not_required",
+    reviewStatus: "not_queued",
+    localPilotOnly: true,
+    noExternalAction: true
+  };
+  const audit = addNexusPilotAuditEvent(db, "record_created", {
+    relatedRecordId: record.id,
+    mode,
+    actor: record.profileLabel,
+    description: `${type} saved locally as ${record.status}. No live provider, payment, pharmacy, emergency, message, call, location, or dispatch action occurred.`
+  });
+  record.auditRefs = [audit.id];
+  db.nexusPilotRecords.unshift(record);
+  return record;
+}
+
+function findNexusPilotRecord(db, id = "") {
+  ensureNexusPilotState(db);
+  return db.nexusPilotRecords.find(record => record.id === id);
+}
+
+function latestNexusPilotRecord(db) {
+  ensureNexusPilotState(db);
+  return db.nexusPilotRecords[0] || null;
+}
+
+function nexusPilotQueueRecordForReview(db, record, user = null) {
+  ensureNexusPilotState(db);
+  if (!record) return { error: "record_not_found" };
+  const sensitive = NEXUS_PILOT_SENSITIVE_TYPES.has(record.type);
+  if (sensitive && record.consentStatus !== "confirmed") {
+    return {
+      error: "consent_required",
+      consentCopy: "Nexus can prepare this summary for review. This does not send it to a live provider unless a provider connection is configured. Review your information before continuing."
+    };
+  }
+  const now = new Date().toISOString();
+  const queueItem = {
+    id: crypto.randomUUID(),
+    recordId: record.id,
+    type: record.type,
+    sourceMode: record.sourceMode,
+    status: "ready_for_review",
+    urgency: record.urgency || "",
+    createdAt: now,
+    updatedAt: now,
+    profileLabel: record.profileLabel || user?.name || "Standard User",
+    summary: record.summary,
+    consentStatus: record.consentStatus,
+    localReviewQueueOnly: true,
+    providerAdminNotes: []
+  };
+  record.status = "ready_for_review";
+  record.reviewStatus = "ready_for_review";
+  record.updatedAt = now;
+  db.nexusPilotReviewQueue.unshift(queueItem);
+  const audit = addNexusPilotAuditEvent(db, "item_queued_for_review", {
+    relatedRecordId: record.id,
+    mode: record.sourceMode,
+    actor: queueItem.profileLabel,
+    description: `${record.type} moved to local provider/admin review queue. No live provider was contacted.`
+  });
+  record.auditRefs = [...(record.auditRefs || []), audit.id];
+  return { queueItem, audit };
+}
+
+function nexusPilotStatus(db) {
+  ensureNexusPilotState(db);
+  return {
+    profiles: db.nexusPilotProfiles.length,
+    savedRecords: db.nexusPilotRecords.length,
+    reviewQueueItems: db.nexusPilotReviewQueue.length,
+    consentEvents: db.nexusPilotConsentEvents.length,
+    auditEvents: db.nexusPilotAuditEvents.length,
+    reminders: db.nexusPilotReminders.length,
+    offlineQueueItems: db.nexusPilotOfflineQueue.length,
+    safetyStatus: "local pilot only; high-risk actions remain consent-gated and provider execution is not implied",
+    knownLimitations: [
+      "No fake live provider connection",
+      "No pharmacy fulfillment",
+      "No emergency dispatch",
+      "No payment processing",
+      "No authentication or compliance claim"
+    ]
+  };
+}
+
 async function api(req, res, url) {
   const db = await readDb();
   const usersChanged = ensureDefaultUsers(db);
@@ -27516,6 +27753,257 @@ async function api(req, res, url) {
 
   if (url.pathname === "/api/nexus/tools/status" && req.method === "GET") {
     return send(res, 200, nexusRealProviderStatus(db));
+  }
+
+  if (url.pathname === "/api/nexus/profile" && req.method === "GET") {
+    ensureNexusPilotState(db);
+    return send(res, 200, { ok: true, profile: db.nexusPilotProfiles[0], localDemoProfile: true });
+  }
+
+  if (url.pathname === "/api/nexus/profile" && req.method === "POST") {
+    ensureNexusPilotState(db);
+    const body = await readBody(req);
+    const now = new Date().toISOString();
+    const profile = db.nexusPilotProfiles[0] || { id: "standard-user-local", createdAt: now };
+    Object.assign(profile, {
+      displayName: sanitizePilotText(body.displayName || profile.displayName || user?.name || "Standard User", 120),
+      role: sanitizePilotText(body.role || profile.role || "Standard User", 80),
+      preferredLanguage: sanitizePilotText(body.preferredLanguage || profile.preferredLanguage || "English", 80),
+      region: sanitizePilotText(body.region || profile.region || "", 120),
+      contactPreferencePlaceholder: sanitizePilotText(body.contactPreferencePlaceholder || profile.contactPreferencePlaceholder || "Not connected", 120),
+      consentPreferencePlaceholder: sanitizePilotText(body.consentPreferencePlaceholder || profile.consentPreferencePlaceholder || "Ask before review queue", 160),
+      updatedAt: now,
+      localDemoProfile: true
+    });
+    db.nexusPilotProfiles[0] = profile;
+    addNexusPilotAuditEvent(db, "profile_updated", {
+      actor: profile.displayName,
+      role: profile.role,
+      description: "Local pilot profile foundation updated. No authentication or compliance claim was made."
+    });
+    await writeDb(db);
+    return send(res, 200, { ok: true, profile, audit: db.nexusPilotAuditEvents[0] });
+  }
+
+  if (url.pathname === "/api/nexus/records" && req.method === "GET") {
+    ensureNexusPilotState(db);
+    return send(res, 200, { ok: true, records: db.nexusPilotRecords, recordTypes: NEXUS_PILOT_RECORD_TYPES, statuses: NEXUS_PILOT_RECORD_STATUSES });
+  }
+
+  if (url.pathname === "/api/nexus/records" && req.method === "POST") {
+    const record = buildNexusPilotRecord(db, await readBody(req), user);
+    await writeDb(db);
+    return send(res, 200, { ok: true, record, audit: db.nexusPilotAuditEvents[0], status: "draft_saved" });
+  }
+
+  const nexusRecordMatch = url.pathname.match(/^\/api\/nexus\/records\/([^/]+)$/);
+  if (nexusRecordMatch && req.method === "PATCH") {
+    ensureNexusPilotState(db);
+    const record = findNexusPilotRecord(db, nexusRecordMatch[1]);
+    if (!record) return send(res, 404, { ok: false, error: "record_not_found" });
+    const body = await readBody(req);
+    if (body.status && NEXUS_PILOT_RECORD_STATUSES.includes(body.status)) record.status = body.status;
+    if (body.reviewStatus) record.reviewStatus = sanitizePilotText(body.reviewStatus, 80);
+    if (body.summary) record.summary = sanitizePilotText(body.summary, 900);
+    if (body.payload) record.payload = { ...(record.payload || {}), ...sanitizePilotPayload(body.payload) };
+    record.updatedAt = new Date().toISOString();
+    const audit = addNexusPilotAuditEvent(db, "record_updated", {
+      relatedRecordId: record.id,
+      mode: record.sourceMode,
+      actor: user?.name || record.profileLabel,
+      description: `${record.type} updated locally. No external action occurred.`
+    });
+    record.auditRefs = [...(record.auditRefs || []), audit.id];
+    await writeDb(db);
+    return send(res, 200, { ok: true, record, audit });
+  }
+
+  const nexusRecordSummaryMatch = url.pathname.match(/^\/api\/nexus\/records\/([^/]+)\/summary$/);
+  if (nexusRecordSummaryMatch && req.method === "POST") {
+    ensureNexusPilotState(db);
+    const record = findNexusPilotRecord(db, nexusRecordSummaryMatch[1]) || latestNexusPilotRecord(db);
+    if (!record) return send(res, 404, { ok: false, error: "record_not_found" });
+    record.status = record.status === "draft" ? "draft" : record.status;
+    record.updatedAt = new Date().toISOString();
+    const audit = addNexusPilotAuditEvent(db, "summary_generated", {
+      relatedRecordId: record.id,
+      mode: record.sourceMode,
+      actor: user?.name || record.profileLabel,
+      description: `${record.type} provider-ready summary prepared locally. No record was sent externally.`
+    });
+    record.auditRefs = [...(record.auditRefs || []), audit.id];
+    await writeDb(db);
+    return send(res, 200, { ok: true, record, summary: record.summary, audit, providerReady: true, noExternalAction: true });
+  }
+
+  const nexusRecordConsentMatch = url.pathname.match(/^\/api\/nexus\/records\/([^/]+)\/consent$/);
+  if (nexusRecordConsentMatch && req.method === "POST") {
+    ensureNexusPilotState(db);
+    const record = findNexusPilotRecord(db, nexusRecordConsentMatch[1]) || latestNexusPilotRecord(db);
+    if (!record) return send(res, 404, { ok: false, error: "record_not_found" });
+    const now = new Date().toISOString();
+    const consent = {
+      id: crypto.randomUUID(),
+      recordId: record.id,
+      consentType: "local_review_queue",
+      timestamp: now,
+      profileId: record.profileId,
+      profileLabel: record.profileLabel || user?.name || "Standard User",
+      mode: record.sourceMode,
+      summary: "Nexus can prepare this summary for review. This does not send it to a live provider unless a provider connection is configured. Review your information before continuing.",
+      localDemoLimitation: true
+    };
+    record.consentStatus = "confirmed";
+    record.updatedAt = now;
+    db.nexusPilotConsentEvents.unshift(consent);
+    const audit = addNexusPilotAuditEvent(db, "consent_confirmed", {
+      relatedRecordId: record.id,
+      mode: record.sourceMode,
+      actor: consent.profileLabel,
+      description: "User confirmed local review-queue consent. No live provider was contacted."
+    });
+    record.auditRefs = [...(record.auditRefs || []), audit.id];
+    await writeDb(db);
+    return send(res, 200, { ok: true, record, consent, audit });
+  }
+
+  const nexusRecordQueueMatch = url.pathname.match(/^\/api\/nexus\/records\/([^/]+)\/queue-review$/);
+  if (nexusRecordQueueMatch && req.method === "POST") {
+    ensureNexusPilotState(db);
+    const record = findNexusPilotRecord(db, nexusRecordQueueMatch[1]) || latestNexusPilotRecord(db);
+    const result = nexusPilotQueueRecordForReview(db, record, user);
+    if (result.error === "record_not_found") return send(res, 404, { ok: false, error: result.error });
+    if (result.error === "consent_required") return send(res, 409, { ok: false, error: result.error, consentCopy: result.consentCopy });
+    await writeDb(db);
+    return send(res, 200, { ok: true, record, queueItem: result.queueItem, audit: result.audit, noExternalAction: true });
+  }
+
+  if (url.pathname === "/api/nexus/review-queue" && req.method === "GET") {
+    ensureNexusPilotState(db);
+    return send(res, 200, { ok: true, queue: db.nexusPilotReviewQueue });
+  }
+
+  const nexusReviewNoteMatch = url.pathname.match(/^\/api\/nexus\/review-queue\/([^/]+)\/note$/);
+  if (nexusReviewNoteMatch && req.method === "POST") {
+    ensureNexusPilotState(db);
+    const item = db.nexusPilotReviewQueue.find(queueItem => queueItem.id === nexusReviewNoteMatch[1]);
+    if (!item) return send(res, 404, { ok: false, error: "queue_item_not_found" });
+    const body = await readBody(req);
+    const note = {
+      id: crypto.randomUUID(),
+      note: sanitizePilotText(body.note || "Provider/admin review note added.", 600),
+      actor: sanitizePilotText(body.actor || user?.name || "Provider/Admin", 120),
+      createdAt: new Date().toISOString(),
+      localReviewOnly: true
+    };
+    item.providerAdminNotes = [note, ...(item.providerAdminNotes || [])];
+    item.updatedAt = note.createdAt;
+    db.nexusPilotAdminNotes.unshift({ ...note, queueItemId: item.id, recordId: item.recordId });
+    const audit = addNexusPilotAuditEvent(db, "provider_admin_note_added", {
+      relatedRecordId: item.recordId,
+      mode: item.sourceMode,
+      actor: note.actor,
+      role: "Provider/Admin",
+      description: "Provider/admin note added to local review queue. No live clinical, pharmacy, payment, or emergency action occurred."
+    });
+    await writeDb(db);
+    return send(res, 200, { ok: true, queueItem: item, note, audit });
+  }
+
+  const nexusReviewStatusMatch = url.pathname.match(/^\/api\/nexus\/review-queue\/([^/]+)\/status$/);
+  if (nexusReviewStatusMatch && req.method === "PATCH") {
+    ensureNexusPilotState(db);
+    const item = db.nexusPilotReviewQueue.find(queueItem => queueItem.id === nexusReviewStatusMatch[1]);
+    if (!item) return send(res, 404, { ok: false, error: "queue_item_not_found" });
+    const body = await readBody(req);
+    const status = NEXUS_PILOT_RECORD_STATUSES.includes(body.status) ? body.status : "reviewed";
+    item.status = status;
+    item.updatedAt = new Date().toISOString();
+    const record = findNexusPilotRecord(db, item.recordId);
+    if (record) {
+      record.reviewStatus = status;
+      record.status = status;
+      record.updatedAt = item.updatedAt;
+    }
+    const audit = addNexusPilotAuditEvent(db, "review_status_changed", {
+      relatedRecordId: item.recordId,
+      mode: item.sourceMode,
+      actor: user?.name || "Provider/Admin",
+      role: "Provider/Admin",
+      description: `Local review queue status changed to ${status}. No external action occurred.`
+    });
+    await writeDb(db);
+    return send(res, 200, { ok: true, queueItem: item, record, audit });
+  }
+
+  if (url.pathname === "/api/nexus/audit" && req.method === "GET") {
+    ensureNexusPilotState(db);
+    return send(res, 200, { ok: true, audit: db.nexusPilotAuditEvents });
+  }
+
+  if (url.pathname === "/api/nexus/reminders" && req.method === "GET") {
+    ensureNexusPilotState(db);
+    return send(res, 200, { ok: true, reminders: db.nexusPilotReminders });
+  }
+
+  if (url.pathname === "/api/nexus/reminders" && req.method === "POST") {
+    ensureNexusPilotState(db);
+    const body = await readBody(req);
+    const reminder = {
+      id: crypto.randomUUID(),
+      type: sanitizePilotText(body.type || body.sourceMode || "general", 80),
+      title: sanitizePilotText(body.title || body.summary || "Nexus reminder", 160),
+      time: sanitizePilotText(body.time || body.when || "Not scheduled", 120),
+      recurrence: sanitizePilotText(body.recurrence || "once", 80),
+      linkedRecordId: sanitizePilotText(body.recordId || "", 120),
+      notes: sanitizePilotText(body.notes || "Local reminder only. No SMS or push notification was sent.", 320),
+      status: "queued_locally",
+      createdAt: new Date().toISOString(),
+      localReminderOnly: true
+    };
+    db.nexusPilotReminders.unshift(reminder);
+    const audit = addNexusPilotAuditEvent(db, "reminder_created", {
+      relatedRecordId: reminder.linkedRecordId,
+      mode: reminder.type,
+      actor: user?.name || "Standard User",
+      description: "Local reminder created. No SMS, push notification, email, or external calendar action occurred."
+    });
+    await writeDb(db);
+    return send(res, 200, { ok: true, reminder, audit });
+  }
+
+  if (url.pathname === "/api/nexus/offline-queue" && req.method === "GET") {
+    ensureNexusPilotState(db);
+    return send(res, 200, { ok: true, offlineQueue: db.nexusPilotOfflineQueue });
+  }
+
+  if (url.pathname === "/api/nexus/offline-queue" && req.method === "POST") {
+    ensureNexusPilotState(db);
+    const body = await readBody(req);
+    const item = {
+      id: crypto.randomUUID(),
+      recordId: sanitizePilotText(body.recordId || "", 120),
+      type: sanitizePilotText(body.type || body.sourceMode || "offline_queue_item", 100),
+      title: sanitizePilotText(body.title || body.summary || "Offline queue item", 180),
+      summary: sanitizePilotText(body.summary || "Saved for local offline review.", 700),
+      status: "queued_locally",
+      createdAt: new Date().toISOString(),
+      syncStatus: "local_only",
+      noLiveSyncClaim: true
+    };
+    db.nexusPilotOfflineQueue.unshift(item);
+    const audit = addNexusPilotAuditEvent(db, "offline_item_queued", {
+      relatedRecordId: item.recordId,
+      mode: item.type,
+      actor: user?.name || "Standard User",
+      description: "Item queued locally for offline review. No live sync or external submission occurred."
+    });
+    await writeDb(db);
+    return send(res, 200, { ok: true, offlineItem: item, audit });
+  }
+
+  if (url.pathname === "/api/nexus/pilot-status" && req.method === "GET") {
+    return send(res, 200, { ok: true, pilotStatus: nexusPilotStatus(db) });
   }
 
   if (url.pathname === "/api/nexus/runtime/capabilities" && req.method === "GET") {
