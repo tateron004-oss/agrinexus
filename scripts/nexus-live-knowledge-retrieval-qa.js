@@ -63,7 +63,7 @@ function excludes(source, token, label) {
 [
   "/api/nexus/knowledge/status",
   "/api/nexus/knowledge/trusted-sources",
-  "/api/nexus/knowledge/query",
+  "/api/nexus/intelligence/ask",
   "/api/nexus/knowledge/save-result"
 ].forEach(token => includes(server, token, `knowledge endpoint ${token}`));
 
@@ -110,7 +110,7 @@ function excludes(source, token, label) {
   'data-testid="nexus-knowledge-queue-result"',
   "/api/nexus/knowledge/status",
   "/api/nexus/knowledge/trusted-sources",
-  "/api/nexus/knowledge/query",
+  "/api/nexus/intelligence/ask",
   "/api/nexus/knowledge/save-result",
   "What causes yellow leaves on maize",
   "No citations are shown because live retrieval is not configured",
@@ -134,15 +134,15 @@ function excludes(source, token, label) {
 ].forEach(token => includes(envExample, token, `env example ${token}`));
 
 [
-  "nexus-behavior-344",
-  "agrinexus-pwa-v323"
+  "nexus-behavior-345",
+  "agrinexus-pwa-v324"
 ].forEach(token => {
   includes(app, token, `app build ${token}`);
   includes(server, token, `server build ${token}`);
   includes(sw, token, `service worker build ${token}`);
 });
-includes(index, "/styles.css?v=nexus-behavior-344", "stylesheet cache bust");
-includes(index, "/app.js?v=nexus-behavior-344", "app cache bust");
+includes(index, "/styles.css?v=nexus-behavior-345", "stylesheet cache bust");
+includes(index, "/app.js?v=nexus-behavior-345", "app cache bust");
 
 assert.strictEqual(
   packageJson.scripts["qa:nexus-live-knowledge-retrieval"],

@@ -103,6 +103,7 @@ let nexusProductionRailActionStatus = "";
 let nexusKnowledgeStatus = null;
 let nexusKnowledgeTrustedSources = [];
 let nexusKnowledgeLastResult = null;
+let nexusKnowledgeHistory = null;
 let nexusKnowledgeActionStatus = "";
 let nexusProviderPathwayLastRequest = null;
 let nexusProviderContactBridgeCards = [];
@@ -255,8 +256,8 @@ const nexusProductIdentity = Object.freeze({
 });
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-344";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v323";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-345";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v324";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
 const VOICE_ATTENTION_DELAY_MS = 900;
@@ -18440,7 +18441,7 @@ function renderNexusHomeModePanel(card = {}) {
         </div>
       ` : ""}
       <p>${escapeHtml(translateText(panel.nextPrompt || "Tell Nexus what you want to do next."))}</p>
-      ${["agriculture", "chronic-care", "telehealth-intake", "mobile-clinic", "pharmacy-support", "learning", "jobs", "agritrade", "maps"].includes(panel.id || "") ? `
+      ${["agriculture", "chronic-care", "telehealth-intake", "mobile-clinic", "pharmacy-support", "learning", "jobs", "agritrade", "maps", "media", "reminders", "offline"].includes(panel.id || "") ? `
         <div class="nexus-mode-knowledge-prompt" data-testid="nexus-mode-knowledge-prompt" data-nexus-mode-knowledge="${escapeHtml(panel.id || "mode")}">
           <strong>${escapeHtml(translateText("Ask with sources"))}</strong>
           <input type="text" data-nexus-mode-knowledge-input="${escapeHtml(panel.id || "mode")}" placeholder="${escapeHtml(translateText("Ask a current or source-backed question"))}">
@@ -18980,13 +18981,33 @@ function nexusKnowledgeCategoryForCommand(command = "") {
   if (/\b(mobile clinic|community health|outreach clinic|clinic van)\b/.test(lower)) return "mobileClinic";
   if (/\b(blood pressure|bp|hypertension|diabetes|glucose|obesity|weight|chronic|rpm|rtm)\b/.test(lower)) return "chronicCare";
   if (/\b(blood pressure|hypertension|diabetes|obesity|chronic|health|symptom|doctor|clinic|medical|patient)\b/.test(lower)) return "health";
+  if (/\b(price|market|buyer|seller|sell|agritade|agritrade|commodity)\b/.test(lower)) return "marketplace";
   if (/\b(crop|maize|tomato|tomatoes|cassava|soil|pest|farm|farmer|agriculture|irrigation|fertilizer|yellow leaves)\b/.test(lower)) return "agriculture";
   if (/\b(job|jobs|workforce|career|training|solar installation|skills|employment)\b/.test(lower)) return "jobs";
   if (/\b(lesson|learning|literacy|course|study|school|training)\b/.test(lower)) return "learning";
-  if (/\b(price|market|buyer|seller|sell|agritrade|commodity)\b/.test(lower)) return "marketplace";
   if (/\b(route|map|field visit|distance|travel|directions)\b/.test(lower)) return "maps";
+  if (/\b(music|media|song|playlist|r&b|rnb|afrobeats|african music|amapiano|gospel|spotify|youtube|apple music)\b/.test(lower)) return "music_media";
+  if (/\b(reminder|reminders|remind me|follow up|follow-up)\b/.test(lower)) return "reminders";
+  if (/\b(offline|low bandwidth|low-bandwidth|queue for later|save for later)\b/.test(lower)) return "offline";
   if (/\b(provider|admin|administrator|review queue|operations|partner account)\b/.test(lower)) return "providerAdmin";
   return "general";
+}
+
+function nexusKnowledgeCategoryForModeId(modeId = "") {
+  return ({
+    agriculture: "agriculture",
+    "chronic-care": "chronicCare",
+    "telehealth-intake": "telehealth",
+    "mobile-clinic": "mobileClinic",
+    "pharmacy-support": "pharmacy",
+    learning: "learning",
+    jobs: "jobs",
+    agritrade: "marketplace",
+    maps: "maps",
+    media: "music_media",
+    reminders: "reminders",
+    offline: "offline"
+  })[modeId] || "";
 }
 
 function buildNexusKnowledgePreparedResult(result = {}) {
@@ -19127,6 +19148,10 @@ function renderNexusKnowledgeRailPanel() {
 function renderNexusInternetResourceHistoryPanel() {
   const answer = nexusKnowledgeLastResult || null;
   const requestItem = nexusProviderPathwayLastRequest || null;
+  const history = nexusKnowledgeHistory || {};
+  const queries = Array.isArray(history.queries) ? history.queries : [];
+  const savedResults = Array.isArray(history.savedResults) ? history.savedResults : [];
+  const reviewSummaries = Array.isArray(history.reviewSummaries) ? history.reviewSummaries : [];
   return `
     <section class="nexus-internet-resource-history" data-testid="nexus-internet-resource-history" aria-label="${escapeHtml(translateText("My Nexus Questions"))}">
       <div>
@@ -19134,6 +19159,7 @@ function renderNexusInternetResourceHistoryPanel() {
         <strong>${escapeHtml(translateText("Internet resource history"))}</strong>
         <small>${escapeHtml(translateText("Saved answers, citations, provider pathway requests, and local review status stay available without claiming live service."))}</small>
       </div>
+      <button type="button" data-nexus-knowledge-action="refresh-history" data-testid="nexus-internet-history-refresh">${escapeHtml(translateText("Refresh history"))}</button>
       ${answer ? `
         <article data-testid="nexus-internet-history-latest">
           <strong>${escapeHtml(answer.question || translateText("Latest Nexus question"))}</strong>
@@ -19142,6 +19168,23 @@ function renderNexusInternetResourceHistoryPanel() {
           <small>${escapeHtml(translateText("Status"))}: ${escapeHtml(answer.sourceBacked ? translateText("source-backed") : translateText("built-in or disabled retrieval"))}</small>
         </article>
       ` : `<p>${escapeHtml(translateText("Ask a source-sensitive question to start your Nexus question history."))}</p>`}
+      ${queries.length ? `
+        <div class="nexus-internet-history-list" data-testid="nexus-internet-history-list">
+          ${queries.slice(0, 6).map(item => {
+            const saved = savedResults.find(result => result.queryId === item.id);
+            return `
+              <article data-testid="nexus-internet-history-item" data-nexus-history-id="${escapeHtml(item.id || "")}">
+                <strong>${escapeHtml(item.questionSummary || translateText("Saved Nexus question"))}</strong>
+                <small>${escapeHtml(translateText("Category"))}: ${escapeHtml(translateText(item.categoryLabel || item.category || "General"))}</small>
+                <small>${escapeHtml(translateText("Answer mode"))}: ${escapeHtml(nexusProductionStatusLabel(item.answerMode || item.retrievalStatus || "disabled"))}</small>
+                <small>${escapeHtml(translateText("Citations"))}: ${escapeHtml(String(item.citationCount || 0))}</small>
+                <small>${escapeHtml(translateText("Saved target"))}: ${escapeHtml(saved?.recordType || translateText("not saved yet"))}</small>
+                <small>${escapeHtml(translateText("Created"))}: ${escapeHtml(item.createdAt ? new Date(item.createdAt).toLocaleString() : "")}</small>
+              </article>
+            `;
+          }).join("")}
+        </div>
+      ` : ""}
       ${requestItem ? `
         <article data-testid="nexus-provider-pathway-history">
           <strong>${escapeHtml(translateText("Provider support request"))}</strong>
@@ -19150,6 +19193,7 @@ function renderNexusInternetResourceHistoryPanel() {
           <small>${escapeHtml(translateText("Routing"))}: ${escapeHtml(nexusProductionStatusLabel(requestItem.routingStatus || "not_routed"))}</small>
         </article>
       ` : `<small>${escapeHtml(translateText("Provider support requests will appear here after you prepare one from an answer."))}</small>`}
+      <small data-testid="nexus-review-summary-history">${escapeHtml(translateText("Prepared review summaries"))}: ${escapeHtml(String(reviewSummaries.length || 0))}</small>
     </section>
   `;
 }
@@ -19169,14 +19213,31 @@ async function refreshNexusKnowledgeRail(options = {}) {
   }
 }
 
+async function refreshNexusInternetResourceHistory(options = {}) {
+  try {
+    nexusKnowledgeHistory = await request("/api/nexus/knowledge/history", { method: "GET" });
+    if (options.rerender !== false && experienceMode === "user") renderUserWorkspace();
+    return nexusKnowledgeHistory;
+  } catch {
+    return null;
+  }
+}
+
 async function runNexusKnowledgeQuery(command = "", options = {}) {
   const question = String(command || "").trim();
   if (!question) return null;
   nexusKnowledgeActionStatus = "Checking the knowledge rail. Nexus will cite sources only if retrieval is configured and returns citable results.";
   if (options.rerender !== false && experienceMode === "user") renderUserWorkspace();
-  const response = await request("/api/nexus/knowledge/query", {
+  const response = await request("/api/nexus/intelligence/ask", {
     method: "POST",
-    body: { question, category: nexusKnowledgeCategoryForCommand(question) }
+    body: {
+      question,
+      category: options.category || nexusKnowledgeCategoryForCommand(question),
+      context: {
+        modeId: options.modeId || "",
+        sourceSurface: options.sourceSurface || "standard_user"
+      }
+    }
   });
   nexusKnowledgeLastResult = response.result || null;
   nexusKnowledgeStatus = response.status || nexusKnowledgeStatus;
@@ -19184,6 +19245,7 @@ async function runNexusKnowledgeQuery(command = "", options = {}) {
     ? "Source-backed answer prepared. Review citations before acting."
     : (nexusKnowledgeLastResult?.answer || "Knowledge rail checked safely.");
   nexusAgenticBrainLastResult = buildNexusKnowledgePreparedResult(response);
+  await refreshNexusInternetResourceHistory({ rerender: false });
   if (options.rerender !== false && experienceMode === "user") renderUserWorkspace();
   return response;
 }
@@ -19201,6 +19263,11 @@ async function handleNexusKnowledgeRailClick(event) {
       await refreshNexusKnowledgeRail({ rerender: true });
       return true;
     }
+    if (action === "refresh-history") {
+      nexusKnowledgeActionStatus = "My Nexus Questions refreshed.";
+      await refreshNexusInternetResourceHistory({ rerender: true });
+      return true;
+    }
     if (action === "ask") {
       const input = $("#nexusKnowledgeQuestionInput");
       await runNexusKnowledgeQuery(input?.value?.trim() || "What causes yellow leaves on maize?");
@@ -19209,12 +19276,25 @@ async function handleNexusKnowledgeRailClick(event) {
     if (action === "ask-mode") {
       const modeId = button.dataset.nexusModeId || "";
       const input = document.querySelector(`[data-nexus-mode-knowledge-input="${CSS.escape(modeId)}"]`);
-      const fallback = modeId === "chronic-care"
-        ? "What is the latest advice for high blood pressure?"
-        : modeId === "agritrade"
-          ? "What is the current market price for tomatoes?"
-          : "What causes yellow leaves on maize?";
-      await runNexusKnowledgeQuery(input?.value?.trim() || fallback);
+      const fallback = ({
+        "chronic-care": "What is the latest advice for high blood pressure?",
+        "telehealth-intake": "What should I prepare before a telehealth visit?",
+        "mobile-clinic": "What should a rural patient prepare before mobile clinic access?",
+        "pharmacy-support": "What questions should I ask a pharmacist about medication adherence?",
+        learning: "What agriculture training should a beginner start with?",
+        jobs: "What training do I need for farm jobs?",
+        agritrade: "What is the current market price for tomatoes?",
+        maps: "What should I prepare for a field visit route?",
+        media: "Open Afrobeats music safely.",
+        reminders: "What follow-up reminder should I create from this answer?",
+        offline: "Save this question for offline review.",
+        agriculture: "What causes yellow leaves on maize?"
+      })[modeId] || "What causes yellow leaves on maize?";
+      await runNexusKnowledgeQuery(input?.value?.trim() || fallback, {
+        modeId,
+        category: nexusKnowledgeCategoryForModeId(modeId),
+        sourceSurface: "standard_user_mode_panel"
+      });
       return true;
     }
     if (action === "save-result" || action === "queue-result" || action === "save-offline") {
@@ -19250,7 +19330,8 @@ async function handleNexusKnowledgeRailClick(event) {
             : "Saved to a local Nexus record. No external action occurred.";
       await Promise.all([
         refreshNexusPilotPlatformStatus({ rerender: false }),
-        refreshNexusPilotReviewQueue({ rerender: false })
+        refreshNexusPilotReviewQueue({ rerender: false }),
+        refreshNexusInternetResourceHistory({ rerender: false })
       ]);
       renderUserWorkspace();
       return true;
@@ -19275,6 +19356,7 @@ async function handleNexusKnowledgeRailClick(event) {
       nexusKnowledgeActionStatus = result?.summary
         ? "Review-ready research summary prepared locally. No provider was contacted."
         : "Review summary prepared locally.";
+      await refreshNexusInternetResourceHistory({ rerender: false });
       if (experienceMode === "user") renderUserWorkspace();
       return true;
     }
@@ -19288,6 +19370,7 @@ async function handleNexusKnowledgeRailClick(event) {
           category: answer.category || "general",
           answerSummary: answer.answer || "",
           answerMode: answer.answerMode || answer.retrievalStatus || "",
+          queryId: answer.queryId || "",
           citations: answer.citations || [],
           limitations: answer.limitations || [],
           userNotes: note,
@@ -19299,6 +19382,7 @@ async function handleNexusKnowledgeRailClick(event) {
       nexusKnowledgeActionStatus = nexusProviderPathwayLastRequest?.providerConfigured
         ? "Provider pathway prepared. Consent is required before routing."
         : "Provider pathway not configured yet. Nexus saved this locally and did not contact a provider.";
+      await refreshNexusInternetResourceHistory({ rerender: false });
       if (experienceMode === "user") renderUserWorkspace();
       return true;
     }
@@ -20902,6 +20986,13 @@ function renderUserWorkspace() {
     setTimeout(() => {
       if (experienceMode === "user" && document.querySelector("[data-nexus-knowledge-rail='true']")) {
         refreshNexusKnowledgeRail({ rerender: false }).catch(() => {});
+      }
+    }, 0);
+  }
+  if (!nexusKnowledgeHistory) {
+    setTimeout(() => {
+      if (experienceMode === "user" && document.querySelector("[data-testid='nexus-internet-resource-history']")) {
+        refreshNexusInternetResourceHistory({ rerender: false }).catch(() => {});
       }
     }, 0);
   }
@@ -33876,11 +33967,12 @@ async function handleVoiceCommandCore(rawCommand, options = {}) {
   if (isOpenKnowledgeQuestion(spokenCommand || command)) {
     pendingAgentClarification = null;
     pendingNexusSpokenCommand = null;
-    updateNexusBehaviorLayer("thinking", "Nexus is listening to the full question and checking live knowledge with platform context.");
-    renderLiveVoiceSuggestions(["ask one follow-up", "open health", "open workforce", "Nexus stop"]);
-    const locationContext = await safeBrowserWeatherLocation(spokenCommand || command);
+    updateNexusBehaviorLayer("thinking", "Nexus is listening to the full question and checking internet-resource knowledge with platform context.");
+    renderLiveVoiceSuggestions(["ask one follow-up", "save to record", "prepare review summary", "Nexus stop"]);
     if (ignoreStaleNexusTurn(turnToken, "knowledge answer")) return;
-    await runBackendAgentCommand(spokenCommand || command, locationContext, { turnToken });
+    await runNexusKnowledgeQuery(spokenCommand || command, { sourceSurface: "global_voice_ask_nexus" });
+    const response = nexusKnowledgeLastResult?.answer || "Nexus checked internet-resource knowledge safely.";
+    setVoiceResponse(response, true, { allowHandoff: false, command: spokenCommand || command, source: "nexus-internet-resource-assistant-platform" });
     return;
   }
   if (isOpenDialogVoiceQuestion(spokenCommand || command)) {
@@ -33937,11 +34029,12 @@ async function handleVoiceCommandCore(rawCommand, options = {}) {
     return;
   }
   if (isOpenKnowledgeQuestion(command)) {
-    updateNexusBehaviorLayer("thinking", "Nexus is checking live knowledge and platform context before answering.");
-    renderLiveVoiceSuggestions(["compare markets", "open trade", "track route", "run live service check"]);
-    const locationContext = await browserWeatherLocation(command);
+    updateNexusBehaviorLayer("thinking", "Nexus is checking internet-resource knowledge and platform context before answering.");
+    renderLiveVoiceSuggestions(["save to record", "prepare review summary", "queue offline", "request advisor support"]);
     if (ignoreStaleNexusTurn(turnToken, "knowledge answer")) return;
-    await runBackendAgentCommand(command, locationContext, { turnToken });
+    await runNexusKnowledgeQuery(command, { sourceSurface: "global_voice_ask_nexus" });
+    const response = nexusKnowledgeLastResult?.answer || "Nexus checked internet-resource knowledge safely.";
+    setVoiceResponse(response, true, { allowHandoff: false, command, source: "nexus-internet-resource-assistant-platform" });
     return;
   }
   if (/\b(system integrity|platform integrity|integrity check|stress test|polish check|demo readiness|final check|readiness pass)\b/.test(lower)) {

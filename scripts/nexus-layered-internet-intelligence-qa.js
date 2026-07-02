@@ -44,7 +44,7 @@ function excludes(source, token, label) {
 
 [
   "/api/nexus/knowledge/classify",
-  "/api/nexus/knowledge/query",
+  "/api/nexus/intelligence/ask",
   "/api/nexus/knowledge/save-result",
   "/api/nexus/knowledge/attach-to-record",
   "/api/nexus/knowledge/prepare-review-summary",
@@ -135,7 +135,7 @@ includes(app, "No citations are shown because live retrieval is not configured",
   "data-testid=\"nexus-mode-knowledge-prompt\"",
   "data-testid=\"nexus-mode-ask-with-sources\"",
   "data-testid=\"nexus-live-knowledge-readiness\"",
-  "/api/nexus/knowledge/query",
+  "/api/nexus/intelligence/ask",
   "/api/nexus/knowledge/save-result",
   "/api/nexus/knowledge/prepare-review-summary"
 ].forEach(token => includes(app, token, `frontend layered UI ${token}`));
@@ -161,15 +161,15 @@ includes(app, "No citations are shown because live retrieval is not configured",
 ].forEach(token => includes(css, token, `layered css ${token}`));
 
 [
-  "nexus-behavior-344",
-  "agrinexus-pwa-v323"
+  "nexus-behavior-345",
+  "agrinexus-pwa-v324"
 ].forEach(token => {
   includes(app, token, `app build ${token}`);
   includes(server, token, `server build ${token}`);
   includes(sw, token, `service worker build ${token}`);
 });
-includes(index, "/styles.css?v=nexus-behavior-344", "stylesheet cache bust");
-includes(index, "/app.js?v=nexus-behavior-344", "app cache bust");
+includes(index, "/styles.css?v=nexus-behavior-345", "stylesheet cache bust");
+includes(index, "/app.js?v=nexus-behavior-345", "app cache bust");
 
 assert.strictEqual(
   packageJson.scripts["qa:nexus-layered-internet-intelligence"],
