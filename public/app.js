@@ -241,8 +241,8 @@ const nexusProductIdentity = Object.freeze({
 });
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-338";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v317";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-339";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v318";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
 const VOICE_ATTENTION_DELAY_MS = 900;
@@ -18370,6 +18370,7 @@ function renderNexusAgenticBrainResultCards() {
           <strong>${escapeHtml(card.title || "Prepared item")}</strong>
           <span>${escapeHtml(card.status || "prepared locally")}</span>
           ${renderNexusHomeModePanel(card)}
+          ${renderNexusHomeModeSummary(card)}
           ${renderNexusMediaProviderOptions(card)}
           ${renderNexusHealthAccessPreparationOptions(card)}
           ${card.localOnly ? `<small>${escapeHtml(translateText("Local-only"))}</small>` : ""}
@@ -18385,6 +18386,7 @@ function renderNexusHomeModePanel(card = {}) {
   const panel = card.modePanel || null;
   if (!panel) return "";
   const actions = Array.isArray(panel.quickActions) ? panel.quickActions : [];
+  const fields = Array.isArray(panel.fields) ? panel.fields : [];
   return `
     <div class="nexus-home-mode-panel" data-nexus-home-mode-panel="${escapeHtml(panel.id || "mode")}">
       <div class="nexus-home-mode-panel-head">
@@ -18403,8 +18405,50 @@ function renderNexusHomeModePanel(card = {}) {
           `).join("")}
         </div>
       ` : ""}
+      ${fields.length ? `
+        <div class="nexus-home-mode-panel-form" data-nexus-mode-form="${escapeHtml(panel.id || "mode")}">
+          <strong>${escapeHtml(translateText("Add details for Nexus to organize"))}</strong>
+          <div class="nexus-home-mode-field-grid">
+            ${fields.slice(0, 9).map(field => {
+              const [name, label, placeholder] = Array.isArray(field) ? field : [field.name, field.label, field.placeholder];
+              return `
+                <label>
+                  <span>${escapeHtml(translateText(label || name || "Field"))}</span>
+                  <input type="text" data-nexus-mode-field="${escapeHtml(name || label || "field")}" placeholder="${escapeHtml(translateText(placeholder || ""))}">
+                </label>
+              `;
+            }).join("")}
+          </div>
+          <button type="button" class="nexus-home-mode-summary-button" data-nexus-mode-summary="${escapeHtml(panel.id || "mode")}">
+            ${escapeHtml(translateText("Prepare local summary"))}
+          </button>
+        </div>
+      ` : ""}
       <p>${escapeHtml(translateText(panel.nextPrompt || "Tell Nexus what you want to do next."))}</p>
       <small>${escapeHtml(translateText(panel.limitation || "Preparation only. High-risk actions remain gated."))}</small>
+    </div>
+  `;
+}
+
+function renderNexusHomeModeSummary(card = {}) {
+  const summary = card.modeSummary || null;
+  if (!summary) return "";
+  const entries = Object.entries(summary.values || {}).filter(([, value]) => String(value || "").trim());
+  return `
+    <div class="nexus-home-mode-summary" data-nexus-home-mode-summary="${escapeHtml(summary.id || "mode")}">
+      <strong>${escapeHtml(translateText(summary.title || "Prepared summary"))}</strong>
+      ${entries.length ? `
+        <dl>
+          ${entries.slice(0, 12).map(([key, value]) => `
+            <div>
+              <dt>${escapeHtml(translateText(summary.labels?.[key] || key))}</dt>
+              <dd>${escapeHtml(String(value || ""))}</dd>
+            </div>
+          `).join("")}
+        </dl>
+      ` : `<p>${escapeHtml(translateText("No details were entered yet. Nexus can still guide the next step."))}</p>`}
+      <p>${escapeHtml(translateText(summary.nextStep || "Review this local summary, then choose a safe next step."))}</p>
+      <small>${escapeHtml(translateText(summary.safetyNote || "Local summary only. No live provider, payment, dispatch, message, call, location sharing, prescribing, diagnosis, or emergency action was executed."))}</small>
     </div>
   `;
 }
@@ -18884,6 +18928,111 @@ const NEXUS_HOME_MODE_PANEL_CONTENT = Object.freeze({
   }
 });
 
+const NEXUS_HOME_MODE_PANEL_FIELDS = Object.freeze({
+  agriculture: [
+    ["crop", "Crop", "Maize, cassava, tomatoes, rice..."],
+    ["region", "Location / region", "Village, county, region, or country"],
+    ["issue", "Issue or goal", "Pest concern, irrigation, soil, market, training..."],
+    ["urgency", "Urgency", "Today, this week, planning ahead"],
+    ["photoNote", "Photo note", "Photos available or not available"],
+    ["supportPath", "Preferred support path", "Learning, marketplace, maps, community support"]
+  ],
+  "chronic-care": [
+    ["condition", "Condition focus", "Diabetes, hypertension, obesity, general wellness"],
+    ["bloodPressure", "Blood pressure", "Example: 128/82"],
+    ["glucose", "Blood glucose", "Example: 110 fasting"],
+    ["weight", "Weight", "If you want to include it"],
+    ["symptoms", "Symptoms", "What changed or worries you?"],
+    ["adherence", "Medication adherence", "Taken as directed, missed doses, unsure"],
+    ["activity", "Activity / therapy update", "Walking, exercise, therapy, diet notes"],
+    ["readingTime", "Reading date/time", "Today 8 AM"],
+    ["notes", "Notes", "Anything for provider review"]
+  ],
+  "telehealth-intake": [
+    ["patientLabel", "Patient label", "Self, parent, child, family member"],
+    ["ageRange", "Age range", "Adult, teen, child, older adult"],
+    ["mainConcern", "Main concern", "What is the visit about?"],
+    ["symptoms", "Symptoms", "Symptoms and timing"],
+    ["conditions", "Chronic conditions", "Known conditions if relevant"],
+    ["medications", "Medications", "Current medicines if known"],
+    ["vitals", "Vitals", "BP, glucose, temperature, pulse, etc."],
+    ["supportType", "Preferred support type", "Telehealth prep, clinic prep, provider summary"],
+    ["urgency", "Urgency level", "Routine, soon, urgent warning signs"]
+  ],
+  "mobile-clinic": [
+    ["area", "Area / community", "Community, village, neighborhood"],
+    ["serviceNeed", "Care or service needed", "Vitals, pharmacy, education, chronic care..."],
+    ["people", "Household or people count", "Optional"],
+    ["urgency", "Urgency", "Routine, soon, urgent concern"],
+    ["barriers", "Access barriers", "Transport, cost, language, mobility, connectivity"],
+    ["timeWindow", "Preferred date/time window", "If known"],
+    ["notes", "Notes", "Details for local review"]
+  ],
+  "pharmacy-support": [
+    ["medication", "Medication name", "As written on package or prescription"],
+    ["dose", "Dose / frequency", "Only if you already know it"],
+    ["refillNeed", "Refill need", "Need refill, question only, not sure"],
+    ["adherence", "Adherence issue", "Missed dose, side effects, cost, access"],
+    ["sideEffect", "Side effect concern", "What happened and when?"],
+    ["question", "Pharmacy question", "Question for pharmacist or clinician"],
+    ["notes", "Notes", "Anything else to include"]
+  ],
+  learning: [
+    ["goal", "Learning goal", "Agriculture, health basics, digital skills, AI..."],
+    ["level", "Current skill level", "Beginner, some experience, advanced"],
+    ["language", "Language preference", "English, Swahili, French, Arabic..."],
+    ["topic", "Topic", "Specific subject"],
+    ["time", "Time available", "10 minutes/day, weekends, evenings"],
+    ["format", "Preferred format", "Reading, audio, video, practice"]
+  ],
+  jobs: [
+    ["interest", "Job interest", "Farm work, healthcare support, tech, sales..."],
+    ["skills", "Skills", "What can you already do?"],
+    ["experience", "Experience level", "New, some experience, experienced"],
+    ["region", "Location / region", "Optional"],
+    ["trainingNeed", "Training need", "What skill do you need next?"],
+    ["availability", "Availability", "Full time, part time, seasonal"],
+    ["notes", "Notes", "Anything for a readiness plan"]
+  ],
+  agritrade: [
+    ["product", "Product / crop", "Maize, cassava, tomatoes, fertilizer..."],
+    ["quantity", "Quantity", "Bags, kg, crates, estimate"],
+    ["location", "Location", "Market, farm, region"],
+    ["buyer", "Target buyer", "Retailer, cooperative, household, exporter"],
+    ["logistics", "Logistics need", "Transport, storage, timing"],
+    ["price", "Price / notes", "Optional"],
+    ["notes", "Questions", "What should Nexus prepare?"]
+  ],
+  maps: [
+    ["site", "Site / farm / community", "Name or description"],
+    ["area", "Location / area", "Typed location only"],
+    ["purpose", "Purpose of visit", "Farm visit, clinic visit, delivery prep..."],
+    ["access", "Access notes", "Road, transport, safety, weather"],
+    ["route", "Route / logistics notes", "Origin, destination, constraints"],
+    ["urgency", "Urgency", "Today, soon, planning"]
+  ],
+  media: [
+    ["musicType", "Music / media type", "R&B, Afrobeats, gospel, study music..."],
+    ["provider", "Provider preference", "YouTube, Spotify, Apple Music"],
+    ["purpose", "Purpose", "Focus, wellness, celebration, learning"],
+    ["notes", "Notes", "Any clean/search preference"]
+  ],
+  reminders: [
+    ["type", "Reminder type", "Health, medication, farm, learning, work"],
+    ["task", "Title / task", "What should Nexus remind you about?"],
+    ["time", "Date/time or natural language time", "Tomorrow morning, Friday 3 PM"],
+    ["recurrence", "Repeat", "Once, daily, weekly, monthly"],
+    ["notes", "Notes", "Keep sensitive details minimal"]
+  ],
+  offline: [
+    ["itemType", "Offline item type", "Note, provider summary, agriculture request"],
+    ["title", "Title", "Short label"],
+    ["details", "Details", "What should be available offline?"],
+    ["priority", "Priority", "Low, normal, high"],
+    ["syncNote", "Sync note", "What should happen when connection returns?"]
+  ]
+});
+
 function buildNexusHomeModePanelResult(modeId = "", command = "") {
   const presentation = NEXUS_HOME_MODE_PRESENTATION[modeId] || {};
   const content = NEXUS_HOME_MODE_PANEL_CONTENT[modeId] || null;
@@ -18905,6 +19054,7 @@ function buildNexusHomeModePanelResult(modeId = "", command = "") {
         title: presentation.title,
         explanation: content.explanation,
         quickActions: content.quickActions,
+        fields: NEXUS_HOME_MODE_PANEL_FIELDS[modeId] || [],
         nextPrompt: content.nextPrompt,
         limitation: content.limitation,
         command
@@ -18931,6 +19081,73 @@ function detectNexusHomeModePanelId(command = "") {
   if (/\b(reminder|reminders|remind me|follow-up|follow up)\b/.test(text)) return "reminders";
   if (/\b(offline queue|offline mode|queued work|low bandwidth|low-bandwidth)\b/.test(text)) return "offline";
   return null;
+}
+
+function buildNexusHomeModeSummaryResult(modeId = "", values = {}) {
+  const presentation = NEXUS_HOME_MODE_PRESENTATION[modeId] || {};
+  const content = NEXUS_HOME_MODE_PANEL_CONTENT[modeId] || {};
+  const fields = NEXUS_HOME_MODE_PANEL_FIELDS[modeId] || [];
+  const labels = Object.fromEntries(fields.map(field => {
+    const [name, label] = Array.isArray(field) ? field : [field.name, field.label];
+    return [name, label || name];
+  }));
+  const enteredValues = Object.fromEntries(Object.entries(values || {}).filter(([, value]) => String(value || "").trim()));
+  const healthcareMode = ["chronic-care", "telehealth-intake", "mobile-clinic", "pharmacy-support"].includes(modeId);
+  const commerceMode = modeId === "agritrade";
+  const locationMode = modeId === "maps" || modeId === "mobile-clinic";
+  const summaryTitle = `${presentation.icon || ""} ${presentation.title || "Nexus"} summary`.trim();
+  const safetyNote = healthcareMode
+    ? "Provider-ready preparation only. Nexus does not diagnose, prescribe, book, launch video, contact providers, request refills, dispatch services, share records, or handle emergencies."
+    : commerceMode
+      ? "Marketplace preparation only. Nexus does not contact buyers or sellers, place orders, process payments, book logistics, or move goods."
+      : locationMode
+        ? "Route and access preparation only. Nexus does not request browser location, share location, dispatch transport, or navigate externally without approval."
+        : modeId === "media"
+          ? "Media preparation only. Nexus does not host, download, rip, cache, scrape, or redistribute copyrighted music."
+          : "Local preparation only. Nexus did not execute external actions, send messages, make calls, process payments, or submit data.";
+  const nextStep = content.nextPrompt || "Review this summary and choose a safe next step.";
+  return {
+    ok: true,
+    status: "standard_user_mode_summary_prepared",
+    mode: presentation.title || "Nexus mode",
+    message: `${presentation.title || "Nexus"} summary prepared locally. Review it before taking any next step.`,
+    preparedCards: [{
+      type: "standard_user_mode_summary",
+      title: summaryTitle,
+      status: "local summary ready",
+      localOnly: true,
+      needsRealProvider: healthcareMode,
+      modeSummary: {
+        id: modeId,
+        title: summaryTitle,
+        labels,
+        values: enteredValues,
+        nextStep,
+        safetyNote
+      }
+    }],
+    noExecutionAuthorized: true,
+    localOnly: true,
+    source: "standard_user_mode_summary"
+  };
+}
+
+function handleNexusHomeModeSummaryClick(event) {
+  const button = event.target?.closest?.("[data-nexus-mode-summary]");
+  if (!button) return false;
+  event.preventDefault();
+  event.stopPropagation();
+  const modeId = button.dataset.nexusModeSummary || "";
+  const form = button.closest("[data-nexus-mode-form]");
+  const values = {};
+  form?.querySelectorAll?.("[data-nexus-mode-field]")?.forEach(field => {
+    values[field.dataset.nexusModeField || field.name || "field"] = field.value || "";
+  });
+  const summary = buildNexusHomeModeSummaryResult(modeId, values);
+  if (!summary) return false;
+  nexusAgenticBrainLastResult = summary;
+  renderUserWorkspace();
+  return true;
 }
 
 function nexusCommandCenterExamples() {
@@ -34820,6 +35037,7 @@ function bindStatic() {
   document.addEventListener("click", async event => {
     if (await handleAssistantRuntimeLocalToolClick(event)) return;
     if (handleAssistantRuntimeFollowUpClick(event)) return;
+    if (handleNexusHomeModeSummaryClick(event)) return;
     const earlyCommandCenterSubmit = event.target.closest("[data-nexus-command-center-submit]");
     if (earlyCommandCenterSubmit) {
       const input = $("#nexusCommandCenterInput");

@@ -26,9 +26,13 @@ function excludes(source, token, label) {
   "const NEXUS_HOME_MODE_PRESENTATION",
   "const NEXUS_HOME_SUGGESTED_ACTIONS",
   "const NEXUS_HOME_MODE_PANEL_CONTENT",
+  "const NEXUS_HOME_MODE_PANEL_FIELDS",
   "function buildNexusHomeModePanelResult",
+  "function buildNexusHomeModeSummaryResult",
   "function detectNexusHomeModePanelId",
   "function renderNexusHomeModePanel",
+  "function renderNexusHomeModeSummary",
+  "function handleNexusHomeModeSummaryClick",
   "function renderNexusSuggestedActions",
   "function buildNexusCapabilityOverviewResult",
   "function runNexusStandardUserHomeLocalCommand",
@@ -43,7 +47,13 @@ function excludes(source, token, label) {
   "onclick=\"return window.nexusHandleStandardUserHomeShortcut",
   "nexus-mode-card",
   "data-nexus-home-mode-panel",
+  "data-nexus-home-mode-summary",
+  "data-nexus-mode-form",
+  "data-nexus-mode-field",
+  "data-nexus-mode-summary",
   "nexus-home-mode-panel-actions",
+  "nexus-home-mode-field-grid",
+  "nexus-home-mode-summary-button",
   "nexus-suggested-action"
 ].forEach(token => includes(app, token, `home screen implementation token ${token}`));
 
@@ -90,6 +100,32 @@ function excludes(source, token, label) {
   "Create reminder",
   "Show offline queue"
 ].forEach(label => includes(app, label, `mode panel quick action ${label}`));
+
+[
+  "Crop",
+  "Blood pressure",
+  "Blood glucose",
+  "Main concern",
+  "Care or service needed",
+  "Medication name",
+  "Learning goal",
+  "Job interest",
+  "Product / crop",
+  "Site / farm / community",
+  "Music / media type",
+  "Reminder type",
+  "Offline item type"
+].forEach(label => includes(app, label, `mode panel structured field ${label}`));
+
+[
+  "Prepare local summary",
+  "standard_user_mode_summary_prepared",
+  "Local summary only",
+  "Provider-ready preparation only",
+  "Marketplace preparation only",
+  "Route and access preparation only",
+  "Media preparation only"
+].forEach(token => includes(app, token, `mode panel summary behavior ${token}`));
 
 [
   "Educational and planning support only",
@@ -154,6 +190,10 @@ function excludes(source, token, label) {
   "body.user-mode .nexus-home-mode-panel",
   "body.user-mode .nexus-home-mode-panel-actions",
   "body.user-mode .nexus-home-mode-panel-icon",
+  "body.user-mode .nexus-home-mode-panel-form",
+  "body.user-mode .nexus-home-mode-field-grid",
+  "body.user-mode .nexus-home-mode-summary",
+  "body.user-mode .nexus-home-mode-summary-button",
   "linear-gradient(135deg",
   "#1b7f4b",
   "#f4aa48",
@@ -170,14 +210,14 @@ function excludes(source, token, label) {
 ].forEach(token => excludes(app, token, "Standard User home screen"));
 
 [
-  [app, 'AGRINEXUS_BUILD_VERSION = "nexus-behavior-338"', "app build version"],
-  [app, 'AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v317"', "app cache version"],
-  [server, 'AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-338"', "server build version"],
-  [server, 'AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v317"', "server cache version"],
-  [sw, 'CACHE_NAME = "agrinexus-pwa-v317"', "service worker cache"],
-  [sw, 'BUILD_VERSION = "nexus-behavior-338"', "service worker build"],
-  [index, "/styles.css?v=nexus-behavior-338", "stylesheet cache bust"],
-  [index, "/app.js?v=nexus-behavior-338", "app script cache bust"]
+  [app, 'AGRINEXUS_BUILD_VERSION = "nexus-behavior-339"', "app build version"],
+  [app, 'AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v318"', "app cache version"],
+  [server, 'AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-339"', "server build version"],
+  [server, 'AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v318"', "server cache version"],
+  [sw, 'CACHE_NAME = "agrinexus-pwa-v318"', "service worker cache"],
+  [sw, 'BUILD_VERSION = "nexus-behavior-339"', "service worker build"],
+  [index, "/styles.css?v=nexus-behavior-339", "stylesheet cache bust"],
+  [index, "/app.js?v=nexus-behavior-339", "app script cache bust"]
 ].forEach(([source, token, label]) => includes(source, token, label));
 
 assert.strictEqual(

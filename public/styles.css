@@ -9053,6 +9053,96 @@ body.user-mode .nexus-home-mode-panel-actions button:focus-visible {
   border-color: rgba(42, 121, 182, .32);
 }
 
+body.user-mode .nexus-home-mode-panel-form,
+body.user-mode .nexus-home-mode-summary {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid rgba(20, 49, 58, .1);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, .86);
+}
+
+body.user-mode .nexus-home-mode-panel-form > strong,
+body.user-mode .nexus-home-mode-summary > strong {
+  color: #102b36;
+  font-size: .88rem;
+}
+
+body.user-mode .nexus-home-mode-field-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+body.user-mode .nexus-home-mode-field-grid label {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+}
+
+body.user-mode .nexus-home-mode-field-grid span {
+  color: #55707a;
+  font-size: .72rem;
+  font-weight: 900;
+}
+
+body.user-mode .nexus-home-mode-field-grid input {
+  width: 100%;
+  min-width: 0;
+  min-height: 36px;
+  border: 1px solid rgba(20, 49, 58, .14);
+  border-radius: 8px;
+  background: #fff;
+  color: #102b36;
+  font-size: .82rem;
+  box-sizing: border-box;
+}
+
+body.user-mode .nexus-home-mode-summary-button {
+  justify-self: start;
+  width: auto;
+  min-height: 36px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #1b7f4b, #2a79b6);
+  color: #fff;
+  box-shadow: 0 10px 22px rgba(27, 127, 75, .18);
+  font-size: .82rem;
+  font-weight: 950;
+}
+
+body.user-mode .nexus-home-mode-summary dl {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0;
+}
+
+body.user-mode .nexus-home-mode-summary dl div {
+  padding: 8px;
+  border-radius: 8px;
+  background: #f7fbf8;
+}
+
+body.user-mode .nexus-home-mode-summary dt {
+  color: #55707a;
+  font-size: .72rem;
+  font-weight: 950;
+}
+
+body.user-mode .nexus-home-mode-summary dd {
+  margin: 3px 0 0;
+  color: #102b36;
+  font-size: .84rem;
+  font-weight: 850;
+  line-height: 1.35;
+}
+
+body.user-mode .nexus-home-mode-summary p {
+  margin: 0;
+}
+
 body.user-mode .nexus-agentic-brain-panel details {
   max-height: 180px;
   overflow: auto;
@@ -9152,6 +9242,11 @@ body.user-mode .user-voice-dock [data-nexus-voice-demo-status] {
   }
 
   body.user-mode .nexus-mode-launcher {
+    grid-template-columns: 1fr;
+  }
+
+  body.user-mode .nexus-home-mode-field-grid,
+  body.user-mode .nexus-home-mode-summary dl {
     grid-template-columns: 1fr;
   }
 
