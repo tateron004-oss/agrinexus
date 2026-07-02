@@ -18388,6 +18388,8 @@ function renderNexusMediaProviderOptions(card = {}) {
   return `
     <div class="nexus-media-provider-card" data-nexus-media-provider-card="true">
       <small>${escapeHtml(translateText("Requested"))}: ${escapeHtml(media.requestedMusicType || "Music")}</small>
+      <small>${escapeHtml(translateText("Provider preference"))}: ${escapeHtml(media.providerPreference && media.providerPreference !== "none" ? media.providerPreference : "No specific provider")}</small>
+      <small>${escapeHtml(translateText("Playback/provider status"))}: ${escapeHtml(media.playbackStatus || "provider handoff")}</small>
       <small>${escapeHtml(translateText(safetyCopy))}</small>
       ${options.length ? `
         <div class="nexus-media-provider-actions">
@@ -18423,7 +18425,7 @@ const NEXUS_COMMAND_CENTER_SHORTCUTS = Object.freeze([
   { id: "jobs", icon: "J", label: "Jobs", description: "Jobs, readiness, workforce pathways.", command: "Help me find jobs or training." },
   { id: "learning", icon: "L", label: "Learning", description: "Digital skills, AI literacy, certifications.", command: "Help me learn a new skill." },
   { id: "maps", icon: "M", label: "Maps", description: "Field visit route planning.", command: "Help me plan a field visit route." },
-  { id: "media", icon: "♪", label: "Media", description: "Music provider search links.", command: "Play Afrobeats." },
+  { id: "media", icon: "🎵", label: "Music / Media", description: "R&B, Afrobeats, gospel, study music.", command: "Play Afrobeats." },
   { id: "messages", icon: "@", label: "Messages", description: "Draft only; no sending.", command: "Prepare a message, but do not send it." },
   { id: "reminders", icon: "R", label: "Reminders", description: "Local reminders and continuity.", command: "Create a reminder." },
   { id: "language", icon: "EN", label: "Language", description: "Switch language safely.", command: "Change language." },
@@ -18437,6 +18439,7 @@ function nexusCommandCenterExamples() {
     "Prepare a provider summary.",
     "Help me with crop disease.",
     "Play Afrobeats.",
+    "Open gospel music on YouTube.",
     "Find farm jobs.",
     "Switch to Swahili.",
     "Prepare a WhatsApp message, but do not send it."

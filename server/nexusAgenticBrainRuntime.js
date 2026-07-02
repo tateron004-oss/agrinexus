@@ -297,7 +297,7 @@ function extractClinicalMeasurement(goal = "") {
 function inferGoalParts(goal = "") {
   const text = goal.toLowerCase();
   const parts = [];
-  if (/what can nexus do|what nexus can help|help me figure out|i need support|what is open|what did you prepare|what still needs a real provider|active cases|current tasks|summarize my current tasks|show what nexus can help/.test(text)) parts.push("general_assistant");
+  if (/what can nexus do|what nexus can help|what can nexus do across all modes|show me nexus modes|show nexus modes|nexus modes|help me figure out|i need support|what is open|what did you prepare|what still needs a real provider|active cases|current tasks|summarize my current tasks|show what nexus can help/.test(text)) parts.push("general_assistant");
   if (mediaMode.isMediaCommand(text)) parts.push("media");
   if (/blood pressure|bp\b|hypertension|htn\b|diabetes|diabetic|dm\b|glucose|blood sugar|fasting sugar|a1c|obesity|weight|bmi|rpm|rtm|remote patient|remote therapeutic|reading|provider|doctor|care team|provider report|care summary|clinical summary|telehealth|pharmacy|medication|mobile clinic|follow-up|follow up|pain|therapy|mobility/.test(text)) parts.push("medical");
   if (/provider report|care team report|care summary|clinical summary|provider summary|provider-ready|report/.test(text)) parts.push("provider_report");
@@ -672,7 +672,7 @@ function buildCapabilityResponse(profile) {
   return {
     ok: true,
     status: "capability_summary",
-    message: "Nexus can organize agriculture, healthcare/chronic-care, provider/care-team prep, marketplace/AgriTrade prep, workforce/jobs, learning/literacy, maps/field visit planning, communications drafts, Media/Music provider search handoffs, multilingual commands, offline prep, reminders/continuity, safety gates, production capability status, RPM/RTM, telehealth prep, pharmacy questions, mobile clinic requests, and provider-onboarding packages. Live provider contact, diagnosis, prescribing, payment, emergency dispatch, calls, messages, location, camera, drone dispatch, and credentialed media playback remain gated until configured and approved.",
+    message: "Nexus can organize agriculture, healthcare/chronic-care, provider/care-team prep, marketplace/AgriTrade prep, workforce/jobs, learning/literacy, maps/field visit planning, communications drafts, Media/Music provider search handoffs, multilingual commands, offline prep, reminders/continuity, safety gates, production capability status, RPM/RTM, telehealth prep, pharmacy questions, mobile clinic requests, and provider-onboarding packages. Media/Music can prepare safe provider options for R&B, Afrobeats, African music, amapiano, gospel, study music, and relaxing music. Playback depends on supported providers/accounts; Nexus does not host, download, rip, cache, or redistribute copyrighted music. Live provider contact, diagnosis, prescribing, payment, emergency dispatch, calls, messages, location, camera, drone dispatch, and credentialed media playback remain gated until configured and approved.",
     modesCovered: [
       "healthcare_chronic_care",
       "provider_care_team",
@@ -719,7 +719,7 @@ async function handleCommand(body = {}, db = {}, env = process.env) {
     return result;
   }
 
-  if (parts.includes("general_assistant") && /what can nexus do|what nexus can help|what still needs a real provider|show my active cases|active cases|current tasks|what is open|show what nexus can help/i.test(goal)) {
+  if (parts.includes("general_assistant") && /what can nexus do|what nexus can help|what can nexus do across all modes|show me nexus modes|show nexus modes|nexus modes|what still needs a real provider|show my active cases|active cases|current tasks|what is open|show what nexus can help/i.test(goal)) {
     const summary = buildCapabilityResponse(profile);
     addActivity(profile, { eventType: "capability_summary", status: "local_only", summary: goal });
     return summary;

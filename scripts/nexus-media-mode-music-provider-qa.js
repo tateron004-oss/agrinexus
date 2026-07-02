@@ -6,6 +6,7 @@ const root = path.resolve(__dirname, "..");
 const read = relativePath => fs.readFileSync(path.join(root, relativePath), "utf8");
 
 const mediaMode = require("../server/nexusMediaMode");
+const agenticBrain = require("../server/nexusAgenticBrainRuntime");
 
 function assertIncludes(source, expected, label) {
   assert(source.includes(expected), `${label} should include ${expected}`);
@@ -37,7 +38,9 @@ const requiredCommands = [
   "Open this in YouTube.",
   "Open this in Spotify.",
   "Use music while I study.",
-  "Play background music."
+  "Play background music.",
+  "Open R&B in Spotify.",
+  "Play Afrobeats on YouTube."
 ];
 
 for (const command of requiredCommands) {
@@ -56,17 +59,48 @@ const providers = afrobeats.mediaMode.providerOptions;
 assert(providers.some(provider => provider.id === "youtube" && provider.url.startsWith("https://www.youtube.com/results?search_query=")), "YouTube search handoff should be present");
 assert(providers.some(provider => provider.id === "spotify" && provider.url.startsWith("https://open.spotify.com/search/")), "Spotify search handoff should be present");
 assert(providers.some(provider => provider.id === "appleMusic" && provider.url.startsWith("https://music.apple.com/us/search?term=")), "Apple Music search handoff should be present");
+assert.strictEqual(mediaMode.buildMediaResponse("Open R&B in Spotify.").mediaMode.providerPreference, "spotify", "Spotify preference should be detected");
+assert.strictEqual(mediaMode.buildMediaResponse("Play Afrobeats on YouTube.").mediaMode.providerPreference, "youtube", "YouTube preference should be detected");
+assert(providers.some(provider => provider.label === "Open in YouTube"), "YouTube provider label should be present");
+assert(providers.some(provider => provider.label === "Open in Spotify"), "Spotify provider label should be present");
+assert(providers.some(provider => provider.label === "Open in Apple Music"), "Apple Music provider label should be present");
 
 assertIncludes(serverRuntime, "require(\"./nexusMediaMode\")", "agentic brain runtime");
 assertIncludes(serverRuntime, "parts.includes(\"media\")", "agentic brain runtime");
 assertIncludes(serverRuntime, "Media/Music provider search handoffs", "capability summary");
+assertIncludes(serverRuntime, "R&B, Afrobeats, African music, amapiano, gospel, study music, and relaxing music", "capability summary genre list");
+assertIncludes(serverRuntime, "does not host, download, rip, cache, or redistribute copyrighted music", "capability summary copyright boundary");
 assertIncludes(serverRuntime, "credentialed media playback remain gated", "capability summary");
+assertIncludes(serverRuntime, "show me nexus modes", "capability mode prompt");
 
 assertIncludes(app, "id: \"media\"", "command center shortcuts");
+assertIncludes(app, "icon: \"🎵\"", "command center media icon");
+assertIncludes(app, "label: \"Music / Media\"", "command center media label");
+assertIncludes(app, "R&B, Afrobeats, gospel, study music.", "command center media description");
 assertIncludes(app, "Play Afrobeats.", "command center examples");
+assertIncludes(app, "Open gospel music on YouTube.", "command center examples");
 assertIncludes(app, "data-nexus-media-provider-card", "media card rendering");
 assertIncludes(app, "data-nexus-media-provider-link", "media provider links");
+assertIncludes(app, "Provider preference", "media card provider preference label");
+assertIncludes(app, "Playback/provider status", "media card provider status label");
 assertIncludes(app, "does not host, download, scrape, cache, or stream copyrighted music", "media safety copy");
+
+[
+  "Health",
+  "Providers",
+  "Agriculture",
+  "AgriTrade",
+  "Jobs",
+  "Learning",
+  "Maps",
+  "Messages",
+  "Reminders",
+  "Language",
+  "Offline",
+  "Safety"
+].forEach(label => {
+  assertIncludes(app, `label: "${label}"`, `existing launcher entry ${label}`);
+});
 
 assertIncludes(voiceShell, "isMediaProviderHandoffCommand", "voice shell");
 assertIncludes(voiceShell, "mediaProviderHandoff", "voice shell bridge metadata");
@@ -95,6 +129,12 @@ const forbiddenPatterns = [
   "cacheTrack",
   "ripAudio",
   "streamCopyrighted",
+  "live Spotify playback",
+  "live YouTube playback",
+  "live Apple Music playback",
+  "download music",
+  "cache music",
+  "rip music",
   "autoplay=true",
   "fs.writeFileSync(\"music"
 ];
@@ -107,4 +147,22 @@ for (const [label, source] of Object.entries(unsafeSources)) {
 assertNotIncludes(mediaSource, "navigator.mediaDevices.getUserMedia", "server/nexusMediaMode.js");
 assertNotIncludes(voiceShell, "navigator.mediaDevices.getUserMedia", "public/nexus-voice-demo-shell.js media path");
 
-console.log("Nexus Media/Music Mode provider QA passed.");
+async function assertCapabilityPrompts() {
+  for (const prompt of ["What can Nexus do?", "What can Nexus do across all modes?", "Show me Nexus modes."]) {
+    const db = {};
+    const result = await agenticBrain.handleCommand({ command: prompt }, db, {});
+    assert.strictEqual(result.status, "capability_summary", `${prompt} should return capability summary`);
+    assert(result.message.includes("Media/Music"), `${prompt} should mention Media/Music`);
+    assert(result.message.includes("R&B"), `${prompt} should mention R&B`);
+    assert(result.message.includes("Afrobeats"), `${prompt} should mention Afrobeats`);
+    assert(result.message.includes("does not host, download, rip, cache, or redistribute copyrighted music"), `${prompt} should include copyright boundary`);
+    assert(result.modesCovered.includes("media_music"), `${prompt} should include media_music mode`);
+  }
+}
+
+assertCapabilityPrompts()
+  .then(() => console.log("Nexus Media/Music Mode provider QA passed."))
+  .catch(error => {
+    console.error(error);
+    process.exit(1);
+  });
