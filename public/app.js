@@ -241,8 +241,8 @@ const nexusProductIdentity = Object.freeze({
 });
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-327";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v306";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-334";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v313";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
 const VOICE_ATTENTION_DELAY_MS = 900;
@@ -806,6 +806,7 @@ function handleNexusStandardUserSafeTypedCommand(command = "") {
     void changeLanguageByVoice(command);
     return true;
   }
+  if (runNexusStandardUserHomeLocalCommand(command)) return true;
   if (handleNexusAgenticBrainTypedCommand(command)) return true;
   if (handleNexusProductionRuntimeTypedCommand(command)) return true;
   if (handleNexusOpenDialogueAgentCommand(command)) return true;
@@ -18669,17 +18670,57 @@ const NEXUS_COMMAND_CENTER_SHORTCUTS = Object.freeze([
   { id: "safety", icon: "S", label: "Safety", description: "What is gated or local-only.", command: "What actions are gated or local-only?" }
 ]);
 
+const NEXUS_HOME_MODE_IDS = Object.freeze([
+  "agriculture",
+  "chronic-care",
+  "telehealth-intake",
+  "mobile-clinic",
+  "pharmacy-support",
+  "learning",
+  "jobs",
+  "agritrade",
+  "maps",
+  "media",
+  "reminders",
+  "offline"
+]);
+
+const NEXUS_HOME_MODE_PRESENTATION = Object.freeze({
+  agriculture: { title: "Agriculture Help", description: "Crop questions, training, and field guidance.", accent: "green" },
+  "chronic-care": { title: "Health & Chronic Care", description: "Blood pressure, glucose, weight, and RPM/RTM prep.", accent: "blue" },
+  "telehealth-intake": { title: "Telehealth Intake", description: "Prepare symptoms and questions before care.", accent: "sky" },
+  "mobile-clinic": { title: "Mobile Clinic", description: "Prepare mobile clinic access needs.", accent: "gold" },
+  "pharmacy-support": { title: "Pharmacy Support", description: "Organize medication questions for review.", accent: "teal" },
+  learning: { title: "Learning & Literacy", description: "Build literacy, AI, and job skills.", accent: "purple" },
+  jobs: { title: "Jobs & Workforce", description: "Find roles, training, and readiness steps.", accent: "orange" },
+  agritrade: { title: "AgriTrade Marketplace", description: "Review listings and prepare safe inquiries.", accent: "earth" },
+  maps: { title: "Maps / Field Visit", description: "Prepare routes without sharing location.", accent: "green" },
+  media: { title: "Music / Media", description: "Open safe provider music searches.", accent: "magenta", icon: "Music" },
+  reminders: { title: "Reminders", description: "Prepare local reminders and follow-ups.", accent: "gold" },
+  offline: { title: "Offline Queue", description: "Review offline readiness and queued work.", accent: "earth" }
+});
+
+const NEXUS_HOME_SUGGESTED_ACTIONS = Object.freeze([
+  { label: "Record blood pressure", command: "Nexus, record my blood pressure.", accent: "blue" },
+  { label: "Start telehealth intake", command: "Nexus, start a telehealth intake.", accent: "sky" },
+  { label: "Ask about crop issues", command: "I need help with crop issues.", accent: "green" },
+  { label: "Find agriculture training", command: "Help me find agriculture training.", accent: "gold" },
+  { label: "Open AgriTrade", command: "Browse AgriTrade.", accent: "earth" },
+  { label: "Find farm jobs", command: "Show me farm jobs.", accent: "orange" },
+  { label: "Prepare provider summary", command: "Prepare a provider summary.", accent: "blue" },
+  { label: "Open music/media", command: "Play Afrobeats.", accent: "magenta" }
+]);
+
 function nexusCommandCenterExamples() {
   return [
-    "Help me with my blood pressure.",
+    "Nexus, open agriculture help.",
     "Start a telehealth intake.",
-    "Prepare a provider summary.",
-    "Help me with crop disease.",
-    "Play Afrobeats.",
+    "Nexus, record my blood pressure.",
+    "Nexus, open AgriTrade.",
+    "Nexus, find farm jobs.",
+    "Nexus, play music.",
     "Open gospel music on YouTube.",
-    "Find farm jobs.",
-    "Switch to Swahili.",
-    "Prepare a WhatsApp message, but do not send it."
+    "Switch to Swahili."
   ];
 }
 
@@ -18728,14 +18769,14 @@ function renderNexusCommandCenterHero() {
   return `
     <section class="nexus-command-center-hero" data-nexus-command-center="true" aria-labelledby="userWorkspaceTitle">
       <div class="nexus-command-center-copy">
-        <span class="eyebrow">${translateText("Tell Nexus what you need")}</span>
-        <h3 id="userWorkspaceTitle">${translateText("What do you need help with?")}</h3>
-        <p>${translateText("Speak or type one request. Nexus will choose the right mode, prepare local results, and keep high-risk actions gated.")}</p>
+        <span class="eyebrow">${translateText("AI assistant home")}</span>
+        <h3 id="userWorkspaceTitle">${translateText("Good morning. I am Nexus.")}</h3>
+        <p>${translateText("Ask Nexus for agriculture, health, learning, jobs, marketplace, music, or provider support. I can prepare the right next step and keep high-risk actions gated.")}</p>
       </div>
       <div class="nexus-command-composer" data-nexus-command-composer="true">
         <label for="nexusCommandCenterInput">${translateText("Ask Nexus")}</label>
         <div class="nexus-command-input-row">
-          <textarea id="nexusCommandCenterInput" rows="2" placeholder="${escapeHtml(translateText("Ask about health, crops, jobs, learning, maps, AgriTrade, messages, reminders, or safety."))}"></textarea>
+          <textarea id="nexusCommandCenterInput" rows="2" placeholder="${escapeHtml(translateText("Ask about health, crops, jobs, learning, maps, AgriTrade, music, messages, reminders, or safety."))}"></textarea>
           <button type="button" class="nexus-command-mic" data-nexus-command-center-voice aria-label="${escapeHtml(translateText("Speak to Nexus"))}">Mic</button>
           <button type="button" class="nexus-command-send" data-nexus-command-center-submit aria-label="${escapeHtml(translateText("Send to Nexus"))}">Send</button>
         </div>
@@ -18753,17 +18794,90 @@ function renderNexusCommandCenterHero() {
 }
 
 function renderNexusModeLauncher() {
+  const shortcutsById = new Map(NEXUS_COMMAND_CENTER_SHORTCUTS.map(item => [item.id, item]));
+  const homeItems = NEXUS_HOME_MODE_IDS.map(id => shortcutsById.get(id)).filter(Boolean);
   return `
     <section class="nexus-mode-launcher" data-nexus-mode-launcher="true" aria-label="${escapeHtml(translateText("Nexus mode shortcuts"))}">
-      ${NEXUS_COMMAND_CENTER_SHORTCUTS.map(item => `
-        <button type="button" data-nexus-mode-shortcut="${escapeHtml(item.id)}" data-nexus-command="${escapeHtml(item.command)}">
-          <span class="nexus-mode-icon" aria-hidden="true">${item.icon}</span>
-          <strong>${translateText(item.label)}</strong>
-          <small>${translateText(item.description)}</small>
+      ${homeItems.map(item => {
+        const presentation = NEXUS_HOME_MODE_PRESENTATION[item.id] || {};
+        const accent = presentation.accent || "green";
+        return `
+        <button type="button" class="nexus-mode-card nexus-mode-card-${escapeHtml(accent)}" data-nexus-mode-shortcut="${escapeHtml(item.id)}" data-nexus-command="${escapeHtml(item.command)}">
+          <span class="nexus-mode-icon" aria-hidden="true">${escapeHtml(presentation.icon || item.icon)}</span>
+          <strong>${translateText(presentation.title || item.label)}</strong>
+          <small>${translateText(presentation.description || item.description)}</small>
         </button>
-      `).join("")}
+      `;
+      }).join("")}
     </section>
   `;
+}
+
+function renderNexusSuggestedActions() {
+  return `
+    <section class="nexus-suggested-actions" data-nexus-suggested-actions="true" aria-label="${escapeHtml(translateText("What Nexus can help with today"))}">
+      <div class="nexus-dashboard-section-head">
+        <span class="eyebrow">${translateText("Quick start")}</span>
+        <strong>${translateText("What Nexus can help with today")}</strong>
+      </div>
+      <div class="nexus-suggested-action-grid">
+        ${NEXUS_HOME_SUGGESTED_ACTIONS.map((item, index) => `
+          <button type="button" class="nexus-suggested-action nexus-suggested-action-${escapeHtml(item.accent || "green")}" data-nexus-mode-shortcut="suggested-${index}" data-nexus-command="${escapeHtml(item.command)}">
+            ${translateText(item.label)}
+          </button>
+        `).join("")}
+      </div>
+    </section>
+  `;
+}
+
+function isNexusCapabilityOverviewCommand(command = "") {
+  return /\b(what can nexus do|what can you do|show me nexus modes|show nexus modes|what can nexus do across all modes|nexus modes)\b/i.test(String(command || ""));
+}
+
+function buildNexusCapabilityOverviewResult(command = "") {
+  return {
+    ok: true,
+    status: "nexus_modes_prepared",
+    mode: "Nexus Home",
+    message: "Nexus can help prepare agriculture, health access, chronic care, telehealth intake, pharmacy support, mobile clinic access, learning, jobs, AgriTrade, maps, reminders, offline work, language support, and safe music/media provider options. Music/media can include R&B, Afrobeats, African music, amapiano, gospel, study music, and relaxing music. Playback depends on supported providers or accounts; Nexus does not host, download, rip, cache, or redistribute copyrighted music.",
+    preparedCards: NEXUS_HOME_MODE_IDS.map(id => {
+      const item = NEXUS_COMMAND_CENTER_SHORTCUTS.find(shortcut => shortcut.id === id) || {};
+      const presentation = NEXUS_HOME_MODE_PRESENTATION[id] || {};
+      return {
+        type: "nexus_mode_overview",
+        title: presentation.title || item.label || "Nexus mode",
+        status: presentation.description || item.description || "Prepared mode",
+        localOnly: true,
+        needsRealProvider: ["telehealth-intake", "mobile-clinic", "pharmacy-support"].includes(id)
+      };
+    }),
+    noExecutionAuthorized: true,
+    localOnly: true,
+    source: "standard_user_home_screen"
+  };
+}
+
+function runNexusStandardUserHomeLocalCommand(command = "") {
+  const normalized = String(command || "").trim();
+  if (!normalized) return false;
+  if (isNexusCapabilityOverviewCommand(normalized) || /\b(what can nexus do|what can you do|show me nexus modes|nexus modes)\b/i.test(normalized)) {
+    nexusAgenticBrainLastResult = buildNexusCapabilityOverviewResult(normalized);
+    renderUserWorkspace();
+    return true;
+  }
+  if (isNexusMediaMusicCommand(normalized) || /\b(play|open)\b.*\b(music|r&b|rnb|afrobeats?|african|amapiano|gospel|youtube|spotify|apple music)\b/i.test(normalized)) {
+    nexusAgenticBrainLastResult = buildNexusMediaMusicLocalResult(normalized);
+    renderUserWorkspace();
+    return true;
+  }
+  const localHealthAccessResult = buildNexusHealthAccessPreparationResult(normalized);
+  if (localHealthAccessResult) {
+    nexusAgenticBrainLastResult = localHealthAccessResult;
+    renderUserWorkspace();
+    return true;
+  }
+  return false;
 }
 
 function renderNexusActiveWorkSummary() {
@@ -18801,6 +18915,18 @@ function renderNexusActiveWorkSummary() {
 // data-simple-section="${item.section}"
 function renderNexusAgenticBrainPanel() {
   const status = nexusAgenticBrainStatus || {};
+  const hasResult = Boolean(nexusAgenticBrainLastResult);
+  if (!hasResult) {
+    return `
+      <section class="nexus-agentic-brain-panel nexus-agentic-brain-panel-empty" data-nexus-agentic-brain-panel="true" aria-label="${translateText("Nexus response area")}">
+        <div class="nexus-dashboard-section-head">
+          <span class="eyebrow">${translateText("Ready when you are")}</span>
+          <strong>${translateText("Nexus responses will appear here")}</strong>
+        </div>
+        <p>${translateText("Choose a mode card, tap a quick action, or ask in your own words. Nexus will prepare review-only next steps and keep provider, payment, call, message, location, camera, medical, pharmacy, and emergency actions gated.")}</p>
+      </section>
+    `;
+  }
   return `
     <section class="nexus-agentic-brain-panel" data-nexus-agentic-brain-panel="true" aria-label="${translateText("Nexus contextual results")}">
       <div class="nexus-dashboard-section-head">
@@ -18856,12 +18982,7 @@ async function runNexusAgenticBrainAction(action = "command", options = {}) {
         renderUserWorkspace();
         return true;
       }
-      const localHealthAccessResult = buildNexusHealthAccessPreparationResult(localMediaCommand);
-      if (localHealthAccessResult) {
-        nexusAgenticBrainLastResult = localHealthAccessResult;
-        renderUserWorkspace();
-        return true;
-      }
+      if (runNexusStandardUserHomeLocalCommand(localMediaCommand)) return true;
     }
     let result = null;
     if (action === "refresh") {
@@ -18904,17 +19025,7 @@ async function runNexusAgenticBrainAction(action = "command", options = {}) {
 function handleNexusAgenticBrainTypedCommand(command = "") {
   const normalized = String(command || "").trim();
   if (!normalized) return false;
-  if (isNexusMediaMusicCommand(normalized)) {
-    nexusAgenticBrainLastResult = buildNexusMediaMusicLocalResult(normalized);
-    renderUserWorkspace();
-    return true;
-  }
-  const localHealthAccessResult = buildNexusHealthAccessPreparationResult(normalized);
-  if (localHealthAccessResult) {
-    nexusAgenticBrainLastResult = localHealthAccessResult;
-    renderUserWorkspace();
-    return true;
-  }
+  if (runNexusStandardUserHomeLocalCommand(normalized)) return true;
   if (!/^nexus,/i.test(normalized) && !/^(continue|confirm|cancel|verify result|what can nexus do|i need support|show my active cases|what did you prepare|what still needs a real provider)/i.test(normalized)) return false;
   if (!/(what can nexus do|i need support|active cases|what did you prepare|what still needs a real provider|blood pressure|bp\b|glucose|blood sugar|fasting sugar|diabetes|obesity|hypertension|provider|care team|report|summary|remind|rpm|rtm|telehealth|mobile clinic|agriculture|training|marketplace|inquiry|farm jobs|digital literacy|ai literacy|drone|field visit|crop|course|clinic|pharmacy|offline|continue|confirm|cancel|verify)/i.test(normalized)) return false;
   void runNexusAgenticBrainAction("command", { command: normalized });
@@ -19400,6 +19511,7 @@ function renderUserWorkspace() {
     ${renderNexusCommandCenterHeader()}
     ${renderNexusCommandCenterHero()}
     ${renderNexusModeLauncher()}
+    ${renderNexusSuggestedActions()}
     ${renderNexusAgenticBrainPanel()}
     ${renderNexusActiveWorkSummary()}
     <div class="nexus-command-hidden-agent-host" data-nexus-open-dialogue-agent-host="true" hidden>${renderNexusOpenDialogueAgentCard()}</div>
@@ -19423,6 +19535,7 @@ function renderUserWorkspace() {
       <span>${translateText("Say: change language to French, Arabic, Swahili, Portuguese, Spanish, or English.")}</span>
     </section>
   `;
+  bindNexusStandardUserHomeControls();
   if (!nexusProductionRuntimeStatus || !nexusAgenticBrainStatus) {
     setTimeout(() => {
       if (experienceMode === "user" && document.querySelector("[data-nexus-agentic-brain-panel='true']")) {
@@ -34393,8 +34506,61 @@ async function runWowDemo() {
   goSection("dashboard");
 }
 
+function handleNexusStandardUserHomeClick(event) {
+  if (experienceMode !== "user" && !document.body.classList.contains("user-mode")) return false;
+  const eventTarget = event.target?.closest ? event.target : event.target?.parentElement;
+  const submit = eventTarget?.closest?.("[data-nexus-command-center-submit]");
+  if (submit) {
+    const input = $("#nexusCommandCenterInput");
+    const command = input?.value?.trim() || "What can Nexus do?";
+    if (!runNexusStandardUserHomeLocalCommand(command)) return false;
+    event.preventDefault();
+    event.stopPropagation();
+    event.stopImmediatePropagation?.();
+    if (input) input.value = command;
+    setCommandInputs(command);
+    return true;
+  }
+  const shortcut = eventTarget?.closest?.("[data-nexus-mode-shortcut]");
+  if (!shortcut) return false;
+  const modeId = shortcut.dataset.nexusModeShortcut || "";
+  const command = shortcut.dataset.nexusCommand || "";
+  if (modeId === "language") return false;
+  if (modeId === "media") {
+    event.preventDefault();
+    event.stopPropagation();
+    event.stopImmediatePropagation?.();
+    const input = $("#nexusCommandCenterInput");
+    if (input) input.value = command || "Play music.";
+    setCommandInputs(command || "Play music.");
+    nexusAgenticBrainLastResult = buildNexusMediaMusicLocalResult(command || "Play music.");
+    renderUserWorkspace();
+    return true;
+  }
+  if (!runNexusStandardUserHomeLocalCommand(command)) return false;
+  event.preventDefault();
+  event.stopPropagation();
+  event.stopImmediatePropagation?.();
+  const input = $("#nexusCommandCenterInput");
+  if (input) input.value = command;
+  setCommandInputs(command);
+  return true;
+}
+
+function bindNexusStandardUserHomeControls() {
+  if (experienceMode !== "user" && !document.body.classList.contains("user-mode")) return;
+  $$("[data-nexus-command-center-submit], [data-nexus-mode-shortcut]").forEach(element => {
+    if (element.dataset.nexusHomeBound === "true") return;
+    element.dataset.nexusHomeBound = "true";
+    element.addEventListener("click", event => {
+      handleNexusStandardUserHomeClick(event);
+    }, true);
+  });
+}
+
 function bindStatic() {
   renderLoginProfiles();
+  document.addEventListener("click", handleNexusStandardUserHomeClick, true);
   document.addEventListener("click", async event => {
     if (await handleAssistantRuntimeLocalToolClick(event)) return;
     if (handleAssistantRuntimeFollowUpClick(event)) return;
@@ -34402,6 +34568,15 @@ function bindStatic() {
     if (earlyCommandCenterSubmit) {
       const input = $("#nexusCommandCenterInput");
       const command = input?.value?.trim() || "What can Nexus do?";
+      if (isNexusCapabilityOverviewCommand(command)) {
+        event.preventDefault();
+        event.stopPropagation();
+        if (input) input.value = command;
+        setCommandInputs(command);
+        nexusAgenticBrainLastResult = buildNexusCapabilityOverviewResult(command);
+        renderUserWorkspace();
+        return;
+      }
       if (isNexusMediaMusicCommand(command)) {
         event.preventDefault();
         event.stopPropagation();
@@ -34425,6 +34600,27 @@ function bindStatic() {
     const earlyModeShortcut = event.target.closest("[data-nexus-mode-shortcut]");
     if (earlyModeShortcut) {
       const command = earlyModeShortcut.dataset.nexusCommand || "";
+      const modeId = earlyModeShortcut.dataset.nexusModeShortcut || "";
+      if (modeId === "media") {
+        event.preventDefault();
+        event.stopPropagation();
+        const input = $("#nexusCommandCenterInput");
+        if (input) input.value = command;
+        setCommandInputs(command);
+        nexusAgenticBrainLastResult = buildNexusMediaMusicLocalResult(command || "Play music.");
+        renderUserWorkspace();
+        return;
+      }
+      if (isNexusCapabilityOverviewCommand(command)) {
+        event.preventDefault();
+        event.stopPropagation();
+        const input = $("#nexusCommandCenterInput");
+        if (input) input.value = command;
+        setCommandInputs(command);
+        nexusAgenticBrainLastResult = buildNexusCapabilityOverviewResult(command);
+        renderUserWorkspace();
+        return;
+      }
       if (isNexusMediaMusicCommand(command)) {
         event.preventDefault();
         event.stopPropagation();
@@ -34534,6 +34730,12 @@ function bindStatic() {
       const input = $("#nexusCommandCenterInput");
       if (input) input.value = command;
       setCommandInputs(command);
+      if (modeId === "media") {
+        nexusAgenticBrainLastResult = buildNexusMediaMusicLocalResult(command || "Play music.");
+        renderUserWorkspace();
+        return;
+      }
+      if (runNexusStandardUserHomeLocalCommand(command)) return;
       if (handleNexusAgenticBrainTypedCommand(command)) return;
       await runNexusAgenticBrainAction("command", { command });
       return;
