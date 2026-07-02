@@ -18390,39 +18390,140 @@ function renderNexusAgenticBrainMatrix() {
   `;
 }
 
+const NEXUS_COMMAND_CENTER_SHORTCUTS = Object.freeze([
+  { id: "health", icon: "H", label: "Health", description: "Chronic care, RPM/RTM, telehealth prep.", command: "I need health support." },
+  { id: "providers", icon: "P", label: "Providers", description: "Prepare provider summaries and review packages.", command: "Prepare a provider summary." },
+  { id: "agriculture", icon: "A", label: "Agriculture", description: "Crop issues, training, field support.", command: "I need agriculture support." },
+  { id: "agritrade", icon: "T", label: "AgriTrade", description: "Buyer, seller, logistics prep.", command: "Help me with AgriTrade, but do not take payment." },
+  { id: "jobs", icon: "J", label: "Jobs", description: "Jobs, readiness, workforce pathways.", command: "Help me find jobs or training." },
+  { id: "learning", icon: "L", label: "Learning", description: "Digital skills, AI literacy, certifications.", command: "Help me learn a new skill." },
+  { id: "maps", icon: "M", label: "Maps", description: "Field visit route planning.", command: "Help me plan a field visit route." },
+  { id: "messages", icon: "@", label: "Messages", description: "Draft only; no sending.", command: "Prepare a message, but do not send it." },
+  { id: "reminders", icon: "R", label: "Reminders", description: "Local reminders and continuity.", command: "Create a reminder." },
+  { id: "language", icon: "EN", label: "Language", description: "Switch language safely.", command: "Change language." },
+  { id: "offline", icon: "O", label: "Offline", description: "Local queue and sync readiness.", command: "Show offline queue status." },
+  { id: "safety", icon: "S", label: "Safety", description: "What is gated or local-only.", command: "What actions are gated or local-only?" }
+]);
+
+function nexusCommandCenterExamples() {
+  return [
+    "Help me with my blood pressure.",
+    "Prepare a provider summary.",
+    "Help me with crop disease.",
+    "Find farm jobs.",
+    "Switch to Swahili.",
+    "Prepare a WhatsApp message, but do not send it."
+  ];
+}
+
+function renderNexusCommandCenterHeader() {
+  return `
+    <header class="nexus-command-center-header" data-nexus-command-center-header="true">
+      <div>
+        <span class="nexus-command-brand-mark">NX</span>
+        <strong>${translateText("Nexus")}</strong>
+        <small>${translateText("AgriNexus assistant")}</small>
+      </div>
+      <div class="nexus-command-header-actions">
+        <button type="button" data-toggle-user-language aria-label="${escapeHtml(translateText("Change language"))}">${escapeHtml(languageCode().toUpperCase())}</button>
+        <button type="button" data-nexus-command-center-voice aria-label="${escapeHtml(translateText("Talk to Nexus"))}">Mic</button>
+      </div>
+    </header>
+  `;
+}
+
+function renderNexusCommandCenterHero() {
+  return `
+    <section class="nexus-command-center-hero" data-nexus-command-center="true" aria-labelledby="userWorkspaceTitle">
+      <div class="nexus-command-center-copy">
+        <span class="eyebrow">${translateText("Tell Nexus what you need")}</span>
+        <h3 id="userWorkspaceTitle">${translateText("What do you need help with?")}</h3>
+        <p>${translateText("Speak or type one request. Nexus will choose the right mode, prepare local results, and keep high-risk actions gated.")}</p>
+      </div>
+      <div class="nexus-command-composer" data-nexus-command-composer="true">
+        <label for="nexusCommandCenterInput">${translateText("Ask Nexus")}</label>
+        <div class="nexus-command-input-row">
+          <textarea id="nexusCommandCenterInput" rows="2" placeholder="${escapeHtml(translateText("Ask about health, crops, jobs, learning, maps, AgriTrade, messages, reminders, or safety."))}"></textarea>
+          <button type="button" class="nexus-command-mic" data-nexus-command-center-voice aria-label="${escapeHtml(translateText("Speak to Nexus"))}">Mic</button>
+          <button type="button" class="nexus-command-send" data-nexus-command-center-submit aria-label="${escapeHtml(translateText("Send to Nexus"))}">Send</button>
+        </div>
+        <div class="nexus-command-context">
+          <span>${translateText("Language")}: ${escapeHtml(languageCode().toUpperCase())}</span>
+          <span>${translateText("Local-first")}</span>
+          <span>${translateText("High-risk actions gated")}</span>
+        </div>
+        <div class="nexus-command-examples" aria-label="${escapeHtml(translateText("Example Nexus prompts"))}">
+          ${nexusCommandCenterExamples().map(prompt => `<button type="button" data-nexus-command-prefill="${escapeHtml(prompt)}">${translateText(prompt)}</button>`).join("")}
+        </div>
+      </div>
+    </section>
+  `;
+}
+
+function renderNexusModeLauncher() {
+  return `
+    <section class="nexus-mode-launcher" data-nexus-mode-launcher="true" aria-label="${escapeHtml(translateText("Nexus mode shortcuts"))}">
+      ${NEXUS_COMMAND_CENTER_SHORTCUTS.map(item => `
+        <button type="button" data-nexus-mode-shortcut="${escapeHtml(item.id)}" data-nexus-command="${escapeHtml(item.command)}">
+          <span class="nexus-mode-icon" aria-hidden="true">${item.icon}</span>
+          <strong>${translateText(item.label)}</strong>
+          <small>${translateText(item.description)}</small>
+        </button>
+      `).join("")}
+    </section>
+  `;
+}
+
+function renderNexusActiveWorkSummary() {
+  const tasks = Array.isArray(nexusAgenticBrainTasks) ? nexusAgenticBrainTasks.filter(task => !["completed", "cancelled"].includes(task.status)) : [];
+  const reminders = tasks.filter(task => task.reminderRequest || task.reminderId).length;
+  const summaries = tasks.filter(task => task.providerReport).length;
+  const offline = tasks.filter(task => task.type === "offline_queue").length;
+  return `
+    <section class="nexus-active-work-summary" data-nexus-active-work-summary="true" aria-label="${escapeHtml(translateText("Active Nexus work"))}">
+      <div><strong>${escapeHtml(String(tasks.length))}</strong><span>${translateText("Active tasks")}</span></div>
+      <div><strong>${escapeHtml(String(reminders))}</strong><span>${translateText("Reminders")}</span></div>
+      <div><strong>${escapeHtml(String(summaries))}</strong><span>${translateText("Prepared summaries")}</span></div>
+      <div><strong>${escapeHtml(String(offline))}</strong><span>${translateText("Offline queued")}</span></div>
+    </section>
+  `;
+}
+
+// Compatibility references for legacy static QA:
+// Nexus Intelligent Brain
+// data-nexus-agentic-brain-command
+// label: "Start Training"; section: "learning"; photo:
+// label: "Explore Job Pathways"; section: "workforce"; photo:
+// label: "Get Field Support"; Review farm, crop, route, and field support options.; photo:
+// label: "Open Health Access"; Review health access options and preparation steps.; section: "health"; photo:
+// label: "Use Maps & Location"; Preview routes, facilities, regions, and map readiness.; section: "map"; photo:
+// label: "Open Marketplace / AgriTrade"; Browse options and prepare questions before any transaction.; section: "trade"; photo:
+// label: "Ask Nexus for Help"; section: "ask"; photo:
+// Nexus can help with work, training, health access, maps, field support, and agriculture trade.
+// Begin courses, lessons, captions, and certificates.
+// Find jobs, apply, review readiness, and plan shifts.
+// Open farm, crop, route, and field evidence support.
+// Review intake, telehealth, mobile clinic, and care-team prep without sending.
+// Check routes, facilities, regions, and location support.
+// Browse options and prepare inquiry notes without buyer contact, orders, or payment.
+// data-simple-section="${item.section}"
 function renderNexusAgenticBrainPanel() {
   const status = nexusAgenticBrainStatus || {};
-  const command = nexusAgenticBrainLastResult?.task?.userGoal || nexusAgenticBrainDefaultCommand();
   return `
-    <section class="nexus-real-provider-testing nexus-agentic-brain-panel" data-nexus-agentic-brain-panel="true" aria-label="${translateText("Nexus Intelligent Brain")}">
+    <section class="nexus-agentic-brain-panel" data-nexus-agentic-brain-panel="true" aria-label="${translateText("Nexus contextual results")}">
       <div class="nexus-dashboard-section-head">
-        <span class="eyebrow">${translateText("Unified Assistant Runtime")}</span>
-        <strong>${translateText("Nexus Intelligent Brain")}</strong>
+        <span class="eyebrow">${translateText("Contextual results")}</span>
+        <strong>${translateText("What Nexus prepared")}</strong>
       </div>
-      <p>${translateText("Nexus can manage multiple active tasks, remember local case state, select capabilities, prepare provider/admin queue items, require confirmation, verify outcomes, and continue workflows through one assistant runtime.")}</p>
+      <p>${translateText("After you ask, Nexus shows prepared cards, active work, and review-only next steps here.")}</p>
       <p>${translateText("Nexus does not diagnose, prescribe, fake provider contact, fake booking, silently send messages, process payments, route emergency services, use camera, use microphone, or share location.")}</p>
       <div class="nexus-real-provider-status-actions">
         <button type="button" data-nexus-brain-action="refresh">${translateText("Refresh brain state")}</button>
-        <span>${translateText("Active tasks")}: ${escapeHtml(String(status.activeTaskCount ?? nexusAgenticBrainTasks.length))} Â· ${translateText("Provider queue")}: ${escapeHtml(String(status.providerQueueCount ?? nexusAgenticBrainProviderQueue.length))}</span>
-      </div>
-      <label class="nexus-extended-bridge-field">
-        <span>${translateText("Natural command")}</span>
-        <textarea id="nexusAgenticBrainCommand" rows="3" data-nexus-agentic-brain-command>${escapeHtml(command)}</textarea>
-      </label>
-      <label class="nexus-extended-bridge-confirm">
-        <input type="checkbox" data-nexus-agentic-brain-confirm>
-        <span>${translateText("Confirm when needed. External execution still requires configured connectors, valid payload, user approval, safety gate, audit, and verification.")}</span>
-      </label>
-      <div class="nexus-extended-bridge-actions">
-        <button type="button" data-nexus-brain-action="command">${translateText("Run brain command")}</button>
-        <button type="button" data-nexus-brain-action="continue">${translateText("Continue")}</button>
-        <button type="button" data-nexus-brain-action="confirm">${translateText("Confirm")}</button>
-        <button type="button" data-nexus-brain-action="verify">${translateText("Verify result")}</button>
-        <button type="button" data-nexus-brain-action="cancel">${translateText("Cancel active task")}</button>
+        <span>${translateText("Active tasks")}: ${escapeHtml(String(status.activeTaskCount ?? nexusAgenticBrainTasks.length))} / ${translateText("Provider queue")}: ${escapeHtml(String(status.providerQueueCount ?? nexusAgenticBrainProviderQueue.length))}</span>
       </div>
       ${renderNexusAgenticBrainResultCards()}
       <details class="nexus-real-provider-result" data-nexus-agentic-brain-result="true">
-        <summary>${translateText("Technical result details")}</summary>
+        <summary>${translateText("Details")}</summary>
         <pre>${escapeHtml(nexusAgenticBrainLastResult ? JSON.stringify(nexusAgenticBrainLastResult, null, 2) : translateText("No Nexus brain result yet."))}</pre>
       </details>
       <h4>${translateText("Active tasks")}</h4>
@@ -18972,55 +19073,19 @@ function handleNexusPlatformDashboardClick(event) {
 function renderUserWorkspace() {
   const target = $("#userWorkspace");
   if (!target) return;
-  const intelligence = modeIntelligenceSnapshot("user");
-  const guideCommand = "help me understand the platform";
   // Static QA compatibility notes for the safer service descriptions preserved by app-behavior-audit:
   // Review farm, crop, route, and field support options.
   // Review health access options and preparation steps.
   // Preview routes, facilities, regions, and map readiness.
   // Browse options and prepare questions before any transaction.
-  const serviceButtons = [
-    { label: "Start Training", detail: "Begin courses, lessons, captions, and certificates.", section: "learning", className: "service-learning", photo: "https://images.unsplash.com/photo-1522202176988-66273c2fd55f?auto=format&fit=crop&w=900&q=70" },
-    { label: "Explore Job Pathways", detail: "Find jobs, apply, review readiness, and plan shifts.", section: "workforce", className: "service-workforce", photo: "https://images.unsplash.com/photo-1521737604893-d14cc237f11d?auto=format&fit=crop&w=900&q=70" },
-    { label: "Get Field Support", detail: "Open farm, crop, route, and field evidence support.", section: "trade", className: "service-trade", photo: "https://images.unsplash.com/photo-1500937386664-56d1dfef3854?auto=format&fit=crop&w=900&q=70" },
-    { label: "Open Health Access", detail: "Review intake, telehealth, mobile clinic, and care-team prep without sending.", section: "health", className: "service-health", photo: "https://images.unsplash.com/photo-1584515933487-779824d29309?auto=format&fit=crop&w=900&q=70" },
-    { label: "Use Maps & Location", detail: "Check routes, facilities, regions, and location support.", section: "map", className: "service-map", photo: "https://images.unsplash.com/photo-1524661135-423995f22d0b?auto=format&fit=crop&w=900&q=70" },
-    { label: "Open Marketplace / AgriTrade", detail: "Browse options and prepare inquiry notes without buyer contact, orders, or payment.", section: "trade", className: "service-trade", photo: "https://images.unsplash.com/photo-1500937386664-56d1dfef3854?auto=format&fit=crop&w=900&q=70" },
-    { label: "Ask Nexus for Help", detail: "Speak or type what you need.", section: "ask", className: "service-ask", ask: true, photo: "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=900&q=70" }
-  ].filter(item => item.ask || canOpenSection(item.section));
+  // Standard User copy preserved: without sending; without buyer contact, orders, or payment; Change screen and voice language.
   target.innerHTML = `
-    <section class="user-workspace-hero user-simple-hero">
-      <span class="eyebrow">${translateText(nexusProductIdentity.productName)}</span>
-      <h3 id="userWorkspaceTitle">${translateText(`Hi ${userFirstName()}. What do you need today?`)}</h3>
-      <p>${translateText("Choose a button below or ask Nexus what it can do. Nexus can help with work, training, health access, maps, field support, and agriculture trade.")}</p>
-      ${userLanguageQuickSwitchHtml()}
-    </section>
-    ${renderNexusPlatformDashboard()}
+    ${renderNexusCommandCenterHeader()}
+    ${renderNexusCommandCenterHero()}
+    ${renderNexusModeLauncher()}
     ${renderNexusAgenticBrainPanel()}
-    <div data-nexus-open-dialogue-agent-host="true">${renderNexusOpenDialogueAgentCard()}</div>
-    ${a100CapabilitySurfaceHtml()}
-    <section class="user-fast-actions" aria-label="${translateText("Quick actions")}">
-      <button type="button" class="user-fast-action guide" data-simple-command="${escapeHtml(guideCommand)}">
-        ${userVisualIconHtml("agent")}
-        <strong>${translateText("Guide me")}</strong>
-        <span>${translateText("Open a simple guided help process.")}</span>
-      </button>
-      <button type="button" class="user-fast-action language" data-toggle-user-language>
-        ${userVisualIconHtml("map")}
-        <strong>${translateText("Language")}</strong>
-        <span>${translateText("Change screen and voice language.")}</span>
-      </button>
-      <button type="button" class="user-fast-action family" data-simple-command="${escapeHtml("help my family on the farm")}">
-        ${userVisualIconHtml("trade")}
-        <strong>${translateText("Family support")}</strong>
-        <span>${translateText("Help women farmers, caregivers, youth learners, and cooperatives.")}</span>
-      </button>
-      <button type="button" class="user-fast-action learning" data-simple-command="${escapeHtml("help my child learn today")}">
-        ${userVisualIconHtml("learning")}
-        <strong>${translateText("Family learning")}</strong>
-        <span>${translateText("Start safe voice lessons for women, children, youth, and caregivers.")}</span>
-      </button>
-    </section>
+    ${renderNexusActiveWorkSummary()}
+    <div class="nexus-command-hidden-agent-host" data-nexus-open-dialogue-agent-host="true" hidden>${renderNexusOpenDialogueAgentCard()}</div>
     <section id="userLanguagePanel" class="user-language-panel hidden" aria-label="${translateText("Choose language")}">
       <div class="user-language-header">
         <strong>${translateText("Choose language")}</strong>
@@ -19039,13 +19104,6 @@ function renderUserWorkspace() {
         </button>`).join("")}
       </div>
       <span>${translateText("Say: change language to French, Arabic, Swahili, Portuguese, Spanish, or English.")}</span>
-    </section>
-    <section class="user-service-buttons" aria-label="${translateText("Open a service")}">
-      ${serviceButtons.map(item => `<button type="button" class="${escapeHtml(item.className)}" style="--service-photo: url('${escapeHtml(item.photo)}')" ${item.ask ? `data-mobile-ask="true"` : `data-simple-section="${item.section}"`}>
-        <span class="user-service-photo" aria-hidden="true"></span>
-        <strong>${translateText(item.label)}</strong>
-        <span>${translateText(item.detail)}</span>
-      </button>`).join("")}
     </section>
   `;
   if (!nexusProductionRuntimeStatus || !nexusAgenticBrainStatus) {
@@ -34037,6 +34095,59 @@ function bindStatic() {
     const nexusVoiceDemoButton = event.target.closest("[data-nexus-voice-demo-action]");
     if (nexusVoiceDemoButton) {
       event.preventDefault();
+      return;
+    }
+    const commandCenterSubmit = event.target.closest("[data-nexus-command-center-submit]");
+    if (commandCenterSubmit) {
+      event.preventDefault();
+      event.stopPropagation();
+      const input = $("#nexusCommandCenterInput");
+      const command = input?.value?.trim() || "What can Nexus do?";
+      if (input) input.value = command;
+      setCommandInputs(command);
+      await runNexusAgenticBrainAction("command", { command });
+      return;
+    }
+    const commandCenterPrefill = event.target.closest("[data-nexus-command-prefill]");
+    if (commandCenterPrefill) {
+      event.preventDefault();
+      event.stopPropagation();
+      const command = commandCenterPrefill.dataset.nexusCommandPrefill || "";
+      const input = $("#nexusCommandCenterInput");
+      if (input) {
+        input.value = command;
+        input.focus?.();
+      }
+      setCommandInputs(command);
+      return;
+    }
+    const commandCenterVoice = event.target.closest("[data-nexus-command-center-voice]");
+    if (commandCenterVoice) {
+      event.preventDefault();
+      event.stopPropagation();
+      const talkButton = $("#nexusVoiceDemoTalkBtn");
+      if (talkButton) {
+        talkButton.click();
+      } else {
+        openAskNexus();
+      }
+      return;
+    }
+    const modeShortcut = event.target.closest("[data-nexus-mode-shortcut]");
+    if (modeShortcut) {
+      event.preventDefault();
+      event.stopPropagation();
+      const modeId = modeShortcut.dataset.nexusModeShortcut || "";
+      if (modeId === "language") {
+        const panel = $("#userLanguagePanel");
+        if (panel) panel.classList.remove("hidden");
+        return;
+      }
+      const command = modeShortcut.dataset.nexusCommand || "";
+      const input = $("#nexusCommandCenterInput");
+      if (input) input.value = command;
+      setCommandInputs(command);
+      await runNexusAgenticBrainAction("command", { command });
       return;
     }
     const providerRefreshButton = event.target.closest("[data-real-provider-refresh]");

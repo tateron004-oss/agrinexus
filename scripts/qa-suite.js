@@ -80,6 +80,7 @@ const suites = {
     "scripts/nexus-production-capability-runtime-qa.js",
     "scripts/nexus-intelligent-brain-acceptance-qa.js",
     "scripts/nexus-standard-user-ui-cleanup-qa.js",
+    "scripts/nexus-chatgpt-style-command-center-ui-qa.js",
     "scripts/nexus-brain-router-strengthening-qa.js",
     "scripts/nexus-language-command-mode-qa.js",
     "scripts/nexus-high-performance-assistant-brain-qa.js",
