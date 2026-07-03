@@ -20172,18 +20172,31 @@ function closeNexusOnboardingModal() {
 
 function renderNexusCommandCenterHero() {
   return `
-    <section class="nexus-command-center-hero" data-nexus-command-center="true" aria-labelledby="userWorkspaceTitle">
+    <section class="nexus-command-center-hero nexus-hero nexus-glass-card" data-nexus-command-center="true" aria-labelledby="userWorkspaceTitle">
       <div class="nexus-command-center-copy">
         <span class="eyebrow nexus-command-center-label">${translateText("Nexus Command Center")}</span>
         <div class="nexus-command-neural-wave" aria-hidden="true">
           <span></span>
           <i></i>
         </div>
-        <strong class="nexus-premium-hero-title">${translateText("Ask Nexus. Plan smarter. Act safely.")}</strong>
-        <small class="nexus-premium-hero-subtitle">${translateText("Your intelligent assistant for agriculture, health access, learning, jobs, marketplace, maps, provider preparation, saved questions, and source-backed insight.")}</small>
+        <strong class="nexus-premium-hero-title">${translateText("Ask Nexus")}</strong>
+        <small class="nexus-premium-hero-subtitle">${translateText("Your AI assistant. Real answers. Real impact.")}</small>
         <span class="eyebrow">${translateText("AI assistant home")}</span>
         <h3 id="userWorkspaceTitle">${translateText("Hi, I’m Nexus. What do you need help with today?")}</h3>
         <p>${translateText("Ask Nexus or choose a support area below. I can help with agriculture, health, learning, jobs, marketplace, music, and provider preparation while keeping high-risk actions gated.")}</p>
+      </div>
+      <div class="nexus-orb-stage" data-nexus-orb="true" aria-hidden="true">
+        <div class="nexus-orb">
+          <span class="nexus-orb-core">N</span>
+          <span class="nexus-orb-ring nexus-orb-ring-one"></span>
+          <span class="nexus-orb-ring nexus-orb-ring-two"></span>
+          <span class="nexus-orb-ring nexus-orb-ring-three"></span>
+        </div>
+        <div class="nexus-energy-wave nexus-wave" data-nexus-energy-wave="true">
+          <span></span>
+          <span></span>
+          <span></span>
+        </div>
       </div>
       <div class="nexus-command-composer" data-nexus-command-composer="true">
         <label for="nexusCommandCenterInput">${translateText("Ask Nexus")}</label>
@@ -20218,7 +20231,7 @@ function renderNexusCommandCenterSidebar() {
     ["settings", "Settings", "Nexus, show language and safety settings.", "gear"]
   ];
   return `
-    <aside class="nexus-command-sidebar" data-nexus-command-sidebar="true" aria-label="${escapeHtml(translateText("Nexus navigation"))}">
+    <aside class="nexus-command-sidebar nexus-sidebar nexus-glass-card" data-nexus-command-sidebar="true" aria-label="${escapeHtml(translateText("Nexus navigation"))}">
       <div class="nexus-sidebar-brand">
         <span class="nexus-sidebar-logo" aria-hidden="true">NX</span>
         <div>
@@ -20237,7 +20250,7 @@ function renderNexusCommandCenterSidebar() {
           `;
         }).join("")}
       </nav>
-      <div class="nexus-sidebar-status" data-testid="nexus-sidebar-platform-status">
+      <div class="nexus-sidebar-status nexus-status-pill" data-testid="nexus-sidebar-platform-status">
         <span></span>
         <strong>${escapeHtml(translateText("Platform Active"))}</strong>
         <small>${escapeHtml(translateText("All systems operational"))}</small>
@@ -20280,7 +20293,7 @@ function renderNexusCoreFeatureCards() {
   return `
     <section class="nexus-core-feature-grid" data-nexus-core-feature-grid="true" aria-label="${escapeHtml(translateText("Core Nexus support areas"))}">
       ${cards.map(([id, title, description, command, accent]) => `
-        <article class="nexus-core-feature-card nexus-core-feature-${escapeHtml(accent)}" data-nexus-core-feature="${escapeHtml(id)}">
+        <article class="nexus-core-feature-card nexus-feature-card nexus-glass-card nexus-core-feature-${escapeHtml(accent)}" data-nexus-core-feature="${escapeHtml(id)}">
           <span aria-hidden="true"></span>
           <strong>${escapeHtml(translateText(title))}</strong>
           <p>${escapeHtml(translateText(description))}</p>
@@ -20295,7 +20308,7 @@ function renderNexusCoreFeatureCards() {
 
 function renderNexusVoiceInteractionBar() {
   return `
-    <section class="nexus-voice-interaction-bar" data-nexus-voice-interaction-bar="true" aria-label="${escapeHtml(translateText("Voice interaction"))}">
+    <section class="nexus-voice-interaction-bar nexus-voice-bar nexus-glass-card" data-nexus-voice-interaction-bar="true" aria-label="${escapeHtml(translateText("Voice interaction"))}">
       <button type="button" class="nexus-voice-pulse" data-nexus-command-center-voice aria-label="${escapeHtml(translateText("Talk to Nexus"))}"></button>
       <div>
         <strong>${escapeHtml(translateText("Tap to speak with Nexus"))}</strong>
@@ -20374,7 +20387,7 @@ function renderNexusProfileUtilityPanel() {
 
 function renderNexusRightUtilityColumn() {
   return `
-    <aside class="nexus-command-right-rail" data-nexus-command-right-rail="true" aria-label="${escapeHtml(translateText("Nexus utilities"))}">
+    <aside class="nexus-command-right-rail nexus-right-rail" data-nexus-command-right-rail="true" aria-label="${escapeHtml(translateText("Nexus utilities"))}">
       ${renderNexusProfileUtilityPanel()}
       ${renderNexusSavedQuestionsUtilityPanel()}
       ${renderNexusProviderSupportUtilityPanel()}
@@ -21133,9 +21146,9 @@ function renderUserWorkspace() {
   // Browse options and prepare questions before any transaction.
   // Standard User copy preserved: without sending; without buyer contact, orders, or payment; Change screen and voice language.
   target.innerHTML = `
-    <div class="nexus-command-center-shell" data-testid="nexus-standard-user-home">
+    <div class="nexus-command-center-shell nexus-shell" data-testid="nexus-standard-user-home">
       ${renderNexusCommandCenterSidebar()}
-      <main class="nexus-command-main" aria-label="${escapeHtml(translateText("Nexus command center"))}">
+      <main class="nexus-command-main nexus-main" aria-label="${escapeHtml(translateText("Nexus command center"))}">
         ${renderNexusTopWelcomeArea()}
         ${renderNexusCommandCenterHero()}
         ${renderNexusCoreFeatureCards()}
