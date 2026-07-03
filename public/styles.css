@@ -10659,3 +10659,597 @@ body.user-mode .user-caption-panel {
     grid-template-columns: 1fr;
   }
 }
+
+/* Visual fidelity pass: make the Standard User command center render like a premium AI platform. */
+body.user-mode {
+  color-scheme: dark;
+  background:
+    radial-gradient(circle at 13% 8%, rgba(34, 211, 238, .28), transparent 26%),
+    radial-gradient(circle at 78% 0%, rgba(236, 72, 153, .24), transparent 30%),
+    radial-gradient(circle at 48% 52%, rgba(124, 58, 237, .22), transparent 42%),
+    linear-gradient(135deg, #020617 0%, #050816 28%, #120a2c 68%, #030712 100%) !important;
+  background-attachment: fixed;
+}
+
+body.user-mode::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background:
+    linear-gradient(rgba(103, 232, 249, .055) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(103, 232, 249, .05) 1px, transparent 1px),
+    radial-gradient(circle at 50% 22%, rgba(34, 211, 238, .14), transparent 24%);
+  background-size: 48px 48px, 48px 48px, auto;
+  mask-image: radial-gradient(circle at 50% 32%, black 0%, transparent 72%);
+}
+
+body.user-mode .app-shell,
+body.user-mode .user-workspace,
+body.user-mode main {
+  background:
+    radial-gradient(circle at 12% 4%, rgba(34, 211, 238, .34), transparent 24%),
+    radial-gradient(circle at 86% 3%, rgba(236, 72, 153, .28), transparent 27%),
+    radial-gradient(circle at 52% 45%, rgba(139, 92, 246, .24), transparent 38%),
+    linear-gradient(135deg, #020617 0%, #071022 42%, #170b33 76%, #030712 100%) !important;
+}
+
+body.user-mode .user-workspace {
+  min-height: 100dvh;
+  padding: 18px;
+  overflow-x: hidden;
+}
+
+body.user-mode .nexus-command-center-shell {
+  position: relative;
+  z-index: 1;
+  grid-template-columns: 190px minmax(0, 1fr) 268px !important;
+  gap: 14px !important;
+  align-items: start;
+  max-width: 1440px;
+  margin: 0 auto;
+  min-height: calc(100dvh - 36px);
+}
+
+body.user-mode .nexus-glass-card,
+body.user-mode .nexus-command-sidebar,
+body.user-mode .nexus-command-topbar,
+body.user-mode .nexus-command-center-hero,
+body.user-mode .nexus-core-feature-card,
+body.user-mode .nexus-voice-interaction-bar,
+body.user-mode .nexus-utility-card,
+body.user-mode .nexus-internet-resource-history,
+body.user-mode .nexus-mode-launcher button,
+body.user-mode .nexus-suggested-actions {
+  border: 1px solid rgba(125, 211, 252, .34) !important;
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, .105), rgba(255, 255, 255, .025) 34%, rgba(0, 0, 0, .08)),
+    linear-gradient(145deg, rgba(7, 13, 31, .92), rgba(20, 18, 52, .74)) !important;
+  box-shadow:
+    0 30px 90px rgba(0, 0, 0, .48),
+    0 0 42px rgba(34, 211, 238, .2),
+    0 0 74px rgba(139, 92, 246, .14),
+    inset 0 1px 0 rgba(255, 255, 255, .13),
+    inset 0 -1px 0 rgba(34, 211, 238, .06) !important;
+  backdrop-filter: blur(26px) saturate(150%);
+}
+
+body.user-mode .nexus-command-sidebar {
+  min-height: calc(100dvh - 36px) !important;
+  padding: 14px !important;
+  border-radius: 28px !important;
+}
+
+body.user-mode .nexus-sidebar-logo,
+body.user-mode .nexus-profile-avatar {
+  background:
+    radial-gradient(circle at 35% 25%, rgba(255, 255, 255, .8), transparent 22%),
+    conic-gradient(from 160deg, #22d3ee, #8b5cf6, #ec4899, #22d3ee) !important;
+  box-shadow: 0 0 24px rgba(34, 211, 238, .45), 0 0 46px rgba(236, 72, 153, .18) !important;
+}
+
+body.user-mode .nexus-sidebar-nav button {
+  min-height: 42px;
+  border-color: rgba(125, 211, 252, .08) !important;
+  background: rgba(2, 6, 23, .32) !important;
+  color: #eaf6ff !important;
+}
+
+body.user-mode .nexus-sidebar-nav button:hover,
+body.user-mode .nexus-sidebar-nav button:focus-visible,
+body.user-mode .nexus-sidebar-nav button.active {
+  background: linear-gradient(90deg, rgba(34, 211, 238, .18), rgba(139, 92, 246, .14)) !important;
+  border-color: rgba(103, 232, 249, .48) !important;
+  box-shadow: 0 0 24px rgba(34, 211, 238, .16);
+}
+
+body.user-mode .nexus-command-main {
+  gap: 14px !important;
+}
+
+body.user-mode .nexus-command-topbar {
+  padding: 14px 16px !important;
+  border-radius: 24px !important;
+}
+
+body.user-mode .nexus-command-topbar h2 {
+  font-size: clamp(1rem, 1.6vw, 1.38rem) !important;
+}
+
+body.user-mode .nexus-command-topbar p {
+  margin: 0;
+  font-size: .88rem;
+}
+
+body.user-mode .nexus-command-center-hero {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) minmax(210px, 270px) !important;
+  grid-template-areas:
+    "copy orb"
+    "composer composer" !important;
+  align-items: center !important;
+  gap: 16px 18px !important;
+  min-height: 0 !important;
+  padding: 22px !important;
+  border-radius: 34px !important;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 58% 28%, rgba(34, 211, 238, .34), transparent 24%),
+    radial-gradient(circle at 80% 22%, rgba(236, 72, 153, .32), transparent 30%),
+    radial-gradient(circle at 42% 70%, rgba(139, 92, 246, .24), transparent 38%),
+    linear-gradient(135deg, rgba(3, 7, 18, .98), rgba(8, 13, 36, .93) 48%, rgba(35, 16, 68, .88)) !important;
+  box-shadow:
+    0 34px 110px rgba(0, 0, 0, .58),
+    0 0 58px rgba(34, 211, 238, .28),
+    0 0 92px rgba(236, 72, 153, .14),
+    inset 0 0 110px rgba(34, 211, 238, .1) !important;
+}
+
+body.user-mode .nexus-command-center-copy {
+  grid-area: copy;
+}
+
+body.user-mode .nexus-orb-stage {
+  grid-area: orb;
+}
+
+body.user-mode .nexus-command-composer {
+  grid-area: composer;
+}
+
+body.user-mode .nexus-command-center-hero::before {
+  opacity: .35 !important;
+  filter: blur(.2px);
+}
+
+body.user-mode .nexus-command-center-hero::after {
+  bottom: 14px;
+  opacity: .85;
+}
+
+body.user-mode .nexus-command-neural-wave {
+  width: min(220px, 70%);
+  aspect-ratio: 4 / 1;
+  margin: 10px 0 12px;
+  border-radius: 999px;
+  opacity: .92;
+}
+
+body.user-mode .nexus-premium-hero-title {
+  font-size: clamp(3rem, 6.4vw, 5.5rem) !important;
+  letter-spacing: 0;
+  line-height: .9;
+  text-shadow: 0 0 28px rgba(34, 211, 238, .24), 0 0 54px rgba(236, 72, 153, .14);
+}
+
+body.user-mode .nexus-premium-hero-subtitle {
+  margin-top: 8px;
+  font-size: clamp(1.02rem, 1.7vw, 1.24rem) !important;
+  color: #dff8ff !important;
+}
+
+body.user-mode .nexus-command-center-hero h3 {
+  max-width: 520px;
+  margin: 10px 0 6px;
+  font-size: clamp(1.45rem, 2.4vw, 2.28rem) !important;
+  line-height: 1.04 !important;
+}
+
+body.user-mode .nexus-command-center-hero p {
+  max-width: 610px;
+  margin: 0;
+  font-size: .98rem;
+  line-height: 1.55;
+  color: #b9d7ec !important;
+}
+
+body.user-mode .nexus-orb-stage {
+  min-height: 272px !important;
+  border-radius: 50%;
+  overflow: visible;
+}
+
+body.user-mode .nexus-orb-stage::before {
+  width: 330px !important;
+  filter: blur(20px);
+  opacity: .95 !important;
+}
+
+body.user-mode .nexus-orb {
+  width: min(250px, 26vw) !important;
+  border: 1px solid rgba(255, 255, 255, .18);
+  background:
+    radial-gradient(circle at 34% 28%, rgba(255, 255, 255, 1), rgba(103, 232, 249, .9) 13%, rgba(34, 211, 238, .36) 31%, rgba(8, 13, 30, .06) 56%),
+    radial-gradient(circle at 64% 68%, rgba(236, 72, 153, .52), transparent 30%),
+    conic-gradient(from 130deg, #22d3ee, #6366f1, #ec4899, #a855f7, #22d3ee) !important;
+  box-shadow:
+    0 0 34px rgba(103, 232, 249, .72),
+    0 0 84px rgba(34, 211, 238, .42),
+    0 0 132px rgba(236, 72, 153, .22),
+    inset 0 0 44px rgba(255, 255, 255, .2) !important;
+}
+
+body.user-mode .nexus-orb::before,
+body.user-mode .nexus-orb::after {
+  content: "";
+  position: absolute;
+  inset: -18%;
+  border-radius: 50%;
+  border: 1px solid rgba(103, 232, 249, .24);
+  box-shadow: 0 0 36px rgba(34, 211, 238, .22);
+}
+
+body.user-mode .nexus-orb::after {
+  inset: -34%;
+  border-color: rgba(236, 72, 153, .22);
+  transform: rotate(36deg) scaleY(.45);
+}
+
+body.user-mode .nexus-orb-core {
+  color: #f8fbff;
+  background: radial-gradient(circle, rgba(2, 6, 23, .98), rgba(15, 23, 42, .72)) !important;
+  box-shadow: inset 0 0 28px rgba(34, 211, 238, .48), 0 0 42px rgba(236, 72, 153, .34) !important;
+}
+
+body.user-mode .nexus-energy-wave {
+  bottom: 8px !important;
+}
+
+body.user-mode .nexus-energy-wave span {
+  height: 3px !important;
+  box-shadow: 0 0 16px rgba(34, 211, 238, .5), 0 0 28px rgba(236, 72, 153, .28);
+}
+
+body.user-mode .nexus-command-composer {
+  padding: 14px !important;
+  border-radius: 24px !important;
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, .1), rgba(255, 255, 255, .02)),
+    rgba(2, 6, 23, .78) !important;
+}
+
+body.user-mode .nexus-command-input-row textarea {
+  min-height: 66px !important;
+  border-radius: 20px !important;
+  font-size: 1rem;
+}
+
+body.user-mode .nexus-command-mic,
+body.user-mode .nexus-command-send {
+  min-height: 46px;
+  padding-inline: 16px;
+}
+
+body.user-mode .nexus-command-examples button,
+body.user-mode .nexus-command-context span,
+body.user-mode .nexus-suggested-action {
+  border: 1px solid rgba(103, 232, 249, .3) !important;
+  background:
+    linear-gradient(135deg, rgba(34, 211, 238, .16), rgba(139, 92, 246, .12)) !important;
+  color: #e9fbff !important;
+  box-shadow: 0 0 22px rgba(34, 211, 238, .14), inset 0 1px 0 rgba(255, 255, 255, .08) !important;
+}
+
+body.user-mode .nexus-core-feature-grid {
+  gap: 14px !important;
+}
+
+body.user-mode .nexus-core-feature-card {
+  min-height: 180px;
+  padding: 18px !important;
+  border-radius: 26px !important;
+}
+
+body.user-mode .nexus-core-feature-card > span {
+  width: 48px !important;
+  height: 48px !important;
+  border-radius: 18px !important;
+  box-shadow: 0 0 30px rgba(34, 211, 238, .26), inset 0 0 18px rgba(255, 255, 255, .14);
+}
+
+body.user-mode .nexus-core-feature-card strong {
+  font-size: 1.05rem;
+}
+
+body.user-mode .nexus-core-feature-card p {
+  font-size: .9rem;
+  line-height: 1.45;
+}
+
+body.user-mode .nexus-core-feature-card button {
+  justify-self: start;
+  padding: 9px 13px;
+}
+
+body.user-mode .nexus-command-right-rail {
+  gap: 12px !important;
+  max-height: calc(100dvh - 36px) !important;
+}
+
+body.user-mode .nexus-utility-card,
+body.user-mode .nexus-internet-resource-history {
+  padding: 14px !important;
+  border-radius: 24px !important;
+}
+
+body.user-mode .nexus-utility-card strong,
+body.user-mode .nexus-internet-resource-history strong {
+  color: #f8fbff !important;
+}
+
+body.user-mode .nexus-utility-status div,
+body.user-mode .nexus-utility-card article {
+  background: rgba(2, 6, 23, .34);
+  border-color: rgba(125, 211, 252, .14) !important;
+}
+
+body.user-mode .nexus-voice-interaction-bar {
+  padding: 16px 18px !important;
+  border-radius: 28px !important;
+  background:
+    radial-gradient(circle at 10% 50%, rgba(34, 211, 238, .18), transparent 28%),
+    linear-gradient(145deg, rgba(7, 13, 31, .9), rgba(20, 18, 52, .72)) !important;
+}
+
+body.user-mode .nexus-voice-pulse {
+  background:
+    radial-gradient(circle at 38% 30%, rgba(255, 255, 255, .92), transparent 20%),
+    linear-gradient(135deg, #22d3ee, #8b5cf6 58%, #ec4899) !important;
+  box-shadow:
+    0 0 0 8px rgba(34, 211, 238, .08),
+    0 0 36px rgba(34, 211, 238, .42),
+    0 0 58px rgba(236, 72, 153, .18) !important;
+}
+
+body.user-mode .nexus-waveform span {
+  background: linear-gradient(180deg, #f0abfc, #67e8f9) !important;
+  box-shadow: 0 0 12px rgba(34, 211, 238, .45);
+}
+
+@media (max-width: 1180px) {
+  body.user-mode .nexus-command-center-shell {
+    grid-template-columns: 176px minmax(0, 1fr) !important;
+  }
+
+  body.user-mode .nexus-command-center-hero {
+    grid-template-columns: minmax(0, 1fr) minmax(190px, 240px) !important;
+  }
+
+  body.user-mode .nexus-command-right-rail {
+    position: static;
+    grid-column: 1 / -1;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    max-height: none !important;
+  }
+}
+
+@media (max-width: 860px) {
+  body.user-mode .user-workspace {
+    padding: 10px;
+  }
+
+  body.user-mode .nexus-command-center-shell,
+  body.user-mode .nexus-command-center-hero {
+    grid-template-columns: 1fr !important;
+  }
+
+  body.user-mode .nexus-command-center-hero {
+    grid-template-areas:
+      "copy"
+      "orb"
+      "composer" !important;
+  }
+
+  body.user-mode .nexus-command-sidebar {
+    position: static;
+    min-height: auto !important;
+  }
+
+  body.user-mode .nexus-command-right-rail,
+  body.user-mode .nexus-core-feature-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  body.user-mode .nexus-premium-hero-title {
+    font-size: clamp(2.45rem, 13vw, 4.2rem) !important;
+  }
+}
+
+/* Visual fidelity refinement: keep the command center powerful in the first viewport. */
+body.user-mode .nexus-command-center-shell {
+  grid-template-columns: 174px minmax(0, 1fr) 238px !important;
+  gap: 12px !important;
+}
+
+body.user-mode .nexus-command-sidebar {
+  padding: 12px !important;
+}
+
+body.user-mode .nexus-sidebar-brand {
+  gap: 8px;
+}
+
+body.user-mode .nexus-sidebar-logo {
+  width: 38px;
+  height: 38px;
+  border-radius: 13px;
+}
+
+body.user-mode .nexus-sidebar-nav button {
+  grid-template-columns: 24px 1fr;
+  gap: 8px;
+  padding: 8px;
+  font-size: .88rem;
+}
+
+body.user-mode .nexus-sidebar-icon {
+  width: 22px;
+  height: 22px;
+}
+
+body.user-mode .nexus-command-topbar {
+  min-height: 0;
+}
+
+body.user-mode .nexus-command-center-hero {
+  grid-template-columns: minmax(0, 1fr) minmax(190px, 225px) !important;
+  gap: 12px 16px !important;
+  padding: 20px !important;
+}
+
+body.user-mode .nexus-command-center-copy {
+  align-self: center;
+  gap: 6px !important;
+}
+
+body.user-mode .nexus-command-neural-wave {
+  width: 176px;
+  height: 30px;
+  margin: 4px 0 6px;
+}
+
+body.user-mode .nexus-premium-hero-title {
+  font-size: clamp(2.7rem, 5.1vw, 4.35rem) !important;
+  max-width: none !important;
+  white-space: normal;
+}
+
+body.user-mode .nexus-premium-hero-subtitle {
+  max-width: 430px !important;
+  font-size: clamp(.96rem, 1.25vw, 1.12rem) !important;
+  line-height: 1.25 !important;
+  margin-top: 3px !important;
+}
+
+body.user-mode .nexus-command-center-hero h3 {
+  max-width: 440px !important;
+  font-size: clamp(1.25rem, 1.9vw, 1.76rem) !important;
+  line-height: 1.08 !important;
+  margin: 5px 0 3px !important;
+}
+
+body.user-mode .nexus-command-center-hero p {
+  max-width: 480px !important;
+  font-size: .9rem !important;
+  line-height: 1.36 !important;
+}
+
+body.user-mode .nexus-orb-stage {
+  min-height: 226px !important;
+}
+
+body.user-mode .nexus-orb {
+  width: min(212px, 22vw) !important;
+}
+
+body.user-mode .nexus-command-composer {
+  gap: 9px !important;
+  padding: 11px !important;
+}
+
+body.user-mode .nexus-command-input-row textarea {
+  min-height: 50px !important;
+}
+
+body.user-mode .nexus-command-context {
+  gap: 6px !important;
+}
+
+body.user-mode .nexus-command-context span {
+  padding: 5px 8px !important;
+  font-size: .76rem !important;
+}
+
+body.user-mode .nexus-command-examples {
+  display: flex !important;
+  flex-wrap: nowrap !important;
+  gap: 8px !important;
+  overflow-x: auto !important;
+  overflow-y: hidden !important;
+  padding: 0 2px 5px;
+  scrollbar-width: thin;
+}
+
+body.user-mode .nexus-command-examples button {
+  flex: 0 0 auto;
+  min-height: 30px;
+  max-width: 238px;
+  padding: 6px 11px !important;
+  border-radius: 999px !important;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+body.user-mode .nexus-core-feature-card {
+  min-height: 156px;
+}
+
+body.user-mode .nexus-core-feature-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+}
+
+body.user-mode .nexus-command-right-rail .nexus-utility-card,
+body.user-mode .nexus-command-right-rail .nexus-internet-resource-history {
+  gap: 7px;
+  padding: 12px !important;
+}
+
+body.user-mode .nexus-command-right-rail .nexus-utility-card p,
+body.user-mode .nexus-command-right-rail .nexus-utility-card small,
+body.user-mode .nexus-command-right-rail .nexus-internet-resource-history p,
+body.user-mode .nexus-command-right-rail .nexus-internet-resource-history small {
+  font-size: .82rem;
+  line-height: 1.35;
+}
+
+body.user-mode .user-caption-panel {
+  width: min(280px, calc(100vw - 24px)) !important;
+  max-height: 108px !important;
+  padding: 10px !important;
+  border: 1px solid rgba(103, 232, 249, .28) !important;
+  border-radius: 18px !important;
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, .08), rgba(255, 255, 255, .02)),
+    rgba(2, 6, 23, .88) !important;
+  color: #eaf6ff !important;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, .4), 0 0 26px rgba(34, 211, 238, .16) !important;
+  backdrop-filter: blur(20px) saturate(140%);
+}
+
+body.user-mode .user-caption-panel * {
+  color: #eaf6ff !important;
+}
+
+body.user-mode .user-caption-panel button {
+  border-color: rgba(103, 232, 249, .24) !important;
+  background: rgba(15, 23, 42, .72) !important;
+  color: #eaf6ff !important;
+}
+
+@media (max-width: 1180px) {
+  body.user-mode .nexus-command-center-shell {
+    grid-template-columns: 164px minmax(0, 1fr) !important;
+  }
+}
