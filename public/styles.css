@@ -11253,3 +11253,106 @@ body.user-mode .user-caption-panel button {
     grid-template-columns: 164px minmax(0, 1fr) !important;
   }
 }
+
+/* Icon visibility polish: stronger glyphs inside the existing command-center badge sizes. */
+body.user-mode .nexus-sidebar-icon,
+body.user-mode .nexus-core-feature-card > span,
+body.user-mode .nexus-mode-icon,
+body.user-mode .nexus-sidebar-logo,
+body.user-mode .nexus-profile-avatar,
+body.user-mode .nexus-voice-pulse {
+  position: relative;
+  display: inline-grid !important;
+  place-items: center !important;
+  color: rgba(255, 255, 255, .98) !important;
+  border: 1.5px solid rgba(255, 255, 255, .48) !important;
+  background:
+    radial-gradient(circle at 32% 22%, rgba(255, 255, 255, .82), transparent 20%),
+    linear-gradient(135deg, rgba(34, 211, 238, .88), rgba(99, 102, 241, .76) 52%, rgba(236, 72, 153, .66)) !important;
+  box-shadow:
+    0 0 18px rgba(34, 211, 238, .36),
+    0 0 34px rgba(139, 92, 246, .22),
+    inset 0 1px 0 rgba(255, 255, 255, .32),
+    inset 0 -8px 22px rgba(2, 6, 23, .18) !important;
+  opacity: 1 !important;
+  overflow: visible !important;
+}
+
+body.user-mode .nexus-sidebar-icon {
+  width: 26px !important;
+  height: 26px !important;
+  min-width: 26px !important;
+  border-radius: 10px !important;
+}
+
+body.user-mode .nexus-sidebar-icon::before,
+body.user-mode .nexus-core-feature-card > span::before {
+  display: block;
+  color: #ffffff;
+  font-size: 17px;
+  line-height: 1;
+  text-shadow:
+    0 0 8px rgba(255, 255, 255, .52),
+    0 0 14px rgba(34, 211, 238, .58),
+    0 1px 3px rgba(2, 6, 23, .58);
+  filter: drop-shadow(0 0 6px rgba(34, 211, 238, .36));
+}
+
+body.user-mode .nexus-sidebar-icon-nexus::before { content: "N"; font-weight: 950; font-size: 15px; }
+body.user-mode .nexus-sidebar-icon-spark::before { content: "✦"; }
+body.user-mode .nexus-sidebar-icon-leaf::before { content: "🌱"; font-size: 15px; }
+body.user-mode .nexus-sidebar-icon-pulse::before { content: "＋"; font-size: 18px; font-weight: 950; }
+body.user-mode .nexus-sidebar-icon-market::before { content: "◆"; font-size: 15px; }
+body.user-mode .nexus-sidebar-icon-learn::before { content: "✓"; font-size: 16px; font-weight: 950; }
+body.user-mode .nexus-sidebar-icon-work::before { content: "▣"; font-size: 14px; }
+body.user-mode .nexus-sidebar-icon-map::before { content: "⌖"; font-size: 17px; }
+body.user-mode .nexus-sidebar-icon-gear::before { content: "⚙"; font-size: 15px; }
+
+body.user-mode .nexus-core-feature-card > span {
+  flex: 0 0 auto;
+  width: 48px !important;
+  height: 48px !important;
+  min-width: 48px !important;
+  min-height: 48px !important;
+  border-radius: 17px !important;
+}
+
+body.user-mode .nexus-core-feature-card > span::before {
+  font-size: 24px;
+}
+
+body.user-mode .nexus-core-feature-agri > span::before { content: "🌱"; }
+body.user-mode .nexus-core-feature-health > span::before { content: "＋"; font-size: 27px; font-weight: 950; }
+body.user-mode .nexus-core-feature-market > span::before { content: "◆"; font-size: 25px; }
+body.user-mode .nexus-core-feature-learn > span::before { content: "✓"; font-size: 25px; font-weight: 950; }
+
+body.user-mode .nexus-core-feature-health > span {
+  background:
+    radial-gradient(circle at 32% 22%, rgba(255, 255, 255, .86), transparent 20%),
+    linear-gradient(135deg, rgba(56, 189, 248, .92), rgba(99, 102, 241, .8)) !important;
+}
+
+body.user-mode .nexus-core-feature-market > span {
+  background:
+    radial-gradient(circle at 32% 22%, rgba(255, 255, 255, .86), transparent 20%),
+    linear-gradient(135deg, rgba(245, 158, 11, .92), rgba(236, 72, 153, .76)) !important;
+}
+
+body.user-mode .nexus-core-feature-learn > span {
+  background:
+    radial-gradient(circle at 32% 22%, rgba(255, 255, 255, .86), transparent 20%),
+    linear-gradient(135deg, rgba(167, 139, 250, .92), rgba(34, 211, 238, .78)) !important;
+}
+
+body.user-mode .nexus-mode-icon {
+  font-size: 26px !important;
+  text-shadow: 0 0 10px rgba(255, 255, 255, .36), 0 0 16px rgba(34, 211, 238, .42);
+}
+
+body.user-mode .nexus-sidebar-status > span {
+  width: 12px !important;
+  height: 12px !important;
+  border: 1px solid rgba(255, 255, 255, .52);
+  background: radial-gradient(circle, #dcfce7 0 18%, #34d399 42%, #059669 100%) !important;
+  box-shadow: 0 0 16px rgba(52, 211, 153, .86), 0 0 30px rgba(34, 211, 238, .2) !important;
+}
