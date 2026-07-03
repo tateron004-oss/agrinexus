@@ -11356,3 +11356,22 @@ body.user-mode .nexus-sidebar-status > span {
   background: radial-gradient(circle, #dcfce7 0 18%, #34d399 42%, #059669 100%) !important;
   box-shadow: 0 0 16px rgba(52, 211, 153, .86), 0 0 30px rgba(34, 211, 238, .2) !important;
 }
+
+/* Mode label readability polish: brighter text only, preserving the approved card geometry. */
+body.user-mode .nexus-mode-launcher strong,
+body.user-mode .nexus-core-feature-card strong {
+  color: rgba(255, 255, 255, .98) !important;
+  text-shadow:
+    0 0 10px rgba(34, 211, 238, .24),
+    0 0 18px rgba(139, 92, 246, .18),
+    0 1px 3px rgba(2, 6, 23, .66) !important;
+}
+
+body.user-mode .nexus-mode-launcher small,
+body.user-mode .nexus-core-feature-card p,
+body.user-mode .nexus-core-feature-card small {
+  color: rgba(226, 232, 240, .9) !important;
+  text-shadow:
+    0 0 8px rgba(34, 211, 238, .12),
+    0 1px 2px rgba(2, 6, 23, .52) !important;
+}
