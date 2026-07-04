@@ -11321,6 +11321,22 @@ body.user-mode .nexus-global-offline-notes {
   gap: 6px;
 }
 
+body.user-mode .nexus-global-assistant-brain-plan {
+  display: grid;
+  gap: 6px;
+  margin-top: 10px;
+  padding: 10px 12px;
+  border: 1px solid rgba(34, 211, 238, .22);
+  border-radius: 14px;
+  background:
+    radial-gradient(circle at 8% 0%, rgba(34, 211, 238, .16), transparent 34%),
+    linear-gradient(135deg, rgba(15, 23, 42, .54), rgba(30, 41, 59, .42));
+}
+
+body.user-mode .nexus-global-assistant-brain-plan small {
+  color: rgba(219, 234, 254, .92);
+}
+
 @media (max-width: 760px) {
   body.user-mode .nexus-global-review-audit-grid,
   body.user-mode .nexus-global-review-audit-actions,

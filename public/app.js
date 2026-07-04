@@ -18399,6 +18399,7 @@ function renderNexusAgenticBrainResultCards() {
           ${renderNexusGlobalProviderAccessPacket(card)}
           ${renderNexusGlobalCommunicationsPacket(card)}
           ${renderNexusGlobalMarketplaceLogisticsPacket(card)}
+          ${renderNexusGlobalAssistantBrainPlan(card)}
           ${renderNexusMediaProviderOptions(card)}
           ${renderNexusHealthAccessPreparationOptions(card)}
           ${card.localOnly ? `<small>${escapeHtml(translateText("Local-only"))}</small>` : ""}
@@ -19650,6 +19651,17 @@ async function runNexusKnowledgeQuery(command = "", options = {}) {
     ? "Source-backed answer prepared. Review citations before acting."
     : (nexusKnowledgeLastResult?.answer || nexusKnowledgeLastResult?.summary || "Knowledge rail checked safely.");
   nexusAgenticBrainLastResult = buildNexusKnowledgePreparedResult(nexusKnowledgeLastResult);
+  const globalAssistantBrainPlan = buildNexusGlobalAssistantBrainPlan(question, {
+    domainKey: nexusGlobalAssistantBrainDomainForCommand(question) || undefined
+  });
+  nexusAgenticBrainLastResult.preparedCards.unshift({
+    type: "nexus_global_assistant_brain_plan",
+    title: "Global assistant brain plan",
+    status: `${globalAssistantBrainPlan.domain} - ${globalAssistantBrainPlan.actionClassifier.riskTier}`,
+    localOnly: true,
+    needsRealProvider: globalAssistantBrainPlan.actionClassifier.finalExecutionGateRequired,
+    globalAssistantBrainPlan
+  });
   if ((options.category || nexusKnowledgeCategoryForCommand(question)) === "agriculture") {
     try {
       const agricultureResult = await request("/api/nexus/global-agriculture/intelligence", {
@@ -22024,6 +22036,204 @@ function handleNexusGlobalOfflineAccessClick(event) {
   return false;
 }
 
+const NEXUS_GLOBAL_ASSISTANT_BRAIN_DOMAINS = Object.freeze({
+  chronicCare: {
+    label: "Chronic care and health access",
+    workflowId: "health-chronic-care",
+    mode: "health",
+    packetType: "chronic_disease_education_packet",
+    needsLiveKnowledge: true,
+    followUpPrompt: "Add readings, symptoms, medication questions, urgency, and what you want reviewed."
+  },
+  agriculture: {
+    label: "Agriculture support",
+    workflowId: "agriculture-help",
+    mode: "agriculture",
+    packetType: "agriculture_support_packet",
+    needsLiveKnowledge: true,
+    followUpPrompt: "Add crop, location context, symptoms, timing, and local conditions."
+  },
+  maps: {
+    label: "Maps and field visit planning",
+    workflowId: "maps-field-visit",
+    mode: "maps",
+    packetType: "route_planning_packet",
+    needsLiveKnowledge: false,
+    followUpPrompt: "Add origin, destination, purpose, timing, and whether this is only a planning route."
+  },
+  communications: {
+    label: "Communications preparation",
+    workflowId: "communications-prep",
+    mode: "communications",
+    packetType: "communications_preparation_packet",
+    needsLiveKnowledge: false,
+    followUpPrompt: "Add recipient, channel, purpose, language, and message draft before any final gate."
+  },
+  workforce: {
+    label: "Training, literacy, and workforce",
+    workflowId: "jobs-workforce",
+    mode: "workforce",
+    packetType: "workforce_training_packet",
+    needsLiveKnowledge: true,
+    followUpPrompt: "Add location, role, skill level, training goal, and preferred language."
+  },
+  providerAccess: {
+    label: "Telehealth and provider bridge",
+    workflowId: "telehealth-intake",
+    mode: "telehealth",
+    packetType: "provider_access_packet",
+    needsLiveKnowledge: true,
+    followUpPrompt: "Add care need, language, callback preference, accessibility need, and provider context."
+  },
+  pharmacy: {
+    label: "Pharmacy support",
+    workflowId: "pharmacy-support",
+    mode: "pharmacy",
+    packetType: "pharmacy_review_packet",
+    needsLiveKnowledge: true,
+    followUpPrompt: "Add medication question, refill context, pharmacy name if known, and safety concerns."
+  },
+  marketplace: {
+    label: "Marketplace and vendor research",
+    workflowId: "agritrade-marketplace",
+    mode: "marketplace",
+    packetType: "marketplace_vendor_research_packet",
+    needsLiveKnowledge: true,
+    followUpPrompt: "Add item, seller/buyer context, price question, delivery need, and review goal."
+  },
+  offlineQueue: {
+    label: "Offline queue and review",
+    workflowId: "offline-queue",
+    mode: "offline",
+    packetType: "queued_action_packet",
+    needsLiveKnowledge: false,
+    followUpPrompt: "Add what should be queued, when to review, and what must remain blocked."
+  }
+});
+
+function nexusGlobalAssistantBrainDomainForCommand(command = "") {
+  const text = String(command || "").toLowerCase();
+  if (/\b(queue this action|queue.*inactive|offline queue|because the lane is inactive)\b/.test(text)) return "offlineQueue";
+  if (/\b(whatsapp|telegram|sms|text message|email|phone call|call|message)\b/.test(text)) return "communications";
+  if (/\b(pharmacy|prescription|refill|medicine|medication)\b/.test(text)) return "pharmacy";
+  if (/\b(telehealth|provider bridge|provider handoff|care team|video visit|provider questions|mobile clinic visit packet|mobile clinic)\b/.test(text)) return "providerAccess";
+  if (/\b(diabetes|blood pressure|hypertension|obesity|rpm|rtm|community health worker|chw|chronic|glucose|a1c)\b/.test(text)) return "chronicCare";
+  if (/\b(crop|maize|farm|field|irrigation|pest|disease guidance|agriculture)\b/.test(text)) return "agriculture";
+  if (/\b(farm visit|field visit|route|map|transport|directions)\b/.test(text)) return "maps";
+  if (/\b(workforce|training|literacy|job|jobs|skills|course|learner)\b/.test(text)) return "workforce";
+  if (/\b(vendor|supplier|cold storage|marketplace|agritrade|buyer|seller)\b/.test(text)) return "marketplace";
+  return "";
+}
+
+function nexusGlobalAssistantBrainRiskForCommand(command = "", domainKey = "") {
+  const text = String(command || "").toLowerCase();
+  if (/\b(emergency|ambulance|dispatch|suicide|stroke|heart attack|can't breathe|cannot breathe)\b/.test(text)) return "emergency";
+  if (/\b(send|call|dial|message|whatsapp|telegram|email|contact|schedule|book|prescribe|diagnose|refill|pay|buy|checkout|share location|camera|video visit|submit|dispatch)\b/.test(text)) return "high";
+  if (["chronicCare", "providerAccess", "pharmacy", "communications", "maps", "marketplace"].includes(domainKey)) return "medium";
+  return "low";
+}
+
+function buildNexusGlobalAssistantBrainPlan(command = "", options = {}) {
+  const rawCommand = String(command || "").trim();
+  const domainKey = options.domainKey || nexusGlobalAssistantBrainDomainForCommand(rawCommand) || "offlineQueue";
+  const domain = NEXUS_GLOBAL_ASSISTANT_BRAIN_DOMAINS[domainKey] || NEXUS_GLOBAL_ASSISTANT_BRAIN_DOMAINS.offlineQueue;
+  const riskTier = nexusGlobalAssistantBrainRiskForCommand(rawCommand, domainKey);
+  const confirmationRequired = riskTier !== "low";
+  const finalExecutionGateRequired = riskTier === "high" || riskTier === "emergency" || /queue|prepare|contact|send|call|provider|pharmacy|telehealth/i.test(rawCommand);
+  return {
+    schemaVersion: "nexus-global-assistant-brain.v1",
+    source: "nexus-global-assistant-brain",
+    intentId: `global-brain-${domainKey}`,
+    rawCommand,
+    mode: domain.mode,
+    domain: domain.label,
+    workflowId: domain.workflowId,
+    packetType: domain.packetType,
+    actionClassifier: {
+      actionType: finalExecutionGateRequired ? "prepared_or_queued_action" : "local_guidance",
+      riskTier,
+      confirmationRequired,
+      finalExecutionGateRequired,
+      noExecutionAuthorized: true,
+      providerHandoffAuthorized: false
+    },
+    routing: {
+      priority: riskTier === "emergency" ? "emergency_boundary_first" : confirmationRequired ? "safety_gate_before_execution" : "low_risk_preview_first",
+      modeDispatcher: domain.mode,
+      liveKnowledgeRouting: domain.needsLiveKnowledge
+        ? "route to Live Knowledge when configured; fall back to built-in safe guidance and source honesty when disabled"
+        : "use local packet builder; do not claim live retrieval",
+      packetBuilder: domain.packetType,
+      queueConnector: finalExecutionGateRequired ? "review_queue_or_offline_queue_only" : "not_required",
+      confirmationConnector: confirmationRequired ? "user_confirmation_gate_required_before_any_future_execution" : "not_required_for_local_preview"
+    },
+    followUpState: {
+      status: "awaiting_user_detail_or_review",
+      nextPrompt: domain.followUpPrompt,
+      noDeadEndResponse: true
+    },
+    userFacingStatus: riskTier === "emergency"
+      ? "Emergency language detected. Nexus cannot dispatch emergency help; seek local emergency services now."
+      : `Nexus prepared the ${domain.label} path. It can prepare packets, ask for missing details, and keep any real-world action behind final gates.`,
+    auditPosture: "local plan/audit metadata prepared; persistent audit write requires configured approved runtime",
+    noExecutionAuthorized: true,
+    localOnly: true
+  };
+}
+
+function shouldNexusGlobalAssistantBrainHandle(command = "") {
+  const text = String(command || "").toLowerCase();
+  if (!text) return false;
+  if (/\b(open agriculture help|open agri.?trade|open maps|open offline queue|play music|show reminders)\b/.test(text)) return false;
+  return /\b(diabetes intake|review my blood pressure|start obesity support|record rpm|community health worker|crop disease|plan a farm visit|prepare a whatsapp|prepare an sms|prepare an email|prepare a phone call|workforce training|provider bridge|pharmacy support|telehealth questions|vendor options|cold storage|mobile clinic visit packet|queue this action)\b/.test(text);
+}
+
+function buildNexusGlobalAssistantBrainResult(command = "", options = {}) {
+  const plan = buildNexusGlobalAssistantBrainPlan(command, options);
+  return {
+    ok: true,
+    status: "nexus_global_assistant_brain_plan_prepared",
+    mode: "Nexus Global Assistant Brain",
+    message: plan.userFacingStatus,
+    preparedCards: [{
+      type: "nexus_global_assistant_brain_plan",
+      title: "Global assistant brain plan",
+      status: `${plan.domain} - ${plan.actionClassifier.riskTier}`,
+      localOnly: true,
+      needsRealProvider: plan.actionClassifier.finalExecutionGateRequired,
+      globalAssistantBrainPlan: plan
+    }, {
+      type: plan.packetType,
+      title: `${plan.domain} packet`,
+      status: "prepared locally / review-only",
+      localOnly: true,
+      needsRealProvider: plan.actionClassifier.finalExecutionGateRequired
+    }],
+    noExecutionAuthorized: true,
+    localOnly: true,
+    source: "nexus_global_assistant_brain"
+  };
+}
+
+function renderNexusGlobalAssistantBrainPlan(card = {}) {
+  const plan = card.globalAssistantBrainPlan || null;
+  if (!plan) return "";
+  const action = plan.actionClassifier || {};
+  const routing = plan.routing || {};
+  const followUp = plan.followUpState || {};
+  return `
+    <div class="nexus-global-assistant-brain-plan" data-nexus-global-assistant-brain-plan="true" data-workflow-id="${escapeHtml(plan.workflowId || "")}" data-risk-tier="${escapeHtml(action.riskTier || "")}" data-execution-authority="false">
+      <small>${escapeHtml(translateText("Workflow"))}: ${escapeHtml(plan.workflowId || "review-only")}</small>
+      <small>${escapeHtml(translateText("Packet"))}: ${escapeHtml(plan.packetType || "local_packet")}</small>
+      <small>${escapeHtml(translateText("Priority"))}: ${escapeHtml(routing.priority || "safe_preview_first")}</small>
+      <small>${escapeHtml(translateText("Live Knowledge"))}: ${escapeHtml(routing.liveKnowledgeRouting || "not required")}</small>
+      <small>${escapeHtml(translateText("Confirmation"))}: ${escapeHtml(action.confirmationRequired ? "required before future execution" : "not required for local preview")}</small>
+      <small>${escapeHtml(translateText("Final gate"))}: ${escapeHtml(action.finalExecutionGateRequired ? "required" : "not required for local preview")}</small>
+      <small>${escapeHtml(translateText("Next"))}: ${escapeHtml(followUp.nextPrompt || "Add missing details or review the prepared packet.")}</small>
+    </div>
+  `;
+}
+
 function renderNexusEndgameCommandCenter() {
   const lanes = nexusAllIntegrationLanes();
   const laneCounts = lanes.reduce((counts, lane) => {
@@ -22959,6 +23169,11 @@ function runNexusStandardUserHomeLocalCommand(command = "") {
       localOnly: true,
       source: "nexus_agent_runtime"
     };
+    renderUserWorkspace();
+    return true;
+  }
+  if (shouldNexusGlobalAssistantBrainHandle(normalized)) {
+    nexusAgenticBrainLastResult = buildNexusGlobalAssistantBrainResult(normalized);
     renderUserWorkspace();
     return true;
   }
