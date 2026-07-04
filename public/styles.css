@@ -11145,6 +11145,102 @@ body.user-mode .nexus-pilot-readiness-grid small {
   line-height: 1.45;
 }
 
+body.user-mode .nexus-endgame-command-center,
+body.user-mode .nexus-activation-center,
+body.user-mode .nexus-review-queues,
+body.user-mode .nexus-confirmation-panel {
+  margin: 14px 0;
+  padding: 14px;
+  border: 1px solid rgba(34, 211, 238, .22);
+  border-radius: 20px;
+  background:
+    linear-gradient(145deg, rgba(14, 165, 233, .10), rgba(168, 85, 247, .06)),
+    rgba(2, 6, 23, .50);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .08), 0 18px 46px rgba(8, 47, 73, .22);
+}
+
+body.user-mode .nexus-endgame-command-center summary,
+body.user-mode .nexus-activation-center summary,
+body.user-mode .nexus-review-queues summary {
+  cursor: pointer;
+  color: #ecfeff;
+  font-weight: 900;
+}
+
+body.user-mode .nexus-command-center-grid,
+body.user-mode .nexus-activation-grid,
+body.user-mode .nexus-review-queue-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 12px;
+}
+
+body.user-mode .nexus-command-center-grid article,
+body.user-mode .nexus-activation-grid article,
+body.user-mode .nexus-review-queue-grid article,
+body.user-mode .nexus-confirmation-panel li {
+  display: grid;
+  gap: 6px;
+  padding: 10px;
+  border: 1px solid rgba(125, 211, 252, .14);
+  border-radius: 15px;
+  color: rgba(226, 232, 240, .90);
+  background: rgba(2, 6, 23, .36);
+}
+
+body.user-mode .nexus-command-center-grid strong,
+body.user-mode .nexus-activation-grid strong,
+body.user-mode .nexus-review-queue-grid strong,
+body.user-mode .nexus-confirmation-panel strong {
+  color: #f8fbff;
+}
+
+body.user-mode .nexus-command-center-actions,
+body.user-mode .nexus-activation-actions,
+body.user-mode .nexus-confirmation-actions,
+body.user-mode .nexus-activation-checklist {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+body.user-mode .nexus-activation-checklist em {
+  padding: 5px 8px;
+  border-radius: 999px;
+  color: #bae6fd;
+  background: rgba(14, 165, 233, .12);
+  font-style: normal;
+}
+
+body.user-mode .nexus-partner-onboarding-form {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 14px;
+}
+
+body.user-mode .nexus-partner-onboarding-form strong,
+body.user-mode .nexus-partner-onboarding-form button {
+  grid-column: 1 / -1;
+}
+
+body.user-mode .nexus-partner-onboarding-form label {
+  display: grid;
+  gap: 5px;
+  color: rgba(248, 250, 252, .92);
+}
+
+body.user-mode .nexus-partner-onboarding-form input,
+body.user-mode .nexus-partner-onboarding-form textarea {
+  width: 100%;
+  border: 1px solid rgba(125, 211, 252, .22);
+  border-radius: 13px;
+  padding: 9px 10px;
+  color: #f8fbff;
+  background: rgba(2, 6, 23, .60);
+}
+
 body.user-mode .nexus-workflow-body {
   display: grid;
   grid-template-columns: minmax(0, 1.4fr) minmax(240px, .8fr);
@@ -11252,6 +11348,10 @@ body.user-mode .nexus-workflow-map-preview span {
   body.user-mode .nexus-workflow-header,
   body.user-mode .nexus-workflow-body,
   body.user-mode .nexus-workflow-field-grid,
+  body.user-mode .nexus-command-center-grid,
+  body.user-mode .nexus-activation-grid,
+  body.user-mode .nexus-review-queue-grid,
+  body.user-mode .nexus-partner-onboarding-form,
   body.user-mode .nexus-workflow-steps,
   body.user-mode .nexus-workflow-lane-status,
   body.user-mode .nexus-pilot-readiness-grid {

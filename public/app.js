@@ -256,8 +256,8 @@ const nexusProductIdentity = Object.freeze({
 });
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-353";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v332";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-354";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v333";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
 const VOICE_ATTENTION_DELAY_MS = 900;
@@ -20133,10 +20133,22 @@ const NEXUS_INTEGRATION_LANES = Object.freeze([
   { id: "resource-assistant-lane", label: "Resource assistant lane", category: "platform", region: "global", country: "multi-country", partnerName: "Nexus source registry", supportedServices: ["source-backed answers", "citations when configured"], integrationType: "source-registry-or-live-retrieval", status: "configured_inactive", testModeAvailable: true, liveModeAvailable: false, requiresConfirmation: false, packetType: "resource_assistant_packet", lastActionStatus: "prepared", lastVerifiedAt: "", activationChecklist: ["source registry", "live retrieval config", "citation honesty"] }
 ]);
 
-const NEXUS_INTEGRATION_LANE_STATUSES = Object.freeze(["not_configured", "configured_inactive", "active_test_mode", "active_live", "disabled", "failed", "needs_user_confirmation"]);
-const NEXUS_OUTCOME_STATES = Object.freeze(["draft", "prepared", "waiting_for_confirmation", "queued", "submitted", "sent", "failed", "response_received", "follow_up_needed", "completed"]);
+const NEXUS_INTEGRATION_LANE_STATUSES = Object.freeze(["not_configured", "configured_inactive", "active_test_mode", "active_live", "disabled", "failed", "needs_user_confirmation", "offline", "credential_missing"]);
+const NEXUS_OUTCOME_STATES = Object.freeze(["draft", "prepared", "waiting_for_confirmation", "queued", "test_submitted", "handoff_prepared", "user_initiated_external_handoff", "submitted", "sent", "failed", "credential_required", "provider_response_pending", "response_received", "follow_up_needed", "completed", "cancelled"]);
+const NEXUS_PACKET_TYPES = Object.freeze([
+  "health_intake", "clinical_support", "chronic_care_summary", "diabetes_report", "hypertension_report", "obesity_report", "rpm_report", "rtm_report", "telehealth_request", "provider_handoff", "pharmacy_support_request", "mobile_clinic_request", "community_health_worker_request",
+  "crop_support_request", "farm_planning_request", "input_supplier_request", "extension_partner_request", "field_visit_request", "marketplace_inquiry", "logistics_request",
+  "workforce_referral", "job_referral", "employer_partner_referral", "training_enrollment_request", "learning_plan_request",
+  "email_message", "sms_message", "whatsapp_message", "telegram_message", "call_intent",
+  "route_planning_request", "location_review_request", "field_visit_location_packet"
+]);
+const NEXUS_REVIEW_QUEUE_TYPES = Object.freeze(["provider", "vendor", "admin", "clinical", "telehealth", "pharmacy", "mobile-clinic", "agriculture-vendor", "workforce", "marketplace"]);
+const NEXUS_PARTNER_ONBOARDING_TYPES = Object.freeze(["Healthcare provider", "Telehealth provider", "Pharmacy", "Mobile clinic", "Community health worker partner", "Agriculture advisor/vendor", "Input supplier", "Marketplace buyer/seller partner", "Logistics partner", "Employer", "Training provider", "Communications provider"]);
+const NEXUS_GLOBAL_READINESS_TAGS = Object.freeze(["global-ready", "Africa-first", "low-bandwidth", "mobile-first", "offline-aware", "rural-relevant", "community-health-ready", "agriculture-ready", "workforce-ready"]);
 let nexusPreparedPackets = [];
 let nexusActionHistory = [];
+let nexusPartnerProfiles = [];
+let nexusLaneConfigOverrides = {};
 
 function nexusWorkflowRegistryEntry(workflowId = "") {
   const normalized = normalizeNexusWorkflowId(workflowId, "");
@@ -20167,6 +20179,7 @@ function buildNexusPacket(workflowId, formData = {}, options = {}) {
   const now = new Date().toISOString();
   const packetId = `nexus-packet-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
   const userEnteredData = Object.fromEntries(Object.entries(formData || {}).filter(([, value]) => String(value || "").trim()));
+  const normalizedData = Object.fromEntries(Object.entries(userEnteredData).map(([key, value]) => [key, String(value || "").trim()]));
   const summary = `${registry?.label || definition?.presentation?.title || "Nexus workflow"} packet prepared for ${lane?.label || "local review"}.`;
   return {
     packetId,
@@ -20174,15 +20187,34 @@ function buildNexusPacket(workflowId, formData = {}, options = {}) {
     workflowLabel: registry?.label || definition?.presentation?.title || "Nexus workflow",
     category: registry?.category || "platform",
     packetType: registry?.packetType || "nexus_packet",
+    riskLevel: registry?.riskLevel || "moderate",
     userEnteredData,
+    normalizedData,
     summary,
     urgency: userEnteredData.urgency || userEnteredData.priority || "not specified",
+    consentText: `${registry?.label || "Nexus"} will share only the reviewed packet with ${lane?.partnerName || "the selected lane"} after explicit approval.`,
+    consentAccepted: Boolean(options.consentAccepted),
     destinationLaneId: lane?.id || "",
+    destinationLabel: lane?.label || "Local Nexus review",
     integrationStatus: lane?.status || "not_configured",
+    adapterType: lane?.category || registry?.category || "local",
     confirmationStatus: registry?.requiresConfirmationBeforeExecution ? "required_before_external_execution" : "not_required_for_local_preparation",
     outcomeStatus: "prepared",
     createdAt: now,
-    updatedAt: now
+    updatedAt: now,
+    createdBy: "standard-user",
+    region: lane?.region || "global",
+    country: lane?.country || "multi-country",
+    language: languageCode?.() || "en",
+    offlineEligible: Boolean(registry?.offlineSupport),
+    retryEligible: true,
+    attachmentsMeta: [],
+    auditTrail: [{
+      event: "packet_created",
+      timestamp: now,
+      actor: "nexus-runtime",
+      laneStatus: lane?.status || "not_configured"
+    }]
   };
 }
 
@@ -20212,48 +20244,269 @@ function requestNexusConfirmation(packet) {
   };
 }
 
+function nexusAdapterTypeForLane(lane = {}, packet = {}) {
+  const text = `${lane.id || ""} ${lane.category || ""} ${packet.packetType || ""}`.toLowerCase();
+  if (/\bemail\b/.test(text)) return "email";
+  if (/\bsms\b/.test(text)) return "sms";
+  if (/\bwhatsapp\b/.test(text)) return "whatsapp";
+  if (/\btelegram\b/.test(text)) return "telegram";
+  if (/\b(call|phone)\b/.test(text)) return "phone";
+  if (/\btelehealth\b/.test(text)) return "telehealth";
+  if (/\bpharmacy\b/.test(text)) return "pharmacy";
+  if (/\bmobile-clinic|mobile clinic\b/.test(text)) return "mobile-clinic";
+  if (/\bclinical|provider\b/.test(text)) return "provider";
+  if (/\bmarketplace|agritrade\b/.test(text)) return "marketplace";
+  if (/\bworkforce|job|employer\b/.test(text)) return "workforce";
+  if (/\btraining|learning\b/.test(text)) return "training";
+  if (/\bagriculture|crop|field|farm|logistics\b/.test(text)) return "agriculture";
+  if (/\bmap|route|location\b/.test(text)) return "maps";
+  return "local";
+}
+
+function makeNexusLaneAdapter(adapterType, options = {}) {
+  const browserHandoff = options.browserHandoff || "";
+  return {
+    adapterType,
+    canExecute(lane, packet) {
+      const mode = lane?.status || "not_configured";
+      return {
+        ok: ["active_test_mode", "active_live", "configured_inactive"].includes(mode),
+        mode,
+        credentialRequired: mode === "active_live" && !lane?.liveModeAvailable,
+        missingCredentials: lane?.requiredCredentials || []
+      };
+    },
+    executeTest(lane, packet) {
+      return {
+        resultId: `nexus-result-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        packetId: packet.packetId,
+        laneId: lane?.id || packet.destinationLaneId,
+        adapterType,
+        mode: "test",
+        status: "test_submitted",
+        userMessage: `${lane?.label || "Lane"} accepted a test-mode ${packet.packetType} packet. No live provider/vendor action occurred.`,
+        externalReference: `test-${packet.packetId}`,
+        verificationStatus: "test_verified",
+        timestamp: new Date().toISOString(),
+        errorCode: "",
+        errorMessage: "",
+        nextSteps: ["Review test result", "Activate live lane only after credentials, consent, and approval"]
+      };
+    },
+    executeLive(lane, packet) {
+      return {
+        resultId: `nexus-result-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        packetId: packet.packetId,
+        laneId: lane?.id || packet.destinationLaneId,
+        adapterType,
+        mode: "live",
+        status: "credential_required",
+        userMessage: `${lane?.label || "Lane"} is not live-ready in this browser. Add verified credentials/partner approval before live execution.`,
+        externalReference: "",
+        verificationStatus: "not_started",
+        timestamp: new Date().toISOString(),
+        errorCode: "credential_required",
+        errorMessage: "Live credential or provider approval is missing.",
+        nextSteps: ["Configure lane", "Run test mode", "Request final confirmation again"]
+      };
+    },
+    prepareBrowserHandoff(lane, packet) {
+      return {
+        resultId: `nexus-result-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        packetId: packet.packetId,
+        laneId: lane?.id || packet.destinationLaneId,
+        adapterType,
+        mode: "browser-native-handoff",
+        status: browserHandoff ? "handoff_prepared" : "queued",
+        userMessage: browserHandoff
+          ? `${adapterType} handoff prepared. Nexus will not claim completion until the user completes it outside the app.`
+          : `${adapterType} handoff is not available here; packet remains queued/copyable.`,
+        externalReference: browserHandoff,
+        verificationStatus: browserHandoff ? "pending_external_completion" : "not_available",
+        timestamp: new Date().toISOString(),
+        errorCode: "",
+        errorMessage: "",
+        nextSteps: browserHandoff ? ["Open handoff after confirmation", "Verify outcome manually"] : ["Copy/export packet"]
+      };
+    },
+    verifyOutcome(result) {
+      return {
+        ...result,
+        verificationStatus: result.status === "test_submitted" ? "test_verified" : result.verificationStatus || "pending_external_completion"
+      };
+    }
+  };
+}
+
+const NEXUS_LANE_ADAPTERS = Object.freeze({
+  email: makeNexusLaneAdapter("email", { browserHandoff: "mailto:" }),
+  sms: makeNexusLaneAdapter("sms", { browserHandoff: "sms:" }),
+  whatsapp: makeNexusLaneAdapter("whatsapp", { browserHandoff: "https://wa.me/" }),
+  telegram: makeNexusLaneAdapter("telegram"),
+  phone: makeNexusLaneAdapter("phone", { browserHandoff: "tel:" }),
+  telehealth: makeNexusLaneAdapter("telehealth"),
+  provider: makeNexusLaneAdapter("provider"),
+  pharmacy: makeNexusLaneAdapter("pharmacy"),
+  "mobile-clinic": makeNexusLaneAdapter("mobile-clinic"),
+  "rpm-rtm": makeNexusLaneAdapter("rpm-rtm"),
+  marketplace: makeNexusLaneAdapter("marketplace"),
+  workforce: makeNexusLaneAdapter("workforce"),
+  training: makeNexusLaneAdapter("training"),
+  agriculture: makeNexusLaneAdapter("agriculture"),
+  logistics: makeNexusLaneAdapter("logistics"),
+  maps: makeNexusLaneAdapter("maps"),
+  local: makeNexusLaneAdapter("local")
+});
+
+function nexusAdapterForPacket(packet, lane) {
+  const adapterType = nexusAdapterTypeForLane(lane, packet);
+  return NEXUS_LANE_ADAPTERS[adapterType] || NEXUS_LANE_ADAPTERS.local;
+}
+
 function handleInactiveNexusLane(packet, lane) {
   return {
+    resultId: `nexus-result-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
     packetId: packet.packetId,
     laneId: lane?.id || packet.destinationLaneId,
+    adapterType: nexusAdapterForPacket(packet, lane).adapterType,
+    mode: "inactive-lane",
+    status: "queued",
     laneStatus: lane?.status || "not_configured",
     outcomeStatus: "queued",
+    userMessage: "Integration inactive. Nexus prepared and queued the packet locally instead of submitting it.",
     resultMessage: "Integration inactive. Nexus prepared and queued the packet locally instead of submitting it.",
+    externalReference: "",
+    verificationStatus: "queued_local_only",
+    timestamp: new Date().toISOString(),
+    errorCode: "lane_inactive",
+    errorMessage: "",
+    nextSteps: ["Configure lane", "Run test mode", "Export packet"],
     externalActionOccurred: false,
     followUpStatus: "activate lane or review manually"
   };
 }
 
 function executeNexusAction(packet, lane, options = {}) {
+  const adapter = nexusAdapterForPacket(packet, lane);
   if (!options.confirmed) {
     return {
+      resultId: `nexus-result-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
       packetId: packet.packetId,
       laneId: lane?.id || packet.destinationLaneId,
+      adapterType: adapter.adapterType,
+      mode: "confirmation",
+      status: "waiting_for_confirmation",
       laneStatus: lane?.status || "not_configured",
       outcomeStatus: "waiting_for_confirmation",
+      userMessage: "External execution blocked until final confirmation.",
       resultMessage: "External execution blocked until final confirmation.",
+      externalReference: "",
+      verificationStatus: "not_started",
+      timestamp: new Date().toISOString(),
+      errorCode: "",
+      errorMessage: "",
+      nextSteps: ["Review packet", "Confirm, edit, cancel, or queue"],
       externalActionOccurred: false
     };
   }
   if (!lane || !["active_test_mode", "active_live"].includes(lane.status)) {
     return handleInactiveNexusLane(packet, lane);
   }
+  const rawResult = lane.status === "active_test_mode"
+    ? adapter.executeTest(lane, packet)
+    : adapter.executeLive(lane, packet);
+  const verified = adapter.verifyOutcome(rawResult);
   return {
-    packetId: packet.packetId,
-    laneId: lane.id,
+    ...verified,
     laneStatus: lane.status,
-    outcomeStatus: lane.status === "active_live" ? "submitted" : "response_received",
-    resultMessage: lane.status === "active_live"
-      ? "Submitted through the verified active lane after confirmation."
-      : "Test-mode result recorded locally after confirmation.",
-    externalActionOccurred: lane.status === "active_live",
-    followUpStatus: "verify provider/vendor response"
+    outcomeStatus: verified.status,
+    resultMessage: verified.userMessage,
+    externalActionOccurred: lane.status === "active_live" && verified.status === "submitted",
+    followUpStatus: verified.verificationStatus === "pending_external_completion" ? "verify external completion" : "verify provider/vendor response"
   };
+}
+
+function queueNexusAction(packet, reason = "inactive_or_offline") {
+  const lane = nexusIntegrationLaneById(packet.destinationLaneId);
+  const result = handleInactiveNexusLane(packet, lane);
+  return {
+    ...result,
+    resultId: `nexus-result-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    adapterType: nexusAdapterForPacket(packet, lane).adapterType,
+    mode: "queue",
+    status: "queued",
+    userMessage: result.resultMessage,
+    externalReference: "",
+    verificationStatus: "queued_local_only",
+    timestamp: new Date().toISOString(),
+    errorCode: reason,
+    errorMessage: "",
+    nextSteps: ["Review queue", "Retry after lane activation", "Export packet if needed"]
+  };
+}
+
+function retryNexusAction(actionId) {
+  const entry = nexusActionHistory.find(item => item.id === actionId);
+  if (!entry) return false;
+  const packet = nexusPreparedPackets.find(item => item.packetId === entry.packetId)
+    || buildNexusPacket(entry.workflowId, {}, { command: "retry queued action" });
+  const lane = nexusIntegrationLaneById(packet.destinationLaneId);
+  const result = executeNexusAction(packet, lane, { confirmed: true, retry: true });
+  showNexusOutcome(packet, result);
+  saveNexusRuntimeMemory();
+  renderUserWorkspace();
+  return true;
+}
+
+function confirmNexusPacket(packetId) {
+  const packet = nexusPreparedPackets.find(item => item.packetId === packetId);
+  if (!packet) return false;
+  const lane = nexusIntegrationLaneById(packet.destinationLaneId);
+  const result = executeNexusAction(packet, lane, { confirmed: true });
+  showNexusOutcome(packet, result);
+  saveNexusRuntimeMemory();
+  renderUserWorkspace();
+  return true;
+}
+
+function cancelNexusPacket(packetId) {
+  const packet = nexusPreparedPackets.find(item => item.packetId === packetId);
+  if (!packet) return false;
+  const result = {
+    resultId: `nexus-result-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    packetId,
+    laneId: packet.destinationLaneId,
+    adapterType: packet.adapterType || "local",
+    mode: "cancel",
+    status: "cancelled",
+    laneStatus: packet.integrationStatus,
+    outcomeStatus: "cancelled",
+    userMessage: "Packet cancelled. Nexus did not send, submit, dispatch, or hand off anything.",
+    resultMessage: "Packet cancelled. Nexus did not send, submit, dispatch, or hand off anything.",
+    externalReference: "",
+    verificationStatus: "cancelled",
+    timestamp: new Date().toISOString(),
+    errorCode: "",
+    errorMessage: "",
+    nextSteps: ["Edit packet", "Choose another workflow"]
+  };
+  packet.outcomeStatus = "cancelled";
+  showNexusOutcome(packet, result);
+  saveNexusRuntimeMemory();
+  renderUserWorkspace();
+  return true;
+}
+
+function editNexusPacket(packetId) {
+  const packet = nexusPreparedPackets.find(item => item.packetId === packetId);
+  if (!packet) return false;
+  return openNexusWorkflow(packet.workflowId, { command: "edit packet", source: "packet-edit" });
 }
 
 function recordNexusOutcome(packet, result) {
   const entry = {
     id: `nexus-action-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    packetId: packet.packetId,
     workflowId: packet.workflowId,
     actionType: packet.packetType,
     laneId: result.laneId || packet.destinationLaneId,
@@ -20296,6 +20549,8 @@ function saveNexusRuntimeMemory() {
     localStorage.setItem("nexusActiveWorkflowState", JSON.stringify(nexusActiveWorkflowState || {}));
     localStorage.setItem("nexusPreparedPackets", JSON.stringify(nexusPreparedPackets.slice(0, 25)));
     localStorage.setItem("nexusActionHistory", JSON.stringify(nexusActionHistory.slice(0, 25)));
+    localStorage.setItem("nexusPartnerProfiles", JSON.stringify(nexusPartnerProfiles.slice(0, 25)));
+    localStorage.setItem("nexusLaneConfigOverrides", JSON.stringify(nexusLaneConfigOverrides || {}));
   } catch {
     // Local storage can be unavailable; Nexus keeps the current session state.
   }
@@ -20306,20 +20561,28 @@ function restoreNexusRuntimeMemory() {
     nexusActiveWorkflowState = JSON.parse(localStorage.getItem("nexusActiveWorkflowState") || "null") || nexusActiveWorkflowState;
     nexusPreparedPackets = JSON.parse(localStorage.getItem("nexusPreparedPackets") || "[]") || [];
     nexusActionHistory = JSON.parse(localStorage.getItem("nexusActionHistory") || "[]") || [];
+    nexusPartnerProfiles = JSON.parse(localStorage.getItem("nexusPartnerProfiles") || "[]") || [];
+    nexusLaneConfigOverrides = JSON.parse(localStorage.getItem("nexusLaneConfigOverrides") || "{}") || {};
   } catch {
     nexusPreparedPackets = [];
     nexusActionHistory = [];
+    nexusPartnerProfiles = [];
+    nexusLaneConfigOverrides = {};
   }
 }
 
 function clearNexusSensitiveLocalData() {
   nexusPreparedPackets = [];
   nexusActionHistory = [];
+  nexusPartnerProfiles = [];
+  nexusLaneConfigOverrides = {};
   nexusActiveWorkflowState = { id: "", command: "", source: "cleared", workflow: "", action: "", openedAt: 0 };
   try {
     localStorage.removeItem("nexusActiveWorkflowState");
     localStorage.removeItem("nexusPreparedPackets");
     localStorage.removeItem("nexusActionHistory");
+    localStorage.removeItem("nexusPartnerProfiles");
+    localStorage.removeItem("nexusLaneConfigOverrides");
   } catch {}
   nexusAgenticBrainLastResult = {
     ok: true,
@@ -20344,24 +20607,45 @@ function runNexusWorkflowControllerAction(action = "", workflowId = "") {
   if (action === "request-confirmation") {
     const confirmation = requestNexusConfirmation(packet);
     result = {
+      resultId: `nexus-result-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
       packetId: packet.packetId,
       laneId: packet.destinationLaneId,
+      adapterType: prepared.lane ? nexusAdapterForPacket(packet, prepared.lane).adapterType : "local",
+      mode: "confirmation",
+      status: "waiting_for_confirmation",
       laneStatus: packet.integrationStatus,
       outcomeStatus: "waiting_for_confirmation",
+      userMessage: confirmation.message,
       resultMessage: confirmation.message,
+      externalReference: "",
+      verificationStatus: "not_started",
+      timestamp: new Date().toISOString(),
+      errorCode: "",
+      errorMessage: "",
+      nextSteps: ["Confirm reviewed packet", "Edit packet", "Queue packet", "Cancel"],
       followUpStatus: "waiting for explicit user approval"
     };
   } else if (action === "queue-packet") {
-    result = handleInactiveNexusLane(packet, prepared.lane);
+    result = queueNexusAction(packet, "manual_queue");
   } else if (action === "execute-confirmed-test") {
     result = executeNexusAction(packet, prepared.lane, { confirmed: true });
   } else {
     result = {
       packetId: packet.packetId,
       laneId: packet.destinationLaneId,
+      adapterType: prepared.lane ? nexusAdapterForPacket(packet, prepared.lane).adapterType : "local",
+      mode: "prepare",
+      status: prepared.status === "waiting_for_confirmation" ? "waiting_for_confirmation" : "prepared",
       laneStatus: packet.integrationStatus,
       outcomeStatus: prepared.status === "waiting_for_confirmation" ? "waiting_for_confirmation" : "prepared",
+      userMessage: prepared.message,
       resultMessage: prepared.message,
+      externalReference: "",
+      verificationStatus: "prepared_local_only",
+      timestamp: new Date().toISOString(),
+      errorCode: "",
+      errorMessage: "",
+      nextSteps: ["Review confirmation", "Queue if inactive", "Export/copy packet"],
       followUpStatus: prepared.requiresConfirmation ? "review confirmation" : "review packet"
     };
   }
@@ -20381,6 +20665,89 @@ function handleNexusWorkflowControllerClick(event) {
   event.preventDefault();
   event.stopPropagation();
   return runNexusWorkflowControllerAction(button.dataset.nexusActionController || "prepare-packet", button.dataset.workflowId || "");
+}
+
+function handleNexusPacketActionClick(event) {
+  const button = event.target?.closest?.("[data-nexus-packet-action]");
+  if (!button) return false;
+  event.preventDefault();
+  event.stopPropagation();
+  const action = button.dataset.nexusPacketAction || "";
+  const packetId = button.dataset.packetId || "";
+  if (action === "confirm") return confirmNexusPacket(packetId);
+  if (action === "cancel") return cancelNexusPacket(packetId);
+  if (action === "edit") return editNexusPacket(packetId);
+  if (action === "queue") {
+    const packet = nexusPreparedPackets.find(item => item.packetId === packetId);
+    if (!packet) return false;
+    queueNexusPreparedPacket(packet, "confirmation_panel_queue");
+    renderUserWorkspace();
+    return true;
+  }
+  if (action === "retry") return retryNexusAction(button.dataset.actionId || "");
+  return false;
+}
+
+function handleNexusLaneActionClick(event) {
+  const button = event.target?.closest?.("[data-nexus-lane-action]");
+  if (!button) return false;
+  event.preventDefault();
+  event.stopPropagation();
+  const laneId = button.dataset.laneId || "";
+  const action = button.dataset.nexusLaneAction || "";
+  const lane = nexusIntegrationLaneById(laneId);
+  if (!lane) return false;
+  if (action === "test") {
+    const workflow = NEXUS_AGENTIC_WORKFLOW_REGISTRY.find(item => item.integrationLaneId === laneId) || NEXUS_AGENTIC_WORKFLOW_REGISTRY[0];
+    const packet = buildNexusPacket(workflow.id, { activationTest: lane.label }, { command: "activation center test", consentAccepted: true });
+    const testLane = { ...lane, status: "active_test_mode" };
+    const result = executeNexusAction(packet, testLane, { confirmed: true });
+    packet.outcomeStatus = result.outcomeStatus;
+    nexusPreparedPackets = [packet, ...nexusPreparedPackets].slice(0, 25);
+    showNexusOutcome(packet, result);
+    saveNexusRuntimeMemory();
+    renderUserWorkspace();
+    return true;
+  }
+  if (action === "configure") {
+    nexusLaneConfigOverrides[laneId] = { ...(nexusLaneConfigOverrides[laneId] || {}), status: "configured_inactive", lastVerifiedAt: new Date().toISOString() };
+  }
+  if (action === "disable") {
+    nexusLaneConfigOverrides[laneId] = { ...(nexusLaneConfigOverrides[laneId] || {}), status: "disabled", lastVerifiedAt: new Date().toISOString() };
+  }
+  saveNexusRuntimeMemory();
+  renderUserWorkspace();
+  return true;
+}
+
+function handleNexusPartnerOnboardingClick(event) {
+  const button = event.target?.closest?.("[data-nexus-partner-action='save']");
+  if (!button) return false;
+  event.preventDefault();
+  event.stopPropagation();
+  const form = button.closest("[data-nexus-partner-onboarding-form]");
+  const profile = {};
+  form?.querySelectorAll?.("[data-nexus-partner-field]")?.forEach(field => {
+    profile[field.dataset.nexusPartnerField] = String(field.value || "").trim();
+  });
+  profile.id = `nexus-partner-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  profile.createdAt = new Date().toISOString();
+  profile.testModeAvailable = true;
+  profile.liveModeApproved = false;
+  nexusPartnerProfiles = [profile, ...nexusPartnerProfiles].slice(0, 25);
+  saveNexusRuntimeMemory();
+  nexusAgenticBrainLastResult = {
+    ok: true,
+    status: "nexus_partner_profile_saved",
+    mode: "Activation Center",
+    message: "Partner profile saved locally. No secrets were stored and no provider was contacted.",
+    preparedCards: [{ type: "partner_profile", title: profile.organizationName || "Partner profile", status: "local profile saved", localOnly: true }],
+    noExecutionAuthorized: true,
+    localOnly: true,
+    source: "nexus_activation_center"
+  };
+  renderUserWorkspace();
+  return true;
 }
 
 function showNexusRuntimeList(kind = "pending") {
@@ -20407,6 +20774,217 @@ function showNexusRuntimeList(kind = "pending") {
   renderUserWorkspace();
   return true;
 }
+
+function resolveNexusIntent(input, options = {}) {
+  const text = String(input || "").trim();
+  const workflowId = normalizeNexusWorkflowId(options.workflowId || "", text) || detectNexusHomeModePanelId(text);
+  if (/\b(activation center|provider vendor registry|provider\/vendor registry|admin console|pilot readiness)\b/i.test(text)) {
+    return { type: "activation-center", workflowId: "activation-center", text };
+  }
+  if (/\b(command center|pilot status|activation status|live lanes|test lanes)\b/i.test(text)) {
+    return { type: "command-center", workflowId: "command-center", text };
+  }
+  if (/\b(provider queue|vendor queue|admin queue|clinical queue|pharmacy queue|mobile clinic queue|marketplace queue|workforce referrals)\b/i.test(text)) {
+    return { type: "review-queue", workflowId: "review-queue", text };
+  }
+  return { type: workflowId ? "workflow" : "unknown", workflowId, text };
+}
+
+function updateNexusWorkflowState(workflowId, data = {}) {
+  const id = normalizeNexusWorkflowId(workflowId || nexusActiveWorkflowState?.id || "", data.command || "");
+  nexusActiveWorkflowState = {
+    ...(nexusActiveWorkflowState || {}),
+    id,
+    command: data.command || nexusActiveWorkflowState?.command || "",
+    source: data.source || "runtime-update",
+    workflow: workflowId || id,
+    action: data.action || nexusActiveWorkflowState?.action || "",
+    openedAt: nexusActiveWorkflowState?.openedAt || Date.now(),
+    updatedAt: Date.now()
+  };
+  saveNexusRuntimeMemory();
+  return nexusActiveWorkflowState;
+}
+
+function queueNexusPreparedPacket(packet, reason = "manual_queue") {
+  const result = queueNexusAction(packet, reason);
+  packet.outcomeStatus = "queued";
+  packet.updatedAt = new Date().toISOString();
+  packet.auditTrail = [...(packet.auditTrail || []), { event: "packet_queued", reason, timestamp: packet.updatedAt }];
+  nexusPreparedPackets = [packet, ...nexusPreparedPackets.filter(item => item.packetId !== packet.packetId)].slice(0, 25);
+  showNexusOutcome(packet, result);
+  saveNexusRuntimeMemory();
+  return result;
+}
+
+function continueLastNexusWorkflow() {
+  const lastId = nexusActiveWorkflowState?.id || nexusPreparedPackets[0]?.workflowId || nexusActionHistory[0]?.workflowId || "";
+  if (lastId && nexusWorkflowDefinition(lastId, "continue last workflow")) return openNexusWorkflow(lastId, { command: "continue last workflow", source: "runtime-continuation" });
+  return false;
+}
+
+function showNexusPendingActions() {
+  return showNexusRuntimeList("pending");
+}
+
+function showNexusFailedActions() {
+  return showNexusRuntimeList("failed");
+}
+
+function showNexusFollowUps() {
+  return showNexusRuntimeList("follow-up");
+}
+
+function renderNexusConfirmationPanel(packet, lane) {
+  if (!packet) return "";
+  const targetLane = lane || nexusIntegrationLaneById(packet.destinationLaneId);
+  return `
+    <div class="nexus-confirmation-panel" data-nexus-confirmation-panel="true" data-packet-id="${escapeHtml(packet.packetId)}">
+      <div>
+        <span class="eyebrow">${escapeHtml(translateText("Confirmation and consent"))}</span>
+        <strong>${escapeHtml(translateText(packet.workflowLabel || "Nexus packet"))}</strong>
+        <p>${escapeHtml(translateText(packet.summary || "Review this packet before any external action."))}</p>
+      </div>
+      <ul>
+        <li>${escapeHtml(translateText(`Destination: ${targetLane?.label || "Local Nexus review"}`))}</li>
+        <li>${escapeHtml(translateText(`Lane status: ${targetLane?.status || "not_configured"}`))}</li>
+        <li>${escapeHtml(translateText(`Data included: ${Object.keys(packet.userEnteredData || {}).join(", ") || "entered workflow fields only"}`))}</li>
+        <li>${escapeHtml(translateText(packet.consentText || "Only reviewed information is shared after approval."))}</li>
+        <li>${escapeHtml(translateText("Clinical note: Nexus assists with intake, tracking, summaries, and coordination; diagnosis, prescribing, and emergency response require licensed/local services."))}</li>
+      </ul>
+      <div class="nexus-confirmation-actions">
+        <button type="button" class="primary" data-nexus-packet-action="confirm" data-packet-id="${escapeHtml(packet.packetId)}">${escapeHtml(translateText("Confirm reviewed packet"))}</button>
+        <button type="button" data-nexus-packet-action="edit" data-packet-id="${escapeHtml(packet.packetId)}">${escapeHtml(translateText("Edit packet"))}</button>
+        <button type="button" data-nexus-packet-action="queue" data-packet-id="${escapeHtml(packet.packetId)}">${escapeHtml(translateText("Queue packet"))}</button>
+        <button type="button" data-nexus-packet-action="cancel" data-packet-id="${escapeHtml(packet.packetId)}">${escapeHtml(translateText("Cancel"))}</button>
+      </div>
+    </div>
+  `;
+}
+
+function renderNexusActivationCenter() {
+  const lanes = NEXUS_INTEGRATION_LANES.map(lane => ({ ...lane, ...(nexusLaneConfigOverrides[lane.id] || {}) }));
+  return `
+    <details class="nexus-activation-center nexus-glass-card" data-nexus-activation-center="true" open>
+      <summary>${escapeHtml(translateText("Activation Center"))}</summary>
+      <p>${escapeHtml(translateText("Manage provider, vendor, communications, healthcare, agriculture, workforce, maps, and offline lanes locally. Secret values are never stored here."))}</p>
+      <div class="nexus-activation-grid">
+        ${lanes.map(lane => `
+          <article data-nexus-activation-lane="${escapeHtml(lane.id)}" data-lane-status="${escapeHtml(lane.status)}">
+            <div>
+              <strong>${escapeHtml(translateText(lane.label))}</strong>
+              <small>${escapeHtml(translateText(`${lane.category} / ${lane.region} / ${lane.country}`))}</small>
+            </div>
+            <span>${escapeHtml(translateText(`Status: ${lane.status}`))}</span>
+            <span>${escapeHtml(translateText(`Partner: ${lane.partnerName}`))}</span>
+            <span>${escapeHtml(translateText(`Packet: ${lane.packetType}`))}</span>
+            <span>${escapeHtml(translateText(`Test: ${lane.testModeAvailable ? "available" : "not available"} / Live: ${lane.liveModeAvailable ? "available" : "credential gated"}`))}</span>
+            <span>${escapeHtml(translateText(`Required credentials: ${(lane.requiredCredentials || ["configured partner account", "approved endpoint"]).join(", ")}`))}</span>
+            <span>${escapeHtml(translateText(`Missing credentials: ${(lane.missingCredentials || (lane.liveModeAvailable ? [] : ["live credentials / approval"])).join(", ") || "none"}`))}</span>
+            <div class="nexus-activation-checklist">
+              ${(lane.activationChecklist || []).map(item => `<em>${escapeHtml(translateText(item))}</em>`).join("")}
+            </div>
+            <div class="nexus-activation-actions">
+              <button type="button" data-nexus-lane-action="test" data-lane-id="${escapeHtml(lane.id)}">${escapeHtml(translateText("Run test action"))}</button>
+              <button type="button" data-nexus-lane-action="configure" data-lane-id="${escapeHtml(lane.id)}">${escapeHtml(translateText("Configure"))}</button>
+              <button type="button" data-nexus-lane-action="disable" data-lane-id="${escapeHtml(lane.id)}">${escapeHtml(translateText("Disable locally"))}</button>
+            </div>
+          </article>
+        `).join("")}
+      </div>
+      <form class="nexus-partner-onboarding-form" data-nexus-partner-onboarding-form="true">
+        <strong>${escapeHtml(translateText("Partner / vendor onboarding"))}</strong>
+        <label>${escapeHtml(translateText("Organization name"))}<input data-nexus-partner-field="organizationName" placeholder="${escapeHtml(translateText("Clinic, pharmacy, vendor, employer, trainer"))}"></label>
+        <label>${escapeHtml(translateText("Contact person"))}<input data-nexus-partner-field="contactPerson" placeholder="${escapeHtml(translateText("Name"))}"></label>
+        <label>${escapeHtml(translateText("Country / region"))}<input data-nexus-partner-field="countryRegion" placeholder="${escapeHtml(translateText("Nigeria, Kenya, Ghana, US, regional"))}"></label>
+        <label>${escapeHtml(translateText("Service categories"))}<input data-nexus-partner-field="serviceCategories" placeholder="${escapeHtml(NEXUS_PARTNER_ONBOARDING_TYPES.join(", "))}"></label>
+        <label>${escapeHtml(translateText("Contact email"))}<input data-nexus-partner-field="contactEmail" placeholder="partner@example.org"></label>
+        <label>${escapeHtml(translateText("Contact phone"))}<input data-nexus-partner-field="contactPhone" placeholder="${escapeHtml(translateText("masked / optional"))}"></label>
+        <label>${escapeHtml(translateText("Website / portal"))}<input data-nexus-partner-field="websitePortal" placeholder="https://"></label>
+        <label>${escapeHtml(translateText("Preferred integration method"))}<input data-nexus-partner-field="integrationMethod" placeholder="${escapeHtml(translateText("manual review, API, email, portal, test mode"))}"></label>
+        <label>${escapeHtml(translateText("Consent requirements"))}<textarea data-nexus-partner-field="consentRequirements"></textarea></label>
+        <label>${escapeHtml(translateText("Notes"))}<textarea data-nexus-partner-field="notes"></textarea></label>
+        <button type="button" class="primary" data-nexus-partner-action="save">${escapeHtml(translateText("Save local partner profile"))}</button>
+      </form>
+    </details>
+  `;
+}
+
+function renderNexusReviewQueues() {
+  const queueCards = NEXUS_REVIEW_QUEUE_TYPES.map(type => {
+    const items = nexusPreparedPackets.filter(packet => {
+      const text = `${type} ${packet.category} ${packet.packetType} ${packet.destinationLaneId}`.toLowerCase();
+      return text.includes(type.split("-")[0]) || (type === "provider" && /clinical|health|telehealth|pharmacy|mobile/.test(text)) || (type === "vendor" && /agriculture|marketplace|logistics/.test(text));
+    });
+    return `
+      <article data-nexus-review-queue="${escapeHtml(type)}">
+        <strong>${escapeHtml(translateText(`${type} queue`))}</strong>
+        <span>${escapeHtml(translateText(`${items.length} packet(s)`))}</span>
+        ${(items.slice(0, 3).map(packet => `
+          <div>
+            <b>${escapeHtml(packet.packetId)}</b>
+            <small>${escapeHtml(`${packet.workflowLabel} / ${packet.urgency} / ${packet.outcomeStatus}`)}</small>
+            <button type="button" data-nexus-packet-action="edit" data-packet-id="${escapeHtml(packet.packetId)}">${escapeHtml(translateText("Review"))}</button>
+            <button type="button" data-nexus-packet-action="retry" data-action-id="${escapeHtml(nexusActionHistory.find(entry => entry.packetId === packet.packetId)?.id || "")}">${escapeHtml(translateText("Retry"))}</button>
+          </div>
+        `).join("")) || `<small>${escapeHtml(translateText("No local packets yet."))}</small>`}
+      </article>
+    `;
+  });
+  return `
+    <details class="nexus-review-queues nexus-glass-card" data-nexus-review-queues="true">
+      <summary>${escapeHtml(translateText("Provider / vendor / admin review queues"))}</summary>
+      <div class="nexus-review-queue-grid">${queueCards.join("")}</div>
+    </details>
+  `;
+}
+
+function renderNexusEndgameCommandCenter() {
+  const laneCounts = NEXUS_INTEGRATION_LANES.reduce((counts, lane) => {
+    counts[lane.status] = (counts[lane.status] || 0) + 1;
+    return counts;
+  }, {});
+  const pending = nexusPreparedPackets.filter(packet => ["prepared", "waiting_for_confirmation", "queued"].includes(packet.outcomeStatus)).length;
+  const failed = nexusActionHistory.filter(entry => entry.outcomeStatus === "failed" || entry.outcomeStatus === "credential_required").length;
+  const followUps = nexusActionHistory.filter(entry => ["follow_up_needed", "response_received"].includes(entry.outcomeStatus)).length;
+  return `
+    <details class="nexus-endgame-command-center nexus-glass-card" data-nexus-endgame-command-center="true" open>
+      <summary>${escapeHtml(translateText("Nexus Command Center"))}</summary>
+      <div class="nexus-command-center-grid">
+        <article><strong>${escapeHtml(translateText("Active workflow"))}</strong><span>${escapeHtml(nexusActiveWorkflowState?.id || "none")}</span></article>
+        <article><strong>${escapeHtml(translateText("Pending packets"))}</strong><span>${pending}</span></article>
+        <article><strong>${escapeHtml(translateText("Failed / credential-required"))}</strong><span>${failed}</span></article>
+        <article><strong>${escapeHtml(translateText("Follow-up needed"))}</strong><span>${followUps}</span></article>
+        <article><strong>${escapeHtml(translateText("Test-mode lanes"))}</strong><span>${laneCounts.active_test_mode || 0}</span></article>
+        <article><strong>${escapeHtml(translateText("Live-mode lanes"))}</strong><span>${laneCounts.active_live || 0}</span></article>
+        <article><strong>${escapeHtml(translateText("Credential-missing lanes"))}</strong><span>${laneCounts.credential_missing || NEXUS_INTEGRATION_LANES.filter(lane => !lane.liveModeAvailable).length}</span></article>
+        <article><strong>${escapeHtml(translateText("Global/Africa readiness"))}</strong><span>${escapeHtml(NEXUS_GLOBAL_READINESS_TAGS.join(" / "))}</span></article>
+      </div>
+      <div class="nexus-command-center-actions">
+        ${["health-intake", "clinical-support", "telehealth-intake", "pharmacy-support", "mobile-clinic", "agriculture", "agritrade", "jobs", "learning", "maps", "communications"].map(id => `<button type="button" data-nexus-mode-shortcut="${escapeHtml(id)}" data-nexus-command="open ${escapeHtml(id)}">${escapeHtml(translateText(id.replace(/-/g, " ")))}</button>`).join("")}
+      </div>
+    </details>
+  `;
+}
+
+const NEXUS_AGENT_RUNTIME = Object.freeze({
+  resolveIntent: resolveNexusIntent,
+  openWorkflow: openNexusWorkflow,
+  updateWorkflowState: updateNexusWorkflowState,
+  buildPacket: buildNexusPacket,
+  prepareAction: prepareNexusAction,
+  requestConfirmation: requestNexusConfirmation,
+  executeAction: executeNexusAction,
+  queueAction: queueNexusPreparedPacket,
+  retryAction: retryNexusAction,
+  recordOutcome: recordNexusOutcome,
+  showOutcome: showNexusOutcome,
+  continueLastWorkflow: continueLastNexusWorkflow,
+  showPendingActions: showNexusPendingActions,
+  showFailedActions: showNexusFailedActions,
+  showFollowUps: showNexusFollowUps,
+  clearSensitiveLocalData: clearNexusSensitiveLocalData
+});
 
 function normalizeNexusWorkflowId(workflowId = "", command = "") {
   const raw = String(workflowId || "").toLowerCase().trim()
@@ -20566,6 +21144,7 @@ function renderNexusActiveWorkflowWorkspace() {
   }
   const { id, presentation, content, fields } = definition;
   const healthcare = isNexusHealthcareWorkflow(id);
+  const latestPacket = nexusPreparedPackets.find(packet => packet.workflowId === id);
   const steps = healthcare
     ? ["Add context", "Review safety boundaries", "Prepare provider-ready summary", "Confirm before any future handoff"]
     : id === "maps"
@@ -20605,9 +21184,11 @@ function renderNexusActiveWorkflowWorkspace() {
         <button type="button" class="primary" data-nexus-action-controller="prepare-packet" data-workflow-id="${escapeHtml(id)}">${escapeHtml(translateText("Prepare packet"))}</button>
         <button type="button" data-nexus-action-controller="request-confirmation" data-workflow-id="${escapeHtml(id)}">${escapeHtml(translateText("Review confirmation"))}</button>
         <button type="button" data-nexus-action-controller="queue-packet" data-workflow-id="${escapeHtml(id)}">${escapeHtml(translateText("Queue if inactive"))}</button>
+        <button type="button" data-nexus-action-controller="execute-confirmed-test" data-workflow-id="${escapeHtml(id)}">${escapeHtml(translateText("Run confirmed test mode"))}</button>
         <button type="button" data-nexus-command-prefill="${escapeHtml(content.nextPrompt)}">${escapeHtml(translateText("Use as prompt"))}</button>
         <span>${escapeHtml(translateText(content.limitation))}</span>
       </div>
+      ${latestPacket ? renderNexusConfirmationPanel(latestPacket, nexusIntegrationLaneById(latestPacket.destinationLaneId)) : ""}
       ${renderNexusWorkflowActionHistory()}
     </section>
   `;
@@ -21087,9 +21668,12 @@ function renderNexusRightUtilityColumn() {
 
 function renderNexusOperationsShelf() {
   return `
-    <details class="nexus-operations-shelf" data-nexus-operations-shelf="true">
+    <details class="nexus-operations-shelf" data-nexus-operations-shelf="true" open>
       <summary>${escapeHtml(translateText("Review workspace details"))}</summary>
       <div class="nexus-operations-shelf-grid">
+        ${renderNexusEndgameCommandCenter()}
+        ${renderNexusActivationCenter()}
+        ${renderNexusReviewQueues()}
         ${renderNexusActiveWorkSummary()}
         ${renderNexusPilotPlatformStatusPanel()}
         ${renderNexusPilotReviewQueuePanel()}
@@ -21198,6 +21782,21 @@ function runNexusStandardUserHomeLocalCommand(command = "") {
   if (/\b(show pending actions|show my tasks|pending actions|queued actions|show queued)\b/i.test(normalized)) return showNexusRuntimeList("pending");
   if (/\b(show failed actions|failed actions)\b/i.test(normalized)) return showNexusRuntimeList("failed");
   if (/\b(show follow-up needed|follow up needed|follow-up needed)\b/i.test(normalized)) return showNexusRuntimeList("follow-up");
+  const runtimeIntent = resolveNexusIntent(normalized);
+  if (runtimeIntent.type === "activation-center" || runtimeIntent.type === "command-center" || runtimeIntent.type === "review-queue") {
+    nexusAgenticBrainLastResult = {
+      ok: true,
+      status: `nexus_${runtimeIntent.type}_opened`,
+      mode: "Nexus Command Center",
+      message: `${runtimeIntent.type.replace(/-/g, " ")} is open in Review workspace details. No external action was executed.`,
+      preparedCards: [{ type: runtimeIntent.type, title: runtimeIntent.type.replace(/-/g, " "), status: "local runtime view open", localOnly: true }],
+      noExecutionAuthorized: true,
+      localOnly: true,
+      source: "nexus_agent_runtime"
+    };
+    renderUserWorkspace();
+    return true;
+  }
   const workflowId = normalizeNexusWorkflowId("", normalized) || detectNexusHomeModePanelId(normalized);
   if (workflowId && nexusWorkflowDefinition(workflowId, normalized)) {
     return openNexusWorkflow(workflowId, { command: normalized, source: "typed-command" });
@@ -37022,6 +37621,9 @@ function bindStatic() {
     if (await handleNexusProductionRailsClick(event)) return;
     if (await handleNexusPilotReviewQueueClick(event)) return;
     if (await handleNexusPilotPlatformActionClick(event)) return;
+    if (handleNexusPacketActionClick(event)) return;
+    if (handleNexusLaneActionClick(event)) return;
+    if (handleNexusPartnerOnboardingClick(event)) return;
     if (handleNexusWorkflowControllerClick(event)) return;
     if (handleNexusHomeModeSummaryClick(event)) return;
     const earlyCommandCenterSubmit = event.target.closest("[data-nexus-command-center-submit]");
