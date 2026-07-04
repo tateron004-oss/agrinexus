@@ -58,8 +58,12 @@ assert.strictEqual(
 
 [
   "renderNexusGlobalMarketplaceLogisticsPacket",
+  "NEXUS_GLOBAL_MARKETPLACE_LOGISTICS_SECTIONS",
+  "renderNexusGlobalMarketplaceLogisticsSections",
   "/api/nexus/global-marketplace-logistics/engine",
   "nexus-global-marketplace-logistics-packet-card",
+  "nexus-global-marketplace-logistics-sections",
+  "data-global-marketplace-logistics-section",
   "nexus-marketplace-logistics-packet-type",
   "nexus-marketplace-logistics-source-backed",
   "nexus-marketplace-logistics-vendor-comparison",
@@ -77,6 +81,29 @@ assert.strictEqual(
 ].forEach(token => includes(app, token, `app should include ${token}`));
 
 [
+  "vendor-research",
+  "vendor-comparison",
+  "logistics-planning",
+  "route-resource",
+  "storage-cold-chain",
+  "purchase-prep",
+  "credential-gates",
+  "review-queue",
+  "Vendor Research",
+  "Vendor Comparison",
+  "Logistics Planning",
+  "Route Resources",
+  "Storage / Cold Chain",
+  "Purchase Preparation",
+  "Credential Gates",
+  "Nexus, research vendor options.",
+  "Nexus, compare marketplace vendors.",
+  "Nexus, prepare logistics planning.",
+  "Nexus, prepare purchase questions.",
+  "will not contact vendors, buy, sell, order, pay, change inventory, dispatch delivery, share location"
+].forEach(token => includes(app, token, `app should include marketplace/logistics section token: ${token}`));
+
+[
   "Nexus Global Marketplace, Vendor, and Logistics Engine",
   "marketplace/vendor research",
   "vendor comparison",
@@ -91,7 +118,10 @@ assert.strictEqual(
   "review queue",
   "must not",
   "fabricating citations",
-  "no silent checkout"
+  "no silent checkout",
+  "The Standard User active workflow now exposes compact Global Marketplace and Logistics sections",
+  "Vendor Research, Vendor Comparison, Logistics Planning, Route Resources, Storage / Cold Chain, Purchase Preparation",
+  "without making any external commitment"
 ].forEach(token => includes(doc, token, `doc should include ${token}`));
 
 [

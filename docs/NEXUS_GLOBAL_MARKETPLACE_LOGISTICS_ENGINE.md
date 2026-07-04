@@ -62,6 +62,8 @@ Purchase/payment execution requires:
 
 Standard Users may prepare and review marketplace, vendor, and logistics packets. They may see credential-gated readiness, missing configuration names, review queue targets, and next safe actions.
 
+The Standard User active workflow now exposes compact Global Marketplace and Logistics sections for Vendor Research, Vendor Comparison, Logistics Planning, Route Resources, Storage / Cold Chain, Purchase Preparation, Credential Gates, and Review Queue. These controls route to existing Nexus commands and help the user prepare source-aware marketplace, vendor, route, storage, and purchase-review packets without making any external commitment.
+
 Standard Users must not see claims that Nexus contacted vendors, purchased items, processed payments, opened external marketplaces, dispatched delivery, shared location, or completed a route handoff unless a future configured provider path actually performs that action after approval and audit.
 
 ## Safety Boundaries

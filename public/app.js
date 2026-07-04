@@ -256,8 +256,8 @@ const nexusProductIdentity = Object.freeze({
 });
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-357";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v336";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-358";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v337";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
 const VOICE_ATTENTION_DELAY_MS = 900;
@@ -19082,6 +19082,17 @@ const NEXUS_GLOBAL_COMMUNICATIONS_SECTIONS = Object.freeze([
   { id: "outcome-recording", label: "Outcome Recording", command: "Nexus, prepare communication outcome recording.", description: "Plan audit and result verification for approved communications." }
 ]);
 
+const NEXUS_GLOBAL_MARKETPLACE_LOGISTICS_SECTIONS = Object.freeze([
+  { id: "vendor-research", label: "Vendor Research", command: "Nexus, research vendor options.", description: "Compare vendor context with source review; no contact." },
+  { id: "vendor-comparison", label: "Vendor Comparison", command: "Nexus, compare marketplace vendors.", description: "Prepare criteria, risks, and local review questions." },
+  { id: "logistics-planning", label: "Logistics Planning", command: "Nexus, prepare logistics planning.", description: "Plan delivery constraints; no dispatch or booking." },
+  { id: "route-resource", label: "Route Resources", command: "Nexus, prepare route resource questions.", description: "Use typed route context only; no location sharing." },
+  { id: "storage-cold-chain", label: "Storage / Cold Chain", command: "Nexus, prepare storage and cold-chain questions.", description: "Prepare storage checks without claiming fulfillment." },
+  { id: "purchase-prep", label: "Purchase Preparation", command: "Nexus, prepare purchase questions.", description: "Prepare review items; no checkout or payment." },
+  { id: "credential-gates", label: "Credential Gates", command: "Nexus, check marketplace logistics readiness.", description: "Show missing provider names only; no secrets." },
+  { id: "review-queue", label: "Review Queue", command: "Nexus, queue marketplace logistics review.", description: "Queue local review before any future external action." }
+]);
+
 function buildNexusKnowledgePreparedResult(result = {}) {
   const answer = result?.result || result || {};
   return {
@@ -19253,6 +19264,21 @@ function renderNexusGlobalCommunicationsSections(id = "") {
         </button>
       `).join("")}
       <small data-testid="nexus-global-communications-sections-no-execution">${escapeHtml(translateText("Communications can be prepared and reviewed here. Nexus will not send, call, open WhatsApp, open Telegram, deliver email, navigate externally, or contact anyone without provider configuration, visible recipient, explicit final approval, audit, and outcome verification."))}</small>
+    </div>
+  `;
+}
+
+function renderNexusGlobalMarketplaceLogisticsSections(id = "") {
+  if (!["agritrade", "marketplace", "maps", "field-visit", "agriculture", "crop-support", "farm-planning"].includes(id)) return "";
+  return `
+    <div class="nexus-global-marketplace-logistics-sections" data-testid="nexus-global-marketplace-logistics-sections" aria-label="${escapeHtml(translateText("Global marketplace and logistics sections"))}">
+      ${NEXUS_GLOBAL_MARKETPLACE_LOGISTICS_SECTIONS.map(section => `
+        <button type="button" data-testid="nexus-global-marketplace-logistics-section-${escapeHtml(section.id)}" data-nexus-command="${escapeHtml(section.command)}" data-nexus-mode-shortcut="global-marketplace-logistics" data-global-marketplace-logistics-section="${escapeHtml(section.id)}">
+          <strong>${escapeHtml(translateText(section.label))}</strong>
+          <span>${escapeHtml(translateText(section.description))}</span>
+        </button>
+      `).join("")}
+      <small data-testid="nexus-global-marketplace-logistics-sections-no-execution">${escapeHtml(translateText("Marketplace and logistics can be researched, compared, queued, and reviewed here. Nexus will not contact vendors, buy, sell, order, pay, change inventory, dispatch delivery, share location, open external marketplaces, or hand off a route without provider configuration, visible review, explicit approval, audit, and outcome verification."))}</small>
     </div>
   `;
 }
@@ -22704,6 +22730,7 @@ function renderNexusActiveWorkflowWorkspace() {
       ${renderNexusChronicCareHealthSections(id)}
       ${renderNexusProviderAccessSections(id)}
       ${renderNexusGlobalCommunicationsSections(id)}
+      ${renderNexusGlobalMarketplaceLogisticsSections(id)}
       ${renderNexusWorkflowMapPreview(id)}
       <div class="nexus-workflow-body">
         ${renderNexusWorkflowFields(id, fields)}
