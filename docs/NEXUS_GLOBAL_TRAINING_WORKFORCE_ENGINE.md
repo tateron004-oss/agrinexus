@@ -49,6 +49,8 @@ Employer contact, job application, training enrollment, profile submission, cred
 
 Training and workforce prompts from the Standard User knowledge rail can now produce visible training/workforce packets. The Learning & Literacy and Jobs & Workforce mode panels expose practical quick actions and engine sections for Digital Literacy, Agriculture Training, Health Literacy, AI Literacy, Workforce Pathway, Resume / Interview Prep, Credential Pathway, Employer Partner Research, and Learning Recommendations.
 
+The Standard User runtime also exposes explicit readiness gates for Enrollment Gate, Application Gate, Profile Sharing Gate, and Training Review Queue. These gates make the next production step visible while keeping enrollment, job applications, profile sharing, credential issuance, employer contact, and interview scheduling behind provider configuration, visible review, explicit approval, audit, and outcome verification.
+
 Each visible section routes through the normal Nexus command path and prepares a packet. The UI must not submit a job application, enroll a learner, contact an employer, share a profile, issue a credential, or claim placement/certification.
 
 ## Export and Review Posture

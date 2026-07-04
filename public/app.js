@@ -256,8 +256,8 @@ const nexusProductIdentity = Object.freeze({
 });
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-358";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v337";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-359";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v338";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
 const VOICE_ATTENTION_DELAY_MS = 900;
@@ -19047,7 +19047,11 @@ const NEXUS_TRAINING_WORKFORCE_SECTIONS = Object.freeze([
   { id: "resume-interview", label: "Resume / Interview Prep", command: "Nexus, prepare resume and interview practice.", description: "Organize experience and practice answers for review." },
   { id: "credential-pathway", label: "Credential Pathway", command: "Nexus, research credential requirements.", description: "Prerequisites, provider legitimacy, costs, and timing." },
   { id: "employer-research", label: "Employer Partner Research", command: "Nexus, research employer partner fit.", description: "Sector needs and hiring fit; no employer contact." },
-  { id: "learning-recommendations", label: "Learning Recommendations", command: "Nexus, recommend a learning path.", description: "Source-aware courses and low-bandwidth learning steps." }
+  { id: "learning-recommendations", label: "Learning Recommendations", command: "Nexus, recommend a learning path.", description: "Source-aware courses and low-bandwidth learning steps." },
+  { id: "enrollment-gate", label: "Enrollment Gate", command: "Nexus, check learning enrollment readiness.", description: "Show provider, approval, and audit needs before enrollment." },
+  { id: "application-gate", label: "Application Gate", command: "Nexus, check job application readiness.", description: "Confirm profile review before any application step." },
+  { id: "profile-sharing-gate", label: "Profile Sharing Gate", command: "Nexus, check profile sharing readiness.", description: "Review consent before sharing resume, profile, or history." },
+  { id: "training-review-queue", label: "Training Review Queue", command: "Nexus, queue training workforce review.", description: "Queue local review for coach, trainer, or employer partner." }
 ]);
 
 const NEXUS_CHRONIC_CARE_HEALTH_SECTIONS = Object.freeze([
@@ -19221,6 +19225,7 @@ function renderNexusTrainingWorkforceSections(id = "") {
           <span>${escapeHtml(translateText(section.description))}</span>
         </button>
       `).join("")}
+      <small data-testid="nexus-training-workforce-sections-gates">${escapeHtml(translateText("Training and workforce can prepare packets, learning paths, employer-fit research, and review queues here. Nexus will not enroll a learner, submit a job application, contact an employer, issue credentials, share a profile, or schedule an interview without a configured provider, visible review, explicit approval, audit, and outcome verification."))}</small>
     </div>
   `;
 }
