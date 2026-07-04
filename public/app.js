@@ -20707,6 +20707,7 @@ const NEXUS_PACKET_TYPES = Object.freeze([
   "email_preparation_packet", "sms_preparation_packet", "whatsapp_preparation_packet", "phone_call_preparation_packet", "telegram_preparation_packet", "communication_confirmation_packet", "communication_outcome_packet",
   "marketplace_vendor_research_packet", "vendor_comparison_packet", "logistics_planning_packet", "route_resource_packet", "purchase_preparation_packet",
   "queued_action_packet", "review_queue_packet", "audit_event_packet", "outcome_record_packet", "failed_action_packet",
+  "offline_access_packet", "low_bandwidth_guidance_packet", "stale_data_warning_packet",
   "workforce_referral", "job_referral", "employer_partner_referral", "training_enrollment_request", "learning_plan_request",
   "email_message", "sms_message", "whatsapp_message", "telegram_message", "call_intent",
   "route_planning_request", "location_review_request", "field_visit_location_packet"
@@ -21671,6 +21672,56 @@ function renderNexusGlobalReviewQueueAuditSystem() {
   `;
 }
 
+function nexusGlobalOfflineAccessState() {
+  const online = typeof navigator === "undefined" ? true : navigator.onLine !== false;
+  const queuedCount = nexusPreparedPackets.filter(packet => packet.outcomeStatus === "queued" || packet.offlineEligible).length;
+  const staleThresholdHours = 24;
+  return {
+    online,
+    connectivityStatus: online ? "online" : "offline",
+    lowBandwidthMode: "available",
+    cachedGuidanceStatus: "static shell and safe built-in guidance available; live knowledge requires provider connectivity",
+    staleDataWarning: "Cached or previously retrieved guidance must be treated as stale until refreshed with a configured source.",
+    queueBehavior: "External actions stay local and review-only while offline or credential-gated.",
+    restoreBehavior: "When online, Nexus can re-check queues; it must not auto-submit without confirmation and lane readiness.",
+    africaFirstAccess: "Summary-first, mobile-friendly, multilingual-ready, low-bandwidth support for rural agriculture, health access, workforce, learning, marketplace, maps, and communications.",
+    queuedCount,
+    staleThresholdHours,
+    noFakeProviderAccess: true,
+    noSecretStorage: true,
+    noAutomaticSync: true
+  };
+}
+
+function renderNexusGlobalOfflineAccessLayer() {
+  const state = nexusGlobalOfflineAccessState();
+  return `
+    <section class="nexus-global-offline-access-panel nexus-glass-card" data-testid="nexus-global-offline-access-layer" data-online="${escapeHtml(String(state.online))}" data-no-automatic-sync="true" aria-label="${escapeHtml(translateText("Global offline low-bandwidth access layer"))}">
+      <div>
+        <span class="eyebrow">${escapeHtml(translateText("Africa-first access"))}</span>
+        <strong>${escapeHtml(translateText("Offline and low-bandwidth resilience"))}</strong>
+        <small data-testid="nexus-global-offline-connectivity">${escapeHtml(translateText(`Status: ${state.connectivityStatus}`))}</small>
+      </div>
+      <div class="nexus-global-offline-grid">
+        <article data-testid="nexus-global-offline-cache-status"><strong>${escapeHtml(translateText("Cached shell"))}</strong><span>${escapeHtml(translateText(state.cachedGuidanceStatus))}</span></article>
+        <article data-testid="nexus-global-offline-queue-count"><strong>${escapeHtml(String(state.queuedCount))}</strong><span>${escapeHtml(translateText("offline-eligible or queued item(s)"))}</span></article>
+        <article data-testid="nexus-global-offline-stale-warning"><strong>${escapeHtml(translateText("Stale data warning"))}</strong><span>${escapeHtml(translateText(state.staleDataWarning))}</span></article>
+        <article data-testid="nexus-global-offline-africa-first"><strong>${escapeHtml(translateText("Africa-first"))}</strong><span>${escapeHtml(translateText(state.africaFirstAccess))}</span></article>
+      </div>
+      <div class="nexus-global-offline-notes">
+        <small data-testid="nexus-global-offline-queue-behavior">${escapeHtml(translateText(state.queueBehavior))}</small>
+        <small data-testid="nexus-global-offline-restore-behavior">${escapeHtml(translateText(state.restoreBehavior))}</small>
+        <small data-testid="nexus-global-offline-no-fake-provider">${escapeHtml(translateText("Offline mode does not claim provider access, dispatch, payment, location sharing, or fresh live citations."))}</small>
+      </div>
+      <div class="nexus-global-offline-actions">
+        <button type="button" data-nexus-global-offline-action="show-offline-queue">${escapeHtml(translateText("Show offline queue"))}</button>
+        <button type="button" data-nexus-global-offline-action="prepare-low-bandwidth-packet">${escapeHtml(translateText("Prepare low-bandwidth packet"))}</button>
+        <button type="button" data-nexus-global-offline-action="show-stale-data-warning">${escapeHtml(translateText("Show stale-data warning"))}</button>
+      </div>
+    </section>
+  `;
+}
+
 function renderNexusConfirmationPanel(packet, lane) {
   if (!packet) return "";
   const targetLane = lane || nexusIntegrationLaneById(packet.destinationLaneId);
@@ -21906,6 +21957,73 @@ function handleNexusGlobalReviewQueueAuditClick(event) {
   return false;
 }
 
+function handleNexusGlobalOfflineAccessClick(event) {
+  const button = event.target?.closest?.("[data-nexus-global-offline-action]");
+  if (!button) return false;
+  event.preventDefault();
+  event.stopPropagation();
+  event.stopImmediatePropagation?.();
+  const action = button.dataset.nexusGlobalOfflineAction || "";
+  const state = nexusGlobalOfflineAccessState();
+  if (action === "show-offline-queue") return showNexusQueuedActions();
+  if (action === "prepare-low-bandwidth-packet") {
+    nexusAgenticBrainLastResult = {
+      ok: true,
+      status: "nexus_global_low_bandwidth_packet_prepared",
+      mode: "Offline and low-bandwidth access",
+      message: "Low-bandwidth access packet prepared locally. Nexus did not claim live provider access, fresh citations, dispatch, sync, payment, or location sharing.",
+      preparedCards: [{
+        type: "low_bandwidth_guidance_packet",
+        title: "Low-bandwidth access packet",
+        status: "local review packet prepared",
+        localOnly: true,
+        noExecutionAuthorized: true
+      }, {
+        type: "offline_access_packet",
+        title: "Offline access posture",
+        status: state.connectivityStatus,
+        localOnly: true,
+        noExecutionAuthorized: true
+      }],
+      state,
+      noExecutionAuthorized: true,
+      noProviderAccessClaimed: true,
+      noLocationSharingAuthorized: true,
+      noAutomaticSync: true,
+      noSecretsExposed: true,
+      localOnly: true,
+      source: "nexus_global_offline_access_layer"
+    };
+    renderUserWorkspace();
+    return true;
+  }
+  if (action === "show-stale-data-warning") {
+    nexusAgenticBrainLastResult = {
+      ok: true,
+      status: "nexus_global_stale_data_warning_shown",
+      mode: "Offline and low-bandwidth access",
+      message: state.staleDataWarning,
+      preparedCards: [{
+        type: "stale_data_warning_packet",
+        title: "Stale data warning",
+        status: "refresh required before source-backed claims",
+        localOnly: true,
+        noExecutionAuthorized: true
+      }],
+      state,
+      noExecutionAuthorized: true,
+      noFreshCitationClaimed: true,
+      noProviderAccessClaimed: true,
+      noSecretsExposed: true,
+      localOnly: true,
+      source: "nexus_global_offline_access_layer"
+    };
+    renderUserWorkspace();
+    return true;
+  }
+  return false;
+}
+
 function renderNexusEndgameCommandCenter() {
   const lanes = nexusAllIntegrationLanes();
   const laneCounts = lanes.reduce((counts, lane) => {
@@ -21929,6 +22047,7 @@ function renderNexusEndgameCommandCenter() {
         <article><strong>${escapeHtml(translateText("Global/Africa readiness"))}</strong><span>${escapeHtml(NEXUS_GLOBAL_READINESS_TAGS.join(" / "))}</span></article>
       </div>
       ${renderNexusGlobalReviewQueueAuditSystem()}
+      ${renderNexusGlobalOfflineAccessLayer()}
       <div class="nexus-command-center-actions">
         ${["health-intake", "clinical-support", "telehealth-intake", "pharmacy-support", "mobile-clinic", "diabetes", "hypertension", "obesity", "rpm", "rtm", "agriculture", "crop-support", "farm-planning", "field-visit", "logistics", "agritrade", "workforce", "jobs", "learning", "training", "employer-partner", "maps", "route-planning", "communications", "email", "sms", "whatsapp", "phone", "telegram"].map(id => `<button type="button" data-nexus-mode-shortcut="${escapeHtml(id)}" data-nexus-command="open ${escapeHtml(id)}">${escapeHtml(translateText(id.replace(/-/g, " ")))}</button>`).join("")}
       </div>
@@ -38567,6 +38686,9 @@ async function runWowDemo() {
 function handleNexusStandardUserHomeClick(event) {
   if (experienceMode !== "user" && !document.body.classList.contains("user-mode")) return false;
   const eventTarget = event.target?.closest ? event.target : event.target?.parentElement;
+  if (eventTarget?.closest?.("[data-nexus-global-offline-action]")) {
+    return handleNexusGlobalOfflineAccessClick(event);
+  }
   const submit = eventTarget?.closest?.("[data-nexus-command-center-submit]");
   if (submit) {
     const input = $("#nexusCommandCenterInput");

@@ -11275,9 +11275,57 @@ body.user-mode .nexus-global-review-audit-notes {
   gap: 6px;
 }
 
+body.user-mode .nexus-global-offline-access-panel {
+  display: grid;
+  gap: 14px;
+  margin: 14px 0;
+  padding: 14px;
+  border: 1px solid rgba(250, 204, 21, .22);
+  border-radius: 18px;
+  background:
+    radial-gradient(circle at 12% 0%, rgba(250, 204, 21, .14), transparent 34%),
+    linear-gradient(135deg, rgba(28, 25, 23, .7), rgba(15, 23, 42, .52));
+  box-shadow:
+    0 16px 44px rgba(2, 6, 23, .22),
+    inset 0 1px 0 rgba(255, 255, 255, .1);
+}
+
+body.user-mode .nexus-global-offline-access-panel strong {
+  color: rgba(255, 255, 255, .96);
+}
+
+body.user-mode .nexus-global-offline-access-panel small,
+body.user-mode .nexus-global-offline-access-panel span {
+  color: rgba(254, 243, 199, .9);
+}
+
+body.user-mode .nexus-global-offline-grid,
+body.user-mode .nexus-global-offline-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+body.user-mode .nexus-global-offline-grid article {
+  display: grid;
+  gap: 4px;
+  min-height: 74px;
+  padding: 10px 12px;
+  border: 1px solid rgba(253, 224, 71, .18);
+  border-radius: 14px;
+  background: rgba(15, 23, 42, .48);
+}
+
+body.user-mode .nexus-global-offline-notes {
+  display: grid;
+  gap: 6px;
+}
+
 @media (max-width: 760px) {
   body.user-mode .nexus-global-review-audit-grid,
-  body.user-mode .nexus-global-review-audit-actions {
+  body.user-mode .nexus-global-review-audit-actions,
+  body.user-mode .nexus-global-offline-grid,
+  body.user-mode .nexus-global-offline-actions {
     grid-template-columns: 1fr;
   }
 }
