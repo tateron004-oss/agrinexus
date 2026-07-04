@@ -143,7 +143,7 @@ check("standard user first screen remains icon-first", [
 
 check("false live claims remain blocked", !/\b(Nexus|we|I)\s+(sent|called|processed|dispatched|fulfilled|connected you to a live provider|completed payment|placed a call)\b/i.test(app + server));
 
-check("service worker/cache bumped", server.includes("nexus-behavior-352") && app.includes("nexus-behavior-352") && sw.includes("agrinexus-pwa-v331"));
+check("service worker/cache bumped", server.includes("nexus-behavior-353") && app.includes("nexus-behavior-353") && sw.includes("agrinexus-pwa-v332"));
 check("package alias exists", pkg.scripts["qa:nexus-internet-resource-provider-pathway"] === "node scripts/nexus-internet-resource-provider-pathway-qa.js");
 check("qa-suite safe wiring exists", qaSuite.includes("scripts/nexus-internet-resource-provider-pathway-qa.js"));
 

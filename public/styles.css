@@ -11045,6 +11045,106 @@ body.user-mode .nexus-workflow-purpose strong {
   color: #f8fbff;
 }
 
+body.user-mode .nexus-workflow-lane-status,
+body.user-mode .nexus-workflow-history,
+body.user-mode .nexus-pilot-readiness-dashboard {
+  margin: 14px 0;
+  padding: 14px;
+  border: 1px solid rgba(125, 211, 252, .22);
+  border-radius: 20px;
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, .08), rgba(255, 255, 255, .02)),
+    rgba(2, 6, 23, .48);
+}
+
+body.user-mode .nexus-workflow-lane-status {
+  display: grid;
+  grid-template-columns: minmax(0, .8fr) minmax(0, 1.2fr);
+  gap: 12px;
+  align-items: start;
+}
+
+body.user-mode .nexus-workflow-lane-status strong,
+body.user-mode .nexus-workflow-history strong,
+body.user-mode .nexus-pilot-readiness-dashboard strong {
+  display: block;
+  color: #f8fbff;
+}
+
+body.user-mode .nexus-workflow-lane-status small {
+  display: inline-flex;
+  width: fit-content;
+  margin-top: 6px;
+  padding: 5px 9px;
+  border: 1px solid rgba(251, 191, 36, .32);
+  border-radius: 999px;
+  color: #fef3c7;
+  background: rgba(245, 158, 11, .12);
+}
+
+body.user-mode .nexus-workflow-lane-status ul,
+body.user-mode .nexus-workflow-history ul {
+  display: grid;
+  gap: 7px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+body.user-mode .nexus-workflow-lane-status li,
+body.user-mode .nexus-workflow-history li {
+  padding: 8px 10px;
+  border: 1px solid rgba(125, 211, 252, .12);
+  border-radius: 14px;
+  color: rgba(226, 232, 240, .9);
+  background: rgba(2, 6, 23, .32);
+}
+
+body.user-mode .nexus-workflow-history li {
+  display: grid;
+  gap: 3px;
+}
+
+body.user-mode .nexus-workflow-history span {
+  color: rgba(203, 213, 225, .86);
+}
+
+body.user-mode .nexus-pilot-readiness-dashboard summary {
+  cursor: pointer;
+  color: #ecfeff;
+  font-weight: 800;
+}
+
+body.user-mode .nexus-pilot-readiness-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 12px;
+}
+
+body.user-mode .nexus-pilot-readiness-grid section,
+body.user-mode .nexus-pilot-readiness-grid article {
+  display: grid;
+  gap: 8px;
+}
+
+body.user-mode .nexus-pilot-readiness-grid article {
+  padding: 10px;
+  border: 1px solid rgba(125, 211, 252, .12);
+  border-radius: 15px;
+  background: rgba(2, 6, 23, .34);
+}
+
+body.user-mode .nexus-pilot-readiness-grid span {
+  color: #f8fbff;
+  font-weight: 800;
+}
+
+body.user-mode .nexus-pilot-readiness-grid small {
+  color: rgba(226, 232, 240, .84);
+  line-height: 1.45;
+}
+
 body.user-mode .nexus-workflow-body {
   display: grid;
   grid-template-columns: minmax(0, 1.4fr) minmax(240px, .8fr);
@@ -11152,7 +11252,9 @@ body.user-mode .nexus-workflow-map-preview span {
   body.user-mode .nexus-workflow-header,
   body.user-mode .nexus-workflow-body,
   body.user-mode .nexus-workflow-field-grid,
-  body.user-mode .nexus-workflow-steps {
+  body.user-mode .nexus-workflow-steps,
+  body.user-mode .nexus-workflow-lane-status,
+  body.user-mode .nexus-pilot-readiness-grid {
     grid-template-columns: 1fr;
   }
 }

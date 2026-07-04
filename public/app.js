@@ -256,8 +256,8 @@ const nexusProductIdentity = Object.freeze({
 });
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-352";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v331";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-353";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v332";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
 const VOICE_ATTENTION_DELAY_MS = 900;
@@ -20094,6 +20094,320 @@ const NEXUS_FULL_WORKFLOW_EXTRAS = Object.freeze({
   }
 });
 
+const NEXUS_AGENTIC_WORKFLOW_REGISTRY = Object.freeze([
+  { id: "health-intake", label: "Health Intake", category: "healthcare", aliases: ["health intake", "patient intake", "care intake", "health preparation"], riskLevel: "clinical", activationType: "provider-ready", integrationRequired: true, integrationLaneId: "clinical-intake-lane", allowedWithoutIntegration: true, requiresConfirmationBeforeExecution: true, auditLogRequired: true, outcomeVerificationRequired: true, globalReadiness: "global-ready / Africa-relevant", offlineSupport: true, packetType: "health_intake_packet" },
+  { id: "clinical-support", label: "Clinical Support", category: "healthcare", aliases: ["clinical", "health intake", "patient intake"], riskLevel: "clinical", activationType: "provider-ready", integrationRequired: true, integrationLaneId: "clinical-intake-lane", allowedWithoutIntegration: true, requiresConfirmationBeforeExecution: true, auditLogRequired: true, outcomeVerificationRequired: true, globalReadiness: "global-ready / Africa-relevant", offlineSupport: true, packetType: "clinical_support_packet" },
+  { id: "telehealth-intake", label: "Telehealth Intake", category: "healthcare", aliases: ["telehealth", "doctor", "provider appointment preparation"], riskLevel: "clinical", activationType: "integration-pending", integrationRequired: true, integrationLaneId: "telehealth-provider-lane", allowedWithoutIntegration: true, requiresConfirmationBeforeExecution: true, auditLogRequired: true, outcomeVerificationRequired: true, globalReadiness: "global-ready / Africa-relevant", offlineSupport: true, packetType: "telehealth_request_packet" },
+  { id: "chronic-care", label: "Chronic Disease Support", category: "healthcare", aliases: ["chronic care", "diabetes", "hypertension", "obesity", "rpm", "rtm"], riskLevel: "clinical", activationType: "provider-ready", integrationRequired: true, integrationLaneId: "chronic-care-lane", allowedWithoutIntegration: true, requiresConfirmationBeforeExecution: true, auditLogRequired: true, outcomeVerificationRequired: true, globalReadiness: "global-ready / Africa-relevant", offlineSupport: true, packetType: "chronic_care_summary_packet" },
+  { id: "pharmacy-support", label: "Pharmacy Support", category: "healthcare", aliases: ["pharmacy", "medication", "refill"], riskLevel: "clinical", activationType: "integration-pending", integrationRequired: true, integrationLaneId: "pharmacy-lane", allowedWithoutIntegration: true, requiresConfirmationBeforeExecution: true, auditLogRequired: true, outcomeVerificationRequired: true, globalReadiness: "global-ready / Africa-relevant", offlineSupport: true, packetType: "pharmacy_support_packet" },
+  { id: "mobile-clinic", label: "Mobile Clinic Support", category: "healthcare", aliases: ["mobile clinic", "clinic outreach", "community health worker"], riskLevel: "clinical", activationType: "vendor-ready", integrationRequired: true, integrationLaneId: "mobile-clinic-lane", allowedWithoutIntegration: true, requiresConfirmationBeforeExecution: true, auditLogRequired: true, outcomeVerificationRequired: true, globalReadiness: "Africa-first / global-ready", offlineSupport: true, packetType: "mobile_clinic_request_packet" },
+  { id: "provider-support", label: "Provider Support", category: "healthcare", aliases: ["provider", "care team", "doctor support"], riskLevel: "clinical", activationType: "provider-ready", integrationRequired: true, integrationLaneId: "provider-handoff-lane", allowedWithoutIntegration: true, requiresConfirmationBeforeExecution: true, auditLogRequired: true, outcomeVerificationRequired: true, globalReadiness: "global-ready", offlineSupport: true, packetType: "provider_handoff_packet" },
+  { id: "agriculture", label: "Agriculture Support", category: "agriculture", aliases: ["crop support", "farm planning", "field support"], riskLevel: "moderate", activationType: "vendor-ready", integrationRequired: false, integrationLaneId: "crop-advisor-lane", allowedWithoutIntegration: true, requiresConfirmationBeforeExecution: true, auditLogRequired: true, outcomeVerificationRequired: true, globalReadiness: "Africa-first / global-ready", offlineSupport: true, packetType: "crop_support_packet" },
+  { id: "agritrade", label: "AgriTrade Marketplace", category: "marketplace", aliases: ["marketplace", "buyer", "seller", "vendor support"], riskLevel: "external-execution", activationType: "integration-pending", integrationRequired: true, integrationLaneId: "marketplace-lane", allowedWithoutIntegration: true, requiresConfirmationBeforeExecution: true, auditLogRequired: true, outcomeVerificationRequired: true, globalReadiness: "Africa-first / global-ready", offlineSupport: true, packetType: "marketplace_inquiry_packet" },
+  { id: "jobs", label: "Jobs & Workforce", category: "workforce", aliases: ["workforce", "employment", "career", "jobs"], riskLevel: "moderate", activationType: "provider-ready", integrationRequired: true, integrationLaneId: "job-referral-lane", allowedWithoutIntegration: true, requiresConfirmationBeforeExecution: true, auditLogRequired: true, outcomeVerificationRequired: true, globalReadiness: "global-ready / Africa-relevant", offlineSupport: true, packetType: "job_readiness_packet" },
+  { id: "learning", label: "Learning & Training", category: "learning", aliases: ["learning", "training", "literacy", "course"], riskLevel: "moderate", activationType: "provider-ready", integrationRequired: true, integrationLaneId: "training-enrollment-lane", allowedWithoutIntegration: true, requiresConfirmationBeforeExecution: true, auditLogRequired: true, outcomeVerificationRequired: true, globalReadiness: "global-ready / Africa-relevant", offlineSupport: true, packetType: "training_enrollment_packet" },
+  { id: "maps", label: "Maps / Route Planning", category: "maps", aliases: ["maps", "route planning", "field visit", "location review"], riskLevel: "high", activationType: "integration-pending", integrationRequired: true, integrationLaneId: "route-planning-lane", allowedWithoutIntegration: true, requiresConfirmationBeforeExecution: true, auditLogRequired: true, outcomeVerificationRequired: true, globalReadiness: "global-ready", offlineSupport: true, packetType: "route_planning_packet" },
+  { id: "communications", label: "Communications Preparation", category: "communications", aliases: ["sms", "whatsapp", "email", "call support", "telegram"], riskLevel: "external-execution", activationType: "execution-capable", integrationRequired: true, integrationLaneId: "communications-lane", allowedWithoutIntegration: true, requiresConfirmationBeforeExecution: true, auditLogRequired: true, outcomeVerificationRequired: true, globalReadiness: "global-ready", offlineSupport: true, packetType: "communications_packet" },
+  { id: "media", label: "Music / Media", category: "media", aliases: ["music", "media"], riskLevel: "low", activationType: "provider-ready", integrationRequired: true, integrationLaneId: "media-provider-lane", allowedWithoutIntegration: true, requiresConfirmationBeforeExecution: false, auditLogRequired: true, outcomeVerificationRequired: true, globalReadiness: "global-ready", offlineSupport: false, packetType: "media_provider_packet" },
+  { id: "reminders", label: "Reminders", category: "platform", aliases: ["reminders", "follow up"], riskLevel: "moderate", activationType: "local-only", integrationRequired: false, integrationLaneId: "reminder-lane", allowedWithoutIntegration: true, requiresConfirmationBeforeExecution: true, auditLogRequired: true, outcomeVerificationRequired: true, globalReadiness: "global-ready", offlineSupport: true, packetType: "reminder_packet" },
+  { id: "offline", label: "Offline Queue", category: "platform", aliases: ["offline", "queue", "pending actions"], riskLevel: "moderate", activationType: "local-only", integrationRequired: false, integrationLaneId: "offline-queue-lane", allowedWithoutIntegration: true, requiresConfirmationBeforeExecution: false, auditLogRequired: true, outcomeVerificationRequired: true, globalReadiness: "Africa-first / low-bandwidth", offlineSupport: true, packetType: "offline_queue_packet" },
+  { id: "resource-assistant", label: "Resource Assistant", category: "platform", aliases: ["resource assistant", "source assistant", "citation"], riskLevel: "low", activationType: "provider-ready", integrationRequired: false, integrationLaneId: "resource-assistant-lane", allowedWithoutIntegration: true, requiresConfirmationBeforeExecution: false, auditLogRequired: true, outcomeVerificationRequired: true, globalReadiness: "global-ready", offlineSupport: true, packetType: "resource_assistant_packet" }
+]);
+
+const NEXUS_INTEGRATION_LANES = Object.freeze([
+  { id: "clinical-intake-lane", label: "Clinical intake lane", category: "healthcare", region: "global", country: "multi-country", partnerName: "Verified clinical intake partner", supportedServices: ["clinical intake", "patient packet"], integrationType: "partner-api-or-manual-review", status: "not_configured", testModeAvailable: true, liveModeAvailable: false, requiresConfirmation: true, packetType: "clinical_support_packet", lastActionStatus: "prepared", lastVerifiedAt: "", activationChecklist: ["verified provider agreement", "consent model", "audit logging", "outcome verification"] },
+  { id: "telehealth-provider-lane", label: "Telehealth provider lane", category: "healthcare", region: "global", country: "multi-country", partnerName: "Telehealth provider", supportedServices: ["telehealth intake", "video visit request"], integrationType: "provider-api", status: "not_configured", testModeAvailable: true, liveModeAvailable: false, requiresConfirmation: true, packetType: "telehealth_request_packet", lastActionStatus: "prepared", lastVerifiedAt: "", activationChecklist: ["provider API", "user consent", "scheduling rules", "audit logging"] },
+  { id: "provider-handoff-lane", label: "Provider handoff lane", category: "healthcare", region: "global", country: "multi-country", partnerName: "Provider / care team", supportedServices: ["provider packet", "care-team note"], integrationType: "secure-partner-handoff", status: "not_configured", testModeAvailable: true, liveModeAvailable: false, requiresConfirmation: true, packetType: "provider_handoff_packet", lastActionStatus: "prepared", lastVerifiedAt: "", activationChecklist: ["verified recipient", "patient consent", "secure delivery", "audit logging"] },
+  { id: "chronic-care-lane", label: "Chronic care lane", category: "healthcare", region: "global", country: "multi-country", partnerName: "Chronic care / RPM partner", supportedServices: ["diabetes", "hypertension", "obesity", "RPM", "RTM"], integrationType: "partner-api-or-manual-review", status: "not_configured", testModeAvailable: true, liveModeAvailable: false, requiresConfirmation: true, packetType: "chronic_care_summary_packet", lastActionStatus: "prepared", lastVerifiedAt: "", activationChecklist: ["care-team protocol", "device/vendor validation", "consent", "audit logging"] },
+  { id: "pharmacy-lane", label: "Pharmacy lane", category: "healthcare", region: "global", country: "multi-country", partnerName: "Verified pharmacy partner", supportedServices: ["pharmacy questions", "refill support preparation"], integrationType: "pharmacy-partner-api", status: "not_configured", testModeAvailable: true, liveModeAvailable: false, requiresConfirmation: true, packetType: "pharmacy_support_packet", lastActionStatus: "prepared", lastVerifiedAt: "", activationChecklist: ["pharmacy partner", "clinical review rules", "consent", "no-prescribing guard"] },
+  { id: "mobile-clinic-lane", label: "Mobile clinic lane", category: "healthcare", region: "Africa-first", country: "multi-country", partnerName: "Mobile clinic partner", supportedServices: ["mobile clinic request", "community health worker coordination"], integrationType: "partner-ops-queue", status: "not_configured", testModeAvailable: true, liveModeAvailable: false, requiresConfirmation: true, packetType: "mobile_clinic_request_packet", lastActionStatus: "prepared", lastVerifiedAt: "", activationChecklist: ["partner operating area", "consent", "location rules", "outcome verification"] },
+  { id: "communications-lane", label: "Communications lane", category: "communications", region: "global", country: "multi-country", partnerName: "Twilio / verified communications provider", supportedServices: ["SMS", "WhatsApp", "email", "phone call intent", "Telegram"], integrationType: "communications-provider-api", status: "configured_inactive", testModeAvailable: true, liveModeAvailable: false, requiresConfirmation: true, packetType: "communications_packet", lastActionStatus: "confirmation_required", lastVerifiedAt: "", activationChecklist: ["recipient resolved", "message preview", "provider configured", "final confirmation", "audit logging"] },
+  { id: "crop-advisor-lane", label: "Crop advisor lane", category: "agriculture", region: "Africa-first", country: "multi-country", partnerName: "Extension/resource expert", supportedServices: ["crop support", "farm planning", "extension advisor"], integrationType: "partner-resource-queue", status: "not_configured", testModeAvailable: true, liveModeAvailable: false, requiresConfirmation: true, packetType: "crop_support_packet", lastActionStatus: "prepared", lastVerifiedAt: "", activationChecklist: ["source registry", "local expert review", "vendor/resource partner", "outcome verification"] },
+  { id: "marketplace-lane", label: "Marketplace buyer/seller lane", category: "marketplace", region: "Africa-first", country: "multi-country", partnerName: "AgriTrade partner", supportedServices: ["buyer/seller inquiry", "logistics prep", "input supplier"], integrationType: "marketplace-provider-api", status: "not_configured", testModeAvailable: true, liveModeAvailable: false, requiresConfirmation: true, packetType: "marketplace_inquiry_packet", lastActionStatus: "prepared", lastVerifiedAt: "", activationChecklist: ["seller verification", "payment disabled until approved", "buyer/seller consent", "audit logging"] },
+  { id: "job-referral-lane", label: "Job referral lane", category: "workforce", region: "global", country: "multi-country", partnerName: "Employer/workforce partner", supportedServices: ["job referral", "career coach", "employer partner"], integrationType: "partner-referral-api", status: "not_configured", testModeAvailable: true, liveModeAvailable: false, requiresConfirmation: true, packetType: "job_readiness_packet", lastActionStatus: "prepared", lastVerifiedAt: "", activationChecklist: ["partner agreement", "user approval", "referral packet", "outcome tracking"] },
+  { id: "training-enrollment-lane", label: "Training enrollment lane", category: "learning", region: "global", country: "multi-country", partnerName: "Training provider / LMS", supportedServices: ["training pathway", "course enrollment prep"], integrationType: "lms-or-training-api", status: "not_configured", testModeAvailable: true, liveModeAvailable: false, requiresConfirmation: true, packetType: "training_enrollment_packet", lastActionStatus: "prepared", lastVerifiedAt: "", activationChecklist: ["training provider", "learner consent", "enrollment rules", "outcome tracking"] },
+  { id: "route-planning-lane", label: "Route planning lane", category: "maps", region: "global", country: "multi-country", partnerName: "Map/route provider", supportedServices: ["route planning", "field visit", "permissioned location sharing"], integrationType: "maps-provider-api", status: "configured_inactive", testModeAvailable: true, liveModeAvailable: false, requiresConfirmation: true, packetType: "route_planning_packet", lastActionStatus: "prepared", lastVerifiedAt: "", activationChecklist: ["typed locations", "permission rules", "route provider", "no automatic location sharing"] },
+  { id: "media-provider-lane", label: "Media provider lane", category: "media", region: "global", country: "multi-country", partnerName: "User-selected media provider", supportedServices: ["provider search", "music/media handoff"], integrationType: "external-provider-link", status: "configured_inactive", testModeAvailable: false, liveModeAvailable: false, requiresConfirmation: false, packetType: "media_provider_packet", lastActionStatus: "prepared", lastVerifiedAt: "", activationChecklist: ["provider account", "copyright-safe handoff", "no hosted downloads"] },
+  { id: "reminder-lane", label: "Reminder lane", category: "platform", region: "global", country: "multi-country", partnerName: "Local reminder engine", supportedServices: ["local reminders", "follow-up prompts"], integrationType: "local-runtime", status: "active_test_mode", testModeAvailable: true, liveModeAvailable: false, requiresConfirmation: true, packetType: "reminder_packet", lastActionStatus: "prepared", lastVerifiedAt: "", activationChecklist: ["local confirmation", "user review", "audit trail"] },
+  { id: "offline-queue-lane", label: "Offline queue lane", category: "platform", region: "Africa-first", country: "multi-country", partnerName: "Nexus local offline queue", supportedServices: ["offline packets", "retry later", "manual completion"], integrationType: "local-storage", status: "active_test_mode", testModeAvailable: true, liveModeAvailable: false, requiresConfirmation: false, packetType: "offline_queue_packet", lastActionStatus: "queued", lastVerifiedAt: "", activationChecklist: ["local-only label", "clear/reset", "retry when active"] },
+  { id: "resource-assistant-lane", label: "Resource assistant lane", category: "platform", region: "global", country: "multi-country", partnerName: "Nexus source registry", supportedServices: ["source-backed answers", "citations when configured"], integrationType: "source-registry-or-live-retrieval", status: "configured_inactive", testModeAvailable: true, liveModeAvailable: false, requiresConfirmation: false, packetType: "resource_assistant_packet", lastActionStatus: "prepared", lastVerifiedAt: "", activationChecklist: ["source registry", "live retrieval config", "citation honesty"] }
+]);
+
+const NEXUS_INTEGRATION_LANE_STATUSES = Object.freeze(["not_configured", "configured_inactive", "active_test_mode", "active_live", "disabled", "failed", "needs_user_confirmation"]);
+const NEXUS_OUTCOME_STATES = Object.freeze(["draft", "prepared", "waiting_for_confirmation", "queued", "submitted", "sent", "failed", "response_received", "follow_up_needed", "completed"]);
+let nexusPreparedPackets = [];
+let nexusActionHistory = [];
+
+function nexusWorkflowRegistryEntry(workflowId = "") {
+  const normalized = normalizeNexusWorkflowId(workflowId, "");
+  return NEXUS_AGENTIC_WORKFLOW_REGISTRY.find(item => item.id === normalized)
+    || NEXUS_AGENTIC_WORKFLOW_REGISTRY.find(item => item.aliases?.some(alias => normalizeNexusWorkflowId(alias, alias) === normalized))
+    || null;
+}
+
+function nexusIntegrationLaneById(laneId = "") {
+  return NEXUS_INTEGRATION_LANES.find(lane => lane.id === laneId) || null;
+}
+
+function nexusFormDataForWorkflow(workflowId = "") {
+  const workspace = $("#nexus-workspace");
+  const values = {};
+  workspace?.querySelectorAll?.("[data-nexus-mode-field]")?.forEach(field => {
+    const key = field.dataset.nexusModeField || field.name || "field";
+    values[key] = String(field.value || "").trim();
+  });
+  values.workflowId = workflowId;
+  return values;
+}
+
+function buildNexusPacket(workflowId, formData = {}, options = {}) {
+  const definition = nexusWorkflowDefinition(workflowId, options.command || "");
+  const registry = nexusWorkflowRegistryEntry(definition?.id || workflowId);
+  const lane = nexusIntegrationLaneById(registry?.integrationLaneId);
+  const now = new Date().toISOString();
+  const packetId = `nexus-packet-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  const userEnteredData = Object.fromEntries(Object.entries(formData || {}).filter(([, value]) => String(value || "").trim()));
+  const summary = `${registry?.label || definition?.presentation?.title || "Nexus workflow"} packet prepared for ${lane?.label || "local review"}.`;
+  return {
+    packetId,
+    workflowId: definition?.id || workflowId,
+    workflowLabel: registry?.label || definition?.presentation?.title || "Nexus workflow",
+    category: registry?.category || "platform",
+    packetType: registry?.packetType || "nexus_packet",
+    userEnteredData,
+    summary,
+    urgency: userEnteredData.urgency || userEnteredData.priority || "not specified",
+    destinationLaneId: lane?.id || "",
+    integrationStatus: lane?.status || "not_configured",
+    confirmationStatus: registry?.requiresConfirmationBeforeExecution ? "required_before_external_execution" : "not_required_for_local_preparation",
+    outcomeStatus: "prepared",
+    createdAt: now,
+    updatedAt: now
+  };
+}
+
+function prepareNexusAction(packet) {
+  const lane = nexusIntegrationLaneById(packet.destinationLaneId);
+  return {
+    packet,
+    lane,
+    actionType: packet.packetType,
+    status: lane?.status === "active_live" ? "waiting_for_confirmation" : "prepared",
+    message: lane?.status === "active_live"
+      ? "This lane can execute when configured, but final confirmation is still required."
+      : "Packet prepared. The integration lane is not live, so Nexus will not claim submission.",
+    requiresConfirmation: Boolean(lane?.requiresConfirmation),
+    noExternalExecutionWithoutConfirmation: true
+  };
+}
+
+function requestNexusConfirmation(packet) {
+  return {
+    packetId: packet.packetId,
+    confirmationStatus: "waiting_for_confirmation",
+    message: "Review the packet, destination lane, and outcome before approving any external action.",
+    allowedConfirmations: ["Confirm after review"],
+    blockedConfirmations: ["okay", "sure", "do it automatically", "always send"],
+    auditRequired: true
+  };
+}
+
+function handleInactiveNexusLane(packet, lane) {
+  return {
+    packetId: packet.packetId,
+    laneId: lane?.id || packet.destinationLaneId,
+    laneStatus: lane?.status || "not_configured",
+    outcomeStatus: "queued",
+    resultMessage: "Integration inactive. Nexus prepared and queued the packet locally instead of submitting it.",
+    externalActionOccurred: false,
+    followUpStatus: "activate lane or review manually"
+  };
+}
+
+function executeNexusAction(packet, lane, options = {}) {
+  if (!options.confirmed) {
+    return {
+      packetId: packet.packetId,
+      laneId: lane?.id || packet.destinationLaneId,
+      laneStatus: lane?.status || "not_configured",
+      outcomeStatus: "waiting_for_confirmation",
+      resultMessage: "External execution blocked until final confirmation.",
+      externalActionOccurred: false
+    };
+  }
+  if (!lane || !["active_test_mode", "active_live"].includes(lane.status)) {
+    return handleInactiveNexusLane(packet, lane);
+  }
+  return {
+    packetId: packet.packetId,
+    laneId: lane.id,
+    laneStatus: lane.status,
+    outcomeStatus: lane.status === "active_live" ? "submitted" : "response_received",
+    resultMessage: lane.status === "active_live"
+      ? "Submitted through the verified active lane after confirmation."
+      : "Test-mode result recorded locally after confirmation.",
+    externalActionOccurred: lane.status === "active_live",
+    followUpStatus: "verify provider/vendor response"
+  };
+}
+
+function recordNexusOutcome(packet, result) {
+  const entry = {
+    id: `nexus-action-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    workflowId: packet.workflowId,
+    actionType: packet.packetType,
+    laneId: result.laneId || packet.destinationLaneId,
+    laneStatus: result.laneStatus || packet.integrationStatus,
+    confirmationStatus: result.outcomeStatus === "waiting_for_confirmation" ? "waiting_for_confirmation" : packet.confirmationStatus,
+    outcomeStatus: result.outcomeStatus || "prepared",
+    destinationLabel: nexusIntegrationLaneById(result.laneId || packet.destinationLaneId)?.label || "Local Nexus review",
+    timestamp: new Date().toISOString(),
+    resultMessage: result.resultMessage || "Outcome recorded.",
+    errorMessage: result.errorMessage || "",
+    followUpStatus: result.followUpStatus || "review next step"
+  };
+  nexusActionHistory = [entry, ...nexusActionHistory].slice(0, 25);
+  return entry;
+}
+
+function showNexusOutcome(packet, result) {
+  const entry = recordNexusOutcome(packet, result);
+  nexusAgenticBrainLastResult = {
+    ok: true,
+    status: "nexus_action_outcome_recorded",
+    mode: packet.workflowLabel,
+    message: entry.resultMessage,
+    preparedCards: [{
+      type: "nexus_action_outcome",
+      title: packet.workflowLabel,
+      status: entry.outcomeStatus,
+      localOnly: entry.laneStatus !== "active_live",
+      noExecutionAuthorized: entry.laneStatus !== "active_live"
+    }],
+    noExecutionAuthorized: entry.laneStatus !== "active_live",
+    localOnly: entry.laneStatus !== "active_live",
+    source: "nexus_execution_controller"
+  };
+  return entry;
+}
+
+function saveNexusRuntimeMemory() {
+  try {
+    localStorage.setItem("nexusActiveWorkflowState", JSON.stringify(nexusActiveWorkflowState || {}));
+    localStorage.setItem("nexusPreparedPackets", JSON.stringify(nexusPreparedPackets.slice(0, 25)));
+    localStorage.setItem("nexusActionHistory", JSON.stringify(nexusActionHistory.slice(0, 25)));
+  } catch {
+    // Local storage can be unavailable; Nexus keeps the current session state.
+  }
+}
+
+function restoreNexusRuntimeMemory() {
+  try {
+    nexusActiveWorkflowState = JSON.parse(localStorage.getItem("nexusActiveWorkflowState") || "null") || nexusActiveWorkflowState;
+    nexusPreparedPackets = JSON.parse(localStorage.getItem("nexusPreparedPackets") || "[]") || [];
+    nexusActionHistory = JSON.parse(localStorage.getItem("nexusActionHistory") || "[]") || [];
+  } catch {
+    nexusPreparedPackets = [];
+    nexusActionHistory = [];
+  }
+}
+
+function clearNexusSensitiveLocalData() {
+  nexusPreparedPackets = [];
+  nexusActionHistory = [];
+  nexusActiveWorkflowState = { id: "", command: "", source: "cleared", workflow: "", action: "", openedAt: 0 };
+  try {
+    localStorage.removeItem("nexusActiveWorkflowState");
+    localStorage.removeItem("nexusPreparedPackets");
+    localStorage.removeItem("nexusActionHistory");
+  } catch {}
+  nexusAgenticBrainLastResult = {
+    ok: true,
+    status: "nexus_local_sensitive_data_cleared",
+    mode: "Nexus memory",
+    message: "Local workflow memory, prepared packets, and action history were cleared from this browser.",
+    preparedCards: [],
+    noExecutionAuthorized: true,
+    localOnly: true,
+    source: "nexus_runtime_memory"
+  };
+  renderUserWorkspace();
+}
+
+function runNexusWorkflowControllerAction(action = "", workflowId = "") {
+  const id = normalizeNexusWorkflowId(workflowId || nexusActiveWorkflowState?.id || "", nexusActiveWorkflowState?.command || "");
+  const registry = nexusWorkflowRegistryEntry(id);
+  if (!registry) return false;
+  const packet = buildNexusPacket(id, nexusFormDataForWorkflow(id), { command: nexusActiveWorkflowState?.command || "" });
+  const prepared = prepareNexusAction(packet);
+  let result = null;
+  if (action === "request-confirmation") {
+    const confirmation = requestNexusConfirmation(packet);
+    result = {
+      packetId: packet.packetId,
+      laneId: packet.destinationLaneId,
+      laneStatus: packet.integrationStatus,
+      outcomeStatus: "waiting_for_confirmation",
+      resultMessage: confirmation.message,
+      followUpStatus: "waiting for explicit user approval"
+    };
+  } else if (action === "queue-packet") {
+    result = handleInactiveNexusLane(packet, prepared.lane);
+  } else if (action === "execute-confirmed-test") {
+    result = executeNexusAction(packet, prepared.lane, { confirmed: true });
+  } else {
+    result = {
+      packetId: packet.packetId,
+      laneId: packet.destinationLaneId,
+      laneStatus: packet.integrationStatus,
+      outcomeStatus: prepared.status === "waiting_for_confirmation" ? "waiting_for_confirmation" : "prepared",
+      resultMessage: prepared.message,
+      followUpStatus: prepared.requiresConfirmation ? "review confirmation" : "review packet"
+    };
+  }
+  packet.outcomeStatus = result.outcomeStatus;
+  packet.updatedAt = new Date().toISOString();
+  nexusPreparedPackets = [packet, ...nexusPreparedPackets].slice(0, 25);
+  showNexusOutcome(packet, result);
+  saveNexusRuntimeMemory();
+  renderUserWorkspace();
+  requestAnimationFrame(() => focusNexusActiveWorkflow());
+  return true;
+}
+
+function handleNexusWorkflowControllerClick(event) {
+  const button = event.target?.closest?.("[data-nexus-action-controller]");
+  if (!button) return false;
+  event.preventDefault();
+  event.stopPropagation();
+  return runNexusWorkflowControllerAction(button.dataset.nexusActionController || "prepare-packet", button.dataset.workflowId || "");
+}
+
+function showNexusRuntimeList(kind = "pending") {
+  const statusByKind = {
+    pending: ["prepared", "waiting_for_confirmation", "queued"],
+    failed: ["failed"],
+    "follow-up": ["follow_up_needed", "response_received"]
+  }[kind] || ["prepared", "waiting_for_confirmation", "queued"];
+  const matchingHistory = nexusActionHistory.filter(entry => statusByKind.includes(entry.outcomeStatus));
+  const matchingPackets = nexusPreparedPackets.filter(packet => statusByKind.includes(packet.outcomeStatus));
+  nexusAgenticBrainLastResult = {
+    ok: true,
+    status: `nexus_${kind}_actions_listed`,
+    mode: "Nexus action history",
+    message: `${matchingPackets.length + matchingHistory.length} ${kind} item(s) found in local Nexus runtime memory.`,
+    preparedCards: [
+      ...matchingPackets.map(packet => ({ type: "nexus_packet", title: packet.workflowLabel, status: packet.outcomeStatus, localOnly: true })),
+      ...matchingHistory.map(entry => ({ type: "nexus_action_history", title: entry.workflowId, status: entry.outcomeStatus, localOnly: entry.laneStatus !== "active_live" }))
+    ],
+    noExecutionAuthorized: true,
+    localOnly: true,
+    source: "nexus_runtime_memory"
+  };
+  renderUserWorkspace();
+  return true;
+}
+
 function normalizeNexusWorkflowId(workflowId = "", command = "") {
   const raw = String(workflowId || "").toLowerCase().trim()
     .replace(/^sidebar-/, "")
@@ -20168,6 +20482,74 @@ function renderNexusWorkflowMapPreview(id = "") {
   `;
 }
 
+function renderNexusWorkflowLaneStatus(id = "") {
+  const registry = nexusWorkflowRegistryEntry(id);
+  const lane = nexusIntegrationLaneById(registry?.integrationLaneId);
+  if (!registry || !lane) return "";
+  return `
+    <div class="nexus-workflow-lane-status" data-nexus-integration-lane-status="true" data-lane-id="${escapeHtml(lane.id)}" data-lane-status="${escapeHtml(lane.status)}">
+      <div>
+        <span class="eyebrow">${escapeHtml(translateText("Integration lane"))}</span>
+        <strong>${escapeHtml(translateText(lane.label))}</strong>
+        <small>${escapeHtml(translateText(lane.status.replace(/_/g, " ")))}</small>
+      </div>
+      <ul>
+        <li>${escapeHtml(translateText(`Activation: ${registry.activationType}`))}</li>
+        <li>${escapeHtml(translateText(`Packet: ${registry.packetType}`))}</li>
+        <li>${escapeHtml(translateText(lane.liveModeAvailable ? "Live mode available when confirmed." : "Live mode not active; packet preparation/queue is available."))}</li>
+        <li>${escapeHtml(translateText(registry.offlineSupport ? "Offline queue supported." : "Offline queue not required for this lane."))}</li>
+      </ul>
+    </div>
+  `;
+}
+
+function renderNexusWorkflowActionHistory() {
+  const history = nexusActionHistory.slice(0, 4);
+  const packets = nexusPreparedPackets.slice(0, 4);
+  if (!history.length && !packets.length) return "";
+  return `
+    <div class="nexus-workflow-history" data-nexus-action-history="true">
+      <div>
+        <span class="eyebrow">${escapeHtml(translateText("Action history"))}</span>
+        <strong>${escapeHtml(translateText("Recent packets and outcomes"))}</strong>
+      </div>
+      ${packets.length ? `<ul>${packets.map(packet => `<li><b>${escapeHtml(packet.workflowLabel)}</b><span>${escapeHtml(packet.outcomeStatus)} - ${escapeHtml(packet.integrationStatus)}</span></li>`).join("")}</ul>` : ""}
+      ${history.length ? `<ul>${history.map(entry => `<li><b>${escapeHtml(entry.outcomeStatus)}</b><span>${escapeHtml(entry.resultMessage)}</span></li>`).join("")}</ul>` : ""}
+    </div>
+  `;
+}
+
+function renderNexusPilotReadinessDashboard() {
+  const rows = NEXUS_AGENTIC_WORKFLOW_REGISTRY.map(workflow => {
+    const lane = nexusIntegrationLaneById(workflow.integrationLaneId);
+    return { workflow, lane };
+  });
+  const grouped = rows.reduce((groups, row) => {
+    const key = row.workflow.category;
+    groups[key] = groups[key] || [];
+    groups[key].push(row);
+    return groups;
+  }, {});
+  return `
+    <details class="nexus-pilot-readiness-dashboard" data-nexus-pilot-readiness-dashboard="true">
+      <summary>${escapeHtml(translateText("Pilot readiness dashboard"))}</summary>
+      <div class="nexus-pilot-readiness-grid">
+        ${Object.entries(grouped).map(([category, categoryRows]) => `
+          <section>
+            <strong>${escapeHtml(translateText(category))}</strong>
+            ${categoryRows.map(({ workflow, lane }) => `
+              <article data-nexus-pilot-lane="${escapeHtml(workflow.id)}">
+                <span>${escapeHtml(translateText(workflow.label))}</span>
+                <small>${escapeHtml(translateText(`workflow built; intake built; packet builder ready; lane ${lane?.status || "not_configured"}; confirmation ${workflow.requiresConfirmationBeforeExecution ? "required" : "not required for local prep"}; audit active; outcome verification active; ${workflow.globalReadiness}`))}</small>
+              </article>
+            `).join("")}
+          </section>
+        `).join("")}
+      </div>
+    </details>
+  `;
+}
+
 function renderNexusActiveWorkflowWorkspace() {
   const state = nexusActiveWorkflowState || {};
   const definition = nexusWorkflowDefinition(state.id, state.command);
@@ -20206,6 +20588,7 @@ function renderNexusActiveWorkflowWorkspace() {
         <strong>${escapeHtml(translateText("Next step"))}</strong>
         <span>${escapeHtml(translateText(content.nextPrompt))}</span>
       </div>
+      ${renderNexusWorkflowLaneStatus(id)}
       ${renderNexusWorkflowMapPreview(id)}
       <div class="nexus-workflow-body">
         ${renderNexusWorkflowFields(id, fields)}
@@ -20219,10 +20602,13 @@ function renderNexusActiveWorkflowWorkspace() {
         ${steps.map((step, index) => `<span><b>${index + 1}</b>${escapeHtml(translateText(step))}</span>`).join("")}
       </div>
       <div class="nexus-workflow-actions">
-        <button type="button" class="primary" data-nexus-mode-summary="${escapeHtml(NEXUS_HOME_MODE_IDS.includes(id) ? id : "clinical-support")}">${escapeHtml(translateText("Prepare local summary"))}</button>
+        <button type="button" class="primary" data-nexus-action-controller="prepare-packet" data-workflow-id="${escapeHtml(id)}">${escapeHtml(translateText("Prepare packet"))}</button>
+        <button type="button" data-nexus-action-controller="request-confirmation" data-workflow-id="${escapeHtml(id)}">${escapeHtml(translateText("Review confirmation"))}</button>
+        <button type="button" data-nexus-action-controller="queue-packet" data-workflow-id="${escapeHtml(id)}">${escapeHtml(translateText("Queue if inactive"))}</button>
         <button type="button" data-nexus-command-prefill="${escapeHtml(content.nextPrompt)}">${escapeHtml(translateText("Use as prompt"))}</button>
         <span>${escapeHtml(translateText(content.limitation))}</span>
       </div>
+      ${renderNexusWorkflowActionHistory()}
     </section>
   `;
 }
@@ -20248,6 +20634,7 @@ function openNexusWorkflow(workflowId, options = {}) {
     action: options.action || "",
     openedAt: Date.now()
   };
+  saveNexusRuntimeMemory();
   if (definition) {
     const panelResult = buildNexusHomeModePanelResult(definition.id, command);
     nexusAgenticBrainLastResult = options.preparedResult || panelResult || {
@@ -20706,6 +21093,7 @@ function renderNexusOperationsShelf() {
         ${renderNexusActiveWorkSummary()}
         ${renderNexusPilotPlatformStatusPanel()}
         ${renderNexusPilotReviewQueuePanel()}
+        ${renderNexusPilotReadinessDashboard()}
         ${renderNexusProductionPlatformRailsPanel()}
       </div>
     </details>
@@ -20787,6 +21175,29 @@ function buildNexusCapabilityOverviewResult(command = "") {
 function runNexusStandardUserHomeLocalCommand(command = "") {
   const normalized = String(command || "").trim();
   if (!normalized) return false;
+  if (/\b(clear local sensitive data|clear sensitive data|reset local nexus data)\b/i.test(normalized)) {
+    clearNexusSensitiveLocalData();
+    return true;
+  }
+  if (/\b(continue my last workflow|continue last workflow|resume workflow|continue workflow)\b/i.test(normalized)) {
+    const lastId = nexusActiveWorkflowState?.id || nexusPreparedPackets[0]?.workflowId || nexusActionHistory[0]?.workflowId || "";
+    if (lastId && nexusWorkflowDefinition(lastId, normalized)) return openNexusWorkflow(lastId, { command: normalized, source: "continue-command" });
+    nexusAgenticBrainLastResult = {
+      ok: true,
+      status: "no_workflow_to_continue",
+      mode: "Nexus continuation",
+      message: "There is no local workflow to continue yet. Choose a workflow card or tell Nexus what you need.",
+      preparedCards: [],
+      noExecutionAuthorized: true,
+      localOnly: true,
+      source: "nexus_runtime_memory"
+    };
+    renderUserWorkspace();
+    return true;
+  }
+  if (/\b(show pending actions|show my tasks|pending actions|queued actions|show queued)\b/i.test(normalized)) return showNexusRuntimeList("pending");
+  if (/\b(show failed actions|failed actions)\b/i.test(normalized)) return showNexusRuntimeList("failed");
+  if (/\b(show follow-up needed|follow up needed|follow-up needed)\b/i.test(normalized)) return showNexusRuntimeList("follow-up");
   const workflowId = normalizeNexusWorkflowId("", normalized) || detectNexusHomeModePanelId(normalized);
   if (workflowId && nexusWorkflowDefinition(workflowId, normalized)) {
     return openNexusWorkflow(workflowId, { command: normalized, source: "typed-command" });
@@ -36611,6 +37022,7 @@ function bindStatic() {
     if (await handleNexusProductionRailsClick(event)) return;
     if (await handleNexusPilotReviewQueueClick(event)) return;
     if (await handleNexusPilotPlatformActionClick(event)) return;
+    if (handleNexusWorkflowControllerClick(event)) return;
     if (handleNexusHomeModeSummaryClick(event)) return;
     const earlyCommandCenterSubmit = event.target.closest("[data-nexus-command-center-submit]");
     if (earlyCommandCenterSubmit) {
@@ -37898,6 +38310,7 @@ function bindStatic() {
 async function boot() {
   registerWebApp();
   installAgriNexusNativeBridge();
+  restoreNexusRuntimeMemory();
   bindStatic();
   loadPublicMapConfig().catch(() => DEFAULT_MAP_TILE_CONFIG);
   installNexusAutonomousRuntimePreview();
