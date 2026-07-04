@@ -58,6 +58,7 @@
     "qa:nexus-global-agriculture-intelligence": "node scripts/nexus-global-agriculture-intelligence-qa.js",
     "qa:nexus-global-training-workforce": "node scripts/nexus-global-training-workforce-qa.js",
     "qa:nexus-global-chronic-care-health": "node scripts/nexus-global-chronic-care-health-qa.js",
+    "qa:nexus-global-provider-access": "node scripts/nexus-global-provider-access-qa.js",
     "qa:nexus-layered-internet-intelligence": "node scripts/nexus-layered-internet-intelligence-qa.js",
     "qa:nexus-endgame-production-platform": "node scripts/nexus-endgame-production-platform-qa.js",
     "qa:nexus-internet-resource-provider-pathway": "node scripts/nexus-internet-resource-provider-pathway-qa.js",

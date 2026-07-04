@@ -29723,6 +29723,180 @@ async function nexusGlobalChronicCareHealthEngine(db, body = {}, user = null, en
   };
 }
 
+function nexusGlobalProviderAccessIntent(query = "", body = {}) {
+  const text = `${query} ${body.mode || ""} ${body.topic || ""} ${body.service || ""}`.toLowerCase();
+  if (/\b(pharmacy|medicine|medication|prescription|refill|pharmacist|drug)\b/.test(text)) return "pharmacy_support";
+  if (/\b(mobile clinic|clinic van|outreach clinic|community clinic|resource access|clinic visit)\b/.test(text)) return "mobile_clinic_access";
+  if (/\b(provider bridge|provider handoff|care team|doctor|clinician|nurse|provider)\b/.test(text)) return "provider_bridge";
+  if (/\b(video visit|telehealth|virtual visit|remote visit)\b/.test(text)) return "telehealth_prep";
+  return "clinic_visit_prep";
+}
+
+function nexusGlobalProviderAccessPacketType(intent = "clinic_visit_prep") {
+  return ({
+    telehealth_prep: "telehealth_prep_packet",
+    provider_bridge: "provider_bridge_packet",
+    pharmacy_support: "pharmacy_support_packet",
+    mobile_clinic_access: "mobile_clinic_access_packet",
+    clinic_visit_prep: "clinic_visit_prep_packet"
+  })[intent] || "clinic_visit_prep_packet";
+}
+
+function nexusGlobalProviderAccessCredentialStatus(intent = "clinic_visit_prep", env = process.env) {
+  const telehealthEnabled = String(env.NEXUS_TELEHEALTH_BRIDGE_ENABLED || env.NEXUS_ZOOM_ENABLED || "").toLowerCase() === "true";
+  const pharmacyEnabled = String(env.NEXUS_PHARMACY_BRIDGE_ENABLED || "").toLowerCase() === "true";
+  const mobileClinicEnabled = String(env.NEXUS_MOBILE_CLINIC_BRIDGE_ENABLED || "").toLowerCase() === "true";
+  const providerEnabled = String(env.NEXUS_PROVIDER_CONTACT_BRIDGE_ENABLED || "").toLowerCase() === "true";
+  const status = {
+    telehealth: telehealthEnabled ? "configured_inactive" : "credential_gated",
+    pharmacy: pharmacyEnabled ? "configured_inactive" : "credential_gated",
+    mobileClinic: mobileClinicEnabled ? "configured_inactive" : "credential_gated",
+    providerBridge: providerEnabled ? "configured_inactive" : "credential_gated"
+  };
+  const requiredEnv = {
+    telehealth_prep: ["NEXUS_TELEHEALTH_BRIDGE_ENABLED", "telehealth or video provider credentials"],
+    provider_bridge: ["NEXUS_PROVIDER_CONTACT_BRIDGE_ENABLED", "verified provider roster or contact bridge credentials"],
+    pharmacy_support: ["NEXUS_PHARMACY_BRIDGE_ENABLED", "verified pharmacy partner rules"],
+    mobile_clinic_access: ["NEXUS_MOBILE_CLINIC_BRIDGE_ENABLED", "verified mobile clinic partner roster"],
+    clinic_visit_prep: ["verified clinic/provider source", "consent and review workflow"]
+  }[intent] || ["verified provider source"];
+  return {
+    intent,
+    status,
+    requiredEnv,
+    liveReady: false,
+    testModeAvailable: true,
+    noSecretsExposed: true
+  };
+}
+
+function nexusGlobalProviderAccessChecklist(intent = "clinic_visit_prep") {
+  if (intent === "telehealth_prep") {
+    return [
+      "Confirm reason for visit, symptoms, known vitals, medications as known, preferred language, accessibility needs, and questions.",
+      "Prepare video visit readiness: device, connection, quiet space, captions/language support, consent, and provider instructions.",
+      "Do not launch telehealth or create a video visit without verified credentials, consent, confirmation, and audit."
+    ];
+  }
+  if (intent === "pharmacy_support") {
+    return [
+      "Organize medication name as written, refill barrier, adherence issue, side-effect question, cost/access concern, and pharmacist questions.",
+      "Keep all medication decisions with a licensed clinician or pharmacist.",
+      "Do not request refills, transfer prescriptions, submit medication data, or contact a pharmacy without verified rules, consent, confirmation, and audit."
+    ];
+  }
+  if (intent === "mobile_clinic_access") {
+    return [
+      "Prepare community, service need, language, access barriers, typed location context if voluntarily provided, and preferred visit window.",
+      "Confirm mobile clinic partner availability before any future request.",
+      "Do not claim clinic dispatch or share location without a verified partner path, consent, confirmation, and audit."
+    ];
+  }
+  if (intent === "provider_bridge") {
+    return [
+      "Prepare visible recipient/provider display, purpose preview, user consent, source summary, and review queue target.",
+      "Confirm provider availability and permissions before any future handoff.",
+      "Do not contact, message, call, send records, or open a provider system without explicit final confirmation."
+    ];
+  }
+  return [
+    "Prepare clinic visit reason, readings, questions, access barriers, language, and source-backed education.",
+    "Review credential status and queue target before any provider access step.",
+    "Keep all live provider, pharmacy, video, and mobile clinic actions gated."
+  ];
+}
+
+function buildNexusGlobalProviderAccessPacket(payload = {}) {
+  const intent = payload.intent || "clinic_visit_prep";
+  const packetType = nexusGlobalProviderAccessPacketType(intent);
+  const liveKnowledge = payload.liveKnowledge || {};
+  const citations = Array.isArray(liveKnowledge.citations) ? liveKnowledge.citations.slice(0, 6) : [];
+  const body = payload.body || {};
+  const credentialStatus = nexusGlobalProviderAccessCredentialStatus(intent, payload.env || process.env);
+  const timestamp = new Date().toISOString();
+  return {
+    type: packetType,
+    packetType,
+    packetId: crypto.randomUUID(),
+    query: sanitizePilotText(payload.query || "", 700),
+    providerAccessIntent: intent,
+    requestedService: sanitizePilotText(body.service || body.mode || intent.replace(/_/g, " "), 180),
+    patientOrUserContext: sanitizePilotText(body.context || body.patientContext || "Add concern, service need, readings, language, access barriers, and preferred support path for a stronger provider-access packet.", 520),
+    preparationChecklist: nexusGlobalProviderAccessChecklist(intent),
+    sourceBackedPreparation: liveKnowledge.status === "source-backed"
+      ? sanitizePilotText(liveKnowledge.summary || liveKnowledge.answer || "Source-backed provider-access preparation is available. Review citations before acting.", 1400)
+      : "Live provider-access retrieval is not configured or did not return citations. Nexus prepared a safe packet without fabricating sources.",
+    citations,
+    sources: Array.isArray(liveKnowledge.sources) ? liveKnowledge.sources.slice(0, 6) : citations,
+    credentialStatus,
+    reviewQueueTarget: intent === "pharmacy_support" ? "pharmacy" : intent === "mobile_clinic_access" ? "mobile-clinic" : "provider",
+    reviewQueueReady: true,
+    providerBridgeSummary: [
+      "Visible provider/service display, purpose preview, consent state, confirmation gate, audit event, and review queue target are required before any handoff.",
+      "Credential-gated lanes may prepare and queue local review packets, but they cannot execute live actions until configured and confirmed."
+    ],
+    nextSafeActions: [
+      "Review the packet and fill missing context.",
+      "Queue for local provider/admin review if appropriate.",
+      "Require explicit user approval and final confirmation before any future live provider, pharmacy, video, or mobile clinic action."
+    ],
+    liveKnowledgeStatus: sanitizePilotText(liveKnowledge.status || "disabled", 80),
+    provider: sanitizePilotText(liveKnowledge.provider || "not-configured", 80),
+    exportReady: true,
+    timestamp,
+    noExecutionAuthorized: true,
+    noTelehealthLaunchAuthorized: true,
+    noPharmacyExecutionAuthorized: true,
+    noMobileClinicDispatchClaim: true,
+    noProviderContactAuthorized: true,
+    requiresConsentBeforeProviderSubmission: true,
+    requiresConfirmationForProviderAccess: true,
+    auditRequiredBeforeLiveAction: true,
+    noFakeCitations: citations.length === 0
+  };
+}
+
+async function nexusGlobalProviderAccessBridge(db, body = {}, user = null, env = process.env) {
+  ensureNexusProductionRailsState(db);
+  const query = sanitizePilotText(body.query || body.question || body.command || "", 700);
+  if (!query) return { ok: false, error: "query_required" };
+  const intent = nexusGlobalProviderAccessIntent(query, body);
+  const liveKnowledge = await nexusLiveKnowledgeAllModesQuery(db, {
+    query,
+    domain: intent === "pharmacy_support" ? "pharmacy" : "health",
+    mode: intent,
+    locale: body.locale || "",
+    maxResults: body.maxResults || 5,
+    safetyContext: { sourceSurface: body.sourceSurface || "global_provider_access_bridge" }
+  }, user, env);
+  const packet = buildNexusGlobalProviderAccessPacket({
+    query,
+    intent,
+    body,
+    liveKnowledge,
+    env
+  });
+  addNexusPilotAuditEvent(db, "global_provider_access_packet_prepared", {
+    actor: user?.name || "Standard User",
+    role: user?.role || "Standard User",
+    mode: intent,
+    description: `${packet.packetType} prepared with Live Knowledge status ${packet.liveKnowledgeStatus}. No telehealth launch, pharmacy execution, provider contact, or mobile clinic dispatch claim occurred.`
+  });
+  return {
+    ok: true,
+    status: "prepared",
+    intent,
+    packetType: packet.packetType,
+    packet,
+    liveKnowledge,
+    noExecutionAuthorized: true,
+    noTelehealthLaunchAuthorized: true,
+    noPharmacyExecutionAuthorized: true,
+    noMobileClinicDispatchClaim: true,
+    noProviderContactAuthorized: true
+  };
+}
+
 function nexusKnowledgeSaveResult(db, body = {}, user = null) {
   ensureNexusProductionRailsState(db);
   const queryId = sanitizePilotText(body.queryId || "", 120);
@@ -31489,6 +31663,13 @@ async function api(req, res, url) {
 
   if (url.pathname === "/api/nexus/global-chronic-care-health/engine" && req.method === "POST") {
     const result = await nexusGlobalChronicCareHealthEngine(db, await readBody(req), user, process.env);
+    if (!result.ok) return send(res, 400, result);
+    await writeDb(db);
+    return send(res, 200, result);
+  }
+
+  if (url.pathname === "/api/nexus/global-provider-access/bridge" && req.method === "POST") {
+    const result = await nexusGlobalProviderAccessBridge(db, await readBody(req), user, process.env);
     if (!result.ok) return send(res, 400, result);
     await writeDb(db);
     return send(res, 200, result);

@@ -18396,6 +18396,7 @@ function renderNexusAgenticBrainResultCards() {
           ${renderNexusGlobalAgriculturePacket(card)}
           ${renderNexusGlobalTrainingWorkforcePacket(card)}
           ${renderNexusGlobalChronicCareHealthPacket(card)}
+          ${renderNexusGlobalProviderAccessPacket(card)}
           ${renderNexusMediaProviderOptions(card)}
           ${renderNexusHealthAccessPreparationOptions(card)}
           ${card.localOnly ? `<small>${escapeHtml(translateText("Local-only"))}</small>` : ""}
@@ -19196,6 +19197,59 @@ function renderNexusGlobalChronicCareHealthPacket(card = {}) {
   `;
 }
 
+function renderNexusGlobalProviderAccessPacket(card = {}) {
+  const packet = card.providerAccessPacket || card.globalProviderAccessPacket || null;
+  if (!packet) return "";
+  const checklist = Array.isArray(packet.preparationChecklist) ? packet.preparationChecklist : [];
+  const bridgeSummary = Array.isArray(packet.providerBridgeSummary) ? packet.providerBridgeSummary : [];
+  const nextSafeActions = Array.isArray(packet.nextSafeActions) ? packet.nextSafeActions : [];
+  const citations = Array.isArray(packet.citations) ? packet.citations : [];
+  const credentialStatus = packet.credentialStatus || {};
+  return `
+    <div class="nexus-global-provider-access-packet" data-testid="nexus-global-provider-access-packet-card" data-packet-type="${escapeHtml(packet.packetType || "clinic_visit_prep_packet")}">
+      <div class="nexus-home-mode-panel-head">
+        <span class="nexus-home-mode-panel-icon" aria-hidden="true">🧑🏾‍⚕️</span>
+        <div>
+          <strong>${escapeHtml(translateText("Global Provider Access Bridge"))}</strong>
+          <small data-testid="nexus-provider-access-packet-type">${escapeHtml(packet.packetType || "clinic_visit_prep_packet")}</small>
+        </div>
+      </div>
+      <p data-testid="nexus-provider-access-service">${escapeHtml(translateText(packet.requestedService || "Provider access packet prepared."))}</p>
+      <dl>
+        <div>
+          <dt>${escapeHtml(translateText("Preparation checklist"))}</dt>
+          <dd data-testid="nexus-provider-access-checklist">${checklist.map(item => escapeHtml(translateText(item))).join("; ")}</dd>
+        </div>
+        <div>
+          <dt>${escapeHtml(translateText("Source-backed preparation"))}</dt>
+          <dd data-testid="nexus-provider-access-source-backed">${escapeHtml(translateText(packet.sourceBackedPreparation || "Live retrieval is not configured; Nexus did not fabricate citations."))}</dd>
+        </div>
+        <div>
+          <dt>${escapeHtml(translateText("Credential status"))}</dt>
+          <dd data-testid="nexus-provider-access-credential-status">${escapeHtml(JSON.stringify(credentialStatus.status || {}))}</dd>
+        </div>
+        <div>
+          <dt>${escapeHtml(translateText("Review queue"))}</dt>
+          <dd data-testid="nexus-provider-access-review-queue">${escapeHtml(translateText(packet.reviewQueueTarget || "provider"))}: ${escapeHtml(translateText(packet.reviewQueueReady ? "ready for local review queue" : "not ready"))}</dd>
+        </div>
+        <div>
+          <dt>${escapeHtml(translateText("Bridge requirements"))}</dt>
+          <dd data-testid="nexus-provider-access-bridge-summary">${bridgeSummary.map(item => escapeHtml(translateText(item))).join("; ")}</dd>
+        </div>
+      </dl>
+      ${nextSafeActions.length ? `
+        <div class="nexus-home-mode-panel-actions" aria-label="${escapeHtml(translateText("Provider access next safe actions"))}">
+          ${nextSafeActions.slice(0, 4).map(action => `<button type="button" data-nexus-command="${escapeHtml(action)}" data-nexus-mode-shortcut="global-provider-access-next-action">${escapeHtml(translateText(action))}</button>`).join("")}
+        </div>
+      ` : ""}
+      <small data-testid="nexus-provider-access-live-knowledge-status">${escapeHtml(translateText("Live Knowledge"))}: ${escapeHtml(packet.liveKnowledgeStatus || "disabled")}</small>
+      <small data-testid="nexus-provider-access-citation-count">${escapeHtml(translateText("Citations"))}: ${escapeHtml(String(citations.length || 0))}</small>
+      <small data-testid="nexus-provider-access-export-ready">${escapeHtml(translateText(packet.exportReady ? "Export-ready provider access packet prepared." : "Review packet prepared locally."))}</small>
+      <small data-testid="nexus-provider-access-no-execution">${escapeHtml(translateText("No telehealth launch, pharmacy execution, provider contact, mobile clinic dispatch claim, or external action was authorized."))}</small>
+    </div>
+  `;
+}
+
 function renderNexusKnowledgeAnswerCard(answer = nexusKnowledgeLastResult) {
   if (!answer) return `<p>${escapeHtml(translateText("Ask a source-sensitive question to use the knowledge rail."))}</p>`;
   const citations = Array.isArray(answer.citations) ? answer.citations : [];
@@ -19546,6 +19600,32 @@ async function runNexusKnowledgeQuery(command = "", options = {}) {
       }
     } catch {
       nexusKnowledgeActionStatus = "Knowledge rail checked safely. Chronic-care health packet preparation was unavailable.";
+    }
+  }
+  if (["telehealth", "mobileClinic", "pharmacy", "providerAdmin"].includes(options.category || nexusKnowledgeCategoryForCommand(question)) || /\b(provider bridge|provider handoff|care team summary|video visit|clinic visit)\b/i.test(question)) {
+    try {
+      const providerAccessResult = await request("/api/nexus/global-provider-access/bridge", {
+        method: "POST",
+        body: {
+          query: question,
+          mode: options.modeId || (options.category || nexusKnowledgeCategoryForCommand(question)),
+          locale: languageCode(),
+          sourceSurface: options.sourceSurface || "standard_user"
+        }
+      });
+      if (providerAccessResult?.packet) {
+        nexusAgenticBrainLastResult.preparedCards.unshift({
+          type: "nexus_global_provider_access_bridge",
+          title: "Provider access packet",
+          status: providerAccessResult.packetType || "clinic_visit_prep_packet",
+          localOnly: true,
+          needsRealProvider: true,
+          globalProviderAccessPacket: providerAccessResult.packet
+        });
+        nexusKnowledgeActionStatus = "Provider access packet prepared. Credential-gated actions remain review, consent, confirmation, and audit controlled.";
+      }
+    } catch {
+      nexusKnowledgeActionStatus = "Knowledge rail checked safely. Provider access packet preparation was unavailable.";
     }
   }
   await refreshNexusInternetResourceHistory({ rerender: false });
@@ -20446,6 +20526,7 @@ const NEXUS_OUTCOME_STATES = Object.freeze(["draft", "prepared", "waiting_for_co
 const NEXUS_PACKET_TYPES = Object.freeze([
   "health_intake", "clinical_support", "chronic_care_summary", "diabetes_report", "hypertension_report", "obesity_report", "rpm_report", "rtm_report", "telehealth_request", "provider_handoff", "pharmacy_support_request", "mobile_clinic_request", "community_health_worker_request",
   "chronic_disease_education_packet", "diabetes_support_packet", "hypertension_support_packet", "obesity_support_packet", "rpm_support_packet", "rtm_support_packet", "chw_support_packet", "provider_review_packet",
+  "telehealth_prep_packet", "provider_bridge_packet", "pharmacy_support_packet", "mobile_clinic_access_packet", "clinic_visit_prep_packet",
   "agriculture_support_packet", "crop_support_packet", "farm_planning_packet", "field_visit_packet", "crop_support_request", "farm_planning_request", "input_supplier_request", "extension_partner_request", "field_visit_request", "marketplace_inquiry", "logistics_request",
   "training_support_packet", "workforce_pathway_packet", "employer_partner_research_packet", "learning_recommendation_packet",
   "workforce_referral", "job_referral", "employer_partner_referral", "training_enrollment_request", "learning_plan_request",
