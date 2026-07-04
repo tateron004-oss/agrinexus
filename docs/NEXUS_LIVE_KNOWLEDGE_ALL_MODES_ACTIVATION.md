@@ -62,7 +62,7 @@ Priority order:
 1. Tavily through `TAVILY_API_KEY`
 2. Brave through `BRAVE_SEARCH_API_KEY`
 3. Exa through `EXA_API_KEY`
-4. generic fallback through `NEXUS_LIVE_KNOWLEDGE_API_KEY`
+4. generic fallback through `NEXUS_LIVE_KNOWLEDGE_API_KEY` plus `NEXUS_LIVE_KNOWLEDGE_PROVIDER_ENDPOINT`
 
 Allowed all-mode selector values:
 
@@ -70,8 +70,9 @@ Allowed all-mode selector values:
 - `tavily`
 - `brave`
 - `exa`
+- `generic`
 
-The generic fallback represents a provider-key shape and controlled adapter-readiness state. It does not fabricate citations when a provider-specific adapter is not active.
+The generic fallback calls the configured provider endpoint from the server with the generic API key. It only returns source-backed output when the endpoint returns citable sources; otherwise Nexus reports a provider error or missing configuration and does not fabricate citations.
 
 ## Research Packet Contract
 
@@ -198,4 +199,3 @@ If a configured provider fails, Nexus returns a controlled provider-error respon
 - no-execution safety text
 - no secret exposure
 - package alias and safe-suite wiring
-

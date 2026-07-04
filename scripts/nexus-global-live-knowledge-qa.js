@@ -31,9 +31,17 @@ assert.strictEqual(existing.status, 0, existing.stdout || existing.stderr);
   "NEXUS_LIVE_KNOWLEDGE_PROVIDER_PRIORITY",
   '"tavily", "brave", "exa", "generic"',
   "NEXUS_LIVE_KNOWLEDGE_ALLOWED_PROVIDERS",
-  '"auto", "tavily", "brave", "exa"',
+  '"auto", "tavily", "brave", "exa", "generic"',
   "nexusLiveKnowledgeProviderCatalog",
   "nexusLiveKnowledgeAllModesQuery",
+  "fetchTavilyKnowledge",
+  "https://api.tavily.com/search",
+  "fetchBraveKnowledge",
+  "https://api.search.brave.com/res/v1/web/search",
+  "fetchExaKnowledge",
+  "https://api.exa.ai/search",
+  "fetchConfiguredLiveKnowledgeEndpoint",
+  "NEXUS_LIVE_KNOWLEDGE_PROVIDER_ENDPOINT",
   "/api/nexus/live-knowledge/status",
   "/api/nexus/live-knowledge/query",
   "credential-blocked",
@@ -64,6 +72,7 @@ assert.strictEqual(existing.status, 0, existing.stdout || existing.stderr);
   "BRAVE_SEARCH_API_KEY=",
   "EXA_API_KEY=",
   "NEXUS_LIVE_KNOWLEDGE_API_KEY=",
+  "NEXUS_LIVE_KNOWLEDGE_PROVIDER_ENDPOINT=",
   "NEXUS_LIVE_KNOWLEDGE_SAFE_MODE=true"
 ].forEach(token => includes(envExample, token, `env example ${token}`));
 

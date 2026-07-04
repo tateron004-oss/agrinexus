@@ -18116,11 +18116,13 @@ async function fetchOpenAiWebKnowledge(query) {
 async function fetchConfiguredLiveKnowledgeEndpoint(query, command) {
   const endpoint = String(process.env.NEXUS_LIVE_KNOWLEDGE_PROVIDER_ENDPOINT || "").trim();
   if (!endpoint) return null;
+  const genericApiKey = String(process.env.NEXUS_LIVE_KNOWLEDGE_API_KEY || "").trim();
   const response = await fetchWithTimeout(endpoint, {
     method: "POST",
     headers: {
       "content-type": "application/json",
-      accept: "application/json"
+      accept: "application/json",
+      ...(genericApiKey ? { authorization: `Bearer ${genericApiKey}` } : {})
     },
     body: JSON.stringify({ query, command, context: "agrinexus-live-knowledge" })
   }, Number(process.env.NEXUS_LIVE_KNOWLEDGE_TIMEOUT_MS || 9000));
@@ -28116,7 +28118,7 @@ function nexusKnowledgeSourceList() {
 }
 
 const NEXUS_LIVE_KNOWLEDGE_PROVIDER_PRIORITY = Object.freeze(["tavily", "brave", "exa", "generic"]);
-const NEXUS_LIVE_KNOWLEDGE_ALLOWED_PROVIDERS = Object.freeze(["auto", "tavily", "brave", "exa"]);
+const NEXUS_LIVE_KNOWLEDGE_ALLOWED_PROVIDERS = Object.freeze(["auto", "tavily", "brave", "exa", "generic"]);
 const NEXUS_LIVE_KNOWLEDGE_SHARED_DOMAINS = Object.freeze([
   "agriculture", "crop", "farm", "field", "logistics", "route",
   "training", "workforce", "employer",
@@ -28182,7 +28184,7 @@ function nexusLiveKnowledgeProviderCatalog(env = process.env) {
     { provider: "tavily", requiredEnvVars: ["TAVILY_API_KEY"], fallbackEnvVars: ["NEXUS_LIVE_KNOWLEDGE_API_KEY"], citationCapability: true, configured: Boolean(String(env.TAVILY_API_KEY || "").trim()) || nexusLiveKnowledgeGenericApiKeyApplies("tavily", env) },
     { provider: "brave", requiredEnvVars: ["BRAVE_SEARCH_API_KEY"], fallbackEnvVars: ["NEXUS_LIVE_KNOWLEDGE_API_KEY"], citationCapability: true, configured: Boolean(String(env.BRAVE_SEARCH_API_KEY || "").trim()) || nexusLiveKnowledgeGenericApiKeyApplies("brave", env) },
     { provider: "exa", requiredEnvVars: ["EXA_API_KEY"], fallbackEnvVars: ["NEXUS_LIVE_KNOWLEDGE_API_KEY"], citationCapability: true, configured: Boolean(String(env.EXA_API_KEY || "").trim()) || nexusLiveKnowledgeGenericApiKeyApplies("exa", env) },
-    { provider: "generic", requiredEnvVars: ["NEXUS_LIVE_KNOWLEDGE_API_KEY"], fallbackEnvVars: [], citationCapability: true, configured: Boolean(String(env.NEXUS_LIVE_KNOWLEDGE_API_KEY || "").trim()) }
+    { provider: "generic", requiredEnvVars: ["NEXUS_LIVE_KNOWLEDGE_API_KEY", "NEXUS_LIVE_KNOWLEDGE_PROVIDER_ENDPOINT"], fallbackEnvVars: [], citationCapability: true, configured: Boolean(String(env.NEXUS_LIVE_KNOWLEDGE_API_KEY || "").trim() && String(env.NEXUS_LIVE_KNOWLEDGE_PROVIDER_ENDPOINT || "").trim()) }
   ].map(item => ({
     ...item,
     missingEnvVars: item.configured ? [] : item.requiredEnvVars.filter(envName => !String(env[envName] || "").trim()),
@@ -28240,7 +28242,7 @@ function nexusKnowledgeProviderStatus(env = process.env) {
     { provider: "tavily", requiredEnv: ["TAVILY_API_KEY"], fallbackEnv: ["NEXUS_LIVE_KNOWLEDGE_API_KEY"], citationCapable: true },
     { provider: "brave", requiredEnv: ["BRAVE_SEARCH_API_KEY"], fallbackEnv: ["NEXUS_LIVE_KNOWLEDGE_API_KEY"], citationCapable: true },
     { provider: "exa", requiredEnv: ["EXA_API_KEY"], fallbackEnv: ["NEXUS_LIVE_KNOWLEDGE_API_KEY"], citationCapable: true },
-    { provider: "generic", requiredEnv: ["NEXUS_LIVE_KNOWLEDGE_API_KEY"], citationCapable: true },
+    { provider: "generic", requiredEnv: ["NEXUS_LIVE_KNOWLEDGE_API_KEY", "NEXUS_LIVE_KNOWLEDGE_PROVIDER_ENDPOINT"], citationCapable: true },
     { provider: "openai-web-search", requiredEnv: ["OPENAI_WEB_SEARCH_ENABLED", "OPENAI_API_KEY"], citationCapable: true },
     { provider: "provider-endpoint", requiredEnv: ["NEXUS_LIVE_KNOWLEDGE_PROVIDER_ENDPOINT"], citationCapable: true }
   ];
@@ -28282,7 +28284,7 @@ function nexusKnowledgeProviderStatus(env = process.env) {
     : selectedProviderPreference === "unsupported"
       ? ["NEXUS_LIVE_KNOWLEDGE_PROVIDER"]
       : selectedProviderPreference === "auto"
-        ? ["TAVILY_API_KEY", "BRAVE_SEARCH_API_KEY", "EXA_API_KEY", "NEXUS_LIVE_KNOWLEDGE_API_KEY"]
+        ? ["TAVILY_API_KEY", "BRAVE_SEARCH_API_KEY", "EXA_API_KEY", "NEXUS_LIVE_KNOWLEDGE_API_KEY", "NEXUS_LIVE_KNOWLEDGE_PROVIDER_ENDPOINT"]
         : (allModeProviders.find(item => item.provider === selectedProviderPreference)?.missingEnvVars || []);
   return {
     ok: true,
@@ -28297,13 +28299,13 @@ function nexusKnowledgeProviderStatus(env = process.env) {
     unsupportedProvider,
     providerState: !enabled ? "disabled" : unsupportedProvider ? "unsupported_provider" : configured ? "configured" : "missing_config",
     providerSelectionMessage: unsupportedProvider
-      ? "NEXUS_LIVE_KNOWLEDGE_PROVIDER must be one of: auto, tavily, brave, exa."
+      ? "NEXUS_LIVE_KNOWLEDGE_PROVIDER must be one of: auto, tavily, brave, exa, generic."
       : "",
     providerPriority,
     liveKnowledgeProviderPriority: providerPriority,
     supportedLiveKnowledgeProviders: allModeProviders,
     requiredEnvVars: selectedProviderPreference === "auto"
-      ? ["TAVILY_API_KEY", "BRAVE_SEARCH_API_KEY", "EXA_API_KEY", "NEXUS_LIVE_KNOWLEDGE_API_KEY"]
+      ? ["TAVILY_API_KEY", "BRAVE_SEARCH_API_KEY", "EXA_API_KEY", "NEXUS_LIVE_KNOWLEDGE_API_KEY", "NEXUS_LIVE_KNOWLEDGE_PROVIDER_ENDPOINT"]
       : (allModeProviders.find(item => item.provider === selectedProviderPreference)?.requiredEnvVars || []),
     missingEnvVars: allModeMissing,
     citationCapability: configured,
@@ -28958,14 +28960,7 @@ async function runNexusLiveKnowledgeProviderQuery(query = "", provider = "auto",
   if (chosen === "tavily") attempts.push(() => fetchTavilyKnowledge(query));
   if (chosen === "brave") attempts.push(() => fetchBraveKnowledge(query));
   if (chosen === "exa") attempts.push(() => fetchExaKnowledge(query));
-  if (chosen === "generic") {
-    attempts.push(async () => ({
-      provider: "generic",
-      answer: "Generic Live Knowledge provider key is configured, but no provider-specific adapter is active. Nexus returned a controlled test-mode response without fabricating citations.",
-      results: [],
-      genericProviderRequiresAdapter: true
-    }));
-  }
+  if (chosen === "generic") attempts.push(() => fetchConfiguredLiveKnowledgeEndpoint(query, query));
   if (!attempts.length) {
     attempts.push(() => fetchTavilyKnowledge(query), () => fetchBraveKnowledge(query), () => fetchExaKnowledge(query));
   }

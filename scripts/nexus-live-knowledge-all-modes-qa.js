@@ -24,7 +24,7 @@ function excludes(source, token, label) {
   "NEXUS_LIVE_KNOWLEDGE_PROVIDER_PRIORITY",
   '"tavily", "brave", "exa", "generic"',
   "NEXUS_LIVE_KNOWLEDGE_ALLOWED_PROVIDERS",
-  '"auto", "tavily", "brave", "exa"',
+  '"auto", "tavily", "brave", "exa", "generic"',
   "NEXUS_LIVE_KNOWLEDGE_SHARED_DOMAINS",
   "function nexusLiveKnowledgeProviderCatalog",
   "function nexusLiveKnowledgeDomainForInput",
@@ -110,7 +110,7 @@ function excludes(source, token, label) {
   "tavily                 requires TAVILY_API_KEY",
   "brave                  requires BRAVE_SEARCH_API_KEY",
   "exa                    requires EXA_API_KEY",
-  "generic                fallback key shape uses NEXUS_LIVE_KNOWLEDGE_API_KEY",
+  "generic                requires NEXUS_LIVE_KNOWLEDGE_API_KEY and NEXUS_LIVE_KNOWLEDGE_PROVIDER_ENDPOINT",
   "NEXUS_LIVE_KNOWLEDGE_MAX_RESULTS=5",
   "NEXUS_LIVE_KNOWLEDGE_TIMEOUT_MS=9000",
   "NEXUS_LIVE_KNOWLEDGE_SAFE_MODE=true"
