@@ -28338,6 +28338,128 @@ function nexusKnowledgeProviderStatus(env = process.env) {
   };
 }
 
+const NEXUS_PRODUCTION_PROVIDER_EMAIL_ENVS = [
+  "NEXUS_PROVIDER_REVIEW_EMAIL",
+  "NEXUS_PHARMACY_REFERRAL_EMAIL",
+  "NEXUS_MOBILE_CLINIC_REFERRAL_EMAIL",
+  "NEXUS_AGRONOMY_REVIEW_EMAIL",
+  "NEXUS_MARKETPLACE_VENDOR_EMAIL",
+  "NEXUS_LOGISTICS_PARTNER_EMAIL",
+  "NEXUS_TRAINING_PARTNER_EMAIL",
+  "NEXUS_ADMIN_ALERT_EMAIL"
+];
+
+const NEXUS_PRODUCTION_PROVIDER_DESTINATION_ENVS = [
+  "NEXUS_PROVIDER_REVIEW_SMS_TO",
+  "NEXUS_PROVIDER_REVIEW_WHATSAPP_TO",
+  "NEXUS_PHARMACY_SMS_TO",
+  "NEXUS_PHARMACY_WHATSAPP_TO",
+  "NEXUS_MOBILE_CLINIC_SMS_TO",
+  "NEXUS_MOBILE_CLINIC_WHATSAPP_TO",
+  "NEXUS_AGRONOMY_SMS_TO",
+  "NEXUS_AGRONOMY_WHATSAPP_TO",
+  "NEXUS_MARKETPLACE_VENDOR_SMS_TO",
+  "NEXUS_MARKETPLACE_VENDOR_WHATSAPP_TO",
+  "NEXUS_LOGISTICS_SMS_TO",
+  "NEXUS_LOGISTICS_WHATSAPP_TO",
+  "NEXUS_TRAINING_PARTNER_SMS_TO",
+  "NEXUS_TRAINING_PARTNER_WHATSAPP_TO"
+];
+
+function nexusProductionConfiguredEnv(env = process.env, names = []) {
+  return names.filter(name => String(env[name] || "").trim()).map(name => ({ name, configured: true }));
+}
+
+function nexusProductionMissingEnv(env = process.env, names = []) {
+  return names.filter(name => !String(env[name] || "").trim());
+}
+
+function nexusProductionPublicStatus(env = process.env) {
+  const liveKnowledge = nexusKnowledgeProviderStatus(env);
+  const email = nexusEmailProviderStatus(env);
+  const communications = nexusCommunicationsProviderStatus(env);
+  const telehealth = nexusTelehealthProvider.status(env);
+  const pharmacy = nexusProviderCoordinationStatus("pharmacy", env);
+  const mobileClinic = nexusProviderCoordinationStatus("mobile-clinic", env);
+  const dailyMissing = nexusProductionMissingEnv(env, ["DAILY_API_KEY", "DAILY_ROOM_DOMAIN"]);
+  const providerEmailMissing = nexusProductionMissingEnv(env, NEXUS_PRODUCTION_PROVIDER_EMAIL_ENVS);
+  const providerDestinationMissing = nexusProductionMissingEnv(env, NEXUS_PRODUCTION_PROVIDER_DESTINATION_ENVS);
+  const publicAppUrlConfigured = Boolean(String(env.NEXUS_PUBLIC_APP_URL || env.RENDER_EXTERNAL_URL || "").trim());
+  const missingEnv = Array.from(new Set([
+    ...(publicAppUrlConfigured ? [] : ["NEXUS_PUBLIC_APP_URL"]),
+    ...(liveKnowledge.configured ? [] : (liveKnowledge.missingEnvVars || liveKnowledge.missingEnv || [])),
+    ...(email.configured ? [] : (email.missingEnv || [])),
+    ...(communications.channels?.sms?.configured ? [] : (communications.channels?.sms?.missingEnv || [])),
+    ...(communications.channels?.whatsapp?.configured ? [] : (communications.channels?.whatsapp?.missingEnv || [])),
+    ...(telehealth.configured ? [] : (telehealth.missingEnv || [])),
+    ...dailyMissing,
+    ...providerEmailMissing,
+    ...providerDestinationMissing,
+    ...(pharmacy.configured ? [] : (pharmacy.missingEnv || [])),
+    ...(mobileClinic.configured ? [] : (mobileClinic.missingEnv || []))
+  ])).filter(name => !/secret|token value|password value/i.test(name));
+  return {
+    ok: true,
+    app: "Nexus / AgriNexus",
+    environment: env.NODE_ENV || "development",
+    timestamp: new Date().toISOString(),
+    publicAppUrlConfigured,
+    liveKnowledgeConfigured: Boolean(liveKnowledge.enabled && liveKnowledge.configured),
+    emailConfigured: Boolean(email.configured),
+    smsConfigured: Boolean(communications.channels?.sms?.configured),
+    whatsappConfigured: Boolean(communications.channels?.whatsapp?.configured),
+    telehealthProviderConfigured: Boolean(telehealth.configured),
+    dailyVideoConfigured: dailyMissing.length === 0,
+    providerRecipientEmailsConfigured: providerEmailMissing.length < NEXUS_PRODUCTION_PROVIDER_EMAIL_ENVS.length,
+    providerSmsWhatsappDestinationsConfigured: providerDestinationMissing.length < NEXUS_PRODUCTION_PROVIDER_DESTINATION_ENVS.length,
+    providerLanes: {
+      liveKnowledge: {
+        provider: liveKnowledge.provider,
+        selectedProvider: liveKnowledge.selectedProvider,
+        configured: Boolean(liveKnowledge.enabled && liveKnowledge.configured),
+        missingEnv: liveKnowledge.configured ? [] : (liveKnowledge.missingEnvVars || liveKnowledge.missingEnv || [])
+      },
+      email: {
+        provider: email.provider,
+        configured: Boolean(email.configured),
+        missingEnv: email.missingEnv || []
+      },
+      communications: {
+        provider: communications.provider,
+        sms: {
+          configured: Boolean(communications.channels?.sms?.configured),
+          missingEnv: communications.channels?.sms?.missingEnv || []
+        },
+        whatsapp: {
+          configured: Boolean(communications.channels?.whatsapp?.configured),
+          missingEnv: communications.channels?.whatsapp?.missingEnv || []
+        }
+      },
+      telehealth: {
+        selectedProvider: telehealth.selectedProvider,
+        configured: Boolean(telehealth.configured),
+        dailyConfigured: dailyMissing.length === 0,
+        missingEnv: telehealth.missingEnv || [],
+        dailyMissingEnv: dailyMissing
+      },
+      pharmacy: {
+        configured: Boolean(pharmacy.configured),
+        missingEnv: pharmacy.missingEnv || []
+      },
+      mobileClinic: {
+        configured: Boolean(mobileClinic.configured),
+        missingEnv: mobileClinic.missingEnv || []
+      }
+    },
+    providerRecipientEmails: nexusProductionConfiguredEnv(env, NEXUS_PRODUCTION_PROVIDER_EMAIL_ENVS),
+    providerDestinations: nexusProductionConfiguredEnv(env, NEXUS_PRODUCTION_PROVIDER_DESTINATION_ENVS),
+    missingEnv,
+    noSecretValuesReturned: true,
+    noAuthHeadersReturned: true,
+    smokeSendFlagEnabled: String(env.NEXUS_ENABLE_PRODUCTION_PROVIDER_SMOKE_SENDS || "false").toLowerCase() === "true"
+  };
+}
+
 function nexusKnowledgeCategoryForQuestion(question = "") {
   const lower = String(question || "").toLowerCase();
   if (/\b(telehealth|virtual visit|video visit|doctor visit|provider visit|intake)\b/.test(lower)) return "telehealth";
@@ -32959,12 +33081,25 @@ async function api(req, res, url) {
     });
   }
 
+  if (url.pathname === "/api/health" && req.method === "GET") {
+    return send(res, 200, {
+      ok: true,
+      app: "Nexus / AgriNexus",
+      environment: process.env.NODE_ENV || "development",
+      timestamp: new Date().toISOString()
+    });
+  }
+
   if ((url.pathname === "/api/integrations" || url.pathname === "/api/readiness") && req.method === "GET") {
     return send(res, 200, integrationStatus(db));
   }
 
   if (url.pathname === "/api/nexus/tools/status" && req.method === "GET") {
     return send(res, 200, nexusRealProviderStatus(db));
+  }
+
+  if (url.pathname === "/api/nexus/production/status" && req.method === "GET") {
+    return send(res, 200, nexusProductionPublicStatus(process.env));
   }
 
   if ((url.pathname === "/api/nexus/health" || url.pathname === "/api/nexus/readiness" || url.pathname === "/api/nexus/production-readiness") && req.method === "GET") {
