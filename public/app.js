@@ -19699,6 +19699,7 @@ function renderNexusKnowledgeRailPanel() {
   const providerList = Array.isArray(status.supportedLiveKnowledgeProviders) ? status.supportedLiveKnowledgeProviders : [];
   const safeDomains = Array.isArray(status.safeDomainsSupported) ? status.safeDomainsSupported : [];
   const missingEnv = Array.isArray(status.missingEnvVars) ? status.missingEnvVars : Array.isArray(status.missingEnv) ? status.missingEnv : [];
+  const lastTest = status.lastTestResult || null;
   return `
     <section class="nexus-knowledge-rail" data-nexus-knowledge-rail="true" data-testid="nexus-knowledge-rail" aria-label="${escapeHtml(translateText("Nexus live knowledge retrieval"))}">
       <div class="nexus-knowledge-rail-header">
@@ -19708,13 +19709,23 @@ function renderNexusKnowledgeRailPanel() {
           <small data-testid="nexus-knowledge-status">${escapeHtml(translateText(enabled ? `Configured: ${status.provider || "provider"}` : status.disabledMessage || "Live internet retrieval is not configured yet. Nexus can still use built-in guidance and prepare a question for review."))}</small>
           <small data-testid="nexus-live-knowledge-provider-status">${escapeHtml(translateText("Selected provider"))}: ${escapeHtml(status.selectedProvider || "auto")} / ${escapeHtml(status.testabilityStatus || status.testability || "disabled")}</small>
         </div>
-        <button type="button" data-nexus-knowledge-action="refresh-status" data-testid="nexus-knowledge-refresh">${escapeHtml(translateText("Refresh"))}</button>
+        <div class="nexus-knowledge-rail-actions">
+          <button type="button" data-nexus-knowledge-action="refresh-status" data-testid="nexus-knowledge-refresh">${escapeHtml(translateText("Refresh"))}</button>
+          <button type="button" data-nexus-knowledge-action="test-provider" data-testid="nexus-live-knowledge-test-provider">${escapeHtml(translateText("Test provider"))}</button>
+        </div>
       </div>
       <div class="nexus-knowledge-source-row" data-testid="nexus-live-knowledge-all-modes-status">
         <span>${escapeHtml(translateText("Providers"))}: ${providerList.map(item => escapeHtml(item.provider)).join(", ") || "tavily, brave, exa, generic"}</span>
         <span>${escapeHtml(translateText("Citation capable"))}: ${escapeHtml(String(Boolean(status.citationCapability || status.citationCapable)))}</span>
         <span>${escapeHtml(translateText("Missing"))}: ${missingEnv.map(escapeHtml).join(", ") || escapeHtml(translateText("none"))}</span>
       </div>
+      ${lastTest ? `
+        <div class="nexus-knowledge-source-row" data-testid="nexus-live-knowledge-last-test-result">
+          <span>${escapeHtml(translateText("Last test"))}: ${escapeHtml(lastTest.status || lastTest.testStatus || "checked")}</span>
+          <span>${escapeHtml(translateText("Provider"))}: ${escapeHtml(lastTest.provider || status.provider || "not-configured")}</span>
+          <span>${escapeHtml(translateText("Citations"))}: ${escapeHtml(String(lastTest.citationCount || 0))}</span>
+        </div>
+      ` : ""}
       <div class="nexus-knowledge-source-row" data-testid="nexus-live-knowledge-safe-domains">
         ${safeDomains.slice(0, 12).map(domain => `<span>${escapeHtml(domain)}</span>`).join("")}
       </div>
@@ -20049,6 +20060,29 @@ async function handleNexusKnowledgeRailClick(event) {
     if (action === "refresh-history") {
       nexusKnowledgeActionStatus = "My Nexus Questions refreshed.";
       await refreshNexusInternetResourceHistory({ rerender: true });
+      return true;
+    }
+    if (action === "test-provider") {
+      nexusKnowledgeActionStatus = "Testing the configured Live Knowledge provider with a safe agriculture query.";
+      if (experienceMode === "user") renderUserWorkspace();
+      const result = await request("/api/nexus/live-knowledge/test", {
+        method: "POST",
+        body: { query: "climate-smart agriculture Africa", domain: "agriculture", mode: "standard_user_status_test" }
+      });
+      nexusKnowledgeStatus = result.statusSnapshot || nexusKnowledgeStatus;
+      if (result.result?.citations || result.result?.sources) {
+        nexusKnowledgeLastResult = {
+          ...(result.result || {}),
+          answer: result.result?.summary || result.result?.answer || "Live Knowledge provider test completed.",
+          answerMode: result.result?.status || result.testStatus || "checked",
+          retrievalStatus: result.result?.status || result.testStatus || "checked",
+          sourceBacked: result.result?.status === "source-backed"
+        };
+      }
+      nexusKnowledgeActionStatus = result.testStatus === "source-backed"
+        ? "Live Knowledge provider returned citation-ready sources."
+        : "Live Knowledge provider test did not return source-backed citations; no fake citations were shown.";
+      await refreshNexusKnowledgeRail({ rerender: true });
       return true;
     }
     if (action === "ask") {

@@ -28119,6 +28119,7 @@ function nexusKnowledgeSourceList() {
 
 const NEXUS_LIVE_KNOWLEDGE_PROVIDER_PRIORITY = Object.freeze(["tavily", "brave", "exa", "generic"]);
 const NEXUS_LIVE_KNOWLEDGE_ALLOWED_PROVIDERS = Object.freeze(["auto", "tavily", "brave", "exa", "generic"]);
+let nexusLiveKnowledgeLastTestResult = null;
 const NEXUS_LIVE_KNOWLEDGE_SHARED_DOMAINS = Object.freeze([
   "agriculture", "crop", "farm", "field", "logistics", "route",
   "training", "workforce", "employer",
@@ -28181,9 +28182,9 @@ function nexusLiveKnowledgeCategoryForDomain(domain = "general") {
 
 function nexusLiveKnowledgeProviderCatalog(env = process.env) {
   return [
-    { provider: "tavily", requiredEnvVars: ["TAVILY_API_KEY"], fallbackEnvVars: ["NEXUS_LIVE_KNOWLEDGE_API_KEY"], citationCapability: true, configured: Boolean(String(env.TAVILY_API_KEY || "").trim()) || nexusLiveKnowledgeGenericApiKeyApplies("tavily", env) },
-    { provider: "brave", requiredEnvVars: ["BRAVE_SEARCH_API_KEY"], fallbackEnvVars: ["NEXUS_LIVE_KNOWLEDGE_API_KEY"], citationCapability: true, configured: Boolean(String(env.BRAVE_SEARCH_API_KEY || "").trim()) || nexusLiveKnowledgeGenericApiKeyApplies("brave", env) },
-    { provider: "exa", requiredEnvVars: ["EXA_API_KEY"], fallbackEnvVars: ["NEXUS_LIVE_KNOWLEDGE_API_KEY"], citationCapability: true, configured: Boolean(String(env.EXA_API_KEY || "").trim()) || nexusLiveKnowledgeGenericApiKeyApplies("exa", env) },
+    { provider: "tavily", requiredEnvVars: ["TAVILY_API_KEY"], fallbackEnvVars: ["NEXUS_LIVE_KNOWLEDGE_API_KEY"], endpointEnvVars: [], citationCapability: true, configured: Boolean(String(env.TAVILY_API_KEY || "").trim()) || nexusLiveKnowledgeGenericApiKeyApplies("tavily", env) },
+    { provider: "brave", requiredEnvVars: ["BRAVE_SEARCH_API_KEY"], fallbackEnvVars: ["NEXUS_LIVE_KNOWLEDGE_API_KEY"], endpointEnvVars: [], citationCapability: true, configured: Boolean(String(env.BRAVE_SEARCH_API_KEY || "").trim()) || nexusLiveKnowledgeGenericApiKeyApplies("brave", env) },
+    { provider: "exa", requiredEnvVars: ["EXA_API_KEY"], fallbackEnvVars: ["NEXUS_LIVE_KNOWLEDGE_API_KEY"], endpointEnvVars: [], citationCapability: true, configured: Boolean(String(env.EXA_API_KEY || "").trim()) || nexusLiveKnowledgeGenericApiKeyApplies("exa", env) },
     { provider: "generic", requiredEnvVars: ["NEXUS_LIVE_KNOWLEDGE_API_KEY", "NEXUS_LIVE_KNOWLEDGE_PROVIDER_ENDPOINT"], fallbackEnvVars: [], citationCapability: true, configured: Boolean(String(env.NEXUS_LIVE_KNOWLEDGE_API_KEY || "").trim() && String(env.NEXUS_LIVE_KNOWLEDGE_PROVIDER_ENDPOINT || "").trim()) }
   ].map(item => ({
     ...item,
@@ -28314,6 +28315,7 @@ function nexusKnowledgeProviderStatus(env = process.env) {
     safeDomains: NEXUS_LIVE_KNOWLEDGE_SHARED_DOMAINS,
     safeDomainsSupported: NEXUS_LIVE_KNOWLEDGE_SHARED_DOMAINS,
     timestamp: new Date().toISOString(),
+    lastTestResult: nexusLiveKnowledgeLastTestResult,
     maxResults: Number(env.NEXUS_LIVE_KNOWLEDGE_MAX_RESULTS || 5),
     timeoutMs: Number(env.NEXUS_LIVE_KNOWLEDGE_TIMEOUT_MS || 9000),
     safeMode: String(env.NEXUS_LIVE_KNOWLEDGE_SAFE_MODE || "true").toLowerCase() !== "false",
@@ -28637,41 +28639,16 @@ function buildNexusKnowledgeDisabledResult(question = "", category = "general") 
 
 async function runNexusKnowledgeProviderQuery(question = "", category = "general") {
   const query = extractKnowledgeSearchQuery(question);
-  const attempts = [
-    () => fetchConfiguredLiveKnowledgeEndpoint(query, question),
-    () => fetchProviderBridgeKnowledge(query, question),
-    () => fetchTavilyKnowledge(query),
-    () => fetchBraveKnowledge(query),
-    () => fetchExaKnowledge(query),
-    () => fetchOpenAiWebKnowledge(query)
-  ];
-  const errors = [];
-  for (const attempt of attempts) {
-    try {
-      const result = await attempt();
-      const citations = normalizeNexusKnowledgeCitations(result?.results || []);
-      if (result && citations.length) {
-        return {
-          ok: true,
-          provider: result.provider || "web-search",
-          query,
-          answer: sanitizePilotText(result.answer || citations.map(item => item.snippet).filter(Boolean).slice(0, 2).join(" "), 1400),
-          citations,
-          retrievalCheckedAt: new Date().toISOString()
-        };
-      }
-      if (result && !citations.length) errors.push(`${result.provider || "provider"} returned no citable sources`);
-    } catch (error) {
-      errors.push(error.message || String(error));
-    }
-  }
+  const result = await runNexusLiveKnowledgeProviderQuery(query, "auto", process.env);
   return {
-    ok: false,
-    provider: "web-search",
+    ok: Boolean(result.ok && Array.isArray(result.citations) && result.citations.length),
+    provider: result.provider || "web-search",
     query,
-    errors: errors.slice(0, 3),
-    providerError: errors[0] || "No configured provider returned citable sources.",
-    retrievalCheckedAt: new Date().toISOString()
+    answer: sanitizePilotText(result.answer || "", 1400),
+    citations: Array.isArray(result.citations) ? result.citations : [],
+    errors: Array.isArray(result.errors) ? result.errors : [],
+    providerError: result.providerError || "",
+    retrievalCheckedAt: result.retrievedAt || new Date().toISOString()
   };
 }
 
@@ -28955,7 +28932,7 @@ async function nexusIntelligenceAsk(db, body = {}, user = null, env = process.en
 async function runNexusLiveKnowledgeProviderQuery(query = "", provider = "auto", env = process.env) {
   const selectedProvider = String(provider || "auto").toLowerCase();
   const status = nexusKnowledgeProviderStatus(env);
-  const chosen = selectedProvider === "auto" ? status.provider : selectedProvider;
+  const chosen = selectedProvider === "auto" || selectedProvider === "not-configured" ? status.provider : selectedProvider;
   const attempts = [];
   if (chosen === "tavily") attempts.push(() => fetchTavilyKnowledge(query));
   if (chosen === "brave") attempts.push(() => fetchBraveKnowledge(query));
@@ -28973,6 +28950,10 @@ async function runNexusLiveKnowledgeProviderQuery(query = "", provider = "auto",
         continue;
       }
       const citations = normalizeNexusKnowledgeCitations(result.results || []);
+      if (!citations.length) {
+        errors.push(`${result.provider || chosen || "provider"} returned no citable source URLs`);
+        continue;
+      }
       return {
         ok: true,
         provider: result.provider || chosen || "web-search",
@@ -28992,9 +28973,56 @@ async function runNexusLiveKnowledgeProviderQuery(query = "", provider = "auto",
     provider: chosen || "web-search",
     query,
     providerStatus: "provider-error",
-    providerError: errors[0] || "No configured live knowledge provider returned a safe result.",
+    providerError: errors[0] || "No configured provider returned citable sources.",
     errors: errors.slice(0, 3),
     retrievedAt: new Date().toISOString()
+  };
+}
+
+async function nexusLiveKnowledgeProviderTest(db, body = {}, user = null, env = process.env) {
+  const query = sanitizePilotText(body.query || "climate-smart agriculture Africa", 300);
+  const statusBefore = nexusKnowledgeProviderStatus(env);
+  if (!statusBefore.enabled || !statusBefore.configured) {
+    nexusLiveKnowledgeLastTestResult = {
+      ok: false,
+      query,
+      provider: statusBefore.provider || "not-configured",
+      status: !statusBefore.enabled ? "disabled" : "missing_config",
+      missingEnvVars: statusBefore.missingEnvVars || statusBefore.missingEnv || [],
+      testedAt: new Date().toISOString(),
+      noFakeCitations: true,
+      noSecretValuesReturned: true
+    };
+    return {
+      ok: true,
+      testStatus: nexusLiveKnowledgeLastTestResult.status,
+      statusSnapshot: nexusKnowledgeProviderStatus(env),
+      result: nexusLiveKnowledgeLastTestResult,
+      noExecutionAuthorized: true
+    };
+  }
+  const result = await nexusLiveKnowledgeAllModesQuery(db, {
+    query,
+    domain: body.domain || "agriculture",
+    mode: body.mode || "provider_test"
+  }, user, env);
+  nexusLiveKnowledgeLastTestResult = {
+    ok: result.status === "source-backed",
+    query,
+    provider: result.provider,
+    status: result.status,
+    citationCount: Array.isArray(result.citations) ? result.citations.length : 0,
+    providerError: result.providerError || "",
+    testedAt: new Date().toISOString(),
+    noFakeCitations: true,
+    noSecretValuesReturned: true
+  };
+  return {
+    ok: true,
+    testStatus: result.status,
+    statusSnapshot: nexusKnowledgeProviderStatus(env),
+    result,
+    noExecutionAuthorized: true
   };
 }
 
@@ -32296,6 +32324,13 @@ async function api(req, res, url) {
 
   if (url.pathname === "/api/nexus/live-knowledge/query" && req.method === "POST") {
     const result = await nexusLiveKnowledgeAllModesQuery(db, await readBody(req), user, process.env);
+    if (!result.ok) return send(res, 400, result);
+    await writeDb(db);
+    return send(res, 200, result);
+  }
+
+  if (url.pathname === "/api/nexus/live-knowledge/test" && req.method === "POST") {
+    const result = await nexusLiveKnowledgeProviderTest(db, await readBody(req), user, process.env);
     if (!result.ok) return send(res, 400, result);
     await writeDb(db);
     return send(res, 200, result);
