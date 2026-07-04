@@ -20409,11 +20409,13 @@ async function runNexusKnowledgeQuery(command = "", options = {}) {
   const workflowId = normalizeNexusWorkflowId(options.modeId || options.workflowId || "", "") || "resource-assistant";
   nexusActiveWorkflowState = {
     id: workflowId,
+    functionId: options.functionId || "live-knowledge",
     command: question,
     source: options.source || "live-knowledge",
     workflow: "live-knowledge",
     action: "research",
-    openedAt: Date.now()
+    openedAt: Date.now(),
+    minimized: false
   };
   saveNexusRuntimeMemory();
   nexusKnowledgeActionStatus = "Checking the knowledge rail. Nexus will cite sources only if retrieval is configured and returns citable results.";
@@ -21541,12 +21543,219 @@ const NEXUS_HOME_MODE_PANEL_FIELDS = Object.freeze({
 
 let nexusActiveWorkflowState = {
   id: "",
+  functionId: "",
   command: "",
   source: "",
   workflow: "",
   action: "",
-  openedAt: 0
+  openedAt: 0,
+  minimized: false
 };
+
+const NEXUS_FUNCTION_WINDOW_IDS = Object.freeze([
+  "virtual-care", "telehealth", "video-visit", "chronic-disease", "diabetes", "hypertension", "obesity", "rpm", "rtm", "physician-review", "follow-up", "emergency-guidance",
+  "pharmacy", "pharmacy-referral", "medication-review", "refill-coordination", "medication-adherence", "diabetes-supplies",
+  "mobile-clinic", "vitals-check", "diabetes-follow-up", "hypertension-follow-up", "obesity-support", "rural-clinic", "community-outreach",
+  "agriculture", "agronomy", "crop-issue", "pest-disease", "soil-fertilizer", "irrigation", "climate-smart-agriculture", "farmer-training", "drone-mission", "farm-visit",
+  "agritrade", "marketplace", "vendor-inquiry", "buyer-seller", "produce-listing", "input-sourcing", "quote-request",
+  "logistics", "route-support", "pickup-request", "delivery-request", "cold-chain", "storage", "dispatch-gate",
+  "workforce", "training", "digital-literacy", "ai-training", "job-readiness", "youth-workforce", "employer-referral", "certification", "lms-handoff",
+  "live-knowledge", "internet", "research", "source-backed-answer",
+  "maps", "field-visit", "route-planning", "location-sharing",
+  "email", "sms", "whatsapp", "phone-handoff", "telegram", "communications-status",
+  "music", "media", "youtube", "media-handoff",
+  "offline", "low-bandwidth", "offline-queue", "sync-status", "local-fallback",
+  "admin-review", "provider-queue", "vendor-queue", "care-team-queue", "pharmacy-queue", "mobile-clinic-queue", "agronomy-queue", "marketplace-queue", "logistics-queue", "workforce-queue", "case-timeline", "provider-response-inbox",
+  "payment", "payment-gate", "booking", "booking-gate", "dispatch", "admin-approval"
+]);
+
+const NEXUS_FUNCTION_WINDOW_ROUTE_MAP = Object.freeze({
+  "virtual-care": "telehealth-intake",
+  telehealth: "telehealth-intake",
+  "video-visit": "telehealth-intake",
+  "chronic-disease": "chronic-care",
+  "physician-review": "provider-support",
+  "follow-up": "reminders",
+  "emergency-guidance": "dispatch-gate",
+  pharmacy: "pharmacy-support",
+  "pharmacy-referral": "pharmacy-support",
+  "medication-review": "pharmacy-support",
+  "refill-coordination": "pharmacy-support",
+  "medication-adherence": "pharmacy-support",
+  "diabetes-supplies": "pharmacy-support",
+  "vitals-check": "mobile-clinic",
+  "diabetes-follow-up": "diabetes",
+  "hypertension-follow-up": "hypertension",
+  "obesity-support": "obesity",
+  "rural-clinic": "mobile-clinic",
+  "community-outreach": "mobile-clinic",
+  agronomy: "agriculture",
+  "crop-issue": "agriculture",
+  "pest-disease": "agriculture",
+  "soil-fertilizer": "agriculture",
+  irrigation: "agriculture",
+  "climate-smart-agriculture": "agriculture",
+  "farmer-training": "learning",
+  "drone-mission": "field-visit",
+  "farm-visit": "field-visit",
+  marketplace: "agritrade",
+  "vendor-inquiry": "agritrade",
+  "buyer-seller": "agritrade",
+  "produce-listing": "agritrade",
+  "input-sourcing": "agritrade",
+  "quote-request": "agritrade",
+  "route-support": "logistics",
+  "pickup-request": "logistics",
+  "delivery-request": "logistics",
+  "cold-chain": "logistics",
+  storage: "logistics",
+  "digital-literacy": "learning",
+  "ai-training": "training",
+  "job-readiness": "jobs",
+  "youth-workforce": "training",
+  "employer-referral": "workforce",
+  certification: "training",
+  "lms-handoff": "training",
+  "live-knowledge": "resource-assistant",
+  internet: "resource-assistant",
+  research: "resource-assistant",
+  "source-backed-answer": "resource-assistant",
+  "field-visit": "maps",
+  "route-planning": "maps",
+  "location-sharing": "maps",
+  email: "communications",
+  sms: "communications",
+  whatsapp: "communications",
+  "phone-handoff": "communications",
+  telegram: "communications",
+  "communications-status": "communications",
+  music: "media",
+  youtube: "media",
+  "media-handoff": "media",
+  "low-bandwidth": "offline",
+  "offline-queue": "offline",
+  "sync-status": "offline",
+  "local-fallback": "offline",
+  "provider-queue": "provider-support",
+  "vendor-queue": "agritrade",
+  "care-team-queue": "provider-support",
+  "pharmacy-queue": "pharmacy-support",
+  "mobile-clinic-queue": "mobile-clinic",
+  "agronomy-queue": "agriculture",
+  "marketplace-queue": "agritrade",
+  "logistics-queue": "logistics",
+  "workforce-queue": "workforce",
+  "case-timeline": "provider-support",
+  "provider-response-inbox": "provider-support",
+  payment: "payment-gate",
+  booking: "booking-gate",
+  dispatch: "dispatch-gate",
+  "admin-approval": "payment-gate"
+});
+
+const NEXUS_FUNCTION_WINDOW_LABELS = Object.freeze({
+  "virtual-care": "Virtual Care", telehealth: "Telehealth", "video-visit": "Video Visit", "chronic-disease": "Chronic Disease Support", diabetes: "Diabetes Support", hypertension: "Hypertension Support", obesity: "Obesity Support", rpm: "RPM Reading Intake", rtm: "RTM Update Intake", "physician-review": "Physician Review", "follow-up": "Follow-up", "emergency-guidance": "Emergency Guidance",
+  pharmacy: "Pharmacy Support", "pharmacy-referral": "Pharmacy Referral", "medication-review": "Medication Review", "refill-coordination": "Refill Coordination", "medication-adherence": "Medication Adherence", "diabetes-supplies": "Diabetes Supplies",
+  "mobile-clinic": "Mobile Clinic", "vitals-check": "Vitals Check", "diabetes-follow-up": "Diabetes Follow-up", "hypertension-follow-up": "Hypertension Follow-up", "obesity-support": "Obesity Support", "rural-clinic": "Rural Clinic", "community-outreach": "Community Outreach",
+  agriculture: "Agriculture Help", agronomy: "Agronomy Support", "crop-issue": "Crop Issue", "pest-disease": "Pest / Disease", "soil-fertilizer": "Soil / Fertilizer", irrigation: "Irrigation", "climate-smart-agriculture": "Climate-smart Agriculture", "farmer-training": "Farmer Training", "drone-mission": "Drone Mission Prep", "farm-visit": "Farm Visit",
+  agritrade: "AgriTrade Marketplace", marketplace: "Marketplace", "vendor-inquiry": "Vendor Inquiry", "buyer-seller": "Buyer / Seller", "produce-listing": "Produce Listing", "input-sourcing": "Input Sourcing", "quote-request": "Quote Request",
+  logistics: "Logistics", "route-support": "Route Support", "pickup-request": "Pickup Request", "delivery-request": "Delivery Request", "cold-chain": "Cold Chain", storage: "Storage", "dispatch-gate": "Dispatch Gate",
+  workforce: "Workforce", training: "Training", "digital-literacy": "Digital Literacy", "ai-training": "AI Training", "job-readiness": "Job Readiness", "youth-workforce": "Youth Workforce", "employer-referral": "Employer Referral", certification: "Certification", "lms-handoff": "LMS Handoff",
+  "live-knowledge": "Live Knowledge Research", internet: "Internet Research", research: "Research", "source-backed-answer": "Source-backed Answer",
+  maps: "Maps", "field-visit": "Field Visit", "route-planning": "Route Planning", "location-sharing": "Location Sharing Gate",
+  email: "Email Draft", sms: "SMS Draft", whatsapp: "WhatsApp Draft", "phone-handoff": "Phone Handoff", telegram: "Telegram Draft", "communications-status": "Communications Status",
+  music: "Music", media: "Media", youtube: "YouTube Handoff", "media-handoff": "Media Handoff",
+  offline: "Offline Queue", "low-bandwidth": "Low-bandwidth Mode", "offline-queue": "Offline Queue", "sync-status": "Sync Status", "local-fallback": "Local Fallback",
+  "admin-review": "Admin Review", "provider-queue": "Provider Queue", "vendor-queue": "Vendor Queue", "care-team-queue": "Care Team Queue", "pharmacy-queue": "Pharmacy Queue", "mobile-clinic-queue": "Mobile Clinic Queue", "agronomy-queue": "Agronomy Queue", "marketplace-queue": "Marketplace Queue", "logistics-queue": "Logistics Queue", "workforce-queue": "Workforce Queue", "case-timeline": "Case Timeline", "provider-response-inbox": "Provider Response Inbox",
+  payment: "Payment Gate", "payment-gate": "Payment Gate", booking: "Booking Gate", "booking-gate": "Booking Gate", dispatch: "Dispatch Gate", "admin-approval": "Admin Approval"
+});
+
+const NEXUS_FUNCTION_WINDOW_CATEGORY_FIELDS = Object.freeze({
+  healthcare: [
+    ["condition", "Condition / concern", "Diabetes, hypertension, obesity, symptoms, follow-up"],
+    ["readings", "RPM / RTM readings", "BP, glucose, weight, pulse, therapy update"],
+    ["redFlags", "Red flags", "Chest pain, severe breathing trouble, confusion, severe weakness"],
+    ["consent", "Consent / confirmation", "What approval is needed before sharing?"]
+  ],
+  pharmacy: [
+    ["need", "Pharmacy need", "Medication review, refill question, supplies, adherence"],
+    ["medication", "Medication / supply", "Name as written, if known"],
+    ["allergies", "Allergies", "Known allergies or unsure"],
+    ["consent", "Consent / confirmation", "Required before any pharmacy handoff"]
+  ],
+  "mobile-clinic": [
+    ["visitNeed", "Visit need", "Vitals, chronic care, pharmacy, education, outreach"],
+    ["serviceArea", "Service area", "Typed community or region"],
+    ["readings", "Readings / symptoms", "Vitals, symptoms, access barriers"],
+    ["redFlags", "Red flags", "Urgent symptoms or emergency boundary"]
+  ],
+  agriculture: [
+    ["crop", "Crop", "Tomato, maize, cassava, rice..."],
+    ["region", "Country / region", "Country, county, district, or farm context"],
+    ["problem", "Problem description", "Pest, disease, soil, irrigation, yield, training"],
+    ["observations", "Field observations", "Leaves, roots, water, fertilizer, weather notes"]
+  ],
+  marketplace: [
+    ["inquiryType", "Inquiry type", "Buy, sell, compare, vendor question, quote request"],
+    ["product", "Product / service", "Crop, input, equipment, service"],
+    ["role", "Buyer / seller role", "Buyer, seller, farmer, vendor, partner"],
+    ["quantityRegion", "Quantity / region", "Amount, location, timing"]
+  ],
+  logistics: [
+    ["requestType", "Request type", "Route, pickup, delivery, cold chain, storage"],
+    ["pickupDropoff", "Pickup / dropoff", "Typed origin and destination only"],
+    ["productTiming", "Product / timing", "Item, storage need, date/time window"],
+    ["coldChain", "Cold-chain need", "None, chilled, frozen, unknown"]
+  ],
+  workforce: [
+    ["goal", "Goal", "Training, job readiness, employer referral, certification"],
+    ["skillArea", "Skill area", "Agriculture, healthcare, digital, logistics, business"],
+    ["regionLanguage", "Region / language", "Optional region and preferred language"],
+    ["experience", "Experience level", "New, some experience, experienced"]
+  ],
+  research: [
+    ["researchQuery", "Research query", "What should Nexus research with sources?"],
+    ["domain", "Domain", "Agriculture, health literacy, workforce, marketplace, logistics"],
+    ["sourceNeed", "Source need", "Current sources, citation cards, safe summary"],
+    ["reviewUse", "Use for", "Learning, planning, provider review, partner research"]
+  ],
+  maps: [
+    ["destination", "Destination / region", "Typed location only"],
+    ["visitType", "Visit type", "Farm visit, clinic visit, delivery, training"],
+    ["routeContext", "Route plan notes", "Origin, timing, constraints"],
+    ["permission", "Location-sharing gate", "No browser location unless explicitly approved later"]
+  ],
+  communications: [
+    ["channel", "Channel", "Email, SMS, WhatsApp, phone, Telegram"],
+    ["recipient", "Recipient / destination", "Name or role; private details stay reviewed"],
+    ["messagePreview", "Message preview", "Draft text or call script"],
+    ["confirmation", "Confirmation gate", "Required before any send/call"]
+  ],
+  media: [
+    ["mediaQuery", "Music / media request", "R&B, Afrobeats, gospel, study music"],
+    ["provider", "Provider", "YouTube, Spotify, Apple Music, browser search"],
+    ["handoffStatus", "Handoff status", "Provider account/link required"],
+    ["copyright", "Copyright note", "No download, rip, cache, or redistribution"]
+  ],
+  offline: [
+    ["queueItem", "Queue item", "Packet, note, reminder, fallback item"],
+    ["syncStatus", "Sync status", "Local only, retry later, configured sync"],
+    ["fallback", "Local fallback", "What should remain available offline?"],
+    ["retry", "Retry path", "Manual retry; no automatic external action"]
+  ],
+  admin: [
+    ["queueLane", "Queue lane", "Provider, vendor, care team, pharmacy, logistics, workforce"],
+    ["caseStatus", "Case / status", "Prepared, queued, blocked, response pending"],
+    ["timeline", "Timeline", "Latest review/audit status"],
+    ["followUp", "Follow-up", "Local follow-up action only"]
+  ],
+  gate: [
+    ["actionType", "Action type", "Payment, booking, dispatch, approval"],
+    ["requiredApproval", "Required approval", "User consent, admin approval, provider confirmation"],
+    ["preparedRequest", "Prepared request", "Review-only request summary"],
+    ["blockedReason", "Blocked reason", "Not executed until credentials, consent, confirmation, and audit pass"]
+  ]
+});
 
 const NEXUS_FULL_WORKFLOW_EXTRAS = Object.freeze({
   "clinical-support": {
@@ -22655,7 +22864,101 @@ function resolveNexusCapability(input = "", options = {}) {
 }
 
 function renderActiveNexusWorkspace(state = nexusActiveWorkflowState) {
+  return renderNexusFunctionWindow(state);
+}
+
+function renderNexusFunctionWindow(state = nexusActiveWorkflowState) {
   return renderNexusActiveWorkflowWorkspace(state);
+}
+
+function closeNexusFunctionWindow(options = {}) {
+  nexusActiveWorkflowState = null;
+  if (options.resetResult !== false) nexusAgenticBrainLastResult = buildNexusCapabilityOverviewResult(options.command || "What can Nexus do?");
+  saveNexusRuntimeMemory();
+  if (experienceMode === "user" || document.body.classList.contains("user-mode")) {
+    renderUserWorkspace();
+    $("#nexusCommandCenterInput")?.focus?.({ preventScroll: true });
+  }
+  return true;
+}
+
+function minimizeNexusFunctionWindow() {
+  if (!nexusActiveWorkflowState?.id) return false;
+  nexusActiveWorkflowState = {
+    ...nexusActiveWorkflowState,
+    minimized: true,
+    updatedAt: Date.now()
+  };
+  saveNexusRuntimeMemory();
+  if (experienceMode === "user" || document.body.classList.contains("user-mode")) renderUserWorkspace();
+  return true;
+}
+
+function restoreNexusFunctionWindow(functionIdOverride = "") {
+  const overrideId = normalizeNexusFunctionId(functionIdOverride, nexusActiveWorkflowState?.command || "");
+  if (!nexusActiveWorkflowState?.id && !nexusActiveWorkflowState?.functionId && !overrideId) return false;
+  const functionId = overrideId || normalizeNexusFunctionId(nexusActiveWorkflowState.functionId || nexusActiveWorkflowState.workflow || nexusActiveWorkflowState.id, nexusActiveWorkflowState.command || "");
+  const workflowId = nexusActiveWorkflowState.id || NEXUS_FUNCTION_WINDOW_ROUTE_MAP[functionId] || normalizeNexusWorkflowId(functionId, nexusActiveWorkflowState.command || "") || "resource-assistant";
+  nexusActiveWorkflowState = {
+    ...(nexusActiveWorkflowState || {}),
+    id: workflowId,
+    functionId,
+    command: nexusActiveWorkflowState?.command || NEXUS_FUNCTION_WINDOW_LABELS[functionId] || "Open Nexus function",
+    source: nexusActiveWorkflowState?.source || "function-window-dock-restore",
+    workflow: nexusActiveWorkflowState?.workflow || functionId,
+    action: nexusActiveWorkflowState?.action || "restore",
+    openedAt: nexusActiveWorkflowState?.openedAt || Date.now(),
+    minimized: false,
+    updatedAt: Date.now()
+  };
+  saveNexusRuntimeMemory();
+  if (experienceMode === "user" || document.body.classList.contains("user-mode")) {
+    renderUserWorkspace();
+    scheduleNexusActiveWorkflowFocus({ instant: true });
+  }
+  return true;
+}
+
+function openNexusFunctionWindow(functionId, options = {}) {
+  const command = options.command || options.response || NEXUS_FUNCTION_WINDOW_LABELS[functionId] || functionId || "";
+  const resolved = resolveNexusFunctionIntent(command, { ...options, functionId });
+  const targetFunctionId = resolved.functionId || normalizeNexusFunctionId(functionId, command) || "live-knowledge";
+  const definition = nexusFunctionWindowDefinition(targetFunctionId, command);
+  const workflowId = definition?.id || NEXUS_FUNCTION_WINDOW_ROUTE_MAP[targetFunctionId] || normalizeNexusWorkflowId(options.workflowId || targetFunctionId, command) || "resource-assistant";
+  nexusActiveWorkflowState = {
+    id: workflowId,
+    functionId: targetFunctionId,
+    command,
+    source: options.source || "nexus-function-window-system",
+    workflow: options.workflow || targetFunctionId,
+    action: options.action || resolved.type || "open",
+    openedAt: Date.now(),
+    minimized: false,
+    transcript: options.transcript || (options.source === "voice-command" ? command : "")
+  };
+  saveNexusRuntimeMemory();
+  const panelResult = buildNexusHomeModePanelResult(workflowId, command);
+  nexusAgenticBrainLastResult = options.preparedResult || panelResult || {
+    ok: true,
+    status: "nexus_function_window_opened",
+    mode: definition?.presentation?.title || "Nexus function",
+    message: `${definition?.presentation?.title || "Nexus function"} opened in a focused function window. No external action was executed.`,
+    preparedCards: [{
+      type: "nexus_function_window",
+      title: definition?.presentation?.title || "Nexus function",
+      status: "focused window open",
+      localOnly: true,
+      noExecutionAuthorized: true
+    }],
+    noExecutionAuthorized: true,
+    localOnly: true,
+    source: "nexus_function_window_system"
+  };
+  if (experienceMode === "user" || document.body.classList.contains("user-mode")) {
+    renderUserWorkspace();
+    scheduleNexusActiveWorkflowFocus({ instant: options.instant !== false });
+  }
+  return true;
 }
 
 function openNexusCapability(capabilityId, options = {}) {
@@ -22663,9 +22966,17 @@ function openNexusCapability(capabilityId, options = {}) {
   if (!capability) return false;
   const command = options.command || capability.title || capability.id;
   if (capability.id === "live-knowledge" || capability.action === "research") {
+    openNexusFunctionWindow("live-knowledge", {
+      ...options,
+      command,
+      source: options.source || "agentic-capability",
+      action: "research",
+      instant: true
+    });
     runNexusKnowledgeQuery(command, {
       source: options.source || "agentic-capability",
       workflowId: capability.workflowId || "resource-assistant",
+      functionId: "live-knowledge",
       sourceSurface: options.sourceSurface || "active_workspace"
     }).catch(error => {
       nexusKnowledgeActionStatus = error.message || "Live Knowledge needs attention.";
@@ -22675,33 +22986,20 @@ function openNexusCapability(capabilityId, options = {}) {
   }
   if (capability.action === "continue") return continueLastNexusWorkflow() || openNexusWorkflow(capability.workflowId, { command, source: options.source || "agentic-capability", action: capability.action });
   if (capability.action === "status" || capability.action === "review-queue") {
-    nexusActiveWorkflowState = {
-      id: capability.workflowId || "resource-assistant",
+    return openNexusFunctionWindow(capability.id === "admin-review" ? "admin-review" : capability.workflowId || "live-knowledge", {
+      ...options,
       command,
       source: options.source || "agentic-capability",
-      workflow: capability.id,
       action: capability.action || "open",
-      openedAt: Date.now()
-    };
-    saveNexusRuntimeMemory();
-    nexusAgenticBrainLastResult = {
-      ok: true,
-      status: `nexus_${capability.id}_opened`,
-      mode: capability.title,
-      message: `${capability.title} is open in the active workspace. External actions remain gated until configured and confirmed.`,
-      preparedCards: [{ type: capability.id, title: capability.title, status: "active workspace open", localOnly: true }],
-      noExecutionAuthorized: true,
-      localOnly: true,
-      source: "nexus_agentic_all_modes_launcher"
-    };
-    renderUserWorkspace();
-    scheduleNexusActiveWorkflowFocus({ instant: Boolean(options.instant) });
-    return true;
+      workflow: capability.id,
+      instant: true
+    });
   }
-  return openNexusWorkflow(capability.workflowId || capability.id, {
+  return openNexusFunctionWindow(capability.id, {
     command,
     source: options.source || "agentic-capability",
     action: capability.action || "open",
+    workflowId: capability.workflowId || capability.id,
     workflow: capability.id,
     instant: options.instant,
     preparedResult: options.preparedResult
@@ -22709,12 +23007,34 @@ function openNexusCapability(capabilityId, options = {}) {
 }
 
 function launchCapabilityFromAskNexus(input = "") {
+  const functionIntent = resolveNexusFunctionIntent(input, { source: "typed-command" });
+  if (functionIntent.functionId) {
+    const opened = openNexusFunctionWindow(functionIntent.functionId, { command: input, source: "typed-command", sourceSurface: "ask_nexus" });
+    if (functionIntent.functionId === "live-knowledge") {
+      runNexusKnowledgeQuery(input, { source: "typed-command", functionId: "live-knowledge", sourceSurface: "ask_nexus" }).catch(error => {
+        nexusKnowledgeActionStatus = error.message || "Live Knowledge needs attention.";
+        if (experienceMode === "user") renderUserWorkspace();
+      });
+    }
+    return opened;
+  }
   const capability = resolveNexusCapability(input);
   return capability ? openNexusCapability(capability.id, { command: input, source: "typed-command", sourceSurface: "ask_nexus" }) : false;
 }
 
 function launchCapabilityFromVoice(transcript = "") {
   const capability = resolveNexusCapability(transcript);
+  const functionIntent = resolveNexusFunctionIntent(transcript, { source: "voice-command" });
+  if (functionIntent.functionId) {
+    const opened = openNexusFunctionWindow(functionIntent.functionId, { command: transcript, transcript, source: "voice-command", sourceSurface: "voice_audio" });
+    if (functionIntent.functionId === "live-knowledge") {
+      runNexusKnowledgeQuery(transcript, { source: "voice-command", functionId: "live-knowledge", sourceSurface: "voice_audio" }).catch(error => {
+        nexusKnowledgeActionStatus = error.message || "Live Knowledge needs attention.";
+        if (experienceMode === "user") renderUserWorkspace();
+      });
+    }
+    return opened;
+  }
   return capability ? openNexusCapability(capability.id, { command: transcript, source: "voice-command", sourceSurface: "voice_audio" }) : false;
 }
 
@@ -22729,6 +23049,10 @@ function launchCapabilityFromClick(eventOrElement) {
 
 function resolveNexusIntent(input, options = {}) {
   const text = String(input || "").trim();
+  const functionId = normalizeNexusFunctionId(options.functionId || options.modeId || options.workflowId || "", text);
+  if (functionId) {
+    return { type: functionId === "live-knowledge" ? "research" : "function-window", functionId, workflowId: NEXUS_FUNCTION_WINDOW_ROUTE_MAP[functionId] || normalizeNexusWorkflowId(functionId, text), text };
+  }
   const capability = resolveNexusCapability(text, options);
   if (capability) return { type: capability.action === "research" ? "research" : "workflow", workflowId: capability.workflowId, capabilityId: capability.id, text };
   const workflowId = normalizeNexusWorkflowId(options.workflowId || "", text) || detectNexusHomeModePanelId(text);
@@ -22742,6 +23066,25 @@ function resolveNexusIntent(input, options = {}) {
     return { type: "review-queue", workflowId: "review-queue", text };
   }
   return { type: workflowId ? "workflow" : "unknown", workflowId, text };
+}
+
+function resolveNexusFunctionIntent(input, options = {}) {
+  const text = String(input || "").trim();
+  const explicit = normalizeNexusFunctionId(options.functionId || options.modeId || options.workflowId || options.capabilityId || "", text);
+  if (explicit) return { type: explicit === "live-knowledge" ? "research" : "function-window", functionId: explicit, workflowId: NEXUS_FUNCTION_WINDOW_ROUTE_MAP[explicit] || normalizeNexusWorkflowId(explicit, text), text };
+  const capability = resolveNexusCapability(text, options);
+  const fromCapability = normalizeNexusFunctionId(capability?.id || capability?.workflowId || "", text);
+  if (fromCapability) return { type: fromCapability === "live-knowledge" ? "research" : "function-window", functionId: fromCapability, workflowId: NEXUS_FUNCTION_WINDOW_ROUTE_MAP[fromCapability] || capability?.workflowId || normalizeNexusWorkflowId(fromCapability, text), text };
+  const inferred = normalizeNexusFunctionId("", text);
+  return { type: inferred ? "function-window" : "unknown", functionId: inferred, workflowId: inferred ? (NEXUS_FUNCTION_WINDOW_ROUTE_MAP[inferred] || normalizeNexusWorkflowId(inferred, text)) : "", text };
+}
+
+if (typeof window !== "undefined") {
+  window["openNexusFunctionWindow"] = openNexusFunctionWindow;
+  window["closeNexusFunctionWindow"] = closeNexusFunctionWindow;
+  window["minimizeNexusFunctionWindow"] = minimizeNexusFunctionWindow;
+  window["restoreNexusFunctionWindow"] = restoreNexusFunctionWindow;
+  window["resolveNexusFunctionIntent"] = resolveNexusFunctionIntent;
 }
 
 function updateNexusWorkflowState(workflowId, data = {}) {
@@ -23459,6 +23802,7 @@ function normalizeNexusWorkflowId(workflowId = "", command = "") {
     .replace(/^core-/, "")
     .replace(/^suggested-\d+$/, "");
   const text = `${raw} ${command || ""}`.toLowerCase();
+  if (NEXUS_FUNCTION_WINDOW_IDS.includes(raw)) return NEXUS_FUNCTION_WINDOW_ROUTE_MAP[raw] || raw;
   if (NEXUS_HOME_MODE_IDS.includes(raw)) return raw;
   if (nexusAllAgenticWorkflows().some(item => item.id === raw)) return raw;
   if (raw === "health") return "chronic-care";
@@ -23505,6 +23849,142 @@ function normalizeNexusWorkflowId(workflowId = "", command = "") {
   if (/\b(message|messages|sms|whatsapp|telegram|email|call|communications?)\b/.test(text)) return "communications";
   if (/\b(resource assistant|source|citation|internet resource|knowledge)\b/.test(text)) return "resource-assistant";
   return raw || "";
+}
+
+function normalizeNexusFunctionId(functionId = "", command = "") {
+  const raw = String(functionId || "").toLowerCase().trim()
+    .replace(/^sidebar-/, "")
+    .replace(/^core-/, "")
+    .replace(/^suggested-\d+$/, "")
+    .replace(/^provider-support$/, "physician-review")
+    .replace(/^provider-video$/, "video-visit")
+    .replace(/^pharmacy-support$/, "pharmacy")
+    .replace(/^telehealth-intake$/, "telehealth")
+    .replace(/^chronic-care$/, "chronic-disease")
+    .replace(/^messages$/, "communications-status");
+  if (NEXUS_FUNCTION_WINDOW_IDS.includes(raw)) return raw;
+  const text = `${raw} ${command || ""}`.toLowerCase();
+  if (isNexusLiveKnowledgeQuestion(text) || /\b(internet|research|source-backed|sources|citations)\b/.test(text)) return "live-knowledge";
+  if (/\b(diabetes follow|diabetes follow-up)\b/.test(text)) return "diabetes-follow-up";
+  if (/\b(hypertension follow|blood pressure follow)\b/.test(text)) return "hypertension-follow-up";
+  if (/\b(obesity support|weight support)\b/.test(text)) return "obesity-support";
+  if (/\b(diabetes|blood sugar|glucose)\b/.test(text)) return "diabetes";
+  if (/\b(hypertension|blood pressure|bp)\b/.test(text)) return "hypertension";
+  if (/\b(obesity|weight)\b/.test(text)) return "obesity";
+  if (/\b(remote patient monitoring|rpm|manual vitals)\b/.test(text)) return "rpm";
+  if (/\b(remote therapeutic monitoring|rtm|therapy update)\b/.test(text)) return "rtm";
+  if (/\b(video visit|daily room|video room)\b/.test(text)) return "video-visit";
+  if (/\b(telehealth|virtual care|doctor video|clinic intake|health intake)\b/.test(text)) return "telehealth";
+  if (/\b(physician|provider review|provider queue|provider bridge|care team)\b/.test(text)) return "physician-review";
+  if (/\b(emergency|urgent help|red flag)\b/.test(text)) return "emergency-guidance";
+  if (/\b(refill)\b/.test(text)) return "refill-coordination";
+  if (/\b(adherence)\b/.test(text)) return "medication-adherence";
+  if (/\b(diabetes supplies|test strips|supplies)\b/.test(text)) return "diabetes-supplies";
+  if (/\b(medication|medicine|pharmacy)\b/.test(text)) return "pharmacy";
+  if (/\b(vitals check|vitals)\b/.test(text)) return "vitals-check";
+  if (/\b(rural clinic|mobile clinic|community outreach|clinic outreach|community health worker|chw)\b/.test(text)) return "mobile-clinic";
+  if (/\b(tomato blight|crop issue|crop problem)\b/.test(text)) return "crop-issue";
+  if (/\b(pest|disease|blight)\b/.test(text)) return "pest-disease";
+  if (/\b(soil|fertilizer)\b/.test(text)) return "soil-fertilizer";
+  if (/\b(irrigation|water)\b/.test(text)) return "irrigation";
+  if (/\b(climate-smart|climate smart)\b/.test(text)) return "climate-smart-agriculture";
+  if (/\b(drone)\b/.test(text)) return "drone-mission";
+  if (/\b(farm visit|field visit)\b/.test(text)) return "farm-visit";
+  if (/\b(agronomy|agriculture|farm|crop)\b/.test(text)) return "agriculture";
+  if (/\b(vendor inquiry)\b/.test(text)) return "vendor-inquiry";
+  if (/\b(buyer|seller)\b/.test(text)) return "buyer-seller";
+  if (/\b(produce listing|listing)\b/.test(text)) return "produce-listing";
+  if (/\b(input sourcing|farm inputs)\b/.test(text)) return "input-sourcing";
+  if (/\b(quote)\b/.test(text)) return "quote-request";
+  if (/\b(agritrade|marketplace)\b/.test(text)) return "agritrade";
+  if (/\b(cold chain|cold-chain)\b/.test(text)) return "cold-chain";
+  if (/\b(pickup)\b/.test(text)) return "pickup-request";
+  if (/\b(delivery)\b/.test(text)) return "delivery-request";
+  if (/\b(storage)\b/.test(text)) return "storage";
+  if (/\b(logistics|route support)\b/.test(text)) return "logistics";
+  if (/\b(digital literacy)\b/.test(text)) return "digital-literacy";
+  if (/\b(ai training)\b/.test(text)) return "ai-training";
+  if (/\b(job readiness|interview|skills checklist|farm jobs|jobs)\b/.test(text)) return "job-readiness";
+  if (/\b(youth workforce)\b/.test(text)) return "youth-workforce";
+  if (/\b(employer referral|employer)\b/.test(text)) return "employer-referral";
+  if (/\b(certification)\b/.test(text)) return "certification";
+  if (/\b(lms)\b/.test(text)) return "lms-handoff";
+  if (/\b(training|course|learning|literacy)\b/.test(text)) return "training";
+  if (/\b(location sharing)\b/.test(text)) return "location-sharing";
+  if (/\b(route planning|route|maps|map)\b/.test(text)) return "maps";
+  if (/\b(whatsapp)\b/.test(text)) return "whatsapp";
+  if (/\b(sms|text message)\b/.test(text)) return "sms";
+  if (/\b(email)\b/.test(text)) return "email";
+  if (/\b(phone|call)\b/.test(text)) return "phone-handoff";
+  if (/\b(telegram)\b/.test(text)) return "telegram";
+  if (/\b(communications?|message)\b/.test(text)) return "communications-status";
+  if (/\b(youtube)\b/.test(text)) return "youtube";
+  if (/\b(music|media|spotify|afrobeats|r&b|rnb|gospel)\b/.test(text)) return "music";
+  if (/\b(low bandwidth|low-bandwidth)\b/.test(text)) return "low-bandwidth";
+  if (/\b(sync status)\b/.test(text)) return "sync-status";
+  if (/\b(offline|queue)\b/.test(text)) return "offline";
+  if (/\b(admin review)\b/.test(text)) return "admin-review";
+  if (/\b(provider response inbox)\b/.test(text)) return "provider-response-inbox";
+  if (/\b(case timeline)\b/.test(text)) return "case-timeline";
+  if (/\b(pharmacy queue)\b/.test(text)) return "pharmacy-queue";
+  if (/\b(mobile clinic queue)\b/.test(text)) return "mobile-clinic-queue";
+  if (/\b(agronomy queue)\b/.test(text)) return "agronomy-queue";
+  if (/\b(marketplace queue|vendor queue)\b/.test(text)) return "marketplace-queue";
+  if (/\b(logistics queue)\b/.test(text)) return "logistics-queue";
+  if (/\b(workforce queue)\b/.test(text)) return "workforce-queue";
+  if (/\b(provider queue)\b/.test(text)) return "provider-queue";
+  if (/\b(payment|pay|checkout|purchase|buy)\b/.test(text)) return "payment-gate";
+  if (/\b(booking|book|schedule|appointment)\b/.test(text)) return "booking-gate";
+  if (/\b(dispatch|send help|send vehicle|send clinic)\b/.test(text)) return "dispatch-gate";
+  return "";
+}
+
+function nexusFunctionWindowCategory(functionId = "") {
+  const id = normalizeNexusFunctionId(functionId);
+  if (/virtual-care|telehealth|video-visit|chronic|diabetes|hypertension|obesity|rpm|rtm|physician|follow-up|emergency/.test(id)) return "healthcare";
+  if (/pharmacy|medication|refill|supplies/.test(id)) return "pharmacy";
+  if (/mobile-clinic|vitals|rural-clinic|community-outreach/.test(id)) return "mobile-clinic";
+  if (/agriculture|agronomy|crop|pest|soil|irrigation|climate|farmer|drone|farm-visit/.test(id)) return "agriculture";
+  if (/agritrade|marketplace|vendor|buyer|seller|produce|input|quote/.test(id)) return "marketplace";
+  if (/logistics|route-support|pickup|delivery|cold-chain|storage/.test(id)) return "logistics";
+  if (/workforce|training|literacy|job|youth|employer|certification|lms/.test(id)) return "workforce";
+  if (/live-knowledge|internet|research|source-backed/.test(id)) return "research";
+  if (/maps|field-visit|route-planning|location-sharing/.test(id)) return "maps";
+  if (/email|sms|whatsapp|phone|telegram|communications/.test(id)) return "communications";
+  if (/music|media|youtube/.test(id)) return "media";
+  if (/offline|low-bandwidth|sync|local-fallback/.test(id)) return "offline";
+  if (/admin|queue|timeline|inbox/.test(id)) return "admin";
+  if (/payment|booking|dispatch|approval/.test(id)) return "gate";
+  return "research";
+}
+
+function nexusFunctionWindowDefinition(functionId = "", command = "") {
+  const id = normalizeNexusFunctionId(functionId, command) || normalizeNexusFunctionId("", command);
+  const workflowId = NEXUS_FUNCTION_WINDOW_ROUTE_MAP[id] || normalizeNexusWorkflowId(id, command) || "resource-assistant";
+  const workflow = nexusWorkflowDefinition(workflowId, command);
+  const category = nexusFunctionWindowCategory(id || workflowId);
+  const title = NEXUS_FUNCTION_WINDOW_LABELS[id] || workflow?.presentation?.title || "Nexus Function";
+  const fields = NEXUS_FUNCTION_WINDOW_CATEGORY_FIELDS[category] || workflow?.fields || [];
+  const quickActions = workflow?.content?.quickActions || [];
+  return {
+    ...(workflow || {}),
+    id: workflow?.id || workflowId,
+    functionId: id || workflowId,
+    category,
+    presentation: {
+      ...(workflow?.presentation || {}),
+      title,
+      description: workflow?.presentation?.description || "Focused Nexus function window"
+    },
+    content: {
+      ...(workflow?.content || {}),
+      explanation: workflow?.content?.explanation || "Nexus opened this function as a focused workspace.",
+      nextPrompt: workflow?.content?.nextPrompt || "Add the missing details and review the next safe step.",
+      limitation: workflow?.content?.limitation || "External actions remain gated by credentials, consent, confirmation, audit, and outcome verification.",
+      quickActions
+    },
+    fields
+  };
 }
 
 function nexusWorkflowDefinition(workflowId = "", command = "") {
@@ -23672,7 +24152,18 @@ function renderNexusPilotReadinessDashboard() {
 
 function renderNexusActiveWorkflowWorkspace() {
   const state = nexusActiveWorkflowState || {};
-  const definition = nexusWorkflowDefinition(state.id, state.command);
+  if (!state.id && !state.functionId) {
+    return `
+      <section id="nexus-workspace" class="nexus-active-workflow nexus-active-workflow-empty nexus-glass-card" data-nexus-workspace="true" data-nexus-active-workflow="none" data-execution-authority="false" aria-label="${escapeHtml(translateText("Nexus active workflow"))}">
+        <div class="nexus-workflow-header">
+          <span class="eyebrow">${escapeHtml(translateText("Workspace"))}</span>
+          <h3 id="nexusActiveWorkflowHeading" tabindex="-1">${escapeHtml(translateText("Choose a workflow to begin"))}</h3>
+          <p>${escapeHtml(translateText("Selected functions open as focused windows above the dashboard, with review-only controls and safety gates intact."))}</p>
+        </div>
+      </section>
+    `;
+  }
+  const definition = nexusFunctionWindowDefinition(state.functionId || state.workflow || state.id, state.command);
   if (!definition) {
     return `
       <section id="nexus-workspace" class="nexus-active-workflow nexus-active-workflow-empty nexus-glass-card" data-nexus-workspace="true" data-nexus-active-workflow="none" data-execution-authority="false" aria-label="${escapeHtml(translateText("Nexus active workflow"))}">
@@ -23684,7 +24175,17 @@ function renderNexusActiveWorkflowWorkspace() {
       </section>
     `;
   }
-  const { id, presentation, content, fields } = definition;
+  const { id, functionId, presentation, content, fields } = definition;
+  if (state.minimized) {
+    return `
+      <div class="nexus-function-window-dock nexus-glass-card" data-nexus-function-window-dock="true" data-nexus-function-window="${escapeHtml(functionId || id)}" role="status">
+        <strong>${escapeHtml(translateText(presentation.title))}</strong>
+        <span>${escapeHtml(translateText("Minimized - external actions remain gated."))}</span>
+        <button type="button" data-nexus-window-restore data-nexus-function-window-restore="${escapeHtml(functionId || id)}" data-nexus-mode-shortcut="${escapeHtml(functionId || id)}" data-nexus-command="${escapeHtml(state.command || presentation.title || "Open Nexus function")}" onclick="window.restoreNexusFunctionWindow && window.restoreNexusFunctionWindow('${escapeHtml(functionId || id)}')" aria-label="${escapeHtml(translateText("Restore function window"))}">${escapeHtml(translateText("Restore"))}</button>
+        <button type="button" data-nexus-workflow-close data-nexus-mode-shortcut="home" data-nexus-command="What can Nexus do?" aria-label="${escapeHtml(translateText("Close function window"))}">${escapeHtml(translateText("Close"))}</button>
+      </div>
+    `;
+  }
   const healthcare = isNexusHealthcareWorkflow(id);
   const latestPacket = nexusPreparedPackets.find(packet => packet.workflowId === id);
   const steps = healthcare
@@ -23695,18 +24196,20 @@ function renderNexusActiveWorkflowWorkspace() {
         ? ["Describe need", "Review marketplace details", "Prepare inquiry", "Confirm before any transaction"]
         : ["Add details", "Review prepared next steps", "Save or change workflow", "Confirm before external action"];
   return `
-    <div class="nexus-workflow-modal-backdrop" data-nexus-workflow-modal="true" role="presentation">
-    <section id="nexus-workspace" class="nexus-active-workflow nexus-active-workflow-modal nexus-active-workflow-${escapeHtml(id)} nexus-glass-card" data-nexus-workspace="true" data-nexus-active-workflow="${escapeHtml(id)}" data-execution-authority="false" data-provider-handoff="false" data-no-live-execution="true" role="dialog" aria-modal="true" aria-labelledby="nexusActiveWorkflowHeading">
+    <div class="nexus-workflow-modal-backdrop" data-nexus-workflow-modal="true" data-nexus-function-window-backdrop="true" role="presentation">
+    <section id="nexus-workspace" class="nexus-active-workflow nexus-active-workflow-modal nexus-function-window nexus-function-window-${escapeHtml(functionId || id)} nexus-active-workflow-${escapeHtml(id)} nexus-glass-card" data-nexus-workspace="true" data-nexus-function-window="true" data-nexus-function-window-id="${escapeHtml(functionId || id)}" data-nexus-active-workflow="${escapeHtml(id)}" data-execution-authority="false" data-provider-handoff="false" data-no-live-execution="true" role="dialog" aria-modal="true" aria-labelledby="nexusActiveWorkflowHeading">
       <div class="nexus-workflow-header">
         <span class="nexus-workflow-icon" aria-hidden="true">${escapeHtml(presentation.icon || "")}</span>
         <div>
-          <span class="eyebrow">${escapeHtml(translateText("Focused Nexus workspace"))}</span>
+          <span class="eyebrow">${escapeHtml(translateText("Focused Nexus function window"))}</span>
           <h3 id="nexusActiveWorkflowHeading" tabindex="-1">${escapeHtml(translateText(presentation.title))}</h3>
           <p>${escapeHtml(translateText(content.explanation))}</p>
         </div>
         <div class="nexus-workflow-window-actions">
+          <button type="button" data-nexus-workflow-back aria-label="${escapeHtml(translateText("Back to Nexus home"))}">${escapeHtml(translateText("Back"))}</button>
+          <button type="button" data-nexus-workflow-minimize aria-label="${escapeHtml(translateText("Minimize function window"))}">${escapeHtml(translateText("Minimize"))}</button>
           <button type="button" data-nexus-mode-shortcut="home" data-nexus-command="What can Nexus do?">${escapeHtml(translateText("Change"))}</button>
-          <button type="button" data-nexus-workflow-close data-nexus-mode-shortcut="home" data-nexus-command="What can Nexus do?" aria-label="${escapeHtml(translateText("Close workflow workspace"))}">${escapeHtml(translateText("Close"))}</button>
+          <button type="button" data-nexus-workflow-close data-nexus-mode-shortcut="home" data-nexus-command="What can Nexus do?" aria-label="${escapeHtml(translateText("Close function window"))}">${escapeHtml(translateText("Close"))}</button>
         </div>
       </div>
       <div class="nexus-workflow-purpose">
@@ -23717,6 +24220,10 @@ function renderNexusActiveWorkflowWorkspace() {
         <strong>${escapeHtml(translateText("Opened in active workspace"))}</strong>
         <span>${escapeHtml(translateText(nexusWorkflowBlockedReason(id)))}</span>
       </div>
+      <section class="nexus-function-window-summary" data-nexus-function-window-summary="true">
+        <strong>${escapeHtml(translateText("Assistant summary"))}</strong>
+        <p>${escapeHtml(translateText(`Nexus resolved this request to ${presentation.title}. Complete the relevant fields here, review the packet preview, then choose a safe next action.`))}</p>
+      </section>
       ${renderNexusWorkflowLaneStatus(id)}
       ${renderNexusAgricultureIntelligenceSections(id)}
       ${renderNexusTrainingWorkforceSections(id)}
@@ -23744,6 +24251,11 @@ function renderNexusActiveWorkflowWorkspace() {
         <button type="button" data-nexus-command-prefill="${escapeHtml(content.nextPrompt)}">${escapeHtml(translateText("Use as prompt"))}</button>
         <span>${escapeHtml(translateText(content.limitation))}</span>
       </div>
+      <section class="nexus-function-window-preview" data-nexus-function-window-preview="true">
+        <strong>${escapeHtml(translateText("Results / packet preview"))}</strong>
+        ${renderNexusKnowledgeAnswerCard(functionId === "live-knowledge" || id === "resource-assistant" ? nexusKnowledgeLastResult : null)}
+        <p>${escapeHtml(translateText(latestPacket ? `${latestPacket.workflowLabel || presentation.title} packet is prepared for review.` : "No full packet has been prepared yet. Use Prepare packet to generate a short review preview inside this window."))}</p>
+      </section>
       ${latestPacket ? renderNexusConfirmationPanel(latestPacket, nexusIntegrationLaneById(latestPacket.destinationLaneId)) : ""}
       ${renderNexusWorkflowActionHistory()}
     </section>
@@ -23772,16 +24284,25 @@ function scheduleNexusActiveWorkflowFocus(options = {}) {
 }
 
 function openNexusWorkflow(workflowId, options = {}) {
+  if (!options.__fromFunctionWindow) {
+    return openNexusFunctionWindow(options.functionId || workflowId, {
+      ...options,
+      workflowId,
+      source: options.source || "standard-user"
+    });
+  }
   const command = options.command || options.response || "";
   const definition = nexusWorkflowDefinition(workflowId, command);
   const safeId = definition?.id || normalizeNexusWorkflowId(workflowId, command) || "unknown";
   nexusActiveWorkflowState = {
     id: definition?.id || safeId,
+    functionId: options.functionId || normalizeNexusFunctionId(workflowId, command),
     command,
     source: options.source || "standard-user",
     workflow: options.workflow || workflowId || "",
     action: options.action || "",
-    openedAt: Date.now()
+    openedAt: Date.now(),
+    minimized: false
   };
   saveNexusRuntimeMemory();
   if (definition) {
@@ -40165,17 +40686,31 @@ async function runWowDemo() {
 function handleNexusStandardUserHomeClick(event) {
   if (experienceMode !== "user" && !document.body.classList.contains("user-mode")) return false;
   const eventTarget = event.target?.closest ? event.target : event.target?.parentElement;
+  if (eventTarget?.closest?.("[data-nexus-workflow-minimize]")) {
+    event.preventDefault();
+    event.stopPropagation();
+    event.stopImmediatePropagation?.();
+    return minimizeNexusFunctionWindow();
+  }
+  if (eventTarget?.closest?.("[data-nexus-window-restore]")) {
+    event.preventDefault();
+    event.stopPropagation();
+    event.stopImmediatePropagation?.();
+    const restoreButton = eventTarget.closest("[data-nexus-window-restore]");
+    return restoreNexusFunctionWindow(restoreButton?.dataset?.nexusFunctionWindowRestore || restoreButton?.dataset?.nexusModeShortcut || "");
+  }
+  if (eventTarget?.closest?.("[data-nexus-workflow-back]")) {
+    event.preventDefault();
+    event.stopPropagation();
+    event.stopImmediatePropagation?.();
+    return closeNexusFunctionWindow({ command: "What can Nexus do?" });
+  }
   if (eventTarget?.closest?.("[data-nexus-workflow-close]")) {
     event.preventDefault();
     event.stopPropagation();
     event.stopImmediatePropagation?.();
-    nexusActiveWorkflowState = null;
-    nexusAgenticBrainLastResult = buildNexusCapabilityOverviewResult("What can Nexus do?");
-    saveNexusRuntimeMemory();
     setCommandInputs("What can Nexus do?");
-    renderUserWorkspace();
-    $("#nexusCommandCenterInput")?.focus?.({ preventScroll: true });
-    return true;
+    return closeNexusFunctionWindow({ command: "What can Nexus do?" });
   }
   if (eventTarget?.closest?.("[data-nexus-global-offline-action]")) {
     return handleNexusGlobalOfflineAccessClick(event);
@@ -40367,6 +40902,73 @@ if (typeof window !== "undefined") {
 
 function bindNexusStandardUserHomeControls() {
   if (experienceMode !== "user" && !document.body.classList.contains("user-mode")) return;
+  if (typeof window !== "undefined") {
+    window.restoreNexusFunctionWindow = restoreNexusFunctionWindow;
+    window.openNexusFunctionWindow = openNexusFunctionWindow;
+    window.closeNexusFunctionWindow = closeNexusFunctionWindow;
+    window.minimizeNexusFunctionWindow = minimizeNexusFunctionWindow;
+  }
+  if (document.body.dataset.nexusFunctionWindowDelegateBound !== "true") {
+    document.body.dataset.nexusFunctionWindowDelegateBound = "true";
+    document.addEventListener("click", event => {
+      const target = event.target;
+      const control = target?.closest?.("[data-nexus-workflow-minimize], [data-nexus-window-restore], [data-nexus-workflow-close], [data-nexus-workflow-back]");
+      if (!control || !document.body.classList.contains("user-mode")) return;
+      event.preventDefault();
+      event.stopPropagation();
+      if (control.matches("[data-nexus-workflow-minimize]")) {
+        minimizeNexusFunctionWindow();
+        return;
+      }
+      if (control.matches("[data-nexus-window-restore]")) {
+        const restoreId = control.dataset.nexusFunctionWindowRestore || control.dataset.nexusModeShortcut || "";
+        restoreNexusFunctionWindow(restoreId);
+        if (!document.querySelector("[data-nexus-function-window='true']")) {
+          openNexusFunctionWindow(restoreId, {
+            command: control.dataset.nexusCommand || "Open Nexus function",
+            source: "function-window-dock-restore-fallback",
+            action: "restore"
+          });
+        }
+        return;
+      }
+      closeNexusFunctionWindow({ command: "What can Nexus do?" });
+    }, true);
+  }
+  $$("[data-nexus-workflow-minimize], [data-nexus-window-restore], [data-nexus-workflow-close], [data-nexus-workflow-back]").forEach(element => {
+    if (element.dataset.nexusFunctionWindowBound === "true") return;
+    element.dataset.nexusFunctionWindowBound = "true";
+    element.addEventListener("click", event => {
+      const control = event.currentTarget;
+      event.preventDefault();
+      event.stopPropagation();
+      event.stopImmediatePropagation?.();
+      if (control.matches("[data-nexus-workflow-minimize]")) {
+        minimizeNexusFunctionWindow();
+        return;
+      }
+      if (control.matches("[data-nexus-window-restore]")) {
+        const restoreId = control.dataset.nexusFunctionWindowRestore || control.dataset.nexusModeShortcut || "";
+        restoreNexusFunctionWindow(restoreId);
+        if (!document.querySelector("[data-nexus-function-window='true']")) {
+          openNexusFunctionWindow(restoreId, {
+            command: control.dataset.nexusCommand || "Open Nexus function",
+            source: "function-window-dock-restore-fallback",
+            action: "restore"
+          });
+        }
+        return;
+      }
+      if (control.matches("[data-nexus-workflow-back]")) {
+        closeNexusFunctionWindow({ command: "What can Nexus do?" });
+        return;
+      }
+      if (control.matches("[data-nexus-workflow-close]")) {
+        setCommandInputs("What can Nexus do?");
+        closeNexusFunctionWindow({ command: "What can Nexus do?" });
+      }
+    }, true);
+  });
   $$("[data-nexus-command-center-submit], [data-nexus-mode-shortcut]").forEach(element => {
     if (element.dataset.nexusHomeBound === "true") return;
     element.dataset.nexusHomeBound = "true";

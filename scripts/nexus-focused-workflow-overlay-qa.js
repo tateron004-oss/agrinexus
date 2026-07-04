@@ -23,9 +23,9 @@ function excludes(source, token, label) {
   "nexus-active-workflow-modal",
   "role=\"dialog\"",
   "aria-modal=\"true\"",
-  "Focused Nexus workspace",
+  "Focused Nexus function window",
   "data-nexus-workflow-close",
-  "Close workflow workspace",
+  "Close function window",
   "$(\"#nexusCommandCenterInput\")?.focus?.({ preventScroll: true })"
 ].forEach(token => includes(app, token, `focused workflow overlay ${token}`));
 
