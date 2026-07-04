@@ -18995,6 +18995,7 @@ function nexusKnowledgeCategoryForCommand(command = "") {
   if (/\b(mobile clinic|community health|outreach clinic|clinic van)\b/.test(lower)) return "mobileClinic";
   if (/\b(blood pressure|bp|hypertension|diabetes|glucose|obesity|weight|chronic|rpm|rtm)\b/.test(lower)) return "chronicCare";
   if (/\b(blood pressure|hypertension|diabetes|obesity|chronic|health|symptom|doctor|clinic|medical|patient)\b/.test(lower)) return "health";
+  if (/\b(crop disease|yellow leaves|cassava|maize|safe pest|pest management|soil fertility|fertilizer|fertiliser|irrigation|climate-smart|farm visit|field visit|farm planning|harvest planning|post-harvest|post harvest|agriculture logistics|farm inputs|input vendor)\b/.test(lower)) return "agriculture";
   if (/\b(price|market|buyer|seller|sell|agritade|agritrade|commodity|vendor|supplier|logistics|delivery|cold chain|storage|warehouse|purchase|checkout)\b/.test(lower)) return "marketplace";
   if (/\b(job|jobs|workforce|career|training|solar installation|skills|employment|employer|credential|certificate|resume|interview|role|hiring)\b/.test(lower)) return "jobs";
   if (/\b(lesson|learning|literacy|course|study|school|training|ai literacy|digital literacy|health literacy|agriculture literacy)\b/.test(lower)) return "learning";
@@ -19024,6 +19025,19 @@ function nexusKnowledgeCategoryForModeId(modeId = "") {
   })[modeId] || "";
 }
 
+const NEXUS_AGRICULTURE_INTELLIGENCE_SECTIONS = Object.freeze([
+  { id: "crop-support", label: "Crop Support", command: "Nexus, help with crop support.", description: "Organize crop symptoms, crop stage, weather, and field notes." },
+  { id: "crop-disease", label: "Crop Disease", command: "Nexus, research crop disease guidance for maize.", description: "Prepare disease guidance with local-condition uncertainty." },
+  { id: "pest-management", label: "Pest Management", command: "Nexus, find safe pest management guidance.", description: "Review scouting, thresholds, IPM, and label-safety questions." },
+  { id: "soil-fertility", label: "Soil/Fertility", command: "Nexus, research soil fertility guidance.", description: "Prepare soil test, pH, organic matter, and fertility questions." },
+  { id: "irrigation", label: "Irrigation/Water", command: "Nexus, help with irrigation planning.", description: "Plan water timing, soil moisture checks, and drought constraints." },
+  { id: "farm-planning", label: "Farm Planning", command: "Nexus, build a farm planning packet.", description: "Prepare crop calendar, input timing, labor, and harvest planning." },
+  { id: "field-visit", label: "Field Visit", command: "Nexus, prepare a field visit checklist.", description: "Build a checklist without dispatching or sharing location." },
+  { id: "harvest", label: "Harvest/Post-Harvest", command: "Nexus, research post-harvest storage guidance.", description: "Review harvest timing, drying, storage, pest, and quality needs." },
+  { id: "logistics", label: "Logistics Handoff", command: "Nexus, prepare agriculture logistics questions.", description: "Prepare logistics questions; no booking or dispatch." },
+  { id: "vendor-research", label: "Vendor Research Handoff", command: "Nexus, research vendor considerations for farm inputs.", description: "Compare vendor considerations; no contact or purchase." }
+]);
+
 function buildNexusKnowledgePreparedResult(result = {}) {
   const answer = result?.result || result || {};
   return {
@@ -19046,14 +19060,22 @@ function renderNexusGlobalAgriculturePacket(card = {}) {
   const fieldChecks = Array.isArray(packet.recommendedFieldChecks) ? packet.recommendedFieldChecks : [];
   const nextSafeActions = Array.isArray(packet.nextSafeActions) ? packet.nextSafeActions : [];
   const citations = Array.isArray(packet.citations) ? packet.citations : [];
+  const sources = Array.isArray(packet.sources) ? packet.sources : citations;
+  const reviewQuestions = Array.isArray(packet.agronomistExtensionReviewQuestions) ? packet.agronomistExtensionReviewQuestions : [];
+  const missingConfig = Array.isArray(packet.missingLiveKnowledgeConfig) ? packet.missingLiveKnowledgeConfig : [];
   return `
-    <div class="nexus-global-agriculture-packet" data-testid="nexus-global-agriculture-packet-card" data-packet-type="${escapeHtml(packet.packetType || "agriculture_support_packet")}">
+    <div class="nexus-global-agriculture-packet" data-testid="nexus-global-agriculture-packet-card" data-packet-type="${escapeHtml(packet.packetType || "agriculture_support_packet")}" data-agriculture-mode="${escapeHtml(packet.mode || "crop-support")}" data-agriculture-domain="${escapeHtml(packet.domain || "agriculture")}">
       <div class="nexus-home-mode-panel-head">
         <span class="nexus-home-mode-panel-icon" aria-hidden="true">🌱</span>
         <div>
           <strong>${escapeHtml(translateText("Global Agriculture Intelligence"))}</strong>
           <small data-testid="nexus-agriculture-packet-type">${escapeHtml(packet.packetType || "agriculture_support_packet")}</small>
         </div>
+      </div>
+      <div class="nexus-knowledge-source-row" data-testid="nexus-agriculture-packet-context">
+        <span>${escapeHtml(translateText("Domain"))}: ${escapeHtml(packet.domain || "agriculture")}</span>
+        <span>${escapeHtml(translateText("Mode"))}: ${escapeHtml(packet.mode || "crop-support")}</span>
+        <span>${escapeHtml(translateText("Issue"))}: ${escapeHtml(translateText(packet.issueCategory || packet.agricultureIntent || "agriculture support"))}</span>
       </div>
       <p data-testid="nexus-agriculture-issue-summary">${escapeHtml(translateText(packet.issueSummary || "Agriculture support packet prepared."))}</p>
       <dl>
@@ -19073,17 +19095,63 @@ function renderNexusGlobalAgriculturePacket(card = {}) {
           <dt>${escapeHtml(translateText("Field checks"))}</dt>
           <dd data-testid="nexus-agriculture-field-checks">${fieldChecks.map(item => escapeHtml(translateText(item))).join("; ")}</dd>
         </div>
+        <div>
+          <dt>${escapeHtml(translateText("Next safe action"))}</dt>
+          <dd data-testid="nexus-agriculture-next-safe-action">${escapeHtml(translateText(packet.nextSafeAction || "Save the packet or queue it for review before acting."))}</dd>
+        </div>
       </dl>
       <p data-testid="nexus-agriculture-extension-review">${escapeHtml(translateText(packet.agronomistExtensionReview || "Confirm important decisions with a local agronomist or extension officer."))}</p>
+      ${reviewQuestions.length ? `
+        <div class="nexus-knowledge-keypoints" data-testid="nexus-agriculture-extension-review-questions">
+          <strong>${escapeHtml(translateText("Agronomist / extension questions"))}</strong>
+          <ul>${reviewQuestions.slice(0, 5).map(item => `<li>${escapeHtml(translateText(item))}</li>`).join("")}</ul>
+        </div>
+      ` : ""}
       <div class="nexus-knowledge-source-row">
         <span data-testid="nexus-agriculture-live-knowledge-status">${escapeHtml(translateText("Live Knowledge"))}: ${escapeHtml(packet.liveKnowledgeStatus || "disabled")}</span>
         <span data-testid="nexus-agriculture-citation-count">${escapeHtml(translateText("Citations"))}: ${escapeHtml(String(citations.length || 0))}</span>
+      </div>
+      ${missingConfig.length ? `<small data-testid="nexus-agriculture-missing-live-knowledge-config">${escapeHtml(translateText("Missing Live Knowledge config"))}: ${missingConfig.map(escapeHtml).join(", ")}</small>` : ""}
+      ${sources.length ? `
+        <div class="nexus-knowledge-citations" data-testid="nexus-agriculture-source-list">
+          <strong>${escapeHtml(translateText("Agriculture sources"))}</strong>
+          ${sources.slice(0, 6).map(source => `
+            <a href="${escapeHtml(source.url || "#")}" target="_blank" rel="noopener noreferrer">
+              ${escapeHtml(source.title || source.source || source.url || translateText("Source"))}
+              <small>${escapeHtml(source.domain || source.publisher || "")}</small>
+            </a>
+          `).join("")}
+        </div>
+      ` : `<small data-testid="nexus-agriculture-no-fake-citations">${escapeHtml(translateText("No agriculture citations are shown unless Live Knowledge returns citable sources."))}</small>`}
+      <div class="nexus-knowledge-source-row" data-testid="nexus-agriculture-queue-review-audit-state">
+        <span>${escapeHtml(translateText("Queue"))}: ${escapeHtml(packet.queueReviewState?.status || "prepared_for_review")}</span>
+        <span>${escapeHtml(translateText("Audit"))}: ${escapeHtml(packet.auditState?.eventType || "global_agriculture_packet_prepared")}</span>
+        <span>${escapeHtml(translateText("Export"))}: ${escapeHtml(packet.export?.ready === false ? "not ready" : "ready")}</span>
+      </div>
+      <div class="nexus-knowledge-source-row" data-testid="nexus-agriculture-handoff-gates">
+        <span>${escapeHtml(translateText("Vendor handoff gated"))}: ${escapeHtml(String(Boolean(packet.handoffReadiness?.marketplaceVendorHandoffGated ?? true)))}</span>
+        <span>${escapeHtml(translateText("Logistics handoff gated"))}: ${escapeHtml(String(Boolean(packet.handoffReadiness?.logisticsHandoffGated ?? true)))}</span>
+        <span>${escapeHtml(translateText("Confirmation required"))}: ${escapeHtml(translateText(packet.downstreamConfirmationRequirement || "Required before external action."))}</span>
       </div>
       <div class="nexus-home-mode-panel-actions" aria-label="${escapeHtml(translateText("Agriculture next safe actions"))}">
         ${nextSafeActions.slice(0, 4).map(action => `<button type="button" data-nexus-command="${escapeHtml(action)}" data-nexus-mode-shortcut="global-agriculture-next-action">${escapeHtml(translateText(action))}</button>`).join("")}
       </div>
       <small data-testid="nexus-agriculture-export-ready">${escapeHtml(translateText(packet.exportReady ? "Export-ready agriculture packet prepared for local review." : "Review packet prepared locally."))}</small>
       <small data-testid="nexus-agriculture-no-execution">${escapeHtml(translateText("No purchase, vendor contact, location sharing, or field dispatch was authorized."))}</small>
+    </div>
+  `;
+}
+
+function renderNexusAgricultureIntelligenceSections(id = "") {
+  if (!["agriculture", "crop-support", "farm-planning", "field-visit"].includes(id)) return "";
+  return `
+    <div class="nexus-agriculture-intelligence-sections" data-testid="nexus-agriculture-intelligence-sections" aria-label="${escapeHtml(translateText("Agriculture intelligence sections"))}">
+      ${NEXUS_AGRICULTURE_INTELLIGENCE_SECTIONS.map(section => `
+        <button type="button" data-testid="nexus-agriculture-section-${escapeHtml(section.id)}" data-nexus-command="${escapeHtml(section.command)}" data-nexus-mode-shortcut="agriculture" data-agriculture-section="${escapeHtml(section.id)}">
+          <strong>${escapeHtml(translateText(section.label))}</strong>
+          <span>${escapeHtml(translateText(section.description))}</span>
+        </button>
+      `).join("")}
     </div>
   `;
 }
@@ -20327,12 +20395,18 @@ const NEXUS_HOME_MODE_PANEL_CONTENT = Object.freeze({
     limitation: "Educational and planning support only. Nexus does not dispatch a field agent or guarantee a diagnosis of crop disease.",
     quickActions: [
       { label: "Describe a crop issue", command: "I need help with crop issues." },
+      { label: "Crop support packet", command: "Nexus, help with crop support." },
       { label: "Research crop disease guidance", command: "Nexus, research crop disease guidance for maize." },
+      { label: "Safe pest management", command: "Nexus, find safe pest management guidance." },
+      { label: "Soil fertility guidance", command: "Nexus, research soil fertility guidance." },
+      { label: "Fertilizer planning", command: "Nexus, help with fertilizer planning." },
+      { label: "Irrigation planning", command: "Nexus, help with irrigation planning." },
+      { label: "Climate-smart options", command: "Nexus, research climate-smart agriculture options." },
       { label: "Plan farm season", command: "Nexus, create a crop calendar and input planning packet." },
-      { label: "Find agriculture training", command: "Help me find agriculture training." },
-      { label: "Learn irrigation basics", command: "Teach me how irrigation works." },
-      { label: "Prepare field visit packet", command: "Nexus, prepare a field visit packet." },
-      { label: "Review market options", command: "Browse AgriTrade." }
+      { label: "Prepare field visit packet", command: "Nexus, prepare a field visit checklist." },
+      { label: "Harvest storage guidance", command: "Nexus, research post-harvest storage guidance." },
+      { label: "Logistics questions", command: "Nexus, prepare agriculture logistics questions." },
+      { label: "Vendor considerations", command: "Nexus, research vendor considerations for farm inputs." }
     ]
   },
   "chronic-care": {
@@ -20714,7 +20788,7 @@ const NEXUS_PACKET_TYPES = Object.freeze([
   "health_intake", "clinical_support", "chronic_care_summary", "diabetes_report", "hypertension_report", "obesity_report", "rpm_report", "rtm_report", "telehealth_request", "provider_handoff", "pharmacy_support_request", "mobile_clinic_request", "community_health_worker_request",
   "chronic_disease_education_packet", "diabetes_support_packet", "hypertension_support_packet", "obesity_support_packet", "rpm_support_packet", "rtm_support_packet", "chw_support_packet", "provider_review_packet",
   "telehealth_prep_packet", "provider_bridge_packet", "pharmacy_support_packet", "mobile_clinic_access_packet", "clinic_visit_prep_packet",
-  "agriculture_support_packet", "crop_support_packet", "farm_planning_packet", "field_visit_packet", "crop_support_request", "farm_planning_request", "input_supplier_request", "extension_partner_request", "field_visit_request", "marketplace_inquiry", "logistics_request",
+  "agriculture_support_packet", "crop_support_packet", "crop_disease_guidance_packet", "pest_management_guidance_packet", "soil_fertility_guidance_packet", "irrigation_planning_packet", "farm_planning_packet", "field_visit_packet", "agriculture_live_knowledge_packet", "agriculture_resource_handoff_packet", "agriculture_audit_event_packet", "crop_support_request", "farm_planning_request", "input_supplier_request", "extension_partner_request", "field_visit_request", "marketplace_inquiry", "logistics_request",
   "training_support_packet", "workforce_pathway_packet", "employer_partner_research_packet", "learning_recommendation_packet",
   "email_preparation_packet", "sms_preparation_packet", "whatsapp_preparation_packet", "phone_call_preparation_packet", "telegram_preparation_packet", "communication_confirmation_packet", "communication_outcome_packet",
   "marketplace_vendor_research_packet", "vendor_comparison_packet", "logistics_planning_packet", "route_resource_packet", "purchase_preparation_packet",
@@ -22517,6 +22591,7 @@ function renderNexusActiveWorkflowWorkspace() {
         <span>${escapeHtml(translateText(content.nextPrompt))}</span>
       </div>
       ${renderNexusWorkflowLaneStatus(id)}
+      ${renderNexusAgricultureIntelligenceSections(id)}
       ${renderNexusWorkflowMapPreview(id)}
       <div class="nexus-workflow-body">
         ${renderNexusWorkflowFields(id, fields)}
