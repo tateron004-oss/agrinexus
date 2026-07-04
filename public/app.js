@@ -256,8 +256,8 @@ const nexusProductIdentity = Object.freeze({
 });
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-359";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v338";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-360";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v339";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
 const VOICE_ATTENTION_DELAY_MS = 900;
@@ -19062,7 +19062,12 @@ const NEXUS_CHRONIC_CARE_HEALTH_SECTIONS = Object.freeze([
   { id: "rpm-support", label: "RPM Manual Readings", command: "Nexus, record RPM reading.", description: "Manual vitals packet; no live device monitoring claim." },
   { id: "rtm-support", label: "RTM Therapy Updates", command: "Nexus, prepare RTM therapy update.", description: "Manual therapy-progress notes for provider review." },
   { id: "chw-support", label: "CHW Support", command: "Nexus, help a community health worker.", description: "Household, language, access, and visit-prep notes only." },
-  { id: "provider-summary", label: "Provider Review Summary", command: "Nexus, prepare a care team summary.", description: "Export-ready summary; no provider submission without consent." }
+  { id: "provider-summary", label: "Provider Review Summary", command: "Nexus, prepare a care team summary.", description: "Export-ready summary; no provider submission without consent." },
+  { id: "provider-submission-gate", label: "Provider Submission Gate", command: "Nexus, check provider submission readiness.", description: "Show consent, provider, and audit needs before sharing." },
+  { id: "rpm-rtm-connector-gate", label: "RPM / RTM Connector Gate", command: "Nexus, check RPM RTM connector readiness.", description: "Verify device/vendor status before any monitoring claim." },
+  { id: "medication-pharmacy-boundary", label: "Medication / Pharmacy Boundary", command: "Nexus, check medication pharmacy boundary.", description: "Prepare questions only; no prescribing or refill execution." },
+  { id: "emergency-boundary", label: "Emergency Boundary", command: "Nexus, show emergency boundary.", description: "Direct urgent danger to local emergency help; no dispatch." },
+  { id: "health-review-queue", label: "Health Review Queue", command: "Nexus, queue health review.", description: "Queue local review for user, clinician, care team, or CHW." }
 ]);
 
 const NEXUS_PROVIDER_ACCESS_SECTIONS = Object.freeze([
@@ -19240,6 +19245,7 @@ function renderNexusChronicCareHealthSections(id = "") {
           <span>${escapeHtml(translateText(section.description))}</span>
         </button>
       `).join("")}
+      <small data-testid="nexus-chronic-care-health-sections-gates">${escapeHtml(translateText("Chronic care and health support can prepare education, intake, manual RPM/RTM notes, provider summaries, and review queues here. Nexus will not diagnose, prescribe, change medication, submit records, contact providers, activate live RPM/RTM monitoring, execute pharmacy workflows, or dispatch emergency help without verified providers, consent, explicit approval, audit, and outcome verification."))}</small>
     </div>
   `;
 }

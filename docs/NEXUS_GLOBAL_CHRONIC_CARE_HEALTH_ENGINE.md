@@ -60,6 +60,11 @@ The Standard User health workspace also exposes a compact chronic-care section l
 - RTM Therapy Updates.
 - CHW Support.
 - Provider Review Summary.
+- Provider Submission Gate.
+- RPM / RTM Connector Gate.
+- Medication / Pharmacy Boundary.
+- Emergency Boundary.
+- Health Review Queue.
 
 Each section routes to the existing chronic-care health engine as preparation and review only. The UI must continue to state or imply no diagnosis, no prescribing, no medication change, no provider submission, no live RPM/RTM device connection, and no emergency dispatch.
 
