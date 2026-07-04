@@ -256,8 +256,8 @@ const nexusProductIdentity = Object.freeze({
 });
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-356";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v335";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-357";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v336";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
 const VOICE_ATTENTION_DELAY_MS = 900;
@@ -19071,6 +19071,17 @@ const NEXUS_PROVIDER_ACCESS_SECTIONS = Object.freeze([
   { id: "review-queue", label: "Review Queue", command: "Nexus, prepare provider access review queue.", description: "Queue local review only until provider configuration is verified." }
 ]);
 
+const NEXUS_GLOBAL_COMMUNICATIONS_SECTIONS = Object.freeze([
+  { id: "sms-prep", label: "SMS Preparation", command: "Nexus, prepare an SMS.", description: "Draft an SMS preview; no send without credentials and confirmation." },
+  { id: "whatsapp-prep", label: "WhatsApp Preparation", command: "Nexus, prepare a WhatsApp message.", description: "Prepare WhatsApp text and purpose; no provider handoff." },
+  { id: "email-prep", label: "Email Preparation", command: "Nexus, prepare an email.", description: "Build a review-ready email draft without external delivery." },
+  { id: "phone-script", label: "Phone Call Script", command: "Nexus, prepare a phone call.", description: "Prepare call purpose and script; no dialer launch." },
+  { id: "telegram-prep", label: "Telegram Preparation", command: "Nexus, prepare a Telegram message.", description: "Draft only until Telegram credentials and approval are present." },
+  { id: "language-confirmation", label: "Language Confirmation", command: "Nexus, confirm communication language.", description: "Confirm language before any future message or call." },
+  { id: "recipient-review", label: "Recipient Review", command: "Nexus, review communication recipient.", description: "Make recipient identity visible before any future send." },
+  { id: "outcome-recording", label: "Outcome Recording", command: "Nexus, prepare communication outcome recording.", description: "Plan audit and result verification for approved communications." }
+]);
+
 function buildNexusKnowledgePreparedResult(result = {}) {
   const answer = result?.result || result || {};
   return {
@@ -19227,6 +19238,21 @@ function renderNexusProviderAccessSections(id = "") {
           <span>${escapeHtml(translateText(section.description))}</span>
         </button>
       `).join("")}
+    </div>
+  `;
+}
+
+function renderNexusGlobalCommunicationsSections(id = "") {
+  if (!["messages", "communications", "sms", "whatsapp", "email", "phone", "telegram", "agritrade", "provider-support", "health", "telehealth-intake", "jobs", "learning"].includes(id)) return "";
+  return `
+    <div class="nexus-global-communications-sections" data-testid="nexus-global-communications-sections" aria-label="${escapeHtml(translateText("Global communications preparation sections"))}">
+      ${NEXUS_GLOBAL_COMMUNICATIONS_SECTIONS.map(section => `
+        <button type="button" data-testid="nexus-global-communications-section-${escapeHtml(section.id)}" data-nexus-command="${escapeHtml(section.command)}" data-nexus-mode-shortcut="global-communications" data-global-communications-section="${escapeHtml(section.id)}">
+          <strong>${escapeHtml(translateText(section.label))}</strong>
+          <span>${escapeHtml(translateText(section.description))}</span>
+        </button>
+      `).join("")}
+      <small data-testid="nexus-global-communications-sections-no-execution">${escapeHtml(translateText("Communications can be prepared and reviewed here. Nexus will not send, call, open WhatsApp, open Telegram, deliver email, navigate externally, or contact anyone without provider configuration, visible recipient, explicit final approval, audit, and outcome verification."))}</small>
     </div>
   `;
 }
@@ -22677,6 +22703,7 @@ function renderNexusActiveWorkflowWorkspace() {
       ${renderNexusTrainingWorkforceSections(id)}
       ${renderNexusChronicCareHealthSections(id)}
       ${renderNexusProviderAccessSections(id)}
+      ${renderNexusGlobalCommunicationsSections(id)}
       ${renderNexusWorkflowMapPreview(id)}
       <div class="nexus-workflow-body">
         ${renderNexusWorkflowFields(id, fields)}

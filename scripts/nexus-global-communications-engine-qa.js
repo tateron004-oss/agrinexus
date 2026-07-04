@@ -61,8 +61,12 @@ assert.strictEqual(
 
 [
   "renderNexusGlobalCommunicationsPacket",
+  "NEXUS_GLOBAL_COMMUNICATIONS_SECTIONS",
+  "renderNexusGlobalCommunicationsSections",
   "/api/nexus/global-communications/engine",
   "nexus-global-communications-packet-card",
+  "nexus-global-communications-sections",
+  "data-global-communications-section",
   "nexus-communications-packet-type",
   "nexus-communications-channel",
   "nexus-communications-draft-preview",
@@ -85,6 +89,31 @@ assert.strictEqual(
 ].forEach(token => includes(app, token, `app should include ${token}`));
 
 [
+  "sms-prep",
+  "whatsapp-prep",
+  "email-prep",
+  "phone-script",
+  "telegram-prep",
+  "language-confirmation",
+  "recipient-review",
+  "outcome-recording",
+  "SMS Preparation",
+  "WhatsApp Preparation",
+  "Email Preparation",
+  "Phone Call Script",
+  "Telegram Preparation",
+  "Recipient Review",
+  "Outcome Recording",
+  "Nexus, prepare an SMS.",
+  "Nexus, prepare a WhatsApp message.",
+  "Nexus, prepare an email.",
+  "Nexus, prepare a phone call.",
+  "Nexus, prepare a Telegram message.",
+  '"communications", "sms", "whatsapp", "email", "phone", "telegram"',
+  "provider configuration, visible recipient, explicit final approval, audit, and outcome verification"
+].forEach(token => includes(app, token, `app should include communications section token: ${token}`));
+
+[
   "Nexus Global Communications Engine",
   "Email, SMS, WhatsApp, Phone, and Telegram",
   "draft previews",
@@ -96,7 +125,11 @@ assert.strictEqual(
   "never exposes API keys",
   "must not send SMS",
   "start phone calls",
-  "explicit final approval"
+  "explicit final approval",
+  "The Standard User active workflow now exposes compact Global Communications preparation sections",
+  "SMS Preparation, WhatsApp Preparation, Email Preparation, Phone Call Script, Telegram Preparation",
+  "visible recipient identity",
+  "outcome verification"
 ].forEach(token => includes(doc, token, `doc should include ${token}`));
 
 [

@@ -50,6 +50,10 @@ High-risk healthcare, pharmacy, emergency, payment, marketplace, transportation,
 
 Standard Users see a communications packet card that explains the channel, draft preview, credential status, confirmation gate, queue/test-mode state, source context, citation count, and no-execution boundary. The card is useful immediately for preparation and review while still blocking live sends or calls without credentials and confirmation.
 
+The Standard User active workflow now exposes compact Global Communications preparation sections in relevant workflows. These sections cover SMS Preparation, WhatsApp Preparation, Email Preparation, Phone Call Script, Telegram Preparation, Language Confirmation, Recipient Review, and Outcome Recording. Each section routes to an existing Nexus command so the user can prepare the correct packet, review recipient/language/purpose, and see credential or confirmation requirements before any future provider action.
+
+The visible sections remain non-executing. They do not send SMS, WhatsApp, Telegram, or email; they do not start phone calls; they do not open provider apps; they do not navigate externally; and they do not contact anyone. Live communication execution still requires provider configuration, visible recipient identity, visible channel/provider display, draft or call-purpose preview, language confirmation, explicit final approval, audit logging, and outcome verification.
+
 ## Future Execution Path
 
 Future phases can connect live providers by preserving the same packet contract:
