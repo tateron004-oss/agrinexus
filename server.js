@@ -30089,6 +30089,218 @@ async function nexusGlobalCommunicationsEngine(db, body = {}, user = null, env =
   };
 }
 
+function nexusGlobalMarketplaceLogisticsIntent(query = "", body = {}) {
+  const text = `${query || ""} ${body.mode || ""} ${body.intent || ""}`.toLowerCase();
+  if (/\b(compare|comparison|which vendor|vendor options|suppliers?)\b/.test(text)) return "vendor_comparison";
+  if (/\b(logistics|delivery|deliver|transport|cold chain|storage|warehouse|rural delivery)\b/.test(text)) return "logistics_planning";
+  if (/\b(route|resource|field visit|mobile route|plan route)\b/.test(text)) return "route_resource";
+  if (/\b(purchase|buy|order|checkout|payment|pay|quote)\b/.test(text)) return "purchase_preparation";
+  return "marketplace_vendor_research";
+}
+
+function nexusGlobalMarketplaceLogisticsPacketType(intent = "marketplace_vendor_research") {
+  return ({
+    marketplace_vendor_research: "marketplace_vendor_research_packet",
+    vendor_comparison: "vendor_comparison_packet",
+    logistics_planning: "logistics_planning_packet",
+    route_resource: "route_resource_packet",
+    purchase_preparation: "purchase_preparation_packet"
+  })[intent] || "marketplace_vendor_research_packet";
+}
+
+function nexusGlobalMarketplaceLogisticsGateStatus(intent = "marketplace_vendor_research", env = process.env) {
+  const marketplaceEnabled = nexusFlagEnabled(env, "NEXUS_MARKETPLACE_PROVIDER_ENABLED");
+  const paymentsEnabled = nexusFlagEnabled(env, "NEXUS_MARKETPLACE_PAYMENTS_ENABLED") || nexusFlagEnabled(env, "NEXUS_STRIPE_ENABLED");
+  const logisticsEnabled = nexusFlagEnabled(env, "NEXUS_LOGISTICS_PROVIDER_ENABLED");
+  const marketplaceConfigured = Boolean(env.AGRITRADE_PROVIDER_API_KEY || env.MARKETPLACE_PROVIDER_API_KEY);
+  const paymentConfigured = Boolean(env.STRIPE_SECRET_KEY || env.PAYSTACK_SECRET_KEY || env.FLUTTERWAVE_SECRET_KEY);
+  const logisticsConfigured = Boolean(env.LOGISTICS_PROVIDER_API_KEY || env.ROUTE_PROVIDER_API_KEY || env.GOOGLE_MAPS_API_KEY);
+  const missingMarketplace = marketplaceConfigured ? [] : ["AGRITRADE_PROVIDER_API_KEY or MARKETPLACE_PROVIDER_API_KEY"];
+  const missingPayments = paymentConfigured ? [] : ["STRIPE_SECRET_KEY or sandbox payment provider key"];
+  const missingLogistics = logisticsConfigured ? [] : ["LOGISTICS_PROVIDER_API_KEY or GOOGLE_MAPS_API_KEY"];
+  const requiresPaymentGate = intent === "purchase_preparation";
+  const requiresLogisticsGate = intent === "logistics_planning" || intent === "route_resource";
+  const missingConfig = [
+    ...(!marketplaceConfigured ? missingMarketplace : []),
+    ...(requiresPaymentGate && !paymentConfigured ? missingPayments : []),
+    ...(requiresLogisticsGate && !logisticsConfigured ? missingLogistics : [])
+  ];
+  const enabled = marketplaceEnabled && (!requiresPaymentGate || paymentsEnabled) && (!requiresLogisticsGate || logisticsEnabled);
+  const configured = marketplaceConfigured && (!requiresPaymentGate || paymentConfigured) && (!requiresLogisticsGate || logisticsConfigured);
+  return {
+    intent,
+    marketplaceProvider: marketplaceEnabled && marketplaceConfigured ? "ready_for_confirmed_execution" : marketplaceEnabled ? "credential_gated" : "disabled",
+    logisticsProvider: logisticsEnabled && logisticsConfigured ? "ready_for_confirmed_execution" : logisticsEnabled ? "credential_gated" : "disabled",
+    paymentProvider: paymentsEnabled && paymentConfigured ? "ready_for_confirmed_execution" : paymentsEnabled ? "credential_gated" : "disabled",
+    status: !enabled ? "disabled" : configured ? "ready_for_explicit_confirmation" : "credential_gated",
+    missingConfig: Array.from(new Set(missingConfig)),
+    canResearch: true,
+    canPreparePacket: true,
+    canContactVendorNow: false,
+    canPurchaseNow: false,
+    canProcessPaymentNow: false,
+    canDispatchLogisticsNow: false,
+    requiresConfirmation: true,
+    noSilentExecution: true
+  };
+}
+
+function nexusGlobalMarketplaceLogisticsChecklist(intent = "marketplace_vendor_research") {
+  if (intent === "vendor_comparison") {
+    return [
+      "Compare vendor category, price transparency, location/service area, reliability evidence, delivery ability, and support language.",
+      "Confirm all vendor details with cited or partner-provided sources before recommending contact.",
+      "Require explicit approval before any vendor outreach, quote request, or marketplace action."
+    ];
+  }
+  if (intent === "logistics_planning") {
+    return [
+      "Prepare origin/destination text, product type, quantity, timing, handling needs, storage needs, and rural access constraints.",
+      "Check cold-chain, storage, loading, road, and route risks before recommending a provider.",
+      "Do not dispatch logistics, share location, or contact a transporter without credentials, consent, confirmation, and audit."
+    ];
+  }
+  if (intent === "route_resource") {
+    return [
+      "Use typed route/resource context only; do not request browser location permission.",
+      "Prepare route constraints, service points, mobile clinic/vendor stops, and access barriers for review.",
+      "Keep navigation, dispatch, live tracking, and location sharing behind separate confirmation gates."
+    ];
+  }
+  if (intent === "purchase_preparation") {
+    return [
+      "Prepare product/service need, quantity, budget range, payment readiness, risk notes, and cancellation questions.",
+      "Keep payment, checkout, order creation, inventory changes, and fulfillment disabled until sandbox/live provider gates are configured.",
+      "Require explicit final approval, audit, and reversible status before any future transaction."
+    ];
+  }
+  return [
+    "Research marketplace category, vendor/source candidates, availability uncertainty, pricing uncertainty, and safety questions.",
+    "Use Live Knowledge citations when configured; otherwise present a review packet without current claims.",
+    "Do not contact vendors, create listings, buy, sell, process payments, or open external marketplace execution from this packet."
+  ];
+}
+
+function buildNexusGlobalMarketplaceLogisticsPacket(payload = {}) {
+  const intent = payload.intent || "marketplace_vendor_research";
+  const packetType = nexusGlobalMarketplaceLogisticsPacketType(intent);
+  const live = payload.liveKnowledge || {};
+  const citations = Array.isArray(live.citations) ? live.citations.slice(0, 6) : [];
+  const gateStatus = nexusGlobalMarketplaceLogisticsGateStatus(intent, payload.env || process.env);
+  const query = sanitizePilotText(payload.query || "", 700);
+  return {
+    type: "nexus_global_marketplace_logistics_engine",
+    packetType,
+    packetId: `global-marketplace-logistics-${Date.now()}`,
+    query,
+    intent,
+    requestedCategory: sanitizePilotText(payload.body?.category || payload.body?.mode || intent.replace(/_/g, " "), 180),
+    marketplaceSummary: query || "Marketplace, vendor, and logistics packet prepared.",
+    sourceBackedResearch: live.status === "source-backed"
+      ? sanitizePilotText(live.summary || live.answer || "Source-backed marketplace and logistics research is available. Review citations before acting.", 1400)
+      : "Live marketplace/logistics retrieval is not configured or did not return citations. Nexus prepared a safe packet without fabricating sources.",
+    vendorComparisonCriteria: [
+      "source verification",
+      "service area",
+      "pricing transparency",
+      "delivery/logistics fit",
+      "quality or safety evidence",
+      "contact and payment readiness gates"
+    ],
+    logisticsPlanningNotes: [
+      "Use typed origin, destination, crop/product, quantity, storage, and cold-chain needs.",
+      "Route/resource planning stays preparatory until a verified map/logistics connector is configured and confirmed.",
+      "Rural delivery support requires provider availability, user consent, confirmation, and audit before dispatch."
+    ],
+    routeResourcePlanning: [
+      "Prepare route/resource review from typed context only.",
+      "Do not request geolocation or share location from this packet.",
+      "Keep navigation handoff and dispatch behind separate gates."
+    ],
+    purchasePreparation: [
+      "Prepare purchase questions, budget notes, cancellation path, and risk review.",
+      "Do not buy, sell, order, checkout, process payment, or change inventory from this packet.",
+      "Payment providers remain disabled/gated unless intentionally configured and confirmed."
+    ],
+    preparationChecklist: nexusGlobalMarketplaceLogisticsChecklist(intent),
+    gateStatus,
+    confirmationGate: {
+      requiredBeforeVendorContact: true,
+      requiredBeforePurchase: true,
+      requiredBeforePayment: true,
+      requiredBeforeLogisticsDispatch: true,
+      visibleVendorDisplayRequired: true,
+      visiblePriceOrScopePreviewRequired: true,
+      cancellationPathRequired: true
+    },
+    reviewQueueTarget: intent === "purchase_preparation" ? "marketplace-payment-review" : intent === "logistics_planning" ? "logistics-review" : "marketplace-vendor-review",
+    reviewQueueReady: true,
+    citations,
+    sources: Array.isArray(live.sources) ? live.sources.slice(0, 6) : citations,
+    liveKnowledgeStatus: sanitizePilotText(live.status || "disabled", 80),
+    provider: sanitizePilotText(live.provider || "not-configured", 80),
+    nextSafeActions: [
+      "Review source/citation freshness and vendor uncertainty.",
+      "Prepare a local marketplace or logistics review note.",
+      "Require explicit confirmation before any vendor contact, purchase, payment, delivery, or route handoff."
+    ],
+    exportReady: true,
+    timestamp: new Date().toISOString(),
+    noExecutionAuthorized: true,
+    noVendorContactAuthorized: true,
+    noPurchaseAuthorized: true,
+    noPaymentAuthorized: true,
+    noLogisticsDispatchAuthorized: true,
+    noLocationSharingAuthorized: true,
+    noExternalMarketplaceOpened: true,
+    noSecretsExposed: true,
+    noFakeVendorExecution: true
+  };
+}
+
+async function nexusGlobalMarketplaceLogisticsEngine(db, body = {}, user = null, env = process.env) {
+  ensureNexusProductionRailsState(db);
+  const query = sanitizePilotText(body.query || body.question || body.command || "", 700);
+  if (!query) return { ok: false, error: "query_required" };
+  const intent = nexusGlobalMarketplaceLogisticsIntent(query, body);
+  const liveKnowledge = await nexusLiveKnowledgeAllModesQuery(db, {
+    query,
+    domain: intent === "route_resource" || intent === "logistics_planning" ? "logistics" : "marketplace",
+    mode: body.mode || intent,
+    locale: body.locale || "",
+    maxResults: body.maxResults || 5,
+    safetyContext: { sourceSurface: body.sourceSurface || "global_marketplace_logistics_engine" }
+  }, user, env);
+  const packet = buildNexusGlobalMarketplaceLogisticsPacket({
+    query,
+    intent,
+    body,
+    liveKnowledge,
+    env
+  });
+  addNexusPilotAuditEvent(db, "global_marketplace_logistics_packet_prepared", {
+    actor: user?.name || "Standard User",
+    role: user?.role || "Standard User",
+    mode: intent,
+    description: `${packet.packetType} prepared with Live Knowledge status ${packet.liveKnowledgeStatus}. No vendor contact, purchase, payment, logistics dispatch, location sharing, or external marketplace execution occurred.`
+  });
+  return {
+    ok: true,
+    status: "prepared",
+    intent,
+    packetType: packet.packetType,
+    packet,
+    liveKnowledge,
+    gateStatus: packet.gateStatus,
+    confirmationRequired: true,
+    noExecutionAuthorized: true,
+    noVendorContactAuthorized: true,
+    noPurchaseAuthorized: true,
+    noPaymentAuthorized: true,
+    noLogisticsDispatchAuthorized: true
+  };
+}
+
 function nexusKnowledgeSaveResult(db, body = {}, user = null) {
   ensureNexusProductionRailsState(db);
   const queryId = sanitizePilotText(body.queryId || "", 120);
@@ -31869,6 +32081,13 @@ async function api(req, res, url) {
 
   if (url.pathname === "/api/nexus/global-communications/engine" && req.method === "POST") {
     const result = await nexusGlobalCommunicationsEngine(db, await readBody(req), user, process.env);
+    if (!result.ok) return send(res, 400, result);
+    await writeDb(db);
+    return send(res, 200, result);
+  }
+
+  if (url.pathname === "/api/nexus/global-marketplace-logistics/engine" && req.method === "POST") {
+    const result = await nexusGlobalMarketplaceLogisticsEngine(db, await readBody(req), user, process.env);
     if (!result.ok) return send(res, 400, result);
     await writeDb(db);
     return send(res, 200, result);

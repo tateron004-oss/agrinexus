@@ -18398,6 +18398,7 @@ function renderNexusAgenticBrainResultCards() {
           ${renderNexusGlobalChronicCareHealthPacket(card)}
           ${renderNexusGlobalProviderAccessPacket(card)}
           ${renderNexusGlobalCommunicationsPacket(card)}
+          ${renderNexusGlobalMarketplaceLogisticsPacket(card)}
           ${renderNexusMediaProviderOptions(card)}
           ${renderNexusHealthAccessPreparationOptions(card)}
           ${card.localOnly ? `<small>${escapeHtml(translateText("Local-only"))}</small>` : ""}
@@ -18993,7 +18994,7 @@ function nexusKnowledgeCategoryForCommand(command = "") {
   if (/\b(mobile clinic|community health|outreach clinic|clinic van)\b/.test(lower)) return "mobileClinic";
   if (/\b(blood pressure|bp|hypertension|diabetes|glucose|obesity|weight|chronic|rpm|rtm)\b/.test(lower)) return "chronicCare";
   if (/\b(blood pressure|hypertension|diabetes|obesity|chronic|health|symptom|doctor|clinic|medical|patient)\b/.test(lower)) return "health";
-  if (/\b(price|market|buyer|seller|sell|agritade|agritrade|commodity)\b/.test(lower)) return "marketplace";
+  if (/\b(price|market|buyer|seller|sell|agritade|agritrade|commodity|vendor|supplier|logistics|delivery|cold chain|storage|warehouse|purchase|checkout)\b/.test(lower)) return "marketplace";
   if (/\b(job|jobs|workforce|career|training|solar installation|skills|employment|employer|credential|certificate|resume|interview|role|hiring)\b/.test(lower)) return "jobs";
   if (/\b(lesson|learning|literacy|course|study|school|training|ai literacy|digital literacy|health literacy|agriculture literacy)\b/.test(lower)) return "learning";
   if (/\b(crop|maize|tomato|tomatoes|cassava|soil|pest|farm|farmer|agriculture|irrigation|fertilizer|yellow leaves)\b/.test(lower)) return "agriculture";
@@ -19300,6 +19301,74 @@ function renderNexusGlobalCommunicationsPacket(card = {}) {
       <small data-testid="nexus-communications-live-knowledge-status">${escapeHtml(translateText("Live Knowledge"))}: ${escapeHtml(packet.liveKnowledgeStatus || "disabled")}</small>
       <small data-testid="nexus-communications-citation-count">${escapeHtml(translateText("Citations"))}: ${escapeHtml(String(citations.length || 0))}</small>
       <small data-testid="nexus-communications-no-execution">${escapeHtml(translateText("No SMS, WhatsApp, Telegram, email, phone call, provider handoff, external navigation, or silent communication was executed."))}</small>
+    </div>
+  `;
+}
+
+function renderNexusGlobalMarketplaceLogisticsPacket(card = {}) {
+  const packet = card.globalMarketplaceLogisticsPacket || card.marketplaceLogisticsPacket || null;
+  if (!packet) return "";
+  const citations = Array.isArray(packet.citations) ? packet.citations : [];
+  const checklist = Array.isArray(packet.preparationChecklist) ? packet.preparationChecklist : [];
+  const vendorCriteria = Array.isArray(packet.vendorComparisonCriteria) ? packet.vendorComparisonCriteria : [];
+  const logisticsNotes = Array.isArray(packet.logisticsPlanningNotes) ? packet.logisticsPlanningNotes : [];
+  const purchasePrep = Array.isArray(packet.purchasePreparation) ? packet.purchasePreparation : [];
+  const gateStatus = packet.gateStatus || {};
+  const missingConfig = Array.isArray(gateStatus.missingConfig) ? gateStatus.missingConfig : [];
+  const nextSafeActions = Array.isArray(packet.nextSafeActions) ? packet.nextSafeActions : [];
+  return `
+    <div class="nexus-global-marketplace-logistics-packet" data-testid="nexus-global-marketplace-logistics-packet-card" data-packet-type="${escapeHtml(packet.packetType || "marketplace_vendor_research_packet")}">
+      <div class="nexus-home-mode-panel-head">
+        <span class="nexus-home-mode-panel-icon" aria-hidden="true">🛒</span>
+        <div>
+          <strong>${escapeHtml(translateText("Global Marketplace, Vendor & Logistics Engine"))}</strong>
+          <small data-testid="nexus-marketplace-logistics-packet-type">${escapeHtml(packet.packetType || "marketplace_vendor_research_packet")}</small>
+        </div>
+      </div>
+      <p data-testid="nexus-marketplace-logistics-summary">${escapeHtml(translateText(packet.marketplaceSummary || "Marketplace and logistics packet prepared."))}</p>
+      <dl>
+        <div>
+          <dt>${escapeHtml(translateText("Source-backed research"))}</dt>
+          <dd data-testid="nexus-marketplace-logistics-source-backed">${escapeHtml(translateText(packet.sourceBackedResearch || "Live retrieval is not configured; Nexus did not fabricate citations."))}</dd>
+        </div>
+        <div>
+          <dt>${escapeHtml(translateText("Vendor comparison"))}</dt>
+          <dd data-testid="nexus-marketplace-logistics-vendor-comparison">${vendorCriteria.map(item => escapeHtml(translateText(item))).join("; ")}</dd>
+        </div>
+        <div>
+          <dt>${escapeHtml(translateText("Logistics planning"))}</dt>
+          <dd data-testid="nexus-marketplace-logistics-planning">${logisticsNotes.map(item => escapeHtml(translateText(item))).join("; ")}</dd>
+        </div>
+        <div>
+          <dt>${escapeHtml(translateText("Purchase/payment preparation"))}</dt>
+          <dd data-testid="nexus-marketplace-logistics-purchase-prep">${purchasePrep.map(item => escapeHtml(translateText(item))).join("; ")}</dd>
+        </div>
+        <div>
+          <dt>${escapeHtml(translateText("Gate status"))}</dt>
+          <dd data-testid="nexus-marketplace-logistics-gate-status">${escapeHtml(translateText(gateStatus.status || "credential_gated"))}; ${escapeHtml(translateText("vendor"))}: ${escapeHtml(translateText(gateStatus.marketplaceProvider || "disabled"))}; ${escapeHtml(translateText("logistics"))}: ${escapeHtml(translateText(gateStatus.logisticsProvider || "disabled"))}; ${escapeHtml(translateText("payment"))}: ${escapeHtml(translateText(gateStatus.paymentProvider || "disabled"))}</dd>
+        </div>
+        <div>
+          <dt>${escapeHtml(translateText("Missing configuration"))}</dt>
+          <dd data-testid="nexus-marketplace-logistics-missing-config">${missingConfig.length ? missingConfig.map(name => escapeHtml(name)).join(", ") : escapeHtml(translateText("none"))}</dd>
+        </div>
+        <div>
+          <dt>${escapeHtml(translateText("Review queue"))}</dt>
+          <dd data-testid="nexus-marketplace-logistics-review-queue">${escapeHtml(translateText(packet.reviewQueueTarget || "marketplace-vendor-review"))}: ${escapeHtml(translateText(packet.reviewQueueReady ? "ready for local review" : "not ready"))}</dd>
+        </div>
+        <div>
+          <dt>${escapeHtml(translateText("Preparation checklist"))}</dt>
+          <dd data-testid="nexus-marketplace-logistics-checklist">${checklist.map(item => escapeHtml(translateText(item))).join("; ")}</dd>
+        </div>
+      </dl>
+      ${nextSafeActions.length ? `
+        <div class="nexus-home-mode-panel-actions" aria-label="${escapeHtml(translateText("Marketplace and logistics next safe actions"))}">
+          ${nextSafeActions.slice(0, 4).map(action => `<button type="button" data-nexus-command="${escapeHtml(action)}" data-nexus-mode-shortcut="global-marketplace-logistics-next-action">${escapeHtml(translateText(action))}</button>`).join("")}
+        </div>
+      ` : ""}
+      <small data-testid="nexus-marketplace-logistics-live-knowledge-status">${escapeHtml(translateText("Live Knowledge"))}: ${escapeHtml(packet.liveKnowledgeStatus || "disabled")}</small>
+      <small data-testid="nexus-marketplace-logistics-citation-count">${escapeHtml(translateText("Citations"))}: ${escapeHtml(String(citations.length || 0))}</small>
+      <small data-testid="nexus-marketplace-logistics-export-ready">${escapeHtml(translateText(packet.exportReady ? "Export-ready marketplace/logistics packet prepared for review." : "Review packet prepared locally."))}</small>
+      <small data-testid="nexus-marketplace-logistics-no-execution">${escapeHtml(translateText("No vendor contact, purchase, payment, order, fulfillment, delivery dispatch, location sharing, external marketplace opening, or route handoff was authorized."))}</small>
     </div>
   `;
 }
@@ -19706,6 +19775,32 @@ async function runNexusKnowledgeQuery(command = "", options = {}) {
       }
     } catch {
       nexusKnowledgeActionStatus = "Knowledge rail checked safely. Communications packet preparation was unavailable.";
+    }
+  }
+  if (["marketplace", "maps"].includes(options.category || nexusKnowledgeCategoryForCommand(question)) || /\b(vendor|supplier|logistics|delivery|cold chain|storage|warehouse|rural delivery|purchase prep|route resource)\b/i.test(question)) {
+    try {
+      const marketplaceLogisticsResult = await request("/api/nexus/global-marketplace-logistics/engine", {
+        method: "POST",
+        body: {
+          query: question,
+          mode: options.modeId || (options.category || nexusKnowledgeCategoryForCommand(question)),
+          locale: languageCode(),
+          sourceSurface: options.sourceSurface || "standard_user"
+        }
+      });
+      if (marketplaceLogisticsResult?.packet) {
+        nexusAgenticBrainLastResult.preparedCards.unshift({
+          type: "nexus_global_marketplace_logistics_engine",
+          title: "Marketplace, vendor, and logistics packet",
+          status: marketplaceLogisticsResult.packetType || "marketplace_vendor_research_packet",
+          localOnly: true,
+          needsRealProvider: true,
+          globalMarketplaceLogisticsPacket: marketplaceLogisticsResult.packet
+        });
+        nexusKnowledgeActionStatus = "Marketplace/logistics packet prepared. Vendor contact, purchase, payment, delivery, route handoff, and external marketplace execution remain gated.";
+      }
+    } catch {
+      nexusKnowledgeActionStatus = "Knowledge rail checked safely. Marketplace/logistics packet preparation was unavailable.";
     }
   }
   await refreshNexusInternetResourceHistory({ rerender: false });
@@ -20610,6 +20705,7 @@ const NEXUS_PACKET_TYPES = Object.freeze([
   "agriculture_support_packet", "crop_support_packet", "farm_planning_packet", "field_visit_packet", "crop_support_request", "farm_planning_request", "input_supplier_request", "extension_partner_request", "field_visit_request", "marketplace_inquiry", "logistics_request",
   "training_support_packet", "workforce_pathway_packet", "employer_partner_research_packet", "learning_recommendation_packet",
   "email_preparation_packet", "sms_preparation_packet", "whatsapp_preparation_packet", "phone_call_preparation_packet", "telegram_preparation_packet", "communication_confirmation_packet", "communication_outcome_packet",
+  "marketplace_vendor_research_packet", "vendor_comparison_packet", "logistics_planning_packet", "route_resource_packet", "purchase_preparation_packet",
   "workforce_referral", "job_referral", "employer_partner_referral", "training_enrollment_request", "learning_plan_request",
   "email_message", "sms_message", "whatsapp_message", "telegram_message", "call_intent",
   "route_planning_request", "location_review_request", "field_visit_location_packet"
