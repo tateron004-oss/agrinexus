@@ -28852,6 +28852,148 @@ async function nexusIntelligenceAsk(db, body = {}, user = null, env = process.en
   ensureNexusProductionRailsState(db);
   const originalQuestion = sanitizePilotText(body.question || body.command || body.query || "", 700);
   if (!originalQuestion) return { ok: false, error: "question_required" };
+  if (/\b(pharmacy|medication|medicine|refill|diabetes supplies|pharmacist)\b/i.test(originalQuestion) && /\b(prepare|create|send|review|blocking|blocked|configured|status|packet|support|coordination|referral)\b/i.test(originalQuestion)) {
+    const pharmacyStatus = nexusProviderCoordinationStatus("pharmacy", env);
+    const wantsBlocking = /\b(blocking|blocked|missing|configured|ready|status)\b/i.test(originalQuestion);
+    const wantsSend = /\b(send|share|route|refer|referral)\b/i.test(originalQuestion);
+    const answer = wantsBlocking
+      ? (pharmacyStatus.configured
+        ? `${pharmacyStatus.providerName || "Pharmacy provider"} is configured for ${pharmacyStatus.providerMode}. Nexus still requires medication context, consent to prepare, consent to share, and explicit confirmation before sending a pharmacy review packet.`
+        : `Pharmacy referral delivery is not ready. Missing: ${pharmacyStatus.missingEnv.join(", ") || "provider destination or delivery credentials"}. Nexus can prepare the pharmacy packet and queue it locally without claiming refill approval, prescription, or delivery.`)
+      : wantsSend
+        ? "Nexus can send a pharmacy review packet only after the packet is prepared, the destination is configured, consent to share is checked, and the user explicitly confirms. Nexus does not approve refills, prescribe, or claim pharmacy acceptance."
+        : "Nexus can prepare a pharmacy review packet for medication review, refill coordination questions, adherence support, diabetes supplies questions, or pharmacist review. External sharing stays consent and confirmation gated.";
+    const auditEvent = addNexusPilotAuditEvent(db, "pharmacy_provider_status_answered", {
+      actor: user?.name || "Standard User",
+      role: user?.role || "Standard User",
+      mode: "pharmacy",
+      description: "Nexus answered pharmacy provider coordination status. No prescription, refill approval, pharmacy acceptance, or external send was created."
+    });
+    return {
+      ok: true,
+      intelligence: {
+        router: "nexus-pharmacy-mobile-clinic-activation",
+        originalQuestion,
+        category: "pharmacy",
+        answerMode: pharmacyStatus.configured ? "pharmacy_provider_configured" : "pharmacy_provider_unconfigured",
+        sourceBacked: false,
+        noExecutionAuthorized: true,
+        noPrescription: true,
+        noRefillApproval: true
+      },
+      status: { pharmacyProvider: pharmacyStatus },
+      classification: { category: "pharmacy", retrievalNeeded: false },
+      result: {
+        ok: true,
+        category: "pharmacy",
+        categoryLabel: "Pharmacy Support",
+        answerMode: wantsSend ? "pharmacy_consent_confirmation_required" : "pharmacy_packet_preparation",
+        retrievalStatus: "built_in",
+        answer,
+        pharmacyProviderStatus: pharmacyStatus,
+        preparedCards: [{
+          type: "pharmacy_provider_activation_status",
+          title: "Pharmacy provider lane",
+          status: pharmacyStatus.configured ? "provider configured, confirmation still required" : "local queue fallback",
+          modePanel: {
+            id: "pharmacy-support",
+            icon: "💊",
+            title: "Pharmacy Support",
+            explanation: "Prepare medication review, refill coordination questions, adherence support, and pharmacist review packets.",
+            nextPrompt: "Add medication context, concerns, consent, and confirmation before preparing or sending.",
+            limitation: "No diagnosis, prescribing, refill approval, pharmacy acceptance, or medication change occurs from Nexus."
+          },
+          needsRealProvider: true,
+          localOnly: !pharmacyStatus.configured
+        }],
+        followUpActions: [
+          { id: "open-pharmacy-support", label: "Open pharmacy support", action: "open-mode" },
+          { id: "review-pharmacy-status", label: "Review pharmacy provider status", action: "refresh-status" }
+        ],
+        limitations: [
+          "Nexus does not prescribe, approve refills, change medication, or replace pharmacist/clinician judgment.",
+          "External pharmacy sharing requires configured provider destination, consent, confirmation, and audit.",
+          "Emergency symptoms should use local emergency services; Nexus does not dispatch help."
+        ],
+        citations: [],
+        noExecutionAuthorized: true,
+        noExternalDelivery: true,
+        auditEventId: auditEvent.id
+      },
+      audit: auditEvent
+    };
+  }
+  if (/\b(mobile clinic|rural clinic|community health|clinic follow-up|clinic follow up|vitals check|blood pressure screening)\b/i.test(originalQuestion) && /\b(prepare|create|send|review|blocking|blocked|configured|status|packet|support|request|route|screening)\b/i.test(originalQuestion)) {
+    const mobileClinicStatus = nexusProviderCoordinationStatus("mobile-clinic", env);
+    const wantsBlocking = /\b(blocking|blocked|missing|configured|ready|status)\b/i.test(originalQuestion);
+    const wantsSend = /\b(send|share|route|request)\b/i.test(originalQuestion);
+    const answer = wantsBlocking
+      ? (mobileClinicStatus.configured
+        ? `${mobileClinicStatus.providerName || "Mobile clinic provider"} is configured for ${mobileClinicStatus.providerMode}. Nexus still requires service details, consent to prepare, consent to share, and explicit confirmation before sending a mobile clinic request packet.`
+        : `Mobile clinic delivery is not ready. Missing: ${mobileClinicStatus.missingEnv.join(", ") || "provider destination or delivery credentials"}. Nexus can prepare the request and queue it locally without claiming dispatch, booking, or provider acceptance.`)
+      : wantsSend
+        ? "Nexus can send a mobile clinic request packet only after the request is prepared, the destination is configured, consent to share is checked, and the user explicitly confirms. Nexus does not dispatch a clinic or claim appointment acceptance."
+        : "Nexus can prepare a mobile clinic request for vitals checks, diabetes or hypertension follow-up, obesity support, screening, community outreach, or rural clinic review. Red flags show emergency guidance instead of dispatch.";
+    const auditEvent = addNexusPilotAuditEvent(db, "mobile_clinic_provider_status_answered", {
+      actor: user?.name || "Standard User",
+      role: user?.role || "Standard User",
+      mode: "mobile-clinic",
+      description: "Nexus answered mobile clinic provider coordination status. No dispatch, appointment acceptance, emergency routing, or external send was created."
+    });
+    return {
+      ok: true,
+      intelligence: {
+        router: "nexus-pharmacy-mobile-clinic-activation",
+        originalQuestion,
+        category: "mobileClinic",
+        answerMode: mobileClinicStatus.configured ? "mobile_clinic_provider_configured" : "mobile_clinic_provider_unconfigured",
+        sourceBacked: false,
+        noExecutionAuthorized: true,
+        noDispatchClaim: true,
+        noAppointmentAcceptanceClaim: true
+      },
+      status: { mobileClinicProvider: mobileClinicStatus },
+      classification: { category: "mobileClinic", retrievalNeeded: false },
+      result: {
+        ok: true,
+        category: "mobileClinic",
+        categoryLabel: "Mobile Clinic",
+        answerMode: wantsSend ? "mobile_clinic_consent_confirmation_required" : "mobile_clinic_packet_preparation",
+        retrievalStatus: "built_in",
+        answer,
+        mobileClinicProviderStatus: mobileClinicStatus,
+        preparedCards: [{
+          type: "mobile_clinic_provider_activation_status",
+          title: "Mobile clinic provider lane",
+          status: mobileClinicStatus.configured ? "provider configured, confirmation still required" : "local queue fallback",
+          modePanel: {
+            id: "mobile-clinic",
+            icon: "🚐",
+            title: "Mobile Clinic",
+            explanation: "Prepare mobile clinic, vitals, screening, community outreach, and rural follow-up request packets.",
+            nextPrompt: "Add service area, concern, symptoms, readings, red flags, consent, and confirmation.",
+            limitation: "No clinic dispatch, appointment acceptance, location sharing, emergency routing, or provider acceptance occurs from Nexus."
+          },
+          needsRealProvider: true,
+          localOnly: !mobileClinicStatus.configured
+        }],
+        followUpActions: [
+          { id: "open-mobile-clinic", label: "Open mobile clinic request", action: "open-mode" },
+          { id: "review-mobile-clinic-status", label: "Review mobile clinic provider status", action: "refresh-status" }
+        ],
+        limitations: [
+          "Nexus does not dispatch a mobile clinic, book appointments, or claim provider acceptance.",
+          "External mobile clinic sharing requires configured provider destination, consent, confirmation, and audit.",
+          "Emergency symptoms should use local emergency services; Nexus does not dispatch emergency help."
+        ],
+        citations: [],
+        noExecutionAuthorized: true,
+        noExternalDelivery: true,
+        auditEventId: auditEvent.id
+      },
+      audit: auditEvent
+    };
+  }
   if (/\b(telehealth|virtual care|video visit|video visits|provider bridge|provider review|diabetes review|blood pressure|hypertension|obesity|rpm|rtm|community health worker|chw)\b/i.test(originalQuestion) && /\b(start|create|prepare|review|blocking|blocked|video|visit|encounter|intake|packet|reading|follow|provider)\b/i.test(originalQuestion)) {
     const telehealthStatus = nexusTelehealthProvider.status(env);
     const provider = telehealthStatus.provider || {};
@@ -31120,6 +31262,339 @@ async function nexusCommunicationsSendMessage(db, body = {}, user = null, env = 
   }
 }
 
+const NEXUS_PROVIDER_COORDINATION_LANES = Object.freeze({
+  pharmacy: {
+    lane: "pharmacy",
+    idPrefix: "NX-RX",
+    title: "Pharmacy Review Packet",
+    statusPath: "/api/nexus/pharmacy/status",
+    createPath: "/api/nexus/pharmacy/create-referral",
+    sendPath: "/api/nexus/pharmacy/send-referral",
+    modeEnv: "NEXUS_PHARMACY_PROVIDER_MODE",
+    providerNameEnv: "NEXUS_PHARMACY_PROVIDER_NAME",
+    emailEnv: "NEXUS_PHARMACY_REFERRAL_EMAIL",
+    smsEnv: "NEXUS_PHARMACY_SMS_TO",
+    whatsappEnv: "NEXUS_PHARMACY_WHATSAPP_TO",
+    intakeUrlEnv: "NEXUS_PHARMACY_INTAKE_URL",
+    regionEnv: "NEXUS_PHARMACY_SERVICE_REGION",
+    smsCopy: id => `Nexus has prepared a pharmacy review packet. Case ID: ${id}. Please review through the approved provider channel. This is not an emergency alert.`
+  },
+  "mobile-clinic": {
+    lane: "mobile-clinic",
+    idPrefix: "NX-MC",
+    title: "Mobile Clinic Request Packet",
+    statusPath: "/api/nexus/mobile-clinic/status",
+    createPath: "/api/nexus/mobile-clinic/create-request",
+    sendPath: "/api/nexus/mobile-clinic/send-request",
+    modeEnv: "NEXUS_MOBILE_CLINIC_PROVIDER_MODE",
+    providerNameEnv: "NEXUS_MOBILE_CLINIC_PROVIDER_NAME",
+    emailEnv: "NEXUS_MOBILE_CLINIC_REFERRAL_EMAIL",
+    smsEnv: "NEXUS_MOBILE_CLINIC_SMS_TO",
+    whatsappEnv: "NEXUS_MOBILE_CLINIC_WHATSAPP_TO",
+    intakeUrlEnv: "NEXUS_MOBILE_CLINIC_INTAKE_URL",
+    regionEnv: "NEXUS_MOBILE_CLINIC_SERVICE_REGION",
+    smsCopy: id => `Nexus has prepared a mobile clinic request. Case ID: ${id}. Please review through the approved provider channel. This is not an emergency alert.`
+  }
+});
+
+const NEXUS_MOBILE_CLINIC_REDFLAGS = Object.freeze(["chest_pain", "shortness_of_breath", "stroke_symptoms", "severe_headache", "confusion", "severe_bleeding"]);
+
+function normalizeNexusProviderCoordinationMode(value = "") {
+  const mode = String(value || "email").trim().toLowerCase();
+  if (mode === "sms" || mode === "whatsapp") return mode;
+  return "email";
+}
+
+function nexusProviderCoordinationStatus(lane = "pharmacy", env = process.env) {
+  const config = NEXUS_PROVIDER_COORDINATION_LANES[lane] || NEXUS_PROVIDER_COORDINATION_LANES.pharmacy;
+  const mode = normalizeNexusProviderCoordinationMode(env[config.modeEnv] || "email");
+  const destinationEnv = mode === "whatsapp" ? config.whatsappEnv : mode === "sms" ? config.smsEnv : config.emailEnv;
+  const providerName = sanitizePilotText(env[config.providerNameEnv] || "", 140);
+  const serviceRegion = sanitizePilotText(env[config.regionEnv] || "", 160);
+  const intakeUrlConfigured = Boolean(String(env[config.intakeUrlEnv] || "").trim());
+  const missingDestinationEnv = String(env[destinationEnv] || "").trim() ? [] : [destinationEnv];
+  const deliveryStatus = mode === "email" ? nexusEmailProviderStatus(env) : nexusCommunicationsProviderStatus(env).channels[mode];
+  const deliveryConfigured = mode === "email" ? Boolean(deliveryStatus.configured) : Boolean(deliveryStatus.configured);
+  const deliveryMissingEnv = mode === "email" ? (deliveryStatus.missingEnv || []) : (deliveryStatus.missingEnv || []);
+  return {
+    ok: true,
+    lane: config.lane,
+    providerMode: mode,
+    providerName: providerName || "not configured",
+    serviceRegion: serviceRegion || "not configured",
+    intakeUrlConfigured,
+    destinationConfigured: missingDestinationEnv.length === 0,
+    deliveryProviderConfigured: deliveryConfigured,
+    configured: missingDestinationEnv.length === 0 && deliveryConfigured,
+    status: missingDestinationEnv.length ? "missing_destination_config" : deliveryConfigured ? "ready" : "provider_unconfigured",
+    missingEnv: Array.from(new Set([...missingDestinationEnv, ...deliveryMissingEnv])),
+    destinationEnvNames: {
+      mode: config.modeEnv,
+      providerName: config.providerNameEnv,
+      email: config.emailEnv,
+      sms: config.smsEnv,
+      whatsapp: config.whatsappEnv,
+      intakeUrl: config.intakeUrlEnv,
+      serviceRegion: config.regionEnv
+    },
+    canPreparePacket: true,
+    canSendWithConsentAndConfirmation: missingDestinationEnv.length === 0 && deliveryConfigured,
+    requiresConsentToShare: true,
+    requiresConfirmation: true,
+    noSecretValuesReturned: true,
+    noSilentSend: true,
+    noDispatchClaim: config.lane === "mobile-clinic",
+    noPrescriptionOrRefillApprovalClaim: config.lane === "pharmacy",
+    nextAction: missingDestinationEnv.length
+      ? `Configure ${destinationEnv} for ${config.lane} ${mode} delivery.`
+      : deliveryConfigured
+        ? "Prepare packet, show destination, collect consent, and require confirmation before sending."
+        : `Configure the ${mode === "email" ? "email" : "Twilio " + mode.toUpperCase()} provider before live delivery.`
+  };
+}
+
+function nexusProviderCoordinationCaseId(prefix = "NX") {
+  return `${prefix}-${new Date().toISOString().slice(0, 10).replace(/-/g, "")}-${crypto.randomUUID().slice(0, 8).toUpperCase()}`;
+}
+
+function normalizeNexusProviderCoordinationList(value = []) {
+  if (Array.isArray(value)) return value.map(item => sanitizePilotText(item, 180)).filter(Boolean).slice(0, 12);
+  return String(value || "").split(/[,;\n]/).map(item => sanitizePilotText(item, 180)).filter(Boolean).slice(0, 12);
+}
+
+function normalizeNexusProviderCoordinationReadings(value = []) {
+  const readings = Array.isArray(value) ? value : String(value || "").split(/[,;\n]/).map(item => ({ type: "symptom", value: item }));
+  return readings.map(item => ({
+    type: sanitizePilotText(item?.type || "symptom", 80),
+    value: sanitizePilotText(item?.value || item || "", 180),
+    observedAt: sanitizePilotText(item?.observedAt || "", 80),
+    notes: sanitizePilotText(item?.notes || "", 180)
+  })).filter(item => item.value).slice(0, 12);
+}
+
+function summarizeNexusProviderReadings(readings = []) {
+  if (!readings.length) return "No readings were included.";
+  return readings.map(item => `${item.type}: ${item.value}${item.observedAt ? ` (${item.observedAt})` : ""}${item.notes ? ` - ${item.notes}` : ""}`).join("; ");
+}
+
+function queueNexusProviderCoordinationFallback(db, lane = "pharmacy", payload = {}, status = "queued-for-review", missingEnv = []) {
+  ensureNexusProductionRailsState(db);
+  const config = NEXUS_PROVIDER_COORDINATION_LANES[lane] || NEXUS_PROVIDER_COORDINATION_LANES.pharmacy;
+  const now = new Date().toISOString();
+  const id = sanitizePilotText(payload.referralId || payload.requestId || payload.caseId || nexusProviderCoordinationCaseId(config.idPrefix), 80);
+  const item = {
+    id: crypto.randomUUID(),
+    type: `${config.lane}_provider_packet`,
+    status,
+    lane: config.lane,
+    packetId: id,
+    missingEnv,
+    localOnly: true,
+    noExternalDelivery: true,
+    nextAction: "Review locally or configure provider destination and delivery credentials before external sharing.",
+    createdAt: now,
+    updatedAt: now
+  };
+  db.nexusPilotOfflineQueue.unshift(item);
+  addNexusPilotAuditEvent(db, `${config.lane}_packet_queued_locally`, {
+    relatedRecordId: item.id,
+    mode: config.lane,
+    actor: "Nexus",
+    description: `${config.title} queued locally with status ${status}. No acceptance, dispatch, prescription, refill approval, or delivery was claimed.`
+  });
+  return item;
+}
+
+function buildNexusPharmacyReferralPacket(body = {}, referralId = "") {
+  const medications = normalizeNexusProviderCoordinationList(body.medications || body.medicationList || body.medication);
+  const allergies = normalizeNexusProviderCoordinationList(body.allergies || body.allergy);
+  const readings = normalizeNexusProviderCoordinationReadings(body.readings || body.readingsText);
+  const concern = sanitizePilotText(body.concern || body.question || "Pharmacy review requested.", 700);
+  const need = sanitizePilotText(body.pharmacyNeed || "medication-review", 120);
+  const condition = sanitizePilotText(body.conditionArea || "general", 120);
+  return {
+    title: "Pharmacy Review Packet",
+    summary: `Pharmacy ${need.replace(/-/g, " ")} packet for ${condition}. Concern: ${concern}`,
+    medicationList: medications,
+    allergies,
+    readingsSummary: summarizeNexusProviderReadings(readings),
+    patientQuestions: [
+      concern,
+      need === "refill-coordination" ? "What is the safe provider-reviewed next step for refill coordination?" : "What should the patient ask a pharmacist or clinician before making changes?",
+      "Are there access, adherence, supply, or side-effect issues that need clinician/pharmacist review?"
+    ].map(item => sanitizePilotText(item, 260)).filter(Boolean),
+    disclaimers: [
+      "Nexus does not diagnose, prescribe, approve refills, change medication, or replace pharmacist/clinician judgment.",
+      "External sharing requires explicit consent and confirmation.",
+      "This is not an emergency service."
+    ],
+    referralId,
+    conditionArea: condition,
+    pharmacyNeed: need
+  };
+}
+
+function buildNexusMobileClinicRequestPacket(body = {}, requestId = "") {
+  const readings = normalizeNexusProviderCoordinationReadings(body.readings || body.readingsText);
+  const symptoms = normalizeNexusProviderCoordinationList(body.symptoms || body.symptom);
+  const redFlags = normalizeNexusProviderCoordinationList(body.redFlags).filter(flag => NEXUS_MOBILE_CLINIC_REDFLAGS.includes(flag));
+  const concern = sanitizePilotText(body.concern || "Mobile clinic access requested.", 700);
+  const visitNeed = sanitizePilotText(body.visitNeed || "vitals-check", 120);
+  const serviceArea = sanitizePilotText(body.serviceArea || body.countryOrRegion || "service area not provided", 180);
+  return {
+    title: "Mobile Clinic Request Packet",
+    summary: `Mobile clinic ${visitNeed.replace(/-/g, " ")} request for ${serviceArea}. Concern: ${concern}`,
+    serviceNeed: visitNeed,
+    readingsSummary: summarizeNexusProviderReadings(readings),
+    redFlagSummary: redFlags.length ? `Possible urgent red flags selected: ${redFlags.join(", ")}. Use local emergency services if symptoms may be urgent.` : "No emergency red flags selected.",
+    symptoms,
+    patientQuestions: [
+      concern,
+      "What mobile clinic or community health review path is appropriate if available?",
+      "What access barriers, language needs, vitals, or follow-up details should be reviewed?"
+    ].map(item => sanitizePilotText(item, 260)).filter(Boolean),
+    disclaimers: [
+      "Nexus does not dispatch a mobile clinic, book appointments, or claim provider acceptance.",
+      "Red flags require local emergency services or urgent care; Nexus does not dispatch emergency help.",
+      "External sharing requires explicit consent and confirmation."
+    ],
+    requestId,
+    visitNeed,
+    serviceArea,
+    redFlags
+  };
+}
+
+function nexusProviderCoordinationBaseResult(lane = "pharmacy", body = {}, env = process.env) {
+  const config = NEXUS_PROVIDER_COORDINATION_LANES[lane] || NEXUS_PROVIDER_COORDINATION_LANES.pharmacy;
+  const idKey = lane === "pharmacy" ? "referralId" : "requestId";
+  const caseId = sanitizePilotText(body[idKey] || body.caseId || nexusProviderCoordinationCaseId(config.idPrefix), 80);
+  const status = nexusProviderCoordinationStatus(config.lane, env);
+  const packet = config.lane === "pharmacy"
+    ? buildNexusPharmacyReferralPacket(body, caseId)
+    : buildNexusMobileClinicRequestPacket(body, caseId);
+  return {
+    idKey,
+    caseId,
+    config,
+    status,
+    packet,
+    redFlags: packet.redFlags || []
+  };
+}
+
+function createNexusProviderCoordinationPacket(db, lane = "pharmacy", body = {}, user = null, env = process.env) {
+  ensureNexusProductionRailsState(db);
+  const { idKey, caseId, config, status, packet, redFlags } = nexusProviderCoordinationBaseResult(lane, body, env);
+  const emergencyGuidance = config.lane === "mobile-clinic" && (redFlags.length || body.urgency === "emergency_possible");
+  const delivery = {
+    email: { attempted: false, executed: false },
+    sms: { attempted: false, executed: false },
+    whatsapp: { attempted: false, executed: false }
+  };
+  if (body.confirmed !== true) {
+    return { ok: true, [idKey]: caseId, status: "blocked-confirmation-required", packet, delivery, queue: { created: false, lane: config.lane, status: "not-created" }, missingEnv: status.missingEnv, error: "Packet preparation requires explicit confirmation.", noExternalDelivery: true };
+  }
+  if (body.consentToPreparePacket !== true) {
+    return { ok: true, [idKey]: caseId, status: "blocked-consent-required", packet, delivery, queue: { created: false, lane: config.lane, status: "not-created" }, missingEnv: status.missingEnv, error: "Packet preparation requires consent.", noExternalDelivery: true };
+  }
+  const queueItem = queueNexusProviderCoordinationFallback(db, config.lane, { ...body, [idKey]: caseId }, emergencyGuidance ? "emergency-guidance" : "pending-review", []);
+  const result = {
+    ok: true,
+    [idKey]: caseId,
+    status: emergencyGuidance ? "emergency-guidance" : "packet-prepared",
+    packet,
+    delivery,
+    queue: { created: true, lane: config.lane, status: "pending-review", id: queueItem.id },
+    missingEnv: status.missingEnv,
+    error: null,
+    providerStatus: status,
+    emergencyGuidance: emergencyGuidance ? "Possible urgent red flags were selected. Use local emergency services or urgent care now if symptoms may be serious. Nexus does not dispatch emergency help." : "",
+    noDiagnosis: true,
+    noPrescription: true,
+    noDispatchClaim: true,
+    noAppointmentAcceptanceClaim: true,
+    noExternalDelivery: true
+  };
+  addNexusPilotAuditEvent(db, `${config.lane}_packet_prepared`, {
+    relatedRecordId: caseId,
+    mode: config.lane,
+    actor: user?.name || "Standard User",
+    description: `${config.title} prepared and queued locally. No external delivery or provider acceptance was claimed.`
+  });
+  return result;
+}
+
+async function sendNexusProviderCoordinationPacket(db, lane = "pharmacy", body = {}, user = null, env = process.env) {
+  ensureNexusProductionRailsState(db);
+  const { idKey, caseId, config, status, packet, redFlags } = nexusProviderCoordinationBaseResult(lane, body, env);
+  const delivery = {
+    email: { attempted: false, executed: false },
+    sms: { attempted: false, executed: false },
+    whatsapp: { attempted: false, executed: false }
+  };
+  const emergencyGuidance = config.lane === "mobile-clinic" && (redFlags.length || body.urgency === "emergency_possible");
+  if (body.confirmed !== true) return { ok: true, [idKey]: caseId, status: "blocked-confirmation-required", packet, delivery, queue: { created: false, lane: config.lane, status: "not-created" }, missingEnv: status.missingEnv, error: "External sharing requires explicit confirmation.", noExternalDelivery: true };
+  if (body.consentToPreparePacket !== true || body.consentToShare !== true) return { ok: true, [idKey]: caseId, status: "blocked-consent-required", packet, delivery, queue: { created: false, lane: config.lane, status: "not-created" }, missingEnv: status.missingEnv, error: "External sharing requires consent to prepare and consent to share.", noExternalDelivery: true };
+  if (emergencyGuidance) {
+    const queueItem = queueNexusProviderCoordinationFallback(db, config.lane, { ...body, [idKey]: caseId }, "emergency-guidance", []);
+    return { ok: true, [idKey]: caseId, status: "emergency-guidance", packet, delivery, queue: { created: true, lane: config.lane, status: "pending-review", id: queueItem.id }, missingEnv: status.missingEnv, error: null, emergencyGuidance: "Possible urgent red flags were selected. Use local emergency services or urgent care now if symptoms may be serious. Nexus does not dispatch emergency help.", noExternalDelivery: true };
+  }
+  if (!status.destinationConfigured) {
+    const queueItem = queueNexusProviderCoordinationFallback(db, config.lane, { ...body, [idKey]: caseId }, "provider-unconfigured", status.missingEnv);
+    return { ok: true, [idKey]: caseId, status: "provider-unconfigured", packet, delivery, queue: { created: true, lane: config.lane, status: "pending-review", id: queueItem.id }, missingEnv: status.missingEnv, error: "Provider destination is not configured.", noExternalDelivery: true };
+  }
+  const mode = status.providerMode;
+  let providerResult = null;
+  if (mode === "email") {
+    delivery.email.attempted = true;
+    providerResult = await nexusEmailSendPacket(db, {
+      to: env[config.emailEnv],
+      subject: `${config.title}: ${caseId}`,
+      domain: config.lane,
+      packetId: caseId,
+      summary: packet.summary,
+      packetBody: [
+        packet.summary,
+        packet.readingsSummary,
+        ...(packet.medicationList || []).map(item => `Medication: ${item}`),
+        ...(packet.allergies || []).map(item => `Allergy: ${item}`),
+        ...(packet.symptoms || []).map(item => `Symptom: ${item}`),
+        ...(packet.patientQuestions || []).map(item => `Question: ${item}`),
+        ...(packet.disclaimers || []).map(item => `Safety: ${item}`)
+      ].filter(Boolean).join("\n"),
+      confirmed: true,
+      consent: true
+    }, user, env);
+    delivery.email.executed = Boolean(providerResult.executed);
+  } else {
+    delivery[mode].attempted = true;
+    providerResult = await nexusCommunicationsSendMessage(db, {
+      channel: mode,
+      to: env[mode === "whatsapp" ? config.whatsappEnv : config.smsEnv],
+      domain: config.lane,
+      packetId: caseId,
+      summary: packet.summary,
+      message: config.smsCopy(caseId),
+      confirmed: true,
+      consent: true
+    }, user, env);
+    delivery[mode].executed = Boolean(providerResult.executed);
+  }
+  if (!providerResult?.executed) {
+    const queueItem = queueNexusProviderCoordinationFallback(db, config.lane, { ...body, [idKey]: caseId }, "provider-unconfigured", providerResult?.missingEnv || status.missingEnv);
+    return { ok: true, [idKey]: caseId, status: "provider-unconfigured", packet, delivery, queue: { created: true, lane: config.lane, status: "pending-review", id: queueItem.id }, missingEnv: providerResult?.missingEnv || status.missingEnv, error: providerResult?.error || "Provider delivery is not configured.", providerResult, noExternalDelivery: true };
+  }
+  const sentStatus = mode === "email" ? "sent-email" : mode === "whatsapp" ? "sent-whatsapp" : "sent-sms";
+  addNexusPilotAuditEvent(db, `${config.lane}_packet_sent`, {
+    relatedRecordId: caseId,
+    mode: config.lane,
+    actor: user?.name || "Standard User",
+    description: `${config.title} accepted by configured ${mode} delivery provider. No clinical outcome, appointment acceptance, dispatch, prescription, or refill approval was claimed.`
+  });
+  return { ok: true, [idKey]: caseId, status: sentStatus, packet, delivery, queue: { created: true, lane: config.lane, status: "sent-for-review" }, missingEnv: [], error: null, providerResult, noSecretValuesReturned: true };
+}
+
 function nexusGlobalMarketplaceLogisticsIntent(query = "", body = {}) {
   const text = `${query || ""} ${body.mode || ""} ${body.intent || ""}`.toLowerCase();
   if (/\b(compare|comparison|which vendor|vendor options|suppliers?)\b/.test(text)) return "vendor_comparison";
@@ -33022,6 +33497,14 @@ async function api(req, res, url) {
     return send(res, 200, status);
   }
 
+  if (url.pathname === "/api/nexus/pharmacy/status" && req.method === "GET") {
+    return send(res, 200, nexusProviderCoordinationStatus("pharmacy", process.env));
+  }
+
+  if (url.pathname === "/api/nexus/mobile-clinic/status" && req.method === "GET") {
+    return send(res, 200, nexusProviderCoordinationStatus("mobile-clinic", process.env));
+  }
+
   if (url.pathname === "/api/nexus/knowledge/trusted-sources" && req.method === "GET") {
     return send(res, 200, { ok: true, categories: nexusKnowledgeSourceList(), safety: "Trusted source preferences guide retrieval. Nexus still shows citations and safety limits for user review." });
   }
@@ -33113,6 +33596,34 @@ async function api(req, res, url) {
 
   if (url.pathname === "/api/nexus/communications/send-message" && req.method === "POST") {
     const result = await nexusCommunicationsSendMessage(db, await readBody(req), user, process.env);
+    if (!result.ok) return send(res, 400, result);
+    await writeDb(db);
+    return send(res, 200, result);
+  }
+
+  if (url.pathname === "/api/nexus/pharmacy/create-referral" && req.method === "POST") {
+    const result = createNexusProviderCoordinationPacket(db, "pharmacy", await readBody(req), user, process.env);
+    if (!result.ok) return send(res, 400, result);
+    await writeDb(db);
+    return send(res, 200, result);
+  }
+
+  if (url.pathname === "/api/nexus/pharmacy/send-referral" && req.method === "POST") {
+    const result = await sendNexusProviderCoordinationPacket(db, "pharmacy", await readBody(req), user, process.env);
+    if (!result.ok) return send(res, 400, result);
+    await writeDb(db);
+    return send(res, 200, result);
+  }
+
+  if (url.pathname === "/api/nexus/mobile-clinic/create-request" && req.method === "POST") {
+    const result = createNexusProviderCoordinationPacket(db, "mobile-clinic", await readBody(req), user, process.env);
+    if (!result.ok) return send(res, 400, result);
+    await writeDb(db);
+    return send(res, 200, result);
+  }
+
+  if (url.pathname === "/api/nexus/mobile-clinic/send-request" && req.method === "POST") {
+    const result = await sendNexusProviderCoordinationPacket(db, "mobile-clinic", await readBody(req), user, process.env);
     if (!result.ok) return send(res, 400, result);
     await writeDb(db);
     return send(res, 200, result);

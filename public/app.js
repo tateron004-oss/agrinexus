@@ -112,6 +112,10 @@ let nexusCommunicationsProviderLastResult = null;
 let nexusTelehealthProviderStatus = null;
 let nexusTelehealthLastResult = null;
 let nexusTelehealthLastEncounter = null;
+let nexusPharmacyProviderStatus = null;
+let nexusPharmacyLastResult = null;
+let nexusMobileClinicProviderStatus = null;
+let nexusMobileClinicLastResult = null;
 let nexusProviderPathwayLastRequest = null;
 let nexusProviderContactBridgeCards = [];
 let nexusLearningProviderBridgeCards = [];
@@ -18470,6 +18474,8 @@ function renderNexusHomeModePanel(card = {}) {
         </div>
       ` : ""}
       ${panel.id === "telehealth-intake" ? renderNexusVirtualCareTelehealthPanel() : ""}
+      ${panel.id === "pharmacy-support" ? renderNexusPharmacyActivationPanel() : ""}
+      ${panel.id === "mobile-clinic" ? renderNexusMobileClinicActivationPanel() : ""}
       <small>${escapeHtml(translateText(panel.limitation || "Preparation only. High-risk actions remain gated."))}</small>
     </div>
   `;
@@ -18669,6 +18675,188 @@ async function handleNexusVirtualCareTelehealthClick(event) {
 function isNexusVirtualCareTelehealthCommand(command = "") {
   return /\b(telehealth|virtual care|video visit|video visits|provider review|diabetes review|blood pressure|hypertension|obesity|rpm|rtm|community health worker|chw)\b/i.test(command)
     && /\b(start|create|prepare|review|blocking|blocked|status|configured|missing|video|visit|encounter|intake|packet|reading|follow|provider)\b/i.test(command);
+}
+
+function nexusProviderActivationStatusLabel(status = null, label = "provider") {
+  if (!status) return `${label} status not loaded yet.`;
+  const missing = Array.isArray(status.missingEnv) ? status.missingEnv : [];
+  if (status.configured) return `${status.providerName || label} ready for ${status.providerMode}; consent and confirmation still required.`;
+  if (missing.length) return `${status.providerMode || "provider"} missing: ${missing.join(", ")}`;
+  return `${label} uses local queue fallback.`;
+}
+
+function renderNexusPharmacyActivationPanel() {
+  const last = nexusPharmacyLastResult || {};
+  const packet = last.packet || {};
+  const status = nexusPharmacyProviderStatus;
+  const medicationList = Array.isArray(packet.medicationList) ? packet.medicationList : [];
+  const allergies = Array.isArray(packet.allergies) ? packet.allergies : [];
+  return `
+    <section class="nexus-home-mode-panel-form nexus-pharmacy-activation-panel" data-testid="nexus-pharmacy-activation-panel" data-nexus-pharmacy-activation="true">
+      <strong>${escapeHtml(translateText("Pharmacy Review + Referral Packet"))}</strong>
+      <p>${escapeHtml(translateText("Prepare medication review, refill coordination, adherence, diabetes supplies, and pharmacist review packets. Nexus does not prescribe or approve refills."))}</p>
+      <div class="nexus-home-mode-field-grid">
+        <label><span>${escapeHtml(translateText("Pharmacy need"))}</span><select data-testid="nexus-pharmacy-need"><option value="medication-review">${escapeHtml(translateText("Medication review"))}</option><option value="refill-coordination">${escapeHtml(translateText("Refill coordination question"))}</option><option value="adherence-support">${escapeHtml(translateText("Adherence support"))}</option><option value="supplies-question">${escapeHtml(translateText("Diabetes supplies question"))}</option><option value="pharmacist-consult">${escapeHtml(translateText("Pharmacist consult prep"))}</option><option value="other">${escapeHtml(translateText("Other"))}</option></select></label>
+        <label><span>${escapeHtml(translateText("Condition"))}</span><select data-testid="nexus-pharmacy-condition"><option value="diabetes">${escapeHtml(translateText("Diabetes"))}</option><option value="hypertension">${escapeHtml(translateText("Hypertension"))}</option><option value="obesity">${escapeHtml(translateText("Obesity"))}</option><option value="general">${escapeHtml(translateText("General"))}</option><option value="other">${escapeHtml(translateText("Other"))}</option></select></label>
+        <label><span>${escapeHtml(translateText("Concern"))}</span><input type="text" data-testid="nexus-pharmacy-concern" placeholder="${escapeHtml(translateText("Medication question, refill barrier, supplies question..."))}"></label>
+        <label><span>${escapeHtml(translateText("Medication list"))}</span><input type="text" data-testid="nexus-pharmacy-medications" placeholder="${escapeHtml(translateText("Comma separated; as written on package"))}"></label>
+        <label><span>${escapeHtml(translateText("Allergies"))}</span><input type="text" data-testid="nexus-pharmacy-allergies" placeholder="${escapeHtml(translateText("Known allergies, if any"))}"></label>
+        <label><span>${escapeHtml(translateText("Readings"))}</span><input type="text" data-testid="nexus-pharmacy-readings" placeholder="${escapeHtml(translateText("BP 138/86; glucose 142; adherence note"))}"></label>
+        <label><span>${escapeHtml(translateText("Region"))}</span><input type="text" data-testid="nexus-pharmacy-region" placeholder="${escapeHtml(translateText("Country or service region"))}"></label>
+        <label><span>${escapeHtml(translateText("Language"))}</span><input type="text" data-testid="nexus-pharmacy-language" placeholder="${escapeHtml(translateText("English, Spanish, Swahili..."))}"></label>
+      </div>
+      <div class="nexus-home-mode-panel-actions" aria-label="${escapeHtml(translateText("Pharmacy consent controls"))}">
+        <label class="nexus-inline-check"><input type="checkbox" data-testid="nexus-pharmacy-consent-prepare"> <span>${escapeHtml(translateText("Consent to prepare packet"))}</span></label>
+        <label class="nexus-inline-check"><input type="checkbox" data-testid="nexus-pharmacy-consent-share"> <span>${escapeHtml(translateText("Consent to share externally if configured"))}</span></label>
+        <label class="nexus-inline-check"><input type="checkbox" data-testid="nexus-pharmacy-confirmed"> <span>${escapeHtml(translateText("I reviewed and confirm this step"))}</span></label>
+      </div>
+      <div class="nexus-home-mode-panel-actions" aria-label="${escapeHtml(translateText("Pharmacy actions"))}">
+        <button type="button" data-nexus-provider-coordination-action="pharmacy-status" data-testid="nexus-pharmacy-refresh-status">${escapeHtml(translateText("Refresh pharmacy status"))}</button>
+        <button type="button" data-nexus-provider-coordination-action="pharmacy-prepare" data-testid="nexus-pharmacy-prepare-packet">${escapeHtml(translateText("Prepare pharmacy packet"))}</button>
+        <button type="button" data-nexus-provider-coordination-action="pharmacy-send" data-testid="nexus-pharmacy-send-referral">${escapeHtml(translateText("Send pharmacy referral"))}</button>
+      </div>
+      <article class="nexus-real-provider-card" data-testid="nexus-pharmacy-provider-status">
+        <strong>${escapeHtml(translateText("Pharmacy provider status"))}</strong>
+        <span>${escapeHtml(translateText(nexusProviderActivationStatusLabel(status, "Pharmacy provider")))}</span>
+        <small>${escapeHtml(translateText("Missing env names only are shown. No prescription, refill approval, pharmacy acceptance, or delivery claim is created."))}</small>
+      </article>
+      ${last.status ? `<article class="nexus-real-provider-card" data-testid="nexus-pharmacy-packet-preview"><strong>${escapeHtml(translateText("Pharmacy packet preview"))}</strong><span>${escapeHtml(translateText(last.status))}: ${escapeHtml(last.referralId || "")}</span><small>${escapeHtml(packet.summary || last.error || "")}</small>${medicationList.length ? `<small>${escapeHtml(translateText("Medication list"))}: ${medicationList.map(escapeHtml).join(", ")}</small>` : ""}${allergies.length ? `<small>${escapeHtml(translateText("Allergies"))}: ${allergies.map(escapeHtml).join(", ")}</small>` : ""}<small>${escapeHtml(translateText("Delivery"))}: ${escapeHtml(JSON.stringify(last.delivery || {}))}</small></article>` : ""}
+    </section>
+  `;
+}
+
+function renderNexusMobileClinicActivationPanel() {
+  const last = nexusMobileClinicLastResult || {};
+  const packet = last.packet || {};
+  const status = nexusMobileClinicProviderStatus;
+  const symptoms = Array.isArray(packet.symptoms) ? packet.symptoms : [];
+  return `
+    <section class="nexus-home-mode-panel-form nexus-mobile-clinic-activation-panel" data-testid="nexus-mobile-clinic-activation-panel" data-nexus-mobile-clinic-activation="true">
+      <strong>${escapeHtml(translateText("Mobile Clinic Request Packet"))}</strong>
+      <p>${escapeHtml(translateText("Prepare vitals, screening, chronic-care follow-up, rural clinic, and community outreach requests. Nexus does not dispatch clinics or book appointments."))}</p>
+      <div class="nexus-home-mode-field-grid">
+        <label><span>${escapeHtml(translateText("Visit need"))}</span><select data-testid="nexus-mobile-clinic-need"><option value="vitals-check">${escapeHtml(translateText("Vitals check"))}</option><option value="diabetes-follow-up">${escapeHtml(translateText("Diabetes follow-up"))}</option><option value="hypertension-follow-up">${escapeHtml(translateText("Hypertension follow-up"))}</option><option value="obesity-support">${escapeHtml(translateText("Obesity support"))}</option><option value="screening">${escapeHtml(translateText("Screening"))}</option><option value="community-outreach">${escapeHtml(translateText("Community outreach"))}</option><option value="other">${escapeHtml(translateText("Other"))}</option></select></label>
+        <label><span>${escapeHtml(translateText("Service area"))}</span><input type="text" data-testid="nexus-mobile-clinic-service-area" placeholder="${escapeHtml(translateText("Community, village, county, route"))}"></label>
+        <label><span>${escapeHtml(translateText("Concern"))}</span><input type="text" data-testid="nexus-mobile-clinic-concern" placeholder="${escapeHtml(translateText("Reason for mobile clinic review"))}"></label>
+        <label><span>${escapeHtml(translateText("Symptoms"))}</span><input type="text" data-testid="nexus-mobile-clinic-symptoms" placeholder="${escapeHtml(translateText("Comma separated symptoms, if any"))}"></label>
+        <label><span>${escapeHtml(translateText("Readings"))}</span><input type="text" data-testid="nexus-mobile-clinic-readings" placeholder="${escapeHtml(translateText("BP 138/86; glucose 142; pulse 80"))}"></label>
+        <label><span>${escapeHtml(translateText("Region"))}</span><input type="text" data-testid="nexus-mobile-clinic-region" placeholder="${escapeHtml(translateText("Country or region"))}"></label>
+        <label><span>${escapeHtml(translateText("Language"))}</span><input type="text" data-testid="nexus-mobile-clinic-language" placeholder="${escapeHtml(translateText("English, Spanish, Swahili..."))}"></label>
+        <label><span>${escapeHtml(translateText("Urgency"))}</span><select data-testid="nexus-mobile-clinic-urgency"><option value="routine">${escapeHtml(translateText("Routine"))}</option><option value="soon">${escapeHtml(translateText("Soon"))}</option><option value="urgent">${escapeHtml(translateText("Urgent"))}</option><option value="emergency_possible">${escapeHtml(translateText("Emergency possible"))}</option></select></label>
+      </div>
+      <div class="nexus-home-mode-panel-actions" aria-label="${escapeHtml(translateText("Mobile clinic red flags"))}">
+        ${[["chest_pain", "Chest pain"], ["shortness_of_breath", "Shortness of breath"], ["stroke_symptoms", "Stroke symptoms"], ["severe_headache", "Severe headache"], ["confusion", "Confusion"], ["severe_bleeding", "Severe bleeding"]].map(([value, label]) => `<label class="nexus-inline-check"><input type="checkbox" data-nexus-mobile-clinic-red-flag="${escapeHtml(value)}"> <span>${escapeHtml(translateText(label))}</span></label>`).join("")}
+      </div>
+      <div class="nexus-home-mode-panel-actions" aria-label="${escapeHtml(translateText("Mobile clinic consent controls"))}">
+        <label class="nexus-inline-check"><input type="checkbox" data-testid="nexus-mobile-clinic-consent-prepare"> <span>${escapeHtml(translateText("Consent to prepare packet"))}</span></label>
+        <label class="nexus-inline-check"><input type="checkbox" data-testid="nexus-mobile-clinic-consent-share"> <span>${escapeHtml(translateText("Consent to share externally if configured"))}</span></label>
+        <label class="nexus-inline-check"><input type="checkbox" data-testid="nexus-mobile-clinic-confirmed"> <span>${escapeHtml(translateText("I reviewed and confirm this step"))}</span></label>
+      </div>
+      <div class="nexus-home-mode-panel-actions" aria-label="${escapeHtml(translateText("Mobile clinic actions"))}">
+        <button type="button" data-nexus-provider-coordination-action="mobile-clinic-status" data-testid="nexus-mobile-clinic-refresh-status">${escapeHtml(translateText("Refresh clinic status"))}</button>
+        <button type="button" data-nexus-provider-coordination-action="mobile-clinic-prepare" data-testid="nexus-mobile-clinic-prepare-request">${escapeHtml(translateText("Prepare mobile clinic request"))}</button>
+        <button type="button" data-nexus-provider-coordination-action="mobile-clinic-send" data-testid="nexus-mobile-clinic-send-request">${escapeHtml(translateText("Send mobile clinic request"))}</button>
+      </div>
+      <article class="nexus-real-provider-card" data-testid="nexus-mobile-clinic-provider-status">
+        <strong>${escapeHtml(translateText("Mobile clinic provider status"))}</strong>
+        <span>${escapeHtml(translateText(nexusProviderActivationStatusLabel(status, "Mobile clinic provider")))}</span>
+        <small>${escapeHtml(translateText("Missing env names only are shown. No dispatch, appointment acceptance, location sharing, or emergency routing claim is created."))}</small>
+      </article>
+      ${last.emergencyGuidance ? `<article class="nexus-real-provider-card" data-testid="nexus-mobile-clinic-emergency-guidance"><strong>${escapeHtml(translateText("Emergency guidance"))}</strong><span>${escapeHtml(translateText(last.emergencyGuidance))}</span></article>` : ""}
+      ${last.status ? `<article class="nexus-real-provider-card" data-testid="nexus-mobile-clinic-packet-preview"><strong>${escapeHtml(translateText("Mobile clinic packet preview"))}</strong><span>${escapeHtml(translateText(last.status))}: ${escapeHtml(last.requestId || "")}</span><small>${escapeHtml(packet.summary || last.error || "")}</small>${symptoms.length ? `<small>${escapeHtml(translateText("Symptoms"))}: ${symptoms.map(escapeHtml).join(", ")}</small>` : ""}<small>${escapeHtml(translateText("Delivery"))}: ${escapeHtml(JSON.stringify(last.delivery || {}))}</small></article>` : ""}
+    </section>
+  `;
+}
+
+function nexusProviderCoordinationCollectForm(lane = "pharmacy") {
+  const isPharmacy = lane === "pharmacy";
+  const panel = document.querySelector(isPharmacy ? '[data-testid="nexus-pharmacy-activation-panel"]' : '[data-testid="nexus-mobile-clinic-activation-panel"]');
+  const value = selector => panel?.querySelector?.(selector)?.value?.trim?.() || "";
+  const checked = selector => Boolean(panel?.querySelector?.(selector)?.checked);
+  if (isPharmacy) {
+    return {
+      countryOrRegion: value('[data-testid="nexus-pharmacy-region"]') || "unspecified",
+      preferredLanguage: value('[data-testid="nexus-pharmacy-language"]') || "English",
+      conditionArea: value('[data-testid="nexus-pharmacy-condition"]') || "general",
+      pharmacyNeed: value('[data-testid="nexus-pharmacy-need"]') || "medication-review",
+      concern: value('[data-testid="nexus-pharmacy-concern"]') || "Pharmacy review requested.",
+      medications: value('[data-testid="nexus-pharmacy-medications"]'),
+      allergies: value('[data-testid="nexus-pharmacy-allergies"]'),
+      readings: value('[data-testid="nexus-pharmacy-readings"]'),
+      urgency: "routine",
+      consentToPreparePacket: checked('[data-testid="nexus-pharmacy-consent-prepare"]'),
+      consentToShare: checked('[data-testid="nexus-pharmacy-consent-share"]'),
+      confirmed: checked('[data-testid="nexus-pharmacy-confirmed"]')
+    };
+  }
+  return {
+    countryOrRegion: value('[data-testid="nexus-mobile-clinic-region"]') || "unspecified",
+    preferredLanguage: value('[data-testid="nexus-mobile-clinic-language"]') || "English",
+    serviceArea: value('[data-testid="nexus-mobile-clinic-service-area"]') || "service area not provided",
+    visitNeed: value('[data-testid="nexus-mobile-clinic-need"]') || "vitals-check",
+    concern: value('[data-testid="nexus-mobile-clinic-concern"]') || "Mobile clinic request prepared.",
+    symptoms: value('[data-testid="nexus-mobile-clinic-symptoms"]'),
+    readings: value('[data-testid="nexus-mobile-clinic-readings"]'),
+    redFlags: Array.from(panel?.querySelectorAll?.("[data-nexus-mobile-clinic-red-flag]:checked") || []).map(item => item.dataset.nexusMobileClinicRedFlag || "").filter(Boolean),
+    urgency: value('[data-testid="nexus-mobile-clinic-urgency"]') || "routine",
+    consentToPreparePacket: checked('[data-testid="nexus-mobile-clinic-consent-prepare"]'),
+    consentToShare: checked('[data-testid="nexus-mobile-clinic-consent-share"]'),
+    confirmed: checked('[data-testid="nexus-mobile-clinic-confirmed"]')
+  };
+}
+
+async function refreshNexusProviderCoordinationStatus(options = {}) {
+  try {
+    const [pharmacyStatus, mobileClinicStatus] = await Promise.all([
+      request("/api/nexus/pharmacy/status", { method: "GET" }).catch(() => null),
+      request("/api/nexus/mobile-clinic/status", { method: "GET" }).catch(() => null)
+    ]);
+    if (pharmacyStatus) nexusPharmacyProviderStatus = pharmacyStatus;
+    if (mobileClinicStatus) nexusMobileClinicProviderStatus = mobileClinicStatus;
+    if (options.rerender !== false && experienceMode === "user") renderUserWorkspace();
+  } catch {
+    // Keep existing visible state if a status refresh fails.
+  }
+  return { pharmacy: nexusPharmacyProviderStatus, mobileClinic: nexusMobileClinicProviderStatus };
+}
+
+async function handleNexusProviderCoordinationClick(event) {
+  const button = event.target?.closest?.("[data-nexus-provider-coordination-action]");
+  if (!button) return false;
+  event.preventDefault();
+  event.stopPropagation();
+  const action = button.dataset.nexusProviderCoordinationAction || "";
+  if (action === "pharmacy-status" || action === "mobile-clinic-status") {
+    await refreshNexusProviderCoordinationStatus();
+    return true;
+  }
+  const isPharmacy = action.startsWith("pharmacy");
+  const lane = isPharmacy ? "pharmacy" : "mobile-clinic";
+  const body = nexusProviderCoordinationCollectForm(lane);
+  const endpoint = isPharmacy
+    ? (action === "pharmacy-send" ? "/api/nexus/pharmacy/send-referral" : "/api/nexus/pharmacy/create-referral")
+    : (action === "mobile-clinic-send" ? "/api/nexus/mobile-clinic/send-request" : "/api/nexus/mobile-clinic/create-request");
+  const result = await request(endpoint, { method: "POST", body });
+  if (isPharmacy) {
+    nexusPharmacyLastResult = result;
+    nexusKnowledgeActionStatus = result.status === "packet-prepared"
+      ? "Pharmacy packet prepared and queued locally. No refill approval or prescription claim occurred."
+      : result.status === "sent-email" || result.status === "sent-sms" || result.status === "sent-whatsapp"
+        ? "Pharmacy referral packet sent through the configured provider lane. No pharmacy acceptance or refill approval was claimed."
+        : result.error || "Pharmacy lane checked safely.";
+  } else {
+    nexusMobileClinicLastResult = result;
+    nexusKnowledgeActionStatus = result.status === "packet-prepared"
+      ? "Mobile clinic request prepared and queued locally. No dispatch or appointment acceptance occurred."
+      : result.status === "emergency-guidance"
+        ? "Emergency guidance shown. Nexus did not dispatch emergency help."
+        : result.status === "sent-email" || result.status === "sent-sms" || result.status === "sent-whatsapp"
+          ? "Mobile clinic request packet sent through the configured provider lane. No dispatch or acceptance was claimed."
+          : result.error || "Mobile clinic lane checked safely.";
+  }
+  await refreshNexusProviderCoordinationStatus({ rerender: false });
+  if (experienceMode === "user") renderUserWorkspace();
+  return true;
 }
 
 async function runNexusVirtualCareTelehealthCommand(command = "") {
@@ -20181,17 +20369,21 @@ async function refreshNexusKnowledgeRail(options = {}) {
         return request("/api/nexus/knowledge/status", { method: "GET" });
       }
     };
-    const [status, sources, emailStatus, communicationsStatus, telehealthStatus] = await Promise.all([
+    const [status, sources, emailStatus, communicationsStatus, telehealthStatus, pharmacyStatus, mobileClinicStatus] = await Promise.all([
       requestLiveKnowledgeStatus(),
       request("/api/nexus/knowledge/trusted-sources", { method: "GET" }),
       request("/api/nexus/email/status", { method: "GET" }).catch(() => null),
       request("/api/nexus/communications/status", { method: "GET" }).catch(() => null),
-      request("/api/nexus/telehealth/status", { method: "GET" }).catch(() => null)
+      request("/api/nexus/telehealth/status", { method: "GET" }).catch(() => null),
+      request("/api/nexus/pharmacy/status", { method: "GET" }).catch(() => null),
+      request("/api/nexus/mobile-clinic/status", { method: "GET" }).catch(() => null)
     ]);
     nexusKnowledgeStatus = status || null;
     nexusEmailProviderStatus = emailStatus || null;
     nexusCommunicationsProviderStatus = communicationsStatus || null;
     nexusTelehealthProviderStatus = telehealthStatus || null;
+    nexusPharmacyProviderStatus = pharmacyStatus || null;
+    nexusMobileClinicProviderStatus = mobileClinicStatus || null;
     nexusKnowledgeTrustedSources = Array.isArray(sources?.categories) ? sources.categories : [];
     if (options.rerender !== false && experienceMode === "user") renderUserWorkspace();
     return nexusKnowledgeStatus;
@@ -20578,7 +20770,7 @@ async function handleNexusKnowledgeRailClick(event) {
         if (experienceMode === "user") renderUserWorkspace();
         return true;
       }
-      if (["healthcare", "pharmacy", "mobile-clinic", "telehealth", "rpm", "rtm", "physician-review"].includes(domain) && !consent) {
+      if (["healthcare", "pharmacy", "mobile-clinic", "telehealth", "rpm", "rtm", "physician-review", "virtual-care"].includes(domain) && !consent) {
         nexusEmailProviderLastResult = { executed: false, status: "consent_required" };
         nexusKnowledgeActionStatus = "Email was not sent. Consent is required for sensitive health/provider packets.";
         if (experienceMode === "user") renderUserWorkspace();
@@ -20640,7 +20832,7 @@ async function handleNexusKnowledgeRailClick(event) {
         if (experienceMode === "user") renderUserWorkspace();
         return true;
       }
-      if (["healthcare", "pharmacy", "mobile-clinic", "telehealth", "rpm", "rtm", "physician-review"].includes(domain) && !consent) {
+      if (["healthcare", "pharmacy", "mobile-clinic", "telehealth", "rpm", "rtm", "physician-review", "virtual-care"].includes(domain) && !consent) {
         nexusCommunicationsProviderLastResult = { executed: false, status: "consent_required", channel };
         nexusKnowledgeActionStatus = `${channel.toUpperCase()} was not sent. Consent is required for sensitive health/provider packet notifications.`;
         if (experienceMode === "user") renderUserWorkspace();
@@ -39855,6 +40047,7 @@ function bindStatic() {
     if (await handleNexusPilotReviewQueueClick(event)) return;
     if (await handleNexusPilotPlatformActionClick(event)) return;
     if (await handleNexusVirtualCareTelehealthClick(event)) return;
+    if (await handleNexusProviderCoordinationClick(event)) return;
     if (handleNexusPacketActionClick(event)) return;
     if (handleNexusGlobalReviewQueueAuditClick(event)) return;
     if (handleNexusGlobalActivationCenterClick(event)) return;

@@ -64,6 +64,7 @@
     "qa:nexus-email-provider-activation": "node scripts/nexus-email-provider-activation-qa.js",
     "qa:nexus-sms-whatsapp-provider-activation": "node scripts/nexus-sms-whatsapp-provider-activation-qa.js",
     "qa:nexus-virtual-care-telehealth-activation": "node scripts/nexus-virtual-care-telehealth-activation-qa.js",
+    "qa:nexus-pharmacy-mobile-clinic-activation": "node scripts/nexus-pharmacy-mobile-clinic-activation-qa.js",
     "qa:nexus-global-marketplace-logistics": "node scripts/nexus-global-marketplace-logistics-qa.js",
     "qa:nexus-global-activation-center": "node scripts/nexus-global-activation-center-qa.js",
     "qa:nexus-global-review-queue-audit": "node scripts/nexus-global-review-queue-audit-qa.js",
