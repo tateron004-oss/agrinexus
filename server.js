@@ -2,6 +2,8 @@ const http = require("http");
 const fs = require("fs");
 const path = require("path");
 const crypto = require("crypto");
+const net = require("net");
+const tls = require("tls");
 const { classifyNexusIntent } = require("./public/nexus-intent-classifier.js");
 const { buildNexusPolicyDecision, validateNexusPolicyDecision } = require("./public/nexus-policy-engine.js");
 const { createNexusPlan, validateNexusPlan } = require("./public/nexus-planner.js");
@@ -28846,6 +28848,56 @@ async function nexusIntelligenceAsk(db, body = {}, user = null, env = process.en
   ensureNexusProductionRailsState(db);
   const originalQuestion = sanitizePilotText(body.question || body.command || body.query || "", 700);
   if (!originalQuestion) return { ok: false, error: "question_required" };
+  if (/\b(email|mail)\b/i.test(originalQuestion) && /\b(configured|blocking|blocked|send|physician|pharmacy|mobile clinic|agriculture expert|vendor|logistics|packet|provider)\b/i.test(originalQuestion)) {
+    const emailStatus = nexusEmailProviderStatus(env);
+    const wantsSend = /\b(send|email|mail)\b/i.test(originalQuestion) && /\b(packet|physician|pharmacy|mobile clinic|agriculture expert|vendor|logistics|provider)\b/i.test(originalQuestion);
+    const answer = emailStatus.configured
+      ? "Email provider credentials are configured. Nexus can send a packet only after a recipient is visible, the packet is prepared, confirmation is checked, and consent is checked for sensitive health/provider domains."
+      : `Email provider is not configured. Missing: ${emailStatus.missingEnv.join(", ") || "email provider credentials"}. Nexus can prepare the packet and keep a local queue fallback without claiming delivery.`;
+    const auditEvent = addNexusPilotAuditEvent(db, "email_provider_status_answered", {
+      actor: user?.name || "Standard User",
+      role: user?.role || "Standard User",
+      mode: "email",
+      description: "Nexus answered email provider status. No email was sent."
+    });
+    return {
+      ok: true,
+      intelligence: {
+        router: "nexus-email-provider-activation",
+        originalQuestion,
+        category: "communications",
+        answerMode: emailStatus.configured ? "email_provider_configured" : "email_provider_unconfigured",
+        sourceBacked: false,
+        provider: emailStatus.provider,
+        noExecutionAuthorized: true,
+        noFakeEmailSendClaim: true
+      },
+      status: { emailProvider: emailStatus },
+      classification: { category: "communications", retrievalNeeded: false },
+      result: {
+        ok: true,
+        category: "communications",
+        categoryLabel: "Email Provider",
+        answerMode: wantsSend ? "email_confirmation_required" : "email_status",
+        retrievalStatus: "built_in",
+        answer,
+        emailProviderStatus: emailStatus,
+        followUpActions: [
+          { id: "prepare-email-packet", label: "Prepare packet before sending", action: "prepare-review-summary" },
+          { id: "open-email-status", label: "Review email provider status", action: "refresh-status" }
+        ],
+        limitations: [
+          "No email is sent from Ask Nexus without a prepared packet, visible recipient, explicit confirmation, and consent for sensitive domains.",
+          "Nexus does not expose SMTP passwords, API keys, tokens, or auth headers."
+        ],
+        citations: [],
+        noExecutionAuthorized: true,
+        noExternalDelivery: true,
+        auditEventId: auditEvent.id
+      },
+      audit: auditEvent
+    };
+  }
   const context = body.context || {};
   const normalizedQuestion = originalQuestion.trim().replace(/\s+/g, " ");
   const categoryHint = NEXUS_KNOWLEDGE_TRUSTED_SOURCES[body.category] ? body.category : context.category;
@@ -30204,9 +30256,10 @@ function nexusGlobalCommunicationsChannelStatus(channel = "sms", env = process.e
   let configured = false;
   if (normalized === "email") {
     flagName = "NEXUS_EMAIL_ENABLED";
-    provider = "Email provider";
-    configured = Boolean(env.SMTP_HOST || env.SENDGRID_API_KEY || env.MAIL_PROVIDER_API_KEY);
-    if (!configured) missing.push("SMTP_HOST or SENDGRID_API_KEY");
+    const emailStatus = nexusEmailProviderStatus(env);
+    provider = `${emailStatus.provider} email provider`;
+    configured = emailStatus.configured;
+    missing.push(...emailStatus.missingEnv);
   } else if (normalized === "whatsapp") {
     flagName = "NEXUS_WHATSAPP_ENABLED";
     provider = "Twilio WhatsApp";
@@ -30234,7 +30287,7 @@ function nexusGlobalCommunicationsChannelStatus(channel = "sms", env = process.e
       if (!env[name] && !(name === "TWILIO_FROM_NUMBER" && (env.TWILIO_PHONE_NUMBER || env.TWILIO_NUMBER))) missing.push(name);
     });
   }
-  const flagEnabled = nexusFlagEnabled(env, flagName);
+  const flagEnabled = normalized === "email" ? true : nexusFlagEnabled(env, flagName);
   return {
     channel: normalized,
     provider,
@@ -30365,6 +30418,336 @@ async function nexusGlobalCommunicationsEngine(db, body = {}, user = null, env =
     noSilentSend: true,
     noSilentCall: true
   };
+}
+
+const NEXUS_EMAIL_SENSITIVE_DOMAINS = Object.freeze([
+  "healthcare",
+  "health",
+  "pharmacy",
+  "mobile-clinic",
+  "mobileClinic",
+  "telehealth",
+  "rpm",
+  "rtm",
+  "physician-review",
+  "chronicCare",
+  "chronic-care"
+]);
+
+function normalizeNexusEmailProvider(provider = "", env = process.env) {
+  const raw = String(provider || env.NEXUS_EMAIL_PROVIDER || "").trim().toLowerCase();
+  if (raw === "sendgrid" || (!raw && String(env.SENDGRID_API_KEY || "").trim())) return "sendgrid";
+  return raw === "smtp" || !raw ? "smtp" : raw;
+}
+
+function nexusEmailProviderStatus(env = process.env) {
+  const selectedProvider = normalizeNexusEmailProvider("", env);
+  const supportedProviders = [
+    { provider: "smtp", requiredEnv: ["SMTP_HOST", "SMTP_PORT", "SMTP_USER", "SMTP_PASS", "SMTP_FROM"], optionalEnv: ["SMTP_SECURE", "SMTP_REPLY_TO"] },
+    { provider: "sendgrid", requiredEnv: ["SENDGRID_API_KEY", "SENDGRID_FROM_EMAIL"], optionalEnv: ["SENDGRID_REPLY_TO"] }
+  ];
+  const providerConfig = supportedProviders.find(item => item.provider === selectedProvider);
+  const unsupportedProvider = Boolean(selectedProvider && !providerConfig);
+  const missingEnv = unsupportedProvider
+    ? ["NEXUS_EMAIL_PROVIDER"]
+    : providerConfig.requiredEnv.filter(name => !String(env[name] || "").trim());
+  const configured = Boolean(providerConfig && missingEnv.length === 0);
+  return {
+    ok: true,
+    provider: unsupportedProvider ? "unsupported" : selectedProvider,
+    selectedProvider,
+    configured,
+    executed: false,
+    testabilityStatus: unsupportedProvider ? "blocked" : configured ? "ready" : "missing_config",
+    missingEnv,
+    supportedProviders,
+    canSendConfirmedEmail: configured,
+    requiresConfirmation: true,
+    sensitiveDomainsRequireConsent: true,
+    sensitiveDomains: NEXUS_EMAIL_SENSITIVE_DOMAINS,
+    nextAction: configured
+      ? "Prepare a packet, verify recipient, confirm consent where needed, then send."
+      : `Configure ${selectedProvider === "sendgrid" ? "SENDGRID_API_KEY and SENDGRID_FROM_EMAIL" : "SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, and SMTP_FROM"}.`,
+    noSecretValuesReturned: true,
+    timestamp: new Date().toISOString()
+  };
+}
+
+function sanitizeEmailAddress(value = "") {
+  const clean = String(value || "").trim();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(clean)) return "";
+  return clean;
+}
+
+function nexusEmailDomainRequiresConsent(domain = "") {
+  const normalized = String(domain || "").trim();
+  return NEXUS_EMAIL_SENSITIVE_DOMAINS.some(item => item.toLowerCase() === normalized.toLowerCase());
+}
+
+function nexusEmailDomainDisclaimer(domain = "") {
+  const normalized = String(domain || "admin").toLowerCase();
+  if (nexusEmailDomainRequiresConsent(normalized)) {
+    return "Healthcare safety: Nexus does not diagnose, prescribe, change medication, replace emergency services, or replace clinician judgment. This packet is shared only with explicit user consent for review.";
+  }
+  if (/\b(marketplace|logistics|agriculture)\b/.test(normalized)) {
+    return "Marketplace/logistics safety: Nexus did not purchase, book, pay, dispatch, or create a binding order. This email is an inquiry/preparation packet only.";
+  }
+  return "Nexus safety: This packet was sent after explicit confirmation. No unrelated provider action, payment, call, message, location sharing, or emergency dispatch was authorized.";
+}
+
+function buildNexusEmailPacketBody(payload = {}) {
+  const domain = sanitizePilotText(payload.domain || "admin", 80);
+  const packetId = sanitizePilotText(payload.packetId || `email-packet-${Date.now()}`, 120);
+  const summary = sanitizePilotText(payload.summary || payload.packetSummary || "Nexus provider packet prepared for review.", 1200);
+  const details = sanitizePilotText(payload.packetBody || payload.details || payload.answer || summary, 2800);
+  return [
+    `Nexus provider packet`,
+    ``,
+    `Packet ID: ${packetId}`,
+    `Domain: ${domain}`,
+    `Summary: ${summary}`,
+    ``,
+    `Packet details:`,
+    details,
+    ``,
+    nexusEmailDomainDisclaimer(domain),
+    ``,
+    `Sent by Nexus only after explicit confirmation${nexusEmailDomainRequiresConsent(domain) ? " and consent" : ""}.`
+  ].join("\n");
+}
+
+function buildRawSmtpMessage({ from, to, subject, text, replyTo = "" }) {
+  const headers = [
+    `From: ${from}`,
+    `To: ${to}`,
+    `Subject: ${String(subject || "Nexus packet").replace(/\r?\n/g, " ")}`,
+    ...(replyTo ? [`Reply-To: ${replyTo}`] : []),
+    `Date: ${new Date().toUTCString()}`,
+    `Message-ID: <${crypto.randomUUID()}@nexus.local>`,
+    `MIME-Version: 1.0`,
+    `Content-Type: text/plain; charset=UTF-8`
+  ];
+  return `${headers.join("\r\n")}\r\n\r\n${String(text || "").replace(/\r?\n/g, "\r\n")}`;
+}
+
+function smtpRead(socket) {
+  return new Promise((resolve, reject) => {
+    let buffer = "";
+    const onData = chunk => {
+      buffer += chunk.toString("utf8");
+      const lines = buffer.split(/\r?\n/).filter(Boolean);
+      if (lines.length && /^\d{3} /.test(lines[lines.length - 1])) {
+        cleanup();
+        resolve(buffer);
+      }
+    };
+    const onError = error => {
+      cleanup();
+      reject(error);
+    };
+    const onTimeout = () => {
+      cleanup();
+      reject(new Error("SMTP provider timed out safely."));
+    };
+    const cleanup = () => {
+      socket.off("data", onData);
+      socket.off("error", onError);
+      socket.off("timeout", onTimeout);
+    };
+    socket.on("data", onData);
+    socket.on("error", onError);
+    socket.on("timeout", onTimeout);
+  });
+}
+
+async function smtpCommand(socket, command, expected = /^[23]/) {
+  socket.write(`${command}\r\n`);
+  const response = await smtpRead(socket);
+  if (!expected.test(response)) throw new Error(`SMTP command failed: ${response.split(/\r?\n/)[0] || "unknown"}`);
+  return response;
+}
+
+async function sendNexusSmtpEmail({ to, subject, text }, env = process.env) {
+  const host = String(env.SMTP_HOST || "").trim();
+  const port = Number(env.SMTP_PORT || 587);
+  const secure = String(env.SMTP_SECURE || "").toLowerCase() === "true" || port === 465;
+  const user = String(env.SMTP_USER || "").trim();
+  const pass = String(env.SMTP_PASS || "").trim();
+  const from = String(env.SMTP_FROM || "").trim();
+  const replyTo = String(env.SMTP_REPLY_TO || "").trim();
+  let socket = secure
+    ? tls.connect({ host, port, servername: host })
+    : net.connect({ host, port });
+  socket.setTimeout(Number(env.NEXUS_EMAIL_TIMEOUT_MS || 12000));
+  try {
+    await smtpRead(socket);
+    await smtpCommand(socket, `EHLO nexus.local`);
+    if (!secure && port !== 25) {
+      await smtpCommand(socket, "STARTTLS", /^220/);
+      socket = tls.connect({ socket, servername: host });
+      socket.setTimeout(Number(env.NEXUS_EMAIL_TIMEOUT_MS || 12000));
+      await smtpCommand(socket, `EHLO nexus.local`);
+    }
+    await smtpCommand(socket, "AUTH LOGIN", /^334/);
+    await smtpCommand(socket, Buffer.from(user).toString("base64"), /^334/);
+    await smtpCommand(socket, Buffer.from(pass).toString("base64"), /^235/);
+    await smtpCommand(socket, `MAIL FROM:<${from}>`);
+    await smtpCommand(socket, `RCPT TO:<${to}>`);
+    await smtpCommand(socket, "DATA", /^354/);
+    const raw = buildRawSmtpMessage({ from, to, subject, text, replyTo }).replace(/^\./gm, "..");
+    socket.write(`${raw}\r\n.\r\n`);
+    const dataResponse = await smtpRead(socket);
+    if (!/^250/.test(dataResponse)) throw new Error(`SMTP DATA failed: ${dataResponse.split(/\r?\n/)[0] || "unknown"}`);
+    socket.write("QUIT\r\n");
+    return {
+      executed: true,
+      messageId: crypto.createHash("sha256").update(`${to}:${subject}:${Date.now()}`).digest("hex").slice(0, 16),
+      providerResponse: dataResponse.split(/\r?\n/)[0] || "250 accepted"
+    };
+  } finally {
+    socket.destroy();
+  }
+}
+
+async function sendNexusSendGridEmail({ to, subject, text }, env = process.env) {
+  const from = String(env.SENDGRID_FROM_EMAIL || "").trim();
+  const replyTo = String(env.SENDGRID_REPLY_TO || "").trim();
+  const response = await fetchWithTimeout("https://api.sendgrid.com/v3/mail/send", {
+    method: "POST",
+    headers: {
+      authorization: `Bearer ${String(env.SENDGRID_API_KEY || "").trim()}`,
+      "content-type": "application/json"
+    },
+    body: JSON.stringify({
+      personalizations: [{ to: [{ email: to }] }],
+      from: { email: from },
+      ...(replyTo ? { reply_to: { email: replyTo } } : {}),
+      subject,
+      content: [{ type: "text/plain", value: text }]
+    })
+  }, Number(env.NEXUS_EMAIL_TIMEOUT_MS || 12000));
+  const safeMessageId = response.headers.get("x-message-id") || "";
+  if (!response.ok) {
+    const payload = await response.json().catch(() => ({}));
+    throw new Error(nexusKnowledgeProviderErrorMessage(payload, response.statusText));
+  }
+  return {
+    executed: true,
+    messageId: sanitizePilotText(safeMessageId || crypto.randomUUID(), 180),
+    providerResponse: `sendgrid:${response.status}`
+  };
+}
+
+function queueNexusEmailFallback(db, payload = {}, status = "email-provider-unconfigured", missingEnv = []) {
+  ensureNexusProductionRailsState(db);
+  const now = new Date().toISOString();
+  const item = {
+    id: crypto.randomUUID(),
+    type: "email_packet",
+    status,
+    domain: sanitizePilotText(payload.domain || "admin", 80),
+    packetId: sanitizePilotText(payload.packetId || "", 120),
+    recipient: sanitizeEmailAddress(payload.to || payload.recipientEmail || "") || "missing-recipient",
+    subject: sanitizePilotText(payload.subject || "Nexus packet", 180),
+    missingEnv,
+    nextAction: "Configure email provider credentials or manually export this packet.",
+    localOnly: true,
+    noExternalDelivery: true,
+    createdAt: now,
+    updatedAt: now
+  };
+  db.nexusPilotOfflineQueue.unshift(item);
+  addNexusPilotAuditEvent(db, "email_packet_queued_locally", {
+    relatedRecordId: item.id,
+    mode: item.domain,
+    actor: "Nexus",
+    description: `Email packet queued locally with status ${status}. No external email delivery was claimed.`
+  });
+  return item;
+}
+
+async function nexusEmailSendPacket(db, body = {}, user = null, env = process.env) {
+  ensureNexusProductionRailsState(db);
+  const status = nexusEmailProviderStatus(env);
+  const to = sanitizeEmailAddress(body.to || body.recipientEmail || "");
+  const subject = sanitizePilotText(body.subject || "Nexus provider packet", 180);
+  const domain = sanitizePilotText(body.domain || "admin", 80);
+  const packetId = sanitizePilotText(body.packetId || body.caseId || `email-packet-${Date.now()}`, 120);
+  const sensitive = nexusEmailDomainRequiresConsent(domain);
+  const timestamp = new Date().toISOString();
+  if (!to) return { ok: false, error: "recipient_email_required", executed: false, status };
+  if (body.confirmed !== true) {
+    return { ok: true, provider: status.provider, configured: status.configured, executed: false, status: "confirmation_required", error: "Email send requires explicit confirmation.", missingEnv: status.missingEnv, noExternalDelivery: true };
+  }
+  if (sensitive && body.consent !== true) {
+    return { ok: true, provider: status.provider, configured: status.configured, executed: false, status: "consent_required", error: "Sensitive packet email requires explicit consent.", missingEnv: status.missingEnv, noExternalDelivery: true };
+  }
+  const text = buildNexusEmailPacketBody({ ...body, domain, packetId });
+  if (!status.configured) {
+    const queueItem = queueNexusEmailFallback(db, { ...body, to, subject, domain, packetId }, "email-provider-unconfigured", status.missingEnv);
+    return {
+      ok: true,
+      provider: status.provider,
+      configured: false,
+      executed: false,
+      messageId: null,
+      to,
+      subject,
+      domain,
+      packetId,
+      timestamp,
+      missingEnv: status.missingEnv,
+      error: "Email provider is not configured.",
+      localQueueItem: queueItem,
+      noExternalDelivery: true
+    };
+  }
+  try {
+    const providerResult = status.provider === "sendgrid"
+      ? await sendNexusSendGridEmail({ to, subject, text }, env)
+      : await sendNexusSmtpEmail({ to, subject, text }, env);
+    const result = {
+      ok: true,
+      provider: status.provider,
+      configured: true,
+      executed: true,
+      messageId: providerResult.messageId,
+      to,
+      subject,
+      domain,
+      packetId,
+      timestamp,
+      missingEnv: [],
+      error: null,
+      noSecretValuesReturned: true
+    };
+    addNexusPilotAuditEvent(db, "email_packet_sent_by_provider", {
+      relatedRecordId: packetId,
+      mode: domain,
+      actor: user?.name || "Standard User",
+      description: `Confirmed Nexus packet email accepted by ${status.provider}. Message metadata only was stored.`
+    });
+    return result;
+  } catch (error) {
+    const safeError = sanitizePilotText(error.message || "Email provider failed safely.", 220);
+    const queueItem = queueNexusEmailFallback(db, { ...body, to, subject, domain, packetId }, "email-blocked", []);
+    return {
+      ok: true,
+      provider: status.provider,
+      configured: true,
+      executed: false,
+      messageId: null,
+      to,
+      subject,
+      domain,
+      packetId,
+      timestamp,
+      missingEnv: [],
+      error: safeError,
+      localQueueItem: queueItem,
+      noExternalDelivery: true
+    };
+  }
 }
 
 function nexusGlobalMarketplaceLogisticsIntent(query = "", body = {}) {
@@ -32254,6 +32637,10 @@ async function api(req, res, url) {
     return send(res, 200, nexusKnowledgeProviderStatus(process.env));
   }
 
+  if (url.pathname === "/api/nexus/email/status" && req.method === "GET") {
+    return send(res, 200, nexusEmailProviderStatus(process.env));
+  }
+
   if (url.pathname === "/api/nexus/knowledge/trusted-sources" && req.method === "GET") {
     return send(res, 200, { ok: true, categories: nexusKnowledgeSourceList(), safety: "Trusted source preferences guide retrieval. Nexus still shows citations and safety limits for user review." });
   }
@@ -32331,6 +32718,13 @@ async function api(req, res, url) {
 
   if (url.pathname === "/api/nexus/live-knowledge/test" && req.method === "POST") {
     const result = await nexusLiveKnowledgeProviderTest(db, await readBody(req), user, process.env);
+    if (!result.ok) return send(res, 400, result);
+    await writeDb(db);
+    return send(res, 200, result);
+  }
+
+  if (url.pathname === "/api/nexus/email/send-packet" && req.method === "POST") {
+    const result = await nexusEmailSendPacket(db, await readBody(req), user, process.env);
     if (!result.ok) return send(res, 400, result);
     await writeDb(db);
     return send(res, 200, result);

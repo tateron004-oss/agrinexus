@@ -105,6 +105,8 @@ let nexusKnowledgeTrustedSources = [];
 let nexusKnowledgeLastResult = null;
 let nexusKnowledgeHistory = null;
 let nexusKnowledgeActionStatus = "";
+let nexusEmailProviderStatus = null;
+let nexusEmailProviderLastResult = null;
 let nexusProviderPathwayLastRequest = null;
 let nexusProviderContactBridgeCards = [];
 let nexusLearningProviderBridgeCards = [];
@@ -19676,6 +19678,28 @@ function renderNexusKnowledgeAnswerCard(answer = nexusKnowledgeLastResult) {
         <span>${escapeHtml(translateText("Review notes"))}</span>
         <input type="text" data-nexus-knowledge-user-notes data-testid="nexus-knowledge-user-notes" placeholder="${escapeHtml(translateText("Optional note for provider/admin review"))}">
       </label>
+      <div class="nexus-provider-support-offer" data-testid="nexus-email-send-packet-panel">
+        <strong>${escapeHtml(translateText("Send packet by email"))}</strong>
+        <small>${escapeHtml(translateText("Email sends only after confirmation. Healthcare, pharmacy, telehealth, mobile clinic, RPM, RTM, and physician-review packets also require consent."))}</small>
+        <label>
+          <span>${escapeHtml(translateText("Recipient email"))}</span>
+          <input type="email" data-nexus-email-recipient data-testid="nexus-email-recipient" placeholder="provider@example.org">
+        </label>
+        <label>
+          <span>${escapeHtml(translateText("Email subject"))}</span>
+          <input type="text" data-nexus-email-subject data-testid="nexus-email-subject" value="${escapeHtml(`${answer.categoryLabel || "Nexus"} packet for review`)}">
+        </label>
+        <label>
+          <input type="checkbox" data-nexus-email-confirmed data-testid="nexus-email-confirmed">
+          <span>${escapeHtml(translateText("I confirm this packet should be sent by email."))}</span>
+        </label>
+        <label>
+          <input type="checkbox" data-nexus-email-consent data-testid="nexus-email-consent">
+          <span>${escapeHtml(translateText("I consent to share this packet if it contains health, pharmacy, telehealth, mobile clinic, RPM, RTM, or physician-review information."))}</span>
+        </label>
+        <button type="button" data-nexus-knowledge-action="send-packet-email" data-testid="nexus-email-send-packet">${escapeHtml(translateText("Send by email"))}</button>
+        ${nexusEmailProviderLastResult ? `<small data-testid="nexus-email-last-result">${escapeHtml(translateText("Last email result"))}: ${escapeHtml(nexusEmailProviderLastResult.executed ? "sent" : nexusEmailProviderLastResult.status || nexusEmailProviderLastResult.error || "blocked")}</small>` : ""}
+      </div>
       <div class="nexus-knowledge-actions">
         <button type="button" data-nexus-knowledge-action="save-result" data-testid="nexus-knowledge-save-result">${escapeHtml(translateText("Save to record"))}</button>
         <button type="button" data-nexus-knowledge-action="prepare-review-summary" data-testid="nexus-knowledge-prepare-review-summary">${escapeHtml(translateText("Prepare review summary"))}</button>
@@ -19690,6 +19714,39 @@ function renderNexusKnowledgeAnswerCard(answer = nexusKnowledgeLastResult) {
 function renderNexusKnowledgeAnswerOptions(card = {}) {
   if (!card.knowledgeAnswer) return "";
   return renderNexusKnowledgeAnswerCard(card.knowledgeAnswer);
+}
+
+function nexusEmailDomainForAnswer(answer = {}) {
+  const category = String(answer.category || answer.domain || "").trim();
+  if (/pharmacy/i.test(category)) return "pharmacy";
+  if (/mobile/i.test(category)) return "mobile-clinic";
+  if (/telehealth/i.test(category)) return "telehealth";
+  if (/health|chronic|diabetes|hypertension|obesity|rpm|rtm/i.test(category)) return "healthcare";
+  if (/marketplace|agritrade/i.test(category)) return "marketplace";
+  if (/logistics|maps|route/i.test(category)) return "logistics";
+  if (/agriculture|crop|farm/i.test(category)) return "agriculture";
+  if (/jobs|workforce|learning|training/i.test(category)) return "workforce";
+  return "admin";
+}
+
+function renderNexusEmailProviderStatusCard() {
+  const status = nexusEmailProviderStatus || {};
+  const fallbackMissing = status.provider === "sendgrid"
+    ? ["SENDGRID_API_KEY", "SENDGRID_FROM_EMAIL"]
+    : ["SMTP_HOST", "SMTP_PORT", "SMTP_USER", "SMTP_PASS", "SMTP_FROM"];
+  const missing = Array.isArray(status.missingEnv) && status.missingEnv.length
+    ? status.missingEnv
+    : status.configured
+      ? []
+      : fallbackMissing;
+  return `
+    <section class="nexus-knowledge-source-row" data-testid="nexus-email-provider-status-card" aria-label="${escapeHtml(translateText("Nexus email provider status"))}">
+      <span>${escapeHtml(translateText("Email provider"))}: ${escapeHtml(status.provider || "smtp")}</span>
+      <span>${escapeHtml(translateText("Status"))}: ${escapeHtml(status.configured ? translateText("configured") : translateText(status.testabilityStatus || "missing_config"))}</span>
+      <span data-testid="nexus-email-missing-env">${escapeHtml(translateText("Missing"))}: ${missing.map(escapeHtml).join(", ") || escapeHtml(translateText("none"))}</span>
+      <span>${escapeHtml(translateText("Next"))}: ${escapeHtml(translateText(status.nextAction || "Configure SMTP or SendGrid credentials before live email sending."))}</span>
+    </section>
+  `;
 }
 
 function renderNexusKnowledgeRailPanel() {
@@ -19729,6 +19786,7 @@ function renderNexusKnowledgeRailPanel() {
       <div class="nexus-knowledge-source-row" data-testid="nexus-live-knowledge-safe-domains">
         ${safeDomains.slice(0, 12).map(domain => `<span>${escapeHtml(domain)}</span>`).join("")}
       </div>
+      ${renderNexusEmailProviderStatusCard()}
       <div class="nexus-knowledge-query-row">
         <label>
           <span>${escapeHtml(translateText("Knowledge question"))}</span>
@@ -19807,11 +19865,13 @@ async function refreshNexusKnowledgeRail(options = {}) {
         return request("/api/nexus/knowledge/status", { method: "GET" });
       }
     };
-    const [status, sources] = await Promise.all([
+    const [status, sources, emailStatus] = await Promise.all([
       requestLiveKnowledgeStatus(),
-      request("/api/nexus/knowledge/trusted-sources", { method: "GET" })
+      request("/api/nexus/knowledge/trusted-sources", { method: "GET" }),
+      request("/api/nexus/email/status", { method: "GET" }).catch(() => null)
     ]);
     nexusKnowledgeStatus = status || null;
+    nexusEmailProviderStatus = emailStatus || null;
     nexusKnowledgeTrustedSources = Array.isArray(sources?.categories) ? sources.categories : [];
     if (options.rerender !== false && experienceMode === "user") renderUserWorkspace();
     return nexusKnowledgeStatus;
@@ -20049,6 +20109,7 @@ async function handleNexusKnowledgeRailClick(event) {
   if (!button) return false;
   event.preventDefault();
   event.stopPropagation();
+  event.stopImmediatePropagation?.();
   const action = button.dataset.nexusKnowledgeAction || "";
   button.disabled = true;
   try {
@@ -20174,6 +20235,67 @@ async function handleNexusKnowledgeRailClick(event) {
         ? "Review-ready research summary prepared locally. No provider was contacted."
         : "Review summary prepared locally.";
       await refreshNexusInternetResourceHistory({ rerender: false });
+      if (experienceMode === "user") renderUserWorkspace();
+      return true;
+    }
+    if (action === "send-packet-email") {
+      const answer = nexusKnowledgeLastResult || {};
+      const emailPanel = event.target?.closest?.("[data-testid='nexus-email-send-packet-panel']") || document;
+      const recipient = emailPanel.querySelector("[data-nexus-email-recipient]")?.value || "";
+      const subject = emailPanel.querySelector("[data-nexus-email-subject]")?.value || `${answer.categoryLabel || "Nexus"} packet for review`;
+      const confirmed = Boolean(emailPanel.querySelector("[data-nexus-email-confirmed]")?.checked);
+      const consent = Boolean(emailPanel.querySelector("[data-nexus-email-consent]")?.checked);
+      const domain = nexusEmailDomainForAnswer(answer);
+      if (!recipient.trim()) {
+        nexusEmailProviderLastResult = { executed: false, status: "recipient_required" };
+        nexusKnowledgeActionStatus = "Email was not sent. Add a recipient email before continuing.";
+        if (experienceMode === "user") renderUserWorkspace();
+        return true;
+      }
+      if (!confirmed) {
+        nexusEmailProviderLastResult = { executed: false, status: "confirmation_required" };
+        nexusKnowledgeActionStatus = "Email was not sent. Confirm the send before continuing.";
+        if (experienceMode === "user") renderUserWorkspace();
+        return true;
+      }
+      if (["healthcare", "pharmacy", "mobile-clinic", "telehealth", "rpm", "rtm", "physician-review"].includes(domain) && !consent) {
+        nexusEmailProviderLastResult = { executed: false, status: "consent_required" };
+        nexusKnowledgeActionStatus = "Email was not sent. Consent is required for sensitive health/provider packets.";
+        if (experienceMode === "user") renderUserWorkspace();
+        return true;
+      }
+      const result = await request("/api/nexus/email/send-packet", {
+        method: "POST",
+        body: {
+          to: recipient,
+          subject,
+          domain,
+          packetId: answer.liveKnowledgeResearchPacket?.packetId || answer.packet?.packetId || answer.queryId || `ui-email-packet-${Date.now()}`,
+          summary: answer.answer || answer.summary || "Nexus packet prepared for review.",
+          packetBody: [
+            answer.answer || answer.summary || "Nexus packet prepared for review.",
+            ...(Array.isArray(answer.keyPoints) ? answer.keyPoints : []),
+            ...(Array.isArray(answer.limitations) ? answer.limitations : [])
+          ].filter(Boolean).join("\n"),
+          confirmed,
+          consent
+        }
+      });
+      nexusEmailProviderLastResult = result;
+      nexusKnowledgeActionStatus = result.executed
+        ? "Email sent by the configured provider. Message metadata was recorded safely."
+        : result.status === "confirmation_required"
+          ? "Email was not sent. Confirm the send before continuing."
+          : result.status === "consent_required"
+            ? "Email was not sent. Consent is required for sensitive health/provider packets."
+            : result.localQueueItem
+              ? "Email was not sent. Nexus queued the packet locally until an email provider is configured or the issue is resolved."
+              : result.error || "Email was not sent.";
+      await Promise.all([
+        refreshNexusKnowledgeRail({ rerender: false }),
+        refreshNexusPilotPlatformStatus({ rerender: false }).catch(() => null),
+        refreshNexusInternetResourceHistory({ rerender: false }).catch(() => null)
+      ]);
       if (experienceMode === "user") renderUserWorkspace();
       return true;
     }
@@ -39302,6 +39424,13 @@ function bindNexusStandardUserHomeControls() {
     };
     element.addEventListener("click", event => {
       handleNexusStandardUserHomeClick(event);
+    }, true);
+  });
+  $$('[data-nexus-knowledge-action="send-packet-email"]').forEach(element => {
+    if (element.dataset.nexusEmailBound === "true") return;
+    element.dataset.nexusEmailBound = "true";
+    element.addEventListener("click", event => {
+      handleNexusKnowledgeRailClick(event);
     }, true);
   });
 }
