@@ -50,6 +50,19 @@ Diagnosis, prescribing, medication changes, provider submission, care-team conta
 
 Health and chronic-care prompts from the Standard User knowledge rail can now produce visible chronic-care health packets. The Health & Chronic Care mode includes quick actions for diabetes, hypertension, obesity, RPM, RTM, CHW support, provider summaries, readings, and urgent warning education.
 
+The Standard User health workspace also exposes a compact chronic-care section launcher with:
+
+- Chronic Care Education.
+- Diabetes Support.
+- Hypertension Support.
+- Obesity Support.
+- RPM Manual Readings.
+- RTM Therapy Updates.
+- CHW Support.
+- Provider Review Summary.
+
+Each section routes to the existing chronic-care health engine as preparation and review only. The UI must continue to state or imply no diagnosis, no prescribing, no medication change, no provider submission, no live RPM/RTM device connection, and no emergency dispatch.
+
 ## Export and Review Posture
 
 Packets are export-ready for local user, clinician, care-team, CHW, or provider review. Exported packet content must preserve the education-only and no-execution boundary and must not include secrets or unsupported claims of live provider action.

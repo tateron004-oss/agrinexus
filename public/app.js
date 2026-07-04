@@ -19050,6 +19050,17 @@ const NEXUS_TRAINING_WORKFORCE_SECTIONS = Object.freeze([
   { id: "learning-recommendations", label: "Learning Recommendations", command: "Nexus, recommend a learning path.", description: "Source-aware courses and low-bandwidth learning steps." }
 ]);
 
+const NEXUS_CHRONIC_CARE_HEALTH_SECTIONS = Object.freeze([
+  { id: "chronic-education", label: "Chronic Care Education", command: "Nexus, prepare chronic disease education.", description: "Plain-language education and questions for provider review." },
+  { id: "diabetes-support", label: "Diabetes Support", command: "Nexus, help with diabetes intake.", description: "Organize glucose context, questions, and warning-sign education." },
+  { id: "hypertension-support", label: "Hypertension Support", command: "Nexus, review my blood pressure.", description: "Prepare BP reading context and care-team questions." },
+  { id: "obesity-support", label: "Obesity Support", command: "Nexus, start obesity support.", description: "Organize weight, activity, sleep, and access barriers for review." },
+  { id: "rpm-support", label: "RPM Manual Readings", command: "Nexus, record RPM reading.", description: "Manual vitals packet; no live device monitoring claim." },
+  { id: "rtm-support", label: "RTM Therapy Updates", command: "Nexus, prepare RTM therapy update.", description: "Manual therapy-progress notes for provider review." },
+  { id: "chw-support", label: "CHW Support", command: "Nexus, help a community health worker.", description: "Household, language, access, and visit-prep notes only." },
+  { id: "provider-summary", label: "Provider Review Summary", command: "Nexus, prepare a care team summary.", description: "Export-ready summary; no provider submission without consent." }
+]);
+
 function buildNexusKnowledgePreparedResult(result = {}) {
   const answer = result?.result || result || {};
   return {
@@ -19174,6 +19185,20 @@ function renderNexusTrainingWorkforceSections(id = "") {
     <div class="nexus-training-workforce-sections" data-testid="nexus-training-workforce-sections" aria-label="${escapeHtml(translateText("Training, literacy, and workforce sections"))}">
       ${NEXUS_TRAINING_WORKFORCE_SECTIONS.map(section => `
         <button type="button" data-testid="nexus-training-workforce-section-${escapeHtml(section.id)}" data-nexus-command="${escapeHtml(section.command)}" data-nexus-mode-shortcut="training-workforce" data-training-workforce-section="${escapeHtml(section.id)}">
+          <strong>${escapeHtml(translateText(section.label))}</strong>
+          <span>${escapeHtml(translateText(section.description))}</span>
+        </button>
+      `).join("")}
+    </div>
+  `;
+}
+
+function renderNexusChronicCareHealthSections(id = "") {
+  if (!["health", "health-chronic-care", "chronic-care", "clinical-support", "telehealth-intake"].includes(id)) return "";
+  return `
+    <div class="nexus-chronic-care-health-sections" data-testid="nexus-chronic-care-health-sections" aria-label="${escapeHtml(translateText("Chronic care health sections"))}">
+      ${NEXUS_CHRONIC_CARE_HEALTH_SECTIONS.map(section => `
+        <button type="button" data-testid="nexus-chronic-care-health-section-${escapeHtml(section.id)}" data-nexus-command="${escapeHtml(section.command)}" data-nexus-mode-shortcut="chronic-care-health" data-chronic-care-health-section="${escapeHtml(section.id)}">
           <strong>${escapeHtml(translateText(section.label))}</strong>
           <span>${escapeHtml(translateText(section.description))}</span>
         </button>
@@ -22626,6 +22651,7 @@ function renderNexusActiveWorkflowWorkspace() {
       ${renderNexusWorkflowLaneStatus(id)}
       ${renderNexusAgricultureIntelligenceSections(id)}
       ${renderNexusTrainingWorkforceSections(id)}
+      ${renderNexusChronicCareHealthSections(id)}
       ${renderNexusWorkflowMapPreview(id)}
       <div class="nexus-workflow-body">
         ${renderNexusWorkflowFields(id, fields)}
