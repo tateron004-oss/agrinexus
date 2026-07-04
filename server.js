@@ -29187,6 +29187,164 @@ async function nexusLiveKnowledgeAllModesQuery(db, body = {}, user = null, env =
   return result;
 }
 
+function nexusGlobalAgricultureIntent(query = "", body = {}) {
+  const text = `${query} ${body.mode || ""} ${body.crop || ""}`.toLowerCase();
+  if (/\b(field visit|farm visit|extension visit|site visit|field check|visit packet)\b/.test(text)) return "field_visit";
+  if (/\b(farm plan|farm planning|season plan|crop calendar|planting calendar|input planning|water planning|climate-smart|climate smart|harvest plan|yield plan)\b/.test(text)) return "farm_planning";
+  if (/\b(disease|pest|soil|irrigation|fertilizer|fertiliser|climate|yield|yellow leaves|wilting|blight|rot|cassava|maize|tomato|rice|beans)\b/.test(text)) return "crop_support";
+  return "agriculture_support";
+}
+
+function nexusGlobalAgriculturePacketType(intent = "agriculture_support") {
+  return ({
+    crop_support: "crop_support_packet",
+    farm_planning: "farm_planning_packet",
+    field_visit: "field_visit_packet",
+    agriculture_support: "agriculture_support_packet"
+  })[intent] || "agriculture_support_packet";
+}
+
+function nexusGlobalAgricultureIssueSummary(query = "", intent = "agriculture_support", body = {}) {
+  const crop = sanitizePilotText(body.crop || "", 80);
+  const region = sanitizePilotText(body.region || body.location || "", 120);
+  const cropText = crop ? ` for ${crop}` : "";
+  const regionText = region ? ` in ${region}` : "";
+  if (intent === "field_visit") return `Field visit preparation${cropText}${regionText}: ${sanitizePilotText(query, 260)}`;
+  if (intent === "farm_planning") return `Farm planning support${cropText}${regionText}: ${sanitizePilotText(query, 260)}`;
+  if (intent === "crop_support") return `Crop support question${cropText}${regionText}: ${sanitizePilotText(query, 260)}`;
+  return `Agriculture support request${cropText}${regionText}: ${sanitizePilotText(query, 260)}`;
+}
+
+function nexusGlobalAgricultureLikelyCauses(intent = "agriculture_support", query = "") {
+  const lower = String(query || "").toLowerCase();
+  if (intent === "farm_planning") {
+    return [
+      "Season timing, expected rainfall, crop variety, input availability, and market timing may affect the plan.",
+      "Water access, soil condition, labor timing, and harvest storage should be checked before committing resources."
+    ];
+  }
+  if (intent === "field_visit") {
+    return [
+      "A field visit packet should confirm crop stage, soil moisture, pest signs, irrigation access, photos, and typed location context.",
+      "Any recommendation depends on local field evidence and expert review."
+    ];
+  }
+  const causes = [
+    "Nutrient stress, soil pH, water stress, pest pressure, disease, heat, or field drainage can create similar crop symptoms.",
+    "Local weather, crop variety, recent input use, and field history can change the likely cause."
+  ];
+  if (/\b(yellow leaves|yellowing|chlorosis)\b/.test(lower)) causes.unshift("Yellowing leaves may come from nitrogen deficiency, water stress, root disease, pests, or normal crop aging.");
+  if (/\b(pest|insect|worm|borer|aphid)\b/.test(lower)) causes.unshift("Visible insects, leaf damage pattern, and crop stage are needed before choosing pest control.");
+  if (/\b(irrigation|water|dry|drought)\b/.test(lower)) causes.unshift("Water timing, soil moisture, drainage, and local climate should be checked before changing irrigation.");
+  return causes.slice(0, 4);
+}
+
+function nexusGlobalAgricultureFieldChecks(intent = "agriculture_support") {
+  const shared = [
+    "Record crop type, variety if known, growth stage, and recent weather.",
+    "Check soil moisture, drainage, leaf pattern, stems, roots if safe, and pest signs.",
+    "Take clear photos for local expert review without sharing precise location unless separately approved."
+  ];
+  if (intent === "farm_planning") {
+    return [
+      "Confirm planting window, expected rainfall, irrigation access, seed/input availability, and labor timing.",
+      "Estimate water needs, fertilizer plan, pest monitoring schedule, harvest window, and storage/market needs.",
+      "Identify what depends on local extension guidance before buying inputs."
+    ];
+  }
+  if (intent === "field_visit") {
+    return [
+      "Prepare typed farm/field context, preferred contact method, crop stage, observed issue, and visit purpose.",
+      "List safe directions or landmarks only if the user chooses to provide them.",
+      "Keep vendor contact, dispatch, and location sharing behind a separate confirmation gate."
+    ];
+  }
+  return shared;
+}
+
+function buildNexusGlobalAgriculturePacket(payload = {}) {
+  const intent = payload.intent || "agriculture_support";
+  const packetType = nexusGlobalAgriculturePacketType(intent);
+  const liveKnowledge = payload.liveKnowledge || {};
+  const citations = Array.isArray(liveKnowledge.citations) ? liveKnowledge.citations.slice(0, 6) : [];
+  const timestamp = new Date().toISOString();
+  return {
+    type: packetType,
+    packetType,
+    packetId: crypto.randomUUID(),
+    query: sanitizePilotText(payload.query || "", 700),
+    agricultureIntent: intent,
+    issueSummary: nexusGlobalAgricultureIssueSummary(payload.query || "", intent, payload.body || {}),
+    likelyCauses: nexusGlobalAgricultureLikelyCauses(intent, payload.query || ""),
+    sourceBackedGuidance: liveKnowledge.status === "source-backed"
+      ? sanitizePilotText(liveKnowledge.summary || liveKnowledge.answer || "Source-backed agriculture guidance is available. Review citations before acting.", 1400)
+      : "Live agriculture retrieval is not configured or did not return citations. Nexus prepared a safe packet without fabricating sources.",
+    citations,
+    sources: Array.isArray(liveKnowledge.sources) ? liveKnowledge.sources.slice(0, 6) : citations,
+    localConditionUncertainty: "Local conditions, crop variety, season, soil, water access, field history, and recent weather can change the right recommendation.",
+    recommendedFieldChecks: nexusGlobalAgricultureFieldChecks(intent),
+    agronomistExtensionReview: "Confirm important disease, pesticide, fertilizer, yield, crop-loss, or field-dispatch decisions with a local agronomist, extension officer, or trusted agriculture expert.",
+    nextSafeActions: [
+      "Add crop, region, crop stage, photos, recent weather, watering, and input history if you want a stronger review packet.",
+      intent === "field_visit" ? "Prepare a field visit packet for local review; do not dispatch or share location without separate confirmation." : "Save this packet or prepare it for agriculture expert review.",
+      "Use marketplace, vendor, or location workflows only after explicit confirmation and review."
+    ],
+    liveKnowledgeStatus: sanitizePilotText(liveKnowledge.status || "disabled", 80),
+    provider: sanitizePilotText(liveKnowledge.provider || "not-configured", 80),
+    exportReady: true,
+    timestamp,
+    noExecutionAuthorized: true,
+    noPurchaseAuthorized: true,
+    noVendorContactAuthorized: true,
+    noLocationSharingAuthorized: true,
+    noFieldDispatchAuthorized: true,
+    requiresConfirmationForVendorContact: true,
+    requiresConfirmationForLocationSharing: true,
+    noFakeCitations: citations.length === 0
+  };
+}
+
+async function nexusGlobalAgricultureIntelligence(db, body = {}, user = null, env = process.env) {
+  ensureNexusProductionRailsState(db);
+  const query = sanitizePilotText(body.query || body.question || body.command || "", 700);
+  if (!query) return { ok: false, error: "query_required" };
+  const intent = nexusGlobalAgricultureIntent(query, body);
+  const domain = intent === "field_visit" ? "field" : intent === "farm_planning" ? "farm" : "crop";
+  const liveKnowledge = await nexusLiveKnowledgeAllModesQuery(db, {
+    query,
+    domain,
+    mode: "agriculture",
+    locale: body.locale || "",
+    maxResults: body.maxResults || 5,
+    safetyContext: { sourceSurface: body.sourceSurface || "global_agriculture_intelligence" }
+  }, user, env);
+  const packet = buildNexusGlobalAgriculturePacket({
+    query,
+    intent,
+    body,
+    liveKnowledge
+  });
+  addNexusPilotAuditEvent(db, "global_agriculture_packet_prepared", {
+    actor: user?.name || "Standard User",
+    role: user?.role || "Standard User",
+    mode: intent,
+    description: `${packet.packetType} prepared with Live Knowledge status ${packet.liveKnowledgeStatus}. No purchase, vendor contact, location sharing, or field dispatch occurred.`
+  });
+  return {
+    ok: true,
+    status: "prepared",
+    intent,
+    packetType: packet.packetType,
+    packet,
+    liveKnowledge,
+    noExecutionAuthorized: true,
+    noPurchaseAuthorized: true,
+    noVendorContactAuthorized: true,
+    noLocationSharingAuthorized: true,
+    noFieldDispatchAuthorized: true
+  };
+}
+
 function nexusKnowledgeSaveResult(db, body = {}, user = null) {
   ensureNexusProductionRailsState(db);
   const queryId = sanitizePilotText(body.queryId || "", 120);
@@ -30932,6 +31090,13 @@ async function api(req, res, url) {
 
   if (url.pathname === "/api/nexus/live-knowledge/query" && req.method === "POST") {
     const result = await nexusLiveKnowledgeAllModesQuery(db, await readBody(req), user, process.env);
+    if (!result.ok) return send(res, 400, result);
+    await writeDb(db);
+    return send(res, 200, result);
+  }
+
+  if (url.pathname === "/api/nexus/global-agriculture/intelligence" && req.method === "POST") {
+    const result = await nexusGlobalAgricultureIntelligence(db, await readBody(req), user, process.env);
     if (!result.ok) return send(res, 400, result);
     await writeDb(db);
     return send(res, 200, result);
