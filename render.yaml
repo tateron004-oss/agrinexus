@@ -190,6 +190,8 @@ services:
         value: "false"
       - key: NEXUS_LIVE_KNOWLEDGE_PROVIDER
         sync: false
+      - key: NEXUS_LIVE_KNOWLEDGE_API_KEY
+        sync: false
       - key: NEXUS_LIVE_KNOWLEDGE_PROVIDER_ENDPOINT
         sync: false
       - key: NEXUS_LIVE_KNOWLEDGE_MAX_RESULTS

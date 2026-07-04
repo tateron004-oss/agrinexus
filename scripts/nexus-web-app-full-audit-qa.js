@@ -61,6 +61,7 @@ const modeCommands = [
 const knowledgeEnv = [
   "NEXUS_LIVE_KNOWLEDGE_ENABLED",
   "NEXUS_LIVE_KNOWLEDGE_PROVIDER",
+  "NEXUS_LIVE_KNOWLEDGE_API_KEY",
   "NEXUS_LIVE_KNOWLEDGE_PROVIDER_ENDPOINT",
   "NEXUS_LIVE_KNOWLEDGE_MAX_RESULTS",
   "NEXUS_LIVE_KNOWLEDGE_TIMEOUT_MS",
@@ -86,6 +87,7 @@ check("clean live knowledge environment documentation exists", hasAll(envExample
   "exa                    requires EXA_API_KEY",
   "openai-web-search      requires OPENAI_WEB_SEARCH_ENABLED=true and OPENAI_API_KEY",
   "provider-endpoint      requires NEXUS_LIVE_KNOWLEDGE_PROVIDER_ENDPOINT",
+  "NEXUS_LIVE_KNOWLEDGE_API_KEY=",
   "NEXUS_LIVE_KNOWLEDGE_ENABLED=false",
   "NEXUS_LIVE_KNOWLEDGE_MAX_RESULTS=5",
   "NEXUS_LIVE_KNOWLEDGE_TIMEOUT_MS=9000",
@@ -98,10 +100,14 @@ check("retrieval status and readiness endpoints exist", hasAll(server, [
   "/api/nexus/knowledge/status",
   "/api/nexus/knowledge/readiness",
   "function nexusKnowledgeProviderStatus",
+  "function nexusLiveKnowledgeApiKeyForProvider",
+  "function nexusKnowledgeProviderErrorMessage",
   "function nexusKnowledgeReadiness",
   "missingEnv",
   "supportedProviders",
-  "providerState"
+  "providerState",
+  "unsupported_provider",
+  "NEXUS_LIVE_KNOWLEDGE_PROVIDER must be one of"
 ]));
 
 check("supported providers and required env names are source-level explicit", providerNames.every(provider => server.includes(provider))
@@ -110,7 +116,10 @@ check("supported providers and required env names are source-level explicit", pr
     'requiredEnv: ["BRAVE_SEARCH_API_KEY"]',
     'requiredEnv: ["EXA_API_KEY"]',
     'requiredEnv: ["OPENAI_WEB_SEARCH_ENABLED", "OPENAI_API_KEY"]',
-    'requiredEnv: ["NEXUS_LIVE_KNOWLEDGE_PROVIDER_ENDPOINT"]'
+    'requiredEnv: ["NEXUS_LIVE_KNOWLEDGE_PROVIDER_ENDPOINT"]',
+    'fallbackEnv: ["NEXUS_LIVE_KNOWLEDGE_API_KEY"]',
+    'unsupportedProvider ? "blocked"',
+    'unsupportedProvider ? "unsupported_provider"'
   ]));
 
 check("disabled retrieval is honest and citation-free", hasAll(server, [

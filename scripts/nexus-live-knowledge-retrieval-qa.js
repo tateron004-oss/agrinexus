@@ -76,6 +76,7 @@ function excludes(source, token, label) {
   "WEB_SEARCH_PROVIDER",
   "NEXUS_LIVE_KNOWLEDGE_ENABLED",
   "NEXUS_LIVE_KNOWLEDGE_PROVIDER",
+  "NEXUS_LIVE_KNOWLEDGE_API_KEY",
   "NEXUS_LIVE_KNOWLEDGE_PROVIDER_ENDPOINT",
   "NEXUS_LIVE_KNOWLEDGE_MAX_RESULTS",
   "NEXUS_LIVE_KNOWLEDGE_TIMEOUT_MS",
@@ -96,6 +97,10 @@ function excludes(source, token, label) {
   "supportedProviders",
   "selectedProvider",
   "unsupportedProvider",
+  "unsupported_provider",
+  "NEXUS_LIVE_KNOWLEDGE_PROVIDER must be one of",
+  "function nexusLiveKnowledgeApiKeyForProvider",
+  "function nexusKnowledgeProviderErrorMessage",
   "missingEnv"
 ].forEach(token => includes(server, token, `provider readiness contract ${token}`));
 

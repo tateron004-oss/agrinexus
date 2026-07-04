@@ -18025,12 +18025,13 @@ function extractKnowledgeSearchQuery(command = "") {
 }
 
 async function fetchTavilyKnowledge(query) {
-  if (!process.env.TAVILY_API_KEY) return null;
+  const apiKey = nexusLiveKnowledgeApiKeyForProvider("tavily");
+  if (!apiKey) return null;
   const response = await fetchWithTimeout("https://api.tavily.com/search", {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({
-      api_key: process.env.TAVILY_API_KEY,
+      api_key: apiKey,
       query,
       search_depth: "basic",
       max_results: 5,
@@ -18038,7 +18039,7 @@ async function fetchTavilyKnowledge(query) {
     })
   }, 9000);
   const payload = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(payload.error || payload.message || response.statusText);
+  if (!response.ok) throw new Error(nexusKnowledgeProviderErrorMessage(payload, response.statusText));
   const results = (payload.results || []).slice(0, 5).map(item => ({
     title: item.title || item.url || "Search result",
     url: item.url || "",
@@ -18048,16 +18049,17 @@ async function fetchTavilyKnowledge(query) {
 }
 
 async function fetchBraveKnowledge(query) {
-  if (!process.env.BRAVE_SEARCH_API_KEY) return null;
+  const apiKey = nexusLiveKnowledgeApiKeyForProvider("brave");
+  if (!apiKey) return null;
   const url = `https://api.search.brave.com/res/v1/web/search?q=${encodeURIComponent(query)}&count=5&freshness=pd`;
   const response = await fetchWithTimeout(url, {
     headers: {
       accept: "application/json",
-      "x-subscription-token": process.env.BRAVE_SEARCH_API_KEY
+      "x-subscription-token": apiKey
     }
   }, 9000);
   const payload = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(payload.error?.detail || payload.message || response.statusText);
+  if (!response.ok) throw new Error(nexusKnowledgeProviderErrorMessage(payload, response.statusText));
   const results = (payload.web?.results || []).slice(0, 5).map(item => ({
     title: item.title || item.url || "Search result",
     url: item.url || "",
@@ -18067,12 +18069,13 @@ async function fetchBraveKnowledge(query) {
 }
 
 async function fetchExaKnowledge(query) {
-  if (!process.env.EXA_API_KEY) return null;
+  const apiKey = nexusLiveKnowledgeApiKeyForProvider("exa");
+  if (!apiKey) return null;
   const response = await fetchWithTimeout("https://api.exa.ai/search", {
     method: "POST",
     headers: {
       "content-type": "application/json",
-      "x-api-key": process.env.EXA_API_KEY
+      "x-api-key": apiKey
     },
     body: JSON.stringify({
       query,
@@ -18081,7 +18084,7 @@ async function fetchExaKnowledge(query) {
     })
   }, Number(process.env.NEXUS_LIVE_KNOWLEDGE_TIMEOUT_MS || 9000));
   const payload = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(payload.error || payload.message || response.statusText);
+  if (!response.ok) throw new Error(nexusKnowledgeProviderErrorMessage(payload, response.statusText));
   const results = (payload.results || []).slice(0, 5).map(item => ({
     title: item.title || item.url || "Search result",
     url: item.url || "",
@@ -18106,7 +18109,7 @@ async function fetchOpenAiWebKnowledge(query) {
     })
   }, 12000);
   const payload = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(payload.error?.message || response.statusText);
+  if (!response.ok) throw new Error(nexusKnowledgeProviderErrorMessage(payload, response.statusText));
   return { provider: "openai-web-search", answer: extractResponseText(payload), results: [] };
 }
 
@@ -18122,7 +18125,7 @@ async function fetchConfiguredLiveKnowledgeEndpoint(query, command) {
     body: JSON.stringify({ query, command, context: "agrinexus-live-knowledge" })
   }, Number(process.env.NEXUS_LIVE_KNOWLEDGE_TIMEOUT_MS || 9000));
   const payload = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(payload.error || payload.message || response.statusText);
+  if (!response.ok) throw new Error(nexusKnowledgeProviderErrorMessage(payload, response.statusText));
   const results = (payload.results || payload.items || payload.sources || []).slice(0, 5).map(item => ({
     title: item.title || item.name || item.url || "Provider result",
     url: item.url || item.link || "",
@@ -18144,7 +18147,7 @@ async function fetchProviderBridgeKnowledge(query, command) {
     body: JSON.stringify({ query, command, context: "agrinexus-live-knowledge" })
   }, PROVIDER_WEBHOOK_TIMEOUT_MS + 4000);
   const payload = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(payload.error || payload.message || response.statusText);
+  if (!response.ok) throw new Error(nexusKnowledgeProviderErrorMessage(payload, response.statusText));
   const results = (payload.results || payload.items || payload.sources || []).slice(0, 5).map(item => ({
     title: item.title || item.name || item.url || "Provider result",
     url: item.url || item.link || "",
@@ -28112,37 +28115,88 @@ function nexusKnowledgeSourceList() {
   ];
 }
 
+function nexusLiveKnowledgeProviderPreference(env = process.env) {
+  return String(env.NEXUS_LIVE_KNOWLEDGE_PROVIDER || env.WEB_SEARCH_PROVIDER || "").trim().toLowerCase();
+}
+
+function nexusLiveKnowledgeGenericApiKeyApplies(provider, env = process.env) {
+  const selectedProvider = nexusLiveKnowledgeProviderPreference(env);
+  const genericKey = String(env.NEXUS_LIVE_KNOWLEDGE_API_KEY || "").trim();
+  return Boolean(genericKey && selectedProvider === provider && ["tavily", "brave", "exa"].includes(provider));
+}
+
+function nexusLiveKnowledgeApiKeyForProvider(provider, env = process.env) {
+  const primaryEnvByProvider = {
+    tavily: "TAVILY_API_KEY",
+    brave: "BRAVE_SEARCH_API_KEY",
+    exa: "EXA_API_KEY"
+  };
+  const primaryEnv = primaryEnvByProvider[provider];
+  const primaryValue = primaryEnv ? String(env[primaryEnv] || "").trim() : "";
+  if (primaryValue) return primaryValue;
+  return nexusLiveKnowledgeGenericApiKeyApplies(provider, env)
+    ? String(env.NEXUS_LIVE_KNOWLEDGE_API_KEY || "").trim()
+    : "";
+}
+
+function nexusKnowledgeProviderErrorMessage(payload = {}, fallback = "Provider request failed") {
+  const candidates = [
+    payload?.error?.message,
+    payload?.error?.detail,
+    payload?.error,
+    payload?.message,
+    payload?.detail,
+    fallback
+  ];
+  const candidate = candidates.find(value => value !== undefined && value !== null && String(value).trim());
+  const raw = typeof candidate === "object"
+    ? JSON.stringify(candidate)
+    : String(candidate || fallback);
+  return sanitizePilotText(raw, 220) || fallback;
+}
+
 function nexusKnowledgeProviderStatus(env = process.env) {
-  const providerPreference = String(env.NEXUS_LIVE_KNOWLEDGE_PROVIDER || env.WEB_SEARCH_PROVIDER || "").trim().toLowerCase();
+  const providerPreference = nexusLiveKnowledgeProviderPreference(env);
   const openAiReady = nexusFlagEnabled(env, "OPENAI_WEB_SEARCH_ENABLED") && Boolean(String(env.OPENAI_API_KEY || "").trim());
   const providerEndpointReady = Boolean(String(env.NEXUS_LIVE_KNOWLEDGE_PROVIDER_ENDPOINT || "").trim());
   const supportedProviders = [
-    { provider: "tavily", requiredEnv: ["TAVILY_API_KEY"], citationCapable: true },
-    { provider: "brave", requiredEnv: ["BRAVE_SEARCH_API_KEY"], citationCapable: true },
-    { provider: "exa", requiredEnv: ["EXA_API_KEY"], citationCapable: true },
+    { provider: "tavily", requiredEnv: ["TAVILY_API_KEY"], fallbackEnv: ["NEXUS_LIVE_KNOWLEDGE_API_KEY"], citationCapable: true },
+    { provider: "brave", requiredEnv: ["BRAVE_SEARCH_API_KEY"], fallbackEnv: ["NEXUS_LIVE_KNOWLEDGE_API_KEY"], citationCapable: true },
+    { provider: "exa", requiredEnv: ["EXA_API_KEY"], fallbackEnv: ["NEXUS_LIVE_KNOWLEDGE_API_KEY"], citationCapable: true },
     { provider: "openai-web-search", requiredEnv: ["OPENAI_WEB_SEARCH_ENABLED", "OPENAI_API_KEY"], citationCapable: true },
     { provider: "provider-endpoint", requiredEnv: ["NEXUS_LIVE_KNOWLEDGE_PROVIDER_ENDPOINT"], citationCapable: true }
   ];
+  const providerMissingEnv = item => item.requiredEnv.filter(envName => {
+    if (envName === "OPENAI_WEB_SEARCH_ENABLED") return !nexusFlagEnabled(env, envName);
+    if (["TAVILY_API_KEY", "BRAVE_SEARCH_API_KEY", "EXA_API_KEY"].includes(envName)) {
+      return !String(env[envName] || "").trim() && !nexusLiveKnowledgeGenericApiKeyApplies(item.provider, env);
+    }
+    return !String(env[envName] || "").trim();
+  });
   const isProviderConfigured = item => item.provider === "openai-web-search"
     ? openAiReady
     : item.provider === "provider-endpoint"
       ? providerEndpointReady
-      : item.requiredEnv.every(envName => Boolean(String(env[envName] || "").trim()));
+      : providerMissingEnv(item).length === 0;
   const selectedByPreference = supportedProviders.find(item => item.provider === providerPreference);
-  const selected = selectedByPreference && isProviderConfigured(selectedByPreference)
+  const unsupportedProvider = Boolean(providerPreference && !supportedProviders.some(item => item.provider === providerPreference));
+  const selected = unsupportedProvider
+    ? null
+    : selectedByPreference && isProviderConfigured(selectedByPreference)
     ? selectedByPreference
     : supportedProviders.find(isProviderConfigured);
   const enabled = nexusFlagEnabled(env, "NEXUS_LIVE_KNOWLEDGE_ENABLED");
   const configured = Boolean(selected);
-  const unsupportedProvider = Boolean(providerPreference && !supportedProviders.some(item => item.provider === providerPreference));
-  const preferredMissing = selectedByPreference && !configured
-    ? selectedByPreference.requiredEnv.filter(envName => envName === "OPENAI_WEB_SEARCH_ENABLED" ? !nexusFlagEnabled(env, envName) : !String(env[envName] || "").trim())
+  const preferredMissing = unsupportedProvider
+    ? ["NEXUS_LIVE_KNOWLEDGE_PROVIDER"]
+    : selectedByPreference && !configured
+    ? providerMissingEnv(selectedByPreference)
     : [];
   const missingEnv = configured
     ? []
     : preferredMissing.length
       ? preferredMissing
-      : ["TAVILY_API_KEY", "BRAVE_SEARCH_API_KEY", "EXA_API_KEY", "OPENAI_WEB_SEARCH_ENABLED + OPENAI_API_KEY", "NEXUS_LIVE_KNOWLEDGE_PROVIDER_ENDPOINT"];
+      : ["TAVILY_API_KEY", "BRAVE_SEARCH_API_KEY", "EXA_API_KEY", "NEXUS_LIVE_KNOWLEDGE_API_KEY with exact provider", "OPENAI_WEB_SEARCH_ENABLED + OPENAI_API_KEY", "NEXUS_LIVE_KNOWLEDGE_PROVIDER_ENDPOINT"];
   return {
     ok: true,
     enabled,
@@ -28150,11 +28204,14 @@ function nexusKnowledgeProviderStatus(env = process.env) {
     selectedProvider: providerPreference || "auto",
     provider: configured ? selected.provider : "not-configured",
     providerEnvName: configured ? selected.requiredEnv.join(" + ") : "",
-    testability: !enabled ? "disabled" : configured ? "ready" : "missing_config",
+    testability: !enabled ? "disabled" : unsupportedProvider ? "blocked" : configured ? "ready" : "missing_config",
     missingEnv,
     supportedProviders,
     unsupportedProvider,
-    providerState: !enabled ? "disabled" : configured ? "configured" : "missing_config",
+    providerState: !enabled ? "disabled" : unsupportedProvider ? "unsupported_provider" : configured ? "configured" : "missing_config",
+    providerSelectionMessage: unsupportedProvider
+      ? "NEXUS_LIVE_KNOWLEDGE_PROVIDER must be one of: tavily, brave, exa, openai-web-search, provider-endpoint."
+      : "",
     maxResults: Number(env.NEXUS_LIVE_KNOWLEDGE_MAX_RESULTS || 5),
     timeoutMs: Number(env.NEXUS_LIVE_KNOWLEDGE_TIMEOUT_MS || 9000),
     safeMode: String(env.NEXUS_LIVE_KNOWLEDGE_SAFE_MODE || "true").toLowerCase() !== "false",
