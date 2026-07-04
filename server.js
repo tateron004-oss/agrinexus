@@ -28848,6 +28848,62 @@ async function nexusIntelligenceAsk(db, body = {}, user = null, env = process.en
   ensureNexusProductionRailsState(db);
   const originalQuestion = sanitizePilotText(body.question || body.command || body.query || "", 700);
   if (!originalQuestion) return { ok: false, error: "question_required" };
+  if (/\b(sms|text|whatsapp|communications?|message)\b/i.test(originalQuestion) && /\b(configured|blocking|blocked|send|provider|pharmacy|mobile clinic|agriculture expert|vendor|logistics|packet|whatsapp|text)\b/i.test(originalQuestion)) {
+    const communicationsStatus = nexusCommunicationsProviderStatus(env);
+    const wantsWhatsApp = /\bwhatsapp\b/i.test(originalQuestion);
+    const channel = wantsWhatsApp ? "whatsapp" : "sms";
+    const channelStatus = communicationsStatus.channels[channel];
+    const wantsSend = /\b(send|text|whatsapp|message)\b/i.test(originalQuestion) && /\b(packet|provider|pharmacy|mobile clinic|agriculture expert|vendor|logistics|review)\b/i.test(originalQuestion);
+    const missing = channelStatus.missingEnv || [];
+    const answer = channelStatus.configured
+      ? `${channel.toUpperCase()} provider credentials are configured. Nexus can send only after a packet exists, the recipient and message preview are visible, confirmation is checked, and consent is checked for sensitive domains.`
+      : `${channel.toUpperCase()} provider is not ready. Missing: ${missing.join(", ") || "communications provider configuration"}. Nexus can prepare the packet and keep a local queue fallback without claiming delivery.`;
+    const auditEvent = addNexusPilotAuditEvent(db, "communications_provider_status_answered", {
+      actor: user?.name || "Standard User",
+      role: user?.role || "Standard User",
+      mode: channel,
+      description: "Nexus answered SMS/WhatsApp provider status. No message was sent."
+    });
+    return {
+      ok: true,
+      intelligence: {
+        router: "nexus-sms-whatsapp-provider-activation",
+        originalQuestion,
+        category: "communications",
+        answerMode: channelStatus.configured ? `${channel}_provider_configured` : `${channel}_provider_unconfigured`,
+        sourceBacked: false,
+        provider: communicationsStatus.provider,
+        noExecutionAuthorized: true,
+        noFakeSmsClaim: true,
+        noFakeWhatsappClaim: true
+      },
+      status: { communicationsProvider: communicationsStatus },
+      classification: { category: "communications", retrievalNeeded: false },
+      result: {
+        ok: true,
+        category: "communications",
+        categoryLabel: "SMS / WhatsApp Provider",
+        answerMode: wantsSend ? `${channel}_confirmation_required` : `${channel}_status`,
+        retrievalStatus: "built_in",
+        answer,
+        communicationsProviderStatus: communicationsStatus,
+        followUpActions: [
+          { id: "prepare-communications-packet", label: "Prepare packet before sending", action: "prepare-review-summary" },
+          { id: "open-communications-status", label: "Review communications provider status", action: "refresh-status" }
+        ],
+        limitations: [
+          "No SMS or WhatsApp message is sent from Ask Nexus without a prepared packet, visible recipient, explicit confirmation, and consent for sensitive domains.",
+          "Nexus does not expose Twilio auth tokens, account secrets, API keys, or auth headers.",
+          "Healthcare-sensitive SMS and WhatsApp bodies use short notification language and do not include diagnosis, medication changes, or detailed protected health information."
+        ],
+        citations: [],
+        noExecutionAuthorized: true,
+        noExternalDelivery: true,
+        auditEventId: auditEvent.id
+      },
+      audit: auditEvent
+    };
+  }
   if (/\b(email|mail)\b/i.test(originalQuestion) && /\b(configured|blocking|blocked|send|physician|pharmacy|mobile clinic|agriculture expert|vendor|logistics|packet|provider)\b/i.test(originalQuestion)) {
     const emailStatus = nexusEmailProviderStatus(env);
     const wantsSend = /\b(send|email|mail)\b/i.test(originalQuestion) && /\b(packet|physician|pharmacy|mobile clinic|agriculture expert|vendor|logistics|provider)\b/i.test(originalQuestion);
@@ -30750,6 +30806,242 @@ async function nexusEmailSendPacket(db, body = {}, user = null, env = process.en
   }
 }
 
+const NEXUS_COMMUNICATIONS_SENSITIVE_DOMAINS = new Set(["healthcare", "pharmacy", "mobile-clinic", "telehealth", "rpm", "rtm", "physician-review"]);
+
+function normalizeNexusCommunicationsChannel(channel = "sms") {
+  const normalized = String(channel || "sms").trim().toLowerCase();
+  return normalized === "whatsapp" ? "whatsapp" : "sms";
+}
+
+function normalizeNexusCommunicationsProvider(env = process.env) {
+  const provider = String(env.NEXUS_COMMUNICATIONS_PROVIDER || "twilio").trim().toLowerCase();
+  return provider === "twilio" ? "twilio" : provider || "twilio";
+}
+
+function nexusCommunicationsFlagEnabled(env = process.env, channel = "sms") {
+  const normalized = normalizeNexusCommunicationsChannel(channel);
+  if (normalized === "whatsapp") return nexusFlagEnabled(env, "NEXUS_WHATSAPP_ENABLED");
+  return nexusFlagEnabled(env, "NEXUS_SMS_ENABLED") || nexusFlagEnabled(env, "NEXUS_MESSAGES_ENABLED");
+}
+
+function nexusTwilioSmsFrom(env = process.env) {
+  return String(env.TWILIO_PHONE_NUMBER || env.TWILIO_FROM_NUMBER || env.TWILIO_NUMBER || env.TWILIO_SMS_FROM || "").trim();
+}
+
+function nexusTwilioWhatsappFrom(env = process.env) {
+  return String(env.TWILIO_WHATSAPP_FROM || "").trim();
+}
+
+function nexusCommunicationsMissingEnv(env = process.env, channel = "sms") {
+  const base = [];
+  if (!String(env.TWILIO_ACCOUNT_SID || "").trim()) base.push("TWILIO_ACCOUNT_SID");
+  if (!String(env.TWILIO_AUTH_TOKEN || "").trim()) base.push("TWILIO_AUTH_TOKEN");
+  if (normalizeNexusCommunicationsChannel(channel) === "whatsapp") {
+    if (!nexusTwilioWhatsappFrom(env)) base.push("TWILIO_WHATSAPP_FROM");
+  } else if (!nexusTwilioSmsFrom(env)) {
+    base.push("TWILIO_PHONE_NUMBER");
+  }
+  return Array.from(new Set(base));
+}
+
+function nexusCommunicationsProviderStatus(env = process.env) {
+  const selectedProvider = normalizeNexusCommunicationsProvider(env);
+  const smsMissingEnv = selectedProvider === "twilio" ? nexusCommunicationsMissingEnv(env, "sms") : ["NEXUS_COMMUNICATIONS_PROVIDER=twilio"];
+  const whatsappMissingEnv = selectedProvider === "twilio" ? nexusCommunicationsMissingEnv(env, "whatsapp") : ["NEXUS_COMMUNICATIONS_PROVIDER=twilio"];
+  const smsEnabled = nexusCommunicationsFlagEnabled(env, "sms");
+  const whatsappEnabled = nexusCommunicationsFlagEnabled(env, "whatsapp");
+  const smsConfigured = selectedProvider === "twilio" && smsEnabled && smsMissingEnv.length === 0;
+  const whatsappConfigured = selectedProvider === "twilio" && whatsappEnabled && whatsappMissingEnv.length === 0;
+  return {
+    ok: true,
+    provider: selectedProvider,
+    supportedProviders: ["twilio"],
+    channels: {
+      sms: {
+        provider: "twilio",
+        enabled: smsEnabled,
+        configured: smsConfigured,
+        missingEnv: smsMissingEnv,
+        status: !smsEnabled ? "disabled" : smsConfigured ? "ready" : "missing_config",
+        sendingAllowed: smsConfigured,
+        confirmationRequired: true,
+        sensitiveConsentRequired: true
+      },
+      whatsapp: {
+        provider: "twilio",
+        enabled: whatsappEnabled,
+        configured: whatsappConfigured,
+        missingEnv: whatsappMissingEnv,
+        status: !whatsappEnabled ? "disabled" : whatsappConfigured ? "ready" : "missing_config",
+        sendingAllowed: whatsappConfigured,
+        confirmationRequired: true,
+        sensitiveConsentRequired: true
+      }
+    },
+    noSecretValuesReturned: true,
+    noSilentSend: true,
+    nextAction: smsConfigured || whatsappConfigured
+      ? "Prepare a packet, show recipient and message preview, then require confirmation before sending."
+      : "Configure Twilio env vars and enable SMS or WhatsApp before live communications sending."
+  };
+}
+
+function sanitizeNexusCommunicationsRecipient(value = "", channel = "sms") {
+  const text = sanitizePilotText(value, 120).replace(/[^\w:+@.\-\s()]/g, "").trim();
+  if (!text) return "";
+  if (normalizeNexusCommunicationsChannel(channel) === "whatsapp") {
+    const noPrefix = text.replace(/^whatsapp:/i, "").trim();
+    return noPrefix ? `whatsapp:${noPrefix}` : "";
+  }
+  return text.replace(/^sms:/i, "").trim();
+}
+
+function nexusCommunicationsDomainRequiresConsent(domain = "") {
+  return NEXUS_COMMUNICATIONS_SENSITIVE_DOMAINS.has(String(domain || "").trim().toLowerCase());
+}
+
+function nexusCommunicationsSafeMessage(body = {}, channel = "sms") {
+  const domain = sanitizePilotText(body.domain || "admin", 80);
+  const packetId = sanitizePilotText(body.packetId || body.caseId || `communications-packet-${Date.now()}`, 120);
+  const summary = sanitizePilotText(body.summary || body.message || body.packetBody || "Nexus has prepared a packet for review.", 420);
+  const label = normalizeNexusCommunicationsChannel(channel) === "whatsapp" ? "WhatsApp" : "SMS";
+  if (nexusCommunicationsDomainRequiresConsent(domain)) {
+    return `Nexus has prepared a ${domain} review packet for approved review. Case ID: ${packetId}. Please review through the approved channel. This is not an emergency alert.`;
+  }
+  if (/marketplace/i.test(domain)) {
+    return `Nexus has prepared a marketplace inquiry notification. Packet ID: ${packetId}. Please review details in Nexus or the approved channel. No purchase or payment has been made.`;
+  }
+  if (/logistics/i.test(domain)) {
+    return `Nexus has prepared a logistics inquiry notification. Packet ID: ${packetId}. Please review details in Nexus or the approved channel. No booking or dispatch has occurred.`;
+  }
+  if (/workforce/i.test(domain)) {
+    return `Nexus has prepared a workforce/training notification. Packet ID: ${packetId}. ${summary.slice(0, 220)} Review before taking action.`;
+  }
+  if (/agriculture/i.test(domain)) {
+    return `Nexus has prepared an agriculture expert review notification. Packet ID: ${packetId}. ${summary.slice(0, 220)} Review before taking action.`;
+  }
+  return `Nexus ${label} notification. Packet ID: ${packetId}. ${summary.slice(0, 240)} Review before taking action.`;
+}
+
+function queueNexusCommunicationsFallback(db, payload = {}, status = "sms-provider-unconfigured", missingEnv = []) {
+  ensureNexusProductionRailsState(db);
+  const now = new Date().toISOString();
+  const channel = normalizeNexusCommunicationsChannel(payload.channel || "sms");
+  const item = {
+    id: crypto.randomUUID(),
+    type: `${channel}_packet_notification`,
+    status,
+    channel,
+    domain: sanitizePilotText(payload.domain || "admin", 80),
+    packetId: sanitizePilotText(payload.packetId || payload.caseId || "", 120),
+    recipient: maskPhoneNumber(String(payload.to || "").replace(/^whatsapp:/i, "")) || "missing-recipient",
+    missingEnv,
+    nextAction: `Configure Twilio ${channel === "whatsapp" ? "WhatsApp" : "SMS"} provider credentials or use email/local export.`,
+    localOnly: true,
+    noExternalDelivery: true,
+    createdAt: now,
+    updatedAt: now
+  };
+  db.nexusPilotOfflineQueue.unshift(item);
+  addNexusPilotAuditEvent(db, "communications_packet_queued_locally", {
+    relatedRecordId: item.id,
+    mode: item.domain,
+    actor: "Nexus",
+    description: `${channel.toUpperCase()} packet queued locally with status ${status}. No external ${channel} delivery was claimed.`
+  });
+  return item;
+}
+
+async function sendNexusTwilioCommunication({ channel, to, message }, env = process.env) {
+  const normalized = normalizeNexusCommunicationsChannel(channel);
+  const from = normalized === "whatsapp"
+    ? (nexusTwilioWhatsappFrom(env).startsWith("whatsapp:") ? nexusTwilioWhatsappFrom(env) : `whatsapp:${nexusTwilioWhatsappFrom(env)}`)
+    : nexusTwilioSmsFrom(env);
+  const recipient = sanitizeNexusCommunicationsRecipient(to, normalized);
+  const form = new URLSearchParams({
+    From: from,
+    To: recipient,
+    Body: sanitizePilotText(message, 1300)
+  });
+  if (String(env.TWILIO_STATUS_CALLBACK_URL || "").trim()) {
+    form.set("StatusCallback", String(env.TWILIO_STATUS_CALLBACK_URL || "").trim());
+  }
+  const response = await fetchWithTimeout(
+    `https://api.twilio.com/2010-04-01/Accounts/${encodeURIComponent(String(env.TWILIO_ACCOUNT_SID || "").trim())}/Messages.json`,
+    {
+      method: "POST",
+      headers: {
+        authorization: `Basic ${Buffer.from(`${String(env.TWILIO_ACCOUNT_SID || "").trim()}:${String(env.TWILIO_AUTH_TOKEN || "").trim()}`).toString("base64")}`,
+        "content-type": "application/x-www-form-urlencoded"
+      },
+      body: form.toString()
+    },
+    Number(env.NEXUS_COMMUNICATIONS_TIMEOUT_MS || 12000)
+  );
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(nexusKnowledgeProviderErrorMessage(payload, response.statusText));
+  return {
+    executed: true,
+    messageId: sanitizePilotText(payload.sid || crypto.randomUUID(), 180),
+    providerStatus: sanitizePilotText(payload.status || `twilio:${response.status}`, 120)
+  };
+}
+
+async function nexusCommunicationsSendMessage(db, body = {}, user = null, env = process.env) {
+  ensureNexusProductionRailsState(db);
+  const status = nexusCommunicationsProviderStatus(env);
+  const channel = normalizeNexusCommunicationsChannel(body.channel || "sms");
+  const channelStatus = status.channels[channel];
+  const domain = sanitizePilotText(body.domain || "admin", 80);
+  const packetId = sanitizePilotText(body.packetId || body.caseId || `communications-packet-${Date.now()}`, 120);
+  const to = sanitizeNexusCommunicationsRecipient(body.to || body.recipient || "", channel);
+  const timestamp = new Date().toISOString();
+  const sensitive = nexusCommunicationsDomainRequiresConsent(domain);
+  if (!to) return { ok: false, provider: status.provider, channel, configured: channelStatus.configured, executed: false, status: "recipient_required", error: "Recipient is required.", missingEnv: channelStatus.missingEnv };
+  if (body.confirmed !== true) {
+    return { ok: true, provider: status.provider, channel, configured: channelStatus.configured, executed: false, messageId: null, to: maskPhoneNumber(to.replace(/^whatsapp:/i, "")), domain, packetId, timestamp, missingEnv: channelStatus.missingEnv, status: "confirmation_required", error: `${channel.toUpperCase()} send requires explicit confirmation.`, noExternalDelivery: true };
+  }
+  if (sensitive && body.consent !== true) {
+    return { ok: true, provider: status.provider, channel, configured: channelStatus.configured, executed: false, messageId: null, to: maskPhoneNumber(to.replace(/^whatsapp:/i, "")), domain, packetId, timestamp, missingEnv: channelStatus.missingEnv, status: "consent_required", error: `Sensitive ${channel.toUpperCase()} packet requires explicit consent.`, noExternalDelivery: true };
+  }
+  const message = nexusCommunicationsSafeMessage({ ...body, domain, packetId }, channel);
+  if (!channelStatus.configured) {
+    const fallbackStatus = channel === "whatsapp" ? "whatsapp-provider-unconfigured" : "sms-provider-unconfigured";
+    const queueItem = queueNexusCommunicationsFallback(db, { ...body, channel, to, domain, packetId }, fallbackStatus, channelStatus.missingEnv);
+    return { ok: true, provider: status.provider, channel, configured: false, executed: false, messageId: null, to: maskPhoneNumber(to.replace(/^whatsapp:/i, "")), domain, packetId, timestamp, missingEnv: channelStatus.missingEnv, error: `${channel.toUpperCase()} provider is not configured.`, status: fallbackStatus, localQueueItem: queueItem, noExternalDelivery: true };
+  }
+  try {
+    const providerResult = await sendNexusTwilioCommunication({ channel, to, message }, env);
+    const result = {
+      ok: true,
+      provider: status.provider,
+      channel,
+      configured: true,
+      executed: true,
+      messageId: providerResult.messageId,
+      to: maskPhoneNumber(to.replace(/^whatsapp:/i, "")),
+      domain,
+      packetId,
+      timestamp,
+      missingEnv: [],
+      error: null,
+      providerStatus: providerResult.providerStatus,
+      noSecretValuesReturned: true
+    };
+    addNexusPilotAuditEvent(db, "communications_packet_sent_by_provider", {
+      relatedRecordId: packetId,
+      mode: domain,
+      actor: user?.name || "Standard User",
+      description: `Confirmed Nexus ${channel.toUpperCase()} packet accepted by Twilio. Safe message metadata only was stored.`
+    });
+    return result;
+  } catch (error) {
+    const fallbackStatus = channel === "whatsapp" ? "whatsapp-blocked" : "sms-blocked";
+    const queueItem = queueNexusCommunicationsFallback(db, { ...body, channel, to, domain, packetId }, fallbackStatus, []);
+    return { ok: true, provider: status.provider, channel, configured: true, executed: false, messageId: null, to: maskPhoneNumber(to.replace(/^whatsapp:/i, "")), domain, packetId, timestamp, missingEnv: [], error: sanitizePilotText(error.message || `${channel.toUpperCase()} provider failed safely.`, 220), status: fallbackStatus, localQueueItem: queueItem, noExternalDelivery: true };
+  }
+}
+
 function nexusGlobalMarketplaceLogisticsIntent(query = "", body = {}) {
   const text = `${query || ""} ${body.mode || ""} ${body.intent || ""}`.toLowerCase();
   if (/\b(compare|comparison|which vendor|vendor options|suppliers?)\b/.test(text)) return "vendor_comparison";
@@ -32641,6 +32933,10 @@ async function api(req, res, url) {
     return send(res, 200, nexusEmailProviderStatus(process.env));
   }
 
+  if (url.pathname === "/api/nexus/communications/status" && req.method === "GET") {
+    return send(res, 200, nexusCommunicationsProviderStatus(process.env));
+  }
+
   if (url.pathname === "/api/nexus/knowledge/trusted-sources" && req.method === "GET") {
     return send(res, 200, { ok: true, categories: nexusKnowledgeSourceList(), safety: "Trusted source preferences guide retrieval. Nexus still shows citations and safety limits for user review." });
   }
@@ -32725,6 +33021,13 @@ async function api(req, res, url) {
 
   if (url.pathname === "/api/nexus/email/send-packet" && req.method === "POST") {
     const result = await nexusEmailSendPacket(db, await readBody(req), user, process.env);
+    if (!result.ok) return send(res, 400, result);
+    await writeDb(db);
+    return send(res, 200, result);
+  }
+
+  if (url.pathname === "/api/nexus/communications/send-message" && req.method === "POST") {
+    const result = await nexusCommunicationsSendMessage(db, await readBody(req), user, process.env);
     if (!result.ok) return send(res, 400, result);
     await writeDb(db);
     return send(res, 200, result);

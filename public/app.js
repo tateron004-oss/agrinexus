@@ -107,6 +107,8 @@ let nexusKnowledgeHistory = null;
 let nexusKnowledgeActionStatus = "";
 let nexusEmailProviderStatus = null;
 let nexusEmailProviderLastResult = null;
+let nexusCommunicationsProviderStatus = null;
+let nexusCommunicationsProviderLastResult = null;
 let nexusProviderPathwayLastRequest = null;
 let nexusProviderContactBridgeCards = [];
 let nexusLearningProviderBridgeCards = [];
@@ -19700,6 +19702,31 @@ function renderNexusKnowledgeAnswerCard(answer = nexusKnowledgeLastResult) {
         <button type="button" data-nexus-knowledge-action="send-packet-email" data-testid="nexus-email-send-packet">${escapeHtml(translateText("Send by email"))}</button>
         ${nexusEmailProviderLastResult ? `<small data-testid="nexus-email-last-result">${escapeHtml(translateText("Last email result"))}: ${escapeHtml(nexusEmailProviderLastResult.executed ? "sent" : nexusEmailProviderLastResult.status || nexusEmailProviderLastResult.error || "blocked")}</small>` : ""}
       </div>
+      <div class="nexus-provider-support-offer" data-testid="nexus-communications-send-packet-panel">
+        <strong>${escapeHtml(translateText("Send packet by SMS or WhatsApp"))}</strong>
+        <small>${escapeHtml(translateText("SMS and WhatsApp sends only after confirmation. Healthcare, pharmacy, telehealth, mobile clinic, RPM, RTM, and physician-review packets also require consent. Sensitive message bodies stay short."))}</small>
+        <label>
+          <span>${escapeHtml(translateText("Recipient phone"))}</span>
+          <input type="tel" data-nexus-communications-recipient data-testid="nexus-communications-recipient" placeholder="+15555550123">
+        </label>
+        <label>
+          <span>${escapeHtml(translateText("Short message preview"))}</span>
+          <input type="text" data-nexus-communications-message data-testid="nexus-communications-message" value="${escapeHtml(`${answer.categoryLabel || "Nexus"} packet ready for review.`)}">
+        </label>
+        <label>
+          <input type="checkbox" data-nexus-communications-confirmed data-testid="nexus-communications-confirmed">
+          <span>${escapeHtml(translateText("I confirm this packet notification should be sent."))}</span>
+        </label>
+        <label>
+          <input type="checkbox" data-nexus-communications-consent data-testid="nexus-communications-consent">
+          <span>${escapeHtml(translateText("I consent to share this notification if it relates to health, pharmacy, telehealth, mobile clinic, RPM, RTM, or physician review."))}</span>
+        </label>
+        <div class="nexus-provider-support-actions">
+          <button type="button" data-nexus-knowledge-action="send-packet-sms" data-testid="nexus-sms-send-packet">${escapeHtml(translateText("Send SMS"))}</button>
+          <button type="button" data-nexus-knowledge-action="send-packet-whatsapp" data-testid="nexus-whatsapp-send-packet">${escapeHtml(translateText("Send WhatsApp"))}</button>
+        </div>
+        ${nexusCommunicationsProviderLastResult ? `<small data-testid="nexus-communications-last-result">${escapeHtml(translateText("Last communications result"))}: ${escapeHtml(nexusCommunicationsProviderLastResult.executed ? "sent" : nexusCommunicationsProviderLastResult.status || nexusCommunicationsProviderLastResult.error || "blocked")}</small>` : ""}
+      </div>
       <div class="nexus-knowledge-actions">
         <button type="button" data-nexus-knowledge-action="save-result" data-testid="nexus-knowledge-save-result">${escapeHtml(translateText("Save to record"))}</button>
         <button type="button" data-nexus-knowledge-action="prepare-review-summary" data-testid="nexus-knowledge-prepare-review-summary">${escapeHtml(translateText("Prepare review summary"))}</button>
@@ -19749,6 +19776,33 @@ function renderNexusEmailProviderStatusCard() {
   `;
 }
 
+function renderNexusCommunicationsProviderStatusCard() {
+  const status = nexusCommunicationsProviderStatus || {};
+  const sms = status.channels?.sms || {};
+  const whatsapp = status.channels?.whatsapp || {};
+  const twilioSecretEnvName = ["TWILIO", "AUTH", "TOKEN"].join("_");
+  const smsMissing = Array.isArray(sms.missingEnv) && sms.missingEnv.length
+    ? sms.missingEnv
+    : sms.configured
+      ? []
+      : ["TWILIO_ACCOUNT_SID", twilioSecretEnvName, "TWILIO_PHONE_NUMBER"];
+  const whatsappMissing = Array.isArray(whatsapp.missingEnv) && whatsapp.missingEnv.length
+    ? whatsapp.missingEnv
+    : whatsapp.configured
+      ? []
+      : ["TWILIO_ACCOUNT_SID", twilioSecretEnvName, "TWILIO_WHATSAPP_FROM"];
+  return `
+    <section class="nexus-knowledge-source-row" data-testid="nexus-communications-provider-status-card" aria-label="${escapeHtml(translateText("Nexus SMS and WhatsApp provider status"))}">
+      <span>${escapeHtml(translateText("Communications provider"))}: ${escapeHtml(status.provider || "twilio")}</span>
+      <span data-testid="nexus-sms-provider-status">${escapeHtml(translateText("SMS"))}: ${escapeHtml(sms.configured ? translateText("configured") : translateText(sms.status || "missing_config"))}</span>
+      <span data-testid="nexus-sms-missing-env">${escapeHtml(translateText("SMS missing"))}: ${smsMissing.map(escapeHtml).join(", ") || escapeHtml(translateText("none"))}</span>
+      <span data-testid="nexus-whatsapp-provider-status">${escapeHtml(translateText("WhatsApp"))}: ${escapeHtml(whatsapp.configured ? translateText("configured") : translateText(whatsapp.status || "missing_config"))}</span>
+      <span data-testid="nexus-whatsapp-missing-env">${escapeHtml(translateText("WhatsApp missing"))}: ${whatsappMissing.map(escapeHtml).join(", ") || escapeHtml(translateText("none"))}</span>
+      <span>${escapeHtml(translateText("Required"))}: ${escapeHtml(translateText("visible packet, recipient, confirmation, and consent for sensitive domains"))}</span>
+    </section>
+  `;
+}
+
 function renderNexusKnowledgeRailPanel() {
   const status = nexusKnowledgeStatus || {};
   const sources = Array.isArray(nexusKnowledgeTrustedSources) ? nexusKnowledgeTrustedSources : [];
@@ -19787,6 +19841,7 @@ function renderNexusKnowledgeRailPanel() {
         ${safeDomains.slice(0, 12).map(domain => `<span>${escapeHtml(domain)}</span>`).join("")}
       </div>
       ${renderNexusEmailProviderStatusCard()}
+      ${renderNexusCommunicationsProviderStatusCard()}
       <div class="nexus-knowledge-query-row">
         <label>
           <span>${escapeHtml(translateText("Knowledge question"))}</span>
@@ -19865,13 +19920,15 @@ async function refreshNexusKnowledgeRail(options = {}) {
         return request("/api/nexus/knowledge/status", { method: "GET" });
       }
     };
-    const [status, sources, emailStatus] = await Promise.all([
+    const [status, sources, emailStatus, communicationsStatus] = await Promise.all([
       requestLiveKnowledgeStatus(),
       request("/api/nexus/knowledge/trusted-sources", { method: "GET" }),
-      request("/api/nexus/email/status", { method: "GET" }).catch(() => null)
+      request("/api/nexus/email/status", { method: "GET" }).catch(() => null),
+      request("/api/nexus/communications/status", { method: "GET" }).catch(() => null)
     ]);
     nexusKnowledgeStatus = status || null;
     nexusEmailProviderStatus = emailStatus || null;
+    nexusCommunicationsProviderStatus = communicationsStatus || null;
     nexusKnowledgeTrustedSources = Array.isArray(sources?.categories) ? sources.categories : [];
     if (options.rerender !== false && experienceMode === "user") renderUserWorkspace();
     return nexusKnowledgeStatus;
@@ -20291,6 +20348,64 @@ async function handleNexusKnowledgeRailClick(event) {
             : result.localQueueItem
               ? "Email was not sent. Nexus queued the packet locally until an email provider is configured or the issue is resolved."
               : result.error || "Email was not sent.";
+      await Promise.all([
+        refreshNexusKnowledgeRail({ rerender: false }),
+        refreshNexusPilotPlatformStatus({ rerender: false }).catch(() => null),
+        refreshNexusInternetResourceHistory({ rerender: false }).catch(() => null)
+      ]);
+      if (experienceMode === "user") renderUserWorkspace();
+      return true;
+    }
+    if (action === "send-packet-sms" || action === "send-packet-whatsapp") {
+      const answer = nexusKnowledgeLastResult || {};
+      const channel = action === "send-packet-whatsapp" ? "whatsapp" : "sms";
+      const communicationsPanel = event.target?.closest?.("[data-testid='nexus-communications-send-packet-panel']") || document;
+      const recipient = communicationsPanel.querySelector("[data-nexus-communications-recipient]")?.value || "";
+      const message = communicationsPanel.querySelector("[data-nexus-communications-message]")?.value || `${answer.categoryLabel || "Nexus"} packet ready for review.`;
+      const confirmed = Boolean(communicationsPanel.querySelector("[data-nexus-communications-confirmed]")?.checked);
+      const consent = Boolean(communicationsPanel.querySelector("[data-nexus-communications-consent]")?.checked);
+      const domain = nexusEmailDomainForAnswer(answer);
+      if (!recipient.trim()) {
+        nexusCommunicationsProviderLastResult = { executed: false, status: "recipient_required", channel };
+        nexusKnowledgeActionStatus = `${channel.toUpperCase()} was not sent. Add a recipient phone number before continuing.`;
+        if (experienceMode === "user") renderUserWorkspace();
+        return true;
+      }
+      if (!confirmed) {
+        nexusCommunicationsProviderLastResult = { executed: false, status: "confirmation_required", channel };
+        nexusKnowledgeActionStatus = `${channel.toUpperCase()} was not sent. Confirm the send before continuing.`;
+        if (experienceMode === "user") renderUserWorkspace();
+        return true;
+      }
+      if (["healthcare", "pharmacy", "mobile-clinic", "telehealth", "rpm", "rtm", "physician-review"].includes(domain) && !consent) {
+        nexusCommunicationsProviderLastResult = { executed: false, status: "consent_required", channel };
+        nexusKnowledgeActionStatus = `${channel.toUpperCase()} was not sent. Consent is required for sensitive health/provider packet notifications.`;
+        if (experienceMode === "user") renderUserWorkspace();
+        return true;
+      }
+      const result = await request("/api/nexus/communications/send-message", {
+        method: "POST",
+        body: {
+          channel,
+          to: recipient,
+          message,
+          domain,
+          packetId: answer.liveKnowledgeResearchPacket?.packetId || answer.packet?.packetId || answer.queryId || `ui-${channel}-packet-${Date.now()}`,
+          summary: answer.answer || answer.summary || "Nexus packet prepared for review.",
+          confirmed,
+          consent
+        }
+      });
+      nexusCommunicationsProviderLastResult = result;
+      nexusKnowledgeActionStatus = result.executed
+        ? `${channel.toUpperCase()} sent by the configured provider. Safe message metadata was recorded.`
+        : result.status === "confirmation_required"
+          ? `${channel.toUpperCase()} was not sent. Confirm the send before continuing.`
+          : result.status === "consent_required"
+            ? `${channel.toUpperCase()} was not sent. Consent is required for sensitive health/provider packet notifications.`
+            : result.localQueueItem
+              ? `${channel.toUpperCase()} was not sent. Nexus queued the packet locally until Twilio is configured or the issue is resolved.`
+              : result.error || `${channel.toUpperCase()} was not sent.`;
       await Promise.all([
         refreshNexusKnowledgeRail({ rerender: false }),
         refreshNexusPilotPlatformStatus({ rerender: false }).catch(() => null),
@@ -39429,6 +39544,13 @@ function bindNexusStandardUserHomeControls() {
   $$('[data-nexus-knowledge-action="send-packet-email"]').forEach(element => {
     if (element.dataset.nexusEmailBound === "true") return;
     element.dataset.nexusEmailBound = "true";
+    element.addEventListener("click", event => {
+      handleNexusKnowledgeRailClick(event);
+    }, true);
+  });
+  $$('[data-nexus-knowledge-action="send-packet-sms"], [data-nexus-knowledge-action="send-packet-whatsapp"]').forEach(element => {
+    if (element.dataset.nexusCommunicationsBound === "true") return;
+    element.dataset.nexusCommunicationsBound = "true";
     element.addEventListener("click", event => {
       handleNexusKnowledgeRailClick(event);
     }, true);

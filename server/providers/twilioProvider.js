@@ -32,13 +32,17 @@ function twilioFromNumber(env = process.env) {
   return name ? clean(env[name]) : "";
 }
 
+function smsEnabled(env = process.env) {
+  return envEnabled("NEXUS_SMS_ENABLED", env) || envEnabled("NEXUS_MESSAGES_ENABLED", env);
+}
+
 function status(env = process.env) {
   const baseMissing = twilioConfigured(env);
   const fromMissing = missingPreferredEnv(TWILIO_FROM_ENV_NAMES, "TWILIO_FROM_NUMBER", env);
   return {
     provider: "twilio",
     sms: {
-      enabled: envEnabled("NEXUS_MESSAGES_ENABLED", env),
+      enabled: smsEnabled(env),
       missingConfig: [...baseMissing, ...fromMissing]
     },
     whatsapp: {
@@ -70,7 +74,7 @@ async function twilioPost(path, params, env = process.env) {
 async function sendSms(body = {}, env = process.env) {
   const provider = "twilio";
   const action = "sms.send";
-  if (!envEnabled("NEXUS_MESSAGES_ENABLED", env)) return disabledResponse(provider, action, "NEXUS_MESSAGES_ENABLED");
+  if (!smsEnabled(env)) return disabledResponse(provider, action, "NEXUS_SMS_ENABLED");
   const missing = [...twilioConfigured(env), ...missingPreferredEnv(TWILIO_FROM_ENV_NAMES, "TWILIO_FROM_NUMBER", env)];
   if (missing.length) return missingConfigResponse(provider, action, missing);
   const confirmation = requireConfirmation(body, provider, action);
