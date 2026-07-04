@@ -21456,6 +21456,7 @@ function buildNexusHomeModePanelResult(modeId = "", command = "") {
 function detectNexusHomeModePanelId(command = "") {
   const alias = normalizeNexusWorkflowId("", command);
   if (NEXUS_HOME_MODE_IDS.includes(alias)) return alias;
+  if (["diabetes", "hypertension", "obesity", "rpm", "rtm", "community-health-worker"].includes(alias)) return alias;
   const text = String(command || "").toLowerCase();
   if (/\b(agriculture help|agriculture support|crop issue|crop issues|irrigation|field guidance)\b/.test(text)) return "agriculture";
   if (/\b(chronic care|blood pressure|glucose|blood sugar|diabetes|obesity|hypertension|rpm|rtm|vitals)\b/.test(text)) return "chronic-care";
@@ -21919,6 +21920,12 @@ function renderNexusSuggestedActions() {
 
 function isNexusCapabilityOverviewCommand(command = "") {
   return /\b(what can nexus do|what can you do|show me nexus modes|show nexus modes|what can nexus do across all modes|nexus modes)\b/i.test(String(command || ""));
+}
+
+function isNexusExplicitActivationWorkflowCommand(command = "") {
+  const text = String(command || "").toLowerCase();
+  return /\b(help with|review my|start|record|help a|plan|route to|prepare|open|show|find)\b/.test(text)
+    && /\b(diabetes|blood pressure|hypertension|obesity|rpm|rtm|community health worker|crop support|farm visit|mobile clinic|whatsapp|sms|email|phone call|training|workforce|provider bridge|pharmacy support|agriculture|maps?|field visit|jobs?|agritrade|reminders?|offline)\b/.test(text);
 }
 
 function buildNexusCapabilityOverviewResult(command = "") {
@@ -37713,6 +37720,14 @@ function handleNexusStandardUserHomeClick(event) {
   if (submit) {
     const input = $("#nexusCommandCenterInput");
     const command = input?.value?.trim() || "What can Nexus do?";
+    if (isNexusExplicitActivationWorkflowCommand(command) && runNexusStandardUserHomeLocalCommand(command)) {
+      event.preventDefault();
+      event.stopPropagation();
+      event.stopImmediatePropagation?.();
+      if (input) input.value = command;
+      setCommandInputs(command);
+      return true;
+    }
     if (isNexusLiveKnowledgeQuestion(command)) {
       event.preventDefault();
       event.stopPropagation();
@@ -37869,6 +37884,13 @@ function bindStatic() {
     if (earlyCommandCenterSubmit) {
       const input = $("#nexusCommandCenterInput");
       const command = input?.value?.trim() || "What can Nexus do?";
+      if (isNexusExplicitActivationWorkflowCommand(command) && runNexusStandardUserHomeLocalCommand(command)) {
+        event.preventDefault();
+        event.stopPropagation();
+        if (input) input.value = command;
+        setCommandInputs(command);
+        return;
+      }
       if (isNexusLiveKnowledgeQuestion(command)) {
         event.preventDefault();
         event.stopPropagation();
@@ -38012,6 +38034,7 @@ function bindStatic() {
       const command = input?.value?.trim() || "What can Nexus do?";
       if (input) input.value = command;
       setCommandInputs(command);
+      if (isNexusExplicitActivationWorkflowCommand(command) && runNexusStandardUserHomeLocalCommand(command)) return;
       if (isNexusLiveKnowledgeQuestion(command)) {
         await runNexusKnowledgeQuery(command);
         return;

@@ -48,6 +48,7 @@
     "qa:nexus-full-workflow-workspace": "node scripts/nexus-full-workflow-workspace-qa.js",
     "qa:nexus-real-global-agent-platform": "node scripts/nexus-real-global-agent-platform-qa.js",
     "qa:nexus-final-endgame-agent-platform": "node scripts/nexus-final-endgame-agent-platform-qa.js",
+    "qa:nexus-activation-verification": "node scripts/nexus-activation-verification-qa.js",
     "qa:nexus-pilot-platform-foundation": "node scripts/nexus-pilot-platform-foundation-qa.js",
     "qa:nexus-pilot-browser-readiness": "node scripts/nexus-pilot-browser-readiness-qa.js",
     "qa:nexus-production-platform-rails": "node scripts/nexus-production-platform-rails-qa.js",
