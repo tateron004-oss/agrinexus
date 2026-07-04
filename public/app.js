@@ -256,8 +256,8 @@ const nexusProductIdentity = Object.freeze({
 });
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-346";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v325";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-351";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v330";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
 const VOICE_ATTENTION_DELAY_MS = 900;
@@ -9869,11 +9869,17 @@ function translateText(value) {
 
 function captureOriginalText(root = document.body) {
   if (!root) return;
-  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
+  const nodeFilter = globalThis.NodeFilter || {
+    SHOW_TEXT: 4,
+    FILTER_ACCEPT: 1,
+    FILTER_REJECT: 2,
+    FILTER_SKIP: 3
+  };
+  const walker = document.createTreeWalker(root, nodeFilter.SHOW_TEXT, {
     acceptNode(node) {
       const parent = node.parentElement;
-      if (!parent || ["SCRIPT", "STYLE", "NOSCRIPT"].includes(parent.tagName)) return NodeFilter.FILTER_REJECT;
-      return node.nodeValue.trim() ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_SKIP;
+      if (!parent || ["SCRIPT", "STYLE", "NOSCRIPT"].includes(parent.tagName)) return nodeFilter.FILTER_REJECT;
+      return node.nodeValue.trim() ? nodeFilter.FILTER_ACCEPT : nodeFilter.FILTER_SKIP;
     }
   });
   while (walker.nextNode()) {
@@ -24490,8 +24496,10 @@ function normalizedMapTileLayers() {
 }
 
 async function loadPublicMapConfig() {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 3500);
   try {
-    const response = await fetch("/api/config", { credentials: "same-origin" });
+    const response = await fetch("/api/config", { credentials: "same-origin", signal: controller.signal });
     if (!response.ok) throw new Error("Map config unavailable");
     const config = await response.json();
     if (config?.map?.engine === "leaflet" && config.map.layers) {
@@ -24533,6 +24541,8 @@ async function loadPublicMapConfig() {
     if (localStorage.getItem("agrinexusMapDebug") === "on") {
       console.warn("Using default map tile configuration", error?.message || error);
     }
+  } finally {
+    clearTimeout(timeout);
   }
   return mapTileConfig;
 }
@@ -36262,12 +36272,19 @@ function nexusHandleStandardUserHomeShortcut(event) {
 if (typeof globalThis !== "undefined") {
   globalThis.nexusHandleStandardUserHomeShortcut = nexusHandleStandardUserHomeShortcut;
 }
+if (typeof window !== "undefined") {
+  window.nexusHandleStandardUserHomeShortcut = nexusHandleStandardUserHomeShortcut;
+}
 
 function bindNexusStandardUserHomeControls() {
   if (experienceMode !== "user" && !document.body.classList.contains("user-mode")) return;
   $$("[data-nexus-command-center-submit], [data-nexus-mode-shortcut]").forEach(element => {
     if (element.dataset.nexusHomeBound === "true") return;
     element.dataset.nexusHomeBound = "true";
+    element.onclick = event => {
+      handleNexusStandardUserHomeClick(event);
+      return false;
+    };
     element.addEventListener("click", event => {
       handleNexusStandardUserHomeClick(event);
     }, true);
@@ -36278,6 +36295,9 @@ function bindStatic() {
   renderLoginProfiles();
   if (typeof globalThis !== "undefined") {
     globalThis.nexusHandleStandardUserHomeShortcut = nexusHandleStandardUserHomeShortcut;
+  }
+  if (typeof window !== "undefined") {
+    window.nexusHandleStandardUserHomeShortcut = nexusHandleStandardUserHomeShortcut;
   }
   document.addEventListener("click", handleNexusStandardUserHomeClick, true);
   document.addEventListener("click", async event => {
@@ -37592,8 +37612,8 @@ function bindStatic() {
 async function boot() {
   registerWebApp();
   installAgriNexusNativeBridge();
-  await loadPublicMapConfig();
   bindStatic();
+  loadPublicMapConfig().catch(() => DEFAULT_MAP_TILE_CONFIG);
   installNexusAutonomousRuntimePreview();
   captureOriginalText();
   setLoginLanguage(localStorage.getItem("agrinexusLoginLanguage") || "en");
