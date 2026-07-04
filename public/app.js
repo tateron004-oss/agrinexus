@@ -19437,7 +19437,7 @@ function isNexusLiveKnowledgeQuestion(command = "") {
   const lower = String(command || "").toLowerCase().trim();
   if (!lower) return false;
   if (/\b(open|start|send|call|message|pay|checkout|book|schedule|delete|upload|camera|share my location)\b/.test(lower)) return false;
-  return /\b(current|latest|today|now|recent|source|sources|cite|citation|internet|web|search|what causes|what should|safe storage|market price|price for|farm jobs|training do i need|advice for|doctor about|yellow leaves|maize|tomatoes|blood pressure|diabetes|insulin|solar installation)\b/.test(lower);
+  return /\b(current|latest|today|now|recent|research|source-backed|source|sources|cite|citation|internet|web|search|best practices|what causes|what should|safe storage|market price|price for|farm jobs|training do i need|advice for|doctor about|yellow leaves|maize|tomatoes|blood pressure|diabetes|insulin|solar installation)\b/.test(lower);
 }
 
 function nexusKnowledgeCategoryForCommand(command = "") {
@@ -20405,6 +20405,16 @@ async function refreshNexusInternetResourceHistory(options = {}) {
 async function runNexusKnowledgeQuery(command = "", options = {}) {
   const question = String(command || "").trim();
   if (!question) return null;
+  const workflowId = normalizeNexusWorkflowId(options.modeId || options.workflowId || "", "") || "resource-assistant";
+  nexusActiveWorkflowState = {
+    id: workflowId,
+    command: question,
+    source: options.source || "live-knowledge",
+    workflow: "live-knowledge",
+    action: "research",
+    openedAt: Date.now()
+  };
+  saveNexusRuntimeMemory();
   nexusKnowledgeActionStatus = "Checking the knowledge rail. Nexus will cite sources only if retrieval is configured and returns citable results.";
   if (options.rerender !== false && experienceMode === "user") renderUserWorkspace();
   const response = await request("/api/nexus/intelligence/ask", {
@@ -20612,7 +20622,10 @@ async function runNexusKnowledgeQuery(command = "", options = {}) {
     }
   }
   await refreshNexusInternetResourceHistory({ rerender: false });
-  if (options.rerender !== false && experienceMode === "user") renderUserWorkspace();
+  if (options.rerender !== false && experienceMode === "user") {
+    renderUserWorkspace();
+    scheduleNexusActiveWorkflowFocus({ instant: options.instant });
+  }
   return response;
 }
 
@@ -21592,6 +21605,86 @@ const NEXUS_FULL_WORKFLOW_EXTRAS = Object.freeze({
       ["channel", "Channel", "SMS, WhatsApp, call, email"],
       ["purpose", "Purpose", "Why this communication is needed"],
       ["draft", "Draft", "Message or call note for review"]
+    ]
+  },
+  logistics: {
+    presentation: { title: "Logistics Request", description: "Prepare route, pickup, delivery, and partner-review details without dispatch.", accent: "amber", icon: "L" },
+    content: {
+      explanation: "Use this workspace to prepare logistics details for review before any route handoff, carrier contact, booking, or dispatch.",
+      nextPrompt: "Add the pickup point, dropoff point, item or visit purpose, timing, and any route constraints.",
+      limitation: "Nexus does not book transport, contact carriers, share location, dispatch delivery, or move goods without configured providers, visible review, explicit confirmation, audit, and outcome verification.",
+      quickActions: [
+        { label: "Prepare route details", command: "Nexus, prepare logistics route details." },
+        { label: "Review pickup and dropoff", command: "Nexus, review logistics pickup and dropoff." },
+        { label: "Check provider gate", command: "Nexus, check logistics provider readiness." },
+        { label: "Queue local review", command: "Nexus, queue logistics review." }
+      ]
+    },
+    fields: [
+      ["pickup", "Pickup / origin", "Typed location or safe description only"],
+      ["dropoff", "Dropoff / destination", "Typed location or safe description only"],
+      ["purpose", "Purpose", "Farm visit, mobile clinic prep, delivery, field support"],
+      ["constraints", "Constraints", "Timing, road, storage, weather, safety notes"]
+    ]
+  },
+  "payment-gate": {
+    presentation: { title: "Payment Gate", description: "Review payment intent safely before any future configured provider step.", accent: "gold", icon: "$" },
+    content: {
+      explanation: "Use this gate to prepare payment details for review. Nexus keeps money movement blocked until the required provider, consent, confirmation, and audit controls are active.",
+      nextPrompt: "Add what the payment would be for, the amount, payer/recipient labels, and what approval is still missing.",
+      limitation: "Nexus does not process payments, purchases, refunds, checkout, wallet transfers, or marketplace transactions from this workspace.",
+      quickActions: [
+        { label: "Prepare payment review", command: "Nexus, prepare payment review." },
+        { label: "Check payment credentials", command: "Nexus, check payment provider readiness." },
+        { label: "Queue payment approval", command: "Nexus, queue payment approval for review." },
+        { label: "Cancel payment intent", command: "Nexus, cancel the payment intent." }
+      ]
+    },
+    fields: [
+      ["purpose", "Payment purpose", "What would this payment support?"],
+      ["amount", "Amount", "Amount and currency, if known"],
+      ["recipient", "Recipient label", "Provider, seller, program, or partner label"],
+      ["approval", "Approval status", "Missing, needs review, approved later"]
+    ]
+  },
+  "booking-gate": {
+    presentation: { title: "Booking Gate", description: "Prepare scheduling details without booking an appointment or service.", accent: "sky", icon: "B" },
+    content: {
+      explanation: "Use this gate to organize appointment or service-request details before any future scheduling connector can run.",
+      nextPrompt: "Add the service type, preferred time window, participant label, and confirmation still needed.",
+      limitation: "Nexus does not book appointments, reserve services, create calendar events, or claim provider acceptance without configured scheduling, consent, confirmation, audit, and outcome verification.",
+      quickActions: [
+        { label: "Prepare appointment request", command: "Nexus, prepare appointment request." },
+        { label: "Review scheduling details", command: "Nexus, review scheduling details." },
+        { label: "Check booking gate", command: "Nexus, check booking provider readiness." },
+        { label: "Queue booking review", command: "Nexus, queue booking review." }
+      ]
+    },
+    fields: [
+      ["service", "Service type", "Telehealth, mobile clinic, pharmacy, training, provider visit"],
+      ["time", "Preferred time", "Date/time window or general availability"],
+      ["participant", "Provider / participant", "Person, clinic, program, or partner label"],
+      ["consent", "Consent / confirmation", "What approval is still needed?"]
+    ]
+  },
+  "dispatch-gate": {
+    presentation: { title: "Dispatch Gate", description: "Prepare urgent or field-support details without dispatching help.", accent: "red", icon: "D" },
+    content: {
+      explanation: "Use this gate to organize dispatch-sensitive details for review while Nexus keeps emergency, transport, mobile-clinic, and field-dispatch execution blocked.",
+      nextPrompt: "Add the support type, safe typed location context, urgency, and who should review before any future dispatch workflow.",
+      limitation: "Nexus does not dispatch emergency help, vehicles, clinicians, field teams, drones, couriers, or services. For emergencies, contact local emergency services directly.",
+      quickActions: [
+        { label: "Prepare dispatch review", command: "Nexus, prepare dispatch review." },
+        { label: "Review emergency boundary", command: "Nexus, review emergency boundary." },
+        { label: "Check dispatch credentials", command: "Nexus, check dispatch provider readiness." },
+        { label: "Queue safety review", command: "Nexus, queue dispatch safety review." }
+      ]
+    },
+    fields: [
+      ["supportType", "Support type", "Emergency, mobile clinic, transport, field visit, courier"],
+      ["locationContext", "Location context", "Typed context only; no automatic location sharing"],
+      ["urgency", "Urgency", "Planning, soon, urgent, emergency boundary"],
+      ["reviewer", "Reviewer / gate", "Who must approve before any future action?"]
     ]
   },
   "resource-assistant": {
@@ -23258,6 +23351,9 @@ function normalizeNexusWorkflowId(workflowId = "", command = "") {
   if (/\b(pharmacy|medication|medicine|refill)\b/.test(text)) return "pharmacy-support";
   if (/\b(mobile clinic|clinic outreach|community clinic|clinic)\b/.test(text)) return "mobile-clinic";
   if (/\b(chronic|chronic care)\b/.test(text)) return "chronic-care";
+  if (/\b(process|make|send|submit|pay|payment|checkout|purchase|buy|refund|wallet)\b/.test(text) && /\b(payment|pay|checkout|purchase|buy|refund|wallet|money)\b/.test(text)) return "payment-gate";
+  if (/\b(book|booking|schedule|appointment|reserve|calendar)\b/.test(text)) return "booking-gate";
+  if (/\b(dispatch|send help|emergency help|emergency\s+dispatch|send clinic|send vehicle|send ambulance|send field team|send drone)\b/.test(text)) return "dispatch-gate";
   if (/\b(employer partner|hiring partner|employer)\b/.test(text)) return "employer-partner";
   if (/\b(workforce referral|workforce)\b/.test(text)) return "workforce";
   if (/\b(jobs|employment|career|farm jobs|find jobs)\b/.test(text)) return "jobs";
@@ -23352,6 +23448,22 @@ function renderNexusWorkflowMapPreview(id = "") {
       <span>${escapeHtml(translateText("Enter typed origin and destination details below. Nexus will not request browser location automatically."))}</span>
     </div>
   `;
+}
+
+function nexusWorkflowBlockedReason(id = "") {
+  const registry = nexusWorkflowRegistryEntry(id);
+  const lane = nexusIntegrationLaneById(registry?.integrationLaneId);
+  if (!registry || !lane) return "Workflow is open locally. Any unavailable provider action will show a visible disabled reason before it can proceed.";
+  if (lane.liveModeAvailable) {
+    return "Workflow is open. Live execution still requires the visible packet, consent, confirmation, audit, and outcome verification gates.";
+  }
+  if (lane.status === "credential_missing") {
+    return "Workflow is open in preparation mode because provider credentials are missing or not enabled.";
+  }
+  if (lane.status === "disabled" || lane.status === "not_configured") {
+    return "Workflow is open in preparation mode because this provider lane is not configured.";
+  }
+  return "Workflow is open in preparation mode. Nexus will not execute hidden provider, payment, booking, dispatch, message, call, location, pharmacy, or emergency actions.";
 }
 
 function renderNexusWorkflowLaneStatus(id = "") {
@@ -23461,6 +23573,10 @@ function renderNexusActiveWorkflowWorkspace() {
         <strong>${escapeHtml(translateText("Next step"))}</strong>
         <span>${escapeHtml(translateText(content.nextPrompt))}</span>
       </div>
+      <div class="nexus-workflow-launch-status" data-testid="nexus-workflow-launch-status" role="status">
+        <strong>${escapeHtml(translateText("Opened in active workspace"))}</strong>
+        <span>${escapeHtml(translateText(nexusWorkflowBlockedReason(id)))}</span>
+      </div>
       ${renderNexusWorkflowLaneStatus(id)}
       ${renderNexusAgricultureIntelligenceSections(id)}
       ${renderNexusTrainingWorkforceSections(id)}
@@ -23499,8 +23615,19 @@ function focusNexusActiveWorkflow(options = {}) {
   const heading = $("#nexusActiveWorkflowHeading");
   if (!workspace) return;
   const behavior = options.instant ? "auto" : "smooth";
+  workspace.classList.add("nexus-workflow-focus-ring");
   workspace.scrollIntoView?.({ block: "start", behavior });
   setTimeout(() => heading?.focus?.({ preventScroll: true }), options.instant ? 0 : 80);
+  setTimeout(() => workspace.classList.remove("nexus-workflow-focus-ring"), 1600);
+}
+
+function scheduleNexusActiveWorkflowFocus(options = {}) {
+  if (experienceMode !== "user" && !document.body.classList.contains("user-mode")) return;
+  const focusOptions = { instant: Boolean(options.instant) };
+  requestAnimationFrame(() => {
+    focusNexusActiveWorkflow(focusOptions);
+    setTimeout(() => focusNexusActiveWorkflow({ instant: true }), 120);
+  });
 }
 
 function openNexusWorkflow(workflowId, options = {}) {
@@ -23547,7 +23674,7 @@ function openNexusWorkflow(workflowId, options = {}) {
     };
   }
   renderUserWorkspace();
-  requestAnimationFrame(() => focusNexusActiveWorkflow({ instant: options.instant }));
+  scheduleNexusActiveWorkflowFocus({ instant: options.instant });
   return true;
 }
 
@@ -24055,6 +24182,7 @@ function isNexusCapabilityOverviewCommand(command = "") {
 
 function isNexusExplicitActivationWorkflowCommand(command = "") {
   const text = String(command || "").toLowerCase();
+  if (isNexusLiveKnowledgeQuestion(text)) return false;
   return /\b(help with|review my|start|record|help a|plan|route to|prepare|open|show|find)\b/.test(text)
     && /\b(diabetes|blood pressure|hypertension|obesity|rpm|rtm|community health worker|crop support|farm visit|mobile clinic|whatsapp|sms|email|phone call|training|workforce|provider bridge|pharmacy support|agriculture|maps?|field visit|jobs?|agritrade|reminders?|offline)\b/.test(text);
 }
@@ -24110,6 +24238,15 @@ function runNexusStandardUserHomeLocalCommand(command = "") {
   if (/\b(show follow-up needed|follow up needed|follow-up needed)\b/i.test(normalized)) return showNexusRuntimeList("follow-up");
   const runtimeIntent = resolveNexusIntent(normalized);
   if (runtimeIntent.type === "activation-center" || runtimeIntent.type === "command-center" || runtimeIntent.type === "review-queue") {
+    nexusActiveWorkflowState = {
+      id: "resource-assistant",
+      command: normalized,
+      source: "typed-command",
+      workflow: runtimeIntent.type,
+      action: "open-status",
+      openedAt: Date.now()
+    };
+    saveNexusRuntimeMemory();
     nexusAgenticBrainLastResult = {
       ok: true,
       status: `nexus_${runtimeIntent.type}_opened`,
@@ -24121,11 +24258,24 @@ function runNexusStandardUserHomeLocalCommand(command = "") {
       source: "nexus_agent_runtime"
     };
     renderUserWorkspace();
+    scheduleNexusActiveWorkflowFocus({ instant: true });
     return true;
   }
   if (shouldNexusGlobalAssistantBrainHandle(normalized)) {
-    nexusAgenticBrainLastResult = buildNexusGlobalAssistantBrainResult(normalized);
+    const result = buildNexusGlobalAssistantBrainResult(normalized);
+    const workflowIdFromPlan = result.preparedCards?.[0]?.globalAssistantBrainPlan?.workflowId || normalizeNexusWorkflowId("", normalized) || "resource-assistant";
+    nexusActiveWorkflowState = {
+      id: workflowIdFromPlan,
+      command: normalized,
+      source: "typed-command",
+      workflow: workflowIdFromPlan,
+      action: "assistant-plan",
+      openedAt: Date.now()
+    };
+    saveNexusRuntimeMemory();
+    nexusAgenticBrainLastResult = result;
     renderUserWorkspace();
+    scheduleNexusActiveWorkflowFocus();
     return true;
   }
   const workflowId = normalizeNexusWorkflowId("", normalized) || detectNexusHomeModePanelId(normalized);
@@ -24142,8 +24292,19 @@ function runNexusStandardUserHomeLocalCommand(command = "") {
   }
   const localHealthAccessResult = buildNexusHealthAccessPreparationResult(normalized);
   if (localHealthAccessResult) {
+    const healthWorkflowId = normalizeNexusWorkflowId("", normalized) || "clinical-support";
+    nexusActiveWorkflowState = {
+      id: healthWorkflowId,
+      command: normalized,
+      source: "typed-command",
+      workflow: healthWorkflowId,
+      action: "health-access-prep",
+      openedAt: Date.now()
+    };
+    saveNexusRuntimeMemory();
     nexusAgenticBrainLastResult = localHealthAccessResult;
     renderUserWorkspace();
+    scheduleNexusActiveWorkflowFocus();
     return true;
   }
   return false;
@@ -37721,6 +37882,20 @@ async function handleVoiceCommandCore(rawCommand, options = {}) {
     agentPerformanceState.lastCommand = command || localizedCommand || rawCommand;
     recordNexusAutonomousLearning({ type: "auto-language-detected", command: rawCommand, language: autoLanguage.label, mode: experienceMode || data?.user?.role || "platform" });
   }
+  const standardUserVoiceCommand = spokenCommand || command || localizedCommand || rawCommand;
+  if (experienceMode === "user" || document.body.classList.contains("user-mode")) {
+    if (isNexusLiveKnowledgeQuestion(standardUserVoiceCommand)) {
+      await runNexusKnowledgeQuery(standardUserVoiceCommand, { source: "voice-command", sourceSurface: "standard_user_voice" });
+      updateNexusBehaviorLayer("ready", "Nexus opened Live Knowledge research in the main workspace.");
+      setVoiceResponse("I opened Live Knowledge research in the main workspace. I will show sources only when the configured provider returns citable results.", true, { allowHandoff: false, command: standardUserVoiceCommand, source: "voice-workflow-launch" });
+      return;
+    }
+    if (runNexusStandardUserHomeLocalCommand(standardUserVoiceCommand)) {
+      updateNexusBehaviorLayer("ready", "Nexus opened the requested workflow in the main workspace.");
+      setVoiceResponse("I opened that workflow in the main workspace. External actions remain gated until configured and confirmed.", true, { allowHandoff: false, command: standardUserVoiceCommand, source: "voice-workflow-launch" });
+      return;
+    }
+  }
   const fastLaneIntent = nexusFastLaneIntent(spokenCommand || command || localizedCommand || rawCommand);
   if (fastLaneIntent) {
     if (runCompanionWorkflowOfferIfNeeded(spokenCommand || command || localizedCommand || rawCommand, {
@@ -39930,6 +40105,15 @@ function handleNexusStandardUserHomeClick(event) {
     setCommandInputs(command || "Nexus, show language and safety settings.");
     const panel = $("#userLanguagePanel");
     if (panel) panel.classList.remove("hidden");
+    nexusActiveWorkflowState = {
+      id: "resource-assistant",
+      command: command || "Nexus, show language and safety settings.",
+      source: "mode-click",
+      workflow: "settings",
+      action: "show-settings",
+      openedAt: Date.now()
+    };
+    saveNexusRuntimeMemory();
     nexusAgenticBrainLastResult = {
       ok: true,
       status: "nexus_settings_panel_opened",
@@ -39942,6 +40126,7 @@ function handleNexusStandardUserHomeClick(event) {
     };
     renderUserWorkspace();
     $("#userLanguagePanel")?.classList.remove("hidden");
+    scheduleNexusActiveWorkflowFocus({ instant: true });
     return true;
   }
   if (normalizedModeId === "activation-center") {
@@ -39949,6 +40134,15 @@ function handleNexusStandardUserHomeClick(event) {
     event.stopPropagation();
     event.stopImmediatePropagation?.();
     setCommandInputs(command || "Show activation status");
+    nexusActiveWorkflowState = {
+      id: "resource-assistant",
+      command: command || "Show activation status",
+      source: "mode-click",
+      workflow: "activation-center",
+      action: "show-status",
+      openedAt: Date.now()
+    };
+    saveNexusRuntimeMemory();
     nexusAgenticBrainLastResult = {
       ok: true,
       status: "nexus_activation_center_opened",
@@ -39960,6 +40154,7 @@ function handleNexusStandardUserHomeClick(event) {
       source: "standard_user_home"
     };
     renderUserWorkspace();
+    scheduleNexusActiveWorkflowFocus({ instant: true });
     return true;
   }
   const normalizedWorkflowId = normalizeNexusWorkflowId(modeId, command);

@@ -10970,6 +10970,14 @@ body.user-mode .nexus-active-workflow {
     linear-gradient(145deg, rgba(2, 6, 23, .92), rgba(14, 18, 44, .82)) !important;
 }
 
+body.user-mode .nexus-active-workflow.nexus-workflow-focus-ring {
+  box-shadow:
+    0 0 0 1px rgba(125, 211, 252, .42),
+    0 0 34px rgba(34, 211, 238, .28),
+    0 0 58px rgba(236, 72, 153, .16),
+    inset 0 1px 0 rgba(255, 255, 255, .1) !important;
+}
+
 body.user-mode .nexus-active-workflow::before {
   content: "";
   position: absolute;
@@ -11043,6 +11051,28 @@ body.user-mode .nexus-workflow-purpose {
   border: 1px solid rgba(125, 211, 252, .2);
   border-radius: 20px;
   background: rgba(2, 6, 23, .42);
+}
+
+body.user-mode .nexus-workflow-launch-status {
+  display: grid;
+  gap: 4px;
+  margin: 12px 0 14px;
+  padding: 12px 14px;
+  border: 1px solid rgba(52, 211, 153, .28);
+  border-radius: 18px;
+  background:
+    linear-gradient(135deg, rgba(16, 185, 129, .12), rgba(34, 211, 238, .08)),
+    rgba(2, 6, 23, .38);
+  color: rgba(236, 253, 245, .94);
+}
+
+body.user-mode .nexus-workflow-launch-status strong {
+  color: #ecfdf5;
+}
+
+body.user-mode .nexus-workflow-launch-status span {
+  color: rgba(209, 250, 229, .86);
+  line-height: 1.45;
 }
 
 body.user-mode .nexus-workflow-purpose strong {
