@@ -37,6 +37,7 @@ function excludes(source, token, label) {
   "/api/nexus/communications/send-message",
   "confirmation_required",
   "consent_required",
+  "\"virtual-care\"",
   "sms-provider-unconfigured",
   "whatsapp-provider-unconfigured",
   "sms-blocked",
@@ -92,6 +93,8 @@ function excludes(source, token, label) {
 
 assert(twilioProvider.includes("NEXUS_SMS_ENABLED") && twilioProvider.includes("NEXUS_MESSAGES_ENABLED"), "Twilio provider should support both NEXUS_SMS_ENABLED and legacy NEXUS_MESSAGES_ENABLED");
 assert(server.includes("body.confirmed !== true") && server.includes("body.consent !== true"), "send route helper should block without confirmation and sensitive consent");
+assert(server.includes("\"virtual-care\""), "virtual-care must remain a sensitive communications consent domain");
+assert(server.includes("This is not an emergency alert"), "healthcare-sensitive communications should use short notification language");
 assert(server.includes("queueNexusCommunicationsFallback"), "unconfigured/failed sends should use local queue fallback");
 assert(server.includes("communications_provider_status_answered"), "Ask Nexus should answer communications provider status");
 assert(server.includes("noFakeSmsClaim") && server.includes("noFakeWhatsappClaim"), "Ask Nexus should avoid fake send claims");

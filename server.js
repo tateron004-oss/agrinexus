@@ -30884,7 +30884,7 @@ async function nexusEmailSendPacket(db, body = {}, user = null, env = process.en
   }
 }
 
-const NEXUS_COMMUNICATIONS_SENSITIVE_DOMAINS = new Set(["healthcare", "pharmacy", "mobile-clinic", "telehealth", "rpm", "rtm", "physician-review"]);
+const NEXUS_COMMUNICATIONS_SENSITIVE_DOMAINS = new Set(["healthcare", "pharmacy", "mobile-clinic", "telehealth", "rpm", "rtm", "physician-review", "virtual-care"]);
 
 function normalizeNexusCommunicationsChannel(channel = "sms") {
   const normalized = String(channel || "sms").trim().toLowerCase();
