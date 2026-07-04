@@ -29345,6 +29345,171 @@ async function nexusGlobalAgricultureIntelligence(db, body = {}, user = null, en
   };
 }
 
+function nexusGlobalTrainingWorkforceIntent(query = "", body = {}) {
+  const text = `${query} ${body.mode || ""} ${body.topic || ""} ${body.role || ""}`.toLowerCase();
+  if (/\b(employer|hiring partner|partner fit|sector needs|workforce alignment|talent pipeline|recruiter)\b/.test(text)) return "employer_partner_research";
+  if (/\b(job|jobs|career|workforce|role|resume|interview|credential|certificate|skill gap|readiness|employment)\b/.test(text)) return "workforce_pathway";
+  if (/\b(recommend|recommendation|course options|learning path|what should i learn|next course|resources)\b/.test(text)) return "learning_recommendation";
+  return "training_support";
+}
+
+function nexusGlobalTrainingWorkforcePacketType(intent = "training_support") {
+  return ({
+    training_support: "training_support_packet",
+    workforce_pathway: "workforce_pathway_packet",
+    employer_partner_research: "employer_partner_research_packet",
+    learning_recommendation: "learning_recommendation_packet"
+  })[intent] || "training_support_packet";
+}
+
+function nexusGlobalTrainingWorkforceFocusAreas(intent = "training_support", query = "") {
+  const lower = String(query || "").toLowerCase();
+  if (intent === "employer_partner_research") {
+    return [
+      "Partner fit, hiring pathway, sector needs, role requirements, training alignment, and support expectations.",
+      "Confirm employer requirements, data-sharing rules, and candidate consent before any referral or contact."
+    ];
+  }
+  if (intent === "workforce_pathway") {
+    return [
+      "Target role, current skills, missing credentials, resume evidence, interview readiness, and training gaps.",
+      "No application, employer message, or profile submission happens from this packet."
+    ];
+  }
+  const focus = [
+    "Digital literacy, agriculture literacy, health literacy, AI literacy, workforce readiness, and continuing education.",
+    "Recommended learning should match the learner's language, reading level, device access, and low-bandwidth needs."
+  ];
+  if (/\b(ai|artificial intelligence)\b/.test(lower)) focus.unshift("AI literacy should explain practical use, privacy, source checking, and safe assistant limits.");
+  if (/\b(health|patient|clinic|pharmacy)\b/.test(lower)) focus.unshift("Health literacy stays educational and does not diagnose, prescribe, or replace a clinician.");
+  if (/\b(agriculture|crop|farm)\b/.test(lower)) focus.unshift("Agriculture literacy can connect crop guidance, market basics, safe input planning, and local expert review.");
+  return focus.slice(0, 4);
+}
+
+function nexusGlobalTrainingWorkforceNextSteps(intent = "training_support") {
+  if (intent === "employer_partner_research") {
+    return [
+      "Add employer sector, country or region, role types, required skills, and hiring constraints.",
+      "Prepare a partner-fit packet for review; do not contact the employer without explicit approval.",
+      "Confirm privacy, consent, and outcome tracking before candidate referral."
+    ];
+  }
+  if (intent === "workforce_pathway") {
+    return [
+      "Add desired role, current skills, education level, language, availability, and support needs.",
+      "Prepare a resume/interview checklist and identify training gaps.",
+      "Use employer contact or application workflows only after explicit confirmation and review."
+    ];
+  }
+  if (intent === "learning_recommendation") {
+    return [
+      "Add current skill level, preferred language, device access, and learning goal.",
+      "Review course options and source dates before choosing a path.",
+      "Use enrollment or credential workflows only after explicit confirmation and provider readiness."
+    ];
+  }
+  return [
+    "Add learning goal, literacy level, preferred language, country or region, and device/bandwidth needs.",
+    "Choose whether this is digital literacy, agriculture literacy, health literacy, AI literacy, workforce readiness, or continuing education.",
+    "Save or export the training packet for learner, coach, or partner review."
+  ];
+}
+
+function buildNexusGlobalTrainingWorkforcePacket(payload = {}) {
+  const intent = payload.intent || "training_support";
+  const packetType = nexusGlobalTrainingWorkforcePacketType(intent);
+  const liveKnowledge = payload.liveKnowledge || {};
+  const citations = Array.isArray(liveKnowledge.citations) ? liveKnowledge.citations.slice(0, 6) : [];
+  const body = payload.body || {};
+  const timestamp = new Date().toISOString();
+  return {
+    type: packetType,
+    packetType,
+    packetId: crypto.randomUUID(),
+    query: sanitizePilotText(payload.query || "", 700),
+    trainingWorkforceIntent: intent,
+    learnerOrWorkerContext: sanitizePilotText(body.learner || body.worker || body.context || "Add learner or worker context for a stronger packet.", 360),
+    roleOrLearningGoal: sanitizePilotText(body.role || body.goal || body.topic || payload.query || "Learning or workforce goal pending.", 360),
+    focusAreas: nexusGlobalTrainingWorkforceFocusAreas(intent, payload.query || ""),
+    sourceBackedResearch: liveKnowledge.status === "source-backed"
+      ? sanitizePilotText(liveKnowledge.summary || liveKnowledge.answer || "Source-backed training/workforce research is available. Review citations before acting.", 1400)
+      : "Live training/workforce retrieval is not configured or did not return citations. Nexus prepared a safe packet without fabricating sources.",
+    citations,
+    sources: Array.isArray(liveKnowledge.sources) ? liveKnowledge.sources.slice(0, 6) : citations,
+    skillPathway: [
+      "Identify the learner or worker's current level.",
+      "Map the next practical skill or credential step.",
+      "Prepare evidence for a coach, training provider, employer partner, or workforce reviewer."
+    ],
+    resumeInterviewPrep: [
+      "Collect role target, current experience, references if available, and portfolio or farm/work evidence.",
+      "Prepare interview practice questions and a readiness checklist before any application."
+    ],
+    employerPartnerFit: intent === "employer_partner_research"
+      ? "Review sector needs, hiring pathway, role requirements, support model, and data-sharing rules before employer outreach."
+      : "Employer partner research is available when the user asks for employer fit, hiring pathways, or sector needs.",
+    learningRecommendations: [
+      "Match learning to language, literacy level, device access, bandwidth, and local relevance.",
+      "Prefer verified public, partner, government, university, NGO, or training-provider sources."
+    ],
+    nextSafeActions: nexusGlobalTrainingWorkforceNextSteps(intent),
+    liveKnowledgeStatus: sanitizePilotText(liveKnowledge.status || "disabled", 80),
+    provider: sanitizePilotText(liveKnowledge.provider || "not-configured", 80),
+    exportReady: true,
+    timestamp,
+    noExecutionAuthorized: true,
+    noEmployerContactAuthorized: true,
+    noJobApplicationSubmitted: true,
+    noEnrollmentSubmitted: true,
+    noProfileSubmissionAuthorized: true,
+    requiresConfirmationForEmployerContact: true,
+    requiresConfirmationForJobApplication: true,
+    requiresConfirmationForEnrollment: true,
+    noFakeCitations: citations.length === 0
+  };
+}
+
+async function nexusGlobalTrainingWorkforceEngine(db, body = {}, user = null, env = process.env) {
+  ensureNexusProductionRailsState(db);
+  const query = sanitizePilotText(body.query || body.question || body.command || "", 700);
+  if (!query) return { ok: false, error: "query_required" };
+  const intent = nexusGlobalTrainingWorkforceIntent(query, body);
+  const domain = intent === "workforce_pathway" || intent === "employer_partner_research" ? "workforce" : "learning";
+  const liveKnowledge = await nexusLiveKnowledgeAllModesQuery(db, {
+    query,
+    domain,
+    mode: intent,
+    locale: body.locale || "",
+    maxResults: body.maxResults || 5,
+    safetyContext: { sourceSurface: body.sourceSurface || "global_training_workforce_engine" }
+  }, user, env);
+  const packet = buildNexusGlobalTrainingWorkforcePacket({
+    query,
+    intent,
+    body,
+    liveKnowledge
+  });
+  addNexusPilotAuditEvent(db, "global_training_workforce_packet_prepared", {
+    actor: user?.name || "Standard User",
+    role: user?.role || "Standard User",
+    mode: intent,
+    description: `${packet.packetType} prepared with Live Knowledge status ${packet.liveKnowledgeStatus}. No employer contact, job application, enrollment, or profile submission occurred.`
+  });
+  return {
+    ok: true,
+    status: "prepared",
+    intent,
+    packetType: packet.packetType,
+    packet,
+    liveKnowledge,
+    noExecutionAuthorized: true,
+    noEmployerContactAuthorized: true,
+    noJobApplicationSubmitted: true,
+    noEnrollmentSubmitted: true,
+    noProfileSubmissionAuthorized: true
+  };
+}
+
 function nexusKnowledgeSaveResult(db, body = {}, user = null) {
   ensureNexusProductionRailsState(db);
   const queryId = sanitizePilotText(body.queryId || "", 120);
@@ -31097,6 +31262,13 @@ async function api(req, res, url) {
 
   if (url.pathname === "/api/nexus/global-agriculture/intelligence" && req.method === "POST") {
     const result = await nexusGlobalAgricultureIntelligence(db, await readBody(req), user, process.env);
+    if (!result.ok) return send(res, 400, result);
+    await writeDb(db);
+    return send(res, 200, result);
+  }
+
+  if (url.pathname === "/api/nexus/global-training-workforce/engine" && req.method === "POST") {
+    const result = await nexusGlobalTrainingWorkforceEngine(db, await readBody(req), user, process.env);
     if (!result.ok) return send(res, 400, result);
     await writeDb(db);
     return send(res, 200, result);
