@@ -131,7 +131,7 @@ assertAll([
   "noExternalExecutionWithoutConfirmation: true",
   "External execution blocked until final confirmation.",
   "Integration inactive. Nexus prepared and queued the packet locally instead of submitting it.",
-  "Live mode not active; packet preparation/queue is available.",
+  "You can prepare the packet now; live handoff stays gated.",
   "No action was executed"
 ], app, "confirmation/execution safety contract");
 

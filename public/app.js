@@ -22629,6 +22629,8 @@ const NEXUS_CAPABILITIES = Object.freeze({
   agritrade: { id: "agritrade", title: "AgriTrade", category: "marketplace", workflowId: "agritrade", aliases: ["agritrade", "agri trade", "marketplace", "start marketplace", "vendor inquiry", "buyer seller", "produce listing", "input sourcing", "quote request", "vendor review queue"] },
   logistics: { id: "logistics", title: "Logistics Planning", category: "logistics", workflowId: "logistics", aliases: ["logistics", "logistics planning", "route support", "pickup request", "delivery request", "cold-chain", "cold chain", "storage request", "logistics partner queue"] },
   workforce: { id: "workforce", title: "Workforce Support", category: "workforce", workflowId: "workforce", aliases: ["workforce", "workforce support", "job readiness", "employer referral", "employment support"] },
+  jobs: { id: "jobs", title: "Jobs & Workforce", category: "workforce", workflowId: "jobs", aliases: ["jobs", "farm jobs", "find jobs", "job pathway", "job skills", "interview", "work readiness"] },
+  learning: { id: "learning", title: "Learning & Literacy", category: "training", workflowId: "learning", aliases: ["learning", "literacy", "digital literacy", "agriculture training", "find agriculture training", "course support", "learn a new skill"] },
   training: { id: "training", title: "Training Enrollment", category: "training", workflowId: "training", aliases: ["training", "training enrollment", "digital literacy", "ai training", "youth workforce", "agriculture workforce training", "healthcare workforce training", "ev workforce", "certification partner", "lms handoff"] },
   maps: { id: "maps", title: "Maps / Field Visit", category: "maps", workflowId: "maps", aliases: ["maps", "open maps", "route planning", "farm visit planning", "mobile clinic route planning", "logistics route planning", "location-sharing gate"] },
   communications: { id: "communications", title: "Communications", category: "communications", workflowId: "communications", aliases: ["communications", "email provider status", "send by email", "sms provider status", "send sms", "whatsapp provider status", "send whatsapp", "phone handoff", "telegram handoff"] },
@@ -23578,17 +23580,26 @@ function renderNexusWorkflowMapPreview(id = "") {
 function nexusWorkflowBlockedReason(id = "") {
   const registry = nexusWorkflowRegistryEntry(id);
   const lane = nexusIntegrationLaneById(registry?.integrationLaneId);
-  if (!registry || !lane) return "Workflow is open locally. Any unavailable provider action will show a visible disabled reason before it can proceed.";
+  if (!registry || !lane) return "Preparation workspace is ready. Nexus can organize the next step here; any unavailable provider action will stay gated before it can proceed.";
   if (lane.liveModeAvailable) {
-    return "Workflow is open. Live execution still requires the visible packet, consent, confirmation, audit, and outcome verification gates.";
+    return "Preparation workspace is ready. Live execution still requires the visible packet, consent, confirmation, audit, and outcome verification gates.";
   }
   if (lane.status === "credential_missing") {
-    return "Workflow is open in preparation mode because provider credentials are missing or not enabled.";
+    return "Preparation workspace is ready. A live partner connection needs credentials before Nexus can route anything outside the app.";
   }
   if (lane.status === "disabled" || lane.status === "not_configured") {
-    return "Workflow is open in preparation mode because this provider lane is not configured.";
+    return "Preparation workspace is ready. The live partner connector is not connected yet, so Nexus will keep this local and review-only.";
   }
-  return "Workflow is open in preparation mode. Nexus will not execute hidden provider, payment, booking, dispatch, message, call, location, pharmacy, or emergency actions.";
+  return "Preparation workspace is ready. Nexus will not execute hidden provider, payment, booking, dispatch, message, call, location, pharmacy, or emergency actions.";
+}
+
+function nexusWorkflowLaneUserStatus(lane = {}) {
+  if (!lane || !lane.id) return "Preparation ready";
+  if (lane.liveModeAvailable) return "Live-capable after approval";
+  if (lane.status === "configured_inactive") return "Ready for reviewed handoff";
+  if (lane.status === "credential_missing") return "Needs credentials for live handoff";
+  if (lane.status === "disabled" || lane.status === "not_configured") return "Preparation ready";
+  return String(lane.status || "Preparation ready").replace(/_/g, " ");
 }
 
 function renderNexusWorkflowLaneStatus(id = "") {
@@ -23600,12 +23611,12 @@ function renderNexusWorkflowLaneStatus(id = "") {
       <div>
         <span class="eyebrow">${escapeHtml(translateText("Integration lane"))}</span>
         <strong>${escapeHtml(translateText(lane.label))}</strong>
-        <small>${escapeHtml(translateText(lane.status.replace(/_/g, " ")))}</small>
+        <small>${escapeHtml(translateText(nexusWorkflowLaneUserStatus(lane)))}</small>
       </div>
       <ul>
         <li>${escapeHtml(translateText(`Activation: ${registry.activationType}`))}</li>
         <li>${escapeHtml(translateText(`Packet: ${registry.packetType}`))}</li>
-        <li>${escapeHtml(translateText(lane.liveModeAvailable ? "Live mode available when confirmed." : "Live mode not active; packet preparation/queue is available."))}</li>
+        <li>${escapeHtml(translateText(lane.liveModeAvailable ? "Live connector can run only after review and confirmation." : "You can prepare the packet now; live handoff stays gated."))}</li>
         <li>${escapeHtml(translateText(registry.offlineSupport ? "Offline queue supported." : "Offline queue not required for this lane."))}</li>
       </ul>
     </div>
@@ -23684,15 +23695,19 @@ function renderNexusActiveWorkflowWorkspace() {
         ? ["Describe need", "Review marketplace details", "Prepare inquiry", "Confirm before any transaction"]
         : ["Add details", "Review prepared next steps", "Save or change workflow", "Confirm before external action"];
   return `
-    <section id="nexus-workspace" class="nexus-active-workflow nexus-active-workflow-${escapeHtml(id)} nexus-glass-card" data-nexus-workspace="true" data-nexus-active-workflow="${escapeHtml(id)}" data-execution-authority="false" data-provider-handoff="false" data-no-live-execution="true" aria-labelledby="nexusActiveWorkflowHeading">
+    <div class="nexus-workflow-modal-backdrop" data-nexus-workflow-modal="true" role="presentation">
+    <section id="nexus-workspace" class="nexus-active-workflow nexus-active-workflow-modal nexus-active-workflow-${escapeHtml(id)} nexus-glass-card" data-nexus-workspace="true" data-nexus-active-workflow="${escapeHtml(id)}" data-execution-authority="false" data-provider-handoff="false" data-no-live-execution="true" role="dialog" aria-modal="true" aria-labelledby="nexusActiveWorkflowHeading">
       <div class="nexus-workflow-header">
         <span class="nexus-workflow-icon" aria-hidden="true">${escapeHtml(presentation.icon || "")}</span>
         <div>
-          <span class="eyebrow">${escapeHtml(translateText("Active workflow"))}</span>
+          <span class="eyebrow">${escapeHtml(translateText("Focused Nexus workspace"))}</span>
           <h3 id="nexusActiveWorkflowHeading" tabindex="-1">${escapeHtml(translateText(presentation.title))}</h3>
           <p>${escapeHtml(translateText(content.explanation))}</p>
         </div>
-        <button type="button" data-nexus-mode-shortcut="home" data-nexus-command="What can Nexus do?">${escapeHtml(translateText("Change workflow"))}</button>
+        <div class="nexus-workflow-window-actions">
+          <button type="button" data-nexus-mode-shortcut="home" data-nexus-command="What can Nexus do?">${escapeHtml(translateText("Change"))}</button>
+          <button type="button" data-nexus-workflow-close data-nexus-mode-shortcut="home" data-nexus-command="What can Nexus do?" aria-label="${escapeHtml(translateText("Close workflow workspace"))}">${escapeHtml(translateText("Close"))}</button>
+        </div>
       </div>
       <div class="nexus-workflow-purpose">
         <strong>${escapeHtml(translateText("Next step"))}</strong>
@@ -23732,6 +23747,7 @@ function renderNexusActiveWorkflowWorkspace() {
       ${latestPacket ? renderNexusConfirmationPanel(latestPacket, nexusIntegrationLaneById(latestPacket.destinationLaneId)) : ""}
       ${renderNexusWorkflowActionHistory()}
     </section>
+    </div>
   `;
 }
 
@@ -40149,6 +40165,18 @@ async function runWowDemo() {
 function handleNexusStandardUserHomeClick(event) {
   if (experienceMode !== "user" && !document.body.classList.contains("user-mode")) return false;
   const eventTarget = event.target?.closest ? event.target : event.target?.parentElement;
+  if (eventTarget?.closest?.("[data-nexus-workflow-close]")) {
+    event.preventDefault();
+    event.stopPropagation();
+    event.stopImmediatePropagation?.();
+    nexusActiveWorkflowState = null;
+    nexusAgenticBrainLastResult = buildNexusCapabilityOverviewResult("What can Nexus do?");
+    saveNexusRuntimeMemory();
+    setCommandInputs("What can Nexus do?");
+    renderUserWorkspace();
+    $("#nexusCommandCenterInput")?.focus?.({ preventScroll: true });
+    return true;
+  }
   if (eventTarget?.closest?.("[data-nexus-global-offline-action]")) {
     return handleNexusGlobalOfflineAccessClick(event);
   }

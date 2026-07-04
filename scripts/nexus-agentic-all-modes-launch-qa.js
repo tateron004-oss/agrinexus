@@ -51,6 +51,8 @@ function excludes(source, token, label) {
   "agritrade",
   "logistics",
   "workforce",
+  "jobs",
+  "learning",
   "training",
   "maps",
   "communications",

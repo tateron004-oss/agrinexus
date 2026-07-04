@@ -10957,6 +10957,22 @@ body.user-mode .nexus-suggested-action {
   box-shadow: 0 0 22px rgba(34, 211, 238, .14), inset 0 1px 0 rgba(255, 255, 255, .08) !important;
 }
 
+body.user-mode .nexus-workflow-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: grid;
+  align-items: start;
+  justify-items: center;
+  padding: clamp(14px, 3vh, 34px) clamp(12px, 3vw, 38px);
+  overflow-y: auto;
+  background:
+    radial-gradient(circle at 18% 8%, rgba(34, 211, 238, .28), transparent 30%),
+    radial-gradient(circle at 82% 12%, rgba(236, 72, 153, .20), transparent 28%),
+    rgba(2, 6, 23, .74);
+  backdrop-filter: blur(18px);
+}
+
 body.user-mode .nexus-active-workflow {
   position: relative;
   min-height: 430px;
@@ -10968,6 +10984,18 @@ body.user-mode .nexus-active-workflow {
     radial-gradient(circle at 18% 10%, rgba(34, 211, 238, .24), transparent 26%),
     radial-gradient(circle at 88% 18%, rgba(236, 72, 153, .18), transparent 28%),
     linear-gradient(145deg, rgba(2, 6, 23, .92), rgba(14, 18, 44, .82)) !important;
+}
+
+body.user-mode .nexus-active-workflow-modal {
+  width: min(1120px, 100%);
+  max-height: calc(100vh - clamp(28px, 6vh, 68px));
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  box-shadow:
+    0 34px 120px rgba(0, 0, 0, .56),
+    0 0 0 1px rgba(125, 211, 252, .34),
+    0 0 70px rgba(34, 211, 238, .18),
+    inset 0 1px 0 rgba(255, 255, 255, .12) !important;
 }
 
 body.user-mode .nexus-active-workflow.nexus-workflow-focus-ring {
@@ -10995,6 +11023,14 @@ body.user-mode .nexus-active-workflow > * {
   z-index: 1;
 }
 
+body.user-mode .nexus-active-workflow,
+body.user-mode .nexus-active-workflow * {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  word-break: normal;
+  writing-mode: horizontal-tb;
+}
+
 body.user-mode .nexus-active-workflow-empty {
   min-height: 170px;
 }
@@ -11004,6 +11040,13 @@ body.user-mode .nexus-workflow-header {
   grid-template-columns: auto minmax(0, 1fr) auto;
   gap: 14px;
   align-items: start;
+}
+
+body.user-mode .nexus-workflow-window-actions {
+  display: inline-flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
 }
 
 body.user-mode .nexus-workflow-icon {
@@ -11466,14 +11509,14 @@ body.user-mode .nexus-partner-onboarding-form textarea {
 
 body.user-mode .nexus-workflow-body {
   display: grid;
-  grid-template-columns: minmax(0, 1.4fr) minmax(240px, .8fr);
+  grid-template-columns: minmax(360px, 1.35fr) minmax(280px, .85fr);
   gap: 14px;
   align-items: start;
 }
 
 body.user-mode .nexus-workflow-field-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(240px, 1fr));
   gap: 12px;
 }
 
@@ -11496,6 +11539,7 @@ body.user-mode .nexus-workflow-field-grid textarea {
 
 body.user-mode .nexus-workflow-quick-actions {
   display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
   gap: 10px;
 }
 
@@ -11579,6 +11623,21 @@ body.user-mode .nexus-workflow-map-preview span {
   body.user-mode .nexus-workflow-lane-status,
   body.user-mode .nexus-pilot-readiness-grid {
     grid-template-columns: 1fr;
+  }
+
+  body.user-mode .nexus-workflow-modal-backdrop {
+    align-items: stretch;
+    padding: 10px;
+  }
+
+  body.user-mode .nexus-active-workflow-modal {
+    max-height: calc(100vh - 20px);
+    border-radius: 24px !important;
+  }
+
+  body.user-mode .nexus-workflow-window-actions {
+    width: 100%;
+    justify-content: flex-start;
   }
 }
 

@@ -95,7 +95,7 @@ function excludes(source, token, label) {
 
 [
   "Live actions remain credential, consent, confirmation, and audit gated.",
-  "Live mode not active; packet preparation/queue is available.",
+  "You can prepare the packet now; live handoff stays gated.",
   "data-no-live-execution=\"true\"",
   "data-execution-authority=\"false\""
 ].forEach(token => includes(app, token, "credential-gated visible status"));
