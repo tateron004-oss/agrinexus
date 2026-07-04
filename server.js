@@ -29897,6 +29897,198 @@ async function nexusGlobalProviderAccessBridge(db, body = {}, user = null, env =
   };
 }
 
+function nexusGlobalCommunicationsIntent(query = "", body = {}) {
+  const text = `${query || ""} ${body.channel || ""} ${body.mode || ""}`.toLowerCase();
+  if (/\b(whatsapp|wa\.me)\b/.test(text)) return "whatsapp";
+  if (/\b(telegram|t\.me)\b/.test(text)) return "telegram";
+  if (/\b(phone|call|dial)\b/.test(text)) return "phone";
+  if (/\b(email|mail)\b/.test(text)) return "email";
+  if (/\b(sms|text)\b/.test(text)) return "sms";
+  return "sms";
+}
+
+function nexusGlobalCommunicationsPacketType(channel = "sms", phase = "preparation") {
+  const normalized = String(channel || "sms").toLowerCase();
+  if (phase === "confirmation") return "communication_confirmation_packet";
+  if (phase === "outcome") return "communication_outcome_packet";
+  if (normalized === "email") return "email_preparation_packet";
+  if (normalized === "whatsapp") return "whatsapp_preparation_packet";
+  if (normalized === "phone") return "phone_call_preparation_packet";
+  if (normalized === "telegram") return "telegram_preparation_packet";
+  return "sms_preparation_packet";
+}
+
+function nexusGlobalCommunicationsChannelStatus(channel = "sms", env = process.env) {
+  const normalized = String(channel || "sms").toLowerCase();
+  const missing = [];
+  let flagName = "NEXUS_MESSAGES_ENABLED";
+  let provider = "Twilio SMS";
+  let configured = false;
+  if (normalized === "email") {
+    flagName = "NEXUS_EMAIL_ENABLED";
+    provider = "Email provider";
+    configured = Boolean(env.SMTP_HOST || env.SENDGRID_API_KEY || env.MAIL_PROVIDER_API_KEY);
+    if (!configured) missing.push("SMTP_HOST or SENDGRID_API_KEY");
+  } else if (normalized === "whatsapp") {
+    flagName = "NEXUS_WHATSAPP_ENABLED";
+    provider = "Twilio WhatsApp";
+    configured = Boolean(env.TWILIO_ACCOUNT_SID && env.TWILIO_AUTH_TOKEN && (env.TWILIO_WHATSAPP_FROM || env.TWILIO_FROM_NUMBER || env.TWILIO_PHONE_NUMBER || env.TWILIO_NUMBER));
+    ["TWILIO_ACCOUNT_SID", "TWILIO_AUTH_TOKEN", "TWILIO_WHATSAPP_FROM"].forEach(name => {
+      if (!env[name]) missing.push(name);
+    });
+  } else if (normalized === "phone") {
+    flagName = "NEXUS_CALLS_ENABLED";
+    provider = "Twilio Voice";
+    configured = Boolean(env.TWILIO_ACCOUNT_SID && env.TWILIO_AUTH_TOKEN && (env.TWILIO_FROM_NUMBER || env.TWILIO_PHONE_NUMBER || env.TWILIO_NUMBER));
+    ["TWILIO_ACCOUNT_SID", "TWILIO_AUTH_TOKEN", "TWILIO_FROM_NUMBER"].forEach(name => {
+      if (!env[name] && !(name === "TWILIO_FROM_NUMBER" && (env.TWILIO_PHONE_NUMBER || env.TWILIO_NUMBER))) missing.push(name);
+    });
+  } else if (normalized === "telegram") {
+    flagName = "NEXUS_TELEGRAM_ENABLED";
+    provider = "Telegram provider";
+    configured = Boolean(env.TELEGRAM_BOT_TOKEN);
+    if (!configured) missing.push("TELEGRAM_BOT_TOKEN");
+  } else {
+    flagName = "NEXUS_MESSAGES_ENABLED";
+    provider = "Twilio SMS";
+    configured = Boolean(env.TWILIO_ACCOUNT_SID && env.TWILIO_AUTH_TOKEN && (env.TWILIO_FROM_NUMBER || env.TWILIO_PHONE_NUMBER || env.TWILIO_NUMBER));
+    ["TWILIO_ACCOUNT_SID", "TWILIO_AUTH_TOKEN", "TWILIO_FROM_NUMBER"].forEach(name => {
+      if (!env[name] && !(name === "TWILIO_FROM_NUMBER" && (env.TWILIO_PHONE_NUMBER || env.TWILIO_NUMBER))) missing.push(name);
+    });
+  }
+  const flagEnabled = nexusFlagEnabled(env, flagName);
+  return {
+    channel: normalized,
+    provider,
+    flagName,
+    flagEnabled,
+    configured,
+    status: !flagEnabled ? "disabled" : configured ? "ready_for_confirmed_execution" : "credential_gated",
+    missingConfig: Array.from(new Set(missing)),
+    canDraft: true,
+    canExecuteNow: Boolean(flagEnabled && configured),
+    requiresConfirmation: true,
+    noSilentExecution: true
+  };
+}
+
+function nexusGlobalCommunicationsDraftPreview(query = "", channel = "sms") {
+  const cleanQuery = sanitizePilotText(query || "Prepare a concise Nexus communication update.", 500);
+  const purpose = /\b(provider|doctor|clinic|pharmacy|telehealth)\b/i.test(cleanQuery)
+    ? "provider-ready communication preparation"
+    : /\b(buyer|seller|market|crop|agritrade)\b/i.test(cleanQuery)
+      ? "marketplace communication preparation"
+      : /\b(job|training|course|learner|workforce)\b/i.test(cleanQuery)
+        ? "workforce or learning communication preparation"
+        : "general communication preparation";
+  const label = String(channel || "sms").toUpperCase();
+  return {
+    purpose,
+    subject: `${label} draft for review`,
+    body: `Draft for review only: ${cleanQuery}. Please verify recipient, purpose, language, consent, and final approval before any provider or channel execution.`,
+    languageConfirmation: "Confirm the recipient language and final wording before sending.",
+    redactionNotice: "Do not include medical records, payment details, secrets, or sensitive identifiers in draft text."
+  };
+}
+
+function buildNexusGlobalCommunicationsPacket(payload = {}) {
+  const channel = nexusGlobalCommunicationsIntent(payload.query, payload);
+  const channelStatus = nexusGlobalCommunicationsChannelStatus(channel, payload.env || process.env);
+  const live = payload.liveKnowledge || {};
+  const citations = Array.isArray(live.citations) ? live.citations : [];
+  const draft = nexusGlobalCommunicationsDraftPreview(payload.query, channel);
+  const canQueue = !channelStatus.canExecuteNow;
+  return {
+    type: "nexus_global_communications_engine",
+    packetType: nexusGlobalCommunicationsPacketType(channel),
+    confirmationPacketType: nexusGlobalCommunicationsPacketType(channel, "confirmation"),
+    outcomePacketType: nexusGlobalCommunicationsPacketType(channel, "outcome"),
+    packetId: `global-communications-${Date.now()}`,
+    query: sanitizePilotText(payload.query || "", 1000),
+    channel,
+    provider: channelStatus.provider,
+    draftPreview: draft,
+    sourceContext: citations.length
+      ? "Live Knowledge context is available; verify citations before using them in a communication."
+      : "Live Knowledge is not configured or did not return citations. Nexus prepared the draft without fabricating sources.",
+    citations,
+    sources: citations.map(item => ({ title: item.title || item.url || "Source", url: item.url || "", provider: item.provider || live.provider || "" })),
+    channelStatus,
+    confirmationGate: {
+      required: true,
+      requiredBefore: "send_call_or_provider_handoff",
+      visibleRecipientRequired: true,
+      visibleProviderRequired: true,
+      messagePreviewRequired: true,
+      languageConfirmationRequired: true,
+      cancellationPathRequired: true
+    },
+    queueStatus: canQueue ? "queued_for_review_when_credentials_or_approval_are_missing" : "ready_for_explicit_confirmation",
+    testMode: {
+      available: true,
+      result: "draft_preview_only",
+      noLiveProviderExecution: true
+    },
+    audit: {
+      eventType: "global_communications_packet_prepared",
+      requiredBeforeExecution: true,
+      recordsOutcome: true
+    },
+    outcomeRecording: {
+      required: true,
+      statusOptions: ["prepared", "confirmation_required", "credential_gated", "sent_by_provider", "call_started_by_provider", "failed_safely", "cancelled"]
+    },
+    noExecutionAuthorized: true,
+    noSilentSend: true,
+    noSilentCall: true,
+    noProviderHandoffAuthorized: true,
+    noExternalNavigationAuthorized: true,
+    noSecretsExposed: true,
+    liveKnowledgeStatus: live.status || live.statusSnapshot?.status || "disabled",
+    timestamp: new Date().toISOString()
+  };
+}
+
+async function nexusGlobalCommunicationsEngine(db, body = {}, user = null, env = process.env) {
+  ensureNexusProductionRailsState(db);
+  const query = sanitizePilotText(body.query || body.question || body.command || "", 700);
+  if (!query) return { ok: false, error: "query_required" };
+  const channel = nexusGlobalCommunicationsIntent(query, body);
+  const liveKnowledge = await nexusLiveKnowledgeAllModesQuery(db, {
+    query,
+    domain: "communications",
+    mode: body.mode || channel,
+    locale: body.locale || "",
+    maxResults: body.maxResults || 3,
+    safetyContext: { sourceSurface: body.sourceSurface || "global_communications_engine" }
+  }, user, env);
+  const packet = buildNexusGlobalCommunicationsPacket({
+    query,
+    channel,
+    mode: body.mode,
+    liveKnowledge,
+    env
+  });
+  addNexusPilotAuditEvent(db, "global_communications_packet_prepared", {
+    actor: user?.name || "Standard User",
+    role: user?.role || "Standard User",
+    mode: channel,
+    description: `${packet.packetType} prepared for ${channel}. No send, call, provider handoff, external navigation, or silent execution occurred.`
+  });
+  return {
+    ok: true,
+    status: "prepared",
+    channel,
+    packetType: packet.packetType,
+    packet,
+    channelStatus: packet.channelStatus,
+    confirmationRequired: true,
+    noExecutionAuthorized: true,
+    noSilentSend: true,
+    noSilentCall: true
+  };
+}
+
 function nexusKnowledgeSaveResult(db, body = {}, user = null) {
   ensureNexusProductionRailsState(db);
   const queryId = sanitizePilotText(body.queryId || "", 120);
@@ -31670,6 +31862,13 @@ async function api(req, res, url) {
 
   if (url.pathname === "/api/nexus/global-provider-access/bridge" && req.method === "POST") {
     const result = await nexusGlobalProviderAccessBridge(db, await readBody(req), user, process.env);
+    if (!result.ok) return send(res, 400, result);
+    await writeDb(db);
+    return send(res, 200, result);
+  }
+
+  if (url.pathname === "/api/nexus/global-communications/engine" && req.method === "POST") {
+    const result = await nexusGlobalCommunicationsEngine(db, await readBody(req), user, process.env);
     if (!result.ok) return send(res, 400, result);
     await writeDb(db);
     return send(res, 200, result);

@@ -18397,6 +18397,7 @@ function renderNexusAgenticBrainResultCards() {
           ${renderNexusGlobalTrainingWorkforcePacket(card)}
           ${renderNexusGlobalChronicCareHealthPacket(card)}
           ${renderNexusGlobalProviderAccessPacket(card)}
+          ${renderNexusGlobalCommunicationsPacket(card)}
           ${renderNexusMediaProviderOptions(card)}
           ${renderNexusHealthAccessPreparationOptions(card)}
           ${card.localOnly ? `<small>${escapeHtml(translateText("Local-only"))}</small>` : ""}
@@ -18986,6 +18987,7 @@ function isNexusLiveKnowledgeQuestion(command = "") {
 
 function nexusKnowledgeCategoryForCommand(command = "") {
   const lower = String(command || "").toLowerCase();
+  if (/\b(email|sms|text|message|whatsapp|telegram|phone call|call|dial|communication)\b/.test(lower)) return "communications";
   if (/\b(telehealth|virtual visit|video visit|doctor visit|provider visit|intake)\b/.test(lower)) return "telehealth";
   if (/\b(pharmacy|medicine|medication|drug|prescription|refill|insulin storage|safe storage)\b/.test(lower)) return "pharmacy";
   if (/\b(mobile clinic|community health|outreach clinic|clinic van)\b/.test(lower)) return "mobileClinic";
@@ -19246,6 +19248,58 @@ function renderNexusGlobalProviderAccessPacket(card = {}) {
       <small data-testid="nexus-provider-access-citation-count">${escapeHtml(translateText("Citations"))}: ${escapeHtml(String(citations.length || 0))}</small>
       <small data-testid="nexus-provider-access-export-ready">${escapeHtml(translateText(packet.exportReady ? "Export-ready provider access packet prepared." : "Review packet prepared locally."))}</small>
       <small data-testid="nexus-provider-access-no-execution">${escapeHtml(translateText("No telehealth launch, pharmacy execution, provider contact, mobile clinic dispatch claim, or external action was authorized."))}</small>
+    </div>
+  `;
+}
+
+function renderNexusGlobalCommunicationsPacket(card = {}) {
+  const packet = card.globalCommunicationsPacket || card.communicationsPacket || null;
+  if (!packet) return "";
+  const draft = packet.draftPreview || {};
+  const channelStatus = packet.channelStatus || {};
+  const confirmationGate = packet.confirmationGate || {};
+  const citations = Array.isArray(packet.citations) ? packet.citations : [];
+  const statusLabel = channelStatus.status || "credential_gated";
+  return `
+    <div class="nexus-global-communications-packet" data-testid="nexus-global-communications-packet-card" data-packet-type="${escapeHtml(packet.packetType || "sms_preparation_packet")}">
+      <div class="nexus-home-mode-panel-head">
+        <span class="nexus-home-mode-panel-icon" aria-hidden="true">ðŸ“¨</span>
+        <div>
+          <strong>${escapeHtml(translateText("Global Communications Engine"))}</strong>
+          <small data-testid="nexus-communications-packet-type">${escapeHtml(packet.packetType || "sms_preparation_packet")}</small>
+        </div>
+      </div>
+      <p data-testid="nexus-communications-channel">${escapeHtml(translateText("Channel"))}: ${escapeHtml(translateText(packet.channel || "sms"))}</p>
+      <dl>
+        <div>
+          <dt>${escapeHtml(translateText("Draft preview"))}</dt>
+          <dd data-testid="nexus-communications-draft-preview">${escapeHtml(translateText(draft.body || "Draft prepared for review only."))}</dd>
+        </div>
+        <div>
+          <dt>${escapeHtml(translateText("Provider status"))}</dt>
+          <dd data-testid="nexus-communications-channel-status">${escapeHtml(translateText(packet.provider || "communications provider"))}: ${escapeHtml(translateText(statusLabel))}</dd>
+        </div>
+        <div>
+          <dt>${escapeHtml(translateText("Missing configuration"))}</dt>
+          <dd data-testid="nexus-communications-missing-config">${Array.isArray(channelStatus.missingConfig) && channelStatus.missingConfig.length ? channelStatus.missingConfig.map(name => escapeHtml(name)).join(", ") : escapeHtml(translateText("none"))}</dd>
+        </div>
+        <div>
+          <dt>${escapeHtml(translateText("Confirmation gate"))}</dt>
+          <dd data-testid="nexus-communications-confirmation-gate">${escapeHtml(translateText(confirmationGate.required ? "Recipient, provider, preview, language, cancellation path, audit, and explicit final approval are required." : "not required"))}</dd>
+        </div>
+        <div>
+          <dt>${escapeHtml(translateText("Queue / test mode"))}</dt>
+          <dd data-testid="nexus-communications-queue-status">${escapeHtml(translateText(packet.queueStatus || "draft_preview_only"))}; ${escapeHtml(translateText(packet.testMode?.result || "draft_preview_only"))}</dd>
+        </div>
+        <div>
+          <dt>${escapeHtml(translateText("Outcome recording"))}</dt>
+          <dd data-testid="nexus-communications-outcome-recording">${escapeHtml(translateText(packet.outcomeRecording?.required ? "required before any future live channel result is trusted" : "not required"))}</dd>
+        </div>
+      </dl>
+      <small data-testid="nexus-communications-source-context">${escapeHtml(translateText(packet.sourceContext || "No fabricated sources."))}</small>
+      <small data-testid="nexus-communications-live-knowledge-status">${escapeHtml(translateText("Live Knowledge"))}: ${escapeHtml(packet.liveKnowledgeStatus || "disabled")}</small>
+      <small data-testid="nexus-communications-citation-count">${escapeHtml(translateText("Citations"))}: ${escapeHtml(String(citations.length || 0))}</small>
+      <small data-testid="nexus-communications-no-execution">${escapeHtml(translateText("No SMS, WhatsApp, Telegram, email, phone call, provider handoff, external navigation, or silent communication was executed."))}</small>
     </div>
   `;
 }
@@ -19626,6 +19680,32 @@ async function runNexusKnowledgeQuery(command = "", options = {}) {
       }
     } catch {
       nexusKnowledgeActionStatus = "Knowledge rail checked safely. Provider access packet preparation was unavailable.";
+    }
+  }
+  if ((options.category || nexusKnowledgeCategoryForCommand(question)) === "communications" || /\b(prepare|draft|write|compose|confirm|queue)\b[\s\S]*\b(email|sms|text|message|whatsapp|telegram|phone|call)\b/i.test(question)) {
+    try {
+      const communicationsResult = await request("/api/nexus/global-communications/engine", {
+        method: "POST",
+        body: {
+          query: question,
+          mode: options.modeId || (options.category || nexusKnowledgeCategoryForCommand(question)),
+          locale: languageCode(),
+          sourceSurface: options.sourceSurface || "standard_user"
+        }
+      });
+      if (communicationsResult?.packet) {
+        nexusAgenticBrainLastResult.preparedCards.unshift({
+          type: "nexus_global_communications_engine",
+          title: "Communications packet",
+          status: communicationsResult.packetType || "sms_preparation_packet",
+          localOnly: true,
+          needsRealProvider: true,
+          globalCommunicationsPacket: communicationsResult.packet
+        });
+        nexusKnowledgeActionStatus = "Communications packet prepared. Sending, calling, provider handoff, and external navigation remain credential, confirmation, audit, and outcome controlled.";
+      }
+    } catch {
+      nexusKnowledgeActionStatus = "Knowledge rail checked safely. Communications packet preparation was unavailable.";
     }
   }
   await refreshNexusInternetResourceHistory({ rerender: false });
@@ -20529,6 +20609,7 @@ const NEXUS_PACKET_TYPES = Object.freeze([
   "telehealth_prep_packet", "provider_bridge_packet", "pharmacy_support_packet", "mobile_clinic_access_packet", "clinic_visit_prep_packet",
   "agriculture_support_packet", "crop_support_packet", "farm_planning_packet", "field_visit_packet", "crop_support_request", "farm_planning_request", "input_supplier_request", "extension_partner_request", "field_visit_request", "marketplace_inquiry", "logistics_request",
   "training_support_packet", "workforce_pathway_packet", "employer_partner_research_packet", "learning_recommendation_packet",
+  "email_preparation_packet", "sms_preparation_packet", "whatsapp_preparation_packet", "phone_call_preparation_packet", "telegram_preparation_packet", "communication_confirmation_packet", "communication_outcome_packet",
   "workforce_referral", "job_referral", "employer_partner_referral", "training_enrollment_request", "learning_plan_request",
   "email_message", "sms_message", "whatsapp_message", "telegram_message", "call_intent",
   "route_planning_request", "location_review_request", "field_visit_location_packet"
