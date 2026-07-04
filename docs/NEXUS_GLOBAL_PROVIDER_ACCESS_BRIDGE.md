@@ -44,6 +44,18 @@ Live provider access requires verified credentials, provider availability, conse
 
 Telehealth, pharmacy, mobile clinic, and provider-bridge prompts can now produce visible provider-access packets from the Standard User knowledge rail. The packets display preparation steps, credential status, review queue target, Live Knowledge state, citation count, export readiness, and no-execution copy.
 
+The Standard User health/provider workspace also exposes a compact provider-access section launcher with:
+
+- Telehealth Preparation.
+- Provider Bridge Packet.
+- Pharmacy Support.
+- Mobile Clinic Access.
+- Clinic Visit Preparation.
+- Credential Status.
+- Review Queue.
+
+Each section routes into the existing provider access bridge as packet preparation, credential review, or local review queue work only. The UI must not claim telehealth launch, provider contact, pharmacy refill, mobile clinic dispatch, record submission, or live provider action unless a verified provider integration is configured and the user completes consent, approval, final confirmation, and audit requirements.
+
 ## Export and Review Posture
 
 Provider-access packets are export-ready for local user, provider, pharmacy, mobile clinic, or admin review. Exported packet content must preserve credential-gated and no-execution boundaries and must not include secrets or unsupported claims of live provider action.

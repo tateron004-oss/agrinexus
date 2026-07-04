@@ -256,8 +256,8 @@ const nexusProductIdentity = Object.freeze({
 });
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-354";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v333";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-356";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v335";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
 const VOICE_ATTENTION_DELAY_MS = 900;
@@ -19061,6 +19061,16 @@ const NEXUS_CHRONIC_CARE_HEALTH_SECTIONS = Object.freeze([
   { id: "provider-summary", label: "Provider Review Summary", command: "Nexus, prepare a care team summary.", description: "Export-ready summary; no provider submission without consent." }
 ]);
 
+const NEXUS_PROVIDER_ACCESS_SECTIONS = Object.freeze([
+  { id: "telehealth-prep", label: "Telehealth Preparation", command: "Nexus, open telehealth access.", description: "Prepare visit goals, questions, and provider-ready context." },
+  { id: "provider-bridge", label: "Provider Bridge Packet", command: "Nexus, open provider bridge.", description: "Organize a review packet; no provider contact without consent." },
+  { id: "pharmacy-support", label: "Pharmacy Support", command: "Nexus, open pharmacy support.", description: "Prepare medication/refill questions; no refill request or prescribing." },
+  { id: "mobile-clinic", label: "Mobile Clinic Access", command: "Nexus, route to a mobile clinic.", description: "Prepare clinic access needs; no dispatch or location sharing." },
+  { id: "clinic-visit", label: "Clinic Visit Preparation", command: "Nexus, prepare clinic visit questions.", description: "Build a visit checklist and barriers summary for review." },
+  { id: "credential-status", label: "Credential Status", command: "Nexus, check provider access readiness.", description: "Show credential-gated readiness without exposing secrets." },
+  { id: "review-queue", label: "Review Queue", command: "Nexus, prepare provider access review queue.", description: "Queue local review only until provider configuration is verified." }
+]);
+
 function buildNexusKnowledgePreparedResult(result = {}) {
   const answer = result?.result || result || {};
   return {
@@ -19199,6 +19209,20 @@ function renderNexusChronicCareHealthSections(id = "") {
     <div class="nexus-chronic-care-health-sections" data-testid="nexus-chronic-care-health-sections" aria-label="${escapeHtml(translateText("Chronic care health sections"))}">
       ${NEXUS_CHRONIC_CARE_HEALTH_SECTIONS.map(section => `
         <button type="button" data-testid="nexus-chronic-care-health-section-${escapeHtml(section.id)}" data-nexus-command="${escapeHtml(section.command)}" data-nexus-mode-shortcut="chronic-care-health" data-chronic-care-health-section="${escapeHtml(section.id)}">
+          <strong>${escapeHtml(translateText(section.label))}</strong>
+          <span>${escapeHtml(translateText(section.description))}</span>
+        </button>
+      `).join("")}
+    </div>
+  `;
+}
+
+function renderNexusProviderAccessSections(id = "") {
+  if (!["health", "health-chronic-care", "chronic-care", "clinical-support", "telehealth-intake", "pharmacy-support", "mobile-clinic", "provider-support"].includes(id)) return "";
+  return `
+    <div class="nexus-provider-access-sections" data-testid="nexus-provider-access-sections" aria-label="${escapeHtml(translateText("Provider access sections"))}">
+      ${NEXUS_PROVIDER_ACCESS_SECTIONS.map(section => `
+        <button type="button" data-testid="nexus-provider-access-section-${escapeHtml(section.id)}" data-nexus-command="${escapeHtml(section.command)}" data-nexus-mode-shortcut="provider-access" data-provider-access-section="${escapeHtml(section.id)}">
           <strong>${escapeHtml(translateText(section.label))}</strong>
           <span>${escapeHtml(translateText(section.description))}</span>
         </button>
@@ -22652,6 +22676,7 @@ function renderNexusActiveWorkflowWorkspace() {
       ${renderNexusAgricultureIntelligenceSections(id)}
       ${renderNexusTrainingWorkforceSections(id)}
       ${renderNexusChronicCareHealthSections(id)}
+      ${renderNexusProviderAccessSections(id)}
       ${renderNexusWorkflowMapPreview(id)}
       <div class="nexus-workflow-body">
         ${renderNexusWorkflowFields(id, fields)}

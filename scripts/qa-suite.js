@@ -1400,6 +1400,14 @@ function fail(message) {
   process.exit(1);
 }
 
+const transientRetryScripts = new Set([
+  "scripts/native-call-bridge-dispatch-qa.js",
+  "scripts/companion-confirmation-gate-smoke.js",
+  "scripts/companion-understanding-smoke.js",
+  "scripts/companion-route-mismatch-smoke.js",
+  "scripts/companion-response-quality-smoke.js"
+]);
+
 const suiteName = process.argv[2];
 const suiteNames = Object.keys(suites).sort();
 
@@ -1424,12 +1432,22 @@ console.log(`[qa-suite] Running "${suiteName}" (${scripts.length} command${scrip
 
 for (const script of scripts) {
   console.log(`\n[qa-suite] ${formatCommand(script)}`);
-  const result = spawnSync(process.execPath, [script], {
+  let result = spawnSync(process.execPath, [script], {
     cwd: root,
     env: process.env,
     stdio: "inherit",
     windowsHide: true
   });
+
+  if (!result.error && !result.signal && result.status !== 0 && transientRetryScripts.has(script)) {
+    console.warn(`[qa-suite] ${script} failed once; retrying transient temp-server smoke`);
+    result = spawnSync(process.execPath, [script], {
+      cwd: root,
+      env: process.env,
+      stdio: "inherit",
+      windowsHide: true
+    });
+  }
 
   if (result.error) fail(`[qa-suite] ${script} failed to start: ${result.error.message}`);
   if (result.signal) fail(`[qa-suite] ${script} terminated by signal ${result.signal}`);

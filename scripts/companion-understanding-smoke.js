@@ -39,8 +39,23 @@ async function waitForServer() {
   throw new Error("Companion understanding smoke server did not become reachable");
 }
 
+async function fetchWithRetry(url, options) {
+  let lastError;
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    try {
+      return await fetch(url, options);
+    } catch (error) {
+      lastError = error;
+      const code = error?.cause?.code || error?.code;
+      if (!["ECONNRESET", "ECONNREFUSED"].includes(code) || attempt === 2) throw error;
+      await wait(200 + attempt * 150);
+    }
+  }
+  throw lastError;
+}
+
 async function call(route, body) {
-  const response = await fetch(`${base}${route}`, {
+  const response = await fetchWithRetry(`${base}${route}`, {
     method: body ? "POST" : "GET",
     headers: { "content-type": "application/json", cookie },
     body: body ? JSON.stringify(body) : undefined
