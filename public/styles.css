@@ -11182,6 +11182,53 @@ body.user-mode .nexus-review-queue-grid {
   margin-top: 12px;
 }
 
+body.user-mode .nexus-global-activation-summary {
+  display: grid;
+  gap: 14px;
+  margin: 14px 0;
+  padding: 14px;
+  border: 1px solid rgba(103, 232, 249, .22);
+  border-radius: 18px;
+  background:
+    radial-gradient(circle at 10% 0%, rgba(34, 211, 238, .16), transparent 38%),
+    linear-gradient(135deg, rgba(15, 23, 42, .72), rgba(30, 41, 59, .48));
+  box-shadow:
+    0 16px 44px rgba(2, 6, 23, .24),
+    inset 0 1px 0 rgba(255, 255, 255, .1);
+}
+
+body.user-mode .nexus-global-activation-summary strong {
+  color: rgba(255, 255, 255, .96);
+}
+
+body.user-mode .nexus-global-activation-summary small,
+body.user-mode .nexus-global-activation-summary span {
+  color: rgba(226, 232, 240, .88);
+}
+
+body.user-mode .nexus-global-activation-stats,
+body.user-mode .nexus-global-activation-groups,
+body.user-mode .nexus-global-activation-summary .nexus-activation-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+body.user-mode .nexus-global-activation-stats span,
+body.user-mode .nexus-global-activation-groups article {
+  border: 1px solid rgba(125, 211, 252, .18);
+  border-radius: 14px;
+  background: rgba(15, 23, 42, .5);
+  padding: 10px 12px;
+}
+
+body.user-mode .nexus-global-activation-groups article {
+  display: grid;
+  gap: 4px;
+  min-width: 180px;
+  flex: 1 1 180px;
+}
+
 body.user-mode .nexus-command-center-grid article,
 body.user-mode .nexus-activation-grid article,
 body.user-mode .nexus-review-queue-grid article,

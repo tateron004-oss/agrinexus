@@ -20713,6 +20713,41 @@ const NEXUS_PACKET_TYPES = Object.freeze([
 ]);
 const NEXUS_REVIEW_QUEUE_TYPES = Object.freeze(["provider", "vendor", "admin", "clinical", "telehealth", "pharmacy", "mobile-clinic", "agriculture-vendor", "workforce", "marketplace"]);
 const NEXUS_PARTNER_ONBOARDING_TYPES = Object.freeze(["Healthcare provider", "Telehealth provider", "Pharmacy", "Mobile clinic", "Community health worker partner", "Agriculture advisor/vendor", "Input supplier", "Marketplace buyer/seller partner", "Logistics partner", "Employer", "Training provider", "Communications provider"]);
+const NEXUS_GLOBAL_ACTIVATION_CENTER_GROUPS = Object.freeze([
+  { id: "health-provider", label: "Health and provider lanes", categories: ["healthcare"] },
+  { id: "agriculture-marketplace", label: "Agriculture, marketplace, vendor, and logistics lanes", categories: ["agriculture", "marketplace", "maps"] },
+  { id: "communications", label: "Communications lanes", categories: ["communications"] },
+  { id: "training-workforce", label: "Training and workforce lanes", categories: ["learning", "workforce"] },
+  { id: "platform-access", label: "Platform, offline, media, and source lanes", categories: ["platform", "media"] }
+]);
+
+function nexusGlobalActivationCenterSummary(lanes = nexusAllIntegrationLanes()) {
+  const merged = lanes.map(lane => ({ ...lane, ...(nexusLaneConfigOverrides[lane.id] || {}) }));
+  const grouped = NEXUS_GLOBAL_ACTIVATION_CENTER_GROUPS.map(group => {
+    const groupLanes = merged.filter(lane => group.categories.includes(lane.category));
+    return {
+      id: group.id,
+      label: group.label,
+      laneCount: groupLanes.length,
+      testModeCount: groupLanes.filter(lane => lane.testModeAvailable).length,
+      liveModeCount: groupLanes.filter(lane => lane.liveModeAvailable).length,
+      credentialGatedCount: groupLanes.filter(lane => !lane.liveModeAvailable || /not_configured|configured_inactive|credential|disabled/.test(String(lane.status || ""))).length
+    };
+  });
+  return {
+    laneCount: merged.length,
+    groupCount: grouped.length,
+    partnerProfileCount: nexusPartnerProfiles.length,
+    configuredInactiveCount: merged.filter(lane => lane.status === "configured_inactive").length,
+    activeTestModeCount: merged.filter(lane => lane.status === "active_test_mode").length,
+    liveModeAvailableCount: merged.filter(lane => lane.liveModeAvailable).length,
+    credentialGatedCount: merged.filter(lane => !lane.liveModeAvailable || /not_configured|configured_inactive|credential|disabled/.test(String(lane.status || ""))).length,
+    groups: grouped,
+    testLiveSeparation: "Test mode may prepare local packets; live mode requires verified credentials, approval, confirmation, audit, and outcome records.",
+    secretSafeExport: "Global lane and partner exports include names, statuses, and missing variable names only; secret values are never included.",
+    activationAuditState: "Lane configuration, test actions, partner linking, export preparation, and disable actions create local reviewable state without provider execution."
+  };
+}
 const NEXUS_GLOBAL_READINESS_TAGS = Object.freeze(["global-ready", "Africa-first", "low-bandwidth", "mobile-first", "offline-aware", "rural-relevant", "community-health-ready", "agriculture-ready", "workforce-ready"]);
 const NEXUS_ENDGAME_WORKFLOW_EXTENSIONS = Object.freeze([
   { id: "diabetes", label: "Diabetes Support", category: "healthcare", aliases: ["diabetes", "blood sugar", "glucose"], riskLevel: "clinical", activationType: "provider-ready", integrationRequired: true, integrationLaneId: "diabetes-lane", allowedWithoutIntegration: true, requiresConfirmationBeforeExecution: true, auditLogRequired: true, outcomeVerificationRequired: true, globalReadiness: "global-ready / Africa-relevant", offlineSupport: true, packetType: "diabetes_report_packet" },
@@ -21315,6 +21350,73 @@ function handleNexusPacketActionClick(event) {
   return false;
 }
 
+function handleNexusGlobalActivationCenterClick(event) {
+  const button = event.target?.closest?.("[data-nexus-activation-action]");
+  if (!button) return false;
+  event.preventDefault();
+  event.stopPropagation();
+  const action = button.dataset.nexusActivationAction || "";
+  const lanes = nexusAllIntegrationLanes().map(lane => ({ ...lane, ...(nexusLaneConfigOverrides[lane.id] || {}) }));
+  const summary = nexusGlobalActivationCenterSummary(lanes);
+  if (action === "export-global-lanes") {
+    nexusAgenticBrainLastResult = {
+      ok: true,
+      status: "nexus_global_activation_lane_registry_export_prepared",
+      mode: "Activation Center",
+      message: `Global activation lane registry export is ready with ${summary.laneCount} lane(s), ${summary.partnerProfileCount} partner profile(s), and no secret values.`,
+      preparedCards: [{
+        type: "global_activation_lane_registry_export",
+        title: "Global activation lane registry",
+        status: "secret-safe local export prepared",
+        localOnly: true
+      }],
+      summary,
+      lanes: lanes.map(lane => ({
+        id: lane.id,
+        label: lane.label,
+        category: lane.category,
+        region: lane.region,
+        status: lane.status,
+        testModeAvailable: Boolean(lane.testModeAvailable),
+        liveModeAvailable: Boolean(lane.liveModeAvailable),
+        requiresConfirmation: Boolean(lane.requiresConfirmation),
+        packetType: lane.packetType,
+        requiredCredentials: lane.requiredCredentials || [],
+        missingCredentials: lane.missingCredentials || (lane.liveModeAvailable ? [] : ["live credentials / approval"]),
+        secretsIncluded: false
+      })),
+      noExecutionAuthorized: true,
+      noSecretsExposed: true,
+      noProviderContactAuthorized: true,
+      localOnly: true,
+      source: "nexus_global_activation_center"
+    };
+  }
+  if (action === "show-partner-registry") {
+    nexusAgenticBrainLastResult = {
+      ok: true,
+      status: "nexus_global_partner_registry_listed",
+      mode: "Activation Center",
+      message: `${nexusPartnerProfiles.length} local partner profile(s) available. Profiles are local review records and do not contact partners or expose secrets.`,
+      preparedCards: (nexusPartnerProfiles.length ? nexusPartnerProfiles : [{ organizationName: "No partner profiles yet", serviceCategories: "Add one below" }]).slice(0, 6).map(profile => ({
+        type: "global_partner_registry_profile",
+        title: profile.organizationName || "Partner profile",
+        status: profile.serviceCategories || "local review",
+        localOnly: true
+      })),
+      partnerProfileCount: nexusPartnerProfiles.length,
+      noExecutionAuthorized: true,
+      noSecretsExposed: true,
+      noProviderContactAuthorized: true,
+      localOnly: true,
+      source: "nexus_global_activation_center"
+    };
+  }
+  saveNexusRuntimeMemory();
+  renderUserWorkspace();
+  return true;
+}
+
 function handleNexusLaneActionClick(event) {
   const button = event.target?.closest?.("[data-nexus-lane-action]");
   if (!button) return false;
@@ -21541,13 +21643,45 @@ function renderNexusConfirmationPanel(packet, lane) {
 
 function renderNexusActivationCenter() {
   const lanes = nexusAllIntegrationLanes().map(lane => ({ ...lane, ...(nexusLaneConfigOverrides[lane.id] || {}) }));
+  const summary = nexusGlobalActivationCenterSummary(lanes);
   return `
     <details class="nexus-activation-center nexus-glass-card" data-nexus-activation-center="true" open>
       <summary>${escapeHtml(translateText("Activation Center"))}</summary>
       <p>${escapeHtml(translateText("Manage provider, vendor, communications, healthcare, agriculture, workforce, maps, and offline lanes locally. Secret values are never stored here."))}</p>
+      <section class="nexus-global-activation-summary" data-testid="nexus-global-activation-center-summary" aria-label="${escapeHtml(translateText("Global activation center summary"))}">
+        <div>
+          <span class="eyebrow">${escapeHtml(translateText("Global operational console"))}</span>
+          <strong>${escapeHtml(translateText("Activation readiness across Nexus"))}</strong>
+          <small data-testid="nexus-global-activation-lane-count">${escapeHtml(translateText("Lanes"))}: ${escapeHtml(String(summary.laneCount))}</small>
+          <small data-testid="nexus-global-activation-partner-count">${escapeHtml(translateText("Partner profiles"))}: ${escapeHtml(String(summary.partnerProfileCount))}</small>
+          <small data-testid="nexus-global-activation-test-live-separation">${escapeHtml(translateText(summary.testLiveSeparation))}</small>
+          <small data-testid="nexus-global-activation-secret-safe-export">${escapeHtml(translateText(summary.secretSafeExport))}</small>
+          <small data-testid="nexus-global-activation-audit-state">${escapeHtml(translateText(summary.activationAuditState))}</small>
+        </div>
+        <div class="nexus-global-activation-stats">
+          <span>${escapeHtml(translateText("Configured inactive"))}: ${escapeHtml(String(summary.configuredInactiveCount))}</span>
+          <span>${escapeHtml(translateText("Active test mode"))}: ${escapeHtml(String(summary.activeTestModeCount))}</span>
+          <span>${escapeHtml(translateText("Live mode available"))}: ${escapeHtml(String(summary.liveModeAvailableCount))}</span>
+          <span>${escapeHtml(translateText("Credential gated"))}: ${escapeHtml(String(summary.credentialGatedCount))}</span>
+        </div>
+        <div class="nexus-global-activation-groups" data-testid="nexus-global-activation-groups">
+          ${summary.groups.map(group => `
+            <article data-testid="nexus-global-activation-group" data-nexus-global-activation-group="${escapeHtml(group.id)}">
+              <strong>${escapeHtml(translateText(group.label))}</strong>
+              <small>${escapeHtml(translateText("Lanes"))}: ${escapeHtml(String(group.laneCount))}</small>
+              <small>${escapeHtml(translateText("Test"))}: ${escapeHtml(String(group.testModeCount))} / ${escapeHtml(translateText("Live"))}: ${escapeHtml(String(group.liveModeCount))}</small>
+              <small>${escapeHtml(translateText("Credential gated"))}: ${escapeHtml(String(group.credentialGatedCount))}</small>
+            </article>
+          `).join("")}
+        </div>
+        <div class="nexus-activation-actions">
+          <button type="button" data-nexus-activation-action="export-global-lanes" data-testid="nexus-global-activation-export">${escapeHtml(translateText("Export global lane registry"))}</button>
+          <button type="button" data-nexus-activation-action="show-partner-registry" data-testid="nexus-global-activation-partner-registry">${escapeHtml(translateText("Show partner registry"))}</button>
+        </div>
+      </section>
       <div class="nexus-activation-grid">
         ${lanes.map(lane => `
-          <article data-nexus-activation-lane="${escapeHtml(lane.id)}" data-lane-status="${escapeHtml(lane.status)}">
+          <article data-testid="nexus-global-activation-lane-card" data-nexus-activation-lane="${escapeHtml(lane.id)}" data-lane-status="${escapeHtml(lane.status)}">
             <div>
               <strong>${escapeHtml(translateText(lane.label))}</strong>
               <small>${escapeHtml(translateText(`${lane.category} / ${lane.region} / ${lane.country}`))}</small>
@@ -38448,6 +38582,7 @@ function bindStatic() {
     if (await handleNexusPilotReviewQueueClick(event)) return;
     if (await handleNexusPilotPlatformActionClick(event)) return;
     if (handleNexusPacketActionClick(event)) return;
+    if (handleNexusGlobalActivationCenterClick(event)) return;
     if (handleNexusLaneActionClick(event)) return;
     if (handleNexusPartnerOnboardingClick(event)) return;
     if (handleNexusWorkflowControllerClick(event)) return;
