@@ -18421,7 +18421,7 @@ function renderNexusHomeModePanel(card = {}) {
       ${actions.length ? `
         <div class="nexus-home-mode-panel-actions" aria-label="${escapeHtml(translateText("Mode quick actions"))}">
           ${actions.slice(0, 6).map(action => `
-            <button type="button" data-nexus-mode-shortcut="mode-panel-${escapeHtml(panel.id || "mode")}" data-nexus-command="${escapeHtml(action.command || action.label || "")}" onclick="return window.nexusHandleStandardUserHomeShortcut ? !window.nexusHandleStandardUserHomeShortcut(event) : true">
+            <button type="button" data-nexus-mode-shortcut="mode-panel-${escapeHtml(panel.id || "mode")}" data-nexus-command="${escapeHtml(action.command || action.label || "")}">
               ${escapeHtml(translateText(action.label || "Open action"))}
             </button>
           `).join("")}
@@ -21656,7 +21656,21 @@ function renderNexusCommandCenterHero() {
   `;
 }
 
+function nexusActiveSidebarId() {
+  const id = normalizeNexusWorkflowId(nexusActiveWorkflowState?.id || "", nexusActiveWorkflowState?.command || "");
+  if (!id) return "home";
+  if (["agriculture", "crop-support", "farm-planning", "field-visit", "logistics"].includes(id)) return "agriculture";
+  if (["chronic-care", "diabetes", "hypertension", "obesity", "rpm", "rtm", "community-health-worker", "clinical-support", "telehealth-intake", "provider-support", "pharmacy-support", "mobile-clinic"].includes(id)) return "chronic-care";
+  if (["agritrade", "marketplace"].includes(id)) return "agritrade";
+  if (["learning", "training"].includes(id)) return "learning";
+  if (["jobs", "workforce", "employer-partner"].includes(id)) return "jobs";
+  if (["maps", "route-planning"].includes(id)) return "maps";
+  if (["resource-assistant", "communications", "email", "sms", "whatsapp", "phone", "telegram", "media", "reminders", "offline"].includes(id)) return "ask";
+  return id;
+}
+
 function renderNexusCommandCenterSidebar() {
+  const activeSidebarId = nexusActiveSidebarId();
   const items = [
     ["home", "Home", "Home", "nexus"],
     ["ask", "Ask Nexus", "help me", "spark"],
@@ -21681,7 +21695,7 @@ function renderNexusCommandCenterSidebar() {
         ${items.map((item, index) => {
           const [id, label, command, icon] = item;
           return `
-            <button type="button" class="${index === 0 ? "active" : ""}" data-nexus-mode-shortcut="sidebar-${escapeHtml(id)}" data-nexus-command="${escapeHtml(command)}" onclick="return window.nexusHandleStandardUserHomeShortcut ? !window.nexusHandleStandardUserHomeShortcut(event) : true">
+            <button type="button" class="${activeSidebarId === id ? "active" : ""}" data-nexus-mode-shortcut="sidebar-${escapeHtml(id)}" data-nexus-command="${escapeHtml(command)}" aria-pressed="${activeSidebarId === id}">
               <span class="nexus-sidebar-icon nexus-sidebar-icon-${escapeHtml(icon)}" aria-hidden="true"></span>
               <span>${escapeHtml(translateText(label))}</span>
             </button>
@@ -21722,6 +21736,7 @@ function renderNexusTopWelcomeArea() {
 }
 
 function renderNexusCoreFeatureCards() {
+  const activeSidebarId = nexusActiveSidebarId();
   const cards = [
     ["agriculture", "Agriculture Help", "Source-aware crop, soil, pest, field, and advisor preparation.", "I need agriculture support.", "agri"],
     ["chronic-care", "Chronic Care Support", "Organize readings, questions, RPM/RTM context, and provider-ready summaries.", "Nexus, record my blood pressure.", "health"],
@@ -21731,11 +21746,11 @@ function renderNexusCoreFeatureCards() {
   return `
     <section class="nexus-core-feature-grid" data-nexus-core-feature-grid="true" aria-label="${escapeHtml(translateText("Core Nexus support areas"))}">
       ${cards.map(([id, title, description, command, accent]) => `
-        <article class="nexus-core-feature-card nexus-feature-card nexus-glass-card nexus-core-feature-${escapeHtml(accent)}" data-nexus-core-feature="${escapeHtml(id)}">
+        <article class="nexus-core-feature-card nexus-feature-card nexus-glass-card nexus-core-feature-${escapeHtml(accent)} ${activeSidebarId === id ? "selected active" : ""}" data-nexus-core-feature="${escapeHtml(id)}">
           <span aria-hidden="true"></span>
           <strong>${escapeHtml(translateText(title))}</strong>
           <p>${escapeHtml(translateText(description))}</p>
-          <button type="button" data-nexus-mode-shortcut="core-${escapeHtml(id)}" data-nexus-command="${escapeHtml(command)}" onclick="return window.nexusHandleStandardUserHomeShortcut ? !window.nexusHandleStandardUserHomeShortcut(event) : true">
+          <button type="button" data-nexus-mode-shortcut="core-${escapeHtml(id)}" data-nexus-command="${escapeHtml(command)}">
             ${escapeHtml(translateText("Open workflow"))}
           </button>
         </article>
@@ -21785,6 +21800,7 @@ function renderNexusProviderSupportUtilityPanel() {
       <strong>${escapeHtml(translateText(configured ? "Provider pathway available" : "Live when configured"))}</strong>
       <p>${escapeHtml(translateText(requestItem ? "A provider/advisor request is prepared for consent and review." : "Nexus can prepare support requests locally. Live routing needs configuration, consent, final approval, and audit."))}</p>
       <small>${escapeHtml(translateText(configured ? "Connect when available after consent." : "Provider pending - Review / request support"))}</small>
+      <button type="button" data-nexus-mode-shortcut="provider-support" data-nexus-command="Nexus, prepare questions for my provider.">${escapeHtml(translateText("Open provider prep"))}</button>
     </section>
   `;
 }
@@ -21806,6 +21822,7 @@ function renderNexusPlatformStatusUtilityPanel() {
           <strong>${escapeHtml(translateText(value))}</strong>
         </div>
       `).join("")}
+      <button type="button" data-nexus-mode-shortcut="activation-center" data-nexus-command="Show activation status">${escapeHtml(translateText("Show activation status"))}</button>
     </section>
   `;
 }
@@ -21819,6 +21836,7 @@ function renderNexusProfileUtilityPanel() {
       <strong>${escapeHtml(profile.name || profile.displayName || translateText("Standard User"))}</strong>
       <small>${escapeHtml(translateText("Standard User"))} - ${escapeHtml(translateText(country || "Global"))}</small>
       <p>${escapeHtml(translateText("Your workspace keeps questions, summaries, and review steps organized without hidden execution."))}</p>
+      <button type="button" data-nexus-mode-shortcut="settings" data-nexus-command="Nexus, show language and safety settings.">${escapeHtml(translateText("Open settings"))}</button>
     </section>
   `;
 }
@@ -21856,6 +21874,7 @@ function renderNexusOperationsShelf() {
 function renderNexusModeLauncher() {
   const shortcutsById = new Map(NEXUS_COMMAND_CENTER_SHORTCUTS.map(item => [item.id, item]));
   const homeItems = NEXUS_HOME_MODE_IDS.map(id => shortcutsById.get(id)).filter(Boolean);
+  const activeWorkflowId = normalizeNexusWorkflowId(nexusActiveWorkflowState?.id || "", nexusActiveWorkflowState?.command || "");
   return `
     <section class="nexus-mode-launcher" data-nexus-mode-launcher="true" aria-label="${escapeHtml(translateText("Nexus mode shortcuts"))}">
       ${homeItems.map(item => {
@@ -21868,7 +21887,7 @@ function renderNexusModeLauncher() {
           media: ["nexus-mode-card-music"]
         }[item.id] || [];
         return `
-        <button type="button" class="nexus-mode-card nexus-mode-card-${escapeHtml(accent)}" data-nexus-mode-shortcut="${escapeHtml(item.id)}" data-nexus-command="${escapeHtml(item.command)}" data-testid="nexus-mode-card-${escapeHtml(item.id)}" onclick="return window.nexusHandleStandardUserHomeShortcut ? !window.nexusHandleStandardUserHomeShortcut(event) : true">
+        <button type="button" class="nexus-mode-card nexus-mode-card-${escapeHtml(accent)} ${activeWorkflowId === item.id ? "selected active" : ""}" data-nexus-mode-shortcut="${escapeHtml(item.id)}" data-nexus-command="${escapeHtml(item.command)}" data-testid="nexus-mode-card-${escapeHtml(item.id)}" aria-pressed="${activeWorkflowId === item.id}">
           ${testAliases.map(alias => `<span hidden data-testid="${escapeHtml(alias)}"></span>`).join("")}
           <span class="nexus-mode-icon" aria-hidden="true">${escapeHtml(presentation.icon || item.icon)}</span>
           <strong>${translateText(presentation.title || item.label)}</strong>
@@ -21889,7 +21908,7 @@ function renderNexusSuggestedActions() {
       </div>
       <div class="nexus-suggested-action-grid">
         ${NEXUS_HOME_SUGGESTED_ACTIONS.map((item, index) => `
-          <button type="button" class="nexus-suggested-action nexus-suggested-action-${escapeHtml(item.accent || "green")}" data-nexus-mode-shortcut="suggested-${index}" data-nexus-command="${escapeHtml(item.command)}" onclick="return window.nexusHandleStandardUserHomeShortcut ? !window.nexusHandleStandardUserHomeShortcut(event) : true">
+          <button type="button" class="nexus-suggested-action nexus-suggested-action-${escapeHtml(item.accent || "green")}" data-nexus-mode-shortcut="suggested-${index}" data-nexus-command="${escapeHtml(item.command)}">
             ${translateText(item.label)}
           </button>
         `).join("")}
@@ -37718,7 +37737,59 @@ function handleNexusStandardUserHomeClick(event) {
   if (!shortcut) return false;
   const modeId = shortcut.dataset.nexusModeShortcut || "";
   const command = shortcut.dataset.nexusCommand || "";
-  if (modeId === "language") return false;
+  const normalizedModeId = String(modeId || "").toLowerCase().replace(/^sidebar-/, "").replace(/^core-/, "");
+  if (normalizedModeId === "home") {
+    event.preventDefault();
+    event.stopPropagation();
+    event.stopImmediatePropagation?.();
+    nexusActiveWorkflowState = null;
+    nexusAgenticBrainLastResult = buildNexusCapabilityOverviewResult(command || "What can Nexus do?");
+    saveNexusRuntimeMemory();
+    setCommandInputs(command || "What can Nexus do?");
+    renderUserWorkspace();
+    return true;
+  }
+  if (normalizedModeId === "settings" || modeId === "language") {
+    event.preventDefault();
+    event.stopPropagation();
+    event.stopImmediatePropagation?.();
+    const input = $("#nexusCommandCenterInput");
+    if (input) input.value = command || "Nexus, show language and safety settings.";
+    setCommandInputs(command || "Nexus, show language and safety settings.");
+    const panel = $("#userLanguagePanel");
+    if (panel) panel.classList.remove("hidden");
+    nexusAgenticBrainLastResult = {
+      ok: true,
+      status: "nexus_settings_panel_opened",
+      mode: "Nexus settings",
+      message: "Language and safety settings are open. No external action was executed.",
+      preparedCards: [{ type: "settings_panel", title: "Language and safety settings", status: "local panel open", localOnly: true }],
+      noExecutionAuthorized: true,
+      localOnly: true,
+      source: "standard_user_home"
+    };
+    renderUserWorkspace();
+    $("#userLanguagePanel")?.classList.remove("hidden");
+    return true;
+  }
+  if (normalizedModeId === "activation-center") {
+    event.preventDefault();
+    event.stopPropagation();
+    event.stopImmediatePropagation?.();
+    setCommandInputs(command || "Show activation status");
+    nexusAgenticBrainLastResult = {
+      ok: true,
+      status: "nexus_activation_center_opened",
+      mode: "Activation Center",
+      message: "Activation status is open in Review workspace details. Live actions remain credential, consent, confirmation, and audit gated.",
+      preparedCards: [{ type: "activation_center", title: "Activation Center", status: "local status open", localOnly: true }],
+      noExecutionAuthorized: true,
+      localOnly: true,
+      source: "standard_user_home"
+    };
+    renderUserWorkspace();
+    return true;
+  }
   const normalizedWorkflowId = normalizeNexusWorkflowId(modeId, command);
   if (normalizedWorkflowId === "media") {
     event.preventDefault();
@@ -37765,8 +37836,7 @@ function bindNexusStandardUserHomeControls() {
     if (element.dataset.nexusHomeBound === "true") return;
     element.dataset.nexusHomeBound = "true";
     element.onclick = event => {
-      handleNexusStandardUserHomeClick(event);
-      return false;
+      return !handleNexusStandardUserHomeClick(event);
     };
     element.addEventListener("click", event => {
       handleNexusStandardUserHomeClick(event);

@@ -53,6 +53,7 @@ function excludes(source, token, label) {
   "function nexusHandleStandardUserHomeShortcut",
   "window.nexusHandleStandardUserHomeShortcut",
   "function bindNexusStandardUserHomeControls",
+  "return !handleNexusStandardUserHomeClick(event);",
   "nexus-agentic-brain-panel-empty",
   "data-nexus-mode-launcher",
   "data-nexus-suggested-actions",
@@ -78,7 +79,6 @@ function excludes(source, token, label) {
   "nexus-voice-bar",
   "nexus-status-pill",
   "data-nexus-mode-shortcut",
-  "onclick=\"return window.nexusHandleStandardUserHomeShortcut",
   "nexus-mode-card",
   "data-nexus-home-mode-panel",
   "data-nexus-home-mode-summary",
@@ -90,6 +90,10 @@ function excludes(source, token, label) {
   "nexus-home-mode-summary-button",
   "nexus-suggested-action"
 ].forEach(token => includes(app, token, `home screen implementation token ${token}`));
+
+[
+  "onclick=\"return window.nexusHandleStandardUserHomeShortcut"
+].forEach(token => excludes(app, token, "Standard User home screen stale inline click trap"));
 
 [
   ["🌱", "Agriculture Help"],
