@@ -256,8 +256,8 @@ const nexusProductIdentity = Object.freeze({
 });
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-345";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v324";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-346";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v325";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
 const VOICE_ATTENTION_DELAY_MS = 900;
@@ -18630,7 +18630,7 @@ function renderNexusPilotPlatformStatusPanel() {
       </div>
       <dl>
         <div><dt>${escapeHtml(translateText("Records"))}</dt><dd>${escapeHtml(String(status.savedRecords ?? "0"))}</dd></div>
-        <div><dt>${escapeHtml(translateText("Review queue"))}</dt><dd>${escapeHtml(String(status.reviewQueueItems ?? "0"))}</dd></div>
+        <div><dt>${escapeHtml(translateText("Provider/Admin review queue"))}</dt><dd>${escapeHtml(String(status.reviewQueueItems ?? "0"))}</dd></div>
         <div><dt>${escapeHtml(translateText("Consent"))}</dt><dd>${escapeHtml(String(status.consentEvents ?? "0"))}</dd></div>
         <div><dt>${escapeHtml(translateText("Audit"))}</dt><dd>${escapeHtml(String(status.auditEvents ?? "0"))}</dd></div>
         <div><dt>${escapeHtml(translateText("Reminders"))}</dt><dd>${escapeHtml(String(status.reminders ?? "0"))}</dd></div>
@@ -18805,7 +18805,7 @@ function renderNexusProductionPlatformRailsPanel() {
           <small>${escapeHtml(translateText("Review queues, audit history, reminders, offline work, and provider readiness without hidden execution."))}</small>
         </article>
         <article data-testid="nexus-live-knowledge-readiness">
-          <span>${escapeHtml(translateText("Internet intelligence"))}</span>
+          <span>${escapeHtml(translateText("Internet Resource status"))}</span>
           <strong>${escapeHtml(translateText(knowledge.liveKnowledge?.testability ? nexusProductionStatusLabel(knowledge.liveKnowledge.testability) : "Disabled"))}</strong>
           <small>${escapeHtml(translateText("Classification, citations, save/attach, review summaries, and audit are ready. Live retrieval needs provider configuration."))}</small>
         </article>
@@ -18832,12 +18832,12 @@ function renderNexusProductionPlatformRailsPanel() {
         <article data-testid="nexus-communications-center-status">
           <span>${escapeHtml(translateText("Communications center"))}</span>
           <strong>${escapeHtml(String(communications.records || 0))} ${escapeHtml(translateText("records"))}</strong>
-          <small>${escapeHtml(translateText("In-app updates and prepared messages are tracked as prepared/not sent unless a provider is actually configured and approved."))}</small>
+          <small>${escapeHtml(translateText("In-app updates and prepared messages are tracked as Prepared locally / not sent unless a provider is actually configured and approved."))}</small>
         </article>
         <article data-testid="nexus-launch-readiness-status">
           <span>${escapeHtml(translateText("Launch readiness"))}</span>
           <strong>${escapeHtml(translateText(launch.blockedForPublicProduction ? "Blocked for public production" : "Pilot ready"))}</strong>
-          <small>${escapeHtml(String(blockers.length))} ${escapeHtml(translateText("open blockers"))}. ${escapeHtml(translateText("Local/demo pilot can run; public launch requires auth, DB, providers, legal/compliance, credentials, and monitoring."))}</small>
+          <small>${escapeHtml(String(blockers.length))} ${escapeHtml(translateText("open blockers"))}. ${escapeHtml(translateText("Controlled pilot can run; public launch requires auth, DB, providers, legal/compliance, credentials, and monitoring."))}</small>
         </article>
         <article data-testid="nexus-language-accessibility-status">
           <span>${escapeHtml(translateText("Language & accessibility"))}</span>

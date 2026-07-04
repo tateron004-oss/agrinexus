@@ -192,7 +192,7 @@ check("production/admin readiness includes internet-resource platform status", h
   "nexusKnowledgeReadiness"
 ]) || hasAll(app, [
   'data-testid="nexus-live-knowledge-readiness"',
-  "Internet intelligence",
+  "Internet Resource status",
   "Classification, citations, save/attach, review summaries, and audit are ready."
 ]));
 
@@ -223,9 +223,9 @@ check("Standard User first screen remains icon-first and uncluttered", hasAll(ap
   "Ask Nexus or choose a support area below"
 ]) && modeLabels.every(label => app.includes(label)) && !app.includes("workflow tab wall"));
 
-check("service worker/cache bumped for frontend change", hasAll(server, ["nexus-behavior-345", "agrinexus-pwa-v324"])
-  && hasAll(app, ["nexus-behavior-345", "agrinexus-pwa-v324"])
-  && hasAll(sw, ["nexus-behavior-345", "agrinexus-pwa-v324"]));
+check("service worker/cache bumped for frontend change", hasAll(server, ["nexus-behavior-346", "agrinexus-pwa-v325"])
+  && hasAll(app, ["nexus-behavior-346", "agrinexus-pwa-v325"])
+  && hasAll(sw, ["nexus-behavior-346", "agrinexus-pwa-v325"]));
 
 check("package alias exists", pkg.scripts["qa:nexus-internet-resource-assistant-platform"] === "node scripts/nexus-internet-resource-assistant-platform-qa.js");
 check("qa-suite safe wiring exists", qaSuite.includes("scripts/nexus-internet-resource-assistant-platform-qa.js"));
