@@ -19019,12 +19019,12 @@ function nexusKnowledgeCategoryForModeId(modeId = "") {
 function buildNexusKnowledgePreparedResult(result = {}) {
   const answer = result?.result || result || {};
   return {
-    status: answer.retrievalStatus || "prepared",
-    message: answer.answer || "Nexus checked the live knowledge rail.",
+    status: answer.retrievalStatus || answer.status || "prepared",
+    message: answer.answer || answer.summary || "Nexus checked the live knowledge rail.",
     preparedCards: [{
       type: "nexus_knowledge_answer",
       title: answer.sourceBacked ? "Source-backed knowledge answer" : "Knowledge answer needs live retrieval",
-      status: answer.sourceBacked ? "source-backed" : answer.retrievalStatus || "disabled",
+      status: answer.sourceBacked ? "source-backed" : answer.retrievalStatus || answer.status || "disabled",
       localOnly: true,
       knowledgeAnswer: answer
     }]
@@ -19037,19 +19037,27 @@ function renderNexusKnowledgeAnswerCard(answer = nexusKnowledgeLastResult) {
   const keyPoints = Array.isArray(answer.keyPoints) ? answer.keyPoints : [];
   const limitations = Array.isArray(answer.limitations) ? answer.limitations : [];
   const followUps = Array.isArray(answer.followUpActions) ? answer.followUpActions : [];
+  const recommendedSteps = Array.isArray(answer.recommendedNextSteps) ? answer.recommendedNextSteps : [];
+  const safetyNotes = Array.isArray(answer.safetyNotes) ? answer.safetyNotes : [];
   const saveTargets = Array.isArray(answer.saveTargets) ? answer.saveTargets : [];
-  const modeLabel = answer.answerMode || answer.retrievalStatus || "disabled";
+  const modeLabel = answer.answerMode || answer.retrievalStatus || answer.status || "disabled";
   const providerOffer = answer.providerOffer || {};
+  const packet = answer.liveKnowledgeResearchPacket || answer.packet || {};
   return `
     <article class="nexus-knowledge-answer-card" data-testid="nexus-knowledge-answer-card" data-source-backed="${answer.sourceBacked ? "true" : "false"}" data-retrieval-status="${escapeHtml(answer.retrievalStatus || "unknown")}" data-answer-mode="${escapeHtml(modeLabel)}">
       <div>
         <span>${escapeHtml(translateText(answer.categoryLabel || "Knowledge"))}</span>
         <strong>${escapeHtml(translateText(answer.sourceBacked ? "Source-backed answer" : "Retrieval not active"))}</strong>
         <small data-testid="nexus-knowledge-answer-mode">${escapeHtml(translateText("Answer mode"))}: ${escapeHtml(translateText(nexusKnowledgeStatusLabel(modeLabel)))}</small>
+        <small data-testid="nexus-live-knowledge-provider-used">${escapeHtml(translateText("Provider"))}: ${escapeHtml(answer.provider || "not-configured")}</small>
+        <small data-testid="nexus-live-knowledge-domain">${escapeHtml(translateText("Domain / mode"))}: ${escapeHtml(answer.domain || answer.category || "general")} ${answer.mode ? `/ ${escapeHtml(answer.mode)}` : ""}</small>
+        <small data-testid="nexus-live-knowledge-packet-type">${escapeHtml(translateText("Packet"))}: ${escapeHtml(packet.packetType || "live_knowledge_research_packet")}</small>
         <small>${escapeHtml(translateText("Retrieved/checked"))}: ${escapeHtml(answer.retrievalCheckedAt || "not checked")}</small>
       </div>
-      <p>${escapeHtml(translateText(answer.answer || "Nexus checked the knowledge rail."))}</p>
+      <p>${escapeHtml(translateText(answer.answer || answer.summary || "Nexus checked the knowledge rail."))}</p>
       <small>${escapeHtml(translateText(answer.safetyNote || "Review sources and local context before acting."))}</small>
+      ${answer.providerError ? `<small data-testid="nexus-live-knowledge-provider-error">${escapeHtml(translateText("Provider error"))}: ${escapeHtml(answer.providerError)}</small>` : ""}
+      ${Array.isArray(answer.missingEnvVars) && answer.missingEnvVars.length ? `<small data-testid="nexus-live-knowledge-missing-env">${escapeHtml(translateText("Missing config"))}: ${answer.missingEnvVars.map(escapeHtml).join(", ")}</small>` : ""}
       ${keyPoints.length ? `
         <div class="nexus-knowledge-keypoints" data-testid="nexus-knowledge-keypoints">
           <strong>${escapeHtml(translateText("Key points"))}</strong>
@@ -19070,8 +19078,15 @@ function renderNexusKnowledgeAnswerCard(answer = nexusKnowledgeLastResult) {
       <div class="nexus-knowledge-limitations" data-testid="nexus-knowledge-limitations">
         <strong>${escapeHtml(translateText("Confidence and limitations"))}</strong>
         <small>${escapeHtml(translateText("Confidence"))}: ${escapeHtml(translateText(answer.confidence || "not_source_backed"))}</small>
+        ${safetyNotes.slice(0, 5).map(item => `<small data-testid="nexus-live-knowledge-safety-note">${escapeHtml(translateText(item))}</small>`).join("")}
         ${limitations.slice(0, 4).map(item => `<small>${escapeHtml(translateText(item))}</small>`).join("")}
       </div>
+      ${recommendedSteps.length ? `
+        <div class="nexus-knowledge-followups" data-testid="nexus-live-knowledge-recommended-next-steps">
+          <strong>${escapeHtml(translateText("Recommended next safe steps"))}</strong>
+          ${recommendedSteps.slice(0, 4).map(item => `<small>${escapeHtml(translateText(item))}</small>`).join("")}
+        </div>
+      ` : ""}
       ${followUps.length ? `
         <div class="nexus-knowledge-followups" data-testid="nexus-knowledge-followups">
           <strong>${escapeHtml(translateText("What Nexus can do next"))}</strong>
@@ -19125,6 +19140,9 @@ function renderNexusKnowledgeRailPanel() {
   const status = nexusKnowledgeStatus || {};
   const sources = Array.isArray(nexusKnowledgeTrustedSources) ? nexusKnowledgeTrustedSources : [];
   const enabled = Boolean(status.enabled && status.configured);
+  const providerList = Array.isArray(status.supportedLiveKnowledgeProviders) ? status.supportedLiveKnowledgeProviders : [];
+  const safeDomains = Array.isArray(status.safeDomainsSupported) ? status.safeDomainsSupported : [];
+  const missingEnv = Array.isArray(status.missingEnvVars) ? status.missingEnvVars : Array.isArray(status.missingEnv) ? status.missingEnv : [];
   return `
     <section class="nexus-knowledge-rail" data-nexus-knowledge-rail="true" data-testid="nexus-knowledge-rail" aria-label="${escapeHtml(translateText("Nexus live knowledge retrieval"))}">
       <div class="nexus-knowledge-rail-header">
@@ -19132,8 +19150,17 @@ function renderNexusKnowledgeRailPanel() {
           <span class="eyebrow">${escapeHtml(translateText("Live knowledge rail"))}</span>
           <strong>${escapeHtml(translateText("Ask Nexus for current, source-backed information"))}</strong>
           <small data-testid="nexus-knowledge-status">${escapeHtml(translateText(enabled ? `Configured: ${status.provider || "provider"}` : status.disabledMessage || "Live internet retrieval is not configured yet. Nexus can still use built-in guidance and prepare a question for review."))}</small>
+          <small data-testid="nexus-live-knowledge-provider-status">${escapeHtml(translateText("Selected provider"))}: ${escapeHtml(status.selectedProvider || "auto")} / ${escapeHtml(status.testabilityStatus || status.testability || "disabled")}</small>
         </div>
         <button type="button" data-nexus-knowledge-action="refresh-status" data-testid="nexus-knowledge-refresh">${escapeHtml(translateText("Refresh"))}</button>
+      </div>
+      <div class="nexus-knowledge-source-row" data-testid="nexus-live-knowledge-all-modes-status">
+        <span>${escapeHtml(translateText("Providers"))}: ${providerList.map(item => escapeHtml(item.provider)).join(", ") || "tavily, brave, exa, generic"}</span>
+        <span>${escapeHtml(translateText("Citation capable"))}: ${escapeHtml(String(Boolean(status.citationCapability || status.citationCapable)))}</span>
+        <span>${escapeHtml(translateText("Missing"))}: ${missingEnv.map(escapeHtml).join(", ") || escapeHtml(translateText("none"))}</span>
+      </div>
+      <div class="nexus-knowledge-source-row" data-testid="nexus-live-knowledge-safe-domains">
+        ${safeDomains.slice(0, 12).map(domain => `<span>${escapeHtml(domain)}</span>`).join("")}
       </div>
       <div class="nexus-knowledge-query-row">
         <label>
@@ -19206,8 +19233,15 @@ function renderNexusInternetResourceHistoryPanel() {
 
 async function refreshNexusKnowledgeRail(options = {}) {
   try {
+    const requestLiveKnowledgeStatus = async () => {
+      try {
+        return await request("/api/nexus/live-knowledge/status", { method: "GET" });
+      } catch {
+        return request("/api/nexus/knowledge/status", { method: "GET" });
+      }
+    };
     const [status, sources] = await Promise.all([
-      request("/api/nexus/knowledge/status", { method: "GET" }),
+      requestLiveKnowledgeStatus(),
       request("/api/nexus/knowledge/trusted-sources", { method: "GET" })
     ]);
     nexusKnowledgeStatus = status || null;
@@ -19245,12 +19279,35 @@ async function runNexusKnowledgeQuery(command = "", options = {}) {
       }
     }
   });
-  nexusKnowledgeLastResult = response.result || null;
-  nexusKnowledgeStatus = response.status || nexusKnowledgeStatus;
+  const liveResponse = await request("/api/nexus/live-knowledge/query", {
+    method: "POST",
+    body: {
+      query: question,
+      domain: options.category || nexusKnowledgeCategoryForCommand(question),
+      mode: options.modeId || options.sourceSurface || "standard_user",
+      locale: languageCode(),
+      maxResults: 5,
+      safetyContext: { sourceSurface: options.sourceSurface || "standard_user" }
+    }
+  });
+  nexusKnowledgeLastResult = {
+    ...(response.result || {}),
+    ...(liveResponse || {}),
+    answer: liveResponse.summary || response.result?.answer || "",
+    retrievalStatus: liveResponse.status || response.result?.retrievalStatus || "",
+    answerMode: liveResponse.status || response.result?.answerMode || "",
+    sourceBacked: liveResponse.status === "source-backed",
+    category: liveResponse.category || response.result?.category || "",
+    categoryLabel: response.result?.categoryLabel || liveResponse.domain || "Live Knowledge",
+    followUpActions: response.result?.followUpActions || [],
+    saveTargets: response.result?.saveTargets || [],
+    providerOffer: response.result?.providerOffer || null
+  };
+  nexusKnowledgeStatus = liveResponse.statusSnapshot || response.status || nexusKnowledgeStatus;
   nexusKnowledgeActionStatus = nexusKnowledgeLastResult?.sourceBacked
     ? "Source-backed answer prepared. Review citations before acting."
-    : (nexusKnowledgeLastResult?.answer || "Knowledge rail checked safely.");
-  nexusAgenticBrainLastResult = buildNexusKnowledgePreparedResult(response);
+    : (nexusKnowledgeLastResult?.answer || nexusKnowledgeLastResult?.summary || "Knowledge rail checked safely.");
+  nexusAgenticBrainLastResult = buildNexusKnowledgePreparedResult(nexusKnowledgeLastResult);
   await refreshNexusInternetResourceHistory({ rerender: false });
   if (options.rerender !== false && experienceMode === "user") renderUserWorkspace();
   return response;
@@ -20111,7 +20168,7 @@ const NEXUS_AGENTIC_WORKFLOW_REGISTRY = Object.freeze([
   { id: "media", label: "Music / Media", category: "media", aliases: ["music", "media"], riskLevel: "low", activationType: "provider-ready", integrationRequired: true, integrationLaneId: "media-provider-lane", allowedWithoutIntegration: true, requiresConfirmationBeforeExecution: false, auditLogRequired: true, outcomeVerificationRequired: true, globalReadiness: "global-ready", offlineSupport: false, packetType: "media_provider_packet" },
   { id: "reminders", label: "Reminders", category: "platform", aliases: ["reminders", "follow up"], riskLevel: "moderate", activationType: "local-only", integrationRequired: false, integrationLaneId: "reminder-lane", allowedWithoutIntegration: true, requiresConfirmationBeforeExecution: true, auditLogRequired: true, outcomeVerificationRequired: true, globalReadiness: "global-ready", offlineSupport: true, packetType: "reminder_packet" },
   { id: "offline", label: "Offline Queue", category: "platform", aliases: ["offline", "queue", "pending actions"], riskLevel: "moderate", activationType: "local-only", integrationRequired: false, integrationLaneId: "offline-queue-lane", allowedWithoutIntegration: true, requiresConfirmationBeforeExecution: false, auditLogRequired: true, outcomeVerificationRequired: true, globalReadiness: "Africa-first / low-bandwidth", offlineSupport: true, packetType: "offline_queue_packet" },
-  { id: "resource-assistant", label: "Resource Assistant", category: "platform", aliases: ["resource assistant", "source assistant", "citation"], riskLevel: "low", activationType: "provider-ready", integrationRequired: false, integrationLaneId: "resource-assistant-lane", allowedWithoutIntegration: true, requiresConfirmationBeforeExecution: false, auditLogRequired: true, outcomeVerificationRequired: true, globalReadiness: "global-ready", offlineSupport: true, packetType: "resource_assistant_packet" }
+  { id: "resource-assistant", label: "Live Knowledge / Resource Assistant", category: "platform", aliases: ["resource assistant", "source assistant", "citation", "live knowledge", "internet research"], riskLevel: "low", activationType: "provider-ready", integrationRequired: false, integrationLaneId: "resource-assistant-lane", allowedWithoutIntegration: true, requiresConfirmationBeforeExecution: false, auditLogRequired: true, outcomeVerificationRequired: true, globalReadiness: "global-ready", offlineSupport: true, packetType: "live_knowledge_research_packet" }
 ]);
 
 const NEXUS_INTEGRATION_LANES = Object.freeze([
@@ -20130,7 +20187,7 @@ const NEXUS_INTEGRATION_LANES = Object.freeze([
   { id: "media-provider-lane", label: "Media provider lane", category: "media", region: "global", country: "multi-country", partnerName: "User-selected media provider", supportedServices: ["provider search", "music/media handoff"], integrationType: "external-provider-link", status: "configured_inactive", testModeAvailable: false, liveModeAvailable: false, requiresConfirmation: false, packetType: "media_provider_packet", lastActionStatus: "prepared", lastVerifiedAt: "", activationChecklist: ["provider account", "copyright-safe handoff", "no hosted downloads"] },
   { id: "reminder-lane", label: "Reminder lane", category: "platform", region: "global", country: "multi-country", partnerName: "Local reminder engine", supportedServices: ["local reminders", "follow-up prompts"], integrationType: "local-runtime", status: "active_test_mode", testModeAvailable: true, liveModeAvailable: false, requiresConfirmation: true, packetType: "reminder_packet", lastActionStatus: "prepared", lastVerifiedAt: "", activationChecklist: ["local confirmation", "user review", "audit trail"] },
   { id: "offline-queue-lane", label: "Offline queue lane", category: "platform", region: "Africa-first", country: "multi-country", partnerName: "Nexus local offline queue", supportedServices: ["offline packets", "retry later", "manual completion"], integrationType: "local-storage", status: "active_test_mode", testModeAvailable: true, liveModeAvailable: false, requiresConfirmation: false, packetType: "offline_queue_packet", lastActionStatus: "queued", lastVerifiedAt: "", activationChecklist: ["local-only label", "clear/reset", "retry when active"] },
-  { id: "resource-assistant-lane", label: "Resource assistant lane", category: "platform", region: "global", country: "multi-country", partnerName: "Nexus source registry", supportedServices: ["source-backed answers", "citations when configured"], integrationType: "source-registry-or-live-retrieval", status: "configured_inactive", testModeAvailable: true, liveModeAvailable: false, requiresConfirmation: false, packetType: "resource_assistant_packet", lastActionStatus: "prepared", lastVerifiedAt: "", activationChecklist: ["source registry", "live retrieval config", "citation honesty"] }
+  { id: "resource-assistant-lane", label: "Live Knowledge / resource assistant lane", category: "platform", region: "global", country: "multi-country", partnerName: "Nexus Live Knowledge provider registry", supportedServices: ["live knowledge research", "source-backed answers", "citations when configured", "Tavily / Brave / Exa / generic provider fallback"], integrationType: "source-registry-or-live-retrieval", status: "configured_inactive", testModeAvailable: true, liveModeAvailable: false, requiresConfirmation: false, packetType: "live_knowledge_research_packet", lastActionStatus: "prepared", lastVerifiedAt: "", activationChecklist: ["source registry", "live retrieval config", "provider priority: Tavily, Brave, Exa, generic", "citation honesty", "no downstream execution"] }
 ]);
 
 const NEXUS_INTEGRATION_LANE_STATUSES = Object.freeze(["not_configured", "configured_inactive", "active_test_mode", "active_live", "disabled", "failed", "needs_user_confirmation", "offline", "credential_missing"]);
@@ -20141,6 +20198,7 @@ const NEXUS_PACKET_TYPES = Object.freeze([
   "workforce_referral", "job_referral", "employer_partner_referral", "training_enrollment_request", "learning_plan_request",
   "email_message", "sms_message", "whatsapp_message", "telegram_message", "call_intent",
   "route_planning_request", "location_review_request", "field_visit_location_packet"
+  , "live_knowledge_research_packet"
 ]);
 const NEXUS_REVIEW_QUEUE_TYPES = Object.freeze(["provider", "vendor", "admin", "clinical", "telehealth", "pharmacy", "mobile-clinic", "agriculture-vendor", "workforce", "marketplace"]);
 const NEXUS_PARTNER_ONBOARDING_TYPES = Object.freeze(["Healthcare provider", "Telehealth provider", "Pharmacy", "Mobile clinic", "Community health worker partner", "Agriculture advisor/vendor", "Input supplier", "Marketplace buyer/seller partner", "Logistics partner", "Employer", "Training provider", "Communications provider"]);
@@ -21105,6 +21163,9 @@ const NEXUS_AGENT_RUNTIME = Object.freeze({
   showQueuedActions: showNexusQueuedActions,
   showFailedActions: showNexusFailedActions,
   showFollowUps: showNexusFollowUps,
+  liveKnowledgeStatus: () => nexusKnowledgeStatus,
+  liveKnowledgeQuery: runNexusKnowledgeQuery,
+  buildLiveKnowledgePacket: answer => answer?.liveKnowledgeResearchPacket || answer?.packet || { packetType: "live_knowledge_research_packet", noExecutionAuthorized: true },
   clearSensitiveLocalData: clearNexusSensitiveLocalData
 });
 

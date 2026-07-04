@@ -53,6 +53,7 @@
     "qa:nexus-pilot-browser-readiness": "node scripts/nexus-pilot-browser-readiness-qa.js",
     "qa:nexus-production-platform-rails": "node scripts/nexus-production-platform-rails-qa.js",
     "qa:nexus-live-knowledge-retrieval": "node scripts/nexus-live-knowledge-retrieval-qa.js",
+    "qa:nexus-live-knowledge-all-modes": "node scripts/nexus-live-knowledge-all-modes-qa.js",
     "qa:nexus-layered-internet-intelligence": "node scripts/nexus-layered-internet-intelligence-qa.js",
     "qa:nexus-endgame-production-platform": "node scripts/nexus-endgame-production-platform-qa.js",
     "qa:nexus-internet-resource-provider-pathway": "node scripts/nexus-internet-resource-provider-pathway-qa.js",

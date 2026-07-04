@@ -28115,8 +28115,79 @@ function nexusKnowledgeSourceList() {
   ];
 }
 
+const NEXUS_LIVE_KNOWLEDGE_PROVIDER_PRIORITY = Object.freeze(["tavily", "brave", "exa", "generic"]);
+const NEXUS_LIVE_KNOWLEDGE_ALLOWED_PROVIDERS = Object.freeze(["auto", "tavily", "brave", "exa"]);
+const NEXUS_LIVE_KNOWLEDGE_SHARED_DOMAINS = Object.freeze([
+  "agriculture", "crop", "farm", "field", "logistics", "route",
+  "training", "workforce", "employer",
+  "chronic", "diabetes", "hypertension", "obesity", "RPM", "RTM", "CHW",
+  "telehealth", "pharmacy", "mobile clinic", "marketplace",
+  "communications", "email", "SMS", "WhatsApp", "phone", "Telegram"
+]);
+
 function nexusLiveKnowledgeProviderPreference(env = process.env) {
-  return String(env.NEXUS_LIVE_KNOWLEDGE_PROVIDER || env.WEB_SEARCH_PROVIDER || "").trim().toLowerCase();
+  const raw = String(env.NEXUS_LIVE_KNOWLEDGE_PROVIDER || env.WEB_SEARCH_PROVIDER || "auto").trim().toLowerCase();
+  return raw || "auto";
+}
+
+function nexusLiveKnowledgeDomainForInput(domain = "", mode = "", query = "") {
+  const raw = String(domain || mode || "").trim();
+  const text = `${raw} ${query || ""}`.toLowerCase();
+  if (/\b(diabetes|glucose|blood sugar)\b/.test(text)) return "diabetes";
+  if (/\b(hypertension|blood pressure|bp)\b/.test(text)) return "hypertension";
+  if (/\b(obesity|weight)\b/.test(text)) return "obesity";
+  if (/\b(rpm|remote patient monitoring)\b/.test(text)) return "RPM";
+  if (/\b(rtm|remote therapeutic monitoring)\b/.test(text)) return "RTM";
+  if (/\b(chw|community health worker)\b/.test(text)) return "CHW";
+  if (/\b(chronic|health|clinic|medical|patient)\b/.test(text)) return "chronic";
+  if (/\b(telehealth|video visit|provider bridge|provider questions)\b/.test(text)) return "telehealth";
+  if (/\b(pharmacy|medication|medicine|prescription|refill)\b/.test(text)) return "pharmacy";
+  if (/\b(mobile clinic|clinic van|outreach)\b/.test(text)) return "mobile clinic";
+  if (/\b(whatsapp)\b/.test(text)) return "WhatsApp";
+  if (/\b(sms|text message)\b/.test(text)) return "SMS";
+  if (/\b(email)\b/.test(text)) return "email";
+  if (/\b(phone|call)\b/.test(text)) return "phone";
+  if (/\b(telegram)\b/.test(text)) return "Telegram";
+  if (/\b(message|communications|communication)\b/.test(text)) return "communications";
+  if (/\b(marketplace|vendor|buyer|seller|agritrade)\b/.test(text)) return "marketplace";
+  if (/\b(logistics|delivery|rural delivery)\b/.test(text)) return "logistics";
+  if (/\b(route|map|field visit|directions)\b/.test(text)) return "route";
+  if (/\b(field|farm visit)\b/.test(text)) return "field";
+  if (/\b(employer)\b/.test(text)) return "employer";
+  if (/\b(workforce|jobs|career)\b/.test(text)) return "workforce";
+  if (/\b(training|learning|literacy|course)\b/.test(text)) return "training";
+  if (/\b(crop|cassava|maize|pest|disease|yellow leaves)\b/.test(text)) return "crop";
+  if (/\b(farm|irrigation|soil)\b/.test(text)) return "farm";
+  if (/\b(agriculture|agronomy)\b/.test(text)) return "agriculture";
+  return raw || "general";
+}
+
+function nexusLiveKnowledgeCategoryForDomain(domain = "general") {
+  const normalized = String(domain || "general").trim();
+  if (["diabetes", "hypertension", "obesity", "RPM", "RTM", "CHW", "chronic"].includes(normalized)) return "chronicCare";
+  if (normalized === "telehealth") return "telehealth";
+  if (normalized === "pharmacy") return "pharmacy";
+  if (normalized === "mobile clinic") return "mobileClinic";
+  if (["crop", "farm", "field", "agriculture"].includes(normalized)) return "agriculture";
+  if (["logistics", "route"].includes(normalized)) return "maps";
+  if (["training"].includes(normalized)) return "learning";
+  if (["workforce", "employer"].includes(normalized)) return "jobs";
+  if (normalized === "marketplace") return "marketplace";
+  if (["communications", "email", "SMS", "WhatsApp", "phone", "Telegram"].includes(normalized)) return "general";
+  return "general";
+}
+
+function nexusLiveKnowledgeProviderCatalog(env = process.env) {
+  return [
+    { provider: "tavily", requiredEnvVars: ["TAVILY_API_KEY"], fallbackEnvVars: ["NEXUS_LIVE_KNOWLEDGE_API_KEY"], citationCapability: true, configured: Boolean(String(env.TAVILY_API_KEY || "").trim()) || nexusLiveKnowledgeGenericApiKeyApplies("tavily", env) },
+    { provider: "brave", requiredEnvVars: ["BRAVE_SEARCH_API_KEY"], fallbackEnvVars: ["NEXUS_LIVE_KNOWLEDGE_API_KEY"], citationCapability: true, configured: Boolean(String(env.BRAVE_SEARCH_API_KEY || "").trim()) || nexusLiveKnowledgeGenericApiKeyApplies("brave", env) },
+    { provider: "exa", requiredEnvVars: ["EXA_API_KEY"], fallbackEnvVars: ["NEXUS_LIVE_KNOWLEDGE_API_KEY"], citationCapability: true, configured: Boolean(String(env.EXA_API_KEY || "").trim()) || nexusLiveKnowledgeGenericApiKeyApplies("exa", env) },
+    { provider: "generic", requiredEnvVars: ["NEXUS_LIVE_KNOWLEDGE_API_KEY"], fallbackEnvVars: [], citationCapability: true, configured: Boolean(String(env.NEXUS_LIVE_KNOWLEDGE_API_KEY || "").trim()) }
+  ].map(item => ({
+    ...item,
+    missingEnvVars: item.configured ? [] : item.requiredEnvVars.filter(envName => !String(env[envName] || "").trim()),
+    secretValuesReturned: false
+  }));
 }
 
 function nexusLiveKnowledgeGenericApiKeyApplies(provider, env = process.env) {
@@ -28157,12 +28228,19 @@ function nexusKnowledgeProviderErrorMessage(payload = {}, fallback = "Provider r
 
 function nexusKnowledgeProviderStatus(env = process.env) {
   const providerPreference = nexusLiveKnowledgeProviderPreference(env);
+  const allModeProviders = nexusLiveKnowledgeProviderCatalog(env);
+  const selectedProviderPreference = NEXUS_LIVE_KNOWLEDGE_ALLOWED_PROVIDERS.includes(providerPreference) ? providerPreference : "unsupported";
+  const providerPriority = NEXUS_LIVE_KNOWLEDGE_PROVIDER_PRIORITY;
+  const selectedAllModeProvider = selectedProviderPreference === "auto"
+    ? allModeProviders.find(item => providerPriority.includes(item.provider) && item.configured)
+    : allModeProviders.find(item => item.provider === selectedProviderPreference && item.configured);
   const openAiReady = nexusFlagEnabled(env, "OPENAI_WEB_SEARCH_ENABLED") && Boolean(String(env.OPENAI_API_KEY || "").trim());
   const providerEndpointReady = Boolean(String(env.NEXUS_LIVE_KNOWLEDGE_PROVIDER_ENDPOINT || "").trim());
   const supportedProviders = [
     { provider: "tavily", requiredEnv: ["TAVILY_API_KEY"], fallbackEnv: ["NEXUS_LIVE_KNOWLEDGE_API_KEY"], citationCapable: true },
     { provider: "brave", requiredEnv: ["BRAVE_SEARCH_API_KEY"], fallbackEnv: ["NEXUS_LIVE_KNOWLEDGE_API_KEY"], citationCapable: true },
     { provider: "exa", requiredEnv: ["EXA_API_KEY"], fallbackEnv: ["NEXUS_LIVE_KNOWLEDGE_API_KEY"], citationCapable: true },
+    { provider: "generic", requiredEnv: ["NEXUS_LIVE_KNOWLEDGE_API_KEY"], citationCapable: true },
     { provider: "openai-web-search", requiredEnv: ["OPENAI_WEB_SEARCH_ENABLED", "OPENAI_API_KEY"], citationCapable: true },
     { provider: "provider-endpoint", requiredEnv: ["NEXUS_LIVE_KNOWLEDGE_PROVIDER_ENDPOINT"], citationCapable: true }
   ];
@@ -28179,9 +28257,11 @@ function nexusKnowledgeProviderStatus(env = process.env) {
       ? providerEndpointReady
       : providerMissingEnv(item).length === 0;
   const selectedByPreference = supportedProviders.find(item => item.provider === providerPreference);
-  const unsupportedProvider = Boolean(providerPreference && !supportedProviders.some(item => item.provider === providerPreference));
+  const unsupportedProvider = Boolean(providerPreference && !["auto", ...supportedProviders.map(item => item.provider)].includes(providerPreference));
   const selected = unsupportedProvider
     ? null
+    : selectedAllModeProvider
+    ? supportedProviders.find(item => item.provider === selectedAllModeProvider.provider)
     : selectedByPreference && isProviderConfigured(selectedByPreference)
     ? selectedByPreference
     : supportedProviders.find(isProviderConfigured);
@@ -28197,6 +28277,13 @@ function nexusKnowledgeProviderStatus(env = process.env) {
     : preferredMissing.length
       ? preferredMissing
       : ["TAVILY_API_KEY", "BRAVE_SEARCH_API_KEY", "EXA_API_KEY", "NEXUS_LIVE_KNOWLEDGE_API_KEY with exact provider", "OPENAI_WEB_SEARCH_ENABLED + OPENAI_API_KEY", "NEXUS_LIVE_KNOWLEDGE_PROVIDER_ENDPOINT"];
+  const allModeMissing = configured
+    ? []
+    : selectedProviderPreference === "unsupported"
+      ? ["NEXUS_LIVE_KNOWLEDGE_PROVIDER"]
+      : selectedProviderPreference === "auto"
+        ? ["TAVILY_API_KEY", "BRAVE_SEARCH_API_KEY", "EXA_API_KEY", "NEXUS_LIVE_KNOWLEDGE_API_KEY"]
+        : (allModeProviders.find(item => item.provider === selectedProviderPreference)?.missingEnvVars || []);
   return {
     ok: true,
     enabled,
@@ -28210,8 +28297,21 @@ function nexusKnowledgeProviderStatus(env = process.env) {
     unsupportedProvider,
     providerState: !enabled ? "disabled" : unsupportedProvider ? "unsupported_provider" : configured ? "configured" : "missing_config",
     providerSelectionMessage: unsupportedProvider
-      ? "NEXUS_LIVE_KNOWLEDGE_PROVIDER must be one of: tavily, brave, exa, openai-web-search, provider-endpoint."
+      ? "NEXUS_LIVE_KNOWLEDGE_PROVIDER must be one of: auto, tavily, brave, exa."
       : "",
+    providerPriority,
+    liveKnowledgeProviderPriority: providerPriority,
+    supportedLiveKnowledgeProviders: allModeProviders,
+    requiredEnvVars: selectedProviderPreference === "auto"
+      ? ["TAVILY_API_KEY", "BRAVE_SEARCH_API_KEY", "EXA_API_KEY", "NEXUS_LIVE_KNOWLEDGE_API_KEY"]
+      : (allModeProviders.find(item => item.provider === selectedProviderPreference)?.requiredEnvVars || []),
+    missingEnvVars: allModeMissing,
+    citationCapability: configured,
+    citationCapable: configured,
+    testabilityStatus: !enabled ? "disabled" : unsupportedProvider ? "blocked" : configured ? "ready" : "credential-blocked",
+    safeDomains: NEXUS_LIVE_KNOWLEDGE_SHARED_DOMAINS,
+    safeDomainsSupported: NEXUS_LIVE_KNOWLEDGE_SHARED_DOMAINS,
+    timestamp: new Date().toISOString(),
     maxResults: Number(env.NEXUS_LIVE_KNOWLEDGE_MAX_RESULTS || 5),
     timeoutMs: Number(env.NEXUS_LIVE_KNOWLEDGE_TIMEOUT_MS || 9000),
     safeMode: String(env.NEXUS_LIVE_KNOWLEDGE_SAFE_MODE || "true").toLowerCase() !== "false",
@@ -28223,7 +28323,8 @@ function nexusKnowledgeProviderStatus(env = process.env) {
     noFakeCitations: true,
     noExecutionAuthorized: true,
     noLocationPermissionRequested: true,
-    noDispatchAuthorized: true
+    noDispatchAuthorized: true,
+    noSecretValuesReturned: true
   };
 }
 
@@ -28847,6 +28948,243 @@ async function nexusIntelligenceAsk(db, body = {}, user = null, env = process.en
     },
     audit: auditEvent
   };
+}
+
+async function runNexusLiveKnowledgeProviderQuery(query = "", provider = "auto", env = process.env) {
+  const selectedProvider = String(provider || "auto").toLowerCase();
+  const status = nexusKnowledgeProviderStatus(env);
+  const chosen = selectedProvider === "auto" ? status.provider : selectedProvider;
+  const attempts = [];
+  if (chosen === "tavily") attempts.push(() => fetchTavilyKnowledge(query));
+  if (chosen === "brave") attempts.push(() => fetchBraveKnowledge(query));
+  if (chosen === "exa") attempts.push(() => fetchExaKnowledge(query));
+  if (chosen === "generic") {
+    attempts.push(async () => ({
+      provider: "generic",
+      answer: "Generic Live Knowledge provider key is configured, but no provider-specific adapter is active. Nexus returned a controlled test-mode response without fabricating citations.",
+      results: [],
+      genericProviderRequiresAdapter: true
+    }));
+  }
+  if (!attempts.length) {
+    attempts.push(() => fetchTavilyKnowledge(query), () => fetchBraveKnowledge(query), () => fetchExaKnowledge(query));
+  }
+  const errors = [];
+  for (const attempt of attempts) {
+    try {
+      const result = await attempt();
+      if (!result) {
+        errors.push(`${chosen || "provider"} was not configured for this attempt`);
+        continue;
+      }
+      const citations = normalizeNexusKnowledgeCitations(result.results || []);
+      return {
+        ok: true,
+        provider: result.provider || chosen || "web-search",
+        query,
+        answer: sanitizePilotText(result.answer || citations.map(item => item.snippet).filter(Boolean).slice(0, 3).join(" "), 1600),
+        citations,
+        sources: citations,
+        providerStatus: result.genericProviderRequiresAdapter ? "test_mode_adapter_required" : "source_backed",
+        retrievedAt: new Date().toISOString()
+      };
+    } catch (error) {
+      errors.push(sanitizePilotText(error.message || String(error), 220));
+    }
+  }
+  return {
+    ok: false,
+    provider: chosen || "web-search",
+    query,
+    providerStatus: "provider-error",
+    providerError: errors[0] || "No configured live knowledge provider returned a safe result.",
+    errors: errors.slice(0, 3),
+    retrievedAt: new Date().toISOString()
+  };
+}
+
+function nexusLiveKnowledgeSafetyProfile(domain = "general", query = "") {
+  const category = nexusLiveKnowledgeCategoryForDomain(domain);
+  const medical = ["health", "chronicCare", "telehealth", "pharmacy", "mobileClinic"].includes(category);
+  const communications = ["communications", "email", "SMS", "WhatsApp", "phone", "Telegram"].includes(domain);
+  const marketplace = domain === "marketplace";
+  const location = ["route", "logistics", "field"].includes(domain);
+  const safetyNotes = [
+    "Live Knowledge research never authorizes execution by itself.",
+    "Nexus returns source context for review and keeps provider actions behind separate approval gates."
+  ];
+  if (medical) safetyNotes.push("Health content is education and preparation only; it does not diagnose, does not prescribe, and does not replace a clinician.");
+  if (communications) safetyNotes.push("Communications research can prepare context only; Nexus does not send SMS, WhatsApp, email, Telegram, or calls from this response.");
+  if (marketplace) safetyNotes.push("Marketplace research does not create listings, purchases, payments, or commitments.");
+  if (location) safetyNotes.push("Route or logistics research uses typed context only and does not request browser location or dispatch services.");
+  return {
+    category,
+    safetyClass: medical ? "clinical_education_review" : communications || marketplace || location ? "high_impact_preparation" : "low_risk_research",
+    safetyNotes,
+    requiresReview: medical || communications || marketplace || location,
+    requiresConfirmationForNextAction: medical || communications || marketplace || location,
+    recommendedNextSteps: [
+      "Review citations and source dates.",
+      medical ? "Prepare questions for a qualified provider." : "Save the research packet for the matching Nexus workflow.",
+      "Use a separate confirmation gate before any external action."
+    ]
+  };
+}
+
+function buildNexusLiveKnowledgeResearchPacket(payload = {}) {
+  const timestamp = payload.timestamp || new Date().toISOString();
+  return {
+    type: "live_knowledge_research_packet",
+    packetType: "live_knowledge_research_packet",
+    packetId: crypto.randomUUID(),
+    query: sanitizePilotText(payload.query || "", 600),
+    domain: sanitizePilotText(payload.domain || "general", 120),
+    mode: sanitizePilotText(payload.mode || "", 120),
+    provider: sanitizePilotText(payload.provider || "not-configured", 80),
+    status: sanitizePilotText(payload.status || "credential-blocked", 80),
+    citedSummary: sanitizePilotText(payload.summary || "", 1600),
+    citations: Array.isArray(payload.citations) ? payload.citations.slice(0, 8) : [],
+    sourceList: Array.isArray(payload.sources) ? payload.sources.slice(0, 8) : [],
+    safetyClass: sanitizePilotText(payload.safetyClass || "low_risk_research", 120),
+    safetyNotes: Array.isArray(payload.safetyNotes) ? payload.safetyNotes.map(item => sanitizePilotText(item, 260)).slice(0, 8) : [],
+    recommendedNextSafeAction: sanitizePilotText(payload.recommendedNextSafeAction || "Review sources and save the packet before any downstream action.", 260),
+    confirmationRequiredDownstream: Boolean(payload.requiresConfirmationForNextAction),
+    reviewRequiredClinicalOrProvider: Boolean(payload.requiresReview),
+    timestamp,
+    noExecutionAuthorized: true,
+    noProviderHandoffAuthorized: true,
+    noSecretValuesReturned: true
+  };
+}
+
+async function nexusLiveKnowledgeAllModesQuery(db, body = {}, user = null, env = process.env) {
+  ensureNexusProductionRailsState(db);
+  const query = sanitizePilotText(body.query || body.question || body.command || "", 700);
+  if (!query) return { ok: false, error: "query_required" };
+  const mode = sanitizePilotText(body.mode || body.modeId || body.context?.modeId || "", 120);
+  const domain = nexusLiveKnowledgeDomainForInput(body.domain || body.category, mode, query);
+  const category = nexusLiveKnowledgeCategoryForDomain(domain);
+  const status = nexusKnowledgeProviderStatus(env);
+  const safety = nexusLiveKnowledgeSafetyProfile(domain, query);
+  const timestamp = new Date().toISOString();
+  let responseStatus = "credential-blocked";
+  let provider = status.provider || "not-configured";
+  let summary = "Live Knowledge is not configured yet. Nexus can prepare this research request, save it for review, and avoid fake citations.";
+  let citations = [];
+  let sources = [];
+  let providerError = "";
+
+  addNexusPilotAuditEvent(db, "live_knowledge_research_requested", {
+    actor: user?.name || "Standard User",
+    role: user?.role || "Standard User",
+    mode: domain,
+    description: `Live Knowledge research requested for ${domain}. No execution occurred.`
+  });
+
+  if (!status.enabled) {
+    responseStatus = "disabled";
+  } else if (!status.configured) {
+    responseStatus = "credential-blocked";
+  } else {
+    const providerResult = await runNexusLiveKnowledgeProviderQuery(query, status.selectedProvider, env);
+    provider = providerResult.provider || provider;
+    if (providerResult.ok && providerResult.citations?.length) {
+      responseStatus = "source-backed";
+      summary = providerResult.answer || "Nexus retrieved source-backed information. Review citations before using it downstream.";
+      citations = providerResult.citations;
+      sources = providerResult.sources || providerResult.citations;
+    } else if (providerResult.ok && providerResult.providerStatus === "test_mode_adapter_required") {
+      responseStatus = "provider-test-mode";
+      summary = providerResult.answer;
+    } else {
+      responseStatus = "provider-error";
+      providerError = sanitizePilotText(providerResult.providerError || "Provider failed safely.", 260);
+      summary = "The configured Live Knowledge provider failed safely. Nexus did not fabricate citations and did not authorize any external action.";
+    }
+  }
+
+  const packet = buildNexusLiveKnowledgeResearchPacket({
+    query,
+    domain,
+    mode,
+    provider,
+    status: responseStatus,
+    summary,
+    citations,
+    sources,
+    safetyClass: safety.safetyClass,
+    safetyNotes: safety.safetyNotes,
+    recommendedNextSafeAction: safety.recommendedNextSteps[1],
+    requiresConfirmationForNextAction: safety.requiresConfirmationForNextAction,
+    requiresReview: safety.requiresReview,
+    timestamp
+  });
+
+  const result = {
+    ok: true,
+    status: responseStatus,
+    provider,
+    domain,
+    mode,
+    category,
+    query,
+    summary,
+    answer: summary,
+    citations,
+    sources,
+    safetyNotes: safety.safetyNotes,
+    recommendedNextSteps: safety.recommendedNextSteps,
+    requiresReview: safety.requiresReview,
+    requiresConfirmationForNextAction: safety.requiresConfirmationForNextAction,
+    timestamp,
+    providerError,
+    packet,
+    liveKnowledgeResearchPacket: packet,
+    statusSnapshot: status,
+    missingEnvVars: status.missingEnvVars || status.missingEnv || [],
+    noExecutionAuthorized: true,
+    noProviderHandoffAuthorized: true,
+    noProviderContactAuthorized: true,
+    noLocationPermissionRequested: true,
+    noDispatchAuthorized: true,
+    noPaymentAuthorized: true,
+    noMedicalActionAuthorized: true,
+    noFakeCitations: citations.length === 0,
+    noSecretValuesReturned: true
+  };
+
+  const queryRecord = {
+    id: packet.packetId,
+    questionSummary: query.slice(0, 180),
+    category,
+    categoryLabel: NEXUS_KNOWLEDGE_TRUSTED_SOURCES[category]?.label || "Live Knowledge",
+    retrievalStatus: responseStatus,
+    answerMode: responseStatus,
+    sourceBacked: responseStatus === "source-backed",
+    provider,
+    citationCount: citations.length,
+    retrievalNeeded: true,
+    retrievalConfigured: Boolean(status.enabled && status.configured),
+    answer: sanitizePilotText(summary, 900),
+    keyPoints: safety.recommendedNextSteps,
+    citations,
+    limitations: safety.safetyNotes,
+    followUpActions: nexusKnowledgeFollowUpActions(category),
+    saveTargets: nexusKnowledgeSaveTargets(category),
+    liveKnowledgeResearchPacket: packet,
+    createdAt: timestamp,
+    updatedAt: timestamp,
+    noExecutionAuthorized: true,
+    noSensitiveDetailLogged: true
+  };
+  db.nexusKnowledgeQueries.unshift(queryRecord);
+  addNexusPilotAuditEvent(db, "live_knowledge_research_packet_prepared", {
+    actor: user?.name || "Standard User",
+    role: user?.role || "Standard User",
+    mode: domain,
+    description: `Live Knowledge research packet prepared with status ${responseStatus}. No execution occurred.`
+  });
+  return result;
 }
 
 function nexusKnowledgeSaveResult(db, body = {}, user = null) {
@@ -30520,6 +30858,10 @@ async function api(req, res, url) {
     return send(res, 200, nexusKnowledgeProviderStatus(process.env));
   }
 
+  if (url.pathname === "/api/nexus/live-knowledge/status" && req.method === "GET") {
+    return send(res, 200, nexusKnowledgeProviderStatus(process.env));
+  }
+
   if (url.pathname === "/api/nexus/knowledge/trusted-sources" && req.method === "GET") {
     return send(res, 200, { ok: true, categories: nexusKnowledgeSourceList(), safety: "Trusted source preferences guide retrieval. Nexus still shows citations and safety limits for user review." });
   }
@@ -30583,6 +30925,13 @@ async function api(req, res, url) {
 
   if (url.pathname === "/api/nexus/knowledge/query" && req.method === "POST") {
     const result = await nexusKnowledgeQuery(db, await readBody(req), user, process.env);
+    if (!result.ok) return send(res, 400, result);
+    await writeDb(db);
+    return send(res, 200, result);
+  }
+
+  if (url.pathname === "/api/nexus/live-knowledge/query" && req.method === "POST") {
+    const result = await nexusLiveKnowledgeAllModesQuery(db, await readBody(req), user, process.env);
     if (!result.ok) return send(res, 400, result);
     await writeDb(db);
     return send(res, 200, result);
