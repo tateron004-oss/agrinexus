@@ -19038,6 +19038,18 @@ const NEXUS_AGRICULTURE_INTELLIGENCE_SECTIONS = Object.freeze([
   { id: "vendor-research", label: "Vendor Research Handoff", command: "Nexus, research vendor considerations for farm inputs.", description: "Compare vendor considerations; no contact or purchase." }
 ]);
 
+const NEXUS_TRAINING_WORKFORCE_SECTIONS = Object.freeze([
+  { id: "digital-literacy", label: "Digital Literacy", command: "Nexus, build a digital literacy plan.", description: "Device, internet, privacy, and communication basics." },
+  { id: "agriculture-literacy", label: "Agriculture Training", command: "Nexus, research agriculture training options.", description: "Crop learning, market basics, and local expert review." },
+  { id: "health-literacy", label: "Health Literacy", command: "Nexus, prepare health literacy education.", description: "Plain-language health education; no diagnosis or prescribing." },
+  { id: "ai-literacy", label: "AI Literacy", command: "Nexus, teach safe AI literacy.", description: "Source checking, privacy, and safe assistant use." },
+  { id: "workforce-pathway", label: "Workforce Pathway", command: "Nexus, build a workforce pathway packet.", description: "Skills, role targets, credentials, and support needs." },
+  { id: "resume-interview", label: "Resume / Interview Prep", command: "Nexus, prepare resume and interview practice.", description: "Organize experience and practice answers for review." },
+  { id: "credential-pathway", label: "Credential Pathway", command: "Nexus, research credential requirements.", description: "Prerequisites, provider legitimacy, costs, and timing." },
+  { id: "employer-research", label: "Employer Partner Research", command: "Nexus, research employer partner fit.", description: "Sector needs and hiring fit; no employer contact." },
+  { id: "learning-recommendations", label: "Learning Recommendations", command: "Nexus, recommend a learning path.", description: "Source-aware courses and low-bandwidth learning steps." }
+]);
+
 function buildNexusKnowledgePreparedResult(result = {}) {
   const answer = result?.result || result || {};
   return {
@@ -19156,6 +19168,20 @@ function renderNexusAgricultureIntelligenceSections(id = "") {
   `;
 }
 
+function renderNexusTrainingWorkforceSections(id = "") {
+  if (!["learning", "jobs", "training-literacy", "workforce"].includes(id)) return "";
+  return `
+    <div class="nexus-training-workforce-sections" data-testid="nexus-training-workforce-sections" aria-label="${escapeHtml(translateText("Training, literacy, and workforce sections"))}">
+      ${NEXUS_TRAINING_WORKFORCE_SECTIONS.map(section => `
+        <button type="button" data-testid="nexus-training-workforce-section-${escapeHtml(section.id)}" data-nexus-command="${escapeHtml(section.command)}" data-nexus-mode-shortcut="training-workforce" data-training-workforce-section="${escapeHtml(section.id)}">
+          <strong>${escapeHtml(translateText(section.label))}</strong>
+          <span>${escapeHtml(translateText(section.description))}</span>
+        </button>
+      `).join("")}
+    </div>
+  `;
+}
+
 function renderNexusGlobalTrainingWorkforcePacket(card = {}) {
   const packet = card.trainingWorkforcePacket || card.globalTrainingWorkforcePacket || null;
   if (!packet) return "";
@@ -19165,8 +19191,9 @@ function renderNexusGlobalTrainingWorkforcePacket(card = {}) {
   const learningRecommendations = Array.isArray(packet.learningRecommendations) ? packet.learningRecommendations : [];
   const nextSafeActions = Array.isArray(packet.nextSafeActions) ? packet.nextSafeActions : [];
   const citations = Array.isArray(packet.citations) ? packet.citations : [];
+  const reviewQuestions = Array.isArray(packet.learnerCoachReviewQuestions) ? packet.learnerCoachReviewQuestions : [];
   return `
-    <div class="nexus-global-training-workforce-packet" data-testid="nexus-global-training-workforce-packet-card" data-packet-type="${escapeHtml(packet.packetType || "training_support_packet")}">
+    <div class="nexus-global-training-workforce-packet" data-testid="nexus-global-training-workforce-packet-card" data-packet-type="${escapeHtml(packet.packetType || "training_support_packet")}" data-training-workforce-mode="${escapeHtml(packet.mode || packet.trainingWorkforceIntent || "")}" data-training-workforce-domain="${escapeHtml(packet.domain || "")}">
       <div class="nexus-home-mode-panel-head">
         <span class="nexus-home-mode-panel-icon" aria-hidden="true">ðŸŽ“</span>
         <div>
@@ -19196,6 +19223,10 @@ function renderNexusGlobalTrainingWorkforcePacket(card = {}) {
           <dt>${escapeHtml(translateText("Learning recommendations"))}</dt>
           <dd data-testid="nexus-training-workforce-learning-recommendations">${learningRecommendations.map(item => escapeHtml(translateText(item))).join("; ")}</dd>
         </div>
+        <div>
+          <dt>${escapeHtml(translateText("Review questions"))}</dt>
+          <dd data-testid="nexus-training-workforce-review-questions">${reviewQuestions.map(item => escapeHtml(translateText(item))).join("; ")}</dd>
+        </div>
       </dl>
       <p data-testid="nexus-training-workforce-employer-fit">${escapeHtml(translateText(packet.employerPartnerFit || "Employer partner research requires review before outreach."))}</p>
       <div class="nexus-knowledge-source-row">
@@ -19206,6 +19237,8 @@ function renderNexusGlobalTrainingWorkforcePacket(card = {}) {
         ${nextSafeActions.slice(0, 4).map(action => `<button type="button" data-nexus-command="${escapeHtml(action)}" data-nexus-mode-shortcut="global-training-workforce-next-action">${escapeHtml(translateText(action))}</button>`).join("")}
       </div>
       <small data-testid="nexus-training-workforce-export-ready">${escapeHtml(translateText(packet.exportReady ? "Export-ready training/workforce packet prepared for learner, coach, employer, or partner review." : "Review packet prepared locally."))}</small>
+      <small data-testid="nexus-training-workforce-queue-review-audit-state">${escapeHtml(translateText("Queue/review/audit: prepared for review; executable false; no external submission included."))}</small>
+      <small data-testid="nexus-training-workforce-handoff-gates">${escapeHtml(translateText("Employer contact, application, enrollment, profile sharing, and certificate/credential actions require verified provider configuration, explicit user approval, confirmation, and audit."))}</small>
       <small data-testid="nexus-training-workforce-no-execution">${escapeHtml(translateText("No employer contact, job application, enrollment, profile submission, or external action was authorized."))}</small>
     </div>
   `;
@@ -20789,7 +20822,7 @@ const NEXUS_PACKET_TYPES = Object.freeze([
   "chronic_disease_education_packet", "diabetes_support_packet", "hypertension_support_packet", "obesity_support_packet", "rpm_support_packet", "rtm_support_packet", "chw_support_packet", "provider_review_packet",
   "telehealth_prep_packet", "provider_bridge_packet", "pharmacy_support_packet", "mobile_clinic_access_packet", "clinic_visit_prep_packet",
   "agriculture_support_packet", "crop_support_packet", "crop_disease_guidance_packet", "pest_management_guidance_packet", "soil_fertility_guidance_packet", "irrigation_planning_packet", "farm_planning_packet", "field_visit_packet", "agriculture_live_knowledge_packet", "agriculture_resource_handoff_packet", "agriculture_audit_event_packet", "crop_support_request", "farm_planning_request", "input_supplier_request", "extension_partner_request", "field_visit_request", "marketplace_inquiry", "logistics_request",
-  "training_support_packet", "workforce_pathway_packet", "employer_partner_research_packet", "learning_recommendation_packet",
+  "training_support_packet", "workforce_pathway_packet", "employer_partner_research_packet", "learning_recommendation_packet", "digital_literacy_packet", "agriculture_literacy_packet", "health_literacy_packet", "ai_literacy_packet", "credential_pathway_packet", "resume_interview_prep_packet",
   "email_preparation_packet", "sms_preparation_packet", "whatsapp_preparation_packet", "phone_call_preparation_packet", "telegram_preparation_packet", "communication_confirmation_packet", "communication_outcome_packet",
   "marketplace_vendor_research_packet", "vendor_comparison_packet", "logistics_planning_packet", "route_resource_packet", "purchase_preparation_packet",
   "queued_action_packet", "review_queue_packet", "audit_event_packet", "outcome_record_packet", "failed_action_packet",
@@ -22592,6 +22625,7 @@ function renderNexusActiveWorkflowWorkspace() {
       </div>
       ${renderNexusWorkflowLaneStatus(id)}
       ${renderNexusAgricultureIntelligenceSections(id)}
+      ${renderNexusTrainingWorkforceSections(id)}
       ${renderNexusWorkflowMapPreview(id)}
       <div class="nexus-workflow-body">
         ${renderNexusWorkflowFields(id, fields)}

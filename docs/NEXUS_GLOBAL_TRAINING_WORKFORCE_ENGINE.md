@@ -18,8 +18,14 @@ Phase 3 builds training, literacy, workforce, and employer-partner support as a 
 - `workforce_pathway_packet`
 - `employer_partner_research_packet`
 - `learning_recommendation_packet`
+- `digital_literacy_packet`
+- `agriculture_literacy_packet`
+- `health_literacy_packet`
+- `ai_literacy_packet`
+- `credential_pathway_packet`
+- `resume_interview_prep_packet`
 
-Each packet includes the user query, intent, learner or worker context, role or learning goal, focus areas, Live Knowledge status, source-backed research when configured, citations, skill pathway, resume/interview prep, employer partner fit notes, learning recommendations, next safe actions, export readiness, and no-execution guarantees.
+Each packet includes the user query, intent, domain, mode, learner or worker context, role or learning goal, focus areas, Live Knowledge status, source-backed research when configured, citations, skill pathway, resume/interview prep, employer partner fit notes, learning recommendations, learner/coach review questions, queue/review/audit state, handoff readiness, next safe actions, export readiness, and no-execution guarantees.
 
 ## Live Knowledge Use
 
@@ -41,7 +47,9 @@ Employer contact, job application, training enrollment, profile submission, cred
 
 ## Standard User Experience
 
-Training and workforce prompts from the Standard User knowledge rail can now produce visible training/workforce packets. The Learning & Literacy and Jobs & Workforce mode panels expose practical quick actions for literacy, AI learning, agriculture training, role research, credential requirements, employer fit, workforce readiness, and interview prep.
+Training and workforce prompts from the Standard User knowledge rail can now produce visible training/workforce packets. The Learning & Literacy and Jobs & Workforce mode panels expose practical quick actions and engine sections for Digital Literacy, Agriculture Training, Health Literacy, AI Literacy, Workforce Pathway, Resume / Interview Prep, Credential Pathway, Employer Partner Research, and Learning Recommendations.
+
+Each visible section routes through the normal Nexus command path and prepares a packet. The UI must not submit a job application, enroll a learner, contact an employer, share a profile, issue a credential, or claim placement/certification.
 
 ## Export and Review Posture
 

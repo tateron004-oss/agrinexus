@@ -29525,7 +29525,13 @@ async function nexusGlobalAgricultureIntelligence(db, body = {}, user = null, en
 
 function nexusGlobalTrainingWorkforceIntent(query = "", body = {}) {
   const text = `${query} ${body.mode || ""} ${body.topic || ""} ${body.role || ""}`.toLowerCase();
+  if (/\b(resume|cv|interview|cover letter|portfolio|work evidence)\b/.test(text)) return "resume_interview_prep";
+  if (/\b(credential|certificate|certification|license|qualification|badge)\b/.test(text)) return "credential_pathway";
   if (/\b(employer|hiring partner|partner fit|sector needs|workforce alignment|talent pipeline|recruiter)\b/.test(text)) return "employer_partner_research";
+  if (/\b(digital literacy|phone skills|computer basics|internet basics|online safety|privacy basics)\b/.test(text)) return "digital_literacy";
+  if (/\b(ai literacy|artificial intelligence|use ai|assistant skills|source checking)\b/.test(text)) return "ai_literacy";
+  if (/\b(agriculture literacy|farm training|crop training|farmer training|agriculture training)\b/.test(text)) return "agriculture_literacy";
+  if (/\b(health literacy|patient education|clinic education|pharmacy education)\b/.test(text)) return "health_literacy";
   if (/\b(job|jobs|career|workforce|role|resume|interview|credential|certificate|skill gap|readiness|employment)\b/.test(text)) return "workforce_pathway";
   if (/\b(recommend|recommendation|course options|learning path|what should i learn|next course|resources)\b/.test(text)) return "learning_recommendation";
   return "training_support";
@@ -29536,7 +29542,13 @@ function nexusGlobalTrainingWorkforcePacketType(intent = "training_support") {
     training_support: "training_support_packet",
     workforce_pathway: "workforce_pathway_packet",
     employer_partner_research: "employer_partner_research_packet",
-    learning_recommendation: "learning_recommendation_packet"
+    learning_recommendation: "learning_recommendation_packet",
+    digital_literacy: "digital_literacy_packet",
+    agriculture_literacy: "agriculture_literacy_packet",
+    health_literacy: "health_literacy_packet",
+    ai_literacy: "ai_literacy_packet",
+    credential_pathway: "credential_pathway_packet",
+    resume_interview_prep: "resume_interview_prep_packet"
   })[intent] || "training_support_packet";
 }
 
@@ -29554,10 +29566,26 @@ function nexusGlobalTrainingWorkforceFocusAreas(intent = "training_support", que
       "No application, employer message, or profile submission happens from this packet."
     ];
   }
+  if (intent === "resume_interview_prep") {
+    return [
+      "Resume, CV, portfolio, interview story, references, and work evidence can be organized for review.",
+      "No resume, profile, application, or message is submitted from this packet."
+    ];
+  }
+  if (intent === "credential_pathway") {
+    return [
+      "Credential requirements, prerequisites, issuing organization, cost, timeline, and evidence needs should be checked from verified sources.",
+      "Nexus does not issue certificates or enroll the learner without a configured provider and explicit approval."
+    ];
+  }
   const focus = [
     "Digital literacy, agriculture literacy, health literacy, AI literacy, workforce readiness, and continuing education.",
     "Recommended learning should match the learner's language, reading level, device access, and low-bandwidth needs."
   ];
+  if (intent === "digital_literacy") focus.unshift("Digital literacy should build device, internet, privacy, communication, and online-safety confidence in small steps.");
+  if (intent === "ai_literacy") focus.unshift("AI literacy should explain practical use, privacy, source checking, and safe assistant limits.");
+  if (intent === "agriculture_literacy") focus.unshift("Agriculture literacy can connect crop guidance, market basics, safe input planning, and local expert review.");
+  if (intent === "health_literacy") focus.unshift("Health literacy stays educational and does not diagnose, prescribe, or replace a clinician.");
   if (/\b(ai|artificial intelligence)\b/.test(lower)) focus.unshift("AI literacy should explain practical use, privacy, source checking, and safe assistant limits.");
   if (/\b(health|patient|clinic|pharmacy)\b/.test(lower)) focus.unshift("Health literacy stays educational and does not diagnose, prescribe, or replace a clinician.");
   if (/\b(agriculture|crop|farm)\b/.test(lower)) focus.unshift("Agriculture literacy can connect crop guidance, market basics, safe input planning, and local expert review.");
@@ -29577,6 +29605,20 @@ function nexusGlobalTrainingWorkforceNextSteps(intent = "training_support") {
       "Add desired role, current skills, education level, language, availability, and support needs.",
       "Prepare a resume/interview checklist and identify training gaps.",
       "Use employer contact or application workflows only after explicit confirmation and review."
+    ];
+  }
+  if (intent === "resume_interview_prep") {
+    return [
+      "Add current experience, role target, references, language preference, and work examples.",
+      "Prepare resume bullets, interview stories, and a review checklist.",
+      "Submit nothing externally until the user approves a separate application or employer-contact workflow."
+    ];
+  }
+  if (intent === "credential_pathway") {
+    return [
+      "Add desired credential, current level, country or region, timeline, and cost constraints.",
+      "Check source dates, prerequisites, provider legitimacy, and learner consent before enrollment.",
+      "Issue no credential and enroll no learner without a verified provider workflow and confirmation."
     ];
   }
   if (intent === "learning_recommendation") {
@@ -29608,6 +29650,8 @@ function buildNexusGlobalTrainingWorkforcePacket(payload = {}) {
     trainingWorkforceIntent: intent,
     learnerOrWorkerContext: sanitizePilotText(body.learner || body.worker || body.context || "Add learner or worker context for a stronger packet.", 360),
     roleOrLearningGoal: sanitizePilotText(body.role || body.goal || body.topic || payload.query || "Learning or workforce goal pending.", 360),
+    domain: intent === "workforce_pathway" || intent === "employer_partner_research" || intent === "resume_interview_prep" ? "workforce" : "learning",
+    mode: intent,
     focusAreas: nexusGlobalTrainingWorkforceFocusAreas(intent, payload.query || ""),
     sourceBackedResearch: liveKnowledge.status === "source-backed"
       ? sanitizePilotText(liveKnowledge.summary || liveKnowledge.answer || "Source-backed training/workforce research is available. Review citations before acting.", 1400)
@@ -29631,6 +29675,31 @@ function buildNexusGlobalTrainingWorkforcePacket(payload = {}) {
       "Prefer verified public, partner, government, university, NGO, or training-provider sources."
     ],
     nextSafeActions: nexusGlobalTrainingWorkforceNextSteps(intent),
+    learnerCoachReviewQuestions: [
+      "What is the learner or worker's current skill level, language preference, and reading comfort?",
+      "Which source, provider, coach, employer, or training partner should review this packet before action?",
+      "What consent is required before sharing profile, resume, contact, or learning history?"
+    ],
+    queueReviewState: {
+      status: "prepared_for_review",
+      queueType: "training_workforce_review_queue",
+      executable: false,
+      executionAuthority: "none"
+    },
+    auditState: {
+      eventType: "global_training_workforce_packet_prepared",
+      requiredBeforeHandoff: true,
+      containsSecrets: false,
+      containsExternalSubmission: false
+    },
+    handoffReadiness: {
+      employerContactReady: false,
+      jobApplicationReady: false,
+      enrollmentReady: false,
+      credentialIssueReady: false,
+      requiresVerifiedProvider: true,
+      requiresExplicitUserApproval: true
+    },
     liveKnowledgeStatus: sanitizePilotText(liveKnowledge.status || "disabled", 80),
     provider: sanitizePilotText(liveKnowledge.provider || "not-configured", 80),
     exportReady: true,
@@ -29640,9 +29709,12 @@ function buildNexusGlobalTrainingWorkforcePacket(payload = {}) {
     noJobApplicationSubmitted: true,
     noEnrollmentSubmitted: true,
     noProfileSubmissionAuthorized: true,
+    noCredentialIssued: true,
     requiresConfirmationForEmployerContact: true,
     requiresConfirmationForJobApplication: true,
     requiresConfirmationForEnrollment: true,
+    requiresConfirmationForProfileSharing: true,
+    requiresConfirmationForCredentialIssuance: true,
     noFakeCitations: citations.length === 0
   };
 }
