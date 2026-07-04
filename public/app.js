@@ -256,8 +256,8 @@ const nexusProductIdentity = Object.freeze({
 });
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-351";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v330";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-352";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v331";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
 const VOICE_ATTENTION_DELAY_MS = 900;
@@ -20005,6 +20005,284 @@ const NEXUS_HOME_MODE_PANEL_FIELDS = Object.freeze({
   ]
 });
 
+let nexusActiveWorkflowState = {
+  id: "",
+  command: "",
+  source: "",
+  workflow: "",
+  action: "",
+  openedAt: 0
+};
+
+const NEXUS_FULL_WORKFLOW_EXTRAS = Object.freeze({
+  "clinical-support": {
+    presentation: { title: "Clinical Support", description: "Organize health questions, vitals, symptoms, and provider-ready notes.", accent: "blue", icon: "H" },
+    content: {
+      explanation: "Use this workspace to organize clinical context for a licensed professional or care team review.",
+      nextPrompt: "Add the concern, vitals you already know, medication context, and questions you want reviewed.",
+      limitation: "Nexus does not diagnose, prescribe, treat, book, contact providers, dispatch emergency help, or replace clinical judgment.",
+      quickActions: [
+        { label: "Start patient intake", command: "Nexus, start patient intake." },
+        { label: "Prepare provider summary", command: "Prepare a provider summary." },
+        { label: "Review chronic care", command: "Nexus, open chronic care." },
+        { label: "Prepare pharmacy question", command: "Nexus, prepare pharmacy support." }
+      ]
+    },
+    fields: [
+      ["concern", "Main concern", "What should a clinician review?"],
+      ["vitals", "Known vitals", "BP, glucose, weight, pulse, temperature"],
+      ["medications", "Medication context", "Only what you already know"],
+      ["questions", "Questions for provider review", "What do you want to ask?"]
+    ]
+  },
+  "provider-support": {
+    presentation: { title: "Provider Support", description: "Prepare provider-ready notes and integration status before any handoff.", accent: "sky", icon: "P" },
+    content: {
+      explanation: "Prepare a local provider summary, questions, and consent checklist before any future configured handoff.",
+      nextPrompt: "Tell Nexus who the summary is for, what should be reviewed, and what permission is still needed.",
+      limitation: "Nexus does not contact providers, schedule visits, send records, call, message, or share information without a future configured connector, consent, confirmation, and audit.",
+      quickActions: [
+        { label: "Prepare provider summary", command: "Prepare a provider summary." },
+        { label: "Start telehealth intake", command: "Nexus, start a telehealth intake." },
+        { label: "Prepare pharmacy support", command: "Nexus, prepare pharmacy support." },
+        { label: "Review confirmation gates", command: "What actions are gated or local-only?" }
+      ]
+    },
+    fields: [
+      ["recipient", "Provider / reviewer", "Clinic, doctor, nurse, pharmacist, care team"],
+      ["purpose", "Purpose", "Review, intake prep, question list, care summary"],
+      ["consent", "Consent status", "Not requested, needs review, approved later"],
+      ["notes", "Notes", "Details for local review only"]
+    ]
+  },
+  communications: {
+    presentation: { title: "Communications Preparation", description: "Draft messages or call notes without sending.", accent: "purple", icon: "@" },
+    content: {
+      explanation: "Prepare message drafts, call notes, and recipient checks locally before any future communications provider can run.",
+      nextPrompt: "Add the recipient label, purpose, preferred channel, and draft text.",
+      limitation: "Nexus does not send SMS, WhatsApp, Telegram, email, place calls, open phone links, or contact anyone without explicit future execution gates.",
+      quickActions: [
+        { label: "Prepare a message", command: "Prepare a message, but do not send it." },
+        { label: "Prepare call notes", command: "Nexus, prepare a call note." },
+        { label: "Review recipient", command: "Nexus, review contact details before any message." }
+      ]
+    },
+    fields: [
+      ["recipient", "Recipient", "Name or role, not full private details"],
+      ["channel", "Channel", "SMS, WhatsApp, call, email"],
+      ["purpose", "Purpose", "Why this communication is needed"],
+      ["draft", "Draft", "Message or call note for review"]
+    ]
+  },
+  "resource-assistant": {
+    presentation: { title: "Resource Assistant", description: "Ask source-aware questions and save review-only answers.", accent: "teal", icon: "R" },
+    content: {
+      explanation: "Use Nexus to prepare source-backed questions, local notes, and safe review steps.",
+      nextPrompt: "Ask a question or tell Nexus which source-backed topic you want to review.",
+      limitation: "Nexus does not fake live sources or citations. Live retrieval appears only when configured and clearly labeled.",
+      quickActions: [
+        { label: "Ask a source question", command: "What causes yellow leaves on maize?" },
+        { label: "Review source status", command: "What data sources can Nexus use?" },
+        { label: "Save answer locally", command: "Nexus, save this for review." }
+      ]
+    },
+    fields: [
+      ["question", "Question", "What do you want Nexus to research or explain?"],
+      ["context", "Context", "Crop, health access, jobs, marketplace, or maps"],
+      ["sourceNeed", "Source need", "Built-in guidance, live source when configured, local note"]
+    ]
+  }
+});
+
+function normalizeNexusWorkflowId(workflowId = "", command = "") {
+  const raw = String(workflowId || "").toLowerCase().trim()
+    .replace(/^sidebar-/, "")
+    .replace(/^core-/, "")
+    .replace(/^suggested-\d+$/, "");
+  const text = `${raw} ${command || ""}`.toLowerCase();
+  if (NEXUS_HOME_MODE_IDS.includes(raw)) return raw;
+  if (raw === "health") return "chronic-care";
+  if (raw === "providers" || raw === "provider" || raw === "doctor") return "provider-support";
+  if (raw === "messages" || raw === "communication" || raw === "communications") return "communications";
+  if (raw === "ask" || raw === "agent" || raw === "resource") return "resource-assistant";
+  if (raw === "home") return "";
+  if (/\b(clinical|clinical support|health support|health access)\b/.test(text)) return "clinical-support";
+  if (/\b(patient intake|intake|symptom intake|health intake)\b/.test(text)) return "telehealth-intake";
+  if (/\b(telehealth|doctor|appointment preparation|provider|care team)\b/.test(text)) return /\bprovider|doctor|care team\b/.test(text) ? "provider-support" : "telehealth-intake";
+  if (/\b(pharmacy|medication|medicine|refill)\b/.test(text)) return "pharmacy-support";
+  if (/\b(mobile clinic|clinic outreach|community clinic|clinic)\b/.test(text)) return "mobile-clinic";
+  if (/\b(chronic|diabetes|hypertension|blood pressure|obesity|glucose|blood sugar|rpm|rtm|remote patient monitoring|remote therapeutic monitoring)\b/.test(text)) return "chronic-care";
+  if (/\b(workforce|jobs|employment|career|farm jobs)\b/.test(text)) return "jobs";
+  if (/\b(maps|map|route|routes|field visit)\b/.test(text)) return "maps";
+  if (/\b(learning|training|literacy|course)\b/.test(text)) return "learning";
+  if (/\b(agriculture|farm|crop|irrigation|field guidance)\b/.test(text)) return "agriculture";
+  if (/\b(marketplace|trade|agritrade|buyer|seller)\b/.test(text)) return "agritrade";
+  if (/\b(media|music|afrobeats|r&b|rnb|gospel|spotify|youtube)\b/.test(text)) return "media";
+  if (/\b(reminder|reminders|follow up|follow-up)\b/.test(text)) return "reminders";
+  if (/\b(offline|queue|low bandwidth|low-bandwidth)\b/.test(text)) return "offline";
+  if (/\b(message|messages|sms|whatsapp|telegram|email|call|communications?)\b/.test(text)) return "communications";
+  if (/\b(resource assistant|source|citation|internet resource|knowledge)\b/.test(text)) return "resource-assistant";
+  return raw || "";
+}
+
+function nexusWorkflowDefinition(workflowId = "", command = "") {
+  const id = normalizeNexusWorkflowId(workflowId, command);
+  if (!id) return null;
+  const extra = NEXUS_FULL_WORKFLOW_EXTRAS[id] || null;
+  const presentation = extra?.presentation || NEXUS_HOME_MODE_PRESENTATION[id] || null;
+  const content = extra?.content || NEXUS_HOME_MODE_PANEL_CONTENT[id] || null;
+  const fields = extra?.fields || NEXUS_HOME_MODE_PANEL_FIELDS[id] || [];
+  if (!presentation || !content) return null;
+  return { id, presentation, content, fields };
+}
+
+function isNexusHealthcareWorkflow(id = "") {
+  return ["clinical-support", "chronic-care", "telehealth-intake", "mobile-clinic", "pharmacy-support", "provider-support"].includes(id);
+}
+
+function renderNexusWorkflowFields(id, fields = []) {
+  if (!fields.length) return "";
+  return `
+    <form class="nexus-workflow-field-grid" data-nexus-mode-form="${escapeHtml(id)}" aria-label="${escapeHtml(translateText("Workflow details"))}">
+      ${fields.map(field => {
+        const [name, label, placeholder] = Array.isArray(field) ? field : [field.name, field.label, field.placeholder];
+        const rows = /notes|details|symptoms|questions|draft|issue|concern|context/i.test(name || "") ? 3 : 2;
+        return `
+          <label>
+            <span>${escapeHtml(translateText(label || name || "Detail"))}</span>
+            <textarea rows="${rows}" data-nexus-mode-field="${escapeHtml(name || "field")}" name="${escapeHtml(name || "field")}" placeholder="${escapeHtml(translateText(placeholder || ""))}"></textarea>
+          </label>
+        `;
+      }).join("")}
+    </form>
+  `;
+}
+
+function renderNexusWorkflowMapPreview(id = "") {
+  if (id !== "maps") return "";
+  return `
+    <div class="nexus-workflow-map-preview" data-nexus-workflow-map-preview="true" data-location-permission-requested="false" data-geolocation-used="false">
+      <strong>${escapeHtml(translateText("Map workspace ready"))}</strong>
+      <span>${escapeHtml(translateText("Enter typed origin and destination details below. Nexus will not request browser location automatically."))}</span>
+    </div>
+  `;
+}
+
+function renderNexusActiveWorkflowWorkspace() {
+  const state = nexusActiveWorkflowState || {};
+  const definition = nexusWorkflowDefinition(state.id, state.command);
+  if (!definition) {
+    return `
+      <section id="nexus-workspace" class="nexus-active-workflow nexus-active-workflow-empty nexus-glass-card" data-nexus-workspace="true" data-nexus-active-workflow="none" data-execution-authority="false" aria-label="${escapeHtml(translateText("Nexus active workflow"))}">
+        <div class="nexus-workflow-header">
+          <span class="eyebrow">${escapeHtml(translateText("Workspace"))}</span>
+          <h3 id="nexusActiveWorkflowHeading" tabindex="-1">${escapeHtml(translateText("Choose a workflow to begin"))}</h3>
+          <p>${escapeHtml(translateText("Selected workflows open here as the main working area, with review-only controls and safety gates intact."))}</p>
+        </div>
+      </section>
+    `;
+  }
+  const { id, presentation, content, fields } = definition;
+  const healthcare = isNexusHealthcareWorkflow(id);
+  const steps = healthcare
+    ? ["Add context", "Review safety boundaries", "Prepare provider-ready summary", "Confirm before any future handoff"]
+    : id === "maps"
+      ? ["Enter typed locations", "Review route questions", "Keep location sharing off", "Confirm before external navigation"]
+      : id === "agritrade"
+        ? ["Describe need", "Review marketplace details", "Prepare inquiry", "Confirm before any transaction"]
+        : ["Add details", "Review prepared next steps", "Save or change workflow", "Confirm before external action"];
+  return `
+    <section id="nexus-workspace" class="nexus-active-workflow nexus-active-workflow-${escapeHtml(id)} nexus-glass-card" data-nexus-workspace="true" data-nexus-active-workflow="${escapeHtml(id)}" data-execution-authority="false" data-provider-handoff="false" data-no-live-execution="true" aria-labelledby="nexusActiveWorkflowHeading">
+      <div class="nexus-workflow-header">
+        <span class="nexus-workflow-icon" aria-hidden="true">${escapeHtml(presentation.icon || "")}</span>
+        <div>
+          <span class="eyebrow">${escapeHtml(translateText("Active workflow"))}</span>
+          <h3 id="nexusActiveWorkflowHeading" tabindex="-1">${escapeHtml(translateText(presentation.title))}</h3>
+          <p>${escapeHtml(translateText(content.explanation))}</p>
+        </div>
+        <button type="button" data-nexus-mode-shortcut="home" data-nexus-command="What can Nexus do?">${escapeHtml(translateText("Change workflow"))}</button>
+      </div>
+      <div class="nexus-workflow-purpose">
+        <strong>${escapeHtml(translateText("Next step"))}</strong>
+        <span>${escapeHtml(translateText(content.nextPrompt))}</span>
+      </div>
+      ${renderNexusWorkflowMapPreview(id)}
+      <div class="nexus-workflow-body">
+        ${renderNexusWorkflowFields(id, fields)}
+        <div class="nexus-workflow-quick-actions" aria-label="${escapeHtml(translateText("Workflow quick actions"))}">
+          ${(content.quickActions || []).map(action => `
+            <button type="button" data-nexus-mode-shortcut="${escapeHtml(id)}" data-nexus-command="${escapeHtml(action.command || "")}">${escapeHtml(translateText(action.label || "Next step"))}</button>
+          `).join("")}
+        </div>
+      </div>
+      <div class="nexus-workflow-steps" aria-label="${escapeHtml(translateText("Workflow steps"))}">
+        ${steps.map((step, index) => `<span><b>${index + 1}</b>${escapeHtml(translateText(step))}</span>`).join("")}
+      </div>
+      <div class="nexus-workflow-actions">
+        <button type="button" class="primary" data-nexus-mode-summary="${escapeHtml(NEXUS_HOME_MODE_IDS.includes(id) ? id : "clinical-support")}">${escapeHtml(translateText("Prepare local summary"))}</button>
+        <button type="button" data-nexus-command-prefill="${escapeHtml(content.nextPrompt)}">${escapeHtml(translateText("Use as prompt"))}</button>
+        <span>${escapeHtml(translateText(content.limitation))}</span>
+      </div>
+    </section>
+  `;
+}
+
+function focusNexusActiveWorkflow(options = {}) {
+  const workspace = $("#nexus-workspace");
+  const heading = $("#nexusActiveWorkflowHeading");
+  if (!workspace) return;
+  const behavior = options.instant ? "auto" : "smooth";
+  workspace.scrollIntoView?.({ block: "start", behavior });
+  setTimeout(() => heading?.focus?.({ preventScroll: true }), options.instant ? 0 : 80);
+}
+
+function openNexusWorkflow(workflowId, options = {}) {
+  const command = options.command || options.response || "";
+  const definition = nexusWorkflowDefinition(workflowId, command);
+  const safeId = definition?.id || normalizeNexusWorkflowId(workflowId, command) || "unknown";
+  nexusActiveWorkflowState = {
+    id: definition?.id || safeId,
+    command,
+    source: options.source || "standard-user",
+    workflow: options.workflow || workflowId || "",
+    action: options.action || "",
+    openedAt: Date.now()
+  };
+  if (definition) {
+    const panelResult = buildNexusHomeModePanelResult(definition.id, command);
+    nexusAgenticBrainLastResult = options.preparedResult || panelResult || {
+      ok: true,
+      status: "nexus_workflow_opened",
+      mode: definition.presentation.title,
+      message: `${definition.presentation.title} opened in the main workspace. No external action was executed.`,
+      preparedCards: [{
+        type: "nexus_full_workflow_workspace",
+        title: definition.presentation.title,
+        status: "main workspace open",
+        localOnly: true,
+        noExecutionAuthorized: true
+      }],
+      noExecutionAuthorized: true,
+      localOnly: true,
+      source: "nexus_full_workflow_workspace"
+    };
+  } else {
+    nexusAgenticBrainLastResult = {
+      ok: true,
+      status: "unknown_workflow_safe_fallback",
+      mode: "Nexus workflow",
+      message: "I could not identify that workflow, so I kept the request in a safe local review state. No action was executed.",
+      preparedCards: [],
+      noExecutionAuthorized: true,
+      localOnly: true,
+      source: "nexus_full_workflow_workspace"
+    };
+  }
+  renderUserWorkspace();
+  requestAnimationFrame(() => focusNexusActiveWorkflow({ instant: options.instant }));
+  return true;
+}
+
 function buildNexusHomeModePanelResult(modeId = "", command = "") {
   const presentation = NEXUS_HOME_MODE_PRESENTATION[modeId] || {};
   const content = NEXUS_HOME_MODE_PANEL_CONTENT[modeId] || null;
@@ -20039,6 +20317,8 @@ function buildNexusHomeModePanelResult(modeId = "", command = "") {
 }
 
 function detectNexusHomeModePanelId(command = "") {
+  const alias = normalizeNexusWorkflowId("", command);
+  if (NEXUS_HOME_MODE_IDS.includes(alias)) return alias;
   const text = String(command || "").toLowerCase();
   if (/\b(agriculture help|agriculture support|crop issue|crop issues|irrigation|field guidance)\b/.test(text)) return "agriculture";
   if (/\b(chronic care|blood pressure|glucose|blood sugar|diabetes|obesity|hypertension|rpm|rtm|vitals)\b/.test(text)) return "chronic-care";
@@ -20110,12 +20390,27 @@ function handleNexusHomeModeSummaryClick(event) {
   event.preventDefault();
   event.stopPropagation();
   const modeId = button.dataset.nexusModeSummary || "";
+  const normalizedModeId = normalizeNexusWorkflowId(modeId, "");
+  if (!NEXUS_HOME_MODE_IDS.includes(normalizedModeId)) {
+    nexusAgenticBrainLastResult = {
+      ok: true,
+      status: "nexus_workflow_local_summary_ready",
+      mode: nexusWorkflowDefinition(normalizedModeId)?.presentation?.title || "Nexus workflow",
+      message: "Local workflow notes are ready for human review. No provider, payment, call, message, location, camera, medical, pharmacy, emergency, or backend action was executed.",
+      preparedCards: [],
+      noExecutionAuthorized: true,
+      localOnly: true,
+      source: "nexus_full_workflow_workspace"
+    };
+    renderUserWorkspace();
+    return true;
+  }
   const form = button.closest("[data-nexus-mode-form]");
   const values = {};
   form?.querySelectorAll?.("[data-nexus-mode-field]")?.forEach(field => {
     values[field.dataset.nexusModeField || field.name || "field"] = field.value || "";
   });
-  const summary = buildNexusHomeModeSummaryResult(modeId, values);
+  const summary = buildNexusHomeModeSummaryResult(normalizedModeId, values);
   if (!summary) return false;
   nexusAgenticBrainLastResult = summary;
   renderUserWorkspace();
@@ -20492,14 +20787,9 @@ function buildNexusCapabilityOverviewResult(command = "") {
 function runNexusStandardUserHomeLocalCommand(command = "") {
   const normalized = String(command || "").trim();
   if (!normalized) return false;
-  const panelModeId = detectNexusHomeModePanelId(normalized);
-  if (panelModeId) {
-    const panelResult = buildNexusHomeModePanelResult(panelModeId, normalized);
-    if (panelResult) {
-      nexusAgenticBrainLastResult = panelResult;
-      renderUserWorkspace();
-      return true;
-    }
+  const workflowId = normalizeNexusWorkflowId("", normalized) || detectNexusHomeModePanelId(normalized);
+  if (workflowId && nexusWorkflowDefinition(workflowId, normalized)) {
+    return openNexusWorkflow(workflowId, { command: normalized, source: "typed-command" });
   }
   if (isNexusCapabilityOverviewCommand(normalized) || /\b(what can nexus do|what can you do|show me nexus modes|nexus modes)\b/i.test(normalized)) {
     nexusAgenticBrainLastResult = buildNexusCapabilityOverviewResult(normalized);
@@ -20507,9 +20797,7 @@ function runNexusStandardUserHomeLocalCommand(command = "") {
     return true;
   }
   if (isNexusMediaMusicCommand(normalized) || /\b(play|open)\b.*\b(music|r&b|rnb|afrobeats?|african|amapiano|gospel|youtube|spotify|apple music)\b/i.test(normalized)) {
-    nexusAgenticBrainLastResult = buildNexusMediaMusicLocalResult(normalized);
-    renderUserWorkspace();
-    return true;
+    return openNexusWorkflow("media", { command: normalized, source: "typed-command" });
   }
   const localHealthAccessResult = buildNexusHealthAccessPreparationResult(normalized);
   if (localHealthAccessResult) {
@@ -20622,9 +20910,8 @@ async function runNexusAgenticBrainAction(action = "command", options = {}) {
     if (action === "command") {
       const localMediaCommand = String(options.command || nexusAgenticBrainCommandValue() || "").trim();
       if (isNexusMediaMusicCommand(localMediaCommand)) {
-        nexusAgenticBrainLastResult = buildNexusMediaMusicLocalResult(localMediaCommand);
-        renderUserWorkspace();
-        return true;
+        const mediaResult = buildNexusMediaMusicLocalResult(localMediaCommand);
+        return openNexusWorkflow("media", { command: localMediaCommand, source: "agentic-command", preparedResult: mediaResult });
       }
       if (runNexusStandardUserHomeLocalCommand(localMediaCommand)) return true;
     }
@@ -21157,6 +21444,7 @@ function renderUserWorkspace() {
       <main class="nexus-command-main nexus-main" aria-label="${escapeHtml(translateText("Nexus command center"))}">
         ${renderNexusTopWelcomeArea()}
         ${renderNexusCommandCenterHero()}
+        ${renderNexusActiveWorkflowWorkspace()}
         ${renderNexusCoreFeatureCards()}
         ${renderNexusModeLauncher()}
         ${renderNexusSuggestedActions()}
@@ -22121,6 +22409,15 @@ function renderUserProcessScreen(sectionId, config, mapped = {}, label = "Select
 
 function forceOpenUserProcessScreen(sectionId, config, mapped = {}, label = "Selected action") {
   if (experienceMode !== "user" || !config) return false;
+  const centralWorkflowId = normalizeNexusWorkflowId(sectionId, `${config.userTitle || ""} ${config.title || ""} ${config.action || ""} ${label || ""} ${mapped.response || ""}`);
+  if (nexusWorkflowDefinition(centralWorkflowId, mapped.response || label || "")) {
+    return openNexusWorkflow(centralWorkflowId, {
+      command: mapped.response || label || config.userTitle || config.title || "",
+      source: "user-process-helper",
+      workflow: sectionId,
+      action: config.action || ""
+    });
+  }
   closeAskNexus({ silent: true });
   closeUserCaptionPanel();
   goSection(sectionId, { instant: true, openDefaultAction: false, keepAssistant: false, scroll: false });
@@ -31277,6 +31574,19 @@ function openWorkflowByVoice(workflow, action, response, dataset = {}) {
   }
   const userSection = workflow === "ai" ? "agent" : workflow === "map" ? "map" : workflow;
   if (experienceMode === "user" && simpleUserSections[userSection]) {
+    const centralWorkflowId = normalizeNexusWorkflowId(workflow, `${action || ""} ${response || ""}`);
+    if (nexusWorkflowDefinition(centralWorkflowId, response || action || workflow)) {
+      openNexusWorkflow(centralWorkflowId, {
+        command: response || `${workflow} ${action}`.trim(),
+        source: "voice-command",
+        workflow,
+        action
+      });
+      updateNexusBehaviorLayer("ready", "Nexus opened the requested workflow in the main workspace and is waiting for the next command.");
+      const shortResponse = response || config.userTitle || config.title || "I opened that workflow.";
+      setVoiceResponse(`${actionLead}${shortResponse}`.trim(), true);
+      return;
+    }
     if (workflow === "health" && action === "video" && config.videoPreview) {
       openHealthVideoPreviewWorkflow(config, response, userSection);
       updateNexusBehaviorLayer("ready", "Nexus opened the local camera preview workflow and is waiting for confirmation.");
@@ -36230,30 +36540,24 @@ function handleNexusStandardUserHomeClick(event) {
   const modeId = shortcut.dataset.nexusModeShortcut || "";
   const command = shortcut.dataset.nexusCommand || "";
   if (modeId === "language") return false;
-  if (modeId === "media") {
+  const normalizedWorkflowId = normalizeNexusWorkflowId(modeId, command);
+  if (normalizedWorkflowId === "media") {
     event.preventDefault();
     event.stopPropagation();
     event.stopImmediatePropagation?.();
     const input = $("#nexusCommandCenterInput");
     if (input) input.value = command || "Play music.";
     setCommandInputs(command || "Play music.");
-    nexusAgenticBrainLastResult = buildNexusMediaMusicLocalResult(command || "Play music.");
-    renderUserWorkspace();
-    return true;
+    return openNexusWorkflow("media", { command: command || "Play music.", source: "mode-click" });
   }
-  if (NEXUS_HOME_MODE_IDS.includes(modeId)) {
+  if (nexusWorkflowDefinition(normalizedWorkflowId, command)) {
     event.preventDefault();
     event.stopPropagation();
     event.stopImmediatePropagation?.();
     const input = $("#nexusCommandCenterInput");
     if (input) input.value = command;
     setCommandInputs(command);
-    const panelResult = buildNexusHomeModePanelResult(modeId, command);
-    if (panelResult) {
-      nexusAgenticBrainLastResult = panelResult;
-      renderUserWorkspace();
-      return true;
-    }
+    return openNexusWorkflow(normalizedWorkflowId, { command, source: "mode-click" });
   }
   if (!runNexusStandardUserHomeLocalCommand(command)) return false;
   event.preventDefault();
@@ -36322,16 +36626,12 @@ function bindStatic() {
       }
       const panelModeId = detectNexusHomeModePanelId(command);
       if (panelModeId) {
-        const panelResult = buildNexusHomeModePanelResult(panelModeId, command);
-        if (panelResult) {
-          event.preventDefault();
-          event.stopPropagation();
-          if (input) input.value = command;
-          setCommandInputs(command);
-          nexusAgenticBrainLastResult = panelResult;
-          renderUserWorkspace();
-          return;
-        }
+        event.preventDefault();
+        event.stopPropagation();
+        if (input) input.value = command;
+        setCommandInputs(command);
+        openNexusWorkflow(panelModeId, { command, source: "command-submit" });
+        return;
       }
       if (isNexusCapabilityOverviewCommand(command)) {
         event.preventDefault();
@@ -36347,8 +36647,7 @@ function bindStatic() {
         event.stopPropagation();
         if (input) input.value = command;
         setCommandInputs(command);
-        nexusAgenticBrainLastResult = buildNexusMediaMusicLocalResult(command);
-        renderUserWorkspace();
+        openNexusWorkflow("media", { command, source: "command-submit" });
         return;
       }
       const localHealthAccessResult = buildNexusHealthAccessPreparationResult(command);
@@ -36366,27 +36665,23 @@ function bindStatic() {
     if (earlyModeShortcut) {
       const command = earlyModeShortcut.dataset.nexusCommand || "";
       const modeId = earlyModeShortcut.dataset.nexusModeShortcut || "";
-      if (NEXUS_HOME_MODE_IDS.includes(modeId)) {
-        const panelResult = buildNexusHomeModePanelResult(modeId, command);
-        if (panelResult) {
-          event.preventDefault();
-          event.stopPropagation();
-          const input = $("#nexusCommandCenterInput");
-          if (input) input.value = command;
-          setCommandInputs(command);
-          nexusAgenticBrainLastResult = panelResult;
-          renderUserWorkspace();
-          return;
-        }
-      }
-      if (modeId === "media") {
+      const normalizedWorkflowId = normalizeNexusWorkflowId(modeId, command);
+      if (nexusWorkflowDefinition(normalizedWorkflowId, command)) {
         event.preventDefault();
         event.stopPropagation();
         const input = $("#nexusCommandCenterInput");
         if (input) input.value = command;
         setCommandInputs(command);
-        nexusAgenticBrainLastResult = buildNexusMediaMusicLocalResult(command || "Play music.");
-        renderUserWorkspace();
+        openNexusWorkflow(normalizedWorkflowId, { command, source: "delegated-mode-click" });
+        return;
+      }
+      if (normalizedWorkflowId === "media") {
+        event.preventDefault();
+        event.stopPropagation();
+        const input = $("#nexusCommandCenterInput");
+        if (input) input.value = command;
+        setCommandInputs(command);
+        openNexusWorkflow("media", { command: command || "Play music.", source: "delegated-mode-click" });
         return;
       }
       if (isNexusCapabilityOverviewCommand(command)) {
@@ -36405,8 +36700,7 @@ function bindStatic() {
         const input = $("#nexusCommandCenterInput");
         if (input) input.value = command;
         setCommandInputs(command);
-        nexusAgenticBrainLastResult = buildNexusMediaMusicLocalResult(command);
-        renderUserWorkspace();
+        openNexusWorkflow("media", { command, source: "delegated-mode-click" });
         return;
       }
       const localHealthAccessResult = buildNexusHealthAccessPreparationResult(command);
@@ -36471,12 +36765,8 @@ function bindStatic() {
       }
       const panelModeId = detectNexusHomeModePanelId(command);
       if (panelModeId) {
-        const panelResult = buildNexusHomeModePanelResult(panelModeId, command);
-        if (panelResult) {
-          nexusAgenticBrainLastResult = panelResult;
-          renderUserWorkspace();
-          return;
-        }
+        openNexusWorkflow(panelModeId, { command, source: "command-submit" });
+        return;
       }
       if (handleNexusAgenticBrainTypedCommand(command)) return;
       await runNexusAgenticBrainAction("command", { command });
@@ -36518,20 +36808,16 @@ function bindStatic() {
         return;
       }
       const command = modeShortcut.dataset.nexusCommand || "";
+      const normalizedWorkflowId = normalizeNexusWorkflowId(modeId, command);
       const input = $("#nexusCommandCenterInput");
       if (input) input.value = command;
       setCommandInputs(command);
-      if (NEXUS_HOME_MODE_IDS.includes(modeId)) {
-        const panelResult = buildNexusHomeModePanelResult(modeId, command);
-        if (panelResult) {
-          nexusAgenticBrainLastResult = panelResult;
-          renderUserWorkspace();
-          return;
-        }
+      if (nexusWorkflowDefinition(normalizedWorkflowId, command)) {
+        openNexusWorkflow(normalizedWorkflowId, { command, source: "mode-click" });
+        return;
       }
-      if (modeId === "media") {
-        nexusAgenticBrainLastResult = buildNexusMediaMusicLocalResult(command || "Play music.");
-        renderUserWorkspace();
+      if (normalizedWorkflowId === "media") {
+        openNexusWorkflow("media", { command: command || "Play music.", source: "mode-click" });
         return;
       }
       if (runNexusStandardUserHomeLocalCommand(command)) return;

@@ -44,6 +44,7 @@
     "qa:nexus-standard-user-task-mode-launcher": "node scripts/nexus-standard-user-task-mode-launcher-qa.js",
     "qa:nexus-standard-user-home-screen-redesign": "node scripts/nexus-standard-user-home-screen-redesign-qa.js",
     "qa:nexus-panel-tab-click-repair": "node scripts/nexus-panel-tab-click-repair-qa.js",
+    "qa:nexus-full-workflow-workspace": "node scripts/nexus-full-workflow-workspace-qa.js",
     "qa:nexus-pilot-platform-foundation": "node scripts/nexus-pilot-platform-foundation-qa.js",
     "qa:nexus-pilot-browser-readiness": "node scripts/nexus-pilot-browser-readiness-qa.js",
     "qa:nexus-production-platform-rails": "node scripts/nexus-production-platform-rails-qa.js",

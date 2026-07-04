@@ -10951,6 +10951,212 @@ body.user-mode .nexus-suggested-action {
   box-shadow: 0 0 22px rgba(34, 211, 238, .14), inset 0 1px 0 rgba(255, 255, 255, .08) !important;
 }
 
+body.user-mode .nexus-active-workflow {
+  position: relative;
+  min-height: 430px;
+  padding: 20px !important;
+  border-radius: 30px !important;
+  overflow: hidden;
+  scroll-margin-top: 18px;
+  background:
+    radial-gradient(circle at 18% 10%, rgba(34, 211, 238, .24), transparent 26%),
+    radial-gradient(circle at 88% 18%, rgba(236, 72, 153, .18), transparent 28%),
+    linear-gradient(145deg, rgba(2, 6, 23, .92), rgba(14, 18, 44, .82)) !important;
+}
+
+body.user-mode .nexus-active-workflow::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(90deg, rgba(103, 232, 249, .12), transparent 32%, rgba(236, 72, 153, .09)),
+    linear-gradient(rgba(255, 255, 255, .035) 1px, transparent 1px);
+  background-size: auto, 100% 42px;
+  opacity: .75;
+}
+
+body.user-mode .nexus-active-workflow > * {
+  position: relative;
+  z-index: 1;
+}
+
+body.user-mode .nexus-active-workflow-empty {
+  min-height: 170px;
+}
+
+body.user-mode .nexus-workflow-header {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 14px;
+  align-items: start;
+}
+
+body.user-mode .nexus-workflow-icon {
+  width: 58px;
+  height: 58px;
+  display: grid;
+  place-items: center;
+  border-radius: 20px;
+  color: #ffffff;
+  font-size: 28px;
+  background:
+    radial-gradient(circle at 32% 22%, rgba(255, 255, 255, .88), transparent 20%),
+    linear-gradient(135deg, rgba(34, 211, 238, .9), rgba(139, 92, 246, .78), rgba(236, 72, 153, .68));
+  box-shadow: 0 0 32px rgba(34, 211, 238, .3), inset 0 0 18px rgba(255, 255, 255, .12);
+}
+
+body.user-mode .nexus-workflow-header h3 {
+  margin: 2px 0 8px;
+  font-size: clamp(1.45rem, 2.7vw, 2.35rem);
+  line-height: 1.04;
+  color: rgba(255, 255, 255, .98);
+  text-shadow: 0 0 18px rgba(34, 211, 238, .2), 0 1px 3px rgba(0, 0, 0, .55);
+}
+
+body.user-mode .nexus-workflow-header p,
+body.user-mode .nexus-workflow-purpose span,
+body.user-mode .nexus-workflow-actions span {
+  color: rgba(226, 232, 240, .9);
+  line-height: 1.5;
+}
+
+body.user-mode .nexus-workflow-header > button,
+body.user-mode .nexus-workflow-actions button,
+body.user-mode .nexus-workflow-quick-actions button {
+  border: 1px solid rgba(103, 232, 249, .28);
+  border-radius: 999px;
+  color: #ecfeff;
+  background: linear-gradient(135deg, rgba(34, 211, 238, .16), rgba(139, 92, 246, .14));
+  box-shadow: 0 0 20px rgba(34, 211, 238, .12), inset 0 1px 0 rgba(255, 255, 255, .08);
+}
+
+body.user-mode .nexus-workflow-purpose {
+  margin: 18px 0 14px;
+  padding: 14px 16px;
+  border: 1px solid rgba(125, 211, 252, .2);
+  border-radius: 20px;
+  background: rgba(2, 6, 23, .42);
+}
+
+body.user-mode .nexus-workflow-purpose strong {
+  display: block;
+  margin-bottom: 4px;
+  color: #f8fbff;
+}
+
+body.user-mode .nexus-workflow-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(240px, .8fr);
+  gap: 14px;
+  align-items: start;
+}
+
+body.user-mode .nexus-workflow-field-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+body.user-mode .nexus-workflow-field-grid label {
+  display: grid;
+  gap: 6px;
+  color: rgba(248, 250, 252, .94);
+}
+
+body.user-mode .nexus-workflow-field-grid textarea {
+  width: 100%;
+  min-height: 54px;
+  resize: vertical;
+  border: 1px solid rgba(125, 211, 252, .24);
+  border-radius: 16px;
+  padding: 10px 12px;
+  color: #f8fbff;
+  background: rgba(2, 6, 23, .58);
+}
+
+body.user-mode .nexus-workflow-quick-actions {
+  display: grid;
+  gap: 10px;
+}
+
+body.user-mode .nexus-workflow-steps {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  margin: 16px 0;
+}
+
+body.user-mode .nexus-workflow-steps span {
+  min-height: 78px;
+  display: grid;
+  align-content: start;
+  gap: 6px;
+  padding: 12px;
+  border: 1px solid rgba(125, 211, 252, .18);
+  border-radius: 18px;
+  color: rgba(226, 232, 240, .9);
+  background: rgba(2, 6, 23, .34);
+}
+
+body.user-mode .nexus-workflow-steps b {
+  width: 26px;
+  height: 26px;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  color: #020617;
+  background: #67e8f9;
+}
+
+body.user-mode .nexus-workflow-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+}
+
+body.user-mode .nexus-workflow-actions .primary {
+  color: #031526;
+  background: linear-gradient(135deg, #67e8f9, #a7f3d0) !important;
+}
+
+body.user-mode .nexus-workflow-map-preview {
+  min-height: 230px;
+  display: grid;
+  place-items: center;
+  text-align: center;
+  margin: 12px 0 14px;
+  border: 1px solid rgba(103, 232, 249, .34);
+  border-radius: 24px;
+  background:
+    linear-gradient(90deg, rgba(103, 232, 249, .12) 1px, transparent 1px),
+    linear-gradient(rgba(103, 232, 249, .1) 1px, transparent 1px),
+    radial-gradient(circle at 50% 44%, rgba(34, 211, 238, .2), transparent 35%),
+    rgba(2, 6, 23, .58);
+  background-size: 36px 36px, 36px 36px, auto, auto;
+}
+
+body.user-mode .nexus-workflow-map-preview strong {
+  display: block;
+  color: #f8fbff;
+  font-size: 1.2rem;
+}
+
+body.user-mode .nexus-workflow-map-preview span {
+  max-width: 520px;
+  color: rgba(226, 232, 240, .88);
+}
+
+@media (max-width: 900px) {
+  body.user-mode .nexus-workflow-header,
+  body.user-mode .nexus-workflow-body,
+  body.user-mode .nexus-workflow-field-grid,
+  body.user-mode .nexus-workflow-steps {
+    grid-template-columns: 1fr;
+  }
+}
+
 body.user-mode .nexus-core-feature-grid {
   gap: 14px !important;
 }
