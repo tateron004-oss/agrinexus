@@ -109,6 +109,9 @@ let nexusEmailProviderStatus = null;
 let nexusEmailProviderLastResult = null;
 let nexusCommunicationsProviderStatus = null;
 let nexusCommunicationsProviderLastResult = null;
+let nexusTelehealthProviderStatus = null;
+let nexusTelehealthLastResult = null;
+let nexusTelehealthLastEncounter = null;
 let nexusProviderPathwayLastRequest = null;
 let nexusProviderContactBridgeCards = [];
 let nexusLearningProviderBridgeCards = [];
@@ -18466,9 +18469,267 @@ function renderNexusHomeModePanel(card = {}) {
           <small>${escapeHtml(translateText("Nexus uses built-in guidance or live retrieval if configured. No fake citations."))}</small>
         </div>
       ` : ""}
+      ${panel.id === "telehealth-intake" ? renderNexusVirtualCareTelehealthPanel() : ""}
       <small>${escapeHtml(translateText(panel.limitation || "Preparation only. High-risk actions remain gated."))}</small>
     </div>
   `;
+}
+
+function nexusTelehealthStatusLabel(status = nexusTelehealthProviderStatus) {
+  const selected = status?.selectedProvider || status?.provider?.provider || "local";
+  const configured = status?.configured || status?.provider?.configured;
+  const missing = status?.missingEnv || status?.provider?.missingEnv || [];
+  if (configured) return `${selected} configured; consent and confirmation still required.`;
+  if (missing.length) return `${selected} missing: ${missing.join(", ")}`;
+  return "Local provider review queue fallback.";
+}
+
+function renderNexusVirtualCareTelehealthPanel() {
+  const statusLabel = nexusTelehealthStatusLabel();
+  const last = nexusTelehealthLastResult || {};
+  const encounter = nexusTelehealthLastEncounter || last.encounter || null;
+  const packetSummary = encounter?.packet?.summary || last.packet?.summary || [];
+  return `
+    <section class="nexus-home-mode-panel-form nexus-virtual-care-telehealth-panel" data-testid="nexus-virtual-care-telehealth-panel" data-nexus-virtual-care-telehealth="true">
+      <strong>${escapeHtml(translateText("Virtual Care + Telehealth Encounter"))}</strong>
+      <p>${escapeHtml(translateText("Prepare a provider-ready encounter packet for diabetes, hypertension, obesity, RPM/RTM readings, or general concerns."))}</p>
+      <div class="nexus-home-mode-field-grid">
+        <label>
+          <span>${escapeHtml(translateText("Condition area"))}</span>
+          <select data-testid="nexus-virtual-care-condition">
+            <option value="diabetes">${escapeHtml(translateText("Diabetes"))}</option>
+            <option value="hypertension">${escapeHtml(translateText("Hypertension"))}</option>
+            <option value="obesity">${escapeHtml(translateText("Obesity"))}</option>
+            <option value="general">${escapeHtml(translateText("General concern"))}</option>
+            <option value="other">${escapeHtml(translateText("Other"))}</option>
+          </select>
+        </label>
+        <label>
+          <span>${escapeHtml(translateText("Symptoms or concern"))}</span>
+          <input type="text" data-testid="nexus-virtual-care-symptoms" placeholder="${escapeHtml(translateText("Example: high morning glucose, dizziness, medication question"))}">
+        </label>
+        <label>
+          <span>${escapeHtml(translateText("Reading type"))}</span>
+          <select data-testid="nexus-virtual-care-reading-type">
+            <option value="blood pressure">${escapeHtml(translateText("Blood pressure"))}</option>
+            <option value="glucose">${escapeHtml(translateText("Glucose"))}</option>
+            <option value="weight">${escapeHtml(translateText("Weight"))}</option>
+            <option value="rtm note">${escapeHtml(translateText("RTM note"))}</option>
+          </select>
+        </label>
+        <label>
+          <span>${escapeHtml(translateText("Reading value"))}</span>
+          <input type="text" data-testid="nexus-virtual-care-reading-value" placeholder="${escapeHtml(translateText("Example: 138/86 or 142 mg/dL"))}">
+        </label>
+        <label>
+          <span>${escapeHtml(translateText("Medication list"))}</span>
+          <input type="text" data-testid="nexus-virtual-care-medications" placeholder="${escapeHtml(translateText("Optional, for packet organization only"))}">
+        </label>
+        <label>
+          <span>${escapeHtml(translateText("Allergies"))}</span>
+          <input type="text" data-testid="nexus-virtual-care-allergies" placeholder="${escapeHtml(translateText("Optional"))}">
+        </label>
+        <label>
+          <span>${escapeHtml(translateText("Preferred language"))}</span>
+          <input type="text" data-testid="nexus-virtual-care-language" placeholder="${escapeHtml(translateText("English, Spanish, Swahili..."))}">
+        </label>
+        <label>
+          <span>${escapeHtml(translateText("Region"))}</span>
+          <input type="text" data-testid="nexus-virtual-care-region" placeholder="${escapeHtml(translateText("City, county, or service area"))}">
+        </label>
+        <label>
+          <span>${escapeHtml(translateText("Contact method"))}</span>
+          <select data-testid="nexus-virtual-care-contact-method">
+            <option value="email">${escapeHtml(translateText("Email"))}</option>
+            <option value="sms">${escapeHtml(translateText("SMS"))}</option>
+            <option value="whatsapp">${escapeHtml(translateText("WhatsApp"))}</option>
+            <option value="phone">${escapeHtml(translateText("Phone"))}</option>
+          </select>
+        </label>
+        <label>
+          <span>${escapeHtml(translateText("Contact value"))}</span>
+          <input type="text" data-testid="nexus-virtual-care-contact-value" placeholder="${escapeHtml(translateText("Only used after consent and confirmation"))}">
+        </label>
+      </div>
+      <div class="nexus-home-mode-panel-actions" aria-label="${escapeHtml(translateText("Virtual care red flags"))}">
+        ${["Chest pain", "Severe trouble breathing", "Stroke symptoms", "Severe allergic reaction"].map(flag => `
+          <label class="nexus-inline-check">
+            <input type="checkbox" data-nexus-telehealth-red-flag="${escapeHtml(flag)}">
+            <span>${escapeHtml(translateText(flag))}</span>
+          </label>
+        `).join("")}
+      </div>
+      <div class="nexus-home-mode-panel-actions" aria-label="${escapeHtml(translateText("Virtual care consent controls"))}">
+        <label class="nexus-inline-check"><input type="checkbox" data-testid="nexus-virtual-care-consent-prepare"> <span>${escapeHtml(translateText("Consent to prepare packet"))}</span></label>
+        <label class="nexus-inline-check"><input type="checkbox" data-testid="nexus-virtual-care-consent-share"> <span>${escapeHtml(translateText("Consent to share when provider is configured"))}</span></label>
+        <label class="nexus-inline-check"><input type="checkbox" data-testid="nexus-virtual-care-confirmed"> <span>${escapeHtml(translateText("I reviewed and confirm this step"))}</span></label>
+      </div>
+      <div class="nexus-home-mode-panel-actions" aria-label="${escapeHtml(translateText("Virtual care actions"))}">
+        <button type="button" data-nexus-virtual-care-action="refresh-status" data-testid="nexus-virtual-care-refresh-status">${escapeHtml(translateText("Refresh provider status"))}</button>
+        <button type="button" data-nexus-virtual-care-action="prepare-encounter" data-testid="nexus-virtual-care-prepare-encounter">${escapeHtml(translateText("Prepare encounter"))}</button>
+        <button type="button" data-nexus-virtual-care-action="create-video" data-testid="nexus-virtual-care-create-video">${escapeHtml(translateText("Create video room"))}</button>
+        <button type="button" data-nexus-virtual-care-action="queue-review" data-testid="nexus-virtual-care-queue-review">${escapeHtml(translateText("Queue for provider review"))}</button>
+        <button type="button" data-nexus-virtual-care-action="email-packet" data-testid="nexus-virtual-care-email-packet">${escapeHtml(translateText("Email packet"))}</button>
+        <button type="button" data-nexus-virtual-care-action="notify-patient" data-testid="nexus-virtual-care-notify-patient">${escapeHtml(translateText("Notify patient"))}</button>
+        <button type="button" data-nexus-virtual-care-action="follow-up" data-testid="nexus-virtual-care-follow-up">${escapeHtml(translateText("Create follow-up task"))}</button>
+      </div>
+      <article class="nexus-real-provider-card" data-testid="nexus-virtual-care-status">
+        <strong>${escapeHtml(translateText("Telehealth provider status"))}</strong>
+        <span>${escapeHtml(translateText(statusLabel))}</span>
+        <small>${escapeHtml(translateText("No diagnosis, prescribing, appointment acceptance, urgent response routing, or provider submission occurs without the required provider path, consent, and confirmation."))}</small>
+      </article>
+      ${last.status ? `
+        <article class="nexus-real-provider-card" data-testid="nexus-virtual-care-last-result">
+          <strong>${escapeHtml(translateText("Last virtual care result"))}</strong>
+          <span>${escapeHtml(translateText(last.message || last.status || "Result ready"))}</span>
+          ${encounter?.id ? `<small>${escapeHtml(translateText("Encounter"))}: ${escapeHtml(encounter.id)}</small>` : ""}
+          ${packetSummary.length ? `<ul>${packetSummary.slice(0, 4).map(item => `<li>${escapeHtml(translateText(item))}</li>`).join("")}</ul>` : ""}
+        </article>
+      ` : ""}
+    </section>
+  `;
+}
+
+function nexusVirtualCareCollectForm() {
+  const panel = document.querySelector('[data-testid="nexus-virtual-care-telehealth-panel"]');
+  const value = selector => panel?.querySelector?.(selector)?.value?.trim?.() || "";
+  const checked = selector => Boolean(panel?.querySelector?.(selector)?.checked);
+  const redFlags = Array.from(panel?.querySelectorAll?.("[data-nexus-telehealth-red-flag]:checked") || [])
+    .map(item => item.dataset.nexusTelehealthRedFlag || "")
+    .filter(Boolean);
+  const readingType = value('[data-testid="nexus-virtual-care-reading-type"]');
+  const readingValue = value('[data-testid="nexus-virtual-care-reading-value"]');
+  return {
+    patient: {
+      preferredLanguage: value('[data-testid="nexus-virtual-care-language"]') || "English",
+      region: value('[data-testid="nexus-virtual-care-region"]')
+    },
+    contact: {
+      method: value('[data-testid="nexus-virtual-care-contact-method"]'),
+      value: value('[data-testid="nexus-virtual-care-contact-value"]')
+    },
+    conditionArea: value('[data-testid="nexus-virtual-care-condition"]') || "general",
+    symptoms: value('[data-testid="nexus-virtual-care-symptoms"]'),
+    medications: value('[data-testid="nexus-virtual-care-medications"]'),
+    allergies: value('[data-testid="nexus-virtual-care-allergies"]'),
+    readings: readingType || readingValue ? [{ type: readingType, value: readingValue }] : [],
+    redFlags,
+    urgency: redFlags.length ? "urgent" : "routine",
+    requestedProviderLane: "telehealth",
+    consentToPreparePacket: checked('[data-testid="nexus-virtual-care-consent-prepare"]'),
+    consentToShare: checked('[data-testid="nexus-virtual-care-consent-share"]'),
+    confirmed: checked('[data-testid="nexus-virtual-care-confirmed"]')
+  };
+}
+
+async function refreshNexusVirtualCareTelehealthStatus(options = {}) {
+  try {
+    nexusTelehealthProviderStatus = await request("/api/nexus/telehealth/status", { method: "GET" });
+    if (options.rerender !== false && experienceMode === "user") renderUserWorkspace();
+    return nexusTelehealthProviderStatus;
+  } catch (error) {
+    nexusTelehealthProviderStatus = { ok: false, error: error.message || "status_unavailable" };
+    if (options.rerender !== false && experienceMode === "user") renderUserWorkspace();
+    return nexusTelehealthProviderStatus;
+  }
+}
+
+async function handleNexusVirtualCareTelehealthClick(event) {
+  const button = event.target?.closest?.("[data-nexus-virtual-care-action]");
+  if (!button) return false;
+  event.preventDefault();
+  event.stopPropagation();
+  const action = button.dataset.nexusVirtualCareAction || "";
+  if (action === "refresh-status") {
+    await refreshNexusVirtualCareTelehealthStatus();
+    return true;
+  }
+  const body = nexusVirtualCareCollectForm();
+  if (action === "create-video" || action === "email-packet" || action === "notify-patient" || action === "follow-up") {
+    body.encounterId = nexusTelehealthLastEncounter?.id || nexusTelehealthLastResult?.encounter?.id || "";
+  }
+  if (action === "prepare-encounter" || action === "queue-review") {
+    body.createVideo = false;
+    nexusTelehealthLastResult = await request("/api/nexus/telehealth/create-encounter", { method: "POST", body });
+  } else if (action === "create-video") {
+    nexusTelehealthLastResult = await request("/api/nexus/telehealth/create-video-room", { method: "POST", body });
+  } else if (action === "email-packet") {
+    nexusTelehealthLastResult = await request("/api/nexus/telehealth/notify", { method: "POST", body: { ...body, channel: "email", to: body.contact.value } });
+  } else if (action === "notify-patient") {
+    nexusTelehealthLastResult = await request("/api/nexus/telehealth/notify", { method: "POST", body: { ...body, channel: body.contact.method || "sms", recipient: body.contact.value } });
+  } else if (action === "follow-up") {
+    nexusTelehealthLastResult = await request("/api/nexus/telehealth/follow-up", { method: "POST", body: { ...body, title: `Follow up on ${body.conditionArea} virtual care packet` } });
+  }
+  if (nexusTelehealthLastResult?.encounter) nexusTelehealthLastEncounter = nexusTelehealthLastResult.encounter;
+  await refreshNexusVirtualCareTelehealthStatus({ rerender: false });
+  renderUserWorkspace();
+  return true;
+}
+
+function isNexusVirtualCareTelehealthCommand(command = "") {
+  return /\b(telehealth|virtual care|video visit|video visits|provider review|diabetes review|blood pressure|hypertension|obesity|rpm|rtm|community health worker|chw)\b/i.test(command)
+    && /\b(start|create|prepare|review|blocking|blocked|status|configured|missing|video|visit|encounter|intake|packet|reading|follow|provider)\b/i.test(command);
+}
+
+async function runNexusVirtualCareTelehealthCommand(command = "") {
+  const question = String(command || "").trim();
+  if (!question) return null;
+  nexusAgenticBrainLastResult = {
+    ok: true,
+    status: "nexus_virtual_care_telehealth_checking",
+    message: "Checking the virtual care telehealth lane. Nexus will not create a provider submission, diagnosis, prescription, video room, or urgent response route from this command.",
+    preparedCards: [],
+    noExecutionAuthorized: true,
+    localOnly: true
+  };
+  renderUserWorkspace();
+  try {
+    const result = await request("/api/nexus/intelligence/ask", {
+      method: "POST",
+      body: {
+        question,
+        category: "telehealth",
+        context: { modeId: "telehealth-intake", sourceSurface: "standard_user" }
+      }
+    });
+    const cardResult = result?.result || {};
+    nexusAgenticBrainLastResult = {
+      ok: true,
+      status: "nexus_virtual_care_telehealth_answered",
+      message: cardResult.answer || "Nexus checked the virtual care telehealth lane.",
+      preparedCards: Array.isArray(cardResult.preparedCards) && cardResult.preparedCards.length
+        ? cardResult.preparedCards
+        : [{
+          type: "virtual_care_telehealth_status",
+          title: "Virtual care telehealth lane",
+          status: cardResult.answerMode || "provider status checked",
+          modePanel: {
+            id: "telehealth-intake",
+            icon: "🧑🏾‍⚕️",
+            title: "Telehealth Intake",
+            explanation: "Prepare virtual care details, RPM/RTM readings, and provider-ready packets.",
+            nextPrompt: "Add intake details, review the packet, then choose a gated next step.",
+            limitation: "No diagnosis, prescribing, appointment acceptance, urgent response routing, or provider submission occurs without consent, confirmation, and a configured provider path."
+          },
+          needsRealProvider: true,
+          localOnly: true
+        }],
+      statusPayload: result?.status || {},
+      noExecutionAuthorized: true,
+      noProviderSubmission: true,
+      source: "nexus-virtual-care-telehealth-activation"
+    };
+  } catch (error) {
+    nexusAgenticBrainLastResult = {
+      ok: false,
+      status: "nexus_virtual_care_telehealth_failed_safely",
+      message: error.message || "Virtual care telehealth status is unavailable.",
+      preparedCards: [],
+      noExecutionAuthorized: true
+    };
+  }
+  renderUserWorkspace();
+  return nexusAgenticBrainLastResult;
 }
 
 function renderNexusHomeModeSummary(card = {}) {
@@ -19920,15 +20181,17 @@ async function refreshNexusKnowledgeRail(options = {}) {
         return request("/api/nexus/knowledge/status", { method: "GET" });
       }
     };
-    const [status, sources, emailStatus, communicationsStatus] = await Promise.all([
+    const [status, sources, emailStatus, communicationsStatus, telehealthStatus] = await Promise.all([
       requestLiveKnowledgeStatus(),
       request("/api/nexus/knowledge/trusted-sources", { method: "GET" }),
       request("/api/nexus/email/status", { method: "GET" }).catch(() => null),
-      request("/api/nexus/communications/status", { method: "GET" }).catch(() => null)
+      request("/api/nexus/communications/status", { method: "GET" }).catch(() => null),
+      request("/api/nexus/telehealth/status", { method: "GET" }).catch(() => null)
     ]);
     nexusKnowledgeStatus = status || null;
     nexusEmailProviderStatus = emailStatus || null;
     nexusCommunicationsProviderStatus = communicationsStatus || null;
+    nexusTelehealthProviderStatus = telehealthStatus || null;
     nexusKnowledgeTrustedSources = Array.isArray(sources?.categories) ? sources.categories : [];
     if (options.rerender !== false && experienceMode === "user") renderUserWorkspace();
     return nexusKnowledgeStatus;
@@ -39404,6 +39667,24 @@ function handleNexusStandardUserHomeClick(event) {
   if (submit) {
     const input = $("#nexusCommandCenterInput");
     const command = input?.value?.trim() || "What can Nexus do?";
+    if (isNexusVirtualCareTelehealthCommand(command)) {
+      event.preventDefault();
+      event.stopPropagation();
+      event.stopImmediatePropagation?.();
+      if (input) input.value = command;
+      setCommandInputs(command);
+      runNexusVirtualCareTelehealthCommand(command).catch(error => {
+        nexusAgenticBrainLastResult = {
+          ok: false,
+          status: "nexus_virtual_care_telehealth_failed_safely",
+          message: error.message || "Virtual care telehealth status is unavailable.",
+          preparedCards: [],
+          noExecutionAuthorized: true
+        };
+        renderUserWorkspace();
+      });
+      return true;
+    }
     if (isNexusExplicitActivationWorkflowCommand(command) && runNexusStandardUserHomeLocalCommand(command)) {
       event.preventDefault();
       event.stopPropagation();
@@ -39573,6 +39854,7 @@ function bindStatic() {
     if (await handleNexusProductionRailsClick(event)) return;
     if (await handleNexusPilotReviewQueueClick(event)) return;
     if (await handleNexusPilotPlatformActionClick(event)) return;
+    if (await handleNexusVirtualCareTelehealthClick(event)) return;
     if (handleNexusPacketActionClick(event)) return;
     if (handleNexusGlobalReviewQueueAuditClick(event)) return;
     if (handleNexusGlobalActivationCenterClick(event)) return;

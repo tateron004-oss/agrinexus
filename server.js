@@ -12,6 +12,7 @@ const nexusStandardUserAgentExperience = require("./server/nexus-standard-user-a
 const nexusProductionRuntime = require("./server/nexusProductionRuntime.js");
 const nexusAgenticBrainRuntime = require("./server/nexusAgenticBrainRuntime.js");
 const nexusRealProviders = require("./server/providers");
+const nexusTelehealthProvider = require("./server/telehealth/provider.js");
 
 function loadEnvFile(filePath) {
   if (!fs.existsSync(filePath)) return;
@@ -27989,6 +27990,9 @@ function ensureNexusProductionRailsState(db) {
   if (!Array.isArray(db.nexusCommunications)) db.nexusCommunications = [];
   if (!Array.isArray(db.nexusNotifications)) db.nexusNotifications = [];
   if (!Array.isArray(db.nexusOutcomes)) db.nexusOutcomes = [];
+  if (!Array.isArray(db.nexusTelehealthEncounters)) db.nexusTelehealthEncounters = [];
+  if (!Array.isArray(db.nexusTelehealthFollowUps)) db.nexusTelehealthFollowUps = [];
+  if (!Array.isArray(db.nexusTelehealthVideoAttempts)) db.nexusTelehealthVideoAttempts = [];
   if (!Array.isArray(db.nexusLaunchBlockers)) db.nexusLaunchBlockers = [];
   if (!Array.isArray(db.nexusLegalSafetyPages)) db.nexusLegalSafetyPages = [];
   if (!Array.isArray(db.nexusAttachmentReadinessEvents)) db.nexusAttachmentReadinessEvents = [];
@@ -28848,6 +28852,80 @@ async function nexusIntelligenceAsk(db, body = {}, user = null, env = process.en
   ensureNexusProductionRailsState(db);
   const originalQuestion = sanitizePilotText(body.question || body.command || body.query || "", 700);
   if (!originalQuestion) return { ok: false, error: "question_required" };
+  if (/\b(telehealth|virtual care|video visit|video visits|provider bridge|provider review|diabetes review|blood pressure|hypertension|obesity|rpm|rtm|community health worker|chw)\b/i.test(originalQuestion) && /\b(start|create|prepare|review|blocking|blocked|video|visit|encounter|intake|packet|reading|follow|provider)\b/i.test(originalQuestion)) {
+    const telehealthStatus = nexusTelehealthProvider.status(env);
+    const provider = telehealthStatus.provider || {};
+    const missing = Array.isArray(telehealthStatus.missingEnv) ? telehealthStatus.missingEnv : [];
+    const wantsBlocking = /\b(blocking|blocked|missing|configured|ready|status)\b/i.test(originalQuestion);
+    const wantsVideo = /\b(video|visit|room)\b/i.test(originalQuestion);
+    const answer = wantsBlocking
+      ? (provider.configured
+        ? `${telehealthStatus.providerName || "Telehealth provider"} is configured. Nexus still requires intake details, consent to prepare a packet, consent to share, and explicit confirmation before any provider-facing handoff.`
+        : `Virtual care is using the ${telehealthStatus.selectedProvider || "local"} provider mode, but live video/provider handoff is not ready. Missing: ${missing.join(", ") || "configured telehealth provider credentials"}. Nexus can still prepare a local encounter packet and queue it for review.`)
+      : (wantsVideo
+        ? "Nexus can prepare a virtual care encounter packet and attempt a configured video path only after intake details, sharing consent, and explicit confirmation. Without configured provider credentials, it queues the packet locally for provider review."
+        : "Nexus can start a virtual care intake for diabetes, hypertension, obesity, RPM/RTM readings, or general concerns. It prepares a provider-ready packet and keeps diagnosis, prescribing, emergency dispatch, and provider submission gated.");
+    const auditEvent = addNexusPilotAuditEvent(db, "virtual_care_telehealth_status_answered", {
+      actor: user?.name || "Standard User",
+      role: user?.role || "Standard User",
+      mode: "virtual-care-telehealth",
+      description: "Nexus answered virtual care telehealth status. No provider submission, diagnosis, prescription, or video room was created."
+    });
+    return {
+      ok: true,
+      intelligence: {
+        router: "nexus-virtual-care-telehealth-activation",
+        originalQuestion,
+        category: "telehealth",
+        answerMode: provider.configured ? "telehealth_provider_configured" : "telehealth_provider_unconfigured",
+        sourceBacked: false,
+        provider: telehealthStatus.selectedProvider,
+        noExecutionAuthorized: true,
+        noDiagnosis: true,
+        noPrescribing: true
+      },
+      status: { telehealthProvider: telehealthStatus },
+      classification: { category: "telehealth", retrievalNeeded: false },
+      result: {
+        ok: true,
+        category: "telehealth",
+        categoryLabel: "Virtual Care / Telehealth",
+        answerMode: wantsVideo ? "video_visit_gated" : "telehealth_intake",
+        retrievalStatus: "built_in",
+        answer,
+        telehealthProviderStatus: telehealthStatus,
+        preparedCards: [{
+          type: "virtual_care_telehealth_status",
+          title: "Virtual care telehealth lane",
+          status: provider.configured ? "provider configured, confirmation still required" : "local queue fallback",
+          modePanel: {
+            id: "telehealth-intake",
+            icon: "🧑🏾‍⚕️",
+            title: "Telehealth Intake",
+            explanation: "Prepare virtual care details, RPM/RTM readings, and provider-ready packets.",
+            nextPrompt: "Add intake details, review the packet, then choose a gated next step.",
+            limitation: "No diagnosis, prescribing, appointment acceptance, emergency dispatch, or provider submission occurs without the required consent, confirmation, and configured provider path."
+          },
+          needsRealProvider: true,
+          localOnly: !provider.configured
+        }],
+        followUpActions: [
+          { id: "open-telehealth-intake", label: "Open telehealth intake", action: "open-mode" },
+          { id: "review-telehealth-status", label: "Review provider status", action: "refresh-status" }
+        ],
+        limitations: [
+          "Nexus does not diagnose, prescribe, change medication, or replace clinician judgment.",
+          "Video rooms and external provider handoffs require configured provider credentials, sharing consent, and explicit confirmation.",
+          "Emergency symptoms should use local emergency services; Nexus does not dispatch emergency help."
+        ],
+        citations: [],
+        noExecutionAuthorized: true,
+        noProviderSubmission: true,
+        auditEventId: auditEvent.id
+      },
+      audit: auditEvent
+    };
+  }
   if (/\b(sms|text|whatsapp|communications?|message)\b/i.test(originalQuestion) && /\b(configured|blocking|blocked|send|provider|pharmacy|mobile clinic|agriculture expert|vendor|logistics|packet|whatsapp|text)\b/i.test(originalQuestion)) {
     const communicationsStatus = nexusCommunicationsProviderStatus(env);
     const wantsWhatsApp = /\bwhatsapp\b/i.test(originalQuestion);
@@ -32937,6 +33015,13 @@ async function api(req, res, url) {
     return send(res, 200, nexusCommunicationsProviderStatus(process.env));
   }
 
+  if (url.pathname === "/api/nexus/telehealth/status" && req.method === "GET") {
+    const status = nexusTelehealthProvider.status(process.env);
+    status.emailProviderAvailability = nexusEmailProviderStatus(process.env);
+    status.communicationsProviderAvailability = nexusCommunicationsProviderStatus(process.env);
+    return send(res, 200, status);
+  }
+
   if (url.pathname === "/api/nexus/knowledge/trusted-sources" && req.method === "GET") {
     return send(res, 200, { ok: true, categories: nexusKnowledgeSourceList(), safety: "Trusted source preferences guide retrieval. Nexus still shows citations and safety limits for user review." });
   }
@@ -33028,6 +33113,61 @@ async function api(req, res, url) {
 
   if (url.pathname === "/api/nexus/communications/send-message" && req.method === "POST") {
     const result = await nexusCommunicationsSendMessage(db, await readBody(req), user, process.env);
+    if (!result.ok) return send(res, 400, result);
+    await writeDb(db);
+    return send(res, 200, result);
+  }
+
+  if (url.pathname === "/api/nexus/telehealth/create-encounter" && req.method === "POST") {
+    const result = await nexusTelehealthProvider.createEncounter(db, await readBody(req), user, process.env);
+    if (!result.ok) return send(res, 400, result);
+    await writeDb(db);
+    return send(res, 200, result);
+  }
+
+  if (url.pathname === "/api/nexus/telehealth/create-video-room" && req.method === "POST") {
+    const result = await nexusTelehealthProvider.createVideoRoom(db, await readBody(req), user, process.env);
+    if (!result.ok) return send(res, 400, result);
+    await writeDb(db);
+    return send(res, 200, result);
+  }
+
+  if (url.pathname === "/api/nexus/telehealth/notify" && req.method === "POST") {
+    const body = await readBody(req);
+    const prepared = nexusTelehealthProvider.prepareNotification(db, body, user, process.env);
+    let providerResult = null;
+    if (prepared.ok && prepared.status === "prepared") {
+      const channel = prepared.channel;
+      if (channel === "email") {
+        providerResult = await nexusEmailSendPacket(db, {
+          to: body.to || body.contactValue || "",
+          subject: body.subject || "Nexus virtual care packet",
+          packetId: prepared.encounterId,
+          domain: "telehealth",
+          message: prepared.message,
+          confirmed: body.confirmed === true,
+          consent: body.consentToShare === true
+        }, user, process.env);
+      } else if (channel === "sms" || channel === "whatsapp") {
+        providerResult = await nexusCommunicationsSendMessage(db, {
+          channel,
+          recipient: body.recipient || body.contactValue || "",
+          packetId: prepared.encounterId,
+          domain: "telehealth",
+          message: prepared.message,
+          confirmed: body.confirmed === true,
+          consent: body.consentToShare === true
+        }, user, process.env);
+      }
+    }
+    const result = { ...prepared, providerResult };
+    if (!result.ok) return send(res, 400, result);
+    await writeDb(db);
+    return send(res, 200, result);
+  }
+
+  if (url.pathname === "/api/nexus/telehealth/follow-up" && req.method === "POST") {
+    const result = nexusTelehealthProvider.createFollowUp(db, await readBody(req), user, process.env);
     if (!result.ok) return send(res, 400, result);
     await writeDb(db);
     return send(res, 200, result);
