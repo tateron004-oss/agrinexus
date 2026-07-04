@@ -62,6 +62,7 @@
     "qa:nexus-global-communications-engine": "node scripts/nexus-global-communications-engine-qa.js",
     "qa:nexus-global-marketplace-logistics": "node scripts/nexus-global-marketplace-logistics-qa.js",
     "qa:nexus-global-activation-center": "node scripts/nexus-global-activation-center-qa.js",
+    "qa:nexus-global-review-queue-audit": "node scripts/nexus-global-review-queue-audit-qa.js",
     "qa:nexus-layered-internet-intelligence": "node scripts/nexus-layered-internet-intelligence-qa.js",
     "qa:nexus-endgame-production-platform": "node scripts/nexus-endgame-production-platform-qa.js",
     "qa:nexus-internet-resource-provider-pathway": "node scripts/nexus-internet-resource-provider-pathway-qa.js",

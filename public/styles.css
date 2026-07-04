@@ -11229,6 +11229,59 @@ body.user-mode .nexus-global-activation-groups article {
   flex: 1 1 180px;
 }
 
+body.user-mode .nexus-global-review-audit-panel {
+  display: grid;
+  gap: 14px;
+  margin: 14px 0;
+  padding: 14px;
+  border: 1px solid rgba(167, 139, 250, .22);
+  border-radius: 18px;
+  background:
+    radial-gradient(circle at 88% 0%, rgba(217, 70, 239, .12), transparent 36%),
+    linear-gradient(135deg, rgba(15, 23, 42, .7), rgba(17, 24, 39, .52));
+  box-shadow:
+    0 16px 44px rgba(2, 6, 23, .22),
+    inset 0 1px 0 rgba(255, 255, 255, .1);
+}
+
+body.user-mode .nexus-global-review-audit-panel strong {
+  color: rgba(255, 255, 255, .96);
+}
+
+body.user-mode .nexus-global-review-audit-panel small,
+body.user-mode .nexus-global-review-audit-panel span {
+  color: rgba(226, 232, 240, .88);
+}
+
+body.user-mode .nexus-global-review-audit-grid,
+body.user-mode .nexus-global-review-audit-actions {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+body.user-mode .nexus-global-review-audit-grid article {
+  display: grid;
+  gap: 4px;
+  min-height: 70px;
+  padding: 10px 12px;
+  border: 1px solid rgba(196, 181, 253, .18);
+  border-radius: 14px;
+  background: rgba(15, 23, 42, .5);
+}
+
+body.user-mode .nexus-global-review-audit-notes {
+  display: grid;
+  gap: 6px;
+}
+
+@media (max-width: 760px) {
+  body.user-mode .nexus-global-review-audit-grid,
+  body.user-mode .nexus-global-review-audit-actions {
+    grid-template-columns: 1fr;
+  }
+}
+
 body.user-mode .nexus-command-center-grid article,
 body.user-mode .nexus-activation-grid article,
 body.user-mode .nexus-review-queue-grid article,

@@ -20706,6 +20706,7 @@ const NEXUS_PACKET_TYPES = Object.freeze([
   "training_support_packet", "workforce_pathway_packet", "employer_partner_research_packet", "learning_recommendation_packet",
   "email_preparation_packet", "sms_preparation_packet", "whatsapp_preparation_packet", "phone_call_preparation_packet", "telegram_preparation_packet", "communication_confirmation_packet", "communication_outcome_packet",
   "marketplace_vendor_research_packet", "vendor_comparison_packet", "logistics_planning_packet", "route_resource_packet", "purchase_preparation_packet",
+  "queued_action_packet", "review_queue_packet", "audit_event_packet", "outcome_record_packet", "failed_action_packet",
   "workforce_referral", "job_referral", "employer_partner_referral", "training_enrollment_request", "learning_plan_request",
   "email_message", "sms_message", "whatsapp_message", "telegram_message", "call_intent",
   "route_planning_request", "location_review_request", "field_visit_location_packet"
@@ -21614,6 +21615,62 @@ function showNexusFollowUps() {
   return showNexusRuntimeList("follow-up");
 }
 
+function nexusGlobalReviewQueueAuditSummary() {
+  const preparedPackets = nexusPreparedPackets.filter(packet => packet.outcomeStatus === "prepared");
+  const waitingPackets = nexusPreparedPackets.filter(packet => packet.outcomeStatus === "waiting_for_confirmation");
+  const queuedPackets = nexusPreparedPackets.filter(packet => packet.outcomeStatus === "queued");
+  const failedHistory = nexusActionHistory.filter(entry => ["failed", "credential_required"].includes(entry.outcomeStatus));
+  const blockedHistory = nexusActionHistory.filter(entry => /blocked|credential|inactive|confirmation/i.test(`${entry.outcomeStatus} ${entry.resultMessage} ${entry.errorMessage}`));
+  const outcomeHistory = nexusActionHistory.filter(entry => ["prepared", "queued", "waiting_for_confirmation", "test_submitted", "handoff_prepared", "submitted", "sent", "failed", "credential_required", "cancelled", "completed"].includes(entry.outcomeStatus));
+  const auditEventCount = nexusPreparedPackets.reduce((count, packet) => count + (Array.isArray(packet.auditTrail) ? packet.auditTrail.length : 0), 0) + nexusActionHistory.length;
+  return {
+    preparedCount: preparedPackets.length,
+    waitingConfirmationCount: waitingPackets.length,
+    queuedCount: queuedPackets.length,
+    failedCount: failedHistory.length,
+    blockedCount: blockedHistory.length,
+    outcomeCount: outcomeHistory.length,
+    auditEventCount,
+    latestOutcome: nexusActionHistory[0]?.outcomeStatus || "none",
+    storageMode: "local browser memory only; no secrets or provider credentials",
+    safeRetryPolicy: "Retry controls only re-check local/test-mode lane readiness and never bypass confirmation, credentials, or provider gates.",
+    stateDefinitions: "Prepared means locally assembled; queued means held for review; confirmed means explicitly approved for the current packet; executed/sent applies only to configured future providers; failed/blocked requires review.",
+    exportPolicy: "Exports include packet IDs, lane IDs, statuses, timestamps, and redacted metadata only."
+  };
+}
+
+function renderNexusGlobalReviewQueueAuditSystem() {
+  const summary = nexusGlobalReviewQueueAuditSummary();
+  return `
+    <section class="nexus-global-review-audit-panel nexus-glass-card" data-testid="nexus-global-review-queue-audit-system" aria-label="${escapeHtml(translateText("Global review queue audit and outcome system"))}">
+      <div>
+        <span class="eyebrow">${escapeHtml(translateText("Operational backbone"))}</span>
+        <strong>${escapeHtml(translateText("Review, queue, audit, and outcomes"))}</strong>
+        <small data-testid="nexus-global-review-state-definitions">${escapeHtml(translateText(summary.stateDefinitions))}</small>
+      </div>
+      <div class="nexus-global-review-audit-grid">
+        <article data-testid="nexus-global-review-prepared-count"><strong>${escapeHtml(String(summary.preparedCount))}</strong><span>${escapeHtml(translateText("prepared"))}</span></article>
+        <article data-testid="nexus-global-review-waiting-count"><strong>${escapeHtml(String(summary.waitingConfirmationCount))}</strong><span>${escapeHtml(translateText("waiting confirmation"))}</span></article>
+        <article data-testid="nexus-global-review-queued-count"><strong>${escapeHtml(String(summary.queuedCount))}</strong><span>${escapeHtml(translateText("queued"))}</span></article>
+        <article data-testid="nexus-global-review-failed-count"><strong>${escapeHtml(String(summary.failedCount))}</strong><span>${escapeHtml(translateText("failed / credential required"))}</span></article>
+        <article data-testid="nexus-global-review-blocked-count"><strong>${escapeHtml(String(summary.blockedCount))}</strong><span>${escapeHtml(translateText("blocked"))}</span></article>
+        <article data-testid="nexus-global-review-audit-count"><strong>${escapeHtml(String(summary.auditEventCount))}</strong><span>${escapeHtml(translateText("audit events"))}</span></article>
+      </div>
+      <div class="nexus-global-review-audit-notes">
+        <small data-testid="nexus-global-review-storage-mode">${escapeHtml(translateText(summary.storageMode))}</small>
+        <small data-testid="nexus-global-review-safe-retry-policy">${escapeHtml(translateText(summary.safeRetryPolicy))}</small>
+        <small data-testid="nexus-global-review-export-policy">${escapeHtml(translateText(summary.exportPolicy))}</small>
+      </div>
+      <div class="nexus-global-review-audit-actions">
+        <button type="button" data-nexus-global-review-action="show-queued">${escapeHtml(translateText("Show queued"))}</button>
+        <button type="button" data-nexus-global-review-action="show-failed">${escapeHtml(translateText("Show failed / blocked"))}</button>
+        <button type="button" data-nexus-global-review-action="show-outcomes">${escapeHtml(translateText("Show outcomes"))}</button>
+        <button type="button" data-nexus-global-review-action="export-review-audit">${escapeHtml(translateText("Export review/audit packet"))}</button>
+      </div>
+    </section>
+  `;
+}
+
 function renderNexusConfirmationPanel(packet, lane) {
   if (!packet) return "";
   const targetLane = lane || nexusIntegrationLaneById(packet.destinationLaneId);
@@ -21762,6 +21819,93 @@ function renderNexusReviewQueues() {
   `;
 }
 
+function handleNexusGlobalReviewQueueAuditClick(event) {
+  const button = event.target?.closest?.("[data-nexus-global-review-action]");
+  if (!button) return false;
+  event.preventDefault();
+  event.stopPropagation();
+  const action = button.dataset.nexusGlobalReviewAction || "";
+  const summary = nexusGlobalReviewQueueAuditSummary();
+  if (action === "show-queued") return showNexusQueuedActions();
+  if (action === "show-failed") return showNexusFailedActions();
+  if (action === "show-outcomes") {
+    nexusAgenticBrainLastResult = {
+      ok: true,
+      status: "nexus_global_outcome_records_listed",
+      mode: "Review, queue, audit, and outcomes",
+      message: `${summary.outcomeCount} local outcome record(s) are available for review.`,
+      preparedCards: nexusActionHistory.slice(0, 8).map(entry => ({
+        type: "outcome_record_packet",
+        title: entry.workflowId || entry.actionType || "Nexus outcome",
+        status: entry.outcomeStatus,
+        localOnly: entry.laneStatus !== "active_live",
+        noExecutionAuthorized: true
+      })),
+      noExecutionAuthorized: true,
+      noSecretsExposed: true,
+      localOnly: true,
+      source: "nexus_global_review_queue_audit_system"
+    };
+    renderUserWorkspace();
+    return true;
+  }
+  if (action === "export-review-audit") {
+    nexusAgenticBrainLastResult = {
+      ok: true,
+      status: "nexus_global_review_audit_export_prepared",
+      mode: "Review, queue, audit, and outcomes",
+      message: "Review queue, audit, and outcome export is ready locally with redacted metadata only.",
+      preparedCards: [{
+        type: "review_queue_packet",
+        title: "Global review queue export",
+        status: "local redacted export prepared",
+        localOnly: true,
+        noExecutionAuthorized: true
+      }, {
+        type: "audit_event_packet",
+        title: "Global audit event summary",
+        status: `${summary.auditEventCount} audit event(s) summarized`,
+        localOnly: true,
+        noExecutionAuthorized: true
+      }, {
+        type: summary.failedCount || summary.blockedCount ? "failed_action_packet" : "outcome_record_packet",
+        title: "Outcome and blocked-state summary",
+        status: `queued ${summary.queuedCount}; failed ${summary.failedCount}; blocked ${summary.blockedCount}`,
+        localOnly: true,
+        noExecutionAuthorized: true
+      }],
+      summary,
+      packets: nexusPreparedPackets.slice(0, 25).map(packet => ({
+        packetId: packet.packetId,
+        workflowId: packet.workflowId,
+        packetType: packet.packetType,
+        outcomeStatus: packet.outcomeStatus,
+        destinationLaneId: packet.destinationLaneId,
+        auditTrailCount: Array.isArray(packet.auditTrail) ? packet.auditTrail.length : 0,
+        secretsIncluded: false
+      })),
+      outcomes: nexusActionHistory.slice(0, 25).map(entry => ({
+        id: entry.id,
+        packetId: entry.packetId,
+        workflowId: entry.workflowId,
+        laneId: entry.laneId,
+        laneStatus: entry.laneStatus,
+        outcomeStatus: entry.outcomeStatus,
+        timestamp: entry.timestamp,
+        secretsIncluded: false
+      })),
+      noExecutionAuthorized: true,
+      noSecretsExposed: true,
+      noUnsafeRetryAuthorized: true,
+      localOnly: true,
+      source: "nexus_global_review_queue_audit_system"
+    };
+    renderUserWorkspace();
+    return true;
+  }
+  return false;
+}
+
 function renderNexusEndgameCommandCenter() {
   const lanes = nexusAllIntegrationLanes();
   const laneCounts = lanes.reduce((counts, lane) => {
@@ -21784,6 +21928,7 @@ function renderNexusEndgameCommandCenter() {
         <article><strong>${escapeHtml(translateText("Credential-missing lanes"))}</strong><span>${laneCounts.credential_missing || lanes.filter(lane => !lane.liveModeAvailable).length}</span></article>
         <article><strong>${escapeHtml(translateText("Global/Africa readiness"))}</strong><span>${escapeHtml(NEXUS_GLOBAL_READINESS_TAGS.join(" / "))}</span></article>
       </div>
+      ${renderNexusGlobalReviewQueueAuditSystem()}
       <div class="nexus-command-center-actions">
         ${["health-intake", "clinical-support", "telehealth-intake", "pharmacy-support", "mobile-clinic", "diabetes", "hypertension", "obesity", "rpm", "rtm", "agriculture", "crop-support", "farm-planning", "field-visit", "logistics", "agritrade", "workforce", "jobs", "learning", "training", "employer-partner", "maps", "route-planning", "communications", "email", "sms", "whatsapp", "phone", "telegram"].map(id => `<button type="button" data-nexus-mode-shortcut="${escapeHtml(id)}" data-nexus-command="open ${escapeHtml(id)}">${escapeHtml(translateText(id.replace(/-/g, " ")))}</button>`).join("")}
       </div>
@@ -38582,6 +38727,7 @@ function bindStatic() {
     if (await handleNexusPilotReviewQueueClick(event)) return;
     if (await handleNexusPilotPlatformActionClick(event)) return;
     if (handleNexusPacketActionClick(event)) return;
+    if (handleNexusGlobalReviewQueueAuditClick(event)) return;
     if (handleNexusGlobalActivationCenterClick(event)) return;
     if (handleNexusLaneActionClick(event)) return;
     if (handleNexusPartnerOnboardingClick(event)) return;
