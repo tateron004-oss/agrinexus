@@ -18395,6 +18395,7 @@ function renderNexusAgenticBrainResultCards() {
           ${renderNexusKnowledgeAnswerOptions(card)}
           ${renderNexusGlobalAgriculturePacket(card)}
           ${renderNexusGlobalTrainingWorkforcePacket(card)}
+          ${renderNexusGlobalChronicCareHealthPacket(card)}
           ${renderNexusMediaProviderOptions(card)}
           ${renderNexusHealthAccessPreparationOptions(card)}
           ${card.localOnly ? `<small>${escapeHtml(translateText("Local-only"))}</small>` : ""}
@@ -19137,6 +19138,64 @@ function renderNexusGlobalTrainingWorkforcePacket(card = {}) {
   `;
 }
 
+function renderNexusGlobalChronicCareHealthPacket(card = {}) {
+  const packet = card.chronicCareHealthPacket || card.globalChronicCareHealthPacket || null;
+  if (!packet) return "";
+  const educationFocus = Array.isArray(packet.educationFocus) ? packet.educationFocus : [];
+  const intakeQuestions = Array.isArray(packet.intakeQuestions) ? packet.intakeQuestions : [];
+  const providerReviewSummary = Array.isArray(packet.providerReviewSummary) ? packet.providerReviewSummary : [];
+  const urgentWarningSymptoms = Array.isArray(packet.urgentWarningSymptoms) ? packet.urgentWarningSymptoms : [];
+  const nextSafeActions = Array.isArray(packet.nextSafeActions) ? packet.nextSafeActions : [];
+  const citations = Array.isArray(packet.citations) ? packet.citations : [];
+  return `
+    <div class="nexus-global-chronic-care-health-packet" data-testid="nexus-global-chronic-care-health-packet-card" data-packet-type="${escapeHtml(packet.packetType || "chronic_disease_education_packet")}">
+      <div class="nexus-home-mode-panel-head">
+        <span class="nexus-home-mode-panel-icon" aria-hidden="true">🩺</span>
+        <div>
+          <strong>${escapeHtml(translateText("Global Chronic Care Health Engine"))}</strong>
+          <small data-testid="nexus-chronic-care-health-packet-type">${escapeHtml(packet.packetType || "chronic_disease_education_packet")}</small>
+        </div>
+      </div>
+      <p data-testid="nexus-chronic-care-health-condition-focus">${escapeHtml(translateText(packet.conditionFocus || "Chronic disease education packet prepared."))}</p>
+      <dl>
+        <div>
+          <dt>${escapeHtml(translateText("Education focus"))}</dt>
+          <dd data-testid="nexus-chronic-care-health-education-focus">${educationFocus.map(item => escapeHtml(translateText(item))).join("; ") || escapeHtml(translateText("Add condition, readings, and questions for stronger education."))}</dd>
+        </div>
+        <div>
+          <dt>${escapeHtml(translateText("Source-backed education"))}</dt>
+          <dd data-testid="nexus-chronic-care-health-source-backed-education">${escapeHtml(translateText(packet.sourceBackedEducation || "Live retrieval is not configured; Nexus did not fabricate citations."))}</dd>
+        </div>
+        <div>
+          <dt>${escapeHtml(translateText("Intake questions"))}</dt>
+          <dd data-testid="nexus-chronic-care-health-intake-questions">${intakeQuestions.map(item => escapeHtml(translateText(item))).join("; ")}</dd>
+        </div>
+        <div>
+          <dt>${escapeHtml(translateText("RPM / RTM context"))}</dt>
+          <dd data-testid="nexus-chronic-care-health-rpm-rtm-context">${escapeHtml(translateText(packet.rpmRtmContext?.explanation || "RPM/RTM remains manual and provider-review only unless a verified connector is configured."))}</dd>
+        </div>
+        <div>
+          <dt>${escapeHtml(translateText("Provider-ready summary"))}</dt>
+          <dd data-testid="nexus-chronic-care-health-provider-summary">${providerReviewSummary.map(item => escapeHtml(translateText(item))).join("; ")}</dd>
+        </div>
+        <div>
+          <dt>${escapeHtml(translateText("Urgent warning symptoms"))}</dt>
+          <dd data-testid="nexus-chronic-care-health-urgent-warnings">${urgentWarningSymptoms.map(item => escapeHtml(translateText(item))).join("; ")}</dd>
+        </div>
+      </dl>
+      ${nextSafeActions.length ? `
+        <div class="nexus-home-mode-panel-actions" aria-label="${escapeHtml(translateText("Chronic care next safe actions"))}">
+          ${nextSafeActions.slice(0, 4).map(action => `<button type="button" data-nexus-command="${escapeHtml(action)}" data-nexus-mode-shortcut="global-chronic-care-health-next-action">${escapeHtml(translateText(action))}</button>`).join("")}
+        </div>
+      ` : ""}
+      <small data-testid="nexus-chronic-care-health-live-knowledge-status">${escapeHtml(translateText("Live Knowledge"))}: ${escapeHtml(packet.liveKnowledgeStatus || "disabled")}</small>
+      <small data-testid="nexus-chronic-care-health-citation-count">${escapeHtml(translateText("Citations"))}: ${escapeHtml(String(citations.length || 0))}</small>
+      <small data-testid="nexus-chronic-care-health-export-ready">${escapeHtml(translateText(packet.exportReady ? "Export-ready care packet prepared for provider or care-team review." : "Review packet prepared locally."))}</small>
+      <small data-testid="nexus-chronic-care-health-no-execution">${escapeHtml(translateText("No diagnosis, prescription, medication change, provider submission, live RPM/RTM claim, or urgent-response action was authorized."))}</small>
+    </div>
+  `;
+}
+
 function renderNexusKnowledgeAnswerCard(answer = nexusKnowledgeLastResult) {
   if (!answer) return `<p>${escapeHtml(translateText("Ask a source-sensitive question to use the knowledge rail."))}</p>`;
   const citations = Array.isArray(answer.citations) ? answer.citations : [];
@@ -19462,6 +19521,31 @@ async function runNexusKnowledgeQuery(command = "", options = {}) {
       }
     } catch {
       nexusKnowledgeActionStatus = "Knowledge rail checked safely. Training/workforce packet preparation was unavailable.";
+    }
+  }
+  if (["chronicCare", "health", "telehealth", "mobileClinic", "pharmacy"].includes(options.category || nexusKnowledgeCategoryForCommand(question))) {
+    try {
+      const chronicCareHealthResult = await request("/api/nexus/global-chronic-care-health/engine", {
+        method: "POST",
+        body: {
+          query: question,
+          mode: options.modeId || (options.category || nexusKnowledgeCategoryForCommand(question)),
+          locale: languageCode(),
+          sourceSurface: options.sourceSurface || "standard_user"
+        }
+      });
+      if (chronicCareHealthResult?.packet) {
+        nexusAgenticBrainLastResult.preparedCards.unshift({
+          type: "nexus_global_chronic_care_health_engine",
+          title: "Chronic care health packet",
+          status: chronicCareHealthResult.packetType || "chronic_disease_education_packet",
+          localOnly: true,
+          globalChronicCareHealthPacket: chronicCareHealthResult.packet
+        });
+        nexusKnowledgeActionStatus = "Chronic-care health packet prepared. Review education, readings, urgent warnings, and provider-review limits before acting.";
+      }
+    } catch {
+      nexusKnowledgeActionStatus = "Knowledge rail checked safely. Chronic-care health packet preparation was unavailable.";
     }
   }
   await refreshNexusInternetResourceHistory({ rerender: false });
@@ -19990,8 +20074,13 @@ const NEXUS_HOME_MODE_PANEL_CONTENT = Object.freeze({
     limitation: "Nexus does not diagnose, prescribe, or replace clinical judgment. It prepares information for your clinician or care team.",
     quickActions: [
       { label: "Record blood pressure", command: "Nexus, record my blood pressure." },
+      { label: "Prepare diabetes packet", command: "Nexus, help with diabetes education and provider review." },
+      { label: "Prepare hypertension packet", command: "Nexus, review my blood pressure for provider review." },
+      { label: "Prepare obesity support", command: "Nexus, start obesity support for provider review." },
       { label: "Record glucose", command: "Nexus, help me organize a glucose reading." },
       { label: "Track weight", command: "Nexus, help me track my weight for chronic care." },
+      { label: "Explain RPM/RTM", command: "Nexus, explain RPM and RTM for chronic care." },
+      { label: "Prepare CHW packet", command: "Nexus, help a community health worker prepare a visit." },
       { label: "Prepare provider summary", command: "Prepare a provider summary." },
       { label: "Review urgent warning signs", command: "Nexus, explain urgent warning signs for chronic care." }
     ]
@@ -20356,6 +20445,7 @@ const NEXUS_INTEGRATION_LANE_STATUSES = Object.freeze(["not_configured", "config
 const NEXUS_OUTCOME_STATES = Object.freeze(["draft", "prepared", "waiting_for_confirmation", "queued", "test_submitted", "handoff_prepared", "user_initiated_external_handoff", "submitted", "sent", "failed", "credential_required", "provider_response_pending", "response_received", "follow_up_needed", "completed", "cancelled"]);
 const NEXUS_PACKET_TYPES = Object.freeze([
   "health_intake", "clinical_support", "chronic_care_summary", "diabetes_report", "hypertension_report", "obesity_report", "rpm_report", "rtm_report", "telehealth_request", "provider_handoff", "pharmacy_support_request", "mobile_clinic_request", "community_health_worker_request",
+  "chronic_disease_education_packet", "diabetes_support_packet", "hypertension_support_packet", "obesity_support_packet", "rpm_support_packet", "rtm_support_packet", "chw_support_packet", "provider_review_packet",
   "agriculture_support_packet", "crop_support_packet", "farm_planning_packet", "field_visit_packet", "crop_support_request", "farm_planning_request", "input_supplier_request", "extension_partner_request", "field_visit_request", "marketplace_inquiry", "logistics_request",
   "training_support_packet", "workforce_pathway_packet", "employer_partner_research_packet", "learning_recommendation_packet",
   "workforce_referral", "job_referral", "employer_partner_referral", "training_enrollment_request", "learning_plan_request",

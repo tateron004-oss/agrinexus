@@ -29510,6 +29510,219 @@ async function nexusGlobalTrainingWorkforceEngine(db, body = {}, user = null, en
   };
 }
 
+function nexusGlobalChronicCareHealthIntent(query = "", body = {}) {
+  const text = `${query} ${body.mode || ""} ${body.condition || ""} ${body.topic || ""}`.toLowerCase();
+  if (/\b(provider summary|provider review|care team|doctor summary|clinician summary|report)\b/.test(text)) return "provider_review";
+  if (/\b(chw|community health worker|health worker|home visit|community visit)\b/.test(text)) return "chw_support";
+  if (/\b(rtm|remote therapeutic monitoring|therapy update|therapy progress|rehab|physical therapy|activity therapy)\b/.test(text)) return "rtm_support";
+  if (/\b(rpm|remote patient monitoring|vitals|manual reading|blood pressure reading|glucose reading|weight reading|pulse|oxygen)\b/.test(text)) return "rpm_support";
+  if (/\b(obesity|weight|bmi|weight support|nutrition|activity plan)\b/.test(text)) return "obesity_support";
+  if (/\b(hypertension|blood pressure|bp|high blood pressure)\b/.test(text)) return "hypertension_support";
+  if (/\b(diabetes|glucose|blood sugar|a1c|insulin)\b/.test(text)) return "diabetes_support";
+  return "chronic_disease_education";
+}
+
+function nexusGlobalChronicCareHealthPacketType(intent = "chronic_disease_education") {
+  return ({
+    chronic_disease_education: "chronic_disease_education_packet",
+    diabetes_support: "diabetes_support_packet",
+    hypertension_support: "hypertension_support_packet",
+    obesity_support: "obesity_support_packet",
+    rpm_support: "rpm_support_packet",
+    rtm_support: "rtm_support_packet",
+    chw_support: "chw_support_packet",
+    provider_review: "provider_review_packet"
+  })[intent] || "chronic_disease_education_packet";
+}
+
+function nexusGlobalChronicCareHealthEducationFocus(intent = "chronic_disease_education") {
+  const shared = [
+    "Plain-language education only; Nexus does not diagnose, prescribe, or change medications.",
+    "Capture symptoms, readings, timing, access barriers, questions, and preferred language for provider review."
+  ];
+  if (intent === "diabetes_support") {
+    return [
+      "Organize glucose readings, meal/activity context, medication questions, and hypo/hyperglycemia warning signs for clinician review.",
+      ...shared
+    ];
+  }
+  if (intent === "hypertension_support") {
+    return [
+      "Organize blood pressure readings, position/rest context, symptoms, medication adherence questions, and urgent warning signs.",
+      ...shared
+    ];
+  }
+  if (intent === "obesity_support") {
+    return [
+      "Organize weight trend, nutrition/activity context, sleep/stress barriers, access needs, and provider-ready questions.",
+      ...shared
+    ];
+  }
+  if (intent === "rpm_support") {
+    return [
+      "Explain Remote Patient Monitoring as provider-supervised review of vitals or device data when a configured care program exists.",
+      "This packet treats readings as manual/user-provided unless a verified RPM device connector is configured.",
+      ...shared
+    ];
+  }
+  if (intent === "rtm_support") {
+    return [
+      "Explain Remote Therapeutic Monitoring as provider-supervised review of therapy participation, symptoms, or functional progress when configured.",
+      "This packet treats therapy updates as manual/user-provided unless a verified RTM connector is configured.",
+      ...shared
+    ];
+  }
+  if (intent === "chw_support") {
+    return [
+      "Prepare community health worker visit notes, household barriers, language needs, danger signs, and local referral questions.",
+      ...shared
+    ];
+  }
+  if (intent === "provider_review") {
+    return [
+      "Prepare a concise care-team summary with readings, concerns, medications as known, questions, access barriers, and safety notes.",
+      ...shared
+    ];
+  }
+  return shared;
+}
+
+function nexusGlobalChronicCareHealthUrgentWarnings() {
+  return [
+    "Seek urgent local care or emergency help for chest pain, trouble breathing, severe weakness, fainting, stroke signs, severe confusion, uncontrolled bleeding, or life-threatening symptoms.",
+    "For very high or very low readings, severe symptoms, pregnancy concerns, children, or rapidly worsening illness, contact local emergency services or a licensed clinician now."
+  ];
+}
+
+function nexusGlobalChronicCareHealthNextSteps(intent = "chronic_disease_education") {
+  if (intent === "provider_review") {
+    return [
+      "Review the summary for accuracy before sharing it with a care team.",
+      "Ask the user for explicit consent before any future provider handoff.",
+      "Keep diagnosis, medication changes, prescribing, and emergency decisions with licensed professionals."
+    ];
+  }
+  if (intent === "rpm_support" || intent === "rtm_support") {
+    return [
+      "Label readings or therapy updates as manual unless a verified RPM/RTM connector is configured.",
+      "Prepare a trend summary for provider review; do not claim live device monitoring.",
+      "Escalate urgent warning symptoms to local emergency or clinician support."
+    ];
+  }
+  if (intent === "chw_support") {
+    return [
+      "Prepare household context, preferred language, access barriers, readings, warning signs, and questions for CHW review.",
+      "Do not dispatch a CHW or share location without a configured partner path, consent, confirmation, and audit.",
+      "Use emergency services for urgent warning symptoms."
+    ];
+  }
+  return [
+    "Add readings, timing, symptoms, current medications as known, barriers, and questions for provider review.",
+    "Review education and citations before acting.",
+    "Do not change treatment without a licensed clinician."
+  ];
+}
+
+function buildNexusGlobalChronicCareHealthPacket(payload = {}) {
+  const intent = payload.intent || "chronic_disease_education";
+  const packetType = nexusGlobalChronicCareHealthPacketType(intent);
+  const liveKnowledge = payload.liveKnowledge || {};
+  const citations = Array.isArray(liveKnowledge.citations) ? liveKnowledge.citations.slice(0, 6) : [];
+  const body = payload.body || {};
+  const timestamp = new Date().toISOString();
+  return {
+    type: packetType,
+    packetType,
+    packetId: crypto.randomUUID(),
+    query: sanitizePilotText(payload.query || "", 700),
+    chronicCareIntent: intent,
+    conditionFocus: sanitizePilotText(body.condition || body.topic || payload.conditionFocus || intent.replace(/_/g, " "), 160),
+    patientContext: sanitizePilotText(body.context || body.patientContext || "Add age range, condition focus, readings, symptoms, access needs, and preferred language for stronger provider review.", 520),
+    educationFocus: nexusGlobalChronicCareHealthEducationFocus(intent),
+    sourceBackedEducation: liveKnowledge.status === "source-backed"
+      ? sanitizePilotText(liveKnowledge.summary || liveKnowledge.answer || "Source-backed health education is available. Review citations with a licensed professional before acting.", 1400)
+      : "Live health retrieval is not configured or did not return citations. Nexus prepared education-only guidance without fabricating sources.",
+    citations,
+    sources: Array.isArray(liveKnowledge.sources) ? liveKnowledge.sources.slice(0, 6) : citations,
+    intakeQuestions: [
+      "What condition or concern should the care team review?",
+      "What readings, symptoms, timing, medications as known, activity, diet, or therapy updates should be included?",
+      "What questions, access barriers, language needs, or follow-up concerns should Nexus organize?"
+    ],
+    rpmRtmContext: {
+      rpmReady: intent === "rpm_support",
+      rtmReady: intent === "rtm_support",
+      manualEntryOnly: true,
+      liveDeviceConnectorConfigured: false,
+      explanation: "RPM/RTM support is manual/provider-review preparation unless a verified device or care-team connector is configured."
+    },
+    providerReviewSummary: [
+      "Condition or concern, readings, symptom timing, medication questions as known, adherence barriers, access needs, and preferred language.",
+      "Provider review is required before diagnosis, medication changes, treatment decisions, remote monitoring enrollment, or care-team action."
+    ],
+    communityHealthWorkerSupport: intent === "chw_support"
+      ? "Prepare CHW visit context, household needs, language/access barriers, danger signs, and local referral questions. No CHW is dispatched from this packet."
+      : "CHW support can be prepared when the user asks for community health worker or household visit support.",
+    urgentWarningSymptoms: nexusGlobalChronicCareHealthUrgentWarnings(),
+    nextSafeActions: nexusGlobalChronicCareHealthNextSteps(intent),
+    liveKnowledgeStatus: sanitizePilotText(liveKnowledge.status || "disabled", 80),
+    provider: sanitizePilotText(liveKnowledge.provider || "not-configured", 80),
+    exportReady: true,
+    timestamp,
+    noExecutionAuthorized: true,
+    noDiagnosisProvided: true,
+    noPrescriptionProvided: true,
+    noMedicationChangeAuthorized: true,
+    noProviderSubmissionAuthorized: true,
+    noEmergencyDispatchAuthorized: true,
+    noLiveRpmRtmClaim: true,
+    requiresProviderReview: true,
+    requiresConsentBeforeProviderSubmission: true,
+    requiresConfirmationForProviderSubmission: true,
+    noFakeCitations: citations.length === 0
+  };
+}
+
+async function nexusGlobalChronicCareHealthEngine(db, body = {}, user = null, env = process.env) {
+  ensureNexusProductionRailsState(db);
+  const query = sanitizePilotText(body.query || body.question || body.command || "", 700);
+  if (!query) return { ok: false, error: "query_required" };
+  const intent = nexusGlobalChronicCareHealthIntent(query, body);
+  const liveKnowledge = await nexusLiveKnowledgeAllModesQuery(db, {
+    query,
+    domain: "health",
+    mode: intent,
+    locale: body.locale || "",
+    maxResults: body.maxResults || 5,
+    safetyContext: { sourceSurface: body.sourceSurface || "global_chronic_care_health_engine" }
+  }, user, env);
+  const packet = buildNexusGlobalChronicCareHealthPacket({
+    query,
+    intent,
+    body,
+    liveKnowledge
+  });
+  addNexusPilotAuditEvent(db, "global_chronic_care_health_packet_prepared", {
+    actor: user?.name || "Standard User",
+    role: user?.role || "Standard User",
+    mode: intent,
+    description: `${packet.packetType} prepared with Live Knowledge status ${packet.liveKnowledgeStatus}. No diagnosis, prescription, provider submission, RPM/RTM device claim, or emergency dispatch occurred.`
+  });
+  return {
+    ok: true,
+    status: "prepared",
+    intent,
+    packetType: packet.packetType,
+    packet,
+    liveKnowledge,
+    noExecutionAuthorized: true,
+    noDiagnosisProvided: true,
+    noPrescriptionProvided: true,
+    noProviderSubmissionAuthorized: true,
+    noEmergencyDispatchAuthorized: true
+  };
+}
+
 function nexusKnowledgeSaveResult(db, body = {}, user = null) {
   ensureNexusProductionRailsState(db);
   const queryId = sanitizePilotText(body.queryId || "", 120);
@@ -31269,6 +31482,13 @@ async function api(req, res, url) {
 
   if (url.pathname === "/api/nexus/global-training-workforce/engine" && req.method === "POST") {
     const result = await nexusGlobalTrainingWorkforceEngine(db, await readBody(req), user, process.env);
+    if (!result.ok) return send(res, 400, result);
+    await writeDb(db);
+    return send(res, 200, result);
+  }
+
+  if (url.pathname === "/api/nexus/global-chronic-care-health/engine" && req.method === "POST") {
+    const result = await nexusGlobalChronicCareHealthEngine(db, await readBody(req), user, process.env);
     if (!result.ok) return send(res, 400, result);
     await writeDb(db);
     return send(res, 200, result);
