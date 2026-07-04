@@ -53,7 +53,7 @@ function excludes(source, token, label) {
   "title: \"Dispatch Gate\"",
   "title: \"Logistics Request\"",
   "Nexus does not process payments",
-  "Nexus does not book appointments",
+  "Nexus does not reserve appointments",
   "Nexus does not dispatch emergency help",
   "Nexus does not book transport",
   "return \"payment-gate\"",

@@ -67,6 +67,7 @@
     "qa:nexus-pharmacy-mobile-clinic-activation": "node scripts/nexus-pharmacy-mobile-clinic-activation-qa.js",
     "qa:nexus-production-provider-smoke-test": "node scripts/nexus-production-provider-smoke-test.js",
     "qa:nexus-production-workflow-launch-live-knowledge": "node scripts/nexus-production-workflow-launch-live-knowledge-qa.js",
+    "qa:nexus-agentic-all-modes-launch": "node scripts/nexus-agentic-all-modes-launch-qa.js",
     "qa:nexus-global-marketplace-logistics": "node scripts/nexus-global-marketplace-logistics-qa.js",
     "qa:nexus-global-activation-center": "node scripts/nexus-global-activation-center-qa.js",
     "qa:nexus-global-review-queue-audit": "node scripts/nexus-global-review-queue-audit-qa.js",

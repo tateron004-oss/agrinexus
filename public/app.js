@@ -19436,8 +19436,9 @@ function nexusKnowledgeStatusLabel(value = "") {
 function isNexusLiveKnowledgeQuestion(command = "") {
   const lower = String(command || "").toLowerCase().trim();
   if (!lower) return false;
+  if (/\b(i need|need help|help me|help with|open|start|prepare)\b/.test(lower) && !/\b(research|source|sources|cite|citation|current|latest|internet|web|search)\b/.test(lower)) return false;
   if (/\b(open|start|send|call|message|pay|checkout|book|schedule|delete|upload|camera|share my location)\b/.test(lower)) return false;
-  return /\b(current|latest|today|now|recent|research|source-backed|source|sources|cite|citation|internet|web|search|best practices|what causes|what should|safe storage|market price|price for|farm jobs|training do i need|advice for|doctor about|yellow leaves|maize|tomatoes|blood pressure|diabetes|insulin|solar installation)\b/.test(lower);
+  return /\b(current|latest|today|now|recent|research|source-backed|source|sources|cite|citation|internet|web|search|best practices|what causes|what should|safe storage|market price|price for|farm jobs|training do i need|advice for|doctor about|solar installation)\b/.test(lower);
 }
 
 function nexusKnowledgeCategoryForCommand(command = "") {
@@ -21652,7 +21653,7 @@ const NEXUS_FULL_WORKFLOW_EXTRAS = Object.freeze({
     content: {
       explanation: "Use this gate to organize appointment or service-request details before any future scheduling connector can run.",
       nextPrompt: "Add the service type, preferred time window, participant label, and confirmation still needed.",
-      limitation: "Nexus does not book appointments, reserve services, create calendar events, or claim provider acceptance without configured scheduling, consent, confirmation, audit, and outcome verification.",
+      limitation: "Nexus does not reserve appointments, reserve services, create calendar events, or claim provider acceptance without configured scheduling, consent, confirmation, audit, and outcome verification.",
       quickActions: [
         { label: "Prepare appointment request", command: "Nexus, prepare appointment request." },
         { label: "Review scheduling details", command: "Nexus, review scheduling details." },
@@ -22602,8 +22603,132 @@ function showNexusRuntimeList(kind = "pending") {
   return true;
 }
 
+const NEXUS_CAPABILITIES = Object.freeze({
+  "ask-nexus": { id: "ask-nexus", title: "Ask Nexus", category: "core", workflowId: "resource-assistant", aliases: ["ask nexus", "general assistant", "open dialogue", "dialogue", "assistant task"] },
+  "task-continuation": { id: "task-continuation", title: "Task Continuation", category: "core", workflowId: "resource-assistant", action: "continue", aliases: ["continue last task", "continue workflow", "resume workflow", "task continuation"] },
+  "task-cancellation": { id: "task-cancellation", title: "Task Cancellation", category: "core", workflowId: "resource-assistant", action: "cancel", aliases: ["cancel task", "cancel workflow", "stop current task"] },
+  "confirmation-panel": { id: "confirmation-panel", title: "Confirmation Panel", category: "core", workflowId: "resource-assistant", aliases: ["confirmation panel", "review confirmation", "confirm action"] },
+  "outcome-verification": { id: "outcome-verification", title: "Outcome Verification", category: "core", workflowId: "resource-assistant", aliases: ["outcome verification", "verify outcome", "show outcome"] },
+  "global-platform-status": { id: "global-platform-status", title: "Global Platform Status", category: "status", workflowId: "resource-assistant", action: "status", aliases: ["global platform status", "production status", "activation status", "what is blocking live provider actions"] },
+  "live-knowledge": { id: "live-knowledge", title: "Live Knowledge Research", category: "research", workflowId: "resource-assistant", action: "research", aliases: ["live knowledge", "internet research", "source-backed answer", "citation", "research agriculture topic", "research healthcare topic", "research workforce topic", "research marketplace", "research logistics", "use the internet", "find current sources"] },
+  "virtual-care": { id: "virtual-care", title: "Virtual Care", category: "healthcare", workflowId: "telehealth-intake", aliases: ["virtual care", "video visit", "daily video room", "daily video room gate", "virtual care encounter"] },
+  telehealth: { id: "telehealth", title: "Telehealth", category: "healthcare", workflowId: "telehealth-intake", aliases: ["telehealth", "telehealth visit", "prepare telehealth visit", "provider bridge"] },
+  "physician-review": { id: "physician-review", title: "Physician Review Packet", category: "healthcare", workflowId: "provider-support", aliases: ["physician review packet", "provider review packet", "care team queue", "provider queue", "provider review queue"] },
+  "chronic-disease": { id: "chronic-disease", title: "Chronic Disease Support", category: "healthcare", workflowId: "chronic-care", aliases: ["chronic disease", "chronic disease support", "chronic care"] },
+  diabetes: { id: "diabetes", title: "Diabetes", category: "healthcare", workflowId: "diabetes", aliases: ["diabetes", "diabetes intake", "diabetes follow-up", "blood sugar", "glucose"] },
+  hypertension: { id: "hypertension", title: "Hypertension", category: "healthcare", workflowId: "hypertension", aliases: ["hypertension", "high blood pressure", "blood pressure", "bp"] },
+  obesity: { id: "obesity", title: "Obesity", category: "healthcare", workflowId: "obesity", aliases: ["obesity", "obesity support", "weight support"] },
+  rpm: { id: "rpm", title: "RPM Readings", category: "healthcare", workflowId: "rpm", aliases: ["rpm", "rpm reading", "rpm readings", "remote patient monitoring"] },
+  rtm: { id: "rtm", title: "RTM Readings", category: "healthcare", workflowId: "rtm", aliases: ["rtm", "rtm reading", "rtm readings", "remote therapeutic monitoring"] },
+  "emergency-red-flag": { id: "emergency-red-flag", title: "Emergency Red Flag Guidance", category: "healthcare", workflowId: "dispatch-gate", aliases: ["emergency red flag", "emergency guidance", "urgent help", "emergency help"] },
+  pharmacy: { id: "pharmacy", title: "Pharmacy Referral", category: "pharmacy", workflowId: "pharmacy-support", aliases: ["pharmacy", "pharmacy referral", "medication review", "refill coordination", "medication adherence", "diabetes supplies", "pharmacist review", "pharmacy queue"] },
+  "mobile-clinic": { id: "mobile-clinic", title: "Mobile Clinic Request", category: "mobile-clinic", workflowId: "mobile-clinic", aliases: ["mobile clinic", "mobile clinic request", "vitals check", "rural clinic", "community health outreach", "mobile clinic queue"] },
+  agriculture: { id: "agriculture", title: "Agriculture Support", category: "agriculture", workflowId: "agriculture", aliases: ["agriculture", "agriculture support", "agronomy", "agronomy expert case", "crop issue", "crop issue triage", "tomato blight", "blight", "tomato disease", "pest", "disease support", "soil", "fertilizer", "irrigation", "climate-smart agriculture", "farmer training"] },
+  "farm-visit": { id: "farm-visit", title: "Farm Visit Request", category: "agriculture", workflowId: "field-visit", aliases: ["farm visit", "farm visit request", "field visit", "field operations"] },
+  "drone-mission": { id: "drone-mission", title: "Drone Mission Request", category: "agriculture", workflowId: "field-visit", aliases: ["drone mission", "drone mission request", "drone support"] },
+  agritrade: { id: "agritrade", title: "AgriTrade", category: "marketplace", workflowId: "agritrade", aliases: ["agritrade", "agri trade", "marketplace", "start marketplace", "vendor inquiry", "buyer seller", "produce listing", "input sourcing", "quote request", "vendor review queue"] },
+  logistics: { id: "logistics", title: "Logistics Planning", category: "logistics", workflowId: "logistics", aliases: ["logistics", "logistics planning", "route support", "pickup request", "delivery request", "cold-chain", "cold chain", "storage request", "logistics partner queue"] },
+  workforce: { id: "workforce", title: "Workforce Support", category: "workforce", workflowId: "workforce", aliases: ["workforce", "workforce support", "job readiness", "employer referral", "employment support"] },
+  training: { id: "training", title: "Training Enrollment", category: "training", workflowId: "training", aliases: ["training", "training enrollment", "digital literacy", "ai training", "youth workforce", "agriculture workforce training", "healthcare workforce training", "ev workforce", "certification partner", "lms handoff"] },
+  maps: { id: "maps", title: "Maps / Field Visit", category: "maps", workflowId: "maps", aliases: ["maps", "open maps", "route planning", "farm visit planning", "mobile clinic route planning", "logistics route planning", "location-sharing gate"] },
+  communications: { id: "communications", title: "Communications", category: "communications", workflowId: "communications", aliases: ["communications", "email provider status", "send by email", "sms provider status", "send sms", "whatsapp provider status", "send whatsapp", "phone handoff", "telegram handoff"] },
+  "music-media": { id: "music-media", title: "Music / Media", category: "media", workflowId: "media", aliases: ["music", "media", "music media", "youtube embed", "external media handoff", "media search"] },
+  offline: { id: "offline", title: "Offline Support", category: "offline", workflowId: "offline", aliases: ["offline", "offline support", "offline queue", "low bandwidth", "sync status", "local fallback"] },
+  "admin-review": { id: "admin-review", title: "Admin Review", category: "admin", workflowId: "resource-assistant", action: "review-queue", aliases: ["admin review", "admin queue", "provider response inbox", "case timeline"] },
+  "provider-review": { id: "provider-review", title: "Provider Review", category: "admin", workflowId: "provider-support", aliases: ["provider review", "provider queue", "vendor queue", "agronomy queue", "marketplace queue", "logistics queue", "workforce queue"] },
+  "payment-gate": { id: "payment-gate", title: "Payment Preparation Gate", category: "gate", workflowId: "payment-gate", aliases: ["payment gate", "payment preparation", "open payment gate", "process payment", "pay", "checkout"] },
+  "booking-gate": { id: "booking-gate", title: "Booking Preparation Gate", category: "gate", workflowId: "booking-gate", aliases: ["booking gate", "booking preparation", "open booking gate", "appointment request", "schedule appointment", "booking"] },
+  "dispatch-gate": { id: "dispatch-gate", title: "Dispatch Preparation Gate", category: "gate", workflowId: "dispatch-gate", aliases: ["dispatch gate", "dispatch preparation", "prepare dispatch request", "dispatch request", "send help"] }
+});
+
+function resolveNexusCapability(input = "", options = {}) {
+  const text = String(input || "").toLowerCase().trim();
+  const explicitId = String(options.capabilityId || options.modeId || "").toLowerCase().replace(/^sidebar-/, "").replace(/^core-/, "");
+  if (explicitId && NEXUS_CAPABILITIES[explicitId]) return NEXUS_CAPABILITIES[explicitId];
+  if (isNexusLiveKnowledgeQuestion(text)) return NEXUS_CAPABILITIES["live-knowledge"];
+  const workflowId = normalizeNexusWorkflowId(explicitId, text);
+  const directByWorkflow = Object.values(NEXUS_CAPABILITIES).find(item => item.workflowId === workflowId || item.id === workflowId);
+  if (directByWorkflow) return directByWorkflow;
+  return Object.values(NEXUS_CAPABILITIES).find(item => (item.aliases || []).some(alias => text.includes(String(alias).toLowerCase()))) || null;
+}
+
+function renderActiveNexusWorkspace(state = nexusActiveWorkflowState) {
+  return renderNexusActiveWorkflowWorkspace(state);
+}
+
+function openNexusCapability(capabilityId, options = {}) {
+  const capability = NEXUS_CAPABILITIES[String(capabilityId || "").toLowerCase()] || resolveNexusCapability(options.command || capabilityId, options);
+  if (!capability) return false;
+  const command = options.command || capability.title || capability.id;
+  if (capability.id === "live-knowledge" || capability.action === "research") {
+    runNexusKnowledgeQuery(command, {
+      source: options.source || "agentic-capability",
+      workflowId: capability.workflowId || "resource-assistant",
+      sourceSurface: options.sourceSurface || "active_workspace"
+    }).catch(error => {
+      nexusKnowledgeActionStatus = error.message || "Live Knowledge needs attention.";
+      if (experienceMode === "user") renderUserWorkspace();
+    });
+    return true;
+  }
+  if (capability.action === "continue") return continueLastNexusWorkflow() || openNexusWorkflow(capability.workflowId, { command, source: options.source || "agentic-capability", action: capability.action });
+  if (capability.action === "status" || capability.action === "review-queue") {
+    nexusActiveWorkflowState = {
+      id: capability.workflowId || "resource-assistant",
+      command,
+      source: options.source || "agentic-capability",
+      workflow: capability.id,
+      action: capability.action || "open",
+      openedAt: Date.now()
+    };
+    saveNexusRuntimeMemory();
+    nexusAgenticBrainLastResult = {
+      ok: true,
+      status: `nexus_${capability.id}_opened`,
+      mode: capability.title,
+      message: `${capability.title} is open in the active workspace. External actions remain gated until configured and confirmed.`,
+      preparedCards: [{ type: capability.id, title: capability.title, status: "active workspace open", localOnly: true }],
+      noExecutionAuthorized: true,
+      localOnly: true,
+      source: "nexus_agentic_all_modes_launcher"
+    };
+    renderUserWorkspace();
+    scheduleNexusActiveWorkflowFocus({ instant: Boolean(options.instant) });
+    return true;
+  }
+  return openNexusWorkflow(capability.workflowId || capability.id, {
+    command,
+    source: options.source || "agentic-capability",
+    action: capability.action || "open",
+    workflow: capability.id,
+    instant: options.instant,
+    preparedResult: options.preparedResult
+  });
+}
+
+function launchCapabilityFromAskNexus(input = "") {
+  const capability = resolveNexusCapability(input);
+  return capability ? openNexusCapability(capability.id, { command: input, source: "typed-command", sourceSurface: "ask_nexus" }) : false;
+}
+
+function launchCapabilityFromVoice(transcript = "") {
+  const capability = resolveNexusCapability(transcript);
+  return capability ? openNexusCapability(capability.id, { command: transcript, source: "voice-command", sourceSurface: "voice_audio" }) : false;
+}
+
+function launchCapabilityFromClick(eventOrElement) {
+  const target = eventOrElement?.target?.closest ? eventOrElement.target : eventOrElement;
+  const shortcut = target?.closest?.("[data-nexus-mode-shortcut]");
+  if (!shortcut) return false;
+  const command = shortcut.dataset.nexusCommand || shortcut.textContent || "";
+  const capability = resolveNexusCapability(command, { modeId: shortcut.dataset.nexusModeShortcut || "" });
+  return capability ? openNexusCapability(capability.id, { command, source: "mode-click", sourceSurface: "click" }) : false;
+}
+
 function resolveNexusIntent(input, options = {}) {
   const text = String(input || "").trim();
+  const capability = resolveNexusCapability(text, options);
+  if (capability) return { type: capability.action === "research" ? "research" : "workflow", workflowId: capability.workflowId, capabilityId: capability.id, text };
   const workflowId = normalizeNexusWorkflowId(options.workflowId || "", text) || detectNexusHomeModePanelId(text);
   if (/\b(activation center|provider vendor registry|provider\/vendor registry|admin console|pilot readiness)\b/i.test(text)) {
     return { type: "activation-center", workflowId: "activation-center", text };
@@ -24260,6 +24385,9 @@ function runNexusStandardUserHomeLocalCommand(command = "") {
     renderUserWorkspace();
     scheduleNexusActiveWorkflowFocus({ instant: true });
     return true;
+  }
+  if (runtimeIntent.capabilityId) {
+    return openNexusCapability(runtimeIntent.capabilityId, { command: normalized, source: "typed-command", sourceSurface: "standard_user_home" });
   }
   if (shouldNexusGlobalAssistantBrainHandle(normalized)) {
     const result = buildNexusGlobalAssistantBrainResult(normalized);
@@ -37884,13 +38012,7 @@ async function handleVoiceCommandCore(rawCommand, options = {}) {
   }
   const standardUserVoiceCommand = spokenCommand || command || localizedCommand || rawCommand;
   if (experienceMode === "user" || document.body.classList.contains("user-mode")) {
-    if (isNexusLiveKnowledgeQuestion(standardUserVoiceCommand)) {
-      await runNexusKnowledgeQuery(standardUserVoiceCommand, { source: "voice-command", sourceSurface: "standard_user_voice" });
-      updateNexusBehaviorLayer("ready", "Nexus opened Live Knowledge research in the main workspace.");
-      setVoiceResponse("I opened Live Knowledge research in the main workspace. I will show sources only when the configured provider returns citable results.", true, { allowHandoff: false, command: standardUserVoiceCommand, source: "voice-workflow-launch" });
-      return;
-    }
-    if (runNexusStandardUserHomeLocalCommand(standardUserVoiceCommand)) {
+    if (launchCapabilityFromVoice(standardUserVoiceCommand) || runNexusStandardUserHomeLocalCommand(standardUserVoiceCommand)) {
       updateNexusBehaviorLayer("ready", "Nexus opened the requested workflow in the main workspace.");
       setVoiceResponse("I opened that workflow in the main workspace. External actions remain gated until configured and confirmed.", true, { allowHandoff: false, command: standardUserVoiceCommand, source: "voice-workflow-launch" });
       return;
@@ -40034,6 +40156,14 @@ function handleNexusStandardUserHomeClick(event) {
   if (submit) {
     const input = $("#nexusCommandCenterInput");
     const command = input?.value?.trim() || "What can Nexus do?";
+    if (launchCapabilityFromAskNexus(command)) {
+      event.preventDefault();
+      event.stopPropagation();
+      event.stopImmediatePropagation?.();
+      if (input) input.value = command;
+      setCommandInputs(command);
+      return true;
+    }
     if (isNexusVirtualCareTelehealthCommand(command)) {
       event.preventDefault();
       event.stopPropagation();
@@ -40157,6 +40287,16 @@ function handleNexusStandardUserHomeClick(event) {
     scheduleNexusActiveWorkflowFocus({ instant: true });
     return true;
   }
+  const clickedCapability = resolveNexusCapability(command, { modeId });
+  if (clickedCapability) {
+    event.preventDefault();
+    event.stopPropagation();
+    event.stopImmediatePropagation?.();
+    const input = $("#nexusCommandCenterInput");
+    if (input) input.value = command || clickedCapability.title;
+    setCommandInputs(command || clickedCapability.title);
+    return openNexusCapability(clickedCapability.id, { command: command || clickedCapability.title, source: "mode-click", sourceSurface: "standard_user_click" });
+  }
   const normalizedWorkflowId = normalizeNexusWorkflowId(modeId, command);
   if (normalizedWorkflowId === "media") {
     event.preventDefault();
@@ -40254,6 +40394,13 @@ function bindStatic() {
     if (earlyCommandCenterSubmit) {
       const input = $("#nexusCommandCenterInput");
       const command = input?.value?.trim() || "What can Nexus do?";
+      if (launchCapabilityFromAskNexus(command)) {
+        event.preventDefault();
+        event.stopPropagation();
+        if (input) input.value = command;
+        setCommandInputs(command);
+        return;
+      }
       if (isNexusExplicitActivationWorkflowCommand(command) && runNexusStandardUserHomeLocalCommand(command)) {
         event.preventDefault();
         event.stopPropagation();
@@ -40310,6 +40457,16 @@ function bindStatic() {
     if (earlyModeShortcut) {
       const command = earlyModeShortcut.dataset.nexusCommand || "";
       const modeId = earlyModeShortcut.dataset.nexusModeShortcut || "";
+      const earlyCapability = resolveNexusCapability(command, { modeId });
+      if (earlyCapability) {
+        event.preventDefault();
+        event.stopPropagation();
+        const input = $("#nexusCommandCenterInput");
+        if (input) input.value = command || earlyCapability.title;
+        setCommandInputs(command || earlyCapability.title);
+        openNexusCapability(earlyCapability.id, { command: command || earlyCapability.title, source: "delegated-mode-click", sourceSurface: "early_click" });
+        return;
+      }
       const normalizedWorkflowId = normalizeNexusWorkflowId(modeId, command);
       if (nexusWorkflowDefinition(normalizedWorkflowId, command)) {
         event.preventDefault();
@@ -40404,6 +40561,7 @@ function bindStatic() {
       const command = input?.value?.trim() || "What can Nexus do?";
       if (input) input.value = command;
       setCommandInputs(command);
+      if (launchCapabilityFromAskNexus(command)) return;
       if (isNexusExplicitActivationWorkflowCommand(command) && runNexusStandardUserHomeLocalCommand(command)) return;
       if (isNexusLiveKnowledgeQuestion(command)) {
         await runNexusKnowledgeQuery(command);
@@ -40454,10 +40612,12 @@ function bindStatic() {
         return;
       }
       const command = modeShortcut.dataset.nexusCommand || "";
+      const modeCapability = resolveNexusCapability(command, { modeId });
       const normalizedWorkflowId = normalizeNexusWorkflowId(modeId, command);
       const input = $("#nexusCommandCenterInput");
-      if (input) input.value = command;
-      setCommandInputs(command);
+      if (input) input.value = command || modeCapability?.title || "";
+      setCommandInputs(command || modeCapability?.title || "");
+      if (modeCapability && openNexusCapability(modeCapability.id, { command: command || modeCapability.title, source: "mode-click", sourceSurface: "fallback_click" })) return;
       if (nexusWorkflowDefinition(normalizedWorkflowId, command)) {
         openNexusWorkflow(normalizedWorkflowId, { command, source: "mode-click" });
         return;
