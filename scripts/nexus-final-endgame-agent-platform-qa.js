@@ -36,10 +36,21 @@ assertAll(app, [
   "showNexusOutcome",
   "continueLastNexusWorkflow",
   "showNexusPendingActions",
+  "showNexusQueuedActions",
   "showNexusFailedActions",
   "showNexusFollowUps",
   "clearNexusSensitiveLocalData"
 ], "central Nexus agent runtime");
+
+assertAll(app, [
+  "NEXUS_ENDGAME_WORKFLOW_EXTENSIONS",
+  "NEXUS_ENDGAME_INTEGRATION_LANE_EXTENSIONS",
+  "nexusAllAgenticWorkflows",
+  "nexusAllIntegrationLanes",
+  "nexusAllAgenticWorkflows().some",
+  "nexusAllAgenticWorkflows().map",
+  "const lanes = nexusAllIntegrationLanes();"
+], "granular endgame registry extensions");
 
 assertAll(app, [
   "renderNexusActivationCenter",
@@ -47,8 +58,20 @@ assertAll(app, [
   "data-nexus-activation-lane",
   "data-nexus-lane-action=\"test\"",
   "data-nexus-lane-action=\"configure\"",
+  "data-nexus-lane-action=\"link-partner\"",
+  "data-nexus-lane-action=\"export\"",
   "data-nexus-lane-action=\"disable\"",
+  "data-nexus-lane-config-field=\"partnerName\"",
+  "data-nexus-lane-config-field=\"country\"",
+  "data-nexus-lane-config-field=\"endpointUrl\"",
+  "data-nexus-lane-config-field=\"responsibleContact\"",
+  "data-nexus-lane-config-field=\"consentTemplate\"",
+  "data-nexus-lane-config-field=\"dataSharingNotes\"",
+  "linkedPartnerId",
+  "nexus_lane_profile_export_prepared",
   "data-nexus-partner-onboarding-form=\"true\"",
+  "data-nexus-partner-action=\"export\"",
+  "nexus_partner_profile_export_prepared",
   "NEXUS_PARTNER_ONBOARDING_TYPES"
 ], "activation center");
 
@@ -204,9 +227,60 @@ assertAll(app, [
   "workforce",
   "learning",
   "training",
+  "employer-partner",
   "communications",
+  "email",
+  "sms",
+  "whatsapp",
+  "phone",
+  "telegram",
+  "route-planning",
   "maps"
 ], "multi-domain workflow coverage");
+
+assertAll(app, [
+  "diabetes-lane",
+  "hypertension-lane",
+  "obesity-lane",
+  "rpm-lane",
+  "rtm-lane",
+  "community-health-worker-lane",
+  "crop-advisor-lane",
+  "farm-planning-lane",
+  "field-visit-lane",
+  "logistics-lane",
+  "workforce-referral-lane",
+  "training-enrollment-lane",
+  "employer-partner-lane",
+  "route-planning-lane",
+  "email-lane",
+  "sms-lane",
+  "whatsapp-lane",
+  "phone-lane",
+  "telegram-lane"
+], "granular activation lane coverage");
+
+assertAll(app, [
+  "return \"diabetes\"",
+  "return \"hypertension\"",
+  "return \"obesity\"",
+  "return \"rpm\"",
+  "return \"rtm\"",
+  "return \"community-health-worker\"",
+  "return \"crop-support\"",
+  "return \"farm-planning\"",
+  "return \"field-visit\"",
+  "return \"logistics\"",
+  "return \"workforce\"",
+  "return \"training\"",
+  "return \"employer-partner\"",
+  "return \"route-planning\"",
+  "return \"email\"",
+  "return \"sms\"",
+  "return \"whatsapp\"",
+  "return \"phone\"",
+  "return \"telegram\""
+], "granular natural-language routing");
 
 assertAll(app, [
   "data-nexus-workflow-map-preview=\"true\"",
@@ -222,6 +296,14 @@ assertAll(app, [
   "telegram",
   "Nexus will not claim completion until the user completes it outside the app."
 ], "communications handoff boundaries");
+
+assertAll(app, [
+  "Show queued actions",
+  "showNexusRuntimeList(\"queued\")",
+  "queued: [\"queued\"]",
+  "No secrets are included and no provider was contacted.",
+  "Live external execution requires configured credentials, explicit confirmation, consent, approval, and audit logging."
+], "queueing and local export safety boundaries");
 
 assertAll(app, [
   "renderNexusEndgameCommandCenter",
@@ -241,6 +323,7 @@ assertAll(app, [
 assertAll(styles, [
   ".nexus-endgame-command-center",
   ".nexus-activation-center",
+  ".nexus-lane-config-field",
   ".nexus-review-queues",
   ".nexus-confirmation-panel",
   ".nexus-partner-onboarding-form",
