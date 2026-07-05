@@ -11198,6 +11198,7 @@ body.user-mode .nexus-operations-action-grid {
 
 body.user-mode .nexus-operations-status-grid article,
 body.user-mode .nexus-operations-heat-risk,
+body.user-mode .nexus-operations-domain-window,
 body.user-mode .nexus-operations-result,
 body.user-mode .nexus-operations-audit {
   padding: 12px;
@@ -11218,6 +11219,7 @@ body.user-mode .nexus-operations-status-grid strong {
 
 body.user-mode .nexus-operations-status-grid span,
 body.user-mode .nexus-operations-heat-risk p,
+body.user-mode .nexus-operations-domain-window p,
 body.user-mode .nexus-operations-result p,
 body.user-mode .nexus-operations-audit p {
   color: rgba(226, 232, 240, .88);

@@ -37,8 +37,8 @@ const AI_MODEL = process.env.OPENAI_MODEL || "gpt-5.4-mini";
 const AI_REASONING_MODEL = process.env.OPENAI_REASONING_MODEL || process.env.OPENAI_AGENT_MODEL || AI_MODEL;
 const AI_TRANSLATION_MODEL = process.env.OPENAI_TRANSLATION_MODEL || process.env.OPENAI_AGENT_MODEL || AI_MODEL;
 const AGRINEXUS_RELEASE = "2026-06-16-operational-readiness";
-const AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-376";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v350";
+const AGRINEXUS_WEB_BUILD_VERSION = "nexus-behavior-377";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v351";
 const PRODUCT_IDENTITY = Object.freeze({
   productName: "Nexus Workforce AI",
   assistantName: "Nexus",
@@ -33074,7 +33074,25 @@ const NEXUS_OPERATION_COLLECTIONS = Object.freeze([
   "archiveRecords",
   "heatRiskReports",
   "providerResponses",
-  "statusChanges"
+  "statusChanges",
+  "learningProfiles",
+  "trainingRecords",
+  "learningPlans",
+  "skillAssessments",
+  "lmsHandoffRecords",
+  "certificationPathways",
+  "applicantProfiles",
+  "resumePackets",
+  "employerProfiles",
+  "jobOpportunities",
+  "jobApplications",
+  "interviewFollowUps",
+  "hiringPipelineRecords",
+  "droneProviders",
+  "droneEquipment",
+  "droneMissionRequests",
+  "droneMissionEvents",
+  "droneImageryReports"
 ]);
 
 function nexusNow() {
@@ -33184,7 +33202,34 @@ function nexusOperationsSummary(db) {
       pharmacies: store.providers.filter(item => item.type === "pharmacy").length,
       mobileClinics: store.providers.filter(item => item.type === "mobile-clinic").length,
       agronomyExperts: store.providers.filter(item => item.type === "agronomy").length,
+      trainingProviders: store.providers.filter(item => item.type === "training-provider").length,
+      employers: store.employerProfiles.length,
+      droneProviders: store.droneProviders.length,
       buyersSellers: store.parties.length
+    },
+    learning: {
+      profiles: store.learningProfiles.length,
+      trainingRecords: store.trainingRecords.length,
+      learningPlans: store.learningPlans.length,
+      skillAssessments: store.skillAssessments.length,
+      lmsHandoffs: store.lmsHandoffRecords.length,
+      certificationPathways: store.certificationPathways.length
+    },
+    workforce: {
+      applicants: store.applicantProfiles.length,
+      resumePackets: store.resumePackets.length,
+      employers: store.employerProfiles.length,
+      jobOpportunities: store.jobOpportunities.length,
+      applications: store.jobApplications.length,
+      interviewFollowUps: store.interviewFollowUps.length
+    },
+    drones: {
+      providers: store.droneProviders.length,
+      equipment: store.droneEquipment.length,
+      missions: store.droneMissionRequests.length,
+      missionEvents: store.droneMissionEvents.length,
+      imageryReports: store.droneImageryReports.length,
+      dispatchDisabled: true
     },
     trade: {
       shipments: store.shipments.length,
@@ -33204,6 +33249,9 @@ function nexusOperationsSummary(db) {
       noFakePayments: true,
       noFakeShipmentTracking: true,
       noFakeIllnessPrevalenceMap: true,
+      noFakeTrainingEnrollment: true,
+      noFakeJobPlacement: true,
+      noFakeDroneDispatch: true,
       consentBeforeSharing: true,
       auditTrail: true
     },
@@ -33228,6 +33276,22 @@ function latestParty(store, type = "") {
   return store.parties.find(item => !type || item.type === type || item.type === "both") || store.parties[0] || null;
 }
 
+function latestLearningProfile(store) {
+  return store.learningProfiles.find(item => !/archived|deleted/.test(item.status || "")) || store.learningProfiles[0] || null;
+}
+
+function latestApplicantProfile(store) {
+  return store.applicantProfiles.find(item => !/archived|no-contact|deleted/.test(item.status || "")) || store.applicantProfiles[0] || null;
+}
+
+function latestEmployerProfile(store) {
+  return store.employerProfiles.find(item => !/closed|archived/.test(item.status || "")) || store.employerProfiles[0] || null;
+}
+
+function latestDroneMission(store) {
+  return store.droneMissionRequests.find(item => !/cancelled|archived|completed/.test(item.status || "")) || store.droneMissionRequests[0] || null;
+}
+
 function parseNexusOperationsCommand(command = "") {
   const text = cleanOpsText(command, 500).toLowerCase();
   if (/\b(create|add|start).*(chronic care|hypertension|diabetes|obesity)\b/.test(text)) return "create_chronic_care_profile";
@@ -33242,6 +33306,8 @@ function parseNexusOperationsCommand(command = "") {
   if (/\b(create intake|healthcare intake|patient intake)\b/.test(text)) return "create_intake";
   if (/\b(archive this intake|archive intake)\b/.test(text)) return "archive_intake";
   if (/\b(delete this intake|delete intake)\b/.test(text)) return "delete_intake_if_allowed";
+  if (/\b(add.*training provider)\b/.test(text)) return "add_training_provider";
+  if (/\b(add.*drone provider|drone provider)\b/.test(text)) return "add_drone_provider";
   if (/\b(add.*pharmacy provider|add.*pharmacy)\b/.test(text)) return "add_pharmacy_provider";
   if (/\b(add.*mobile clinic provider|add.*mobile clinic)\b/.test(text)) return "add_mobile_clinic_provider";
   if (/\b(add.*provider)\b/.test(text)) return "add_provider";
@@ -33256,6 +33322,41 @@ function parseNexusOperationsCommand(command = "") {
   if (/\b(add item to transaction|add item)\b/.test(text)) return "add_transaction_item";
   if (/\b(cancel transaction|cancel this transaction)\b/.test(text)) return "cancel_transaction";
   if (/\b(heat illness|heat risk|heat index|risk map)\b/.test(text)) return "log_heat_risk_report";
+  if (/\b(create|open|start).*(learning profile|learning development|learning and development|training profile|student profile)\b/.test(text)) return "create_learning_profile";
+  if (/\b(training referral|training provider referral|prepare training)\b/.test(text)) return "prepare_training_referral";
+  if (/\b(lms handoff|learning management|koachlearn|moodle)\b/.test(text)) return "prepare_lms_handoff";
+  if (/\b(learning plan|development plan|study plan)\b/.test(text)) return "create_learning_plan";
+  if (/\b(skill assessment|skills assessment|skills checklist)\b/.test(text)) return "create_skill_assessment_packet";
+  if (/\b(training interest|track training)\b/.test(text)) return "track_training_interest";
+  if (/\b(enrollment status|track enrollment)\b/.test(text)) return "track_enrollment_status";
+  if (/\b(archive learning|archive training)\b/.test(text)) return "archive_learning_profile";
+  if (/\b(delete learning|delete training data)\b/.test(text)) return "delete_training_data_if_allowed";
+  if (/\b(learning timeline|training timeline)\b/.test(text)) return "show_learning_timeline";
+  if (/\b(create|open|start).*(applicant|career support|career profile)\b/.test(text)) return "create_applicant_profile";
+  if (/\b(resume|cv|job readiness packet)\b/.test(text)) return "prepare_resume_packet";
+  if (/\b(create|add|open).*(employer|hiring company|company profile)\b/.test(text)) return "create_employer_profile";
+  if (/\b(add job|job opportunity|open role|vacancy)\b/.test(text)) return "add_job_opportunity";
+  if (/\b(application packet|prepare application)\b/.test(text)) return "prepare_application_packet";
+  if (/\b(application status|track application)\b/.test(text)) return "track_application_status";
+  if (/\b(interview follow|interview note)\b/.test(text)) return "add_interview_follow_up";
+  if (/\b(employer closed|company closed|mark employer closed)\b/.test(text)) return "mark_employer_closed";
+  if (/\b(archive applicant|no contact applicant|stop applicant outreach)\b/.test(text)) return /no contact|stop/i.test(text) ? "no_contact_applicant" : "archive_applicant";
+  if (/\b(delete applicant|delete career data)\b/.test(text)) return "delete_applicant_data_if_allowed";
+  if (/\b(applicant timeline|career timeline)\b/.test(text)) return "show_applicant_timeline";
+  if (/\b(hiring pipeline|show hiring)\b/.test(text)) return "show_hiring_pipeline";
+  if (/\b(create|open|start).*(drone mission|drone support|drone request)\b/.test(text)) return "create_drone_mission_request";
+  if (/\b(drone mission packet|prepare drone)\b/.test(text)) return "prepare_drone_mission_packet";
+  if (/\b(add.*drone equipment|drone equipment)\b/.test(text)) return "add_drone_equipment";
+  if (/\b(match.*drone|drone provider match)\b/.test(text)) return "match_drone_mission_provider";
+  if (/\b(queue.*drone mission|drone mission queue)\b/.test(text)) return "queue_drone_mission";
+  if (/\b(track.*drone mission|drone mission status)\b/.test(text)) return "track_drone_mission_status";
+  if (/\b(add.*drone mission event|drone mission event|drone event)\b/.test(text)) return "add_drone_mission_event";
+  if (/\b(cancel.*drone mission)\b/.test(text)) return "cancel_drone_mission";
+  if (/\b(archive.*drone)\b/.test(text)) return "archive_drone_record";
+  if (/\b(drone training referral|drone pilot training)\b/.test(text)) return "create_drone_training_referral";
+  if (/\b(agriculture expert packet.*drone|drone agriculture expert)\b/.test(text)) return "create_agriculture_expert_packet_from_drone";
+  if (/\b(drone mission timeline|drone timeline)\b/.test(text)) return "show_drone_mission_timeline";
+  if (/\b(add.*employer)\b/.test(text)) return "add_employer";
   if (/\b(show action receipts|action receipts)\b/.test(text)) return "show_action_receipts";
   if (/\b(show audit log|audit log)\b/.test(text)) return "show_audit_log";
   return "";
@@ -33430,8 +33531,8 @@ function runNexusOperationsAction(db, body = {}, user = null) {
     return nexusOperationResponse(db, action, profile, audit, receipt);
   }
 
-  if (["add_provider", "add_pharmacy_provider", "add_mobile_clinic_provider"].includes(action)) {
-    const type = action === "add_pharmacy_provider" ? "pharmacy" : action === "add_mobile_clinic_provider" ? "mobile-clinic" : cleanOpsText(body.type || "clinic", 60);
+  if (["add_provider", "add_pharmacy_provider", "add_mobile_clinic_provider", "add_training_provider"].includes(action)) {
+    const type = action === "add_pharmacy_provider" ? "pharmacy" : action === "add_mobile_clinic_provider" ? "mobile-clinic" : action === "add_training_provider" ? "training-provider" : cleanOpsText(body.type || "clinic", 60);
     const provider = {
       providerId: nexusOperationId("NX-PROV"),
       type,
@@ -33585,6 +33686,318 @@ function runNexusOperationsAction(db, body = {}, user = null) {
     return nexusOperationResponse(db, action, transaction, audit, receipt);
   }
 
+  if (action === "create_learning_profile") {
+    const profile = {
+      learningProfileId: nexusOperationId("NX-LRN"),
+      learnerId: cleanOpsText(body.learnerId || body.learnerName || "standard-user-local-learner", 120),
+      status: "active",
+      learningGoals: cleanOpsArray(body.learningGoals || "digital literacy, workforce readiness, agriculture training"),
+      preferredLanguage: cleanOpsText(body.preferredLanguage || "English", 80),
+      countryOrRegion: cleanOpsText(body.countryOrRegion || body.region || "", 120),
+      trainingInterests: cleanOpsArray(body.trainingInterests || "agriculture, health access, workforce skills"),
+      accessibilityNotes: cleanOpsText(body.accessibilityNotes || "", 300),
+      consentState: { prepareReferral: body.prepareReferral !== false, shareWithProvider: body.shareWithProvider === true, lastUpdatedAt: now },
+      createdAt: now,
+      updatedAt: now
+    };
+    store.learningProfiles.unshift(profile);
+    addNexusConsentRecord(db, "learning-profile", profile.learningProfileId, "prepareReferral", profile.consentState.prepareReferral, actor);
+    const audit = addNexusOperationsAudit(db, "learning-profile", profile.learningProfileId, "learning_profile_created", actor, "Learning profile created for local operations memory.", null, profile);
+    const receipt = addNexusOperationsReceipt(db, "learning-profile", profile.learningProfileId, action, ["Created learning and development profile.", "Recorded consent state for training referral preparation."], ["Nexus did not enroll the learner, certify completion, submit to an LMS, or contact a training provider."], "active");
+    return nexusOperationResponse(db, action, profile, audit, receipt);
+  }
+
+  if (["prepare_training_referral", "prepare_lms_handoff", "create_learning_plan", "create_skill_assessment_packet", "track_training_interest", "track_enrollment_status", "create_drone_training_referral"].includes(action)) {
+    const profile = store.learningProfiles.find(item => item.learningProfileId === body.learningProfileId) || latestLearningProfile(store) || runNexusOperationsAction(db, { action: "create_learning_profile" }, user).record;
+    const status = action === "track_enrollment_status" ? cleanOpsText(body.status || "manual-status-review", 80) : action === "track_training_interest" ? "interest-recorded" : "prepared";
+    const record = {
+      trainingRecordId: nexusOperationId("NX-TRN"),
+      learningProfileId: profile.learningProfileId,
+      type: action,
+      status: /confirmed|accepted|completed|certified/i.test(status) && body.manualConfirmation !== true ? "manual-status-review" : status,
+      providerName: cleanOpsText(body.providerName || body.trainingProviderName || "", 160),
+      programName: cleanOpsText(body.programName || body.courseName || "Training support packet", 160),
+      learnerGoals: cleanOpsArray(body.learnerGoals || profile.learningGoals || ""),
+      referralNotes: cleanOpsText(body.referralNotes || body.notes || command || "Training support prepared for review.", 400),
+      lmsConfigured: Boolean(process.env.MOODLE_BASE_URL && process.env.MOODLE_TOKEN),
+      providerSubmissionEnabled: false,
+      createdAt: now,
+      updatedAt: now
+    };
+    if (action === "create_learning_plan") store.learningPlans.unshift(record);
+    else if (action === "create_skill_assessment_packet") store.skillAssessments.unshift(record);
+    else if (action === "prepare_lms_handoff") store.lmsHandoffRecords.unshift(record);
+    else if (action === "create_drone_training_referral") store.certificationPathways.unshift(record);
+    else store.trainingRecords.unshift(record);
+    profile.updatedAt = now;
+    const audit = addNexusOperationsAudit(db, "learning-profile", profile.learningProfileId, action, actor, `${action} recorded for learning profile with execution disabled.`, null, record);
+    const receipt = addNexusOperationsReceipt(db, "training-record", record.trainingRecordId, action, ["Prepared learning/training support record.", "Kept provider/LMS handoff disabled until credentials, consent, and confirmation exist."], ["Nexus did not enroll the learner, certify training, submit a referral, or claim provider acceptance."], record.status);
+    return nexusOperationResponse(db, action, record, audit, receipt, { timeline: nexusLearningTimeline(store, profile.learningProfileId) });
+  }
+
+  if (["archive_learning_profile", "delete_training_data_if_allowed"].includes(action)) {
+    const profile = store.learningProfiles.find(item => item.learningProfileId === body.learningProfileId) || latestLearningProfile(store);
+    if (!profile) return { ok: false, error: "learning_profile_not_found", operations: nexusOperationsSummary(db) };
+    const before = { ...profile };
+    profile.status = action === "archive_learning_profile" ? "archived" : "deactivated-delete-review";
+    profile.updatedAt = now;
+    store.archiveRecords.unshift({ archiveId: nexusOperationId("NX-ARCH"), entityType: "learning-profile", entityId: profile.learningProfileId, action, reason: cleanOpsText(body.reason || "User requested learning profile archive/deactivation review.", 240), createdAt: now });
+    const audit = addNexusOperationsAudit(db, "learning-profile", profile.learningProfileId, action, actor, "Learning profile archived/deactivated with audit retained.", before, profile);
+    const receipt = addNexusOperationsReceipt(db, "learning-profile", profile.learningProfileId, action, ["Updated learning profile status and preserved audit trail."], ["Nexus did not hard-delete audit records, contact providers, or continue training outreach."], profile.status);
+    return nexusOperationResponse(db, action, profile, audit, receipt);
+  }
+
+  if (action === "show_learning_timeline") {
+    const profile = store.learningProfiles.find(item => item.learningProfileId === body.learningProfileId) || latestLearningProfile(store);
+    return { ok: true, action, record: profile, timeline: nexusLearningTimeline(store, profile?.learningProfileId), operations: nexusOperationsSummary(db), noExecutionAuthorized: true };
+  }
+
+  if (action === "create_applicant_profile") {
+    const applicant = {
+      applicantId: nexusOperationId("NX-APP"),
+      applicantName: cleanOpsText(body.applicantName || body.name || "standard-user-local-applicant", 160),
+      status: "active",
+      targetRoles: cleanOpsArray(body.targetRoles || "farm work, community health support, logistics, training"),
+      skills: cleanOpsArray(body.skills || ""),
+      preferredLanguage: cleanOpsText(body.preferredLanguage || "English", 80),
+      region: cleanOpsText(body.region || "", 160),
+      consentState: { prepareApplication: body.prepareApplication !== false, shareWithEmployer: body.shareWithEmployer === true, lastUpdatedAt: now },
+      noContact: false,
+      createdAt: now,
+      updatedAt: now
+    };
+    store.applicantProfiles.unshift(applicant);
+    addNexusConsentRecord(db, "applicant", applicant.applicantId, "prepareApplication", applicant.consentState.prepareApplication, actor);
+    const audit = addNexusOperationsAudit(db, "applicant", applicant.applicantId, "applicant_profile_created", actor, "Applicant career profile created for local workforce support.", null, applicant);
+    const receipt = addNexusOperationsReceipt(db, "applicant", applicant.applicantId, action, ["Created applicant career profile.", "Recorded consent state for application preparation."], ["Nexus did not apply to a job, send a resume, promise employment, or contact an employer."], "active");
+    return nexusOperationResponse(db, action, applicant, audit, receipt);
+  }
+
+  if (action === "prepare_resume_packet") {
+    const applicant = store.applicantProfiles.find(item => item.applicantId === body.applicantId) || latestApplicantProfile(store) || runNexusOperationsAction(db, { action: "create_applicant_profile" }, user).record;
+    const packet = {
+      resumePacketId: nexusOperationId("NX-RES"),
+      applicantId: applicant.applicantId,
+      status: "prepared",
+      headline: cleanOpsText(body.headline || "Workforce readiness packet", 160),
+      skills: cleanOpsArray(body.skills || applicant.skills || ""),
+      targetRoles: cleanOpsArray(body.targetRoles || applicant.targetRoles || ""),
+      summary: cleanOpsText(body.summary || "Resume/job readiness packet prepared for applicant review.", 400),
+      employerSubmissionEnabled: false,
+      createdAt: now,
+      updatedAt: now
+    };
+    store.resumePackets.unshift(packet);
+    applicant.updatedAt = now;
+    const audit = addNexusOperationsAudit(db, "applicant", applicant.applicantId, "resume_packet_prepared", actor, "Resume packet prepared without employer submission.", null, packet);
+    const receipt = addNexusOperationsReceipt(db, "resume-packet", packet.resumePacketId, action, ["Prepared resume/job readiness packet."], ["Nexus did not submit an application, contact an employer, or claim job placement."], "prepared");
+    return nexusOperationResponse(db, action, packet, audit, receipt, { timeline: nexusApplicantTimeline(store, applicant.applicantId) });
+  }
+
+  if (["create_employer_profile", "add_employer"].includes(action)) {
+    const employer = {
+      employerId: nexusOperationId("NX-EMP"),
+      companyName: cleanOpsText(body.companyName || body.name || "Hiring company", 160),
+      status: cleanOpsText(body.status || "active", 60),
+      region: cleanOpsText(body.region || "", 160),
+      hiringAreas: cleanOpsArray(body.hiringAreas || "agriculture, logistics, healthcare support, workforce training"),
+      contactEmail: cleanOpsText(body.contactEmail || "", 160),
+      notes: cleanOpsText(body.notes || "", 400),
+      createdAt: now,
+      updatedAt: now
+    };
+    store.employerProfiles.unshift(employer);
+    const audit = addNexusOperationsAudit(db, "employer", employer.employerId, "employer_profile_created", actor, "Employer profile added to local hiring support memory.", null, employer);
+    const receipt = addNexusOperationsReceipt(db, "employer", employer.employerId, action, ["Added employer/hiring company record."], ["Nexus did not contact the employer, post a job externally, or claim employer acceptance."], "active");
+    return nexusOperationResponse(db, action, employer, audit, receipt);
+  }
+
+  if (action === "add_job_opportunity") {
+    const employer = store.employerProfiles.find(item => item.employerId === body.employerId) || latestEmployerProfile(store) || runNexusOperationsAction(db, { action: "create_employer_profile" }, user).record;
+    const job = {
+      jobOpportunityId: nexusOperationId("NX-JOB"),
+      employerId: employer.employerId,
+      title: cleanOpsText(body.title || "Job opportunity", 160),
+      status: "draft",
+      location: cleanOpsText(body.location || employer.region || "", 160),
+      skillsRequired: cleanOpsArray(body.skillsRequired || ""),
+      description: cleanOpsText(body.description || command || "Job opportunity prepared for review.", 500),
+      externalPostingEnabled: false,
+      createdAt: now,
+      updatedAt: now
+    };
+    store.jobOpportunities.unshift(job);
+    employer.updatedAt = now;
+    const audit = addNexusOperationsAudit(db, "job", job.jobOpportunityId, "job_opportunity_added", actor, "Job opportunity added as draft only.", null, job);
+    const receipt = addNexusOperationsReceipt(db, "job", job.jobOpportunityId, action, ["Added job opportunity draft."], ["Nexus did not publish the job externally or promise applicant placement."], "draft");
+    return nexusOperationResponse(db, action, job, audit, receipt, { pipeline: nexusHiringPipeline(store, employer.employerId) });
+  }
+
+  if (["prepare_application_packet", "track_application_status", "add_interview_follow_up"].includes(action)) {
+    const applicant = store.applicantProfiles.find(item => item.applicantId === body.applicantId) || latestApplicantProfile(store) || runNexusOperationsAction(db, { action: "create_applicant_profile" }, user).record;
+    const employer = store.employerProfiles.find(item => item.employerId === body.employerId) || latestEmployerProfile(store) || runNexusOperationsAction(db, { action: "create_employer_profile" }, user).record;
+    const job = store.jobOpportunities.find(item => item.jobOpportunityId === body.jobOpportunityId) || store.jobOpportunities[0] || runNexusOperationsAction(db, { action: "add_job_opportunity", employerId: employer.employerId }, user).record;
+    const status = action === "track_application_status" ? cleanOpsText(body.status || "manual-status-review", 80) : action === "add_interview_follow_up" ? "follow-up-prepared" : "prepared";
+    const application = {
+      applicationId: nexusOperationId(action === "add_interview_follow_up" ? "NX-INTV" : "NX-APPL"),
+      applicantId: applicant.applicantId,
+      employerId: employer.employerId,
+      jobOpportunityId: job.jobOpportunityId,
+      type: action,
+      status: /accepted|hired|placed|offer/i.test(status) && body.manualConfirmation !== true ? "manual-status-review" : status,
+      summary: cleanOpsText(body.summary || command || "Application support prepared for review.", 400),
+      employerSubmissionEnabled: false,
+      createdAt: now,
+      updatedAt: now
+    };
+    if (action === "add_interview_follow_up") store.interviewFollowUps.unshift(application);
+    else store.jobApplications.unshift(application);
+    store.hiringPipelineRecords.unshift({ pipelineId: nexusOperationId("NX-PIPE"), applicantId: applicant.applicantId, employerId: employer.employerId, jobOpportunityId: job.jobOpportunityId, status: application.status, sourceAction: action, createdAt: now });
+    applicant.updatedAt = now;
+    employer.updatedAt = now;
+    const audit = addNexusOperationsAudit(db, "application", application.applicationId, action, actor, `${action} recorded without employer submission.`, null, application);
+    const receipt = addNexusOperationsReceipt(db, "application", application.applicationId, action, ["Prepared workforce/application support record."], ["Nexus did not submit the application, contact the employer, schedule an interview, or claim job placement."], application.status);
+    return nexusOperationResponse(db, action, application, audit, receipt, { timeline: nexusApplicantTimeline(store, applicant.applicantId), pipeline: nexusHiringPipeline(store, employer.employerId) });
+  }
+
+  if (action === "mark_employer_closed") {
+    const employer = store.employerProfiles.find(item => item.employerId === body.employerId) || latestEmployerProfile(store);
+    if (!employer) return { ok: false, error: "employer_not_found", operations: nexusOperationsSummary(db) };
+    const before = { ...employer };
+    employer.status = "closed";
+    employer.noContact = true;
+    employer.updatedAt = now;
+    store.archiveRecords.unshift({ archiveId: nexusOperationId("NX-ARCH"), entityType: "employer", entityId: employer.employerId, action, reason: "Employer marked closed/no-contact.", createdAt: now });
+    const audit = addNexusOperationsAudit(db, "employer", employer.employerId, "employer_closed", actor, "Employer marked closed; hiring history preserved.", before, employer);
+    const receipt = addNexusOperationsReceipt(db, "employer", employer.employerId, action, ["Marked employer closed and stopped outreach."], ["Nexus did not contact employer or delete historical hiring records."], "closed");
+    return nexusOperationResponse(db, action, employer, audit, receipt);
+  }
+
+  if (["archive_applicant", "no_contact_applicant", "delete_applicant_data_if_allowed"].includes(action)) {
+    const applicant = store.applicantProfiles.find(item => item.applicantId === body.applicantId) || latestApplicantProfile(store);
+    if (!applicant) return { ok: false, error: "applicant_not_found", operations: nexusOperationsSummary(db) };
+    const before = { ...applicant };
+    applicant.status = action === "no_contact_applicant" ? "no-contact" : action === "archive_applicant" ? "archived" : "deactivated-delete-review";
+    applicant.noContact = action === "no_contact_applicant";
+    applicant.updatedAt = now;
+    store.archiveRecords.unshift({ archiveId: nexusOperationId("NX-ARCH"), entityType: "applicant", entityId: applicant.applicantId, action, reason: cleanOpsText(body.reason || "Applicant archive/no-contact/deactivation review.", 240), createdAt: now });
+    const audit = addNexusOperationsAudit(db, "applicant", applicant.applicantId, action, actor, "Applicant record status updated with audit retained.", before, applicant);
+    const receipt = addNexusOperationsReceipt(db, "applicant", applicant.applicantId, action, ["Updated applicant status and preserved audit trail."], ["Nexus did not hard-delete protected records, contact employers, or continue outreach."], applicant.status);
+    return nexusOperationResponse(db, action, applicant, audit, receipt);
+  }
+
+  if (action === "show_applicant_timeline") {
+    const applicant = store.applicantProfiles.find(item => item.applicantId === body.applicantId) || latestApplicantProfile(store);
+    return { ok: true, action, record: applicant, timeline: nexusApplicantTimeline(store, applicant?.applicantId), operations: nexusOperationsSummary(db), noExecutionAuthorized: true };
+  }
+
+  if (action === "show_hiring_pipeline") {
+    const employer = store.employerProfiles.find(item => item.employerId === body.employerId) || latestEmployerProfile(store);
+    return { ok: true, action, record: employer, pipeline: nexusHiringPipeline(store, employer?.employerId), operations: nexusOperationsSummary(db), noExecutionAuthorized: true };
+  }
+
+  if (["add_drone_provider"].includes(action)) {
+    const provider = {
+      droneProviderId: nexusOperationId("NX-DRP"),
+      name: cleanOpsText(body.name || body.providerName || "Drone provider", 160),
+      status: cleanOpsText(body.status || "candidate", 80),
+      serviceRegion: cleanOpsText(body.serviceRegion || body.region || "", 160),
+      capabilities: cleanOpsArray(body.capabilities || "mapping, crop scouting, training support"),
+      complianceNotes: cleanOpsText(body.complianceNotes || "Flight authorization, insurance, pilot credentials, and local approvals required before mission execution.", 400),
+      dispatchEnabled: false,
+      createdAt: now,
+      updatedAt: now
+    };
+    store.droneProviders.unshift(provider);
+    const audit = addNexusOperationsAudit(db, "drone-provider", provider.droneProviderId, "drone_provider_added", actor, "Drone provider candidate added with dispatch disabled.", null, provider);
+    const receipt = addNexusOperationsReceipt(db, "drone-provider", provider.droneProviderId, action, ["Added drone provider candidate record."], ["Nexus did not dispatch drones, schedule flights, capture imagery, or claim provider acceptance."], provider.status);
+    return nexusOperationResponse(db, action, provider, audit, receipt);
+  }
+
+  if (action === "add_drone_equipment") {
+    const equipment = {
+      droneEquipmentId: nexusOperationId("NX-DRE"),
+      providerId: cleanOpsText(body.providerId || store.droneProviders[0]?.droneProviderId || "", 120),
+      equipmentName: cleanOpsText(body.equipmentName || body.name || "Drone equipment", 160),
+      status: "inventory-review",
+      capabilities: cleanOpsArray(body.capabilities || "imagery, scouting"),
+      complianceNotes: cleanOpsText(body.complianceNotes || "Equipment use requires operator approval and local flight authorization.", 400),
+      createdAt: now,
+      updatedAt: now
+    };
+    store.droneEquipment.unshift(equipment);
+    const audit = addNexusOperationsAudit(db, "drone-equipment", equipment.droneEquipmentId, "drone_equipment_added", actor, "Drone equipment candidate added for readiness review.", null, equipment);
+    const receipt = addNexusOperationsReceipt(db, "drone-equipment", equipment.droneEquipmentId, action, ["Added drone equipment record."], ["Nexus did not activate flight hardware, capture images, or launch a mission."], "inventory-review");
+    return nexusOperationResponse(db, action, equipment, audit, receipt);
+  }
+
+  if (["create_drone_mission_request", "prepare_drone_mission_packet", "match_drone_mission_provider", "queue_drone_mission", "track_drone_mission_status", "add_drone_mission_event", "create_agriculture_expert_packet_from_drone"].includes(action)) {
+    const mission = action === "create_drone_mission_request"
+      ? {
+          droneMissionId: nexusOperationId("NX-DRN"),
+          status: "draft",
+          missionType: cleanOpsText(body.missionType || "crop scouting", 120),
+          locationText: cleanOpsText(body.locationText || body.location || "user-provided field location required", 180),
+          purpose: cleanOpsText(body.purpose || command || "Drone mission request prepared for review.", 400),
+          providerId: cleanOpsText(body.providerId || "", 120),
+          consentRequiredBeforeProviderSharing: true,
+          dispatchEnabled: false,
+          imageryCaptureEnabled: false,
+          createdAt: now,
+          updatedAt: now
+        }
+      : (store.droneMissionRequests.find(item => item.droneMissionId === body.droneMissionId) || latestDroneMission(store) || runNexusOperationsAction(db, { action: "create_drone_mission_request" }, user).record);
+    if (action === "create_drone_mission_request") store.droneMissionRequests.unshift(mission);
+    const before = action === "create_drone_mission_request" ? null : { ...mission };
+    if (action === "prepare_drone_mission_packet") mission.status = "packet-prepared";
+    if (action === "match_drone_mission_provider") mission.status = "provider-match-review";
+    if (action === "queue_drone_mission") mission.status = "queued-for-review";
+    if (action === "track_drone_mission_status") mission.status = /flown|dispatched|completed|captured/i.test(body.status || "") && body.manualConfirmation !== true ? "manual-status-review" : cleanOpsText(body.status || "manual-status-review", 80);
+    if (action === "create_agriculture_expert_packet_from_drone") mission.status = "agriculture-expert-packet-prepared";
+    mission.updatedAt = now;
+    const event = {
+      droneEventId: nexusOperationId("NX-DREV"),
+      droneMissionId: mission.droneMissionId,
+      action,
+      status: mission.status,
+      notes: cleanOpsText(body.notes || command || `${action} recorded for drone mission.`, 400),
+      occurredAt: now,
+      noFlightExecuted: true,
+      noImageryCaptured: true
+    };
+    store.droneMissionEvents.unshift(event);
+    if (action === "create_agriculture_expert_packet_from_drone") {
+      store.droneImageryReports.unshift({
+        droneImageryReportId: nexusOperationId("NX-DIMG"),
+        droneMissionId: mission.droneMissionId,
+        status: "report-template-prepared",
+        summary: "Agriculture expert review packet prepared without claiming imagery capture.",
+        noImageryCaptured: true,
+        createdAt: now
+      });
+    }
+    const audit = addNexusOperationsAudit(db, "drone-mission", mission.droneMissionId, action, actor, `${action} recorded with drone dispatch disabled.`, before, mission);
+    const receipt = addNexusOperationsReceipt(db, "drone-mission", mission.droneMissionId, action, ["Updated drone mission support record.", "Preserved provider, consent, compliance, and manual review gates."], ["Nexus did not dispatch a drone, schedule a flight, request flight authorization, capture imagery, diagnose crops, or contact a provider."], mission.status);
+    return nexusOperationResponse(db, action, mission, audit, receipt, { event, timeline: nexusDroneMissionTimeline(store, mission.droneMissionId) });
+  }
+
+  if (["cancel_drone_mission", "archive_drone_record"].includes(action)) {
+    const mission = store.droneMissionRequests.find(item => item.droneMissionId === body.droneMissionId) || latestDroneMission(store);
+    if (!mission) return { ok: false, error: "drone_mission_not_found", operations: nexusOperationsSummary(db) };
+    const before = { ...mission };
+    mission.status = action === "cancel_drone_mission" ? "cancelled" : "archived";
+    mission.updatedAt = now;
+    store.archiveRecords.unshift({ archiveId: nexusOperationId("NX-ARCH"), entityType: "drone-mission", entityId: mission.droneMissionId, action, reason: cleanOpsText(body.reason || "Drone mission cancelled/archived before execution.", 240), createdAt: now });
+    const audit = addNexusOperationsAudit(db, "drone-mission", mission.droneMissionId, action, actor, "Drone mission cancelled/archived before any live flight action.", before, mission);
+    const receipt = addNexusOperationsReceipt(db, "drone-mission", mission.droneMissionId, action, ["Updated drone mission status and preserved audit trail."], ["Nexus did not cancel a real flight, contact a provider, or delete compliance history."], mission.status);
+    return nexusOperationResponse(db, action, mission, audit, receipt);
+  }
+
+  if (action === "show_drone_mission_timeline") {
+    const mission = store.droneMissionRequests.find(item => item.droneMissionId === body.droneMissionId) || latestDroneMission(store);
+    return { ok: true, action, record: mission, timeline: nexusDroneMissionTimeline(store, mission?.droneMissionId), operations: nexusOperationsSummary(db), noExecutionAuthorized: true };
+  }
+
   if (action === "log_heat_risk_report") {
     const report = { heatReportId: nexusOperationId("NX-HEAT"), region: cleanOpsText(body.region || body.location || "local area", 160), riskNotes: cleanOpsText(body.riskNotes || command || "Heat illness/risk report logged.", 400), chronicConditionConsideration: cleanOpsText(body.chronicConditionConsideration || "Chronic conditions may increase risk; seek clinical guidance for medical concerns.", 300), liveDatasetConfigured: Boolean(process.env.NEXUS_HEAT_RISK_DATASET_URL), datasetNotice: process.env.NEXUS_HEAT_RISK_DATASET_URL ? "Configured heat-risk source can be reviewed for source-backed heat context." : "No live illness prevalence dataset is configured. Nexus can track local reports and prepare heat-risk response packets.", createdAt: now };
     store.heatRiskReports.unshift(report);
@@ -33607,6 +34020,49 @@ function nexusChronicCareTimeline(store, chronicCareId = "") {
     ...store.rtmActivities.filter(item => item.chronicCareId === chronicCareId).map(item => ({ type: "rtm", occurredAt: item.observedAt, title: `${item.type}: ${item.value}`, record: item })),
     ...store.cases.filter(item => item.chronicCareId === chronicCareId).map(item => ({ type: "case", occurredAt: item.createdAt, title: `${item.type} case ${item.status}`, record: item })),
     ...store.careTasks.filter(item => item.chronicCareId === chronicCareId).map(item => ({ type: "task", occurredAt: item.createdAt, title: `${item.type || "task"} ${item.status}`, record: item }))
+  ].sort((a, b) => String(b.occurredAt || "").localeCompare(String(a.occurredAt || ""))).slice(0, 100);
+}
+
+function nexusLearningTimeline(store, learningProfileId = "") {
+  if (!learningProfileId) return [];
+  return [
+    ...store.learningProfiles.filter(item => item.learningProfileId === learningProfileId).map(item => ({ type: "learning-profile", occurredAt: item.createdAt, title: `Learning profile ${item.status}`, record: item })),
+    ...store.trainingRecords.filter(item => item.learningProfileId === learningProfileId).map(item => ({ type: "training-record", occurredAt: item.createdAt, title: `${item.type} ${item.status}`, record: item })),
+    ...store.learningPlans.filter(item => item.learningProfileId === learningProfileId).map(item => ({ type: "learning-plan", occurredAt: item.createdAt, title: `${item.programName || "Learning plan"} ${item.status}`, record: item })),
+    ...store.skillAssessments.filter(item => item.learningProfileId === learningProfileId).map(item => ({ type: "skill-assessment", occurredAt: item.createdAt, title: `${item.programName || "Skill assessment"} ${item.status}`, record: item })),
+    ...store.lmsHandoffRecords.filter(item => item.learningProfileId === learningProfileId).map(item => ({ type: "lms-handoff", occurredAt: item.createdAt, title: `LMS handoff ${item.status}`, record: item })),
+    ...store.certificationPathways.filter(item => item.learningProfileId === learningProfileId).map(item => ({ type: "certification-pathway", occurredAt: item.createdAt, title: `${item.programName || "Certification pathway"} ${item.status}`, record: item }))
+  ].sort((a, b) => String(b.occurredAt || "").localeCompare(String(a.occurredAt || ""))).slice(0, 100);
+}
+
+function nexusApplicantTimeline(store, applicantId = "") {
+  if (!applicantId) return [];
+  return [
+    ...store.applicantProfiles.filter(item => item.applicantId === applicantId).map(item => ({ type: "applicant-profile", occurredAt: item.createdAt, title: `Applicant profile ${item.status}`, record: item })),
+    ...store.resumePackets.filter(item => item.applicantId === applicantId).map(item => ({ type: "resume-packet", occurredAt: item.createdAt, title: `${item.headline || "Resume packet"} ${item.status}`, record: item })),
+    ...store.jobApplications.filter(item => item.applicantId === applicantId).map(item => ({ type: "job-application", occurredAt: item.createdAt, title: `${item.type} ${item.status}`, record: item })),
+    ...store.interviewFollowUps.filter(item => item.applicantId === applicantId).map(item => ({ type: "interview-follow-up", occurredAt: item.createdAt, title: `${item.type} ${item.status}`, record: item })),
+    ...store.hiringPipelineRecords.filter(item => item.applicantId === applicantId).map(item => ({ type: "hiring-pipeline", occurredAt: item.createdAt, title: `Pipeline ${item.status}`, record: item }))
+  ].sort((a, b) => String(b.occurredAt || "").localeCompare(String(a.occurredAt || ""))).slice(0, 100);
+}
+
+function nexusHiringPipeline(store, employerId = "") {
+  if (!employerId) return [];
+  return [
+    ...store.employerProfiles.filter(item => item.employerId === employerId).map(item => ({ type: "employer-profile", occurredAt: item.createdAt, title: `${item.companyName} ${item.status}`, record: item })),
+    ...store.jobOpportunities.filter(item => item.employerId === employerId).map(item => ({ type: "job-opportunity", occurredAt: item.createdAt, title: `${item.title} ${item.status}`, record: item })),
+    ...store.jobApplications.filter(item => item.employerId === employerId).map(item => ({ type: "job-application", occurredAt: item.createdAt, title: `${item.type} ${item.status}`, record: item })),
+    ...store.interviewFollowUps.filter(item => item.employerId === employerId).map(item => ({ type: "interview-follow-up", occurredAt: item.createdAt, title: `${item.type} ${item.status}`, record: item })),
+    ...store.hiringPipelineRecords.filter(item => item.employerId === employerId).map(item => ({ type: "hiring-pipeline", occurredAt: item.createdAt, title: `Pipeline ${item.status}`, record: item }))
+  ].sort((a, b) => String(b.occurredAt || "").localeCompare(String(a.occurredAt || ""))).slice(0, 100);
+}
+
+function nexusDroneMissionTimeline(store, droneMissionId = "") {
+  if (!droneMissionId) return [];
+  return [
+    ...store.droneMissionRequests.filter(item => item.droneMissionId === droneMissionId).map(item => ({ type: "drone-mission", occurredAt: item.createdAt, title: `${item.missionType} ${item.status}`, record: item })),
+    ...store.droneMissionEvents.filter(item => item.droneMissionId === droneMissionId).map(item => ({ type: "drone-event", occurredAt: item.occurredAt, title: `${item.action} ${item.status}`, record: item })),
+    ...store.droneImageryReports.filter(item => item.droneMissionId === droneMissionId).map(item => ({ type: "drone-imagery-report", occurredAt: item.createdAt, title: `${item.status}`, record: item }))
   ].sort((a, b) => String(b.occurredAt || "").localeCompare(String(a.occurredAt || ""))).slice(0, 100);
 }
 

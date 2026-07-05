@@ -268,8 +268,8 @@ const nexusProductIdentity = Object.freeze({
 });
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-376";
-const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v350";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-377";
+const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v351";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
 const VOICE_ATTENTION_DELAY_MS = 900;
@@ -22358,7 +22358,11 @@ const NEXUS_MAJOR_LAUNCH_BUTTONS = Object.freeze([
   { id: "logistics", label: "Logistics", command: "Nexus, open logistics cold chain." },
   { id: "jobs", label: "Workforce", command: "Nexus, open workforce training." },
   { id: "live-knowledge", label: "Live Knowledge", command: "Research climate-smart agriculture in Africa and show sources." },
-  { id: "operations-memory", label: "Operations", command: "Show audit log" }
+  { id: "operations-memory", label: "Operations", command: "Show audit log" },
+  { id: "learning-development", label: "Learning Ops", command: "Open learning and development" },
+  { id: "applicant-career", label: "Applicant Career", command: "Open applicant career support" },
+  { id: "employer-hiring", label: "Employer Hiring", command: "Open employer hiring support" },
+  { id: "drone-mission-support", label: "Drone Support", command: "Open drone mission support" }
 ]);
 
 function nexusAllAgenticWorkflows() {
@@ -24945,7 +24949,7 @@ function nexusCommandInputForSubmit(target = null) {
 }
 
 function isNexusPersistentOperationsCommand(command = "") {
-  return /\b(chronic care profile|blood pressure|bp|glucose|blood sugar|rpm|rtm|therapy activity|provider review|pharmacy referral|mobile clinic follow-up|telehealth encounter|deceased|stop outreach|archive intake|delete intake|mobile clinic provider|pharmacy provider|add provider|add buyer|add seller|out of business|create shipment|tracking event|shipment timeline|cancel shipment|create transaction|add item to transaction|cancel transaction|transaction ledger|heat illness|heat risk|heat index|action receipts|audit log)\b/i.test(String(command || ""));
+  return /\b(chronic care profile|blood pressure|bp|glucose|blood sugar|rpm|rtm|therapy activity|provider review|pharmacy referral|mobile clinic follow-up|telehealth encounter|deceased|stop outreach|archive intake|delete intake|mobile clinic provider|pharmacy provider|training provider|drone provider|add provider|add buyer|add seller|out of business|create shipment|tracking event|shipment timeline|cancel shipment|create transaction|add item to transaction|cancel transaction|transaction ledger|heat illness|heat risk|heat index|learning profile|learning development|training referral|lms handoff|learning plan|skill assessment|training interest|enrollment status|learning timeline|applicant|career support|resume|job readiness|employer|hiring company|job opportunity|application packet|application status|interview follow|hiring pipeline|drone mission|drone support|drone equipment|drone timeline|action receipts|audit log)\b/i.test(String(command || ""));
 }
 
 function nexusOperationsActionForCommand(command = "") {
@@ -24962,6 +24966,8 @@ function nexusOperationsActionForCommand(command = "") {
   if (/\b(create intake|healthcare intake|patient intake)\b/.test(text)) return "create_intake";
   if (/\b(archive this intake|archive intake)\b/.test(text)) return "archive_intake";
   if (/\b(delete this intake|delete intake)\b/.test(text)) return "delete_intake_if_allowed";
+  if (/\b(add.*training provider)\b/.test(text)) return "add_training_provider";
+  if (/\b(add.*drone provider|drone provider)\b/.test(text)) return "add_drone_provider";
   if (/\b(add.*pharmacy provider|add.*pharmacy)\b/.test(text)) return "add_pharmacy_provider";
   if (/\b(add.*mobile clinic provider|add.*mobile clinic)\b/.test(text)) return "add_mobile_clinic_provider";
   if (/\b(add.*provider)\b/.test(text)) return "add_provider";
@@ -24976,6 +24982,41 @@ function nexusOperationsActionForCommand(command = "") {
   if (/\b(add item to transaction|add item)\b/.test(text)) return "add_transaction_item";
   if (/\b(cancel transaction|cancel this transaction)\b/.test(text)) return "cancel_transaction";
   if (/\b(heat illness|heat risk|heat index|risk map)\b/.test(text)) return "log_heat_risk_report";
+  if (/\b(create|open|start).*(learning profile|learning development|learning and development|training profile|student profile)\b/.test(text)) return "create_learning_profile";
+  if (/\b(training referral|training provider referral|prepare training)\b/.test(text)) return "prepare_training_referral";
+  if (/\b(lms handoff|learning management|koachlearn|moodle)\b/.test(text)) return "prepare_lms_handoff";
+  if (/\b(learning plan|development plan|study plan)\b/.test(text)) return "create_learning_plan";
+  if (/\b(skill assessment|skills assessment|skills checklist)\b/.test(text)) return "create_skill_assessment_packet";
+  if (/\b(training interest|track training)\b/.test(text)) return "track_training_interest";
+  if (/\b(enrollment status|track enrollment)\b/.test(text)) return "track_enrollment_status";
+  if (/\b(archive learning|archive training)\b/.test(text)) return "archive_learning_profile";
+  if (/\b(delete learning|delete training data)\b/.test(text)) return "delete_training_data_if_allowed";
+  if (/\b(learning timeline|training timeline)\b/.test(text)) return "show_learning_timeline";
+  if (/\b(create|open|start).*(applicant|career support|career profile)\b/.test(text)) return "create_applicant_profile";
+  if (/\b(resume|cv|job readiness packet)\b/.test(text)) return "prepare_resume_packet";
+  if (/\b(create|add|open).*(employer|hiring company|company profile)\b/.test(text)) return "create_employer_profile";
+  if (/\b(add job|job opportunity|open role|vacancy)\b/.test(text)) return "add_job_opportunity";
+  if (/\b(application packet|prepare application)\b/.test(text)) return "prepare_application_packet";
+  if (/\b(application status|track application)\b/.test(text)) return "track_application_status";
+  if (/\b(interview follow|interview note)\b/.test(text)) return "add_interview_follow_up";
+  if (/\b(employer closed|company closed|mark employer closed)\b/.test(text)) return "mark_employer_closed";
+  if (/\b(archive applicant|no contact applicant|stop applicant outreach)\b/.test(text)) return /no contact|stop/i.test(text) ? "no_contact_applicant" : "archive_applicant";
+  if (/\b(delete applicant|delete career data)\b/.test(text)) return "delete_applicant_data_if_allowed";
+  if (/\b(applicant timeline|career timeline)\b/.test(text)) return "show_applicant_timeline";
+  if (/\b(hiring pipeline|show hiring)\b/.test(text)) return "show_hiring_pipeline";
+  if (/\b(create|open|start).*(drone mission|drone support|drone request)\b/.test(text)) return "create_drone_mission_request";
+  if (/\b(drone mission packet|prepare drone)\b/.test(text)) return "prepare_drone_mission_packet";
+  if (/\b(add.*drone equipment|drone equipment)\b/.test(text)) return "add_drone_equipment";
+  if (/\b(match.*drone|drone provider match)\b/.test(text)) return "match_drone_mission_provider";
+  if (/\b(queue.*drone mission|drone mission queue)\b/.test(text)) return "queue_drone_mission";
+  if (/\b(track.*drone mission|drone mission status)\b/.test(text)) return "track_drone_mission_status";
+  if (/\b(add.*drone mission event|drone mission event|drone event)\b/.test(text)) return "add_drone_mission_event";
+  if (/\b(cancel.*drone mission)\b/.test(text)) return "cancel_drone_mission";
+  if (/\b(archive.*drone)\b/.test(text)) return "archive_drone_record";
+  if (/\b(drone training referral|drone pilot training)\b/.test(text)) return "create_drone_training_referral";
+  if (/\b(agriculture expert packet.*drone|drone agriculture expert)\b/.test(text)) return "create_agriculture_expert_packet_from_drone";
+  if (/\b(drone mission timeline|drone timeline)\b/.test(text)) return "show_drone_mission_timeline";
+  if (/\b(add.*employer)\b/.test(text)) return "add_employer";
   if (/\b(show action receipts|action receipts)\b/.test(text)) return "show_action_receipts";
   if (/\b(show audit log|audit log)\b/.test(text)) return "show_audit_log";
   return "status";
@@ -25039,6 +25080,28 @@ function renderNexusOperationsMemoryWindow() {
     ["add_transaction_item", "Add transaction item"],
     ["cancel_transaction", "Cancel transaction"],
     ["log_heat_risk_report", "Open heat risk window"],
+    ["create_learning_profile", "Create learning profile"],
+    ["prepare_training_referral", "Prepare training referral"],
+    ["add_training_provider", "Add training provider"],
+    ["prepare_lms_handoff", "Prepare LMS handoff"],
+    ["create_learning_plan", "Create learning plan"],
+    ["create_skill_assessment_packet", "Create skill assessment"],
+    ["track_training_interest", "Track training interest"],
+    ["create_applicant_profile", "Create applicant profile"],
+    ["prepare_resume_packet", "Prepare resume packet"],
+    ["create_employer_profile", "Add hiring company"],
+    ["add_employer", "Add employer"],
+    ["add_job_opportunity", "Add job opportunity"],
+    ["prepare_application_packet", "Prepare application packet"],
+    ["add_interview_follow_up", "Add interview follow-up"],
+    ["create_drone_mission_request", "Create drone mission request"],
+    ["prepare_drone_mission_packet", "Prepare drone mission packet"],
+    ["add_drone_provider", "Add drone provider"],
+    ["add_drone_equipment", "Add drone equipment"],
+    ["match_drone_mission_provider", "Match drone provider"],
+    ["add_drone_mission_event", "Add drone mission event"],
+    ["create_drone_training_referral", "Prepare drone training referral"],
+    ["create_agriculture_expert_packet_from_drone", "Prepare agronomy packet from drone"],
     ["show_action_receipts", "Show action receipts"],
     ["show_audit_log", "Show audit log"]
   ];
@@ -25055,11 +25118,34 @@ function renderNexusOperationsMemoryWindow() {
         <article><strong>${escapeHtml(String(collections.parties || 0))}</strong><span>${escapeHtml(translateText("Buyers / sellers"))}</span></article>
         <article><strong>${escapeHtml(String(collections.shipments || 0))}</strong><span>${escapeHtml(translateText("Shipments"))}</span></article>
         <article><strong>${escapeHtml(String(collections.transactions || 0))}</strong><span>${escapeHtml(translateText("Transactions"))}</span></article>
+        <article><strong>${escapeHtml(String(collections.learningProfiles || 0))}</strong><span>${escapeHtml(translateText("Learning profiles"))}</span></article>
+        <article><strong>${escapeHtml(String(collections.trainingRecords || 0))}</strong><span>${escapeHtml(translateText("Training records"))}</span></article>
+        <article><strong>${escapeHtml(String(collections.applicantProfiles || 0))}</strong><span>${escapeHtml(translateText("Applicants"))}</span></article>
+        <article><strong>${escapeHtml(String(collections.employerProfiles || 0))}</strong><span>${escapeHtml(translateText("Employers"))}</span></article>
+        <article><strong>${escapeHtml(String(collections.jobOpportunities || 0))}</strong><span>${escapeHtml(translateText("Jobs"))}</span></article>
+        <article><strong>${escapeHtml(String(collections.droneMissionRequests || 0))}</strong><span>${escapeHtml(translateText("Drone missions"))}</span></article>
+        <article><strong>${escapeHtml(String(collections.droneProviders || 0))}</strong><span>${escapeHtml(translateText("Drone providers"))}</span></article>
         <article><strong>${escapeHtml(String(collections.auditLogs || 0))}</strong><span>${escapeHtml(translateText("Audit logs"))}</span></article>
       </div>
       <div class="nexus-operations-action-grid">
         ${actions.map(([action, label]) => `<button type="button" data-nexus-operations-action="${escapeHtml(action)}">${escapeHtml(translateText(label))}</button>`).join("")}
       </div>
+      <section class="nexus-operations-domain-window" data-nexus-learning-development-window="true">
+        <strong>${escapeHtml(translateText("Learning & Development Operations"))}</strong>
+        <p>${escapeHtml(translateText("Create learning profiles, prepare training referrals, skill assessments, LMS handoff records, and certification pathways. Enrollment remains provider/LMS-confirmed only."))}</p>
+      </section>
+      <section class="nexus-operations-domain-window" data-nexus-applicant-career-window="true">
+        <strong>${escapeHtml(translateText("Applicant Career Support"))}</strong>
+        <p>${escapeHtml(translateText("Create applicant profiles, resume packets, application packets, and interview follow-ups. Nexus does not submit applications or promise job placement."))}</p>
+      </section>
+      <section class="nexus-operations-domain-window" data-nexus-employer-hiring-window="true">
+        <strong>${escapeHtml(translateText("Employer Hiring Support"))}</strong>
+        <p>${escapeHtml(translateText("Add hiring companies and job opportunities, then review hiring pipeline records. Employer contact and acceptance remain gated."))}</p>
+      </section>
+      <section class="nexus-operations-domain-window" data-nexus-drone-mission-window="true">
+        <strong>${escapeHtml(translateText("Drone Mission Support"))}</strong>
+        <p>${escapeHtml(translateText("Prepare drone mission requests, provider matches, mission events, and agronomy packets. Nexus does not dispatch drones, schedule flights, or claim imagery capture."))}</p>
+      </section>
       <section class="nexus-operations-heat-risk" data-nexus-heat-risk-window="true" data-fake-illness-prevalence-map="false">
         <strong>${escapeHtml(translateText("Health Risk / Heat Index"))}</strong>
         <p>${escapeHtml(translateText(ops.heatRisk?.datasetNotice || "No live illness prevalence dataset is configured. Nexus can track local reports and prepare heat-risk response packets."))}</p>
@@ -41818,7 +41904,7 @@ async function runWowDemo() {
 function handleNexusStandardUserHomeClick(event) {
   if (experienceMode !== "user" && !document.body.classList.contains("user-mode")) return false;
   const eventTarget = event.target?.closest ? event.target : event.target?.parentElement;
-  const persistentOperationsShortcut = eventTarget?.closest?.("[data-nexus-mode-shortcut='operations-memory']");
+  const persistentOperationsShortcut = eventTarget?.closest?.("[data-nexus-mode-shortcut='operations-memory'],[data-nexus-mode-shortcut='learning-development'],[data-nexus-mode-shortcut='applicant-career'],[data-nexus-mode-shortcut='employer-hiring'],[data-nexus-mode-shortcut='drone-mission-support']");
   if (persistentOperationsShortcut) {
     event.preventDefault();
     event.stopPropagation();
@@ -42023,7 +42109,7 @@ function handleNexusStandardUserHomeClick(event) {
     scheduleNexusActiveWorkflowFocus({ instant: true });
     return true;
   }
-  if (normalizedModeId === "operations-memory") {
+  if (["operations-memory", "learning-development", "applicant-career", "employer-hiring", "drone-mission-support"].includes(normalizedModeId)) {
     event.preventDefault();
     event.stopPropagation();
     event.stopImmediatePropagation?.();
@@ -42333,7 +42419,7 @@ function bindStatic() {
   document.addEventListener("click", async event => {
     if (await handleAssistantRuntimeLocalToolClick(event)) return;
     if (handleAssistantRuntimeFollowUpClick(event)) return;
-    const persistentOperationsShortcut = event.target?.closest?.("[data-nexus-mode-shortcut='operations-memory']");
+    const persistentOperationsShortcut = event.target?.closest?.("[data-nexus-mode-shortcut='operations-memory'],[data-nexus-mode-shortcut='learning-development'],[data-nexus-mode-shortcut='applicant-career'],[data-nexus-mode-shortcut='employer-hiring'],[data-nexus-mode-shortcut='drone-mission-support']");
     if (persistentOperationsShortcut) {
       event.preventDefault();
       event.stopPropagation();

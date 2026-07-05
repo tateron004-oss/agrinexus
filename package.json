@@ -74,6 +74,7 @@
     "qa:nexus-app-window-experience": "node scripts/nexus-app-window-experience-qa.js",
     "qa:nexus-user-experience-maximization": "node scripts/nexus-user-experience-maximization-qa.js",
     "qa:nexus-persistent-operations-chronic-care": "node scripts/nexus-persistent-operations-chronic-care-qa.js",
+    "qa:nexus-remaining-modes-operations": "node scripts/nexus-remaining-modes-operations-qa.js",
     "qa:nexus-global-marketplace-logistics": "node scripts/nexus-global-marketplace-logistics-qa.js",
     "qa:nexus-global-activation-center": "node scripts/nexus-global-activation-center-qa.js",
     "qa:nexus-global-review-queue-audit": "node scripts/nexus-global-review-queue-audit-qa.js",
