@@ -22252,6 +22252,64 @@ function nexusGlobalActivationCenterSummary(lanes = nexusAllIntegrationLanes()) 
     activationAuditState: "Lane configuration, test actions, partner linking, export preparation, and disable actions create local reviewable state without provider execution."
   };
 }
+
+const NEXUS_ALL_MODES_ACTIVATION_RUNTIME_CATEGORIES = Object.freeze([
+  { id: "foundation", label: "Foundation", lanes: ["Identity/profile", "Consent", "Confirmation", "Audit log", "Data deletion", "Offline queue"], status: "local_ready", fallback: "Local records, receipts, lifecycle updates, and audit events." },
+  { id: "communications", label: "Communications", lanes: ["Email", "SMS", "WhatsApp", "Telegram", "Phone/call handoff", "Notifications"], status: "confirmation_required", missing: ["communications provider enable flag", "provider account SID", "provider auth token", "provider sender number"], fallback: "Draft message packets and visible confirmation only." },
+  { id: "live-knowledge", label: "Live Knowledge / AI Search", lanes: ["Tavily", "Brave Search", "Exa", "Generic endpoint", "Citation normalization"], status: "missing_credentials", missing: ["live knowledge provider selector", "selected search provider API key"], fallback: "Non-live guidance plus source-needed notice." },
+  { id: "healthcare", label: "Healthcare", lanes: ["Patient intake", "DM/HTN/Obesity", "RPM", "RTM", "Telehealth", "Pharmacy", "Mobile clinic", "Deceased patient lifecycle"], status: "consent_required", missing: ["health provider enable flag", "pharmacy provider endpoint", "mobile clinic provider endpoint"], fallback: "Physician-ready packets, local readings, and provider-review summaries." },
+  { id: "marketplace", label: "Marketplace / Trade", lanes: ["Buyer profile", "Seller profile", "Listings", "Orders", "Transactions", "Payments", "Refund/dispute"], status: "confirmation_required", missing: ["marketplace payments enable flag", "sandbox payment provider key"], fallback: "Local buyer/seller and transaction memory." },
+  { id: "agriculture", label: "Agriculture", lanes: ["Crop advisory", "Soil advisory", "Pest/disease info", "Weather/heat-risk", "Market price", "Export readiness"], status: "local_ready", missing: ["NEXUS_AGRICULTURE_PROVIDER_ENDPOINT"], fallback: "Local crop support and farm planning packets." },
+  { id: "maps-logistics", label: "Maps / Logistics / Shipment", lanes: ["Map tiles", "Geocoding", "Route planning", "Shipment tracking", "Delivery provider"], status: "confirmation_required", missing: ["maps enable flag", "routing provider API key", "shipment tracking endpoint"], fallback: "Typed-location route and local shipment packets." },
+  { id: "workforce", label: "Workforce / Career / Hiring", lanes: ["Applicant profile", "Resume packet", "Employer profile", "ATS/CRM", "Employer outreach", "Interview handoff"], status: "vendor_required", missing: ["workforce provider enable flag", "employer CRM endpoint"], fallback: "Local applicant, employer, and application packets." },
+  { id: "learning", label: "Learning / Training / LMS", lanes: ["Learner profile", "Learning path", "Training referral", "LMS enrollment", "Certificate sync"], status: "vendor_required", missing: ["LMS enable flag", "LMS base URL", "LMS access token"], fallback: "Local learning plan and LMS handoff packet." },
+  { id: "drones", label: "Drone Support", lanes: ["Mission request", "Provider profile", "Equipment profile", "Compliance checklist", "Dispatch provider", "Imagery upload"], status: "approval_required", missing: ["drone provider enable flag", "drone provider API key"], fallback: "Local drone mission packet and compliance evidence." },
+  { id: "media", label: "Media / Music", lanes: ["YouTube handoff", "External media search", "Preference record", "Copyright-safe behavior"], status: "local_ready", missing: ["YOUTUBE_API_KEY"], fallback: "Safe provider options; no downloads, ripping, or cached music." },
+  { id: "admin", label: "Admin / Provider / Vendor Operations", lanes: ["Provider onboarding", "Vendor onboarding", "Credential status", "Provider test", "Disable provider", "Approval receipt"], status: "approval_required", fallback: "Local provider/vendor readiness, tests, receipts, and audit records." }
+]);
+
+function renderNexusAllModesActivationRuntime() {
+  const receipts = nexusActionHistory.slice(0, 3);
+  return `
+    <section class="nexus-all-modes-activation-runtime nexus-glass-card" data-nexus-all-modes-activation-runtime="true" data-no-secret-values="true" data-live-execution-gated="true" aria-label="${escapeHtml(translateText("Nexus all-modes activation runtime"))}">
+      <div class="nexus-all-modes-runtime-heading">
+        <span class="eyebrow">${escapeHtml(translateText("All-modes activation runtime"))}</span>
+        <strong>${escapeHtml(translateText("Credential-aware live execution gate"))}</strong>
+        <p>${escapeHtml(translateText("Every mode can prepare local packets, receipts, and audit records now. Live provider execution requires configured credentials, consent where needed, final confirmation, approvals where required, and a provider receipt before Nexus claims completion."))}</p>
+      </div>
+      <div class="nexus-all-modes-runtime-status" data-nexus-live-execution-gate-statuses="true">
+        ${["local_prepared", "blocked_missing_credentials", "consent_required", "confirmation_required", "approval_required", "vendor_required", "blocked_for_safety", "live_executed", "cancelled", "failed"].map(status => `<span>${escapeHtml(status)}</span>`).join("")}
+      </div>
+      <div class="nexus-all-modes-runtime-grid" data-nexus-all-modes-activation-categories="true">
+        ${NEXUS_ALL_MODES_ACTIVATION_RUNTIME_CATEGORIES.map(category => `
+          <article data-nexus-activation-runtime-category="${escapeHtml(category.id)}" data-gate-status="${escapeHtml(category.status)}">
+            <div>
+              <strong>${escapeHtml(translateText(category.label))}</strong>
+              <span>${escapeHtml(translateText(`Status: ${category.status}`))}</span>
+            </div>
+            <small>${escapeHtml(translateText(`Lanes: ${category.lanes.join(", ")}`))}</small>
+            <small>${escapeHtml(translateText(`Missing env names: ${(category.missing || ["none"]).join(", ")}`))}</small>
+            <small>${escapeHtml(translateText(`Local fallback: ${category.fallback}`))}</small>
+          </article>
+        `).join("")}
+      </div>
+      <div class="nexus-standard-user-activation-summary" data-nexus-standard-user-activation-summary="true">
+        <strong>${escapeHtml(translateText("Standard User summary"))}</strong>
+        <ul>
+          <li>${escapeHtml(translateText("Available now: local preparation, packets, lifecycle records, receipts, review queues, and audit logs."))}</li>
+          <li>${escapeHtml(translateText("Live-capable when configured: messages, provider handoff, telehealth, pharmacy, mobile clinic, payments, LMS enrollment, maps, shipment tracking, drone operations, and source retrieval."))}</li>
+          <li>${escapeHtml(translateText("Blocked without credentials/approval: unapproved sends or calls, payments, dispatch, booking, prescribing, diagnosis, emergency routing, job placement, LMS enrollment, drone flight, imagery upload, and fake provider acceptance."))}</li>
+        </ul>
+      </div>
+      <div class="nexus-runtime-receipt-audit-preview" data-nexus-runtime-receipt-audit-preview="true">
+        <strong>${escapeHtml(translateText("Receipts and audit"))}</strong>
+        <span>${escapeHtml(translateText("Receipts visible"))}: ${escapeHtml(String(nexusPreparedPackets.length + receipts.length))}</span>
+        <span>${escapeHtml(translateText("Audit events visible"))}: ${escapeHtml(String(nexusActionHistory.length))}</span>
+        <span>${escapeHtml(translateText("Secret export"))}: ${escapeHtml(translateText("names only, never values"))}</span>
+      </div>
+    </section>
+  `;
+}
 const NEXUS_GLOBAL_READINESS_TAGS = Object.freeze(["global-ready", "Africa-first", "low-bandwidth", "mobile-first", "offline-aware", "rural-relevant", "community-health-ready", "agriculture-ready", "workforce-ready"]);
 const NEXUS_ENDGAME_WORKFLOW_EXTENSIONS = Object.freeze([
   { id: "diabetes", label: "Diabetes Support", category: "healthcare", aliases: ["diabetes", "blood sugar", "glucose"], riskLevel: "clinical", activationType: "provider-ready", integrationRequired: true, integrationLaneId: "diabetes-lane", allowedWithoutIntegration: true, requiresConfirmationBeforeExecution: true, auditLogRequired: true, outcomeVerificationRequired: true, globalReadiness: "global-ready / Africa-relevant", offlineSupport: true, packetType: "diabetes_report_packet" },
@@ -23878,6 +23936,7 @@ function renderNexusActivationCenter() {
           <button type="button" data-nexus-activation-action="show-partner-registry" data-testid="nexus-global-activation-partner-registry">${escapeHtml(translateText("Show partner registry"))}</button>
         </div>
       </section>
+      ${renderNexusAllModesActivationRuntime()}
       <div class="nexus-activation-grid">
         ${lanes.map(lane => `
           <article data-testid="nexus-global-activation-lane-card" data-nexus-activation-lane="${escapeHtml(lane.id)}" data-lane-status="${escapeHtml(lane.status)}">

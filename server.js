@@ -33260,6 +33260,585 @@ function nexusOperationsSummary(db) {
   };
 }
 
+const NEXUS_ACTIVATION_STATUSES = Object.freeze([
+  "local_ready",
+  "configured",
+  "missing_credentials",
+  "vendor_required",
+  "approval_required",
+  "consent_required",
+  "confirmation_required",
+  "disabled",
+  "blocked_for_safety",
+  "unknown"
+]);
+
+const NEXUS_LIVE_EXECUTION_GATE_STATUSES = Object.freeze([
+  "local_prepared",
+  "blocked_missing_credentials",
+  "consent_required",
+  "confirmation_required",
+  "approval_required",
+  "vendor_required",
+  "blocked_for_safety",
+  "live_executed",
+  "cancelled",
+  "failed"
+]);
+
+const NEXUS_ALL_MODES_ACTIVATION_REGISTRY = Object.freeze([
+  {
+    id: "foundation-identity-consent-audit",
+    label: "Identity, consent, confirmation, audit, retention, deletion, offline queue, and case memory",
+    category: "Foundation",
+    modeIds: ["identity/profile", "user role", "consent", "confirmation", "audit log", "data retention", "data deletion", "local persistence", "offline queue", "case/task memory", "record lifecycle management"],
+    actionIds: ["record_created", "record_updated", "record_deactivated", "record_deleted", "consent_required", "confirmation_required", "approval_required"],
+    description: "Core records, lifecycle controls, receipts, audit logs, local fallback, and offline-safe packet memory.",
+    providerType: "local-runtime",
+    requiredEnv: [],
+    optionalEnv: ["DATABASE_URL"],
+    requiresConsent: false,
+    requiresConfirmation: false,
+    requiresAdminApproval: false,
+    requiresVendorApproval: false,
+    supportsLocalFallback: true,
+    localFallbackActions: ["create local record", "create receipt", "create audit event", "deactivate record", "archive record"],
+    liveActions: ["sync to configured database when DATABASE_URL is active"],
+    blockedActions: ["hard-delete protected audit evidence without policy approval", "background real-world action"],
+    riskLevel: "platform",
+    safeFallbackMessage: "Nexus can create local records, receipts, audit events, and lifecycle updates without external execution.",
+    successReceiptType: "activation_foundation_receipt",
+    auditEventTypes: ["activation_matrix_viewed", "record_created", "record_updated", "record_deactivated", "record_deleted"],
+    recordTypesAffected: ["patients", "buyers", "sellers", "applicants", "employers", "learners", "providers", "vendors", "transactions", "shipments", "cases", "auditLogs", "actionReceipts"]
+  },
+  {
+    id: "communications-provider-lane",
+    label: "Email, SMS, WhatsApp, Telegram, phone/call handoff, notifications, and message receipts",
+    category: "Communications",
+    modeIds: ["communications", "messages", "email", "sms", "whatsapp", "telegram", "phone", "notifications"],
+    actionIds: ["prepare_email", "prepare_sms", "prepare_whatsapp", "prepare_telegram", "prepare_phone_call", "send_message", "call_handoff"],
+    description: "Drafts communication packets locally and executes only through configured providers after visible recipient, consent, confirmation, and audit checks.",
+    providerType: "communications-provider",
+    requiredEnv: ["NEXUS_MESSAGES_ENABLED", "TWILIO_ACCOUNT_SID", "TWILIO_AUTH_TOKEN", "TWILIO_FROM_NUMBER"],
+    optionalEnv: ["OWNER_TEST_RECIPIENT_NUMBER", "NEXUS_WHATSAPP_ENABLED", "NEXUS_CALLS_ENABLED", "SMTP_HOST", "SENDGRID_API_KEY", "TELEGRAM_BOT_TOKEN"],
+    requiresConsent: true,
+    requiresConfirmation: true,
+    requiresAdminApproval: false,
+    requiresVendorApproval: false,
+    supportsLocalFallback: true,
+    localFallbackActions: ["draft message", "preview recipient", "prepare phone script", "queue for review"],
+    liveActions: ["send SMS", "send email", "send WhatsApp", "send Telegram", "open phone handoff when configured"],
+    blockedActions: ["unapproved message send", "unapproved call handoff", "hidden provider handoff", "background communication"],
+    riskLevel: "external-execution",
+    safeFallbackMessage: "Nexus can prepare communication drafts locally; live sending requires provider credentials and explicit confirmation.",
+    successReceiptType: "communications_execution_receipt",
+    auditEventTypes: ["live_execution_gate_checked", "confirmation_required", "live_action_blocked", "live_action_executed", "external_execution_failed"],
+    recordTypesAffected: ["nexusCommunications", "notifications", "actionReceipts", "auditLogs"]
+  },
+  {
+    id: "live-knowledge-ai-search",
+    label: "Tavily, Brave Search, Exa, generic endpoint, citation normalization, trust scoring, and uncited fallback",
+    category: "Live Knowledge / AI Search",
+    modeIds: ["live-knowledge", "resource-assistant", "agriculture", "training", "workforce", "healthcare", "marketplace"],
+    actionIds: ["live_knowledge_query", "normalize_citations", "score_source_trust", "prepare_uncited_fallback"],
+    description: "Source-backed research lane with provider detection, normalized citations, source metadata, and honest missing-credential fallback.",
+    providerType: "live-knowledge",
+    requiredEnv: ["NEXUS_LIVE_KNOWLEDGE_PROVIDER"],
+    optionalEnv: ["TAVILY_API_KEY", "BRAVE_SEARCH_API_KEY", "EXA_API_KEY", "NEXUS_LIVE_KNOWLEDGE_PROVIDER_ENDPOINT", "NEXUS_LIVE_KNOWLEDGE_API_KEY"],
+    requiresConsent: false,
+    requiresConfirmation: false,
+    requiresAdminApproval: false,
+    requiresVendorApproval: false,
+    supportsLocalFallback: true,
+    localFallbackActions: ["general guidance", "source-needed notice", "prepare research packet"],
+    liveActions: ["execute Tavily search", "execute Brave Search", "execute Exa search", "execute generic endpoint"],
+    blockedActions: ["fake citations", "uncited live claim", "downstream regulated execution"],
+    riskLevel: "information",
+    safeFallbackMessage: "Live retrieval runs only when a supported provider is configured; otherwise Nexus labels guidance as non-live.",
+    successReceiptType: "live_knowledge_research_packet",
+    auditEventTypes: ["provider_lane_checked", "provider_test_requested", "provider_test_passed", "provider_test_failed"],
+    recordTypesAffected: ["knowledgeQueries", "sourceCitations", "actionReceipts", "auditLogs"]
+  },
+  {
+    id: "healthcare-provider-activation",
+    label: "Patient intake, chronic disease, diabetes, hypertension, obesity, RPM, RTM, provider reports, telehealth, pharmacy, mobile clinic, emergency guidance, and deceased patient lifecycle",
+    category: "Healthcare",
+    modeIds: ["health-intake", "chronic-care", "diabetes", "hypertension", "obesity", "rpm", "rtm", "provider-support", "telehealth-intake", "pharmacy-support", "mobile-clinic", "community-health-worker"],
+    actionIds: ["create_intake", "add_rpm_reading", "add_rtm_activity", "create_provider_review_packet", "create_telehealth_encounter", "create_pharmacy_referral", "create_mobile_clinic_follow_up", "mark_deceased_stop_outreach"],
+    description: "Healthcare preparation and provider-ready packets with no diagnosis, no prescribing, no emergency dispatch, and regulated execution gated by provider credentials, consent, confirmation, and audit.",
+    providerType: "healthcare-provider",
+    requiredEnv: ["NEXUS_HEALTH_PROVIDER_ENABLED"],
+    optionalEnv: ["NEXUS_TELEHEALTH_PROVIDER_ENDPOINT", "DAILY_API_KEY", "NEXUS_PHARMACY_PROVIDER_ENDPOINT", "NEXUS_MOBILE_CLINIC_PROVIDER_ENDPOINT", "NEXUS_RPM_PROVIDER_ENDPOINT", "NEXUS_RTM_PROVIDER_ENDPOINT"],
+    requiresConsent: true,
+    requiresConfirmation: true,
+    requiresAdminApproval: true,
+    requiresVendorApproval: true,
+    supportsLocalFallback: true,
+    localFallbackActions: ["prepare intake", "record manual RPM/RTM reading", "prepare physician-ready summary", "archive/deactivate patient record"],
+    liveActions: ["provider packet submission", "telehealth request", "pharmacy partner request", "mobile clinic partner request", "RPM/RTM provider sync"],
+    blockedActions: ["diagnosis", "prescribing", "medication change", "emergency dispatch", "claiming clinician review without receipt", "fake provider acceptance"],
+    riskLevel: "regulated-health",
+    safeFallbackMessage: "Nexus can prepare healthcare summaries locally; provider execution requires verified regulated connectors and receipts.",
+    successReceiptType: "healthcare_provider_execution_receipt",
+    auditEventTypes: ["consent_required", "approval_required", "patient_marked_deceased", "live_action_blocked", "external_execution_failed"],
+    recordTypesAffected: ["patients", "healthcareIntakes", "chronicCareProfiles", "rpmReadings", "rtmActivities", "cases", "providers"]
+  },
+  {
+    id: "marketplace-trade-payments",
+    label: "Buyer/seller memory, listings, orders, transactions, cancellation, adjustment, refund/dispute placeholder, payment provider, and marketplace audit receipts",
+    category: "Marketplace / Trade",
+    modeIds: ["agritrade", "marketplace", "buyer", "seller", "transactions", "payments"],
+    actionIds: ["add_buyer", "add_seller", "create_transaction", "add_transaction_item", "cancel_transaction", "mark_party_closed", "payment_provider_gate"],
+    description: "Buyer, seller, listing, transaction, and payment-readiness memory with live payment/order execution disabled until configured, approved, confirmed, and receipted.",
+    providerType: "marketplace-payment-provider",
+    requiredEnv: ["NEXUS_MARKETPLACE_PAYMENTS_ENABLED", "STRIPE_SECRET_KEY"],
+    optionalEnv: ["NEXUS_MARKETPLACE_PROVIDER_ENDPOINT", "STRIPE_WEBHOOK_SECRET"],
+    requiresConsent: true,
+    requiresConfirmation: true,
+    requiresAdminApproval: true,
+    requiresVendorApproval: true,
+    supportsLocalFallback: true,
+    localFallbackActions: ["create buyer/seller record", "prepare product/order packet", "locally cancel or adjust transaction"],
+    liveActions: ["payment checkout", "order submission", "refund/dispute request"],
+    blockedActions: ["silent purchase", "payment completion claim without provider receipt", "external cancellation without provider receipt"],
+    riskLevel: "payments-commerce",
+    safeFallbackMessage: "Nexus can prepare marketplace records locally; payments and live orders require sandbox/live provider credentials and approval.",
+    successReceiptType: "marketplace_payment_receipt",
+    auditEventTypes: ["transaction_cancel_requested", "transaction_adjust_requested", "live_action_blocked", "live_action_executed"],
+    recordTypesAffected: ["parties", "marketplaceListings", "transactions", "actionReceipts", "auditLogs"]
+  },
+  {
+    id: "agriculture-advisory-logistics",
+    label: "Crop advisory, soil advisory, pest/disease information, market price, weather/heat-risk, farm inputs, buyer/seller linkages, logistics, and export readiness",
+    category: "Agriculture",
+    modeIds: ["agriculture", "crop-support", "farm-planning", "field-visit", "heat-risk", "agritrade", "logistics"],
+    actionIds: ["crop_support_packet", "farm_planning_request", "field_visit_request", "log_heat_risk_report", "create_shipment"],
+    description: "Agriculture support uses source-backed guidance when configured, local advisory packets otherwise, and gates field visits, vendor contact, logistics, and trade execution.",
+    providerType: "agriculture-provider",
+    requiredEnv: ["NEXUS_LIVE_KNOWLEDGE_PROVIDER"],
+    optionalEnv: ["NEXUS_HEAT_RISK_DATASET_URL", "NEXUS_AGRICULTURE_PROVIDER_ENDPOINT", "NEXUS_MARKET_PRICE_PROVIDER_ENDPOINT"],
+    requiresConsent: false,
+    requiresConfirmation: true,
+    requiresAdminApproval: false,
+    requiresVendorApproval: true,
+    supportsLocalFallback: true,
+    localFallbackActions: ["prepare crop support packet", "prepare farm plan", "record heat risk report", "prepare field visit request"],
+    liveActions: ["source-backed crop research", "market price retrieval", "weather/heat-risk lookup", "vendor/extension partner request"],
+    blockedActions: ["field dispatch without partner receipt", "uncited live claim", "purchase without confirmation"],
+    riskLevel: "moderate",
+    safeFallbackMessage: "Nexus can prepare agriculture packets locally and retrieve sources when configured; field/vendor actions remain gated.",
+    successReceiptType: "agriculture_activation_receipt",
+    auditEventTypes: ["provider_lane_checked", "local_fallback_created", "vendor_required"],
+    recordTypesAffected: ["heatRiskReports", "shipments", "cases", "actionReceipts", "auditLogs"]
+  },
+  {
+    id: "maps-logistics-shipment",
+    label: "Map tiles, geocoding, route planning, trade route visualization, shipment tracking, delivery/logistics provider, live status sync, and local shipment fallback",
+    category: "Maps / Logistics / Shipment",
+    modeIds: ["maps", "route-planning", "logistics", "shipments", "field-visit"],
+    actionIds: ["route_planning_request", "create_shipment", "add_tracking_event", "shipment_tracking_provider_sync", "logistics_dispatch"],
+    description: "Typed-location route support, local shipment records, and tracking/provider sync gated by maps/logistics credentials and confirmation.",
+    providerType: "maps-logistics-provider",
+    requiredEnv: ["NEXUS_MAPS_ENABLED", "GOOGLE_MAPS_API_KEY"],
+    optionalEnv: ["NEXUS_SHIPMENT_TRACKING_ENDPOINT", "NEXUS_LOGISTICS_PROVIDER_ENDPOINT"],
+    requiresConsent: true,
+    requiresConfirmation: true,
+    requiresAdminApproval: false,
+    requiresVendorApproval: true,
+    supportsLocalFallback: true,
+    localFallbackActions: ["prepare route packet", "create shipment record", "add local tracking event"],
+    liveActions: ["geocode", "route compute", "shipment tracking sync", "logistics dispatch request"],
+    blockedActions: ["browser geolocation without permission", "location sharing without consent", "delivery dispatch without provider receipt"],
+    riskLevel: "location-logistics",
+    safeFallbackMessage: "Nexus can prepare typed routes and shipment records locally; live tracking/dispatch requires configured providers.",
+    successReceiptType: "logistics_provider_receipt",
+    auditEventTypes: ["provider_lane_checked", "consent_required", "live_action_blocked", "external_execution_failed"],
+    recordTypesAffected: ["shipments", "trackingEvents", "providers", "actionReceipts", "auditLogs"]
+  },
+  {
+    id: "workforce-career-hiring",
+    label: "Applicant profile, resume packet, career support, job opportunities, employer profile, ATS/CRM, outreach, placement, interview scheduling, and employment audit trail",
+    category: "Workforce / Career / Hiring",
+    modeIds: ["jobs", "workforce", "applicant-career", "employer-hiring", "employer-partner"],
+    actionIds: ["create_applicant_profile", "prepare_resume_packet", "create_employer_profile", "add_job_opportunity", "prepare_application_packet", "add_interview_follow_up", "mark_employer_closed"],
+    description: "Applicant and employer memory with resume/application packets and employer outreach/placement gated by partner credentials and confirmation.",
+    providerType: "workforce-provider",
+    requiredEnv: ["NEXUS_WORKFORCE_PROVIDER_ENABLED"],
+    optionalEnv: ["NEXUS_EMPLOYER_CRM_ENDPOINT", "NEXUS_ATS_ENDPOINT", "NEXUS_CALENDAR_PROVIDER_ENDPOINT"],
+    requiresConsent: true,
+    requiresConfirmation: true,
+    requiresAdminApproval: false,
+    requiresVendorApproval: true,
+    supportsLocalFallback: true,
+    localFallbackActions: ["create applicant profile", "prepare resume packet", "create employer profile", "prepare application packet"],
+    liveActions: ["employer outreach", "ATS/CRM sync", "interview scheduling handoff", "job placement confirmation"],
+    blockedActions: ["auto-apply", "employer contact without confirmation", "job placement claim without employer receipt"],
+    riskLevel: "moderate",
+    safeFallbackMessage: "Nexus can prepare career and hiring records locally; outreach and placement require partner connectors.",
+    successReceiptType: "workforce_provider_receipt",
+    auditEventTypes: ["consent_required", "confirmation_required", "vendor_required", "record_deactivated"],
+    recordTypesAffected: ["applicantProfiles", "resumePackets", "employerProfiles", "jobOpportunities", "jobApplications", "interviewFollowUps"]
+  },
+  {
+    id: "learning-training-lms",
+    label: "Learner profile, learning path, training referral, LMS enrollment, course completion sync, credential/certificate sync, and learning provider integration",
+    category: "Learning / Training / LMS",
+    modeIds: ["learning", "training", "learning-development", "lms"],
+    actionIds: ["create_learning_profile", "prepare_training_referral", "prepare_lms_handoff", "create_learning_plan", "track_enrollment_status"],
+    description: "Learner memory and training referral packets with LMS enrollment/completion/certificate sync gated by provider credentials and confirmation.",
+    providerType: "learning-provider",
+    requiredEnv: ["NEXUS_LMS_ENABLED", "MOODLE_BASE_URL", "MOODLE_TOKEN"],
+    optionalEnv: ["NEXUS_TRAINING_PROVIDER_ENDPOINT", "NEXUS_CERTIFICATE_SYNC_ENDPOINT"],
+    requiresConsent: true,
+    requiresConfirmation: true,
+    requiresAdminApproval: false,
+    requiresVendorApproval: true,
+    supportsLocalFallback: true,
+    localFallbackActions: ["create learner profile", "prepare learning plan", "prepare LMS handoff", "track local training interest"],
+    liveActions: ["LMS enrollment", "course completion sync", "credential/certificate sync"],
+    blockedActions: ["fake enrollment", "fake certificate", "provider submission without confirmation"],
+    riskLevel: "moderate",
+    safeFallbackMessage: "Nexus can prepare learning plans locally; LMS enrollment and certificates require configured providers.",
+    successReceiptType: "learning_provider_receipt",
+    auditEventTypes: ["confirmation_required", "vendor_required", "live_action_blocked"],
+    recordTypesAffected: ["learningProfiles", "trainingRecords", "learningPlans", "lmsHandoffRecords", "certificationPathways"]
+  },
+  {
+    id: "drone-operations",
+    label: "Drone mission request, vendor profile, equipment profile, compliance checklist, dispatch provider, imagery capture/upload, mission completion receipt, and no-fly fallback",
+    category: "Drone Support",
+    modeIds: ["drone-mission-support", "drone", "field-agent", "crop-support"],
+    actionIds: ["create_drone_mission_request", "prepare_drone_mission_packet", "add_drone_provider", "add_drone_equipment", "match_drone_mission_provider", "cancel_drone_mission"],
+    description: "Drone mission and equipment memory with compliance-first dispatch/imagery gates. No flight or imagery claim is made without provider receipt.",
+    providerType: "drone-provider",
+    requiredEnv: ["NEXUS_DRONES_ENABLED", "DJI_API_KEY"],
+    optionalEnv: ["NEXUS_DRONE_PROVIDER_ENDPOINT", "NEXUS_DRONE_IMAGERY_STORAGE_ENDPOINT"],
+    requiresConsent: true,
+    requiresConfirmation: true,
+    requiresAdminApproval: true,
+    requiresVendorApproval: true,
+    supportsLocalFallback: true,
+    localFallbackActions: ["create drone mission request", "prepare mission packet", "record equipment/provider profile", "record compliance checklist"],
+    liveActions: ["drone dispatch request", "imagery capture/upload", "mission completion sync"],
+    blockedActions: ["autonomous flight", "no-fly bypass", "imagery capture/upload without provider receipt", "dispatch claim without receipt"],
+    riskLevel: "field-safety",
+    safeFallbackMessage: "Nexus can prepare drone mission packets locally; dispatch and imagery require approved drone providers and compliance receipts.",
+    successReceiptType: "drone_provider_receipt",
+    auditEventTypes: ["vendor_required", "approval_required", "unsafe_action_blocked", "external_execution_failed"],
+    recordTypesAffected: ["droneProviders", "droneEquipment", "droneMissionRequests", "droneMissionEvents", "droneImageryReports"]
+  },
+  {
+    id: "media-music-provider",
+    label: "Embedded YouTube where safe, external media search handoff, local media preference record, provider safety, and copyright-safe behavior",
+    category: "Media / Music",
+    modeIds: ["media", "music"],
+    actionIds: ["media_search_handoff", "record_media_preference", "open_external_media_provider"],
+    description: "Media preference and provider handoff lane with copyright-safe language and no hosted/downloaded commercial music.",
+    providerType: "media-provider",
+    requiredEnv: [],
+    optionalEnv: ["YOUTUBE_API_KEY", "NEXUS_MEDIA_PROVIDER_ENDPOINT"],
+    requiresConsent: false,
+    requiresConfirmation: false,
+    requiresAdminApproval: false,
+    requiresVendorApproval: false,
+    supportsLocalFallback: true,
+    localFallbackActions: ["record media preference", "prepare provider options", "show copyright-safe note"],
+    liveActions: ["external media provider handoff", "embedded YouTube when supported"],
+    blockedActions: ["download music", "rip audio", "cache copyrighted audio", "fake licensed playback"],
+    riskLevel: "low",
+    safeFallbackMessage: "Nexus can prepare safe media options and external provider links; it does not host, download, rip, or redistribute music.",
+    successReceiptType: "media_handoff_receipt",
+    auditEventTypes: ["local_fallback_created", "provider_lane_checked"],
+    recordTypesAffected: ["mediaPreferences", "actionReceipts", "auditLogs"]
+  },
+  {
+    id: "admin-provider-vendor-operations",
+    label: "Provider onboarding, vendor onboarding, credential status, provider test, disable provider, admin/vendor approval, activation receipt, and operational audit trail",
+    category: "Admin / Provider / Vendor Operations",
+    modeIds: ["admin", "provider", "vendor", "activation-center"],
+    actionIds: ["provider_onboarding", "vendor_onboarding", "provider_test", "disable_provider", "admin_approval", "vendor_approval", "activation_receipt"],
+    description: "Operator controls for provider/vendor onboarding, credential status, test mode, approval gates, disablement, receipts, and audit logs.",
+    providerType: "operator-console",
+    requiredEnv: [],
+    optionalEnv: ["NEXUS_ADMIN_APPROVAL_REQUIRED", "NEXUS_VENDOR_APPROVAL_REQUIRED"],
+    requiresConsent: false,
+    requiresConfirmation: true,
+    requiresAdminApproval: true,
+    requiresVendorApproval: false,
+    supportsLocalFallback: true,
+    localFallbackActions: ["record provider profile", "record vendor profile", "run deterministic test", "disable lane locally"],
+    liveActions: ["provider test", "activation approval", "vendor approval"],
+    blockedActions: ["secret export", "silent enablement", "approval bypass"],
+    riskLevel: "operator",
+    safeFallbackMessage: "Nexus can manage local provider/vendor readiness and tests; live activation still requires configured credentials and approvals.",
+    successReceiptType: "operator_activation_receipt",
+    auditEventTypes: ["activation_matrix_viewed", "provider_test_requested", "provider_test_passed", "provider_test_failed", "activation_receipt"],
+    recordTypesAffected: ["providers", "droneProviders", "employerProfiles", "actionReceipts", "auditLogs"]
+  }
+]);
+
+const NEXUS_ACTION_TO_ACTIVATION_LANE = Object.freeze({
+  send_message: "communications-provider-lane",
+  prepare_sms: "communications-provider-lane",
+  prepare_whatsapp: "communications-provider-lane",
+  prepare_email: "communications-provider-lane",
+  prepare_phone_call: "communications-provider-lane",
+  live_knowledge_query: "live-knowledge-ai-search",
+  create_provider_review_packet: "healthcare-provider-activation",
+  create_pharmacy_referral: "healthcare-provider-activation",
+  create_mobile_clinic_follow_up: "healthcare-provider-activation",
+  create_telehealth_encounter: "healthcare-provider-activation",
+  add_rpm_reading: "healthcare-provider-activation",
+  add_rtm_activity: "healthcare-provider-activation",
+  mark_deceased_stop_outreach: "healthcare-provider-activation",
+  create_transaction: "marketplace-trade-payments",
+  cancel_transaction: "marketplace-trade-payments",
+  payment_provider_gate: "marketplace-trade-payments",
+  crop_support_packet: "agriculture-advisory-logistics",
+  log_heat_risk_report: "agriculture-advisory-logistics",
+  create_shipment: "maps-logistics-shipment",
+  add_tracking_event: "maps-logistics-shipment",
+  shipment_tracking_provider_sync: "maps-logistics-shipment",
+  logistics_dispatch: "maps-logistics-shipment",
+  create_applicant_profile: "workforce-career-hiring",
+  prepare_resume_packet: "workforce-career-hiring",
+  create_employer_profile: "workforce-career-hiring",
+  add_job_opportunity: "workforce-career-hiring",
+  prepare_application_packet: "workforce-career-hiring",
+  employer_outreach: "workforce-career-hiring",
+  create_learning_profile: "learning-training-lms",
+  prepare_training_referral: "learning-training-lms",
+  prepare_lms_handoff: "learning-training-lms",
+  create_learning_plan: "learning-training-lms",
+  lms_enrollment: "learning-training-lms",
+  create_drone_mission_request: "drone-operations",
+  prepare_drone_mission_packet: "drone-operations",
+  match_drone_mission_provider: "drone-operations",
+  drone_dispatch: "drone-operations",
+  drone_imagery_upload: "drone-operations",
+  media_search_handoff: "media-music-provider",
+  provider_test: "admin-provider-vendor-operations",
+  record_lifecycle: "foundation-identity-consent-audit"
+});
+
+function nexusMissingEnv(requiredEnv = [], env = process.env) {
+  return requiredEnv.filter(name => !String(env[name] || "").trim());
+}
+
+function nexusActivationEntryStatus(entry, env = process.env) {
+  const missingEnv = nexusMissingEnv(entry.requiredEnv, env);
+  if (entry.riskLevel === "regulated-health" && !env.NEXUS_HEALTH_PROVIDER_ENABLED) return "missing_credentials";
+  if (entry.riskLevel === "payments-commerce" && missingEnv.length) return "missing_credentials";
+  if (missingEnv.length) return entry.supportsLocalFallback ? "missing_credentials" : "disabled";
+  if (entry.requiresConsent) return "consent_required";
+  if (entry.requiresConfirmation) return "confirmation_required";
+  return "configured";
+}
+
+function nexusActivationRegistrySnapshot(env = process.env) {
+  const lastChecked = new Date().toISOString();
+  const entries = NEXUS_ALL_MODES_ACTIVATION_REGISTRY.map(entry => {
+    const missingEnv = nexusMissingEnv(entry.requiredEnv, env);
+    const status = nexusActivationEntryStatus(entry, env);
+    return {
+      ...entry,
+      status,
+      missingEnv,
+      configured: missingEnv.length === 0,
+      testability: missingEnv.length === 0 ? "ready" : entry.supportsLocalFallback ? "local_fallback" : "missing_config",
+      lastChecked
+    };
+  });
+  return {
+    ok: true,
+    statuses: NEXUS_ACTIVATION_STATUSES,
+    gateStatuses: NEXUS_LIVE_EXECUTION_GATE_STATUSES,
+    categories: [...new Set(entries.map(entry => entry.category))],
+    entries,
+    summary: {
+      total: entries.length,
+      configured: entries.filter(entry => entry.configured).length,
+      credentialGated: entries.filter(entry => entry.missingEnv.length).length,
+      localFallback: entries.filter(entry => entry.supportsLocalFallback).length,
+      consentRequired: entries.filter(entry => entry.requiresConsent).length,
+      confirmationRequired: entries.filter(entry => entry.requiresConfirmation).length,
+      adminApprovalRequired: entries.filter(entry => entry.requiresAdminApproval).length,
+      vendorApprovalRequired: entries.filter(entry => entry.requiresVendorApproval).length
+    },
+    standardUserSummary: [
+      "Nexus can prepare local packets, records, receipts, and audit entries now.",
+      "Live provider execution requires configured credentials, consent where needed, final confirmation, approvals where required, and provider receipts.",
+      "Nexus does not silently send, call, pay, dispatch, book, diagnose, prescribe, enroll, place jobs, capture imagery, or claim provider acceptance."
+    ],
+    noSecretValues: true
+  };
+}
+
+function nexusActivationEntryForAction(action = "") {
+  const entryId = NEXUS_ACTION_TO_ACTIVATION_LANE[action] || "foundation-identity-consent-audit";
+  return NEXUS_ALL_MODES_ACTIVATION_REGISTRY.find(entry => entry.id === entryId) || NEXUS_ALL_MODES_ACTIVATION_REGISTRY[0];
+}
+
+function createNexusActivationReceipt(db, gate = {}, action = "activation_gate", summary = "") {
+  return addNexusOperationsReceipt(db, gate.mode || gate.providerLane || "activation", gate.actionId || gate.providerLane || action, action, [
+    summary || gate.userMessage || "Nexus checked the all-modes activation gate.",
+    `Gate status: ${gate.gateStatus || "unknown"}.`
+  ], [
+    "Nexus did not claim live external execution without a configured adapter receipt.",
+    "Nexus did not expose secrets, bypass consent, bypass confirmation, or perform a hidden provider handoff."
+  ], gate.gateStatus || "prepared");
+}
+
+function createNexusActivationAudit(db, gate = {}, action = "live_execution_gate_checked") {
+  return addNexusOperationsAudit(db, "activation", gate.actionId || gate.providerLane || action, action, gate.actor || "standard-user", gate.userMessage || `Activation gate checked for ${gate.actionId || "unknown action"}.`, null, gate);
+}
+
+function evaluateNexusLiveExecutionGate(db, body = {}, user = null, env = process.env) {
+  const actionId = cleanOpsText(body.actionId || body.action || "record_lifecycle", 120);
+  const mode = cleanOpsText(body.mode || body.modeId || "standard-user", 120);
+  const entry = nexusActivationEntryForAction(actionId);
+  const missingEnv = nexusMissingEnv(entry.requiredEnv, env);
+  const consentCaptured = body.consent === true || body.consentGranted === true;
+  const confirmed = body.confirmed === true || body.finalConfirmation === true;
+  const adminApproved = body.adminApproved === true;
+  const vendorApproved = body.vendorApproved === true;
+  const unsafe = entry.blockedActions.some(blocked => new RegExp(blocked.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i").test(String(body.intent || body.command || "")));
+  let gateStatus = "local_prepared";
+  let userMessage = entry.safeFallbackMessage;
+  let shouldExecuteLive = false;
+
+  if (unsafe) {
+    gateStatus = "blocked_for_safety";
+    userMessage = "Nexus blocked this action because it matches a safety-blocked behavior.";
+  } else if (missingEnv.length) {
+    gateStatus = entry.supportsLocalFallback ? "blocked_missing_credentials" : "failed";
+    userMessage = `${entry.label} is not live-configured. Missing environment variable names: ${missingEnv.join(", ")}. Nexus can use local fallback only.`;
+  } else if (entry.requiresConsent && !consentCaptured) {
+    gateStatus = "consent_required";
+    userMessage = `${entry.label} requires user consent before live execution.`;
+  } else if (entry.requiresAdminApproval && !adminApproved) {
+    gateStatus = "approval_required";
+    userMessage = `${entry.label} requires admin approval before live execution.`;
+  } else if (entry.requiresVendorApproval && !vendorApproved) {
+    gateStatus = "vendor_required";
+    userMessage = `${entry.label} requires provider/vendor approval before live execution.`;
+  } else if (entry.requiresConfirmation && !confirmed) {
+    gateStatus = "confirmation_required";
+    userMessage = `${entry.label} requires final user confirmation before live execution.`;
+  } else if (entry.liveActions.length && body.allowLive === true) {
+    gateStatus = "vendor_required";
+    userMessage = `${entry.label} is configured, but no real provider adapter receipt was returned in this safe activation foundation.`;
+  } else {
+    gateStatus = "local_prepared";
+    userMessage = `${entry.label} prepared locally with receipt and audit trail.`;
+  }
+
+  const result = {
+    ok: true,
+    actionId,
+    mode,
+    providerLane: entry.id,
+    providerType: entry.providerType,
+    gateStatus,
+    shouldExecuteLive,
+    missingCredentials: missingEnv,
+    consentStatus: entry.requiresConsent ? consentCaptured ? "captured" : "required" : "not_required",
+    confirmationStatus: entry.requiresConfirmation ? confirmed ? "confirmed" : "required" : "not_required",
+    approvalStatus: entry.requiresAdminApproval ? adminApproved ? "approved" : "required" : "not_required",
+    vendorApprovalStatus: entry.requiresVendorApproval ? vendorApproved ? "approved" : "required" : "not_required",
+    localFallbackAvailable: entry.supportsLocalFallback,
+    localFallbackActions: entry.localFallbackActions,
+    liveActions: entry.liveActions,
+    blockedActions: entry.blockedActions,
+    userMessage,
+    noExecutionAuthorized: gateStatus !== "live_executed",
+    externalReceiptId: null,
+    adapterReceiptRequiredBeforeLiveClaim: true,
+    safeFallbackMessage: entry.safeFallbackMessage
+  };
+  result.receipt = createNexusActivationReceipt(db, result, "live_execution_gate_checked", result.userMessage);
+  result.audit = createNexusActivationAudit(db, result, "live_execution_gate_checked");
+  return result;
+}
+
+function nexusProviderAdapters(env = process.env) {
+  const lanes = [
+    ["live-knowledge", "live-knowledge-ai-search", ["NEXUS_LIVE_KNOWLEDGE_PROVIDER"]],
+    ["email", "communications-provider-lane", ["SMTP_HOST"]],
+    ["sms", "communications-provider-lane", ["NEXUS_MESSAGES_ENABLED", "TWILIO_ACCOUNT_SID", "TWILIO_AUTH_TOKEN", "TWILIO_FROM_NUMBER"]],
+    ["whatsapp", "communications-provider-lane", ["NEXUS_WHATSAPP_ENABLED", "TWILIO_ACCOUNT_SID", "TWILIO_AUTH_TOKEN", "TWILIO_WHATSAPP_FROM"]],
+    ["telegram", "communications-provider-lane", ["TELEGRAM_BOT_TOKEN"]],
+    ["phone-call", "communications-provider-lane", ["NEXUS_CALLS_ENABLED", "TWILIO_ACCOUNT_SID", "TWILIO_AUTH_TOKEN", "TWILIO_FROM_NUMBER"]],
+    ["telehealth-video", "healthcare-provider-activation", ["DAILY_API_KEY"]],
+    ["pharmacy", "healthcare-provider-activation", ["NEXUS_PHARMACY_PROVIDER_ENDPOINT"]],
+    ["mobile-clinic", "healthcare-provider-activation", ["NEXUS_MOBILE_CLINIC_PROVIDER_ENDPOINT"]],
+    ["rpm-rtm-sync", "healthcare-provider-activation", ["NEXUS_RPM_PROVIDER_ENDPOINT"]],
+    ["payment", "marketplace-trade-payments", ["NEXUS_MARKETPLACE_PAYMENTS_ENABLED", "STRIPE_SECRET_KEY"]],
+    ["marketplace-order", "marketplace-trade-payments", ["NEXUS_MARKETPLACE_PROVIDER_ENDPOINT"]],
+    ["employer-ats-crm", "workforce-career-hiring", ["NEXUS_EMPLOYER_CRM_ENDPOINT"]],
+    ["lms-enrollment", "learning-training-lms", ["NEXUS_LMS_ENABLED", "MOODLE_BASE_URL", "MOODLE_TOKEN"]],
+    ["maps-routing", "maps-logistics-shipment", ["NEXUS_MAPS_ENABLED", "GOOGLE_MAPS_API_KEY"]],
+    ["shipment-tracking", "maps-logistics-shipment", ["NEXUS_SHIPMENT_TRACKING_ENDPOINT"]],
+    ["drone-dispatch", "drone-operations", ["NEXUS_DRONES_ENABLED", "DJI_API_KEY"]],
+    ["drone-imagery-storage", "drone-operations", ["NEXUS_DRONE_IMAGERY_STORAGE_ENDPOINT"]],
+    ["media-youtube", "media-music-provider", ["YOUTUBE_API_KEY"]],
+    ["generic-provider", "admin-provider-vendor-operations", ["NEXUS_GENERIC_PROVIDER_ENDPOINT"]]
+  ];
+  return lanes.map(([id, providerLaneId, requiredEnv]) => {
+    const missingEnv = nexusMissingEnv(requiredEnv, env);
+    return {
+      id,
+      providerLaneId,
+      canExecute: missingEnv.length === 0,
+      missingEnv,
+      prepare: "available",
+      confirm: "required when sensitive",
+      execute: missingEnv.length === 0 ? "adapter-ready-with-confirmation" : "blocked_missing_credentials",
+      cancel: "available",
+      test: "deterministic-status-check",
+      normalizeReceipt: `${id}_receipt`,
+      safeFailure: missingEnv.length ? `Missing environment variable names: ${missingEnv.join(", ")}` : "Provider adapter still requires explicit action confirmation."
+    };
+  });
+}
+
+function buildNexusAgentActivationPlan(command = "", env = process.env) {
+  const text = cleanOpsText(command, 500).toLowerCase();
+  let actionId = parseNexusOperationsCommand(text) || "record_lifecycle";
+  if (/send|sms|message|whatsapp|telegram|email|call/.test(text)) actionId = /email/.test(text) ? "prepare_email" : /whatsapp/.test(text) ? "prepare_whatsapp" : /telegram/.test(text) ? "prepare_telegram" : /call/.test(text) ? "prepare_phone_call" : "prepare_sms";
+  if (/pharmacy|refill|medication/.test(text)) actionId = "create_pharmacy_referral";
+  if (/telehealth|video visit|doctor/.test(text)) actionId = "create_telehealth_encounter";
+  if (/mobile clinic|community health worker|chw/.test(text)) actionId = "create_mobile_clinic_follow_up";
+  if (/dispatch.*drone|drone dispatch/.test(text)) actionId = "drone_dispatch";
+  if (/enroll|lms|course/.test(text)) actionId = "lms_enrollment";
+  if (/employer|contact the employer|outreach/.test(text)) actionId = "employer_outreach";
+  if (/cancel.*transaction|refund|dispute/.test(text)) actionId = "cancel_transaction";
+  if (/shipment|track/.test(text)) actionId = "shipment_tracking_provider_sync";
+  if (/payment|pay|checkout/.test(text)) actionId = "payment_provider_gate";
+  if (/research|source|citation|current|best practice/.test(text)) actionId = "live_knowledge_query";
+  const entry = nexusActivationEntryForAction(actionId);
+  const missingEnv = nexusMissingEnv(entry.requiredEnv, env);
+  return {
+    ok: true,
+    command,
+    actionId,
+    mode: entry.modeIds[0] || "standard-user",
+    providerLane: entry.id,
+    taskPlan: [
+      "Interpret user goal.",
+      "Identify provider lane and risk.",
+      missingEnv.length ? "Use local fallback because credentials are missing." : "Check consent, approval, and confirmation.",
+      "Create packet/receipt/audit evidence.",
+      "Report what happened and what did not happen."
+    ],
+    missingInformation: missingEnv.length ? ["configured provider credentials", "final provider/vendor approval if applicable"] : entry.requiresConfirmation ? ["final confirmation"] : [],
+    localFallbackAvailable: entry.supportsLocalFallback,
+    requiredEnv: entry.requiredEnv,
+    missingEnv,
+    noSecretValues: true
+  };
+}
+
 function latestChronicCareProfile(store) {
   return store.chronicCareProfiles.find(item => !/archived|deceased/.test(item.status || "")) || store.chronicCareProfiles[0] || null;
 }
@@ -34135,6 +34714,117 @@ async function api(req, res, url) {
     const state = publicState(db, operationsUser);
     state.nexusOperationsResult = result;
     return send(res, 200, state);
+  }
+
+  if (url.pathname === "/api/nexus/activation-matrix" && req.method === "GET") {
+    const store = ensureNexusPersistentOperations(db);
+    addNexusOperationsAudit(db, "activation", "matrix", "activation_matrix_viewed", user?.role || "standard-user", "All-modes activation matrix viewed; no provider execution occurred.");
+    const snapshot = nexusActivationRegistrySnapshot(process.env);
+    snapshot.receipts = store.actionReceipts.slice(0, 12);
+    snapshot.audit = store.auditLogs.slice(0, 12);
+    await writeDb(db);
+    return send(res, 200, snapshot);
+  }
+
+  if (url.pathname === "/api/nexus/live-execution-status" && req.method === "GET") {
+    return send(res, 200, {
+      ok: true,
+      gateStatuses: NEXUS_LIVE_EXECUTION_GATE_STATUSES,
+      registry: nexusActivationRegistrySnapshot(process.env),
+      adapters: nexusProviderAdapters(process.env),
+      noSecretValues: true,
+      noSilentExecution: true
+    });
+  }
+
+  if (url.pathname === "/api/nexus/provider/test" && req.method === "POST") {
+    const body = await readBody(req);
+    const adapterId = cleanOpsText(body.adapterId || body.providerLane || "generic-provider", 100);
+    const adapter = nexusProviderAdapters(process.env).find(item => item.id === adapterId || item.providerLaneId === adapterId) || nexusProviderAdapters(process.env).find(item => item.id === "generic-provider");
+    const status = adapter?.canExecute ? "provider_test_passed" : "provider_test_failed";
+    const result = {
+      ok: true,
+      adapter,
+      status,
+      providerLane: adapter?.providerLaneId || "admin-provider-vendor-operations",
+      missingEnv: adapter?.missingEnv || [],
+      noSecretValues: true,
+      noExecutionAuthorized: true,
+      message: adapter?.canExecute
+        ? "Provider adapter configuration shape is present. Live execution still requires consent, confirmation, approvals, and provider receipt."
+        : `Provider adapter is not ready. Missing environment variable names: ${(adapter?.missingEnv || []).join(", ") || "provider configuration"}.`
+    };
+    result.audit = addNexusOperationsAudit(db, "activation", adapter?.id || adapterId, status, user?.role || "standard-user", result.message, null, { adapterId: adapter?.id, missingEnv: adapter?.missingEnv || [] });
+    result.receipt = addNexusOperationsReceipt(db, "activation", adapter?.id || adapterId, "provider_test_requested", [result.message], ["Nexus did not run a live provider action, send data, or expose secret values."], adapter?.canExecute ? "configured" : "missing_credentials");
+    await writeDb(db);
+    return send(res, 200, result);
+  }
+
+  if (url.pathname === "/api/nexus/live-execution/prepare" && req.method === "POST") {
+    const body = await readBody(req);
+    const plan = buildNexusAgentActivationPlan(body.command || body.prompt || body.actionId || "", process.env);
+    const gate = evaluateNexusLiveExecutionGate(db, { ...body, actionId: body.actionId || plan.actionId, mode: body.mode || plan.mode }, user, process.env);
+    await writeDb(db);
+    return send(res, 200, { ok: true, plan, gate, receipt: gate.receipt, audit: gate.audit, noSecretValues: true });
+  }
+
+  if (url.pathname === "/api/nexus/live-execution/confirm" && req.method === "POST") {
+    const body = await readBody(req);
+    const gate = evaluateNexusLiveExecutionGate(db, { ...body, confirmed: body.confirmed === true, finalConfirmation: body.finalConfirmation === true }, user, process.env);
+    await writeDb(db);
+    return send(res, 200, { ok: true, gate, receipt: gate.receipt, audit: gate.audit, noSecretValues: true });
+  }
+
+  if (url.pathname === "/api/nexus/live-execution/cancel" && req.method === "POST") {
+    const body = await readBody(req);
+    const actionId = cleanOpsText(body.actionId || body.action || "cancelled", 120);
+    const result = {
+      ok: true,
+      actionId,
+      gateStatus: "cancelled",
+      noExecutionAuthorized: true,
+      userMessage: "Nexus cancelled the prepared action locally. No provider, vendor, payment, message, call, dispatch, booking, enrollment, or external system was contacted."
+    };
+    result.receipt = createNexusActivationReceipt(db, result, "live_action_cancelled", result.userMessage);
+    result.audit = addNexusOperationsAudit(db, "activation", actionId, "live_action_cancelled", user?.role || "standard-user", result.userMessage, null, result);
+    await writeDb(db);
+    return send(res, 200, result);
+  }
+
+  if (url.pathname === "/api/nexus/records/lifecycle" && req.method === "POST") {
+    const body = await readBody(req);
+    const entityType = cleanOpsText(body.entityType || "record", 80);
+    const entityId = cleanOpsText(body.entityId || nexusOperationId("NX-LIFE"), 120);
+    const lifecycleStatus = cleanOpsText(body.status || body.lifecycleStatus || "deactivated", 80);
+    const allowedStates = new Set(["active", "inactive", "deactivated", "deleted", "deceased", "closed", "cancelled", "expired", "archived"]);
+    if (!allowedStates.has(lifecycleStatus)) return send(res, 400, { ok: false, error: "unsupported_lifecycle_status", allowedStates: [...allowedStates] });
+    const store = ensureNexusPersistentOperations(db);
+    const record = {
+      archiveId: nexusOperationId("NX-LIFE"),
+      entityType,
+      entityId,
+      lifecycleStatus,
+      reason: cleanOpsText(body.reason || "Lifecycle change requested through all-modes activation runtime.", 240),
+      localOnly: true,
+      liveSynced: false,
+      createdAt: nexusNow()
+    };
+    store.archiveRecords.unshift(record);
+    const auditType = lifecycleStatus === "deceased" ? "patient_marked_deceased" : lifecycleStatus === "closed" ? "business_marked_closed" : lifecycleStatus === "deleted" ? "record_deleted" : "record_deactivated";
+    const audit = addNexusOperationsAudit(db, entityType, entityId, auditType, user?.role || "standard-user", `${entityType} marked ${lifecycleStatus} locally; external sync not claimed.`, null, record);
+    const receipt = addNexusOperationsReceipt(db, entityType, entityId, auditType, [`Marked ${entityType} as ${lifecycleStatus} in local operations memory.`, "Created lifecycle audit evidence."], ["Nexus did not hard-delete protected audit evidence or claim live provider sync."], lifecycleStatus);
+    await writeDb(db);
+    return send(res, 200, { ok: true, record, audit, receipt, localOnly: true, liveSynced: false, noSecretValues: true });
+  }
+
+  if (url.pathname === "/api/nexus/operation-receipts" && req.method === "GET") {
+    const store = ensureNexusPersistentOperations(db);
+    return send(res, 200, { ok: true, receipts: store.actionReceipts.slice(0, 100), noSecretValues: true });
+  }
+
+  if (url.pathname === "/api/nexus/audit-log" && req.method === "GET") {
+    const store = ensureNexusPersistentOperations(db);
+    return send(res, 200, { ok: true, audit: store.auditLogs.slice(0, 100), noSecretValues: true });
   }
 
   if (url.pathname === "/api/nexus/production/status" && req.method === "GET") {
