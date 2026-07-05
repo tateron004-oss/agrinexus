@@ -267,7 +267,7 @@ const nexusProductIdentity = Object.freeze({
 });
 const assistantFullName = "AgriNexus";
 const assistantShortName = "Nexus";
-const AGRINEXUS_BUILD_VERSION = "nexus-behavior-360";
+const AGRINEXUS_BUILD_VERSION = "nexus-behavior-361";
 const AGRINEXUS_PWA_CACHE_VERSION = "agrinexus-pwa-v339";
 const VOICE_RESTART_DELAY_MS = 320;
 const VOICE_UI_FOCUS_DELAY_MS = 80;
@@ -21757,6 +21757,178 @@ const NEXUS_FUNCTION_WINDOW_CATEGORY_FIELDS = Object.freeze({
   ]
 });
 
+const NEXUS_WORKFLOW_LANDING_WINDOWS = Object.freeze({
+  "mobile-clinic": {
+    type: "mobile-clinic-intake",
+    title: "Mobile Clinic Intake",
+    status: "Request preparation only",
+    summary: "Nexus helps organize a mobile clinic request, vitals context, consent status, and local queue readiness without dispatching a clinic.",
+    fields: [
+      { name: "patientContact", label: "Patient / contact display", type: "text", placeholder: "Name or safe contact label" },
+      { name: "serviceArea", label: "Service area", type: "text", placeholder: "Village, city, district, or typed service area" },
+      { name: "visitNeed", label: "Visit need", type: "select", options: ["Vitals check", "Chronic care follow-up", "Pharmacy access", "Health education", "Community outreach"] },
+      { name: "condition", label: "Condition", type: "select", options: ["Diabetes", "Hypertension", "Obesity", "General health access", "Other"] },
+      { name: "symptoms", label: "Symptoms / concern", type: "textarea", placeholder: "Describe what should be reviewed" },
+      { name: "readings", label: "Vitals / readings", type: "textarea", placeholder: "BP, glucose, weight, pulse, temperature if already known" },
+      { name: "redFlags", label: "Red flag checklist", type: "checkboxes", options: ["Chest pain", "Trouble breathing", "Severe weakness/confusion", "Severe bleeding", "None selected"] },
+      { name: "consent", label: "Consent and confirmation", type: "select", options: ["Not requested", "Needs review", "User approved preparation only"] }
+    ],
+    actions: ["Prepare mobile clinic request", "Create local queue item", "Review emergency guidance", "Check send gate"],
+    preview: "Mobile clinic request packet preview: service area, need, symptoms/readings, red flags, consent state, and queue status.",
+    statusNote: "No mobile clinic dispatch, route, message, call, or provider contact occurs from this window."
+  },
+  pharmacy: {
+    type: "pharmacy-referral",
+    title: "Pharmacy Referral",
+    status: "Pharmacy packet preparation only",
+    summary: "Nexus organizes medication questions, allergy context, readings, and consent before any pharmacy connector can be used.",
+    fields: [
+      { name: "pharmacyNeed", label: "Pharmacy need", type: "select", options: ["Medication question", "Refill coordination", "Diabetes supplies", "Adherence support", "Pharmacist review"] },
+      { name: "condition", label: "Condition", type: "select", options: ["Diabetes", "Hypertension", "Obesity", "General medication support", "Other"] },
+      { name: "medicationList", label: "Medication list", type: "textarea", placeholder: "Medication names as written, if known" },
+      { name: "allergy", label: "Allergy field", type: "textarea", placeholder: "Known allergies, unsure, or none known" },
+      { name: "concern", label: "Concern", type: "textarea", placeholder: "What should a pharmacist or provider review?" },
+      { name: "readings", label: "Readings if relevant", type: "textarea", placeholder: "BP, glucose, weight, or other relevant readings" },
+      { name: "consent", label: "Consent and confirmation", type: "select", options: ["Not requested", "Needs review", "User approved preparation only"] }
+    ],
+    actions: ["Prepare pharmacy packet", "Queue pharmacy review", "Review confirmation", "Check pharmacy connector"],
+    preview: "Pharmacy packet preview: need, condition, medication list, allergies, concern, readings, and consent state.",
+    statusNote: "No prescription, refill approval, pharmacy fulfillment, message, call, or provider handoff is claimed."
+  },
+  telehealth: {
+    type: "virtual-care-intake",
+    title: "Virtual Care Intake",
+    status: "Provider review gate",
+    summary: "Nexus prepares a telehealth encounter packet with symptoms, RPM/RTM readings, red flags, consent, and video room gate status.",
+    fields: [
+      { name: "condition", label: "Condition", type: "select", options: ["Diabetes", "Hypertension", "Obesity", "General concern", "Other"] },
+      { name: "concern", label: "Concern / symptoms", type: "textarea", placeholder: "What should the provider review?" },
+      { name: "rpmRtm", label: "RPM / RTM readings", type: "textarea", placeholder: "BP, glucose, weight, pulse, therapy notes" },
+      { name: "redFlags", label: "Red flags", type: "checkboxes", options: ["Chest pain", "Trouble breathing", "Stroke-like symptoms", "Severe confusion", "None selected"] },
+      { name: "consent", label: "Consent / confirmation", type: "select", options: ["Not requested", "Needs review", "User approved preparation only"] },
+      { name: "followUp", label: "Follow-up action", type: "textarea", placeholder: "Questions, follow-up reminders, or provider notes" }
+    ],
+    actions: ["Prepare encounter packet", "Review video room gate", "Provider review queue", "Prepare follow-up"],
+    preview: "Virtual care packet preview: condition, symptoms, readings, red flags, consent, Provider review queue status, and video status.",
+    statusNote: "No diagnosis, treatment, prescription, appointment booking, video room creation, provider contact, or urgent-response action is claimed."
+  },
+  agriculture: {
+    type: "agronomy-crop-support",
+    title: "Agronomy / Crop Issue",
+    status: "Source-backed support preparation",
+    summary: "Nexus organizes crop context, field observations, and research needs into a concise agronomy packet for learning or expert review.",
+    fields: [
+      { name: "crop", label: "Crop", type: "text", placeholder: "Tomato, maize, cassava, rice..." },
+      { name: "region", label: "Country / region", type: "text", placeholder: "Country, county, district, or farm context" },
+      { name: "farmSize", label: "Farm size optional", type: "text", placeholder: "Optional acreage/hectares or smallholder context" },
+      { name: "problem", label: "Problem description", type: "textarea", placeholder: "Pest, disease, soil, irrigation, yield, weather, market issue" },
+      { name: "observations", label: "Field observations", type: "textarea", placeholder: "Leaves, roots, water, fertilizer, pests, photos already reviewed by human" },
+      { name: "soilWater", label: "Soil / water / fertilizer notes", type: "textarea", placeholder: "Soil, water source, fertilizer, irrigation notes" },
+      { name: "seasonWeather", label: "Season / weather context optional", type: "textarea", placeholder: "Season, recent rainfall, heat, drought, flooding" },
+      { name: "urgency", label: "Urgency", type: "select", options: ["Learning / planning", "Needs local expert review", "Crop loss risk", "Unsure"] }
+    ],
+    actions: ["Run Live Knowledge research", "Prepare agronomy packet", "Queue expert review", "Review marketplace/logistics links"],
+    preview: "Agronomy packet preview: crop, region, problem, observations, soil/water/fertilizer notes, weather context, urgency, and research status.",
+    statusNote: "No crop diagnosis, pesticide prescription, field dispatch, location sharing, vendor contact, or purchase is claimed."
+  },
+  marketplace: {
+    type: "agritrade-vendor-inquiry",
+    title: "AgriTrade Vendor Inquiry",
+    status: "Inquiry preparation only",
+    summary: "Nexus prepares buyer/seller details, product context, quantity, region, and desired outcome before any vendor handoff.",
+    fields: [
+      { name: "inquiryType", label: "Inquiry type", type: "select", options: ["Buy", "Sell", "Compare vendors", "Quote request", "Input sourcing"] },
+      { name: "role", label: "Buyer / seller role", type: "select", options: ["Buyer", "Seller", "Farmer", "Vendor", "Partner"] },
+      { name: "product", label: "Product / service", type: "text", placeholder: "Crop, input, equipment, storage, transport" },
+      { name: "quantity", label: "Quantity", type: "text", placeholder: "Amount, units, range, or unknown" },
+      { name: "region", label: "Region", type: "text", placeholder: "Market, community, city, country" },
+      { name: "desiredOutcome", label: "Desired outcome", type: "textarea", placeholder: "What should the inquiry accomplish?" }
+    ],
+    actions: ["Prepare inquiry", "Queue vendor review", "Review payment gate", "Prepare logistics questions"],
+    preview: "AgriTrade inquiry preview: inquiry type, role, product/service, quantity, region, desired outcome, and vendor queue status.",
+    statusNote: "No purchase, order, payment, vendor acceptance, delivery, or marketplace transaction is claimed."
+  },
+  logistics: {
+    type: "logistics-cold-chain-request",
+    title: "Logistics / Cold Chain Request",
+    status: "Logistics request preparation only",
+    summary: "Nexus prepares pickup, dropoff, product, timing, and cold-chain needs before any logistics connector or dispatch gate.",
+    fields: [
+      { name: "requestType", label: "Request type", type: "select", options: ["Route planning", "Pickup request", "Delivery request", "Cold-chain support", "Storage request"] },
+      { name: "pickup", label: "Pickup point", type: "text", placeholder: "Typed pickup point" },
+      { name: "dropoff", label: "Dropoff point", type: "text", placeholder: "Typed destination" },
+      { name: "product", label: "Product type", type: "text", placeholder: "Produce, medicine, equipment, supplies" },
+      { name: "quantity", label: "Quantity", type: "text", placeholder: "Amount, units, or unknown" },
+      { name: "timing", label: "Timing", type: "text", placeholder: "Date/time window or urgency" },
+      { name: "coldChain", label: "Cold-chain / storage need", type: "select", options: ["None", "Chilled", "Frozen", "Dry storage", "Unsure"] }
+    ],
+    actions: ["Prepare logistics request", "Open route planning", "Queue logistics review", "Review dispatch gate"],
+    preview: "Logistics request preview: request type, pickup, dropoff, product, quantity, timing, cold-chain/storage need, and queue status.",
+    statusNote: "No booking, dispatch, delivery, carrier contact, or live route launch is claimed."
+  },
+  maps: {
+    type: "maps-route-planning",
+    title: "Maps / Route Planning",
+    status: "Route preparation only unless provider is configured",
+    summary: "Nexus prepares typed origin/destination route context and can surface existing map support without requesting browser location or faking route metrics.",
+    fields: [
+      { name: "startPoint", label: "Start point", type: "text", placeholder: "Typed start point" },
+      { name: "destination", label: "Destination", type: "text", placeholder: "Typed destination" },
+      { name: "purpose", label: "Purpose", type: "select", options: ["Farm visit", "Mobile clinic visit", "Logistics delivery", "Marketplace pickup", "Training site visit"] },
+      { name: "routeNotes", label: "Route notes", type: "textarea", placeholder: "Timing, road, accessibility, safety, cold-chain, or visit notes" }
+    ],
+    actions: ["Prepare route", "Open map review", "Review location-sharing gate", "Queue route handoff"],
+    preview: "Route planning preview: start point, destination, purpose, route notes, provider status, and location-sharing gate.",
+    statusNote: "No browser geolocation, live navigation, tracking, route distance/time, dispatch, or location sharing is claimed unless a configured provider returns it."
+  },
+  research: {
+    type: "internet-research",
+    title: "Internet Research",
+    status: "Live retrieval if configured",
+    summary: "Nexus prepares a source-backed research query and shows provider status, returned source cards, and citation metadata only when real retrieval provides them.",
+    fields: [
+      { name: "researchQuery", label: "Research query", type: "textarea", placeholder: "What should Nexus research with sources?" },
+      { name: "domain", label: "Domain", type: "select", options: ["Agriculture", "Health literacy", "Workforce", "Marketplace", "Logistics", "General"] },
+      { name: "sourceNeed", label: "Source need", type: "select", options: ["Current sources", "Citation cards", "Provider review packet", "Learning summary"] }
+    ],
+    actions: ["Run research", "Review source cards", "Prepare cited packet", "Check provider status"],
+    preview: "Research preview: query, provider status, result summary, source cards/links, citations when returned, and missing env names when unconfigured.",
+    statusNote: "No fake citations are generated. Missing providers are shown by environment variable name only."
+  },
+  workforce: {
+    type: "training-workforce-referral",
+    title: "Training / Workforce Referral",
+    status: "Referral preparation only",
+    summary: "Nexus organizes training, literacy, job readiness, employer referral, and business-creation context for partner review.",
+    fields: [
+      { name: "goal", label: "Goal", type: "select", options: ["Training", "Literacy", "Job readiness", "Employer referral", "Business creation"] },
+      { name: "skillArea", label: "Skill area", type: "text", placeholder: "Agriculture, healthcare, AI, logistics, digital, business" },
+      { name: "region", label: "Country / region", type: "text", placeholder: "Country, county, city, corridor, or online" },
+      { name: "language", label: "Language", type: "text", placeholder: "English, Spanish, French, Arabic, Portuguese, Swahili..." },
+      { name: "experience", label: "Experience level", type: "select", options: ["New learner", "Some experience", "Experienced", "Returning worker"] },
+      { name: "outcome", label: "Training / employment / business goal", type: "textarea", placeholder: "What outcome does the learner or worker want?" }
+    ],
+    actions: ["Prepare referral packet", "Queue partner review", "Find training sources", "Review LMS gate"],
+    preview: "Workforce referral preview: goal, skill area, region, language, experience, desired outcome, and partner queue/send status.",
+    statusNote: "No enrollment, employer contact, certificate award, or LMS handoff is claimed unless configured and explicitly confirmed."
+  },
+  gate: {
+    type: "payment-booking-dispatch-gate",
+    title: "Payment / Booking / Dispatch Gate",
+    status: "Explicit not-executed gate",
+    summary: "Nexus shows the action type, required approvals, missing credentials, prepared request preview, and admin approval gate before any high-risk execution.",
+    fields: [
+      { name: "actionType", label: "Action type", type: "select", options: ["Payment", "Booking", "Dispatch", "Admin approval", "Other high-risk action"] },
+      { name: "requiredApproval", label: "Required approval", type: "textarea", placeholder: "User consent, admin approval, provider confirmation, audit, outcome verification" },
+      { name: "missingCredentials", label: "Missing provider credentials", type: "textarea", placeholder: "Shown by env name only when known" },
+      { name: "preparedRequest", label: "Prepared request preview", type: "textarea", placeholder: "What would be reviewed before any execution?" }
+    ],
+    actions: ["Prepare request preview", "Admin approval gate", "Keep not executed", "Show audit requirement"],
+    preview: "Gate preview: action type, approval requirements, missing credentials, prepared request, admin gate, and explicit not-executed status.",
+    statusNote: "Not executed. No payment, booking, dispatch, order, send, provider acceptance, or emergency action has occurred."
+  }
+});
+
 const NEXUS_FULL_WORKFLOW_EXTRAS = Object.freeze({
   "clinical-support": {
     presentation: { title: "Clinical Support", description: "Organize health questions, vitals, symptoms, and provider-ready notes.", accent: "blue", icon: "H" },
@@ -23070,6 +23242,17 @@ function resolveNexusIntent(input, options = {}) {
 
 function resolveNexusFunctionIntent(input, options = {}) {
   const text = String(input || "").trim();
+  const routeFirstText = text.toLowerCase();
+  const routeFirstIntent = /\b(map|maps|route|routes|directions|field visit|farm visit)\b/.test(routeFirstText)
+    || /\bfrom\s+.{2,}\s+to\s+.{2,}/.test(routeFirstText);
+  if (routeFirstIntent) {
+    return {
+      type: "function-window",
+      functionId: "maps",
+      workflowId: NEXUS_FUNCTION_WINDOW_ROUTE_MAP.maps || normalizeNexusWorkflowId("maps", text),
+      text
+    };
+  }
   const explicit = normalizeNexusFunctionId(options.functionId || options.modeId || options.workflowId || options.capabilityId || "", text);
   if (explicit) return { type: explicit === "live-knowledge" ? "research" : "function-window", functionId: explicit, workflowId: NEXUS_FUNCTION_WINDOW_ROUTE_MAP[explicit] || normalizeNexusWorkflowId(explicit, text), text };
   const capability = resolveNexusCapability(text, options);
@@ -24047,6 +24230,174 @@ function renderNexusWorkflowFields(id, fields = []) {
   `;
 }
 
+function nexusWorkflowLandingKind(definition = {}) {
+  const id = normalizeNexusFunctionId(definition.functionId || definition.id || "", definition?.command || "");
+  const category = definition.category || nexusFunctionWindowCategory(id);
+  if (/mobile-clinic|vitals-check|diabetes-follow-up|hypertension-follow-up|obesity-support|rural-clinic|community-outreach/.test(id)) return "mobile-clinic";
+  if (/pharmacy|medication|refill|supplies/.test(id)) return "pharmacy";
+  if (/virtual-care|telehealth|video-visit|chronic-disease|diabetes|hypertension|obesity|rpm|rtm|physician-review|follow-up|emergency-guidance/.test(id)) return "telehealth";
+  if (/agriculture|agronomy|crop|pest|soil|irrigation|climate|farmer|drone|farm-visit/.test(id)) return "agriculture";
+  if (/agritrade|marketplace|vendor|buyer|seller|produce|input|quote/.test(id)) return "marketplace";
+  if (/logistics|pickup|delivery|cold-chain|storage/.test(id)) return "logistics";
+  if (/maps|field-visit|route-planning|location-sharing|route-support/.test(id) || category === "maps") return "maps";
+  if (/live-knowledge|internet|research|source-backed/.test(id) || category === "research") return "research";
+  if (/workforce|training|literacy|job|youth|employer|certification|lms/.test(id)) return "workforce";
+  if (/payment|booking|dispatch|approval/.test(id) || category === "gate") return "gate";
+  return NEXUS_WORKFLOW_LANDING_WINDOWS[category] ? category : "research";
+}
+
+function nexusWorkflowLandingConfig(definition = {}, state = {}) {
+  const kind = nexusWorkflowLandingKind(definition);
+  const config = NEXUS_WORKFLOW_LANDING_WINDOWS[kind] || NEXUS_WORKFLOW_LANDING_WINDOWS.research;
+  const title = definition?.presentation?.title || config.title;
+  return {
+    ...config,
+    kind,
+    title: config.title || title,
+    resolvedTitle: title,
+    command: state.command || ""
+  };
+}
+
+function parseNexusRoutePoints(command = "") {
+  const text = String(command || "").trim();
+  const match = text.match(/\b(?:route|map|plan|prepare)?[\s\S]*?\bfrom\s+(.+?)\s+\bto\s+(.+?)(?:[.!?]|$)/i);
+  if (!match) return { start: "", destination: "" };
+  return {
+    start: match[1].replace(/\b(route|map|plan|mobile clinic|logistics|farm visit)\b/gi, "").trim(),
+    destination: match[2].replace(/\b(route|map|plan|mobile clinic|logistics|farm visit)\b/gi, "").trim()
+  };
+}
+
+function renderNexusLandingField(field = {}, state = {}) {
+  const name = field.name || "field";
+  const label = field.label || name;
+  const placeholder = field.placeholder || "";
+  const safeName = escapeHtml(name);
+  const value = name === "researchQuery" ? state.command || "" : "";
+  if (field.type === "select") {
+    return `
+      <label class="nexus-landing-field">
+        <span>${escapeHtml(translateText(label))}</span>
+        <select data-nexus-landing-field="${safeName}" name="${safeName}">
+          ${(field.options || ["Needs review"]).map(option => `<option>${escapeHtml(translateText(option))}</option>`).join("")}
+        </select>
+      </label>
+    `;
+  }
+  if (field.type === "checkboxes") {
+    return `
+      <fieldset class="nexus-landing-field nexus-landing-checkboxes" data-nexus-landing-field="${safeName}">
+        <legend>${escapeHtml(translateText(label))}</legend>
+        ${(field.options || []).map(option => `
+          <label><input type="checkbox" data-nexus-landing-checkbox="${safeName}" value="${escapeHtml(option)}"> <span>${escapeHtml(translateText(option))}</span></label>
+        `).join("")}
+      </fieldset>
+    `;
+  }
+  if (field.type === "textarea") {
+    return `
+      <label class="nexus-landing-field">
+        <span>${escapeHtml(translateText(label))}</span>
+        <textarea rows="3" data-nexus-landing-field="${safeName}" name="${safeName}" placeholder="${escapeHtml(translateText(placeholder))}">${escapeHtml(value)}</textarea>
+      </label>
+    `;
+  }
+  return `
+    <label class="nexus-landing-field">
+      <span>${escapeHtml(translateText(label))}</span>
+      <input data-nexus-landing-field="${safeName}" name="${safeName}" placeholder="${escapeHtml(translateText(placeholder))}" value="${escapeHtml(value)}">
+    </label>
+  `;
+}
+
+function renderNexusRoutePlanningLandingArea(config = {}, state = {}) {
+  const route = parseNexusRoutePoints(state.command || "");
+  const providerReadiness = typeof nexusProviderReadiness !== "undefined" ? nexusProviderReadiness : null;
+  const configured = Boolean(providerReadiness?.providers?.maps?.testability === "ready" || nexusKnowledgeStatus?.providers?.maps?.ready);
+  return `
+    <section class="nexus-landing-route-panel" data-nexus-route-planning-window="true" data-route-provider-configured="${configured ? "true" : "false"}" data-geolocation-used="false" data-location-permission-requested="false">
+      <div>
+        <strong>${escapeHtml(translateText("Route summary area"))}</strong>
+        <p>${escapeHtml(translateText(configured ? "A configured route provider may return route metadata after explicit typed origin/destination review." : "route provider not configured / route preparation only. Nexus will not fake route distance or time."))}</p>
+      </div>
+      <div class="nexus-route-input-row">
+        <label><span>${escapeHtml(translateText("Start point"))}</span><input data-nexus-route-start value="${escapeHtml(route.start)}" placeholder="${escapeHtml(translateText("Typed start point"))}"></label>
+        <label><span>${escapeHtml(translateText("Destination"))}</span><input data-nexus-route-destination value="${escapeHtml(route.destination)}" placeholder="${escapeHtml(translateText("Typed destination"))}"></label>
+      </div>
+      <div class="nexus-route-map-surface" data-nexus-existing-map-component="true" data-nexus-route-map-container="true">
+        <span>${escapeHtml(translateText("Map / route preview surface"))}</span>
+        <small>${escapeHtml(translateText("Existing Nexus map review can be opened from here. Browser geolocation stays off unless a future explicit permission flow is approved."))}</small>
+      </div>
+      <div class="nexus-route-actions">
+        <button type="button" data-nexus-mode-shortcut="maps" data-nexus-command="Prepare route from ${escapeHtml(route.start || "start")} to ${escapeHtml(route.destination || "destination")}">${escapeHtml(translateText("Calculate or prepare route"))}</button>
+        <button type="button" data-nexus-mode-shortcut="maps" data-nexus-command="Open map review">${escapeHtml(translateText("Open map review"))}</button>
+      </div>
+    </section>
+  `;
+}
+
+function renderNexusLiveKnowledgeLandingArea(config = {}, state = {}) {
+  const missing = Array.isArray(nexusKnowledgeStatus?.missingEnvNames) ? nexusKnowledgeStatus.missingEnvNames : [];
+  const provider = nexusKnowledgeStatus?.provider || nexusKnowledgeStatus?.selectedProvider || "not configured";
+  return `
+    <section class="nexus-landing-research-panel" data-nexus-live-knowledge-landing="true" data-fake-citations="false">
+      <div>
+        <strong>${escapeHtml(translateText("Live Knowledge provider status"))}</strong>
+        <p>${escapeHtml(translateText(`Provider: ${provider}. ${missing.length ? `Missing: ${missing.join(", ")}` : "Ready when configured provider returns citable results."}`))}</p>
+      </div>
+      <label class="nexus-landing-field">
+        <span>${escapeHtml(translateText("Research query field"))}</span>
+        <textarea rows="3" data-nexus-live-knowledge-query placeholder="${escapeHtml(translateText("Research climate-smart agriculture in Africa"))}">${escapeHtml(state.command || "")}</textarea>
+      </label>
+      <button type="button" data-nexus-mode-shortcut="live-knowledge" data-nexus-command="${escapeHtml(state.command || "Research climate-smart agriculture in Africa and show sources.")}">${escapeHtml(translateText("Run research"))}</button>
+      <div class="nexus-source-card-list" data-nexus-source-card-list="true">
+        ${renderNexusKnowledgeAnswerCard(nexusKnowledgeLastResult)}
+        ${nexusKnowledgeLastResult ? "" : `<p>${escapeHtml(translateText("Source cards and citation metadata appear here only when the configured provider returns real sources."))}</p>`}
+      </div>
+    </section>
+  `;
+}
+
+function renderNexusWorkflowLandingWindow(definition = {}, state = {}) {
+  const config = nexusWorkflowLandingConfig(definition, state);
+  const id = definition.id || "";
+  const functionId = definition.functionId || "";
+  return `
+    <section class="nexus-workflow-landing-window nexus-workflow-landing-${escapeHtml(config.kind)}" data-nexus-workflow-landing-window="true" data-nexus-workflow-landing-kind="${escapeHtml(config.kind)}" data-nexus-function-id="${escapeHtml(functionId || id)}">
+      <div class="nexus-landing-status-strip">
+        <span>${escapeHtml(translateText(config.status))}</span>
+        <span>${escapeHtml(translateText("Consent/confirmation required before external action"))}</span>
+        <span>${escapeHtml(translateText("No hidden execution"))}</span>
+      </div>
+      <section class="nexus-landing-purpose">
+        <strong>${escapeHtml(translateText(config.title))}</strong>
+        <p>${escapeHtml(translateText(config.summary))}</p>
+      </section>
+      <form class="nexus-landing-intake-grid" data-nexus-landing-intake="${escapeHtml(config.type)}" aria-label="${escapeHtml(translateText(`${config.title} intake`))}">
+        ${(config.fields || []).map(field => renderNexusLandingField(field, state)).join("")}
+      </form>
+      ${config.kind === "maps" ? renderNexusRoutePlanningLandingArea(config, state) : ""}
+      ${config.kind === "research" ? renderNexusLiveKnowledgeLandingArea(config, state) : ""}
+      <section class="nexus-landing-next-actions" data-nexus-landing-next-actions="true">
+        <strong>${escapeHtml(translateText("Next actions"))}</strong>
+        <div>
+          ${(config.actions || []).map(action => `<button type="button" data-nexus-mode-shortcut="${escapeHtml(functionId || id)}" data-nexus-command="${escapeHtml(action)}">${escapeHtml(translateText(action))}</button>`).join("")}
+        </div>
+      </section>
+      <section class="nexus-landing-packet-preview" data-nexus-landing-packet-preview="true">
+        <strong>${escapeHtml(translateText("Result / packet preview"))}</strong>
+        <p>${escapeHtml(translateText(config.preview))}</p>
+      </section>
+      <section class="nexus-landing-provider-status" data-nexus-landing-provider-status="true" data-no-secret-exposure="true" data-no-fake-execution="true">
+        <strong>${escapeHtml(translateText("Provider / safety status"))}</strong>
+        <p>${escapeHtml(translateText(config.statusNote))}</p>
+        <p>${escapeHtml(translateText("Missing credentials, when applicable, are shown by environment variable name only. Secret values are never rendered."))}</p>
+      </section>
+    </section>
+  `;
+}
+
 function renderNexusWorkflowMapPreview(id = "") {
   if (!["maps", "route-planning", "field-visit"].includes(id)) return "";
   return `
@@ -24224,22 +24575,8 @@ function renderNexusActiveWorkflowWorkspace() {
         <strong>${escapeHtml(translateText("Assistant summary"))}</strong>
         <p>${escapeHtml(translateText(`Nexus resolved this request to ${presentation.title}. Complete the relevant fields here, review the packet preview, then choose a safe next action.`))}</p>
       </section>
+      ${renderNexusWorkflowLandingWindow(definition, state)}
       ${renderNexusWorkflowLaneStatus(id)}
-      ${renderNexusAgricultureIntelligenceSections(id)}
-      ${renderNexusTrainingWorkforceSections(id)}
-      ${renderNexusChronicCareHealthSections(id)}
-      ${renderNexusProviderAccessSections(id)}
-      ${renderNexusGlobalCommunicationsSections(id)}
-      ${renderNexusGlobalMarketplaceLogisticsSections(id)}
-      ${renderNexusWorkflowMapPreview(id)}
-      <div class="nexus-workflow-body">
-        ${renderNexusWorkflowFields(id, fields)}
-        <div class="nexus-workflow-quick-actions" aria-label="${escapeHtml(translateText("Workflow quick actions"))}">
-          ${(content.quickActions || []).map(action => `
-            <button type="button" data-nexus-mode-shortcut="${escapeHtml(id)}" data-nexus-command="${escapeHtml(action.command || "")}">${escapeHtml(translateText(action.label || "Next step"))}</button>
-          `).join("")}
-        </div>
-      </div>
       <div class="nexus-workflow-steps" aria-label="${escapeHtml(translateText("Workflow steps"))}">
         ${steps.map((step, index) => `<span><b>${index + 1}</b>${escapeHtml(translateText(step))}</span>`).join("")}
       </div>
