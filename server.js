@@ -28971,10 +28971,131 @@ function nexusRetrievalReason(question = "", classification = {}) {
   return "Source-backed context may improve this answer when a configured retrieval provider is available.";
 }
 
+function nexusInternetAgenticCommandMatches(question = "") {
+  return /\b(internet services|online services|what.*active|search the latest|latest .*information|check weather|heat risk|show trade routes|track this shipment|find buyers|prepare a buyer transaction|cancel this transaction|save this patient intake|prepare this for a physician|find a pharmacy|request a mobile clinic|create a video visit|enroll this learner|find training resources|prepare this applicant|contact this employer|create a drone mission|dispatch the drone|upload drone imagery|translate this|call this person on whatsapp|play music|source-backed|provider lane|live service)\b/i.test(question);
+}
+
+async function nexusInternetAgenticResponse(db, body = {}, user = null, env = process.env) {
+  const question = sanitizePilotText(body.question || body.command || body.query || "", 700);
+  const lane = nexusInternetServiceLaneById(nexusInternetIntentLane(question));
+  const laneSnapshot = nexusInternetServiceLaneSnapshot(lane, env);
+  const adapter = nexusInternetServiceAdapter(lane, env);
+  const wantsStatus = /\b(what.*active|internet services|online services|provider lane|live service status)\b/i.test(question);
+  const wantsSearch = /\b(search|latest|source-backed|current|research|weather|heat risk|route|map|translate|music|media)\b/i.test(question) && lane.riskLevel === "low";
+  let serviceResult = null;
+  if (wantsStatus) {
+    const snapshot = nexusInternetServicesSnapshot(env);
+    const summary = `Nexus checked ${snapshot.summary.total} internet service lanes across ${snapshot.summary.categories} categories. ${snapshot.summary.publicAvailable} public/local lanes are available now, ${snapshot.summary.configured} credential sets appear configured, and ${snapshot.summary.missingCredentials} lanes still need credentials.`;
+    const receipt = createNexusInternetServiceReceipt(db, lane, "internet_services_status", "internet_result_returned", summary, {
+      mode: "ask-nexus",
+      publicFallbackUsed: true,
+      whatHappened: [summary, "Nexus displayed provider status by env variable name only."],
+      whatDidNotHappen: ["Nexus did not expose secret values.", "Nexus did not execute any external provider action."]
+    });
+    const audit = createNexusInternetServiceAudit(db, lane, "internet_services_viewed", summary, { gateStatus: "internet_result_returned" });
+    serviceResult = { snapshot, receipt, audit, gateStatus: "internet_result_returned", summary };
+  } else if (wantsSearch && ["tavily-live-search", "brave-live-search", "exa-live-search", "generic-live-knowledge"].includes(lane.id)) {
+    const liveKnowledge = await nexusLiveKnowledgeAllModesQuery(db, {
+      query: question,
+      domain: body.domain || lane.supportedModes?.[0] || "general",
+      mode: body.mode || "ask-nexus"
+    }, user, env);
+    const gateStatus = liveKnowledge.status === "source-backed" ? "internet_result_returned" : liveKnowledge.status === "provider-error" ? "failed" : "local_prepared";
+    const summary = liveKnowledge.summary || liveKnowledge.answer || "Nexus checked Live Knowledge and returned the current provider status.";
+    const receipt = createNexusInternetServiceReceipt(db, lane, "ask_nexus_internet_search", gateStatus, summary, {
+      mode: "ask-nexus",
+      internetUsed: liveKnowledge.status === "source-backed",
+      publicFallbackUsed: liveKnowledge.status !== "source-backed",
+      configuredProviderUsed: liveKnowledge.status === "source-backed",
+      missingCredentials: laneSnapshot.missingEnv,
+      whatHappened: [summary],
+      whatDidNotHappen: ["Nexus did not fabricate citations.", "Nexus did not execute downstream provider actions from search."]
+    });
+    const audit = createNexusInternetServiceAudit(db, lane, gateStatus === "internet_result_returned" ? "source_backed_search_completed" : "local_fallback_created", summary, { gateStatus, missingEnv: laneSnapshot.missingEnv });
+    serviceResult = { liveKnowledge, receipt, audit, gateStatus, summary };
+  } else {
+    const prepared = adapter.prepare(db, {
+      command: question,
+      mode: body.mode || "ask-nexus",
+      consent: body.consent === true || body.consentGranted === true,
+      confirmed: body.confirmed === true || body.finalConfirmation === true,
+      adminApproved: body.adminApproved === true,
+      vendorApproved: body.vendorApproved === true
+    });
+    serviceResult = {
+      ...prepared,
+      gateStatus: prepared.gate?.gateStatus || prepared.receipt?.gateStatus || "local_prepared",
+      summary: prepared.receipt?.summary || `${lane.label} prepared with visible gate status.`
+    };
+  }
+  const statusLabel = serviceResult.gateStatus || "local_prepared";
+  const answer = [
+    serviceResult.summary,
+    laneSnapshot.missingEnv.length ? `Missing credential names: ${laneSnapshot.missingEnv.join(", ")}.` : "Required credential names for this lane are present or the lane uses a public/local fallback.",
+    "Nexus did not send, call, pay, book, dispatch, prescribe, diagnose, enroll, upload, or contact a provider unless a configured adapter returns an external receipt after required consent and confirmation."
+  ].join(" ");
+  return {
+    ok: true,
+    intelligence: {
+      router: "nexus-full-internet-services-activation-runtime",
+      originalQuestion: question,
+      category: lane.category,
+      answerMode: statusLabel,
+      sourceBacked: Boolean(serviceResult.liveKnowledge?.status === "source-backed"),
+      noExecutionAuthorized: statusLabel !== "live_executed",
+      noSecretValues: true
+    },
+    classification: {
+      category: lane.category,
+      serviceLaneId: lane.id,
+      providerType: lane.providerType,
+      riskLevel: lane.riskLevel,
+      retrievalNeeded: wantsSearch
+    },
+    result: {
+      ok: true,
+      category: lane.category,
+      categoryLabel: lane.category,
+      answerMode: statusLabel,
+      retrievalStatus: serviceResult.liveKnowledge?.status || statusLabel,
+      answer,
+      internetServiceLane: laneSnapshot,
+      internetServiceResult: serviceResult,
+      preparedCards: [{
+        type: "internet_service_activation_card",
+        title: lane.label,
+        status: statusLabel,
+        provider: lane.providerType,
+        missingEnv: laneSnapshot.missingEnv,
+        localFallback: lane.localFallback,
+        riskLevel: lane.riskLevel,
+        receiptId: serviceResult.receipt?.receiptId || null
+      }],
+      followUpActions: [
+        { id: "open-internet-services", label: "Open Internet Services & Activation Center", action: "open-mode" },
+        { id: "show-receipts", label: "Show receipts", action: "show-receipts" }
+      ],
+      limitations: [
+        "Secret values are never shown.",
+        "Low-risk retrieval is separate from real-world execution.",
+        "Medium/high-risk actions require credentials, consent, confirmation, and provider receipts."
+      ],
+      citations: serviceResult.liveKnowledge?.citations || [],
+      noExecutionAuthorized: statusLabel !== "live_executed",
+      noSecretValues: true
+    },
+    receipt: serviceResult.receipt,
+    audit: serviceResult.audit
+  };
+}
+
 async function nexusIntelligenceAsk(db, body = {}, user = null, env = process.env) {
   ensureNexusProductionRailsState(db);
   const originalQuestion = sanitizePilotText(body.question || body.command || body.query || "", 700);
   if (!originalQuestion) return { ok: false, error: "question_required" };
+  if (nexusInternetAgenticCommandMatches(originalQuestion)) {
+    return nexusInternetAgenticResponse(db, body, user, env);
+  }
   if (/\b(pharmacy|medication|medicine|refill|diabetes supplies|pharmacist)\b/i.test(originalQuestion) && /\b(prepare|create|send|review|blocking|blocked|configured|status|packet|support|coordination|referral)\b/i.test(originalQuestion)) {
     const pharmacyStatus = nexusProviderCoordinationStatus("pharmacy", env);
     const wantsBlocking = /\b(blocking|blocked|missing|configured|ready|status)\b/i.test(originalQuestion);
@@ -33092,7 +33213,14 @@ const NEXUS_OPERATION_COLLECTIONS = Object.freeze([
   "droneEquipment",
   "droneMissionRequests",
   "droneMissionEvents",
-  "droneImageryReports"
+  "droneImageryReports",
+  "internetServiceReceipts",
+  "internetServiceResults",
+  "weatherHeatRiskLookups",
+  "routeTradeLookups",
+  "translationRecords",
+  "mediaPreferences",
+  "communicationDrafts"
 ]);
 
 function nexusNow() {
@@ -33837,6 +33965,407 @@ function buildNexusAgentActivationPlan(command = "", env = process.env) {
     missingEnv,
     noSecretValues: true
   };
+}
+
+const NEXUS_INTERNET_SERVICE_STATUSES = Object.freeze([
+  "available_public",
+  "configured",
+  "missing_credentials",
+  "oauth_required",
+  "vendor_required",
+  "approval_required",
+  "consent_required",
+  "confirmation_required",
+  "test_ready",
+  "live_ready",
+  "local_fallback",
+  "disabled",
+  "blocked_for_safety",
+  "unknown"
+]);
+
+const NEXUS_INTERNET_GATE_OUTCOMES = Object.freeze([
+  "internet_result_returned",
+  "local_prepared",
+  "blocked_missing_credentials",
+  "oauth_required",
+  "vendor_required",
+  "consent_required",
+  "confirmation_required",
+  "approval_required",
+  "live_executed",
+  "cancelled",
+  "failed",
+  "blocked_for_safety"
+]);
+
+function nexusInternetLane(id, label, category, providerType, description, requiredEnv, optionalEnv, supportedModes, supportedActions, testAction, riskLevel, overrides = {}) {
+  return {
+    id,
+    label,
+    category,
+    providerType,
+    description,
+    requiredEnv,
+    optionalEnv,
+    supportedModes,
+    supportedActions,
+    testAction,
+    requiresConsent: Boolean(overrides.requiresConsent),
+    requiresConfirmation: Boolean(overrides.requiresConfirmation),
+    requiresAdminApproval: Boolean(overrides.requiresAdminApproval),
+    requiresVendorApproval: Boolean(overrides.requiresVendorApproval),
+    riskLevel,
+    status: "unknown",
+    configured: false,
+    missingEnv: [],
+    canTest: false,
+    canExecuteLive: false,
+    localFallback: overrides.localFallback !== false,
+    publicProvider: Boolean(overrides.publicProvider),
+    oauthProvider: Boolean(overrides.oauthProvider),
+    safeFallbackMessage: overrides.safeFallbackMessage || `${label} can prepare a local packet and report missing provider configuration by env name only.`,
+    successReceiptType: overrides.successReceiptType || `${id}_receipt`,
+    externalReceiptRequired: overrides.externalReceiptRequired !== false,
+    auditEventTypes: overrides.auditEventTypes || ["internet_service_checked", "internet_service_test_requested", "local_fallback_created"]
+  };
+}
+
+const NEXUS_INTERNET_SERVICE_REGISTRY = Object.freeze([
+  nexusInternetLane("tavily-live-search", "Tavily Live Search", "AI / Live Knowledge / Search", "tavily", "Source-backed web research through Tavily when configured.", ["TAVILY_API_KEY"], ["NEXUS_LIVE_KNOWLEDGE_PROVIDER"], ["ask-nexus", "agriculture", "healthcare", "workforce", "marketplace"], ["source_backed_search", "citation_normalization"], "search", "low", { successReceiptType: "live_knowledge_research_packet", safeFallbackMessage: "Set TAVILY_API_KEY to enable Tavily source-backed retrieval." }),
+  nexusInternetLane("brave-live-search", "Brave Search", "AI / Live Knowledge / Search", "brave", "Source-backed web search through Brave Search when configured.", ["BRAVE_SEARCH_API_KEY"], ["NEXUS_LIVE_KNOWLEDGE_PROVIDER"], ["ask-nexus", "agriculture", "training", "workforce"], ["source_backed_search", "citation_normalization"], "search", "low", { successReceiptType: "live_knowledge_research_packet" }),
+  nexusInternetLane("exa-live-search", "Exa Search", "AI / Live Knowledge / Search", "exa", "Neural/source search through Exa when configured.", ["EXA_API_KEY"], ["NEXUS_LIVE_KNOWLEDGE_PROVIDER"], ["ask-nexus", "research", "workforce"], ["source_backed_search"], "search", "low", { successReceiptType: "live_knowledge_research_packet" }),
+  nexusInternetLane("generic-live-knowledge", "Generic Live Knowledge Endpoint", "AI / Live Knowledge / Search", "generic-live-knowledge", "Generic JSON live knowledge provider endpoint.", ["NEXUS_LIVE_KNOWLEDGE_PROVIDER_ENDPOINT", "NEXUS_LIVE_KNOWLEDGE_API_KEY"], ["NEXUS_LIVE_KNOWLEDGE_PROVIDER"], ["ask-nexus", "all-modes"], ["source_backed_search"], "search", "low", { successReceiptType: "live_knowledge_research_packet" }),
+  nexusInternetLane("serpapi-search", "SerpAPI-Compatible Search", "AI / Live Knowledge / Search", "serpapi", "SerpAPI-compatible source search lane.", ["SERPAPI_API_KEY"], ["SERPAPI_ENDPOINT"], ["ask-nexus", "agriculture", "marketplace"], ["source_backed_search"], "test_search", "low"),
+  nexusInternetLane("google-programmable-search", "Google Programmable Search", "AI / Live Knowledge / Search", "google-cse", "Google Programmable Search lane.", ["GOOGLE_CSE_API_KEY", "GOOGLE_CSE_ID"], ["GOOGLE_CSE_ENDPOINT"], ["ask-nexus", "training", "workforce"], ["source_backed_search"], "test_search", "low"),
+  nexusInternetLane("azure-bing-search", "Bing / Azure Search", "AI / Live Knowledge / Search", "azure-bing", "Bing/Azure Search-compatible lane.", ["AZURE_BING_SEARCH_KEY"], ["AZURE_BING_SEARCH_ENDPOINT"], ["ask-nexus", "all-modes"], ["source_backed_search"], "test_search", "low"),
+  nexusInternetLane("wikipedia-wikidata-fallback", "Wikipedia / Wikidata Open Knowledge", "AI / Live Knowledge / Search", "public-open-knowledge", "Public open-knowledge fallback for general non-sensitive context.", [], ["WIKIDATA_SPARQL_ENDPOINT"], ["ask-nexus", "learning", "general"], ["public_knowledge_lookup"], "public_lookup", "low", { publicProvider: true, externalReceiptRequired: false, successReceiptType: "public_knowledge_lookup_receipt" }),
+  nexusInternetLane("public-url-fetch", "Public Web URL Fetch / Summarization", "AI / Live Knowledge / Search", "public-url-fetch", "Configured public URL fetch/summarization lane with no secret exposure.", ["NEXUS_PUBLIC_URL_FETCH_ENABLED"], ["NEXUS_PUBLIC_URL_FETCH_TIMEOUT_MS"], ["ask-nexus", "source-review"], ["public_url_review"], "url_review", "low"),
+
+  nexusInternetLane("osm-public-maps", "OpenStreetMap Public Fallback", "Maps / Routing / Geospatial", "openstreetmap", "Public map display and typed-location fallback.", [], ["NEXUS_OSM_TILE_URL"], ["maps", "field-visit", "logistics"], ["map_tile_fallback", "typed_route_preview"], "map_status", "low", { publicProvider: true, externalReceiptRequired: false }),
+  nexusInternetLane("google-maps-provider", "Google Maps-Compatible Provider", "Maps / Routing / Geospatial", "google-maps", "Geocoding, routing, distance/time estimation, and trade-route visualization when configured.", ["GOOGLE_MAPS_API_KEY"], ["NEXUS_MAPS_ENABLED"], ["maps", "agriculture", "logistics"], ["geocode", "route_plan", "distance_time"], "route_test", "low"),
+  nexusInternetLane("mapbox-provider", "Mapbox-Compatible Provider", "Maps / Routing / Geospatial", "mapbox", "Mapbox-compatible geospatial lane.", ["MAPBOX_ACCESS_TOKEN"], ["MAPBOX_ENDPOINT"], ["maps", "field-visit"], ["geocode", "route_plan"], "route_test", "low"),
+  nexusInternetLane("here-provider", "HERE-Compatible Provider", "Maps / Routing / Geospatial", "here", "HERE-compatible geocoding and routing lane.", ["HERE_API_KEY"], ["HERE_ROUTING_ENDPOINT"], ["maps", "logistics"], ["geocode", "route_plan"], "route_test", "low"),
+  nexusInternetLane("tomtom-provider", "TomTom-Compatible Provider", "Maps / Routing / Geospatial", "tomtom", "TomTom-compatible routing lane.", ["TOMTOM_API_KEY"], ["TOMTOM_ROUTING_ENDPOINT"], ["maps", "logistics"], ["route_plan"], "route_test", "low"),
+  nexusInternetLane("generic-geospatial-provider", "Generic Geospatial Endpoint", "Maps / Routing / Geospatial", "generic-geospatial", "Generic maps/geocoding/routing endpoint.", ["NEXUS_GEOSPATIAL_PROVIDER_ENDPOINT"], ["NEXUS_GENERIC_PROVIDER_API_KEY"], ["maps", "logistics"], ["geocode", "reverse_geocode", "route_plan"], "route_test", "low"),
+
+  nexusInternetLane("openweather-provider", "OpenWeather-Compatible Provider", "Weather / Climate / Heat Risk", "openweather", "Weather, forecast, and agriculture advisory weather lane.", ["OPENWEATHER_API_KEY"], ["NEXUS_WEATHER_PROVIDER_ENABLED"], ["agriculture", "healthcare", "maps"], ["weather_lookup", "heat_index"], "weather_test", "low"),
+  nexusInternetLane("tomorrow-weather-provider", "Tomorrow.io-Compatible Provider", "Weather / Climate / Heat Risk", "tomorrow-io", "Tomorrow.io-compatible weather and climate lane.", ["TOMORROW_IO_API_KEY"], ["TOMORROW_IO_ENDPOINT"], ["agriculture", "field-visit"], ["weather_lookup", "climate_advisory"], "weather_test", "low"),
+  nexusInternetLane("noaa-weather-public", "NOAA / weather.gov Public Fallback", "Weather / Climate / Heat Risk", "noaa-weather-gov", "Public NOAA/weather.gov fallback where applicable.", [], ["NEXUS_NOAA_USER_AGENT"], ["agriculture", "healthcare"], ["weather_lookup", "heat_risk_advisory"], "weather_public_test", "low", { publicProvider: true, externalReceiptRequired: false }),
+  nexusInternetLane("generic-weather-endpoint", "Generic Weather Endpoint", "Weather / Climate / Heat Risk", "generic-weather", "Generic weather, heat index, and agriculture climate endpoint.", ["NEXUS_WEATHER_PROVIDER_ENDPOINT"], ["NEXUS_GENERIC_PROVIDER_API_KEY"], ["agriculture", "maps"], ["weather_lookup", "heat_index"], "weather_test", "low"),
+
+  nexusInternetLane("smtp-email-provider", "SMTP Email Provider", "Communications", "smtp", "SMTP-compatible email send lane.", ["SMTP_HOST", "SMTP_PORT", "SMTP_USER", "SMTP_PASS", "SMTP_FROM"], ["NEXUS_EMAIL_PROVIDER"], ["communications", "provider", "workforce"], ["email_send"], "email_readiness", "medium", { requiresConsent: true, requiresConfirmation: true, successReceiptType: "communication_send_receipt" }),
+  nexusInternetLane("sendgrid-email-provider", "SendGrid Provider", "Communications", "sendgrid", "SendGrid-compatible email lane.", ["SENDGRID_API_KEY", "SENDGRID_FROM_EMAIL"], ["NEXUS_EMAIL_PROVIDER"], ["communications", "provider"], ["email_send"], "email_readiness", "medium", { requiresConsent: true, requiresConfirmation: true }),
+  nexusInternetLane("gmail-api-provider", "Gmail API Provider", "Communications", "gmail-api", "Gmail API-compatible provider lane when OAuth/token env is configured.", ["GMAIL_API_ACCESS_TOKEN"], ["GMAIL_CLIENT_ID"], ["communications"], ["email_send"], "oauth_readiness", "medium", { oauthProvider: true, requiresConsent: true, requiresConfirmation: true }),
+  nexusInternetLane("microsoft-graph-email-provider", "Microsoft Graph Email", "Communications", "microsoft-graph", "Microsoft Graph email-compatible lane.", ["MICROSOFT_GRAPH_ACCESS_TOKEN"], ["MICROSOFT_GRAPH_TENANT_ID"], ["communications"], ["email_send"], "oauth_readiness", "medium", { oauthProvider: true, requiresConsent: true, requiresConfirmation: true }),
+  nexusInternetLane("twilio-sms-provider", "Twilio SMS", "Communications", "twilio-sms", "Twilio SMS lane with explicit confirmation and redacted receipts.", ["TWILIO_ACCOUNT_SID", "TWILIO_AUTH_TOKEN", "TWILIO_PHONE_NUMBER"], ["NEXUS_MESSAGES_ENABLED", "OWNER_TEST_RECIPIENT_NUMBER"], ["communications", "provider", "marketplace"], ["sms_send"], "sms_readiness", "medium", { requiresConsent: true, requiresConfirmation: true }),
+  nexusInternetLane("twilio-whatsapp-provider", "Twilio WhatsApp", "Communications", "twilio-whatsapp", "Twilio WhatsApp lane.", ["TWILIO_ACCOUNT_SID", "TWILIO_AUTH_TOKEN", "TWILIO_WHATSAPP_FROM"], ["NEXUS_WHATSAPP_ENABLED"], ["communications", "marketplace"], ["whatsapp_send"], "whatsapp_readiness", "medium", { requiresConsent: true, requiresConfirmation: true }),
+  nexusInternetLane("whatsapp-business-provider", "WhatsApp Business API", "Communications", "whatsapp-business", "WhatsApp Business API-compatible provider.", ["WHATSAPP_BUSINESS_ACCESS_TOKEN", "WHATSAPP_BUSINESS_PHONE_NUMBER_ID"], ["WHATSAPP_BUSINESS_ENDPOINT"], ["communications"], ["whatsapp_send"], "whatsapp_business_readiness", "medium", { requiresConsent: true, requiresConfirmation: true }),
+  nexusInternetLane("telegram-bot-provider", "Telegram Bot API", "Communications", "telegram", "Telegram Bot API provider lane.", ["TELEGRAM_BOT_TOKEN"], ["TELEGRAM_CHAT_ID"], ["communications"], ["telegram_send"], "telegram_readiness", "medium", { requiresConsent: true, requiresConfirmation: true }),
+  nexusInternetLane("twilio-voice-provider", "Twilio Voice", "Communications", "twilio-voice", "Twilio Voice call lane.", ["TWILIO_ACCOUNT_SID", "TWILIO_AUTH_TOKEN", "TWILIO_PHONE_NUMBER"], ["NEXUS_CALLS_ENABLED"], ["communications"], ["voice_call"], "voice_readiness", "medium", { requiresConsent: true, requiresConfirmation: true }),
+  nexusInternetLane("tel-whatsapp-handoff", "Tel / WhatsApp Call Handoff Fallback", "Communications", "browser-handoff", "User-controlled tel/WhatsApp handoff fallback.", [], ["NEXUS_BROWSER_HANDOFF_ENABLED"], ["communications"], ["call_handoff", "whatsapp_handoff"], "handoff_readiness", "medium", { publicProvider: true, requiresConsent: true, requiresConfirmation: true, externalReceiptRequired: false }),
+
+  nexusInternetLane("zoom-video-provider", "Zoom-Compatible Provider", "Telehealth / Video", "zoom", "Zoom meeting creation lane.", ["ZOOM_ACCOUNT_ID", "ZOOM_CLIENT_ID", "ZOOM_CLIENT_SECRET"], ["NEXUS_ZOOM_ENABLED"], ["telehealth", "learning"], ["video_visit_create"], "video_readiness", "high", { requiresConsent: true, requiresConfirmation: true, requiresAdminApproval: true }),
+  nexusInternetLane("daily-video-provider", "Daily.co Provider", "Telehealth / Video", "daily", "Daily.co room creation lane.", ["DAILY_API_KEY"], ["DAILY_ROOM_DOMAIN"], ["telehealth"], ["video_room_create"], "video_readiness", "high", { requiresConsent: true, requiresConfirmation: true, requiresAdminApproval: true }),
+  nexusInternetLane("twilio-video-provider", "Twilio Video", "Telehealth / Video", "twilio-video", "Twilio Video provider lane.", ["TWILIO_ACCOUNT_SID", "TWILIO_AUTH_TOKEN"], ["TWILIO_VIDEO_ROOM_TYPE"], ["telehealth"], ["video_room_create"], "video_readiness", "high", { requiresConsent: true, requiresConfirmation: true, requiresAdminApproval: true }),
+  nexusInternetLane("vonage-opentok-provider", "Vonage / OpenTok", "Telehealth / Video", "vonage-opentok", "Vonage/OpenTok video provider lane.", ["VONAGE_API_KEY", "VONAGE_API_SECRET"], ["VONAGE_APPLICATION_ID"], ["telehealth"], ["video_room_create"], "video_readiness", "high", { requiresConsent: true, requiresConfirmation: true, requiresAdminApproval: true }),
+  nexusInternetLane("whereby-video-provider", "Whereby Provider", "Telehealth / Video", "whereby", "Whereby-compatible video provider lane.", ["WHEREBY_API_KEY"], ["WHEREBY_ENDPOINT"], ["telehealth"], ["video_room_create"], "video_readiness", "high", { requiresConsent: true, requiresConfirmation: true, requiresAdminApproval: true }),
+  nexusInternetLane("generic-video-provider", "Generic Video Meeting Endpoint", "Telehealth / Video", "generic-video", "Generic video meeting endpoint.", ["NEXUS_VIDEO_PROVIDER_ENDPOINT"], ["NEXUS_GENERIC_PROVIDER_API_KEY"], ["telehealth"], ["video_room_create"], "video_readiness", "high", { requiresConsent: true, requiresConfirmation: true, requiresAdminApproval: true }),
+  nexusInternetLane("browser-video-handoff", "Browser / Local Video Handoff", "Telehealth / Video", "browser-video-handoff", "Local browser video handoff fallback.", [], ["NEXUS_BROWSER_VIDEO_HANDOFF_ENABLED"], ["telehealth"], ["video_handoff_prepare"], "handoff_readiness", "medium", { publicProvider: true, requiresConsent: true, requiresConfirmation: true, externalReceiptRequired: false }),
+
+  nexusInternetLane("generic-provider-referral", "Generic Provider Referral Endpoint", "Healthcare Support", "generic-provider-referral", "Generic provider referral endpoint.", ["NEXUS_PROVIDER_REFERRAL_ENDPOINT"], ["NEXUS_GENERIC_PROVIDER_API_KEY"], ["healthcare", "provider"], ["provider_referral_submit"], "provider_readiness", "high", { requiresConsent: true, requiresConfirmation: true, requiresAdminApproval: true, requiresVendorApproval: true }),
+  nexusInternetLane("clinic-intake-provider", "Generic Clinic Intake Endpoint", "Healthcare Support", "clinic-intake", "Clinic intake endpoint.", ["NEXUS_CLINIC_INTAKE_ENDPOINT"], ["NEXUS_GENERIC_PROVIDER_API_KEY"], ["healthcare"], ["clinic_intake_submit"], "clinic_readiness", "high", { requiresConsent: true, requiresConfirmation: true, requiresAdminApproval: true, requiresVendorApproval: true }),
+  nexusInternetLane("pharmacy-intake-provider", "Generic Pharmacy Intake Endpoint", "Healthcare Support", "pharmacy-intake", "Pharmacy intake/request endpoint.", ["NEXUS_PHARMACY_PROVIDER_ENDPOINT"], ["NEXUS_GENERIC_PROVIDER_API_KEY"], ["pharmacy"], ["pharmacy_request_submit"], "pharmacy_readiness", "high", { requiresConsent: true, requiresConfirmation: true, requiresAdminApproval: true, requiresVendorApproval: true }),
+  nexusInternetLane("mobile-clinic-request-provider", "Generic Mobile Clinic Request Endpoint", "Healthcare Support", "mobile-clinic", "Mobile clinic request endpoint.", ["NEXUS_MOBILE_CLINIC_PROVIDER_ENDPOINT"], ["NEXUS_GENERIC_PROVIDER_API_KEY"], ["mobile-clinic"], ["mobile_clinic_request"], "mobile_clinic_readiness", "high", { requiresConsent: true, requiresConfirmation: true, requiresAdminApproval: true, requiresVendorApproval: true }),
+  nexusInternetLane("rpm-rtm-sync-provider", "RPM / RTM Sync Endpoint", "Healthcare Support", "rpm-rtm-sync", "RPM/RTM provider sync endpoint.", ["NEXUS_RPM_PROVIDER_ENDPOINT"], ["NEXUS_RTM_PROVIDER_ENDPOINT"], ["rpm", "rtm", "chronic-care"], ["rpm_sync", "rtm_sync"], "rpm_rtm_readiness", "high", { requiresConsent: true, requiresConfirmation: true, requiresAdminApproval: true, requiresVendorApproval: true }),
+  nexusInternetLane("device-provider-endpoint", "Device Provider Endpoint", "Healthcare Support", "device-provider", "Device-provider endpoint placeholder.", ["NEXUS_DEVICE_PROVIDER_ENDPOINT"], ["NEXUS_GENERIC_PROVIDER_API_KEY"], ["rpm", "rtm"], ["device_sync"], "device_readiness", "high", { requiresConsent: true, requiresConfirmation: true, requiresAdminApproval: true, requiresVendorApproval: true }),
+  nexusInternetLane("provider-queue-fallback", "Provider Queue Fallback", "Healthcare Support", "local-provider-queue", "Local provider queue fallback and physician-ready packet export.", [], ["NEXUS_PROVIDER_QUEUE_ENABLED"], ["healthcare", "provider"], ["provider_queue_local", "packet_export"], "provider_queue_test", "medium", { publicProvider: true, requiresConsent: true, requiresConfirmation: true, externalReceiptRequired: false }),
+  nexusInternetLane("emergency-guidance-fallback", "Emergency Guidance Fallback", "Healthcare Support", "emergency-guidance", "Emergency guidance fallback without dispatch claims.", [], [], ["healthcare", "safety"], ["emergency_guidance"], "emergency_guidance_check", "high", { publicProvider: true, externalReceiptRequired: false, safeFallbackMessage: "Nexus can show emergency guidance and tell users to contact local emergency services; it does not dispatch help." }),
+
+  nexusInternetLane("stripe-payment-provider", "Stripe-Compatible Provider", "Payments / Mobile Money / Marketplace", "stripe", "Stripe payment provider lane.", ["STRIPE_SECRET_KEY"], ["NEXUS_MARKETPLACE_PAYMENTS_ENABLED", "STRIPE_WEBHOOK_SECRET"], ["marketplace", "payments"], ["payment_create", "refund_request"], "payment_readiness", "high", { requiresConsent: true, requiresConfirmation: true, requiresAdminApproval: true, requiresVendorApproval: true }),
+  nexusInternetLane("paypal-payment-provider", "PayPal-Compatible Provider", "Payments / Mobile Money / Marketplace", "paypal", "PayPal-compatible provider lane.", ["PAYPAL_CLIENT_ID", "PAYPAL_CLIENT_SECRET"], ["PAYPAL_ENV"], ["marketplace", "payments"], ["payment_create"], "payment_readiness", "high", { requiresConsent: true, requiresConfirmation: true, requiresAdminApproval: true, requiresVendorApproval: true }),
+  nexusInternetLane("flutterwave-payment-provider", "Flutterwave-Compatible Provider", "Payments / Mobile Money / Marketplace", "flutterwave", "Flutterwave-compatible payment lane.", ["FLUTTERWAVE_SECRET_KEY"], ["FLUTTERWAVE_PUBLIC_KEY"], ["marketplace", "payments"], ["payment_create"], "payment_readiness", "high", { requiresConsent: true, requiresConfirmation: true, requiresAdminApproval: true, requiresVendorApproval: true }),
+  nexusInternetLane("paystack-payment-provider", "Paystack-Compatible Provider", "Payments / Mobile Money / Marketplace", "paystack", "Paystack-compatible payment lane.", ["PAYSTACK_SECRET_KEY"], ["PAYSTACK_PUBLIC_KEY"], ["marketplace", "payments"], ["payment_create"], "payment_readiness", "high", { requiresConsent: true, requiresConfirmation: true, requiresAdminApproval: true, requiresVendorApproval: true }),
+  nexusInternetLane("mpesa-payment-provider", "M-Pesa-Compatible Provider", "Payments / Mobile Money / Marketplace", "mpesa", "M-Pesa-compatible payment lane.", ["MPESA_CONSUMER_KEY", "MPESA_CONSUMER_SECRET", "MPESA_SHORTCODE"], ["MPESA_PASSKEY"], ["marketplace", "payments"], ["mobile_money_payment"], "payment_readiness", "high", { requiresConsent: true, requiresConfirmation: true, requiresAdminApproval: true, requiresVendorApproval: true }),
+  nexusInternetLane("generic-payment-endpoint", "Generic Payment Endpoint", "Payments / Mobile Money / Marketplace", "generic-payment", "Generic payment endpoint.", ["NEXUS_PAYMENT_PROVIDER_ENDPOINT"], ["NEXUS_GENERIC_PROVIDER_API_KEY"], ["marketplace", "payments"], ["payment_create", "refund_request"], "payment_readiness", "high", { requiresConsent: true, requiresConfirmation: true, requiresAdminApproval: true, requiresVendorApproval: true }),
+  nexusInternetLane("local-transaction-fallback", "Local Transaction Fallback", "Payments / Mobile Money / Marketplace", "local-transaction", "Local order/transaction/cancellation/adjustment record fallback.", [], [], ["marketplace"], ["order_record", "transaction_cancel_local", "transaction_adjust_local"], "transaction_local_test", "medium", { publicProvider: true, requiresConfirmation: true, externalReceiptRequired: false }),
+
+  nexusInternetLane("aftership-tracking-provider", "AfterShip-Compatible Tracking", "Marketplace / Trade / Logistics", "aftership", "AfterShip-compatible shipment tracking lane.", ["AFTERSHIP_API_KEY"], ["AFTERSHIP_ENDPOINT"], ["logistics", "marketplace"], ["shipment_tracking"], "shipment_tracking_readiness", "medium", { requiresConfirmation: true }),
+  nexusInternetLane("shippo-tracking-provider", "Shippo-Compatible Tracking", "Marketplace / Trade / Logistics", "shippo", "Shippo-compatible logistics/tracking lane.", ["SHIPPO_API_TOKEN"], ["SHIPPO_ENDPOINT"], ["logistics"], ["shipment_tracking"], "shipment_tracking_readiness", "medium", { requiresConfirmation: true }),
+  nexusInternetLane("carrier-tracking-provider", "DHL / FedEx / UPS Tracking", "Marketplace / Trade / Logistics", "carrier-tracking", "Carrier tracking lane for configured carrier APIs.", ["CARRIER_TRACKING_API_KEY"], ["DHL_API_KEY", "FEDEX_API_KEY", "UPS_API_KEY"], ["logistics"], ["shipment_tracking"], "shipment_tracking_readiness", "medium", { requiresConfirmation: true }),
+  nexusInternetLane("generic-shipment-tracking", "Generic Shipment Tracking Endpoint", "Marketplace / Trade / Logistics", "generic-shipment", "Generic shipment tracking endpoint.", ["NEXUS_SHIPMENT_TRACKING_ENDPOINT"], ["NEXUS_GENERIC_PROVIDER_API_KEY"], ["logistics", "marketplace"], ["shipment_tracking"], "shipment_tracking_readiness", "medium", { requiresConfirmation: true }),
+  nexusInternetLane("generic-logistics-provider", "Generic Logistics Provider Endpoint", "Marketplace / Trade / Logistics", "generic-logistics", "Generic logistics provider endpoint.", ["NEXUS_LOGISTICS_PROVIDER_ENDPOINT"], ["NEXUS_GENERIC_PROVIDER_API_KEY"], ["logistics"], ["logistics_dispatch"], "logistics_readiness", "high", { requiresConsent: true, requiresConfirmation: true, requiresAdminApproval: true, requiresVendorApproval: true }),
+
+  nexusInternetLane("hubspot-crm-provider", "HubSpot-Compatible Provider", "Workforce / Employer / ATS / CRM", "hubspot", "HubSpot-compatible CRM/employer outreach lane.", ["HUBSPOT_ACCESS_TOKEN"], ["HUBSPOT_PORTAL_ID"], ["workforce", "employer"], ["employer_sync", "outreach_send"], "ats_crm_readiness", "medium", { requiresConsent: true, requiresConfirmation: true, requiresVendorApproval: true }),
+  nexusInternetLane("zoho-crm-provider", "Zoho-Compatible Provider", "Workforce / Employer / ATS / CRM", "zoho", "Zoho-compatible CRM lane.", ["ZOHO_ACCESS_TOKEN"], ["ZOHO_ORG_ID"], ["workforce", "employer"], ["employer_sync"], "ats_crm_readiness", "medium", { requiresConsent: true, requiresConfirmation: true, requiresVendorApproval: true }),
+  nexusInternetLane("airtable-provider", "Airtable-Compatible Provider", "Workforce / Employer / ATS / CRM", "airtable", "Airtable-compatible job/employer sync lane.", ["AIRTABLE_API_KEY", "AIRTABLE_BASE_ID"], ["AIRTABLE_TABLE_NAME"], ["workforce"], ["job_sync", "applicant_packet"], "ats_crm_readiness", "medium", { requiresConsent: true, requiresConfirmation: true, requiresVendorApproval: true }),
+  nexusInternetLane("greenhouse-provider", "Greenhouse-Compatible Provider", "Workforce / Employer / ATS / CRM", "greenhouse", "Greenhouse-compatible ATS lane.", ["GREENHOUSE_API_KEY"], ["GREENHOUSE_BOARD_TOKEN"], ["workforce"], ["job_sync", "applicant_packet"], "ats_readiness", "medium", { requiresConsent: true, requiresConfirmation: true, requiresVendorApproval: true }),
+  nexusInternetLane("lever-provider", "Lever-Compatible Provider", "Workforce / Employer / ATS / CRM", "lever", "Lever-compatible ATS lane.", ["LEVER_API_KEY"], ["LEVER_ENDPOINT"], ["workforce"], ["job_sync", "applicant_packet"], "ats_readiness", "medium", { requiresConsent: true, requiresConfirmation: true, requiresVendorApproval: true }),
+  nexusInternetLane("generic-employer-ats", "Generic Employer / ATS Endpoint", "Workforce / Employer / ATS / CRM", "generic-ats", "Generic employer/ATS endpoint.", ["NEXUS_EMPLOYER_CRM_ENDPOINT"], ["NEXUS_GENERIC_PROVIDER_API_KEY"], ["workforce"], ["job_sync", "applicant_packet", "interview_handoff"], "ats_readiness", "medium", { requiresConsent: true, requiresConfirmation: true, requiresVendorApproval: true }),
+
+  nexusInternetLane("moodle-lms-provider", "Moodle-Compatible LMS", "Learning / LMS", "moodle", "Moodle-compatible enrollment/course sync lane.", ["MOODLE_BASE_URL", "MOODLE_TOKEN"], ["NEXUS_LMS_ENABLED"], ["learning", "training"], ["lms_enrollment", "course_completion_sync"], "lms_readiness", "medium", { requiresConsent: true, requiresConfirmation: true, requiresVendorApproval: true }),
+  nexusInternetLane("canvas-lms-provider", "Canvas-Compatible LMS", "Learning / LMS", "canvas", "Canvas-compatible LMS lane.", ["CANVAS_BASE_URL", "CANVAS_ACCESS_TOKEN"], ["CANVAS_ACCOUNT_ID"], ["learning"], ["lms_enrollment", "course_completion_sync"], "lms_readiness", "medium", { requiresConsent: true, requiresConfirmation: true, requiresVendorApproval: true }),
+  nexusInternetLane("talentlms-provider", "TalentLMS-Compatible Provider", "Learning / LMS", "talentlms", "TalentLMS-compatible lane.", ["TALENTLMS_API_KEY", "TALENTLMS_DOMAIN"], [], ["learning"], ["lms_enrollment"], "lms_readiness", "medium", { requiresConsent: true, requiresConfirmation: true, requiresVendorApproval: true }),
+  nexusInternetLane("thinkific-provider", "Thinkific-Compatible Provider", "Learning / LMS", "thinkific", "Thinkific-compatible lane.", ["THINKIFIC_API_KEY", "THINKIFIC_SUBDOMAIN"], [], ["learning"], ["lms_enrollment"], "lms_readiness", "medium", { requiresConsent: true, requiresConfirmation: true, requiresVendorApproval: true }),
+  nexusInternetLane("learnworlds-provider", "LearnWorlds-Compatible Provider", "Learning / LMS", "learnworlds", "LearnWorlds-compatible lane.", ["LEARNWORLDS_API_KEY"], ["LEARNWORLDS_SCHOOL_ID"], ["learning"], ["lms_enrollment"], "lms_readiness", "medium", { requiresConsent: true, requiresConfirmation: true, requiresVendorApproval: true }),
+  nexusInternetLane("generic-lms-provider", "Generic LMS Enrollment Endpoint", "Learning / LMS", "generic-lms", "Generic LMS enrollment/certificate endpoint.", ["NEXUS_LMS_PROVIDER_ENDPOINT"], ["NEXUS_GENERIC_PROVIDER_API_KEY"], ["learning"], ["lms_enrollment", "certificate_sync"], "lms_readiness", "medium", { requiresConsent: true, requiresConfirmation: true, requiresVendorApproval: true }),
+
+  nexusInternetLane("generic-drone-mission", "Generic Drone Mission Endpoint", "Drone / Imagery / Storage", "generic-drone", "Generic drone mission request endpoint.", ["NEXUS_DRONE_MISSION_ENDPOINT"], ["NEXUS_GENERIC_PROVIDER_API_KEY"], ["drone", "agriculture"], ["drone_mission_request"], "drone_readiness", "high", { requiresConsent: true, requiresConfirmation: true, requiresAdminApproval: true, requiresVendorApproval: true }),
+  nexusInternetLane("drone-vendor-dispatch", "Drone Vendor Dispatch Endpoint", "Drone / Imagery / Storage", "drone-vendor", "Drone vendor dispatch endpoint.", ["NEXUS_DRONE_VENDOR_DISPATCH_ENDPOINT"], ["DJI_API_KEY"], ["drone"], ["drone_dispatch"], "drone_dispatch_readiness", "high", { requiresConsent: true, requiresConfirmation: true, requiresAdminApproval: true, requiresVendorApproval: true }),
+  nexusInternetLane("imagery-upload-endpoint", "Imagery Upload Endpoint", "Drone / Imagery / Storage", "imagery-upload", "Drone imagery upload endpoint.", ["NEXUS_IMAGERY_UPLOAD_ENDPOINT"], ["NEXUS_GENERIC_PROVIDER_API_KEY"], ["drone"], ["imagery_upload"], "imagery_readiness", "high", { requiresConsent: true, requiresConfirmation: true, requiresAdminApproval: true, requiresVendorApproval: true }),
+  nexusInternetLane("s3-storage-provider", "S3-Compatible Storage", "Drone / Imagery / Storage", "s3", "S3-compatible object storage lane.", ["S3_BUCKET", "S3_ACCESS_KEY_ID", "S3_SECRET_ACCESS_KEY"], ["S3_REGION"], ["storage", "drone", "export"], ["file_export", "imagery_upload"], "storage_readiness", "medium", { requiresConsent: true, requiresConfirmation: true, requiresAdminApproval: true }),
+  nexusInternetLane("google-drive-upload-provider", "Google Drive-Compatible Upload", "Drone / Imagery / Storage", "google-drive", "Google Drive-compatible upload/export lane.", ["GOOGLE_DRIVE_ACCESS_TOKEN"], ["GOOGLE_DRIVE_FOLDER_ID"], ["storage", "export"], ["file_export"], "oauth_readiness", "medium", { oauthProvider: true, requiresConsent: true, requiresConfirmation: true, requiresAdminApproval: true }),
+  nexusInternetLane("cloudinary-storage-provider", "Cloudinary-Compatible Upload", "Drone / Imagery / Storage", "cloudinary", "Cloudinary-compatible media upload lane.", ["CLOUDINARY_URL"], ["CLOUDINARY_UPLOAD_PRESET"], ["storage", "media"], ["file_upload"], "storage_readiness", "medium", { requiresConsent: true, requiresConfirmation: true, requiresAdminApproval: true }),
+  nexusInternetLane("no-fly-compliance-fallback", "No-Fly / Compliance Checklist Fallback", "Drone / Imagery / Storage", "drone-compliance-local", "Local no-fly and compliance checklist fallback.", [], [], ["drone"], ["compliance_checklist"], "drone_compliance_check", "high", { publicProvider: true, requiresConfirmation: true, externalReceiptRequired: false }),
+
+  nexusInternetLane("youtube-media-provider", "YouTube Data / Embed Support", "Media / Music", "youtube", "YouTube search/embed handoff lane.", ["YOUTUBE_API_KEY"], ["NEXUS_MEDIA_PROVIDER_ENABLED"], ["media", "music"], ["media_search", "embed_handoff"], "media_readiness", "low"),
+  nexusInternetLane("external-media-handoff", "External Media Search Handoff", "Media / Music", "external-media-handoff", "Safe external media provider handoff without downloads or cached copyrighted music.", [], [], ["media", "music"], ["media_handoff"], "media_handoff_test", "low", { publicProvider: true, externalReceiptRequired: false }),
+  nexusInternetLane("local-media-preference", "Local Media Preference Memory", "Media / Music", "local-media", "Local media preference memory and copyright-safe playback language.", [], [], ["media", "music"], ["media_preference_record"], "media_preference_test", "low", { publicProvider: true, externalReceiptRequired: false }),
+
+  nexusInternetLane("google-translate-provider", "Google Translate-Compatible Provider", "Translation / Language", "google-translate", "Google Translate-compatible lane.", ["GOOGLE_TRANSLATE_API_KEY"], ["GOOGLE_TRANSLATE_PROJECT_ID"], ["language", "all-modes"], ["translation"], "translation_readiness", "low"),
+  nexusInternetLane("deepl-provider", "DeepL-Compatible Provider", "Translation / Language", "deepl", "DeepL-compatible lane.", ["DEEPL_API_KEY"], ["DEEPL_ENDPOINT"], ["language"], ["translation"], "translation_readiness", "low"),
+  nexusInternetLane("azure-translator-provider", "Azure Translator-Compatible Provider", "Translation / Language", "azure-translator", "Azure Translator-compatible lane.", ["AZURE_TRANSLATOR_KEY"], ["AZURE_TRANSLATOR_REGION"], ["language"], ["translation"], "translation_readiness", "low"),
+  nexusInternetLane("generic-translation-provider", "Generic Translation Endpoint", "Translation / Language", "generic-translation", "Generic translation endpoint.", ["NEXUS_TRANSLATION_PROVIDER_ENDPOINT"], ["NEXUS_GENERIC_PROVIDER_API_KEY"], ["language"], ["translation"], "translation_readiness", "low"),
+  nexusInternetLane("local-language-fallback", "Built-In Language Fallback", "Translation / Language", "local-language", "Built-in app language fallback.", [], [], ["language"], ["local_language_switch"], "language_fallback_test", "low", { publicProvider: true, externalReceiptRequired: false }),
+
+  nexusInternetLane("local-export-provider", "Local Export", "Storage / Files / Export", "local-export", "Local packet/report export lane.", [], [], ["export", "reports"], ["local_export"], "export_test", "low", { publicProvider: true, externalReceiptRequired: false }),
+  nexusInternetLane("generic-document-storage", "Generic Document Storage Endpoint", "Storage / Files / Export", "generic-document-storage", "Generic document storage endpoint.", ["NEXUS_DOCUMENT_STORAGE_ENDPOINT"], ["NEXUS_GENERIC_PROVIDER_API_KEY"], ["export", "reports"], ["document_storage"], "storage_readiness", "medium", { requiresConsent: true, requiresConfirmation: true, requiresAdminApproval: true }),
+  nexusInternetLane("pdf-report-export", "PDF / Report Export", "Storage / Files / Export", "pdf-report-export", "PDF/report export lane using current local architecture.", [], [], ["export", "reports"], ["pdf_export"], "pdf_export_test", "low", { publicProvider: true, externalReceiptRequired: false })
+]);
+
+function nexusInternetServiceEnvPresent(name, env = process.env) {
+  return Boolean(String(env[name] || "").trim());
+}
+
+function nexusInternetServiceLaneSnapshot(lane, env = process.env) {
+  const missingEnv = nexusMissingEnv(lane.requiredEnv || [], env);
+  const configured = missingEnv.length === 0;
+  let status = "unknown";
+  if (lane.publicProvider) status = "available_public";
+  else if (lane.oauthProvider && missingEnv.length) status = "oauth_required";
+  else if (missingEnv.length) status = lane.localFallback ? "missing_credentials" : "disabled";
+  else if (lane.requiresConsent) status = "consent_required";
+  else if (lane.requiresAdminApproval) status = "approval_required";
+  else if (lane.requiresVendorApproval) status = "vendor_required";
+  else if (lane.requiresConfirmation) status = "confirmation_required";
+  else status = "configured";
+  const canTest = lane.publicProvider || configured || lane.localFallback;
+  const canExecuteLive = configured && !lane.publicProvider && !["high", "regulated", "payments"].includes(lane.riskLevel);
+  return {
+    ...lane,
+    status,
+    configured: lane.publicProvider || configured,
+    credentialConfigured: configured,
+    missingEnv,
+    canTest,
+    canExecuteLive,
+    lastChecked: nexusNow(),
+    requiredEnvStatus: (lane.requiredEnv || []).map(name => ({ name, present: nexusInternetServiceEnvPresent(name, env) })),
+    optionalEnvStatus: (lane.optionalEnv || []).map(name => ({ name, present: nexusInternetServiceEnvPresent(name, env) })),
+    noSecretValues: true
+  };
+}
+
+function nexusInternetServicesSnapshot(env = process.env) {
+  const lanes = NEXUS_INTERNET_SERVICE_REGISTRY.map(lane => nexusInternetServiceLaneSnapshot(lane, env));
+  const categories = [...new Set(lanes.map(lane => lane.category))];
+  return {
+    ok: true,
+    name: "Nexus Full Internet Services Activation Runtime",
+    statuses: NEXUS_INTERNET_SERVICE_STATUSES,
+    gateOutcomes: NEXUS_INTERNET_GATE_OUTCOMES,
+    categories,
+    lanes,
+    summary: {
+      total: lanes.length,
+      categories: categories.length,
+      publicAvailable: lanes.filter(lane => lane.status === "available_public").length,
+      configured: lanes.filter(lane => lane.credentialConfigured).length,
+      missingCredentials: lanes.filter(lane => lane.missingEnv.length).length,
+      testable: lanes.filter(lane => lane.canTest).length,
+      liveReady: lanes.filter(lane => lane.canExecuteLive).length,
+      consentRequired: lanes.filter(lane => lane.requiresConsent).length,
+      confirmationRequired: lanes.filter(lane => lane.requiresConfirmation).length,
+      adminApprovalRequired: lanes.filter(lane => lane.requiresAdminApproval).length,
+      vendorApprovalRequired: lanes.filter(lane => lane.requiresVendorApproval).length
+    },
+    standardUserOnlineSummary: [
+      "Nexus can use configured search providers for source-backed answers and can use public/local fallback where safe.",
+      "Low-risk internet actions can return public/configured information without heavy execution gates.",
+      "Messages, provider handoff, payments, dispatch, enrollment, and regulated workflows remain consent/confirmation/provider gated.",
+      "Missing credentials are displayed by environment variable name only; secret values are never returned."
+    ],
+    noSecretValues: true
+  };
+}
+
+function nexusInternetServiceLaneById(laneId = "") {
+  return NEXUS_INTERNET_SERVICE_REGISTRY.find(lane => lane.id === laneId)
+    || NEXUS_INTERNET_SERVICE_REGISTRY.find(lane => lane.supportedActions.includes(laneId))
+    || NEXUS_INTERNET_SERVICE_REGISTRY[0];
+}
+
+function createNexusInternetServiceReceipt(db, lane, action, gateStatus, summary, details = {}) {
+  const store = ensureNexusPersistentOperations(db);
+  const receipt = {
+    receiptId: nexusOperationId("NX-NET"),
+    timestamp: nexusNow(),
+    mode: cleanOpsText(details.mode || lane.supportedModes?.[0] || "internet-services", 120),
+    serviceCategory: lane.category,
+    serviceLaneId: lane.id,
+    provider: lane.providerType,
+    action: cleanOpsText(action, 120),
+    riskLevel: lane.riskLevel,
+    gateStatus,
+    internetUsed: Boolean(details.internetUsed),
+    publicFallbackUsed: Boolean(details.publicFallbackUsed || lane.publicProvider),
+    configuredProviderUsed: Boolean(details.configuredProviderUsed),
+    missingCredentials: Array.isArray(details.missingCredentials) ? details.missingCredentials : [],
+    externalReceiptId: cleanOpsText(details.externalReceiptId || "", 120) || null,
+    localRecordId: cleanOpsText(details.localRecordId || "", 120) || null,
+    summary: cleanOpsText(summary, 600),
+    whatHappened: cleanOpsArray(details.whatHappened || [summary], 8),
+    whatDidNotHappen: cleanOpsArray(details.whatDidNotHappen || [
+      "Nexus did not expose secrets.",
+      "Nexus did not claim live execution without an adapter/provider receipt.",
+      "Nexus did not bypass consent, confirmation, approval, or vendor gates."
+    ], 8),
+    safetyNote: cleanOpsText(details.safetyNote || lane.safeFallbackMessage, 360),
+    nextStep: cleanOpsText(details.nextStep || (details.missingCredentials?.length ? "Add the missing provider environment variables or continue with local fallback." : "Review the result before any downstream action."), 260),
+    noSecretValues: true
+  };
+  store.actionReceipts.unshift(receipt);
+  store.internetServiceReceipts.unshift(receipt);
+  store.actionReceipts = store.actionReceipts.slice(0, 1000);
+  store.internetServiceReceipts = store.internetServiceReceipts.slice(0, 500);
+  return receipt;
+}
+
+function createNexusInternetServiceAudit(db, lane, action, summary, after = {}) {
+  return addNexusOperationsAudit(db, "internet-service", lane.id, action, "standard-user", summary, null, {
+    serviceLaneId: lane.id,
+    category: lane.category,
+    provider: lane.providerType,
+    missingEnv: Array.isArray(after.missingEnv) ? after.missingEnv : [],
+    gateStatus: after.gateStatus || after.status || "checked",
+    noSecretValues: true
+  });
+}
+
+function nexusInternetServiceGate(laneSnapshot, body = {}) {
+  if (/diagnos|prescrib|emergency dispatch|payment completion|drone flight|provider reviewed|message sent/i.test(String(body.command || body.intent || ""))) {
+    return { gateStatus: "blocked_for_safety", canProceed: false };
+  }
+  if (laneSnapshot.missingEnv?.length && !laneSnapshot.publicProvider) return { gateStatus: "blocked_missing_credentials", canProceed: false };
+  if (laneSnapshot.requiresConsent && body.consent !== true && body.consentGranted !== true) return { gateStatus: "consent_required", canProceed: false };
+  if (laneSnapshot.requiresAdminApproval && body.adminApproved !== true) return { gateStatus: "approval_required", canProceed: false };
+  if (laneSnapshot.requiresVendorApproval && body.vendorApproved !== true) return { gateStatus: "vendor_required", canProceed: false };
+  if (laneSnapshot.requiresConfirmation && body.confirmed !== true && body.finalConfirmation !== true) return { gateStatus: "confirmation_required", canProceed: false };
+  if (laneSnapshot.riskLevel === "low") return { gateStatus: "internet_result_returned", canProceed: true };
+  return { gateStatus: body.allowLive === true ? "live_executed" : "local_prepared", canProceed: body.allowLive === true };
+}
+
+function nexusInternetServiceAdapter(lane, env = process.env) {
+  return {
+    id: `${lane.id}-adapter`,
+    serviceLaneId: lane.id,
+    provider: lane.providerType,
+    requiredEnv: lane.requiredEnv,
+    isConfigured: () => nexusMissingEnv(lane.requiredEnv, env).length === 0 || lane.publicProvider,
+    getMissingEnv: () => nexusMissingEnv(lane.requiredEnv, env),
+    test: (db, body = {}) => {
+      const snapshot = nexusInternetServiceLaneSnapshot(lane, env);
+      const gateStatus = snapshot.canTest ? snapshot.status === "available_public" ? "internet_result_returned" : snapshot.missingEnv.length ? "local_prepared" : "internet_result_returned" : "blocked_missing_credentials";
+      const summary = snapshot.missingEnv.length && !snapshot.publicProvider
+        ? `${lane.label} is not fully configured. Missing env names: ${snapshot.missingEnv.join(", ")}.`
+        : `${lane.label} test completed with ${snapshot.publicProvider ? "public/local fallback" : "configured provider readiness"}.`;
+      const receipt = createNexusInternetServiceReceipt(db, lane, lane.testAction, gateStatus, summary, {
+        mode: body.mode,
+        missingCredentials: snapshot.missingEnv,
+        internetUsed: snapshot.missingEnv.length === 0 && !snapshot.publicProvider,
+        publicFallbackUsed: snapshot.publicProvider || Boolean(snapshot.missingEnv.length && lane.localFallback),
+        configuredProviderUsed: snapshot.missingEnv.length === 0 && !snapshot.publicProvider,
+        whatHappened: [summary, "Nexus checked provider readiness without returning secret values."],
+        safetyNote: lane.safeFallbackMessage
+      });
+      const audit = createNexusInternetServiceAudit(db, lane, snapshot.missingEnv.length ? "internet_service_test_failed" : "internet_service_test_passed", summary, { missingEnv: snapshot.missingEnv, gateStatus });
+      return { ok: true, lane: snapshot, gateStatus, receipt, audit, noSecretValues: true, noLiveExecutionClaimed: gateStatus !== "live_executed" };
+    },
+    prepare: (db, body = {}) => {
+      const snapshot = nexusInternetServiceLaneSnapshot(lane, env);
+      const gate = nexusInternetServiceGate(snapshot, body);
+      const summary = `${lane.label} prepared for ${body.command || body.action || lane.testAction}. Gate status: ${gate.gateStatus}.`;
+      const receipt = createNexusInternetServiceReceipt(db, lane, body.action || "internet_service_prepare", gate.gateStatus, summary, {
+        mode: body.mode,
+        missingCredentials: snapshot.missingEnv,
+        publicFallbackUsed: lane.publicProvider || snapshot.missingEnv.length > 0,
+        whatHappened: [summary, "Nexus prepared the internet service action with visible gate state."],
+        safetyNote: lane.safeFallbackMessage
+      });
+      const audit = createNexusInternetServiceAudit(db, lane, "local_fallback_created", summary, { missingEnv: snapshot.missingEnv, gateStatus: gate.gateStatus });
+      return { ok: true, lane: snapshot, gate, receipt, audit, noSecretValues: true };
+    },
+    execute: (db, body = {}) => {
+      const snapshot = nexusInternetServiceLaneSnapshot(lane, env);
+      const gate = nexusInternetServiceGate(snapshot, body);
+      const summary = gate.canProceed && gate.gateStatus === "live_executed"
+        ? `${lane.label} passed gates and is ready for adapter-confirmed live execution.`
+        : `${lane.label} did not execute live. Gate status: ${gate.gateStatus}.`;
+      const receipt = createNexusInternetServiceReceipt(db, lane, body.action || "internet_service_execute", gate.gateStatus, summary, {
+        mode: body.mode,
+        missingCredentials: snapshot.missingEnv,
+        internetUsed: gate.gateStatus === "internet_result_returned",
+        configuredProviderUsed: gate.gateStatus === "live_executed",
+        externalReceiptId: gate.gateStatus === "live_executed" ? body.externalReceiptId || "" : "",
+        whatHappened: [summary],
+        safetyNote: lane.safeFallbackMessage
+      });
+      const audit = createNexusInternetServiceAudit(db, lane, gate.gateStatus === "live_executed" ? "live_action_executed" : "live_action_blocked", summary, { missingEnv: snapshot.missingEnv, gateStatus: gate.gateStatus });
+      return { ok: true, lane: snapshot, gate, receipt, audit, noSecretValues: true };
+    },
+    cancel: (db, body = {}) => {
+      const summary = `${lane.label} cancelled locally. No provider was contacted.`;
+      const receipt = createNexusInternetServiceReceipt(db, lane, body.action || "internet_service_cancel", "cancelled", summary, {
+        mode: body.mode,
+        whatHappened: [summary],
+        publicFallbackUsed: false
+      });
+      const audit = createNexusInternetServiceAudit(db, lane, "live_action_blocked", summary, { gateStatus: "cancelled" });
+      return { ok: true, gateStatus: "cancelled", receipt, audit, noSecretValues: true };
+    },
+    normalizeReceipt: result => safeOpsSnapshot(result?.receipt || {}),
+    safeFailure: error => ({
+      ok: false,
+      provider: lane.providerType,
+      serviceLaneId: lane.id,
+      error: cleanOpsText(error?.message || error || "Provider failed safely.", 260),
+      noSecretValues: true,
+      noLiveExecutionClaimed: true
+    })
+  };
+}
+
+function nexusInternetServiceAdapters(env = process.env) {
+  return Object.fromEntries(NEXUS_INTERNET_SERVICE_REGISTRY.map(lane => [lane.id, nexusInternetServiceAdapter(lane, env)]));
+}
+
+function nexusInternetIntentLane(command = "") {
+  const text = String(command || "").toLowerCase();
+  if (/weather|heat risk|heat index|climate/.test(text)) return "noaa-weather-public";
+  if (/route|map|field visit|distance|geocod|trade route/.test(text)) return "osm-public-maps";
+  if (/translate|swahili|french|arabic|spanish|portuguese/.test(text)) return "local-language-fallback";
+  if (/youtube|music|media|play/.test(text)) return "external-media-handoff";
+  if (/shipment|tracking/.test(text)) return "generic-shipment-tracking";
+  if (/sms|whatsapp|telegram|email|call/.test(text)) return /whatsapp/.test(text) ? "twilio-whatsapp-provider" : /telegram/.test(text) ? "telegram-bot-provider" : /email/.test(text) ? "smtp-email-provider" : /call/.test(text) ? "twilio-voice-provider" : "twilio-sms-provider";
+  if (/telehealth|video visit/.test(text)) return "daily-video-provider";
+  if (/pharmacy|refill/.test(text)) return "pharmacy-intake-provider";
+  if (/mobile clinic/.test(text)) return "mobile-clinic-request-provider";
+  if (/payment|pay|refund|checkout|mpesa|stripe|paypal/.test(text)) return "generic-payment-endpoint";
+  if (/drone|imagery/.test(text)) return /dispatch/.test(text) ? "drone-vendor-dispatch" : "generic-drone-mission";
+  if (/enroll|course|lms|training/.test(text)) return "moodle-lms-provider";
+  if (/employer|job|applicant|ats|crm|workforce/.test(text)) return "generic-employer-ats";
+  if (/crop|farm|agriculture|disease|buyer|market|source|search|latest|current|research/.test(text)) return "tavily-live-search";
+  return "wikipedia-wikidata-fallback";
 }
 
 function latestChronicCareProfile(store) {
@@ -34691,6 +35220,90 @@ async function api(req, res, url) {
     return send(res, 200, nexusRealProviderStatus(db));
   }
 
+  if (url.pathname === "/api/nexus/internet-services" && req.method === "GET") {
+    const store = ensureNexusPersistentOperations(db);
+    const snapshot = nexusInternetServicesSnapshot(process.env);
+    addNexusOperationsAudit(db, "internet-service", "registry", "internet_services_viewed", user?.role || "standard-user", "Nexus Internet Services & Activation Center viewed; no live execution occurred.", null, { categories: snapshot.categories, noSecretValues: true });
+    snapshot.recentReceipts = store.internetServiceReceipts.slice(0, 12);
+    snapshot.recentAudit = store.auditLogs.filter(item => item.entityType === "internet-service").slice(0, 12);
+    await writeDb(db);
+    return send(res, 200, snapshot);
+  }
+
+  if (url.pathname === "/api/nexus/internet-services/test" && req.method === "POST") {
+    const body = await readBody(req);
+    const lane = nexusInternetServiceLaneById(cleanOpsText(body.laneId || body.serviceLaneId || body.provider || nexusInternetIntentLane(body.command || ""), 160));
+    const result = nexusInternetServiceAdapter(lane, process.env).test(db, body);
+    await writeDb(db);
+    return send(res, 200, result);
+  }
+
+  if (url.pathname === "/api/nexus/internet-services/search" && req.method === "POST") {
+    const body = await readBody(req);
+    const query = cleanOpsText(body.query || body.question || body.command || "", 700);
+    if (!query) return send(res, 400, { ok: false, error: "query_required" });
+    const lane = nexusInternetServiceLaneById(cleanOpsText(body.laneId || nexusInternetIntentLane(query), 160));
+    const laneSnapshot = nexusInternetServiceLaneSnapshot(lane, process.env);
+    let liveKnowledge = null;
+    let gateStatus = "local_prepared";
+    let summary = `${lane.label} prepared a local fallback result.`;
+    const lowRiskSearch = lane.riskLevel === "low" && /Search|Knowledge|Weather|Maps|Translation|Media|Storage|Export/.test(lane.category);
+    if (lowRiskSearch && ["tavily-live-search", "brave-live-search", "exa-live-search", "generic-live-knowledge"].includes(lane.id)) {
+      liveKnowledge = await nexusLiveKnowledgeAllModesQuery(db, {
+        query,
+        domain: body.domain || lane.supportedModes?.[0] || "general",
+        mode: body.mode || "internet-services"
+      }, user, process.env);
+      gateStatus = liveKnowledge.status === "source-backed" ? "internet_result_returned" : liveKnowledge.status === "provider-error" ? "failed" : "local_prepared";
+      summary = liveKnowledge.summary || liveKnowledge.answer || "Live Knowledge search completed with honest provider status.";
+    } else if (lane.publicProvider) {
+      gateStatus = "internet_result_returned";
+      summary = `${lane.label} returned safe public/local fallback guidance for "${query}".`;
+    } else if (laneSnapshot.missingEnv.length) {
+      gateStatus = "blocked_missing_credentials";
+      summary = `${lane.label} requires provider configuration before live internet use. Missing env names: ${laneSnapshot.missingEnv.join(", ")}.`;
+    }
+    const receipt = createNexusInternetServiceReceipt(db, lane, "internet_service_search", gateStatus, summary, {
+      mode: body.mode || "ask-nexus",
+      internetUsed: gateStatus === "internet_result_returned" && !lane.publicProvider,
+      publicFallbackUsed: lane.publicProvider || gateStatus !== "internet_result_returned",
+      configuredProviderUsed: Boolean(liveKnowledge?.status === "source-backed"),
+      missingCredentials: laneSnapshot.missingEnv,
+      whatHappened: [summary, "Nexus separated information retrieval from real-world execution."],
+      whatDidNotHappen: [
+        "Nexus did not fabricate citations.",
+        "Nexus did not send, call, pay, book, dispatch, prescribe, diagnose, or contact a provider from this search."
+      ],
+      safetyNote: lane.safeFallbackMessage
+    });
+    const audit = createNexusInternetServiceAudit(db, lane, gateStatus === "internet_result_returned" ? "source_backed_search_completed" : "public_internet_fallback_used", summary, { missingEnv: laneSnapshot.missingEnv, gateStatus });
+    const store = ensureNexusPersistentOperations(db);
+    store.internetServiceResults.unshift({
+      resultId: receipt.receiptId,
+      query,
+      laneId: lane.id,
+      category: lane.category,
+      status: gateStatus,
+      provider: lane.providerType,
+      liveKnowledgeStatus: liveKnowledge?.status || "",
+      citations: liveKnowledge?.citations || [],
+      createdAt: nexusNow(),
+      noExecutionAuthorized: true,
+      noSecretValues: true
+    });
+    store.internetServiceResults = store.internetServiceResults.slice(0, 500);
+    await writeDb(db);
+    return send(res, 200, { ok: true, lane: laneSnapshot, query, gateStatus, summary, liveKnowledge, receipt, audit, noSecretValues: true, noExecutionAuthorized: true });
+  }
+
+  if (url.pathname === "/api/nexus/internet-services/prepare" && req.method === "POST") {
+    const body = await readBody(req);
+    const lane = nexusInternetServiceLaneById(cleanOpsText(body.laneId || nexusInternetIntentLane(body.command || body.action || ""), 160));
+    const result = nexusInternetServiceAdapter(lane, process.env).prepare(db, body);
+    await writeDb(db);
+    return send(res, 200, result);
+  }
+
   if (url.pathname === "/api/nexus/operations/status" && req.method === "GET") {
     return send(res, 200, nexusOperationsSummary(db));
   }
@@ -34720,6 +35333,7 @@ async function api(req, res, url) {
     const store = ensureNexusPersistentOperations(db);
     addNexusOperationsAudit(db, "activation", "matrix", "activation_matrix_viewed", user?.role || "standard-user", "All-modes activation matrix viewed; no provider execution occurred.");
     const snapshot = nexusActivationRegistrySnapshot(process.env);
+    snapshot.internetServices = nexusInternetServicesSnapshot(process.env);
     snapshot.receipts = store.actionReceipts.slice(0, 12);
     snapshot.audit = store.auditLogs.slice(0, 12);
     await writeDb(db);
@@ -34730,8 +35344,20 @@ async function api(req, res, url) {
     return send(res, 200, {
       ok: true,
       gateStatuses: NEXUS_LIVE_EXECUTION_GATE_STATUSES,
+      internetGateOutcomes: NEXUS_INTERNET_GATE_OUTCOMES,
       registry: nexusActivationRegistrySnapshot(process.env),
+      internetServices: nexusInternetServicesSnapshot(process.env),
       adapters: nexusProviderAdapters(process.env),
+      internetServiceAdapters: Object.values(nexusInternetServiceAdapters(process.env)).map(adapter => ({
+        id: adapter.id,
+        serviceLaneId: adapter.serviceLaneId,
+        provider: adapter.provider,
+        requiredEnv: adapter.requiredEnv,
+        configured: adapter.isConfigured(),
+        missingEnv: adapter.getMissingEnv(),
+        methods: ["test", "prepare", "execute", "cancel", "normalizeReceipt", "safeFailure"],
+        noSecretValues: true
+      })),
       noSecretValues: true,
       noSilentExecution: true
     });

@@ -22310,6 +22310,74 @@ function renderNexusAllModesActivationRuntime() {
     </section>
   `;
 }
+
+const NEXUS_FULL_INTERNET_SERVICE_UI_CATEGORIES = Object.freeze([
+  { id: "ai-search", label: "AI / Live Knowledge / Search", lanes: ["Tavily", "Brave Search", "Exa", "Generic endpoint", "SerpAPI", "Google Programmable Search", "Bing/Azure", "Wikipedia/Wikidata"], status: "public + credential-gated", risk: "low", worksNow: "Public/local fallback and configured source-backed search.", needs: "Selected provider credentials for live citations." },
+  { id: "maps-routing", label: "Maps / Routing / Geospatial", lanes: ["OpenStreetMap", "Google Maps", "Mapbox", "HERE", "TomTom", "Geocoding", "Route planning"], status: "public + credential-gated", risk: "low", worksNow: "Typed-location route preparation and public map fallback.", needs: "Routing/geocoding provider credentials for live distance/time." },
+  { id: "weather", label: "Weather / Climate / Heat Risk", lanes: ["OpenWeather", "Tomorrow.io", "NOAA/weather.gov", "Generic weather", "Heat index"], status: "public + credential-gated", risk: "low", worksNow: "Heat-risk and weather lookup packet preparation.", needs: "Weather provider credentials for live forecast data outside public fallback." },
+  { id: "communications", label: "Communications", lanes: ["SMTP", "SendGrid", "Gmail API", "Microsoft Graph", "Twilio SMS", "Twilio WhatsApp", "Telegram", "Twilio Voice"], status: "confirmation-gated", risk: "medium", worksNow: "Drafts, scripts, visible recipient preview, and local review.", needs: "Provider credentials, recipient confirmation, consent, and final approval before send/call." },
+  { id: "telehealth-video", label: "Telehealth / Video", lanes: ["Zoom", "Daily.co", "Twilio Video", "Vonage/OpenTok", "Whereby", "Generic video", "Browser handoff"], status: "consent-gated", risk: "high", worksNow: "Telehealth intake and video visit preparation.", needs: "Video provider credentials plus consent, confirmation, and provider receipt." },
+  { id: "healthcare", label: "Healthcare Support", lanes: ["Provider referral", "Clinic intake", "Pharmacy intake", "Mobile clinic", "RPM/RTM sync", "Provider queue", "Emergency guidance"], status: "regulated-gated", risk: "high", worksNow: "Provider-ready packets, local RPM/RTM, pharmacy/mobile clinic request prep.", needs: "Verified provider endpoints, consent, confirmation, admin/vendor approval, and receipts." },
+  { id: "payments", label: "Payments / Mobile Money / Marketplace", lanes: ["Stripe", "PayPal", "Flutterwave", "Paystack", "M-Pesa", "Generic payment", "Local transaction"], status: "approval-gated", risk: "high", worksNow: "Local transaction, cancellation, adjustment, and dispute prep.", needs: "Sandbox/live provider credentials, explicit confirmation, vendor approval, and payment receipt." },
+  { id: "logistics", label: "Marketplace / Trade / Logistics", lanes: ["Buyer/seller", "Orders", "Trade route", "AfterShip", "Shippo", "Carrier tracking", "Generic logistics"], status: "credential-gated", risk: "medium/high", worksNow: "Buyer/seller records, shipment packets, trade route prep.", needs: "Tracking/logistics provider credentials before live tracking or dispatch claims." },
+  { id: "workforce", label: "Workforce / Employer / ATS / CRM", lanes: ["HubSpot", "Zoho", "Airtable", "Greenhouse", "Lever", "Generic ATS", "Interview handoff"], status: "vendor-gated", risk: "medium", worksNow: "Applicant, resume, employer, and outreach packet preparation.", needs: "Employer/ATS credentials, applicant consent, confirmation, and partner receipt." },
+  { id: "learning", label: "Learning / LMS", lanes: ["Moodle", "Canvas", "TalentLMS", "Thinkific", "LearnWorlds", "Generic LMS", "Certificate sync"], status: "vendor-gated", risk: "medium", worksNow: "Learning plans, training referrals, and LMS handoff records.", needs: "LMS credentials, learner consent, confirmation, and enrollment receipt." },
+  { id: "drone-storage", label: "Drone / Imagery / Storage", lanes: ["Generic mission", "Drone vendor dispatch", "Imagery upload", "S3", "Google Drive", "Cloudinary", "No-fly checklist"], status: "approval-gated", risk: "high", worksNow: "Drone mission packets and compliance checklist.", needs: "Drone/storage provider credentials, admin/vendor approval, confirmation, and external receipt." },
+  { id: "media", label: "Media / Music", lanes: ["YouTube", "External media search", "Safe embed", "Local preferences"], status: "public + credential-gated", risk: "low", worksNow: "Safe provider media handoff and preference memory.", needs: "Provider API credentials for live search metadata; no downloading/ripping/caching." },
+  { id: "translation", label: "Translation / Language", lanes: ["Google Translate", "DeepL", "Azure Translator", "Generic translation", "Built-in languages"], status: "public + credential-gated", risk: "low", worksNow: "Built-in language fallback and local command language support.", needs: "Translation provider credentials for live translation." },
+  { id: "storage-export", label: "Storage / Files / Export", lanes: ["Local export", "S3", "Google Drive", "Generic document storage", "PDF/report export"], status: "local + credential-gated", risk: "low/medium", worksNow: "Local packet/report export and review packets.", needs: "Storage provider credentials plus consent before external upload." }
+]);
+
+function renderNexusFullInternetServicesActivationRuntime() {
+  return `
+    <section class="nexus-full-internet-services-runtime nexus-glass-card" data-nexus-full-internet-services-runtime="true" data-no-secret-values="true" data-live-provider-receipts-required="true" aria-label="${escapeHtml(translateText("Nexus Internet Services and Activation Center"))}">
+      <div class="nexus-internet-services-heading">
+        <span class="eyebrow">${escapeHtml(translateText("Nexus Internet Services & Activation Center"))}</span>
+        <strong>${escapeHtml(translateText("What Nexus can do online now"))}</strong>
+        <p>${escapeHtml(translateText("Nexus can test public/configured internet services, prepare provider packets, and show exactly what still needs credentials. Low-risk retrieval is separated from medium/high-risk real-world execution."))}</p>
+      </div>
+      <div class="nexus-internet-service-actions" data-nexus-internet-service-test-actions="true">
+        ${[
+          "Test live knowledge",
+          "Test maps/routing",
+          "Test weather/heat risk",
+          "Test translation",
+          "Test communications readiness",
+          "Test telehealth readiness",
+          "Test payment readiness",
+          "Test LMS readiness",
+          "Test drone readiness",
+          "Test shipment tracking readiness",
+          "Test media search/embed readiness"
+        ].map(label => `<button type="button" data-nexus-internet-service-test="${escapeHtml(label.toLowerCase().replace(/[^a-z0-9]+/g, "-"))}">${escapeHtml(translateText(label))}</button>`).join("")}
+      </div>
+      <div class="nexus-internet-services-summary" data-nexus-standard-user-online-capability-summary="true">
+        <span>${escapeHtml(translateText("Can run now"))}: ${escapeHtml(translateText("public/local fallback, source-ready search when configured, local packets, receipts, and audit."))}</span>
+        <span>${escapeHtml(translateText("Needs credentials"))}: ${escapeHtml(translateText("provider API keys, OAuth tokens, endpoints, sandbox accounts, or partner/vendor approval."))}</span>
+        <span>${escapeHtml(translateText("Never hidden"))}: ${escapeHtml(translateText("messages, calls, payments, bookings, dispatch, provider handoff, uploads, or medical/pharmacy actions."))}</span>
+      </div>
+      <div class="nexus-internet-services-grid" data-nexus-internet-service-categories="true">
+        ${NEXUS_FULL_INTERNET_SERVICE_UI_CATEGORIES.map(category => `
+          <article data-nexus-internet-service-category="${escapeHtml(category.id)}" data-risk-level="${escapeHtml(category.risk)}">
+            <div>
+              <strong>${escapeHtml(translateText(category.label))}</strong>
+              <span>${escapeHtml(translateText(`Status: ${category.status}`))}</span>
+            </div>
+            <small>${escapeHtml(translateText(`Provider lanes: ${category.lanes.join(", ")}`))}</small>
+            <small>${escapeHtml(translateText(`Works now: ${category.worksNow}`))}</small>
+            <small>${escapeHtml(translateText(`Requires: ${category.needs}`))}</small>
+            <small>${escapeHtml(translateText(`Risk: ${category.risk}`))}</small>
+          </article>
+        `).join("")}
+      </div>
+      <div class="nexus-internet-receipts-audit-preview" data-nexus-internet-receipts-audit-preview="true">
+        <strong>${escapeHtml(translateText("Recent receipts and audit"))}</strong>
+        <span>${escapeHtml(translateText("Receipt model"))}: ${escapeHtml(translateText("internet used, public fallback, configured provider, missing credentials, what happened, what did not happen."))}</span>
+        <span>${escapeHtml(translateText("Secret safety"))}: ${escapeHtml(translateText("env names and present/missing booleans only; secret values are never shown."))}</span>
+      </div>
+    </section>
+  `;
+}
 const NEXUS_GLOBAL_READINESS_TAGS = Object.freeze(["global-ready", "Africa-first", "low-bandwidth", "mobile-first", "offline-aware", "rural-relevant", "community-health-ready", "agriculture-ready", "workforce-ready"]);
 const NEXUS_ENDGAME_WORKFLOW_EXTENSIONS = Object.freeze([
   { id: "diabetes", label: "Diabetes Support", category: "healthcare", aliases: ["diabetes", "blood sugar", "glucose"], riskLevel: "clinical", activationType: "provider-ready", integrationRequired: true, integrationLaneId: "diabetes-lane", allowedWithoutIntegration: true, requiresConfirmationBeforeExecution: true, auditLogRequired: true, outcomeVerificationRequired: true, globalReadiness: "global-ready / Africa-relevant", offlineSupport: true, packetType: "diabetes_report_packet" },
@@ -23937,6 +24005,7 @@ function renderNexusActivationCenter() {
         </div>
       </section>
       ${renderNexusAllModesActivationRuntime()}
+      ${renderNexusFullInternetServicesActivationRuntime()}
       <div class="nexus-activation-grid">
         ${lanes.map(lane => `
           <article data-testid="nexus-global-activation-lane-card" data-nexus-activation-lane="${escapeHtml(lane.id)}" data-lane-status="${escapeHtml(lane.status)}">
