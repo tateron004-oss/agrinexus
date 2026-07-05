@@ -11843,7 +11843,8 @@ body.user-mode .nexus-connect-everything-head {
 
 body.user-mode .nexus-connect-everything-head strong,
 body.user-mode .nexus-missing-credentials-checklist strong,
-body.user-mode .nexus-live-ready-lanes strong {
+body.user-mode .nexus-live-ready-lanes strong,
+body.user-mode .nexus-render-credential-setup-card strong {
   display: block;
   color: rgba(255, 255, 255, .97);
   text-shadow: 0 0 14px rgba(34, 211, 238, .2);
@@ -11862,7 +11863,8 @@ body.user-mode .nexus-connect-everything-counts {
 
 body.user-mode .nexus-connect-everything-counts span,
 body.user-mode .nexus-missing-credentials-checklist,
-body.user-mode .nexus-live-ready-lanes {
+body.user-mode .nexus-live-ready-lanes,
+body.user-mode .nexus-render-credential-setup-card {
   border: 1px solid rgba(148, 163, 184, .22);
   background: rgba(15, 23, 42, .42);
   border-radius: 14px;
@@ -11895,9 +11897,29 @@ body.user-mode .nexus-connect-everything-actions button {
 }
 
 body.user-mode .nexus-missing-credentials-checklist,
-body.user-mode .nexus-live-ready-lanes {
+body.user-mode .nexus-live-ready-lanes,
+body.user-mode .nexus-render-credential-setup-card {
   display: grid;
   gap: 5px;
+}
+
+body.user-mode .nexus-render-credential-setup-card {
+  border-color: rgba(251, 191, 36, .34);
+  background:
+    linear-gradient(135deg, rgba(251, 191, 36, .12), rgba(14, 165, 233, .08)),
+    rgba(15, 23, 42, .48);
+}
+
+body.user-mode .nexus-render-credential-setup-card ul {
+  margin: 0;
+  padding-left: 1.1rem;
+  display: grid;
+  gap: 4px;
+}
+
+body.user-mode .nexus-render-credential-setup-card li,
+body.user-mode .nexus-render-credential-setup-card small {
+  color: rgba(226, 232, 240, .88);
 }
 
 body.user-mode .nexus-internet-services-summary span,

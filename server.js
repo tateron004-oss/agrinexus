@@ -34549,6 +34549,38 @@ function nexusProviderReadinessReport(env = process.env, db = null) {
       "Payments / Mobile Money / Marketplace",
       "Drone / Imagery / Storage"
     ],
+    renderCredentialActivation: {
+      missingRenderEnvVariables: [...new Set(missing.flatMap(lane => lane.missingEnv || []))].sort(),
+      recommendedFirstVariablesToAdd: [
+        "NEXUS_PROVIDER_TEST_MODE",
+        "NEXUS_ALLOW_LIVE_EXECUTION",
+        "NEXUS_REQUIRE_CONFIRMATION_FOR_LIVE_ACTIONS",
+        "NEXUS_REQUIRE_CONSENT_FOR_HEALTH_ACTIONS",
+        "NEXUS_LIVE_KNOWLEDGE_PROVIDER",
+        "TAVILY_API_KEY",
+        "NEXUS_WEATHER_PROVIDER",
+        "OPENWEATHER_API_KEY",
+        "NEXUS_MAP_PROVIDER",
+        "MAPBOX_ACCESS_TOKEN"
+      ],
+      keepDisabledOrBlankUntilVendorAgreements: [
+        "NEXUS_ALLOW_LIVE_EXECUTION",
+        "NEXUS_HEALTH_PROVIDER_ENDPOINT",
+        "NEXUS_HEALTH_PROVIDER_API_KEY",
+        "NEXUS_PHARMACY_PROVIDER_ENDPOINT",
+        "NEXUS_PHARMACY_PROVIDER_API_KEY",
+        "NEXUS_MOBILE_CLINIC_PROVIDER_ENDPOINT",
+        "NEXUS_MOBILE_CLINIC_PROVIDER_API_KEY",
+        "NEXUS_DRONE_DISPATCH_ENDPOINT",
+        "NEXUS_DRONE_DISPATCH_API_KEY"
+      ],
+      liveExecutionAllowed: /^true$/i.test(String(env.NEXUS_ALLOW_LIVE_EXECUTION || "")),
+      liveExecutionWarning: /^true$/i.test(String(env.NEXUS_ALLOW_LIVE_EXECUTION || ""))
+        ? "Warning: live execution is enabled. Confirm provider tests, consent, confirmation, approval, audit, and vendor gates before any live action."
+        : "Safe default: live execution is disabled for Render credential readiness testing.",
+      renderDashboardPath: "Render Dashboard -> Select AgriNexus/Nexus Web Service -> Environment -> Add Environment Variable -> Save Changes -> Redeploy",
+      noSecretValues: true
+    },
     noSecretValues: true
   };
 }
@@ -34583,6 +34615,15 @@ function nexusProviderReadinessMarkdownReport(env = process.env, db = null) {
     "## First Recommended Activation Order",
     "",
     ...report.recommendedActivationOrder.map((item, index) => `${index + 1}. ${item}`),
+    "",
+    "## Render Credential Activation",
+    "",
+    `- Render path: ${report.renderCredentialActivation.renderDashboardPath}`,
+    `- Live execution allowed: ${report.renderCredentialActivation.liveExecutionAllowed ? "true" : "false"}`,
+    `- Status: ${report.renderCredentialActivation.liveExecutionWarning}`,
+    `- Recommended first variables: ${report.renderCredentialActivation.recommendedFirstVariablesToAdd.join(", ")}`,
+    `- Keep disabled/blank until vendor agreements: ${report.renderCredentialActivation.keepDisabledOrBlankUntilVendorAgreements.join(", ")}`,
+    `- Missing Render env variables: ${report.renderCredentialActivation.missingRenderEnvVariables.slice(0, 80).join(", ") || "none"}`,
     "",
     "## Safety",
     "",

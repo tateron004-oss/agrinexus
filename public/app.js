@@ -22400,6 +22400,21 @@ function renderNexusFullInternetServicesActivationRuntime() {
             ["show-blocked-lanes-only", "Show blocked lanes only"]
           ].map(([id, label]) => `<button type="button" data-nexus-provider-readiness-action="${escapeHtml(id)}" data-command="${escapeHtml(label)}">${escapeHtml(translateText(label))}</button>`).join("")}
         </div>
+        <div class="nexus-render-credential-setup-card" data-nexus-render-credential-setup="true" data-no-secret-values="true">
+          <strong>${escapeHtml(translateText("Render Credential Setup"))}</strong>
+          <span>${escapeHtml(translateText("Add provider API keys in Render -> Environment, then redeploy. Start with Tavily, OpenWeather, and Mapbox. Keep live execution disabled until testing passes."))}</span>
+          <ul>
+            ${[
+              "Safe controls: NEXUS_PROVIDER_TEST_MODE=true and NEXUS_ALLOW_LIVE_EXECUTION=false",
+              "Live Knowledge: NEXUS_LIVE_KNOWLEDGE_PROVIDER plus TAVILY_API_KEY",
+              "Weather: NEXUS_WEATHER_PROVIDER plus OPENWEATHER_API_KEY",
+              "Maps: NEXUS_MAP_PROVIDER plus MAPBOX_ACCESS_TOKEN",
+              "Email/SMS later: SendGrid and Twilio stay confirmation-gated",
+              "Payments/health/drone only after credentials, approvals, consent, and audit"
+            ].map(item => `<li>${escapeHtml(translateText(item))}</li>`).join("")}
+          </ul>
+          <small>${escapeHtml(translateText("Docs: docs/NEXUS_RENDER_CREDENTIAL_ACTIVATION_GUIDE.md and docs/NEXUS_RENDER_ENV_CHECKLIST.md"))}</small>
+        </div>
         <div class="nexus-missing-credentials-checklist" data-nexus-missing-credentials-checklist="true">
           <strong>${escapeHtml(translateText("Missing credentials checklist"))}</strong>
           <span>${escapeHtml(translateText("The API returns exact env variable names and present/missing booleans. Secret values are never shown."))}</span>
